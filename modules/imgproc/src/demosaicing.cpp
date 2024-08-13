@@ -227,39 +227,43 @@ public:
             v_zip(b1, r1, r0, r1);
             // b17 g17 r17 0 b19 g19 r19 0 ...
 
+            // 0 b0 g0 r0 b1 g1 r1 0 ...
             v_uint32x8 pack32_lo, pack32_hi;
             v_zip(v_reinterpret_as_u32(g0), v_reinterpret_as_u32(r0), pack32_lo, pack32_hi);
-
-            // 0 b0 g0 r0 b1 g1 r1 0 ...
-            b0 = v_reinterpret_as_u16(v_rotate_left<1>(v_reinterpret_as_u8(pack32_lo)));
-            b1 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_lo)));
-            // 0 0 b0 g0 r0 b1 g1 r1 b2 g2 r2 b3 g3 r3 0 0 ...
-            v_uint64x4 blend = v256_blend<0b1010>(v_reinterpret_as_u64(b0), v_reinterpret_as_u64(b1));
-            v_store_low(dst-1+0, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
-            v_store_high(dst-1+12*1, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
+            b0 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_lo)));
             // 0 b8 g8 r8 b9 g9 r9 0 ...
-            b0 = v_reinterpret_as_u16(v_rotate_left<1>(v_reinterpret_as_u8(pack32_hi)));
             b1 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_hi)));
-            // 0 0 b8 g8 r8 b9 g9 r9 b10 g10 r10 b11 g11 r11 0 0 ...
-            blend = v256_blend<0b1010>(v_reinterpret_as_u64(b0), v_reinterpret_as_u64(b1));
-            v_store_low(dst-1+12*2, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
-            v_store_high(dst-1+12*3, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
 
+            // store x[63:0] to ptr
+            #define v_store_1_4(ptr, x) _mm_storel_epi64((__m128i*)(ptr), _mm256_castsi256_si128(x.val))
+            // store x[127:64] to ptr
+            #define v_store_2_4(ptr, x) _mm_storel_epi64((__m128i*)(ptr), _mm_unpackhi_epi64(_mm256_castsi256_si128(x.val), _mm256_castsi256_si128(x.val)))
+            // store x[191:128] to ptr
+            #define v_store_3_4(ptr, x) _mm_storel_epi64((__m128i*)(ptr), _mm256_extracti128_si256(x.val, 1))
+            // store x[255:192] to ptr
+            #define v_store_4_4(ptr, x) _mm_storel_epi64((__m128i*)(ptr), _mm_unpackhi_epi64(_mm256_extracti128_si256(x.val, 1), _mm256_extracti128_si256(x.val, 1)))
+
+            v_store_1_4(dst-1+0, b0);
+            v_store_2_4(dst-1+6*1, b0);
+            v_store_3_4(dst-1+6*2, b0);
+            v_store_4_4(dst-1+6*3, b0);
+            v_store_1_4(dst-1+6*4, b1);
+            v_store_2_4(dst-1+6*5, b1);
+            v_store_3_4(dst-1+6*6, b1);
+            v_store_4_4(dst-1+6*7, b1);
+
+            // 0 b8 g8 r8 b9 g9 r9 0 ...
             v_zip(v_reinterpret_as_u32(g1), v_reinterpret_as_u32(r1), pack32_lo, pack32_hi);
-            // 0 b16 g16 r16 b17 g17 r17 0 ...
-            g0 = v_reinterpret_as_u16(v_rotate_left<1>(v_reinterpret_as_u8(pack32_lo)));
-            g1 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_lo)));
-            // 0 0 b16 g16 r16 b17 g17 r17 b18 g18 r18 b19 g19 r19 0 0 ...
-            blend = v256_blend<0b1010>(v_reinterpret_as_u64(g0), v_reinterpret_as_u64(g1));
-            v_store_low(dst-1+12*4, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
-            v_store_high(dst-1+12*5, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
-
-            // 0 b24 g24 r24 b25 g25 r25 0 ...
-            g0 = v_reinterpret_as_u16(v_rotate_left<1>(v_reinterpret_as_u8(pack32_hi)));
+            g0 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_lo)));
+            // 0 b12 g12 r12 b13 g13 r13 0 ...
             g1 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_hi)));
-            // 0 0 b24 g24 r24 b25 g25 r25 b26 g26 r26 b27 g27 r27 0 0 ...
-            blend = v256_blend<0b1010>(v_reinterpret_as_u64(g0), v_reinterpret_as_u64(g1));
-            v_store_low(dst-1+12*6, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
+
+            v_store_1_4(dst-1+6*8, g0);
+            v_store_2_4(dst-1+6*9, g0);
+            v_store_3_4(dst-1+6*10, g0);
+            v_store_4_4(dst-1+6*11, g0);
+            v_store_1_4(dst-1+6*12, g1);
+            v_store_2_4(dst-1+6*13, g1);
         }
 
         return (int)(bayer - (bayer_end - width));
@@ -424,39 +428,43 @@ public:
             v_zip(b1, r1, r0, r1);
             // b17 g17 r17 0 b19 g19 r19 0 ...
 
+            // 0 b0 g0 r0 b1 g1 r1 0 ...
             v_uint32x8 pack32_lo, pack32_hi;
             v_zip(v_reinterpret_as_u32(g0), v_reinterpret_as_u32(r0), pack32_lo, pack32_hi);
-
-            // 0 b0 g0 r0 b1 g1 r1 0 ...
-            b0 = v_reinterpret_as_u16(v_rotate_left<1>(v_reinterpret_as_u8(pack32_lo)));
-            b1 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_lo)));
-            // 0 0 b0 g0 r0 b1 g1 r1 b2 g2 r2 b3 g3 r3 0 0 ...
-            v_uint64x4 blend = v256_blend<0b1010>(v_reinterpret_as_u64(b0), v_reinterpret_as_u64(b1));
-            v_store_low(dst+0, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
-            v_store_high(dst+12*1, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
+            b0 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_lo)));
             // 0 b8 g8 r8 b9 g9 r9 0 ...
-            b0 = v_reinterpret_as_u16(v_rotate_left<1>(v_reinterpret_as_u8(pack32_hi)));
             b1 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_hi)));
-            // 0 0 b8 g8 r8 b9 g9 r9 b10 g10 r10 b11 g11 r11 0 0 ...
-            blend = v256_blend<0b1010>(v_reinterpret_as_u64(b0), v_reinterpret_as_u64(b1));
-            v_store_low(dst+12*2, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
-            v_store_high(dst+12*3, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
 
+            // store x[63:0] to ptr
+            #define v_store_1_4(ptr, x) _mm_storel_epi64((__m128i*)(ptr), _mm256_castsi256_si128(x.val))
+            // store x[127:64] to ptr
+            #define v_store_2_4(ptr, x) _mm_storel_epi64((__m128i*)(ptr), _mm_unpackhi_epi64(_mm256_castsi256_si128(x.val), _mm256_castsi256_si128(x.val)))
+            // store x[191:128] to ptr
+            #define v_store_3_4(ptr, x) _mm_storel_epi64((__m128i*)(ptr), _mm256_extracti128_si256(x.val, 1))
+            // store x[255:192] to ptr
+            #define v_store_4_4(ptr, x) _mm_storel_epi64((__m128i*)(ptr), _mm_unpackhi_epi64(_mm256_extracti128_si256(x.val, 1), _mm256_extracti128_si256(x.val, 1)))
+
+            v_store_1_4(dst-1+0, b0);
+            v_store_2_4(dst-1+6*1, b0);
+            v_store_3_4(dst-1+6*2, b0);
+            v_store_4_4(dst-1+6*3, b0);
+            v_store_1_4(dst-1+6*4, b1);
+            v_store_2_4(dst-1+6*5, b1);
+            v_store_3_4(dst-1+6*6, b1);
+            v_store_4_4(dst-1+6*7, b1);
+
+            // 0 b8 g8 r8 b9 g9 r9 0 ...
             v_zip(v_reinterpret_as_u32(g1), v_reinterpret_as_u32(r1), pack32_lo, pack32_hi);
-            // 0 b16 g16 r16 b17 g17 r17 0 ...
-            g0 = v_reinterpret_as_u16(v_rotate_left<1>(v_reinterpret_as_u8(pack32_lo)));
-            g1 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_lo)));
-            // 0 0 b16 g16 r16 b17 g17 r17 b18 g18 r18 b19 g19 r19 0 0 ...
-            blend = v256_blend<0b1010>(v_reinterpret_as_u64(g0), v_reinterpret_as_u64(g1));
-            v_store_low(dst+12*4, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
-            v_store_high(dst+12*5, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
-
-            // 0 b24 g24 r24 b25 g25 r25 0 ...
-            g0 = v_reinterpret_as_u16(v_rotate_left<1>(v_reinterpret_as_u8(pack32_hi)));
+            g0 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_lo)));
+            // 0 b12 g12 r12 b13 g13 r13 0 ...
             g1 = v_reinterpret_as_u16(v_rotate_right<1>(v_reinterpret_as_u8(pack32_hi)));
-            // 0 0 b24 g24 r24 b25 g25 r25 b26 g26 r26 b27 g27 r27 0 0 ...
-            blend = v256_blend<0b1010>(v_reinterpret_as_u64(g0), v_reinterpret_as_u64(g1));
-            v_store_low(dst+12*6, v_rotate_right<2>(v_reinterpret_as_u8(blend)));
+
+            v_store_1_4(dst-1+6*8, g0);
+            v_store_2_4(dst-1+6*9, g0);
+            v_store_3_4(dst-1+6*10, g0);
+            v_store_4_4(dst-1+6*11, g0);
+            v_store_1_4(dst-1+6*12, g1);
+            v_store_2_4(dst-1+6*13, g1);
         }
 
         return int(bayer - (bayer_end - width));
