@@ -1879,18 +1879,18 @@ template<typename R> struct TheTest
 
         // Test overflow and underflow values with step
         const LaneType step = (LaneType) 0.01;
-        for (LaneType i = dataMax + 1; i <= dataMax + 11;) {
+        for (LaneType i = (LaneType) (dataMax + 1); i <= dataMax + 11;) {
             Data<R> dataUpperBound, dataLowerBound, resOverflow, resUnderflow;
             for (int j = 0; j < n; ++j) {
-                dataUpperBound[j] = i;
-                dataLowerBound[j] = -i;
-                i += step;
+                dataUpperBound[j] = (LaneType) i;
+                dataLowerBound[j] = (LaneType) -i;
+                i = (LaneType) (i + step);
             }
             R upperBound = dataUpperBound, lowerBound = dataLowerBound;
             resOverflow = v_exp(upperBound);
             resUnderflow = v_exp(lowerBound);
             for (int j = 0; j < n; ++j) {
-                SCOPED_TRACE(cv::format("Overflow/Underflow test value: %f", i));
+                SCOPED_TRACE(cv::format("Overflow/Underflow test value: %f", (double) i));
                 EXPECT_TRUE(resOverflow[j] > 0 && std::isinf(resOverflow[j]));
                 EXPECT_GE(resUnderflow[j], 0);
                 EXPECT_LT(resUnderflow[j], flt_min);
@@ -1898,7 +1898,7 @@ template<typename R> struct TheTest
         }
 
         // Test random values combined with special values
-        std::vector<LaneType> specialValues = {0, 1, INFINITY, -INFINITY, NAN, dataMax};
+        std::vector<LaneType> specialValues = {(LaneType) 0, (LaneType) 1, (LaneType) INFINITY, (LaneType) -INFINITY, (LaneType) NAN, (LaneType) dataMax};
         const int testRandNum = 10000;
         const double specialValueProbability = 0.1; // 10% chance to insert a special value
         cv::RNG_MT19937 rng;
@@ -1919,8 +1919,8 @@ template<typename R> struct TheTest
             R x = dataRand;
             resRand = v_exp(x);
             for (int j = 0; j < n; ++j) {
-                SCOPED_TRACE(cv::format("Random test value: %f", dataRand[j]));
-                LaneType std_exp = std::exp(dataRand[j]);
+                SCOPED_TRACE(cv::format("Random test value: %f", (double) dataRand[j]));
+                LaneType std_exp = (LaneType) std::exp(dataRand[j]);
                 if (dataRand[j] == 0) {
                     // input 0 -> output 1
                     EXPECT_EQ(resRand[j], 1);
@@ -1952,11 +1952,11 @@ template<typename R> struct TheTest
 
     TheTest &test_exp_fp16() {
         // issue after 4.x merge: float16_t and hfloat conflict: https://github.com/opencv/opencv/issues/25922
-#if CV_SIMD_FP16 & 0
-        float16_t flt16_min;
+#if CV_SIMD_FP16
+        hfloat flt16_min;
         uint16_t flt16_min_hex = 0x0400;
-        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(float16_t));
-        __test_exp((float16_t) 10, (float16_t) 1e-2, (float16_t) 1e2, flt16_min);
+        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(hfloat));
+        __test_exp((hfloat) 10, (hfloat) 1e-2, (hfloat) 1e2, flt16_min);
 #endif
         return *this;
     }
@@ -1976,7 +1976,7 @@ template<typename R> struct TheTest
     void __test_log(LaneType expBound, LaneType diff_thr, LaneType flt_min) {
         int n = VTraits<R>::vlanes();
         // Test special values
-        std::vector<LaneType> specialValues = {0, 1, (LaneType) M_E, INFINITY, -INFINITY, NAN};
+        std::vector<LaneType> specialValues = {(LaneType) 0, (LaneType) 1, (LaneType) M_E, (LaneType) INFINITY, (LaneType) -INFINITY, (LaneType) NAN};
         const int testRandNum = 10000;
         const double specialValueProbability = 0.1; // 10% chance to insert a special value
         cv::RNG_MT19937 rng;
@@ -1998,8 +1998,8 @@ template<typename R> struct TheTest
             R x = dataRand;
             resRand = v_log(x);
             for (int j = 0; j < n; ++j) {
-                SCOPED_TRACE(cv::format("Random test value: %f", dataRand[j]));
-                LaneType std_log = std::log(dataRand[j]);
+                SCOPED_TRACE(cv::format("Random test value: %f", (double) dataRand[j]));
+                LaneType std_log = (LaneType) std::log(dataRand[j]);
                 if (dataRand[j] == 0) {
                     // input 0 -> output -INF
                     EXPECT_TRUE(std::isinf(resRand[j]) && resRand[j] < 0);
@@ -2022,11 +2022,11 @@ template<typename R> struct TheTest
 
     TheTest &test_log_fp16() {
     // issue after 4.x merge: float16_t and hfloat conflict: https://github.com/opencv/opencv/issues/25922
-#if CV_SIMD_FP16  & 0
-        float16_t flt16_min;
+#if CV_SIMD_FP16
+        hfloat flt16_min;
         uint16_t flt16_min_hex = 0x0400;
-        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(float16_t));
-        __test_log((float16_t) 9, (float16_t) 1e-3, flt16_min);
+        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(hfloat));
+        __test_log((hfloat) 9, (hfloat) 1e-3, flt16_min);
 #endif
         return *this;
     }
