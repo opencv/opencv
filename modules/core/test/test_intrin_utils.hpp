@@ -1951,7 +1951,6 @@ template<typename R> struct TheTest
     }
 
     TheTest &test_exp_fp16() {
-        // issue after 4.x merge: float16_t and hfloat conflict: https://github.com/opencv/opencv/issues/25922
 #if CV_SIMD_FP16
         hfloat flt16_min;
         uint16_t flt16_min_hex = 0x0400;
@@ -2021,7 +2020,6 @@ template<typename R> struct TheTest
     }
 
     TheTest &test_log_fp16() {
-    // issue after 4.x merge: float16_t and hfloat conflict: https://github.com/opencv/opencv/issues/25922
 #if CV_SIMD_FP16
         hfloat flt16_min;
         uint16_t flt16_min_hex = 0x0400;
