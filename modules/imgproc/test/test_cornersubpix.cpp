@@ -62,7 +62,7 @@ TEST(Imgproc_CornerSubPix, out_of_image_corners)
     cv::cornerSubPix(image, corners, win, zeroZone, criteria);
 
     ASSERT_EQ(corners.size(), 1u);
-    ASSERT_TRUE(Rect2f(0, 0, image.cols, image.rows).contains(corners.front()));
+    ASSERT_TRUE(Rect2f(0.0f, 0.0f, static_cast<float>(image.cols), static_cast<float>(image.rows)).contains(corners.front()));
 }
 
 // See https://github.com/opencv/opencv/issues/26016
