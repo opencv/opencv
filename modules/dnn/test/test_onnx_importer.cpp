@@ -3205,7 +3205,11 @@ TEST_P(Test_ONNX_layers, TopK) {
         Mat output_ref_val = readTensorFromONNX(_tf("data/output_" + basename + "_0.pb")),
             output_ref_ind = readTensorFromONNX(_tf("data/output_" + basename + "_1.pb"));
 
+        checkBackend(&input, &output_ref_val);
+        checkBackend(&input, &output_ref_ind);
         Net net = readNetFromONNX(onnxmodel);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
 
         net.setInput(input);
         std::vector<Mat> outputs;
@@ -3217,6 +3221,7 @@ TEST_P(Test_ONNX_layers, TopK) {
 
         normAssert(output_ref_val, output_res_val, (basename + " values").c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         normAssert(output_ref_ind, output_res_ind, (basename + " indices").c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        expectNoFallbacksFromIE(net);
     };
 
     test("top_k");
