@@ -309,15 +309,16 @@ CvTrackbar* CvWindow::findTrackbarByName(cv::String name)
     return nullptr;
 }
 
-void CvWindow::updateImage(CvMat* src)
+void CvWindow::updateImage(InputArray arr)
 {
     if (!imageControl) return;
 
-    this->imageData = src;
-    this->imageWidth = src->width;
+    Mat src = arr.getMat();
+    this->imageData = src.data;
+    this->imageWidth = src.size().width;
 
     // Create the WriteableBitmap
-    WriteableBitmap^ bitmap = ref new WriteableBitmap(src->cols, src->rows);
+    WriteableBitmap^ bitmap = ref new WriteableBitmap(src.cols, src.rows);
 
     // Get access to the pixels
     IBuffer^ buffer = bitmap->PixelBuffer;
@@ -330,7 +331,7 @@ void CvWindow::updateImage(CvMat* src)
 
     // Get pointer to pixel bytes
     pBufferByteAccess->Buffer(&dstPixels);
-    memcpy(dstPixels, src->data.ptr, CV_ELEM_SIZE(src->type) * src->cols*src->rows);
+    memcpy(dstPixels, src.data, CV_ELEM_SIZE(src.type) * src.cols*src.rows);
 
     // Set the bitmap to the Image element
     imageControl->Source = bitmap;
