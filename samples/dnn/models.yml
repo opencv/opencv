@@ -34,7 +34,7 @@ yolov8s:
   postprocessing: "yolov8"
   sample: "object_detection"
 
-yolov8n:
+yolov8:
   load_info:
     url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
     sha1: "68f864475d06e2ec4037181052739f268eeac38d"
@@ -137,20 +137,6 @@ tiny-yolo-voc:
   rgb: true
   labels: "object_detection_classes_pascal_voc.txt"
   background_label_id: 0
-  sample: "object_detection"
-
-yolov8:
-  load_info:
-    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
-    sha1: "68f864475d06e2ec4037181052739f268eeac38d"
-  model: "yolov8n.onnx"
-  mean: [0, 0, 0]
-  scale: 0.00392
-  width: 640
-  height: 640
-  rgb: true
-  postprocessing: "yolov8"
-  labels: "object_detection_classes_yolo.txt"
   sample: "object_detection"
 
 # Caffe implementation of SSD model from https://github.com/chuanqi305/MobileNet-SSD

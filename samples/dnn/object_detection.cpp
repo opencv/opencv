@@ -82,9 +82,9 @@ string modelName, framework;
 
 static void preprocess(const Mat& frame, Net& net, Size inpSize);
 
-static void postprocess(Mat& frame, const vector<Mat>& out, Net& net, int backend);
+static void postprocess(Mat& frame, const vector<Mat>& out, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes);
 
-static void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
+static void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame, FontFace& sans);
 
 static void callback(int pos, void* userdata);
 
@@ -98,6 +98,22 @@ static void yoloPostProcessing(
     float conf_threshold,
     float iou_threshold,
     const string& test_name);
+
+static void printAliases(const std::string& zooFile){
+    vector<string> aliases = findAliases(zooFile, "object_detection");
+
+    cout<<"Alias choices: [ ";
+    for (auto it: aliases){
+        cout<<"'"<<it<<"' ";
+    }
+    cout<<"]"<<endl;
+}
+
+static Scalar getTextColor(Scalar bgColor) {
+    double luminance = 0.299 * bgColor[2] + 0.587 * bgColor[1] + 0.114 * bgColor[0];
+
+    return luminance > 128 ? Scalar(0, 0, 0) : Scalar(255, 255, 255);
+}
 
 #ifdef USE_THREADS
 template <typename T>
@@ -155,15 +171,16 @@ int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
+    const string zooFile = findFile(parser.get<String>("zoo"));
     if (!parser.has("@alias") || parser.has("help"))
     {
         cout << about << endl;
         parser.printMessage();
+        printAliases(zooFile);
         return -1;
     }
 
     modelName = parser.get<String>("@alias");
-    const string zooFile = findFile(parser.get<String>("zoo"));
 
     keys += genPreprocArguments(modelName, zooFile);
 
@@ -220,6 +237,10 @@ int main(int argc, char** argv)
         cap.open(parser.get<int>("device"));
 
     FontFace sans("sans");
+
+    vector<int> classIds;
+    vector<float> confidences;
+    vector<Rect> boxes;
 
 #ifdef USE_THREADS
     bool process = true;
@@ -299,7 +320,15 @@ int main(int argc, char** argv)
         vector<Mat> outs = predictionsQueue.get();
         Mat frame = processedFramesQueue.get();
 
-        postprocess(frame, outs, net, backend);
+        classIds.clear();
+        confidences.clear();
+        boxes.clear();
+        postprocess(frame, outs, net, backend, classIds, confidences, boxes);
+
+        for (size_t idx = 0; idx < boxes.size(); ++idx)
+        {
+            drawPred(classIds[idx], confidences[idx], boxes[idx].x, boxes[idx].y, boxes[idx].x + boxes[idx].width, boxes[idx].y + boxes[idx].height, frame, sans);
+        }
 
         if (predictionsQueue.counter > 1)
         {
@@ -343,7 +372,19 @@ int main(int argc, char** argv)
         net.forward(outs, net.getUnconnectedOutLayersNames());
         //![forward]
 
-        postprocess(frame, outs, net, backend);
+        classIds.clear();
+        confidences.clear();
+        boxes.clear();
+
+        postprocess(frame, outs, net, backend, classIds, confidences, boxes);
+
+        // Draw predictions on the frame
+        //![draw_boxes]
+        for (size_t idx = 0; idx < boxes.size(); ++idx)
+        {
+            drawPred(classIds[idx], confidences[idx], boxes[idx].x, boxes[idx].y, boxes[idx].x + boxes[idx].width, boxes[idx].y + boxes[idx].height, frame, sans);
+        }
+        //![draw_boxes]
 
         // Put efficiency information.
         vector<double> layersTimes;
@@ -482,14 +523,10 @@ void yoloPostProcessing(
     }
 }
 
-void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend)
+void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes)
 {
     static vector<int> outLayers = net.getUnconnectedOutLayers();
     static string outLayerType = net.getLayer(outLayers[0])->type;
-
-    vector<int> classIds;
-    vector<float> confidences;
-    vector<Rect> boxes;
 
     if (outLayerType == "DetectionOutput")
     {
@@ -631,19 +668,13 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend)
         classIds = nmsClassIds;
         confidences = nmsConfidences;
     }
-    //![draw_boxes]
-    for (size_t idx = 0; idx < boxes.size(); ++idx)
-    {
-        Rect box = boxes[idx];
-        drawPred(classIds[idx], confidences[idx], box.x, box.y, box.x + box.width, box.y + box.height, frame);
-    }
-    //![draw_boxes]
 }
 
-
-void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame)
+void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame, FontFace& sans)
 {
-    rectangle(frame, Point(left, top), Point(right, bottom), getColor(classId));
+    Scalar boxColor = getColor(classId);
+    int thickness = (2*frame.rows)/512;
+    rectangle(frame, Point(left, top), Point(right, bottom), boxColor, thickness);
 
     string label = format("%.2f", conf);
     if (!labels.empty())
@@ -652,15 +683,16 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
         label = labels[classId] + ": " + label;
     }
 
-    int baseLine;
-    Size labelSize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-
-    FontFace sans("sans");
+    int size = (12*frame.rows)/512;
+    int weight = (150*frame.rows)/512;
+    Rect r = getTextSize(Size(), label, Point(), sans, size, weight);
+    int baseline = r.y + r.height;
+    Size labelSize = Size(r.width, r.height - baseline);
 
     top = max(top, labelSize.height);
     rectangle(frame, Point(left, top - labelSize.height),
-              Point(left + labelSize.width, top + baseLine), Scalar::all(255), FILLED);
-    putText(frame, label, Point(left, top), Scalar(), sans, 12, 400);
+              Point(left + labelSize.width, top + baseline), boxColor, FILLED);
+    putText(frame, label, Point(left, top-thickness), getTextColor(boxColor), sans, size, weight);
 }
 
 void callback(int pos, void*)

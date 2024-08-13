@@ -12,6 +12,8 @@ std::string findFile(const std::string& filename);
 
 std::string findModel(const std::string& filename, const std::string& sha1);
 
+std::vector<std::string> findAliases(const std::string& zooFile, const std::string& sampleType);
+
 inline int getBackendID(const String& backend) {
     std::map<String, int> backendIDs = {
         {"default", cv::dnn::DNN_BACKEND_DEFAULT},
@@ -174,4 +176,29 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
                        modelName, zooFile)+
            genArgument("sha1", "Optional path to hashsum of downloaded model to be loaded from models.yml",
                        modelName, zooFile);
+}
+
+std::vector<std::string> findAliases(const std::string& zooFile, const std::string& sampleType) {
+    std::vector<std::string> aliases;
+
+    cv::FileStorage fs(zooFile, cv::FileStorage::READ);
+    if (!fs.isOpened()) {
+        std::cerr << "Failed to open file: " << zooFile << std::endl;
+        return aliases;
+    }
+
+    cv::FileNode root = fs.root();
+    for (const auto& node : root) {
+        std::string alias = node.name();
+        cv::FileNode sampleNode = node["sample"];
+
+        if (!sampleNode.empty() && sampleNode.isString()) {
+            std::string sampleValue = (std::string)sampleNode;
+            if (sampleValue == sampleType) {
+                aliases.push_back(alias);
+            }
+        }
+    }
+
+    return aliases;
 }

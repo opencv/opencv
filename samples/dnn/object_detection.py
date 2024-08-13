@@ -70,6 +70,7 @@ parser = argparse.ArgumentParser(parents=[parser],
                                  description='Use this script to run object detection deep learning networks using OpenCV.',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 args = parser.parse_args()
+
 if args.alias is None or hasattr(args, 'help'):
     help()
     exit(1)
@@ -113,25 +114,13 @@ def get_color(class_id):
     b = min((class_id >> 2 & 1) * 128 + (class_id >> 5 & 1) * 64 + (class_id >> 8 & 1) * 32 + 40, 255)
     return (int(b), int(g), int(r))
 
+def get_text_color(bg_color):
+    luminance = 0.299 * bg_color[2] + 0.587 * bg_color[1] + 0.114 * bg_color[0]
+    return (0, 0, 0) if luminance > 128 else (255, 255, 255)
+
 def postprocess(frame, outs):
     frameHeight = frame.shape[0]
     frameWidth = frame.shape[1]
-
-    def drawPred(classId, conf, left, top, right, bottom):
-        # Draw a bounding box.
-        cv.rectangle(frame, (left, top), (right, bottom), get_color(classId))
-
-        label = '%.2f' % conf
-
-        # Print a label of class.
-        if labels:
-            assert(classId < len(labels))
-            label = '%s: %s' % (labels[classId], label)
-
-        labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-        top = max(top, labelSize[1])
-        cv.rectangle(frame, (left, top - labelSize[1]), (left + labelSize[0], top + baseLine), (255, 255, 255), cv.FILLED)
-        cv.putText(frame, label, (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
     layerNames = net.getLayerNames()
     lastLayerId = net.getLayerId(layerNames[-1])
@@ -216,13 +205,24 @@ def postprocess(frame, outs):
     else:
         indices = np.arange(0, len(classIds))
 
-    for i in indices:
-        box = boxes[i]
-        left = box[0]
-        top = box[1]
-        width = box[2]
-        height = box[3]
-        drawPred(classIds[i], confidences[i], left, top, left + width, top + height)
+    return boxes, classIds, confidences, indices
+
+def drawPred(classId, conf, left, top, right, bottom):
+        # Draw a bounding box.
+        bg_color = get_color(classId)
+        cv.rectangle(frame, (left, top), (right, bottom), bg_color)
+
+        label = '%.2f' % conf
+
+        # Print a label of class.
+        if labels:
+            assert(classId < len(labels))
+            label = '%s: %s' % (labels[classId], label)
+
+        labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        top = max(top, labelSize[1])
+        cv.rectangle(frame, (left, top - labelSize[1]), (left + labelSize[0], top + baseLine), bg_color, cv.FILLED)
+        cv.putText(frame, label, (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, get_text_color(bg_color))
 
 # Process inputs
 winName = 'Deep learning object detection in OpenCV'
@@ -336,7 +336,10 @@ while cv.waitKey(1) < 0:
         outs = predictionsQueue.get_nowait()
         frame = processedFramesQueue.get_nowait()
 
-        postprocess(frame, outs)
+        boxes, classIds, confidences, indices = postprocess(frame, outs)
+        for i in indices:
+            box = boxes[i]
+            drawPred(classIds[i], confidences[i], box[0], box[1], box[0] + box[2], box[1] + box[3])
 
         # Put efficiency information.
         if predictionsQueue.counter > 1:
