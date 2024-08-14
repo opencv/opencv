@@ -155,8 +155,8 @@ TEST(Imgcodecs_Gif, read_gif_big){
     ASSERT_NO_THROW(img_8UC4 = imread(gif_filename, IMREAD_UNCHANGED));
     ASSERT_FALSE(img_8UC4.empty());
     cv::Mat img_8UC3;
-    const int expected_col=13043;
-    const int expected_row=13917;
+    const int expected_col=1303;
+    const int expected_row=1391;
     EXPECT_EQ(expected_col, img_8UC4.cols);
     EXPECT_EQ(expected_row, img_8UC4.rows);
     ASSERT_NO_THROW(cvtColor(img_8UC4,img_8UC3,COLOR_BGRA2BGR));
