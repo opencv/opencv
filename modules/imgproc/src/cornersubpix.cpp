@@ -96,7 +96,7 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
     for( int pt_i = 0; pt_i < count; pt_i++ )
     {
         Point2f cT = corners[pt_i], cI = cT;
-        CV_Assert( Rect2f(0.0f, 0.0f, static_cast<float>(src.cols), static_cast<float>(src.rows)).contains(cT) );
+        CV_Assert( Rect2f(0, 0, src.cols, src.rows).contains(cT) );
         int iter = 0;
         double err = 0;
 
