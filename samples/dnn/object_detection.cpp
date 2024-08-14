@@ -99,7 +99,7 @@ static void yoloPostProcessing(
     float iou_threshold,
     const string& test_name);
 
-static void printAliases(std::string& zooFile){
+static void printAliases(string& zooFile){
     vector<string> aliases = findAliases(zooFile, "object_detection");
 
     cout<<"Alias choices: [ ";
@@ -464,7 +464,7 @@ void yoloPostProcessing(
         // remove the second element
         outs_copy.pop_back();
         // unsqueeze the first dimension
-        outs_copy[0] = outs_copy[0].reshape(0, std::vector<int>{1, 8400, 84});
+        outs_copy[0] = outs_copy[0].reshape(0, vector<int>{1, 8400, 84});
     }
 
     for (auto preds : outs_copy)
@@ -648,7 +648,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
                 localBoxes.push_back(boxes[classIndices[i]]);
                 localConfidences.push_back(confidences[classIndices[i]]);
             }
-            std::vector<int> nmsIndices;
+            vector<int> nmsIndices;
             NMSBoxes(localBoxes, localConfidences, confThreshold, nmsThreshold, nmsIndices);
             for (size_t i = 0; i < nmsIndices.size(); i++)
             {
@@ -666,13 +666,14 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
 
 void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans)
 {
-    int stdSize = 12;
+    int stdSize = 15;
     int stdWeight = 150;
     int stdImgSize = 512;
     int stdThickness = 2;
-    int size = (stdSize*frame.rows)/stdImgSize;
-    int weight = (stdWeight*frame.rows)/stdImgSize;
-    int thickness = (stdThickness*frame.rows)/stdImgSize;
+    int imgWidth = max(frame.rows, frame.cols);
+    int size = (stdSize*imgWidth)/stdImgSize;
+    int weight = (stdWeight*imgWidth)/stdImgSize;
+    int thickness = (stdThickness*imgWidth)/stdImgSize;
 
     for (size_t idx = 0; idx < boxes.size(); ++idx){
         Scalar boxColor = getColor(classIds[idx]);

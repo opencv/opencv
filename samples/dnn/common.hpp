@@ -180,9 +180,7 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
 
 std::vector<std::string> findAliases(std::string& zooFile, const std::string& sampleType) {
     std::vector<std::string> aliases;
-    if(!utils::fs::exists(zooFile)){
-        std::cout<<"[WARN] Please specify full path to models.yml or set OPENCV_SAMPLES_DATA_PATH environment variable."<<std::endl;
-    }
+
     zooFile = findFile(zooFile);
 
     cv::FileStorage fs(zooFile, cv::FileStorage::READ);
