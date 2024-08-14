@@ -130,6 +130,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     bool needcopy = false, needcast = false;
     int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = typenum == NPY_UBYTE ? CV_8U :
+               typenum == NPY_BOOL ? CV_Bool :
                typenum == NPY_BYTE ? CV_8S :
                typenum == NPY_USHORT ? CV_16U :
                typenum == NPY_SHORT ? CV_16S :

@@ -546,5 +546,21 @@ class dnn_test(NewOpenCVTests):
         out = net.forward()
         self.assertEqual(out.shape, (1, 2, 3, 4))
 
+    def test_bool_operator(self):
+        n = self.find_dnn_file('dnn/onnx/models/and_op.onnx')
+        x = self.find_dnn_file('dnn/onnx/data/input_and_op_0.npy')
+        y = self.find_dnn_file('dnn/onnx/data/input_and_op_1.npy')
+        o = self.find_dnn_file('dnn/onnx/data/output_and_op.npy')
+
+        net = cv.dnn.readNet(n)
+        x, y, o  = np.load(x), np.load(y), np.load(o)
+
+        net.setInput(x)
+        net.setInput(y)
+
+        out = net.forward()
+
+        normAssert(self, out, o)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
