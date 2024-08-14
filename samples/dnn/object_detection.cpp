@@ -84,7 +84,7 @@ static void preprocess(const Mat& frame, Net& net, Size inpSize);
 
 static void postprocess(Mat& frame, const vector<Mat>& out, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes);
 
-static void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame, FontFace& sans);
+static void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans);
 
 static void callback(int pos, void* userdata);
 
@@ -99,7 +99,7 @@ static void yoloPostProcessing(
     float iou_threshold,
     const string& test_name);
 
-static void printAliases(const std::string& zooFile){
+static void printAliases(std::string& zooFile){
     vector<string> aliases = findAliases(zooFile, "object_detection");
 
     cout<<"Alias choices: [ ";
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
-    const string zooFile = findFile(parser.get<String>("zoo"));
+    string zooFile = parser.get<String>("zoo");
     if (!parser.has("@alias") || parser.has("help"))
     {
         cout << about << endl;
@@ -179,7 +179,7 @@ int main(int argc, char** argv)
         printAliases(zooFile);
         return -1;
     }
-
+    zooFile = findFile(zooFile);
     modelName = parser.get<String>("@alias");
 
     keys += genPreprocArguments(modelName, zooFile);
@@ -325,10 +325,7 @@ int main(int argc, char** argv)
         boxes.clear();
         postprocess(frame, outs, net, backend, classIds, confidences, boxes);
 
-        for (size_t idx = 0; idx < boxes.size(); ++idx)
-        {
-            drawPred(classIds[idx], confidences[idx], boxes[idx].x, boxes[idx].y, boxes[idx].x + boxes[idx].width, boxes[idx].y + boxes[idx].height, frame, sans);
-        }
+        drawPred(classIds, confidences, boxes, frame, sans);
 
         if (predictionsQueue.counter > 1)
         {
@@ -380,10 +377,7 @@ int main(int argc, char** argv)
 
         // Draw predictions on the frame
         //![draw_boxes]
-        for (size_t idx = 0; idx < boxes.size(); ++idx)
-        {
-            drawPred(classIds[idx], confidences[idx], boxes[idx].x, boxes[idx].y, boxes[idx].x + boxes[idx].width, boxes[idx].y + boxes[idx].height, frame, sans);
-        }
+        drawPred(classIds, confidences, boxes, frame, sans);
         //![draw_boxes]
 
         // Put efficiency information.
@@ -670,29 +664,40 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
     }
 }
 
-void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame, FontFace& sans)
+void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans)
 {
-    Scalar boxColor = getColor(classId);
-    int thickness = (2*frame.rows)/512;
-    rectangle(frame, Point(left, top), Point(right, bottom), boxColor, thickness);
+    int stdSize = 12;
+    int stdWeight = 150;
+    int stdImgSize = 512;
+    int stdThickness = 2;
+    int size = (stdSize*frame.rows)/stdImgSize;
+    int weight = (stdWeight*frame.rows)/stdImgSize;
+    int thickness = (stdThickness*frame.rows)/stdImgSize;
 
-    string label = format("%.2f", conf);
-    if (!labels.empty())
-    {
-        CV_Assert(classId < (int)labels.size());
-        label = labels[classId] + ": " + label;
+    for (size_t idx = 0; idx < boxes.size(); ++idx){
+        Scalar boxColor = getColor(classIds[idx]);
+        int left = boxes[idx].x;
+        int top = boxes[idx].y;
+        int right = boxes[idx].x + boxes[idx].width;
+        int bottom = boxes[idx].y + boxes[idx].height;
+        rectangle(frame, Point(left, top), Point(right, bottom), boxColor, thickness);
+
+        string label = format("%.2f", confidences[idx]);
+        if (!labels.empty())
+        {
+            CV_Assert(classIds[idx] < (int)labels.size());
+            label = labels[classIds[idx]] + ": " + label;
+        }
+
+        Rect r = getTextSize(Size(), label, Point(), sans, size, weight);
+        int baseline = r.y + r.height;
+        Size labelSize = Size(r.width, r.height - baseline);
+
+        top = max(top, labelSize.height);
+        rectangle(frame, Point(left, top - labelSize.height),
+                Point(left + labelSize.width, top + baseline), boxColor, FILLED);
+        putText(frame, label, Point(left, top-thickness), getTextColor(boxColor), sans, size, weight);
     }
-
-    int size = (12*frame.rows)/512;
-    int weight = (150*frame.rows)/512;
-    Rect r = getTextSize(Size(), label, Point(), sans, size, weight);
-    int baseline = r.y + r.height;
-    Size labelSize = Size(r.width, r.height - baseline);
-
-    top = max(top, labelSize.height);
-    rectangle(frame, Point(left, top - labelSize.height),
-              Point(left + labelSize.width, top + baseline), boxColor, FILLED);
-    putText(frame, label, Point(left, top-thickness), getTextColor(boxColor), sans, size, weight);
 }
 
 void callback(int pos, void*)

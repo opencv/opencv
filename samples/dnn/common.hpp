@@ -12,7 +12,7 @@ std::string findFile(const std::string& filename);
 
 std::string findModel(const std::string& filename, const std::string& sha1);
 
-std::vector<std::string> findAliases(const std::string& zooFile, const std::string& sampleType);
+std::vector<std::string> findAliases(std::string& zooFile, const std::string& sampleType);
 
 inline int getBackendID(const String& backend) {
     std::map<String, int> backendIDs = {
@@ -178,14 +178,14 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
                        modelName, zooFile);
 }
 
-std::vector<std::string> findAliases(const std::string& zooFile, const std::string& sampleType) {
+std::vector<std::string> findAliases(std::string& zooFile, const std::string& sampleType) {
     std::vector<std::string> aliases;
+    if(!utils::fs::exists(zooFile)){
+        std::cout<<"[WARN] Please specify full path to models.yml or set OPENCV_SAMPLES_DATA_PATH environment variable."<<std::endl;
+    }
+    zooFile = findFile(zooFile);
 
     cv::FileStorage fs(zooFile, cv::FileStorage::READ);
-    if (!fs.isOpened()) {
-        std::cerr << "Failed to open file: " << zooFile << std::endl;
-        return aliases;
-    }
 
     cv::FileNode root = fs.root();
     for (const auto& node : root) {

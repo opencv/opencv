@@ -207,17 +207,22 @@ def postprocess(frame, outs):
 
     return boxes, classIds, confidences, indices
 
-def drawPred(classId, conf, left, top, right, bottom):
-        # Draw a bounding box.
-        bg_color = get_color(classId)
+def drawPred(classIds, confidences, boxes, indices):
+    for i in indices:
+        box = boxes[i]
+        left = box[0]
+        top = box[1]
+        right = box[0] + box[2]
+        bottom = box[1] + box[3]
+        bg_color = get_color(classIds[i])
         cv.rectangle(frame, (left, top), (right, bottom), bg_color)
 
-        label = '%.2f' % conf
+        label = '%.2f' % confidences[i]
 
         # Print a label of class.
         if labels:
-            assert(classId < len(labels))
-            label = '%s: %s' % (labels[classId], label)
+            assert(classIds[i] < len(labels))
+            label = '%s: %s' % (labels[classIds[i]], label)
 
         labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)
         top = max(top, labelSize[1])
@@ -337,9 +342,7 @@ while cv.waitKey(1) < 0:
         frame = processedFramesQueue.get_nowait()
 
         boxes, classIds, confidences, indices = postprocess(frame, outs)
-        for i in indices:
-            box = boxes[i]
-            drawPred(classIds[i], confidences[i], box[0], box[1], box[0] + box[2], box[1] + box[3])
+        drawPred(classIds, confidences, boxes, indices)
 
         # Put efficiency information.
         if predictionsQueue.counter > 1:
