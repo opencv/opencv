@@ -28,8 +28,7 @@ public:
     bool operator()(const size_t lhs_idx, const size_t rhs_idx) {
         T lhs = *(data_ + lhs_idx * step_),
           rhs = *(data_ + rhs_idx * step_);
-        // return (lhs > rhs || (lhs == rhs && lhs_idx < rhs_idx));
-        return (lhs > rhs);
+        return (lhs > rhs || (lhs == rhs && lhs_idx < rhs_idx));
     }
 
 private:
@@ -41,7 +40,7 @@ template<typename T>
 class ComparatorLess {
 public:
     ComparatorLess(const T* data, size_t step)
-        : data_(data), step_(step), offset_(0) {}
+        : data_(data), step_(step) {}
 
     void addOffset(size_t offset) {
         data_ += offset;
@@ -54,14 +53,12 @@ public:
     bool operator()(const size_t lhs_idx, const size_t rhs_idx) {
         T lhs = *(data_ + lhs_idx * step_),
           rhs = *(data_ + rhs_idx * step_);
-        // return (lhs < rhs || (lhs == rhs && lhs_idx < rhs_idx));
-        return (lhs < rhs);
+        return (lhs < rhs || (lhs == rhs && lhs_idx < rhs_idx));
     }
 
 private:
     const T* data_;
     size_t step_;
-    size_t offset_;
 };
 }
 
@@ -155,7 +152,7 @@ public:
                     cmp.minusOffset(offset);
                 }
             };
-            parallel_for_(Range(0, step), worker, double(step / 1024.0));
+            parallel_for_(Range(0, step), worker);
         } else {
             auto worker = [&](const Range &r) {
                 const auto *input_ptr = input.ptr<const float>();
@@ -185,7 +182,7 @@ public:
                     }
                 }
             };
-            parallel_for_(Range(0, loops), worker, double(loops / 1024.0));
+            parallel_for_(Range(0, loops), worker);
         }
     }
 
