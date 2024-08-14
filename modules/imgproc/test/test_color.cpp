@@ -1863,6 +1863,31 @@ TEST(Imgproc_ColorBayer, regression)
     EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
 }
 
+TEST(Imgproc_ColorBayer2Gray, regression_25823)
+{
+    const int n = 100;
+    Mat src(n, n, CV_8UC1);
+    Mat dst;
+
+    for (int i = 0; i < src.rows; ++i)
+    {
+        for (int j = 0; j < src.cols; ++j)
+        {
+            src.at<uchar>(i, j) = (i + j) % 2;
+        }
+    }
+
+    cvtColor(src, dst, COLOR_BayerBG2GRAY);
+
+    for (int i = 0; i < dst.rows; ++i)
+    {
+        for (int j = 0; j < dst.cols; ++j)
+        {
+            EXPECT_EQ(1, dst.at<uchar>(i, j));
+        }
+    }
+}
+
 TEST(Imgproc_ColorBayerVNG, regression)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
