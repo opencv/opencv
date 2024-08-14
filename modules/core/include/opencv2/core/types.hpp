@@ -475,6 +475,14 @@ public:
     template<typename _Tp2> operator Rect_<_Tp2>() const;
 
     //! checks whether the rectangle contains the point
+    /*! @note After 4.11.0, when calling Rect.contains() with cv::Point2f / cv::Point2d point, point should not convert/round to int.
+     * See https://github.com/opencv/opencv/issues/26016
+     * ```
+     * Rect_<int> r(0,0,500,500); Point_<float> p(250.0f, 499.9f).
+     * r.contains(pt) returns false(4.10.0-)
+     * r.contains(pt) returns true (4.11.0+)
+     * ```
+     */
     template<typename _Tp2> inline bool contains(const Point_<_Tp2>& pt) const;
 
     _Tp x; //!< x coordinate of the top-left corner

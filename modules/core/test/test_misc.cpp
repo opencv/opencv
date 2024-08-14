@@ -918,7 +918,7 @@ template<> float cv_nexttoward<float>(float v, float v2) { return std::nextafter
 template<> double cv_nexttoward<double>(double v, double v2) { return std::nexttoward(v,v2); }
 TYPED_TEST_P(Rect_Test, OnTheEdge) {
   Rect_<int> rect(0,0,500,500);
-  TypeParam h = rect.height;
+  TypeParam h = static_cast<TypeParam>(rect.height);
   ASSERT_TRUE ( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h - 1))));
   ASSERT_FALSE( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h    ))));
   ASSERT_FALSE( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h + 1))));
