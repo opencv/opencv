@@ -555,12 +555,15 @@ class dnn_test(NewOpenCVTests):
         net = cv.dnn.readNet(n)
         x, y, o  = np.load(x), np.load(y), np.load(o)
 
-        net.setInput(x)
-        net.setInput(y)
+        names = ["x", "y"]
+        net.setInputsNames(names)
+        net.setInput(x, names[0])
+        net.setInput(y, names[1])
 
         out = net.forward()
 
-        normAssert(self, out, o)
+        self.assertTrue(np.all(out == o))
+
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
