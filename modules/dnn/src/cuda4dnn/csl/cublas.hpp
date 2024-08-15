@@ -425,8 +425,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         const auto batch_count = static_cast<int>(batchCount);
 
-        AutoBuffer<half> buffer(3 * batch_count);
-        auto A_slices = (half**)(buffer.data());
+        AutoBuffer<half*> buffer(3 * batch_count);
+        auto A_slices = buffer.data();
         auto B_slices = A_slices + batch_count;
         auto C_slices = B_slices + batch_count;
         // collect A, B and C slices
@@ -438,18 +438,18 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         const half **dev_A_slices = 0, **dev_B_slices = 0;
         half **dev_C_slices = 0;
-        cudaMalloc((void**)&dev_A_slices, batch_count * sizeof(half*));
-        cudaMalloc((void**)&dev_B_slices, batch_count * sizeof(half*));
-        cudaMalloc((void**)&dev_C_slices, batch_count * sizeof(half*));
-        cudaMemcpy(dev_A_slices, A_slices, batch_count * sizeof(half*), cudaMemcpyHostToDevice);
-        cudaMemcpy(dev_B_slices, B_slices, batch_count * sizeof(half*), cudaMemcpyHostToDevice);
-        cudaMemcpy(dev_C_slices, C_slices, batch_count * sizeof(half*), cudaMemcpyHostToDevice);
+        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_A_slices, batch_count * sizeof(half*)));
+        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_B_slices, batch_count * sizeof(half*)));
+        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_C_slices, batch_count * sizeof(half*)));
+        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_A_slices, A_slices, batch_count * sizeof(half*), cudaMemcpyHostToDevice));
+        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_B_slices, B_slices, batch_count * sizeof(half*), cudaMemcpyHostToDevice));
+        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_C_slices, C_slices, batch_count * sizeof(half*), cudaMemcpyHostToDevice));
 
         CUDA4DNN_CHECK_CUBLAS(cublasHgemmBatched(handle.get(), opa, opb, iM, iN, iK, &alpha, dev_A_slices, ilda, dev_B_slices, ildb, &beta, dev_C_slices, ildc, batch_count));
 
-        cudaFree(dev_A_slices);
-        cudaFree(dev_B_slices);
-        cudaFree(dev_C_slices);
+        CUDA4DNN_CHECK_CUDA(cudaFree(dev_A_slices));
+        CUDA4DNN_CHECK_CUDA(cudaFree(dev_B_slices));
+        CUDA4DNN_CHECK_CUDA(cudaFree(dev_C_slices));
     }
 
     template <> inline
@@ -475,8 +475,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         const auto batch_count = static_cast<int>(batchCount);
 
-        AutoBuffer<float> buffer(3 * batch_count);
-        auto A_slices = (float**)(buffer.data());
+        AutoBuffer<float*> buffer(3 * batch_count);
+        auto A_slices = buffer.data();
         auto B_slices = A_slices + batch_count;
         auto C_slices = B_slices + batch_count;
         // collect A, B and C slices
@@ -488,19 +488,19 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace cu
 
         const float **dev_A_slices = 0, **dev_B_slices = 0;
         float **dev_C_slices = 0;
-        cudaMalloc((void**)&dev_A_slices, batch_count * sizeof(float*));
-        cudaMalloc((void**)&dev_B_slices, batch_count * sizeof(float*));
-        cudaMalloc((void**)&dev_C_slices, batch_count * sizeof(float*));
-        cudaMemcpy(dev_A_slices, A_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice);
-        cudaMemcpy(dev_B_slices, B_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice);
-        cudaMemcpy(dev_C_slices, C_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice);
+        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_A_slices, batch_count * sizeof(float*)));
+        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_B_slices, batch_count * sizeof(float*)));
+        CUDA4DNN_CHECK_CUDA(cudaMalloc((void**)&dev_C_slices, batch_count * sizeof(float*)));
+        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_A_slices, A_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice));
+        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_B_slices, B_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice));
+        CUDA4DNN_CHECK_CUDA(cudaMemcpy(dev_C_slices, C_slices, batch_count * sizeof(float*), cudaMemcpyHostToDevice));
 
         // cuBLAS is column-major
         CUDA4DNN_CHECK_CUBLAS(cublasSgemmBatched(handle.get(), opa, opb, iM, iN, iK, &alpha, dev_A_slices, ilda, dev_B_slices, ildb, &beta, dev_C_slices, ildc, batch_count));
 
-        cudaFree(dev_A_slices);
-        cudaFree(dev_B_slices);
-        cudaFree(dev_C_slices);
+        CUDA4DNN_CHECK_CUDA(cudaFree(dev_A_slices));
+        CUDA4DNN_CHECK_CUDA(cudaFree(dev_B_slices));
+        CUDA4DNN_CHECK_CUDA(cudaFree(dev_C_slices));
     }
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cublas */
