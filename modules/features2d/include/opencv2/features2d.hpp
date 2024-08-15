@@ -50,6 +50,8 @@
 #include "opencv2/flann/miniflann.hpp"
 #endif
 
+#include <map>
+
 /**
   @defgroup features2d 2D Features Framework
   @{
@@ -1462,7 +1464,7 @@ public:
     CV_WRAP virtual void clear();
 
     /** @overload */
-    CV_WRAP virtual Mat cluster() const = 0;
+    CV_WRAP virtual Mat cluster() = 0;
 
     /** @brief Clusters train descriptors.
 
@@ -1473,7 +1475,7 @@ public:
     variant of the method, train descriptors stored in the object are clustered. In the second variant,
     input descriptors are clustered.
      */
-    CV_WRAP virtual Mat cluster( const Mat& descriptors ) const = 0;
+    CV_WRAP virtual Mat cluster( const Mat& descriptors ) = 0;
 
 protected:
     std::vector<Mat> descriptors;
@@ -1494,8 +1496,8 @@ public:
     virtual ~BOWKMeansTrainer();
 
     // Returns trained vocabulary (i.e. cluster centers).
-    CV_WRAP virtual Mat cluster() const CV_OVERRIDE;
-    CV_WRAP virtual Mat cluster( const Mat& descriptors ) const CV_OVERRIDE;
+    CV_WRAP virtual Mat cluster() CV_OVERRIDE;
+    CV_WRAP virtual Mat cluster( const Mat& descriptors ) CV_OVERRIDE;
 
 protected:
 
@@ -1503,6 +1505,132 @@ protected:
     TermCriteria termcrit;
     int attempts;
     int flags;
+};
+
+/** @brief Hierarchical bag-of-words for faster query.
+
+This algorithm represents the output of the K-means cluster descriptors in a tree structure.
+For more details, please refer to *Bags of Binary Words for Fast Place Recognition in Image Sequences*, T-RO 2012.
+ */
+class CV_EXPORTS_W DBOWTrainer : public BOWTrainer
+{
+public:
+    /** @brief The constructor.
+    */
+    CV_WRAP DBOWTrainer( int clusterCountPerLevel, int level, const NormTypes scoringType=NORM_L1,
+                      const TermCriteria& termcrit=TermCriteria(), int attempts=3, int flags=KMEANS_PP_CENTERS );
+    virtual ~DBOWTrainer();
+
+    CV_WRAP virtual Mat cluster() CV_OVERRIDE;
+    CV_WRAP virtual Mat cluster( const Mat& descriptors ) CV_OVERRIDE;
+
+    /** @brief Saves vocabulary to file.
+
+    @param fn File name, better in *.json.
+     */
+    virtual void save( const std::string &fn );
+
+    /** @brief Loads vocabulary from file.
+
+    @param fn File name, better in *.json.
+     */
+    virtual void load( const std::string &fn );
+
+    /** @brief Class for BoW Vector manipulation.
+     *
+     * Inherits from std::map, which maps the given word ID to similarity.
+     */
+    class BOWVector : public std::map<unsigned, double>
+    {
+    public:
+        BOWVector();
+        virtual ~BOWVector();
+
+        /** @brief Adds weight to a word weight existing in the vector, or creates a new word with the given weight.
+
+        @param id Query wordIdx
+        @param weight weight to create the word with, or to add to existing word
+         */
+        void addWeight(int id, double weight);
+
+        /** @brief Adds a word with a weight to the vector only if this does not exist yet
+
+        @param id Query wordIdx
+        @param weight weight to assign to the word if this does not exist
+         */
+        void addIfNotExist(int id, double weight);
+
+        /** @brief Normalizes the weights in the BoW vector.
+
+        @param normType norm type
+         */
+        void normalize(NormTypes normType);
+    };
+
+    /** @brief Transforms a set of descriptors into a BoW vector.
+
+    @param descriptors Input descriptors.
+    @param bowVector Output BoW vector.
+     */
+    virtual void transform( const Mat& descriptors, BOWVector& bowVector);
+
+    /** @brief Computes and returns score of two BoW vector.
+
+    @param bowVector1 Input BoW vector 2.
+    @param bowVector2 Input BoW vector 1.
+    @return Score between two BoW vectors.
+     */
+    virtual double score( BOWVector& bowVector1, BOWVector& bowVector2 );
+
+protected:
+    /** @brief Structure for Node in tree.
+     */
+    struct Node
+    {
+        unsigned idx;
+        unsigned parent;
+        unsigned wordIdx;
+        double weight;
+        cv::Mat descriptor;
+        std::vector<unsigned> childs;
+
+        Node() : idx(0), parent(0) {}
+        Node(unsigned _idx) : idx(_idx), parent(0) {}
+        Node(unsigned _idx, unsigned _parent, cv::Mat _descriptor) : idx(_idx), parent(_parent), descriptor(_descriptor) {}
+    };
+
+    int clusterCountPerLevel, level;
+    NormTypes scoringType;
+    TermCriteria termcrit;
+    int attempts;
+    int flags;
+    std::vector<Node> nodes;
+    std::vector<Node*> words;
+
+    /** @brief Recursively clustering descriptors at each level in the vocabulary tree.
+
+    @param descriptors Descriptors to cluster. Each row of the descriptors matrix is a descriptor.
+    @param parent parent node index.
+    @param current_level current level in the vocabulary tree.
+    @see cv::kmeans
+     */
+    CV_WRAP virtual void kmeansStep( const Mat& descriptors, int parent, int current_level );
+
+    /** @brief Create words from nodes.
+     */
+    CV_WRAP virtual void createWords();
+
+    /** @brief Sets weights for nodes.
+     */
+    CV_WRAP virtual void setWeights();
+
+    /** @brief Finds the most likely wordIdx and weight with the given descriptors.
+
+    @param descriptor Input descriptors.
+    @param wordIdx Output word index.
+    @param weight Output weight.
+     */
+    CV_WRAP virtual void transform( const Mat& descriptor, unsigned& wordIdx, double& weight);
 };
 
 /** @brief Class to compute an image descriptor using the *bag of visual words*.
