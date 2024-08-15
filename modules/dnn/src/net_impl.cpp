@@ -514,7 +514,7 @@ void Net::Impl::allocateLayer(int lid, const LayersShapesMap& layersShapes)
     CV_Assert(layerShapesIt != layersShapes.end());
 
     if (preferableBackend == DNN_BACKEND_OPENCV && preferableTarget == DNN_TARGET_OPENCL_FP16 && ld.dtype == CV_32F)
-        ld.dtype = CV_16S;
+        ld.dtype = CV_16F;
 
     std::vector<LayerPin> pinsForInternalBlobs;
     blobManager.allocateBlobsForLayer(ld, layerShapesIt->second, pinsForInternalBlobs);
@@ -572,7 +572,7 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
             preferableTarget == DNN_TARGET_OPENCL_FP16 &&
             layers[0].dtype == CV_32F)
         {
-            layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16S);
+            layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16F);
         }
         inputShapes.push_back(shape(inp));
     }
@@ -656,8 +656,8 @@ void Net::Impl::forwardLayer(LayerData& ld)
                     {
                         UMat& u = umat_outputBlobs[i];
                         Mat m;
-                        if (u.depth() == CV_16S)  // FP16
-                            convertFp16(u, m);
+                        if (u.depth() == CV_16F)  // FP16
+                            u.convertTo(m, CV_32F);
                         else
                             m = u.getMat(ACCESS_READ);
                         if (!checkRange(m))
@@ -679,8 +679,8 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         {
                             UMat& u = umat_inputBlobs[i];
                             Mat m;
-                            if (u.depth() == CV_16S)  // FP16
-                                convertFp16(u, m);
+                            if (u.depth() == CV_16F)  // FP16
+                                u.convertTo(m, CV_32F);
                             else
                                 m = u.getMat(ACCESS_READ);
                             std::cout << "INPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << std::endl;
@@ -690,8 +690,8 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         {
                             UMat& u = umat_outputBlobs[i];
                             Mat m;
-                            if (u.depth() == CV_16S)  // FP16
-                                convertFp16(u, m);
+                            if (u.depth() == CV_16F)  // FP16
+                                u.convertTo(m, CV_32F);
                             else
                                 m = u.getMat(ACCESS_READ);
                             std::cout << "OUTPUT " << i << " " << cv::typeToString(u.type()) << " " << shape(m) << std::endl;
@@ -701,8 +701,8 @@ void Net::Impl::forwardLayer(LayerData& ld)
                         {
                             UMat& u = umat_internalBlobs[i];
                             Mat m;
-                            if (u.depth() == CV_16S)  // FP16
-                                convertFp16(u, m);
+                            if (u.depth() == CV_16F)  // FP16
+                                u.convertTo(m, CV_32F);
                             else
                                 m = u.getMat(ACCESS_READ);
                             std::cout << "INTERNAL " << i << " " << shape(m) << std::endl;
@@ -918,7 +918,6 @@ AsyncArray Net::Impl::forwardAsync(const String& outputName)
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
-#ifdef CV_CXX11
     String layerName = outputName;
 
     if (layerName.empty())
@@ -939,9 +938,6 @@ AsyncArray Net::Impl::forwardAsync(const String& outputName)
     isAsync = false;
 
     return getBlobAsync(layerName);
-#else
-    CV_Error(Error::StsNotImplemented, "DNN: Asynchronous forward requires build with enabled C++11");
-#endif  // CV_CXX11
 }
 
 
@@ -985,12 +981,12 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
                 ld.outputBlobsWrappers[i]->copyToHost();
             }
         }
-        if (ld.outputBlobs[0].depth() == CV_16S)
+        if (ld.outputBlobs[0].depth() == CV_16F)
         {
             std::vector<Mat>& outputvec = *(std::vector<Mat>*)outputBlobs.getObj();
             outputvec.resize(ld.outputBlobs.size());
             for (int i = 0; i < outputvec.size(); i++)
-                convertFp16(ld.outputBlobs[i], outputvec[i]);
+                ld.outputBlobs[i].convertTo(outputvec[i], CV_32F);
         }
         else
         {
@@ -1013,7 +1009,7 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
                 std::vector<UMat> out_vec = OpenCLBackendWrapper::getUMatVector(ld.outputBlobsWrappers);
                 outputvec.resize(out_vec.size());
                 for (int i = 0; i < out_vec.size(); i++)
-                    convertFp16(out_vec[i], outputvec[i]);
+                    out_vec[i].convertTo(outputvec[i], CV_32F);
             }
         }
         else
@@ -1279,7 +1275,7 @@ void Net::Impl::updateLayersShapes()
             preferableTarget == DNN_TARGET_OPENCL_FP16 &&
             inputLayerData.dtype == CV_32F)
         {
-            inp.create(inp.dims, inp.size, CV_16S);
+            inp.create(inp.dims, inp.size, CV_16F);
         }
         inputShapes.push_back(shape(inp));
     }
@@ -1348,10 +1344,10 @@ Mat Net::Impl::getBlob(const LayerPin& pin) const
         ld.outputBlobsWrappers[pin.oid]->copyToHost();
     }
 
-    if (ld.outputBlobs[pin.oid].depth() == CV_16S)
+    if (ld.outputBlobs[pin.oid].depth() == CV_16F)
     {
         Mat output_blob;
-        convertFp16(ld.outputBlobs[pin.oid], output_blob);
+        ld.outputBlobs[pin.oid].convertTo(output_blob, CV_32F);
         return output_blob;
     }
     else
@@ -1834,15 +1830,278 @@ string Net::Impl::dump(bool forceAllocation) const
     return out.str();
 }
 
+static void dumpTensorToString(std::ostringstream &out, const Mat &m, const int num_indent_spaces = 4) {
+    string indent_spaces(num_indent_spaces, ' ');
+
+    int type = 1;
+    /* Check TensorProto::DataType from https://github.com/onnx/onnx/blob/main/onnx/onnx.proto */
+    switch (m.type()) {
+        case CV_32F: break;
+        case CV_8U:  type = 2; break;
+        case CV_8S:  type = 3; break;
+        case CV_16U: type = 4; break;
+        case CV_16S: type = 5; break;
+        case CV_32S: type = 6; break;
+#if CV_VERSION_MAJOR > 4
+        case CV_64S: type = 7; break;
+        // STRING: 8
+        case CV_BOOL: type = 9; break;
+#endif
+        case CV_16F: type = 10; break;
+        case CV_64F: type = 11; break;
+#if CV_VERSION_MAJOR > 4
+        case CV_32U: type = 12; break;
+        case CV_64U: type = 13; break;
+        // COMPLEX64: 14
+        // COMPLEX128: 15
+        case CV_16BF: type = 16; break;
+#endif
+        default: CV_Error(Error::StsUnsupportedFormat, "Type of mat is not supported");
+    }
+    const auto &mshape = shape(m);
+
+    out << indent_spaces << "type {\n"
+        << indent_spaces << "  tensor_type {\n"
+        << indent_spaces << "    elem_type: " << type << "\n";
+    out << indent_spaces << "    shape {\n";
+    for (size_t i = 0; i < mshape.size(); i++) {
+        out << indent_spaces << format("      dim { dim_value: %d }\n", mshape[i]);
+    }
+    out << indent_spaces << "    }\n" // shape{}
+        << indent_spaces << "  }\n" // tensor_type{}
+        << indent_spaces << "}\n"; // type{}
+}
+
+
+static void dumpParamToString(std::ostringstream &out, const std::string &key, const DictValue &value, const int num_indent_spaces = 2) {
+    std::string indent_spaces(num_indent_spaces, ' ');
+
+    out << indent_spaces << "attribute {\n"
+        << indent_spaces << format("  name: \"%s\"\n", key.c_str());
+    if (value.size() == 1) {
+        if (value.isString()) {
+            out << indent_spaces << format("  type: STRING\n")
+                << indent_spaces << format("  s: \"%s\"\n", value.getStringValue(0).c_str());
+        } else if (value.isInt()) {
+            out << indent_spaces << format("  type: INT\n")
+                << indent_spaces << format("  i: %d\n", value.getIntValue(0));
+        } else if (value.isReal()) {
+            out << indent_spaces << format("  type: FLOAT\n")
+                << indent_spaces << format("  f: %f\n", value.getRealValue(0));
+        } else {
+            out << indent_spaces << format("  type: UNKNOWN-SCALAR\n");
+        }
+    } else {
+        if (value.isString()) {
+            out << indent_spaces << format("  type: STRINGS\n");
+        } else if (value.isInt()) {
+            out << indent_spaces << format("  type: INTS\n");
+        } else if (value.isReal()) {
+            out << indent_spaces << format("  type: FLOATS\n");
+        } else {
+            out << indent_spaces << format("  type: UNKNOWN-ARRAY\n");
+        }
+        for (int i = 0; i < value.size(); i++) {
+            if (value.isString()) {
+                out << indent_spaces << format("  strings: \"%s\"\n", value.getStringValue(i).c_str());
+            } else if (value.isInt()) {
+                out << indent_spaces << format("  ints: %d\n", value.getIntValue(i));
+            } else if (value.isReal()) {
+                out << indent_spaces << format("  floats: %f\n", value.getRealValue());
+            }
+        }
+    }
+    out << indent_spaces << "}\n"; // attribute{}
+}
+
+static void dumpLayerToString(std::ostringstream &out,
+                              const std::vector<std::string> &inputs,
+                              const std::vector<std::string> &outputs,
+                              const std::string &name,
+                              const std::string &op_type,
+                              const LayerParams &params,
+                              const std::string &backend_name,
+                              const std::string &target_name,
+                              const int num_indent_spaces = 2) {
+    std::string indent_spaces(num_indent_spaces, ' ');
+
+    for (size_t i = 0; i < inputs.size(); i++) {
+        out << indent_spaces << format("input: \"%s\"\n", inputs[i].c_str());
+    }
+    for (size_t i = 0; i < outputs.size(); i++) {
+        out << indent_spaces << format("output: \"%s\"\n", outputs[i].c_str());
+    }
+    if (!name.empty()) {
+        out << indent_spaces << format("name: \"%s\"\n", name.c_str());
+    }
+    if (!op_type.empty()) {
+        out << indent_spaces << format("op_type: \"%s\"\n", op_type.c_str());
+    }
+    if (!params.name.empty()) {
+        for (auto param_iter = params.begin(); param_iter != params.end(); param_iter++) {
+            auto key = param_iter->first;
+            auto value = param_iter->second;
+            dumpParamToString(out, key, value, num_indent_spaces);
+        }
+    }
+    if (!backend_name.empty()) {
+        DictValue dvb(backend_name);
+        dumpParamToString(out, "Backend", dvb, num_indent_spaces);
+    }
+    if (!target_name.empty()) {
+        DictValue dvt(target_name);
+        dumpParamToString(out, "Target", dvt, num_indent_spaces);
+    }
+}
+
+string Net::Impl::dumpToPbtxt(bool forceAllocation) const {
+    if (forceAllocation && !netWasAllocated) {
+        const_cast<Net::Impl*>(this)->setUpNet();
+    }
+
+    std::ostringstream out;
+    const std::map<int, LayerData> &map = layers;
+    std::map<String, Mat*> value_info;
+
+    Backend prefBackend = (Backend)preferableBackend;
+    Target prefTarget = (Target)preferableTarget;
+
+    auto GetBackendName = [] (int backendId) {
+        std::string backend = "Unknown";
+        switch (backendId) {
+            case DNN_BACKEND_DEFAULT:   backend = "DEFAULT"; break;
+            #if CV_VERSION_MAJOR <= 4
+            case DNN_BACKEND_HALIDE:    backend = "HALIDE"; break;
+            #endif
+            case DNN_BACKEND_INFERENCE_ENGINE:  // fallthru
+            case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019:  // fallthru
+            case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: backend = "OpenVINO"; break;
+            case DNN_BACKEND_OPENCV:    backend = "OCV"; break;
+            case DNN_BACKEND_VKCOM:     backend = "VULKAN"; break;
+            case DNN_BACKEND_CUDA:      backend = "CUDA"; break;
+            case DNN_BACKEND_WEBNN:     backend = "WEBNN"; break;
+            case DNN_BACKEND_TIMVX:     backend = "TIMVX"; break;
+            case DNN_BACKEND_CANN:      backend = "CANN"; break;
+        }
+        return backend;
+    };
+    auto GetTargetName = [] (int targetId) {
+        std::string target = "Unknown";
+        switch (targetId) {
+            case DNN_TARGET_CPU:         target = "CPU"; break;
+            case DNN_TARGET_OPENCL:      target = "OCL"; break;
+            case DNN_TARGET_OPENCL_FP16: target = "OCL_FP16"; break;
+            case DNN_TARGET_MYRIAD:      target = "MYRIAD"; break;
+            case DNN_TARGET_VULKAN:      target = "VULKAN"; break;
+            case DNN_TARGET_FPGA:        target = "FPGA"; break;
+            case DNN_TARGET_CUDA:        target = "CUDA"; break;
+            case DNN_TARGET_CUDA_FP16:   target = "CUDA_FP16"; break;
+            case DNN_TARGET_HDDL:        target = "HDDL"; break;
+            case DNN_TARGET_NPU:         target = "NPU"; break;
+            case DNN_TARGET_CPU_FP16:    target = "CPU_FP16"; break;
+        }
+        return target;
+    };
+
+    const int num_indent_spaces = 2;
+    std::string indent_spaces(num_indent_spaces, ' ');
+    out << "producer_name: \"opencv dnn\"\n"
+        << "producer_version: \"" << getVersionString() << "\"\n"
+        << "graph {\n";
+    // Add nodes, inputs and outputs
+    for (std::map<int, LayerData>::const_iterator iter = map.begin(); iter != map.end(); iter++) {
+        auto &ld = iter->second;
+        if (ld.id == 0) {
+            for (int i = 0; i < ld.outputBlobs.size(); i++) {
+                const auto &name = netInputLayer->outNames.empty() ? cv::format("%s_%d", ld.name.c_str(), i) : netInputLayer->outNames[i];
+                out << indent_spaces << "input {\n"
+                    << indent_spaces << format("  name: \"%s\"\n", name.c_str());
+                // Add shape
+                if (!ld.outputBlobs.empty()) {
+                    dumpTensorToString(out, ld.outputBlobs[i], num_indent_spaces + 2);
+                }
+                out << indent_spaces << "}\n"; // input{}
+            }
+        } else if (ld.consumers.size() == 0) {
+            out << indent_spaces << "output {\n"
+                << indent_spaces << format("  name: \"%s\"\n", ld.name.c_str());
+            // Add shape
+            if (!ld.outputBlobs.empty()) {
+                dumpTensorToString(out, ld.outputBlobs.front(), num_indent_spaces + 2);
+            }
+            out << indent_spaces << "}\n"; // output{}
+        } else {
+            out << indent_spaces << "node {\n";
+            const auto &name = ld.name;
+            const auto &op_type = "cv::dnn::" + ld.type;
+            std::vector<std::string> inputs, outputs;
+            // Collect names of inputs
+            for (size_t i = 0; i < ld.inputBlobsId.size(); i++) {
+                int lid = ld.inputBlobsId[i].lid;
+                int oid = ld.inputBlobsId[i].oid;
+                std::string name;
+                if (lid == 0) {
+                    name = netInputLayer->outNames.empty() ? cv::format("%s_%d", ld.name.c_str(), oid) : netInputLayer->outNames[oid];
+                } else {
+                    name = format("%s_output%d", map.find(lid)->second.name.c_str(), oid);
+                    if (!ld.inputBlobs.empty()) {
+                        value_info.insert({name, ld.inputBlobs[i]});
+                    }
+                }
+                inputs.push_back(name);
+            }
+            // Collect names of outputs
+            for (size_t i = 0; i < ld.consumers.size(); i++) {
+                int lid = ld.consumers[i].lid;
+                const auto &layer_output_layer = map.find(lid)->second;
+                std::string name;
+                if (layer_output_layer.consumers.size() == 0) {
+                    name = layer_output_layer.name;
+                } else {
+                    name = format("%s_output%zu", ld.name.c_str(), i);
+                }
+                outputs.push_back(name);
+            }
+            const auto &params = ld.params;
+            // Collect backend and target
+            const Backend backend = ld.backendNodes.find(prefBackend) == ld.backendNodes.end() ? DNN_BACKEND_OPENCV : prefBackend;
+            const std::string backend_name = GetBackendName(backend);
+            const Target target = ld.layerInstance.empty() ? DNN_TARGET_CPU : (Target)(ld.layerInstance->preferableTarget);
+            const std::string target_name = GetTargetName(target);
+            dumpLayerToString(out, inputs, outputs, name, op_type, params, backend_name, target_name, num_indent_spaces + 2);
+            out << indent_spaces << "}\n"; // node{}
+        }
+    }
+    // Add value_info
+    for (std::map<String, Mat*>::const_iterator iter = value_info.begin(); iter != value_info.end(); iter++) {
+        out << indent_spaces << "value_info {\n"
+            << indent_spaces << format("  name: \"%s\"\n", iter->first.c_str());
+        dumpTensorToString(out, *(iter->second), num_indent_spaces + 2);
+        out << indent_spaces << "}\n"; // value_info{}
+    }
+    out << "}\n"; // graph{}
+
+    // Add preferable backend and target as metadata
+    out << "metadata_props {\n";
+    out << indent_spaces << format("  key: \"%s\"", "Preferable Backend")
+        << indent_spaces << format("  value: \"%s\"", GetBackendName(prefBackend).c_str());
+    out << "}\n"; // metadata_props{}
+    out << "metadata_props {\n";
+    out << indent_spaces << format("  key: \"%s\"", "Preferable Target")
+        << indent_spaces << format("  value: \"%s\"", GetTargetName(prefTarget).c_str());
+    out << "}\n"; // metadata_props{}
+
+    return out.str();
+}
 
 void Net::Impl::dumpNetworkToFile() const
 {
 #ifndef OPENCV_DNN_DISABLE_NETWORK_AUTO_DUMP
     string dumpFileNameBase = getDumpFileNameBase();
-    string dumpFileName = dumpFileNameBase + ".dot";
+    string dumpFileName = dumpFileNameBase + ".pbtxt";
     try
     {
-        string dumpStr = dump();
+        string dumpStr = dumpToPbtxt();
         std::ofstream out(dumpFileName.c_str(), std::ios::out | std::ios::binary);
         out << dumpStr;
     }

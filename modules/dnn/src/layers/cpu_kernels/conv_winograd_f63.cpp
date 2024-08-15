@@ -85,7 +85,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
         // works at FP 16.
         CONV_WINO_ATOM = CONV_WINO_ATOM_F16;
         CONV_WINO_NATOMS = CONV_WINO_NATOMS_F16;
-        esz = sizeof(float16_t);
+        esz = sizeof(__fp16);
     }
 #endif
 
@@ -338,7 +338,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
                         }
 #if CV_TRY_AVX2
                         if (conv->useAVX2)
-                            opt_AVX::winofunc_AtXA_8x8_F32((float *)out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
+                            opt_AVX2::winofunc_AtXA_8x8_F32((float *)out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
                                                                 bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
                         else
 #endif

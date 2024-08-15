@@ -48,7 +48,6 @@
 /**
   @defgroup imgcodecs Image file reading and writing
   @{
-    @defgroup imgcodecs_c C API
     @defgroup imgcodecs_flags Flags used for image file reading and writing
     @defgroup imgcodecs_ios iOS glue
     @defgroup imgcodecs_macosx MacOS(OSX) glue
@@ -69,7 +68,8 @@ namespace cv
 enum ImreadModes {
        IMREAD_UNCHANGED            = -1, //!< If set, return the loaded image as is (with alpha channel, otherwise it gets cropped). Ignore EXIF orientation.
        IMREAD_GRAYSCALE            = 0,  //!< If set, always convert image to the single channel grayscale image (codec internal conversion).
-       IMREAD_COLOR                = 1,  //!< If set, always convert image to the 3 channel BGR color image.
+       IMREAD_COLOR_BGR            = 1,  //!< If set, always convert image to the 3 channel BGR color image.
+       IMREAD_COLOR                = 1,  //!< Same as IMREAD_COLOR_BGR.
        IMREAD_ANYDEPTH             = 2,  //!< If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
        IMREAD_ANYCOLOR             = 4,  //!< If set, the image is read in any possible color format.
        IMREAD_LOAD_GDAL            = 8,  //!< If set, use the gdal driver for loading the image.
@@ -79,7 +79,8 @@ enum ImreadModes {
        IMREAD_REDUCED_COLOR_4      = 33, //!< If set, always convert image to the 3 channel BGR color image and the image size reduced 1/4.
        IMREAD_REDUCED_GRAYSCALE_8  = 64, //!< If set, always convert image to the single channel grayscale image and the image size reduced 1/8.
        IMREAD_REDUCED_COLOR_8      = 65, //!< If set, always convert image to the 3 channel BGR color image and the image size reduced 1/8.
-       IMREAD_IGNORE_ORIENTATION   = 128 //!< If set, do not rotate the image according to EXIF's orientation flag.
+       IMREAD_IGNORE_ORIENTATION   = 128, //!< If set, do not rotate the image according to EXIF's orientation flag.
+       IMREAD_COLOR_RGB            = 256, //!< If set, always convert image to the 3 channel RGB color image.
      };
 
 //! Imwrite flags
@@ -88,8 +89,8 @@ enum ImwriteFlags {
        IMWRITE_JPEG_PROGRESSIVE    = 2,  //!< Enable JPEG features, 0 or 1, default is False.
        IMWRITE_JPEG_OPTIMIZE       = 3,  //!< Enable JPEG features, 0 or 1, default is False.
        IMWRITE_JPEG_RST_INTERVAL   = 4,  //!< JPEG restart interval, 0 - 65535, default is 0 - no restart.
-       IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is -1 - don't use.
-       IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is -1 - don't use.
+       IMWRITE_JPEG_LUMA_QUALITY   = 5,  //!< Separate luma quality level, 0 - 100, default is -1 - don't use. If JPEG_LIB_VERSION < 70, Not supported.
+       IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is -1 - don't use. If JPEG_LIB_VERSION < 70, Not supported.
        IMWRITE_JPEG_SAMPLING_FACTOR = 7, //!< For JPEG, set sampling factor. See cv::ImwriteJPEGSamplingFactorParams.
        IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
        IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
@@ -104,7 +105,9 @@ enum ImwriteFlags {
        IMWRITE_TIFF_RESUNIT        = 256,//!< For TIFF, use to specify which DPI resolution unit to set; see libtiff documentation for valid values
        IMWRITE_TIFF_XDPI           = 257,//!< For TIFF, use to specify the X direction DPI
        IMWRITE_TIFF_YDPI           = 258,//!< For TIFF, use to specify the Y direction DPI
-       IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See libtiff for integer constants corresponding to compression formats. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
+       IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See cv::ImwriteTiffCompressionFlags. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
+       IMWRITE_TIFF_ROWSPERSTRIP   = 278,//!< For TIFF, use to specify the number of rows per strip.
+       IMWRITE_TIFF_PREDICTOR      = 317,//!< For TIFF, use to specify predictor. See cv::ImwriteTiffPredictorFlags.
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272,//!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
        IMWRITE_AVIF_QUALITY        = 512,//!< For AVIF, it can be a quality between 0 and 100 (the higher the better). Default is 95.
        IMWRITE_AVIF_DEPTH          = 513,//!< For AVIF, it can be 8, 10 or 12. If >8, it is stored/read as CV_32F. Default is 8.
@@ -119,6 +122,48 @@ enum ImwriteJPEGSamplingFactorParams {
        IMWRITE_JPEG_SAMPLING_FACTOR_444 = 0x111111  //!< 1x1,1x1,1x1(No subsampling)
      };
 
+enum ImwriteTiffCompressionFlags {
+        IMWRITE_TIFF_COMPRESSION_NONE = 1,            //!< dump mode
+        IMWRITE_TIFF_COMPRESSION_CCITTRLE = 2,        //!< CCITT modified Huffman RLE
+        IMWRITE_TIFF_COMPRESSION_CCITTFAX3 = 3,       //!< CCITT Group 3 fax encoding
+        IMWRITE_TIFF_COMPRESSION_CCITT_T4 = 3,        //!< CCITT T.4 (TIFF 6 name)
+        IMWRITE_TIFF_COMPRESSION_CCITTFAX4 = 4,       //!< CCITT Group 4 fax encoding
+        IMWRITE_TIFF_COMPRESSION_CCITT_T6 = 4,        //!< CCITT T.6 (TIFF 6 name)
+        IMWRITE_TIFF_COMPRESSION_LZW = 5,             //!< Lempel-Ziv  & Welch
+        IMWRITE_TIFF_COMPRESSION_OJPEG = 6,           //!< !6.0 JPEG
+        IMWRITE_TIFF_COMPRESSION_JPEG = 7,            //!< %JPEG DCT compression
+        IMWRITE_TIFF_COMPRESSION_T85 = 9,             //!< !TIFF/FX T.85 JBIG compression
+        IMWRITE_TIFF_COMPRESSION_T43 = 10,            //!< !TIFF/FX T.43 colour by layered JBIG compression
+        IMWRITE_TIFF_COMPRESSION_NEXT = 32766,        //!< NeXT 2-bit RLE
+        IMWRITE_TIFF_COMPRESSION_CCITTRLEW = 32771,   //!< #1 w/ word alignment
+        IMWRITE_TIFF_COMPRESSION_PACKBITS = 32773,    //!< Macintosh RLE
+        IMWRITE_TIFF_COMPRESSION_THUNDERSCAN = 32809, //!< ThunderScan RLE
+        IMWRITE_TIFF_COMPRESSION_IT8CTPAD = 32895,    //!< IT8 CT w/padding
+        IMWRITE_TIFF_COMPRESSION_IT8LW = 32896,       //!< IT8 Linework RLE
+        IMWRITE_TIFF_COMPRESSION_IT8MP = 32897,       //!< IT8 Monochrome picture
+        IMWRITE_TIFF_COMPRESSION_IT8BL = 32898,       //!< IT8 Binary line art
+        IMWRITE_TIFF_COMPRESSION_PIXARFILM = 32908,   //!< Pixar companded 10bit LZW
+        IMWRITE_TIFF_COMPRESSION_PIXARLOG = 32909,    //!< Pixar companded 11bit ZIP
+        IMWRITE_TIFF_COMPRESSION_DEFLATE = 32946,     //!< Deflate compression, legacy tag
+        IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE = 8,   //!< Deflate compression, as recognized by Adobe
+        IMWRITE_TIFF_COMPRESSION_DCS = 32947,         //!< Kodak DCS encoding
+        IMWRITE_TIFF_COMPRESSION_JBIG = 34661,        //!< ISO JBIG
+        IMWRITE_TIFF_COMPRESSION_SGILOG = 34676,      //!< SGI Log Luminance RLE
+        IMWRITE_TIFF_COMPRESSION_SGILOG24 = 34677,    //!< SGI Log 24-bit packed
+        IMWRITE_TIFF_COMPRESSION_JP2000 = 34712,      //!< Leadtools JPEG2000
+        IMWRITE_TIFF_COMPRESSION_LERC = 34887,        //!< ESRI Lerc codec: https://github.com/Esri/lerc
+        IMWRITE_TIFF_COMPRESSION_LZMA = 34925,        //!< LZMA2
+        IMWRITE_TIFF_COMPRESSION_ZSTD = 50000,        //!< ZSTD: WARNING not registered in Adobe-maintained registry
+        IMWRITE_TIFF_COMPRESSION_WEBP = 50001,        //!< WEBP: WARNING not registered in Adobe-maintained registry
+        IMWRITE_TIFF_COMPRESSION_JXL = 50002          //!< JPEGXL: WARNING not registered in Adobe-maintained registry
+};
+
+enum ImwriteTiffPredictorFlags {
+        IMWRITE_TIFF_PREDICTOR_NONE = 1,              //!< no prediction scheme used
+        IMWRITE_TIFF_PREDICTOR_HORIZONTAL = 2,        //!< horizontal differencing
+        IMWRITE_TIFF_PREDICTOR_FLOATINGPOINT = 3      //!< floating point predictor
+
+};
 
 enum ImwriteEXRTypeFlags {
        /*IMWRITE_EXR_TYPE_UNIT = 0, //!< not supported */
@@ -225,7 +270,18 @@ Currently, the following file formats are supported:
 @param filename Name of file to be loaded.
 @param flags Flag that can take values of cv::ImreadModes
 */
-CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR );
+CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR_BGR );
+
+/** @brief Loads an image from a file.
+
+This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts and the return value.
+@param filename Name of file to be loaded.
+@param dst object in which the image will be loaded.
+@param flags Flag that can take values of cv::ImreadModes
+@note
+The image passing through the img parameter can be pre-allocated. The memory is reused if the shape and the type match with the load image.
+ */
+CV_EXPORTS_W void imread( const String& filename, OutputArray dst, int flags = IMREAD_COLOR_BGR );
 
 /** @brief Loads a multi-page image from a file.
 
@@ -237,7 +293,7 @@ The function imreadmulti loads a multi-page image from the specified file into a
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int flags = IMREAD_ANYCOLOR);
 
-/** @brief Loads a of images of a multi-page image from a file.
+/** @brief Loads images of a multi-page image from a file.
 
 The function imreadmulti loads a specified range from a multi-page image from the specified file into a vector of Mat objects.
 @param filename Name of file to be loaded.
@@ -249,11 +305,13 @@ The function imreadmulti loads a specified range from a multi-page image from th
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
 
-/** @brief Returns the number of images inside the give file
+/** @brief Returns the number of images inside the given file
 
-The function imcount will return the number of pages in a multi-page image, or 1 for single-page images
+The function imcount returns the number of pages in a multi-page image (e.g. TIFF), the number of frames in an animation (e.g. AVIF), and 1 otherwise.
+If the image cannot be decoded, 0 is returned.
 @param filename Name of file to be loaded.
 @param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+@todo when cv::IMREAD_LOAD_GDAL flag used the return value will be 0 or 1 because OpenCV's GDAL decoder doesn't support multi-page reading yet.
 */
 CV_EXPORTS_W size_t imcount(const String& filename, int flags = IMREAD_ANYCOLOR);
 
@@ -297,7 +355,7 @@ It also demonstrates how to save multiple images in a TIFF file:
 CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
               const std::vector<int>& params = std::vector<int>());
 
-/// @overload multi-image overload for bindings
+//! @brief multi-image overload for bindings
 CV_WRAP static inline
 bool imwritemulti(const String& filename, InputArrayOfArrays img,
                   const std::vector<int>& params = std::vector<int>())
@@ -322,7 +380,8 @@ CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 @param buf Input array or vector of bytes.
 @param flags The same flags as in cv::imread, see cv::ImreadModes.
 @param dst The optional output placeholder for the decoded matrix. It can save the image
-reallocations when the function is called repeatedly for images of the same size.
+reallocations when the function is called repeatedly for images of the same size. In case of decoder
+failure the function returns empty cv::Mat object, but does not release user-provided dst buffer.
 */
 CV_EXPORTS Mat imdecode( InputArray buf, int flags, Mat* dst);
 
@@ -355,27 +414,47 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
 
-/** @brief Returns true if the specified image can be decoded by OpenCV
+/** @brief Checks if the specified image file can be decoded by OpenCV.
 
-@param filename File name of the image
+The function haveImageReader checks if OpenCV is capable of reading the specified file.
+This can be useful for verifying support for a given image format before attempting to load an image.
+
+@param filename The name of the file to be checked.
+@return true if an image reader for the specified file is available and the file can be opened, false otherwise.
+
+@note The function checks the availability of image codecs that are either built into OpenCV or dynamically loaded.
+It does not check for the actual existence of the file but rather the ability to read the specified file type.
+If the file cannot be opened or the format is unsupported, the function will return false.
+
+@sa cv::haveImageWriter, cv::imread, cv::imdecode
 */
 CV_EXPORTS_W bool haveImageReader( const String& filename );
 
-/** @brief Returns true if an image with the specified filename can be encoded by OpenCV
+/** @brief Checks if the specified image file or specified file extension can be encoded by OpenCV.
 
- @param filename File name of the image
- */
+The function haveImageWriter checks if OpenCV is capable of writing images with the specified file extension.
+This can be useful for verifying support for a given image format before attempting to save an image.
+
+@param filename The name of the file or the file extension (e.g., ".jpg", ".png").
+It is recommended to provide the file extension rather than the full file name.
+@return true if an image writer for the specified extension is available, false otherwise.
+
+@note The function checks the availability of image codecs that are either built into OpenCV or dynamically loaded.
+It does not check for the actual existence of the file but rather the ability to write files of the given type.
+
+@sa cv::haveImageReader, cv::imwrite, cv::imencode
+*/
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
-/** @brief To read Multi Page images on demand
+/** @brief To read multi-page images on demand
 
-The ImageCollection class provides iterator API to read multi page images on demand. Create iterator
+The ImageCollection class provides iterator API to read multi-page images on demand. Create iterator
 to the collection of the images and iterate over the collection. Decode the necessary page with operator*.
 
 The performance of page decoding is O(1) if collection is increment sequentially. If the user wants to access random page,
 then the time Complexity is O(n) because the collection has to be reinitialized every time in order to go to the correct page.
 However, the intermediate pages are not decoded during the process, so typically it's quite fast.
-This is required because multipage codecs does not support going backwards.
+This is required because multi-page codecs does not support going backwards.
 After decoding the one page, it is stored inside the collection cache. Hence, trying to get Mat object from already decoded page is O(1).
 If you need memory, you can use .releaseCache() method to release cached index.
 The space complexity is O(n) if all pages are decoded into memory. The user is able to decode and release images on demand.

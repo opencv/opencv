@@ -217,6 +217,7 @@ Following options can be used to produce special builds with instrumentation or 
 | `ENABLE_BUILD_HARDENING` | GCC, Clang, MSVC | Enable compiler options which reduce possibility of code exploitation.  |
 | `ENABLE_LTO` | GCC, Clang, MSVC | Enable Link Time Optimization (LTO). |
 | `ENABLE_THIN_LTO` | Clang | Enable thin LTO which incorporates intermediate bitcode to binaries allowing consumers optimize their applications later. |
+| `OPENCV_ALGO_HINT_DEFAULT` | Any | Set default OpenCV implementation hint value: `ALGO_HINT_ACCURATE` or `ALGO_HINT_APROX`. Dangerous! The option  changes behaviour globally and may affect accuracy of many algorithms. |
 
 @see [GCC instrumentation](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html)
 @see [Build hardening](https://en.wikipedia.org/wiki/Hardening_(computing))
@@ -585,6 +586,7 @@ Following options can be used to change installation layout for common scenarios
 | `BUILD_FAT_JAVA_LIB` | _ON_ (for static Android builds) | Build single _opencv_java_ dynamic library containing all library functionality bundled with Java bindings. |
 | `BUILD_opencv_python2` | _ON_ | Build python2 bindings (deprecated). Python with development files and numpy must be installed. |
 | `BUILD_opencv_python3` | _ON_ | Build python3 bindings. Python with development files and numpy must be installed. |
+| `CAROTENE_NEON_ARCH` | '(auto)' | Switch NEON Arch for Carotene. If it sets nothing, it will be auto-detected. If it sets 8, ARMv8(and later) is used. Otherwise, ARMv7 is used. |
 
 TODO: need separate tutorials covering bindings builds
 
@@ -622,6 +624,7 @@ Following build options are utilized in `opencv_contrib` modules, as stated [pre
 `CMAKE_TOOLCHAIN_FILE`
 
 `WITH_CAROTENE`
+`WITH_KLEIDICV`
 `WITH_CPUFEATURES`
 `WITH_EIGEN`
 `WITH_OPENVX`

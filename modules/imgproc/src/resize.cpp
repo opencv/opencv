@@ -3396,8 +3396,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     {
         int wdepth = std::max(depth, CV_32S);
         char buf[2][50];
-        cv::String compileOpts = format("-D USE_SAMPLER -D depth=%d -D T=%s -D T1=%s "
-                        "-D convertToDT=%s -D cn=%d",
+        cv::String compileOpts = format("-D USE_SAMPLER -D SRC_DEPTH=%d -D T=%s -D T1=%s "
+                        "-D CONVERT_TO_DT=%s -D CN=%d",
                         depth, ocl::typeToStr(type), ocl::typeToStr(depth),
                         ocl::convertTypeStr(wdepth, depth, cn, buf[1], sizeof(buf[1])),
                         cn);
@@ -3461,8 +3461,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
             Mat(1, static_cast<int>(_buffer.size()), CV_8UC1, _buffer.data()).copyTo(coeffs);
 
             k.create("resizeLN", ocl::imgproc::resize_oclsrc,
-                     format("-D INTER_LINEAR_INTEGER -D depth=%d -D T=%s -D T1=%s "
-                            "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
+                     format("-D INTER_LINEAR_INTEGER -D SRC_DEPTH=%d -D T=%s -D T1=%s "
+                            "-D WT=%s -D CONVERT_TO_WT=%s -D CONVERT_TO_DT=%s -D CN=%d "
                             "-D INTER_RESIZE_COEF_BITS=%d",
                             depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                             ocl::convertTypeStr(depth, wdepth, cn, buf[0], sizeof(buf[0])),
@@ -3479,8 +3479,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
             int wdepth = depth <= CV_8S ? CV_32S : std::max(depth, CV_32F);
             int wtype = CV_MAKETYPE(wdepth, cn);
             k.create("resizeLN", ocl::imgproc::resize_oclsrc,
-                     format("-D INTER_LINEAR -D depth=%d -D T=%s -D T1=%s "
-                            "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
+                     format("-D INTER_LINEAR -D SRC_DEPTH=%d -D T=%s -D T1=%s "
+                            "-D WT=%s -D CONVERT_TO_WT=%s -D CONVERT_TO_DT=%s -D CN=%d "
                             "-D INTER_RESIZE_COEF_BITS=%d",
                             depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                             ocl::convertTypeStr(depth, wdepth, cn, buf[0], sizeof(buf[0])),
@@ -3550,7 +3550,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     else if (interpolation == INTER_NEAREST)
     {
         k.create("resizeNN", ocl::imgproc::resize_oclsrc,
-                 format("-D INTER_NEAREST -D T=%s -D T1=%s -D cn=%d",
+                 format("-D INTER_NEAREST -D T=%s -D T1=%s -D CN=%d",
                         ocl::vecopTypeToStr(type), ocl::vecopTypeToStr(depth), cn));
         if (k.empty())
             return false;
@@ -3564,7 +3564,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         int wtype = CV_MAKE_TYPE(wdepth, cn);
 
         char cvt[2][50];
-        String buildOption = format("-D INTER_AREA -D T=%s -D T1=%s -D WTV=%s -D convertToWTV=%s -D cn=%d",
+        String buildOption = format("-D INTER_AREA -D T=%s -D T1=%s -D WTV=%s -D CONVERT_TO_WTV=%s -D CN=%d",
                                     ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                                     ocl::convertTypeStr(depth, wdepth, cn, cvt[0], sizeof(cvt[0])), cn);
 
@@ -3574,7 +3574,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         if (is_area_fast)
         {
             int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
-            buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
+            buildOption = buildOption + format(" -D CONVERT_TO_T=%s -D WT2V=%s -D CONVERT_TO_WT2V=%s -D INTER_AREA_FAST"
                                                 " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
                                                 ocl::convertTypeStr(wdepth2, depth, cn, cvt[0], sizeof(cvt[0])),
                                                 ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1], sizeof(cvt[1])),
@@ -3586,7 +3586,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         }
         else
         {
-            buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0], sizeof(cvt[0])));
+            buildOption = buildOption + format(" -D CONVERT_TO_T=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0], sizeof(cvt[0])));
             k.create("resizeAREA", ocl::imgproc::resize_oclsrc, buildOption);
             if (k.empty())
                 return false;
@@ -4078,7 +4078,7 @@ void resize(int src_type,
     else if( interpolation == INTER_LINEAR || interpolation == INTER_AREA )
         ksize = 2, func = linear_tab[depth];
     else
-        CV_Error( CV_StsBadArg, "Unknown interpolation method" );
+        CV_Error( cv::Error::StsBadArg, "Unknown interpolation method" );
     ksize2 = ksize/2;
 
     CV_Assert( func != 0 );

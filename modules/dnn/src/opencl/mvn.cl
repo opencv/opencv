@@ -54,6 +54,7 @@
     #define vec_type Dtype8
     #define CALC_MEAN calc_mean8
     #define MVN mvn8
+    #define MVN_GROUP mvn_group8
     #define MEAN_FUSE mean_fuse8
     #define MVN_FUSE mvn_fuse8
 #elif NUM == 4
@@ -62,6 +63,7 @@
     #define vec_type Dtype4
     #define CALC_MEAN calc_mean4
     #define MVN mvn4
+    #define MVN_GROUP mvn_group4
     #define MEAN_FUSE mean_fuse4
     #define MVN_FUSE mvn_fuse4
 #elif NUM == 1
@@ -70,6 +72,7 @@
     #define vec_type Dtype
     #define CALC_MEAN calc_mean1
     #define MVN mvn1
+    #define MVN_GROUP mvn_group1
     #define MEAN_FUSE mean_fuse1
     #define MVN_FUSE mvn_fuse1
 #endif
@@ -137,6 +140,54 @@ __kernel void MVN(__global const Dtype* src,
 #endif
 
 #endif // LAYER_NORM
+
+    vec_type src_vec = load(src, index) - (vec_type)mean_val;
+    vec_type dst_vec = src_vec * alpha;
+    dst_vec = dst_vec * w + (vec_type)b;
+
+#ifdef FUSE_RELU
+    vec_type new_val = dst_vec * relu_slope;
+    dst_vec = select(new_val, dst_vec, dst_vec > (vec_type)0.f);
+#endif
+
+    store(dst_vec, dst, index);
+}
+
+#elif defined KERNEL_MVN_GROUP
+
+__kernel void MVN_GROUP(__global const Dtype* src,
+                            const int rows,
+                            const int cols,
+                            const Dtype eps,
+                            __global const Dtype* mean,
+                            __global const Dtype* dev,
+                            __global const Dtype* weight,
+                            __global const Dtype* bias,
+                            const int channels,
+                            const int num_groups,
+                            const float relu_slope,
+                            __global Dtype* dst)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1) * NUM;
+    int index = x * cols + y;
+
+    if (x >= rows || y >= cols)
+        return;
+
+    int group_size = channels / num_groups;
+    int step = norm_size / group_size;
+    int channel_index = x % num_groups * group_size + y / step
+    Dtype mean_val = mean[x];
+    Dtype dev_val = dev[x];
+    Dtype alpha;
+#ifdef NORM_VARIANCE
+    alpha = 1 / sqrt(eps + dev_val);
+#else
+    alpha = 1;
+#endif
+
+    Dtype w = weight[channel_index], b = bias[channel_index];
 
     vec_type src_vec = load(src, index) - (vec_type)mean_val;
     vec_type dst_vec = src_vec * alpha;

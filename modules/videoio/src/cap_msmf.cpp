@@ -18,6 +18,7 @@
 
 #include <windows.h>
 #include <guiddef.h>
+#include <initguid.h>
 #include <mfidl.h>
 #include <mfapi.h>
 #include <mfplay.h>
@@ -38,6 +39,7 @@
 #include <string>
 #include <algorithm>
 #include <deque>
+#include <iterator>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -158,6 +160,11 @@ private:
 #define _ComPtr ComPtr
 
 template <typename T> inline T absDiff(T a, T b) { return a >= b ? a - b : b - a; }
+
+// synonym for system MFVideoFormat_D16. D3DFMT_D16 = 80
+// added to fix builds with old MSVS and platform SDK
+// see https://learn.microsoft.com/en-us/windows/win32/medfound/video-subtype-guids#luminance-and-depth-formats
+DEFINE_MEDIATYPE_GUID( OCV_MFVideoFormat_D16, 80 );
 
 //==================================================================================================
 
@@ -350,9 +357,7 @@ struct MediaType
     }
     bool VideoIsAvailable() const
     {
-        return ((subType == MFVideoFormat_RGB32) ||
-            (subType == MFVideoFormat_RGB24) ||
-            (subType == MFVideoFormat_YUY2));
+        return (subType != OCV_MFVideoFormat_D16);
     }
 };
 
@@ -702,7 +707,7 @@ public:
         if (FAILED(MFCreateAttributes(&attr, 1)) ||
             FAILED(attr->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, sourceType)))
         {
-            CV_Error(CV_StsError, "Failed to create attributes");
+            CV_Error(cv::Error::StsError, "Failed to create attributes");
         }
         if (FAILED(MFEnumDeviceSources(attr.Get(), &devices, &count)))
         {
@@ -956,14 +961,14 @@ _ComPtr<IMFAttributes> CvCapture_MSMF::getDefaultSourceConfig(UINT32 num)
         FAILED(res->SetUINT32(MF_SOURCE_READER_ENABLE_ADVANCED_VIDEO_PROCESSING, true))
         )
     {
-        CV_Error(CV_StsError, "Failed to create attributes");
+        CV_Error(cv::Error::StsError, "Failed to create attributes");
     }
 #ifdef HAVE_MSMF_DXVA
     if (D3DMgr)
     {
         if (FAILED(res->SetUnknown(MF_SOURCE_READER_D3D_MANAGER, D3DMgr.Get())))
         {
-            CV_Error(CV_StsError, "Failed to create attributes");
+            CV_Error(cv::Error::StsError, "Failed to create attributes");
         }
     }
 #endif

@@ -55,44 +55,44 @@
 
 #define noconvert
 
-#if cn != 3
+#if CN != 3
 #define loadpix(addr)  *(__global const T *)(addr)
 #define storepix(val, addr)  *(__global T *)(addr) = val
 #define TSIZE (int)sizeof(T)
 #else
 #define loadpix(addr)  vload3(0, (__global const T1 *)(addr))
 #define storepix(val, addr) vstore3(val, 0, (__global T1 *)(addr))
-#define TSIZE (int)sizeof(T1)*cn
+#define TSIZE (int)sizeof(T1)*CN
 #endif
 
 #if defined USE_SAMPLER
 
-#if cn == 1
+#if CN == 1
 #define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z).x
 #define INTERMEDIATE_TYPE  float
-#elif cn == 2
+#elif CN == 2
 #define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z).xy
 #define INTERMEDIATE_TYPE  float2
-#elif cn == 3
+#elif CN == 3
 #define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z).xyz
 #define INTERMEDIATE_TYPE  float3
-#elif cn == 4
+#elif CN == 4
 #define READ_IMAGE(X,Y,Z)  read_imagef(X,Y,Z)
 #define INTERMEDIATE_TYPE  float4
 #endif
 
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
-//#define INTERMEDIATE_TYPE CAT(float, cn)
+//#define INTERMEDIATE_TYPE CAT(float, CN)
 #define float1 float
 
-#if depth == 0
+#if SRC_DEPTH == 0
 #define RESULT_SCALE    255.0f
-#elif depth == 1
+#elif SRC_DEPTH == 1
 #define RESULT_SCALE    127.0f
-#elif depth == 2
+#elif SRC_DEPTH == 2
 #define RESULT_SCALE    65535.0f
-#elif depth == 3
+#elif SRC_DEPTH == 3
 #define RESULT_SCALE    32767.0f
 #else
 #define RESULT_SCALE    1.0f
@@ -114,10 +114,10 @@ __kernel void resizeSampler(__read_only image2d_t srcImage,
 
     INTERMEDIATE_TYPE intermediate = READ_IMAGE(srcImage, sampler, (float2)(sx, sy));
 
-#if depth <= 4
-    T uval = convertToDT(round(intermediate * RESULT_SCALE));
+#if SRC_DEPTH <= 4
+    T uval = CONVERT_TO_DT(round(intermediate * RESULT_SCALE));
 #else
-    T uval = convertToDT(intermediate * RESULT_SCALE);
+    T uval = CONVERT_TO_DT(intermediate * RESULT_SCALE);
 #endif
 
     if(dx < dstcols && dy < dstrows)
@@ -149,15 +149,15 @@ __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offs
 
         int src_index0 = mad24(sy0, src_step, mad24(sx0, TSIZE, src_offset)),
         src_index1 = mad24(sy1, src_step, mad24(sx0, TSIZE, src_offset));
-        WT data0 = convertToWT(loadpix(srcptr + src_index0));
-        WT data1 = convertToWT(loadpix(srcptr + src_index0 + TSIZE));
-        WT data2 = convertToWT(loadpix(srcptr + src_index1));
-        WT data3 = convertToWT(loadpix(srcptr + src_index1 + TSIZE));
+        WT data0 = CONVERT_TO_WT(loadpix(srcptr + src_index0));
+        WT data1 = CONVERT_TO_WT(loadpix(srcptr + src_index0 + TSIZE));
+        WT data2 = CONVERT_TO_WT(loadpix(srcptr + src_index1));
+        WT data3 = CONVERT_TO_WT(loadpix(srcptr + src_index1 + TSIZE));
 
         WT val = ( (((data0 * a0 + data1 * a1) >> 4) * b0) >> 16) +
                  ( (((data2 * a0 + data3 * a1) >> 4) * b1) >> 16);
 
-        storepix(convertToDT((val + 2) >> 2),
+        storepix(CONVERT_TO_DT((val + 2) >> 2),
                  dstptr + mad24(dy, dst_step, mad24(dx, TSIZE, dst_offset)));
     }
 }
@@ -186,7 +186,7 @@ __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offs
         int y_ = INC(y, src_rows);
         int x_ = INC(x, src_cols);
 
-#if depth <= 1  // 8U/8S only, 16U+ cause integer overflows
+#if SRC_DEPTH <= 1  // 8U/8S only, 16U+ cause integer overflows
 #define INTER_RESIZE_COEF_SCALE (1 << INTER_RESIZE_COEF_BITS)
 #define CAST_BITS (INTER_RESIZE_COEF_BITS << 1)
         u = u * INTER_RESIZE_COEF_SCALE;
@@ -197,24 +197,24 @@ __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offs
         int U1 = rint(INTER_RESIZE_COEF_SCALE - u);
         int V1 = rint(INTER_RESIZE_COEF_SCALE - v);
 
-        WT data0 = convertToWT(loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset))));
-        WT data1 = convertToWT(loadpix(srcptr + mad24(y, src_step, mad24(x_, TSIZE, src_offset))));
-        WT data2 = convertToWT(loadpix(srcptr + mad24(y_, src_step, mad24(x, TSIZE, src_offset))));
-        WT data3 = convertToWT(loadpix(srcptr + mad24(y_, src_step, mad24(x_, TSIZE, src_offset))));
+        WT data0 = CONVERT_TO_WT(loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset))));
+        WT data1 = CONVERT_TO_WT(loadpix(srcptr + mad24(y, src_step, mad24(x_, TSIZE, src_offset))));
+        WT data2 = CONVERT_TO_WT(loadpix(srcptr + mad24(y_, src_step, mad24(x, TSIZE, src_offset))));
+        WT data3 = CONVERT_TO_WT(loadpix(srcptr + mad24(y_, src_step, mad24(x_, TSIZE, src_offset))));
 
         WT val = mul24((WT)mul24(U1, V1), data0) + mul24((WT)mul24(U, V1), data1) +
                    mul24((WT)mul24(U1, V), data2) + mul24((WT)mul24(U, V), data3);
 
-        T uval = convertToDT((val + (1<<(CAST_BITS-1)))>>CAST_BITS);
+        T uval = CONVERT_TO_DT((val + (1<<(CAST_BITS-1)))>>CAST_BITS);
 #else
         float u1 = 1.f - u;
         float v1 = 1.f - v;
-        WT data0 = convertToWT(loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset))));
-        WT data1 = convertToWT(loadpix(srcptr + mad24(y, src_step, mad24(x_, TSIZE, src_offset))));
-        WT data2 = convertToWT(loadpix(srcptr + mad24(y_, src_step, mad24(x, TSIZE, src_offset))));
-        WT data3 = convertToWT(loadpix(srcptr + mad24(y_, src_step, mad24(x_, TSIZE, src_offset))));
+        WT data0 = CONVERT_TO_WT(loadpix(srcptr + mad24(y, src_step, mad24(x, TSIZE, src_offset))));
+        WT data1 = CONVERT_TO_WT(loadpix(srcptr + mad24(y, src_step, mad24(x_, TSIZE, src_offset))));
+        WT data2 = CONVERT_TO_WT(loadpix(srcptr + mad24(y_, src_step, mad24(x, TSIZE, src_offset))));
+        WT data3 = CONVERT_TO_WT(loadpix(srcptr + mad24(y_, src_step, mad24(x_, TSIZE, src_offset))));
 
-        T uval = convertToDT((u1 * v1) * data0 + (u * v1) * data1 + (u1 * v) * data2 + (u * v) * data3);
+        T uval = CONVERT_TO_DT((u1 * v1) * data0 + (u * v1) * data1 + (u1 * v) * data2 + (u * v) * data3);
 #endif
         storepix(uval, dstptr + mad24(dy, dst_step, mad24(dx, TSIZE, dst_offset)));
     }
@@ -311,11 +311,11 @@ __kernel void resizeAREA_FAST(__global const uchar * src, int src_step, int src_
             for (int px = 0; px < XSCALE; ++px)
             {
                 int x = min(sx + px, src_cols - 1);
-                sum += convertToWTV(loadpix(src + src_index + x*TSIZE));
+                sum += CONVERT_TO_WTV(loadpix(src + src_index + x*TSIZE));
             }
         }
 
-        storepix(convertToT(convertToWT2V(sum) * (WT2V)(SCALE)), dst + mad24(dx, TSIZE, dst_index));
+        storepix(CONVERT_TO_T(CONVERT_TO_WT2V(sum) * (WT2V)(SCALE)), dst + mad24(dx, TSIZE, dst_index));
     }
 }
 
@@ -357,12 +357,12 @@ __kernel void resizeAREA(__global const uchar * src, int src_step, int src_offse
             for (int sx = sx0, xk = xk0; sx <= sx1; ++sx, ++xk)
             {
                 WTV alpha = (WTV)(xalpha_tab[xk]);
-                buf += convertToWTV(loadpix(src + mad24(sx, TSIZE, src_index))) * alpha;
+                buf += CONVERT_TO_WTV(loadpix(src + mad24(sx, TSIZE, src_index))) * alpha;
             }
             sum += buf * beta;
         }
 
-        storepix(convertToT(sum), dst + mad24(dx, TSIZE, dst_index));
+    storepix(CONVERT_TO_T(sum), dst + mad24(dx, TSIZE, dst_index));
     }
 }
 

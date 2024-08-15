@@ -184,8 +184,9 @@ public class FaceDetectActivity extends CameraActivity implements CvCameraViewLi
 
         mRgba = inputFrame.rgba();
 
-        if (mInputSize == null) {
-            mInputSize = new Size(Math.round(mRgba.cols()/mScale), Math.round(mRgba.rows()/mScale));
+        Size inputSize = new Size(Math.round(mRgba.cols()/mScale), Math.round(mRgba.rows()/mScale));
+        if (mInputSize == null || !mInputSize.equals(inputSize)) {
+            mInputSize = inputSize;
             mFaceDetector.setInputSize(mInputSize);
         }
 

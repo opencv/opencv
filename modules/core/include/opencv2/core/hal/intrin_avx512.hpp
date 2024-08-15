@@ -506,12 +506,12 @@ inline v_float64x8 v_reinterpret_as_f64(const v_float32x16& a)
 { return v_float64x8(_mm512_castps_pd(a.val)); }
 
 // FP16
-inline v_float32x16 v512_load_expand(const float16_t* ptr)
+inline v_float32x16 v512_load_expand(const hfloat* ptr)
 {
     return v_float32x16(_mm512_cvtph_ps(_mm256_loadu_si256((const __m256i*)ptr)));
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x16& a)
+inline void v_pack_store(hfloat* ptr, const v_float32x16& a)
 {
     __m256i ah = _mm512_cvtps_ph(a.val, 0);
     _mm256_storeu_si256((__m256i*)ptr, ah);

@@ -260,7 +260,7 @@ const tensorflow::AttrValue& getLayerAttr(const tensorflow::NodeDef &layer, cons
     return layer.attr().at(name);
 }
 
-#if defined(__GNUC__) && (__GNUC__ == 13)
+#if defined(__GNUC__) && (__GNUC__ >= 13)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdangling-reference"
 #endif
@@ -2300,6 +2300,12 @@ void TFImporter::parseSoftmax(tensorflow::GraphDef& net, const tensorflow::NodeD
     CV_CheckGT(num_inputs, 0, "");
     if (hasLayerAttr(layer, "axis"))
         layerParams.set("axis", getLayerAttr(layer, "axis").i());
+    // if tf version is 2.x, use axis -1 as default
+    else if(netBin.has_versions() && (int)netBin.versions().producer() >= 2)
+        layerParams.set("axis", -1);
+    // else use axis 1 as default
+    else
+        layerParams.set("axis", 1);
 
     int id = dstNet.addLayer(name, "Softmax", layerParams);
     layer_id[name] = id;

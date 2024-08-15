@@ -564,6 +564,12 @@ public:
     /** @copybrief getGamma @see getGamma */
     CV_WRAP virtual void setGamma(float val) = 0;
 
+    /** @brief Norm value shift for robust penalizer
+    @see setEpsilon */
+    CV_WRAP virtual float getEpsilon() const = 0;
+    /** @copybrief getEpsilon @see getEpsilon */
+    CV_WRAP virtual void setEpsilon(float val) = 0;
+
     /** @brief Creates an instance of VariationalRefinement
     */
     CV_WRAP static Ptr<VariationalRefinement> create();
@@ -644,6 +650,12 @@ public:
     CV_WRAP virtual float getVariationalRefinementGamma() const = 0;
     /** @copybrief getVariationalRefinementGamma @see getVariationalRefinementGamma */
     CV_WRAP virtual void setVariationalRefinementGamma(float val) = 0;
+
+    /** @brief Norm value shift for robust penalizer
+    @see setVariationalRefinementEpsilon */
+    CV_WRAP virtual float getVariationalRefinementEpsilon() const = 0;
+    /** @copybrief getVariationalRefinementEpsilon @see getVariationalRefinementEpsilon */
+    CV_WRAP virtual void setVariationalRefinementEpsilon(float val) = 0;
 
 
     /** @brief Whether to use mean-normalization of patches when computing patch distance. It is turned on
@@ -908,6 +920,7 @@ public:
         CV_PROP_RW int target;
         CV_PROP_RW Scalar meanvalue;
         CV_PROP_RW Scalar stdvalue;
+        CV_PROP_RW float tracking_score_threshold;
     };
 
     /** @brief Constructor

@@ -129,7 +129,7 @@ The sample code that we will explain can be downloaded from
 Explanation
 -----------
 
-#### Load an image:
+### Load an image:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp load
@@ -143,7 +143,7 @@ Explanation
 @snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py load
 @end_toggle
 
-#### Detect the edges of the image by using a Canny detector:
+### Detect the edges of the image by using a Canny detector:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp edge_detection
@@ -160,7 +160,7 @@ Explanation
 Now we will apply the Hough Line Transform. We will explain how to use both OpenCV functions
 available for this purpose.
 
-#### Standard Hough Line Transform:
+### Standard Hough Line Transform:
 First, you apply the Transform:
 
 @add_toggle_cpp
@@ -199,7 +199,7 @@ And then you display the result by drawing the lines.
 @snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py draw_lines
 @end_toggle
 
-#### Probabilistic Hough Line Transform
+### Probabilistic Hough Line Transform
 First you apply the transform:
 
 @add_toggle_cpp
@@ -242,7 +242,7 @@ And then you display the result by drawing the lines.
 @snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py draw_lines_p
 @end_toggle
 
-#### Display the original image and the detected lines:
+### Display the original image and the detected lines:
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp imshow
@@ -256,7 +256,7 @@ And then you display the result by drawing the lines.
 @snippet samples/python/tutorial_code/ImgTrans/HoughLine/hough_lines.py imshow
 @end_toggle
 
-#### Wait until the user exits the program
+### Wait until the user exits the program
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgTrans/houghlines.cpp exit

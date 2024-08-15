@@ -342,7 +342,13 @@ int QRCodeEncoderImpl::versionAuto(const std::string& input_str)
         return -1;
     }
 
-    const auto tmp_version = findVersionCapacity((int)payload_tmp.size(), ecc_level, possible_version);
+    int nbits = static_cast<int>(payload_tmp.size());
+
+    // Extra info for structure's position, total and parity + mode of final message
+    if (mode_type == MODE_STRUCTURED_APPEND)
+        nbits += 4 + 4 + 8 + 4;
+
+    const auto tmp_version = findVersionCapacity(nbits, ecc_level, possible_version);
 
     return tmp_version;
 }
@@ -365,7 +371,7 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
     auto string_itr = input.begin();
     for (int i = struct_num; i > 0; --i)
     {
-        sequence_num = (uint8_t) i;
+        sequence_num = (uint8_t) (struct_num - i);
         size_t segment_begin = string_itr - input.begin();
         size_t segment_end = (input.end() - string_itr) / i;
 
@@ -1356,6 +1362,7 @@ private:
     void decodeByte(String& result);
     void decodeECI(String& result);
     void decodeKanji(String& result);
+    void decodeStructuredAppend(String& result);
 };
 
 QRCodeDecoder::~QRCodeDecoder()
@@ -1746,6 +1753,11 @@ void QRCodeDecoderImpl::decodeSymbols(String& result) {
             decodeECI(result);
         else if (currMode == QRCodeEncoder::EncodeMode::MODE_KANJI)
             decodeKanji(result);
+        else if (currMode == QRCodeEncoder::EncodeMode::MODE_STRUCTURED_APPEND) {
+            sequence_num = static_cast<uint8_t>(bitstream.next(4));
+            total_num = static_cast<uint8_t>(1 + bitstream.next(4));
+            parity = static_cast<uint8_t>(bitstream.next(8));
+        }
         else
             CV_Error(Error::StsNotImplemented, format("mode %d", currMode));
     }

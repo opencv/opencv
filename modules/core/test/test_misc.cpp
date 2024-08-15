@@ -8,10 +8,8 @@
 
 #include <opencv2/core/utils/fp_control_utils.hpp>
 
-#ifdef CV_CXX11
 #include <chrono>
 #include <thread>
-#endif
 
 namespace opencv_test { namespace {
 
@@ -282,9 +280,7 @@ public:
             // FP state is not supported
             // no checks
         }
-#ifdef CV_CXX11
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-#endif
     }
 
     cv::details::FPDenormalsModeState base_state;

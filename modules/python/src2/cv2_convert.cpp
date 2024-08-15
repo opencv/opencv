@@ -56,7 +56,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     if(!o || o == Py_None)
     {
         if( !m.data )
-            m.allocator = &g_numpyAllocator;
+            m.allocator = &GetNumpyAllocator();
         return true;
     }
 
@@ -173,7 +173,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     CV_LOG_DEBUG(NULL, "Incoming ndarray '" << info.name << "': ndims=" << ndims << "  _sizes=" << pycv_dumpArray(_sizes, ndims) << "  _strides=" << pycv_dumpArray(_strides, ndims));
 
-    bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
+    bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX && !info.nd_mat;
     if (pyopencv_Mat_TypePtr && PyObject_TypeCheck(o, pyopencv_Mat_TypePtr))
     {
         bool wrapChannels = false;
@@ -298,14 +298,14 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 #endif
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
-    m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
+    m.u = GetNumpyAllocator().allocate(o, ndims, size, type, step);
     m.addref();
 
     if( !needcopy )
     {
         Py_INCREF(o);
     }
-    m.allocator = &g_numpyAllocator;
+    m.allocator = &GetNumpyAllocator();
 
     return true;
 }
@@ -316,9 +316,9 @@ PyObject* pyopencv_from(const cv::Mat& m)
     if( !m.data )
         Py_RETURN_NONE;
     cv::Mat temp, *p = (cv::Mat*)&m;
-    if(!p->u || p->allocator != &g_numpyAllocator)
+    if(!p->u || p->allocator != &GetNumpyAllocator())
     {
-        temp.allocator = &g_numpyAllocator;
+        temp.allocator = &GetNumpyAllocator();
         ERRWRAP2(m.copyTo(temp));
         p = &temp;
     }
@@ -701,6 +701,18 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
         return true;
     }
     std::string str;
+
+#if ((PY_VERSION_HEX >= 0x03060000) && !defined(Py_LIMITED_API)) || (Py_LIMITED_API >= 0x03060000)
+    if (info.pathlike)
+    {
+        obj = PyOS_FSPath(obj);
+        if (PyErr_Occurred())
+        {
+            failmsg("Expected '%s' to be a str or path-like object", info.name);
+            return false;
+        }
+    }
+#endif
     if (getUnicodeString(obj, str))
     {
         value = str;
@@ -783,6 +795,21 @@ template<>
 PyObject* pyopencv_from(const Rect& r)
 {
     return Py_BuildValue("(iiii)", r.x, r.y, r.width, r.height);
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, Rect2f& r, const ArgInfo& info)
+{
+    RefWrapper<float> values[] = {
+        RefWrapper<float>(r.x), RefWrapper<float>(r.y),
+        RefWrapper<float>(r.width), RefWrapper<float>(r.height)};
+    return parseSequence(obj, values, info);
+}
+
+template<>
+PyObject* pyopencv_from(const Rect2f& r)
+{
+    return Py_BuildValue("(ffff)", r.x, r.y, r.width, r.height);
 }
 
 template<>
@@ -950,6 +977,21 @@ template<>
 PyObject* pyopencv_from(const Point2d& p)
 {
     return Py_BuildValue("(dd)", p.x, p.y);
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, Point3i& p, const ArgInfo& info)
+{
+    RefWrapper<int> values[] = {RefWrapper<int>(p.x),
+                                RefWrapper<int>(p.y),
+                                RefWrapper<int>(p.z)};
+    return parseSequence(obj, values, info);
+}
+
+template<>
+PyObject* pyopencv_from(const Point3i& p)
+{
+    return Py_BuildValue("(iii)", p.x, p.y, p.z);
 }
 
 template<>

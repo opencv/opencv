@@ -21,7 +21,7 @@ static void checkOperandsExist(const Mat& a)
 {
     if (a.empty())
     {
-        CV_Error(CV_StsBadArg, "Matrix operand is an empty matrix.");
+        CV_Error(cv::Error::StsBadArg, "Matrix operand is an empty matrix.");
     }
 }
 
@@ -29,7 +29,7 @@ static void checkOperandsExist(const Mat& a, const Mat& b)
 {
     if (a.empty() || b.empty())
     {
-        CV_Error(CV_StsBadArg, "One or more matrix operands are empty.");
+        CV_Error(cv::Error::StsBadArg, "One or more matrix operands are empty.");
     }
 }
 
@@ -1456,7 +1456,7 @@ void MatOp_Bin::assign(const MatExpr& e, Mat& m, int _type) const
     else if( e.flags == 'a' && !e.b.data )
         cv::absdiff(e.a, e.s, dst);
     else
-        CV_Error(CV_StsError, "Unknown operation");
+        CV_Error(cv::Error::StsError, "Unknown operation");
 
     if( dst.data != m.data )
         dst.convertTo(m, _type);
@@ -1691,7 +1691,7 @@ void MatOp_Initializer::assign(const MatExpr& e, Mat& m, int _type) const
     else if( e.flags == '1' )
         m = Scalar(e.alpha);
     else
-        CV_Error(CV_StsError, "Invalid matrix initializer type");
+        CV_Error(cv::Error::StsError, "Invalid matrix initializer type");
 }
 
 void MatOp_Initializer::multiply(const MatExpr& e, double s, MatExpr& res) const

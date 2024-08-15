@@ -85,50 +85,8 @@ It provides easy interface to:
         created. Then, a new button is attached to it.
 
     See below the example used to generate the figure:
-    @code
-        int main(int argc, char *argv[])
-        {
 
-            int value = 50;
-            int value2 = 0;
-
-
-            namedWindow("main1",WINDOW_NORMAL);
-            namedWindow("main2",WINDOW_AUTOSIZE | WINDOW_GUI_NORMAL);
-            createTrackbar( "track1", "main1", &value, 255,  NULL);
-
-            String nameb1 = "button1";
-            String nameb2 = "button2";
-
-            createButton(nameb1,callbackButton,&nameb1,QT_CHECKBOX,1);
-            createButton(nameb2,callbackButton,NULL,QT_CHECKBOX,0);
-            createTrackbar( "track2", NULL, &value2, 255, NULL);
-            createButton("button5",callbackButton1,NULL,QT_RADIOBOX,0);
-            createButton("button6",callbackButton2,NULL,QT_RADIOBOX,1);
-
-            setMouseCallback( "main2",on_mouse,NULL );
-
-            Mat img1 = imread("files/flower.jpg");
-            VideoCapture video;
-            video.open("files/hockey.avi");
-
-            Mat img2,img3;
-
-            while( waitKey(33) != 27 )
-            {
-                img1.convertTo(img2,-1,1,value);
-                video >> img3;
-
-                imshow("main1",img2);
-                imshow("main2",img3);
-            }
-
-            destroyAllWindows();
-
-            return 0;
-        }
-    @endcode
-
+    @include highgui_qt.cpp
 
     @defgroup highgui_winrt WinRT support
 
@@ -139,36 +97,34 @@ It provides easy interface to:
 
     See below the example used to generate the figure:
     @code
-        void sample_app::MainPage::ShowWindow()
+    void sample_app::MainPage::ShowWindow()
+    {
+        static cv::String windowName("sample");
+        cv::winrt_initContainer(this->cvContainer);
+        cv::namedWindow(windowName); // not required
+
+        cv::Mat image = cv::imread("Assets/sample.jpg");
+        cv::Mat converted = cv::Mat(image.rows, image.cols, CV_8UC4);
+        cv::cvtColor(image, converted, COLOR_BGR2BGRA);
+        cv::imshow(windowName, converted); // this will create window if it hasn't been created before
+
+        int state = 42;
+        cv::TrackbarCallback callback = [](int pos, void* userdata)
         {
-            static cv::String windowName("sample");
-            cv::winrt_initContainer(this->cvContainer);
-            cv::namedWindow(windowName); // not required
-
-            cv::Mat image = cv::imread("Assets/sample.jpg");
-            cv::Mat converted = cv::Mat(image.rows, image.cols, CV_8UC4);
-            cv::cvtColor(image, converted, COLOR_BGR2BGRA);
-            cv::imshow(windowName, converted); // this will create window if it hasn't been created before
-
-            int state = 42;
-            cv::TrackbarCallback callback = [](int pos, void* userdata)
-            {
-                if (pos == 0) {
-                    cv::destroyWindow(windowName);
-                }
-            };
-            cv::TrackbarCallback callbackTwin = [](int pos, void* userdata)
-            {
-                if (pos >= 70) {
-                    cv::destroyAllWindows();
-                }
-            };
-            cv::createTrackbar("Sample trackbar", windowName, &state, 100, callback);
-            cv::createTrackbar("Twin brother", windowName, &state, 100, callbackTwin);
-        }
+            if (pos == 0) {
+                cv::destroyWindow(windowName);
+            }
+        };
+        cv::TrackbarCallback callbackTwin = [](int pos, void* userdata)
+        {
+            if (pos >= 70) {
+                cv::destroyAllWindows();
+            }
+        };
+        cv::createTrackbar("Sample trackbar", windowName, &state, 100, callback);
+        cv::createTrackbar("Twin brother", windowName, &state, 100, callbackTwin);
+    }
     @endcode
-
-    @defgroup highgui_c C API
 @}
 */
 
@@ -329,6 +285,15 @@ The function destroyAllWindows destroys all of the opened HighGUI windows.
  */
 CV_EXPORTS_W void destroyAllWindows();
 
+
+/** @brief HighGUI backend used.
+
+The function returns HighGUI backend name used: could be COCOA, GTK2/3, QT, WAYLAND or WIN32.
+Returns empty string if there is no available UI backend.
+ */
+CV_EXPORTS_W const std::string currentUIFramework();
+
+
 CV_EXPORTS_W int startWindowThread();
 
 /** @brief Similar to #waitKey, but returns full key code.
@@ -401,6 +366,11 @@ for image display). **waitKey(25)** will display a frame and wait approximately 
 press (suitable for displaying a video frame-by-frame). To remove the window, use cv::destroyWindow.
 
 @note [__Windows Backend Only__] Pressing Ctrl+C will copy the image to the clipboard. Pressing Ctrl+S will show a dialog to save the image.
+@note [__Wayland Backend Only__] Supoorting format is extended.
+-   If the image is 8-bit signed, the pixels are biased by 128. That is, the
+    value range [-128,127] is mapped to [0,255].
+-   If the image is 16-bit signed, the pixels are divided by 256 and biased by 128. That is, the
+    value range [-32768,32767] is mapped to [0,255].
 
 @param winname Name of the window.
 @param mat Image to be shown.
@@ -429,6 +399,8 @@ CV_EXPORTS_W void resizeWindow(const String& winname, const cv::Size& size);
 @param winname Name of the window.
 @param x The new x-coordinate of the window.
 @param y The new y-coordinate of the window.
+
+@note [__Wayland Backend Only__] This function is not supported by the Wayland protocol limitation.
  */
 CV_EXPORTS_W void moveWindow(const String& winname, int x, int y);
 
@@ -439,6 +411,8 @@ The function setWindowProperty enables changing properties of a window.
 @param winname Name of the window.
 @param prop_id Window property to edit. The supported operation flags are: (cv::WindowPropertyFlags)
 @param prop_value New value of the window property. The supported flags are: (cv::WindowFlags)
+
+@note [__Wayland Backend Only__] This function is not supported.
  */
 CV_EXPORTS_W void setWindowProperty(const String& winname, int prop_id, double prop_value);
 
@@ -456,6 +430,8 @@ The function getWindowProperty returns properties of a window.
 @param prop_id Window property to retrieve. The following operation flags are available: (cv::WindowPropertyFlags)
 
 @sa setWindowProperty
+
+@note [__Wayland Backend Only__] This function is not supported.
  */
 CV_EXPORTS_W double getWindowProperty(const String& winname, int prop_id);
 
@@ -466,6 +442,8 @@ The function getWindowImageRect returns the client screen coordinates, width and
 @param winname Name of the window.
 
 @sa resizeWindow moveWindow
+
+@note [__Wayland Backend Only__] This function is not supported by the Wayland protocol limitation.
  */
 CV_EXPORTS_W Rect getWindowImageRect(const String& winname);
 

@@ -2,7 +2,7 @@
 ; jidctfst.asm - fast integer IDCT (SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2016, D. R. Commander.
+; Copyright (C) 2016, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -56,7 +56,7 @@ F_1_613 equ (F_2_613 - (1 << CONST_BITS))       ; FIX(2.613125930) - FIX(1)
 %define PRE_MULTIPLY_SCALE_BITS  2
 %define CONST_SHIFT              (16 - PRE_MULTIPLY_SCALE_BITS - CONST_BITS)
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_idct_ifast_sse2)
 
 EXTN(jconst_idct_ifast_sse2):
@@ -67,7 +67,7 @@ PW_MF1613      times 8  dw -F_1_613 << CONST_SHIFT
 PW_F1082       times 8  dw  F_1_082 << CONST_SHIFT
 PB_CENTERJSAMP times 16 db  CENTERJSAMPLE
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -101,13 +101,13 @@ EXTN(jsimd_idct_ifast_sse2):
     mov         [esp], eax
     mov         ebp, esp                     ; ebp = aligned ebp
     lea         esp, [wk(0)]
-    pushpic     ebx
+    PUSHPIC     ebx
 ;   push        ecx                     ; unused
 ;   push        edx                     ; need not be preserved
     push        esi
     push        edi
 
-    get_GOT     ebx                     ; get GOT address
+    GET_GOT     ebx                     ; get GOT address
 
     ; ---- Pass 1: process columns from input.
 
@@ -155,7 +155,7 @@ EXTN(jsimd_idct_ifast_sse2):
     movdqa      XMMWORD [wk(0)], xmm2   ; wk(0)=col1
     movdqa      XMMWORD [wk(1)], xmm0   ; wk(1)=col3
     jmp         near .column_end
-    alignx      16, 7
+    ALIGNX      16, 7
 %endif
 .columnDCT:
 
@@ -490,7 +490,7 @@ EXTN(jsimd_idct_ifast_sse2):
     pop         esi
 ;   pop         edx                     ; need not be preserved
 ;   pop         ecx                     ; unused
-    poppic      ebx
+    POPPIC      ebx
     mov         esp, ebp                ; esp <- aligned ebp
     pop         esp                     ; esp <- original ebp
     pop         ebp

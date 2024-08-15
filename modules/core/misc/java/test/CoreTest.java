@@ -947,11 +947,11 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testMahalanobis() {
-        Mat src = new Mat(matSize, matSize, CvType.CV_32F);
+        Mat src = new Mat(matSize + 1, matSize, CvType.CV_32F);
         Core.randu(src, -128, 128);
 
         Mat covar = new Mat(matSize, matSize, CvType.CV_32F);
-        Mat mean = new Mat(1, matSize, CvType.CV_32F);
+        Mat mean = new Mat(1, matSize + 1, CvType.CV_32F);
         Core.calcCovarMatrix(src, covar, mean, Core.COVAR_ROWS | Core.COVAR_NORMAL, CvType.CV_32F);
         covar = covar.inv();
 
@@ -962,9 +962,8 @@ public class CoreTest extends OpenCVTestCase {
 
         assertEquals(0.0, d);
 
-        // Bug: https://github.com/opencv/opencv/issues/24348
-        // d = Core.Mahalanobis(line1, line2, covar);
-        // assertTrue(d > 0.0);
+        d = Core.Mahalanobis(line1, line2, covar);
+        assertTrue(d > 0.0);
     }
 
     public void testMax() {

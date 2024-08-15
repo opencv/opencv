@@ -39,6 +39,7 @@
 
 #include "common.hpp"
 #include "vtransform.hpp"
+#include "vround_helper.hpp"
 
 #include <cstring>
 #include <cfloat>
@@ -51,13 +52,6 @@ namespace {
 
 #ifdef CAROTENE_NEON
 
-inline float32x4_t vroundq(const float32x4_t& v)
-{
-    const int32x4_t signMask = vdupq_n_s32(1 << 31), half = vreinterpretq_s32_f32(vdupq_n_f32(0.5f));
-    float32x4_t v_addition = vreinterpretq_f32_s32(vorrq_s32(half, vandq_s32(signMask, vreinterpretq_s32_f32(v))));
-    return vaddq_f32(v, v_addition);
-}
-
 template <typename T>
 inline T divSaturateQ(const T &v1, const T &v2, const float scale)
 {
@@ -69,17 +63,10 @@ inline T divSaturateQ(const T &v1, const T &v2, const float scale)
 }
 template <>
 inline int32x4_t divSaturateQ<int32x4_t>(const int32x4_t &v1, const int32x4_t &v2, const float scale)
-{ return vcvtq_s32_f32(vroundq(vmulq_f32(vmulq_n_f32(vcvtq_f32_s32(v1), scale), internal::vrecpq_f32(vcvtq_f32_s32(v2))))); }
+{ return internal::vroundq_s32_f32(vmulq_f32(vmulq_n_f32(vcvtq_f32_s32(v1), scale), internal::vrecpq_f32(vcvtq_f32_s32(v2)))); }
 template <>
 inline uint32x4_t divSaturateQ<uint32x4_t>(const uint32x4_t &v1, const uint32x4_t &v2, const float scale)
-{ return vcvtq_u32_f32(vroundq(vmulq_f32(vmulq_n_f32(vcvtq_f32_u32(v1), scale), internal::vrecpq_f32(vcvtq_f32_u32(v2))))); }
-
-inline float32x2_t vround(const float32x2_t& v)
-{
-    const int32x2_t signMask = vdup_n_s32(1 << 31), half = vreinterpret_s32_f32(vdup_n_f32(0.5f));
-    float32x2_t v_addition = vreinterpret_f32_s32(vorr_s32(half, vand_s32(signMask, vreinterpret_s32_f32(v))));
-    return vadd_f32(v, v_addition);
-}
+{ return internal::vroundq_u32_f32(vmulq_f32(vmulq_n_f32(vcvtq_f32_u32(v1), scale), internal::vrecpq_f32(vcvtq_f32_u32(v2)))); }
 
 template <typename T>
 inline T divSaturate(const T &v1, const T &v2, const float scale)
@@ -88,10 +75,10 @@ inline T divSaturate(const T &v1, const T &v2, const float scale)
 }
 template <>
 inline int32x2_t divSaturate<int32x2_t>(const int32x2_t &v1, const int32x2_t &v2, const float scale)
-{ return vcvt_s32_f32(vround(vmul_f32(vmul_n_f32(vcvt_f32_s32(v1), scale), internal::vrecp_f32(vcvt_f32_s32(v2))))); }
+{ return internal::vround_s32_f32(vmul_f32(vmul_n_f32(vcvt_f32_s32(v1), scale), internal::vrecp_f32(vcvt_f32_s32(v2)))); }
 template <>
 inline uint32x2_t divSaturate<uint32x2_t>(const uint32x2_t &v1, const uint32x2_t &v2, const float scale)
-{ return vcvt_u32_f32(vround(vmul_f32(vmul_n_f32(vcvt_f32_u32(v1), scale), internal::vrecp_f32(vcvt_f32_u32(v2))))); }
+{ return internal::vround_u32_f32(vmul_f32(vmul_n_f32(vcvt_f32_u32(v1), scale), internal::vrecp_f32(vcvt_f32_u32(v2)))); }
 
 
 template <typename T>
@@ -157,8 +144,8 @@ void div(const Size2D &size,
 
     if (scale == 0.0f ||
         (std::numeric_limits<T>::is_integer &&
-         (scale * std::numeric_limits<T>::max()) <  1.0f &&
-         (scale * std::numeric_limits<T>::max()) > -1.0f))
+         (scale * static_cast<float>(std::numeric_limits<T>::max())) <  1.0f &&
+         (scale * static_cast<float>(std::numeric_limits<T>::max())) > -1.0f))
     {
         for (size_t y = 0; y < size.height; ++y)
         {

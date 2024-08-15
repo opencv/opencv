@@ -558,7 +558,7 @@ public:
     //! returns the minimal up-right integer rectangle containing the rotated rectangle
     CV_WRAP Rect boundingRect() const;
     //! returns the minimal (exact) floating point rectangle containing the rotated rectangle, not intended for use with images
-    Rect_<float> boundingRect2f() const;
+    CV_WRAP Rect2f boundingRect2f() const;
     //! returns the rectangle mass center
     CV_PROP_RW Point2f center;
     //! returns width and height of the rectangle

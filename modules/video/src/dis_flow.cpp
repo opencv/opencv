@@ -67,6 +67,7 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
     float variational_refinement_alpha;
     float variational_refinement_gamma;
     float variational_refinement_delta;
+    float variational_refinement_epsilon;
     bool use_mean_normalization;
     bool use_spatial_propagation;
 
@@ -92,6 +93,8 @@ class DISOpticalFlowImpl CV_FINAL : public DISOpticalFlow
     void setVariationalRefinementDelta(float val) CV_OVERRIDE { variational_refinement_delta = val; }
     float getVariationalRefinementGamma() const CV_OVERRIDE { return variational_refinement_gamma; }
     void setVariationalRefinementGamma(float val) CV_OVERRIDE { variational_refinement_gamma = val; }
+    float getVariationalRefinementEpsilon() const CV_OVERRIDE { return variational_refinement_epsilon; }
+    void setVariationalRefinementEpsilon(float val) CV_OVERRIDE { variational_refinement_epsilon = val; }
 
     bool getUseMeanNormalization() const CV_OVERRIDE { return use_mean_normalization; }
     void setUseMeanNormalization(bool val) CV_OVERRIDE { use_mean_normalization = val; }
@@ -219,6 +222,7 @@ DISOpticalFlowImpl::DISOpticalFlowImpl()
     variational_refinement_alpha = 20.f;
     variational_refinement_gamma = 10.f;
     variational_refinement_delta = 5.f;
+    variational_refinement_epsilon = 0.01f;
 
     border_size = 16;
     use_mean_normalization = true;
@@ -306,6 +310,7 @@ void DISOpticalFlowImpl::prepareBuffers(Mat &I0, Mat &I1, Mat &flow, bool use_fl
             variational_refinement_processors[i]->setAlpha(variational_refinement_alpha);
             variational_refinement_processors[i]->setDelta(variational_refinement_delta);
             variational_refinement_processors[i]->setGamma(variational_refinement_gamma);
+            variational_refinement_processors[i]->setEpsilon(variational_refinement_epsilon);
             variational_refinement_processors[i]->setSorIterations(5);
             variational_refinement_processors[i]->setFixedPointIterations(variational_refinement_iter);
 
@@ -1274,6 +1279,7 @@ void DISOpticalFlowImpl::ocl_prepareBuffers(UMat &I0, UMat &I1, InputArray flow,
             variational_refinement_processors[i]->setAlpha(variational_refinement_alpha);
             variational_refinement_processors[i]->setDelta(variational_refinement_delta);
             variational_refinement_processors[i]->setGamma(variational_refinement_gamma);
+            variational_refinement_processors[i]->setEpsilon(variational_refinement_epsilon);
             variational_refinement_processors[i]->setSorIterations(5);
             variational_refinement_processors[i]->setFixedPointIterations(variational_refinement_iter);
 

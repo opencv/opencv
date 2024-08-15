@@ -307,7 +307,7 @@ void CV_MorphologyBaseTest::prepare_to_validation( int /*test_case_idx*/ )
             cvtest::add( dst, 1, src, -1, Scalar::all(0), dst, dst.type() );
         }
         else
-            CV_Error( CV_StsBadArg, "Unknown operation" );
+            CV_Error( cv::Error::StsBadArg, "Unknown operation" );
     }
 
     cvReleaseStructuringElement( &element );
@@ -470,7 +470,7 @@ void CV_DerivBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     int sameDepth = cvtest::randInt(rng) % 2;
     types[OUTPUT][0] = types[REF_OUTPUT][0] = sameDepth ? depth : CV_MAKETYPE(depth==CV_8U?CV_16S:CV_32F,1);
     _aperture_size = (cvtest::randInt(rng)%5)*2 - 1;
-    sizes[INPUT][1] = aperture_size = cvSize(_aperture_size, _aperture_size);
+    sizes[INPUT][1] = aperture_size = Size(_aperture_size, _aperture_size);
 }
 
 
@@ -519,21 +519,21 @@ void CV_SobelTest::get_test_array_types_and_sizes( int test_case_idx,
     }
 
     if( _aperture_size < 0 )
-        aperture_size = cvSize(3, 3);
+        aperture_size = Size(3, 3);
     else if( _aperture_size == 1 )
     {
         if( dx == 0 )
-            aperture_size = cvSize(1, 3);
+            aperture_size = Size(1, 3);
         else if( dy == 0 )
-            aperture_size = cvSize(3, 1);
+            aperture_size = Size(3, 1);
         else
         {
             _aperture_size = 3;
-            aperture_size = cvSize(3, 3);
+            aperture_size = Size(3, 3);
         }
     }
     else
-        aperture_size = cvSize(_aperture_size, _aperture_size);
+        aperture_size = Size(_aperture_size, _aperture_size);
 
     sizes[INPUT][1] = aperture_size;
     anchor.x = aperture_size.width / 2;
@@ -647,10 +647,10 @@ void CV_LaplaceTest::get_test_array_types_and_sizes( int test_case_idx,
     {
         if( _aperture_size < 0 )
             _aperture_size = 1;
-        aperture_size = cvSize(3, 3);
+        aperture_size = Size(3, 3);
     }
     else
-        aperture_size = cvSize(_aperture_size, _aperture_size);
+        aperture_size = Size(_aperture_size, _aperture_size);
 
     sizes[INPUT][1] = aperture_size;
     anchor.x = aperture_size.width / 2;
@@ -772,9 +772,8 @@ void CV_BlurTest::get_test_array_types_and_sizes( int test_case_idx,
 
 void CV_BlurTest::run_func()
 {
-    cvSmooth( inplace ? test_array[OUTPUT][0] : test_array[INPUT][0],
-              test_array[OUTPUT][0], normalize ? CV_BLUR : CV_BLUR_NO_SCALE,
-              aperture_size.width, aperture_size.height );
+    cv::boxFilter(inplace ? test_mat[OUTPUT][0] : test_mat[INPUT][0], test_mat[OUTPUT][0],
+                  test_mat[OUTPUT][0].type(), aperture_size, cv::Point(-1, -1), normalize, cv::BORDER_REPLICATE);
 }
 
 
@@ -1193,7 +1192,7 @@ CV_PyramidDownTest::CV_PyramidDownTest() : CV_PyramidBaseTest( true )
 
 void CV_PyramidDownTest::run_func()
 {
-    cvPyrDown( test_array[INPUT][0], test_array[OUTPUT][0], CV_GAUSSIAN_5x5 );
+    cv::pyrDown(test_mat[INPUT][0], test_mat[OUTPUT][0]);
 }
 
 
@@ -1576,7 +1575,7 @@ CV_PreCornerDetectTest::CV_PreCornerDetectTest() : CV_FeatureSelBaseTest( 1 )
 
 void CV_PreCornerDetectTest::run_func()
 {
-    cvPreCornerDetect( test_array[INPUT][0], test_array[OUTPUT][0], aperture_size );
+    cv::preCornerDetect( test_mat[INPUT][0], test_mat[OUTPUT][0], aperture_size, BORDER_REPLICATE );
 }
 
 
@@ -2379,5 +2378,177 @@ TEST(Imgproc, morphologyEx_small_input_22893)
 
     ASSERT_EQ(0, cvtest::norm(result, gold, NORM_INF));
 }
+
+TEST(Imgproc_sepFilter2D, identity)
+{
+    std::vector<uint8_t> kernelX{0, 0, 0, 1, 0, 0, 0};
+    std::vector<uint8_t> kernelY{0, 0, 1, 0, 0};
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, input.depth(), kernelX, kernelY);
+
+    EXPECT_EQ(0, cv::norm(result, input, NORM_INF));
+}
+
+TEST(Imgproc_sepFilter2D, shift)
+{
+    std::vector<float> kernelX{1, 0, 0};
+    std::vector<float> kernelY{0, 0, 1};
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, input.depth(), kernelX, kernelY);
+
+    int W = input.cols;
+    int H = input.rows;
+    Mat inputCrop = input(Range(1, H), Range(0, W - 1));
+    Mat resultCrop = result(Range(0, H - 1), Range(1, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    // Checking borders. Should be BORDER_REFLECT_101
+
+    inputCrop = input(Range(H - 2, H - 1), Range(0, W - 1));
+    resultCrop = result(Range(H - 1, H), Range(1, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    inputCrop = input(Range(1, H), Range(1, 2));
+    resultCrop = result(Range(0, H - 1), Range(0, 1));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    inputCrop = input(Range(H - 2, H - 1), Range(1, 2));
+    resultCrop = result(Range(H - 1, H), Range(0, 1));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+}
+
+TEST(Imgproc_sepFilter2D, zeroPadding)
+{
+    std::vector<int> kernelX{1, 0, 0};
+    std::vector<int> kernelY{0, 0, 1};
+    Point anchor(-1, -1);
+    double delta = 0;
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, input.depth(), kernelX, kernelY, anchor, delta, BORDER_CONSTANT);
+
+    int W = input.cols;
+    int H = input.rows;
+    Mat inputCrop = input(Range(1, H), Range(0, W - 1));
+    Mat resultCrop = result(Range(0, H - 1), Range(1, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    // Checking borders
+
+    resultCrop = result(Range(H - 1, H), Range(0, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, NORM_INF));
+
+    resultCrop = result(Range(0, H), Range(0, 1));
+    EXPECT_EQ(0, cv::norm(resultCrop, NORM_INF));
+}
+
+TEST(Imgproc_sepFilter2D, anchor)
+{
+    std::vector<float> kernelX{0, 1, 0};
+    std::vector<float> kernelY{0, 1, 0};
+    Point anchor(2, 0);
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, input.depth(), kernelX, kernelY, anchor);
+
+    int W = input.cols;
+    int H = input.rows;
+    Mat inputCrop = input(Range(1, H), Range(0, W - 1));
+    Mat resultCrop = result(Range(0, H - 1), Range(1, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    // Checking borders. Should be BORDER_REFLECT_101
+
+    inputCrop = input(Range(H - 2, H - 1), Range(0, W - 1));
+    resultCrop = result(Range(H - 1, H), Range(1, W));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    inputCrop = input(Range(1, H), Range(1, 2));
+    resultCrop = result(Range(0, H - 1), Range(0, 1));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+
+    inputCrop = input(Range(H - 2, H - 1), Range(1, 2));
+    resultCrop = result(Range(H - 1, H), Range(0, 1));
+    EXPECT_EQ(0, cv::norm(resultCrop, inputCrop, NORM_INF));
+}
+
+TEST(Imgproc_sepFilter2D, delta)
+{
+    std::vector<float> kernelX{0, 0.5, 0};
+    std::vector<float> kernelY{0, 1, 0};
+    Point anchor(1, 1);
+    double delta = 5;
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, input.depth(), kernelX, kernelY, anchor, delta);
+
+    Mat gt = input / 2 + delta;
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+typedef testing::TestWithParam<int> Imgproc_sepFilter2D_outTypes;
+TEST_P(Imgproc_sepFilter2D_outTypes, simple)
+{
+    int outputType = GetParam();
+    std::vector<float> kernelX{0, 0.5, 0};
+    std::vector<float> kernelY{0, 0.5, 0};
+    Point anchor(1, 1);
+    double delta = 5;
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::sepFilter2D(input, result, outputType, kernelX, kernelY, anchor, delta);
+
+    input.convertTo(input, outputType);
+    Mat gt = input / 4 + delta;
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_sepFilter2D_outTypes,
+    testing::Values(CV_16S, CV_32F, CV_64F),
+);
+
+typedef testing::TestWithParam<int> Imgproc_sepFilter2D_types;
+TEST_P(Imgproc_sepFilter2D_types, simple)
+{
+    int outputType = GetParam();
+    std::vector<float> kernelX{0, 0.5, 0};
+    std::vector<float> kernelY{0, 0.5, 0};
+    Point anchor(1, 1);
+    double delta = 5;
+
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    input.convertTo(input, outputType);
+    Mat result;
+
+    cv::sepFilter2D(input, result, outputType, kernelX, kernelY, anchor, delta);
+
+    Mat gt = input / 4 + delta;
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_sepFilter2D_types,
+    testing::Values(CV_16S, CV_32F, CV_64F),
+);
 
 }} // namespace

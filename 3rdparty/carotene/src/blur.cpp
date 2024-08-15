@@ -41,6 +41,7 @@
 
 #include "common.hpp"
 #include "saturate_cast.hpp"
+#include "vround_helper.hpp"
 
 namespace CAROTENE_NS {
 
@@ -198,7 +199,6 @@ void blur3x3(const Size2D &size, s32 cn,
 //#define FLOAT_VARIANT_1_9
 #ifdef FLOAT_VARIANT_1_9
     float32x4_t v1_9 = vdupq_n_f32 (1.0/9.0);
-    float32x4_t v0_5 = vdupq_n_f32 (.5);
 #else
     const int16x8_t vScale = vmovq_n_s16(3640);
 #endif
@@ -283,8 +283,8 @@ void blur3x3(const Size2D &size, s32 cn,
                 uint32x4_t tres2 = vmovl_u16(vget_high_u16(t0));
                 float32x4_t vf1 = vmulq_f32(v1_9, vcvtq_f32_u32(tres1));
                 float32x4_t vf2 = vmulq_f32(v1_9, vcvtq_f32_u32(tres2));
-                tres1 = vcvtq_u32_f32(vaddq_f32(vf1, v0_5));
-                tres2 = vcvtq_u32_f32(vaddq_f32(vf2, v0_5));
+                tres1 = internal::vroundq_u32_f32(vf1);
+                tres2 = internal::vroundq_u32_f32(vf2);
                 t0 = vcombine_u16(vmovn_u32(tres1),vmovn_u32(tres2));
                 vst1_u8(drow + x - 8, vmovn_u16(t0));
 #else
@@ -445,8 +445,8 @@ void blur3x3(const Size2D &size, s32 cn,
                 uint32x4_t tres2 = vmovl_u16(vget_high_u16(t0));
                 float32x4_t vf1 = vmulq_f32(v1_9, vcvtq_f32_u32(tres1));
                 float32x4_t vf2 = vmulq_f32(v1_9, vcvtq_f32_u32(tres2));
-                tres1 = vcvtq_u32_f32(vaddq_f32(vf1, v0_5));
-                tres2 = vcvtq_u32_f32(vaddq_f32(vf2, v0_5));
+                tres1 = internal::vroundq_u32_f32(vf1);
+                tres2 = internal::vroundq_u32_f32(vf2);
                 t0 = vcombine_u16(vmovn_u32(tres1),vmovn_u32(tres2));
                 vst1_u8(drow + x - 8, vmovn_u16(t0));
 #else
@@ -508,7 +508,6 @@ void blur5x5(const Size2D &size, s32 cn,
 #define FLOAT_VARIANT_1_25
 #ifdef FLOAT_VARIANT_1_25
     float32x4_t v1_25 = vdupq_n_f32 (1.0f/25.0f);
-    float32x4_t v0_5 = vdupq_n_f32 (.5f);
 #else
     const int16x8_t vScale = vmovq_n_s16(1310);
 #endif
@@ -752,8 +751,8 @@ void blur5x5(const Size2D &size, s32 cn,
             uint32x4_t tres2 = vmovl_u16(vget_high_u16(t0));
             float32x4_t vf1 = vmulq_f32(v1_25, vcvtq_f32_u32(tres1));
             float32x4_t vf2 = vmulq_f32(v1_25, vcvtq_f32_u32(tres2));
-            tres1 = vcvtq_u32_f32(vaddq_f32(vf1, v0_5));
-            tres2 = vcvtq_u32_f32(vaddq_f32(vf2, v0_5));
+            tres1 = internal::vroundq_u32_f32(vf1);
+            tres2 = internal::vroundq_u32_f32(vf2);
             t0 = vcombine_u16(vmovn_u32(tres1),vmovn_u32(tres2));
             vst1_u8(drow + x - 8, vmovn_u16(t0));
 #else

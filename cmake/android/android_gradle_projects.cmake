@@ -2,7 +2,7 @@
 set(ANDROID_GRADLE_PLUGIN_VERSION "7.3.1" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
-set(KOTLIN_PLUGIN_VERSION "1.5.20" CACHE STRING "Kotlin Plugin version")
+set(KOTLIN_PLUGIN_VERSION "1.8.20" CACHE STRING "Kotlin Plugin version")
 message(STATUS "Kotlin Plugin version: ${KOTLIN_PLUGIN_VERSION}")
 
 if(BUILD_KOTLIN_EXTENSIONS)
@@ -16,7 +16,7 @@ endif()
 set(GRADLE_VERSION "7.6.3" CACHE STRING "Gradle version")
 message(STATUS "Gradle version: ${GRADLE_VERSION}")
 
-set(ANDROID_COMPILE_SDK_VERSION "26" CACHE STRING "Android compileSdkVersion")
+set(ANDROID_COMPILE_SDK_VERSION "31" CACHE STRING "Android compileSdkVersion")
 if(ANDROID_NATIVE_API_LEVEL GREATER 21)
   set(ANDROID_MIN_SDK_VERSION "${ANDROID_NATIVE_API_LEVEL}" CACHE STRING "Android minSdkVersion")
 else()
@@ -89,15 +89,11 @@ else()
   ocv_update(OPENCV_ANDROID_NAMESPACE_DECLARATION "")
 endif()
 
-# set android gradle java version in build.gradle and set aidl config
 if(NOT (ANDROID_GRADLE_PLUGIN_VERSION VERSION_LESS "8.0.0"))
   # AGP-8.0 requires a minimum JDK version of JDK17
   ocv_update(ANDROID_GRADLE_JAVA_VERSION_INIT "17")
-  # Enable aidl configuration for OpenCV compile with AGP-8.0
-  ocv_update(ANDROID_GRADLE_BUILD_FEATURE_AIDL "buildFeatures { aidl true }")
 else()
   ocv_update(ANDROID_GRADLE_JAVA_VERSION_INIT "1_8")
-  ocv_update(ANDROID_GRADLE_BUILD_FEATURE_AIDL "")
 endif()
 
 set(ANDROID_GRADLE_JAVA_VERSION "${ANDROID_GRADLE_JAVA_VERSION_INIT}" CACHE STRING "Android Gradle Java version")
@@ -145,6 +141,8 @@ if (gradle.opencv_source == 'sdk_path') {
 ")
 
 ocv_check_environment_variables(OPENCV_GRADLE_VERBOSE_OPTIONS)
+ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
+separate_arguments(OPENCV_GRADLE_VERBOSE_OPTIONS UNIX_COMMAND "${OPENCV_GRADLE_VERBOSE_OPTIONS}")
 
 macro(add_android_project target path)
   get_filename_component(__dir "${path}" NAME)
@@ -179,7 +177,6 @@ include ':${__dir}'
   if (BUILD_ANDROID_EXAMPLES)
     # build apk
     set(APK_FILE "${ANDROID_BUILD_BASE_DIR}/${__dir}/build/outputs/apk/release/${__dir}-${ANDROID_ABI}-release-unsigned.apk")
-    ocv_update(OPENCV_GRADLE_VERBOSE_OPTIONS "-i")
     add_custom_command(
         OUTPUT "${APK_FILE}" "${OPENCV_DEPHELPER}/android_sample_${__dir}"
         COMMAND ./gradlew ${OPENCV_GRADLE_VERBOSE_OPTIONS} "${__dir}:assemble"

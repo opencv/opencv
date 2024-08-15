@@ -83,7 +83,7 @@ void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point
                 points2f[i] = keypoints[idx].pt;
             else
             {
-                CV_Error( CV_StsBadArg, "keypointIndexes has element < 0. TODO: process this case" );
+                CV_Error( cv::Error::StsBadArg, "keypointIndexes has element < 0. TODO: process this case" );
                 //points2f[i] = Point2f(-1, -1);
             }
         }

@@ -82,8 +82,8 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceDetectorYN> create(const String& model,
-                                              const String& config,
+    CV_WRAP static Ptr<FaceDetectorYN> create(CV_WRAP_FILE_PATH const String& model,
+                                              CV_WRAP_FILE_PATH const String& config,
                                               const Size& input_size,
                                               float score_threshold = 0.9f,
                                               float nms_threshold = 0.3f,
@@ -128,23 +128,23 @@ public:
      */
     enum DisType { FR_COSINE=0, FR_NORM_L2=1 };
 
-    /** @brief Aligning image to put face on the standard position
+    /** @brief Aligns detected face with the source input image and crops it
      *  @param src_img input image
-     *  @param face_box the detection result used for indicate face in input image
+     *  @param face_box the detected face result from the input image
      *  @param aligned_img output aligned image
      */
     CV_WRAP virtual void alignCrop(InputArray src_img, InputArray face_box, OutputArray aligned_img) const = 0;
 
-    /** @brief Extracting face feature from aligned image
+    /** @brief Extracts face feature from aligned image
      *  @param aligned_img input aligned image
      *  @param face_feature output face feature
      */
     CV_WRAP virtual void feature(InputArray aligned_img, OutputArray face_feature) = 0;
 
-    /** @brief Calculating the distance between two face features
+    /** @brief Calculates the distance between two face features
      *  @param face_feature1 the first input feature
      *  @param face_feature2 the second input feature of the same size and the same type as face_feature1
-     *  @param dis_type defining the similarity with optional values "FR_OSINE" or "FR_NORM_L2"
+     *  @param dis_type defines how to calculate the distance between two face features with optional values "FR_COSINE" or "FR_NORM_L2"
      */
     CV_WRAP virtual double match(InputArray face_feature1, InputArray face_feature2, int dis_type = FaceRecognizerSF::FR_COSINE) const = 0;
 
@@ -154,7 +154,7 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& model, const String& config, int backend_id = 0, int target_id = 0);
+    CV_WRAP static Ptr<FaceRecognizerSF> create(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config, int backend_id = 0, int target_id = 0);
 };
 
 //! @}

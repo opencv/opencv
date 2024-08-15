@@ -55,30 +55,29 @@ This module includes photo processing algorithms
     @defgroup photo_denoise Denoising
     @defgroup photo_hdr HDR imaging
 
-This section describes high dynamic range imaging algorithms namely tonemapping, exposure alignment,
-camera calibration with multiple exposures and exposure fusion.
+    This section describes high dynamic range imaging algorithms namely tonemapping, exposure alignment,
+    camera calibration with multiple exposures and exposure fusion.
 
     @defgroup photo_decolor Contrast Preserving Decolorization
 
-Useful links:
+    Useful links:
 
-http://www.cse.cuhk.edu.hk/leojia/projects/color2gray/index.html
+    http://www.cse.cuhk.edu.hk/leojia/projects/color2gray/index.html
 
     @defgroup photo_clone Seamless Cloning
 
-Useful links:
+    Useful links:
 
-https://www.learnopencv.com/seamless-cloning-using-opencv-python-cpp
+    https://www.learnopencv.com/seamless-cloning-using-opencv-python-cpp
 
     @defgroup photo_render Non-Photorealistic Rendering
 
-Useful links:
+    Useful links:
 
-http://www.inf.ufrgs.br/~eslgastal/DomainTransform
+    http://www.inf.ufrgs.br/~eslgastal/DomainTransform
 
-https://www.learnopencv.com/non-photorealistic-rendering-using-opencv-python-c/
+    https://www.learnopencv.com/non-photorealistic-rendering-using-opencv-python-c/
 
-    @defgroup photo_c C API
 @}
   */
 
@@ -210,7 +209,7 @@ size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
-imgToDenoiseIndex - temporalWindowSize / 2 from srcImgs will be used to denoise
+imgToDenoiseIndex + temporalWindowSize / 2 from srcImgs will be used to denoise
 srcImgs[imgToDenoiseIndex] image.
 @param dst Output image with the same size and type as srcImgs images.
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.
@@ -237,7 +236,7 @@ have the same type and size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
-imgToDenoiseIndex - temporalWindowSize / 2 from srcImgs will be used to denoise
+imgToDenoiseIndex + temporalWindowSize / 2 from srcImgs will be used to denoise
 srcImgs[imgToDenoiseIndex] image.
 @param dst Output image with the same size and type as srcImgs images.
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.
@@ -264,7 +263,7 @@ size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
-imgToDenoiseIndex - temporalWindowSize / 2 from srcImgs will be used to denoise
+imgToDenoiseIndex + temporalWindowSize / 2 from srcImgs will be used to denoise
 srcImgs[imgToDenoiseIndex] image.
 @param dst Output image with the same size and type as srcImgs images.
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.

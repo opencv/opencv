@@ -60,13 +60,13 @@ void createConcentricSpheresTestSet( int num_samples, int num_features, int num_
                                      OutputArray _samples, OutputArray _responses)
 {
     if( num_samples < 1 )
-        CV_Error( CV_StsBadArg, "num_samples parameter must be positive" );
+        CV_Error( cv::Error::StsBadArg, "num_samples parameter must be positive" );
 
     if( num_features < 1 )
-        CV_Error( CV_StsBadArg, "num_features parameter must be positive" );
+        CV_Error( cv::Error::StsBadArg, "num_features parameter must be positive" );
 
     if( num_classes < 1 )
-        CV_Error( CV_StsBadArg, "num_classes parameter must be positive" );
+        CV_Error( cv::Error::StsBadArg, "num_classes parameter must be positive" );
 
     int i, cur_class;
 

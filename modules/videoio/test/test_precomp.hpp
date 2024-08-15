@@ -6,6 +6,7 @@
 
 #include <sstream>
 #include <algorithm>
+#include <numeric>
 
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/ocl_test.hpp"

@@ -14,7 +14,7 @@
 #define CONV_NR_FP32 28
 
 // The FP16 can only be supported by ARM64 and with FP16 FMA supported.
-#if CV_FP16 // check FP16 FMA.
+#if CV_FP16 && CV_TRY_NEON_FP16 // check FP16 FMA.
 #define CONV_ARM_FP16 1
 #endif
 
@@ -62,10 +62,10 @@ struct FastConv
     float* getWeights();
     float* getWeightsWino();
 
-    std::vector<float16_t> weightsBuf_FP16;
-    std::vector<float16_t> weightsWinoBuf_FP16;
-    float16_t* getWeightsFP16();
-    float16_t* getWeightsWinoFP16();
+    std::vector<hfloat> weightsBuf_FP16;
+    std::vector<hfloat> weightsWinoBuf_FP16;
+    hfloat* getWeightsFP16();
+    hfloat* getWeightsWinoFP16();
 
     int conv_type;
     int conv_dim;  // Flag for conv1d, conv2d, or conv3d.

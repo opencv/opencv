@@ -84,7 +84,6 @@ class Builder:
             "-DPYTHON_DEFAULT_EXECUTABLE=%s" % sys.executable,
                "-DENABLE_PIC=FALSE", # To workaround emscripten upstream backend issue https://github.com/emscripten-core/emscripten/issues/8761
                "-DCMAKE_BUILD_TYPE=Release",
-               "-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file(),
                "-DCPU_BASELINE=''",
                "-DCMAKE_INSTALL_PREFIX=/usr/local",
                "-DCPU_DISPATCH=''",
@@ -206,6 +205,8 @@ class Builder:
                "-DBUILD_PERF_TESTS=ON"]
         if self.options.cmake_option:
             cmd += self.options.cmake_option
+        if not self.options.cmake_option or all(["-DCMAKE_TOOLCHAIN_FILE" not in opt for opt in self.options.cmake_option]):
+            cmd.append("-DCMAKE_TOOLCHAIN_FILE='%s'" % self.get_toolchain_file())
         if self.options.build_doc:
             cmd.append("-DBUILD_DOCS=ON")
         else:
@@ -252,9 +253,10 @@ class Builder:
         if self.options.simd:
             flags += "-msimd128 "
         if self.options.build_flags:
-            flags += self.options.build_flags
+            flags += self.options.build_flags + " "
         if self.options.webnn:
             flags += "-s USE_WEBNN=1 "
+        flags += "-s EXPORTED_FUNCTIONS=\"['_malloc', '_free']\""
         return flags
 
     def config(self):
@@ -286,9 +288,11 @@ if __name__ == "__main__":
     opencv_dir = os.path.abspath(os.path.join(SCRIPT_DIR, '../..'))
     emscripten_dir = None
     if "EMSDK" in os.environ:
-        emscripten_dir = os.environ["EMSDK"] + "/upstream/emscripten/"
+        emscripten_dir = os.path.join(os.environ["EMSDK"], "upstream", "emscripten")
+    elif "EMSCRIPTEN" in os.environ:
+        emscripten_dir = os.environ["EMSCRIPTEN"]
     else:
-        log.warning("EMSDK environment variable is not available. Please properly activate Emscripten SDK and consider using 'emcmake' launcher")
+        log.warning("EMSCRIPTEN/EMSDK environment variable is not available. Please properly activate Emscripten SDK and consider using 'emcmake' launcher")
 
     parser = argparse.ArgumentParser(description='Build OpenCV.js by Emscripten')
     parser.add_argument("build_dir", help="Building directory (and output)")
@@ -317,7 +321,8 @@ if __name__ == "__main__":
                         help="Specify configuration file with own list of exported into JS functions")
     parser.add_argument('--webnn', action="store_true", help="Enable WebNN Backend")
 
-    args = parser.parse_args()
+    transformed_args = ["--cmake_option=%s".format(arg) if arg[:2] == "-D" else arg for arg in sys.argv[1:]]
+    args = parser.parse_args(transformed_args)
 
     log.debug("Args: %s", args)
 
@@ -327,7 +332,7 @@ if __name__ == "__main__":
         del os.environ['EMMAKEN_JUST_CONFIGURE']  # avoid linker errors with NODERAWFS message then using 'emcmake' launcher
 
     if args.emscripten_dir is None:
-        log.error("Cannot get Emscripten path, please use 'emcmake' launcher or specify it either by EMSDK environment variable or --emscripten_dir option.")
+        log.error("Cannot get Emscripten path, please use 'emcmake' launcher or specify it either by EMSCRIPTEN/EMSDK environment variable or --emscripten_dir option.")
         sys.exit(-1)
 
     builder = Builder(args)

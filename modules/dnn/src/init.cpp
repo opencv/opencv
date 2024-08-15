@@ -102,6 +102,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(LRN,            LRNLayer);
     CV_DNN_REGISTER_LAYER_CLASS(InnerProduct,   InnerProductLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Gemm,           GemmLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(MatMul,         MatMulLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Softmax,        SoftmaxLayer);
     CV_DNN_REGISTER_LAYER_CLASS(SoftMax,        SoftmaxLayer);  // For compatibility. See https://github.com/opencv/opencv/issues/16877
     CV_DNN_REGISTER_LAYER_CLASS(MVN,            MVNLayer);
@@ -161,6 +162,12 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(LayerNormalization, LayerNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Expand,         ExpandLayer);
     CV_DNN_REGISTER_LAYER_CLASS(InstanceNormalization, InstanceNormLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Attention,      AttentionLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(GroupNormalization, GroupNormLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(DepthToSpace,   DepthToSpaceLayer)
+    CV_DNN_REGISTER_LAYER_CLASS(SpaceToDepth,   SpaceToDepthLayer)
+    CV_DNN_REGISTER_LAYER_CLASS(DepthToSpaceInt8, DepthToSpaceLayer)
+    CV_DNN_REGISTER_LAYER_CLASS(SpaceToDepthInt8, SpaceToDepthLayer)
 
     CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);
@@ -209,6 +216,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(SigmoidInt8,      ActivationLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(TanHInt8,         ActivationLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(SwishInt8,        ActivationLayerInt8);
+    CV_DNN_REGISTER_LAYER_CLASS(HardSwishInt8,    ActivationLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(MishInt8,         ActivationLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(ELUInt8,          ActivationLayerInt8);
     CV_DNN_REGISTER_LAYER_CLASS(BNLLInt8,         ActivationLayerInt8);

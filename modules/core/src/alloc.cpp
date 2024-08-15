@@ -70,7 +70,7 @@ namespace cv {
 
 static void* OutOfMemoryError(size_t size)
 {
-    CV_Error_(CV_StsNoMem, ("Failed to allocate %llu bytes", (unsigned long long)size));
+    CV_Error_(cv::Error::StsNoMem, ("Failed to allocate %llu bytes", (unsigned long long)size));
 }
 
 CV_EXPORTS cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics();

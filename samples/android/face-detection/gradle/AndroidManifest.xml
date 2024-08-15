@@ -11,7 +11,6 @@
                   android:exported="true"
                   android:name="FaceDetectActivity"
                   android:label="@string/app_name"
-                  android:screenOrientation="landscape"
                   android:configChanges="keyboardHidden|orientation">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

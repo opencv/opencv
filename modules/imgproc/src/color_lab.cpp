@@ -4424,7 +4424,7 @@ bool oclCvtColorBGR2Luv( InputArray _src, OutputArray _dst, int bidx, bool srgb)
     OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
 
     if(!h.createKernel("BGR2Luv", ocl::imgproc::color_lab_oclsrc,
-                       format("-D dcn=3 -D bidx=%d%s", bidx, srgb ? " -D SRGB" : "")))
+                       format("-D DCN=3 -D BIDX=%d%s", bidx, srgb ? " -D SRGB" : "")))
     {
         return false;
     }
@@ -4492,7 +4492,7 @@ bool oclCvtColorBGR2Lab( InputArray _src, OutputArray _dst, int bidx, bool srgb 
     OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_32F> > h(_src, _dst, 3);
 
     if(!h.createKernel("BGR2Lab", ocl::imgproc::color_lab_oclsrc,
-                       format("-D dcn=3 -D bidx=%d%s", bidx, srgb ? " -D SRGB" : "")))
+                       format("-D DCN=3 -D BIDX=%d%s", bidx, srgb ? " -D SRGB" : "")))
     {
         return false;
     }
@@ -4587,7 +4587,7 @@ bool oclCvtColorLab2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bo
     OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("Lab2BGR", ocl::imgproc::color_lab_oclsrc,
-                       format("-D dcn=%d -D bidx=%d%s", dcn, bidx, srgb ? " -D SRGB" : "")))
+                       format("-D DCN=%d -D BIDX=%d%s", dcn, bidx, srgb ? " -D SRGB" : "")))
     {
         return false;
     }
@@ -4638,7 +4638,7 @@ bool oclCvtColorLuv2BGR(InputArray _src, OutputArray _dst, int dcn, int bidx, bo
     OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("Luv2BGR", ocl::imgproc::color_lab_oclsrc,
-                       format("-D dcn=%d -D bidx=%d%s", dcn, bidx, srgb ? " -D SRGB" : "")))
+                       format("-D DCN=%d -D BIDX=%d%s", dcn, bidx, srgb ? " -D SRGB" : "")))
     {
         return false;
     }
@@ -4692,7 +4692,7 @@ bool oclCvtColorBGR2XYZ( InputArray _src, OutputArray _dst, int bidx )
     OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
 
     if(!h.createKernel("RGB2XYZ", ocl::imgproc::color_lab_oclsrc,
-                       format("-D dcn=3 -D bidx=%d", bidx)))
+                       format("-D DCN=3 -D BIDX=%d", bidx)))
     {
         return false;
     }
@@ -4740,7 +4740,7 @@ bool oclCvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
     OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("XYZ2RGB", ocl::imgproc::color_lab_oclsrc,
-                       format("-D dcn=%d -D bidx=%d", dcn, bidx)))
+                       format("-D DCN=%d -D BIDX=%d", dcn, bidx)))
     {
         return false;
     }

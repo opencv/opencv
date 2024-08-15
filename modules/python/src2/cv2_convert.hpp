@@ -156,6 +156,33 @@ struct PyOpenCV_Converter
     }
 };
 
+// There is conflict between "uint64_t" and "size_t".
+// They are the same type on some 32-bit platforms.
+template<typename T>
+struct PyOpenCV_Converter
+    < T, typename std::enable_if< std::is_same<uint64_t, T>::value && !std::is_same<uint64_t, size_t>::value >::type >
+{
+    static inline PyObject* from(const uint64_t& value)
+    {
+        return PyLong_FromUnsignedLongLong(value);
+    }
+
+    static inline bool to(PyObject* obj, uint64_t& value, const ArgInfo& info)
+    {
+        CV_UNUSED(info);
+        if(!obj || obj == Py_None)
+            return true;
+        if(PyInt_Check(obj))
+            value = (uint64_t)PyInt_AsUnsignedLongLongMask(obj);
+        else if(PyLong_Check(obj))
+            value = (uint64_t)PyLong_AsUnsignedLongLong(obj);
+        else
+            return false;
+        return value != (uint64_t)-1 || !PyErr_Occurred();
+    }
+};
+
+
 // --- uchar
 template<> bool pyopencv_to(PyObject* obj, uchar& value, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const uchar& value);
@@ -187,6 +214,8 @@ template<> PyObject* pyopencv_from(const cv::Size_<float>& sz);
 // --- Rect
 template<> bool pyopencv_to(PyObject* obj, cv::Rect& r, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Rect& r);
+template<> bool pyopencv_to(PyObject* obj, cv::Rect2f& r, const ArgInfo& info);
+template<> PyObject* pyopencv_from(const cv::Rect2f& r);
 template<> bool pyopencv_to(PyObject* obj, cv::Rect2d& r, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Rect2d& r);
 
@@ -205,6 +234,8 @@ template<> bool pyopencv_to(PyObject* obj, cv::Point2f& p, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Point2f& p);
 template<> bool pyopencv_to(PyObject* obj, cv::Point2d& p, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Point2d& p);
+template<> bool pyopencv_to(PyObject* obj, cv::Point3i& p, const ArgInfo& info);
+template<> PyObject* pyopencv_from(const cv::Point3i& p);
 template<> bool pyopencv_to(PyObject* obj, cv::Point3f& p, const ArgInfo& info);
 template<> PyObject* pyopencv_from(const cv::Point3f& p);
 template<> bool pyopencv_to(PyObject* obj, cv::Point3d& p, const ArgInfo& info);
@@ -309,20 +340,36 @@ static bool pyopencv_to_generic_vec(PyObject* obj, std::vector<Tp>& value, const
     {
         return true;
     }
-    if (!PySequence_Check(obj))
+    if (info.nd_mat && PyArray_Check(obj))
     {
-        failmsg("Can't parse '%s'. Input argument doesn't provide sequence protocol", info.name);
-        return false;
-    }
-    const size_t n = static_cast<size_t>(PySequence_Size(obj));
-    value.resize(n);
-    for (size_t i = 0; i < n; i++)
-    {
-        SafeSeqItem item_wrap(obj, i);
-        if (!pyopencv_to(item_wrap.item, value[i], info))
+        /*
+            If obj is marked as nd mat and of array type, it is parsed to a single
+            mat in the target vector to avoid being split into multiple mats
+        */
+        value.resize(1);
+        if (!pyopencv_to(obj, value.front(), info))
         {
-            failmsg("Can't parse '%s'. Sequence item with index %lu has a wrong type", info.name, i);
+            failmsg("Can't parse '%s'. Array item has a wrong type", info.name);
             return false;
+        }
+    }
+    else // parse as sequence
+    {
+        if (!PySequence_Check(obj))
+        {
+            failmsg("Can't parse '%s'. Input argument doesn't provide sequence protocol", info.name);
+            return false;
+        }
+        const size_t n = static_cast<size_t>(PySequence_Size(obj));
+        value.resize(n);
+        for (size_t i = 0; i < n; i++)
+        {
+            SafeSeqItem item_wrap(obj, i);
+            if (!pyopencv_to(item_wrap.item, value[i], info))
+            {
+                failmsg("Can't parse '%s'. Sequence item with index %lu has a wrong type", info.name, i);
+                return false;
+            }
         }
     }
     return true;

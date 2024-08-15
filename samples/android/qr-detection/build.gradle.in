@@ -19,7 +19,6 @@ android {
     sourceSets {
         main {
             java.srcDirs = @ANDROID_SAMPLE_JAVA_PATH@
-            aidl.srcDirs = @ANDROID_SAMPLE_JAVA_PATH@
             res.srcDirs = @ANDROID_SAMPLE_RES_PATH@
             manifest.srcFile '@ANDROID_SAMPLE_MANIFEST_PATH@'
         }
@@ -30,7 +29,7 @@ dependencies {
     //implementation fileTree(dir: 'libs', include: ['*.jar'])
     if (gradle.opencv_source == "sdk_path") {
         implementation project(':opencv')
-    } else if (gradle.opencv_source == "maven_local" || gradle.opencv_source == "maven_cenral") {
+    } else if (gradle.opencv_source == "maven_local" || gradle.opencv_source == "maven_central") {
         implementation 'org.opencv:opencv:@OPENCV_VERSION_PLAIN@'
     }
 }
