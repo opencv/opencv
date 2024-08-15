@@ -144,8 +144,8 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        if (inputs_arr.depth() == CV_16F)
+	int depth = inputs_arr.depth();
+        if (depth == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
