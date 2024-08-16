@@ -5,10 +5,46 @@ from tqdm import tqdm
 from functools import partial
 from copy import deepcopy
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
-            cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_CUDA)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD,
-            cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
+## let use write description of the script and general information how to use it
+
+'''
+This sample proposes experimental inpainting sample using Latent Diffusion Model (LDM) for inpainting.
+Most of the script is based on the code from the official repository of the LDM model: https://github.com/CompVis/latent-diffusion
+
+Current limitations of the script:
+    - Slow diffusion sampling
+    - Not exact reproduction of the results from the original repository (due to issues related deviation in covolution operation.
+    See issue for more details: https://github.com/opencv/opencv/pull/25973)
+
+Steps for running the script:
+
+1. Firstly generate ONNX graph of the Latent Diffusion Model.
+
+    Generate the using this [repo](https://github.com/Abdurrahheem/latent-diffusion/tree/ash/export2onnx) and follow instructions below
+
+    - git clone https://github.com/Abdurrahheem/latent-diffusion.git
+    - cd latent-diffusion
+    - conda env create -f environment.yaml
+    - conda activate ldm
+    - wget -O models/ldm/inpainting_big/last.ckpt https://heibox.uni-heidelberg.de/f/4d9ac7ea40c64582b7c9/?dl=1
+    - python -m scripts.inpaint.py --indir data/inpainting_examples/ --outdir outputs/inpainting_results --export=True
+
+2. Build opencv (preferebly with CUDA support enabled
+3. Run the script
+
+    - cd opencv/samples/dnn
+    - python ldm_inpainting.py -e=<path-to-InpaintEncoder.onnx file> -d=<path-to-InpaintDecoder.onnx file> -df=<path-to-LatenDiffusion.onnx file> -i=<path-to-image>
+
+Right after the last command you will be promted with image. You can click on left mouse botton and starting selection a region you would like to be inpainted (delited).
+Once you finish marking the region, click on left mouse botton again and press esc botton on your keyboard. The inpainting proccess will start.
+
+Note: If you are running it on CPU it might take a large chank of time.
+Also make sure to have abount 15GB of RAM to make proccess faster (other wise swapping will ckick in and everything will be slower)
+'''
+
+
+backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_CUDA)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_CUDA)
 
 parser = argparse.ArgumentParser(description='Use this script to run inpainting using Latent Diffusion Model',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -27,18 +63,14 @@ parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, 
                         help='Choose one of target computation devices: '
                              '%d: CPU target (by default), '
                              '%d: OpenCL, '
-                             '%d: OpenCL fp16 (half-float precision), '
-                             '%d: NCS2 VPU, '
-                             '%d: HDDL VPU, '
-                             '%d: CUDA, '
-                             '%d: CUDA fp16 (half-float preprocess)'% targets)
+                             '%d: CUDA,' % targets)
 
 def make_batch(image, mask):
     image = image.astype(np.float32)/255.0
-    image = image[None].transpose(0,3,1,2)
+    image = image[np.axis, ...].transpose(0,3,1,2)
 
     mask = mask.astype(np.float32)/255.0
-    mask = mask[None,None]
+    mask = mask[np.axis, np.axis, ...]
     mask[mask < 0.5] = 0
     mask[mask >= 0.5] = 1
 
@@ -108,7 +140,7 @@ def make_beta_schedule(schedule, n_timestep, linear_start=1e-4, linear_end=2e-2,
     return betas
 
 class DDIMSampler(object):
-    def __init__(self, model, schedule="linear", ddpm_num_timesteps=1000, **kwargs):
+    def __init__(self, model, schedule="linear", ddpm_num_timesteps=1000):
         super().__init__()
         self.model = model
         self.ddpm_num_timesteps = ddpm_num_timesteps
