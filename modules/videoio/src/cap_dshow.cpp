@@ -1382,14 +1382,11 @@ int videoInput::listDevices(bool silent){
                  // Find the description or friendly name.
                 VARIANT varName;
                 VariantInit(&varName);
-                hr = pPropBag->Read(L"Description", &varName, 0);
+                hr = pPropBag->Read(L"FriendlyName", &varName, 0);
 
-                if (FAILED(hr)) hr = pPropBag->Read(L"FriendlyName", &varName, 0);
+                if (FAILED(hr)) hr = pPropBag->Read(L"Description", &varName, 0);
 
                 if (SUCCEEDED(hr)){
-
-                    hr = pPropBag->Read(L"FriendlyName", &varName, 0);
-
                     int count = 0;
                     int maxLen = sizeof(deviceNames[0])/sizeof(deviceNames[0][0]) - 2;
                     while( varName.bstrVal[count] != 0x00 && count < maxLen) {
