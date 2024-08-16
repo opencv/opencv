@@ -1002,6 +1002,10 @@ TEST_P(Test_ONNX_layers, MatMul_init_bcast)
     testONNXModels("matmul_init_bcast");
 }
 
+TEST_P(Test_ONNX_layers, MatMul_bcast_3dx2d) {
+    testONNXModels("matmul_bcast");
+}
+
 TEST_P(Test_ONNX_layers, MatMulAdd)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
