@@ -316,7 +316,7 @@ public:
 
     static std::string exception_msg()
     {
-        return "InvalidSource sucessfuly failed!";
+        return "InvalidSource successfully failed!";
     }
 
     bool pull(cv::gapi::wip::Data& d) override {
@@ -355,7 +355,7 @@ GAPI_OCV_KERNEL(GThrowExceptionKernel, GThrowExceptionOp)
 {
     static std::string exception_msg()
     {
-        return "GThrowExceptionKernel sucessfuly failed";
+        return "GThrowExceptionKernel successfully failed";
     }
 
     static void run(const cv::Mat&, cv::Mat&)
