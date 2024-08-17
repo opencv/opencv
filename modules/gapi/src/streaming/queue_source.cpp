@@ -20,9 +20,8 @@ namespace wip {
 
 class QueueSourceBase::Priv {
 public:
-    explicit Priv(const cv::GMetaArg &meta) {
-        m = meta;
-        halted = false;
+    explicit Priv(const cv::GMetaArg &meta)
+        : m(meta), halted(false) {
     }
 
     cv::GMetaArg m;
