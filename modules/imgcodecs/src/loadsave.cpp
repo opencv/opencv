@@ -154,6 +154,7 @@ struct ImageCodecInitializer
 
     #ifdef HAVE_IMGCODEC_GIF
         decoders.push_back( makePtr<GifDecoder>() );
+        encoders.push_back( makePtr<GifEncoder>() );
     #endif
     #ifdef HAVE_AVIF
         decoders.push_back(makePtr<AvifDecoder>());
