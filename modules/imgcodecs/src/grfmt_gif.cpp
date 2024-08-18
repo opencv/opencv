@@ -530,7 +530,7 @@ bool GifEncoder::writeFrames(std::vector<Mat>& img_vec,
                 dithering = std::min(std::max(params[i + 1], -1), 3);
                 break;
             case IMWRITE_GIF_TRANSPARENCY:
-                criticalTransparency = std::min(std::max(params[i + 1], 0), 255);
+                criticalTransparency = (uchar)std::min(std::max(params[i + 1], 0), 255);
                 break;
             case IMWRITE_GIF_COLORTABLE:
                 localColorTableSize = std::min(std::max(params[i + 1], 0), 1);
@@ -619,7 +619,7 @@ bool GifEncoder::lzwEncode() {
     int lzwCodeSize = lzwMinCodeSize + 1;
     // add clear code to the head of the output stream
     int bitLeft = lzwCodeSize;
-    size_t output = 1 << lzwMinCodeSize;
+    size_t output = (uchar)1 << lzwMinCodeSize;
 
     lzwTable.allocate((1 << 12) * 256);
     // clear lzwTable
@@ -852,7 +852,7 @@ void GifEncoder::close() {
 GifEncoder::OctreeColorQuant::OctreeNode::OctreeNode() {
     this->isLeaf = false;
     level = 0;
-    index = -1;
+    index = 0;
     for (auto &i: children) {
         i = nullptr;
     }
