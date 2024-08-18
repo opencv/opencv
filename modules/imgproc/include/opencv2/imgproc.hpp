@@ -236,7 +236,7 @@ enum MorphShapes {
     MORPH_CROSS   = 1, //!< a cross-shaped structuring element:
                        //!< \f[E_{ij} = \begin{cases} 1 & \texttt{if } {i=\texttt{anchor.y } {or } {j=\texttt{anchor.x}}} \\0 & \texttt{otherwise} \end{cases}\f]
     MORPH_ELLIPSE = 2 //!< an elliptic structuring element, that is, a filled ellipse inscribed
-                      //!< into the rectangle Rect(0, 0, esize.width, 0.esize.height)
+                      //!< into the rectangle Rect(0, 0, esize.width, esize.height)
 };
 
 //! @} imgproc_filter
@@ -3726,10 +3726,11 @@ floating-point.
 @param code color space conversion code (see #ColorConversionCodes).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
 channels is derived automatically from src and code.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @see @ref imgproc_color_conversions
  */
-CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0 );
+CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief Converts an image from one color space to another where the source image is
 stored in two planes.
@@ -3748,8 +3749,9 @@ This function only supports YUV420 to RGB conversion as of now.
 - #COLOR_YUV2RGB_NV21
 - #COLOR_YUV2BGRA_NV21
 - #COLOR_YUV2RGBA_NV21
+@param hint Implementation modfication flags. See #AlgorithmHint
 */
-CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code );
+CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief main function for all demosaicing processes
 
