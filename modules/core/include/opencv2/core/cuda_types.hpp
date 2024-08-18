@@ -124,6 +124,8 @@ namespace cv
 
             int cols;
             int rows;
+
+            __CV_CUDA_HOST_DEVICE__ [[nodiscard]] Size size() const { return {cols, rows}; }
         };
 
         typedef PtrStepSz<unsigned char> PtrStepSzb;
