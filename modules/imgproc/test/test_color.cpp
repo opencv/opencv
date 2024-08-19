@@ -1879,13 +1879,8 @@ TEST(Imgproc_ColorBayer2Gray, regression_25823)
 
     cvtColor(src, dst, COLOR_BayerBG2GRAY);
 
-    for (int i = 0; i < dst.rows; ++i)
-    {
-        for (int j = 0; j < dst.cols; ++j)
-        {
-            EXPECT_EQ(1, dst.at<uchar>(i, j));
-        }
-    }
+    Mat gold(n, n, CV_8UC1, Scalar(1));
+    EXPECT_EQ(0, cv::norm(dst, gold, NORM_INF));
 }
 
 TEST(Imgproc_ColorBayerVNG, regression)
