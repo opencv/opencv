@@ -622,7 +622,7 @@ static void PostOutputs(::ov::InferRequest             &infer_request,
 
     ctx->eptr = std::move(eptr);
     for (auto i : ade::util::iota(ctx->uu.params.num_out)) {
-        // NB: Copy data back only if execution finished sucessfuly
+        // NB: Copy data back only if execution finished successfully
         // and inference only mode is disabled.
         // Otherwise just post outputs to maintain streaming executor contract.
         if (!ctx->eptr && !ctx->getOptions().inference_only) {
