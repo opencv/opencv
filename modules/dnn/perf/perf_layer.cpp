@@ -1081,6 +1081,9 @@ struct Layer_TopK : public TestBaseWithParam<tuple<Backend, Target>> {
 PERF_TEST_P_(Layer_TopK, TopK_2D_Axis0) {
     test_layer(input_shape_2d, input_shape_2d[0] / 2, 0);
 }
+PERF_TEST_P_(Layer_TopK, TopK_2D_Axis0_K5) {
+    test_layer(input_shape_2d, 5, 0);
+}
 PERF_TEST_P_(Layer_TopK, TopK_2D_Axis1) {
     test_layer(input_shape_2d, input_shape_2d[1] / 2, 1);
 }
