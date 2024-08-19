@@ -1398,6 +1398,8 @@ int videoInput::listDevices(bool silent){
                     if(!silent) DebugPrintOut("SETUP: %i) %s\n",deviceCounter, deviceNames[deviceCounter]);
                 }
 
+                VariantClear(&varName);
+
                 pPropBag->Release();
                 pPropBag = NULL;
 
