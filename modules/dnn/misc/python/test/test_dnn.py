@@ -549,8 +549,8 @@ class dnn_test(NewOpenCVTests):
     def test_bool_operator(self):
         n = self.find_dnn_file('dnn/onnx/models/and_op.onnx')
 
-        x = np.random.randint(0, 2, [5], dtype=np.bool)
-        y = np.random.randint(0, 2, [5], dtype=np.bool)
+        x = np.random.randint(0, 2, [5], dtype=np.bool_)
+        y = np.random.randint(0, 2, [5], dtype=np.bool_)
         o = x & y
 
         net = cv.dnn.readNet(n)
