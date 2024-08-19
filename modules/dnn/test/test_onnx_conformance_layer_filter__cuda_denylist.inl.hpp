@@ -90,7 +90,6 @@
 "test_scatternd_max",
 "test_scatternd_min",
 "test_scatternd_multiply",
-"test_nllloss_NCd1d2d3d4d5_none_no_weight_expanded", // crash: https://github.com/opencv/opencv/issues/25471
 "test_dequantizelinear_blocked", // Issue https://github.com/opencv/opencv/issues/25999
 "test_quantizelinear", // Issue https://github.com/opencv/opencv/issues/25999
 "test_quantizelinear_axis", // Issue https://github.com/opencv/opencv/issues/25999
