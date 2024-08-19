@@ -437,15 +437,13 @@ class DDIMInpainter(object):
 
 def create_mask(img, radius=20):
     drawing = False  # True if the mouse is pressed
-    ix, iy = -1, -1  # Coordinates of the mouse
     counter = 0
 
     # Mouse callback function
     def draw_circle(event, x, y, flags, param):
-        nonlocal ix, iy, drawing, counter, radius
+        nonlocal drawing, counter, radius
 
         if event == cv.EVENT_LBUTTONDOWN:
-            ix, iy = x, y
             drawing = True if counter % 2 == 0 else False
             counter += 1
             cv.circle(img, (x, y), radius, (255, 255, 255), -1)
