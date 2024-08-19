@@ -125,9 +125,9 @@ namespace cv
             int cols;
             int rows;
 
-            __CV_CUDA_HOST_DEVICE__ [[nodiscard]] Size size() const { return {cols, rows}; }
-            __CV_CUDA_HOST_DEVICE__       T& operator ()(const Point &pos)       { return (*this)(pos.y, pos.x); }
-            __CV_CUDA_HOST_DEVICE__ const T& operator ()(const Point &pos) const { return (*this)(pos.y, pos.x); }
+            __CV_CUDA_HOST_DEVICE__ CV_NODISCARD_STD Size size() const { return {cols, rows}; }
+            __CV_CUDA_HOST_DEVICE__ CV_NODISCARD_STD       T& operator ()(const Point &pos)       { return (*this)(pos.y, pos.x); }
+            __CV_CUDA_HOST_DEVICE__ CV_NODISCARD_STD const T& operator ()(const Point &pos) const { return (*this)(pos.y, pos.x); }
         };
 
         typedef PtrStepSz<unsigned char> PtrStepSzb;
