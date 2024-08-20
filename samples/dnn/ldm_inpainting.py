@@ -43,8 +43,8 @@ Also make sure to have abount 15GB of RAM to make proccess faster (other wise sw
 '''
 
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_CUDA)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_CUDA)
+backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_CUDA)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_CUDA)
 
 parser = argparse.ArgumentParser(description='Use this script to run inpainting using Latent Diffusion Model',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -56,21 +56,23 @@ parser.add_argument('--samples', '-s', type=int, help='Number of times to sample
 parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
                         help="Choose one of computation backends: "
                              "%d: automatically (by default), "
-                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
                              "%d: OpenCV implementation, "
-                             "%d: CUDA" % backends)
+                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                             "%d: CUDA, " % backends)
 parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
                         help='Choose one of target computation devices: '
-                             '%d: CPU target (by default), '
-                             '%d: OpenCL, '
-                             '%d: CUDA,' % targets)
+                         '%d: CPU target (by default), '
+                         '%d: OpenCL, '
+                         '%d: NCS2 VPU, '
+                         '%d: HDDL VPU, '
+                         '%d: CUDA ' % targets)
 
 def make_batch(image, mask):
     image = image.astype(np.float32)/255.0
-    image = image[np.axis, ...].transpose(0,3,1,2)
+    image = image[np.newaxis, ...].transpose(0,3,1,2)
 
     mask = mask.astype(np.float32)/255.0
-    mask = mask[np.axis, np.axis, ...]
+    mask = mask[np.newaxis, np.newaxis, ...]
     mask[mask < 0.5] = 0
     mask[mask >= 0.5] = 1
 
