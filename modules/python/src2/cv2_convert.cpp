@@ -137,7 +137,9 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                typenum == NPY_INT32 ? CV_32S :
                typenum == NPY_HALF ? CV_16F :
                typenum == NPY_FLOAT ? CV_32F :
-               typenum == NPY_DOUBLE ? CV_64F : -1;
+               typenum == NPY_DOUBLE ? CV_64F :
+               typenum == NPY_BOOL ? CV_Bool :
+               -1;
 
     if( type < 0 )
     {
