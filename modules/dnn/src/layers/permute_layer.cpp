@@ -337,11 +337,13 @@ public:
             mnew_stride.copyTo(unew_stride);
         }
 
-        bool use_half = (inps.depth() == CV_16F);
-        String opts = format("-DDtype=%s", use_half ? "half" : "float");
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            ocl::Kernel kernel("permute", ocl::dnn::permute_oclsrc, opts);
+            String matType = matTypeToOclType(inputs[0].type());
+            String opts = " -DDtype=" + matType;
+            String kname = "permute_" + matType;
+
+            ocl::Kernel kernel(kname.c_str(), ocl::dnn::permute_oclsrc, opts);
 
             kernel.set(0, (int)_count);
             kernel.set(1, ocl::KernelArg::PtrReadOnly(inputs[i]));
@@ -364,9 +366,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   inputs_arr.depth() != CV_8S && inputs_arr.depth() != CV_8U &&
-                   inputs_arr.depth() != CV_Bool && inputs_arr.depth() != CV_64S,
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         std::vector<Mat> inputs, outputs;
