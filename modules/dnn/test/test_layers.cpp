@@ -65,13 +65,26 @@ static String _tf(TString filename)
 class Test_Caffe_layers : public DNNTestLayer
 {
 public:
+    void testLayerUsingOnnxModels(const String& basename, bool useCommonInputBlob = true, double l1 = 0.0, double lInf = 0.0,
+                                   int numInps = 1, int numOuts = 1)
+    {
+        _testLayerUsingModels(basename, false, true, useCommonInputBlob, l1, lInf, numInps, numOuts);
+    }
+
     void testLayerUsingCaffeModels(const String& basename, bool useCaffeModel = false,
                                    bool useCommonInputBlob = true, double l1 = 0.0, double lInf = 0.0,
                                    int numInps = 1, int numOuts = 1)
     {
+        _testLayerUsingModels(basename, useCaffeModel, false, useCommonInputBlob, l1, lInf, numInps, numOuts);
+    }
+
+    void _testLayerUsingModels(const String& basename, bool useCaffeModel, bool useOnnxModel, bool useCommonInputBlob, double l1, double lInf,
+                                   int numInps, int numOuts)
+    {
         CV_Assert_N(numInps >= 1, numInps <= 10, numOuts >= 1, numOuts <= 10);
         String prototxt = _tf(basename + ".prototxt");
         String caffemodel = _tf(basename + ".caffemodel");
+        String onnxmodel = _tf(basename + ".onnx");
 
         std::vector<Mat> inps, refs, outs;
 
@@ -103,7 +116,11 @@ public:
             refs.push_back(blobFromNPY(outfile));
         }
 
-        Net net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
+        Net net;
+        if (useOnnxModel)
+            net = readNetFromONNX(onnxmodel);
+        else
+            net = readNetFromCaffe(prototxt, (useCaffeModel) ? caffemodel : String());
         ASSERT_FALSE(net.empty());
         checkBackend(&inps[0], &refs[0]);
 
@@ -133,7 +150,7 @@ public:
 
 TEST_P(Test_Caffe_layers, Softmax)
 {
-    testLayerUsingCaffeModels("layer_softmax");
+    testLayerUsingOnnxModels("layer_softmax");
 }
 
 TEST_P(Test_Caffe_layers, LRN)
@@ -148,12 +165,12 @@ TEST_P(Test_Caffe_layers, LRN)
         lInf = 0.01;
     }
     testLayerUsingCaffeModels("layer_lrn_spatial", false, true, l1, lInf);
-    testLayerUsingCaffeModels("layer_lrn_channels", false, true, l1, lInf);
+    testLayerUsingOnnxModels("layer_lrn_channels", true, l1, lInf);
 }
 
 TEST_P(Test_Caffe_layers, Convolution)
 {
-    testLayerUsingCaffeModels("layer_convolution", true);
+    testLayerUsingOnnxModels("layer_convolution", true);
 }
 
 TEST_P(Test_Caffe_layers, DeConvolution)
@@ -195,12 +212,12 @@ TEST_P(Test_Caffe_layers, InnerProduct)
 
 TEST_P(Test_Caffe_layers, Pooling_max)
 {
-    testLayerUsingCaffeModels("layer_pooling_max");
+    testLayerUsingOnnxModels("layer_pooling_max");
 }
 
 TEST_P(Test_Caffe_layers, Pooling_ave)
 {
-    testLayerUsingCaffeModels("layer_pooling_ave");
+    testLayerUsingOnnxModels("layer_pooling_ave");
 }
 
 TEST_P(Test_Caffe_layers, MVN)
@@ -260,18 +277,18 @@ TEST(Layer_Test_Reshape, Accuracy)
 
 TEST_P(Test_Caffe_layers, BatchNorm)
 {
-    testLayerUsingCaffeModels("layer_batch_norm", true);
+    testLayerUsingOnnxModels("layer_batch_norm", true);
     testLayerUsingCaffeModels("layer_batch_norm_local_stats", true, false);
 }
 
 TEST_P(Test_Caffe_layers, ReLU)
 {
-    testLayerUsingCaffeModels("layer_relu");
+    testLayerUsingOnnxModels("layer_relu");
 }
 
 TEST_P(Test_Caffe_layers, Dropout)
 {
-    testLayerUsingCaffeModels("layer_dropout");
+    testLayerUsingOnnxModels("layer_dropout");
 }
 
 TEST_P(Test_Caffe_layers, Concat)
@@ -295,9 +312,9 @@ TEST_P(Test_Caffe_layers, Concat)
 #endif
 
 #endif
-    testLayerUsingCaffeModels("layer_concat");
-    testLayerUsingCaffeModels("layer_concat_optim", true, false);
-    testLayerUsingCaffeModels("layer_concat_shared_input", true, false);
+    testLayerUsingOnnxModels("layer_concat");
+    testLayerUsingOnnxModels("layer_concat_optim", false);
+    testLayerUsingOnnxModels("layer_concat_shared_input", false);
 }
 
 TEST_P(Test_Caffe_layers, Fused_Concat)
@@ -356,7 +373,7 @@ TEST_P(Test_Caffe_layers, Eltwise)
 TEST_P(Test_Caffe_layers, PReLU)
 {
     double lInf = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16) ? 0.021 : 0.0;
-    testLayerUsingCaffeModels("layer_prelu", true, true, 0.0, lInf);
+    testLayerUsingOnnxModels("layer_prelu", true, 0.0, lInf);
 }
 
 // TODO: fix an unstable test case
@@ -377,7 +394,7 @@ TEST_P(Test_Caffe_layers, layer_prelu_fc)
         l1 = 0.01f; lInf = 0.05f;
     }
 #endif
-    testLayerUsingCaffeModels("layer_prelu_fc", true, false, l1, lInf);
+    testLayerUsingOnnxModels("layer_prelu_fc", false, l1, lInf);
 }
 
 TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
@@ -756,7 +773,7 @@ TEST_P(Test_Caffe_layers, ChannelNorm)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    testLayerUsingCaffeModels("channel_norm", false, false);
+    testLayerUsingOnnxModels("channel_norm", false);
 }
 
 TEST_P(Test_Caffe_layers, DataAugmentation)
@@ -1265,7 +1282,7 @@ TEST_P(Layer_Test_Convolution_DLDT, Accuracy)
 
     ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
 
-    Net netDefault = readNet(_tf("layer_convolution.caffemodel"), _tf("layer_convolution.prototxt"));
+    Net netDefault = readNet(_tf("layer_convolution.onnx"));
     Net net = readNet(_tf("layer_convolution.xml"), _tf("layer_convolution.bin"));
 
     Mat inp = blobFromNPY(_tf("blob.npy"));

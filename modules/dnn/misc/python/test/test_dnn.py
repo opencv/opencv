@@ -110,9 +110,8 @@ class dnn_test(NewOpenCVTests):
                               required=required)
 
     def checkIETarget(self, backend, target):
-        proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
-        model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
-        net = cv.dnn.readNet(proto, model)
+        model = self.find_dnn_file('dnn/layers/layer_convolution.onnx')
+        net = cv.dnn.readNet(model)
         try:
             net.setPreferableBackend(backend)
             net.setPreferableTarget(target)
@@ -324,10 +323,9 @@ class dnn_test(NewOpenCVTests):
 
     def test_async(self):
         timeout = 10*1000*10**6  # in nanoseconds (10 sec)
-        proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
-        model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
-        if proto is None or model is None:
-            raise unittest.SkipTest("Missing DNN test files (dnn/layers/layer_convolution.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+        model = self.find_dnn_file('dnn/layers/layer_convolution.onnx')
+        if model is None:
+            raise unittest.SkipTest("Missing DNN test files (dnn/layers/layer_convolution.onnx). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
         print('\n')
         for backend, target in self.dnnBackendsAndTargets:
@@ -336,11 +334,11 @@ class dnn_test(NewOpenCVTests):
 
             printParams(backend, target)
 
-            netSync = cv.dnn.readNet(proto, model)
+            netSync = cv.dnn.readNet(model)
             netSync.setPreferableBackend(backend)
             netSync.setPreferableTarget(target)
 
-            netAsync = cv.dnn.readNet(proto, model)
+            netAsync = cv.dnn.readNet(model)
             netAsync.setPreferableBackend(backend)
             netAsync.setPreferableTarget(target)
 
