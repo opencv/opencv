@@ -96,7 +96,8 @@ ignore_list = ['locate',  #int&
 
 def makeWhiteList(module_list):
     wl = {}
-    for n, m in module_list.items():
+    for n, gen_dict in module_list.items():
+        m = gen_dict["whitelist"]
         for k in m.keys():
             if k in wl:
                 wl[k] += m[k]
@@ -104,11 +105,21 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
+def makeNamespacePrefixOverride(module_list):
+    wl = {}
+    for n, gen_dict in module_list.items():
+        if "namespace_prefix_override" in gen_dict:
+            m = gen_dict["namespace_prefix_override"]
+            for k in m.keys():
+                if k in wl:
+                    wl[k] += m[k]
+                else:
+                    wl[k] = m[k]
+    return wl
+
+
 white_list = None
-namespace_prefix_override = {
-    'dnn' : '',
-    'aruco' : '',
-}
+namespace_prefix_override = None
 
 # Features to be exported
 export_enums = False
@@ -960,6 +971,7 @@ if __name__ == "__main__":
         f.close()
 
     white_list = makeWhiteList(white_list)
+    namespace_prefix_override = makeNamespacePrefixOverride(white_list)
 
     generator = JSWrapperGenerator()
     generator.gen(bindingsCpp, headers, coreBindings)

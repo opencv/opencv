@@ -1,5 +1,0 @@
-{
-    "dnn_Net": ["setInput", "forward", "setPreferableBackend","getUnconnectedOutLayersNames"],
-    "": ["readNetFromCaffe", "readNetFromTensorflow", "readNetFromTorch", "readNetFromDarknet",
-         "readNetFromONNX", "readNetFromTFLite", "readNet", "blobFromImage"]
-}
