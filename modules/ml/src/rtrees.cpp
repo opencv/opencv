@@ -388,9 +388,10 @@ public:
             results = output.getMat();
             for( i = 0; i < nsamples; i++ )
             {
+                const Mat sampleRow = samples.row(i);
                 for( j = 0; j < ntrees; j++ )
                 {
-                    float val = predictTrees( Range(j, j+1), samples.row(i), flags);
+                    float val = predictTrees( Range(j, j+1), sampleRow, flags);
                     results.at<float> (i, j) = val;
                 }
             }
@@ -408,9 +409,10 @@ public:
             for( i = 0; i < nsamples; i++ )
             {
                 votes.clear();
+                const Mat sampleRow = samples.row(i);
                 for( j = 0; j < ntrees; j++ )
                 {
-                    int val = (int)predictTrees( Range(j, j+1), samples.row(i), flags);
+                    int val = (int)predictTrees( Range(j, j+1), sampleRow, flags);
                     votes.push_back(val);
                 }
 
