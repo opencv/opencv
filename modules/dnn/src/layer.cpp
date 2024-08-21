@@ -278,5 +278,20 @@ bool Layer::updateMemoryShapes(const std::vector<MatShape>& inputs)
     return true;
 }
 
+std::vector<Ptr<Graph> >* Layer::subgraphs() const
+{
+    return nullptr;
+}
+
+bool Layer::alwaysSupportInplace() const
+{
+    return false;
+}
+
+bool Layer::dynamicOutputShapes() const
+{
+    return false;
+}
+
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

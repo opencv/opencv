@@ -28,7 +28,7 @@ public:
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        std::vector<int> outShape;
+        MatShape outShape;
         int batch = inputs[0][0];
         outShape.push_back(batch);
 

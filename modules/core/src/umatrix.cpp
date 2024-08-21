@@ -412,6 +412,10 @@ size_t UMat::total() const
     return p;
 }
 
+MatShape UMat::shape() const
+{
+    return dims == 0 && u == 0 ? MatShape() : MatShape(dims, size.p);
+}
 
 UMat::UMat(UMat&& m)
 : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
@@ -749,6 +753,63 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
 void UMat::create(const std::vector<int>& _sizes, int _type, UMatUsageFlags _usageFlags)
 {
     create((int)_sizes.size(), _sizes.data(), _type, _usageFlags);
+}
+
+void UMat::create(const MatShape& _shape, int _type, UMatUsageFlags _usageFlags)
+{
+    if (_shape.dims < 0) {
+        release();
+    } else {
+        create(_shape.dims, _shape.p, _type, _usageFlags);
+    }
+}
+
+void UMat::fit(int _dims, const int* _sizes, int _type, UMatUsageFlags _usageFlags)
+{
+    if (_usageFlags == cv::USAGE_DEFAULT)
+        _usageFlags = usageFlags;
+    size_t oldTotalBytes = u ? u->size : 0;
+    size_t esz = CV_ELEM_SIZE(_type), newTotal = _dims >= 0;
+    for (int i = 0; i < _dims; i++)
+        newTotal *= _sizes[i];
+    size_t newTotalBytes = newTotal*esz;
+    if (!isContinuous() || newTotalBytes > oldTotalBytes || _usageFlags != usageFlags) {
+        create(_dims, _sizes, _type, _usageFlags);
+    } else {
+        flags = (flags & ~Mat::TYPE_MASK) | CV_MAT_TYPE(_type);
+        int _dummy_size = 0;
+        setSize(*this, (_dims >= 0 ? _dims : 1), (_dims >= 0 ? _sizes : &_dummy_size), nullptr, true);
+        finalizeHdr(*this);
+    }
+}
+
+void UMat::fit(const std::vector<int>& _shape, int _type, UMatUsageFlags _usageFlags)
+{
+    fit((int)_shape.size(), _shape.data(), _type, _usageFlags);
+}
+
+void UMat::fit(const MatShape& _shape, int _type, UMatUsageFlags _usageFlags)
+{
+    fit(_shape.dims, _shape.p, _type, _usageFlags);
+}
+
+void UMat::fit(int _rows, int _cols, int _type, UMatUsageFlags _usageFlags)
+{
+    _type &= TYPE_MASK;
+    int sz[] = {_rows, _cols};
+    fit(2, sz, _type, _usageFlags);
+}
+
+void UMat::fit(Size _sz, int _type, UMatUsageFlags _usageFlags)
+{
+    fit(_sz.height, _sz.width, _type, _usageFlags);
+}
+
+void UMat::fitSameSize(InputArray m, int _type, UMatUsageFlags _usageFlags)
+{
+    int _sizes[CV_MAX_DIM];
+    int _dims = m.sizend(_sizes);
+    fit(_dims, _sizes, _type, _usageFlags);
 }
 
 void UMat::copySize(const UMat& m)

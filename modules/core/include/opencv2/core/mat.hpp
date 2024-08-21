@@ -69,6 +69,108 @@ __CV_ENUM_FLAGS_BITWISE_AND(AccessFlag, int, AccessFlag)
 
 CV__DEBUG_NS_BEGIN
 
+/**
+ * @brief Enum of data layout for model inference.
+ * @see Image2BlobParams
+ */
+enum DataLayout
+{
+    DATA_LAYOUT_UNKNOWN = 0,
+    DATA_LAYOUT_ND = 1,        //!< OpenCV data layout for 2D data.
+    DATA_LAYOUT_NCHW = 2,      //!< OpenCV data layout for 4D data.
+    DATA_LAYOUT_NCDHW = 3,     //!< OpenCV data layout for 5D data.
+    DATA_LAYOUT_NHWC = 4,      //!< Tensorflow-like data layout for 4D data.
+    DATA_LAYOUT_NDHWC = 5,     //!< Tensorflow-like data layout for 5D data.
+    DATA_LAYOUT_PLANAR = 6,    //!< Tensorflow-like data layout, it should only be used at tf or tflite model parsing.
+    DATA_LAYOUT_BLOCK = 7,     //!< Block layout (also referred to as 'NC1HWC0'), which some accelerators need and even on CPU a better performance may be achieved.
+
+    // for compatibility with the old code in DNN
+    DNN_LAYOUT_UNKNOWN = 0,
+    DNN_LAYOUT_ND = 1,        //!< OpenCV data layout for 2D data.
+    DNN_LAYOUT_NCHW = 2,      //!< OpenCV data layout for 4D data.
+    DNN_LAYOUT_NCDHW = 3,     //!< OpenCV data layout for 5D data.
+    DNN_LAYOUT_NHWC = 4,      //!< Tensorflow-like data layout for 4D data.
+    DNN_LAYOUT_NDHWC = 5,     //!< Tensorflow-like data layout for 5D data.
+    DNN_LAYOUT_PLANAR = 6,    //!< Tensorflow-like data layout, it should only be used at tf or tflite model parsing.
+    DNN_LAYOUT_BLOCK = 7,     //!< Block layout (also referred to as 'NC1HWC0'), which some accelerators need and even on CPU a better performance may be achieved.
+};
+
+CV_EXPORTS std::string layoutToString(DataLayout layout);
+
+/**
+ * @brief Represents shape of a matrix/tensor.
+ *   Previously, MatShape was defined as an alias of std::vector<int>,
+ *   but now we use a special structure that provides a few extra benefits:
+ *   1. avoids any heap operations, since the shape is stored in a plain array. This reduces overhead of shape inference etc.
+ *   2. includes information about the layout, including the actual number of channels ('C') in the case of block layout.
+ *   3. distinguishes between empty shape (total() == 0) and 0-dimensional shape (dims == 0, but total() == 1).
+ */
+struct CV_EXPORTS MatShape
+{
+    enum {MAX_DIMS=10};
+
+    MatShape();
+    explicit MatShape(size_t dims, const int* sizes=nullptr, DataLayout layout=DATA_LAYOUT_UNKNOWN, int C=0);
+    explicit MatShape(size_t dims, int value, DataLayout layout=DATA_LAYOUT_UNKNOWN);
+    explicit MatShape(int dims, int value, DataLayout layout=DATA_LAYOUT_UNKNOWN);
+    explicit MatShape(const std::vector<int>& shape, DataLayout layout=DATA_LAYOUT_UNKNOWN, int C=0);
+    explicit MatShape(const int* begin, const int* end, DataLayout layout=DATA_LAYOUT_UNKNOWN, int C=0);
+    explicit MatShape(std::initializer_list<int> shape);
+    MatShape(const MatShape& shape);
+    MatShape& operator = (const MatShape& shape);
+    static MatShape scalar();
+    template<class _It> MatShape(_It begin, _It end);
+
+    // try to mimic basic std::vector<int> functionality
+    size_t size() const; // returns 0 in the case of scalar tensor. So, please don't use 'size()==0' to check for an empty shape. Use empty() instead.
+    bool empty() const; // equivalent to total()==0, but may be slightly faster.
+    bool isScalar() const; // dims==0
+    void clear();
+    void resize(size_t newSize, int value=0);
+    void reserve(size_t maxSize);
+    void assign(size_t newSize, int value);
+    void assign(int newSize, int value);
+    void assign(const int* begin, const int* end);
+    template<class _It> void assign(_It begin, _It end);
+    void insert(int* where, int value);
+    void insert(int* where, const int* begin, const int* end);
+    void insert(int* where, size_t count, int value);
+    void insert(int* where, int count, int value);
+    template<class _It> void insert(int* where, _It begin, _It end);
+    void erase(int* where);
+    int* data();
+    const int* data() const;
+    int* begin();
+    const int* begin() const;
+    int* end();
+    const int* end() const;
+    int& back();
+    const int& back() const;
+    void push_back(int value);
+    void emplace_back(int value);
+    int& operator [](size_t idx);
+    const int& operator [](size_t idx) const;
+
+    bool haveSymbols() const; // negative elements in the shape may denote 'symbols' instead of actual values.
+
+    // compute shape of the result with possible broadcasting
+    MatShape expand(const MatShape& another) const;
+
+    // convert shape to/from block layout
+    MatShape toBlock(int C0) const;
+    MatShape fromBlock(DataLayout newLayout) const;
+
+    size_t total() const; // returns the total number of elements in the tensor (including padding elements, i.e. the method ignores 'C' in the case of block layout). Returns 1 for scalar tensors. Returns 0 for empty shapes.
+
+    int dims;
+    DataLayout layout;
+    int C;
+    int p[MAX_DIMS];
+};
+
+CV_EXPORTS bool operator == (const MatShape& shape1, const MatShape& shape2);
+CV_EXPORTS bool operator != (const MatShape& shape1, const MatShape& shape2);
+
 class CV_EXPORTS _OutputArray;
 
 //////////////////////// Input/Output Array Arguments /////////////////////////////////
@@ -227,6 +329,7 @@ public:
     int cols(int i=-1) const;
     int rows(int i=-1) const;
     Size size(int i=-1) const;
+    MatShape shape(int i=-1) const;
     int sizend(int* sz, int i=-1) const;
     bool sameSize(const _InputArray& arr) const;
     size_t total(int i=-1) const;
@@ -367,10 +470,19 @@ public:
     template<typename _Tp> std::vector<std::vector<_Tp> >& getVecVecRef() const;
     ogl::Buffer& getOGlBufferRef() const;
     cuda::HostMem& getHostMemRef() const;
+
     void create(Size sz, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
     void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
     void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
+    void create(const MatShape& shape, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
     void createSameSize(const _InputArray& arr, int mtype) const;
+
+    void fit(Size sz, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
+    void fit(int rows, int cols, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
+    void fit(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
+    void fit(const MatShape& shape, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
+    void fitSameSize(const _InputArray& arr, int mtype) const;
+
     void release() const;
     void clear() const;
     void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
@@ -877,6 +989,13 @@ public:
     Mat(const std::vector<int>& sizes, int type);
 
     /** @overload
+    @param shape Array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    */
+    Mat(const MatShape& shape, int type);
+
+    /** @overload
     @param ndims Array dimensionality.
     @param sizes Array of integers specifying an n-dimensional array shape.
     @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
@@ -897,6 +1016,15 @@ public:
     */
     Mat(const std::vector<int>& sizes, int type, const Scalar& s);
 
+    /** @overload
+    @param shape Array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    @param s An optional value to initialize each matrix element with. To set all the matrix elements to
+    the particular value after the construction, use the assignment operator
+    Mat::operator=(const Scalar& value) .
+    */
+    Mat(const MatShape& shape, int type, const Scalar& s);
 
     /** @overload
     @param m Array that (as a whole or partly) is assigned to the constructed matrix. No data is copied
@@ -1332,6 +1460,12 @@ public:
      */
     Mat reshape(int cn, const std::vector<int>& newshape) const;
 
+    /** @overload
+     * @param cn New number of channels. If the parameter is 0, the number of channels remains the same.
+     * @param newshape New shape in the form of MatShape.
+     */
+    Mat reshape(int cn, const MatShape& newshape) const;
+
     /** @brief Transposes a matrix.
 
     The method performs matrix transposition by means of matrix expressions. It does not perform the
@@ -1522,6 +1656,12 @@ public:
     */
     void create(const std::vector<int>& sizes, int type);
 
+    /** @overload
+    @param shape The new shape.
+    @param type New matrix type.
+    */
+    void create(const MatShape& shape, int type);
+
     /** @brief Creates the matrix of the same size as another array.
 
     The method is similar to _OutputArray::createSameSize(arr, type),
@@ -1530,6 +1670,44 @@ public:
     @param type New matrix type.
     */
     void createSameSize(InputArray arr, int type);
+
+    /** @brief Similar to create(rows, cols, type), but only reallocates memory if the existing buffer size is not enough.
+     @param rows New number of rows.
+     @param cols New number of columns.
+     @param type New matrix type.
+    */
+    void fit(int rows, int cols, int type);
+
+    /** @overload
+    @param size Alternative new matrix size specification: Size(cols, rows)
+    @param type New matrix type.
+    */
+    void fit(Size size, int type);
+
+    /** @overload
+    @param ndims New array dimensionality.
+    @param sizes Array of integers specifying a new array shape.
+    @param type New matrix type.
+    */
+    void fit(int ndims, const int* sizes, int type);
+
+    /** @overload
+    @param sizes Array of integers specifying a new array shape.
+    @param type New matrix type.
+    */
+    void fit(const std::vector<int>& sizes, int type);
+
+    /** @overload
+    @param sizes The new shape.
+    @param type New matrix type.
+    */
+    void fit(const MatShape& shape, int type);
+
+    /** @brief Similar to createSameSize(arr, type), but only reallocates memory if the existing buffer is not enough.
+    @param arr The other array.
+    @param type New matrix type.
+    */
+    void fitSameSize(InputArray arr, int type);
 
     /** @brief Increments the reference counter.
 
@@ -1832,6 +2010,10 @@ public:
     arbitrary matrix element.
      */
     size_t step1(int i=0) const;
+
+    /** @brief Returns the shape.
+    */
+    MatShape shape() const;
 
     /** @brief Returns true if the array has no elements.
 
@@ -2549,10 +2731,20 @@ public:
     void create(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     void create(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     void create(const std::vector<int>& sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void create(const MatShape& shape, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+
+    //! fits the new shape into existing data buffer if possible, otherwise reallocates data.
+    void fit(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void fit(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void fit(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void fit(const std::vector<int>& sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    void fit(const MatShape& shape, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! allocates new matrix data unless the matrix already has specified size and type.
     // the size is taken from the specified array.
     void createSameSize(InputArray arr, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+
+    void fitSameSize(InputArray arr, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! increases the reference counter; use with care to avoid memleaks
     void addref();
@@ -2601,6 +2793,10 @@ public:
     bool empty() const;
     //! returns the total number of matrix elements
     size_t total() const;
+
+    /** @brief Returns the shape.
+    */
+    MatShape shape() const;
 
     //! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel (1 x N) or (N x 1); negative number otherwise
     int checkVector(int elemChannels, int depth=-1, bool requireContinuous=true) const;

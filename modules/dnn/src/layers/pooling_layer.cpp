@@ -1264,7 +1264,7 @@ public:
         int numOutputs = requiredOutputs ? requiredOutputs : (type == MAX ? 2 : 1);
         CV_Assert(numOutputs == 1 || (numOutputs == 2 && type == MAX));
 
-        outputs.assign(numOutputs, outShape);
+        outputs.assign(numOutputs, MatShape(outShape));
 
         return false;
     }

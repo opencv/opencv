@@ -351,7 +351,7 @@ public:
                      "be multiple of %d but got %d", weightShape[1], inpCn));
         CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
-        outputs.resize(1, outShape);
+        outputs.resize(1, MatShape(outShape));
 
         return false;
     }
@@ -1404,7 +1404,7 @@ public:
         CV_Assert(inpCn % ngroups == 0 && outCn % ngroups == 0);
         CV_Assert(blobs[0].size[0] == inpCn);
 
-        outputs.resize(1, outShape);
+        outputs.resize(1, MatShape(outShape));
 
         if (!is1x1())
             internals.push_back(computeColRowShape(inputs[0], outputs[0]));

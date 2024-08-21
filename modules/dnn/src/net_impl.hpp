@@ -25,12 +25,16 @@
 
 #include "legacy_backend.hpp"  // wrapMat BlobManager OpenCLBackendWrapper
 
+#include <unordered_map>
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 using std::make_pair;
 using std::string;
+
+typedef std::unordered_map<std::string, int64_t> NamesHash;
 
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
@@ -66,6 +70,33 @@ struct Net::Impl : public detail::NetImplBase
     bool useWinograd;
     std::vector<int64> layersTimings;
 
+    Net* net; // weak pointer to the public Net structure
+              // (which contains smart pointer to this structure).
+              // This is needed, because most of the time we
+              // want to use public API via cv::dnn::Net,
+              // not the private one in cv::dnn::Net::Impl
+
+    DataLayout originalLayout;
+    int onnx_opset;
+
+    NamesHash argnames;
+    NamesHash dimnames;
+    std::vector<std::string> dimnames_;
+    std::vector<ArgInfo> args;
+    std::vector<Mat> tensors;
+    std::vector<int> bufidxs;
+    std::vector<Mat> buffers;
+    std::vector<Mat> scratchBufs;
+    Ptr<Graph> mainGraph;
+
+    int accuracy;
+    bool haveFP16;
+    bool prepared;
+    TracingMode tracingMode;
+    ProfilingMode profilingMode;
+    std::vector<std::pair<Ptr<Layer>, int64_t> > profileEntries;
+    std::vector<int64_t> dimvalues;
+    std::ostream* traceStream;
 
     virtual bool empty() const;
     virtual void setPreferableBackend(Net& net, int backendId);
@@ -281,6 +312,56 @@ struct Net::Impl : public detail::NetImplBase
     string dumpToPbtxt(bool forceAllocation = false) const;
 
     void dumpNetworkToFile() const;
+
+    ///////////////////////////// the new engine ////////////////////////////
+
+    // pre-allocates memory for output tensors.
+    // if useBufferPool==true, the method uses 'buffers'
+    // for outputs (according to bufidxs)
+    // instead of allocating fresh outputs
+    void allocateLayerOutputs(const Ptr<Layer>& layer,
+                              const std::vector<int>& inpTypes,
+                              const std::vector<MatShape>& inpShapes,
+                              std::vector<int>& outTypes,
+                              std::vector<MatShape>& outShapes,
+                              std::vector<Mat>& outputs, // [TODO] replace with something else to cover other backends
+                              std::vector<int>& tempTypes,
+                              std::vector<MatShape>& tempShapes,
+                              std::vector<Mat>& temps, // [TODO] ditto
+                              std::vector<Mat>& globalTemps,
+                              bool useBufferPool
+                              );
+
+    // run graph or subgraph.
+    void forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs, OutputArrayOfArrays outputs, bool isMainGraph);
+    // run the whole model
+    void forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
+    // helper function for useCounts()
+    void updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& usecounts) const;
+    // computes how many times each argument is used, i.e. on output usecounts.size() == args.size()
+    void useCounts(std::vector<int>& usecounts) const;
+
+    void initPerfProfile();
+    void updatePerfProfile(const Layer* layer, int64_t time);
+    // checks that every Arg is already registered in the Net.
+    void checkArgs(const std::vector<Arg>& args) const;
+    void checkArg(Arg arg) const;
+    // deals with numeric and symblic shape values.
+    void checkAndUpdateDim(const Ptr<Graph>& graph, const Layer* layer, Arg inp, int j, int64_t value);
+
+    // dump information about certain input or output argument of an operation
+    void traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg arg, bool dumpdata);
+
+    // infers all types
+    void inferTypes();
+    // infers all shapes
+    void inferShapes(bool symbolic);
+    // sets certain buffer index for a particular 
+    void assignBuffers();
+    //void useBlockLayout();
+    void fuse();
+    void constFold();
+    void constArgs();
 
 };  // Net::Impl
 

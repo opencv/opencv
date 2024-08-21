@@ -7,6 +7,375 @@
 
 namespace cv {
 
+std::string layoutToString(DataLayout layout)
+{
+    return
+        layout == DATA_LAYOUT_ND ? "ND" :
+        layout == DATA_LAYOUT_NCHW ? "NCHW" :
+        layout == DATA_LAYOUT_NHWC ? "NHWC" :
+        layout == DATA_LAYOUT_BLOCK ? "NC1HWC0" :
+        layout == DATA_LAYOUT_NCDHW ? "NCDHW" :
+        layout == DATA_LAYOUT_NDHWC ? "NDHWC" :
+        layout == DATA_LAYOUT_PLANAR ? "PLANAR" :
+        layout == DATA_LAYOUT_UNKNOWN ? "Unknown" : "???";
+}
+
+/////////////////////////// MatShape ////////////////////////////////
+
+MatShape MatShape::scalar()
+{
+    return MatShape(0);
+}
+
+void MatShape::clear()
+{
+    dims = -1;
+    layout = DATA_LAYOUT_UNKNOWN;
+    C = 0;
+    for (int i = 0; i < MAX_DIMS; i++)
+        p[i] = 0;
+}
+
+void MatShape::resize(size_t newSize, int value)
+{
+    CV_Assert(newSize < (size_t)MAX_DIMS);
+    int old_dims = std::max(dims, 0);
+    dims = (int)newSize;
+    for (int i = old_dims; i < dims; i++)
+        p[i] = value;
+}
+
+void MatShape::reserve(size_t)
+{
+    // no op; maybe need to add a check for overflow, but we check it anyway in other operations
+}
+
+void MatShape::assign(size_t newSize, int value)
+{
+    CV_Assert(newSize < (size_t)MAX_DIMS);
+    dims = (int)newSize;
+    for (int i = 0; i < dims; i++)
+        p[i] = value;
+}
+
+void MatShape::assign(int newSize, int value)
+{
+    assign((size_t)newSize, value);
+}
+
+void MatShape::assign(const int* begin, const int* end)
+{
+    ptrdiff_t newSize = end - begin;
+    CV_Assert(0 <= newSize && newSize < (ptrdiff_t)MAX_DIMS);
+    dims = (int)newSize;
+    for (int i = 0; i < dims; i++)
+        p[i] = begin[i];
+}
+
+int* MatShape::begin() { return p; }
+const int* MatShape::begin() const { return p; }
+int* MatShape::end() { return p + std::max(dims, 0); }
+const int* MatShape::end() const { return p + std::max(dims, 0); }
+int& MatShape::back() { return p[std::max(dims-1, 0)]; }
+const int& MatShape::back() const { return p[std::max(dims-1, 0)]; }
+
+void MatShape::push_back(int value)
+{
+    CV_Assert(dims+1 < MAX_DIMS);
+    dims = std::max(dims+1, 1);
+    p[dims-1] = value;
+}
+
+void MatShape::emplace_back(int value)
+{
+    push_back(value);
+}
+
+void MatShape::insert(int* where, int value)
+{
+    int old_dims = std::max(dims, 0);
+    CV_Assert(old_dims+1 < MAX_DIMS);
+    ptrdiff_t ofs = where - p;
+    CV_Assert(0 <= ofs && ofs <= old_dims);
+    dims = old_dims+1;
+    for (int i = old_dims-1; i >= (int)ofs; i--)
+        p[i+1] = p[i];
+    p[ofs] = value;
+}
+
+void MatShape::insert(int* where, size_t count, int value)
+{
+    int old_dims = std::max(dims, 0);
+    CV_Assert((size_t)(old_dims+count) < (size_t)MAX_DIMS);
+    ptrdiff_t ofs = where - p;
+    CV_Assert(0 <= ofs && ofs <= old_dims);
+    dims = (int)(old_dims+count);
+    for (int i = old_dims-1; i >= (int)ofs; i--)
+        p[i+count] = p[i];
+    for (int i = 0; i < (int)count; i++)
+        p[i+ofs] = value;
+}
+
+void MatShape::insert(int* where, int count, int value)
+{
+    insert(where, (size_t)count, value);
+}
+
+void MatShape::insert(int* where, const int* begin, const int* end)
+{
+    int old_dims = std::max(dims, 0);
+    ptrdiff_t delta = end - begin;
+    CV_Assert(0 <= delta && old_dims+delta < MAX_DIMS);
+    ptrdiff_t ofs = where - p;
+    CV_Assert(0 <= ofs && ofs <= old_dims);
+    dims = (int)(old_dims+delta);
+    for (int i = old_dims-1; i >= (int)ofs; i--)
+        p[i+delta] = p[i];
+    for (int i = 0; i < (int)delta; i++)
+        p[i+ofs] = begin[i];
+}
+
+void MatShape::erase(int* where)
+{
+    CV_Assert(dims > 0);
+    ptrdiff_t ofs = where - p;
+    CV_Assert(0 <= ofs && ofs <= dims);
+    if (ofs == dims)
+        return;
+    dims--;
+    for (int i = (int)ofs+1; i <= dims; i++)
+        p[i-1] = p[i];
+}
+
+size_t MatShape::total() const
+{
+    size_t result = 1;
+    if (dims < 0)
+        return 0;
+    for (int i = 0; i < dims; i++)
+        result *= p[i];
+    return result;
+}
+
+static void finalizeBlockLayout(MatShape& size, int C=0)
+{
+    if (size.layout == DATA_LAYOUT_BLOCK) {
+        CV_Assert(size.dims >= 4);
+        int C0 = size.p[size.dims-1];
+        CV_Assert(C0 > 1 && (C0 & (C0-1)) == 0);
+        size.C = C > 0 ? C : size.p[1]*size.p[size.dims-1];
+    } else {
+        size.C = 0;
+    }
+    for (int i = std::max(size.dims, 0); i < MatShape::MAX_DIMS; i++)
+        size.p[i] = 0;
+    if (size.dims == 0)
+        size.p[0] = 1;
+}
+
+MatShape::MatShape()
+{
+    clear();
+}
+
+MatShape::MatShape(size_t dims_, const int* size_, DataLayout layout_, int C_)
+{
+    layout = layout_;
+    CV_Assert(dims_ <= (size_t)MAX_DIMS);
+    dims = (int)dims_;
+    for (int i = 0; i < dims; i++) {
+        p[i] = size_ ? size_[i] : 0;
+    }
+    finalizeBlockLayout(*this, C_);
+}
+
+MatShape::MatShape(size_t dims_, int value, DataLayout layout_)
+{
+    layout = layout_;
+    CV_Assert(dims_ <= (size_t)MAX_DIMS);
+    dims = (int)dims_;
+    for (int i = 0; i < dims; i++) {
+        p[i] = value;
+    }
+    finalizeBlockLayout(*this, 0);
+}
+
+MatShape::MatShape(std::initializer_list<int> shape)
+{
+    layout = DATA_LAYOUT_UNKNOWN;
+    CV_Assert(shape.size() <= (size_t)MAX_DIMS);
+    dims = (int)shape.size();
+    auto it = shape.begin();
+    for (int i = 0; i < dims; i++, ++it) {
+        p[i] = *it;
+    }
+    finalizeBlockLayout(*this, 0);
+}
+
+MatShape::MatShape(int dims_, int value, DataLayout layout_)
+{
+    layout = layout_;
+    CV_Assert(dims_ <= MAX_DIMS);
+    dims = dims_;
+    for (int i = 0; i < dims; i++) {
+        p[i] = value;
+    }
+    finalizeBlockLayout(*this, 0);
+}
+
+MatShape::MatShape(const std::vector<int>& shape_, DataLayout layout_, int C_)
+{
+    layout = layout_;
+    size_t shape_size = shape_.size();
+    CV_Assert(shape_size < (size_t)MAX_DIMS);
+    dims = (int)shape_size;
+    for (int i = 0; i < dims; i++) {
+        p[i] = shape_[i];
+    }
+    finalizeBlockLayout(*this, C_);
+}
+
+MatShape::MatShape(const int* begin, const int* end, DataLayout layout_, int C_)
+{
+    layout = layout_;
+    ptrdiff_t shape_size = end - begin;
+    CV_Assert(0 <= shape_size && shape_size < MAX_DIMS);
+    dims = (int)shape_size;
+    for (int i = 0; i < dims; i++) {
+        p[i] = begin[i];
+    }
+    finalizeBlockLayout(*this, C_);
+}
+
+MatShape::MatShape(const MatShape& shape)
+{
+    dims = shape.dims;
+    layout = shape.layout;
+    C = shape.C;
+    for (int i = 0; i < MAX_DIMS; i++)
+        p[i] = shape.p[i];
+}
+
+MatShape& MatShape::operator = (const MatShape& shape)
+{
+    if (this != &shape) {
+        dims = shape.dims;
+        layout = shape.layout;
+        C = shape.C;
+        for (int i = 0; i < MAX_DIMS; i++)
+            p[i] = shape.p[i];
+    }
+    return *this;
+}
+
+bool MatShape::haveSymbols() const
+{
+    for (int i = 0; i < dims; i++) {
+        if (p[i] < 0)
+            return true;
+    }
+    return false;
+}
+
+MatShape MatShape::toBlock(int C0) const
+{
+    CV_Assert(dims >= 3);
+    // C0 should be > 1 and be a power-of-2: 2, 4, 8, ...
+    CV_Assert(C0 > 1 && (C0 & (C0-1)) == 0);
+    CV_Assert(layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
+    int c_idx = layout == DATA_LAYOUT_NCHW ? 1 : dims-1;
+
+    MatShape newsize = *this;
+    newsize.layout = DATA_LAYOUT_BLOCK;
+    newsize.C = p[c_idx];
+    newsize.p[newsize.dims++] = C0;
+    newsize.p[c_idx] = (p[c_idx] + C0 - 1)/C0;
+
+    return newsize;
+}
+
+MatShape MatShape::fromBlock(DataLayout newLayout) const
+{
+    CV_Assert(dims >= 4);
+    CV_Assert(layout == DATA_LAYOUT_BLOCK);
+    // C0 should be > 1 and be a power-of-2: 2, 4, 8, ...
+    int C0 = p[dims-1];
+    CV_Assert(C0 > 1 && (C0 & (C0-1)) == 0);
+    CV_Assert(p[1] == (C + C0-1)/C0);
+    CV_Assert(newLayout == DATA_LAYOUT_NCHW || newLayout == DATA_LAYOUT_NHWC);
+    int c_idx = newLayout == DATA_LAYOUT_NCHW ? 1 : dims-2;
+
+    MatShape newsize = *this;
+    newsize.layout = newLayout;
+    newsize.C = 0;
+    newsize.p[c_idx] = C;
+    newsize.dims--;
+
+    return newsize;
+}
+
+MatShape MatShape::expand(const MatShape& another) const
+{
+    if (dims == 0)
+        return another;
+    if (another.dims == 0)
+        return *this;
+
+    if ((layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC) &&
+        (another.layout == DATA_LAYOUT_NCHW || another.layout == DATA_LAYOUT_NHWC)) {
+        CV_Assert(layout == another.layout);
+    }
+    // [TODO] support block layout
+    CV_Assert(layout != DATA_LAYOUT_BLOCK && another.layout != DATA_LAYOUT_BLOCK);
+
+    MatShape result;
+
+    if (dims < 0 || another.dims < 0)
+        return result;
+
+    result = *this;
+    result.dims = std::max(dims, another.dims);
+    result.layout = layout == DATA_LAYOUT_UNKNOWN ? another.layout :
+        layout == DATA_LAYOUT_ND && (another.layout == DATA_LAYOUT_NCHW ||
+        another.layout == DATA_LAYOUT_NHWC) ? another.layout : layout;
+    for (int i = result.dims-1; i >= 0; i--) {
+        int i1 = i - (result.dims - dims);
+        int i2 = i - (result.dims - another.dims);
+        int sz1 = i1 < 0 ? 1 : p[i1];
+        int sz2 = i2 < 0 ? 1 : another.p[i2];
+        CV_Assert(sz1 == sz2 || sz1 == 1 || sz2 == 1);
+        // [TODO] handle symbolic shapes
+        result.p[i] = std::max(sz1, sz2);
+    }
+    return result;
+}
+
+bool operator == (const MatShape& size1, const MatShape& size2)
+{
+    if (size1.dims != size2.dims)
+        return false;
+    if (size1.layout != size2.layout &&
+        size1.layout != DATA_LAYOUT_UNKNOWN &&
+        size2.layout != DATA_LAYOUT_UNKNOWN)
+        return false;
+    if (size1.layout == DATA_LAYOUT_BLOCK &&
+        size2.layout == DATA_LAYOUT_BLOCK &&
+        size1.C != size2.C)
+        return false;
+    for (int i = 0; i < size1.dims; i++) {
+        if (size1.p[i] != size2.p[i])
+            return false;
+    }
+    return true;
+}
+
+bool operator != (const MatShape& size1, const MatShape& size2)
+{
+    return !(size1 == size2);
+}
+
+/////////////////////////// MatAllocator ////////////////////////////
+
 void MatAllocator::map(UMatData*, AccessFlag) const
 {
 }
@@ -403,6 +772,21 @@ Mat::Mat(const std::vector<int>& _sz, int _type, const Scalar& _s)
     *this = _s;
 }
 
+Mat::Mat(const MatShape& _shape, int _type)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+{
+    create(_shape, _type);
+}
+
+Mat::Mat(const MatShape& _shape, int _type, const Scalar& _s)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+{
+    create(_shape, _type);
+    *this = _s;
+}
+
 Mat::Mat(const Mat& m)
     : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
       datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
@@ -557,6 +941,52 @@ void Mat::createSameSize(InputArray m, int type)
     _OutputArray(*this).createSameSize(m, type);
 }
 
+void Mat::fit(int _dims, const int* _sizes, int _type)
+{
+    size_t oldTotalBytes = u ? u->size : 0;
+    size_t esz = CV_ELEM_SIZE(_type), newTotal = _dims >= 0;
+    for (int i = 0; i < _dims; i++)
+        newTotal *= _sizes[i];
+    size_t newTotalBytes = newTotal*esz;
+    if (!isContinuous() || newTotalBytes > oldTotalBytes) {
+        create(_dims, _sizes, _type);
+    } else {
+        flags = (flags & ~Mat::TYPE_MASK) | CV_MAT_TYPE(_type);
+        int _dummy_size = 0;
+        setSize(*this, (_dims >= 0 ? _dims : 1), (_dims >= 0 ? _sizes : &_dummy_size), nullptr, true);
+        finalizeHdr(*this);
+    }
+}
+
+void Mat::fit(const std::vector<int>& _shape, int _type)
+{
+    fit((int)_shape.size(), _shape.data(), _type);
+}
+
+void Mat::fit(const MatShape& _shape, int _type)
+{
+    fit(_shape.dims, _shape.p, _type);
+}
+
+void Mat::fit(int _rows, int _cols, int _type)
+{
+    _type &= TYPE_MASK;
+    int sz[] = {_rows, _cols};
+    fit(2, sz, _type);
+}
+
+void Mat::fit(Size _sz, int _type)
+{
+    fit(_sz.height, _sz.width, _type);
+}
+
+void Mat::fitSameSize(InputArray m, int _type)
+{
+    int _sizes[CV_MAX_DIM];
+    int _dims = m.sizend(_sizes);
+    fit(_dims, _sizes, _type);
+}
+
 void Mat::addref()
 {
     if( u )
@@ -613,6 +1043,10 @@ size_t Mat::total(int startDim, int endDim) const
     return p;
 }
 
+MatShape Mat::shape() const
+{
+    return dims == 0 && data == 0 ? MatShape() : MatShape(dims, size.p);
+}
 
 Mat::Mat(Mat&& m) CV_NOEXCEPT
     : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
@@ -745,6 +1179,15 @@ void Mat::create(int d0, const int* _sizes, int _type)
 void Mat::create(const std::vector<int>& _sizes, int _type)
 {
     create((int)_sizes.size(), _sizes.data(), _type);
+}
+
+void Mat::create(const MatShape& _shape, int _type)
+{
+    if (_shape.dims < 0) {
+        release();
+        return;
+    }
+    create(_shape.dims, _shape.p, _type);
 }
 
 void Mat::copySize(const Mat& m)
@@ -1295,6 +1738,15 @@ Mat Mat::reshape(int _cn, const std::vector<int>& _newshape) const
     }
 
     return reshape(_cn, newdims, newdims > 0 ? &_newshape[0] : 0);
+}
+
+Mat Mat::reshape(int _cn, const MatShape& _newshape) const
+{
+    if (_newshape.dims < 0) {
+        int newshape[] = {0};
+        return reshape(_cn, 1, newshape);
+    }
+    return reshape(_cn, _newshape.dims, _newshape.p);
 }
 
 Mat Mat::diag(const Mat& d)

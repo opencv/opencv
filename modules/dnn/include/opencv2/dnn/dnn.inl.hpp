@@ -405,6 +405,18 @@ inline std::map<String, DictValue>::const_iterator Dict::end() const
     return dict.end();
 }
 
+/////////////////////////////////////////////////////////////////
+
+inline Arg::Arg() : idx(0) {}
+
+inline Arg::Arg(int idx_) : idx(idx_) {}
+
+inline bool Arg::empty() const { return idx == 0; }
+
+inline Arg::operator bool() const { return idx != 0; }
+
+inline bool operator == (const Arg& a, const Arg& b) { return a.idx == b.idx; }
+
 CV__DNN_INLINE_NS_END
 }
 }

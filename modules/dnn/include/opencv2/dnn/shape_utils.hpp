@@ -152,10 +152,9 @@ namespace {inline bool is_neg(int i) { return i < 0; }}
 
 static inline MatShape shape(int a0, int a1=-1, int a2=-1, int a3=-1)
 {
-    int dims[] = {a0, a1, a2, a3};
-    MatShape s = shape(dims, 4);
-    s.erase(std::remove_if(s.begin(), s.end(), is_neg), s.end());
-    return s;
+    int shape_[] = {a0, a1, a2, a3};
+    int dims = 1 + (a1 >= 0) + (a1 >= 0 && a2 >= 0) + (a1 >= 0 && a2 >= 0 && a3 >= 0);
+    return shape(shape_, dims);
 }
 
 static inline int total(const MatShape& shape, int start = -1, int end = -1)
@@ -206,9 +205,39 @@ static inline int total(const Mat& mat, int start = -1, int end = -1)
 static inline MatShape concat(const MatShape& a, const MatShape& b)
 {
     MatShape c = a;
-    c.insert(c.end(), b.begin(), b.end());
-
+    size_t a_size = a.size(), b_size = b.size(), c_size = a_size + b_size;
+    c.resize(c_size);
+    for (size_t i = 0; i < b_size; i++) {
+        c[i+a_size] = b[i];
+    }
     return c;
+}
+
+static inline std::ostream& operator << (std::ostream& strm, const MatShape& shape)
+{
+    strm << '[';
+    if (shape.empty()) {
+        strm << "<empty>";
+    } else {
+        size_t n = shape.size();
+        if (n == 0) {
+            strm << "<scalar>";
+        } else {
+            for(size_t i = 0; i < n; ++i)
+                strm << (i > 0 ? " x " : "") << shape[i];
+        }
+    }
+    strm << "]";
+    return strm;
+}
+
+static inline std::string toString(const MatShape& shape, const String& name = "")
+{
+    std::ostringstream ss;
+    if (!name.empty())
+        ss << name << ' ';
+    ss << shape;
+    return ss.str();
 }
 
 template<typename _Tp>

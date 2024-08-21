@@ -45,7 +45,7 @@ public:
 
         MatShape input_shape = inputs[0]; // 1d tensor is represented as 2d mat, e.g. [3] -> [3, 1]
         if (const_input_1d) {
-            input_shape = {inputs[0][0]};
+            input_shape = shape(inputs[0][0]);
         }
 
         auto& moreDimension = input_shape.size() > target_shape.size() ? input_shape : target_shape;
@@ -96,7 +96,7 @@ public:
         const auto &input = inputs[0];
         auto input_shape = shape(input);
         if (const_input_1d) {
-            input_shape = {input_shape[0]};
+            input_shape = shape(input_shape[0]);
         }
 
         auto& moreDimension = input_shape.size() > target_shape.size() ? input_shape : target_shape;
@@ -105,7 +105,7 @@ public:
         MatShape final_target_shape(moreDimension.size(), 1);
         for (int i = 0; i < moreDimension.size(); i++) {
             int d = moreDimension[i];
-            int j = i - (moreDimension.size() - lessDimension.size());
+            int j = i - (int)(moreDimension.size() - lessDimension.size());
             if (j >= 0) {
                 final_target_shape[i] = std::max(lessDimension[j], d);
             } else {

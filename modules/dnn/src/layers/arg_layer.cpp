@@ -97,7 +97,7 @@ public:
         outputs_arr.getMatVector(outputs);
 
         CV_Assert_N(inputs.size() == 1, outputs.size() == 1);
-        std::vector<int> outShape = shape(outputs[0]);
+        MatShape outShape = shape(outputs[0]);
         Mat output(outShape, CV_32SC1);
 
         switch (op)

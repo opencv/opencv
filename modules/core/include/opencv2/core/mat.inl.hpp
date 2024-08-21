@@ -86,6 +86,61 @@ int rawType()
     return (int)CV_MAKETYPE(CV_8U, elemSize);
 }
 
+/////////////////////////// MatShape ////////////////////////////////
+
+inline size_t MatShape::size() const { return dims >= 0 ? dims : 0; }
+inline bool MatShape::empty() const { return total() == 0; }
+inline bool MatShape::isScalar() const { return dims == 0; }
+
+inline int* MatShape::data() { return p; }
+inline const int* MatShape::data() const { return p; }
+
+inline int& MatShape::operator [](size_t idx)
+{
+    CV_Assert(idx < (size_t)(dims >= 0 ? dims : 1));
+    return p[idx];
+}
+
+inline const int& MatShape::operator [](size_t idx) const
+{
+    CV_Assert(idx < (size_t)(dims >= 0 ? dims : 1));
+    return p[idx];
+}
+
+template<typename _It> inline MatShape::MatShape(_It begin, _It end)
+{
+    int buf[MAX_DIMS];
+    int count = 0;
+    for (_It it = begin; it != end; ++it, ++count) {
+        CV_Assert(count < MAX_DIMS);
+        buf[count] = (int)*it;
+    }
+    clear();
+    assign(buf, buf + count);
+}
+
+template<typename _It> inline void MatShape::assign(_It begin, _It end)
+{
+    int buf[MAX_DIMS];
+    int count = 0;
+    for (_It it = begin; it != end; ++it, ++count) {
+        CV_Assert(count < MAX_DIMS);
+        buf[count] = (int)*it;
+    }
+    assign(buf, buf + count);
+}
+
+template<class _It> inline void MatShape::insert(int* where, _It begin, _It end)
+{
+    int buf[MAX_DIMS];
+    int count = 0;
+    for (_It it = begin; it != end; ++it, ++count) {
+        CV_Assert(count < MAX_DIMS);
+        buf[count] = (int)*it;
+    }
+    insert(where, buf, buf + count);
+}
+
 //////////////////////// Input/Output Arrays ////////////////////////
 
 inline void _InputArray::init(int _flags, const void* _obj)

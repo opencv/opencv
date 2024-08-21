@@ -411,5 +411,23 @@ int64 Net::getPerfProfile(std::vector<double>& timings)
     return impl->getPerfProfile(timings);
 }
 
+ArgKind Net::argKind(Arg arg) const
+{
+    CV_Assert(impl);
+    CV_Assert((size_t)arg.idx < impl->args.size());
+    return impl->args[arg.idx].kind;
+}
+
+bool Net::isConstArg(Arg arg) const
+{
+    return argKind(arg) == DNN_ARG_CONST;
+}
+
+Ptr<Graph> Net::getMainGraph() const
+{
+    CV_Assert(impl);
+    return impl->mainGraph;
+}
+
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

@@ -44,20 +44,21 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_CheckEQ(inputs.size(), 1ull, "Tile: one input is expected");
+        int nrepeats = (int)repeats.size();
 
         // repeats must have the same length as input's dimension number
         if (inputs[0].size() > 1) {
             CV_CheckEQ(inputs[0].size(), repeats.size(), "Tile: repeats must be a 1D tensor of the same length as input's dimension number");
             outputs.assign(1, inputs[0]);
-            for (int i = 0; i < repeats.size(); i++)
+            for (int i = 0; i < nrepeats; i++)
             {
                 outputs[0][i] *= repeats[i];
             }
         } else {
-            CV_CheckGE((int)repeats.size(), 1, "Tile: Provide at least one repeat along any dimension");
-            outputs.assign(1, repeats);
+            CV_CheckGE(nrepeats, 1, "Tile: Provide at least one repeat along any dimension");
+            outputs.assign(1, MatShape(repeats));
             if (inputs[0].size() == 1)
-                outputs[0][repeats.size() - 1] *= inputs[0][0];
+                outputs[0][nrepeats - 1] *= inputs[0][0];
         }
 
         return false;

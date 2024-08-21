@@ -15,7 +15,7 @@ namespace dnn
 {
 
 static bool IsTransposeReshapeForEinsum(const std::vector<size_t>& perm,
-                                        std::vector<int> input_dims,
+                                        const MatShape& input_dims,
                                         MatShape& new_shape) {
     // As long as the dims with values > 1 stay in the same order, it's a reshape.
     // Example: Shape=(1,1,1024,4096) -> perm=(2,0,3,1).
@@ -59,7 +59,8 @@ static Mat Transpose(
     Mat output;
     MatShape order(permutation.begin(), permutation.end());
 
-    cv::transposeND((reshape ? input_reshaped : input), order, output);
+    std::vector<int> order_(order.begin(), order.end());
+    cv::transposeND((reshape ? input_reshaped : input), order_, output);
     return output;
 }
 
