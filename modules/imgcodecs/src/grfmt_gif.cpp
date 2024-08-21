@@ -632,7 +632,7 @@ bool GifEncoder::lzwEncode() {
     int lzwCodeSize = lzwMinCodeSize + 1;
     // add clear code to the head of the output stream
     int bitLeft = lzwCodeSize;
-    size_t output = (uchar)1 << lzwMinCodeSize;
+    size_t output = (size_t)1 << lzwMinCodeSize;
 
     lzwTable.allocate((1 << 12) * 256);
     // clear lzwTable
