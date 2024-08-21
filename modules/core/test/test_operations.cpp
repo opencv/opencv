@@ -42,6 +42,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp" // T-API like tests
+#include <fenv.h>
 
 namespace opencv_test {
 namespace {
@@ -1596,9 +1597,12 @@ TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
     const Mat src2(matSize, matType, Scalar(beta, beta, beta, beta));
     const Mat result = ( src1 + src2 ) / 2;
 
-    // Expected that default is FE_TONEAREST(Ties to Even).
+    const int rounding = fegetround();
+    fesetround(FE_TONEAREST);
     const int mean = lrint( static_cast<double>(alpha + beta) / 2.0 );
-    const Mat expected(matSize, matType, Scalar(mean,mean,mean,mean));
+    fesetround(rounding);
+
+    const Mat expected(matSize, matType, Scalar::all(mean));
 
     // Compare result and extected.
     ASSERT_EQ(expected.size(), result.size());
