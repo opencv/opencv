@@ -3,7 +3,7 @@
     "description": "Perfermance tests for opencv js bindings",
     "version": "1.0.0",
     "dependencies": {
-        "benchmark": "^2.1.4"
+        "benchmark": "latest"
     },
     "repository": {
         "type": "git",
