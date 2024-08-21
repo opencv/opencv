@@ -55,4 +55,6 @@
 
 bool clOptionSupport(cv::String option);
 
+cv::String matTypeToOclType(int cvMatType);
+
 #endif
