@@ -1198,6 +1198,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SpaceToDepthLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS TopKLayer : public Layer
+    {
+    public:
+        static Ptr<TopKLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END
