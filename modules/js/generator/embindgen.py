@@ -96,6 +96,16 @@ ignore_list = ['locate',  #int&
 
 def makeWhiteList(module_list):
     wl = {}
+    for m in module_list:
+        for k in m.keys():
+            if k in wl:
+                wl[k] += m[k]
+            else:
+                wl[k] = m[k]
+    return wl
+
+def makeWhiteListJson(module_list):
+    wl = {}
     for n, gen_dict in module_list.items():
         m = gen_dict["whitelist"]
         for k in m.keys():
@@ -951,9 +961,9 @@ if __name__ == "__main__":
     if len(sys.argv) < 5:
         print("Usage:\n", \
             os.path.basename(sys.argv[0]), \
-            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp> <opencv_js.config.py>")
+            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp> <whitelist.json or opencv_js.config.py>")
         print("Current args are: ", ", ".join(["'"+a+"'" for a in sys.argv]))
-        exit(0)
+        exit(1)
 
     dstdir = "."
     hdr_parser_path = os.path.abspath(sys.argv[1])
@@ -966,12 +976,23 @@ if __name__ == "__main__":
     headers = open(sys.argv[3], 'r').read().split(';')
     coreBindings = sys.argv[4]
     whiteListFile = sys.argv[5]
-    with open(whiteListFile) as f:
-        white_list = json.load(f)
-        f.close()
 
-    white_list = makeWhiteList(white_list)
-    namespace_prefix_override = makeNamespacePrefixOverride(white_list)
+    if whiteListFile.endswith(".json") or whiteListFile.endswith(".JSON"):
+        with open(whiteListFile) as f:
+            gen_dict = json.load(f)
+        f.close()
+        white_list = makeWhiteListJson(gen_dict)
+        namespace_prefix_override = makeNamespacePrefixOverride(gen_dict)
+    elif whiteListFile.endswith(".py") or whiteListFile.endswith(".PY"):
+        exec(open(whiteListFile).read())
+        assert(white_list)
+        namespace_prefix_override = {
+            'dnn' : '',
+            'aruco' : '',
+        }
+    else:
+        print("Unexpected format of OpenCV config file", whiteListFile)
+        exit(1)
 
     generator = JSWrapperGenerator()
     generator.gen(bindingsCpp, headers, coreBindings)
