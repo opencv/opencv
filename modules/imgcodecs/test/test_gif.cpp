@@ -199,7 +199,7 @@ TEST(Imgcodecs_Gif,read_gif_multi_bgra){
             const string root = cvtest::TS::ptr()->get_data_path();
             const string gif_filename = root + "gifsuite/gif_multi_bgra.gif";
     vector<cv::Mat> img_vec;
-    ASSERT_NO_THROW(cv::imreadmulti(gif_filename,img_vec));
+    ASSERT_NO_THROW(cv::imreadmulti(gif_filename,img_vec,IMREAD_UNCHANGED));
     EXPECT_EQ(imcount(gif_filename),img_vec.size());
     const int fixed_transparent_count = 53211;
     for(auto & frame_count : img_vec){
