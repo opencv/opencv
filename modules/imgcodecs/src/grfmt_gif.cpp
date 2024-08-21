@@ -164,15 +164,24 @@ bool GifDecoder::readData(Mat &img) {
     }
 
     lastImage = img_;
-    if (!img.empty())
-        img_.copyTo(img);
+    if (!img.empty()) {
+        if (img.channels() == 3){
+            if (m_use_rgb) {
+                cvtColor(img_, img, COLOR_BGRA2RGB);
+            } else {
+                cvtColor(img_, img, COLOR_BGRA2BGR);
+            }
+        } else {
+            if (m_use_rgb) {
+                cvtColor(img_, img, COLOR_BGRA2RGBA);
+            } else {
+                img_.copyTo(img);
+            }
+        }
+    }
 
     // release the memory
     img_.release();
-
-    if (m_use_rgb) {
-        cvtColor(img, img, COLOR_BGRA2RGBA);
-    }
 
     return hasRead;
 }
@@ -537,7 +546,11 @@ bool GifEncoder::writeFrames(std::vector<Mat>& img_vec,
                 break;
         }
     }
-    colorNum = criticalTransparency ? std::min(256, colorNum + 1) : colorNum;
+    if (criticalTransparency) {
+        lzwMinCodeSize = std::min(8, lzwMinCodeSize + 1);
+        colorNum = 1 << lzwMinCodeSize;
+        globalColorTableSize = colorNum;
+    }
 
     if (dithering != 3) {
         for (auto &img : img_vec) {
@@ -784,13 +797,11 @@ void GifEncoder::getColorTable(const std::vector<Mat> &img_vec, bool isGlobal) {
         quantG.addMats(img_vec);
         globalColorTable.allocate(colorNum * 3);
         quantG.getPalette(globalColorTable.data());
-        globalColorTableSize = 1 << lzwMinCodeSize;
     } else {
         quantL = OctreeColorQuant(colorNum, bitDepth, criticalTransparency);
         quantL.addMat(img_vec[0]);
         localColorTable.allocate(colorNum * 3);
         quantL.getPalette(localColorTable.data());
-        localColorTableSize = 1 << lzwMinCodeSize;
     }
 }
 
@@ -798,40 +809,40 @@ void GifEncoder::ditheringKernel(Mat &img, int depth, uchar criticalTransparency
     if (img.empty()) {
         return;
     } else if (img.type() == CV_8UC3){
-        Mat error = Mat::zeros(img.size(), CV_32FC3);
+        Mat error = Mat::zeros(img.rows + 2, img.cols + 2, CV_32FC3);
         int constant = (1 << (9 - depth)) - 1;
         Vec3f bias = Vec3f(0.5, 0.5, 0.5);
-        for (int i = 0; i < img.rows - 2; i++) {
-            for (int j = 0; j < img.cols - 2; j++) {
-                Vec3f old_pixel = (Vec3f)img.at<Vec3b>(i, j) + error.at<Vec3f>(i, j);
+        for (int i = 0; i < img.rows; i++) {
+            for (int j = 0; j < img.cols; j++) {
+                Vec3f old_pixel = (Vec3f)img.at<Vec3b>(i, j) + error.at<Vec3f>(i + 1, j + 1);
                 Vec3b new_pixel = (Vec3b)(old_pixel / constant + bias) * constant;
                 img.at<Vec3b>(i, j) = new_pixel;
                 Vec3f diff = old_pixel - (Vec3f)new_pixel;
-                error.at<Vec3f>(i, j + 1) += diff * 7 / 16;
-                error.at<Vec3f>(i + 1, j - 1) += diff * 3 / 16;
-                error.at<Vec3f>(i + 1, j) += diff * 5 / 16;
-                error.at<Vec3f>(i + 1, j + 1) += diff / 16;
+                error.at<Vec3f>(i + 1, j + 2) += diff * 7 / 16; //     (i, j + 1)
+                error.at<Vec3f>(i + 2, j) += diff * 3 / 16;     // (i + 1, j - 1)
+                error.at<Vec3f>(i + 2, j + 1) += diff * 5 / 16; // (i + 1, j)
+                error.at<Vec3f>(i + 2, j + 2) += diff / 16;     // (i + 1, j + 1)
             }
         }
     } else if (img.type() == CV_8UC4) {
-        Mat error = Mat::zeros(img.size(), CV_32FC4);
+        Mat error = Mat::zeros(img.rows + 2, img.cols + 2, CV_32FC4);
         int constant = (1 << (9 - depth)) - 1;
         Vec4f bias = Vec4f(0.5, 0.5, 0.5, 0.5);
-        for (int i = 0; i < img.rows - 2; i++) {
-            for (int j = 0; j < img.cols - 2; j++) {
+        for (int i = 0; i < img.rows; i++) {
+            for (int j = 0; j < img.cols; j++) {
                 // transparent color should not be dithered
                 if (img.at<Vec4b>(i, j)[3] < criticalTransparency) {
                     continue;
                 }
-                Vec4f old_pixel = (Vec4f)img.at<Vec4b>(i, j) + error.at<Vec4f>(i, j);
+                Vec4f old_pixel = (Vec4f)img.at<Vec4b>(i, j) + error.at<Vec4f>(i + 1, j + 1);
                 Vec4b new_pixel = (Vec4b)(old_pixel / constant + bias) * constant;
                 new_pixel[3] = img.at<Vec4b>(i, j)[3];
                 img.at<Vec4b>(i, j) = new_pixel;
                 Vec4f diff = old_pixel - (Vec4f)new_pixel;
-                error.at<Vec4f>(i, j + 1) += diff * 7 / 16;
-                error.at<Vec4f>(i + 1, j - 1) += diff * 3 / 16;
-                error.at<Vec4f>(i + 1, j) += diff * 5 / 16;
-                error.at<Vec4f>(i + 1, j + 1) += diff / 16;
+                error.at<Vec4f>(i + 1, j + 2) += diff * 7 / 16; //     (i, j + 1)
+                error.at<Vec4f>(i + 2, j) += diff * 3 / 16;     // (i + 1, j - 1)
+                error.at<Vec4f>(i + 2, j + 1) += diff * 5 / 16; // (i + 1, j)
+                error.at<Vec4f>(i + 2, j + 2) += diff / 16;     // (i + 1, j + 1)
             }
         }
     } else {
@@ -963,6 +974,9 @@ int GifEncoder::OctreeColorQuant::getPalette(uchar* colorTable) {
     CV_Assert(colorTable != nullptr);
     uchar index = 0;
     if (m_criticalTransparency) {
+        colorTable[index * 3]     = r;
+        colorTable[index * 3 + 1] = g;
+        colorTable[index * 3 + 2] = b;
         index++;
     }
     for (int i = 0; i < m_bitLength; i++) {
