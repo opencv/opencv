@@ -123,12 +123,12 @@ public:
      Instead, the macros CV_Error(), CV_Error_() and CV_Assert() are used.
     */
     Exception(int _code, const String& _err, const String& _func, const String& _file, int _line);
-    virtual ~Exception() throw();
+    virtual ~Exception() CV_NOEXCEPT;
 
     /*!
      \return the error description and the context as a text string.
     */
-    virtual const char *what() const throw() CV_OVERRIDE;
+    virtual const char *what() const CV_NOEXCEPT CV_OVERRIDE;
     void formatMessage();
 
     String msg; ///< the formatted error message
@@ -149,18 +149,6 @@ It is possible to alternate error processing by using #redirectError().
 @deprecated drop this version
  */
 CV_EXPORTS CV_NORETURN void error(const Exception& exc);
-
-/*! @brief Flags that allow to midify some functions behavior. Used as set of flags.
-*/
-enum AlgorithmHint {
-    ALGO_DEFAULT = 0, //!< Default algorithm behaviour defined during OpenCV build
-    ALGO_ACCURATE = 1, //!< Use generic portable implementation
-    ALGO_APPROX = 2, //!< Allow alternative approximations to get faster implementation. Behaviour and result depends on a platform
-};
-
-/*! @brief Returns ImplementationHint selected by default, a.k.a. `IMPL_DEFAULT` defined during OpenCV compilation.
- */
-CV_EXPORTS_W AlgorithmHint getDefaultAlgorithmHint();
 
 enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independently
                  SORT_EVERY_COLUMN = 1, //!< each matrix column is sorted

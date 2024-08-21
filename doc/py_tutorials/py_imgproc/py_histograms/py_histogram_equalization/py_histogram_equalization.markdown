@@ -151,6 +151,3 @@ Also check these SOF questions regarding contrast adjustment:
     C?](http://stackoverflow.com/questions/10549245/how-can-i-adjust-contrast-in-opencv-in-c)
 4.  [How do I equalize contrast & brightness of images using
     opencv?](http://stackoverflow.com/questions/10561222/how-do-i-equalize-contrast-brightness-of-images-using-opencv)
-
-Exercises
----------

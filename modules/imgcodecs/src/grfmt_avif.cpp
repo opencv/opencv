@@ -195,6 +195,7 @@ bool AvifDecoder::readHeader() {
 
   m_width = decoder_->image->width;
   m_height = decoder_->image->height;
+  m_frame_count = decoder_->imageCount;
   channels_ = (decoder_->image->yuvFormat == AVIF_PIXEL_FORMAT_YUV400) ? 1 : 3;
   if (decoder_->alphaPresent) ++channels_;
   bit_depth_ = decoder_->image->depth;

@@ -135,6 +135,9 @@ CV_EXPORTS void CV_NORETURN check_failed_MatChannels(const int v, const CheckCon
 /// Example: depth == CV_32F || depth == CV_64F
 #define CV_CheckDepth(t, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, MatDepth, t, (test_expr), #t, #test_expr, msg)
 
+/// Example: channel == 1 || channel == 3
+#define CV_CheckChannels(t, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, MatChannels, t, (test_expr), #t, #test_expr, msg)
+
 /// Example: v == A || v == B
 #define CV_Check(v, test_expr, msg)  CV__CHECK_CUSTOM_TEST(_, auto, v, (test_expr), #v, #test_expr, msg)
 

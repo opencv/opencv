@@ -1035,7 +1035,8 @@ static std::string findData(const std::string& relative_path, bool required, boo
         }
     }
 #ifdef OPENCV_TEST_DATA_INSTALL_PATH
-    datapath = path_join("./", OPENCV_TEST_DATA_INSTALL_PATH);
+    datapath = OPENCV_TEST_DATA_INSTALL_PATH;
+
     if (isDirectory(datapath))
     {
         for(size_t i = search_subdir.size(); i > 0; i--)
@@ -1127,6 +1128,7 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
     recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
     recordPropertyVerbose("cv_compiler", "Compiler", getSnippetFromConfig("C++ Compiler:", "\n"));
     recordPropertyVerbose("implementation_hint", "Algorithm hint", getSnippetFromConfig("Algorithm Hint:", "\n"));
+    recordPropertyVerbose("hal", "HAL", getSnippetFromConfig("Custom HAL:", "\n"));
     const char* parallelFramework = cv::currentParallelFramework();
     if (parallelFramework)
     {

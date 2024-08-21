@@ -1263,26 +1263,8 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     m_decoder->setSource(filename);
     CV_Assert(m_decoder->readHeader());
 
-    // count the pages of the image collection
-    size_t count = 1;
-    while(m_decoder->nextPage()) count++;
-
-    m_size = count;
+    m_size = m_decoder->getFrameCount();
     m_pages.resize(m_size);
-    // Reinitialize the decoder because we advanced to the last page while counting the pages of the image
-#ifdef HAVE_GDAL
-    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
-        m_decoder = GdalDecoder().newDecoder();
-    }
-    else {
-#endif
-    m_decoder = findDecoder(m_filename);
-#ifdef HAVE_GDAL
-    }
-#endif
-
-    m_decoder->setSource(m_filename);
-    m_decoder->readHeader();
 }
 
 size_t ImageCollection::Impl::size() const { return m_size; }

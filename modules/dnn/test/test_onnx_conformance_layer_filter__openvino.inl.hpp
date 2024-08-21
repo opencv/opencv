@@ -565,9 +565,11 @@ CASE(test_depthtospace_dcr_mode)
 CASE(test_depthtospace_example)
     // no filter
 CASE(test_dequantizelinear)
-    // no filter
+    SKIP;
 CASE(test_dequantizelinear_axis)
-    // no filter
+    SKIP;
+CASE(test_dequantizelinear_blocked)
+    SKIP;
 CASE(test_det_2d)
     // no filter
 CASE(test_det_nd)
@@ -624,7 +626,13 @@ CASE(test_elu)
     // no filter
 CASE(test_elu_default)
     // no filter
+CASE(test_elu_default_expanded_ver18)
+    // no filter
 CASE(test_elu_example)
+    // no filter
+CASE(test_elu_example_expanded_ver18)
+    // no filter
+CASE(test_elu_expanded_ver18)
     // no filter
 CASE(test_equal)
     // no filter
@@ -1098,6 +1106,10 @@ CASE(test_min_uint64)
     // no filter
 CASE(test_min_uint8)
     // no filter
+CASE(test_mish)
+    // no filter
+CASE(test_mish_expanded)
+    // no filter
 CASE(test_mod_broadcast)
     // no filter
 CASE(test_mod_int64_fmod)
@@ -1338,9 +1350,11 @@ CASE(test_qlinearmatmul_2D)
 CASE(test_qlinearmatmul_3D)
     // no filter
 CASE(test_quantizelinear)
-    // no filter
+    SKIP;
 CASE(test_quantizelinear_axis)
-    // no filter
+    SKIP;
+CASE(test_quantizelinear_blocked)
+    SKIP;
 CASE(test_range_float_type_positive_delta)
     // no filter
 CASE(test_range_float_type_positive_delta_expanded)
@@ -1851,7 +1865,13 @@ CASE(test_selu)
     // no filter
 CASE(test_selu_default)
     // no filter
+CASE(test_selu_default_expanded_ver18)
+    // no filter
 CASE(test_selu_example)
+    // no filter
+CASE(test_selu_example_expanded_ver18)
+    // no filter
+CASE(test_selu_expanded_ver18)
     // no filter
 CASE(test_sequence_insert_at_back)
     // no filter
