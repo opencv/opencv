@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include <cfenv>
 #include "opencv2/ts/ocl_test.hpp" // T-API like tests
 
 namespace opencv_test {
@@ -1574,6 +1575,8 @@ TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/is
 typedef tuple<perf::MatDepth,int,int,int> Arith_Regression24163Param;
 typedef testing::TestWithParam<Arith_Regression24163Param> Core_Arith_Regression24163;
 
+static std::mutex roundingMutex;
+
 TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
 {
     const int matDepth = get<0>(GetParam());
@@ -1596,8 +1599,15 @@ TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
     const Mat src2(matSize, matType, Scalar(beta, beta, beta, beta));
     const Mat result = ( src1 + src2 ) / 2;
 
-    // Expected that default is FE_TONEAREST(Ties to Even).
-    const int mean = lrint( static_cast<double>(alpha + beta) / 2.0 );
+    // Set mode to banker's rounding so that no other thread can interfere
+    int mean;
+    {
+        std::lock_guard<std::mutex> lg(roundingMutex);
+        int rounding = std::fegetround();
+        std::fesetround(FE_TONEAREST);
+        mean = lrint( static_cast<double>(alpha + beta) / 2.0 );
+        std::fesetround(rounding);
+    }
     const Mat expected(matSize, matType, Scalar(mean,mean,mean,mean));
 
     // Compare result and extected.
