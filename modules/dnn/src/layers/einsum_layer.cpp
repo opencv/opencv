@@ -541,7 +541,7 @@ public:
                 // Use either the preprocessed inputs (if it is available) or the corresponding raw inputs
                 result = pairwiseOperandProcess(!result.empty() ? result : rawInputs[0],
                                                 !result.empty() ? tmpResult : homogenizedInputDims[0],
-                                                (!preProcessedInputs.empty() && !preProcessedInputs[input].empty()) ? preProcessedInputs[input] : rawInputs[input],
+                                                (!preProcessedInputs.empty() && preProcessedInputs.size() > input && !preProcessedInputs[input].empty()) ? preProcessedInputs[input] : rawInputs[input],
                                                 homogenizedInputDims[input],
                                                 reducedDims,
                                                 isFinalPair);
