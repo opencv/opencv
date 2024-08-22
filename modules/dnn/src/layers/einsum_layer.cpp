@@ -459,6 +459,7 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        CV_CheckEQ((size_t)inputs_arr.total(), (size_t)numInputs, "Number of inputs in forward and inputs during graph constructions do not match");
 
         if (inputs_arr.depth() == CV_16F)
         {
@@ -541,7 +542,7 @@ public:
                 // Use either the preprocessed inputs (if it is available) or the corresponding raw inputs
                 result = pairwiseOperandProcess(!result.empty() ? result : rawInputs[0],
                                                 !result.empty() ? tmpResult : homogenizedInputDims[0],
-                                                !preProcessedInputs[input].empty() ? preProcessedInputs[input] : rawInputs[input],
+                                                (!preProcessedInputs[input].empty()) ? preProcessedInputs[input] : rawInputs[input],
                                                 homogenizedInputDims[input],
                                                 reducedDims,
                                                 isFinalPair);
@@ -605,8 +606,8 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
     std::vector<cv::Mat> inputs;
     inputs_arr.getMatVector(inputs);
 
-    preProcessedInputs.reserve(inputs.size());
-    homogenizedInputDims.reserve(inputs.size());
+    preProcessedInputs.resize(inputs.size());
+    homogenizedInputDims.resize(inputs.size());
 
     int inputIter = 0;
     for(const Mat& input : inputs)
@@ -615,6 +616,11 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         // variable to hold processed version of the original input
         MatShape input_dims = shape(input);
+        if (input_dims.empty()){
+            homogenizedInputDims.insert(homogenizedInputDims.begin() + inputIter, MatShape(numLetterIndices, 1));
+            ++inputIter;
+            continue;
+        }
 
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
@@ -667,9 +673,9 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         {
             preprocessed = preprocessed.reshape(1, homogenizedInputDims_.size(), homogenizedInputDims_.data());
         }
+        homogenizedInputDims.insert(homogenizedInputDims.begin() + inputIter, homogenizedInputDims_);
+        preProcessedInputs.insert(preProcessedInputs.begin() + inputIter, preprocessed);
 
-        preProcessedInputs.emplace_back(preprocessed);
-        homogenizedInputDims.emplace_back(homogenizedInputDims_);
         ++inputIter;
     }
 }
