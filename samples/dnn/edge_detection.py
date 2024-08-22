@@ -1,6 +1,6 @@
 '''
 This sample demonstrates edge detection with dexined and canny edge detection techniques.
-For switching between deep learning based model(dexined) and canny edge detector, press 'd' (for dexined) or 'c' (for canny) respectively in case of video. For image pass the argument --method for switching between dexined and canny.
+For switching between deep learning based model(dexined) and canny edge detector, press space bar in case of video. In case of image, pass the argument --method for switching between dexined and canny.
 '''
 
 import cv2 as cv
@@ -46,7 +46,7 @@ def get_args_parser(func_args):
             Dexined:
                 python edge_detection.py dexined --input=path/to/your/input/image/or/video
 
-        "In case of video input, for switching between deep learning based model (Dexined) and Canny edge detector, press 'd' (for Dexined) or 'c' (for Canny) respectively. Pass as argument in case of image input."
+        "In case of video input, for switching between deep learning based model (Dexined) and Canny edge detector, press space bar. Pass as argument in case of image input."
 
         Model path can also be specified using --model argument
         ''', formatter_class=argparse.RawTextHelpFormatter)
@@ -126,6 +126,7 @@ def main(func_args=None):
     else:
         args.model = findModel(args.model, args.sha1)
         method = 'dexined'
+
     if method == 'canny':
         dummy = np.zeros((512, 512, 3), dtype="uint8")
         setupCannyWindow(dummy)
@@ -150,7 +151,7 @@ def main(func_args=None):
 
         cv.imshow("Input", image)
         key = cv.waitKey(30)
-        if key == ord('d') or key == ord('D'):
+        if key == ord(' ') and method == 'canny':
             if hasattr(args, 'model'):
                 method = "dexined"
                 if net is None:
@@ -160,7 +161,7 @@ def main(func_args=None):
                 cv.moveWindow('Output', 200, 50)
             else:
                 print("[ERROR] Provide model file using --model to use dexined")
-        elif key == ord('c') or key == ord('C'):
+        elif key == ord(' ') and method=='dexined':
             method = "canny"
             setupCannyWindow(image)
         elif key == 27 or key == ord('q'):

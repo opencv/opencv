@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
         "\t ./example_dnn_edge_detection --input=path/to/your/input/image/or/video (don't give --input flag if want to use device camera)\n"
         "With Dexined:\n"
         "\t ./example_dnn_edge_detection dexined --input=path/to/your/input/image/or/video\n\n"
-        "For switching between deep learning based model(dexined) and canny edge detector, press 'd' (for dexined) or 'c' (for canny) respectively in case of video. For image pass the argument --method for switching between dexined and canny.\n"
+        "For switching between deep learning based model(dexined) and canny edge detector, press space bar in case of video. In case of image, pass the argument --method for switching between dexined and canny.\n"
         "Model path can also be specified using --model argument\n\n";
 
     const string param_keys =
@@ -137,10 +137,16 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    const string modelName = parser.get<String>("@alias");
+    string modelName = parser.get<String>("@alias");
     string zooFile = parser.get<String>("zoo");
-    if(parser.has("@alias")){
+
+    const char* path = getenv("OPENCV_SAMPLES_DATA_PATH");
+    if ((path != NULL) || parser.has("@alias")) {
+        modelName = "dexined";
         zooFile = findFile(zooFile);
+    }
+    else{
+        cout<<"[WARN] set the environment variables or pass path to dexined.onnx model file and models.yml file for using dexined based edge detector.";
     }
 
     keys += genPreprocArguments(modelName, zooFile);
@@ -158,11 +164,6 @@ int main(int argc, char** argv) {
     string model = findModel(parser.get<String>("model"), sha1);
     parser.about(about);
 
-    if (parser.has("help")) {
-        parser.printMessage();
-        return 0;
-    }
-
     VideoCapture cap;
     if (parser.has("input"))
         cap.open(samples::findFile(parser.get<String>("input")));
@@ -179,9 +180,6 @@ int main(int argc, char** argv) {
         cout << "[WARN] Model file not provided, using canny instead. Pass model using --model=/path/to/dexined.onnx to use dexined model." << endl;
         method = "canny";
     }
-    else{
-        method = "dexined";
-    }
 
     if (method == "dexined") {
         loadModel(model, backend, target, net);
@@ -190,7 +188,7 @@ int main(int argc, char** argv) {
         Mat dummy = Mat::zeros(512, 512, CV_8UC3);
         setupCannyWindow(dummy);
     }
-
+    cout<<"To switch between canny and dexined press space bar."<<endl;
     for (;;){
         cap >> image;
         if (image.empty())
@@ -216,7 +214,7 @@ int main(int argc, char** argv) {
         imshow("Output", result);
         int key = waitKey(30);
 
-        if (key == 'd' || key == 'D')
+        if (key == ' ' && method == "canny")
         {
             if (!model.empty()){
                 method = "dexined";
@@ -230,7 +228,7 @@ int main(int argc, char** argv) {
                 cout << "[ERROR] Provide model file using --model to use dexined" << endl;
             }
         }
-        else if (key == 'c' || key == 'C')
+        else if (key == ' ' && method == "dexined")
         {
             method = "canny";
             setupCannyWindow(image);
