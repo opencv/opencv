@@ -688,6 +688,24 @@ OCL_PERF_TEST_P(PowFixture, Pow, ::testing::Combine(
     SANITY_CHECK(dst, 1.5e-6, ERROR_RELATIVE);
 }
 
+///////////// iPow ////////////////////////
+OCL_PERF_TEST_P(PowFixture, iPow, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8UC1, CV_8SC1,CV_16UC1,CV_16SC1,CV_32SC1)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    randu(src, 0, 100);
+    declare.in(src).out(dst);
+
+    OCL_TEST_CYCLE() cv::pow(src, 7.0, dst);
+
+    SANITY_CHECK_NOTHING();
+}
 ///////////// AddWeighted////////////////////////
 
 typedef Size_MatType AddWeightedFixture;
