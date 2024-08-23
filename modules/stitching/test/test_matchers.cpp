@@ -67,9 +67,11 @@ TEST(SurfFeaturesFinder, CanFindInROIs)
     int tl_rect_count = 0, br_rect_count = 0, bad_count = 0;
     for (const auto &keypoint : roi_features.keypoints)
     {
-        if (rois[0].contains(keypoint.pt))
+        // Workaround for https://github.com/opencv/opencv/issues/26016
+        // To keep its behaviour, keypoint.pt casts to Point_<int>.
+        if (rois[0].contains(Point_<int>(keypoint.pt)))
             tl_rect_count++;
-        else if (rois[1].contains(keypoint.pt))
+        else if (rois[1].contains(Point_<int>(keypoint.pt)))
             br_rect_count++;
         else
             bad_count++;
