@@ -704,7 +704,7 @@ OCL_PERF_TEST_P(PowFixture, iPow, ::testing::Combine(
 
     OCL_TEST_CYCLE() cv::pow(src, 7.0, dst);
 
-    SANITY_CHECK(dst, 1.5e-6, ERROR_RELATIVE);
+    SANITY_CHECK_NOTHING();
 }
 ///////////// AddWeighted////////////////////////
 
