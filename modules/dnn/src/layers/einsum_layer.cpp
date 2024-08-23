@@ -617,7 +617,7 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         // variable to hold processed version of the original input
         MatShape input_dims = shape(input);
         if (input_dims.empty()){
-            homogenizedInputDims.insert(homogenizedInputDims.begin() + inputIter, MatShape(numLetterIndices, 1));
+            homogenizedInputDims[inputIter] = MatShape(numLetterIndices, 1);
             ++inputIter;
             continue;
         }
@@ -673,8 +673,8 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         {
             preprocessed = preprocessed.reshape(1, homogenizedInputDims_.size(), homogenizedInputDims_.data());
         }
-        homogenizedInputDims.insert(homogenizedInputDims.begin() + inputIter, homogenizedInputDims_);
-        preProcessedInputs.insert(preProcessedInputs.begin() + inputIter, preprocessed);
+        preProcessedInputs[inputIter] = preprocessed;
+        homogenizedInputDims[inputIter] = homogenizedInputDims_;
 
         ++inputIter;
     }
