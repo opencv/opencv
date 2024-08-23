@@ -393,7 +393,7 @@ There are multiple less popular frameworks which can be used to read and write v
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |
-| `WITH_1394` | _ON_ | [IIDC IEEE1394](https://en.wikipedia.org/wiki/IEEE_1394#IIDC) support using DC1394 library |
+| `WITH_1394` | _OFF_ | [IIDC IEEE1394](https://en.wikipedia.org/wiki/IEEE_1394#IIDC) support using DC1394 library |
 | `WITH_OPENNI` | _OFF_ | [OpenNI](https://en.wikipedia.org/wiki/OpenNI) can be used to capture data from depth-sensing cameras. Deprecated. |
 | `WITH_OPENNI2` | _OFF_ | [OpenNI2](https://structure.io/openni) can be used to capture data from depth-sensing cameras. |
 | `WITH_PVAPI` | _OFF_ | [PVAPI](https://www.alliedvision.com/en/support/software-downloads.html) is legacy SDK for Prosilica GigE cameras. Deprecated. |
@@ -455,6 +455,8 @@ OpenCV relies on various GUI libraries for window drawing.
 | `WITH_WIN32UI` | _ON_ | Windows | [WinAPI](https://en.wikipedia.org/wiki/Windows_API) is a standard GUI API in Windows. |
 | N/A | _ON_ | macOS | [Cocoa](https://en.wikipedia.org/wiki/Cocoa_(API)) is a framework used in macOS. |
 | `WITH_QT` | _OFF_ | Cross-platform | [Qt](https://en.wikipedia.org/wiki/Qt_(software)) is a cross-platform GUI framework. |
+| `WITH_FRAMEBUFFER` | _OFF_ | Linux | Experimental backend using [Linux framebuffer](https://en.wikipedia.org/wiki/Linux_framebuffer). Have limited functionality but does not require dependencies. |
+| `WITH_FRAMEBUFFER_XVFB` | _OFF_ | Linux | Enables special output mode of the FRAMEBUFFER backend compatible with [xvfb](https://en.wikipedia.org/wiki/Xvfb) tool. Requires some X11 headers. |
 
 @note OpenCV compiled with Qt support enables advanced _highgui_ interface, see @ref highgui_qt for details.
 
