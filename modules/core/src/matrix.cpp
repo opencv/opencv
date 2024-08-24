@@ -1313,6 +1313,20 @@ Mat::Mat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _
     finalizeHdr(*this);
 }
 
+Mat::Mat(const MatShape& _shape, int _type, void* _data, const size_t* _steps)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
+{
+    flags |= CV_MAT_TYPE(_type);
+    datastart = data = (uchar*)_data;
+    if (_shape.dims >= 0) {
+        setSize(*this, (int)_shape.dims, _shape.p, _steps, true);
+    }
+    else {
+        CV_Assert(!data);
+    }
+    finalizeHdr(*this);
+}
 
 Mat::Mat(const Mat& m, const Range* ranges)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
@@ -1747,6 +1761,17 @@ Mat Mat::reshape(int _cn, const MatShape& _newshape) const
         return reshape(_cn, 1, newshape);
     }
     return reshape(_cn, _newshape.dims, _newshape.p);
+}
+
+Mat Mat::reshape(int _cn, std::initializer_list<int> newshape_) const
+{
+    int newshape[MatShape::MAX_DIMS];
+    size_t i, newshape_dims = newshape_.size();
+    CV_Assert(newshape_dims <= (size_t)MatShape::MAX_DIMS);
+    auto it = newshape_.begin();
+    for (i = 0; i < newshape_dims; i++, ++it)
+        newshape[i] = *it;
+    return reshape(_cn, (int)newshape_dims, newshape);
 }
 
 Mat Mat::diag(const Mat& d)

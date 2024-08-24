@@ -11,7 +11,7 @@ void runLayer(cv::Ptr<cv::dnn::Layer> layer, std::vector<cv::Mat> &inpBlobs, std
 {
     size_t ninputs = inpBlobs.size();
     std::vector<cv::Mat> inp(ninputs), outp, intp;
-    std::vector<cv::dnn::MatShape> inputs, outputs, internals;
+    std::vector<cv::MatShape> inputs, outputs, internals;
     std::vector<cv::dnn::MatType> inputs_types, outputs_types, internals_types;
 
     for (size_t i = 0; i < ninputs; i++)

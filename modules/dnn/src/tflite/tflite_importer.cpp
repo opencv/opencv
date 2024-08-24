@@ -184,7 +184,7 @@ void TFLiteImporter::populateNet()
         layerIds[idx] = std::make_pair(0, i);
         const auto tensor = modelTensors->Get(idx);
         if (!tensor)
-            CV_Error(Error::StsError, cv::format("DNN/TFLite: subgraph input %d (%zu) is NULL", (int)i, idx));
+            CV_Error(Error::StsError, cv::format("DNN/TFLite: subgraph input %zu (%zu) is NULL", i, idx));
         layouts[idx] = estimateLayout(*tensor);
 
         // Keep info about origin inputs names and shapes

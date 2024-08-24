@@ -1414,25 +1414,25 @@ TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
     lp.set("bias_term", false);
     lp.set("axis", 0);
 
-    std::vector<int> input_shape = get<0>(GetParam());
+    MatShape input_shape(get<0>(GetParam()));
 
     RNG& rng = TS::ptr()->get_rng();
     float inp_value = rng.uniform(0.0, 10.0);
-    Mat weights(std::vector<int>{total(input_shape), 1}, CV_32F, inp_value);
+    Mat weights(std::vector<int>{(int)input_shape.total(), 1}, CV_32F, inp_value);
     lp.blobs.push_back(weights);
 
     Ptr<Layer> layer = LayerFactory::createLayerInstance("InnerProduct", lp);
 
-    Mat input(input_shape.size(), input_shape.data(), CV_32F);
+    Mat input(input_shape, CV_32F);
     randn(input, 0, 1);
     Mat output_ref = input.reshape(1, 1) * weights;
-    output_ref.dims = input_shape.size();
+    output_ref.dims = input_shape.dims;
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
     ASSERT_EQ(1, outputs.size());
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    ASSERT_EQ(output_ref.shape(), outputs[0].shape());
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,

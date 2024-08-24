@@ -502,9 +502,9 @@ TEST_F(Layer_LSTM_Test, get_set_test)
 
     EXPECT_EQ(2u, outputs.size());
 
-    print(outResShape, "outResShape");
-    print(shape(outputs[0]), "out0");
-    print(shape(outputs[0]), "out1");
+    //print(outResShape, "outResShape");
+    //print(shape(outputs[0]), "out0");
+    //print(shape(outputs[0]), "out1");
 
     EXPECT_EQ(outResShape, shape(outputs[0]));
     EXPECT_EQ(outResShape, shape(outputs[1]));
@@ -1520,17 +1520,17 @@ public:
         return Ptr<Layer>(new CustomInterpLayer(params));
     }
 
-    virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
+    virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
-                                 std::vector<std::vector<int> > &outputs,
-                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE
+                                 std::vector<MatShape> &outputs,
+                                 std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         const int batchSize = inputs[0][0];
         const int numChannels = inputs[0][1];
         const int inpHeight = inputs[0][2];
         const int inpWidth = inputs[0][3];
 
-        std::vector<int> outShape(4);
+        MatShape outShape(4);
         outShape[0] = batchSize;
         outShape[1] = numChannels;
         outShape[2] = outHeight != 0 ? outHeight : (inpHeight + (inpHeight - 1) * (zoomFactor - 1));
