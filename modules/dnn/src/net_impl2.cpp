@@ -20,7 +20,7 @@ std::string argKindToString(ArgKind kind)
         kind == DNN_ARG_PATTERN ? "Pattern" : "???";
 }
 
-ArgInfo::ArgInfo()
+ArgData::ArgData()
 {
     kind = DNN_ARG_EMPTY;
     type = -1;
@@ -215,7 +215,7 @@ void Net::Impl::clear()
     dimnames = NamesHash();
     dimnames_ = std::vector<std::string>();
 
-    args = std::vector<ArgInfo>();
+    args = std::vector<ArgData>();
     argnames = NamesHash();
 
     tensors = std::vector<Tensor>();
@@ -224,12 +224,12 @@ void Net::Impl::clear()
 
     mainGraph = Graph();
 
-    pattern_args = std::vector<ArgInfo>();
+    pattern_args = std::vector<ArgData>();
     pattern_tensors = std::vector<Tensor>();
 
-    ArgInfo info;
-    args.push_back(info);
-    pattern_args.push_back(info);
+    ArgData adata;
+    args.push_back(adata);
+    pattern_args.push_back(adata);
     tensors.push_back(Tensor());
     bufidxs.push_back(-1);
 
@@ -267,8 +267,8 @@ void Net::Impl::allocateLayerOutputs(
     outputs.resize(noutputs);
     for (size_t i = 0; i < noutputs; i++) {
         Arg out = layer->outputs[i];
-        const ArgInfo& info = args.at(out.idx);
-        if (useBufferPool && info.kind == DNN_ARG_TEMP) {
+        const ArgData& adata = args.at(out.idx);
+        if (useBufferPool && adata.kind == DNN_ARG_TEMP) {
             int bufidx = bufidxs.at(out.idx);
             Mat& buf = buffers.at(bufidx);
             buf.fit(outShapes[i], outTypes[i]);
@@ -302,12 +302,12 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
 
 /*void Net::Impl::checkAndUpdateDim(const Ptr<Graph>& g, const Ptr<Layer>& layer, Arg inp, int j, int value)
 {
-    const ArgInfo& info = args[inp.idx];
-    int64_t value0 = info.size.size[j];
+    const ArgData& adata = args[inp.idx];
+    int64_t value0 = adata.size.size[j];
     if (value0 >= 0) {
         if (value0 != value) {
             CV_Error_(Error::StsBadArg, ("graph '%s': node '%s': %d-th dimension of argument '%s' is wrong: %lld given, %lld expected",
-                                        g->name().data(), node ? node->name().data() : "none (graph input)", j, info.name.c_str(), value, value0));
+                                        g->name().data(), node ? node->name().data() : "none (graph input)", j, adata.name.c_str(), value, value0));
         }
     } else {
         int64_t idx = -value0-1;
@@ -319,7 +319,7 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
             CV_Error_(Error::StsBadArg,
             ("graph '%s': node '%s': %d-th dimension '%s' of argument '%s' is wrong: %lld given, but '%s' is already set to %lld",
                     g->name().data(), node ? node->name().data() : "none (graph input)",
-                    j, dimnames_[idx].c_str(), info.name.c_str(),
+                    j, dimnames_[idx].c_str(), adata.name.c_str(),
                     value, dimnames_[idx].c_str(), value0));
         }
     }
@@ -328,11 +328,11 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
 void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg arg, bool dumpdata)
 {
     const Mat& m = tensors.at(arg.idx);
-    const ArgInfo& info = args.at(arg.idx);
-    CV_Assert(m.type() == info.type);
-    strm_ << prefix << " " << i << ". Name: " << info.name << "\n";
+    const ArgData& adata = args.at(arg.idx);
+    CV_Assert(m.type() == adata.type);
+    strm_ << prefix << " " << i << ". Name: " << adata.name << "\n";
     strm_ << "  Buf: " << bufidxs.at(arg.idx) << "\n";
-    strm_ << "  Type: " << typeToString(info.type) << " \n";
+    strm_ << "  Type: " << typeToString(adata.type) << " \n";
     MatShape shape = m.shape();
     strm_ << "  Shape: " << shape << "\n  Layout: " << layoutToString(shape.layout) << "\n";
     if (dumpdata) {
@@ -373,27 +373,27 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         int mtype = m.type();
         MatShape mshape = m.shape();
         Arg inp = gr_inputs[i];
-        const ArgInfo& info = args.at(inp.idx);
-        if (info.type != mtype) {
+        const ArgData& adata = args.at(inp.idx);
+        if (adata.type != mtype) {
             CV_Error_(Error::StsBadArg, ("wrong type of argument '%s': %s given, %s expected",
-                                         info.name.c_str(), typeToString(mtype).c_str(),
-                                         typeToString(info.type).c_str()));
+                                         adata.name.c_str(), typeToString(mtype).c_str(),
+                                         typeToString(adata.type).c_str()));
         }
 
         /*
         [TODO] ignore extensive shape check for now
-        if (info.shape.dims != mshape.dims) {
+        if (adata.shape.dims != mshape.dims) {
             CV_Error_(Error::StsBadArg, ("wrong dimensionality of argument '%s': %d given, %d expected",
-                                         info.name.c_str(), tsize.ndims, info.size.ndims));
+                                         adata.name.c_str(), tsize.ndims, adata.size.ndims));
         }
 
         for (int k = 0; k < mshape.dims; k++) {
             checkAndUpdateDim(graph, Node(), inp, k, tsize.size[k]);
         }*/
 
-        if (info.kind == DNN_ARG_INPUT) {
+        if (adata.kind == DNN_ARG_INPUT) {
             tensors.at(inp.idx) = m;
-        } else if (info.kind == DNN_ARG_TEMP) {
+        } else if (adata.kind == DNN_ARG_TEMP) {
             int bufidx = bufidxs.at(inp.idx);
             Mat& buf = buffers.at(bufidx);
             buf.fit(mshape, mtype); // minimize reallocations
@@ -401,7 +401,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             tensors[inp.idx] = buf;
         } else {
             CV_Error_(Error::StsBadArg, ("graph %s: argument '%s' must be 'INPUT' or 'TEMP', not '%s'",
-                                         graph->name().data(), info.name.c_str(), argKindToString(info.kind).c_str()));
+                                         graph->name().data(), adata.name.c_str(), argKindToString(adata.kind).c_str()));
         }
     }
 
@@ -418,7 +418,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         inpShapes.resize(ninputs);
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
-            //const ArgInfo& info = args[inp.idx];
+            //const ArgData& adata = args[inp.idx];
             const Mat& m = tensors[inp.idx];
             inpMats[i] = m;
             inpTypes[i] = m.type();
@@ -433,8 +433,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             outMats.resize(noutputs);
             for (i = 0; i < noutputs; i++) {
                 Arg out = outputs[i];
-                const ArgInfo& info = args.at(out.idx);
-                if (info.kind == DNN_ARG_TEMP) {
+                const ArgData& adata = args.at(out.idx);
+                if (adata.kind == DNN_ARG_TEMP) {
                     int bufidx = bufidxs.at(out.idx);
                     outMats[i] = buffers.at(bufidx);
                 } else {
@@ -461,12 +461,12 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         for (i = 0; i < noutputs; i++) {
             Arg out = outputs[i];
-            ArgInfo& info = args[out.idx];
+            ArgData& adata = args[out.idx];
             const Mat& m = outMats[i];
-            info.type = m.type();
-            info.shape = m.shape();
+            adata.type = m.type();
+            adata.shape = m.shape();
             tensors.at(out.idx) = m;
-            if (info.kind == DNN_ARG_TEMP) {
+            if (adata.kind == DNN_ARG_TEMP) {
                 int bufidx = bufidxs.at(out.idx);
                 Mat& buf = buffers.at(bufidx);
 
@@ -564,36 +564,36 @@ std::ostream& Net::Impl::dumpDim(std::ostream& strm, int value) const
 std::ostream& Net::Impl::dumpArg(std::ostream& strm, Arg arg, int indent, bool comma, bool dump_details) const
 {
     checkArg(arg);
-    const ArgInfo& info = args.at(arg.idx);
+    const ArgData& adata = args.at(arg.idx);
     prindent(strm, indent);
     if (arg.empty()) {
         strm << "<empty>" << (comma ? "," : "");
     } else {
-        strm << '\"' << info.name << (comma ? "\"," : "\"");
+        strm << '\"' << adata.name << (comma ? "\"," : "\"");
         if (dump_details && arg.idx > 0) {
             strm << " // ";
-            strm << (info.kind == DNN_ARG_INPUT ? "<Input>" :
-                     info.kind == DNN_ARG_OUTPUT ? "<Output>" :
-                     info.kind == DNN_ARG_CONST ? "<Const>" :
-                     info.kind == DNN_ARG_TEMP ? "<Temp>" :
+            strm << (adata.kind == DNN_ARG_INPUT ? "<Input>" :
+                     adata.kind == DNN_ARG_OUTPUT ? "<Output>" :
+                     adata.kind == DNN_ARG_CONST ? "<Const>" :
+                     adata.kind == DNN_ARG_TEMP ? "<Temp>" :
                      "<Uknown kind>");
-            if (info.type >= 0) {
-                strm << " " << typeToString(info.type);
-                if (info.shape.empty()) {
+            if (adata.type >= 0) {
+                strm << " " << typeToString(adata.type);
+                if (adata.shape.empty()) {
                     strm << " <empty>";
                 } else {
-                    if (info.shape.dims > 0 && info.shape.layout != DATA_LAYOUT_UNKNOWN) {
-                        strm << " " << layoutToString(info.shape.layout);
+                    if (adata.shape.dims > 0 && adata.shape.layout != DATA_LAYOUT_UNKNOWN) {
+                        strm << " " << layoutToString(adata.shape.layout);
                     }
                     strm << " [";
-                    for (int i = 0; i < info.shape.dims; i++) {
+                    for (int i = 0; i < adata.shape.dims; i++) {
                         strm << (i > 0 ? " x " : "");
-                        dumpDim(strm, info.shape[i]);
+                        dumpDim(strm, adata.shape[i]);
                     }
                     strm << "]";
                 }
             }
-            if (info.kind == DNN_ARG_TEMP && ((size_t)arg.idx < bufidxs.size()))
+            if (adata.kind == DNN_ARG_TEMP && ((size_t)arg.idx < bufidxs.size()))
                 strm << " (buf #" << bufidxs[arg.idx] << ")";
         }
     }

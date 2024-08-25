@@ -428,15 +428,15 @@ void Net::checkArgs(const std::vector<Arg>& args) const
     impl->checkArgs(args);
 }
 
-const ArgInfo& Net::argInfo(Arg arg) const
+const ArgData& Net::argData(Arg arg) const
 {
     checkArg(arg);
     return impl->args[arg.idx];
 }
 
-std::string Net::argName(Arg arg) const { return argInfo(arg).name; }
+std::string Net::argName(Arg arg) const { return argData(arg).name; }
 
-ArgKind Net::argKind(Arg arg) const { return argInfo(arg).kind; }
+ArgKind Net::argKind(Arg arg) const { return argData(arg).kind; }
 
 Arg Net::getArg(const std::string& name)
 {
@@ -461,9 +461,9 @@ Arg Net::newConstArg(const std::string& name, const Mat& m) const
     CV_Assert(impl);
     Arg arg = newArg(name, DNN_ARG_CONST);
     impl->tensors[arg.idx] = m;
-    ArgInfo& info = impl->args[arg.idx];
-    info.type = m.type();
-    info.shape = m.shape();
+    ArgData& adata = impl->args[arg.idx];
+    adata.type = m.type();
+    adata.shape = m.shape();
     return arg;
 }
 
@@ -477,10 +477,10 @@ Arg Net::newArg(const std::string& name, ArgKind kind) const
         impl->argnames.insert(std::make_pair(name, idx));
     }
 
-    ArgInfo info;
-    info.name = name;
-    info.kind = kind;
-    impl->args.push_back(info);
+    ArgData adata;
+    adata.name = name;
+    adata.kind = kind;
+    impl->args.push_back(adata);
     impl->tensors.push_back(Mat());
     impl->bufidxs.push_back(-1);
 

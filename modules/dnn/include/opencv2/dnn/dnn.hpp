@@ -247,9 +247,9 @@ CV__DNN_INLINE_NS_BEGIN
 
     CV_EXPORTS std::string argKindToString(ArgKind kind);
 
-    struct CV_EXPORTS ArgInfo
+    struct CV_EXPORTS ArgData
     {
-        ArgInfo();
+        ArgData();
         std::string name;
         ArgKind kind;
         MatShape shape;
@@ -979,7 +979,7 @@ CV__DNN_INLINE_NS_BEGIN
         // Get the main model graph
         Ptr<Graph> getMainGraph() const;
 
-        const ArgInfo& argInfo(Arg arg) const;
+        const ArgData& argData(Arg arg) const;
         std::string argName(Arg arg) const;
         ArgKind argKind(Arg arg) const;
 

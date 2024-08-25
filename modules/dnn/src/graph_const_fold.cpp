@@ -96,11 +96,11 @@ struct ConstFolding
                 CV_Assert(outMats.size() == noutputs);
                 for (j = 0; j < noutputs; j++) {
                     Arg out = outputs[j];
-                    ArgInfo& out_info = netimpl->args.at(out.idx);
+                    ArgData& out_data = netimpl->args.at(out.idx);
                     const Mat& m = outMats[j];
-                    out_info.type = m.type();
-                    out_info.shape = m.shape();
-                    out_info.kind = DNN_ARG_CONST; // re-classify each output as constant
+                    out_data.type = m.type();
+                    out_data.shape = m.shape();
+                    out_data.kind = DNN_ARG_CONST; // re-classify each output as constant
                     netimpl->tensors.at(out.idx) = m;
                 }
 

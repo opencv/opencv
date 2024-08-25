@@ -82,7 +82,7 @@ struct Net::Impl : public detail::NetImplBase
     NamesHash argnames;
     NamesHash dimnames;
     std::vector<std::string> dimnames_vec;
-    std::vector<ArgInfo> args;
+    std::vector<ArgData> args;
     std::vector<Mat> tensors;
     std::vector<int> bufidxs;
     std::vector<Mat> buffers;
