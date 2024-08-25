@@ -86,7 +86,6 @@ public:
         Mat& out = outputs[0];
 
         Mat tmp = data.clone();
-        MatShape tmp_shape = shape(tmp);
         MatShape out_shape = shape(out);
         int rep_i, ndims = data.dims;
         int dims = 1;
