@@ -977,7 +977,7 @@ CV__DNN_INLINE_NS_BEGIN
         Ptr<Graph> getMainGraph() const;
 
         const ArgInfo& argInfo(Arg arg) const;
-        std::string_view argName(Arg arg) const;
+        std::string argName(Arg arg) const;
         ArgKind argKind(Arg arg) const;
 
         // if the name is empty, always creates a new argument;
