@@ -458,7 +458,7 @@ CV__DNN_INLINE_NS_BEGIN
                               std::vector<MatType>&internals) const;
 
         virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
-                               const std::vector<MatShape> &outputs) const {CV_UNUSED(inputs); CV_UNUSED(outputs); return 0;}
+                               const std::vector<MatShape> &outputs) const;
 
         virtual bool updateMemoryShapes(const std::vector<MatShape> &inputs);
 

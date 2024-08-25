@@ -360,7 +360,7 @@ struct Net::Impl : public detail::NetImplBase
     void inferTypes();
     // infers all shapes
     void inferShapes(bool symbolic);
-    // sets certain buffer index for a particular 
+    // sets certain buffer index for each intermediate argument (Arg)
     void assignBuffers();
     //void useBlockLayout();
     void fuse();
@@ -369,6 +369,10 @@ struct Net::Impl : public detail::NetImplBase
 
 };  // Net::Impl
 
+Net readNetFromONNX2(const String&);
+Net readNetFromONNX2(const char*, size_t);
+Net readNetFromONNX2(const std::vector<uchar>&);
+Mat readTensorFromONNX2(const String&);
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

@@ -274,6 +274,12 @@ void Layer::getTypes(const std::vector<MatType>&inputs,
     internals.assign(requiredInternals, inputs[0]);
 }
 
+int64 Layer::getFLOPS(const std::vector<MatShape>&,
+                      const std::vector<MatShape>&) const
+{
+    return 0;
+}
+
 bool Layer::updateMemoryShapes(const std::vector<MatShape>& inputs)
 {
     return true;
