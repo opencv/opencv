@@ -42,6 +42,7 @@
 #ifndef OPENCV_DNN_DNN_HPP
 #define OPENCV_DNN_DNN_HPP
 
+#include <ostream>
 #include <vector>
 #include <opencv2/core.hpp>
 #include "opencv2/core/async.hpp"
@@ -474,6 +475,13 @@ CV__DNN_INLINE_NS_BEGIN
         // so that forward() can assume that the outputs are already allocated.
         virtual bool dynamicOutputShapes() const;
 
+        // dumps attributes of the layer (e.g. strides, dilations in Convolution, MaxPool)
+        virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const;
+
+        // dumps information about the layer. The default implementation is usually good enough,
+        // just override dumpAttrs().
+        virtual std::ostream& dump(std::ostream& strm, int indent, bool comma) const;
+
         CV_PROP String name; //!< Name of the layer instance, can be used for logging or other internal purposes.
         CV_PROP String type; //!< Type name which was used for creating layer by layer factory.
         CV_PROP int preferableTarget; //!< prefer target for layer forwarding
@@ -493,21 +501,16 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS Graph
     {
     public:
-        static Ptr<Graph> create(const Net& net, const std::string& name,
+        static Ptr<Graph> create(Net& net, const std::string& name,
                                  const std::vector<Arg>& inputs);
         virtual ~Graph();
         virtual bool empty() const = 0;
         virtual void clear() = 0;
         virtual std::string name() const = 0;
-        virtual Ptr<Graph> clone(Net* newnet=nullptr) const = 0;
         virtual const std::vector<Arg>& append(Ptr<Layer>& layer,
                     const std::vector<std::string>& outnames=std::vector<std::string>()) = 0;
         virtual Arg append(Ptr<Layer>& layer, const std::string& outname=std::string()) = 0;
         virtual std::ostream& dump(std::ostream& strm, int indent, bool comma) = 0;
-        virtual void inferTypes(const std::vector<MatShape>& inptypes,
-                        std::vector<MatShape>& outtypes) const = 0;
-        virtual void inferShapes(const std::vector<MatShape>& inpshapes,
-                         std::vector<MatShape>& outshapes) const = 0;
         virtual Net* net() const = 0;
         virtual const std::vector<Arg>& inputs() const = 0;
         virtual const std::vector<Arg>& outputs() const = 0;
@@ -994,9 +997,15 @@ CV__DNN_INLINE_NS_BEGIN
         Mat& argTensor(Arg arg) const;
         MatSize argSize(Arg arg) const;
         int argType(Arg arg) const;
+        void checkArg(Arg arg) const;
+        void checkArgs(const std::vector<Arg>& args) const;
 
         int64_t findDim(const std::string& name=std::string(), bool insert=false);
-        std::string dimToString(int64_t size) const;
+
+        std::ostream& dump(std::ostream* strm=nullptr) const;
+        std::ostream& dumpArg(std::ostream& strm, Arg arg, int indent,
+                              bool comma=true, bool dump_details=false) const;
+        std::ostream& dumpDim(std::ostream& strm, int value) const;
 
         struct Impl;
         inline Impl* getImpl() const { return impl.get(); }

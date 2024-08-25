@@ -20,9 +20,151 @@ std::string argKindToString(ArgKind kind)
         kind == DNN_ARG_PATTERN ? "Pattern" : "???";
 }
 
+ArgInfo::ArgInfo()
+{
+    kind = DNN_ARG_EMPTY;
+    type = -1;
+}
+
+class GraphImpl : public Graph
+{
+public:
+    GraphImpl(const Net& net, const std::string& name,
+              const std::vector<Arg>& inputs)
+    {
+        net_ = (Net*)&net;
+        name_ = name;
+        inputs_ = inputs;
+    }
+
+    virtual ~GraphImpl()
+    {
+    }
+
+    virtual std::string name() const override { return name_; }
+    virtual bool empty() const override { return prog_.empty(); }
+    virtual void clear() override
+    {
+        prog_.clear();
+    }
+
+    /*Ptr<Graph> clone(Net* newnet) const
+    {
+        Graph g = std::make_shared<GraphData>((newnet ? *newnet : *net_), name_, inputs_, ispattern_);
+        g->outputs_ = outputs_;
+        g->backend_ = backend_;
+        // don't copy optigraph_. It has to be re-created
+        for (auto n : prog_) {
+            g->prog_.push_back(n->clone(g->net_));
+        }
+        return g;
+    }*/
+
+    virtual const std::vector<Arg>& append(Ptr<Layer>& layer,
+                const std::vector<std::string>& outnames) override
+    {
+        CV_Assert(layer);
+        int i, noutputs = (int)outnames.size();
+        //CV_Assert(layer->minNumOutputs() <= noutputs && noutputs <= layer->maxNumOutputs());
+
+        layer->outputs.resize(noutputs);
+        for (i = 0; i < noutputs; i++) {
+            Arg outarg = net_->getArg(outnames[i]);
+            ArgKind kind = net_->argKind(outarg);
+            CV_Assert(kind == DNN_ARG_TEMP || kind == DNN_ARG_OUTPUT);
+            layer->outputs[i] = outarg;
+        }
+
+        prog_.push_back(layer);
+        return layer->outputs;
+    }
+
+    virtual Arg append(Ptr<Layer>& layer,
+               const std::string& outname) override
+    {
+        std::vector<std::string> outnames = {outname};
+        const std::vector<Arg>& outputs = append(layer, outnames);
+        CV_Assert(outputs.size() == 1);
+        return outputs[0];
+    }
+
+    virtual std::ostream& dump(std::ostream& strm, int indent, bool comma) override
+    {
+        CV_Assert(net_);
+        size_t ninputs = inputs_.size(), noutputs = outputs_.size();
+        int delta_indent = net_->getImpl()->indent;
+        int subindent = indent + delta_indent;
+        int argindent = subindent + delta_indent;
+        strm << "graph {\n";
+        prindent(strm, subindent);
+        strm << "name: ";
+        if (name_.empty())
+            strm << "<noname>\n";
+        else
+            strm << '\"' << name_ << "\"\n";
+        prindent(strm, subindent);
+        strm << "inputs: [\n";
+        for (size_t i = 0; i < ninputs; i++) {
+            net_->dumpArg(strm, inputs_[i], argindent, i+1 < ninputs, true);
+        }
+        prindent(strm, subindent);
+        strm << "],\n";
+        prindent(strm, subindent);
+        strm << "outputs: [\n";
+        for (size_t i = 0; i < noutputs; i++) {
+            net_->dumpArg(strm, outputs_[i], argindent, i+1 < noutputs, true);
+        }
+        prindent(strm, subindent);
+        strm << "],\n";
+        prindent(strm, subindent);
+        strm << "nodes: [\n";
+        size_t nlayers = prog_.size();
+        for (size_t i = 0; i < nlayers; i++) {
+            prindent(strm, subindent);
+            strm << "// op #" << i << "\n";
+            const Ptr<Layer>& layer = prog_[i];
+            layer->dump(strm, argindent, i+1 < nlayers);
+        }
+        prindent(strm, subindent);
+        strm << "]\n";
+        prindent(strm, indent);
+        strm << '}';
+        if (comma)
+            strm << ',';
+        strm << '\n';
+        return strm;
+    }
+
+    virtual Net* net() const override { return net_; }
+    virtual const std::vector<Arg>& inputs() const override { return inputs_; }
+    virtual const std::vector<Arg>& outputs() const override { return outputs_; }
+
+    virtual void setOutputs(const std::vector<Arg>& outputs) override {
+        net_->checkArgs(outputs);
+        outputs_ = outputs;
+    }
+    virtual const std::vector<Ptr<Layer> >& prog() const override { return prog_; }
+    virtual void setProg(const std::vector<Ptr<Layer> >& newprog) override { prog_ = newprog; }
+
+protected:
+    Net* net_;
+    std::string name_;
+    std::vector<Arg> inputs_;
+    std::vector<Arg> outputs_;
+    std::vector<Ptr<Layer> > prog_;
+};
+
+Ptr<Graph> Graph::create(Net& net, const std::string& name,
+                         const std::vector<Arg>& inputs)
+{
+    return Ptr<Graph>(new GraphImpl(net, name, inputs));
+}
+
+Graph::~Graph() {}
+
 /*
 [TODO] move code from these methods into net_impl.cpp.
-Net::Impl::Impl(Net2* net_)
+Net::Impl::Impl(Net* net_)
 {
     CV_Assert(net_ != nullptr);
     net = net_;
@@ -153,7 +295,7 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
     // [TODO] initialize profile, tracer, symbolic shapes etc.
-    size_t nsymdims = dimnames_.size();
+    size_t nsymdims = dimnames_vec.size();
     dimvalues.assign(nsymdims, -1);
     forwardGraph(mainGraph, inputs, outputs, true);
 }
@@ -403,6 +545,60 @@ void Net::Impl::checkArg(Arg a) const
 {
     CV_Assert(a.idx >= 0);
     CV_Assert(a.idx < (int)args.size());
+}
+
+std::ostream& Net::Impl::dumpDim(std::ostream& strm, int value) const
+{
+    if (value >= 0) {
+        strm << value;
+    } else {
+        size_t idx = -value;
+        if (idx < dimnames_vec.size())
+            strm << dimnames_vec[idx];
+        else
+            strm << "sym(" << idx << ")";
+    }
+    return strm;
+}
+
+std::ostream& Net::Impl::dumpArg(std::ostream& strm, Arg arg, int indent, bool comma, bool dump_details) const
+{
+    checkArg(arg);
+    const ArgInfo& info = args.at(arg.idx);
+    prindent(strm, indent);
+    if (arg.empty()) {
+        strm << "<empty>" << (comma ? "," : "");
+    } else {
+        strm << '\"' << info.name << (comma ? "\"," : "\"");
+        if (dump_details && arg.idx > 0) {
+            strm << " // ";
+            strm << (info.kind == DNN_ARG_INPUT ? "<Input>" :
+                     info.kind == DNN_ARG_OUTPUT ? "<Output>" :
+                     info.kind == DNN_ARG_CONST ? "<Const>" :
+                     info.kind == DNN_ARG_TEMP ? "<Temp>" :
+                     "<Uknown kind>");
+            if (info.type >= 0) {
+                strm << " " << typeToString(info.type);
+                if (info.shape.empty()) {
+                    strm << " <empty>";
+                } else {
+                    if (info.shape.dims > 0 && info.shape.layout != DATA_LAYOUT_UNKNOWN) {
+                        strm << " " << layoutToString(info.shape.layout);
+                    }
+                    strm << " [";
+                    for (int i = 0; i < info.shape.dims; i++) {
+                        strm << (i > 0 ? " x " : "");
+                        dumpDim(strm, info.shape[i]);
+                    }
+                    strm << "]";
+                }
+            }
+            if (info.kind == DNN_ARG_TEMP && ((size_t)arg.idx < bufidxs.size()))
+                strm << " (buf #" << bufidxs[arg.idx] << ")";
+        }
+    }
+    strm << "\n";
+    return strm;
 }
 
 CV__DNN_INLINE_NS_END

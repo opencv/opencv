@@ -1418,7 +1418,7 @@ TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
 
     RNG& rng = TS::ptr()->get_rng();
     float inp_value = rng.uniform(0.0, 10.0);
-    Mat weights(std::vector<int>{(int)input_shape.total(), 1}, CV_32F, inp_value);
+    Mat weights({(int)input_shape.total(), 1}, CV_32F, inp_value);
     lp.blobs.push_back(weights);
 
     Ptr<Layer> layer = LayerFactory::createLayerInstance("InnerProduct", lp);

@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
+#include "net_impl.hpp"
 
 namespace cv {
 namespace dnn {
@@ -291,6 +292,67 @@ bool Layer::alwaysSupportInplace() const
 bool Layer::dynamicOutputShapes() const
 {
     return false;
+}
+
+std::ostream& Layer::dumpAttrs(std::ostream& strm, int) const
+{
+    return strm;
+}
+
+std::ostream& Layer::dump(std::ostream& strm, int indent, bool comma) const
+{
+    CV_Assert(net);
+    size_t ninputs = inputs.size(), noutputs = outputs.size();
+    const std::vector<Ptr<Graph> >* subgraphs_ = subgraphs();
+    size_t nsubgraphs = subgraphs_ ? subgraphs_->size() : 0;
+    int delta_indent = net->getImpl()->indent;
+    int subindent = indent + delta_indent;
+    int argindent = subindent + delta_indent;
+    prindent(strm, indent);
+    std::string opname = type;
+    strm << opname << " {\n";
+    prindent(strm, subindent);
+    strm << "name: \"" << name << "\",\n";
+    dumpAttrs(strm, subindent);
+    prindent(strm, subindent);
+    strm << "inputs: [\n";
+    for (size_t i = 0; i < ninputs; i++) {
+        net->dumpArg(strm, inputs[i], argindent, i+1 < ninputs, true);
+    }
+    prindent(strm, subindent);
+    strm << "],\n";
+    prindent(strm, subindent);
+    strm << "outputs: [\n";
+    for (size_t i = 0; i < noutputs; i++) {
+        net->dumpArg(strm, outputs[i], argindent, i+1 < noutputs, true);
+    }
+    prindent(strm, subindent);
+    strm << "],\n";
+
+    if (nsubgraphs > 0) {
+        std::vector<std::string> names;
+        if (opname == "If")
+            names = {"then", "else"};
+        else if (opname == "Loop")
+            names = {"body"};
+        else {
+            CV_Error(Error::StsError,
+                     format("unsupported operation '%s' with subgraphs",
+                            std::string(opname).c_str()));
+        }
+        CV_Assert(names.size() == nsubgraphs);
+        for (size_t i = 0; i < nsubgraphs; i++) {
+            prindent(strm, subindent);
+            strm << names[i] << ": ";
+            subgraphs_->at(i)->dump(strm, argindent, i+1 < nsubgraphs);
+        }
+    }
+    prindent(strm, indent);
+    strm << '}';
+    if (comma)
+        strm << ',';
+    strm << '\n';
+    return strm;
 }
 
 CV__DNN_INLINE_NS_END

@@ -411,22 +411,99 @@ int64 Net::getPerfProfile(std::vector<double>& timings)
     return impl->getPerfProfile(timings);
 }
 
-ArgKind Net::argKind(Arg arg) const
-{
-    CV_Assert(impl);
-    CV_Assert((size_t)arg.idx < impl->args.size());
-    return impl->args[arg.idx].kind;
-}
-
 bool Net::isConstArg(Arg arg) const
 {
     return argKind(arg) == DNN_ARG_CONST;
+}
+
+void Net::checkArg(Arg arg) const
+{
+    CV_Assert(impl);
+    impl->checkArg(arg);
+}
+
+void Net::checkArgs(const std::vector<Arg>& args) const
+{
+    CV_Assert(impl);
+    impl->checkArgs(args);
+}
+
+const ArgInfo& Net::argInfo(Arg arg) const
+{
+    checkArg(arg);
+    return impl->args[arg.idx];
+}
+
+std::string Net::argName(Arg arg) const { return argInfo(arg).name; }
+
+ArgKind Net::argKind(Arg arg) const { return argInfo(arg).kind; }
+
+Arg Net::getArg(const std::string& name)
+{
+    CV_Assert(impl);
+    if (!name.empty()) {
+        auto it = impl->argnames.find(name);
+        if (it != impl->argnames.end()) {
+            return Arg((int)it->second);
+        }
+    }
+    return newArg(name, DNN_ARG_TEMP);
+}
+
+bool Net::haveArg(const std::string& name) const
+{
+    CV_Assert(impl);
+    return impl->argnames.find(name) != impl->argnames.end();
+}
+
+Arg Net::newConstArg(const std::string& name, const Mat& m) const
+{
+    CV_Assert(impl);
+    Arg arg = newArg(name, DNN_ARG_CONST);
+    impl->tensors[arg.idx] = m;
+    ArgInfo& info = impl->args[arg.idx];
+    info.type = m.type();
+    info.shape = m.shape();
+    return arg;
+}
+
+Arg Net::newArg(const std::string& name, ArgKind kind) const
+{
+    CV_Assert(impl);
+    int idx = (int)impl->args.size();
+
+    if (!name.empty()) {
+        CV_Assert(impl->argnames.find(name) == impl->argnames.end());
+        impl->argnames.insert(std::make_pair(name, idx));
+    }
+
+    ArgInfo info;
+    info.name = name;
+    info.kind = kind;
+    impl->args.push_back(info);
+    impl->tensors.push_back(Mat());
+    impl->bufidxs.push_back(-1);
+
+    return Arg(idx);
 }
 
 Ptr<Graph> Net::getMainGraph() const
 {
     CV_Assert(impl);
     return impl->mainGraph;
+}
+
+std::ostream& Net::dumpArg(std::ostream& strm, Arg arg, int indent,
+                           bool comma, bool dump_details) const
+{
+    CV_Assert(impl);
+    return impl->dumpArg(strm, arg, indent, comma, dump_details);
+}
+
+std::ostream& Net::dumpDim(std::ostream& strm, int value) const
+{
+    CV_Assert(impl);
+    return impl->dumpDim(strm, value);
 }
 
 CV__DNN_INLINE_NS_END

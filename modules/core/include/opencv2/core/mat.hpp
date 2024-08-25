@@ -996,6 +996,13 @@ public:
     Mat(const MatShape& shape, int type);
 
     /** @overload
+    @param shape Array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    */
+    Mat(std::initializer_list<int> shape, int type);
+
+    /** @overload
     @param ndims Array dimensionality.
     @param sizes Array of integers specifying an n-dimensional array shape.
     @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
@@ -1025,6 +1032,16 @@ public:
     Mat::operator=(const Scalar& value) .
     */
     Mat(const MatShape& shape, int type, const Scalar& s);
+
+    /** @overload
+    @param shape Array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    @param s An optional value to initialize each matrix element with. To set all the matrix elements to
+     the particular value after the construction, use the assignment operator
+    Mat::operator=(const Scalar& value) .
+    */
+    Mat(std::initializer_list<int> shape, int type, const Scalar& s);
 
     /** @overload
     @param m Array that (as a whole or partly) is assigned to the constructed matrix. No data is copied
@@ -1109,6 +1126,20 @@ public:
     set to the element size). If not specified, the matrix is assumed to be continuous.
     */
     Mat(const MatShape& shape, int type, void* data, const size_t* steps=0);
+
+    /** @overload
+    @param shape Array shape.
+    @param type Array type. Use CV_8UC1, ..., CV_64FC4 to create 1-4 channel matrices, or
+    CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
+    @param data Pointer to the user data. Matrix constructors that take data and step parameters do not
+    allocate matrix data. Instead, they just initialize the matrix header that points to the specified
+    data, which means that no data is copied. This operation is very efficient and can be used to
+    process external data using OpenCV functions. The external data is not automatically deallocated, so
+    you should take care of it.
+    @param steps Array of ndims-1 steps in case of a multi-dimensional array (the last step is always
+    set to the element size). If not specified, the matrix is assumed to be continuous.
+    */
+    Mat(std::initializer_list<int> shape, int type, void* data, const size_t* steps=0);
 
     /** @overload
     @param m Array that (as a whole or partly) is assigned to the constructed matrix. No data is copied
@@ -1682,6 +1713,12 @@ public:
     */
     void create(const MatShape& shape, int type);
 
+    /** @overload
+    @param shape The new shape.
+    @param type New matrix type.
+    */
+    void create(std::initializer_list<int> shape, int type);
+
     /** @brief Creates the matrix of the same size as another array.
 
     The method is similar to _OutputArray::createSameSize(arr, type),
@@ -1718,10 +1755,16 @@ public:
     void fit(const std::vector<int>& sizes, int type);
 
     /** @overload
-    @param sizes The new shape.
+    @param shape The new shape.
     @param type New matrix type.
     */
     void fit(const MatShape& shape, int type);
+
+    /** @overload
+    @param shape The new shape.
+    @param type New matrix type.
+    */
+    void fit(std::initializer_list<int> shape, int type);
 
     /** @brief Similar to createSameSize(arr, type), but only reallocates memory if the existing buffer is not enough.
     @param arr The other array.

@@ -779,7 +779,22 @@ Mat::Mat(const MatShape& _shape, int _type)
     create(_shape, _type);
 }
 
+Mat::Mat(std::initializer_list<int> _shape, int _type)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+{
+    create(_shape, _type);
+}
+
 Mat::Mat(const MatShape& _shape, int _type, const Scalar& _s)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+{
+    create(_shape, _type);
+    *this = _s;
+}
+
+Mat::Mat(std::initializer_list<int> _shape, int _type, const Scalar& _s)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
       datalimit(0), allocator(0), u(0), size(&rows), step(0)
 {
@@ -966,6 +981,17 @@ void Mat::fit(const std::vector<int>& _shape, int _type)
 void Mat::fit(const MatShape& _shape, int _type)
 {
     fit(_shape.dims, _shape.p, _type);
+}
+
+void Mat::fit(std::initializer_list<int> _shape, int _type)
+{
+    int new_shape[MatShape::MAX_DIMS];
+    int new_ndims = (int)_shape.size();
+    CV_Assert(new_ndims <= MatShape::MAX_DIMS);
+    auto it = _shape.begin();
+    for (int i = 0; i < new_ndims; i++, ++it)
+        new_shape[i] = *it;
+    fit(new_ndims, new_shape, _type);
 }
 
 void Mat::fit(int _rows, int _cols, int _type)
@@ -1190,6 +1216,18 @@ void Mat::create(const MatShape& _shape, int _type)
     create(_shape.dims, _shape.p, _type);
 }
 
+void Mat::create(std::initializer_list<int> _shape, int _type)
+{
+    int new_shape[MatShape::MAX_DIMS];
+    int new_ndims = (int)_shape.size();
+    CV_Assert(new_ndims <= MatShape::MAX_DIMS);
+    auto it = _shape.begin();
+    for (int i = 0; i < new_ndims; i++, ++it)
+        new_shape[i] = *it;
+
+    create(new_ndims, new_shape, _type);
+}
+
 void Mat::copySize(const Mat& m)
 {
     setSize(*this, m.dims, 0, 0);
@@ -1320,11 +1358,28 @@ Mat::Mat(const MatShape& _shape, int _type, void* _data, const size_t* _steps)
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
     if (_shape.dims >= 0) {
-        setSize(*this, (int)_shape.dims, _shape.p, _steps, true);
+        setSize(*this, _shape.dims, _shape.p, _steps, true);
     }
     else {
         CV_Assert(!data);
     }
+    finalizeHdr(*this);
+}
+
+Mat::Mat(std::initializer_list<int> _shape, int _type, void* _data, const size_t* _steps)
+    : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
+      datalimit(0), allocator(0), u(0), size(&rows)
+{
+    int new_shape[MatShape::MAX_DIMS];
+    int new_ndims = (int)_shape.size();
+    CV_Assert(new_ndims <= MatShape::MAX_DIMS);
+    auto it = _shape.begin();
+    for (int i = 0; i < new_ndims; i++, ++it)
+        new_shape[i] = *it;
+
+    flags |= CV_MAT_TYPE(_type);
+    datastart = data = (uchar*)_data;
+    setSize(*this, new_ndims, new_shape, _steps, true);
     finalizeHdr(*this);
 }
 

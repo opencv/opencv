@@ -34,7 +34,7 @@ CV__DNN_INLINE_NS_BEGIN
 using std::make_pair;
 using std::string;
 
-typedef std::unordered_map<std::string, int64_t> NamesHash;
+typedef std::unordered_map<std::string, int> NamesHash;
 
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
@@ -81,7 +81,7 @@ struct Net::Impl : public detail::NetImplBase
 
     NamesHash argnames;
     NamesHash dimnames;
-    std::vector<std::string> dimnames_;
+    std::vector<std::string> dimnames_vec;
     std::vector<ArgInfo> args;
     std::vector<Mat> tensors;
     std::vector<int> bufidxs;
@@ -97,6 +97,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<std::pair<Ptr<Layer>, int64_t> > profileEntries;
     std::vector<int64_t> dimvalues;
     std::ostream* traceStream;
+    int indent;
 
     virtual bool empty() const;
     virtual void setPreferableBackend(Net& net, int backendId);
@@ -351,6 +352,9 @@ struct Net::Impl : public detail::NetImplBase
 
     // dump information about certain input or output argument of an operation
     void traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg arg, bool dumpdata);
+    std::ostream& dumpArg(std::ostream& strm, Arg arg, int indent,
+                          bool comma, bool dump_details) const;
+    std::ostream& dumpDim(std::ostream& strm, int value) const;
 
     // infers all types
     void inferTypes();

@@ -1006,9 +1006,9 @@ Mat LayerEinsumImpl::FinalizeOutput(
     const std::vector<int>& subscript_indices_to_output_indices = subscriptIndicesToOutputIndices;
     const auto output_dims = einsumOutDims;
 
-    MatShape output_shape = output_dims;
     const auto output_rank = output_dims.size();
 
+    // MatShape output_shape = output_dims;
     // CV_CheckEQ((int) candidateOutput.dims,  (int) output_shape.size(),
     //           "Einsum op: The candidate output cannot be reshaped into the op's output");
 
