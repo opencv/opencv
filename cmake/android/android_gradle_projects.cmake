@@ -1,5 +1,5 @@
 # https://developer.android.com/studio/releases/gradle-plugin
-set(ANDROID_GRADLE_PLUGIN_VERSION "7.3.1" CACHE STRING "Android Gradle Plugin version")
+set(ANDROID_GRADLE_PLUGIN_VERSION "8.5.2" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
 set(KOTLIN_PLUGIN_VERSION "1.8.20" CACHE STRING "Kotlin Plugin version")
@@ -13,16 +13,16 @@ else()
   set(KOTLIN_STD_LIB "" CACHE STRING "Kotlin Standard Library dependency")
 endif()
 
-set(GRADLE_VERSION "7.6.3" CACHE STRING "Gradle version")
+set(GRADLE_VERSION "8.10" CACHE STRING "Gradle version")
 message(STATUS "Gradle version: ${GRADLE_VERSION}")
 
-set(ANDROID_COMPILE_SDK_VERSION "31" CACHE STRING "Android compileSdkVersion")
+set(ANDROID_COMPILE_SDK_VERSION "33" CACHE STRING "Android compileSdkVersion")
 if(ANDROID_NATIVE_API_LEVEL GREATER 21)
   set(ANDROID_MIN_SDK_VERSION "${ANDROID_NATIVE_API_LEVEL}" CACHE STRING "Android minSdkVersion")
 else()
   set(ANDROID_MIN_SDK_VERSION "21" CACHE STRING "Android minSdkVersion")
 endif()
-set(ANDROID_TARGET_SDK_VERSION "31" CACHE STRING "Android minSdkVersion")
+set(ANDROID_TARGET_SDK_VERSION "33" CACHE STRING "Android targetSdkVersion")
 
 set(ANDROID_BUILD_BASE_DIR "${OpenCV_BINARY_DIR}/opencv_android" CACHE INTERNAL "")
 set(ANDROID_TMP_INSTALL_BASE_DIR "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/install/opencv_android")
