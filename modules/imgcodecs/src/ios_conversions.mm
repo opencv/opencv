@@ -40,7 +40,7 @@
 //
 //M*/
 #include <TargetConditionals.h>
-#if TARGET_OS_IOS && !TARGET_OS_MACCATALYST
+#if (TARGET_OS_IOS || TARGET_OS_VISION) && !TARGET_OS_MACCATALYST
 
 #import <UIKit/UIKit.h>
 #include "apple_conversions.h"

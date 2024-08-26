@@ -489,6 +489,10 @@ class ArgInfo(object):
         return self.name
 
     @property
+    def nd_mat(self):
+        return '/ND' in self._modifiers
+
+    @property
     def inputarg(self):
         return '/O' not in self._modifiers
 
@@ -528,6 +532,7 @@ class ArgInfo(object):
         arg  = 0x01 if self.outputarg else 0x0
         arg += 0x02 if self.arithm_op_src_arg else 0x0
         arg += 0x04 if self.pathlike else 0x0
+        arg += 0x08 if self.nd_mat else 0x0
         return "ArgInfo(\"%s\", %d)" % (self.name, arg)
 
 
@@ -849,7 +854,22 @@ class FuncInfo(object):
 
         all_code_variants = []
 
+        # See https://github.com/opencv/opencv/issues/25928
+        # Conversion to UMat is expensive more than conversion to Mat.
+        # To reduce this cost, conversion to Mat is prefer than to UMat.
+        variants = []
+        variants_umat = []
         for v in self.variants:
+            hasUMat = False
+            for a in v.args:
+                hasUMat = hasUMat or "UMat" in a.tp
+            if hasUMat :
+                variants_umat.append(v)
+            else:
+                variants.append(v)
+        variants.extend(variants_umat)
+
+        for v in variants:
             code_decl = ""
             code_ret = ""
             code_cvt_list = []

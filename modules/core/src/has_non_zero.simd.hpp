@@ -310,7 +310,7 @@ static bool hasNonZero64f( const double* src, size_t len )
 
 HasNonZeroFunc getHasNonZeroTab(int depth)
 {
-    static HasNonZeroFunc hasNonZeroTab[] =
+    static HasNonZeroFunc hasNonZeroTab[CV_DEPTH_MAX] =
     {
         (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero8u), (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero8u),
         (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero16u), (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero16u),

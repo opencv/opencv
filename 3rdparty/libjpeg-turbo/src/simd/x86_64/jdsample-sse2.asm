@@ -2,8 +2,9 @@
 ; jdsample.asm - upsampling (64-bit SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2009, 2016, D. R. Commander.
+; Copyright (C) 2009, 2016, 2024, D. R. Commander.
 ; Copyright (C) 2018, Matthias Räncker.
+; Copyright (C) 2023, Aliaksiej Kandracienka.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -20,7 +21,7 @@
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_fancy_upsample_sse2)
 
 EXTN(jconst_fancy_upsample_sse2):
@@ -31,7 +32,7 @@ PW_THREE times 8 dw 3
 PW_SEVEN times 8 dw 7
 PW_EIGHT times 8 dw 8
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -60,10 +61,10 @@ PW_EIGHT times 8 dw 8
     GLOBAL_FUNCTION(jsimd_h2v1_fancy_upsample_sse2)
 
 EXTN(jsimd_h2v1_fancy_upsample_sse2):
+    ENDBR64
     push        rbp
-    mov         rax, rsp
     mov         rbp, rsp
-    collect_args 4
+    COLLECT_ARGS 4
 
     mov         eax, r11d               ; colctr
     test        rax, rax
@@ -174,7 +175,7 @@ EXTN(jsimd_h2v1_fancy_upsample_sse2):
     jg          near .rowloop
 
 .return:
-    uncollect_args 4
+    UNCOLLECT_ARGS 4
     pop         rbp
     ret
 
@@ -195,21 +196,22 @@ EXTN(jsimd_h2v1_fancy_upsample_sse2):
 ; r12 = JSAMPARRAY input_data
 ; r13 = JSAMPARRAY *output_data_ptr
 
-%define wk(i)   rbp - (WK_NUM - (i)) * SIZEOF_XMMWORD  ; xmmword wk[WK_NUM]
+%define wk(i)   r15 - (WK_NUM - (i)) * SIZEOF_XMMWORD  ; xmmword wk[WK_NUM]
 %define WK_NUM  4
 
     align       32
     GLOBAL_FUNCTION(jsimd_h2v2_fancy_upsample_sse2)
 
 EXTN(jsimd_h2v2_fancy_upsample_sse2):
+    ENDBR64
     push        rbp
-    mov         rax, rsp                     ; rax = original rbp
-    sub         rsp, byte 4
+    mov         rbp, rsp
+    push        r15
     and         rsp, byte (-SIZEOF_XMMWORD)  ; align to 128 bits
-    mov         [rsp], rax
-    mov         rbp, rsp                     ; rbp = aligned rbp
-    lea         rsp, [wk(0)]
-    collect_args 4
+    ; Allocate stack space for wk array.  r15 is used to access it.
+    mov         r15, rsp
+    sub         rsp, byte (SIZEOF_XMMWORD * WK_NUM)
+    COLLECT_ARGS 4
     push        rbx
 
     mov         eax, r11d               ; colctr
@@ -472,9 +474,9 @@ EXTN(jsimd_h2v2_fancy_upsample_sse2):
 
 .return:
     pop         rbx
-    uncollect_args 4
-    mov         rsp, rbp                ; rsp <- aligned rbp
-    pop         rsp                     ; rsp <- original rbp
+    UNCOLLECT_ARGS 4
+    lea         rsp, [rbp-8]
+    pop         r15
     pop         rbp
     ret
 
@@ -497,10 +499,10 @@ EXTN(jsimd_h2v2_fancy_upsample_sse2):
     GLOBAL_FUNCTION(jsimd_h2v1_upsample_sse2)
 
 EXTN(jsimd_h2v1_upsample_sse2):
+    ENDBR64
     push        rbp
-    mov         rax, rsp
     mov         rbp, rsp
-    collect_args 4
+    COLLECT_ARGS 4
 
     mov         edx, r11d
     add         rdx, byte (2*SIZEOF_XMMWORD)-1
@@ -561,7 +563,7 @@ EXTN(jsimd_h2v1_upsample_sse2):
     jg          short .rowloop
 
 .return:
-    uncollect_args 4
+    UNCOLLECT_ARGS 4
     pop         rbp
     ret
 
@@ -584,10 +586,10 @@ EXTN(jsimd_h2v1_upsample_sse2):
     GLOBAL_FUNCTION(jsimd_h2v2_upsample_sse2)
 
 EXTN(jsimd_h2v2_upsample_sse2):
+    ENDBR64
     push        rbp
-    mov         rax, rsp
     mov         rbp, rsp
-    collect_args 4
+    COLLECT_ARGS 4
     push        rbx
 
     mov         edx, r11d
@@ -656,7 +658,7 @@ EXTN(jsimd_h2v2_upsample_sse2):
 
 .return:
     pop         rbx
-    uncollect_args 4
+    UNCOLLECT_ARGS 4
     pop         rbp
     ret
 

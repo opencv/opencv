@@ -99,21 +99,6 @@ void Board::Impl::generateImage(Size outSize, OutputArray img, int marginSize, i
     float sizeX = maxX - minX;
     float sizeY = maxY - minY;
 
-    // proportion transformations
-    float xReduction = sizeX / float(out.cols);
-    float yReduction = sizeY / float(out.rows);
-
-    // determine the zone where the markers are placed
-    if(xReduction > yReduction) {
-        int nRows = int(sizeY / xReduction);
-        int rowsMargins = (out.rows - nRows) / 2;
-        out.adjustROI(-rowsMargins, -rowsMargins, 0, 0);
-    } else {
-        int nCols = int(sizeX / yReduction);
-        int colsMargins = (out.cols - nCols) / 2;
-        out.adjustROI(0, 0, -colsMargins, -colsMargins);
-    }
-
     // now paint each marker
     Mat marker;
     Point2f outCorners[3];

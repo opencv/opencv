@@ -40,6 +40,7 @@
 //M*/
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/imgproc/detail/legacy.hpp"
 
 using namespace cv;
 
@@ -1813,7 +1814,7 @@ cvFindContours( void*  img,  CvMemStorage*  storage,
     return cvFindContours_Impl(img, storage, firstContour, cntHeaderSize, mode, method, offset, 1);
 }
 
-void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
+void cv::findContours_legacy( InputArray _image, OutputArrayOfArrays _contours,
                    OutputArray _hierarchy, int mode, int method, Point offset )
 {
     CV_INSTRUMENT_REGION();
@@ -1878,12 +1879,12 @@ void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
     }
 }
 
-void cv::findContours( InputArray _image, OutputArrayOfArrays _contours,
+void cv::findContours_legacy( InputArray _image, OutputArrayOfArrays _contours,
                        int mode, int method, Point offset)
 {
     CV_INSTRUMENT_REGION();
 
-    findContours(_image, _contours, noArray(), mode, method, offset);
+    findContours_legacy(_image, _contours, noArray(), mode, method, offset);
 }
 
 /* End of file. */

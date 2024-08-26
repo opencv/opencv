@@ -979,7 +979,7 @@ typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
 
 static DotProdFunc getDotProdFunc(int depth)
 {
-    static DotProdFunc dotProdTab[] =
+    static DotProdFunc dotProdTab[CV_DEPTH_MAX] =
     {
         (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)GET_OPTIMIZED(dotProd_8s),
         (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
@@ -995,9 +995,18 @@ double Mat::dot(InputArray _mat) const
     CV_INSTRUMENT_REGION();
 
     Mat mat = _mat.getMat();
+    CV_Assert_N( mat.type() == type(), mat.size == size);
+
     int cn = channels();
+    if (this->dims <= 2)
+    {
+        double product = 0;
+        CALL_HAL_RET(dotProduct, cv_hal_dotProduct, product, this->data, this->step, mat.data, mat.step,
+                     this->cols * cn, this->rows, this->depth());
+    }
+
     DotProdFunc func = getDotProdFunc(depth());
-    CV_Assert_N( mat.type() == type(), mat.size == size, func != 0 );
+    CV_Assert(func != 0 );
 
     if( isContinuous() && mat.isContinuous() )
     {

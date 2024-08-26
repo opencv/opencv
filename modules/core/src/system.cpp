@@ -46,6 +46,15 @@
 #include <iostream>
 #include <ostream>
 
+#ifdef __QNX__
+    #include <unistd.h>
+    #include <sys/neutrino.h>
+    #include <sys/syspage.h>
+#ifdef __aarch64__
+    #include <aarch64/syspage.h>
+#endif
+#endif
+
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
@@ -318,12 +327,12 @@ Exception::Exception(int _code, const String& _err, const String& _func, const S
     formatMessage();
 }
 
-Exception::~Exception() throw() {}
+Exception::~Exception() CV_NOEXCEPT {}
 
 /*!
  \return the error description and the context as a text string.
  */
-const char* Exception::what() const throw() { return msg.c_str(); }
+const char* Exception::what() const CV_NOEXCEPT { return msg.c_str(); }
 
 void Exception::formatMessage()
 {
@@ -1314,6 +1323,12 @@ redirectError( ErrorCallback errCallback, void* userdata, void** prevUserdata)
     customErrorCallbackData = userdata;
 
     return prevCallback;
+}
+
+void terminate(int _code, const String& _err, const char* _func, const char* _file, int _line) CV_NOEXCEPT
+{
+    dumpException(cv::Exception(_code, _err, _func, _file, _line));
+    std::terminate();
 }
 
 }
@@ -2882,6 +2897,14 @@ bool restoreFPDenormalsState(const FPDenormalsModeState& state)
 
 }  // namespace details
 
+AlgorithmHint getDefaultAlgorithmHint()
+{
+#ifdef OPENCV_ALGO_HINT_DEFAULT
+    return OPENCV_ALGO_HINT_DEFAULT;
+#else
+    return ALGO_HINT_ACCURATE;
+#endif
+};
 
 } // namespace cv
 

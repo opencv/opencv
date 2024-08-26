@@ -76,9 +76,11 @@ char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero
         }
         else
         {
-            static const char* fmt = "%.16e";
+            // binary64 has 52 bit fraction with hidden bit.
+            // 53 * log_10(2) is 15.955. So "%.16f" should be fine, but its test fails.
+            snprintf( buf, bufSize, "%.17g", value );
+
             char* ptr = buf;
-            snprintf( buf, bufSize, fmt, value );
             if( *ptr == '+' || *ptr == '-' )
                 ptr++;
             for( ; cv_isdigit(*ptr); ptr++ )
@@ -118,11 +120,21 @@ char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision,
         }
         else
         {
-            char* ptr = buf;
             if (halfprecision)
-                snprintf(buf, bufSize, "%.4e", value);
+            {
+                // bfloat16 has 7 bit fraction with hidden bit.
+                // binary16 has 10 bit fraction with hidden bit.
+                // 11 * log_10(2) is 3.311. So "%.4f" should be fine, but its test fails.
+                snprintf(buf, bufSize, "%.5g", value);
+            }
             else
-                snprintf(buf, bufSize, "%.8e", value);
+            {
+                // binray32 has 23 bit fraction with hidden bit.
+                // 24 * log_10(2) is 7.225. So "%.8f" should be fine, but its test fails.
+                snprintf(buf, bufSize, "%.9g", value);
+            }
+
+            char* ptr = buf;
             if( *ptr == '+' || *ptr == '-' )
                 ptr++;
             for( ; cv_isdigit(*ptr); ptr++ )

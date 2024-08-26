@@ -189,11 +189,12 @@ private:
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCumSum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseDepthToSpace         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDepthSpaceOps        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTile                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseTopK                 (LayerParams& LayerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseEinsum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
@@ -1202,7 +1203,12 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
 
 void ONNXImporter::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    MatShape inpShape = outShapes[node_proto.input(0)];
+    MatShape inpShape;
+    if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
+        inpShape = shape(getBlob(node_proto, 0));
+    else {
+        inpShape = outShapes[node_proto.input(0)];
+    }
     int dims = inpShape.size();
     std::vector<int> begin(dims, 0);
     std::vector<int> end(dims, INT_MAX);
@@ -2846,14 +2852,6 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         };
     }
 
-    // element-wise layers that can have >=1 inputs but actually have one input
-    if (node_proto.input_size() == 1 && (op_type == "max" || op_type == "min" || op_type == "mean" || op_type == "sum"))
-    {
-        layerParams.type = "Identity";
-        addLayer(layerParams, node_proto);
-        return;
-    }
-
     auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
         if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
             transpose(t, t);
@@ -2911,82 +2909,8 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter::parseDepthToSpace(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
-{
-    // We parse "DepthToSpace" and "SpaceToDepth" in this function.
-    opencv_onnx::NodeProto node_proto = node_proto_;
-    const std::string& layer_type = node_proto.op_type();
-    CV_Assert(layer_type == "DepthToSpace" || layer_type == "SpaceToDepth");
-
-    // Get blocksize
-    CV_Assert(layerParams.has("blocksize"));
-    int blocksize = layerParams.get<int>("blocksize");
-    CV_Assert(blocksize > 0);
-
-    // Get mode, only for "DepthToSpace"
-    std::string modeType = layerParams.get<std::string>("mode", "DCR");
-
-    MatShape inpShape = outShapes[node_proto.input(0)];
-    CV_Assert(inpShape.size() == 4);
-    int N = inpShape[0], C = inpShape[1], H = inpShape[2], W = inpShape[3];
-
-    // Implement DepthToSpace and SpaceToDepth by the Reshape and Permute layer.
-    std::array<int, 6> shape0, perm;
-    std::array<int, 4> shape1;
-
-    if (layer_type == "DepthToSpace")
-    {
-        if (modeType == "DCR")
-        {
-            shape0 = {N, blocksize, blocksize, C/(blocksize * blocksize), H, W};
-            perm = {0, 3, 4, 1, 5, 2};
-            shape1 = {N, C/(blocksize * blocksize), H * blocksize, W * blocksize};
-        }
-        else if (modeType == "CRD")
-        {
-            shape0 = {N, C/(blocksize * blocksize), blocksize, blocksize, H, W};
-            perm = {0, 1, 4, 2, 5, 3};
-            shape1 = {N, C/(blocksize * blocksize), H * blocksize, W * blocksize};
-        }
-        else
-            CV_Error(Error::StsNotImplemented, "The mode of " + modeType + " in " + layer_type + " Layer is not supported");
-    }
-    else // SpaceToDepth
-    {
-        shape0 = {N, C, H/blocksize, blocksize, W/blocksize, blocksize};
-        perm = {0, 3, 5, 1, 2, 4};
-        shape1 = {N, C * blocksize * blocksize, H/blocksize, W/blocksize};
-    }
-
-    // Step1: Reshape
-    LayerParams reshapeLp;
-    reshapeLp.name = layerParams.name + "/reshape";
-    reshapeLp.type = "Reshape";
-    CV_Assert(layer_id.find(reshapeLp.name) == layer_id.end());
-    reshapeLp.set("dim", DictValue::arrayInt(shape0.data(), shape0.size()));
-
-    opencv_onnx::NodeProto protoReshape;
-    protoReshape.add_input(node_proto.input(0));
-    protoReshape.add_output(reshapeLp.name);
-    addLayer(reshapeLp, protoReshape);
-
-    // Step2: Transpose
-    LayerParams permuteLp;
-    permuteLp.name = layerParams.name + "/permute";
-    permuteLp.type = "Permute";
-    CV_Assert(layer_id.find(permuteLp.name) == layer_id.end());
-    permuteLp.set("order", DictValue::arrayInt(perm.data(), perm.size()));
-
-    opencv_onnx::NodeProto protoPermute;
-    protoPermute.add_input(reshapeLp.name);
-    protoPermute.add_output(permuteLp.name);
-    addLayer(permuteLp, protoPermute);
-
-    // Step3: Reshape
-    layerParams.type = "Reshape";
-    layerParams.set("dim", DictValue::arrayInt(shape1.data(), shape1.size()));
-
-    node_proto.set_input(0, permuteLp.name);
+void ONNXImporter::parseDepthSpaceOps(LayerParams &layerParams, const opencv_onnx::NodeProto& node_proto) {
+    CV_CheckTrue(layerParams.has("blocksize"), "blocksize is required but not found");
     addLayer(layerParams, node_proto);
 }
 
@@ -3005,22 +2929,22 @@ void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Assert(const_id.size() == 3);
 
     Mat startMat = getBlob(node_proto, 0);
-    CV_Assert(startMat.type() == CV_32SC1);
-    int start = startMat.at<int>(0);
+    startMat.convertTo(startMat, CV_32F);
+    float start = startMat.at<float>(0);
 
     Mat limitMat = getBlob(node_proto, 1);
-    CV_Assert(limitMat.type() == CV_32SC1);
-    int limit = limitMat.at<int>(0);
+    limitMat.convertTo(limitMat, CV_32F);
+    float limit = limitMat.at<float>(0);
 
     Mat deltaMat = getBlob(node_proto, 2);
-    CV_Assert(deltaMat.type() == CV_32SC1);
-    int delta = deltaMat.at<int>(0);
+    deltaMat.convertTo(deltaMat, CV_32F);
+    float delta = deltaMat.at<float>(0);
 
     int number_of_elements = std::max(int(std::ceil((limit - start) / delta)), 0);
-    Mat r(number_of_elements, 1, CV_32SC1);
+    Mat r(1, number_of_elements, CV_32FC1); // should be 1d tensor, but Mat doesn't support it
     for (int i = 0; i < number_of_elements; i++)
     {
-        r.at<int>(i) = start + (i * delta);
+        r.at<float>(i) = start + (i * delta);
     }
     addConstant(node_proto.output(0), r);
     constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(1)));
@@ -3198,6 +3122,21 @@ void ONNXImporter::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::N
     }
 }
 
+void ONNXImporter::parseTopK(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // K needs to be constant in case of being input (since opset 10)
+    if (node_proto.input_size() == 2) {
+        bool K_const = constBlobs.find(node_proto.input(1)) != constBlobs.end();
+        CV_CheckTrue(K_const, "OnnxImporter/TopK: K being non-constant is not supported");
+
+        Mat input_K = getBlob(node_proto, 1);
+        int K = input_K.at<int>(0);
+        layerParams.set("k", K);
+    }
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     bool is_all_input_const = true;
@@ -3316,6 +3255,17 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     // or 1-D tensor (per-channel quantized).
     bool is1D = false;
 
+    if (layerParams.type == "Quantize")
+        layerParams.set("depth", CV_8S);
+    else // Dequantize
+        layerParams.set("depth", CV_32F);
+
+    // If scale is not defined as a constant blob, it is considered an external input.
+    if(constBlobs.find(node_proto.input(1)) == constBlobs.end()){
+        addLayer(layerParams, node_proto);
+        return;
+    }
+
     Mat scaleMat = getBlob(node_proto, 1);
     if(scaleMat.total() > 1) is1D = true;
 
@@ -3356,11 +3306,6 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
         layerParams.set("scales", scale);
         layerParams.set("zeropoints", zeropoint);
     }
-
-    if (layerParams.type == "Quantize")
-        layerParams.set("depth", CV_8S);
-    else // Dequantize
-        layerParams.set("depth", CV_32F);
 
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end()) // Variable input.
     {
@@ -3997,17 +3942,18 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter::parseCumSum;
-    dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter::parseDepthToSpace;
+    dispatch["SpaceToDepth"] = dispatch["DepthToSpace"] = &ONNXImporter::parseDepthSpaceOps;
     dispatch["ScatterElements"] = dispatch["Scatter"] = dispatch["ScatterND"] = &ONNXImporter::parseScatter;
     dispatch["Tile"] = &ONNXImporter::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter::parseInstanceNormalization;
+    dispatch["TopK"] = &ONNXImporter::parseTopK;
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
             dispatch["LessOrEqual"] = dispatch["Mod"] = &ONNXImporter::parseElementWise;
 
-    dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
+    dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = dispatch["Mean"] = &ONNXImporter::parseElementWise;
     dispatch["Where"] = &ONNXImporter::parseElementWise;
     dispatch["Range"] = &ONNXImporter::parseRange;
     dispatch["Einsum"] = &ONNXImporter::parseEinsum;

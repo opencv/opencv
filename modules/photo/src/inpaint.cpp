@@ -46,6 +46,7 @@
 // */
 
 #include <queue>
+#include <type_traits>
 
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
@@ -54,6 +55,16 @@
 #undef CV_MAT_ELEM_PTR_FAST
 #define CV_MAT_ELEM_PTR_FAST( mat, row, col, pix_size )  \
      ((mat).data.ptr + (size_t)(mat).step*(row) + (pix_size)*(col))
+
+template<typename T>
+typename std::enable_if<std::is_floating_point<T>::value, T>::type round_cast(float val) {
+   return cv::saturate_cast<T>(val);
+}
+
+template<typename T>
+typename std::enable_if<!std::is_floating_point<T>::value, T>::type round_cast(float val) {
+   return cv::saturate_cast<T>(val + 0.5);
+}
 
 inline float
 min4( float a, float b, float c, float d )
@@ -329,7 +340,7 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                                     gradI.y=0;
                                  }
                               }
-                              Ia[color] += (float)w * (float)(CV_MAT_3COLOR_ELEM(*out,uchar,km,lm,color));
+                              Ia[color] += (float)w * (float)(CV_MAT_3COLOR_ELEM(*out,uchar,k-1,l-1,color));
                               Jx[color] -= (float)w * (float)(gradI.x*r.x);
                               Jy[color] -= (float)w * (float)(gradI.y*r.y);
                               s[color]  += w;
@@ -339,8 +350,8 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                   }
                }
                for (color=0; color<=2; color++) {
-                  sat = (float)((Ia[color]/s[color]+(Jx[color]+Jy[color])/(sqrt(Jx[color]*Jx[color]+Jy[color]*Jy[color])+1.0e-20f)+0.5f));
-                  CV_MAT_3COLOR_ELEM(*out,uchar,i-1,j-1,color) = cv::saturate_cast<uchar>(sat);
+                  sat = (float)(Ia[color]/s[color]+(Jx[color]+Jy[color])/(sqrt(Jx[color]*Jx[color]+Jy[color]*Jy[color])+1.0e-20f));
+                  CV_MAT_3COLOR_ELEM(*out,uchar,i-1,j-1,color) = round_cast<uchar>(sat);
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;
@@ -441,7 +452,7 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                                     gradI.y=0;
                                  }
                               }
-                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,data_type,km,lm));
+                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,data_type,k-1,l-1));
                               Jx -= (float)w * (float)(gradI.x*r.x);
                               Jy -= (float)w * (float)(gradI.y*r.y);
                               s  += w;
@@ -449,9 +460,9 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                         }
                      }
                   }
-                  sat = (float)((Ia/s+(Jx+Jy)/(sqrt(Jx*Jx+Jy*Jy)+1.0e-20f)+0.5f));
+                  sat = (float)(Ia/s+(Jx+Jy)/(sqrt(Jx*Jx+Jy*Jy)+1.0e-20f));
                   {
-                  CV_MAT_ELEM(*out,data_type,i-1,j-1) = cv::saturate_cast<data_type>(sat);
+                  CV_MAT_ELEM(*out,data_type,i-1,j-1) = round_cast<data_type>(sat);
                   }
                }
 
@@ -544,7 +555,7 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                                  dir = (float)fabs(VectorScalMult(r,gradI)/sqrt(VectorLength(r)*VectorLength(gradI)));
                               }
                               w = dst*dir;
-                              Ia[color] += (float)w * (float)(CV_MAT_3COLOR_ELEM(*out,uchar,km,lm,color));
+                              Ia[color] += (float)w * (float)(CV_MAT_3COLOR_ELEM(*out,uchar,k-1,l-1,color));
                               s[color]  += w;
                            }
                         }
@@ -634,7 +645,7 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                                  dir = (float)fabs(VectorScalMult(r,gradI)/sqrt(VectorLength(r)*VectorLength(gradI)));
                               }
                               w = dst*dir;
-                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,data_type,km,lm));
+                              Ia += (float)w * (float)(CV_MAT_ELEM(*out,data_type,k-1,l-1));
                               s  += w;
                            }
                         }

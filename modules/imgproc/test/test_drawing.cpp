@@ -928,4 +928,111 @@ TEST(Drawing, circle_memory_access)
     cv::circle(matrix, cv::Point(-1, -1), 0, kBlue, 2, 8, 16);
 }
 
+inline static Mat mosaic2x2(Mat &img)
+{
+    const Size sz = img.size();
+    Mat res(sz * 2, img.type(), Scalar::all(0));
+    img.copyTo(res(Rect(Point(0, 0), sz)));
+    img.copyTo(res(Rect(Point(0, sz.height), sz)));
+    img.copyTo(res(Rect(Point(sz.width, 0), sz)));
+    img.copyTo(res(Rect(Point(sz.width, sz.height), sz)));
+    return res;
+}
+
+TEST(Drawing, contours_filled)
+{
+    const Scalar white(255);
+    const Scalar black(0);
+    const Size sz(100, 100);
+
+    Mat img(sz, CV_8UC1, black);
+    rectangle(img, Point(20, 20), Point(80, 80), white, -1);
+    rectangle(img, Point(30, 30), Point(70, 70), black, -1);
+    rectangle(img, Point(40, 40), Point(60, 60), white, -1);
+    img = mosaic2x2(img);
+
+    Mat img1(sz, CV_8UC1, black);
+    rectangle(img1, Point(20, 20), Point(80, 80), white, -1);
+    img1 = mosaic2x2(img1);
+
+    Mat img2(sz, CV_8UC1, black);
+    rectangle(img2, Point(20, 20), Point(80, 80), white, -1);
+    rectangle(img2, Point(30, 30), Point(70, 70), black, -1);
+    img2 = mosaic2x2(img2);
+
+    Mat img3(sz, CV_8UC1, black);
+    rectangle(img3, Point(40, 40), Point(60, 60), white, -1);
+    img3 = mosaic2x2(img3);
+
+    // inverted contours - corners and left edge adjusted
+    Mat imgi(sz, CV_8UC1, black);
+    rectangle(imgi, Point(29, 29), Point(71, 71), white, -1);
+    rectangle(imgi, Point(41, 41), Point(59, 59), black, -1);
+    imgi.at<uchar>(Point(29, 29)) = 0;
+    imgi.at<uchar>(Point(29, 71)) = 0;
+    imgi = mosaic2x2(imgi);
+
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    findContours(img, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
+    ASSERT_EQ(12u, contours.size());
+
+    // NOTE:
+    // assuming contour tree has following structure (idx = 0, 1, ...):
+    //   idx (top level)
+    //     - idx + 1
+    //         - idx + 2
+    //   idx + 3 (top level)
+    //     - idx + 4
+    //         - idx + 5
+    //   ...
+    const vector<int> top_contours {0, 3, 6, 9};
+    {
+        // all contours
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        drawContours(res, contours, -1, white, -1, cv::LINE_8, hierarchy);
+        EXPECT_LT(cvtest::norm(img, res, NORM_INF), 1);
+    }
+    {
+        // all contours
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        drawContours(res, contours, -1, white, -1, cv::LINE_8, hierarchy, 3);
+        EXPECT_LT(cvtest::norm(img, res, NORM_INF), 1);
+    }
+    {
+        // all contours
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        drawContours(res, contours, -1, white, -1, cv::LINE_8, hierarchy, 0);
+        EXPECT_LT(cvtest::norm(img, res, NORM_INF), 1);
+    }
+    {
+        // all external contours one by one
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        for (int idx : top_contours)
+            drawContours(res, contours, idx, white, -1, cv::LINE_8, hierarchy, 0);
+        EXPECT_LT(cvtest::norm(img1, res, NORM_INF), 1);
+    }
+    {
+        // all external contours + 1-level deep hole (one by one)
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        for (int idx : top_contours)
+            drawContours(res, contours, idx, white, -1, cv::LINE_8, hierarchy, 1);
+        EXPECT_LT(cvtest::norm(img2, res, NORM_INF), 1);
+    }
+    {
+        // 2-level deep contours
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        for (int idx : top_contours)
+            drawContours(res, contours, idx + 2, white, -1, cv::LINE_8, hierarchy);
+        EXPECT_LT(cvtest::norm(img3, res, NORM_INF), 1);
+    }
+    {
+        // holes become inverted here, LINE_8 -> LINE_4
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        for (int idx : top_contours)
+            drawContours(res, contours, idx + 1, white, -1, cv::LINE_4, hierarchy);
+        EXPECT_LT(cvtest::norm(imgi, res, NORM_INF), 1);
+    }
+}
+
 }} // namespace

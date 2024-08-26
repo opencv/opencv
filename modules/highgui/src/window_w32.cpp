@@ -681,7 +681,7 @@ void cvSetPropTopmost_W32(const char* name, const bool topmost)
 
 static bool setPropTopmost_(CvWindow& window, bool topmost)
 {
-    HWND flag    = topmost ? HWND_TOPMOST : HWND_TOP;
+    HWND flag    = topmost ? HWND_TOPMOST : HWND_NOTOPMOST;
     BOOL success = SetWindowPos(window.frame, flag, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
     if (!success)
@@ -2161,7 +2161,7 @@ static void showSaveDialog(CvWindow& window)
 #ifdef HAVE_TIFF
                       "TIFF Files (*.tiff;*.tif)\0*.tiff;*.tif\0"
 #endif
-#ifdef HAVE_JASPER
+#if defined(HAVE_JASPER) || defined(HAVE_OPENJPEG)
                       "JPEG-2000 files (*.jp2)\0*.jp2\0"
 #endif
 #ifdef HAVE_WEBP
@@ -3003,6 +3003,11 @@ public:
     int pollKey() CV_OVERRIDE
     {
         return pollKey_W32();
+    }
+
+    const std::string getName() const CV_OVERRIDE
+    {
+        return "WIN32";
     }
 };  // Win32BackendUI
 

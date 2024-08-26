@@ -561,6 +561,37 @@ static bool ipp_moments(Mat &src, Moments &m )
 
 }
 
+namespace cv { namespace hal {
+
+static int moments(const cv::Mat& src, bool binary, cv::Moments& m)
+{
+    CV_INSTRUMENT_REGION();
+
+    double m_data[10];
+    int status = 0;
+    int type = src.type();
+    int depth = CV_MAT_DEPTH(type);
+
+    if( src.checkVector(2) >= 0 && (depth == CV_32F || depth == CV_32S))
+        status = cv_hal_polygonMoments(src.data, src.total()/2, src.type(), m_data);
+    else
+        status = cv_hal_imageMoments(src.data, src.step, src.type(), src.cols, src.rows, binary, m_data);
+
+    if (status == CV_HAL_ERROR_OK)
+    {
+        m = cv::Moments(m_data[0], m_data[1], m_data[2], m_data[3], m_data[4],
+                        m_data[5], m_data[6], m_data[7], m_data[8], m_data[9]);
+    }
+    else if (status != CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        CV_Error_(cv::Error::StsInternal,
+            ("HAL implementation moments ==> " CVAUX_STR(cv_hal_imageMoments) " returned %d (0x%08x)", status, status));
+    }
+
+    return status;
+}
+}}
+
 cv::Moments cv::moments( InputArray _src, bool binary )
 {
     CV_INSTRUMENT_REGION();
@@ -580,6 +611,10 @@ cv::Moments cv::moments( InputArray _src, bool binary )
 #endif
 
     Mat mat = _src.getMat();
+
+    if (hal::moments(mat, binary, m) == CV_HAL_ERROR_OK)
+        return m;
+
     if( mat.checkVector(2) >= 0 && (depth == CV_32F || depth == CV_32S))
         return contourMoments(mat);
 
@@ -616,7 +651,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
             if( binary )
             {
                 cv::Mat tmp(tileSize, CV_8U, nzbuf);
-                cv::compare( src, 0, tmp, CV_CMP_NE );
+                cv::compare( src, 0, tmp, cv::CMP_NE );
                 src = tmp;
             }
 

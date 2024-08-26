@@ -451,7 +451,7 @@ class Arguments(NewOpenCVTests):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpFloat)
         min_float, max_float = get_limits(ctypes.c_float)
         for convertible in (2, -13, 1.24, np.float32(32.45), float(32), np.double(12.23),
-                            np.float32(-12.3), np.float64(3.22), np.float_(-1.5), min_float,
+                            np.float32(-12.3), np.float64(3.22), min_float,
                             max_float, np.inf, -np.inf, float('Inf'), -float('Inf'),
                             np.double(np.inf), np.double(-np.inf), np.double(float('Inf')),
                             np.double(-float('Inf'))):
@@ -495,7 +495,7 @@ class Arguments(NewOpenCVTests):
         min_float, max_float = get_limits(ctypes.c_float)
         min_double, max_double = get_limits(ctypes.c_double)
         for convertible in (2, -13, 1.24, np.float32(32.45), float(2), np.double(12.23),
-                            np.float32(-12.3), np.float64(3.22), np.float_(-1.5), min_float,
+                            np.float32(-12.3), np.float64(3.22), min_float,
                             max_float, min_double, max_double, np.inf, -np.inf, float('Inf'),
                             -float('Inf'), np.double(np.inf), np.double(-np.inf),
                             np.double(float('Inf')), np.double(-float('Inf'))):
@@ -973,7 +973,7 @@ class CanUsePurePythonModuleFunction(NewOpenCVTests):
 class SamplesFindFile(NewOpenCVTests):
 
     def test_ExistedFile(self):
-        res = cv.samples.findFile('lena.jpg', False)
+        res = cv.samples.findFile('HappyFish.jpg', False)
         self.assertNotEqual(res, '')
 
     def test_MissingFile(self):
@@ -987,6 +987,10 @@ class SamplesFindFile(NewOpenCVTests):
         except cv.error as _e:
             pass
 
+class AlgorithmImplHit(NewOpenCVTests):
+    def test_callable(self):
+        res = cv.getDefaultAlgorithmHint()
+        self.assertTrue(res is not None)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

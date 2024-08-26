@@ -42,6 +42,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp" // T-API like tests
+#include <fenv.h>
 
 namespace opencv_test {
 namespace {
@@ -1574,11 +1575,7 @@ TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/is
 typedef tuple<perf::MatDepth,int,int,int> Arith_Regression24163Param;
 typedef testing::TestWithParam<Arith_Regression24163Param> Core_Arith_Regression24163;
 
-#if defined __riscv
-TEST_P(Core_Arith_Regression24163, DISABLED_test_for_ties_to_even)
-#else
 TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
-#endif
 {
     const int matDepth = get<0>(GetParam());
     const int matHeight= get<1>(GetParam());
@@ -1600,9 +1597,12 @@ TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
     const Mat src2(matSize, matType, Scalar(beta, beta, beta, beta));
     const Mat result = ( src1 + src2 ) / 2;
 
-    // Expected that default is FE_TONEAREST(Ties to Even).
+    const int rounding = fegetround();
+    fesetround(FE_TONEAREST);
     const int mean = lrint( static_cast<double>(alpha + beta) / 2.0 );
-    const Mat expected(matSize, matType, Scalar(mean,mean,mean,mean));
+    fesetround(rounding);
+
+    const Mat expected(matSize, matType, Scalar::all(mean));
 
     // Compare result and extected.
     ASSERT_EQ(expected.size(), result.size());

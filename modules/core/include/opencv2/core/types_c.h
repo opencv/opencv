@@ -90,13 +90,7 @@
 #include <float.h>
 #endif // SKIP_INCLUDES
 
-#if defined _WIN32
-#  define CV_CDECL __cdecl
-#  define CV_STDCALL __stdcall
-#else
-#  define CV_CDECL
-#  define CV_STDCALL
-#endif
+
 
 #ifndef CV_DEFAULT
 #  ifdef __cplusplus
@@ -203,21 +197,13 @@ enum {
 *                             Common macros and inline functions                         *
 \****************************************************************************************/
 
-#define CV_SWAP(a,b,t) ((t) = (a), (a) = (b), (b) = (t))
-
-/** min & max without jumps */
-#define  CV_IMIN(a, b)  ((a) ^ (((a)^(b)) & (((a) < (b)) - 1)))
-
-#define  CV_IMAX(a, b)  ((a) ^ (((a)^(b)) & (((a) > (b)) - 1)))
-
 /** absolute value without jumps */
 #ifndef __cplusplus
 #  define  CV_IABS(a)     (((a) ^ ((a) < 0 ? -1 : 0)) - ((a) < 0 ? -1 : 0))
 #else
 #  define  CV_IABS(a)     abs(a)
 #endif
-#define  CV_CMP(a,b)    (((a) > (b)) - ((a) < (b)))
-#define  CV_SIGN(a)     CV_CMP((a),0)
+
 
 #define cvInvSqrt(value) ((float)(1./sqrt(value)))
 #define cvSqrt(value)  ((float)sqrt(value))
@@ -674,8 +660,6 @@ CV_INLINE int cvIplDepth( int type )
 
 #define CV_MATND_MAGIC_VAL    0x42430000
 #define CV_TYPE_NAME_MATND    "opencv-nd-matrix"
-
-#define CV_MAX_DIM            32
 
 #ifdef __cplusplus
 typedef struct CvMatND CvMatND;

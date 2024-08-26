@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 
 #include <algorithm> // for std::max & std::min
@@ -43,7 +45,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && reduction == REDUCTION::NONE);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -202,6 +205,27 @@ public:
                 CV_Error(Error::StsBadArg, "Unsupported reduction.");
         };
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        int32_t indicesBoundValue = nodes[0].dynamicCast<InfEngineNgraphNode>()->node.get_shape()[axis];
+        auto indicesBound = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &indicesBoundValue);
+        auto indices = std::make_shared<ov::op::v0::Convert>(nodes[1].dynamicCast<InfEngineNgraphNode>()->node, ov::element::i32);
+        auto indicesNonNegative = std::make_shared<ov::op::v1::Mod>(
+            std::make_shared<ov::op::v1::Add>(indices, indicesBound),
+            indicesBound);
+
+        auto axis_node = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &axis);
+        auto scatterElements = std::make_shared<ov::op::v3::ScatterElementsUpdate>(
+            nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+            indicesNonNegative,
+            nodes[2].dynamicCast<InfEngineNgraphNode>()->node,
+            axis_node);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(scatterElements));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     // Attributes

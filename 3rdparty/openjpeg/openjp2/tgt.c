@@ -287,12 +287,12 @@ void opj_tgt_encode(opj_bio_t *bio, opj_tgt_tree_t *tree, OPJ_UINT32 leafno,
         while (low < threshold) {
             if (low >= node->value) {
                 if (!node->known) {
-                    opj_bio_write(bio, 1, 1);
+                    opj_bio_putbit(bio, 1);
                     node->known = 1;
                 }
                 break;
             }
-            opj_bio_write(bio, 0, 1);
+            opj_bio_putbit(bio, 0);
             ++low;
         }
 

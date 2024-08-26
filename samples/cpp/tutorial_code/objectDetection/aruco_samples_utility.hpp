@@ -45,4 +45,47 @@ inline static bool saveCameraParams(const std::string &filename, cv::Size imageS
     return true;
 }
 
+inline static cv::aruco::DetectorParameters readDetectorParamsFromCommandLine(cv::CommandLineParser &parser) {
+    cv::aruco::DetectorParameters detectorParams;
+    if (parser.has("dp")) {
+        cv::FileStorage fs(parser.get<std::string>("dp"), cv::FileStorage::READ);
+        bool readOk = detectorParams.readDetectorParameters(fs.root());
+        if(!readOk) {
+            throw std::runtime_error("Invalid detector parameters file\n");
+        }
+    }
+    return detectorParams;
+}
+
+inline static void readCameraParamsFromCommandLine(cv::CommandLineParser &parser, cv::Mat& camMatrix, cv::Mat& distCoeffs) {
+    //! [camDistCoeffs]
+    if(parser.has("c")) {
+        bool readOk = readCameraParameters(parser.get<std::string>("c"), camMatrix, distCoeffs);
+        if(!readOk) {
+            throw std::runtime_error("Invalid camera file\n");
+        }
+    }
+    //! [camDistCoeffs]
+}
+
+inline static cv::aruco::Dictionary readDictionatyFromCommandLine(cv::CommandLineParser &parser) {
+    cv::aruco::Dictionary dictionary;
+    if (parser.has("cd")) {
+        cv::FileStorage fs(parser.get<std::string>("cd"), cv::FileStorage::READ);
+        bool readOk = dictionary.readDictionary(fs.root());
+        if(!readOk) {
+            throw std::runtime_error("Invalid dictionary file\n");
+        }
+    }
+    else {
+        int dictionaryId = parser.has("d") ? parser.get<int>("d"): cv::aruco::DICT_4X4_50;
+        if (!parser.has("d")) {
+            std::cout << "The default DICT_4X4_50 dictionary has been selected, you could "
+                         "select the specific dictionary using flags -d or -cd." << std::endl;
+        }
+        dictionary = cv::aruco::getPredefinedDictionary(dictionaryId);
+    }
+    return dictionary;
+}
+
 }

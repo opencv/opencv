@@ -89,11 +89,8 @@
 "test_convtranspose_pad",
 "test_convtranspose_pads",
 "test_convtranspose_with_kernel",
-"test_dequantizelinear",
-"test_dequantizelinear_axis",
 "test_det_2d",
 "test_det_nd",
-"test_div_example",
 "test_dropout_default_mask",
 "test_dropout_default_mask_ratio",
 "test_dynamicquantizelinear",
@@ -104,6 +101,9 @@
 "test_dynamicquantizelinear_min_adjusted_expanded",
 "test_edge_pad",
 "test_einsum_inner_prod",
+"test_elu_default_expanded_ver18",
+"test_elu_example_expanded_ver18",
+"test_elu_expanded_ver18",
 "test_equal",
 "test_equal_bcast",
 "test_expand_dim_changed",
@@ -118,11 +118,13 @@
 "test_gathernd_example_float32",
 "test_gathernd_example_int32",
 "test_gathernd_example_int32_batch_dim1",
+"test_gelu_default_1_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_default_2_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_tanh_1_expanded", // parser: no corresponding layer for CastLike
+"test_gelu_tanh_2_expanded", // parser: no corresponding layer for CastLike
 "test_gemm_all_attributes",
 "test_gemm_alpha",
 "test_gemm_beta",
-"test_gemm_default_matrix_bias",
-"test_gemm_default_no_bias",
 "test_gemm_default_scalar_bias",
 "test_gemm_default_single_elem_vector_bias",
 "test_gemm_default_vector_bias",
@@ -177,50 +179,34 @@
 "test_lstm_with_initial_bias",
 "test_lstm_with_peepholes",
 "test_matmulinteger",
-"test_max_example",
-"test_max_float16",
-"test_max_float32",
-"test_max_float64",
-"test_max_int16",
-"test_max_int32",
-"test_max_int64",
-"test_max_int8",
-"test_max_one_input",
-"test_max_two_inputs",
-"test_max_uint16",
-"test_max_uint32",
-"test_max_uint64",
-"test_max_uint8",
-"test_mean_example",
-"test_mean_one_input",
-"test_mean_two_inputs",
-"test_min_example",
-"test_min_float16",
-"test_min_float32",
-"test_min_float64",
-"test_min_int16",
-"test_min_int32",
-"test_min_int64",
-"test_min_int8",
-"test_min_one_input",
-"test_min_two_inputs",
-"test_min_uint16",
-"test_min_uint32",
-"test_min_uint64",
-"test_min_uint8",
-"test_mod_broadcast",
-"test_mod_int64_fmod",
-"test_mod_mixed_sign_int16",
-"test_mod_mixed_sign_int32",
-"test_mod_mixed_sign_int64",
-"test_mod_mixed_sign_int8",
-"test_mod_uint16",
-"test_mod_uint32",
-"test_mod_uint64",
-"test_mod_uint8",
+"test_max_int16", // output type (int16) mismatched
+"test_max_int32", // output type (int32) mismatched
+"test_max_int64", // output type (int64) mismatched
+"test_max_int8",  // output type (int8) mismatched
+"test_max_uint16", // output type (uint16) mismatched
+"test_max_uint32", // output type (uint32) mismatched
+"test_max_uint64", // output type (uint64) mismatched
+"test_max_uint8",  // output type (uint8) mismatched
+"test_min_int16", // output type (int16) mismatched
+"test_min_int32", // output type (int32) mismatched
+"test_min_int64", // output type (int64) mismatched
+"test_min_int8",  // output type (int8) mismatched
+"test_min_uint16", // output type (uint16) mismatched
+"test_min_uint32", // output type (uint32) mismatched
+"test_min_uint64", // output type (uint64) mismatched
+"test_min_uint8",  // output type (uint8) mismatched
+"test_mod_broadcast",  // output type (int32) mismatched
+"test_mod_int64_fmod", // output type (int64) mismatched
+"test_mod_mixed_sign_int16", // unsupported data type (int16)
+"test_mod_mixed_sign_int32", // output type (int32) mismatched
+"test_mod_mixed_sign_int64", // output type (int64) mismatched
+"test_mod_mixed_sign_int8",  // output type (int8) mismatched
+"test_mod_uint16", // unsupported data type (uint16)
+"test_mod_uint32", // unsupported data type (uint32)
+"test_mod_uint64", // unsupported data type (uint32)
+"test_mod_uint8",  // output type (int8) mismatched
 "test_momentum",
 "test_momentum_multiple",
-"test_mul_example",
 "test_mvn",
 "test_mvn_expanded",
 "test_nesterov_momentum",
@@ -289,27 +275,19 @@
 "test_or_bcast4v2d",
 "test_or_bcast4v3d",
 "test_or_bcast4v4d",
-"test_pow",
-"test_pow_bcast_array",
-"test_pow_bcast_scalar",
-"test_pow_example",
-"test_pow_types_float",
-"test_pow_types_float32_int32",
-"test_pow_types_float32_int64",
-"test_pow_types_float32_uint32",
-"test_pow_types_float32_uint64",
-"test_pow_types_int",
-"test_pow_types_int32_float32",
-"test_pow_types_int32_int32",
-"test_pow_types_int64_float32",
-"test_pow_types_int64_int64",
+"test_pow_bcast_array", // 1d support is required
+"test_pow_types_float", // output type (int64) mismatched
+"test_pow_types_float32_uint32", // exponent of unsupported data type (uint32)
+"test_pow_types_float32_uint64", // exponent of unsupported data type (uint64)
+"test_pow_types_int32_float32", // output type (int32) mismatched
+"test_pow_types_int32_int32", // output type (int32) mismatched
+"test_pow_types_int64_float32", // output type (int64) mismatched
+"test_pow_types_int64_int64", // output type (int64) mismatched
 "test_prelu_broadcast",
 "test_prelu_example",
 "test_qlinearconv",
 "test_qlinearmatmul_2D",
 "test_qlinearmatmul_3D",
-"test_quantizelinear",
-"test_quantizelinear_axis",
 "test_range_float_type_positive_delta",
 "test_range_float_type_positive_delta_expanded",
 "test_range_int32_type_negative_delta",
@@ -433,6 +411,9 @@
 "test_sce_sum_expanded",
 "test_sce_sum_log_prob",
 "test_sce_sum_log_prob_expanded",
+"test_selu_default_expanded_ver18",
+"test_selu_example_expanded_ver18",
+"test_selu_expanded_ver18",
 "test_sequence_insert_at_back",
 "test_sequence_insert_at_front",
 "test_shape",
@@ -470,9 +451,6 @@
 "test_strnormalizer_export_monday_empty_output",
 "test_strnormalizer_export_monday_insensintive_upper_twodim",
 "test_strnormalizer_nostopwords_nochangecase",
-"test_sub_example",
-"test_sum_example",
-"test_sum_two_inputs",
 "test_tfidfvectorizer_tf_batch_onlybigrams_skip0",
 "test_tfidfvectorizer_tf_batch_onlybigrams_skip5",
 "test_tfidfvectorizer_tf_batch_uniandbigrams_skip5",
@@ -521,8 +499,8 @@
 "test_unsqueeze_three_axes",
 "test_unsqueeze_two_axes",
 "test_unsqueeze_unsorted_axes",
-"test_where_example",
-"test_where_long_example",
+"test_where_example", // input of unsupported data type (bool)
+"test_where_long_example", // input of unsupported data type (bool)
 "test_xor2d",
 "test_xor3d",
 "test_xor4d",
