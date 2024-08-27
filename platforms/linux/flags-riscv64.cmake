@@ -1,0 +1,6 @@
+set(PLATFORM_STR "rv64gc")
+if(ENABLE_RVV OR RISCV_RVV_SCALABLE)
+  set(PLATFORM_STR "rv64gcv")
+endif()
+set(CMAKE_C_FLAGS_INIT "-march=${PLATFORM_STR}")
+set(CMAKE_CXX_FLAGS_INIT "-march=${PLATFORM_STR}")
