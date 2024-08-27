@@ -197,6 +197,7 @@ private:
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseEinsum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseHardmax              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -3190,6 +3191,20 @@ void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter::parseHardmax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Hardmax";
+
+    // hadnle parameter axis
+    int axis = layerParams.get<int>("axis", -1);
+    if (axis == -1) {
+        axis = static_cast<int>(outShapes[node_proto.input(0)].size()) - 1;
+    }
+    layerParams.set("axis", axis);
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseEinsum(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     std::vector<MatShape> einsumInpShapes;
@@ -3981,6 +3996,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Where"] = &ONNXImporter::parseElementWise;
     dispatch["Range"] = &ONNXImporter::parseRange;
     dispatch["Einsum"] = &ONNXImporter::parseEinsum;
+    dispatch["Hardmax"] = &ONNXImporter::parseHardmax;
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
                                           "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
