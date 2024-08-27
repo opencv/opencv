@@ -1203,16 +1203,6 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     _dst.createSameSize(_src, type);
     if (is_ipower)
     {
-        if (ipower == 0)
-        {
-            _dst.setTo(Scalar::all(1));
-            return true;
-        }
-        if (ipower == 1)
-        {
-            _src.copyTo(_dst);
-            return true;
-        }
         if( ipower < 0 )
         {
             if( depth == CV_32F || depth == CV_64F )
@@ -1271,11 +1261,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     bool useOpenCL = _dst.isUMat() && _src.dims() <= 2;
 #endif
 
-    if( is_ipower
-#ifdef HAVE_OPENCL
-            && !(useOpenCL && ocl::Device::getDefault().isIntel() && depth != CV_64F)
-#endif
-      )
+    if (is_ipower)
     {
         switch( ipower )
         {
@@ -1291,8 +1277,6 @@ void pow( InputArray _src, double power, OutputArray _dst )
             return;
         }
     }
-    else
-        CV_Assert( depth == CV_32F || depth == CV_64F );
 
     CV_OCL_RUN(useOpenCL, ocl_pow(_src, power, _dst, is_ipower, ipower))
 
