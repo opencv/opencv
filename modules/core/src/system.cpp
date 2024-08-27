@@ -46,6 +46,15 @@
 #include <iostream>
 #include <ostream>
 
+#ifdef __QNX__
+    #include <unistd.h>
+    #include <sys/neutrino.h>
+    #include <sys/syspage.h>
+#ifdef __aarch64__
+    #include <aarch64/syspage.h>
+#endif
+#endif
+
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 

@@ -2044,8 +2044,11 @@ void fillPoly( InputOutputArray _img, const Point** pts, const int* npts, int nc
     edges.reserve( total + 1 );
     for (i = 0; i < ncontours; i++)
     {
-        std::vector<Point2l> _pts(pts[i], pts[i] + npts[i]);
-        CollectPolyEdges(img, _pts.data(), npts[i], edges, buf, line_type, shift, offset);
+        if (npts[i] > 0 && pts[i])
+        {
+            std::vector<Point2l> _pts(pts[i], pts[i] + npts[i]);
+            CollectPolyEdges(img, _pts.data(), npts[i], edges, buf, line_type, shift, offset);
+        }
     }
 
     FillEdgeCollection(img, edges, buf, line_type);
@@ -2105,7 +2108,7 @@ void cv::fillPoly(InputOutputArray img, InputArrayOfArrays pts,
     for( i = 0; i < ncontours; i++ )
     {
         Mat p = pts.getMat(manyContours ? i : -1);
-        CV_Assert(p.checkVector(2, CV_32S) >= 0);
+        CV_Assert(p.checkVector(2, CV_32S) > 0);
         ptsptr[i] = p.ptr<Point>();
         npts[i] = p.rows*p.cols*p.channels()/2;
     }
