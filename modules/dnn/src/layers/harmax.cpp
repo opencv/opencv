@@ -72,25 +72,10 @@ public:
 
         Mat src = inputs[0];
         Mat dst = outputs[0];
-        std::cout << "input shape: " << src.size << std::endl;
-        std::cout << "input type: " << src.type() << std::endl;
-
-        std::cout << "output shape: " << dst.size << std::endl;
-        std::cout << "output type: " << dst.type() << std::endl;
 
         int dims = src.dims;
-        int real_axis = normalize_axis(axis, dims);
-        std::cout << "axis: " << axis << std::endl;
-        std::cout << "dims: " << dims << std::endl;
-        std::cout << "actual_axis: " << real_axis << std::endl;
+        axis = normalize_axis(axis, dims);
         MatShape shape(src.size.p, src.size.p + src.dims);
-
-        // print all elements of src
-        for (int i = 0; i < src.total(); ++i)
-        {
-            std::cout << src.ptr<float>()[i] << " ";
-        }
-        std::cout << std::endl;
 
         // Calculate strides for efficient iteration
         std::vector<size_t> strides(src.dims);
@@ -100,9 +85,6 @@ public:
             strides[i] = total;
             total *= shape[i];
         }
-        std::cout << "strides: " << strides << std::endl;
-        std::cout << "shape: " << shape << std::endl;
-        std::cout << "total: " << total << std::endl;
 
         // Prepare output
         dst.create(shape, src.type());
@@ -110,19 +92,39 @@ public:
 
         // Iterate over all elements except the axis dimension
         std::vector<int> indices(src.dims, 0);
-        size_t count = total / shape[real_axis];
+        size_t count = total / shape[axis];
+
+        switch (src.depth())
+        {
+            case CV_8U:  hardmaxImpl<uchar>(src, dst, shape, strides, indices, count, axis); break;
+            case CV_8S:  hardmaxImpl<schar>(src, dst, shape, strides, indices, count, axis); break;
+            case CV_16U: hardmaxImpl<ushort>(src, dst, shape, strides, indices, count, axis); break;
+            case CV_16S: hardmaxImpl<short>(src, dst, shape, strides, indices, count, axis); break;
+            case CV_32S: hardmaxImpl<int>(src, dst, shape, strides, indices, count, axis); break;
+            case CV_32F: hardmaxImpl<float>(src, dst, shape, strides, indices, count, axis); break;
+            case CV_64F: hardmaxImpl<double>(src, dst, shape, strides, indices, count, axis); break;
+            default:
+                CV_Error(Error::StsUnsupportedFormat, "Unsupported input data type");
+        }
+    }
+
+    template<typename T>
+    void hardmaxImpl(const Mat& src, Mat& dst, const MatShape& shape, const std::vector<size_t>& strides,
+                     std::vector<int>& indices, size_t count, int axis)
+    {
         for (size_t i = 0; i < count; ++i)
         {
             // Find max element along the axis
-            float max_val = -std::numeric_limits<float>::max();
+            T max_val = std::numeric_limits<T>::lowest();
             int max_idx = -1;
-            for (int j = 0; j < shape[real_axis]; ++j)
+            for (int j = 0; j < shape[axis]; ++j)
             {
-                indices[real_axis] = j;
+                indices[axis] = j;
                 size_t offset = 0;
                 for (int k = 0; k < src.dims; ++k)
                     offset += indices[k] * strides[k];
-                float val = src.ptr<float>()[offset];
+
+                T val = src.ptr<T>()[offset];
                 if (val > max_val)
                 {
                     max_val = val;
@@ -131,23 +133,21 @@ public:
             }
 
             // Set the max element to 1, others to 0
-            indices[real_axis] = max_idx;
+            indices[axis] = max_idx;
             size_t offset = 0;
             for (int k = 0; k < src.dims; ++k)
                 offset += indices[k] * strides[k];
 
-            dst.ptr<float>()[offset] = 1.0f;
+            dst.ptr<T>()[offset] = 1;
 
             // Update indices for the next iteration
             for (int j = src.dims - 1; j >= 0; --j)
             {
-                if (j == real_axis) continue;
+                if (j == axis) continue;
                 if (++indices[j] < shape[j]) break;
                 indices[j] = 0;
             }
         }
-
-
     }
 
 
