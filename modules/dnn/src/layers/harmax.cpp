@@ -24,12 +24,30 @@ public:
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
+    void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size());
+        for (auto input : inputs)
+        {
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
+            else
+                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
+        }
+
+        outputs.assign(requiredOutputs, inputs[0]);
+    }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        CV_CheckEQ(inputs.size(), 1ull, "Hardmax: one input is expected");
         outputs.resize(1);
         outputs[0] = inputs[0];
         return true;
@@ -89,8 +107,6 @@ public:
         // Prepare output
         dst.create(shape, src.type());
         dst = Scalar(0);
-
-
 
         // Iterate over all elements except the axis dimension
         std::vector<int> indices(src.dims, 0);
