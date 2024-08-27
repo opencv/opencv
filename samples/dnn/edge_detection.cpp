@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
     string zooFile = parser.get<String>("zoo");
 
     const char* path = getenv("OPENCV_SAMPLES_DATA_PATH");
-    if ((path != NULL) || parser.has("@alias")) {
+    if ((path != NULL) || parser.has("@alias") || (parser.get<String>("model") != "")) {
         modelName = "dexined";
         zooFile = findFile(zooFile);
     }
