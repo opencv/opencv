@@ -335,8 +335,8 @@ bool GifDecoder::lzwDecode() {
             }
 
             // check if the code stream is full
-            if (idx == width * height) {
-                return false;
+            if (idx >= width * height) {
+                return idx == width * height && blockLen == 0 && !m_strm.getByte();
             }
 
             // output code
@@ -663,7 +663,7 @@ bool GifEncoder::lzwEncode() {
         uchar c = imgCodeStream[i];
         // prev + currentCode(c) is not in the table
         if(lzwTable[prev * 256 + c] == 0){
-            output |= (prev << bitLeft);
+            output |= ((size_t)prev << bitLeft);
             bitLeft += lzwCodeSize;
             lzwTable[prev * 256 + c] = idx;
             prev = c;
@@ -674,7 +674,7 @@ bool GifEncoder::lzwEncode() {
             idx ++;
             // if the lzwTable is full, add clear code to the output
             if(idx == (1 << lzwMaxCodeSize)){
-                output |= ((1 << lzwMinCodeSize) << bitLeft);
+                output |= (((size_t)1 << lzwMinCodeSize) << bitLeft);
                 bitLeft += lzwCodeSize;
                 memset(lzwTable.data(), 0, (1 << 12) * 256 * sizeof(int));
                 // next code
@@ -687,9 +687,9 @@ bool GifEncoder::lzwEncode() {
     }
 
     // end of the code
-    output |= (prev << bitLeft);
+    output |= ((size_t)prev << bitLeft);
     bitLeft += lzwCodeSize;
-    output |= (((1 << lzwMinCodeSize) + 1) << bitLeft);
+    output |= ((((size_t)1 << lzwMinCodeSize) | 1) << bitLeft);
     bitLeft += lzwCodeSize;
     while (bitLeft >= 8) {
         buffer[bufferLen++] = (uchar)output;
