@@ -58,6 +58,10 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL arm)
   set(CMAKE_EXE_LINKER_FLAGS_INIT    "${common_ld_opt} -Wl,-z,nocopyreloc")
 elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
   include("${CMAKE_CURRENT_LIST_DIR}/flags-aarch64.cmake")
+  if(OCV_FLAGS)
+    set(CMAKE_CXX_FLAGS_INIT "${OCV_FLAGS}")
+    set(CMAKE_C_FLAGS_INIT "${OCV_FLAGS}")
+  endif()
 endif()
 
 
