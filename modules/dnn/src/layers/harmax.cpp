@@ -96,64 +96,61 @@ public:
 
         switch (src.depth())
         {
-            case CV_8U:  hardmaxImpl<uchar>(src, dst, shape, strides, indices, count); break;
-            case CV_8S:  hardmaxImpl<schar>(src, dst, shape, strides, indices, count); break;
-            case CV_16U: hardmaxImpl<ushort>(src, dst, shape, strides, indices, count); break;
-            case CV_16S: hardmaxImpl<short>(src, dst, shape, strides, indices, count); break;
-            case CV_32S: hardmaxImpl<int>(src, dst, shape, strides, indices, count); break;
-            case CV_32F: hardmaxImpl<float>(src, dst, shape, strides, indices, count); break;
-            case CV_64F: hardmaxImpl<double>(src, dst, shape, strides, indices, count); break;
+            case CV_8U: hardmaxApply<uchar>(src, dst, axis); break;
+            case CV_8S: hardmaxApply<schar>(src, dst, axis); break;
+            case CV_16U: hardmaxApply<ushort>(src, dst, axis); break;
+            case CV_16S: hardmaxApply<short>(src, dst, axis); break;
+            case CV_32S: hardmaxApply<int>(src, dst, axis); break;
+            case CV_32F: hardmaxApply<float>(src, dst, axis); break;
+            case CV_64F: hardmaxApply<double>(src, dst, axis); break;
             default:
                 CV_Error(Error::StsUnsupportedFormat, "Unsupported input data type");
         }
     }
 
-    template<typename T>
-    void hardmaxImpl(const Mat& src, Mat& dst, const MatShape& shape, const std::vector<size_t>& strides,
-                     std::vector<int>& indices, size_t count)
+    template <typename T>
+    void hardmaxApply(const cv::Mat& src, cv::Mat& dst, const int axis)
     {
-        for (size_t i = 0; i < count; ++i)
+        const auto *src_ptr = src.ptr<T>();
+        auto *dst_ptr = dst.ptr<T>();
+
+        const size_t outer_size = src.total(0, axis);
+        const auto mid_size = static_cast<size_t>(src.size[axis]);
+        const size_t inner_size = src.total(axis + 1);
+
+        const size_t outer_step = src.total(axis);
+        const size_t dst_step = dst.total(axis);
+
+        for (size_t outer = 0; outer < outer_size; ++outer)
         {
-            // Find max element along the axis
-            T max_val = std::numeric_limits<T>::lowest();
-            int max_idx = -1;
+            const size_t outer_offset = outer * outer_step;
+            const size_t dst_offset = outer * dst_step;
 
-            size_t base_offset = 0;
-            for (int k = 0; k < src.dims; ++k) {
-                if (k != axis) {
-                    base_offset += indices[k] * strides[k];
-                }
-            }
-
-            for (int j = 0; j < shape[axis]; ++j)
+            for (size_t inner = 0; inner < inner_size; ++inner)
             {
-                size_t offset = base_offset + j * strides[axis];
-                T val = src.ptr<T>()[offset];
-                if (val > max_val)
+                T max_val = std::numeric_limits<T>::lowest();
+                size_t max_idx = 0;
+
+                // Find max along the reduction axis
+                for (size_t mid = 0; mid < mid_size; ++mid)
                 {
-                    max_val = val;
-                    max_idx = j;
+                    const size_t src_idx = outer_offset + mid * inner_size + inner;
+                    if (src_ptr[src_idx] > max_val)
+                    {
+                        max_val = src_ptr[src_idx];
+                        max_idx = mid;
+                    }
                 }
-            }
 
-            // Set the max element to 1, others to 0
-            indices[axis] = max_idx;
-            size_t offset = 0;
-            for (int k = 0; k < src.dims; ++k)
-                offset += indices[k] * strides[k];
-
-            dst.ptr<T>()[offset] = 1;
-
-            // Update indices for the next iteration
-            for (int j = src.dims - 1; j >= 0; --j)
-            {
-                if (j == axis) continue;
-                if (++indices[j] < shape[j]) break;
-                indices[j] = 0;
+                // Set 1 for max, 0 for others
+                for (size_t mid = 0; mid < mid_size; ++mid)
+                {
+                    const size_t dst_idx = dst_offset + mid * inner_size + inner;
+                    dst_ptr[dst_idx] = (mid == max_idx) ? 1 : 0;
+                }
             }
         }
     }
-
 
 };
 
