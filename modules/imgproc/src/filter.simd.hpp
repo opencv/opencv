@@ -490,10 +490,20 @@ struct RowVec_8u32f
             {
                 v_float32 f = vx_setall_f32(_kx[k]);
                 const uchar* src = (const uchar*)_src + i + k * cn;
-                v_float32 vs_ll = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src)));
-                v_float32 vs_lh = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + VTraits<v_float32>::vlanes())));
-                v_float32 vs_hl = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + 2*VTraits<v_float32>::vlanes())));
-                v_float32 vs_hh = v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src + 3*VTraits<v_float32>::vlanes())));
+                v_uint8 v_src = vx_load(src);
+                v_uint16 v_src_d0; 
+                v_uint16 v_src_d1; 
+                v_expand(v_src, v_src_d0, v_src_d1);
+                v_uint32 v_src_q0;
+                v_uint32 v_src_q1;
+                v_uint32 v_src_q2;
+                v_uint32 v_src_q3;
+                v_expand(v_src_d0, v_src_q0, v_src_q1);
+                v_expand(v_src_d1, v_src_q2, v_src_q3);
+                v_float32 vs_ll = v_cvt_f32(v_reinterpret_as_s32(v_src_q0));
+                v_float32 vs_lh = v_cvt_f32(v_reinterpret_as_s32(v_src_q1));
+                v_float32 vs_hl = v_cvt_f32(v_reinterpret_as_s32(v_src_q2));
+                v_float32 vs_hh = v_cvt_f32(v_reinterpret_as_s32(v_src_q3));
                 s0 = v_muladd(vs_ll, f, s0);
                 s1 = v_muladd(vs_lh, f, s1);
                 s2 = v_muladd(vs_hl, f, s2);
