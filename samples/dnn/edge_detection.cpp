@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
                 namedWindow("Output", WINDOW_AUTOSIZE);
                 moveWindow("Output", 200, 0);
             } else {
-                cout << "[ERROR] Provide model file using --model to use dexined" << endl;
+                cout << "[ERROR] Provide model file using --model to use dexined. Download model from https://drive.google.com/file/d/1u_qXqXqaIP_SqdGaq4CbZyjzkZb02XTs/view?usp=sharing" << endl;
             }
         }
         else if (key == ' ' && method == "dexined")
