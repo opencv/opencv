@@ -143,6 +143,7 @@ AvifDecoder::AvifDecoder() {
   m_buf_supported = true;
   channels_ = 0;
   decoder_ = avifDecoderCreate();
+  decoder_->strictFlags = AVIF_STRICT_DISABLED;
 }
 
 AvifDecoder::~AvifDecoder() {
@@ -166,6 +167,7 @@ bool AvifDecoder::checkSignature(const String &signature) const {
   std::unique_ptr<avifDecoder, decltype(&avifDecoderDestroy)> decoder(
       avifDecoderCreate(), avifDecoderDestroy);
   if (!decoder) return false;
+  decoder->strictFlags = AVIF_STRICT_DISABLED;
   OPENCV_AVIF_CHECK_STATUS(
       avifDecoderSetIOMemory(
           decoder.get(), reinterpret_cast<const uint8_t *>(signature.c_str()),
