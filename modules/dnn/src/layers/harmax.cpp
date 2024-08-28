@@ -77,22 +77,9 @@ public:
         axis = normalize_axis(axis, dims);
         MatShape shape(src.size.p, src.size.p + src.dims);
 
-        // Calculate strides for efficient iteration
-        std::vector<size_t> strides(src.dims);
-        size_t total = 1;
-        for (int i = src.dims - 1; i >= 0; --i)
-        {
-            strides[i] = total;
-            total *= shape[i];
-        }
-
         // Prepare output
         dst.create(shape, src.type());
         dst = Scalar(0);
-
-        // Iterate over all elements except the axis dimension
-        std::vector<int> indices(src.dims, 0);
-        size_t count = total / shape[axis];
 
         switch (src.depth())
         {
@@ -124,7 +111,6 @@ public:
         for (size_t outer = 0; outer < outer_size; ++outer)
         {
             const size_t outer_offset = outer * outer_step;
-            const size_t dst_offset = outer * dst_step;
 
             for (size_t inner = 0; inner < inner_size; ++inner)
             {
