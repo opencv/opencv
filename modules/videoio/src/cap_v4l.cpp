@@ -1538,11 +1538,11 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         return;
     case V4L2_PIX_FMT_NV12:
         cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), destination,
-                     COLOR_YUV2RGB_NV12);
+                     COLOR_YUV2BGR_NV12);
         return;
     case V4L2_PIX_FMT_NV21:
         cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), destination,
-                     COLOR_YUV2RGB_NV21);
+                     COLOR_YUV2BGR_NV21);
         return;
 #ifdef HAVE_JPEG
     case V4L2_PIX_FMT_MJPEG:
