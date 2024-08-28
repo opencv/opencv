@@ -84,7 +84,7 @@ static void preprocess(const Mat& frame, Net& net, Size inpSize);
 
 static void postprocess(Mat& frame, const vector<Mat>& out, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes);
 
-static void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans);
+static void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans, int stdSize, int stdWeight, int stdImgSize, int stdThickness);
 
 static void callback(int pos, void* userdata);
 
@@ -238,6 +238,10 @@ int main(int argc, char** argv)
 
     FontFace sans("sans");
 
+    int stdSize = 15;
+    int stdWeight = 150;
+    int stdImgSize = 512;
+    int stdThickness = 2;
     vector<int> classIds;
     vector<float> confidences;
     vector<Rect> boxes;
@@ -325,19 +329,23 @@ int main(int argc, char** argv)
         boxes.clear();
         postprocess(frame, outs, net, backend, classIds, confidences, boxes);
 
-        drawPred(classIds, confidences, boxes, frame, sans);
+        drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
+
+        int imgWidth = max(frame.rows, frame.cols);
+        int size = (stdSize*imgWidth)/(stdImgSize*1.5);
+        int weight = (stdWeight*imgWidth)/(stdImgSize*1.5);
 
         if (predictionsQueue.counter > 1)
         {
             string label = format("Camera: %.2f FPS", framesQueue.getFPS());
-            rectangle(frame, Point(0, 0), Point(150, 50), Scalar::all(255), FILLED);
-            putText(frame, label, Point(0, 15), Scalar::all(0), sans, 12, 400);
+            rectangle(frame, Point(0, 0), Point(10*size, 3*size+size/4), Scalar::all(255), FILLED);
+            putText(frame, label, Point(0, size), Scalar::all(0), sans, size, weight);
 
             label = format("Network: %.2f FPS", predictionsQueue.getFPS());
-            putText(frame, label, Point(0, 30), Scalar::all(0), sans, 12, 400);
+            putText(frame, label, Point(0, 2*size), Scalar::all(0), sans, size, weight);
 
             label = format("Skipped frames: %d", framesQueue.counter - predictionsQueue.counter);
-            putText(frame, label, Point(0, 45), Scalar::all(0), sans, 12, 400);
+            putText(frame, label, Point(0, 3*size), Scalar::all(0), sans, size, weight);
         }
         imshow(kWinName, frame);
     }
@@ -377,16 +385,18 @@ int main(int argc, char** argv)
 
         // Draw predictions on the frame
         //![draw_boxes]
-        drawPred(classIds, confidences, boxes, frame, sans);
+        drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
         //![draw_boxes]
 
         // Put efficiency information.
         vector<double> layersTimes;
+        int imgWidth = max(frame.rows, frame.cols);
+        int size = (stdSize*imgWidth)/(stdImgSize*1.5);
+        int weight = (stdWeight*imgWidth)/(stdImgSize*1.5);
         double freq = getTickFrequency() / 1000;
         double t = net.getPerfProfile(layersTimes) / freq;
         string label = format("Inference time: %.2f ms", t);
-        putText(frame, label, Point(0, 15), Scalar(0, 255, 0), sans, 12, 400);
-
+        putText(frame, label, Point(0, size), Scalar(0, 255, 0), sans, size, weight);
         imshow(kWinName, frame);
     }
 #endif  // USE_THREADS
@@ -664,12 +674,8 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
     }
 }
 
-void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans)
+void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans, int stdSize, int stdWeight, int stdImgSize, int stdThickness)
 {
-    int stdSize = 15;
-    int stdWeight = 150;
-    int stdImgSize = 512;
-    int stdThickness = 2;
     int imgWidth = max(frame.rows, frame.cols);
     int size = (stdSize*imgWidth)/stdImgSize;
     int weight = (stdWeight*imgWidth)/stdImgSize;
@@ -692,12 +698,12 @@ void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& b
 
         Rect r = getTextSize(Size(), label, Point(), sans, size, weight);
         int baseline = r.y + r.height;
-        Size labelSize = Size(r.width, r.height - baseline);
+        Size labelSize = Size(r.width, r.height + size/4 - baseline);
 
-        top = max(top, labelSize.height);
-        rectangle(frame, Point(left, top - labelSize.height),
-                Point(left + labelSize.width, top + baseline), boxColor, FILLED);
-        putText(frame, label, Point(left, top-thickness), getTextColor(boxColor), sans, size, weight);
+        top = max(top-thickness/2, labelSize.height);
+        rectangle(frame, Point(left-thickness/2, top-(labelSize.height)),
+                Point(left + labelSize.width, top), boxColor, FILLED);
+        putText(frame, label, Point(left, top-size/4), getTextColor(boxColor), sans, size, weight);
     }
 }
 
