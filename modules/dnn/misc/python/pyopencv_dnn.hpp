@@ -143,37 +143,16 @@ public:
         return Ptr<dnn::Layer>(new pycvLayer(params, it->second.back()));
     }
 
-    virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
-                                 const int,
-                                 std::vector<std::vector<int> > &outputs,
-                                 std::vector<std::vector<int> > &) const CV_OVERRIDE
-    {
-        PyGILState_STATE gstate;
-        gstate = PyGILState_Ensure();
-
-        PyObject* args = PyList_New(inputs.size());
-        for(size_t i = 0; i < inputs.size(); ++i)
-            PyList_SetItem(args, i, pyopencv_from_generic_vec(inputs[i]));
-
-        PyObject* res = PyObject_CallMethodObjArgs(o, PyString_FromString("getMemoryShapes"), args, NULL);
-        Py_DECREF(args);
-        PyGILState_Release(gstate);
-        if (!res)
-            CV_Error(Error::StsNotImplemented, "Failed to call \"getMemoryShapes\" method");
-        CV_Assert(pyopencv_to_generic_vec(res, outputs, ArgInfo("", 0)));
-        return false;
-    }
-
     virtual void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
         PyGILState_STATE gstate;
         gstate = PyGILState_Ensure();
 
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
+        std::vector<Mat> ins, outs;
+        inputs_arr.getMatVector(ins);
+        outputs_arr.getMatVector(outs);
 
-        PyObject* args = pyopencv_from(inputs);
+        PyObject* args = pyopencv_from(ins);
         PyObject* res = PyObject_CallMethodObjArgs(o, PyString_FromString("forward"), args, NULL);
         Py_DECREF(args);
         if (!res)
@@ -184,12 +163,12 @@ public:
         Py_DECREF(res);
         PyGILState_Release(gstate);
 
-        CV_Assert(pyOutputs.size() == outputs.size());
-        for (size_t i = 0; i < outputs.size(); ++i)
+        CV_Assert(pyOutputs.size() == outs.size());
+        for (size_t i = 0; i < outs.size(); ++i)
         {
-            CV_Assert(pyOutputs[i].size == outputs[i].size);
-            CV_Assert(pyOutputs[i].type() == outputs[i].type());
-            pyOutputs[i].copyTo(outputs[i]);
+            CV_Assert(pyOutputs[i].size == outs[i].size);
+            CV_Assert(pyOutputs[i].type() == outs[i].type());
+            pyOutputs[i].copyTo(outs[i]);
         }
     }
 

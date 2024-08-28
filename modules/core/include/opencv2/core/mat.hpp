@@ -105,7 +105,7 @@ CV_EXPORTS std::string layoutToString(DataLayout layout);
  *   2. includes information about the layout, including the actual number of channels ('C') in the case of block layout.
  *   3. distinguishes between empty shape (total() == 0) and 0-dimensional shape (dims == 0, but total() == 1).
  */
-struct CV_EXPORTS MatShape
+struct CV_EXPORTS_W_SIMPLE MatShape
 {
     enum {MAX_DIMS=10};
 
@@ -123,9 +123,9 @@ struct CV_EXPORTS MatShape
 
     // try to mimic basic std::vector<int> functionality
     size_t size() const; // returns 0 in the case of scalar tensor. So, please don't use 'size()==0' to check for an empty shape. Use empty() instead.
-    bool empty() const; // equivalent to total()==0, but may be slightly faster.
-    bool isScalar() const; // dims==0
-    void clear();
+    CV_WRAP bool empty() const; // equivalent to total()==0, but may be slightly faster.
+    CV_WRAP bool isScalar() const; // dims==0
+    CV_WRAP void clear();
     void resize(size_t newSize, int value=0);
     void reserve(size_t maxSize);
     void assign(size_t newSize, int value);
@@ -137,7 +137,7 @@ struct CV_EXPORTS MatShape
     void insert(int* where, size_t count, int value);
     void insert(int* where, int count, int value);
     template<class _It> void insert(int* where, _It begin, _It end);
-    void erase(int* where);
+    CV_WRAP void erase(int* where);
     int* data();
     const int* data() const;
     int* begin();
@@ -151,14 +151,14 @@ struct CV_EXPORTS MatShape
     int& operator [](size_t idx);
     const int& operator [](size_t idx) const;
 
-    bool haveSymbols() const; // negative elements in the shape may denote 'symbols' instead of actual values.
+    CV_WRAP bool haveSymbols() const; // negative elements in the shape may denote 'symbols' instead of actual values.
 
     // compute shape of the result with possible broadcasting
-    MatShape expand(const MatShape& another) const;
+    CV_WRAP MatShape expand(const MatShape& another) const;
 
     // convert shape to/from block layout
-    MatShape toBlock(int C0) const;
-    MatShape fromBlock(DataLayout newLayout) const;
+    CV_WRAP MatShape toBlock(int C0) const;
+    CV_WRAP MatShape fromBlock(DataLayout newLayout) const;
 
     size_t total() const; // returns the total number of elements in the tensor (including padding elements, i.e. the method ignores 'C' in the case of block layout). Returns 1 for scalar tensors. Returns 0 for empty shapes.
 
