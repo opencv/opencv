@@ -146,7 +146,8 @@ public:
                 for (size_t mid = 0; mid < mid_size; ++mid)
                 {
                     const size_t dst_idx = dst_offset + mid * inner_size + inner;
-                    dst_ptr[dst_idx] = (mid == max_idx) ? 1 : 0;
+                    if (mid == max_idx)
+                        dst_ptr[dst_idx] = 1;
                 }
             }
         }
