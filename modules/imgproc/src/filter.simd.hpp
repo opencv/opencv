@@ -491,8 +491,8 @@ struct RowVec_8u32f
                 v_float32 f = vx_setall_f32(_kx[k]);
                 const uchar* src = (const uchar*)_src + i + k * cn;
                 v_uint8 v_src = vx_load(src);
-                v_uint16 v_src_d0; 
-                v_uint16 v_src_d1; 
+                v_uint16 v_src_d0;
+                v_uint16 v_src_d1;
                 v_expand(v_src, v_src_d0, v_src_d1);
                 v_uint32 v_src_q0;
                 v_uint32 v_src_q1;
