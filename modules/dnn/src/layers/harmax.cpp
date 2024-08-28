@@ -73,13 +73,11 @@ public:
         Mat src = inputs[0];
         Mat dst = outputs[0];
 
-        int dims = src.dims;
-        axis = normalize_axis(axis, dims);
+        axis = normalize_axis(axis, src.dims);
         MatShape shape(src.size.p, src.size.p + src.dims);
 
         // Prepare output
-        dst.create(shape, src.type());
-        dst = Scalar(0);
+        dst = Mat::zeros(src.dims, src.size, src.type());
 
         switch (src.depth())
         {
@@ -104,9 +102,7 @@ public:
         const size_t outer_size = src.total(0, axis);
         const auto mid_size = static_cast<size_t>(src.size[axis]);
         const size_t inner_size = src.total(axis + 1);
-
         const size_t outer_step = src.total(axis);
-        const size_t dst_step = dst.total(axis);
 
         for (size_t outer = 0; outer < outer_size; ++outer)
         {
