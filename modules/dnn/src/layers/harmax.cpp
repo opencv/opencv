@@ -138,17 +138,12 @@ public:
                     if (src_ptr[src_idx] > max_val)
                     {
                         max_val = src_ptr[src_idx];
-                        max_idx = mid;
+                        max_idx = src_idx;
                     }
                 }
 
                 // Set 1 for max, 0 for others
-                for (size_t mid = 0; mid < mid_size; ++mid)
-                {
-                    const size_t dst_idx = dst_offset + mid * inner_size + inner;
-                    if (mid == max_idx)
-                        dst_ptr[dst_idx] = 1;
-                }
+                dst_ptr[max_idx] = 1;
             }
         }
     }
