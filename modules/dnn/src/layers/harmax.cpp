@@ -96,13 +96,13 @@ public:
 
         switch (src.depth())
         {
-            case CV_8U:  hardmaxImpl<uchar>(src, dst, shape, strides, indices, count, axis); break;
-            case CV_8S:  hardmaxImpl<schar>(src, dst, shape, strides, indices, count, axis); break;
-            case CV_16U: hardmaxImpl<ushort>(src, dst, shape, strides, indices, count, axis); break;
-            case CV_16S: hardmaxImpl<short>(src, dst, shape, strides, indices, count, axis); break;
-            case CV_32S: hardmaxImpl<int>(src, dst, shape, strides, indices, count, axis); break;
-            case CV_32F: hardmaxImpl<float>(src, dst, shape, strides, indices, count, axis); break;
-            case CV_64F: hardmaxImpl<double>(src, dst, shape, strides, indices, count, axis); break;
+            case CV_8U:  hardmaxImpl<uchar>(src, dst, shape, strides, indices, count); break;
+            case CV_8S:  hardmaxImpl<schar>(src, dst, shape, strides, indices, count); break;
+            case CV_16U: hardmaxImpl<ushort>(src, dst, shape, strides, indices, count); break;
+            case CV_16S: hardmaxImpl<short>(src, dst, shape, strides, indices, count); break;
+            case CV_32S: hardmaxImpl<int>(src, dst, shape, strides, indices, count); break;
+            case CV_32F: hardmaxImpl<float>(src, dst, shape, strides, indices, count); break;
+            case CV_64F: hardmaxImpl<double>(src, dst, shape, strides, indices, count); break;
             default:
                 CV_Error(Error::StsUnsupportedFormat, "Unsupported input data type");
         }
@@ -110,20 +110,24 @@ public:
 
     template<typename T>
     void hardmaxImpl(const Mat& src, Mat& dst, const MatShape& shape, const std::vector<size_t>& strides,
-                     std::vector<int>& indices, size_t count, int axis)
+                     std::vector<int>& indices, size_t count)
     {
         for (size_t i = 0; i < count; ++i)
         {
             // Find max element along the axis
             T max_val = std::numeric_limits<T>::lowest();
             int max_idx = -1;
+
+            size_t base_offset = 0;
+            for (int k = 0; k < src.dims; ++k) {
+                if (k != axis) {
+                    base_offset += indices[k] * strides[k];
+                }
+            }
+
             for (int j = 0; j < shape[axis]; ++j)
             {
-                indices[axis] = j;
-                size_t offset = 0;
-                for (int k = 0; k < src.dims; ++k)
-                    offset += indices[k] * strides[k];
-
+                size_t offset = base_offset + j * strides[axis];
                 T val = src.ptr<T>()[offset];
                 if (val > max_val)
                 {
