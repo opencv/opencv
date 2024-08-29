@@ -172,7 +172,6 @@ endif()
 
 macro(ocv_force_baseline_detect_and_check_dispatch)
   set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
-  set(CPU_DISPATCH "" CACHE STRING "${HELP_CPU_DISPATCH}")
 
   if(CPU_BASELINE STREQUAL "NATIVE")
     # ok
@@ -572,7 +571,7 @@ foreach(OPT ${CPU_KNOWN_OPTIMIZATIONS})
   if(NOT __is_from_dispatch)
     ocv_is_optimization_in_list(__is_from_dispatch ${OPT} ${CPU_DISPATCH})
   endif()
-  if(NOT __is_disabled AND (__is_from_dispatch OR __is_from_baseline OR CPU_BASELINE_DETECT))
+  if(__is_from_dispatch OR __is_from_baseline OR CPU_BASELINE_DETECT)
     ocv_check_compiler_optimization(${OPT})
   endif()
   if(CPU_BASELINE_DETECT AND NOT __is_from_baseline AND NOT __is_disabled)
