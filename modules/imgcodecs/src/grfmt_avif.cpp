@@ -33,7 +33,7 @@ struct AvifImageDeleter {
 
 using AvifImageUniquePtr = std::unique_ptr<avifImage, AvifImageDeleter>;
 
-avifResult CopyToMat(const avifImage *image, int channels, Mat *mat) {
+avifResult CopyToMat(const avifImage *image, int channels, bool useRGB , Mat *mat) {
   CV_Assert((int)image->height == mat->rows);
   CV_Assert((int)image->width == mat->cols);
   if (channels == 1) {
@@ -53,7 +53,10 @@ avifResult CopyToMat(const avifImage *image, int channels, Mat *mat) {
   avifRGBImage rgba;
   avifRGBImageSetDefaults(&rgba, image);
   if (channels == 3) {
-    rgba.format = AVIF_RGB_FORMAT_BGR;
+      if (useRGB)
+          rgba.format = AVIF_RGB_FORMAT_RGB;
+      else
+          rgba.format = AVIF_RGB_FORMAT_BGR;
   } else {
     CV_Assert(channels == 4);
     rgba.format = AVIF_RGB_FORMAT_BGRA;
@@ -192,6 +195,7 @@ bool AvifDecoder::readHeader() {
 
   m_width = decoder_->image->width;
   m_height = decoder_->image->height;
+  m_frame_count = decoder_->imageCount;
   channels_ = (decoder_->image->yuvFormat == AVIF_PIXEL_FORMAT_YUV400) ? 1 : 3;
   if (decoder_->alphaPresent) ++channels_;
   bit_depth_ = decoder_->image->depth;
@@ -227,7 +231,7 @@ bool AvifDecoder::readData(Mat &img) {
     is_first_image_ = false;
   }
 
-  if (CopyToMat(decoder_->image, channels_, &read_img) != AVIF_RESULT_OK) {
+  if (CopyToMat(decoder_->image, channels_, m_use_rgb, &read_img) != AVIF_RESULT_OK) {
     CV_Error(Error::StsInternal, "Cannot convert from AVIF to Mat");
     return false;
   }

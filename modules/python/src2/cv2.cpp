@@ -562,6 +562,11 @@ static bool init_body(PyObject * m)
     PUBLISH(CV_16FC2);
     PUBLISH(CV_16FC3);
     PUBLISH(CV_16FC4);
+    PUBLISH(CV_Bool);
+    PUBLISH(CV_BoolC1);
+    PUBLISH(CV_BoolC2);
+    PUBLISH(CV_BoolC3);
+    PUBLISH(CV_BoolC4);
 #undef PUBLISH_
 #undef PUBLISH
 

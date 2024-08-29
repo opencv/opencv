@@ -279,6 +279,7 @@ bool TiffDecoder::readHeader()
 
             m_width = wdth;
             m_height = hght;
+            m_frame_count = TIFFNumberOfDirectories(tif);
             if (ncn == 3 && photometric == PHOTOMETRIC_LOGLUV)
             {
                 m_type = CV_32FC3;
@@ -865,9 +866,14 @@ bool  TiffDecoder::readData( Mat& img )
                                         break;
 
                                     case MAKE_FLAG( 3, 3 ): // RGB to BGR
-                                        icvCvt_BGR2RGB_8u_C3R( bstart, 0,
-                                                img_line_buffer, 0,
-                                                Size(tile_width, 1) );
+                                        if (m_use_rgb)
+                                            memcpy( (void*) img_line_buffer,
+                                                    (void*) bstart,
+                                                    tile_width * sizeof(uchar) );
+                                        else
+                                            icvCvt_BGR2RGB_8u_C3R( bstart, 0,
+                                                    img_line_buffer, 0,
+                                                    Size(tile_width, 1) );
                                         break;
 
                                     case MAKE_FLAG( 4, 1 ): // RGBA to GRAY
@@ -879,7 +885,7 @@ bool  TiffDecoder::readData( Mat& img )
                                     case MAKE_FLAG( 4, 3 ): // RGBA to BGR
                                         icvCvt_BGRA2BGR_8u_C4C3R( bstart, 0,
                                                 img_line_buffer, 0,
-                                                Size(tile_width, 1), 2 );
+                                                Size(tile_width, 1), m_use_rgb ? 0 : 2);
                                         break;
 
                                     case MAKE_FLAG( 4, 4 ): // RGBA to BGRA
@@ -909,7 +915,7 @@ bool  TiffDecoder::readData( Mat& img )
                                         CV_CheckEQ(wanted_channels, 3, "TIFF-8bpp: BGR/BGRA images are supported only");
                                         icvCvt_BGRA2BGR_8u_C4C3R(bstart + i*tile_width0*4, 0,
                                                 img.ptr(img_y + tile_height - i - 1, x), 0,
-                                                Size(tile_width, 1), 2);
+                                                Size(tile_width, 1), m_use_rgb ? 0 : 2);
                                     }
                                 }
                                 else
@@ -972,9 +978,12 @@ bool  TiffDecoder::readData( Mat& img )
                                     else if (ncn == 3)
                                     {
                                         CV_CheckEQ(wanted_channels, 3, "");
-                                        icvCvt_RGB2BGR_16u_C3R(buffer16, 0,
-                                                img.ptr<ushort>(img_y + i, x), 0,
-                                                Size(tile_width, 1));
+                                        if (m_use_rgb)
+                                            memcpy(buffer16, img.ptr<ushort>(img_y + i, x), tile_width * sizeof(ushort));
+                                        else
+                                            icvCvt_RGB2BGR_16u_C3R(buffer16, 0,
+                                                    img.ptr<ushort>(img_y + i, x), 0,
+                                                    Size(tile_width, 1));
                                     }
                                     else if (ncn == 4)
                                     {
@@ -989,7 +998,7 @@ bool  TiffDecoder::readData( Mat& img )
                                             CV_CheckEQ(wanted_channels, 3, "TIFF-16bpp: BGR/BGRA images are supported only");
                                             icvCvt_BGRA2BGR_16u_C4C3R(buffer16, 0,
                                                 img.ptr<ushort>(img_y + i, x), 0,
-                                                Size(tile_width, 1), 2);
+                                                Size(tile_width, 1), m_use_rgb ? 0 : 2);
                                         }
                                     }
                                     else
@@ -1032,7 +1041,7 @@ bool  TiffDecoder::readData( Mat& img )
                             Mat m_tile(Size(tile_width0, tile_height0), CV_MAKETYPE((dst_bpp == 32) ? (depth == CV_32S ? CV_32S : CV_32F) : CV_64F, ncn), src_buffer);
                             Rect roi_tile(0, 0, tile_width, tile_height);
                             Rect roi_img(x, img_y, tile_width, tile_height);
-                            if (!m_hdr && ncn == 3)
+                            if (!m_hdr && ncn == 3 && !m_use_rgb)
                                 extend_cvtColor(m_tile(roi_tile), img(roi_img), COLOR_RGB2BGR);
                             else if (!m_hdr && ncn == 4)
                                 extend_cvtColor(m_tile(roi_tile), img(roi_img), COLOR_RGBA2BGRA);
@@ -1060,7 +1069,10 @@ bool  TiffDecoder::readData( Mat& img )
     if (m_hdr && depth >= CV_32F)
     {
         CV_Assert(photometric == PHOTOMETRIC_LOGLUV);
-        cvtColor(img, img, COLOR_XYZ2BGR);
+        if (m_use_rgb)
+            cvtColor(img, img, COLOR_XYZ2RGB);
+        else
+            cvtColor(img, img, COLOR_XYZ2BGR);
     }
     return true;
 }
@@ -1086,16 +1098,6 @@ ImageEncoder TiffEncoder::newEncoder() const
 bool TiffEncoder::isFormatSupported( int depth ) const
 {
     return depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F;
-}
-
-void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
-                             TiffFieldType fieldType,
-                             int count, int value )
-{
-    strm.putWord( tag );
-    strm.putWord( fieldType );
-    strm.putDWord( count );
-    strm.putDWord( value );
 }
 
 class TiffEncoderBufHelper

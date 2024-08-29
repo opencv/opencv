@@ -1275,7 +1275,7 @@ Size MatSize::operator()() const
 {
     int d = dims();
     CV_DbgAssert(d <= 2);
-    return d == 2 ? Size(p[1], p[0]) : Size(p[0], 1);
+    return d == 2 ? Size(p[1], p[0]) : d == 1 ? Size(p[0], 1) : Size(0, 0);
 }
 
 inline

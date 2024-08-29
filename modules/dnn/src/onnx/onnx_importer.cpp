@@ -195,6 +195,7 @@ private:
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTile                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseTopK                 (LayerParams& LayerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSimpleLayers         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseEinsum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
@@ -1168,6 +1169,7 @@ void ONNXImporter::parseGlobalPool(LayerParams &layerParams, const opencv_onnx::
 
 void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    layerParams.type = "Reduce";
     const auto& op_type = node_proto.op_type();
     String reduce_type;
     if (op_type == "ReduceMax")
@@ -1209,9 +1211,16 @@ void ONNXImporter::parseReduce(LayerParams& layerParams, const opencv_onnx::Node
         for (int i = 0; i < num_axes; ++i)
             axes[i] = mat_axes.at<int>(i);
         layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
+        if (constBlobs.find(node_proto.input(0)) != constBlobs.end()){
+            std::vector<Mat> inputs, output;
+            inputs.push_back(getBlob(node_proto, 0));
+            runLayer(layerParams, inputs, output);
+            CV_Assert(output.size() == 1);
+            addConstant(node_proto.output(0), output[0]);
+            return;
+        }
     }
 
-    layerParams.type = "Reduce";
     addLayer(layerParams, node_proto);
 }
 
@@ -2858,14 +2867,6 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
         };
     }
 
-    // element-wise layers that can have >=1 inputs but actually have one input
-    if (node_proto.input_size() == 1 && (op_type == "max" || op_type == "min" || op_type == "mean" || op_type == "sum"))
-    {
-        layerParams.type = "Identity";
-        addLayer(layerParams, node_proto);
-        return;
-    }
-
     auto pre_broadcast_transform = [](Mat& t, int t_real_ndims) {
         if (t.dims == 2 && t_real_ndims == 1 && t.size[1] == 1)
             transpose(t, t);
@@ -3162,6 +3163,21 @@ void ONNXImporter::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::N
     }
 }
 
+void ONNXImporter::parseTopK(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // K needs to be constant in case of being input (since opset 10)
+    if (node_proto.input_size() == 2) {
+        bool K_const = constBlobs.find(node_proto.input(1)) != constBlobs.end();
+        CV_CheckTrue(K_const, "OnnxImporter/TopK: K being non-constant is not supported");
+
+        Mat input_K = getBlob(node_proto, 1);
+        int K = input_K.at<int>(0);
+        layerParams.set("k", K);
+    }
+
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     bool is_all_input_const = true;
@@ -3280,6 +3296,17 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
     // or 1-D tensor (per-channel quantized).
     bool is1D = false;
 
+    if (layerParams.type == "Quantize")
+        layerParams.set("depth", CV_8S);
+    else // Dequantize
+        layerParams.set("depth", CV_32F);
+
+    // If scale is not defined as a constant blob, it is considered an external input.
+    if(constBlobs.find(node_proto.input(1)) == constBlobs.end()){
+        addLayer(layerParams, node_proto);
+        return;
+    }
+
     Mat scaleMat = getBlob(node_proto, 1);
     if(scaleMat.total() > 1) is1D = true;
 
@@ -3320,11 +3347,6 @@ void ONNXImporter::parseQuantDequant(LayerParams& layerParams, const opencv_onnx
         layerParams.set("scales", scale);
         layerParams.set("zeropoints", zeropoint);
     }
-
-    if (layerParams.type == "Quantize")
-        layerParams.set("depth", CV_8S);
-    else // Dequantize
-        layerParams.set("depth", CV_32F);
 
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end()) // Variable input.
     {
@@ -3966,12 +3988,13 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Tile"] = &ONNXImporter::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter::parseInstanceNormalization;
+    dispatch["TopK"] = &ONNXImporter::parseTopK;
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
             dispatch["LessOrEqual"] = dispatch["Mod"] = dispatch["And"] = dispatch["Or"] = dispatch["Xor"] = &ONNXImporter::parseElementWise;
 
-    dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = &ONNXImporter::parseElementWise;
+    dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = dispatch["Mean"] = &ONNXImporter::parseElementWise;
     dispatch["Where"] = &ONNXImporter::parseElementWise;
     dispatch["Range"] = &ONNXImporter::parseRange;
     dispatch["Einsum"] = &ONNXImporter::parseEinsum;

@@ -40,7 +40,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/core_c.h"
 
 namespace opencv_test { namespace {
 
@@ -159,17 +158,17 @@ int CV_ColorCvtBaseTest::prepare_test_case( int test_case_idx )
 
 void CV_ColorCvtBaseTest::run_func()
 {
-    CvArr* out0 = test_array[OUTPUT][0];
-    cv::Mat _out0 = cv::cvarrToMat(out0), _out1 = cv::cvarrToMat(test_array[OUTPUT][1]);
+    cv::Mat out0 = test_mat[OUTPUT][0];
+    cv::Mat _out0 = out0, _out1 = test_mat[OUTPUT][1];
 
-    cv::cvtColor( cv::cvarrToMat(inplace ? out0 : test_array[INPUT][0]), _out0, fwd_code, _out0.channels());
+    cv::cvtColor( inplace ? out0 : test_mat[INPUT][0], _out0, fwd_code, _out0.channels());
 
     if( inplace )
     {
-        cvCopy( out0, test_array[OUTPUT][1] );
-        out0 = test_array[OUTPUT][1];
+        out0.copyTo(test_mat[OUTPUT][1]);
+        out0 = test_mat[OUTPUT][1];
     }
-    cv::cvtColor(cv::cvarrToMat(out0), _out1, inv_code, _out1.channels());
+    cv::cvtColor(out0, _out1, inv_code, _out1.channels());
 }
 
 
@@ -1722,8 +1721,8 @@ double CV_ColorBayerTest::get_success_error_level( int /*test_case_idx*/, int /*
 
 void CV_ColorBayerTest::run_func()
 {
-    cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
-    cv::cvtColor(cv::cvarrToMat(test_array[INPUT][0]), _out, fwd_code, _out.channels());
+    cv::Mat _out = test_mat[OUTPUT][0];
+    cv::cvtColor(test_mat[INPUT][0], _out, fwd_code, _out.channels());
 }
 
 
@@ -1862,6 +1861,26 @@ TEST(Imgproc_ColorBayer, regression)
     absdiff(gold, result, diff);
 
     EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+}
+
+TEST(Imgproc_ColorBayer2Gray, regression_25823)
+{
+    const int n = 100;
+    Mat src(n, n, CV_8UC1);
+    Mat dst;
+
+    for (int i = 0; i < src.rows; ++i)
+    {
+        for (int j = 0; j < src.cols; ++j)
+        {
+            src.at<uchar>(i, j) = (i + j) % 2;
+        }
+    }
+
+    cvtColor(src, dst, COLOR_BayerBG2GRAY);
+
+    Mat gold(n, n, CV_8UC1, Scalar(1));
+    EXPECT_EQ(0, cv::norm(dst, gold, NORM_INF));
 }
 
 TEST(Imgproc_ColorBayerVNG, regression)
@@ -2658,7 +2677,7 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
             Mat probe(256, 256, CV_8UC3), result;
             rng.fill(probe, RNG::UNIFORM, 0, 255, true);
 
-            cvtColor(probe, result, codes[c]);
+            cvtColor(probe, result, codes[c], 0, ALGO_HINT_ACCURATE);
 
             uint32_t h = adler32(result);
             uint32_t goodHash = hashes[c*nIterations + iter];
@@ -2750,7 +2769,7 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
             Mat probe(256, 256, CV_8UC3), result;
             rng.fill(probe, RNG::UNIFORM, 0, 255, true);
 
-            cvtColor(probe, result, codes[c]);
+            cvtColor(probe, result, codes[c], 0, ALGO_HINT_ACCURATE);
 
             uint32_t h = adler32(result);
             uint32_t goodHash = hashes[c*nIterations + iter];
@@ -2809,7 +2828,7 @@ void runCvtColorBitExactCheck(ColorConversionCodes code, int inputType, uint32_t
     Mat dst;
     rng.fill(src, RNG::UNIFORM, 0, 255, true);
 
-    cv::cvtColor(src, dst, code);
+    cv::cvtColor(src, dst, code, 0, ALGO_HINT_ACCURATE);
 
     uint32_t dst_hash = adler32(dst);
 
@@ -3202,6 +3221,22 @@ TEST(ImgProc_RGB2Lab, NaN_21111)
         }
     }
 #endif
+}
+
+// See https://github.com/opencv/opencv/issues/25971
+// If num of channels is not suitable for selected cv::ColorConversionCodes,
+// e.code must be cv::Error::BadNumChannels.
+TEST(ImgProc_cvtColor_InvalidNumOfChannels, regression_25971)
+{
+    try {
+        cv::Mat src = cv::Mat::zeros(100, 100, CV_8UC1);
+        cv::Mat dst;
+        EXPECT_THROW(cv::cvtColor(src, dst, COLOR_RGB2GRAY), cv::Exception);
+    }catch(const cv::Exception& e) {
+        EXPECT_EQ(e.code, cv::Error::BadNumChannels);
+    }catch(...) {
+        FAIL() << "Unexpected exception is happened.";
+    }
 }
 
 }} // namespace

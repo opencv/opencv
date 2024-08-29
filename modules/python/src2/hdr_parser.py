@@ -84,6 +84,10 @@ class CppHeaderParser(object):
         modlist = []
 
         # pass 0: extracts the modifiers
+        if "CV_ND" in arg_str:
+            modlist.append("/ND")
+            arg_str = arg_str.replace("CV_ND", "")
+
         if "CV_OUT" in arg_str:
             modlist.append("/O")
             arg_str = arg_str.replace("CV_OUT", "")

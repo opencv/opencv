@@ -288,6 +288,7 @@ namespace cv {
 #define CV_CPU_VSX3             201
 
 #define CV_CPU_RVV              210
+#define CV_CPU_RVV_ZVFH         211
 
 #define CV_CPU_LSX              230
 #define CV_CPU_LASX             231
@@ -350,6 +351,7 @@ enum CpuFeatures {
     CPU_VSX3            = 201,
 
     CPU_RVV             = 210,
+    CPU_RVV_ZVFH        = 211,
 
     CPU_LSX             = 230,
     CPU_LASX            = 231,
@@ -383,6 +385,8 @@ enum CpuFeatures {
 
 #if defined __ARM_FP16_FORMAT_IEEE \
     && !defined __CUDACC__
+#  define CV_FP16_TYPE 1
+#elif (defined(__riscv_zvfh) && __riscv_zvfh) || (defined(__riscv_zvfhmin) && __riscv_zvfhmin)
 #  define CV_FP16_TYPE 1
 #else
 #  define CV_FP16_TYPE 0
@@ -481,6 +485,7 @@ Cv64suf;
 #define CV_OUT
 #define CV_PROP
 #define CV_PROP_RW
+#define CV_ND // Indicates that input data should be parsed into Mat without channels
 #define CV_WRAP
 #define CV_WRAP_AS(synonym)
 #define CV_WRAP_MAPPABLE(mappable)
@@ -837,12 +842,14 @@ class hfloat
 public:
 #if CV_FP16_TYPE
     hfloat() = default;
-    explicit hfloat(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
 #if defined __ARM_FP16_FORMAT_IEEE
+    explicit hfloat(float x) { h = (__fp16)x; }
 protected:
     __fp16 h;
 #else
+    explicit hfloat(float x) { h = (_Float16)x; }
+    explicit operator _Float16() const { return h; }
 protected:
     _Float16 h;
 #endif

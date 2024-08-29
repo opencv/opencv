@@ -2414,7 +2414,15 @@ TEST(Mat, regression_18473)
     EXPECT_EQ((int)5, (int)m.at<short>(19, 49, 99));
 }
 
-// FITIT: remove DISABLE_ when 1D Mat is supported
+TEST(Mat0D, basic)
+{
+    Mat1b m1, m2(0, nullptr);
+    ASSERT_EQ(0, m1.size().width);
+    ASSERT_EQ(0, m1.size().height);
+    ASSERT_EQ(1, m2.size().width);
+    ASSERT_EQ(1, m2.size().height);
+}
+
 TEST(Mat1D, basic)
 {
     std::vector<int> sizes { 100 };

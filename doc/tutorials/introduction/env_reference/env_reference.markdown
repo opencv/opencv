@@ -329,6 +329,9 @@ Some external dependencies can be detached into a dynamic library, which will be
 |------|------|---------|-------------|
 | OPENCV_LEGACY_WAITKEY | non-null | | switch `waitKey` return result (default behavior: `return code & 0xff` (or -1), legacy behavior: `return code`) |
 | $XDG_RUNTIME_DIR | | | Wayland backend specific - create shared memory-mapped file for interprocess communication (named `opencv-shared-??????`) |
+| OPENCV_HIGHGUI_FB_MODE | string | `FB` | Selects output mode for the framebuffer backend (`FB` - regular frambuffer, `EMU` - emulation, perform internal checks but does nothing, `XVFB` - compatible with _xvfb_ virtual frambuffer) |
+| OPENCV_HIGHGUI_FB_DEVICE | file path | | Path to frambuffer device to use (will be checked first) |
+| FRAMEBUFFER | file path | `/dev/fb0` | Same as OPENCV_HIGHGUI_FB_DEVICE, commonly used variable for the same purpose (will be checked second) |
 
 
 ## imgproc

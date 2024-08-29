@@ -86,7 +86,6 @@ TEST_F(fisheyeTest, distortUndistortPoints)
     int height = imageSize.height;
 
     /* Create test points */
-    std::vector<cv::Point2d> points0Vector;
     cv::Mat principalPoints = (cv::Mat_<double>(5, 2) << K(0, 2), K(1, 2), // (cx, cy)
                                                                     /* Image corners */
                                                                     0, 0,
@@ -124,6 +123,95 @@ TEST_F(fisheyeTest, distortUndistortPoints)
         /* Undistort -> Distort */
         cv::fisheye::undistortPoints(points0, undistortedPoints, K, distortion);
         cv::fisheye::distortPoints(undistortedPoints, distortedPoints, K, distortion);
+
+        EXPECT_MAT_NEAR(points0, distortedPoints, 1e-8);
+    }
+}
+
+TEST_F(fisheyeTest, distortUndistortPointsNewCameraFixed)
+{
+    int width = imageSize.width;
+    int height = imageSize.height;
+
+    /* Random points inside image */
+    cv::Mat xy[2] = {};
+    xy[0].create(100, 1, CV_64F);
+    theRNG().fill(xy[0], cv::RNG::UNIFORM, 0, width); // x
+    xy[1].create(100, 1, CV_64F);
+    theRNG().fill(xy[1], cv::RNG::UNIFORM, 0, height); // y
+
+    cv::Mat randomPoints;
+    merge(xy, 2, randomPoints);
+
+    cv::Mat points0 = randomPoints;
+    cv::Mat Reye = cv::Mat::eye(3, 3, CV_64FC1);
+
+    cv::Mat Knew;
+    cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K, D, imageSize, Reye,  Knew);
+
+    /* Distort -> Undistort */
+    cv::Mat distortedPoints;
+    cv::fisheye::distortPoints(points0, distortedPoints, Knew, K, D);
+    cv::Mat undistortedPoints;
+    cv::fisheye::undistortPoints(distortedPoints, undistortedPoints, K, D, Reye, Knew);
+
+    EXPECT_MAT_NEAR(points0, undistortedPoints, 1e-8);
+
+    /* Undistort -> Distort */
+    cv::fisheye::undistortPoints(points0, undistortedPoints, K, D, Reye, Knew);
+    cv::fisheye::distortPoints(undistortedPoints, distortedPoints, Knew, K, D);
+
+    EXPECT_MAT_NEAR(points0, distortedPoints, 1e-8);
+}
+
+TEST_F(fisheyeTest, distortUndistortPointsNewCameraRandom)
+{
+    int width = imageSize.width;
+    int height = imageSize.height;
+
+    /* Create test points */
+    std::vector<cv::Point2d> points0Vector;
+    cv::Mat principalPoints = (cv::Mat_<double>(5, 2) << K(0, 2), K(1, 2), // (cx, cy)
+                                                                    /* Image corners */
+                                                                    0, 0,
+                                                                    0, height,
+                                                                    width, 0,
+                                                                    width, height
+                                                                    );
+
+    /* Random points inside image */
+    cv::Mat xy[2] = {};
+    xy[0].create(100, 1, CV_64F);
+    theRNG().fill(xy[0], cv::RNG::UNIFORM, 0, width); // x
+    xy[1].create(100, 1, CV_64F);
+    theRNG().fill(xy[1], cv::RNG::UNIFORM, 0, height); // y
+
+    cv::Mat randomPoints;
+    merge(xy, 2, randomPoints);
+
+    cv::Mat points0;
+    cv::Mat Reye = cv::Mat::eye(3, 3, CV_64FC1);
+    cv::vconcat(principalPoints.reshape(2), randomPoints, points0);
+
+    /* Test with random D set */
+    for (size_t i = 0; i < 10; ++i) {
+        cv::Mat distortion(1, 4, CV_64F);
+        theRNG().fill(distortion, cv::RNG::UNIFORM, -0.001, 0.001);
+
+        cv::Mat Knew;
+        cv::fisheye::estimateNewCameraMatrixForUndistortRectify(K, distortion, imageSize, Reye,  Knew);
+
+        /* Distort -> Undistort */
+        cv::Mat distortedPoints;
+        cv::fisheye::distortPoints(points0, distortedPoints, Knew, K, distortion);
+        cv::Mat undistortedPoints;
+        cv::fisheye::undistortPoints(distortedPoints, undistortedPoints, K, distortion, Reye, Knew);
+
+        EXPECT_MAT_NEAR(points0, undistortedPoints, 1e-8);
+
+        /* Undistort -> Distort */
+        cv::fisheye::undistortPoints(points0, undistortedPoints, K, distortion, Reye, Knew);
+        cv::fisheye::distortPoints(undistortedPoints, distortedPoints, Knew, K, distortion);
 
         EXPECT_MAT_NEAR(points0, distortedPoints, 1e-8);
     }

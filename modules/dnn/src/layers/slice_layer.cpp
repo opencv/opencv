@@ -69,10 +69,12 @@ Range normalizeRange(const Range& input_range, int n)
 {
     Range range = input_range;
 
-    range.start = std::min(std::max(range.start, -n), n - 1);
-    if (range.start < 0)
-    {
-        range.start += n;
+    if (range.start != n){
+        range.start = std::min(std::max(range.start, -n), n - 1);
+        if (range.start < 0)
+        {
+            range.start += n;
+        }
     }
 
     range.end = std::min(std::max(range.end, -n), n);
@@ -619,8 +621,7 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        CV_OCL_RUN((IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                    (outputs[0].type() != CV_32S && outputs[0].type() != CV_64S)),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         const Mat& inpMat = inputs[0];
@@ -630,7 +631,9 @@ public:
         {
             for (size_t i = 0; i < outputs.size(); i++)
             {
-                inpMat(finalSliceRanges[i]).copyTo(outputs[i]);
+                if (finalSliceRanges[i][0].start != finalSliceRanges[i][0].end){
+                    inpMat(finalSliceRanges[i]).copyTo(outputs[i]);
+                }
             }
         }
         else

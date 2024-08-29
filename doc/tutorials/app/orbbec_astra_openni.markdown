@@ -4,7 +4,7 @@ Using Orbbec Astra 3D cameras {#tutorial_orbbec_astra_openni}
 @tableofcontents
 
 @prev_tutorial{tutorial_kinect_openni}
-@next_tutorial{tutorial_intelperc}
+@next_tutorial{tutorial_orbbec_uvc}
 
 
 ### Introduction

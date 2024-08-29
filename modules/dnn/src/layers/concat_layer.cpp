@@ -52,6 +52,7 @@
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#include "../ocl4dnn/include/common.hpp"
 #endif
 
 #ifdef HAVE_CUDA
@@ -235,8 +236,6 @@ public:
     {
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
-
-        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -250,8 +249,9 @@ public:
         int num_concats = total(shape(inputs[0]), 0, cAxis);
         int offset_concat_axis = 0;
         UMat& outMat = outputs[0];
-        String buildopt = format(" -DDtype=%s", (use_half) ? "half" : "float");
-        String kname = format("concat_%s", use_half ? "half" : "float");
+        String matType = matTypeToOclType(inputs[0].type());
+        String buildopt = " -DDtype=" + matType;
+        String kname = "concat_" + matType;
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -287,8 +287,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   (inputs_arr.depth() == CV_32F || inputs_arr.depth() == CV_16F),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         std::vector<Mat> inputs, outputs;
@@ -316,6 +315,8 @@ public:
             ranges[cAxis].start = 0;
             for (size_t i = 0; i < inputs.size(); i++)
             {
+                if (inputs[i].empty())
+                    continue;
                 ranges[cAxis].end = ranges[cAxis].start + inputs[i].size[cAxis];
                 for (int j = 0; j < outMat.dims; ++j)
                 {

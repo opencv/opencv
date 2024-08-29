@@ -2044,8 +2044,11 @@ void fillPoly( InputOutputArray _img, const Point** pts, const int* npts, int nc
     edges.reserve( total + 1 );
     for (i = 0; i < ncontours; i++)
     {
-        std::vector<Point2l> _pts(pts[i], pts[i] + npts[i]);
-        CollectPolyEdges(img, _pts.data(), npts[i], edges, buf, line_type, shift, offset);
+        if (npts[i] > 0 && pts[i])
+        {
+            std::vector<Point2l> _pts(pts[i], pts[i] + npts[i]);
+            CollectPolyEdges(img, _pts.data(), npts[i], edges, buf, line_type, shift, offset);
+        }
     }
 
     FillEdgeCollection(img, edges, buf, line_type);
@@ -2105,7 +2108,7 @@ void cv::fillPoly(InputOutputArray img, InputArrayOfArrays pts,
     for( i = 0; i < ncontours; i++ )
     {
         Mat p = pts.getMat(manyContours ? i : -1);
-        CV_Assert(p.checkVector(2, CV_32S) >= 0);
+        CV_Assert(p.checkVector(2, CV_32S) > 0);
         ptsptr[i] = p.ptr<Point>();
         npts[i] = p.rows*p.cols*p.channels()/2;
     }
@@ -2145,11 +2148,6 @@ void cv::polylines(InputOutputArray img, InputArrayOfArrays pts,
 }
 
 
-void
-cvDrawContours( void* _img, CvSeq* contour,
-                CvScalar _externalColor, CvScalar _holeColor,
-                int  maxLevel, int thickness,
-                int line_type, CvPoint _offset );
 
 void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
                    int contourIdx, const Scalar& color, int thickness,
@@ -2247,129 +2245,4 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
             contoursToFill.push_back(_contours.getMat(idx));
         fillPoly(image, contoursToFill, color, lineType, 0, offset);
     }
-}
-
-
-static const int CodeDeltas[8][2] =
-{ {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
-
-void
-cvDrawContours( void* _img, CvSeq* contour,
-                CvScalar _externalColor, CvScalar _holeColor,
-                int  maxLevel, int thickness,
-                int line_type, CvPoint _offset )
-{
-    CvSeq *contour0 = contour, *h_next = 0;
-    CvTreeNodeIterator iterator;
-    std::vector<cv::PolyEdge> edges;
-    std::vector<cv::Point2l> pts;
-    cv::Scalar externalColor = _externalColor, holeColor = _holeColor;
-    cv::Mat img = cv::cvarrToMat(_img);
-    cv::Point offset = _offset;
-    double ext_buf[4], hole_buf[4];
-
-    if( line_type == cv::LINE_AA && img.depth() != CV_8U )
-        line_type = 8;
-
-    if( !contour )
-        return;
-
-    CV_Assert( thickness <= MAX_THICKNESS );
-
-    scalarToRawData( externalColor, ext_buf, img.type(), 0 );
-    scalarToRawData( holeColor, hole_buf, img.type(), 0 );
-
-    maxLevel = MAX(maxLevel, INT_MIN+2);
-    maxLevel = MIN(maxLevel, INT_MAX-1);
-
-    if( maxLevel < 0 )
-    {
-        h_next = contour->h_next;
-        contour->h_next = 0;
-        maxLevel = -maxLevel+1;
-    }
-
-    cvInitTreeNodeIterator( &iterator, contour, maxLevel );
-    while( (contour = (CvSeq*)cvNextTreeNode( &iterator )) != 0 )
-    {
-        CvSeqReader reader;
-        int i, count = contour->total;
-        int elem_type = CV_MAT_TYPE(contour->flags);
-        void* clr = (contour->flags & CV_SEQ_FLAG_HOLE) == 0 ? ext_buf : hole_buf;
-
-        cvStartReadSeq( contour, &reader, 0 );
-        CV_Assert(reader.ptr != NULL);
-        if( thickness < 0 )
-            pts.resize(0);
-
-        if( CV_IS_SEQ_CHAIN_CONTOUR( contour ))
-        {
-            cv::Point pt = ((CvChain*)contour)->origin;
-            cv::Point prev_pt = pt;
-            char prev_code = reader.ptr ? reader.ptr[0] : '\0';
-
-            prev_pt += offset;
-
-            for( i = 0; i < count; i++ )
-            {
-                char code;
-                CV_READ_SEQ_ELEM( code, reader );
-
-                CV_Assert( (code & ~7) == 0 );
-
-                if( code != prev_code )
-                {
-                    prev_code = code;
-                    if( thickness >= 0 )
-                        cv::ThickLine( img, prev_pt, pt, clr, thickness, line_type, 2, 0 );
-                    else
-                        pts.push_back(pt);
-                    prev_pt = pt;
-                }
-
-                pt.x += CodeDeltas[(int)code][0];
-                pt.y += CodeDeltas[(int)code][1];
-            }
-
-            if( thickness >= 0 )
-                cv::ThickLine( img, prev_pt,
-                    cv::Point(((CvChain*)contour)->origin) + offset,
-                    clr, thickness, line_type, 2, 0 );
-            else
-                cv::CollectPolyEdges(img, &pts[0], (int)pts.size(),
-                                     edges, ext_buf, line_type, 0, offset);
-        }
-        else if( CV_IS_SEQ_POLYLINE( contour ))
-        {
-            CV_Assert( elem_type == CV_32SC2 );
-            cv::Point pt1, pt2;
-            int shift = 0;
-
-            count -= !CV_IS_SEQ_CLOSED(contour);
-            { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, reader); pt1 = pt_; }
-            pt1 += offset;
-            if( thickness < 0 )
-                pts.push_back(pt1);
-
-            for( i = 0; i < count; i++ )
-            {
-                { CvPoint pt_ = CV_STRUCT_INITIALIZER; CV_READ_SEQ_ELEM(pt_, reader); pt2 = pt_; }
-                pt2 += offset;
-                if( thickness >= 0 )
-                    cv::ThickLine( img, pt1, pt2, clr, thickness, line_type, 2, shift );
-                else
-                    pts.push_back(pt2);
-                pt1 = pt2;
-            }
-            if( thickness < 0 )
-                cv::CollectPolyEdges( img, &pts[0], (int)pts.size(),
-                                      edges, ext_buf, line_type, 0, cv::Point() );
-        }
-    }
-
-    if( thickness < 0 )
-        cv::FillEdgeCollection( img, edges, ext_buf, line_type);
-
-    if( h_next && contour0 )
-        contour0->h_next = h_next;
 }

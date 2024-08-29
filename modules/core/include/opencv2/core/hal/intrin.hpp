@@ -64,7 +64,7 @@
 namespace {
 inline unsigned int trailingZeros32(unsigned int value) {
 #if defined(_MSC_VER)
-#if (_MSC_VER < 1700) || defined(_M_ARM) || defined(_M_ARM64)
+#if (_MSC_VER < 1700) || defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
     unsigned long index = 0;
     _BitScanForward(&index, value);
     return (unsigned int)index;
@@ -239,11 +239,7 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #include "opencv2/core/hal/intrin_wasm.hpp"
 
 #elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP)
-#if defined(CV_RVV_SCALABLE)
 #include "opencv2/core/hal/intrin_rvv_scalable.hpp"
-#else
-#include "opencv2/core/hal/intrin_rvv.hpp"
-#endif
 
 #elif CV_LSX && !defined(CV_FORCE_SIMD128_CPP)
 
@@ -347,6 +343,10 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_SIMD_SCALABLE_64F 0
 #endif
 
+#ifndef CV_SIMD_SCALABLE_FP16
+#define CV_SIMD_SCALABLE_FP16 0
+#endif
+
 //==================================================================================================
 
 template<typename _Tp> struct V_RegTraits
@@ -416,6 +416,9 @@ template<typename _Tp> struct V_RegTraits
     CV_DEF_REG_TRAITS(v, v_int8, schar, s8, v_uint8, v_int16, v_int32, v_int8, void);
     CV_DEF_REG_TRAITS(v, v_uint16, ushort, u16, v_uint16, v_uint32, v_uint64, v_int16, void);
     CV_DEF_REG_TRAITS(v, v_int16, short, s16, v_uint16, v_int32, v_int64, v_int16, void);
+    #if CV_SIMD_SCALABLE_FP16
+    CV_DEF_REG_TRAITS(v, v_float16, hfloat, f16, v_float16, v_float32, v_float64, v_int16, v_int16);
+    #endif
     CV_DEF_REG_TRAITS(v, v_uint32, unsigned, u32, v_uint32, v_uint64, void, v_int32, void);
     CV_DEF_REG_TRAITS(v, v_int32, int, s32, v_uint32, v_int64, void, v_int32, void);
     CV_DEF_REG_TRAITS(v, v_float32, float, f32, v_float32, v_float64, void, v_int32, v_int32);
@@ -546,6 +549,7 @@ using namespace CV__SIMD_NAMESPACE;
 #define CV__SIMD_NAMESPACE simd
 namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD 0
+    #define CV_SIMD_FP16 0
     #define CV_SIMD_WIDTH 128  /* 1024/8 */
 
     #define VXPREFIX(func) v##func
@@ -569,7 +573,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_setall_s8(schar v) { return VXPREFIX(_setall_s8)(v); }
     inline v_uint16 vx_setall_u16(ushort v) { return VXPREFIX(_setall_u16)(v); }
     inline v_int16 vx_setall_s16(short v) { return VXPREFIX(_setall_s16)(v); }
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     inline v_float16 vx_setall_f16(hfloat v) { return VXPREFIX(_setall_f16)(v); }
 #endif
     inline v_int32 vx_setall_s32(int v) { return VXPREFIX(_setall_s32)(v); }
@@ -589,7 +593,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_setzero_s8() { return VXPREFIX(_setzero_s8)(); }
     inline v_uint16 vx_setzero_u16() { return VXPREFIX(_setzero_u16)(); }
     inline v_int16 vx_setzero_s16() { return VXPREFIX(_setzero_s16)(); }
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     inline v_float16 vx_setzero_f16() { return VXPREFIX(_setzero_f16)(); }
 #endif
     inline v_int32 vx_setzero_s32() { return VXPREFIX(_setzero_s32)(); }
@@ -609,7 +613,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load(const schar * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_uint16 vx_load(const ushort * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_int16 vx_load(const short * ptr) { return VXPREFIX(_load)(ptr); }
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     inline v_float16 vx_load(const hfloat * ptr) { return VXPREFIX(_load)(ptr); }
 #endif
     inline v_int32 vx_load(const int * ptr) { return VXPREFIX(_load)(ptr); }
@@ -629,7 +633,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_aligned(const schar * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_uint16 vx_load_aligned(const ushort * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_int16 vx_load_aligned(const short * ptr) { return VXPREFIX(_load_aligned)(ptr); }
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     inline v_float16 vx_load_aligned(const hfloat * ptr) { return VXPREFIX(_load_aligned)(ptr); }
 #endif
     inline v_int32 vx_load_aligned(const int * ptr) { return VXPREFIX(_load_aligned)(ptr); }
@@ -649,7 +653,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_low(const schar * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_uint16 vx_load_low(const ushort * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_int16 vx_load_low(const short * ptr) { return VXPREFIX(_load_low)(ptr); }
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     inline v_float16 vx_load_low(const hfloat * ptr) { return VXPREFIX(_load_low)(ptr); }
 #endif
     inline v_int32 vx_load_low(const int * ptr) { return VXPREFIX(_load_low)(ptr); }
@@ -669,7 +673,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_halves(const schar * ptr0, const schar * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_uint16 vx_load_halves(const ushort * ptr0, const ushort * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_int16 vx_load_halves(const short * ptr0, const short * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     inline v_float16 vx_load_halves(const hfloat * ptr0, const hfloat * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
 #endif
     inline v_int32 vx_load_halves(const int * ptr0, const int * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
@@ -689,7 +693,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_lut(const schar * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_uint16 vx_lut(const ushort * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_int16 vx_lut(const short* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     inline v_float16 vx_lut(const hfloat * ptr, const int * idx) { return VXPREFIX(_lut)(ptr, idx); }
 #endif
     inline v_int32 vx_lut(const int* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
@@ -709,7 +713,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_lut_pairs(const schar * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_uint16 vx_lut_pairs(const ushort * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_int16 vx_lut_pairs(const short* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     inline v_float16 vx_lut_pairs(const hfloat * ptr, const int * idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
 #endif
     inline v_int32 vx_lut_pairs(const int* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
@@ -1305,6 +1309,7 @@ namespace CV__SIMD_NAMESPACE {
 typedef struct v_float64 { int dummy; } v_float64;
 #endif
 
+#include "intrin_math.hpp"
 #include "simd_utils.impl.hpp"
 
 #ifndef CV_DOXYGEN
