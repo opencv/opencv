@@ -119,8 +119,7 @@ def main(func_args=None):
     cv.moveWindow('Output', 200, 50)
 
     method = args.method
-
-    if os.getenv('OPENCV_SAMPLE_DATA_PATH') is not None or hasattr(args, 'model'):
+    if os.getenv('OPENCV_SAMPLES_DATA_PATH') is not None or hasattr(args, 'model'):
         try:
             args.model = findModel(args.model, args.sha1)
             method = 'dexined'

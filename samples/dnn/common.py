@@ -4,13 +4,12 @@ import cv2 as cv
 
 
 def add_argument(zoo, parser, name, help, required=False, default=None, type=None, action=None, nargs=None, alias=None):
-    if len(sys.argv) <= 1:
-        return
-
     if alias is not None:
         modelName = alias
-    else:
+    elif len(sys.argv) > 1:
         modelName = sys.argv[1]
+    else:
+        return
 
     if os.path.isfile(zoo):
         fs = cv.FileStorage(zoo, cv.FILE_STORAGE_READ)
