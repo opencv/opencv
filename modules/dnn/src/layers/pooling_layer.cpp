@@ -315,25 +315,11 @@ public:
         CV_Assert_N(inputs.size() == 1, !outputs.empty(), !computeMaxIdx || outputs.size() == 2);
         UMat& inpMat = inputs[0];
         UMat& outMat = outputs[0];
-        UMat maskMat;
-        if (computeMaxIdx)
-            maskMat.create(shape(outputs[1]), use_half ? CV_16F : CV_32F);
+        UMat maskMat = computeMaxIdx ? outputs[1] : UMat();
 
         CV_Assert(inpMat.offset == 0 && outMat.offset == 0);
 
-        bool result = poolOp->Forward(inpMat, outMat, maskMat);
-
-        if (computeMaxIdx) {
-            if (use_half) {
-                UMat maskMat32F;
-                maskMat.convertTo(maskMat32F, CV_32F);
-                maskMat32F.convertTo(outputs[1], CV_64S);
-            }
-            else
-                maskMat.convertTo(outputs[1], CV_64S);
-        }
-
-        return result;
+        return poolOp->Forward(inpMat, outMat, maskMat);
     }
 #endif
 

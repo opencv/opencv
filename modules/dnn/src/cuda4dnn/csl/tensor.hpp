@@ -28,7 +28,7 @@
 #include <utility>
 
 #ifndef CSL_MAX_TENSOR_RANK
-    #define CSL_MAX_TENSOR_RANK 6
+    #define CSL_MAX_TENSOR_RANK 7
 #endif
 
 namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {

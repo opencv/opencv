@@ -1,7 +1,7 @@
 # --- obsensor ---
 if(NOT HAVE_OBSENSOR)
   if(OBSENSOR_USE_ORBBEC_SDK)
-    include(${CMAKE_SOURCE_DIR}/3rdparty/orbbecsdk/orbbecsdk.cmake)
+    include("${OpenCV_SOURCE_DIR}/3rdparty/orbbecsdk/orbbecsdk.cmake")
     download_orbbec_sdk(ORBBEC_SDK_ROOT_DIR)
     message(STATUS "ORBBEC_SDK_ROOT_DIR: ${ORBBEC_SDK_ROOT_DIR}")
     if(ORBBEC_SDK_ROOT_DIR)
