@@ -37,6 +37,7 @@ def get_args_parser(func_args):
                          "cuda_fp16: CUDA fp16 (half-float preprocess)")
 
     args, _ = parser.parse_known_args()
+    args.alias = 'dexined'
     add_preproc_args(args.zoo, parser, 'edge_detection')
     parser = argparse.ArgumentParser(parents=[parser],
                                      description='''
@@ -120,12 +121,16 @@ def main(func_args=None):
 
     method = args.method
 
-    if not hasattr(args, 'model'):
+    if os.getenv('OPENCV_SAMPLE_DATA_PATH') is not None or hasattr(args, 'model'):
+        try:
+            args.model = findModel(args.model, args.sha1)
+            method = 'dexined'
+        except:
+            print("[WARN] Model file not provided, using canny instead. Pass model using --model=/path/to/dexined.onnx to use dexined model.")
+            method = 'canny'
+    else:
         print("[WARN] Model file not provided, using canny instead. Pass model using --model=/path/to/dexined.onnx to use dexined model.")
         method = 'canny'
-    else:
-        args.model = findModel(args.model, args.sha1)
-        method = 'dexined'
 
     if method == 'canny':
         dummy = np.zeros((512, 512, 3), dtype="uint8")
@@ -152,7 +157,7 @@ def main(func_args=None):
         cv.imshow("Input", image)
         key = cv.waitKey(30)
         if key == ord(' ') and method == 'canny':
-            if hasattr(args, 'model'):
+            if hasattr(args, 'model') and args.model is not None:
                 method = "dexined"
                 if net is None:
                     net = loadModel(args)
@@ -160,7 +165,7 @@ def main(func_args=None):
                 cv.namedWindow('Output', cv.WINDOW_AUTOSIZE)
                 cv.moveWindow('Output', 200, 50)
             else:
-                print("[ERROR] Provide model file using --model to use dexined")
+                print("[ERROR] Provide model file using --model to use dexined. Download model from https://drive.google.com/file/d/1u_qXqXqaIP_SqdGaq4CbZyjzkZb02XTs/view?usp=sharing")
         elif key == ord(' ') and method=='dexined':
             method = "canny"
             setupCannyWindow(image)

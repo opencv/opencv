@@ -62,7 +62,7 @@ def add_preproc_args(zoo, parser, sample):
 
     parser.add_argument('alias', nargs='?', choices=aliases,
                         help='An alias name of model to extract preprocessing parameters from models.yml file.')
-    add_argument(zoo, parser, 'model', required=True,
+    add_argument(zoo, parser, 'model',
                  help='Path to a binary file of model contains trained weights. '
                       'It could be a file with extensions .caffemodel (Caffe), '
                       '.pb (TensorFlow), .weights (Darknet), .bin (OpenVINO)')
@@ -110,10 +110,9 @@ def findModel(filename, sha1):
         if os.path.exists(os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], filename)):
             return os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], filename)
 
-        print('File ' + filename + ' not found! Please specify a path to '
-             'model download directory in OPENCV_DOWNLOAD_CACHE_DIR '
-             'environment variable or pass a full path to ' + filename)
-        exit(0)
+    raise FileNotFoundError('File ' + filename + ' not found! Please specify a path to '
+            'model download directory in OPENCV_DOWNLOAD_CACHE_DIR '
+            'environment variable or pass a full path to ' + filename)
 
 def findFile(filename):
     if filename:
@@ -140,12 +139,14 @@ def findFile(filename):
             except KeyError:
                 pass
 
-        print('File ' + filename + ' not found! Please specify the path to '
-            '/opencv/samples/data in the OPENCV_SAMPLES_DATA_PATH environment variable, '
-            'or specify the path to opencv_extra/testdata in the OPENCV_DNN_TEST_DATA_PATH environment variable, '
-            'or specify the path to the model download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, '
-            'or pass the full path to ' + filename + '.')
-        exit(0)
+    raise FileNotFoundError(
+        'File ' + filename + ' not found! Please specify the path to '
+        '/opencv/samples/data in the OPENCV_SAMPLES_DATA_PATH environment variable, '
+        'or specify the path to opencv_extra/testdata in the OPENCV_DNN_TEST_DATA_PATH environment variable, '
+        'or specify the path to the model download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, '
+        'or pass the full path to ' + filename + '.'
+    )
+
 
 def get_backend_id(backend_name):
     backend_ids = {
