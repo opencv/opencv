@@ -37,8 +37,7 @@ def get_args_parser(func_args):
                          "cuda_fp16: CUDA fp16 (half-float preprocess)")
 
     args, _ = parser.parse_known_args()
-    args.alias = 'dexined'
-    add_preproc_args(args.zoo, parser, 'edge_detection')
+    add_preproc_args(args.zoo, parser, 'edge_detection', 'dexined')
     parser = argparse.ArgumentParser(parents=[parser],
                                      description='''
         To run:
@@ -135,7 +134,6 @@ def main(func_args=None):
     if method == 'canny':
         dummy = np.zeros((512, 512, 3), dtype="uint8")
         setupCannyWindow(dummy)
-
     net = None
     if method == "dexined":
         net = loadModel(args)
@@ -151,6 +149,7 @@ def main(func_args=None):
             apply_canny(gray)
         elif method == "dexined":
             inp = cv.dnn.blobFromImage(image, args.scale, (args.width, args.height), args.mean, swapRB=args.rgb, crop=False)
+
             net.setInput(inp)
             apply_dexined(net, image)
 

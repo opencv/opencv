@@ -41,7 +41,7 @@ static void broadcast1D2TargetMat(Mat& data, const MatShape& targetShape, int ax
 static void block_repeat(InputArray src, const MatShape& srcShape, int axis, int repetitions, OutputArray dst)
 {
     CV_Assert(src.getObj() != dst.getObj());
-    CV_Check(axis, axis >= 0 && axis < src.dims(), "Axis out of range");
+    CV_Check(axis, axis >= 0 && axis < src.size().width, "Axis out of range");
     CV_CheckGT(repetitions, 1, "More than one repetition expected");
 
     Mat src_mat = src.getMat();
