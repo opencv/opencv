@@ -1,7 +1,8 @@
 #include <inttypes.h>
- #include <opencv2/dnn/shape_utils.hpp>
- #include "../precomp.hpp"
- #include "layers_common.hpp"
+#include <opencv2/dnn/shape_utils.hpp>
+#include "../precomp.hpp"
+#include "layers_common.hpp"
+#include "../ie_ngraph.hpp"
 
 namespace cv
 {
@@ -130,8 +131,18 @@ public:
         }
     }
 
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                    const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+#ifdef HAVE_DNN_NGRAPH
+        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        auto hardmax = std::make_shared<ngraph::op::HardMax>(ieInpNode, axis);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(hardmax));
+#else
+        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without Inference Engine support");
+#endif  // HAVE_DNN_NGRAPH
+    }
 };
-
 
 Ptr<HardmaxLayer> HardmaxLayer::create(const LayerParams& params)
 {
