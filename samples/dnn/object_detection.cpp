@@ -332,8 +332,9 @@ int main(int argc, char** argv)
         drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
 
         int imgWidth = max(frame.rows, frame.cols);
-        int size = (stdSize*imgWidth)/(stdImgSize*1.5);
-        int weight = (stdWeight*imgWidth)/(stdImgSize*1.5);
+        int size = static_cast<int>((stdSize*imgWidth)/(stdImgSize*1.5));
+        int weight = static_cast<int>((stdWeight*imgWidth)/(stdImgSize*1.5));
+
 
         if (predictionsQueue.counter > 1)
         {
@@ -391,8 +392,8 @@ int main(int argc, char** argv)
         // Put efficiency information.
         vector<double> layersTimes;
         int imgWidth = max(frame.rows, frame.cols);
-        int size = (stdSize*imgWidth)/(stdImgSize*1.5);
-        int weight = (stdWeight*imgWidth)/(stdImgSize*1.5);
+        int size = static_cast<int>((stdSize*imgWidth)/(stdImgSize*1.5));
+        int weight = static_cast<int>((stdWeight*imgWidth)/(stdImgSize*1.5));
         double freq = getTickFrequency() / 1000;
         double t = net.getPerfProfile(layersTimes) / freq;
         string label = format("Inference time: %.2f ms", t);
