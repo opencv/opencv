@@ -15,7 +15,10 @@ namespace dnn
 static void broadcast1D2TargetMat(Mat& data, const MatShape& targetShape, int axis)
 {
     // The data is the 1-D scales or zeropoints.
-    CV_Assert(axis >= 0 && targetShape.size() > axis && data.total() == targetShape[axis]);
+    CV_CheckGE(axis, 0, "Quantization axis must be non-negative.");
+    CV_CheckGT((int)targetShape.size(),axis,"Quantization axis must be within the valid range of target shape dimensions.");
+    CV_CheckEQ((int)data.total(), (int)targetShape[axis], "Data total size must match the size of the specified target dimension.");
+
     std::vector<int> broadcast_axes;
     for (int i = 0; i < targetShape.size(); i++)
     {
@@ -35,29 +38,98 @@ static void broadcast1D2TargetMat(Mat& data, const MatShape& targetShape, int ax
     }
 }
 
+static void block_repeat(InputArray src, const MatShape& srcShape, int axis, int repetitions, OutputArray dst)
+{
+    CV_Assert(src.getObj() != dst.getObj());
+    CV_Check(axis, axis >= 0 && axis < src.dims(), "Axis out of range");
+    CV_CheckGT(repetitions, 1, "More than one repetition expected");
+
+    Mat src_mat = src.getMat();
+    Mat dst_mat;
+
+    if (src_mat.depth() != CV_32F)
+        src_mat.convertTo(src_mat, CV_32F);
+
+    MatShape sshape = srcShape;
+    MatShape dshape = srcShape;
+
+    size_t dtype_bytes = src_mat.elemSize();
+    int chunk_size = dtype_bytes;
+    int num_chunks = 1;
+
+    dshape[axis] *= repetitions;
+
+    for (int i = axis+1; i < sshape.size(); ++i)
+        chunk_size*=sshape[i];
+
+    for (int i = 0; i <= axis; ++i)
+        num_chunks*=sshape[i];
+
+    dst.create(dshape.size(), dshape.data(), src_mat.type());
+    dst_mat = dst.getMat();
+
+    CV_Assert(dst_mat.isContinuous());
+    CV_Assert(src_mat.isContinuous());
+
+    for (int i = 0; i < repetitions; ++i) {
+        size_t src_offset = 0;
+        size_t dst_offset = i * chunk_size;
+
+        for (int j = 0; j < num_chunks; ++j) {
+            memcpy(dst_mat.data + dst_offset, src_mat.data + src_offset, chunk_size);
+            src_offset += chunk_size;
+            dst_offset += chunk_size * repetitions;
+        }
+    }
+}
+
+template <typename T>
+static void copyVecToMat(Mat& mat, const std::vector<T>& data){
+    float * matPtr = mat.ptr<float>(0);
+    const int len = data.size();
+
+    for (int i = 0; i < len; i++)
+        matPtr[i] = (float) data[i];
+}
+
+template <typename T>
+static void broadcastBlockedMatrix(Mat& mat, const std::vector<T>& data, const MatShape& targetShape, int axis, int block_size){
+    CV_Check(block_size, targetShape[axis] % block_size == 0 && block_size <= targetShape[axis], "Block size must be a divisor of the target dimension size and not exceed it.");
+
+    MatShape subTargetShape(targetShape);
+    subTargetShape[axis] = static_cast<int>(subTargetShape[axis] / block_size);
+
+    block_repeat(data, subTargetShape, axis, block_size, mat);
+}
+
+template <typename T>
+static void broadcastStandardMatrix(Mat& mat, const std::vector<T>& data, const MatShape& targetShape, int axis)
+{
+    MatShape subTargetShape(targetShape.size(), 1);
+    subTargetShape[axis] = data.size();
+    mat.create(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
+
+    copyVecToMat(mat,data);
+
+    broadcast1D2TargetMat(mat, targetShape, axis);
+}
+
+
 static void broadcastScaleAndZeropoint(Mat& scalesMat, Mat& zeropointsMat, const std::vector<float>& scales,
-                                       const std::vector<int>& zeropoints, const MatShape& targetShape, int axis)
+                                       const std::vector<int>& zeropoints, const MatShape& targetShape, int axis, int block_size)
 {
     // broad cast the scales and zeropoint to the input shape.
-    MatShape subTargetShape(targetShape.size(), 1);
-    subTargetShape[axis] = scales.size();
 
-    zeropointsMat.create(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
-    scalesMat.create(subTargetShape.size(), subTargetShape.data(), CV_32FC1);
-
-    const int len = scales.size();
-    // Deep copy the scales and zeropoint data and prevent the original data from being changed.
-
-    float * scalePtr = scalesMat.ptr<float>(0);
-    for (int i = 0; i < len; i++)
-        scalePtr[i] = scales[i];
-
-    float * zpPtr = zeropointsMat.ptr<float>(0);
-    for (int i = 0; i < len; i++)
-        zpPtr[i] = (float )zeropoints[i];
-
-    broadcast1D2TargetMat(scalesMat, targetShape, axis);
-    broadcast1D2TargetMat(zeropointsMat, targetShape, axis);
+    if (block_size == 0)
+    {
+        broadcastStandardMatrix(zeropointsMat, zeropoints, targetShape, axis);
+        broadcastStandardMatrix(scalesMat, scales, targetShape, axis);
+    }
+    else
+    {
+        broadcastBlockedMatrix(zeropointsMat, zeropoints, targetShape, axis, block_size);
+        broadcastBlockedMatrix(scalesMat, scales, targetShape, axis, block_size);
+    }
 }
 
 // Quantize FP32/FP16 Inputs to INT8
@@ -65,13 +137,17 @@ class QuantizeLayerImpl CV_FINAL : public QuantizeLayer
 {
 public:
     int axis;
+    int block_size;
     bool is1D;
-    Mat scalesMat, zeropointsMat; // Saving the broadcasetd scales data.
+    Mat scalesMat, zeropointsMat; // Saving the broadcasted scales data.
+    bool quantParamExternal = true;  // Indicates if the quantization parameters (scale and zero point) are provided as inputs to the node.
 
     QuantizeLayerImpl(const LayerParams& params)
     {
         is1D = params.get<bool>("is1D", false);
         axis = params.get<int>("axis", 1);
+        block_size = params.get<int>("block_size", 0);
+
         if (!is1D)
         {
             scales.push_back(params.get<float>("scales", 1.0f));
@@ -82,7 +158,7 @@ public:
             DictValue paramScales = params.get("scales");
             int i, n = paramScales.size();
 
-            CV_Assert(n > 0);
+            CV_CheckGT(n, 0, "Scale missing.");
             scales.resize(n, 0.);
             for (i = 0; i < n; i++)
                 scales[i] = paramScales.get<float>(i);
@@ -108,7 +184,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1);
+        CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3, "Number of inputs must be between 1 and 3 inclusive.");
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return false;
     }
@@ -134,7 +210,7 @@ public:
         if (is1D)
         {
             MatShape inputShape = shape(inputs[0]);
-            broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis);
+            broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis, block_size);
         }
     }
 
@@ -156,6 +232,39 @@ public:
         return true;
     }
 #endif
+    void processInputOutput(std::vector<Mat>& inputs, std::vector<Mat>& outputs)
+    {
+        CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3, "Number of inputs must be between 1 and 3 inclusive.");
+        quantParamExternal &= inputs.size() > 1;
+
+        // Scale and zeropoint taken as input
+        if (quantParamExternal)
+        {
+            quantParamExternal = false;
+            scalesMat = inputs[1];
+
+            scalesMat.reshape(1, 1).copyTo(scales);
+
+            if(scalesMat.total() > 1) is1D = true;
+
+
+            if (inputs.size() > 2)
+            {
+                zeropointsMat = inputs[2];
+                CV_CheckEQ((int)zeropointsMat.total(), (int)scalesMat.total(), "Scale and zero point elements number must match.");
+                zeropointsMat.reshape(1, 1).copyTo(zeropoints);
+            }
+
+            if (is1D)
+            {
+                MatShape inputShape = shape(inputs[0]);
+                broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis, block_size);
+            }
+        }
+
+        if (outputs[0].depth() != CV_8S)
+            outputs[0].convertTo(outputs[0], CV_8S);
+    }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
@@ -169,14 +278,13 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        if (outputs[0].depth() != CV_8S)
-            outputs[0].convertTo(outputs[0], CV_8S);
+        processInputOutput(inputs, outputs);
 
         if (is1D)
         {
             Mat inputTmp;
             divide(inputs[0], scalesMat, inputTmp);
-            subtract(inputTmp, zeropointsMat, inputTmp);
+            add(inputTmp, zeropointsMat, inputTmp);
 
             inputTmp.convertTo(outputs[0], CV_8S);
         }
@@ -200,13 +308,16 @@ class DequantizeLayerImpl CV_FINAL : public DequantizeLayer
 {
 public:
     int axis;
+    int block_size;
     bool is1D;
     Mat scalesMat, zeropointsMat; // Saving the broadcasetd scales data.
+    bool quantParamExternal = true;
 
     DequantizeLayerImpl(const LayerParams& params)
     {
         is1D = params.get<bool>("is1D", false);
         axis = params.get<int>("axis", 1);
+        block_size = params.get<int>("block_size", 0);
 
         if (!is1D)
         {
@@ -218,7 +329,7 @@ public:
             DictValue paramScales = params.get("scales");
             int i, n = paramScales.size();
 
-            CV_Assert(n > 0);
+            CV_CheckGT(n, 0, "Scale missing.");
             scales.resize(n);
             for (i = 0; i < n; i++)
                 scales[i] = paramScales.get<float>(i);
@@ -244,7 +355,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == 1);
+        CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3, "Number of inputs must be between 1 and 3 inclusive.");
         Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
         return false;
     }
@@ -273,7 +384,7 @@ public:
         if (is1D)
         {
             MatShape inputShape = shape(inputs[0]);
-            broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis);
+            broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis, block_size);
         }
     }
 
@@ -292,6 +403,39 @@ public:
     }
 #endif
 
+    void processInputOutput(std::vector<Mat>& inputs, std::vector<Mat>& outputs)
+    {
+        CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3, "Number of inputs must be between 1 and 3 inclusive.");
+
+        quantParamExternal &= inputs.size() > 1;
+        // Scale and zeropoint taken as input
+        if (quantParamExternal)
+        {
+            quantParamExternal = false;
+            scalesMat = inputs[1];
+
+            scalesMat.reshape(1, 1).copyTo(scales);
+
+            if(scalesMat.total() > 1) is1D = true;
+
+            if (inputs.size() > 2)
+            {
+                zeropointsMat = inputs[2];
+                CV_CheckEQ((int)zeropointsMat.total(), (int)scalesMat.total(), "Scale and zero point elements number must match.");
+                zeropointsMat.reshape(1, 1).copyTo(zeropoints);
+            }
+
+            if (is1D)
+            {
+                MatShape inputShape = shape(inputs[0]);
+                broadcastScaleAndZeropoint(scalesMat, zeropointsMat, scales, zeropoints, inputShape, axis, block_size);
+            }
+        }
+
+        if (outputs[0].depth() != CV_32F)
+            outputs[0].convertTo(outputs[0], CV_32F);
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
@@ -304,8 +448,7 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        if (outputs[0].depth() != CV_32F)
-            outputs[0].convertTo(outputs[0], CV_32F);
+        processInputOutput(inputs, outputs);
 
         if (is1D)
         {

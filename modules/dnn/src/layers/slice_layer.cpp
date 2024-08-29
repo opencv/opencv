@@ -621,8 +621,7 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        CV_OCL_RUN((IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                    (outputs[0].type() != CV_32S && outputs[0].type() != CV_64S)),
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
         const Mat& inpMat = inputs[0];

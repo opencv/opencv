@@ -266,6 +266,48 @@ void cv::fisheye::distortPoints(InputArray undistorted, OutputArray distorted, I
     }
 }
 
+void cv::fisheye::distortPoints(InputArray _undistorted, OutputArray distorted, InputArray Kundistorted, InputArray K, InputArray D, double alpha)
+{
+    CV_INSTRUMENT_REGION();
+
+    CV_Assert(_undistorted.type() == CV_32FC2 || _undistorted.type() == CV_64FC2);
+    CV_Assert(Kundistorted.size() == Size(3,3) && (Kundistorted.type() == CV_32F || Kundistorted.type() == CV_64F));
+
+    cv::Mat undistorted = _undistorted.getMat();
+    cv::Mat normalized(undistorted.size(), CV_64FC2);
+
+    Mat Knew = Kundistorted.getMat();
+
+    double cx, cy, fx, fy;
+    if (Knew.depth() == CV_32F)
+    {
+        fx = (double)Knew.at<float>(0, 0);
+        fy = (double)Knew.at<float>(1, 1);
+        cx = (double)Knew.at<float>(0, 2);
+        cy = (double)Knew.at<float>(1, 2);
+    }
+    else
+    {
+        fx = Knew.at<double>(0, 0);
+        fy = Knew.at<double>(1, 1);
+        cx = Knew.at<double>(0, 2);
+        cy = Knew.at<double>(1, 2);
+    }
+
+    size_t n = undistorted.total();
+    const Vec2f* Xf = undistorted.ptr<Vec2f>();
+    const Vec2d* Xd = undistorted.ptr<Vec2d>();
+    Vec2d* normXd = normalized.ptr<Vec2d>();
+    for (size_t i = 0; i < n; i++)
+    {
+        Vec2d p = undistorted.depth() == CV_32F ? (Vec2d)Xf[i] : Xd[i];
+        normXd[i][0] = (p[0] - cx) / fx;
+        normXd[i][1] = (p[1] - cy) / fy;
+    }
+
+    cv::fisheye::distortPoints(normalized, distorted, K, D, alpha);
+}
+
 void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted, InputArray K, InputArray D,
                                    InputArray R, InputArray P, TermCriteria criteria)
 {

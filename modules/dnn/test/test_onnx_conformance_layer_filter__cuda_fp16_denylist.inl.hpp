@@ -19,3 +19,7 @@
 "test_softmax_large_number", // fp16 accuracy issue
 "test_softmax_large_number_expanded", // fp16 accuracy issue
 "test_tan", // fp16 accuracy issue
+"test_dequantizelinear_blocked", // Issue https://github.com/opencv/opencv/issues/25999
+"test_quantizelinear", // Issue https://github.com/opencv/opencv/issues/25999
+"test_quantizelinear_axis", // Issue https://github.com/opencv/opencv/issues/25999
+"test_quantizelinear_blocked", // Issue https://github.com/opencv/opencv/issues/25999

@@ -132,9 +132,3 @@ cv.imwrite('res.png',img_rgb)
 Result:
 
 ![image](images/res_mario.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

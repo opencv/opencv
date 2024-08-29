@@ -46,6 +46,15 @@
 #include <iostream>
 #include <ostream>
 
+#ifdef __QNX__
+    #include <unistd.h>
+    #include <sys/neutrino.h>
+    #include <sys/syspage.h>
+#ifdef __aarch64__
+    #include <aarch64/syspage.h>
+#endif
+#endif
+
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/trace.private.hpp>
 
@@ -434,6 +443,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_AVX512_ICL] = "AVX512-ICL";
 
         g_hwFeatureNames[CPU_RVV] = "RVV";
+        g_hwFeatureNames[CPU_RVV_ZVFH] = "RVV_ZVFH";
 
         g_hwFeatureNames[CPU_LSX]  = "LSX";
         g_hwFeatureNames[CPU_LASX] = "LASX";
@@ -712,6 +722,12 @@ struct HWFeatures
 
     #if defined __riscv && defined __riscv_vector
         have[CV_CPU_RVV] = true;
+        #if (defined __riscv_zvfh && __riscv_zvfh) || (defined __riscv_zvfhmin && __riscv_zvfhmin)
+            have[CV_CPU_FP16] = true;
+        #endif
+        #if defined __riscv_zvfh && __riscv_zvfh
+            have[CV_CPU_RVV_ZVFH] = true;
+        #endif
     #endif
 
     #if defined __loongarch64 && defined __linux__
