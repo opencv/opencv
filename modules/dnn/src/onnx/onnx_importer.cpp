@@ -3194,14 +3194,6 @@ void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx
 void ONNXImporter::parseHardmax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "Hardmax";
-
-    // hadnle parameter axis
-    int axis = layerParams.get<int>("axis", -1);
-    if (axis == -1) {
-        axis = static_cast<int>(outShapes[node_proto.input(0)].size()) - 1;
-    }
-    layerParams.set("axis", axis);
-
     addLayer(layerParams, node_proto);
 }
 

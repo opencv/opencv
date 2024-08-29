@@ -34,10 +34,7 @@ public:
         CV_Assert(inputs.size());
         for (auto input : inputs)
         {
-            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
-            else
-                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
+            CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S || input == CV_Bool, "");
         }
 
         outputs.assign(requiredOutputs, inputs[0]);
@@ -51,7 +48,7 @@ public:
         CV_CheckEQ(inputs.size(), 1ull, "Hardmax: one input is expected");
         outputs.resize(1);
         outputs[0] = inputs[0];
-        return true;
+        return false;
     }
 
     void forward(InputArrayOfArrays inputs_arr,
@@ -78,7 +75,7 @@ public:
         MatShape shape(src.size.p, src.size.p + src.dims);
 
         // Prepare output
-        dst = Mat::zeros(src.dims, src.size, src.type());
+        memset(dst.ptr(), 0, dst.total() * dst.elemSize());
 
         switch (src.depth())
         {
@@ -105,30 +102,32 @@ public:
         const size_t inner_size = src.total(axis + 1);
         const size_t outer_step = src.total(axis);
 
-        for (size_t outer = 0; outer < outer_size; ++outer)
-        {
-            const size_t outer_offset = outer * outer_step;
-
-            for (size_t inner = 0; inner < inner_size; ++inner)
+        parallel_for_(Range(0, outer_size), [&](const Range& range) {
+            for (size_t outer = range.start; outer < range.end; ++outer)
             {
-                T max_val = std::numeric_limits<T>::lowest();
-                size_t max_idx = 0;
+                const size_t outer_offset = outer * outer_step;
 
-                // Find max along the reduction axis
-                for (size_t mid = 0; mid < mid_size; ++mid)
+                for (size_t inner = 0; inner < inner_size; ++inner)
                 {
-                    const size_t src_idx = outer_offset + mid * inner_size + inner;
-                    if (src_ptr[src_idx] > max_val)
-                    {
-                        max_val = src_ptr[src_idx];
-                        max_idx = src_idx;
-                    }
-                }
+                    T max_val = std::numeric_limits<T>::lowest();
+                    size_t max_idx = 0;
 
-                // Set 1 for max, 0 for others
-                dst_ptr[max_idx] = 1;
+                    // Find max along the reduction axis
+                    for (size_t mid = 0; mid < mid_size; ++mid)
+                    {
+                        const size_t src_idx = outer_offset + mid * inner_size + inner;
+                        if (src_ptr[src_idx] > max_val)
+                        {
+                            max_val = src_ptr[src_idx];
+                            max_idx = src_idx;
+                        }
+                    }
+
+                    // Set 1 for max, 0 for others
+                    dst_ptr[max_idx] = 1;
+                }
             }
-        }
+        });
     }
 
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
