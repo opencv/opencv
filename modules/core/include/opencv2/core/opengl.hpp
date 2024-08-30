@@ -483,7 +483,7 @@ public:
 
     /** @brief Attach fragment and vertex shaders
     */
-    void attachShaders(const std::string fragment_shader_source, const std::string vertex_shader_source);
+    void attachShaders(const std::string& fragment_shader_source, const std::string& vertex_shader_source);
 
     /** @brief Attach default fragment and vertex shaders
     */

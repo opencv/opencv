@@ -1410,7 +1410,7 @@ cv::ogl::Program::Program()
     program_ = gl::CreateProgram();
 }
 
-void cv::ogl::Program::attachShaders(const std::string fragment_shader_source, const std::string vertex_shader_source)
+void cv::ogl::Program::attachShaders(const std::string& fragment_shader_source, const std::string& vertex_shader_source)
 {
     GLuint fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
     GLuint vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
