@@ -472,6 +472,32 @@ private:
     Buffer texCoord_;
 };
 
+
+/** @brief Wrapper for OpenGL 3.2 Program object
+ */
+class CV_EXPORTS Program{
+public:
+    /** @brief Default constructor
+     */
+    Program();
+
+    /** @brief Attach fragment and vertex shaders
+    */
+    void attachShaders(const std::string fragment_shader_source, const std::string vertex_shader_source);
+
+    /** @brief Attach default fragment and vertex shaders
+    */
+    void attachDefaultShaders();
+
+    /** @brief Get the program ID
+    */
+    unsigned int getProgram();
+
+private:
+    unsigned int program_;
+
+};
+
 /////////////////// Render Functions ///////////////////
 
 //! render mode

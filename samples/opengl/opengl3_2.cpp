@@ -30,7 +30,8 @@ const int win_height = 640;
 
 struct DrawData
 {
-    GLuint vao, vbo, program, textureID;
+    GLuint vao, vbo, textureID;
+    ogl::Program program;
 };
 
 static cv::Mat rot(float angle)
@@ -44,13 +45,6 @@ static cv::Mat rot(float angle)
     return R_y;
 }
 
-static GLuint create_shader(const char* source, GLenum type) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, NULL);
-    glCompileShader(shader);
-    return shader;
-}
-
 static void draw(void* userdata) {
     DrawData* data = static_cast<DrawData*>(userdata);
     static float angle = 0.0f;
@@ -61,8 +55,8 @@ static void draw(void* userdata) {
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glUseProgram(data->program);
-    glUniformMatrix4fv(glGetUniformLocation(data->program, "transform"), 1, GL_FALSE, trans.ptr<float>());
+    glUseProgram(data->program.getProgram());
+    glUniformMatrix4fv(glGetUniformLocation(data->program.getProgram(), "transform"), 1, GL_FALSE, trans.ptr<float>());
     glBindTexture(GL_TEXTURE_2D, data->textureID);
     glBindVertexArray(data->vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -94,31 +88,7 @@ int main(int argc, char* argv[])
     DrawData data;
 
     glEnable(GL_DEPTH_TEST);
-    const char *vertex_shader_source =
-            "#version 330 core\n"
-            "layout (location = 0) in vec3 position;\n"
-            "layout (location = 1) in vec2 texCoord;\n"
-            "out vec2 TexCoord;\n"
-            "uniform mat4 transform;\n"
-            "void main() {\n"
-            "   gl_Position = transform * vec4(position, 1.0);\n"
-            "   TexCoord = texCoord;\n"
-            "}\n";
-    const char *fragment_shader_source =
-            "#version 330 core\n"
-            "in vec2 TexCoord;\n"
-            "out vec4 color;\n"
-            "uniform sampler2D ourTexture;\n"
-            "void main() {\n"
-            "   color = texture(ourTexture, TexCoord);\n"
-            "}\n";
-    data.program = glCreateProgram();
-    GLuint vertex_shader = create_shader(vertex_shader_source, GL_VERTEX_SHADER);
-    GLuint fragment_shader = create_shader(fragment_shader_source, GL_FRAGMENT_SHADER);
-    glAttachShader(data.program, vertex_shader);
-    glAttachShader(data.program, fragment_shader);
-    glLinkProgram(data.program);
-    glUseProgram(data.program);
+    data.program.attachDefaultShaders();
 
     GLfloat vertices[] = {
             // Positions        // Texture Coords
