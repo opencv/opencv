@@ -847,7 +847,7 @@ static MinMaxIdxFunc getMinmaxTab(int depth)
 }
 
 // The function expects 1-based indexing for ofs
-// Zero is trited as invalid offset (not found)
+// Zero is treated as invalid offset (not found)
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {
     int i, d = a.dims;
