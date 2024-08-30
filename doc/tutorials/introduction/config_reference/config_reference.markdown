@@ -586,7 +586,6 @@ Following options can be used to change installation layout for common scenarios
 | `BUILD_FAT_JAVA_LIB` | _ON_ (for static Android builds) | Build single _opencv_java_ dynamic library containing all library functionality bundled with Java bindings. |
 | `BUILD_opencv_python2` | _ON_ | Build python2 bindings (deprecated). Python with development files and numpy must be installed. |
 | `BUILD_opencv_python3` | _ON_ | Build python3 bindings. Python with development files and numpy must be installed. |
-| `CAROTENE_NEON_ARCH` | '(auto)' | Switch NEON Arch for Carotene. If it sets nothing, it will be auto-detected. If it sets 8, ARMv8(and later) is used. Otherwise, ARMv7 is used. |
 
 TODO: need separate tutorials covering bindings builds
 
