@@ -1426,9 +1426,9 @@ void cv::ogl::Program::attachShaders(const std::string& fragment_shader_source, 
     gl::UseProgram(program_);
 };
 
-void cv::ogl::Program::attachDefaultShaders()
+std::string cv::ogl::Program::getDefaultFragmentShader()
 {
-    const std::string fragment_shader_source =
+    return
         "#version 330 core\n"
         "in vec2 TexCoord;\n"
         "out vec4 color;\n"
@@ -1436,8 +1436,11 @@ void cv::ogl::Program::attachDefaultShaders()
         "void main() {\n"
         "   color = texture(ourTexture, TexCoord);\n"
         "}\n";
+}
 
-    const std::string vertex_shader_source =
+std::string cv::ogl::Program::getDefaultVertexShader()
+{
+    return
         "#version 330 core\n"
         "layout (location = 0) in vec3 position;\n"
         "layout (location = 1) in vec2 texCoord;\n"
@@ -1447,8 +1450,6 @@ void cv::ogl::Program::attachDefaultShaders()
         "   gl_Position = transform * vec4(position, 1.0);\n"
         "   TexCoord = texCoord;\n"
         "}\n";
-
-    cv::ogl::Program::attachShaders(fragment_shader_source, vertex_shader_source);
 }
 
 unsigned int cv::ogl::Program::getProgram()

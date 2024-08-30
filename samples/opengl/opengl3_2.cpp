@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
     DrawData data;
 
     glEnable(GL_DEPTH_TEST);
-    data.program.attachDefaultShaders();
+    data.program.attachShaders(ogl::Program::getDefaultFragmentShader(), ogl::Program::getDefaultVertexShader());
 
     GLfloat vertices[] = {
             // Positions        // Texture Coords

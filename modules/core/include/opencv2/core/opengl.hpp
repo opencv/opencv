@@ -485,9 +485,13 @@ public:
     */
     void attachShaders(const std::string& fragment_shader_source, const std::string& vertex_shader_source);
 
-    /** @brief Attach default fragment and vertex shaders
+    /** @brief Get default fragment shader
     */
-    void attachDefaultShaders();
+    static std::string getDefaultFragmentShader();
+
+    /** @brief Get default vertex shader
+    */
+    static std::string getDefaultVertexShader();
 
     /** @brief Get the program ID
     */
@@ -497,6 +501,7 @@ private:
     unsigned int program_;
 
 };
+
 
 /////////////////// Render Functions ///////////////////
 
