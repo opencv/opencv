@@ -650,16 +650,18 @@ inline v_float32x8 v256_shuffle(const v_float32x8 &a)
 template<int m>
 inline v_float64x4 v256_shuffle(const v_float64x4 &a)
 {
-    int imm8 = m & 0b0001;  //0 or 1
-    if (m & 0x0b0010) imm8 |= 0b0100;
-    //else imm8 |= 0b0000;
-    if (m & 0x0b0100) imm8 |= 0b110000;  //2 or 3
-    else imm8 |= 0b100000;
-    if (m & 0x0b1000) imm8 |= 0b11000000;
-    else imm8 |= 0b10000000;
+    const int m1 = m & 0b1;
+    const int m2 = m & 0b10;
+    const int m3 = m & 0b100;
+    const int m4 = m & 0b1000;
+    const int m5 = m2 << 1;
+    const int m6 = m3 << 2;
+    const int m7 = m4 << 3;
+    const int m8 = m1 & m5 & m6 & m7;
 
-    return v_float64x4(__lasx_xvpermi_d(*((__m256i*)&a.val), imm8));
+    return v_float64x4(__lasx_xvshuf4i_d(*((__m256i*)&a.val), *((__m256i*)&a.val), m8));
 }
+
 template<typename _Tpvec>
 inline void v256_zip(const _Tpvec& a, const _Tpvec& b, _Tpvec& ab0, _Tpvec& ab1)
 {
@@ -1100,7 +1102,7 @@ inline v_uint8x32 v_rotate_right(const v_uint8x32& a, const v_uint8x32& b)
 template<int imm>
 inline v_uint8x32 v_rotate_left(const v_uint8x32& a)
 {
-    enum {IMM_L = (imm - 16) & 0xFF};
+    enum {IMM_L = ((imm - 16) & 0xFF) > 31 ? 31 : ((imm - 16) & 0xFF)};
     enum {IMM_R = (16 - imm) & 0xFF};
 
     if (imm == 0) return a;
@@ -1117,7 +1119,7 @@ inline v_uint8x32 v_rotate_left(const v_uint8x32& a)
 template<int imm>
 inline v_uint8x32 v_rotate_right(const v_uint8x32& a)
 {
-    enum {IMM_L = (imm - 16) & 0xFF};
+    enum {IMM_L = ((imm - 16) & 0xFF) > 31 ? 31 : ((imm - 16) & 0xFF)};
 
     if (imm == 0) return a;
     if (imm > 32) return v_uint8x32();
