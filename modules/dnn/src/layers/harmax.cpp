@@ -21,8 +21,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+        return backendId == DNN_BACKEND_OPENCV;
     }
 
     void getTypes(const std::vector<MatType>& inputs,
@@ -94,13 +93,14 @@ public:
     template <typename T>
     void hardmaxApply(const cv::Mat& src, cv::Mat& dst, const int axis)
     {
-        const auto *src_ptr = src.ptr<T>();
+        const auto *src_ptr = src.ptr<const T>();
         auto *dst_ptr = dst.ptr<T>();
 
         const size_t outer_size = src.total(0, axis);
         const auto mid_size = static_cast<size_t>(src.size[axis]);
         const size_t inner_size = src.total(axis + 1);
         const size_t outer_step = src.total(axis);
+        double nstripes = (double) outer_size * inner_size / 1024.0;
 
         parallel_for_(Range(0, outer_size), [&](const Range& range) {
             for (size_t outer = range.start; outer < range.end; ++outer)
@@ -127,20 +127,9 @@ public:
                     dst_ptr[max_idx] = 1;
                 }
             }
-        });
+        }, nstripes);
     }
 
-    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
-                                    const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-#ifdef HAVE_DNN_NGRAPH
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto hardmax = std::make_shared<ngraph::op::HardMax>(ieInpNode, axis);
-        return Ptr<BackendNode>(new InfEngineNgraphNode(hardmax));
-#else
-        CV_Error(Error::StsNotImplemented, "This OpenCV version is built without Inference Engine support");
-#endif  // HAVE_DNN_NGRAPH
-    }
 };
 
 Ptr<HardmaxLayer> HardmaxLayer::create(const LayerParams& params)
