@@ -1452,7 +1452,7 @@ std::string cv::ogl::Program::getDefaultVertexShader()
         "}\n";
 }
 
-unsigned int cv::ogl::Program::getProgram()
+unsigned int cv::ogl::Program::getProgramId()
 {
     return program_;
 }

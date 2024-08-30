@@ -55,8 +55,8 @@ static void draw(void* userdata) {
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glUseProgram(data->program.getProgram());
-    glUniformMatrix4fv(glGetUniformLocation(data->program.getProgram(), "transform"), 1, GL_FALSE, trans.ptr<float>());
+    glUseProgram(data->program.getProgramId());
+    glUniformMatrix4fv(glGetUniformLocation(data->program.getProgramId(), "transform"), 1, GL_FALSE, trans.ptr<float>());
     glBindTexture(GL_TEXTURE_2D, data->textureID);
     glBindVertexArray(data->vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

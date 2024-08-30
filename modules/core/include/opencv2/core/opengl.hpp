@@ -493,9 +493,9 @@ public:
     */
     static std::string getDefaultVertexShader();
 
-    /** @brief Get the program ID
+    /** @brief Get the current program object
     */
-    unsigned int getProgram();
+    unsigned int getProgramId();
 
 private:
     unsigned int program_;
