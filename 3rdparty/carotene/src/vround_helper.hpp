@@ -57,7 +57,7 @@ namespace CAROTENE_NS { namespace internal {
 
 inline uint32x4_t vroundq_u32_f32(const float32x4_t val)
 {
-#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
+#if defined(__ARM_ARCH) && (__ARM_ARCH >= 8)
     return vcvtnq_u32_f32(val);
 #else
     const float32x4_t delta = vdupq_n_f32(CAROTENE_ROUND_DELTA);
@@ -67,7 +67,7 @@ inline uint32x4_t vroundq_u32_f32(const float32x4_t val)
 
 inline uint32x2_t vround_u32_f32(const float32x2_t val)
 {
-#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
+#if defined(__ARM_ARCH) && (__ARM_ARCH >= 8)
     return vcvtn_u32_f32(val);
 #else
     const float32x2_t delta = vdup_n_f32(CAROTENE_ROUND_DELTA);
@@ -77,7 +77,7 @@ inline uint32x2_t vround_u32_f32(const float32x2_t val)
 
 inline int32x4_t vroundq_s32_f32(const float32x4_t val)
 {
-#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
+#if defined(__ARM_ARCH) && (__ARM_ARCH >= 8)
     return vcvtnq_s32_f32(val);
 #else
     const float32x4_t delta = vdupq_n_f32(CAROTENE_ROUND_DELTA);
@@ -87,7 +87,7 @@ inline int32x4_t vroundq_s32_f32(const float32x4_t val)
 
 inline int32x2_t vround_s32_f32(const float32x2_t val)
 {
-#if CAROTENE_NEON_ARCH >= 8 /* get ready for ARMv9 */
+#if defined(__ARM_ARCH) && (__ARM_ARCH >= 8)
     return vcvtn_s32_f32(val);
 #else
     const float32x2_t delta = vdup_n_f32(CAROTENE_ROUND_DELTA);
