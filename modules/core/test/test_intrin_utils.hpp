@@ -1890,7 +1890,7 @@ template<typename R> struct TheTest
             resOverflow = v_exp(upperBound);
             resUnderflow = v_exp(lowerBound);
             for (int j = 0; j < n; ++j) {
-                SCOPED_TRACE(cv::format("Overflow/Underflow test value: %f", (double) i));
+                SCOPED_TRACE(cv::format("Overflow/Underflow test value: %lf", (double) i));
                 EXPECT_TRUE(resOverflow[j] > 0 && std::isinf(resOverflow[j]));
                 EXPECT_GE(resUnderflow[j], 0);
                 EXPECT_LT(resUnderflow[j], flt_min);
@@ -1919,7 +1919,7 @@ template<typename R> struct TheTest
             R x = dataRand;
             resRand = v_exp(x);
             for (int j = 0; j < n; ++j) {
-                SCOPED_TRACE(cv::format("Random test value: %f", (double) dataRand[j]));
+                SCOPED_TRACE(cv::format("Random test value: %lf", (double) dataRand[j]));
                 LaneType std_exp = (LaneType) std::exp(dataRand[j]);
                 if (dataRand[j] == 0) {
                     // input 0 -> output 1
@@ -1997,7 +1997,7 @@ template<typename R> struct TheTest
             R x = dataRand;
             resRand = v_log(x);
             for (int j = 0; j < n; ++j) {
-                SCOPED_TRACE(cv::format("Random test value: %f", (double) dataRand[j]));
+                SCOPED_TRACE(cv::format("Random test value: %lf", (double) dataRand[j]));
                 LaneType std_log = (LaneType) std::log(dataRand[j]);
                 if (dataRand[j] == 0) {
                     // input 0 -> output -INF
@@ -2064,7 +2064,7 @@ template<typename R> struct TheTest
 
             Data<R> outputs = v_erf(R(inputs));
             for (int j = 0; j < n; j++) {
-                SCOPED_TRACE(cv::format("Random test value: %f", inputs[j]));
+                SCOPED_TRACE(cv::format("Random test value: %lf", inputs[j]));
                 if (std::isinf(inputs[j])) {
                     if (inputs[j] < 0) {
                         EXPECT_EQ(-1, outputs[j]);
