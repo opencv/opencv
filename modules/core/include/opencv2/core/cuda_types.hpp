@@ -66,13 +66,8 @@
     #define __CV_CUDA_HOST_DEVICE__
 #endif
 
-#ifdef __NVCC__
-#define CV_NODISCARD_NVCC
-#else
 #include "opencv2/core/cvdef.h"
-#define CV_NODISCARD_NVCC CV_NODISCARD_STD
-#endif
-
+#include "opencv2/core.hpp"
 
 namespace cv
 {
@@ -133,9 +128,10 @@ namespace cv
             int cols;
             int rows;
 
-            __CV_CUDA_HOST_DEVICE__ CV_NODISCARD_NVCC Size size() const { return {cols, rows}; }
-            __CV_CUDA_HOST_DEVICE__ CV_NODISCARD_NVCC       T& operator ()(const Point &pos)       { return (*this)(pos.y, pos.x); }
-            __CV_CUDA_HOST_DEVICE__ CV_NODISCARD_NVCC const T& operator ()(const Point &pos) const { return (*this)(pos.y, pos.x); }
+            CV_NODISCARD_STD __CV_CUDA_HOST_DEVICE__ Size size() const { return {cols, rows}; }
+            CV_NODISCARD_STD __CV_CUDA_HOST_DEVICE__ T& operator ()(const Point &pos)       { return (*this)(pos.y, pos.x); }
+            CV_NODISCARD_STD __CV_CUDA_HOST_DEVICE__ const T& operator ()(const Point &pos) const { return (*this)(pos.y, pos.x); }
+            using PtrStep<T>::operator();
         };
 
         typedef PtrStepSz<unsigned char> PtrStepSzb;
