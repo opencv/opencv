@@ -1096,7 +1096,6 @@ INSTANTIATE_TEST_CASE_P(AllModes, Imgcodecs_Tiff_Modes, testing::ValuesIn(all_mo
 TEST(Imgcodecs_Tiff_Modes, write_multipage)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "readwrite/multipage.tif";
     const string page_files[] = {
         "readwrite/multipage_p1.tif",
         "readwrite/multipage_p2.tif",
@@ -1109,7 +1108,7 @@ TEST(Imgcodecs_Tiff_Modes, write_multipage)
     vector<Mat> pages;
     for (size_t i = 0; i < page_count; i++)
     {
-        const Mat page = imread(root + page_files[i]);
+        const Mat page = imread(root + page_files[i], IMREAD_REDUCED_GRAYSCALE_8 + i);
         pages.push_back(page);
     }
 
