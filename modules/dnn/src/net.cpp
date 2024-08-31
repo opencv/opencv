@@ -438,6 +438,12 @@ std::string Net::argName(Arg arg) const { return argData(arg).name; }
 
 ArgKind Net::argKind(Arg arg) const { return argData(arg).kind; }
 
+Mat& Net::argTensor(Arg arg) const {
+    CV_Assert(impl);
+    CV_Assert((size_t)arg.idx < impl->tensors.size());
+    return impl->tensors.at(arg.idx);
+}
+
 Arg Net::getArg(const std::string& name)
 {
     CV_Assert(impl);
@@ -498,6 +504,26 @@ std::ostream& Net::dumpArg(std::ostream& strm, Arg arg, int indent,
 {
     CV_Assert(impl);
     return impl->dumpArg(strm, arg, indent, comma, dump_details);
+}
+
+int Net::findDim(const std::string& dimname, bool insert)
+{
+    CV_Assert(impl);
+    if (!dimname.empty()) {
+        auto it = impl->dimnames.find(dimname);
+        if (it != impl->dimnames.end()) {
+            return it->second;
+        }
+    }
+    if (!insert) {
+        CV_Error_(Error::StsObjectNotFound, ("symbolic dimension '%s' is not found",
+                dimname.empty() ? "<some unique name>" : dimname.c_str()));
+    }
+    int value = -(int)impl->dimnames_vec.size() - 1;
+    std::string inserted_dimname = dimname.empty() ? format("N!%d", -value) : dimname;
+    impl->dimnames.insert(std::make_pair(inserted_dimname, value));
+    impl->dimnames_vec.push_back(inserted_dimname);
+    return value;
 }
 
 std::ostream& Net::dumpDim(std::ostream& strm, int value) const

@@ -92,7 +92,7 @@ public:
     {
         CV_Assert(net_);
         size_t ninputs = inputs_.size(), noutputs = outputs_.size();
-        int delta_indent = net_->getImpl()->indent;
+        int delta_indent = net_->getImpl()->dump_indent;
         int subindent = indent + delta_indent;
         int argindent = subindent + delta_indent;
         strm << "graph {\n";
@@ -162,79 +162,20 @@ Ptr<Graph> Graph::create(Net& net, const std::string& name,
 
 Graph::~Graph() {}
 
-/*
-[TODO] move code from these methods into net_impl.cpp.
-Net::Impl::Impl(Net* net_)
-{
-    CV_Assert(net_ != nullptr);
-    net = net_;
-    modelFormat = DNN_MODEL_GENERIC;
-    defaultLayout = LAYOUT_NCHW;
-    onnx_opset = 0;
-
-    defaultDevice = Device::CPU();
-    defaultMemoryManager = MemoryManager::forCPU();
-
-    accuracy = CV_32F;
-    enableFP16 = haveFP16 = false;
-    if (checkHardwareSupport(CV_CPU_FP16)) {
-        enableFP16 = haveFP16 = true;
-    }
-
-    tracingMode = DNN_TRACE_NONE;
-    profilingMode = DNN_PROFILE_NONE;
-    prepared = false;
-
-    strm = &std::cout;
-    dump_indent = 3;
-
-    clear();
-}
-
-Net::Impl::~Impl() { clear(); }
-
 void Net::Impl::prepareForInference()
 {
     if (!prepared) {
         constFold();
-        inferTypes();
-        constArgs();
-        inferShapes(true);
-        fuse();
-        useBlockLayout();
-        inferShapes(true);
+        //inferTypes();
+        //constArgs();
+        //inferShapes(true);
+        //fuse();
+        //useBlockLayout();
+        //inferShapes(true);
         assignBuffers();
         prepared = true;
     }
 }
-
-void Net::Impl::clear()
-{
-    modelFormat = DNN_MODEL_GENERIC;
-
-    dimnames = NamesHash();
-    dimnames_ = std::vector<std::string>();
-
-    args = std::vector<ArgData>();
-    argnames = NamesHash();
-
-    tensors = std::vector<Tensor>();
-    bufidxs = std::vector<int>();
-    buffers = std::vector<Buffer>();
-
-    mainGraph = Graph();
-
-    pattern_args = std::vector<ArgData>();
-    pattern_tensors = std::vector<Tensor>();
-
-    ArgData adata;
-    args.push_back(adata);
-    pattern_args.push_back(adata);
-    tensors.push_back(Tensor());
-    bufidxs.push_back(-1);
-
-    fromBlock = TransformLayoutOp::create(LAYOUT_NCHW);
-}*/
 
 void Net::Impl::allocateLayerOutputs(
                           const Ptr<Layer>& layer,
@@ -351,7 +292,7 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
 void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                              OutputArrayOfArrays outputs_, bool isMainGraph)
 {
-    std::ostream& strm_ = traceStream ? *traceStream : std::cout;
+    std::ostream& strm_ = dump_strm ? *dump_strm : std::cout;
     const std::vector<Ptr<Layer> >& prog = graph->prog();
     size_t i, nops = prog.size();
     const std::vector<Arg>& gr_inputs = graph->inputs();

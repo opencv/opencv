@@ -311,7 +311,7 @@ std::ostream& Layer::dump(std::ostream& strm, int indent, bool comma) const
     size_t ninputs = inputs.size(), noutputs = outputs.size();
     const std::vector<Ptr<Graph> >* subgraphs_ = subgraphs();
     size_t nsubgraphs = subgraphs_ ? subgraphs_->size() : 0;
-    int delta_indent = net->getImpl()->indent;
+    int delta_indent = net->getImpl()->dump_indent;
     int subindent = indent + delta_indent;
     int argindent = subindent + delta_indent;
     prindent(strm, indent);

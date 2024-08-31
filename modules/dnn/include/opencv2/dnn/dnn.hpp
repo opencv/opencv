@@ -1000,7 +1000,7 @@ CV__DNN_INLINE_NS_BEGIN
         void checkArg(Arg arg) const;
         void checkArgs(const std::vector<Arg>& args) const;
 
-        int64_t findDim(const std::string& name=std::string(), bool insert=false);
+        int findDim(const std::string& name, bool insert=false);
 
         std::ostream& dump(std::ostream* strm=nullptr) const;
         std::ostream& dumpArg(std::ostream& strm, Arg arg, int indent,
@@ -1187,26 +1187,29 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
      *  @param onnxFile path to the .onnx file with text description of the network architecture.
+     *  @param useNewEngine the new engine is used to load and run the model
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
      */
-    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile);
+    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, bool useNewEngine=true);
 
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer memory address of the first byte of the buffer.
      *  @param sizeBuffer size of the buffer.
+     *  @param useNewEngine the new engine is used to load and run the model
      *  @returns Network object that ready to do forward, throw an exception
      *        in failure cases.
      */
-    CV_EXPORTS Net readNetFromONNX(const char* buffer, size_t sizeBuffer);
+    CV_EXPORTS Net readNetFromONNX(const char* buffer, size_t sizeBuffer, bool useNewEngine=true);
 
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer in-memory buffer that stores the ONNX model bytes.
+     *  @param useNewEngine the new engine is used to load and run the model
      *  @returns Network object that ready to do forward, throw an exception
      *        in failure cases.
      */
-    CV_EXPORTS_W Net readNetFromONNX(const std::vector<uchar>& buffer);
+    CV_EXPORTS_W Net readNetFromONNX(const std::vector<uchar>& buffer, bool useNewEngine=true);
 
     /** @brief Creates blob from .pb file.
      *  @param path to the .pb file with input tensor.

@@ -76,6 +76,7 @@ struct Net::Impl : public detail::NetImplBase
               // want to use public API via cv::dnn::Net,
               // not the private one in cv::dnn::Net::Impl
 
+    ModelFormat modelFormat;
     DataLayout originalLayout;
     int onnx_opset;
 
@@ -90,14 +91,14 @@ struct Net::Impl : public detail::NetImplBase
     Ptr<Graph> mainGraph;
 
     int accuracy;
-    bool haveFP16;
+    bool enableFP16, haveFP16;
     bool prepared;
     TracingMode tracingMode;
     ProfilingMode profilingMode;
     std::vector<std::pair<Ptr<Layer>, int64_t> > profileEntries;
     std::vector<int64_t> dimvalues;
-    std::ostream* traceStream;
-    int indent;
+    std::ostream* dump_strm;
+    int dump_indent;
 
     virtual bool empty() const;
     virtual void setPreferableBackend(Net& net, int backendId);
@@ -316,6 +317,8 @@ struct Net::Impl : public detail::NetImplBase
 
     ///////////////////////////// the new engine ////////////////////////////
 
+    void prepareForInference();
+
     // pre-allocates memory for output tensors.
     // if useBufferPool==true, the method uses 'buffers'
     // for outputs (according to bufidxs)
@@ -372,7 +375,6 @@ struct Net::Impl : public detail::NetImplBase
 Net readNetFromONNX2(const String&);
 Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
-Mat readTensorFromONNX2(const String&);
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

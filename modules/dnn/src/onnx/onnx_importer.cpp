@@ -6,12 +6,12 @@
 // Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
-#include <opencv2/dnn/shape_utils.hpp>
+#include "../net_impl.hpp"
 
+#include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/layer_reg.private.hpp>
 
 #include <opencv2/core/utils/fp_control_utils.hpp>
-
 #include <opencv2/core/utils/logger.defines.hpp>
 #undef CV_LOG_STRIP_LEVEL
 #define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
@@ -4026,18 +4026,24 @@ void ONNXImporter::buildDispatchMap_COM_MICROSOFT(int opset_version)
 }
 
 
-Net readNetFromONNX(const String& onnxFile)
+Net readNetFromONNX(const String& onnxFile, bool useNewEngine)
 {
+    if (useNewEngine)
+        return readNetFromONNX2(onnxFile);
     return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
 }
 
-Net readNetFromONNX(const char* buffer, size_t sizeBuffer)
+Net readNetFromONNX(const char* buffer, size_t sizeBuffer, bool useNewEngine)
 {
+    if (useNewEngine)
+        return readNetFromONNX2(buffer, sizeBuffer);
     return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
 }
 
-Net readNetFromONNX(const std::vector<uchar>& buffer)
+Net readNetFromONNX(const std::vector<uchar>& buffer, bool useNewEngine)
 {
+    if (useNewEngine)
+        return readNetFromONNX2(buffer);
     return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 }
 

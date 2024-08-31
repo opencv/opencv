@@ -59,6 +59,26 @@ Net::Impl::Impl()
     preferableTarget = DNN_TARGET_CPU;
     hasDynamicShapes = false;
     useWinograd = true;
+
+    ////////////// extra initialization for the new engine /////////////////
+
+    modelFormat = DNN_MODEL_GENERIC;
+    originalLayout = DATA_LAYOUT_NCHW;
+    onnx_opset = 0;
+
+    accuracy = CV_32F;
+    enableFP16 = haveFP16 = false;
+    if (checkHardwareSupport(CV_CPU_FP16)) {
+        enableFP16 = haveFP16 = true;
+    }
+
+    tracingMode = DNN_TRACE_NONE;
+    profilingMode = DNN_PROFILE_NONE;
+
+    dump_strm = &std::cout;
+    dump_indent = 3;
+
+    clear();
 }
 
 
@@ -92,6 +112,29 @@ void Net::Impl::clear()
     }
     netWasAllocated = false;
     layersTimings.clear();
+
+    /////////////// for the new inference engine //////////////////
+
+    modelFormat = DNN_MODEL_GENERIC;
+
+    dimnames = NamesHash();
+    dimnames_vec = std::vector<std::string>();
+
+    args = std::vector<ArgData>();
+    argnames = NamesHash();
+
+    tensors = std::vector<Mat>();
+    bufidxs = std::vector<int>();
+    buffers = std::vector<Mat>();
+
+    mainGraph = Ptr<Graph>();
+
+    ArgData adata;
+    args.push_back(adata);
+    tensors.push_back(Mat());
+    bufidxs.push_back(-1);
+
+    prepared = false;
 }
 
 
@@ -351,7 +394,7 @@ int Net::Impl::addLayer(const String& name, const String& type, const int& dtype
     {
         if (!DNN_DIAGNOSTICS_RUN || type != "NotImplemented")
         {
-            CV_Error(Error::StsBadArg, "Layer \"" + name + "\" already into net");
+            CV_Error(Error::StsBadArg, "Layer \"" + name + "\" has been already added into net");
             return -1;
         }
         else
