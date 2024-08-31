@@ -1108,7 +1108,7 @@ TEST(Imgcodecs_Tiff_Modes, write_multipage)
     vector<Mat> pages;
     for (size_t i = 0; i < page_count; i++)
     {
-        const Mat page = imread(root + page_files[i], IMREAD_REDUCED_GRAYSCALE_8 + i);
+        const Mat page = imread(root + page_files[i], IMREAD_REDUCED_GRAYSCALE_8 + (int)i);
         pages.push_back(page);
     }
 
