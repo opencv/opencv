@@ -1264,6 +1264,7 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
         UMatData * prevu = _dst.getUMat().u;
         _dst.create( dims, size, type() );
 
+        UMat tmpSrc = *this;
         UMat tmpDst = _dst.getUMat();
         UMat dst;
         bool haveDstUninit = false;
@@ -1282,66 +1283,24 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
 
         cv::UMat src;
 
-        if(pExecCtxSrc && !pExecCtxSrc->empty()) {
-            CV_Assert(!currentExecCtx.empty());
-            if(pExecCtxSrc->getContext().ptr() != currentExecCtx.getContext().ptr()) {
-                cv::Mat mCopy;
-                {
-                    ocl::OpenCLExecutionContextScope scope(*pExecCtxSrc.get());
-                    this->copyTo(mCopy);
-                }
-                {
-                    ocl::OpenCLExecutionContextScope scope(currentExecCtx);
-                    mCopy.copyTo(src);
-                }
-            } else {
-                src = *this;
-            }
+        CV_Assert(!currentExecCtx.empty());
+        if((!pExecCtxSrc || pExecCtxSrc->empty()) || pExecCtxSrc->getContext().ptr() != currentExecCtx.getContext().ptr()) {
+            tmpSrc.copyTo(src);
         } else {
-            cv::Mat mCopy;
-            this->copyTo(mCopy);
-            mCopy.copyTo(src);
+            src = tmpSrc;
         }
 
-        if(pExecCtxDst && !pExecCtxDst->empty()) {
-            CV_Assert(!currentExecCtx.empty());
-            if(pExecCtxDst->getContext().ptr() != currentExecCtx.getContext().ptr()) {
-                cv::Mat mCopy;
-                {
-                    ocl::OpenCLExecutionContextScope scope(*pExecCtxDst.get());
-                    tmpDst.copyTo(mCopy);
-                }
-                {
-                    ocl::OpenCLExecutionContextScope scope(currentExecCtx);
-                    mCopy.copyTo(dst);
-                }
-            } else {
-                dst = tmpDst;
-            }
+        if((!pExecCtxDst || pExecCtxDst->empty()) || pExecCtxDst->getContext().ptr() != currentExecCtx.getContext().ptr()) {
+            tmpDst.copyTo(dst);
         } else {
-            cv::Mat mCopy;
-            tmpDst.copyTo(mCopy);
-            mCopy.copyTo(dst);
+            dst = tmpDst;
         }
 
         UMat mask;
-        if(pExecCtxMask && !pExecCtxMask->empty()) {
-            CV_Assert(!currentExecCtx.empty());
-            if(pExecCtxMask->getContext().ptr() != currentExecCtx.getContext().ptr()) {
-                cv::Mat mCopy;
-                {
-                    ocl::OpenCLExecutionContextScope scope(*pExecCtxMask.get());
-                    tmpMask.copyTo(mCopy);
-                }
-                {
-                    ocl::OpenCLExecutionContextScope scope(currentExecCtx);
-                    mCopy.copyTo(mask);
-                }
-            }
+        if((!pExecCtxMask || pExecCtxMask->empty()) || pExecCtxMask->getContext().ptr() != currentExecCtx.getContext().ptr()) {
+            tmpMask.copyTo(mask);
         } else {
-            cv::Mat mCopy;
-            tmpMask.copyTo(mCopy);
-            mCopy.copyTo(mask);
+            mask = tmpMask;
         }
 
         ocl::Kernel k("copyToMask", ocl::core::copyset_oclsrc, opts);
