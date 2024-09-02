@@ -423,9 +423,6 @@ elseif(RISCV)
 
   ocv_update(CPU_RVV_FLAGS_CONFLICT "-march=[^ ]*")
 
-  if(NOT ${BUILD_SHARED_LIBS}) # static build for k230
-    add_extra_compiler_option("-static -static-libgcc -static-libstdc++")
-  endif()
   set(CPU_DISPATCH "FP16;RVV_ZVFH" CACHE STRING "${HELP_CPU_DISPATCH}")
   set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
 
