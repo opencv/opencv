@@ -60,16 +60,16 @@ public:
 
         CV_CheckGE(r, 1, "GatherND: data rank must be >= 1");
         CV_CheckGE(q, 1, "GatherND: indices rank must be >= 1");
-        CV_CheckLE(batch_dims, std::min(q - 1, r - 1), "GatherND: batch_dims must be <= min(q-1, r-1)");
+        CV_CheckLE(batch_dims, std::min(q, r), "GatherND: batch_dims must be <= min(q, r)");
+        CV_CheckGE(last_indices_dim, 1, "GatherND: last dimension of indices must be >= 1");
         CV_CheckLE(last_indices_dim, r - batch_dims, "GatherND: last dimension of indices must be <= r - batch_dims");
 
         MatShape output_shape;
-        for (int i = 0; i < batch_dims; ++i)
-            output_shape.push_back(data[i]);
         for (int i = 0; i < q - 1; ++i)
             output_shape.push_back(indices[i]);
         for (int i = batch_dims + last_indices_dim; i < r; ++i)
             output_shape.push_back(data[i]);
+
 
         std::cout << "output_shape: " << output_shape << std::endl;
         outputs.assign(1, output_shape);
