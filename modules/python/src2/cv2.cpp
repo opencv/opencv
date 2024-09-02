@@ -9,8 +9,6 @@
 #include "opencv2/core/utils/logger.hpp"
 
 #include "pyopencv_generated_include.h"
-#include "opencv2/core/types_c.h"
-
 
 #include "cv2_util.hpp"
 #include "cv2_numpy.hpp"

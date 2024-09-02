@@ -356,13 +356,13 @@ void Exception::formatMessage()
     if (func.size() > 0)
     {
         if (multiline)
-            msg = format("OpenCV(%s) %s:%d: error: (%d:%s) in function '%s'\n%s", CV_VERSION, file.c_str(), line, code, cvErrorStr(code), func.c_str(), err.c_str());
+            msg = format("OpenCV(%s) %s:%d: error: (%d:%s) in function '%s'\n%s", CV_VERSION, file.c_str(), line, code, Error::toString(code), func.c_str(), err.c_str());
         else
-            msg = format("OpenCV(%s) %s:%d: error: (%d:%s) %s in function '%s'\n", CV_VERSION, file.c_str(), line, code, cvErrorStr(code), err.c_str(), func.c_str());
+            msg = format("OpenCV(%s) %s:%d: error: (%d:%s) %s in function '%s'\n", CV_VERSION, file.c_str(), line, code, Error::toString(code), err.c_str(), func.c_str());
     }
     else
     {
-        msg = format("OpenCV(%s) %s:%d: error: (%d:%s) %s%s", CV_VERSION, file.c_str(), line, code, cvErrorStr(code), err.c_str(), multiline ? "" : "\n");
+        msg = format("OpenCV(%s) %s:%d: error: (%d:%s) %s%s", CV_VERSION, file.c_str(), line, code, Error::toString(code), err.c_str(), multiline ? "" : "\n");
     }
 }
 
@@ -1221,7 +1221,7 @@ int cv_vsnprintf(char* buf, int len, const char* fmt, va_list args)
 
 static void dumpException(const Exception& exc)
 {
-    const char* errorStr = cvErrorStr(exc.code);
+    const char* errorStr = Error::toString(exc.code);
     char buf[1 << 12];
 
     cv_snprintf(buf, sizeof(buf),
@@ -1341,7 +1341,7 @@ void terminate(int _code, const String& _err, const char* _func, const char* _fi
 }
 
 
-CV_IMPL const char* cvErrorStr( int status )
+const char* cv::Error::toString( int status )
 {
     static char buf[256];
 

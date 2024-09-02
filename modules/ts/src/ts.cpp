@@ -42,8 +42,6 @@
 #include "precomp.hpp"
 #include <opencv2/core/utils/configuration.private.hpp>
 
-#include "opencv2/core/core_c.h"
-
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -308,7 +306,7 @@ void BaseTest::safe_run( int start_from )
         }
         catch (const cv::Exception& exc)
         {
-            const char* errorStr = cvErrorStr(exc.code);
+            const char* errorStr = cv::Error::toString(exc.code);
             char buf[1 << 16];
 
             const char* delim = exc.err.find('\n') == cv::String::npos ? "" : "\n";
@@ -544,7 +542,7 @@ static int tsErrorCallback( int status, const char* func_name, const char* err_m
 {
     TS* ts = (TS*)data;
     const char* delim = std::string(err_msg).find('\n') == std::string::npos ? "" : "\n";
-    ts->printf(TS::LOG, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d\n", cvErrorStr(status), delim, err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
+    ts->printf(TS::LOG, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d\n", cv::Error::toString(status), delim, err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
     return 0;
 }
 
@@ -638,7 +636,6 @@ void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_conte
     current_test_info.test = test;
     current_test_info.test_case_idx = test_case_idx;
     current_test_info.code = 0;
-    cvSetErrStatus( cv::Error::StsOk );
 }
 
 

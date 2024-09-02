@@ -122,6 +122,10 @@ enum Code {
     OpenCLInitError=           -222, //!< OpenCL initialization error
     OpenCLNoAMDBlasFft=        -223
 };
+
+/** Retrieves textual description of the error given its code */
+CV_EXPORTS const char* toString(int status);
+
 } //Error
 
 //! @} core_utils

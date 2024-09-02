@@ -1815,9 +1815,6 @@ CVAPI(int) cvSetErrMode( int mode );
 CVAPI(void) cvError( int status, const char* func_name,
                     const char* err_msg, const char* file_name, int line );
 
-/** Retrieves textual description of the error given its code */
-CVAPI(const char*) cvErrorStr( int status );
-
 /** Retrieves detailed information about the last error occurred */
 CVAPI(int) cvGetErrInfo( const char** errcode_desc, const char** description,
                         const char** filename, int* line );
