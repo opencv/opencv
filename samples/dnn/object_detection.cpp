@@ -7,15 +7,9 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 
-#if defined(HAVE_THREADS)
-#define USE_THREADS 1
-#endif
-
-#ifdef USE_THREADS
 #include <mutex>
 #include <thread>
 #include <queue>
-#endif
 
 #include "iostream"
 #include "common.hpp"
@@ -76,7 +70,7 @@ vector<string> labels;
 Scalar meanv;
 bool swapRB;
 int inpWidth, inpHeight;
-size_t asyncNumReq;
+size_t asyncNumReq = 0;
 ImagePaddingMode paddingMode;
 string modelName, framework;
 
@@ -115,7 +109,6 @@ static Scalar getTextColor(Scalar bgColor) {
     return luminance > 128 ? Scalar(0, 0, 0) : Scalar(255, 255, 255);
 }
 
-#ifdef USE_THREADS
 template <typename T>
 class QueueFPS : public std::queue<T>
 {
@@ -165,7 +158,6 @@ private:
     TickMeter tm;
     std::mutex mutex;
 };
-#endif  // USE_THREADS
 
 int main(int argc, char** argv)
 {
@@ -194,7 +186,7 @@ int main(int argc, char** argv)
     swapRB = parser.get<bool>("rgb");
     inpWidth = parser.get<int>("width");
     inpHeight = parser.get<int>("height");
-    asyncNumReq = parser.get<int>("async");
+    int async = parser.get<int>("async");
     paddingValue = parser.get<float>("padvalue");
     paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
     //![preprocess_params]
@@ -246,161 +238,138 @@ int main(int argc, char** argv)
     vector<float> confidences;
     vector<Rect> boxes;
 
-#ifdef USE_THREADS
-    bool process = true;
+    if (async != 0) {
+        // Threading is enabled
+        bool process = true;
 
-    // Frames capturing thread
-    QueueFPS<Mat> framesQueue;
-    std::thread framesThread([&](){
-        Mat frame;
-        while (process)
-        {
-            cap >> frame;
-            if (!frame.empty())
-                framesQueue.push(frame.clone());
-            else
-                break;
-        }
-    });
-
-    // Frames processing thread
-    QueueFPS<Mat> processedFramesQueue;
-    QueueFPS<std::vector<Mat> > predictionsQueue;
-    std::thread processingThread([&](){
-        std::queue<AsyncArray> futureOutputs;
-        Mat blob;
-        while (process)
-        {
-            // Get a next frame
+        // Frames capturing thread
+        QueueFPS<Mat> framesQueue;
+        std::thread framesThread([&]() {
             Mat frame;
-            {
-                if (!framesQueue.empty())
+            while (process) {
+                cap >> frame;
+                if (!frame.empty())
+                    framesQueue.push(frame.clone());
+                else
+                    break;
+            }
+        });
+
+        // Frames processing thread
+        QueueFPS<Mat> processedFramesQueue;
+        QueueFPS<std::vector<Mat>> predictionsQueue;
+        std::thread processingThread([&]() {
+            std::queue<AsyncArray> futureOutputs;
+            Mat blob;
+            while (process) {
+                // Get the next frame
+                Mat frame;
                 {
-                    frame = framesQueue.get();
-                    if (asyncNumReq)
-                    {
-                        if (futureOutputs.size() == asyncNumReq)
-                            frame = Mat();
+                    if (!framesQueue.empty()) {
+                        frame = framesQueue.get();
+                        if (asyncNumReq) {
+                            if (futureOutputs.size() == asyncNumReq)
+                                frame = Mat();
+                        }
                     }
                 }
-            }
 
-            // Process the frame
-            if (!frame.empty())
-            {
-                preprocess(frame, net, Size(inpWidth, inpHeight));
-                processedFramesQueue.push(frame);
+                // Process the frame
+                if (!frame.empty()) {
+                    preprocess(frame, net, Size(inpWidth, inpHeight));
+                    processedFramesQueue.push(frame);
 
-                if (asyncNumReq)
-                {
-                    futureOutputs.push(net.forwardAsync());
+                    if (asyncNumReq) {
+                        futureOutputs.push(net.forwardAsync());
+                    } else {
+                        vector<Mat> outs;
+                        net.forward(outs, net.getUnconnectedOutLayersNames());
+                        predictionsQueue.push(outs);
+                    }
                 }
-                else
-                {
-                    vector<Mat> outs;
-                    net.forward(outs, net.getUnconnectedOutLayersNames());
-                    predictionsQueue.push(outs);
+
+                while (!futureOutputs.empty() &&
+                    futureOutputs.front().wait_for(std::chrono::seconds(0))) {
+                    AsyncArray async_out = futureOutputs.front();
+                    futureOutputs.pop();
+                    Mat out;
+                    async_out.get(out);
+                    predictionsQueue.push({out});
                 }
             }
+        });
 
-            while (!futureOutputs.empty() &&
-                   futureOutputs.front().wait_for(std::chrono::seconds(0)))
-            {
-                AsyncArray async_out = futureOutputs.front();
-                futureOutputs.pop();
-                Mat out;
-                async_out.get(out);
-                predictionsQueue.push({out});
+        // Postprocessing and rendering loop
+        while (waitKey(100) < 0) {
+            if (predictionsQueue.empty())
+                continue;
+
+            vector<Mat> outs = predictionsQueue.get();
+            Mat frame = processedFramesQueue.get();
+
+            classIds.clear();
+            confidences.clear();
+            boxes.clear();
+            postprocess(frame, outs, net, backend, classIds, confidences, boxes);
+
+            drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
+
+            int imgWidth = max(frame.rows, frame.cols);
+            int size = static_cast<int>((stdSize * imgWidth) / (stdImgSize * 1.5));
+            int weight = static_cast<int>((stdWeight * imgWidth) / (stdImgSize * 1.5));
+
+            if (predictionsQueue.counter > 1) {
+                string label = format("Camera: %.2f FPS", framesQueue.getFPS());
+                rectangle(frame, Point(0, 0), Point(10 * size, 3 * size + size / 4), Scalar::all(255), FILLED);
+                putText(frame, label, Point(0, size), Scalar::all(0), sans, size, weight);
+
+                label = format("Network: %.2f FPS", predictionsQueue.getFPS());
+                putText(frame, label, Point(0, 2 * size), Scalar::all(0), sans, size, weight);
+
+                label = format("Skipped frames: %d", framesQueue.counter - predictionsQueue.counter);
+                putText(frame, label, Point(0, 3 * size), Scalar::all(0), sans, size, weight);
             }
+            imshow(kWinName, frame);
         }
-    });
 
-    // Postprocessing and rendering loop
-    while (waitKey(100) < 0)
-    {
-        if (predictionsQueue.empty())
-            continue;
+        process = false;
+        framesThread.join();
+        processingThread.join();
+    } else {
+        if (asyncNumReq)
+            CV_Error(Error::StsNotImplemented, "Asynchronous forward is supported only with Inference Engine backend.");
+        // Threading is disabled, run synchronously
+        Mat frame, blob;
+        while (waitKey(100) < 0) {
+            cap >> frame;
+            if (frame.empty()) {
+                waitKey();
+                break;
+            }
+            preprocess(frame, net, Size(inpWidth, inpHeight));
 
-        vector<Mat> outs = predictionsQueue.get();
-        Mat frame = processedFramesQueue.get();
+            vector<Mat> outs;
+            net.forward(outs, net.getUnconnectedOutLayersNames());
 
-        classIds.clear();
-        confidences.clear();
-        boxes.clear();
-        postprocess(frame, outs, net, backend, classIds, confidences, boxes);
+            classIds.clear();
+            confidences.clear();
+            boxes.clear();
 
-        drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
+            postprocess(frame, outs, net, backend, classIds, confidences, boxes);
 
-        int imgWidth = max(frame.rows, frame.cols);
-        int size = static_cast<int>((stdSize*imgWidth)/(stdImgSize*1.5));
-        int weight = static_cast<int>((stdWeight*imgWidth)/(stdImgSize*1.5));
+            drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
 
-
-        if (predictionsQueue.counter > 1)
-        {
-            string label = format("Camera: %.2f FPS", framesQueue.getFPS());
-            rectangle(frame, Point(0, 0), Point(10*size, 3*size+size/4), Scalar::all(255), FILLED);
-            putText(frame, label, Point(0, size), Scalar::all(0), sans, size, weight);
-
-            label = format("Network: %.2f FPS", predictionsQueue.getFPS());
-            putText(frame, label, Point(0, 2*size), Scalar::all(0), sans, size, weight);
-
-            label = format("Skipped frames: %d", framesQueue.counter - predictionsQueue.counter);
-            putText(frame, label, Point(0, 3*size), Scalar::all(0), sans, size, weight);
+            vector<double> layersTimes;
+            int imgWidth = max(frame.rows, frame.cols);
+            int size = static_cast<int>((stdSize * imgWidth) / (stdImgSize * 1.5));
+            int weight = static_cast<int>((stdWeight * imgWidth) / (stdImgSize * 1.5));
+            double freq = getTickFrequency() / 1000;
+            double t = net.getPerfProfile(layersTimes) / freq;
+            string label = format("Inference time: %.2f ms", t);
+            putText(frame, label, Point(0, size), Scalar(0, 255, 0), sans, size, weight);
+            imshow(kWinName, frame);
         }
-        imshow(kWinName, frame);
     }
-
-    process = false;
-    framesThread.join();
-    processingThread.join();
-
-#else  // USE_THREADS
-    if (asyncNumReq)
-        CV_Error(Error::StsNotImplemented, "Asynchronous forward is supported only with Inference Engine backend.");
-
-    // Process frames.
-    Mat frame, blob;
-    while (waitKey(100) < 0)
-    {
-        cap >> frame;
-        if (frame.empty())
-        {
-            waitKey();
-            break;
-        }
-        //![preprocess_call_func]
-        preprocess(frame, net, Size(inpWidth, inpHeight));
-        //![preprocess_call_func]
-
-        //![forward]
-        vector<Mat> outs;
-        net.forward(outs, net.getUnconnectedOutLayersNames());
-        //![forward]
-
-        classIds.clear();
-        confidences.clear();
-        boxes.clear();
-
-        postprocess(frame, outs, net, backend, classIds, confidences, boxes);
-
-        // Draw predictions on the frame
-        //![draw_boxes]
-        drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
-        //![draw_boxes]
-
-        // Put efficiency information.
-        vector<double> layersTimes;
-        int imgWidth = max(frame.rows, frame.cols);
-        int size = static_cast<int>((stdSize*imgWidth)/(stdImgSize*1.5));
-        int weight = static_cast<int>((stdWeight*imgWidth)/(stdImgSize*1.5));
-        double freq = getTickFrequency() / 1000;
-        double t = net.getPerfProfile(layersTimes) / freq;
-        string label = format("Inference time: %.2f ms", t);
-        putText(frame, label, Point(0, size), Scalar(0, 255, 0), sans, size, weight);
-        imshow(kWinName, frame);
-    }
-#endif  // USE_THREADS
     return 0;
 }
 
