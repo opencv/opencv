@@ -3219,6 +3219,8 @@ void ONNXImporter::parseGatherND(LayerParams& layerParams, const opencv_onnx::No
     std::cout << "Parsing GatherND" << std::endl;
     CV_Assert(node_proto.input_size() == 2);
     layerParams.type = "GatherND";
+    int batch_dims = layerParams.get<int>("batch_dims", 0);
+    layerParams.set("batch_dims", batch_dims);
     addLayer(layerParams, node_proto);
     std::cout << "Parsed GatherND" << std::endl;
 }

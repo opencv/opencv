@@ -10,6 +10,7 @@ public:
     {
         setParamsFrom(params);
         batch_dims = params.get<int>("batch_dims", 0);
+        std::cout << "batch_dims: " << batch_dims << std::endl;
     }
 
     void getTypes(const std::vector<MatType>& inputs,
@@ -70,6 +71,7 @@ public:
         for (int i = batch_dims + last_indices_dim; i < r; ++i)
             output_shape.push_back(data[i]);
 
+        std::cout << "output_shape: " << output_shape << std::endl;
         outputs.assign(1, output_shape);
         return false;
     }
@@ -117,26 +119,43 @@ public:
         for (int i = r - 2; i >= 0; --i)
             data_strides[i] = data_strides[i + 1] * data.size[i + 1];
 
-        int indices_size = indices.total() / last_indices_dim;
-        int out_size = out.total();
+        std::vector<int> indices_strides(q);
+        indices_strides[q - 1] = 1;
+        for (int i = q - 2; i >= 0; --i)
+            indices_strides[i] = indices_strides[i + 1] * indices.size[i + 1];
 
-        for (int i = 0; i < indices_size; ++i)
+        std::cout << "data_strides: " << data_strides << std::endl;
+        std::cout << "indices_strides: " << indices_strides << std::endl;
+
+        const int outer_size = indices.total() / last_indices_dim;
+        std::cout << "outer_size: " << outer_size << std::endl;
+        std::cout << "last_indices_dim: " << last_indices_dim << std::endl;
+
+        for (int i = 0; i < outer_size; ++i)
         {
-            size_t data_offset = 0;
+            std::vector<int> sliced_indices(indices_ptr + i * last_indices_dim, indices_ptr + (i + 1) * last_indices_dim);
+            std::cout << "sliced_indices: " << sliced_indices << std::endl;
+
+            // we have outer loop which tells us how many times we need to make slice operation
+            // we need to calculate correct index in data based on sliced_indices and data_strides
+
+            size_t offset = 0;
             for (int j = 0; j < last_indices_dim; ++j)
             {
-                int idx = indices_ptr[i * last_indices_dim + j];
-                CV_CheckGE(idx, -data.size[batch_dims + j], "GatherND: index out of bounds");
-                CV_CheckLT(idx, data.size[batch_dims + j], "GatherND: index out of bounds");
-                if (idx < 0) idx += data.size[batch_dims + j];
-                data_offset += idx * data_strides[batch_dims + j];
+                offset += sliced_indices[j] * data_strides[j];
+            }
+            std::cout << "offset: " << offset << std::endl;
+            std::cout << "data_ptr[offset]: " << data_ptr[offset] << std::endl;
+
+            // copy data from data_ptr to out_ptr
+            for (int j = 0; j < out.total() / outer_size; ++j)
+            {
+                out_ptr[i * (out.total() / outer_size) + j] = data_ptr[offset + j];
             }
 
-            for (int j = 0; j < out_size / indices_size; ++j)
-            {
-                out_ptr[i * (out_size / indices_size) + j] = data_ptr[data_offset + j];
-            }
         }
+
+        // std::cout << "out: " << out << std::endl;
     }
 
 private:
