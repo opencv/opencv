@@ -90,8 +90,6 @@ public:
         Mat& out = outputs[0];
 
         int dtype = data.depth();
-        // int indices_type = indices.depth();
-
         switch (dtype)
         {
             case CV_8U: forward_impl<uchar>(data, indices, out); break;
@@ -113,6 +111,8 @@ public:
         int r = data.dims;
         int q = indices.dims;
         int last_indices_dim = indices.size[q - 1];
+        std::cout << "last_indices_dim: " << last_indices_dim << std::endl;
+
 
         std::vector<int> data_strides(r);
         data_strides[r - 1] = 1;
@@ -124,38 +124,45 @@ public:
         for (int i = q - 2; i >= 0; --i)
             indices_strides[i] = indices_strides[i + 1] * indices.size[i + 1];
 
+        // std::vector<int> batch_dims_strides(last_indices_dim);
+        // for (int i = 0; i < outer_size; ++i)
+        //     batch_dims_strides[i] =
+
         std::cout << "data_strides: " << data_strides << std::endl;
         std::cout << "indices_strides: " << indices_strides << std::endl;
 
         const int outer_size = indices.total() / last_indices_dim;
+        const int inner_size = out.total() / outer_size;
+
         std::cout << "outer_size: " << outer_size << std::endl;
-        std::cout << "last_indices_dim: " << last_indices_dim << std::endl;
+        std::cout << "inner_size: " << inner_size << std::endl;
 
         for (int i = 0; i < outer_size; ++i)
         {
             std::vector<int> sliced_indices(indices_ptr + i * last_indices_dim, indices_ptr + (i + 1) * last_indices_dim);
             std::cout << "sliced_indices: " << sliced_indices << std::endl;
 
-            // we have outer loop which tells us how many times we need to make slice operation
-            // we need to calculate correct index in data based on sliced_indices and data_strides
-
             size_t offset = 0;
             for (int j = 0; j < last_indices_dim; ++j)
             {
-                offset += sliced_indices[j] * data_strides[j];
+                offset += sliced_indices[j] * data_strides[batch_dims + j];
+                std::cout << "sliced_indices[j]: " << sliced_indices[j] << std::endl;
+                std::cout << "data_strides[batch_dims + j]: " << data_strides[batch_dims + j] << std::endl;
+                std::cout << "offset: " << offset << std::endl;
             }
-            std::cout << "offset: " << offset << std::endl;
-            std::cout << "data_ptr[offset]: " << data_ptr[offset] << std::endl;
+            std::cout << "offset after last_indices_dim: " << offset << std::endl;
 
-            // copy data from data_ptr to out_ptr
-            for (int j = 0; j < out.total() / outer_size; ++j)
+            if (batch_dims > 0)
+                offset += data_strides[batch_dims - 1] * i;
+            std::cout << "offset after strides: " << offset << std::endl;
+
+
+            // copy data from data to out
+            for (int j = 0; j < inner_size; ++j)
             {
-                out_ptr[i * (out.total() / outer_size) + j] = data_ptr[offset + j];
+                out_ptr[i * inner_size + j] = data_ptr[offset + j];
             }
-
         }
-
-        // std::cout << "out: " << out << std::endl;
     }
 
 private:
