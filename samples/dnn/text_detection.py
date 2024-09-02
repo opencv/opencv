@@ -39,7 +39,7 @@ def help():
         Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 
         To run:
-        Example: python text_detection.py modelName(i.e. DB or East) --ocr=<path to ResNet_CTC.onnx>
+        Example: python text_detection.py modelName(i.e. DB or East) --ocr=<path to VGG_CTC.onnx>
 
         Detection model path can also be specified using --model argument.
         Download link for ocr model: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing

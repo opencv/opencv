@@ -22,7 +22,7 @@
     dummy_input = torch.randn(1, 1, 32, 100)
     torch.onnx.export(model, dummy_input, "crnn.onnx", verbose=True)
 
-    Usage: ./example_dnn_text_detection DB --ocr=<path to recognition model>
+    Usage: ./example_dnn_text_detection DB
 */
 #include <iostream>
 #include <fstream>
@@ -40,9 +40,9 @@ using namespace cv::dnn;
 const string about = "Use this script for Text Detection and Recognition using OpenCV. \n\n"
         "Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to point to the directory where models are downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"
         "To run:\n"
-        "\t Example: ./example_dnn_text_detection modelName(i.e. DB or East) --ocr=<path to ResNet_CTC.onnx>\n\n"
+        "\t Example: ./example_dnn_text_detection modelName(i.e. DB or East) --ocr_model=<path to VGG_CTC.onnx>\n\n"
         "Detection model path can also be specified using --model argument. \n\n"
-        "Download link for ocr model: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing \n\n";
+        "Download ocr model using: python download_models.py OCR \n\n";
 
 // Command-line keys to parse the input arguments
 string keys =
@@ -50,7 +50,7 @@ string keys =
     "{ input i                        |      right.jpg      | Path to an input image. }"
     "{ @alias                         |                     | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo                            |  ../dnn/models.yml  | An optional path to file with preprocessing parameters }"
-    "{ ocr                            |                     | Path to a binary .onnx model for recognition. }"
+    "{ ocr_model                      |                     | Path to a binary .onnx model for recognition. }"
     "{ model                          |                     | Path to detection model file. }"
     "{ thr                            |        0.5          | Confidence threshold for EAST detector. }"
     "{ nms                            |        0.4          | Non-maximum suppression threshold for EAST detector. }"
@@ -62,6 +62,16 @@ string keys =
 
 // Function prototype for the four-point perspective transform
 static void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat& result);
+static void processFrame(
+    const Mat& frame,
+    const vector<vector<Point>>& detResults,
+    String ocr_model,
+    bool imreadRGB,
+    Mat& board,
+    int fontSize,
+    int fontWeight,
+    vector<String> vocabulary
+);
 
 int main(int argc, char** argv) {
     // Setting up command-line parser with the specified keys
@@ -76,14 +86,16 @@ int main(int argc, char** argv) {
     const string modelName = parser.get<String>("@alias");
     const string zooFile = findFile(parser.get<String>("zoo"));
 
-    keys += genPreprocArguments(modelName, zooFile);
+    keys += genPreprocArguments(modelName, zooFile, "");
+    keys += genPreprocArguments(modelName, zooFile, "ocr_");
     parser = CommandLineParser(argc, argv, keys);
     parser.about(about);
 
     // Parsing command-line arguments
     String sha1 = parser.get<String>("sha1");
+    String ocr_sha1 = parser.get<String>("ocr_sha1");
     String detModelPath = findModel(parser.get<String>("model"), sha1);
-    String ocr = findModel(parser.get<String>("ocr"), "");
+    String ocr = findModel(parser.get<String>("ocr_model"), ocr_sha1);
     int height = parser.get<int>("height");
     int width = parser.get<int>("width");
     bool imreadRGB = parser.get<bool>("rgb");
@@ -108,6 +120,13 @@ int main(int argc, char** argv) {
     vector<vector<Point>> detResults;
     // Reading the input image
     Mat frame = imread(samples::findFile(parser.get<String>("input")));
+    Mat board(frame.size(), frame.type(), Scalar(255, 255, 255));
+    int stdSize = 20;
+    int stdWeight = 400;
+    int stdImgSize = 512;
+    int imgWidth = min(frame.rows, frame.cols);
+    int size = (stdSize*imgWidth)/stdImgSize;
+    int weight = (stdWeight*imgWidth)/stdImgSize;
 
     // Initializing and configuring the text detection model based on the provided config
     if (modelName == "East") {
@@ -148,64 +167,7 @@ int main(int argc, char** argv) {
         vocabulary.push_back(vocLine);
     }
 
-    // Initializing text recognition model with the provided model path
-    if (ocr.empty()) {
-        cout << "[ERROR] Please pass the path to the ocr model using --ocr to run the sample" << endl;
-        return -1;
-    }
-    TextRecognitionModel recognizer(ocr);
-    recognizer.setVocabulary(vocabulary);
-    recognizer.setDecodeType("CTC-greedy");
-
-    // Setting input parameters for the recognition model
-    double recScale = 1.0 / 127.5;
-    Scalar recMean = Scalar(127.5);
-    Size recInputSize = Size(100, 32);
-    recognizer.setInputParams(recScale, recInputSize, recMean);
-
-    // Process detected text regions for recognition
-    if (detResults.size() > 0) {
-        // Text Recognition
-        Mat recInput;
-        if (!imreadRGB) {
-            cvtColor(frame, recInput, cv::COLOR_BGR2GRAY);
-        } else {
-            recInput = frame;
-        }
-        vector< vector<Point> > contours;
-        for (uint i = 0; i < detResults.size(); i++) {
-            const auto& quadrangle = detResults[i];
-            CV_CheckEQ(quadrangle.size(), (size_t)4, "");
-
-            contours.emplace_back(quadrangle);
-
-            vector<Point2f> quadrangle_2f;
-            for (int j = 0; j < 4; j++)
-                quadrangle_2f.emplace_back(detResults[i][j]);
-
-            // Cropping the detected text region using a four-point transform
-            Mat cropped;
-            fourPointsTransform(recInput, &quadrangle_2f[0], cropped);
-
-            // Recognizing text from the cropped image
-            string recognitionResult = recognizer.recognize(cropped);
-            cout << i << ": '" << recognitionResult << "'" << endl;
-
-            //Create FontFace for putText
-            FontFace sans("sans");
-            // Displaying the recognized text on the image
-            putText(frame, recognitionResult, detResults[i][3], Scalar(0, 0, 255), sans, 25, 500);
-        }
-        // Drawing detected text regions on the image
-        polylines(frame, contours, true, Scalar(0, 255, 0), 2);
-    } else {
-        cout << "No Text Detected." << endl;
-    }
-
-    // Displaying the final image with detected and recognized text
-    imshow("Text Detection and Recognition", frame);
-    waitKey(0);
-
+    processFrame(frame, detResults, ocr, imreadRGB, board, size, weight, vocabulary);
     return 0;
 }
 
@@ -223,4 +185,75 @@ static void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat&
     Mat rotationMatrix = getPerspectiveTransform(vertices, targetVertices);
     // Applying the perspective transform to the region
     warpPerspective(frame, result, rotationMatrix, outputSize);
+}
+
+void processFrame(
+    const Mat& frame,
+    const vector<vector<Point>>& detResults,
+    String ocr_model,
+    bool imreadRGB,
+    Mat& board,
+    int fontSize,
+    int fontWeight,
+    vector<String> vocabulary
+) {
+    if (detResults.size() > 0) {
+        // Text Recognition
+        Mat recInput;
+        if (!imreadRGB) {
+            cvtColor(frame, recInput, cv::COLOR_BGR2GRAY);
+        } else {
+            recInput = frame;
+        }
+
+        vector<vector<Point>> contours;
+        for (uint i = 0; i < detResults.size(); i++) {
+            const auto& quadrangle = detResults[i];
+            CV_CheckEQ(quadrangle.size(), (size_t)4, "");
+
+            contours.emplace_back(quadrangle);
+
+            vector<Point2f> quadrangle_2f;
+            for (int j = 0; j < 4; j++)
+                quadrangle_2f.emplace_back(detResults[i][j]);
+
+            // Cropping the detected text region using a four-point transform
+            Mat cropped;
+            fourPointsTransform(recInput, &quadrangle_2f[0], cropped);
+
+            if(!ocr_model.empty()){
+                TextRecognitionModel recognizer(ocr_model);
+                recognizer.setVocabulary(vocabulary);
+                recognizer.setDecodeType("CTC-greedy");
+
+                // Setting input parameters for the recognition model
+                double recScale = 1.0 / 127.5;
+                Scalar recMean = Scalar(127.5);
+                Size recInputSize = Size(100, 32);
+                recognizer.setInputParams(recScale, recInputSize, recMean);
+                // Recognizing text from the cropped image
+                string recognitionResult = recognizer.recognize(cropped);
+                cout << i << ": '" << recognitionResult << "'" << endl;
+
+                // Displaying the recognized text on the image
+                FontFace sans("sans");
+                // Displaying the recognized text on the image
+                putText(board, recognitionResult, Point(detResults[i][1].x, detResults[i][0].y), Scalar(0, 0, 0), sans, fontSize, fontWeight);
+            }
+            else{
+                cout << "[WARN] Please pass the path to the ocr model using --ocr_model to get the recognised text." << endl;
+            }
+        }
+        // Drawing detected text regions on the image
+        polylines(board, contours, true, Scalar(200, 255, 200), 1);
+        polylines(frame, contours, true, Scalar(0, 255, 0), 1);
+    } else {
+        cout << "No Text Detected." << endl;
+    }
+
+    // Displaying the final image with detected and recognized text
+    Mat stacked;
+    hconcat(frame, board, stacked);
+    imshow("Text Detection and Recognition", stacked);
+    waitKey(0);
 }

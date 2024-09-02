@@ -301,5 +301,5 @@ Detection models can be downloaded using:
 All the preprocessing parameters will be loaded from [samples/dnn/models.yml](https://github.com/opencv/opencv/blob/5.x/samples/dnn/models.yml)
 Examples:
 ```bash
-example_dnn_text_detection -rmp=path/to/ResNet_CTC.onnx
+example_dnn_text_detection DB
 ```
