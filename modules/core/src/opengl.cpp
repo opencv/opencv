@@ -1190,7 +1190,6 @@ void cv::ogl::Texture2D::copyTo(OutputArray arr, int ddepth, bool autoRelease) c
                 ogl::Buffer::unbind(ogl::Buffer::PIXEL_PACK_BUFFER);
                 buf.copyTo(arr);
             #endif
-
             break;
         }
 
@@ -1455,7 +1454,7 @@ std::string cv::ogl::Program::getDefaultFragmentShader()
 std::string cv::ogl::Program::getDefaultVertexShader()
 {
 #ifndef HAVE_OPENGL
-    throw_no_ogl()
+    throw_no_ogl();
 #else
     return
         "#version 330 core\n"
@@ -1473,7 +1472,7 @@ std::string cv::ogl::Program::getDefaultVertexShader()
 unsigned int cv::ogl::Program::getProgramId()
 {
 #ifndef HAVE_OPENGL
-    throw_no_ogl()
+    throw_no_ogl();
 #else
     return program_;
 #endif
