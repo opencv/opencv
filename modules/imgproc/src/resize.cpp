@@ -95,6 +95,10 @@ static void hlineResize(ET* src, int cn, int *ofst, FT* m, FT* dst, int dst_min,
             }
         }
     }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
+    }
     ET* src_last = src + cn*ofst[dst_width - 1];
     for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
     {
@@ -126,6 +130,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 2, true, 1>
             ET* px = src + ofst[i];
             *(dst++) = m[0] * px[0] + m[1] * px[1];
         }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
+        }
         src0 = (src + ofst[dst_width - 1])[0];
         for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
         {
@@ -149,6 +157,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 2, true, 2>
             ET* px = src + 2*ofst[i];
             *(dst++) = m[0] * px[0] + m[1] * px[2];
             *(dst++) = m[0] * px[1] + m[1] * px[3];
+        }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
         }
         src0 = (src + 2*ofst[dst_width - 1])[0];
         src1 = (src + 2*ofst[dst_width - 1])[1];
@@ -177,6 +189,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 2, true, 3>
             *(dst++) = m[0] * px[0] + m[1] * px[3];
             *(dst++) = m[0] * px[1] + m[1] * px[4];
             *(dst++) = m[0] * px[2] + m[1] * px[5];
+        }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
         }
         src0 = (src + 3*ofst[dst_width - 1])[0];
         src1 = (src + 3*ofst[dst_width - 1])[1];
@@ -210,6 +226,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 2, true, 4>
             *(dst++) = m[0] * px[2] + m[1] * px[6];
             *(dst++) = m[0] * px[3] + m[1] * px[7];
         }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
+        }
         src0 = (src + 4*ofst[dst_width - 1])[0];
         src1 = (src + 4*ofst[dst_width - 1])[1];
         src2 = (src + 4*ofst[dst_width - 1])[2];
@@ -238,6 +258,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 4, true, 1>
             ET* px = src + ofst[i];
             *(dst++) = m[0] * src[0] + m[1] * src[1] + m[2] * src[2] + m[3] * src[3];
         }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
+        }
         src0 = (src + ofst[dst_width - 1])[0];
         for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
         {
@@ -261,6 +285,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 4, true, 2>
             ET* px = src + 2*ofst[i];
             *(dst++) = m[0] * src[0] + m[1] * src[2] + m[2] * src[4] + m[3] * src[6];
             *(dst++) = m[0] * src[1] + m[1] * src[3] + m[2] * src[5] + m[3] * src[7];
+        }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
         }
         src0 = (src + 2*ofst[dst_width - 1])[0];
         src1 = (src + 2*ofst[dst_width - 1])[1];
@@ -289,6 +317,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 4, true, 3>
             *(dst++) = m[0] * src[0] + m[1] * src[3] + m[2] * src[6] + m[3] * src[ 9];
             *(dst++) = m[0] * src[1] + m[1] * src[4] + m[2] * src[7] + m[3] * src[10];
             *(dst++) = m[0] * src[2] + m[1] * src[5] + m[2] * src[8] + m[3] * src[11];
+        }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
         }
         src0 = (src + 3*ofst[dst_width - 1])[0];
         src1 = (src + 3*ofst[dst_width - 1])[1];
@@ -321,6 +353,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 4, true, 4>
             *(dst++) = m[0] * src[1] + m[1] * src[5] + m[2] * src[ 9] + m[3] * src[13];
             *(dst++) = m[0] * src[2] + m[1] * src[6] + m[2] * src[10] + m[3] * src[14];
             *(dst++) = m[0] * src[3] + m[1] * src[7] + m[2] * src[11] + m[3] * src[15];
+        }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
         }
         src0 = (src + 4*ofst[dst_width - 1])[0];
         src1 = (src + 4*ofst[dst_width - 1])[1];
@@ -383,6 +419,10 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *o
         uint8_t* px = src + ofst[i];
         *(dst++) = m[0] * px[0] + m[1] * px[1];
     }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
+    }
     src_0 = (src + ofst[dst_width - 1])[0];
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     v_src_0 = vx_setall_u16(*((uint16_t*)&src_0));
@@ -438,6 +478,10 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 2>(uint8_t* src, int, int *o
         uint8_t* px = src + 2 * ofst[i];
         *(dst++) = m[0] * px[0] + m[1] * px[2];
         *(dst++) = m[0] * px[1] + m[1] * px[3];
+    }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
     }
     ((ufixedpoint16*)(srccn.w))[0] = (src + 2 * ofst[dst_width - 1])[0]; ((ufixedpoint16*)(srccn.w))[1] = (src + 2 * ofst[dst_width - 1])[1];
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -510,6 +554,10 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 3>(uint8_t* src, int, int *o
         *(dst++) = m[0] * px[0] + m[1] * px[3];
         *(dst++) = m[0] * px[1] + m[1] * px[4];
         *(dst++) = m[0] * px[2] + m[1] * px[5];
+    }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
     }
     ((ufixedpoint16*)(srccn.w))[0] = (src + 3*ofst[dst_width - 1])[0];
     ((ufixedpoint16*)(srccn.w))[1] = (src + 3*ofst[dst_width - 1])[1];
@@ -584,6 +632,10 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 4>(uint8_t* src, int, int *o
         *(dst++) = m[0] * px[2] + m[1] * px[6];
         *(dst++) = m[0] * px[3] + m[1] * px[7];
     }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
+    }
     ((ufixedpoint16*)(srccn.w))[0] = (src + 4 * ofst[dst_width - 1])[0]; ((ufixedpoint16*)(srccn.w))[1] = (src + 4 * ofst[dst_width - 1])[1];
     ((ufixedpoint16*)(srccn.w))[2] = (src + 4 * ofst[dst_width - 1])[2]; ((ufixedpoint16*)(srccn.w))[3] = (src + 4 * ofst[dst_width - 1])[3];
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -634,6 +686,10 @@ void hlineResizeCn<uint16_t, ufixedpoint32, 2, true, 1>(uint16_t* src, int, int 
     {
         uint16_t* px = src + ofst[i];
         *(dst++) = m[0] * px[0] + m[1] * px[1];
+    }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
     }
     src_0 = (src + ofst[dst_width - 1])[0];
 #if (CV_SIMD || CV_SIMD_SCALABLE)
