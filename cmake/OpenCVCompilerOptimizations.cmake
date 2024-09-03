@@ -170,21 +170,6 @@ elseif(" ${CMAKE_CXX_FLAGS} " MATCHES " -march=native | -xHost | /QxHost ")
   set(CPU_BASELINE_DETECT ON)
 endif()
 
-# This macro traverses all the dependent (IMPLIES) backends for the CPU_${OPT}_FLAGS_ON.
-macro(ocv_cpu_riscv_update_flag FEATURE_NAME_LIST COMMON_OPTION)
-  foreach(OPT IN LISTS ${FEATURE_NAME_LIST})
-    unset(APPEND_TRAILING)
-    # traverse all dependency and merge extensions to a flag.
-    foreach(IMPLIE IN LISTS CPU_${OPT}_IMPLIES)
-      string(APPEND APPEND_TRAILING "_${CPU_${IMPLIE}_FLAG}")
-    endforeach()
-    string(APPEND APPEND_TRAILING "_${CPU_${OPT}_FLAG}")
-    # Update flag
-    set(CPU_${OPT}_FLAGS_ON "${COMMON_OPTION}${APPEND_TRAILING}")
-    message(STATUS "CPU_${OPT}_FLAGS_ON is ${CPU_${OPT}_FLAGS_ON}")
-  endforeach()
-endmacro()
-
 if(X86 OR X86_64)
   ocv_update(CPU_KNOWN_OPTIMIZATIONS "SSE;SSE2;SSE3;SSSE3;SSE4_1;POPCNT;SSE4_2;AVX;FP16;AVX2;FMA3;AVX_512F;AVX512_COMMON;AVX512_KNL;AVX512_KNM;AVX512_SKX;AVX512_CNL;AVX512_CLX;AVX512_ICL")
 
@@ -415,11 +400,9 @@ elseif(RISCV)
   ocv_update(CPU_RVV_ZVFH_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_rvv_fp16.cpp")
   ocv_update(CPU_RVV_ZVFH_IMPLIES "RVV;FP16")
   ocv_update(CPU_FP16_IMPLIES "RVV")
-  set(CPU_RVV_FLAG "v")
-  set(CPU_FP16_FLAG "zvfhmin")
-  set(CPU_RVV_ZVFH_FLAG "zvfh")
-  set(BASE_ARCHITECTURE "-march=${PLATFORM_STR}")
-  ocv_cpu_riscv_update_flag(CPU_KNOWN_OPTIMIZATIONS ${BASE_ARCHITECTURE})
+  ocv_update(CPU_RVV_FLAGS_ON "-march=rv64gc_v")
+  ocv_update(CPU_FP16_FLAGS_ON "-march=rv64gc_v_zvfhmin")
+  ocv_update(CPU_RVV_ZVFH_FLAGS_ON "-march=rv64gc_v_zvfhmin_zvfh")
 
   ocv_update(CPU_RVV_FLAGS_CONFLICT "-march=[^ ]*")
 
@@ -523,32 +506,6 @@ macro(ocv_cpu_aarch64_baseline_merge_feature_options FEATURE_NAME_LIST FLAG_STRI
   endif()
 endmacro()
 
-macro(ocv_cpu_riscv_baseline_merge_feature_options FEATURE_NAME_LIST FLAG_STRING COMMON_OPTION)
-  unset(_POSTFIX)
-  unset(APPEND_TRAILING)
-  # Check each feature option.
-  foreach(OPT IN LISTS ${FEATURE_NAME_LIST})
-    string(FIND "${${FLAG_STRING}}" "${CPU_${OPT}_FLAGS_ON}" OPT_FOUND)
-    if(NOT ${OPT_FOUND} EQUAL -1)
-      # e.g. when ${CPU_${OPT}_FLAGS_ON} is "rv64gc_v_zvfhmin"
-      # the ${TRAILING_PART} will be "_v_zvfhmin"
-      # and the ${parts} will be "_v;_zvfhmin" (a list)
-      string(REPLACE "${COMMON_OPTION}" "" TRAILING_PART "${CPU_${OPT}_FLAGS_ON}")
-      string(REGEX MATCHALL "_[^_]+" parts ${TRAILING_PART})
-      list(APPEND _POSTFIX ${parts})
-      # remove ${CPU_${OPT}_FLAGS_ON} from ${FLAG_STRING}
-      string(REGEX REPLACE "${CPU_${OPT}_FLAGS_ON}( |$)" "" ${FLAG_STRING} ${${FLAG_STRING}})
-    endif()
-  endforeach()
-  # Remove the duplicate extensions. (e.g. _v, _v, ...)
-  list(REMOVE_DUPLICATES _POSTFIX)
-  # Merge to one extensions flag
-  foreach(TRAILING IN LISTS _POSTFIX)
-    string(APPEND APPEND_TRAILING "${TRAILING}")
-  endforeach()
-  set(${FLAG_STRING} "${${FLAG_STRING}} ${COMMON_OPTION}${APPEND_TRAILING}")
-endmacro()
-
 foreach(OPT ${CPU_KNOWN_OPTIMIZATIONS})
   set(CPU_${OPT}_USAGE_COUNT 0 CACHE INTERNAL "")
   if("${CPU_${OPT}_FLAGS_ON}" STREQUAL "disabled")
@@ -649,11 +606,6 @@ if(AARCH64)
     set(BASE_ARCHITECTURE "-march=armv8.2-a")
     ocv_cpu_aarch64_baseline_merge_feature_options(NEON_OPTIONS_LIST CPU_BASELINE_FLAGS ${BASE_ARCHITECTURE})
   endif()
-endif()
-
-if(RISCV)
-    string(STRIP "${CPU_BASELINE_FLAGS}" CPU_BASELINE_FLAGS)
-    ocv_cpu_riscv_baseline_merge_feature_options(CPU_KNOWN_OPTIMIZATIONS CPU_BASELINE_FLAGS ${BASE_ARCHITECTURE})
 endif()
 
 foreach(OPT ${CPU_BASELINE_REQUIRE})
