@@ -16,7 +16,10 @@ typedef std::pair<int, Arg> int_arg_pair;
 
 struct ConstFolding
 {
-    ConstFolding(Net* net_) : net(net_), netimpl(net_->getImpl()) {}
+    Net::Impl* netimpl;
+    std::vector<int> usecounts;
+
+    ConstFolding(Net::Impl* netimpl_) : netimpl(netimpl_) {}
 
     void process()
     {
@@ -36,7 +39,7 @@ struct ConstFolding
     void unuse(Arg inp)
     {
         CV_Assert(usecounts[inp.idx] > 0);
-        if (--usecounts[inp.idx] == 0 && net->isConstArg(inp)) {
+        if (--usecounts[inp.idx] == 0 && netimpl->isConstArg(inp)) {
             netimpl->tensors[inp.idx] = Mat(); // deallocate unused tensor
         }
     }
@@ -70,7 +73,7 @@ struct ConstFolding
             inpShapes.resize(ninputs);
             for (j = 0; j < ninputs; j++) {
                 Arg inp = inputs[j];
-                bool const_arg = net->isConstArg(inp);
+                bool const_arg = netimpl->isConstArg(inp);
                 if (!const_arg)
                     all_const = false;
                 if (all_const) {
@@ -92,6 +95,7 @@ struct ConstFolding
                     netimpl->allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes,
                                                   outShapes, outMats, tempTypes, tempShapes, tempMats,
                                                   netimpl->scratchBufs, false);
+                layer->finalize(inpMats, outMats);
                 layer->forward(inpMats, outMats, tempMats);
                 CV_Assert(outMats.size() == noutputs);
                 for (j = 0; j < noutputs; j++) {
@@ -122,15 +126,11 @@ struct ConstFolding
 
         return modified;
     }
-
-    Net* net;
-    Net::Impl* netimpl;
-    std::vector<int> usecounts;
 };
 
 void Net::Impl::constFold()
 {
-    ConstFolding constfolder(net);
+    ConstFolding constfolder(this);
     constfolder.process();
 }
 

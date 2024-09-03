@@ -665,6 +665,7 @@ Net ONNXImporter2::parseModel()
         return Net();
     }
     netimpl->prepareForInference();
+    // [for debugging] net.dumpToStream(std::cout);
     return net;
 }
 
@@ -723,27 +724,6 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     curr_graph_proto = graph_proto;
     std::vector<Arg> inputs, outputs;
 
-    // parse graph inputs
-    int n_inputs = graph_proto->input_size();
-    for (int i = 0; i < n_inputs; i++) {
-        const opencv_onnx::ValueInfoProto& input_i = graph_proto->input(i);
-        Arg arg = net.newArg(input_i.name(), mainGraph_ ? DNN_ARG_INPUT : DNN_ARG_TEMP);
-        parseValueInfo(input_i, netimpl->args.at(arg.idx));
-        inputs.push_back(arg);
-    }
-
-    // parse graph outputs
-    int n_outputs = graph_proto->output_size();
-    for (int i = 0; i < n_outputs; i++) {
-        const opencv_onnx::ValueInfoProto& output_i = graph_proto->input(i);
-        Arg arg = net.newArg(output_i.name(), mainGraph_ ? DNN_ARG_OUTPUT : DNN_ARG_TEMP);
-        parseValueInfo(output_i, netimpl->args.at(arg.idx));
-        outputs.push_back(arg);
-    }
-
-    curr_graph = Graph::create(net, graph_proto->name(), inputs);
-    curr_graph->setOutputs(outputs);
-
     // parse constant tensors
     int n_consts = graph_proto->initializer_size();
     for (int i = 0; i < n_consts; i++) {
@@ -752,6 +732,29 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
         Mat t = parseTensor(const_i);
         net.newConstArg(const_i.name(), t);
     }
+
+    // parse graph inputs
+    int n_inputs = graph_proto->input_size();
+    for (int i = 0; i < n_inputs; i++) {
+        const opencv_onnx::ValueInfoProto& input_i = graph_proto->input(i);
+        if (net.haveArg(input_i.name()))
+            continue;
+        Arg arg = net.newArg(input_i.name(), mainGraph_ ? DNN_ARG_INPUT : DNN_ARG_TEMP);
+        parseValueInfo(input_i, netimpl->args.at(arg.idx));
+        inputs.push_back(arg);
+    }
+
+    // parse graph outputs
+    int n_outputs = graph_proto->output_size();
+    for (int i = 0; i < n_outputs; i++) {
+        const opencv_onnx::ValueInfoProto& output_i = graph_proto->output(i);
+        Arg arg = net.newArg(output_i.name(), mainGraph_ ? DNN_ARG_OUTPUT : DNN_ARG_TEMP);
+        parseValueInfo(output_i, netimpl->args.at(arg.idx));
+        outputs.push_back(arg);
+    }
+
+    curr_graph = Graph::create(net, graph_proto->name(), inputs);
+    curr_graph->setOutputs(outputs);
 
     std::swap(saved_prog, curr_prog);
 
@@ -902,6 +905,8 @@ void ONNXImporter2::addLayer(LayerParams& layerParams,
     layer->inputs = node_inputs;
     layer->inputs.resize(actual_inputs);
     layer->outputs = node_outputs;
+    layer->netimpl = netimpl;
+    CV_Assert(netimpl->dump_indent == 3);
     curr_prog.push_back(layer);
 }
 
@@ -1055,189 +1060,11 @@ void ONNXImporter2::parseReduce(LayerParams& layerParams, const opencv_onnx::Nod
 
 void ONNXImporter2::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    /*MatShape inpShape;
-    if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
-        inpShape = shape(getBlob(node_proto, 0));
-    else {
-        inpShape = outShapes[node_proto.input(0)];
-    }
-    int dims = inpShape.size();
-    std::vector<int> begin(dims, 0);
-    std::vector<int> end(dims, INT_MAX);
-    std::vector<int> steps;
-    int inp_size = node_proto.input_size();
-    int axis = 0;
-    bool has_axes = false;
-    DictValue starts_, ends_, axes_, steps_;
-
-    // opset = 1
-    if (inp_size == 1)
-    {
-        starts_ = layerParams.get("starts");
-        ends_ = layerParams.get("ends");
-        CV_Assert(starts_.size() == ends_.size());
-        if (layerParams.has("axes"))
-        {
-            axes_ = layerParams.get("axes");
-            CV_Assert(axes_.size() == starts_.size());
-            axis = axes_.getIntValue(0) < 0 ? axes_.getIntValue(0) + dims : axes_.getIntValue(0);
-            has_axes = true;
-        }
-    }
-    // opset > 1
-    else
-    {
-        CV_Assert(inp_size >= 3);
-        for (int i = 1; i < inp_size; ++i)
-        {
-            CV_Assert(constBlobs.find(node_proto.input(i)) != constBlobs.end());
-        }
-        Mat start_blob = getIntBlob(node_proto, 1);
-        Mat end_blob = getIntBlob(node_proto, 2);
-        CV_Assert(start_blob.total() == end_blob.total());
-        starts_ = DictValue::arrayInt(start_blob.begin<int>(), start_blob.total());
-        ends_ = DictValue::arrayInt(end_blob.begin<int>(), end_blob.total());
-
-        if (inp_size > 3 && !getBlob(node_proto, 3).empty())
-        {
-            Mat axes_blob = getIntBlob(node_proto, 3);
-            CV_Assert(axes_blob.total() == start_blob.total());
-            axes_ = DictValue::arrayInt(axes_blob.begin<int>(), axes_blob.total());
-            axis = axes_.getIntValue(0) < 0 ? axes_.getIntValue(0) + dims : axes_.getIntValue(0);
-            has_axes = true;
-        }
-
-        if (inp_size == 5 && !getBlob(node_proto, 4).empty())
-        {
-            Mat step_blob = getIntBlob(node_proto, 4);
-            CV_Assert(step_blob.total() == start_blob.total());
-            steps_ = DictValue::arrayInt(step_blob.begin<int>(), step_blob.total());
-            steps.resize(dims, 1);
-
-            // Very strange application for Slice op with tensor reversing.
-            // We just workaround it for 2d constants.
-            if (constBlobs.find(node_proto.input(0)) != constBlobs.end() &&
-                axis == 0 &&
-                start_blob.at<int>(0) == -1 && step_blob.at<int>(0) == -1 &&
-                end_blob.at<int>(0) == std::numeric_limits<int32_t>::min())
-            {
-                Mat inp = getBlob(node_proto, 0);
-                if (inp.dims == 2)
-                {
-                    Mat flipped;
-                    flip(inp, flipped, 0);
-                    addConstant(node_proto.output(0), flipped);
-                    return;
-                }
-            }
-        }
-    }
-
-    if (!has_axes)
-    {
-        // make a default axes [0, 1, 2...]
-        Mat axes_tmp(1, starts_.size(), CV_32S);
-        std::iota(axes_tmp.begin<int>(), axes_tmp.end<int>(), 0);
-        axes_ = DictValue::arrayInt(axes_tmp.begin<int>(), axes_tmp.total());
-    }
-
-    int cur_axe;
-    std::vector<bool> flag(dims, false);
-    Mat axes(1, starts_.size(), CV_32S);
-    auto axes_ptr = axes.ptr<int>();
-    // resize begin and end
-    for (int i = 0; i < axes_.size(); ++i)
-    {
-        // dims should be added to the negative axes
-        cur_axe = axes_.getIntValue(i) < 0 ? axes_.getIntValue(i) + dims : axes_.getIntValue(i);
-        CV_CheckGE(cur_axe, 0, "Axes should be grater or equal to '-dims'.");
-        CV_CheckLT(cur_axe, dims, "Axes should be less than 'dim'.");
-        CV_CheckEQ(flag[cur_axe], false, "Axes shouldn't have duplicated values.");
-        flag[cur_axe] = true;
-        // change axis to the minimum axe
-        if (cur_axe < axis) axis = cur_axe;
-        axes_ptr[i] = cur_axe;
-        begin[cur_axe] = starts_.getIntValue(i);
-        end[cur_axe] = ends_.getIntValue(i);
-    }
-
-    layerParams.set("begin", DictValue::arrayInt(&begin[0], begin.size()));
-    layerParams.set("end", DictValue::arrayInt(&end[0], end.size()));
-    layerParams.set("axis", axis);
-
-    if (!steps.empty())
-    {
-        for (int i = 0; i < axes.total(); ++i)
-            steps[axes_ptr[i]] = steps_.getIntValue(i);
-        layerParams.set("steps", DictValue::arrayInt(&steps[0], steps.size()));
-    }
-
-    if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
-    {
-        Mat inp = getBlob(node_proto, 0);
-        std::vector<Mat> inputs, sliced;
-        inputs.push_back(inp);
-        runLayer(layerParams, inputs, sliced);
-        CV_Assert(sliced.size() == 1);
-        addConstant(node_proto.output(0), sliced[0]);
-        return;
-    }*/
     addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseSplit(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    /*int axis = layerParams.get<int>("axis", 0);
-    MatShape inpShape = outShapes[node_proto.input(0)];
-    axis = normalize_axis(axis, inpShape.size());
-
-    if (layerParams.has("split"))
-    {
-        DictValue splits = layerParams.get("split");
-        const int numSplits = splits.size();
-
-        if (numSplits == 1)
-        {
-            layerParams.set("num_split", 1);
-        }
-        else
-        {
-            CV_Assert(numSplits >= 1);
-
-            std::vector<int> slicePoints(numSplits - 1, splits.get<int>(0));
-            for (int i = 1; i < splits.size() - 1; ++i)
-            {
-                slicePoints[i] = slicePoints[i - 1] + splits.get<int>(i);
-            }
-            layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
-        }
-    }
-    else if (node_proto.input_size() == 2) // opset >= 13, the split will be stored at the second input, instead of the attribute.
-    {
-        CV_Assert(constBlobs.find(node_proto.input(1)) != constBlobs.end());
-        Mat splitsBlob = getIntBlob(node_proto, 1);
-        int splitSize = splitsBlob.total();
-        if (splitSize == 1)
-        {
-            layerParams.set("num_split", 1);
-        }
-        else
-        {
-            std::vector<int> slicePoints(splitSize - 1, splitsBlob.at<int>(0));
-            for (int i = 1; i < splitSize - 1; ++i)
-            {
-                slicePoints[i] = slicePoints[i - 1] + splitsBlob.at<int>(i);
-            }
-            layerParams.set("slice_point", DictValue::arrayInt(&slicePoints[0], slicePoints.size()));
-        }
-    }
-    else
-    {
-        layerParams.set("num_split", node_proto.output_size());
-    }
-    int depth = layerParams.get<int>("depth", CV_32F);
-    layerParams.type = (depth == CV_8S) ? "SliceInt8" : "Slice";
-    layerParams.set("axis", axis);*/
     addLayer(layerParams, node_proto);
 }
 
@@ -1772,7 +1599,7 @@ void ONNXImporter2::parseGemm(LayerParams& layerParams, const opencv_onnx::NodeP
         n_inputs = 1;
     }
 
-    addLayer(layerParams, node_proto);
+    addLayer(layerParams, node_proto, n_inputs);
 }
 
 void ONNXImporter2::parseMatMul(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto) {
@@ -1879,7 +1706,6 @@ void ONNXImporter2::parseSqueeze(LayerParams& layerParams, const opencv_onnx::No
 void ONNXImporter2::parseFlatten(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_Assert(node_proto.input_size() == 1);
-    CV_Assert(layerParams.has("axis"));
     addLayer(layerParams, node_proto);
 }
 

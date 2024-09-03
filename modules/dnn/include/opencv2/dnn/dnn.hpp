@@ -125,8 +125,11 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_MODEL_GENERIC = 0, //!< Some generic model format
         DNN_MODEL_ONNX = 1, //!< ONNX model
         DNN_MODEL_TF = 2, //!< TF model
-        DNn_MODEL_TFLITE = 3 //!< TFLite model
+        DNN_MODEL_TFLITE = 3, //!< TFLite model
+        DNN_MODEL_CAFFE = 4, //!< Caffe model
     };
+
+    CV_EXPORTS std::string modelFormatToString(ModelFormat modelFormat);
 
     CV_EXPORTS std::vector< std::pair<Backend, Target> > getAvailableBackends();
     CV_EXPORTS_W std::vector<Target> getAvailableTargets(dnn::Backend be);
@@ -273,7 +276,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW std::vector<Mat> blobs;
         std::vector<Arg> inputs;
         std::vector<Arg> outputs;
-        Net* net;
+        void* netimpl;
 
         virtual std::vector<Ptr<Graph> >* subgraphs() const;
 
@@ -511,7 +514,6 @@ CV__DNN_INLINE_NS_BEGIN
                     const std::vector<std::string>& outnames=std::vector<std::string>()) = 0;
         virtual Arg append(Ptr<Layer>& layer, const std::string& outname=std::string()) = 0;
         virtual std::ostream& dump(std::ostream& strm, int indent, bool comma) = 0;
-        virtual Net* net() const = 0;
         virtual const std::vector<Arg>& inputs() const = 0;
         virtual const std::vector<Arg>& outputs() const = 0;
         virtual void setOutputs(const std::vector<Arg>& outputs) = 0;
@@ -583,6 +585,10 @@ CV__DNN_INLINE_NS_BEGIN
          *  Call method after setInput(). To see correct backend, target and fusion run after forward().
         */
         CV_WRAP void dumpToPbtxt(CV_WRAP_FILE_PATH const String& path);
+        /** @brief Dump net structure, hyperparameters, backend, target and fusion to the specified output stream
+         *  @param strm   the target stream
+        */
+        void dumpToStream(std::ostream& strm) const;
 
         /** @brief Adds new layer to the net.
          *  @param name   unique name of the adding layer.
@@ -746,28 +752,28 @@ CV__DNN_INLINE_NS_BEGIN
          * @brief Set the tracing mode
          * @param[in] tracingMode the tracing mode, see DNN_TRACE_*
          */
-        CV_WRAP void setTracingMode(int tracingMode);
+        CV_WRAP void setTracingMode(TracingMode tracingMode);
 
         /**
          * @brief Retrieve the current tracing mode
          */
-        CV_WRAP int getTracingMode() const;
+        CV_WRAP TracingMode getTracingMode() const;
 
         /**
          * @brief Set the profiling mode
          * @param[in] profilingMode the profiling mode, see DNN_PROFILE_*
          */
-        CV_WRAP void setProfilingMode(int profilingMode);
+        CV_WRAP void setProfilingMode(ProfilingMode profilingMode);
 
         /**
          * @brief Retrieve the current profiling mode
          */
-        CV_WRAP int getProfilingMode() const;
+        CV_WRAP ProfilingMode getProfilingMode() const;
 
         /**
          * @brief Retrieve the current model format, see DNN_MODEL_*
          */
-        CV_WRAP int getModelFormat() const;
+        CV_WRAP ModelFormat getModelFormat() const;
 
         /** @brief Sets the new input value for the network
          *  @param blob        A new blob. Should have CV_32F or CV_8U depth.
@@ -980,7 +986,7 @@ CV__DNN_INLINE_NS_BEGIN
         Ptr<Graph> getMainGraph() const;
 
         const ArgData& argData(Arg arg) const;
-        std::string argName(Arg arg) const;
+        const std::string& argName(Arg arg) const;
         ArgKind argKind(Arg arg) const;
 
         // if the name is empty, always creates a new argument;
@@ -1002,7 +1008,6 @@ CV__DNN_INLINE_NS_BEGIN
 
         int findDim(const std::string& name, bool insert=false);
 
-        std::ostream& dump(std::ostream* strm=nullptr) const;
         std::ostream& dumpArg(std::ostream& strm, Arg arg, int indent,
                               bool comma=true, bool dump_details=false) const;
         std::ostream& dumpDim(std::ostream& strm, int value) const;

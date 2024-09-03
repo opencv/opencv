@@ -80,21 +80,16 @@ class BaseConvolutionLayerImpl : public ConvolutionLayer
 public:
     bool fusedWeights, fusedBias;
     std::vector<double> weightsMultipliers;
-#ifdef HAVE_WEBNN
     int groups;
-#endif
+
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);
         getConvolutionKernelParams(params, kernel_size, pads_begin, pads_end, strides, dilations,
                                    padMode, adjust_pads, useWinograd);
 
-        numOutput = params.get<int>("num_output");
-        int ngroups = params.get<int>("group", 1);
-#ifdef HAVE_WEBNN
-        groups = ngroups;
-#endif
-        CV_Assert(numOutput % ngroups == 0);
+        numOutput = -1;
+        groups = params.get<int>("group", 1);
 
         if (kernel_size.size() == 2) {
             kernel = Size(kernel_size[1], kernel_size[0]);
@@ -123,6 +118,7 @@ public:
         CV_Assert((inputs.size() > outputs.size() && blobs.empty()) ||
                   (!inputs.empty() && (blobs.size() == 1 || blobs.size() == 2)));
         MatSize weightShape = blobs.empty() ? inputs[1].size : blobs[0].size;
+        numOutput = weightShape[0];
 
         CV_Assert(inputs[0].dims == outputs[0].dims);
         if (weightShape.dims() == 3)
@@ -338,7 +334,8 @@ public:
         if (padMode.empty())
         {
             for (int i = 0; i < inpShape.size(); i++)
-                outShape.push_back((inpShape[i] + pads_begin[i] + pads_end[i] - dilations[i] * (kernel_size[i] - 1) - 1) / strides[i] + 1);
+                outShape.push_back((inpShape[i] + pads_begin[i] + pads_end[i] -
+                                    dilations[i] * (kernel_size[i] - 1) - 1) / strides[i] + 1);
         }
         else
         {

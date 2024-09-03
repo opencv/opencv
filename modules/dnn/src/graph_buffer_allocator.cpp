@@ -73,15 +73,14 @@ using std::string;
 
 struct BufferAllocator
 {
-    BufferAllocator(Net* net_) : net(net_), netimpl(net_->getImpl()) {}
-
-    Net* net;
     Net::Impl* netimpl;
     vector<int> usecounts;
     vector<int> freebufs;
     vector<int> buf_usecounts;
     vector<int> bufidxs;
     int nbufs = 0;
+
+    BufferAllocator(Net::Impl* netimpl_) : netimpl(netimpl_) {}
 
     /*
      Here are 3 workhorse methods that abstract the use and bookkeeping of buffers:
@@ -127,7 +126,7 @@ struct BufferAllocator
 
     void shareBuffer(Arg fromArg, Arg toArg)
     {
-        CV_Assert(!net->isConstArg(fromArg) && !net->isConstArg(toArg));
+        CV_Assert(!netimpl->isConstArg(fromArg) && !netimpl->isConstArg(toArg));
         int fromBuf = bufidxs[fromArg.idx], toBuf = bufidxs[toArg.idx];
         CV_Assert(fromBuf >= 0);
         bufidxs[toArg.idx] = fromBuf;
@@ -142,7 +141,7 @@ struct BufferAllocator
         size_t nargs = usecounts.size();
         bufidxs.assign(nargs, -1);
         nbufs = 0;
-        assign(net->getMainGraph());
+        assign(netimpl->mainGraph);
         netimpl->bufidxs = bufidxs;
         netimpl->buffers.resize(nbufs);
         for (int i = 0; i < nbufs; i++)
@@ -185,7 +184,7 @@ struct BufferAllocator
                 layer->alwaysSupportInplace()) {
                 CV_Assert(ninputs >= 1);
                 Arg inp0 = inputs[0];
-                inplace = net->argKind(inp0) == DNN_ARG_TEMP && usecounts[inp0.idx] == 1;
+                inplace = netimpl->argKind(inp0) == DNN_ARG_TEMP && usecounts[inp0.idx] == 1;
                 reuseArg = inp0;
             }
 
@@ -197,7 +196,7 @@ struct BufferAllocator
              */
             //if (layer->type == "Softmax")
             //    putchar('.');
-            if (noutputs > 0 && net->argKind(outputs[0]) == DNN_ARG_TEMP) {
+            if (noutputs > 0 && netimpl->argKind(outputs[0]) == DNN_ARG_TEMP) {
                 Arg out0 = outputs[0];
                 if (inplace && bufidxs.at(out0.idx) < 0)
                     shareBuffer(reuseArg, out0);
@@ -237,9 +236,9 @@ struct BufferAllocator
                     Arg thenOutarg = thenOutargs[i];
                     Arg elseOutarg = elseOutargs[i];
 
-                    if (!net->isConstArg(thenOutarg) && usecounts[thenOutarg.idx] == 1)
+                    if (!netimpl->isConstArg(thenOutarg) && usecounts[thenOutarg.idx] == 1)
                         shareBuffer(outarg, thenOutarg);
-                    if (!net->isConstArg(elseOutarg) && usecounts[elseOutarg.idx] == 1)
+                    if (!netimpl->isConstArg(elseOutarg) && usecounts[elseOutarg.idx] == 1)
                         shareBuffer(outarg, elseOutarg);
                 }
 
@@ -274,8 +273,8 @@ struct BufferAllocator
                 CV_Assert(n_state_vars >= 0 && n_accums >= 0);
                 Arg inp0 = inputs[0];
                 if (inp0.idx > 0 && usecounts[inp0.idx] > 0) {
-                    CV_Assert(!net->isConstArg(inp0));
-                    if (!net->isConstArg(trip_count))
+                    CV_Assert(!netimpl->isConstArg(inp0));
+                    if (!netimpl->isConstArg(trip_count))
                         shareBuffer(trip_count, inputs[0]);
                     else
                         bufidxs.at(inputs[0].idx) = getFreeBuffer();
@@ -287,14 +286,14 @@ struct BufferAllocator
                     Arg v_inp = inputs[i+2];
                     Arg v_out = i >= 0 ? outputs[i] : Arg();
                     if (inparg.idx > 0 && usecounts[inparg.idx] > 0) {
-                        CV_Assert(!net->isConstArg(inparg));
-                        if (!net->isConstArg(v_inp))
+                        CV_Assert(!netimpl->isConstArg(inparg));
+                        if (!netimpl->isConstArg(v_inp))
                             shareBuffer(v_inp, inparg);
                         else
                             bufidxs[inparg.idx] = getFreeBuffer();
                     }
-                    if (!net->isConstArg(v_out)) {
-                        if (!net->isConstArg(outarg) && usecounts[outarg.idx] == 1)
+                    if (!netimpl->isConstArg(v_out)) {
+                        if (!netimpl->isConstArg(outarg) && usecounts[outarg.idx] == 1)
                             shareBuffer(v_out, outarg);
                     }
                 }
@@ -323,7 +322,7 @@ struct BufferAllocator
 
 void Net::Impl::assignBuffers()
 {
-    BufferAllocator buf_allocator(net);
+    BufferAllocator buf_allocator(this);
     buf_allocator.assign();
 }
 

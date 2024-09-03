@@ -84,6 +84,8 @@ Net::Impl::Impl()
 
 bool Net::Impl::empty() const
 {
+    if (mainGraph)
+        return false;
     return layers.size() <= 1;  // first layer is default Data layer
 }
 
@@ -135,6 +137,7 @@ void Net::Impl::clear()
     bufidxs.push_back(-1);
 
     prepared = false;
+    finalizeLayers = true;
 }
 
 
@@ -933,6 +936,9 @@ Mat Net::Impl::forward(const String& outputName)
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
+    if (mainGraph)
+        return forwardWithSingleOutput(outputName);
+
     String layerName = outputName;
 
     if (layerName.empty())
@@ -1453,6 +1459,13 @@ void Net::Impl::setInputShape(const String& inputName, const MatShape& shape)
 void Net::Impl::setInput(InputArray blob, const String& name, double scalefactor, const Scalar& mean)
 {
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
+    if (mainGraph) {
+        CV_Assert(scalefactor == 1);
+        CV_Assert(mean.val[0] == 0 && mean.val[1] == 0 && mean.val[2] == 0 && mean.val[3] == 0);
+        setMainGraphInput(blob, name);
+        return;
+    }
 
     LayerPin pin;
     pin.lid = 0;

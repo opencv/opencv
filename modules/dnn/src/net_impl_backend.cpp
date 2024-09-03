@@ -217,6 +217,8 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
 
 void Net::Impl::setPreferableTarget(int targetId)
 {
+    if (mainGraph) // the new engine does not support different targets yet
+        return;
     if (netWasQuantized && targetId != DNN_TARGET_CPU &&
         targetId != DNN_TARGET_OPENCL && targetId != DNN_TARGET_OPENCL_FP16 && targetId != DNN_TARGET_NPU)
     {

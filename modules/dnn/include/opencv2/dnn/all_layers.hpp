@@ -86,6 +86,15 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Layer> create(const LayerParams &params);
     };
 
+    /**
+     * Constant layer produces the same data blob at an every forward pass.
+     */
+    class CV_EXPORTS ConstantOfShapeLayer : public Layer
+    {
+    public:
+        static Ptr<ConstantOfShapeLayer> create(const LayerParams &params);
+    };
+
     //! LSTM recurrent layer
     class CV_EXPORTS LSTMLayer : public Layer
     {
@@ -445,6 +454,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<MVNLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS ShapeLayer : public Layer
+    {
+    public:
+        static Ptr<ShapeLayer> create(const LayerParams& params);
+    };
+
     /* Reshaping */
 
     class CV_EXPORTS ReshapeLayer : public Layer
@@ -460,6 +475,24 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<FlattenLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SqueezeLayer : public Layer
+    {
+    public:
+        static Ptr<SqueezeLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS UnsqueezeLayer : public Layer
+    {
+    public:
+        static Ptr<UnsqueezeLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS RangeLayer : public Layer
+    {
+    public:
+        static Ptr<RangeLayer> create(const LayerParams& params);
     };
 
     class CV_EXPORTS QuantizeLayer : public Layer

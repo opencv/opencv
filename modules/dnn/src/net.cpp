@@ -175,8 +175,20 @@ String Net::dump()
 {
     CV_TRACE_FUNCTION();
     CV_Assert(impl);
+    if (impl->mainGraph) {
+        std::stringstream sstrm;
+        dumpToStream(sstrm);
+        return sstrm.str();
+    }
     CV_Assert(!empty());
     return impl->dump(true);
+}
+
+void Net::dumpToStream(std::ostream& strm) const
+{
+    if (impl->mainGraph) {
+        impl->dump(std::cout);
+    }
 }
 
 void Net::dumpToFile(const String& path)
@@ -185,7 +197,11 @@ void Net::dumpToFile(const String& path)
     CV_Assert(impl);
     CV_Assert(!empty());
     std::ofstream file(path.c_str());
-    file << dump();
+    if (impl->mainGraph) {
+        impl->dump(file);
+    } else {
+        file << dump();
+    }
     file.close();
 }
 
@@ -419,78 +435,55 @@ bool Net::isConstArg(Arg arg) const
 void Net::checkArg(Arg arg) const
 {
     CV_Assert(impl);
-    impl->checkArg(arg);
+    CV_Assert((size_t)arg.idx < impl->args.size());
 }
 
 void Net::checkArgs(const std::vector<Arg>& args) const
 {
     CV_Assert(impl);
-    impl->checkArgs(args);
+    for (auto arg: args) {
+        CV_Assert((size_t)arg.idx < impl->args.size());
+    }
 }
 
 const ArgData& Net::argData(Arg arg) const
 {
-    checkArg(arg);
+    CV_Assert(impl);
+    CV_Assert((size_t)arg.idx < impl->args.size());
     return impl->args[arg.idx];
 }
 
-std::string Net::argName(Arg arg) const { return argData(arg).name; }
+const std::string& Net::argName(Arg arg) const { return argData(arg).name; }
 
 ArgKind Net::argKind(Arg arg) const { return argData(arg).kind; }
 
 Mat& Net::argTensor(Arg arg) const {
     CV_Assert(impl);
-    CV_Assert((size_t)arg.idx < impl->tensors.size());
-    return impl->tensors.at(arg.idx);
+    return impl->argTensor(arg);
 }
 
 Arg Net::getArg(const std::string& name)
 {
     CV_Assert(impl);
-    if (!name.empty()) {
-        auto it = impl->argnames.find(name);
-        if (it != impl->argnames.end()) {
-            return Arg((int)it->second);
-        }
-    }
-    return newArg(name, DNN_ARG_TEMP);
+    return impl->getArg(name);
 }
 
 bool Net::haveArg(const std::string& name) const
 {
     CV_Assert(impl);
-    return impl->argnames.find(name) != impl->argnames.end();
+    return impl->haveArg(name);
 }
 
 Arg Net::newConstArg(const std::string& name, const Mat& m) const
 {
     CV_Assert(impl);
-    Arg arg = newArg(name, DNN_ARG_CONST);
-    impl->tensors[arg.idx] = m;
-    ArgData& adata = impl->args[arg.idx];
-    adata.type = m.type();
-    adata.shape = m.shape();
-    return arg;
+    return impl->newConstArg(name, m);
 }
 
 Arg Net::newArg(const std::string& name, ArgKind kind) const
 {
     CV_Assert(impl);
-    int idx = (int)impl->args.size();
-
-    if (!name.empty()) {
-        CV_Assert(impl->argnames.find(name) == impl->argnames.end());
-        impl->argnames.insert(std::make_pair(name, idx));
-    }
-
-    ArgData adata;
-    adata.name = name;
-    adata.kind = kind;
-    impl->args.push_back(adata);
-    impl->tensors.push_back(Mat());
-    impl->bufidxs.push_back(-1);
-
-    return Arg(idx);
+    return impl->newArg(name, kind);
 }
 
 Ptr<Graph> Net::getMainGraph() const
@@ -509,27 +502,43 @@ std::ostream& Net::dumpArg(std::ostream& strm, Arg arg, int indent,
 int Net::findDim(const std::string& dimname, bool insert)
 {
     CV_Assert(impl);
-    if (!dimname.empty()) {
-        auto it = impl->dimnames.find(dimname);
-        if (it != impl->dimnames.end()) {
-            return it->second;
-        }
-    }
-    if (!insert) {
-        CV_Error_(Error::StsObjectNotFound, ("symbolic dimension '%s' is not found",
-                dimname.empty() ? "<some unique name>" : dimname.c_str()));
-    }
-    int value = -(int)impl->dimnames_vec.size() - 1;
-    std::string inserted_dimname = dimname.empty() ? format("N!%d", -value) : dimname;
-    impl->dimnames.insert(std::make_pair(inserted_dimname, value));
-    impl->dimnames_vec.push_back(inserted_dimname);
-    return value;
+    return impl->findDim(dimname, insert);
 }
 
 std::ostream& Net::dumpDim(std::ostream& strm, int value) const
 {
     CV_Assert(impl);
     return impl->dumpDim(strm, value);
+}
+
+void Net::setTracingMode(TracingMode tracingMode)
+{
+    CV_Assert(impl);
+    impl->tracingMode = tracingMode;
+}
+
+TracingMode Net::getTracingMode() const
+{
+    CV_Assert(impl);
+    return impl->tracingMode;
+}
+
+void Net::setProfilingMode(ProfilingMode profilingMode)
+{
+    CV_Assert(impl);
+    impl->profilingMode = profilingMode;
+}
+
+ProfilingMode Net::getProfilingMode() const
+{
+    CV_Assert(impl);
+    return impl->profilingMode;
+}
+
+ModelFormat Net::getModelFormat() const
+{
+    CV_Assert(impl);
+    return impl->modelFormat;
 }
 
 CV__DNN_INLINE_NS_END

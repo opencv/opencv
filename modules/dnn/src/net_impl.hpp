@@ -70,12 +70,6 @@ struct Net::Impl : public detail::NetImplBase
     bool useWinograd;
     std::vector<int64> layersTimings;
 
-    Net* net; // weak pointer to the public Net structure
-              // (which contains smart pointer to this structure).
-              // This is needed, because most of the time we
-              // want to use public API via cv::dnn::Net,
-              // not the private one in cv::dnn::Net::Impl
-
     ModelFormat modelFormat;
     DataLayout originalLayout;
     int onnx_opset;
@@ -92,7 +86,8 @@ struct Net::Impl : public detail::NetImplBase
 
     int accuracy;
     bool enableFP16, haveFP16;
-    bool prepared;
+    bool prepared; // need to rerun graph transformations/optimizations
+    bool finalizeLayers; // need to initialize each layer
     TracingMode tracingMode;
     ProfilingMode profilingMode;
     std::vector<std::pair<Ptr<Layer>, int64_t> > profileEntries;
@@ -317,6 +312,45 @@ struct Net::Impl : public detail::NetImplBase
 
     ///////////////////////////// the new engine ////////////////////////////
 
+    // Create a new graph/subgraph, mode 1: we know in advance names of all the graph inputs and outputs (e.g. when we parse ONNX).
+    // The function register arguments with given names and
+    // creates a new empty graph with the inputs and outputs.
+    // When it's the first created graph, it automatically becomes the main model graph.
+    Ptr<Graph> newGraph(const std::string& name,
+                        const std::vector<std::string>& inpnames,
+                        const std::vector<std::string>& outnames) const;
+    // Create a new graph/subgraph, mode 2: we construct the graph manually.
+    // First, we create empty graph with certain input Args (they may or may not have names).
+    // once the graph is constructed, we set the graph outputs using Graph::setOutputs().
+    // When it's the first created graph, it automatically becomes the main model graph.
+    Ptr<Graph> newGraph(const std::string& name, const std::vector<Arg>& inputs) const;
+
+    // Get the main model graph
+    Ptr<Graph> getMainGraph() const;
+
+    const ArgData& argData(Arg arg) const;
+    const std::string& argName(Arg arg) const;
+    ArgKind argKind(Arg arg) const;
+
+    // if the name is empty, always creates a new argument;
+    // if it's not empty, returns argument with the specific name if it already exists,
+    // otherwise creates new argument with the specified name
+    Arg getArg(const std::string& name);
+    bool haveArg(const std::string& name) const;
+
+    Arg newConstArg(const std::string& name, const Mat& m);
+    Arg newConstScalarArg(const std::string& name, int type, const void* value);
+    Arg newArg(const std::string& name, ArgKind kind);
+    bool isConstArg(Arg arg) const;
+    bool isTempArg(Arg arg) const;
+    Mat& argTensor(Arg arg) const;
+    MatSize argSize(Arg arg) const;
+    int argType(Arg arg) const;
+    void checkArg(Arg arg) const;
+    void checkArgs(const std::vector<Arg>& args) const;
+
+    int findDim(const std::string& name, bool insert=false);
+
     void prepareForInference();
 
     // pre-allocates memory for output tensors.
@@ -336,10 +370,16 @@ struct Net::Impl : public detail::NetImplBase
                               bool useBufferPool
                               );
 
+    // set input of the model before running it
+    void setMainGraphInput(InputArray blob, const std::string& name);
+    // set input in some graph, the main one or a subgraph
+    void setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m);
     // run graph or subgraph.
     void forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs, OutputArrayOfArrays outputs, bool isMainGraph);
     // run the whole model
     void forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
+    // run the whole model, convenience wrapper
+    Mat forwardWithSingleOutput(const std::string& outname);
     // helper function for useCounts()
     void updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& usecounts) const;
     // computes how many times each argument is used, i.e. on output usecounts.size() == args.size()
@@ -347,9 +387,6 @@ struct Net::Impl : public detail::NetImplBase
 
     void initPerfProfile();
     void updatePerfProfile(const Layer* layer, int64_t time);
-    // checks that every Arg is already registered in the Net.
-    void checkArgs(const std::vector<Arg>& args) const;
-    void checkArg(Arg arg) const;
     // deals with numeric and symblic shape values.
     void checkAndUpdateDim(const Ptr<Graph>& graph, const Layer* layer, Arg inp, int j, int64_t value);
 
@@ -358,6 +395,8 @@ struct Net::Impl : public detail::NetImplBase
     std::ostream& dumpArg(std::ostream& strm, Arg arg, int indent,
                           bool comma, bool dump_details) const;
     std::ostream& dumpDim(std::ostream& strm, int value) const;
+    std::ostream& dumpTypeShape(std::ostream& strm, int type, const MatShape& shape) const;
+    std::ostream& dump(std::ostream& strm);
 
     // infers all types
     void inferTypes();

@@ -10,6 +10,15 @@ namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
+std::string modelFormatToString(ModelFormat modelFormat)
+{
+    return
+        modelFormat == DNN_MODEL_ONNX ? "ONNX" :
+        modelFormat == DNN_MODEL_TF ? "TF" :
+        modelFormat == DNN_MODEL_TFLITE ? "TFLite" :
+        modelFormat == DNN_MODEL_CAFFE ? "Caffe" : "Unknown/Generic";
+}
+
 std::string argKindToString(ArgKind kind)
 {
     return
@@ -32,7 +41,7 @@ public:
     GraphImpl(const Net& net, const std::string& name,
               const std::vector<Arg>& inputs)
     {
-        net_ = (Net*)&net;
+        netimpl_ = net.getImpl();
         name_ = name;
         inputs_ = inputs;
     }
@@ -69,8 +78,8 @@ public:
 
         layer->outputs.resize(noutputs);
         for (i = 0; i < noutputs; i++) {
-            Arg outarg = net_->getArg(outnames[i]);
-            ArgKind kind = net_->argKind(outarg);
+            Arg outarg = netimpl_->getArg(outnames[i]);
+            ArgKind kind = netimpl_->argKind(outarg);
             CV_Assert(kind == DNN_ARG_TEMP || kind == DNN_ARG_OUTPUT);
             layer->outputs[i] = outarg;
         }
@@ -90,12 +99,12 @@ public:
 
     virtual std::ostream& dump(std::ostream& strm, int indent, bool comma) override
     {
-        CV_Assert(net_);
+        CV_Assert(netimpl_);
         size_t ninputs = inputs_.size(), noutputs = outputs_.size();
-        int delta_indent = net_->getImpl()->dump_indent;
+        int delta_indent = netimpl_->dump_indent;
         int subindent = indent + delta_indent;
         int argindent = subindent + delta_indent;
-        strm << "graph {\n";
+        strm << "{\n";
         prindent(strm, subindent);
         strm << "name: ";
         if (name_.empty())
@@ -105,14 +114,14 @@ public:
         prindent(strm, subindent);
         strm << "inputs: [\n";
         for (size_t i = 0; i < ninputs; i++) {
-            net_->dumpArg(strm, inputs_[i], argindent, i+1 < ninputs, true);
+            netimpl_->dumpArg(strm, inputs_[i], argindent, i+1 < ninputs, true);
         }
         prindent(strm, subindent);
         strm << "],\n";
         prindent(strm, subindent);
         strm << "outputs: [\n";
         for (size_t i = 0; i < noutputs; i++) {
-            net_->dumpArg(strm, outputs_[i], argindent, i+1 < noutputs, true);
+            netimpl_->dumpArg(strm, outputs_[i], argindent, i+1 < noutputs, true);
         }
         prindent(strm, subindent);
         strm << "],\n";
@@ -120,7 +129,7 @@ public:
         strm << "nodes: [\n";
         size_t nlayers = prog_.size();
         for (size_t i = 0; i < nlayers; i++) {
-            prindent(strm, subindent);
+            prindent(strm, argindent);
             strm << "// op #" << i << "\n";
             const Ptr<Layer>& layer = prog_[i];
             layer->dump(strm, argindent, i+1 < nlayers);
@@ -135,19 +144,19 @@ public:
         return strm;
     }
 
-    virtual Net* net() const override { return net_; }
+    //virtual Net* net() const override { return net_; }
     virtual const std::vector<Arg>& inputs() const override { return inputs_; }
     virtual const std::vector<Arg>& outputs() const override { return outputs_; }
 
     virtual void setOutputs(const std::vector<Arg>& outputs) override {
-        net_->checkArgs(outputs);
+        netimpl_->checkArgs(outputs);
         outputs_ = outputs;
     }
     virtual const std::vector<Ptr<Layer> >& prog() const override { return prog_; }
     virtual void setProg(const std::vector<Ptr<Layer> >& newprog) override { prog_ = newprog; }
 
 protected:
-    Net* net_;
+    Net::Impl* netimpl_;
     std::string name_;
     std::vector<Arg> inputs_;
     std::vector<Arg> outputs_;
@@ -162,6 +171,98 @@ Ptr<Graph> Graph::create(Net& net, const std::string& name,
 
 Graph::~Graph() {}
 
+bool Net::Impl::isConstArg(Arg arg) const
+{
+    return argKind(arg) == DNN_ARG_CONST;
+}
+
+const ArgData& Net::Impl::argData(Arg arg) const
+{
+    CV_Assert((size_t)arg.idx < args.size());
+    return args[arg.idx];
+}
+
+const std::string& Net::Impl::argName(Arg arg) const
+{
+    return argData(arg).name;
+}
+
+ArgKind Net::Impl::argKind(Arg arg) const
+{
+    return argData(arg).kind;
+}
+
+Mat& Net::Impl::argTensor(Arg arg) const
+{
+    CV_Assert((size_t)arg.idx < tensors.size());
+    return const_cast<Mat&>(tensors.at(arg.idx));
+}
+
+Arg Net::Impl::getArg(const std::string& name)
+{
+    if (!name.empty()) {
+        auto it = argnames.find(name);
+        if (it != argnames.end()) {
+            return Arg((int)it->second);
+        }
+    }
+    return newArg(name, DNN_ARG_TEMP);
+}
+
+bool Net::Impl::haveArg(const std::string& name) const
+{
+    return argnames.find(name) != argnames.end();
+}
+
+Arg Net::Impl::newConstArg(const std::string& name, const Mat& m)
+{
+    Arg arg = newArg(name, DNN_ARG_CONST);
+    tensors[arg.idx] = m;
+    ArgData& adata = args[arg.idx];
+    adata.type = m.type();
+    adata.shape = m.shape();
+    return arg;
+}
+
+Arg Net::Impl::newArg(const std::string& name, ArgKind kind)
+{
+    int idx = (int)args.size();
+
+    if (!name.empty()) {
+        CV_Assert(argnames.find(name) == argnames.end());
+        argnames.insert(std::make_pair(name, idx));
+    }
+
+    ArgData adata;
+    adata.name = name;
+    adata.kind = kind;
+    args.push_back(adata);
+    tensors.push_back(Mat());
+    bufidxs.push_back(-1);
+
+    return Arg(idx);
+}
+
+
+int Net::Impl::findDim(const std::string& dimname, bool insert)
+{
+    if (!dimname.empty()) {
+        auto it = dimnames.find(dimname);
+        if (it != dimnames.end()) {
+            return it->second;
+        }
+    }
+    if (!insert) {
+        CV_Error_(Error::StsObjectNotFound, ("symbolic dimension '%s' is not found",
+                                             dimname.empty() ? "<some unique name>" : dimname.c_str()));
+    }
+    int value = -(int)dimnames_vec.size() - 1;
+    std::string inserted_dimname = dimname.empty() ? format("N!%d", -value) : dimname;
+    dimnames.insert(std::make_pair(inserted_dimname, value));
+    dimnames_vec.push_back(inserted_dimname);
+    return value;
+}
+
 void Net::Impl::prepareForInference()
 {
     if (!prepared) {
@@ -174,6 +275,7 @@ void Net::Impl::prepareForInference()
         //inferShapes(true);
         assignBuffers();
         prepared = true;
+        finalizeLayers = true;
     }
 }
 
@@ -200,6 +302,8 @@ void Net::Impl::allocateLayerOutputs(
     // MatSize and MatStep will require dynamic memory allocation (those are very small buffers though).
     // But we plan to make MatSize and MatStep lighter so that they don't use dynamic memory.
     size_t noutputs = layer->outputs.size();
+    outShapes.clear();
+    outTypes.clear();
     layer->getMemoryShapes(inpShapes, (int)noutputs, outShapes, tempShapes);
     layer->getTypes(inpTypes, (int)noutputs, (int)tempShapes.size(), outTypes, tempTypes);
     CV_Assert(tempShapes.size() == tempTypes.size());
@@ -235,10 +339,27 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     if (!mainGraph) {
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
+    // [for debugging] tracingMode = DNN_TRACE_OP;
     // [TODO] initialize profile, tracer, symbolic shapes etc.
     size_t nsymdims = dimnames_vec.size();
     dimvalues.assign(nsymdims, -1);
     forwardGraph(mainGraph, inputs, outputs, true);
+}
+
+Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
+{
+    if (!mainGraph) {
+        CV_Error(Error::StsNullPtr, "the model was not loaded");
+    }
+    const std::vector<Arg>& outargs = mainGraph->outputs();
+    CV_Assert(outargs.size() == 1);
+    if (!outname.empty()) {
+        const ArgData& outdata = args.at(outargs[0].idx);
+        CV_Assert(outdata.name == outname);
+    }
+    std::vector<Mat> inps={}, outs;
+    forwardMainGraph(inps, outs);
+    return outs[0];
 }
 
 /*void Net::Impl::checkAndUpdateDim(const Ptr<Graph>& g, const Ptr<Layer>& layer, Arg inp, int j, int value)
@@ -289,6 +410,70 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
     }
 }
 
+void Net::Impl::setMainGraphInput(InputArray m, const std::string& inpname)
+{
+    CV_Assert(mainGraph);
+    const std::vector<Arg>& gr_inputs = mainGraph->inputs();
+    size_t i, ninputs = gr_inputs.size();
+    if (inpname.empty()) {
+        CV_Assert(ninputs == 1 && "empty name can only be used to set input if there is just one input");
+        i = 0;
+    } else {
+        for (i = 0; i < ninputs; i++) {
+            const ArgData& adata = args.at(gr_inputs[i].idx);
+            CV_Assert(adata.kind == DNN_ARG_INPUT);
+            if (adata.name == inpname)
+                break;
+        }
+        if ((i == ninputs) && (!isdigit(inpname[0]) || !sscanf(inpname.c_str(), "%zu", &i))) {
+            CV_Error_(Error::StsObjectNotFound, ("input '%s' is not found", inpname.c_str()));
+        }
+    }
+    setGraphInput(mainGraph, i, m.getMat());
+}
+
+void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
+{
+    int mtype = m.type();
+    MatShape mshape = m.shape();
+    const std::vector<Arg>& gr_inputs = graph->inputs();
+    CV_Assert(idx < gr_inputs.size());
+    Arg inp = gr_inputs[idx];
+    const ArgData& adata = args.at(inp.idx);
+    /*
+     [TODO] add more detailed shape check
+     if (adata.shape.dims != mshape.dims) {
+     CV_Error_(Error::StsBadArg, ("wrong dimensionality of argument '%s': %d given, %d expected",
+     adata.name.c_str(), tsize.ndims, adata.size.ndims));
+     }
+
+     for (int k = 0; k < mshape.dims; k++) {
+        checkAndUpdateDim(graph, Node(), inp, k, tsize.size[k]);
+     }
+    */
+
+    if (adata.kind == DNN_ARG_INPUT) {
+        if (adata.type != mtype) {
+            // [TODO] add conversion BF16/FP16/FP32 <=> BF16/FP16/FP32 when the type is 'slightly' mismatched
+            CV_Error_(Error::StsBadArg, ("wrong type of argument '%s': %s given, %s expected",
+                                         adata.name.c_str(), typeToString(mtype).c_str(),
+                                         typeToString(adata.type).c_str()));
+        }
+        Mat& inp_t = tensors.at(inp.idx);
+        inp_t.fit(mshape, mtype);
+        m.copyTo(inp_t);
+    } else if (adata.kind == DNN_ARG_TEMP) {
+        int bufidx = bufidxs.at(inp.idx);
+        Mat& buf = buffers.at(bufidx);
+        buf.fit(mshape, mtype); // minimize reallocations
+        m.copyTo(buf);
+        tensors[inp.idx] = buf;
+    } else {
+        CV_Error_(Error::StsBadArg, ("graph %s: argument '%s' must be 'INPUT' or 'TEMP', not '%s'",
+                                     graph->name().data(), adata.name.c_str(), argKindToString(adata.kind).c_str()));
+    }
+}
+
 void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                              OutputArrayOfArrays outputs_, bool isMainGraph)
 {
@@ -302,47 +487,20 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     std::vector<int> inpTypes, outTypes, tempTypes;
     std::vector<MatShape> inpShapes, outShapes, tempShapes;
     double timestamp = 0;
+    bool already_set_input = false;
 
-    if (inputs_.total() != n_gr_inputs) {
-        CV_Error_(Error::StsBadArg, ("wrong number of inputs in graph '%s': %zu given, %zu expected",
-                                     graph->name().data(), inputs_.total(), n_gr_inputs));
+    if (inputs_.empty()) {
+        // inputs are already set; it's only possible to do with the main graph
+        CV_Assert(isMainGraph);
     }
-
-    for (i = 0; i < n_gr_inputs; i++) {
-        // [TODO] add conversion if needed
-        Mat m = inputs_.getMat((int)i);
-        int mtype = m.type();
-        MatShape mshape = m.shape();
-        Arg inp = gr_inputs[i];
-        const ArgData& adata = args.at(inp.idx);
-        if (adata.type != mtype) {
-            CV_Error_(Error::StsBadArg, ("wrong type of argument '%s': %s given, %s expected",
-                                         adata.name.c_str(), typeToString(mtype).c_str(),
-                                         typeToString(adata.type).c_str()));
+    else {
+        if (inputs_.total() != n_gr_inputs) {
+            CV_Error_(Error::StsBadArg, ("wrong number of inputs in graph '%s': %zu given, %zu expected",
+                                         graph->name().data(), inputs_.total(), n_gr_inputs));
         }
-
-        /*
-        [TODO] ignore extensive shape check for now
-        if (adata.shape.dims != mshape.dims) {
-            CV_Error_(Error::StsBadArg, ("wrong dimensionality of argument '%s': %d given, %d expected",
-                                         adata.name.c_str(), tsize.ndims, adata.size.ndims));
-        }
-
-        for (int k = 0; k < mshape.dims; k++) {
-            checkAndUpdateDim(graph, Node(), inp, k, tsize.size[k]);
-        }*/
-
-        if (adata.kind == DNN_ARG_INPUT) {
-            tensors.at(inp.idx) = m;
-        } else if (adata.kind == DNN_ARG_TEMP) {
-            int bufidx = bufidxs.at(inp.idx);
-            Mat& buf = buffers.at(bufidx);
-            buf.fit(mshape, mtype); // minimize reallocations
-            m.copyTo(buf);
-            tensors[inp.idx] = buf;
-        } else {
-            CV_Error_(Error::StsBadArg, ("graph %s: argument '%s' must be 'INPUT' or 'TEMP', not '%s'",
-                                         graph->name().data(), adata.name.c_str(), argKindToString(adata.kind).c_str()));
+        for (i = 0; i < n_gr_inputs; i++) {
+            Mat m = inputs_.getMat((int)i);
+            setGraphInput(graph, i, m);
         }
     }
 
@@ -397,6 +555,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         // [TODO] handle If/Loop/...
         CV_Assert(!layer->subgraphs());
+        if (finalizeLayers)
+            layer->finalize(inpMats, outMats);
         layer->forward(inpMats, outMats, tempMats);
         CV_Assert(outMats.size() == noutputs);
 
@@ -417,6 +577,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     CV_Assert(buf.data == m.data);
                 } else if (m.u->size > buf.u->size) {
                     buf = m;
+                } else {
+                    // this branch means that the layer still calls create rather than fit and needs to be fixed.
+                    // [TODO] should probably log it.
+                    buf.fit(m.shape(), m.type());
+                    m.copyTo(buf);
                 }
             }
         }
@@ -502,6 +667,25 @@ std::ostream& Net::Impl::dumpDim(std::ostream& strm, int value) const
     return strm;
 }
 
+std::ostream& Net::Impl::dumpTypeShape(std::ostream& strm, int type, const MatShape& shape) const
+{
+    if (shape.empty()) {
+        strm << "<empty>";
+    } else {
+        strm << typeToString(type);
+        if (shape.dims > 0 && shape.layout != DATA_LAYOUT_UNKNOWN) {
+            strm << " " << layoutToString(shape.layout);
+        }
+        strm << " [";
+        for (int i = 0; i < shape.dims; i++) {
+            strm << (i > 0 ? " x " : "");
+            dumpDim(strm, shape[i]);
+        }
+        strm << "]";
+    }
+    return strm;
+}
+
 std::ostream& Net::Impl::dumpArg(std::ostream& strm, Arg arg, int indent, bool comma, bool dump_details) const
 {
     checkArg(arg);
@@ -519,26 +703,35 @@ std::ostream& Net::Impl::dumpArg(std::ostream& strm, Arg arg, int indent, bool c
                      adata.kind == DNN_ARG_TEMP ? "<Temp>" :
                      "<Uknown kind>");
             if (adata.type >= 0) {
-                strm << " " << typeToString(adata.type);
-                if (adata.shape.empty()) {
-                    strm << " <empty>";
-                } else {
-                    if (adata.shape.dims > 0 && adata.shape.layout != DATA_LAYOUT_UNKNOWN) {
-                        strm << " " << layoutToString(adata.shape.layout);
-                    }
-                    strm << " [";
-                    for (int i = 0; i < adata.shape.dims; i++) {
-                        strm << (i > 0 ? " x " : "");
-                        dumpDim(strm, adata.shape[i]);
-                    }
-                    strm << "]";
-                }
+                strm << " ";
+                dumpTypeShape(strm, adata.type, adata.shape);
             }
             if (adata.kind == DNN_ARG_TEMP && ((size_t)arg.idx < bufidxs.size()))
                 strm << " (buf #" << bufidxs[arg.idx] << ")";
         }
     }
     strm << "\n";
+    return strm;
+}
+
+std::ostream& Net::Impl::dump(std::ostream& strm)
+{
+    int indent = dump_indent;
+    strm << "{\n";
+    prindent(strm, indent);
+    strm << "model_format: \"" << modelFormatToString(modelFormat) << "\",\n";
+    if (modelFormat == DNN_MODEL_ONNX) {
+        prindent(strm, indent);
+        strm << "onnx_opset: " << onnx_opset << ",\n";
+    }
+    prindent(strm, indent);
+    strm << "layout: \"" << layoutToString(originalLayout) << "\",\n";
+    if (mainGraph) {
+        prindent(strm, indent);
+        strm << "main_graph: ";
+        mainGraph->dump(strm, indent, false);
+    }
+    strm << "}\n";
     return strm;
 }
 

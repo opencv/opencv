@@ -10,13 +10,17 @@ namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 
-Layer::Layer() { preferableTarget = DNN_TARGET_CPU; }
+Layer::Layer() {
+    netimpl = nullptr;
+    preferableTarget = DNN_TARGET_CPU;
+}
 
 Layer::Layer(const LayerParams& params)
     : blobs(params.blobs)
     , name(params.name)
     , type(params.type)
 {
+    netimpl = nullptr;
     preferableTarget = DNN_TARGET_CPU;
 }
 
@@ -307,11 +311,14 @@ std::ostream& Layer::dumpAttrs(std::ostream& strm, int) const
 
 std::ostream& Layer::dump(std::ostream& strm, int indent, bool comma) const
 {
-    CV_Assert(net);
-    size_t ninputs = inputs.size(), noutputs = outputs.size();
+    CV_Assert(netimpl);
+    size_t ninputs = inputs.size();
+    size_t noutputs = outputs.size();
+    size_t nblobs = blobs.size();
     const std::vector<Ptr<Graph> >* subgraphs_ = subgraphs();
     size_t nsubgraphs = subgraphs_ ? subgraphs_->size() : 0;
-    int delta_indent = net->getImpl()->dump_indent;
+    Net::Impl* netimpl = reinterpret_cast<Net::Impl*>(this->netimpl);
+    int delta_indent = netimpl->dump_indent;
     int subindent = indent + delta_indent;
     int argindent = subindent + delta_indent;
     prindent(strm, indent);
@@ -319,18 +326,33 @@ std::ostream& Layer::dump(std::ostream& strm, int indent, bool comma) const
     strm << opname << " {\n";
     prindent(strm, subindent);
     strm << "name: \"" << name << "\",\n";
+
+    if (!blobs.empty()) {
+        prindent(strm, subindent);
+        strm << "blobs: [\n";
+        for (size_t i = 0; i < nblobs; i++) {
+            if (i > 0)
+                strm << ",\n";
+            const Mat& blob = blobs[i];
+            prindent(strm, argindent);
+            netimpl->dumpTypeShape(strm, blob.type(), blob.shape());
+        }
+        strm << "\n";
+        prindent(strm, subindent);
+        strm << "],\n";
+    }
     dumpAttrs(strm, subindent);
     prindent(strm, subindent);
     strm << "inputs: [\n";
     for (size_t i = 0; i < ninputs; i++) {
-        net->dumpArg(strm, inputs[i], argindent, i+1 < ninputs, true);
+        netimpl->dumpArg(strm, inputs[i], argindent, i+1 < ninputs, true);
     }
     prindent(strm, subindent);
     strm << "],\n";
     prindent(strm, subindent);
     strm << "outputs: [\n";
     for (size_t i = 0; i < noutputs; i++) {
-        net->dumpArg(strm, outputs[i], argindent, i+1 < noutputs, true);
+        netimpl->dumpArg(strm, outputs[i], argindent, i+1 < noutputs, true);
     }
     prindent(strm, subindent);
     strm << "],\n";
