@@ -75,7 +75,6 @@ public:
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        std::cout << "GatherNDLayerImpl::forward" << std::endl;
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
@@ -127,25 +126,6 @@ public:
         const dT* data_ptr = data.ptr<dT>();
         dT* out_ptr = out.ptr<dT>();
 
-
-        std::cout << "input data shape: " << data.size << std::endl;
-        std::cout << "input type: " << data.type() << std::endl;
-        std::cout << "input data: " << std::endl;
-        for (size_t i = 0; i < data.total(); ++i)
-        {
-            std::cout << data_ptr[i] << " ";
-        }
-        std::cout << std::endl;
-
-        std::cout << "input indices shape: " << indices.size << std::endl;
-        std::cout << "input indices type: " << indices.type() << std::endl;
-        std::cout << "input indices: " << std::endl;
-        for (size_t i = 0; i < indices.total(); ++i)
-        {
-            std::cout << indices_ptr[i] << " ";
-        }
-        std::cout << std::endl;
-
         int r = data.dims;
         int q = indices.dims;
         int last_indices_dim = indices.size[q - 1];
@@ -177,13 +157,10 @@ public:
                 offset += data_strides[batch_dims - 1] * i;
 
             // copy data from data to out
-            std::cout << "output data: " << std::endl;
             for (size_t j = 0; j < inner_size; ++j)
             {
                 out_ptr[i * inner_size + j] = data_ptr[offset + j];
-                std::cout << data_ptr[offset + j] << " ";
             }
-            std::cout << std::endl;
         }
     }
 
