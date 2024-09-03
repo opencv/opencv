@@ -10,7 +10,6 @@ public:
     {
         setParamsFrom(params);
         batch_dims = params.get<int>("batch_dims", 0);
-        std::cout << "batch_dims: " << batch_dims << std::endl;
     }
 
     void getTypes(const std::vector<MatType>& inputs,
@@ -70,14 +69,13 @@ public:
         for (int i = batch_dims + last_indices_dim; i < r; ++i)
             output_shape.push_back(data[i]);
 
-
-        std::cout << "output_shape: " << output_shape << std::endl;
         outputs.assign(1, output_shape);
         return false;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
+        std::cout << "GatherNDLayerImpl::forward" << std::endl;
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
@@ -90,29 +88,67 @@ public:
         Mat& out = outputs[0];
 
         int dtype = data.depth();
-        switch (dtype)
-        {
-            case CV_8U: forward_impl<uchar>(data, indices, out); break;
-            case CV_32S: forward_impl<int32_t>(data, indices, out); break;
-            case CV_32F: forward_impl<float>(data, indices, out); break;
-            case CV_64F: forward_impl<double>(data, indices, out); break;
-            default:
-                CV_Error(Error::StsNotImplemented, "Unsupported data type");
+        int itype = indices.depth();
+
+        switch (itype) {
+            case CV_32S:
+            {
+                switch (dtype) {
+                    case CV_8U: forward_impl<int32_t, uchar>(data, indices, out); break;
+                    case CV_8S: forward_impl<int32_t, schar>(data, indices, out); break;
+                    case CV_32S: forward_impl<int32_t, int32_t>(data, indices, out); break;
+                    case CV_16F: forward_impl<int32_t, float16_t>(data, indices, out); break;
+                    case CV_32F: forward_impl<int32_t, float>(data, indices, out); break;
+                    case CV_64F: forward_impl<int32_t, double>(data, indices, out); break;
+                    default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
+                }
+            }
+            case CV_64S:
+            {
+                switch (dtype) {
+                    case CV_8U: forward_impl<int64_t, uchar>(data, indices, out); break;
+                    case CV_8S: forward_impl<int64_t, schar>(data, indices, out); break;
+                    case CV_32S: forward_impl<int64_t, int32_t>(data, indices, out); break;
+                    case CV_16F: forward_impl<int64_t, float16_t>(data, indices, out); break;
+                    case CV_32F: forward_impl<int64_t, float>(data, indices, out); break;
+                    case CV_64F: forward_impl<int64_t, double>(data, indices, out); break;
+                    default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
+                }
+            }
         }
+
     }
 
-    template <typename T>
+    template <typename iT, typename dT>
     void forward_impl(const Mat& data, const Mat& indices, Mat& out)
     {
-        const int* indices_ptr = indices.ptr<int>();
-        const T* data_ptr = data.ptr<T>();
-        T* out_ptr = out.ptr<T>();
+        CV_Assert(out.isContinuous());
+        const iT* indices_ptr = indices.ptr<iT>();
+        const dT* data_ptr = data.ptr<dT>();
+        dT* out_ptr = out.ptr<dT>();
+
+
+        std::cout << "input data shape: " << data.size << std::endl;
+        std::cout << "input type: " << data.type() << std::endl;
+        std::cout << "input data: " << std::endl;
+        for (size_t i = 0; i < data.total(); ++i)
+        {
+            std::cout << data_ptr[i] << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << "input indices shape: " << indices.size << std::endl;
+        std::cout << "input indices type: " << indices.type() << std::endl;
+        std::cout << "input indices: " << std::endl;
+        for (size_t i = 0; i < indices.total(); ++i)
+        {
+            std::cout << indices_ptr[i] << " ";
+        }
+        std::cout << std::endl;
 
         int r = data.dims;
         int q = indices.dims;
         int last_indices_dim = indices.size[q - 1];
-        std::cout << "last_indices_dim: " << last_indices_dim << std::endl;
-
 
         std::vector<int> data_strides(r);
         data_strides[r - 1] = 1;
@@ -124,44 +160,30 @@ public:
         for (int i = q - 2; i >= 0; --i)
             indices_strides[i] = indices_strides[i + 1] * indices.size[i + 1];
 
-        // std::vector<int> batch_dims_strides(last_indices_dim);
-        // for (int i = 0; i < outer_size; ++i)
-        //     batch_dims_strides[i] =
-
-        std::cout << "data_strides: " << data_strides << std::endl;
-        std::cout << "indices_strides: " << indices_strides << std::endl;
-
         const int outer_size = indices.total() / last_indices_dim;
         const int inner_size = out.total() / outer_size;
 
-        std::cout << "outer_size: " << outer_size << std::endl;
-        std::cout << "inner_size: " << inner_size << std::endl;
-
-        for (int i = 0; i < outer_size; ++i)
+        for (size_t i = 0; i < outer_size; ++i)
         {
             std::vector<int> sliced_indices(indices_ptr + i * last_indices_dim, indices_ptr + (i + 1) * last_indices_dim);
-            std::cout << "sliced_indices: " << sliced_indices << std::endl;
 
             size_t offset = 0;
-            for (int j = 0; j < last_indices_dim; ++j)
+            for (size_t j = 0; j < last_indices_dim; ++j)
             {
                 offset += sliced_indices[j] * data_strides[batch_dims + j];
-                std::cout << "sliced_indices[j]: " << sliced_indices[j] << std::endl;
-                std::cout << "data_strides[batch_dims + j]: " << data_strides[batch_dims + j] << std::endl;
-                std::cout << "offset: " << offset << std::endl;
             }
-            std::cout << "offset after last_indices_dim: " << offset << std::endl;
 
             if (batch_dims > 0)
                 offset += data_strides[batch_dims - 1] * i;
-            std::cout << "offset after strides: " << offset << std::endl;
-
 
             // copy data from data to out
-            for (int j = 0; j < inner_size; ++j)
+            std::cout << "output data: " << std::endl;
+            for (size_t j = 0; j < inner_size; ++j)
             {
                 out_ptr[i * inner_size + j] = data_ptr[offset + j];
+                std::cout << data_ptr[offset + j] << " ";
             }
+            std::cout << std::endl;
         }
     }
 
