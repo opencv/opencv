@@ -5,7 +5,7 @@
 #include "zbuild.h"
 #include <stdlib.h>
 
-#if CHUNK_SIZE == 32 && defined(X86_SSSE3) && defined(X86_SSE2)
+#if CHUNK_SIZE == 32 && defined(X86_SSSE3)
 extern uint8_t* chunkmemset_ssse3(uint8_t *out, unsigned dist, unsigned len);
 #endif
 
@@ -25,7 +25,7 @@ Z_INTERNAL uint32_t CHUNKSIZE(void) {
    without iteration, which will hopefully make the branch prediction more
    reliable. */
 #ifndef HAVE_CHUNKCOPY
-Z_INTERNAL uint8_t* CHUNKCOPY(uint8_t *out, uint8_t const *from, unsigned len) {
+static inline uint8_t* CHUNKCOPY(uint8_t *out, uint8_t const *from, unsigned len) {
     Assert(len > 0, "chunkcopy should never have a length 0");
     chunk_t chunk;
     int32_t align = ((len - 1) % sizeof(chunk_t)) + 1;
@@ -54,7 +54,7 @@ Z_INTERNAL uint8_t* CHUNKCOPY(uint8_t *out, uint8_t const *from, unsigned len) {
    least 258 bytes of output space available (258 being the maximum length
    output from a single token; see inflate_fast()'s assumptions below). */
 #ifndef HAVE_CHUNKUNROLL
-Z_INTERNAL uint8_t* CHUNKUNROLL(uint8_t *out, unsigned *dist, unsigned *len) {
+static inline uint8_t* CHUNKUNROLL(uint8_t *out, unsigned *dist, unsigned *len) {
     unsigned char const *from = out - *dist;
     chunk_t chunk;
     while (*dist < *len && *dist < sizeof(chunk_t)) {
@@ -98,7 +98,7 @@ Z_INTERNAL uint8_t* CHUNKMEMSET(uint8_t *out, unsigned dist, unsigned len) {
        Assert(len >= sizeof(uint64_t), "chunkmemset should be called on larger chunks"); */
     Assert(dist > 0, "chunkmemset cannot have a distance 0");
     /* Only AVX2 */
-#if CHUNK_SIZE == 32 && defined(X86_SSSE3) && defined(X86_SSE2)
+#if CHUNK_SIZE == 32 && defined(X86_SSSE3)
     if (len <= 16) {
         return chunkmemset_ssse3(out, dist, len);
     }

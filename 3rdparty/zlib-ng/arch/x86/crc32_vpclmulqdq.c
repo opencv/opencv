@@ -3,7 +3,7 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-#if defined(X86_PCLMULQDQ_CRC) && defined(X86_VPCLMULQDQ_CRC)
+#ifdef X86_VPCLMULQDQ_CRC
 
 #define X86_VPCLMULQDQ
 #define CRC32_FOLD_COPY  crc32_fold_vpclmulqdq_copy

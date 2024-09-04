@@ -9,23 +9,14 @@
 
 #ifdef X86_AVX2
 
-#include "../../zbuild.h"
+#include "zbuild.h"
 #include <immintrin.h>
-#include "../../adler32_fold.h"
-#include "../../adler32_p.h"
+#include "adler32_p.h"
 #include "adler32_avx2_p.h"
 #include "x86_intrins.h"
 
-#ifdef X86_SSE42
 extern uint32_t adler32_fold_copy_sse42(uint32_t adler, uint8_t *dst, const uint8_t *src, size_t len);
 extern uint32_t adler32_ssse3(uint32_t adler, const uint8_t *src, size_t len);
-
-#define copy_sub32(a, b, c, d) adler32_fold_copy_sse42(a, b, c, d)
-#define sub32(a, b, c) adler32_ssse3(a, b, c)
-#else
-#define copy_sub32(a, b, c, d) adler32_copy_len_16(adler0, c, b, d, adler1)
-#define sub32(a, b, c) adler32_len_16(adler0, b, c, adler1)
-#endif
 
 static inline uint32_t adler32_fold_copy_impl(uint32_t adler, uint8_t *dst, const uint8_t *src, size_t len, const int COPY) {
     if (src == NULL) return 1L;
@@ -44,9 +35,9 @@ rem_peel:
         }
     } else if (len < 32) {
         if (COPY) {
-            return copy_sub32(adler, dst, src, len);
+            return adler32_fold_copy_sse42(adler, dst, src, len);
         } else {
-            return sub32(adler, src, len);
+            return adler32_ssse3(adler, src, len);
         }
     }
 

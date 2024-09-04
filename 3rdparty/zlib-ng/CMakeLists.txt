@@ -70,6 +70,12 @@ add_definitions(-DWITH_GZFILEOP)
 
 if(CMAKE_C_COMPILER_ID MATCHES "^Intel")
   set(WARNFLAGS_DISABLE)
+  check_c_compiler_flag(-diag-disable=10441 HAVE_DIAG_10441)
+    if(HAVE_DIAG_10441)
+        list(APPEND WARNFLAGS_DISABLE "-diag-disable=10441")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -diag-disable=10441")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -diag-disable=10441")
+    endif()
 elseif(MSVC)
   # Minimum supported MSVC version is 1800 = Visual Studio 12.0/2013
   # See also https://cmake.org/cmake/help/latest/variable/MSVC_VERSION.html
@@ -172,6 +178,14 @@ endif()
 check_include_file(unistd.h    HAVE_UNISTD_H)
 
 #
+# Check for Linux includes
+#
+check_include_file(linux/auxvec.h HAVE_LINUX_AUXVEC_H)
+if(HAVE_LINUX_AUXVEC_H)
+    add_definitions(-DHAVE_LINUX_AUXVEC_H)
+endif()
+
+#
 # Check to see if we have large file support
 #
 set(CMAKE_REQUIRED_DEFINITIONS -D_LARGEFILE64_SOURCE=1 -D__USE_LARGEFILE64)
@@ -258,6 +272,22 @@ if(HAVE_ATTRIBUTE_ALIGNED)
 endif()
 
 #
+# Check for __builtin_assume_aligned(x,n) support in the compiler
+#
+check_c_source_compiles(
+    "char *test(char *buffer) {
+        char *abuffer = __builtin_assume_aligned(buffer,64);
+        return abuffer;
+    }
+    int main() {
+        return 0;
+    }"
+    HAVE_BUILTIN_ASSUME_ALIGNED)
+if(HAVE_BUILTIN_ASSUME_ALIGNED)
+    add_definitions(-DHAVE_BUILTIN_ASSUME_ALIGNED)
+endif()
+
+#
 # check for __builtin_ctz() support in the compiler
 #
 check_c_source_compiles(
@@ -321,9 +351,11 @@ if(MSVC)
   add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
 endif()
 
+set(GENERIC_ARCHDIR "arch/generic")
+
 set(ZLIB_ARCH_SRCS)
-set(ZLIB_ARCH_HDRS)
-set(ARCHDIR "arch/generic")
+set(ZLIB_ARCH_HDRS ${GENERIC_ARCHDIR}/generic_functions.h)
+set(ARCHDIR ${GENERIC_ARCHDIR})
 if(BASEARCH_X86_FOUND)
   set(ARCHDIR "arch/x86")
 endif()
@@ -404,13 +436,14 @@ if(NOT CV_DISABLE_OPTIMIZATION)
         endif()
       endif()
     endif()
+    list(APPEND ZLIB_ARCH_HDRS ${ARCHDIR}/arm_functions.h)
     list(APPEND ZLIB_ARCH_HDRS ${ARCHDIR}/arm_features.h)
     list(APPEND ZLIB_ARCH_SRCS ${ARCHDIR}/arm_features.c)
     if(WITH_ACLE)
       check_acle_compiler_flag()
       if(HAVE_ACLE_FLAG)
         add_definitions(-DARM_ACLE)
-        set(ACLE_SRCS ${ARCHDIR}/crc32_acle.c ${ARCHDIR}/insert_string_acle.c)
+        set(ACLE_SRCS ${ARCHDIR}/crc32_acle.c)
         set_property(SOURCE ${ACLE_SRCS} PROPERTY COMPILE_FLAGS "${ACLEFLAG} ${NOLTOFLAG}")
         list(APPEND ZLIB_ARCH_SRCS ${ACLE_SRCS})
       else()
@@ -466,8 +499,14 @@ if(NOT CV_DISABLE_OPTIMIZATION)
     if(WITH_POWER9)
       check_power9_intrinsics()
     endif()
-    if(HAVE_VMX OR HAVE_POWER8_INTRIN OR HAVE_POWER9_INTRIN)
+    if(POWER8_NEED_AUXVEC_H OR POWER9_NEED_AUXVEC_H)
+      add_definitions(-DPOWER_NEED_AUXVEC_H)
+    endif()
+    if(HAVE_POWER8_INTRIN OR HAVE_POWER9_INTRIN)
       add_definitions(-DPOWER_FEATURES)
+      endif()
+    if(HAVE_VMX OR HAVE_POWER8_INTRIN OR HAVE_POWER9_INTRIN)
+      list(APPEND ZLIB_ARCH_HDRS ${ARCHDIR}/power_functions.h)
       list(APPEND ZLIB_ARCH_HDRS ${ARCHDIR}/power_features.h)
       list(APPEND ZLIB_ARCH_SRCS ${ARCHDIR}/power_features.c)
     endif()
@@ -518,11 +557,13 @@ if(NOT CV_DISABLE_OPTIMIZATION)
       if(HAVE_RVV_INTRIN)
         add_definitions(-DRISCV_FEATURES)
         add_definitions(-DRISCV_RVV)
+        list(APPEND ZLIB_ARCH_HDRS ${ARCHDIR}/riscv_functions.h)
         list(APPEND ZLIB_ARCH_HDRS ${ARCHDIR}/riscv_features.h)
         list(APPEND ZLIB_ARCH_SRCS ${ARCHDIR}/riscv_features.c)
         # FIXME: we will not set compile flags for riscv_features.c when
         # the kernels update hwcap or hwprobe for riscv
-        set(RVV_SRCS ${ARCHDIR}/riscv_features.c ${ARCHDIR}/adler32_rvv.c ${ARCHDIR}/chunkset_rvv.c ${ARCHDIR}/compare256_rvv.c ${ARCHDIR}/slide_hash_rvv.c)
+        set(RVV_SRCS ${ARCHDIR}/adler32_rvv.c ${ARCHDIR}/chunkset_rvv.c ${ARCHDIR}/compare256_rvv.c ${ARCHDIR}/slide_hash_rvv.c)
+        list(APPEND RVV_SRCS ${ARCHDIR}/riscv_features.c)
         list(APPEND ZLIB_ARCH_SRCS ${RVV_SRCS})
         set_property(SOURCE ${RVV_SRCS} PROPERTY COMPILE_FLAGS "${RISCVFLAG} ${NOLTOFLAG}")
       else()
@@ -532,14 +573,68 @@ if(NOT CV_DISABLE_OPTIMIZATION)
   endif()
   if(BASEARCH_X86_FOUND)
     add_definitions(-DX86_FEATURES)
+    list(APPEND ZLIB_ARCH_HDRS ${ARCHDIR}/x86_functions.h)
     list(APPEND ZLIB_ARCH_HDRS ${ARCHDIR}/x86_features.h)
     list(APPEND ZLIB_ARCH_SRCS ${ARCHDIR}/x86_features.c)
     if(MSVC)
       list(APPEND ZLIB_ARCH_HDRS fallback_builtins.h)
     endif()
+    check_xsave_intrinsics()
+    if(HAVE_XSAVE_INTRIN)
+      set_property(SOURCE ${ARCHDIR}/x86_features.c PROPERTY COMPILE_FLAGS "${XSAVEFLAG}")
+      if(NOT (CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_LESS 8.2))
+        add_definitions(-DX86_HAVE_XSAVE_INTRIN)
+      endif()
+    endif()
+    if(WITH_SSE2)
+      check_sse2_intrinsics()
+      if(HAVE_SSE2_INTRIN)
+        add_definitions(-DX86_SSE2)
+        set(SSE2_SRCS ${ARCHDIR}/chunkset_sse2.c ${ARCHDIR}/compare256_sse2.c ${ARCHDIR}/slide_hash_sse2.c)
+        list(APPEND ZLIB_ARCH_SRCS ${SSE2_SRCS})
+        if(NOT ${ARCH} MATCHES "x86_64")
+          set_property(SOURCE ${SSE2_SRCS} PROPERTY COMPILE_FLAGS "${SSE2FLAG} ${NOLTOFLAG}")
+        endif()
+      else()
+        set(WITH_SSE2 OFF)
+      endif()
+    endif()
+    if(WITH_SSSE3)
+      check_ssse3_intrinsics()
+      if(HAVE_SSSE3_INTRIN AND WITH_SSE2)
+        add_definitions(-DX86_SSSE3)
+        set(SSSE3_SRCS ${ARCHDIR}/adler32_ssse3.c ${ARCHDIR}/chunkset_ssse3.c)
+        list(APPEND ZLIB_ARCH_SRCS ${SSSE3_SRCS})
+        set_property(SOURCE ${SSSE3_SRCS} PROPERTY COMPILE_FLAGS "${SSSE3FLAG} ${NOLTOFLAG}")
+      else()
+        set(WITH_SSSE3 OFF)
+      endif()
+    endif()
+    if(WITH_SSE42)
+      check_sse42_intrinsics()
+      if(HAVE_SSE42_INTRIN AND WITH_SSSE3)
+        add_definitions(-DX86_SSE42)
+        set(SSE42_SRCS ${ARCHDIR}/adler32_sse42.c)
+        list(APPEND ZLIB_ARCH_SRCS ${SSE42_SRCS})
+        set_property(SOURCE ${SSE42_SRCS} PROPERTY COMPILE_FLAGS "${SSE42FLAG} ${NOLTOFLAG}")
+      else()
+        set(WITH_SSE42 OFF)
+      endif()
+    endif()
+    if(WITH_PCLMULQDQ)
+      check_pclmulqdq_intrinsics()
+      if(HAVE_PCLMULQDQ_INTRIN AND WITH_SSE42)
+        add_definitions(-DX86_PCLMULQDQ_CRC)
+        set(PCLMULQDQ_SRCS ${ARCHDIR}/crc32_pclmulqdq.c)
+        list(APPEND ZLIB_ARCH_SRCS ${PCLMULQDQ_SRCS})
+        set_property(SOURCE ${PCLMULQDQ_SRCS} PROPERTY COMPILE_FLAGS "${SSE42FLAG} ${PCLMULFLAG} ${NOLTOFLAG}")
+      else()
+        set(WITH_PCLMULQDQ OFF)
+      endif()
+    endif()
     if(WITH_AVX2)
       check_avx2_intrinsics()
-      if(HAVE_AVX2_INTRIN)
+      if(HAVE_AVX2_INTRIN AND WITH_SSE42)
         add_definitions(-DX86_AVX2)
         set(AVX2_SRCS ${ARCHDIR}/slide_hash_avx2.c)
         list(APPEND AVX2_SRCS ${ARCHDIR}/chunkset_avx2.c)
@@ -553,14 +648,11 @@ if(NOT CV_DISABLE_OPTIMIZATION)
     endif()
     if(WITH_AVX512)
       check_avx512_intrinsics()
-      if(HAVE_AVX512_INTRIN)
+      if(HAVE_AVX512_INTRIN AND WITH_AVX2)
         add_definitions(-DX86_AVX512)
         list(APPEND AVX512_SRCS ${ARCHDIR}/adler32_avx512.c)
         list(APPEND ZLIB_ARCH_SRCS ${AVX512_SRCS})
         list(APPEND ZLIB_ARCH_HDRS ${ARCHDIR}/adler32_avx512_p.h)
-        if(HAVE_MASK_INTRIN)
-          add_definitions(-DX86_MASK_INTRIN)
-        endif()
         set_property(SOURCE ${AVX512_SRCS} PROPERTY COMPILE_FLAGS "${AVX512FLAG} ${NOLTOFLAG}")
       else()
         set(WITH_AVX512 OFF)
@@ -568,7 +660,7 @@ if(NOT CV_DISABLE_OPTIMIZATION)
     endif()
     if(WITH_AVX512VNNI)
       check_avx512vnni_intrinsics()
-      if(HAVE_AVX512VNNI_INTRIN)
+      if(HAVE_AVX512VNNI_INTRIN AND WITH_AVX2)
         add_definitions(-DX86_AVX512VNNI)
         list(APPEND AVX512VNNI_SRCS ${ARCHDIR}/adler32_avx512_vnni.c)
         list(APPEND ZLIB_ARCH_SRCS ${AVX512VNNI_SRCS})
@@ -577,74 +669,16 @@ if(NOT CV_DISABLE_OPTIMIZATION)
         set(WITH_AVX512VNNI OFF)
       endif()
     endif()
-    if(WITH_SSE42)
-      check_sse42_intrinsics()
-      if(HAVE_SSE42_INTRIN)
-        add_definitions(-DX86_SSE42)
-        set(SSE42_SRCS ${ARCHDIR}/adler32_sse42.c ${ARCHDIR}/insert_string_sse42.c)
-        list(APPEND ZLIB_ARCH_SRCS ${SSE42_SRCS})
-        set_property(SOURCE ${SSE42_SRCS} PROPERTY COMPILE_FLAGS "${SSE42FLAG} ${NOLTOFLAG}")
+    if(WITH_VPCLMULQDQ)
+      check_vpclmulqdq_intrinsics()
+      if(HAVE_VPCLMULQDQ_INTRIN AND WITH_PCLMULQDQ AND WITH_AVX512)
+        add_definitions(-DX86_VPCLMULQDQ_CRC)
+        set(VPCLMULQDQ_SRCS ${ARCHDIR}/crc32_vpclmulqdq.c)
+        list(APPEND ZLIB_ARCH_SRCS ${VPCLMULQDQ_SRCS})
+        set_property(SOURCE ${VPCLMULQDQ_SRCS} PROPERTY COMPILE_FLAGS "${PCLMULFLAG} ${VPCLMULFLAG} ${AVX512FLAG} ${NOLTOFLAG}")
       else()
-        set(WITH_SSE42 OFF)
-      endif()
-    endif()
-    if(WITH_SSE2)
-      check_sse2_intrinsics()
-      if(HAVE_SSE2_INTRIN)
-        add_definitions(-DX86_SSE2)
-        set(SSE2_SRCS ${ARCHDIR}/chunkset_sse2.c ${ARCHDIR}/compare256_sse2.c ${ARCHDIR}/slide_hash_sse2.c)
-        list(APPEND ZLIB_ARCH_SRCS ${SSE2_SRCS})
-        if(NOT ${ARCH} MATCHES "x86_64")
-          set_property(SOURCE ${SSE2_SRCS} PROPERTY COMPILE_FLAGS "${SSE2FLAG} ${NOLTOFLAG}")
-          add_definitions(-DX86_NOCHECK_SSE2)
-        endif()
-      else()
-        set(WITH_SSE2 OFF)
-      endif()
-    endif()
-    if(WITH_SSSE3)
-      check_ssse3_intrinsics()
-      if(HAVE_SSSE3_INTRIN)
-        add_definitions(-DX86_SSSE3)
-        set(SSSE3_SRCS ${ARCHDIR}/adler32_ssse3.c ${ARCHDIR}/chunkset_ssse3.c)
-        list(APPEND ZLIB_ARCH_SRCS ${SSSE3_SRCS})
-        set_property(SOURCE ${SSSE3_SRCS} PROPERTY COMPILE_FLAGS "${SSSE3FLAG} ${NOLTOFLAG}")
-      else()
-        set(WITH_SSSE3 OFF)
-      endif()
-    endif()
-    if(WITH_PCLMULQDQ AND WITH_SSSE3 AND WITH_SSE42)
-      check_pclmulqdq_intrinsics()
-      if(HAVE_PCLMULQDQ_INTRIN AND HAVE_SSSE3_INTRIN)
-        add_definitions(-DX86_PCLMULQDQ_CRC)
-        set(PCLMULQDQ_SRCS ${ARCHDIR}/crc32_pclmulqdq.c)
-        list(APPEND ZLIB_ARCH_SRCS ${PCLMULQDQ_SRCS})
-        set_property(SOURCE ${PCLMULQDQ_SRCS} PROPERTY COMPILE_FLAGS "${SSSE3FLAG} ${SSE42FLAG} ${PCLMULFLAG} ${NOLTOFLAG}")
-
-        if(WITH_VPCLMULQDQ AND WITH_AVX512)
-          check_vpclmulqdq_intrinsics()
-          if(HAVE_VPCLMULQDQ_INTRIN AND HAVE_AVX512_INTRIN)
-            add_definitions(-DX86_VPCLMULQDQ_CRC)
-            set(VPCLMULQDQ_SRCS ${ARCHDIR}/crc32_vpclmulqdq.c)
-            list(APPEND ZLIB_ARCH_SRCS ${VPCLMULQDQ_SRCS})
-            set_property(SOURCE ${VPCLMULQDQ_SRCS} PROPERTY COMPILE_FLAGS "${SSSE3FLAG} ${SSE42FLAG} ${PCLMULFLAG} ${VPCLMULFLAG} ${AVX512FLAG} ${NOLTOFLAG}")
-          else()
-            set(WITH_VPCLMULQDQ OFF)
-          endif()
-        else()
-          set(WITH_VPCLMULQDQ OFF)
-        endif()
-      else()
-        set(WITH_PCLMULQDQ OFF)
         set(WITH_VPCLMULQDQ OFF)
       endif()
-    else()
-      set(WITH_PCLMULQDQ OFF)
-      set(WITH_VPCLMULQDQ OFF)
-    endif()
-    check_xsave_intrinsics()
-    if(HAVE_XSAVE_INTRIN)
-      set_property(SOURCE ${ARCHDIR}/x86_features.c PROPERTY COMPILE_FLAGS "${XSAVEFLAG}")
     endif()
   endif()
 endif()
@@ -678,60 +712,63 @@ set(ZLIB_PUBLIC_HDRS
     ${CMAKE_CURRENT_BINARY_DIR}/zlib.h
 )
 set(ZLIB_PRIVATE_HDRS
-    adler32_p.h
-    chunkset_tpl.h
-    compare256_rle.h
-    cpu_features.h
-    crc32_braid_p.h
-    crc32_braid_comb_p.h
-    crc32_braid_tbl.h
-    crc32_fold.h
-    deflate.h
-    deflate_p.h
-    functable.h
-    inffast_tpl.h
-    inffixed_tbl.h
-    inflate.h
-    inflate_p.h
-    inftrees.h
-    insert_string_tpl.h
-    match_tpl.h
-    trees.h
-    trees_emit.h
-    trees_tbl.h
-    zbuild.h
-    zendian.h
-    zutil.h
+  adler32_p.h
+  chunkset_tpl.h
+  compare256_rle.h
+  arch_functions.h
+  crc32_braid_p.h
+  crc32_braid_comb_p.h
+  crc32_braid_tbl.h
+  deflate.h
+  deflate_p.h
+  functable.h
+  inffast_tpl.h
+  inffixed_tbl.h
+  inflate.h
+  inflate_p.h
+  inftrees.h
+  insert_string_tpl.h
+  match_tpl.h
+  trees.h
+  trees_emit.h
+  trees_tbl.h
+  zbuild.h
+  zendian.h
+  zutil.h
 )
 set(ZLIB_SRCS
-    adler32.c
-    adler32_fold.c
-    chunkset.c
-    compare256.c
-    compress.c
-    cpu_features.c
-    crc32_braid.c
-    crc32_braid_comb.c
-    crc32_fold.c
-    deflate.c
-    deflate_fast.c
-    deflate_huff.c
-    deflate_medium.c
-    deflate_quick.c
-    deflate_rle.c
-    deflate_slow.c
-    deflate_stored.c
-    functable.c
-    infback.c
-    inflate.c
-    inftrees.c
-    insert_string.c
-    insert_string_roll.c
-    slide_hash.c
-    trees.c
-    uncompr.c
-    zutil.c
+  arch/generic/adler32_c.c
+  arch/generic/adler32_fold_c.c
+  arch/generic/chunkset_c.c
+  arch/generic/compare256_c.c
+  arch/generic/crc32_braid_c.c
+  arch/generic/crc32_fold_c.c
+  arch/generic/slide_hash_c.c
+  adler32.c
+  compress.c
+  crc32.c
+  crc32_braid_comb.c
+  deflate.c
+  deflate_fast.c
+  deflate_huff.c
+  deflate_medium.c
+  deflate_quick.c
+  deflate_rle.c
+  deflate_slow.c
+  deflate_stored.c
+  functable.c
+  infback.c
+  inflate.c
+  inftrees.c
+  insert_string.c
+  insert_string_roll.c
+  trees.c
+  uncompr.c
+  zutil.c
 )
+
+list(APPEND ZLIB_PRIVATE_HDRS cpu_features.h)
+list(APPEND ZLIB_SRCS cpu_features.c)
 
 set(ZLIB_GZFILE_PRIVATE_HDRS
     gzguts.h
@@ -748,7 +785,7 @@ list(APPEND ZLIB_ALL_SRCS ${ZLIB_GZFILE_PRIVATE_HDRS} ${ZLIB_GZFILE_SRCS})
 add_library(zlib STATIC ${ZLIB_ALL_SRCS})
 
 target_include_directories(zlib PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR};${CMAKE_CURRENT_SOURCE_DIR}>"
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}$<SEMICOLON>${CMAKE_CURRENT_SOURCE_DIR}>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 
 if(HAVE_UNISTD_H)
@@ -775,6 +812,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/zlib_name_mangling.h.empty
 ocv_warnings_disable(CMAKE_C_FLAGS -Wmissing-prototypes
   -Wundef
   -Wmissing-declarations
+  /wd4244
+  /wd4334
+  /wd4819
 )
 
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES

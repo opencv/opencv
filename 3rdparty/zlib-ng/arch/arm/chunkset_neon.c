@@ -4,8 +4,8 @@
 
 #ifdef ARM_NEON
 #include "neon_intrins.h"
-#include "../../zbuild.h"
-#include "../generic/chunk_permute_table.h"
+#include "zbuild.h"
+#include "arch/generic/chunk_permute_table.h"
 
 typedef uint8x16_t chunk_t;
 
