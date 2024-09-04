@@ -18,12 +18,6 @@ public:
         axis = params.get<int>("axis", -1);
     }
 
-
-    virtual bool supportBackend(int backendId) CV_OVERRIDE
-    {
-        return backendId == DNN_BACKEND_OPENCV;
-    }
-
     void getTypes(const std::vector<MatType>& inputs,
         const int requiredOutputs,
         const int requiredInternals,
