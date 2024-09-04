@@ -730,6 +730,8 @@ CV_IMPL int cvInitSystem( int argc, char** argv )
 #if (GTK_MAJOR_VERSION <= 3)
         auto gtk_success = gtk_init_check(&argc, &argv);
 #else
+        CV_UNUSED(agrc);
+        CV_UNUSED(agrv);
         auto gtk_success = gtk_init_check();
 #endif
         if(!gtk_success)
@@ -1580,6 +1582,7 @@ void resizeWindow_(const std::shared_ptr<CvWindow>& window, int width, int heigh
 
 CV_IMPL void cvMoveWindow( const char* name, int x, int y )
 {
+#if(GTK_MAJOR_VERSION <= 3)
     CV_Assert(name && "NULL name string");
 
     CV_LOCK_MUTEX();
@@ -1587,9 +1590,13 @@ CV_IMPL void cvMoveWindow( const char* name, int x, int y )
     const auto window = icvFindWindowByName(name);
     if(!window)
         return;
-#if(GTK_MAJOR_VERSION <= 3)
     gtk_window_move( GTK_WINDOW(window->frame), x, y );
-#endif // NOTE no gtk_window_move in GTK4
+#else
+    CV_UNUSED(name);
+    CV_UNUSED(x);
+    CV_UNUSED(y);
+    CV_LOG_ONCE_WARNING(nullptr, "Function not implemented: User cannot move window with GTK 4+.");
+#endif
 }
 
 static
@@ -2342,8 +2349,13 @@ CV_IMPL int cvWaitKey( int delay )
         if( delay > 0 )
             timer = g_timeout_add( delay, icvAlarm, &expired );
         last_key = -1;
+    #if (GTK_MAJOR_VERSION <= 3)
         while( gtk_main_iteration_do(TRUE) && last_key < 0 && !expired && (delay > 0 || !getGTKWindows().empty()))
             ;
+    #else
+        while( g_main_context_iteration (NULL, TRUE) && last_key < 0 && !expired && (delay > 0 || !getGTKWindows().empty()))
+            ;
+    #endif
 
         if( delay > 0 && !expired )
             g_source_remove(timer);
