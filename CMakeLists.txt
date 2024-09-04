@@ -121,13 +121,19 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
 ocv_cmake_hook(PRE_CMAKE_BOOTSTRAP)
 
 # Bootstrap CMake system: setup CMAKE_SYSTEM_NAME and other vars
+
+# workaround: https://gitlab.kitware.com/cmake/cmake/-/issues/20989
 if(OPENCV_WORKAROUND_CMAKE_20989)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP ${CMAKE_SYSTEM_PROCESSOR})
 endif()
-enable_language(CXX C)
+
+project(OpenCV CXX C)
+
 if(OPENCV_WORKAROUND_CMAKE_20989)
   set(CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR_BACKUP})
 endif()
+
+enable_testing()
 
 ocv_cmake_hook(POST_CMAKE_BOOTSTRAP)
 
@@ -151,10 +157,6 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)  # https://cmake.org/cmake/help/
   endif()
 endif()
 
-enable_testing()
-
-project(OpenCV CXX C)
-
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
 endif()
@@ -163,17 +165,19 @@ ocv_cmake_eval(DEBUG_PRE ONCE)
 
 ocv_clear_vars(OpenCVModules_TARGETS)
 
-include(cmake/OpenCVDownload.cmake)
-
-set(BUILD_LIST "" CACHE STRING "Build only listed modules (comma-separated, e.g. 'videoio,dnn,ts')")
-
 # ----------------------------------------------------------------------------
-# Break in case of popular CMake configuration mistakes
+#  Autodetect if we are in a GIT repository
 # ----------------------------------------------------------------------------
-if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
-  message(FATAL_ERROR "CMake fails to determine the bitness of the target platform.
-  Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
+find_host_package(Git QUIET)
+
+if(NOT DEFINED OPENCV_VCSVERSION AND GIT_FOUND)
+  ocv_git_describe(OPENCV_VCSVERSION "${OpenCV_SOURCE_DIR}")
+elseif(NOT DEFINED OPENCV_VCSVERSION)
+  # We don't have git:
+  set(OPENCV_VCSVERSION "unknown")
 endif()
+
+include(cmake/OpenCVDownload.cmake)
 
 # ----------------------------------------------------------------------------
 # Detect compiler and target platform architecture
@@ -181,52 +185,10 @@ endif()
 include(cmake/OpenCVDetectCXXCompiler.cmake)
 ocv_cmake_hook(POST_DETECT_COMPILER)
 
-# Add these standard paths to the search paths for FIND_LIBRARY
-# to find libraries from these locations first
-if(UNIX AND NOT ANDROID)
-  if(X86_64 OR CMAKE_SIZEOF_VOID_P EQUAL 8)
-    if(EXISTS /lib64)
-      list(APPEND CMAKE_LIBRARY_PATH /lib64)
-    else()
-      list(APPEND CMAKE_LIBRARY_PATH /lib)
-    endif()
-    if(EXISTS /usr/lib64)
-      list(APPEND CMAKE_LIBRARY_PATH /usr/lib64)
-    else()
-      list(APPEND CMAKE_LIBRARY_PATH /usr/lib)
-    endif()
-  elseif(X86 OR CMAKE_SIZEOF_VOID_P EQUAL 4)
-    if(EXISTS /lib32)
-      list(APPEND CMAKE_LIBRARY_PATH /lib32)
-    else()
-      list(APPEND CMAKE_LIBRARY_PATH /lib)
-    endif()
-    if(EXISTS /usr/lib32)
-      list(APPEND CMAKE_LIBRARY_PATH /usr/lib32)
-    else()
-      list(APPEND CMAKE_LIBRARY_PATH /usr/lib)
-    endif()
-  endif()
-endif()
-
-# Add these standard paths to the search paths for FIND_PATH
-# to find include files from these locations first
-if(MINGW)
-  if(EXISTS /mingw)
-      list(APPEND CMAKE_INCLUDE_PATH /mingw)
-  endif()
-  if(EXISTS /mingw32)
-      list(APPEND CMAKE_INCLUDE_PATH /mingw32)
-  endif()
-  if(EXISTS /mingw64)
-      list(APPEND CMAKE_INCLUDE_PATH /mingw64)
-  endif()
-endif()
-
 # ----------------------------------------------------------------------------
 # OpenCV cmake options
 # ----------------------------------------------------------------------------
-
+set(BUILD_LIST "" CACHE STRING "Build only listed modules (comma-separated, e.g. 'videoio,dnn,ts')")
 OCV_OPTION(OPENCV_ENABLE_NONFREE "Enable non-free algorithms" OFF)
 
 # 3rd party libs
@@ -659,19 +621,6 @@ ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 #  Path for additional modules
 # ----------------------------------------------------------------------------
 set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV modules (can be ;-separated list of paths)")
-
-# ----------------------------------------------------------------------------
-#  Autodetect if we are in a GIT repository
-# ----------------------------------------------------------------------------
-find_host_package(Git QUIET)
-
-if(NOT DEFINED OPENCV_VCSVERSION AND GIT_FOUND)
-  ocv_git_describe(OPENCV_VCSVERSION "${OpenCV_SOURCE_DIR}")
-elseif(NOT DEFINED OPENCV_VCSVERSION)
-  # We don't have git:
-  set(OPENCV_VCSVERSION "unknown")
-endif()
-
 
 # ----------------------------------------------------------------------------
 # OpenCV compiler and linker options

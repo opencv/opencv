@@ -83,6 +83,10 @@ if(NOT DEFINED CMAKE_SIZEOF_VOID_P
     AND NOT OPENCV_SUPPRESS_MESSAGE_MISSING_CMAKE_SIZEOF_VOID_P)
   message(WARNING "OpenCV: CMAKE_SIZEOF_VOID_P is not defined. Perhaps CMake toolchain is broken")
 endif()
+if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
+  message(FATAL_ERROR "CMake fails to determine the bitness of the target platform.
+  Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
+endif()
 
 message(STATUS "Detected processor: ${CMAKE_SYSTEM_PROCESSOR}")
 if(OPENCV_SKIP_SYSTEM_PROCESSOR_DETECTION)
@@ -156,8 +160,10 @@ elseif(MSVC)
     set(OpenCV_ARCH "ARM")
   elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
     set(OpenCV_ARCH "x64")
+  elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+    set(OpenCV_ARCH "x86")
   else()
-    set(OpenCV_ARCH x86)
+    message(FATAL_ERROR "Failed to determine system architecture")
   endif()
 
   if(MSVC_VERSION EQUAL 1400)
