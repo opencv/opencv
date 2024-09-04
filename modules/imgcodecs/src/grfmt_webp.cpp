@@ -184,14 +184,22 @@ bool WebPDecoder::readData(Mat &img)
         if (channels == 3)
         {
             CV_CheckTypeEQ(read_img.type(), CV_8UC3, "");
-            res_ptr = WebPDecodeBGRInto(data.ptr(), data.total(), out_data,
-                                        (int)out_data_size, (int)read_img.step);
+            if (m_use_rgb)
+                res_ptr = WebPDecodeRGBInto(data.ptr(), data.total(), out_data,
+                                            (int)out_data_size, (int)read_img.step);
+            else
+                res_ptr = WebPDecodeBGRInto(data.ptr(), data.total(), out_data,
+                                            (int)out_data_size, (int)read_img.step);
         }
         else if (channels == 4)
         {
             CV_CheckTypeEQ(read_img.type(), CV_8UC4, "");
-            res_ptr = WebPDecodeBGRAInto(data.ptr(), data.total(), out_data,
-                                         (int)out_data_size, (int)read_img.step);
+            if (m_use_rgb)
+                res_ptr = WebPDecodeRGBAInto(data.ptr(), data.total(), out_data,
+                                             (int)out_data_size, (int)read_img.step);
+            else
+                res_ptr = WebPDecodeBGRAInto(data.ptr(), data.total(), out_data,
+                                             (int)out_data_size, (int)read_img.step);
         }
 
         if (res_ptr != out_data)

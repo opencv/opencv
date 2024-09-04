@@ -90,7 +90,8 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl { namespace de
     template <> inline __device__ float tanh(float val) { return tanhf(val); }
     template <> inline __device__ double tanh(double val) { return ::tanh(val); }
 
-    template <class T> __device__ T pow(T val, T exp);
+    // caution: overflow warning casting from double to low-bit types
+    template <class T> __device__ T pow(T val, T exp) { return T(::pow(double(val), double(exp))); }
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template <> inline __device__ __half pow(__half val, __half exp) { return powf(val, exp); }
 #endif

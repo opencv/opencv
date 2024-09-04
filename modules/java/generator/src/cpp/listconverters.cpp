@@ -108,3 +108,21 @@ void Copy_vector_string_to_List(JNIEnv* env, std::vector<std::string>& vs, jobje
         env->DeleteLocalRef(element);
     }
 }
+
+#ifdef HAVE_OPENCV_DNN
+void Copy_vector_MatShape_to_List(JNIEnv* env, std::vector<cv::dnn::MatShape>& vs, jobject list)
+{
+    static jclass juArrayList       = ARRAYLIST(env);
+    jmethodID m_clear     = LIST_CLEAR(env, juArrayList);
+    jmethodID m_add       = LIST_ADD(env, juArrayList);
+
+    env->CallVoidMethod(list, m_clear);
+    for (size_t i = 0; i < vs.size(); i++)
+    {
+        jintArray element = env->NewIntArray((jint)vs[i].size());
+        env->SetIntArrayRegion(element, 0, (jint)vs[i].size(), (const jint*)&vs[i][0]);
+        env->CallBooleanMethod(list, m_add, element);
+        env->DeleteLocalRef(element);
+    }
+}
+#endif // HAVE_OPENCV_DNN

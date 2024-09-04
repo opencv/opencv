@@ -227,7 +227,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     if( haveMask )
     {
         int mtype = _mask.type();
-        CV_Assert( (mtype == CV_8U || mtype == CV_8S) && _mask.sameSize(*psrc1));
+        CV_Assert( (mtype == CV_8U || mtype == CV_8S || mtype == CV_Bool) && _mask.sameSize(*psrc1));
         copymask = getCopyMaskFunc(esz);
         reallocate = !_dst.sameSize(*psrc1) || _dst.type() != type1;
     }
@@ -739,7 +739,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     if( haveMask )
     {
         int mtype = _mask.type();
-        CV_Assert( (mtype == CV_8UC1 || mtype == CV_8SC1) && _mask.sameSize(*psrc1) );
+        CV_Assert( (mtype == CV_8UC1 || mtype == CV_8SC1 || mtype == CV_Bool) && _mask.sameSize(*psrc1) );
         reallocate = !_dst.sameSize(*psrc1) || _dst.type() != dtype;
     }
 
@@ -1261,7 +1261,7 @@ static BinaryFuncC getCmpFunc(int depth)
         (BinaryFuncC)cv::hal::cmp64f,
         (BinaryFuncC)cv::hal::cmp16f,
         (BinaryFuncC)cv::hal::cmp16bf,
-        0,
+        (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8u),
         (BinaryFuncC)cv::hal::cmp64u,
         (BinaryFuncC)cv::hal::cmp64s,
         (BinaryFuncC)cv::hal::cmp32u,

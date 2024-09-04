@@ -56,7 +56,7 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
 
     int ddepth = std::max(sum_op == OCL_OP_SUM_SQR ? CV_32F : CV_32S, depth),
             dtype = CV_MAKE_TYPE(ddepth, cn);
-    CV_Assert(!haveMask || _mask.type() == CV_8UC1);
+    CV_Assert(!haveMask || _mask.type() == CV_8U || _mask.type() == CV_8S || _mask.type() == CV_Bool);
 
     int wgs2_aligned = 1;
     while (wgs2_aligned < (int)wgs)

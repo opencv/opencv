@@ -53,7 +53,7 @@ enum ImreadMixModes
 {
     IMREAD_MIX_UNCHANGED                   = IMREAD_UNCHANGED                                     ,
     IMREAD_MIX_GRAYSCALE                   = IMREAD_GRAYSCALE                                     ,
-    IMREAD_MIX_COLOR                       = IMREAD_COLOR                                         ,
+    IMREAD_MIX_COLOR                       = IMREAD_COLOR     | IMREAD_COLOR_RGB                  ,
     IMREAD_MIX_GRAYSCALE_ANYDEPTH          = IMREAD_GRAYSCALE | IMREAD_ANYDEPTH                   ,
     IMREAD_MIX_GRAYSCALE_ANYCOLOR          = IMREAD_GRAYSCALE                    | IMREAD_ANYCOLOR,
     IMREAD_MIX_GRAYSCALE_ANYDEPTH_ANYCOLOR = IMREAD_GRAYSCALE | IMREAD_ANYDEPTH  | IMREAD_ANYCOLOR,
@@ -125,7 +125,7 @@ TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
             case IMREAD_GRAYSCALE | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH:
                 ncn = (ncn == 1)?1:3;
                 break;
-            case IMREAD_COLOR:
+            case IMREAD_COLOR | IMREAD_COLOR_RGB:
                 ncn = 3;
                 depth = 1;
                 break;
@@ -818,6 +818,24 @@ TEST(Imgcodecs_Tiff, read_palette_color_image)
     ASSERT_EQ(CV_8UC3, img.type());
 }
 
+TEST(Imgcodecs_Tiff, read_palette_color_image_rgb_and_bgr)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_palette_color_image.tif";
+
+    Mat img_rgb, img_bgr;
+    ASSERT_NO_THROW(img_rgb = cv::imread(filenameInput, IMREAD_COLOR_RGB));
+    ASSERT_NO_THROW(img_bgr = cv::imread(filenameInput, IMREAD_COLOR_BGR));
+    ASSERT_FALSE(img_rgb.empty());
+    ASSERT_EQ(CV_8UC3, img_rgb.type());
+
+    ASSERT_FALSE(img_bgr.empty());
+    ASSERT_EQ(CV_8UC3, img_bgr.type());
+
+    EXPECT_EQ(img_rgb.at<Vec3b>(32, 24), Vec3b(255, 0, 0));
+    EXPECT_EQ(img_bgr.at<Vec3b>(32, 24), Vec3b(0, 0, 255));
+}
+
 TEST(Imgcodecs_Tiff, read_4_bit_palette_color_image)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -1066,6 +1084,7 @@ const int all_modes[] =
     IMREAD_UNCHANGED,
     IMREAD_GRAYSCALE,
     IMREAD_COLOR,
+    IMREAD_COLOR_RGB,
     IMREAD_ANYDEPTH,
     IMREAD_ANYCOLOR
 };

@@ -304,8 +304,8 @@ public:
                     opt_LASX::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
                 else
             #endif
-            #if CV_TRY_RVV && defined(__riscv_v_intrinsic) && __riscv_v_intrinsic>=11000
-                if( useRVV)
+            #if CV_TRY_RVV && CV_RVV
+                if( useRVV )
                     opt_RVV::fastGEMM1T( sptr, wptr, wstep, biasptr, multptr, dptr, nw, vecsize, outZp );
                 else
             #endif
