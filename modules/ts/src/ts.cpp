@@ -306,7 +306,7 @@ void BaseTest::safe_run( int start_from )
         }
         catch (const cv::Exception& exc)
         {
-            const char* errorStr = cv::Error::toString(exc.code);
+            const char* errorStr = exc.codeMessage();
             char buf[1 << 16];
 
             const char* delim = exc.err.find('\n') == cv::String::npos ? "" : "\n";
@@ -520,7 +520,7 @@ string TS::str_from_code( const TS::FailureCode code )
     case FAIL_GENERIC:                 return "Generic/Unknown";
     case FAIL_MISSING_TEST_DATA:       return "No test data";
     case FAIL_INVALID_TEST_DATA:       return "Invalid test data";
-    case FAIL_ERROR_IN_CALLED_FUNC:    return "cvError invoked";
+    case FAIL_ERROR_IN_CALLED_FUNC:    return "Error invoked";
     case FAIL_EXCEPTION:               return "Hardware/OS exception";
     case FAIL_MEMORY_EXCEPTION:        return "Invalid memory access";
     case FAIL_ARITHM_EXCEPTION:        return "Arithmetic exception";
@@ -542,7 +542,7 @@ static int tsErrorCallback( int status, const char* func_name, const char* err_m
 {
     TS* ts = (TS*)data;
     const char* delim = std::string(err_msg).find('\n') == std::string::npos ? "" : "\n";
-    ts->printf(TS::LOG, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d\n", cv::Error::toString(status), delim, err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
+    ts->printf(TS::LOG, "OpenCV Error:\n\t%d (%s%s) in %s, file %s, line %d\n", status, delim, err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
     return 0;
 }
 

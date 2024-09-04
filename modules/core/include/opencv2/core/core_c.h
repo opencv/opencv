@@ -1073,7 +1073,7 @@ CVAPI(void)  cvExp( const CvArr* src, CvArr* dst );
 /** Checks array values for NaNs, Infs or simply for too large numbers
    (if CV_CHECK_RANGE is set). If CV_CHECK_QUIET is set,
    no runtime errors is raised (function returns zero value in case of "bad" values).
-   Otherwise cvError is called */
+   */
 CVAPI(int)  cvCheckArr( const CvArr* arr, int flags CV_DEFAULT(0),
                         double min_val CV_DEFAULT(0), double max_val CV_DEFAULT(0));
 #define cvCheckArray cvCheckArr
@@ -1809,11 +1809,6 @@ CVAPI(int)  cvGetErrMode( void );
 /** Sets error processing mode, returns previously used mode */
 CVAPI(int) cvSetErrMode( int mode );
 
-/** Sets error status and performs some additional actions (displaying message box,
- writing message to stderr, terminating application etc.)
- depending on the current error mode */
-CVAPI(void) cvError( int status, const char* func_name,
-                    const char* err_msg, const char* file_name, int line );
 
 /** Retrieves detailed information about the last error occurred */
 CVAPI(int) cvGetErrInfo( const char** errcode_desc, const char** description,
@@ -1824,7 +1819,7 @@ CVAPI(int) cvErrorFromIppStatus( int ipp_status );
 
 
 #define OPENCV_ERROR(status,func,context)                           \
-cvError((status),(func),(context),__FILE__,__LINE__)
+cv::error((status),(func),(context),__FILE__,__LINE__)
 
 #define OPENCV_ASSERT(expr,func,context)                            \
 {if (! (expr))                                      \
@@ -1852,7 +1847,7 @@ static char cvFuncName[] = Name
  */
 #define CV_ERROR( Code, Msg )                                       \
 {                                                                   \
-    cvError( (Code), cvFuncName, Msg, __FILE__, __LINE__ );        \
+    cv::error( (Code), cvFuncName, Msg, __FILE__, __LINE__ );        \
     __CV_EXIT__;                                                   \
 }
 
