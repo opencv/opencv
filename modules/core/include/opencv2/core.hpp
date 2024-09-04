@@ -101,6 +101,9 @@
 
 namespace cv {
 
+//! @addtogroup core
+//! @{
+
 enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independently
                  SORT_EVERY_COLUMN = 1, //!< each matrix column is sorted
                                         //!< independently; this flag and the previous one are
@@ -111,11 +114,6 @@ enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independe
                                         //!< descending order; this flag and the previous one are also
                                         //!< mutually exclusive.
                };
-
-//! @} core_utils
-
-//! @addtogroup core
-//! @{
 
 //! Covariation flags
 enum CovarFlags {

@@ -356,65 +356,10 @@ CV_EXPORTS bool Cholesky(float* A, size_t astep, int m, float* b, size_t bstep, 
 /** proxy for hal::Cholesky */
 CV_EXPORTS bool Cholesky(double* A, size_t astep, int m, double* b, size_t bstep, int n);
 
-////////////////// forward declarations for important OpenCV types //////////////////
+//! @} core_utils
+
 
 //! @cond IGNORED
-
-template<typename _Tp, int cn> class Vec;
-template<typename _Tp, int m, int n> class Matx;
-
-template<typename _Tp> class Complex;
-template<typename _Tp> class Point_;
-template<typename _Tp> class Point3_;
-template<typename _Tp> class Size_;
-template<typename _Tp> class Rect_;
-template<typename _Tp> class Scalar_;
-
-class CV_EXPORTS RotatedRect;
-class CV_EXPORTS Range;
-class CV_EXPORTS TermCriteria;
-class CV_EXPORTS KeyPoint;
-class CV_EXPORTS DMatch;
-class CV_EXPORTS RNG;
-
-class CV_EXPORTS Mat;
-class CV_EXPORTS MatExpr;
-
-class CV_EXPORTS UMat;
-
-class CV_EXPORTS SparseMat;
-typedef Mat MatND;
-
-template<typename _Tp> class Mat_;
-template<typename _Tp> class SparseMat_;
-
-class CV_EXPORTS MatConstIterator;
-class CV_EXPORTS SparseMatIterator;
-class CV_EXPORTS SparseMatConstIterator;
-template<typename _Tp> class MatIterator_;
-template<typename _Tp> class MatConstIterator_;
-template<typename _Tp> class SparseMatIterator_;
-template<typename _Tp> class SparseMatConstIterator_;
-
-namespace ogl
-{
-    class CV_EXPORTS Buffer;
-    class CV_EXPORTS Texture2D;
-    class CV_EXPORTS Arrays;
-}
-
-namespace cuda
-{
-    class CV_EXPORTS GpuMat;
-    class CV_EXPORTS HostMem;
-    class CV_EXPORTS Stream;
-    class CV_EXPORTS Event;
-}
-
-namespace cudev
-{
-    template <typename _Tp> class GpuMat_;
-}
 
 namespace ipp
 {
@@ -440,12 +385,12 @@ static inline void setUseIPP_NE(bool flag) { setUseIPP_NotExact(flag); }
 
 //! @endcond
 
-//! @} core_utils
-
 } // cv
 
+#include "opencv2/core/fwddecl.hpp"
 #include "opencv2/core/neon_utils.hpp"
 #include "opencv2/core/vsx_utils.hpp"
+#include "opencv2/core/exception.hpp"
 #include "opencv2/core/check.hpp"
 
 #endif //OPENCV_CORE_BASE_HPP
