@@ -131,9 +131,11 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     void assign(size_t newSize, int value);
     void assign(int newSize, int value);
     void assign(const int* begin, const int* end);
+    void assign_(const int* begin, const int* end);
     template<class _It> void assign(_It begin, _It end);
     void insert(int* where, int value);
     void insert(int* where, const int* begin, const int* end);
+    void insert_(int* where, const int* begin, const int* end);
     void insert(int* where, size_t count, int value);
     void insert(int* where, int count, int value);
     template<class _It> void insert(int* where, _It begin, _It end);

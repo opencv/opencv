@@ -116,7 +116,7 @@ template<typename _It> inline MatShape::MatShape(_It begin, _It end)
         buf[count] = (int)*it;
     }
     clear();
-    assign(buf, buf + count);
+    assign_(buf, buf + count);
 }
 
 template<typename _It> inline void MatShape::assign(_It begin, _It end)
@@ -127,7 +127,7 @@ template<typename _It> inline void MatShape::assign(_It begin, _It end)
         CV_Assert(count < MAX_DIMS);
         buf[count] = (int)*it;
     }
-    assign(buf, buf + count);
+    assign_(buf, buf + count);
 }
 
 template<class _It> inline void MatShape::insert(int* where, _It begin, _It end)
@@ -138,7 +138,7 @@ template<class _It> inline void MatShape::insert(int* where, _It begin, _It end)
         CV_Assert(count < MAX_DIMS);
         buf[count] = (int)*it;
     }
-    insert(where, buf, buf + count);
+    insert_(where, buf, buf + count);
 }
 
 //////////////////////// Input/Output Arrays ////////////////////////

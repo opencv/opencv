@@ -65,6 +65,11 @@ void MatShape::assign(int newSize, int value)
 
 void MatShape::assign(const int* begin, const int* end)
 {
+    assign_(begin, end);
+}
+
+void MatShape::assign_(const int* begin, const int* end)
+{
     ptrdiff_t newSize = end - begin;
     CV_Assert(0 <= newSize && newSize < (ptrdiff_t)MAX_DIMS);
     dims = (int)newSize;
@@ -122,6 +127,11 @@ void MatShape::insert(int* where, int count, int value)
 }
 
 void MatShape::insert(int* where, const int* begin, const int* end)
+{
+    insert_(where, begin, end);
+}
+
+void MatShape::insert_(int* where, const int* begin, const int* end)
 {
     int old_dims = std::max(dims, 0);
     ptrdiff_t delta = end - begin;

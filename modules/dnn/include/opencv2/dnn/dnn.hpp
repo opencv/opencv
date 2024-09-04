@@ -504,7 +504,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS Graph
     {
     public:
-        static Ptr<Graph> create(Net& net, const std::string& name,
+        static Ptr<Graph> create(void* netimpl, const std::string& name,
                                  const std::vector<Arg>& inputs);
         virtual ~Graph();
         virtual bool empty() const = 0;
@@ -969,18 +969,10 @@ CV__DNN_INLINE_NS_BEGIN
          */
         double getPerfProfileSummary(CV_OUT std::vector<std::string>& names, CV_OUT std::vector<double>& timings);
 
-        // Create a new graph/subgraph, mode 1: we know in advance names of all the graph inputs and outputs (e.g. when we parse ONNX).
-        // The function register arguments with given names and
-        // creates a new empty graph with the inputs and outputs.
-        // When it's the first created graph, it automatically becomes the main model graph.
-        Ptr<Graph> newGraph(const std::string& name,
-                            const std::vector<std::string>& inpnames,
-                            const std::vector<std::string>& outnames) const;
         // Create a new graph/subgraph, mode 2: we construct the graph manually.
         // First, we create empty graph with certain input Args (they may or may not have names).
         // once the graph is constructed, we set the graph outputs using Graph::setOutputs().
-        // When it's the first created graph, it automatically becomes the main model graph.
-        Ptr<Graph> newGraph(const std::string& name, const std::vector<Arg>& inputs) const;
+        Ptr<Graph> newGraph(const std::string& name, const std::vector<Arg>& inputs, bool isMain);
 
         // Get the main model graph
         Ptr<Graph> getMainGraph() const;

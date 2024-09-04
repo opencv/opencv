@@ -309,13 +309,6 @@ inline void replaceLayerParam(LayerParams& layerParams, const String& oldKey, co
     }
 }
 
-static void releaseONNXTensor(opencv_onnx::TensorProto& tensor_proto)
-{
-    if (!tensor_proto.raw_data().empty()) {
-        delete tensor_proto.release_raw_data();
-    }
-}
-
 /*static void runLayer(LayerParams& params, const std::vector<Mat>& inputs,
               std::vector<Mat>& outputs)
 {
@@ -572,7 +565,7 @@ void ONNXImporter2::parseOperatorSet()
     }
 }
 
-static bool ifInt8Output(const String& layerType)
+/*static bool ifInt8Output(const String& layerType)
 {
     // Contains all node types whose output should be int8 when it get int8 input.
     // ai.onnx opset 15
@@ -615,7 +608,7 @@ static bool ifInt8Output(const String& layerType)
     };
     auto layerIt = std::find(input8output8List.begin(), input8output8List.end(), layerType);
     return layerIt != input8output8List.end();
-}
+}*/
 
 Net ONNXImporter2::parseModel()
 {
@@ -753,7 +746,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
         outputs.push_back(arg);
     }
 
-    curr_graph = Graph::create(net, graph_proto->name(), inputs);
+    curr_graph = netimpl->newGraph(graph_proto->name(), inputs, mainGraph_);
     curr_graph->setOutputs(outputs);
 
     std::swap(saved_prog, curr_prog);

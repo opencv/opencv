@@ -38,10 +38,10 @@ ArgData::ArgData()
 class GraphImpl : public Graph
 {
 public:
-    GraphImpl(const Net& net, const std::string& name,
+    GraphImpl(Net::Impl* netimpl, const std::string& name,
               const std::vector<Arg>& inputs)
     {
-        netimpl_ = net.getImpl();
+        netimpl_ = netimpl;
         name_ = name;
         inputs_ = inputs;
     }
@@ -149,6 +149,7 @@ public:
     virtual const std::vector<Arg>& outputs() const override { return outputs_; }
 
     virtual void setOutputs(const std::vector<Arg>& outputs) override {
+        CV_Assert(netimpl_);
         netimpl_->checkArgs(outputs);
         outputs_ = outputs;
     }
@@ -163,10 +164,10 @@ protected:
     std::vector<Ptr<Layer> > prog_;
 };
 
-Ptr<Graph> Graph::create(Net& net, const std::string& name,
+Ptr<Graph> Graph::create(void* netimpl, const std::string& name,
                          const std::vector<Arg>& inputs)
 {
-    return Ptr<Graph>(new GraphImpl(net, name, inputs));
+    return Ptr<Graph>(new GraphImpl(reinterpret_cast<Net::Impl*>(netimpl), name, inputs));
 }
 
 Graph::~Graph() {}
@@ -230,7 +231,7 @@ Arg Net::Impl::newArg(const std::string& name, ArgKind kind)
 
     if (!name.empty()) {
         CV_Assert(argnames.find(name) == argnames.end());
-        argnames.insert(std::make_pair(name, idx));
+        argnames.insert(std::make_pair(name, (int64_t)idx));
     }
 
     ArgData adata;
@@ -249,7 +250,7 @@ int Net::Impl::findDim(const std::string& dimname, bool insert)
     if (!dimname.empty()) {
         auto it = dimnames.find(dimname);
         if (it != dimnames.end()) {
-            return it->second;
+            return (int)it->second;
         }
     }
     if (!insert) {
@@ -258,9 +259,23 @@ int Net::Impl::findDim(const std::string& dimname, bool insert)
     }
     int value = -(int)dimnames_vec.size() - 1;
     std::string inserted_dimname = dimname.empty() ? format("N!%d", -value) : dimname;
-    dimnames.insert(std::make_pair(inserted_dimname, value));
+    dimnames.insert(std::make_pair(inserted_dimname, (int64_t)value));
     dimnames_vec.push_back(inserted_dimname);
     return value;
+}
+
+Ptr<Graph> Net::Impl::newGraph(const std::string& name_, const std::vector<Arg>& inpargs, bool ismain)
+{
+    if (ismain)
+        globGraphIdx = 0;
+    std::string name = name_;
+    if (name_.empty())
+        name = ismain ? std::string("main") : format("subgraph_%d", globGraphIdx);
+    globGraphIdx++;
+    Ptr<Graph> graph = Graph::create(this, name, inpargs);
+    if (ismain)
+        mainGraph = graph;
+    return graph;
 }
 
 void Net::Impl::prepareForInference()
@@ -274,6 +289,7 @@ void Net::Impl::prepareForInference()
         //useBlockLayout();
         //inferShapes(true);
         assignBuffers();
+        totalLayers = updateGraphOfs(mainGraph, 0, true);
         prepared = true;
         finalizeLayers = true;
     }
@@ -343,6 +359,7 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     // [TODO] initialize profile, tracer, symbolic shapes etc.
     size_t nsymdims = dimnames_vec.size();
     dimvalues.assign(nsymdims, -1);
+    layersTimings.assign(totalLayers + 1, 0.);
     forwardGraph(mainGraph, inputs, outputs, true);
 }
 
@@ -360,6 +377,47 @@ Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
     std::vector<Mat> inps={}, outs;
     forwardMainGraph(inps, outs);
     return outs[0];
+}
+
+void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const std::vector<std::string>& outnames)
+{
+    if (!mainGraph) {
+        CV_Error(Error::StsNullPtr, "the model was not loaded");
+    }
+    const std::vector<Arg>& outargs = mainGraph->outputs();
+    std::vector<int> outidxs;
+    int i, j, noutputs = (int)outargs.size();
+    if (!outnames.empty()) {
+        CV_Assert((int)outnames.size() == noutputs);
+        if (noutputs == 1 && outnames[0].empty())
+            ;
+        else {
+            for (i = 0; i < noutputs; i++) {
+                const std::string& outname = outnames[i];
+                for (j = 0; j < noutputs; j++) {
+                    const ArgData& adata = args.at(outargs[j].idx);
+                    if (adata.name == outname) {
+                        outidxs.push_back((int)j);
+                        break;
+                    }
+                }
+                if (j == noutputs) {
+                    CV_Error_(Error::StsObjectNotFound, ("the required output '%s' is not found", outname.c_str()));
+                }
+            }
+        }
+    }
+    std::vector<Mat> inps={}, outs;
+    forwardMainGraph(inps, outs);
+    CV_Assert(outs.size() == noutputs);
+    outblobs.create(Size(noutputs, 1), CV_32F, -1);
+    for (i = 0; i < noutputs; i++) {
+        int j = outidxs.empty() ? i : outidxs[i];
+        Mat src = outs[j];
+        outblobs.create(src.dims, src.size.p, src.type(), i);
+        Mat dst = outblobs.getMat(i);
+        src.copyTo(dst);
+    }
 }
 
 /*void Net::Impl::checkAndUpdateDim(const Ptr<Graph>& g, const Ptr<Layer>& layer, Arg inp, int j, int value)
@@ -477,6 +535,11 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
 void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                              OutputArrayOfArrays outputs_, bool isMainGraph)
 {
+    auto graphofs_it = graphofs.find(graph->name());
+    if (graphofs_it == graphofs.end()) {
+        CV_Error_(Error::StsObjectNotFound, ("graph '%s' does not belong to the model", graph->name().c_str()));
+    }
+
     std::ostream& strm_ = dump_strm ? *dump_strm : std::cout;
     const std::vector<Ptr<Layer> >& prog = graph->prog();
     size_t i, nops = prog.size();
@@ -486,8 +549,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     std::vector<Mat> inpMats, outMats, tempMats;
     std::vector<int> inpTypes, outTypes, tempTypes;
     std::vector<MatShape> inpShapes, outShapes, tempShapes;
-    double timestamp = 0;
-    bool already_set_input = false;
+    double tickfreq = getTickFrequency();
+    int64_t timestamp = 0;
+
+    int graph_ofs = graphofs_it->second;
+    CV_Assert(0 <= graph_ofs && (size_t)graph_ofs + nops <= totalLayers);
 
     if (inputs_.empty()) {
         // inputs are already set; it's only possible to do with the main graph
@@ -550,8 +616,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 Arg inp = inputs[i];
                 traceArg(strm_, "Input", i, inp, false);
             }
-            timestamp = (double)getTickCount();
         }
+        timestamp = getTickCount();
 
         // [TODO] handle If/Loop/...
         CV_Assert(!layer->subgraphs());
@@ -586,10 +652,12 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             }
         }
 
+        timestamp = getTickCount() - timestamp;
+        layersTimings[opidx + graph_ofs + 1] += timestamp;
+
         if (tracingMode != DNN_TRACE_NONE) {
-            timestamp = (double)getTickCount() - timestamp;
             strm_ << "TIME (\"" << layer->name << "\", \"" << layer->type << "\"): " <<
-                format("%.2fms", timestamp*1000/getTickFrequency()) << "\n";
+                format("%.2fms", (double)timestamp*1000./tickfreq) << "\n";
             for (i = 0; i < noutputs; i++) {
                 Arg out = outputs[i];
                 traceArg(strm_, "Output", i, out, tracingMode == DNN_TRACE_ALL);
@@ -638,6 +706,33 @@ void Net::Impl::useCounts(std::vector<int>& usecounts) const
     usecounts.assign(nargs, 0);
     usecounts[0] = 1; // empty Arg() is always useful
     updateUseCounts(mainGraph, usecounts);
+}
+
+int Net::Impl::updateGraphOfs(const Ptr<Graph>& graph, int currofs, bool ismain)
+{
+    CV_Assert(currofs >= 0);
+    if (ismain) {
+        graphofs.clear();
+        allgraphs.clear();
+        layerNameToId.clear();
+    }
+    const std::vector<Ptr<Layer> >& prog = graph->prog();
+    size_t i, nops = prog.size();
+    int subgraph_ofs = currofs + (int)nops;
+    std::string name = graph->name();
+    graphofs.insert(std::make_pair(name, currofs));
+    allgraphs.push_back(graph);
+    for (i = 0; i < nops; i++) {
+        const Ptr<Layer>& layer = prog[i];
+        layerNameToId.insert(std::make_pair(layer->name, currofs + (int)i));
+        const std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
+        if (subgraphs) {
+            for (const Ptr<Graph>& subgraph : *subgraphs) {
+                subgraph_ofs = updateGraphOfs(subgraph, subgraph_ofs, false);
+            }
+        }
+    }
+    return subgraph_ofs;
 }
 
 void Net::Impl::checkArgs(const std::vector<Arg>& args_) const

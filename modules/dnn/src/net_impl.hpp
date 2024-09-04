@@ -34,7 +34,7 @@ CV__DNN_INLINE_NS_BEGIN
 using std::make_pair;
 using std::string;
 
-typedef std::unordered_map<std::string, int> NamesHash;
+typedef std::unordered_map<std::string, int64_t> NamesHash;
 
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
@@ -76,13 +76,18 @@ struct Net::Impl : public detail::NetImplBase
 
     NamesHash argnames;
     NamesHash dimnames;
+    NamesHash graphofs;
+    size_t totalLayers;
     std::vector<std::string> dimnames_vec;
     std::vector<ArgData> args;
     std::vector<Mat> tensors;
     std::vector<int> bufidxs;
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
+    std::vector<Ptr<Graph> > allgraphs;
+
     Ptr<Graph> mainGraph;
+    int globGraphIdx;
 
     int accuracy;
     bool enableFP16, haveFP16;
@@ -90,7 +95,6 @@ struct Net::Impl : public detail::NetImplBase
     bool finalizeLayers; // need to initialize each layer
     TracingMode tracingMode;
     ProfilingMode profilingMode;
-    std::vector<std::pair<Ptr<Layer>, int64_t> > profileEntries;
     std::vector<int64_t> dimvalues;
     std::ostream* dump_strm;
     int dump_indent;
@@ -312,21 +316,13 @@ struct Net::Impl : public detail::NetImplBase
 
     ///////////////////////////// the new engine ////////////////////////////
 
-    // Create a new graph/subgraph, mode 1: we know in advance names of all the graph inputs and outputs (e.g. when we parse ONNX).
-    // The function register arguments with given names and
-    // creates a new empty graph with the inputs and outputs.
-    // When it's the first created graph, it automatically becomes the main model graph.
-    Ptr<Graph> newGraph(const std::string& name,
-                        const std::vector<std::string>& inpnames,
-                        const std::vector<std::string>& outnames) const;
     // Create a new graph/subgraph, mode 2: we construct the graph manually.
     // First, we create empty graph with certain input Args (they may or may not have names).
     // once the graph is constructed, we set the graph outputs using Graph::setOutputs().
     // When it's the first created graph, it automatically becomes the main model graph.
-    Ptr<Graph> newGraph(const std::string& name, const std::vector<Arg>& inputs) const;
-
-    // Get the main model graph
-    Ptr<Graph> getMainGraph() const;
+    Ptr<Graph> newGraph(const std::string& name,
+                        const std::vector<Arg>& inputs,
+                        bool isMainGraph);
 
     const ArgData& argData(Arg arg) const;
     const std::string& argName(Arg arg) const;
@@ -380,13 +376,16 @@ struct Net::Impl : public detail::NetImplBase
     void forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
     // run the whole model, convenience wrapper
     Mat forwardWithSingleOutput(const std::string& outname);
+    // run the whole model, convenience wrapper
+    void forwardWithMultipleOutputs(OutputArrayOfArrays outputBlobs,
+                                    const std::vector<std::string>& outBlobNames);
     // helper function for useCounts()
     void updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& usecounts) const;
     // computes how many times each argument is used, i.e. on output usecounts.size() == args.size()
     void useCounts(std::vector<int>& usecounts) const;
 
-    void initPerfProfile();
-    void updatePerfProfile(const Layer* layer, int64_t time);
+    int updateGraphOfs(const Ptr<Graph>& graph, int currofs, bool ismain);
+
     // deals with numeric and symblic shape values.
     void checkAndUpdateDim(const Ptr<Graph>& graph, const Layer* layer, Arg inp, int j, int64_t value);
 

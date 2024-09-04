@@ -254,8 +254,22 @@ void Net::Impl::setUpNet(const std::vector<LayerPin>& blobsToKeep_)
 
 Ptr<Layer> Net::Impl::getLayer(int layerId) const
 {
-    LayerData& ld = getLayerData(layerId);
-    return getLayerInstance(ld);
+    if (mainGraph) {
+        CV_Assert(0 <= layerId && layerId < totalLayers);
+        int graph_ofs = 0;
+        for (const Ptr<Graph>& graph : allgraphs) {
+            const std::vector<Ptr<Layer> >& prog = graph->prog();
+            int nops = (int)prog.size();
+            CV_Assert(layerId >= graph_ofs);
+            if (layerId < graph_ofs + nops)
+                return prog[layerId - graph_ofs];
+            graph_ofs += nops;
+        }
+        CV_Error_(Error::StsObjectNotFound, ("layer #%d is not found", layerId));
+    } else {
+        LayerData& ld = getLayerData(layerId);
+        return getLayerInstance(ld);
+    }
 }
 
 
@@ -989,6 +1003,12 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
+    if (mainGraph) {
+        std::vector<std::string> outBlobNames = {outputName};
+        forwardWithMultipleOutputs(outputBlobs, outBlobNames);
+        return;
+    }
+
     String layerName = outputName;
 
     if (layerName.empty())
@@ -1076,6 +1096,11 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs,
 {
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
+    if (mainGraph) {
+        forwardWithMultipleOutputs(outputBlobs, outBlobNames);
+        return;
+    }
 
     std::vector<LayerPin> pins;
     for (int i = 0; i < outBlobNames.size(); i++)
@@ -2210,13 +2235,23 @@ std::vector<Ptr<Layer>> Net::Impl::getLayerInputs(int layerId) const
 std::vector<String> Net::Impl::getLayerNames() const
 {
     std::vector<String> res;
-    res.reserve(layers.size());
 
-    Impl::MapIdToLayerData::const_iterator it;
-    for (it = layers.begin(); it != layers.end(); it++)
-    {
-        if (it->second.id)  // skip Data layer
-            res.push_back(it->second.name);
+    if (mainGraph) {
+        res.reserve(totalLayers);
+        for (const Ptr<Graph>& graph: allgraphs) {
+            const std::vector<Ptr<Layer> >& prog = graph->prog();
+            for (const Ptr<Layer>& layer: prog)
+                res.push_back(layer->name);
+        }
+    } else {
+        res.reserve(layers.size());
+
+        Impl::MapIdToLayerData::const_iterator it;
+        for (it = layers.begin(); it != layers.end(); it++)
+        {
+            if (it->second.id)  // skip Data layer
+                res.push_back(it->second.name);
+        }
     }
 
     return res;
@@ -2255,6 +2290,15 @@ std::vector<int> Net::Impl::getUnconnectedOutLayers() const
 // FIXIT drop "unconnected" API
 std::vector<String> Net::Impl::getUnconnectedOutLayersNames() /*const*/
 {
+    if (mainGraph) {
+        std::vector<std::string> outnames;
+        const std::vector<Arg>& outargs = mainGraph->outputs();
+        for (auto out: outargs) {
+            const ArgData& adata = args.at(out.idx);
+            outnames.push_back(adata.name);
+        }
+        return outnames;
+    }
     std::vector<int> ids = getUnconnectedOutLayers();
     const size_t n = ids.size();
     std::vector<String> names(n);
