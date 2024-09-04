@@ -12,7 +12,6 @@ using namespace cv;
 using namespace cv::dnn;
 using namespace std;
 
-Mat gray;
 int threshold1 = 0;
 int threshold2 = 50;
 int blurAmount = 5;
@@ -24,10 +23,9 @@ static void sigmoid(Mat& input) {
 }
 
 static void applyCanny(const Mat& image, Mat& result) {
-    int kernelSize = 2 * blurAmount + 1;
-    Mat blurred;
-    GaussianBlur(image, blurred, Size(kernelSize, kernelSize), 0);
-    Canny(blurred, result, threshold1, threshold2);
+    Mat gray;
+    cvtColor(image, gray, COLOR_BGR2GRAY);
+    Canny(gray, result, threshold1, threshold2);
 }
 
 // Load Model
@@ -37,11 +35,10 @@ static void loadModel(const string modelPath, String backend, String target, Net
     net.setPreferableTarget(getTargetID(target));
 }
 
-static void setupCannyWindow(const Mat &image){
+static void setupCannyWindow(){
     destroyWindow("Output");
     namedWindow("Output", WINDOW_AUTOSIZE);
     moveWindow("Output", 200, 50);
-    cvtColor(image, gray, COLOR_BGR2GRAY);
 
     createTrackbar("thrs1", "Output", &threshold1, 255, nullptr);
     createTrackbar("thrs2", "Output", &threshold2, 255, nullptr);
@@ -97,14 +94,14 @@ int main(int argc, char** argv) {
         "With Dexined:\n"
         "\t ./example_dnn_edge_detection dexined --input=path/to/your/input/image/or/video\n\n"
         "For switching between deep learning based model(dexined) and canny edge detector, press space bar in case of video. In case of image, pass the argument --method for switching between dexined and canny.\n"
-        "Model path can also be specified using --model argument\n\n";
+        "Model path can also be specified using --model argument. Download it using python download_models.py dexined from dnn samples directory\n\n";
 
     const string param_keys =
         "{ help h          |                   | Print help message. }"
         "{ @alias          |                   | An alias name of model to extract preprocessing parameters from models.yml file. }"
         "{ zoo             | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
         "{ input i         |                   | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-        "{ method          |       canny       | Choose method: dexined or canny. }"
+        "{ method          |       dexined       | Choose method: dexined or canny. }"
         "{ model           |                   | Path to the model file for using dexined. }";
 
     const string backend_keys = format(
@@ -146,7 +143,7 @@ int main(int argc, char** argv) {
         zooFile = findFile(zooFile);
     }
     else{
-        cout<<"[WARN] set the environment variables or pass path to dexined.onnx model file and models.yml file for using dexined based edge detector.";
+        cout<<"[WARN] set the environment variables or pass path to dexined.onnx model file using --model and models.yml file using --zoo for using dexined based edge detector. Continuing with canny edge detector\n\n";
     }
 
     keys += genPreprocArguments(modelName, zooFile);
@@ -186,7 +183,7 @@ int main(int argc, char** argv) {
     }
     else{
         Mat dummy = Mat::zeros(512, 512, CV_8UC3);
-        setupCannyWindow(dummy);
+        setupCannyWindow();
     }
     cout<<"To switch between canny and dexined press space bar."<<endl;
     for (;;){
@@ -199,16 +196,18 @@ int main(int argc, char** argv) {
         }
 
         Mat result;
+        int kernelSize = 2 * blurAmount + 1;
+        Mat blurred;
+        GaussianBlur(image, blurred, Size(kernelSize, kernelSize), 0);
         if (method == "dexined")
         {
-            Mat blob = blobFromImage(image, scale, Size(width, height), mean, swapRB, false, CV_32F);
+            Mat blob = blobFromImage(blurred, scale, Size(width, height), mean, swapRB, false, CV_32F);
             net.setInput(blob);
             applyDexined(net, image, result);
         }
         else if (method == "canny")
         {
-            cvtColor(image, gray, COLOR_BGR2GRAY);
-            applyCanny(gray, result);
+            applyCanny(blurred, result);
         }
         imshow("Input", image);
         imshow("Output", result);
@@ -225,13 +224,13 @@ int main(int argc, char** argv) {
                 namedWindow("Output", WINDOW_AUTOSIZE);
                 moveWindow("Output", 200, 0);
             } else {
-                cout << "[ERROR] Provide model file using --model to use dexined. Download model from https://drive.google.com/file/d/1u_qXqXqaIP_SqdGaq4CbZyjzkZb02XTs/view?usp=sharing" << endl;
+                cout << "[ERROR] Provide model file using --model to use dexined. Download model using python download_models.py dexined from dnn samples directory" << endl;
             }
         }
         else if (key == ' ' && method == "dexined")
         {
             method = "canny";
-            setupCannyWindow(image);
+            setupCannyWindow();
         }
         else if (key == 27 || key == 'q')
         { // Escape key to exit
