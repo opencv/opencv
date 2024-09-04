@@ -1444,7 +1444,7 @@ struct op_mul_scale
     static inline v_float32 r(const v_float32& a, const v_float32& b, const T2* scalar)
     {
         const v_float32 v_scalar = vx_setall_f32(*scalar);
-        return v_mul(v_scalar , a , b);
+        return v_mul(v_mul(v_scalar , a) , b);
     }
 #endif
     static inline T1 r(T1 a, T1 b, const T2* scalar)
