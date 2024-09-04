@@ -488,7 +488,7 @@ template<typename R> struct TheTest
         dataA[1] = static_cast<LaneType>(std::numeric_limits<LaneType>::max());
         R a = dataA, b = dataB, c = dataC;
 
-        Data<R> resD = v_add(a, b), resE = v_add(a, b, c), resF = v_sub(a, b);
+        Data<R> resD = v_add(a, b), resE = v_add(v_add(a, b), c), resF = v_sub(a, b);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
@@ -527,7 +527,7 @@ template<typename R> struct TheTest
         R a = dataA, b = dataB, c = dataC;
 
         Data<R> resD = v_mul(a, b);
-        Data<R> resE = v_mul(a, b, c);
+        Data<R> resE = v_mul(v_mul(a, b), c);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
