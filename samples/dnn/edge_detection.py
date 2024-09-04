@@ -126,6 +126,7 @@ def main(func_args=None):
         except:
             print("[WARN] Model file not provided, using canny instead. Pass model using --model=/path/to/dexined.onnx to use dexined model.")
             method = 'canny'
+            args.model = None
     else:
         print("[WARN] Model file not provided, using canny instead. Pass model using --model=/path/to/dexined.onnx to use dexined model.")
         method = 'canny'
@@ -156,6 +157,7 @@ def main(func_args=None):
         key = cv.waitKey(30)
         if key == ord(' ') and method == 'canny':
             if hasattr(args, 'model') and args.model is not None:
+                print("model: ", args.model)
                 method = "dexined"
                 if net is None:
                     net = loadModel(args)
@@ -163,7 +165,7 @@ def main(func_args=None):
                 cv.namedWindow('Output', cv.WINDOW_AUTOSIZE)
                 cv.moveWindow('Output', 200, 50)
             else:
-                print("[ERROR] Provide model file using --model to use dexined. Download model from https://drive.google.com/file/d/1u_qXqXqaIP_SqdGaq4CbZyjzkZb02XTs/view?usp=sharing")
+                print("[ERROR] Provide model file using --model to use dexined. Download model using python download_models.py dexined from dnn samples directory")
         elif key == ord(' ') and method=='dexined':
             method = "canny"
             setupCannyWindow(image)
