@@ -1232,12 +1232,18 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
         gtk_widget_show( window->paned );
     }
 #else
+#if (GTK_MAJOR_VERSION >= 4)
+    window->paned = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_box_append(GTK_BOX(window->paned), window->widget);
+    gtk_widget_set_parent(window->paned, window->frame);
+#else
     window->paned = gtk_vbox_new( FALSE, 0 );
     gtk_box_pack_end( GTK_BOX(window->paned), window->widget, TRUE, TRUE, 0 );
-    gtk_widget_show( window->widget );
     gtk_container_add( GTK_CONTAINER(window->frame), window->paned );
-    gtk_widget_show( window->paned );
 #endif
+    gtk_widget_show( window->widget );
+    gtk_widget_show( window->paned );
+#endif // HAVE_OPENGL
 
 #ifndef HAVE_OPENGL
     if (flags & cv::WINDOW_OPENGL)
@@ -2275,13 +2281,12 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
                 BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
                 BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
 #if (GTK_MAJOR_VERSION <= 3)
-                BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY)
-#else
-                BIT_MAP(state, GDK_ALT_MASK,    CV_EVENT_FLAG_ALTKEY)
-#endif
-            |
+                BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY) |
                 BIT_MAP(state, GDK_MOD2_MASK,    CV_EVENT_FLAG_ALTKEY);
-            window->on_mouse( cv_event, pt.x, pt.y, flags, window->on_mouse_param );
+#else
+                BIT_MAP(state, GDK_ALT_MASK,    CV_EVENT_FLAG_ALTKEY);
+#endif
+                window->on_mouse( cv_event, pt.x, pt.y, flags, window->on_mouse_param );
         }
     }
 
@@ -2457,9 +2462,13 @@ public:
 
     void move(int x, int y) CV_OVERRIDE
     {
+// TODO: Decide if not_implemented exception is neede here
+// GTK issue: https://gitlab.gnome.org/GNOME/gtk/-/issues/5204
+#if (GTK_MAJOR_VERSION <= 3)
         auto window = window_.lock();
         CV_Assert(window);
         gtk_window_move(GTK_WINDOW(window->frame), x, y);
+#endif
     }
 
     Rect getImageRect() const CV_OVERRIDE
