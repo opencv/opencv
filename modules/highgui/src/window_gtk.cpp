@@ -2029,11 +2029,12 @@ static gboolean icvOnKeyPress(GtkWidget* widget, GdkEvent* gdk_event, gpointer u
 {
     int code = 0;
     guint keyval;
-    GdkModifierType state;
 #ifndef GTK_VERSION4
+    guint state;
     keyval = event->keyval;
     state = event->state;
 #else
+    GdkModifierType state;
     keyval = gdk_key_event_get_keyval(gdk_event);
     state = gdk_event_get_modifier_state(gdk_event);
 #endif
@@ -2146,7 +2147,7 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 #ifdef GTK_VERSION4
     event_type = gdk_event_get_event_type(event);
 #else
-    event_type = event->type
+    event_type = event->type;
 #endif
 
     if( event_type == GDK_MOTION_NOTIFY )
