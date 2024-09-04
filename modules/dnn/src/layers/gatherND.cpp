@@ -97,7 +97,7 @@ public:
                     case CV_8U: forward_impl<int32_t, uchar>(data, indices, out); break;
                     case CV_8S: forward_impl<int32_t, schar>(data, indices, out); break;
                     case CV_32S: forward_impl<int32_t, int32_t>(data, indices, out); break;
-                    case CV_16F: forward_impl<int32_t, short>(data, indices, out); break;
+                    case CV_16F: forward_impl<int32_t, int16_t>(data, indices, out); break;
                     case CV_32F: forward_impl<int32_t, float>(data, indices, out); break;
                     case CV_64F: forward_impl<int32_t, double>(data, indices, out); break;
                     default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
@@ -109,7 +109,7 @@ public:
                     case CV_8U: forward_impl<int64_t, uchar>(data, indices, out); break;
                     case CV_8S: forward_impl<int64_t, schar>(data, indices, out); break;
                     case CV_32S: forward_impl<int64_t, int32_t>(data, indices, out); break;
-                    case CV_16F: forward_impl<int64_t, short>(data, indices, out); break;
+                    case CV_16F: forward_impl<int64_t, int16_t>(data, indices, out); break;
                     case CV_32F: forward_impl<int64_t, float>(data, indices, out); break;
                     case CV_64F: forward_impl<int64_t, double>(data, indices, out); break;
                     default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
@@ -148,26 +148,29 @@ public:
 
         const int outer_size = indices.total() / last_indices_dim;
         const int inner_size = out.total() / outer_size;
+        const int nstripes =  outer_size * inner_size / 1024;
 
-        for (size_t i = 0; i < outer_size; ++i)
-        {
-            std::vector<int> sliced_indices(indices_ptr + i * last_indices_dim, indices_ptr + (i + 1) * last_indices_dim);
-
-            size_t offset = 0;
-            for (size_t j = 0; j < last_indices_dim; ++j)
+        parallel_for_(Range(0, outer_size), [&](const Range& range) {
+            for (size_t i = range.start; i < range.end; ++i)
             {
-                offset += sliced_indices[j] * data_strides[batch_dims + j];
-            }
+                std::vector<int> sliced_indices(indices_ptr + i * last_indices_dim, indices_ptr + (i + 1) * last_indices_dim);
 
-            if (batch_dims > 0)
-                offset += data_strides[batch_dims - 1] * i;
+                size_t offset = 0;
+                for (size_t j = 0; j < last_indices_dim; ++j)
+                {
+                    offset += sliced_indices[j] * data_strides[batch_dims + j];
+                }
 
-            // copy data from data to out
-            for (size_t j = 0; j < inner_size; ++j)
-            {
-                out_ptr[i * inner_size + j] = data_ptr[offset + j];
+                if (batch_dims > 0)
+                    offset += data_strides[batch_dims - 1] * i;
+
+                // copy data from data to out
+                for (size_t j = 0; j < inner_size; ++j)
+                {
+                    out_ptr[i * inner_size + j] = data_ptr[offset + j];
+                }
             }
-        }
+        }, nstripes);
     }
 
 private:
