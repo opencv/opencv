@@ -64,6 +64,7 @@ public:
         CV_CheckLE(last_indices_dim, r - batch_dims, "GatherND: last dimension of indices must be <= r - batch_dims");
 
         MatShape output_shape;
+        output_shape.reserve(q - 1 + r - batch_dims - last_indices_dim);
         for (int i = 0; i < q - 1; ++i)
             output_shape.push_back(indices[i]);
         for (int i = batch_dims + last_indices_dim; i < r; ++i)
@@ -96,24 +97,25 @@ public:
                     case CV_8U: forward_impl<int32_t, uchar>(data, indices, out); break;
                     case CV_8S: forward_impl<int32_t, schar>(data, indices, out); break;
                     case CV_32S: forward_impl<int32_t, int32_t>(data, indices, out); break;
-                    case CV_16F: forward_impl<int32_t, float16_t>(data, indices, out); break;
+                    case CV_16F: forward_impl<int32_t, short>(data, indices, out); break;
                     case CV_32F: forward_impl<int32_t, float>(data, indices, out); break;
                     case CV_64F: forward_impl<int32_t, double>(data, indices, out); break;
                     default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
                 }
-            }
+            } break;
             case CV_64S:
             {
                 switch (dtype) {
                     case CV_8U: forward_impl<int64_t, uchar>(data, indices, out); break;
                     case CV_8S: forward_impl<int64_t, schar>(data, indices, out); break;
                     case CV_32S: forward_impl<int64_t, int32_t>(data, indices, out); break;
-                    case CV_16F: forward_impl<int64_t, float16_t>(data, indices, out); break;
+                    case CV_16F: forward_impl<int64_t, short>(data, indices, out); break;
                     case CV_32F: forward_impl<int64_t, float>(data, indices, out); break;
                     case CV_64F: forward_impl<int64_t, double>(data, indices, out); break;
                     default: CV_Error(Error::StsNotImplemented, "Unsupported data type");
                 }
-            }
+            } break;
+            default: CV_Error(Error::StsNotImplemented, "Unsupported indices type");
         }
 
     }
@@ -122,13 +124,17 @@ public:
     void forward_impl(const Mat& data, const Mat& indices, Mat& out)
     {
         CV_Assert(out.isContinuous());
+        CV_Assert(indices.isContinuous());
+        CV_Assert(data.isContinuous());
+
+
         const iT* indices_ptr = indices.ptr<iT>();
         const dT* data_ptr = data.ptr<dT>();
         dT* out_ptr = out.ptr<dT>();
 
-        int r = data.dims;
-        int q = indices.dims;
-        int last_indices_dim = indices.size[q - 1];
+        size_t r = data.dims;
+        size_t q = indices.dims;
+        size_t last_indices_dim = indices.size[q - 1];
 
         std::vector<int> data_strides(r);
         data_strides[r - 1] = 1;
