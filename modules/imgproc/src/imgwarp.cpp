@@ -2574,20 +2574,68 @@ static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation
 
 namespace hal {
 
-void warpAffine(int src_type,
-                const uchar * src_data, size_t src_step, int src_width, int src_height,
-                uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
-                const double M[6], int interpolation, int borderType, const double borderValue[4])
+static void warpAffine(int src_type,
+                       const uchar * src_data, size_t src_step, int src_width, int src_height,
+                       uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                       const double M[6], int interpolation, int borderType, const double borderValue[4], AlgorithmHint hint)
 {
     CALL_HAL(warpAffine, cv_hal_warpAffine, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
 
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
     Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
 
-    if (interpolation == INTER_LINEAR &&
-        (dst.channels() == 1 || dst.channels() == 3 || dst.channels() == 4) &&
-        (dst.depth() == CV_8U || dst.depth() == CV_16U || dst.depth() == CV_32F)) {
-        CV_CPU_DISPATCH(warpAffineSimdInvoker, (dst, src, M, interpolation, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+    if (interpolation == INTER_LINEAR) {
+        switch (src_type) {
+            case CV_8UC1: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                } else {
+                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                }
+                break;
+            }
+            case CV_8UC3: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                } else {
+                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                }
+                break;
+            }
+            case CV_8UC4: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpAffineLinearApproxInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                } else {
+                    CV_CPU_DISPATCH(warpAffineLinearInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                }
+                break;
+            }
+            case CV_16UC1: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC3: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_16UC4: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC1: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC3: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            case CV_32FC4: {
+                CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                break;
+            }
+            // no default
+        }
     }
 
     int x;
@@ -2706,9 +2754,13 @@ void warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int 
 
 void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
-                     int flags, int borderType, const Scalar& borderValue )
+                     int flags, int borderType, const Scalar& borderValue,
+                     AlgorithmHint hint )
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == cv::ALGO_HINT_DEFAULT)
+        hint = cv::getDefaultAlgorithmHint();
 
     int interpolation = flags & INTER_MAX;
     CV_Assert( _src.channels() <= 4 || (interpolation != INTER_LANCZOS4 &&
@@ -2817,7 +2869,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
 #endif
 
     hal::warpAffine(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
-                    M, interpolation, borderType, borderValue.val);
+                    M, interpolation, borderType, borderValue.val, hint);
 }
 
 

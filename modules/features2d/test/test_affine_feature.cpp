@@ -3,7 +3,6 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "test_precomp.hpp"
-#include "opencv2/core/hal/intrin.hpp"
 
 // #define GENERATE_DATA // generate data in debug mode
 
@@ -83,11 +82,7 @@ TEST(Features2d_AFFINE_FEATURE, regression)
     const float badCountsRatio = 0.01f;
     const float badDescriptorDist = 1.0f;
     const float maxBadKeypointsRatio = 0.15f;
-#if CV_SIMD_FP16
-    const float maxBadDescriptorRatio = 0.41f;
-#else
     const float maxBadDescriptorRatio = 0.15f;
-#endif
 
     // read keypoints
     vector<KeyPoint> validKeypoints;
@@ -119,40 +114,6 @@ TEST(Features2d_AFFINE_FEATURE, regression)
         validKeypoints[i].octave = moctave.at<int>(i, 0);
         validKeypoints[i].class_id = mclass_id.at<int>(i, 0);
     }
-
-/*
-Previous:
-
-extracting with sift...
-img1 - 20532 features, img2 - 12710 features
-matching with bruteforce...
-execution time: 544.43 ms
-434 / 569 inliers/matched
-visualizing...
-only 50 inliers are visualized
-done
-
-Optimized-FP32:
-
-img1 - 20550 features, img2 - 12676 features
-matching with bruteforce...
-execution time: 555.62 ms
-395 / 564 inliers/matched
-visualizing...
-only 50 inliers are visualized
-done
-
-Optimized-FP16:
-
-img1 - 20540 features, img2 - 12686 features
-matching with bruteforce...
-execution time: 537.68 ms
-413 / 571 inliers/matched
-visualizing...
-only 50 inliers are visualized
-done
-
-*/
 
     // read descriptors
     fs["descriptors"] >> validDescriptors;
