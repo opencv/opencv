@@ -357,7 +357,8 @@ typedef TestBaseWithParam<FlipParams> FlipFixture;
 
 OCL_PERF_TEST_P(FlipFixture, Flip,
             ::testing::Combine(OCL_TEST_SIZES,
-                               OCL_TEST_TYPES, FlipType::all()))
+                               ::testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_32FC1, CV_32FC4),
+                               FlipType::all()))
 {
     const FlipParams params = GetParam();
     const Size srcSize = get<0>(params);
