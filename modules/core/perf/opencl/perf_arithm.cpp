@@ -388,7 +388,9 @@ typedef tuple<Size, MatType, RotateType> RotateParams;
 typedef TestBaseWithParam<RotateParams> RotateFixture;
 
 OCL_PERF_TEST_P(RotateFixture, rotate,
-                ::testing::Combine(OCL_TEST_SIZES, OCL_TEST_TYPES, RotateType::all()))
+                ::testing::Combine(OCL_TEST_SIZES,
+                                   ::testing::Values(CV_8UC1, CV_8UC2, CV_8UC4, CV_32FC1, CV_32FC4),
+                                   RotateType::all()))
 {
     const RotateParams params = GetParam();
     const Size srcSize   = get<0>(params);
