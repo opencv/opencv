@@ -223,10 +223,11 @@ int main(int argc, char** argv)
 
     // Open a video file or an image file or a camera stream.
     VideoCapture cap;
-    if (parser.has("input"))
-        cap.open(parser.get<String>("input"));
-    else
-        cap.open(parser.get<int>("device"));
+    bool openSuccess = parser.has("input") ? cap.open(parser.get<String>("input")) : cap.open(parser.get<int>("device"));
+    if (!openSuccess){
+        cout << "Could not open input file or camera device" << endl;
+        return 0;
+    }
 
     FontFace sans("sans");
 
@@ -237,6 +238,10 @@ int main(int argc, char** argv)
     vector<int> classIds;
     vector<float> confidences;
     vector<Rect> boxes;
+
+    if (async > 0 && backend == DNN_BACKEND_INFERENCE_ENGINE){
+        asyncNumReq = async;
+    }
 
     if (async != 0) {
         // Threading is enabled
