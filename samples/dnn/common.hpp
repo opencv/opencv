@@ -62,6 +62,10 @@ std::string genArgument(const std::string& argName, const std::string& help,
                     std::string prefix = argName.substr(0, argName.find("sha1"));
                     value = node[prefix+"load_info"][argName];
                 }
+                if (argName.find("download_sha") != std::string::npos) {
+                    std::string prefix = argName.substr(0, argName.find("download_sha"));
+                    value = node[prefix+"load_info"][argName];
+                }
                 if (!value.empty())
                 {
                     if (value.isReal())
@@ -174,5 +178,7 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
            genArgument(prefix + "labels", "Path to a text file with names of classes to label detected objects.",
                        modelName, zooFile)+
            genArgument(prefix + "sha1", "Optional path to hashsum of downloaded model to be loaded from models.yml",
+                       modelName, zooFile)+
+           genArgument(prefix + "download_sha", "Optional path to hashsum of downloaded model to be loaded from models.yml",
                        modelName, zooFile);
 }

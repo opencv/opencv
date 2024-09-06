@@ -312,7 +312,9 @@ DB:
 East:
   load_info:
     url: "https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1"
-    sha1: "3ca8233d6edd748f7ed23246c8ca24cbf696bb94"
+    sha1: "fffabf5ac36f37bddf68e34e84b45f5c4247ed06"
+    download_name: "frozen_east_text_detection.tar.gz"
+    download_sha: "3ca8233d6edd748f7ed23246c8ca24cbf696bb94"
   model: "frozen_east_text_detection.pb"
   ocr_load_info:
     ocr_url: "https://drive.google.com/uc?export=dowload&id=159VavnbvfBQkLIPSAu2SP5Yij1Fy4azw"

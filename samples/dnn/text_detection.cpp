@@ -92,7 +92,11 @@ int main(int argc, char** argv) {
     parser.about(about);
 
     // Parsing command-line arguments
-    String sha1 = parser.get<String>("sha1");
+
+    String sha1 = parser.get<String>("download_sha");
+    if (sha1.empty()){
+        sha1 = parser.get<String>("sha1");
+    }
     String ocr_sha1 = parser.get<String>("ocr_sha1");
     String detModelPath = findModel(parser.get<String>("model"), sha1);
     String ocr = findModel(parser.get<String>("ocr_model"), ocr_sha1);
