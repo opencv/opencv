@@ -2,7 +2,6 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include "../precomp.hpp"
 #include "layers_common.hpp"
-#include "../ie_ngraph.hpp"
 
 namespace cv
 {
@@ -17,7 +16,6 @@ public:
     {
         axis = params.get<int>("axis", -1);
     }
-
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
