@@ -173,10 +173,12 @@ endif()
 macro(ocv_force_baseline_detect_and_check_dispatch)
   set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
 
-  if(CPU_BASELINE STREQUAL "NATIVE")
+  if(DEFINED CPU_BASELINE AND CPU_BASELINE STREQUAL "")
+    # ok
+  elseif(CPU_BASELINE STREQUAL "NATIVE")
     # ok
   elseif(NOT CPU_BASELINE STREQUAL "DETECT")
-    message(WARNING "Platform ${CMAKE_SYSTEM_PROCESSOR} only supports CPU_BASELINE=DETECT|NATIVE, use CMAKE_CXX_FLAGS or cmake toolchain file options to modify compiler options")
+    message(WARNING "Platform ${CMAKE_SYSTEM_PROCESSOR} only supports CPU_BASELINE=DETECT|NATIVE|<empty>, use CMAKE_CXX_FLAGS or cmake toolchain file options to modify compiler options")
     set(CPU_BASELINE "DETECT")
   endif()
 
