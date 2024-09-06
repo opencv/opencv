@@ -3278,8 +3278,7 @@ TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
     testONNXModels("clip_div_shared_constant");
 }
 
-// Bug: https://github.com/opencv/opencv/issues/26076
-TEST_P(Test_ONNX_layers, DISABLED_TopK) {
+TEST_P(Test_ONNX_layers, TopK) {
     auto test = [&](const std::string &basename, double l1 = 0, double lInf = 0) {
         std::string onnxmodel = _tf("models/" + basename + ".onnx", true);
         Mat input = readTensorFromONNX(_tf("data/input_" + basename + ".pb"));
@@ -3298,8 +3297,6 @@ TEST_P(Test_ONNX_layers, DISABLED_TopK) {
 
         Mat output_res_val = outputs.front(),
             output_res_ind = outputs.back();
-
-        output_ref_ind.convertTo(output_ref_ind, CV_32F); // TODO: revise this conversion in 5.x
 
         normAssert(output_ref_val, output_res_val, (basename + " values").c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         normAssert(output_ref_ind, output_res_ind, (basename + " indices").c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);

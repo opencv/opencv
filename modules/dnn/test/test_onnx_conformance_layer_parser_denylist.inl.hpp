@@ -398,7 +398,7 @@
 "test_tfidfvectorizer_tf_uniandbigrams_skip5", // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "TfIdfVectorizer" in function 'getLayerInstance'
 "test_tile", // Issue:: Parser: ONNX/Tile: repeats being non-constant is not supported. in function 'parseTile' (layer parameters are dynamic)
 "test_tile_precomputed", //  // ---- same as above ---
-"test_top_k", // Issue:: Parser: Can't create layer "onnx_node_output_0!values" of type "TopK" in function 'getLayerInstance'
+"test_top_k", // Issue:: K being input is not compatible with the current engine
 "test_top_k_negative_axis",  // ---- same as above ---
 "test_top_k_smallest",  // ---- same as above ---
 "test_training_dropout", // Issue::cvtest::norm::wrong data type
