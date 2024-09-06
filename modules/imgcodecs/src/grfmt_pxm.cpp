@@ -479,7 +479,7 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
         header_sz += sz;
     }
 
-    strm.putBytes(buffer, header_sz);
+    CHECK_WRITE(strm.putBytes(buffer, header_sz));
 
     for( y = 0; y < height; y++ )
     {
@@ -512,7 +512,7 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
                 {
                     *ptr++ = byte;
                 }
-                strm.putBytes(buffer, (int)(ptr - buffer));
+                CHECK_WRITE(strm.putBytes(buffer, (int)(ptr - buffer)));
                 continue;
             }
 
@@ -539,7 +539,7 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
                 }
             }
 
-            strm.putBytes( (channels > 1 || depth > 8) ? buffer : (const char*)data, fileStep);
+            CHECK_WRITE(strm.putBytes( (channels > 1 || depth > 8) ? buffer : (const char*)data, fileStep));
         }
         else
         {
@@ -610,7 +610,7 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
 
             *ptr++ = '\n';
 
-            strm.putBytes( buffer, (int)(ptr - buffer) );
+            CHECK_WRITE(strm.putBytes( buffer, (int)(ptr - buffer) ));
         }
     }
 

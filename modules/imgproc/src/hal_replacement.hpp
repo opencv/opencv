@@ -274,6 +274,29 @@ inline int hal_ni_resize(int src_type, const uchar *src_data, size_t src_step, i
  */
 inline int hal_ni_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4]) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 /**
+   @brief hal_warpAffineBlocklineNN doing a row of affine transformation
+   @param adelta input M0 * x array
+   @param bdelta input M3 * x array
+   @param xy output (x', y') coordinates
+   @param X0 input M1 * y + M2 value
+   @param Y0 input M4 * y + M5 value
+   @param bw length of the row
+   @sa cv::warpAffineBlocklineNN, cv::hal::warpAffineBlocklineNN
+ */
+inline int hal_ni_warpAffineBlocklineNN(int *adelta, int *bdelta, short* xy, int X0, int Y0, int bw) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+   @brief hal_warpAffineBlockline doing a row of affine transformation
+   @param adelta input M0 * x array
+   @param bdelta input M3 * x array
+   @param xy output (x', y') coordinates
+   @param alpha output least significant bits of the (x', y') coordinates for interpolation
+   @param X0 input M1 * y + M2 value
+   @param Y0 input M4 * y + M5 value
+   @param bw length of the row
+   @sa cv::warpAffineBlockline, cv::hal::warpAffineBlockline
+ */
+inline int hal_ni_warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X0, int Y0, int bw) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
    @brief hal_warpPerspective
    @param src_type source and destination image type
    @param src_data source image data
@@ -291,11 +314,38 @@ inline int hal_ni_warpAffine(int src_type, const uchar *src_data, size_t src_ste
    @sa cv::warpPerspective, cv::hal::warpPerspective
  */
 inline int hal_ni_warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4]) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+   @brief hal_warpPerspectiveBlocklineNN doing a row of perspective transformation
+   @param M 3x3 matrix with transform coefficients
+   @param xy output (x', y') coordinates
+   @param X0 input M0 * x0 + M1 * y + M2 value
+   @param Y0 input M3 * x0 + M4 * y + M5 value
+   @param W0 input M6 * x0 + M7 * y + M8 value
+   @param bw length of the row
+   @sa cv::warpPerspectiveBlocklineNN, cv::hal::warpPerspectiveBlocklineNN
+ */
+inline int hal_ni_warpPerspectiveBlocklineNN(const double *M, short* xy, double X0, double Y0, double W0, int bw) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+   @brief hal_warpPerspectiveBlockline doing a row of perspective transformation
+   @param M 3x3 matrix with transform coefficients
+   @param xy output (x', y') coordinates
+   @param alpha output least significant bits of the (x', y') coordinates for interpolation
+   @param X0 input M0 * x0 + M1 * y + M2 value
+   @param Y0 input M3 * x0 + M4 * y + M5 value
+   @param W0 input M6 * x0 + M7 * y + M8 value
+   @param bw length of the row
+   @sa cv::warpPerspectiveBlockline, cv::hal::warpPerspectiveBlockline
+ */
+inline int hal_ni_warpPerspectiveBlockline(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_resize hal_ni_resize
 #define cv_hal_warpAffine hal_ni_warpAffine
+#define cv_hal_warpAffineBlocklineNN hal_ni_warpAffineBlocklineNN
+#define cv_hal_warpAffineBlockline hal_ni_warpAffineBlockline
 #define cv_hal_warpPerspective hal_ni_warpPerspective
+#define cv_hal_warpPerspectiveBlocklineNN hal_ni_warpPerspectiveBlocklineNN
+#define cv_hal_warpPerspectiveBlockline hal_ni_warpPerspectiveBlockline
 //! @endcond
 
 /**
@@ -450,6 +500,23 @@ inline int hal_ni_cvtGraytoBGR5x5(const uchar * src_data, size_t src_step, uchar
 inline int hal_ni_cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, bool swapBlue, bool isCbCr) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /**
+   @brief Analog of hal_cvtBGRtoYUV, but allows approximations (not bit-exact)
+   @param src_data source image data
+   @param src_step source image step
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param width image width
+   @param height image height
+   @param depth image depth (one of CV_8U, CV_16U or CV_32F)
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
+   @param isCbCr if set to true write output in YCbCr format
+   Convert from BGR, RGB, BGRA or RGBA to YUV or YCbCr.
+ */
+inline int hal_ni_cvtBGRtoYUVApprox(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, bool swapBlue, bool isCbCr) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+
+/**
    @brief hal_cvtYUVtoBGR
    @param src_data source image data
    @param src_step source image step
@@ -464,6 +531,22 @@ inline int hal_ni_cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * d
    Convert from YUV or YCbCr to BGR, RGB, BGRA or RGBA.
  */
 inline int hal_ni_cvtYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn, bool swapBlue, bool isCbCr) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Analog of hal_cvtYUVtoBGR, but allows approximations (not bit-exact)
+   @param src_data source image data
+   @param src_step source image step
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param width image width
+   @param height image height
+   @param depth image depth (one of CV_8U, CV_16U or CV_32F)
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param isCbCr if set to true treat source as YCbCr
+   Convert from YUV or YCbCr to BGR, RGB, BGRA or RGBA.
+ */
+inline int hal_ni_cvtYUVtoBGRApprox(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn, bool swapBlue, bool isCbCr) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /**
    @brief hal_cvtBGRtoXYZ
@@ -581,6 +664,24 @@ inline int hal_ni_cvtLabtoBGR(const uchar * src_data, size_t src_step, uchar * d
 inline int hal_ni_cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /**
+   @brief analog of hal_cvtTwoPlaneYUVtoBGR that allows approximations (not bit-exact)
+   @param src_data source image data
+   @param src_step source image step
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param dst_width destination image width
+   @param dst_height destination image height
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param uIdx U-channel index in the interleaved U/V plane (0 or 1)
+   Convert from YUV (YUV420sp (or NV12/NV21) - Y plane followed by interleaved U/V plane) to BGR, RGB, BGRA or RGBA.
+   Only for CV_8U.
+   Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+ */
+inline int hal_ni_cvtTwoPlaneYUVtoBGRApprox(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+
+/**
    @brief Extended version of hal_cvtTwoPlaneYUVtoBGR.
    @param y_data source image data (Y-plane)
    @param y_step source image step (Y-plane)
@@ -598,6 +699,27 @@ inline int hal_ni_cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, u
    Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
  */
 inline int hal_ni_cvtTwoPlaneYUVtoBGREx(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
+                                      uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                                      int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Extended version of hal_cvtTwoPlaneYUVtoBGR that allows approximations (not bit-exact)
+   @param y_data source image data (Y-plane)
+   @param y_step source image step (Y-plane)
+   @param uv_data source image data (UV-plane)
+   @param uv_step source image step (UV-plane)
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param dst_width destination image width
+   @param dst_height destination image height
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param uIdx U-channel index in the interleaved U/V plane (0 or 1)
+   Convert from YUV (YUV420sp (or NV12/NV21) - Y plane followed by interleaved U/V plane) to BGR, RGB, BGRA or RGBA.
+   Only for CV_8U.
+   Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+ */
+inline int hal_ni_cvtTwoPlaneYUVtoBGRExApprox(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
                                       uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
                                       int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
@@ -641,6 +763,23 @@ inline int hal_ni_cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
 inline int hal_ni_cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /**
+   @brief Analog of hal_cvtThreePlaneYUVtoBGR that allows approximations (not bit-exact)
+   @param src_data source image data
+   @param src_step source image step
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param dst_width destination image width
+   @param dst_height destination image height
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param uIdx U-channel plane index (0 or 1)
+   Convert from YUV (YUV420p (or YV12/YV21) - Y plane followed by U and V planes) to BGR, RGB, BGRA or RGBA.
+   Only for CV_8U.
+   Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+ */
+inline int hal_ni_cvtThreePlaneYUVtoBGRApprox(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
    @brief hal_cvtBGRtoThreePlaneYUV
    @param src_data source image data
    @param src_step source image step
@@ -656,6 +795,24 @@ inline int hal_ni_cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
    Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
  */
 inline int hal_ni_cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Analog of hal_cvtBGRtoThreePlaneYUV that allows approximations (not bit-exact)
+   @param src_data source image data
+   @param src_step source image step
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param width image width
+   @param height image height
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R source channels will be swapped (treat as RGB)
+   @param uIdx U-channel plane index (0 or 1)
+   Convert from BGR, RGB, BGRA or RGBA to YUV (YUV420p (or YV12/YV21) - Y plane followed by U and V planes).
+   Only for CV_8U.
+   Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+ */
+inline int hal_ni_cvtBGRtoThreePlaneYUVApprox(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
 
 /**
    @brief hal_cvtOnePlaneYUVtoBGR
@@ -676,6 +833,24 @@ inline int hal_ni_cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
 inline int hal_ni_cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int dcn, bool swapBlue, int uIdx, int ycn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /**
+   @brief analog of hal_cvtOnePlaneYUVtoBGR that allows approximations (not bit-exact)
+   @param src_data source image data
+   @param src_step source image step
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param width image width
+   @param height image height
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param uIdx U-channel index (0 or 1)
+   @param ycn Y-channel index (0 or 1)
+   Convert from interleaved YUV 4:2:2 (UYVY, YUY2 or YVYU) to BGR, RGB, BGRA or RGBA.
+   Only for CV_8U.
+   Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+ */
+inline int hal_ni_cvtOnePlaneYUVtoBGRApprox(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int dcn, bool swapBlue, int uIdx, int ycn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
    @brief hal_cvtOnePlaneBGRtoYUV
    @param src_data,src_step source image data and step
    @param dst_data,dst_step destination image data and step
@@ -689,6 +864,21 @@ inline int hal_ni_cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step, u
    Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
  */
 inline int hal_ni_cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx, int ycn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief analog of hal_cvtOnePlaneBGRtoYUV that allows approximations (not bit-exact)
+   @param src_data,src_step source image data and step
+   @param dst_data,dst_step destination image data and step
+   @param width,height image size
+   @param scn source image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   @param uIdx U-channel index (0 or 1)
+   @param ycn Y-channel index (0 or 1)
+   Convert from BGR, RGB, BGRA or RGBA to interleaved YUV 4:2:2 (UYVY, YUY2 or YVYU).
+   Only for CV_8U.
+   Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+ */
+inline int hal_ni_cvtOnePlaneBGRtoYUVApprox(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx, int ycn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /**
    @brief hal_cvtRGBAtoMultipliedRGBA
@@ -725,7 +915,9 @@ inline int hal_ni_cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_ste
 #define cv_hal_cvtBGR5x5toGray hal_ni_cvtBGR5x5toGray
 #define cv_hal_cvtGraytoBGR5x5 hal_ni_cvtGraytoBGR5x5
 #define cv_hal_cvtBGRtoYUV hal_ni_cvtBGRtoYUV
+#define cv_hal_cvtBGRtoYUVApprox hal_ni_cvtBGRtoYUVApprox
 #define cv_hal_cvtYUVtoBGR hal_ni_cvtYUVtoBGR
+#define cv_hal_cvtYUVtoBGRApprox hal_ni_cvtYUVtoBGRApprox
 #define cv_hal_cvtBGRtoXYZ hal_ni_cvtBGRtoXYZ
 #define cv_hal_cvtXYZtoBGR hal_ni_cvtXYZtoBGR
 #define cv_hal_cvtBGRtoHSV hal_ni_cvtBGRtoHSV
@@ -733,12 +925,18 @@ inline int hal_ni_cvtMultipliedRGBAtoRGBA(const uchar * src_data, size_t src_ste
 #define cv_hal_cvtBGRtoLab hal_ni_cvtBGRtoLab
 #define cv_hal_cvtLabtoBGR hal_ni_cvtLabtoBGR
 #define cv_hal_cvtTwoPlaneYUVtoBGR hal_ni_cvtTwoPlaneYUVtoBGR
+#define cv_hal_cvtTwoPlaneYUVtoBGRApprox hal_ni_cvtTwoPlaneYUVtoBGRApprox
 #define cv_hal_cvtTwoPlaneYUVtoBGREx hal_ni_cvtTwoPlaneYUVtoBGREx
+#define cv_hal_cvtTwoPlaneYUVtoBGRExApprox hal_ni_cvtTwoPlaneYUVtoBGRExApprox
 #define cv_hal_cvtBGRtoTwoPlaneYUV hal_ni_cvtBGRtoTwoPlaneYUV
 #define cv_hal_cvtThreePlaneYUVtoBGR hal_ni_cvtThreePlaneYUVtoBGR
+#define cv_hal_cvtThreePlaneYUVtoBGRApprox hal_ni_cvtThreePlaneYUVtoBGRApprox
 #define cv_hal_cvtBGRtoThreePlaneYUV hal_ni_cvtBGRtoThreePlaneYUV
+#define cv_hal_cvtBGRtoThreePlaneYUVApprox hal_ni_cvtBGRtoThreePlaneYUVApprox
 #define cv_hal_cvtOnePlaneYUVtoBGR hal_ni_cvtOnePlaneYUVtoBGR
+#define cv_hal_cvtOnePlaneYUVtoBGRApprox hal_ni_cvtOnePlaneYUVtoBGRApprox
 #define cv_hal_cvtOnePlaneBGRtoYUV hal_ni_cvtOnePlaneBGRtoYUV
+#define cv_hal_cvtOnePlaneBGRtoYUVApprox hal_ni_cvtOnePlaneBGRtoYUVApprox
 #define cv_hal_cvtRGBAtoMultipliedRGBA hal_ni_cvtRGBAtoMultipliedRGBA
 #define cv_hal_cvtMultipliedRGBAtoRGBA hal_ni_cvtMultipliedRGBAtoRGBA
 //! @endcond
@@ -1047,6 +1245,33 @@ inline int hal_ni_pyrdown(const uchar* src_data, size_t src_step, int src_width,
 
 //! @cond IGNORED
 #define cv_hal_pyrdown hal_ni_pyrdown
+//! @endcond
+
+/**
+   @brief Perform Gaussian Blur and downsampling for input tile with optional margins for submatrix
+   @param src_data Source image data
+   @param src_step Source image step
+   @param src_width Source image width
+   @param src_height Source image height
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param dst_width Destination image width
+   @param dst_height Destination image height
+   @param depth Depths of source and destination image
+   @param cn Number of channels
+   @param margin_left Left margins for source image
+   @param margin_top Top margins for source image
+   @param margin_right Right margins for source image
+   @param margin_bottom Bottom margins for source image
+   @param border_type Border type
+*/
+inline int hal_ni_pyrdown_offset(const uchar* src_data, size_t src_step, int src_width, int src_height,
+                                 uchar* dst_data, size_t dst_step, int dst_width, int dst_height,
+                                 int depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int border_type)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_pyrdown_offset hal_ni_pyrdown_offset
 //! @endcond
 
 /**

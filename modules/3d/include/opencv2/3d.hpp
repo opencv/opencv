@@ -2512,9 +2512,24 @@ the number of points in the view.
 @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
 
 Note that the function assumes the camera intrinsic matrix of the undistorted points to be identity.
-This means if you want to distort image points you have to multiply them with \f$K^{-1}\f$.
+This means if you want to distort image points you have to multiply them with \f$K^{-1}\f$ or
+use another function overload.
  */
 CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
+
+/** @overload
+Overload of distortPoints function to handle cases when undistorted points are got with non-identity
+camera matrix, e.g. output of #estimateNewCameraMatrixForUndistortRectify.
+@param undistorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is
+the number of points in the view.
+@param Kundistorted Camera intrinsic matrix used as new camera matrix for undistortion.
+@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+@param alpha The skew coefficient.
+@param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+@sa estimateNewCameraMatrixForUndistortRectify
+*/
+CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray Kundistorted, InputArray K, InputArray D, double alpha = 0);
 
 /** @brief Undistorts 2D points using fisheye model
 

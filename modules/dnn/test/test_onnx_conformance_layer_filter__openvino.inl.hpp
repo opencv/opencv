@@ -501,9 +501,11 @@ CASE(test_depthtospace_dcr_mode)
 CASE(test_depthtospace_example)
     // no filter
 CASE(test_dequantizelinear)
-    // no filter
+    SKIP;
 CASE(test_dequantizelinear_axis)
-    // no filter
+    SKIP;
+CASE(test_dequantizelinear_blocked)
+    SKIP;
 CASE(test_det_2d)
     // no filter
 CASE(test_det_nd)
@@ -547,6 +549,20 @@ CASE(test_dynamicquantizelinear_min_adjusted_expanded)
 CASE(test_edge_pad)
     // no filter
 CASE(test_einsum_batch_diagonal)
+    SKIP;
+CASE(test_hardmax_axis_0)
+    SKIP;
+CASE(test_hardmax_axis_1)
+    SKIP;
+CASE(test_hardmax_axis_2)
+    SKIP;
+CASE(test_hardmax_default_axis)
+    SKIP;
+CASE(test_hardmax_example)
+    SKIP;
+CASE(test_hardmax_negative_axis)
+    SKIP;
+CASE(test_hardmax_one_hot)
     SKIP;
 CASE(test_einsum_batch_matmul)
     // no filter
@@ -1280,9 +1296,11 @@ CASE(test_qlinearmatmul_2D)
 CASE(test_qlinearmatmul_3D)
     // no filter
 CASE(test_quantizelinear)
-    // no filter
+    SKIP;
 CASE(test_quantizelinear_axis)
-    // no filter
+    SKIP;
+CASE(test_quantizelinear_blocked)
+    SKIP;
 CASE(test_range_float_type_positive_delta)
     // no filter
 CASE(test_range_float_type_positive_delta_expanded)

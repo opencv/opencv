@@ -249,7 +249,7 @@ OCV_OPTION(BUILD_CLAPACK            "Build CLapack from source"          (((WIN3
 
 # Optional 3rd party components
 # ===================================================
-OCV_OPTION(WITH_1394 "Include IEEE1394 support" ON
+OCV_OPTION(WITH_1394 "Include IEEE1394 support" OFF
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_DC1394_2)
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/visionOS/Mac)" ON
@@ -771,7 +771,7 @@ if(UNIX OR MINGW)
     elseif(EMSCRIPTEN)
       # no need to link to system libs with emscripten
     elseif(QNXNTO)
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m)
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m regex)
     elseif(MINGW)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} pthread)
     else()
@@ -1026,7 +1026,7 @@ foreach(hal ${OpenCV_HAL})
       ocv_hal_register(NDSRVP_HAL_LIBRARIES NDSRVP_HAL_HEADERS NDSRVP_HAL_INCLUDE_DIRS)
       list(APPEND OpenCV_USED_HAL "ndsrvp (ver ${NDSRVP_HAL_VERSION})")
     else()
-      message(STATUS "NDSRVP: Andes GNU Toolchain DSP extension is not open, disabling ndsrvp...")
+      message(STATUS "NDSRVP: Andes GNU Toolchain DSP extension is not enabled, disabling ndsrvp...")
     endif()
   elseif(hal STREQUAL "halrvv")
     if(";${CPU_BASELINE_FINAL};" MATCHES ";RVV;")

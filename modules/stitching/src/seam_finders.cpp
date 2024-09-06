@@ -185,7 +185,7 @@ DpSeamFinder::DpSeamFinder(String costFunc)
     else if (costFunc == "COLOR_GRAD")
         costFunc_ = COLOR_GRAD;
     else
-        CV_Error(-1, "Unknown cost function");
+        CV_Error(cv::Error::StsError, "Unknown cost function");
 }
 
 void DpSeamFinder::setCostFunction(String costFunc)
@@ -195,7 +195,7 @@ void DpSeamFinder::setCostFunction(String costFunc)
     else if (costFunc == "COLOR_GRAD")
         costFunc_ = COLOR_GRAD;
     else
-        CV_Error(-1, "Unknown cost function");
+        CV_Error(cv::Error::StsError, "Unknown cost function");
 }
 
 void DpSeamFinder::find(const std::vector<UMat> &src, const std::vector<Point> &corners, std::vector<UMat> &masks)
