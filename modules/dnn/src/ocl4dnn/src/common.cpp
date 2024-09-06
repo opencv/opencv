@@ -52,3 +52,21 @@ bool clOptionSupport(cv::String option)
     ocl::Program program = ocl::Context::getDefault().getProg(ocl::dnn::dummy_oclsrc, option, errmsg);
     return program.ptr() ? true : false;
 }
+
+cv::String matTypeToOclType(int cvMatType)
+{
+    cv::String oclType;
+    switch(cvMatType)
+    {
+        case CV_16F:  oclType =  "half"; break;
+        case CV_32F:  oclType = "float"; break;
+        case CV_Bool: oclType =  "bool"; break;
+        case CV_8U:   oclType = "uchar"; break;
+        case CV_8S:   oclType =  "char"; break;
+        case CV_32S:  oclType =   "int"; break;
+        case CV_64S:  oclType =  "long"; break;
+        default:
+            CV_Error(Error::StsBadArg, "Unsupported mat type");
+    }
+    return oclType;
+}

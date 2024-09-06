@@ -2007,4 +2007,22 @@ INSTANTIATE_TEST_CASE_P( /*nothing*/,
     Core_InputOutput_regression_25073,
     Values("test.json", "test.xml", "test.yml") );
 
+// see https://github.com/opencv/opencv/issues/25946
+TEST(Core_InputOutput, FileStorage_invalid_attribute_value_regression_25946)
+{
+    const std::string fileName = cv::tempfile("FileStorage_invalid_attribute_value_exception_test.xml");
+    const std::string content = "<?xml \n_=";
+
+    std::fstream testFile;
+    testFile.open(fileName.c_str(), std::fstream::out);
+    if(!testFile.is_open()) FAIL();
+    testFile << content;
+    testFile.close();
+
+    FileStorage fs;
+    EXPECT_ANY_THROW( fs.open(fileName, FileStorage::READ + FileStorage::FORMAT_XML) );
+
+    ASSERT_EQ(0, std::remove(fileName.c_str()));
+}
+
 }} // namespace
