@@ -1019,6 +1019,10 @@ TEST_P(Test_ONNX_layers, MatMul_init_bcast)
     testONNXModels("matmul_init_bcast");
 }
 
+TEST_P(Test_ONNX_layers, MatMul_bcast_3dx2d) {
+    testONNXModels("matmul_bcast");
+}
+
 TEST_P(Test_ONNX_layers, MatMulAdd)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -3272,6 +3276,40 @@ TEST_P(Test_ONNX_layers, MatMulAddFusion) {
 
 TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
     testONNXModels("clip_div_shared_constant");
+}
+
+// Bug: https://github.com/opencv/opencv/issues/26076
+TEST_P(Test_ONNX_layers, DISABLED_TopK) {
+    auto test = [&](const std::string &basename, double l1 = 0, double lInf = 0) {
+        std::string onnxmodel = _tf("models/" + basename + ".onnx", true);
+        Mat input = readTensorFromONNX(_tf("data/input_" + basename + ".pb"));
+        Mat output_ref_val = readTensorFromONNX(_tf("data/output_" + basename + "_0.pb")),
+            output_ref_ind = readTensorFromONNX(_tf("data/output_" + basename + "_1.pb"));
+
+        checkBackend(&input, &output_ref_val);
+        checkBackend(&input, &output_ref_ind);
+        Net net = readNetFromONNX(onnxmodel);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+
+        net.setInput(input);
+        std::vector<Mat> outputs;
+        net.forward(outputs, std::vector<std::string>{"values", "indices"});
+
+        Mat output_res_val = outputs.front(),
+            output_res_ind = outputs.back();
+
+        output_ref_ind.convertTo(output_ref_ind, CV_32F); // TODO: revise this conversion in 5.x
+
+        normAssert(output_ref_val, output_res_val, (basename + " values").c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        normAssert(output_ref_ind, output_res_ind, (basename + " indices").c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+
+        expectNoFallbacksFromIE(net);
+    };
+
+    test("top_k");
+    test("top_k_negative_axis");
+    test("top_k_smallest");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

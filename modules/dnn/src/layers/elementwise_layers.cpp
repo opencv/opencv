@@ -1520,10 +1520,10 @@ struct RoundFunctor : public BaseDefaultFunctor<RoundFunctor>
     inline float calculate(float x) const
     {
         // Rounds to even numbers in halfway cases, so 2.5 -> 2, -2.5 -> -2
-        int old_rounding_direction = std::fegetround();
-        std::fesetround(FE_TONEAREST);
+        int old_rounding_direction = fegetround();
+        fesetround(FE_TONEAREST);
         float y = std::nearbyint(x);
-        std::fesetround(old_rounding_direction);
+        fesetround(old_rounding_direction);
         return y;
     }
 

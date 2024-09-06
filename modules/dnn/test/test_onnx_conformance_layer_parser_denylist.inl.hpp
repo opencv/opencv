@@ -128,13 +128,6 @@
 "test_gru_defaults", // ---- same as above ---
 "test_gru_seq_length", // ---- same as above ---
 "test_gru_with_initial_bias", // ---- same as above ---
-"test_hardmax_axis_0", // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "Hardmax" in function 'getLayerInstance'
-"test_hardmax_axis_1",  // ---- same as above ---
-"test_hardmax_axis_2",  // ---- same as above ---
-"test_hardmax_default_axis",  // ---- same as above ---
-"test_hardmax_example",  // ---- same as above ---
-"test_hardmax_negative_axis",  // ---- same as above ---
-"test_hardmax_one_hot",  // ---- same as above ---
 "test_identity_opt", //  23221 illegal hardware instruction
 "test_identity_sequence",  // Issue:: Unkonwn error
 "test_if", // Issue::'Graph' is not supported in function 'getLayerParams'

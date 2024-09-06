@@ -37,7 +37,7 @@ UMatData* NumpyAllocator::allocate(int dims0, const int* sizes, int type, void* 
     int typenum = depth == CV_8U ? NPY_UBYTE : depth == CV_8S ? NPY_BYTE :
     depth == CV_16U ? NPY_USHORT : depth == CV_16S ? NPY_SHORT :
     depth == CV_32S ? NPY_INT : depth == CV_32F ? NPY_FLOAT :
-    depth == CV_64F ? NPY_DOUBLE : depth == CV_16F ? NPY_HALF : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
+    depth == CV_64F ? NPY_DOUBLE : depth == CV_16F ? NPY_HALF : depth == CV_Bool ? NPY_BOOL : f*NPY_ULONGLONG + (f^1)*NPY_UINT;
     int i, dims = dims0;
     cv::AutoBuffer<npy_intp> _sizes(dims + 1);
     for( i = 0; i < dims; i++ )

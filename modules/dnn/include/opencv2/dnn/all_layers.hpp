@@ -274,6 +274,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<EinsumLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS HardmaxLayer : public Layer
+    {
+    public:
+        static Ptr<HardmaxLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS BaseConvolutionLayer : public Layer
     {
     public:
@@ -1201,6 +1207,12 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS SpaceToDepthLayer : public Layer {
     public:
         static Ptr<SpaceToDepthLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS TopKLayer : public Layer
+    {
+    public:
+        static Ptr<TopKLayer> create(const LayerParams& params);
     };
 
 //! @}

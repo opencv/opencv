@@ -61,7 +61,7 @@ __kernel void
     const int pooled_height, const int pooled_width,
     __global Dtype* top_data
 #ifdef HAVE_MASK
-    , __global Dtype* mask
+    , __global long* mask
 #endif
 )
 {
