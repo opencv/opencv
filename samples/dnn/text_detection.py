@@ -22,7 +22,7 @@
     dummy_input = torch.randn(1, 1, 32, 100)
     torch.onnx.export(model, dummy_input, "crnn.onnx", verbose=True)
 
-    Usage: python text_detection.py DB --ocr=<path to recognition model>
+    Usage: python text_detection.py DB --ocr_model=<path to recognition model>
 
 '''
 import os
@@ -38,11 +38,13 @@ def help():
 
         Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 
-        To run:
-        Example: python text_detection.py modelName(i.e. DB or East) --ocr=<path to VGG_CTC.onnx>
+        Example: python download_models.py East
+                 python download_models.py OCR
 
-        Detection model path can also be specified using --model argument.
-        Download link for ocr model: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing
+        To run:
+        Example: python text_detection.py modelName(i.e. DB or East)
+
+        Detection model path can also be specified using --model argument and ocr model can be specified using --ocr_model.
         '''
     )
 
@@ -53,8 +55,6 @@ def get_args_parser():
                         help='Path to input image or video file. Skip this argument to capture frames from a camera.')
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
-    parser.add_argument('--ocr',
-                        help="Path to a .onnx file contains trained recognition network")
     parser.add_argument('--thr', type=float, default=0.5,
                         help='Confidence threshold.')
     parser.add_argument('--nms', type=float, default=0.4,
@@ -70,7 +70,9 @@ def get_args_parser():
     parser.add_argument('--vocabulary_path', default='alphabet_36.txt',
                         help='Path to vocabulary file.')
     args, _ = parser.parse_known_args()
-    add_preproc_args(args.zoo, parser, 'text_detection')
+
+    add_preproc_args(args.zoo, parser, 'text_detection', prefix="")
+    add_preproc_args(args.zoo, parser, 'text_recognition', prefix="ocr_")
     parser = argparse.ArgumentParser(parents=[parser],
                                         description='Text Detection and Recognition using OpenCV.',
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -91,16 +93,28 @@ def fourPointsTransform(frame, vertices):
 
 def main():
     args = get_args_parser()
-
     if args.alias is None or hasattr(args, 'help'):
         help()
         exit(1)
 
-    args.model = findModel(args.model, args.sha1)
+    if args.download_sha is not None:
+        args.model = findModel(args.model, args.download_sha)
+    else:
+        args.model = findModel(args.model, args.sha1)
+
+    args.ocr_model = findModel(args.ocr_model, args.ocr_sha1)
     args.input = findFile(args.input)
     args.vocabulary_path = findFile(args.vocabulary_path)
 
     frame = cv2.imread(args.input)
+    board = np.ones_like(frame)*255
+
+    stdSize = 0.8
+    stdWeight = 2
+    stdImgSize = 512
+    imgWidth = min(frame.shape[:2])
+    fontSize = (stdSize*imgWidth)/stdImgSize
+    fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
 
     if(args.alias == "DB"):
         # DB Detector initialization
@@ -127,11 +141,11 @@ def main():
     with open(args.vocabulary_path, 'r') as voc_file:
         vocabulary = [line.strip() for line in voc_file]
 
-    if args.ocr is None:
-        print("[ERROR] Please pass the path to the ocr model using --ocr to run the sample")
+    if args.ocr_model is None:
+        print("[ERROR] Please pass the path to the ocr model using --ocr_model to run the sample")
         exit(1)
     # Initialize the text recognition model with the specified model path
-    recognizer = cv2.dnn_TextRecognitionModel(args.ocr)
+    recognizer = cv2.dnn_TextRecognitionModel(args.ocr_model)
 
     # Set the vocabulary for the model
     recognizer.setVocabulary(vocabulary)
@@ -162,18 +176,20 @@ def main():
                 print(f"{i}: '{recognitionResult}'")
 
                 try:
-                    text_origin = (int(quadrangle[3][0]), int(quadrangle[3][1]))
-                    cv2.putText(frame, recognitionResult, text_origin, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    text_origin = (int(quadrangle[1][0]), int(quadrangle[0][1]))
+                    cv2.putText(board, recognitionResult, text_origin, cv2.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
                 except Exception as e:
                     print("Failed to write text on the frame:", e)
             else:
                 print("Skipping a detection with invalid format:", quadrangle)
 
-        cv2.polylines(frame, contours, True, (0, 255, 0), 2)
+        cv2.polylines(frame, contours, True, (0, 255, 0), 1)
+        cv2.polylines(board, contours, True, (200, 255, 200), 1)
     else:
         print("No Text Detected.")
 
-    cv2.imshow("Text Detection and Recognition", frame)
+    stacked = np.hstack([frame, board],dtype = "uint8")
+    cv2.imshow("Text Detection and Recognition", stacked)
     cv2.waitKey(0)
 
 

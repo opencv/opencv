@@ -68,6 +68,7 @@ static void processFrame(
     String ocr_model,
     bool imreadRGB,
     Mat& board,
+    FontFace fontFace,
     int fontSize,
     int fontWeight,
     vector<String> vocabulary
@@ -131,6 +132,7 @@ int main(int argc, char** argv) {
     int imgWidth = min(frame.rows, frame.cols);
     int size = (stdSize*imgWidth)/stdImgSize;
     int weight = (stdWeight*imgWidth)/stdImgSize;
+    FontFace fontFace("sans");
 
     // Initializing and configuring the text detection model based on the provided config
     if (modelName == "East") {
@@ -171,7 +173,7 @@ int main(int argc, char** argv) {
         vocabulary.push_back(vocLine);
     }
 
-    processFrame(frame, detResults, ocr, imreadRGB, board, size, weight, vocabulary);
+    processFrame(frame, detResults, ocr, imreadRGB, board, fontFace, size, weight, vocabulary);
     return 0;
 }
 
@@ -197,6 +199,7 @@ void processFrame(
     String ocr_model,
     bool imreadRGB,
     Mat& board,
+    FontFace fontFace,
     int fontSize,
     int fontWeight,
     vector<String> vocabulary
@@ -240,9 +243,7 @@ void processFrame(
                 cout << i << ": '" << recognitionResult << "'" << endl;
 
                 // Displaying the recognized text on the image
-                FontFace sans("sans");
-                // Displaying the recognized text on the image
-                putText(board, recognitionResult, Point(detResults[i][1].x, detResults[i][0].y), Scalar(0, 0, 0), sans, fontSize, fontWeight);
+                putText(board, recognitionResult, Point(detResults[i][1].x, detResults[i][0].y), Scalar(0, 0, 0), fontFace, fontSize, fontWeight);
             }
             else{
                 cout << "[WARN] Please pass the path to the ocr model using --ocr_model to get the recognised text." << endl;

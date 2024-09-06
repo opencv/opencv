@@ -332,6 +332,7 @@ OCR:
     url: "https://drive.google.com/uc?export=dowload&id=159VavnbvfBQkLIPSAu2SP5Yij1Fy4azw"
     sha1: "c4ab1fb3f13c1c8ffc04f016e72ec85311de4ebe"
   model: "VGG_CTC.onnx"
+  sample: "text_recognition"
 
 # Edge Detection models.
 ################################################################################
