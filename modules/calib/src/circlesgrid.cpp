@@ -647,7 +647,6 @@ bool CirclesGridFinder::findHoles()
       CV_Error(Error::StsBadArg, "Unknown pattern type");
   }
   return (isDetectionCorrect());
-  //CV_Error( cv::Error::StsError, "Detection is not correct" );
 }
 
 void CirclesGridFinder::rng2gridGraph(Graph &rng, std::vector<cv::Point2f> &vectors) const
@@ -1326,8 +1325,6 @@ size_t CirclesGridFinder::findLongestPath(std::vector<Graph> &basisGraphs, Path 
       confidences.push_back(conf);
     }
   }
-  //if( bestGraphIdx != 0 )
-  //CV_Error( cv::Error::StsError, "" );
 
   int maxConf = -1;
   int bestPathIdx = -1;
