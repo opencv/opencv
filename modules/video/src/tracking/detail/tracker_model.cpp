@@ -70,7 +70,7 @@ bool TrackerModel::runStateEstimator()
 {
     if (!stateEstimator)
     {
-        CV_Error(-1, "Tracker state estimator is not setted");
+        CV_Error(cv::Error::StsError, "Tracker state estimator is not setted");
     }
     Ptr<TrackerTargetState> targetState = stateEstimator->estimate(confidenceMaps);
     if (!targetState)

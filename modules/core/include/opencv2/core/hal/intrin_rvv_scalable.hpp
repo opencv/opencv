@@ -8,7 +8,7 @@
 #ifndef OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 #define OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 
-#include <opencv2/core/check.hpp>
+#include <opencv2/core/base.hpp>
 
 #if defined(__GNUC__) && !defined(__clang__)
 // FIXIT: eliminate massive warnigs from templates

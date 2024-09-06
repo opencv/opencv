@@ -44,8 +44,6 @@
 
 namespace opencv_test { namespace {
 
-#define CORE_COUNTNONZERO_ERROR_COUNT 1
-
 #define MESSAGE_ERROR_COUNT "Count non zero elements returned by OpenCV function is incorrect."
 
 #define sign(a) a > 0 ? 1 : a == 0 ? 0 : -1
@@ -203,7 +201,7 @@ void CV_CountNonZeroTest::run(int)
                     cout << "Number of experiment: " << i << endl;
                     cout << "Method of data generation: RANDOM" << endl;
                     print_information(right, result);
-                    CV_Error(CORE_COUNTNONZERO_ERROR_COUNT, MESSAGE_ERROR_COUNT);
+                    CV_Error(cv::Error::StsError, MESSAGE_ERROR_COUNT);
                     return;
                 }
 
@@ -219,7 +217,7 @@ void CV_CountNonZeroTest::run(int)
                     cout << "Number of experiment: " << i << endl;
                     cout << "Method of data generation: HALF-RANDOM" << endl;
                     print_information(count_non_zero, result);
-                    CV_Error(CORE_COUNTNONZERO_ERROR_COUNT, MESSAGE_ERROR_COUNT);
+                    CV_Error(cv::Error::StsError, MESSAGE_ERROR_COUNT);
                     return;
                 }
 
@@ -235,7 +233,7 @@ void CV_CountNonZeroTest::run(int)
                     cout << "Number of experiment: " << i << endl;
                     cout << "Method of data generation: STATISTIC" << endl;
                     print_information(right, result);
-                    CV_Error(CORE_COUNTNONZERO_ERROR_COUNT, MESSAGE_ERROR_COUNT);
+                    CV_Error(cv::Error::StsError, MESSAGE_ERROR_COUNT);
                     return;
                 }
 

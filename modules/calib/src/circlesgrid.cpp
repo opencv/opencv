@@ -647,7 +647,6 @@ bool CirclesGridFinder::findHoles()
       CV_Error(Error::StsBadArg, "Unknown pattern type");
   }
   return (isDetectionCorrect());
-  //CV_Error( 0, "Detection is not correct" );
 }
 
 void CirclesGridFinder::rng2gridGraph(Graph &rng, std::vector<cv::Point2f> &vectors) const
@@ -1006,14 +1005,14 @@ void CirclesGridFinder::insertWinner(float aboveConfidence, float belowConfidenc
     if (aboveConfidence >= belowConfidence)
     {
       if (!areCentersNew(above, holes))
-        CV_Error( 0, "Centers are not new" );
+        CV_Error( cv::Error::StsError, "Centers are not new" );
 
       holes.insert(holes.begin(), above);
     }
     else
     {
       if (!areCentersNew(below, holes))
-        CV_Error( 0, "Centers are not new" );
+        CV_Error( cv::Error::StsError, "Centers are not new" );
 
       holes.insert(holes.end(), below);
     }
@@ -1023,7 +1022,7 @@ void CirclesGridFinder::insertWinner(float aboveConfidence, float belowConfidenc
     if (aboveConfidence >= belowConfidence)
     {
       if (!areCentersNew(above, holes))
-        CV_Error( 0, "Centers are not new" );
+        CV_Error( cv::Error::StsError, "Centers are not new" );
 
       for (size_t i = 0; i < holes.size(); i++)
       {
@@ -1033,7 +1032,7 @@ void CirclesGridFinder::insertWinner(float aboveConfidence, float belowConfidenc
     else
     {
       if (!areCentersNew(below, holes))
-        CV_Error( 0, "Centers are not new" );
+        CV_Error( cv::Error::StsError, "Centers are not new" );
 
       for (size_t i = 0; i < holes.size(); i++)
       {
@@ -1102,7 +1101,7 @@ void CirclesGridFinder::addHolesByGraph(const std::vector<Graph> &basisGraphs, b
 void CirclesGridFinder::filterOutliersByDensity(const std::vector<Point2f> &samples, std::vector<Point2f> &filteredSamples)
 {
   if (samples.empty())
-    CV_Error( 0, "samples is empty" );
+    CV_Error( cv::Error::StsError, "samples is empty" );
 
   filteredSamples.clear();
 
@@ -1121,7 +1120,7 @@ void CirclesGridFinder::filterOutliersByDensity(const std::vector<Point2f> &samp
   }
 
   if (filteredSamples.empty())
-    CV_Error( 0, "filteredSamples is empty" );
+    CV_Error( cv::Error::StsError, "filteredSamples is empty" );
 }
 
 void CirclesGridFinder::findBasis(const std::vector<Point2f> &samples, std::vector<Point2f> &basis, std::vector<Graph> &basisGraphs)
@@ -1149,7 +1148,7 @@ void CirclesGridFinder::findBasis(const std::vector<Point2f> &samples, std::vect
     }
   }
   if (basis.size() != 2)
-    CV_Error(0, "Basis size is not 2");
+    CV_Error(cv::Error::StsError, "Basis size is not 2");
 
   if (basis[1].x > basis[0].x)
   {
@@ -1159,7 +1158,7 @@ void CirclesGridFinder::findBasis(const std::vector<Point2f> &samples, std::vect
 
   const float minBasisDif = 2;
   if (norm(basis[0] - basis[1]) < minBasisDif)
-    CV_Error(0, "degenerate basis" );
+    CV_Error(cv::Error::StsError, "degenerate basis" );
 
   std::vector<std::vector<Point2f> > clusters(2), hulls(2);
   for (int k = 0; k < (int)samples.size(); k++)
@@ -1200,7 +1199,7 @@ void CirclesGridFinder::findBasis(const std::vector<Point2f> &samples, std::vect
     }
   }
   if (basisGraphs.size() != 2)
-    CV_Error(0, "Number of basis graphs is not 2");
+    CV_Error(cv::Error::StsError, "Number of basis graphs is not 2");
 }
 
 void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors, Mat *drawImage) const
@@ -1326,8 +1325,6 @@ size_t CirclesGridFinder::findLongestPath(std::vector<Graph> &basisGraphs, Path 
       confidences.push_back(conf);
     }
   }
-  //if( bestGraphIdx != 0 )
-  //CV_Error( 0, "" );
 
   int maxConf = -1;
   int bestPathIdx = -1;
