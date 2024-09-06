@@ -61,22 +61,6 @@ using uint = unsigned int;
 using uint64 = unsigned long int;
 using int64 = long int;
 
-static const int __cv_rvv_e8m1_nlanes = __riscv_vsetvlmax_e8m1();
-static const int __cv_rvv_e16m1_nlanes = __riscv_vsetvlmax_e16m1();
-static const int __cv_rvv_e32m1_nlanes = __riscv_vsetvlmax_e32m1();
-static const int __cv_rvv_e64m1_nlanes = __riscv_vsetvlmax_e64m1();
-static const int __cv_rvv_e8m2_nlanes = __riscv_vsetvlmax_e8m2();
-static const int __cv_rvv_e16m2_nlanes = __riscv_vsetvlmax_e16m2();
-static const int __cv_rvv_e32m2_nlanes = __riscv_vsetvlmax_e32m2();
-static const int __cv_rvv_e64m2_nlanes = __riscv_vsetvlmax_e64m2();
-static const int __cv_rvv_e8m4_nlanes = __riscv_vsetvlmax_e8m4();
-static const int __cv_rvv_e16m4_nlanes = __riscv_vsetvlmax_e16m4();
-static const int __cv_rvv_e32m4_nlanes = __riscv_vsetvlmax_e32m4();
-static const int __cv_rvv_e64m4_nlanes = __riscv_vsetvlmax_e64m4();
-static const int __cv_rvv_e8m8_nlanes = __riscv_vsetvlmax_e8m8();
-static const int __cv_rvv_e16m8_nlanes = __riscv_vsetvlmax_e16m8();
-static const int __cv_rvv_e32m8_nlanes = __riscv_vsetvlmax_e32m8();
-static const int __cv_rvv_e64m8_nlanes = __riscv_vsetvlmax_e64m8();
 
 template <class T>
 struct VTraits;
@@ -85,7 +69,7 @@ struct VTraits;
 template <> \
 struct VTraits<REG> \
 { \
-    static inline int vlanes() { return __cv_rvv_##SUF##_nlanes; } \
+    static inline int vlanes() { return __riscv_vsetvlmax_##SUF(); } \
     using lane_type = TYP; \
     static const int max_nlanes = CV_RVV_MAX_VLEN/SZ; \
 };
@@ -2056,8 +2040,8 @@ inline int v_scan_forward(const v_float64& a)
 // mask: {0,0,0,1, ...} -> {T,T,T,F, ...}
 #define OPENCV_HAL_IMPL_RVV_PACK_TRIPLETS(_Tpvec, v_trunc) \
 inline _Tpvec v_pack_triplets(const _Tpvec& vec) { \
-    size_t vl = __cv_rvv_e8m1_nlanes; \
-    vuint32m1_t one = __riscv_vmv_v_x_u32m1(1, __cv_rvv_e32m1_nlanes); \
+    size_t vl = VTraits<v_uint8>::vlanes(); \
+    vuint32m1_t one = __riscv_vmv_v_x_u32m1(1, VTraits<v_uint32>::vlanes()); \
     vuint8m1_t zero = __riscv_vmv_v_x_u8m1(0, vl); \
     vuint8m1_t mask = __riscv_vreinterpret_u8m1(one); \
     return __riscv_vcompress(vec, __riscv_vmseq(v_trunc(__riscv_vslideup(zero, mask, 3, vl)), 0, vl), VTraits<_Tpvec>::vlanes()); \
