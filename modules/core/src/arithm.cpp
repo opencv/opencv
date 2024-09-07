@@ -997,6 +997,13 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(src1.empty() == src2.empty());
+    if (src1.empty() && src2.empty())
+    {
+        dst.release();
+        return;
+    }
+
     arithm_op(src1, src2, dst, mask, dtype, getAddTab(), false, 0, OCL_OP_ADD );
 }
 
@@ -1004,6 +1011,13 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
                    InputArray mask, int dtype )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(_src1.empty() == _src2.empty());
+    if (_src1.empty() && _src2.empty())
+    {
+        _dst.release();
+        return;
+    }
 
     ExtendedTypeFunc subExtFunc = getSubExtFunc(_src1.depth(), _src2.depth(), dtype < 0 ? _dst.depth() : dtype);
     arithm_op(_src1, _src2, _dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB,
@@ -1013,6 +1027,13 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
 void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(src1.empty() == src2.empty());
+    if (src1.empty() && src2.empty())
+    {
+        dst.release();
+        return;
+    }
 
     arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF);
 }
@@ -1131,6 +1152,13 @@ void divide(InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(src1.empty() == src2.empty());
+    if (src1.empty() && src2.empty())
+    {
+        dst.release();
+        return;
+    }
+
     arithm_op(src1, src2, dst, noArray(), dtype, getDivTab(), true, &scale, OCL_OP_DIV_SCALE);
 }
 
@@ -1138,6 +1166,12 @@ void divide(double scale, InputArray src2,
                 OutputArray dst, int dtype)
 {
     CV_INSTRUMENT_REGION();
+
+    if (src2.empty())
+    {
+        dst.release();
+        return;
+    }
 
     arithm_op(src2, src2, dst, noArray(), dtype, getRecipTab(), true, &scale, OCL_OP_RECIP_SCALE);
 }
@@ -1171,6 +1205,13 @@ void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
                       double beta, double gamma, OutputArray dst, int dtype )
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(src1.empty() == src2.empty());
+    if (src1.empty() && src2.empty())
+    {
+        dst.release();
+        return;
+    }
 
     double scalars[] = {alpha, beta, gamma};
     arithm_op(src1, src2, dst, noArray(), dtype, getAddWeightedTab(), true, scalars, OCL_OP_ADDW);
