@@ -524,41 +524,102 @@ public:
             vst1_u8(dst + 8, p.val[1]);
         }
 #else
-        v_uint16x8 _b2y = v_setall_u16((ushort)(rcoeff*2));
-        v_uint16x8 _g2y = v_setall_u16((ushort)(gcoeff*2));
-        v_uint16x8 _r2y = v_setall_u16((ushort)(bcoeff*2));
+        v_uint16x8 v255 = v_setall_u16(255);
+        v_int16x8 v_descale = v_setall_s16(static_cast<short>(1 << 14));
+        v_int16x8 dummy;
+        v_int16x8 cxrb;
+        v_int16x8 cxg2;
+        v_zip(v_setall_s16(static_cast<short>(rcoeff)),
+              v_setall_s16(static_cast<short>(bcoeff)),
+              cxrb,
+              dummy);
+        v_zip(v_setall_s16(static_cast<short>(gcoeff)),
+              v_setall_s16(static_cast<short>(2)),
+              cxg2,
+              dummy);
+
         const uchar* bayer_end = bayer + width;
 
-        for( ; bayer <= bayer_end - 18; bayer += 14, dst += 14 )
+        for (; bayer < bayer_end - 14; bayer += 14, dst += 14)
         {
-            v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
-            v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
-            v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
+            v_uint16x8 first_line = v_reinterpret_as_u16(v_load(bayer));
+            v_uint16x8 second_line = v_reinterpret_as_u16(v_load(bayer + bayer_step));
+            v_uint16x8 third_line = v_reinterpret_as_u16(v_load(bayer + bayer_step * 2));
 
-            v_uint16x8 b1 = v_add(v_shr<7>(v_shl<8>(r0)), v_shr<7>(v_shl<8>(r2)));
-            v_uint16x8 b0 = v_add(v_rotate_right<1>(b1), b1);
-            b1 = v_shl<1>(v_rotate_right<1>(b1));
+            // bayer[0]
+            v_uint16x8 first_line0 = v_and(first_line, v255);
+            // bayer[bayer_step*2]
+            v_uint16x8 third_line0 = v_and(third_line, v255);
+            // bayer[0] + bayer[bayer_step*2]
+            v_uint16x8 first_third_line0 = v_add(first_line0, third_line0);
+            // bayer[2] + bayer[bayer_step*2+2]
+            v_uint16x8 first_third_line2 = v_rotate_right<1>(first_third_line0);
+            // bayer[0] + bayer[2] + bayer[bayer_step*2] + bayer[bayer_step*2+2]
+            v_int16x8 r0 = v_reinterpret_as_s16(v_add(first_third_line0, first_third_line2));
+            // (bayer[2] + bayer[bayer_step*2+2]) * 2
+            v_int16x8 r1 = v_reinterpret_as_s16(v_shl<1>(first_third_line2));
 
-            v_uint16x8 g0 = v_add(v_shr<7>(r0), v_shr<7>(r2));
-            v_uint16x8 g1 = v_shr<7>(v_shl<8>(r1));
-            g0 = v_add(g0, v_add(v_rotate_right<1>(g1), g1));
-            g1 = v_shl<2>(v_rotate_right<1>(g1));
+            // bayer[bayer_step+1]
+            v_uint16x8 second_line1 = v_shr<8>(second_line);
+            // bayer[bayer_step+1] * 4
+            v_int16x8 b0 = v_reinterpret_as_s16(v_shl<2>(second_line1));
+            // bayer[bayer_step+3]
+            v_uint16x8 second_line3 = v_rotate_right<1>(second_line1);
+            // bayer[bayer_step+1] + bayer[bayer_step+3]
+            v_uint16x8 second_line13 = v_add(second_line1, second_line3);
+            // (bayer[bayer_step+1] + bayer[bayer_step+3]) * 2
+            v_int16x8 b1 = v_reinterpret_as_s16(v_shl(second_line13, 1));
 
-            r0 = v_shr<8>(r1);
-            r1 = v_shl<2>(v_add(v_rotate_right<1>(r0), r0));
-            r0 = v_shl<3>(r0);
+            // bayer[1]
+            v_uint16x8 first_line1 = v_shr<8>(first_line);
+            // bayer[bayer_step]
+            v_uint16x8 second_line0 = v_and(second_line, v255);
+            // bayer[bayer_step+2]
+            v_uint16x8 second_line2 = v_rotate_right<1>(second_line0);
+            // bayer[bayer_step] + bayer[bayer_step+2]
+            v_uint16x8 second_line02 = v_add(second_line0, second_line2);
+            // bayer[bayer_step*2+1]
+            v_uint16x8 third_line1 = v_shr<8>(third_line);
+            // bayer[1] + bayer[bayer_step*2+1]
+            v_uint16x8 first_third_line1 = v_add(first_line1, third_line1);
+            // bayer[1] + bayer[bayer_step] + bayer[bayer_step+2] + bayer[bayer_step*2+1]
+            v_int16x8 g0 = v_reinterpret_as_s16(v_add(first_third_line1, second_line02));
+            // bayer[bayer_step+2] * 4
+            v_int16x8 g1 = v_reinterpret_as_s16(v_shl<2>(second_line2));
 
-            g0 = v_shr<2>(v_add(v_add(v_mul_hi(b0, _b2y), v_mul_hi(g0, _g2y)), v_mul_hi(r0, _r2y)));
-            g1 = v_shr<2>(v_add(v_add(v_mul_hi(b1, _b2y), v_mul_hi(g1, _g2y)), v_mul_hi(r1, _r2y)));
-            v_uint8x16 pack_lo, pack_hi;
-            v_zip(v_pack_u(v_reinterpret_as_s16(g0), v_reinterpret_as_s16(g0)),
-                  v_pack_u(v_reinterpret_as_s16(g1), v_reinterpret_as_s16(g1)),
-                  pack_lo, pack_hi);
-            v_store(dst, pack_lo);
+            v_int16x8 rb0;
+            v_int16x8 rb1;
+            v_int16x8 rb2;
+            v_int16x8 rb3;
+            v_zip(r0, b0, rb0, rb1);
+            v_zip(r1, b1, rb2, rb3);
+
+            v_int16x8 gd0;
+            v_int16x8 gd1;
+            v_int16x8 gd2;
+            v_int16x8 gd3;
+            v_zip(g0, v_descale, gd0, gd1);
+            v_zip(g1, v_descale, gd2, gd3);
+
+            v_int32x4 gray_even0 = v_shr<16>(v_add(v_dotprod(rb0, cxrb), v_dotprod(gd0, cxg2)));
+            v_int32x4 gray_even1 = v_shr<16>(v_add(v_dotprod(rb1, cxrb), v_dotprod(gd1, cxg2)));
+            v_int32x4 gray_odd0 = v_shr<16>(v_add(v_dotprod(rb2, cxrb), v_dotprod(gd2, cxg2)));
+            v_int32x4 gray_odd1 = v_shr<16>(v_add(v_dotprod(rb3, cxrb), v_dotprod(gd3, cxg2)));
+
+            v_int16x8 gray_even = v_pack(gray_even0, gray_even1);
+            v_int16x8 gray_odd = v_pack(gray_odd0, gray_odd1);
+
+            v_int16x8 gray_d0;
+            v_int16x8 gray_d1;
+            v_zip(gray_even, gray_odd, gray_d0, gray_d1);
+
+            v_uint8x16 gray = v_pack(v_reinterpret_as_u16(gray_d0), v_reinterpret_as_u16(gray_d1));
+
+            v_store(dst, gray);
         }
 #endif
 
-        return (int)(bayer - (bayer_end - width));
+        return static_cast<int>(bayer - (bayer_end - width));
     }
 
     int bayer2RGB(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
