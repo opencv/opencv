@@ -61,9 +61,8 @@ parser.add_argument('--target', default="cpu", type=str, choices=targets,
                     "cuda: CUDA, "
                     "cuda_fp16: CUDA fp16 (half-float preprocess)")
 parser.add_argument('--async', type=int, default=0,
-                    dest='asyncN',
-                    help='Number of asynchronous forwards at the same time. '
-                         'Choose 0 for synchronous mode')
+                    dest='use_threads',
+                    help='Choose 0 for synchronous mode and 1 for asynchronous mode')
 args, _ = parser.parse_known_args()
 add_preproc_args(args.zoo, parser, 'object_detection')
 parser = argparse.ArgumentParser(parents=[parser],
@@ -111,6 +110,7 @@ nmsThreshold = args.nms
 stdSize = 0.8
 stdWeight = 2
 stdImgSize = 512
+asyncN = 0
 
 def get_color(class_id):
     r = min((class_id >> 0 & 1) * 128 + (class_id >> 3 & 1) * 64 + (class_id >> 6 & 1) * 32 + 80, 255)
@@ -283,7 +283,7 @@ def framesThreadBody():
 processedFramesQueue = queue.Queue()
 predictionsQueue = QueueFPS()
 def processingThreadBody():
-    global processedFramesQueue, predictionsQueue, args, process
+    global processedFramesQueue, predictionsQueue, args, process, asyncN
 
     futureOutputs = []
     while process:
@@ -292,8 +292,8 @@ def processingThreadBody():
         try:
             frame = framesQueue.get_nowait()
 
-            if args.asyncN:
-                if len(futureOutputs) == args.asyncN:
+            if asyncN:
+                if len(futureOutputs) == asyncN:
                     frame = None  # Skip the frame
             else:
                 framesQueue.queue.clear()  # Skip the rest of frames
@@ -317,7 +317,7 @@ def processingThreadBody():
                 frame = cv.resize(frame, (inpWidth, inpHeight))
                 net.setInput(np.array([[inpHeight, inpWidth, 1.6]], dtype=np.float32), 'im_info')
 
-            if args.asyncN:
+            if asyncN:
                 futureOutputs.append(net.forwardAsync())
             else:
                 outs = net.forward(outNames)
@@ -329,45 +329,67 @@ def processingThreadBody():
 
             del futureOutputs[0]
 
+if args.use_threads:
+    framesThread = Thread(target=framesThreadBody)
+    framesThread.start()
 
-framesThread = Thread(target=framesThreadBody)
-framesThread.start()
+    processingThread = Thread(target=processingThreadBody)
+    processingThread.start()
 
-processingThread = Thread(target=processingThreadBody)
-processingThread.start()
+    #
+    # Postprocessing and rendering loop
+    #
+    while cv.waitKey(1) < 0:
+        try:
+            # Request prediction first because they put after frames
+            outs = predictionsQueue.get_nowait()
+            frame = processedFramesQueue.get_nowait()
+            imgWidth = max(frame.shape[:2])
+            fontSize = (stdSize*imgWidth)/stdImgSize
+            fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
 
-#
-# Postprocessing and rendering loop
-#
-while cv.waitKey(1) < 0:
-    try:
-        # Request prediction first because they put after frames
-        outs = predictionsQueue.get_nowait()
-        frame = processedFramesQueue.get_nowait()
-        imgWidth = max(frame.shape[:2])
-        fontSize = (stdSize*imgWidth)/stdImgSize
-        fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
+            boxes, classIds, confidences, indices = postprocess(frame, outs)
+            drawPred(classIds, confidences, boxes, indices, fontSize, fontThickness)
+            fontSize = fontSize/2
+            # Put efficiency information.
+            if predictionsQueue.counter > 1:
+                label = 'Camera: %.2f FPS' % (framesQueue.getFPS())
+                cv.rectangle(frame, (0, 0), (int(260*fontSize), int(80*fontSize)), (255,255,255), cv.FILLED)
+                cv.putText(frame, label, (0, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+
+                label = 'Network: %.2f FPS' % (predictionsQueue.getFPS())
+                cv.putText(frame, label, (0, int(2*25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+
+                label = 'Skipped frames: %d' % (framesQueue.counter - predictionsQueue.counter)
+                cv.putText(frame, label, (0, int(3*25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+
+            cv.imshow(winName, frame)
+        except queue.Empty:
+            pass
+
+
+    process = False
+    framesThread.join()
+    processingThread.join()
+
+else:
+    # Non-threaded processing if --async is 0
+    while cv.waitKey(1) < 0:
+        hasFrame, frame = cap.read()
+        if not hasFrame:
+            break
+
+        frameHeight = frame.shape[0]
+        frameWidth = frame.shape[1]
+
+        inpWidth = args.width if args.width else frameWidth
+        inpHeight = args.height if args.height else frameHeight
+        blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_32F)
+
+        net.setInput(blob, scalefactor=args.scale, mean=args.mean)
+        outs = net.forward(outNames)
 
         boxes, classIds, confidences, indices = postprocess(frame, outs)
-        drawPred(classIds, confidences, boxes, indices, fontSize, fontThickness)
-        fontSize = fontSize/2
-        # Put efficiency information.
-        if predictionsQueue.counter > 1:
-            label = 'Camera: %.2f FPS' % (framesQueue.getFPS())
-            cv.rectangle(frame, (0, 0), (int(260*fontSize), int(80*fontSize)), (255,255,255), cv.FILLED)
-            cv.putText(frame, label, (0, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
-
-            label = 'Network: %.2f FPS' % (predictionsQueue.getFPS())
-            cv.putText(frame, label, (0, int(2*25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
-
-            label = 'Skipped frames: %d' % (framesQueue.counter - predictionsQueue.counter)
-            cv.putText(frame, label, (0, int(3*25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+        drawPred(classIds, confidences, boxes, indices, (stdSize*max(frame.shape[:2]))/stdImgSize, (stdWeight*max(frame.shape[:2]))//stdImgSize)
 
         cv.imshow(winName, frame)
-    except queue.Empty:
-        pass
-
-
-process = False
-framesThread.join()
-processingThread.join()
