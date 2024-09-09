@@ -65,13 +65,13 @@ static void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat&
 static void processFrame(
     const Mat& frame,
     const vector<vector<Point>>& detResults,
-    String ocr_model,
+    const std::string& ocr_model,
     bool imreadRGB,
     Mat& board,
-    FontFace fontFace,
+    FontFace& fontFace,
     int fontSize,
     int fontWeight,
-    vector<String> vocabulary
+    const vector<std::string>& vocabulary
 );
 
 int main(int argc, char** argv) {
@@ -167,8 +167,8 @@ int main(int argc, char** argv) {
     ifstream vocFile;
     vocFile.open(samples::findFile(vocPath));
     CV_Assert(vocFile.is_open());
-    String vocLine;
-    vector<String> vocabulary;
+    std::string vocLine;
+    vector<std::string> vocabulary;
     while (getline(vocFile, vocLine)) {
         vocabulary.push_back(vocLine);
     }
@@ -196,13 +196,13 @@ static void fourPointsTransform(const Mat& frame, const Point2f vertices[], Mat&
 void processFrame(
     const Mat& frame,
     const vector<vector<Point>>& detResults,
-    String ocr_model,
+    const std::string& ocr_model,
     bool imreadRGB,
     Mat& board,
-    FontFace fontFace,
+    FontFace& fontFace,
     int fontSize,
     int fontWeight,
-    vector<String> vocabulary
+    const vector<std::string>& vocabulary
 ) {
     if (detResults.size() > 0) {
         // Text Recognition
