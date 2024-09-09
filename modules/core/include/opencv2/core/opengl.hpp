@@ -278,6 +278,27 @@ private:
     int type_;
 };
 
+class CV_EXPORTS VertexArray
+{
+public:
+    VertexArray();
+
+    VertexArray(unsigned int vertexArrayId, bool autoRelease = false);
+
+    void bind() const;
+
+    static void unbind();
+
+    void setAutoRelease(bool flag);
+
+    void vertexAttribPointer(unsigned int index, int size, int stride, int offset) const;
+
+    class Impl;
+
+private:
+    Ptr<Impl> impl_;
+};
+
 /** @brief Smart pointer for OpenGL 2D texture memory with reference counting.
  */
 class CV_EXPORTS Texture2D
@@ -484,6 +505,10 @@ public:
     /** @brief Attach fragment and vertex shaders
     */
     void attachShaders(const std::string& fragment_shader_source, const std::string& vertex_shader_source);
+
+    /** @brief Get the location of a specific uniform variable within a program object
+    */
+    int getUniformLocation(const std::string& name);
 
     /** @brief Get default fragment shader
     */

@@ -819,6 +819,149 @@ unsigned int cv::ogl::Buffer::bufId() const
 #endif
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// ogl::VertexArray
+#ifndef HAVE_OPENGL
+
+class cv::ogl::VertexArray
+{
+};
+
+#else
+
+class cv::ogl::VertexArray::Impl
+{
+public:
+    static const Ptr<Impl> empty();
+
+    Impl(GLuint vertexArrayId, bool autoRelease);
+    ~Impl();
+
+    void bind() const;
+
+    void setAutoRelease(bool flag) { autoRelease_ = flag; }
+
+    GLuint vertexArrayId() const { return vertexArrayId_; }
+
+    void vertexAttribPointer(GLuint index, GLint size, GLint stride, int offset) const;
+
+private:
+    Impl();
+
+    GLuint vertexArrayId_;
+    bool autoRelease_;
+};
+
+const Ptr<cv::ogl::VertexArray::Impl> cv::ogl::VertexArray::Impl::empty()
+{
+    static Ptr<Impl> p(new Impl);
+    return p;
+}
+
+cv::ogl::VertexArray::Impl::Impl() : vertexArrayId_(0), autoRelease_(false)
+{
+}
+
+cv::ogl::VertexArray::Impl::Impl(GLuint vertexArrayId, bool autoRelease) : vertexArrayId_(vertexArrayId), autoRelease_(autoRelease)
+{
+    gl::GenVertexArrays(1, &vertexArrayId_);
+    CV_CheckGlError();
+
+    CV_Assert(vertexArrayId_ != 0);
+
+    gl::BindVertexArray(vertexArrayId_);
+    CV_CheckGlError();
+
+    gl::BindVertexArray(0);
+    CV_CheckGlError();
+}
+
+cv::ogl::VertexArray::Impl::~Impl()
+{
+    if (autoRelease_ && vertexArrayId_)
+        gl::DeleteVertexArrays(1, &vertexArrayId_);
+}
+
+void cv::ogl::VertexArray::Impl::bind() const
+{
+    gl::BindVertexArray(vertexArrayId_);
+    CV_CheckGlError();
+}
+
+void cv::ogl::VertexArray::Impl::vertexAttribPointer(GLuint index, GLint size, GLint stride, int offset) const
+{
+    gl::BindVertexArray(vertexArrayId_);
+    CV_CheckGlError();
+    gl::VertexAttribPointer(index, size, gl::FLOAT, gl::FALSE_, stride*sizeof(GLfloat), (GLvoid*)(offset * sizeof(GLfloat)));
+    CV_CheckGlError();
+    gl::EnableVertexAttribArray(index);
+    CV_CheckGlError();
+    gl::BindVertexArray(0);
+    CV_CheckGlError();
+}
+#endif // HAVE_OPENGL
+
+cv::ogl::VertexArray::VertexArray()
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    impl_ = Impl::empty();
+#endif
+}
+
+cv::ogl::VertexArray::VertexArray(unsigned int avertexArrayId, bool autoRelease)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(avertexArrayId);
+    CV_UNUSED(autoRelease);
+    throw_no_ogl();
+#else
+    impl_.reset(new Impl(avertexArrayId, autoRelease));
+#endif
+}
+
+void cv::ogl::VertexArray::bind() const
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    impl_->bind();
+#endif
+}
+
+void cv::ogl::VertexArray::unbind()
+{
+#ifndef HAVE_OPENGL
+    throw_no_ogl();
+#else
+    gl::BindVertexArray(0);
+    CV_CheckGlError();
+#endif
+}
+
+void cv::ogl::VertexArray::setAutoRelease(bool flag)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(flag);
+    throw_no_ogl();
+#else
+    impl_->setAutoRelease(flag);
+#endif
+}
+
+void cv::ogl::VertexArray::vertexAttribPointer(unsigned int index, int size, int stride, int offset) const
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(index);
+    CV_UNUSED(size);
+    CV_UNUSED(stride);
+    CV_UNUSED(offset);
+    throw_no_ogl();
+#else
+    impl_->vertexAttribPointer(index, size, stride, offset);
+#endif
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // ogl::Texture
@@ -1432,6 +1575,16 @@ void cv::ogl::Program::attachShaders(const std::string& fragment_shader_source, 
     gl::AttachShader(program_, vertex_shader);
     gl::LinkProgram(program_);
     gl::UseProgram(program_);
+#endif
+};
+
+int cv::ogl::Program::getUniformLocation(const std::string& name)
+{
+#ifndef HAVE_OPENGL
+    CV_UNUSED(name);
+    throw_no_ogl();
+#else
+    return gl::GetUniformLocation(program_, name.c_str());
 #endif
 };
 

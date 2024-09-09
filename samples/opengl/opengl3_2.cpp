@@ -30,8 +30,10 @@ const int win_height = 640;
 
 struct DrawData
 {
-    GLuint vao, vbo, textureID;
+    ogl::VertexArray vao;
+    ogl::Buffer vbo;
     ogl::Program program;
+    ogl::Texture2D tex;
 };
 
 static cv::Mat rot(float angle)
@@ -55,12 +57,11 @@ static void draw(void* userdata) {
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glUseProgram(data->program.getProgramId());
-    glUniformMatrix4fv(glGetUniformLocation(data->program.getProgramId(), "transform"), 1, GL_FALSE, trans.ptr<float>());
-    glBindTexture(GL_TEXTURE_2D, data->textureID);
-    glBindVertexArray(data->vao);
+    glUniformMatrix4fv(glGetUniformLocation(data->program.getProgramId(), "transform"), 1, GL_FALSE, trans.ptr<float>()); // TODO not use glUniformMatrix4fv
+    // glUniformMatrix4fv(data->program.getUniformLocation("transform"), 1, GL_FALSE, trans.ptr<float>());
+    data->tex.bind();
+    data->vao.bind();
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
 }
 
 int main(int argc, char* argv[])
@@ -86,42 +87,23 @@ int main(int argc, char* argv[])
     resizeWindow("OpenGL", win_width, win_height);
 
     DrawData data;
+    data.program.attachShaders(ogl::Program::getDefaultFragmentShader(), ogl::Program::getDefaultVertexShader()); // new
 
-    glEnable(GL_DEPTH_TEST);
-    data.program.attachShaders(ogl::Program::getDefaultFragmentShader(), ogl::Program::getDefaultVertexShader());
-
-    GLfloat vertices[] = {
-            // Positions        // Texture Coords
-            1.0f,  1.0f, 0.0f,  1.0f, 1.0f,   // Top Right
-            1.0f, -1.0f, 0.0f,  1.0f, 0.0f,   // Bottom Right
-            -1.0f,  1.0f, 0.0f,  0.0f, 1.0f,   // Top Left
-            -1.0f, -1.0f, 0.0f,  0.0f, 0.0f    // Bottom Left
+    std::vector<float> vertex = {
+        // Positions         // Texture Coords
+         1.0f,  1.0f,  0.0f,  1.0f,  1.0f, // Top Right
+         1.0f, -1.0f,  0.0f,  1.0f,  0.0f, // Bottom Right
+        -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, // Top Left
+        -1.0f, -1.0f,  0.0f,  0.0f,  0.0f  // Bottom Left
     };
+    data.vbo.copyFrom(vertex);
+    data.vbo.bind(cv::ogl::Buffer::ARRAY_BUFFER);
+    data.vao = ogl::VertexArray(0, false);
+    data.vao.vertexAttribPointer(0, 3, 5, 0);
+    data.vao.vertexAttribPointer(1, 2, 5, 3);
 
-    glGenVertexArrays(1, &data.vao);
-    glGenBuffers(1, &data.vbo);
-    glBindVertexArray(data.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, data.vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
-    glEnableVertexAttribArray(0);
-    // Texture Coord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0); // Unbind VAO
-
-
-//        Image to texture
-    glGenTextures(1, &data.textureID);
-    glBindTexture(GL_TEXTURE_2D, data.textureID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, img.cols, img.rows, 0, GL_BGR, GL_UNSIGNED_BYTE, img.data);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    data.tex.copyFrom(img);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
 
     setOpenGlDrawCallback("OpenGL", draw, &data);
 
