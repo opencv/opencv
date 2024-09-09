@@ -567,7 +567,6 @@ namespace cv { namespace dnn {
 
                 auto& mat = shared_block->host;
                 CV_Assert(mat.isContinuous());
-                CV_Assert(mat.type() == CV_32F);
 
                 if (!shared_block->d2h_event)
                     shared_block->d2h_event = cuda4dnn::csl::Event(true);
