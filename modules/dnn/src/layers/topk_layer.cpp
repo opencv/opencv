@@ -3,7 +3,6 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
-#include "layers_common.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -114,10 +113,12 @@ public:
         const int requiredInternals,
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE {
-        // [TODO] Check depth of inputs[1](K) once K becomes one of the inputs
+        // [TODO] Check depth of inputs[1] (K) once K becomes one of the inputs
         outputs.resize(2);
         outputs[0] = inputs.front();
-        outputs[1] = CV_64S; // [TODO] Replace with inputs.back() once K becomes one of the inputs
+        // [TODO] Replace with inputs.back() once K becomes one of the inputs
+        // [TODO] OpenVINO does not support int64. Consider set type int32 instead if backend is ngraph
+        outputs[1] = CV_64S;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {

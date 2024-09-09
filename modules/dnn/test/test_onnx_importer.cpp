@@ -3279,6 +3279,11 @@ TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
 }
 
 TEST_P(Test_ONNX_layers, TopK) {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+        backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
+        backend == DNN_BACKEND_INFERENCE_ENGINE) {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE); // OpenVINO does not support int64
+    }
     auto test = [&](const std::string &basename, double l1 = 0, double lInf = 0) {
         std::string onnxmodel = _tf("models/" + basename + ".onnx", true);
         Mat input = readTensorFromONNX(_tf("data/input_" + basename + ".pb"));
