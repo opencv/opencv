@@ -6,7 +6,7 @@ std::string genArgument(const std::string& argName, const std::string& help,
                         const std::string& modelName, const std::string& zooFile,
                         char key = ' ', std::string defaultVal = "");
 
-std::string genPreprocArguments(const std::string& modelName, const std::string& zooFile);
+std::string genPreprocArguments(const std::string& modelName, const std::string& zooFile, const std::string& prefix);
 
 std::string findFile(const std::string& filename);
 
@@ -58,8 +58,13 @@ std::string genArgument(const std::string& argName, const std::string& help,
             if (!node.empty())
             {
                 FileNode value = node[argName];
-                if(argName == "sha1"){
-                    value = node["load_info"][argName];
+                if (argName.find("sha1") != std::string::npos) {
+                    std::string prefix = argName.substr(0, argName.find("sha1"));
+                    value = node[prefix+"load_info"][argName];
+                }
+                if (argName.find("download_sha") != std::string::npos) {
+                    std::string prefix = argName.substr(0, argName.find("download_sha"));
+                    value = node[prefix+"load_info"][argName];
                 }
                 if (!value.empty())
                 {
@@ -149,29 +154,31 @@ std::string findFile(const std::string& filename)
     std::exit(1);
 }
 
-std::string genPreprocArguments(const std::string& modelName, const std::string& zooFile)
+std::string genPreprocArguments(const std::string& modelName, const std::string& zooFile, const std::string& prefix="")
 {
-    return genArgument("model", "Path to a binary file of model contains trained weights. "
+    return genArgument(prefix + "model", "Path to a binary file of model contains trained weights. "
                                 "It could be a file with extensions .caffemodel (Caffe), "
                                 ".pb (TensorFlow), .weights (Darknet), .bin (OpenVINO).",
                        modelName, zooFile, 'm') +
-           genArgument("config", "Path to a text file of model contains network configuration. "
+           genArgument(prefix + "config", "Path to a text file of model contains network configuration. "
                                  "It could be a file with extensions .prototxt (Caffe), .pbtxt (TensorFlow), .cfg (Darknet), .xml (OpenVINO).",
                        modelName, zooFile, 'c') +
-           genArgument("mean", "Preprocess input image by subtracting mean values. Mean values should be in BGR order and delimited by spaces.",
+           genArgument(prefix + "mean", "Preprocess input image by subtracting mean values. Mean values should be in BGR order and delimited by spaces.",
                        modelName, zooFile) +
-           genArgument("std", "Preprocess input image by dividing on a standard deviation.",
+           genArgument(prefix + "std", "Preprocess input image by dividing on a standard deviation.",
                        modelName, zooFile) +
-           genArgument("scale", "Preprocess input image by multiplying on a scale factor.",
+           genArgument(prefix + "scale", "Preprocess input image by multiplying on a scale factor.",
                        modelName, zooFile, ' ', "1.0") +
-           genArgument("width", "Preprocess input image by resizing to a specific width.",
+           genArgument(prefix + "width", "Preprocess input image by resizing to a specific width.",
                        modelName, zooFile, ' ', "-1") +
-           genArgument("height", "Preprocess input image by resizing to a specific height.",
+           genArgument(prefix + "height", "Preprocess input image by resizing to a specific height.",
                        modelName, zooFile, ' ', "-1") +
-           genArgument("rgb", "Indicate that model works with RGB input images instead BGR ones.",
+           genArgument(prefix + "rgb", "Indicate that model works with RGB input images instead BGR ones.",
                        modelName, zooFile)+
-           genArgument("labels", "Path to a text file with names of classes to label detected objects.",
+           genArgument(prefix + "labels", "Path to a text file with names of classes to label detected objects.",
                        modelName, zooFile)+
-           genArgument("sha1", "Optional path to hashsum of downloaded model to be loaded from models.yml",
+           genArgument(prefix + "sha1", "Optional path to hashsum of downloaded model to be loaded from models.yml",
+                       modelName, zooFile)+
+           genArgument(prefix + "download_sha", "Optional path to hashsum of downloaded model to be loaded from models.yml",
                        modelName, zooFile);
 }
