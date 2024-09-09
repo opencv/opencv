@@ -1,35 +1,24 @@
-//  This example provides a digital recognition based on LeNet-5 and connected component analysis.
-//  It makes it possible for OpenCV beginner to run dnn models in real time using only CPU.
-//  It can read pictures from the camera in real time to make predictions, and display the recognized digits as overlays on top of the original digits.
-//
-//  In order to achieve a better display effect, please write the number on white paper and occupy the entire camera.
-//
-//  You can follow the following guide to train LeNet-5 by yourself using the MNIST dataset.
-//  https://github.com/intel/caffe/blob/a3d5b022fe026e9092fc7abc7654b1162ab9940d/examples/mnist/readme.md
-//
-//  You can also download already trained model directly.
-//  https://github.com/zihaomu/opencv_digit_text_recognition_demo/tree/master/src
-
-
 #include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
 #include <opencv2/dnn.hpp>
+#include <opencv2/highgui.hpp>
 
 #include <iostream>
 #include <vector>
+#include <string>
+#include <cstdlib>
 
 using namespace cv;
 using namespace cv::dnn;
 
 const char *keys =
-    "{ help     h  | | Print help message. }"
-    "{ input    i  | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
-    "{ device      |  0  | camera device number. }"
-    "{ modelBin    |     | Path to a binary .caffemodel file contains trained network.}"
-    "{ modelTxt    |     | Path to a .prototxt file contains the model definition of trained network.}"
-    "{ width       | 640 | Set the width of the camera }"
-    "{ height      | 480 | Set the height of the camera }"
-    "{ thr         | 0.7 | Confidence threshold. }";
+"{ help h | | Print help message. }"
+"{ input i | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+"{ device | 0 | camera device number. }"
+"{ modelBin | | Path to a binary .caffemodel file contains trained network.}"
+"{ modelTxt | | Path to a .prototxt file contains the model definition of trained network.}"
+"{ width | 640 | Set the width of the camera }"
+"{ height | 480 | Set the height of the camera }"
+"{ thr | 0.7 | Confidence threshold. }";
 
 // Find best class for the blob (i.e. class with maximal probability)
 static void getMaxClass(const Mat &probBlob, int &classId, double &classProb);
@@ -61,17 +50,11 @@ int main(int argc, char **argv)
     catch (cv::Exception &ee)
     {
         std::cerr << "Exception: " << ee.what() << std::endl;
-        std::cout << "Can't load the network by using the flowing files:" << std::endl;
+        std::cout << "Can't load the network by using the following files:" << std::endl;
         std::cout << "modelTxt: " << modelTxt << std::endl;
         std::cout << "modelBin: " << modelBin << std::endl;
         return 1;
     }
-
-    const std::string resultWinName = "Please write the number on white paper and occupy the entire camera.";
-    const std::string preWinName = "Preprocessing";
-
-    namedWindow(preWinName, WINDOW_AUTOSIZE);
-    namedWindow(resultWinName, WINDOW_AUTOSIZE);
 
     Mat labels, stats, centroids;
     Point position;
@@ -96,12 +79,15 @@ int main(int argc, char **argv)
 
     TickMeter tm;
 
-    while (waitKey(1) < 0)
+    std::string sampleName = "digits_lenet";
+    std::string outputDir = sampleName;
+    system(("mkdir -p " + outputDir).c_str());
+
+    while (true)
     {
         cap >> rawImage;
         if (rawImage.empty())
         {
-            waitKey();
             break;
         }
 
@@ -153,9 +139,12 @@ int main(int argc, char **argv)
         std::string fpsString = format("Inference FPS: %.2f.", fps);
         putText(rawImage, fpsString, Point(5, 20), FONT_HERSHEY_SIMPLEX, 0.6, Scalar(128, 255, 128));
 
-        imshow(resultWinName, rawImage);
-        imshow(preWinName, image);
+        // Save processed image
+        std::string outputPath = outputDir + "/processed_image.jpg";
+        imwrite(outputPath, rawImage);
+        std::cout << "Processed image saved at: " << outputPath << std::endl;
 
+        break; // Exit after processing one frame
     }
 
     return 0;
@@ -180,3 +169,4 @@ void predictor(Net net, const Mat &roi, int &classId, double &probability)
     pred = net.forward();
     getMaxClass(pred, classId, probability);
 }
+

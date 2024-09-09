@@ -4,8 +4,7 @@
 #include "opencv2/calib3d.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/videoio.hpp"
-#include "opencv2/highgui.hpp"
-#include <opencv2/objdetect/charuco_detector.hpp>
+//#include <opencv2/objdetect/charuco_detector.hpp>
 
 #include <cctype>
 #include <stdio.h>
@@ -128,6 +127,7 @@ static double computeReprojectionErrors(
 
     return std::sqrt(totalErr/totalPoints);
 }
+// 删除 calcChessboardCorners 函数中与 CharucoBoard 相关的部分
 
 static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& corners, Pattern patternType = CHESSBOARD)
 {
@@ -150,12 +150,12 @@ static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point
                                           float(i*squareSize), 0));
         break;
 
-      case CHARUCOBOARD:
-        for( int i = 0; i < boardSize.height-1; i++ )
-            for( int j = 0; j < boardSize.width-1; j++ )
-                corners.push_back(Point3f(float(j*squareSize),
-                                          float(i*squareSize), 0));
-        break;
+    //   case CHARUCOBOARD:
+    //     for( int i = 0; i < boardSize.height-1; i++ )
+    //         for( int j = 0; j < boardSize.width-1; j++ )
+    //             corners.push_back(Point3f(float(j*squareSize),
+    //                                       float(i*squareSize), 0));
+    //     break;
       default:
         CV_Error(Error::StsBadArg, "Unknown pattern type\n");
     }
@@ -249,7 +249,7 @@ static void saveCameraParams( const string& filename,
             flags & CALIB_FIX_ASPECT_RATIO ? "+fix_aspectRatio" : "",
             flags & CALIB_FIX_PRINCIPAL_POINT ? "+fix_principal_point" : "",
             flags & CALIB_ZERO_TANGENT_DIST ? "+zero_tangent_dist" : "" );
-        //cvWriteComment( *fs, buf, 0 );
+        //cvWriteComment( *fs, buf, 0);
     }
 
     fs << "flags" << flags;
@@ -304,9 +304,6 @@ static bool readStringList( const string& filename, vector<string>& l )
     FileStorage fs(filename, FileStorage::READ);
     if( !fs.isOpened() )
         return false;
-    size_t dir_pos = filename.rfind('/');
-    if (dir_pos == string::npos)
-        dir_pos = filename.rfind('\\');
     FileNode n = fs.getFirstTopLevelNode();
     if( n.type() != FileNode::SEQ )
         return false;
@@ -314,19 +311,6 @@ static bool readStringList( const string& filename, vector<string>& l )
     for( ; it != it_end; ++it )
     {
         string fname = (string)*it;
-        if (dir_pos != string::npos)
-        {
-            string fpath = samples::findFile(filename.substr(0, dir_pos + 1) + fname, false);
-            if (fpath.empty())
-            {
-                fpath = samples::findFile(fname);
-            }
-            fname = fpath;
-        }
-        else
-        {
-            fname = samples::findFile(fname);
-        }
         l.push_back(fname);
     }
     return true;
@@ -423,32 +407,32 @@ int main( int argc, char** argv )
     squareSize = parser.get<float>("s");
     markerSize = parser.get<float>("ms");
 
-    string arucoDictName = parser.get<string>("ad");
-    if (arucoDictName == "DICT_4X4_50") { arucoDict = cv::aruco::DICT_4X4_50; }
-    else if (arucoDictName == "DICT_4X4_100") { arucoDict = cv::aruco::DICT_4X4_100; }
-    else if (arucoDictName == "DICT_4X4_250") { arucoDict = cv::aruco::DICT_4X4_250; }
-    else if (arucoDictName == "DICT_4X4_1000") { arucoDict = cv::aruco::DICT_4X4_1000; }
-    else if (arucoDictName == "DICT_5X5_50") { arucoDict = cv::aruco::DICT_5X5_50; }
-    else if (arucoDictName == "DICT_5X5_100") { arucoDict = cv::aruco::DICT_5X5_100; }
-    else if (arucoDictName == "DICT_5X5_250") { arucoDict = cv::aruco::DICT_5X5_250; }
-    else if (arucoDictName == "DICT_5X5_1000") { arucoDict = cv::aruco::DICT_5X5_1000; }
-    else if (arucoDictName == "DICT_6X6_50") { arucoDict = cv::aruco::DICT_6X6_50; }
-    else if (arucoDictName == "DICT_6X6_100") { arucoDict = cv::aruco::DICT_6X6_100; }
-    else if (arucoDictName == "DICT_6X6_250") { arucoDict = cv::aruco::DICT_6X6_250; }
-    else if (arucoDictName == "DICT_6X6_1000") { arucoDict = cv::aruco::DICT_6X6_1000; }
-    else if (arucoDictName == "DICT_7X7_50") { arucoDict = cv::aruco::DICT_7X7_50; }
-    else if (arucoDictName == "DICT_7X7_100") { arucoDict = cv::aruco::DICT_7X7_100; }
-    else if (arucoDictName == "DICT_7X7_250") { arucoDict = cv::aruco::DICT_7X7_250; }
-    else if (arucoDictName == "DICT_7X7_1000") { arucoDict = cv::aruco::DICT_7X7_1000; }
-    else if (arucoDictName == "DICT_ARUCO_ORIGINAL") { arucoDict = cv::aruco::DICT_ARUCO_ORIGINAL; }
-    else if (arucoDictName == "DICT_APRILTAG_16h5") { arucoDict = cv::aruco::DICT_APRILTAG_16h5; }
-    else if (arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = cv::aruco::DICT_APRILTAG_25h9; }
-    else if (arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
-    else if (arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
-    else {
-        cout << "Incorrect Aruco dictionary name " <<  arucoDictName << std::endl;
-        return 1;
-    }
+    // string arucoDictName = parser.get<string>("ad");
+    // if (arucoDictName == "DICT_4X4_50") { arucoDict = cv::aruco::DICT_4X4_50; }
+    // else if (arucoDictName == "DICT_4X4_100") { arucoDict = cv::aruco::DICT_4X4_100; }
+    // else if (arucoDictName == "DICT_4X4_250") { arucoDict = cv::aruco::DICT_4X4_250; }
+    // else if (arucoDictName == "DICT_4X4_1000") { arucoDict = cv::aruco::DICT_4X4_1000; }
+    // else if (arucoDictName == "DICT_5X5_50") { arucoDict = cv::aruco::DICT_5X5_50; }
+    // else if (arucoDictName == "DICT_5X5_100") { arucoDict = cv::aruco::DICT_5X5_100; }
+    // else if (arucoDictName == "DICT_5X5_250") { arucoDict = cv::aruco::DICT_5X5_250; }
+    // else if (arucoDictName == "DICT_5X5_1000") { arucoDict = cv::aruco::DICT_5X5_1000; }
+    // else if (arucoDictName == "DICT_6X6_50") { arucoDict = cv::aruco::DICT_6X6_50; }
+    // else if (arucoDictName == "DICT_6X6_100") { arucoDict = cv::aruco::DICT_6X6_100; }
+    // else if (arucoDictName == "DICT_6X6_250") { arucoDict = cv::aruco::DICT_6X6_250; }
+    // else if (arucoDictName == "DICT_6X6_1000") { arucoDict = cv::aruco::DICT_6X6_1000; }
+    // else if (arucoDictName == "DICT_7X7_50") { arucoDict = cv::aruco::DICT_7X7_50; }
+    // else if (arucoDictName == "DICT_7X7_100") { arucoDict = cv::aruco::DICT_7X7_100; }
+    // else if (arucoDictName == "DICT_7X7_250") { arucoDict = cv::aruco::DICT_7X7_250; }
+    // else if (arucoDictName == "DICT_7X7_1000") { arucoDict = cv::aruco::DICT_7X7_1000; }
+    // else if (arucoDictName == "DICT_ARUCO_ORIGINAL") { arucoDict = cv::aruco::DICT_ARUCO_ORIGINAL; }
+    // else if (arucoDictName == "DICT_APRILTAG_16h5") { arucoDict = cv::aruco::DICT_APRILTAG_16h5; }
+    // else if (arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = cv::aruco::DICT_APRILTAG_25h9; }
+    // else if (arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
+    // else if (arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
+    // else {
+    //     cout << "Incorrect Aruco dictionary name " <<  arucoDictName << std::endl;
+    //     return 1;
+    // }
 
     dictFilename = parser.get<std::string>("adf");
     nframes = parser.get<int>("n");
@@ -517,42 +501,43 @@ int main( int argc, char** argv )
     if ( boardSize.height <= 0 )
         return fprintf( stderr, "Invalid board height\n" ), -1;
 
-    cv::aruco::Dictionary dictionary;
-    if (dictFilename == "None") {
-        std::cout << "Using predefined dictionary with id: " << arucoDict << std::endl;
-        dictionary = aruco::getPredefinedDictionary(arucoDict);
-    }
-    else {
-        std::cout << "Using custom dictionary from file: " << dictFilename << std::endl;
-        cv::FileStorage dict_file(dictFilename, cv::FileStorage::Mode::READ);
-        cv::FileNode fn(dict_file.root());
-        dictionary.readDictionary(fn);
-    }
+    // 删除与 CharucoBoard 相关的内容    
+    // cv::aruco::Dictionary dictionary;
+    // if (dictFilename == "None") {
+    //     std::cout << "Using predefined dictionary with id: " << arucoDict << std::endl;
+    //     dictionary = aruco::getPredefinedDictionary(arucoDict);
+    // }
+    // else {
+    //     std::cout << "Using custom dictionary from file: " << dictFilename << std::endl;
+    //     cv::FileStorage dict_file(dictFilename, cv::FileStorage::Mode::READ);
+    //     cv::FileNode fn(dict_file.root());
+    //     dictionary.readDictionary(fn);
+    // }
 
-    cv::aruco::CharucoBoard ch_board(boardSize, squareSize, markerSize, dictionary);
-    std::vector<int> markerIds;
-    cv::aruco::CharucoDetector ch_detector(ch_board);
+    // cv::aruco::CharucoBoard ch_board(boardSize, squareSize, markerSize, dictionary);
+    // std::vector<int> markerIds;
+    // cv::aruco::CharucoDetector ch_detector(ch_board);
 
-    if( !inputFilename.empty() )
-    {
-        if( !videofile && readStringList(samples::findFile(inputFilename), imageList) )
-            mode = CAPTURING;
-        else
-            capture.open(samples::findFileOrKeep(inputFilename));
-    }
-    else
-        capture.open(cameraId);
+    // if( !inputFilename.empty() )
+    // {
+    //     if( !videofile && readStringList(samples::findFile(inputFilename), imageList) )
+    //         mode = CAPTURING;
+    //     else
+    //         capture.open(samples::findFileOrKeep(inputFilename));
+    // }
+    // else
+    //     capture.open(cameraId);
 
-    if( !capture.isOpened() && imageList.empty() )
-        return fprintf( stderr, "Could not initialize video (%d) capture\n", cameraId ), -2;
+    // if( !capture.isOpened() && imageList.empty() )
+    //     return fprintf( stderr, "Could not initialize video (%d) capture\n", cameraId ), -2;
 
-    if( !imageList.empty() )
-        nframes = (int)imageList.size();
+    // if( !imageList.empty() )
+    //     nframes = (int)imageList.size();
 
-    if( capture.isOpened() )
-        printf( "%s", liveCaptureHelp );
+    // if( capture.isOpened() )
+    //     printf( "%s", liveCaptureHelp );
 
-    namedWindow( "Image View", 1 );
+    // namedWindow( "Image View", 1 );  // 注释掉.
 
     for(i = 0;;i++)
     {
@@ -587,6 +572,7 @@ int main( int argc, char** argv )
         cvtColor(view, viewGray, COLOR_BGR2GRAY);
 
         bool found;
+        // 删除 switch 语句中与 CharucoBoard 相关的部分
         switch( pattern )
         {
             case CHESSBOARD:
@@ -599,12 +585,12 @@ int main( int argc, char** argv )
             case ASYMMETRIC_CIRCLES_GRID:
                 found = findCirclesGrid( view, boardSize, pointbuf, CALIB_CB_ASYMMETRIC_GRID );
                 break;
-            case CHARUCOBOARD:
-            {
-                ch_detector.detectBoard(view, pointbuf, markerIds);
-                found = pointbuf.size() == (size_t)(boardSize.width-1)*(boardSize.height-1);
-                break;
-            }
+            // case CHARUCOBOARD:
+            // {
+            //     ch_detector.detectBoard(view, pointbuf, markerIds);
+            //     found = pointbuf.size() == (size_t)(boardSize.width-1)*(boardSize.height-1);
+            //     break;
+            // }
             default:
                 return fprintf( stderr, "Unknown pattern type\n" ), -1;
         }
@@ -613,13 +599,14 @@ int main( int argc, char** argv )
         if( pattern == CHESSBOARD && found) cornerSubPix( viewGray, pointbuf, Size(winSize,winSize),
             Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 30, 0.0001 ));
 
-        if( mode == CAPTURING && found &&
-           (!capture.isOpened() || clock() - prevTimestamp > delay*1e-3*CLOCKS_PER_SEC) )
-        {
-            imagePoints.push_back(pointbuf);
-            prevTimestamp = clock();
-            blink = capture.isOpened();
-        }
+        if (mode == CAPTURING && found &&
+   (!capture.isOpened() || clock() - prevTimestamp > delay*1e-3*CLOCKS_PER_SEC) )
+{
+    cout << "Found corners, capturing..." << endl;
+    imagePoints.push_back(pointbuf);
+    prevTimestamp = clock();
+    blink = capture.isOpened();
+}
 
         if(found)
         {
@@ -654,6 +641,8 @@ int main( int argc, char** argv )
             Mat temp = view.clone();
             undistort(temp, view, cameraMatrix, distCoeffs);
         }
+
+        /*
         if (viewScaleFactor > 1)
         {
             Mat viewScale;
@@ -678,19 +667,17 @@ int main( int argc, char** argv )
             mode = CAPTURING;
             imagePoints.clear();
         }
+        */
 
-        if( mode == CAPTURING && imagePoints.size() >= (unsigned)nframes )
-        {
-            if( runAndSave(outputFilename, imagePoints, imageSize,
-                       boardSize, pattern, squareSize, grid_width, release_object, aspectRatio,
-                       flags, cameraMatrix, distCoeffs,
-                       writeExtrinsics, writePoints, writeGrid))
-                mode = CALIBRATED;
-            else
-                mode = DETECTION;
-            if( !capture.isOpened() )
-                break;
-        }
+        if (mode == CAPTURING && imagePoints.size() >= (unsigned)nframes )
+{
+    if (runAndSave(outputFilename, imagePoints, imageSize, boardSize, pattern, squareSize, grid_width, release_object, aspectRatio, flags, cameraMatrix, distCoeffs, writeExtrinsics, writePoints, writeGrid))
+        mode = CALIBRATED;
+    else
+        mode = DETECTION;
+    if (!capture.isOpened())
+        break;
+}
     }
 
     if( !capture.isOpened() && showUndistorted )
@@ -706,6 +693,7 @@ int main( int argc, char** argv )
             if(view.empty())
                 continue;
             remap(view, rview, map1, map2, INTER_LINEAR);
+            /*
             if (viewScaleFactor > 1)
             {
                 Mat rviewScale;
@@ -719,8 +707,11 @@ int main( int argc, char** argv )
             char c = (char)waitKey();
             if( c == 27 || c == 'q' || c == 'Q' )
                 break;
+            */
+            imwrite("undistorted_" + imageList[i], rview);
         }
     }
 
     return 0;
 }
+

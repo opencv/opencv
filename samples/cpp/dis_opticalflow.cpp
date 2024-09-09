@@ -1,4 +1,3 @@
-
 #include "opencv2/core/utility.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
@@ -16,7 +15,7 @@ int main(int argc, char **argv)
     VideoCapture cap;
     cap.open(filename);
 
-    if(!cap.isOpened())
+    if (!cap.isOpened())
     {
         printf("ERROR: Cannot open file %s\n", filename.c_str());
         parser.printMessage();
@@ -27,11 +26,10 @@ int main(int argc, char **argv)
     Mat flow, flow_uv[2];
     Mat mag, ang;
     Mat hsv_split[3], hsv;
-    char ret;
 
     Ptr<DenseOpticalFlow> algorithm = DISOpticalFlow::create(DISOpticalFlow::PRESET_MEDIUM);
 
-    while(true)
+    while (true)
     {
         cap >> frame;
         if (frame.empty())
@@ -51,14 +49,19 @@ int main(int argc, char **argv)
             hsv_split[2] = Mat::ones(ang.size(), ang.type());
             merge(hsv_split, 3, hsv);
             cvtColor(hsv, rgb, COLOR_HSV2BGR);
-            imshow("flow", rgb);
-            imshow("orig", frame);
+
+            // 注释掉图像显示部分
+            // imshow("flow", rgb);
+            // imshow("orig", frame);
         }
 
-        if ((ret = (char)waitKey(20)) > 0)
-            break;
+        // 注释掉等待按键部分
+        // if ((ret = (char)waitKey(20)) > 0)
+        //     break;
         std::swap(prevgray, gray);
     }
 
+    printf("Processing completed.\n");
     return 0;
 }
+

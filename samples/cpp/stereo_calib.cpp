@@ -1,28 +1,5 @@
-/* This is sample from the OpenCV book. The copyright notice is below */
-
-/* *************** License:**************************
-   Oct. 3, 2008
-   Right to use this code in any way you want without warranty, support or any guarantee of it working.
-
-   BOOK: It would be nice if you cited it:
-   Learning OpenCV: Computer Vision with the OpenCV Library
-     by Gary Bradski and Adrian Kaehler
-     Published by O'Reilly Media, October 3, 2008
-
-   AVAILABLE AT:
-     http://www.amazon.com/Learning-OpenCV-Computer-Vision-Library/dp/0596516134
-     Or: http://oreilly.com/catalog/9780596516130/
-     ISBN-10: 0596516134 or: ISBN-13: 978-0596516130
-
-   OPENCV WEBSITES:
-     Homepage:      http://opencv.org
-     Online docs:   http://docs.opencv.org
-     GitHub:        https://github.com/opencv/opencv/
-   ************************************************** */
-
 #include "opencv2/calib3d.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/objdetect/charuco_detector.hpp"
 
@@ -34,6 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 using namespace cv;
 using namespace std;
@@ -62,7 +41,6 @@ static int print_help(char** argv)
 
     return 0;
 }
-
 
 static void
 StereoCalib(const vector<string>& imagelist, Size inputBoardSize, string type, float squareSize, float markerSize, cv::aruco::PredefinedDictionaryType arucoDict, string arucoDictFile, bool displayCorners = false, bool useCalibrated=true, bool showRectified=true)
@@ -122,9 +100,13 @@ StereoCalib(const vector<string>& imagelist, Size inputBoardSize, string type, f
         for( k = 0; k < 2; k++ )
         {
             const string& filename = imagelist[i*2+k];
+            cout << "Reading file: " << filename << endl; // 添加调试信息
             Mat img = imread(filename, IMREAD_GRAYSCALE);
             if(img.empty())
+            {
+                cout << "Error: Couldn't load image " << filename << endl;
                 break;
+            }
             if( imageSize == Size() )
                 imageSize = img.size();
             else if( img.size() != imageSize )
@@ -172,10 +154,10 @@ StereoCalib(const vector<string>& imagelist, Size inputBoardSize, string type, f
                 drawChessboardCorners(cimg, boardSizeInnerCorners, corners, found);
                 double sf = 640./MAX(img.rows, img.cols);
                 resize(cimg, cimg1, Size(), sf, sf, INTER_LINEAR_EXACT);
-                imshow("corners", cimg1);
-                char c = (char)waitKey(500);
-                if( c == 27 || c == 'q' || c == 'Q' ) //Allow ESC to quit
-                    exit(-1);
+                // imshow("corners", cimg1); // 注释掉imshow
+                // char c = (char)waitKey(500); // 注释掉waitKey
+                // if( c == 27 || c == 'q' || c == 'Q' ) //Allow ESC to quit
+                //    exit(-1);
             }
             else
                 putchar('.');
@@ -264,12 +246,16 @@ StereoCalib(const vector<string>& imagelist, Size inputBoardSize, string type, f
     cout << "average epipolar err = " <<  err/npoints << endl;
 
     // save intrinsic parameters
-    FileStorage fs("intrinsics.yml", FileStorage::WRITE);
+    string outputDir = "stereo_calib";
+    mkdir(outputDir.c_str(), 0777);
+
+    FileStorage fs(outputDir + "/intrinsics.yml", FileStorage::WRITE);
     if( fs.isOpened() )
     {
         fs << "M1" << cameraMatrix[0] << "D1" << distCoeffs[0] <<
             "M2" << cameraMatrix[1] << "D2" << distCoeffs[1];
         fs.release();
+        cout << "Intrinsic parameters saved to " << outputDir + "/intrinsics.yml" << endl;
     }
     else
         cout << "Error: can not save the intrinsic parameters\n";
@@ -282,11 +268,12 @@ StereoCalib(const vector<string>& imagelist, Size inputBoardSize, string type, f
                   imageSize, R, T, R1, R2, P1, P2, Q,
                   CALIB_ZERO_DISPARITY, 1, imageSize, &validRoi[0], &validRoi[1]);
 
-    fs.open("extrinsics.yml", FileStorage::WRITE);
+    fs.open(outputDir + "/extrinsics.yml", FileStorage::WRITE);
     if( fs.isOpened() )
     {
         fs << "R" << R << "T" << T << "R1" << R1 << "R2" << R2 << "P1" << P1 << "P2" << P2 << "Q" << Q;
         fs.release();
+        cout << "Extrinsic parameters saved to " << outputDir + "/extrinsics.yml" << endl;
     }
     else
         cout << "Error: can not save the extrinsic parameters\n";
@@ -372,13 +359,17 @@ StereoCalib(const vector<string>& imagelist, Size inputBoardSize, string type, f
         else
             for( j = 0; j < canvas.cols; j += 16 )
                 line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
-        imshow("rectified", canvas);
-        char c = (char)waitKey();
-        if( c == 27 || c == 'q' || c == 'Q' )
-            break;
+        // imshow("rectified", canvas); // 注释掉imshow
+        // char c = (char)waitKey(); // 注释掉waitKey
+        // if( c == 27 || c == 'q' || c == 'Q' )
+        //    break;
+
+        // Save rectified images
+        string rectifiedFilename = outputDir + "/rectified_" + to_string(i) + ".png";
+        imwrite(rectifiedFilename, canvas);
+        cout << "Rectified image saved to " << rectifiedFilename << endl;
     }
 }
-
 
 static bool readStringList( const string& filename, vector<string>& l )
 {
@@ -456,3 +447,4 @@ int main(int argc, char** argv)
     StereoCalib(imagelist, inputBoardSize, type, squareSize, markerSize, arucoDict, arucoDictFile, false, true, showRectified);
     return 0;
 }
+

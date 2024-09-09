@@ -11,8 +11,11 @@
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
+ #include "opencv2/highgui.hpp"
 #include <iostream>
+#include <cstdlib>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 using namespace std;
 using namespace cv;
@@ -25,11 +28,10 @@ int drag = 0;
 int var = 0;
 int flag = 0;
 
-void mouseHandler(int, int, int, int, void*);
+// void mouseHandler(int, int, int, int, void*);
 
 void mouseHandler(int event, int x, int y, int, void*)
 {
-
     if (event == EVENT_LBUTTONDOWN && !drag)
     {
         if (flag == 0)
@@ -37,21 +39,21 @@ void mouseHandler(int event, int x, int y, int, void*)
             if (var == 0)
                 img1 = src.clone();
             point = Point(x, y);
-            circle(img1, point, 2, Scalar(0, 0, 255), -1, 8, 0);
+            // circle(img1, point, 2, Scalar(0, 0, 255), -1, 8, 0);
             pts.push_back(point);
             var++;
             drag  = 1;
 
             if (var > 1)
-                line(img1,pts[var-2], point, Scalar(0, 0, 255), 2, 8, 0);
+                ; // line(img1, pts[var-2], point, Scalar(0, 0, 255), 2, 8, 0);
 
-            imshow("Source", img1);
+            // imshow("Source", img1);
         }
     }
 
     if (event == EVENT_LBUTTONUP && drag)
     {
-        imshow("Source", img1);
+        // imshow("Source", img1);
         drag = 0;
     }
 
@@ -62,10 +64,10 @@ void mouseHandler(int event, int x, int y, int, void*)
 
         if (var != 0)
         {
-            polylines( img1, pts, 1, Scalar(0,0,0), 2, 8, 0);
+            polylines(img1, pts, 1, Scalar(0, 0, 0), 2, 8, 0);
         }
 
-        imshow("Source", img1);
+        // imshow("Source", img1);
     }
 
     if (event == EVENT_RBUTTONUP)
@@ -76,9 +78,9 @@ void mouseHandler(int event, int x, int y, int, void*)
 
         fillPoly(mask, pts, Scalar(255, 255, 255), 8, 0);
         bitwise_and(src, src, final, mask);
-        imshow("Mask", mask);
-        imshow("Result", final);
-        imshow("Source", img1);
+        // imshow("Mask", mask);
+        // imshow("Result", final);
+        // imshow("Source", img1);
     }
 
     if (event == EVENT_MBUTTONDOWN)
@@ -87,7 +89,7 @@ void mouseHandler(int event, int x, int y, int, void*)
         var = 0;
         drag = 0;
         flag = 0;
-        imshow("Source", src);
+        // imshow("Source", src);
     }
 }
 
@@ -97,8 +99,8 @@ int main(int argc, char **argv)
     parser.about("This program demonstrates using mouse events\n");
     parser.printMessage();
     cout << "\n\tleft mouse button - set a point to create mask shape\n"
-        "\tright mouse button - create mask from points\n"
-        "\tmiddle mouse button - reset\n";
+         << "\tright mouse button - create mask from points\n"
+         << "\tmiddle mouse button - reset\n";
     String input_image = parser.get<String>("@input");
 
     src = imread(samples::findFile(input_image));
@@ -109,10 +111,36 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    namedWindow("Source", WINDOW_AUTOSIZE);
-    setMouseCallback("Source", mouseHandler, NULL);
-    imshow("Source", src);
-    waitKey(0);
+    String sample_name = "create_mask";
+    // 创建子目录
+    if (mkdir(sample_name.c_str(), 0777) == -1)
+    {
+        cerr << "Error :  " << strerror(errno) << endl;
+        return 1;
+    }
+
+    // namedWindow("Source", WINDOW_AUTOSIZE);
+    // setMouseCallback("Source", mouseHandler, NULL);
+    // imshow("Source", src);
+    // waitKey(0);
+
+    // 假设您有一个事先定义的点集来创建mask
+    pts = {Point(100, 100), Point(200, 100), Point(200, 200), Point(100, 200)};
+    final = Mat::zeros(src.size(), CV_8UC3);
+    mask = Mat::zeros(src.size(), CV_8UC1);
+
+    fillPoly(mask, pts, Scalar(255, 255, 255), 8, 0);
+    bitwise_and(src, src, final, mask);
+
+    String mask_filename = sample_name + "/mask.png";
+    String result_filename = sample_name + "/result.png";
+
+    imwrite(mask_filename, mask);
+    imwrite(result_filename, final);
+
+    cout << "Saved mask to " << mask_filename << endl;
+    cout << "Saved result to " << result_filename << endl;
 
     return 0;
 }
+

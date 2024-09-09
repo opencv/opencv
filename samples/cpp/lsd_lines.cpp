@@ -13,6 +13,7 @@ int main(int argc, char** argv)
                                  "{refine  r|false|if true use LSD_REFINE_STD method, if false use LSD_REFINE_NONE method}"
                                  "{canny   c|false|use Canny edge detector}"
                                  "{overlay o|false|show result on input image}"
+                                 "{output  o|result.jpg|output image}"
                                  "{help    h|false|show help message}");
 
     if (parser.get<bool>("help"))
@@ -27,23 +28,22 @@ int main(int argc, char** argv)
     bool useRefine = parser.get<bool>("refine");
     bool useCanny = parser.get<bool>("canny");
     bool overlay = parser.get<bool>("overlay");
+    String outputFilename = parser.get<String>("output");
 
     Mat image = imread(filename, IMREAD_GRAYSCALE);
 
     if( image.empty() )
     {
-        cout << "Unable to load " << filename;
+        cout << "Unable to load " << filename << endl;
         return 1;
     }
-
-    imshow("Source Image", image);
 
     if (useCanny)
     {
         Canny(image, image, 50, 200, 3); // Apply Canny edge detector
     }
 
-    // Create and LSD detector with standard or no refinement.
+    // Create LSD detector with standard or no refinement.
     Ptr<LineSegmentDetector> ls = useRefine ? createLineSegmentDetector(LSD_REFINE_STD) : createLineSegmentDetector(LSD_REFINE_NONE);
 
     double start = double(getTickCount());
@@ -63,11 +63,10 @@ int main(int argc, char** argv)
 
     ls->drawSegments(image, lines_std);
 
-    String window_name = useRefine ? "Result - standard refinement" : "Result - no refinement";
-    window_name += useCanny ? " - Canny edge detector used" : "";
+    // Save the result image
+    imwrite(outputFilename, image);
+    cout << "Result saved to " << outputFilename << endl;
 
-    imshow(window_name, image);
-
-    waitKey();
     return 0;
 }
+

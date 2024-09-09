@@ -1,25 +1,3 @@
-/*
-* cloning_demo.cpp
-*
-* Author:
-* Siddharth Kherada <siddharthkherada27[at]gmail[dot]com>
-*
-* This tutorial demonstrates how to use OpenCV seamless cloning
-* module without GUI.
-*
-* 1- Normal Cloning
-* 2- Mixed Cloning
-* 3- Monochrome Transfer
-* 4- Color Change
-* 5- Illumination change
-* 6- Texture Flattening
-
-* The program takes as input a source and a destination image (for 1-3 methods)
-* and outputs the cloned image.
-*
-* Download test images from opencv_extra repository.
-*/
-
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
@@ -52,7 +30,7 @@ int main()
 
     if(num == 1)
     {
-        string folder =  "cloning/Normal_Cloning/";
+        string folder = "cloning/Normal_Cloning/";
         string original_path1 = samples::findFile(folder + "source1.png");
         string original_path2 = samples::findFile(folder + "destination1.png");
         string original_path3 = samples::findFile(folder + "mask.png");
@@ -82,10 +60,11 @@ int main()
         p.x = 400;
         p.y = 100;
 
-        seamlessClone(source, destination, mask, p, result, 1);
+        seamlessClone(source, destination, mask, p, result, NORMAL_CLONE);
 
-        imshow("Output",result);
-        imwrite("cloned.png", result);
+        // 注释掉 imshow
+        // imshow("Output",result);
+        imwrite("cloned_normal.png", result);
     }
     else if(num == 2)
     {
@@ -116,13 +95,14 @@ int main()
 
         Mat result;
         Point p;
-        p.x = destination.size().width/2;
-        p.y = destination.size().height/2;
+        p.x = destination.size().width / 2;
+        p.y = destination.size().height / 2;
 
-        seamlessClone(source, destination, mask, p, result, 2);
+        seamlessClone(source, destination, mask, p, result, MIXED_CLONE);
 
-        imshow("Output",result);
-        imwrite("cloned.png", result);
+        // 注释掉 imshow
+        // imshow("Output",result);
+        imwrite("cloned_mixed.png", result);
     }
     else if(num == 3)
     {
@@ -153,13 +133,14 @@ int main()
 
         Mat result;
         Point p;
-        p.x = destination.size().width/2;
-        p.y = destination.size().height/2;
+        p.x = destination.size().width / 2;
+        p.y = destination.size().height / 2;
 
-        seamlessClone(source, destination, mask, p, result, 3);
+        seamlessClone(source, destination, mask, p, result, MONOCHROME_TRANSFER);
 
-        imshow("Output",result);
-        imwrite("cloned.png", result);
+        // 注释掉 imshow
+        // imshow("Output",result);
+        imwrite("cloned_monochrome.png", result);
     }
     else if(num == 4)
     {
@@ -185,8 +166,9 @@ int main()
 
         colorChange(source, mask, result, 1.5, .5, .5);
 
-        imshow("Output",result);
-        imwrite("cloned.png", result);
+        // 注释掉 imshow
+        // imshow("Output",result);
+        imwrite("cloned_color_change.png", result);
     }
     else if(num == 5)
     {
@@ -212,8 +194,9 @@ int main()
 
         illuminationChange(source, mask, result, 0.2f, 0.4f);
 
-        imshow("Output",result);
-        imwrite("cloned.png", result);
+        // 注释掉 imshow
+        // imshow("Output",result);
+        imwrite("cloned_illumination_change.png", result);
     }
     else if(num == 6)
     {
@@ -239,13 +222,18 @@ int main()
 
         textureFlattening(source, mask, result, 30, 45, 3);
 
-        imshow("Output",result);
-        imwrite("cloned.png", result);
+        // 注释掉 imshow
+        // imshow("Output",result);
+        imwrite("cloned_texture_flattening.png", result);
     }
     else
     {
         cerr << "Invalid selection: " << num << endl;
         exit(1);
     }
-    waitKey(0);
+
+    // 注释掉 waitKey
+    // waitKey(0);
+    return 0;
 }
+

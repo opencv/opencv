@@ -2,20 +2,19 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 #include <iostream>
 #include <vector>
 #include <string>
 #include <cmath>
+
 using namespace cv;
 using namespace std;
 
-
 class AudioDrawing
 {
-
 public:
-
     AudioDrawing(const CommandLineParser& parser) {
         if (!initAndCheckArgs(parser))
         {
@@ -46,9 +45,6 @@ public:
 
             int duration = static_cast<int>(inputAudio.size()) / samplingRate;
 
-            // since the dimensional grid is counted in integer seconds,
-            // if the input audio has an incomplete last second,
-            // then it is filled with zeros to complete
             int remainder = static_cast<int>(inputAudio.size()) % samplingRate;
             if (remainder)
             {
@@ -64,9 +60,6 @@ public:
             }
             cout << "Duration of audio = " << duration << " seconds" << endl;
 
-            // since the dimensional grid is counted in integer seconds,
-            // if duration of file is less than xmarkup, to avoid an incorrect display,
-            // xmarkup will be taken equal to duration
             if (duration <= xmarkup)
             {
                 xmarkup = duration + 1;
@@ -76,16 +69,20 @@ public:
             {
                 Mat imgAmplitude = drawAmplitude(inputAudio);
                 imgAmplitude = drawAmplitudeScale(imgAmplitude, inputAudio, samplingRate);
-                imshow("Display amplitude graph", imgAmplitude);
-                waitKey(0);
+                // 注释掉显示图像的部分
+                // imshow("Display amplitude graph", imgAmplitude);
+                // waitKey(0);
+                saveImage(imgAmplitude, "amplitude_graph.png");
             }
             else if (graph == "spec")
             {
                 vector<vector<double>>stft = STFT(inputAudio);
                 Mat imgSpec = drawSpectrogram(stft);
                 imgSpec = drawSpectrogramColorbar(imgSpec, inputAudio, samplingRate, stft);
-                imshow("Display spectrogram", imgSpec);
-                waitKey(0);
+                // 注释掉显示图像的部分
+                // imshow("Display spectrogram", imgSpec);
+                // waitKey(0);
+                saveImage(imgSpec, "spectrogram.png");
             }
             else if (graph == "ampl_and_spec")
             {
@@ -95,8 +92,10 @@ public:
                 Mat imgSpec = drawSpectrogram(stft);
                 imgSpec = drawSpectrogramColorbar(imgSpec, inputAudio, samplingRate, stft);
                 Mat imgTotal = concatenateImages(imgAmplitude, imgSpec);
-                imshow("Display amplitude graph and spectrogram", imgTotal);
-                waitKey(0);
+                // 注释掉显示图像的部分
+                // imshow("Display amplitude graph and spectrogram", imgTotal);
+                // waitKey(0);
+                saveImage(imgTotal, "amplitude_and_spectrogram.png");
             }
         }
         else if (draw == "dynamic")
@@ -114,46 +113,45 @@ public:
 
     ~AudioDrawing() {
     }
-
-    int readAudioFile(string file, vector<int>& inputAudio)
+int readAudioFile(string file, vector<int>& inputAudio)
+{
+    VideoCapture cap;
+    cap.open(file); // Use basic open to check if file can be opened without specific parameters
+    if (!cap.isOpened())
     {
-        VideoCapture cap;
-        vector<int> params {    CAP_PROP_AUDIO_STREAM, audioStream,
-                                CAP_PROP_VIDEO_STREAM, -1,
-                                CAP_PROP_AUDIO_DATA_DEPTH, CV_16S   };
-
-        cap.open(file, CAP_ANY, params);
-        if (!cap.isOpened())
-        {
-            cerr << "Error : Can't read audio file: '" << audio << "' with audioStream = " << audioStream << endl;
-            return -1;
-        }
-        const int audioBaseIndex = (int)cap.get(CAP_PROP_AUDIO_BASE_INDEX);
-        const int numberOfChannels = (int)cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS);
-        cout << "CAP_PROP_AUDIO_DATA_DEPTH: " << depthToString((int)cap.get(CAP_PROP_AUDIO_DATA_DEPTH)) << endl;
-        int samplingRate =  static_cast<int>(cap.get(CAP_PROP_AUDIO_SAMPLES_PER_SECOND));
-        cout << "CAP_PROP_AUDIO_SAMPLES_PER_SECOND: " << cap.get(CAP_PROP_AUDIO_SAMPLES_PER_SECOND) << endl;
-        cout << "CAP_PROP_AUDIO_TOTAL_CHANNELS: " << numberOfChannels << endl;
-        cout << "CAP_PROP_AUDIO_TOTAL_STREAMS: " << cap.get(CAP_PROP_AUDIO_TOTAL_STREAMS) << endl;
-
-        vector<int> frameVec;
-        Mat frame;
-        for (;;)
-        {
-            if (cap.grab())
-            {
-                cap.retrieve(frame, audioBaseIndex);
-                frameVec = frame;
-                inputAudio.insert(inputAudio.end(), frameVec.begin(), frameVec.end());
-            }
-            else
-            {
-                cout << "Number of samples: " << inputAudio.size() << endl;
-                break;
-            }
-        }
-        return samplingRate;
+        cerr << "Error : Can't read audio file: '" << file << "' with audioStream = " << audioStream << endl;
+        return -1;
     }
+    cout << "Video file opened successfully" << endl;
+
+    const int audioBaseIndex = (int)cap.get(CAP_PROP_AUDIO_BASE_INDEX);
+    const int numberOfChannels = (int)cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS);
+    cout << "CAP_PROP_AUDIO_DATA_DEPTH: " << depthToString((int)cap.get(CAP_PROP_AUDIO_DATA_DEPTH)) << endl;
+    int samplingRate = static_cast<int>(cap.get(CAP_PROP_AUDIO_SAMPLES_PER_SECOND));
+    cout << "CAP_PROP_AUDIO_SAMPLES_PER_SECOND: " << cap.get(CAP_PROP_AUDIO_SAMPLES_PER_SECOND) << endl;
+    cout << "CAP_PROP_AUDIO_TOTAL_CHANNELS: " << numberOfChannels << endl;
+    cout << "CAP_PROP_AUDIO_TOTAL_STREAMS: " << cap.get(CAP_PROP_AUDIO_TOTAL_STREAMS) << endl;
+
+    vector<int> frameVec;
+    Mat frame;
+    for (;;)
+    {
+        if (cap.grab())
+        {
+            cout << "Frame grabbed successfully" << endl;
+            cap.retrieve(frame, audioBaseIndex);
+            frameVec = frame;
+            inputAudio.insert(inputAudio.end(), frameVec.begin(), frameVec.end());
+        }
+        else
+        {
+            cout << "Number of samples: " << inputAudio.size() << endl;
+            break;
+        }
+    }
+    return samplingRate;
+}
+
 
     int readAudioMicrophone(vector<int>& inputAudio)
     {
@@ -201,15 +199,13 @@ public:
         return samplingRate;
     }
 
-
     Mat drawAmplitude(vector<int>& inputAudio)
     {
         Scalar color = Scalar(247,111,87);
         int thickness = 5;
         int frameVectorRows = 500;
         int middle = frameVectorRows / 2;
-        // usually the input data is too big, so it is necessary
-        // to reduce size using interpolation of data
+
         int frameVectorCols = 40000;
         if (static_cast<int>(inputAudio.size()) < frameVectorCols)
         {
@@ -229,7 +225,6 @@ public:
         resize(img_frameVector, img_frameVector_resize, Size(frameVectorCols, 1), INTER_LINEAR);
         reshapeAudio = img_frameVector_resize;
 
-        // normalization data by maximum element
         normalize(reshapeAudio, reshapeAudio, 1.0, 0.0, NORM_INF);
 
         for (size_t i = 0; i < reshapeAudio.size(); ++i)
@@ -249,11 +244,6 @@ public:
     Mat drawAmplitudeScale(Mat& inputImg, const vector<int>& inputAudio, int samplingRate,
                            int xmin = 0, int xmax = 0)
     {
-        // function of layout drawing for graph of volume amplitudes
-        // x axis for time
-        // y axis for amplitudes
-
-        // parameters for the new image size
         int preCol = 100;
         int aftCol = 100;
         int preLine = 40;
@@ -268,8 +258,6 @@ public:
         Mat imgTotal = Mat(totalRows, totalCols, CV_8UC3, Scalar(255, 255, 255));
         inputImg.copyTo(imgTotal(Rect(preCol, preLine, inputImg.cols, inputImg.rows)));
 
-
-        // calculating values on x axis
         if (xmax == 0)
         {
             xmax = static_cast<int>(inputAudio.size()) / samplingRate;
@@ -285,7 +273,6 @@ public:
         }
         else
         {
-            // this case is used to display a dynamic update
             vector<double> tmpXList;
             for (int i = xmin; i < xmax; ++i)
             {
@@ -299,7 +286,6 @@ public:
             }
         }
 
-        // calculating values on y axis
         double minCv; double maxCv; Point minLoc; Point maxLoc;
         minMaxLoc(inputAudio, &minCv, &maxCv, &minLoc, &maxLoc);
         int ymin = static_cast<int>(minCv);
@@ -312,29 +298,24 @@ public:
             yList[i] = ymin + deltay * i;
         }
 
-        // parameters for layout drawing
         int textThickness = 1;
         int gridThickness = 1;
         Scalar gridColor(0, 0, 0);
         Scalar textColor(0, 0, 0);
         float fontScale = 0.5;
 
-        // horizontal axis
         line(imgTotal, Point(preCol, totalRows - aftLine), Point(preCol + frameVectorCols, totalRows - aftLine),
             gridColor, gridThickness);
-        // vertical axis
+
         line(imgTotal, Point(preCol, preLine), Point(preCol, preLine + frameVectorRows),
             gridColor, gridThickness);
 
-        // parameters for layout calculation
         int serifSize = 10;
         int indentDownX = serifSize * 2;
         int indentDownY = serifSize / 2;
         int indentLeftX = serifSize;
         int indentLeftY = 2 * preCol / 3;
 
-
-        // drawing layout for x axis
         int numX = frameVectorCols / (xmarkup - 1);
         for (size_t i = 0; i < xList.size(); ++i)
         {
@@ -355,7 +336,6 @@ public:
                     FONT_HERSHEY_SIMPLEX, fontScale, textColor, textThickness);
         }
 
-        // drawing layout for y axis
         int numY = frameVectorRows / (ymarkup - 1);
         for (size_t i = 0; i < yList.size(); ++i) {
             int a1 = preCol;
@@ -379,23 +359,12 @@ public:
 
     vector<vector<double>> STFT(const vector<int>& inputAudio)
     {
-        // The Short-time Fourier transform (STFT), is a Fourier-related transform used to
-        // determine the sinusoidal frequency and phase content of local sections of a signal
-        // as it changes over time.
-        // In practice, the procedure for computing STFTs is to divide a longer time signal
-        // into shorter segments of equal length and then compute the Fourier transform separately
-        // on each shorter segment. This reveals the Fourier spectrum on each shorter segment.
-        // One then usually plots the changing spectra as a function of time, known as a spectrogram
-        // or waterfall plot.
-        // https://en.wikipedia.org/wiki/Short-time_Fourier_transform
-
         int timeStep = windLen - overlap;
         Mat dstMat;
         vector<double> stftRow;
         vector<double> WindType;
         if (windowType == "Hann")
         {
-            // https://en.wikipedia.org/wiki/Window_function#Hann_and_Hamming_windows
             for (int j = 1 - windLen; j < windLen; j+=2)
             {
                 WindType.push_back(j * (0.5 * (1 - cos(CV_PI * j / (windLen - 1)))));
@@ -403,7 +372,6 @@ public:
         }
         else if (windowType == "Hamming")
         {
-            // https://en.wikipedia.org/wiki/Window_function#Hann_and_Hamming_windows
             for (int j = 1 - windLen; j < windLen; j+=2)
             {
                 WindType.push_back(j * (0.53836 - 0.46164 * (cos(CV_PI * j / (windLen - 1)))));
@@ -435,7 +403,6 @@ public:
         }
 
         size_t xSize = inputAudio.size() / timeStep + 1;
-        // we need only the first part of the spectrum, the second part is symmetrical
         size_t ySize = dstMat.cols / 4;
 
         vector<vector<double>> stft(ySize, vector<double>(xSize, 0.));
@@ -443,7 +410,6 @@ public:
         {
             for (size_t j = 0; j < ySize; ++j)
             {
-                // write elements with transposition and convert it to the decibel scale
                 double stftElem = stftRow[ i * ySize + j];
                 if (stftElem != 0.)
                 {
@@ -459,8 +425,6 @@ public:
         int frameVectorRows = static_cast<int>(stft.size());
         int frameVectorCols = static_cast<int>(stft[0].size());
 
-        // Normalization of image values from 0 to 255 to get more contrast image
-        // and this normalization will be taken into account in the scale drawing
         int colormapImageRows = 255;
 
         double minCv; double maxCv; Point minLoc; Point maxLoc;
@@ -472,7 +436,6 @@ public:
             minMaxLoc( stft[i], &minCv, &maxCv, &minLoc, &maxLoc);
             maxStft = max(maxStft, max(abs(maxCv), abs(minCv)));
         }
-        // if maxStft is zero (silence)
         if (maxStft == 0.)
         {
             maxStft = 1;
@@ -496,12 +459,6 @@ public:
                                 int samplingRate, const vector<vector<double>>& stft,
                                 int xmin = 0, int xmax = 0)
     {
-        // function of layout drawing for the three-dimensional graph of the spectrogram
-        // x axis for time
-        // y axis for frequencies
-        // z axis for magnitudes of frequencies shown by color scale
-
-        // parameters for the new image size
         int preCol = 100;
         int aftCol = 100;
         int preLine = 40;
@@ -518,8 +475,6 @@ public:
         Mat imgTotal = Mat(totalRows, totalCols, CV_8UC3 , Scalar(255, 255, 255));
         inputImg.copyTo(imgTotal(Rect(preCol, preLine, frameVectorCols, frameVectorRows)));
 
-        // colorbar image due to drawSpectrogram(..) picture has been normalised from 255 to 0,
-        // so here colorbar has values from 255 to 0
         int colorArrSize = 256;
         Mat imgColorBar = Mat (colorArrSize, colColor, CV_8UC1 , Scalar(255,255,255));
         for (int i = 0; i < colorArrSize; ++i)
@@ -534,8 +489,6 @@ public:
         resize(imgColorBar, imgColorBar, Size(colColor, frameVectorRows), INTER_AREA);
         imgColorBar.copyTo(imgTotal(Rect(preCol + frameVectorCols + indCol, preLine, colColor, frameVectorRows)));
 
-
-        // calculating values on x axis
         if (xmax == 0)
         {
             xmax = static_cast<int>(inputAudio.size()) / samplingRate + 1;
@@ -551,7 +504,6 @@ public:
         }
         else
         {
-            // this case is used to display a dynamic update
             vector<double> tmpXList;
             for(int i = xmin; i < xmax; ++i)
             {
@@ -565,9 +517,6 @@ public:
             }
         }
 
-        // calculating values on y axis
-        // according to the Nyquist sampling theorem,
-        // signal should posses frequencies equal to half of sampling rate
         int ymin = 0;
         int ymax = static_cast<int>(samplingRate / 2);
 
@@ -578,7 +527,6 @@ public:
             yList.push_back(ymin + deltay * i);
         }
 
-        // calculating values on z axis
         double minCv; double maxCv; Point minLoc; Point maxLoc;
         minMaxLoc( stft[0], &minCv, &maxCv, &minLoc, &maxLoc);
         double zmin = minCv, zmax = maxCv;
@@ -596,7 +544,6 @@ public:
             zList.push_back(zmin + deltaz * i);
         }
 
-        // parameters for layout drawing
         int textThickness = 1;
         int gridThickness = 1;
         Scalar gridColor(0,0,0);
@@ -609,14 +556,12 @@ public:
         int indentLeftX = serifSize;
         int indentLeftY = 2 * preCol / 3;
 
-        // horizontal axis
         line(imgTotal, Point(preCol, totalRows - aftLine), Point(preCol + frameVectorCols, totalRows - aftLine),
                             gridColor, gridThickness);
-        // vertical axis
+
         line(imgTotal, Point(preCol, preLine), Point(preCol, preLine + frameVectorRows),
                             gridColor, gridThickness);
 
-        // drawing layout for x axis
         int numX = frameVectorCols / (xmarkup - 1);
         for (size_t i = 0; i < xList.size(); ++i)
         {
@@ -631,7 +576,6 @@ public:
                     FONT_HERSHEY_SIMPLEX, fontScale, textColor, textThickness);
         }
 
-        // drawing layout for y axis
         int numY = frameVectorRows / (ymarkup - 1);
         for (size_t i = 0; i < yList.size(); ++i)
         {
@@ -646,7 +590,6 @@ public:
                     FONT_HERSHEY_SIMPLEX, fontScale, textColor, textThickness);
         }
 
-        // drawing layout for z axis
         int numZ = frameVectorRows / (zmarkup - 1);
         for (size_t i = 0; i < zList.size(); ++i)
         {
@@ -667,10 +610,9 @@ public:
 
     Mat concatenateImages(Mat& img1, Mat& img2)
     {
-        // first image will be under the second image
         int totalRows = img1.rows + img2.rows;
         int totalCols = max(img1.cols , img2.cols);
-        // if images columns do not match, the difference is filled in white
+
         Mat imgTotal = Mat (totalRows, totalCols, CV_8UC3 , Scalar(255, 255, 255));
 
         img1.copyTo(imgTotal(Rect(0, 0, img1.cols, img1.rows)));
@@ -704,9 +646,6 @@ public:
         int step = static_cast<int>(updateTime * samplingRate);
         int frameSize = static_cast<int>(frameSizeTime * samplingRate);
 
-        // since the dimensional grid is counted in integer seconds,
-        // if duration of audio frame is less than xmarkup, to avoid an incorrect display,
-        // xmarkup will be taken equal to duration
         if (frameSizeTime <= xmarkup)
         {
             xmarkup = frameSizeTime;
@@ -750,16 +689,18 @@ public:
                     {
                         imgAmplitude = drawAmplitude(section);
                         imgAmplitude = drawAmplitudeScale(imgAmplitude, section, samplingRate, xmin, xmax);
-                        imshow("Display amplitude graph", imgAmplitude);
+                        // imshow("Display amplitude graph", imgAmplitude);
                         waitKey(waitTime);
+                        saveImage(imgAmplitude, "dynamic_amplitude_graph.png");
                     }
                     else if (graph == "spec")
                     {
                         stft = STFT(section);
                         imgSpec = drawSpectrogram(stft);
                         imgSpec = drawSpectrogramColorbar(imgSpec, section, samplingRate, stft, xmin, xmax);
-                        imshow("Display spectrogram", imgSpec);
+                        // imshow("Display spectrogram", imgSpec);
                         waitKey(waitTime);
+                        saveImage(imgSpec, "dynamic_spectrogram.png");
                     }
                     else if (graph == "ampl_and_spec")
                     {
@@ -769,8 +710,9 @@ public:
                         imgSpec = drawSpectrogram(stft);
                         imgSpec = drawSpectrogramColorbar(imgSpec, section, samplingRate, stft, xmin, xmax);
                         imgTotal = concatenateImages(imgAmplitude, imgSpec);
-                        imshow("Display amplitude graph and spectrogram", imgTotal);
+                        // imshow("Display amplitude graph and spectrogram", imgTotal);
                         waitKey(waitTime);
+                        saveImage(imgTotal, "dynamic_amplitude_and_spectrogram.png");
                     }
                 }
             }
@@ -779,7 +721,6 @@ public:
                 break;
             }
         }
-
     }
 
     void dynamicMicrophone()
@@ -809,9 +750,6 @@ public:
 
         int step = (updateTime * samplingRate);
         int frameSize = (frameSizeTime * samplingRate);
-        // since the dimensional grid is counted in integer seconds,
-        // if duration of audio frame is less than xmarkup, to avoid an incorrect display,
-        // xmarkup will be taken equal to duration
         if (frameSizeTime <= xmarkup)
         {
             xmarkup = frameSizeTime;
@@ -859,16 +797,18 @@ public:
                     {
                         imgAmplitude = drawAmplitude(section);
                         imgAmplitude = drawAmplitudeScale(imgAmplitude, section, samplingRate, xmin, xmax);
-                        imshow("Display amplitude graph", imgAmplitude);
+                        // imshow("Display amplitude graph", imgAmplitude);
                         waitKey(waitTime);
+                        saveImage(imgAmplitude, "dynamic_microphone_amplitude_graph.png");
                     }
                     else if (graph == "spec")
                     {
                         stft = STFT(section);
                         imgSpec = drawSpectrogram(stft);
                         imgSpec = drawSpectrogramColorbar(imgSpec, section, samplingRate, stft, xmin, xmax);
-                        imshow("Display spectrogram", imgSpec);
+                        // imshow("Display spectrogram", imgSpec);
                         waitKey(waitTime);
+                        saveImage(imgSpec, "dynamic_microphone_spectrogram.png");
                     }
                     else if (graph == "ampl_and_spec")
                     {
@@ -878,8 +818,9 @@ public:
                         imgSpec = drawSpectrogram(stft);
                         imgSpec = drawSpectrogramColorbar(imgSpec, section, samplingRate, stft, xmin, xmax);
                         imgTotal = concatenateImages(imgAmplitude, imgSpec);
-                        imshow("Display amplitude graph and spectrogram", imgTotal);
+                        // imshow("Display amplitude graph and spectrogram", imgTotal);
                         waitKey(waitTime);
+                        saveImage(imgTotal, "dynamic_microphone_amplitude_and_spectrogram.png");
                     }
                 }
             }
@@ -889,7 +830,6 @@ public:
                 break;
             }
         }
-
     }
 
     bool initAndCheckArgs(const CommandLineParser& parser)
@@ -1029,6 +969,13 @@ private :
     int updateTime;
     int waitTime;
 
+    void saveImage(const Mat& image, const string& filename) {
+        string outputDir = "audio_spectrogram";
+        system(("mkdir -p " + outputDir).c_str());
+        string outputPath = outputDir + "/" + filename;
+        imwrite(outputPath, image);
+        cout << "Image saved at: " << outputPath << endl;
+    }
 };
 
 int main(int argc, char** argv)
@@ -1069,3 +1016,4 @@ int main(int argc, char** argv)
     AudioDrawing draw(parser);
     return 0;
 }
+

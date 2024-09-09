@@ -41,10 +41,13 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <cstdlib>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <opencv2/core.hpp>
 #include "opencv2/imgcodecs.hpp"
-#include <opencv2/highgui.hpp>
+// #include <opencv2/highgui.hpp>
 
 using namespace cv;
 using namespace std;
@@ -63,14 +66,14 @@ static void read_imgList(const string& filename, vector<Mat>& images) {
     }
 }
 
-static  Mat formatImagesForPCA(const vector<Mat> &data)
+static Mat formatImagesForPCA(const vector<Mat>& data)
 {
-    Mat dst(static_cast<int>(data.size()), data[0].rows*data[0].cols, CV_32F);
-    for(unsigned int i = 0; i < data.size(); i++)
+    Mat dst(static_cast<int>(data.size()), data[0].rows * data[0].cols, CV_32F);
+    for (unsigned int i = 0; i < data.size(); i++)
     {
-        Mat image_row = data[i].clone().reshape(1,1);
+        Mat image_row = data[i].clone().reshape(1, 1);
         Mat row_i = dst.row(i);
-        image_row.convertTo(row_i,CV_32F);
+        image_row.convertTo(row_i, CV_32F);
     }
     return dst;
 }
@@ -78,7 +81,7 @@ static  Mat formatImagesForPCA(const vector<Mat> &data)
 static Mat toGrayscale(InputArray _src) {
     Mat src = _src.getMat();
     // only allow one channel
-    if(src.channels() != 1) {
+    if (src.channels() != 1) {
         CV_Error(Error::StsBadArg, "Only Matrices with one channel are supported");
     }
     // create and return normalized image
@@ -103,7 +106,7 @@ static void onTrackbar(int pos, void* ptr)
 
     double var = pos / 100.0;
 
-    struct params *p = (struct params *)ptr;
+    struct params* p = (struct params*)ptr;
 
     p->pca = PCA(p->data, cv::Mat(), PCA::DATA_AS_ROW, var);
 
@@ -112,10 +115,13 @@ static void onTrackbar(int pos, void* ptr)
     reconstruction = reconstruction.reshape(p->ch, p->rows);
     reconstruction = toGrayscale(reconstruction);
 
-    imshow(p->winName, reconstruction);
+    // imshow(p->winName, reconstruction);
     cout << "done!   # of principal components: " << p->pca.eigenvectors.rows << endl;
-}
 
+    String output_dir = p->winName + "/pca_" + to_string(pos) + ".png";
+    imwrite(output_dir, reconstruction);
+    cout << "Saved reconstruction to " << output_dir << endl;
+}
 
 ///////////////////////
 // Main
@@ -141,13 +147,14 @@ int main(int argc, char** argv)
     // Read in the data. This can fail if not valid
     try {
         read_imgList(imgList, images);
-    } catch (const cv::Exception& e) {
+    }
+    catch (const cv::Exception& e) {
         cerr << "Error opening file \"" << imgList << "\". Reason: " << e.msg << endl;
         exit(1);
     }
 
     // Quit if there are not enough images for this demo.
-    if(images.size() <= 1) {
+    if (images.size() <= 1) {
         string error_message = "This demo needs at least 2 images to work. Please add more images to your data set!";
         CV_Error(Error::StsError, error_message);
     }
@@ -164,9 +171,18 @@ int main(int argc, char** argv)
     reconstruction = reconstruction.reshape(images[0].channels(), images[0].rows); // reshape from a row vector into image shape
     reconstruction = toGrayscale(reconstruction); // re-scale for displaying purposes
 
-    // init highgui window
-    string winName = "Reconstruction | press 'q' to quit";
-    namedWindow(winName, WINDOW_NORMAL);
+    // 创建子目录
+    String sample_name = "pca_results";
+    if (mkdir(sample_name.c_str(), 0777) == -1)
+    {
+        cerr << "Error :  " << strerror(errno) << endl;
+        return 1;
+    }
+
+    // 保存初始重构图像
+    String initial_output = sample_name + "/initial_reconstruction.png";
+    imwrite(initial_output, reconstruction);
+    cout << "Saved initial reconstruction to " << initial_output << endl;
 
     // params struct to pass to the trackbar handler
     params p;
@@ -174,18 +190,14 @@ int main(int argc, char** argv)
     p.ch = images[0].channels();
     p.rows = images[0].rows;
     p.pca = pca;
-    p.winName = winName;
+    p.winName = sample_name;
 
-    // create the tracbar
-    int pos = 95;
-    createTrackbar("Retained Variance (%)", winName, &pos, 100, onTrackbar, (void*)&p);
+    // 模拟通过不同的保持方差值进行PCA重建
+    for (int pos = 10; pos <= 100; pos += 10)
+    {
+        onTrackbar(pos, (void*)&p);
+    }
 
-    // display until user presses q
-    imshow(winName, reconstruction);
-
-    char key = 0;
-    while(key != 'q')
-        key = (char)waitKey();
-
-   return 0;
+    return 0;
 }
+

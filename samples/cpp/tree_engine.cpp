@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string>
 #include <map>
+#include <iostream>
 
 using namespace cv;
 using namespace cv::ml;
@@ -13,7 +14,7 @@ static void help(char** argv)
     printf(
         "\nThis sample demonstrates how to use different decision trees and forests including boosting and random trees.\n"
         "Usage:\n\t%s [-r=<response_column>] [-ts=type_spec] <csv filename>\n"
-        "where -r=<response_column> specified the 0-based index of the response (0 by default)\n"
+        "where -r=<response_column> specifies the 0-based index of the response (0 by default)\n"
         "-ts= specifies the var type spec in the form ord[n1,n2-n3,n4-n5,...]cat[m1-m2,m3,m4-m5,...]\n"
         "<csv filename> is the name of training data file in comma-separated value format\n\n", argv[0]);
 }
@@ -27,8 +28,8 @@ static void train_and_print_errs(Ptr<StatModel> model, const Ptr<TrainData>& dat
     }
     else
     {
-        printf( "train error: %f\n", model->calcError(data, false, noArray()) );
-        printf( "test error: %f\n\n", model->calcError(data, true, noArray()) );
+        printf("Train error: %f\n", model->calcError(data, false, noArray()));
+        printf("Test error: %f\n\n", model->calcError(data, true, noArray()));
     }
 }
 
@@ -41,28 +42,28 @@ int main(int argc, char** argv)
         return 0;
     }
     std::string filename = parser.get<std::string>("@input");
-    int response_idx;
-    std::string typespec;
-    response_idx = parser.get<int>("r");
-    typespec = parser.get<std::string>("ts");
+    int response_idx = parser.get<int>("r");
+    std::string typespec = parser.get<std::string>("ts");
+
     if( filename.empty() || !parser.check() )
     {
         parser.printErrors();
         help(argv);
         return 0;
     }
-    printf("\nReading in %s...\n\n",filename.c_str());
+
+    printf("\nReading in %s...\n\n", filename.c_str());
     const double train_test_split_ratio = 0.5;
 
     Ptr<TrainData> data = TrainData::loadFromCSV(filename, 0, response_idx, response_idx+1, typespec);
     if( data.empty() )
     {
-        printf("ERROR: File %s can not be read\n", filename.c_str());
+        printf("ERROR: File %s cannot be read\n", filename.c_str());
         return 0;
     }
 
     data->setTrainTestSplitRatio(train_test_split_ratio);
-    std::cout << "Test/Train: " << data->getNTestSamples() << "/" << data->getNTrainSamples();
+    std::cout << "Test/Train: " << data->getNTestSamples() << "/" << data->getNTrainSamples() << std::endl;
 
     printf("======DTREE=====\n");
     Ptr<DTrees> dtree = DTrees::create();
@@ -102,15 +103,14 @@ int main(int argc, char** argv)
     rtrees->setActiveVarCount(0);
     rtrees->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 0));
     train_and_print_errs(rtrees, data);
-    cv::Mat ref_labels = data->getClassLabels();
-    cv::Mat test_data = data->getTestSampleIdx();
-    cv::Mat predict_labels;
-    rtrees->predict(data->getSamples(), predict_labels);
 
     cv::Mat variable_importance = rtrees->getVarImportance();
     std::cout << "Estimated variable importance" << std::endl;
-    for (int i = 0; i < variable_importance.rows; i++) {
+    for (int i = 0; i < variable_importance.rows; i++)
+    {
         std::cout << "Variable " << i << ": " << variable_importance.at<float>(i, 0) << std::endl;
     }
+
     return 0;
 }
+

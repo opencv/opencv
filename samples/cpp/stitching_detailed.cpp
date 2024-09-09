@@ -1,9 +1,3 @@
-
-#include <iostream>
-#include <fstream>
-#include <string>
-#include "opencv2/opencv_modules.hpp"
-#include <opencv2/core/utility.hpp>
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
@@ -21,6 +15,11 @@
 #include "opencv2/xfeatures2d.hpp"
 #include "opencv2/xfeatures2d/nonfree.hpp"
 #endif
+
+#include <iostream>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fstream>
 
 #define ENABLE_LOG 1
 #define LOG(msg) std::cout << msg
@@ -164,6 +163,11 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--try_cuda")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --try_cuda flag\n";
+                return -1;
+            }
             if (string(argv[i + 1]) == "no")
                 try_cuda = false;
             else if (string(argv[i + 1]) == "yes")
@@ -177,26 +181,51 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--work_megapix")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --work_megapix flag\n";
+                return -1;
+            }
             work_megapix = atof(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--seam_megapix")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --seam_megapix flag\n";
+                return -1;
+            }
             seam_megapix = atof(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--compose_megapix")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --compose_megapix flag\n";
+                return -1;
+            }
             compose_megapix = atof(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--result")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --result flag\n";
+                return -1;
+            }
             result_name = argv[i + 1];
             i++;
         }
         else if (string(argv[i]) == "--features")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --features flag\n";
+                return -1;
+            }
             features_type = argv[i + 1];
             if (string(features_type) == "orb")
                 match_conf = 0.3f;
@@ -204,6 +233,11 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--matcher")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --matcher flag\n";
+                return -1;
+            }
             if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
                 matcher_type = argv[i + 1];
             else
@@ -215,6 +249,11 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--estimator")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --estimator flag\n";
+                return -1;
+            }
             if (string(argv[i + 1]) == "homography" || string(argv[i + 1]) == "affine")
                 estimator_type = argv[i + 1];
             else
@@ -226,21 +265,41 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--match_conf")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --match_conf flag\n";
+                return -1;
+            }
             match_conf = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
         else if (string(argv[i]) == "--conf_thresh")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --conf_thresh flag\n";
+                return -1;
+            }
             conf_thresh = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
         else if (string(argv[i]) == "--ba")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --ba flag\n";
+                return -1;
+            }
             ba_cost_func = argv[i + 1];
             i++;
         }
         else if (string(argv[i]) == "--ba_refine_mask")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --ba_refine_mask flag\n";
+                return -1;
+            }
             ba_refine_mask = argv[i + 1];
             if (ba_refine_mask.size() != 5)
             {
@@ -251,6 +310,11 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--wave_correct")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --wave_correct flag\n";
+                return -1;
+            }
             if (string(argv[i + 1]) == "no")
                 do_wave_correct = false;
             else if (string(argv[i + 1]) == "horiz")
@@ -272,17 +336,32 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--save_graph")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --save_graph flag\n";
+                return -1;
+            }
             save_graph = true;
             save_graph_to = argv[i + 1];
             i++;
         }
         else if (string(argv[i]) == "--warp")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --warp flag\n";
+                return -1;
+            }
             warp_type = string(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--expos_comp")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --expos_comp flag\n";
+                return -1;
+            }
             if (string(argv[i + 1]) == "no")
                 expos_comp_type = ExposureCompensator::NO;
             else if (string(argv[i + 1]) == "gain")
@@ -302,21 +381,41 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--expos_comp_nr_feeds")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --expos_comp_nr_feeds flag\n";
+                return -1;
+            }
             expos_comp_nr_feeds = atoi(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--expos_comp_nr_filtering")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --expos_comp_nr_filtering flag\n";
+                return -1;
+            }
             expos_comp_nr_filtering = atoi(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--expos_comp_block_size")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --expos_comp_block_size flag\n";
+                return -1;
+            }
             expos_comp_block_size = atoi(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--seam")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --seam flag\n";
+                return -1;
+            }
             if (string(argv[i + 1]) == "no" ||
                 string(argv[i + 1]) == "voronoi" ||
                 string(argv[i + 1]) == "gc_color" ||
@@ -333,6 +432,11 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--blend")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --blend flag\n";
+                return -1;
+            }
             if (string(argv[i + 1]) == "no")
                 blend_type = Blender::NO;
             else if (string(argv[i + 1]) == "feather")
@@ -348,6 +452,11 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--timelapse")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --timelapse flag\n";
+                return -1;
+            }
             timelapse = true;
 
             if (string(argv[i + 1]) == "as_is")
@@ -363,16 +472,31 @@ static int parseCmdArgs(int argc, char** argv)
         }
         else if (string(argv[i]) == "--rangewidth")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --rangewidth flag\n";
+                return -1;
+            }
             range_width = atoi(argv[i + 1]);
             i++;
         }
         else if (string(argv[i]) == "--blend_strength")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --blend_strength flag\n";
+                return -1;
+            }
             blend_strength = static_cast<float>(atof(argv[i + 1]));
             i++;
         }
         else if (string(argv[i]) == "--output")
         {
+            if (i + 1 >= argc)
+            {
+                cout << "Missing value for --output flag\n";
+                return -1;
+            }
             result_name = argv[i + 1];
             i++;
         }
@@ -929,9 +1053,18 @@ int main(int argc, char* argv[])
 
         LOGLN("Compositing, time: " << ((getTickCount() - t) / getTickFrequency()) << " sec");
 
-        imwrite(result_name, result);
+        // Create subdirectory for saving results
+        string output_dir = "stitching_detailed";
+        mkdir(output_dir.c_str(), 0777);
+
+        // Save the result image to the subdirectory
+        string output_path = output_dir + "/" + result_name;
+        imwrite(output_path, result);
+
+        LOGLN("Stitching completed successfully. Image saved to " << output_path);
     }
 
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
     return 0;
 }
+

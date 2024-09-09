@@ -120,7 +120,7 @@ int main( int argc, char** argv )
 
     img = Scalar::all(0);
     string win = "Delaunay Demo";
-    imshow(win, img);
+    // imshow(win, img); // 注释掉
 
     for( int i = 0; i < 200; i++ )
     {
@@ -128,26 +128,30 @@ int main( int argc, char** argv )
                     (float)(rand()%(rect.height-10)+5));
 
         locate_point( img, subdiv, fp, active_facet_color );
-        imshow( win, img );
+        // imshow( win, img ); // 注释掉
 
-        if( waitKey( 100 ) >= 0 )
-            break;
+        // if( waitKey( 100 ) >= 0 ) // 注释掉
+        //     break;
 
         subdiv.insert(fp);
 
         img = Scalar::all(0);
         draw_subdiv( img, subdiv, delaunay_color );
-        imshow( win, img );
+        // imshow( win, img ); // 注释掉
 
-        if( waitKey( 100 ) >= 0 )
-            break;
+        // if( waitKey( 100 ) >= 0 ) // 注释掉
+        //     break;
     }
 
     img = Scalar::all(0);
     paint_voronoi( img, subdiv );
-    imshow( win, img );
+    // imshow( win, img ); // 注释掉
 
-    waitKey(0);
+    // waitKey(0); // 注释掉
+
+    // 保存处理后的图像
+    imwrite("output.png", img);
 
     return 0;
 }
+

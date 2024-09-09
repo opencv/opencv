@@ -10,29 +10,9 @@
 #include <iomanip>
 #include <limits>
 #include <stdint.h>
-#ifdef HAVE_OPENGL
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN 1
-#define NOMINMAX 1
-#include <windows.h>
-#endif
-#if defined(_WIN64)
-#include <windows.h>
-#endif
-
-#if defined(__APPLE__)
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-#else
-#include <GL/gl.h>
-#include <GL/glu.h>
-#endif
-#endif
-
 
 using namespace std;
 using namespace cv;
-
 
 static void help(char** argv)
 {
@@ -91,255 +71,6 @@ static String Legende(const MSERParams &pAct)
     return ss.str();
 }
 
-
-#ifdef HAVE_OPENGL
-const int win_width = 800;
-const int win_height = 640;
-#endif
-bool    rotateEnable=true;
-bool    keyPressed=false;
-
-Vec4f   rotAxis(1,0,1,0);
-Vec3f  zoom(1,0,0);
-
-float obsX = 0.f;
-float obsY = 0.f;
-float obsZ = -10.f;
-float tx = 0.f;
-float ty = 0.f;
-
-float thetaObs = -1.570f;
-float phiObs = 1.570f;
-float rObs = 10.f;
-
-int prevX = -1;
-int prevY = -1;
-int prevTheta = -1000;
-int prevPhi = -1000;
-
-#ifdef HAVE_OPENGL
-struct DrawData
-{
-    ogl::Arrays arr;
-    ogl::Texture2D tex;
-    ogl::Buffer indices;
-};
-
-
-static void draw(void* userdata)
-{
-    DrawData* data = static_cast<DrawData*>(userdata);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    gluLookAt(obsX, obsY, obsZ, 0, 0, .0, .0, 10.0, 0.0);
-    glTranslatef(tx,ty,0);
-    keyPressed = false;
-    ogl::render(data->arr, data->indices, ogl::TRIANGLES);
-}
-
-static void onMouse(int event, int x, int y, int flags, void*)
-{
-    if (event == EVENT_RBUTTONDOWN)
-    {
-        prevX = x;
-        prevY = y;
-    }
-    if (event == EVENT_RBUTTONUP)
-    {
-        prevX = -1;
-        prevY = -1;
-    }
-    if (prevX != -1)
-    {
-        tx += float((x - prevX) / 100.0);
-        ty -= float((y - prevY) / 100.0);
-        prevX = x;
-        prevY = y;
-    }
-    if (event == EVENT_LBUTTONDOWN)
-    {
-        prevTheta = x;
-        prevPhi = y;
-    }
-    if (event == EVENT_LBUTTONUP)
-    {
-        prevTheta = -1000;
-        prevPhi = -1000;
-    }
-    if (prevTheta != -1000)
-    {
-        if (x - prevTheta<0)
-        {
-            thetaObs += 0.02f;
-        }
-        else if (x - prevTheta>0)
-        {
-            thetaObs -= 0.02f;
-        }
-        if (y - prevPhi<0)
-        {
-            phiObs -= 0.02f;
-        }
-        else if (y - prevPhi>0)
-        {
-            phiObs += 0.02f;
-        }
-        prevTheta = x;
-        prevPhi = y;
-    }
-    if (event==EVENT_MOUSEWHEEL)
-    {
-        if (getMouseWheelDelta(flags)>0)
-            rObs += 0.1f;
-        else
-            rObs -= 0.1f;
-    }
-    float pi = static_cast<float>(CV_PI);
-    if (thetaObs>pi)
-    {
-        thetaObs = -2 * pi + thetaObs;
-    }
-    if (thetaObs<-pi)
-    {
-        thetaObs = 2 * pi + thetaObs;
-    }
-    if (phiObs>pi / 2)
-    {
-        phiObs = pi / 2 - 0.0001f;
-    }
-    if (phiObs<-pi / 2)
-    {
-        phiObs = -pi / 2 + 0.00001f;
-    }
-    if (rObs<0)
-    {
-        rObs = 0;
-    }
-
-}
-#endif
-
-#ifdef HAVE_OPENGL
-static void DrawOpenGLMSER(Mat img, Mat result)
-{
-    Mat imgGray;
-    if (img.type() != CV_8UC1)
-        cvtColor(img, imgGray, COLOR_BGR2GRAY);
-    else
-        imgGray = img;
-
-    namedWindow("OpenGL", WINDOW_OPENGL);
-    setMouseCallback("OpenGL", onMouse, NULL);
-
-    Mat_<Vec3f> vertex(1, img.cols*img.rows);
-    Mat_<Vec2f> texCoords(1, img.cols*img.rows);
-    for (int i = 0, nbPix = 0; i<img.rows; i++)
-    {
-        for (int j = 0; j<img.cols; j++, nbPix++)
-        {
-            float x = (j) / (float)img.cols;
-            float y = (i) / (float)img.rows;
-            vertex.at< Vec3f >(0, nbPix) = Vec3f(float(2 * (x - 0.5)), float(2 * (0.5 - y)), float(imgGray.at<uchar>(i, j) / 512.0));
-            texCoords.at< Vec2f>(0, nbPix) = Vec2f(x, y);
-        }
-    }
-
-    Mat_<int> indices(1, (img.rows - 1)*(6 * img.cols));
-    for (int i = 1, nbPix = 0; i<img.rows; i++)
-    {
-        for (int j = 1; j<img.cols; j++)
-        {
-            int c = i*img.cols + j;
-            indices.at<int>(0, nbPix++) = c;
-            indices.at<int>(0, nbPix++) = c - 1;
-            indices.at<int>(0, nbPix++) = c - img.cols - 1;
-            indices.at<int>(0, nbPix++) = c - img.cols - 1;
-            indices.at<int>(0, nbPix++) = c - img.cols;
-            indices.at<int>(0, nbPix++) = c;
-        }
-    }
-
-    DrawData *data = new DrawData;
-
-    data->arr.setVertexArray(vertex);
-    data->arr.setTexCoordArray(texCoords);
-    data->indices.copyFrom(indices);
-    data->tex.copyFrom(result);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(45.0, (double)win_width / win_height, 0.0, 1000.0);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    glEnable(GL_TEXTURE_2D);
-    data->tex.bind();
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-
-    glDisable(GL_CULL_FACE);
-    setOpenGlDrawCallback("OpenGL", draw, data);
-
-    for (;;)
-    {
-        updateWindow("OpenGL");
-        char key = (char)waitKey(40);
-        if (key == 27)
-            break;
-        if (key == 0x20)
-            rotateEnable = !rotateEnable;
-        float pi = static_cast<float>(CV_PI);
-
-        switch (key) {
-            case '5':
-                obsX = 0, obsY = 0, obsZ = -10;
-                thetaObs = -pi/2, phiObs = pi/2, rObs = 10;
-                tx=0; ty=0;
-                break;
-            case '4':
-                thetaObs += 0.1f;
-                break;
-            case '6':
-                thetaObs -= 0.1f;
-                break;
-            case '2':
-                phiObs -= 0.1f;
-                break;
-            case '8':
-                phiObs += 0.1f;
-                break;
-            case '+':
-                rObs -= 0.1f;
-                break;
-            case '-':
-                rObs += 0.1f;
-                break;
-        }
-
-        if (thetaObs>pi)
-        {
-            thetaObs = -2 * pi + thetaObs;
-        }
-        if (thetaObs<-pi)
-            thetaObs = 2 * pi + thetaObs;
-        if (phiObs>pi / 2)
-            phiObs = pi / 2 - 0.0001f;
-        if (phiObs<-pi / 2)
-            phiObs = -pi / 2 + 0.00001f;
-        if (rObs<0)
-            rObs = 0;
-        obsX = rObs*cos(thetaObs)*cos(phiObs);
-        obsY = rObs*sin(thetaObs)*cos(phiObs);
-        obsZ = rObs*sin(phiObs);
-    }
-    setOpenGlDrawCallback("OpenGL", 0, 0);
-    destroyAllWindows();
-}
-#endif
-
-// Add nested rectangles of different widths and colors to an image
 static void addNestedRectangles(Mat &img, Point p0, int* width, int *color, int n) {
     for (int i = 0; i<n; i++)
     {
@@ -349,7 +80,6 @@ static void addNestedRectangles(Mat &img, Point p0, int* width, int *color, int 
     }
 }
 
-// Add nested circles of different widths and colors to an image
 static void addNestedCircles(Mat &img, Point p0, int *width, int *color, int n) {
     for (int i = 0; i<n; i++)
     {
@@ -519,19 +249,22 @@ int main(int argc, char *argv[])
             }
 
             const string winName = *itDesc + label;
-            namedWindow(winName, WINDOW_AUTOSIZE);
-            imshow(winName, result);
-            imshow("Original", img);
+            // namedWindow(winName, WINDOW_AUTOSIZE); // 注释掉图像显示部分
+            // imshow(winName, result); // 注释掉图像显示部分
+            // imshow("Original", img); // 注释掉图像显示部分
+
+            // 保存处理后的图像
+            string result_filename = *itDesc + label + "_result.png";
+            imwrite(result_filename, result);
+            cout << "Result image saved as: " << result_filename << endl;
         }
         catch (const Exception& e)
         {
             cout << "Feature: " << *itDesc << "\n";
             cout << e.msg << endl;
         }
-#ifdef HAVE_OPENGL
-        DrawOpenGLMSER(img, result);
-#endif
-        waitKey();
+        // waitKey(); // 注释掉等待按键部分
     }
     return 0;
 }
+

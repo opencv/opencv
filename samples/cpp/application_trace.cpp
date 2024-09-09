@@ -14,12 +14,12 @@ static void process_frame(const cv::UMat& frame)
 {
     CV_TRACE_FUNCTION(); // OpenCV Trace macro for function
 
-    imshow("Live", frame);
+    //imshow("Live", frame);
 
     UMat gray, processed;
     cv::cvtColor(frame, gray, COLOR_BGR2GRAY);
     Canny(gray, processed, 32, 64, 3);
-    imshow("Processed", processed);
+    //imshow("Processed", processed);
 }
 
 int main(int argc, char** argv)
@@ -37,12 +37,14 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    VideoCapture capture;
     std::string video = parser.get<string>("@video");
-    if (video.size() == 1 && isdigit(video[0]))
-        capture.open(parser.get<int>("@video"));
-    else
-        capture.open(samples::findFileOrKeep(video));  // keep GStreamer pipelines
+    if (video.empty())
+    {
+        cout << "Video filename is required\n";
+        return -1;
+    }
+
+    VideoCapture capture(video);  // 直接使用提供的视频路径
     int nframes = 0;
     if (capture.isOpened())
     {
@@ -81,15 +83,16 @@ int main(int argc, char** argv)
 
             // OpenCV Trace macro for NEXT named region in the same C++ scope
             // Previous "read" region will be marked complete on this line.
-            // Use this to eliminate unnecessary curly braces.
+            // Use this to eliminate unnecessary curly brace.
             CV_TRACE_REGION_NEXT("process");
             process_frame(frame);
 
-            CV_TRACE_REGION_NEXT("delay");
-            if (waitKey(1) == 27/*ESC*/)
-                break;
+            //CV_TRACE_REGION_NEXT("delay");
+            //if (waitKey(1) == 27/*ESC*/)
+                //break;
         }
     }
 
     return 0;
 }
+

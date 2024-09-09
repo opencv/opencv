@@ -1,21 +1,11 @@
-/**
-* @file videocapture_starter.cpp
-* @brief A starter sample for using OpenCV VideoCapture with capture devices, video files or image sequences
-* easy as CV_PI right?
-*
-*  Created on: Nov 23, 2010
-*      Author: Ethan Rublee
-*
-*  Modified on: April 17, 2013
-*      Author: Kevin Hughes
-*/
-
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include <iostream>
 #include <stdio.h>
+#include <cstdlib> // 包含 system 函数
 
 using namespace cv;
 using namespace std;
@@ -38,32 +28,42 @@ namespace {
     int process(VideoCapture& capture) {
         int n = 0;
         char filename[200];
-        string window_name = "video | q or esc to quit";
-        cout << "press space to save a picture. q or esc to quit" << endl;
-        namedWindow(window_name, WINDOW_KEEPRATIO); //resizable window;
         Mat frame;
+
+        // 创建子目录
+        system("mkdir -p videocapture_starter");
 
         for (;;) {
             capture >> frame;
             if (frame.empty())
                 break;
 
-            imshow(window_name, frame);
-            char key = (char)waitKey(30); //delay N millis, usually long enough to display and capture input
+            // 模拟保存帧
+            snprintf(filename, sizeof(filename), "videocapture_starter/frame%.3d.jpg", n++);
+            imwrite(filename, frame);
+            cout << "Saved " << filename << endl;
 
-            switch (key) {
-            case 'q':
-            case 'Q':
-            case 27: //escape key
-                return 0;
-            case ' ': //Save an image
-                snprintf(filename,sizeof(filename),"filename%.3d.jpg",n++);
-                imwrite(filename,frame);
-                cout << "Saved " << filename << endl;
+            // 注释掉显示图像的代码
+            // imshow(window_name, frame);
+            // char key = (char)waitKey(30); //delay N millis, usually long enough to display and capture input
+
+            // switch (key) {
+            // case 'q':
+            // case 'Q':
+            // case 27: //escape key
+            //     return 0;
+            // case ' ': //Save an image
+            //     snprintf(filename,sizeof(filename),"filename%.3d.jpg",n++);
+            //     imwrite(filename,frame);
+            //     cout << "Saved " << filename << endl;
+            //     break;
+            // default:
+            //     break;
+            // }
+
+            // 限制处理帧数
+            if (n >= 10) // 处理10帧后退出
                 break;
-            default:
-                break;
-            }
         }
         return 0;
     }
@@ -91,3 +91,4 @@ int main(int ac, char** av) {
     }
     return process(capture);
 }
+

@@ -5,6 +5,7 @@
 #include "opencv2/videoio.hpp"
 #include <iostream>
 #include <time.h>
+#include <cstdlib> // 添加这个头文件
 
 using namespace cv;
 using namespace cv::ml;
@@ -82,8 +83,8 @@ void load_images( const String & dirname, vector< Mat > & img_lst, bool showImag
 
         if ( showImages )
         {
-            imshow( "image", img );
-            waitKey( 1 );
+            // imshow( "image", img );
+            // waitKey( 1 );
         }
         img_lst.push_back( img );
     }
@@ -156,7 +157,7 @@ void test_trained_detector( String obj_det_filename, String test_dir, String vid
     }
 
     obj_det_filename = "testing " + obj_det_filename;
-    namedWindow( obj_det_filename, WINDOW_NORMAL );
+    // namedWindow( obj_det_filename, WINDOW_NORMAL );
 
     for( size_t i=0;; i++ )
     {
@@ -187,12 +188,12 @@ void test_trained_detector( String obj_det_filename, String test_dir, String vid
             rectangle( img, detections[j], color, img.cols / 400 + 1 );
         }
 
-        imshow( obj_det_filename, img );
+        // imshow( obj_det_filename, img );
 
-        if( waitKey( delay ) == 27 )
-        {
-            return;
-        }
+        // if( waitKey( delay ) == 27 )
+        // {
+        //     return;
+        // }
     }
 }
 
@@ -244,8 +245,8 @@ int main( int argc, char** argv )
     {
         parser.printMessage();
         cout << "Wrong number of parameters.\n\n"
-             << "Example command line:\n" << argv[0] << " -dw=64 -dh=128 -pd=/INRIAPerson/96X160H96/Train/pos -nd=/INRIAPerson/neg -td=/INRIAPerson/Test/pos -fn=HOGpedestrian64x128.xml -d\n"
-             << "\nExample command line for testing trained detector:\n" << argv[0] << " -t -fn=HOGpedestrian64x128.xml -td=/INRIAPerson/Test/pos";
+             << "Example command line:\n" << argv[0] << " -dw=64 -dh=128 -pd=positive_images -nd=negative_images -td=test_images -fn=HOGpedestrian64x128.xml -d\n"
+             << "\nExample command line for testing trained detector:\n" << argv[0] << " -t -fn=HOGpedestrian64x128.xml -td=test_images";
         exit( 1 );
     }
 
@@ -354,8 +355,8 @@ int main( int argc, char** argv )
                 {
                     rectangle( full_neg_lst[i], detections[j], Scalar( 0, 255, 0 ), 2 );
                 }
-                imshow( "testing trained detector on negative images", full_neg_lst[i] );
-                waitKey( 5 );
+                // imshow( "testing trained detector on negative images", full_neg_lst[i] );
+                // waitKey( 5 );
             }
         }
         clog << "...[done]" << endl;
@@ -384,9 +385,17 @@ int main( int argc, char** argv )
     HOGDescriptor hog;
     hog.winSize = pos_image_size;
     hog.setSVMDetector( get_svm_detector( svm ) );
-    hog.save( obj_det_filename );
+    
+    // Create directory if it doesn't exist
+    system("mkdir -p train_HOG");
 
-    test_trained_detector( obj_det_filename, test_dir, videofilename );
+    // Save the trained detector to a file in the train_HOG directory
+    string save_path = "train_HOG/" + obj_det_filename;
+    hog.save( save_path );
+    cout << "Trained SVM saved to " << save_path << endl;
+
+    test_trained_detector( save_path, test_dir, videofilename );
 
     return 0;
 }
+

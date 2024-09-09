@@ -1,20 +1,11 @@
-/*
- *  stereo_match.cpp
- *  calibration
- *
- *  Created by Victor  Eruhimov on 1/18/10.
- *  Copyright 2010 Argus Corp. All rights reserved.
- *
- */
-
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
 #include "opencv2/core/utility.hpp"
 
 #include <stdio.h>
 #include <sstream>
+#include <iostream>
 
 using namespace cv;
 
@@ -105,7 +96,7 @@ int main(int argc, char** argv)
     }
     if ( numberOfDisparities < 1 || numberOfDisparities % 16 != 0 )
     {
-        printf("Command-line parameter error: The max disparity (--maxdisparity=<...>) must be a positive integer divisible by 16\n");
+        printf("Command-line parameter error: The max disparity (--max-disparity=<...>) must be a positive integer divisible by 16\n");
         print_help(argv);
         return -1;
     }
@@ -248,10 +239,6 @@ int main(int argc, char** argv)
         sgbm->setMode(StereoSGBM::MODE_SGBM_3WAY);
 
     Mat disp, disp8;
-    //Mat img1p, img2p, dispp;
-    //copyMakeBorder(img1, img1p, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
-    //copyMakeBorder(img2, img2p, 0, 0, numberOfDisparities, 0, IPL_BORDER_REPLICATE);
-
     int64 t = getTickCount();
     float disparity_multiplier = 1.0f;
     if( alg == STEREO_BM )
@@ -269,18 +256,21 @@ int main(int argc, char** argv)
     t = getTickCount() - t;
     printf("Time elapsed: %fms\n", t*1000/getTickFrequency());
 
-    //disp = dispp.colRange(numberOfDisparities, img1p.cols);
-    if( alg != STEREO_VAR )
-        disp.convertTo(disp8, CV_8U, 255/(numberOfDisparities*16.));
-    else
-        disp.convertTo(disp8, CV_8U);
+    disp.convertTo(disp8, CV_8U, 255/(numberOfDisparities*16.));
 
     Mat disp8_3c;
     if (color_display)
         cv::applyColorMap(disp8, disp8_3c, COLORMAP_TURBO);
 
+    std::string outputDir = "stereo_match";
+    system(("mkdir -p " + outputDir).c_str());
+
     if(!disparity_filename.empty())
-        imwrite(disparity_filename, color_display ? disp8_3c : disp8);
+    {
+        std::string outputPath = outputDir + "/" + disparity_filename;
+        imwrite(outputPath, color_display ? disp8_3c : disp8);
+        std::cout << "Disparity image saved at: " << outputPath << std::endl;
+    }
 
     if(!point_cloud_filename.empty())
     {
@@ -290,39 +280,11 @@ int main(int argc, char** argv)
         Mat floatDisp;
         disp.convertTo(floatDisp, CV_32F, 1.0f / disparity_multiplier);
         reprojectImageTo3D(floatDisp, xyz, Q, true);
-        saveXYZ(point_cloud_filename.c_str(), xyz);
-        printf("\n");
-    }
-
-    if( !no_display )
-    {
-        std::ostringstream oss;
-        oss << "disparity  " << (alg==STEREO_BM ? "bm" :
-                                 alg==STEREO_SGBM ? "sgbm" :
-                                 alg==STEREO_HH ? "hh" :
-                                 alg==STEREO_VAR ? "var" :
-                                 alg==STEREO_HH4 ? "hh4" :
-                                 alg==STEREO_3WAY ? "sgbm3way" : "");
-        oss << "  blocksize:" << (alg==STEREO_BM ? SADWindowSize : sgbmWinSize);
-        oss << "  max-disparity:" << numberOfDisparities;
-        std::string disp_name = oss.str();
-
-        namedWindow("left", cv::WINDOW_NORMAL);
-        imshow("left", img1);
-        namedWindow("right", cv::WINDOW_NORMAL);
-        imshow("right", img2);
-        namedWindow(disp_name, cv::WINDOW_AUTOSIZE);
-        imshow(disp_name, color_display ? disp8_3c : disp8);
-
-        printf("press ESC key or CTRL+C to close...");
-        fflush(stdout);
-        printf("\n");
-        while(1)
-        {
-            if(waitKey() == 27) //ESC (prevents closing on actions like taking screenshots)
-                break;
-        }
+        std::string outputPath = outputDir + "/" + point_cloud_filename;
+        saveXYZ(outputPath.c_str(), xyz);
+        printf("\nPoint cloud saved at: %s\n", outputPath.c_str());
     }
 
     return 0;
 }
+

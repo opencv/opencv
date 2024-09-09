@@ -1,29 +1,3 @@
-/*
- * Copyright (c) 2015, Piotr Dobrowolski dobrypd[at]gmail[dot]com
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
- * THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
@@ -35,7 +9,6 @@
 using namespace std;
 using namespace cv;
 
-const char * windowOriginal = "Captured preview";
 const int FOCUS_STEP = 1024;
 const int MAX_FOCUS_STEP = 32767;
 const int FOCUS_DIRECTION_INFTY = 1;
@@ -45,7 +18,7 @@ const double epsylon = 0.0005; // compression, noise, etc.
 
 struct Args_t
 {
-    string deviceName;
+    string inputVideo;
     string output;
     int fps;
     int minimumFocusStep;
@@ -217,7 +190,7 @@ static void showHelp(const char * pName, bool welcomeMsg)
 
     if (!welcomeMsg)
     {
-        cout << "usage " << pName << ": [OPTIONS] DEVICE_NAME\n\n"
+        cout << "usage " << pName << ": [OPTIONS] VIDEO_FILE\n\n"
                 "OPTIONS:\n"
                 "\t-h\t\treturns this help message,\n"
                 "\t-o=<FILENAME>\tsave output video in file (MJPEG only),\n"
@@ -227,7 +200,7 @@ static void showHelp(const char * pName, bool welcomeMsg)
                 "\t\t\tfor every minimum step),\n"
                 "\t-d=<INT>\t\tset minimum focus step,\n"
                 "\t-v\t\tverbose mode.\n\n\n"
-                "DEVICE_NAME\t\tis your digital camera model substring.\n\n\n"
+                "VIDEO_FILE\t\tis your input video file path.\n\n\n"
                 "On runtime you can use keys to control:\n";
     }
     else
@@ -246,7 +219,7 @@ static void showHelp(const char * pName, bool welcomeMsg)
 
 static bool parseArguments(int argc, char ** argv)
 {
-    cv::CommandLineParser parser(argc, argv, "{h help ||}{o||}{f||}{m||}{d|0|}{v||}{@device|Nikon|}");
+    cv::CommandLineParser parser(argc, argv, "{h help ||}{o||}{f||}{m||}{d|0|}{v||}{@input|Megamind.avi|}");
     if (parser.has("help"))
         return false;
     GlobalArgs.breakLimit = DEFAULT_BREAK_LIMIT;
@@ -261,7 +234,7 @@ static bool parseArguments(int argc, char ** argv)
     GlobalArgs.measure = parser.has("m");
     GlobalArgs.verbose = parser.has("v");
     GlobalArgs.minimumFocusStep = parser.get<int>("d");
-    GlobalArgs.deviceName = parser.get<string>("@device");
+    GlobalArgs.inputVideo = parser.get<string>("@input");
     if (!parser.check())
     {
         parser.printErrors();
@@ -287,10 +260,10 @@ int main(int argc, char ** argv)
         showHelp(argv[0], false);
         return -1;
     }
-    VideoCapture cap(GlobalArgs.deviceName);
+    VideoCapture cap(GlobalArgs.inputVideo);
     if (!cap.isOpened())
     {
-        cout << "Cannot find device " << GlobalArgs.deviceName << endl;
+        cout << "Cannot open video file " << GlobalArgs.inputVideo << endl;
         showHelp(argv[0], false);
         return -1;
     }
@@ -300,29 +273,12 @@ int main(int argc, char ** argv)
     FocusState state = createInitialState();
     bool focus = true;
     bool lastSucceeded = true;
-    namedWindow(windowOriginal, 1);
 
-    // Get settings:
-    if (GlobalArgs.verbose)
-    {
-        if ((cap.get(CAP_PROP_GPHOTO2_WIDGET_ENUMERATE) == 0)
-                || (cap.get(CAP_PROP_GPHOTO2_WIDGET_ENUMERATE) == -1))
-        {
-            // Some VideoCapture implementations can return -1, 0.
-            cout << "This is not GPHOTO2 device." << endl;
-            return -2;
-        }
-        cout << "List of camera settings: " << endl
-                << (const char *) (intptr_t) cap.get(CAP_PROP_GPHOTO2_WIDGET_ENUMERATE)
-                << endl;
-        cap.set(CAP_PROP_GPHOTO2_COLLECT_MSGS, true);
-    }
-
-    cap.set(CAP_PROP_GPHOTO2_PREVIEW, true);
-    cap.set(CAP_PROP_VIEWFINDER, true);
-    cap >> frame; // To check PREVIEW output Size.
+    cap >> frame; // To check video output Size.
     if (!GlobalArgs.output.empty())
     {
+        system("mkdir -p videocapture_gphoto2_autofocus");
+        GlobalArgs.output = "videocapture_gphoto2_autofocus/" + GlobalArgs.output;
         Size S = Size((int) cap.get(CAP_PROP_FRAME_WIDTH), (int) cap.get(CAP_PROP_FRAME_HEIGHT));
         int fourCC = VideoWriter::fourcc('M', 'J', 'P', 'G');
         videoWriter.open(GlobalArgs.output, fourCC, GlobalArgs.fps, S, true);
@@ -397,12 +353,11 @@ int main(int argc, char ** argv)
         if ((focus || GlobalArgs.measure) && GlobalArgs.verbose)
         {
             cout << "STATE\t" << state << endl;
-            cout << "Output from camera: " << endl
-                    << (const char *) (intptr_t) cap.get(CAP_PROP_GPHOTO2_FLUSH_MSGS) << endl;
         }
 
-        imshow(windowOriginal, frame);
-        switch (key = static_cast<char>(waitKey(30)))
+        // imshow(windowOriginal, frame); // 注释掉
+        // key = static_cast<char>(waitKey(30)); // 注释掉
+        switch (key)
         {
             case 'k': // focus out
                 cap.set(CAP_PROP_ZOOM, 100);
@@ -426,13 +381,10 @@ int main(int argc, char ** argv)
         }
     }
 
-    if (GlobalArgs.verbose)
-    {
-        cout << "Captured " << (int) cap.get(CAP_PROP_FRAME_COUNT) << " frames"
-                << endl << "in " << (int) (cap.get(CAP_PROP_POS_MSEC) / 1e2)
-                << " seconds," << endl << "at avg speed "
-                << (cap.get(CAP_PROP_FPS)) << " fps." << endl;
+    if (!GlobalArgs.output.empty()) {
+        cout << "Video saved to " << GlobalArgs.output << endl;
     }
 
     return 0;
 }
+

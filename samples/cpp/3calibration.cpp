@@ -1,7 +1,3 @@
-/*
- * 3calibration.cpp -- Calibrate 3 cameras in a horizontal line together.
- */
-
 #include "opencv2/calib3d.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
@@ -11,6 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include<iostream>
+#include<fstream>
 
 using namespace cv;
 using namespace std;
@@ -19,24 +17,22 @@ enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 
 static void help(char** argv)
 {
-        printf( "\nThis is a camera calibration sample that calibrates 3 horizontally placed cameras together.\n"
-               "Usage: %s\n"
-               "     -w=<board_width>         # the number of inner corners per one of board dimension\n"
-               "     -h=<board_height>        # the number of inner corners per another board dimension\n"
-               "     [-s=<squareSize>]       # square size in some user-defined units (1 by default)\n"
-               "     [-o=<out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
-               "     [-zt]                    # assume zero tangential distortion\n"
-               "     [-a=<aspectRatio>]      # fix aspect ratio (fx/fy)\n"
-               "     [-p]                     # fix the principal point at the center\n"
-               "     [input_data]             # input data - text file with a list of the images of the board\n"
-               "\n", argv[0] );
-
+    printf( "\nThis is a camera calibration sample that calibrates 3 horizontally placed cameras together.\n"
+            "Usage: %s\n"
+            "     -w=<board_width>         # the number of inner corners per one of board dimension\n"
+            "     -h=<board_height>        # the number of inner corners per another board dimension\n"
+            "     [-s=<squareSize>]       # square size in some user-defined units (1 by default)\n"
+            "     [-o=<out_camera_params>] # the output filename for intrinsic [and extrinsic] parameters\n"
+            "     [-zt]                    # assume zero tangential distortion\n"
+            "     [-a=<aspectRatio>]      # fix aspect ratio (fx/fy)\n"
+            "     [-p]                     # fix the principal point at the center\n"
+            "     [input_data]             # input data - text file with a list of the images of the board\n"
+            "\n", argv[0] );
 }
 
 static void calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& corners)
 {
     corners.resize(0);
-
     for( int i = 0; i < boardSize.height; i++ )
         for( int j = 0; j < boardSize.width; j++ )
             corners.push_back(Point3f(float(j*squareSize),
@@ -157,23 +153,27 @@ static bool run3Calibration(vector<vector<Point2f> > imagePoints1,
     return true;
 }
 
-static bool readStringList( const string& filename, vector<string>& l )
-{
+bool readStringList(const string& filename, vector<string>& l){
     l.resize(0);
-    FileStorage fs(filename, FileStorage::READ);
-    if( !fs.isOpened() )
+    ifstream fs(filename.c_str());
+    if (!fs.is_open())
         return false;
-    FileNode n = fs.getFirstTopLevelNode();
-    if( n.type() != FileNode::SEQ )
-        return false;
-    FileNodeIterator it = n.begin(), it_end = n.end();
-    for( ; it != it_end; ++it )
-        l.push_back((string)*it);
+    string line;
+    while (getline(fs, line))
+    {
+        if (line.empty()) continue;
+
+        // 将相对路径转换为绝对路径
+        if (line[0] != '/') {
+            line = cv::samples::findFile(line);
+        }
+
+        l.push_back(line);
+    }
     return true;
 }
 
-
-int main( int argc, char** argv )
+int main(int argc, char** argv)
 {
     int i, k;
     int flags = 0;
@@ -182,7 +182,7 @@ int main( int argc, char** argv )
     string outputFilename;
     string inputFilename = "";
 
-    vector<vector<Point2f> > imgpt[3];
+    vector<vector<Point2f>> imgpt[3];
     vector<string> imageList;
 
     cv::CommandLineParser parser(argc, argv,
@@ -212,16 +212,16 @@ int main( int argc, char** argv )
         return -1;
     }
     if (boardSize.width <= 0)
-        return fprintf( stderr, "Invalid board width\n" ), -1;
+        return fprintf(stderr, "Invalid board width\n"), -1;
     if (boardSize.height <= 0)
-        return fprintf( stderr, "Invalid board height\n" ), -1;
+        return fprintf(stderr, "Invalid board height\n"), -1;
     if (squareSize <= 0)
-        return fprintf( stderr, "Invalid board square width\n" ), -1;
+        return fprintf(stderr, "Invalid board square width\n"), -1;
     if (aspectRatio <= 0)
-        return printf("Invalid aspect ratio\n" ), -1;
-    if( inputFilename.empty() ||
-       !readStringList(inputFilename, imageList) ||
-       imageList.size() == 0 || imageList.size() % 3 != 0 )
+        return printf("Invalid aspect ratio\n"), -1;
+    if (inputFilename.empty() ||
+        !readStringList(inputFilename, imageList) ||
+        imageList.size() == 0 || imageList.size() % 3 != 0)
     {
         printf("Error: the input image list is not specified, or can not be read, or the number of files is not divisible by 3\n");
         return -1;
@@ -229,17 +229,17 @@ int main( int argc, char** argv )
 
     Mat view, viewGray;
     Mat cameraMatrix[3], distCoeffs[3], R[3], P[3], R12, T12;
-    for( k = 0; k < 3; k++ )
+    for (k = 0; k < 3; k++)
     {
-        cameraMatrix[k] = Mat_<double>::eye(3,3);
-        cameraMatrix[k].at<double>(0,0) = aspectRatio;
-        cameraMatrix[k].at<double>(1,1) = 1;
-        distCoeffs[k] = Mat_<double>::zeros(5,1);
+        cameraMatrix[k] = Mat_<double>::eye(3, 3);
+        cameraMatrix[k].at<double>(0, 0) = aspectRatio;
+        cameraMatrix[k].at<double>(1, 1) = 1;
+        distCoeffs[k] = Mat_<double>::zeros(5, 1);
     }
-    Mat R13=Mat_<double>::eye(3,3), T13=Mat_<double>::zeros(3,1);
+    Mat R13 = Mat_<double>::eye(3, 3), T13 = Mat_<double>::zeros(3, 1);
 
     FileStorage fs;
-    namedWindow( "Image View", 0 );
+    //namedWindow("Image View", 0);
 
     for( k = 0; k < 3; k++ )
         imgpt[k].resize(imageList.size()/3);
@@ -272,11 +272,10 @@ int main( int argc, char** argv )
             }
         }
     }
-
     printf("Running calibration ...\n");
 
     run3Calibration(imgpt[0], imgpt[1], imgpt[2], imageSize,
-                    boardSize, squareSize, aspectRatio, flags|CALIB_FIX_K4|CALIB_FIX_K5,
+                    boardSize, squareSize, aspectRatio, flags | CALIB_FIX_K4 | CALIB_FIX_K5,
                     cameraMatrix[0], distCoeffs[0],
                     cameraMatrix[1], distCoeffs[1],
                     cameraMatrix[2], distCoeffs[2],
@@ -304,11 +303,11 @@ int main( int argc, char** argv )
 
     // step 3: find rectification transforms
     double ratio = rectify3Collinear(cameraMatrix[0], distCoeffs[0], cameraMatrix[1],
-             distCoeffs[1], cameraMatrix[2], distCoeffs[2],
-             imgpt[0], imgpt[2],
-             imageSize, R12, T12, R13, T13,
-             R[0], R[1], R[2], P[0], P[1], P[2], Q, -1.,
-             imageSize, 0, 0, CALIB_ZERO_DISPARITY);
+                                     distCoeffs[1], cameraMatrix[2], distCoeffs[2],
+                                     imgpt[0], imgpt[2],
+                                     imageSize, R12, T12, R13, T13,
+                                     R[0], R[1], R[2], P[0], P[1], P[2], Q, -1.,
+                                     imageSize, 0, 0, CALIB_ZERO_DISPARITY);
     Mat map1[3], map2[3];
 
     fs << "R1" << R[0];
@@ -324,37 +323,40 @@ int main( int argc, char** argv )
 
     printf("Disparity ratio = %g\n", ratio);
 
-    for( k = 0; k < 3; k++ )
+    for (k = 0; k < 3; k++)
         initUndistortRectifyMap(cameraMatrix[k], distCoeffs[k], R[k], P[k], imageSize, CV_16SC2, map1[k], map2[k]);
 
-    Mat canvas(imageSize.height, imageSize.width*3, CV_8UC3), small_canvas;
+    Mat canvas(imageSize.height, imageSize.width * 3, CV_8UC3), small_canvas;
+    if (cv::getWindowProperty("view", cv::WND_PROP_VISIBLE) >= 0) {
     destroyWindow("view");
+}
     canvas = Scalar::all(0);
 
-    for( i = 0; i < (int)(imageList.size()/3); i++ )
+    for (i = 0; i < (int)(imageList.size() / 3); i++)
     {
         canvas = Scalar::all(0);
-        for( k = 0; k < 3; k++ )
+        for (k = 0; k < 3; k++)
         {
             int k1 = k == 0 ? 2 : k == 1 ? 0 : 1;
             int k2 = k == 0 ? 1 : k == 1 ? 0 : 2;
-            view = imread(imageList[i*3+k], IMREAD_COLOR);
+            view = imread(imageList[i * 3 + k], IMREAD_COLOR);
 
-            if(view.empty())
+            if (view.empty())
                 continue;
 
-            Mat rview = canvas.colRange(k2*imageSize.width, (k2+1)*imageSize.width);
+            Mat rview = canvas.colRange(k2 * imageSize.width, (k2 + 1) * imageSize.width);
             remap(view, rview, map1[k1], map2[k1], INTER_LINEAR);
         }
-        printf("%s %s %s\n", imageList[i*3].c_str(), imageList[i*3+1].c_str(), imageList[i*3+2].c_str());
-        resize( canvas, small_canvas, Size(1500, 1500/3), 0, 0, INTER_LINEAR_EXACT );
-        for( k = 0; k < small_canvas.rows; k += 16 )
-            line(small_canvas, Point(0, k), Point(small_canvas.cols, k), Scalar(0,255,0), 1);
-        imshow("rectified", small_canvas);
-        char c = (char)waitKey(0);
-        if( c == 27 || c == 'q' || c == 'Q' )
-            break;
+        printf("%s %s %s\n", imageList[i * 3].c_str(), imageList[i * 3 + 1].c_str(), imageList[i * 3 + 2].c_str());
+        resize(canvas, small_canvas, Size(1500, 1500 / 3), 0, 0, INTER_LINEAR);
+        for (k = 0; k < small_canvas.rows; k += 16)
+            line(small_canvas, Point(0, k), Point(small_canvas.cols, k), Scalar(0, 255, 0), 1);
+        //imshow("rectified", small_canvas);
+        //char c = (char)waitKey(0);
+        //if (c == 27 || c == 'q' || c == 'Q')
+            //break;
     }
 
     return 0;
 }
+

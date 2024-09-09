@@ -1,45 +1,46 @@
 #include "opencv2/videoio/videoio.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-
+#include "opencv2/imgcodecs.hpp"
 #include <iostream>
+#include <cstdlib> // 包含 system 函数
 
 using namespace cv;
 using namespace std;
 
 static void help()
 {
-        cout << "\nThis program demonstrates usage of depth sensors (Kinect, XtionPRO,...).\n"
-                        "The user gets some of the supported output images.\n"
-            "\nAll supported output map types:\n"
-            "1.) Data given from depth generator\n"
-            "   CAP_OPENNI_DEPTH_MAP            - depth values in mm (CV_16UC1)\n"
-            "   CAP_OPENNI_POINT_CLOUD_MAP      - XYZ in meters (CV_32FC3)\n"
-            "   CAP_OPENNI_DISPARITY_MAP        - disparity in pixels (CV_8UC1)\n"
-            "   CAP_OPENNI_DISPARITY_MAP_32F    - disparity in pixels (CV_32FC1)\n"
-            "   CAP_OPENNI_VALID_DEPTH_MASK     - mask of valid pixels (not occluded, not shaded etc.) (CV_8UC1)\n"
-            "2.) Data given from RGB image generator\n"
-            "   CAP_OPENNI_BGR_IMAGE            - color image (CV_8UC3)\n"
-            "   CAP_OPENNI_GRAY_IMAGE           - gray image (CV_8UC1)\n"
-            "2.) Data given from IR image generator\n"
-            "   CAP_OPENNI_IR_IMAGE             - gray image (CV_16UC1)\n"
+    cout << "\nThis program demonstrates usage of depth sensors (Kinect, XtionPRO,...).\n"
+         << "The user gets some of the supported output images.\n"
+         "\nAll supported output map types:\n"
+         "1.) Data given from depth generator\n"
+         "   CAP_OPENNI_DEPTH_MAP            - depth values in mm (CV_16UC1)\n"
+         "   CAP_OPENNI_POINT_CLOUD_MAP      - XYZ in meters (CV_32FC3)\n"
+         "   CAP_OPENNI_DISPARITY_MAP        - disparity in pixels (CV_8UC1)\n"
+         "   CAP_OPENNI_DISPARITY_MAP_32F    - disparity in pixels (CV_32FC1)\n"
+         "   CAP_OPENNI_VALID_DEPTH_MASK     - mask of valid pixels (not occluded, not shaded etc.) (CV_8UC1)\n"
+         "2.) Data given from RGB image generator\n"
+         "   CAP_OPENNI_BGR_IMAGE            - color image (CV_8UC3)\n"
+         "   CAP_OPENNI_GRAY_IMAGE           - gray image (CV_8UC1)\n"
+         "2.) Data given from IR image generator\n"
+         "   CAP_OPENNI_IR_IMAGE             - gray image (CV_16UC1)\n"
          << endl;
 }
 
-static void colorizeDisparity( const Mat& gray, Mat& rgb, double maxDisp=-1.f)
+static void colorizeDisparity(const Mat& gray, Mat& rgb, double maxDisp = -1.f)
 {
-    CV_Assert( !gray.empty() );
-    CV_Assert( gray.type() == CV_8UC1 );
+    CV_Assert(!gray.empty());
+    CV_Assert(gray.type() == CV_8UC1);
 
-    if( maxDisp <= 0 )
+    if (maxDisp <= 0)
     {
         maxDisp = 0;
-        minMaxLoc( gray, 0, &maxDisp );
+        minMaxLoc(gray, 0, &maxDisp);
     }
 
-    rgb.create( gray.size(), CV_8UC3 );
+    rgb.create(gray.size(), CV_8UC3);
     rgb = Scalar::all(0);
-    if( maxDisp < 1 )
+    if (maxDisp < 1)
         return;
 
     Mat tmp;
@@ -47,11 +48,11 @@ static void colorizeDisparity( const Mat& gray, Mat& rgb, double maxDisp=-1.f)
     applyColorMap(tmp, rgb, COLORMAP_JET);
 }
 
-static float getMaxDisparity( VideoCapture& capture )
+static float getMaxDisparity(VideoCapture& capture)
 {
     const int minDistance = 400; // mm
-    float b = (float)capture.get( CAP_OPENNI_DEPTH_GENERATOR_BASELINE ); // mm
-    float F = (float)capture.get( CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH ); // pixels
+    float b = (float)capture.get(CAP_OPENNI_DEPTH_GENERATOR_BASELINE); // mm
+    float F = (float)capture.get(CAP_OPENNI_DEPTH_GENERATOR_FOCAL_LENGTH); // pixels
     return b * F / minDistance;
 }
 
@@ -67,8 +68,8 @@ static void printCommandLineParams()
     cout << "-r=        Filename of .oni video file. The data will grabbed from it." << endl ;
 }
 
-static void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool& isFixedMaxDisp, int& imageMode, bool retrievedImageFlags[],
-                       string& filename, bool& isFileReading )
+static void parseCommandLine(int argc, char* argv[], bool& isColorizeDisp, bool& isFixedMaxDisp, int& imageMode, bool retrievedImageFlags[],
+                             string& filename, bool& isFileReading)
 {
     filename.clear();
     cv::CommandLineParser parser(argc, argv, "{h help||}{cd|1|}{fmd|0|}{mode|-1|}{m|010100|}{r||}");
@@ -107,118 +108,39 @@ static void parseCommandLine( int argc, char* argv[], bool& isColorizeDisp, bool
  * To work with Kinect or XtionPRO the user must install OpenNI library and PrimeSensorModule for OpenNI and
  * configure OpenCV with WITH_OPENNI flag is ON (using CMake).
  */
-int main( int argc, char* argv[] )
+int main(int argc, char* argv[])
 {
     bool isColorizeDisp, isFixedMaxDisp;
     int imageMode;
     bool retrievedImageFlags[6];
     string filename;
     bool isVideoReading;
-    parseCommandLine( argc, argv, isColorizeDisp, isFixedMaxDisp, imageMode, retrievedImageFlags, filename, isVideoReading );
+    parseCommandLine(argc, argv, isColorizeDisp, isFixedMaxDisp, imageMode, retrievedImageFlags, filename, isVideoReading);
 
     cout << "Device opening ..." << endl;
     VideoCapture capture;
-    if( isVideoReading )
-        capture.open( filename );
+    if (isVideoReading)
+        capture.open(filename);
     else
     {
-        capture.open( CAP_OPENNI2 );
-        if( !capture.isOpened() )
-            capture.open( CAP_OPENNI );
+        cerr << "No video file provided. Exiting..." << endl;
+        return -1;
     }
 
     cout << "done." << endl;
 
-    if( !capture.isOpened() )
+    if (!capture.isOpened())
     {
         cout << "Can not open a capture object." << endl;
         return -1;
     }
 
-    if( !isVideoReading && imageMode >= 0 )
-    {
-        bool modeRes=false;
-        switch ( imageMode )
-        {
-            case 0:
-                modeRes = capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_VGA_30HZ );
-                break;
-            case 1:
-                modeRes = capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_SXGA_15HZ );
-                break;
-            case 2:
-                modeRes = capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_SXGA_30HZ );
-                break;
-                //The following modes are only supported by the Xtion Pro Live
-            case 3:
-                modeRes = capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_QVGA_30HZ );
-                break;
-            case 4:
-                modeRes = capture.set( CAP_OPENNI_IMAGE_GENERATOR_OUTPUT_MODE, CAP_OPENNI_QVGA_60HZ );
-                break;
-            default:
-                CV_Error( Error::StsBadArg, "Unsupported image mode property.\n");
-        }
-        if (!modeRes)
-            cout << "\nThis image mode is not supported by the device, the default value (CV_CAP_OPENNI_SXGA_15HZ) will be used.\n" << endl;
-    }
+    // 创建子目录
+    system("mkdir -p videocapture_openni");
 
-    // turn on depth, color and IR if needed
-    if (retrievedImageFlags[0] || retrievedImageFlags[1] || retrievedImageFlags[2])
-        capture.set(CAP_OPENNI_DEPTH_GENERATOR_PRESENT, true);
-    else
-        capture.set(CAP_OPENNI_DEPTH_GENERATOR_PRESENT, false);
-    if (retrievedImageFlags[3] || retrievedImageFlags[4])
-        capture.set(CAP_OPENNI_IMAGE_GENERATOR_PRESENT, true);
-    else
-        capture.set(CAP_OPENNI_IMAGE_GENERATOR_PRESENT, false);
-    if (retrievedImageFlags[5])
-        capture.set(CAP_OPENNI_IR_GENERATOR_PRESENT, true);
-    else
-        capture.set(CAP_OPENNI_IR_GENERATOR_PRESENT, false);
+    int frame_count = 0;
 
-    // Print some available device settings.
-    if (capture.get(CAP_OPENNI_DEPTH_GENERATOR_PRESENT))
-    {
-        cout << "\nDepth generator output mode:" << endl <<
-            "FRAME_WIDTH      " << capture.get(CAP_PROP_FRAME_WIDTH) << endl <<
-            "FRAME_HEIGHT     " << capture.get(CAP_PROP_FRAME_HEIGHT) << endl <<
-            "FRAME_MAX_DEPTH  " << capture.get(CAP_PROP_OPENNI_FRAME_MAX_DEPTH) << " mm" << endl <<
-            "FPS              " << capture.get(CAP_PROP_FPS) << endl <<
-            "REGISTRATION     " << capture.get(CAP_PROP_OPENNI_REGISTRATION) << endl;
-    }
-    else
-    {
-        cout << "\nDevice doesn't contain depth generator or it is not selected." << endl;
-    }
-
-    if( capture.get( CAP_OPENNI_IMAGE_GENERATOR_PRESENT ) )
-    {
-        cout <<
-            "\nImage generator output mode:" << endl <<
-            "FRAME_WIDTH   " << capture.get( CAP_OPENNI_IMAGE_GENERATOR+CAP_PROP_FRAME_WIDTH ) << endl <<
-            "FRAME_HEIGHT  " << capture.get( CAP_OPENNI_IMAGE_GENERATOR+CAP_PROP_FRAME_HEIGHT ) << endl <<
-            "FPS           " << capture.get( CAP_OPENNI_IMAGE_GENERATOR+CAP_PROP_FPS ) << endl;
-    }
-    else
-    {
-        cout << "\nDevice doesn't contain image generator or it is not selected." << endl;
-    }
-
-    if( capture.get(CAP_OPENNI_IR_GENERATOR_PRESENT) )
-    {
-        cout <<
-            "\nIR generator output mode:" << endl <<
-            "FRAME_WIDTH   " << capture.get(CAP_OPENNI_IR_GENERATOR + CAP_PROP_FRAME_WIDTH) << endl <<
-            "FRAME_HEIGHT  " << capture.get(CAP_OPENNI_IR_GENERATOR + CAP_PROP_FRAME_HEIGHT) << endl <<
-            "FPS           " << capture.get(CAP_OPENNI_IR_GENERATOR + CAP_PROP_FPS) << endl;
-    }
-    else
-    {
-        cout << "\nDevice doesn't contain IR generator or it is not selected." << endl;
-    }
-
-    for(;;)
+    for (;;)
     {
         Mat depthMap;
         Mat validDepthMap;
@@ -227,56 +149,64 @@ int main( int argc, char* argv[] )
         Mat grayImage;
         Mat irImage;
 
-        if( !capture.grab() )
+        if (!capture.grab())
         {
             cout << "Can not grab images." << endl;
             return -1;
         }
         else
         {
-            if( retrievedImageFlags[0] && capture.retrieve( depthMap, CAP_OPENNI_DEPTH_MAP ) )
+            if (retrievedImageFlags[0] && capture.retrieve(depthMap, CAP_OPENNI_DEPTH_MAP))
             {
-                const float scaleFactor = 0.05f;
-                Mat show; depthMap.convertTo( show, CV_8UC1, scaleFactor );
-                imshow( "depth map", show );
+                string depth_filename = "videocapture_openni/depth_" + to_string(frame_count) + ".png";
+                imwrite(depth_filename, depthMap);
+                cout << "Saved " << depth_filename << endl;
             }
 
-            if( retrievedImageFlags[1] && capture.retrieve( disparityMap, CAP_OPENNI_DISPARITY_MAP ) )
+            if (retrievedImageFlags[1] && capture.retrieve(disparityMap, CAP_OPENNI_DISPARITY_MAP))
             {
-                if( isColorizeDisp )
-                {
-                    Mat colorDisparityMap;
-                    colorizeDisparity( disparityMap, colorDisparityMap, isFixedMaxDisp ? getMaxDisparity(capture) : -1 );
-                    Mat validColorDisparityMap;
-                    colorDisparityMap.copyTo( validColorDisparityMap, disparityMap != 0 );
-                    imshow( "colorized disparity map", validColorDisparityMap );
-                }
-                else
-                {
-                    imshow( "original disparity map", disparityMap );
-                }
+                string disparity_filename = "videocapture_openni/disparity_" + to_string(frame_count) + ".png";
+                imwrite(disparity_filename, disparityMap);
+                cout << "Saved " << disparity_filename << endl;
             }
 
-            if( retrievedImageFlags[2] && capture.retrieve( validDepthMap, CAP_OPENNI_VALID_DEPTH_MASK ) )
-                imshow( "valid depth mask", validDepthMap );
+            if (retrievedImageFlags[2] && capture.retrieve(validDepthMap, CAP_OPENNI_VALID_DEPTH_MASK))
+            {
+                string valid_depth_filename = "videocapture_openni/valid_depth_" + to_string(frame_count) + ".png";
+                imwrite(valid_depth_filename, validDepthMap);
+                cout << "Saved " << valid_depth_filename << endl;
+            }
 
-            if( retrievedImageFlags[3] && capture.retrieve( bgrImage, CAP_OPENNI_BGR_IMAGE ) )
-                imshow( "rgb image", bgrImage );
+            if (retrievedImageFlags[3] && capture.retrieve(bgrImage, CAP_OPENNI_BGR_IMAGE))
+            {
+                string bgr_filename = "videocapture_openni/bgr_" + to_string(frame_count) + ".jpg";
+                imwrite(bgr_filename, bgrImage);
+                cout << "Saved " << bgr_filename << endl;
+            }
 
-            if( retrievedImageFlags[4] && capture.retrieve( grayImage, CAP_OPENNI_GRAY_IMAGE ) )
-                imshow( "gray image", grayImage );
+            if (retrievedImageFlags[4] && capture.retrieve(grayImage, CAP_OPENNI_GRAY_IMAGE))
+            {
+                string gray_filename = "videocapture_openni/gray_" + to_string(frame_count) + ".png";
+                imwrite(gray_filename, grayImage);
+                cout << "Saved " << gray_filename << endl;
+            }
 
-            if( retrievedImageFlags[5] && capture.retrieve( irImage, CAP_OPENNI_IR_IMAGE ) )
+            if (retrievedImageFlags[5] && capture.retrieve(irImage, CAP_OPENNI_IR_IMAGE))
             {
                 Mat ir8;
                 irImage.convertTo(ir8, CV_8U, 256.0 / 3500, 0.0);
-                imshow("IR image", ir8);
+                string ir_filename = "videocapture_openni/ir_" + to_string(frame_count) + ".png";
+                imwrite(ir_filename, ir8);
+                cout << "Saved " << ir_filename << endl;
             }
         }
 
-        if( waitKey( 30 ) >= 0 )
+        frame_count++;
+
+        if (frame_count >= 10) // 处理10帧后退出
             break;
     }
 
     return 0;
 }
+

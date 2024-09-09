@@ -10,10 +10,10 @@ using namespace std;
 
 static void help(char** argv)
 {
-    cout << "\nThis program demonstrated the floodFill() function\n"
+    cout << "\nThis program demonstrates the floodFill() function\n"
             "Call:\n"
-        <<  argv[0]
-        <<  " [image_name -- Default: fruits.jpg]\n" << endl;
+         << argv[0]
+         << " [image_name -- Default: fruits.jpg]\n" << endl;
 
     cout << "Hot keys: \n"
             "\tESC - quit the program\n"
@@ -21,8 +21,8 @@ static void help(char** argv)
             "\tm - switch mask mode\n"
             "\tr - restore the original image\n"
             "\ts - use null-range floodfill\n"
-            "\tf - use gradient floodfill with fixed(absolute) range\n"
-            "\tg - use gradient floodfill with floating(relative) range\n"
+            "\tf - use gradient floodfill with fixed (absolute) range\n"
+            "\tg - use gradient floodfill with floating (relative) range\n"
             "\t4 - use 4-connectivity mode\n"
             "\t8 - use 8-connectivity mode\n" << endl;
 }
@@ -35,12 +35,12 @@ int isColor = true;
 bool useMask = false;
 int newMaskVal = 255;
 
-static void onMouse( int event, int x, int y, int, void* )
+static void onMouse(int event, int x, int y, int, void*)
 {
-    if( event != EVENT_LBUTTONDOWN )
+    if (event != EVENT_LBUTTONDOWN)
         return;
 
-    Point seed = Point(x,y);
+    Point seed = Point(x, y);
     int lo = ffillMode == 0 ? 0 : loDiff;
     int up = ffillMode == 0 ? 0 : upDiff;
     int flags = connectivity + (newMaskVal << 8) +
@@ -50,31 +50,32 @@ static void onMouse( int event, int x, int y, int, void* )
     int r = (unsigned)theRNG() & 255;
     Rect ccomp;
 
-    Scalar newVal = isColor ? Scalar(b, g, r) : Scalar(r*0.299 + g*0.587 + b*0.114);
+    Scalar newVal = isColor ? Scalar(b, g, r) : Scalar(r * 0.299 + g * 0.587 + b * 0.114);
     Mat dst = isColor ? image : gray;
     int area;
 
-    if( useMask )
+    if (useMask)
     {
         threshold(mask, mask, 1, 128, THRESH_BINARY);
         area = floodFill(dst, mask, seed, newVal, &ccomp, Scalar(lo, lo, lo),
-                  Scalar(up, up, up), flags);
-        imshow( "mask", mask );
+                         Scalar(up, up, up), flags);
+        // 注释掉显示代码
+        // imshow("mask", mask);
     }
     else
     {
         area = floodFill(dst, seed, newVal, &ccomp, Scalar(lo, lo, lo),
-                  Scalar(up, up, up), flags);
+                         Scalar(up, up, up), flags);
     }
 
-    imshow("image", dst);
+    // 注释掉显示代码
+    // imshow("image", dst);
     cout << area << " pixels were repainted\n";
 }
 
-
-int main( int argc, char** argv )
+int main(int argc, char** argv)
 {
-    cv::CommandLineParser parser (argc, argv,
+    cv::CommandLineParser parser(argc, argv,
         "{help h | | show help message}{@image|fruits.jpg| input image}"
     );
     if (parser.has("help"))
@@ -85,7 +86,7 @@ int main( int argc, char** argv )
     string filename = parser.get<string>("@image");
     image0 = imread(samples::findFile(filename), 1);
 
-    if( image0.empty() )
+    if (image0.empty())
     {
         cout << "Image empty\n";
         parser.printMessage();
@@ -94,84 +95,92 @@ int main( int argc, char** argv )
     help(argv);
     image0.copyTo(image);
     cvtColor(image0, gray, COLOR_BGR2GRAY);
-    mask.create(image0.rows+2, image0.cols+2, CV_8UC1);
+    mask.create(image0.rows + 2, image0.cols + 2, CV_8UC1);
 
-    namedWindow( "image", 0 );
-    createTrackbar( "lo_diff", "image", &loDiff, 255, 0 );
-    createTrackbar( "up_diff", "image", &upDiff, 255, 0 );
+    // 注释掉窗口代码
+    // namedWindow("image", 0);
+    // createTrackbar("lo_diff", "image", &loDiff, 255, 0);
+    // createTrackbar("up_diff", "image", &upDiff, 255, 0);
 
-    setMouseCallback( "image", onMouse, 0 );
+    setMouseCallback("image", onMouse, 0);
 
-    for(;;)
-    {
-        imshow("image", isColor ? image : gray);
+    // 注释掉显示和键盘输入处理代码
+    // for (;;)
+    // {
+    //     imshow("image", isColor ? image : gray);
 
-        char c = (char)waitKey(0);
-        if( c == 27 )
-        {
-            cout << "Exiting ...\n";
-            break;
-        }
-        switch( c )
-        {
-        case 'c':
-            if( isColor )
-            {
-                cout << "Grayscale mode is set\n";
-                cvtColor(image0, gray, COLOR_BGR2GRAY);
-                mask = Scalar::all(0);
-                isColor = false;
-            }
-            else
-            {
-                cout << "Color mode is set\n";
-                image0.copyTo(image);
-                mask = Scalar::all(0);
-                isColor = true;
-            }
-            break;
-        case 'm':
-            if( useMask )
-            {
-                destroyWindow( "mask" );
-                useMask = false;
-            }
-            else
-            {
-                namedWindow( "mask", 0 );
-                mask = Scalar::all(0);
-                imshow("mask", mask);
-                useMask = true;
-            }
-            break;
-        case 'r':
-            cout << "Original image is restored\n";
-            image0.copyTo(image);
-            cvtColor(image, gray, COLOR_BGR2GRAY);
-            mask = Scalar::all(0);
-            break;
-        case 's':
-            cout << "Simple floodfill mode is set\n";
-            ffillMode = 0;
-            break;
-        case 'f':
-            cout << "Fixed Range floodfill mode is set\n";
-            ffillMode = 1;
-            break;
-        case 'g':
-            cout << "Gradient (floating range) floodfill mode is set\n";
-            ffillMode = 2;
-            break;
-        case '4':
-            cout << "4-connectivity mode is set\n";
-            connectivity = 4;
-            break;
-        case '8':
-            cout << "8-connectivity mode is set\n";
-            connectivity = 8;
-            break;
-        }
-    }
+    //     char c = (char)waitKey(0);
+    //     if (c == 27)
+    //     {
+    //         cout << "Exiting ...\n";
+    //         break;
+    //     }
+    //     switch (c)
+    //     {
+    //     case 'c':
+    //         if (isColor)
+    //         {
+    //             cout << "Grayscale mode is set\n";
+    //             cvtColor(image0, gray, COLOR_BGR2GRAY);
+    //             mask = Scalar::all(0);
+    //             isColor = false;
+    //         }
+    //         else
+    //         {
+    //             cout << "Color mode is set\n";
+    //             image0.copyTo(image);
+    //             mask = Scalar::all(0);
+    //             isColor = true;
+    //         }
+    //         break;
+    //     case 'm':
+    //         if (useMask)
+    //         {
+    //             destroyWindow("mask");
+    //             useMask = false;
+    //         }
+    //         else
+    //         {
+    //             namedWindow("mask", 0);
+    //             mask = Scalar::all(0);
+    //             imshow("mask", mask);
+    //             useMask = true;
+    //         }
+    //         break;
+    //     case 'r':
+    //         cout << "Original image is restored\n";
+    //         image0.copyTo(image);
+    //         cvtColor(image, gray, COLOR_BGR2GRAY);
+    //         mask = Scalar::all(0);
+    //         break;
+    //     case 's':
+    //         cout << "Simple floodfill mode is set\n";
+    //         ffillMode = 0;
+    //         break;
+    //     case 'f':
+    //         cout << "Fixed Range floodfill mode is set\n";
+    //         ffillMode = 1;
+    //         break;
+    //     case 'g':
+    //         cout << "Gradient (floating range) floodfill mode is set\n";
+    //         ffillMode = 2;
+    //         break;
+    //     case '4':
+    //         cout << "4-connectivity mode is set\n";
+    //         connectivity = 4;
+    //         break;
+    //     case '8':
+    //         cout << "8-connectivity mode is set\n";
+    //         connectivity = 8;
+    //         break;
+    //     }
+    // }
+
+    // 保存处理后的文件
+    string outputFilename = "output.jpg";
+    imwrite(outputFilename, isColor ? image : gray);
+    cout << "Processed image saved as: " << outputFilename << endl;
 
     return 0;
 }
+

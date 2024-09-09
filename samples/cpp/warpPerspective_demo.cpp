@@ -1,14 +1,10 @@
-/**
-@file warpPerspective_demo.cpp
-@brief a demo program shows how perspective transformation applied on an image
-@based on a sample code http://study.marearts.com/2015/03/image-warping-using-opencv.html
-@modified by Suleyman TURKMEN
-*/
-
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include <iostream>
+#include <vector>
+#include <string>
+#include <cstdlib> // 包含 system 函数
 
 using namespace std;
 using namespace cv;
@@ -29,14 +25,13 @@ static void help(char** argv)
          "\nUse your mouse to select a point and move it to see transformation changes" << endl;
 }
 
-static void onMouse(int event, int x, int y, int, void*);
-Mat warping(Mat image, Size warped_image_size, vector< Point2f> srcPoints, vector< Point2f> dstPoints);
+Mat warping(Mat image, Size warped_image_size, vector<Point2f> srcPoints, vector<Point2f> dstPoints);
 
 String windowTitle = "Perspective Transformation Demo";
-String labels[4] = { "TL","TR","BR","BL" };
-vector< Point2f> roi_corners;
-vector< Point2f> midpoints(4);
-vector< Point2f> dst_corners(4);
+String labels[4] = {"TL", "TR", "BR", "BL"};
+vector<Point2f> roi_corners;
+vector<Point2f> midpoints(4);
+vector<Point2f> dst_corners(4);
 int roiIndex = 0;
 bool dragging;
 int selected_corner_index = 0;
@@ -48,56 +43,53 @@ int main(int argc, char** argv)
     CommandLineParser parser(argc, argv, "{@input| right.jpg |}");
 
     string filename = samples::findFile(parser.get<string>("@input"));
-    Mat original_image = imread( filename );
-    Mat image;
+    Mat original_image = imread(filename);
+    if (original_image.empty()) {
+        cerr << "ERROR! Unable to open image\n";
+        return -1;
+    }
+
+    // 创建子目录
+    system("mkdir -p warpPerspective_demo");
 
     float original_image_cols = (float)original_image.cols;
     float original_image_rows = (float)original_image.rows;
-    roi_corners.push_back(Point2f( (float)(original_image_cols / 1.70), (float)(original_image_rows / 4.20) ));
-    roi_corners.push_back(Point2f( (float)(original_image.cols / 1.15), (float)(original_image.rows / 3.32) ));
-    roi_corners.push_back(Point2f( (float)(original_image.cols / 1.33), (float)(original_image.rows / 1.10) ));
-    roi_corners.push_back(Point2f( (float)(original_image.cols / 1.93), (float)(original_image.rows / 1.36) ));
-
-    namedWindow(windowTitle, WINDOW_NORMAL);
-    namedWindow("Warped Image", WINDOW_AUTOSIZE);
-    moveWindow("Warped Image", 20, 20);
-    moveWindow(windowTitle, 330, 20);
-
-    setMouseCallback(windowTitle, onMouse, 0);
+    roi_corners.push_back(Point2f((float)(original_image_cols / 1.70), (float)(original_image_rows / 4.20)));
+    roi_corners.push_back(Point2f((float)(original_image.cols / 1.15), (float)(original_image.rows / 3.32)));
+    roi_corners.push_back(Point2f((float)(original_image.cols / 1.33), (float)(original_image.rows / 1.10)));
+    roi_corners.push_back(Point2f((float)(original_image.cols / 1.93), (float)(original_image.rows / 1.36)));
 
     bool endProgram = false;
+    int frame_count = 0;
     while (!endProgram)
     {
-        if ( validation_needed & (roi_corners.size() < 4) )
+        Mat image = original_image.clone();
+
+        if (validation_needed & (roi_corners.size() < 4))
         {
             validation_needed = false;
-            image = original_image.clone();
 
             for (size_t i = 0; i < roi_corners.size(); ++i)
             {
-                circle( image, roi_corners[i], 5, Scalar(0, 255, 0), 3 );
+                circle(image, roi_corners[i], 5, Scalar(0, 255, 0), 3);
 
-                if( i > 0 )
+                if (i > 0)
                 {
-                    line(image, roi_corners[i-1], roi_corners[(i)], Scalar(0, 0, 255), 2);
+                    line(image, roi_corners[i - 1], roi_corners[i], Scalar(0, 0, 255), 2);
                     circle(image, roi_corners[i], 5, Scalar(0, 255, 0), 3);
                     putText(image, labels[i].c_str(), roi_corners[i], FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 0, 0), 2);
                 }
             }
-            imshow( windowTitle, image );
         }
 
-        if ( validation_needed & ( roi_corners.size() == 4 ))
+        if (validation_needed & (roi_corners.size() == 4))
         {
-            image = original_image.clone();
-            for ( int i = 0; i < 4; ++i )
+            for (int i = 0; i < 4; ++i)
             {
                 line(image, roi_corners[i], roi_corners[(i + 1) % 4], Scalar(0, 0, 255), 2);
                 circle(image, roi_corners[i], 5, Scalar(0, 255, 0), 3);
                 putText(image, labels[i].c_str(), roi_corners[i], FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 0, 0), 2);
             }
-
-            imshow( windowTitle, image );
 
             midpoints[0] = (roi_corners[0] + roi_corners[1]) / 2;
             midpoints[1] = (roi_corners[1] + roi_corners[2]) / 2;
@@ -120,67 +112,23 @@ int main(int argc, char** argv)
             Mat warped_image;
             warpPerspective(original_image, warped_image, M, warped_image_size); // do perspective transformation
 
-            imshow("Warped Image", warped_image);
+            stringstream warped_filename;
+            warped_filename << "warpPerspective_demo/warped_image_" << frame_count++ << ".jpg";
+            imwrite(warped_filename.str(), warped_image);
+            cout << "Saved warped image: " << warped_filename.str() << endl;
         }
 
-        char c = (char)waitKey( 10 );
+        // 注释掉等待键盘输入的代码
+        // char c = (char)waitKey(10);
+        // if ((c == 'q') | (c == 'Q') | (c == 27))
+        // {
+        //     endProgram = true;
+        // }
 
-        if ((c == 'q') | (c == 'Q') | (c == 27))
-        {
-            endProgram = true;
-        }
-
-        if ((c == 'c') | (c == 'C'))
-        {
-            roi_corners.clear();
-        }
-
-        if ((c == 'r') | (c == 'R'))
-        {
-            roi_corners.push_back(roi_corners[0]);
-            roi_corners.erase(roi_corners.begin());
-        }
-
-        if ((c == 'i') | (c == 'I'))
-        {
-            swap(roi_corners[0], roi_corners[1]);
-            swap(roi_corners[2], roi_corners[3]);
-        }
+        // 模拟退出条件
+        if (frame_count >= 10)  // 示例：处理10帧后退出
+            break;
     }
     return 0;
 }
 
-static void onMouse(int event, int x, int y, int, void*)
-{
-    // Action when left button is pressed
-    if (roi_corners.size() == 4)
-    {
-        for (int i = 0; i < 4; ++i)
-        {
-            if ((event == EVENT_LBUTTONDOWN) && ((abs(roi_corners[i].x - x) < 10)) && (abs(roi_corners[i].y - y) < 10))
-            {
-                selected_corner_index = i;
-                dragging = true;
-            }
-        }
-    }
-    else if ( event == EVENT_LBUTTONDOWN )
-    {
-        roi_corners.push_back( Point2f( (float) x, (float) y ) );
-        validation_needed = true;
-    }
-
-    // Action when left button is released
-    if (event == EVENT_LBUTTONUP)
-    {
-        dragging = false;
-    }
-
-    // Action when left button is pressed and mouse has moved over the window
-    if ((event == EVENT_MOUSEMOVE) && dragging)
-    {
-        roi_corners[selected_corner_index].x = (float) x;
-        roi_corners[selected_corner_index].y = (float) y;
-        validation_needed = true;
-    }
-}

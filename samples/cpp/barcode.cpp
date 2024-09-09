@@ -15,7 +15,7 @@ static Scalar randColor()
     return Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
 }
 
-//==============================================================================
+//===============================================================================
 
 struct TheApp
 {
@@ -40,41 +40,42 @@ struct TheApp
     }
 
     void drawResults(Mat &frame) const
+{
+    //! [visualize]
+    for (size_t i = 0; i < corners.size(); i += 4)
     {
-        //! [visualize]
-        for (size_t i = 0; i < corners.size(); i += 4)
+        const size_t idx = i / 4;
+        const bool isDecodable = idx < decode_info.size()
+            && idx < decode_type.size()
+            && !decode_type[idx].empty();
+        const Scalar lineColor = isDecodable ? greenColor : redColor;
+        // draw barcode rectangle
+        vector<Point> contour(corners.begin() + i, corners.begin() + i + 4);
+        const vector< vector<Point> > contours {contour};
+        // drawContours(frame, contours, 0, lineColor, 1); // 注释掉
+        // draw vertices
+        for (size_t j = 0; j < 4; j++)
+            ;// circle(frame, contour[j], 2, randColor(), -1); // 注释掉
+        // write decoded text
+        if (isDecodable)
         {
-            const size_t idx = i / 4;
-            const bool isDecodable = idx < decode_info.size()
-                && idx < decode_type.size()
-                && !decode_type[idx].empty();
-            const Scalar lineColor = isDecodable ? greenColor : redColor;
-            // draw barcode rectangle
-            vector<Point> contour(corners.begin() + i, corners.begin() + i + 4);
-            const vector< vector<Point> > contours {contour};
-            drawContours(frame, contours, 0, lineColor, 1);
-            // draw vertices
-            for (size_t j = 0; j < 4; j++)
-                circle(frame, contour[j], 2, randColor(), -1);
-            // write decoded text
-            if (isDecodable)
-            {
-                ostringstream buf;
-                buf << "[" << decode_type[idx] << "] " << decode_info[idx];
-                putText(frame, buf.str(), contour[1], FONT_HERSHEY_COMPLEX, 0.8, yellowColor, 1);
-            }
+            ostringstream buf;
+            buf << "[" << decode_type[idx] << "] " << decode_info[idx];
+            ;// putText(frame, buf.str(), contour[1], FONT_HERSHEY_COMPLEX, 0.8, yellowColor, 1); // 注释掉
         }
-        //! [visualize]
     }
+    //! [visualize]
+}
+
 
     void drawFPS(Mat &frame, double fps) const
-    {
-        ostringstream buf;
-        buf << modeString()
-            << " (" << corners.size() / 4 << "/" << decode_type.size() << "/" << decode_info.size() << ") "
-            << cv::format("%.2f", fps) << " FPS ";
-        putText(frame, buf.str(), Point(25, 25), FONT_HERSHEY_COMPLEX, 0.8, redColor, 2);
-    }
+{
+    ostringstream buf;
+    buf << modeString()
+        << " (" << corners.size() / 4 << "/" << decode_type.size() << "/" << decode_info.size() << ") "
+        << cv::format("%.2f", fps) << " FPS ";
+    ;// putText(frame, buf.str(), Point(25, 25), FONT_HERSHEY_COMPLEX, 0.8, redColor, 2); // 注释掉
+}
 
     inline void call_decode(Mat &frame)
     {
@@ -94,76 +95,77 @@ struct TheApp
     }
 
     int liveBarCodeDetect()
+{
+    VideoCapture cap(0);
+    if (!cap.isOpened())
     {
-        VideoCapture cap(0);
-        if (!cap.isOpened())
-        {
-            cout << "Cannot open a camera" << endl;
-            return 2;
-        }
-        Mat frame;
-        Mat result;
-        cap >> frame;
-        cout << "Image size: " << frame.size() << endl;
-        cout << "Press 'd' to switch between <detect> and <detectAndDecode> modes" << endl;
-        cout << "Press 'ESC' to exit" << endl;
-        for (;;)
-        {
-            cap >> frame;
-            if (frame.empty())
-            {
-                cout << "End of video stream" << endl;
-                break;
-            }
-            if (frame.channels() == 1)
-                cvtColor(frame, frame, COLOR_GRAY2BGR);
-            TickMeter timer;
-            timer.start();
-            call_decode(frame);
-            timer.stop();
-            drawResults(frame);
-            drawFPS(frame, timer.getFPS());
-            imshow("barcode", frame);
-            const char c = (char)waitKey(1);
-            if (c == 'd')
-            {
-                detectOnly = !detectOnly;
-                cout << "Mode switched to " << modeString() << endl;
-            }
-            else if (c == 27)
-            {
-                cout << "'ESC' is pressed. Exiting..." << endl;
-                break;
-            }
-        }
-        return 0;
+        cout << "Cannot open a camera" << endl;
+        return 2;
     }
+    Mat frame;
+    Mat result;
+    cap >> frame;
+    cout << "Image size: " << frame.size() << endl;
+    cout << "Press 'd' to switch between <detect> and <detectAndDecode> modes" << endl;
+    cout << "Press 'ESC' to exit" << endl;
+    for (;;)
+    {
+        cap >> frame;
+        if (frame.empty())
+        {
+            cout << "End of video stream" << endl;
+            break;
+        }
+        if (frame.channels() == 1)
+            cvtColor(frame, frame, COLOR_GRAY2BGR);
+        TickMeter timer;
+        timer.start();
+        call_decode(frame);
+        timer.stop();
+        drawResults(frame);
+        drawFPS(frame, timer.getFPS());
+        // imshow("barcode", frame); // 注释掉
+        const char c = (char)waitKey(1);
+        if (c == 'd')
+        {
+            detectOnly = !detectOnly;
+            cout << "Mode switched to " << modeString() << endl;
+        }
+        else if (c == 27)
+        {
+            cout << "'ESC' is pressed. Exiting..." << endl;
+            break;
+        }
+    }
+    return 0;
+}
 
     int imageBarCodeDetect(const string &in_file, const string &out_file)
+{
+    Mat frame = imread(in_file, IMREAD_COLOR);
+    cout << "Image size: " << frame.size() << endl;
+    cout << "Mode is " << modeString() << endl;
+    const int count_experiments = 100;
+    TickMeter timer;
+    for (size_t i = 0; i < count_experiments; i++)
     {
-        Mat frame = imread(in_file, IMREAD_COLOR);
-        cout << "Image size: " << frame.size() << endl;
-        cout << "Mode is " << modeString() << endl;
-        const int count_experiments = 100;
-        TickMeter timer;
-        for (size_t i = 0; i < count_experiments; i++)
-        {
-            timer.start();
-            call_decode(frame);
-            timer.stop();
-        }
-        cout << "FPS: " << timer.getFPS() << endl;
-        drawResults(frame);
-        if (!out_file.empty())
-        {
-            cout << "Saving result: " << out_file << endl;
-            imwrite(out_file, frame);
-        }
-        imshow("barcode", frame);
-        cout << "Press any key to exit ..." << endl;
-        waitKey(0);
-        return 0;
+        timer.start();
+        call_decode(frame);
+        timer.stop();
     }
+    cout << "FPS: " << timer.getFPS() << endl;
+    drawResults(frame);
+    if (!out_file.empty())
+    {
+        cout << "Saving result: " << out_file << endl;
+        imwrite(out_file, frame);
+    }
+    // imshow("barcode", frame); // 注释掉
+    cout << "Press any key to exit ..." << endl;
+    ;// waitKey(0); // 注释掉
+    return 0;
+    }
+
 };
 
 
@@ -221,3 +223,4 @@ int main(int argc, char **argv)
     else
         return app.imageBarCodeDetect(in_file, out_file);
 }
+

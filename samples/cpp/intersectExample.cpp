@@ -149,11 +149,13 @@ static void intersectConvexExample()
 
     drawDescription(image, (int)intersectionArea, " (invalid input: not convex)", Point(70, 580));
 
-    imshow("Intersections", image);
-    waitKey(0);
+    //imshow("Intersections", image);
+    //waitKey(0);
+    imwrite("intersections_result.png", image);
 }
 
 int main()
 {
     intersectConvexExample();
 }
+

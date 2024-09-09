@@ -100,7 +100,11 @@ int main(int args, char** argv) {
     resize(image1, image1, Size((int) sqrt ((double) image1.cols * new_img_size / image1.rows),
                                 (int)sqrt ((double) image1.rows * new_img_size / image1.cols)));
 
-    imshow("epipolar lines, image 1, 2", image1);
+    // imshow("epipolar lines, image 1, 2", image1); // 注释掉图像显示
     imwrite("epipolar_lines.png", image1);
-    waitKey(0);
+    printf("Result image saved as: epipolar_lines.png\n");
+    // waitKey(0); // 注释掉等待按键
+
+    return 0;
 }
+

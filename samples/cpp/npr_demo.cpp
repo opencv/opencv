@@ -28,13 +28,14 @@ using namespace cv;
 
 int main(int argc, char* argv[])
 {
-    cv::CommandLineParser parser(argc, argv, "{help h||show help message}{@image|lena.jpg|input image}");
+    cv::CommandLineParser parser(argc, argv, "{help h||show help message}{@image|lena.jpg|input image}{@output|output.jpg|output image}");
     if (parser.has("help"))
     {
         parser.printMessage();
         return 0;
     }
     string filename = samples::findFile(parser.get<string>("@image"));
+    string output_filename = parser.get<string>("@output");
 
     Mat I = imread(filename);
 
@@ -74,26 +75,37 @@ int main(int argc, char* argv[])
 
         cin >> type;
 
-        edgePreservingFilter(I,img,type);
-        imshow("Edge Preserve Smoothing",img);
-
+        edgePreservingFilter(I, img, type);
+        // imshow("Edge Preserve Smoothing", img);
+        imwrite(output_filename, img);
+        cout << "Processed image saved to " << output_filename << endl;
     }
     else if(num == 2)
     {
-        detailEnhance(I,img);
-        imshow("Detail Enhanced",img);
+        detailEnhance(I, img);
+        // imshow("Detail Enhanced", img);
+        imwrite(output_filename, img);
+        cout << "Processed image saved to " << output_filename << endl;
     }
     else if(num == 3)
     {
         Mat img1;
-        pencilSketch(I,img1, img, 10 , 0.1f, 0.03f);
-        imshow("Pencil Sketch",img1);
-        imshow("Color Pencil Sketch",img);
+        pencilSketch(I, img1, img, 10, 0.1f, 0.03f);
+        // imshow("Pencil Sketch", img1);
+        // imshow("Color Pencil Sketch", img);
+        imwrite(output_filename + "_pencil.jpg", img1);
+        imwrite(output_filename + "_color_pencil.jpg", img);
+        cout << "Pencil sketch saved to " << output_filename + "_pencil.jpg" << endl;
+        cout << "Color pencil sketch saved to " << output_filename + "_color_pencil.jpg" << endl;
     }
     else if(num == 4)
     {
-        stylization(I,img);
-        imshow("Stylization",img);
+        stylization(I, img);
+        // imshow("Stylization", img);
+        imwrite(output_filename, img);
+        cout << "Processed image saved to " << output_filename << endl;
     }
-    waitKey(0);
+    // waitKey(0);
+    return 0;
 }
+

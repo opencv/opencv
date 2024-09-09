@@ -6,14 +6,14 @@
 using namespace cv;
 using namespace std;
 
-enum MyShape{MyCIRCLE=0,MyRECTANGLE,MyELLIPSE};
+enum MyShape { MyCIRCLE = 0, MyRECTANGLE, MyELLIPSE };
 
 struct ParamColorMap {
     int iColormap;
     Mat img;
 };
 
-String winName="False color";
+String winName = "False color";
 static const String ColorMaps[] = { "Autumn", "Bone", "Jet", "Winter", "Rainbow", "Ocean", "Summer", "Spring",
                                     "Cool", "HSV", "Pink", "Hot", "Parula", "Magma", "Inferno", "Plasma", "Viridis",
                                     "Cividis", "Twilight", "Twilight Shifted", "Turbo", "Deep Green", "User defined (random)" };
@@ -22,7 +22,7 @@ static void TrackColorMap(int x, void *r)
 {
     ParamColorMap *p = (ParamColorMap*)r;
     Mat dst;
-    p->iColormap= x;
+    p->iColormap = x;
     if (x == COLORMAP_DEEPGREEN + 1)
     {
         Mat lutRND(256, 1, CV_8UC3);
@@ -30,50 +30,50 @@ static void TrackColorMap(int x, void *r)
         applyColorMap(p->img, dst, lutRND);
     }
     else
-        applyColorMap(p->img,dst,p->iColormap);
+        applyColorMap(p->img, dst, p->iColormap);
 
-    putText(dst, "Colormap : "+ColorMaps[p->iColormap], Point(10, 20), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 255),2);
-    imshow(winName, dst);
+    putText(dst, "Colormap : " + ColorMaps[p->iColormap], Point(10, 20), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(255, 255, 255), 2);
+    imwrite("colormap_result.png", dst); // 保存处理后的图像
+    std::cout << "Result image saved as: colormap_result.png" << std::endl; // 输出保存的文件名称和路径
 }
 
-
-static Mat DrawMyImage(int thickness,int nbShape)
+static Mat DrawMyImage(int thickness, int nbShape)
 {
-    Mat img=Mat::zeros(500,256*thickness+100,CV_8UC1);
+    Mat img = Mat::zeros(500, 256 * thickness + 100, CV_8UC1);
     int offsetx = 50, offsety = 25;
     int lineLength = 50;
 
-    for (int i=0;i<256;i++)
-        line(img,Point(thickness*i+ offsetx, offsety),Point(thickness*i+ offsetx, offsety+ lineLength),Scalar(i), thickness);
+    for (int i = 0; i < 256; i++)
+        line(img, Point(thickness * i + offsetx, offsety), Point(thickness * i + offsetx, offsety + lineLength), Scalar(i), thickness);
     RNG r;
     Point center;
     int radius;
-    int width,height;
+    int width, height;
     int angle;
     Rect rc;
 
-    for (int i=1;i<=nbShape;i++)
+    for (int i = 1; i <= nbShape; i++)
     {
-        int typeShape = r.uniform(MyCIRCLE, MyELLIPSE+1);
+        int typeShape = r.uniform(MyCIRCLE, MyELLIPSE + 1);
         switch (typeShape) {
         case MyCIRCLE:
-            center = Point(r.uniform(offsetx,img.cols- offsetx), r.uniform(offsety + lineLength, img.rows - offsety));
+            center = Point(r.uniform(offsetx, img.cols - offsetx), r.uniform(offsety + lineLength, img.rows - offsety));
             radius = r.uniform(1, min(offsetx, offsety));
-            circle(img,center,radius,Scalar(i),-1);
+            circle(img, center, radius, Scalar(i), -1);
             break;
         case MyRECTANGLE:
             center = Point(r.uniform(offsetx, img.cols - offsetx), r.uniform(offsety + lineLength, img.rows - offsety));
             width = r.uniform(1, min(offsetx, offsety));
             height = r.uniform(1, min(offsetx, offsety));
-            rc = Rect(center-Point(width ,height )/2, center + Point(width , height )/2);
-            rectangle(img,rc, Scalar(i), -1);
+            rc = Rect(center - Point(width, height) / 2, center + Point(width, height) / 2);
+            rectangle(img, rc, Scalar(i), -1);
             break;
         case MyELLIPSE:
             center = Point(r.uniform(offsetx, img.cols - offsetx), r.uniform(offsety + lineLength, img.rows - offsety));
             width = r.uniform(1, min(offsetx, offsety));
             height = r.uniform(1, min(offsetx, offsety));
             angle = r.uniform(0, 180);
-            ellipse(img, center,Size(width/2,height/2),angle,0,360, Scalar(i), -1);
+            ellipse(img, center, Size(width / 2, height / 2), angle, 0, 360, Scalar(i), -1);
             break;
         }
     }
@@ -90,21 +90,17 @@ int main(int argc, char** argv)
     if (argc > 1)
         img = imread(samples::findFile(argv[1]), IMREAD_GRAYSCALE);
     else
-        img = DrawMyImage(2,256);
+        img = DrawMyImage(2, 256);
 
-    p.img=img;
-    p.iColormap=0;
+    p.img = img;
+    p.iColormap = 0;
 
-    imshow("Gray image",img);
-    namedWindow(winName);
-    createTrackbar("colormap", winName, NULL, COLORMAP_DEEPGREEN + 1, TrackColorMap, (void*)&p);
-    setTrackbarMin("colormap", winName, COLORMAP_AUTUMN);
-    setTrackbarMax("colormap", winName, COLORMAP_DEEPGREEN + 1);
-    setTrackbarPos("colormap", winName, COLORMAP_AUTUMN);
+    imwrite("gray_image.png", img); // 保存灰度图像
+    std::cout << "Gray image saved as: gray_image.png" << std::endl; // 输出保存的文件名称和路径
 
     TrackColorMap(0, (void*)&p);
 
-    cout << "Press a key to exit" << endl;
-    waitKey(0);
+    cout << "Processing completed. Check the saved images." << endl;
     return 0;
 }
+

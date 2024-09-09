@@ -331,7 +331,7 @@ int main(int /* argc */, char* argv[])
 
     vector<Mat> digits_test(digits2.begin() + train_n, digits2.end());
     mosaic(25, digits_test, test_set);
-    imshow("test set", test_set);
+    // imshow("test set", test_set); // 注释掉图像显示部分
 
     Mat samples_train = samples(Rect(0, 0, samples.cols, train_n));
     Mat samples_test = samples(Rect(0, train_n, samples.cols, samples.rows - train_n));
@@ -350,7 +350,11 @@ int main(int /* argc */, char* argv[])
     // predict digits with KNearest
     k_nearest->findNearest(samples_test, 4, predictions);
     evaluate_model(predictions, digits_test, labels_test, vis);
-    imshow("KNearest test", vis);
+    // imshow("KNearest test", vis); // 注释掉图像显示部分
+    std::string knearest_result_filename = "KNearest_test.png";
+    imwrite(knearest_result_filename, vis); // 保存处理后的图像
+    printf("KNearest test result image saved as: %s\n", knearest_result_filename.c_str());
+
     k_nearest.release();
 
     cout << "training SVM..." << endl;
@@ -364,12 +368,17 @@ int main(int /* argc */, char* argv[])
     // predict digits with SVM
     svm->predict(samples_test, predictions);
     evaluate_model(predictions, digits_test, labels_test, vis);
-    imshow("SVM test", vis);
+    // imshow("SVM test", vis); // 注释掉图像显示部分
+    std::string svm_result_filename = "SVM_test.png";
+    imwrite(svm_result_filename, vis); // 保存处理后的图像
+    printf("SVM test result image saved as: %s\n", svm_result_filename.c_str());
+
     cout << "Saving SVM as \"digits_svm.yml\"..." << endl;
     svm->save("digits_svm.yml");
     svm.release();
 
-    waitKey();
+    // waitKey(); // 注释掉等待按键部分
 
     return 0;
 }
+

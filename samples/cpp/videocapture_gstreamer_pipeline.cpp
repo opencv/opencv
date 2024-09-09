@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <map>
+#include <cstdlib>  // 包含 system 函数
 
 using namespace std;
 using namespace cv;
@@ -145,7 +146,12 @@ inline string containerByName(const string &name)
 
 inline Ptr<VideoCapture> createCapture(const string &backend, const string &file_name, const string &codec)
 {
-    if (backend == "gst-default")
+    if (backend == "default")
+    {
+        cout << "Created default capture ( " << file_name << " )" << endl;
+        return makePtr<VideoCapture>(file_name);
+    }
+    else if (backend == "gst-default")
     {
         cout << "Created GStreamer capture ( " << file_name << " )" << endl;
         return makePtr<VideoCapture>(file_name, CAP_GSTREAMER);
@@ -179,6 +185,7 @@ inline Ptr<VideoCapture> createCapture(const string &backend, const string &file
     }
     return Ptr<VideoCapture>();
 }
+
 
 inline Ptr<VideoCapture> createSynthSource(Size sz, unsigned fps)
 {
@@ -279,10 +286,11 @@ int main(int argc, char *argv[])
     {
         if (mode == "decode")
         {
+            cout << "Attempting to create capture with backend: " << backend << " and file: " << file_name << endl;
             cap = createCapture(backend, file_name, codec);
             if (!cap)
             {
-                cout << "Failed to create video capture" << endl;
+                cout << "Failed to create video capture (cap is nullptr)" << endl;
                 return -3;
             }
             if (!cap->isOpened())
@@ -296,6 +304,11 @@ int main(int argc, char *argv[])
             Size sz = getValue(sizeByResolution(), resolution, "Invalid resolution");
             cout << "FPS: " << fix_fps << ", Frame size: " << sz << endl;
             cap = createSynthSource(sz, fix_fps);
+            
+            // 使用 system 命令创建目录
+            system("mkdir -p videocapture_gstreamer_pipeline");
+            
+            file_name = "videocapture_gstreamer_pipeline/" + file_name;
             wrt = createWriter(backend, file_name, codec, sz, fix_fps);
             if (!cap || !wrt)
             {
@@ -376,5 +389,7 @@ int main(int argc, char *argv[])
         double res_fps = tick.getCounter() / tick.getTimeSec();
         cout << tick.getCounter() << " frames in " << tick.getTimeSec() << " sec ~ " << res_fps << " FPS" << " (total time: " << total.getTimeSec() << " sec)" << endl;
     }
+    cout << "Processed file saved at: " << file_name << endl;
     return 0;
 }
+

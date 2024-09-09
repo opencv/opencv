@@ -5,11 +5,13 @@
 #include "opencv2/imgcodecs.hpp"
 #include <string>
 #include <iostream>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 using namespace std;
 using namespace cv;
 
-static int liveQRCodeDetect();
+static int liveQRCodeDetect(const string& video_file);
 static int imageQRCodeDetect(const string& in_file);
 
 static bool g_useArucoBased = false;
@@ -42,6 +44,7 @@ int main(int argc, char *argv[])
         "{o out    | qr_code.png | path to result file }"
         "{save_detections | false  | save all QR detections (video mode only) }"
         "{save_all | false  | save all processed frames  (video mode only) }"
+        "{video    |        | use video as input instead of camera}"
     ;
     CommandLineParser cmd_parser(argc, argv, keys);
 
@@ -53,6 +56,7 @@ int main(int argc, char *argv[])
     }
 
     string in_file_name = cmd_parser.get<string>("in");    // path to input image
+    string video_file_name = cmd_parser.get<string>("video");
 
     if (cmd_parser.has("out"))
     {
@@ -82,51 +86,51 @@ int main(int argc, char *argv[])
     g_saveDetections = cmd_parser.has("save_detections") && cmd_parser.get<bool>("save_detections");
     g_saveAll = cmd_parser.has("save_all") && cmd_parser.get<bool>("save_all");
 
+    // Create output directory if it doesn't exist
+    system("mkdir -p qrcode");
+
     int return_code = 0;
-    if (in_file_name.empty())
+    if (!in_file_name.empty())
     {
-        return_code = liveQRCodeDetect();
+        return_code = imageQRCodeDetect(samples::findFile(in_file_name));
     }
     else
     {
-        return_code = imageQRCodeDetect(samples::findFile(in_file_name));
+        return_code = liveQRCodeDetect(samples::findFile(video_file_name));
     }
     return return_code;
 }
 
-static
-void drawQRCodeContour(Mat &color_image, const vector<Point>& corners)
+static void drawQRCodeContour(Mat &color_image, const vector<Point>& corners)
 {
     if (!corners.empty())
     {
-        double show_radius = (color_image.rows  > color_image.cols)
-                   ? (2.813 * color_image.rows) / color_image.cols
-                   : (2.813 * color_image.cols) / color_image.rows;
+        double show_radius = (color_image.rows > color_image.cols)
+            ? (2.813 * color_image.rows) / color_image.cols
+            : (2.813 * color_image.cols) / color_image.rows;
         double contour_radius = show_radius * 0.4;
 
-        vector< vector<Point> > contours;
+        vector<vector<Point>> contours;
         contours.push_back(corners);
         drawContours(color_image, contours, 0, Scalar(211, 0, 148), cvRound(contour_radius));
 
         RNG rng(1000);
         for (size_t i = 0; i < 4; i++)
         {
-            Scalar color = Scalar(rng.uniform(0,255), rng.uniform(0, 255), rng.uniform(0, 255));
+            Scalar color = Scalar(rng.uniform(0, 255), rng.uniform(0, 255), rng.uniform(0, 255));
             circle(color_image, corners[i], cvRound(show_radius), color, -1);
         }
     }
 }
 
-static
-void drawFPS(Mat &color_image, double fps)
+static void drawFPS(Mat &color_image, double fps)
 {
     ostringstream convert;
     convert << cv::format("%.2f", fps) << " FPS (" << getQRModeString() << ")";
     putText(color_image, convert.str(), Point(25, 25), FONT_HERSHEY_DUPLEX, 1, Scalar(0, 0, 255), 2);
 }
 
-static
-void drawQRCodeResults(Mat& frame, const vector<Point>& corners, const vector<cv::String>& decode_info, double fps)
+static void drawQRCodeResults(Mat& frame, const vector<Point>& corners, const vector<cv::String>& decode_info, double fps)
 {
     if (!corners.empty())
     {
@@ -158,11 +162,9 @@ void drawQRCodeResults(Mat& frame, const vector<Point>& corners, const vector<cv
     drawFPS(frame, fps);
 }
 
-static
-void runQR(
+static void runQR(
     const GraphicalCodeDetector& qrcode, const Mat& input,
     vector<Point>& corners, vector<cv::String>& decode_info
-    // +global: bool g_modeMultiQR, bool g_detectOnly
 )
 {
     if (!g_modeMultiQR)
@@ -193,8 +195,7 @@ void runQR(
     }
 }
 
-static
-double processQRCodeDetection(const GraphicalCodeDetector& qrcode, const Mat& input, Mat& result, vector<Point>& corners)
+static double processQRCodeDetection(const GraphicalCodeDetector& qrcode, const Mat& input, Mat& result, vector<Point>& corners)
 {
     if (input.channels() == 1)
         cvtColor(input, result, COLOR_GRAY2BGR);
@@ -218,14 +219,27 @@ double processQRCodeDetection(const GraphicalCodeDetector& qrcode, const Mat& in
     return fps;
 }
 
-int liveQRCodeDetect()
+int liveQRCodeDetect(const string& video_file)
 {
-    VideoCapture cap(0);
+    VideoCapture cap;
 
-    if (!cap.isOpened())
+    if (!video_file.empty())
     {
-        cout << "Cannot open a camera" << endl;
-        return 2;
+        cap.open(video_file);
+        if (!cap.isOpened())
+        {
+            cout << "Cannot open the video file: " << video_file << endl;
+            return 2;
+        }
+    }
+    else
+    {
+        cap.open(0);
+        if (!cap.isOpened())
+        {
+            cout << "Cannot open a camera" << endl;
+            return 2;
+        }
     }
 
     cout << "Press 'm' to switch between detectAndDecode and detectAndDecodeMulti" << endl;
@@ -256,7 +270,6 @@ int liveQRCodeDetect()
             double fps = processQRCodeDetection(qrcode, frame, result, corners);
             cout << "FPS: " << fps << endl;
             forceSave |= (g_saveDetections && !corners.empty());
-            //forceSave |= fps < 1.0;
         }
         catch (const cv::Exception& e)
         {
@@ -265,25 +278,29 @@ int liveQRCodeDetect()
         }
 
         if (!result.empty())
-            imshow("QR code", result);
+        {
+            // imshow("QR code", result); // Commented out to run in headless mode
+
+            string fsuffix = cv::format("-%05d", g_save_idx++);
+
+            string fname_input = "qrcode/" + g_out_file_name + fsuffix + "_input.png";
+            cout << "Saving QR code detection input: '" << fname_input << "' ..." << endl;
+            imwrite(fname_input, frame);
+
+            string fname = "qrcode/" + g_out_file_name + fsuffix + g_out_file_ext;
+            cout << "Saving QR code detection result: '" << fname << "' ..." << endl;
+            imwrite(fname, result);
+
+            cout << "Saved" << endl;
+        }
 
         int code = waitKey(1);
         if (code < 0 && !forceSave)
             continue; // timeout
         char c = (char)code;
-        if (c == ' ' || forceSave)
+        if (c == ' ')
         {
-            string fsuffix = cv::format("-%05d", g_save_idx++);
-
-            string fname_input = g_out_file_name + fsuffix + "_input.png";
-            cout << "Saving QR code detection input: '" << fname_input << "' ..." << endl;
-            imwrite(fname_input, frame);
-
-            string fname = g_out_file_name + fsuffix + g_out_file_ext;
-            cout << "Saving QR code detection result: '" << fname << "' ..." << endl;
-            imwrite(fname, result);
-
-            cout << "Saved" << endl;
+            forceSave = true;
         }
         if (c == 'm')
         {
@@ -338,18 +355,21 @@ int imageQRCodeDetect(const string& in_file)
     Mat result; input.copyTo(result);
     drawQRCodeResults(result, corners, decode_info, fps);
 
-    imshow("QR", result); waitKey(1);
+    // imshow("QR", result); // Commented out to run in headless mode
 
     if (!g_out_file_name.empty())
     {
-        string out_file = g_out_file_name + g_out_file_ext;
+        // Manually create the directory if it doesn't exist
+        system("mkdir -p qrcode");
+        string out_file = "qrcode/" + g_out_file_name + g_out_file_ext;
         cout << "Saving result: " << out_file << endl;
         imwrite(out_file, result);
     }
 
-    cout << "Press any key to exit ..." << endl;
-    waitKey(0);
+    // waitKey(0); // Commented out to run in headless mode
+
     cout << "Exit." << endl;
 
     return 0;
 }
+

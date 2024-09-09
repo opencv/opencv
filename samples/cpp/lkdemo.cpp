@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <ctype.h>
+#include <cstdlib>  // 为 system() 函数包含的头文件
 
 using namespace cv;
 using namespace std;
@@ -14,7 +15,7 @@ static void help()
     // print a welcome message, and the OpenCV version
     cout << "\nThis is a demo of Lukas-Kanade optical flow lkdemo(),\n"
             "Using OpenCV version " << CV_VERSION << endl;
-    cout << "\nIt uses camera by default, but you can provide a path to video as an argument.\n";
+    cout << "\nIt uses a video file as input, which should be provided as a command-line argument.\n";
     cout << "\nHot keys: \n"
             "\tESC - quit the program\n"
             "\tr - auto-initialize tracking\n"
@@ -37,6 +38,11 @@ static void onMouse( int event, int x, int y, int /*flags*/, void* /*param*/ )
 
 int main( int argc, char** argv )
 {
+    if (argc < 2) {
+        cout << "Usage: " << argv[0] << " <video_file>" << endl;
+        return -1;
+    }
+
     VideoCapture cap;
     TermCriteria termcrit(TermCriteria::COUNT|TermCriteria::EPS,20,0.03);
     Size subPixWinSize(10,10), winSize(31,31);
@@ -46,13 +52,9 @@ int main( int argc, char** argv )
     bool nightMode = false;
 
     help();
-    cv::CommandLineParser parser(argc, argv, "{@input|0|}");
-    string input = parser.get<string>("@input");
 
-    if( input.size() == 1 && isdigit(input[0]) )
-        cap.open(input[0] - '0');
-    else
-        cap.open(input);
+    string input = argv[1];
+    cap.open(input);
 
     if( !cap.isOpened() )
     {
@@ -60,8 +62,19 @@ int main( int argc, char** argv )
         return 0;
     }
 
-    namedWindow( "LK Demo", 1 );
-    setMouseCallback( "LK Demo", onMouse, 0 );
+    // 创建子目录 lkdemo
+    string outputDir = "lkdemo";
+    system(("mkdir -p " + outputDir).c_str());  // 使用 system() 创建目录
+
+    // 创建保存文件的路径
+    string outputFilePath = outputDir + "/output.avi";
+    cout << "Processed video will be saved at: " << outputFilePath << endl;
+
+    // 设置视频写入器
+    int codec = VideoWriter::fourcc('M', 'J', 'P', 'G');
+    VideoWriter writer(outputFilePath, codec, cap.get(CAP_PROP_FPS), 
+                       Size((int)cap.get(CAP_PROP_FRAME_WIDTH), 
+                            (int)cap.get(CAP_PROP_FRAME_HEIGHT)));
 
     Mat gray, prevGray, image, frame;
     vector<Point2f> points[2];
@@ -124,24 +137,29 @@ int main( int argc, char** argv )
         }
 
         needToInit = false;
-        imshow("LK Demo", image);
 
-        char c = (char)waitKey(10);
-        if( c == 27 )
-            break;
-        switch( c )
-        {
-        case 'r':
-            needToInit = true;
-            break;
-        case 'c':
-            points[0].clear();
-            points[1].clear();
-            break;
-        case 'n':
-            nightMode = !nightMode;
-            break;
-        }
+        // 注释掉图形显示部分
+        // imshow("LK Demo", image);
+
+        // 将处理后的帧写入视频文件
+        writer.write(image);
+
+        // char c = (char)waitKey(10);
+        // if( c == 27 )
+        //     break;
+        // switch( c )
+        // {
+        // case 'r':
+        //     needToInit = true;
+        //     break;
+        // case 'c':
+        //     points[0].clear();
+        //     points[1].clear();
+        //     break;
+        // case 'n':
+        //     nightMode = !nightMode;
+        //     break;
+        // }
 
         std::swap(points[1], points[0]);
         cv::swap(prevGray, gray);
@@ -149,3 +167,4 @@ int main( int argc, char** argv )
 
     return 0;
 }
+

@@ -3,18 +3,28 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>  // cv::Canny()
 #include <iostream>
+#include <cstdlib> // For system()
 
 using namespace cv;
-using std::cout; using std::cerr; using std::endl;
+using std::cout;
+using std::cerr;
+using std::endl;
+using std::string;
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
+    if (argc != 2) {
+        cerr << "Usage: " << argv[0] << " <video_file_path>" << endl;
+        return -1;
+    }
+
+    string videoFilePath = argv[1];
     Mat frame;
-    cout << "Opening camera..." << endl;
-    VideoCapture capture(0); // open the first camera
+    cout << "Opening video file: " << videoFilePath << endl;
+    VideoCapture capture(videoFilePath);
     if (!capture.isOpened())
     {
-        cerr << "ERROR: Can't initialize camera capture" << endl;
+        cerr << "ERROR: Can't open video file" << endl;
         return 1;
     }
 
@@ -22,19 +32,32 @@ int main(int, char**)
     cout << "     height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << endl;
     cout << "Capturing FPS: " << capture.get(CAP_PROP_FPS) << endl;
 
-    cout << endl << "Press 'ESC' to quit, 'space' to toggle frame processing" << endl;
-    cout << endl << "Start grabbing..." << endl;
+    cout << endl << "Start processing..." << endl;
 
     size_t nFrames = 0;
     bool enableProcessing = false;
     int64 t0 = cv::getTickCount();
     int64 processingTime = 0;
-    for (;;)
+
+    int frameWidth = static_cast<int>(capture.get(CAP_PROP_FRAME_WIDTH));
+    int frameHeight = static_cast<int>(capture.get(CAP_PROP_FRAME_HEIGHT));
+    double fps = capture.get(CAP_PROP_FPS);
+    int fourcc = VideoWriter::fourcc('M', 'J', 'P', 'G');
+
+    system("mkdir -p videocapture_camera");
+    string outputFilePath = "videocapture_camera/output.avi";
+    VideoWriter writer(outputFilePath, fourcc, fps, Size(frameWidth, frameHeight));
+
+    if (!writer.isOpened()) {
+        cerr << "Could not open the output video file for write\n";
+        return -1;
+    }
+
+    while (capture.read(frame))
     {
-        capture >> frame; // read the next frame from camera
         if (frame.empty())
         {
-            cerr << "ERROR: Can't grab camera frame." << endl;
+            cerr << "ERROR: Can't grab video frame." << endl;
             break;
         }
         nFrames++;
@@ -52,7 +75,8 @@ int main(int, char**)
         }
         if (!enableProcessing)
         {
-            imshow("Frame", frame);
+            // imshow("Frame", frame); // 注释掉
+            writer.write(frame);
         }
         else
         {
@@ -60,17 +84,21 @@ int main(int, char**)
             Mat processed;
             cv::Canny(frame, processed, 400, 1000, 5);
             processingTime += cv::getTickCount() - tp0;
-            imshow("Frame", processed);
+            // imshow("Frame", processed); // 注释掉
+            writer.write(processed);
         }
-        int key = waitKey(1);
-        if (key == 27/*ESC*/)
-            break;
-        if (key == 32/*SPACE*/)
-        {
-            enableProcessing = !enableProcessing;
-            cout << "Enable frame processing ('space' key): " << enableProcessing << endl;
-        }
+        // int key = waitKey(1); // 注释掉
+        // if (key == 27/*ESC*/) // 注释掉
+        //     break; // 注释掉
+        // if (key == 32/*SPACE*/) // 注释掉
+        // {
+        //     enableProcessing = !enableProcessing; // 注释掉
+        //     cout << "Enable frame processing ('space' key): " << enableProcessing << endl; // 注释掉
+        // }
     }
-    std::cout << "Number of captured frames: " << nFrames << endl;
+
+    cout << "Number of captured frames: " << nFrames << endl;
+    cout << "Video saved to " << outputFilePath << endl;
     return nFrames > 0 ? 0 : 1;
 }
+

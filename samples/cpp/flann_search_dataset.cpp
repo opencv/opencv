@@ -12,6 +12,7 @@
 using namespace cv;
 using std::cout;
 using std::endl;
+using std::string;
 
 #define _ORB_
 
@@ -33,10 +34,10 @@ struct img_info {
 };
 
 
-int main( int argc, char* argv[] )
+int main(int argc, char* argv[])
 {
-    //-- Test the program options
-    CommandLineParser parser( argc, argv, keys );
+    // Test the program options
+    CommandLineParser parser(argc, argv, keys);
     if (parser.has("help"))
     {
         parser.printMessage();
@@ -44,17 +45,17 @@ int main( int argc, char* argv[] )
     }
 
     const cv::String img_path = parser.get<String>("image");
-    Mat img = imread( samples::findFile( img_path ), IMREAD_GRAYSCALE );
-    if (img.empty() )
+    Mat img = imread(samples::findFile(img_path), IMREAD_GRAYSCALE);
+    if (img.empty())
     {
-        cout << "Could not open the image "<< img_path << endl;
+        cout << "Could not open the image " << img_path << endl;
         return -1;
     }
 
     const cv::String db_path = parser.get<String>("dataset");
     if (!utils::fs::isDirectory(db_path))
     {
-        cout << "Dataset folder "<< db_path.c_str() <<" doesn't exist!" << endl;
+        cout << "Dataset folder " << db_path.c_str() << " doesn't exist!" << endl;
         return -1;
     }
 
@@ -68,11 +69,11 @@ int main( int argc, char* argv[] )
 
     const cv::String save_db_path = parser.get<String>("save");
 
-    //-- Step 1: Detect the keypoints using a detector, compute the descriptors
-    //   in the folder containing the images of the dataset
+    // Step 1: Detect the keypoints using a detector, compute the descriptors
+    // in the folder containing the images of the dataset
 #ifdef _SIFT_
     int minHessian = 400;
-    Ptr<Feature2D> detector = SIFT::create( minHessian );
+    Ptr<Feature2D> detector = SIFT::create(minHessian);
 #elif defined(_ORB_)
     Ptr<Feature2D> detector = ORB::create();
 #else
@@ -91,52 +92,52 @@ int main( int argc, char* argv[] )
     utils::fs::glob(db_path, cv::String(), files);
     for (std::vector<cv::String>::iterator itr = files.begin(); itr != files.end(); ++itr)
     {
-        Mat tmp_img = imread( *itr, IMREAD_GRAYSCALE );
+        Mat tmp_img = imread(*itr, IMREAD_GRAYSCALE);
         if (!tmp_img.empty())
         {
             std::vector<KeyPoint> kpts;
             Mat descriptors;
-            detector->detectAndCompute( tmp_img, noArray(), kpts, descriptors );
+            detector->detectAndCompute(tmp_img, noArray(), kpts, descriptors);
 
-            db_keypoints.insert( db_keypoints.end(), kpts.begin(), kpts.end() );
-            db_descriptors.push_back( descriptors );
-            db_images_indice_range.push_back( db_images_indice_range.back()
-                                              + static_cast<unsigned int>(kpts.size()) );
+            db_keypoints.insert(db_keypoints.end(), kpts.begin(), kpts.end());
+            db_descriptors.push_back(descriptors);
+            db_images_indice_range.push_back(db_images_indice_range.back()
+                                              + static_cast<unsigned int>(kpts.size()));
         }
     }
 
-    //-- Set the LUT
-    db_indice_2_image_lut.resize( db_images_indice_range.back() );
-    const int nbr_of_imgs = static_cast<int>( db_images_indice_range.size()-1 );
+    // Set the LUT
+    db_indice_2_image_lut.resize(db_images_indice_range.back());
+    const int nbr_of_imgs = static_cast<int>(db_images_indice_range.size() - 1);
     for (int i = 0; i < nbr_of_imgs; ++i)
     {
         const unsigned int first_indice = db_images_indice_range[i];
-        const unsigned int last_indice = db_images_indice_range[i+1];
-        std::fill( db_indice_2_image_lut.begin() + first_indice,
-                   db_indice_2_image_lut.begin() + last_indice,
-                   i );
+        const unsigned int last_indice = db_images_indice_range[i + 1];
+        std::fill(db_indice_2_image_lut.begin() + first_indice,
+                  db_indice_2_image_lut.begin() + last_indice,
+                  i);
     }
 
-    //-- Step 2: build the structure storing the descriptors
+    // Step 2: build the structure storing the descriptors
 #if defined(_SIFT_)
-    cv::Ptr<flann::GenericIndex<cvflann::L2<float> > > index;
+    cv::Ptr<flann::GenericIndex<cvflann::L2<float>>> index;
     if (load_db_path != String())
-        index = cv::makePtr<flann::GenericIndex<cvflann::L2<float> > >(db_descriptors,
-                                                             cvflann::SavedIndexParams(load_db_path));
+        index = cv::makePtr<flann::GenericIndex<cvflann::L2<float>>>(db_descriptors,
+                                                                     cvflann::SavedIndexParams(load_db_path));
     else
-        index = cv::makePtr<flann::GenericIndex<cvflann::L2<float> > >(db_descriptors,
-                                                             cvflann::KDTreeIndexParams(4));
+        index = cv::makePtr<flann::GenericIndex<cvflann::L2<float>>>(db_descriptors,
+                                                                     cvflann::KDTreeIndexParams(4));
 
 #elif defined(_ORB_)
-    cv::Ptr<flann::GenericIndex<cvflann::Hamming<unsigned char> > > index;
+    cv::Ptr<flann::GenericIndex<cvflann::Hamming<unsigned char>>> index;
     if (load_db_path != String())
-        index  = cv::makePtr<flann::GenericIndex<cvflann::Hamming<unsigned char> > >
+        index = cv::makePtr<flann::GenericIndex<cvflann::Hamming<unsigned char>>>
                 (db_descriptors, cvflann::SavedIndexParams(load_db_path));
     else
-        index  = cv::makePtr<flann::GenericIndex<cvflann::Hamming<unsigned char> > >
+        index = cv::makePtr<flann::GenericIndex<cvflann::Hamming<unsigned char>>>
                 (db_descriptors, cvflann::LshIndexParams());
 #else
-    cout<< "Descriptor not listed. Set the proper FLANN distance for this descriptor" <<endl;
+    cout << "Descriptor not listed. Set the proper FLANN distance for this descriptor" << endl;
     return -1;
 #endif
     if (save_db_path != String())
@@ -147,14 +148,14 @@ int main( int argc, char* argv[] )
     if (img_path == String())
         return 0;
 
-    //-- Detect the keypoints and compute the descriptors for the query image
+    // Detect the keypoints and compute the descriptors for the query image
     std::vector<KeyPoint> img_keypoints;
     Mat img_descriptors;
-    detector->detectAndCompute( img, noArray(), img_keypoints, img_descriptors );
+    detector->detectAndCompute(img, noArray(), img_keypoints, img_descriptors);
 
 
-    //-- Step 3: retrieve the descriptors in the dataset matching the ones of the query image
-    // /!\ knnSearch doesn't follow OpenCV standards by not initialising empty Mat properties
+    // Step 3: retrieve the descriptors in the dataset matching the ones of the query image
+    // knnSearch doesn't follow OpenCV standards by not initializing empty Mat properties
     const int knn = 2;
     Mat indices(img_descriptors.rows, knn, CV_32S);
 #if defined(_SIFT_)
@@ -164,49 +165,48 @@ int main( int argc, char* argv[] )
 #define DIST_TYPE int
     Mat dists(img_descriptors.rows, knn, CV_32S);
 #endif
-    index->knnSearch( img_descriptors, indices, dists, knn, cvflann::SearchParams(32) );
+    index->knnSearch(img_descriptors, indices, dists, knn, cvflann::SearchParams(32));
 
-    //-- Filter matches using the Lowe's ratio test
+    // Filter matches using the Lowe's ratio test
     const float ratio_thresh = 0.7f;
     std::vector<DMatch> good_matches; //contains
-    std::vector<unsigned int> matches_per_img_histogram( nbr_of_imgs, 0 );
+    std::vector<unsigned int> matches_per_img_histogram(nbr_of_imgs, 0);
     for (int i = 0; i < dists.rows; ++i)
     {
-        if (dists.at<DIST_TYPE>(i,0) < ratio_thresh * dists.at<DIST_TYPE>(i,1))
+        if (dists.at<DIST_TYPE>(i, 0) < ratio_thresh * dists.at<DIST_TYPE>(i, 1))
         {
-            const int indice_in_db = indices.at<int>(i,0);
+            const int indice_in_db = indices.at<int>(i, 0);
             DMatch dmatch(i, indice_in_db, db_indice_2_image_lut[indice_in_db],
-                          static_cast<float>(dists.at<DIST_TYPE>(i,0)));
-            good_matches.push_back( dmatch );
-            matches_per_img_histogram[ db_indice_2_image_lut[indice_in_db] ]++;
+                          static_cast<float>(dists.at<DIST_TYPE>(i, 0)));
+            good_matches.push_back(dmatch);
+            matches_per_img_histogram[db_indice_2_image_lut[indice_in_db]]++;
         }
     }
 
-
-    //-- Step 4: find the dataset image with the highest proportion of matches
+    // Step 4: find the dataset image with the highest proportion of matches
     std::multimap<float, img_info> images_infos;
     for (int i = 0; i < nbr_of_imgs; ++i)
     {
         const unsigned int nbr_of_matches = matches_per_img_histogram[i];
-        if (nbr_of_matches < 4) //we need at leat 4 points for a homography
+        if (nbr_of_matches < 4) //we need at least 4 points for a homography
             continue;
 
-        const unsigned int nbr_of_kpts = db_images_indice_range[i+1] - db_images_indice_range[i];
+        const unsigned int nbr_of_kpts = db_images_indice_range[i + 1] - db_images_indice_range[i];
         const float inverse_proportion_of_retrieved_kpts =
                 static_cast<float>(nbr_of_kpts) / static_cast<float>(nbr_of_matches);
 
         img_info info(i, nbr_of_matches);
-        images_infos.insert( std::pair<float,img_info>(inverse_proportion_of_retrieved_kpts,
-                                                       info) );
+        images_infos.insert(std::pair<float, img_info>(inverse_proportion_of_retrieved_kpts,
+                                                       info));
     }
 
     if (images_infos.begin() == images_infos.end())
     {
-        cout<<"No good match could be found."<<endl;
+        cout << "No good match could be found." << endl;
         return 0;
     }
 
-    //-- if there are several images with a similar proportion of matches,
+    // if there are several images with a similar proportion of matches,
     // select the one with the highest number of matches weighted by the
     // squared ratio of proportions
     const float best_matches_proportion = images_infos.begin()->first;
@@ -215,10 +215,10 @@ int main( int argc, char* argv[] )
 
     std::multimap<float, img_info>::iterator it = images_infos.begin();
     ++it;
-    while ((it!=images_infos.end()) && (it->first < 1.1*best_matches_proportion))
+    while ((it != images_infos.end()) && (it->first < 1.1 * best_matches_proportion))
     {
         const float ratio = new_matches_proportion / it->first;
-        if( it->second.nbr_of_matches * (ratio * ratio) > best_img.nbr_of_matches)
+        if (it->second.nbr_of_matches * (ratio * ratio) > best_img.nbr_of_matches)
         {
             new_matches_proportion = it->first;
             best_img = it->second;
@@ -226,7 +226,7 @@ int main( int argc, char* argv[] )
         ++it;
     }
 
-    //-- Step 5: filter goodmatches that belong to the best image match of the dataset
+    // Step 5: filter goodmatches that belong to the best image match of the dataset
     std::vector<DMatch> filtered_good_matches;
     for (std::vector<DMatch>::iterator itr(good_matches.begin()); itr != good_matches.end(); ++itr)
     {
@@ -234,17 +234,19 @@ int main( int argc, char* argv[] )
             filtered_good_matches.push_back(*itr);
     }
 
-    //-- Retrieve the best image match from the dataset
-    Mat db_img = imread( files[best_img.img_index], IMREAD_GRAYSCALE );
+    // Retrieve the best image match from the dataset
+    Mat db_img = imread(files[best_img.img_index], IMREAD_GRAYSCALE);
 
-    //-- Draw matches
+    // Draw matches and save the image
     Mat img_matches;
-    drawMatches( img, img_keypoints, db_img, db_keypoints, filtered_good_matches, img_matches, Scalar::all(-1),
-                 Scalar::all(-1), std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+    drawMatches(img, img_keypoints, db_img, db_keypoints, filtered_good_matches, img_matches,
+                Scalar::all(-1), Scalar::all(-1), std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 
-    //-- Show detected matches
-    imshow("Good Matches", img_matches );
-    waitKey();
+    // Save the result
+    std::string outputFilename = "good_matches.jpg";
+    imwrite(outputFilename, img_matches);
+    cout << "Processed image saved as: " << outputFilename << endl;
 
     return 0;
 }
+

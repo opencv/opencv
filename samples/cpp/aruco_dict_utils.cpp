@@ -268,7 +268,7 @@ const char* keys  =
 const char* about =
         "This program can be used to calculate the ArUco dictionary metric.\n"
         "To calculate the metric considering flipped markers use -'r' flag.\n"
-        "This program can be used to create and write the custom ArUco dictionary.\n";
+        "This program can be used to create and write the custom ArUco dictionary\n";
 
 int main(int argc, char *argv[])
 {
@@ -346,3 +346,4 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
+

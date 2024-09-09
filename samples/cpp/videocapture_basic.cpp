@@ -9,46 +9,57 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <iostream>
-#include <stdio.h>
+#include <fstream>
+#include <cstdlib> // For system()
 
 using namespace cv;
 using namespace std;
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
-    Mat frame;
-    //--- INITIALIZE VIDEOCAPTURE
-    VideoCapture cap;
-    // open the default camera using default API
-    // cap.open(0);
-    // OR advance usage: select any API backend
-    int deviceID = 0;             // 0 = open default camera
-    int apiID = cv::CAP_ANY;      // 0 = autodetect default API
-    // open selected camera using selected API
-    cap.open(deviceID, apiID);
-    // check if we succeeded
-    if (!cap.isOpened()) {
-        cerr << "ERROR! Unable to open camera\n";
+    if (argc != 2) {
+        cerr << "Usage: " << argv[0] << " <video_file_path>" << endl;
         return -1;
     }
 
-    //--- GRAB AND WRITE LOOP
-    cout << "Start grabbing" << endl
-        << "Press any key to terminate" << endl;
-    for (;;)
-    {
-        // wait for a new frame from camera and store it into 'frame'
-        cap.read(frame);
-        // check if we succeeded
+    string videoFilePath = argv[1];
+    Mat frame;
+    VideoCapture cap(videoFilePath);
+
+    if (!cap.isOpened()) {
+        cerr << "ERROR! Unable to open video file: " << videoFilePath << endl;
+        return -1;
+    }
+
+    int frameWidth = static_cast<int>(cap.get(CAP_PROP_FRAME_WIDTH));
+    int frameHeight = static_cast<int>(cap.get(CAP_PROP_FRAME_HEIGHT));
+    double fps = cap.get(CAP_PROP_FPS);
+    int fourcc = VideoWriter::fourcc('M', 'J', 'P', 'G');
+
+    system("mkdir -p videocapture_basic");
+    string outputFilePath = "videocapture_basic/output.avi";
+    VideoWriter writer(outputFilePath, fourcc, fps, Size(frameWidth, frameHeight));
+
+    if (!writer.isOpened()) {
+        cerr << "Could not open the output video file for write\n";
+        return -1;
+    }
+
+    cout << "Start processing video: " << videoFilePath << endl;
+    cout << "Press any key to terminate" << endl;
+
+    while (cap.read(frame)) {
         if (frame.empty()) {
             cerr << "ERROR! blank frame grabbed\n";
             break;
         }
-        // show live and wait for a key with timeout long enough to show images
-        imshow("Live", frame);
-        if (waitKey(5) >= 0)
-            break;
+        writer.write(frame);
+        // imshow("Live", frame); // 注释掉
+        // if (waitKey(5) >= 0) // 注释掉
+        //    break; // 注释掉
     }
-    // the camera will be deinitialized automatically in VideoCapture destructor
+
+    cout << "Video saved to " << outputFilePath << endl;
     return 0;
 }
+

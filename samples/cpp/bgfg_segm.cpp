@@ -8,6 +8,9 @@
 #include "opencv2/videoio.hpp"
 #include "opencv2/highgui.hpp"
 #include <iostream>
+#include <cstdlib>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 using namespace std;
 using namespace cv;
@@ -59,13 +62,19 @@ int main(int argc, const char** argv)
         return 3;
     }
 
-    cout << "Press <space> to toggle background model update" << endl;
-    cout << "Press 's' to toggle foreground mask smoothing" << endl;
-    cout << "Press ESC or 'q' to exit" << endl;
     bool doUpdateModel = true;
     bool doSmoothMask = false;
 
     Mat inputFrame, frame, foregroundMask, foreground, background;
+    String sample_name = "bgfg_segm";
+    // 创建子目录
+    if (mkdir(sample_name.c_str(), 0777) == -1)
+    {
+        cerr << "Error :  " << strerror(errno) << endl;
+        return 1;
+    }
+
+    int frame_counter = 0;
     for (;;)
     {
         // prepare input frame
@@ -82,7 +91,7 @@ int main(int argc, const char** argv)
         model->apply(frame, foregroundMask, doUpdateModel ? -1 : 0);
 
         // show processed frame
-        imshow("image", frame);
+        // imshow("image", frame);
 
         // show foreground image and mask (with optional smoothing)
         if (doSmoothMask)
@@ -94,31 +103,49 @@ int main(int argc, const char** argv)
             foreground.create(scaledSize, frame.type());
         foreground = Scalar::all(0);
         frame.copyTo(foreground, foregroundMask);
-        imshow("foreground mask", foregroundMask);
-        imshow("foreground image", foreground);
+        // imshow("foreground mask", foregroundMask);
+        // imshow("foreground image", foreground);
 
         // show background image
         model->getBackgroundImage(background);
         if (!background.empty())
-            imshow("mean background image", background );
+            ; // imshow("mean background image", background);
+
+        // Save the frames and masks
+        String frame_filename = sample_name + "/frame_" + to_string(frame_counter) + ".png";
+        String foreground_filename = sample_name + "/foreground_" + to_string(frame_counter) + ".png";
+        String background_filename = sample_name + "/background_" + to_string(frame_counter) + ".png";
+
+        imwrite(frame_filename, frame);
+        imwrite(foreground_filename, foreground);
+        if (!background.empty())
+            imwrite(background_filename, background);
+
+        cout << "Saved frame to " << frame_filename << endl;
+        cout << "Saved foreground to " << foreground_filename << endl;
+        if (!background.empty())
+            cout << "Saved background to " << background_filename << endl;
+
+        frame_counter++;
 
         // interact with user
-        const char key = (char)waitKey(30);
-        if (key == 27 || key == 'q') // ESC
-        {
-            cout << "Exit requested" << endl;
-            break;
-        }
-        else if (key == ' ')
-        {
-            doUpdateModel = !doUpdateModel;
-            cout << "Toggle background update: " << (doUpdateModel ? "ON" : "OFF") << endl;
-        }
-        else if (key == 's')
-        {
-            doSmoothMask = !doSmoothMask;
-            cout << "Toggle foreground mask smoothing: " << (doSmoothMask ? "ON" : "OFF") << endl;
-        }
+        // const char key = (char)waitKey(30);
+        // if (key == 27 || key == 'q') // ESC
+        // {
+        //     cout << "Exit requested" << endl;
+        //     break;
+        // }
+        // else if (key == ' ')
+        // {
+        //     doUpdateModel = !doUpdateModel;
+        //     cout << "Toggle background update: " << (doUpdateModel ? "ON" : "OFF") << endl;
+        // }
+        // else if (key == 's')
+        // {
+        //     doSmoothMask = !doSmoothMask;
+        //     cout << "Toggle foreground mask smoothing: " << (doSmoothMask ? "ON" : "OFF") << endl;
+        // }
     }
     return 0;
 }
+

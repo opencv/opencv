@@ -3,10 +3,12 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/ml.hpp"
+#include <iostream>
+#include <cstdlib> // For system()
 
 using namespace cv;
 using namespace cv::ml;
-
+using namespace std;
 
 struct Data
 {
@@ -14,12 +16,10 @@ struct Data
     Mat samples;          //Set of train samples. Contains points on image
     Mat responses;        //Set of responses for train samples
 
-    Data()
+    Data(int width, int height)
     {
-        const int WIDTH = 841;
-        const int HEIGHT = 594;
-        img = Mat::zeros(HEIGHT, WIDTH, CV_8UC3);
-        imshow("Train svmsgd", img);
+        img = Mat::zeros(height, width, CV_8UC3);
+        // imshow("Train svmsgd", img);  // 注释掉
     }
 };
 
@@ -38,18 +38,17 @@ bool findCrossPointWithBorders(const Mat &weights, float shift, const std::pair<
 void fillSegments(std::vector<std::pair<Point,Point> > &segments, int width, int height);
 
 //redraw points' set and line (wx = 0)
-void redraw(Data data, const Point points[2]);
+void redraw(Data &data, const Point points[2]);
 
 //add point in train set, train SVMSGD algorithm and draw results on image
 void addPointRetrainAndRedraw(Data &data, int x, int y, int response);
 
-
-bool doTrain( const Mat samples, const Mat responses, Mat &weights, float &shift)
+bool doTrain(const Mat samples, const Mat responses, Mat &weights, float &shift)
 {
-    cv::Ptr<SVMSGD> svmsgd = SVMSGD::create();
+    Ptr<SVMSGD> svmsgd = SVMSGD::create();
 
-    cv::Ptr<TrainData> trainData = TrainData::create(samples, cv::ml::ROW_SAMPLE, responses);
-    svmsgd->train( trainData );
+    Ptr<TrainData> trainData = TrainData::create(samples, ROW_SAMPLE, responses);
+    svmsgd->train(trainData);
 
     if (svmsgd->isTrained())
     {
@@ -82,7 +81,6 @@ void fillSegments(std::vector<std::pair<Point,Point> > &segments, int width, int
     segments.push_back(currentSegment);
 }
 
-
 bool findCrossPointWithBorders(const Mat &weights, float shift, const std::pair<Point,Point> &segment, Point &crossPoint)
 {
     int x = 0;
@@ -98,7 +96,7 @@ bool findCrossPointWithBorders(const Mat &weights, float shift, const std::pair<
     if (xMin == xMax && weights.at<float>(1) != 0)
     {
         x = xMin;
-        y = static_cast<int>(std::floor( - (weights.at<float>(0) * x + shift) / weights.at<float>(1)));
+        y = static_cast<int>(std::floor(-(weights.at<float>(0) * x + shift) / weights.at<float>(1)));
         if (y >= yMin && y <= yMax)
         {
             crossPoint.x = x;
@@ -109,7 +107,7 @@ bool findCrossPointWithBorders(const Mat &weights, float shift, const std::pair<
     else if (yMin == yMax && weights.at<float>(0) != 0)
     {
         y = yMin;
-        x = static_cast<int>(std::floor( - (weights.at<float>(1) * y + shift) / weights.at<float>(0)));
+        x = static_cast<int>(std::floor(-(weights.at<float>(1) * y + shift) / weights.at<float>(0)));
         if (x >= xMin && x <= xMax)
         {
             crossPoint.x = x;
@@ -142,7 +140,7 @@ bool findPointsForLine(const Mat &weights, float shift, Point points[2], int wid
     return true;
 }
 
-void redraw(Data data, const Point points[2])
+void redraw(Data &data, const Point points[2])
 {
     data.img.setTo(0);
     Point center;
@@ -151,22 +149,22 @@ void redraw(Data data, const Point points[2])
     CV_Assert((data.samples.type() == CV_32FC1) && (data.responses.type() == CV_32FC1));
     for (int i = 0; i < data.samples.rows; i++)
     {
-        center.x = static_cast<int>(data.samples.at<float>(i,0));
-        center.y = static_cast<int>(data.samples.at<float>(i,1));
-        color = (data.responses.at<float>(i) > 0) ? Scalar(128,128,0) : Scalar(0,128,128);
+        center.x = static_cast<int>(data.samples.at<float>(i, 0));
+        center.y = static_cast<int>(data.samples.at<float>(i, 1));
+        color = (data.responses.at<float>(i) > 0) ? Scalar(128, 128, 0) : Scalar(0, 128, 128);
         circle(data.img, center, radius, color, 5);
     }
-    line(data.img, points[0], points[1],cv::Scalar(1,255,1));
+    line(data.img, points[0], points[1], Scalar(1, 255, 1));
 
-    imshow("Train svmsgd", data.img);
+    // imshow("Train svmsgd", data.img); // 注释掉
 }
 
 void addPointRetrainAndRedraw(Data &data, int x, int y, int response)
 {
     Mat currentSample(1, 2, CV_32FC1);
 
-    currentSample.at<float>(0,0) = (float)x;
-    currentSample.at<float>(0,1) = (float)y;
+    currentSample.at<float>(0, 0) = (float)x;
+    currentSample.at<float>(0, 1) = (float)y;
     data.samples.push_back(currentSample);
     data.responses.push_back(static_cast<float>(response));
 
@@ -182,12 +180,11 @@ void addPointRetrainAndRedraw(Data &data, int x, int y, int response)
     }
 }
 
-
-static void onMouse( int event, int x, int y, int, void* pData)
+static void onMouse(int event, int x, int y, int, void* pData)
 {
     Data &data = *(Data*)pData;
 
-    switch( event )
+    switch (event)
     {
     case EVENT_LBUTTONUP:
         addPointRetrainAndRedraw(data, x, y, 1);
@@ -197,15 +194,33 @@ static void onMouse( int event, int x, int y, int, void* pData)
         addPointRetrainAndRedraw(data, x, y, -1);
         break;
     }
-
 }
 
-int main()
+int main(int argc, char** argv)
 {
-    Data data;
+    if (argc != 3)
+    {
+        cout << "Usage: " << argv[0] << " <image_width> <image_height>" << endl;
+        return -1;
+    }
 
-    setMouseCallback( "Train svmsgd", onMouse, &data );
-    waitKey();
+    int width = stoi(argv[1]);
+    int height = stoi(argv[2]);
+
+    Data data(width, height);
+
+    // Create directory if it doesn't exist
+    system("mkdir -p train_SVMSGD");
+
+    setMouseCallback("Train svmsgd", onMouse, &data);
+
+    // waitKey();  // 注释掉
+
+    // Save the final image
+    string save_path = "train_SVMSGD/final_image.jpg";
+    imwrite(save_path, data.img);
+    cout << "Final image saved to " << save_path << endl;
 
     return 0;
 }
+

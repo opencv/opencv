@@ -8,23 +8,33 @@
 #include <opencv2/core.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <iostream>
 #include <stdio.h>
+#include <cstdlib> // 包含 system 函数
 
 using namespace cv;
 using namespace std;
 
-int main(int, char**)
+int main(int argc, char** argv)
 {
+    if (argc < 2) {
+        cout << "Usage: " << argv[0] << " <video_file>" << endl;
+        return 1;
+    }
+
+    string video_file = argv[1];
+
     Mat src;
-    // use default camera as video source
-    VideoCapture cap(0);
+    // 使用视频文件作为视频源
+    VideoCapture cap(video_file);
     // check if we succeeded
     if (!cap.isOpened()) {
-        cerr << "ERROR! Unable to open camera\n";
+        cerr << "ERROR! Unable to open video file\n";
         return -1;
     }
-    // get one frame from camera to know frame size and type
+
+    // get one frame from video to know frame size and type
     cap >> src;
     // check if we succeeded
     if (src.empty()) {
@@ -37,7 +47,11 @@ int main(int, char**)
     VideoWriter writer;
     int codec = VideoWriter::fourcc('M', 'J', 'P', 'G');  // select desired codec (must be available at runtime)
     double fps = 25.0;                          // framerate of the created video stream
-    string filename = "./live.avi";             // name of the output video file
+    string filename = "./videowriter_basic/output.avi";   // name of the output video file
+
+    // 创建子目录
+    system("mkdir -p videowriter_basic");
+
     writer.open(filename, codec, fps, src.size(), isColor);
     // check if we succeeded
     if (!writer.isOpened()) {
@@ -46,9 +60,9 @@ int main(int, char**)
     }
 
     //--- GRAB AND WRITE LOOP
-    cout << "Writing videofile: " << filename << endl
-         << "Press any key to terminate" << endl;
-    for (;;)
+    cout << "Writing videofile: " << filename << endl;
+    int frame_count = 0;
+    while (frame_count < 100) // 限制处理帧数为100帧
     {
         // check if we succeeded
         if (!cap.read(src)) {
@@ -57,11 +71,11 @@ int main(int, char**)
         }
         // encode the frame into the videofile stream
         writer.write(src);
-        // show live and wait for a key with timeout long enough to show images
-        imshow("Live", src);
-        if (waitKey(5) >= 0)
-            break;
+        frame_count++;
     }
+
+    cout << "Saved video file: " << filename << endl;
     // the videofile will be closed and released automatically in VideoWriter destructor
     return 0;
 }
+

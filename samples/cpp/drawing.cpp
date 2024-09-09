@@ -1,6 +1,6 @@
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/imgcodecs.hpp" // 添加此行以包含 imwrite 的声明
 #include <stdio.h>
 
 using namespace cv;
@@ -20,17 +20,13 @@ static Scalar randomColor(RNG& rng)
 int main(int /* argc */, char** argv)
 {
     help(argv);
-    char wndname[] = "Drawing Demo";
     const int NUMBER = 100;
-    const int DELAY = 5;
     int lineType = LINE_AA; // change it to LINE_8 to see non-antialiased graphics
     int i, width = 1000, height = 700;
     int x1 = -width/2, x2 = width*3/2, y1 = -height/2, y2 = height*3/2;
     RNG rng(0xFFFFFFFF);
 
     Mat image = Mat::zeros(height, width, CV_8UC3);
-    imshow(wndname, image);
-    waitKey(DELAY);
 
     for (i = 0; i < NUMBER * 2; i++)
     {
@@ -43,13 +39,9 @@ int main(int /* argc */, char** argv)
         int arrowed = rng.uniform(0, 6);
 
         if( arrowed < 3 )
-            line( image, pt1, pt2, randomColor(rng), rng.uniform(1,10), lineType );
+            line(image, pt1, pt2, randomColor(rng), rng.uniform(1,10), lineType);
         else
             arrowedLine(image, pt1, pt2, randomColor(rng), rng.uniform(1, 10), lineType);
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
     }
 
     for (i = 0; i < NUMBER * 2; i++)
@@ -66,11 +58,7 @@ int main(int /* argc */, char** argv)
         if (marker > 5)
             rectangle(image, pt1, pt2, randomColor(rng), MAX(thickness, -1), lineType);
         else
-            drawMarker(image, pt1, randomColor(rng), marker, marker_size );
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+            drawMarker(image, pt1, randomColor(rng), marker, marker_size);
     }
 
     for (i = 0; i < NUMBER; i++)
@@ -83,12 +71,7 @@ int main(int /* argc */, char** argv)
         axes.height = rng.uniform(0, 200);
         double angle = rng.uniform(0, 180);
 
-        ellipse( image, center, axes, angle, angle - 100, angle + 200,
-                 randomColor(rng), rng.uniform(-1,9), lineType );
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+        ellipse(image, center, axes, angle, angle - 100, angle + 200, randomColor(rng), rng.uniform(-1,9), lineType);
     }
 
     for (i = 0; i< NUMBER; i++)
@@ -110,10 +93,6 @@ int main(int /* argc */, char** argv)
         int npt[] = {3, 3};
 
         polylines(image, ppt, npt, 2, true, randomColor(rng), rng.uniform(1,10), lineType);
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
     }
 
     for (i = 0; i< NUMBER; i++)
@@ -135,10 +114,6 @@ int main(int /* argc */, char** argv)
         int npt[] = {3, 3};
 
         fillPoly(image, ppt, npt, 2, randomColor(rng), lineType);
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
     }
 
     for (i = 0; i < NUMBER; i++)
@@ -147,12 +122,7 @@ int main(int /* argc */, char** argv)
         center.x = rng.uniform(x1, x2);
         center.y = rng.uniform(y1, y2);
 
-        circle(image, center, rng.uniform(0, 300), randomColor(rng),
-               rng.uniform(-1, 9), lineType);
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+        circle(image, center, rng.uniform(0, 300), randomColor(rng), rng.uniform(-1, 9), lineType);
     }
 
     for (i = 1; i < NUMBER; i++)
@@ -161,29 +131,24 @@ int main(int /* argc */, char** argv)
         org.x = rng.uniform(x1, x2);
         org.y = rng.uniform(y1, y2);
 
-        putText(image, "Testing text rendering", org, rng.uniform(0,8),
-                rng.uniform(0,100)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), lineType);
-
-        imshow(wndname, image);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+        putText(image, "Testing text rendering", org, rng.uniform(0,8), rng.uniform(0,100)*0.05+0.1, randomColor(rng), rng.uniform(1, 10), lineType);
     }
 
     Size textsize = getTextSize("OpenCV forever!", FONT_HERSHEY_COMPLEX, 3, 5, 0);
     Point org((width - textsize.width)/2, (height - textsize.height)/2);
 
     Mat image2;
-    for( i = 0; i < 255; i += 2 )
+    for(i = 0; i < 255; i += 2)
     {
         image2 = image - Scalar::all(i);
-        putText(image2, "OpenCV forever!", org, FONT_HERSHEY_COMPLEX, 3,
-                Scalar(i, i, 255), 5, lineType);
-
-        imshow(wndname, image2);
-        if(waitKey(DELAY) >= 0)
-            return 0;
+        putText(image2, "OpenCV forever!", org, FONT_HERSHEY_COMPLEX, 3, Scalar(i, i, 255), 5, lineType);
     }
 
-    waitKey();
+    // 保存处理后的图像
+    std::string result_filename = "drawing_demo.png";
+    imwrite(result_filename, image2); // 使用 imwrite 保存图像
+    printf("Result image saved as: %s\n", result_filename.c_str());
+
     return 0;
 }
+

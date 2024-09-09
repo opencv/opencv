@@ -1,9 +1,10 @@
-
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/stitching.hpp"
 
 #include <iostream>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 using namespace std;
 using namespace cv;
@@ -33,8 +34,13 @@ int main(int argc, char* argv[])
     }
     //![stitching]
 
-    imwrite(result_name, pano);
-    cout << "stitching completed successfully\n" << result_name << " saved!";
+    // 创建子目录并保存结果图像
+    string outputDir = "stitching_result";
+    mkdir(outputDir.c_str(), 0777);
+    string outputFilePath = outputDir + "/" + result_name;
+    
+    imwrite(outputFilePath, pano);
+    cout << "Stitching completed successfully. Result saved to " << outputFilePath << endl;
     return EXIT_SUCCESS;
 }
 
@@ -117,3 +123,4 @@ int parseCmdArgs(int argc, char** argv)
     }
     return EXIT_SUCCESS;
 }
+

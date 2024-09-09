@@ -26,8 +26,7 @@ static void help()
 "    the yellow segment should be shorter than the red one and\n"
 "    the green segment should be shorter than the yellow one)."
             "\n"
-"   Pressing any key (except ESC) will reset the tracking.\n"
-"   Pressing ESC will stop the program.\n"
+"   The program will run for a set number of iterations and then exit.\n"
             );
 }
 
@@ -39,9 +38,11 @@ int main(int, char**)
     Mat state(2, 1, CV_32F); /* (phi, delta_phi) */
     Mat processNoise(2, 1, CV_32F);
     Mat measurement = Mat::zeros(1, 1, CV_32F);
-    char code = (char)-1;
 
-    for(;;)
+    const int max_iterations = 100; // 设置最大迭代次数
+    int iteration_count = 0;
+
+    while(iteration_count < max_iterations)
     {
         img = Scalar::all(0);
         state.at<float>(0) = 0.0f;
@@ -94,19 +95,19 @@ int main(int, char**)
             line( img, statePt, predictPt, Scalar(0,255,255), 1, LINE_AA, 0 );
             line( img, statePt, improvedPt, Scalar(0,255,0), 1, LINE_AA, 0 );
 
-
             randn( processNoise, Scalar(0), Scalar::all(sqrt(KF.processNoiseCov.at<float>(0, 0))));
             state = KF.transitionMatrix*state + processNoise;
 
-            imshow( "Kalman", img );
-            code = (char)waitKey(1000);
+            imwrite("kalman_result.png", img); // 保存图像
 
-            if( code > 0 )
+            iteration_count++;
+            if(iteration_count >= max_iterations)
                 break;
         }
-        if( code == 27 || code == 'q' || code == 'Q' )
+        if(iteration_count >= max_iterations)
             break;
     }
 
     return 0;
 }
+

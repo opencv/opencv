@@ -24,7 +24,7 @@ static void detectFaces(Mat&, vector<Rect_<int> >&, string);
 static void detectEyes(Mat&, vector<Rect_<int> >&, string);
 static void detectNose(Mat&, vector<Rect_<int> >&, string);
 static void detectMouth(Mat&, vector<Rect_<int> >&, string);
-static void detectFacialFeaures(Mat&, const vector<Rect_<int> >, string, string, string);
+static void detectFacialFeatures(Mat&, const vector<Rect_<int> >, string, string, string);
 
 string input_image_path;
 string face_cascade_path, eye_cascade_path, nose_cascade_path, mouth_cascade_path;
@@ -55,11 +55,13 @@ int main(int argc, char** argv)
     // Detect faces and facial features
     vector<Rect_<int> > faces;
     detectFaces(image, faces, face_cascade_path);
-    detectFacialFeaures(image, faces, eye_cascade_path, nose_cascade_path, mouth_cascade_path);
+    detectFacialFeatures(image, faces, eye_cascade_path, nose_cascade_path, mouth_cascade_path);
 
-    imshow("Result", image);
+    // imshow("Result", image); // 注释掉显示图像的代码
+    imwrite("result.png", image); // 保存处理后的图像
+    std::cout << "Result image saved as: result.png" << std::endl; // 输出保存的图像文件名称和路径
 
-    waitKey(0);
+    // waitKey(0); // 注释掉等待键盘输入的代码
     return 0;
 }
 
@@ -78,7 +80,6 @@ static void help(char** argv)
         "\t-eyes=<eyes_cascade> : Specify the haarcascade classifier for eye detection.\n"
         "\t-nose=<nose_cascade> : Specify the haarcascade classifier for nose detection.\n"
         "\t-mouth=<mouth-cascade> : Specify the haarcascade classifier for mouth detection.\n";
-
 
     cout << "EXAMPLE:\n"
         "(1) " << argv[0] << " image.jpg face.xml -eyes=eyes.xml -mouth=mouth.xml\n"
@@ -101,18 +102,18 @@ static void detectFaces(Mat& img, vector<Rect_<int> >& faces, string cascade_pat
     face_cascade.load(samples::findFile(cascade_path));
 
     if (!face_cascade.empty())
-        face_cascade.detectMultiScale(img, faces, 1.15, 3, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
+        face_cascade.detectMultiScale(img, faces, 1.15, 3, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
 
-static void detectFacialFeaures(Mat& img, const vector<Rect_<int> > faces, string eye_cascade,
+static void detectFacialFeatures(Mat& img, const vector<Rect_<int> > faces, string eye_cascade,
         string nose_cascade, string mouth_cascade)
 {
-    for(unsigned int i = 0; i < faces.size(); ++i)
+    for (unsigned int i = 0; i < faces.size(); ++i)
     {
         // Mark the bounding box enclosing the face
         Rect face = faces[i];
-        rectangle(img, Point(face.x, face.y), Point(face.x+face.width, face.y+face.height),
+        rectangle(img, Point(face.x, face.y), Point(face.x + face.width, face.y + face.height),
                 Scalar(255, 0, 0), 1, 4);
 
         // Eyes, nose and mouth will be detected inside the face (region of interest)
@@ -120,65 +121,64 @@ static void detectFacialFeaures(Mat& img, const vector<Rect_<int> > faces, strin
 
         // Check if all features (eyes, nose and mouth) are being detected
         bool is_full_detection = false;
-        if( (!eye_cascade.empty()) && (!nose_cascade.empty()) && (!mouth_cascade.empty()) )
+        if ((!eye_cascade.empty()) && (!nose_cascade.empty()) && (!mouth_cascade.empty()))
             is_full_detection = true;
 
         // Detect eyes if classifier provided by the user
-        if(!eye_cascade.empty())
+        if (!eye_cascade.empty())
         {
             vector<Rect_<int> > eyes;
             detectEyes(ROI, eyes, eye_cascade);
 
             // Mark points corresponding to the centre of the eyes
-            for(unsigned int j = 0; j < eyes.size(); ++j)
+            for (unsigned int j = 0; j < eyes.size(); ++j)
             {
                 Rect e = eyes[j];
-                circle(ROI, Point(e.x+e.width/2, e.y+e.height/2), 3, Scalar(0, 255, 0), -1, 8);
-                /* rectangle(ROI, Point(e.x, e.y), Point(e.x+e.width, e.y+e.height),
+                circle(ROI, Point(e.x + e.width / 2, e.y + e.height / 2), 3, Scalar(0, 255, 0), -1, 8);
+                /* rectangle(ROI, Point(e.x, e.y), Point(e.x + e.width, e.y + e.height),
                     Scalar(0, 255, 0), 1, 4); */
             }
         }
 
         // Detect nose if classifier provided by the user
         double nose_center_height = 0.0;
-        if(!nose_cascade.empty())
+        if (!nose_cascade.empty())
         {
             vector<Rect_<int> > nose;
             detectNose(ROI, nose, nose_cascade);
 
             // Mark points corresponding to the centre (tip) of the nose
-            for(unsigned int j = 0; j < nose.size(); ++j)
+            for (unsigned int j = 0; j < nose.size(); ++j)
             {
                 Rect n = nose[j];
-                circle(ROI, Point(n.x+n.width/2, n.y+n.height/2), 3, Scalar(0, 255, 0), -1, 8);
-                nose_center_height = (n.y + n.height/2);
+                circle(ROI, Point(n.x + n.width / 2, n.y + n.height / 2), 3, Scalar(0, 255, 0), -1, 8);
+                nose_center_height = (n.y + n.height / 2);
             }
         }
 
         // Detect mouth if classifier provided by the user
         double mouth_center_height = 0.0;
-        if(!mouth_cascade.empty())
+        if (!mouth_cascade.empty())
         {
             vector<Rect_<int> > mouth;
             detectMouth(ROI, mouth, mouth_cascade);
 
-            for(unsigned int j = 0; j < mouth.size(); ++j)
+            for (unsigned int j = 0; j < mouth.size(); ++j)
             {
                 Rect m = mouth[j];
-                mouth_center_height = (m.y + m.height/2);
+                mouth_center_height = (m.y + m.height / 2);
 
                 // The mouth should lie below the nose
-                if( (is_full_detection) && (mouth_center_height > nose_center_height) )
+                if ((is_full_detection) && (mouth_center_height > nose_center_height))
                 {
-                    rectangle(ROI, Point(m.x, m.y), Point(m.x+m.width, m.y+m.height), Scalar(0, 255, 0), 1, 4);
+                    rectangle(ROI, Point(m.x, m.y), Point(m.x + m.width, m.y + m.height), Scalar(0, 255, 0), 1, 4);
                 }
-                else if( (is_full_detection) && (mouth_center_height <= nose_center_height) )
+                else if ((is_full_detection) && (mouth_center_height <= nose_center_height))
                     continue;
                 else
-                    rectangle(ROI, Point(m.x, m.y), Point(m.x+m.width, m.y+m.height), Scalar(0, 255, 0), 1, 4);
+                    rectangle(ROI, Point(m.x, m.y), Point(m.x + m.width, m.y + m.height), Scalar(0, 255, 0), 1, 4);
             }
         }
-
     }
 
     return;
@@ -190,7 +190,7 @@ static void detectEyes(Mat& img, vector<Rect_<int> >& eyes, string cascade_path)
     eyes_cascade.load(samples::findFile(cascade_path, !cascade_path.empty()));
 
     if (!eyes_cascade.empty())
-        eyes_cascade.detectMultiScale(img, eyes, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
+        eyes_cascade.detectMultiScale(img, eyes, 1.20, 5, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
 
@@ -200,7 +200,7 @@ static void detectNose(Mat& img, vector<Rect_<int> >& nose, string cascade_path)
     nose_cascade.load(samples::findFile(cascade_path, !cascade_path.empty()));
 
     if (!nose_cascade.empty())
-        nose_cascade.detectMultiScale(img, nose, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
+        nose_cascade.detectMultiScale(img, nose, 1.20, 5, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
 
@@ -210,6 +210,7 @@ static void detectMouth(Mat& img, vector<Rect_<int> >& mouth, string cascade_pat
     mouth_cascade.load(samples::findFile(cascade_path, !cascade_path.empty()));
 
     if (!mouth_cascade.empty())
-        mouth_cascade.detectMultiScale(img, mouth, 1.20, 5, 0|CASCADE_SCALE_IMAGE, Size(30, 30));
+        mouth_cascade.detectMultiScale(img, mouth, 1.20, 5, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
     return;
 }
+

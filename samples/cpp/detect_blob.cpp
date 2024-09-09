@@ -9,16 +9,14 @@
 using namespace std;
 using namespace cv;
 
-
 static void help(char** argv)
 {
     cout << "\n This program demonstrates how to use BLOB to detect and filter region \n"
          << "Usage: \n"
          << argv[0]
-         << " <image1(detect_blob.png as default)>\n"
+         << " <image1(lena.jpg as default)>\n"
          << "Press a key when image window is active to change descriptor";
 }
-
 
 static String Legende(SimpleBlobDetector::Params &pAct)
 {
@@ -67,12 +65,10 @@ static String Legende(SimpleBlobDetector::Params &pAct)
     return s;
 }
 
-
-
 int main(int argc, char *argv[])
 {
     String fileName;
-    cv::CommandLineParser parser(argc, argv, "{@input |detect_blob.png| }{h help | | }");
+    cv::CommandLineParser parser(argc, argv, "{@input |lena.jpg| }{h help | | }");
     if (parser.has("h"))
     {
         help(argv);
@@ -104,9 +100,10 @@ int main(int argc, char *argv[])
     pDefaultBLOB.filterByInertia = false;
     pDefaultBLOB.minInertiaRatio = 0.1f;
     pDefaultBLOB.maxInertiaRatio = (float)1e37;
-    pDefaultBLOB.filterByConvexity = false;
-    pDefaultBLOB.minConvexity = 0.95f;
-    pDefaultBLOB.maxConvexity = (float)1e37;
+    pDefaultBLOB.filterByConvexity = true;
+    pDefaultBLOB.minConvexity = 0.9f;  // 确保 minConvexity > 0
+    pDefaultBLOB.maxConvexity = 1.0f;  // 确保 maxConvexity >= minConvexity
+
     // Descriptor array for BLOB
     vector<String> typeDesc;
     // Param array for BLOB
@@ -122,7 +119,6 @@ int main(int argc, char *argv[])
         palette.push_back(Vec3b(c1, c2, c3));
     }
     help(argv);
-
 
     // These descriptors are going to be detecting and computing BLOBS with 6 different params
     // Param for first BLOB detector we want all
@@ -145,13 +141,13 @@ int main(int argc, char *argv[])
     typeDesc.push_back("BLOB");
     pBLOB.push_back(pDefaultBLOB);
     pBLOB.back().filterByInertia = true;
-    pBLOB.back().minInertiaRatio = 0;
+    pBLOB.back().minInertiaRatio = 0.1f;
     pBLOB.back().maxInertiaRatio = (float)0.2;
     // Param for fifth BLOB detector we want ratio inertia
     typeDesc.push_back("BLOB");
     pBLOB.push_back(pDefaultBLOB);
     pBLOB.back().filterByConvexity = true;
-    pBLOB.back().minConvexity = 0.;
+    pBLOB.back().minConvexity = 0.5;
     pBLOB.back().maxConvexity = (float)0.9;
     // Param for six BLOB detector we want blob with gravity center color equal to 0
     typeDesc.push_back("BLOB");
@@ -190,10 +186,17 @@ int main(int argc, char *argv[])
                 for (vector<KeyPoint>::iterator k = keyImg.begin(); k != keyImg.end(); ++k, ++i)
                     circle(result, k->pt, (int)k->size, palette[i % 65536]);
             }
-            namedWindow(*itDesc + label, WINDOW_AUTOSIZE);
-            imshow(*itDesc + label, result);
-            imshow("Original", img);
-            waitKey();
+
+            // 注释掉图像显示的部分
+            // namedWindow(*itDesc + label, WINDOW_AUTOSIZE);
+            // imshow(*itDesc + label, result);
+            // imshow("Original", img);
+            // waitKey();
+
+            // 保存处理后的图像
+            string result_filename = *itDesc + label + "_result.png";
+            imwrite(result_filename, result);
+            cout << "Result image saved as: " << result_filename << endl;
         }
         catch (const Exception& e)
         {
@@ -203,3 +206,4 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
+

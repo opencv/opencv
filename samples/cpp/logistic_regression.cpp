@@ -1,8 +1,4 @@
-// Logistic Regression sample
-// AUTHOR: Rahul Kavi rahulkavi[at]live[at]com
-
 #include <iostream>
-
 #include <opencv2/core.hpp>
 #include <opencv2/ml.hpp>
 #include <opencv2/highgui.hpp>
@@ -11,15 +7,15 @@ using namespace std;
 using namespace cv;
 using namespace cv::ml;
 
-static void showImage(const Mat &data, int columns, const String &name)
-{
-    Mat bigImage;
-    for(int i = 0; i < data.rows; ++i)
-    {
-        bigImage.push_back(data.row(i).reshape(0, columns));
-    }
-    imshow(name, bigImage.t());
-}
+// static void showImage(const Mat &data, int columns, const String &name)
+// {
+//     Mat bigImage;
+//     for(int i = 0; i < data.rows; ++i)
+//     {
+//         bigImage.push_back(data.row(i).reshape(0, columns));
+//     }
+//     imshow(name, bigImage.t());
+// }
 
 static float calculateAccuracyPercent(const Mat &original, const Mat &predicted)
 {
@@ -74,8 +70,8 @@ int main()
     cout << "training/testing samples count: " << data_train.rows << "/" << data_test.rows << endl;
 
     // display sample image
-    showImage(data_train, 28, "train data");
-    showImage(data_test, 28, "test data");
+    // showImage(data_train, 28, "train data");
+    // showImage(data_test, 28, "test data");
 
     // simple case with batch gradient
     cout << "training...";
@@ -122,6 +118,7 @@ int main()
     cout << responses2.t() << endl;
     cout << "accuracy: " << calculateAccuracyPercent(labels_test, responses2) << "%" << endl;
 
-    waitKey(0);
+    // waitKey(0);
     return 0;
 }
+

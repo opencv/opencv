@@ -1,7 +1,7 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/highgui.hpp" // 无头环境不需要
 
 #include <iostream>
 
@@ -40,7 +40,7 @@ static void updateBrightnessContrast( int /*arg*/, void* )
 
     Mat dst, hist;
     image.convertTo(dst, CV_8U, a, b);
-    imshow("image", dst);
+    // imshow("image", dst); // 注释掉显示图像的代码
 
     calcHist(&dst, 1, 0, Mat(), hist, 1, &histSize, 0);
     Mat histImage = Mat::ones(200, 320, CV_8U)*255;
@@ -54,7 +54,14 @@ static void updateBrightnessContrast( int /*arg*/, void* )
         rectangle( histImage, Point(i*binW, histImage.rows),
                    Point((i+1)*binW, histImage.rows - cvRound(hist.at<float>(i))),
                    Scalar::all(0), -1, 8, 0 );
-    imshow("histogram", histImage);
+    // imshow("histogram", histImage); // 注释掉显示直方图的代码
+
+    // 保存处理后的图像
+    imwrite("result.png", dst);
+    imwrite("histogram.png", histImage);
+
+    cout << "Result image saved as: result.png" << endl;
+    cout << "Histogram image saved as: histogram.png" << endl;
 }
 
 const char* keys =
@@ -81,14 +88,15 @@ int main( int argc, const char** argv )
         return -1;
     }
 
-    namedWindow("image", 0);
-    namedWindow("histogram", 0);
-
-    createTrackbar("brightness", "image", &_brightness, 200, updateBrightnessContrast);
-    createTrackbar("contrast", "image", &_contrast, 200, updateBrightnessContrast);
+    // 无头环境不需要创建窗口和轨迹条
+    // namedWindow("image", 0);
+    // namedWindow("histogram", 0);
+    // createTrackbar("brightness", "image", &_brightness, 200, updateBrightnessContrast);
+    // createTrackbar("contrast", "image", &_contrast, 200, updateBrightnessContrast);
 
     updateBrightnessContrast(0, 0);
-    waitKey();
+    // waitKey(); // 注释掉等待按键的代码
 
     return 0;
 }
+

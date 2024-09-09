@@ -59,7 +59,6 @@ const std::string keys =
 
 static void help(const char** argv)
 {
-
     cout << "\nThis file demonstrates the use of the ECC image alignment algorithm. When one image"
         " is given, the template image is artificially formed by a random warp. When both images"
         " are given, the initialization of the warp by command line parsing is possible. "
@@ -74,19 +73,18 @@ static void help(const char** argv)
          << argv[0]
          << " yourInput.png yourTemplate.png "
         "yourInitialWarp.ecc -o=outWarp.ecc -m=homography -e=1e-6 -N=70 -v=1 -w=yourFinalImage.png \n" << endl;
-
 }
 
-static int readWarp(string iFilename, Mat& warp, int motionType){
-
+static int readWarp(string iFilename, Mat& warp, int motionType)
+{
     // it reads from file a specific number of raw values:
     // 9 values for homography, 6 otherwise
-    CV_Assert(warp.type()==CV_32FC1);
+    CV_Assert(warp.type() == CV_32FC1);
     int numOfElements;
-    if (motionType==MOTION_HOMOGRAPHY)
-        numOfElements=9;
+    if (motionType == MOTION_HOMOGRAPHY)
+        numOfElements = 9;
     else
-        numOfElements=6;
+        numOfElements = 6;
 
     int i;
     int ret_value;
@@ -94,7 +92,7 @@ static int readWarp(string iFilename, Mat& warp, int motionType){
     ifstream myfile(iFilename.c_str());
     if (myfile.is_open()){
         float* matPtr = warp.ptr<float>(0);
-        for(i=0; i<numOfElements; i++){
+        for (i = 0; i < numOfElements; i++){
             myfile >> matPtr[i];
         }
         ret_value = 1;
@@ -109,27 +107,26 @@ static int readWarp(string iFilename, Mat& warp, int motionType){
 static int saveWarp(string fileName, const Mat& warp, int motionType)
 {
     // it saves the raw matrix elements in a file
-    CV_Assert(warp.type()==CV_32FC1);
+    CV_Assert(warp.type() == CV_32FC1);
 
     const float* matPtr = warp.ptr<float>(0);
     int ret_value;
 
     ofstream outfile(fileName.c_str());
-    if( !outfile ) {
+    if (!outfile) {
         cerr << "error in saving "
             << "Couldn't open file '" << fileName.c_str() << "'!" << endl;
         ret_value = 0;
     }
-    else {//save the warp's elements
+    else { //save the warp's elements
         outfile << matPtr[0] << " " << matPtr[1] << " " << matPtr[2] << endl;
         outfile << matPtr[3] << " " << matPtr[4] << " " << matPtr[5] << endl;
-        if (motionType==MOTION_HOMOGRAPHY){
+        if (motionType == MOTION_HOMOGRAPHY){
             outfile << matPtr[6] << " " << matPtr[7] << " " << matPtr[8] << endl;
         }
         ret_value = 1;
     }
     return ret_value;
-
 }
 
 
@@ -137,14 +134,14 @@ static void draw_warped_roi(Mat& image, const int width, const int height, Mat& 
 {
     Point2f top_left, top_right, bottom_left, bottom_right;
 
-    Mat  H = Mat (3, 1, CV_32F);
-    Mat  U = Mat (3, 1, CV_32F);
+    Mat  H = Mat(3, 1, CV_32F);
+    Mat  U = Mat(3, 1, CV_32F);
 
-    Mat warp_mat = Mat::eye (3, 3, CV_32F);
+    Mat warp_mat = Mat::eye(3, 3, CV_32F);
 
     for (int y = 0; y < W.rows; y++)
         for (int x = 0; x < W.cols; x++)
-            warp_mat.at<float>(y,x) = W.at<float>(y,x);
+            warp_mat.at<float>(y, x) = W.at<float>(y, x);
 
     //warp the corners of rectangle
 
@@ -175,9 +172,8 @@ static void draw_warped_roi(Mat& image, const int width, const int height, Mat& 
     line(image, bottom_left, top_left, Scalar(255));
 }
 
-int main (const int argc, const char * argv[])
+int main(const int argc, const char* argv[])
 {
-
     CommandLineParser parser(argc, argv, keys);
     parser.about("ECC demo");
 
@@ -219,62 +215,60 @@ int main (const int argc, const char * argv[])
     Mat inputImage = imread(samples::findFile(imgFile), IMREAD_GRAYSCALE);
     if (inputImage.empty())
     {
-        cerr << "Unable to load the inputImage" <<  endl;
+        cerr << "Unable to load the inputImage" << endl;
         return -1;
     }
 
     Mat target_image;
     Mat template_image;
 
-    if (tempImgFile!="") {
+    if (tempImgFile != "") {
         inputImage.copyTo(target_image);
         template_image = imread(samples::findFile(tempImgFile), IMREAD_GRAYSCALE);
         if (template_image.empty()){
             cerr << "Unable to load the template image" << endl;
             return -1;
         }
-
     }
-    else{ //apply random warp to input image
+    else { //apply random warp to input image
         resize(inputImage, target_image, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
         Mat warpGround;
         RNG rng(getTickCount());
         double angle;
         switch (mode_temp) {
         case MOTION_TRANSLATION:
-            warpGround = (Mat_<float>(2,3) << 1, 0, (rng.uniform(10.f, 20.f)),
+            warpGround = (Mat_<float>(2, 3) << 1, 0, (rng.uniform(10.f, 20.f)),
                 0, 1, (rng.uniform(10.f, 20.f)));
             warpAffine(target_image, template_image, warpGround,
-                Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
+                Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_EUCLIDEAN:
-            angle = CV_PI/30 + CV_PI*rng.uniform((double)-2.f, (double)2.f)/180;
+            angle = CV_PI / 30 + CV_PI * rng.uniform((double)-2.f, (double)2.f) / 180;
 
-            warpGround = (Mat_<float>(2,3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)),
+            warpGround = (Mat_<float>(2, 3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)),
                 sin(angle), cos(angle), (rng.uniform(10.f, 20.f)));
             warpAffine(target_image, template_image, warpGround,
-                Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
+                Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_AFFINE:
 
-            warpGround = (Mat_<float>(2,3) << (1-rng.uniform(-0.05f, 0.05f)),
+            warpGround = (Mat_<float>(2, 3) << (1 - rng.uniform(-0.05f, 0.05f)),
                 (rng.uniform(-0.03f, 0.03f)), (rng.uniform(10.f, 20.f)),
-                (rng.uniform(-0.03f, 0.03f)), (1-rng.uniform(-0.05f, 0.05f)),
+                (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
                 (rng.uniform(10.f, 20.f)));
             warpAffine(target_image, template_image, warpGround,
-                Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
+                Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         case MOTION_HOMOGRAPHY:
-            warpGround = (Mat_<float>(3,3) << (1-rng.uniform(-0.05f, 0.05f)),
+            warpGround = (Mat_<float>(3, 3) << (1 - rng.uniform(-0.05f, 0.05f)),
                 (rng.uniform(-0.03f, 0.03f)), (rng.uniform(10.f, 20.f)),
-                (rng.uniform(-0.03f, 0.03f)), (1-rng.uniform(-0.05f, 0.05f)),(rng.uniform(10.f, 20.f)),
+                (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(10.f, 20.f)),
                 (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f);
             warpPerspective(target_image, template_image, warpGround,
-                Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
+                Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
             break;
         }
     }
-
 
     const int warp_mode = mode_temp;
 
@@ -285,7 +279,7 @@ int main (const int argc, const char * argv[])
     else
         warp_matrix = Mat::eye(2, 3, CV_32F);
 
-    if (inWarpFile!=""){
+    if (inWarpFile != ""){
         int readflag = readWarp(inWarpFile, warp_matrix, warp_mode);
         if ((!readflag) || warp_matrix.empty())
         {
@@ -294,11 +288,9 @@ int main (const int argc, const char * argv[])
         }
     }
     else {
-
         printf("\n ->Performance Warning: Identity warp ideally assumes images of "
             "similar size. If the deformation is strong, the identity warp may not "
             "be a good initialization. \n");
-
     }
 
     if (number_of_iterations > 200)
@@ -308,10 +300,10 @@ int main (const int argc, const char * argv[])
         warp_matrix.rows = 2;
 
     // start timing
-    const double tic_init = (double) getTickCount ();
-    double cc = findTransformECC (template_image, target_image, warp_matrix, warp_mode,
-        TermCriteria (TermCriteria::COUNT+TermCriteria::EPS,
-        number_of_iterations, termination_eps));
+    const double tic_init = (double)getTickCount();
+    double cc = findTransformECC(template_image, target_image, warp_matrix, warp_mode,
+        TermCriteria(TermCriteria::COUNT + TermCriteria::EPS,
+            number_of_iterations, termination_eps));
 
     if (cc == -1)
     {
@@ -320,13 +312,12 @@ int main (const int argc, const char * argv[])
     }
 
     // end timing
-    const double toc_final  = (double) getTickCount ();
-    const double total_time = (toc_final-tic_init)/(getTickFrequency());
+    const double toc_final = (double)getTickCount();
+    const double total_time = (toc_final - tic_init) / (getTickFrequency());
     if (verbose){
         cout << "Alignment time (" << warpType << " transformation): "
             << total_time << " sec" << endl << flush;
         //  cout << "Final correlation: " << cc << endl << flush;
-
     }
 
     // save the final warp matrix
@@ -339,36 +330,36 @@ int main (const int argc, const char * argv[])
     // save the final warped image
     Mat warped_image = Mat(template_image.rows, template_image.cols, CV_32FC1);
     if (warp_mode != MOTION_HOMOGRAPHY)
-        warpAffine      (target_image, warped_image, warp_matrix, warped_image.size(),
-        INTER_LINEAR + WARP_INVERSE_MAP);
+        warpAffine(target_image, warped_image, warp_matrix, warped_image.size(),
+            INTER_LINEAR + WARP_INVERSE_MAP);
     else
-        warpPerspective (target_image, warped_image, warp_matrix, warped_image.size(),
-        INTER_LINEAR + WARP_INVERSE_MAP);
+        warpPerspective(target_image, warped_image, warp_matrix, warped_image.size(),
+            INTER_LINEAR + WARP_INVERSE_MAP);
 
-    //save the warped image
+    // save the warped image
     imwrite(warpedImFile, warped_image);
 
     // display resulting images
     if (verbose)
     {
-
         cout << "The warped image has been saved in the file: " << warpedImFile << endl << flush;
 
-        namedWindow ("image",    WINDOW_AUTOSIZE);
-        namedWindow ("template", WINDOW_AUTOSIZE);
-        namedWindow ("warped image",   WINDOW_AUTOSIZE);
-        namedWindow ("error (black: no error)", WINDOW_AUTOSIZE);
+        // 注释掉图形显示相关的代码
+        // namedWindow("image", WINDOW_AUTOSIZE);
+        // namedWindow("template", WINDOW_AUTOSIZE);
+        // namedWindow("warped image", WINDOW_AUTOSIZE);
+        // namedWindow("error (black: no error)", WINDOW_AUTOSIZE);
 
-        moveWindow  ("image", 20, 300);
-        moveWindow  ("template", 300, 300);
-        moveWindow  ("warped image",   600, 300);
-        moveWindow  ("error (black: no error)", 900, 300);
+        // moveWindow("image", 20, 300);
+        // moveWindow("template", 300, 300);
+        // moveWindow("warped image", 600, 300);
+        // moveWindow("error (black: no error)", 900, 300);
 
         // draw boundaries of corresponding regions
-        Mat identity_matrix = Mat::eye(3,3,CV_32F);
+        Mat identity_matrix = Mat::eye(3, 3, CV_32F);
 
-        draw_warped_roi (target_image,   template_image.cols-2, template_image.rows-2, warp_matrix);
-        draw_warped_roi (template_image, template_image.cols-2, template_image.rows-2, identity_matrix);
+        draw_warped_roi(target_image, template_image.cols - 2, template_image.rows - 2, warp_matrix);
+        draw_warped_roi(template_image, template_image.cols - 2, template_image.rows - 2, identity_matrix);
 
         Mat errorImage;
         subtract(template_image, warped_image, errorImage);
@@ -378,17 +369,18 @@ int main (const int argc, const char * argv[])
         // show images
         cout << "Press any key to exit the demo (you might need to click on the images before)." << endl << flush;
 
-        imshow ("image",    target_image);
-        waitKey (200);
-        imshow ("template", template_image);
-        waitKey (200);
-        imshow ("warped image",   warped_image);
-        waitKey(200);
-        imshow ("error (black: no error)",  abs(errorImage)*255/max_of_error);
-        waitKey(0);
-
+        // 注释掉图形显示相关的代码
+        // imshow("image", target_image);
+        // waitKey(200);
+        // imshow("template", template_image);
+        // waitKey(200);
+        // imshow("warped image", warped_image);
+        // waitKey(200);
+        // imshow("error (black: no error)", abs(errorImage) * 255 / max_of_error);
+        // waitKey(0);
     }
 
     // done
     return 0;
 }
+

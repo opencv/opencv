@@ -2,7 +2,7 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
+// #include "opencv2/highgui.hpp" // 无头环境不需要
 
 #include <stdio.h>
 
@@ -11,9 +11,9 @@ using namespace std;
 
 static void help(const char ** argv)
 {
-    printf("\nThis program demonstrated the use of the discrete Fourier transform (dft)\n"
-           "The dft of an image is taken and it's power spectrum is displayed.\n"
-           "Usage:\n %s [image_name -- default lena.jpg]\n",argv[0]);
+    printf("\nThis program demonstrates the use of the discrete Fourier transform (dft)\n"
+           "The dft of an image is taken and its power spectrum is displayed.\n"
+           "Usage:\n %s [image_name -- default lena.jpg]\n", argv[0]);
 }
 
 const char* keys =
@@ -32,14 +32,14 @@ int main(int argc, const char ** argv)
     }
     string filename = parser.get<string>(0);
     Mat img = imread(samples::findFile(filename), IMREAD_GRAYSCALE);
-    if( img.empty() )
+    if (img.empty())
     {
         help(argv);
         printf("Cannot read image file: %s\n", filename.c_str());
         return -1;
     }
-    int M = getOptimalDFTSize( img.rows );
-    int N = getOptimalDFTSize( img.cols );
+    int M = getOptimalDFTSize(img.rows);
+    int N = getOptimalDFTSize(img.cols);
     Mat padded;
     copyMakeBorder(img, padded, 0, M - img.rows, 0, N - img.cols, BORDER_CONSTANT, Scalar::all(0));
 
@@ -59,8 +59,8 @@ int main(int argc, const char ** argv)
     // crop the spectrum, if it has an odd number of rows or columns
     mag = mag(Rect(0, 0, mag.cols & -2, mag.rows & -2));
 
-    int cx = mag.cols/2;
-    int cy = mag.rows/2;
+    int cx = mag.cols / 2;
+    int cy = mag.rows / 2;
 
     // rearrange the quadrants of Fourier image
     // so that the origin is at the image center
@@ -80,7 +80,12 @@ int main(int argc, const char ** argv)
 
     normalize(mag, mag, 0, 1, NORM_MINMAX);
 
-    imshow("spectrum magnitude", mag);
-    waitKey();
+    // imshow("spectrum magnitude", mag); // 注释掉图像显示部分
+    string outputFileName = "spectrum_magnitude.png";
+    imwrite(outputFileName, mag); // 保存处理后的图像
+    printf("Result image saved as: %s\n", outputFileName.c_str());
+
+    // waitKey(); // 注释掉等待按键部分
     return 0;
 }
+

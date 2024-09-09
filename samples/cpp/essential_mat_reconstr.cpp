@@ -11,6 +11,8 @@
 #include <fstream>
 
 using namespace cv;
+
+// Helper function to calculate error to epipolar lines
 static double getError2EpipLines (const Mat &F, const Mat &pts1, const Mat &pts2, const Mat &mask) {
     Mat points1, points2;
     vconcat(pts1, Mat::ones(1, pts1.cols, pts1.type()), points1);
@@ -28,11 +30,7 @@ static double getError2EpipLines (const Mat &F, const Mat &pts1, const Mat &pts2
 }
 static int sgn(double val) { return (0 < val) - (val < 0); }
 
-/*
- * @points3d - vector of Point3 or Mat of size Nx3
- * @planes - vector of found planes
- * @labels - vector of size point3d. Every point which has non-zero label is classified to this plane.
- */
+// Function to get planes from 3D points
 static void getPlanes (InputArray points3d_, std::vector<int> &labels, std::vector<Vec4d> &planes, int desired_num_planes, double thr_, double conf_, int max_iters_) {
     Mat points3d = points3d_.getMat();
     points3d.convertTo(points3d, CV_64F); // convert points to have double precision
@@ -292,7 +290,7 @@ int main(int args, char** argv) {
                 continue;
 
             Vec4d obj_pt;
-            // find object point using triangulation
+            // find object point using triangulatePoints
             triangulatePoints(P1, P2, points1.col(i), points2.col(i), obj_pt);
             obj_pt /= obj_pt(3); // normalize 4d point
             if (obj_pt(2) > 0) { // check if projected point has positive depth
@@ -336,7 +334,11 @@ int main(int args, char** argv) {
     // resize with the same aspect ratio
     resize(image1, image1, Size((int)sqrt ((double) image1.cols * new_img_size / image1.rows),
                                 (int)sqrt ((double) image1.rows * new_img_size / image1.cols)));
-    imshow("image 1-2", image1);
-    imwrite("planes.png", image1);
-    waitKey(0);
+    // 显示和保存图像
+    // imshow("image 1-2", image1); // 注释掉显示图像的代码
+    imwrite("planes.png", image1); // 保存处理后的图像
+    std::cout << "Result image saved as: planes.png" << std::endl; // 输出保存的图像文件名称和路径
+    // waitKey(0); // 注释掉等待键盘输入的代码
+    return 0;
 }
+

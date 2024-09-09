@@ -1,8 +1,8 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/features2d.hpp>
-#include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
+#include <opencv2/highgui.hpp>
 #include <iostream>
 #include <iomanip>
 
@@ -152,7 +152,7 @@ int main(int argc, char** argv)
     vector<int> indices(inliers);
     cv::sortIdx(distances, indices, SORT_EVERY_ROW+SORT_ASCENDING);
 
-    // explore_match
+    // explore match
     int h1 = img1.size().height;
     int w1 = img1.size().width;
     int h2 = img2.size().height;
@@ -184,16 +184,16 @@ int main(int argc, char** argv)
     }
     if (inliers > maxlines)
         cout << "only " << maxlines << " inliers are visualized" << endl;
-    imshow("affine find_obj", vis);
 
-    // Mat vis2 = Mat::zeros(max(h1, h2), w1+w2, CV_8U);
-    // Mat warp1;
-    // warpPerspective(img1, warp1, H, Size(w1, h1));
-    // warp1.copyTo(Mat(vis2, Rect(0, 0, w1, h1)));
-    // img2.copyTo(Mat(vis2, Rect(w1, 0, w2, h2)));
-    // imshow("warped", vis2);
+    // 注释掉图形显示的代码
+    // imshow("affine find_obj", vis);
+    // waitKey();
 
-    waitKey();
+    // 将结果保存到文件中
+    imwrite("affine_find_obj_result.jpg", vis);
+    cout << "Result saved as affine_find_obj_result.jpg" << endl;
+
     cout << "done" << endl;
     return 0;
 }
+

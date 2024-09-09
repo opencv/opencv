@@ -1,83 +1,91 @@
-/**
- * attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
-*/
-
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <iostream>
+#include <cstdlib> // 包含 system 函数
 
 using namespace cv;
-int main()
+using namespace std;
+
+static void help(char** argv)
 {
-    VideoCapture obsensorCapture(0, CAP_OBSENSOR);
-    if(!obsensorCapture.isOpened()){
-        std::cerr << "Failed to open obsensor capture! Index out of range or no response from device";
-        return -1;
+    cout << "\nThis sample shows you how to use OpenCV VideoCapture with a video file instead of an obsensor.\n"
+         << "Usage: " << argv[0] << " <video_file>\n"
+         << "Video file should be an official OpenCV sample video file."
+         << endl;
+}
+
+int main(int argc, char** argv)
+{
+    help(argv);
+    cv::CommandLineParser parser(argc, argv, "{@video| ../data/Megamind.avi |}");
+    string video_file = parser.get<string>("@video");
+
+    if(video_file.empty())
+    {
+        cerr << "No video file provided!" << endl;
+        return 1;
     }
 
-    double fx = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_FX);
-    double fy = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_FY);
-    double cx = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_CX);
-    double cy = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_CY);
-    std::cout << "obsensor camera intrinsic params: fx=" << fx << ", fy=" << fy << ", cx=" << cx << ", cy=" << cy << std::endl;
+    VideoCapture cap(video_file);
+    if (!cap.isOpened())
+    {
+        cerr << "ERROR! Can't open video file" << endl;
+        return -1;
+    }
 
     Mat image;
     Mat depthMap;
     Mat adjDepthMap;
 
+    // 创建子目录
+    system("mkdir -p videocapture_obsensor");
+
     // Minimum depth value
     const double minVal = 300;
     // Maximum depth value
     const double maxVal = 5000;
+
+    int frame_count = 0;
+
     while (true)
     {
-        // Grab depth map like this:
-        // obsensorCapture >> depthMap;
-
-        // Another way to grab depth map (and bgr image).
-        if (obsensorCapture.grab())
+        if (cap.grab())
         {
-            if (obsensorCapture.retrieve(image, CAP_OBSENSOR_BGR_IMAGE))
-            {
-                imshow("RGB", image);
-            }
+            cap.retrieve(image);
+            // 模拟深度图
+            depthMap = Mat(image.rows, image.cols, CV_16U);
+            randu(depthMap, Scalar::all(minVal), Scalar::all(maxVal));
 
-            if (obsensorCapture.retrieve(depthMap, CAP_OBSENSOR_DEPTH_MAP))
-            {
-                depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
-                applyColorMap(adjDepthMap, adjDepthMap, COLORMAP_JET);
-                imshow("DEPTH", adjDepthMap);
-            }
+            // 处理深度图
+            depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
+            applyColorMap(adjDepthMap, adjDepthMap, COLORMAP_JET);
 
-            // depth map overlay on bgr image
-            static const float alpha = 0.6f;
-            if (!image.empty() && !depthMap.empty())
-            {
-                depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
-                cv::resize(adjDepthMap, adjDepthMap, cv::Size(image.cols, image.rows));
-                for (int i = 0; i < image.rows; i++)
-                {
-                    for (int j = 0; j < image.cols; j++)
-                    {
-                        cv::Vec3b& outRgb = image.at<cv::Vec3b>(i, j);
-                        uint8_t depthValue = 255 - adjDepthMap.at<uint8_t>(i, j);
-                        if (depthValue != 0 && depthValue != 255)
-                        {
-                            outRgb[0] = (uint8_t)(outRgb[0] * (1.0f - alpha) + depthValue * alpha);
-                            outRgb[1] = (uint8_t)(outRgb[1] * (1.0f - alpha) + depthValue *  alpha);
-                            outRgb[2] = (uint8_t)(outRgb[2] * (1.0f - alpha) + depthValue *  alpha);
-                        }
-                    }
-                }
-                imshow("DepthToColor", image);
-            }
+            // 保存图像和深度图
+            string rgb_filename = "videocapture_obsensor/rgb_" + to_string(frame_count) + ".jpg";
+            string depth_filename = "videocapture_obsensor/depth_" + to_string(frame_count) + ".png";
+
+            imwrite(rgb_filename, image);
+            imwrite(depth_filename, adjDepthMap);
+
+            cout << "Saved: " << rgb_filename << " and " << depth_filename << endl;
+
+            frame_count++;
+
+            if (frame_count >= 10) // 处理10帧后退出
+                break;
+
             image.release();
             depthMap.release();
         }
-
-        if (pollKey() >= 0)
+        else
+        {
+            cerr << "Grab error" << endl;
             break;
+        }
     }
+
     return 0;
 }
+

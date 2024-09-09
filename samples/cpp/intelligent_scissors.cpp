@@ -228,8 +228,16 @@ int main( int argc, const char** argv )
     param.img.copyTo(param.img_pre_render);
     param.img.copyTo(param.img_render);
 
-    namedWindow("lasso");
-    setMouseCallback("lasso", onMouse, &param);
-    imshow("lasso", param.img);
-    waitKey(0);
+    //namedWindow("lasso");
+    //setMouseCallback("lasso", onMouse, &param);
+    //imshow("lasso", param.img);
+    //waitKey(0);
+
+    // 自动化图像处理和结果保存
+    Point startPoint(10, 10); // 起始点，可根据需要更改
+    find_min_path(startPoint, &param);
+    imwrite("output.png", param.img_render); // 保存处理结果
+
+    return 0;
 }
+

@@ -1,4 +1,5 @@
 #include <opencv2/ml/ml.hpp>
+#include <iostream>
 
 using namespace std;
 using namespace cv;
@@ -6,15 +7,15 @@ using namespace cv::ml;
 
 int main()
 {
-    //create random training data
+    // Create random training data
     Mat_<float> data(100, 100);
     randn(data, Mat::zeros(1, 1, data.type()), Mat::ones(1, 1, data.type()));
 
-    //half of the samples for each class
+    // Half of the samples for each class
     Mat_<float> responses(data.rows, 2);
-    for (int i = 0; i<data.rows; ++i)
+    for (int i = 0; i < data.rows; ++i)
     {
-        if (i < data.rows/2)
+        if (i < data.rows / 2)
         {
             responses(i, 0) = 1;
             responses(i, 1) = 0;
@@ -27,13 +28,13 @@ int main()
     }
 
     /*
-    //example code for just a single response (regression)
+    // Example code for just a single response (regression)
     Mat_<float> responses(data.rows, 1);
-    for (int i=0; i<responses.rows; ++i)
+    for (int i = 0; i < responses.rows; ++i)
         responses(i, 0) = i < responses.rows / 2 ? 0 : 1;
     */
 
-    //create the neural network
+    // Create the neural network
     Mat_<int> layerSizes(1, 3);
     layerSizes(0, 0) = data.cols;
     layerSizes(0, 1) = 20;
@@ -46,6 +47,7 @@ int main()
     Ptr<TrainData> trainData = TrainData::create(data, ROW_SAMPLE, responses);
 
     network->train(trainData);
+
     if (network->isTrained())
     {
         printf("Predict one-vector:\n");
@@ -54,7 +56,7 @@ int main()
         cout << result << endl;
 
         printf("Predict training data:\n");
-        for (int i=0; i<data.rows; ++i)
+        for (int i = 0; i < data.rows; ++i)
         {
             network->predict(data.row(i), result);
             cout << result << endl;
@@ -63,3 +65,4 @@ int main()
 
     return 0;
 }
+
