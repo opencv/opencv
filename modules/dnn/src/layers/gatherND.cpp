@@ -153,7 +153,7 @@ public:
         parallel_for_(Range(0, outer_size), [&](const Range& range) {
             for (size_t i = range.start; i < range.end; ++i)
             {
-                std::vector<int> sliced_indices(indices_ptr + i * last_indices_dim, indices_ptr + (i + 1) * last_indices_dim);
+                const iT* sliced_indices = indices_ptr + i * last_indices_dim;
 
                 size_t offset = 0;
                 for (size_t j = 0; j < last_indices_dim; ++j)
