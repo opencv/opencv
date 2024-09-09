@@ -76,7 +76,8 @@ if args.alias is None or hasattr(args, 'help'):
     exit(1)
 
 args.model = findModel(args.model, args.sha1)
-args.config = findFile(args.config)
+if args.config is not None:
+    args.config = findFile(args.config)
 args.labels = findFile(args.labels)
 
 # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
@@ -107,6 +108,9 @@ outNames = net.getUnconnectedOutLayersNames()
 
 confThreshold = args.thr
 nmsThreshold = args.nms
+stdSize = 0.8
+stdWeight = 2
+stdImgSize = 512
 
 def get_color(class_id):
     r = min((class_id >> 0 & 1) * 128 + (class_id >> 3 & 1) * 64 + (class_id >> 6 & 1) * 32 + 80, 255)
@@ -207,7 +211,7 @@ def postprocess(frame, outs):
 
     return boxes, classIds, confidences, indices
 
-def drawPred(classIds, confidences, boxes, indices):
+def drawPred(classIds, confidences, boxes, indices, fontSize, fontThickness):
     for i in indices:
         box = boxes[i]
         left = box[0]
@@ -215,7 +219,7 @@ def drawPred(classIds, confidences, boxes, indices):
         right = box[0] + box[2]
         bottom = box[1] + box[3]
         bg_color = get_color(classIds[i])
-        cv.rectangle(frame, (left, top), (right, bottom), bg_color)
+        cv.rectangle(frame, (left, top), (right, bottom), bg_color, fontThickness)
 
         label = '%.2f' % confidences[i]
 
@@ -224,10 +228,10 @@ def drawPred(classIds, confidences, boxes, indices):
             assert(classIds[i] < len(labels))
             label = '%s: %s' % (labels[classIds[i]], label)
 
-        labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        labelSize, baseLine = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
         top = max(top, labelSize[1])
-        cv.rectangle(frame, (left, top - labelSize[1]), (left + labelSize[0], top + baseLine), bg_color, cv.FILLED)
-        cv.putText(frame, label, (left, top), cv.FONT_HERSHEY_SIMPLEX, 0.5, get_text_color(bg_color))
+        cv.rectangle(frame, (int(left-fontThickness/2), top - labelSize[1]), (left + labelSize[0], top + baseLine), bg_color, cv.FILLED)
+        cv.putText(frame, label, (left, top-fontThickness), cv.FONT_HERSHEY_SIMPLEX, fontSize, get_text_color(bg_color), fontThickness)
 
 # Process inputs
 winName = 'Deep learning object detection in OpenCV'
@@ -304,7 +308,7 @@ def processingThreadBody():
             # Create a 4D blob from a frame.
             inpWidth = args.width if args.width else frameWidth
             inpHeight = args.height if args.height else frameHeight
-            blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_8U)
+            blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_32F)
             processedFramesQueue.put(frame)
 
             # Run a model
@@ -340,21 +344,24 @@ while cv.waitKey(1) < 0:
         # Request prediction first because they put after frames
         outs = predictionsQueue.get_nowait()
         frame = processedFramesQueue.get_nowait()
+        imgWidth = max(frame.shape[:2])
+        fontSize = (stdSize*imgWidth)/stdImgSize
+        fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
 
         boxes, classIds, confidences, indices = postprocess(frame, outs)
-        drawPred(classIds, confidences, boxes, indices)
-
+        drawPred(classIds, confidences, boxes, indices, fontSize, fontThickness)
+        fontSize = fontSize/2
         # Put efficiency information.
         if predictionsQueue.counter > 1:
             label = 'Camera: %.2f FPS' % (framesQueue.getFPS())
-            cv.rectangle(frame, (0, 0), (150, 50), (255,255,255), cv.FILLED)
-            cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+            cv.rectangle(frame, (0, 0), (int(260*fontSize), int(80*fontSize)), (255,255,255), cv.FILLED)
+            cv.putText(frame, label, (0, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
 
             label = 'Network: %.2f FPS' % (predictionsQueue.getFPS())
-            cv.putText(frame, label, (0, 30), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+            cv.putText(frame, label, (0, int(2*25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
 
             label = 'Skipped frames: %d' % (framesQueue.counter - predictionsQueue.counter)
-            cv.putText(frame, label, (0, 45), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+            cv.putText(frame, label, (0, int(3*25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
 
         cv.imshow(winName, frame)
     except queue.Empty:
