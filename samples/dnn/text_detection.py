@@ -188,7 +188,7 @@ def main():
     else:
         print("No Text Detected.")
 
-    stacked = np.hstack([frame, board],dtype = "uint8")
+    stacked = cv2.hconcat([frame, board])
     cv2.imshow("Text Detection and Recognition", stacked)
     cv2.waitKey(0)
 
