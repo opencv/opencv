@@ -76,6 +76,21 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
 
 // Used in quantized model. It will return the (Max_element - Min_element)/127.
 double getWeightScale(const Mat& weightsMat);
+
+// inputs and outputs are both vector<Mat>'s or both are vector<UMat>'s.
+// the function does the following:
+//
+// 1. resizes output vector to 1-element vector
+// 2. outputs[0].fit(shape, inputs[0].type())
+// 3. temp = inputs[0].reshape(shape);
+// 4. temp.copyTo(outputs[0]) // detect in-place case and do nothing in this case
+//
+// the function helps to implement DL operations
+// 'Reshape', 'Flatten', 'Squeeze', 'Unsqueeze', 'Identity'.
+void reshapeAndCopyFirst(InputArrayOfArrays inputs,
+                         OutputArrayOfArrays outputs,
+                         const MatShape& shape);
+
 }
 }
 

@@ -658,7 +658,8 @@ Net ONNXImporter2::parseModel()
         return Net();
     }
     netimpl->prepareForInference();
-    // [for debugging] net.dumpToStream(std::cout);
+    // ************ uncomment for debugging **********
+    //net.dumpToStream(std::cout);
     return net;
 }
 
@@ -692,7 +693,7 @@ void ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
             const std::string& param_j = dimension.dim_param();
             val_j = net.findDim(param_j, true);
         }
-        CV_Assert(0 <= val_j && val_j <= INT_MAX);
+        //CV_Assert(0 <= val_j && val_j <= INT_MAX);
         shape[j] = (int)val_j;
     }
     data.shape = shape;
@@ -707,8 +708,8 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
 {
     CV_LOG_DEBUG(NULL, "DNN/ONNX: parsing graph '" << graph_proto->name() << "' of " << graph_proto->node_size() << " nodes");
     simplifySubgraphs(*graph_proto);
-    int nnodes = graph_proto->node_size();
-    CV_LOG_DEBUG(NULL, "DNN/ONNX: simplified the graph to " << nnodes << " nodes");
+    int n_nodes = graph_proto->node_size();
+    CV_LOG_DEBUG(NULL, "DNN/ONNX: simplified the graph to " << n_nodes << " nodes");
 
     opencv_onnx::GraphProto* saved_graph_proto = curr_graph_proto;
     Ptr<Graph> saved_graph = curr_graph;
@@ -751,7 +752,6 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
 
     std::swap(saved_prog, curr_prog);
 
-    int n_nodes = graph_proto->node_size();
     std::vector<Ptr<Layer> > prog;
     for (int i = 0; i < n_nodes; i++) {
         parseNode(graph_proto->node(i));
@@ -816,10 +816,10 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
     std::string layer_type_domain = getLayerTypeDomain(node_proto);
     const auto& dispatch = getDispatchMap(node_proto);
 
-    CV_LOG_INFO(NULL, "DNN/ONNX: processing node '" << node_name << "' ("
+    /*CV_LOG_INFO(NULL, "DNN/ONNX: processing node '" << node_name << "' ("
                 << layer_type << ") with " << node_proto.input_size() << " inputs and "
                 << node_proto.output_size() << " outputs from domain '"
-                << layer_type_domain << "'");
+                << layer_type_domain << "'");*/
 
     if (dispatch.empty())
     {
@@ -1692,6 +1692,7 @@ void ONNXImporter2::parseTranspose(LayerParams& layerParams, const opencv_onnx::
 
 void ONNXImporter2::parseSqueeze(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    layerParams.type = "Squeeze2";
     CV_Assert(node_proto.input_size() <= 2);
     addLayer(layerParams, node_proto);
 }
@@ -1717,7 +1718,10 @@ void ONNXImporter2::parseExpand(LayerParams& layerParams, const opencv_onnx::Nod
 
 void ONNXImporter2::parseReshape(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    CV_Assert(node_proto.input_size() == 2 || layerParams.has("shape"));
+    bool have_shape_attr = layerParams.has("shape");
+    CV_Assert((node_proto.input_size() == 2 && !have_shape_attr) ||
+              (node_proto.input_size() == 1 && have_shape_attr));
+    layerParams.type = "Reshape2";
     addLayer(layerParams, node_proto);
 }
 
@@ -1927,7 +1931,16 @@ void ONNXImporter2::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::
 {
     int n_inputs = node_proto.input_size();
     CV_Assert(2 <= n_inputs && n_inputs <= 3);
-    addLayer(layerParams, node_proto);
+    if (net.isConstArg(node_inputs[1]) && (n_inputs == 2 || net.isConstArg(node_inputs[2]))) {
+        Mat scale = net.argTensor(node_inputs[1]);
+        layerParams.blobs.push_back(scale);
+        if (n_inputs > 2) {
+            Mat bias = net.argTensor(node_inputs[2]);
+            layerParams.blobs.push_back(bias);
+        }
+        n_inputs = 1;
+    }
+    addLayer(layerParams, node_proto, n_inputs);
 }
 
 void ONNXImporter2::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)

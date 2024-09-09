@@ -2769,6 +2769,7 @@ public:
     // number of channels and/or different number of rows. see cvReshape.
     UMat reshape(int cn, int rows=0) const;
     UMat reshape(int cn, int newndims, const int* newsz) const;
+    UMat reshape(int cn, const MatShape& shape) const;
 
     //! matrix transposition by means of matrix expressions
     UMat t() const;

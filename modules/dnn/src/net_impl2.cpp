@@ -355,12 +355,19 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     if (!mainGraph) {
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
-    // [for debugging] tracingMode = DNN_TRACE_OP;
+    // ************ uncomment for debugging **********
+    //tracingMode = DNN_TRACE_OP;
     // [TODO] initialize profile, tracer, symbolic shapes etc.
     size_t nsymdims = dimnames_vec.size();
     dimvalues.assign(nsymdims, -1);
     layersTimings.assign(totalLayers + 1, 0.);
+
     forwardGraph(mainGraph, inputs, outputs, true);
+
+    // reset finalizeLayer so that layers are only initialized once.
+    // [TODO] if a target or backend change or there are some other important
+    // global changes in configuration, finalizeLayers should be set to 'true' again
+    finalizeLayers = false;
 }
 
 Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
@@ -552,8 +559,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     double tickfreq = getTickFrequency();
     int64_t timestamp = 0;
 
-    int graph_ofs = graphofs_it->second;
-    CV_Assert(0 <= graph_ofs && (size_t)graph_ofs + nops <= totalLayers);
+    size_t graph_ofs = (size_t)graphofs_it->second;
+    CV_Assert(graph_ofs + nops <= totalLayers);
 
     if (inputs_.empty()) {
         // inputs are already set; it's only possible to do with the main graph
@@ -640,8 +647,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 if (!dynamicOutShapes) {
                     // a sanity check: make sure that the data was not reallocated during Layer::forward()
                     // if the layer claims it does not produce dynamic-shape outputs.
-                    CV_Assert(buf.data == m.data);
-                } else if (m.u->size > buf.u->size) {
+                    CV_Assert(buf.u == m.u);
+                } else if (!buf.u || m.u->size > buf.u->size) {
                     buf = m;
                 } else {
                     // this branch means that the layer still calls create rather than fit and needs to be fixed.

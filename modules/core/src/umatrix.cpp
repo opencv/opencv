@@ -1162,6 +1162,15 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
     CV_Error(cv::Error::StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
 }
 
+UMat UMat::reshape(int _cn, const MatShape& _newshape) const
+{
+    if (_newshape.dims < 0) {
+        int newshape[] = {0};
+        return reshape(_cn, 1, newshape);
+    }
+    return reshape(_cn, _newshape.dims, _newshape.p);
+}
+
 Mat UMat::getMat(AccessFlag accessFlags) const
 {
     if(!u)

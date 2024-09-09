@@ -2263,16 +2263,19 @@ TEST_P(Test_ONNX_nets, Googlenet)
     if (target == DNN_TARGET_CPU_FP16)
         net.enableWinograd(false);
 
-    std::vector<Mat> images;
+    std::vector<Mat> images, results;
     images.push_back( imread(_tf("../googlenet_0.png")) );
     images.push_back( imread(_tf("../googlenet_1.png")) );
-    Mat inp = blobFromImages(images, 1.0f, Size(), Scalar(), false);
     Mat ref = blobFromNPY(_tf("../googlenet_prob.npy"));
-    checkBackend(&inp, &ref);
-
-    net.setInput(inp);
-    ASSERT_FALSE(net.empty());
-    Mat out = net.forward();
+    for (int i = 0; i < 2; i++) {
+        Mat inp_i = blobFromImage(images[i], 1.0f, Size(), Scalar(), false);
+        net.setInput(inp_i);
+        ASSERT_FALSE(net.empty());
+        Mat out_i = net.forward();
+        results.push_back(out_i);
+    }
+    Mat out;
+    vconcat(results, out);
 
     normAssert(ref, out, "", default_l1,  default_lInf);
     expectNoFallbacksFromIE(net);

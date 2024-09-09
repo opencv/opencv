@@ -264,5 +264,33 @@ double getWeightScale(const Mat& weightsMat)
     return (realMax == realMin) ? 1.0 : std::max(-realMin, realMax)/127;
 }
 
+void reshapeAndCopyFirst(InputArrayOfArrays inputs,
+                         OutputArrayOfArrays outputs,
+                         const MatShape& shape)
+{
+    int inp_kind = inputs.kind(), out_kind = outputs.kind();
+    CV_Assert(inp_kind == out_kind);
+    CV_Assert(inp_kind == _InputArray::STD_VECTOR_MAT ||
+              inp_kind == _InputArray::STD_VECTOR_UMAT);
+    int inp_type = inputs.type(0);
+    if (inp_kind == _InputArray::STD_VECTOR_MAT) {
+        Mat inp = inputs.getMat(0);
+        std::vector<Mat>& outref = outputs.getMatVecRef();
+        outref.resize(1);
+        outref[0].fit(shape, inp_type);
+        Mat inp_ = inp.reshape(0, shape);
+        if (inp_.data != outref[0].data)
+            inp_.copyTo(outref[0]);
+    }
+    else {
+        UMat inp = inputs.getUMat(0);
+        std::vector<UMat>& outref = outputs.getUMatVecRef();
+        outref.resize(1);
+        outref[0].fit(shape, inp_type);
+        UMat inp_ = inp.reshape(0, shape);
+        inp_.copyTo(outref[0]);
+    }
+}
+
 }
 }

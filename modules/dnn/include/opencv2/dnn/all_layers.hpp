@@ -471,6 +471,14 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ReshapeLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS Reshape2Layer : public Layer
+    {
+    public:
+        MatShape newShapeDesc;
+
+        static Ptr<Reshape2Layer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS FlattenLayer : public Layer
     {
     public:
