@@ -728,8 +728,8 @@ namespace CV__SIMD_NAMESPACE {
 
     #define OPENCV_HAL_WRAP_BIN_OP_ADDSUB(_Tpvec) \
     template<typename... Args> \
-    inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
-        return v_add(v_add(f1, f2), vf...); \
+    inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const _Tpvec& f3, const Args&... vf) { \
+        return v_add(v_add(f1, f2), f3, vf...); \
     }
 
     OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8)
@@ -777,8 +777,8 @@ namespace CV__SIMD_NAMESPACE {
 
     #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
     template<typename... Args> \
-    inline _Tpvec v_mul(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
-        return v_mul(v_mul(f1, f2), vf...); \
+    inline _Tpvec v_mul(const _Tpvec& f1, const _Tpvec& f2, const _Tpvec& f3, const Args&... vf) { \
+        return v_mul(v_mul(f1, f2), f3, vf...); \
     }
     OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8)
     OPENCV_HAL_WRAP_BIN_OP_MUL(v_int8)
@@ -936,8 +936,8 @@ namespace CV__SIMD_NAMESPACE {
 // Compatibility layer for the backend that cleaned up.
     #define OPENCV_HAL_WRAP_BIN_OP_ADDSUB(_Tpvec) \
     template<typename... Args> \
-    inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
-        return v_add(v_add(f1, f2), vf...); \
+    inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const _Tpvec& f3, const Args&... vf) { \
+        return v_add(v_add(f1, f2), f3, vf...); \
     }
 
     OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8)
@@ -955,8 +955,8 @@ namespace CV__SIMD_NAMESPACE {
 
     #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
     template<typename... Args> \
-    inline _Tpvec v_mul(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
-        return v_mul(v_mul(f1, f2), vf...); \
+    inline _Tpvec v_mul(const _Tpvec& f1, const _Tpvec& f2, const _Tpvec& f3, const Args&... vf) { \
+        return v_mul(v_mul(f1, f2), f3, vf...); \
     }
     OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8)
     OPENCV_HAL_WRAP_BIN_OP_MUL(v_int8)
