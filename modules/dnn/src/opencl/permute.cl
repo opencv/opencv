@@ -44,13 +44,16 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
-__kernel void permute(const int nthreads,
-                      __global Dtype* bottom_data,
-                      global int* permute_order,
-                      global int* oldStride,
-                      global int* newStride,
-                      const int num_axes,
-                      __global Dtype* top_data)
+#define CONCAT(A,B) A##_##B
+#define TEMPLATE(name,type) CONCAT(name,type)
+
+__kernel void TEMPLATE(permute, Dtype)(const int nthreads,
+                                       __global Dtype* bottom_data,
+                                       global int* permute_order,
+                                       global int* oldStride,
+                                       global int* newStride,
+                                       const int num_axes,
+                                       __global Dtype* top_data)
 {
     for (int i = get_global_id(0); i < nthreads; i += get_global_size(0))
     {

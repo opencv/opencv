@@ -159,8 +159,8 @@ template <typename R> std::ostream & operator<<(std::ostream & out, const Data<R
     out << "{ ";
     for (int i = 0; i < VTraits<R>::vlanes(); ++i)
     {
-        // out << std::hex << +V_TypeTraits<typename VTraits<R>::lane_type>::reinterpret_int(d.d[i]);
-        out << +d.d[i];
+        out << std::hex << +V_TypeTraits<typename VTraits<R>::lane_type>::reinterpret_int(d.d[i]);
+        // out << +d.d[i]; // Note: No  operator '<<' for _Float16
         if (i + 1 < VTraits<R>::vlanes())
             out << ", ";
     }
@@ -182,7 +182,7 @@ template<> inline void EXPECT_COMPARE_EQ_<double>(const double a, const double b
     EXPECT_DOUBLE_EQ( a, b );
 }
 
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
 template<> inline void EXPECT_COMPARE_EQ_<hfloat>(const hfloat a, const hfloat b)
 {
     EXPECT_LT(std::abs(float(a - b)), 0.126);
@@ -564,7 +564,7 @@ template<typename R> struct TheTest
     // Handle accuracy for fp16
     TheTest & test_div_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         Data<R> dataA, dataB;
         dataB.reverse();
         R a = dataA, b = dataB;
@@ -1572,7 +1572,7 @@ template<typename R> struct TheTest
 
     TheTest & test_matmul_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         Data<R> dataV, data0, data1, data2, data3, data4, data5, data6, data7;
         data1.reverse();
         data2 += 2;
@@ -1657,7 +1657,8 @@ template<typename R> struct TheTest
 
     TheTest & test_transpose8x8_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 /*|| CV_SIMD_SCALABLE_FP16*/)
+// Note: The scalable backend does not yet implement fixed-length functions
         Data<R> dataA0, dataA1, dataA2, dataA3, dataA4, dataA5, dataA6, dataA7;
         dataA1 *= 2;
         dataA2 *= 4;
@@ -1713,7 +1714,8 @@ template<typename R> struct TheTest
 
     TheTest & test_reduce_sum8()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 /*|| CV_SIMD_SCALABLE_FP16*/)
+// Note: The scalable backend does not yet implement fixed-length functions
         Data<R> dataA, dataB, dataC, dataD, dataW, dataX, dataY, dataZ;
         dataB *= 0.01f;
         dataC *= 0.001f;
@@ -1773,7 +1775,7 @@ template<typename R> struct TheTest
 
     TheTest & test_loadstore_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         AlignedData<R> data;
         AlignedData<R> out;
 
@@ -1804,7 +1806,7 @@ template<typename R> struct TheTest
 
     TheTest & test_float_cvt_fp16()
     {
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
         AlignedData<v_float32> data;
 
         // check conversion
@@ -1879,18 +1881,18 @@ template<typename R> struct TheTest
 
         // Test overflow and underflow values with step
         const LaneType step = (LaneType) 0.01;
-        for (LaneType i = dataMax + 1; i <= dataMax + 11;) {
+        for (LaneType i = (LaneType) (dataMax + 1); i <= dataMax + 11;) {
             Data<R> dataUpperBound, dataLowerBound, resOverflow, resUnderflow;
             for (int j = 0; j < n; ++j) {
-                dataUpperBound[j] = i;
-                dataLowerBound[j] = -i;
-                i += step;
+                dataUpperBound[j] = (LaneType) i;
+                dataLowerBound[j] = (LaneType) -i;
+                i = (LaneType) (i + step);
             }
             R upperBound = dataUpperBound, lowerBound = dataLowerBound;
             resOverflow = v_exp(upperBound);
             resUnderflow = v_exp(lowerBound);
             for (int j = 0; j < n; ++j) {
-                SCOPED_TRACE(cv::format("Overflow/Underflow test value: %f", i));
+                SCOPED_TRACE(cv::format("Overflow/Underflow test value: %lf", (double) i));
                 EXPECT_TRUE(resOverflow[j] > 0 && std::isinf(resOverflow[j]));
                 EXPECT_GE(resUnderflow[j], 0);
                 EXPECT_LT(resUnderflow[j], flt_min);
@@ -1898,7 +1900,7 @@ template<typename R> struct TheTest
         }
 
         // Test random values combined with special values
-        std::vector<LaneType> specialValues = {0, 1, INFINITY, -INFINITY, NAN, dataMax};
+        std::vector<LaneType> specialValues = {(LaneType) 0, (LaneType) 1, (LaneType) INFINITY, (LaneType) -INFINITY, (LaneType) NAN, (LaneType) dataMax};
         const int testRandNum = 10000;
         const double specialValueProbability = 0.1; // 10% chance to insert a special value
         cv::RNG_MT19937 rng;
@@ -1919,8 +1921,8 @@ template<typename R> struct TheTest
             R x = dataRand;
             resRand = v_exp(x);
             for (int j = 0; j < n; ++j) {
-                SCOPED_TRACE(cv::format("Random test value: %f", dataRand[j]));
-                LaneType std_exp = std::exp(dataRand[j]);
+                SCOPED_TRACE(cv::format("Random test value: %lf", (double) dataRand[j]));
+                LaneType std_exp = (LaneType) std::exp(dataRand[j]);
                 if (dataRand[j] == 0) {
                     // input 0 -> output 1
                     EXPECT_EQ(resRand[j], 1);
@@ -1951,12 +1953,11 @@ template<typename R> struct TheTest
     }
 
     TheTest &test_exp_fp16() {
-        // issue after 4.x merge: float16_t and hfloat conflict: https://github.com/opencv/opencv/issues/25922
-#if CV_SIMD_FP16 & 0
-        float16_t flt16_min;
+#if CV_SIMD_FP16
+        hfloat flt16_min;
         uint16_t flt16_min_hex = 0x0400;
-        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(float16_t));
-        __test_exp((float16_t) 10, (float16_t) 1e-2, (float16_t) 1e2, flt16_min);
+        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(hfloat));
+        __test_exp((hfloat) 10, (hfloat) 1e-2, (hfloat) 1e2, flt16_min);
 #endif
         return *this;
     }
@@ -1976,7 +1977,7 @@ template<typename R> struct TheTest
     void __test_log(LaneType expBound, LaneType diff_thr, LaneType flt_min) {
         int n = VTraits<R>::vlanes();
         // Test special values
-        std::vector<LaneType> specialValues = {0, 1, (LaneType) M_E, INFINITY, -INFINITY, NAN};
+        std::vector<LaneType> specialValues = {(LaneType) 0, (LaneType) 1, (LaneType) M_E, (LaneType) INFINITY, (LaneType) -INFINITY, (LaneType) NAN};
         const int testRandNum = 10000;
         const double specialValueProbability = 0.1; // 10% chance to insert a special value
         cv::RNG_MT19937 rng;
@@ -1998,8 +1999,8 @@ template<typename R> struct TheTest
             R x = dataRand;
             resRand = v_log(x);
             for (int j = 0; j < n; ++j) {
-                SCOPED_TRACE(cv::format("Random test value: %f", dataRand[j]));
-                LaneType std_log = std::log(dataRand[j]);
+                SCOPED_TRACE(cv::format("Random test value: %lf", (double) dataRand[j]));
+                LaneType std_log = (LaneType) std::log(dataRand[j]);
                 if (dataRand[j] == 0) {
                     // input 0 -> output -INF
                     EXPECT_TRUE(std::isinf(resRand[j]) && resRand[j] < 0);
@@ -2021,12 +2022,11 @@ template<typename R> struct TheTest
     }
 
     TheTest &test_log_fp16() {
-    // issue after 4.x merge: float16_t and hfloat conflict: https://github.com/opencv/opencv/issues/25922
-#if CV_SIMD_FP16  & 0
-        float16_t flt16_min;
+#if CV_SIMD_FP16
+        hfloat flt16_min;
         uint16_t flt16_min_hex = 0x0400;
-        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(float16_t));
-        __test_log((float16_t) 9, (float16_t) 1e-3, flt16_min);
+        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(hfloat));
+        __test_log((hfloat) 9, (hfloat) 1e-3, flt16_min);
 #endif
         return *this;
     }
@@ -2066,7 +2066,7 @@ template<typename R> struct TheTest
 
             Data<R> outputs = v_erf(R(inputs));
             for (int j = 0; j < n; j++) {
-                SCOPED_TRACE(cv::format("Random test value: %f", inputs[j]));
+                SCOPED_TRACE(cv::format("Random test value: %lf", inputs[j]));
                 if (std::isinf(inputs[j])) {
                     if (inputs[j] < 0) {
                         EXPECT_EQ(-1, outputs[j]);
@@ -2449,7 +2449,7 @@ void test_hal_intrin_float16()
     DUMP_ENTRY(v_float16);
 #if CV_FP16
     TheTest<v_float32>().test_loadstore_fp16_f32();
-#if CV_SIMD_FP16
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
     TheTest<v_float16>()
         .test_loadstore_fp16()
         .test_float_cvt_fp16()
@@ -2476,6 +2476,8 @@ void test_hal_intrin_float16()
         .test_extract_n<0>().test_extract_n<1>()
         .test_exp_fp16()
         .test_log_fp16()
+#else
+    std::cout << "SKIP: CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16 is not available" << std::endl;
 #endif
         ;
 #else

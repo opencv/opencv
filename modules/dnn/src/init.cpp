@@ -196,10 +196,13 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(GRU,            GRULayer);
     CV_DNN_REGISTER_LAYER_CLASS(CumSum,         CumSumLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Einsum,         EinsumLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Hardmax,        HardmaxLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(GatherND,       GatherNDLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Scatter,        ScatterLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ScatterND,      ScatterNDLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Tile,           TileLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(TopK,           TopKLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Quantize,         QuantizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Dequantize,       DequantizeLayer);

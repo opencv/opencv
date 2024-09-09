@@ -13,13 +13,15 @@ For NanoTrack:
 For VitTrack:
     vitTracker: https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_vittrack/object_tracking_vittrack_2023sep.onnx
 USAGE:
-    tracker.py [-h] [--input INPUT] [--tracker_algo TRACKER_ALGO]
+    tracker.py [-h] [--input INPUT_VIDEO]
+                    [--tracker_algo TRACKER_ALGO mil, dasiamrpn, nanotrack, vittrack]
                     [--dasiamrpn_net DASIAMRPN_NET]
                     [--dasiamrpn_kernel_r1 DASIAMRPN_KERNEL_R1]
                     [--dasiamrpn_kernel_cls1 DASIAMRPN_KERNEL_CLS1]
                     [--dasiamrpn_backend DASIAMRPN_BACKEND]
                     [--dasiamrpn_target DASIAMRPN_TARGET]
-                    [--nanotrack_backbone NANOTRACK_BACKEND] [--nanotrack_headneck NANOTRACK_TARGET]
+                    [--nanotrack_backbone NANOTRACK_BACKBONE]
+                    [--nanotrack_headneck NANOTRACK_TARGET]
                     [--vittrack_net VITTRACK_MODEL]
 '''
 

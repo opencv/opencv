@@ -80,8 +80,6 @@
 "test_convtranspose_pad", // Issue::Parser::Weights are required as inputs
 "test_convtranspose_pads", // Issue::Parser::Weights are required as inputs
 "test_convtranspose_with_kernel", // Issue::Parser::Weights are required as inputs
-"test_dequantizelinear", // Issue::Parser::Weights are required as inputs
-"test_dequantizelinear_axis", // Issue::Parser::Weights are required as inputs
 "test_det_2d", // Issue:: Unkonwn error
 "test_det_nd", // Issue:: Unkonwn error
 "test_dropout_default_mask", // Issue::cvtest::norm::wrong data type
@@ -102,9 +100,6 @@
 "test_eyelike_populate_off_main_diagonal", // Issues::Layer::Can't create layer::Can't create layer "onnx_node_output_0!y" of type "EyeLike" in function 'getLayerInstance'
 "test_eyelike_with_dtype", // ---- same as above ---
 "test_eyelike_without_dtype", // ---- same as above ---
-"test_gathernd_example_float32", // Issues::Layer::Can't create layer
-"test_gathernd_example_int32", // ---- same as above ---
-"test_gathernd_example_int32_batch_dim1", // ---- same as above ---
 "test_gelu_default_1_expanded", // parser: no corresponding layer for CastLike
 "test_gelu_default_2_expanded", // parser: no corresponding layer for CastLike
 "test_gelu_tanh_1_expanded", // parser: no corresponding layer for CastLike
@@ -130,13 +125,6 @@
 "test_gru_defaults", // ---- same as above ---
 "test_gru_seq_length", // ---- same as above ---
 "test_gru_with_initial_bias", // ---- same as above ---
-"test_hardmax_axis_0", // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "Hardmax" in function 'getLayerInstance'
-"test_hardmax_axis_1",  // ---- same as above ---
-"test_hardmax_axis_2",  // ---- same as above ---
-"test_hardmax_default_axis",  // ---- same as above ---
-"test_hardmax_example",  // ---- same as above ---
-"test_hardmax_negative_axis",  // ---- same as above ---
-"test_hardmax_one_hot",  // ---- same as above ---
 "test_identity_opt", //  23221 illegal hardware instruction
 "test_identity_sequence",  // Issue:: Unkonwn error
 "test_if", // Issue::'Graph' is not supported in function 'getLayerParams'
@@ -235,8 +223,6 @@
 "test_qlinearconv", // Issue::Parser:  Blob x_scale not found in const blobs in function 'getBlob' (weights are required as inputs)
 "test_qlinearmatmul_2D", // Issue:: Parser: Variable weights is not supported in function 'parseQMatMul'
 "test_qlinearmatmul_3D", // ---- same as above ---
-"test_quantizelinear", // Issue::Parser: Blob y_scale not found in const blobs in function 'getBlob' (weights are required as inputs)
-"test_quantizelinear_axis", // ---- same as above ---
 "test_range_float_type_positive_delta", // Issue:: Unsupported data type in function. Unsupported type in function 'parseCast'
 "test_range_float_type_positive_delta_expanded", // ---- same as above ---
 "test_range_int32_type_negative_delta", // Issue:: Unsupported data type: INT32 in function. Unsupported type in function 'parseCast'
@@ -409,7 +395,7 @@
 "test_tfidfvectorizer_tf_uniandbigrams_skip5", // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "TfIdfVectorizer" in function 'getLayerInstance'
 "test_tile", // Issue:: Parser: ONNX/Tile: repeats being non-constant is not supported. in function 'parseTile' (layer parameters are dynamic)
 "test_tile_precomputed", //  // ---- same as above ---
-"test_top_k", // Issue:: Parser: Can't create layer "onnx_node_output_0!values" of type "TopK" in function 'getLayerInstance'
+"test_top_k", // Issue:: K being input is not compatible with the current engine
 "test_top_k_negative_axis",  // ---- same as above ---
 "test_top_k_smallest",  // ---- same as above ---
 "test_training_dropout", // Issue::cvtest::norm::wrong data type
