@@ -3,4 +3,3 @@ if(ENABLE_RVV OR RISCV_RVV_SCALABLE)
 else()
   set(OCV_FLAGS "-march=rv64gc")
 endif()
-
