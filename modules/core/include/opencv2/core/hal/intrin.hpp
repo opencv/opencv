@@ -1025,6 +1025,7 @@ namespace CV__SIMD_NAMESPACE {
 #define CV_SIMD 0
 #endif
 
+#include "intrin_math.hpp"
 #include "simd_utils.impl.hpp"
 
 #ifndef CV_DOXYGEN
