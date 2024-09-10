@@ -12,7 +12,7 @@ CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR)
 CV_ENUM(InterTypeExtended, INTER_NEAREST, INTER_LINEAR, WARP_RELATIVE_MAP)
 CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH)
 
-typedef TestBaseWithParam< tuple<Size, InterType, BorderMode> > TestWarpAffine;
+typedef TestBaseWithParam< tuple<MatType, Size, InterType, BorderMode> > TestWarpAffine;
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, int> > TestWarpPerspective;
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpPerspectiveNear_t;
 typedef TestBaseWithParam< tuple<MatType, Size, InterTypeExtended, BorderMode, RemapMode> > TestRemap;
@@ -21,6 +21,7 @@ void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode, boo
 
 PERF_TEST_P( TestWarpAffine, WarpAffine,
              Combine(
+                Values(CV_8UC1, CV_8UC4),
                 Values( szVGA, sz720p, sz1080p ),
                 InterType::all(),
                 BorderMode::all()
@@ -28,13 +29,14 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
 )
 {
     Size sz, szSrc(512, 512);
-    int borderMode, interType;
-    sz         = get<0>(GetParam());
-    interType  = get<1>(GetParam());
-    borderMode = get<2>(GetParam());
+    int borderMode, interType, dataType;
+    dataType   = get<0>(GetParam());
+    sz         = get<1>(GetParam());
+    interType  = get<2>(GetParam());
+    borderMode = get<3>(GetParam());
     Scalar borderColor = Scalar::all(150);
 
-    Mat src(szSrc,CV_8UC4), dst(sz, CV_8UC4);
+    Mat src(szSrc, dataType), dst(sz, dataType);
     cvtest::fillGradient(src);
     if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder(src, borderColor, 1);
     Mat warpMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 30., 2.2);
@@ -47,6 +49,7 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
 
 PERF_TEST_P(TestWarpAffine, DISABLED_WarpAffine_ovx,
     Combine(
+        Values(CV_8UC1, CV_8UC4),
         Values(szVGA, sz720p, sz1080p),
         InterType::all(),
         BorderMode::all()
@@ -54,13 +57,16 @@ PERF_TEST_P(TestWarpAffine, DISABLED_WarpAffine_ovx,
 )
 {
     Size sz, szSrc(512, 512);
-    int borderMode, interType;
-    sz = get<0>(GetParam());
-    interType = get<1>(GetParam());
-    borderMode = get<2>(GetParam());
+    int borderMode, interType, dataType;
+
+    dataType   = get<0>(GetParam());
+    sz         = get<1>(GetParam());
+    interType  = get<2>(GetParam());
+    borderMode = get<3>(GetParam());
+
     Scalar borderColor = Scalar::all(150);
 
-    Mat src(szSrc, CV_8UC1), dst(sz, CV_8UC1);
+    Mat src(szSrc, dataType), dst(sz, dataType);
     cvtest::fillGradient(src);
     if (borderMode == BORDER_CONSTANT) cvtest::smoothBorder(src, borderColor, 1);
     Mat warpMat = getRotationMatrix2D(Point2f(src.cols / 2.f, src.rows / 2.f), 30., 2.2);

@@ -21,6 +21,8 @@ static MinMaxIdxFunc getMinMaxIdxFunc(int depth)
                     CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// The function expects 1-based indexing for ofs
+// Zero is treated as invalid offset (not found)
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {
     int i, d = a.dims;
@@ -324,9 +326,9 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
         {
             // minIdx[0] and minIdx[0] are always 0 for "flatten" version
             if (minIdx)
-                ofs2idx(src, minIdx[1], minIdx);
+                ofs2idx(src, minIdx[1]+1, minIdx);
             if (maxIdx)
-                ofs2idx(src, maxIdx[1], maxIdx);
+                ofs2idx(src, maxIdx[1]+1, maxIdx);
             return;
         }
         else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
