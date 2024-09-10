@@ -66,7 +66,7 @@ macro(check_armv6_compiler_flag)
             return __uqsub16(a, b);
         #endif
         }
-        int main(void) { return 0; }"
+        int main(void) { return f(1,2); }"
         HAVE_ARMV6_INTRIN
     )
     set(CMAKE_REQUIRED_FLAGS)
