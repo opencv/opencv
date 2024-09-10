@@ -118,7 +118,7 @@ public:
         CV_Assert((inputs.size() > outputs.size() && blobs.empty()) ||
                   (!inputs.empty() && (blobs.size() == 1 || blobs.size() == 2)));
         MatSize weightShape = blobs.empty() ? inputs[1].size : blobs[0].size;
-        numOutput = weightShape[0];
+        numOutput = weightShape[1];
 
         CV_Assert(inputs[0].dims == outputs[0].dims);
         if (weightShape.dims() == 3)
@@ -1369,10 +1369,10 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(!hasBias() || blobs[1].total() == (size_t)numOutput);
+        CV_Assert(!hasBias() || blobs[1].total());
         CV_Assert(inputs.size() != 0);
 
-        int outCn = numOutput;
+        int outCn = blobs[0].size[1];
         std::vector<int> outShape;
         outShape.push_back(inputs[0][0]);  // batch
         outShape.push_back(outCn);
