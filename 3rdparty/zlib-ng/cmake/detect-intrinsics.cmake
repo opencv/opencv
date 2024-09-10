@@ -429,6 +429,19 @@ macro(check_rvv_intrinsics)
     set(CMAKE_REQUIRED_FLAGS)
 endmacro()
 
+macro(check_s390_intrinsics)
+    check_c_source_compiles(
+        "#include <sys/auxv.h>
+        #ifndef HWCAP_S390_VXRS
+        #define HWCAP_S390_VXRS HWCAP_S390_VX
+        #endif
+        int main() {
+            return (getauxval(AT_HWCAP) & HWCAP_S390_VXRS);
+        }"
+        HAVE_S390_INTRIN
+    )
+endmacro()
+
 macro(check_power9_intrinsics)
     if(NOT NATIVEFLAG)
         if(CMAKE_C_COMPILER_ID MATCHES "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
