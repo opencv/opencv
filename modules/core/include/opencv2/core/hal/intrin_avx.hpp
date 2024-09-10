@@ -3158,6 +3158,10 @@ inline void v_pack_store(hfloat* ptr, const v_float32x8& a)
 
 inline void v256_cleanup() { _mm256_zeroall(); }
 
+#include "intrin_math.hpp"
+OPENCV_HAL_MATH_IMPL_32F(v256, 32x8)
+OPENCV_HAL_MATH_IMPL_64F(v256, 64x4)
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond

@@ -3070,6 +3070,10 @@ inline int v_scan_forward(const v_float64x8& a) { return trailingZeros32(v_signm
 
 inline void v512_cleanup() { _mm256_zeroall(); }
 
+#include "intrin_math.hpp"
+OPENCV_HAL_MATH_IMPL_32F(v512, 32x16)
+OPENCV_HAL_MATH_IMPL_64F(v512, 64x8)
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond

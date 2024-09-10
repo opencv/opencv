@@ -2164,6 +2164,10 @@ inline v_float32 v_matmuladd(const v_float32& v, const v_float32& m0,
 
 inline void v_cleanup() {}
 
+#include "intrin_math.hpp"
+OPENCV_HAL_MATH_IMPL_32F(v, 32)
+OPENCV_HAL_MATH_IMPL_64F(v, 64)
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond

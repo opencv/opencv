@@ -1594,6 +1594,9 @@ template<int i, typename Tvec>
 inline Tvec v_broadcast_element(const Tvec& v)
 { return Tvec(vec_splat(v.val, i)); }
 
+#include "intrin_math.hpp"
+OPENCV_HAL_MATH_IMPL_32F(v, 32x4)
+OPENCV_HAL_MATH_IMPL_64F(v, 64x2)
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

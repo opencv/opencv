@@ -2646,6 +2646,13 @@ inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 
 inline void v_cleanup() {}
 
+#include "intrin_math.hpp"
+#if defined(CV_SIMD_FP16) && CV_SIMD_FP16
+OPENCV_HAL_MATH_IMPL_16F(v, 16x8)
+#endif
+OPENCV_HAL_MATH_IMPL_32F(v, 32x4)
+OPENCV_HAL_MATH_IMPL_64F(v, 64x2)
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
 //! @endcond
