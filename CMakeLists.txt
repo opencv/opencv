@@ -465,7 +465,7 @@ OCV_OPTION(WITH_CANN "Include CANN support" OFF
 OCV_OPTION(WITH_FLATBUFFERS "Include Flatbuffers support (required by DNN/TFLite importer)" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_FLATBUFFERS)
-OCV_OPTION(WITH_ZLIB_NG "Use zlib-ng instead of zlib" OFF
+OCV_OPTION(WITH_ZLIB_NG "Use zlib-ng instead of zlib" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_ZLIB_NG)
 
