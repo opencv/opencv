@@ -2244,7 +2244,7 @@ struct Lab2RGBfloat
             }
             for(int k = 0; k < nrepeats; k++)
             {
-                yhi[k] = v_mul(v_mul(fyhi[k], fyhi[k]), fyhi[k]);
+                yhi[k] = v_mul(fyhi[k], fyhi[k], fyhi[k]);
             }
             for(int k = 0; k < nrepeats; k++)
             {
@@ -3775,9 +3775,9 @@ struct Luv2RGBinteger
             // fixing 16bit signed multiplication
             // by subtracting 2^(base_shift-1) and then adding result back
             v_int32 dummy32, fm[3];
-            v_expand(v_add(v_add(vc[0],vc[1]),vc[2]), fm[0], dummy32);
-            v_expand(v_add(v_add(vc[3],vc[4]),vc[5]), fm[1], dummy32);
-            v_expand(v_add(v_add(vc[6],vc[7]),vc[8]), fm[2], dummy32);
+            v_expand(v_add(vc[0],vc[1],vc[2]), fm[0], dummy32);
+            v_expand(v_add(vc[3],vc[4],vc[5]), fm[1], dummy32);
+            v_expand(v_add(vc[6],vc[7],vc[8]), fm[2], dummy32);
             fm[0] = v_shl(fm[0], (base_shift-1));
             fm[1] = v_shl(fm[1], (base_shift-1));
             fm[2] = v_shl(fm[2], (base_shift-1));
