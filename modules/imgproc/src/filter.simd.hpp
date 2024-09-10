@@ -1780,7 +1780,7 @@ struct SymmRowSmallVec_32f
                         for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
                         {
                             v_float32 x = vx_load(src);
-                            v_store(dst + i, v_add(v_add(v_add(vx_load(src - cn), vx_load(src + cn)), x) , x));
+                            v_store(dst + i, v_add(vx_load(src - cn), vx_load(src + cn), x , x));
                         }
                     else
                         for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes(), src += VTraits<v_float32>::vlanes() )
@@ -2097,13 +2097,13 @@ struct SymmColumnSmallVec_32f
                     for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes() )
                     {
                         v_float32 x = vx_load(S1 + i);
-                        v_store(dst + i, v_add(v_add(v_add(v_add(vx_load(S0 + i), vx_load(S2 + i)), d4), x), x));
+                        v_store(dst + i, v_add(vx_load(S0 + i), vx_load(S2 + i), d4, x, x));
                     }
                 else
                     for( ; i <= width - VTraits<v_float32>::vlanes(); i += VTraits<v_float32>::vlanes() )
                     {
                         v_float32 x = vx_load(S1 + i);
-                        v_store(dst + i, v_sub(v_add(v_add(vx_load(S0 + i), vx_load(S2 + i)), d4), v_add(x, x)));
+                        v_store(dst + i, v_sub(v_add(vx_load(S0 + i), vx_load(S2 + i), d4), v_add(x, x)));
                     }
 #endif
             }

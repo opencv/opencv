@@ -221,7 +221,7 @@ void hlineSmooth3N121Impl(const ET* src, int cn, const FT*, int, FT* dst, int le
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int VECSZ = VTraits<VFT>::vlanes();
         for (; i <= lencn - VECSZ; i += VECSZ, src += VECSZ, dst += VECSZ)
-            v_store((typename FT::raw_t*)dst, v_shl<(FT::fixedShift-2)>(v_add(v_add(vx_load_expand(src - cn), vx_load_expand(src + cn)), v_shl<1>((vx_load_expand(src))))));
+            v_store((typename FT::raw_t*)dst, v_shl<(FT::fixedShift-2)>(v_add(vx_load_expand(src - cn), vx_load_expand(src + cn), v_shl<1>((vx_load_expand(src))))));
 #endif
         for (; i < lencn; i++, src++, dst++)
             *dst = (FT(src[-cn])>>2) + (FT(src[cn])>>2) + (FT(src[0])>>1);
