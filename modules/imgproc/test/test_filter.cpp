@@ -470,7 +470,7 @@ void CV_DerivBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     int sameDepth = cvtest::randInt(rng) % 2;
     types[OUTPUT][0] = types[REF_OUTPUT][0] = sameDepth ? depth : CV_MAKETYPE(depth==CV_8U?CV_16S:CV_32F,1);
     _aperture_size = (cvtest::randInt(rng)%5)*2 - 1;
-    sizes[INPUT][1] = aperture_size = cvSize(_aperture_size, _aperture_size);
+    sizes[INPUT][1] = aperture_size = Size(_aperture_size, _aperture_size);
 }
 
 
@@ -519,21 +519,21 @@ void CV_SobelTest::get_test_array_types_and_sizes( int test_case_idx,
     }
 
     if( _aperture_size < 0 )
-        aperture_size = cvSize(3, 3);
+        aperture_size = Size(3, 3);
     else if( _aperture_size == 1 )
     {
         if( dx == 0 )
-            aperture_size = cvSize(1, 3);
+            aperture_size = Size(1, 3);
         else if( dy == 0 )
-            aperture_size = cvSize(3, 1);
+            aperture_size = Size(3, 1);
         else
         {
             _aperture_size = 3;
-            aperture_size = cvSize(3, 3);
+            aperture_size = Size(3, 3);
         }
     }
     else
-        aperture_size = cvSize(_aperture_size, _aperture_size);
+        aperture_size = Size(_aperture_size, _aperture_size);
 
     sizes[INPUT][1] = aperture_size;
     anchor.x = aperture_size.width / 2;
@@ -647,10 +647,10 @@ void CV_LaplaceTest::get_test_array_types_and_sizes( int test_case_idx,
     {
         if( _aperture_size < 0 )
             _aperture_size = 1;
-        aperture_size = cvSize(3, 3);
+        aperture_size = Size(3, 3);
     }
     else
-        aperture_size = cvSize(_aperture_size, _aperture_size);
+        aperture_size = Size(_aperture_size, _aperture_size);
 
     sizes[INPUT][1] = aperture_size;
     anchor.x = aperture_size.width / 2;
@@ -1192,7 +1192,7 @@ CV_PyramidDownTest::CV_PyramidDownTest() : CV_PyramidBaseTest( true )
 
 void CV_PyramidDownTest::run_func()
 {
-    cvPyrDown( test_array[INPUT][0], test_array[OUTPUT][0], CV_GAUSSIAN_5x5 );
+    cv::pyrDown(test_mat[INPUT][0], test_mat[OUTPUT][0]);
 }
 
 
@@ -1575,7 +1575,7 @@ CV_PreCornerDetectTest::CV_PreCornerDetectTest() : CV_FeatureSelBaseTest( 1 )
 
 void CV_PreCornerDetectTest::run_func()
 {
-    cvPreCornerDetect( test_array[INPUT][0], test_array[OUTPUT][0], aperture_size );
+    cv::preCornerDetect( test_mat[INPUT][0], test_mat[OUTPUT][0], aperture_size, BORDER_REPLICATE );
 }
 
 

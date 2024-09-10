@@ -973,7 +973,7 @@ class CanUsePurePythonModuleFunction(NewOpenCVTests):
 class SamplesFindFile(NewOpenCVTests):
 
     def test_ExistedFile(self):
-        res = cv.samples.findFile('lena.jpg', False)
+        res = cv.samples.findFile('HappyFish.jpg', False)
         self.assertNotEqual(res, '')
 
     def test_MissingFile(self):
@@ -987,6 +987,10 @@ class SamplesFindFile(NewOpenCVTests):
         except cv.error as _e:
             pass
 
+class AlgorithmImplHit(NewOpenCVTests):
+    def test_callable(self):
+        res = cv.getDefaultAlgorithmHint()
+        self.assertTrue(res is not None)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

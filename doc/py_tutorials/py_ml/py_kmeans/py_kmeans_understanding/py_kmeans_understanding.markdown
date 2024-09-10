@@ -80,6 +80,3 @@ Additional Resources
 
 -#  [Machine Learning Course](https://www.coursera.org/course/ml), Video lectures by Prof. Andrew Ng
     (Some of the images are taken from this)
-
-Exercises
----------

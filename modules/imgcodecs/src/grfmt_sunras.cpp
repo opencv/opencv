@@ -342,7 +342,7 @@ bad_decoding_end:
 
                 if( color )
                 {
-                    if( m_type == RAS_FORMAT_RGB )
+                    if( m_type == RAS_FORMAT_RGB || m_use_rgb)
                         icvCvt_RGB2BGR_8u_C3R(src, 0, data, 0, Size(m_width,1) );
                     else
                         memcpy(data, src, std::min(step, (size_t)src_pitch));
@@ -365,7 +365,7 @@ bad_decoding_end:
 
                 if( color )
                     icvCvt_BGRA2BGR_8u_C4C3R( src + 4, 0, data, 0, Size(m_width,1),
-                                              m_type == RAS_FORMAT_RGB ? 2 : 0 );
+                                              (m_type == RAS_FORMAT_RGB || m_use_rgb) ? 2 : 0 );
                 else
                     icvCvt_BGRA2Gray_8u_C4C1R( src + 4, 0, data, 0, Size(m_width,1),
                                                m_type == RAS_FORMAT_RGB ? 2 : 0 );
@@ -410,17 +410,17 @@ bool  SunRasterEncoder::write( const Mat& img, const std::vector<int>& )
 
     if( strm.open(m_filename) )
     {
-        strm.putBytes( fmtSignSunRas, (int)strlen(fmtSignSunRas) );
-        strm.putDWord( width );
-        strm.putDWord( height );
-        strm.putDWord( channels*8 );
-        strm.putDWord( fileStep*height );
-        strm.putDWord( RAS_STANDARD );
-        strm.putDWord( RMT_NONE );
-        strm.putDWord( 0 );
+        CHECK_WRITE(strm.putBytes( fmtSignSunRas, (int)strlen(fmtSignSunRas) ));
+        CHECK_WRITE(strm.putDWord( width ));
+        CHECK_WRITE(strm.putDWord( height ));
+        CHECK_WRITE(strm.putDWord( channels*8 ));
+        CHECK_WRITE(strm.putDWord( fileStep*height ));
+        CHECK_WRITE(strm.putDWord( RAS_STANDARD ));
+        CHECK_WRITE(strm.putDWord( RMT_NONE ));
+        CHECK_WRITE(strm.putDWord( 0 ));
 
         for( y = 0; y < height; y++ )
-            strm.putBytes( img.ptr(y), fileStep );
+            CHECK_WRITE(strm.putBytes( img.ptr(y), fileStep ));
 
         strm.close();
         result = true;

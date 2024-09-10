@@ -199,9 +199,3 @@ righty = int(((cols-x)*vy/vx)+y)
 cv.line(img,(cols-1,righty),(0,lefty),(0,255,0),2)
 @endcode
 ![image](images/fitline.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

@@ -64,7 +64,7 @@
 namespace {
 inline unsigned int trailingZeros32(unsigned int value) {
 #if defined(_MSC_VER)
-#if (_MSC_VER < 1700) || defined(_M_ARM) || defined(_M_ARM64)
+#if (_MSC_VER < 1700) || defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
     unsigned long index = 0;
     _BitScanForward(&index, value);
     return (unsigned int)index;
@@ -236,11 +236,7 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #include "opencv2/core/hal/intrin_wasm.hpp"
 
 #elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP)
-#if defined(CV_RVV_SCALABLE)
 #include "opencv2/core/hal/intrin_rvv_scalable.hpp"
-#else
-#include "opencv2/core/hal/intrin_rvv.hpp"
-#endif
 
 #elif CV_LSX && !defined(CV_FORCE_SIMD128_CPP)
 
@@ -1239,6 +1235,7 @@ namespace CV__SIMD_NAMESPACE {
 #define CV_SIMD 0
 #endif
 
+#include "intrin_math.hpp"
 #include "simd_utils.impl.hpp"
 
 #ifndef CV_DOXYGEN

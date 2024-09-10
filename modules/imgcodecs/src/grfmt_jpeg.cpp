@@ -437,13 +437,13 @@ bool  JpegDecoder::readData( Mat& img )
                 if( cinfo->num_components != 4 )
                 {
 #ifdef JCS_EXTENSIONS
-                    cinfo->out_color_space = JCS_EXT_BGR;
+                    cinfo->out_color_space = m_use_rgb ? JCS_EXT_RGB : JCS_EXT_BGR;
                     cinfo->out_color_components = 3;
                     doDirectRead = true; // BGR -> BGR
 #else
                     cinfo->out_color_space = JCS_RGB;
                     cinfo->out_color_components = 3;
-                    doDirectRead = false; // RGB -> BGR
+                    doDirectRead = m_use_rgb ? true : false; // RGB -> BGR
 #endif
                 }
                 else
@@ -499,7 +499,7 @@ bool  JpegDecoder::readData( Mat& img )
                 for( int iy = 0 ; iy < m_height; iy ++ )
                 {
                     uchar* data = img.ptr<uchar>(iy);
-                    jpeg_read_scanlines( cinfo, &data, 1 );
+                    if (jpeg_read_scanlines( cinfo, &data, 1 ) != 1) return false;
                 }
             }
             else
@@ -510,14 +510,24 @@ bool  JpegDecoder::readData( Mat& img )
                 for( int iy = 0 ; iy < m_height; iy ++ )
                 {
                     uchar* data = img.ptr<uchar>(iy);
-                    jpeg_read_scanlines( cinfo, buffer, 1 );
+                    if (jpeg_read_scanlines( cinfo, buffer, 1 ) != 1) return false;
 
                     if( color )
                     {
-                        if( cinfo->out_color_components == 3 )
-                            icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        if (m_use_rgb)
+                        {
+                            if( cinfo->out_color_components == 3 )
+                                icvCvt_BGR2RGB_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                            else
+                                icvCvt_CMYK2RGB_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        }
                         else
-                            icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        {
+                            if( cinfo->out_color_components == 3 )
+                                icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                            else
+                                icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        }
                     }
                     else
                     {

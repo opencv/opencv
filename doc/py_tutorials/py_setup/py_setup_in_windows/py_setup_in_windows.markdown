@@ -116,9 +116,6 @@ Building OpenCV from source
 @note We have installed with no other support like TBB, Eigen, Qt, Documentation etc. It would be
 difficult to explain it here. A more detailed video will be added soon or you can just hack around.
 
-Additional Resources
---------------------
-
 Exercises
 ---------
 

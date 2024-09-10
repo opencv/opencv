@@ -920,6 +920,7 @@ public:
         CV_PROP_RW int target;
         CV_PROP_RW Scalar meanvalue;
         CV_PROP_RW Scalar stdvalue;
+        CV_PROP_RW float tracking_score_threshold;
     };
 
     /** @brief Constructor

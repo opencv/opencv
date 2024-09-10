@@ -43,130 +43,7 @@
 
 namespace opencv_test { namespace {
 
-class CV_CannyTest : public cvtest::ArrayTest
-{
-public:
-    CV_CannyTest(bool custom_deriv = false);
-
-protected:
-    void get_test_array_types_and_sizes( int test_case_idx, vector<vector<Size> >& sizes, vector<vector<int> >& types );
-    double get_success_error_level( int test_case_idx, int i, int j );
-    int prepare_test_case( int test_case_idx );
-    void run_func();
-    void prepare_to_validation( int );
-    int validate_test_results( int /*test_case_idx*/ );
-
-    int aperture_size;
-    bool use_true_gradient;
-    double threshold1, threshold2;
-    bool test_cpp;
-    bool test_custom_deriv;
-
-    Mat img;
-};
-
-
-CV_CannyTest::CV_CannyTest(bool custom_deriv)
-{
-    test_array[INPUT].push_back(NULL);
-    test_array[OUTPUT].push_back(NULL);
-    test_array[REF_OUTPUT].push_back(NULL);
-    element_wise_relative_error = true;
-    aperture_size = 0;
-    use_true_gradient = false;
-    threshold1 = threshold2 = 0;
-    test_custom_deriv = custom_deriv;
-
-    const char imgPath[] = "shared/fruits.png";
-    img = cv::imread(cvtest::TS::ptr()->get_data_path() + imgPath, IMREAD_GRAYSCALE);
-}
-
-
-void CV_CannyTest::get_test_array_types_and_sizes( int test_case_idx,
-                                                  vector<vector<Size> >& sizes,
-                                                  vector<vector<int> >& types )
-{
-    RNG& rng = ts->get_rng();
-    double thresh_range;
-
-    cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    types[INPUT][0] = types[OUTPUT][0] = types[REF_OUTPUT][0] = CV_8U;
-
-    aperture_size = cvtest::randInt(rng) % 2 ? 5 : 3;
-    thresh_range = aperture_size == 3 ? 300 : 1000;
-
-    threshold1 = cvtest::randReal(rng)*thresh_range;
-    threshold2 = cvtest::randReal(rng)*thresh_range*0.3;
-
-    if( cvtest::randInt(rng) % 2 )
-        CV_SWAP( threshold1, threshold2, thresh_range );
-
-    use_true_gradient = cvtest::randInt(rng) % 2 != 0;
-    test_cpp = (cvtest::randInt(rng) & 256) == 0;
-
-    ts->printf(cvtest::TS::LOG, "Canny(size = %d x %d, aperture_size = %d, threshold1 = %g, threshold2 = %g, L2 = %s) test_cpp = %s (test case #%d)\n",
-        sizes[0][0].width, sizes[0][0].height, aperture_size, threshold1, threshold2, use_true_gradient ? "TRUE" : "FALSE", test_cpp ? "TRUE" : "FALSE", test_case_idx);
-}
-
-
-int CV_CannyTest::prepare_test_case( int test_case_idx )
-{
-    int code = cvtest::ArrayTest::prepare_test_case( test_case_idx );
-    if( code > 0 )
-    {
-        RNG& rng = ts->get_rng();
-        Mat& src = test_mat[INPUT][0];
-        //GaussianBlur(src, src, Size(11, 11), 5, 5);
-        if(src.cols > img.cols || src.rows > img.rows)
-            resize(img, src, src.size(), 0, 0, INTER_LINEAR_EXACT);
-        else
-            img(
-                Rect(
-                    cvtest::randInt(rng) % (img.cols-src.cols),
-                    cvtest::randInt(rng) % (img.rows-src.rows),
-                    src.cols,
-                    src.rows
-                )
-            ).copyTo(src);
-        GaussianBlur(src, src, Size(5, 5), 0);
-    }
-
-    return code;
-}
-
-
-double CV_CannyTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
-{
-    return 0;
-}
-
-
-void CV_CannyTest::run_func()
-{
-    if (test_custom_deriv)
-    {
-        cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
-        cv::Mat src = cv::cvarrToMat(test_array[INPUT][0]);
-        cv::Mat dx, dy;
-        int m = aperture_size;
-        Point anchor(m/2, m/2);
-        Mat dxkernel = cvtest::calcSobelKernel2D( 1, 0, m, 0 );
-        Mat dykernel = cvtest::calcSobelKernel2D( 0, 1, m, 0 );
-        cvtest::filter2D(src, dx, CV_16S, dxkernel, anchor, 0, BORDER_REPLICATE);
-        cvtest::filter2D(src, dy, CV_16S, dykernel, anchor, 0, BORDER_REPLICATE);
-        cv::Canny(dx, dy, _out, threshold1, threshold2, use_true_gradient);
-    }
-    else
-    {
-        cv::Mat _out = cv::cvarrToMat(test_array[OUTPUT][0]);
-        cv::Canny(cv::cvarrToMat(test_array[INPUT][0]), _out, threshold1, threshold2,
-                aperture_size, use_true_gradient);
-    }
-}
-
-
-static void
-cannyFollow( int x, int y, float lowThreshold, const Mat& mag, Mat& dst )
+static void Canny_reference_follow( int x, int y, float lowThreshold, const Mat& mag, Mat& dst )
 {
     static const int ofs[][2] = {{1,0},{1,-1},{0,-1},{-1,-1},{-1,0},{-1,1},{0,1},{1,1}};
     int i;
@@ -181,16 +58,15 @@ cannyFollow( int x, int y, float lowThreshold, const Mat& mag, Mat& dst )
             (unsigned)y1 < (unsigned)mag.rows &&
             mag.at<float>(y1, x1) > lowThreshold &&
             !dst.at<uchar>(y1, x1) )
-            cannyFollow( x1, y1, lowThreshold, mag, dst );
+            Canny_reference_follow( x1, y1, lowThreshold, mag, dst );
     }
 }
 
-
-static void
-test_Canny( const Mat& src, Mat& dst,
+static void Canny_reference( const Mat& src, Mat& dst,
             double threshold1, double threshold2,
             int aperture_size, bool use_true_gradient )
 {
+    dst.create(src.size(), src.type());
     int m = aperture_size;
     Point anchor(m/2, m/2);
     const double tan_pi_8 = tan(CV_PI/8.);
@@ -273,47 +149,80 @@ test_Canny( const Mat& src, Mat& dst,
     {
         for( x = 0; x < width; x++ )
             if( mag.at<float>(y, x) > highThreshold && !dst.at<uchar>(y, x) )
-                cannyFollow( x, y, lowThreshold, mag, dst );
+                Canny_reference_follow( x, y, lowThreshold, mag, dst );
     }
 }
 
+//==============================================================================
 
-void CV_CannyTest::prepare_to_validation( int )
+// aperture, true gradient
+typedef testing::TestWithParam<testing::tuple<int, bool>> Canny_Modes;
+
+TEST_P(Canny_Modes, accuracy)
 {
-    Mat src = test_mat[INPUT][0], dst = test_mat[REF_OUTPUT][0];
-    test_Canny( src, dst, threshold1, threshold2, aperture_size, use_true_gradient );
+    const int aperture = get<0>(GetParam());
+    const bool trueGradient = get<1>(GetParam());
+    const double range = aperture == 3 ? 300. : 1000.;
+    RNG & rng = TS::ptr()->get_rng();
+
+    for (int ITER = 0; ITER < 20; ++ITER)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", ITER));
+
+        const std::string fname = cvtest::findDataFile("shared/fruits.png");
+        const Mat original = cv::imread(fname, IMREAD_GRAYSCALE);
+
+        const double thresh1 = rng.uniform(0., range);
+        const double thresh2 = rng.uniform(0., range * 0.3);
+        const Size sz(rng.uniform(127, 800), rng.uniform(127, 600));
+        const Size osz = original.size();
+
+        // preparation
+        Mat img;
+        if (sz.width >= osz.width || sz.height >= osz.height)
+        {
+            // larger image -> scale
+            resize(original, img, sz, 0, 0, INTER_LINEAR_EXACT);
+        }
+        else
+        {
+            // smaller image -> crop
+            Point origin(rng.uniform(0, osz.width - sz.width), rng.uniform(0, osz.height - sz.height));
+            Rect roi(origin, sz);
+            original(roi).copyTo(img);
+        }
+        GaussianBlur(img, img, Size(5, 5), 0);
+
+        // regular function
+        Mat result;
+        {
+            cv::Canny(img, result, thresh1, thresh2, aperture, trueGradient);
+        }
+
+        // custom derivatives
+        Mat customResult;
+        {
+            Mat dxkernel = cvtest::calcSobelKernel2D(1, 0, aperture, 0);
+            Mat dykernel = cvtest::calcSobelKernel2D(0, 1, aperture, 0);
+            Point anchor(aperture / 2, aperture / 2);
+            cv::Mat dx, dy;
+            cvtest::filter2D(img, dx, CV_16S, dxkernel, anchor, 0, BORDER_REPLICATE);
+            cvtest::filter2D(img, dy, CV_16S, dykernel, anchor, 0, BORDER_REPLICATE);
+            cv::Canny(dx, dy, customResult, thresh1, thresh2, trueGradient);
+        }
+
+        Mat reference;
+        Canny_reference(img, reference, thresh1, thresh2, aperture, trueGradient);
+
+        EXPECT_MAT_NEAR(result, reference, 0);
+        EXPECT_MAT_NEAR(customResult, reference, 0);
+    }
 }
 
-
-int CV_CannyTest::validate_test_results( int test_case_idx )
-{
-    int code = cvtest::TS::OK, nz0;
-    prepare_to_validation(test_case_idx);
-
-    double err = cvtest::norm(test_mat[OUTPUT][0], test_mat[REF_OUTPUT][0], CV_L1);
-    if( err == 0 )
-        return code;
-
-    if( err != cvRound(err) || cvRound(err)%255 != 0 )
-    {
-        ts->printf( cvtest::TS::LOG, "Some of the pixels, produced by Canny, are not 0's or 255's; the difference is %g\n", err );
-        ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );
-        return code;
-    }
-
-    nz0 = cvRound(cvtest::norm(test_mat[REF_OUTPUT][0], CV_L1)/255);
-    err = (err/255/MAX(nz0,100))*100;
-    if( err > 1 )
-    {
-        ts->printf( cvtest::TS::LOG, "Too high percentage of non-matching edge pixels = %g%%\n", err);
-        ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
-    }
-
-    return code;
-}
-
-TEST(Imgproc_Canny, accuracy) { CV_CannyTest test; test.safe_run(); }
-TEST(Imgproc_Canny, accuracy_deriv) { CV_CannyTest test(true); test.safe_run(); }
+INSTANTIATE_TEST_CASE_P(/**/, Canny_Modes,
+    testing::Combine(
+        testing::Values(3, 5),
+        testing::Values(true, false)));
 
 
 /*

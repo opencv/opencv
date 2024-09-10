@@ -42,15 +42,11 @@ endif()
 
 if(WITH_NEON)
     target_compile_definitions(carotene_objs PRIVATE "-DWITH_NEON")
-    if(NOT DEFINED CAROTENE_NEON_ARCH )
-    elseif(CAROTENE_NEON_ARCH EQUAL 8)
-	    target_compile_definitions(carotene_objs PRIVATE "-DCAROTENE_NEON_ARCH=8")
-    elseif(CAROTENE_NEON_ARCH EQUAL 7)
-	    target_compile_definitions(carotene_objs PRIVATE "-DCAROTENE_NEON_ARCH=7")
-    else()
-	    target_compile_definitions(carotene_objs PRIVATE "-DCAROTENE_NEON_ARCH=0")
-    endif()
 endif()
+
+ if(MINGW)
+    target_compile_definitions(carotene_objs PRIVATE "-D_USE_MATH_DEFINES=1")
+ endif()
 
 # we add dummy file to fix XCode build
 add_library(carotene STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} "$<TARGET_OBJECTS:carotene_objs>" "${CAROTENE_SOURCE_DIR}/dummy.cpp")

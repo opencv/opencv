@@ -216,8 +216,6 @@ for i in range(len(objpoints)):
 
 print( "total error: {}".format(mean_error/len(objpoints)) )
 @endcode
-Additional Resources
---------------------
 
 Exercises
 ---------
