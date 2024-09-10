@@ -3805,7 +3805,7 @@ namespace fisheye
     @param imagePoints Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or
     vector\<Point2f\>.
     @param affine
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param alpha The skew coefficient.
     @param jacobian Optional output 2Nx15 jacobian matrix of derivatives of image points with respect
@@ -3829,7 +3829,7 @@ namespace fisheye
 
     @param undistorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is
     the number of points in the view.
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param alpha The skew coefficient.
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
@@ -3841,12 +3841,12 @@ namespace fisheye
     CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
 
     /** @overload
-    Overload of distortPoints function to handle cases when undistorted points are got with non-identity
+    Overload of distortPoints function to handle cases when undistorted points are obtained with non-identity
     camera matrix, e.g. output of #estimateNewCameraMatrixForUndistortRectify.
     @param undistorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is
     the number of points in the view.
     @param Kundistorted Camera intrinsic matrix used as new camera matrix for undistortion.
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param alpha The skew coefficient.
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
@@ -3858,7 +3858,7 @@ namespace fisheye
 
     @param distorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is the
     number of points in the view.
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
     1-channel or 1x1 3-channel
@@ -3873,7 +3873,7 @@ namespace fisheye
     /** @brief Computes undistortion and rectification maps for image transform by #remap. If D is empty zero
     distortion is used, if R or P is empty identity matrixes are used.
 
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
     1-channel or 1x1 3-channel
@@ -3891,7 +3891,7 @@ namespace fisheye
 
     @param distorted image with fisheye lens distortion.
     @param undistorted Output image with compensated fisheye lens distortion.
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param Knew Camera intrinsic matrix of the distorted image. By default, it is the identity matrix but you
     may additionally scale and shift the result by using a different matrix.
@@ -3920,7 +3920,7 @@ namespace fisheye
 
     /** @brief Estimates new camera intrinsic matrix for undistortion or rectification.
 
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param image_size Size of the image
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
@@ -3947,7 +3947,7 @@ namespace fisheye
     @ref fisheye::CALIB_USE_INTRINSIC_GUESS is specified, some or all of fx, fy, cx, cy must be
     initialized before calling the function.
     @param D Output vector of distortion coefficients \f$\distcoeffsfisheye\f$.
-    @param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view.
+    @param rvecs Output vector of rotation vectors (see @ref Rodrigues ) estimated for each pattern view.
     That is, each k-th rotation vector together with the corresponding k-th translation vector (see
     the next output parameter description) brings the calibration pattern from the model coordinate
     space (in which object points are specified) to the world coordinate space, that is, a real
@@ -4088,7 +4088,7 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     - for all the other flags, number of input points must be >= 4 and object points can be in any configuration.
     @param criteria Termination criteria for internal undistortPoints call.
     The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
-    thus the input are very similar. Check there and Perspective-n-Points is described in @ref calib3d_solvePnP
+    thus the input are very similar. More information about Perspective-n-Points is described in @ref calib3d_solvePnP
     for more information.
     */
     CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
