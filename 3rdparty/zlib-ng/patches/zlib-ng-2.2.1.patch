@@ -1,0 +1,54 @@
+--- ../../../zlib-ng/CMakeLists.txt	2024-09-05 17:13:34.179849573 +0300
++++ ./CMakeLists.txt	2024-09-10 15:56:43.346774933 +0300
+@@ -74,10 +74,10 @@
+ # Options parsing
+ #
+ option(WITH_GZFILEOP "Compile with support for gzFile related functions" ON)
+-option(ZLIB_COMPAT "Compile with zlib compatible API" OFF)
+-option(ZLIB_ENABLE_TESTS "Build test binaries" ON)
+-option(ZLIBNG_ENABLE_TESTS "Test zlib-ng specific API" ON)
+-option(WITH_GTEST "Build gtest_zlib" ON)
++option(ZLIB_COMPAT "Compile with zlib compatible API" ON)
++option(ZLIB_ENABLE_TESTS "Build test binaries" OFF)
++option(ZLIBNG_ENABLE_TESTS "Test zlib-ng specific API" OFF)
++option(WITH_GTEST "Build gtest_zlib" OFF)
+ option(WITH_FUZZERS "Build test/fuzz" OFF)
+ option(WITH_BENCHMARKS "Build test/benchmarks" OFF)
+ option(WITH_BENCHMARK_APPS "Build application benchmarks" OFF)
+@@ -128,6 +128,9 @@
+ 
+ option(INSTALL_UTILS "Copy minigzip and minideflate during install" OFF)
+ 
++set(BUILD_SHARED_LIBS OFF)
++ocv_warnings_disable(CMAKE_C_FLAGS -Wmissing-prototypes -Wmissing-declarations -Wundef)
++
+ mark_as_advanced(FORCE
+     ZLIB_SYMBOL_PREFIX
+     WITH_REDUCED_MEM
+@@ -1271,8 +1274,6 @@
+ if(WITH_GZFILEOP)
+     set(PKG_CONFIG_CFLAGS "-DWITH_GZFILEOP")
+ endif()
+-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/zlib.pc.cmakein
+-    ${ZLIB_PC} @ONLY)
+ configure_file(${CMAKE_CURRENT_BINARY_DIR}/zconf${SUFFIX}.h.cmakein
+     ${CMAKE_CURRENT_BINARY_DIR}/zconf${SUFFIX}.h @ONLY)
+ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/zlib${SUFFIX}.h.in
+@@ -1322,17 +1323,6 @@
+        set(PACKAGE_CONFIGNAME zlib-ng)
+        set(PACKAGE_VERSION ${ZLIBNG_HEADER_VERSION})
+     endif()
+-    configure_package_config_file(${PACKAGE_CONFIGNAME}-config.cmake.in
+-        ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_CONFIGNAME}-config.cmake
+-        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${EXPORT_NAME}
+-        PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR)
+-    write_basic_package_version_file(
+-        ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_CONFIGNAME}-config-version.cmake
+-        VERSION ${PACKAGE_VERSION}
+-        COMPATIBILITY AnyNewerVersion)
+-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_CONFIGNAME}-config.cmake
+-                  ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_CONFIGNAME}-config-version.cmake
+-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${EXPORT_NAME})
+ endif()
+ 
+ #============================================================================
