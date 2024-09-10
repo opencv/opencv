@@ -30,7 +30,8 @@
 
   (this is the zlib license)
 */
-
+#ifndef OPENCV_HAL_INTRIN_MATH_HPP
+#define OPENCV_HAL_INTRIN_MATH_HPP
 
 //! @name Exponential
 //! @{
@@ -442,7 +443,7 @@ inline v_float##TpSuffix v_erf(const v_float##TpSuffix &v) { \
 
 #define OPENCV_HAL_MATH_IMPL_16F(VXPrefix, TpSuffix) \
 OPENCV_HAL_MATH_IMPL_EXP_F16(VXPrefix, TpSuffix) \
-OPENCV_HAL_MATH_IMPL_LOG_F16(VXPrefix, TpSuffix) \
+OPENCV_HAL_MATH_IMPL_LOG_F16(VXPrefix, TpSuffix)
 
 #define OPENCV_HAL_MATH_IMPL_32F(VXPrefix, TpSuffix) \
 OPENCV_HAL_MATH_IMPL_EXP_F32(VXPrefix, TpSuffix) \
@@ -451,4 +452,6 @@ OPENCV_HAL_MATH_IMPL_ERF_F32(VXPrefix, TpSuffix)
 
 #define OPENCV_HAL_MATH_IMPL_64F(VXPrefix, TpSuffix) \
 OPENCV_HAL_MATH_IMPL_EXP_F64(VXPrefix, TpSuffix) \
-OPENCV_HAL_MATH_IMPL_LOG_F64(VXPrefix, TpSuffix) \
+OPENCV_HAL_MATH_IMPL_LOG_F64(VXPrefix, TpSuffix)
+
+#endif // OPENCV_HAL_INTRIN_MATH_HPP
