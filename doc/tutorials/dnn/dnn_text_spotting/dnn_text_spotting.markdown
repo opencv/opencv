@@ -14,6 +14,7 @@
 In this tutorial, we will introduce the APIs for TextRecognitionModel and TextDetectionModel in detail.
 
 ---
+
 ### TextRecognitionModel
 
 In the current version, @ref cv::dnn::TextRecognitionModel only supports CNN+RNN+CTC based algorithms,
@@ -292,38 +293,13 @@ of these APIs can be found in the DNN module.
 
 ## Detailed Sample
 For more information, please refer to:
-- [samples/dnn/scene_text_recognition.cpp](https://github.com/opencv/opencv/blob/5.x/samples/dnn/scene_text_recognition.cpp)
-- [samples/dnn/scene_text_detection.cpp](https://github.com/opencv/opencv/blob/5.x/samples/dnn/scene_text_detection.cpp)
 - [samples/dnn/text_detection.cpp](https://github.com/opencv/opencv/blob/5.x/samples/dnn/text_detection.cpp)
-- [samples/dnn/scene_text_spotting.cpp](https://github.com/opencv/opencv/blob/5.x/samples/dnn/scene_text_spotting.cpp)
 
 ### Test with an image
+Detection models can be downloaded using:
+- [samples/dnn/download_models.py](https://github.com/opencv/opencv/blob/5.x/samples/dnn/download_models.py)
+All the preprocessing parameters will be loaded from [samples/dnn/models.yml](https://github.com/opencv/opencv/blob/5.x/samples/dnn/models.yml)
 Examples:
 ```bash
-example_dnn_scene_text_recognition -mp=path/to/crnn_cs.onnx -i=path/to/an/image -rgb=1 -vp=/path/to/alphabet_94.txt
-example_dnn_scene_text_detection -mp=path/to/DB_TD500_resnet50.onnx -i=path/to/an/image -ih=736 -iw=736
-example_dnn_scene_text_spotting -dmp=path/to/DB_IC15_resnet50.onnx -rmp=path/to/crnn_cs.onnx -i=path/to/an/image -iw=1280 -ih=736 -rgb=1 -vp=/path/to/alphabet_94.txt
-example_dnn_text_detection -dmp=path/to/EAST.pb -rmp=path/to/crnn_cs.onnx -i=path/to/an/image -rgb=1 -vp=path/to/alphabet_94.txt
-```
-
-### Test on public datasets
-Text Recognition:
-
-The download link for testing images can be found in the **Images for Testing**
-
-
-Examples:
-```bash
-example_dnn_scene_text_recognition -mp=path/to/crnn.onnx -e=true -edp=path/to/evaluation_data_rec -vp=/path/to/alphabet_36.txt -rgb=0
-example_dnn_scene_text_recognition -mp=path/to/crnn_cs.onnx -e=true -edp=path/to/evaluation_data_rec -vp=/path/to/alphabet_94.txt -rgb=1
-```
-
-Text Detection:
-
-The download links for testing images can be found in the **Images for Testing**
-
-Examples:
-```bash
-example_dnn_scene_text_detection -mp=path/to/DB_TD500_resnet50.onnx -e=true -edp=path/to/evaluation_data_det/TD500 -ih=736 -iw=736
-example_dnn_scene_text_detection -mp=path/to/DB_IC15_resnet50.onnx -e=true -edp=path/to/evaluation_data_det/IC15 -ih=736 -iw=1280
+example_dnn_text_detection DB
 ```

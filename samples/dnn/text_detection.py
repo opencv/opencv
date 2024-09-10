@@ -1,15 +1,19 @@
 '''
-    Text detection model: https://github.com/argman/EAST
-    Download link: https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1
+    Text detection model (EAST): https://github.com/argman/EAST
+    Download link for EAST model: https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1
 
-    CRNN Text recognition model taken from here: https://github.com/meijieru/crnn.pytorch
-    How to convert from pb to onnx:
-    Using classes from here: https://github.com/meijieru/crnn.pytorch/blob/master/models/crnn.py
+    DB detector model:
+    https://drive.google.com/uc?export=download&id=17_ABp79PlFt9yPCxSaarVc_DKTmrSGGf
 
-    More converted onnx text recognition models can be downloaded directly here:
+    CRNN Text recognition model sourced from: https://github.com/meijieru/crnn.pytorch
+    How to convert from .pb to .onnx:
+    Using classes from: https://github.com/meijieru/crnn.pytorch/blob/master/models/crnn.py
+
+    Additional converted ONNX text recognition models available for direct download:
     Download link: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing
-    And these models taken from here:https://github.com/clovaai/deep-text-recognition-benchmark
+    These models are taken from: https://github.com/clovaai/deep-text-recognition-benchmark
 
+    Importing and using the CRNN model in PyTorch:
     import torch
     from models.crnn import CRNN
 
@@ -17,39 +21,62 @@
     model.load_state_dict(torch.load('crnn.pth'))
     dummy_input = torch.randn(1, 1, 32, 100)
     torch.onnx.export(model, dummy_input, "crnn.onnx", verbose=True)
+
+    Usage: python text_detection.py DB --ocr_model=<path to recognition model>
+
 '''
-
-
-# Import required modules
-import numpy as np
-import cv2 as cv
-import math
+import os
+import cv2
 import argparse
+import numpy as np
+from common import *
+
+def help():
+    print(
+        '''
+        Use this script for Text Detection and Recognition using OpenCV.
+
+        Firstly, download required models using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
+
+        Example: python download_models.py East
+                 python download_models.py OCR
+
+        To run:
+        Example: python text_detection.py modelName(i.e. DB or East)
+
+        Detection model path can also be specified using --model argument and ocr model can be specified using --ocr_model.
+        '''
+    )
 
 ############ Add argument parser for command line arguments ############
-parser = argparse.ArgumentParser(
-    description="Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of "
-                "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)"
-                "The OCR model can be obtained from converting the pretrained CRNN model to .onnx format from the github repository https://github.com/meijieru/crnn.pytorch"
-                "Or you can download trained OCR model directly from https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing")
-parser.add_argument('--input',
-                    help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-parser.add_argument('--model', '-m', required=True,
-                    help='Path to a binary .pb file contains trained detector network.')
-parser.add_argument('--ocr', default="crnn.onnx",
-                    help="Path to a binary .pb or .onnx file contains trained recognition network", )
-parser.add_argument('--width', type=int, default=320,
-                    help='Preprocess input image by resizing to a specific width. It should be multiple by 32.')
-parser.add_argument('--height', type=int, default=320,
-                    help='Preprocess input image by resizing to a specific height. It should be multiple by 32.')
-parser.add_argument('--thr', type=float, default=0.5,
-                    help='Confidence threshold.')
-parser.add_argument('--nms', type=float, default=0.4,
-                    help='Non-maximum suppression threshold.')
-args = parser.parse_args()
+def get_args_parser():
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--input', default='right.jpg',
+                        help='Path to input image or video file. Skip this argument to capture frames from a camera.')
+    parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
+                        help='An optional path to file with preprocessing parameters.')
+    parser.add_argument('--thr', type=float, default=0.5,
+                        help='Confidence threshold.')
+    parser.add_argument('--nms', type=float, default=0.4,
+                        help='Non-maximum suppression threshold.')
+    parser.add_argument('--binary_threshold', type=float, default=0.3,
+                        help='Confidence threshold for the binary map in DB detector. ')
+    parser.add_argument('--polygon_threshold', type=float, default=0.5,
+                        help='Confidence threshold for polygons in DB detector.')
+    parser.add_argument('--max_candidate', type=int, default=200,
+                        help='Max candidates for polygons in DB detector.')
+    parser.add_argument('--unclip_ratio', type=float, default=2.0,
+                        help='Unclip ratio for DB detector.')
+    parser.add_argument('--vocabulary_path', default='alphabet_36.txt',
+                        help='Path to vocabulary file.')
+    args, _ = parser.parse_known_args()
 
-
-############ Utility functions ############
+    add_preproc_args(args.zoo, parser, 'text_detection', prefix="")
+    add_preproc_args(args.zoo, parser, 'text_recognition', prefix="ocr_")
+    parser = argparse.ArgumentParser(parents=[parser],
+                                        description='Text Detection and Recognition using OpenCV.',
+                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    return parser.parse_args()
 
 def fourPointsTransform(frame, vertices):
     vertices = np.asarray(vertices)
@@ -60,179 +87,110 @@ def fourPointsTransform(frame, vertices):
         [outputSize[0] - 1, 0],
         [outputSize[0] - 1, outputSize[1] - 1]], dtype="float32")
 
-    rotationMatrix = cv.getPerspectiveTransform(vertices, targetVertices)
-    result = cv.warpPerspective(frame, rotationMatrix, outputSize)
+    rotationMatrix = cv2.getPerspectiveTransform(vertices, targetVertices)
+    result = cv2.warpPerspective(frame, rotationMatrix, outputSize)
     return result
 
-
-def decodeText(scores):
-    text = ""
-    alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
-    for i in range(scores.shape[0]):
-        c = np.argmax(scores[i][0])
-        if c != 0:
-            text += alphabet[c - 1]
-        else:
-            text += '-'
-
-    # adjacent same letters as well as background text must be removed to get the final output
-    char_list = []
-    for i in range(len(text)):
-        if text[i] != '-' and (not (i > 0 and text[i] == text[i - 1])):
-            char_list.append(text[i])
-    return ''.join(char_list)
-
-
-def decodeBoundingBoxes(scores, geometry, scoreThresh):
-    detections = []
-    confidences = []
-
-    ############ CHECK DIMENSIONS AND SHAPES OF geometry AND scores ############
-    assert len(scores.shape) == 4, "Incorrect dimensions of scores"
-    assert len(geometry.shape) == 4, "Incorrect dimensions of geometry"
-    assert scores.shape[0] == 1, "Invalid dimensions of scores"
-    assert geometry.shape[0] == 1, "Invalid dimensions of geometry"
-    assert scores.shape[1] == 1, "Invalid dimensions of scores"
-    assert geometry.shape[1] == 5, "Invalid dimensions of geometry"
-    assert scores.shape[2] == geometry.shape[2], "Invalid dimensions of scores and geometry"
-    assert scores.shape[3] == geometry.shape[3], "Invalid dimensions of scores and geometry"
-    height = scores.shape[2]
-    width = scores.shape[3]
-    for y in range(0, height):
-
-        # Extract data from scores
-        scoresData = scores[0][0][y]
-        x0_data = geometry[0][0][y]
-        x1_data = geometry[0][1][y]
-        x2_data = geometry[0][2][y]
-        x3_data = geometry[0][3][y]
-        anglesData = geometry[0][4][y]
-        for x in range(0, width):
-            score = scoresData[x]
-
-            # If score is lower than threshold score, move to next x
-            if (score < scoreThresh):
-                continue
-
-            # Calculate offset
-            offsetX = x * 4.0
-            offsetY = y * 4.0
-            angle = anglesData[x]
-
-            # Calculate cos and sin of angle
-            cosA = math.cos(angle)
-            sinA = math.sin(angle)
-            h = x0_data[x] + x2_data[x]
-            w = x1_data[x] + x3_data[x]
-
-            # Calculate offset
-            offset = ([offsetX + cosA * x1_data[x] + sinA * x2_data[x], offsetY - sinA * x1_data[x] + cosA * x2_data[x]])
-
-            # Find points for rectangle
-            p1 = (-sinA * h + offset[0], -cosA * h + offset[1])
-            p3 = (-cosA * w + offset[0], sinA * w + offset[1])
-            center = (0.5 * (p1[0] + p3[0]), 0.5 * (p1[1] + p3[1]))
-            detections.append((center, (w, h), -1 * angle * 180.0 / math.pi))
-            confidences.append(float(score))
-
-    # Return detections and confidences
-    return [detections, confidences]
-
-
 def main():
-    # Read and store arguments
-    confThreshold = args.thr
-    nmsThreshold = args.nms
-    inpWidth = args.width
-    inpHeight = args.height
-    modelDetector = args.model
-    modelRecognition = args.ocr
+    args = get_args_parser()
+    if args.alias is None or hasattr(args, 'help'):
+        help()
+        exit(1)
 
-    # Load network
-    detector = cv.dnn.readNet(modelDetector)
-    recognizer = cv.dnn.readNet(modelRecognition)
+    if args.download_sha is not None:
+        args.model = findModel(args.model, args.download_sha)
+    else:
+        args.model = findModel(args.model, args.sha1)
 
-    # Create a new named window
-    kWinName = "EAST: An Efficient and Accurate Scene Text Detector"
-    cv.namedWindow(kWinName, cv.WINDOW_NORMAL)
-    outNames = []
-    outNames.append("feature_fusion/Conv_7/Sigmoid")
-    outNames.append("feature_fusion/concat_3")
+    args.ocr_model = findModel(args.ocr_model, args.ocr_sha1)
+    args.input = findFile(args.input)
+    args.vocabulary_path = findFile(args.vocabulary_path)
 
-    # Open a video file or an image file or a camera stream
-    cap = cv.VideoCapture(args.input if args.input else 0)
+    frame = cv2.imread(args.input)
+    board = np.ones_like(frame)*255
 
-    tickmeter = cv.TickMeter()
-    while cv.waitKey(1) < 0:
-        # Read frame
-        hasFrame, frame = cap.read()
-        if not hasFrame:
-            cv.waitKey()
-            break
+    stdSize = 0.8
+    stdWeight = 2
+    stdImgSize = 512
+    imgWidth = min(frame.shape[:2])
+    fontSize = (stdSize*imgWidth)/stdImgSize
+    fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
 
-        # Get frame height and width
-        height_ = frame.shape[0]
-        width_ = frame.shape[1]
-        rW = width_ / float(inpWidth)
-        rH = height_ / float(inpHeight)
+    if(args.alias == "DB"):
+        # DB Detector initialization
+        detector = cv2.dnn_TextDetectionModel_DB(args.model)
+        detector.setBinaryThreshold(args.binary_threshold)
+        detector.setPolygonThreshold(args.polygon_threshold)
+        detector.setUnclipRatio(args.unclip_ratio)
+        detector.setMaxCandidates(args.max_candidate)
+        # Setting input parameters specific to the DB model
+        detector.setInputParams(scale=args.scale, size=(args.width, args.height), mean=args.mean)
+        # Performing text detection
+        detResults = detector.detect(frame)
+    elif(args.alias == "East"):
+        # EAST Detector initialization
+        detector = cv2.dnn_TextDetectionModel_EAST(args.model)
+        detector.setConfidenceThreshold(args.thr)
+        detector.setNMSThreshold(args.nms)
+        # Setting input parameters specific to EAST model
+        detector.setInputParams(scale=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=True)
+        # Perfroming text detection
+        detResults = detector.detect(frame)
 
-        # Create a 4D blob from frame.
-        blob = cv.dnn.blobFromImage(frame, 1.0, (inpWidth, inpHeight), (123.68, 116.78, 103.94), True, False)
+    # Open the vocabulary file and read lines into a list
+    with open(args.vocabulary_path, 'r') as voc_file:
+        vocabulary = [line.strip() for line in voc_file]
 
-        # Run the detection model
-        detector.setInput(blob)
+    if args.ocr_model is None:
+        print("[ERROR] Please pass the path to the ocr model using --ocr_model to run the sample")
+        exit(1)
+    # Initialize the text recognition model with the specified model path
+    recognizer = cv2.dnn_TextRecognitionModel(args.ocr_model)
 
-        tickmeter.start()
-        outs = detector.forward(outNames)
-        tickmeter.stop()
+    # Set the vocabulary for the model
+    recognizer.setVocabulary(vocabulary)
 
-        # Get scores and geometry
-        scores = outs[0]
-        geometry = outs[1]
-        [boxes, confidences] = decodeBoundingBoxes(scores, geometry, confThreshold)
+    # Set the decoding method to 'CTC-greedy'
+    recognizer.setDecodeType("CTC-greedy")
 
-        # Apply NMS
-        indices = cv.dnn.NMSBoxesRotated(boxes, confidences, confThreshold, nmsThreshold)
-        for i in indices:
-            # get 4 corners of the rotated rect
-            vertices = cv.boxPoints(boxes[i])
-            # scale the bounding box coordinates based on the respective ratios
-            for j in range(4):
-                vertices[j][0] *= rW
-                vertices[j][1] *= rH
+    recScale = 1.0 / 127.5
+    recMean = (127.5, 127.5, 127.5)
+    recInputSize = (100, 32)
+    recognizer.setInputParams(scale=recScale, size=recInputSize, mean=recMean)
 
+    if len(detResults) > 0:
+        recInput = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if not args.rgb else frame.copy()
+        contours = []
 
-            # get cropped image using perspective transform
-            if modelRecognition:
-                cropped = fourPointsTransform(frame, vertices)
-                cropped = cv.cvtColor(cropped, cv.COLOR_BGR2GRAY)
+        for i, (quadrangle, _) in enumerate(zip(detResults[0], detResults[1])):
+            if isinstance(quadrangle, np.ndarray):
+                quadrangle = np.array(quadrangle).astype(np.float32)
 
-                # Create a 4D blob from cropped image
-                blob = cv.dnn.blobFromImage(cropped, size=(100, 32), mean=127.5, scalefactor=1 / 127.5)
-                recognizer.setInput(blob)
+                if quadrangle is None or len(quadrangle) != 4:
+                    print("Skipping a quadrangle with incorrect points or transformation failed.")
+                    continue
 
-                # Run the recognition model
-                tickmeter.start()
-                result = recognizer.forward()
-                tickmeter.stop()
+                contours.append(np.array(quadrangle, dtype=np.int32))
+                cropped = fourPointsTransform(recInput, quadrangle)
+                recognitionResult = recognizer.recognize(cropped)
+                print(f"{i}: '{recognitionResult}'")
 
-                # decode the result into text
-                wordRecognized = decodeText(result)
-                cv.putText(frame, wordRecognized, (int(vertices[1][0]), int(vertices[1][1])), cv.FONT_HERSHEY_SIMPLEX,
-                           0.5, (255, 0, 0))
+                try:
+                    text_origin = (int(quadrangle[1][0]), int(quadrangle[0][1]))
+                    cv2.putText(board, recognitionResult, text_origin, cv2.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+                except Exception as e:
+                    print("Failed to write text on the frame:", e)
+            else:
+                print("Skipping a detection with invalid format:", quadrangle)
 
-            for j in range(4):
-                p1 = (int(vertices[j][0]), int(vertices[j][1]))
-                p2 = (int(vertices[(j + 1) % 4][0]), int(vertices[(j + 1) % 4][1]))
-                cv.line(frame, p1, p2, (0, 255, 0), 1)
+        cv2.polylines(frame, contours, True, (0, 255, 0), 1)
+        cv2.polylines(board, contours, True, (200, 255, 200), 1)
+    else:
+        print("No Text Detected.")
 
-        # Put efficiency information
-        label = 'Inference time: %.2f ms' % (tickmeter.getTimeMilli())
-        cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-
-        # Display the frame
-        cv.imshow(kWinName, frame)
-        tickmeter.reset()
+    stacked = cv2.hconcat([frame, board])
+    cv2.imshow("Text Detection and Recognition", stacked)
+    cv2.waitKey(0)
 
 
 if __name__ == "__main__":

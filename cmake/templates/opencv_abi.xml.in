@@ -35,7 +35,6 @@
     opencv2/imgcodecs/imgcodecs_c.h
     opencv2/imgcodecs/ios.h
     opencv2/imgcodecs/macosx.h
-    opencv2/videoio/videoio_c.h
     opencv2/videoio/cap_ios.h
     opencv2/xobjdetect/private.hpp
     @OPENCV_ABI_SKIP_HEADERS@

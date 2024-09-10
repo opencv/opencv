@@ -6,31 +6,7 @@
 #define CAP_INTERFACE_HPP
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/core_c.h"
 #include "opencv2/videoio.hpp"
-#include "opencv2/videoio/videoio_c.h"
-
-//===================================================
-
-// Legacy structs
-
-struct CvCapture
-{
-    virtual ~CvCapture() {}
-    virtual double getProperty(int) const { return 0; }
-    virtual bool setProperty(int, double) { return 0; }
-    virtual bool grabFrame() { return true; }
-    virtual IplImage* retrieveFrame(int) { return 0; }
-    virtual int getCaptureDomain() { return cv::CAP_ANY; } // Return the type of the capture object: CAP_DSHOW, etc...
-};
-
-struct CvVideoWriter
-{
-    virtual ~CvVideoWriter() {}
-    virtual bool writeFrame(const IplImage*) { return false; }
-    virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
-    virtual double getProperty(int) const { return 0; }
-};
 
 //===================================================
 
@@ -241,85 +217,31 @@ public:
 };
 } // namespace
 
-//===================================================
 
-// Utility
-
-static inline void applyMetadataRotation(const IVideoCapture& cap, OutputArray mat)
+// Advanced base class for VideoCapture backends providing some extra functionality
+class VideoCaptureBase : public IVideoCapture
 {
-    bool rotation_auto = 0 != cap.getProperty(CAP_PROP_ORIENTATION_AUTO);
-    int rotation_angle = static_cast<int>(cap.getProperty(CAP_PROP_ORIENTATION_META));
-
-    if(!rotation_auto || rotation_angle%360 == 0)
-    {
-        return;
-    }
-
-    cv::RotateFlags flag;
-    if(rotation_angle == 90 || rotation_angle == -270) { // Rotate clockwise 90 degrees
-        flag = cv::ROTATE_90_CLOCKWISE;
-    } else if(rotation_angle == 270 || rotation_angle == -90) { // Rotate clockwise 270 degrees
-        flag = cv::ROTATE_90_COUNTERCLOCKWISE;
-    } else if(rotation_angle == 180 || rotation_angle == -180) { // Rotate clockwise 180 degrees
-        flag = cv::ROTATE_180;
-    } else { // Unsupported rotation
-        return;
-    }
-
-    cv::rotate(mat, mat, flag);
-}
-
-//===================================================
-
-// Wrapper
-
-class LegacyCapture : public IVideoCapture
-{
-private:
-    CvCapture * cap;
-    bool autorotate;
-    LegacyCapture(const LegacyCapture &);
-    LegacyCapture& operator=(const LegacyCapture &);
-
-    bool shouldSwapWidthHeight() const
-    {
-        if (!autorotate)
-            return false;
-        int rotation = static_cast<int>(cap->getProperty(cv::CAP_PROP_ORIENTATION_META));
-        return std::abs(rotation % 180) == 90;
-    }
-
 public:
-    LegacyCapture(CvCapture * cap_) : cap(cap_), autorotate(true) {}
-    ~LegacyCapture()
-    {
-        cvReleaseCapture(&cap);
-    }
+    VideoCaptureBase() : autorotate(false) {}
     double getProperty(int propId) const CV_OVERRIDE
     {
-        if (!cap)
-            return 0;
-
         switch(propId)
         {
             case cv::CAP_PROP_ORIENTATION_AUTO:
                 return static_cast<double>(autorotate);
 
             case cv::CAP_PROP_FRAME_WIDTH:
-                return shouldSwapWidthHeight() ? cap->getProperty(cv::CAP_PROP_FRAME_HEIGHT) : cap->getProperty(cv::CAP_PROP_FRAME_WIDTH);
+                return shouldSwapWidthHeight() ? getProperty_(cv::CAP_PROP_FRAME_HEIGHT) : getProperty_(cv::CAP_PROP_FRAME_WIDTH);
 
             case cv::CAP_PROP_FRAME_HEIGHT:
-                return shouldSwapWidthHeight() ? cap->getProperty(cv::CAP_PROP_FRAME_WIDTH) : cap->getProperty(cv::CAP_PROP_FRAME_HEIGHT);
+                return shouldSwapWidthHeight() ? getProperty_(cv::CAP_PROP_FRAME_WIDTH) : getProperty_(cv::CAP_PROP_FRAME_HEIGHT);
 
             default:
-                return cap->getProperty(propId);
+                return getProperty_(propId);
         }
     }
     bool setProperty(int propId, double value) CV_OVERRIDE
     {
-        if (!cap)
-            return false;
-
         switch(propId)
         {
             case cv::CAP_PROP_ORIENTATION_AUTO:
@@ -327,84 +249,55 @@ public:
                 return true;
 
             default:
-                return cvSetCaptureProperty(cap, propId, value) != 0;
+                return setProperty_(propId, value);
         }
-    }
-    bool grabFrame() CV_OVERRIDE
-    {
-        return cap ? cvGrabFrame(cap) != 0 : false;
     }
     bool retrieveFrame(int channel, OutputArray image) CV_OVERRIDE
     {
-        IplImage* _img = cvRetrieveFrame(cap, channel);
-        if( !_img )
-        {
-            image.release();
+        const bool res = retrieveFrame_(channel, image);
+        if (res)
+            applyMetadataRotation(image);
+        return res;
+    }
+
+protected:
+    virtual double getProperty_(int) const = 0;
+    virtual bool setProperty_(int, double) = 0;
+    virtual bool retrieveFrame_(int, OutputArray) = 0;
+
+protected:
+    bool shouldSwapWidthHeight() const
+    {
+        if (!autorotate)
             return false;
-        }
-        if(_img->origin == IPL_ORIGIN_TL)
-        {
-            cv::cvarrToMat(_img).copyTo(image);
-        }
-        else
-        {
-            Mat temp = cv::cvarrToMat(_img);
-            flip(temp, image, 0);
-        }
-        applyMetadataRotation(*this, image);
-        return true;
+        int rotation = static_cast<int>(getProperty(cv::CAP_PROP_ORIENTATION_META));
+        return std::abs(rotation % 180) == 90;
     }
-    bool isOpened() const CV_OVERRIDE
+    void applyMetadataRotation(OutputArray mat) const
     {
-        return cap != 0;  // legacy interface doesn't support closed files
-    }
-    int getCaptureDomain() CV_OVERRIDE
-    {
-        return cap ? cap->getCaptureDomain() : 0;
+        bool rotation_auto = 0 != getProperty(CAP_PROP_ORIENTATION_AUTO);
+        int rotation_angle = static_cast<int>(getProperty(CAP_PROP_ORIENTATION_META));
+        if(!rotation_auto || rotation_angle%360 == 0)
+        {
+            return;
+        }
+        cv::RotateFlags flag;
+        if(rotation_angle == 90 || rotation_angle == -270) { // Rotate clockwise 90 degrees
+            flag = cv::ROTATE_90_CLOCKWISE;
+        } else if(rotation_angle == 270 || rotation_angle == -90) { // Rotate clockwise 270 degrees
+            flag = cv::ROTATE_90_COUNTERCLOCKWISE;
+        } else if(rotation_angle == 180 || rotation_angle == -180) { // Rotate clockwise 180 degrees
+            flag = cv::ROTATE_180;
+        } else { // Unsupported rotation
+            return;
+        }
+        cv::rotate(mat, mat, flag);
     }
 
-    CvCapture* getCvCapture() const { return cap; }
+protected:
+    bool autorotate;
 };
 
-class LegacyWriter : public IVideoWriter
-{
-private:
-    CvVideoWriter * writer;
-    LegacyWriter(const LegacyWriter &);
-    LegacyWriter& operator=(const LegacyWriter &);
-public:
-    LegacyWriter(CvVideoWriter * wri_) : writer(wri_)
-    {}
-    ~LegacyWriter()
-    {
-        cvReleaseVideoWriter(&writer);
-    }
-    double getProperty(int propId) const CV_OVERRIDE
-    {
-        if (writer)
-        {
-            return writer->getProperty(propId);
-        }
-        return 0.;
-    }
-    bool setProperty(int, double) CV_OVERRIDE
-    {
-        return false;
-    }
-    bool isOpened() const CV_OVERRIDE
-    {
-        return writer != NULL;
-    }
-    void write(InputArray image) CV_OVERRIDE
-    {
-        IplImage _img = cvIplImage(image.getMat());
-        cvWriteFrame(writer, &_img);
-    }
-    int getCaptureDomain() const CV_OVERRIDE
-    {
-        return writer ? writer->getCaptureDomain() : 0;
-    }
-};
 
 //==================================================================================================
 

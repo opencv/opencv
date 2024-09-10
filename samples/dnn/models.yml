@@ -276,6 +276,50 @@ u2netp:
   sample: "segmentation"
 
 ################################################################################
+# Text detection models.
+################################################################################
+
+DB:
+  load_info:
+    url: "https://drive.google.com/uc?export=dowload&id=17_ABp79PlFt9yPCxSaarVc_DKTmrSGGf"
+    sha1: "bef233c28947ef6ec8c663d20a2b326302421fa3"
+  model: "DB_IC15_resnet50.onnx"
+  ocr_load_info:
+    ocr_url: "https://drive.google.com/uc?export=dowload&id=159VavnbvfBQkLIPSAu2SP5Yij1Fy4azw"
+    ocr_sha1: "c4ab1fb3f13c1c8ffc04f016e72ec85311de4ebe"
+  ocr_model: "VGG_CTC.onnx"
+  mean: [122.67891434, 116.66876762, 104.00698793]
+  scale: 0.00392
+  width: 736
+  height: 736
+  rgb: false
+  sample: "text_detection"
+
+East:
+  load_info:
+    url: "https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1"
+    sha1: "fffabf5ac36f37bddf68e34e84b45f5c4247ed06"
+    download_name: "frozen_east_text_detection.tar.gz"
+    download_sha: "3ca8233d6edd748f7ed23246c8ca24cbf696bb94"
+  model: "frozen_east_text_detection.pb"
+  ocr_load_info:
+    ocr_url: "https://drive.google.com/uc?export=dowload&id=159VavnbvfBQkLIPSAu2SP5Yij1Fy4azw"
+    ocr_sha1: "c4ab1fb3f13c1c8ffc04f016e72ec85311de4ebe"
+  ocr_model: "VGG_CTC.onnx"
+  mean: [123.68, 116.78, 103.94]
+  scale: 1.0
+  width: 736
+  height: 736
+  rgb: false
+  sample: "text_detection"
+
+OCR:
+  load_info:
+    url: "https://drive.google.com/uc?export=dowload&id=159VavnbvfBQkLIPSAu2SP5Yij1Fy4azw"
+    sha1: "c4ab1fb3f13c1c8ffc04f016e72ec85311de4ebe"
+  model: "VGG_CTC.onnx"
+  sample: "text_recognition"
+
 # Edge Detection models.
 ################################################################################
 
