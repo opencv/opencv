@@ -291,6 +291,3 @@ Additional Resources
     Theory](http://cns-alumni.bu.edu/~slehar/fourier/fourier.html) by Steven Lehar
 2.  [Fourier Transform](http://homepages.inf.ed.ac.uk/rbf/HIPR2/fourier.htm) at HIPR
 3.  [What does frequency domain denote in case of images?](http://dsp.stackexchange.com/q/1637/818)
-
-Exercises
----------

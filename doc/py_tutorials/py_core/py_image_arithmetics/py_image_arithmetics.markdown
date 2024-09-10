@@ -110,9 +110,6 @@ img2_fg.
 
 ![image](images/overlay.jpg)
 
-Additional Resources
---------------------
-
 Exercises
 ---------
 

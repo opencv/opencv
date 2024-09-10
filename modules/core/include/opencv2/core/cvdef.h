@@ -747,7 +747,11 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #    define __has_cpp_attribute(__x) 0
 #  endif
 #  if __has_cpp_attribute(nodiscard)
-#    define CV_NODISCARD_STD [[nodiscard]]
+#    if defined(__NVCC__) && __CUDACC_VER_MAJOR__ < 12
+#       define CV_NODISCARD_STD
+#    else
+#       define CV_NODISCARD_STD [[nodiscard]]
+#    endif
 #  elif __cplusplus >= 201703L
 //   available when compiler is C++17 compliant
 #    define CV_NODISCARD_STD [[nodiscard]]

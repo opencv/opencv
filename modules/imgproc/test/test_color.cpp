@@ -455,7 +455,7 @@ void CV_ColorGrayTest::get_test_array_types_and_sizes( int test_case_idx, vector
 double CV_ColorGrayTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
 {
     int depth = test_mat[i][j].depth();
-    return depth == CV_8U ? 2 : depth == CV_16U ? 16 : 1e-5;
+    return depth == CV_8U ? 1 : depth == CV_16U ? 2 : 1e-5;
 }
 
 
@@ -1863,6 +1863,26 @@ TEST(Imgproc_ColorBayer, regression)
     EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
 }
 
+TEST(Imgproc_ColorBayer2Gray, regression_25823)
+{
+    const int n = 100;
+    Mat src(n, n, CV_8UC1);
+    Mat dst;
+
+    for (int i = 0; i < src.rows; ++i)
+    {
+        for (int j = 0; j < src.cols; ++j)
+        {
+            src.at<uchar>(i, j) = (i + j) % 2;
+        }
+    }
+
+    cvtColor(src, dst, COLOR_BayerBG2GRAY);
+
+    Mat gold(n, n, CV_8UC1, Scalar(1));
+    EXPECT_EQ(0, cv::norm(dst, gold, NORM_INF));
+}
+
 TEST(Imgproc_ColorBayerVNG, regression)
 {
     cvtest::TS* ts = cvtest::TS::ptr();
@@ -2657,7 +2677,7 @@ TEST(Imgproc_ColorLab_Full, bitExactness)
             Mat probe(256, 256, CV_8UC3), result;
             rng.fill(probe, RNG::UNIFORM, 0, 255, true);
 
-            cvtColor(probe, result, codes[c]);
+            cvtColor(probe, result, codes[c], 0, ALGO_HINT_ACCURATE);
 
             uint32_t h = adler32(result);
             uint32_t goodHash = hashes[c*nIterations + iter];
@@ -2749,7 +2769,7 @@ TEST(Imgproc_ColorLuv_Full, bitExactness)
             Mat probe(256, 256, CV_8UC3), result;
             rng.fill(probe, RNG::UNIFORM, 0, 255, true);
 
-            cvtColor(probe, result, codes[c]);
+            cvtColor(probe, result, codes[c], 0, ALGO_HINT_ACCURATE);
 
             uint32_t h = adler32(result);
             uint32_t goodHash = hashes[c*nIterations + iter];
@@ -2808,7 +2828,7 @@ void runCvtColorBitExactCheck(ColorConversionCodes code, int inputType, uint32_t
     Mat dst;
     rng.fill(src, RNG::UNIFORM, 0, 255, true);
 
-    cv::cvtColor(src, dst, code);
+    cv::cvtColor(src, dst, code, 0, ALGO_HINT_ACCURATE);
 
     uint32_t dst_hash = adler32(dst);
 
@@ -2823,6 +2843,11 @@ void runCvtColorBitExactCheck(ColorConversionCodes code, int inputType, uint32_t
         fs << "dst" << dst;
     }
 }
+
+TEST(Imgproc_cvtColor_BE, COLOR_RGB2GRAY)  { runCvtColorBitExactCheck(COLOR_RGB2GRAY,  CV_8UC3, 0x416bd44a); }
+TEST(Imgproc_cvtColor_BE, COLOR_RGBA2GRAY) { runCvtColorBitExactCheck(COLOR_RGBA2GRAY, CV_8UC3, 0x416bd44a); }
+TEST(Imgproc_cvtColor_BE, COLOR_BGR2GRAY)  { runCvtColorBitExactCheck(COLOR_BGR2GRAY,  CV_8UC3, 0x3008c6b8); }
+TEST(Imgproc_cvtColor_BE, COLOR_BGRA2GRAY) { runCvtColorBitExactCheck(COLOR_BGRA2GRAY, CV_8UC3, 0x3008c6b8); }
 
 TEST(Imgproc_cvtColor_BE, COLOR_BGR2YUV) { runCvtColorBitExactCheck(COLOR_BGR2YUV, CV_8UC3, 0xc2cbcfda); }
 TEST(Imgproc_cvtColor_BE, COLOR_RGB2YUV) { runCvtColorBitExactCheck(COLOR_RGB2YUV, CV_8UC3, 0x4e98e757); }
@@ -3201,6 +3226,22 @@ TEST(ImgProc_RGB2Lab, NaN_21111)
         }
     }
 #endif
+}
+
+// See https://github.com/opencv/opencv/issues/25971
+// If num of channels is not suitable for selected cv::ColorConversionCodes,
+// e.code must be cv::Error::BadNumChannels.
+TEST(ImgProc_cvtColor_InvalidNumOfChannels, regression_25971)
+{
+    try {
+        cv::Mat src = cv::Mat::zeros(100, 100, CV_8UC1);
+        cv::Mat dst;
+        EXPECT_THROW(cv::cvtColor(src, dst, COLOR_RGB2GRAY), cv::Exception);
+    }catch(const cv::Exception& e) {
+        EXPECT_EQ(e.code, cv::Error::BadNumChannels);
+    }catch(...) {
+        FAIL() << "Unexpected exception is happened.";
+    }
 }
 
 }} // namespace

@@ -96,7 +96,9 @@ struct RoiPredicate
 
     bool operator()( const KeyPoint& keyPt ) const
     {
-        return !r.contains( keyPt.pt );
+        // workaround for https://github.com/opencv/opencv/issues/26016
+        // To keep its behaviour, keyPt.pt casts to Point_<int>.
+        return !r.contains( Point_<int>(keyPt.pt) );
     }
 
     Rect r;

@@ -1043,4 +1043,67 @@ INSTANTIATE_TEST_CASE_P(/**/, Layer_Elementwise,
                                               /* withWebnn= */           false,
                                               /* withCann= */            false));
 
+struct Layer_TopK : public TestBaseWithParam<tuple<Backend, Target>> {
+    void test_layer(const std::vector<int> &input_shape, const int K, const int axis) {
+        int backend_id = get<0>(GetParam());
+        int target_id = get<1>(GetParam());
+
+        Mat input_data(input_shape, CV_32F);
+        randn(input_data, -1.f, 1.f);
+
+        Net net;
+        LayerParams lp;
+        lp.type = "TopK";
+        lp.name = "testLayer";
+        lp.set("k", K);
+        lp.set("axis", axis);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+
+        // Warmup
+        {
+            net.setInput(input_data);
+            net.setPreferableBackend(backend_id);
+            net.setPreferableTarget(target_id);
+            net.forward();
+        }
+
+        TEST_CYCLE() {
+            net.forward();
+        }
+
+        SANITY_CHECK_NOTHING();
+    }
+
+    std::vector<int> input_shape_2d{1000, 100};
+    std::vector<int> input_shape_3d{100, 100, 100};
+};
+
+PERF_TEST_P_(Layer_TopK, TopK_2D_Axis0) {
+    test_layer(input_shape_2d, input_shape_2d[0] / 2, 0);
+}
+PERF_TEST_P_(Layer_TopK, TopK_2D_Axis0_K5) {
+    test_layer(input_shape_2d, 5, 0);
+}
+PERF_TEST_P_(Layer_TopK, TopK_2D_Axis1) {
+    test_layer(input_shape_2d, input_shape_2d[1] / 2, 1);
+}
+PERF_TEST_P_(Layer_TopK, TopK_3D_Axis0) {
+    test_layer(input_shape_3d, input_shape_3d[0] / 2, 0);
+}
+PERF_TEST_P_(Layer_TopK, TopK_3D_Axis1) {
+    test_layer(input_shape_3d, input_shape_3d[1] / 2, 1);
+}
+PERF_TEST_P_(Layer_TopK, TopK_3D_Axis2) {
+    test_layer(input_shape_3d, input_shape_3d[2] / 2, 2);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Layer_TopK,
+                        dnnBackendsAndTargets(/* withInferenceEngine= */ false,
+                                              /* withHalide= */          false,
+                                              /* withCpuOCV= */          true,
+                                              /* withVkCom= */           false,
+                                              /* withCUDA= */            false,
+                                              /* withNgraph= */          false,
+                                              /* withWebnn= */           false,
+                                              /* withCann= */            false));
+
 } // namespace
