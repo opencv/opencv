@@ -1640,7 +1640,7 @@ INSTANTIATE_TEST_CASE_P(Core_CartToPolarToCart, ElemWiseTest, ::testing::Values(
 
 // Mixed Type Arithmetic Operations
 
-typedef std::tuple<ElemWiseOpPtr, std::tuple<cvtest::MatDepth, cvtest::MatDepth>> SomeType;
+typedef std::tuple<ElemWiseOpPtr, std::tuple<cvtest::MatDepth, cvtest::MatDepth>, int> SomeType;
 class ArithmMixedTest : public ::testing::TestWithParam<SomeType> {};
 
 TEST_P(ArithmMixedTest, accuracy)
@@ -1649,7 +1649,10 @@ TEST_P(ArithmMixedTest, accuracy)
     ElemWiseOpPtr op = std::get<0>(p);
     int srcDepth = std::get<0>(std::get<1>(p));
     int dstDepth = std::get<1>(std::get<1>(p));
+    int channels = std::get<2>(p);
 
+    int srcType = CV_MAKETYPE(srcDepth, channels);
+    int dstType = CV_MAKETYPE(dstDepth, channels);
     op->flags |= BaseElemWiseOp::MIXED_TYPE;
     int testIdx = 0;
     RNG rng((uint64)ARITHM_RNG_SEED);
@@ -1664,15 +1667,15 @@ TEST_P(ArithmMixedTest, accuracy)
         int ninputs = op->ninputs;
         vector<Mat> src(ninputs);
         for(int i = 0; i < ninputs; i++ )
-            src[i] = cvtest::randomMat(rng, size, srcDepth, minval, maxval, true);
+            src[i] = cvtest::randomMat(rng, size, srcType, minval, maxval, true);
         Mat dst0, dst, mask;
         if( haveMask )
         {
             mask = cvtest::randomMat(rng, size, CV_8UC1, 0, 2, true);
         }
 
-        dst0 = cvtest::randomMat(rng, size, dstDepth, minval, maxval, false);
-        dst = cvtest::randomMat(rng, size, dstDepth, minval, maxval, true);
+        dst0 = cvtest::randomMat(rng, size, dstType, minval, maxval, false);
+        dst = cvtest::randomMat(rng, size, dstType, minval, maxval, true);
         cvtest::copy(dst, dst0);
 
         op->generateScalars(dstDepth, rng);
@@ -1692,53 +1695,62 @@ INSTANTIATE_TEST_CASE_P(Core_AddMixed, ArithmMixedTest,
                                            ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
-                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F}),
+                                           ::testing::Values(1, 3, 4)));
 INSTANTIATE_TEST_CASE_P(Core_AddScalarMixed, ArithmMixedTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddSOp)),
                                            ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
-                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F}),
+                                           ::testing::Values(1, 3, 4)));
 INSTANTIATE_TEST_CASE_P(Core_AddWeightedMixed, ArithmMixedTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new AddWeightedOp)),
                                            ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
-                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F}),
+                                           ::testing::Values(1, 3, 4)));
 INSTANTIATE_TEST_CASE_P(Core_SubMixed, ArithmMixedTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new SubOp)),
                                            ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
-                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F}),
+                                           ::testing::Values(1, 3, 4)));
 INSTANTIATE_TEST_CASE_P(Core_SubScalarMinusArgMixed, ArithmMixedTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new SubRSOp)),
                                            ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
-                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F}),
+                                           ::testing::Values(1, 3, 4)));
 INSTANTIATE_TEST_CASE_P(Core_MulMixed, ArithmMixedTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new MulOp)),
                                            ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
-                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F}),
+                                           ::testing::Values(1, 3, 4)));
 INSTANTIATE_TEST_CASE_P(Core_MulScalarMixed, ArithmMixedTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new MulSOp)),
                                            ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
-                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F}),
+                                           ::testing::Values(1, 3, 4)));
 INSTANTIATE_TEST_CASE_P(Core_DivMixed, ArithmMixedTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new DivOp)),
                                            ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_16S},
                                                              std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
-                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F}),
+                                           ::testing::Values(1, 3, 4)));
 INSTANTIATE_TEST_CASE_P(Core_RecipMixed, ArithmMixedTest,
                         ::testing::Combine(::testing::Values(ElemWiseOpPtr(new RecipOp)),
-                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_32F},
-                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F})));
+                                           ::testing::Values(std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8U, CV_16U},
+                                                             std::tuple<cvtest::MatDepth, cvtest::MatDepth>{CV_8S, CV_32F}),
+                                           ::testing::Values(1, 3, 4)));
 
 TEST(Core_ArithmMask, uninitialized)
 {
