@@ -263,7 +263,7 @@ Most of these operations return only one value.
 
 ### Other math
 
-- Some frequent operations: @ref v_sqrt, @ref v_invsqrt, @ref v_magnitude, @ref v_sqr_magnitude, @ref v_exp,
+- Some frequent operations: @ref v_sqrt, @ref v_invsqrt, @ref v_magnitude, @ref v_sqr_magnitude, @ref v_exp, @ref v_log,
                             @ref v_erf
 - Absolute values: @ref v_abs, @ref v_absdiff, @ref v_absdiffs
 
