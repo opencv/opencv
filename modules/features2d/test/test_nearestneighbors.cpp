@@ -365,9 +365,13 @@ protected:
                 neighbors1.at<int>(i, j) = *it;
         }
 
-        EXPECT_LE(cvtest::norm(neighbors, neighbors1, NORM_L1), 0);
+        if (cvtest::norm(neighbors, neighbors1, NORM_L1) > 0)
+        {
+            ts->printf(cvtest::TS::LOG, "bad accuray of find nearest neighbors\n");
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        }
 
-        return ::testing::Test::HasFailure() ? cvtest::TS::FAIL_BAD_ACCURACY : cvtest::TS::OK;
+        return ts->get_err_code();
     }
 
     void releaseModel() CV_OVERRIDE {}
