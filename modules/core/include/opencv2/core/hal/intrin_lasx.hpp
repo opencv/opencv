@@ -744,7 +744,7 @@ OPENCV_HAL_IMPL_LASX_ZIP(v_float64x4)
 
 /** Arithmetics **/
 #define OPENCV_HAL_IMPL_LASX_BIN_OP(bin_op, _Tpvec, intrin)           \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)            \
     { return _Tpvec(intrin(a.val, b.val)); }
 
 OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_uint8x32,  __lasx_xvsadd_bu)
@@ -776,19 +776,19 @@ OPENCV_HAL_IMPL_LASX_BIN_OP(v_mul, v_float64x4, __lasx_xvfmul_d)
 OPENCV_HAL_IMPL_LASX_BIN_OP(v_div, v_float64x4, __lasx_xvfdiv_d)
 
 // saturating multiply 8-bit, 16-bit
-inline v_uint8x32 v_mul (const v_uint8x32& a, const v_uint8x32& b)
+inline v_uint8x32 v_mul(const v_uint8x32& a, const v_uint8x32& b)
 {
     v_uint16x16 c, d;
     v_mul_expand(a, b, c, d);
     return v_pack(c, d);
 }
-inline v_int8x32 v_mul (const v_int8x32& a, const v_int8x32& b)
+inline v_int8x32 v_mul(const v_int8x32& a, const v_int8x32& b)
 {
     v_int16x16 c, d;
     v_mul_expand(a, b, c, d);
     return v_pack(c, d);
 }
-inline v_uint16x16 v_mul (const v_uint16x16& a, const v_uint16x16& b)
+inline v_uint16x16 v_mul(const v_uint16x16& a, const v_uint16x16& b)
 {
     __m256i pl = __lasx_xvmul_h(a.val, b.val);
     __m256i ph = __lasx_xvmuh_hu(a.val, b.val);
@@ -796,7 +796,7 @@ inline v_uint16x16 v_mul (const v_uint16x16& a, const v_uint16x16& b)
     __m256i p1 = __lasx_xvilvh_h(ph, pl);
     return v_uint16x16(_v256_packs_epu32(p0, p1));
 }
-inline v_int16x16 v_mul (const v_int16x16& a, const v_int16x16& b)
+inline v_int16x16 v_mul(const v_int16x16& a, const v_int16x16& b)
 {
     __m256i pl = __lasx_xvmul_h(a.val, b.val);
     __m256i ph = __lasx_xvmuh_h(a.val, b.val);
@@ -892,13 +892,13 @@ inline v_uint16x16 v_mul_hi(const v_uint16x16& a, const v_uint16x16& b) { return
 
 /** Bitwise shifts **/
 #define OPENCV_HAL_IMPL_LASX_SHIFT_OP(_Tpuvec, _Tpsvec, suffix, srai)                             \
-    inline _Tpuvec v_shl (const _Tpuvec& a, int imm)                                        \
+    inline _Tpuvec v_shl(const _Tpuvec& a, int imm)                                               \
     { return _Tpuvec(__lasx_xvsll_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
-    inline _Tpsvec v_shl (const _Tpsvec& a, int imm)                                        \
+    inline _Tpsvec v_shl(const _Tpsvec& a, int imm)                                               \
     { return _Tpsvec(__lasx_xvsll_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
-    inline _Tpuvec V_shr (const _Tpuvec& a, int imm)                                        \
+    inline _Tpuvec V_shr(const _Tpuvec& a, int imm)                                               \
     { return _Tpuvec(__lasx_xvsrl_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
-    inline _Tpsvec v_shr (const _Tpsvec& a, int imm)                                        \
+    inline _Tpsvec v_shr(const _Tpsvec& a, int imm)                                               \
     { return _Tpsvec(srai(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }                            \
     template<int imm>                                                                             \
     inline _Tpuvec v_shl(const _Tpuvec& a)                                                        \
@@ -920,10 +920,10 @@ OPENCV_HAL_IMPL_LASX_SHIFT_OP(v_uint64x4,  v_int64x4,  d, __lasx_xvsra_d)
 
 /** Bitwise logic **/
 #define OPENCV_HAL_IMPL_LASX_LOGIC_OP(_Tpvec, suffix, not_const)    \
-    OPENCV_HAL_IMPL_LASX_BIN_OP(v_and, _Tpvec, __lasx_xvand_##suffix)   \
+    OPENCV_HAL_IMPL_LASX_BIN_OP(v_and, _Tpvec, __lasx_xvand_##suffix)  \
     OPENCV_HAL_IMPL_LASX_BIN_OP(v_or, _Tpvec, __lasx_xvor_##suffix)    \
-    OPENCV_HAL_IMPL_LASX_BIN_OP(v_xor, _Tpvec, __lasx_xvxor_##suffix)   \
-    inline _Tpvec v_not (const _Tpvec& a)                      \
+    OPENCV_HAL_IMPL_LASX_BIN_OP(v_xor, _Tpvec, __lasx_xvxor_##suffix)  \
+    inline _Tpvec v_not(const _Tpvec& a)                               \
     { return _Tpvec(__lasx_xvnori_b(a.val, 0)); }
 
 OPENCV_HAL_IMPL_LASX_LOGIC_OP(v_uint8x32,   v, __lasx_xvreplgr2vr_w(-1))
@@ -936,14 +936,14 @@ OPENCV_HAL_IMPL_LASX_LOGIC_OP(v_uint64x4,   v, __lasx_xvreplgr2vr_d(-1))
 OPENCV_HAL_IMPL_LASX_LOGIC_OP(v_int64x4,    v, __lasx_xvreplgr2vr_d(-1))
 
 #define OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(bin_op, _Tpvec, intrin, cast)                         \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)                            \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)                                      \
     { return _Tpvec(intrin(*((__m256i*)(&a.val)), *((__m256i*)(&b.val)))); }
 
 #define OPENCV_HAL_IMPL_LASX_FLOAT_LOGIC_OP(_Tpvec, suffix, not_const, cast)       \
-    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(v_and, _Tpvec, __lasx_xvand_##suffix, cast)      \
-    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(v_or, _Tpvec, __lasx_xvor_##suffix, cast)       \
-    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(v_xor, _Tpvec, __lasx_xvxor_##suffix, cast)      \
-    inline _Tpvec v_not (const _Tpvec& a)                                     \
+    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(v_and, _Tpvec, __lasx_xvand_##suffix, cast)  \
+    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(v_or, _Tpvec, __lasx_xvor_##suffix, cast)    \
+    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(v_xor, _Tpvec, __lasx_xvxor_##suffix, cast)  \
+    inline _Tpvec v_not(const _Tpvec& a)                                           \
     { return _Tpvec(__lasx_xvxor_##suffix(*((__m256i*)(&a.val)), not_const)); }
 
 OPENCV_HAL_IMPL_LASX_FLOAT_LOGIC_OP(v_float32x8,  v, __lasx_xvreplgr2vr_w(-1), _lasx_256_castsi256_ps)
@@ -969,25 +969,25 @@ inline v_float64x4 v_select(const v_float64x4 &mask, const v_float64x4 &a, const
 
 /** Comparison **/
 #define OPENCV_HAL_IMPL_LASX_CMP_OP_OV(_Tpvec)                     \
-    inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b)   \
-    { return v_not(v_eq(a, b)); }                                          \
-    inline _Tpvec v_lt  (const _Tpvec& a, const _Tpvec& b)   \
-    { return v_gt(b, a); }                                              \
-    inline _Tpvec v_ge (const _Tpvec& a, const _Tpvec& b)   \
-    { return v_not(v_lt(a, b)); }                                           \
-    inline _Tpvec v_le (const _Tpvec& a, const _Tpvec& b)   \
+    inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)           \
+    { return v_not(v_eq(a, b)); }                                  \
+    inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b)           \
+    { return v_gt(b, a); }                                         \
+    inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b)           \
+    { return v_not(v_lt(a, b)); }                                  \
+    inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b)           \
     { return v_ge(b, a); }
 
 #define OPENCV_HAL_IMPL_LASX_CMP_OP_INT(_Tpuvec, _Tpsvec, suffix, usuffix)   \
-    inline _Tpuvec v_eq (const _Tpuvec& a, const _Tpuvec& b)          \
+    inline _Tpuvec v_eq(const _Tpuvec& a, const _Tpuvec& b)                  \
     { return _Tpuvec(__lasx_xvseq_##suffix(a.val, b.val)); }                 \
-    inline _Tpuvec v_gt (const _Tpuvec& a, const _Tpuvec& b)           \
+    inline _Tpuvec v_gt(const _Tpuvec& a, const _Tpuvec& b)                  \
     {                                                                        \
         return _Tpuvec(__lasx_xvslt_##usuffix(b.val, a.val));                \
     }                                                                        \
-    inline _Tpsvec v_eq (const _Tpsvec& a, const _Tpsvec& b)          \
+    inline _Tpsvec v_eq(const _Tpsvec& a, const _Tpsvec& b)                  \
     { return _Tpsvec(__lasx_xvseq_##suffix(a.val, b.val)); }                 \
-    inline _Tpsvec v_gt (const _Tpsvec& a, const _Tpsvec& b)           \
+    inline _Tpsvec v_gt(const _Tpsvec& a, const _Tpsvec& b)                  \
     { return _Tpsvec(__lasx_xvslt_##suffix(b.val, a.val)); }                 \
     OPENCV_HAL_IMPL_LASX_CMP_OP_OV(_Tpuvec)                                  \
     OPENCV_HAL_IMPL_LASX_CMP_OP_OV(_Tpsvec)
@@ -997,37 +997,37 @@ OPENCV_HAL_IMPL_LASX_CMP_OP_INT(v_uint16x16, v_int16x16, h, hu)
 OPENCV_HAL_IMPL_LASX_CMP_OP_INT(v_uint32x8,  v_int32x8,  w, wu)
 
 #define OPENCV_HAL_IMPL_LASX_CMP_OP_64BIT(_Tpvec, suffix)         \
-    inline _Tpvec v_eq (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b)          \
     { return _Tpvec(__lasx_xvseq_##suffix(a.val, b.val)); }       \
-    inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)          \
     { return v_not(v_eq(a, b)); }
 
 OPENCV_HAL_IMPL_LASX_CMP_OP_64BIT(v_uint64x4, d)
 OPENCV_HAL_IMPL_LASX_CMP_OP_64BIT(v_int64x4, d)
 
 #define OPENCV_HAL_IMPL_LASX_CMP_FLT(bin_op, suffix, _Tpvec, ssuffix)    \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)     \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)               \
     { return _Tpvec(__lasx_##suffix##_##ssuffix(a.val, b.val)); }
 
 #define OPENCV_HAL_IMPL_LASX_CMP_OP_FLT(_Tpvec, ssuffix)              \
-    OPENCV_HAL_IMPL_LASX_CMP_FLT(v_eq, xvfcmp_ceq, _Tpvec, ssuffix)     \
-    OPENCV_HAL_IMPL_LASX_CMP_FLT(v_ne, xvfcmp_cne, _Tpvec, ssuffix)     \
-    OPENCV_HAL_IMPL_LASX_CMP_FLT(v_lt,  xvfcmp_clt, _Tpvec, ssuffix)     \
+    OPENCV_HAL_IMPL_LASX_CMP_FLT(v_eq, xvfcmp_ceq, _Tpvec, ssuffix)   \
+    OPENCV_HAL_IMPL_LASX_CMP_FLT(v_ne, xvfcmp_cne, _Tpvec, ssuffix)   \
+    OPENCV_HAL_IMPL_LASX_CMP_FLT(v_lt,  xvfcmp_clt, _Tpvec, ssuffix)  \
     OPENCV_HAL_IMPL_LASX_CMP_FLT(v_le, xvfcmp_cle, _Tpvec, ssuffix)
 
 OPENCV_HAL_IMPL_LASX_CMP_OP_FLT(v_float32x8, s)
 OPENCV_HAL_IMPL_LASX_CMP_OP_FLT(v_float64x4, d)
 
-inline v_float32x8 v_gt (const v_float32x8 &a, const v_float32x8 &b)
+inline v_float32x8 v_gt(const v_float32x8 &a, const v_float32x8 &b)
 { return v_float32x8(__lasx_xvfcmp_clt_s(b.val, a.val)); }
 
-inline v_float32x8 v_ge (const v_float32x8 &a, const v_float32x8 &b)
+inline v_float32x8 v_ge(const v_float32x8 &a, const v_float32x8 &b)
 { return v_float32x8(__lasx_xvfcmp_cle_s(b.val, a.val)); }
 
-inline v_float64x4 v_gt (const v_float64x4 &a, const v_float64x4 &b)
+inline v_float64x4 v_gt(const v_float64x4 &a, const v_float64x4 &b)
 { return v_float64x4(__lasx_xvfcmp_clt_d(b.val, a.val)); }
 
-inline v_float64x4 v_ge (const v_float64x4 &a, const v_float64x4 &b)
+inline v_float64x4 v_ge(const v_float64x4 &a, const v_float64x4 &b)
 { return v_float64x4(__lasx_xvfcmp_cle_d(b.val, a.val)); }
 
 inline v_float32x8 v_not_nan(const v_float32x8& a)
@@ -1489,7 +1489,7 @@ OPENCV_HAL_IMPL_LASX_CHECK_SHORT(v_int16x16)
     inline _Tpvec v_sqrt(const _Tpvec& x)                                      \
     { return _Tpvec(__lasx_xvfsqrt_##suffix(x.val)); }                         \
     inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)            \
-    { return v_fma(a, a, v_mul(b, b)); }                                             \
+    { return v_fma(a, a, v_mul(b, b)); }                                       \
     inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b)                \
     { return v_sqrt(v_fma(a, a, v_mul(b, b))); }
 

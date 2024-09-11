@@ -746,23 +746,23 @@ inline v_float64x2 v_select(const v_float64x2 &mask, const v_float64x2 &a, const
 
 /** Comparison **/
 #define OPENCV_HAL_IMPL_LSX_CMP_OP_OV(_Tpvec)                            \
-    inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b)         \
-    { return v_not(v_eq(a, b)); }                                              \
-    inline _Tpvec v_lt  (const _Tpvec& a, const _Tpvec& b)         \
-    { return v_gt(b, a); }                                                   \
-    inline _Tpvec v_ge (const _Tpvec& a, const _Tpvec& b)         \
-    { return v_not(v_lt(a, b)); }                                                 \
-    inline _Tpvec v_le (const _Tpvec& a, const _Tpvec& b)         \
-    { return v_ge(b, a); }                                                   \
+    inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)                 \
+    { return v_not(v_eq(a, b)); }                                        \
+    inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b)                 \
+    { return v_gt(b, a); }                                               \
+    inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b)                 \
+    { return v_not(v_lt(a, b)); }                                        \
+    inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b)                 \
+    { return v_ge(b, a); }                                               \
 
 #define OPENCV_HAL_IMPL_LSX_CMP_OP_INT(_Tpuvec, _Tpsvec, suffix, usuffix)    \
-    inline _Tpuvec v_eq (const _Tpuvec& a, const _Tpuvec& b)          \
+    inline _Tpuvec v_eq(const _Tpuvec& a, const _Tpuvec& b)                  \
     { return _Tpuvec(__lsx_vseq_##suffix(a.val, b.val)); }                   \
-    inline _Tpuvec v_gt  (const _Tpuvec& a, const _Tpuvec& b)          \
+    inline _Tpuvec v_gt(const _Tpuvec& a, const _Tpuvec& b)                  \
     { return _Tpuvec(__lsx_vslt_##usuffix(b.val, a.val)); }                  \
-    inline _Tpsvec v_eq (const _Tpsvec& a, const _Tpsvec& b)          \
+    inline _Tpsvec v_eq(const _Tpsvec& a, const _Tpsvec& b)                  \
     { return _Tpsvec(__lsx_vseq_##suffix(a.val, b.val)); }                   \
-    inline _Tpsvec v_gt (const _Tpsvec& a, const _Tpsvec& b)           \
+    inline _Tpsvec v_gt(const _Tpsvec& a, const _Tpsvec& b)                  \
     { return _Tpsvec(__lsx_vslt_##suffix(b.val, a.val)); }                   \
     OPENCV_HAL_IMPL_LSX_CMP_OP_OV(_Tpuvec)                                   \
     OPENCV_HAL_IMPL_LSX_CMP_OP_OV(_Tpsvec)
@@ -772,37 +772,37 @@ OPENCV_HAL_IMPL_LSX_CMP_OP_INT(v_uint16x8,  v_int16x8,  h, hu)
 OPENCV_HAL_IMPL_LSX_CMP_OP_INT(v_uint32x4,  v_int32x4,  w, wu)
 
 #define OPENCV_HAL_IMPL_LSX_CMP_OP_64BIT(_Tpvec, suffix)          \
-    inline _Tpvec v_eq (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b)          \
     { return _Tpvec(__lsx_vseq_##suffix(a.val, b.val)); }         \
-    inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)          \
     { return v_not(v_eq(a, b)); }
 
 OPENCV_HAL_IMPL_LSX_CMP_OP_64BIT(v_uint64x2, d)
 OPENCV_HAL_IMPL_LSX_CMP_OP_64BIT(v_int64x2, d)
 
 #define OPENCV_HAL_IMPL_LSX_CMP_FLT(bin_op, suffix, _Tpvec, ssuffix)       \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)       \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)                 \
     { return _Tpvec(__lsx_##suffix##_##ssuffix(a.val, b.val)); }           \
 
 #define OPENCV_HAL_IMPL_LSX_CMP_OP_FLT(_Tpvec, ssuffix)                    \
-    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_eq, vfcmp_ceq, _Tpvec, ssuffix)            \
-    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_ne, vfcmp_cne, _Tpvec, ssuffix)            \
-    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_lt,  vfcmp_clt, _Tpvec, ssuffix)            \
-    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_le, vfcmp_cle, _Tpvec, ssuffix)            \
+    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_eq, vfcmp_ceq, _Tpvec, ssuffix)          \
+    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_ne, vfcmp_cne, _Tpvec, ssuffix)          \
+    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_lt,  vfcmp_clt, _Tpvec, ssuffix)         \
+    OPENCV_HAL_IMPL_LSX_CMP_FLT(v_le, vfcmp_cle, _Tpvec, ssuffix)          \
 
 OPENCV_HAL_IMPL_LSX_CMP_OP_FLT(v_float32x4, s)
 OPENCV_HAL_IMPL_LSX_CMP_OP_FLT(v_float64x2, d)
 
-inline v_float32x4 v_gt (const v_float32x4 &a, const v_float32x4 &b)
+inline v_float32x4 v_gt(const v_float32x4 &a, const v_float32x4 &b)
 { return v_float32x4(__lsx_vfcmp_clt_s(b.val, a.val)); }
 
-inline v_float32x4 v_ge (const v_float32x4 &a, const v_float32x4 &b)
+inline v_float32x4 v_ge(const v_float32x4 &a, const v_float32x4 &b)
 { return v_float32x4(__lsx_vfcmp_cle_s(b.val, a.val)); }
 
-inline v_float64x2 v_gt (const v_float64x2 &a, const v_float64x2 &b)
+inline v_float64x2 v_gt(const v_float64x2 &a, const v_float64x2 &b)
 { return v_float64x2(__lsx_vfcmp_clt_d(b.val, a.val)); }
 
-inline v_float64x2 v_ge (const v_float64x2 &a, const v_float64x2 &b)
+inline v_float64x2 v_ge(const v_float64x2 &a, const v_float64x2 &b)
 { return v_float64x2(__lsx_vfcmp_cle_d(b.val, a.val)); }
 
 inline v_float32x4 v_not_nan(const v_float32x4& a)
@@ -1281,7 +1281,7 @@ OPENCV_HAL_IMPL_LSX_CHECK(v_float64x2, 3)
     inline _Tpvec v_sqrt(const _Tpvec& x)                                       \
     { return _Tpvec(__lsx_vfsqrt_##suffix(x.val)); }                            \
     inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)             \
-    { return v_fma(a, a, v_mul(b, b)); }                                              \
+    { return v_fma(a, a, v_mul(b, b)); }                                        \
     inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b)                 \
     { return v_sqrt(v_fma(a, a, v_mul(b, b))); }
 

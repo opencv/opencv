@@ -769,7 +769,7 @@ OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_int64x2, _mm_sub_epi64)
 
 // saturating multiply 8-bit, 16-bit
 #define OPENCV_HAL_IMPL_SSE_MUL_SAT(_Tpvec, _Tpwvec)             \
-    inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b)        \
     {                                                            \
         _Tpwvec c, d;                                            \
         v_mul_expand(a, b, c, d);                                \
@@ -1024,7 +1024,7 @@ inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a,   const v_int32x4& 
 
 #define OPENCV_HAL_IMPL_SSE_LOGIC_OP(_Tpvec, suffix, not_const) \
     OPENCV_HAL_IMPL_SSE_BIN_OP(v_and, _Tpvec, _mm_and_##suffix) \
-    OPENCV_HAL_IMPL_SSE_BIN_OP(v_or, _Tpvec, _mm_or_##suffix) \
+    OPENCV_HAL_IMPL_SSE_BIN_OP(v_or, _Tpvec, _mm_or_##suffix)   \
     OPENCV_HAL_IMPL_SSE_BIN_OP(v_xor, _Tpvec, _mm_xor_##suffix) \
     inline _Tpvec v_not(const _Tpvec& a) \
     { \
@@ -1175,58 +1175,58 @@ inline v_int32x4 v_max(const v_int32x4& a, const v_int32x4& b)
 }
 
 #define OPENCV_HAL_IMPL_SSE_INT_CMP_OP(_Tpuvec, _Tpsvec, suffix, sbit) \
-inline _Tpuvec v_eq (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_eq(const _Tpuvec& a, const _Tpuvec& b) \
 { return _Tpuvec(_mm_cmpeq_##suffix(a.val, b.val)); } \
-inline _Tpuvec v_ne (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_ne(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     __m128i not_mask = _mm_set1_epi32(-1); \
     return _Tpuvec(_mm_xor_si128(_mm_cmpeq_##suffix(a.val, b.val), not_mask)); \
 } \
-inline _Tpsvec v_eq (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_eq(const _Tpsvec& a, const _Tpsvec& b) \
 { return _Tpsvec(_mm_cmpeq_##suffix(a.val, b.val)); } \
-inline _Tpsvec v_ne (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_ne(const _Tpsvec& a, const _Tpsvec& b) \
 { \
     __m128i not_mask = _mm_set1_epi32(-1); \
     return _Tpsvec(_mm_xor_si128(_mm_cmpeq_##suffix(a.val, b.val), not_mask)); \
 } \
-inline _Tpuvec v_lt (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_lt(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     __m128i smask = _mm_set1_##suffix(sbit); \
     return _Tpuvec(_mm_cmpgt_##suffix(_mm_xor_si128(b.val, smask), _mm_xor_si128(a.val, smask))); \
 } \
-inline _Tpuvec v_gt (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_gt(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     __m128i smask = _mm_set1_##suffix(sbit); \
     return _Tpuvec(_mm_cmpgt_##suffix(_mm_xor_si128(a.val, smask), _mm_xor_si128(b.val, smask))); \
 } \
-inline _Tpuvec v_le (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_le(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     __m128i smask = _mm_set1_##suffix(sbit); \
     __m128i not_mask = _mm_set1_epi32(-1); \
     __m128i res = _mm_cmpgt_##suffix(_mm_xor_si128(a.val, smask), _mm_xor_si128(b.val, smask)); \
     return _Tpuvec(_mm_xor_si128(res, not_mask)); \
 } \
-inline _Tpuvec v_ge (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_ge(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     __m128i smask = _mm_set1_##suffix(sbit); \
     __m128i not_mask = _mm_set1_epi32(-1); \
     __m128i res = _mm_cmpgt_##suffix(_mm_xor_si128(b.val, smask), _mm_xor_si128(a.val, smask)); \
     return _Tpuvec(_mm_xor_si128(res, not_mask)); \
 } \
-inline _Tpsvec v_lt (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_lt(const _Tpsvec& a, const _Tpsvec& b) \
 { \
     return _Tpsvec(_mm_cmpgt_##suffix(b.val, a.val)); \
 } \
-inline _Tpsvec v_gt (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_gt(const _Tpsvec& a, const _Tpsvec& b) \
 { \
     return _Tpsvec(_mm_cmpgt_##suffix(a.val, b.val)); \
 } \
-inline _Tpsvec v_le (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_le(const _Tpsvec& a, const _Tpsvec& b) \
 { \
     __m128i not_mask = _mm_set1_epi32(-1); \
     return _Tpsvec(_mm_xor_si128(_mm_cmpgt_##suffix(a.val, b.val), not_mask)); \
 } \
-inline _Tpsvec v_ge (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_ge(const _Tpsvec& a, const _Tpsvec& b) \
 { \
     __m128i not_mask = _mm_set1_epi32(-1); \
     return _Tpsvec(_mm_xor_si128(_mm_cmpgt_##suffix(b.val, a.val), not_mask)); \
@@ -1237,17 +1237,17 @@ OPENCV_HAL_IMPL_SSE_INT_CMP_OP(v_uint16x8, v_int16x8, epi16, (short)-32768)
 OPENCV_HAL_IMPL_SSE_INT_CMP_OP(v_uint32x4, v_int32x4, epi32, (int)0x80000000)
 
 #define OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(_Tpvec, suffix) \
-inline _Tpvec v_eq (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmpeq_##suffix(a.val, b.val)); } \
-inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmpneq_##suffix(a.val, b.val)); } \
-inline _Tpvec v_lt (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmplt_##suffix(a.val, b.val)); } \
-inline _Tpvec v_gt (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_gt(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmpgt_##suffix(a.val, b.val)); } \
-inline _Tpvec v_le (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmple_##suffix(a.val, b.val)); } \
-inline _Tpvec v_ge (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmpge_##suffix(a.val, b.val)); }
 
 OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(v_float32x4, ps)
@@ -1390,19 +1390,19 @@ OPENCV_HAL_IMPL_SSE_MISC_FLT_OP(v_float32x4, float, __m128, ps, _mm_set1_epi32((
 OPENCV_HAL_IMPL_SSE_MISC_FLT_OP(v_float64x2, double, __m128d, pd, _mm_srli_epi64(_mm_set1_epi32(-1), 1))
 
 #define OPENCV_HAL_IMPL_SSE_SHIFT_OP(_Tpuvec, _Tpsvec, suffix, srai) \
-inline _Tpuvec v_shl (const _Tpuvec& a, int imm) \
+inline _Tpuvec v_shl(const _Tpuvec& a, int imm) \
 { \
     return _Tpuvec(_mm_slli_##suffix(a.val, imm)); \
 } \
-inline _Tpsvec v_shl (const _Tpsvec& a, int imm) \
+inline _Tpsvec v_shl(const _Tpsvec& a, int imm) \
 { \
     return _Tpsvec(_mm_slli_##suffix(a.val, imm)); \
 } \
-inline _Tpuvec v_shr (const _Tpuvec& a, int imm) \
+inline _Tpuvec v_shr(const _Tpuvec& a, int imm) \
 { \
     return _Tpuvec(_mm_srli_##suffix(a.val, imm)); \
 } \
-inline _Tpsvec v_shr (const _Tpsvec& a, int imm) \
+inline _Tpsvec v_shr(const _Tpsvec& a, int imm) \
 { \
     return _Tpsvec(srai(a.val, imm)); \
 } \

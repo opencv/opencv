@@ -634,7 +634,7 @@ CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(macro_name, __VA_ARGS__) \
 
 #define CV__HAL_INTRIN_IMPL_BIN_OP_(_Tp, bin_op, func) \
 template<int n> inline \
-v_reg<_Tp, n> func (const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+v_reg<_Tp, n> func(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
     v_reg<_Tp, n> c; \
     for( int i = 0; i < n; i++ ) \
@@ -651,7 +651,7 @@ CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(CV__HAL_INTRIN_IMPL_BIN_OP_, /, v_div)
 
 #define CV__HAL_INTRIN_IMPL_BIT_OP_(_Tp, bit_op, func) \
 template<int n> CV_INLINE \
-v_reg<_Tp, n> func (const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+v_reg<_Tp, n> func(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
     v_reg<_Tp, n> c; \
     typedef typename V_TypeTraits<_Tp>::int_type itype; \
@@ -672,7 +672,7 @@ CV__HAL_INTRIN_IMPL_BIT_OP(^, v_xor)
 
 #define CV__HAL_INTRIN_IMPL_BITWISE_NOT_(_Tp, dummy, dummy2) \
 template<int n> CV_INLINE \
-v_reg<_Tp, n> v_not (const v_reg<_Tp, n>& a) \
+v_reg<_Tp, n> v_not(const v_reg<_Tp, n>& a) \
 { \
     v_reg<_Tp, n> c; \
     for( int i = 0; i < n; i++ ) \

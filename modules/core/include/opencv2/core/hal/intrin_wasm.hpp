@@ -849,7 +849,7 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
 }
 
 #define OPENCV_HAL_IMPL_WASM_BIN_OP(bin_op, _Tpvec, intrin) \
-inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b) \
 { \
     return _Tpvec(intrin(a.val, b.val)); \
 }
@@ -883,7 +883,7 @@ OPENCV_HAL_IMPL_WASM_BIN_OP(v_div, v_float64x2, wasm_f64x2_div)
 
 // saturating multiply 8-bit, 16-bit
 #define OPENCV_HAL_IMPL_WASM_MUL_SAT(_Tpvec, _Tpwvec)        \
-inline _Tpvec v_mul (const _Tpvec& a, const _Tpvec& b)  \
+inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b)        \
 {                                                            \
     _Tpwvec c, d;                                            \
     v_mul_expand(a, b, c, d);                                \
@@ -1103,9 +1103,9 @@ inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b,
 
 #define OPENCV_HAL_IMPL_WASM_LOGIC_OP(_Tpvec) \
 OPENCV_HAL_IMPL_WASM_BIN_OP(v_and, _Tpvec, wasm_v128_and) \
-OPENCV_HAL_IMPL_WASM_BIN_OP(v_or, _Tpvec, wasm_v128_or) \
+OPENCV_HAL_IMPL_WASM_BIN_OP(v_or, _Tpvec, wasm_v128_or)   \
 OPENCV_HAL_IMPL_WASM_BIN_OP(v_xor, _Tpvec, wasm_v128_xor) \
-inline _Tpvec v_not (const _Tpvec& a) \
+inline _Tpvec v_not(const _Tpvec& a) \
 { \
     return _Tpvec(wasm_v128_not(a.val)); \
 }
@@ -1208,17 +1208,17 @@ OPENCV_HAL_IMPL_WASM_MINMAX_U_INIT_FUNC(v_uint16x8, i16x8, (short)0x8000)
 OPENCV_HAL_IMPL_WASM_MINMAX_U_INIT_FUNC(v_uint32x4, i32x4, (int)0x80000000)
 
 #define OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(_Tpvec, suffix, esuffix) \
-inline _Tpvec v_eq (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b)  \
 { return _Tpvec(wasm_##esuffix##_eq(a.val, b.val)); } \
-inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)  \
 { return _Tpvec(wasm_##esuffix##_ne(a.val, b.val)); } \
-inline _Tpvec v_lt (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(wasm_##suffix##_lt(a.val, b.val)); } \
-inline _Tpvec v_gt (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_gt(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(wasm_##suffix##_gt(a.val, b.val)); } \
-inline _Tpvec v_le (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(wasm_##suffix##_le(a.val, b.val)); } \
-inline _Tpvec v_ge (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(wasm_##suffix##_ge(a.val, b.val)); }
 
 OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(v_uint8x16, u8x16, i8x16)
@@ -1231,9 +1231,9 @@ OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(v_float32x4, f32x4, f32x4)
 OPENCV_HAL_IMPL_WASM_INIT_CMP_OP(v_float64x2, f64x2, f64x2)
 
 #define OPENCV_HAL_IMPL_WASM_64BIT_CMP_OP(_Tpvec, cast) \
-inline _Tpvec v_eq (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b) \
 { return cast(v_eq(v_reinterpret_as_f64(a), v_reinterpret_as_f64(b))); } \
-inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b) \
 { return cast(v_ne(v_reinterpret_as_f64(a), v_reinterpret_as_f64(b))); }
 
 OPENCV_HAL_IMPL_WASM_64BIT_CMP_OP(v_uint64x2, v_reinterpret_as_u64)
@@ -1379,19 +1379,19 @@ OPENCV_HAL_IMPL_WASM_MISC_FLT_OP(v_float32x4, f32x4)
 OPENCV_HAL_IMPL_WASM_MISC_FLT_OP(v_float64x2, f64x2)
 
 #define OPENCV_HAL_IMPL_WASM_SHIFT_OP(_Tpuvec, _Tpsvec, suffix, ssuffix) \
-inline _Tpuvec v_shl (const _Tpuvec& a, int imm) \
+inline _Tpuvec v_shl(const _Tpuvec& a, int imm) \
 { \
     return _Tpuvec(wasm_##suffix##_shl(a.val, imm)); \
 } \
-inline _Tpsvec v_shl (const _Tpsvec& a, int imm) \
+inline _Tpsvec v_shl(const _Tpsvec& a, int imm) \
 { \
     return _Tpsvec(wasm_##suffix##_shl(a.val, imm)); \
 } \
-inline _Tpuvec V_shr (const _Tpuvec& a, int imm) \
+inline _Tpuvec V_shr(const _Tpuvec& a, int imm) \
 { \
     return _Tpuvec(wasm_##ssuffix##_shr(a.val, imm)); \
 } \
-inline _Tpsvec v_shr (const _Tpsvec& a, int imm) \
+inline _Tpsvec v_shr(const _Tpsvec& a, int imm) \
 { \
     return _Tpsvec(wasm_##suffix##_shr(a.val, imm)); \
 } \

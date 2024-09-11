@@ -673,7 +673,7 @@ OPENCV_HAL_IMPL_AVX_ZIP(v_float64x4)
 
 /** Arithmetics **/
 #define OPENCV_HAL_IMPL_AVX_BIN_OP(bin_op, _Tpvec, intrin)            \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)            \
     { return _Tpvec(intrin(a.val, b.val)); }
 
 OPENCV_HAL_IMPL_AVX_BIN_OP(v_add, v_uint8x32,  _mm256_adds_epu8)
@@ -705,19 +705,19 @@ OPENCV_HAL_IMPL_AVX_BIN_OP(v_mul, v_float64x4, _mm256_mul_pd)
 OPENCV_HAL_IMPL_AVX_BIN_OP(v_div, v_float64x4, _mm256_div_pd)
 
 // saturating multiply 8-bit, 16-bit
-inline v_uint8x32 v_mul (const v_uint8x32& a, const v_uint8x32& b)
+inline v_uint8x32 v_mul(const v_uint8x32& a, const v_uint8x32& b)
 {
     v_uint16x16 c, d;
     v_mul_expand(a, b, c, d);
     return v_pack(c, d);
 }
-inline v_int8x32 v_mul (const v_int8x32& a, const v_int8x32& b)
+inline v_int8x32 v_mul(const v_int8x32& a, const v_int8x32& b)
 {
     v_int16x16 c, d;
     v_mul_expand(a, b, c, d);
     return v_pack(c, d);
 }
-inline v_uint16x16 v_mul (const v_uint16x16& a, const v_uint16x16& b)
+inline v_uint16x16 v_mul(const v_uint16x16& a, const v_uint16x16& b)
 {
     __m256i pl = _mm256_mullo_epi16(a.val, b.val);
     __m256i ph = _mm256_mulhi_epu16(a.val, b.val);
@@ -725,7 +725,7 @@ inline v_uint16x16 v_mul (const v_uint16x16& a, const v_uint16x16& b)
     __m256i p1 = _mm256_unpackhi_epi16(pl, ph);
     return v_uint16x16(_v256_packs_epu32(p0, p1));
 }
-inline v_int16x16 v_mul (const v_int16x16& a, const v_int16x16& b)
+inline v_int16x16 v_mul(const v_int16x16& a, const v_int16x16& b)
 {
     __m256i pl = _mm256_mullo_epi16(a.val, b.val);
     __m256i ph = _mm256_mulhi_epi16(a.val, b.val);
@@ -823,13 +823,13 @@ inline v_uint16x16 v_mul_hi(const v_uint16x16& a, const v_uint16x16& b) { return
 
 /** Bitwise shifts **/
 #define OPENCV_HAL_IMPL_AVX_SHIFT_OP(_Tpuvec, _Tpsvec, suffix, srai)  \
-    inline _Tpuvec v_shl (const _Tpuvec& a, int imm)            \
+    inline _Tpuvec v_shl(const _Tpuvec& a, int imm)                   \
     { return _Tpuvec(_mm256_slli_##suffix(a.val, imm)); }             \
-    inline _Tpsvec v_shl (const _Tpsvec& a, int imm)            \
+    inline _Tpsvec v_shl(const _Tpsvec& a, int imm)                   \
     { return _Tpsvec(_mm256_slli_##suffix(a.val, imm)); }             \
-    inline _Tpuvec v_shr (const _Tpuvec& a, int imm)            \
+    inline _Tpuvec v_shr(const _Tpuvec& a, int imm)                   \
     { return _Tpuvec(_mm256_srli_##suffix(a.val, imm)); }             \
-    inline _Tpsvec v_shr (const _Tpsvec& a, int imm)            \
+    inline _Tpsvec v_shr(const _Tpsvec& a, int imm)                   \
     { return _Tpsvec(srai(a.val, imm)); }                             \
     template<int imm>                                                 \
     inline _Tpuvec v_shl(const _Tpuvec& a)                            \
@@ -857,11 +857,11 @@ OPENCV_HAL_IMPL_AVX_SHIFT_OP(v_uint64x4,  v_int64x4,  epi64, _mm256_srai_epi64xx
 
 
 /** Bitwise logic **/
-#define OPENCV_HAL_IMPL_AVX_LOGIC_OP(_Tpvec, suffix, not_const)  \
-    OPENCV_HAL_IMPL_AVX_BIN_OP(v_and, _Tpvec, _mm256_and_##suffix)   \
+#define OPENCV_HAL_IMPL_AVX_LOGIC_OP(_Tpvec, suffix, not_const)     \
+    OPENCV_HAL_IMPL_AVX_BIN_OP(v_and, _Tpvec, _mm256_and_##suffix)  \
     OPENCV_HAL_IMPL_AVX_BIN_OP(v_or, _Tpvec, _mm256_or_##suffix)    \
-    OPENCV_HAL_IMPL_AVX_BIN_OP(v_xor, _Tpvec, _mm256_xor_##suffix)   \
-    inline _Tpvec v_not (const _Tpvec& a)                   \
+    OPENCV_HAL_IMPL_AVX_BIN_OP(v_xor, _Tpvec, _mm256_xor_##suffix)  \
+    inline _Tpvec v_not(const _Tpvec& a)                            \
     { return _Tpvec(_mm256_xor_##suffix(a.val, not_const)); }
 
 OPENCV_HAL_IMPL_AVX_LOGIC_OP(v_uint8x32,   si256, _mm256_set1_epi32(-1))
@@ -890,29 +890,29 @@ OPENCV_HAL_IMPL_AVX_SELECT(v_float32x8, ps)
 OPENCV_HAL_IMPL_AVX_SELECT(v_float64x4, pd)
 
 /** Comparison **/
-#define OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpvec)                     \
-    inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b)  \
-    { return v_not(v_eq(a, b)); }                                         \
-    inline _Tpvec v_lt  (const _Tpvec& a, const _Tpvec& b)  \
-    { return v_gt(b, a); }                                             \
-    inline _Tpvec v_ge (const _Tpvec& a, const _Tpvec& b)  \
-    { return v_not(v_lt(a, b)); }                                          \
-    inline _Tpvec v_le (const _Tpvec& a, const _Tpvec& b)  \
+#define OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpvec)                            \
+    inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)                 \
+    { return v_not(v_eq(a, b)); }                                        \
+    inline _Tpvec v_lt (const _Tpvec& a, const _Tpvec& b)                \
+    { return v_gt(b, a); }                                               \
+    inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b)                 \
+    { return v_not(v_lt(a, b)); }                                        \
+    inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b)                 \
     { return v_ge(b, a); }
 
 #define OPENCV_HAL_IMPL_AVX_CMP_OP_INT(_Tpuvec, _Tpsvec, suffix, sbit)   \
-    inline _Tpuvec v_eq (const _Tpuvec& a, const _Tpuvec& b)      \
+    inline _Tpuvec v_eq(const _Tpuvec& a, const _Tpuvec& b)              \
     { return _Tpuvec(_mm256_cmpeq_##suffix(a.val, b.val)); }             \
-    inline _Tpuvec v_gt (const _Tpuvec& a, const _Tpuvec& b)       \
+    inline _Tpuvec v_gt(const _Tpuvec& a, const _Tpuvec& b)              \
     {                                                                    \
         __m256i smask = _mm256_set1_##suffix(sbit);                      \
         return _Tpuvec(_mm256_cmpgt_##suffix(                            \
                        _mm256_xor_si256(a.val, smask),                   \
                        _mm256_xor_si256(b.val, smask)));                 \
     }                                                                    \
-    inline _Tpsvec v_eq (const _Tpsvec& a, const _Tpsvec& b)      \
+    inline _Tpsvec v_eq(const _Tpsvec& a, const _Tpsvec& b)              \
     { return _Tpsvec(_mm256_cmpeq_##suffix(a.val, b.val)); }             \
-    inline _Tpsvec v_gt (const _Tpsvec& a, const _Tpsvec& b)       \
+    inline _Tpsvec v_gt(const _Tpsvec& a, const _Tpsvec& b)              \
     { return _Tpsvec(_mm256_cmpgt_##suffix(a.val, b.val)); }             \
     OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpuvec)                               \
     OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpsvec)
@@ -922,24 +922,24 @@ OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint16x16, v_int16x16, epi16, (short)-32768)
 OPENCV_HAL_IMPL_AVX_CMP_OP_INT(v_uint32x8,  v_int32x8,  epi32, (int)0x80000000)
 
 #define OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(_Tpvec)                 \
-    inline _Tpvec v_eq (const _Tpvec& a, const _Tpvec& b) \
+    inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b)         \
     { return _Tpvec(_mm256_cmpeq_epi64(a.val, b.val)); }         \
-    inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b) \
+    inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)         \
     { return v_not(v_eq(a, b)); }
 
 OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_uint64x4)
 OPENCV_HAL_IMPL_AVX_CMP_OP_64BIT(v_int64x4)
 
 #define OPENCV_HAL_IMPL_AVX_CMP_FLT(bin_op, imm8, _Tpvec, suffix)    \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b) \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)           \
     { return _Tpvec(_mm256_cmp_##suffix(a.val, b.val, imm8)); }
 
 #define OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(_Tpvec, suffix)               \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_eq, _CMP_EQ_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_ne, _CMP_NEQ_OQ, _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_lt,  _CMP_LT_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_gt,  _CMP_GT_OQ,  _Tpvec, suffix)     \
-    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_le, _CMP_LE_OQ,  _Tpvec, suffix)     \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_eq, _CMP_EQ_OQ,  _Tpvec, suffix)   \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_ne, _CMP_NEQ_OQ, _Tpvec, suffix)   \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_lt,  _CMP_LT_OQ,  _Tpvec, suffix)  \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_gt,  _CMP_GT_OQ,  _Tpvec, suffix)  \
+    OPENCV_HAL_IMPL_AVX_CMP_FLT(v_le, _CMP_LE_OQ,  _Tpvec, suffix)   \
     OPENCV_HAL_IMPL_AVX_CMP_FLT(v_ge, _CMP_GE_OQ,  _Tpvec, suffix)
 
 OPENCV_HAL_IMPL_AVX_CMP_OP_FLT(v_float32x8, ps)
@@ -1398,7 +1398,7 @@ OPENCV_HAL_IMPL_AVX_CHECK_SHORT(v_int16x16)
     inline _Tpvec v_sqrt(const _Tpvec& x)                                     \
     { return _Tpvec(_mm256_sqrt_##suffix(x.val)); }                           \
     inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)           \
-    { return v_fma(a, a, v_mul(b, b)); }                                            \
+    { return v_fma(a, a, v_mul(b, b)); }                                      \
     inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b)               \
     { return v_sqrt(v_fma(a, a, v_mul(b, b))); }
 

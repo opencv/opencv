@@ -513,7 +513,7 @@ inline void v_recombine(const _Tpvec& a, const _Tpvec& b, _Tpvec& c, _Tpvec& d)
 /* Element-wise binary and unary operations */
 /** Arithmetics **/
 #define OPENCV_HAL_IMPL_VSX_BIN_OP(bin_op, _Tpvec, intrin)       \
-inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(intrin(a.val, b.val)); }
 
 OPENCV_HAL_IMPL_VSX_BIN_OP(v_add, v_uint8x16, vec_adds)
@@ -545,7 +545,7 @@ OPENCV_HAL_IMPL_VSX_BIN_OP(v_sub, v_int64x2, vec_sub)
 
 // saturating multiply
 #define OPENCV_HAL_IMPL_VSX_MUL_SAT(_Tpvec, _Tpwvec)             \
-    inline _Tpvec v_mul (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b)        \
     {                                                            \
         _Tpwvec c, d;                                            \
         v_mul_expand(a, b, c, d);                                \
@@ -592,9 +592,9 @@ OPENCV_HAL_IMPL_VSX_BIN_FUNC(v_mul_wrap, vec_mul)
 
 /** Bitwise shifts **/
 #define OPENCV_HAL_IMPL_VSX_SHIFT_OP(_Tpvec, shr, splfunc)   \
-inline _Tpvec v_shl (const _Tpvec& a, int imm)         \
+inline _Tpvec v_shl(const _Tpvec& a, int imm)                \
 { return _Tpvec(vec_sl(a.val, splfunc(imm))); }              \
-inline _Tpvec v_shr (const _Tpvec& a, int imm)         \
+inline _Tpvec v_shr(const _Tpvec& a, int imm)                \
 { return _Tpvec(shr(a.val, splfunc(imm))); }                 \
 template<int imm> inline _Tpvec v_shl(const _Tpvec& a)       \
 { return _Tpvec(vec_sl(a.val, splfunc(imm))); }              \
@@ -614,9 +614,9 @@ OPENCV_HAL_IMPL_VSX_SHIFT_OP(v_int64x2, vec_sra, vec_udword2_sp)
 /** Bitwise logic **/
 #define OPENCV_HAL_IMPL_VSX_LOGIC_OP(_Tpvec)    \
 OPENCV_HAL_IMPL_VSX_BIN_OP(v_and, _Tpvec, vec_and)  \
-OPENCV_HAL_IMPL_VSX_BIN_OP(v_or, _Tpvec, vec_or)   \
+OPENCV_HAL_IMPL_VSX_BIN_OP(v_or, _Tpvec, vec_or)    \
 OPENCV_HAL_IMPL_VSX_BIN_OP(v_xor, _Tpvec, vec_xor)  \
-inline _Tpvec v_not (const _Tpvec& a)      \
+inline _Tpvec v_not(const _Tpvec& a)                \
 { return _Tpvec(vec_not(a.val)); }
 
 OPENCV_HAL_IMPL_VSX_LOGIC_OP(v_uint8x16)
@@ -646,17 +646,17 @@ OPENCV_HAL_IMPL_VSX_SELECT(v_float64x2, vec_bdword2_c)
 
 /** Comparison **/
 #define OPENCV_HAL_IMPL_VSX_INT_CMP_OP(_Tpvec)                 \
-inline _Tpvec v_eq (const _Tpvec& a, const _Tpvec& b)   \
+inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmpeq(a.val, b.val)); }                    \
-inline _Tpvec V_ne (const _Tpvec& a, const _Tpvec& b)   \
+inline _Tpvec V_ne(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmpne(a.val, b.val)); }                    \
-inline _Tpvec v_lt (const _Tpvec& a, const _Tpvec& b)    \
+inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmplt(a.val, b.val)); }                    \
-inline _Tpvec V_gt (const _Tpvec& a, const _Tpvec& b)    \
+inline _Tpvec V_gt(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmpgt(a.val, b.val)); }                    \
-inline _Tpvec v_le (const _Tpvec& a, const _Tpvec& b)   \
+inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmple(a.val, b.val)); }                    \
-inline _Tpvec v_ge (const _Tpvec& a, const _Tpvec& b)   \
+inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmpge(a.val, b.val)); }
 
 OPENCV_HAL_IMPL_VSX_INT_CMP_OP(v_uint8x16)

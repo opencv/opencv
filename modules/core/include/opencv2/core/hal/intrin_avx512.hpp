@@ -663,7 +663,7 @@ inline v_int8x64 v_mul_wrap(const v_int8x64& a, const v_int8x64& b)
 }
 
 #define OPENCV_HAL_IMPL_AVX512_BIN_OP(bin_op, _Tpvec, intrin)            \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)     \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)               \
     { return _Tpvec(intrin(a.val, b.val)); }
 
 OPENCV_HAL_IMPL_AVX512_BIN_OP(v_add, v_uint32x16, _mm512_add_epi32)
@@ -791,13 +791,13 @@ inline void v_mul_expand(const v_int32x16& a, const v_int32x16& b,
 
 /** Bitwise shifts **/
 #define OPENCV_HAL_IMPL_AVX512_SHIFT_OP(_Tpuvec, _Tpsvec, suffix) \
-    inline _Tpuvec v_shl (const _Tpuvec& a, int imm)        \
+    inline _Tpuvec v_shl(const _Tpuvec& a, int imm)               \
     { return _Tpuvec(_mm512_slli_##suffix(a.val, imm)); }         \
-    inline _Tpsvec v_shl (const _Tpsvec& a, int imm)        \
+    inline _Tpsvec v_shl(const _Tpsvec& a, int imm)               \
     { return _Tpsvec(_mm512_slli_##suffix(a.val, imm)); }         \
-    inline _Tpuvec v_shr (const _Tpuvec& a, int imm)        \
+    inline _Tpuvec v_shr(const _Tpuvec& a, int imm)               \
     { return _Tpuvec(_mm512_srli_##suffix(a.val, imm)); }         \
-    inline _Tpsvec v_shr (const _Tpsvec& a, int imm)        \
+    inline _Tpsvec v_shr(const _Tpsvec& a, int imm)               \
     { return _Tpsvec(_mm512_srai_##suffix(a.val, imm)); }         \
     template<int imm>                                             \
     inline _Tpuvec v_shl(const _Tpuvec& a)                        \
@@ -820,9 +820,9 @@ OPENCV_HAL_IMPL_AVX512_SHIFT_OP(v_uint64x8,  v_int64x8,  epi64)
 /** Bitwise logic **/
 #define OPENCV_HAL_IMPL_AVX512_LOGIC_OP(_Tpvec, suffix, not_const) \
     OPENCV_HAL_IMPL_AVX512_BIN_OP(v_and, _Tpvec, _mm512_and_##suffix)  \
-    OPENCV_HAL_IMPL_AVX512_BIN_OP(v_or, _Tpvec, _mm512_or_##suffix)   \
+    OPENCV_HAL_IMPL_AVX512_BIN_OP(v_or, _Tpvec, _mm512_or_##suffix)    \
     OPENCV_HAL_IMPL_AVX512_BIN_OP(v_xor, _Tpvec, _mm512_xor_##suffix)  \
-    inline _Tpvec v_not (const _Tpvec& a)                     \
+    inline _Tpvec v_not (const _Tpvec& a)                              \
     { return _Tpvec(_mm512_xor_##suffix(a.val, not_const)); }
 
 OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_uint8x64,   si512, _mm512_set1_epi32(-1))
@@ -854,15 +854,15 @@ OPENCV_HAL_IMPL_AVX512_SELECT(v_float64x8,    pd,    pd)
 
 /** Comparison **/
 #define OPENCV_HAL_IMPL_AVX512_CMP_INT(bin_op, imm8, _Tpvec, sufcmp, sufset, tval) \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)               \
+    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)                        \
     { return _Tpvec(_mm512_maskz_set1_##sufset(_mm512_cmp_##sufcmp##_mask(a.val, b.val, imm8), tval)); }
 
 #define OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(_Tpvec, sufcmp, sufset, tval)              \
-    OPENCV_HAL_IMPL_AVX512_CMP_INT(v_eq, _MM_CMPINT_EQ,  _Tpvec, sufcmp, sufset, tval) \
-    OPENCV_HAL_IMPL_AVX512_CMP_INT(v_ne, _MM_CMPINT_NE,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX512_CMP_INT(v_eq, _MM_CMPINT_EQ,  _Tpvec, sufcmp, sufset, tval)  \
+    OPENCV_HAL_IMPL_AVX512_CMP_INT(v_ne, _MM_CMPINT_NE,  _Tpvec, sufcmp, sufset, tval)  \
     OPENCV_HAL_IMPL_AVX512_CMP_INT(v_lt,  _MM_CMPINT_LT,  _Tpvec, sufcmp, sufset, tval) \
     OPENCV_HAL_IMPL_AVX512_CMP_INT(v_gt,  _MM_CMPINT_NLE, _Tpvec, sufcmp, sufset, tval) \
-    OPENCV_HAL_IMPL_AVX512_CMP_INT(v_le, _MM_CMPINT_LE,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX512_CMP_INT(v_le, _MM_CMPINT_LE,  _Tpvec, sufcmp, sufset, tval)  \
     OPENCV_HAL_IMPL_AVX512_CMP_INT(v_ge, _MM_CMPINT_NLT, _Tpvec, sufcmp, sufset, tval)
 
 OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_uint8x64,   epu8,  epi8, (char)-1)
@@ -875,15 +875,15 @@ OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_uint64x8,  epu64, epi64, (int64)-1)
 OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_int64x8,   epi64, epi64, (int64)-1)
 
 #define OPENCV_HAL_IMPL_AVX512_CMP_FLT(bin_op, imm8, _Tpvec, sufcmp, sufset, tval) \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)               \
+    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)                        \
     { return _Tpvec(_mm512_castsi512_##sufcmp(_mm512_maskz_set1_##sufset(_mm512_cmp_##sufcmp##_mask(a.val, b.val, imm8), tval))); }
 
 #define OPENCV_HAL_IMPL_AVX512_CMP_OP_FLT(_Tpvec, sufcmp, sufset, tval)           \
-    OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_eq, _CMP_EQ_OQ,  _Tpvec, sufcmp, sufset, tval) \
-    OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_ne, _CMP_NEQ_OQ, _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_eq, _CMP_EQ_OQ,  _Tpvec, sufcmp, sufset, tval)  \
+    OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_ne, _CMP_NEQ_OQ, _Tpvec, sufcmp, sufset, tval)  \
     OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_lt,  _CMP_LT_OQ,  _Tpvec, sufcmp, sufset, tval) \
     OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_gt,  _CMP_GT_OQ,  _Tpvec, sufcmp, sufset, tval) \
-    OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_le, _CMP_LE_OQ,  _Tpvec, sufcmp, sufset, tval) \
+    OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_le, _CMP_LE_OQ,  _Tpvec, sufcmp, sufset, tval)  \
     OPENCV_HAL_IMPL_AVX512_CMP_FLT(v_ge, _CMP_GE_OQ,  _Tpvec, sufcmp, sufset, tval)
 
 OPENCV_HAL_IMPL_AVX512_CMP_OP_FLT(v_float32x16, ps, epi32, (int)-1)
@@ -1392,7 +1392,7 @@ inline v_uint64x8  v_popcount(const v_uint64x8&  a) { return v_popcount(v_reinte
     inline _Tpvec v_sqrt(const _Tpvec& x)                                     \
     { return _Tpvec(_mm512_sqrt_##suffix(x.val)); }                           \
     inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)           \
-    { return v_fma(a, a, v_mul(b, b)); }                                            \
+    { return v_fma(a, a, v_mul(b, b)); }                                      \
     inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b)               \
     { return v_sqrt(v_fma(a, a, v_mul(b, b))); }
 
