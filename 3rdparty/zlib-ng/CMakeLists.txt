@@ -128,7 +128,8 @@ endif()
 
 option(INSTALL_UTILS "Copy minigzip and minideflate during install" OFF)
 
-set(BUILD_SHARED_LIBS OFF)
+set(ZLIB_BUILD_SHARED_LIBS OFF)
+set(SKIP_INSTALL_ALL ON)
 ocv_warnings_disable(CMAKE_C_FLAGS -Wmissing-prototypes -Wmissing-declarations -Wundef -Wstrict-prototypes)
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4819)
 
@@ -1146,21 +1147,22 @@ if(WITH_GZFILEOP)
     list(APPEND ZLIB_ALL_SRCS ${ZLIB_GZFILE_PRIVATE_HDRS} ${ZLIB_GZFILE_SRCS})
 endif()
 
-if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
+if(NOT DEFINED ZLIB_BUILD_SHARED_LIBS OR ZLIB_BUILD_SHARED_LIBS)
     set(ZLIB_DLL_SRCS win32/zlib${SUFFIX}1.rc)
 endif()
 
-if(NOT DEFINED BUILD_SHARED_LIBS)
+if(NOT DEFINED ZLIB_BUILD_SHARED_LIBS)
     add_library(zlib SHARED ${ZLIB_ALL_SRCS} ${ZLIB_DLL_SRCS})
     add_library(zlibstatic STATIC ${ZLIB_ALL_SRCS})
 
     set(ZLIB_INSTALL_LIBRARIES zlib zlibstatic)
 else()
-    add_library(zlib ${ZLIB_ALL_SRCS})
 
-    if(BUILD_SHARED_LIBS)
+    if(ZLIB_BUILD_SHARED_LIBS)
+        add_library(zlib SHARED ${ZLIB_ALL_SRCS} ${ZLIB_DLL_SRCS})
         target_sources(zlib PRIVATE ${ZLIB_DLL_SRCS})
     else()
+        add_library(zlib STATIC ${ZLIB_ALL_SRCS})
         add_library(zlibstatic ALIAS zlib)
     endif()
 
@@ -1193,17 +1195,17 @@ endforeach()
 
 if(WIN32)
     # Shared library
-    if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
+    if(NOT DEFINED ZLIB_BUILD_SHARED_LIBS OR ZLIB_BUILD_SHARED_LIBS)
         set_target_properties(zlib PROPERTIES OUTPUT_NAME zlib${SUFFIX})
     endif()
     # Static library
-    if(NOT DEFINED BUILD_SHARED_LIBS)
+    if(NOT DEFINED ZLIB_BUILD_SHARED_LIBS)
         if(MSVC)
             set_target_properties(zlibstatic PROPERTIES OUTPUT_NAME zlibstatic${SUFFIX})
         else()
             set_target_properties(zlibstatic PROPERTIES OUTPUT_NAME z${SUFFIX})
         endif()
-    elseif(NOT BUILD_SHARED_LIBS)
+    elseif(NOT ZLIB_BUILD_SHARED_LIBS)
         if(MSVC)
             set_target_properties(zlib PROPERTIES OUTPUT_NAME zlibstatic${SUFFIX})
         else()
@@ -1215,7 +1217,7 @@ else()
     set_target_properties(${ZLIB_INSTALL_LIBRARIES} PROPERTIES OUTPUT_NAME z${SUFFIX})
 endif()
 
-if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
+if(NOT DEFINED ZLIB_BUILD_SHARED_LIBS OR ZLIB_BUILD_SHARED_LIBS)
     set_target_properties(zlib PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
 
     if(ZLIB_COMPAT)
@@ -1333,7 +1335,7 @@ endif()
 if(ZLIB_ENABLE_TESTS)
     enable_testing()
 
-    if(BUILD_SHARED_LIBS)
+    if(ZLIB_BUILD_SHARED_LIBS)
         if(ZLIBNG_ENABLE_TESTS)
             message(STATUS "Disabling zlib-ng tests because shared libraries are enabled")
             set(ZLIBNG_ENABLE_TESTS OFF)
@@ -1397,19 +1399,12 @@ add_feature_info(INSTALL_UTILS INSTALL_UTILS "Copy minigzip and minideflate duri
 
 FEATURE_SUMMARY(WHAT ALL INCLUDE_QUIET_PACKAGES)
 
-#============================================================================
-# CPack
-#============================================================================
-set(CPACK_GENERATOR "TGZ")
-set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_SOURCE_IGNORE_FILES .git/ _CPack_Packages/ "${PROJECT_BINARY_DIR}/")
-
-set(CPACK_PACKAGE_NAME "zlib${SUFFIX}")
-set(CPACK_PACKAGE_VERSION ${ZLIB_FULL_VERSION})
-set(CPACK_PACKAGE_DIRECTORY "${PROJECT_BINARY_DIR}/package")
-
-if("${PROJECT_BINARY_DIR}" STREQUAL "${PROJECT_SOURCE_DIR}")
-    message(WARNING "Building to source folder is not recommended. Cpack will be unable to generate source package.")
+if(ENABLE_SOLUTION_FOLDERS)
+  set_target_properties(${ZLIB_INSTALL_LIBRARIES} PROPERTIES FOLDER "3rdparty")
 endif()
 
-include(CPack)
+if(NOT BUILD_SHARED_LIBS)
+  ocv_install_target(${ZLIB_INSTALL_LIBRARIES} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
+endif()
+
+ocv_install_3rdparty_licenses(${ZLIB_INSTALL_LIBRARIES} LICENSE.md)
