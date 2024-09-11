@@ -130,8 +130,8 @@ option(INSTALL_UTILS "Copy minigzip and minideflate during install" OFF)
 
 set(ZLIB_BUILD_SHARED_LIBS OFF)
 set(SKIP_INSTALL_ALL ON)
-ocv_warnings_disable(CMAKE_C_FLAGS -Wmissing-prototypes -Wmissing-declarations -Wundef -Wstrict-prototypes)
-ocv_warnings_disable(CMAKE_C_FLAGS /wd4819)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wmissing-prototypes -Wmissing-declarations -Wundef -Wstrict-prototypes -Wtype-limits)
+ocv_warnings_disable(CMAKE_C_FLAGS /wd4819 /wd4244 /wd4334)
 
 mark_as_advanced(FORCE
     ZLIB_SYMBOL_PREFIX
