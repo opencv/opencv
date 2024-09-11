@@ -73,6 +73,40 @@ int borderInterpolate(int p, int len, int borderType)
     return p;
 }
 
+int16x4_t borderInterpolate_vector(int16x4_t vp, short len, int borderType)
+{
+    int16x4_t vzero = (int16x4_t){0, 0, 0, 0};
+    int16x4_t vone = (int16x4_t){1, 1, 1, 1};
+    int16x4_t vlen = (int16x4_t){len, len, len, len};
+    if(borderType == CV_HAL_BORDER_REPLICATE)
+        vp = (int16x4_t)__nds__bpick(0, __nds__bpick((long)(vlen - 1), (long)vp, (long)(vp >= vlen)), (long)(vp < 0));
+    else if(borderType == CV_HAL_BORDER_REFLECT || borderType == CV_HAL_BORDER_REFLECT_101)
+    {
+        int16x4_t vdelta = (borderType == CV_HAL_BORDER_REFLECT_101) ? vone : vzero;
+        if(len == 1)
+            return vzero;
+        do
+        {
+            int16x4_t vneg = -vp - 1 + vdelta;
+            int16x4_t vpos = vlen - 1 - (vp - vlen) - vdelta;
+            vp = (int16x4_t)__nds__bpick((long)vneg, __nds__bpick((long)vpos, (long)vp, (long)(vp >= vlen)), (long)(vp < 0));
+        }
+        while( (long)(vp >= vlen) || (long)(vp < 0) );
+    }
+    else if(borderType == CV_HAL_BORDER_WRAP)
+    {
+        ndsrvp_assert(len > 0);
+        int16x4_t vneg = vp - ((vp - vlen + 1) / vlen) * vlen;
+        int16x4_t vpos = vp % vlen;
+        vp = (int16x4_t)__nds__bpick((long)vneg, __nds__bpick((long)vpos, (long)vp, (long)(vp >= vlen)), (long)(vp < 0));
+    }
+    else if(borderType == CV_HAL_BORDER_CONSTANT)
+        vp = (int16x4_t)__nds__bpick((long)-vone, (long)vp, (long)(vp < 0 || vp >= vlen));
+    else
+        ndsrvp_error(Error::StsBadArg, "borderInterpolate_vector(): Unknown/unsupported border type");
+    return vp;
+}
+
 } // namespace ndsrvp
 
 } // namespace cv
