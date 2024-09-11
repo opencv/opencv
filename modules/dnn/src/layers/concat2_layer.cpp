@@ -26,8 +26,11 @@ namespace dnn
     Opset's 1 to 13 are covered.
 */
 
+// out must be pre-allocated
 static void concat(const std::vector<Mat>& inps, Mat& out, int axis)
 {
+    CV_Assert(out.isContinuous());
+
     MatShape outShape = out.shape();
     int ndims = outShape.dims, nslices = 1;
     size_t esz = out.elemSize();
@@ -40,23 +43,25 @@ static void concat(const std::vector<Mat>& inps, Mat& out, int axis)
     outStep = sliceSize*outShape[axis];
     for (int i = 0; i < axis; i++)
         nslices *= outShape[i];
-    for (int i = 0; i < ninputs; i++)
+    for (int i = 0; i < ninputs; i++) {
+        CV_Assert(inps[i].isContinuous());
         totalSize += inps[i].total()*esz;
+    }
 
     parallel_for_(Range(0, ninputs), [&](const Range& r) {
-        for (int i = r.start; i < r.end; i++) {
-            const Mat& inp = inps[i];
+        for (int k = r.start; k < r.end; k++) {
+            const Mat& inp_k = inps[k];
             uchar* outptr = out.data;
-            const uchar* inptr_i = inp.data;
+            const uchar* inptr_k = inp_k.data;
             int sz_a;
-            for (int j = 0; j < i; j++) {
-                sz_a = inps[j].size[axis];
+            for (int i = 0; i < k; i++) {
+                sz_a = inps[i].size[axis];
                 outptr += sliceSize*sz_a;
             }
-            sz_a = inp.size[axis];
-            size_t sliceSize_i = sliceSize*sz_a;
-            for (int j = 0; j < nslices; j++)
-                memcpy(outptr + j*outStep, inptr_i + j*sliceSize_i, sliceSize_i);
+            sz_a = inp_k.size[axis];
+            size_t sliceSize_k = sliceSize*sz_a;
+            for (int i = 0; i < nslices; i++)
+                memcpy(outptr + i*outStep, inptr_k + i*sliceSize_k, sliceSize_k);
         }
     }, (totalSize > 1000000 ? ninputs : 1));
 }

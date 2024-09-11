@@ -26,13 +26,12 @@ namespace dnn
     Opset's 1 to 13 are covered.
 */
 
+// out must be pre-allocated
 static void gather(const Mat& data, const Mat& ind, Mat& out, int axis)
 {
-    CV_Assert(data.isContinuous());
-    CV_Assert(ind.isContinuous());
+    CV_Assert_N(data.isContinuous(), ind.isContinuous(), out.isContinuous());
     int indType = ind.type();
     CV_Assert(indType == CV_32S || indType == CV_64S);
-    CV_Assert(out.isContinuous());
 
     MatShape dataShape = data.shape();
     MatShape indShape = ind.shape();

@@ -1074,7 +1074,7 @@ void ONNXImporter2::parseSplit(LayerParams& layerParams, const opencv_onnx::Node
 {
     CV_CheckGE(node_proto.input_size(), 1, "");
     CV_CheckLE(node_proto.input_size(), 2, "");
-    layerParams.type = "Split";
+    layerParams.type = "Split2";
     addLayer(layerParams, node_proto);
 }
 
