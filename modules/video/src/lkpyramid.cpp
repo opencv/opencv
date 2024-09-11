@@ -190,6 +190,18 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
     const Mat& J = *nextImg;
     const Mat& derivI = *prevDeriv;
 
+    CALL_HAL(LKOpticalFlowLevel, cv_hal_LKOpticalFlowLevel,
+                I.data, I.step, (const short*)derivI.data, derivI.step, J.data, J.step,
+                I.cols, I.rows, I.channels(),
+                (float*)(prevPts+range.start), (float*)(nextPts+range.start), range.end-range.start,
+                status+range.start, err+range.start, winSize.width, winSize.height,
+                criteria.maxCount, criteria.epsilon,
+                level, maxLevel,
+                (flags & OPTFLOW_USE_INITIAL_FLOW) != 0,
+                (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) != 0,
+                (float)minEigThreshold
+    );
+
     int j, cn = I.channels(), cn2 = cn*2;
     cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2));
     int derivDepth = DataType<deriv_type>::depth;
@@ -1394,21 +1406,6 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
 
         CV_Assert(prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size());
         CV_Assert(prevPyr[level * lvlStep1].type() == nextPyr[level * lvlStep2].type());
-
-        CALL_HAL(LKOpticalFlowLevel, cv_hal_LKOpticalFlowLevel,
-                    prevPyr[level * lvlStep1].data, prevPyr[level * lvlStep1].step,
-                    (const short*)derivI.data, derivI.step,
-                    nextPyr[level * lvlStep2].data, nextPyr[level * lvlStep2].step,
-                    prevPyr[level * lvlStep1].cols, prevPyr[level * lvlStep1].rows,
-                    nextPyr[level * lvlStep2].channels(),
-                    (float*)prevPts, (float*)nextPts, npoints,
-                    status, err, winSize.width, winSize.height,
-                    criteria.maxCount, criteria.epsilon,
-                    level, maxLevel,
-                    flags & OPTFLOW_USE_INITIAL_FLOW > 0,
-                    flags & OPTFLOW_LK_GET_MIN_EIGENVALS > 0,
-                    (float)minEigThreshold
-                );
 
         typedef cv::detail::LKTrackerInvoker LKTrackerInvoker;
         parallel_for_(Range(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], derivI,
