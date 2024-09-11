@@ -970,13 +970,13 @@ inline v_float64x4 v_select(const v_float64x4 &mask, const v_float64x4 &a, const
 /** Comparison **/
 #define OPENCV_HAL_IMPL_LASX_CMP_OP_OV(_Tpvec)                     \
     inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b)   \
-    { return ~(a == b); }                                          \
+    { return v_not(v_eq(a, b)); }                                          \
     inline _Tpvec v_lt  (const _Tpvec& a, const _Tpvec& b)   \
-    { return b > a; }                                              \
+    { return v_gt(b, a); }                                              \
     inline _Tpvec v_ge (const _Tpvec& a, const _Tpvec& b)   \
-    { return ~(a < b); }                                           \
+    { return v_not(v_lt(a, b)); }                                           \
     inline _Tpvec v_le (const _Tpvec& a, const _Tpvec& b)   \
-    { return b >= a; }
+    { return v_ge(b, a); }
 
 #define OPENCV_HAL_IMPL_LASX_CMP_OP_INT(_Tpuvec, _Tpsvec, suffix, usuffix)   \
     inline _Tpuvec v_eq (const _Tpuvec& a, const _Tpuvec& b)          \
@@ -1000,7 +1000,7 @@ OPENCV_HAL_IMPL_LASX_CMP_OP_INT(v_uint32x8,  v_int32x8,  w, wu)
     inline _Tpvec v_eq (const _Tpvec& a, const _Tpvec& b)  \
     { return _Tpvec(__lasx_xvseq_##suffix(a.val, b.val)); }       \
     inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b)  \
-    { return ~(a == b); }
+    { return v_not(v_eq(a, b)); }
 
 OPENCV_HAL_IMPL_LASX_CMP_OP_64BIT(v_uint64x4, d)
 OPENCV_HAL_IMPL_LASX_CMP_OP_64BIT(v_int64x4, d)
@@ -1295,9 +1295,9 @@ inline unsigned v_reduce_sum(const v_uint32x8& a)
 { return v_reduce_sum(v_reinterpret_as_s32(a)); }
 
 inline int v_reduce_sum(const v_int16x16& a)
-{ return v_reduce_sum(v_expand_low(a) + v_expand_high(a)); }
+{ return v_reduce_sum(v_add(v_expand_low(a), v_expand_high(a))); }
 inline unsigned v_reduce_sum(const v_uint16x16& a)
-{ return v_reduce_sum(v_expand_low(a) + v_expand_high(a)); }
+{ return v_reduce_sum(v_add(v_expand_low(a), v_expand_high(a))); }
 
 inline float v_reduce_sum(const v_float32x8& a)
 {
