@@ -456,7 +456,8 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
 {
     const Mat& m = tensors.at(arg.idx);
     const ArgData& adata = args.at(arg.idx);
-    CV_Assert(m.type() == adata.type);
+    // [TODO] replace with type compatibility check
+    // CV_Assert(m.type() == adata.type);
     strm_ << prefix << " " << i << ". Name: " << adata.name << "\n";
     strm_ << "  Buf: " << bufidxs.at(arg.idx) << "\n";
     strm_ << "  Type: " << typeToString(adata.type) << " \n";
@@ -518,15 +519,20 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
     */
 
     if (adata.kind == DNN_ARG_INPUT) {
-        if (adata.type != mtype) {
-            // [TODO] add conversion BF16/FP16/FP32 <=> BF16/FP16/FP32 when the type is 'slightly' mismatched
-            CV_Error_(Error::StsBadArg, ("wrong type of argument '%s': %s given, %s expected",
-                                         adata.name.c_str(), typeToString(mtype).c_str(),
+        int adata_type = adata.type;
+        if ((adata_type == CV_16F || adata_type == CV_16BF) && !enableFP16)
+            adata_type = CV_32F;
+        if (adata_type != mtype &&
+            !((adata_type == CV_32F || adata_type == CV_16F || adata_type == CV_16BF) &&
+              (mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF)))
+        {
+            CV_Error_(Error::StsBadArg, ("incompatible type of input tensor #%zu '%s': %s given, %s expected",
+                                         idx, adata.name.c_str(), typeToString(mtype).c_str(),
                                          typeToString(adata.type).c_str()));
         }
         Mat& inp_t = tensors.at(inp.idx);
-        inp_t.fit(mshape, mtype);
-        m.copyTo(inp_t);
+        inp_t.fit(mshape, adata_type);
+        m.convertTo(inp_t, adata_type);
     } else if (adata.kind == DNN_ARG_TEMP) {
         int bufidx = bufidxs.at(inp.idx);
         Mat& buf = buffers.at(bufidx);
@@ -535,7 +541,8 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         tensors[inp.idx] = buf;
     } else {
         CV_Error_(Error::StsBadArg, ("graph %s: argument '%s' must be 'INPUT' or 'TEMP', not '%s'",
-                                     graph->name().data(), adata.name.c_str(), argKindToString(adata.kind).c_str()));
+                                     graph->name().data(), adata.name.c_str(),
+                                     argKindToString(adata.kind).c_str()));
     }
 }
 
@@ -588,6 +595,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         inpMats.resize(ninputs);
         inpTypes.resize(ninputs);
         inpShapes.resize(ninputs);
+        outMats.clear();
+
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
             //const ArgData& adata = args[inp.idx];

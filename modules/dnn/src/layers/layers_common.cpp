@@ -264,20 +264,34 @@ double getWeightScale(const Mat& weightsMat)
     return (realMax == realMin) ? 1.0 : std::max(-realMin, realMax)/127;
 }
 
+void tensorToIntVec(const Mat& tensor, std::vector<int>& vec)
+{
+    int type = tensor.type();
+    CV_Assert(type == CV_32S || type == CV_64S);
+    CV_Assert(tensor.dims <= 1);
+    size_t size = tensor.total();
+    vec.resize(size);
+    for (size_t i = 0; i < size; i++) {
+        vec[i] = type == CV_32S ? tensor.at<int>(i) : (int)tensor.at<int64_t>(i);
+    }
+}
+
 void reshapeAndCopyFirst(InputArrayOfArrays inputs,
                          OutputArrayOfArrays outputs,
                          const MatShape& shape)
 {
-    int inp_kind = inputs.kind(), out_kind = outputs.kind();
-    CV_Assert(inp_kind == out_kind);
-    CV_Assert(inp_kind == _InputArray::STD_VECTOR_MAT ||
-              inp_kind == _InputArray::STD_VECTOR_UMAT);
-    int inp_type = inputs.type(0);
-    if (inp_kind == _InputArray::STD_VECTOR_MAT) {
+    int inpKind = inputs.kind(), outKind = outputs.kind();
+    CV_Assert(inpKind == outKind);
+    CV_Assert(inpKind == _InputArray::STD_VECTOR_MAT ||
+              inpKind == _InputArray::STD_VECTOR_UMAT);
+    CV_Assert(inputs.isContinuous(0));
+    int inpType = inputs.type(0);
+    if (inpKind == _InputArray::STD_VECTOR_MAT) {
         Mat inp = inputs.getMat(0);
         std::vector<Mat>& outref = outputs.getMatVecRef();
         outref.resize(1);
-        outref[0].fit(shape, inp_type);
+        outref[0].fit(shape, inpType);
+        CV_Assert(outref[0].isContinuous());
         Mat inp_ = inp.reshape(0, shape);
         if (inp_.data != outref[0].data)
             inp_.copyTo(outref[0]);
@@ -286,7 +300,8 @@ void reshapeAndCopyFirst(InputArrayOfArrays inputs,
         UMat inp = inputs.getUMat(0);
         std::vector<UMat>& outref = outputs.getUMatVecRef();
         outref.resize(1);
-        outref[0].fit(shape, inp_type);
+        outref[0].fit(shape, inpType);
+        CV_Assert(outref[0].isContinuous());
         UMat inp_ = inp.reshape(0, shape);
         inp_.copyTo(outref[0]);
     }

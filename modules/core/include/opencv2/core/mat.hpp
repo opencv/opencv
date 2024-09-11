@@ -341,6 +341,7 @@ public:
     bool isContinuous(int i=-1) const;
     bool isSubmatrix(int i=-1) const;
     bool empty() const;
+    bool empty(int i) const;
     void copyTo(const _OutputArray& arr) const;
     void copyTo(const _OutputArray& arr, const _InputArray & mask) const;
     size_t offset(int i=-1) const;

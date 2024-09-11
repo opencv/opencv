@@ -593,15 +593,36 @@ int _InputArray::sizend(int* arrsz, int i) const
     return d;
 }
 
-MatShape _InputArray::shape(int i) const
+bool _InputArray::empty(int i) const
 {
     _InputArray::KindFlag k = kind();
+    if (i >= 0) {
+        if (k == STD_VECTOR_MAT) {
+            auto mv = reinterpret_cast<const std::vector<Mat>*>(obj);
+            CV_Assert((size_t)i < mv->size());
+            return mv->at(i).empty();
+        }
+        else if (k == STD_VECTOR_MAT) {
+            auto umv = reinterpret_cast<const std::vector<UMat>*>(obj);
+            CV_Assert((size_t)i < umv->size());
+            return umv->at(i).empty();
+        }
+        else if (k == STD_VECTOR_VECTOR) {
+            auto vv = reinterpret_cast<const std::vector<std::vector<int> >*>(obj);
+            CV_Assert((size_t)i < vv->size());
+            return vv->at(i).empty();
+        } else {
+            CV_Error(Error::StsNotImplemented, "");
+        }
+    }
+    return empty();
+}
+
+MatShape _InputArray::shape(int i) const
+{
     int sizes[CV_MAX_DIM], dims = sizend(sizes, i);
 
-    if (dims == 0 && ((k == MAT && i < 0) ||
-                      (k == UMAT && i < 0) ||
-                      (k == STD_VECTOR_MAT && i >= 0) ||
-                      (k == STD_VECTOR_UMAT && i >= 0)))
+    if (dims == 0 && empty(i))
         return MatShape();
     return MatShape(dims, sizes);
 }

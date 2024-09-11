@@ -103,6 +103,13 @@ static std::string dataType2str(opencv_onnx::TensorProto_DataType dt)
     return std::string(str);
 }
 
+static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto)
+{
+    Mat m = getMatFromTensor(tensor_proto, false);
+    m.dims = (int)tensor_proto.dims_size();
+    return m;
+}
+
 class ONNXImporter2
 {
 public:
@@ -348,7 +355,7 @@ inline void replaceLayerParam(LayerParams& layerParams, const String& oldKey, co
     {
         const opencv_onnx::TensorProto& tensor_proto = graph_proto.initializer(i);
         dumpTensorProto(i, tensor_proto, "initializer");
-        Mat mat = getMatFromTensor(tensor_proto);
+        Mat mat = getMatFromTensor2(tensor_proto);
         releaseONNXTensor(const_cast<opencv_onnx::TensorProto&>(tensor_proto));  // drop already loaded data
 
         if (DNN_DIAGNOSTICS_RUN && mat.empty())
@@ -461,7 +468,7 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             else if (attribute_proto.has_t())
             {
                 opencv_onnx::TensorProto tensor = attribute_proto.t();
-                Mat blob = getMatFromTensor(tensor);
+                Mat blob = getMatFromTensor2(tensor);
                 lp.blobs.push_back(blob);
                 lp.set("original_dims_of_mat", tensor.dims_size());
             }
@@ -701,7 +708,7 @@ void ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
 
 Mat ONNXImporter2::parseTensor(const opencv_onnx::TensorProto& tensor_proto)
 {
-    return getMatFromTensor(tensor_proto, false);
+    return getMatFromTensor2(tensor_proto);
 }
 
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)
@@ -839,6 +846,10 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
             have_errors = true;
         }
         Arg arg = net.getArg(arg_name);
+        /*ArgData adata = net.argData(arg);
+        printf("%s (%s), arg '%s'/'%s': adata.kind = %s, type=%s\n", node_name.c_str(), layer_type.c_str(),
+               arg_name.c_str(), adata.name.c_str(),
+               argKindToString(adata.kind).c_str(), typeToString(adata.type).c_str());*/
         node_inputs.push_back(arg);
     }
 
@@ -1053,11 +1064,17 @@ void ONNXImporter2::parseReduce(LayerParams& layerParams, const opencv_onnx::Nod
 
 void ONNXImporter2::parseSlice(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    int ninputs = node_proto.input_size();
+    CV_Assert(ninputs == 1 || (3 <= ninputs && ninputs <= 5));
+    layerParams.type = "Slice2";
     addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseSplit(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    CV_CheckGE(node_proto.input_size(), 1, "");
+    CV_CheckLE(node_proto.input_size(), 2, "");
+    layerParams.type = "Split";
     addLayer(layerParams, node_proto);
 }
 
@@ -1684,8 +1701,6 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
 
 void ONNXImporter2::parseTranspose(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "Permute";
-    replaceLayerParam(layerParams, "perm", "order");
     CV_Assert(node_proto.input_size() == 1);
     addLayer(layerParams, node_proto);
 }
@@ -1755,6 +1770,7 @@ void ONNXImporter2::parseConstantOfShape(LayerParams& layerParams, const opencv_
 
 void ONNXImporter2::parseGather(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    layerParams.type = "Gather2";
     CV_CheckEQ(node_proto.input_size(), 2, "");
     addLayer(layerParams, node_proto);
 }
@@ -1767,6 +1783,8 @@ void ONNXImporter2::parseGatherElements(LayerParams& layerParams, const opencv_o
 
 void ONNXImporter2::parseConcat(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    CV_CheckEQ(node_proto.output_size(), 1, "");
+    layerParams.type = "Concat2";
     addLayer(layerParams, node_proto);
 }
 

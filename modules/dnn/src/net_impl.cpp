@@ -68,9 +68,9 @@ Net::Impl::Impl()
 
     accuracy = CV_32F;
     enableFP16 = haveFP16 = false;
-    if (checkHardwareSupport(CV_CPU_FP16)) {
+    /*if (checkHardwareSupport(CV_CPU_FP16)) {
         enableFP16 = haveFP16 = true;
-    }
+    }*/
 
     tracingMode = DNN_TRACE_NONE;
     profilingMode = DNN_PROFILE_NONE;
@@ -132,7 +132,11 @@ void Net::Impl::clear()
     mainGraph = Ptr<Graph>();
 
     ArgData adata;
+    adata.name = "";
+    adata.kind = DNN_ARG_CONST;
+
     args.push_back(adata);
+    argnames.insert(std::make_pair(std::string(""), 0));
     tensors.push_back(Mat());
     bufidxs.push_back(-1);
 

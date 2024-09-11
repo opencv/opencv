@@ -125,6 +125,18 @@ inline int DictValue::getIntValue(int idx) const
 }
 
 template<>
+inline std::vector<int> DictValue::get<std::vector<int> >(int idx) const
+{
+    CV_Assert(idx == -1);
+    int size_ = size();
+    std::vector<int> values(size_);
+
+    for (int i = 0; i < size_; i++)
+        values[i] = get<int>(i);
+    return values;
+}
+
+template<>
 inline unsigned DictValue::get<unsigned>(int idx) const
 {
     return (unsigned)get<int64>(idx);

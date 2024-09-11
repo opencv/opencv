@@ -14,15 +14,26 @@
 
 //#include <opencv2/dnn/shape_utils.hpp>
 
-#ifdef HAVE_CUDA
-#include "../cuda4dnn/primitives/reshape.hpp"
-using namespace cv::dnn::cuda4dnn;
-#endif
-
 namespace cv
 {
 namespace dnn
 {
+
+/*
+    Reshape2 layer, as defined in ONNX specification:
+    https://onnx.ai/onnx/operators/onnx__Reshape.html
+
+    Opset's 1 to 23 are covered.
+
+    The layers Flatten, Reshape2, Squeeze and Unsqueeze all share the same
+    implementation idea:
+    1. calculate shape of the output tensor
+    2. assuming that the input is continuous, just copy all the data to output tensor.
+       reshapeAndCopyFirst() does that.
+       The engine buffer allocator recognizes all these operations and tries to run
+       them in-place. In such a case no copy operation is actually done,
+       so the operations are really cheap.
+*/
 
 class Reshape2LayerImpl CV_FINAL : public Reshape2Layer
 {
@@ -37,11 +48,11 @@ public:
         {
             dynamicShapeSpec = false;
 
-            const DictValue &paramShape = params.get("shape");
-            int i, ndims = paramShape.size();
+            const DictValue& shapeParam = params.get("shape");
+            int i, ndims = shapeParam.size();
             newShapeDesc.resize(ndims);
             for (i = 0; i < ndims; i++) {
-                int sz = paramShape.get<int>(i);
+                int sz = shapeParam.get<int>(i);
                 if (sz <= 0)
                     dynamicShapeSpec = true;
                 newShapeDesc[i] = sz;
@@ -51,6 +62,10 @@ public:
 
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
     {
+        // [TODO] fix. If the 'shape' spec is attribute,
+        // or if shape is a constant 2nd input of the layer,
+        // then the output shape can be inferred from the input tensor shape.
+        // That is, dynamicShapeSpec is not quite incorrect.
         return dynamicShapeSpec;
     }
 
@@ -64,7 +79,7 @@ public:
         return newShapeDesc.dims >= 0;
     }
 
-    MatShape getOutShape(const MatShape& inpShape, const MatShape& shapeSpec) const
+    MatShape getOutShape(const MatShape& inpShape, MatShape& shapeSpec) const
     {
         MatShape outShape = shapeSpec;
         int m1idx = -1, haveZeros = 0;
@@ -102,23 +117,15 @@ public:
         return outShape;
     }
 
-    MatShape shapeFromMat(const Mat& shapeTensor) const
+    MatShape tensorToShapeSpec(const Mat& shapeTensor) const
     {
-        int shapeType = shapeTensor.type();
-        CV_Assert(shapeType == CV_32S || shapeType == CV_64S);
-        CV_Assert(shapeTensor.dims <= 1);
-        size_t ndims = shapeTensor.total();
-        CV_Assert(ndims <= (size_t)MatShape::MAX_DIMS);
-        MatShape shape((int)ndims);
-        for (int i = 0; i < (int)ndims; i++) {
-            shape[i] = shapeType == CV_32S ? shapeTensor.at<int>(i) :
-                (int)shapeTensor.at<int64_t>(i);
-        }
-        return shape;
+        std::vector<int> shapeSpecVec;
+        tensorToIntVec(shapeTensor, shapeSpecVec);
+        return MatShape(shapeSpecVec);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
-                         const int requiredOutputs,
+                         const int,
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
@@ -132,7 +139,7 @@ public:
             CV_Assert(this->inputs.size() == 2);
             Net::Impl* netimpl_ = reinterpret_cast<Net::Impl*>(netimpl);
             Mat shapeTensor = netimpl_->argTensor(this->inputs[1]);
-            shapeSpec = shapeFromMat(shapeTensor);
+            shapeSpec = tensorToShapeSpec(shapeTensor);
         } else {
             CV_Assert(shapeSpec.dims >= 0);
         }
@@ -175,7 +182,7 @@ public:
         MatShape shapeSpec = newShapeDesc;
         if (!haveShapeSpec_) {
             Mat shapeTensor = inputs_arr.getMat(1);
-            shapeSpec = shapeFromMat(shapeTensor);
+            shapeSpec = tensorToShapeSpec(shapeTensor);
         }
         MatShape outShape = getOutShape(inpShape, shapeSpec);
         reshapeAndCopyFirst(inputs_arr, outputs_arr, outShape);
