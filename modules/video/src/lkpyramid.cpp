@@ -50,6 +50,7 @@
 #endif
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
+#include "hal_replacement.hpp"
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -1280,7 +1281,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
     Mat statusMat = _status.getMat(), errMat;
     CV_Assert( statusMat.isContinuous() );
     uchar* status = statusMat.ptr();
-    float* err = 0;
+    float* err = nullptr;
 
     for( i = 0; i < npoints; i++ )
         status[i] = true;
@@ -1393,6 +1394,21 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
 
         CV_Assert(prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size());
         CV_Assert(prevPyr[level * lvlStep1].type() == nextPyr[level * lvlStep2].type());
+
+        CALL_HAL(LKOpticalFlowLevel, cv_hal_LKOpticalFlowLevel,
+                    prevPyr[level * lvlStep1].data, prevPyr[level * lvlStep1].step,
+                    (const short*)derivI.data, derivI.step,
+                    nextPyr[level * lvlStep2].data, nextPyr[level * lvlStep2].step,
+                    prevPyr[level * lvlStep1].cols, prevPyr[level * lvlStep1].rows,
+                    nextPyr[level * lvlStep2].channels(),
+                    (float*)prevPts, (float*)nextPts, npoints,
+                    status, err, winSize.width, winSize.height,
+                    criteria.maxCount, criteria.epsilon,
+                    level, maxLevel,
+                    flags & OPTFLOW_USE_INITIAL_FLOW > 0,
+                    flags & OPTFLOW_LK_GET_MIN_EIGENVALS > 0,
+                    (float)minEigThreshold
+                );
 
         typedef cv::detail::LKTrackerInvoker LKTrackerInvoker;
         parallel_for_(Range(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], derivI,
