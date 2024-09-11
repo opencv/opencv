@@ -629,19 +629,6 @@ if(NOT IOS AND NOT XROS)
   include(cmake/OpenCVDetectPython.cmake)
 endif()
 
-# Use same flags for native AArch64 and RISC-V compilation as for cross-compile (Linux)
-if((CV_GCC OR CV_CLANG) AND UNIX AND NOT APPLE AND NOT CMAKE_CROSSCOMPILING AND NOT CMAKE_TOOLCHAIN_FILE)
-  if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64") # Maybe use AARCH64 variable?
-    include(${CMAKE_CURRENT_LIST_DIR}/platforms/linux/flags-aarch64.cmake)
-  elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "riscv64")
-    include(${CMAKE_CURRENT_LIST_DIR}/platforms/linux/flags-riscv64.cmake)
-  endif()
-  if(OCV_FLAGS)
-    set(CMAKE_CXX_FLAGS "${OCV_FLAGS}")
-    set(CMAKE_C_FLAGS "${OCV_FLAGS}")
-  endif()
-endif()
-
 include(cmake/OpenCVCompilerOptions.cmake)
 
 ocv_cmake_hook(POST_COMPILER_OPTIONS)

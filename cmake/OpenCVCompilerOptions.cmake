@@ -77,6 +77,12 @@ macro(add_env_definitions option)
   add_definitions("-D${option}=\"${value}\"")
 endmacro()
 
+# Use same flags for native AArch64 and RISC-V compilation as for cross-compile (Linux)
+if(NOT CMAKE_CROSSCOMPILING AND NOT CMAKE_TOOLCHAIN_FILE AND COMMAND ocv_set_platform_flags)
+  ocv_set_platform_flags(CMAKE_CXX_FLAGS APPEND)
+  ocv_set_platform_flags(CMAKE_C_FLAGS APPEND)
+endif()
+
 if(NOT MSVC)
   # OpenCV fails some tests when 'char' is 'unsigned' by default
   add_extra_compiler_option(-fsigned-char)
