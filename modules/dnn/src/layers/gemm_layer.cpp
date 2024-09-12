@@ -74,16 +74,20 @@ public:
         int K_b = trans_b ? nb : mb;
         CV_CheckEQ(K_a, K_b, "DNN/Gemm: Invalid dimension of dim K");
 
+        bool have_bias_ = have_bias || inputs.size() == 3;
+
         // Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
-        if (have_bias) {
+        if (have_bias_) {
             const auto shape_C = const_C ? shape(blobs.back()) : inputs.back();
 
             auto ndims_C = shape_C.size();
             CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
 
-            if (real_ndims_C == 1) { // (1,) or (N,)
+            int real_ndims_C_ = real_ndims_C >= 0 ? real_ndims_C : ndims_C;
+
+            if (real_ndims_C_ == 1) { // (1,) or (N,)
                 CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/Gemm: invalid dimension of C");
-            } else if (real_ndims_C == 2) { // (1, 1) or (1, N) or (M, 1) or (M, N)
+            } else if (real_ndims_C_ == 2) { // (1, 1) or (1, N) or (M, 1) or (M, N)
                 // printf("shape_C=[%d, %d]\n", shape_C[0], shape_C[1]);
                 CV_Check(shape_C[0], (shape_C[0] == 1 && shape_C[1] == 1) ||
                                      (shape_C[0] == 1 && shape_C[1] == N) ||
@@ -113,18 +117,20 @@ public:
             broadcast_C.clear();
             broadcast_C.resize(M * N, 0.f);
 
+            int real_ndims_C_ = real_ndims_C >= 0 ? real_ndims_C : C.dims;
+
             const float *ptr_c = C.ptr<const float>();
             const auto shape_C = shape(C);
-            if ((real_ndims_C == 0) || (real_ndims_C == 1 && shape_C[0] == 1) ||
-                (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
+            if ((real_ndims_C_ == 0) || (real_ndims_C_ == 1 && shape_C[0] == 1) ||
+                (real_ndims_C_ == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
                 // (), (1,), (1, 1)
                 float c = *ptr_c;
                 int total = M * N;
                 for (int i = 0; i < total; ++i) {
                     broadcast_C[i] = beta * c;
                 }
-            } else if ((real_ndims_C == 1 && shape_C[0] == N) ||
-                       (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == N)) {
+            } else if ((real_ndims_C_ == 1 && shape_C[0] == N) ||
+                       (real_ndims_C_ == 2 && shape_C[0] == 1 && shape_C[1] == N)) {
                 // (N,), (1, N)
                 for (int i = 0; i < M; ++i) {
                     int step = i * N;
@@ -132,7 +138,7 @@ public:
                         broadcast_C[step + j] = beta * ptr_c[j];
                     }
                 }
-            } else if (real_ndims_C == 2 && shape_C[0] == M && shape_C[1] == 1) {
+            } else if (real_ndims_C_ == 2 && shape_C[0] == M && shape_C[1] == 1) {
                 // (M, 1)
                 for (int i = 0; i < M; ++i) {
                     int step = i * N;
