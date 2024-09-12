@@ -7,7 +7,6 @@
  * Kadatch and Jenkins (2010). See doc/crc-doc.1.0.pdf in this distribution.
  */
 
-#include "zbuild.h"
 #include "zutil.h"
 #include "crc32_braid_p.h"
 #include "crc32_braid_tbl.h"

@@ -17,7 +17,7 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-#include "../../zbuild.h"
+#include "zbuild.h"
 
 #include <immintrin.h>
 #include <wmmintrin.h>
@@ -26,8 +26,9 @@
 #  include <immintrin.h>
 #endif
 
-#include "../../crc32_fold.h"
-#include "../../crc32_braid_p.h"
+#include "crc32.h"
+#include "crc32_braid_p.h"
+#include "crc32_braid_tbl.h"
 #include "x86_intrins.h"
 #include <assert.h>
 
@@ -350,11 +351,22 @@ Z_INTERNAL uint32_t CRC32_FOLD_FINAL(crc32_fold *crc) {
     return crc->value;
 }
 
+static inline uint32_t crc32_small(uint32_t crc, const uint8_t *buf, size_t len) {
+    uint32_t c = (~crc) & 0xffffffff;
+
+    while (len) {
+        len--;
+        DO1;
+    }
+
+    return c ^ 0xffffffff;
+}
+
 Z_INTERNAL uint32_t CRC32(uint32_t crc32, const uint8_t *buf, size_t len) {
-    /* For lens < 64, crc32_braid method is faster. The CRC32 instruction for
-     * these short lengths might also prove to be effective */
-    if (len < 64)
-        return PREFIX(crc32_braid)(crc32, buf, len);
+    /* For lens smaller than ~12, crc32_small method is faster.
+     * But there are also minimum requirements for the pclmul functions due to alignment */
+    if (len < 16)
+        return crc32_small(crc32, buf, len);
 
     crc32_fold ALIGNED_(16) crc_state;
     CRC32_FOLD_RESET(&crc_state);

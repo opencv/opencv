@@ -3,11 +3,9 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 #include "zbuild.h"
+#include "zutil.h"
 #include "functable.h"
-
-#include "crc32_fold.h"
-
-#include <limits.h>
+#include "crc32.h"
 
 Z_INTERNAL uint32_t crc32_fold_reset_c(crc32_fold *crc) {
     crc->value = CRC32_INITIAL_VALUE;
@@ -15,7 +13,7 @@ Z_INTERNAL uint32_t crc32_fold_reset_c(crc32_fold *crc) {
 }
 
 Z_INTERNAL void crc32_fold_copy_c(crc32_fold *crc, uint8_t *dst, const uint8_t *src, size_t len) {
-    crc->value = functable.crc32(crc->value, src, len);
+    crc->value = FUNCTABLE_CALL(crc32)(crc->value, src, len);
     memcpy(dst, src, len);
 }
 
@@ -25,7 +23,7 @@ Z_INTERNAL void crc32_fold_c(crc32_fold *crc, const uint8_t *src, size_t len, ui
      * same arguments for the versions that _do_ do a folding CRC but we don't want a copy. The
      * init_crc is an unused argument in this context */
     Z_UNUSED(init_crc);
-    crc->value = functable.crc32(crc->value, src, len);
+    crc->value = FUNCTABLE_CALL(crc32)(crc->value, src, len);
 }
 
 Z_INTERNAL uint32_t crc32_fold_final_c(crc32_fold *crc) {

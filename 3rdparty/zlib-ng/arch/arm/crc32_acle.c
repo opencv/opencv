@@ -7,7 +7,7 @@
 
 #ifdef ARM_ACLE
 #include "acle_intrins.h"
-#include "../../zbuild.h"
+#include "zbuild.h"
 
 Z_INTERNAL Z_TARGET_CRC uint32_t crc32_acle(uint32_t crc, const uint8_t *buf, size_t len) {
     Z_REGISTER uint32_t c;

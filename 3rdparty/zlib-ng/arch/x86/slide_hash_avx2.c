@@ -9,8 +9,8 @@
  *
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
-#include "../../zbuild.h"
-#include "../../deflate.h"
+#include "zbuild.h"
+#include "deflate.h"
 
 #include <immintrin.h>
 

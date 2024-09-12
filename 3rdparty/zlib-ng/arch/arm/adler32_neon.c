@@ -7,8 +7,8 @@
  */
 #ifdef ARM_NEON
 #include "neon_intrins.h"
-#include "../../zbuild.h"
-#include "../../adler32_p.h"
+#include "zbuild.h"
+#include "adler32_p.h"
 
 static void NEON_accum32(uint32_t *s, const uint8_t *buf, size_t len) {
     static const uint16_t ALIGNED_(16) taps[64] = {

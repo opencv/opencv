@@ -26,27 +26,26 @@ Z_INTERNAL void CRC32_FOLD(crc32_fold *crc, const uint8_t *src, size_t len, uint
     __m128i xmm_t0, xmm_t1, xmm_t2, xmm_t3;
     __m128i xmm_crc0, xmm_crc1, xmm_crc2, xmm_crc3;
     __m128i xmm_crc_part = _mm_setzero_si128();
-#ifdef COPY
     char ALIGNED_(16) partial_buf[16] = { 0 };
-#else
+#ifndef COPY
     __m128i xmm_initial = _mm_cvtsi32_si128(init_crc);
     int32_t first = init_crc != 0;
 
-    /* Technically the CRC functions don't even call this for input < 64, but a bare minimum of 31
-     * bytes of input is needed for the aligning load that occurs.  If there's an initial CRC, to
-     * carry it forward through the folded CRC there must be 16 - src % 16 + 16 bytes available, which
-     * by definition can be up to 15 bytes + one full vector load. */
-    assert(len >= 31 || first == 0);
+    /* The CRC functions don't call this for input < 16, as a minimum of 16 bytes of input is needed
+     * for the aligning load that occurs.  If there's an initial CRC, to carry it forward through
+     * the folded CRC there must be 16 - src % 16 + 16 bytes available, which by definition can be
+     * up to 15 bytes + one full vector load. */
+    assert(len >= 16 || first == 0);
 #endif
     crc32_fold_load((__m128i *)crc->fold, &xmm_crc0, &xmm_crc1, &xmm_crc2, &xmm_crc3);
 
     if (len < 16) {
-#ifdef COPY
         if (len == 0)
             return;
 
         memcpy(partial_buf, src, len);
         xmm_crc_part = _mm_load_si128((const __m128i *)partial_buf);
+#ifdef COPY
         memcpy(dst, partial_buf, len);
 #endif
         goto partial;
@@ -63,9 +62,23 @@ Z_INTERNAL void CRC32_FOLD(crc32_fold *crc, const uint8_t *src, size_t len, uint
 
         if (algn_diff < 4 && init_crc != 0) {
             xmm_t0 = xmm_crc_part;
-            xmm_crc_part = _mm_loadu_si128((__m128i*)src + 1);
-            fold_1(&xmm_crc0, &xmm_crc1, &xmm_crc2, &xmm_crc3);
-            xmm_crc3 = _mm_xor_si128(xmm_crc3, xmm_t0);
+            if (len >= 32) {
+                xmm_crc_part = _mm_loadu_si128((__m128i*)src + 1);
+                fold_1(&xmm_crc0, &xmm_crc1, &xmm_crc2, &xmm_crc3);
+                xmm_crc3 = _mm_xor_si128(xmm_crc3, xmm_t0);
+            } else {
+                memcpy(partial_buf, src + 16, len - 16);
+                xmm_crc_part = _mm_load_si128((__m128i*)partial_buf);
+                fold_1(&xmm_crc0, &xmm_crc1, &xmm_crc2, &xmm_crc3);
+                xmm_crc3 = _mm_xor_si128(xmm_crc3, xmm_t0);
+                src += 16;
+                len -= 16;
+#ifdef COPY
+                dst -= algn_diff;
+#endif
+                goto partial;
+            }
+
             src += 16;
             len -= 16;
         }

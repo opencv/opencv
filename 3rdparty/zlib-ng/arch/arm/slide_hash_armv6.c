@@ -5,8 +5,8 @@
 
 #if defined(ARM_SIMD)
 #include "acle_intrins.h"
-#include "../../zbuild.h"
-#include "../../deflate.h"
+#include "zbuild.h"
+#include "deflate.h"
 
 /* SIMD version of hash_chain rebase */
 static inline void slide_hash_chain(Pos *table, uint32_t entries, uint16_t wsize) {

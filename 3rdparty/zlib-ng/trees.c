@@ -1,5 +1,5 @@
 /* trees.c -- output deflated data using Huffman coding
- * Copyright (C) 1995-2021 Jean-loup Gailly
+ * Copyright (C) 1995-2024 Jean-loup Gailly
  * detect_data_type() function provided freely by Cosmin Truta, 2006
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
@@ -75,7 +75,6 @@ static int  build_bl_tree    (deflate_state *s);
 static void send_all_trees   (deflate_state *s, int lcodes, int dcodes, int blcodes);
 static void compress_block   (deflate_state *s, const ct_data *ltree, const ct_data *dtree);
 static int  detect_data_type (deflate_state *s);
-static void bi_flush         (deflate_state *s);
 
 /* ===========================================================================
  * Initialize the tree data structures for a new zlib stream.
@@ -610,20 +609,13 @@ void Z_INTERNAL zng_tr_stored_block(deflate_state *s, char *buf, uint32_t stored
 }
 
 /* ===========================================================================
- * Flush the bits in the bit buffer to pending output (leaves at most 7 bits)
- */
-void Z_INTERNAL zng_tr_flush_bits(deflate_state *s) {
-    bi_flush(s);
-}
-
-/* ===========================================================================
  * Send one empty static block to give enough lookahead for inflate.
  * This takes 10 bits, of which 7 may remain in the bit buffer.
  */
 void Z_INTERNAL zng_tr_align(deflate_state *s) {
     zng_tr_emit_tree(s, STATIC_TREES, 0);
     zng_tr_emit_end_block(s, static_ltree, 0);
-    bi_flush(s);
+    zng_tr_flush_bits(s);
 }
 
 /* ===========================================================================
@@ -718,21 +710,30 @@ static void compress_block(deflate_state *s, const ct_data *ltree, const ct_data
     /* dtree: distance tree */
     unsigned dist;      /* distance of matched string */
     int lc;             /* match length or unmatched char (if dist == 0) */
-    unsigned sx = 0;    /* running index in sym_buf */
+    unsigned sx = 0;    /* running index in symbol buffers */
 
     if (s->sym_next != 0) {
         do {
+#ifdef LIT_MEM
+            dist = s->d_buf[sx];
+            lc = s->l_buf[sx++];
+#else
             dist = s->sym_buf[sx++] & 0xff;
             dist += (unsigned)(s->sym_buf[sx++] & 0xff) << 8;
             lc = s->sym_buf[sx++];
+#endif
             if (dist == 0) {
                 zng_emit_lit(s, ltree, lc);
             } else {
                 zng_emit_dist(s, ltree, dtree, lc, dist);
             } /* literal or match pair ? */
 
-            /* Check that the overlay between pending_buf and sym_buf is ok: */
+            /* Check for no overlay of pending_buf on needed symbols */
+#ifdef LIT_MEM
+            Assert(s->pending < 2 * (s->lit_bufsize + sx), "pending_buf overflow");
+#else
             Assert(s->pending < s->lit_bufsize + sx, "pending_buf overflow");
+#endif
         } while (sx < s->sym_next);
     }
 
@@ -781,27 +782,26 @@ static int detect_data_type(deflate_state *s) {
 /* ===========================================================================
  * Flush the bit buffer, keeping at most 7 bits in it.
  */
-static void bi_flush(deflate_state *s) {
-    if (s->bi_valid == 64) {
-        put_uint64(s, s->bi_buf);
-        s->bi_buf = 0;
-        s->bi_valid = 0;
-    } else {
-        if (s->bi_valid >= 32) {
-            put_uint32(s, (uint32_t)s->bi_buf);
-            s->bi_buf >>= 32;
-            s->bi_valid -= 32;
-        }
-        if (s->bi_valid >= 16) {
-            put_short(s, (uint16_t)s->bi_buf);
-            s->bi_buf >>= 16;
-            s->bi_valid -= 16;
-        }
-        if (s->bi_valid >= 8) {
-            put_byte(s, s->bi_buf);
-            s->bi_buf >>= 8;
-            s->bi_valid -= 8;
-        }
+void Z_INTERNAL zng_tr_flush_bits(deflate_state *s) {
+    if (s->bi_valid >= 48) {
+        put_uint32(s, (uint32_t)s->bi_buf);
+        put_short(s, (uint16_t)(s->bi_buf >> 32));
+        s->bi_buf >>= 48;
+        s->bi_valid -= 48;
+    } else if (s->bi_valid >= 32) {
+        put_uint32(s, (uint32_t)s->bi_buf);
+        s->bi_buf >>= 32;
+        s->bi_valid -= 32;
+    }
+    if (s->bi_valid >= 16) {
+        put_short(s, (uint16_t)s->bi_buf);
+        s->bi_buf >>= 16;
+        s->bi_valid -= 16;
+    }
+    if (s->bi_valid >= 8) {
+        put_byte(s, s->bi_buf);
+        s->bi_buf >>= 8;
+        s->bi_valid -= 8;
     }
 }
 

@@ -1,10 +1,10 @@
 #ifndef INSERT_STRING_H_
 #define INSERT_STRING_H_
 
-/* insert_string.h -- Private insert_string functions shared with more than
- *                    one insert string implementation
+/* insert_string_tpl.h -- Private insert_string functions shared with more than
+ *                        one insert string implementation
  *
- * Copyright (C) 1995-2013 Jean-loup Gailly and Mark Adler
+ * Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
  *
  * Copyright (C) 2013 Intel Corporation. All rights reserved.
  * Authors:
@@ -47,9 +47,8 @@
  *    input characters, so that a running hash key can be computed from the
  *    previous key instead of complete recalculation each time.
  */
-Z_INTERNAL uint32_t UPDATE_HASH(deflate_state *const s, uint32_t h, uint32_t val) {
-    (void)s;
-    HASH_CALC(s, h, val);
+Z_INTERNAL uint32_t UPDATE_HASH(uint32_t h, uint32_t val) {
+    HASH_CALC(h, val);
     return h & HASH_CALC_MASK;
 }
 
@@ -65,7 +64,7 @@ Z_INTERNAL Pos QUICK_INSERT_STRING(deflate_state *const s, uint32_t str) {
 
     HASH_CALC_VAR_INIT;
     HASH_CALC_READ;
-    HASH_CALC(s, HASH_CALC_VAR, val);
+    HASH_CALC(HASH_CALC_VAR, val);
     HASH_CALC_VAR &= HASH_CALC_MASK;
     hm = HASH_CALC_VAR;
 
@@ -94,7 +93,7 @@ Z_INTERNAL void INSERT_STRING(deflate_state *const s, uint32_t str, uint32_t cou
 
         HASH_CALC_VAR_INIT;
         HASH_CALC_READ;
-        HASH_CALC(s, HASH_CALC_VAR, val);
+        HASH_CALC(HASH_CALC_VAR, val);
         HASH_CALC_VAR &= HASH_CALC_MASK;
         hm = HASH_CALC_VAR;
 

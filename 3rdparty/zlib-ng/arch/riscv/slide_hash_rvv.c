@@ -8,18 +8,16 @@
 
 #include <riscv_vector.h>
 
-#include "../../zbuild.h"
-#include "../../deflate.h"
+#include "zbuild.h"
+#include "deflate.h"
 
 static inline void slide_hash_chain(Pos *table, uint32_t entries, uint16_t wsize) {
     size_t vl;
     while (entries > 0) {
         vl = __riscv_vsetvl_e16m4(entries);
         vuint16m4_t v_tab = __riscv_vle16_v_u16m4(table, vl);
-        vuint16m4_t v_diff = __riscv_vsub_vx_u16m4(v_tab, wsize, vl);
-        vbool4_t mask = __riscv_vmsltu_vx_u16m4_b4(v_tab, wsize, vl);
-        v_tab = __riscv_vmerge_vxm_u16m4(v_diff, 0, mask, vl);
-        __riscv_vse16_v_u16m4(table, v_tab, vl);
+        vuint16m4_t v_diff = __riscv_vssubu_vx_u16m4(v_tab, wsize, vl);
+        __riscv_vse16_v_u16m4(table, v_diff, vl);
         table += vl, entries -= vl;
     }
 }

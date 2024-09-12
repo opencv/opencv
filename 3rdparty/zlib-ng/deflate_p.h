@@ -1,7 +1,7 @@
 /* deflate_p.h -- Private inline functions and macros shared with more than
  *                one deflate method
  *
- * Copyright (C) 1995-2013 Jean-loup Gailly and Mark Adler
+ * Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  *
  */
@@ -60,27 +60,37 @@ extern const unsigned char Z_INTERNAL zng_dist_code[];
 
 static inline int zng_tr_tally_lit(deflate_state *s, unsigned char c) {
     /* c is the unmatched char */
+#ifdef LIT_MEM
+    s->d_buf[s->sym_next] = 0;
+    s->l_buf[s->sym_next++] = c;
+#else
     s->sym_buf[s->sym_next++] = 0;
     s->sym_buf[s->sym_next++] = 0;
     s->sym_buf[s->sym_next++] = c;
+#endif
     s->dyn_ltree[c].Freq++;
     Tracevv((stderr, "%c", c));
     Assert(c <= (STD_MAX_MATCH-STD_MIN_MATCH), "zng_tr_tally: bad literal");
     return (s->sym_next == s->sym_end);
 }
 
-static inline int zng_tr_tally_dist(deflate_state *s, uint32_t dist, uint32_t len) {
+static inline int zng_tr_tally_dist(deflate_state* s, uint32_t dist, uint32_t len) {
     /* dist: distance of matched string */
     /* len: match length-STD_MIN_MATCH */
+#ifdef LIT_MEM
+    s->d_buf[s->sym_next] = dist;
+    s->l_buf[s->sym_next++] = len;
+#else
     s->sym_buf[s->sym_next++] = (uint8_t)(dist);
     s->sym_buf[s->sym_next++] = (uint8_t)(dist >> 8);
     s->sym_buf[s->sym_next++] = (uint8_t)len;
+#endif
     s->matches++;
     dist--;
     Assert(dist < MAX_DIST(s) && (uint16_t)d_code(dist) < (uint16_t)D_CODES,
         "zng_tr_tally: bad match");
 
-    s->dyn_ltree[zng_length_code[len]+LITERALS+1].Freq++;
+    s->dyn_ltree[zng_length_code[len] + LITERALS + 1].Freq++;
     s->dyn_dtree[d_code(dist)].Freq++;
     return (s->sym_next == s->sym_end);
 }

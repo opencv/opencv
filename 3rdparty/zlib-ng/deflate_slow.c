@@ -1,6 +1,6 @@
 /* deflate_slow.c -- compress data using the slow strategy of deflation algorithm
  *
- * Copyright (C) 1995-2013 Jean-loup Gailly and Mark Adler
+ * Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
@@ -19,12 +19,12 @@ Z_INTERNAL block_state deflate_slow(deflate_state *s, int flush) {
     int bflush;              /* set if current block must be flushed */
     int64_t dist;
     uint32_t match_len;
-    match_func *longest_match;
+    match_func longest_match;
 
     if (s->max_chain_length <= 1024)
-        longest_match = &functable.longest_match;
+        longest_match = FUNCTABLE_FPTR(longest_match);
     else
-        longest_match = &functable.longest_match_slow;
+        longest_match = FUNCTABLE_FPTR(longest_match_slow);
 
     /* Process the input block. */
     for (;;) {
@@ -61,7 +61,7 @@ Z_INTERNAL block_state deflate_slow(deflate_state *s, int flush) {
              * of window index 0 (in particular we have to avoid a match
              * of the string with itself at the start of the input file).
              */
-            match_len = (*longest_match)(s, hash_head);
+            match_len = longest_match(s, hash_head);
             /* longest_match() sets match_start */
 
             if (match_len <= 5 && (s->strategy == Z_FILTERED)) {
@@ -129,7 +129,7 @@ Z_INTERNAL block_state deflate_slow(deflate_state *s, int flush) {
     }
     Assert(flush != Z_NO_FLUSH, "no flush?");
     if (UNLIKELY(s->match_available)) {
-        (void) zng_tr_tally_lit(s, s->window[s->strstart-1]);
+        Z_UNUSED(zng_tr_tally_lit(s, s->window[s->strstart-1]));
         s->match_available = 0;
     }
     s->insert = s->strstart < (STD_MIN_MATCH - 1) ? s->strstart : (STD_MIN_MATCH - 1);
