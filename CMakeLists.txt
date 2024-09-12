@@ -192,7 +192,7 @@ set(BUILD_LIST "" CACHE STRING "Build only listed modules (comma-separated, e.g.
 OCV_OPTION(OPENCV_ENABLE_NONFREE "Enable non-free algorithms" OFF)
 
 # 3rd party libs
-OCV_OPTION(OPENCV_FORCE_3RDPARTY_BUILD   "Force using 3rdparty code from source" ON)
+OCV_OPTION(OPENCV_FORCE_3RDPARTY_BUILD   "Force using 3rdparty code from source" OFF)
 OCV_OPTION(BUILD_ZLIB               "Build zlib from source"             (WIN32 OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_TIFF               "Build libtiff from source"          (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
 OCV_OPTION(BUILD_OPENJPEG           "Build OpenJPEG from source"         (WIN32 OR ANDROID OR APPLE OR OPENCV_FORCE_3RDPARTY_BUILD) )
@@ -465,7 +465,7 @@ OCV_OPTION(WITH_CANN "Include CANN support" OFF
 OCV_OPTION(WITH_FLATBUFFERS "Include Flatbuffers support (required by DNN/TFLite importer)" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_FLATBUFFERS)
-OCV_OPTION(WITH_ZLIB_NG "Use zlib-ng instead of zlib" ON
+OCV_OPTION(WITH_ZLIB_NG "Use zlib-ng instead of zlib" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_ZLIB_NG)
 
