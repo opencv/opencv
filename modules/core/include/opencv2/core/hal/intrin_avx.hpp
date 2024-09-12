@@ -893,7 +893,7 @@ OPENCV_HAL_IMPL_AVX_SELECT(v_float64x4, pd)
 #define OPENCV_HAL_IMPL_AVX_CMP_OP_OV(_Tpvec)                            \
     inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)                 \
     { return v_not(v_eq(a, b)); }                                        \
-    inline _Tpvec v_lt (const _Tpvec& a, const _Tpvec& b)                \
+    inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b)                 \
     { return v_gt(b, a); }                                               \
     inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b)                 \
     { return v_not(v_lt(a, b)); }                                        \

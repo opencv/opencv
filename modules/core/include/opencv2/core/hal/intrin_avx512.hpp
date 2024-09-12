@@ -722,7 +722,7 @@ inline v_uint16x32 v_mul(const v_uint16x32& a, const v_uint16x32& b)
     const __m512i m = _mm512_set1_epi32(65535);
     return v_uint16x32(_mm512_packus_epi32(_mm512_min_epu32(p0, m), _mm512_min_epu32(p1, m)));
 }
-inline v_int16x32 v_mul (const v_int16x32& a, const v_int16x32& b)
+inline v_int16x32 v_mul(const v_int16x32& a, const v_int16x32& b)
 {
     __m512i pl = _mm512_mullo_epi16(a.val, b.val);
     __m512i ph = _mm512_mulhi_epi16(a.val, b.val);
@@ -822,7 +822,7 @@ OPENCV_HAL_IMPL_AVX512_SHIFT_OP(v_uint64x8,  v_int64x8,  epi64)
     OPENCV_HAL_IMPL_AVX512_BIN_OP(v_and, _Tpvec, _mm512_and_##suffix)  \
     OPENCV_HAL_IMPL_AVX512_BIN_OP(v_or, _Tpvec, _mm512_or_##suffix)    \
     OPENCV_HAL_IMPL_AVX512_BIN_OP(v_xor, _Tpvec, _mm512_xor_##suffix)  \
-    inline _Tpvec v_not (const _Tpvec& a)                              \
+    inline _Tpvec v_not(const _Tpvec& a)                               \
     { return _Tpvec(_mm512_xor_##suffix(a.val, not_const)); }
 
 OPENCV_HAL_IMPL_AVX512_LOGIC_OP(v_uint8x64,   si512, _mm512_set1_epi32(-1))
@@ -854,7 +854,7 @@ OPENCV_HAL_IMPL_AVX512_SELECT(v_float64x8,    pd,    pd)
 
 /** Comparison **/
 #define OPENCV_HAL_IMPL_AVX512_CMP_INT(bin_op, imm8, _Tpvec, sufcmp, sufset, tval) \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)                        \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)                         \
     { return _Tpvec(_mm512_maskz_set1_##sufset(_mm512_cmp_##sufcmp##_mask(a.val, b.val, imm8), tval)); }
 
 #define OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(_Tpvec, sufcmp, sufset, tval)              \
@@ -875,7 +875,7 @@ OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_uint64x8,  epu64, epi64, (int64)-1)
 OPENCV_HAL_IMPL_AVX512_CMP_OP_INT(v_int64x8,   epi64, epi64, (int64)-1)
 
 #define OPENCV_HAL_IMPL_AVX512_CMP_FLT(bin_op, imm8, _Tpvec, sufcmp, sufset, tval) \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)                        \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)                        \
     { return _Tpvec(_mm512_castsi512_##sufcmp(_mm512_maskz_set1_##sufset(_mm512_cmp_##sufcmp##_mask(a.val, b.val, imm8), tval))); }
 
 #define OPENCV_HAL_IMPL_AVX512_CMP_OP_FLT(_Tpvec, sufcmp, sufset, tval)           \

@@ -525,7 +525,7 @@ OPENCV_HAL_IMPL_LSX_ZIP(v_float64x2)
 
 /** Arithmetics **/
 #define OPENCV_HAL_IMPL_LSX_BIN_OP(bin_op, _Tpvec, intrin)           \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)  \
     { return _Tpvec(intrin(a.val, b.val)); }
 
 OPENCV_HAL_IMPL_LSX_BIN_OP(v_add, v_uint8x16,  __lsx_vsadd_bu)
@@ -557,19 +557,19 @@ OPENCV_HAL_IMPL_LSX_BIN_OP(v_mul, v_float64x2, __lsx_vfmul_d)
 OPENCV_HAL_IMPL_LSX_BIN_OP(v_div, v_float64x2, __lsx_vfdiv_d)
 
 // saturating multiply 8-bit, 16-bit
-inline v_uint8x16 v_mul (const v_uint8x16& a, const v_uint8x16& b)
+inline v_uint8x16 v_mul(const v_uint8x16& a, const v_uint8x16& b)
 {
     v_uint16x8 c, d;
     v_mul_expand(a, b, c, d);
     return v_pack(c, d);
 }
-inline v_int8x16 v_mul (const v_int8x16& a, const v_int8x16& b)
+inline v_int8x16 v_mul(const v_int8x16& a, const v_int8x16& b)
 {
     v_int16x8 c, d;
     v_mul_expand(a, b, c, d);
     return v_pack(c, d);
 }
-inline v_uint16x8 v_mul (const v_uint16x8& a, const v_uint16x8& b)
+inline v_uint16x8 v_mul(const v_uint16x8& a, const v_uint16x8& b)
 {
     __m128i a0 = a.val, b0 = b.val;
     __m128i pev = __lsx_vmulwev_w_hu(a0, b0);
@@ -578,7 +578,7 @@ inline v_uint16x8 v_mul (const v_uint16x8& a, const v_uint16x8& b)
     __m128i ph  = __lsx_vilvh_w(pod, pev);
     return (v_uint16x8)__lsx_vssrlrni_hu_w(ph, pl, 0);
 }
-inline v_int16x8 v_mul (const v_int16x8& a, const v_int16x8& b)
+inline v_int16x8 v_mul(const v_int16x8& a, const v_int16x8& b)
 {
     __m128i a0 = a.val, b0 = b.val;
     __m128i pev = __lsx_vmulwev_w_h(a0, b0);
@@ -671,13 +671,13 @@ inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b)
 
 /** Bitwise shifts **/
 #define OPENCV_HAL_IMPL_LSX_SHIFT_OP(_Tpuvec, _Tpsvec, suffix, srai)                 \
-    inline _Tpuvec v_shl (const _Tpuvec& a, int imm)                           \
+    inline _Tpuvec v_shl(const _Tpuvec& a, int imm)                                  \
     { return _Tpuvec(__lsx_vsll_##suffix(a.val, __lsx_vreplgr2vr_##suffix(imm))); }  \
-    inline _Tpsvec v_shl (const _Tpsvec& a, int imm)                           \
+    inline _Tpsvec v_shl(const _Tpsvec& a, int imm)                                  \
     { return _Tpsvec(__lsx_vsll_##suffix(a.val, __lsx_vreplgr2vr_##suffix(imm))); }  \
-    inline _Tpuvec v_shr (const _Tpuvec& a, int imm)                           \
+    inline _Tpuvec v_shr(const _Tpuvec& a, int imm)                                  \
     { return _Tpuvec(__lsx_vsrl_##suffix(a.val, __lsx_vreplgr2vr_##suffix(imm))); }  \
-    inline _Tpsvec v_shr (const _Tpsvec& a, int imm)                           \
+    inline _Tpsvec v_shr(const _Tpsvec& a, int imm)                                  \
     { return _Tpsvec(srai(a.val, __lsx_vreplgr2vr_##suffix(imm))); }                 \
     template<int imm>                                                                \
     inline _Tpuvec v_shl(const _Tpuvec& a)                                           \
@@ -698,10 +698,10 @@ OPENCV_HAL_IMPL_LSX_SHIFT_OP(v_uint64x2, v_int64x2, d, __lsx_vsra_d)
 
 /** Bitwise logic **/
 #define OPENCV_HAL_IMPL_LSX_LOGIC_OP(_Tpvec, suffix)                                 \
-    OPENCV_HAL_IMPL_LSX_BIN_OP(v_and, _Tpvec, __lsx_vand_##suffix)                       \
-    OPENCV_HAL_IMPL_LSX_BIN_OP(v_or, _Tpvec, __lsx_vor_##suffix)                        \
-    OPENCV_HAL_IMPL_LSX_BIN_OP(v_xor, _Tpvec, __lsx_vxor_##suffix)                       \
-    inline _Tpvec v_not(const _Tpvec& a)                                        \
+    OPENCV_HAL_IMPL_LSX_BIN_OP(v_and, _Tpvec, __lsx_vand_##suffix)                   \
+    OPENCV_HAL_IMPL_LSX_BIN_OP(v_or, _Tpvec, __lsx_vor_##suffix)                     \
+    OPENCV_HAL_IMPL_LSX_BIN_OP(v_xor, _Tpvec, __lsx_vxor_##suffix)                   \
+    inline _Tpvec v_not(const _Tpvec& a)                                             \
     { return _Tpvec(__lsx_vnori_b(a.val, 0)); }                                      \
 
 OPENCV_HAL_IMPL_LSX_LOGIC_OP(v_uint8x16,   v)
@@ -714,14 +714,14 @@ OPENCV_HAL_IMPL_LSX_LOGIC_OP(v_uint64x2,   v)
 OPENCV_HAL_IMPL_LSX_LOGIC_OP(v_int64x2,    v)
 
 #define OPENCV_HAL_IMPL_LSX_FLOAT_BIN_OP(bin_op, _Tpvec, intrin, cast)               \
-    inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b)                 \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)                           \
     { return _Tpvec(intrin((__m128i)(a.val), (__m128i)(b.val))); }
 
 #define OPENCV_HAL_IMPL_LSX_FLOAT_LOGIC_OP(_Tpvec, cast)                             \
-    OPENCV_HAL_IMPL_LSX_FLOAT_BIN_OP(v_and, _Tpvec, __lsx_vand_v, cast)                  \
-    OPENCV_HAL_IMPL_LSX_FLOAT_BIN_OP(v_or, _Tpvec, __lsx_vor_v, cast)                   \
-    OPENCV_HAL_IMPL_LSX_FLOAT_BIN_OP(v_xor, _Tpvec, __lsx_vxor_v, cast)                  \
-    inline _Tpvec v_not (const _Tpvec& a)                                       \
+    OPENCV_HAL_IMPL_LSX_FLOAT_BIN_OP(v_and, _Tpvec, __lsx_vand_v, cast)              \
+    OPENCV_HAL_IMPL_LSX_FLOAT_BIN_OP(v_or, _Tpvec, __lsx_vor_v, cast)                \
+    OPENCV_HAL_IMPL_LSX_FLOAT_BIN_OP(v_xor, _Tpvec, __lsx_vxor_v, cast)              \
+    inline _Tpvec v_not(const _Tpvec& a)                                             \
     { return _Tpvec(__lsx_vnori_b((__m128i)(a.val), 0)); }                           \
 
 OPENCV_HAL_IMPL_LSX_FLOAT_LOGIC_OP(v_float32x4, _lsx_128_castsi128_ps)

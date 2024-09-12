@@ -373,7 +373,7 @@ inline v_float64x2 v_setall_f64(double v) { return v_float64x2(vfmv_v_f_f64m1(v,
 
 
 #define OPENCV_HAL_IMPL_RISCVV_BIN_OP(bin_op, _Tpvec, intrin) \
-inline _Tpvec bin_op (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b) \
 { \
     return _Tpvec(intrin(a.val, b.val)); \
 }
