@@ -4028,22 +4028,31 @@ void ONNXImporter::buildDispatchMap_COM_MICROSOFT(int opset_version)
 
 Net readNetFromONNX(const String& onnxFile, bool useNewEngine)
 {
-    if (useNewEngine)
-        return readNetFromONNX2(onnxFile);
+    if (useNewEngine) {
+        Net net = readNetFromONNX2(onnxFile);
+        if (!net.empty())
+            return net;
+    }
     return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
 }
 
 Net readNetFromONNX(const char* buffer, size_t sizeBuffer, bool useNewEngine)
 {
-    if (useNewEngine)
-        return readNetFromONNX2(buffer, sizeBuffer);
+    if (useNewEngine) {
+        Net net = readNetFromONNX2(buffer, sizeBuffer);
+        if (!net.empty())
+            return net;
+    }
     return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
 }
 
 Net readNetFromONNX(const std::vector<uchar>& buffer, bool useNewEngine)
 {
-    if (useNewEngine)
-        return readNetFromONNX2(buffer);
+    if (useNewEngine) {
+        Net net = readNetFromONNX2(buffer);
+        if (!net.empty())
+            return net;
+    }
     return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 }
 

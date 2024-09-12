@@ -652,7 +652,7 @@ Net ONNXImporter2::parseModel()
         sstrm << "DNN/ONNX: the model ";
         if (!onnxFilename.empty())
             sstrm << "'"  << onnxFilename << "' ";
-        sstrm << "cannot be loaded.";
+        sstrm << "cannot be loaded with the new parser. Trying the older parser. ";
         if (!missing_ops.empty()) {
             sstrm << " Unsupported operations:\n";
             auto it = missing_ops.begin();
@@ -661,7 +661,7 @@ Net ONNXImporter2::parseModel()
                 sstrm << "\t" << *it << (i+1 < nmissing ? ",\n" : "\n");
             }
         }
-        CV_LOG_ERROR(NULL, sstrm.str());
+        CV_LOG_WARNING(NULL, sstrm.str());
         return Net();
     }
     netimpl->prepareForInference();
@@ -2673,11 +2673,13 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Range"] = &ONNXImporter2::parseRange;
     dispatch["Einsum"] = &ONNXImporter2::parseEinsum;
 
-    std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
-                                          "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
-                                          "Identity", "Log", "Neg", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh",
-                                          "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "Gelu",
-                                          "GeluApproximation"};
+    std::vector<std::string> simpleLayers {
+        "Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
+        "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
+        "Identity", "Log", "Neg", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh",
+        "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "Gelu",
+        "GeluApproximation"
+    };
     for (const auto& name : simpleLayers)
     {
         dispatch[name] = &ONNXImporter2::parseSimpleLayers;
