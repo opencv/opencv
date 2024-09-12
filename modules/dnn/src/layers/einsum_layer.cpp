@@ -1024,6 +1024,7 @@ Mat LayerEinsumImpl::FinalizeOutput(
     std::vector<size_t> output_permutation;
     output_permutation.resize(output_rank, 0);
     size_t output_iter = 0;
+    
 
     for (size_t iter = 0, end = ordered_subscript_indices_in_candidate.size(); iter < end; ++iter)
     {
