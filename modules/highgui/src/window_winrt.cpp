@@ -48,8 +48,6 @@ void cv::winrt_initContainer(::Windows::UI::Xaml::Controls::Panel^ _container)
 
 void showImageImpl(const char* name, InputArray arr)
 {
-    CV_FUNCNAME("showImageImpl");
-
     __BEGIN__;
 
     if (!name)
@@ -72,8 +70,6 @@ void showImageImpl(const char* name, InputArray arr)
 
 int namedWindowImpl(const char* name, int flags)
 {
-    CV_FUNCNAME("namedWindowImpl");
-
     if (!name)
         CV_Error(cv::Error::StsNullPtr, "NULL name");
 
@@ -84,8 +80,6 @@ int namedWindowImpl(const char* name, int flags)
 
 void destroyWindowImpl(const char* name)
 {
-    CV_FUNCNAME("destroyWindowImpl");
-
     if (!name)
         CV_Error(cv::Error::StsNullPtr, "NULL name string");
 
@@ -100,8 +94,6 @@ void destroyAllWindowsImpl()
 int createTrackbar2Impl(const char* trackbar_name, const char* window_name,
     int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
 {
-    CV_FUNCNAME("createTrackbar2Impl");
-
     int pos = 0;
 
     if (!window_name || !trackbar_name)
@@ -124,8 +116,6 @@ int createTrackbar2Impl(const char* trackbar_name, const char* window_name,
 
 void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int pos)
 {
-    CV_FUNCNAME("setTrackbarPosImpl");
-
     CvTrackbar* trackbar = 0;
 
     if (trackbar_name == 0 || window_name == 0)
@@ -141,8 +131,6 @@ void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int 
 
 void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval)
 {
-    CV_FUNCNAME("setTrackbarMaxImpl");
-
     if (maxval >= 0)
     {
         if (trackbar_name == 0 || window_name == 0)
@@ -157,8 +145,6 @@ void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int 
 
 void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval)
 {
-    CV_FUNCNAME("setTrackbarMinImpl");
-
     if (minval >= 0)
     {
         if (trackbar_name == 0 || window_name == 0)
@@ -174,8 +160,6 @@ void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int 
 int getTrackbarPosImpl(const char* trackbar_name, const char* window_name)
 {
     int pos = -1;
-
-    CV_FUNCNAME("getTrackbarPosImpl");
 
     if (trackbar_name == 0 || window_name == 0)
         CV_Error(cv::Error::StsNullPtr, "NULL trackbar or window name");
@@ -211,8 +195,6 @@ int waitKeyImpl(int delay)
 void setMouseCallbackImpl(const char* window_name, CvMouseCallback on_mouse, void* param)
 {
     CV_WINRT_NO_GUI_ERROR("setMouseCallbackImpl");
-
-    CV_FUNCNAME("setMouseCallbackImpl");
 
     if (!window_name)
         CV_Error(cv::Error::StsNullPtr, "NULL window name");
