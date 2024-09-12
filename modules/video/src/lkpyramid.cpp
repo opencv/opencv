@@ -221,7 +221,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         I.data, I.step, (const short*)derivI.data, derivI.step, J.data, J.step,
         I.cols, I.rows, I.channels(),
         (float*)prevPtsScaled, (float*)(nextPts+range.start), range.end-range.start,
-        status != nullptr ? status+range.start: nullptr, err != nullptr ? err+range.start: nullptr,
+        status+range.start, err != nullptr ? err+range.start: nullptr,
         winSize.width, winSize.height, criteria.maxCount, criteria.epsilon, level,
         (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) != 0,
         (float)minEigThreshold
@@ -250,8 +250,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         {
             if( level == 0 )
             {
-                if( status )
-                    status[ptidx] = false;
+                status[ptidx] = false;
                 if( err )
                     err[ptidx] = 0;
             }
@@ -508,7 +507,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
         if( minEig < minEigThreshold || D < FLT_EPSILON )
         {
-            if( level == 0 && status )
+            if(level == 0)
                 status[ptidx] = false;
             continue;
         }
@@ -526,7 +525,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             if( inextPt.x < -winSize.width || inextPt.x >= J.cols ||
                inextPt.y < -winSize.height || inextPt.y >= J.rows )
             {
-                if( level == 0 && status )
+                if( level == 0 )
                     status[ptidx] = false;
                 break;
             }
@@ -709,7 +708,6 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             prevDelta = delta;
         }
 
-        CV_Assert(status != NULL);
         if( status[ptidx] && err && level == 0 && (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) == 0 )
         {
             Point2f nextPoint = nextPts[ptidx] - halfWin;
