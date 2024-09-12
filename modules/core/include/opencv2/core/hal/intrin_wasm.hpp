@@ -1292,9 +1292,9 @@ OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int16x8, v_mul_wrap, wasm_i16x8_mul)
 /** Absolute difference **/
 
 inline v_uint8x16 v_absdiff(const v_uint8x16& a, const v_uint8x16& b)
-{ return v_add_wrap(v_sub(a, b),  v_sub(b, a)); }
+{ return v_add_wrap(v_sub(a, b), v_sub(b, a)); }
 inline v_uint16x8 v_absdiff(const v_uint16x8& a, const v_uint16x8& b)
-{ return v_add_wrap(v_sub(a, b),  v_sub(b, a)); }
+{ return v_add_wrap(v_sub(a, b), v_sub(b, a)); }
 inline v_uint32x4 v_absdiff(const v_uint32x4& a, const v_uint32x4& b)
 { return v_sub(v_max(a, b), v_min(a, b)); }
 
@@ -1687,7 +1687,7 @@ inline unsigned v_reduce_sad(const v_uint8x16& a, const v_uint8x16& b)
     v_expand(v_absdiff(a, b), l16, h16);
     v_expand(l16, l16_l32, l16_h32);
     v_expand(h16, h16_l32, h16_h32);
-    return v_reduce_sum(v_add(v_add(v_add(l16_l32, l16_h32), h16_l32), h16_h32));
+    return v_reduce_sum(v_add(v_add(l16_l32, l16_h32), v_add(h16_l32, h16_h32)));
 }
 inline unsigned v_reduce_sad(const v_int8x16& a, const v_int8x16& b)
 {
@@ -1696,7 +1696,7 @@ inline unsigned v_reduce_sad(const v_int8x16& a, const v_int8x16& b)
     v_expand(v_absdiff(a, b), l16, h16);
     v_expand(l16, l16_l32, l16_h32);
     v_expand(h16, h16_l32, h16_h32);
-    return v_reduce_sum(v_add(v_add(v_add(l16_l32, l16_h32), h16_l32), h16_h32));
+    return v_reduce_sum(v_add(v_add(l16_l32, l16_h32), v_add(h16_l32, h16_h32)));
 }
 inline unsigned v_reduce_sad(const v_uint16x8& a, const v_uint16x8& b)
 {
