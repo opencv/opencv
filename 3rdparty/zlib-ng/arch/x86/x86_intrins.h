@@ -7,7 +7,7 @@
 #ifdef __AVX2__
 #include <immintrin.h>
 
-#if (!defined(__clang__) && defined(__GNUC__) && __GNUC__ < 10) \
+#if (!defined(__clang__) && !defined(__NVCOMPILER) && defined(__GNUC__) && __GNUC__ < 10) \
     || (defined(__apple_build_version__) && __apple_build_version__ < 9020039)
 static inline __m256i _mm256_zextsi128_si256(__m128i a) {
     __m128i r;
@@ -29,7 +29,7 @@ static inline __m512i _mm512_zextsi128_si512(__m128i a) {
 /* GCC <9 is missing some AVX512 intrinsics.
  */
 #ifdef __AVX512F__
-#if (!defined(__clang__) && defined(__GNUC__) && __GNUC__ < 9)
+#if (!defined(__clang__) && !defined(__NVCOMPILER) && defined(__GNUC__) && __GNUC__ < 9)
 #include <immintrin.h>
 
 #define PACK(c0, c1, c2, c3) (((int)(unsigned char)(c0) << 24) | ((int)(unsigned char)(c1) << 16) | \

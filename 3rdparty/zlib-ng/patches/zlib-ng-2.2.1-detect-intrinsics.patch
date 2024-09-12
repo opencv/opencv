@@ -1,0 +1,13 @@
+diff --git a/3rdparty/zlib-ng/cmake/detect-intrinsics.cmake b/3rdparty/zlib-ng/cmake/detect-intrinsics.cmake
+index 14f82fc..78e46e1 100644
+--- a/3rdparty/zlib-ng/cmake/detect-intrinsics.cmake
++++ b/3rdparty/zlib-ng/cmake/detect-intrinsics.cmake
+@@ -66,7 +66,7 @@ macro(check_armv6_compiler_flag)
+             return __uqsub16(a, b);
+         #endif
+         }
+-        int main(void) { return 0; }"
++        int main(void) { return f(1,2); }"
+         HAVE_ARMV6_INTRIN
+     )
+     set(CMAKE_REQUIRED_FLAGS)

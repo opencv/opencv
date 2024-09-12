@@ -8,42 +8,8 @@
  */
 
 #include "zbuild.h"
-#include "zutil.h"
-#include "functable.h"
 #include "crc32_braid_p.h"
 #include "crc32_braid_tbl.h"
-
-/* ========================================================================= */
-
-const uint32_t * Z_EXPORT PREFIX(get_crc_table)(void) {
-    return (const uint32_t *)crc_table;
-}
-
-#ifdef ZLIB_COMPAT
-unsigned long Z_EXPORT PREFIX(crc32_z)(unsigned long crc, const unsigned char *buf, size_t len) {
-    if (buf == NULL) return 0;
-
-    return (unsigned long)functable.crc32((uint32_t)crc, buf, len);
-}
-#else
-uint32_t Z_EXPORT PREFIX(crc32_z)(uint32_t crc, const unsigned char *buf, size_t len) {
-    if (buf == NULL) return 0;
-
-    return functable.crc32(crc, buf, len);
-}
-#endif
-
-#ifdef ZLIB_COMPAT
-unsigned long Z_EXPORT PREFIX(crc32)(unsigned long crc, const unsigned char *buf, unsigned int len) {
-    return (unsigned long)PREFIX(crc32_z)((uint32_t)crc, buf, len);
-}
-#else
-uint32_t Z_EXPORT PREFIX(crc32)(uint32_t crc, const unsigned char *buf, uint32_t len) {
-    return PREFIX(crc32_z)(crc, buf, len);
-}
-#endif
-
-/* ========================================================================= */
 
 /*
   A CRC of a message is computed on N braids of words in the message, where
@@ -65,24 +31,6 @@ uint32_t Z_EXPORT PREFIX(crc32)(uint32_t crc, const unsigned char *buf, uint32_t
   They were all tested with either gcc or clang, all using the -O3 optimization
   level. Your mileage may vary.
 */
-
-/* ========================================================================= */
-
-#if BYTE_ORDER == LITTLE_ENDIAN
-#  define ZSWAPWORD(word) (word)
-#  define BRAID_TABLE crc_braid_table
-#elif BYTE_ORDER == BIG_ENDIAN
-#  if W == 8
-#    define ZSWAPWORD(word) ZSWAP64(word)
-#  elif W == 4
-#    define ZSWAPWORD(word) ZSWAP32(word)
-#  endif
-#  define BRAID_TABLE crc_braid_big_table
-#else
-#  error "No endian defined"
-#endif
-#define DO1 c = crc_table[(c ^ *buf++) & 0xff] ^ (c >> 8)
-#define DO8 DO1; DO1; DO1; DO1; DO1; DO1; DO1; DO1
 
 /* ========================================================================= */
 #ifdef W
@@ -112,7 +60,7 @@ static z_word_t crc_word(z_word_t data) {
 
 /* ========================================================================= */
 Z_INTERNAL uint32_t PREFIX(crc32_braid)(uint32_t crc, const uint8_t *buf, size_t len) {
-    Z_REGISTER uint32_t c;
+    uint32_t c;
 
     /* Pre-condition the CRC */
     c = (~crc) & 0xffffffff;
