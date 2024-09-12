@@ -851,8 +851,6 @@ double cvGetOpenGlProp_W32(const char* name)
     double result = -1;
 
 #ifdef HAVE_OPENGL
-    CV_FUNCNAME("cvGetOpenGlProp_W32");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -894,8 +892,6 @@ namespace
 {
     void createGlContext(HWND hWnd, HDC& hGLDC, HGLRC& hGLRC, bool& useGl)
     {
-        CV_FUNCNAME("createGlContext");
-
         AutoLock lock(getWindowMutex());
 
         useGl = false;
@@ -947,8 +943,6 @@ namespace
 
     void releaseGlContext(CvWindow& window)
     {
-        //CV_FUNCNAME("releaseGlContext");
-
         AutoLock lock(getWindowMutex());
 
         if (window.hGLRC)
@@ -968,8 +962,6 @@ namespace
 
     void drawGl(CvWindow& window)
     {
-        CV_FUNCNAME("drawGl");
-
         AutoLock lock(getWindowMutex());
 
         if (!wglMakeCurrent(window.dc, window.hGLRC))
@@ -986,8 +978,6 @@ namespace
 
     void resizeGl(CvWindow& window)
     {
-        CV_FUNCNAME("resizeGl");
-
         AutoLock lock(getWindowMutex());
 
         if (!wglMakeCurrent(window.dc, window.hGLRC))
@@ -1119,8 +1109,6 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 void setOpenGLContextImpl(const char* name)
 {
-    CV_FUNCNAME("setOpenGLContextImpl");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -1139,8 +1127,6 @@ void setOpenGLContextImpl(const char* name)
 
 void updateWindowImpl(const char* name)
 {
-    CV_FUNCNAME("updateWindowImpl");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -1155,8 +1141,6 @@ void updateWindowImpl(const char* name)
 
 void setOpenGLDrawCallbackImpl(const char* name, CvOpenGlDrawCallback callback, void* userdata)
 {
-    CV_FUNCNAME("cvCreateOpenGLCallback");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)

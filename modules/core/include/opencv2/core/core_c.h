@@ -1830,27 +1830,6 @@ cv::error((status),(func),(context),__FILE__,__LINE__)
 Func;                                                           \
 }
 
-
-/** CV_FUNCNAME macro defines icvFuncName constant which is used by CV_ERROR macro */
-#ifdef CV_NO_FUNC_NAMES
-#define CV_FUNCNAME( Name )
-#define cvFuncName ""
-#else
-#define CV_FUNCNAME( Name )  \
-static char cvFuncName[] = Name
-#endif
-
-
-/**
- CV_ERROR macro unconditionally raises error with passed code and message.
- After raising error, control will be transferred to the exit label.
- */
-#define CV_ERROR( Code, Msg )                                       \
-{                                                                   \
-    cv::error( (Code), cvFuncName, Msg, __FILE__, __LINE__ );        \
-    __CV_EXIT__;                                                   \
-}
-
 /**
  CV_CHECK macro checks error status after CV (or IPL)
  function call. If error detected, control will be transferred to the exit
