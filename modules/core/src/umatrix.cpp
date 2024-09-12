@@ -404,10 +404,13 @@ UMat::UMat(UMat&& m)
 : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
   usageFlags(m.usageFlags), u(m.u), offset(m.offset), size(&rows)
 {
-    if (m.dims <= 2)  // move new step/size info
+    if (m.dims <= CV_DIM_BUFLEN) // move new step/size info
     {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
+        for (int i = 0; i < m.dims; ++i)
+        {
+            size[i] = m.size[i];
+            step[i] = m.step[i];
+        }
     }
     else
     {
@@ -438,10 +441,13 @@ UMat& UMat::operator=(UMat&& m)
         step.p = step.buf;
         size.p = &rows;
     }
-    if (m.dims <= 2) // move new step/size info
+    if (m.dims <= CV_DIM_BUFLEN) // move new step/size info
     {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
+        for (int i = 0; i < m.dims; ++i)
+        {
+            size[i] = m.size[i];
+            step[i] = m.step[i];
+        }
     }
     else
     {
@@ -511,7 +517,7 @@ void setSize( UMat& m, int _dims, const int* _sz,
             m.step.p = m.step.buf;
             m.size.p = &m.rows;
         }
-        if( _dims > 2 )
+        if( _dims > CV_DIM_BUFLEN )
         {
             m.step.p = (size_t*)fastMalloc(_dims*sizeof(m.step.p[0]) + (_dims+1)*sizeof(m.size.p[0]));
             m.size.p = (int*)(m.step.p + _dims) + 1;
@@ -563,7 +569,7 @@ void finalizeHdr(UMat& m)
 {
     m.updateContinuityFlag();
     int d = m.dims;
-    if( d > 2 )
+    if( d > CV_DIM_BUFLEN)
         m.rows = m.cols = -1;
 }
 
