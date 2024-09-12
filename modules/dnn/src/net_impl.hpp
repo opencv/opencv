@@ -379,6 +379,16 @@ struct Net::Impl : public detail::NetImplBase
     // run the whole model, convenience wrapper
     void forwardWithMultipleOutputs(OutputArrayOfArrays outputBlobs,
                                     const std::vector<std::string>& outBlobNames);
+    // try infer shapes; if some layers produce tensors with dynamic shapes, shape inference is impossible
+    void tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
+                        const std::vector<MatType>& suggestedInpTypes,
+                        LayerShapes& shapes,
+                        std::vector<MatShape>& shapeCache,
+                        std::vector<MatType>& typeCache) const;
+    bool tryInferGraphShapes(const Ptr<Graph>& graph,
+                             std::vector<MatShape>& shapeCache,
+                             std::vector<MatType>& typeCache) const;
+
     // helper function for useCounts()
     void updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& usecounts) const;
     // computes how many times each argument is used, i.e. on output usecounts.size() == args.size()

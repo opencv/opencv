@@ -758,6 +758,175 @@ int Net::Impl::updateGraphOfs(const Ptr<Graph>& graph, int currofs, bool ismain)
     return subgraph_ofs;
 }
 
+void Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
+                               const std::vector<MatType>& suggestedInpTypes,
+                               LayerShapes& result,
+                               std::vector<MatShape>& shapeCache,
+                               std::vector<MatType>& typeCache) const
+{
+    result.in.clear();
+    result.out.clear();
+    result.inTypes.clear();
+    result.outTypes.clear();
+
+    CV_Assert(mainGraph);
+    size_t nargs = args.size();
+    shapeCache.assign(nargs, MatShape());
+    typeCache.assign(nargs, -1);
+
+    const std::vector<Arg>& inputs = mainGraph->inputs();
+    const std::vector<Arg>& outputs = mainGraph->outputs();
+
+    size_t ninputs = inputs.size();
+    size_t noutputs = outputs.size();
+
+    size_t nsuggestedShapes = suggestedInpShapes.size();
+    size_t nsuggestedTypes = suggestedInpTypes.size();
+    CV_Assert(nsuggestedShapes == 0 || nsuggestedShapes == ninputs ||
+              
+              // workaround, but this is not quite correct usage of the function
+              (nsuggestedShapes == 1 && suggestedInpShapes[0].empty())
+              );
+    CV_Assert(nsuggestedTypes <= 1 || nsuggestedTypes == ninputs);
+
+    for (size_t i = 0; i < ninputs; i++) {
+        Arg inp = inputs[i];
+        const ArgData& adata = args.at(inp.idx);
+        int type = adata.type;
+        MatShape shape = adata.shape;
+
+        if (nsuggestedTypes) {
+            int suggestedType = suggestedInpTypes[i < nsuggestedTypes ? i : 0];
+            if (suggestedType == -1)
+                suggestedType = adata.type;
+            if (adata.type == type ||
+                ((adata.type == CV_32F || adata.type == CV_16F || adata.type == CV_16BF) &&
+                 (suggestedType == CV_32F || suggestedType == CV_16F || suggestedType == CV_16BF)))
+                ;
+            else {
+                CV_Error_(Error::StsBadArg, ("mismatched type for model input '%s': %s provided, %s expected",
+                                             adata.name.c_str(), typeToString(suggestedType).c_str(),
+                                             typeToString(adata.type).c_str()));
+            }
+            type = suggestedType;
+        }
+
+        if (nsuggestedShapes) {
+            MatShape suggestedShape = suggestedInpShapes[i < nsuggestedShapes ? i : 0];
+            if (suggestedShape.empty())
+                suggestedShape = adata.shape;
+            CV_Assert(suggestedShape.dims == adata.shape.dims);
+            shape = suggestedShape;
+        }
+
+        typeCache[inp.idx] = type;
+        shapeCache[inp.idx] = shape;
+
+        result.inTypes.push_back(type);
+        result.in.push_back(shape);
+    }
+
+    if (!tryInferGraphShapes(mainGraph, shapeCache, typeCache))
+        return;
+
+    for (size_t i = 0; i < noutputs; i++) {
+        Arg out = outputs[i];
+        const ArgData adata = args.at(out.idx);
+        int type = typeCache.at(out.idx);
+        MatShape shape = shapeCache.at(out.idx);
+        if (type < 0) {
+            CV_Error_(Error::StsBadArg, ("type for output '%s' was not inferred", adata.name.c_str()));
+        }
+
+        result.outTypes.push_back(type);
+        result.out.push_back(shape);
+    }
+}
+
+// [TODO]
+// The current 'pure' shape inference is quite fragile, it does not handle any dynamic cases
+// or even some seemingly dynamic cases.
+// It would be nice maybe to some optional speculative forward() with some dummy inputs when
+// straight-forward shape inference mechanism failed.
+bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
+                                    std::vector<MatShape>& shapeCache,
+                                    std::vector<MatType>& typeCache) const
+{
+    if (!graph)
+        return true;
+
+    const std::vector<Ptr<Layer> >& prog = graph->prog();
+
+    std::vector<MatShape> inpShapes, outShapes, tempShapes;
+    std::vector<int> inpTypes, outTypes, tempTypes;
+
+    for (const Ptr<Layer>& layer: prog) {
+        if (!layer)
+            continue;
+
+        const std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
+        if (subgraphs) {
+            CV_LOG_WARNING(NULL, format("shape inference for the model with subgraphs (node %s (%s)) is not supported yet", layer->name.c_str(), layer->type.c_str()));
+        }
+
+        if (layer->dynamicOutputShapes()) {
+            CV_LOG_WARNING(NULL, format("DNN/InferShape: Layer '%s' (%s) output shapes cannot be inferenced without running forward()", layer->name.c_str(), layer->type.c_str()));
+            return false;
+        }
+
+        const std::vector<Arg>& inputs = layer->inputs;
+        const std::vector<Arg>& outputs = layer->outputs;
+
+        int ninputs = (int)inputs.size();
+        int noutputs = (int)outputs.size();
+
+        inpShapes.resize(ninputs);
+        inpTypes.resize(ninputs);
+        outShapes.clear();
+        outTypes.clear();
+        tempShapes.clear();
+        tempTypes.clear();
+
+        for (int i = 0; i < ninputs; i++) {
+            Arg inp = inputs[i];
+            const ArgData& adata = args.at(inp.idx);
+            MatShape shape;
+            int type;
+
+            if (adata.kind == DNN_ARG_CONST || adata.kind == DNN_ARG_EMPTY) {
+                shape = adata.shape;
+                type = adata.type;
+
+                // unnecessary, but nice to have for consistency
+                shapeCache[inp.idx] = shape;
+                typeCache[inp.idx] = type;
+            } else {
+                shape = shapeCache[inp.idx];
+                type = typeCache[inp.idx];
+                if (type < 0) {
+                    CV_Error_(Error::StsInternal, ("input '%s' of operation '%s' (%s) does not have a proper type",
+                                                   adata.name.c_str(), layer->name.c_str(), layer->type.c_str()));
+                }
+            }
+            inpShapes[i] = shape;
+            inpTypes[i] = type;
+        }
+
+        layer->getMemoryShapes(inpShapes, noutputs, outShapes, tempShapes);
+        CV_Assert((int)outShapes.size() == noutputs);
+        layer->getTypes(inpTypes, noutputs, (int)tempShapes.size(), outTypes, tempTypes);
+        CV_Assert((int)outTypes.size() == noutputs);
+
+        for (int i = 0; i < noutputs; i++) {
+            Arg out = outputs[i];
+            if (out.idx == 0)
+                continue;
+            shapeCache[out.idx] = outShapes[i];
+            typeCache[out.idx] = outTypes[i];
+        }
+    }
+}
+
 void Net::Impl::checkArgs(const std::vector<Arg>& args_) const
 {
     for (const Arg& a: args_) {

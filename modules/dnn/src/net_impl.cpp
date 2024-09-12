@@ -1344,11 +1344,18 @@ void Net::Impl::getLayerShapes(const ShapesVec& netInputShapes,
         const int layerId,
         LayerShapes& shapes)
 {
-    LayersShapesMap inOutShapes;
-    inOutShapes[0].in = netInputShapes;  // insert shape for first input layer
-    inOutShapes[0].inTypes = netInputTypes;
-    getLayerShapesRecursively(layerId, inOutShapes);
-    shapes = inOutShapes[layerId];
+    if (mainGraph) {
+        std::vector<MatShape> shapeCache;
+        std::vector<int> typeCache;
+        CV_Assert(layerId == 0);
+        tryInferShapes(netInputShapes, netInputTypes, shapes, shapeCache, typeCache);
+    } else {
+        LayersShapesMap inOutShapes;
+        inOutShapes[0].in = netInputShapes;  // insert shape for first input layer
+        inOutShapes[0].inTypes = netInputTypes;
+        getLayerShapesRecursively(layerId, inOutShapes);
+        shapes = inOutShapes[layerId];
+    }
 }
 
 void Net::Impl::updateLayersShapes()
