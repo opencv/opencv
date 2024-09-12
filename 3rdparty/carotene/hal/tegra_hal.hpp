@@ -1940,8 +1940,7 @@ inline int TEGRA_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_ste
                        uchar *status, float *err,
                        const int win_width, const int win_height,
                        int termination_count, double termination_epsilon,
-                       int level, int max_level,
-                       bool use_initial_flow,
+                       int level,
                        bool get_min_eigen_vals,
                        float min_eigen_vals_threshold)
 {
@@ -1953,8 +1952,8 @@ inline int TEGRA_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_ste
         next_data, next_step,
         point_count, prev_points, next_points,
         status, err, CAROTENE_NS::Size2D(win_width, win_height),
-        termination_count, termination_epsilon, level, max_level,
-        use_initial_flow, get_min_eigen_vals, min_eigen_vals_threshold);
+        termination_count, termination_epsilon, level,
+        get_min_eigen_vals, min_eigen_vals_threshold);
     return CV_HAL_ERROR_OK;
 }
 

@@ -47,8 +47,6 @@
 @param termination_count maximum algorithm iterations. 0 means unlimited
 @param termination_epsilon maximal allowed algorithm error
 @param level current pyramid level
-@param max_level amount of pyramid levels
-@param use_initial_flow use next_points values as initial point for the first iteration
 @param get_min_eigen_vals return minimal egen values as point errors in err buffer
 @param min_eigen_vals_threshold eigen values threshold
 **/
@@ -60,8 +58,7 @@ inline int hal_ni_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_st
                        uchar *status, float *err,
                        const int win_width, const int win_height,
                        int termination_count, double termination_epsilon,
-                       int level, int max_level,
-                       bool use_initial_flow,
+                       int level,
                        bool get_min_eigen_vals,
                        float min_eigen_vals_threshold)
 {

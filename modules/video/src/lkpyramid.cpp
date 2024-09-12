@@ -190,17 +190,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
     const Mat& J = *nextImg;
     const Mat& derivI = *prevDeriv;
 
-    CALL_HAL(LKOpticalFlowLevel, cv_hal_LKOpticalFlowLevel,
-                I.data, I.step, (const short*)derivI.data, derivI.step, J.data, J.step,
-                I.cols, I.rows, I.channels(),
-                (float*)(prevPts+range.start), (float*)(nextPts+range.start), range.end-range.start,
-                status+range.start, err+range.start, winSize.width, winSize.height,
-                criteria.maxCount, criteria.epsilon,
-                level, maxLevel,
-                (flags & OPTFLOW_USE_INITIAL_FLOW) != 0,
-                (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) != 0,
-                (float)minEigThreshold
-    );
+    cv::AutoBuffer<Point2f> prevPtsScaledData(range.end - range.start);
+    Point2f* prevPtsScaled = prevPtsScaledData.data();
 
     int j, cn = I.channels(), cn2 = cn*2;
     cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2));
@@ -223,7 +214,32 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         else
             nextPt = nextPts[ptidx]*2.f;
         nextPts[ptidx] = nextPt;
+        prevPtsScaled[ptidx-range.start] = prevPt;
+    }
 
+    int hal_res = cv_hal_LKOpticalFlowLevel(
+        I.data, I.step, (const short*)derivI.data, derivI.step, J.data, J.step,
+        I.cols, I.rows, I.channels(),
+        (float*)prevPtsScaled, (float*)(nextPts+range.start), range.end-range.start,
+        status != nullptr ? status+range.start: nullptr, err != nullptr ? err+range.start: nullptr,
+        winSize.width, winSize.height, criteria.maxCount, criteria.epsilon, level,
+        (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) != 0,
+        (float)minEigThreshold
+    );
+
+    if(hal_res == CV_HAL_ERROR_OK)
+    {
+        // TODO: Handle err and status and return;
+    }
+    else if (hal_res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        CV_Error_(cv::Error::StsInternal,
+            ("HAL implementation LKOpticalFlowLevel ==> " CVAUX_STR(cv_hal_LKOpticalFlowLevel) " returned %d (0x%08x)", hal_res, hal_res));
+    }
+
+    for( int ptidx = range.start; ptidx < range.end; ptidx++ )
+    {
+        Point2f prevPt = prevPtsScaled[ptidx-range.start];
         Point2i iprevPt, inextPt;
         prevPt -= halfWin;
         iprevPt.x = cvFloor(prevPt.x);
@@ -499,7 +515,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
         D = 1.f/D;
 
-        nextPt -= halfWin;
+        Point2f nextPt = nextPts[ptidx] - halfWin;
         Point2f prevDelta;
 
         for( j = 0; j < criteria.maxCount; j++ )

@@ -58,7 +58,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
                        u8 *status, f32 *err,
                        const Size2D &winSize,
                        u32 terminationCount, f64 terminationEpsilon,
-                       u32 level, u32 maxLevel, bool useInitialFlow, bool getMinEigenVals,
+                       u32 level, bool getMinEigenVals,
                        f32 minEigThreshold)
 {
     internal::assertSupportedConfiguration();
@@ -74,32 +74,10 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
 
     for( u32 ptidx = 0; ptidx < ptCount; ptidx++ )
     {
-        f32 levscale = (1./(1 << level));
-        u32 ptref = ptidx << 1;
-        f32 prevPtX = prevPts[ptref+0]*levscale;
-        f32 prevPtY = prevPts[ptref+1]*levscale;
-        f32 nextPtX;
-        f32 nextPtY;
-        if( level == maxLevel )
-        {
-            if( useInitialFlow )
-            {
-                nextPtX = nextPts[ptref+0]*levscale;
-                nextPtY = nextPts[ptref+1]*levscale;
-            }
-            else
-            {
-                nextPtX = prevPtX;
-                nextPtY = prevPtY;
-            }
-        }
-        else
-        {
-            nextPtX = nextPts[ptref+0]*2.f;
-            nextPtY = nextPts[ptref+1]*2.f;
-        }
-        nextPts[ptref+0] = nextPtX;
-        nextPts[ptref+1] = nextPtY;
+        f32 prevPtX = prevPts[ptref+0];
+        f32 prevPtY = prevPts[ptref+1];
+        f32 nextPtX = nextPts[ptref+0];
+        f32 nextPtY = nextPts[ptref+1];
 
         s32 iprevPtX, iprevPtY;
         s32 inextPtX, inextPtY;
@@ -527,8 +505,6 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
     (void)terminationCount;
     (void)terminationEpsilon;
     (void)level;
-    (void)maxLevel;
-    (void)useInitialFlow;
     (void)getMinEigenVals;
     (void)minEigThreshold;
     (void)ptCount;
