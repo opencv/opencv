@@ -58,7 +58,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
                        u8 *status, f32 *err,
                        const Size2D &winSize,
                        u32 terminationCount, f64 terminationEpsilon,
-                       u32 level, bool getMinEigenVals,
+                       bool getMinEigenVals,
                        f32 minEigThreshold)
 {
     internal::assertSupportedConfiguration();
@@ -89,13 +89,10 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
         if( iprevPtX < -(s32)winSize.width || iprevPtX >= (s32)size.width ||
             iprevPtY < -(s32)winSize.height || iprevPtY >= (s32)size.height )
         {
-            if( level == 0 )
-            {
-                if( status )
-                    status[ptidx] = false;
-                if( err )
-                    err[ptidx] = 0;
-            }
+            if( status )
+                status[ptidx] = false;
+            if( err )
+                err[ptidx] = 0;
             continue;
         }
 
@@ -311,7 +308,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
 
         if( minEig < minEigThreshold || D < FLT_EPSILON )
         {
-            if( level == 0 && status )
+            if( tatus )
                 status[ptidx] = false;
             continue;
         }
@@ -331,7 +328,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
             if( inextPtX < -(s32)winSize.width || inextPtX >= (s32)size.width ||
                inextPtY < -(s32)winSize.height || inextPtY >= (s32)size.height )
             {
-                if( level == 0 && status )
+                if( status )
                     status[ptidx] = false;
                 break;
             }
@@ -447,46 +444,6 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
             prevDeltaX = deltaX;
             prevDeltaY = deltaY;
         }
-
-        if( status && status[ptidx] && err && level == 0 && !getMinEigenVals )
-        {
-            f32 nextPointX = nextPts[ptref+0] - halfWinX;
-            f32 nextPointY = nextPts[ptref+1] - halfWinY;
-
-            s32 inextPointX = floor(nextPointX);
-            s32 inextPointY = floor(nextPointY);
-
-            if( inextPointX < -(s32)winSize.width || inextPointX >= (s32)size.width ||
-                inextPointY < -(s32)winSize.height || inextPointY >= (s32)size.height )
-            {
-                if( status )
-                    status[ptidx] = false;
-                continue;
-            }
-
-            f32 aa = nextPointX - inextPointX;
-            f32 bb = nextPointY - inextPointY;
-            iw00 = round((1.f - aa)*(1.f - bb)*(1 << W_BITS));
-            iw01 = round(aa*(1.f - bb)*(1 << W_BITS));
-            iw10 = round((1.f - aa)*bb*(1 << W_BITS));
-            iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
-            f32 errval = 0.f;
-
-            for(s32 y = 0; y < (s32)winSize.height; y++ )
-            {
-                const u8* Jptr = nextData + nextStride*(y + inextPointY) + inextPointX*cn;
-                const s16* Iptr = IWinBuf + y*IWinBufStride;
-
-                for( x = 0; x < wwcn; x++ )
-                {
-                    s32 diff = CV_DESCALE(Jptr[x]*iw00 + Jptr[x+cn]*iw01 +
-                                          Jptr[x+nextStride]*iw10 + Jptr[x+nextStride+cn]*iw11,
-                                          W_BITS1-5) - Iptr[x];
-                    errval += std::abs((f32)diff);
-                }
-            }
-            err[ptidx] = errval / (32*wwcn*winSize.height);
-        }
     }
 #else
     (void)size;
@@ -504,7 +461,6 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
     (void)winSize;
     (void)terminationCount;
     (void)terminationEpsilon;
-    (void)level;
     (void)getMinEigenVals;
     (void)minEigThreshold;
     (void)ptCount;

@@ -185,6 +185,9 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 {
     CV_INSTRUMENT_REGION();
 
+    const int W_BITS = 14, W_BITS1 = 14;
+    const float FLT_SCALE = 1.f/(1 << 20);
+
     Point2f halfWin((winSize.width-1)*0.5f, (winSize.height-1)*0.5f);
     const Mat& I = *prevImg;
     const Mat& J = *nextImg;
@@ -221,8 +224,8 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         I.data, I.step, (const short*)derivI.data, derivI.step, J.data, J.step,
         I.cols, I.rows, I.channels(),
         (float*)prevPtsScaled, (float*)(nextPts+range.start), range.end-range.start,
-        status+range.start, err != nullptr ? err+range.start: nullptr,
-        winSize.width, winSize.height, criteria.maxCount, criteria.epsilon, level,
+        (level == 0) ? status+range.start: nullptr, err != nullptr ? err+range.start: nullptr,
+        winSize.width, winSize.height, criteria.maxCount, criteria.epsilon,
         (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) != 0,
         (float)minEigThreshold
     );
@@ -259,8 +262,6 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
         float a = prevPt.x - iprevPt.x;
         float b = prevPt.y - iprevPt.y;
-        const int W_BITS = 14, W_BITS1 = 14;
-        const float FLT_SCALE = 1.f/(1 << 20);
         int iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
         int iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
         int iw10 = cvRound((1.f - a)*b*(1 << W_BITS));

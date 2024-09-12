@@ -40,13 +40,12 @@
 @param prev_points 2d points coordinates (x,y) on the previous frame
 @param next_points points coordinates (x,y) on the next frame
 @param point_count - amount of input points
-@param status optical flow status for each point
-@param err optical flow estimation error for each point
+@param status optical flow status for each point. Optional output, expected if not nullptr is provided
+@param err optical flow estimation error for each point. Optional output, expected if not nullptr is provided
 @param win_width optical flow window width
 @param win_height optical flow window heigh
 @param termination_count maximum algorithm iterations. 0 means unlimited
 @param termination_epsilon maximal allowed algorithm error
-@param level current pyramid level
 @param get_min_eigen_vals return minimal egen values as point errors in err buffer
 @param min_eigen_vals_threshold eigen values threshold
 **/
@@ -58,7 +57,6 @@ inline int hal_ni_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_st
                        uchar *status, float *err,
                        const int win_width, const int win_height,
                        int termination_count, double termination_epsilon,
-                       int level,
                        bool get_min_eigen_vals,
                        float min_eigen_vals_threshold)
 {
