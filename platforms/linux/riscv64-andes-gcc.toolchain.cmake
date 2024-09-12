@@ -10,16 +10,12 @@ set(CMAKE_C_COMPILER  ${RISCV_GCC_INSTALL_ROOT}/bin/riscv64-linux-gcc)
 set(CMAKE_CXX_COMPILER ${RISCV_GCC_INSTALL_ROOT}/bin/riscv64-linux-g++)
 
 # fix toolchain macro
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__ANDES=1")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__ANDES=1")
-
 # enable rvp
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=rv64gc -mext-dsp")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=rv64gc -mext-dsp")
+set(CMAKE_C_FLAGS_INIT "-march=rv64gc -mext-dsp -D__ANDES=1")
+set(CMAKE_CXX_FLAGS_INIT "-march=rv64gc -mext-dsp -D__ANDES=1")
 
 # fix segment address
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Ttext-segment=0x50000")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-Ttext-segment=0x50000")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,-Ttext-segment=0x50000")
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "-Wl,-Ttext-segment=0x50000")
