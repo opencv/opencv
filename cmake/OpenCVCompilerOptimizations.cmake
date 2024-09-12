@@ -170,28 +170,26 @@ elseif(" ${CMAKE_CXX_FLAGS} " MATCHES " -march=native | -xHost | /QxHost ")
   set(CPU_BASELINE_DETECT ON)
 endif()
 
-macro(ocv_force_baseline_detect_and_check_dispatch)
+# For platforms which don't allow enabling of extra instruction sets with separate compiler options.
+# E.g. GCC/Clang for RISC-V/AArch64 use suffixes for -march option. So we should avoid using existing
+# CPU features mechanisms and rely on cmake-toolchain files or flags provided via command-line.
+macro(ocv_default_baseline_detect_and_check_dispatch)
   set(CPU_BASELINE "DETECT" CACHE STRING "${HELP_CPU_BASELINE}")
-
-  if(DEFINED CPU_BASELINE AND CPU_BASELINE STREQUAL "")
-    # ok
-  elseif(CPU_BASELINE STREQUAL "NATIVE")
-    # ok
-  elseif(NOT CPU_BASELINE STREQUAL "DETECT")
-    message(WARNING "Platform ${CMAKE_SYSTEM_PROCESSOR} only supports CPU_BASELINE=DETECT|NATIVE|<empty>, use CMAKE_CXX_FLAGS or cmake toolchain file options to modify compiler options")
-    set(CPU_BASELINE "DETECT")
+  if(NOT CPU_BASELINE MATCHES "^(DETECT|NATIVE|)$")
+    message(WARNING "CPU_BASELINE is set to '${CPU_BASELINE}', but '${CMAKE_SYSTEM_PROCESSOR}' "
+                    "platform is designed to work with DETECT|NATIVE|<empty>, "
+                    "otherwise target CPU architecture may be changed unexpectedly. "
+                    "Please check your resulting compiler flags in the CMake output.")
   endif()
-
-  if(NOT CPU_DISPATCH STREQUAL "")
-    set(have_flags TRUE)
-    foreach(opt ${CPU_DISPATCH})
-      if(NOT DEFINED CPU_${opt}_FLAGS_ON)
-        set(have_flags FALSE)
-        message(WARNING "No compiler flags for ${opt} found in CPU_DISPATCH, you should explicitly set CPU_${opt}_FLAGS_ON variable to enable dispatching")
-      endif()
-    endforeach()
-  endif()
+  foreach(opt ${CPU_DISPATCH})
+    if(NOT DEFINED CPU_${opt}_FLAGS_ON)
+      message(WARNING "${opt} is in the CPU_DISPATCH list, but 'CPU_${opt}_FLAGS_ON' is not set. "
+                      "Please provide feature-specific compiler options explicitly.")
+    endif()
+  endforeach()
 endmacro()
+
+#===================================================================================================
 
 if(X86 OR X86_64)
 
@@ -386,7 +384,7 @@ elseif(ARM OR AARCH64)
       ocv_update(CPU_NEON_BF16_FLAGS_ON "-march=armv8.2-a+bf16")
     endif()
     set(CPU_DISPATCH "NEON_FP16;NEON_BF16;NEON_DOTPROD" CACHE STRING "${HELP_CPU_DISPATCH}")
-    ocv_force_baseline_detect_and_check_dispatch()
+    ocv_default_baseline_detect_and_check_dispatch()
   endif()
 
 elseif(MIPS)
@@ -421,7 +419,7 @@ elseif(RISCV)
 
   ocv_update(CPU_KNOWN_OPTIMIZATIONS "RVV")
   ocv_update(CPU_RVV_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_rvv.cpp")
-  ocv_force_baseline_detect_and_check_dispatch()
+  ocv_default_baseline_detect_and_check_dispatch()
 
 elseif(LOONGARCH64)
 
