@@ -117,7 +117,7 @@ public:
     TransposeLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        perm = params.get<std::vector<int> >("perm");
+        perm = params.getVector<int>("perm");
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE

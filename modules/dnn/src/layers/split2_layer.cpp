@@ -93,7 +93,7 @@ public:
     {
         setParamsFrom(params);
         axis = params.get<int>("axis", 1);
-        split = params.get<std::vector<int> >("split");
+        split = params.getVector<int>("split");
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -107,18 +107,19 @@ public:
     {
         size_t noutputs = split.size();
         CV_Assert(noutputs == outputs.size());
-        outShapes.resize(noutputs);
 
         int inpDims = inpShape.dims;
         CV_Assert(0 <= axis_ && axis_ < inpDims);
         int totalSize_a = 0;
 
+        outShapes.resize(noutputs);
         for (size_t i = 0; i < noutputs; i++) {
             MatShape outShape = inpShape;
             int s = split[i];
             CV_Assert(s >= 0);
             CV_Assert(s <= inpShape[axis_] - totalSize_a);
             outShape[axis_] = s;
+            outShapes[i] = outShape;
             totalSize_a += s;
         }
     }
@@ -139,7 +140,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(noutputs == (int)outputs.size());
+        CV_Assert(noutputs == (int)this->outputs.size());
 
         size_t ninputs = inputs.size();
         CV_Assert(ninputs == 1 || ninputs == 2);
@@ -172,10 +173,7 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         size_t ninputs = inputs.size();
-        CV_Assert(ninputs > 0);
-        for (size_t i = 1; i < ninputs; i++) {
-            CV_Assert(inputs[i] == inputs[0]);
-        }
+        CV_Assert(ninputs == 1 || ninputs == 2);
         outputs.assign(requiredOutputs, inputs[0]);
         CV_Assert(requiredInternals == 0);
         internals.clear();

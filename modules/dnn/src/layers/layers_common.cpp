@@ -266,13 +266,18 @@ double getWeightScale(const Mat& weightsMat)
 
 void tensorToIntVec(const Mat& tensor, std::vector<int>& vec)
 {
-    int type = tensor.type();
-    CV_Assert(type == CV_32S || type == CV_64S);
-    CV_Assert(tensor.dims <= 1);
-    size_t size = tensor.total();
-    vec.resize(size);
-    for (size_t i = 0; i < size; i++) {
-        vec[i] = type == CV_32S ? tensor.at<int>(i) : (int)tensor.at<int64_t>(i);
+    if (tensor.empty()) {
+        vec.clear();
+    } else {
+        int type = tensor.type();
+        CV_Assert(type == CV_32S || type == CV_64S);
+        CV_Assert(tensor.dims <= 1);
+        int size = (int)tensor.total();
+        vec.resize(size);
+        for (int i = 0; i < size; i++) {
+            vec[i] = type == CV_32S ? tensor.at<int>(i) :
+                saturate_cast<int>(tensor.at<int64_t>(i));
+        }
     }
 }
 

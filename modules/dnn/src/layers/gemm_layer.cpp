@@ -196,9 +196,10 @@ public:
         size_t dims_Y = shape_Y.size();
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
+        bool have_bias_ = have_bias || inputs.size() == 3;
 
         // broadcast C and copy C to output
-        if (have_bias) {
+        if (have_bias_) {
             if (!const_C) {
                 broadcastCWtihBeta(M, N, inputs.back());
             }

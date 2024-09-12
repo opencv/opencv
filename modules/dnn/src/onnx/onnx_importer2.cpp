@@ -1707,7 +1707,7 @@ void ONNXImporter2::parseTranspose(LayerParams& layerParams, const opencv_onnx::
 
 void ONNXImporter2::parseSqueeze(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "Squeeze2";
+    layerParams.type = "Squeeze";
     CV_Assert(node_proto.input_size() <= 2);
     addLayer(layerParams, node_proto);
 }
@@ -1791,6 +1791,7 @@ void ONNXImporter2::parseConcat(LayerParams& layerParams, const opencv_onnx::Nod
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#Resize
 void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    int ninputs = node_proto.input_size();
     layerParams.type = "Resize";
 
     if (layerParams.has("coordinate_transformation_mode"))
@@ -1813,8 +1814,54 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
     // opset-10: input = [X, scales]
     // opset-11: input = [X, roi, scales] or [x, roi, scales, sizes]
     // opset-13: may have empty input, [X, "", "", sizes] or [x, "", scales]
+    int scalesInputId = ninputs == 2 ? 1 : 2;
+    Arg scalesArg = node_inputs[scalesInputId];
+    Mat scales;
+    if(scalesArg.idx > 0 && netimpl->isConstArg(scalesArg))
+        scales = netimpl->argTensor(scalesArg);
+
+    if (ninputs >= 3) {
+        int roiInputId = 1;
+        Arg roiArg = node_inputs[roiInputId];
+        if (!netimpl->isConstArg(roiArg)) {
+            CV_Error(Error::StsNotImplemented, "ONNX/Resize: only empty ROI is supported");
+        }
+        Mat roi = netimpl->argTensor(roiArg);
+        if (!roi.empty()) {
+            CV_Error(Error::StsNotImplemented, "ONNX/Resize: only empty ROI is supported");
+        }
+    }
+
+    if (!scales.empty())
+    {
+        CV_CheckEQ(scales.total(), (size_t)4, "HCHW layout is expected");
+        CV_CheckEQ(scales.type(), CV_32F, "Scales should have 32F type");
+        layerParams.set("zoom_factor_y", scales.at<float>(2));
+        layerParams.set("zoom_factor_x", scales.at<float>(3));
+        ninputs = 1;
+    }
+    else if (node_proto.input_size() >= 4)  // opset-11 [x, roi, scales, sizes] or opset-13: input = [X, "", "", sizes]
+    {
+        Arg sizesArg = node_inputs[3];
+        if (netimpl->isConstArg(sizesArg))
+        {
+            Mat shapes = netimpl->argTensor(sizesArg);
+            CV_CheckEQ(shapes.total(), (size_t)4, "HCHW layout is expected");
+            layerParams.set("width", shapes.at<int>(3));
+            layerParams.set("height", shapes.at<int>(2));
+        }
+        else
+        {
+            CV_Error_(Error::StsNotImplemented, ("ONNX/Resize: doesn't support dynamic non-constant 'sizes' input: %s", node_proto.input(3).c_str()));
+        }
+        ninputs = 1;
+    }
+    else
+    {
+        CV_Error(Error::StsNotImplemented, "ONNX/Resize: can't find neither 'scale' nor destination sizes parameters");
+    }
     replaceLayerParam(layerParams, "mode", "interpolation");
-    addLayer(layerParams, node_proto);
+    addLayer(layerParams, node_proto, ninputs);
 }
 
 void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)

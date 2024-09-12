@@ -82,7 +82,7 @@ public:
     MatShape getOutShape(const MatShape& inpShape, MatShape& shapeSpec) const
     {
         MatShape outShape = shapeSpec;
-        int m1idx = -1, haveZeros = 0;
+        int m1idx = -1;
         int i, ndims = outShape.dims;
         int64_t outTotal = 1;
         for (i = 0; i < ndims; i++) {
@@ -95,7 +95,6 @@ public:
             }
             else {
                 if (outShape[i] == 0) {
-                    haveZeros++;
                     if (i >= inpShape.dims) {
                         CV_Error(Error::StsBadArg, "cannot copy dimension from the input tensor");
                     }

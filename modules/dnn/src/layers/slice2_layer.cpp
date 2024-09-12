@@ -132,9 +132,9 @@ public:
     Slice2LayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        axes = params.get<std::vector<int> >("axes");
-        starts = params.get<std::vector<int> >("starts");
-        ends = params.get<std::vector<int> >("ends");
+        axes = params.getVector<int>("axes");
+        starts = params.getVector<int>("starts");
+        ends = params.getVector<int>("ends");
     }
 
     void checkNumInputs(size_t ninputs) const

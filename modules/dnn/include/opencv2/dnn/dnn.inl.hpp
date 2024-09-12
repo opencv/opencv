@@ -116,12 +116,12 @@ inline int64 DictValue::get<int64>(int idx) const
 template<>
 inline int DictValue::get<int>(int idx) const
 {
-    return (int)get<int64>(idx);
+    return saturate_cast<int>(get<int64>(idx));
 }
 
 inline int DictValue::getIntValue(int idx) const
 {
-    return (int)get<int64>(idx);
+    return saturate_cast<int>(get<int64>(idx));
 }
 
 template<>
@@ -378,6 +378,17 @@ inline T Dict::get(const String &key, const T &defaultValue) const
         return i->second.get<T>();
     else
         return defaultValue;
+}
+
+template <typename T>
+inline std::vector<T> Dict::getVector(const String &key) const
+{
+    _Dict::const_iterator i = dict.find(key);
+
+    if (i != dict.end())
+        return i->second.get<std::vector<T> >();
+    else
+        return std::vector<T>();
 }
 
 template<typename T>

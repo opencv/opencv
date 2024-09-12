@@ -201,11 +201,9 @@ Mat& Net::Impl::argTensor(Arg arg) const
 
 Arg Net::Impl::getArg(const std::string& name)
 {
-    if (!name.empty()) {
-        auto it = argnames.find(name);
-        if (it != argnames.end()) {
-            return Arg((int)it->second);
-        }
+    auto it = argnames.find(name);
+    if (it != argnames.end()) {
+        return Arg((int)it->second);
     }
     return newArg(name, DNN_ARG_TEMP);
 }
@@ -217,6 +215,10 @@ bool Net::Impl::haveArg(const std::string& name) const
 
 Arg Net::Impl::newConstArg(const std::string& name, const Mat& m)
 {
+    if (name.empty()) {
+        CV_Assert(m.empty());
+        return Arg();
+    }
     Arg arg = newArg(name, DNN_ARG_CONST);
     tensors[arg.idx] = m;
     ArgData& adata = args[arg.idx];
@@ -227,6 +229,7 @@ Arg Net::Impl::newConstArg(const std::string& name, const Mat& m)
 
 Arg Net::Impl::newArg(const std::string& name, ArgKind kind)
 {
+    CV_Assert(!name.empty());
     int idx = (int)args.size();
 
     if (!name.empty()) {
@@ -458,7 +461,9 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
     const ArgData& adata = args.at(arg.idx);
     // [TODO] replace with type compatibility check
     // CV_Assert(m.type() == adata.type);
-    strm_ << prefix << " " << i << ". Name: " << adata.name << "\n";
+    strm_ << prefix << " " << i << ". Name: " << (arg.idx > 0 ? adata.name.c_str() : "<empty>") << "\n";
+    if (arg.idx == 0)
+        return;
     strm_ << "  Buf: " << bufidxs.at(arg.idx) << "\n";
     strm_ << "  Type: " << typeToString(adata.type) << " \n";
     MatShape shape = m.shape();
@@ -606,6 +611,15 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             inpShapes[i] = m.shape();
         }
 
+        if (tracingMode != DNN_TRACE_NONE) {
+            strm_ << "-----------\n";
+            strm_ << "'" << graph->name() << "' [" << opidx << "/" << nops << "]. " << layer->type << " node: " << layer->name << "\n";
+            for (i = 0; i < ninputs; i++) {
+                Arg inp = inputs[i];
+                traceArg(strm_, "Input", i, inp, false);
+            }
+        }
+
         bool dynamicOutShapes = layer->dynamicOutputShapes();
         if (!dynamicOutShapes) {
             allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outMats,
@@ -625,14 +639,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             tempMats = scratchBufs;
         }
 
-        if (tracingMode != DNN_TRACE_NONE) {
-            strm_ << "-----------\n";
-            strm_ << "'" << graph->name() << "' [" << opidx << "/" << nops << "]. " << layer->type << " node: " << layer->name << "\n";
-            for (i = 0; i < ninputs; i++) {
-                Arg inp = inputs[i];
-                traceArg(strm_, "Input", i, inp, false);
-            }
-        }
         timestamp = getTickCount();
 
         // [TODO] handle If/Loop/...
@@ -646,6 +652,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             Arg out = outputs[i];
             ArgData& adata = args[out.idx];
             const Mat& m = outMats[i];
+            //checkRange(m, false);
             adata.type = m.type();
             adata.shape = m.shape();
             tensors.at(out.idx) = m;
@@ -797,7 +804,8 @@ std::ostream& Net::Impl::dumpTypeShape(std::ostream& strm, int type, const MatSh
     return strm;
 }
 
-std::ostream& Net::Impl::dumpArg(std::ostream& strm, Arg arg, int indent, bool comma, bool dump_details) const
+std::ostream& Net::Impl::dumpArg(std::ostream& strm, Arg arg, int indent,
+                                 bool comma, bool dump_details) const
 {
     checkArg(arg);
     const ArgData& adata = args.at(arg.idx);

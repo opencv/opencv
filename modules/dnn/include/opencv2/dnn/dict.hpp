@@ -138,6 +138,10 @@ public:
     template <typename T>
     T get(const String &key, const T &defaultValue) const;
 
+    //! If the @p key in the dictionary then returns its value, else returns empty vector.
+    template <typename T>
+    std::vector<T> getVector(const String &key) const;
+
     //! Sets new @p value for the @p key, or adds new key-value pair into the dictionary.
     template<typename T>
     const T &set(const String &key, const T &value);

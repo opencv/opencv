@@ -34,7 +34,7 @@ public:
     SqueezeLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        axes = params.get<std::vector<int> >("axes");
+        axes = params.getVector<int>("axes");
     }
 
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
