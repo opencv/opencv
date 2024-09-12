@@ -220,25 +220,16 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         prevPtsScaled[ptidx-range.start] = prevPt;
     }
 
-    int hal_res = cv_hal_LKOpticalFlowLevel(
+    CALL_HAL(LKOpticalFlowLevel, cv_hal_LKOpticalFlowLevel,
         I.data, I.step, (const short*)derivI.data, derivI.step, J.data, J.step,
         I.cols, I.rows, I.channels(),
         (float*)prevPtsScaled, (float*)(nextPts+range.start), range.end-range.start,
-        (level == 0) ? status+range.start: nullptr, err != nullptr ? err+range.start: nullptr,
+        (level == 0) ? status+range.start: nullptr,
+        err != nullptr ? err+range.start: nullptr,
         winSize.width, winSize.height, criteria.maxCount, criteria.epsilon,
         (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) != 0,
         (float)minEigThreshold
     );
-
-    if(hal_res == CV_HAL_ERROR_OK)
-    {
-        // TODO: Handle err and status and return;
-    }
-    else if (hal_res != CV_HAL_ERROR_NOT_IMPLEMENTED)
-    {
-        CV_Error_(cv::Error::StsInternal,
-            ("HAL implementation LKOpticalFlowLevel ==> " CVAUX_STR(cv_hal_LKOpticalFlowLevel) " returned %d (0x%08x)", hal_res, hal_res));
-    }
 
     for( int ptidx = range.start; ptidx < range.end; ptidx++ )
     {
@@ -720,8 +711,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             if( inextPoint.x < -winSize.width || inextPoint.x >= J.cols ||
                 inextPoint.y < -winSize.height || inextPoint.y >= J.rows )
             {
-                if( status )
-                    status[ptidx] = false;
+                status[ptidx] = false;
                 continue;
             }
 

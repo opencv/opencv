@@ -74,6 +74,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
 
     for( u32 ptidx = 0; ptidx < ptCount; ptidx++ )
     {
+        u32 ptref = ptidx << 1;
         f32 prevPtX = prevPts[ptref+0];
         f32 prevPtY = prevPts[ptref+1];
         f32 nextPtX = nextPts[ptref+0];
@@ -308,7 +309,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
 
         if( minEig < minEigThreshold || D < FLT_EPSILON )
         {
-            if( tatus )
+            if( status )
                 status[ptidx] = false;
             continue;
         }
@@ -444,6 +445,45 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
             prevDeltaX = deltaX;
             prevDeltaY = deltaY;
         }
+        if( status && status[ptidx] && err && !getMinEigenVals )
+        {
+            f32 nextPointX = nextPts[ptref+0] - halfWinX;
+            f32 nextPointY = nextPts[ptref+1] - halfWinY;
+
+            s32 inextPointX = floor(nextPointX);
+            s32 inextPointY = floor(nextPointY);
+
+            if( inextPointX < -(s32)winSize.width || inextPointX >= (s32)size.width ||
+                inextPointY < -(s32)winSize.height || inextPointY >= (s32)size.height )
+            {
+                if( status )
+                    status[ptidx] = false;
+                continue;
+            }
+
+            f32 aa = nextPointX - inextPointX;
+            f32 bb = nextPointY - inextPointY;
+            iw00 = round((1.f - aa)*(1.f - bb)*(1 << W_BITS));
+            iw01 = round(aa*(1.f - bb)*(1 << W_BITS));
+            iw10 = round((1.f - aa)*bb*(1 << W_BITS));
+            iw11 = (1 << W_BITS) - iw00 - iw01 - iw10;
+            f32 errval = 0.f;
+
+            for(s32 y = 0; y < (s32)winSize.height; y++ )
+            {
+                const u8* Jptr = nextData + nextStride*(y + inextPointY) + inextPointX*cn;
+                const s16* Iptr = IWinBuf + y*IWinBufStride;
+
+                for( x = 0; x < wwcn; x++ )
+                {
+                    s32 diff = CV_DESCALE(Jptr[x]*iw00 + Jptr[x+cn]*iw01 +
+                                          Jptr[x+nextStride]*iw10 + Jptr[x+nextStride+cn]*iw11,
+                                          W_BITS1-5) - Iptr[x];
+                    errval += std::abs((f32)diff);
+                }
+            }
+            err[ptidx] = errval / (32*wwcn*winSize.height);
+        }
     }
 #else
     (void)size;
@@ -468,4 +508,3 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
 }
 
 }//CAROTENE_NS
-
