@@ -225,32 +225,32 @@ These operations allow to reorder or recombine elements in one or multiple vecto
 Element-wise binary and unary operations.
 
 - Arithmetics:
-@ref operator +(const v_reg &a, const v_reg &b) "+",
-@ref operator -(const v_reg &a, const v_reg &b) "-",
-@ref operator *(const v_reg &a, const v_reg &b) "*",
-@ref operator /(const v_reg &a, const v_reg &b) "/",
+@ref v_add(const v_reg &a, const v_reg &b) "+",
+@ref v_sub(const v_reg &a, const v_reg &b) "-",
+@ref v_mul(const v_reg &a, const v_reg &b) "*",
+@ref v_div(const v_reg &a, const v_reg &b) "/",
 @ref v_mul_expand
 
 - Non-saturating arithmetics: @ref v_add_wrap, @ref v_sub_wrap
 
 - Bitwise shifts:
-@ref operator <<(const v_reg &a, int s) "<<",
-@ref operator >>(const v_reg &a, int s) ">>",
+@ref v_shl(const v_reg &a, int s) "<<",
+@ref v_shr(const v_reg &a, int s) ">>",
 @ref v_shl, @ref v_shr
 
 - Bitwise logic:
-@ref operator &(const v_reg &a, const v_reg &b) "&",
-@ref operator |(const v_reg &a, const v_reg &b) "|",
-@ref operator ^(const v_reg &a, const v_reg &b) "^",
-@ref operator ~(const v_reg &a) "~"
+@ref v_and(const v_reg &a, const v_reg &b) "&",
+@ref v_or(const v_reg &a, const v_reg &b) "|",
+@ref v_xor(const v_reg &a, const v_reg &b) "^",
+@ref v_not(const v_reg &a) "~"
 
 - Comparison:
-@ref operator >(const v_reg &a, const v_reg &b) ">",
-@ref operator >=(const v_reg &a, const v_reg &b) ">=",
-@ref operator <(const v_reg &a, const v_reg &b) "<",
-@ref operator <=(const v_reg &a, const v_reg &b) "<=",
-@ref operator ==(const v_reg &a, const v_reg &b) "==",
-@ref operator !=(const v_reg &a, const v_reg &b) "!="
+@ref v_gt(const v_reg &a, const v_reg &b) ">",
+@ref v_ge(const v_reg &a, const v_reg &b) ">=",
+@ref v_lt(const v_reg &a, const v_reg &b) "<",
+@ref v_le(const v_reg &a, const v_reg &b) "<=",
+@ref v_eq(const v_reg &a, const v_reg &b) "==",
+@ref v_ne(const v_reg &a, const v_reg &b) "!="
 
 - min/max: @ref v_min, @ref v_max
 
@@ -573,50 +573,43 @@ enum {
 /** @brief Add values
 
 For all types. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator+(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator+=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_add(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Subtract values
 
 For all types. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator-(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator-=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_sub(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Multiply values
 
 For 16- and 32-bit integer types and floating types. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator*(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator*=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_mul(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Divide values
 
 For floating types only. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator/(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator/=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_div(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 
 /** @brief Bitwise AND
 
 Only for integer types. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator&(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator&=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_and(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Bitwise OR
 
 Only for integer types. */
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator|(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator|=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_or(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Bitwise XOR
 
 Only for integer types.*/
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator^(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n>& operator^=(v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_xor(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b);
 
 /** @brief Bitwise NOT
 
 Only for integer types.*/
-template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> operator~(const v_reg<_Tp, n>& a);
+template<typename _Tp, int n> CV_INLINE v_reg<_Tp, n> v_not(const v_reg<_Tp, n>& a);
 
 
 #ifndef CV_DOXYGEN
@@ -639,33 +632,26 @@ __CV_EXPAND(macro_name(double, __VA_ARGS__)) \
 CV__HAL_INTRIN_EXPAND_WITH_INTEGER_TYPES(macro_name, __VA_ARGS__) \
 CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(macro_name, __VA_ARGS__) \
 
-#define CV__HAL_INTRIN_IMPL_BIN_OP_(_Tp, bin_op) \
+#define CV__HAL_INTRIN_IMPL_BIN_OP_(_Tp, bin_op, func) \
 template<int n> inline \
-v_reg<_Tp, n> operator bin_op (const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+v_reg<_Tp, n> func(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
     v_reg<_Tp, n> c; \
     for( int i = 0; i < n; i++ ) \
         c.s[i] = saturate_cast<_Tp>(a.s[i] bin_op b.s[i]); \
     return c; \
-} \
-template<int n> inline \
-v_reg<_Tp, n>& operator bin_op##= (v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
-{ \
-    for( int i = 0; i < n; i++ ) \
-        a.s[i] = saturate_cast<_Tp>(a.s[i] bin_op b.s[i]); \
-    return a; \
 }
 
-#define CV__HAL_INTRIN_IMPL_BIN_OP(bin_op) CV__HAL_INTRIN_EXPAND_WITH_ALL_TYPES(CV__HAL_INTRIN_IMPL_BIN_OP_, bin_op)
+#define CV__HAL_INTRIN_IMPL_BIN_OP(bin_op, func) CV__HAL_INTRIN_EXPAND_WITH_ALL_TYPES(CV__HAL_INTRIN_IMPL_BIN_OP_, bin_op, func)
 
-CV__HAL_INTRIN_IMPL_BIN_OP(+)
-CV__HAL_INTRIN_IMPL_BIN_OP(-)
-CV__HAL_INTRIN_IMPL_BIN_OP(*)
-CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(CV__HAL_INTRIN_IMPL_BIN_OP_, /)
+CV__HAL_INTRIN_IMPL_BIN_OP(+, v_add)
+CV__HAL_INTRIN_IMPL_BIN_OP(-, v_sub)
+CV__HAL_INTRIN_IMPL_BIN_OP(*, v_mul)
+CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(CV__HAL_INTRIN_IMPL_BIN_OP_, /, v_div)
 
-#define CV__HAL_INTRIN_IMPL_BIT_OP_(_Tp, bit_op) \
+#define CV__HAL_INTRIN_IMPL_BIT_OP_(_Tp, bit_op, func) \
 template<int n> CV_INLINE \
-v_reg<_Tp, n> operator bit_op (const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+v_reg<_Tp, n> func(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
     v_reg<_Tp, n> c; \
     typedef typename V_TypeTraits<_Tp>::int_type itype; \
@@ -673,29 +659,20 @@ v_reg<_Tp, n> operator bit_op (const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
         c.s[i] = V_TypeTraits<_Tp>::reinterpret_from_int((itype)(V_TypeTraits<_Tp>::reinterpret_int(a.s[i]) bit_op \
                                                         V_TypeTraits<_Tp>::reinterpret_int(b.s[i]))); \
     return c; \
-} \
-template<int n> CV_INLINE \
-v_reg<_Tp, n>& operator bit_op##= (v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
-{ \
-    typedef typename V_TypeTraits<_Tp>::int_type itype; \
-    for( int i = 0; i < n; i++ ) \
-        a.s[i] = V_TypeTraits<_Tp>::reinterpret_from_int((itype)(V_TypeTraits<_Tp>::reinterpret_int(a.s[i]) bit_op \
-                                                        V_TypeTraits<_Tp>::reinterpret_int(b.s[i]))); \
-    return a; \
 }
 
-#define CV__HAL_INTRIN_IMPL_BIT_OP(bit_op) \
-CV__HAL_INTRIN_EXPAND_WITH_INTEGER_TYPES(CV__HAL_INTRIN_IMPL_BIT_OP_, bit_op) \
-CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(CV__HAL_INTRIN_IMPL_BIT_OP_, bit_op) /* TODO: FIXIT remove this after masks refactoring */
+#define CV__HAL_INTRIN_IMPL_BIT_OP(bit_op, func) \
+CV__HAL_INTRIN_EXPAND_WITH_INTEGER_TYPES(CV__HAL_INTRIN_IMPL_BIT_OP_, bit_op, func) \
+CV__HAL_INTRIN_EXPAND_WITH_FP_TYPES(CV__HAL_INTRIN_IMPL_BIT_OP_, bit_op, func) /* TODO: FIXIT remove this after masks refactoring */
 
 
-CV__HAL_INTRIN_IMPL_BIT_OP(&)
-CV__HAL_INTRIN_IMPL_BIT_OP(|)
-CV__HAL_INTRIN_IMPL_BIT_OP(^)
+CV__HAL_INTRIN_IMPL_BIT_OP(&, v_and)
+CV__HAL_INTRIN_IMPL_BIT_OP(|, v_or)
+CV__HAL_INTRIN_IMPL_BIT_OP(^, v_xor)
 
-#define CV__HAL_INTRIN_IMPL_BITWISE_NOT_(_Tp, dummy) \
+#define CV__HAL_INTRIN_IMPL_BITWISE_NOT_(_Tp, dummy, dummy2) \
 template<int n> CV_INLINE \
-v_reg<_Tp, n> operator ~ (const v_reg<_Tp, n>& a) \
+v_reg<_Tp, n> v_not(const v_reg<_Tp, n>& a) \
 { \
     v_reg<_Tp, n> c; \
     for( int i = 0; i < n; i++ ) \
@@ -703,7 +680,7 @@ v_reg<_Tp, n> operator ~ (const v_reg<_Tp, n>& a) \
     return c; \
 } \
 
-CV__HAL_INTRIN_EXPAND_WITH_INTEGER_TYPES(CV__HAL_INTRIN_IMPL_BITWISE_NOT_, ~)
+CV__HAL_INTRIN_EXPAND_WITH_INTEGER_TYPES(CV__HAL_INTRIN_IMPL_BITWISE_NOT_, ~, v_not)
 
 #endif  // !CV_DOXYGEN
 
@@ -760,7 +737,6 @@ OPENCV_HAL_IMPL_MATH_FUNC(v_exp, std::exp, _Tp)
  * @note Similar to the behavior of std::log(), \f$ \ln(0) = -\infty \f$.
  */
 OPENCV_HAL_IMPL_MATH_FUNC(v_log, std::log, _Tp)
-#define OPENCV_HAL_MATH_HAVE_LOG 1
 
 /**
  * @brief Error function.
@@ -771,9 +747,7 @@ OPENCV_HAL_IMPL_MATH_FUNC(v_erf, std::erf, _Tp)
 
 //! @cond IGNORED
 OPENCV_HAL_IMPL_MATH_FUNC(v_sin, std::sin, _Tp)
-#define OPENCV_HAL_MATH_HAVE_SIN 1
 OPENCV_HAL_IMPL_MATH_FUNC(v_cos, std::cos, _Tp)
-#define OPENCV_HAL_MATH_HAVE_COS 1
 //! @endcond
 
 /** @brief Absolute value of elements
@@ -897,9 +871,9 @@ inline void v_minmax( const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b,
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_CMP_OP(cmp_op) \
+#define OPENCV_HAL_IMPL_CMP_OP(cmp_op, func) \
 template<typename _Tp, int n> \
-inline v_reg<_Tp, n> operator cmp_op(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
+inline v_reg<_Tp, n> func(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>& b) \
 { \
     typedef typename V_TypeTraits<_Tp>::int_type itype; \
     v_reg<_Tp, n> c; \
@@ -911,28 +885,28 @@ inline v_reg<_Tp, n> operator cmp_op(const v_reg<_Tp, n>& a, const v_reg<_Tp, n>
 /** @brief Less-than comparison
 
 For all types except 64-bit integer values. */
-OPENCV_HAL_IMPL_CMP_OP(<)
+OPENCV_HAL_IMPL_CMP_OP(<, v_lt)
 
 /** @brief Greater-than comparison
 
 For all types except 64-bit integer values. */
-OPENCV_HAL_IMPL_CMP_OP(>)
+OPENCV_HAL_IMPL_CMP_OP(>, v_gt)
 
 /** @brief Less-than or equal comparison
 
 For all types except 64-bit integer values. */
-OPENCV_HAL_IMPL_CMP_OP(<=)
+OPENCV_HAL_IMPL_CMP_OP(<=, v_le)
 
 /** @brief Greater-than or equal comparison
 
 For all types except 64-bit integer values. */
-OPENCV_HAL_IMPL_CMP_OP(>=)
+OPENCV_HAL_IMPL_CMP_OP(>=, v_ge)
 
 /** @brief Equal comparison */
-OPENCV_HAL_IMPL_CMP_OP(==)
+OPENCV_HAL_IMPL_CMP_OP(==, v_eq)
 
 /** @brief Not equal comparison */
-OPENCV_HAL_IMPL_CMP_OP(!=)
+OPENCV_HAL_IMPL_CMP_OP(!=, v_ne)
 
 template<int n>
 inline v_reg<float, n> v_not_nan(const v_reg<float, n>& a)
@@ -1301,8 +1275,8 @@ template<typename _Tp, int n> inline void v_hsum(const v_reg<_Tp, n>& a,
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
-#define OPENCV_HAL_IMPL_SHIFT_OP(shift_op) \
-template<typename _Tp, int n> inline v_reg<_Tp, n> operator shift_op(const v_reg<_Tp, n>& a, int imm) \
+#define OPENCV_HAL_IMPL_SHIFT_OP(shift_op, func) \
+template<typename _Tp, int n> inline v_reg<_Tp, n> func(const v_reg<_Tp, n>& a, int imm) \
 { \
     v_reg<_Tp, n> c; \
     for( int i = 0; i < n; i++ ) \
@@ -1313,12 +1287,12 @@ template<typename _Tp, int n> inline v_reg<_Tp, n> operator shift_op(const v_reg
 /** @brief Bitwise shift left
 
 For 16-, 32- and 64-bit integer values. */
-OPENCV_HAL_IMPL_SHIFT_OP(<< )
+OPENCV_HAL_IMPL_SHIFT_OP(<<, v_shl)
 
 /** @brief Bitwise shift right
 
 For 16-, 32- and 64-bit integer values. */
-OPENCV_HAL_IMPL_SHIFT_OP(>> )
+OPENCV_HAL_IMPL_SHIFT_OP(>>, v_shr)
 
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
@@ -2942,7 +2916,7 @@ OPENCV_HAL_IMPL_C_REINTERPRET(int64, s64)
 //! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_C_SHIFTL(_Tp) \
 template<int shift, int n> inline v_reg<_Tp, n> v_shl(const v_reg<_Tp, n>& a) \
-{ return a << shift; }
+{ return v_shl(a, shift); }
 
 //! @name Left shift
 //! @{
@@ -2959,7 +2933,7 @@ OPENCV_HAL_IMPL_C_SHIFTL(int64)
 //! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_C_SHIFTR(_Tp) \
 template<int shift, int n> inline v_reg<_Tp, n> v_shr(const v_reg<_Tp, n>& a) \
-{ return a >> shift; }
+{ return v_shr(a, shift); }
 
 //! @name Right shift
 //! @{
@@ -3285,7 +3259,7 @@ inline v_reg<float, n> v_matmuladd(const v_reg<float, n>& v,
 
 
 template<int n> inline v_reg<double, n/2> v_dotprod_expand(const v_reg<int, n>& a, const v_reg<int, n>& b)
-{ return v_fma(v_cvt_f64(a), v_cvt_f64(b), v_cvt_f64_high(a) * v_cvt_f64_high(b)); }
+{ return v_fma(v_cvt_f64(a), v_cvt_f64(b), v_mul(v_cvt_f64_high(a), v_cvt_f64_high(b))); }
 template<int n> inline v_reg<double, n/2> v_dotprod_expand(const v_reg<int, n>& a, const v_reg<int, n>& b,
                                                            const v_reg<double, n/2>& c)
 { return v_fma(v_cvt_f64(a), v_cvt_f64(b), v_fma(v_cvt_f64_high(a), v_cvt_f64_high(b), c)); }

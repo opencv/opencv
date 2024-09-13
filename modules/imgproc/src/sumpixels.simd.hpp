@@ -130,9 +130,9 @@ struct Integral_SIMD<uchar, int, double>
                     el8 = v_add(el8, v_rotate_left<1>(el8));
                     el8 = v_add(el8, v_rotate_left<2>(el8));
 #if CV_SIMD_WIDTH >= 32
-                    el8 += v_rotate_left<4>(el8);
+                    el8 = v_add(el8, v_rotate_left<4>(el8));
 #if CV_SIMD_WIDTH == 64
-                    el8 += v_rotate_left<8>(el8);
+                    el8 = v_add(el8, v_rotate_left<8>(el8));
 #endif
 #endif
                     v_expand(el8, el4l, el4h);
@@ -188,11 +188,11 @@ struct Integral_SIMD<uchar, int, double>
                     el8_1 = v_add(el8_1, v_rotate_left<2>(el8_1));
                     el8_2 = v_add(el8_2, v_rotate_left<2>(el8_2));
 #if CV_SIMD_WIDTH >= 32
-                    el8_1 += v_rotate_left<4>(el8_1);
-                    el8_2 += v_rotate_left<4>(el8_2);
+                    el8_1 = v_add(el8_1, v_rotate_left<4>(el8_1));
+                    el8_2 = v_add(el8_2, v_rotate_left<4>(el8_2));
 #if CV_SIMD_WIDTH == 64
-                    el8_1 += v_rotate_left<8>(el8_1);
-                    el8_2 += v_rotate_left<8>(el8_2);
+                    el8_1 = v_add(el8_1, v_rotate_left<8>(el8_1));
+                    el8_2 = v_add(el8_2, v_rotate_left<8>(el8_2));
 #endif
 #endif
                     v_expand(el8_1, el4l_1, el4h_1);
@@ -350,9 +350,9 @@ struct Integral_SIMD<uchar, int, double>
                     prev.val = _mm256_permute2x128_si256(el4h.val, el4h.val, 0x31);
 #else
 #if CV_SIMD_WIDTH >= 32
-                    el8 += v_rotate_left<4>(el8);
+                    el8 = v_add(el8, v_rotate_left<4>(el8));
 #if CV_SIMD_WIDTH == 64
-                    el8 += v_rotate_left<8>(el8);
+                    el8 = v_add(el8, v_rotate_left<8>(el8));
 #endif
 #endif
                     v_expand(el8, el4l, el4h);
@@ -364,7 +364,7 @@ struct Integral_SIMD<uchar, int, double>
                     prev = v_combine_high(el4h, el4h);
 #else
                     v_int32 t = v_rotate_right<12>(el4h);
-                    t |= v_rotate_left<4>(t);
+                    t = v_or(t, v_rotate_left<4>(t));
                     prev = v_combine_low(t, t);
 #endif
 #endif
@@ -442,9 +442,9 @@ struct Integral_SIMD<uchar, float, double>
                     el8 = v_add(el8, v_rotate_left<1>(el8));
                     el8 = v_add(el8, v_rotate_left<2>(el8));
 #if CV_SIMD_WIDTH >= 32
-                    el8 += v_rotate_left<4>(el8);
+                    el8 = v_add(el8, v_rotate_left<4>(el8));
 #if CV_SIMD_WIDTH == 64
-                    el8 += v_rotate_left<8>(el8);
+                    el8 = v_add(el8, v_rotate_left<8>(el8));
 #endif
 #endif
                     v_int32 el4li, el4hi;
@@ -501,11 +501,11 @@ struct Integral_SIMD<uchar, float, double>
                     el8_1 = v_add(el8_1, v_rotate_left<2>(el8_1));
                     el8_2 = v_add(el8_2, v_rotate_left<2>(el8_2));
 #if CV_SIMD_WIDTH >= 32
-                    el8_1 += v_rotate_left<4>(el8_1);
-                    el8_2 += v_rotate_left<4>(el8_2);
+                    el8_1 = v_add(el8_1, v_rotate_left<4>(el8_1));
+                    el8_2 = v_add(el8_2, v_rotate_left<4>(el8_2));
 #if CV_SIMD_WIDTH == 64
-                    el8_1 += v_rotate_left<8>(el8_1);
-                    el8_2 += v_rotate_left<8>(el8_2);
+                    el8_1 = v_add(el8_1, v_rotate_left<8>(el8_1));
+                    el8_2 = v_add(el8_2, v_rotate_left<8>(el8_2));
 #endif
 #endif
                     v_int32 el4li_1, el4hi_1, el4li_2, el4hi_2;
@@ -590,13 +590,13 @@ struct Integral_SIMD<uchar, float, double>
                     el8_2 = v_add(el8_2, v_rotate_left<2>(el8_2));
                     el8_3 = v_add(el8_3, v_rotate_left<2>(el8_3));
 #if CV_SIMD_WIDTH >= 32
-                    el8_1 += v_rotate_left<4>(el8_1);
-                    el8_2 += v_rotate_left<4>(el8_2);
-                    el8_3 += v_rotate_left<4>(el8_3);
+                    el8_1 = v_add(el8_1, v_rotate_left<4>(el8_1));
+                    el8_2 = v_add(el8_2, v_rotate_left<4>(el8_2));
+                    el8_3 = v_add(el8_3, v_rotate_left<4>(el8_3));
 #if CV_SIMD_WIDTH == 64
-                    el8_1 += v_rotate_left<8>(el8_1);
-                    el8_2 += v_rotate_left<8>(el8_2);
-                    el8_3 += v_rotate_left<8>(el8_3);
+                    el8_1 = v_add(el8_1, v_rotate_left<8>(el8_1));
+                    el8_2 = v_add(el8_2, v_rotate_left<8>(el8_2));
+                    el8_3 = v_add(el8_3, v_rotate_left<8>(el8_3));
 #endif
 #endif
                     v_int32 el4li_1, el4hi_1, el4li_2, el4hi_2, el4li_3, el4hi_3;
@@ -663,9 +663,9 @@ struct Integral_SIMD<uchar, float, double>
                     prev.val = _mm256_permute2f128_ps(el4h.val, el4h.val, 0x31);
 #else
 #if CV_SIMD_WIDTH >= 32
-                    el8 += v_rotate_left<4>(el8);
+                    el8 = v_add(el8, v_rotate_left<4>(el8));
 #if CV_SIMD_WIDTH == 64
-                    el8 += v_rotate_left<8>(el8);
+                    el8 = v_add(el8, v_rotate_left<8>(el8));
 #endif
 #endif
                     v_int32 el4li, el4hi;
@@ -678,7 +678,7 @@ struct Integral_SIMD<uchar, float, double>
                     prev = v_combine_high(el4h, el4h);
 #else
                     v_float32 t = v_rotate_right<12>(el4h);
-                    t |= v_rotate_left<4>(t);
+                    t = v_or(t, v_rotate_left<4>(t));
                     prev = v_combine_low(t, t);
 #endif
 #endif
@@ -770,9 +770,9 @@ struct Integral_SIMD<uchar, double, double>
                     el8 = v_add(el8, v_rotate_left<1>(el8));
                     el8 = v_add(el8, v_rotate_left<2>(el8));
 #if CV_SIMD_WIDTH >= 32
-                    el8 += v_rotate_left<4>(el8);
+                    el8 = v_add(el8, v_rotate_left<4>(el8));
 #if CV_SIMD_WIDTH == 64
-                    el8 += v_rotate_left<8>(el8);
+                    el8 = v_add(el8, v_rotate_left<8>(el8));
 #endif
 #endif
                     v_int32 el4li, el4hi;
@@ -843,11 +843,11 @@ struct Integral_SIMD<uchar, double, double>
                     el8_1 = v_add(el8_1, v_rotate_left<2>(el8_1));
                     el8_2 = v_add(el8_2, v_rotate_left<2>(el8_2));
 #if CV_SIMD_WIDTH >= 32
-                    el8_1 += v_rotate_left<4>(el8_1);
-                    el8_2 += v_rotate_left<4>(el8_2);
+                    el8_1 = v_add(el8_1, v_rotate_left<4>(el8_1));
+                    el8_2 = v_add(el8_2, v_rotate_left<4>(el8_2));
 #if CV_SIMD_WIDTH == 64
-                    el8_1 += v_rotate_left<8>(el8_1);
-                    el8_2 += v_rotate_left<8>(el8_2);
+                    el8_1 = v_add(el8_1, v_rotate_left<8>(el8_1));
+                    el8_2 = v_add(el8_2, v_rotate_left<8>(el8_2));
 #endif
 #endif
                     v_int32 el4li_1, el4hi_1, el4li_2, el4hi_2;
@@ -958,13 +958,13 @@ struct Integral_SIMD<uchar, double, double>
                     el8_2 = v_add(el8_2, v_rotate_left<2>(el8_2));
                     el8_3 = v_add(el8_3, v_rotate_left<2>(el8_3));
 #if CV_SIMD_WIDTH >= 32
-                    el8_1 += v_rotate_left<4>(el8_1);
-                    el8_2 += v_rotate_left<4>(el8_2);
-                    el8_3 += v_rotate_left<4>(el8_3);
+                    el8_1 = v_add(el8_1, v_rotate_left<4>(el8_1));
+                    el8_2 = v_add(el8_2, v_rotate_left<4>(el8_2));
+                    el8_3 = v_add(el8_3, v_rotate_left<4>(el8_3));
 #if CV_SIMD_WIDTH == 64
-                    el8_1 += v_rotate_left<8>(el8_1);
-                    el8_2 += v_rotate_left<8>(el8_2);
-                    el8_3 += v_rotate_left<8>(el8_3);
+                    el8_1 = v_add(el8_1, v_rotate_left<8>(el8_1));
+                    el8_2 = v_add(el8_2, v_rotate_left<8>(el8_2));
+                    el8_3 = v_add(el8_3, v_rotate_left<8>(el8_3));
 #endif
 #endif
                     v_int32 el4li_1, el4hi_1, el4li_2, el4hi_2, el4li_3, el4hi_3;
@@ -1058,9 +1058,9 @@ struct Integral_SIMD<uchar, double, double>
                     prev_1.val = prev_2.val = el4hh.val;
 #else
 #if CV_SIMD_WIDTH >= 32
-                    el8 += v_rotate_left<4>(el8);
+                    el8 = v_add(el8, v_rotate_left<4>(el8));
 #if CV_SIMD_WIDTH == 64
-                    el8 += v_rotate_left<8>(el8);
+                    el8 = v_add(el8, v_rotate_left<8>(el8));
 #endif
 #endif
                     v_int32 el4li, el4hi;
