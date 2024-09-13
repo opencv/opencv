@@ -13,7 +13,7 @@ Track::Track()
 }
 
 
-Track::Track(cv::Rect2f tlwh, int trackId, int classId, float score)
+Track::Track(const cv::Rect2f& tlwh, int trackId, int classId, float score)
 {
     rect = tlwh;
     classScore = score;

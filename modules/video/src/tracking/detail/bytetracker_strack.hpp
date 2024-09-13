@@ -14,49 +14,16 @@ namespace tracking {
 //! @addtogroup tracking_detail
 //! @{
 
-//TODO based on the original implementation
-//http://vision.ucsd.edu/~bbabenko/project_miltrack.shtml
+enum TrackState { NEW = 0, TRACKED, LOST};
 
-enum TrackState { NEW = 0, TRACKED, LOST}; //move this.
 
-/*
-class CV_EXPORTS ClfMilBoost
-{
-public:
-    struct CV_EXPORTS Params
-    {
-        Params();
-        int _numSel;
-        int _numFeat;
-        float _lRate;
-    };
-
-    ClfMilBoost();
-    ~ClfMilBoost();
-    void init(const ClfMilBoost::Params& parameters = ClfMilBoost::Params());
-    void update(const Mat& posx, const Mat& negx);
-    std::vector<float> classify(const Mat& x, bool logR = true);
-
-    inline float sigmoid(float x)
-    {
-        return 1.0f / (1.0f + exp(-x));
-    }
-
-private:
-    uint _numsamples;
-    ClfMilBoost::Params _myParams;
-    std::vector<int> _selectors;
-    std::vector<ClfOnlineStump*> _weakclf;
-    uint _counter;
-}; */
-
-class CV_EXPORTS_W Strack : public Track { //move to detail.
+class CV_EXPORTS_W Strack : public Track {
 public:
     Strack();
-    Strack(Rect2f tlwh, int classId, float score);
+    Strack(const Rect2f& tlwh, int classId, float score);
     int getId() const;
     cv::Rect2f getTlwh() const;
-    void setTlwh(cv::Rect2f tlwh);
+    void setTlwh(const cv::Rect2f& tlwh);
     TrackState getState() const;
     void setState(TrackState);
     int getClass();
@@ -82,8 +49,6 @@ private:
     cv::KalmanFilter kalmanFilter_;
 
 };
-
-
 
 //! @}
 

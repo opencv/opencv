@@ -91,8 +91,6 @@ ByteTracker::Params::Params()
     frameBuffer = 30;
 }
 
-
-
 class ByteTrackerImpl : public ByteTracker
 {
 public:
@@ -248,7 +246,7 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
     std::vector<int> detectionsIndex;
     std::map<int, int> matches;
 
-    matches = lapjv(dists); // returns a map of matched indexes (track,detection)
+    matches = this->lapjv(dists); // returns a map of matched indexes (track,detection)
 
     // Find unmatched track indexes
     for (

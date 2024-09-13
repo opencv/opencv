@@ -913,7 +913,7 @@ public:
     * \param classLabel Classification of the track (dog, car, person, etc.)
     * \param trackingId Track's ID number
     */
-    Track(Rect2f rect, int trackingId, int classLabel, float classScore);
+    Track(const Rect2f& rect, int trackingId, int classLabel, float classScore);
     Rect2f rect;
     float classScore;
     int classLabel; // static_cast<> ()
@@ -996,7 +996,7 @@ public:
     static CV_WRAP
     Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
 
-    bool update(InputArray inputDetections,CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
+    bool update(InputArray inputDetections, CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
 
     virtual void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE = 0;
 

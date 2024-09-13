@@ -25,7 +25,7 @@ Strack::~Strack()
     //nothing
 }
 
-Strack::Strack(cv::Rect2f tlwh,  int classId, float score)
+Strack::Strack(const cv::Rect2f& tlwh, int classId, float score)
 {
     rect = tlwh;
     classLabel = classId;
@@ -48,7 +48,7 @@ cv::Rect2f Strack::getTlwh() const
   return rect;
 }
 
-void Strack::setTlwh(cv::Rect2f tlwh)
+void Strack::setTlwh(const cv::Rect2f& tlwh)
 {
     rect = tlwh;
 }
