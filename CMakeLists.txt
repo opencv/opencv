@@ -121,13 +121,19 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ${ENABLE_PIC})
 ocv_cmake_hook(PRE_CMAKE_BOOTSTRAP)
 
 # Bootstrap CMake system: setup CMAKE_SYSTEM_NAME and other vars
+
+# workaround: https://gitlab.kitware.com/cmake/cmake/-/issues/20989
 if(OPENCV_WORKAROUND_CMAKE_20989)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP ${CMAKE_SYSTEM_PROCESSOR})
 endif()
-enable_language(CXX C)
+
+project(OpenCV CXX C)
+
 if(OPENCV_WORKAROUND_CMAKE_20989)
   set(CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR_BACKUP})
 endif()
+
+enable_testing()
 
 ocv_cmake_hook(POST_CMAKE_BOOTSTRAP)
 
@@ -139,7 +145,7 @@ if(NOT OPENCV_SKIP_CMAKE_SYSTEM_FILE)
 endif()
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)  # https://cmake.org/cmake/help/latest/variable/CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT.html
-  if(NOT CMAKE_TOOLCHAIN_FILE)
+  if(NOT CMAKE_CROSSCOMPILING)
     if(WIN32)
       set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory" FORCE)
     else()
@@ -151,10 +157,6 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)  # https://cmake.org/cmake/help/
   endif()
 endif()
 
-enable_testing()
-
-project(OpenCV CXX C)
-
 if(MSVC)
   set(CMAKE_USE_RELATIVE_PATHS ON CACHE INTERNAL "" FORCE)
 endif()
@@ -163,17 +165,19 @@ ocv_cmake_eval(DEBUG_PRE ONCE)
 
 ocv_clear_vars(OpenCVModules_TARGETS)
 
-include(cmake/OpenCVDownload.cmake)
-
-set(BUILD_LIST "" CACHE STRING "Build only listed modules (comma-separated, e.g. 'videoio,dnn,ts')")
-
 # ----------------------------------------------------------------------------
-# Break in case of popular CMake configuration mistakes
+#  Autodetect if we are in a GIT repository
 # ----------------------------------------------------------------------------
-if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
-  message(FATAL_ERROR "CMake fails to determine the bitness of the target platform.
-  Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
+find_host_package(Git QUIET)
+
+if(NOT DEFINED OPENCV_VCSVERSION AND GIT_FOUND)
+  ocv_git_describe(OPENCV_VCSVERSION "${OpenCV_SOURCE_DIR}")
+elseif(NOT DEFINED OPENCV_VCSVERSION)
+  # We don't have git:
+  set(OPENCV_VCSVERSION "unknown")
 endif()
+
+include(cmake/OpenCVDownload.cmake)
 
 # ----------------------------------------------------------------------------
 # Detect compiler and target platform architecture
@@ -181,52 +185,10 @@ endif()
 include(cmake/OpenCVDetectCXXCompiler.cmake)
 ocv_cmake_hook(POST_DETECT_COMPILER)
 
-# Add these standard paths to the search paths for FIND_LIBRARY
-# to find libraries from these locations first
-if(UNIX AND NOT ANDROID)
-  if(X86_64 OR CMAKE_SIZEOF_VOID_P EQUAL 8)
-    if(EXISTS /lib64)
-      list(APPEND CMAKE_LIBRARY_PATH /lib64)
-    else()
-      list(APPEND CMAKE_LIBRARY_PATH /lib)
-    endif()
-    if(EXISTS /usr/lib64)
-      list(APPEND CMAKE_LIBRARY_PATH /usr/lib64)
-    else()
-      list(APPEND CMAKE_LIBRARY_PATH /usr/lib)
-    endif()
-  elseif(X86 OR CMAKE_SIZEOF_VOID_P EQUAL 4)
-    if(EXISTS /lib32)
-      list(APPEND CMAKE_LIBRARY_PATH /lib32)
-    else()
-      list(APPEND CMAKE_LIBRARY_PATH /lib)
-    endif()
-    if(EXISTS /usr/lib32)
-      list(APPEND CMAKE_LIBRARY_PATH /usr/lib32)
-    else()
-      list(APPEND CMAKE_LIBRARY_PATH /usr/lib)
-    endif()
-  endif()
-endif()
-
-# Add these standard paths to the search paths for FIND_PATH
-# to find include files from these locations first
-if(MINGW)
-  if(EXISTS /mingw)
-      list(APPEND CMAKE_INCLUDE_PATH /mingw)
-  endif()
-  if(EXISTS /mingw32)
-      list(APPEND CMAKE_INCLUDE_PATH /mingw32)
-  endif()
-  if(EXISTS /mingw64)
-      list(APPEND CMAKE_INCLUDE_PATH /mingw64)
-  endif()
-endif()
-
 # ----------------------------------------------------------------------------
 # OpenCV cmake options
 # ----------------------------------------------------------------------------
-
+set(BUILD_LIST "" CACHE STRING "Build only listed modules (comma-separated, e.g. 'videoio,dnn,ts')")
 OCV_OPTION(OPENCV_ENABLE_NONFREE "Enable non-free algorithms" OFF)
 
 # 3rd party libs
@@ -248,7 +210,7 @@ OCV_OPTION(BUILD_ITT                "Build Intel ITT from source"
 
 # Optional 3rd party components
 # ===================================================
-OCV_OPTION(WITH_1394 "Include IEEE1394 support" ON
+OCV_OPTION(WITH_1394 "Include IEEE1394 support" OFF
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_DC1394_2)
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/visionOS/Mac)" ON
@@ -261,7 +223,7 @@ OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VERIFY HAVE_CAP_IOS)
 OCV_OPTION(WITH_CAROTENE "Use NVidia carotene acceleration library for ARM platform" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (ARM OR AARCH64) AND NOT IOS AND NOT XROS)
-OCV_OPTION(WITH_KLEIDICV "Use KleidiCV library for ARM platforms" OFF
+OCV_OPTION(WITH_KLEIDICV "Use KleidiCV library for ARM platforms" (ANDROID AND AARCH64 AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (AARCH64 AND (ANDROID OR UNIX AND NOT IOS AND NOT XROS)))
 OCV_OPTION(WITH_NDSRVP "Use Andes RVP extension" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF RISCV)
@@ -306,6 +268,10 @@ OCV_OPTION(WITH_GTK "Include GTK support" ON
 OCV_OPTION(WITH_GTK_2_X "Use GTK version 2" OFF
   VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
   VERIFY HAVE_GTK AND NOT HAVE_GTK3)
+OCV_OPTION(WITH_FRAMEBUFFER "Include framebuffer support" OFF
+  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID)
+OCV_OPTION(WITH_FRAMEBUFFER_XVFB "Include virtual framebuffer support" OFF
+  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID)
 OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
         VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
         VERIFY HAVE_WAYLAND)
@@ -547,10 +513,6 @@ OCV_OPTION(OPENCV_ENABLE_MEMORY_SANITIZER "Better support for memory/address san
 OCV_OPTION(ENABLE_OMIT_FRAME_POINTER  "Enable -fomit-frame-pointer for GCC"                      ON   IF CV_GCC )
 OCV_OPTION(ENABLE_POWERPC             "Enable PowerPC for GCC"                                   ON   IF (CV_GCC AND CMAKE_SYSTEM_PROCESSOR MATCHES powerpc.*) )
 OCV_OPTION(ENABLE_FAST_MATH           "Enable compiler options for fast math optimizations on FP computations (not recommended)" OFF)
-if(NOT IOS AND (NOT ANDROID OR OPENCV_ANDROID_USE_LEGACY_FLAGS) AND CMAKE_CROSSCOMPILING)  # Use CPU_BASELINE instead
-OCV_OPTION(ENABLE_NEON                "Enable NEON instructions"                                 (NEON OR ANDROID_ARM_NEON OR AARCH64) IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS OR XROS) )
-OCV_OPTION(ENABLE_VFPV3               "Enable VFPv3-D32 instructions"                            OFF  IF (CV_GCC OR CV_CLANG) AND (ARM OR AARCH64 OR IOS OR XROS) )
-endif()
 OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too noisy"             OFF )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 OCV_OPTION(ANDROID_EXAMPLES_WITH_LIBS "Build binaries of Android examples with native libraries" OFF  IF ANDROID )
@@ -657,19 +619,6 @@ ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV modules (can be ;-separated list of paths)")
 
 # ----------------------------------------------------------------------------
-#  Autodetect if we are in a GIT repository
-# ----------------------------------------------------------------------------
-find_host_package(Git QUIET)
-
-if(NOT DEFINED OPENCV_VCSVERSION AND GIT_FOUND)
-  ocv_git_describe(OPENCV_VCSVERSION "${OpenCV_SOURCE_DIR}")
-elseif(NOT DEFINED OPENCV_VCSVERSION)
-  # We don't have git:
-  set(OPENCV_VCSVERSION "unknown")
-endif()
-
-
-# ----------------------------------------------------------------------------
 # OpenCV compiler and linker options
 # ----------------------------------------------------------------------------
 
@@ -722,7 +671,13 @@ if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
 
     cmake_policy(SET CMP0092 NEW) # CMake 3.15+: leave warning flags out of default CMAKE_<LANG>_FLAGS flags.
     if(CMAKE_CUDA_COMPILER)
+      if(CMAKE_CUDA_ARCHITECTURES)
+        set(USER_DEFINED_CMAKE_CUDA_ARCHITECTURES TRUE)
+      endif()
       enable_language(CUDA)
+      if(NOT USER_DEFINED_CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES "")
+      endif()
     elseif(UNIX)
       message(WARNING "CUDA: Not detected!  If you are not using the default host compiler (g++) then you need to specify both CMAKE_CUDA_HOST_COMPILER and CMAKE_CUDA_COMPILER. e.g. -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/clang++ -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc.")
     endif()
@@ -763,7 +718,7 @@ if(UNIX OR MINGW)
     elseif(EMSCRIPTEN)
       # no need to link to system libs with emscripten
     elseif(QNXNTO)
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m)
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m regex)
     elseif(MINGW)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} pthread)
     else()
@@ -1008,15 +963,7 @@ foreach(hal ${OpenCV_HAL})
     if(";${CPU_BASELINE_FINAL};" MATCHES ";NEON;")
       add_subdirectory(3rdparty/carotene/hal)
       ocv_hal_register(CAROTENE_HAL_LIBRARIES CAROTENE_HAL_HEADERS CAROTENE_HAL_INCLUDE_DIRS)
-
-      if( NOT DEFINED CAROTENE_NEON_ARCH)
-          set(CAROTENE_NEON_MSG "Auto detected")
-      elseif( CAROTENE_NEON_ARCH GREATER 7)
-          set(CAROTENE_NEON_MSG "Force ARMv8+")
-      else()
-          set(CAROTENE_NEON_MSG "Force ARMv7")
-      endif()
-      list(APPEND OpenCV_USED_HAL "carotene (ver ${CAROTENE_HAL_VERSION}, ${CAROTENE_NEON_MSG})")
+      list(APPEND OpenCV_USED_HAL "carotene (ver ${CAROTENE_HAL_VERSION})")
     else()
       message(STATUS "Carotene: NEON is not available, disabling carotene...")
     endif()
@@ -1030,12 +977,16 @@ foreach(hal ${OpenCV_HAL})
       ocv_hal_register(NDSRVP_HAL_LIBRARIES NDSRVP_HAL_HEADERS NDSRVP_HAL_INCLUDE_DIRS)
       list(APPEND OpenCV_USED_HAL "ndsrvp (ver ${NDSRVP_HAL_VERSION})")
     else()
-      message(STATUS "NDSRVP: Andes GNU Toolchain DSP extension is not open, disabling ndsrvp...")
+      message(STATUS "NDSRVP: Andes GNU Toolchain DSP extension is not enabled, disabling ndsrvp...")
     endif()
   elseif(hal STREQUAL "halrvv")
+    if(";${CPU_BASELINE_FINAL};" MATCHES ";RVV;")
       add_subdirectory(3rdparty/hal_rvv/)
       ocv_hal_register(RVV_HAL_LIBRARIES RVV_HAL_HEADERS RVV_HAL_INCLUDE_DIRS)
       list(APPEND OpenCV_USED_HAL "HAL RVV (ver ${RVV_HAL_VERSION})")
+    else()
+      message(STATUS "HAL RVV: RVV is not available, disabling halrvv...")
+    endif()
   elseif(hal STREQUAL "openvx")
     add_subdirectory(3rdparty/openvx)
     ocv_hal_register(OPENVX_HAL_LIBRARIES OPENVX_HAL_HEADERS OPENVX_HAL_INCLUDE_DIRS)
@@ -1250,7 +1201,11 @@ if(CMAKE_GENERATOR MATCHES "Xcode|Visual Studio|Multi-Config")
 else()
   status("    Configuration:"  ${CMAKE_BUILD_TYPE})
 endif()
-
+if(DEFINED OPENCV_ALGO_HINT_DEFAULT)
+  status("    Algorithm Hint:"  ${OPENCV_ALGO_HINT_DEFAULT})
+else()
+  status("    Algorithm Hint:" " ALGO_HINT_ACCURATE")
+endif()
 
 # ========================= CPU code generation mode =========================
 status("")
@@ -1453,12 +1408,16 @@ if(WITH_GTK OR HAVE_GTK)
     status("    GTK+:" "YES (ver ${GTK3_VERSION})")
   elseif(HAVE_GTK)
     status("    GTK+:" "YES (ver ${GTK2_VERSION})")
+    status("      GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${GTKGLEXT_VERSION})" ELSE NO)
   else()
     status("    GTK+:" "NO")
   endif()
-  if(HAVE_GTK)
-    status(  "      GThread :" HAVE_GTHREAD THEN "YES (ver ${GTHREAD_VERSION})" ELSE NO)
-    status(  "      GtkGlExt:" HAVE_GTKGLEXT THEN "YES (ver ${GTKGLEXT_VERSION})" ELSE NO)
+endif()
+
+if(WITH_FRAMEBUFFER OR HAVE_FRAMEBUFFER)
+  status("    Framebuffer UI:" HAVE_FRAMEBUFFER THEN YES ELSE NO)
+  if(WITH_FRAMEBUFFER_XVFB OR HAVE_FRAMEBUFFER_XVFB)
+    status("    Virtual framebuffer UI:" HAVE_FRAMEBUFFER_XVFB THEN YES ELSE NO)
   endif()
 endif()
 

@@ -21,7 +21,7 @@ z_const char * const PREFIX(z_errmsg)[10] = {
 };
 
 const char PREFIX3(vstring)[] =
-    " zlib-ng 2.1.6";
+    " zlib-ng 2.2.1";
 
 #ifdef ZLIB_COMPAT
 const char * Z_EXPORT zlibVersion(void) {
@@ -108,52 +108,4 @@ void Z_INTERNAL *PREFIX(zcalloc)(void *opaque, unsigned items, unsigned size) {
 void Z_INTERNAL PREFIX(zcfree)(void *opaque, void *ptr) {
     Z_UNUSED(opaque);
     zng_free(ptr);
-}
-
-/* Since we support custom memory allocators, some which might not align memory as we expect,
- * we have to ask for extra memory and return an aligned pointer. */
-void Z_INTERNAL *PREFIX3(alloc_aligned)(zng_calloc_func zalloc, void *opaque, unsigned items, unsigned size, unsigned align) {
-    uintptr_t return_ptr, original_ptr;
-    uint32_t alloc_size, align_diff;
-    void *ptr;
-
-    /* If no custom calloc function used then call zlib-ng's aligned calloc */
-    if (zalloc == PREFIX(zcalloc))
-        return PREFIX(zcalloc)(opaque, items, size);
-
-    /* Allocate enough memory for proper alignment and to store the original memory pointer */
-    alloc_size = sizeof(void *) + (items * size) + align;
-    ptr = zalloc(opaque, 1, alloc_size);
-    if (!ptr)
-        return NULL;
-
-    /* Calculate return pointer address with space enough to store original pointer */
-    align_diff = align - ((uintptr_t)ptr % align);
-    return_ptr = (uintptr_t)ptr + align_diff;
-    if (align_diff < sizeof(void *))
-        return_ptr += align;
-
-    /* Store the original pointer for free() */
-    original_ptr = return_ptr - sizeof(void *);
-    memcpy((void *)original_ptr, &ptr, sizeof(void *));
-
-    /* Return properly aligned pointer in allocation */
-    return (void *)return_ptr;
-}
-
-void Z_INTERNAL PREFIX3(free_aligned)(zng_cfree_func zfree, void *opaque, void *ptr) {
-    /* If no custom cfree function used then call zlib-ng's aligned cfree */
-    if (zfree == PREFIX(zcfree)) {
-        PREFIX(zcfree)(opaque, ptr);
-        return;
-    }
-    if (!ptr)
-        return;
-
-    /* Calculate offset to original memory allocation pointer */
-    void *original_ptr = (void *)((uintptr_t)ptr - sizeof(void *));
-    void *free_ptr = *(void **)original_ptr;
-
-    /* Free original memory allocation */
-    zfree(opaque, free_ptr);
 }

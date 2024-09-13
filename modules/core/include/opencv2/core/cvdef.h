@@ -478,6 +478,7 @@ Cv64suf;
 #define CV_OUT
 #define CV_PROP
 #define CV_PROP_RW
+#define CV_ND // Indicates that input data should be parsed into Mat without channels
 #define CV_WRAP
 #define CV_WRAP_AS(synonym)
 #define CV_WRAP_MAPPABLE(mappable)
@@ -746,7 +747,11 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #    define __has_cpp_attribute(__x) 0
 #  endif
 #  if __has_cpp_attribute(nodiscard)
-#    define CV_NODISCARD_STD [[nodiscard]]
+#    if defined(__NVCC__) && __CUDACC_VER_MAJOR__ < 12
+#       define CV_NODISCARD_STD
+#    else
+#       define CV_NODISCARD_STD [[nodiscard]]
+#    endif
 #  elif __cplusplus >= 201703L
 //   available when compiler is C++17 compliant
 #    define CV_NODISCARD_STD [[nodiscard]]

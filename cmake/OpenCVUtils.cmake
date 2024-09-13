@@ -309,7 +309,11 @@ function(ocv_include_directories)
            dir MATCHES "/usr/include$")
       # workaround for GCC 6.x bug
     else()
-      include_directories(AFTER SYSTEM "${dir}")
+      if(${CMAKE_SYSTEM_NAME} MATCHES QNX)
+        include_directories(AFTER "${dir}")
+      else()
+        include_directories(AFTER SYSTEM "${dir}")
+      endif()
     endif()
   endforeach()
   include_directories(BEFORE ${__add_before})
@@ -1992,7 +1996,7 @@ macro(ocv_git_describe var_name path)
       OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     if(NOT GIT_RESULT EQUAL 0)
-      execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*" --exclude "[^-]*-cvsdk"
+      execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9]*.[0-9]*" --exclude "[^-]*-cvsdk"
         WORKING_DIRECTORY "${path}"
         OUTPUT_VARIABLE ${var_name}
         RESULT_VARIABLE GIT_RESULT

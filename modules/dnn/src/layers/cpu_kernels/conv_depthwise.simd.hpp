@@ -264,48 +264,48 @@ void fastDepthwiseConv( const float* wptr,
             if( stride_w == 1 )
                 for( ; out_j < outW1; out_j += vl, avl -= vl)
                 {
-                    vl = vsetvl_e32m8(avl);
+                    vl = __riscv_vsetvl_e32m8(avl);
                     int in_j = out_j * stride_w - pad_l;
-                    vfloat32m8_t vout0 = vfmacc_vf_f32m8(vfmv_v_f_f32m8(bias, vl), w00, vle32_v_f32m8(imgptr0 + in_j, vl), vl);
-                    vout0 = vfmacc_vf_f32m8(vout0, w01, vle32_v_f32m8(imgptr0 + in_j + dilation_w, vl), vl);
-                    vout0 = vfmacc_vf_f32m8(vout0, w02, vle32_v_f32m8(imgptr0 + in_j + dilation_w*2, vl), vl);
-                    vout0 = vfmacc_vf_f32m8(vout0, w10, vle32_v_f32m8(imgptr1 + in_j, vl),vl);
-                    vout0 = vfmacc_vf_f32m8(vout0, w11, vle32_v_f32m8(imgptr1 + in_j + dilation_w, vl),vl);
-                    vout0 = vfmacc_vf_f32m8(vout0, w12, vle32_v_f32m8(imgptr1 + in_j + dilation_w*2, vl),vl);
-                    vout0 = vfmacc_vf_f32m8(vout0, w20, vle32_v_f32m8(imgptr2 + in_j, vl), vl);
-                    vout0 = vfmacc_vf_f32m8(vout0, w21, vle32_v_f32m8(imgptr2 + in_j + dilation_w, vl), vl);
-                    vout0 = vfmacc_vf_f32m8(vout0, w22, vle32_v_f32m8(imgptr2 + in_j + dilation_w*2, vl), vl);
+                    vfloat32m8_t vout0 = __riscv_vfmacc_vf_f32m8(__riscv_vfmv_v_f_f32m8(bias, vl), w00, __riscv_vle32_v_f32m8(imgptr0 + in_j, vl), vl);
+                    vout0 = __riscv_vfmacc_vf_f32m8(vout0, w01, __riscv_vle32_v_f32m8(imgptr0 + in_j + dilation_w, vl), vl);
+                    vout0 = __riscv_vfmacc_vf_f32m8(vout0, w02, __riscv_vle32_v_f32m8(imgptr0 + in_j + dilation_w*2, vl), vl);
+                    vout0 = __riscv_vfmacc_vf_f32m8(vout0, w10, __riscv_vle32_v_f32m8(imgptr1 + in_j, vl),vl);
+                    vout0 = __riscv_vfmacc_vf_f32m8(vout0, w11, __riscv_vle32_v_f32m8(imgptr1 + in_j + dilation_w, vl),vl);
+                    vout0 = __riscv_vfmacc_vf_f32m8(vout0, w12, __riscv_vle32_v_f32m8(imgptr1 + in_j + dilation_w*2, vl),vl);
+                    vout0 = __riscv_vfmacc_vf_f32m8(vout0, w20, __riscv_vle32_v_f32m8(imgptr2 + in_j, vl), vl);
+                    vout0 = __riscv_vfmacc_vf_f32m8(vout0, w21, __riscv_vle32_v_f32m8(imgptr2 + in_j + dilation_w, vl), vl);
+                    vout0 = __riscv_vfmacc_vf_f32m8(vout0, w22, __riscv_vle32_v_f32m8(imgptr2 + in_j + dilation_w*2, vl), vl);
                     if (relu)
                     {
-                        vbool4_t m = vmfgt_vf_f32m8_b4(vout0, 0, vl);
-                        vout0 = vmerge_vvm_f32m8(m, vfmul_vf_f32m8(vout0, relu_coeff, vl), vout0, vl);
+                        vbool4_t m = __riscv_vmfgt_vf_f32m8_b4(vout0, 0, vl);
+                        vout0 = __riscv_vmerge_vvm_f32m8(__riscv_vfmul_vf_f32m8(vout0, relu_coeff, vl), vout0, m, vl);
                     }
-                    vse32_v_f32m8(outptr + out_j, vout0, vl);
+                    __riscv_vse32_v_f32m8(outptr + out_j, vout0, vl);
                 }
             else //stride_w == 2 && dilation_w == 1
                 for( ; out_j < outW1; out_j += vl, avl -= vl)
                 {
-                    vl = vsetvl_e32m2(avl);
+                    vl = __riscv_vsetvl_e32m2(avl);
                     int in_j = out_j * stride_w - pad_l;
-                    vfloat32m2_t vout0 = vfmacc_vf_f32m2(vfmv_v_f_f32m2(bias, vl), w00, vlse32_v_f32m2(imgptr0+in_j  , 8, vl), vl);
-                    vfloat32m2_t vout1 = vfmul_vf_f32m2(vlse32_v_f32m2(imgptr0+in_j+1, 8, vl), w01, vl);
-                    vfloat32m2_t vout2 = vfmul_vf_f32m2(vlse32_v_f32m2(imgptr0+in_j+2, 8, vl), w02, vl);
+                    vfloat32m2_t vout0 = __riscv_vfmacc_vf_f32m2(__riscv_vfmv_v_f_f32m2(bias, vl), w00, __riscv_vlse32_v_f32m2(imgptr0+in_j  , 8, vl), vl);
+                    vfloat32m2_t vout1 = __riscv_vfmul_vf_f32m2(__riscv_vlse32_v_f32m2(imgptr0+in_j+1, 8, vl), w01, vl);
+                    vfloat32m2_t vout2 = __riscv_vfmul_vf_f32m2(__riscv_vlse32_v_f32m2(imgptr0+in_j+2, 8, vl), w02, vl);
 
-                    vout0 = vfmacc_vf_f32m2(vout0, w10, vlse32_v_f32m2(imgptr1+in_j  , 8, vl), vl);
-                    vout1 = vfmacc_vf_f32m2(vout1, w11, vlse32_v_f32m2(imgptr1+in_j+1, 8, vl), vl);
-                    vout2 = vfmacc_vf_f32m2(vout2, w12, vlse32_v_f32m2(imgptr1+in_j+2, 8, vl), vl);
+                    vout0 = __riscv_vfmacc_vf_f32m2(vout0, w10, __riscv_vlse32_v_f32m2(imgptr1+in_j  , 8, vl), vl);
+                    vout1 = __riscv_vfmacc_vf_f32m2(vout1, w11, __riscv_vlse32_v_f32m2(imgptr1+in_j+1, 8, vl), vl);
+                    vout2 = __riscv_vfmacc_vf_f32m2(vout2, w12, __riscv_vlse32_v_f32m2(imgptr1+in_j+2, 8, vl), vl);
 
-                    vout0 = vfmacc_vf_f32m2(vout0, w20, vlse32_v_f32m2(imgptr2+in_j  , 8, vl), vl);
-                    vout1 = vfmacc_vf_f32m2(vout1, w21, vlse32_v_f32m2(imgptr2+in_j+1, 8, vl), vl);
-                    vout2 = vfmacc_vf_f32m2(vout2, w22, vlse32_v_f32m2(imgptr2+in_j+2, 8, vl), vl);
+                    vout0 = __riscv_vfmacc_vf_f32m2(vout0, w20, __riscv_vlse32_v_f32m2(imgptr2+in_j  , 8, vl), vl);
+                    vout1 = __riscv_vfmacc_vf_f32m2(vout1, w21, __riscv_vlse32_v_f32m2(imgptr2+in_j+1, 8, vl), vl);
+                    vout2 = __riscv_vfmacc_vf_f32m2(vout2, w22, __riscv_vlse32_v_f32m2(imgptr2+in_j+2, 8, vl), vl);
 
-                    vout0 = vfadd_vv_f32m2(vfadd_vv_f32m2(vout0, vout1, vl), vout2, vl);
+                    vout0 = __riscv_vfadd_vv_f32m2(__riscv_vfadd_vv_f32m2(vout0, vout1, vl), vout2, vl);
                     if (relu)
                     {
-                        vbool16_t m = vmfgt_vf_f32m2_b16(vout0, 0, vl);
-                        vout0 = vmerge_vvm_f32m2(m, vfmul_vf_f32m2(vout0, relu_coeff, vl), vout0, vl);
+                        vbool16_t m = __riscv_vmfgt_vf_f32m2_b16(vout0, 0, vl);
+                        vout0 = __riscv_vmerge_vvm_f32m2(__riscv_vfmul_vf_f32m2(vout0, relu_coeff, vl), vout0, m, vl);
                     }
-                    vse32_v_f32m2(outptr + out_j, vout0, vl);
+                    __riscv_vse32_v_f32m2(outptr + out_j, vout0, vl);
                 }
         }
 

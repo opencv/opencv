@@ -1,0 +1,148 @@
+--- ./CMakeLists.txt	2024-09-11 12:28:30.597680661 +0300
++++ ../../../zlib-ng/CMakeLists.txt	2024-09-11 12:29:10.013644583 +0300
+@@ -74,10 +74,10 @@
+ # Options parsing
+ #
+ option(WITH_GZFILEOP "Compile with support for gzFile related functions" ON)
+-option(ZLIB_COMPAT "Compile with zlib compatible API" ON)
+-option(ZLIB_ENABLE_TESTS "Build test binaries" OFF)
+-option(ZLIBNG_ENABLE_TESTS "Test zlib-ng specific API" OFF)
+-option(WITH_GTEST "Build gtest_zlib" OFF)
++option(ZLIB_COMPAT "Compile with zlib compatible API" OFF)
++option(ZLIB_ENABLE_TESTS "Build test binaries" ON)
++option(ZLIBNG_ENABLE_TESTS "Test zlib-ng specific API" ON)
++option(WITH_GTEST "Build gtest_zlib" ON)
+ option(WITH_FUZZERS "Build test/fuzz" OFF)
+ option(WITH_BENCHMARKS "Build test/benchmarks" OFF)
+ option(WITH_BENCHMARK_APPS "Build application benchmarks" OFF)
+@@ -128,11 +128,6 @@
+ 
+ option(INSTALL_UTILS "Copy minigzip and minideflate during install" OFF)
+ 
+-set(ZLIB_BUILD_SHARED_LIBS OFF)
+-set(SKIP_INSTALL_ALL ON)
+-ocv_warnings_disable(CMAKE_C_FLAGS -Wmissing-prototypes -Wmissing-declarations -Wundef -Wstrict-prototypes -Wtype-limits)
+-ocv_warnings_disable(CMAKE_C_FLAGS /wd4819 /wd4244 /wd4334)
+-
+ mark_as_advanced(FORCE
+     ZLIB_SYMBOL_PREFIX
+     WITH_REDUCED_MEM
+@@ -1147,22 +1142,21 @@
+     list(APPEND ZLIB_ALL_SRCS ${ZLIB_GZFILE_PRIVATE_HDRS} ${ZLIB_GZFILE_SRCS})
+ endif()
+ 
+-if(NOT DEFINED ZLIB_BUILD_SHARED_LIBS OR ZLIB_BUILD_SHARED_LIBS)
++if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
+     set(ZLIB_DLL_SRCS win32/zlib${SUFFIX}1.rc)
+ endif()
+ 
+-if(NOT DEFINED ZLIB_BUILD_SHARED_LIBS)
++if(NOT DEFINED BUILD_SHARED_LIBS)
+     add_library(zlib SHARED ${ZLIB_ALL_SRCS} ${ZLIB_DLL_SRCS})
+     add_library(zlibstatic STATIC ${ZLIB_ALL_SRCS})
+ 
+     set(ZLIB_INSTALL_LIBRARIES zlib zlibstatic)
+ else()
++    add_library(zlib ${ZLIB_ALL_SRCS})
+ 
+-    if(ZLIB_BUILD_SHARED_LIBS)
+-        add_library(zlib SHARED ${ZLIB_ALL_SRCS} ${ZLIB_DLL_SRCS})
++    if(BUILD_SHARED_LIBS)
+         target_sources(zlib PRIVATE ${ZLIB_DLL_SRCS})
+     else()
+-        add_library(zlib STATIC ${ZLIB_ALL_SRCS})
+         add_library(zlibstatic ALIAS zlib)
+     endif()
+ 
+@@ -1195,17 +1189,17 @@
+ 
+ if(WIN32)
+     # Shared library
+-    if(NOT DEFINED ZLIB_BUILD_SHARED_LIBS OR ZLIB_BUILD_SHARED_LIBS)
++    if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
+         set_target_properties(zlib PROPERTIES OUTPUT_NAME zlib${SUFFIX})
+     endif()
+     # Static library
+-    if(NOT DEFINED ZLIB_BUILD_SHARED_LIBS)
++    if(NOT DEFINED BUILD_SHARED_LIBS)
+         if(MSVC)
+             set_target_properties(zlibstatic PROPERTIES OUTPUT_NAME zlibstatic${SUFFIX})
+         else()
+             set_target_properties(zlibstatic PROPERTIES OUTPUT_NAME z${SUFFIX})
+         endif()
+-    elseif(NOT ZLIB_BUILD_SHARED_LIBS)
++    elseif(NOT BUILD_SHARED_LIBS)
+         if(MSVC)
+             set_target_properties(zlib PROPERTIES OUTPUT_NAME zlibstatic${SUFFIX})
+         else()
+@@ -1217,7 +1211,7 @@
+     set_target_properties(${ZLIB_INSTALL_LIBRARIES} PROPERTIES OUTPUT_NAME z${SUFFIX})
+ endif()
+ 
+-if(NOT DEFINED ZLIB_BUILD_SHARED_LIBS OR ZLIB_BUILD_SHARED_LIBS)
++if(NOT DEFINED BUILD_SHARED_LIBS OR BUILD_SHARED_LIBS)
+     set_target_properties(zlib PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
+ 
+     if(ZLIB_COMPAT)
+@@ -1277,6 +1271,8 @@
+ if(WITH_GZFILEOP)
+     set(PKG_CONFIG_CFLAGS "-DWITH_GZFILEOP")
+ endif()
++configure_file(${CMAKE_CURRENT_SOURCE_DIR}/zlib.pc.cmakein
++    ${ZLIB_PC} @ONLY)
+ configure_file(${CMAKE_CURRENT_BINARY_DIR}/zconf${SUFFIX}.h.cmakein
+     ${CMAKE_CURRENT_BINARY_DIR}/zconf${SUFFIX}.h @ONLY)
+ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/zlib${SUFFIX}.h.in
+@@ -1326,6 +1322,17 @@
+        set(PACKAGE_CONFIGNAME zlib-ng)
+        set(PACKAGE_VERSION ${ZLIBNG_HEADER_VERSION})
+     endif()
++    configure_package_config_file(${PACKAGE_CONFIGNAME}-config.cmake.in
++        ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_CONFIGNAME}-config.cmake
++        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${EXPORT_NAME}
++        PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR)
++    write_basic_package_version_file(
++        ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_CONFIGNAME}-config-version.cmake
++        VERSION ${PACKAGE_VERSION}
++        COMPATIBILITY AnyNewerVersion)
++    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_CONFIGNAME}-config.cmake
++                  ${CMAKE_CURRENT_BINARY_DIR}/${PACKAGE_CONFIGNAME}-config-version.cmake
++        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${EXPORT_NAME})
+ endif()
+ 
+ #============================================================================
+@@ -1335,7 +1342,7 @@
+ if(ZLIB_ENABLE_TESTS)
+     enable_testing()
+ 
+-    if(ZLIB_BUILD_SHARED_LIBS)
++    if(BUILD_SHARED_LIBS)
+         if(ZLIBNG_ENABLE_TESTS)
+             message(STATUS "Disabling zlib-ng tests because shared libraries are enabled")
+             set(ZLIBNG_ENABLE_TESTS OFF)
+@@ -1399,12 +1406,19 @@
+ 
+ FEATURE_SUMMARY(WHAT ALL INCLUDE_QUIET_PACKAGES)
+ 
+-if(ENABLE_SOLUTION_FOLDERS)
+-  set_target_properties(${ZLIB_INSTALL_LIBRARIES} PROPERTIES FOLDER "3rdparty")
+-endif()
++#============================================================================
++# CPack
++#============================================================================
++set(CPACK_GENERATOR "TGZ")
++set(CPACK_SOURCE_GENERATOR "TGZ")
++set(CPACK_SOURCE_IGNORE_FILES .git/ _CPack_Packages/ "${PROJECT_BINARY_DIR}/")
++
++set(CPACK_PACKAGE_NAME "zlib${SUFFIX}")
++set(CPACK_PACKAGE_VERSION ${ZLIB_FULL_VERSION})
++set(CPACK_PACKAGE_DIRECTORY "${PROJECT_BINARY_DIR}/package")
+ 
+-if(NOT BUILD_SHARED_LIBS)
+-  ocv_install_target(${ZLIB_INSTALL_LIBRARIES} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
++if("${PROJECT_BINARY_DIR}" STREQUAL "${PROJECT_SOURCE_DIR}")
++    message(WARNING "Building to source folder is not recommended. Cpack will be unable to generate source package.")
+ endif()
+ 
+-ocv_install_3rdparty_licenses(${ZLIB_INSTALL_LIBRARIES} LICENSE.md)
++include(CPack)

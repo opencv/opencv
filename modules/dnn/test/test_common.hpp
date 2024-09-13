@@ -211,7 +211,7 @@ public:
             if ((!l->supportBackend(backend) || l->preferableTarget != target) && !fused)
             {
                 hasFallbacks = true;
-                std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to has backend implementation" << endl;
+                std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to have backend implementation" << endl;
             }
         }
         if (hasFallbacks && raiseError)

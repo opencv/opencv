@@ -89,8 +89,13 @@
 //
 
 apply plugin: 'com.android.library'
-apply plugin: 'maven-publish'
-@KOTLIN_PLUGIN_DECLARATION@
+@MAVEN_PUBLISH_PLUGIN_DECLARATION@
+try {
+    @KOTLIN_PLUGIN_DECLARATION@
+    println "Configure OpenCV with Kotlin"
+} catch (Exception e) {
+    println "Configure OpenCV without Kotlin"
+}
 
 def openCVersionName = "@OPENCV_VERSION@"
 def openCVersionCode = ((@OPENCV_VERSION_MAJOR@ * 100 + @OPENCV_VERSION_MINOR@) * 100 + @OPENCV_VERSION_PATCH@) * 10 + 0
@@ -115,12 +120,7 @@ android {
             }
         }
     }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_@ANDROID_GRADLE_JAVA_VERSION_INIT@
-        targetCompatibility JavaVersion.VERSION_@ANDROID_GRADLE_JAVA_VERSION_INIT@
-    }
-
+    @BUILD_GRADLE_COMPILE_OPTIONS@
     buildTypes {
         debug {
             packagingOptions {
@@ -136,29 +136,12 @@ android {
         }
     }
 
-    buildFeatures {
-        prefabPublishing true
-        buildConfig true
-    }
-    prefab {
-        opencv_jni_shared {
-            headers "native/jni/include"
-        }
-    }
-
     sourceSets {
         main {
-            jniLibs.srcDirs = ['native/libs']
-            java.srcDirs = ['java/src']
-            res.srcDirs = ['java/res']
-            manifest.srcFile 'java/AndroidManifest.xml'
-        }
-    }
-
-    publishing {
-        singleVariant('release') {
-            withSourcesJar()
-            withJavadocJar()
+            jniLibs.srcDirs = [@SOURSE_SETS_JNI_LIBS_SRC_DIRS@]
+            java.srcDirs = [@SOURSE_SETS_JAVA_SRC_DIRS@]
+            res.srcDirs = [@SOURSE_SETS_RES_SRC_DIRS@]
+            manifest.srcFile @SOURSE_SETS_MANIFEST_SRC_FILE@
         }
     }
 
@@ -167,27 +150,8 @@ android {
             path (project.projectDir.toString() + '/libcxx_helper/CMakeLists.txt')
         }
     }
+    @BUILD_GRADLE_ANDROID_PUBLISHING_CONFIG@
 }
-
-publishing {
-    publications {
-        release(MavenPublication) {
-            groupId = 'org.opencv'
-            artifactId = 'opencv'
-            version = '@OPENCV_VERSION_PLAIN@'
-
-            afterEvaluate {
-               from components.release
-           }
-        }
-    }
-    repositories {
-        maven {
-            name = 'myrepo'
-            url = "${project.buildDir}/repo"
-        }
-    }
-}
-
+@BUILD_GRADLE_PUBLISHING_CONFIG@
 dependencies {
 }

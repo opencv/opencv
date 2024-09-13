@@ -43,10 +43,15 @@ int32_t ZNG_CONDEXPORT PREFIX(inflateBackInit)(PREFIX3(stream) *strm, int32_t wi
     }
     if (strm->zfree == NULL)
         strm->zfree = PREFIX(zcfree);
-    state = ZALLOC_INFLATE_STATE(strm);
-    if (state == NULL)
+
+    inflate_allocs *alloc_bufs = alloc_inflate(strm);
+    if (alloc_bufs == NULL)
         return Z_MEM_ERROR;
+
+    state = alloc_bufs->state;
+    state->alloc_bufs = alloc_bufs;
     Tracev((stderr, "inflate: allocated\n"));
+
     strm->state = (struct internal_state *)state;
     state->dmax = 32768U;
     state->wbits = (unsigned int)windowBits;
@@ -55,7 +60,7 @@ int32_t ZNG_CONDEXPORT PREFIX(inflateBackInit)(PREFIX3(stream) *strm, int32_t wi
     state->wnext = 0;
     state->whave = 0;
     state->sane = 1;
-    state->chunksize = functable.chunksize();
+    state->chunksize = FUNCTABLE_CALL(chunksize)();
     return Z_OK;
 }
 
@@ -357,7 +362,7 @@ int32_t Z_EXPORT PREFIX(inflateBack)(PREFIX3(stream) *strm, in_func in, void *in
                 RESTORE();
                 if (state->whave < state->wsize)
                     state->whave = state->wsize - left;
-                functable.inflate_fast(strm, state->wsize);
+                FUNCTABLE_CALL(inflate_fast)(strm, state->wsize);
                 LOAD();
                 break;
             }
@@ -504,8 +509,10 @@ int32_t Z_EXPORT PREFIX(inflateBack)(PREFIX3(stream) *strm, in_func in, void *in
 int32_t Z_EXPORT PREFIX(inflateBackEnd)(PREFIX3(stream) *strm) {
     if (strm == NULL || strm->state == NULL || strm->zfree == NULL)
         return Z_STREAM_ERROR;
-    ZFREE_STATE(strm, strm->state);
-    strm->state = NULL;
+
+    /* Free allocated buffers */
+    free_inflate(strm);
+
     Tracev((stderr, "inflate: end\n"));
     return Z_OK;
 }

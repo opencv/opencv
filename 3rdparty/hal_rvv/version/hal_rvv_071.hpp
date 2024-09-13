@@ -5,6 +5,8 @@
 #ifndef OPENCV_HAL_RVV_071_HPP_INCLUDED
 #define OPENCV_HAL_RVV_071_HPP_INCLUDED
 
+#include <riscv_vector.h>
+
 #include <limits>
 
 namespace cv { namespace cv_hal_rvv {
