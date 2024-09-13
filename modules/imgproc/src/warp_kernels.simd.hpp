@@ -739,7 +739,7 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
                 sx -= ix; sy -= iy;
                 int p00r, p00g, p00b, p00a, p01r, p01g, p01b, p01a;
                 int p10r, p10g, p10b, p10a, p11r, p11g, p11b, p11a;
-                const uint8_t* srcptr = src + srcstep*iy + ix*3;
+                const uint8_t* srcptr = src + srcstep*iy + ix*4;
 
                 CV_WARP_LINEAR_SCALAR_SHUFFLE(C4);
 
@@ -774,11 +774,11 @@ void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, in
             saturate_cast<uint16_t>(border_value[3]),
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
-                           border_type != BORDER_TRANSPARENT &&
-                           src_cols <= 1 ? BORDER_REPLICATE : border_type;
+                            border_type != BORDER_TRANSPARENT &&
+                            srccols <= 1 ? BORDER_REPLICATE : border_type;
         int border_type_y = border_type != BORDER_CONSTANT &&
-                           border_type != BORDER_TRANSPARENT &&
-                           src_rows <= 1 ? BORDER_REPLICATE : border_type;
+                            border_type != BORDER_TRANSPARENT &&
+                            srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
@@ -889,11 +889,11 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
             saturate_cast<uint16_t>(border_value[3]),
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
-                           border_type != BORDER_TRANSPARENT &&
-                           src_cols <= 1 ? BORDER_REPLICATE : border_type;
+                            border_type != BORDER_TRANSPARENT &&
+                            srccols <= 1 ? BORDER_REPLICATE : border_type;
         int border_type_y = border_type != BORDER_CONSTANT &&
-                           border_type != BORDER_TRANSPARENT &&
-                           src_rows <= 1 ? BORDER_REPLICATE : border_type;
+                            border_type != BORDER_TRANSPARENT &&
+                            srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
@@ -1009,11 +1009,11 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
             saturate_cast<uint16_t>(border_value[3]),
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
-                           border_type != BORDER_TRANSPARENT &&
-                           src_cols <= 1 ? BORDER_REPLICATE : border_type;
+                            border_type != BORDER_TRANSPARENT &&
+                            srccols <= 1 ? BORDER_REPLICATE : border_type;
         int border_type_y = border_type != BORDER_CONSTANT &&
-                           border_type != BORDER_TRANSPARENT &&
-                           src_rows <= 1 ? BORDER_REPLICATE : border_type;
+                            border_type != BORDER_TRANSPARENT &&
+                            srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
@@ -1131,10 +1131,10 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
-                            src_cols <= 1 ? BORDER_REPLICATE : border_type;
+                            srccols <= 1 ? BORDER_REPLICATE : border_type;
         int border_type_y = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
-                            src_rows <= 1 ? BORDER_REPLICATE : border_type;
+                            srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
@@ -1244,10 +1244,10 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
-                            src_cols <= 1 ? BORDER_REPLICATE : border_type;
+                            srccols <= 1 ? BORDER_REPLICATE : border_type;
         int border_type_y = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
-                            src_rows <= 1 ? BORDER_REPLICATE : border_type;
+                            srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
@@ -1364,10 +1364,10 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
         };
         int border_type_x = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
-                            src_cols <= 1 ? BORDER_REPLICATE : border_type;
+                            srccols <= 1 ? BORDER_REPLICATE : border_type;
         int border_type_y = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
-                            src_rows <= 1 ? BORDER_REPLICATE : border_type;
+                            srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
