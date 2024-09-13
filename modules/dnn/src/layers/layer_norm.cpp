@@ -63,6 +63,9 @@ public:
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        int noutputs = requiredOutputs > 0 ? requiredOutputs : (int)this->outputs.size();
+        CV_Assert(noutputs == 1 || noutputs == 3);
+
         // check shapes of weight and bias if existed
         // inputs >= 2 (X and Weight are required, bias is optional)
         int num_inputs = inputs.size() + blobs.size();
@@ -89,7 +92,18 @@ public:
                 CV_CheckEQ(w_shape[i], b_shape[i], "LayerNorm: bias dimensions does not match with weight dimensions");
         }
 
-        outputs.assign(1, inputs[0]);
+        outputs.resize(noutputs, inputs[0]);
+
+        /*
+            even though OpenCV currently does not compute the other outputs
+            of LayerNormalization op, we correctly compute their shapes,
+            according to the specs:
+            https://onnx.ai/onnx/operators/onnx__LayerNormalization.html
+        */
+        for (int i = 1; i < noutputs; i++) {
+            for (int j = axis_; j < x_ndims; j++)
+                outputs[i][j] = 1;
+        }
         return false;
     }
 

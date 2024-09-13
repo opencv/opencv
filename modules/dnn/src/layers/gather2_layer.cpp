@@ -109,11 +109,11 @@ public:
         MatShape outShape(dataDims + indDims - 1);
 
         for (int i = 0; i < outShape.dims; i++) {
-            if (i < indDims) {
-                outShape[i] = indShape[i];
+            if (i < axis_) {
+                outShape[i] = dataShape[i];
             } else {
-                int j = i - indDims;
-                outShape[i] = dataShape[j < axis ? j : j+1];
+                int j = i - axis_;
+                outShape[i] = j < indDims ? indShape[j] : dataShape[i - indDims + 1];
             }
         }
         return outShape;

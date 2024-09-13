@@ -31,9 +31,13 @@ namespace dnn
    the dimensionality in inp and out.
 */
 static void slice(const Mat& inp, const int* starts_,
-                  const int* ends_, const int* steps_,
+                  const int*, const int* steps_,
                   Mat& out)
 {
+    /// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    /// in this function steps can be negative, so
+    /// please don't replace int64_t's with size_t's
+    /// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     enum {SLICE_MAX_DIMS=7};
 
     CV_Assert_N(inp.isContinuous(), out.isContinuous());
@@ -42,13 +46,12 @@ static void slice(const Mat& inp, const int* starts_,
 
     MatShape inpShape = inp.shape();
     MatShape outShape = out.shape();
-    int type = inp.type();
-    size_t esz = inp.elemSize();
+    int64_t esz = (int64_t)inp.elemSize();
 
     int ndims = inpShape.dims;
-    int starts[SLICE_MAX_DIMS], ends[SLICE_MAX_DIMS], steps[SLICE_MAX_DIMS];
+    int starts[SLICE_MAX_DIMS], steps[SLICE_MAX_DIMS];
     int inpsz[SLICE_MAX_DIMS], outsz[SLICE_MAX_DIMS];
-    size_t inpstep[SLICE_MAX_DIMS];
+    int64_t inpstep[SLICE_MAX_DIMS];
 
     int delta = SLICE_MAX_DIMS - ndims;
     bool emptyOut = false;
@@ -56,12 +59,13 @@ static void slice(const Mat& inp, const int* starts_,
     for (int i = 0; i < SLICE_MAX_DIMS; i++) {
         inpsz[i] = outsz[i] = steps[i] = 1;
         starts[i] = 0;
-        ends[i] = INT_MAX;
     }
 
     for (int i = 0; i < ndims; i++) {
         inpsz[delta + i] = inpShape[i];
         outsz[delta + i] = outShape[i];
+        starts[delta + i] = starts_[i];
+        steps[delta + i] = steps_[i];
         if (outShape[i] == 0)
             emptyOut = true;
     }
@@ -79,9 +83,9 @@ static void slice(const Mat& inp, const int* starts_,
     int sz0 = outsz[6], sz1 = outsz[5];
     int sz2 = outsz[4], sz3 = outsz[3];
     int sz4 = outsz[2], sz5 = outsz[1], sz6 = outsz[0];
-    size_t p0 = inpstep[6], p1 = inpstep[5];
-    size_t p2 = inpstep[4], p3 = inpstep[3];
-    size_t p4 = inpstep[2], p5 = inpstep[1], p6 = inpstep[0];
+    int64_t p0 = inpstep[6], p1 = inpstep[5];
+    int64_t p2 = inpstep[4], p3 = inpstep[3];
+    int64_t p4 = inpstep[2], p5 = inpstep[1], p6 = inpstep[0];
 
     #undef CV_IMPLEMENT_SLICE
     #define CV_IMPLEMENT_SLICE(typ) \
@@ -101,7 +105,7 @@ static void slice(const Mat& inp, const int* starts_,
             } \
             else { \
                 for (; i0 <= sz0 - 4; i0 += 4) { \
-                    size_t ip0 = i0*p0; \
+                    int64_t ip0 = i0*p0; \
                     typ t0 = inptr[ip0], t1 = inptr[ip0 + p0]; \
                     typ t2 = inptr[ip0 + p0*2], t3 = inptr[ip0 + p0*3]; \
                     outptr[i0] = t0; outptr[i0+1] = t1; \

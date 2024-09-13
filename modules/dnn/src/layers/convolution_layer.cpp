@@ -117,11 +117,11 @@ public:
 
         CV_Assert((inputs.size() > outputs.size() && blobs.empty()) ||
                   (!inputs.empty() && (blobs.size() == 1 || blobs.size() == 2)));
-        MatSize weightShape = blobs.empty() ? inputs[1].size : blobs[0].size;
+        MatShape weightShape = blobs.empty() ? inputs[1].shape() : blobs[0].shape();
         numOutput = weightShape[0];
 
         CV_Assert(inputs[0].dims == outputs[0].dims);
-        if (weightShape.dims() == 3)
+        if (weightShape.dims == 3)
         {
             kernel_size.resize(1, kernel_size[0]);
             strides.resize(1, strides[0]);
@@ -129,7 +129,7 @@ public:
             pads_begin.resize(1, pads_begin[0]);
             pads_end.resize(1, pads_end[0]);
         }
-        CV_Assert(weightShape.dims() == kernel_size.size() + 2);
+        CV_Assert(weightShape.dims == kernel_size.size() + 2);
         for (int i = 0; i < kernel_size.size(); i++) {
             CV_Assert(weightShape[i + 2] == kernel_size[i]);
         }
@@ -1369,10 +1369,15 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert(!hasBias() || blobs[1].total() == (size_t)numOutput);
+        //CV_Assert(!hasBias() || blobs[1].total() == (size_t)numOutput);
         CV_Assert(inputs.size() != 0);
 
         int outCn = numOutput;
+        if (outCn < 0) {
+            CV_Assert(inputs.size() > 1 || !blobs.empty());
+            MatShape weightShape = blobs.empty() ? inputs[1] : blobs[0].shape();
+            outCn = weightShape[1];
+        }
         std::vector<int> outShape;
         outShape.push_back(inputs[0][0]);  // batch
         outShape.push_back(outCn);
@@ -1417,6 +1422,11 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        CV_Assert(inputs.size() > 1 || !blobs.empty());
+
+        MatShape weightShape = blobs.empty() ? inputs[1].shape() : blobs[0].shape();
+        numOutput = weightShape[1];
+
         std::vector<int> inpShape;
         std::vector<int> outShape;
         for (int i = 2; i < inputs[0].dims; i++) {
@@ -1433,10 +1443,12 @@ public:
         }
 
         weightsMultipliers.assign(numOutput, 1.0);
+
         if (weightsMat.empty())
         {
             transpose(blobs[0].reshape(1, blobs[0].size[0]), weightsMat);
-            biasesMat = hasBias() ? blobs[1].reshape(1, numOutput)
+            bool constBias = blobs.size() >= 2;
+            biasesMat = constBias ? blobs[1].reshape(1, numOutput)
                                   : Mat::zeros(numOutput, 1, CV_32F);
         }
     }
@@ -1861,10 +1873,14 @@ public:
         bool is1x1flag = is1x1();
         int nstripes = getNumThreads();
 
-        if( weightsMat.empty() )
-        {
-            transpose(blobs[0].reshape(1, inpCn), weightsMat);
-            biasesMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat::zeros(outCn, 1, CV_32F);
+        if( weightsMat.empty() ) {
+            Mat inpWeights = !blobs.empty() ? blobs[0] : inputs[1];
+            transpose(inpWeights.reshape(1, inpCn), weightsMat);
+        }
+
+        if (biasesMat.empty()) {
+            Mat inpBias = blobs.size() >= 2 ? blobs[1] : inputs.size() >= 3 ? inputs[2] : Mat();
+            biasesMat = !inpBias.empty() ? inpBias.reshape(1, outCn) : Mat::zeros(outCn, 1, CV_32F);
         }
 
         for (size_t ii = 0; ii < outputs.size(); ii++)

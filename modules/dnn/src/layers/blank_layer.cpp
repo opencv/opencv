@@ -78,7 +78,9 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
+        CV_Assert(!inputs.empty());
+        outputs.assign(std::max(requiredOutputs, 1), inputs[0]);
+        internals.clear();
         return true;
     }
 
@@ -88,11 +90,9 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size());
-        outputs = inputs;
-        if (requiredOutputs > (int)inputs.size()) {
-            outputs.resize(requiredOutputs, inputs[0]);
-        }
+        CV_Assert(!inputs.empty());
+        outputs.assign(std::max(requiredOutputs, 1), inputs[0]);
+        internals.clear();
     }
 
 

@@ -167,6 +167,23 @@ size_t MatShape::total() const
     return result;
 }
 
+std::string MatShape::str() const
+{
+    std::stringstream sstrm;
+    if (empty()) {
+        sstrm << "<empty>";
+    } else if (dims == 0) {
+        sstrm << "<scalar>";
+    } else {
+        sstrm << "[";
+        for (int i = 0; i < dims; i++) {
+            sstrm << (i > 0 ? " x " : "") << p[i];
+        }
+        sstrm << "]";
+    }
+    return sstrm.str();
+}
+
 static void finalizeBlockLayout(MatShape& size, int C=0)
 {
     if (size.layout == DATA_LAYOUT_BLOCK) {
@@ -278,7 +295,7 @@ MatShape& MatShape::operator = (const MatShape& shape)
     return *this;
 }
 
-bool MatShape::haveSymbols() const
+bool MatShape::hasSymbols() const
 {
     for (int i = 0; i < dims; i++) {
         if (p[i] < 0)

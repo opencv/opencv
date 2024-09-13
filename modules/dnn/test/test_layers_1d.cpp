@@ -1030,7 +1030,10 @@ TEST_P(Layer_Concat_Test, Accuracy_01D)
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Concat_Test,
 /*input blob shape*/    testing::Values(
-    std::vector<int>({}),
+    // ONNX Concat produces output tensor of the same dimensionality as inputs.
+    // Therefore 0-dimensional tensors cannot be concatenated.
+    // They first need to be converted to 1D tensors, e.g. using Unsqueeze.
+    //std::vector<int>({}),
     std::vector<int>({1})
 ));
 
@@ -1140,13 +1143,11 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
     auto reduceOperation = [](const cv::Mat& input, const std::string& operation, int axis) -> cv::Mat {
         // Initialize result matrix
         cv::Mat result;
-        if (shape(input).size() == 0 || shape(input).size() == 1){
-            result = cv::Mat(shape(input).size(), shape(input).data(), CV_32F);
-            int sz[1] = {1};
-            if (!shape(input).empty() && shape(input)[0] != 1){
-                result = cv::Mat(1, 1, CV_32F);
-                result = result.reshape(1, 1, sz);
-            }
+        MatShape inpshape = input.shape();
+        if (inpshape.dims == 0) {
+            result = cv::Mat(0, nullptr, CV_32F);
+        } else if (inpshape.dims == 1) {
+            result = cv::Mat({1}, CV_32F);
         } else {
             if (axis == 0) {
                 result = cv::Mat::zeros(1, input.cols, CV_32F);
@@ -1225,11 +1226,16 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
     lp.type = "Reduce";
     lp.name = "reduceLayer";
     lp.set("reduce", reduce_operation);
-    lp.set("axes", axis);
+
+    // for scalar tensors we cannot specify reduction axis,
+    // because it will be out-of-range anyway
+    if (!input_shape.empty())
+        lp.set("axes", axis);
+
     lp.set("keepdims", true);
     Ptr<ReduceLayer> layer = ReduceLayer::create(lp);
 
-    cv::Mat input(input_shape.size(), input_shape.data(), CV_32F, 1.0);
+    cv::Mat input((int)input_shape.size(), input_shape.data(), CV_32F, 1.0);
     cv::randu(input, 0.0, 1.0);
 
     cv::Mat output_ref = reduceOperation(input, reduce_operation, axis);
@@ -1238,7 +1244,14 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
 
     runLayer(layer, inputs, outputs);
     ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+
+    MatShape ref_shape = output_ref.shape();
+    MatShape out_shape = outputs[0].shape();
+    if (ref_shape != out_shape) {
+        printf("ref shape: %s\n", ref_shape.str().c_str());
+        printf("out shape: %s\n", out_shape.str().c_str());
+    }
+    ASSERT_EQ(ref_shape, out_shape);
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Reduce_Test, Combine(

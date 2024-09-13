@@ -153,7 +153,7 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     int& operator [](size_t idx);
     const int& operator [](size_t idx) const;
 
-    CV_WRAP bool haveSymbols() const; // negative elements in the shape may denote 'symbols' instead of actual values.
+    CV_WRAP bool hasSymbols() const; // negative elements in the shape may denote 'symbols' instead of actual values.
 
     // compute shape of the result with possible broadcasting
     CV_WRAP MatShape expand(const MatShape& another) const;
@@ -163,6 +163,8 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     CV_WRAP MatShape fromBlock(DataLayout newLayout) const;
 
     size_t total() const; // returns the total number of elements in the tensor (including padding elements, i.e. the method ignores 'C' in the case of block layout). Returns 1 for scalar tensors. Returns 0 for empty shapes.
+
+    std::string str() const;
 
     int dims;
     DataLayout layout;

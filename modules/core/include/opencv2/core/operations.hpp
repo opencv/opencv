@@ -50,6 +50,7 @@
 #endif
 
 #include <cstdio>
+#include <ostream>
 
 #if defined(__GNUC__) || defined(__clang__) // at least GCC 3.1+, clang 3.5+
 #  if defined(__MINGW_PRINTF_FORMAT)  // https://sourceforge.net/p/mingw-w64/wiki2/gnu%20printf/.
@@ -483,6 +484,11 @@ int print(const Matx<_Tp, m, n>& matx, FILE* stream = stdout)
 {
     return print(Formatter::get()->format(cv::Mat(matx)), stream);
 }
+
+// numpy/ONNXRuntime-style matrix pretty-printer
+CV_EXPORTS std::ostream& pprint(std::ostream& strm, InputArray tensor, int indent=0,
+                                int edge=3, int wholeTensorThreshold=100,
+                                char parens='\0');
 
 //! @endcond
 

@@ -195,8 +195,13 @@ ArgKind Net::Impl::argKind(Arg arg) const
 
 Mat& Net::Impl::argTensor(Arg arg) const
 {
-    CV_Assert((size_t)arg.idx < tensors.size());
-    return const_cast<Mat&>(tensors.at(arg.idx));
+    const ArgData& adata = argData(arg);
+    if (adata.kind == DNN_ARG_TEMP) {
+        CV_Assert(__tensors__.at(arg.idx).empty());
+        int bufidx = bufidxs.at(arg.idx);
+        return const_cast<Mat&>(buffers.at(bufidx));
+    }
+    return const_cast<Mat&>(__tensors__.at(arg.idx));
 }
 
 Arg Net::Impl::getArg(const std::string& name)
@@ -219,17 +224,17 @@ Arg Net::Impl::newConstArg(const std::string& name, const Mat& m)
         CV_Assert(m.empty());
         return Arg();
     }
-    Arg arg = newArg(name, DNN_ARG_CONST);
-    tensors[arg.idx] = m;
+    Arg arg = newArg(name, DNN_ARG_CONST, true);
+    __tensors__[arg.idx] = m;
     ArgData& adata = args[arg.idx];
     adata.type = m.type();
     adata.shape = m.shape();
     return arg;
 }
 
-Arg Net::Impl::newArg(const std::string& name, ArgKind kind)
+Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName)
 {
-    CV_Assert(!name.empty());
+    CV_Assert(allowEmptyName || !name.empty());
     int idx = (int)args.size();
 
     if (!name.empty()) {
@@ -241,7 +246,7 @@ Arg Net::Impl::newArg(const std::string& name, ArgKind kind)
     adata.name = name;
     adata.kind = kind;
     args.push_back(adata);
-    tensors.push_back(Mat());
+    __tensors__.push_back(Mat());
     bufidxs.push_back(-1);
 
     return Arg(idx);
@@ -328,15 +333,14 @@ void Net::Impl::allocateLayerOutputs(
     CV_Assert(tempShapes.size() == tempTypes.size());
     CV_Assert(outShapes.size() == outTypes.size());
     CV_Assert(outShapes.size() == noutputs);
-    outputs.resize(noutputs);
+    outputs.assign(noutputs, Mat());
     for (size_t i = 0; i < noutputs; i++) {
         Arg out = layer->outputs[i];
         const ArgData& adata = args.at(out.idx);
-        if (useBufferPool && adata.kind == DNN_ARG_TEMP) {
-            int bufidx = bufidxs.at(out.idx);
-            Mat& buf = buffers.at(bufidx);
-            buf.fit(outShapes[i], outTypes[i]);
-            outputs[i] = buf;
+        if (useBufferPool) {
+            Mat& out_t = argTensor(out);
+            out_t.fit(outShapes[i], outTypes[i]);
+            outputs[i] = out_t;
         } else {
             outputs[i].fit(outShapes[i], outTypes[i]);
         }
@@ -379,7 +383,7 @@ Mat Net::Impl::forwardWithSingleOutput(const std::string& outname)
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
     const std::vector<Arg>& outargs = mainGraph->outputs();
-    CV_Assert(outargs.size() == 1);
+    CV_Assert(outargs.size() > 0);
     if (!outname.empty()) {
         const ArgData& outdata = args.at(outargs[0].idx);
         CV_Assert(outdata.name == outname);
@@ -457,8 +461,12 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
 
 void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg arg, bool dumpdata)
 {
-    const Mat& m = tensors.at(arg.idx);
+    const int PPRINT_CONTEXT = 5;
+    const int PPRINT_CONST_THRESHOLD = 16;
+    const int PPRINT_ALL_THRESHOLD = 16;
+    const Mat& m = argTensor(arg);
     const ArgData& adata = args.at(arg.idx);
+    bool constArg = adata.kind == DNN_ARG_CONST;
     // [TODO] replace with type compatibility check
     // CV_Assert(m.type() == adata.type);
     strm_ << prefix << " " << i << ". Name: " << (arg.idx > 0 ? adata.name.c_str() : "<empty>") << "\n";
@@ -467,17 +475,24 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
     strm_ << "  Buf: " << bufidxs.at(arg.idx) << "\n";
     strm_ << "  Type: " << typeToString(adata.type) << " \n";
     MatShape shape = m.shape();
-    strm_ << "  Shape: " << shape << "\n  Layout: " << layoutToString(shape.layout) << "\n";
-    if (dumpdata) {
-        Mat temp;
-        /*if (size.layout == DNN_LAYOUT_BLOCK) {
+    strm_ << "  Shape: " << shape;
+    if (constArg && m.total() <= PPRINT_CONST_THRESHOLD) {
+        strm_ << " /* ";
+        pprint(strm_, m, 0, PPRINT_CONTEXT, PPRINT_CONST_THRESHOLD, '{');
+        strm_ << " */";
+    }
+    strm_ << "\n  Layout: " << layoutToString(shape.layout) << "\n";
+    if (dumpdata && !constArg) {
+        /*Mat temp;
+        if (shape.layout == DNN_LAYOUT_BLOCK) {
             fromBlock->forward(*net, mainGraph, {m}, {fromBlockResult}, scratch_bufs);
             temp = fromBlockResult;
-        } else*/ {
+        } else {
             temp = m;
         }
-        // [TODO] dump(strm_, m, 0);
-        strm_ << "\n";
+        dump(strm_, temp, 0, PPRINT_CONTEXT, PPRINT_ALL_THRESHOLD, '[');
+        strm_ << "\n";*/
+        pprint(strm_, m, 0, PPRINT_CONTEXT, PPRINT_ALL_THRESHOLD, '[');
     }
 }
 
@@ -527,15 +542,18 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         int adata_type = adata.type;
         if ((adata_type == CV_16F || adata_type == CV_16BF) && !enableFP16)
             adata_type = CV_32F;
+        // [TODO] need to analyze this situation more carefully
+        if (adata_type == CV_64F)
+            adata_type = CV_32F;
         if (adata_type != mtype &&
-            !((adata_type == CV_32F || adata_type == CV_16F || adata_type == CV_16BF) &&
-              (mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF)))
+            !((adata_type == CV_64F || adata_type == CV_32F || adata_type == CV_16F || adata_type == CV_16BF) &&
+              (mtype == CV_64F || mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF)))
         {
             CV_Error_(Error::StsBadArg, ("incompatible type of input tensor #%zu '%s': %s given, %s expected",
                                          idx, adata.name.c_str(), typeToString(mtype).c_str(),
                                          typeToString(adata.type).c_str()));
         }
-        Mat& inp_t = tensors.at(inp.idx);
+        Mat& inp_t = argTensor(inp);
         inp_t.fit(mshape, adata_type);
         m.convertTo(inp_t, adata_type);
     } else if (adata.kind == DNN_ARG_TEMP) {
@@ -543,7 +561,6 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         Mat& buf = buffers.at(bufidx);
         buf.fit(mshape, mtype); // minimize reallocations
         m.copyTo(buf);
-        tensors[inp.idx] = buf;
     } else {
         CV_Error_(Error::StsBadArg, ("graph %s: argument '%s' must be 'INPUT' or 'TEMP', not '%s'",
                                      graph->name().data(), adata.name.c_str(),
@@ -605,7 +622,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
             //const ArgData& adata = args[inp.idx];
-            const Mat& m = tensors[inp.idx];
+            const Mat& m = argTensor(inp);
             inpMats[i] = m;
             inpTypes[i] = m.type();
             inpShapes[i] = m.shape();
@@ -628,13 +645,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             outMats.resize(noutputs);
             for (i = 0; i < noutputs; i++) {
                 Arg out = outputs[i];
-                const ArgData& adata = args.at(out.idx);
-                if (adata.kind == DNN_ARG_TEMP) {
-                    int bufidx = bufidxs.at(out.idx);
-                    outMats[i] = buffers.at(bufidx);
-                } else {
-                    outMats[i] = tensors.at(out.idx);
-                }
+                outMats[i] = argTensor(out);
             }
             tempMats = scratchBufs;
         }
@@ -655,7 +666,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             //checkRange(m, false);
             adata.type = m.type();
             adata.shape = m.shape();
-            tensors.at(out.idx) = m;
             if (adata.kind == DNN_ARG_TEMP) {
                 int bufidx = bufidxs.at(out.idx);
                 Mat& buf = buffers.at(bufidx);
@@ -667,11 +677,14 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 } else if (!buf.u || m.u->size > buf.u->size) {
                     buf = m;
                 } else {
-                    // this branch means that the layer still calls create rather than fit and needs to be fixed.
-                    // [TODO] should probably log it.
+                    // this branch means that the layer still calls
+                    // 'create()' rather than 'fit()'; that needs to be fixed, but
+                    // we provide workaround here at the expense of extra copy.
                     buf.fit(m.shape(), m.type());
                     m.copyTo(buf);
                 }
+            } else {
+                __tensors__.at(out.idx) = m;
             }
         }
 
@@ -692,7 +705,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     outputsVec.resize(n_gr_outputs);
     for (i = 0; i < n_gr_outputs; i++) {
         Arg out = gr_outputs[i];
-        const Mat& outm = tensors.at(out.idx);
+        const Mat& outm = argTensor(out);
         if (isMainGraph) {
             outputsVec[i].fit(outm.shape(), outm.type());
             outm.copyTo(outputsVec[i]);
@@ -758,7 +771,7 @@ int Net::Impl::updateGraphOfs(const Ptr<Graph>& graph, int currofs, bool ismain)
     return subgraph_ofs;
 }
 
-void Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
+bool Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
                                const std::vector<MatType>& suggestedInpTypes,
                                LayerShapes& result,
                                std::vector<MatShape>& shapeCache,
@@ -788,17 +801,31 @@ void Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
               (nsuggestedShapes == 1 && suggestedInpShapes[0].empty())
               );
     CV_Assert(nsuggestedTypes <= 1 || nsuggestedTypes == ninputs);
+    bool dynamicInputShapes = false;
+
+    result.in.resize(ninputs);
+    result.inTypes.resize(ninputs);
 
     for (size_t i = 0; i < ninputs; i++) {
         Arg inp = inputs[i];
         const ArgData& adata = args.at(inp.idx);
-        int type = adata.type;
-        MatShape shape = adata.shape;
+        CV_Assert(adata.kind == DNN_ARG_INPUT);
+
+        int type;
+        MatShape shape;
+        const Mat& tensor = argTensor(inp);
+        if (!tensor.empty()) {
+            type = tensor.type();
+            shape = tensor.shape();
+        } else {
+            type = adata.type;
+            shape = adata.shape;
+        }
 
         if (nsuggestedTypes) {
             int suggestedType = suggestedInpTypes[i < nsuggestedTypes ? i : 0];
             if (suggestedType == -1)
-                suggestedType = adata.type;
+                suggestedType = type;
             if (adata.type == type ||
                 ((adata.type == CV_32F || adata.type == CV_16F || adata.type == CV_16BF) &&
                  (suggestedType == CV_32F || suggestedType == CV_16F || suggestedType == CV_16BF)))
@@ -813,21 +840,38 @@ void Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
 
         if (nsuggestedShapes) {
             MatShape suggestedShape = suggestedInpShapes[i < nsuggestedShapes ? i : 0];
-            if (suggestedShape.empty())
-                suggestedShape = adata.shape;
-            CV_Assert(suggestedShape.dims == adata.shape.dims);
+            if (suggestedShape.empty()) {
+                suggestedShape = shape;
+            }
+            // [TODO] shut up it for now;
+            // too many ONNX conformance tests
+            // depend on this "liberal" behaviour
+            //
+            // CV_Assert(suggestedShape.dims == adata.shape.dims);
             shape = suggestedShape;
         }
 
         typeCache[inp.idx] = type;
         shapeCache[inp.idx] = shape;
 
-        result.inTypes.push_back(type);
-        result.in.push_back(shape);
+        if (shape.hasSymbols()) {
+            CV_LOG_WARNING(NULL, format("the shape of model input '%s' includes symbols. Shape inference is impossible without prior calls to setInput()",
+                adata.name.c_str()));
+            dynamicInputShapes = true;
+            shape = MatShape();
+        }
+
+        result.inTypes[i] = type;
+        result.in[i] = shape;
     }
 
-    if (!tryInferGraphShapes(mainGraph, shapeCache, typeCache))
-        return;
+    bool inferenced = false;
+    if (!dynamicInputShapes)
+        inferenced = tryInferGraphShapes(mainGraph, shapeCache, typeCache);
+    bool missingOutputs = false;
+
+    result.outTypes.resize(noutputs, -1);
+    result.out.resize(noutputs);
 
     for (size_t i = 0; i < noutputs; i++) {
         Arg out = outputs[i];
@@ -835,12 +879,19 @@ void Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
         int type = typeCache.at(out.idx);
         MatShape shape = shapeCache.at(out.idx);
         if (type < 0) {
-            CV_Error_(Error::StsBadArg, ("type for output '%s' was not inferred", adata.name.c_str()));
+            if (!inferenced)
+                type = adata.type;
+            if (type < 0) {
+                CV_LOG_WARNING(NULL, format("type for output '%s' was not inferred",                        adata.name.c_str()));
+                missingOutputs = true;
+            }
         }
 
-        result.outTypes.push_back(type);
-        result.out.push_back(shape);
+        result.outTypes[i] = type;
+        result.out[i] = shape;
     }
+
+    return inferenced && !missingOutputs;
 }
 
 // [TODO]

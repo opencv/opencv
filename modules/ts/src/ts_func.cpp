@@ -1505,8 +1505,11 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
     normType = normType == NORM_L2SQR ? NORM_L2 : normType;
 
     CV_CheckTypeEQ(src1.type(), src2.type(), "");
-    CV_Assert(src1.size == src2.size);
-    CV_Assert( mask.empty() || (src1.size == mask.size && (mask.type() == CV_8U || mask.type() == CV_Bool)) );
+    MatShape shape1 = src1.shape();
+    MatShape shape2 = src2.shape();
+    CV_Assert(shape1 == shape2 && "shapes of compared arrays must be the same");
+    //CV_Assert(src1.size == src2.size);
+    CV_Assert( mask.empty() || (shape1 == mask.shape() && (mask.type() == CV_8U || mask.type() == CV_Bool)) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     const Mat *arrays[]={&src1, &src2, &mask, 0};
     Mat planes[3];

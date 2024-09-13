@@ -196,15 +196,21 @@ struct BufferAllocator
              */
             //if (layer->type == "Softmax")
             //    putchar('.');
-            if (noutputs > 0 && netimpl->argKind(outputs[0]) == DNN_ARG_TEMP) {
+            if (noutputs > 0) {
                 Arg out0 = outputs[0];
-                if (inplace && bufidxs.at(out0.idx) < 0)
+                if (inplace &&
+                    noutputs == 1 &&
+                    netimpl->argKind(out0) == DNN_ARG_TEMP &&
+                    bufidxs.at(out0.idx) < 0)
                     shareBuffer(reuseArg, out0);
-                else
-                    for (auto argidx: outputs) {
-                        if (bufidxs.at(argidx.idx) < 0)
-                            bufidxs.at(argidx.idx) = getFreeBuffer();
+                else {
+                    for (auto out: outputs) {
+                        if (netimpl->argKind(out) == DNN_ARG_TEMP &&
+                            bufidxs.at(out.idx) < 0) {
+                            bufidxs.at(out.idx) = getFreeBuffer();
+                        }
                     }
+                }
             }
 
             std::string opname = layer->type;
@@ -303,16 +309,16 @@ struct BufferAllocator
                     releaseBuffer(bufidxs.at(body_out.idx));
             }
 
-            for (auto outarg: outputs) {
-                if (usecounts[outarg.idx] == 0)
-                    releaseBuffer(bufidxs.at(outarg.idx));
+            for (auto out: outputs) {
+                if (usecounts[out.idx] == 0)
+                    releaseBuffer(bufidxs.at(out.idx));
             }
             // let's release inputs in the reverse order to keep the buffer allocation consistent across the network
             for (size_t i = 0; i < ninputs; i++) {
-                Arg inparg = inputs[ninputs-i-1];
-                int bufidx = bufidxs[inparg.idx];
+                Arg inp = inputs[ninputs-i-1];
+                int bufidx = bufidxs[inp.idx];
                 if (bufidx >= 0) {
-                    if (--usecounts.at(inparg.idx) == 0)
+                    if (--usecounts.at(inp.idx) == 0)
                         releaseBuffer(bufidx);
                 }
             }

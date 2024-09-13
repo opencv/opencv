@@ -80,7 +80,7 @@ struct Net::Impl : public detail::NetImplBase
     size_t totalLayers;
     std::vector<std::string> dimnames_vec;
     std::vector<ArgData> args;
-    std::vector<Mat> tensors;
+    std::vector<Mat> __tensors__;
     std::vector<int> bufidxs;
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
@@ -336,7 +336,7 @@ struct Net::Impl : public detail::NetImplBase
 
     Arg newConstArg(const std::string& name, const Mat& m);
     Arg newConstScalarArg(const std::string& name, int type, const void* value);
-    Arg newArg(const std::string& name, ArgKind kind);
+    Arg newArg(const std::string& name, ArgKind kind, bool allowEmptyName=false);
     bool isConstArg(Arg arg) const;
     bool isTempArg(Arg arg) const;
     Mat& argTensor(Arg arg) const;
@@ -380,7 +380,7 @@ struct Net::Impl : public detail::NetImplBase
     void forwardWithMultipleOutputs(OutputArrayOfArrays outputBlobs,
                                     const std::vector<std::string>& outBlobNames);
     // try infer shapes; if some layers produce tensors with dynamic shapes, shape inference is impossible
-    void tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
+    bool tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
                         const std::vector<MatType>& suggestedInpTypes,
                         LayerShapes& shapes,
                         std::vector<MatShape>& shapeCache,

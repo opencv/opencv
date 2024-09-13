@@ -125,7 +125,7 @@ void Net::Impl::clear()
     args = std::vector<ArgData>();
     argnames = NamesHash();
 
-    tensors = std::vector<Mat>();
+    __tensors__ = std::vector<Mat>();
     bufidxs = std::vector<int>();
     buffers = std::vector<Mat>();
 
@@ -137,7 +137,7 @@ void Net::Impl::clear()
 
     args.push_back(adata);
     argnames.insert(std::make_pair(std::string(""), 0));
-    tensors.push_back(Mat());
+    __tensors__.push_back(Mat());
     bufidxs.push_back(-1);
 
     prepared = false;
