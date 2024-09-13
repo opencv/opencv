@@ -436,7 +436,6 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        std::cout << "getMemoryShapes" << std::endl;
         CV_UNUSED(internals);
 
         // check if passed and parsed inputs match up in number and dimensions
@@ -447,12 +446,8 @@ public:
             if (inputs[i] != einsumInpShapes[i])
                 CV_Error(Error::StsAssert, "Passed input shapes do not match with parsed input shapes!");
         }
-        std::cout << "einsumOutDims: " << einsumOutDims << std::endl;
-        std::cout << "outputs size: " << outputs.size() << std::endl;
         outputs.clear();
         outputs.emplace_back(einsumOutDims);
-        std::cout << "outputs size after clear: " << outputs.size() << std::endl;
-        std::cout << "outputs[0]: " << outputs[0] << std::endl;
         return true;
 
     } // getMemoryShape
@@ -562,10 +557,7 @@ public:
 
         // reduce dimentions
         result = result.reshape(1, einsumOutDims.size(), einsumOutDims.data());
-        std::cout << "result type: " << result.type() << std::endl;
         result.copyTo(outputs[0]);
-        std::cout << "outputs[0] type: " << outputs[0].type() << std::endl;
-        std::cout << "outputs[0]: " << outputs[0] << std::endl;
     } // forward
 
 #ifdef HAVE_DNN_NGRAPH
@@ -763,7 +755,6 @@ void LayerEinsumImpl::calculateOutputShape()
 
             // Push output dimention
             // Einsum layer only has one output vector
-            std::cout << "subscriptIndicesToDimValue[mappedIndex]: " << subscriptIndicesToDimValue[mappedIndex] << std::endl;
             einsumOutDims.emplace_back(subscriptIndicesToDimValue[mappedIndex]);
 
             // Reset the last input index for this subscript label
@@ -773,11 +764,7 @@ void LayerEinsumImpl::calculateOutputShape()
         }
     }
     if (rhs_eq.empty()) {
-        std::cout << "rhs_eq is empty" << std::endl;
         einsumOutDims = MatShape(0, 0); // handle scalar output case
-        std::cout << "einsumOutDims dims: " << einsumOutDims.size() << std::endl;
-        std::cout << "isScalar: " << einsumOutDims.isScalar() << std::endl;
-        std::cout << "empty: " << einsumOutDims.empty() << std::endl;
     }
 }
 
@@ -1361,13 +1348,6 @@ Mat LayerEinsumImpl::batchwiseMatMul(
     Mat reshapedInput1 = input1;
     Mat reshapedInput2 = input2;
 
-    std::cout << "reshapedInput1 size inside test: " << reshapedInput1.size << std::endl;
-    std::cout << "reshapedInput2 size inside test: " << reshapedInput2.size << std::endl;
-    std::cout << "reshapedInput1 shape inside test: " << shape(reshapedInput1) << std::endl;
-    std::cout << "reshapedInput2 shape inside test: " << shape(reshapedInput2) << std::endl;
-    std::cout << "reshapedInput1 dims inside test: " << reshapedInput1.dims << std::endl;
-    std::cout << "reshapedInput2 dims inside test: " << reshapedInput2.dims << std::endl;
-    std::cout << "batches: " << batches << std::endl;
 
     Mat output;
     if (batches > 1)
@@ -1398,25 +1378,13 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         }
 
 
-        std::cout << "reshapedInput1 size inside test: " << reshapedInput1.size << std::endl;
-        std::cout << "reshapedInput2 size inside test: " << reshapedInput2.size << std::endl;
-        std::cout << "reshapedInput1 shape inside test: " << shape(reshapedInput1) << std::endl;
-        std::cout << "reshapedInput2 shape inside test: " << shape(reshapedInput2) << std::endl;
-        std::cout << "reshapedInput1 dims inside test: " << reshapedInput1.dims << std::endl;
-        std::cout << "reshapedInput2 dims inside test: " << reshapedInput2.dims << std::endl;
-
-        std::cout << "reshapedInput2 shape empty: " << shape(reshapedInput2).empty() << std::endl;
-        std::cout << "reshapedInput1 shape empty: " << shape(reshapedInput1).empty() << std::endl;
-
         output = Mat(M, N, reshapedInput1.type());
         if ((reshapedInput1.dims == 0 && reshapedInput2.dims == 0)  ||
             (reshapedInput1.dims == 0 && reshapedInput2.dims != 0) ||
             (reshapedInput1.dims != 0 && reshapedInput2.dims == 0))
         {
-            std::cout << "sample multiplication" << std::endl;
             output = reshapedInput1.mul(reshapedInput2); // fastGemm does not support 0D * 0D multiplication
         } else {
-            std::cout << "fastGemm multiplication" << std::endl;
             fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, output, opt);
         }
 
