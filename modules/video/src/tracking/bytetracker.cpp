@@ -5,18 +5,75 @@
 #include "../precomp.hpp"
 
 #include "detail/bytetracker_strack.hpp"
-#include "opencv2/video/lapjv.hpp"
 #include <map>
+#include <vector>
 #include <unordered_map>
 #include <iostream>
-
-using namespace std;
-using namespace cv;
+#include "lapjv.h"
 
 namespace cv {
 
-using cv::detail::tracking::Strack;
-using cv::detail::tracking::TrackState;
+using namespace cv::detail::tracking;
+
+std::map<int, int> lapjv(const Mat &cost, float matchThreshold)
+{
+    std::map<int, int> ret;
+    if (cost.rows == 0 || cost.cols == 0)
+        return ret;
+    int maxI = cost.rows;
+    int maxJ = cost.cols;
+    int n = max(maxJ, maxI);
+
+    std::vector<std::vector<double>> cost_ptr(n, std::vector<double>(n));
+    std::vector<int> x_c(n);
+    std::vector<int> y_c(n);
+
+    std::vector<double*> cost_ptr_ptr(n);
+    for (int i=0; i < n; i++)
+    {
+        cost_ptr_ptr[i] = cost_ptr[i].data();
+    }
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            if (i < maxI && j < maxJ && cost.at<float>(i, j) < matchThreshold) // verify
+            {
+                cost_ptr[i][j] = static_cast<double>(cost.at<float>(i, j));
+            }
+            else
+            {
+                cost_ptr[i][j] = LARGE;
+            }
+        }
+        x_c[i] = -1;
+        y_c[i] = -1;
+    }
+    lapjv_internal(n, cost_ptr_ptr.data(), x_c.data(), y_c.data());
+    for (int i = 0; i < n; i++)
+    {
+        if (i < maxI && x_c[i] < maxJ) // verify
+        {
+            ret[i] = x_c[i];
+        }
+    }
+
+    return ret;
+}
+
+void lapjv(InputArray costMatrix, OutputArray assignedPairs, float matchThreshold)
+{
+    auto ret = lapjv(costMatrix.getMat(), matchThreshold);
+    auto numPairs = ret.size();
+    assignedPairs.create(static_cast<int>(numPairs), 2, CV_32S);
+
+    auto c_assigned_pairs = assignedPairs.getMat();
+    for (auto const& x : ret) {
+        c_assigned_pairs.at<int>(x.first, 0) = x.first;
+        c_assigned_pairs.at<int>(x.first, 1) = x.second;
+    }
+}
 
 ByteTracker::ByteTracker()
 {
@@ -54,39 +111,39 @@ public:
     void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE;
     int getFrame();
     void incrementFrame();
-    map<int, int> lapjv(InputArray &cost);
+    std::map<int, int> lapjv(InputArray &cost);
     Mat getCostMatrix(const cv::Mat, const cv::Mat) CV_OVERRIDE;
 
 protected:
     ByteTracker::Params params;
     float trackThreshold;
     float matchThreshold;
-    unordered_map<int, Strack> trackedStracks_;
-    unordered_map<int, Strack> lostStracks_;
+    std::unordered_map<int, Strack> trackedStracks_;
+    std::unordered_map<int, Strack> lostStracks_;
     int lastId;
     int frame;
     float maxTimeLost;
 
-    void getDetections(vector<Detection> inputObjects, vector<Strack>& detections,
-        vector<Strack>& detectionsLow);
+    void getDetections(std::vector<Detection> inputObjects, std::vector<Strack>& detections,
+        std::vector<Strack>& detectionsLow);
 
 
-    void addNewDetectedTracks(unordered_map<int, Strack> trackedMap,
-        vector<Strack>& inactiveStracks, vector<Strack>& trackedStracks);
+    void addNewDetectedTracks(std::unordered_map<int, Strack> trackedMap,
+        std::vector<Strack>& inactiveStracks, std::vector<Strack>& trackedStracks);
 
 
-    Mat getCostMatrix(const vector<Strack>& tracks, const vector<Strack>& btracks);
-    Mat getCostMatrix(const unordered_map<int, Strack>& atracks,const vector<Strack> &btracks);
+    Mat getCostMatrix(const std::vector<Strack>& tracks, const std::vector<Strack>& btracks);
+    Mat getCostMatrix(const std::unordered_map<int, Strack>& atracks,const std::vector<Strack> &btracks);
 
 
-    Mat calculateIous(const vector<Rect2f>& atlwhs,const vector<Rect2f>& btlwhs);
+    Mat calculateIous(const std::vector<Rect2f>& atlwhs,const std::vector<Rect2f>& btlwhs);
 
 
-    unordered_map<int, Strack> joinStracks(const vector<Strack>& trackA, vector<Strack>& trackB);
-    unordered_map<int, Strack> joinStracks(const vector<Strack>& trackVector,
-        unordered_map<int, Strack>& trackMap, bool inplace);
+    std::unordered_map<int, Strack> joinStracks(const std::vector<Strack>& trackA, std::vector<Strack>& trackB);
+    std::unordered_map<int, Strack> joinStracks(const std::vector<Strack>& trackVector,
+                                                std::unordered_map<int, Strack>& trackMap, bool inplace);
 
-    unordered_map<int, Strack> vectorToMap(const vector<Strack>& stracks);
+    std::unordered_map<int, Strack> vectorToMap(const std::vector<Strack>& stracks);
     static bool compareTracksByTrackId(const Track& track1, const Track& track2);
 };
 
@@ -99,8 +156,8 @@ Ptr<ByteTracker> ByteTracker::create(const ByteTracker::Params& parameters)
 bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outputTracks)
 {
     Mat dets = inputDetections.getMat();
-    vector<Detection> detections;
-    vector<Track> tracks;
+    std::vector<Detection> detections;
+    std::vector<Track> tracks;
 
     for (int i = 0; i < dets.rows; i++)
     {
@@ -144,20 +201,20 @@ bool ByteTrackerImpl::update(InputArray inputDetections,CV_OUT OutputArray& outp
 
 void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_OUT std::vector<Track>& tracks)
 {
-    vector<Strack> detections;
-    vector<Strack> detectionsLow;
-    vector<Strack> remainDets;
-    vector<Strack> activatedStracks;
-    vector<Strack> reRemainTracks;
+    std::vector<Strack> detections;
+    std::vector<Strack> detectionsLow;
+    std::vector<Strack> remainDets;
+    std::vector<Strack> activatedStracks;
+    std::vector<Strack> reRemainTracks;
 
     getDetections(inputDetections, detections, detectionsLow); // objects -> D and Dlow
-    vector<Strack> inactiveStracks;
-    vector<Strack> trackedStracks;
+    std::vector<Strack> inactiveStracks;
+    std::vector<Strack> trackedStracks;
 
     // trackedStracks_ -> inactive and active
     addNewDetectedTracks(trackedStracks_, inactiveStracks, trackedStracks);
 
-    unordered_map<int, Strack> strackPool;
+    std::unordered_map<int, Strack> strackPool;
     strackPool = joinStracks(trackedStracks, lostStracks_, false);
     // remember that in the first association we consider the lost tracks too
     // we need to predict the tracks to do association
@@ -172,7 +229,7 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
     }
 
     // getting map keys from the indexes
-    unordered_map<int, int> indexToKey;
+    std::unordered_map<int, int> indexToKey;
     int index = 0;
     for (const auto &pair : strackPool)
     {
@@ -186,10 +243,10 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
     Mat dists; // IoU distances
     dists = getCostMatrix(strackPool, detections);
 
-    vector<Strack> remainTracks;
-    vector<int> strackIndex;
-    vector<int> detectionsIndex;
-    map<int, int> matches;
+    std::vector<Strack> remainTracks;
+    std::vector<int> strackIndex;
+    std::vector<int> detectionsIndex;
+    std::map<int, int> matches;
 
     matches = lapjv(dists); // returns a map of matched indexes (track,detection)
 
@@ -331,7 +388,7 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
     lostStracks_ = vectorToMap(reRemainTracks);
 
     // deal with lost tracks and save them in an attribute
-    vector<int> keysToRemove;
+    std::vector<int> keysToRemove;
     for (auto& pair : lostStracks_)
     {
         Strack& track = pair.second;
@@ -372,8 +429,8 @@ void ByteTrackerImpl::update(const std::vector<Detection>& inputDetections, CV_O
     std::sort(tracks.begin(), tracks.end(), compareTracksByTrackId);
 }
 
-void ByteTrackerImpl::getDetections(vector<Detection> inputObjects, vector<Strack>& detections,
-    vector<Strack>& detectionsLow)
+void ByteTrackerImpl::getDetections(std::vector<Detection> inputObjects, std::vector<Strack>& detections,
+    std::vector<Strack>& detectionsLow)
 {
     for (const Detection& detection : inputObjects)
     {
@@ -393,10 +450,10 @@ void ByteTrackerImpl::getDetections(vector<Detection> inputObjects, vector<Strac
     }
 }
 
-void ByteTrackerImpl::addNewDetectedTracks(unordered_map<int, Strack> trackedMap,
-    vector<Strack> &inactiveStracks, vector<Strack> &trackedStracks)
+void ByteTrackerImpl::addNewDetectedTracks(std::unordered_map<int, Strack> trackedMap,
+    std::vector<Strack> &inactiveStracks, std::vector<Strack> &trackedStracks)
 {
-    // checks if the trackedStracks are activated to keep them in the vector(same name)
+    // checks if the trackedStracks are activated to keep them in the std::vector(same name)
     for (auto pair : trackedMap)
     {
         Strack track = pair.second;
@@ -407,14 +464,14 @@ void ByteTrackerImpl::addNewDetectedTracks(unordered_map<int, Strack> trackedMap
     }
 }
 
-Mat ByteTrackerImpl::getCostMatrix(const vector<Strack> &atracks, const vector<Strack> &btracks)
+Mat ByteTrackerImpl::getCostMatrix(const std::vector<Strack> &atracks, const std::vector<Strack> &btracks)
 {
     Mat costMatrix;
     if (atracks.size() == 0 || btracks.size() == 0)
     {
         return costMatrix; // returns empty matrix
     }
-    vector<Rect2f> atlwhs,btlwhs;
+    std::vector<Rect2f> atlwhs,btlwhs;
     for (auto& track : atracks)
     {
         atlwhs.push_back(track.getTlwh());
@@ -431,7 +488,7 @@ Mat ByteTrackerImpl::getCostMatrix(const vector<Strack> &atracks, const vector<S
 }
 
 //overload
-Mat ByteTrackerImpl::getCostMatrix(const unordered_map<int, Strack> &atracks, const vector<Strack> &btracks)
+Mat ByteTrackerImpl::getCostMatrix(const std::unordered_map<int, Strack> &atracks, const std::vector<Strack> &btracks)
 {
     Mat costMatrix;
     if (atracks.size() == 0 && btracks.size() == 0)
@@ -439,7 +496,7 @@ Mat ByteTrackerImpl::getCostMatrix(const unordered_map<int, Strack> &atracks, co
         return costMatrix;
     }
 
-    vector<Rect2f> atlwhs,btlwhs;
+    std::vector<Rect2f> atlwhs,btlwhs;
     for (auto &pair : atracks)
     {
         Rect2f tlwh = pair.second.getTlwh();
@@ -466,7 +523,7 @@ Mat ByteTrackerImpl::getCostMatrix(const Mat amat, const Mat bmat)
         return costMatrix;
     }
 
-    vector<Rect2f> atlwhs,btlwhs;
+    std::vector<Rect2f> atlwhs,btlwhs;
     for (int i = 0; i < amat.rows ; i++)
     {
         cv::Rect2f rect(
@@ -498,7 +555,7 @@ Mat ByteTrackerImpl::getCostMatrix(const Mat amat, const Mat bmat)
 }
 
 
-Mat ByteTrackerImpl::calculateIous(const vector<Rect2f> &atlwhs,const vector<Rect2f> &btlwhs)
+Mat ByteTrackerImpl::calculateIous(const std::vector<Rect2f> &atlwhs,const std::vector<Rect2f> &btlwhs)
 {
     Mat iousMatrix;
     if (atlwhs.empty() || btlwhs.empty())
@@ -527,10 +584,10 @@ Mat ByteTrackerImpl::calculateIous(const vector<Rect2f> &atlwhs,const vector<Rec
 }
 
 
-unordered_map<int, Strack> ByteTrackerImpl::joinStracks(
-    const vector<Strack>& trackA, vector<Strack>& trackB)
+std::unordered_map<int, Strack> ByteTrackerImpl::joinStracks(
+    const std::vector<Strack>& trackA, std::vector<Strack>& trackB)
 {
-    unordered_map<int, Strack> joinedTracks;
+    std::unordered_map<int, Strack> joinedTracks;
 
     for (const auto &track : trackA)
     {
@@ -546,8 +603,8 @@ unordered_map<int, Strack> ByteTrackerImpl::joinStracks(
 }
 
 // overload to receive a hashmap
-unordered_map<int, Strack> ByteTrackerImpl::joinStracks(const vector<Strack>& trackVector,
-    unordered_map<int, Strack>& trackMap, bool inplace)
+std::unordered_map<int, Strack> ByteTrackerImpl::joinStracks(const std::vector<Strack>& trackVector,
+    std::unordered_map<int, Strack>& trackMap, bool inplace)
 {
     if (inplace)
     {
@@ -558,7 +615,7 @@ unordered_map<int, Strack> ByteTrackerImpl::joinStracks(const vector<Strack>& tr
         return trackMap;
     }
 
-    unordered_map<int, Strack> joinedTracks = trackMap;
+    std::unordered_map<int, Strack> joinedTracks = trackMap;
     for (const auto &track : trackVector)
     {
         joinedTracks.emplace(track.getId(), track);
@@ -568,21 +625,21 @@ unordered_map<int, Strack> ByteTrackerImpl::joinStracks(const vector<Strack>& tr
 
 }
 
-map<int, int> ByteTrackerImpl::lapjv(InputArray &cost)
+std::map<int, int> ByteTrackerImpl::lapjv(InputArray &cost)
 {
     Mat _cost = cost.getMat();
-    map<int, int> ret;
+    std::map<int, int> ret;
     if (_cost.rows == 0 || _cost.cols == 0)
         return ret;
     int maxI = _cost.rows;
     int maxJ = _cost.cols;
     int n = max(maxJ, maxI);
 
-    vector<vector<double>> cost_ptr(n, vector<double>(n));
-    vector<int> x_c(n);
-    vector<int> y_c(n);
+    std::vector<std::vector<double>> cost_ptr(n, std::vector<double>(n));
+    std::vector<int> x_c(n);
+    std::vector<int> y_c(n);
 
-    vector<double*> cost_ptr_ptr(n);
+    std::vector<double*> cost_ptr_ptr(n);
     for (int i=0; i < n; i++)
     {
         cost_ptr_ptr[i] = cost_ptr[i].data();
@@ -626,9 +683,9 @@ void ByteTrackerImpl::incrementFrame()
     frame++;
 }
 
-unordered_map<int, Strack> ByteTrackerImpl::vectorToMap(const vector<Strack>& stracks)
+std::unordered_map<int, Strack> ByteTrackerImpl::vectorToMap(const std::vector<Strack>& stracks)
 {
-    unordered_map<int, Strack> strackMap;
+    std::unordered_map<int, Strack> strackMap;
     for (const Strack& strack : stracks)
     {
         int id = strack.getId();
@@ -640,4 +697,5 @@ unordered_map<int, Strack> ByteTrackerImpl::vectorToMap(const vector<Strack>& st
 bool ByteTrackerImpl::compareTracksByTrackId(const Track& track1, const Track& track2) {
     return track1.trackingId< track2.trackingId;
 }
+
 }// namespace cv

@@ -1,12 +1,9 @@
-#include "opencv2/video/lapjv.hpp"
-#include "../precomp.hpp"
-#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "lapjv.h"
 
-//using namespace std;
-
-namespace cv
-{
 /** Column-reduction and reduction transfer for a dense cost matrix.
  */
 int_t _ccrrt_dense(const uint_t n, cost_t *cost[],
@@ -147,7 +144,7 @@ int_t _carr_dense(
 
 /** Find columns with minimum d[j] and put them on the SCAN list.
  */
-uint_t _find_dense(const uint_t n, uint_t lo, cost_t *d, int_t *cols)
+uint_t _find_dense(const uint_t n, uint_t lo, cost_t *d, int_t *cols, int_t *y)
 {
     uint_t hi = lo + 1;
     cost_t mind = d[cols[lo]];
@@ -238,7 +235,7 @@ int_t find_path_dense(
         if (lo == hi) {
             PRINTF("%d..%d -> find\n", lo, hi);
             n_ready = lo;
-            hi = _find_dense(n, lo, d, cols);
+            hi = _find_dense(n, lo, d, cols, y);
             PRINTF("check %d..%d\n", lo, hi);
             PRINT_INDEX_ARRAY(cols, n);
             for (uint_t k = lo; k < hi; k++) {
@@ -337,66 +334,4 @@ int lapjv_internal(
     FREE(v);
     FREE(free_rows);
     return ret;
-}
-
-std::map<int, int> lapjv(const cv::Mat &cost, float matchThreshold)
-{
-
-    std::map<int, int> ret;
-    if (cost.rows == 0 || cost.cols == 0)
-        return ret;
-    int maxI = cost.rows;
-    int maxJ = cost.cols;
-    int n = max(maxJ, maxI);
-
-    std::vector<std::vector<double>> cost_ptr(n, std::vector<double>(n));
-    std::vector<int> x_c(n);
-    std::vector<int> y_c(n);
-
-    std::vector<double*> cost_ptr_ptr(n);
-    for (int i=0; i < n; i++)
-    {
-        cost_ptr_ptr[i] = cost_ptr[i].data();
-    }
-
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            if (i < maxI && j < maxJ && cost.at<float>(i, j) < matchThreshold) // verify
-            {
-                cost_ptr[i][j] = static_cast<double>(cost.at<float>(i, j));
-            }
-            else
-            {
-                cost_ptr[i][j] = LARGE;
-            }
-        }
-        x_c[i] = -1;
-        y_c[i] = -1;
-    }
-    lapjv_internal(n, cost_ptr_ptr.data(), x_c.data(), y_c.data());
-    for (int i = 0; i < n; i++)
-    {
-        if (i < maxI && x_c[i] < maxJ) // verify
-        {
-            ret[i] = x_c[i];
-        }
-    }
-
-    return ret;
-}
-
-void lapjv(InputArray costMatrix, OutputArray assignedPairs, float matchThreshold)
-{
-    auto ret = lapjv(costMatrix.getMat(), matchThreshold);
-    auto numPairs = ret.size();
-    assignedPairs.create(static_cast<int>(numPairs), 2, CV_32S);
-
-    auto c_assigned_pairs = assignedPairs.getMat();
-    for (auto const& x : ret) {
-        c_assigned_pairs.at<int>(x.first, 0) = x.first;
-        c_assigned_pairs.at<int>(x.first, 1) = x.second;
-    }
-}
 }

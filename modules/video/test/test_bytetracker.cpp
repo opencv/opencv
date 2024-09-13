@@ -1,6 +1,6 @@
 #include "test_precomp.hpp"
 #include "opencv2/video/tracking.hpp"
-#include "opencv2/video/lapjv.hpp"
+#include "opencv2/video.hpp"
 #include <map>
 #include <string>
 #include <fstream> // Include the header for file input/output
@@ -49,7 +49,7 @@ void CV_ByteTrackerTest::run(int)
         cout<<"Invalid test data";
         cout<<detectionFile.is_open();
         cout<<"\n"<<referenceFile.is_open();
-        //ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
         return;
     }
     cv::Mat frameRows;

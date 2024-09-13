@@ -9,7 +9,7 @@
 
 namespace cv {
 namespace detail {
-inline namespace tracking {
+namespace tracking {
 
 //! @addtogroup tracking_detail
 //! @{

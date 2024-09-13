@@ -896,6 +896,8 @@ if(WITH_QUIRC)
   set(HAVE_QUIRC TRUE)
 endif()
 
+add_subdirectory(3rdparty/lapjv)
+
 if(WITH_ONNX)
   include(cmake/FindONNX.cmake)
 endif()

@@ -1,10 +1,7 @@
 #include "test_precomp.hpp"
 
-#include "opencv2/video/lapjv.hpp"
+#include "opencv2/video.hpp"
 #include <iostream>
-
-
-using namespace cv;
 
 #define TEST_AVAILABLE 1
 #ifdef TEST_AVAILABLE
@@ -29,7 +26,7 @@ TEST(Video_Lapjv, testSquare) {
     auto cost = getTestCostMatrix();
     auto expectedAssignment = getExpectedAssignment();
 
-    std::map<int, int> assignments = lapjv(cost);
+    std::map<int, int> assignments = cv::lapjv(cost);
 
     for (const auto& assignment : assignments) {
         int i = assignment.first;
@@ -41,7 +38,7 @@ TEST(Video_Lapjv, testSquare) {
 
 TEST(Video_Lapjv, testEmpty) {
     cv::Mat emptyMat;
-    auto ret = lapjv(emptyMat);
+    auto ret = cv::lapjv(emptyMat);
     EXPECT_TRUE(ret.empty());
 }
 
