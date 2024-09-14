@@ -1376,7 +1376,7 @@ public:
         if (outCn < 0) {
             CV_Assert(inputs.size() > 1 || !blobs.empty());
             MatShape weightShape = blobs.empty() ? inputs[1] : blobs[0].shape();
-            outCn = weightShape[1];
+            outCn = weightShape[1]*groups;
         }
         std::vector<int> outShape;
         outShape.push_back(inputs[0][0]);  // batch
@@ -1400,10 +1400,9 @@ public:
             CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
 
         CV_Assert(outCn % blobs[0].size[1] == 0);
-        int ngroups = outCn / blobs[0].size[1];
 
         int inpCn = inputs[0][1];
-        CV_Assert(inpCn % ngroups == 0 && outCn % ngroups == 0);
+        CV_Assert(inpCn % groups == 0 && outCn % groups == 0);
         CV_Assert(blobs[0].size[0] == inpCn);
 
         outputs.resize(1, MatShape(outShape));
@@ -1425,7 +1424,7 @@ public:
         CV_Assert(inputs.size() > 1 || !blobs.empty());
 
         MatShape weightShape = blobs.empty() ? inputs[1].shape() : blobs[0].shape();
-        numOutput = weightShape[1];
+        numOutput = weightShape[1]*groups;
 
         std::vector<int> inpShape;
         std::vector<int> outShape;
@@ -1444,12 +1443,12 @@ public:
 
         weightsMultipliers.assign(numOutput, 1.0);
 
-        if (weightsMat.empty())
-        {
+        if (weightsMat.empty() && !blobs.empty()) {
             transpose(blobs[0].reshape(1, blobs[0].size[0]), weightsMat);
-            bool constBias = blobs.size() >= 2;
-            biasesMat = constBias ? blobs[1].reshape(1, numOutput)
-                                  : Mat::zeros(numOutput, 1, CV_32F);
+        }
+
+        if (biasesMat.empty() && blobs.size() >= 2) {
+            biasesMat = blobs[1].reshape(1, numOutput);
         }
     }
 
@@ -1857,7 +1856,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr));
 
-        if (inputs_arr.depth() == CV_16F)
+        if (inputs_arr.depth(0) == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -1872,22 +1871,25 @@ public:
         int inpCn = inputs[0].size[1];
         bool is1x1flag = is1x1();
         int nstripes = getNumThreads();
+        CV_Assert(outputs.size() == 1);
+        CV_Assert(inputs[0].size[0] == outputs[0].size[0]);
+        CV_Assert(outCn == outputs[0].size[1]);
 
-        if( weightsMat.empty() ) {
+        if (weightsMat.empty() || inputs.size() >= 2) {
             Mat inpWeights = !blobs.empty() ? blobs[0] : inputs[1];
             transpose(inpWeights.reshape(1, inpCn), weightsMat);
         }
 
-        if (biasesMat.empty()) {
+        if (biasesMat.empty() || inputs.size() >= 3) {
             Mat inpBias = blobs.size() >= 2 ? blobs[1] : inputs.size() >= 3 ? inputs[2] : Mat();
             biasesMat = !inpBias.empty() ? inpBias.reshape(1, outCn) : Mat::zeros(outCn, 1, CV_32F);
         }
 
-        for (size_t ii = 0; ii < outputs.size(); ii++)
+        //for (size_t ii = 0; ii < outputs.size(); ii++)
         {
-            int ngroups = outCn / blobs[0].size[1];
-            int inpGroupCn = inpCn / ngroups;
-            int outGroupCn = blobs[0].size[1];
+            int ii = 0;
+            int inpGroupCn = inpCn / groups;
+            int outGroupCn = outCn / groups;
             const Mat& inp = inputs[ii];
             Mat& out = outputs[ii];
             int numImg = inp.size[0];
@@ -1899,12 +1901,12 @@ public:
 
             for (int n = 0; n < numImg; n++)
             {
-                for (int g = 0; g < ngroups; g++)
+                for (int g = 0; g < groups; g++)
                 {
-                    Mat dstMat = decnBlob.rowRange(_Range((g + n * ngroups) * outGroupCn, outGroupCn));
+                    Mat dstMat = decnBlob.rowRange(_Range((g + n * groups) * outGroupCn, outGroupCn));
                     Mat &colMat = is1x1flag ? dstMat : internals[0];
 
-                    Mat convMat = convBlob.rowRange(_Range((g + n * ngroups) * inpGroupCn, inpGroupCn));
+                    Mat convMat = convBlob.rowRange(_Range((g + n * groups) * inpGroupCn, inpGroupCn));
                     Mat wghtMat = weightsMat.colRange(_Range(g * inpGroupCn, inpGroupCn));
                     Mat curBiasMat = biasesMat.rowRange(_Range(g * outGroupCn, outGroupCn));
 

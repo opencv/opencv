@@ -136,7 +136,7 @@ public:
         if (inputs.size() == 2)
         {
             CV_Assert(this->inputs.size() == 2);
-            Net::Impl* netimpl_ = reinterpret_cast<Net::Impl*>(netimpl);
+            Net::Impl* netimpl_ = getNetImpl(this);
             Mat shapeTensor = netimpl_->argTensor(this->inputs[1]);
             shapeSpec = tensorToShapeSpec(shapeTensor);
         } else {

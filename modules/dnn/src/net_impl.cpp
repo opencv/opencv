@@ -2479,6 +2479,20 @@ void Net::Impl::enableWinograd(bool useWinograd_)
 void Net::Impl::getLayerTypes(std::vector<String>& layersTypes) const
 {
     layersTypes.clear();
+    if (mainGraph) {
+        std::set<std::string> layersTypesSet;
+        for (const Ptr<Graph>& g: allgraphs) {
+            const std::vector<Ptr<Layer> >& prog = g->prog();
+            for (const Ptr<Layer>& layer: prog) {
+                if (!layer)
+                    continue;
+                layersTypesSet.insert(layer->type);
+            }
+        }
+        for (auto it = layersTypesSet.begin(); it != layersTypesSet.end(); ++it)
+            layersTypes.push_back(*it);
+        return;
+    }
 
     std::map<String, int> layers_type_map;
     for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); it++)

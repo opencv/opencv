@@ -71,7 +71,7 @@ public:
 
         const int axis_ = normalize_axis(axis, inpShape);
         // handle dims = 0 situation
-        if (!inpShape.empty())
+        if (inpShape.dims > 0)
             handleKeepDims(inpShape, axis_);
         outputs.assign(1, inpShape);
 

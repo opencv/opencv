@@ -113,10 +113,9 @@ public:
     // TODO: replace with cv::broadcast() once 1d mat is supported
     // FIXME: fix if conditions if 1d mat is supported properly
     void broadcastCWtihBeta(int M, int N, const Mat &C) {
+        broadcast_C.clear();
+        broadcast_C.resize(M * N, 0.f);
         if (beta != 0 && !C.empty()) {
-            broadcast_C.clear();
-            broadcast_C.resize(M * N, 0.f);
-
             int real_ndims_C_ = real_ndims_C >= 0 ? real_ndims_C : C.dims;
 
             const float *ptr_c = C.ptr<const float>();
@@ -206,8 +205,8 @@ public:
 
         // broadcast C and copy C to output
         if (have_bias_) {
-            if (!const_C) {
-                broadcastCWtihBeta(M, N, inputs.back());
+            if (!const_C || broadcast_C.empty()) {
+                broadcastCWtihBeta(M, N, (inputs.size() >= 3 ? inputs.back() : blobs.back()));
             }
             int step = M * N;
             CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(step), "DNN/Gemm: C is not broadcast properly");

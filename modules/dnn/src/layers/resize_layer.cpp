@@ -9,6 +9,7 @@
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_cann.hpp"
+#include "../net_impl.hpp"
 #include <opencv2/imgproc.hpp>
 
 #ifdef HAVE_DNN_NGRAPH
@@ -26,13 +27,14 @@ namespace cv { namespace dnn {
 class ResizeLayerImpl : public ResizeLayer
 {
 public:
+    int outWidth0, outHeight0;
     ResizeLayerImpl(const LayerParams& params) : zoomFactorWidth(params.get<float>("zoom_factor_x", params.get<float>("zoom_factor", 0))),
                                                  zoomFactorHeight(params.get<float>("zoom_factor_y", params.get<float>("zoom_factor", 0))),
                                                  scaleWidth(0), scaleHeight(0)
     {
         setParamsFrom(params);
-        outWidth = params.get<float>("width", 0);
-        outHeight = params.get<float>("height", 0);
+        outWidth = outWidth0 = params.get<float>("width", 0);
+        outHeight = outHeight0 = params.get<float>("height", 0);
         if (params.has("zoom_factor"))
         {
             CV_Assert(!params.has("zoom_factor_x") && !params.has("zoom_factor_y"));
@@ -50,20 +52,66 @@ public:
             halfPixelCenters = true;
     }
 
+    bool dynamicOutputShapes() const CV_OVERRIDE
+    {
+        size_t ninputs = inputs.size();
+        if (ninputs == 1 ||
+            (outWidth0 > 0 && outHeight0 > 0) ||
+            (zoomFactorWidth > 0 && zoomFactorHeight > 0))
+            return false;
+        Net::Impl* netimpl_ = getNetImpl(this);
+        if (!netimpl_)
+            return true;
+        for (size_t i = 1; i < ninputs; i++) {
+            if (!netimpl_->isConstArg(inputs[i]))
+                return true;
+        }
+        return false;
+    }
+
+    MatShape getOutShape(const MatShape& inpShape, const std::vector<int>& sizes,
+                         const std::vector<float>& scales) const
+    {
+        CV_Assert((sizes.size() == 4 && scales.empty()) ||
+                  (scales.size() == 4 && sizes.empty()));
+        MatShape outShape = inpShape;
+        if (!sizes.empty()) {
+            outShape[2] = sizes[2];
+            outShape[3] = sizes[3];
+        } else {
+            outShape[2] = (float)(inpShape[2]*scales[2]);
+            outShape[3] = (float)(inpShape[3]*scales[3]);
+        }
+        return outShape;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_Assert_N(inputs.size() == 1 || inputs.size() == 2, inputs[0].size() == 4);
+        size_t ninputs = inputs.size();
+        CV_Assert(ninputs == 1 || ninputs == 2 || ninputs >= 4);
+        CV_Assert(!dynamicOutputShapes());
         outputs.resize(1, inputs[0]);
-        if (inputs.size() == 1) {
-            outputs[0][2] = zoomFactorHeight > 0 ? (outputs[0][2] * zoomFactorHeight) : outHeight;
-            outputs[0][3] = zoomFactorWidth > 0 ? (outputs[0][3] * zoomFactorWidth) : outWidth;
-        } else {
-            CV_CheckGE(inputs[1].size(), (size_t)4, "");
+        if (ninputs == 1) {
+            outputs[0][2] = zoomFactorHeight > 0 ? (int)(outputs[0][2] * zoomFactorHeight) : outHeight;
+            outputs[0][3] = zoomFactorWidth > 0 ? (int)(outputs[0][3] * zoomFactorWidth) : outWidth;
+        } else if (ninputs == 2 && inputs[1].dims == 4) {
+            // [TODO] this workaround needs to be removed
             outputs[0][2] = inputs[1][2];
             outputs[0][3] = inputs[1][3];
+        } else {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            std::vector<int> sizes;
+            std::vector<float> scales;
+            if (ninputs >= 4) {
+                Mat sizesTensor = netimpl_->argTensor(this->inputs[3]);
+                tensorToIntVec(sizesTensor, sizes);
+            }
+            Mat scalesTensor = netimpl_->argTensor(this->inputs[ninputs >= 4 ? 2 : 1]);
+            tensorToFloatVec(scalesTensor, scales);
+            outputs[0] = getOutShape(inputs[0], sizes, scales);
         }
         // We can work in-place (do nothing) if input shape == output shape.
         return (outputs[0][2] == inputs[0][2]) && (outputs[0][3] == inputs[0][3]);
@@ -87,54 +135,97 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    void updateOutSizeAndScale(const MatShape& inpShape, const MatShape& outShape)
+    {
+        CV_Assert(outShape.dims == 4);
+        outHeight = outShape[2];
+        outWidth = outShape[3];
+        if (alignCorners && outHeight > 1)
+            scaleHeight = float(inpShape[2] - 1) / (outHeight - 1);
+        else
+            scaleHeight = float(inpShape[2]) / outHeight;
+
+        if (alignCorners && outWidth > 1)
+            scaleWidth = float(inpShape[3] - 1) / (outWidth - 1);
+        else
+            scaleWidth = float(inpShape[3]) / outWidth;
+    }
+
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        outHeight = outputs[0].size[2];
-        outWidth = outputs[0].size[3];
-        if (alignCorners && outHeight > 1)
-            scaleHeight = static_cast<float>(inputs[0].size[2] - 1) / (outHeight - 1);
-        else
-            scaleHeight = static_cast<float>(inputs[0].size[2]) / outHeight;
-
-        if (alignCorners && outWidth > 1)
-            scaleWidth = static_cast<float>(inputs[0].size[3] - 1) / (outWidth - 1);
-        else
-            scaleWidth = static_cast<float>(inputs[0].size[3]) / outWidth;
+        if (!dynamicOutputShapes()) {
+            MatShape inpShape = inputs[0].shape();
+            MatShape outShape = outputs[0].shape();
+            updateOutSizeAndScale(inpShape, outShape);
+        }
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr,
+                 OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16F)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
-
-        std::vector<Mat> inputs, outputs, internals;
+        std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-        internals_arr.getMatVector(internals);
+        std::vector<Mat>& outputs = outputs_arr.getMatVecRef();
+        size_t ninputs = inputs.size();
+        CV_Assert(ninputs > 0);
 
-        if (outHeight == inputs[0].size[2] && outWidth == inputs[0].size[3])
-        {
-            // outputs[0] = inputs[0] doesn't work due to BlobManager optimizations
-            if (inputs[0].data != outputs[0].data)
-            {
-                inputs[0].copyTo(outputs[0]);
+        Mat& inp_ = inputs[0];
+
+        MatShape inpShape = inp_.shape();
+        MatShape outShape;
+
+        if (dynamicOutputShapes()) {
+            if (ninputs == 2 && inputs[0].dims == 4 && inputs[1].dims == 4) {
+                outShape = inpShape;
+                outShape[2] = inputs[1].size[2];
+                outShape[3] = inputs[1].size[3];
+            } else {
+                std::vector<int> sizes;
+                std::vector<float> scales;
+                if (ninputs >= 4) {
+                    Mat sizesTensor = inputs[3];
+                    tensorToIntVec(sizesTensor, sizes);
+                }
+                Mat scalesTensor = inputs[ninputs >= 4 ? 2 : 1];
+                tensorToFloatVec(scalesTensor, scales);
+                outShape = getOutShape(inpShape, sizes, scales);
             }
+        } else {
+            CV_Assert(outWidth > 0 && outHeight > 0);
+            outShape = inpShape;
+            outShape[2] = outHeight;
+            outShape[3] = outWidth;
+        }
+
+        updateOutSizeAndScale(inpShape, outShape);
+        outputs[0].fit(outShape, inp_.type());
+        Mat& out_ = outputs[0];
+
+        if (outShape == inpShape)
+        {
+            inp_.copyTo(out_);
             return;
         }
 
-        Mat& inp = inputs[0];
-        Mat& out = outputs[0];
-        int depth = inp.depth();
+        int depth = inp_.depth(), orig_depth = depth;
+
+        Mat inp, out;
+        if (depth != CV_32F && depth != CV_8S) {
+            inp_.convertTo(inp, CV_32F);
+            out.create(outShape, CV_32F);
+            depth = CV_32F;
+        } else {
+            inp = inp_;
+            out = out_;
+        }
+
         if ((interpolation == "nearest" && !alignCorners && !halfPixelCenters) || (interpolation == "opencv_linear" && depth != CV_8S) ||
             (interpolation == "bilinear" && halfPixelCenters && depth != CV_8S))
         {
@@ -305,6 +396,9 @@ public:
         }
         else
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
+
+        if (orig_depth != depth)
+            out.convertTo(out_, depth);
     }
 
 #ifdef HAVE_CANN

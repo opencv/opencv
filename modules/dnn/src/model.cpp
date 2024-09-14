@@ -117,7 +117,7 @@ public:
         net.setInput(blob);
 
         // Faster-RCNN or R-FCN
-        if (net.getLayer(0)->outputNameToIndex("im_info") != -1)
+        if (!net.getMainGraph() && net.getLayer(0)->outputNameToIndex("im_info") != -1)
         {
             Mat imInfo(Matx13f(size.height, size.width, 1.6f));
             net.setInput(imInfo, "im_info");

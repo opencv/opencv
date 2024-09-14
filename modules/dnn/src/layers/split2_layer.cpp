@@ -151,7 +151,7 @@ public:
         int axis_ = normalize_axis(axis, inpShape.dims);
 
         if (ninputs == 2) {
-            Net::Impl* netimpl_ = reinterpret_cast<Net::Impl*>(netimpl);
+            Net::Impl* netimpl_ = getNetImpl(this);
             Mat splitTensor = netimpl_->argTensor(this->inputs[1]);
             tensorToIntVec(splitTensor, tempSplit);
             split_ = &tempSplit;

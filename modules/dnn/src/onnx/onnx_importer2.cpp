@@ -144,6 +144,9 @@ protected:
                               const int index);
     void lstm_add_transform(int num_directions, int batch_size, int hidden_size,
                             int index, const std::string& input_name, const std::string& output_name);
+    void raiseError() {
+        have_errors = true;
+    }
 
     Net& net;
     Net::Impl* netimpl;
@@ -699,7 +702,7 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
             const std::string& param_j = dimension.dim_param();
             val_j = net.findDim(param_j, true);
         } else {
-            have_errors = true;
+            raiseError();
             return false;
         }
         //CV_Assert(0 <= val_j && val_j <= INT_MAX);
@@ -745,7 +748,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
             continue;
         Arg arg = net.newArg(input_i.name(), mainGraph_ ? DNN_ARG_INPUT : DNN_ARG_TEMP);
         if (!parseValueInfo(input_i, netimpl->args.at(arg.idx))) {
-            have_errors = true;
+            raiseError();
             return Ptr<Graph>();
         }
         inputs.push_back(arg);
@@ -757,7 +760,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
         const opencv_onnx::ValueInfoProto& output_i = graph_proto->output(i);
         Arg arg = net.newArg(output_i.name(), mainGraph_ ? DNN_ARG_OUTPUT : DNN_ARG_TEMP);
         if (!parseValueInfo(output_i, netimpl->args.at(arg.idx))) {
-           have_errors = true;
+           raiseError();
            return Ptr<Graph>();
         }
         outputs.push_back(arg);
@@ -821,7 +824,7 @@ std::string ONNXImporter2::extractNodeName(const opencv_onnx::NodeProto& node_pr
 void ONNXImporter2::rememberMissingOp(const std::string& opname)
 {
     missing_ops.insert(opname);
-    have_errors = true;
+    raiseError();
 }
 
 void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
@@ -852,7 +855,7 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
         const std::string& arg_name = node_proto.input(i);
         if (!net.haveArg(arg_name)) {
             CV_LOG_ERROR(NULL, "DNN/ONNX: unknown input '" << arg_name << "' of node '" << node_name << "'");
-            have_errors = true;
+            raiseError();
         }
         Arg arg = net.getArg(arg_name);
         /*ArgData adata = net.argData(arg);
@@ -888,8 +891,8 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
     }
     catch (const cv::Exception& e)
     {
-        have_errors = true;
-        CV_LOG_INFO(NULL, "DNN/ONNX: error occurred when processing node '" << node_name
+        raiseError();
+        CV_LOG_INFO(NULL, "DNN/ONNX: error '" << e.what() << "' occurred when processing node '" << node_name
                     << "' (" << layer_type << ") with "
                     << node_proto.input_size() << " inputs and "
                     << node_proto.output_size() << " outputs from domain '"
@@ -1803,21 +1806,18 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
 {
     int ninputs = node_proto.input_size();
     layerParams.type = "Resize";
+    String interp_mode = layerParams.get<String>("coordinate_transformation_mode", "half_pixel");
 
-    if (layerParams.has("coordinate_transformation_mode"))
+    CV_Assert(interp_mode != "tf_crop_and_resize");
+    bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel";
+
+    layerParams.set("align_corners", interp_mode == "align_corners");
+    layerParams.set("half_pixel_centers", halfPixel);
+    if (layerParams.get<String>("mode") == "linear")
     {
-        String interp_mode = layerParams.get<String>("coordinate_transformation_mode");
-        CV_Assert(interp_mode != "tf_crop_and_resize");
-
-        bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel";
-
-        layerParams.set("align_corners", interp_mode == "align_corners");
-        layerParams.set("half_pixel_centers", halfPixel);
-        if (layerParams.get<String>("mode") == "linear")
-        {
-            layerParams.set("mode", halfPixel ? "opencv_linear" : "bilinear");
-        }
+        layerParams.set("mode", halfPixel ? "opencv_linear" : "bilinear");
     }
+
     if (layerParams.get<String>("mode") == "linear" && framework_name == "pytorch")
         layerParams.set("mode", "opencv_linear");
 
@@ -1830,7 +1830,7 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
     if(scalesArg.idx > 0 && netimpl->isConstArg(scalesArg))
         scales = netimpl->argTensor(scalesArg);
 
-    if (ninputs >= 3) {
+    if (ninputs >= 3 && interp_mode == "tf_crop_and_resize") {
         int roiInputId = 1;
         Arg roiArg = node_inputs[roiInputId];
         if (!netimpl->isConstArg(roiArg)) {
@@ -1842,7 +1842,7 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
         }
     }
 
-    if (!scales.empty())
+    if (scales.total() == 4)
     {
         CV_CheckEQ(scales.total(), (size_t)4, "HCHW layout is expected");
         CV_CheckEQ(scales.type(), CV_32F, "Scales should have 32F type");
@@ -1850,7 +1850,7 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
         layerParams.set("zoom_factor_x", scales.at<float>(3));
         ninputs = 1;
     }
-    else if (node_proto.input_size() >= 4)  // opset-11 [x, roi, scales, sizes] or opset-13: input = [X, "", "", sizes]
+    else if (ninputs >= 4)  // opset-11 [x, roi, scales, sizes] or opset-13: input = [X, "", "", sizes]
     {
         Arg sizesArg = node_inputs[3];
         if (netimpl->isConstArg(sizesArg))
@@ -1859,16 +1859,8 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
             CV_CheckEQ(shapes.total(), (size_t)4, "HCHW layout is expected");
             layerParams.set("width", shapes.at<int>(3));
             layerParams.set("height", shapes.at<int>(2));
+            ninputs = 1;
         }
-        else
-        {
-            CV_Error_(Error::StsNotImplemented, ("ONNX/Resize: doesn't support dynamic non-constant 'sizes' input: %s", node_proto.input(3).c_str()));
-        }
-        ninputs = 1;
-    }
-    else
-    {
-        CV_Error(Error::StsNotImplemented, "ONNX/Resize: can't find neither 'scale' nor destination sizes parameters");
     }
     replaceLayerParam(layerParams, "mode", "interpolation");
     addLayer(layerParams, node_proto, ninputs);

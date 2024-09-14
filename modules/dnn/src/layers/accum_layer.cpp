@@ -85,8 +85,13 @@ public:
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
         LayerParams resizeParams;
+        Mat out = outputs_arr.getMat(0);
         resizeParams.set("interpolation", "bilinear");
         resizeParams.set("align_corners", true);
+        if (out.dims == 4) {
+            resizeParams.set("height", out.size[2]);
+            resizeParams.set("width", out.size[3]);
+        }
         resize = ResizeLayer::create(resizeParams);
     }
 

@@ -281,6 +281,24 @@ void tensorToIntVec(const Mat& tensor, std::vector<int>& vec)
     }
 }
 
+void tensorToFloatVec(const Mat& tensor, std::vector<float>& vec)
+{
+    if (tensor.empty()) {
+        vec.clear();
+    } else {
+        int type = tensor.type();
+        MatShape shape = tensor.shape();
+        CV_Assert(type == CV_32F || type == CV_16F);
+        CV_Assert(shape.dims <= 1);
+        int size = (int)shape.total();
+        vec.resize(size);
+        for (int i = 0; i < size; i++) {
+            vec[i] = type == CV_32F ? tensor.at<float>(i) :
+                (float)tensor.at<hfloat>(i);
+        }
+    }
+}
+
 void reshapeAndCopyFirst(InputArrayOfArrays inputs,
                          OutputArrayOfArrays outputs,
                          const MatShape& shape)

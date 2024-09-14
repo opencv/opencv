@@ -148,7 +148,7 @@ public:
 
     virtual bool dynamicOutputShapes() const CV_OVERRIDE
     {
-        Net::Impl* netimpl_ = reinterpret_cast<Net::Impl*>(netimpl);
+        Net::Impl* netimpl_ = getNetImpl(this);
         size_t ninputs = inputs.size();
 
         for (size_t i = 1; i < ninputs; i++) {
@@ -241,7 +241,7 @@ public:
         const std::vector<int> *starts_ = &starts, *ends_ = &ends, *axes_ = &axes;
 
         if (ninputs > 1) {
-            Net::Impl* netimpl_ = reinterpret_cast<Net::Impl*>(netimpl);
+            Net::Impl* netimpl_ = getNetImpl(this);
             Mat startsTensor = netimpl_->argTensor(this->inputs[1]);
             tensorToIntVec(startsTensor, tempStarts);
             starts_ = &tempStarts;

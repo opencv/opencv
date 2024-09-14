@@ -1411,7 +1411,10 @@ TEST_P(Layer_Padding_Test, Accuracy_01D){
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/,  Layer_Padding_Test,
 /*input blob shape*/ testing::Values(
-            std::vector<int>{},
+
+            //scalars cannot be padded
+            //std::vector<int>{},
+
             std::vector<int>{1},
             std::vector<int>{1, 4},
             std::vector<int>{4, 1}
@@ -1445,12 +1448,19 @@ TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
     ASSERT_EQ(1, outputs.size());
-    ASSERT_EQ(output_ref.shape(), outputs[0].shape());
+    MatShape ref_shape = output_ref.shape();
+    MatShape out_shape = outputs[0].shape();
+    if (ref_shape != out_shape) {
+        printf("ref_shape: %s\n", ref_shape.str().c_str());
+        printf("out_shape: %s\n", out_shape.str().c_str());
+        ASSERT_EQ(ref_shape, out_shape);
+    }
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
                         testing::Values(
-                            std::vector<int>({}),
+                            //only bias could be broadcasted from a scalar
+                            //std::vector<int>({}),
                             std::vector<int>({1}),
                             std::vector<int>({4})
 ));

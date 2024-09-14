@@ -77,11 +77,12 @@ void getConvPoolPaddings(const std::vector<int>& inp, const std::vector<size_t>&
 // Used in quantized model. It will return the (Max_element - Min_element)/127.
 double getWeightScale(const Mat& weightsMat);
 
-// Several ONNX operations take list of integer's (32-bit or 64-bit),
+// Several ONNX operations take list of integer's or float's,
 // e.g. to specify list of axes (Squeeze, Unsqueeze, Transpose, Reduce*, ...),
-// coordinates, repetitions etc. (Slice, Tile, ...).
-// Here is a helper function to extract this data
+// coordinates, repetitions etc. (Slice, Tile, ...), scale factors (Resize, ...).
+// Here are helper functions to extract this data
 void tensorToIntVec(const Mat& tensor, std::vector<int>& vec);
+void tensorToFloatVec(const Mat& tensor, std::vector<float>& vec);
 
 // inputs and outputs are both vector<Mat>'s or both are vector<UMat>'s.
 // the function does the following:

@@ -317,7 +317,7 @@ std::ostream& Layer::dump(std::ostream& strm, int indent, bool comma) const
     size_t nblobs = blobs.size();
     const std::vector<Ptr<Graph> >* subgraphs_ = subgraphs();
     size_t nsubgraphs = subgraphs_ ? subgraphs_->size() : 0;
-    Net::Impl* netimpl = reinterpret_cast<Net::Impl*>(this->netimpl);
+    Net::Impl* netimpl = getNetImpl(this);
     int delta_indent = netimpl->dump_indent;
     int subindent = indent + delta_indent;
     int argindent = subindent + delta_indent;

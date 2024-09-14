@@ -420,6 +420,11 @@ struct Net::Impl : public detail::NetImplBase
 
 };  // Net::Impl
 
+inline Net::Impl* getNetImpl(const Layer* layer)
+{
+    return reinterpret_cast<Net::Impl*>(layer->netimpl);
+}
+
 Net readNetFromONNX2(const String&);
 Net readNetFromONNX2(const char*, size_t);
 Net readNetFromONNX2(const std::vector<uchar>&);
