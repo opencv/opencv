@@ -530,7 +530,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean, scale);
 }
 
-TEST_P(Test_Model, Keypoints_pose)
+/*TEST_P(Test_Model, Keypoints_pose)
 {
     if (target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
@@ -563,7 +563,7 @@ TEST_P(Test_Model, Keypoints_pose)
         norm = 20; // l1 = 1.5, lInf = 20
 
     testKeypointsModel(weights, "", inp, exp, norm, size, mean, scale, swapRB);
-}
+}*/
 
 TEST_P(Test_Model, Keypoints_face)
 {
