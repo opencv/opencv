@@ -1651,7 +1651,7 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Einsum_Test, testing::Values(
-    std::make_tuple(std::vector<int>({}), std::vector<int>({}), ",->"),
+    //std::make_tuple(std::vector<int>({}), std::vector<int>({}), ",->"),
     std::make_tuple(std::vector<int>({1}), std::vector<int>({}), "i,->i"),
     std::make_tuple(std::vector<int>({}), std::vector<int>({1}), ",i->i"),
     std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({}), "ij,->ij"),

@@ -1326,7 +1326,6 @@ public:
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
         int dims = inpShape.size();
-        int inpCn = inpShape[1];
         int inpD = dims == 5 ? inpShape[2] : 1;
         int inpH = inpShape[dims - 2];
         int inpW = inpShape.back();

@@ -662,6 +662,12 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
         if (preferableBackend != DNN_BACKEND_OPENCV && preferableBackend != DNN_BACKEND_CUDA)
             continue;  // Go to the next layer.
 
+        // [TODO] temporarily disabled Concat optimization.
+        // It's not quite compatible with dynamic shapes,
+        // so we need to make sure that we correctly predicted shapes
+        // of all the concatenated tensors and their offsets inside the result
+        // and also properly allocated that concatenated tensor in advance
+#if 0
         // the optimization #2. if there is concat layer that concatenates channels
         // from the inputs together (i.e. axis == 1) then we make the inputs of
         // the concat layer to write to the concatenation output buffer
@@ -832,6 +838,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 }
             }
         }
+#endif
     }
 }
 

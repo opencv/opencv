@@ -677,11 +677,22 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
 }
 
 
+#define TRACE_INFERENCE 0
+
 void Net::Impl::forwardLayer(LayerData& ld)
 {
     CV_TRACE_FUNCTION();
 
     Ptr<Layer> layer = ld.layerInstance;
+
+#if TRACE_INFERENCE
+    if (layer) {
+        printf("------------------------------------------------\n");
+        printf("Running layer '%s' (%s)\n",
+               layer->name.c_str(),
+               layer->type.c_str());
+    }
+#endif
 
     if (!ld.skip)
     {
@@ -906,6 +917,29 @@ void Net::Impl::forwardLayer(LayerData& ld)
         tm.stop();
         int64 t = tm.getTimeTicks();
         layersTimings[ld.id] = (t > 0) ? t : t + 1;  // zero for skipped layers only
+#if TRACE_INFERENCE
+        size_t noutputs = ld.outputBlobs.size();
+        for (size_t i = 0; i < noutputs; i++) {
+            const Mat& out = ld.outputBlobs[i];
+            printf("Output %zu.\n", i);
+            printf("  Type: %s\n", typeToString(out.type()).c_str());
+            printf("  Shape: ");
+            if (out.empty()) {
+                printf("<empty>\n");
+            } else if (out.dims == 0) {
+                printf("<scalar>\n");
+            } else {
+                for (int j = 0; j < out.dims; j++) {
+                    printf("%s%d", (j == 0 ? "[" : " x "), out.size[j]);
+                }
+                printf("]\n");
+            }
+            fflush(stdout);
+            pprint(std::cout, out, 0, 3, 100, '[');
+            std::cout.flush();
+            printf("\n");
+        }
+#endif
     }
     else
     {

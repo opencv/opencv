@@ -113,7 +113,7 @@ static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto)
 class ONNXImporter2
 {
 public:
-    ONNXImporter2(Net& net_);
+    ONNXImporter2();
 
     Net parseFile(const char *onnxFile);
     Net parseBuffer(const void* buffer, size_t sizeBuffer);
@@ -148,7 +148,7 @@ protected:
         have_errors = true;
     }
 
-    Net& net;
+    Net net;
     Net::Impl* netimpl;
     std::string onnxFilename;
     Ptr<Graph> curr_graph;
@@ -259,10 +259,9 @@ protected:
     std::string extractNodeName(const opencv_onnx::NodeProto& node_proto);
 };
 
-ONNXImporter2::ONNXImporter2(Net& net_)
-    : net(net_)
-    , onnx_opset(0)
-    , useLegacyNames(getParamUseLegacyNames())
+ONNXImporter2::ONNXImporter2() :
+    onnx_opset(0),
+    useLegacyNames(getParamUseLegacyNames())
 {
     netimpl = net.getImpl();
 }
@@ -2732,22 +2731,23 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT(int opset_version)
 
 Net readNetFromONNX2(const String& onnxFile)
 {
-    Net net;
-    ONNXImporter2 importer(net);
-    return importer.parseFile(onnxFile.c_str());
+    ONNXImporter2 importer;
+    Net net = importer.parseFile(onnxFile.c_str());
+    if (net.getMainGraph()) {
+        net.getImpl()->modelFileName = onnxFile;
+    }
+    return net;
 }
 
 Net readNetFromONNX2(const char* buffer, size_t size)
 {
-    Net net;
-    ONNXImporter2 importer(net);
+    ONNXImporter2 importer;
     return importer.parseBuffer(buffer, size);
 }
 
 Net readNetFromONNX2(const std::vector<uchar>& buffer)
 {
-    Net net;
-    ONNXImporter2 importer(net);
+    ONNXImporter2 importer;
     return importer.parseBuffer(buffer.data(), buffer.size());
 }
 

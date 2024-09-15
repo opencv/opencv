@@ -70,6 +70,7 @@ struct Net::Impl : public detail::NetImplBase
     bool useWinograd;
     std::vector<int64> layersTimings;
 
+    std::string modelFileName;
     ModelFormat modelFormat;
     DataLayout originalLayout;
     int onnx_opset;

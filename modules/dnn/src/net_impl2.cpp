@@ -338,7 +338,6 @@ void Net::Impl::allocateLayerOutputs(
     outputs.assign(noutputs, Mat());
     for (size_t i = 0; i < noutputs; i++) {
         Arg out = layer->outputs[i];
-        const ArgData& adata = args.at(out.idx);
         if (useBufferPool) {
             Mat& out_t = argTensor(out);
             out_t.fit(outShapes[i], outTypes[i]);
@@ -405,7 +404,7 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
     std::vector<int> outidxs;
     int i, j, noutputs = (int)outargs.size();
     if (!outnames.empty()) {
-        CV_Assert((int)outnames.size() == noutputs);
+        CV_CheckEQ((int)outnames.size(), noutputs, "the number of requested and actual outputs must be the same");
         if (noutputs == 1 && outnames[0].empty())
             ;
         else {
@@ -973,6 +972,8 @@ bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
             typeCache[out.idx] = outTypes[i];
         }
     }
+
+    return true;
 }
 
 void Net::Impl::checkArgs(const std::vector<Arg>& args_) const

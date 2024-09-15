@@ -527,7 +527,7 @@ namespace cv
                 int j = n == ndump || i < edge ? i :
                         i == edge ? -1 :
                         n - edge*2 - 1 + i;
-                bool dots = j < 0;
+                dots = j < 0;
                 if (!dots)
                     pprintSlice(strm, tensor, step, d+1, ofs + j*step[d], edge);
                 else
@@ -537,7 +537,7 @@ namespace cv
     }
 
     std::ostream& pprint(std::ostream& strm, InputArray array,
-                         int indent, int edge_,
+                         int /*indent*/, int edge_,
                          int wholeTensorThreshold,
                          char parens)
     {

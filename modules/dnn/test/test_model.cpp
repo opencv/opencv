@@ -100,7 +100,8 @@ public:
     void testSegmentationModel(const std::string& weights_file, const std::string& config_file,
                                const std::string& inImgPath, const std::string& outImgPath,
                                float norm, const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                               double scale = 1.0, bool swapRB = false, bool crop = false, const std::string outname = "")
+                               double scale = 1.0, bool swapRB = false, bool crop = false,
+                               const std::vector<std::string>& outnames=std::vector<std::string>())
     {
         checkBackend();
 
@@ -115,8 +116,8 @@ public:
         model.setPreferableBackend(backend);
         model.setPreferableTarget(target);
 
-        if(!outname.empty())
-            model.setOutputNames({outname});
+        if(!outnames.empty())
+            model.setOutputNames(outnames);
 
         model.segment(frame, mask);
         normAssert(mask, exp, "", norm, norm);
@@ -684,7 +685,7 @@ TEST_P(Test_Model, Segmentation)
     Scalar mean = Scalar(0.485*255, 0.456*255, 0.406*255);
     bool swapRB = true;
 
-    testSegmentationModel(weights_file, "", inp, exp, norm, size, mean, scale, swapRB, false, "out");
+    testSegmentationModel(weights_file, "", inp, exp, norm, size, mean, scale, swapRB, false);
 }
 
 TEST_P(Test_Model, TextRecognition)
