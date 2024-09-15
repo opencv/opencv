@@ -328,6 +328,8 @@ void Net::Impl::allocateLayerOutputs(
     size_t noutputs = layer->outputs.size();
     outShapes.clear();
     outTypes.clear();
+    tempShapes.clear();
+    tempTypes.clear();
     layer->getMemoryShapes(inpShapes, (int)noutputs, outShapes, tempShapes);
     layer->getTypes(inpTypes, (int)noutputs, (int)tempShapes.size(), outTypes, tempTypes);
     CV_Assert(tempShapes.size() == tempTypes.size());
@@ -362,8 +364,9 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     if (!mainGraph) {
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
-    // ************ uncomment for debugging **********
+    // ************ uncomment one of the lines below for debugging **********
     //tracingMode = DNN_TRACE_OP;
+    //tracingMode = DNN_TRACE_ALL;
     // [TODO] initialize profile, tracer, symbolic shapes etc.
     size_t nsymdims = dimnames_vec.size();
     dimvalues.assign(nsymdims, -1);
@@ -461,9 +464,9 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
 
 void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg arg, bool dumpdata)
 {
-    const int PPRINT_CONTEXT = 5;
+    const int PPRINT_CONTEXT = 3;
     const int PPRINT_CONST_THRESHOLD = 16;
-    const int PPRINT_ALL_THRESHOLD = 16;
+    const int PPRINT_ALL_THRESHOLD = 100;
     const Mat& m = argTensor(arg);
     const ArgData& adata = args.at(arg.idx);
     bool constArg = adata.kind == DNN_ARG_CONST;
@@ -483,16 +486,10 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
     }
     strm_ << "\n  Layout: " << layoutToString(shape.layout) << "\n";
     if (dumpdata && !constArg) {
-        /*Mat temp;
-        if (shape.layout == DNN_LAYOUT_BLOCK) {
-            fromBlock->forward(*net, mainGraph, {m}, {fromBlockResult}, scratch_bufs);
-            temp = fromBlockResult;
-        } else {
-            temp = m;
-        }
-        dump(strm_, temp, 0, PPRINT_CONTEXT, PPRINT_ALL_THRESHOLD, '[');
-        strm_ << "\n";*/
+        // [TODO] when we support block layout, block-layout tensor
+        // should be converted to the original layout before printing it
         pprint(strm_, m, 0, PPRINT_CONTEXT, PPRINT_ALL_THRESHOLD, '[');
+        strm_ << "\n";
     }
 }
 

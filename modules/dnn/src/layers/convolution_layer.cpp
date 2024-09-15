@@ -1331,8 +1331,7 @@ public:
         int inpH = inpShape[dims - 2];
         int inpW = inpShape.back();
         int outCn = outShape[1];
-        int ngroups = inpCn / blobs[0].size[0];
-        int outGroupCn = outCn / ngroups;
+        int outGroupCn = outCn / groups;
         int ksize = outGroupCn * std::accumulate(kernel_size.begin(), kernel_size.end(),
                                                  1, std::multiplies<size_t>());
         return shape(ksize, inpD * inpH * inpW);
@@ -1407,10 +1406,22 @@ public:
 
         outputs.resize(1, MatShape(outShape));
 
-        if (!is1x1())
-            internals.push_back(computeColRowShape(inputs[0], outputs[0]));
+        internals.assign(1,
+            is1x1() ? MatShape() :
+            computeColRowShape(inputs[0], outputs[0]));
 
         return false;
+    }
+
+    void getTypes(const std::vector<MatType> &inputs,
+                  const int requiredOutputs,
+                  const int requiredInternals,
+                  std::vector<MatType> &outputs,
+                  std::vector<MatType> &internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() > 0);
+        outputs.assign(requiredOutputs, inputs[0]);
+        internals.assign(requiredInternals, CV_32F);
     }
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -1882,9 +1893,19 @@ public:
 
         if (biasesMat.empty() || inputs.size() >= 3) {
             Mat inpBias = blobs.size() >= 2 ? blobs[1] : inputs.size() >= 3 ? inputs[2] : Mat();
-            biasesMat = !inpBias.empty() ? inpBias.reshape(1, outCn) : Mat::zeros(outCn, 1, CV_32F);
+            Mat biasesMat_ = !inpBias.empty() ? inpBias.reshape(1, outCn) : Mat::zeros(outCn, 1, CV_32F);
+            biasesMat_.copyTo(biasesMat);
         }
 
+        /*printf("DeConvolution Input: ");
+        pprint(std::cout, inputs[0], 0, 3, 100, '[');
+        printf("\nDeConvolution Weights: ");
+        pprint(std::cout, weightsMat, 0, 3, 100, '[');
+        printf("\nDeConvolution Bias: ");
+        pprint(std::cout, biasesMat, 0, 3, 100, '[');
+        printf("\n");*/
+
+        CV_Assert(outputs.size() == 1);
         //for (size_t ii = 0; ii < outputs.size(); ii++)
         {
             int ii = 0;
