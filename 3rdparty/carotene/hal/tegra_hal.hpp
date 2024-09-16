@@ -1932,6 +1932,8 @@ inline int TEGRA_GaussianBlurBinomial(const uchar* src_data, size_t src_step, uc
 
 #endif // OPENCV_IMGPROC_HAL_INTERFACE_H
 
+// The optimized branch was developed for old armv7 processors
+#if defined(__ARM_ARCH) && (__ARM_ARCH == 7)
 inline int TEGRA_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_step,
                        const short* prev_deriv_data, size_t prev_deriv_step,
                        const uchar* next_data, size_t next_step,
@@ -1958,5 +1960,6 @@ inline int TEGRA_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_ste
 
 #undef cv_hal_LKOpticalFlowLevel
 #define cv_hal_LKOpticalFlowLevel TEGRA_LKOpticalFlowLevel
+#endif // __ARM_ARCH=7
 
 #endif
