@@ -76,7 +76,7 @@ string modelName, framework;
 
 static void preprocess(const Mat& frame, Net& net, Size inpSize);
 
-static void postprocess(Mat& frame, const vector<Mat>& out, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes);
+static void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string yolo_name);
 
 static void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans, int stdSize, int stdWeight, int stdImgSize, int stdThickness);
 
@@ -91,7 +91,7 @@ static void yoloPostProcessing(
     vector<Rect2d>& keep_boxes,
     float conf_threshold,
     float iou_threshold,
-    const string& test_name);
+    const string& yolo_name);
 
 static void printAliases(string& zooFile){
     vector<string> aliases = findAliases(zooFile, "object_detection");
@@ -188,6 +188,7 @@ int main(int argc, char** argv)
     inpHeight = parser.get<int>("height");
     int async = parser.get<int>("async");
     paddingValue = parser.get<float>("padvalue");
+    const string yolo_name = parser.get<String>("postprocessing");
     paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
     //![preprocess_params]
     String sha1 = parser.get<String>("sha1");
@@ -315,7 +316,7 @@ int main(int argc, char** argv)
             classIds.clear();
             confidences.clear();
             boxes.clear();
-            postprocess(frame, outs, net, backend, classIds, confidences, boxes);
+            postprocess(frame, outs, net, backend, classIds, confidences, boxes, yolo_name);
 
             drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
 
@@ -360,7 +361,7 @@ int main(int argc, char** argv)
             confidences.clear();
             boxes.clear();
 
-            postprocess(frame, outs, net, backend, classIds, confidences, boxes);
+            postprocess(frame, outs, net, backend, classIds, confidences, boxes, yolo_name);
 
             drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
 
@@ -423,7 +424,7 @@ void yoloPostProcessing(
     vector<Rect2d>& keep_boxes,
     float conf_threshold,
     float iou_threshold,
-    const string& test_name)
+    const string& yolo_name)
 {
     // Retrieve
     vector<int> classIds;
@@ -432,12 +433,12 @@ void yoloPostProcessing(
 
     vector<Mat> outs_copy = outs;
 
-    if (test_name == "yolov8")
+    if (yolo_name == "yolov8")
     {
         transposeND(outs_copy[0], {0, 2, 1}, outs_copy[0]);
     }
 
-    if (test_name == "yolonas")
+    if (yolo_name == "yolonas")
     {
         // outs contains 2 elements of shape [1, 8400, 80] and [1, 8400, 4]. Concat them to get [1, 8400, 84]
         Mat concat_out;
@@ -458,16 +459,16 @@ void yoloPostProcessing(
         for (int i = 0; i < preds.rows; ++i)
         {
             // filter out non-object
-            float obj_conf = (test_name == "yolov8" || test_name == "yolonas") ? 1.0f : preds.at<float>(i, 4);
+            float obj_conf = (yolo_name == "yolov8" || yolo_name == "yolonas") ? 1.0f : preds.at<float>(i, 4);
             if (obj_conf < conf_threshold)
                 continue;
 
-            Mat scores = preds.row(i).colRange((test_name == "yolov8" || test_name == "yolonas") ? 4 : 5, preds.cols);
+            Mat scores = preds.row(i).colRange((yolo_name == "yolov8" || yolo_name == "yolonas") ? 4 : 5, preds.cols);
             double conf;
             Point maxLoc;
             minMaxLoc(scores, 0, &conf, 0, &maxLoc);
 
-            conf = (test_name == "yolov8" || test_name == "yolonas") ? conf : conf * obj_conf;
+            conf = (yolo_name == "yolov8" || yolo_name == "yolonas") ? conf : conf * obj_conf;
             if (conf < conf_threshold)
                 continue;
 
@@ -479,7 +480,7 @@ void yoloPostProcessing(
             double h = det[3];
 
             // [x1, y1, x2, y2]
-            if (test_name == "yolonas") {
+            if (yolo_name == "yolonas") {
                 boxes.push_back(Rect2d(cx, cy, w, h));
             } else {
                 boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
@@ -502,7 +503,7 @@ void yoloPostProcessing(
     }
 }
 
-void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes)
+void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string yolo_name)
 {
     static vector<int> outLayers = net.getUnconnectedOutLayers();
     static string outLayerType = net.getLayer(outLayers[0])->type;
@@ -582,7 +583,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
         //![forward_buffers]
 
         //![postprocess]
-        yoloPostProcessing(outs, keep_classIds, keep_confidences, keep_boxes, confThreshold, nmsThreshold, "yolov8");
+        yoloPostProcessing(outs, keep_classIds, keep_confidences, keep_boxes, confThreshold, nmsThreshold, yolo_name);
         //![postprocess]
 
         for (size_t i = 0; i < keep_classIds.size(); ++i)

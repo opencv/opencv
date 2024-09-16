@@ -174,6 +174,8 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
                        modelName, zooFile)+
            genArgument("labels", "Path to a text file with names of classes to label detected objects.",
                        modelName, zooFile)+
+           genArgument("postprocessing", "Indicate the postprocessing type of model i.e. yolov8, yolonas, etc.",
+                       modelName, zooFile)+
            genArgument("sha1", "Optional path to hashsum of downloaded model to be loaded from models.yml",
                        modelName, zooFile);
 }

@@ -196,7 +196,7 @@ cd ../data
 export OPENCV_SAMPLES_DATA_PATH=$(pwd)
 python download_models.py yolov8x --save_dir=$OPENCV_DOWNLOAD_CACHE_DIR
 cd <build directory of OpenCV>
-./bin/example_dnn_yolo_detector yolov8x
+./bin/example_dnn_object_detection yolov8x
 @endcode
 
 This will execute the YOLOX detector with your camera.
