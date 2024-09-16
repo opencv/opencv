@@ -1,17 +1,12 @@
 /* match_tpl.h -- find longest match template for compare256 variants
  *
- * Copyright (C) 1995-2013 Jean-loup Gailly and Mark Adler
+ * Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  *
  * Portions copyright (C) 2014-2021 Konstantin Nosov
  *  Fast-zlib optimized longest_match
  *  https://github.com/gildor2/fast_zlib
  */
-
-#include "zbuild.h"
-#include "zutil_p.h"
-#include "deflate.h"
-#include "functable.h"
 
 #ifndef MATCH_TPL_H
 #define MATCH_TPL_H
@@ -107,11 +102,11 @@ Z_INTERNAL uint32_t LONGEST_MATCH(deflate_state *const s, Pos cur_match) {
          * to cur_match). We cannot use s->prev[strstart+1,...] immediately, because
          * these strings are not yet inserted into the hash table.
          */
-        hash = s->update_hash(s, 0, scan[1]);
-        hash = s->update_hash(s, hash, scan[2]);
+        hash = s->update_hash(0, scan[1]);
+        hash = s->update_hash(hash, scan[2]);
 
         for (i = 3; i <= best_len; i++) {
-            hash = s->update_hash(s, hash, scan[i]);
+            hash = s->update_hash(hash, scan[i]);
 
             /* If we're starting with best_len >= 3, we can use offset search. */
             pos = s->head[hash];
@@ -241,9 +236,9 @@ Z_INTERNAL uint32_t LONGEST_MATCH(deflate_state *const s, Pos cur_match) {
                  */
                 scan_endstr = scan + len - (STD_MIN_MATCH+1);
 
-                hash = s->update_hash(s, 0, scan_endstr[0]);
-                hash = s->update_hash(s, hash, scan_endstr[1]);
-                hash = s->update_hash(s, hash, scan_endstr[2]);
+                hash = s->update_hash(0, scan_endstr[0]);
+                hash = s->update_hash(hash, scan_endstr[1]);
+                hash = s->update_hash(hash, scan_endstr[2]);
 
                 pos = s->head[hash];
                 if (pos < cur_match) {

@@ -11,8 +11,12 @@
 #ifndef INFLATE_H_
 #define INFLATE_H_
 
-#include "adler32_fold.h"
-#include "crc32_fold.h"
+#include "crc32.h"
+
+#ifdef S390_DFLTCC_INFLATE
+#  include "arch/s390/dfltcc_common.h"
+#  define HAVE_ARCH_INFLATE_STATE
+#endif
 
 /* define NO_GZIP when compiling if you want to disable gzip header and trailer decoding by inflate().
    NO_GZIP would be used to avoid linking in the crc code when it is not needed.
@@ -53,14 +57,13 @@ typedef enum {
     LENGTH,     /* i: waiting for 32-bit length (gzip) */
     DONE,       /* finished check, done -- remain here until reset */
     BAD,        /* got a data error -- remain here until reset */
-    MEM,        /* got an inflate() memory error -- remain here until reset */
     SYNC        /* looking for synchronization bytes to restart inflate() */
 } inflate_mode;
 
 /*
     State transitions between above modes -
 
-    (most modes can go to BAD or MEM on error -- not shown for clarity)
+    (most modes can go to BAD on error -- not shown for clarity)
 
     Process header:
         HEAD -> (gzip) or (zlib) or (raw)
@@ -81,10 +84,19 @@ typedef enum {
     Process trailer:
         CHECK -> LENGTH -> DONE
  */
+typedef struct inflate_state inflate_state;
+
+/* Struct for memory allocation handling */
+typedef struct inflate_allocs_s {
+    char            *buf_start;
+    free_func        zfree;
+    inflate_state   *state;
+    unsigned char   *window;
+} inflate_allocs;
 
 /* State maintained between inflate() calls -- approximately 7K bytes, not
    including the allocated sliding window, which is up to 32K bytes. */
-struct inflate_state {
+struct ALIGNED_(64) inflate_state {
     PREFIX3(stream) *strm;             /* pointer back to this zlib stream */
     inflate_mode mode;          /* current inflate mode */
     int last;                   /* true if processing last block */
@@ -132,9 +144,14 @@ struct inflate_state {
     int back;                   /* bits back of last unprocessed length/lit */
     unsigned was;               /* initial length of match */
     uint32_t chunksize;         /* size of memory copying chunk */
+    inflate_allocs *alloc_bufs; /* struct for handling memory allocations */
+#ifdef HAVE_ARCH_INFLATE_STATE
+    arch_inflate_state arch;    /* architecture-specific extensions */
+#endif
 };
 
-int Z_INTERNAL PREFIX(inflate_ensure_window)(struct inflate_state *state);
 void Z_INTERNAL PREFIX(fixedtables)(struct inflate_state *state);
+Z_INTERNAL inflate_allocs* alloc_inflate(PREFIX3(stream) *strm);
+Z_INTERNAL void free_inflate(PREFIX3(stream) *strm);
 
 #endif /* INFLATE_H_ */

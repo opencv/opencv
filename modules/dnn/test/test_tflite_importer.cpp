@@ -268,6 +268,10 @@ TEST_P(Test_TFLite, global_max_pooling_2d) {
     testLayer("global_max_pooling_2d");
 }
 
+TEST_P(Test_TFLite, leakyRelu) {
+    testLayer("leakyRelu");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace
