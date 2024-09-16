@@ -3,7 +3,6 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
-#include "layers_common.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -104,10 +103,22 @@ public:
         // Assign output shape
         auto output_shape = input_shape;
         output_shape[axis_normalized] = K;
-        outputs.assign(1, output_shape);
-        outputs.assign(2, output_shape); // TODO: support indices of type CV_32S on 5.x
+        outputs.assign(2, output_shape);
 
         return false;
+    }
+
+    void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE {
+        // [TODO] Check depth of inputs[1] (K) once K becomes one of the inputs
+        outputs.resize(2);
+        outputs[0] = inputs.front();
+        // [TODO] Replace with inputs.back() once K becomes one of the inputs
+        // [TODO] OpenVINO does not support int64. Consider set type int32 instead if backend is ngraph
+        outputs[1] = CV_64S;
     }
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
@@ -119,7 +130,7 @@ public:
         axis = normalize_axis(axis, input_shape.size());
     }
 
-    template<class Comparator>
+    template<class Comparator, typename T>
     void FindTopK(const Mat &input, Mat &output_value, Mat &output_index) {
         const auto input_shape = shape(input);
         size_t loops = std::accumulate(input_shape.begin(), input_shape.begin() + axis, 1, std::multiplies<int>());
@@ -127,9 +138,9 @@ public:
         int dim_axis = input_shape[axis];
         if (loops == 1) {
             auto worker = [&](const Range &r) {
-                const auto *input_ptr = input.ptr<const float>();   // TODO: support other input type
-                auto *output_value_ptr = output_value.ptr<float>();
-                auto *output_index_ptr = output_index.ptr<float>(); // TODO: use CV_32S on 5.x
+                const auto *input_ptr = input.ptr<const T>();
+                auto *output_value_ptr = output_value.ptr<T>();
+                auto *output_index_ptr = output_index.ptr<int64_t>();
 
                 Comparator cmp(input_ptr, step);
 
@@ -155,9 +166,9 @@ public:
             parallel_for_(Range(0, step), worker);
         } else {
             auto worker = [&](const Range &r) {
-                const auto *input_ptr = input.ptr<const float>();
-                auto *output_value_ptr = output_value.ptr<float>();
-                auto *output_index_ptr = output_index.ptr<float>();
+                const auto *input_ptr = input.ptr<const T>();
+                auto *output_value_ptr = output_value.ptr<T>();
+                auto *output_index_ptr = output_index.ptr<int64_t>();
 
                 Comparator cmp(input_ptr, step);
 
@@ -206,9 +217,35 @@ public:
         auto &output_index = outputs.back();
 
         if (largest) {
-            FindTopK<ComparatorGreater<float>>(input, output_value, output_index);
+            switch (input.depth()) {
+                case CV_8U: FindTopK<ComparatorGreater<uint8_t>, uint8_t>(input, output_value, output_index); break;
+                case CV_8S: FindTopK<ComparatorGreater<int8_t>, int8_t>(input, output_value, output_index); break;
+                case CV_16U: FindTopK<ComparatorGreater<uint16_t>, uint16_t>(input, output_value, output_index); break;
+                case CV_16S: FindTopK<ComparatorGreater<int16_t>, int16_t>(input, output_value, output_index); break;
+                case CV_16F: FindTopK<ComparatorGreater<hfloat>, hfloat>(input, output_value, output_index); break;
+                case CV_32U: FindTopK<ComparatorGreater<unsigned>, unsigned>(input, output_value, output_index); break;
+                case CV_32S: FindTopK<ComparatorGreater<int>, int>(input, output_value, output_index); break;
+                case CV_32F: FindTopK<ComparatorGreater<float>, float>(input, output_value, output_index); break;
+                case CV_64U: FindTopK<ComparatorGreater<uint64_t>, uint64_t>(input, output_value, output_index); break;
+                case CV_64S: FindTopK<ComparatorGreater<int64_t>, int64_t>(input, output_value, output_index); break;
+                case CV_64F: FindTopK<ComparatorGreater<double>, double>(input, output_value, output_index); break;
+                default: CV_Error(Error::BadDepth, "Unsupported input data type");
+            }
         } else {
-            FindTopK<ComparatorLess<float>>(input, output_value, output_index);
+            switch (input.depth()) {
+                case CV_8U: FindTopK<ComparatorLess<uint8_t>, uint8_t>(input, output_value, output_index); break;
+                case CV_8S: FindTopK<ComparatorLess<int8_t>, int8_t>(input, output_value, output_index); break;
+                case CV_16U: FindTopK<ComparatorLess<uint16_t>, uint16_t>(input, output_value, output_index); break;
+                case CV_16S: FindTopK<ComparatorLess<int16_t>, int16_t>(input, output_value, output_index); break;
+                case CV_16F: FindTopK<ComparatorLess<hfloat>, hfloat>(input, output_value, output_index); break;
+                case CV_32U: FindTopK<ComparatorLess<unsigned>, unsigned>(input, output_value, output_index); break;
+                case CV_32S: FindTopK<ComparatorLess<int>, int>(input, output_value, output_index); break;
+                case CV_32F: FindTopK<ComparatorLess<float>, float>(input, output_value, output_index); break;
+                case CV_64U: FindTopK<ComparatorLess<uint64_t>, uint64_t>(input, output_value, output_index); break;
+                case CV_64S: FindTopK<ComparatorLess<int64_t>, int64_t>(input, output_value, output_index); break;
+                case CV_64F: FindTopK<ComparatorLess<double>, double>(input, output_value, output_index); break;
+                default: CV_Error(Error::BadDepth, "Unsupported input data type");
+            }
         }
     }
 

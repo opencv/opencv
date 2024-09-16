@@ -100,9 +100,6 @@
 "test_eyelike_populate_off_main_diagonal", // Issues::Layer::Can't create layer::Can't create layer "onnx_node_output_0!y" of type "EyeLike" in function 'getLayerInstance'
 "test_eyelike_with_dtype", // ---- same as above ---
 "test_eyelike_without_dtype", // ---- same as above ---
-"test_gathernd_example_float32", // Issues::Layer::Can't create layer
-"test_gathernd_example_int32", // ---- same as above ---
-"test_gathernd_example_int32_batch_dim1", // ---- same as above ---
 "test_gelu_default_1_expanded", // parser: no corresponding layer for CastLike
 "test_gelu_default_2_expanded", // parser: no corresponding layer for CastLike
 "test_gelu_tanh_1_expanded", // parser: no corresponding layer for CastLike
@@ -398,7 +395,7 @@
 "test_tfidfvectorizer_tf_uniandbigrams_skip5", // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "TfIdfVectorizer" in function 'getLayerInstance'
 "test_tile", // Issue:: Parser: ONNX/Tile: repeats being non-constant is not supported. in function 'parseTile' (layer parameters are dynamic)
 "test_tile_precomputed", //  // ---- same as above ---
-"test_top_k", // Issue:: Parser: Can't create layer "onnx_node_output_0!values" of type "TopK" in function 'getLayerInstance'
+"test_top_k", // Issue:: K being input is not compatible with the current engine
 "test_top_k_negative_axis",  // ---- same as above ---
 "test_top_k_smallest",  // ---- same as above ---
 "test_training_dropout", // Issue::cvtest::norm::wrong data type

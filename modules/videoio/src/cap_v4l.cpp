@@ -154,12 +154,12 @@ the symptoms were damaged image and 'Corrupt JPEG data: premature end of data se
   prevents bad images in the first place
 
 11th patch: April 2, 2013, Forrest Reiling forrest.reiling@gmail.com
-Added v4l2 support for getting capture property CV_CAP_PROP_POS_MSEC.
+Added v4l2 support for getting capture property CAP_PROP_POS_MSEC.
 Returns the millisecond timestamp of the last frame grabbed or 0 if no frames have been grabbed
 Used to successfully synchronize 2 Logitech C310 USB webcams to within 16 ms of one another
 
 12th patch: March 9, 2018, Taylor Lanclos <tlanclos@live.com>
- added support for CV_CAP_PROP_BUFFERSIZE
+ added support for CAP_PROP_BUFFERSIZE
 
 make & enjoy!
 
@@ -361,7 +361,7 @@ struct Buffer
     }
 };
 
-struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
+struct CvCaptureCAM_V4L CV_FINAL : public IVideoCapture
 {
     int getCaptureDomain() /*const*/ CV_OVERRIDE { return cv::CAP_V4L; }
 
@@ -373,7 +373,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool FirstCapture;
     String deviceName;
 
-    IplImage frame;
+    Mat frame;
 
     __u32 palette;
     int width, height;
@@ -381,7 +381,6 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     int bufferSize;
     __u32 fps;
     bool convert_rgb;
-    bool frame_allocated;
     bool returnFrame;
     // To select a video input set cv::CAP_PROP_CHANNEL to channel number.
     // If the new channel number is than 0, then a video input will not change
@@ -407,15 +406,15 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     timeval timestamp;
 
     bool open(int _index);
-    bool open(const char* deviceName);
-    bool isOpened() const;
+    bool open(const std::string & filename);
+    bool isOpened() const CV_OVERRIDE;
 
     void closeDevice();
 
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual bool grabFrame() CV_OVERRIDE;
-    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
+    virtual bool retrieveFrame(int, OutputArray) CV_OVERRIDE;
 
     CvCaptureCAM_V4L();
     virtual ~CvCaptureCAM_V4L();
@@ -436,11 +435,9 @@ struct CvCaptureCAM_V4L CV_FINAL : public CvCapture
     bool try_palette_v4l2();
     bool try_init_v4l2();
     bool autosetup_capture_mode_v4l2();
-    void v4l2_create_frame();
     bool read_frame_v4l2();
     bool convertableToRgb() const;
     void convertToRgb(const Buffer &currentBuffer);
-    void releaseFrame();
 
     bool havePendingFrame;  // true if next .grab() should be noop, .retrive() resets this flag
 };
@@ -456,13 +453,12 @@ CvCaptureCAM_V4L::CvCaptureCAM_V4L() :
     palette(0),
     width(0), height(0), width_set(0), height_set(0),
     bufferSize(DEFAULT_V4L_BUFFERS),
-    fps(0), convert_rgb(0), frame_allocated(false), returnFrame(false),
+    fps(0), convert_rgb(0), returnFrame(false),
     channelNumber(-1), normalizePropRange(false),
     type(V4L2_BUF_TYPE_VIDEO_CAPTURE),
     num_planes(0),
     havePendingFrame(false)
 {
-    frame = cvIplImage();
     memset(&timestamp, 0, sizeof(timestamp));
 }
 
@@ -696,86 +692,6 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
     return false;
 }
 
-void CvCaptureCAM_V4L::v4l2_create_frame()
-{
-    CvSize size;
-    int channels = 3;
-    int depth = IPL_DEPTH_8U;
-
-
-    if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
-        CV_Assert(form.fmt.pix_mp.width <= (uint)std::numeric_limits<int>::max());
-        CV_Assert(form.fmt.pix_mp.height <= (uint)std::numeric_limits<int>::max());
-        size = {(int)form.fmt.pix_mp.width, (int)form.fmt.pix_mp.height};
-    } else {
-        CV_Assert(form.fmt.pix.width <= (uint)std::numeric_limits<int>::max());
-        CV_Assert(form.fmt.pix.height <= (uint)std::numeric_limits<int>::max());
-        size = {(int)form.fmt.pix.width, (int)form.fmt.pix.height};
-    }
-
-    if (!convert_rgb) {
-        switch (palette) {
-        case V4L2_PIX_FMT_BGR24:
-        case V4L2_PIX_FMT_RGB24:
-        case V4L2_PIX_FMT_XBGR32:
-        case V4L2_PIX_FMT_ABGR32:
-            break;
-        case V4L2_PIX_FMT_YUYV:
-        case V4L2_PIX_FMT_UYVY:
-            channels = 2;
-            break;
-        case V4L2_PIX_FMT_YVU420:
-        case V4L2_PIX_FMT_YUV420:
-        case V4L2_PIX_FMT_NV12:
-        case V4L2_PIX_FMT_NV21:
-            channels = 1;
-            size.height = size.height * 3 / 2; // "1.5" channels
-            break;
-        case V4L2_PIX_FMT_Y16:
-        case V4L2_PIX_FMT_Y16_BE:
-        case V4L2_PIX_FMT_Y12:
-        case V4L2_PIX_FMT_Y10:
-            depth = IPL_DEPTH_16U;
-            /* fallthru */
-        case V4L2_PIX_FMT_GREY:
-            channels = 1;
-            break;
-        case V4L2_PIX_FMT_MJPEG:
-        case V4L2_PIX_FMT_JPEG:
-        default:
-            channels = 1;
-            if(bufferIndex < 0)
-                size = cvSize(buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].length, 1);
-            else {
-                __u32 bytesused = 0;
-                if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
-                    __u32 data_offset;
-                    for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++) {
-                        data_offset = buffers[bufferIndex].planes[n_planes].data_offset;
-                        bytesused += buffers[bufferIndex].planes[n_planes].bytesused - data_offset;
-                    }
-                } else
-                      bytesused = buffers[bufferIndex].buffer.bytesused;
-                size = cvSize(bytesused, 1);
-            }
-            break;
-        }
-    }
-
-    /* Set up Image data */
-    cvInitImageHeader(&frame, size, depth, channels);
-
-    /* Allocate space for pixelformat we convert to.
-     * If we do not convert frame is just points to the buffer
-     */
-    releaseFrame();
-    // we need memory iff convert_rgb is true
-    if (convert_rgb) {
-        frame.imageData = (char *)cvAlloc(frame.imageSize);
-        frame_allocated = true;
-    }
-}
-
 bool CvCaptureCAM_V4L::initCapture()
 {
     if (!isOpened())
@@ -839,8 +755,6 @@ bool CvCaptureCAM_V4L::initCapture()
         releaseBuffers();
         return false;
     }
-
-    v4l2_create_frame();
 
     // reinitialize buffers
     FirstCapture = true;
@@ -993,7 +907,7 @@ bool CvCaptureCAM_V4L::open(int _index)
         name = cv::format("/dev/video%d", _index);
     }
 
-    bool res = open(name.c_str());
+    bool res = open(name);
     if (!res)
     {
         CV_LOG_WARNING(NULL, "VIDEOIO(V4L2:" << deviceName << "): can't open camera by index");
@@ -1001,9 +915,8 @@ bool CvCaptureCAM_V4L::open(int _index)
     return res;
 }
 
-bool CvCaptureCAM_V4L::open(const char* _deviceName)
+bool CvCaptureCAM_V4L::open(const std::string & _deviceName)
 {
-    CV_Assert(_deviceName);
     CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << _deviceName << "): opening...");
     FirstCapture = true;
     width = DEFAULT_V4L_WIDTH;
@@ -1012,7 +925,6 @@ bool CvCaptureCAM_V4L::open(const char* _deviceName)
     bufferSize = DEFAULT_V4L_BUFFERS;
     fps = DEFAULT_V4L_FPS;
     convert_rgb = true;
-    frame_allocated = false;
     deviceName = _deviceName;
     returnFrame = true;
     normalizePropRange = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED", false);
@@ -1519,46 +1431,45 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
     switch (palette)
     {
     case V4L2_PIX_FMT_YUV411P:
-        yuv411p_to_rgb24(imageSize.width, imageSize.height,
-                start, (unsigned char*)frame.imageData);
+        frame.create(imageSize, CV_8UC3);
+        yuv411p_to_rgb24(imageSize.width, imageSize.height, start, frame.data);
         return;
     default:
         break;
     }
     // Converted by cvtColor or imdecode
-    cv::Mat destination(imageSize, CV_8UC3, frame.imageData);
     switch (palette) {
     case V4L2_PIX_FMT_YVU420:
-        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), destination,
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), frame,
                      COLOR_YUV2BGR_YV12);
         return;
     case V4L2_PIX_FMT_YUV420:
-        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), destination,
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), frame,
                      COLOR_YUV2BGR_IYUV);
         return;
     case V4L2_PIX_FMT_NV12:
-        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), destination,
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), frame,
                      COLOR_YUV2RGB_NV12);
         return;
     case V4L2_PIX_FMT_NV21:
-        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), destination,
+        cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), frame,
                      COLOR_YUV2RGB_NV21);
         return;
 #ifdef HAVE_JPEG
     case V4L2_PIX_FMT_MJPEG:
     case V4L2_PIX_FMT_JPEG:
         CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): decoding JPEG frame: size=" << currentBuffer.bytesused);
-        cv::imdecode(Mat(1, currentBuffer.bytesused, CV_8U, start), IMREAD_COLOR, &destination);
+        cv::imdecode(Mat(1, currentBuffer.bytesused, CV_8U, start), IMREAD_COLOR, &frame);
         return;
 #endif
     case V4L2_PIX_FMT_YUYV:
-        cv::cvtColor(cv::Mat(imageSize, CV_8UC2, start), destination, COLOR_YUV2BGR_YUYV);
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC2, start), frame, COLOR_YUV2BGR_YUYV);
         return;
     case V4L2_PIX_FMT_UYVY:
-        cv::cvtColor(cv::Mat(imageSize, CV_8UC2, start), destination, COLOR_YUV2BGR_UYVY);
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC2, start), frame, COLOR_YUV2BGR_UYVY);
         return;
     case V4L2_PIX_FMT_RGB24:
-        cv::cvtColor(cv::Mat(imageSize, CV_8UC3, start), destination, COLOR_RGB2BGR);
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC3, start), frame, COLOR_RGB2BGR);
         return;
     case V4L2_PIX_FMT_Y16:
     {
@@ -1567,7 +1478,7 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         // Note: 10-bits precision is not supported
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
         cv::extractChannel(cv::Mat(imageSize, CV_8UC2, start), temp, 1);  // 1 - second channel
-        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        cv::cvtColor(temp, frame, COLOR_GRAY2BGR);
         return;
     }
     case V4L2_PIX_FMT_Y16_BE:
@@ -1577,21 +1488,21 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         // Note: 10-bits precision is not supported
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
         cv::extractChannel(cv::Mat(imageSize, CV_8UC2, start), temp, 0);  // 0 - first channel
-        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        cv::cvtColor(temp, frame, COLOR_GRAY2BGR);
         return;
     }
     case V4L2_PIX_FMT_Y12:
     {
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
         cv::Mat(imageSize, CV_16UC1, start).convertTo(temp, CV_8U, 1.0 / 16);
-        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        cv::cvtColor(temp, frame, COLOR_GRAY2BGR);
         return;
     }
     case V4L2_PIX_FMT_Y10:
     {
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
         cv::Mat(imageSize, CV_16UC1, start).convertTo(temp, CV_8U, 1.0 / 4);
-        cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        cv::cvtColor(temp, frame, COLOR_GRAY2BGR);
         return;
     }
     case V4L2_PIX_FMT_SN9C10X:
@@ -1601,40 +1512,39 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
                 start, (unsigned char*)buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
 
         cv::Mat cv_buf(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
-        cv::cvtColor(cv_buf, destination, COLOR_BayerRG2BGR);
+        cv::cvtColor(cv_buf, frame, COLOR_BayerRG2BGR);
         return;
     }
     case V4L2_PIX_FMT_SRGGB8:
     {
-        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), destination, COLOR_BayerBG2BGR);
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), frame, COLOR_BayerBG2BGR);
         return;
     }
     case V4L2_PIX_FMT_SBGGR8:
     {
-        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), destination, COLOR_BayerRG2BGR);
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), frame, COLOR_BayerRG2BGR);
         return;
     }
     case V4L2_PIX_FMT_SGBRG8:
     {
-        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), destination, COLOR_BayerGR2BGR);
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), frame, COLOR_BayerGR2BGR);
         return;
     }
     case V4L2_PIX_FMT_SGRBG8:
     {
-        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), destination, COLOR_BayerGB2BGR);
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), frame, COLOR_BayerGB2BGR);
         return;
     }
     case V4L2_PIX_FMT_GREY:
-        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), destination, COLOR_GRAY2BGR);
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), frame, COLOR_GRAY2BGR);
         break;
     case V4L2_PIX_FMT_XBGR32:
     case V4L2_PIX_FMT_ABGR32:
-        cv::cvtColor(cv::Mat(imageSize, CV_8UC4, start), destination, COLOR_BGRA2BGR);
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC4, start), frame, COLOR_BGRA2BGR);
         break;
     case V4L2_PIX_FMT_BGR24:
     default:
-        memcpy((char *)frame.imageData, start,
-               std::min(frame.imageSize, (int)currentBuffer.bytesused));
+        Mat(1, currentBuffer.bytesused, CV_8U, start).copyTo(frame);
         break;
     }
 }
@@ -1921,7 +1831,7 @@ double CvCaptureCAM_V4L::getProperty(int property_id) const
     case cv::CAP_PROP_FOURCC:
         return palette;
     case cv::CAP_PROP_FORMAT:
-        return CV_MAKETYPE(IPL2CV_DEPTH(frame.depth), frame.nChannels);
+        return frame.type();
     case cv::CAP_PROP_MODE:
         if (normalizePropRange)
             return palette;
@@ -2000,8 +1910,6 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
             return convert_rgb;
         }else{
             convert_rgb = false;
-            releaseFrame();
-            v4l2_create_frame();
             return true;
         }
     case cv::CAP_PROP_FOURCC:
@@ -2063,18 +1971,8 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
     return false;
 }
 
-void CvCaptureCAM_V4L::releaseFrame()
-{
-    if (frame_allocated && frame.imageData) {
-        cvFree(&frame.imageData);
-        frame_allocated = false;
-    }
-}
-
 void CvCaptureCAM_V4L::releaseBuffers()
 {
-    releaseFrame();
-
     if (buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].start) {
         free(buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].start);
         buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].start = 0;
@@ -2135,42 +2033,43 @@ bool CvCaptureCAM_V4L::streaming(bool startStream)
     return startStream;
 }
 
-IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
+bool CvCaptureCAM_V4L::retrieveFrame(int, OutputArray ret)
 {
     havePendingFrame = false;  // unlock .grab()
 
     if (bufferIndex < 0)
-        return &frame;
+        frame.copyTo(ret);
 
     /* Now get what has already been captured as a IplImage return */
     const Buffer &currentBuffer = buffers[bufferIndex];
     if (convert_rgb) {
-        if (!frame_allocated)
-            v4l2_create_frame();
-
         convertToRgb(currentBuffer);
     } else {
         // for mjpeg streams the size might change in between, so we have to change the header
         // We didn't allocate memory when not convert_rgb, but we have to recreate the header
         CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << deviceName << "): buffer input size=" << currentBuffer.bytesused);
-        if (frame.imageSize != (int)currentBuffer.bytesused)
-            v4l2_create_frame();
 
-        frame.imageData = (char *)buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].start;
         if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
+            // calculate total size
+            __u32 bytestotal = 0;
+            for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++) {
+                const v4l2_plane & cur_plane = currentBuffer.planes[n_planes];
+                bytestotal += cur_plane.bytesused - cur_plane.data_offset;
+            }
+            // allocate frame data
+            frame.create(Size(bytestotal, 1), CV_8U);
+            // copy each plane to the frame
             __u32 offset = 0;
             for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++) {
-                __u32 data_offset, bytesused;
-                data_offset = currentBuffer.planes[n_planes].data_offset;
-                bytesused = currentBuffer.planes[n_planes].bytesused - data_offset;
-                memcpy((unsigned char*)buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].start + offset,
-                       (char *)currentBuffer.memories[n_planes].start + data_offset,
-                       std::min(currentBuffer.memories[n_planes].length, (size_t)bytesused));
-                offset += bytesused;
+                const v4l2_plane & cur_plane = currentBuffer.planes[n_planes];
+                const Memory & cur_mem = currentBuffer.memories[n_planes];
+                memcpy(frame.data + offset,
+                       (char*)cur_mem.start + cur_plane.data_offset,
+                       std::min(currentBuffer.memories[n_planes].length, (size_t)cur_plane.bytesused));
             }
         } else {
-            memcpy(buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].start, currentBuffer.memories[MEMORY_ORIG].start,
-                   std::min(buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].length, (size_t)currentBuffer.buffer.bytesused));
+            const Size sz(std::min(buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].length, (size_t)currentBuffer.buffer.bytesused), 1);
+            frame = Mat(sz, CV_8U, currentBuffer.memories[MEMORY_ORIG].start);
         }
     }
     //Revert buffer to the queue
@@ -2180,28 +2079,23 @@ IplImage *CvCaptureCAM_V4L::retrieveFrame(int)
     }
 
     bufferIndex = -1;
-    return &frame;
+    frame.copyTo(ret);
+    return true;
 }
 
 Ptr<IVideoCapture> create_V4L_capture_cam(int index)
 {
-    cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
-
-    if (capture->open(index))
-        return makePtr<LegacyCapture>(capture);
-
-    delete capture;
+    Ptr<CvCaptureCAM_V4L> ret = makePtr<CvCaptureCAM_V4L>();
+    if (ret->open(index))
+        return ret;
     return NULL;
 }
 
 Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename)
 {
-    cv::CvCaptureCAM_V4L* capture = new cv::CvCaptureCAM_V4L();
-
-    if (capture->open(filename.c_str()))
-        return makePtr<LegacyCapture>(capture);
-
-    delete capture;
+    auto ret = makePtr<CvCaptureCAM_V4L>();
+    if (ret->open(filename))
+        return ret;
     return NULL;
 }
 
@@ -2272,12 +2166,7 @@ bool VideoCapture_V4L_waitAny(const std::vector<VideoCapture>& streams, CV_OUT s
     for (size_t i = 0; i < N; ++i)
     {
         IVideoCapture* iCap = internal::VideoCapturePrivateAccessor::getIVideoCapture(streams[i]);
-        LegacyCapture* legacyCapture = dynamic_cast<LegacyCapture*>(iCap);
-        CV_Assert(legacyCapture);
-        CvCapture* cvCap = legacyCapture->getCvCapture();
-        CV_Assert(cvCap);
-
-        CvCaptureCAM_V4L *ptr_CvCaptureCAM_V4L = dynamic_cast<CvCaptureCAM_V4L*>(cvCap);
+        CvCaptureCAM_V4L *ptr_CvCaptureCAM_V4L = dynamic_cast<CvCaptureCAM_V4L*>(iCap);
         CV_Assert(ptr_CvCaptureCAM_V4L);
         capPtr[i] = ptr_CvCaptureCAM_V4L;
     }

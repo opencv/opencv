@@ -605,7 +605,7 @@ public:
 
     int get_flags() const { return flags_; }
 
-    void set_image(cv::Mat const &image);
+    void set_image(cv::InputArray arr);
 
     void set_mouse_callback(CvMouseCallback callback, void *param);
 
@@ -740,7 +740,7 @@ public:
 
     cv_wl_window_state const &state() const;
 
-    void show_image(cv::Mat const &image);
+    void show_image(cv::InputArray arr);
 
     int create_trackbar(std::string const &name, int *value, int count, CvTrackbarCallback2 on_change, void *userdata);
 
@@ -1582,8 +1582,8 @@ cv_wl_viewer::cv_wl_viewer(cv_wl_window *window, int flags)
         : cv_wl_widget(window), flags_(flags) {
 }
 
-void cv_wl_viewer::set_image(cv::Mat const &image) {
-    image_ = image.clone();
+void cv_wl_viewer::set_image(cv::InputArray arr) {
+    image_ = arr.getMat().clone();
     image_changed_ = true;
 
     // See https://github.com/opencv/opencv/issues/25560
@@ -1922,8 +1922,8 @@ void cv_wl_window::set_maximized(bool maximize) {
         xdg_toplevel_set_maximized(xdg_toplevel_);
 }
 
-void cv_wl_window::show_image(cv::Mat const &image) {
-    viewer_->set_image(image);
+void cv_wl_window::show_image(cv::InputArray arr) {
+    viewer_->set_image(arr);
     this->show();
 }
 
@@ -2485,14 +2485,14 @@ void resizeWindowImpl(const char *name, int width, int height) {
         throw_system_error("Could not get window name", errno)
 }
 
-CvRect cvGetWindowRect_WAYLAND(const char* name)
+cv::Rect cvGetWindowRect_WAYLAND(const char* name)
 {
     CV_UNUSED(name);
     CV_LOG_ONCE_WARNING(nullptr, "Function not implemented: User cannot get window rect in Wayland");
-    return cvRect(-1, -1, -1, -1);
+    return cv::Rect(-1, -1, -1, -1);
 }
 
-CV_IMPL int createTrackbar2Impl(const char *trackbar_name, const char *window_name, int *val, int count,
+int createTrackbar2Impl(const char *trackbar_name, const char *window_name, int *val, int count,
                                 CvTrackbarCallback2 on_notify, void *userdata) {
     if (auto window = CvWlCore::getInstance().get_window(window_name))
         window->create_trackbar(trackbar_name, val, count, on_notify, userdata);
@@ -2537,7 +2537,7 @@ void setMouseCallbackImpl(const char *window_name, CvMouseCallback on_mouse, voi
         window->set_mouse_callback(on_mouse, param);
 }
 
-void showImageImpl(const char *name, const CvArr *arr) {
+void showImageImpl(const char *name, cv::InputArray arr) {
     // see https://github.com/opencv/opencv/issues/25497
     /*
      * To reuse the result of getInstance() repeatedly looks like better efficient implementation.
@@ -2552,8 +2552,7 @@ void showImageImpl(const char *name, const CvArr *arr) {
             CV_Error_(StsNoMem, ("Failed to create window: %s", name));
     }
 
-    cv::Mat mat = cv::cvarrToMat(arr, true);
-    window->show_image(mat);
+    window->show_image(arr);
 }
 
 void setWindowTitle_WAYLAND(const cv::String &winname, const cv::String &title) {
