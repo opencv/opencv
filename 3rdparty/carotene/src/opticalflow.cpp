@@ -58,7 +58,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
                        u8 *status, f32 *err,
                        const Size2D &winSize,
                        u32 terminationCount, f64 terminationEpsilon,
-                       u32 level, u32 maxLevel, bool useInitialFlow, bool getMinEigenVals,
+                       bool getMinEigenVals,
                        f32 minEigThreshold)
 {
     internal::assertSupportedConfiguration();
@@ -74,32 +74,11 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
 
     for( u32 ptidx = 0; ptidx < ptCount; ptidx++ )
     {
-        f32 levscale = (1./(1 << level));
         u32 ptref = ptidx << 1;
-        f32 prevPtX = prevPts[ptref+0]*levscale;
-        f32 prevPtY = prevPts[ptref+1]*levscale;
-        f32 nextPtX;
-        f32 nextPtY;
-        if( level == maxLevel )
-        {
-            if( useInitialFlow )
-            {
-                nextPtX = nextPts[ptref+0]*levscale;
-                nextPtY = nextPts[ptref+1]*levscale;
-            }
-            else
-            {
-                nextPtX = prevPtX;
-                nextPtY = prevPtY;
-            }
-        }
-        else
-        {
-            nextPtX = nextPts[ptref+0]*2.f;
-            nextPtY = nextPts[ptref+1]*2.f;
-        }
-        nextPts[ptref+0] = nextPtX;
-        nextPts[ptref+1] = nextPtY;
+        f32 prevPtX = prevPts[ptref+0];
+        f32 prevPtY = prevPts[ptref+1];
+        f32 nextPtX = nextPts[ptref+0];
+        f32 nextPtY = nextPts[ptref+1];
 
         s32 iprevPtX, iprevPtY;
         s32 inextPtX, inextPtY;
@@ -111,13 +90,10 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
         if( iprevPtX < -(s32)winSize.width || iprevPtX >= (s32)size.width ||
             iprevPtY < -(s32)winSize.height || iprevPtY >= (s32)size.height )
         {
-            if( level == 0 )
-            {
-                if( status )
-                    status[ptidx] = false;
-                if( err )
-                    err[ptidx] = 0;
-            }
+            if( status )
+                status[ptidx] = false;
+            if( err )
+                err[ptidx] = 0;
             continue;
         }
 
@@ -333,7 +309,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
 
         if( minEig < minEigThreshold || D < FLT_EPSILON )
         {
-            if( level == 0 && status )
+            if( status )
                 status[ptidx] = false;
             continue;
         }
@@ -353,7 +329,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
             if( inextPtX < -(s32)winSize.width || inextPtX >= (s32)size.width ||
                inextPtY < -(s32)winSize.height || inextPtY >= (s32)size.height )
             {
-                if( level == 0 && status )
+                if( status )
                     status[ptidx] = false;
                 break;
             }
@@ -469,8 +445,7 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
             prevDeltaX = deltaX;
             prevDeltaY = deltaY;
         }
-
-        if( status && status[ptidx] && err && level == 0 && !getMinEigenVals )
+        if( status && status[ptidx] && err && !getMinEigenVals )
         {
             f32 nextPointX = nextPts[ptref+0] - halfWinX;
             f32 nextPointY = nextPts[ptref+1] - halfWinY;
@@ -526,9 +501,6 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
     (void)winSize;
     (void)terminationCount;
     (void)terminationEpsilon;
-    (void)level;
-    (void)maxLevel;
-    (void)useInitialFlow;
     (void)getMinEigenVals;
     (void)minEigThreshold;
     (void)ptCount;
@@ -536,4 +508,3 @@ void pyrLKOptFlowLevel(const Size2D &size, s32 cn,
 }
 
 }//CAROTENE_NS
-

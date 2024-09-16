@@ -2485,7 +2485,7 @@ namespace CAROTENE_NS {
                            u8 *status, f32 *err,
                            const Size2D &winSize,
                            u32 terminationCount, f64 terminationEpsilon,
-                           u32 level, u32 maxLevel, bool useInitialFlow, bool getMinEigenVals,
+                           bool getMinEigenVals,
                            f32 minEigThreshold);
 }
 
