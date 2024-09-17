@@ -353,6 +353,9 @@ public:
     // Backend for fastgemm
     FastGemmOpt opt;
 
+    mutable bool outputShapeComputed;
+    mutable MatShape cachedOutputShape;
+
     void parseEquation(String equation);
     void processEquation(const std::vector<MatShape>& inputs);
     void processBroadcastedDims();
@@ -376,30 +379,29 @@ public:
         const MatShape& input2ShapeOverride
     );
 
+    void computeOutputShape(const std::vector<MatShape>& inputs) const {
+        std::cout << "computeOutputShape" << std::endl;
+        std::cout << "einsumOutDims: " << einsumOutDims << std::endl;
+        if (!outputShapeComputed) {
+            // Copy of the existing computation logic
+            const_cast<LayerEinsumImpl*>(this)->processEquation(inputs);
+            const_cast<LayerEinsumImpl*>(this)->processBroadcastedDims();
+            const_cast<LayerEinsumImpl*>(this)->validateOutputSubscript();
+            const_cast<LayerEinsumImpl*>(this)->calculateOutputShape();
+
+            cachedOutputShape = einsumOutDims;
+            outputShapeComputed = true;
+        }
+    }
+
     // constructor
     LayerEinsumImpl(const LayerParams& params)
+        : outputShapeComputed(false)
     {
         setParamsFrom(params);
         equation = params.get<String>("equation");
-        int outputSize = params.get<int>("outputSize");
-        numInputs  = params.get<int>("inputSize");
-
-        CV_CheckEQ(outputSize, 1, "Einsum layer should only have one output");
-
-        // get the input shapes from onnx importer
-        for (int i=0; i < numInputs; i++){
-            auto param = params.get("inputShapes" + cv::format("%d", i));
-            int inputDims = param.size();
-            std::vector<int> shape;
-            for (int i = 0; i < inputDims; ++i)
-                shape.emplace_back(param.get<int>(i));
-            einsumInpShapes.emplace_back(shape);
-        }
-
+        std::cout << "equation: " << equation << std::endl;
         opt.init();
-
-        // Maintains a mapping between input indices and their corresponding subscript labels for each input
-        inputSubscriptIndices.reserve(numInputs);
 
         // We allocate space for 10 values as a precaution,
         // assuming that we won't encounter any input with a rank greater than 10.
@@ -414,15 +416,6 @@ public:
         // parser equation and extract tokens from the equation
         // save token to lhs_eq_tokens variable
         parseEquation(equation); // TODO: return lhs_eq_tokens
-
-        // Start preprocessing related to equation parsing
-        // and dimention broadcasting
-        processEquation(einsumInpShapes);
-        processBroadcastedDims();
-
-        // calculate output shape
-        validateOutputSubscript();
-        calculateOutputShape();
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
@@ -436,20 +429,14 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        CV_UNUSED(requiredOutputs);
         CV_UNUSED(internals);
 
-        // check if passed and parsed inputs match up in number and dimensions
-        CV_CheckEQ(static_cast<int>(inputs.size()), numInputs,
-            "Number of inputs in forward and inputs during graph constructions do not match");
-        for (int i = 0; i < numInputs; i++)
-        {
-            if (inputs[i] != einsumInpShapes[i])
-                CV_Error(Error::StsAssert, "Passed input shapes do not match with parsed input shapes!");
-        }
-        outputs.clear();
-        outputs.emplace_back(einsumOutDims);
-        return true;
+        computeOutputShape(inputs);
 
+        outputs.clear();
+        outputs.emplace_back(cachedOutputShape);
+        return true;
     } // getMemoryShape
 
     // forward
@@ -825,6 +812,7 @@ void LayerEinsumImpl::processBroadcastedDims()
             tempCurrentInputDimIndicesToSubscriptIndices.reserve(currentInputDimIndicesToSubscriptIndices.size());
 
             // make sure it is correct
+            std::cout << "einsumInpShapes size: " << einsumInpShapes[i] << std::endl;
             const auto& dims = einsumInpShapes[i];
             auto rank = dims.size();
 
@@ -875,6 +863,14 @@ void LayerEinsumImpl::processBroadcastedDims()
 void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
 {
 
+    // fill in the einsumInpShapes
+    for (const auto& input : inputs) {
+        einsumInpShapes.emplace_back(input);
+    }
+
+
+    numInputs = inputs.size();
+    inputSubscriptIndices.reserve(numInputs);
     // Check if number of tokens in equal to number of inputs.
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
     int num_input_tensors = inputs.size();
