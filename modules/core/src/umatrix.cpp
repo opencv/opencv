@@ -773,7 +773,11 @@ void UMat::fit(int _dims, const int* _sizes, int _type, UMatUsageFlags _usageFla
     for (int i = 0; i < _dims; i++)
         newTotal *= _sizes[i];
     size_t newTotalBytes = newTotal*esz;
-    if (newTotalBytes > 0 && (!isContinuous() || newTotalBytes > oldTotalBytes || _usageFlags != usageFlags)) {
+    if (newTotalBytes > 0 &&
+        (!isContinuous() ||
+         newTotalBytes > oldTotalBytes ||
+         offset != 0 ||
+         _usageFlags != usageFlags)) {
         create(_dims, _sizes, _type, _usageFlags);
     } else {
         flags = (flags & ~Mat::TYPE_MASK) | CV_MAT_TYPE(_type);

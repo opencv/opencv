@@ -339,9 +339,7 @@ struct Net::Impl : public detail::NetImplBase
     Arg newConstScalarArg(const std::string& name, int type, const void* value);
     Arg newArg(const std::string& name, ArgKind kind, bool allowEmptyName=false);
     bool isConstArg(Arg arg) const;
-    bool isTempArg(Arg arg) const;
     Mat& argTensor(Arg arg) const;
-    MatSize argSize(Arg arg) const;
     int argType(Arg arg) const;
     void checkArg(Arg arg) const;
     void checkArgs(const std::vector<Arg>& args) const;
@@ -359,6 +357,7 @@ struct Net::Impl : public detail::NetImplBase
                               const std::vector<MatShape>& inpShapes,
                               std::vector<int>& outTypes,
                               std::vector<MatShape>& outShapes,
+                              std::vector<std::pair<uchar*, size_t> >& outOrigData,
                               std::vector<Mat>& outputs, // [TODO] replace with something else to cover other backends
                               std::vector<int>& tempTypes,
                               std::vector<MatShape>& tempShapes,

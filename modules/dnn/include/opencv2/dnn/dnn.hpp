@@ -969,11 +969,6 @@ CV__DNN_INLINE_NS_BEGIN
          */
         double getPerfProfileSummary(CV_OUT std::vector<std::string>& names, CV_OUT std::vector<double>& timings);
 
-        // Create a new graph/subgraph, mode 2: we construct the graph manually.
-        // First, we create empty graph with certain input Args (they may or may not have names).
-        // once the graph is constructed, we set the graph outputs using Graph::setOutputs().
-        Ptr<Graph> newGraph(const std::string& name, const std::vector<Arg>& inputs, bool isMain);
-
         // Get the main model graph
         Ptr<Graph> getMainGraph() const;
 
@@ -987,16 +982,9 @@ CV__DNN_INLINE_NS_BEGIN
         Arg getArg(const std::string& name);
         bool haveArg(const std::string& name) const;
 
-        Arg newConstArg(const std::string& name, const Mat& m) const;
-        Arg newConstScalarArg(const std::string& name, int type, const void* value) const;
-        Arg newArg(const std::string& name, ArgKind kind) const;
         bool isConstArg(Arg arg) const;
-        bool isTempArg(Arg arg) const;
         Mat& argTensor(Arg arg) const;
-        MatSize argSize(Arg arg) const;
         int argType(Arg arg) const;
-        void checkArg(Arg arg) const;
-        void checkArgs(const std::vector<Arg>& args) const;
 
         int findDim(const std::string& name, bool insert=false);
 
@@ -1135,7 +1123,10 @@ CV__DNN_INLINE_NS_BEGIN
       * or @ref readNetFromDarknet. An order of @p model and @p config
       * arguments does not matter.
       */
-     CV_EXPORTS_W Net readNet(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config = "", const String& framework = "");
+     CV_EXPORTS_W Net readNet(CV_WRAP_FILE_PATH const String& model,
+                              CV_WRAP_FILE_PATH const String& config = "",
+                              const String& framework = "",
+                              bool useNewEngine = true);
 
      /**
       * @brief Read deep learning network represented in one of the supported formats.

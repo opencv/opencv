@@ -432,20 +432,6 @@ bool Net::isConstArg(Arg arg) const
     return argKind(arg) == DNN_ARG_CONST;
 }
 
-void Net::checkArg(Arg arg) const
-{
-    CV_Assert(impl);
-    CV_Assert((size_t)arg.idx < impl->args.size());
-}
-
-void Net::checkArgs(const std::vector<Arg>& args) const
-{
-    CV_Assert(impl);
-    for (auto arg: args) {
-        CV_Assert((size_t)arg.idx < impl->args.size());
-    }
-}
-
 const ArgData& Net::argData(Arg arg) const
 {
     CV_Assert(impl);
@@ -472,18 +458,6 @@ bool Net::haveArg(const std::string& name) const
 {
     CV_Assert(impl);
     return impl->haveArg(name);
-}
-
-Arg Net::newConstArg(const std::string& name, const Mat& m) const
-{
-    CV_Assert(impl);
-    return impl->newConstArg(name, m);
-}
-
-Arg Net::newArg(const std::string& name, ArgKind kind) const
-{
-    CV_Assert(impl);
-    return impl->newArg(name, kind);
 }
 
 Ptr<Graph> Net::getMainGraph() const

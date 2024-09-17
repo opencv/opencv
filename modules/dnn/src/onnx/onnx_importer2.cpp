@@ -736,7 +736,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
         //const opencv_onnx::
         const opencv_onnx::TensorProto& const_i = graph_proto->initializer(i);
         Mat t = parseTensor(const_i);
-        net.newConstArg(const_i.name(), t);
+        netimpl->newConstArg(const_i.name(), t);
     }
 
     // parse graph inputs
@@ -745,7 +745,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
         const opencv_onnx::ValueInfoProto& input_i = graph_proto->input(i);
         if (net.haveArg(input_i.name()))
             continue;
-        Arg arg = net.newArg(input_i.name(), mainGraph_ ? DNN_ARG_INPUT : DNN_ARG_TEMP);
+        Arg arg = netimpl->newArg(input_i.name(), mainGraph_ ? DNN_ARG_INPUT : DNN_ARG_TEMP);
         if (!parseValueInfo(input_i, netimpl->args.at(arg.idx))) {
             raiseError();
             return Ptr<Graph>();
@@ -757,7 +757,7 @@ Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool 
     int n_outputs = graph_proto->output_size();
     for (int i = 0; i < n_outputs; i++) {
         const opencv_onnx::ValueInfoProto& output_i = graph_proto->output(i);
-        Arg arg = net.newArg(output_i.name(), mainGraph_ ? DNN_ARG_OUTPUT : DNN_ARG_TEMP);
+        Arg arg = netimpl->newArg(output_i.name(), mainGraph_ ? DNN_ARG_OUTPUT : DNN_ARG_TEMP);
         if (!parseValueInfo(output_i, netimpl->args.at(arg.idx))) {
            raiseError();
            return Ptr<Graph>();

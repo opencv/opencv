@@ -134,7 +134,7 @@ class dnn_test(NewOpenCVTests):
         paramNet.mean = [0.485, 0.456, 0.406]
         paramNet.scalefactor = [0.229, 0.224, 0.225]
         paramNet.swapRB = False
-        paramNet.datalayout = cv.dnn.DNN_LAYOUT_NCHW
+        paramNet.datalayout = cv.DATA_LAYOUT_NCHW
         paramNet.paddingmode = cv.dnn.DNN_PMODE_LETTERBOX
         rBlob = np.zeros(shape=(20, 4), dtype=np.int32)
         rImg = paramNet.blobRectsToImageRects(rBlob, (356, 356))
@@ -148,7 +148,7 @@ class dnn_test(NewOpenCVTests):
         paramNet.mean = [0.485, 0.456, 0.406]
         paramNet.scalefactor = [0.229, 0.224, 0.225]
         paramNet.swapRB = False
-        paramNet.datalayout = cv.dnn.DNN_LAYOUT_NCHW
+        paramNet.datalayout = cv.DATA_LAYOUT_NCHW
         paramNet.paddingmode = cv.dnn.DNN_PMODE_LETTERBOX
         rBlob = np.zeros(shape=(20, 4), dtype=np.int32)
         rImg = paramNet.blobRectToImageRect((0, 0, 0, 0), (356, 356))
@@ -198,11 +198,11 @@ class dnn_test(NewOpenCVTests):
         param.size = (6, 7)
         param.mean = mean
         param.swapRB=True
-        param.datalayout = cv.dnn.DNN_LAYOUT_NHWC
+        param.datalayout = cv.DATA_LAYOUT_NHWC
 
         blob = cv.dnn.blobFromImageWithParams(img, param)
         blob_args = cv.dnn.blobFromImageWithParams(img, cv.dnn.Image2BlobParams(scalefactor=scalefactor, size=(6, 7), mean=mean,
-                                                                      swapRB=True, datalayout=cv.dnn.DNN_LAYOUT_NHWC))
+                                                                      swapRB=True, datalayout=cv.DATA_LAYOUT_NHWC))
         normAssert(self, blob, blob_args)
 
         target2 = cv.resize(img, (width, height), interpolation=cv.INTER_LINEAR).astype(np.float32)

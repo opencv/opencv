@@ -55,9 +55,9 @@ public:
     bool dynamicOutputShapes() const CV_OVERRIDE
     {
         size_t ninputs = inputs.size();
-        if (ninputs == 1 ||
-            (outWidth0 > 0 && outHeight0 > 0) ||
-            (zoomFactorWidth > 0 && zoomFactorHeight > 0))
+        if (ninputs <= 1 &&
+            ((outWidth0 > 0 && outHeight0 > 0) ||
+            (zoomFactorWidth > 0 && zoomFactorHeight > 0)))
             return false;
         Net::Impl* netimpl_ = getNetImpl(this);
         if (!netimpl_)
@@ -92,11 +92,10 @@ public:
     {
         size_t ninputs = inputs.size();
         CV_Assert(ninputs == 1 || ninputs == 2 || ninputs >= 4);
-        CV_Assert(!dynamicOutputShapes());
         outputs.resize(1, inputs[0]);
         if (ninputs == 1) {
-            outputs[0][2] = zoomFactorHeight > 0 ? (int)(outputs[0][2] * zoomFactorHeight) : outHeight;
-            outputs[0][3] = zoomFactorWidth > 0 ? (int)(outputs[0][3] * zoomFactorWidth) : outWidth;
+            outputs[0][2] = zoomFactorHeight > 0 ? (int)(inputs[0][2] * zoomFactorHeight) : outHeight0;
+            outputs[0][3] = zoomFactorWidth > 0 ? (int)(inputs[0][3] * zoomFactorWidth) : outWidth0;
         } else if (ninputs == 2 && inputs[1].dims == 4) {
             // [TODO] this workaround needs to be removed
             outputs[0][2] = inputs[1][2];
@@ -153,13 +152,10 @@ public:
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
     {
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-
-        if (!dynamicOutputShapes()) {
-            MatShape inpShape = inputs[0].shape();
-            MatShape outShape = outputs[0].shape();
+        if (!dynamicOutputShapes())
+        {
+            MatShape inpShape = inputs_arr.shape(0);
+            MatShape outShape = outputs_arr.shape(0);
             updateOutSizeAndScale(inpShape, outShape);
         }
     }
@@ -181,28 +177,27 @@ public:
         MatShape inpShape = inp_.shape();
         MatShape outShape;
 
-        if (dynamicOutputShapes()) {
-            if (ninputs == 2 && inputs[0].dims == 4 && inputs[1].dims == 4) {
-                outShape = inpShape;
-                outShape[2] = inputs[1].size[2];
-                outShape[3] = inputs[1].size[3];
-            } else {
-                std::vector<int> sizes;
-                std::vector<float> scales;
-                if (ninputs >= 4) {
-                    Mat sizesTensor = inputs[3];
-                    tensorToIntVec(sizesTensor, sizes);
-                }
-                Mat scalesTensor = inputs[ninputs >= 4 ? 2 : 1];
-                tensorToFloatVec(scalesTensor, scales);
-                outShape = getOutShape(inpShape, sizes, scales);
-            }
-        } else {
-            CV_Assert(outWidth > 0 && outHeight > 0);
+        if (ninputs == 1) {
             outShape = inpShape;
-            outShape[2] = outHeight;
-            outShape[3] = outWidth;
+            outShape[2] = zoomFactorHeight > 0 ? (int)(inpShape[2] * zoomFactorHeight) : outHeight0;
+            outShape[3] = zoomFactorWidth > 0 ? (int)(inpShape[3] * zoomFactorWidth) : outWidth0;
+        } else if (ninputs == 2 && inputs[0].dims == 4 && inputs[1].dims == 4) {
+            outShape = inpShape;
+            outShape[2] = inputs[1].size[2];
+            outShape[3] = inputs[1].size[3];
+        } else {
+            std::vector<int> sizes;
+            std::vector<float> scales;
+            if (ninputs >= 4) {
+                Mat sizesTensor = inputs[3];
+                tensorToIntVec(sizesTensor, sizes);
+            }
+            Mat scalesTensor = inputs[ninputs >= 4 ? 2 : 1];
+            tensorToFloatVec(scalesTensor, scales);
+            outShape = getOutShape(inpShape, sizes, scales);
         }
+
+        //printf("name: %s, outShape: %d x %d x %d x %d\n", name.c_str(), outShape[0], outShape[1], outShape[2], outShape[3]);
 
         updateOutSizeAndScale(inpShape, outShape);
         outputs[0].fit(outShape, inp_.type());
@@ -214,12 +209,12 @@ public:
             return;
         }
 
-        int depth = inp_.depth(), orig_depth = depth;
+        int depth = inp_.type(), orig_depth = depth;
 
         Mat inp, out;
         if (depth != CV_32F && depth != CV_8S) {
             inp_.convertTo(inp, CV_32F);
-            out.create(outShape, CV_32F);
+            out.fit(outShape, CV_32F);
             depth = CV_32F;
         } else {
             inp = inp_;
@@ -231,6 +226,7 @@ public:
         {
             // INTER_LINEAR Resize mode does not support INT8 inputs
             InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
+            // [TODO] this is a really slow approach; need to rewrite it completely.
             for (size_t n = 0; n < inputs[0].size[0]; ++n)
             {
                 for (size_t ch = 0; ch < inputs[0].size[1]; ++ch)
@@ -398,7 +394,7 @@ public:
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
 
         if (orig_depth != depth)
-            out.convertTo(out_, depth);
+            out.convertTo(out_, orig_depth);
     }
 
 #ifdef HAVE_CANN

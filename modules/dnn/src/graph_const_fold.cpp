@@ -91,9 +91,10 @@ struct ConstFolding
                 // Use a fresh vector of Mat's for outputs since we want to make these outputs the new constant tensors.
                 // So, they must be unique and don't interfere with other tensors.
                 std::vector<Mat> outMats(noutputs);
+                std::vector<std::pair<uchar*, size_t> > outOrigData;
                 if (!layer->dynamicOutputShapes())
                     netimpl->allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes,
-                                                  outShapes, outMats, tempTypes, tempShapes, tempMats,
+                                                  outShapes, outOrigData, outMats, tempTypes, tempShapes, tempMats,
                                                   netimpl->scratchBufs, false);
                 layer->finalize(inpMats, outMats);
                 layer->forward(inpMats, outMats, tempMats);

@@ -309,6 +309,7 @@ void Net::Impl::allocateLayerOutputs(
                           const std::vector<MatShape>& inpShapes,
                           std::vector<int>& outTypes,
                           std::vector<MatShape>& outShapes,
+                          std::vector<std::pair<uchar*, size_t> >& outOrigData,
                           std::vector<Mat>& outputs,
                           std::vector<int>& tempTypes,
                           std::vector<MatShape>& tempShapes,
@@ -336,6 +337,7 @@ void Net::Impl::allocateLayerOutputs(
     CV_Assert(outShapes.size() == outTypes.size());
     CV_Assert(outShapes.size() == noutputs);
     outputs.assign(noutputs, Mat());
+    outOrigData.resize(noutputs);
     for (size_t i = 0; i < noutputs; i++) {
         Arg out = layer->outputs[i];
         if (useBufferPool) {
@@ -345,6 +347,8 @@ void Net::Impl::allocateLayerOutputs(
         } else {
             outputs[i].fit(outShapes[i], outTypes[i]);
         }
+        outOrigData[i].first = outputs[i].u ? outputs[i].u->data : nullptr;
+        outOrigData[i].second = outputs[i].u ? outputs[i].u->size : 0;
     }
     // [TODO] probably there should be a smarter algorithm that e.g. sorts
     // temp buffers by size in decreasing order and assigns global temps accordingly
@@ -426,13 +430,30 @@ void Net::Impl::forwardWithMultipleOutputs(OutputArrayOfArrays outblobs, const s
     std::vector<Mat> inps={}, outs;
     forwardMainGraph(inps, outs);
     CV_Assert(outs.size() == noutputs);
-    outblobs.create(Size(noutputs, 1), CV_32F, -1);
+    std::vector<Mat>* outMats = nullptr;
+    std::vector<UMat>* outUMats = nullptr;
+    _InputArray::KindFlag outKind = outblobs.kind();
+    if (outKind == _InputArray::STD_VECTOR_MAT) {
+        outMats = &outblobs.getMatVecRef();
+        outMats->resize(noutputs);
+    } else if (outKind == _InputArray::STD_VECTOR_UMAT) {
+        outUMats = &outblobs.getUMatVecRef();
+        outUMats->resize(noutputs);
+    } else if (outKind == _InputArray::MAT || outKind == _InputArray::UMAT) {
+        CV_Assert(noutputs == 1);
+    } else {
+        CV_Error(Error::StsBadArg, "outputs must be Mat, UMat, a vector of Mat's or a vector of UMat's");
+    }
     for (i = 0; i < noutputs; i++) {
         int j = outidxs.empty() ? i : outidxs[i];
         Mat src = outs[j];
-        outblobs.create(src.dims, src.size.p, src.type(), i);
-        Mat dst = outblobs.getMat(i);
-        src.copyTo(dst);
+        if (outMats) {
+            src.copyTo(outMats->at(i));
+        } else if (outUMats) {
+            src.copyTo(outUMats->at(i));
+        } else {
+            src.copyTo(outblobs);
+        }
     }
 }
 
@@ -550,6 +571,8 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
                                          typeToString(adata.type).c_str()));
         }
         Mat& inp_t = argTensor(inp);
+        if (inp_t.shape() != mshape || inp_t.type() != adata_type)
+            finalizeLayers = true;
         inp_t.fit(mshape, adata_type);
         m.convertTo(inp_t, adata_type);
     } else if (adata.kind == DNN_ARG_TEMP) {
@@ -580,6 +603,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     size_t n_gr_inputs = gr_inputs.size(), n_gr_outputs = gr_outputs.size();
     std::vector<Mat> inpMats, outMats, tempMats;
     std::vector<int> inpTypes, outTypes, tempTypes;
+    std::vector<std::pair<uchar*, size_t> > outOrigData;
     std::vector<MatShape> inpShapes, outShapes, tempShapes;
     double tickfreq = getTickFrequency();
     int64_t timestamp = 0;
@@ -614,6 +638,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         inpTypes.resize(ninputs);
         inpShapes.resize(ninputs);
         outMats.clear();
+        outOrigData.clear();
 
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
@@ -635,7 +660,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         bool dynamicOutShapes = layer->dynamicOutputShapes();
         if (!dynamicOutShapes) {
-            allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outMats,
+            allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
                                  tempTypes, tempShapes, tempMats, scratchBufs, true);
         } else {
             outMats.resize(noutputs);
@@ -669,7 +694,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 if (!dynamicOutShapes) {
                     // a sanity check: make sure that the data was not reallocated during Layer::forward()
                     // if the layer claims it does not produce dynamic-shape outputs.
-                    CV_Assert(buf.u == m.u);
+                    CV_Assert_N(buf.u == m.u,
+                                buf.shape() == m.shape(),
+                                buf.type() == m.type(),
+                                (!m.u || m.u->data == outOrigData[i].first),
+                                (!m.u || m.u->size == outOrigData[i].second));
                 } else if (!buf.u || m.u->size > buf.u->size) {
                     buf = m;
                 } else {

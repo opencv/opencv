@@ -990,7 +990,9 @@ void Mat::fit(int _dims, const int* _sizes, int _type)
     for (int i = 0; i < _dims; i++)
         newTotal *= _sizes[i];
     size_t newTotalBytes = newTotal*esz;
-    if (newTotalBytes > 0 && (!isContinuous() || newTotalBytes > oldTotalBytes)) {
+    if (newTotalBytes > 0 && (!isContinuous() ||
+                              newTotalBytes > oldTotalBytes ||
+                              data != datastart)) {
         create(_dims, _sizes, _type);
     } else {
         flags = (flags & ~Mat::TYPE_MASK) | CV_MAT_TYPE(_type);

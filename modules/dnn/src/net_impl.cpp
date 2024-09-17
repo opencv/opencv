@@ -934,10 +934,10 @@ void Net::Impl::forwardLayer(LayerData& ld)
                 }
                 printf("]\n");
             }
-            fflush(stdout);
-            pprint(std::cout, out, 0, 3, 100, '[');
-            std::cout.flush();
-            printf("\n");
+            //fflush(stdout);
+            //pprint(std::cout, out, 0, 3, 100, '[');
+            //std::cout.flush();
+            //printf("\n");
         }
 #endif
     }
