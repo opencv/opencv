@@ -821,7 +821,7 @@ bool Net::Impl::tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
     size_t nsuggestedShapes = suggestedInpShapes.size();
     size_t nsuggestedTypes = suggestedInpTypes.size();
     CV_Assert(nsuggestedShapes == 0 || nsuggestedShapes == ninputs ||
-              
+
               // workaround, but this is not quite correct usage of the function
               (nsuggestedShapes == 1 && suggestedInpShapes[0].empty())
               );
