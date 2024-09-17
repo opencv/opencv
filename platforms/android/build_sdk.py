@@ -300,6 +300,14 @@ class Builder:
                     classpaths.append(os.path.join(dir, f))
         srcdir = os.path.join(self.resultdest, 'sdk', 'java', 'src')
         dstdir = self.docdest
+        # HACK: create stubs for auto-generated files to satisfy imports
+        with open(os.path.join(srcdir, 'org', 'opencv', 'BuildConfig.java'), 'wt') as fs:
+            fs.write("package org.opencv;\n public class BuildConfig {\n}")
+            fs.close()
+        with open(os.path.join(srcdir, 'org', 'opencv', 'R.java'), 'wt') as fs:
+            fs.write("package org.opencv;\n public class R {\n}")
+            fs.close()
+
         # synchronize with modules/java/jar/build.xml.in
         shutil.copy2(os.path.join(SCRIPT_DIR, '../../doc/mymath.js'), dstdir)
         cmd = [
@@ -327,9 +335,12 @@ class Builder:
             '-bottom', 'Generated on %s / OpenCV %s' % (time.strftime("%Y-%m-%d %H:%M:%S"), self.opencv_version),
             "-d", dstdir,
             "-classpath", ":".join(classpaths),
-            '-subpackages', 'org.opencv',
+            '-subpackages', 'org.opencv'
         ]
         execute(cmd)
+        # HACK: remove temporary files needed to satisfy javadoc imports
+        os.remove(os.path.join(srcdir, 'org', 'opencv', 'BuildConfig.java'))
+        os.remove(os.path.join(srcdir, 'org', 'opencv', 'R.java'))
 
     def gather_results(self):
         # Copy all files
