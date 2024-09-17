@@ -222,7 +222,7 @@ enum ImwriteHDRCompressionFlags {
 
 @anchor imread
 
-The `imread` function loads an image from the specified file and returns the image. If the image cannot be
+The `imread` function loads an image from the specified file and returns OpenCV matrix. If the image cannot be
 read (because of a missing file, improper permissions, or unsupported/invalid format), the function
 returns an empty matrix.
 
@@ -247,9 +247,9 @@ Currently, the following file formats are supported:
 -   In the case of color images, the decoded images will have the channels stored in **B G R** order.
 -   When using IMREAD_GRAYSCALE, the codec's internal grayscale conversion will be used, if available.
     Results may differ from the output of cvtColor().
--   On Microsoft Windows\* and MacOSX\*, the codecs shipped with OpenCV (libjpeg, libpng, libtiff,
-    and libjasper) are used by default. So, OpenCV can always read JPEGs, PNGs, and TIFFs. On MacOSX,
-    there is also an option to use native MacOSX image readers. However, beware that currently these
+-   On Microsoft Windows\* and Mac OS\*, the codecs shipped with OpenCV (libjpeg, libpng, libtiff,
+    and libjasper) are used by default. So, OpenCV can always read JPEGs, PNGs, and TIFFs. On Mac OS,
+    there is also an option to use native Mac OS image readers. However, beware that currently these
     native image loaders give images with different pixel values because of the color management embedded
     into Mac OS.
 -   On Linux\*, BSD flavors, and other Unix-like open-source operating systems, OpenCV looks for
@@ -263,8 +263,8 @@ Currently, the following file formats are supported:
     and thus the image will be rotated accordingly unless the flags @ref IMREAD_IGNORE_ORIENTATION
     or @ref IMREAD_UNCHANGED are passed.
 -   Use the IMREAD_UNCHANGED flag to preserve the floating-point values from PFM images.
--   By default, the number of pixels must be less than 2^30. This limit can be changed by setting the system
-    variable OPENCV_IO_MAX_IMAGE_PIXELS.
+-   By default, the number of pixels must be less than 2^30. This limit can be changed by setting
+    the environment variable `OPENCV_IO_MAX_IMAGE_PIXELS`. See @ref tutorial_env_reference.
 
 @param filename Name of the file to be loaded.
 @param flags Flag that can take values of `cv::ImreadModes`.
