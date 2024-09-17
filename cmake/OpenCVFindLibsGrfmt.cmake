@@ -8,6 +8,9 @@ if(WITH_ZLIB_NG)
   set(ZLIB_LIBRARY zlib CACHE INTERNAL "")
   add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/zlib-ng")
 
+  ocv_parse_header_version(ZLIB "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h.in" ZLIB_VERSION)
+  ocv_parse_header_version(ZLIBNG "${${ZLIB_LIBRARY}_SOURCE_DIR}/zlib.h.in" ZLIBNG_VERSION)
+
   set(HAVE_ZLIB_NG YES)
 else()
   if(BUILD_ZLIB)
