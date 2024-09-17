@@ -5,92 +5,122 @@
 #include <opencv2/core/utils/logger.hpp>
 #include <fstream>
 
-
-
-// Namespaces.
 using namespace cv;
 using namespace std;
 using namespace dnn;
 
-
-// Constants.
+// Yolo 8s detector parameters
 const int INPUT_WIDTH = 640;
 const int INPUT_HEIGHT = 640;
 const float SCORE_THRESHOLD = 0.6f;
 const float NMS_THRESHOLD = 0.45f;
 const float CONFIDENCE_THRESHOLD = 0.45f;
 
-// Text parameters.
+// Text parameters
 const float FONT_SCALE = 0.7f;
 const int FONT_FACE = FONT_HERSHEY_SIMPLEX;
 const int THICKNESS = 1;
 
-// Colors.
-Scalar BLACK = Scalar(0, 0, 0);
-Scalar BLUE = Scalar(255, 178, 50);
-Scalar YELLOW = Scalar(0, 255, 255);
-Scalar RED = Scalar(0, 0, 255);
+// Colors
+const Scalar BLACK = Scalar(0, 0, 0);
+const Scalar BLUE = Scalar(255, 178, 50);
+const Scalar YELLOW = Scalar(0, 255, 255);
+const Scalar RED = Scalar(0, 0, 255);
 
-string home = getenv("HOME");
-string DETECTIONS_OUTPUT_PATH = home + "/files/det.txt";
-string TRACKINGS_OUTPUT_PATH = home + "/files/tracked.txt";
-string VIDEO_OUTPUT_PATH = home + "/files/output.mp4";
-string COCO_NAMES = home + "/files/coco.names";
-//string NET_PATH = home + "/files/YOLOv5s.onnx";
-string NET_PATH = home + "/files/yolov8s.onnx";
-//string NET_PATH = home + "/files/yolov8x.onnx";
-
-//string folderPath = "./imgs/%06d.jpg";
-string folderPath="../data/vtest.avi";
-
-int outputCodec = VideoWriter::fourcc('M', 'J', 'P', 'G');
-double outputFps = 10;
-Size outputSize(768, 576);
+// Video encoder parameters
+const int outputCodec = VideoWriter::fourcc('M', 'J', 'P', 'G');
 
 vector<Mat> inference(Mat&, Net&);
-Mat formatYolov5(const Mat&);
 Mat postProcessImage(Mat&, vector<Mat>&, const vector<string>&, vector<Detection>&);
 void drawLabel(Mat&, string, int, int);
-void writeDetectionsToFile(const vector<Detection>, const string&, const int);
-void writeTracksToFile(const Mat&, const string&, const int);
-void writeTracksToFile(const vector<Track> objects, const string &outputPath,
-    const int frameNumber);
+void writeDetectionsToFile(const vector<Detection>, const string&, const int frameNumber);
+void writeTracksToFile(const Mat&, const string&, const int frameNumber);
+void writeTracksToFile(const vector<Track> objects, const string &outputPath, const int frameNumber);
 Scalar getColor(int);
 Mat detectionToMat(vector<Detection>);
 
-int main()
+const char *keys =
+        "{ help     h  |   | Print help message }"
+        "{ input    i  |   | Full path to input video folder, the specific camera index. (empty for camera 0) }"
+        "{ video    v  | output.avi | Path to video file for recording recording }"
+        "{ net         | yolov8s.onnx | Yolo8s detector model }"
+        "{ classes     |   | Optional path to a text file with names of classes to label detected objects. }"
+        "{ dets_path   |   | Optional path to store all detected boxes }"
+        "{ tracks_path |   | Optional path to store all tracks }"
+        "{ backend     | 0 | Choose one of computation backends: "
+                            "0: automatically (by default), "
+                            "1: Halide language (http://halide-lang.org/), "
+                            "2: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                            "3: OpenCV implementation, "
+                            "4: VKCOM, "
+                            "5: CUDA },"
+        "{ target      | 0 | Choose one of target computation devices: "
+                            "0: CPU target (by default), "
+                            "1: OpenCL, "
+                            "2: OpenCL fp16 (half-float precision), "
+                            "3: VPU, "
+                            "4: Vulkan, "
+                            "6: CUDA, "
+                            "7: CUDA fp16 (half-float preprocess) }";
+
+int main(int argc, char** argv)
 {
+    CommandLineParser parser(argc, argv, keys);
+
     // Load class list.
     cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_WARNING);
+
     vector<string> classList;
-    ifstream ifs(COCO_NAMES);
-    string line;
-    while (getline(ifs, line))
+    if (parser.has("classes"))
     {
-        classList.push_back(line);
+        ifstream ifs(parser.get<std::string>("classes"));
+        string line;
+        while (getline(ifs, line))
+        {
+            classList.push_back(line);
+        }
     }
 
-    VideoCapture capture;
-    VideoWriter writer(VIDEO_OUTPUT_PATH, outputCodec, outputFps, outputSize);
-
-
-    capture.open(folderPath);
-
+    std::string inputVideo = parser.get<std::string>("input");
+    VideoCapture capture(inputVideo);
     if (!capture.isOpened())
     {
-        cout << "failed to open the image sequence: " << folderPath << endl;
+        cout << "failed to open video: " << inputVideo << endl;
         return -1;
     }
 
-    // Load image sequence.
-    Mat frame;
-    int frameNumber = 0;
+    // Load model.
+    std::string net = parser.get<std::string>("net");
+    int backend = parser.get<int>("backend");
+    int target = parser.get<int>("target");
+    Net detector = readNet(net);
+    detector.setPreferableBackend(backend);
+    detector.setPreferableTarget(target);
+    vector<Mat> detections; // Process the image.
+    vector<Detection> objects;
+
     double fps = capture.get(CAP_PROP_FPS);
-    //cout<<"my fps is"<<fps;
+    int width = capture.get(CAP_PROP_FRAME_WIDTH);
+    int height = capture.get(CAP_PROP_FRAME_HEIGHT);
+
     cv::ByteTracker::Params params;
     params.frameRate = fps;
     params.frameBuffer = 30;
     Ptr<ByteTracker> tracker = ByteTracker::create(params);
+
+    std::string outputVideo = parser.get<std::string>("video");
+    VideoWriter writer(outputVideo, outputCodec, fps, cv::Size(width, height));
+
+    std::string detectorOutputPath;
+    if(parser.has("dets_path"))
+        detectorOutputPath = parser.get<std::string>("dets_path");
+
+    std::string trackerOutputPath;
+    if(parser.has("tracks_path"))
+        trackerOutputPath = parser.get<std::string>("tracks_path");
+
+    Mat frame;
+    int frameNumber = 0;
     while (capture.read(frame))
     {
         if (frame.empty())
@@ -99,17 +129,8 @@ int main()
             break;
         }
 
-        // Load model.
-        Net net;
-        net = readNet(NET_PATH);
-        // net.setPreferableBackend(dnn::DNN_TARGET_CPU);
-        // net.setPreferableTarget(dnn::DNN_TARGET_CUDA_FP16);
-        vector<Mat> detections; // Process the image.
-        vector<Detection> objects;
-        detections = inference(frame, net);
-        Mat img = postProcessImage(frame, detections, classList,
-                               objects);
-
+        detections = inference(frame, detector);
+        Mat img = postProcessImage(frame, detections, classList, objects);
 
         bool useArray = false;
         if (useArray) //Update method with input array and output array
@@ -134,10 +155,11 @@ int main()
                     int yPoint = static_cast<int>(tlwh_.y);
                     putText(img, to_string(id_), Point(xPoint, yPoint - 5), FONT_FACE, FONT_SCALE, RED);
                 }
-                writeTracksToFile(trackedObjects, TRACKINGS_OUTPUT_PATH, frameNumber);
             }
+            if(!trackerOutputPath.empty())
+                writeTracksToFile(trackedObjects, trackerOutputPath, frameNumber);
         }
-        else if (!useArray)
+        else
         {
             vector<Track> trackedObjects;
             tracker->update(objects, trackedObjects); //Update method with vector of detection as input and vector of tracks as output
@@ -149,16 +171,19 @@ int main()
                 int yPoint = static_cast<int>(track.rect.y);
                 putText(img, to_string(track.trackingId), Point(xPoint, yPoint - 5), FONT_FACE, FONT_SCALE, RED);
             }
-            writeTracksToFile(trackedObjects, TRACKINGS_OUTPUT_PATH, frameNumber);
+            if(!trackerOutputPath.empty())
+                writeTracksToFile(trackedObjects, trackerOutputPath, frameNumber);
         }
-        writeDetectionsToFile(objects, DETECTIONS_OUTPUT_PATH, frameNumber);
-        // Put efficiency information.
-        // The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes).
+
+        if(!detectorOutputPath.empty())
+            writeDetectionsToFile(objects, detectorOutputPath, frameNumber);
+
         vector<double> layersTimes;
         double freq = getTickFrequency() / 1000;
-        double t = net.getPerfProfile(layersTimes) / freq;
+        double t = detector.getPerfProfile(layersTimes) / freq;
         string label = format("Inference time : %.2f ms", t);
         putText(img, label, Point(20, 40), FONT_FACE, FONT_SCALE, RED);
+
         imshow("Output", img);
         writer.write(img);
         //waitKey(0);
@@ -170,7 +195,6 @@ int main()
     }
     writer.release();
     capture.release();
-    cout<<"Output video generated";
 
     return 0;
 }
@@ -284,7 +308,7 @@ Mat postProcessImage(Mat &inputImage, vector<Mat> &output, const vector<string> 
         rectangle(inputImage, Point(left, top), Point(left + width, top + height), BLUE, 1 * THICKNESS);
         // Get the label for the class name and its confidence.
         string label = format("%.2f", confidences[idx]);
-        label = className[classIds[idx]] + ":" + label;
+        label = className.empty() ? cv::format("class %d", classIds[idx]): className[classIds[idx]] + ":" + label;
         // Draw class labels.
         drawLabel(inputImage, label, left, top);
         Detection det(box, classIds[idx], confidences[idx]);
