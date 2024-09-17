@@ -24,7 +24,7 @@ namespace dnn
     https://onnx.ai/onnx/operators/onnx__Squeeze.html
 
     Opset's 1 to 13 are covered.
-    
+
     See description in reshape2_layer.cpp
     for more some common implementation details.
 */

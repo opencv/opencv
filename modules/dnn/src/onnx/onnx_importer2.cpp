@@ -1854,8 +1854,9 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
         Arg sizesArg = node_inputs[3];
         if (netimpl->isConstArg(sizesArg))
         {
-            Mat shapes = netimpl->argTensor(sizesArg);
-            CV_CheckEQ(shapes.total(), (size_t)4, "HCHW layout is expected");
+            Mat shapes_ = netimpl->argTensor(sizesArg), shapes;
+            CV_CheckEQ(shapes_.total(), (size_t)4, "HCHW layout is expected");
+            shapes_.convertTo(shapes, CV_32S);
             layerParams.set("width", shapes.at<int>(3));
             layerParams.set("height", shapes.at<int>(2));
             ninputs = 1;

@@ -319,7 +319,7 @@ public:
         int allSteps[MatShape::MAX_DIMS];
         MatShape outShape = getOutShape(inpShape, *starts_, *ends_, *axes_, steps,
                                         allStarts, allEnds, allSteps);
-        
+
         int outKind = outputs_arr.kind();
 
         CV_Assert(outKind == _InputArray::STD_VECTOR_MAT ||

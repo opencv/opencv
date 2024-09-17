@@ -63,7 +63,7 @@ public:
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        int noutputs = requiredOutputs > 0 ? requiredOutputs : (int)this->outputs.size();
+        int noutputs = std::max(requiredOutputs > 0 ? requiredOutputs : (int)this->outputs.size(), 1);
         CV_Assert(noutputs == 1 || noutputs == 3);
 
         // check shapes of weight and bias if existed

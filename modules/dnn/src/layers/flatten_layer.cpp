@@ -122,7 +122,7 @@ public:
                 outer *= inputs[0][i];
             for (; i < numAxes; i++)
                 inner *= inputs[0][i];
-            
+
             CV_Assert_N(inner <= (size_t)INT_MAX, outer < (size_t)INT_MAX);
             outputShapeVec.push_back((int)outer);
             outputShapeVec.push_back((int)inner);
