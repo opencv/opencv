@@ -65,7 +65,8 @@ public:
         size_t weightsMemory = 0, blobsMemory = 0;
         net.getMemoryConsumption(netMatShapes, netMatTypes, weightsMemory, blobsMemory);
         int64 flops = net.getFLOPS(netMatShapes, netMatTypes);
-        CV_Assert(flops > 0);
+        // [TODO] implement getFLOPS in the new engine
+        CV_Assert(flops > 0 || net.getMainGraph());
         std::cout << "Memory consumption:" << std::endl;
         std::cout << "    Weights(parameters): " << divUp(weightsMemory, 1u<<20) << " Mb" << std::endl;
         std::cout << "    Blobs: " << divUp(blobsMemory, 1u<<20) << " Mb" << std::endl;
