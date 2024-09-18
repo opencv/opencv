@@ -35,15 +35,19 @@ using namespace cv;
 using namespace cv::dnn;
 using namespace std;
 
+const string about = "Use this script for Person Re-identification using OpenCV. \n\n"
+        "Firstly, download required models i.e. reid and yolov8 using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to point to the directory where models are downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"
+        "To run:\n"
+        "\t Example: ./example_dnn_person_reid reid\n\n"
+        "Re-Identification model path can also be specified using --model argument. Detection model can be set using --yolo_model argument.\n\n";
+
 const string param_keys =
-    "{help    h  |           | show help message}"
-    "{model   m  | youtu_reid_baseline_medium.onnx | network model}"
-    "{query   q  |           | Path to target image. Skip this argument to select target in the video frame.}"
-    "{batch_size |    1      | batch size of each inference}"
-    "{video   v  | vtest.avi | video file path}"
-    "{yolo       |           | Path to yolov8n.onnx}"
-    "{resize_h   |    256    | resize input to specific height}"
-    "{resize_w   |    128    | resize input to specific width}";
+    "{help    h  |                   | show help message}"
+    "{ @alias    |                   | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ zoo       | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
+    "{query   q  |                   | Path to target image. Skip this argument to select target in the video frame.}"
+    "{input   i  |                   | video file path}"
+    "{yolo_model |                   | Path to yolov8n.onnx}";
 
 const string backend_keys = format(
     "{ backend | default | Choose one of computation backends: "
@@ -81,29 +85,50 @@ bool drawing = false;
 int ix = -1, iy = -1;
 Rect rect;
 
-static void extractFrames(const string& queryImgPath, const string& videoPath, Net* reidNet, const string& yoloPath, int resize_h, int resize_w, int batch_size);
+string sha1, yoloSha1, modelPath;
+string queryImagePath, videoPath, yoloPath, backend, target;
+int resize_h, resize_w, yoloHeight, yoloWidth;
+float scale, yoloScale;
+bool swapRB, yoloSwapRB;
+Scalar mean_v, stnd;
+
+static void extractFrames(Net* reidNet);
 
 int main(int argc, char **argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
-    if (parser.has("help"))
+    if (!parser.has("@alias") || parser.has("help"))
     {
+        cout<<about<<endl;
         parser.printMessage();
         return 0;
     }
+    string modelName = parser.get<String>("@alias");
+    string zooFile = findFile(parser.get<String>("zoo"));
+    keys += genPreprocArguments(modelName, zooFile);
+    keys += genPreprocArguments(modelName, zooFile, "yolo_");
     parser = CommandLineParser(argc, argv, keys);
     parser.about("Use this script to run ReID networks using OpenCV.");
 
-    String modelPath = findModel(parser.get<String>("model"), "");
-    const string queryImagePath = parser.get<String>("query");
-    const string videoPath = findFile(parser.get<String>("video"));
-    const string yoloPath = findModel(parser.get<String>("yolo"), "");
-    const int batch_size = parser.get<int>("batch_size");
-    const string backend = parser.get<String>("backend");
-    const string target = parser.get<String>("target");
-    const int resize_h = parser.get<int>("resize_h");
-    const int resize_w = parser.get<int>("resize_w");
+    sha1 = parser.get<String>("sha1");
+    yoloSha1 = parser.get<String>("yolo_sha1");
+    modelPath = findModel(parser.get<String>("model"), sha1);
+    queryImagePath = parser.get<String>("query");
+    videoPath = parser.get<String>("input");
+    yoloPath = findModel(parser.get<String>("yolo_model"), yoloSha1);
+    backend = parser.get<String>("backend");
+    target = parser.get<String>("target");
+    resize_h = parser.get<int>("height");
+    resize_w = parser.get<int>("width");
+    yoloHeight = parser.get<int>("yolo_height");
+    yoloWidth = parser.get<int>("yolo_width");
+    scale = parser.get<float>("scale");
+    yoloScale = parser.get<float>("yolo_scale");
+    swapRB = parser.get<bool>("rgb");
+    yoloSwapRB = parser.get<bool>("yolo_rgb");
+    mean_v = parser.get<Scalar>("mean");
+    stnd = parser.get<Scalar>("std");
 
     Net net = readNetFromONNX(modelPath);
     net.setPreferableBackend(getBackendID(backend));
@@ -114,14 +139,12 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    extractFrames(queryImagePath, videoPath, &net, yoloPath, resize_h, resize_w, batch_size);
+    extractFrames(&net);
     return 0;
 }
 
 static Mat preprocess(const Mat &img)
 {
-    const double mean[3] = {0.485, 0.456, 0.406};
-    const double std[3] = {0.229, 0.224, 0.225};
     Mat ret = Mat(img.rows, img.cols, CV_32FC3);
     for (int y = 0; y < ret.rows; y++)
     {
@@ -129,7 +152,7 @@ static Mat preprocess(const Mat &img)
         {
             for (int c = 0; c < 3; c++)
             {
-                ret.at<Vec3f>(y,x)[c] = (float)((img.at<Vec3b>(y,x)[c] / 255.0 - mean[2 - c]) / std[2 - c]);
+                ret.at<Vec3f>(y,x)[c] = (float)((img.at<Vec3b>(y,x)[c] / 255.0 - mean_v[2 - c]) / stnd[2 - c]);
             }
         }
     }
@@ -152,17 +175,13 @@ static vector<float> normalization(const vector<float> &feature)
     return ret;
 }
 
-static void extractFeatures(vector<Mat> &imglist, Net *net, const int &resize_h, const int &resize_w, vector<vector<float>> &features, int batch_size=32)
+static void extractFeatures(vector<Mat> &imglist, Net *net, vector<vector<float>> &features)
 {
-    for (int st = 0; st < (int)imglist.size(); st += batch_size)
+    for (int st = 0; st < (int)imglist.size(); st++)
     {
-        vector<Mat> batch;
-        for (int delta = 0; delta < batch_size && st + delta < (int)imglist.size(); delta++)
-        {
-            Mat img = imglist[st + delta];
-            batch.push_back(preprocess(img));
-        }
-        Mat blob = blobFromImages(batch, 1.0, Size(resize_w, resize_h), Scalar(0.0,0.0,0.0), true, false, CV_32F);
+        Mat processed_img = preprocess(imglist[st]);
+
+        Mat blob = blobFromImage(processed_img, 1.0, Size(resize_w, resize_h), Scalar(), true, false, CV_32F);
         net->setInput(blob);
         Mat out=net->forward();
         vector<int> s {out.size[0], out.size[1]};
@@ -224,10 +243,10 @@ static vector<Mat> yoloDetector(Mat &frame, Net &net)
     frame.copyTo(image(Rect(0, 0, width, height)));
 
     // Calculate the scale
-    double scale = static_cast<double>(length) / 640.0;
+    double norm_scale = static_cast<double>(length) / yoloWidth;
 
     Mat blob;
-    blobFromImage(image, blob, 1.0/255.0, Size(640, 640), Scalar(), true, false, CV_32F);
+    blobFromImage(image, blob, yoloScale, Size(yoloWidth, yoloHeight), Scalar(), yoloSwapRB, false, CV_32F);
     net.setInput(blob);
 
     vector<Mat> outputs;
@@ -272,10 +291,10 @@ static vector<Mat> yoloDetector(Mat &frame, Net &net)
 
     vector<Mat> images;
     for (int index : indexes) {
-        int x = static_cast<int>(round(boxes[index].x * scale));
-        int y = static_cast<int>(round(boxes[index].y * scale));
-        int w = static_cast<int>(round(boxes[index].width * scale));
-        int h = static_cast<int>(round(boxes[index].height * scale));
+        int x = static_cast<int>(round(boxes[index].x * norm_scale));
+        int y = static_cast<int>(round(boxes[index].y * norm_scale));
+        int w = static_cast<int>(round(boxes[index].width * norm_scale));
+        int h = static_cast<int>(round(boxes[index].height * norm_scale));
         // Make sure the box is within the frame
         x = max(0, x);
         y = max(0, y);
@@ -318,8 +337,15 @@ static void drawRectangle(int event, int x, int y, int, void* param) {
     }
 }
 
-void extractFrames(const string& queryImgPath, const string& videoPath, Net* reidNet, const string& yoloPath, int resize_h = 384, int resize_w = 128, int batch_size = 1) {
-    VideoCapture cap(videoPath);
+void extractFrames(Net* reidNet) {
+    VideoCapture cap;
+    if (!videoPath.empty()){
+        videoPath = findFile(videoPath);
+        cap.open(videoPath);
+    }
+    else
+        cap.open(0);
+
     if (!cap.isOpened()) {
         cerr << "Error: Video could not be opened." << endl;
         return;
@@ -329,8 +355,8 @@ void extractFrames(const string& queryImgPath, const string& videoPath, Net* rei
     vector<Mat> queryImages;
 
     Mat queryImg;
-    if (!queryImgPath.empty()) {
-        queryImg = imread(queryImgPath);
+    if (!queryImagePath.empty()) {
+        queryImg = imread(queryImagePath);
         if (queryImg.empty()) {
             cerr << "Error: Query image could not be loaded." << endl;
             return;
@@ -362,7 +388,7 @@ void extractFrames(const string& queryImgPath, const string& videoPath, Net* rei
 
     Mat frame;
     vector<vector<float>> queryFeatures;
-    extractFeatures(queryImages, reidNet, resize_h, resize_w, queryFeatures, batch_size);
+    extractFeatures(queryImages, reidNet, queryFeatures);
 
     for(;;) {
         if (!cap.read(frame) || frame.empty()) {
@@ -371,7 +397,7 @@ void extractFrames(const string& queryImgPath, const string& videoPath, Net* rei
         vector<Mat> detectedImages = yoloDetector(frame, net);
 
         vector<vector<float>> galleryFeatures;
-        extractFeatures(detectedImages, reidNet, resize_h, resize_w, galleryFeatures, batch_size);
+        extractFeatures(detectedImages, reidNet, galleryFeatures);
 
         int topk_idx = getTopK(queryFeatures, galleryFeatures);
         if (topk_idx != -1 && static_cast<int>(detectedImages.size()) > topk_idx) {
@@ -383,7 +409,8 @@ void extractFrames(const string& queryImgPath, const string& videoPath, Net* rei
 
         putText(frame, "Tracking", Point(10, 30), FONT_HERSHEY_SIMPLEX, 0.6, Scalar(255, 0, 0), 2);
         imshow("TRACKING", frame);
-        if (waitKey(1) == 'q' || waitKey(1) == 27) {
+        int key = waitKey(1);
+        if (key == 'q' || key == 27) {
             break;
         }
     }

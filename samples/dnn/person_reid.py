@@ -29,23 +29,55 @@ import numpy as np
 import cv2 as cv
 from common import *
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT,
-    cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
-    cv.dnn.DNN_BACKEND_OPENCV,
-    cv.dnn.DNN_BACKEND_VKCOM,
-    cv.dnn.DNN_BACKEND_CUDA)
+def help():
+    print(
+        '''
+        Use this script for Person Re-identification using OpenCV.
 
-targets = (cv.dnn.DNN_TARGET_CPU,
-    cv.dnn.DNN_TARGET_OPENCL,
-    cv.dnn.DNN_TARGET_OPENCL_FP16,
-    cv.dnn.DNN_TARGET_MYRIAD,
-    cv.dnn.DNN_TARGET_HDDL,
-    cv.dnn.DNN_TARGET_VULKAN,
-    cv.dnn.DNN_TARGET_CUDA,
-    cv.dnn.DNN_TARGET_CUDA_FP16)
+        Firstly, download required models i.e. reid and yolov8 using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 
-MEAN = (0.485, 0.456, 0.406)
-STD = (0.229, 0.224, 0.225)
+        To run:
+        Example: python person_reid.py reid
+
+        Re-identification model path can also be specified using --model argument and detection model can be specified using --yolo_model argument.
+        '''
+    )
+
+def get_args_parser():
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
+                        help='An optional path to file with preprocessing parameters.')
+    parser.add_argument('--query', '-q', help='Path to target image. Skip this argument to select target in the video frame.')
+    parser.add_argument('--input', '-i', default=0, help='Path to video file.', required=False)
+    parser.add_argument('--backend', default="default", type=str, choices=backends,
+            help="Choose one of computation backends: "
+            "default: automatically (by default), "
+            "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+            "opencv: OpenCV implementation, "
+            "vkcom: VKCOM, "
+            "cuda: CUDA, "
+            "webnn: WebNN")
+    parser.add_argument('--target', default="cpu", type=str, choices=targets,
+            help="Choose one of target computation devices: "
+            "cpu: CPU target (by default), "
+            "opencl: OpenCL, "
+            "opencl_fp16: OpenCL fp16 (half-float precision), "
+            "ncs2_vpu: NCS2 VPU, "
+            "hddl_vpu: HDDL VPU, "
+            "vulkan: Vulkan, "
+            "cuda: CUDA, "
+            "cuda_fp16: CUDA fp16 (half-float preprocess)")
+    args, _ = parser.parse_known_args()
+    add_preproc_args(args.zoo, parser, 'person_reid', prefix="")
+    add_preproc_args(args.zoo, parser, 'person_reid', prefix="yolo_")
+    parser = argparse.ArgumentParser(parents=[parser],
+                                        description='Person Re-identification using OpenCV.',
+                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    return parser.parse_args()
+
 drawing = False
 ix, iy = -1, -1
 rect = None
@@ -64,7 +96,7 @@ def preprocess(images, height, width):
         img_list.append(image[:, :, ::-1])
 
     images = np.array(img_list)
-    images = (images / 255.0 - MEAN) / STD
+    images = (images / 255.0 - args.mean) / args.std
 
     input = cv.dnn.blobFromImages(images.astype(np.float32), ddepth = cv.CV_32F)
     return input
@@ -77,10 +109,10 @@ def yolo_detector(frame, net):
     image = np.zeros((length, length, 3), np.uint8)
     image[0:height, 0:width] = frame
 
-    scale = length/640
+    scale = length/args.yolo_width
     # Create blob from the frame with correct scale factor and size for the model
 
-    blob = cv.dnn.blobFromImage(image, scalefactor=1 / 255, size=(640, 640), swapRB=True)
+    blob = cv.dnn.blobFromImage(image, scalefactor=args.yolo_scale, size=(args.yolo_width, args.yolo_height), swapRB=args.yolo_rgb)
     net.setInput(blob)
     outputs = net.forward()
 
@@ -143,8 +175,8 @@ def draw_rectangle(event, x, y, flags, param):
         cv.rectangle(param[0], (ix, iy), (x, y), (0, 255, 0), 2)
         cv.imshow('TRACKING', param[0])
 
-def extract_frames(query_image_path, video_path, model_path, yolo_path, resize_h=384, resize_w=128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, batch_size=32):
-    cap = cv.VideoCapture(video_path)
+def extract_frames(query_image_path, model_path, yolo_path, resize_h=384, resize_w=128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, batch_size=32):
+    cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
     net = cv.dnn.readNet(yolo_path)
     query_images = []
 
@@ -186,7 +218,7 @@ def extract_frames(query_image_path, video_path, model_path, yolo_path, resize_h
 
         cv.putText(frame, "Tracking", (10, 30), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
         cv.imshow("TRACKING", frame)
-        if cv.waitKey(1) & 0xFF == ord('q'):
+        if cv.waitKey(1) & 0xFF in [ord('q'), 27]:
             break
 
     cap.release()
@@ -267,42 +299,18 @@ def topk(query_feat, gallery_feat):
     return index
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Use this script to run human parsing using JPPNet',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--query', '-q', help='Path to target image. Skip this argument to select target in the video frame.')
-    parser.add_argument('--video', '-v', default='vtest.avi', help='Path to video file.')
-    parser.add_argument('--yolo', help='Path to yolov8.onnx.')
-    parser.add_argument('--resize_h', default = 256, help='The height of the input for model inference.')
-    parser.add_argument('--resize_w', default = 128, help='The width of the input for model inference')
-    parser.add_argument('--model', '-m', default='youtu_reid_baseline_medium.onnx', help='Path to pb model.')
-    parser.add_argument('--backend', default="default", type=str, choices=backends,
-            help="Choose one of computation backends: "
-            "default: automatically (by default), "
-            "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-            "opencv: OpenCV implementation, "
-            "vkcom: VKCOM, "
-            "cuda: CUDA, "
-            "webnn: WebNN")
-    parser.add_argument('--target', default="cpu", type=str, choices=targets,
-            help="Choose one of target computation devices: "
-            "cpu: CPU target (by default), "
-            "opencl: OpenCL, "
-            "opencl_fp16: OpenCL fp16 (half-float precision), "
-            "ncs2_vpu: NCS2 VPU, "
-            "hddl_vpu: HDDL VPU, "
-            "vulkan: Vulkan, "
-            "cuda: CUDA, "
-            "cuda_fp16: CUDA fp16 (half-float preprocess)")
-    args, _ = parser.parse_known_args()
+    args = get_args_parser()
+    if args.alias is None or hasattr(args, 'help'):
+        help()
+        exit(1)
 
-    args.model = findModel(args.model, "")
+    args.model = findModel(args.model, args.sha1)
     if not os.path.isfile(args.model):
         raise OSError("Model not exist")
 
-    if args.yolo is None:
-        print("[ERROR] Please pass path to yolov8.onnx model file using --yolo.")
+    if args.yolo_model is None:
+        print("[ERROR] Please pass path to yolov8.onnx model file using --yolo_model.")
         exit(1)
     else:
-        args.yolo = findModel(args.yolo, "")
-    args.video = findFile(args.video)
-    extract_frames(args.query, args.video, args.model, args.yolo, args.resize_h, args.resize_w, args.backend, args.target)
+        args.yolo_model = findModel(args.yolo_model, args.yolo_sha1)
+    extract_frames(args.query, args.model, args.yolo_model, args.height, args.width, args.backend, args.target)
