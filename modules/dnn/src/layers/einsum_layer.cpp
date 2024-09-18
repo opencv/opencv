@@ -380,8 +380,6 @@ public:
     );
 
     void computeOutputShape(const std::vector<MatShape>& inputs) const {
-        std::cout << "computeOutputShape" << std::endl;
-        std::cout << "einsumOutDims: " << einsumOutDims << std::endl;
         if (!outputShapeComputed) {
             // Copy of the existing computation logic
             const_cast<LayerEinsumImpl*>(this)->processEquation(inputs);
@@ -400,7 +398,6 @@ public:
     {
         setParamsFrom(params);
         equation = params.get<String>("equation");
-        std::cout << "equation: " << equation << std::endl;
         opt.init();
 
         // We allocate space for 10 values as a precaution,
@@ -825,7 +822,6 @@ void LayerEinsumImpl::processBroadcastedDims()
             tempCurrentInputDimIndicesToSubscriptIndices.reserve(currentInputDimIndicesToSubscriptIndices.size());
 
             // make sure it is correct
-            std::cout << "einsumInpShapes size: " << einsumInpShapes[i] << std::endl;
             const auto& dims = einsumInpShapes[i];
             auto rank = dims.size();
 
