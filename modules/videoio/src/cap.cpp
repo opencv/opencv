@@ -62,9 +62,6 @@ static bool param_VIDEOWRITER_DEBUG = utils::getConfigurationParameterBool("OPEN
         CV_LOG_WARNING(nullptr, __VA_ARGS__)            \
     }
 
-void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const { cvReleaseCapture(&obj); }
-void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const { cvReleaseVideoWriter(&obj); }
-
 
 VideoCapture::VideoCapture() : throwOnFail(false)
 {}

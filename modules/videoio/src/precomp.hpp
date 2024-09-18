@@ -55,7 +55,6 @@
 
 
 #include "opencv2/videoio.hpp"
-#include "opencv2/videoio/legacy/constants_c.h"
 
 #include "opencv2/core/utility.hpp"
 #ifdef __OPENCV_BUILD
@@ -74,7 +73,6 @@
 #include "opencv2/imgcodecs.hpp"
 
 #include "opencv2/imgproc.hpp"
-#include "opencv2/videoio/videoio_c.h"
 
 #include <stdlib.h>
 #include <stdio.h>

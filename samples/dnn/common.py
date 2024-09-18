@@ -3,19 +3,26 @@ import os
 import cv2 as cv
 
 
-def add_argument(zoo, parser, name, help, required=False, default=None, type=None, action=None, nargs=None):
-    if len(sys.argv) <= 1:
+def add_argument(zoo, parser, name, help, required=False, default=None, type=None, action=None, nargs=None, alias=None):
+    if alias is not None:
+        modelName = alias
+    elif len(sys.argv) > 1:
+        modelName = sys.argv[1]
+    else:
         return
-
-    modelName = sys.argv[1]
 
     if os.path.isfile(zoo):
         fs = cv.FileStorage(zoo, cv.FILE_STORAGE_READ)
         node = fs.getNode(modelName)
         if not node.empty():
             value = node.getNode(name)
-            if name=="sha1":
-                value = node.getNode("load_info")
+            if "sha1" in name:
+                prefix = name.replace("sha1", "")
+                value = node.getNode(prefix + "load_info")
+                value = value.getNode(name)
+            if "download_sha" in name:
+                prefix = name.replace("download_sha", "")
+                value = node.getNode(prefix + "load_info")
                 value = value.getNode(name)
             if not value.empty():
                 if value.isReal():
@@ -50,7 +57,7 @@ def add_argument(zoo, parser, name, help, required=False, default=None, type=Non
                             action=action, nargs=nargs, type=type)
 
 
-def add_preproc_args(zoo, parser, sample):
+def add_preproc_args(zoo, parser, sample, alias=None, prefix=""):
     aliases = []
     if os.path.isfile(zoo):
         fs = cv.FileStorage(zoo, cv.FILE_STORAGE_READ)
@@ -60,36 +67,38 @@ def add_preproc_args(zoo, parser, sample):
             if model.getNode('sample').string() == sample:
                 aliases.append(name)
 
-    parser.add_argument('alias', nargs='?', choices=aliases,
+    parser.add_argument(prefix+'alias', nargs='?', choices=aliases,
                         help='An alias name of model to extract preprocessing parameters from models.yml file.')
-    add_argument(zoo, parser, 'model', required=True,
+    add_argument(zoo, parser, prefix+'model',
                  help='Path to a binary file of model contains trained weights. '
                       'It could be a file with extensions .caffemodel (Caffe), '
-                      '.pb (TensorFlow), .weights (Darknet), .bin (OpenVINO)')
-    add_argument(zoo, parser, 'config',
+                      '.pb (TensorFlow), .weights (Darknet), .bin (OpenVINO)', alias=alias)
+    add_argument(zoo, parser, prefix+'config',
                  help='Path to a text file of model contains network configuration. '
-                      'It could be a file with extensions .prototxt (Caffe), .pbtxt or .config (TensorFlow), .cfg (Darknet), .xml (OpenVINO)')
-    add_argument(zoo, parser, 'mean', nargs='+', type=float, default=[0, 0, 0],
+                      'It could be a file with extensions .prototxt (Caffe), .pbtxt or .config (TensorFlow), .cfg (Darknet), .xml (OpenVINO)', alias=alias)
+    add_argument(zoo, parser, prefix+'mean', nargs='+', type=float, default=[0, 0, 0],
                  help='Preprocess input image by subtracting mean values. '
-                      'Mean values should be in BGR order.')
-    add_argument(zoo, parser, 'std', nargs='+', type=float, default=[0, 0, 0],
-                 help='Preprocess input image by dividing on a standard deviation.')
-    add_argument(zoo, parser, 'scale', type=float, default=1.0,
-                 help='Preprocess input image by multiplying on a scale factor.')
-    add_argument(zoo, parser, 'width', type=int,
-                 help='Preprocess input image by resizing to a specific width.')
-    add_argument(zoo, parser, 'height', type=int,
-                 help='Preprocess input image by resizing to a specific height.')
-    add_argument(zoo, parser, 'rgb', action='store_true',
-                 help='Indicate that model works with RGB input images instead BGR ones.')
-    add_argument(zoo, parser, 'labels',
-                 help='Optional path to a text file with names of labels to label detected objects.')
-    add_argument(zoo, parser, 'postprocessing', type=str,
-                 help='Post-processing kind depends on model topology.')
-    add_argument(zoo, parser, 'background_label_id', type=int, default=-1,
-                 help='An index of background class in predictions. If not negative, exclude such class from list of classes.')
-    add_argument(zoo, parser, 'sha1', type=str,
-                 help='Optional path to hashsum of downloaded model to be loaded from models.yml')
+                      'Mean values should be in BGR order.', alias=alias)
+    add_argument(zoo, parser, prefix+'std', nargs='+', type=float, default=[0, 0, 0],
+                 help='Preprocess input image by dividing on a standard deviation.', alias=alias)
+    add_argument(zoo, parser, prefix+'scale', type=float, default=1.0,
+                 help='Preprocess input image by multiplying on a scale factor.', alias=alias)
+    add_argument(zoo, parser, prefix+'width', type=int,
+                 help='Preprocess input image by resizing to a specific width.', alias=alias)
+    add_argument(zoo, parser, prefix+'height', type=int,
+                 help='Preprocess input image by resizing to a specific height.', alias=alias)
+    add_argument(zoo, parser, prefix+'rgb', action='store_true',
+                 help='Indicate that model works with RGB input images instead BGR ones.', alias=alias)
+    add_argument(zoo, parser, prefix+'labels',
+                 help='Optional path to a text file with names of labels to label detected objects.', alias=alias)
+    add_argument(zoo, parser, prefix+'postprocessing', type=str,
+                 help='Post-processing kind depends on model topology.', alias=alias)
+    add_argument(zoo, parser, prefix+'background_label_id', type=int, default=-1,
+                 help='An index of background class in predictions. If not negative, exclude such class from list of classes.', alias=alias)
+    add_argument(zoo, parser, prefix+'sha1', type=str,
+                 help='Optional path to hashsum of downloaded model to be loaded from models.yml', alias=alias)
+    add_argument(zoo, parser, prefix+'download_sha', type=str,
+                 help='Optional path to hashsum of downloaded model to be loaded from models.yml', alias=alias)
 
 def findModel(filename, sha1):
     if filename:
@@ -110,10 +119,9 @@ def findModel(filename, sha1):
         if os.path.exists(os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], filename)):
             return os.path.join(os.environ['OPENCV_DOWNLOAD_CACHE_DIR'], filename)
 
-        print('File ' + filename + ' not found! Please specify a path to '
-             'model download directory in OPENCV_DOWNLOAD_CACHE_DIR '
-             'environment variable or pass a full path to ' + filename)
-        exit(0)
+    raise FileNotFoundError('File ' + filename + ' not found! Please specify a path to '
+            'model download directory in OPENCV_DOWNLOAD_CACHE_DIR '
+            'environment variable or pass a full path to ' + filename)
 
 def findFile(filename):
     if filename:
@@ -140,12 +148,14 @@ def findFile(filename):
             except KeyError:
                 pass
 
-        print('File ' + filename + ' not found! Please specify the path to '
-            '/opencv/samples/data in the OPENCV_SAMPLES_DATA_PATH environment variable, '
-            'or specify the path to opencv_extra/testdata in the OPENCV_DNN_TEST_DATA_PATH environment variable, '
-            'or specify the path to the model download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, '
-            'or pass the full path to ' + filename + '.')
-        exit(0)
+    raise FileNotFoundError(
+        'File ' + filename + ' not found! Please specify the path to '
+        '/opencv/samples/data in the OPENCV_SAMPLES_DATA_PATH environment variable, '
+        'or specify the path to opencv_extra/testdata in the OPENCV_DNN_TEST_DATA_PATH environment variable, '
+        'or specify the path to the model download cache directory in the OPENCV_DOWNLOAD_CACHE_DIR environment variable, '
+        'or pass the full path to ' + filename + '.'
+    )
+
 
 def get_backend_id(backend_name):
     backend_ids = {

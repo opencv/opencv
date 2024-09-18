@@ -45,12 +45,6 @@ namespace opencv_test { namespace {
 
 #define sign(a) a > 0 ? 1 : a == 0 ? 0 : -1
 
-#define CORE_EIGEN_ERROR_COUNT 1
-#define CORE_EIGEN_ERROR_SIZE  2
-#define CORE_EIGEN_ERROR_DIFF  3
-#define CORE_EIGEN_ERROR_ORTHO 4
-#define CORE_EIGEN_ERROR_ORDER 5
-
 #define MESSAGE_ERROR_COUNT "Matrix of eigen values must have the same rows as source matrix and 1 column."
 #define MESSAGE_ERROR_SIZE "Source matrix and matrix of eigen vectors must have the same sizes."
 #define MESSAGE_ERROR_DIFF_1 "Accuracy of eigen values computing less than required."
@@ -173,7 +167,7 @@ bool Core_EigenTest::check_pair_count(const cv::Mat& src, const cv::Mat& evalues
         std::cout << endl; std::cout << "Checking sizes of eigen values matrix " << evalues << "..." << endl;
         std::cout << "Number of rows: " << evalues.rows << "   Number of cols: " << evalues.cols << endl;
         std::cout << "Size of src symmetric matrix: " << src.rows << " * " << src.cols << endl; std::cout << endl;
-        CV_Error(CORE_EIGEN_ERROR_COUNT, MESSAGE_ERROR_COUNT);
+        CV_Error(cv::Error::StsError, MESSAGE_ERROR_COUNT);
     }
     return true;
 }
@@ -188,7 +182,7 @@ bool Core_EigenTest::check_pair_count(const cv::Mat& src, const cv::Mat& evalues
         std::cout << endl; std::cout << "Checking sizes of eigen vectors matrix " << evectors << "..." << endl;
         std::cout << "Number of rows: " << evectors.rows << "   Number of cols: " << evectors.cols << endl;
         std:: cout << "Size of src symmetric matrix: " << src.rows << " * " << src.cols << endl; std::cout << endl;
-        CV_Error (CORE_EIGEN_ERROR_SIZE, MESSAGE_ERROR_SIZE);
+        CV_Error (cv::Error::StsError, MESSAGE_ERROR_SIZE);
     }
 
     if (!(evalues.rows == right_eigen_pair_count && evalues.cols == 1))
@@ -196,7 +190,7 @@ bool Core_EigenTest::check_pair_count(const cv::Mat& src, const cv::Mat& evalues
         std::cout << endl; std::cout << "Checking sizes of eigen values matrix " << evalues << "..." << endl;
         std::cout << "Number of rows: " << evalues.rows << "   Number of cols: " << evalues.cols << endl;
         std:: cout << "Size of src symmetric matrix: " << src.rows << " * " << src.cols << endl; std::cout << endl;
-        CV_Error (CORE_EIGEN_ERROR_COUNT, MESSAGE_ERROR_COUNT);
+        CV_Error (cv::Error::StsError, MESSAGE_ERROR_COUNT);
     }
 
     return true;
@@ -233,7 +227,7 @@ bool Core_EigenTest::check_orthogonality(const cv::Mat& U)
         {
             std::cout << endl; std::cout << "Checking orthogonality of matrix " << U << ": ";
             print_information(i, U, diff, eps_vec);
-            CV_Error(CORE_EIGEN_ERROR_ORTHO, MESSAGE_ERROR_ORTHO);
+            CV_Error(cv::Error::StsError, MESSAGE_ERROR_ORTHO);
         }
     }
 
@@ -252,7 +246,7 @@ bool Core_EigenTest::check_pairs_order(const cv::Mat& eigen_values)
                 std::cout << endl; std::cout << "Checking order of eigen values vector " << eigen_values << "..." << endl;
                 std::cout << "Pair of indexes with non descending of eigen values: (" << i << ", " << i+1 << ")." << endl;
                 std::cout << endl;
-                CV_Error(CORE_EIGEN_ERROR_ORDER, MESSAGE_ERROR_ORDER);
+                CV_Error(cv::Error::StsError, MESSAGE_ERROR_ORDER);
             }
 
             break;
@@ -266,7 +260,7 @@ bool Core_EigenTest::check_pairs_order(const cv::Mat& eigen_values)
                     std::cout << endl; std::cout << "Checking order of eigen values vector " << eigen_values << "..." << endl;
                     std::cout << "Pair of indexes with non descending of eigen values: (" << i << ", " << i+1 << ")." << endl;
                     std::cout << endl;
-                    CV_Error(CORE_EIGEN_ERROR_ORDER, "Eigen values are not sorted in descending order.");
+                    CV_Error(cv::Error::StsError, "Eigen values are not sorted in descending order.");
                 }
 
             break;
@@ -324,7 +318,7 @@ bool Core_EigenTest::test_pairs(const cv::Mat& src)
         {
             std::cout << endl; std::cout << "Checking accuracy of eigen vectors computing for matrix " << src << ": ";
             print_information(i, src, diff, eps_vec);
-            CV_Error(CORE_EIGEN_ERROR_DIFF, MESSAGE_ERROR_DIFF_2);
+            CV_Error(cv::Error::StsError, MESSAGE_ERROR_DIFF_2);
         }
     }
 
@@ -352,7 +346,7 @@ bool Core_EigenTest::test_values(const cv::Mat& src)
         {
             std::cout << endl; std::cout << "Checking accuracy of eigen values computing for matrix " << src << ": ";
             print_information(i, src, diff, eps_val);
-            CV_Error(CORE_EIGEN_ERROR_DIFF, MESSAGE_ERROR_DIFF_1);
+            CV_Error(cv::Error::StsError, MESSAGE_ERROR_DIFF_1);
         }
     }
 

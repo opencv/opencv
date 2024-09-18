@@ -218,13 +218,13 @@ a centric one.
 
 - Create a class with `getMemoryShapes` and `forward` methods
 
-@snippet dnn/edge_detection.py CropLayer
+@snippet dnn/custom_layer.py CropLayer
 
 @note Both methods should return lists.
 
 - Register a new layer.
 
-@snippet dnn/edge_detection.py Register
+@snippet dnn/custom_layer.py Register
 
 That's it! We have replaced an implemented OpenCV's layer to a custom one.
 You may find a full script in the [source code](https://github.com/opencv/opencv/tree/5.x/samples/dnn/edge_detection.py).

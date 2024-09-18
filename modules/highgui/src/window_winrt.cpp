@@ -34,17 +34,7 @@
 #include <opencv2\highgui\highgui_winrt.hpp>
 #include "window_winrt_bridge.hpp"
 
-#define CV_WINRT_NO_GUI_ERROR( funcname )       \
-{                                               \
-    cvError( cv::Error::StsNotImplemented, funcname,    \
-    "The function is not implemented. ",        \
-    __FILE__, __LINE__ );                       \
-}
-
-#define CV_Error( Code, Msg )                                       \
-{                                                                   \
-    cvError( (Code), cvFuncName, Msg, __FILE__, __LINE__ );         \
-};
+#define CV_WINRT_NO_GUI_ERROR( funcname )  CV_Error(cv::Error::StsNotImplemented, "The function is not implemented")
 
 /********************************** WinRT Specific API Implementation ******************************************/
 
@@ -56,29 +46,25 @@ void cv::winrt_initContainer(::Windows::UI::Xaml::Controls::Panel^ _container)
 
 /********************************** API Implementation *********************************************************/
 
-void showImageImpl(const char* name, const CvArr* arr)
+void showImageImpl(const char* name, InputArray arr)
 {
     CV_FUNCNAME("showImageImpl");
 
     __BEGIN__;
-
-    CvMat stub, *image;
 
     if (!name)
         CV_Error(cv::Error::StsNullPtr, "NULL name");
 
     CvWindow* window = HighguiBridge::getInstance().namedWindow(name);
 
-    if (!window || !arr)
+    if (!window || arr.empty())
         return;
-
-    CV_CALL(image = cvGetMat(arr, &stub));
 
     //TODO: use approach from window_w32.cpp or cv::Mat(.., .., CV_8UC4)
     //      and cvtColor(.., .., cv::COLOR_BGR2BGRA) to convert image here
     //      than beforehand.
 
-    window->updateImage(image);
+    window->updateImage(arr);
     HighguiBridge::getInstance().showWindow(window);
 
     __END__;
