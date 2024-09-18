@@ -178,6 +178,13 @@ int main(int argc, char** argv)
 
     parser = CommandLineParser(argc, argv, keys);
 
+    if (!parser.has("model"))
+    {
+        cout << "Path to model is not provided in command line or model alias is not correct" << endl;
+        printAliases(zooFile);
+        return -1;
+    }
+
     confThreshold = parser.get<float>("thr");
     nmsThreshold = parser.get<float>("nms");
     //![preprocess_params]
@@ -192,7 +199,6 @@ int main(int argc, char** argv)
     paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
     //![preprocess_params]
     String sha1 = parser.get<String>("sha1");
-    CV_Assert(parser.has("model"));
     const string modelPath = findModel(parser.get<String>("model"), sha1);
     const string configPath = findFile(parser.get<String>("config"));
     framework = modelPath.substr(modelPath.rfind('.') + 1);
