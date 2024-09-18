@@ -29,7 +29,7 @@ std::map<int, int> lapjv(const Mat &cost, float matchThreshold)
     std::vector<int> y_c(n);
 
     std::vector<double*> cost_ptr_ptr(n);
-    for (int i=0; i < n; i++)
+    for (int i = 0; i < n; i++)
     {
         cost_ptr_ptr[i] = cost_ptr[i].data();
     }
@@ -494,7 +494,7 @@ Mat ByteTrackerImpl::getCostMatrix(const std::unordered_map<int, Strack> &atrack
         return costMatrix;
     }
 
-    std::vector<Rect2f> atlwhs,btlwhs;
+    std::vector<Rect2f> atlwhs, btlwhs;
     for (auto &pair : atracks)
     {
         Rect2f tlwh = pair.second.getTlwh();
@@ -508,6 +508,7 @@ Mat ByteTrackerImpl::getCostMatrix(const std::unordered_map<int, Strack> &atrack
     }
 
     costMatrix = calculateIous(atlwhs, btlwhs);
+    std::cout << "cost matrix: " << std::endl << costMatrix << std::endl;
     subtract(1, costMatrix, costMatrix); //costMatrix = 1 - costMatrix
 
     return costMatrix;
@@ -521,8 +522,8 @@ Mat ByteTrackerImpl::getCostMatrix(const Mat amat, const Mat bmat)
         return costMatrix;
     }
 
-    std::vector<Rect2f> atlwhs,btlwhs;
-    for (int i = 0; i < amat.rows ; i++)
+    std::vector<Rect2f> atlwhs, btlwhs;
+    for (int i = 0; i < amat.rows; i++)
     {
         cv::Rect2f rect(
             amat.at<float>(0, 0), // x
@@ -534,7 +535,7 @@ Mat ByteTrackerImpl::getCostMatrix(const Mat amat, const Mat bmat)
         atlwhs.push_back(tlwh);
     }
 
-    for (int i = 0; i < bmat.rows ; i++)
+    for (int i = 0; i < bmat.rows; i++)
     {
         cv::Rect2f rect(
             bmat.at<float>(0, 0), // x
@@ -553,11 +554,12 @@ Mat ByteTrackerImpl::getCostMatrix(const Mat amat, const Mat bmat)
 }
 
 
-Mat ByteTrackerImpl::calculateIous(const std::vector<Rect2f> &atlwhs,const std::vector<Rect2f> &btlwhs)
+Mat ByteTrackerImpl::calculateIous(const std::vector<Rect2f> &atlwhs, const std::vector<Rect2f> &btlwhs)
 {
     Mat iousMatrix;
     if (atlwhs.empty() || btlwhs.empty())
     {
+        printf("one of them is empty\n");
         return iousMatrix;
     }
     int m = static_cast<int>(atlwhs.size());

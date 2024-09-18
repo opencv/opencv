@@ -67,9 +67,13 @@ int main(int argc, char** argv)
 {
     CommandLineParser parser(argc, argv, keys);
 
-    // Load class list.
-    cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_WARNING);
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
 
+    // Load class list.
     vector<string> classList;
     if (parser.has("classes"))
     {
@@ -132,48 +136,22 @@ int main(int argc, char** argv)
         detections = inference(frame, detector);
         Mat img = postProcessImage(frame, detections, classList, objects);
 
-        bool useArray = false;
-        if (useArray) //Update method with input array and output array
-        {
-            Mat objectsMat = detectionToMat(objects);
-            Mat trackedObjects;
-            bool ok = tracker->update(objectsMat, trackedObjects);
-            if (ok)
-            {
-                for (int i = 0; i < trackedObjects.rows; i++)
-                {
-                    int id_ = static_cast<int>(trackedObjects.at<float>(i, 6));
-                    Scalar color = getColor(id_);
-                    cv::Rect2f tlwh_(
-                        trackedObjects.at<float>(i, 0),
-                        trackedObjects.at<float>(i, 1),
-                        trackedObjects.at<float>(i, 2),
-                        trackedObjects.at<float>(i, 3));
+        std::cout << "detections for " << frameNumber << ":" << std::endl;
+        for(size_t i = 0; i < objects.size(); i++)
+            std::cout << objects[i].rect << ", " << objects[i].classLabel << ", " << objects[i].classScore << std::endl;
 
-                    rectangle(img, tlwh_, color, 2);
-                    int xPoint = static_cast<int>(tlwh_.x);
-                    int yPoint = static_cast<int>(tlwh_.y);
-                    putText(img, to_string(id_), Point(xPoint, yPoint - 5), FONT_FACE, FONT_SCALE, RED);
-                }
-            }
-            if(!trackerOutputPath.empty())
-                writeTracksToFile(trackedObjects, trackerOutputPath, frameNumber);
-        }
-        else
+        vector<Track> trackedObjects;
+        tracker->update(objects, trackedObjects); //Update method with vector of detection as input and vector of tracks as output
+        for (auto& track : trackedObjects)
         {
-            vector<Track> trackedObjects;
-            tracker->update(objects, trackedObjects); //Update method with vector of detection as input and vector of tracks as output
-            for (auto& track : trackedObjects)
-            {
-                Scalar color = getColor(track.trackingId);
-                rectangle(img, track.rect, color, 2);
-                int xPoint = static_cast<int>(track.rect.x);
-                int yPoint = static_cast<int>(track.rect.y);
-                putText(img, to_string(track.trackingId), Point(xPoint, yPoint - 5), FONT_FACE, FONT_SCALE, RED);
-            }
-            if(!trackerOutputPath.empty())
-                writeTracksToFile(trackedObjects, trackerOutputPath, frameNumber);
+            Scalar color = getColor(track.trackingId);
+            rectangle(img, track.rect, color, 2);
+            int xPoint = static_cast<int>(track.rect.x);
+            int yPoint = static_cast<int>(track.rect.y);
+            putText(img, to_string(track.trackingId), Point(xPoint, yPoint - 5), FONT_FACE, FONT_SCALE, RED);
         }
+        if(!trackerOutputPath.empty())
+            writeTracksToFile(trackedObjects, trackerOutputPath, frameNumber);
 
         if(!detectorOutputPath.empty())
             writeDetectionsToFile(objects, detectorOutputPath, frameNumber);
