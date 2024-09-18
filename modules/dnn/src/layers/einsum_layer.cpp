@@ -432,6 +432,19 @@ public:
         CV_UNUSED(requiredOutputs);
         CV_UNUSED(internals);
 
+        // check if input einsumInputShapes is empty
+        if (einsumInpShapes.empty()) {
+            outputShapeComputed = false;
+        } else {
+            // check weather shapes in inputs are compatible with shapes in einsumInpShapes
+            for (int i = 0; i < inputs.size(); i++) {
+                if (inputs[i] != einsumInpShapes[i]) {
+                    outputShapeComputed = false;
+                    break;
+                }
+            }
+        }
+
         computeOutputShape(inputs);
 
         outputs.clear();
