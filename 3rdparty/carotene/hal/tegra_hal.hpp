@@ -1962,6 +1962,7 @@ inline int TEGRA_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_ste
 #define cv_hal_LKOpticalFlowLevel TEGRA_LKOpticalFlowLevel
 #endif // __ARM_ARCH=7
 
+#if 0 // OpenCV provides fater parallel implementation
 inline int TEGRA_ScharrDeriv(const uchar* src_data, size_t src_step,
                       short* dst_data, size_t dst_step,
                       int width, int height, int cn)
@@ -1975,5 +1976,6 @@ inline int TEGRA_ScharrDeriv(const uchar* src_data, size_t src_step,
 
 #undef cv_hal_ScharrDeriv
 #define cv_hal_ScharrDeriv TEGRA_ScharrDeriv
+#endif
 
 #endif
