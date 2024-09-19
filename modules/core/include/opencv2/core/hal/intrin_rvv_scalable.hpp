@@ -188,11 +188,11 @@ inline v_##_Tpv v_setall_##suffix(_Tp v) \
 { \
     return __riscv_vfmv_v_f_##suffix##m1(v, vl); \
 } \
-inline v_##_Tpvec v_setzero(v_##_Tpvec /*unused*/) \
+inline v_##_Tpv v_setzero(v_##_Tpv /*unused*/) \
 { \
     return v_setzero_##suffix(); \
 } \
-inline v_##_Tpvec v_setall(_Tp v, v_##_Tpvec /*unused*/) \
+inline v_##_Tpv v_setall(_Tp v, v_##_Tpv /*unused*/) \
 { \
     return v_setall_##suffix(v); \
 }
