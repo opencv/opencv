@@ -1,5 +1,5 @@
 # https://developer.android.com/studio/releases/gradle-plugin
-set(ANDROID_GRADLE_PLUGIN_VERSION "8.5.2" CACHE STRING "Android Gradle Plugin version")
+set(ANDROID_GRADLE_PLUGIN_VERSION "8.6.0" CACHE STRING "Android Gradle Plugin version")
 message(STATUS "Android Gradle Plugin version: ${ANDROID_GRADLE_PLUGIN_VERSION}")
 
 set(KOTLIN_PLUGIN_VERSION "1.8.20" CACHE STRING "Kotlin Plugin version")
