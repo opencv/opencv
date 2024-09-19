@@ -411,7 +411,7 @@ inline _TpVec64F v_log_default_64f(const _TpVec64F &x) {
 
 //! @name Error Function
 //! @{
-template<typename _TpVec32F>
+template<typename _TpVec32F, typename _TpVec32S>
 inline _TpVec32F v_erf_default_32f(const _TpVec32F &v) {
     const _TpVec32F coef0 = v_setall(0.3275911f, v),
             coef1 = v_setall(1.061405429f, v),
@@ -434,7 +434,7 @@ inline _TpVec32F v_erf_default_32f(const _TpVec32F &v) {
     _TpVec32F pow_2 = v_mul(v, v);
     _TpVec32F neg_pow_2 = v_xor(neg_zeros, pow_2);
     // - exp(- v * v)
-    _TpVec32F exp = v_exp(neg_pow_2);
+    _TpVec32F exp = v_exp_default_32f<_TpVec32F, _TpVec32S>(neg_pow_2);
     _TpVec32F neg_exp = v_xor(neg_zeros, exp);
     _TpVec32F res = v_mul(t, neg_exp);
     res = v_fma(r, res, ones);

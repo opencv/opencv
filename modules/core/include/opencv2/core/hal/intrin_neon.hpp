@@ -2655,7 +2655,7 @@ inline v_float16x8 v_log(v_float16x8 x) { return v_log_default_16f<v_float16x8, 
 #endif
 inline v_float32x4 v_exp(v_float32x4 x) { return v_exp_default_32f<v_float32x4, v_int32x4>(x); }
 inline v_float32x4 v_log(v_float32x4 x) { return v_log_default_32f<v_float32x4, v_int32x4>(x); }
-inline v_float32x4 v_erf(v_float32x4 x) { return v_erf_default_32f<v_float32x4>(x); }
+inline v_float32x4 v_erf(v_float32x4 x) { return v_erf_default_32f<v_float32x4, v_int32x4>(x); }
 #if CV_SIMD128_64F
 inline v_float64x2 v_exp(v_float64x2 x) { return v_exp_default_64f<v_float64x2, v_int64x2>(x); }
 inline v_float64x2 v_log(v_float64x2 x) { return v_log_default_64f<v_float64x2, v_int64x2>(x); }
