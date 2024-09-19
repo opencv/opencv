@@ -52,7 +52,7 @@ namespace cv
 class RBS_ ## name ## _Exception : public cv::Exception \
 { \
 public: \
-    RBS_ ## name ## _Exception(int code_, const String& err_, const String& func_, const String& file_, int line_) : \
+    RBS_ ## name ## _Exception(cv::Error::Code code_, const String& err_, const String& func_, const String& file_, int line_) : \
         cv::Exception(code_, err_, func_, file_, line_) \
     {} \
 };

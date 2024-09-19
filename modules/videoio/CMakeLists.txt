@@ -27,7 +27,6 @@ set(videoio_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp)
 
 set(videoio_srcs
   "${CMAKE_CURRENT_LIST_DIR}/src/videoio_registry.cpp"
-  "${CMAKE_CURRENT_LIST_DIR}/src/videoio_c.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/cap.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_images.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/src/cap_mjpeg_encoder.cpp"
@@ -38,9 +37,7 @@ set(videoio_srcs
 
 file(GLOB videoio_ext_hdrs
   "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
-  "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
-  "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.h"
-  "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/legacy/*.h")
+  "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp")
 
 if(OPENCV_DEBUG_POSTFIX)
   ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/backend_plugin.cpp" "DEBUG_POSTFIX=${OPENCV_DEBUG_POSTFIX}")

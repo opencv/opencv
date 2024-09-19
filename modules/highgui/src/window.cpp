@@ -996,18 +996,14 @@ void cv::imshow( const String& winname, InputArray _img )
 
 #ifndef HAVE_OPENGL
     {
-        Mat img = _img.getMat();
-        CvMat c_img = cvMat(img);
-        showImageImpl(winname.c_str(), &c_img);
+        showImageImpl(winname.c_str(), _img);
     }
 #else
     const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
 
     if (useGl <= 0)
     {
-        Mat img = _img.getMat();
-        CvMat c_img = cvMat(img);
-        showImageImpl(winname.c_str(), &c_img);
+        showImageImpl(winname.c_str(), _img);
     }
     else
     {
@@ -1227,7 +1223,7 @@ void destroyAllWindowsImpl( void )
     CV_NO_GUI_ERROR( "destroyAllWindowsImpl" );
 }
 
-void showImageImpl( const char*, const CvArr* )
+void showImageImpl( const char*, InputArray)
 {
     CV_NO_GUI_ERROR( "showImageImpl" );
 }

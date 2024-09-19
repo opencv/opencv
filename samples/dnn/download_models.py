@@ -41,6 +41,9 @@ def getHashsumFromFile(filepath):
     return hashsum
 
 def checkHashsum(expected_sha, filepath, silent=True):
+    if not os.path.exists(filepath):
+        print(f"{filepath} does not exist. Skipping hashsum matching")
+        return False
     print('  expected SHA1: {}'.format(expected_sha))
     actual_sha = getHashsumFromFile(filepath)
     print('  actual SHA1:{}'.format(actual_sha))
@@ -158,6 +161,8 @@ class Loader(object):
                 if self.archive_member is None:
                     pathDict = dict((os.path.split(elem)[1], os.path.split(elem)[0]) for elem in f.getnames())
                     self.archive_member = pathDict[requested_file]
+                    if self.archive_member == "":
+                        self.archive_member = requested_file
                 assert self.archive_member in f.getnames()
                 self.save(filepath, f.extractfile(self.archive_member))
         except Exception as e:
