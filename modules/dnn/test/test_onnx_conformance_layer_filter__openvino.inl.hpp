@@ -550,6 +550,20 @@ CASE(test_edge_pad)
     // no filter
 CASE(test_einsum_batch_diagonal)
     SKIP;
+CASE(test_hardmax_axis_0)
+    SKIP;
+CASE(test_hardmax_axis_1)
+    SKIP;
+CASE(test_hardmax_axis_2)
+    SKIP;
+CASE(test_hardmax_default_axis)
+    SKIP;
+CASE(test_hardmax_example)
+    SKIP;
+CASE(test_hardmax_negative_axis)
+    SKIP;
+CASE(test_hardmax_one_hot)
+    SKIP;
 CASE(test_einsum_batch_matmul)
     // no filter
 CASE(test_einsum_inner_prod)

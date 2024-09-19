@@ -43,6 +43,8 @@
 #include "precomp.hpp"
 #include "opencv2/imgproc.hpp"
 
+
+
 #import <TargetConditionals.h>
 
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
@@ -51,7 +53,7 @@
 static int cocoa_InitSystem( int argc, char** argv) { return 0;}
 void destroyWindowImpl( const char* name) {}
 void destroyAllWindowsImpl( void ) {}
-void showImageImpl( const char* name, const CvArr* arr) {}
+void showImageImpl( const char* name, cv::InputArray arr) {}
 void resizeWindowImpl( const char* name, int width, int height) {}
 void moveWindowImpl( const char* name, int x, int y){}
 int createTrackbar2Impl(const char* trackbar_name,const char* window_name,
@@ -81,7 +83,7 @@ static bool wasInitialized = false;
 @property(retain) NSView *imageView;
 @property(retain) NSImage *image;
 @property int sliderHeight;
-- (void)setImageData:(CvArr *)arr;
+- (void)setImageData:(cv::InputArray)arr;
 @end
 
 @interface CVSlider : NSView {
@@ -206,7 +208,7 @@ void destroyAllWindowsImpl( void )
 }
 
 
-void showImageImpl( const char* name, const CvArr* arr)
+void showImageImpl( const char* name, cv::InputArray arr)
 {
     //cout << "showImageImpl" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
@@ -222,7 +224,7 @@ void showImageImpl( const char* name, const CvArr* arr)
         bool empty = [[window contentView] image] == nil;
         NSRect vrectOld = [[window contentView] frame];
         NSSize oldImageSize = [[[window contentView] image] size];
-        [[window contentView] setImageData:(CvArr *)arr];
+        [[window contentView] setImageData:arr];
         if([window autosize] || [window firstContent] || empty)
         {
             NSSize imageSize = [[[window contentView] image] size];
@@ -578,9 +580,9 @@ int waitKeyImpl (int maxWait)
     return returnCode;
 }
 
-CvRect cvGetWindowRect_COCOA( const char* name )
+cv::Rect cvGetWindowRect_COCOA( const char* name )
 {
-    CvRect result = cvRect(-1, -1, -1, -1);
+    cv::Rect result(-1, -1, -1, -1);
     CVWindow *window = nil;
 
     if( name == NULL )
@@ -600,7 +602,7 @@ CvRect cvGetWindowRect_COCOA( const char* name )
         NSPoint pt = [window convertBaseToScreen:rect.origin];
 #endif
         NSSize sz = [[[window contentView] image] size];
-        result = cvRect(pt.x, pt.y, sz.width, sz.height);
+        result = cv::Rect(pt.x, pt.y, sz.width, sz.height);
     }
     return result;
 }
@@ -991,11 +993,11 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     return self;
 }
 
-- (void)setImageData:(CvArr *)arr {
+- (void)setImageData:(cv::InputArray)arr {
     //cout << "setImageData" << endl;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
-    cv::Mat arrMat = cv::cvarrToMat(arr);
+    cv::Mat arrMat = arr.getMat();
     /*CGColorSpaceRef colorspace = NULL;
     CGDataProviderRef provider = NULL;
     int width = cvimage->width;

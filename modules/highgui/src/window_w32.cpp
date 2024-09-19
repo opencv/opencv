@@ -395,7 +395,7 @@ static const char* const icvWindowPosRootKey = "Software\\OpenCV\\HighGUI\\Windo
 //<a href="mailto:pgruebele@cox.net">pgruebele@cox.net</a>
 // Restores the window position from the registry saved position.
 static void
-icvLoadWindowPos(const char* name, CvRect& rect)
+icvLoadWindowPos(const char* name, Rect& rect)
 {
     HKEY hkey;
     char szKey[1024];
@@ -454,7 +454,7 @@ icvLoadWindowPos(const char* name, CvRect& rect)
 //<a href="mailto:pgruebele@cox.net">pgruebele@cox.net</a>
 // philipg.  Saves the window position in the registry
 static void
-icvSaveWindowPos(const char* name, CvRect rect)
+icvSaveWindowPos(const char* name, Rect rect)
 {
     static const DWORD MAX_RECORD_COUNT = 100;
     HKEY hkey;
@@ -517,10 +517,8 @@ icvSaveWindowPos(const char* name, CvRect rect)
 
 static Rect getImageRect_(CvWindow& window);
 
-CvRect cvGetWindowRect_W32(const char* name)
+cv::Rect cvGetWindowRect_W32(const char* name)
 {
-    CV_FUNCNAME("cvGetWindowRect_W32");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -532,7 +530,7 @@ CvRect cvGetWindowRect_W32(const char* name)
 
     Rect r = getImageRect_(*window);
 
-    CvRect result = cvRect(r.x, r.y, r.width, r.height);
+    cv::Rect result(r.x, r.y, r.width, r.height);
     return result;
 }
 
@@ -548,8 +546,6 @@ static Rect getImageRect_(CvWindow& window)
 
 double cvGetModeWindow_W32(const char* name)//YV
 {
-    CV_FUNCNAME("cvGetModeWindow_W32");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -566,8 +562,6 @@ static bool setModeWindow_(CvWindow& window, int mode);
 
 void cvSetModeWindow_W32(const char* name, double prop_value)//Yannick Verdie
 {
-    CV_FUNCNAME("cvSetModeWindow_W32");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -590,7 +584,7 @@ static bool setModeWindow_(CvWindow& window, int mode)
 
     {
         DWORD dwStyle = (DWORD)GetWindowLongPtr(window.frame, GWL_STYLE);
-        CvRect position;
+        Rect position;
 
         if (window.status == cv::WINDOW_FULLSCREEN && mode == cv::WINDOW_NORMAL)
         {
@@ -608,7 +602,7 @@ static bool setModeWindow_(CvWindow& window, int mode)
             //save dimension
             RECT rect = { 0 };
             GetWindowRect(window.frame, &rect);
-            CvRect rectCV = cvRect(rect.left, rect.top,rect.right - rect.left, rect.bottom - rect.top);
+            Rect rectCV(rect.left, rect.top,rect.right - rect.left, rect.bottom - rect.top);
             icvSaveWindowPos(window.name.c_str(), rectCV);
 
             //Look at coordinate for fullscreen
@@ -820,8 +814,6 @@ double cvGetPropWindowAutoSize_W32(const char* name)
 {
     double result = -1;
 
-    CV_FUNCNAME("cvSetCloseCallback");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -839,8 +831,6 @@ double cvGetPropWindowAutoSize_W32(const char* name)
 double cvGetRatioWindow_W32(const char* name)
 {
     double result = -1;
-
-    CV_FUNCNAME("cvGetRatioWindow_W32");
 
     AutoLock lock(getWindowMutex());
 
@@ -861,8 +851,6 @@ double cvGetOpenGlProp_W32(const char* name)
     double result = -1;
 
 #ifdef HAVE_OPENGL
-    CV_FUNCNAME("cvGetOpenGlProp_W32");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -884,8 +872,6 @@ double cvGetPropVisible_W32(const char* name)
 {
     double result = -1;
 
-    CV_FUNCNAME("cvGetPropVisible_W32");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -906,8 +892,6 @@ namespace
 {
     void createGlContext(HWND hWnd, HDC& hGLDC, HGLRC& hGLRC, bool& useGl)
     {
-        CV_FUNCNAME("createGlContext");
-
         AutoLock lock(getWindowMutex());
 
         useGl = false;
@@ -959,8 +943,6 @@ namespace
 
     void releaseGlContext(CvWindow& window)
     {
-        //CV_FUNCNAME("releaseGlContext");
-
         AutoLock lock(getWindowMutex());
 
         if (window.hGLRC)
@@ -980,8 +962,6 @@ namespace
 
     void drawGl(CvWindow& window)
     {
-        CV_FUNCNAME("drawGl");
-
         AutoLock lock(getWindowMutex());
 
         if (!wglMakeCurrent(window.dc, window.hGLRC))
@@ -998,8 +978,6 @@ namespace
 
     void resizeGl(CvWindow& window)
     {
-        CV_FUNCNAME("resizeGl");
-
         AutoLock lock(getWindowMutex());
 
         if (!wglMakeCurrent(window.dc, window.hGLRC))
@@ -1015,8 +993,6 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 int namedWindowImpl(const char* name, int flags)
 {
-    CV_FUNCNAME("namedWindowImpl");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -1047,7 +1023,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
     HGLRC hGLRC;
 #endif
 
-    CvRect rect;
+    Rect rect;
     icvLoadWindowPos(name.c_str(), rect);
 
     if (!(flags & cv::WINDOW_AUTOSIZE))//YV add border in order to resize the window
@@ -1133,8 +1109,6 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 
 void setOpenGLContextImpl(const char* name)
 {
-    CV_FUNCNAME("setOpenGLContextImpl");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -1153,8 +1127,6 @@ void setOpenGLContextImpl(const char* name)
 
 void updateWindowImpl(const char* name)
 {
-    CV_FUNCNAME("updateWindowImpl");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -1169,8 +1141,6 @@ void updateWindowImpl(const char* name)
 
 void setOpenGLDrawCallbackImpl(const char* name, CvOpenGlDrawCallback callback, void* userdata)
 {
-    CV_FUNCNAME("cvCreateOpenGLCallback");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -1215,7 +1185,7 @@ static void icvRemoveWindow(const std::shared_ptr<CvWindow>& window_)
 
     if (window.frame)
         GetWindowRect(window.frame, &wrect);
-    icvSaveWindowPos(window.name.c_str(), cvRect(wrect.left, wrect.top, wrect.right-wrect.left, wrect.bottom-wrect.top));
+    icvSaveWindowPos(window.name.c_str(), Rect(wrect.left, wrect.top, wrect.right-wrect.left, wrect.bottom-wrect.top));
 
     if (window.hwnd)
         icvSetWindowLongPtr(window.hwnd, CV_USERDATA, 0);
@@ -1244,8 +1214,6 @@ static void icvRemoveWindow(const std::shared_ptr<CvWindow>& window_)
 
 void destroyWindowImpl(const char* name)
 {
-    CV_FUNCNAME("destroyWindowImpl");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -1361,12 +1329,10 @@ static void icvUpdateWindowPos(CvWindow& window)
                rect.bottom - rect.top, TRUE);
 }
 
-static void showImage_(CvWindow& window, const Mat& image);
+static void showImage_(CvWindow& window, InputArray arr);
 
-void showImageImpl(const char* name, const CvArr* arr)
+void showImageImpl(const char* name, InputArray arr)
 {
-    CV_FUNCNAME("showImageImpl");
-
     if (!name)
         CV_Error(Error::StsNullPtr, "NULL name");
 
@@ -1382,25 +1348,23 @@ void showImageImpl(const char* name, const CvArr* arr)
         }
     }
 
-    if (!window || !arr)
+    if (!window || arr.empty())
         return; // keep silence here.
 
-    CvMat stub = {};
-    CvMat* image_c = cvGetMat(arr, &stub);
-    Mat image = cv::cvarrToMat(image_c);
 #ifdef HAVE_OPENGL
     if (window->useGl)
     {
-        cv::imshow(name, image);
+        cv::imshow(name, arr);
         return;
     }
 #endif
-    return showImage_(*window, image);
+    return showImage_(*window, arr);
 }
 
-static void showImage_(CvWindow& window, const Mat& image)
+static void showImage_(CvWindow& window, InputArray arr)
 {
     AutoLock lock(window.mutex);
+    Mat image = arr.getMat();
 
     SIZE size = { 0, 0 };
     int channels = 0;
@@ -1455,8 +1419,6 @@ static void resizeWindow_(CvWindow& window, const Size& size);
 
 void resizeWindowImpl(const char* name, int width, int height)
 {
-    CV_FUNCNAME("resizeWindowImpl");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -1497,8 +1459,6 @@ static void moveWindow_(CvWindow& window, const Point& pt);
 
 void moveWindowImpl(const char* name, int x, int y)
 {
-    CV_FUNCNAME("moveWindowImpl");
-
     AutoLock lock(getWindowMutex());
 
     if (!name)
@@ -2335,8 +2295,6 @@ icvCreateTrackbar(const char* trackbar_name, const char* window_name,
                   int* val, int count, CvTrackbarCallback on_notify,
                   CvTrackbarCallback2 on_notify2, void* userdata)
 {
-    CV_FUNCNAME("icvCreateTrackbar");
-
     AutoLock lock(getWindowMutex());
 
     if (!window_name || !trackbar_name)
@@ -2513,8 +2471,6 @@ int createTrackbar2Impl(const char* trackbar_name, const char* window_name,
 
 void setMouseCallbackImpl(const char* name, CvMouseCallback on_mouse, void* param)
 {
-    CV_FUNCNAME("setMouseCallbackImpl");
-
     if (!name)
         CV_Error(Error::StsNullPtr, "NULL window name");
 
@@ -2531,8 +2487,6 @@ void setMouseCallbackImpl(const char* name, CvMouseCallback on_mouse, void* para
 
 int getTrackbarPosImpl(const char* trackbar_name, const char* window_name)
 {
-    CV_FUNCNAME("getTrackbarPosImpl");
-
     AutoLock lock(getWindowMutex());
 
     if (trackbar_name == 0 || window_name == 0)
@@ -2552,8 +2506,6 @@ int getTrackbarPosImpl(const char* trackbar_name, const char* window_name)
 
 void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int pos)
 {
-    CV_FUNCNAME("setTrackbarPosImpl");
-
     AutoLock lock(getWindowMutex());
 
     if (trackbar_name == 0 || window_name == 0)
@@ -2582,8 +2534,6 @@ void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int 
 
 void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval)
 {
-    CV_FUNCNAME("setTrackbarMaxImpl");
-
     if (trackbar_name == 0 || window_name == 0)
     {
         CV_Error(Error::StsNullPtr, "NULL trackbar or window name");
@@ -2611,8 +2561,6 @@ void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int 
 
 void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval)
 {
-    CV_FUNCNAME("setTrackbarMinImpl");
-
     if (trackbar_name == 0 || window_name == 0)
     {
         CV_Error(Error::StsNullPtr, "NULL trackbar or window name");

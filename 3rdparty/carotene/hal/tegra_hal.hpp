@@ -1857,7 +1857,7 @@ TegraCvtColor_Invoker(bgrx2hsvf, bgrx2hsv, src_data + static_cast<size_t>(range.
 #endif
 
 // The optimized branch was developed for old armv7 processors and leads to perf degradation on armv8
-#if defined(DCAROTENE_NEON_ARCH) && (DCAROTENE_NEON_ARCH == 7)
+#if defined(__ARM_ARCH) && (__ARM_ARCH == 7)
 inline CAROTENE_NS::BORDER_MODE borderCV2Carotene(int borderType)
 {
     switch(borderType)
@@ -1928,7 +1928,7 @@ inline int TEGRA_GaussianBlurBinomial(const uchar* src_data, size_t src_step, uc
 #undef cv_hal_gaussianBlurBinomial
 #define cv_hal_gaussianBlurBinomial TEGRA_GaussianBlurBinomial
 
-#endif // DCAROTENE_NEON_ARCH=7
+#endif // __ARM_ARCH=7
 
 #endif // OPENCV_IMGPROC_HAL_INTERFACE_H
 

@@ -16,9 +16,9 @@ yolov8x:
   width: 640
   height: 640
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "yolo_detector"
+  labels: "object_detection_classes_yolo.txt"
+  postprocessing: "yolov8"
+  sample: "object_detection"
 
 yolov8s:
   load_info:
@@ -30,11 +30,11 @@ yolov8s:
   width: 640
   height: 640
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "yolo_detector"
+  labels: "object_detection_classes_yolo.txt"
+  postprocessing: "yolov8"
+  sample: "object_detection"
 
-yolov8n:
+yolov8:
   load_info:
     url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
     sha1: "68f864475d06e2ec4037181052739f268eeac38d"
@@ -44,9 +44,9 @@ yolov8n:
   width: 640
   height: 640
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "yolo_detector"
+  labels: "object_detection_classes_yolo.txt"
+  postprocessing: "yolov8"
+  sample: "object_detection"
 
 yolov8m:
   load_info:
@@ -58,9 +58,9 @@ yolov8m:
   width: 640
   height: 640
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
-  sample: "yolo_detector"
+  labels: "object_detection_classes_yolo.txt"
+  postprocessing: "yolov8"
+  sample: "object_detection"
 
 yolov8l:
   load_info:
@@ -72,8 +72,8 @@ yolov8l:
   width: 640
   height: 640
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
+  labels: "object_detection_classes_yolo.txt"
+  postprocessing: "yolov8"
   sample: "yolo_detector"
 
 # YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
@@ -90,7 +90,7 @@ yolov4:
   width: 416
   height: 416
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
+  labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
   sample: "object_detection"
 
@@ -105,7 +105,7 @@ yolov4-tiny:
   width: 416
   height: 416
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
+  labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
   sample: "object_detection"
 
@@ -120,7 +120,7 @@ yolov3:
   width: 416
   height: 416
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
+  labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
   sample: "object_detection"
 
@@ -135,22 +135,8 @@ tiny-yolo-voc:
   width: 416
   height: 416
   rgb: true
-  classes: "object_detection_classes_pascal_voc.txt"
+  labels: "object_detection_classes_pascal_voc.txt"
   background_label_id: 0
-  sample: "object_detection"
-
-yolov8:
-  load_info:
-    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
-    sha1: "68f864475d06e2ec4037181052739f268eeac38d"
-  model: "yolov8n.onnx"
-  mean: [0, 0, 0]
-  scale: 0.00392
-  width: 640
-  height: 640
-  rgb: true
-  postprocessing: "yolov8"
-  classes: "object_detection_classes_yolo.txt"
   sample: "object_detection"
 
 # Caffe implementation of SSD model from https://github.com/chuanqi305/MobileNet-SSD
@@ -165,7 +151,7 @@ ssd_caffe:
   width: 300
   height: 300
   rgb: false
-  classes: "object_detection_classes_pascal_voc.txt"
+  labels: "object_detection_classes_pascal_voc.txt"
   sample: "object_detection"
 
 # TensorFlow implementation of SSD model from https://github.com/tensorflow/models/tree/master/research/object_detection
@@ -183,7 +169,7 @@ ssd_tf:
   width: 300
   height: 300
   rgb: true
-  classes: "object_detection_classes_coco.txt"
+  labels: "object_detection_classes_coco.txt"
   sample: "object_detection"
 
 # TensorFlow implementation of Faster-RCNN model from https://github.com/tensorflow/models/tree/master/research/object_detection
@@ -288,3 +274,63 @@ u2netp:
   height: 320
   rgb: true
   sample: "segmentation"
+
+################################################################################
+# Text detection models.
+################################################################################
+
+DB:
+  load_info:
+    url: "https://drive.google.com/uc?export=dowload&id=17_ABp79PlFt9yPCxSaarVc_DKTmrSGGf"
+    sha1: "bef233c28947ef6ec8c663d20a2b326302421fa3"
+  model: "DB_IC15_resnet50.onnx"
+  ocr_load_info:
+    ocr_url: "https://drive.google.com/uc?export=dowload&id=159VavnbvfBQkLIPSAu2SP5Yij1Fy4azw"
+    ocr_sha1: "c4ab1fb3f13c1c8ffc04f016e72ec85311de4ebe"
+  ocr_model: "VGG_CTC.onnx"
+  mean: [122.67891434, 116.66876762, 104.00698793]
+  scale: 0.00392
+  width: 736
+  height: 736
+  rgb: false
+  sample: "text_detection"
+
+East:
+  load_info:
+    url: "https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1"
+    sha1: "fffabf5ac36f37bddf68e34e84b45f5c4247ed06"
+    download_name: "frozen_east_text_detection.tar.gz"
+    download_sha: "3ca8233d6edd748f7ed23246c8ca24cbf696bb94"
+  model: "frozen_east_text_detection.pb"
+  ocr_load_info:
+    ocr_url: "https://drive.google.com/uc?export=dowload&id=159VavnbvfBQkLIPSAu2SP5Yij1Fy4azw"
+    ocr_sha1: "c4ab1fb3f13c1c8ffc04f016e72ec85311de4ebe"
+  ocr_model: "VGG_CTC.onnx"
+  mean: [123.68, 116.78, 103.94]
+  scale: 1.0
+  width: 736
+  height: 736
+  rgb: false
+  sample: "text_detection"
+
+OCR:
+  load_info:
+    url: "https://drive.google.com/uc?export=dowload&id=159VavnbvfBQkLIPSAu2SP5Yij1Fy4azw"
+    sha1: "c4ab1fb3f13c1c8ffc04f016e72ec85311de4ebe"
+  model: "VGG_CTC.onnx"
+  sample: "text_recognition"
+
+# Edge Detection models.
+################################################################################
+
+dexined:
+  load_info:
+    url: "https://github.com/gursimarsingh/opencv_zoo/raw/dexined_model/models/edge_detection_dexined/dexined.onnx"
+    sha1: "f86f2d32c3cf892771f76b5e6b629b16a66510e9"
+  model: "dexined.onnx"
+  mean: [103.5, 116.2, 123.6]
+  scale: 1.0
+  width: 512
+  height: 512
+  rgb: false
+  sample: "edge_detection"
