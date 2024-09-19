@@ -355,9 +355,9 @@ dexined:
 
 reid:
   load_info:
-    url: "https://github.com/gursimarsingh/opencv_zoo/raw/dexined_model/models/edge_detection_dexined/dexined.onnx"
-    sha1: "f86f2d32c3cf892771f76b5e6b629b16a66510e9"
-  model: "youtu_reid_baseline_medium.onnx"
+    url: "https://github.com/opencv/opencv_zoo/raw/main/models/person_reid_youtureid/person_reid_youtu_2021nov.onnx?download="
+    sha1: "d4316b100db40f8840aa82626e1cf3f519a7f1ae"
+  model: "person_reid_youtu_2021nov.onnx"
   yolo_load_info:
     yolo_sha1: "68f864475d06e2ec4037181052739f268eeac38d"
   yolo_model: "yolov8n.onnx"
