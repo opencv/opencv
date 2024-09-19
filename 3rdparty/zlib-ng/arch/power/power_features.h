@@ -4,8 +4,8 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-#ifndef POWER_H_
-#define POWER_H_
+#ifndef POWER_FEATURES_H_
+#define POWER_FEATURES_H_
 
 struct power_cpu_features {
     int has_altivec;
@@ -15,4 +15,4 @@ struct power_cpu_features {
 
 void Z_INTERNAL power_check_features(struct power_cpu_features *features);
 
-#endif /* POWER_H_ */
+#endif /* POWER_FEATURES_H_ */

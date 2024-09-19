@@ -5,9 +5,6 @@
 #if defined(_M_IX86) || defined(_M_AMD64) || defined(_M_IA64) ||  defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
 
 #include <intrin.h>
-#ifdef X86_FEATURES
-#  include "arch/x86/x86_features.h"
-#endif
 
 /* This is not a general purpose replacement for __builtin_ctz. The function expects that value is != 0.
  * Because of that assumption trailing_zero is not initialized and the return value is not checked.
