@@ -568,6 +568,10 @@ CV_EXPORTS void render(const Arrays& arr, int mode = POINTS, Scalar color = Scal
 */
 CV_EXPORTS void render(const Arrays& arr, InputArray indices, int mode = POINTS, Scalar color = Scalar::all(255));
 
+/////////////////// Export to Graphic device ///////////////////
+
+CV_EXPORTS void uniformMatrix4fv(int location, int count, float* value);
+
 /////////////////// CL-GL Interoperability Functions ///////////////////
 
 namespace ocl {

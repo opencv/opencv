@@ -1,7 +1,5 @@
 #include <iostream>
 
-#include <epoxy/gl.h>
-
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN 1
     #define NOMINMAX 1
@@ -57,8 +55,8 @@ static void draw(void* userdata) {
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glUniformMatrix4fv(glGetUniformLocation(data->program.getProgramId(), "transform"), 1, GL_FALSE, trans.ptr<float>()); // TODO not use glUniformMatrix4fv
-    // glUniformMatrix4fv(data->program.getUniformLocation("transform"), 1, GL_FALSE, trans.ptr<float>());
+    ogl::uniformMatrix4fv(data->program.getUniformLocation("transform"), 1, trans.ptr<float>());
+
     data->tex.bind();
     data->vao.bind();
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

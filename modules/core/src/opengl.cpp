@@ -2159,4 +2159,10 @@ void unmapGLBuffer(UMat& u)
 #endif
 }
 
+void uniformMatrix4fv(int location, int count, float* value)
+{
+    gl::UniformMatrix4fv(location, count, gl::FALSE_, value);
+    CV_CheckGlError();
+}
+
 }} // namespace cv::ogl
