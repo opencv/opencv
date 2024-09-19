@@ -3256,12 +3256,26 @@ private:
 
 namespace hal {
 
-void warpPerspective(int src_type,
+static void warpPerspective(int src_type,
                     const uchar * src_data, size_t src_step, int src_width, int src_height,
                     uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
-                    const double M[9], int interpolation, int borderType, const double borderValue[4])
+                    const double M[9], int interpolation, int borderType, const double borderValue[4], AlgorithmHint hint)
 {
     CALL_HAL(warpPerspective, cv_hal_warpPerspective, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
+
+    if (hint == cv::ALGO_HINT_APPROX) {
+        // printf("warpPerspective, depth=%d, channels=%d\n", CV_MAT_DEPTH(src_type), CV_MAT_CN(src_type));
+
+        if (interpolation == INTER_LINEAR) {
+            switch (src_type) {
+                case CV_8UC1: {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                }
+            }
+            // no default
+        }
+    }
+
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
     Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
 
@@ -3342,9 +3356,13 @@ void warpPerspectiveBlockline(const double *M, short* xy, short* alpha, double X
 } // cv::
 
 void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
-                          Size dsize, int flags, int borderType, const Scalar& borderValue )
+                          Size dsize, int flags, int borderType, const Scalar& borderValue,
+                          AlgorithmHint hint )
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == cv::ALGO_HINT_DEFAULT)
+        hint = cv::getDefaultAlgorithmHint();
 
     CV_Assert( _src.total() > 0 );
 
@@ -3436,7 +3454,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
         invert(matM, matM);
 
     hal::warpPerspective(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
-                        matM.ptr<double>(), interpolation, borderType, borderValue.val);
+                        matM.ptr<double>(), interpolation, borderType, borderValue.val, hint);
 }
 
 
