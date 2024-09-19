@@ -38,7 +38,6 @@ public:
     ~Strack();
 
 private:
-
     //cv::Rect tlwh_; //rect
     //int trackId_; //trackingId
     //int classId_; //classLabel
@@ -47,7 +46,6 @@ private:
     //float score_; //classScore
     int startFrame_;
     cv::KalmanFilter kalmanFilter_;
-
 };
 
 //! @}
