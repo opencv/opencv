@@ -355,7 +355,9 @@ inline v_float64x2 v_reinterpret_as_f64(const v_float64x2& v) { return v_float64
 
 #define OPENCV_HAL_IMPL_RISCVV_INIT_SET(__Tp, _Tp, suffix, len, num) \
 inline v_##_Tp##x##num v_setzero_##suffix() { return v_##_Tp##x##num(vmv_v_x_##len##m1(0, num)); }     \
-inline v_##_Tp##x##num v_setall_##suffix(__Tp v) { return v_##_Tp##x##num(vmv_v_x_##len##m1(v, num)); }
+inline v_##_Tp##x##num v_setall_##suffix(__Tp v) { return v_##_Tp##x##num(vmv_v_x_##len##m1(v, num)); } \
+inline v_##_Tp##x##num v_setzero(v_##_Tp##x##num /*unused*/) { return v_setzero_##suffix(); }          \
+inline v_##_Tp##x##num v_setall(__Tp v, v_##_Tp##x##num /*unused*/) { return v_setall_##suffix(v); }
 
 OPENCV_HAL_IMPL_RISCVV_INIT_SET(uchar, uint8, u8, u8, 16)
 OPENCV_HAL_IMPL_RISCVV_INIT_SET(char, int8, s8, i8, 16)
@@ -371,6 +373,11 @@ inline v_float32x4 v_setall_f32(float v) { return v_float32x4(vfmv_v_f_f32m1(v, 
 inline v_float64x2 v_setzero_f64() { return v_float64x2(vfmv_v_f_f64m1(0, 2)); }
 inline v_float64x2 v_setall_f64(double v) { return v_float64x2(vfmv_v_f_f64m1(v, 2)); }
 
+inline v_float32x4 v_setzero(v_float32x4 /*unused*/) { return v_setzero_f32(); }
+inline v_float32x4 v_setall(float v, v_float32x4 /*unused*/) { return v_setall_f32(v); }
+
+inline v_float64x2 v_setzero(v_float64x2 /*unused*/) { return v_setzero_f64(); }
+inline v_float64x2 v_setall(float v, v_float64x2 /*unused*/) { return v_setall_f64(v); }
 
 #define OPENCV_HAL_IMPL_RISCVV_BIN_OP(bin_op, _Tpvec, intrin) \
 inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b) \
@@ -2860,8 +2867,12 @@ inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 inline void v_cleanup() {}
 
 #include "intrin_math.hpp"
-OPENCV_HAL_MATH_IMPL_32F(v, 32x4)
-OPENCV_HAL_MATH_IMPL_64F(v, 64x2)
+inline v_float32x4 v_exp(v_float32x4 x) { return v_exp_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_log(v_float32x4 x) { return v_log_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_erf(v_float32x4 x) { return v_erf_default_32f<v_float32x4>(x); }
+
+inline v_float64x2 v_exp(v_float64x2 x) { return v_exp_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_log(v_float64x2 x) { return v_log_default_64f<v_float64x2, v_int64x2>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

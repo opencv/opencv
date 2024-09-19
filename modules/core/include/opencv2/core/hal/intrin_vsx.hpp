@@ -261,6 +261,8 @@ OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_float64x2, double)
 #define OPENCV_HAL_IMPL_VSX_INITVEC(_Tpvec, _Tp, suffix, cast)                        \
 inline _Tpvec v_setzero_##suffix() { return _Tpvec(vec_splats((_Tp)0)); }             \
 inline _Tpvec v_setall_##suffix(_Tp v) { return _Tpvec(vec_splats((_Tp)v));}          \
+inline _Tpvec v_setzero(_Tpvec /*unused*/) { return v_setzero_##suffix(); }           \
+inline _Tpvec v_setall(_Tp v, _Tpvec /*unused*/) { return v_setall_##suffix(_Tp v); } \
 template<typename _Tpvec0> inline _Tpvec v_reinterpret_as_##suffix(const _Tpvec0 &a)  \
 { return _Tpvec((cast)a.val); }
 
@@ -1595,8 +1597,12 @@ inline Tvec v_broadcast_element(const Tvec& v)
 { return Tvec(vec_splat(v.val, i)); }
 
 #include "intrin_math.hpp"
-OPENCV_HAL_MATH_IMPL_32F(v, 32x4)
-OPENCV_HAL_MATH_IMPL_64F(v, 64x2)
+inline v_float32x4 v_exp(v_float32x4 x) { return v_exp_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_log(v_float32x4 x) { return v_log_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_erf(v_float32x4 x) { return v_erf_default_32f<v_float32x4>(x); }
+
+inline v_float64x2 v_exp(v_float64x2 x) { return v_exp_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_log(v_float64x2 x) { return v_log_default_64f<v_float64x2, v_int64x2>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

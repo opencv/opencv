@@ -347,6 +347,8 @@ namespace hal_sse_internal
 #define OPENCV_HAL_IMPL_SSE_INITVEC(_Tpvec, _Tp, suffix, zsuffix, ssuffix, _Tps, cast) \
 inline _Tpvec v_setzero_##suffix() { return _Tpvec(_mm_setzero_##zsuffix()); } \
 inline _Tpvec v_setall_##suffix(_Tp v) { return _Tpvec(_mm_set1_##ssuffix((_Tps)v)); } \
+inline _Tpvec v_setzero(_Tpvec /*unused*/) { return v_setzero_##suffix(); } \
+inline _Tpvec v_setall(_Tp v, _Tpvec /*unused*/) { return v_setall_##suffix(v); } \
 template<typename _Tpvec0> inline _Tpvec v_reinterpret_as_##suffix(const _Tpvec0& a) \
 { return _Tpvec(cast(a.val)); }
 
@@ -363,6 +365,11 @@ inline v_uint64x2 v_setzero_u64() { return v_uint64x2(_mm_setzero_si128()); }
 inline v_int64x2 v_setzero_s64() { return v_int64x2(_mm_setzero_si128()); }
 inline v_uint64x2 v_setall_u64(uint64 val) { return v_uint64x2(val, val); }
 inline v_int64x2 v_setall_s64(int64 val) { return v_int64x2(val, val); }
+
+inline v_uint64x2 v_setzero(v_uint64x2 /*unused*/) { return v_setzero_u64(); }
+inline v_int64x2 v_setzero(v_int64x2 /*unused*/) { return v_setzero_s64(); }
+inline v_uint64x2 v_setall(uint64 val, v_uint64x2 /*unused*/) { return v_setall_u64(val); }
+inline v_int64x2 v_setall(int64 val, v_int64x2 /*unused*/) { return v_setall_s64(val); }
 
 template<typename _Tpvec> inline
 v_uint64x2 v_reinterpret_as_u64(const _Tpvec& a) { return v_uint64x2(a.val); }
@@ -3450,11 +3457,15 @@ inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 #endif
 }
 
-#include "intrin_math.hpp"
-OPENCV_HAL_MATH_IMPL_32F(v, 32x4)
-OPENCV_HAL_MATH_IMPL_64F(v, 64x2)
-
 inline void v_cleanup() {}
+
+#include "intrin_math.hpp"
+inline v_float32x4 v_exp(v_float32x4 x) { return v_exp_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_log(v_float32x4 x) { return v_log_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_erf(v_float32x4 x) { return v_erf_default_32f<v_float32x4>(x); }
+
+inline v_float64x2 v_exp(v_float64x2 x) { return v_exp_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_log(v_float64x2 x) { return v_log_default_64f<v_float64x2, v_int64x2>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
