@@ -291,7 +291,7 @@ public:
 
     void setAutoRelease(bool flag);
 
-    void vertexAttribPointer(unsigned int index, int size, int stride, int offset) const;
+    void vertexAttribPointer(InputArray arr, unsigned int index, int size, int stride, int offset) const;
 
     class Impl;
 

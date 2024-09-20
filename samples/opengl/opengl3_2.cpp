@@ -97,8 +97,8 @@ int main(int argc, char* argv[])
     data.vbo.copyFrom(vertex);
     data.vbo.bind(cv::ogl::Buffer::ARRAY_BUFFER);
     data.vao = ogl::VertexArray(0, false);
-    data.vao.vertexAttribPointer(0, 3, 5, 0);
-    data.vao.vertexAttribPointer(1, 2, 5, 3);
+    data.vao.vertexAttribPointer(vertex, 0, 3, 5, 0);
+    data.vao.vertexAttribPointer(vertex, 1, 2, 5, 3);
 
     data.tex.copyFrom(img);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

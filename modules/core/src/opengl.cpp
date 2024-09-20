@@ -843,7 +843,7 @@ public:
 
     GLuint vertexArrayId() const { return vertexArrayId_; }
 
-    void vertexAttribPointer(GLuint index, GLint size, GLint stride, int offset) const;
+    void vertexAttribPointer(InputArray arr, GLuint index, GLint size, GLint stride, int offset) const;
 
 private:
     Impl();
@@ -888,17 +888,37 @@ void cv::ogl::VertexArray::Impl::bind() const
     CV_CheckGlError();
 }
 
-void cv::ogl::VertexArray::Impl::vertexAttribPointer(GLuint index, GLint size, GLint stride, int offset) const
+#include <iostream>
+void cv::ogl::VertexArray::Impl::vertexAttribPointer(InputArray arr, GLuint index, GLint size, GLint stride, int offset) const
 {
+    const int atype = arr.type();
+    const int depth = CV_MAT_DEPTH(atype);
+
+    CV_Assert( depth == CV_8S || depth == CV_8U || depth == CV_16S || depth == CV_16U || depth == CV_32S || depth == CV_32F || depth == CV_64F );
+
+    size_t elementSize = 0;
+    switch (depth)
+    {
+        case CV_8S: elementSize = sizeof(GLbyte); break;
+        case CV_8U: elementSize = sizeof(GLubyte); break;
+        case CV_16S: elementSize = sizeof(GLshort); break;
+        case CV_16U: elementSize = sizeof(GLushort); break;
+        case CV_32S: elementSize = sizeof(GLint); break;
+        case CV_32F: elementSize = sizeof(GLfloat); break;
+        case CV_64F: elementSize = sizeof(GLdouble); break;
+    }
+
     gl::BindVertexArray(vertexArrayId_);
     CV_CheckGlError();
-    gl::VertexAttribPointer(index, size, gl::FLOAT, gl::FALSE_, stride*sizeof(GLfloat), (GLvoid*)(offset * sizeof(GLfloat)));
+    gl::VertexAttribPointer(index, size, gl_types[depth], gl::FALSE_, stride*elementSize, (GLvoid*)(offset * elementSize));
     CV_CheckGlError();
     gl::EnableVertexAttribArray(index);
     CV_CheckGlError();
     gl::BindVertexArray(0);
     CV_CheckGlError();
 }
+    // // arr.offset or arr.step
+    // std::cout << "sizeof GLfloat:" << sizeof(GLfloat) << " arr.offset:" << arr.offset() << " arr.step:" << arr.step() << " arr.size:" << arr.size() << std::endl;
 #endif // HAVE_OPENGL
 
 cv::ogl::VertexArray::VertexArray()
@@ -950,7 +970,7 @@ void cv::ogl::VertexArray::setAutoRelease(bool flag)
 #endif
 }
 
-void cv::ogl::VertexArray::vertexAttribPointer(unsigned int index, int size, int stride, int offset) const
+void cv::ogl::VertexArray::vertexAttribPointer(InputArray arr, unsigned int index, int size, int stride, int offset) const
 {
 #ifndef HAVE_OPENGL
     CV_UNUSED(index);
@@ -959,7 +979,7 @@ void cv::ogl::VertexArray::vertexAttribPointer(unsigned int index, int size, int
     CV_UNUSED(offset);
     throw_no_ogl();
 #else
-    impl_->vertexAttribPointer(index, size, stride, offset);
+    impl_->vertexAttribPointer(arr, index, size, stride, offset);
 #endif
 }
 
