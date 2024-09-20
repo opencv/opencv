@@ -888,7 +888,6 @@ void cv::ogl::VertexArray::Impl::bind() const
     CV_CheckGlError();
 }
 
-#include <iostream>
 void cv::ogl::VertexArray::Impl::vertexAttribPointer(InputArray arr, GLuint index, GLint size, GLint stride, int offset) const
 {
     const int atype = arr.type();
@@ -917,8 +916,7 @@ void cv::ogl::VertexArray::Impl::vertexAttribPointer(InputArray arr, GLuint inde
     gl::BindVertexArray(0);
     CV_CheckGlError();
 }
-    // // arr.offset or arr.step
-    // std::cout << "sizeof GLfloat:" << sizeof(GLfloat) << " arr.offset:" << arr.offset() << " arr.step:" << arr.step() << " arr.size:" << arr.size() << std::endl;
+
 #endif // HAVE_OPENGL
 
 cv::ogl::VertexArray::VertexArray()
