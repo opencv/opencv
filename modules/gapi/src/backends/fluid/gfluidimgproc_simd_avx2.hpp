@@ -85,15 +85,15 @@ CV_ALWAYS_INLINE void calcRowLinear32FC1Impl(float *dst[],
                 v_deinterleave(low1, high1, s00, s01);
 
                 //  v_float32 res0 = s00*alpha0 + s01*alpha1;
-                v_float32x8 res0 = v_fma(s00 - s01, alpha0, s01);
+                v_float32x8 res0 = v_fma(v_sub(s00, s01), alpha0, s01);
 
                 v_gather_pairs(src1[line], &mapsx[x], low2, high2);
                 v_deinterleave(low2, high2, s10, s11);
 
                 //  v_float32 res1 = s10*alpha0 + s11*alpha1;
-                v_float32x8 res1 = v_fma(s10 - s11, alpha0, s11);
+                v_float32x8 res1 = v_fma(v_sub(s10, s11), alpha0, s11);
                 //  v_float32 d = res0*beta0 + res1*beta1;
-                v_float32x8 d = v_fma(res0 - res1, v_beta0, res1);
+                v_float32x8 d = v_fma(v_sub(res0, res1), v_beta0, res1);
 
                 v_store(&dst[line][x], d);
             }
@@ -126,7 +126,7 @@ CV_ALWAYS_INLINE void calcRowLinear32FC1Impl(float *dst[],
                 v_deinterleave(low, high, s00, s01);
 
                 //  v_float32 d = s00*alpha0 + s01*alpha1;
-                v_float32x8 d = v_fma(s00 - s01, alpha0, s01);
+                v_float32x8 d = v_fma(v_sub(s00, s01), alpha0, s01);
 
                 v_store(&dst[line][x], d);
             }
@@ -157,7 +157,7 @@ CV_ALWAYS_INLINE void calcRowLinear32FC1Impl(float *dst[],
                 v_float32x8 s1 = v256_load(&src1[line][x]);
 
                 //  v_float32 d = s0*beta0 + s1*beta1;
-                v_float32x8 d = v_fma(s0 - s1, v_beta0, s1);
+                v_float32x8 d = v_fma(v_sub(s0, s1), v_beta0, s1);
 
                 v_store(&dst[line][x], d);
             }
