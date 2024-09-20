@@ -1932,4 +1932,34 @@ inline int TEGRA_GaussianBlurBinomial(const uchar* src_data, size_t src_step, uc
 
 #endif // OPENCV_IMGPROC_HAL_INTERFACE_H
 
+// The optimized branch was developed for old armv7 processors
+#if defined(__ARM_ARCH) && (__ARM_ARCH == 7)
+inline int TEGRA_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_step,
+                       const short* prev_deriv_data, size_t prev_deriv_step,
+                       const uchar* next_data, size_t next_step,
+                       int width, int height, int cn,
+                       const float *prev_points, float *next_points, size_t point_count,
+                       uchar *status, float *err,
+                       const int win_width, const int win_height,
+                       int termination_count, double termination_epsilon,
+                       bool get_min_eigen_vals,
+                       float min_eigen_vals_threshold)
+{
+    if (!CAROTENE_NS::isSupportedConfiguration())
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    CAROTENE_NS::pyrLKOptFlowLevel(CAROTENE_NS::Size2D(width, height), cn,
+        prev_data, prev_data_step, prev_deriv_data, prev_deriv_step,
+        next_data, next_step,
+        point_count, prev_points, next_points,
+        status, err, CAROTENE_NS::Size2D(win_width, win_height),
+        termination_count, termination_epsilon,
+        get_min_eigen_vals, min_eigen_vals_threshold);
+    return CV_HAL_ERROR_OK;
+}
+
+#undef cv_hal_LKOpticalFlowLevel
+#define cv_hal_LKOpticalFlowLevel TEGRA_LKOpticalFlowLevel
+#endif // __ARM_ARCH=7
+
 #endif

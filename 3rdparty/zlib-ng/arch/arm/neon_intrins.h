@@ -25,6 +25,13 @@
     out.val[3] = vqsubq_u16(a.val[3], b); \
 } while (0)
 
+#  if defined(__clang__) && defined(__arm__) && defined(__ANDROID__)
+/* Clang for 32-bit Android has too strict alignment requirement (:256) for x4 NEON intrinsics */
+#    undef ARM_NEON_HASLD4
+#    undef vld1q_u16_x4
+#    undef vld1q_u8_x4
+#    undef vst1q_u16_x4
+#  endif
 
 #  ifndef ARM_NEON_HASLD4
 

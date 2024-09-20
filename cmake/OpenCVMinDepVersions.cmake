@@ -1,5 +1,5 @@
 if(NOT DEFINED MIN_VER_CMAKE)
-  set(MIN_VER_CMAKE 3.5.1)
+  set(MIN_VER_CMAKE 3.7)
 endif()
 set(MIN_VER_CUDA 6.5)
 set(MIN_VER_CUDNN 7.5)
