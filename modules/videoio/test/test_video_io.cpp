@@ -674,6 +674,8 @@ TEST_P(videocapture_acceleration, read)
     ))
         throw SkipTestException("Format/codec is not supported");
 
+    if (backend == CAP_FFMPEG && va_type == cv::VIDEO_ACCELERATION_MFX)
+        throw SkipTestException("Known memory leaks in some FFmpeg/MFX configurations");
 
     std::string backend_name = cv::videoio_registry::getBackendName(backend);
     if (!videoio_registry::hasBackend(backend))
