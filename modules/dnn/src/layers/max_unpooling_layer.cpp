@@ -221,7 +221,7 @@ public:
         std::vector<MatShape> outShapes, internals;
         for (int i = 0; i < nodes.size(); ++i) {
             std::vector<size_t> shape = nodes[i].dynamicCast<InfEngineNgraphNode>()->node.get_shape();
-            inpShapes[i] = std::vector<int>(shape.begin(), shape.end());
+            inpShapes[i] = MatShape(shape.begin(), shape.end());
         }
         getMemoryShapes(inpShapes, 1, outShapes, internals);
 
