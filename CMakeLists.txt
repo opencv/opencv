@@ -921,9 +921,9 @@ if(WITH_WEBNN)
 endif()
 
 # --- Inference Engine ---
-if(WITH_INF_ENGINE OR WITH_OPENVINO)
-  include(cmake/OpenCVDetectInferenceEngine.cmake)
-endif()
+#if(WITH_INF_ENGINE OR WITH_OPENVINO)
+#  include(cmake/OpenCVDetectInferenceEngine.cmake)
+#endif()
 
 # --- DirectX ---
 if(WITH_DIRECTX)
