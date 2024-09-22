@@ -168,7 +168,6 @@ public:
 
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
-        std::vector<Mat>& outputs = outputs_arr.getMatVecRef();
         size_t ninputs = inputs.size();
         CV_Assert(ninputs > 0);
 
@@ -200,13 +199,32 @@ public:
         //printf("name: %s, outShape: %d x %d x %d x %d\n", name.c_str(), outShape[0], outShape[1], outShape[2], outShape[3]);
 
         updateOutSizeAndScale(inpShape, outShape);
-        outputs[0].fit(outShape, inp_.type());
-        Mat& out_ = outputs[0];
 
-        if (outShape == inpShape)
-        {
-            inp_.copyTo(out_);
-            return;
+        auto kind = outputs_arr.kind();
+        Mat out_;
+        UMat uout_;
+        if (kind == _InputArray::STD_VECTOR_MAT) {
+            std::vector<Mat>& outputs = outputs_arr.getMatVecRef();
+            outputs[0].fit(outShape, inp_.type());
+            out_ = outputs[0];
+
+            if (outShape == inpShape)
+            {
+                inp_.copyTo(out_);
+                return;
+            }
+        }
+        else {
+            CV_Assert(kind == _InputArray::STD_VECTOR_UMAT);
+            std::vector<UMat>& u_outputs = outputs_arr.getUMatVecRef();
+            u_outputs[0].fit(outShape, inp_.type());
+            uout_ = u_outputs[0];
+            if (outShape == inpShape)
+            {
+                inp_.copyTo(uout_);
+                return;
+            }
+            out_.create(outShape, inp_.type());
         }
 
         int depth = inp_.type(), orig_depth = depth;
@@ -393,8 +411,15 @@ public:
         else
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
 
-        if (orig_depth != depth)
-            out.convertTo(out_, orig_depth);
+        if (orig_depth != depth) {
+            if (!uout_.empty())
+                out.convertTo(uout_, orig_depth);
+            else
+                out.convertTo(out_, orig_depth);
+        }
+        else if (!uout_.empty()) {
+            out.copyTo(uout_);
+        }
     }
 
 #ifdef HAVE_CANN

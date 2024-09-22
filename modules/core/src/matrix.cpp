@@ -7,6 +7,8 @@
 
 namespace cv {
 
+CV__DEBUG_NS_BEGIN
+
 std::string layoutToString(DataLayout layout)
 {
     return
@@ -19,6 +21,32 @@ std::string layoutToString(DataLayout layout)
         layout == DATA_LAYOUT_PLANAR ? "PLANAR" :
         layout == DATA_LAYOUT_UNKNOWN ? "Unknown" : "???";
 }
+
+bool operator == (const MatShape& size1, const MatShape& size2)
+{
+    if (size1.dims != size2.dims)
+        return false;
+    if (size1.layout != size2.layout &&
+        size1.layout != DATA_LAYOUT_UNKNOWN &&
+        size2.layout != DATA_LAYOUT_UNKNOWN)
+        return false;
+    if (size1.layout == DATA_LAYOUT_BLOCK &&
+        size2.layout == DATA_LAYOUT_BLOCK &&
+        size1.C != size2.C)
+        return false;
+    for (int i = 0; i < size1.dims; i++) {
+        if (size1.p[i] != size2.p[i])
+            return false;
+    }
+    return true;
+}
+
+bool operator != (const MatShape& size1, const MatShape& size2)
+{
+    return !(size1 == size2);
+}
+
+CV__DEBUG_NS_END
 
 /////////////////////////// MatShape ////////////////////////////////
 
@@ -375,30 +403,6 @@ MatShape MatShape::expand(const MatShape& another) const
         result.p[i] = std::max(sz1, sz2);
     }
     return result;
-}
-
-bool operator == (const MatShape& size1, const MatShape& size2)
-{
-    if (size1.dims != size2.dims)
-        return false;
-    if (size1.layout != size2.layout &&
-        size1.layout != DATA_LAYOUT_UNKNOWN &&
-        size2.layout != DATA_LAYOUT_UNKNOWN)
-        return false;
-    if (size1.layout == DATA_LAYOUT_BLOCK &&
-        size2.layout == DATA_LAYOUT_BLOCK &&
-        size1.C != size2.C)
-        return false;
-    for (int i = 0; i < size1.dims; i++) {
-        if (size1.p[i] != size2.p[i])
-            return false;
-    }
-    return true;
-}
-
-bool operator != (const MatShape& size1, const MatShape& size2)
-{
-    return !(size1 == size2);
 }
 
 /////////////////////////// MatAllocator ////////////////////////////

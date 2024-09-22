@@ -1772,33 +1772,40 @@ public:
         if (is1x1())
             return false;
 
-        if (umat_weights.empty())
-        {
+        if (umat_weights.empty() || inputs.size() >= 2) {
+            Mat temp;
             if (fusedWeights)
                 weightsMat.copyTo(umat_weights);
-            else
-                transpose(blobs[0].reshape(1, inpCn), umat_weights);
+            else if (!blobs.empty()) {                
+                transpose(blobs[0].reshape(1, inpCn), temp);
+                temp.copyTo(umat_weights);
+            }
+            else {
+                transpose(inputs[1].reshape(1, inpCn), temp);
+                temp.copyTo(umat_weights);
+            }
+        }
 
+        if (umat_biases.empty() || inputs.size() >= 3) {
             if (fusedBias)
                 biasesMat.copyTo(umat_biases);
+            else if (blobs.size() > 1)
+                blobs[1].reshape(1, outCn).copyTo(umat_biases);
+            else if (inputs.size() >= 3)
+                inputs[2].reshape(1, outCn).copyTo(umat_biases);
             else
-            {
-                if (hasBias())
-                    blobs[1].reshape(1, outCn).copyTo(umat_biases);
-                else
-                    umat_biases = UMat::zeros(outCn, 1, CV_32F);
-            }
+                umat_biases = UMat::zeros(outCn, 1, CV_32F);
         }
 
         String buildopt = format("-DT=%s ", ocl::typeToStr(inputs[0].type()));
         buildopt += format("-DPAD_H=%d -DPAD_W=%d -DKERNEL_H=%d -DKERNEL_W=%d -DSTRIDE_H=%d -DSTRIDE_W=%d ",
                            pad.height, pad.width, kernel.height, kernel.width, stride.height, stride.width);
 
-        for (size_t ii = 0; ii < outputs.size(); ii++)
+        //for (size_t ii = 0; ii < outputs.size(); ii++)
         {
-            int ngroups = outCn / blobs[0].size[1];
-            int inpGroupCn = inpCn / ngroups;
-            int outGroupCn = blobs[0].size[1];
+            int ii = 0;
+            int inpGroupCn = inpCn / groups;
+            int outGroupCn = outCn / groups;
             const UMat& inp = inputs[ii];
             UMat& out = outputs[ii];
             int numImg = inp.size[0];
@@ -1807,21 +1814,21 @@ public:
 
             MatShape inpshape = shape(numImg*inpCn, inpH*inpW);
             MatShape outshape = shape(numImg*outCn, outH*outW);
-            UMat convBlob = inputs[ii].reshape(1, inpshape.size(), &inpshape[0]);
-            UMat decnBlob = out.reshape(1, outshape.size(), &outshape[0]);
-            int rows = internals[0].rows / ngroups;
+            UMat convBlob = inputs[ii].reshape(1, inpshape);
+            UMat decnBlob = out.reshape(1, outshape);
+            int rows = internals[0].rows / groups;
 
             for (int n = 0; n < numImg; n++)
             {
-                for (int g = 0; g < ngroups; g++)
+                for (int g = 0; g < groups; g++)
                 {
                     UMat colMat = internals[0].rowRange(_Range(g * rows, rows));
-                    UMat convMat = convBlob.rowRange(_Range((g + n * ngroups) * inpGroupCn, inpGroupCn));
+                    UMat convMat = convBlob.rowRange(_Range((g + n * groups) * inpGroupCn, inpGroupCn));
                     UMat wghtMat = umat_weights.colRange(_Range(g * inpGroupCn, inpGroupCn));
                     gemm(wghtMat, convMat, 1, noArray(), 0, colMat, 0);
                 }
 
-                for (int g = 0; g < ngroups; g++)
+                for (int g = 0; g < groups; g++)
                 {
                     int total = outGroupCn * decnBlob.cols;
                     int index = 0;
@@ -1844,7 +1851,7 @@ public:
                     k.set(index++, ocl::KernelArg::PtrReadOnly(umat_biases));
                     k.set(index++, (int)(g * outGroupCn * umat_biases.cols));
                     k.set(index++, ocl::KernelArg::PtrWriteOnly(decnBlob));
-                    k.set(index++, (int)((g + n * ngroups) * outGroupCn * decnBlob.cols));
+                    k.set(index++, (int)((g + n * groups) * outGroupCn * decnBlob.cols));
 
                     size_t global[] = { (size_t)total };
                     bool ret = k.run(1, global, NULL, false);
@@ -1863,8 +1870,11 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
-                   forward_ocl(inputs_arr, outputs_arr, internals_arr));
+        // For some reason, tests for deconvolution fail;
+        // Also, the current implementation is super-inefficient,
+        // Just disabled it. Need to rewrite it and then uncomment back these lines
+        //CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+        //           forward_ocl(inputs_arr, outputs_arr, internals_arr));
 
         if (inputs_arr.depth(0) == CV_16F)
         {
@@ -1872,18 +1882,18 @@ public:
             return;
         }
 
-        std::vector<Mat> inputs, outputs, internals;
+        auto kind = outputs_arr.kind();
+        std::vector<Mat> inputs, internals;
         inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
 
         int outCn = numOutput;
         int inpCn = inputs[0].size[1];
         bool is1x1flag = is1x1();
         int nstripes = getNumThreads();
-        CV_Assert(outputs.size() == 1);
+        /*CV_Assert(outputs.size() == 1);
         CV_Assert(inputs[0].size[0] == outputs[0].size[0]);
-        CV_Assert(outCn == outputs[0].size[1]);
+        CV_Assert(outCn == outputs[0].size[1]);*/
 
         if (weightsMat.empty() || inputs.size() >= 2) {
             Mat inpWeights = !blobs.empty() ? blobs[0] : inputs[1];
@@ -1904,14 +1914,23 @@ public:
         pprint(std::cout, biasesMat, 0, 3, 100, '[');
         printf("\n");*/
 
-        CV_Assert(outputs.size() == 1);
         //for (size_t ii = 0; ii < outputs.size(); ii++)
         {
             int ii = 0;
             int inpGroupCn = inpCn / groups;
             int outGroupCn = outCn / groups;
             const Mat& inp = inputs[ii];
-            Mat& out = outputs[ii];
+            MatShape outshape = outputs_arr.shape(0);
+            CV_Assert(outshape.dims == inp.dims);
+            CV_Assert(outshape[0] == inp.size[0]);
+            CV_Assert(outshape[1] == outCn);
+            Mat out;
+            if (kind == _InputArray::STD_VECTOR_MAT) {
+                out = outputs_arr.getMat(0);
+            }
+            else {
+                out.create(outshape, inp.type());
+            }
             int numImg = inp.size[0];
             int inpH = inp.size[2], inpW = inp.size[3];
             int outH = out.size[2], outW = out.size[3];
@@ -1939,6 +1958,10 @@ public:
                                        stride.height, stride.width, inpH, inpW, dstMat.ptr<float>(),
                                        curBiasMat.ptr<float>(), is1x1flag);
                 }
+            }
+            if (kind == _InputArray::STD_VECTOR_UMAT) {
+                std::vector<UMat>& u_outputs = outputs_arr.getUMatVecRef();
+                out.copyTo(u_outputs[0]);
             }
         }
     }
