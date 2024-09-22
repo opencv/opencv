@@ -162,7 +162,7 @@ struct CV_EXPORTS_W_SIMPLE MatShape
 
     size_t total() const; // returns the total number of elements in the tensor (including padding elements, i.e. the method ignores 'C' in the case of block layout). Returns 1 for scalar tensors. Returns 0 for empty shapes.
 
-    operator std::vector<int>() const;    
+    operator std::vector<int>() const;
     std::string str() const;
 
     int dims;

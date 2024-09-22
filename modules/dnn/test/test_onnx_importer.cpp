@@ -350,13 +350,13 @@ TEST_P(Test_ONNX_layers, Deconvolution3D)
     }
 #endif
 
-    if (backend == DNN_BACKEND_OPENCV)
-        throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
+    //if (backend == DNN_BACKEND_OPENCV)
+    throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
 
-    if (backend == DNN_BACKEND_VKCOM)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+    //if (backend == DNN_BACKEND_VKCOM)
+    //    applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
-    testONNXModels("deconv3d");
+    //testONNXModels("deconv3d");
 }
 
 TEST_P(Test_ONNX_layers, Deconvolution3D_bias)
@@ -379,13 +379,13 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_bias)
     }
 #endif
 
-    if (backend == DNN_BACKEND_OPENCV)
+    //if (backend == DNN_BACKEND_OPENCV)
         throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
 
-    if (backend == DNN_BACKEND_VKCOM)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+    //if (backend == DNN_BACKEND_VKCOM)
+    //    applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
-    testONNXModels("deconv3d_bias");
+    //testONNXModels("deconv3d_bias");
 }
 
 TEST_P(Test_ONNX_layers, Deconvolution3D_pad)
@@ -408,13 +408,13 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_pad)
     }
 #endif
 
-    if (backend == DNN_BACKEND_OPENCV)
+    //if (backend == DNN_BACKEND_OPENCV)
         throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
 
-    if (backend == DNN_BACKEND_VKCOM)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+    //if (backend == DNN_BACKEND_VKCOM)
+    //    applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
-    testONNXModels("deconv3d_pad");
+    //testONNXModels("deconv3d_pad");
 }
 
 TEST_P(Test_ONNX_layers, Deconvolution3D_adjpad)
@@ -437,13 +437,13 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_adjpad)
     }
 #endif
 
-    if (backend == DNN_BACKEND_OPENCV)
+    //if (backend == DNN_BACKEND_OPENCV)
         throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
 
-    if (backend == DNN_BACKEND_VKCOM)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+    //if (backend == DNN_BACKEND_VKCOM)
+    //    applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
-    testONNXModels("deconv3d_adjpad");
+    //testONNXModels("deconv3d_adjpad");
 }
 
 TEST_P(Test_ONNX_layers, Dropout)

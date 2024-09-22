@@ -188,6 +188,12 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
 
     if (preferableBackend != backendId)
     {
+        if (mainGraph)
+        {
+            preferableBackend = backendId;
+            return;
+        }
+
         clear();
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {

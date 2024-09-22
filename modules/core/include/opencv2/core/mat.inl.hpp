@@ -71,9 +71,6 @@
 
 namespace cv
 {
-CV__DEBUG_NS_BEGIN
-
-
 //! @cond IGNORED
 
 ////////////////////////// Custom (raw) type wrapper //////////////////////////
@@ -140,6 +137,9 @@ template<class _It> inline void MatShape::insert(int* where, _It begin, _It end)
     }
     insert_(where, buf, buf + count);
 }
+
+CV__DEBUG_NS_BEGIN
+
 
 //////////////////////// Input/Output Arrays ////////////////////////
 
