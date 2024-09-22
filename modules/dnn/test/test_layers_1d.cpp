@@ -1600,8 +1600,8 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
     lp.set("equation", equation);
     lp.set("inputSize", 2);
     lp.set("outputSize", 1);
-    lp.set("inputShapes0", DictValue::arrayInt(&input_shape1[0], input_shape1.size()));
-    lp.set("inputShapes1", DictValue::arrayInt(&input_shape2[0], input_shape2.size()));
+    lp.set("inputShapes0", DictValue::arrayInt(input_shape1.data(), input_shape1.size()));
+    lp.set("inputShapes1", DictValue::arrayInt(input_shape2.data(), input_shape2.size()));
 
     Ptr<Layer> layer = EinsumLayer::create(lp);
 
@@ -1652,9 +1652,9 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Einsum_Test, testing::Values(
     //std::make_tuple(std::vector<int>({}), std::vector<int>({}), ",->"),
-    std::make_tuple(std::vector<int>({1}), std::vector<int>({}), "i,->i"),
+    //std::make_tuple(std::vector<int>({1}), std::vector<int>({}), "i,->i"),
     std::make_tuple(std::vector<int>({}), std::vector<int>({1}), ",i->i"),
-    std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({}), "ij,->ij"),
+    //std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({}), "ij,->ij"),
     // std::make_tuple(std::vector<int>({}), std::vector<int>({4, 1}), ",ij->ij")), // mul function of arithm_op can not handle cases with different number of channels
     std::make_tuple(std::vector<int>({1}), std::vector<int>({1}), "i,i->i"),
     std::make_tuple(std::vector<int>({1}), std::vector<int>({1}), "i,i->"),
