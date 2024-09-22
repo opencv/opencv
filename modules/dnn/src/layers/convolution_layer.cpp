@@ -1776,7 +1776,7 @@ public:
             Mat temp;
             if (fusedWeights)
                 weightsMat.copyTo(umat_weights);
-            else if (!blobs.empty()) {                
+            else if (!blobs.empty()) {
                 transpose(blobs[0].reshape(1, inpCn), temp);
                 temp.copyTo(umat_weights);
             }

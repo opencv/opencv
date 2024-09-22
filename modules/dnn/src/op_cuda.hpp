@@ -612,7 +612,7 @@ namespace cv { namespace dnn {
         }
 
         void update(const MatShape& shape_, std::size_t offset_) override {
-            auto total = std::accumulate(std::begin(shape_), std::end(shape_), 1, std::multiplies<MatShape::value_type>());
+            std::size_t total = shape_.total();
             if (offset_ + total > shared_block->device.size()) {
                 CV_Error(Error::BadOffset, "shape and offset provided can potentially leads to OOB access");
             }
