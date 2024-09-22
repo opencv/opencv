@@ -67,8 +67,6 @@ enum AccessFlag { ACCESS_READ=1<<24, ACCESS_WRITE=1<<25,
 CV_ENUM_FLAGS(AccessFlag)
 __CV_ENUM_FLAGS_BITWISE_AND(AccessFlag, int, AccessFlag)
 
-CV__DEBUG_NS_BEGIN
-
 /**
  * @brief Enum of data layout for model inference.
  * @see Image2BlobParams
@@ -164,6 +162,7 @@ struct CV_EXPORTS_W_SIMPLE MatShape
 
     size_t total() const; // returns the total number of elements in the tensor (including padding elements, i.e. the method ignores 'C' in the case of block layout). Returns 1 for scalar tensors. Returns 0 for empty shapes.
 
+    operator std::vector<int>() const;    
     std::string str() const;
 
     int dims;
@@ -174,6 +173,8 @@ struct CV_EXPORTS_W_SIMPLE MatShape
 
 CV_EXPORTS bool operator == (const MatShape& shape1, const MatShape& shape2);
 CV_EXPORTS bool operator != (const MatShape& shape1, const MatShape& shape2);
+
+CV__DEBUG_NS_BEGIN
 
 class CV_EXPORTS _OutputArray;
 

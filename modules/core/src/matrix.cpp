@@ -7,8 +7,6 @@
 
 namespace cv {
 
-CV__DEBUG_NS_BEGIN
-
 std::string layoutToString(DataLayout layout)
 {
     return
@@ -45,8 +43,6 @@ bool operator != (const MatShape& size1, const MatShape& size2)
 {
     return !(size1 == size2);
 }
-
-CV__DEBUG_NS_END
 
 /////////////////////////// MatShape ////////////////////////////////
 
@@ -403,6 +399,13 @@ MatShape MatShape::expand(const MatShape& another) const
         result.p[i] = std::max(sz1, sz2);
     }
     return result;
+}
+
+MatShape::operator std::vector<int>() const
+{
+    if (dims < 0)
+        return std::vector<int>(1, 0);
+    return std::vector<int>(p, p + dims);
 }
 
 /////////////////////////// MatAllocator ////////////////////////////

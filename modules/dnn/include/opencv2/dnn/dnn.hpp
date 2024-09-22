@@ -828,20 +828,25 @@ CV__DNN_INLINE_NS_BEGIN
          *  @param inLayersShapes output parameter for input layers shapes;
          * order is the same as in layersIds
          *  @param outLayersShapes output parameter for output layers shapes;
-         * order is the same as in layersIds
+         * order is the same as in layersIds.
+         *
+         * This overload should be deprecated
          */
-        CV_WRAP void getLayersShapes(const std::vector<MatShape>& netInputShapes,
-                                     const std::vector<int>& netInputTypes,
-                                     CV_OUT std::vector<int>& layersIds,
-                                     CV_OUT std::vector<std::vector<MatShape> >& inLayersShapes,
-                                     CV_OUT std::vector<std::vector<MatShape> >& outLayersShapes) const;
+        void getLayersShapes(const std::vector<MatShape>& netInputShapes,
+                             const std::vector<int>& netInputTypes,
+                             CV_OUT std::vector<int>& layersIds,
+                             CV_OUT std::vector<std::vector<MatShape> >& inLayersShapes,
+                             CV_OUT std::vector<std::vector<MatShape> >& outLayersShapes) const;
 
-        /** @overload */
-        CV_WRAP void getLayersShapes(const MatShape& netInputShape,
-                                     const int& netInputType,
-                                     CV_OUT std::vector<int>& layersIds,
-                                     CV_OUT std::vector<std::vector<MatShape> >& inLayersShapes,
-                                     CV_OUT std::vector<std::vector<MatShape> >& outLayersShapes) const;
+        /** @overload
+         *
+         * This overload should be deprecated
+        */
+        void getLayersShapes(const MatShape& netInputShape,
+                             const int& netInputType,
+                             CV_OUT std::vector<int>& layersIds,
+                             CV_OUT std::vector<std::vector<MatShape> >& inLayersShapes,
+                             CV_OUT std::vector<std::vector<MatShape> >& outLayersShapes) const;
 
         /** @brief Returns input and output shapes for layer with specified
          * id in loaded model; preliminary inferencing isn't necessary.
@@ -852,15 +857,20 @@ CV__DNN_INLINE_NS_BEGIN
          * order is the same as in layersIds
          *  @param outLayerShapes output parameter for output layers shapes;
          * order is the same as in layersIds
-         */
-        CV_WRAP void getLayerShapes(const MatShape& netInputShape,
-                                    const int& netInputType,
-                                    const int layerId,
-                                    CV_OUT std::vector<MatShape>& inLayerShapes,
-                                    CV_OUT std::vector<MatShape>& outLayerShapes) const; // FIXIT: CV_WRAP
+         *
+         * This overload should be deprecated
+        */
+        void getLayerShapes(const MatShape& netInputShape,
+                            const int& netInputType,
+                            const int layerId,
+                            CV_OUT std::vector<MatShape>& inLayerShapes,
+                            CV_OUT std::vector<MatShape>& outLayerShapes) const; // FIXIT: CV_WRAP
 
-        /** @overload */
-        void getLayerShapes(const std::vector<MatShape>& netInputShapes,
+        /** @overload
+         *
+         * The only overload of getLayerShapes that should be kept in 5.x
+        */
+        CV_WRAP void getLayerShapes(const std::vector<MatShape>& netInputShapes,
                                     const std::vector<int>& netInputTypes,
                                     const int layerId,
                                     CV_OUT std::vector<MatShape>& inLayerShapes,
@@ -873,17 +883,19 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getFLOPS(const std::vector<MatShape>& netInputShapes,
                                const std::vector<int>& netInputTypes) const;
+        /** @overload
+            These overloads should be deprecated
+        */
+        int64 getFLOPS(const MatShape& netInputShape,
+                       const int& netInputType) const;
         /** @overload */
-        CV_WRAP int64 getFLOPS(const MatShape& netInputShape,
-                               const int& netInputType) const;
+        int64 getFLOPS(const int layerId,
+                       const std::vector<MatShape>& netInputShapes,
+                       const std::vector<int>& netInputTypes) const;
         /** @overload */
-        CV_WRAP int64 getFLOPS(const int layerId,
-                               const std::vector<MatShape>& netInputShapes,
-                               const std::vector<int>& netInputTypes) const;
-        /** @overload */
-        CV_WRAP int64 getFLOPS(const int layerId,
-                               const MatShape& netInputShape,
-                               const int& netInputType) const;
+        int64 getFLOPS(const int layerId,
+                       const MatShape& netInputShape,
+                       const int& netInputType) const;
 
         /** @brief Returns list of types for layer used in model.
          * @param layersTypes output parameter for returning types.
@@ -903,20 +915,26 @@ CV__DNN_INLINE_NS_BEGIN
          * @param weights output parameter to store resulting bytes for weights.
          * @param blobs output parameter to store resulting bytes for intermediate blobs.
          */
-        void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
+        CV_WRAP void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
                                           const std::vector<int>& netInputTypes,
-                                          CV_OUT size_t& weights, CV_OUT size_t& blobs) const; // FIXIT: CV_WRAP
-        /** @overload */
-        CV_WRAP void getMemoryConsumption(const MatShape& netInputShape,
+                                          CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
+        /** @overload
+            It should be deprecated
+        */
+        void getMemoryConsumption(const MatShape& netInputShape,
                                           const int& netInputType,
                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
-        /** @overload */
-        CV_WRAP void getMemoryConsumption(const int layerId,
+        /** @overload
+            It should be deprecated
+        */
+        void getMemoryConsumption(const int layerId,
                                           const std::vector<MatShape>& netInputShapes,
                                           const std::vector<int>& netInputTypes,
                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
-        /** @overload */
-        CV_WRAP void getMemoryConsumption(const int layerId,
+        /** @overload
+            It should be deprecated
+        */
+        void getMemoryConsumption(const int layerId,
                                           const MatShape& netInputShape,
                                           const int& netInputType,
                                           CV_OUT size_t& weights, CV_OUT size_t& blobs) const;
@@ -928,18 +946,23 @@ CV__DNN_INLINE_NS_BEGIN
          * @param layerIds output vector to save layer IDs.
          * @param weights output parameter to store resulting bytes for weights.
          * @param blobs output parameter to store resulting bytes for intermediate blobs.
-         */
+         *
+         * It should be deprecated
+        */
         void getMemoryConsumption(const std::vector<MatShape>& netInputShapes,
                                           const std::vector<int>& netInputTypes,
                                           CV_OUT std::vector<int>& layerIds,
                                           CV_OUT std::vector<size_t>& weights,
-                                          CV_OUT std::vector<size_t>& blobs) const; // FIXIT: CV_WRAP
-        /** @overload */
+                                          CV_OUT std::vector<size_t>& blobs) const;
+        /** @overload
+         *
+         *  It should be deprecated
+         */
         void getMemoryConsumption(const MatShape& netInputShape,
                                           const int& netInputType,
                                           CV_OUT std::vector<int>& layerIds,
                                           CV_OUT std::vector<size_t>& weights,
-                                          CV_OUT std::vector<size_t>& blobs) const; // FIXIT: CV_WRAP
+                                          CV_OUT std::vector<size_t>& blobs) const;
 
         /** @brief Enables or disables layer fusion in the network.
          * @param fusion true to enable the fusion, false to disable. The fusion is enabled by default.
