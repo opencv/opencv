@@ -185,7 +185,7 @@ static int findMatching(const Mat &queryFeatures, const vector<Mat> &galleryFeat
 
     for (int j = 0; j < (int)galleryFeatures.size(); j++)
     {
-        float currentSimilarity = queryFeatures.dot(galleryFeatures[j]);
+        float currentSimilarity = static_cast<float>(queryFeatures.dot(galleryFeatures[j]));
         if (currentSimilarity > maxSimilarity)
         {
             maxSimilarity = currentSimilarity;
