@@ -83,24 +83,6 @@ ix, iy = -1, -1
 rect = None
 img_dict = {} # Dictionary to store bounding boxes for corresponding cropped image
 
-def preprocess(images, height, width):
-    """
-    Create 4-dimensional blob from image
-    :param image: input image
-    :param height: the height of the resized input image
-    :param width: the width of the resized input image
-    """
-    img_list = []
-    for image in images:
-        image = cv.resize(image, (width, height))
-        img_list.append(image[:, :, ::-1])
-
-    images = np.array(img_list)
-    images = (images / 255.0 - args.mean) / args.std
-
-    input = cv.dnn.blobFromImages(images.astype(np.float32), ddepth = cv.CV_32F)
-    return input
-
 def yolo_detector(frame, net):
     global img_dict
     height, width, _ = frame.shape
@@ -175,7 +157,7 @@ def draw_rectangle(event, x, y, flags, param):
         cv.rectangle(param[0], (ix, iy), (x, y), (0, 255, 0), 2)
         cv.imshow('TRACKING', param[0])
 
-def extract_frames(query_image_path, model_path, yolo_path, resize_h=384, resize_w=128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, batch_size=32):
+def extract_frames(query_image_path, model_path, yolo_path, batch_size=32):
     cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
     net = cv.dnn.readNet(yolo_path)
     query_images = []
@@ -206,13 +188,13 @@ def extract_frames(query_image_path, model_path, yolo_path, resize_h=384, resize
         if not ret:
             break
         images = yolo_detector(frame, net)
-        query_feat = extract_feature(query_images, model_path, resize_h, resize_w, backend, target, batch_size)
-        gallery_feat = extract_feature(images, model_path, resize_h, resize_w, backend, target, batch_size)
+        query_feat = extract_feature(query_images, model_path, batch_size)
+        gallery_feat = extract_feature(images, model_path, batch_size)
 
-        topk_idx = topk(query_feat, gallery_feat)
+        match_idx = find_matching(query_feat, gallery_feat)
 
-        top_img = images[topk_idx]
-        x, y, w, h = img_dict[top_img.tobytes()]
+        match_img = images[match_idx]
+        x, y, w, h = img_dict[match_img.tobytes()]
         cv.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
         cv.putText(frame, "Target", (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
@@ -225,76 +207,53 @@ def extract_frames(query_image_path, model_path, yolo_path, resize_h=384, resize
     cv.destroyAllWindows()
     return
 
-def extract_feature(images, model_path, resize_h = 384, resize_w = 128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU, batch_size = 32):
+def extract_feature(images, model_path, batch_size = 32):
     """
     Extract features from images
     :param images: the input images
     :param model_path: path to ReID model
     :param batch_size: the batch size for each network inference iteration
-    :param resize_h: the height of the input image
-    :param resize_w: the width of the input image
-    :param backend: name of computation backend
-    :param target: name of computation target
     """
     feat_list = []
 
     for i in range(0, len(images), batch_size):
         batch = images[i : min(i + batch_size, len(images))]
-        inputs = preprocess(batch, resize_h, resize_w)
+        blob = cv.dnn.blobFromImages(batch, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=args.rgb, crop=False, ddepth=cv.CV_32F)
 
-        feat = run_net(inputs, model_path, backend, target)
+        for i in range(blob.shape[1]):
+            blob[:, i, :, :] /= args.std[i]
+
+        feat = run_net(blob, model_path)
 
         feat_list.append(feat)
 
     feats = np.concatenate(feat_list, axis = 0)
     return feats
 
-def run_net(inputs, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU):
+def run_net(inputs, model_path):
     """
     Forword propagation for a batch of images.
     :param inputs: input batch of images
     :param model_path: path to ReID model
-    :param backend: name of computation backend
-    :param target: name of computation target
     """
     net = cv.dnn.readNet(model_path)
-    net.setPreferableBackend(get_backend_id(backend))
-    net.setPreferableTarget(get_target_id(target))
+    net.setPreferableBackend(get_backend_id(args.backend))
+    net.setPreferableTarget(get_target_id(args.target))
     net.setInput(inputs)
     out = net.forward()
     out = np.reshape(out, (out.shape[0], out.shape[1]))
     return out
 
-def normalize(nparray, order=2, axis=0):
+def find_matching(query_feat, gallery_feat):
     """
-    Normalize a N-D numpy array along the specified axis.
-    :param nparry: the array of vectors to be normalized
-    :param order: order of the norm
-    :param axis: the axis of x along which to compute the vector norms
-    """
-    norm = np.linalg.norm(nparray, ord=order, axis=axis, keepdims=True)
-    return nparray / (norm + np.finfo(np.float32).eps)
-
-def similarity(array1, array2):
-    """
-    Compute the euclidean or cosine distance of all pairs.
-    :param  array1: numpy array with shape [m1, n]
-    :param  array2: numpy array with shape [m2, n]
-    Returns:
-      numpy array with shape [m1, m2]
-    """
-    array1 = normalize(array1, axis=1)
-    array2 = normalize(array2, axis=1)
-    dist = np.matmul(array1, array2.T)
-    return dist
-
-def topk(query_feat, gallery_feat):
-    """
-    Return the index of the top gallery image most similar to the query image
+    Return the index of the gallery image most similar to the query image
     :param query_feat: array of feature vectors of query images
     :param gallery_feat: array of feature vectors of gallery images
     """
-    sim = similarity(query_feat, gallery_feat)
+    cv.normalize(query_feat, query_feat, 1.0, 0.0, cv.NORM_L2)
+    cv.normalize(gallery_feat, gallery_feat, 1.0, 0.0, cv.NORM_L2)
+
+    sim = query_feat.dot(gallery_feat.T)
     index = np.argmax(sim, axis=1)[0]
     return index
 
@@ -313,4 +272,4 @@ if __name__ == '__main__':
         exit(1)
     else:
         args.yolo_model = findModel(args.yolo_model, args.yolo_sha1)
-    extract_frames(args.query, args.model, args.yolo_model, args.height, args.width, args.backend, args.target)
+    extract_frames(args.query, args.model, args.yolo_model)

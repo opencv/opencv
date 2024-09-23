@@ -87,12 +87,12 @@ Rect rect;
 
 string sha1, yoloSha1, modelPath;
 string queryImagePath, videoPath, yoloPath, backend, target;
-int resize_h, resize_w, yoloHeight, yoloWidth;
+int height, width, yoloHeight, yoloWidth;
 float scale, yoloScale;
 bool swapRB, yoloSwapRB;
 Scalar mean_v, stnd;
 
-static void extractFrames(Net* reidNet);
+static void extractFrames(Net& reidNet);
 
 int main(int argc, char **argv)
 {
@@ -119,8 +119,8 @@ int main(int argc, char **argv)
     yoloPath = findModel(parser.get<String>("yolo_model"), yoloSha1);
     backend = parser.get<String>("backend");
     target = parser.get<String>("target");
-    resize_h = parser.get<int>("height");
-    resize_w = parser.get<int>("width");
+    height = parser.get<int>("height");
+    width = parser.get<int>("width");
     yoloHeight = parser.get<int>("yolo_height");
     yoloWidth = parser.get<int>("yolo_width");
     scale = parser.get<float>("scale");
@@ -139,89 +139,53 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    extractFrames(&net);
+    extractFrames(net);
     return 0;
 }
 
-static Mat preprocess(const Mat &img)
-{
-    Mat ret = Mat(img.rows, img.cols, CV_32FC3);
-    for (int y = 0; y < ret.rows; y++)
-    {
-        for (int x = 0; x < ret.cols; x++)
-        {
-            for (int c = 0; c < 3; c++)
-            {
-                ret.at<Vec3f>(y,x)[c] = (float)((img.at<Vec3b>(y,x)[c] / 255.0 - mean_v[2 - c]) / stnd[2 - c]);
-            }
-        }
-    }
-    return ret;
-}
-
-static vector<float> normalization(const vector<float> &feature)
-{
-    vector<float> ret;
-    float sum = 0.0;
-    for (int i = 0; i < (int)feature.size(); i++)
-    {
-        sum += feature[i] * feature[i];
-    }
-    sum = sqrt(sum);
-    for (int i = 0; i < (int)feature.size(); i++)
-    {
-        ret.push_back(feature[i] / sum);
-    }
-    return ret;
-}
-
-static void extractFeatures(vector<Mat> &imglist, Net *net, vector<vector<float>> &features)
+static void extractFeatures(vector<Mat> &imglist, Net &net, vector<Mat> &features)
 {
     for (int st = 0; st < (int)imglist.size(); st++)
     {
-        Mat processed_img = preprocess(imglist[st]);
+        Mat blob;
+        blobFromImage(imglist[st], blob, scale, Size(width, height), mean_v, swapRB, false, CV_32F);
 
-        Mat blob = blobFromImage(processed_img, 1.0, Size(resize_w, resize_h), Scalar(), true, false, CV_32F);
-        net->setInput(blob);
-        Mat out=net->forward();
+        // Check if standard deviation values are non-zero
+        if (stnd[0] != 0.0 && stnd[1] != 0.0 && stnd[2] != 0.0)
+        {
+            // Divide blob by std for each channel
+            divide(blob, stnd, blob);
+        }
+        net.setInput(blob);
+        Mat out=net.forward();
         vector<int> s {out.size[0], out.size[1]};
         out = out.reshape(1, s);
         for (int i = 0; i < out.rows; i++)
         {
-            vector<float> temp_feature;
+            Mat temp_feature(1, out.cols, CV_32F);
             for (int j = 0; j < out.cols; j++)
             {
-                temp_feature.push_back(out.at<float>(i,j));
+                temp_feature.at<float>(0, j) = out.at<float>(i, j);
             }
-            features.push_back(normalization(temp_feature));
+            Mat norm_feature;
+            normalize(temp_feature, norm_feature, 1.0, 0.0, NORM_L2);
+            features.push_back(norm_feature);
         }
     }
     return;
 }
 
-static float similarity(const vector<float> &feature1, const vector<float> &feature2)
-{
-    float result = 0.0;
-    for (int i = 0; i < (int)feature1.size(); i++)
-    {
-        result += feature1[i] * feature2[i];
-    }
-    return result;
-}
-
-static int getTopK(const vector<vector<float>> &queryFeatures, const vector<vector<float>> &galleryFeatures)
+static int findMatching(const Mat &queryFeatures, const vector<Mat> &galleryFeatures)
 {
     if (queryFeatures.empty() || galleryFeatures.empty())
         return -1; // No valid index if either feature list is empty
 
     int bestIndex = -1;
-    float maxSimilarity = -1000000000.0;
-
-    const vector<float> &query = queryFeatures[0];
+    float maxSimilarity = FLT_MIN;
 
     for (int j = 0; j < (int)galleryFeatures.size(); j++)
     {
-        float currentSimilarity = similarity(query, galleryFeatures[j]);
+        float currentSimilarity = queryFeatures.dot(galleryFeatures[j]);
         if (currentSimilarity > maxSimilarity)
         {
             maxSimilarity = currentSimilarity;
@@ -233,14 +197,14 @@ static int getTopK(const vector<vector<float>> &queryFeatures, const vector<vect
 
 static vector<Mat> yoloDetector(Mat &frame, Net &net)
 {
-    int height = frame.rows;
-    int width = frame.cols;
+    int ht = frame.rows;
+    int wt = frame.cols;
 
-    int length = max(height, width);
+    int length = max(ht, wt);
 
-     Mat image = Mat::zeros(Size(length, length), frame.type());
+    Mat image = Mat::zeros(Size(length, length), frame.type());
 
-    frame.copyTo(image(Rect(0, 0, width, height)));
+    frame.copyTo(image(Rect(0, 0, wt, ht)));
 
     // Calculate the scale
     double norm_scale = static_cast<double>(length) / yoloWidth;
@@ -337,7 +301,7 @@ static void drawRectangle(int event, int x, int y, int, void* param) {
     }
 }
 
-void extractFrames(Net* reidNet) {
+void extractFrames(Net& reidNet) {
     VideoCapture cap;
     if (!videoPath.empty()){
         videoPath = findFile(videoPath);
@@ -387,7 +351,7 @@ void extractFrames(Net* reidNet) {
     }
 
     Mat frame;
-    vector<vector<float>> queryFeatures;
+    vector<Mat> queryFeatures;
     extractFeatures(queryImages, reidNet, queryFeatures);
 
     for(;;) {
@@ -396,13 +360,13 @@ void extractFrames(Net* reidNet) {
         }
         vector<Mat> detectedImages = yoloDetector(frame, net);
 
-        vector<vector<float>> galleryFeatures;
+        vector<Mat> galleryFeatures;
         extractFeatures(detectedImages, reidNet, galleryFeatures);
 
-        int topk_idx = getTopK(queryFeatures, galleryFeatures);
-        if (topk_idx != -1 && static_cast<int>(detectedImages.size()) > topk_idx) {
-            Mat topImg = detectedImages[topk_idx];
-            Rect bbox = imgDict[topImg];
+        int match_idx = findMatching(queryFeatures[0], galleryFeatures);
+        if (match_idx != -1 && static_cast<int>(detectedImages.size()) > match_idx) {
+            Mat matchImg = detectedImages[match_idx];
+            Rect bbox = imgDict[matchImg];
             rectangle(frame, bbox, Scalar(0, 0, 255), 2);
             putText(frame, "Target", Point(bbox.x, bbox.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 255), 2);
         }
