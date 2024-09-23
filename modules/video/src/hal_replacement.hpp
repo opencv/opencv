@@ -67,6 +67,27 @@ inline int hal_ni_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_st
 #define cv_hal_LKOpticalFlowLevel hal_ni_LKOpticalFlowLevel
 //! @endcond
 
+/**
+@brief Computes Schaar derivatives with inteleaved layout xyxy...
+@param src_data source image data
+@param src_step source image step
+@param dst_data destination buffer data
+@param dst_step destination buffer step
+@param width image width
+@param height image height
+@param cn source image channels
+**/
+inline int hal_ni_ScharrDeriv(const uchar* src_data, size_t src_step,
+                              short* dst_data, size_t dst_step,
+                              int width, int height, int cn)
+{
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+
+//! @cond IGNORED
+#define cv_hal_ScharrDeriv hal_ni_ScharrDeriv
+//! @endcond
+
 //! @}
 
 #if defined(__clang__)

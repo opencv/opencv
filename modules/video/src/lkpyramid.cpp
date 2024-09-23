@@ -63,6 +63,9 @@ static void calcScharrDeriv(const cv::Mat& src, cv::Mat& dst)
     int rows = src.rows, cols = src.cols, cn = src.channels(), depth = src.depth();
     CV_Assert(depth == CV_8U);
     dst.create(rows, cols, CV_MAKETYPE(DataType<deriv_type>::depth, cn*2));
+
+    CALL_HAL(ScharrDeriv, cv_hal_ScharrDeriv, src.data, src.step, (short*)dst.data, dst.step, cols, rows, cn);
+
     parallel_for_(Range(0, rows), cv::detail::ScharrDerivInvoker(src, dst), cv::getNumThreads());
 }
 
