@@ -232,7 +232,6 @@ module this is also quite easy to achieve. Below we will outline the sample impl
 
 @snippet samples/dnn/object_detection.cpp preprocess_params
 @snippet samples/dnn/object_detection.cpp preprocess_call
-@snippet samples/dnn/object_detection.cpp preprocess_call_func
 
 - Inference:
 
