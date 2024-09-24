@@ -97,15 +97,6 @@ static double computeReprojectionMSE(const Mat &obj_points_, const Mat &img_poin
     return norm(tmpImagePoints, NORM_L2SQR) / tmpImagePoints.rows;
 }
 
-static void computeExtrinsics(const Mat &obj_points_, const Mat &img_points_, const Matx33d &K, const Mat &distortion,
-               Vec3d &rvec, Vec3d &tvec, bool is_fisheye) {
-    if (is_fisheye) {
-        fisheye::solvePnP(obj_points_, img_points_, K, distortion, rvec, tvec, false, SOLVEPNP_ITERATIVE);
-    } else {
-        solvePnP(obj_points_, img_points_, K, distortion, rvec, tvec, false, SOLVEPNP_ITERATIVE);
-    }
-}
-
 static void establishValidPointMap(const std::vector<std::vector<Mat>>& imagePoints,
                         const std::vector<Size> &imageSize,
                         const std::vector<std::vector<bool>>& detection_mask_mat,
@@ -777,7 +768,8 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 // TODO: Add reprojection error check after solvePnP
 
                 const double err2 = multiview::computeReprojectionMSE(obj_points_valid[k][cnt_valid_frame], img_points_valid[k][cnt_valid_frame],
-                                                                      Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
+                                                                      Ks[k], distortions[k], Mat(rvecs_all[k][i]), Mat(tvecs_all[k][i]),
+                                                                      noArray(), noArray(), is_fisheye_vec[k]);
                 if (camera_rt_errors[i] > err2) {
                     camera_rt_errors[i] = err2;
                     camera_rt_best[i] = k;
