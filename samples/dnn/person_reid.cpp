@@ -10,16 +10,20 @@ Authors of samples and Youtu ReID baseline:
 
 Copyright (C) 2020-2021, Tencent.
 Copyright (C) 2020-2021, SUSTech.
+Copyright (C) 2024, Bigvision LLC.
 
 How to use:
     sample command to run:
 
-        ./person_reid --video=/path/to/videofile --model=path/to/youtu_reid_baseline_medium.onnx --yolo=path/to/yolov8n.onnx
+        ./example_dnn_person_reid
     The system will ask you to mark the person to be tracked
 
-    You can download a baseline ReID model from:
-        https://github.com/ReID-Team/ReID_extra_testdata
-    Drive Link: https://drive.google.com/drive/folders/1wFGcuolSzX3_PqNKb4BAV3DNac7tYpc2
+    You can download ReID model using:
+       `python download_models.py reid`
+    and yolo model using:
+       `python download_models.py yolov8`
+
+    Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to point to the directory where models are downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 */
 
 #include <iostream>
@@ -43,7 +47,7 @@ const string about = "Use this script for Person Re-identification using OpenCV.
 
 const string param_keys =
     "{help    h  |                   | show help message}"
-    "{ @alias    |                   | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ @alias    |       reid        | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo       | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
     "{query   q  |                   | Path to target image. Skip this argument to select target in the video frame.}"
     "{input   i  |                   | video file path}"
@@ -79,69 +83,12 @@ struct MatComparator
     }
 };
 
-// Global variable for drawing function to select target
 map<Mat, Rect, MatComparator> imgDict;
-bool drawing = false;
-int ix = -1, iy = -1;
-Rect rect;
-
-string sha1, yoloSha1, modelPath;
-string queryImagePath, videoPath, yoloPath, backend, target;
 int height, width, yoloHeight, yoloWidth;
 float scale, yoloScale;
 bool swapRB, yoloSwapRB;
 Scalar mean_v, stnd;
 
-static void extractFrames(Net& reidNet);
-
-int main(int argc, char **argv)
-{
-    CommandLineParser parser(argc, argv, keys);
-
-    if (!parser.has("@alias") || parser.has("help"))
-    {
-        cout<<about<<endl;
-        parser.printMessage();
-        return 0;
-    }
-    string modelName = parser.get<String>("@alias");
-    string zooFile = findFile(parser.get<String>("zoo"));
-    keys += genPreprocArguments(modelName, zooFile);
-    keys += genPreprocArguments(modelName, zooFile, "yolo_");
-    parser = CommandLineParser(argc, argv, keys);
-    parser.about("Use this script to run ReID networks using OpenCV.");
-
-    sha1 = parser.get<String>("sha1");
-    yoloSha1 = parser.get<String>("yolo_sha1");
-    modelPath = findModel(parser.get<String>("model"), sha1);
-    queryImagePath = parser.get<String>("query");
-    videoPath = parser.get<String>("input");
-    yoloPath = findModel(parser.get<String>("yolo_model"), yoloSha1);
-    backend = parser.get<String>("backend");
-    target = parser.get<String>("target");
-    height = parser.get<int>("height");
-    width = parser.get<int>("width");
-    yoloHeight = parser.get<int>("yolo_height");
-    yoloWidth = parser.get<int>("yolo_width");
-    scale = parser.get<float>("scale");
-    yoloScale = parser.get<float>("yolo_scale");
-    swapRB = parser.get<bool>("rgb");
-    yoloSwapRB = parser.get<bool>("yolo_rgb");
-    mean_v = parser.get<Scalar>("mean");
-    stnd = parser.get<Scalar>("std");
-
-    Net net = readNetFromONNX(modelPath);
-    net.setPreferableBackend(getBackendID(backend));
-    net.setPreferableTarget(getTargetID(target));
-
-    if(yoloPath.empty()){
-        cout<<"[ERROR] Please pass path to yolov8.onnx model file using --yolo."<<endl;
-        return -1;
-    }
-
-    extractFrames(net);
-    return 0;
-}
 
 static void extractFeatures(vector<Mat> &imglist, Net &net, vector<Mat> &features)
 {
@@ -274,34 +221,60 @@ static vector<Mat> yoloDetector(Mat &frame, Net &net)
     return images;
 }
 
-static void drawRectangle(int event, int x, int y, int, void* param) {
-    Mat& img = *(Mat*)param;
+int main(int argc, char **argv)
+{
+    CommandLineParser parser(argc, argv, keys);
 
-    switch (event) {
-        case EVENT_LBUTTONDOWN:
-            drawing = true;
-            ix = x;
-            iy = y;
-            break;
-
-        case EVENT_MOUSEMOVE:
-            if (drawing) {
-                Mat img_copy = img.clone();
-                rectangle(img_copy, Point(ix, iy), Point(x, y), Scalar(0, 255, 0), 2);
-                imshow("TRACKING", img_copy);
-            }
-            break;
-
-        case EVENT_LBUTTONUP:
-            drawing = false;
-            rect = Rect(Point(ix, iy), Point(x, y));
-            rectangle(img, rect, Scalar(0, 255, 0), 2);
-            imshow("TRACKING", img);
-            break;
+    if (!parser.has("@alias") || parser.has("help"))
+    {
+        cout<<about<<endl;
+        parser.printMessage();
+        return 0;
     }
-}
+    string modelName = parser.get<String>("@alias");
+    string zooFile = findFile(parser.get<String>("zoo"));
+    keys += genPreprocArguments(modelName, zooFile);
+    keys += genPreprocArguments(modelName, zooFile, "yolo_");
+    parser = CommandLineParser(argc, argv, keys);
+    parser.about("Use this script to run ReID networks using OpenCV.");
 
-void extractFrames(Net& reidNet) {
+    const string sha1 = parser.get<String>("sha1");
+    const string yoloSha1 = parser.get<String>("yolo_sha1");
+    const string modelPath = findModel(parser.get<String>("model"), sha1);
+    const string queryImagePath = parser.get<String>("query");
+    string videoPath = parser.get<String>("input");
+    const string yoloPath = findModel(parser.get<String>("yolo_model"), yoloSha1);
+    const string backend = parser.get<String>("backend");
+    const string target = parser.get<String>("target");
+    height = parser.get<int>("height");
+    width = parser.get<int>("width");
+    yoloHeight = parser.get<int>("yolo_height");
+    yoloWidth = parser.get<int>("yolo_width");
+    scale = parser.get<float>("scale");
+    yoloScale = parser.get<float>("yolo_scale");
+    swapRB = parser.get<bool>("rgb");
+    yoloSwapRB = parser.get<bool>("yolo_rgb");
+    mean_v = parser.get<Scalar>("mean");
+    stnd = parser.get<Scalar>("std");
+    int stdSize = 20;
+    int stdWeight = 400;
+    int stdImgSize = 512;
+    int imgWidth = -1; // Initialization
+    int fontSize = -1;
+    int fontWeight = -1;
+
+    Net reidNet = readNetFromONNX(modelPath);
+    reidNet.setPreferableBackend(getBackendID(backend));
+    reidNet.setPreferableTarget(getTargetID(target));
+
+    if(yoloPath.empty()){
+        cout<<"[ERROR] Please pass path to yolov8.onnx model file using --yolo_model."<<endl;
+        return -1;
+    }
+    Net net = readNetFromONNX(yoloPath);
+
+    FontFace fontFace("sans");
+
     VideoCapture cap;
     if (!videoPath.empty()){
         videoPath = findFile(videoPath);
@@ -312,40 +285,45 @@ void extractFrames(Net& reidNet) {
 
     if (!cap.isOpened()) {
         cerr << "Error: Video could not be opened." << endl;
-        return;
+        return -1;
     }
-
-    Net net = readNetFromONNX(yoloPath);
     vector<Mat> queryImages;
-
     Mat queryImg;
     if (!queryImagePath.empty()) {
         queryImg = imread(queryImagePath);
         if (queryImg.empty()) {
             cerr << "Error: Query image could not be loaded." << endl;
-            return;
+            return -1;
         }
         queryImages.push_back(queryImg);
     } else {
-        Mat firstFrame;
-        cap.read(firstFrame);
-        if (firstFrame.empty()) {
-            cerr << "Error reading the video" << endl;
-            return;
-        }
-
-        putText(firstFrame, "Draw Bounding Box on Target", Point(10, 30), FONT_HERSHEY_SIMPLEX, 0.6, Scalar(255, 0, 0), 2);
-        imshow("TRACKING", firstFrame);
-        setMouseCallback("TRACKING", drawRectangle, &firstFrame);
-
+        Mat image;
         for(;;) {
-            if (rect.width > 0 && rect.height > 0) {
-                queryImg = firstFrame(rect).clone();
-                queryImages.push_back(queryImg);
-                break;
+            cap.read(image);
+            if (image.empty()) {
+                cerr << "Error reading the video" << endl;
+                return -1;
             }
-            if (waitKey(1) == 'q' || waitKey(1) == 27) {
-                return;
+            if (imgWidth == -1){
+                imgWidth = min(image.rows, image.cols);
+                fontSize = (stdSize*imgWidth)/stdImgSize;
+                fontWeight = (stdWeight*imgWidth)/stdImgSize;
+            }
+
+            putText(image, "Press 's' to Draw Bounding Box, press 'Enter' after selecting", Point(10, 30), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+            imshow("TRACKING", image);
+            int key = waitKey(200);
+            if(key == 's' || key == 'S'){
+                Rect rect = selectROI("TRACKING", image);
+
+                if (rect.width > 0 && rect.height > 0) {
+                    queryImg = image(rect).clone();
+                    queryImages.push_back(queryImg);
+                    break;
+                }
+            }
+            if (key == 'q' || key == 27) {
+                return 0;
             }
         }
     }
@@ -358,6 +336,11 @@ void extractFrames(Net& reidNet) {
         if (!cap.read(frame) || frame.empty()) {
             break;
         }
+        if (imgWidth == -1){
+            imgWidth = min(frame.rows, frame.cols);
+            fontSize = (stdSize*imgWidth)/stdImgSize;
+            fontWeight = (stdWeight*imgWidth)/stdImgSize;
+        }
         vector<Mat> detectedImages = yoloDetector(frame, net);
 
         vector<Mat> galleryFeatures;
@@ -368,12 +351,12 @@ void extractFrames(Net& reidNet) {
             Mat matchImg = detectedImages[match_idx];
             Rect bbox = imgDict[matchImg];
             rectangle(frame, bbox, Scalar(0, 0, 255), 2);
-            putText(frame, "Target", Point(bbox.x, bbox.y - 10), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 0, 255), 2);
+            putText(frame, "Target", Point(bbox.x, bbox.y - 10), Scalar(0,0,255), fontFace, fontSize, fontWeight);
         }
 
-        putText(frame, "Tracking", Point(10, 30), FONT_HERSHEY_SIMPLEX, 0.6, Scalar(255, 0, 0), 2);
+        putText(frame, "Tracking", Point(10, 30), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         imshow("TRACKING", frame);
-        int key = waitKey(1);
+        int key = waitKey(30);
         if (key == 'q' || key == 27) {
             break;
         }
@@ -381,4 +364,5 @@ void extractFrames(Net& reidNet) {
 
     cap.release();
     destroyAllWindows();
+    return 0;
 }

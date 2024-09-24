@@ -11,17 +11,18 @@ Authors of samples and Youtu ReID baseline:
 
 Copyright (C) 2020-2021, Tencent.
 Copyright (C) 2020-2021, SUSTech.
+Copyright (C) 2024, Bigvision LLC.
 
 How to use:
     sample command to run:
+        `python person_reid.py`
 
-        python person_reid.py --query=/path/to/query_image(optional) --video=/path/to/video/footage --model=path/to/youtu_reid_baseline_medium.onnx --yolo=/path/to/yolov8.onnx
+    You can download ReID model using
+        `python download_models.py reid`
+    and yolo model using:
+        `python download_models.py yolov8`
 
-    You can download a baseline ReID model from:
-        https://github.com/ReID-Team/ReID_extra_testdata
-
-    Drive Link: https://drive.google.com/drive/folders/1wFGcuolSzX3_PqNKb4BAV3DNac7tYpc2
-
+    Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to point to the directory where models are downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 '''
 import argparse
 import os.path
@@ -71,16 +72,13 @@ def get_args_parser():
             "cuda: CUDA, "
             "cuda_fp16: CUDA fp16 (half-float preprocess)")
     args, _ = parser.parse_known_args()
-    add_preproc_args(args.zoo, parser, 'person_reid', prefix="")
-    add_preproc_args(args.zoo, parser, 'person_reid', prefix="yolo_")
+    add_preproc_args(args.zoo, parser, 'person_reid', prefix="", alias="reid")
+    add_preproc_args(args.zoo, parser, 'person_reid', prefix="yolo_", alias="reid")
     parser = argparse.ArgumentParser(parents=[parser],
                                         description='Person Re-identification using OpenCV.',
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     return parser.parse_args()
 
-drawing = False
-ix, iy = -1, -1
-rect = None
 img_dict = {} # Dictionary to store bounding boxes for corresponding cropped image
 
 def yolo_detector(frame, net):
@@ -119,7 +117,6 @@ def yolo_detector(frame, net):
             scores.append(maxScore)
             class_ids.append(maxClassIndex)
 
-
     # Apply Non-Maximum Suppression
     indexes = cv.dnn.NMSBoxes(boxes, scores, 0.25, 0.45, 0.5)
 
@@ -138,111 +135,27 @@ def yolo_detector(frame, net):
         img_dict[crop_img.tobytes()] = (x, y, w, h)
     return images
 
-def draw_rectangle(event, x, y, flags, param):
-    global ix, iy, drawing, rect
-
-    if event == cv.EVENT_LBUTTONDOWN:
-        drawing = True
-        ix, iy = x, y
-
-    elif event == cv.EVENT_MOUSEMOVE:
-        if drawing:
-            img_copy = param[0].copy()
-            cv.rectangle(img_copy, (ix, iy), (x, y), (0, 255, 0), 2)
-            cv.imshow('TRACKING', img_copy)
-
-    elif event == cv.EVENT_LBUTTONUP:
-        drawing = False
-        rect = (ix, iy, x, y)
-        cv.rectangle(param[0], (ix, iy), (x, y), (0, 255, 0), 2)
-        cv.imshow('TRACKING', param[0])
-
-def extract_frames(query_image_path, model_path, yolo_path, batch_size=32):
-    cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
-    net = cv.dnn.readNet(yolo_path)
-    query_images = []
-
-    if query_image_path:
-        query_images = [cv.imread(query_image_path)]
-    else:
-        ret, first_frame = cap.read()
-        if not ret:
-            print("Error reading the video")
-            return
-        cv.putText(first_frame, "Draw Bounding Box on Target", (10, 30), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
-        cv.imshow('TRACKING', first_frame)
-        cv.setMouseCallback('TRACKING', draw_rectangle, [first_frame])
-
-        while True:
-            if rect:
-                break
-            if cv.waitKey(1) & 0xFF == ord('q'):
-                return
-
-        x1, y1, x2, y2 = rect
-        query_image = first_frame[y1:y2, x1:x2]
-        query_images = [query_image]
-
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-        images = yolo_detector(frame, net)
-        query_feat = extract_feature(query_images, model_path, batch_size)
-        gallery_feat = extract_feature(images, model_path, batch_size)
-
-        match_idx = find_matching(query_feat, gallery_feat)
-
-        match_img = images[match_idx]
-        x, y, w, h = img_dict[match_img.tobytes()]
-        cv.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
-        cv.putText(frame, "Target", (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-
-        cv.putText(frame, "Tracking", (10, 30), cv.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
-        cv.imshow("TRACKING", frame)
-        if cv.waitKey(1) & 0xFF in [ord('q'), 27]:
-            break
-
-    cap.release()
-    cv.destroyAllWindows()
-    return
-
-def extract_feature(images, model_path, batch_size = 32):
+def extract_feature(images, net):
     """
     Extract features from images
     :param images: the input images
-    :param model_path: path to ReID model
-    :param batch_size: the batch size for each network inference iteration
+    :param net: the model network
     """
     feat_list = []
+    # net = reid_net.copy()
+    for img in images:
+        blob = cv.dnn.blobFromImage(img, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=args.rgb, crop=False, ddepth=cv.CV_32F)
 
-    for i in range(0, len(images), batch_size):
-        batch = images[i : min(i + batch_size, len(images))]
-        blob = cv.dnn.blobFromImages(batch, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=args.rgb, crop=False, ddepth=cv.CV_32F)
+        for j in range(blob.shape[1]):
+            blob[:, j, :, :] /= args.std[j]
 
-        for i in range(blob.shape[1]):
-            blob[:, i, :, :] /= args.std[i]
-
-        feat = run_net(blob, model_path)
-
+        net.setInput(blob)
+        feat = net.forward()
+        feat = np.reshape(feat, (feat.shape[0], feat.shape[1]))
         feat_list.append(feat)
 
     feats = np.concatenate(feat_list, axis = 0)
     return feats
-
-def run_net(inputs, model_path):
-    """
-    Forword propagation for a batch of images.
-    :param inputs: input batch of images
-    :param model_path: path to ReID model
-    """
-    net = cv.dnn.readNet(model_path)
-    net.setPreferableBackend(get_backend_id(args.backend))
-    net.setPreferableTarget(get_target_id(args.target))
-    net.setInput(inputs)
-    out = net.forward()
-    out = np.reshape(out, (out.shape[0], out.shape[1]))
-    return out
 
 def find_matching(query_feat, gallery_feat):
     """
@@ -257,9 +170,8 @@ def find_matching(query_feat, gallery_feat):
     index = np.argmax(sim, axis=1)[0]
     return index
 
-if __name__ == '__main__':
-    args = get_args_parser()
-    if args.alias is None or hasattr(args, 'help'):
+def main():
+    if hasattr(args, 'help'):
         help()
         exit(1)
 
@@ -272,4 +184,78 @@ if __name__ == '__main__':
         exit(1)
     else:
         args.yolo_model = findModel(args.yolo_model, args.yolo_sha1)
-    extract_frames(args.query, args.model, args.yolo_model)
+
+    yolo_net = cv.dnn.readNet(args.yolo_model)
+    reid_net = cv.dnn.readNet(args.model)
+    reid_net.setPreferableBackend(get_backend_id(args.backend))
+    reid_net.setPreferableTarget(get_target_id(args.target))
+    cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
+    query_images = []
+
+    stdSize = 0.65
+    stdWeight = 2
+    stdImgSize = 512
+    imgWidth = -1 # Initialization
+    fontSize = -1
+    fontThickness = -1
+
+    if args.query:
+        query_images = [cv.imread(findFile(args.query))]
+    else:
+        while True:
+            ret, image = cap.read()
+            if not ret:
+                print("Error reading the video")
+                return -1
+            if imgWidth == -1:
+                imgWidth = min(image.shape[:2])
+                fontSize = (stdSize*imgWidth)/stdImgSize
+                fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
+
+            cv.putText(image, "Press 's' to Draw Bounding Box, press 'Enter' after selecting", (10, 30), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+            cv.imshow('TRACKING', image)
+
+            key = cv.waitKey(100) & 0xFF
+            if key == ord('s'):
+                rect = cv.selectROI("TRACKING", image)
+                if rect:
+                    x, y, w, h = rect
+                    query_image = image[y:y + h, x:x + w]
+                    query_images = [query_image]
+                    break
+
+            if key == ord('q') or key == 27:
+                return
+
+    query_feat = extract_feature(query_images, reid_net)
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if imgWidth == -1:
+            imgWidth = min(frame.shape[:2])
+            fontSize = (stdSize*imgWidth)/stdImgSize
+            fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
+
+        images = yolo_detector(frame, yolo_net)
+        gallery_feat = extract_feature(images, reid_net)
+
+        match_idx = find_matching(query_feat, gallery_feat)
+
+        match_img = images[match_idx]
+        x, y, w, h = img_dict[match_img.tobytes()]
+        cv.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        cv.putText(frame, "Target", (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 255), fontThickness)
+
+        cv.putText(frame, "Tracking", (10, 30), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+        cv.imshow("TRACKING", frame)
+        if cv.waitKey(1) & 0xFF in [ord('q'), 27]:
+            break
+
+    cap.release()
+    cv.destroyAllWindows()
+    return
+
+if __name__ == '__main__':
+    args = get_args_parser()
+    main()
