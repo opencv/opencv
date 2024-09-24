@@ -823,7 +823,7 @@ unsigned int cv::ogl::Buffer::bufId() const
 // ogl::VertexArray
 #ifndef HAVE_OPENGL
 
-class cv::ogl::VertexArray
+class cv::ogl::VertexArray::Impl
 {
 };
 
