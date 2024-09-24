@@ -1843,6 +1843,22 @@ void warpAffineLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step
                 };
                 vst3_u8(dstptr + x*3, result);
             }
+
+            for (; x < dstcols; x++) {
+                float sx = x*M[0] + y*M[1] + M[2];
+                float sy = x*M[3] + y*M[4] + M[5];
+                int ix = cvFloor(sx), iy = cvFloor(sy);
+                sx -= ix; sy -= iy;
+                int p00r, p00g, p00b, p01r, p01g, p01b;
+                int p10r, p10g, p10b, p11r, p11g, p11b;
+                const uint8_t *srcptr = src + srcstep * iy + ix*3;
+
+                CV_WARP_LINEAR_SCALAR_SHUFFLE(C3);
+
+                CV_WARP_LINEAR_SCALAR_INTER_CALC_F32(C3);
+
+                CV_WARP_LINEAR_SCALAR_STORE(C3, 8U);
+            }
         }
 
     };
@@ -2087,6 +2103,22 @@ void warpAffineLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step
                     vqmovun_s16(vcvtnq_s16_f16(f00a.val)),
                 };
                 vst4_u8(dstptr + x*4, result);
+            }
+
+            for (; x < dstcols; x++) {
+                float sx = x*M[0] + y*M[1] + M[2];
+                float sy = x*M[3] + y*M[4] + M[5];
+                int ix = cvFloor(sx), iy = cvFloor(sy);
+                sx -= ix; sy -= iy;
+                int p00r, p00g, p00b, p00a, p01r, p01g, p01b, p01a;
+                int p10r, p10g, p10b, p10a, p11r, p11g, p11b, p11a;
+                const uint8_t *srcptr = src + srcstep * iy + ix*4;
+
+                CV_WARP_LINEAR_SCALAR_SHUFFLE(C4);
+
+                CV_WARP_LINEAR_SCALAR_INTER_CALC_F32(C4);
+
+                CV_WARP_LINEAR_SCALAR_STORE(C4, 8U);
             }
         }
     };
