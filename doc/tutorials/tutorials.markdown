@@ -10,7 +10,7 @@ OpenCV Tutorials {#tutorial_root}
 - @subpage tutorial_table_of_content_features2d - feature detectors, descriptors and matching framework
 - @subpage tutorial_table_of_content_dnn - infer neural networks using built-in _dnn_ module
 - @subpage tutorial_table_of_content_gapi - graph-based approach to computer vision algorithms building
-- @subpage tutorial_table_of_content_other - other modules (objdetect, stitching, video, photo)
+- @subpage tutorial_table_of_content_other - other modules (stitching, video, photo)
 - @subpage tutorial_table_of_content_ios - running OpenCV on an iDevice
 - @subpage tutorial_table_of_content_3d - 3d objects processing and visualisation
 @cond CUDA_MODULES

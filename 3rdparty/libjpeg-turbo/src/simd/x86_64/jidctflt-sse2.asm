@@ -2,8 +2,9 @@
 ; jidctflt.asm - floating-point IDCT (64-bit SSE & SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2009, 2016, D. R. Commander.
+; Copyright (C) 2009, 2016, 2024, D. R. Commander.
 ; Copyright (C) 2018, Matthias Räncker.
+; Copyright (C) 2023, Aliaksiej Kandracienka.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -24,18 +25,18 @@
 
 ; --------------------------------------------------------------------------
 
-%macro unpcklps2 2  ; %1=(0 1 2 3) / %2=(4 5 6 7) => %1=(0 1 4 5)
+%macro UNPCKLPS2 2  ; %1=(0 1 2 3) / %2=(4 5 6 7) => %1=(0 1 4 5)
     shufps      %1, %2, 0x44
 %endmacro
 
-%macro unpckhps2 2  ; %1=(0 1 2 3) / %2=(4 5 6 7) => %1=(2 3 6 7)
+%macro UNPCKHPS2 2  ; %1=(0 1 2 3) / %2=(4 5 6 7) => %1=(2 3 6 7)
     shufps      %1, %2, 0xEE
 %endmacro
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_idct_float_sse2)
 
 EXTN(jconst_idct_float_sse2):
@@ -47,7 +48,7 @@ PD_M2_613       times 4  dd -2.613125929752753055713286
 PD_RNDINT_MAGIC times 4  dd  100663296.0  ; (float)(0x00C00000 << 3)
 PB_CENTERJSAMP  times 16 db  CENTERJSAMPLE
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -65,8 +66,7 @@ PB_CENTERJSAMP  times 16 db  CENTERJSAMPLE
 ; r12 = JSAMPARRAY output_buf
 ; r13d = JDIMENSION output_col
 
-%define original_rbp  rbp + 0
-%define wk(i)         rbp - (WK_NUM - (i)) * SIZEOF_XMMWORD
+%define wk(i)         r15 - (WK_NUM - (i)) * SIZEOF_XMMWORD
                                         ; xmmword wk[WK_NUM]
 %define WK_NUM        2
 %define workspace     wk(0) - DCTSIZE2 * SIZEOF_FAST_FLOAT
@@ -76,14 +76,15 @@ PB_CENTERJSAMP  times 16 db  CENTERJSAMPLE
     GLOBAL_FUNCTION(jsimd_idct_float_sse2)
 
 EXTN(jsimd_idct_float_sse2):
+    ENDBR64
     push        rbp
-    mov         rax, rsp                     ; rax = original rbp
-    sub         rsp, byte 4
+    mov         rbp, rsp
+    push        r15
     and         rsp, byte (-SIZEOF_XMMWORD)  ; align to 128 bits
-    mov         [rsp], rax
-    mov         rbp, rsp                     ; rbp = aligned rbp
+    ; Allocate stack space for wk array.  r15 is used to access it.
+    mov         r15, rsp
     lea         rsp, [workspace]
-    collect_args 4
+    COLLECT_ARGS 4
     push        rbx
 
     ; ---- Pass 1: process columns from input, store into work array.
@@ -280,11 +281,11 @@ EXTN(jsimd_idct_float_sse2):
     unpckhps    xmm4, xmm0              ; xmm4=(42 52 43 53)
 
     movaps      xmm3, xmm6              ; transpose coefficients(phase 2)
-    unpcklps2   xmm6, xmm7              ; xmm6=(00 10 20 30)
-    unpckhps2   xmm3, xmm7              ; xmm3=(01 11 21 31)
+    UNPCKLPS2   xmm6, xmm7              ; xmm6=(00 10 20 30)
+    UNPCKHPS2   xmm3, xmm7              ; xmm3=(01 11 21 31)
     movaps      xmm0, xmm1              ; transpose coefficients(phase 2)
-    unpcklps2   xmm1, xmm2              ; xmm1=(02 12 22 32)
-    unpckhps2   xmm0, xmm2              ; xmm0=(03 13 23 33)
+    UNPCKLPS2   xmm1, xmm2              ; xmm1=(02 12 22 32)
+    UNPCKHPS2   xmm0, xmm2              ; xmm0=(03 13 23 33)
 
     movaps      xmm7, XMMWORD [wk(0)]   ; xmm7=(60 70 61 71)
     movaps      xmm2, XMMWORD [wk(1)]   ; xmm2=(62 72 63 73)
@@ -295,11 +296,11 @@ EXTN(jsimd_idct_float_sse2):
     movaps      XMMWORD [XMMBLOCK(3,0,rdi,SIZEOF_FAST_FLOAT)], xmm0
 
     movaps      xmm6, xmm5              ; transpose coefficients(phase 2)
-    unpcklps2   xmm5, xmm7              ; xmm5=(40 50 60 70)
-    unpckhps2   xmm6, xmm7              ; xmm6=(41 51 61 71)
+    UNPCKLPS2   xmm5, xmm7              ; xmm5=(40 50 60 70)
+    UNPCKHPS2   xmm6, xmm7              ; xmm6=(41 51 61 71)
     movaps      xmm3, xmm4              ; transpose coefficients(phase 2)
-    unpcklps2   xmm4, xmm2              ; xmm4=(42 52 62 72)
-    unpckhps2   xmm3, xmm2              ; xmm3=(43 53 63 73)
+    UNPCKLPS2   xmm4, xmm2              ; xmm4=(42 52 62 72)
+    UNPCKHPS2   xmm3, xmm2              ; xmm3=(43 53 63 73)
 
     movaps      XMMWORD [XMMBLOCK(0,1,rdi,SIZEOF_FAST_FLOAT)], xmm5
     movaps      XMMWORD [XMMBLOCK(1,1,rdi,SIZEOF_FAST_FLOAT)], xmm6
@@ -322,7 +323,6 @@ EXTN(jsimd_idct_float_sse2):
 
     ; ---- Pass 2: process rows from work array, store into output array.
 
-    mov         rax, [original_rbp]
     lea         rsi, [workspace]        ; FAST_FLOAT *wsptr
     mov         rdi, r12                ; (JSAMPROW *)
     mov         eax, r13d
@@ -471,9 +471,9 @@ EXTN(jsimd_idct_float_sse2):
     jnz         near .rowloop
 
     pop         rbx
-    uncollect_args 4
-    mov         rsp, rbp                ; rsp <- aligned rbp
-    pop         rsp                     ; rsp <- original rbp
+    UNCOLLECT_ARGS 4
+    lea         rsp, [rbp-8]
+    pop         r15
     pop         rbp
     ret
 

@@ -187,12 +187,10 @@ public:
         CV_Assert(inputs.size());
         for (auto input : inputs)
         {
-            if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-                CV_CheckTypeEQ(input, CV_32F, "Unsupported type");
-            else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_32S, "");
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+                CV_CheckType(input, input == CV_16F || input == CV_32S || input == CV_64S || input == CV_8S || input == CV_8U || input == CV_Bool, "");
             else
-                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_32S, "");
+                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S || input == CV_8S || input == CV_8U || input == CV_Bool, "");
         }
 
         outputs.assign(requiredOutputs, inputs[0]);
@@ -339,11 +337,13 @@ public:
             mnew_stride.copyTo(unew_stride);
         }
 
-        bool use_half = (inps.depth() == CV_16F);
-        String opts = format("-DDtype=%s", use_half ? "half" : "float");
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            ocl::Kernel kernel("permute", ocl::dnn::permute_oclsrc, opts);
+            String matType = matTypeToOclType(inputs[0].type());
+            String opts = " -DDtype=" + matType;
+            String kname = "permute_" + matType;
+
+            ocl::Kernel kernel(kname.c_str(), ocl::dnn::permute_oclsrc, opts);
 
             kernel.set(0, (int)_count);
             kernel.set(1, ocl::KernelArg::PtrReadOnly(inputs[i]));
@@ -366,15 +366,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   inputs_arr.depth() != CV_8S && inputs_arr.depth() != CV_32S,
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
-
-        if (inputs_arr.depth() == CV_16F)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
@@ -392,69 +385,71 @@ public:
         }
         else
         {
-            size_t i, j, count = _count, numAxes = _numAxes;
-            const size_t* newStride = &_newStride[0];
-            const size_t* oldStride = &_oldStride[0];
-            const size_t* order = &_order[0];
-
             for (k = 0; k < ninputs; k++)
             {
-                const Mat& inp = inputs[k];
-                Mat& out = outputs[k];
+                CV_Assert(inputs[k].dims == _numAxes && inputs[k].size == inputs[0].size);
+                CV_Assert(outputs[k].dims == _numAxes && outputs[k].size == outputs[0].size);
 
-                CV_Assert(inp.dims == numAxes && inp.size == inputs[0].size);
-                CV_Assert(out.dims == numAxes && out.size == outputs[0].size);
-
-                CV_Assert(inp.isContinuous() && out.isContinuous());
-                // CV_Assert(inp.type() == CV_32F && out.type() == CV_32F);
-
-                if( numAxes == 4 )
+                switch (inputs[k].depth())
                 {
-                    int nstripes = getNumThreads();
-                    if (inp.type() == CV_8S)
-                        PermuteInvoker<int8_t>::run(inp, out, _order, nstripes);
-                    else
-                        PermuteInvoker<float>::run(inp, out, _order, nstripes);
+                case CV_32F:
+                    forward_impl<float>(inputs[k], outputs[k]);
+                    break;
+                case CV_16F:
+                    forward_impl<int16_t>(inputs[k], outputs[k]);
+                    break;
+                case CV_32S:
+                    forward_impl<int32_t>(inputs[k], outputs[k]);
+                    break;
+                case CV_64S:
+                    forward_impl<int64_t>(inputs[k], outputs[k]);
+                    break;
+                case CV_8S:
+                    forward_impl<int8_t>(inputs[k], outputs[k]);
+                    break;
+                case CV_8U:
+                    forward_impl<uint8_t>(inputs[k], outputs[k]);
+                    break;
+                case CV_Bool:
+                    forward_impl<bool>(inputs[k], outputs[k]);
+                    break;
+                default:
+                    CV_Error(Error::BadDepth, "unsupported mat type");
                 }
-                else
+            }
+        }
+    }
+
+    template <class T>
+    void forward_impl(const Mat& inp, Mat& out)
+    {
+        const size_t* newStride = &_newStride[0];
+        const size_t* oldStride = &_oldStride[0];
+        const size_t* order = &_order[0];
+
+        CV_Assert(inp.isContinuous() && out.isContinuous());
+
+        if( _numAxes == 4 )
+        {
+            int nstripes = getNumThreads();
+            PermuteInvoker<T>::run(inp, out, _order, nstripes);
+        }
+        else
+        {
+            const T *srcData = inp.ptr<T>();
+            T *dstData = out.ptr<T>();
+
+            for (size_t i = 0; i < _count; ++i)
+            {
+                size_t oldPosition = 0;
+                size_t newPosition = i;
+
+                for (size_t j = 0; j < _numAxes; ++j)
                 {
-                    if (inp.type() == CV_8S)
-                    {
-                        const int8_t *srcData = inp.ptr<int8_t>();
-                        int8_t *dstData = out.ptr<int8_t>();
-
-                        for (i = 0; i < count; ++i)
-                        {
-                            size_t oldPosition = 0;
-                            size_t newPosition = i;
-
-                            for (j = 0; j < numAxes; ++j)
-                            {
-                                oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
-                                newPosition %= newStride[j];
-                            }
-                            dstData[i] = srcData[oldPosition];
-                        }
-                    }
-                    else
-                    {
-                        const float *srcData = inp.ptr<float>();
-                        float *dstData = out.ptr<float>();
-
-                        for (i = 0; i < count; ++i)
-                        {
-                            size_t oldPosition = 0;
-                            size_t newPosition = i;
-
-                            for (j = 0; j < numAxes; ++j)
-                            {
-                                oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
-                                newPosition %= newStride[j];
-                            }
-                            dstData[i] = srcData[oldPosition];
-                        }
-                    }
+                    oldPosition += (newPosition / newStride[j]) * oldStride[order[j]];
+                    newPosition %= newStride[j];
                 }
+                dstData[i] = srcData[oldPosition];
             }
         }
     }
@@ -495,9 +490,9 @@ public:
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<int64_t> order(_order.begin(), _order.end());
-        auto tr_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                       ngraph::Shape({order.size()}), order.data());
-        auto transpose = std::make_shared<ngraph::op::Transpose>(ieInpNode, tr_axes);
+        auto tr_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                       ov::Shape({order.size()}), order.data());
+        auto transpose = std::make_shared<ov::op::v1::Transpose>(ieInpNode, tr_axes);
         return Ptr<BackendNode>(new InfEngineNgraphNode(transpose));
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -525,7 +520,10 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        return make_cuda_node<cuda4dnn::PermuteOp>(preferableTarget, std::move(context->stream), _order);
+        if (inputs[0]->getHostMatDepth() == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::PermuteOp>(std::move(context->stream), _order);
+        else
+            return make_cuda_node_with_type<cuda4dnn::PermuteOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), _order);
     }
 #endif
 

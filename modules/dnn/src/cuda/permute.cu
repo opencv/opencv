@@ -107,6 +107,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
 
     template void transpose(const Stream&, Span<__half>, View<__half>, std::size_t, std::size_t);
     template void transpose(const Stream&, Span<float>, View<float>, std::size_t, std::size_t);
+    template void transpose(const Stream&, Span<int8_t>, View<int8_t>, std::size_t, std::size_t);
+    template void transpose(const Stream&, Span<uint8_t>, View<uint8_t>, std::size_t, std::size_t);
+    template void transpose(const Stream&, Span<int32_t>, View<int32_t>, std::size_t, std::size_t);
+    template void transpose(const Stream&, Span<int64_t>, View<int64_t>, std::size_t, std::size_t);
 
     template <class T, std::size_t Rank> static
     void launch_permute_kernel(
@@ -284,5 +288,10 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace kernels {
     template void permute(const Stream&, TensorSpan<__half>, TensorView<__half>, std::vector<std::size_t>);
 #endif
     template void permute(const Stream&, TensorSpan<float>, TensorView<float>, std::vector<std::size_t>);
+    template void permute(const Stream&, TensorSpan<int8_t>, TensorView<int8_t>, std::vector<std::size_t>);
+    template void permute(const Stream&, TensorSpan<uint8_t>, TensorView<uint8_t>, std::vector<std::size_t>);
+    template void permute(const Stream&, TensorSpan<int32_t>, TensorView<int32_t>, std::vector<std::size_t>);
+    template void permute(const Stream&, TensorSpan<int64_t>, TensorView<int64_t>, std::vector<std::size_t>);
+    template void permute(const Stream&, TensorSpan<bool>, TensorView<bool>, std::vector<std::size_t>);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

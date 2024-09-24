@@ -4,7 +4,7 @@ import org.opencv.core.Point
 import org.opencv.core.Scalar
 import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
-import org.opencv.objdetect.CascadeClassifier
+import org.opencv.xobjdetect.CascadeClassifier
 import reflect._
 
 /*

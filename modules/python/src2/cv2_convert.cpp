@@ -56,7 +56,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
     if(!o || o == Py_None)
     {
         if( !m.data )
-            m.allocator = &g_numpyAllocator;
+            m.allocator = &GetNumpyAllocator();
         return true;
     }
 
@@ -137,7 +137,9 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                typenum == NPY_INT32 ? CV_32S :
                typenum == NPY_HALF ? CV_16F :
                typenum == NPY_FLOAT ? CV_32F :
-               typenum == NPY_DOUBLE ? CV_64F : -1;
+               typenum == NPY_DOUBLE ? CV_64F :
+               typenum == NPY_BOOL ? CV_Bool :
+               -1;
 
     if( type < 0 )
     {
@@ -173,7 +175,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     CV_LOG_DEBUG(NULL, "Incoming ndarray '" << info.name << "': ndims=" << ndims << "  _sizes=" << pycv_dumpArray(_sizes, ndims) << "  _strides=" << pycv_dumpArray(_strides, ndims));
 
-    bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
+    bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX && !info.nd_mat;
     if (pyopencv_Mat_TypePtr && PyObject_TypeCheck(o, pyopencv_Mat_TypePtr))
     {
         bool wrapChannels = false;
@@ -298,14 +300,14 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 #endif
 
     m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
-    m.u = g_numpyAllocator.allocate(o, ndims, size, type, step);
+    m.u = GetNumpyAllocator().allocate(o, ndims, size, type, step);
     m.addref();
 
     if( !needcopy )
     {
         Py_INCREF(o);
     }
-    m.allocator = &g_numpyAllocator;
+    m.allocator = &GetNumpyAllocator();
 
     return true;
 }
@@ -316,9 +318,9 @@ PyObject* pyopencv_from(const cv::Mat& m)
     if( !m.data )
         Py_RETURN_NONE;
     cv::Mat temp, *p = (cv::Mat*)&m;
-    if(!p->u || p->allocator != &g_numpyAllocator)
+    if(!p->u || p->allocator != &GetNumpyAllocator())
     {
-        temp.allocator = &g_numpyAllocator;
+        temp.allocator = &GetNumpyAllocator();
         ERRWRAP2(m.copyTo(temp));
         p = &temp;
     }

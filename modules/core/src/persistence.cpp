@@ -98,9 +98,11 @@ char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero
         }
         else
         {
-            static const char* fmt = "%.16e";
+            // binary64 has 52 bit fraction with hidden bit.
+            // 53 * log_10(2) is 15.955. So "%.16f" should be fine, but its test fails.
+            snprintf( buf, bufSize, "%.17g", value );
+
             char* ptr = buf;
-            snprintf( buf, bufSize, fmt, value );
             if( *ptr == '+' || *ptr == '-' )
                 ptr++;
             for( ; cv_isdigit(*ptr); ptr++ )
@@ -140,11 +142,21 @@ char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision,
         }
         else
         {
-            char* ptr = buf;
             if (halfprecision)
-                snprintf(buf, bufSize, "%.4e", value);
+            {
+                // bfloat16 has 7 bit fraction with hidden bit.
+                // binary16 has 10 bit fraction with hidden bit.
+                // 11 * log_10(2) is 3.311. So "%.4f" should be fine, but its test fails.
+                snprintf(buf, bufSize, "%.5g", value);
+            }
             else
-                snprintf(buf, bufSize, "%.8e", value);
+            {
+                // binray32 has 23 bit fraction with hidden bit.
+                // 24 * log_10(2) is 7.225. So "%.8f" should be fine, but its test fails.
+                snprintf(buf, bufSize, "%.9g", value);
+            }
+
+            char* ptr = buf;
             if( *ptr == '+' || *ptr == '-' )
                 ptr++;
             for( ; cv_isdigit(*ptr); ptr++ )
@@ -294,8 +306,8 @@ int calcStructSize( const char* dt, int initial_size )
         case 'n': { elem_max_size = std::max( elem_max_size, sizeof(unsigned) ); break; }
         case 'f': { elem_max_size = std::max( elem_max_size, sizeof(float ) ); break; }
         case 'd': { elem_max_size = std::max( elem_max_size, sizeof(double) ); break; }
-        case 'h': { elem_max_size = std::max( elem_max_size, sizeof(float16_t)); break; }
-        case 'H': { elem_max_size = std::max( elem_max_size, sizeof(bfloat16_t)); break; }
+        case 'h': { elem_max_size = std::max( elem_max_size, sizeof(hfloat)); break; }
+        case 'H': { elem_max_size = std::max( elem_max_size, sizeof(bfloat)); break; }
         case 'I': { elem_max_size = std::max( elem_max_size, sizeof(int64_t)); break; }
         case 'U': { elem_max_size = std::max( elem_max_size, sizeof(uint64_t)); break; }
         default:
@@ -1172,12 +1184,12 @@ void FileStorage::Impl::writeRawData(const std::string &dt, const void *_data, s
                         data += sizeof(double);
                         break;
                     case CV_16F:
-                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(float16_t *) data, true, explicitZero);
-                        data += sizeof(float16_t);
+                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(hfloat *) data, true, explicitZero);
+                        data += sizeof(hfloat);
                         break;
                     case CV_16BF:
-                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(bfloat16_t *) data, true, explicitZero);
-                        data += sizeof(bfloat16_t);
+                        ptr = fs::floatToString(buf, sizeof(buf), (float) *(bfloat *) data, true, explicitZero);
+                        data += sizeof(bfloat);
                         break;
                     default:
                         CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported type");
@@ -1856,7 +1868,7 @@ char *FileStorage::Impl::parseBase64(char *ptr, int indent, FileNode &collection
                         node_type = FileNode::REAL;
                         break;
                     case CV_16F:
-                        fval = (float) float16_t::fromBits(base64decoder.getUInt16());
+                        fval = float(hfloatFromBits(base64decoder.getUInt16()));
                         node_type = FileNode::REAL;
                         break;
                     default:
@@ -2663,12 +2675,12 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             data += sizeof(double);
                             break;
                         case CV_16F:
-                            *(float16_t*)data = float16_t((float)ival);
-                            data += sizeof(float16_t);
+                            *(hfloat*)data = hfloat((float)ival);
+                            data += sizeof(hfloat);
                             break;
                         case CV_16BF:
-                            *(bfloat16_t*)data = bfloat16_t((float)ival);
-                            data += sizeof(bfloat16_t);
+                            *(bfloat*)data = bfloat((float)ival);
+                            data += sizeof(bfloat);
                             break;
                         default:
                             CV_Error( Error::StsUnsupportedFormat, "Unsupported type" );
@@ -2721,12 +2733,12 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             data += sizeof(double);
                             break;
                         case CV_16F:
-                            *(float16_t*)data = float16_t((float)fval);
-                            data += sizeof(float16_t);
+                            *(hfloat*)data = hfloat((float)fval);
+                            data += sizeof(hfloat);
                             break;
                         case CV_16BF:
-                            *(bfloat16_t*)data = bfloat16_t((float)fval);
-                            data += sizeof(bfloat16_t);
+                            *(bfloat*)data = bfloat((float)fval);
+                            data += sizeof(bfloat);
                             break;
                         default:
                             CV_Error( Error::StsUnsupportedFormat, "Unsupported type" );

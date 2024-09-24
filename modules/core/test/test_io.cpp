@@ -1191,11 +1191,7 @@ TEST(Core_InputOutput, FileStorage_DMatch)
 
     EXPECT_NO_THROW(fs << "d" << d);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
-    EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+000 ]\n");
-#else
-    EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+00 ]\n");
-#endif
+    EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5 ]\n");
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1222,25 +1218,14 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector)
 
     EXPECT_NO_THROW(fs << "dv" << dv);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
 "dv:\n"
-"   - [ 1, 2, 3, -1.5000000000000000e+000 ]\n"
-"   - [ 2, 3, 4, 1.5000000000000000e+000 ]\n"
-"   - [ 3, 2, 1, 5.0000000000000000e-001 ]\n"
+"   - [ 1, 2, 3, -1.5 ]\n"
+"   - [ 2, 3, 4, 1.5 ]\n"
+"   - [ 3, 2, 1, 0.5 ]\n"
 );
-#else
-    EXPECT_STREQ(fs_result.c_str(),
-"%YAML:1.0\n"
-"---\n"
-"dv:\n"
-"   - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
-"   - [ 2, 3, 4, 1.5000000000000000e+00 ]\n"
-"   - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
-);
-#endif
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1280,33 +1265,18 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
     EXPECT_NO_THROW(fs << "dvv" << dvv);
     cv::String fs_result = fs.releaseAndGetString();
 #ifndef OPENCV_TRAITS_ENABLE_DEPRECATED
-#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
 "dvv:\n"
 "   -\n"
-"      - [ 1, 2, 3, -1.5000000000000000e+000 ]\n"
-"      - [ 2, 3, 4, 1.5000000000000000e+000 ]\n"
-"      - [ 3, 2, 1, 5.0000000000000000e-001 ]\n"
+"      - [ 1, 2, 3, -1.5 ]\n"
+"      - [ 2, 3, 4, 1.5 ]\n"
+"      - [ 3, 2, 1, 0.5 ]\n"
 "   -\n"
-"      - [ 3, 2, 1, 5.0000000000000000e-001 ]\n"
-"      - [ 1, 2, 3, -1.5000000000000000e+000 ]\n"
+"      - [ 3, 2, 1, 0.5 ]\n"
+"      - [ 1, 2, 3, -1.5 ]\n"
 );
-#else
-    EXPECT_STREQ(fs_result.c_str(),
-"%YAML:1.0\n"
-"---\n"
-"dvv:\n"
-"   -\n"
-"      - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
-"      - [ 2, 3, 4, 1.5000000000000000e+00 ]\n"
-"      - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
-"   -\n"
-"      - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
-"      - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
-);
-#endif
 #endif // OPENCV_TRAITS_ENABLE_DEPRECATED
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
@@ -1988,5 +1958,71 @@ TEST(Core_InputOutput, FileStorage_invalid_path_regression_21448_JSON)
     fs.release();
 }
 
+// see https://github.com/opencv/opencv/issues/25073
+typedef testing::TestWithParam< std::string > Core_InputOutput_regression_25073;
+
+TEST_P(Core_InputOutput_regression_25073, my_double)
+{
+    cv::String res = "";
+    double my_double = 0.5;
+
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "my_double" << my_double );
+    EXPECT_NO_THROW( fs << "my_int" << 5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.5"), String::npos ) << res; // Found "0.5"
+    EXPECT_EQ( res.find("5.0"), String::npos ) << res; // Not Found "5.000000000000000000e-01"
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_regression_25073, my_float)
+{
+    cv::String res = "";
+    float my_float = 0.5;
+
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "my_float" << my_float );
+    EXPECT_NO_THROW( fs << "my_int" << 5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.5"), String::npos ) << res; // Found "0.5"
+    EXPECT_EQ( res.find("5.0"), String::npos ) << res; // Not Found "5.00000000e-01",
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_regression_25073, my_hfloat)
+{
+    cv::String res = "";
+    cv::hfloat my_hfloat(0.5);
+
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "my_hfloat" << my_hfloat );
+    EXPECT_NO_THROW( fs << "my_int" << 5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.5"), String::npos ) << res; // Found "0.5".
+    EXPECT_EQ( res.find("5.0"), String::npos ) << res; // Not Found "5.0000e-01".
+    fs.release();
+}
+
+INSTANTIATE_TEST_CASE_P( /*nothing*/,
+    Core_InputOutput_regression_25073,
+    Values("test.json", "test.xml", "test.yml") );
+
+// see https://github.com/opencv/opencv/issues/25946
+TEST(Core_InputOutput, FileStorage_invalid_attribute_value_regression_25946)
+{
+    const std::string fileName = cv::tempfile("FileStorage_invalid_attribute_value_exception_test.xml");
+    const std::string content = "<?xml \n_=";
+
+    std::fstream testFile;
+    testFile.open(fileName.c_str(), std::fstream::out);
+    if(!testFile.is_open()) FAIL();
+    testFile << content;
+    testFile.close();
+
+    FileStorage fs;
+    EXPECT_ANY_THROW( fs.open(fileName, FileStorage::READ + FileStorage::FORMAT_XML) );
+
+    ASSERT_EQ(0, std::remove(fileName.c_str()));
+}
 
 }} // namespace

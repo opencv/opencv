@@ -6,7 +6,7 @@ import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.xobjdetect.CascadeClassifier;
 
 /*
  * Detects faces in an image, draws boxes around them, and writes the results

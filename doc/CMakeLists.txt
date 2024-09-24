@@ -17,8 +17,8 @@ endif()
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
   if (DOXYGEN_VERSION VERSION_LESS 1.9.8)
-    message(WARNING "Found doxygen ${DOXYGEN_VERSION}, version 1.9.8 is used for testing, there is
-                     a chance your documentation will look different or have some limitations.")
+    message(WARNING "Found doxygen ${DOXYGEN_VERSION}, version 1.9.8 is used for testing, there is "
+                    "a chance your documentation will look different or have some limitations.")
   endif()
   add_custom_target(doxygen)
 
@@ -200,12 +200,17 @@ if(DOXYGEN_FOUND)
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tutorial-utils.js")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_HTML_FILES "${CMAKE_DOXYGEN_HTML_FILES}")
 
-  set(OPENCV_MATHJAX_RELPATH "https://cdn.jsdelivr.net/npm/mathjax@3.0.1" CACHE STRING "URI to a MathJax installation")
-
-  set(OPENCV_DOCS_DOT_PATH "" CACHE PATH "Doxygen/DOT_PATH value")
+  if (DOXYGEN_DOT_EXECUTABLE)
+    message(STATUS "Found DOT executable: ${DOXYGEN_DOT_EXECUTABLE}")
+    set(init_dot_path "${DOXYGEN_DOT_EXECUTABLE}")
+    set(init_dot_mode "YES")
+  else()
+    set(init_dot_path "")
+    set(init_dot_mode "NO")
+  endif()
+  set(OPENCV_DOCS_DOT_PATH "${init_dot_path}" CACHE PATH "Doxygen/DOT_PATH value")
+  set(OPENCV_DOCS_HAVE_DOT "${init_dot_mode}" CACHE BOOL "Doxygen: build extra diagrams")
   set(CMAKECONFIG_DOT_PATH "${OPENCV_DOCS_DOT_PATH}")
-
-  set(OPENCV_DOCS_HAVE_DOT "NO" CACHE BOOL "Doxygen: build extra diagrams")
   set(CMAKECONFIG_HAVE_DOT "${OPENCV_DOCS_HAVE_DOT}")
 
   # 'png' is good enough for compatibility (but requires +50% storage space)
@@ -245,12 +250,6 @@ if(DOXYGEN_FOUND)
   elseif(DEFINED OPENCV_JS_LOCATION)
     list(APPEND js_assets "${OPENCV_JS_LOCATION}")
   endif()
-
-  # copy haar cascade files
-  set(haar_cascade_files "")
-  set(data_harrcascades_path "${OpenCV_SOURCE_DIR}/data/haarcascades/")
-  list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
-  list(APPEND js_assets "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
 
   foreach(f ${js_assets})
     get_filename_component(fname "${f}" NAME)

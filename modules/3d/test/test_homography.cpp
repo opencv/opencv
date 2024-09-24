@@ -46,12 +46,6 @@
 
 namespace opencv_test { namespace {
 
-#define CALIB3D_HOMOGRAPHY_ERROR_MATRIX_SIZE 1
-#define CALIB3D_HOMOGRAPHY_ERROR_MATRIX_DIFF 2
-#define CALIB3D_HOMOGRAPHY_ERROR_REPROJ_DIFF 3
-#define CALIB3D_HOMOGRAPHY_ERROR_RANSAC_MASK 4
-#define CALIB3D_HOMOGRAPHY_ERROR_RANSAC_DIFF 5
-
 #define MESSAGE_MATRIX_SIZE "Homography matrix must have 3*3 sizes."
 #define MESSAGE_MATRIX_DIFF "Accuracy of homography transformation matrix less than required."
 #define MESSAGE_REPROJ_DIFF_1 "Reprojection error for current pair of points more than required."
@@ -297,7 +291,7 @@ TEST(Calib3d_Homography, accuracy)
                         if (!check_matrix_size(H_res_64[j]))
                         {
                             print_information_1(j, N, method, H_res_64[j]);
-                            CV_Error(CALIB3D_HOMOGRAPHY_ERROR_MATRIX_SIZE, MESSAGE_MATRIX_SIZE);
+                            CV_Error(cv::Error::StsError, MESSAGE_MATRIX_SIZE);
                             return;
                         }
 
@@ -307,7 +301,7 @@ TEST(Calib3d_Homography, accuracy)
                             if (!check_matrix_diff(H_64, H_res_64[j], NORM_TYPE[k], diff))
                             {
                             print_information_2(j, N, method, H_64, H_res_64[j], k, diff);
-                            CV_Error(CALIB3D_HOMOGRAPHY_ERROR_MATRIX_DIFF, MESSAGE_MATRIX_DIFF);
+                            CV_Error(cv::Error::StsError, MESSAGE_MATRIX_DIFF);
                             return;
                         }
                     }
@@ -330,7 +324,7 @@ TEST(Calib3d_Homography, accuracy)
                         if (!check_matrix_size(H_res_64[j]))
                         {
                             print_information_1(j, N, method, H_res_64[j]);
-                            CV_Error(CALIB3D_HOMOGRAPHY_ERROR_MATRIX_SIZE, MESSAGE_MATRIX_SIZE);
+                            CV_Error(cv::Error::StsError, MESSAGE_MATRIX_SIZE);
                             return;
                         }
 
@@ -338,7 +332,7 @@ TEST(Calib3d_Homography, accuracy)
                             if (!check_matrix_diff(H_64, H_res_64[j], NORM_TYPE[k], diff))
                             {
                             print_information_2(j, N, method, H_64, H_res_64[j], k, diff);
-                            CV_Error(CALIB3D_HOMOGRAPHY_ERROR_MATRIX_DIFF, MESSAGE_MATRIX_DIFF);
+                            CV_Error(cv::Error::StsError, MESSAGE_MATRIX_DIFF);
                             return;
                         }
 
@@ -350,9 +344,9 @@ TEST(Calib3d_Homography, accuracy)
 
                             switch (code)
                             {
-                            case 1: { CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_MASK, MESSAGE_RANSAC_MASK_1); break; }
-                            case 2: { CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_MASK, MESSAGE_RANSAC_MASK_2); break; }
-                            case 3: { CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_MASK, MESSAGE_RANSAC_MASK_3); break; }
+                            case 1: { CV_Error(cv::Error::StsError, MESSAGE_RANSAC_MASK_1); break; }
+                            case 2: { CV_Error(cv::Error::StsError, MESSAGE_RANSAC_MASK_2); break; }
+                            case 3: { CV_Error(cv::Error::StsError, MESSAGE_RANSAC_MASK_3); break; }
 
                             default: break;
                             }
@@ -400,7 +394,7 @@ TEST(Calib3d_Homography, accuracy)
                         if (!check_matrix_size(H_res_64[j]))
                         {
                             print_information_1(j, N, method, H_res_64[j]);
-                            CV_Error(CALIB3D_HOMOGRAPHY_ERROR_MATRIX_SIZE, MESSAGE_MATRIX_SIZE);
+                            CV_Error(cv::Error::StsError, MESSAGE_MATRIX_SIZE);
                             return;
                         }
 
@@ -424,7 +418,7 @@ TEST(Calib3d_Homography, accuracy)
                                 if (cv::norm(tmp_mat_3d, dst_mat_3d.col(k), NORM_TYPE[l]) - cv::norm(noise_2d.col(k), NORM_TYPE[l]) > max_2diff)
                                 {
                                 print_information_4(method, j, N, k, l, cv::norm(tmp_mat_3d, dst_mat_3d.col(k), NORM_TYPE[l]) - cv::norm(noise_2d.col(k), NORM_TYPE[l]));
-                                CV_Error(CALIB3D_HOMOGRAPHY_ERROR_REPROJ_DIFF, MESSAGE_REPROJ_DIFF_1);
+                                CV_Error(cv::Error::StsError, MESSAGE_REPROJ_DIFF_1);
                                 return;
                             }
 
@@ -434,7 +428,7 @@ TEST(Calib3d_Homography, accuracy)
                             if (cv::norm(dst_res_3d, dst_mat_3d, NORM_TYPE[l]) - cv::norm(noise_2d, NORM_TYPE[l]) > max_diff)
                             {
                             print_information_5(method, j, N, l, cv::norm(dst_res_3d, dst_mat_3d, NORM_TYPE[l]) - cv::norm(noise_2d, NORM_TYPE[l]));
-                            CV_Error(CALIB3D_HOMOGRAPHY_ERROR_REPROJ_DIFF, MESSAGE_REPROJ_DIFF_2);
+                            CV_Error(cv::Error::StsError, MESSAGE_REPROJ_DIFF_2);
                             return;
                         }
 
@@ -457,7 +451,7 @@ TEST(Calib3d_Homography, accuracy)
                         if (!check_matrix_size(H_res_64[j]))
                         {
                             print_information_1(j, N, method, H_res_64[j]);
-                            CV_Error(CALIB3D_HOMOGRAPHY_ERROR_MATRIX_SIZE, MESSAGE_MATRIX_SIZE);
+                            CV_Error(cv::Error::StsError, MESSAGE_MATRIX_SIZE);
                             return;
                         }
 
@@ -469,8 +463,8 @@ TEST(Calib3d_Homography, accuracy)
 
                             switch (code)
                             {
-                            case 1: { CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_MASK, MESSAGE_RANSAC_MASK_1); break; }
-                            case 2: { CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_MASK, MESSAGE_RANSAC_MASK_3); break; }
+                            case 1: { CV_Error(cv::Error::StsError, MESSAGE_RANSAC_MASK_1); break; }
+                            case 2: { CV_Error(cv::Error::StsError, MESSAGE_RANSAC_MASK_3); break; }
 
                             default: break;
                             }
@@ -498,14 +492,14 @@ TEST(Calib3d_Homography, accuracy)
                             if (mask_res[j].at<bool>(k, 0) != (diff <= reproj_threshold))
                             {
                                 print_information_6(method, j, N, k, diff, mask_res[j].at<bool>(k, 0));
-                                CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_MASK, MESSAGE_RANSAC_MASK_4);
+                                CV_Error(cv::Error::StsError, MESSAGE_RANSAC_MASK_4);
                                 return;
                             }
 
                             if (mask.at<bool>(k, 0) && !mask_res[j].at<bool>(k, 0))
                             {
                                 print_information_7(method, j, N, k, diff, mask.at<bool>(k, 0), mask_res[j].at<bool>(k, 0));
-                                CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_MASK, MESSAGE_RANSAC_MASK_5);
+                                CV_Error(cv::Error::StsError, MESSAGE_RANSAC_MASK_5);
                                 return;
                             }
 
@@ -525,7 +519,7 @@ TEST(Calib3d_Homography, accuracy)
                                     if (diff - cv::norm(noise_2d, NORM_TYPE[l]) > max_2diff)
                                     {
                                         print_information_8(method, j, N, k, l, diff - cv::norm(noise_2d, NORM_TYPE[l]));
-                                        CV_Error(CALIB3D_HOMOGRAPHY_ERROR_RANSAC_DIFF, MESSAGE_RANSAC_DIFF);
+                                        CV_Error(cv::Error::StsError, MESSAGE_RANSAC_DIFF);
                                         return;
                                     }
                                 }
@@ -703,6 +697,65 @@ TEST(Calib3d_Homography, minPoints)
 
     // findHomography should raise an error since npoints < MIN_COUNT_OF_POINTS
     EXPECT_THROW(findHomography(p1, p2, RANSAC, 0.01, mask), cv::Exception);
+}
+
+TEST(Calib3d_Homography, not_normalized)
+{
+    Mat_<double> p1({5, 2}, {-1, -1, -2, -2, -1, 1, -2, 2, -1, 0});
+    Mat_<double> p2({5, 2}, {0, -1, -1, -1, 0, 0, -1, 0, 0, -0.5});
+    Mat_<double> ref({3, 3}, {
+        0.74276086, 0., 0.74276086,
+        0.18569022, 0.18569022, 0.,
+        -0.37138043, 0., 0.
+    });
+
+    for (int method : std::vector<int>({0, RANSAC, LMEDS}))
+    {
+        Mat h = findHomography(p1, p2, method);
+        for (auto it = h.begin<double>(); it != h.end<double>(); ++it) {
+            ASSERT_FALSE(cvIsNaN(*it)) << cv::format("method %d\nResult:\n", method) << h;
+        }
+        if (h.at<double>(0, 0) * ref.at<double>(0, 0) < 0) {
+            h *= -1;
+        }
+        ASSERT_LE(cv::norm(h, ref, NORM_INF), 1e-8) << cv::format("method %d\nResult:\n", method) << h;
+    }
+}
+
+TEST(Calib3d_Homography, Refine)
+{
+    Mat_<double> p1({10, 2}, {41, -86, -87, 99, 66, -96, -86, -8, -67, 24,
+                              -87, -76, -19, 89, 37, -4, -86, -86, -66, -53});
+    Mat_<double> p2({10, 2}, {
+        0.007723226608700208, -1.177541410622515,
+        -0.1909072353027552, -0.4247610181930323,
+        -0.134992319993638, -0.6469949816560389,
+        -0.3570627451405215, 0.1811469436293486,
+        -0.3005671881038939, -0.02325733734262935,
+        -0.4404509481789249, 0.4851526464158342,
+        0.6343346428859541, -3.396187657072353,
+        -0.3539383967092603, 0.1469447227353143,
+        -0.4526924606856586, 0.5296757109061794,
+        -0.4309974583614644, 0.4522732662733471
+    });
+    hconcat(p1, Mat::ones(p1.rows, 1, CV_64F), p1);
+    hconcat(p2, Mat::ones(p2.rows, 1, CV_64F), p2);
+
+    for(int method : std::vector<int>({0, RANSAC, LMEDS}))
+    {
+        Mat h = findHomography(p1, p2, method);
+        EXPECT_NEAR(h.at<double>(2, 2), 1.0, 1e-7);
+
+        Mat proj = p1 * h.t();
+        proj.col(0) /= proj.col(2);
+        proj.col(1) /= proj.col(2);
+
+        Mat error;
+        cv::pow(p2.colRange(0, 2) - proj.colRange(0, 2), 2, error);
+        cv::reduce(error, error, 1, REDUCE_SUM);
+        cv::reduce(error, error, 0, REDUCE_AVG);
+        EXPECT_LE(sqrt(error.at<double>(0, 0)), method == LMEDS ? 7e-2 : 7e-5);
+    }
 }
 
 }} // namespace

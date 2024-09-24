@@ -45,8 +45,8 @@ namespace cv { namespace hal {
     DECLARE_SIMPLE_BINARY_OP(opname##32s, int); \
     DECLARE_SIMPLE_BINARY_OP(opname##64u, uint64); \
     DECLARE_SIMPLE_BINARY_OP(opname##64s, int64); \
-    DECLARE_SIMPLE_BINARY_OP(opname##16f, float16_t); \
-    DECLARE_SIMPLE_BINARY_OP(opname##16bf, bfloat16_t); \
+    DECLARE_SIMPLE_BINARY_OP(opname##16f, hfloat); \
+    DECLARE_SIMPLE_BINARY_OP(opname##16bf, bfloat); \
     DECLARE_SIMPLE_BINARY_OP(opname##32f, float); \
     DECLARE_SIMPLE_BINARY_OP(opname##64f, double)
 
@@ -74,8 +74,8 @@ DECLARE_CMP_OP(cmp32u, unsigned);
 DECLARE_CMP_OP(cmp32s, int);
 DECLARE_CMP_OP(cmp64u, uint64);
 DECLARE_CMP_OP(cmp64s, int64);
-DECLARE_CMP_OP(cmp16f, float16_t);
-DECLARE_CMP_OP(cmp16bf, bfloat16_t);
+DECLARE_CMP_OP(cmp16f, hfloat);
+DECLARE_CMP_OP(cmp16bf, bfloat);
 DECLARE_CMP_OP(cmp32f, float);
 DECLARE_CMP_OP(cmp64f, double);
 
@@ -94,8 +94,8 @@ DECLARE_CMP_OP(cmp64f, double);
     DECLARE_SCALED_BINARY_OP(opname##32s, int, scale_arg); \
     DECLARE_SCALED_BINARY_OP(opname##64u, uint64, scale_arg); \
     DECLARE_SCALED_BINARY_OP(opname##64s, int64, scale_arg); \
-    DECLARE_SCALED_BINARY_OP(opname##16f, float16_t, scale_arg); \
-    DECLARE_SCALED_BINARY_OP(opname##16bf, bfloat16_t, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##16f, hfloat, scale_arg); \
+    DECLARE_SCALED_BINARY_OP(opname##16bf, bfloat, scale_arg); \
     DECLARE_SCALED_BINARY_OP(opname##32f, float, scale_arg); \
     DECLARE_SCALED_BINARY_OP(opname##64f, double, scale_arg)
 
@@ -223,8 +223,8 @@ void opname(const T1* src1, size_t step1, \
     DEFINE_SIMPLE_BINARY_OP(opname##32s, int, v_int32, scalar_op, vec_op) \
     DEFINE_SIMPLE_BINARY_OP_NOSIMD(opname##64u, uint64, uint64, scalar_op_u64) \
     DEFINE_SIMPLE_BINARY_OP_NOSIMD(opname##64s, int64, int64, scalar_op) \
-    DEFINE_SIMPLE_BINARY_OP_16F(opname##16f, float16_t, scalar_op, vec_op) \
-    DEFINE_SIMPLE_BINARY_OP_16F(opname##16bf, bfloat16_t, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP_16F(opname##16f, hfloat, scalar_op, vec_op) \
+    DEFINE_SIMPLE_BINARY_OP_16F(opname##16bf, bfloat, scalar_op, vec_op) \
     DEFINE_SIMPLE_BINARY_OP(opname##32f, float, v_float32, scalar_op, vec_op) \
     DEFINE_SIMPLE_BINARY_OP_64F(opname##64f, scalar_op, vec_op)
 
@@ -245,8 +245,8 @@ DEFINE_SIMPLE_BINARY_OP_NOSIMD(absdiff32u, unsigned, unsigned, scalar_absdiffu)
 DEFINE_SIMPLE_BINARY_OP_NOSIMD(absdiff32s, int, int, scalar_absdiff)
 DEFINE_SIMPLE_BINARY_OP_NOSIMD(absdiff64u, uint64, uint64, scalar_absdiffu)
 DEFINE_SIMPLE_BINARY_OP_NOSIMD(absdiff64s, int64, int64, scalar_absdiff)
-DEFINE_SIMPLE_BINARY_OP_16F(absdiff16f, float16_t, scalar_absdiff, v_absdiff)
-DEFINE_SIMPLE_BINARY_OP_16F(absdiff16bf, bfloat16_t, scalar_absdiff, v_absdiff)
+DEFINE_SIMPLE_BINARY_OP_16F(absdiff16f, hfloat, scalar_absdiff, v_absdiff)
+DEFINE_SIMPLE_BINARY_OP_16F(absdiff16bf, bfloat, scalar_absdiff, v_absdiff)
 DEFINE_SIMPLE_BINARY_OP(absdiff32f, float, v_float32, scalar_absdiff, v_absdiff)
 DEFINE_SIMPLE_BINARY_OP_64F(absdiff64f, scalar_absdiff, v_absdiff)
 
@@ -457,8 +457,8 @@ static void opname(const T1* src1, size_t step1, \
     DEFINE_CMP_OP_32(opname##32s, int, v_int32, scalar_op, vec_op) \
     DEFINE_CMP_OP_64(opname##64u, uint64, scalar_op) \
     DEFINE_CMP_OP_64(opname##64s, int64, scalar_op) \
-    DEFINE_CMP_OP_16F(opname##16f, float16_t, scalar_op, vec_op) \
-    DEFINE_CMP_OP_16F(opname##16bf, bfloat16_t, scalar_op, vec_op) \
+    DEFINE_CMP_OP_16F(opname##16f, hfloat, scalar_op, vec_op) \
+    DEFINE_CMP_OP_16F(opname##16bf, bfloat, scalar_op, vec_op) \
     DEFINE_CMP_OP_32(opname##32f, float, v_float32, scalar_op, vec_op) \
     DEFINE_CMP_OP_64(opname##64f, double, scalar_op)
 
@@ -504,8 +504,8 @@ DEFINE_CMP_OP(32u, unsigned)
 DEFINE_CMP_OP(32s, int)
 DEFINE_CMP_OP(64u, uint64)
 DEFINE_CMP_OP(64s, int64)
-DEFINE_CMP_OP(16f, float16_t)
-DEFINE_CMP_OP(16bf, bfloat16_t)
+DEFINE_CMP_OP(16f, hfloat)
+DEFINE_CMP_OP(16bf, bfloat)
 DEFINE_CMP_OP(32f, float)
 DEFINE_CMP_OP(64f, double)
 
@@ -805,8 +805,8 @@ void opname(const T1* src1, size_t step1, const T1* src2, size_t step2, \
     DEFINE_SCALED_OP_NOSIMD(opname##64s, scale_arg, int64, double, iscalar_op, init##_nosimd_f64, when_binary) \
     DEFINE_SCALED_OP_32(opname##32f, scale_arg, float, v_float32, fscalar_op, fvec_op, init##_f32, vx_load, v_store, when_binary) \
     DEFINE_SCALED_OP_64F(opname##64f, scale_arg, fscalar_op, fvec_op, init##_f64, when_binary) \
-    DEFINE_SCALED_OP_16F(opname##16f, scale_arg, float16_t, fscalar_op, fvec_op, init##_f32, when_binary) \
-    DEFINE_SCALED_OP_16F(opname##16bf, scale_arg, bfloat16_t, fscalar_op, fvec_op, init##_f32, when_binary)
+    DEFINE_SCALED_OP_16F(opname##16f, scale_arg, hfloat, fscalar_op, fvec_op, init##_f32, when_binary) \
+    DEFINE_SCALED_OP_16F(opname##16bf, scale_arg, bfloat, fscalar_op, fvec_op, init##_f32, when_binary)
 
 
 DEFINE_SCALED_OP_ALLTYPES(mul, double scale, scalar_mul, scalar_mul, vec_mul, vec_mul, init_muldiv, this_is_binary)
@@ -838,8 +838,8 @@ void opname(const decl_type* src1, size_t step1, const decl_type* src2, size_t s
     DEFINE_BINARY_OP_DISPATCHER(opname##32s, int, int) \
     DEFINE_BINARY_OP_DISPATCHER(opname##64u, uint64, uint64) \
     DEFINE_BINARY_OP_DISPATCHER(opname##64s, int64, int64) \
-    DEFINE_BINARY_OP_DISPATCHER(opname##16f, cv_hal_f16, float16_t) \
-    DEFINE_BINARY_OP_DISPATCHER(opname##16bf, cv_hal_bf16, bfloat16_t) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##16f, cv_hal_f16, hfloat) \
+    DEFINE_BINARY_OP_DISPATCHER(opname##16bf, cv_hal_bf16, bfloat) \
     DEFINE_BINARY_OP_DISPATCHER(opname##32f, float, float) \
     DEFINE_BINARY_OP_DISPATCHER(opname##64f, double, double)
 
@@ -879,8 +879,8 @@ DEFINE_CMP_OP_DISPATCHER(cmp32u, unsigned, unsigned)
 DEFINE_CMP_OP_DISPATCHER(cmp32s, int, int)
 DEFINE_CMP_OP_DISPATCHER(cmp64u, uint64, uint64)
 DEFINE_CMP_OP_DISPATCHER(cmp64s, int64, int64)
-DEFINE_CMP_OP_DISPATCHER(cmp16f, cv_hal_f16, float16_t)
-DEFINE_CMP_OP_DISPATCHER(cmp16bf, cv_hal_bf16, bfloat16_t)
+DEFINE_CMP_OP_DISPATCHER(cmp16f, cv_hal_f16, hfloat)
+DEFINE_CMP_OP_DISPATCHER(cmp16bf, cv_hal_bf16, bfloat)
 DEFINE_CMP_OP_DISPATCHER(cmp32f, float, float)
 DEFINE_CMP_OP_DISPATCHER(cmp64f, double, double)
 
@@ -906,8 +906,8 @@ void opname(const decl_type* src1, size_t step1, const decl_type* src2, size_t s
     DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##32s, int, int, read_params, paramname) \
     DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##64u, uint64, uint64, read_params, paramname) \
     DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##64s, int64, int64, read_params, paramname) \
-    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##16f, cv_hal_f16, float16_t, read_params, paramname) \
-    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##16bf, cv_hal_bf16, bfloat16_t, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##16f, cv_hal_f16, hfloat, read_params, paramname) \
+    DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##16bf, cv_hal_bf16, bfloat, read_params, paramname) \
     DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##32f, float, float, read_params, paramname) \
     DEFINE_BINARY_OP_W_PARAMS_DISPATCHER(opname##64f, double, double, read_params, paramname)
 
@@ -940,8 +940,8 @@ DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip32u, unsigned, unsigned, double scale =
 DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip32s, int, int, double scale = *(double*)params_, scale)
 DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip64u, uint64, uint64, double scale = *(double*)params_, scale)
 DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip64s, int64, int64, double scale = *(double*)params_, scale)
-DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip16f, cv_hal_f16, float16_t, double scale = *(double*)params_, scale)
-DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip16bf, cv_hal_bf16, bfloat16_t, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip16f, cv_hal_f16, hfloat, double scale = *(double*)params_, scale)
+DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip16bf, cv_hal_bf16, bfloat, double scale = *(double*)params_, scale)
 DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip32f, float, float, double scale = *(double*)params_, scale)
 DEFINE_UNARY_OP_W_PARAMS_DISPATCHER(recip64f, double, double, double scale = *(double*)params_, scale)
 

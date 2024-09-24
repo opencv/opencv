@@ -3,7 +3,7 @@ Introduction to Principal Component Analysis (PCA) {#tutorial_introduction_to_pc
 
 @tableofcontents
 
-@prev_tutorial{tutorial_barcode_detect_and_decode}
+@prev_tutorial{tutorial_optical_flow}
 
 |    |    |
 | -: | :- |

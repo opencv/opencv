@@ -43,11 +43,7 @@
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#include "opencv2/core/openvx/ovx_defs.hpp"
-
 #include "opencv2/core/utils/tls.hpp"
-
-void cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform );
 
 namespace cv
 {
@@ -838,64 +834,6 @@ private:
 
 }
 
-#ifdef HAVE_OPENVX
-namespace cv
-{
-    namespace ovx {
-        template <> inline bool skipSmallImages<VX_KERNEL_HISTOGRAM>(int w, int h) { return w*h < 2048 * 1536; }
-    }
-    static bool openvx_calchist(const Mat& image, OutputArray _hist, const int histSize,
-        const float* _range)
-    {
-        vx_int32 offset = (vx_int32)(_range[0]);
-        vx_uint32 range = (vx_uint32)(_range[1] - _range[0]);
-        if (float(offset) != _range[0] || float(range) != (_range[1] - _range[0]))
-            return false;
-
-        size_t total_size = image.total();
-        int rows = image.dims > 1 ? image.size[0] : 1, cols = rows ? (int)(total_size / rows) : 0;
-        if (image.dims > 2 && !(image.isContinuous() && cols > 0 && (size_t)rows*cols == total_size))
-            return false;
-
-        try
-        {
-            ivx::Context ctx = ovx::getOpenVXContext();
-#if VX_VERSION <= VX_VERSION_1_0
-            if (ctx.vendorID() == VX_ID_KHRONOS && (range % histSize))
-                return false;
-#endif
-
-            ivx::Image
-                img = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                    ivx::Image::createAddressing(cols, rows, 1, (vx_int32)(image.step[0])), image.data);
-
-            ivx::Distribution vxHist = ivx::Distribution::create(ctx, histSize, offset, range);
-            ivx::IVX_CHECK_STATUS(vxuHistogram(ctx, img, vxHist));
-
-            _hist.create(1, &histSize, CV_32F);
-            Mat hist = _hist.getMat(), ihist = hist;
-            ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK) | CV_32S;
-            vxHist.copyTo(ihist);
-            ihist.convertTo(hist, CV_32F);
-
-#ifdef VX_VERSION_1_1
-            img.swapHandle();
-#endif
-        }
-        catch (const ivx::RuntimeError & e)
-        {
-            VX_DbgThrow(e.what());
-        }
-        catch (const ivx::WrapperError & e)
-        {
-            VX_DbgThrow(e.what());
-        }
-
-        return true;
-    }
-}
-#endif
-
 #ifdef HAVE_IPP
 #define IPP_HISTOGRAM_PARALLEL 1
 namespace cv
@@ -955,14 +893,6 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
     CV_INSTRUMENT_REGION();
 
     CV_Assert(images && nimages > 0);
-
-    CV_OVX_RUN(
-        images && histSize &&
-        nimages == 1 && images[0].type() == CV_8UC1 && dims == 1 && _mask.getMat().empty() &&
-        (!channels || channels[0] == 0) && !accumulate && uniform &&
-        ranges && ranges[0] &&
-        !ovx::skipSmallImages<VX_KERNEL_HISTOGRAM>(images[0].cols, images[0].rows),
-        openvx_calchist(images[0], _hist, histSize[0], ranges[0]))
 
     Mat mask = _mask.getMat();
 
@@ -2372,70 +2302,6 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
 }
 
 
-// Sets a value range for every histogram bin
-void cvSetHistBinRanges( CvHistogram* hist, float** ranges, int uniform )
-{
-    int dims, size[CV_MAX_DIM], total = 0;
-    int i, j;
-
-    if( !ranges )
-        CV_Error( cv::Error::StsNullPtr, "NULL ranges pointer" );
-
-    if( !CV_IS_HIST(hist) )
-        CV_Error( cv::Error::StsBadArg, "Invalid histogram header" );
-
-    dims = cvGetDims( hist->bins, size );
-    for( i = 0; i < dims; i++ )
-        total += size[i]+1;
-
-    if( uniform )
-    {
-        for( i = 0; i < dims; i++ )
-        {
-            if( !ranges[i] )
-                CV_Error( cv::Error::StsNullPtr, "One of <ranges> elements is NULL" );
-            hist->thresh[i][0] = ranges[i][0];
-            hist->thresh[i][1] = ranges[i][1];
-        }
-
-        hist->type |= CV_HIST_UNIFORM_FLAG + CV_HIST_RANGES_FLAG;
-    }
-    else
-    {
-        float* dim_ranges;
-
-        if( !hist->thresh2 )
-        {
-            hist->thresh2 = (float**)cvAlloc(
-                        dims*sizeof(hist->thresh2[0])+
-                        total*sizeof(hist->thresh2[0][0]));
-        }
-        dim_ranges = (float*)(hist->thresh2 + dims);
-
-        for( i = 0; i < dims; i++ )
-        {
-            float val0 = -FLT_MAX;
-
-            if( !ranges[i] )
-                CV_Error( cv::Error::StsNullPtr, "One of <ranges> elements is NULL" );
-
-            for( j = 0; j <= size[i]; j++ )
-            {
-                float val = ranges[i][j];
-                if( val <= val0 )
-                    CV_Error(cv::Error::StsOutOfRange, "Bin ranges should go in ascenting order");
-                val0 = dim_ranges[j] = val;
-            }
-
-            hist->thresh2[i] = dim_ranges;
-            dim_ranges += size[i] + 1;
-        }
-
-        hist->type |= CV_HIST_RANGES_FLAG;
-        hist->type &= ~CV_HIST_UNIFORM_FLAG;
-    }
-}
-
 
 class EqualizeHistCalcHist_Invoker : public cv::ParallelLoopBody
 {
@@ -2611,43 +2477,6 @@ static bool ocl_equalizeHist(InputArray _src, OutputArray _dst)
 
 #endif
 
-#ifdef HAVE_OPENVX
-namespace cv
-{
-static bool openvx_equalize_hist(Mat srcMat, Mat dstMat)
-{
-    using namespace ivx;
-
-    try
-    {
-        Context context = ovx::getOpenVXContext();
-        Image srcImage = Image::createFromHandle(context, Image::matTypeToFormat(srcMat.type()),
-                                                 Image::createAddressing(srcMat), srcMat.data);
-        Image dstImage = Image::createFromHandle(context, Image::matTypeToFormat(dstMat.type()),
-                                                 Image::createAddressing(dstMat), dstMat.data);
-
-        IVX_CHECK_STATUS(vxuEqualizeHist(context, srcImage, dstImage));
-
-#ifdef VX_VERSION_1_1
-        //we should take user memory back before release
-        //(it's not done automatically according to standard)
-        srcImage.swapHandle(); dstImage.swapHandle();
-#endif
-    }
-    catch (const RuntimeError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-    catch (const WrapperError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-
-    return true;
-}
-}
-#endif
-
 void cv::equalizeHist( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
@@ -2664,8 +2493,7 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
 
-    CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_EQUALIZE_HISTOGRAM>(src.cols, src.rows),
-               openvx_equalize_hist(src, dst))
+    CALL_HAL(equalizeHist, cv_hal_equalize_hist, src.data, src.step, dst.data, dst.step, src.cols, src.rows);
 
     Mutex histogramLockInstance;
 

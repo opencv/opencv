@@ -14,10 +14,10 @@ namespace cv {
 namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-void cvt16f32f(const float16_t* src, float* dst, int len);
-void cvt32f16f(const float* src, float16_t* dst, int len);
-void cvt16bf32f(const bfloat16_t* src, float* dst, int len);
-void cvt32f16bf(const float* src, bfloat16_t* dst, int len);
+void cvt16f32f(const hfloat* src, float* dst, int len);
+void cvt32f16f(const float* src, hfloat* dst, int len);
+void cvt16bf32f(const bfloat* src, float* dst, int len);
+void cvt32f16bf(const float* src, bfloat* dst, int len);
 void addRNGBias32f(float* arr, const float* scaleBiasPairs, int len, int cn);
 void addRNGBias64f(double* arr, const double* scaleBiasPairs, int len, int cn);
 
@@ -37,7 +37,7 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 BinaryFunc getConvertFunc(int sdepth, int ddepth);
 
-void cvt16f32f( const float16_t* src, float* dst, int len )
+void cvt16f32f( const hfloat* src, float* dst, int len )
 {
     CV_INSTRUMENT_REGION();
     int j = 0;
@@ -58,7 +58,7 @@ void cvt16f32f( const float16_t* src, float* dst, int len )
         dst[j] = (float)src[j];
 }
 
-void cvt32f16f( const float* src, float16_t* dst, int len )
+void cvt32f16f( const float* src, hfloat* dst, int len )
 {
     CV_INSTRUMENT_REGION();
     int j = 0;
@@ -76,10 +76,10 @@ void cvt32f16f( const float* src, float16_t* dst, int len )
     }
 #endif
     for( ; j < len; j++ )
-        dst[j] = float16_t(src[j]);
+        dst[j] = hfloat(src[j]);
 }
 
-void cvt32f16bf( const float* src, bfloat16_t* dst, int len )
+void cvt32f16bf( const float* src, bfloat* dst, int len )
 {
     CV_INSTRUMENT_REGION();
     int j = 0;
@@ -97,7 +97,7 @@ void cvt32f16bf( const float* src, bfloat16_t* dst, int len )
     }
 #endif
     for( ; j < len; j++ )
-        dst[j] = bfloat16_t(src[j]);
+        dst[j] = bfloat(src[j]);
 }
 
 void addRNGBias32f( float* arr, const float* scaleBiasPairs, int len, int cn )
@@ -322,8 +322,8 @@ DEF_CVT_FUNC(8u32s, cvt_,  uchar, int,      v_int32)
 DEF_CVT_FUNC(8u32f, cvt_,  uchar, float,    v_float32)
 DEF_CVT_FUNC(8u64f, cvt_,  uchar, double,   v_int32)
 DEF_CVT_SCALAR_FUNC(8u64s, uchar, int64_t)
-DEF_CVT_FUNC(8u16f, cvt1_, uchar, float16_t, v_float32)
-DEF_CVT_FUNC(8u16bf, cvt1_, uchar, bfloat16_t, v_float32)
+DEF_CVT_FUNC(8u16f, cvt1_, uchar, hfloat, v_float32)
+DEF_CVT_FUNC(8u16bf, cvt1_, uchar, bfloat, v_float32)
 DEF_CVT2BOOL_FUNC(8u8b, uchar, 0)
 
 ////////////////////// 8s -> ... ////////////////////////
@@ -337,8 +337,8 @@ DEF_CVT_FUNC(8s32f, cvt_,  schar, float,    v_float32)
 DEF_CVT_FUNC(8s64f, cvt_,  schar, double,   v_int32)
 DEF_CVT_FUNC(8s64u, cvt_,  schar, uint64_t, v_uint32)
 DEF_CVT_FUNC(8s64s, cvt_,  schar, int64_t,  v_int32)
-DEF_CVT_FUNC(8s16f, cvt1_, schar, float16_t, v_float32)
-DEF_CVT_FUNC(8s16bf, cvt1_, schar, bfloat16_t, v_float32)
+DEF_CVT_FUNC(8s16f, cvt1_, schar, hfloat, v_float32)
+DEF_CVT_FUNC(8s16bf, cvt1_, schar, bfloat, v_float32)
 
 ////////////////////// 8b -> ... ////////////////////////
 
@@ -348,8 +348,8 @@ DEF_CVTBOOL2_FUNC(8b32s, int, 1)
 DEF_CVTBOOL2_FUNC(8b32f, float, 1)
 DEF_CVTBOOL2_FUNC(8b64f, double, 1)
 DEF_CVTBOOL2_FUNC(8b64s, int64_t, 1)
-DEF_CVTBOOL2_FUNC(8b16f, uint16_t, 0x3c00) // float16_t(1.0f)
-DEF_CVTBOOL2_FUNC(8b16bf, uint16_t, 0x3f80) // bfloat16_t(1.0f)
+DEF_CVTBOOL2_FUNC(8b16f, uint16_t, 0x3c00) // hfloat(1.0f)
+DEF_CVTBOOL2_FUNC(8b16bf, uint16_t, 0x3f80) // bfloat(1.0f)
 
 ////////////////////// 16u -> ... ////////////////////////
 
@@ -360,8 +360,8 @@ DEF_CVT_FUNC(16u32s, cvt_, ushort, int,    v_int32)
 DEF_CVT_FUNC(16u32f, cvt_, ushort, float,  v_float32)
 DEF_CVT_FUNC(16u64f, cvt_, ushort, double, v_int32)
 DEF_CVT_SCALAR_FUNC(16u64s, ushort, int64_t)
-DEF_CVT_FUNC(16u16f, cvt1_,ushort, float16_t, v_float32)
-DEF_CVT_FUNC(16u16bf, cvt1_, ushort, bfloat16_t, v_float32)
+DEF_CVT_FUNC(16u16f, cvt1_,ushort, hfloat, v_float32)
+DEF_CVT_FUNC(16u16bf, cvt1_, ushort, bfloat, v_float32)
 
 ////////////////////// 16s -> ... ////////////////////////
 
@@ -374,8 +374,8 @@ DEF_CVT_FUNC(16s32f, cvt_, short, float,  v_float32)
 DEF_CVT_FUNC(16s64f, cvt_, short, double, v_int32)
 DEF_CVT_FUNC(16s64u, cvt_, short, uint64_t, v_uint32)
 DEF_CVT_FUNC(16s64s, cvt_, short, int64_t, v_int32)
-DEF_CVT_FUNC(16s16f, cvt1_,short, float16_t, v_float32)
-DEF_CVT_FUNC(16s16bf, cvt1_, short, bfloat16_t, v_float32)
+DEF_CVT_FUNC(16s16f, cvt1_,short, hfloat, v_float32)
+DEF_CVT_FUNC(16s16bf, cvt1_, short, bfloat, v_float32)
 DEF_CVT2BOOL_FUNC(16s8b, short, 0)
 
 ////////////////////// 32u -> ... ////////////////////////
@@ -388,8 +388,8 @@ DEF_CVT_SCALAR_FUNC(32u32s, unsigned, int)
 DEF_CVT_FUNC(32u32f, cvt_, unsigned, float,  v_float32)
 DEF_CVT_FUNC(32u64f, cvt_, unsigned, double, v_float32)
 DEF_CVT_SCALAR_FUNC(32u64s, unsigned, int64_t)
-DEF_CVT_FUNC(32u16f, cvt1_, unsigned, float16_t, v_float32)
-DEF_CVT_FUNC(32u16bf, cvt1_, int, bfloat16_t, v_float32)
+DEF_CVT_FUNC(32u16f, cvt1_, unsigned, hfloat, v_float32)
+DEF_CVT_FUNC(32u16bf, cvt1_, int, bfloat, v_float32)
 
 ////////////////////// 32s -> ... ////////////////////////
 
@@ -402,8 +402,8 @@ DEF_CVT_FUNC(32s32f, cvt_, int, float,  v_float32)
 DEF_CVT_FUNC(32s64f, cvt_, int, double, v_int32)
 DEF_CVT_FUNC(32s64u, cvt_, int, uint64_t, v_uint32)
 DEF_CVT_FUNC(32s64s, cvt_, int, int64_t, v_int32)
-DEF_CVT_FUNC(32s16f, cvt1_,int, float16_t, v_float32)
-DEF_CVT_FUNC(32s16bf, cvt1_, int, bfloat16_t, v_float32)
+DEF_CVT_FUNC(32s16f, cvt1_,int, hfloat, v_float32)
+DEF_CVT_FUNC(32s16bf, cvt1_, int, bfloat, v_float32)
 DEF_CVT2BOOL_FUNC(32s8b, int, 0)
 
 ////////////////////// 32f -> ... ////////////////////////
@@ -417,8 +417,8 @@ DEF_CVT_FUNC(32f32s, cvt_, float, int,    v_float32)
 DEF_CVT_FUNC(32f64f, cvt_, float, double, v_float32)
 DEF_CVT_FUNC(32f64u, cvt_64f, float, uint64_t, v_float64)
 DEF_CVT_FUNC(32f64s, cvt_64f, float, int64_t, v_float64)
-DEF_CVT_FUNC(32f16f, cvt1_,float, float16_t, v_float32)
-DEF_CVT_FUNC(32f16bf, cvt1_,float, bfloat16_t, v_float32)
+DEF_CVT_FUNC(32f16f, cvt1_,float, hfloat, v_float32)
+DEF_CVT_FUNC(32f16bf, cvt1_,float, bfloat, v_float32)
 DEF_CVT2BOOL_FUNC(32f8b, int, 1)
 
 ////////////////////// 64f -> ... ////////////////////////
@@ -432,38 +432,38 @@ DEF_CVT_FUNC(64f32s, cvt_, double, int,    v_int32)
 DEF_CVT_FUNC(64f32f, cvt_, double, float,  v_float32)
 DEF_CVT_FUNC(64f64u, cvt_64f, double, uint64_t, v_float64)
 DEF_CVT_FUNC(64f64s, cvt_64f, double, int64_t, v_float32)
-DEF_CVT_FUNC(64f16f, cvt1_,double, float16_t, v_float32)
-DEF_CVT_FUNC(64f16bf, cvt1_,double, bfloat16_t, v_float32)
+DEF_CVT_FUNC(64f16f, cvt1_,double, hfloat, v_float32)
+DEF_CVT_FUNC(64f16bf, cvt1_,double, bfloat, v_float32)
 DEF_CVT2BOOL_FUNC(64f8b, int64_t, 1)
 
 ////////////////////// 16f -> ... ////////////////////////
 
-DEF_CVT_FUNC(16f8u,  cvt_,  float16_t, uchar,  v_float32)
-DEF_CVT_FUNC(16f8s,  cvt_,  float16_t, schar,  v_float32)
-DEF_CVT_FUNC(16f16u, cvt1_, float16_t, ushort, v_float32)
-DEF_CVT_FUNC(16f16s, cvt1_, float16_t, short,  v_float32)
-DEF_CVT_FUNC(16f32u, cvt1_, float16_t, unsigned, v_float32)
-DEF_CVT_FUNC(16f32s, cvt1_, float16_t, int,    v_float32)
-DEF_CVT_FUNC(16f32f, cvt1_, float16_t, float,  v_float32)
-DEF_CVT_FUNC(16f64f, cvt1_, float16_t, double, v_float32)
-DEF_CVT_FUNC(16f64u, cvt1_, float16_t, uint64_t, v_float32)
-DEF_CVT_FUNC(16f64s, cvt1_, float16_t, int64_t, v_float32)
-DEF_CVT_FUNC(16f16bf, cvt1_, float16_t, bfloat16_t, v_float32)
+DEF_CVT_FUNC(16f8u,  cvt_,  hfloat, uchar,  v_float32)
+DEF_CVT_FUNC(16f8s,  cvt_,  hfloat, schar,  v_float32)
+DEF_CVT_FUNC(16f16u, cvt1_, hfloat, ushort, v_float32)
+DEF_CVT_FUNC(16f16s, cvt1_, hfloat, short,  v_float32)
+DEF_CVT_FUNC(16f32u, cvt1_, hfloat, unsigned, v_float32)
+DEF_CVT_FUNC(16f32s, cvt1_, hfloat, int,    v_float32)
+DEF_CVT_FUNC(16f32f, cvt1_, hfloat, float,  v_float32)
+DEF_CVT_FUNC(16f64f, cvt1_, hfloat, double, v_float32)
+DEF_CVT_FUNC(16f64u, cvt1_, hfloat, uint64_t, v_float32)
+DEF_CVT_FUNC(16f64s, cvt1_, hfloat, int64_t, v_float32)
+DEF_CVT_FUNC(16f16bf, cvt1_, hfloat, bfloat, v_float32)
 DEF_CVT2BOOL_FUNC(16f8b, short, 1)
 
 ////////////////////// 16bf -> ... ////////////////////////
 
-DEF_CVT_FUNC(16bf8u,  cvt_,  bfloat16_t, uchar,  v_float32)
-DEF_CVT_FUNC(16bf8s,  cvt_,  bfloat16_t, schar,  v_float32)
-DEF_CVT_FUNC(16bf16u, cvt1_, bfloat16_t, ushort, v_float32)
-DEF_CVT_FUNC(16bf16s, cvt1_, bfloat16_t, short,  v_float32)
-DEF_CVT_FUNC(16bf32u, cvt1_, bfloat16_t, unsigned, v_float32)
-DEF_CVT_FUNC(16bf32s, cvt1_, bfloat16_t, int,    v_float32)
-DEF_CVT_FUNC(16bf32f, cvt1_, bfloat16_t, float,  v_float32)
-DEF_CVT_FUNC(16bf64f, cvt1_, bfloat16_t, double, v_float32)
-DEF_CVT_FUNC(16bf64u, cvt1_, bfloat16_t, uint64_t, v_float32)
-DEF_CVT_FUNC(16bf64s, cvt1_, bfloat16_t, int64_t, v_float32)
-DEF_CVT_FUNC(16bf16f, cvt1_, bfloat16_t, float16_t, v_float32)
+DEF_CVT_FUNC(16bf8u,  cvt_,  bfloat, uchar,  v_float32)
+DEF_CVT_FUNC(16bf8s,  cvt_,  bfloat, schar,  v_float32)
+DEF_CVT_FUNC(16bf16u, cvt1_, bfloat, ushort, v_float32)
+DEF_CVT_FUNC(16bf16s, cvt1_, bfloat, short,  v_float32)
+DEF_CVT_FUNC(16bf32u, cvt1_, bfloat, unsigned, v_float32)
+DEF_CVT_FUNC(16bf32s, cvt1_, bfloat, int,    v_float32)
+DEF_CVT_FUNC(16bf32f, cvt1_, bfloat, float,  v_float32)
+DEF_CVT_FUNC(16bf64f, cvt1_, bfloat, double, v_float32)
+DEF_CVT_FUNC(16bf64u, cvt1_, bfloat, uint64_t, v_float32)
+DEF_CVT_FUNC(16bf64s, cvt1_, bfloat, int64_t, v_float32)
+DEF_CVT_FUNC(16bf16f, cvt1_, bfloat, hfloat, v_float32)
 
 ////////////////////// 64s -> ... ////////////////////////
 
@@ -476,8 +476,8 @@ DEF_CVT_FUNC(64s32s, cvt_, int64_t, int,    v_int32)
 DEF_CVT_FUNC(64s32f, cvt_64f, int64_t, float,  v_float32)
 DEF_CVT_FUNC(64s64f, cvt_64f, int64_t, double,  v_float64)
 DEF_CVT_FUNC(64s64u, cvt_, int64_t, uint64_t, v_uint64)
-DEF_CVT_FUNC(64s16f, cvt1_,int64_t, float16_t, v_float32)
-DEF_CVT_FUNC(64s16bf, cvt1_, int64_t, bfloat16_t, v_float32)
+DEF_CVT_FUNC(64s16f, cvt1_,int64_t, hfloat, v_float32)
+DEF_CVT_FUNC(64s16bf, cvt1_, int64_t, bfloat, v_float32)
 DEF_CVT2BOOL_FUNC(64s8b, int64_t, 0)
 
 ////////////////////// 64u -> ... ////////////////////////
@@ -490,8 +490,8 @@ DEF_CVT_FUNC(64u32u, cvt_, uint64_t, unsigned, v_uint32)
 DEF_CVT_FUNC(64u32s, cvt_, uint64_t, int,   v_int32)
 DEF_CVT_FUNC(64u32f, cvt_64f, uint64_t, float,  v_float64)
 DEF_CVT_FUNC(64u64f, cvt_64f, uint64_t, double,  v_float64)
-DEF_CVT_FUNC(64u16f, cvt1_,uint64_t, float16_t, v_float32)
-DEF_CVT_FUNC(64u16bf, cvt1_, uint64_t, bfloat16_t, v_float32)
+DEF_CVT_FUNC(64u16f, cvt1_,uint64_t, hfloat, v_float32)
+DEF_CVT_FUNC(64u16bf, cvt1_, uint64_t, bfloat, v_float32)
 
 ///////////// "conversion" w/o conversion ///////////////
 

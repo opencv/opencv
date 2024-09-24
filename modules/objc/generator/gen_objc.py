@@ -482,6 +482,7 @@ class FuncInfo(GeneralInfo):
             self.objc_name = "getelem"
         if self.namespace in namespaces_dict:
             self.objc_name = '%s_%s' % (namespaces_dict[self.namespace], self.objc_name)
+            self.swift_name = '%s_%s' % (namespaces_dict[self.namespace], self.swift_name)
         for m in decl[2]:
             if m.startswith("="):
                 self.objc_name = m[1:]

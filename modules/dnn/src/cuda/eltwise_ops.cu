@@ -350,6 +350,11 @@ void eltwise_fmod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x,
     eltwise_op<T, FModFunctor<T>>(stream, output, x, y);
 }
 
+template <class T>
+void eltwise_pow_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
+    eltwise_op<T, PowFunctor<T>>(stream, output, x, y);
+}
+
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
     template void eltwise_mod_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_fmod_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
@@ -360,6 +365,7 @@ void eltwise_fmod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x,
     template void eltwise_sum_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_max_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_min_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
+    template void eltwise_pow_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
 #endif
     template void eltwise_mod_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_fmod_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
@@ -370,6 +376,29 @@ void eltwise_fmod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x,
     template void eltwise_sum_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_max_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_min_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
+    template void eltwise_pow_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
+
+    template void eltwise_mod_2(const Stream& stream, TensorSpan<int8_t> output, TensorView<int8_t> x, TensorView<int8_t> y);
+    template void eltwise_fmod_2(const Stream& stream, TensorSpan<int8_t> output, TensorView<int8_t> x, TensorView<int8_t> y);
+    template void eltwise_sub_2(const Stream& stream, TensorSpan<int8_t> output, TensorView<int8_t> x, TensorView<int8_t> y);
+    template void eltwise_div_2(const Stream& stream, TensorSpan<int8_t> output, TensorView<int8_t> x, TensorView<int8_t> y);
+    template void eltwise_prod_2(const Stream& stream, TensorSpan<int8_t> output, TensorView<int8_t> x, TensorView<int8_t> y);
+    template void eltwise_sum_coeff_2(const Stream&, TensorSpan<int8_t>, int8_t, TensorView<int8_t>, int8_t, TensorView<int8_t>);
+    template void eltwise_sum_2(const Stream& stream, TensorSpan<int8_t> output, TensorView<int8_t> x, TensorView<int8_t> y);
+    template void eltwise_max_2(const Stream& stream, TensorSpan<int8_t> output, TensorView<int8_t> x, TensorView<int8_t> y);
+    template void eltwise_min_2(const Stream& stream, TensorSpan<int8_t> output, TensorView<int8_t> x, TensorView<int8_t> y);
+    template void eltwise_pow_2(const Stream& stream, TensorSpan<int8_t> output, TensorView<int8_t> x, TensorView<int8_t> y);
+
+    template void eltwise_mod_2(const Stream& stream, TensorSpan<uint8_t> output, TensorView<uint8_t> x, TensorView<uint8_t> y);
+    template void eltwise_fmod_2(const Stream& stream, TensorSpan<uint8_t> output, TensorView<uint8_t> x, TensorView<uint8_t> y);
+    template void eltwise_sub_2(const Stream& stream, TensorSpan<uint8_t> output, TensorView<uint8_t> x, TensorView<uint8_t> y);
+    template void eltwise_div_2(const Stream& stream, TensorSpan<uint8_t> output, TensorView<uint8_t> x, TensorView<uint8_t> y);
+    template void eltwise_prod_2(const Stream& stream, TensorSpan<uint8_t> output, TensorView<uint8_t> x, TensorView<uint8_t> y);
+    template void eltwise_sum_coeff_2(const Stream&, TensorSpan<uint8_t>, uint8_t, TensorView<uint8_t>, uint8_t, TensorView<uint8_t>);
+    template void eltwise_sum_2(const Stream& stream, TensorSpan<uint8_t> output, TensorView<uint8_t> x, TensorView<uint8_t> y);
+    template void eltwise_max_2(const Stream& stream, TensorSpan<uint8_t> output, TensorView<uint8_t> x, TensorView<uint8_t> y);
+    template void eltwise_min_2(const Stream& stream, TensorSpan<uint8_t> output, TensorView<uint8_t> x, TensorView<uint8_t> y);
+    template void eltwise_pow_2(const Stream& stream, TensorSpan<uint8_t> output, TensorView<uint8_t> x, TensorView<uint8_t> y);
 
     template void eltwise_mod_2(const Stream& stream, TensorSpan<int32_t> output, TensorView<int32_t> x, TensorView<int32_t> y);
     template void eltwise_fmod_2(const Stream& stream, TensorSpan<int32_t> output, TensorView<int32_t> x, TensorView<int32_t> y);
@@ -380,6 +409,7 @@ void eltwise_fmod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x,
     template void eltwise_sum_2(const Stream& stream, TensorSpan<int32_t> output, TensorView<int32_t> x, TensorView<int32_t> y);
     template void eltwise_max_2(const Stream& stream, TensorSpan<int32_t> output, TensorView<int32_t> x, TensorView<int32_t> y);
     template void eltwise_min_2(const Stream& stream, TensorSpan<int32_t> output, TensorView<int32_t> x, TensorView<int32_t> y);
+    template void eltwise_pow_2(const Stream& stream, TensorSpan<int32_t> output, TensorView<int32_t> x, TensorView<int32_t> y);
 
     template void eltwise_mod_2(const Stream& stream, TensorSpan<int64_t> output, TensorView<int64_t> x, TensorView<int64_t> y);
     template void eltwise_fmod_2(const Stream& stream, TensorSpan<int64_t> output, TensorView<int64_t> x, TensorView<int64_t> y);
@@ -390,6 +420,7 @@ void eltwise_fmod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x,
     template void eltwise_sum_2(const Stream& stream, TensorSpan<int64_t> output, TensorView<int64_t> x, TensorView<int64_t> y);
     template void eltwise_max_2(const Stream& stream, TensorSpan<int64_t> output, TensorView<int64_t> x, TensorView<int64_t> y);
     template void eltwise_min_2(const Stream& stream, TensorSpan<int64_t> output, TensorView<int64_t> x, TensorView<int64_t> y);
+    template void eltwise_pow_2(const Stream& stream, TensorSpan<int64_t> output, TensorView<int64_t> x, TensorView<int64_t> y);
 
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

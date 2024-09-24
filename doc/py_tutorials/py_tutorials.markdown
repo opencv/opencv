@@ -48,7 +48,7 @@ OpenCV-Python Tutorials {#tutorial_py_root}
 -   @ref tutorial_table_of_content_objdetect
 
     In this section you
-    will learn object detection techniques like face detection etc.
+    will learn object detection techniques.
 
 -   @subpage tutorial_py_table_of_contents_bindings
 

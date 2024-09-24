@@ -381,7 +381,7 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
         HANDLE(U8, uint8_t);
         HANDLE(FP32, float);
         HANDLE(I32, int);
-        HANDLE(FP16, cv::float16_t);
+        HANDLE(FP16, cv::hfloat);
 #undef HANDLE
         case IE::Precision::I64: {
             GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
@@ -1232,8 +1232,8 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     // General algorithm:
     //     1. Collect island inputs/outputs.
     //     2. Create kernel context. (Every kernel has his own context).
-    //     3. If the EndOfStream message is recieved, wait until all passed task are done.
-    //     4. If the Exception message is revieved, propagate it further.
+    //     3. If the EndOfStream message is received, wait until all passed task are done.
+    //     4. If the Exception message is received, propagate it further.
     //     5.
     //        5.1 Run the kernel.
     //        5.2 Kernel wait for all nececcary infer requests and start asynchronous execution.

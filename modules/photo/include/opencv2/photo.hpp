@@ -209,7 +209,7 @@ size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
-imgToDenoiseIndex - temporalWindowSize / 2 from srcImgs will be used to denoise
+imgToDenoiseIndex + temporalWindowSize / 2 from srcImgs will be used to denoise
 srcImgs[imgToDenoiseIndex] image.
 @param dst Output image with the same size and type as srcImgs images.
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.
@@ -236,7 +236,7 @@ have the same type and size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
-imgToDenoiseIndex - temporalWindowSize / 2 from srcImgs will be used to denoise
+imgToDenoiseIndex + temporalWindowSize / 2 from srcImgs will be used to denoise
 srcImgs[imgToDenoiseIndex] image.
 @param dst Output image with the same size and type as srcImgs images.
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.
@@ -263,7 +263,7 @@ size.
 @param imgToDenoiseIndex Target image to denoise index in srcImgs sequence
 @param temporalWindowSize Number of surrounding images to use for target image denoising. Should
 be odd. Images from imgToDenoiseIndex - temporalWindowSize / 2 to
-imgToDenoiseIndex - temporalWindowSize / 2 from srcImgs will be used to denoise
+imgToDenoiseIndex + temporalWindowSize / 2 from srcImgs will be used to denoise
 srcImgs[imgToDenoiseIndex] image.
 @param dst Output image with the same size and type as srcImgs images.
 @param templateWindowSize Size in pixels of the template patch that is used to compute weights.
@@ -722,6 +722,9 @@ enum
 
 /** @example samples/cpp/tutorial_code/photo/seamless_cloning/cloning_demo.cpp
 An example using seamlessClone function
+*/
+/** @example samples/cpp/snippets/cloning_demo.cpp
+An example using illuminationChange, colorChange, seamlessClone, textureFlattening functions
 */
 /** @brief Image editing tasks concern either global changes (color/intensity corrections, filters,
 deformations) or local changes concerned to a selection. Here we are interested in achieving local

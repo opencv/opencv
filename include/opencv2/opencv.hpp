@@ -76,9 +76,6 @@
 #ifdef HAVE_OPENCV_IMGPROC
 #include "opencv2/imgproc.hpp"
 #endif
-#ifdef HAVE_OPENCV_ML
-#include "opencv2/ml.hpp"
-#endif
 #ifdef HAVE_OPENCV_OBJDETECT
 #include "opencv2/objdetect.hpp"
 #endif

@@ -96,4 +96,58 @@ TEST(Imgproc_Threshold, regression_THRESH_TOZERO_IPP_21258_Max)
     EXPECT_EQ(0, cv::norm(result, NORM_INF));
 }
 
+TEST(Imgproc_AdaptiveThreshold, mean)
+{
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::adaptiveThreshold(input, result, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, 8);
+
+    const string gt_path = cvtest::findDataFile("../cv/imgproc/adaptive_threshold1.png");
+    Mat gt = imread(gt_path, IMREAD_GRAYSCALE);
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+TEST(Imgproc_AdaptiveThreshold, mean_inv)
+{
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::adaptiveThreshold(input, result, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, 15, 8);
+
+    const string gt_path = cvtest::findDataFile("../cv/imgproc/adaptive_threshold1.png");
+    Mat gt = imread(gt_path, IMREAD_GRAYSCALE);
+    gt = Mat(gt.rows, gt.cols, CV_8UC1, cv::Scalar(255)) - gt;
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+TEST(Imgproc_AdaptiveThreshold, gauss)
+{
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::adaptiveThreshold(input, result, 200, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 21, -5);
+
+    const string gt_path = cvtest::findDataFile("../cv/imgproc/adaptive_threshold2.png");
+    Mat gt = imread(gt_path, IMREAD_GRAYSCALE);
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+TEST(Imgproc_AdaptiveThreshold, gauss_inv)
+{
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::adaptiveThreshold(input, result, 200, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, 21, -5);
+
+    const string gt_path = cvtest::findDataFile("../cv/imgproc/adaptive_threshold2.png");
+    Mat gt = imread(gt_path, IMREAD_GRAYSCALE);
+    gt = Mat(gt.rows, gt.cols, CV_8UC1, cv::Scalar(200)) - gt;
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
 }} // namespace

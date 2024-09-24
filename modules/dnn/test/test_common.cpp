@@ -12,21 +12,24 @@ void runLayer(cv::Ptr<cv::dnn::Layer> layer, std::vector<cv::Mat> &inpBlobs, std
     size_t ninputs = inpBlobs.size();
     std::vector<cv::Mat> inp(ninputs), outp, intp;
     std::vector<cv::dnn::MatShape> inputs, outputs, internals;
+    std::vector<cv::dnn::MatType> inputs_types, outputs_types, internals_types;
 
     for (size_t i = 0; i < ninputs; i++)
     {
         inp[i] = inpBlobs[i].clone();
         inputs.push_back(cv::dnn::shape(inp[i]));
+        inputs_types.push_back(cv::dnn::MatType(inp[i].type()));
     }
 
     layer->getMemoryShapes(inputs, 0, outputs, internals);
+    layer->getTypes(inputs_types, outputs.size(), internals.size(), outputs_types, internals_types);
     for (size_t i = 0; i < outputs.size(); i++)
     {
-        outp.push_back(cv::Mat(outputs[i], CV_32F));
+        outp.push_back(cv::Mat(outputs[i], outputs_types[i]));
     }
     for (size_t i = 0; i < internals.size(); i++)
     {
-        intp.push_back(cv::Mat(internals[i], CV_32F));
+        intp.push_back(cv::Mat(internals[i], internals_types[i]));
     }
 
     layer->finalize(inp, outp);

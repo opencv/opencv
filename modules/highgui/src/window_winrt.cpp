@@ -34,17 +34,7 @@
 #include <opencv2\highgui\highgui_winrt.hpp>
 #include "window_winrt_bridge.hpp"
 
-#define CV_WINRT_NO_GUI_ERROR( funcname )       \
-{                                               \
-    cvError( cv::Error::StsNotImplemented, funcname,    \
-    "The function is not implemented. ",        \
-    __FILE__, __LINE__ );                       \
-}
-
-#define CV_Error( Code, Msg )                                       \
-{                                                                   \
-    cvError( (Code), cvFuncName, Msg, __FILE__, __LINE__ );         \
-};
+#define CV_WINRT_NO_GUI_ERROR( funcname )  CV_Error(cv::Error::StsNotImplemented, "The function is not implemented")
 
 /********************************** WinRT Specific API Implementation ******************************************/
 
@@ -56,29 +46,23 @@ void cv::winrt_initContainer(::Windows::UI::Xaml::Controls::Panel^ _container)
 
 /********************************** API Implementation *********************************************************/
 
-void showImageImpl(const char* name, const CvArr* arr)
+void showImageImpl(const char* name, InputArray arr)
 {
-    CV_FUNCNAME("showImageImpl");
-
     __BEGIN__;
-
-    CvMat stub, *image;
 
     if (!name)
         CV_Error(cv::Error::StsNullPtr, "NULL name");
 
     CvWindow* window = HighguiBridge::getInstance().namedWindow(name);
 
-    if (!window || !arr)
+    if (!window || arr.empty())
         return;
-
-    CV_CALL(image = cvGetMat(arr, &stub));
 
     //TODO: use approach from window_w32.cpp or cv::Mat(.., .., CV_8UC4)
     //      and cvtColor(.., .., cv::COLOR_BGR2BGRA) to convert image here
     //      than beforehand.
 
-    window->updateImage(image);
+    window->updateImage(arr);
     HighguiBridge::getInstance().showWindow(window);
 
     __END__;
@@ -86,8 +70,6 @@ void showImageImpl(const char* name, const CvArr* arr)
 
 int namedWindowImpl(const char* name, int flags)
 {
-    CV_FUNCNAME("namedWindowImpl");
-
     if (!name)
         CV_Error(cv::Error::StsNullPtr, "NULL name");
 
@@ -98,8 +80,6 @@ int namedWindowImpl(const char* name, int flags)
 
 void destroyWindowImpl(const char* name)
 {
-    CV_FUNCNAME("destroyWindowImpl");
-
     if (!name)
         CV_Error(cv::Error::StsNullPtr, "NULL name string");
 
@@ -114,8 +94,6 @@ void destroyAllWindowsImpl()
 int createTrackbar2Impl(const char* trackbar_name, const char* window_name,
     int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
 {
-    CV_FUNCNAME("createTrackbar2Impl");
-
     int pos = 0;
 
     if (!window_name || !trackbar_name)
@@ -138,8 +116,6 @@ int createTrackbar2Impl(const char* trackbar_name, const char* window_name,
 
 void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int pos)
 {
-    CV_FUNCNAME("setTrackbarPosImpl");
-
     CvTrackbar* trackbar = 0;
 
     if (trackbar_name == 0 || window_name == 0)
@@ -155,8 +131,6 @@ void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int 
 
 void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval)
 {
-    CV_FUNCNAME("setTrackbarMaxImpl");
-
     if (maxval >= 0)
     {
         if (trackbar_name == 0 || window_name == 0)
@@ -171,8 +145,6 @@ void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int 
 
 void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval)
 {
-    CV_FUNCNAME("setTrackbarMinImpl");
-
     if (minval >= 0)
     {
         if (trackbar_name == 0 || window_name == 0)
@@ -188,8 +160,6 @@ void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int 
 int getTrackbarPosImpl(const char* trackbar_name, const char* window_name)
 {
     int pos = -1;
-
-    CV_FUNCNAME("getTrackbarPosImpl");
 
     if (trackbar_name == 0 || window_name == 0)
         CV_Error(cv::Error::StsNullPtr, "NULL trackbar or window name");
@@ -225,8 +195,6 @@ int waitKeyImpl(int delay)
 void setMouseCallbackImpl(const char* window_name, CvMouseCallback on_mouse, void* param)
 {
     CV_WINRT_NO_GUI_ERROR("setMouseCallbackImpl");
-
-    CV_FUNCNAME("setMouseCallbackImpl");
 
     if (!window_name)
         CV_Error(cv::Error::StsNullPtr, "NULL window name");

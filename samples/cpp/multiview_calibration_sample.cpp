@@ -52,7 +52,7 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
     }
 // ! [calib_init]
 // ! [charuco_detector]
-    cv::aruco::CharucoDetector* detector = nullptr;
+    cv::Ptr<cv::aruco::CharucoDetector> detector;
     if (pattern_type == "charuco") {
         CV_Assert(dict_path != nullptr);
         cv::FileStorage fs(*dict_path, cv::FileStorage::READ);
@@ -68,14 +68,14 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
         // For charuco board, the size is defined to be the number of box (not inner corner)
         auto charuco_board = cv::aruco::CharucoBoard(
             cv::Size(pattern_size.width+1, pattern_size.height+1),
-            square_size, marker_size, dictionary);
+            static_cast<float>(square_size), static_cast<float>(marker_size), dictionary);
 
         // It is suggested to use refinement in detecting charuco board
         auto detector_params = cv::aruco::DetectorParameters();
         auto charuco_params = cv::aruco::CharucoParameters();
         charuco_params.tryRefineMarkers = true;
         detector_params.cornerRefinementMethod = cv::aruco::CORNER_REFINE_CONTOUR;
-        detector = new cv::aruco::CharucoDetector(charuco_board, charuco_params, detector_params);
+        detector = cv::makePtr<cv::aruco::CharucoDetector>(charuco_board, charuco_params, detector_params);
     }
 // ! [charuco_detector]
 // ! [detect_pattern]
@@ -112,21 +112,21 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
             }
             else if (pattern_type == "charuco")
             {
-                cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
                 std::vector<int> ids; cv::Mat corners_sub;
                 detector->detectBoard(img, corners_sub, ids);
-                corners.create(board.size(), 2, CV_32F);
+                corners.create(static_cast<int>(board.size()), 2, CV_32F);
                 if (ids.size() < 4)
                     success = false;
                 else {
                     success = true;
                     int head = 0;
-                    for (size_t i = 0; i < board.size(); i++) {
-                        if (head < ids.size() && ids[head] == i) {
+                    for (int i = 0; i < static_cast<int>(board.size()); i++) {
+                        if (head < static_cast<int>(ids.size()) && ids[head] == i) {
                             corners.at<float>(i, 0) = corners_sub.at<float>(head, 0);
                             corners.at<float>(i, 1) = corners_sub.at<float>(head, 1);
                             head++;
                         } else {
+                            // points outside of frame border are dropped by calibrateMultiview
                             corners.at<float>(i, 0) = -1.;
                             corners.at<float>(i, 1) = -1.;
                         }
@@ -174,8 +174,6 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
         std::cout << "intrinsic matrix\n" << Ks[c] << "\n";
         std::cout << "distortion\n" << distortions[c] << "\n";
     }
-    if (detector)
-        delete detector;
 }
 
 int main (int argc, char **argv) {

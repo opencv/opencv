@@ -87,10 +87,10 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
         scalarToRawData_(s, (short*)_buf, cn, unroll_to);
         break;
     case CV_16F:
-        scalarToRawData_(s, (float16_t*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (hfloat*)_buf, cn, unroll_to);
         break;
     case CV_16BF:
-        scalarToRawData_(s, (bfloat16_t*)_buf, cn, unroll_to);
+        scalarToRawData_(s, (bfloat*)_buf, cn, unroll_to);
         break;
     case CV_32U:
         scalarToRawData_(s, (unsigned*)_buf, cn, unroll_to);
@@ -454,7 +454,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
     }
 
     int cn = channels(), mcn = mask.channels();
-    CV_Assert( mask.depth() == CV_8U && (mcn == 1 || mcn == cn) );
+    CV_Assert( (mask.depth() == CV_8U || mask.depth() == CV_8S || mask.depth() == CV_Bool) && (mcn == 1 || mcn == cn) );
     bool colorMask = mcn > 1;
     if( dims <= 2 )
     {
@@ -643,7 +643,8 @@ Mat& Mat::setTo(InputArray _value, InputArray _mask)
 
     CV_Assert( checkScalar(value, type(), _value.kind(), _InputArray::MAT ));
     int cn = channels(), mcn = mask.channels();
-    CV_Assert( mask.empty() || (mask.depth() == CV_8U && (mcn == 1 || mcn == cn) && size == mask.size) );
+    CV_Assert( mask.empty() || ((mask.depth() == CV_8U || mask.depth() == CV_8S || mask.depth() == CV_Bool) &&
+               (mcn == 1 || mcn == cn) && size == mask.size) );
 
     CV_IPP_RUN_FAST(ipp_Mat_setTo_Mat(*this, value, mask), *this)
 

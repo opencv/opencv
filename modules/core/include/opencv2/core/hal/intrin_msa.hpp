@@ -345,53 +345,46 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
 }
 
 #define OPENCV_HAL_IMPL_MSA_BIN_OP(bin_op, _Tpvec, intrin) \
-inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b) \
 { \
     return _Tpvec(intrin(a.val, b.val)); \
-} \
-inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b) \
-{ \
-    a.val = intrin(a.val, b.val); \
-    return a; \
 }
 
-OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_uint8x16, msa_qaddq_u8)
-OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_uint8x16, msa_qsubq_u8)
-OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_int8x16, msa_qaddq_s8)
-OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_int8x16, msa_qsubq_s8)
-OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_uint16x8, msa_qaddq_u16)
-OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_uint16x8, msa_qsubq_u16)
-OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_int16x8, msa_qaddq_s16)
-OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_int16x8, msa_qsubq_s16)
-OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_int32x4, msa_addq_s32)
-OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_int32x4, msa_subq_s32)
-OPENCV_HAL_IMPL_MSA_BIN_OP(*, v_int32x4, msa_mulq_s32)
-OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_uint32x4, msa_addq_u32)
-OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_uint32x4, msa_subq_u32)
-OPENCV_HAL_IMPL_MSA_BIN_OP(*, v_uint32x4, msa_mulq_u32)
-OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_float32x4, msa_addq_f32)
-OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_float32x4, msa_subq_f32)
-OPENCV_HAL_IMPL_MSA_BIN_OP(*, v_float32x4, msa_mulq_f32)
-OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_int64x2, msa_addq_s64)
-OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_int64x2, msa_subq_s64)
-OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_uint64x2, msa_addq_u64)
-OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_uint64x2, msa_subq_u64)
-OPENCV_HAL_IMPL_MSA_BIN_OP(/, v_float32x4, msa_divq_f32)
-OPENCV_HAL_IMPL_MSA_BIN_OP(+, v_float64x2, msa_addq_f64)
-OPENCV_HAL_IMPL_MSA_BIN_OP(-, v_float64x2, msa_subq_f64)
-OPENCV_HAL_IMPL_MSA_BIN_OP(*, v_float64x2, msa_mulq_f64)
-OPENCV_HAL_IMPL_MSA_BIN_OP(/, v_float64x2, msa_divq_f64)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_add, v_uint8x16, msa_qaddq_u8)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_sub, v_uint8x16, msa_qsubq_u8)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_add, v_int8x16, msa_qaddq_s8)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_sub, v_int8x16, msa_qsubq_s8)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_add, v_uint16x8, msa_qaddq_u16)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_sub, v_uint16x8, msa_qsubq_u16)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_add, v_int16x8, msa_qaddq_s16)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_sub, v_int16x8, msa_qsubq_s16)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_add, v_int32x4, msa_addq_s32)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_sub, v_int32x4, msa_subq_s32)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_mul, v_int32x4, msa_mulq_s32)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_add, v_uint32x4, msa_addq_u32)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_sub, v_uint32x4, msa_subq_u32)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_mul, v_uint32x4, msa_mulq_u32)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_add, v_float32x4, msa_addq_f32)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_sub, v_float32x4, msa_subq_f32)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_mul, v_float32x4, msa_mulq_f32)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_add, v_int64x2, msa_addq_s64)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_sub, v_int64x2, msa_subq_s64)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_add, v_uint64x2, msa_addq_u64)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_sub, v_uint64x2, msa_subq_u64)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_div, v_float32x4, msa_divq_f32)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_add, v_float64x2, msa_addq_f64)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_sub, v_float64x2, msa_subq_f64)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_mul, v_float64x2, msa_mulq_f64)
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_div, v_float64x2, msa_divq_f64)
 
 // saturating multiply 8-bit, 16-bit
 #define OPENCV_HAL_IMPL_MSA_MUL_SAT(_Tpvec, _Tpwvec)         \
-inline _Tpvec operator * (const _Tpvec& a, const _Tpvec& b)  \
+inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b)  \
 {                                                            \
     _Tpwvec c, d;                                            \
     v_mul_expand(a, b, c, d);                                \
     return v_pack(c, d);                                     \
-}                                                            \
-inline _Tpvec& operator *= (_Tpvec& a, const _Tpvec& b)      \
-{a = a * b; return a; }
+}
 
 OPENCV_HAL_IMPL_MSA_MUL_SAT(v_int8x16,  v_int16x8)
 OPENCV_HAL_IMPL_MSA_MUL_SAT(v_uint8x16, v_uint16x8)
@@ -546,13 +539,13 @@ inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
     return v_int64x2(msa_hadd_s64(prod, prod));
 }
 inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 // 32 >> 64f
 inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
 { return v_cvt_f64(v_dotprod(a, b)); }
 inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 
 //////// Fast Dot Product ////////
@@ -596,10 +589,10 @@ inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b,
 { return v_dotprod_expand(a, b, c); }
 
 #define OPENCV_HAL_IMPL_MSA_LOGIC_OP(_Tpvec, _Tpv, suffix) \
-OPENCV_HAL_IMPL_MSA_BIN_OP(&, _Tpvec, msa_andq_##suffix)   \
-OPENCV_HAL_IMPL_MSA_BIN_OP(|, _Tpvec, msa_orrq_##suffix)   \
-OPENCV_HAL_IMPL_MSA_BIN_OP(^, _Tpvec, msa_eorq_##suffix)   \
-inline _Tpvec operator ~ (const _Tpvec& a) \
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_and, _Tpvec, msa_andq_##suffix)   \
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_or, _Tpvec, msa_orrq_##suffix)    \
+OPENCV_HAL_IMPL_MSA_BIN_OP(v_xor, _Tpvec, msa_eorq_##suffix)   \
+inline _Tpvec v_not(const _Tpvec& a) \
 { \
     return _Tpvec(MSA_TPV_REINTERPRET(_Tpv, msa_mvnq_u8(MSA_TPV_REINTERPRET(v16u8, a.val)))); \
 }
@@ -614,21 +607,16 @@ OPENCV_HAL_IMPL_MSA_LOGIC_OP(v_uint64x2, v2u64, u64)
 OPENCV_HAL_IMPL_MSA_LOGIC_OP(v_int64x2, v2i64, s64)
 
 #define OPENCV_HAL_IMPL_MSA_FLT_BIT_OP(bin_op, intrin) \
-inline v_float32x4 operator bin_op (const v_float32x4& a, const v_float32x4& b) \
+inline v_float32x4 bin_op(const v_float32x4& a, const v_float32x4& b) \
 { \
     return v_float32x4(MSA_TPV_REINTERPRET(v4f32, intrin(MSA_TPV_REINTERPRET(v4i32, a.val), MSA_TPV_REINTERPRET(v4i32, b.val)))); \
-} \
-inline v_float32x4& operator bin_op##= (v_float32x4& a, const v_float32x4& b) \
-{ \
-    a.val = MSA_TPV_REINTERPRET(v4f32, intrin(MSA_TPV_REINTERPRET(v4i32, a.val), MSA_TPV_REINTERPRET(v4i32, b.val))); \
-    return a; \
 }
 
-OPENCV_HAL_IMPL_MSA_FLT_BIT_OP(&, msa_andq_s32)
-OPENCV_HAL_IMPL_MSA_FLT_BIT_OP(|, msa_orrq_s32)
-OPENCV_HAL_IMPL_MSA_FLT_BIT_OP(^, msa_eorq_s32)
+OPENCV_HAL_IMPL_MSA_FLT_BIT_OP(v_and, msa_andq_s32)
+OPENCV_HAL_IMPL_MSA_FLT_BIT_OP(v_or, msa_orrq_s32)
+OPENCV_HAL_IMPL_MSA_FLT_BIT_OP(v_xor, msa_eorq_s32)
 
-inline v_float32x4 operator ~ (const v_float32x4& a)
+inline v_float32x4 v_not(const v_float32x4& a)
 {
     return v_float32x4(MSA_TPV_REINTERPRET(v4f32, msa_mvnq_s32(MSA_TPV_REINTERPRET(v4i32, a.val))));
 }
@@ -659,21 +647,16 @@ OPENCV_HAL_IMPL_MSA_BASIC_FUNC(v_float64x2, v_sqrt, msa_sqrtq_f64)
 OPENCV_HAL_IMPL_MSA_BASIC_FUNC(v_float64x2, v_invsqrt, msa_rsqrtq_f64)
 
 #define OPENCV_HAL_IMPL_MSA_DBL_BIT_OP(bin_op, intrin) \
-inline v_float64x2 operator bin_op (const v_float64x2& a, const v_float64x2& b) \
+inline v_float64x2 bin_op(const v_float64x2& a, const v_float64x2& b) \
 { \
     return v_float64x2(MSA_TPV_REINTERPRET(v2f64, intrin(MSA_TPV_REINTERPRET(v2i64, a.val), MSA_TPV_REINTERPRET(v2i64, b.val)))); \
-} \
-inline v_float64x2& operator bin_op##= (v_float64x2& a, const v_float64x2& b) \
-{ \
-    a.val = MSA_TPV_REINTERPRET(v2f64, intrin(MSA_TPV_REINTERPRET(v2i64, a.val), MSA_TPV_REINTERPRET(v2i64, b.val))); \
-    return a; \
 }
 
-OPENCV_HAL_IMPL_MSA_DBL_BIT_OP(&, msa_andq_s64)
-OPENCV_HAL_IMPL_MSA_DBL_BIT_OP(|, msa_orrq_s64)
-OPENCV_HAL_IMPL_MSA_DBL_BIT_OP(^, msa_eorq_s64)
+OPENCV_HAL_IMPL_MSA_DBL_BIT_OP(v_and, msa_andq_s64)
+OPENCV_HAL_IMPL_MSA_DBL_BIT_OP(v_or, msa_orrq_s64)
+OPENCV_HAL_IMPL_MSA_DBL_BIT_OP(v_xor, msa_eorq_s64)
 
-inline v_float64x2 operator ~ (const v_float64x2& a)
+inline v_float64x2 v_not(const v_float64x2& a)
 {
     return v_float64x2(MSA_TPV_REINTERPRET(v2f64, msa_mvnq_s32(MSA_TPV_REINTERPRET(v4i32, a.val))));
 }
@@ -704,17 +687,17 @@ OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_float64x2, v_min, msa_minq_f64)
 OPENCV_HAL_IMPL_MSA_BIN_FUNC(v_float64x2, v_max, msa_maxq_f64)
 
 #define OPENCV_HAL_IMPL_MSA_INT_CMP_OP(_Tpvec, _Tpv, suffix, not_suffix) \
-inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(MSA_TPV_REINTERPRET(_Tpv, msa_ceqq_##suffix(a.val, b.val))); } \
-inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(MSA_TPV_REINTERPRET(_Tpv, msa_mvnq_##not_suffix(msa_ceqq_##suffix(a.val, b.val)))); } \
-inline _Tpvec operator < (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(MSA_TPV_REINTERPRET(_Tpv, msa_cltq_##suffix(a.val, b.val))); } \
-inline _Tpvec operator > (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_gt(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(MSA_TPV_REINTERPRET(_Tpv, msa_cgtq_##suffix(a.val, b.val))); } \
-inline _Tpvec operator <= (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(MSA_TPV_REINTERPRET(_Tpv, msa_cleq_##suffix(a.val, b.val))); } \
-inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(MSA_TPV_REINTERPRET(_Tpv, msa_cgeq_##suffix(a.val, b.val))); }
 
 OPENCV_HAL_IMPL_MSA_INT_CMP_OP(v_uint8x16, v16u8, u8, u8)
@@ -821,9 +804,9 @@ inline v_float64x2 v_muladd(const v_float64x2& a, const v_float64x2& b, const v_
 
 // trade efficiency for convenience
 #define OPENCV_HAL_IMPL_MSA_SHIFT_OP(_Tpvec, suffix, _Tps, ssuffix) \
-inline _Tpvec operator << (const _Tpvec& a, int n) \
+inline _Tpvec v_shl(const _Tpvec& a, int n) \
 { return _Tpvec(msa_shlq_##suffix(a.val, msa_dupq_n_##ssuffix((_Tps)n))); } \
-inline _Tpvec operator >> (const _Tpvec& a, int n) \
+inline _Tpvec v_shr(const _Tpvec& a, int n) \
 { return _Tpvec(msa_shrq_##suffix(a.val, msa_dupq_n_##ssuffix((_Tps)n))); } \
 template<int n> inline _Tpvec v_shl(const _Tpvec& a) \
 { return _Tpvec(msa_shlq_n_##suffix(a.val, n)); } \
@@ -1838,7 +1821,7 @@ inline v_float32x4 v_broadcast_element(const v_float32x4& a)
 
 ////// FP16 support ///////
 #if CV_FP16
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
 #ifndef msa_ld1_f16
     v4f16 v = (v4f16)msa_ld1_s16((const short*)ptr);
@@ -1848,7 +1831,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_float32x4(msa_cvt_f32_f16(v));
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     v4f16 hv = msa_cvt_f16_f32(v.val);
 
@@ -1859,7 +1842,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
 #endif
 }
 #else
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     float buf[4];
     for( int i = 0; i < 4; i++ )
@@ -1867,12 +1850,12 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_load(buf);
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     float buf[4];
     v_store(buf, v);
     for( int i = 0; i < 4; i++ )
-        ptr[i] = (float16_t)buf[i];
+        ptr[i] = (hfloat)buf[i];
 }
 #endif
 

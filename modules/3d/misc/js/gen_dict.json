@@ -1,0 +1,20 @@
+{
+    "whitelist":
+    {
+        "": [
+            "findHomography",
+            "drawFrameAxes",
+            "estimateAffine2D",
+            "getDefaultNewCameraMatrix",
+            "initUndistortRectifyMap",
+            "Rodrigues",
+            "solvePnP",
+            "solvePnPRansac",
+            "solvePnPRefineLM",
+            "projectPoints",
+            "undistort",
+            "fisheye_initUndistortRectifyMap",
+            "fisheye_projectPoints"
+        ]
+    }
+}

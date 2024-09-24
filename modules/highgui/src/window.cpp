@@ -435,6 +435,8 @@ cv::Rect cv::getWindowImageRect(const String& winname)
         return cvGetWindowRect_GTK(winname.c_str());
     #elif defined (HAVE_COCOA)
         return cvGetWindowRect_COCOA(winname.c_str());
+    #elif defined (HAVE_WAYLAND)
+        return cvGetWindowRect_WAYLAND(winname.c_str());
     #else
         return Rect(-1, -1, -1, -1);
     #endif
@@ -994,18 +996,14 @@ void cv::imshow( const String& winname, InputArray _img )
 
 #ifndef HAVE_OPENGL
     {
-        Mat img = _img.getMat();
-        CvMat c_img = cvMat(img);
-        showImageImpl(winname.c_str(), &c_img);
+        showImageImpl(winname.c_str(), _img);
     }
 #else
     const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
 
     if (useGl <= 0)
     {
-        Mat img = _img.getMat();
-        CvMat c_img = cvMat(img);
-        showImageImpl(winname.c_str(), &c_img);
+        showImageImpl(winname.c_str(), _img);
     }
     else
     {
@@ -1079,6 +1077,33 @@ void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
 
         updateWindow(winname);
     }
+#endif
+}
+
+const std::string cv::currentUIFramework()
+{
+    CV_TRACE_FUNCTION();
+
+    // plugin and backend-compatible implementations
+    auto backend = getCurrentUIBackend();
+    if (backend)
+    {
+        return backend->getName();
+    }
+
+    // builtin backends
+#if defined(HAVE_WIN32UI)
+    CV_Assert(false); // backend-compatible
+#elif defined (HAVE_GTK)
+    CV_Assert(false); // backend-compatible
+#elif defined (HAVE_QT)
+    return std::string("QT");
+#elif defined (HAVE_COCOA)
+    return std::string("COCOA");
+#elif defined (HAVE_WAYLAND)
+    return std::string("WAYLAND");
+#else
+    return std::string();
 #endif
 }
 
@@ -1198,7 +1223,7 @@ void destroyAllWindowsImpl( void )
     CV_NO_GUI_ERROR( "destroyAllWindowsImpl" );
 }
 
-void showImageImpl( const char*, const CvArr* )
+void showImageImpl( const char*, InputArray)
 {
     CV_NO_GUI_ERROR( "showImageImpl" );
 }

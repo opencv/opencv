@@ -26,7 +26,7 @@ void convBlockMR1_F32(int np, const float* a, const float* b, float *c, const fl
 
 #ifdef CONV_ARM_FP16
 // Fast convert float 32 to float16
-static inline void _cvt32f16f(const float* src, float16_t* dst, int len)
+static inline void _cvt32f16f(const float* src, __fp16* dst, int len)
 {
     int j = 0;
     const int VECSZ = 4;
@@ -60,7 +60,7 @@ static inline void _cvt32f16f(const float* src, float16_t* dst, int len)
         vst1_f16(dst_FP16 + j, hv);
     }
     for( ; j < len; j++ )
-        dst[j] = float16_t(src[j]);
+        dst[j] = __fp16(src[j]);
 }
 #endif
 
@@ -74,12 +74,12 @@ float* FastConv::getWeightsWino()
     return alignPtr(weightsWinoBuf.data(), VEC_ALIGN);
 }
 
-float16_t* FastConv::getWeightsFP16()
+hfloat* FastConv::getWeightsFP16()
 {
     return alignPtr(weightsBuf_FP16.data(), VEC_ALIGN);
 }
 
-float16_t* FastConv::getWeightsWinoFP16()
+hfloat* FastConv::getWeightsWinoFP16()
 {
     return alignPtr(weightsWinoBuf_FP16.data(), VEC_ALIGN);
 }
@@ -209,8 +209,7 @@ Ptr<FastConv> initFastConv(
         if (conv->useFP16)
         {
             conv->weightsBuf_FP16.resize(nweights + VEC_ALIGN);
-            auto weightsPtr_FP16 = conv->getWeightsFP16();
-            memset(reinterpret_cast<short*>(weightsPtr_FP16), 0, nweights * sizeof(weightsPtr_FP16[0]));
+            auto weightsPtr_FP16 = (__fp16*)conv->getWeightsFP16();
 
             parallel_for_(Range(0, C), [&](const Range& r0){
                 for(int c = r0.start; c < r0.end; c++)
@@ -222,7 +221,6 @@ Ptr<FastConv> initFastConv(
         {
             conv->weightsBuf.resize(nweights + VEC_ALIGN);
             auto weightsPtr = conv->getWeights();
-            memset(weightsPtr, 0, nweights*sizeof(weightsPtr[0]));
 
             parallel_for_(Range(0, C), [&](const Range& r0) {
                 for(int c = r0.start; c < r0.end; c++)
@@ -271,19 +269,17 @@ Ptr<FastConv> initFastConv(
 
         float* wptrWino = nullptr;
 #ifdef CONV_ARM_FP16
-        float16_t* wptrWino_FP16 = nullptr;
+        __fp16* wptrWino_FP16 = nullptr;
         if (conv->useFP16)
         {
             conv->weightsWinoBuf_FP16.resize(nweights + VEC_ALIGN);
-            wptrWino_FP16 = conv->getWeightsWinoFP16();
-            memset(reinterpret_cast<short*>(wptrWino_FP16), 0, nweights * sizeof(wptrWino_FP16[0]));
+            wptrWino_FP16 = (__fp16*)conv->getWeightsWinoFP16();
         }
         else
 #endif
         {
             conv->weightsWinoBuf.resize(nweights + VEC_ALIGN);
             wptrWino = conv->getWeightsWino();
-            memset(wptrWino, 0, nweights * sizeof(wptrWino[0]));
         }
 
         parallel_for_(Range(0, K), [&](const Range& r0){
@@ -327,7 +323,7 @@ Ptr<FastConv> initFastConv(
 #ifdef CONV_ARM_FP16
                 if (conv->useFP16)
                 {
-                    float16_t* wptr = wptrWino_FP16 + (g*Kg_nblocks + ki) * Cg *CONV_WINO_KBLOCK*CONV_WINO_AREA +
+                    __fp16* wptr = wptrWino_FP16 + (g*Kg_nblocks + ki) * Cg *CONV_WINO_KBLOCK*CONV_WINO_AREA +
                                   (c*CONV_WINO_KBLOCK + dk)*CONV_WINO_ATOM_F16;
                     for (int i = 0; i < CONV_WINO_NATOMS_F16; i++,
                             wptr += Cg * CONV_WINO_KBLOCK * CONV_WINO_ATOM_F16)
@@ -335,7 +331,7 @@ Ptr<FastConv> initFastConv(
                         CV_Assert(wptrWino_FP16 <= wptr && wptr + CONV_WINO_ATOM_F16 <= wptrWino_FP16 + nweights);
                         for (int j = 0; j < CONV_WINO_ATOM_F16; j++)
                         {
-                            wptr[j] = (float16_t)kernelTm[i * CONV_WINO_ATOM_F16 + j];
+                            wptr[j] = (__fp16)kernelTm[i * CONV_WINO_ATOM_F16 + j];
                         }
                     }
                 }
@@ -371,20 +367,18 @@ Ptr<FastConv> initFastConv(
         int numStripsMR_FP16 = (Kg + CONV_MR_FP16 - 1) / CONV_MR_FP16;
         int Kg_aligned_FP16 = numStripsMR_FP16 * CONV_MR_FP16;
         size_t nweights_FP16 = ngroups * Kg_aligned_FP16 * DkHkWkCg;
-        float16_t* weightsPtr_FP16 = nullptr;
+        __fp16* weightsPtr_FP16 = nullptr;
 
         if (conv->useFP16)
         {
             conv->weightsBuf_FP16.resize(nweights_FP16 + VEC_ALIGN);
-            weightsPtr_FP16 = conv->getWeightsFP16();
-            memset(reinterpret_cast<short*>(weightsPtr_FP16), 0, nweights_FP16*sizeof(weightsPtr_FP16[0]));
+            weightsPtr_FP16 = (__fp16*)conv->getWeightsFP16();
         }
         else
 #endif
         {
             conv->weightsBuf.resize(nweights + VEC_ALIGN);
             weightsPtr = conv->getWeights();
-            memset(weightsPtr, 0, nweights*sizeof(weightsPtr[0]));
         }
 
         // Pack the weight.
@@ -400,7 +394,7 @@ Ptr<FastConv> initFastConv(
                 int startK = si * CONV_MR_FP16;
                 CV_Assert(startK < Kg_aligned_FP16);
 
-                float16_t* packed_wptr = weightsPtr_FP16 + DkHkWkCg * (startK + g * Kg_aligned_FP16);
+                __fp16* packed_wptr = weightsPtr_FP16 + DkHkWkCg * (startK + g * Kg_aligned_FP16);
                 int dk = Kg - startK < CONV_MR_FP16 ? Kg - startK : CONV_MR_FP16; // check if we need zero padding.
 
                 int k_idx = g*Kg + startK;
@@ -411,9 +405,9 @@ Ptr<FastConv> initFastConv(
                         const float* wptr = srcWeights + wstep * k_idx + c*Hk*Wk*Dk + hwd;
                         int k = 0;
                         for(; k < dk; k++, wptr += wstep)
-                            packed_wptr[k] = (float16_t)(*wptr);
+                            packed_wptr[k] = (__fp16)(*wptr);
                         for(; k < CONV_MR_FP16; k++)
-                            packed_wptr[k] = (float16_t)0.f;
+                            packed_wptr[k] = (__fp16)0.f;
                     }
                 }
             }});
@@ -473,8 +467,8 @@ static inline void packData8(char*& inpbuf, float*& inptrIn, int& in_w, int& x0,
     float* inptrInC = (float* )inptrIn;
 
 #ifdef CONV_ARM_FP16
-    float16_t* inpbufC_FP16 = (float16_t *)inpbufC;
-    if (esz == sizeof(float16_t))
+    __fp16* inpbufC_FP16 = (__fp16 *)inpbufC;
+    if (esz == sizeof(__fp16))
     {
         if (stride_w == 1)
         {
@@ -571,16 +565,16 @@ static inline void packData2(char *& inpbuf, float*& inptrIn, int& in_w, int& x0
     float* inptrInC = inptrIn;
 
 #ifdef CONV_ARM_FP16
-    float16_t* inpbufC_FP16 = (float16_t *)inpbufC;
-    if (esz == sizeof(float16_t))
+    __fp16* inpbufC_FP16 = (__fp16 *)inpbufC;
+    if (esz == sizeof(__fp16))
     {
         for (int k = 0; k < ksize; k++)
         {
             int k1 = ofstab[k];
             float v0 = inptrInC[k1];
             float v1 = inptrInC[k1 + stride_w];
-            inpbufC_FP16[k*CONV_NR_FP16] = (float16_t)v0;
-            inpbufC_FP16[k*CONV_NR_FP16+1] = (float16_t)v1;
+            inpbufC_FP16[k*CONV_NR_FP16] = (__fp16)v0;
+            inpbufC_FP16[k*CONV_NR_FP16+1] = (__fp16)v1;
         }
     } else
 #endif
@@ -636,7 +630,7 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                 if (useFP16)
                 {
                     for (int c = 0; c < Cg; c++, inptr += inp_planesize, inpbuf += CONV_NR_esz)
-                        _cvt32f16f(inptr, (float16_t *)inpbuf, CONV_NR);
+                        _cvt32f16f(inptr, (__fp16 *)inpbuf, CONV_NR);
                 }
                 else
 #endif
@@ -650,8 +644,7 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                 {
                     for (int c = 0; c < Cg; c++, inptr += inp_planesize, inpbuf += CONV_NR_esz)
                     {
-                        _cvt32f16f(inptr, (float16_t *)inpbuf, slice_len);
-                        memset(inpbuf + slice_len * esz, 0, (CONV_NR - slice_len) * esz);
+                        _cvt32f16f(inptr, (__fp16 *)inpbuf, slice_len);
                     }
                 }
                 else
@@ -659,7 +652,6 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                 for (int c = 0; c < Cg; c++, inptr += inp_planesize, inpbuf += CONV_NR_esz)
                 {
                     memcpy(inpbuf, inptr, slice_len * esz);
-                    memset(inpbuf + slice_len * esz, 0, (CONV_NR - slice_len) * esz);
                 }
             }
         }
@@ -712,11 +704,11 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
 #ifdef CONV_ARM_FP16
                             if (useFP16)
                             {
-                                float16_t* inpbufC = (float16_t *)inpbuf + s0;
+                                __fp16* inpbufC = (__fp16 *)inpbuf + s0;
                                 for (int w = w0; w < w1; w++)
                                 {
                                     int imgofs = w*dilation_w;
-                                    inpbufC[w*CONV_NR] = (float16_t)inptrInC[imgofs];
+                                    inpbufC[w*CONV_NR] = (__fp16)inptrInC[imgofs];
                                 }
                             }
                             else
@@ -773,14 +765,14 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
 #ifdef CONV_ARM_FP16
                             if (useFP16)
                             {
-                                float16_t* inpbufC = (float16_t *)inpbuf + s0;
+                                __fp16* inpbufC = (__fp16 *)inpbuf + s0;
 
                                 for (int h = h0; h < h1; h++)
                                 {
                                     for (int w = w0; w < w1; w++)
                                     {
                                         int imgofs = h*(dilation_h*Wi) + w*dilation_w;
-                                        inpbufC[(h*Wk + w)*CONV_NR] = (float16_t)inptrInC[imgofs];
+                                        inpbufC[(h*Wk + w)*CONV_NR] = (__fp16)inptrInC[imgofs];
                                     }
                                 }
                             }
@@ -846,7 +838,7 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
 #ifdef CONV_ARM_FP16
                             if (useFP16)
                             {
-                                float16_t* inpbufC = (float16_t* )inpbuf + s0;
+                                __fp16* inpbufC = (__fp16* )inpbuf + s0;
 
                                 for ( int d = d0; d < d1; d++)
                                 {
@@ -855,7 +847,7 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                                         for (int w = w0; w < w1; w++)
                                         {
                                             int imgofs = d*dilation_d*HWi + h*(dilation_h*Wi) + w*dilation_w;
-                                            inpbufC[((d*Hk + h)*Wk + w)*CONV_NR] = (float16_t)inptrInC[imgofs];
+                                            inpbufC[((d*Hk + h)*Wk + w)*CONV_NR] = (__fp16)inptrInC[imgofs];
                                         }
                                     }
                                 }
@@ -897,7 +889,7 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                 {
                     float* inpbuf_ki = (float* )inpbuf + k * CONV_NR * Cg + i;
 #ifdef CONV_ARM_FP16
-                    float16_t * inpbuf_ki_FP16 = (float16_t *)inpbuf + k * CONV_NR * Cg + i;
+                    __fp16 * inpbuf_ki_FP16 = (__fp16 *)inpbuf + k * CONV_NR * Cg + i;
 #endif
 
                     int zi = z0 * stride_d + dz - pad_front;
@@ -1061,7 +1053,7 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                             if (useFP16)
                             {
                                 for (int c = 0; c < Cg; c++, inpbuf_ki_FP16 += CONV_NR, inptr_ki += inp_planesize)
-                                    inpbuf_ki_FP16[0] = (float16_t)(*inptr_ki);
+                                    inpbuf_ki_FP16[0] = (__fp16)(*inptr_ki);
                             }
                             else
 #endif
@@ -1077,7 +1069,7 @@ static inline void packInputData(char* inpbuf_task, float* inp, const int* ofsta
                         if (useFP16)
                         {
                             for (int c = 0; c < Cg; c++, inpbuf_ki_FP16 += CONV_NR)
-                                inpbuf_ki_FP16[0] = (float16_t)0.f;
+                                inpbuf_ki_FP16[0] = (__fp16)0.f;
                         }
                         else
 #endif
@@ -1265,7 +1257,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
         // works at FP 16.
         CONV_NR = CONV_NR_FP16;
         CONV_MR = CONV_MR_FP16;
-        esz = sizeof(float16_t);
+        esz = sizeof(__fp16);
     }
 #endif
 
@@ -1519,7 +1511,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
 
                             char *wptr = weights + (k0_block * DkHkWkCg + c0 * CONV_MR) * esz;
                             float *cptr = cbuf_task + stripe * CONV_NR;
-                            float16_t* cptr_f16 = (float16_t*)cbuf_task + stripe*CONV_NR;
+                            hfloat* cptr_f16 = (hfloat*)cbuf_task + stripe*CONV_NR;
                             for (int k = k0_block; k < k1_block; k += CONV_MR,
                                     wptr += DkHkWkCg * CONV_MR * esz, cptr += CONV_MR * ldc, cptr_f16 += CONV_MR * ldc)
                             {
@@ -1555,7 +1547,7 @@ void runFastConv(InputArray _input, OutputArray _output, const Ptr<FastConv>& co
 
                     size_t outofs = ((n * ngroups + g) * Kg + k0_block) * out_planesize + zyx0;
                     const float *cptr = cbuf_task;
-                    const float16_t *cptr_fp16 = (const float16_t *)cbuf_task;
+                    const hfloat *cptr_fp16 = (const hfloat *)cbuf_task;
                     float *outptr = out + outofs;
                     const float *pbptr = fusedAddPtr0 ? fusedAddPtr0 + outofs : 0;
 

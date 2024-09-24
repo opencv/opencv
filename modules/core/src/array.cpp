@@ -189,7 +189,7 @@ CV_IMPL void
 cvReleaseMat( CvMat** array )
 {
     if( !array )
-        CV_Error( CV_HeaderIsNull, "" );
+        CV_Error( cv::Error::HeaderIsNull, "" );
 
     if( *array )
     {
@@ -393,7 +393,7 @@ CV_IMPL void
 cvReleaseSparseMat( CvSparseMat** array )
 {
     if( !array )
-        CV_Error( CV_HeaderIsNull, "" );
+        CV_Error( cv::Error::HeaderIsNull, "" );
 
     if( *array )
     {
@@ -2464,7 +2464,7 @@ cvInitImageHeader( IplImage * image, CvSize size, int depth,
     const char *colorModel, *channelSeq;
 
     if( !image )
-        CV_Error( CV_HeaderIsNull, "null pointer to header" );
+        CV_Error( cv::Error::HeaderIsNull, "null pointer to header" );
 
     *image = cvIplImage();
 
@@ -2568,7 +2568,7 @@ CV_IMPL void
 cvSetImageROI( IplImage* image, CvRect rect )
 {
     if( !image )
-        CV_Error( CV_HeaderIsNull, "" );
+        CV_Error( cv::Error::HeaderIsNull, "" );
 
     // allow zero ROI width or height
     CV_Assert( rect.width >= 0 && rect.height >= 0 &&
@@ -2603,7 +2603,7 @@ CV_IMPL void
 cvResetImageROI( IplImage* image )
 {
     if( !image )
-        CV_Error( CV_HeaderIsNull, "" );
+        CV_Error( cv::Error::HeaderIsNull, "" );
 
     if( image->roi )
     {
@@ -2641,7 +2641,7 @@ CV_IMPL void
 cvSetImageCOI( IplImage* image, int coi )
 {
     if( !image )
-        CV_Error( CV_HeaderIsNull, "" );
+        CV_Error( cv::Error::HeaderIsNull, "" );
 
     if( (unsigned)coi > (unsigned)(image->nChannels) )
         CV_Error( cv::Error::BadCOI, "" );
@@ -2664,7 +2664,7 @@ CV_IMPL int
 cvGetImageCOI( const IplImage* image )
 {
     if( !image )
-        CV_Error( CV_HeaderIsNull, "" );
+        CV_Error( cv::Error::HeaderIsNull, "" );
 
     return image->roi ? image->roi->coi : 0;
 }

@@ -64,7 +64,7 @@
 namespace {
 inline unsigned int trailingZeros32(unsigned int value) {
 #if defined(_MSC_VER)
-#if (_MSC_VER < 1700) || defined(_M_ARM) || defined(_M_ARM64)
+#if (_MSC_VER < 1700) || defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
     unsigned long index = 0;
     _BitScanForward(&index, value);
     return (unsigned int)index;
@@ -165,6 +165,9 @@ CV_INTRIN_DEF_TYPE_TRAITS(uchar, schar, uchar, uchar, ushort, unsigned, unsigned
 CV_INTRIN_DEF_TYPE_TRAITS(schar, schar, uchar, uchar, short, int, int);
 CV_INTRIN_DEF_TYPE_TRAITS(ushort, short, ushort, ushort, unsigned, uint64, unsigned);
 CV_INTRIN_DEF_TYPE_TRAITS(short, short, ushort, ushort, int, int64, int);
+#if CV_FP16_TYPE
+CV_INTRIN_DEF_TYPE_TRAITS(hfloat, short, ushort, hfloat, float, double, float);
+#endif
 CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(unsigned, int, unsigned, unsigned, uint64, unsigned);
 CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(int, int, unsigned, unsigned, int64, int);
 CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(float, int, unsigned, float, double, float);
@@ -236,11 +239,7 @@ using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #include "opencv2/core/hal/intrin_wasm.hpp"
 
 #elif CV_RVV && !defined(CV_FORCE_SIMD128_CPP)
-#if defined(CV_RVV_SCALABLE)
 #include "opencv2/core/hal/intrin_rvv_scalable.hpp"
-#else
-#include "opencv2/core/hal/intrin_rvv.hpp"
-#endif
 
 #elif CV_LSX && !defined(CV_FORCE_SIMD128_CPP)
 
@@ -344,6 +343,10 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define CV_SIMD_SCALABLE_64F 0
 #endif
 
+#ifndef CV_SIMD_SCALABLE_FP16
+#define CV_SIMD_SCALABLE_FP16 0
+#endif
+
 //==================================================================================================
 
 template<typename _Tp> struct V_RegTraits
@@ -366,6 +369,9 @@ template<typename _Tp> struct V_RegTraits
     CV_DEF_REG_TRAITS(v, v_int8x16, schar, s8, v_uint8x16, v_int16x8, v_int32x4, v_int8x16, void);
     CV_DEF_REG_TRAITS(v, v_uint16x8, ushort, u16, v_uint16x8, v_uint32x4, v_uint64x2, v_int16x8, void);
     CV_DEF_REG_TRAITS(v, v_int16x8, short, s16, v_uint16x8, v_int32x4, v_int64x2, v_int16x8, void);
+#if CV_SIMD128_FP16
+    CV_DEF_REG_TRAITS(v, v_float16x8, hfloat, f16, v_float16x8, v_float32x4, v_float64x2, v_int16x8, v_int16x8);
+#endif
     CV_DEF_REG_TRAITS(v, v_uint32x4, unsigned, u32, v_uint32x4, v_uint64x2, void, v_int32x4, void);
     CV_DEF_REG_TRAITS(v, v_int32x4, int, s32, v_uint32x4, v_int64x2, void, v_int32x4, void);
 #if CV_SIMD128_64F || CV_SIMD128_CPP
@@ -410,6 +416,9 @@ template<typename _Tp> struct V_RegTraits
     CV_DEF_REG_TRAITS(v, v_int8, schar, s8, v_uint8, v_int16, v_int32, v_int8, void);
     CV_DEF_REG_TRAITS(v, v_uint16, ushort, u16, v_uint16, v_uint32, v_uint64, v_int16, void);
     CV_DEF_REG_TRAITS(v, v_int16, short, s16, v_uint16, v_int32, v_int64, v_int16, void);
+    #if CV_SIMD_SCALABLE_FP16
+    CV_DEF_REG_TRAITS(v, v_float16, hfloat, f16, v_float16, v_float32, v_float64, v_int16, v_int16);
+    #endif
     CV_DEF_REG_TRAITS(v, v_uint32, unsigned, u32, v_uint32, v_uint64, void, v_int32, void);
     CV_DEF_REG_TRAITS(v, v_int32, int, s32, v_uint32, v_int64, void, v_int32, void);
     CV_DEF_REG_TRAITS(v, v_float32, float, f32, v_float32, v_float64, void, v_int32, v_int32);
@@ -499,6 +508,7 @@ using namespace CV__SIMD_NAMESPACE;
 #endif
 namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD CV_SIMD128
+    #define CV_SIMD_FP16 CV_SIMD128_FP16
     #define CV_SIMD_64F CV_SIMD128_64F
     #define CV_SIMD_WIDTH 16
 //! @addtogroup core_hal_intrin
@@ -511,6 +521,10 @@ namespace CV__SIMD_NAMESPACE {
     typedef v_uint16x8  v_uint16;
     //! @brief Maximum available vector register capacity 16-bit signed integer values
     typedef v_int16x8   v_int16;
+    #if CV_SIMD128_FP16
+    //! @brief Maximum available vector register capacity 16-bit floating point values (half precision)
+    typedef v_float16x8 v_float16;
+    #endif
     //! @brief Maximum available vector register capacity 32-bit unsigned integer values
     typedef v_uint32x4  v_uint32;
     //! @brief Maximum available vector register capacity 32-bit signed integer values
@@ -535,6 +549,7 @@ using namespace CV__SIMD_NAMESPACE;
 #define CV__SIMD_NAMESPACE simd
 namespace CV__SIMD_NAMESPACE {
     #define CV_SIMD 0
+    #define CV_SIMD_FP16 0
     #define CV_SIMD_WIDTH 128  /* 1024/8 */
 
     #define VXPREFIX(func) v##func
@@ -558,6 +573,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_setall_s8(schar v) { return VXPREFIX(_setall_s8)(v); }
     inline v_uint16 vx_setall_u16(ushort v) { return VXPREFIX(_setall_u16)(v); }
     inline v_int16 vx_setall_s16(short v) { return VXPREFIX(_setall_s16)(v); }
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    inline v_float16 vx_setall_f16(hfloat v) { return VXPREFIX(_setall_f16)(v); }
+#endif
     inline v_int32 vx_setall_s32(int v) { return VXPREFIX(_setall_s32)(v); }
     inline v_uint32 vx_setall_u32(unsigned v) { return VXPREFIX(_setall_u32)(v); }
     inline v_float32 vx_setall_f32(float v) { return VXPREFIX(_setall_f32)(v); }
@@ -575,6 +593,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_setzero_s8() { return VXPREFIX(_setzero_s8)(); }
     inline v_uint16 vx_setzero_u16() { return VXPREFIX(_setzero_u16)(); }
     inline v_int16 vx_setzero_s16() { return VXPREFIX(_setzero_s16)(); }
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    inline v_float16 vx_setzero_f16() { return VXPREFIX(_setzero_f16)(); }
+#endif
     inline v_int32 vx_setzero_s32() { return VXPREFIX(_setzero_s32)(); }
     inline v_uint32 vx_setzero_u32() { return VXPREFIX(_setzero_u32)(); }
     inline v_float32 vx_setzero_f32() { return VXPREFIX(_setzero_f32)(); }
@@ -592,6 +613,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load(const schar * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_uint16 vx_load(const ushort * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_int16 vx_load(const short * ptr) { return VXPREFIX(_load)(ptr); }
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    inline v_float16 vx_load(const hfloat * ptr) { return VXPREFIX(_load)(ptr); }
+#endif
     inline v_int32 vx_load(const int * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_uint32 vx_load(const unsigned * ptr) { return VXPREFIX(_load)(ptr); }
     inline v_float32 vx_load(const float * ptr) { return VXPREFIX(_load)(ptr); }
@@ -609,6 +633,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_aligned(const schar * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_uint16 vx_load_aligned(const ushort * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_int16 vx_load_aligned(const short * ptr) { return VXPREFIX(_load_aligned)(ptr); }
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    inline v_float16 vx_load_aligned(const hfloat * ptr) { return VXPREFIX(_load_aligned)(ptr); }
+#endif
     inline v_int32 vx_load_aligned(const int * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_uint32 vx_load_aligned(const unsigned * ptr) { return VXPREFIX(_load_aligned)(ptr); }
     inline v_float32 vx_load_aligned(const float * ptr) { return VXPREFIX(_load_aligned)(ptr); }
@@ -626,6 +653,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_low(const schar * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_uint16 vx_load_low(const ushort * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_int16 vx_load_low(const short * ptr) { return VXPREFIX(_load_low)(ptr); }
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    inline v_float16 vx_load_low(const hfloat * ptr) { return VXPREFIX(_load_low)(ptr); }
+#endif
     inline v_int32 vx_load_low(const int * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_uint32 vx_load_low(const unsigned * ptr) { return VXPREFIX(_load_low)(ptr); }
     inline v_float32 vx_load_low(const float * ptr) { return VXPREFIX(_load_low)(ptr); }
@@ -643,6 +673,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_load_halves(const schar * ptr0, const schar * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_uint16 vx_load_halves(const ushort * ptr0, const ushort * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_int16 vx_load_halves(const short * ptr0, const short * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    inline v_float16 vx_load_halves(const hfloat * ptr0, const hfloat * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
+#endif
     inline v_int32 vx_load_halves(const int * ptr0, const int * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_uint32 vx_load_halves(const unsigned * ptr0, const unsigned * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
     inline v_float32 vx_load_halves(const float * ptr0, const float * ptr1) { return VXPREFIX(_load_halves)(ptr0, ptr1); }
@@ -660,6 +693,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_lut(const schar * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_uint16 vx_lut(const ushort * ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_int16 vx_lut(const short* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    inline v_float16 vx_lut(const hfloat * ptr, const int * idx) { return VXPREFIX(_lut)(ptr, idx); }
+#endif
     inline v_int32 vx_lut(const int* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_uint32 vx_lut(const unsigned* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
     inline v_float32 vx_lut(const float* ptr, const int* idx) { return VXPREFIX(_lut)(ptr, idx); }
@@ -677,6 +713,9 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int8 vx_lut_pairs(const schar * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_uint16 vx_lut_pairs(const ushort * ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_int16 vx_lut_pairs(const short* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
+#if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    inline v_float16 vx_lut_pairs(const hfloat * ptr, const int * idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
+#endif
     inline v_int32 vx_lut_pairs(const int* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_uint32 vx_lut_pairs(const unsigned* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
     inline v_float32 vx_lut_pairs(const float* ptr, const int* idx) { return VXPREFIX(_lut_pairs)(ptr, idx); }
@@ -708,7 +747,7 @@ namespace CV__SIMD_NAMESPACE {
     inline v_int32 vx_load_expand(const short* ptr) { return VXPREFIX(_load_expand)(ptr); }
     inline v_int64 vx_load_expand(const int* ptr) { return VXPREFIX(_load_expand)(ptr); }
     inline v_uint64 vx_load_expand(const unsigned* ptr) { return VXPREFIX(_load_expand)(ptr); }
-    inline v_float32 vx_load_expand(const float16_t * ptr) { return VXPREFIX(_load_expand)(ptr); }
+    inline v_float32 vx_load_expand(const hfloat * ptr) { return VXPREFIX(_load_expand)(ptr); }
     //! @}
 
     //! @name Wide load with quad expansion
@@ -719,13 +758,13 @@ namespace CV__SIMD_NAMESPACE {
     //! @}
 
     #ifndef OPENCV_HAL_HAVE_PACK_STORE_BFLOAT16
-    inline v_float32 vx_load_expand(const bfloat16_t* ptr)
+    inline v_float32 vx_load_expand(const bfloat* ptr)
     {
         v_uint32 v = vx_load_expand((const ushort*)ptr);
         return v_reinterpret_as_f32(v_shl<16>(v));
     }
 
-    inline void v_pack_store(const bfloat16_t* ptr, const v_float32& v)
+    inline void v_pack_store(const bfloat* ptr, const v_float32& v)
     {
         v_int32 iv = v_shr<16>(v_reinterpret_as_s32(v));
         cv::v_pack_store((short*)ptr, iv);
@@ -736,316 +775,14 @@ namespace CV__SIMD_NAMESPACE {
     /** @brief SIMD processing state cleanup call */
     inline void vx_cleanup() { VXPREFIX(_cleanup)(); }
 
-#if !CV_SIMD_SCALABLE && !(CV_NEON && !defined(CV_FORCE_SIMD128_CPP))
+#if !CV_SIMD_SCALABLE
     // Compatibility layer
-
+#if !(CV_NEON && !defined(CV_FORCE_SIMD128_CPP))
     template<typename T> struct VTraits {
         static inline int vlanes() { return T::nlanes; }
         enum { nlanes = T::nlanes, max_nlanes = T::nlanes };
         using lane_type = typename T::lane_type;
     };
-
-    #define OPENCV_HAL_WRAP_BIN_OP_ADDSUB(_Tpvec) \
-    inline _Tpvec v_add(const _Tpvec& a, const _Tpvec& b) \
-    { \
-        return a + b; \
-    } \
-    inline _Tpvec v_sub(const _Tpvec& a, const _Tpvec& b) \
-    { \
-        return a - b; \
-    } \
-    template<typename... Args> \
-    inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
-        return v_add(f1 + f2, vf...); \
-    }
-    #define OPENCV_HAL_WRAP_SHIFT_OP(_Tpvec) \
-    inline _Tpvec v_shr(const _Tpvec& a, int n) \
-    { \
-        return a >> n; \
-    } \
-    inline _Tpvec v_shl(const _Tpvec& a, int n) \
-    { \
-        return a << n; \
-    }
-
-    OPENCV_HAL_WRAP_SHIFT_OP(v_uint16)
-    OPENCV_HAL_WRAP_SHIFT_OP(v_uint32)
-    OPENCV_HAL_WRAP_SHIFT_OP(v_uint64)
-    OPENCV_HAL_WRAP_SHIFT_OP(v_int16)
-    OPENCV_HAL_WRAP_SHIFT_OP(v_int32)
-    OPENCV_HAL_WRAP_SHIFT_OP(v_int64)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint16)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint32)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint64)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int8)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int16)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32)
-    #if CV_SIMD_64F
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64)
-    #endif
-    #if CV_SIMD_WIDTH != 16/*128*/ && CV_SIMD128
-    // when we use CV_SIMD128 with 256/512 bit SIMD (e.g. AVX2 or AVX512)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8x16)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint16x8)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint32x4)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint64x2)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int8x16)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int16x8)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32x4)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64x2)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32x4)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_uint16x8)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_uint32x4)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_uint64x2)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_int16x8)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_int32x4)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_int64x2)
-        #if CV_SIMD_64F
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64x2)
-        #endif
-    #endif
-    #if CV_SIMD_WIDTH != 32/*256*/ && CV_SIMD256
-    // when we use CV_SIMD256 with 512 bit SIMD (e.g. AVX512)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8x32)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint16x16)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint32x8)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint64x4)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int8x32)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int16x16)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32x8)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64x4)
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32x8)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_uint16x16)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_uint32x8)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_uint64x4)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_int16x16)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_int32x8)
-        OPENCV_HAL_WRAP_SHIFT_OP(v_int64x4)
-        #if CV_SIMD_64F
-        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64x4)
-        #endif
-    #endif
-
-    #define OPENCV_HAL_WRAP_BIN_OP_LOGIC(_Tpvec) \
-    inline _Tpvec v_and(const _Tpvec& a, const _Tpvec& b) \
-    { \
-        return a & b; \
-    } \
-    inline _Tpvec v_or(const _Tpvec& a, const _Tpvec& b) \
-    { \
-        return a | b; \
-    } \
-    inline _Tpvec v_xor(const _Tpvec& a, const _Tpvec& b) \
-    { \
-        return a ^ b; \
-    }
-
-    #define OPENCV_HAL_WRAP_NOT_OP(_Tpvec) \
-    inline _Tpvec v_not(const _Tpvec& a) \
-    { \
-        return ~a; \
-    }
-
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint8)
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint16)
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint32)
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint64)
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int8)
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int16)
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int32)
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int64)
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float32)
-    OPENCV_HAL_WRAP_NOT_OP(v_uint8)
-    OPENCV_HAL_WRAP_NOT_OP(v_uint16)
-    OPENCV_HAL_WRAP_NOT_OP(v_uint32)
-    OPENCV_HAL_WRAP_NOT_OP(v_uint64)
-    OPENCV_HAL_WRAP_NOT_OP(v_int8)
-    OPENCV_HAL_WRAP_NOT_OP(v_int16)
-    OPENCV_HAL_WRAP_NOT_OP(v_int32)
-    OPENCV_HAL_WRAP_NOT_OP(v_int64)
-    #if CV_SIMD_64F
-    OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float64)
-    #endif
-    #if CV_SIMD_WIDTH != 16/*128*/ && CV_SIMD128
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint8x16)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint16x8)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint32x4)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint64x2)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int8x16)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int16x8)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int32x4)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int64x2)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float32x4)
-        OPENCV_HAL_WRAP_NOT_OP(v_uint8x16)
-        OPENCV_HAL_WRAP_NOT_OP(v_uint16x8)
-        OPENCV_HAL_WRAP_NOT_OP(v_uint32x4)
-        OPENCV_HAL_WRAP_NOT_OP(v_uint64x2)
-        OPENCV_HAL_WRAP_NOT_OP(v_int8x16)
-        OPENCV_HAL_WRAP_NOT_OP(v_int16x8)
-        OPENCV_HAL_WRAP_NOT_OP(v_int32x4)
-        OPENCV_HAL_WRAP_NOT_OP(v_int64x2)
-        #if CV_SIMD_64F
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float64x2)
-        #endif
-    #endif
-    #if CV_SIMD_WIDTH != 32/*256*/ && CV_SIMD256
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint8x32)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint16x16)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint32x8)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_uint64x4)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int8x32)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int16x16)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int32x8)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_int64x4)
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float32x8)
-        OPENCV_HAL_WRAP_NOT_OP(v_uint8x32)
-        OPENCV_HAL_WRAP_NOT_OP(v_uint16x16)
-        OPENCV_HAL_WRAP_NOT_OP(v_uint32x8)
-        OPENCV_HAL_WRAP_NOT_OP(v_uint64x4)
-        OPENCV_HAL_WRAP_NOT_OP(v_int8x32)
-        OPENCV_HAL_WRAP_NOT_OP(v_int16x16)
-        OPENCV_HAL_WRAP_NOT_OP(v_int32x8)
-        OPENCV_HAL_WRAP_NOT_OP(v_int64x4)
-        #if CV_SIMD_64F
-        OPENCV_HAL_WRAP_BIN_OP_LOGIC(v_float64x4)
-        #endif
-    #endif
-
-    #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
-    inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b) \
-    { \
-        return a * b; \
-    } \
-    template<typename... Args> \
-    inline _Tpvec v_mul(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
-        return v_mul(f1 * f2, vf...); \
-    }
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int8)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint16)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint32)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int16)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int32)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_float32)
-    #if CV_SIMD_64F
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_float64)
-    #endif
-    #if CV_SIMD_WIDTH != 16/*128*/ && CV_SIMD128
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8x16)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint16x8)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint32x4)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int8x16)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int16x8)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int32x4)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_float32x4)
-        #if CV_SIMD_64F
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_float64x2)
-        #endif
-    #endif
-    #if CV_SIMD_WIDTH != 32/*256*/ && CV_SIMD256
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8x32)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint16x16)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint32x8)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int8x32)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int16x16)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int32x8)
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_float32x8)
-        #if CV_SIMD_64F
-        OPENCV_HAL_WRAP_BIN_OP_MUL(v_float64x4)
-        #endif
-    #endif
-
-    #define OPENCV_HAL_WRAP_BIN_OP_DIV(_Tpvec) \
-    inline _Tpvec v_div(const _Tpvec& a, const _Tpvec& b) \
-    { \
-        return a / b; \
-    }
-    OPENCV_HAL_WRAP_BIN_OP_DIV(v_float32)
-    #if CV_SIMD_64F
-    OPENCV_HAL_WRAP_BIN_OP_DIV(v_float64)
-    #endif
-    #if CV_SIMD_WIDTH != 16/*128*/ && CV_SIMD128
-        OPENCV_HAL_WRAP_BIN_OP_DIV(v_float32x4)
-        #if CV_SIMD_64F
-        OPENCV_HAL_WRAP_BIN_OP_DIV(v_float64x2)
-        #endif
-    #endif
-    #if CV_SIMD_WIDTH != 32/*256*/ && CV_SIMD256
-        OPENCV_HAL_WRAP_BIN_OP_DIV(v_float32x8)
-        #if CV_SIMD_64F
-        OPENCV_HAL_WRAP_BIN_OP_DIV(v_float64x4)
-        #endif
-    #endif
-
-    #define OPENCV_HAL_WRAP_CMP_OP(_Tpvec, intrin, op) \
-    inline _Tpvec v_##intrin(const _Tpvec& a, const _Tpvec& b) \
-    { \
-        return a op b; \
-    }
-    #define OPENCV_HAL_WRAP_EQ_OP(_Tpvec) \
-    inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b) \
-    { \
-        return a == b; \
-    } \
-    inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b) \
-    { \
-        return a != b; \
-    }
-
-    #define OPENCV_HAL_WRAP_CMP(_Tpvec) \
-    OPENCV_HAL_WRAP_CMP_OP(_Tpvec, eq, ==) \
-    OPENCV_HAL_WRAP_CMP_OP(_Tpvec, ne, !=) \
-    OPENCV_HAL_WRAP_CMP_OP(_Tpvec, lt, <) \
-    OPENCV_HAL_WRAP_CMP_OP(_Tpvec, gt, >) \
-    OPENCV_HAL_WRAP_CMP_OP(_Tpvec, le, <=) \
-    OPENCV_HAL_WRAP_CMP_OP(_Tpvec, ge, >=)
-
-    OPENCV_HAL_WRAP_CMP(v_uint8)
-    OPENCV_HAL_WRAP_CMP(v_uint16)
-    OPENCV_HAL_WRAP_CMP(v_uint32)
-    OPENCV_HAL_WRAP_EQ_OP(v_uint64)
-    OPENCV_HAL_WRAP_CMP(v_int8)
-    OPENCV_HAL_WRAP_CMP(v_int16)
-    OPENCV_HAL_WRAP_CMP(v_int32)
-    OPENCV_HAL_WRAP_EQ_OP(v_int64)
-    OPENCV_HAL_WRAP_CMP(v_float32)
-    #if CV_SIMD_64F
-    OPENCV_HAL_WRAP_CMP(v_float64)
-    #endif
-    #if CV_SIMD_WIDTH != 16/*128*/ && CV_SIMD128
-        OPENCV_HAL_WRAP_CMP(v_uint8x16)
-        OPENCV_HAL_WRAP_CMP(v_uint16x8)
-        OPENCV_HAL_WRAP_CMP(v_uint32x4)
-        OPENCV_HAL_WRAP_EQ_OP(v_uint64x2)
-        OPENCV_HAL_WRAP_CMP(v_int8x16)
-        OPENCV_HAL_WRAP_CMP(v_int16x8)
-        OPENCV_HAL_WRAP_CMP(v_int32x4)
-        OPENCV_HAL_WRAP_EQ_OP(v_int64x2)
-        OPENCV_HAL_WRAP_CMP(v_float32x4)
-        #if CV_SIMD_64F
-        OPENCV_HAL_WRAP_CMP(v_float64x2)
-        #endif
-    #endif
-    #if CV_SIMD_WIDTH != 32/*256*/ && CV_SIMD256
-        OPENCV_HAL_WRAP_CMP(v_uint8x32)
-        OPENCV_HAL_WRAP_CMP(v_uint16x16)
-        OPENCV_HAL_WRAP_CMP(v_uint32x8)
-        OPENCV_HAL_WRAP_EQ_OP(v_uint64x4)
-        OPENCV_HAL_WRAP_CMP(v_int8x32)
-        OPENCV_HAL_WRAP_CMP(v_int16x16)
-        OPENCV_HAL_WRAP_CMP(v_int32x8)
-        OPENCV_HAL_WRAP_EQ_OP(v_int64x4)
-        OPENCV_HAL_WRAP_CMP(v_float32x8)
-        #if CV_SIMD_64F
-        OPENCV_HAL_WRAP_CMP(v_float64x4)
-        #endif
-    #endif
-    OPENCV_HAL_WRAP_CMP_OP(v_int64, lt, <) \
-    OPENCV_HAL_WRAP_CMP_OP(v_int64, gt, >) \
-
 
     //////////// get0 ////////////
     #define OPENCV_HAL_WRAP_GRT0(_Tpvec) \
@@ -1094,6 +831,102 @@ namespace CV__SIMD_NAMESPACE {
         OPENCV_HAL_WRAP_GRT0(v_float64x4)
         #endif
     #endif
+#endif
+
+    #define OPENCV_HAL_WRAP_BIN_OP_ADDSUB(_Tpvec) \
+    template<typename... Args> \
+    inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const _Tpvec& f3, const Args&... vf) { \
+        return v_add(v_add(f1, f2), f3, vf...); \
+    }
+
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint16)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint32)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint64)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int8)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int16)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32)
+    #if CV_SIMD_64F
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64)
+    #endif
+    #if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float16)
+    #endif // (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    #if CV_SIMD_WIDTH != 16/*128*/ && CV_SIMD128
+    // when we use CV_SIMD128 with 256/512 bit SIMD (e.g. AVX2 or AVX512)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8x16)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint16x8)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint32x4)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint64x2)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int8x16)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int16x8)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32x4)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64x2)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32x4)
+        #if CV_SIMD_64F
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64x2)
+        #endif
+    #endif
+    #if CV_SIMD_WIDTH != 32/*256*/ && CV_SIMD256
+    // when we use CV_SIMD256 with 512 bit SIMD (e.g. AVX512)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8x32)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint16x16)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint32x8)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint64x4)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int8x32)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int16x16)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32x8)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64x4)
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32x8)
+        #if CV_SIMD_64F
+        OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64x4)
+        #endif
+    #endif
+
+    #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
+    template<typename... Args> \
+    inline _Tpvec v_mul(const _Tpvec& f1, const _Tpvec& f2, const _Tpvec& f3, const Args&... vf) { \
+        return v_mul(v_mul(f1, f2), f3, vf...); \
+    }
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int8)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint16)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint32)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int16)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int32)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_float32)
+    #if CV_SIMD_64F
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_float64)
+    #endif
+    #if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    OPENCV_HAL_WRAP_BIN_OP_MUL(v_float16)
+    #endif // (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    #if CV_SIMD_WIDTH != 16/*128*/ && CV_SIMD128
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8x16)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint16x8)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint32x4)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int8x16)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int16x8)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int32x4)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_float32x4)
+        #if CV_SIMD_64F
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_float64x2)
+        #endif
+    #endif
+    #if CV_SIMD_WIDTH != 32/*256*/ && CV_SIMD256
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8x32)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint16x16)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint32x8)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int8x32)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int16x16)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_int32x8)
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_float32x8)
+        #if CV_SIMD_64F
+        OPENCV_HAL_WRAP_BIN_OP_MUL(v_float64x4)
+        #endif
+    #endif
 
     #define OPENCV_HAL_WRAP_EXTRACT(_Tpvec) \
     inline typename VTraits<_Tpvec>::lane_type v_extract_highest(const _Tpvec& v) \
@@ -1110,6 +943,9 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_EXTRACT(v_uint64)
     OPENCV_HAL_WRAP_EXTRACT(v_int64)
     OPENCV_HAL_WRAP_EXTRACT(v_float32)
+    #if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    OPENCV_HAL_WRAP_EXTRACT(v_float16)
+    #endif
     #if CV_SIMD_64F
     OPENCV_HAL_WRAP_EXTRACT(v_float64)
     #endif
@@ -1151,6 +987,9 @@ namespace CV__SIMD_NAMESPACE {
     OPENCV_HAL_WRAP_BROADCAST(v_uint32)
     OPENCV_HAL_WRAP_BROADCAST(v_int32)
     OPENCV_HAL_WRAP_BROADCAST(v_float32)
+    #if (CV_SIMD_FP16 || CV_SIMD_SCALABLE_FP16)
+    OPENCV_HAL_WRAP_BROADCAST(v_float16)
+    #endif
     #if CV_SIMD_WIDTH != 16/*128*/ && CV_SIMD128
         OPENCV_HAL_WRAP_BROADCAST(v_uint32x4)
         OPENCV_HAL_WRAP_BROADCAST(v_int32x4)
@@ -1163,74 +1002,6 @@ namespace CV__SIMD_NAMESPACE {
     #endif
 
 #endif //!CV_SIMD_SCALABLE
-
-#if (CV_NEON /* || CV_others */) && !defined(CV_FORCE_SIMD128_CPP)
-// Compatibility layer for the backend that cleaned up.
-    #define OPENCV_HAL_WRAP_BIN_OP_ADDSUB(_Tpvec) \
-    template<typename... Args> \
-    inline _Tpvec v_add(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
-        return v_add(v_add(f1, f2), vf...); \
-    }
-
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint8)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint16)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint32)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_uint64)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int8)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int16)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int32)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_int64)
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float32)
-    #if CV_SIMD_64F
-    OPENCV_HAL_WRAP_BIN_OP_ADDSUB(v_float64)
-    #endif
-
-    #define OPENCV_HAL_WRAP_BIN_OP_MUL(_Tpvec) \
-    template<typename... Args> \
-    inline _Tpvec v_mul(const _Tpvec& f1, const _Tpvec& f2, const Args&... vf) { \
-        return v_mul(v_mul(f1, f2), vf...); \
-    }
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint8)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int8)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint16)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_uint32)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int16)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_int32)
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_float32)
-    #if CV_SIMD_64F
-    OPENCV_HAL_WRAP_BIN_OP_MUL(v_float64)
-    #endif
-
-    #define OPENCV_HAL_WRAP_EXTRACT(_Tpvec) \
-    inline typename VTraits<_Tpvec>::lane_type v_extract_highest(const _Tpvec& v) \
-    { \
-        return v_extract_n<VTraits<_Tpvec>::nlanes-1>(v); \
-    }
-
-    OPENCV_HAL_WRAP_EXTRACT(v_uint8)
-    OPENCV_HAL_WRAP_EXTRACT(v_int8)
-    OPENCV_HAL_WRAP_EXTRACT(v_uint16)
-    OPENCV_HAL_WRAP_EXTRACT(v_int16)
-    OPENCV_HAL_WRAP_EXTRACT(v_uint32)
-    OPENCV_HAL_WRAP_EXTRACT(v_int32)
-    OPENCV_HAL_WRAP_EXTRACT(v_uint64)
-    OPENCV_HAL_WRAP_EXTRACT(v_int64)
-    OPENCV_HAL_WRAP_EXTRACT(v_float32)
-    #if CV_SIMD_64F
-    OPENCV_HAL_WRAP_EXTRACT(v_float64)
-    #endif
-
-    #define OPENCV_HAL_WRAP_BROADCAST(_Tpvec) \
-    inline _Tpvec v_broadcast_highest(const _Tpvec& v) \
-    { \
-        return v_broadcast_element<VTraits<_Tpvec>::nlanes-1>(v); \
-    }
-
-    OPENCV_HAL_WRAP_BROADCAST(v_uint32)
-    OPENCV_HAL_WRAP_BROADCAST(v_int32)
-    OPENCV_HAL_WRAP_BROADCAST(v_float32)
-
-#endif //CV_NEON
 
 //! @cond IGNORED
 
@@ -1261,6 +1032,7 @@ namespace CV__SIMD_NAMESPACE {
 typedef struct v_float64 { int dummy; } v_float64;
 #endif
 
+#include "intrin_math.hpp"
 #include "simd_utils.impl.hpp"
 
 #ifndef CV_DOXYGEN

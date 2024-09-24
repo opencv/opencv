@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
@@ -23,13 +25,29 @@ public:
         setParamsFrom(params);
     }
 
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
+        outputs.assign(1, inputs[0]);
         return exclusive_raw == 0;
+    }
+
+    virtual void getTypes(const std::vector<MatType>& inputs,
+        const int requiredOutputs,
+        const int requiredInternals,
+        std::vector<MatType>& outputs,
+        std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F, "");
+        outputs.assign(1, inputs[0]);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -47,9 +65,30 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        CV_CheckTypeEQ(inputs[0].depth(), outputs[0].depth(), "");
+
+        switch(inputs[0].depth())
+        {
+            case CV_32F:
+                forwardImpl<float>(inputs, outputs);
+                break;
+            case CV_32S:
+                forwardImpl<int32_t>(inputs, outputs);
+                break;
+            case CV_64S:
+                forwardImpl<int64_t>(inputs, outputs);
+                break;
+            default:
+                CV_Error(Error::BadDepth, "");
+        }
+    }
+
+    template <typename T>
+    void forwardImpl(const std::vector<Mat>& inputs, std::vector<Mat>& outputs)
+    {
         // Get input tensor.
         const auto& src_mat = inputs[0];
-        const auto* src_ptr = src_mat.ptr<float>();
+        const T* src_ptr = src_mat.ptr<T>();
 
         // Get target axis.
         int axis = inputs.size() > 1 ? parseAxis(inputs[1]) : axis_raw;
@@ -58,7 +97,7 @@ public:
 
         // Get output tensor.
         auto& dst_mat = outputs[0];
-        auto* dst_ptr = dst_mat.ptr<float>();
+        T* dst_ptr = dst_mat.ptr<T>();
 
         // Get flags.
         const auto exclusive = exclusive_raw == 1;
@@ -89,7 +128,7 @@ public:
             size_t first_inner_offset = target_offset + target_start * inner_size;
             if (exclusive)
                 for (size_t inner_idx = 0; inner_idx < inner_size; inner_idx++)
-                    dst_ptr[first_inner_offset + inner_idx] = 0.0f;
+                    dst_ptr[first_inner_offset + inner_idx] = 0;
             else
                 for (size_t inner_idx = 0; inner_idx < inner_size; inner_idx++)
                     dst_ptr[first_inner_offset + inner_idx] = src_ptr[first_inner_offset + inner_idx];
@@ -119,6 +158,36 @@ public:
             return axis_mat_int.at<int32_t>(0);
         }
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        std::shared_ptr<ov::op::v0::CumSum> cumsum;
+        if (nodes.size() == 2)
+        {
+            int32_t axis_shape = 1;
+            auto axis_scalar = std::make_shared<ov::op::v1::Reshape>(
+                nodes[1].dynamicCast<InfEngineNgraphNode>()->node,
+                std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &axis_shape),
+                false);
+            cumsum = std::make_shared<ov::op::v0::CumSum>(
+                nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+                std::make_shared<ov::op::v0::Convert>(axis_scalar, ov::element::i32),
+                exclusive_raw,
+                reverse_raw);
+        }
+        else
+        {
+            cumsum = std::make_shared<ov::op::v0::CumSum>(
+                nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+                std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &axis_raw),
+                exclusive_raw,
+                reverse_raw);
+        }
+        return Ptr<BackendNode>(new InfEngineNgraphNode(cumsum));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     int axis_raw;
     int exclusive_raw;

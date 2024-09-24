@@ -735,53 +735,46 @@ inline v_float32x4 v_matmuladd(const v_float32x4& v, const v_float32x4& m0,
 }
 
 #define OPENCV_HAL_IMPL_SSE_BIN_OP(bin_op, _Tpvec, intrin) \
-    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b) \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b) \
     { \
         return _Tpvec(intrin(a.val, b.val)); \
-    } \
-    inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b) \
-    { \
-        a.val = intrin(a.val, b.val); \
-        return a; \
     }
 
-OPENCV_HAL_IMPL_SSE_BIN_OP(+, v_uint8x16, _mm_adds_epu8)
-OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_uint8x16, _mm_subs_epu8)
-OPENCV_HAL_IMPL_SSE_BIN_OP(+, v_int8x16, _mm_adds_epi8)
-OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_int8x16, _mm_subs_epi8)
-OPENCV_HAL_IMPL_SSE_BIN_OP(+, v_uint16x8, _mm_adds_epu16)
-OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_uint16x8, _mm_subs_epu16)
-OPENCV_HAL_IMPL_SSE_BIN_OP(+, v_int16x8, _mm_adds_epi16)
-OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_int16x8, _mm_subs_epi16)
-OPENCV_HAL_IMPL_SSE_BIN_OP(+, v_uint32x4, _mm_add_epi32)
-OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_uint32x4, _mm_sub_epi32)
-OPENCV_HAL_IMPL_SSE_BIN_OP(*, v_uint32x4, _v128_mullo_epi32)
-OPENCV_HAL_IMPL_SSE_BIN_OP(+, v_int32x4, _mm_add_epi32)
-OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_int32x4, _mm_sub_epi32)
-OPENCV_HAL_IMPL_SSE_BIN_OP(*, v_int32x4, _v128_mullo_epi32)
-OPENCV_HAL_IMPL_SSE_BIN_OP(+, v_float32x4, _mm_add_ps)
-OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_float32x4, _mm_sub_ps)
-OPENCV_HAL_IMPL_SSE_BIN_OP(*, v_float32x4, _mm_mul_ps)
-OPENCV_HAL_IMPL_SSE_BIN_OP(/, v_float32x4, _mm_div_ps)
-OPENCV_HAL_IMPL_SSE_BIN_OP(+, v_float64x2, _mm_add_pd)
-OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_float64x2, _mm_sub_pd)
-OPENCV_HAL_IMPL_SSE_BIN_OP(*, v_float64x2, _mm_mul_pd)
-OPENCV_HAL_IMPL_SSE_BIN_OP(/, v_float64x2, _mm_div_pd)
-OPENCV_HAL_IMPL_SSE_BIN_OP(+, v_uint64x2, _mm_add_epi64)
-OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_uint64x2, _mm_sub_epi64)
-OPENCV_HAL_IMPL_SSE_BIN_OP(+, v_int64x2, _mm_add_epi64)
-OPENCV_HAL_IMPL_SSE_BIN_OP(-, v_int64x2, _mm_sub_epi64)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_add, v_uint8x16, _mm_adds_epu8)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_uint8x16, _mm_subs_epu8)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_add, v_int8x16, _mm_adds_epi8)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_int8x16, _mm_subs_epi8)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_add, v_uint16x8, _mm_adds_epu16)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_uint16x8, _mm_subs_epu16)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_add, v_int16x8, _mm_adds_epi16)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_int16x8, _mm_subs_epi16)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_add, v_uint32x4, _mm_add_epi32)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_uint32x4, _mm_sub_epi32)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_mul, v_uint32x4, _v128_mullo_epi32)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_add, v_int32x4, _mm_add_epi32)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_int32x4, _mm_sub_epi32)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_mul, v_int32x4, _v128_mullo_epi32)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_add, v_float32x4, _mm_add_ps)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_float32x4, _mm_sub_ps)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_mul, v_float32x4, _mm_mul_ps)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_div, v_float32x4, _mm_div_ps)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_add, v_float64x2, _mm_add_pd)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_float64x2, _mm_sub_pd)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_mul, v_float64x2, _mm_mul_pd)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_div, v_float64x2, _mm_div_pd)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_add, v_uint64x2, _mm_add_epi64)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_uint64x2, _mm_sub_epi64)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_add, v_int64x2, _mm_add_epi64)
+OPENCV_HAL_IMPL_SSE_BIN_OP(v_sub, v_int64x2, _mm_sub_epi64)
 
 // saturating multiply 8-bit, 16-bit
 #define OPENCV_HAL_IMPL_SSE_MUL_SAT(_Tpvec, _Tpwvec)             \
-    inline _Tpvec operator * (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b)        \
     {                                                            \
         _Tpwvec c, d;                                            \
         v_mul_expand(a, b, c, d);                                \
         return v_pack(c, d);                                     \
-    }                                                            \
-    inline _Tpvec& operator *= (_Tpvec& a, const _Tpvec& b)      \
-    { a = a * b; return a; }
+    }
 
 OPENCV_HAL_IMPL_SSE_MUL_SAT(v_uint8x16, v_uint16x8)
 OPENCV_HAL_IMPL_SSE_MUL_SAT(v_int8x16,  v_int16x8)
@@ -845,7 +838,7 @@ inline v_uint16x8 v_mul_hi(const v_uint16x8& a, const v_uint16x8& b) { return v_
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b)
 { return v_int32x4(_mm_madd_epi16(a.val, b.val)); }
 inline v_int32x4 v_dotprod(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
-{ return v_dotprod(a, b) + c; }
+{ return v_add(v_dotprod(a, b), c); }
 
 // 32 >> 64
 inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b)
@@ -872,7 +865,7 @@ inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b)
 #endif
 }
 inline v_int64x2 v_dotprod(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
-{ return v_dotprod(a, b) + c; }
+{ return v_add(v_dotprod(a, b), c); }
 
 // 8 >> 32
 inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
@@ -886,7 +879,7 @@ inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b)
     return v_uint32x4(_mm_add_epi32(p0, p1));
 }
 inline v_uint32x4 v_dotprod_expand(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
 {
@@ -899,7 +892,7 @@ inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b)
     return v_int32x4(_mm_add_epi32(p0, p1));
 }
 inline v_int32x4 v_dotprod_expand(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 // 16 >> 64
 inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
@@ -911,14 +904,14 @@ inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b)
     v_expand(c, c0, c1);
     v_expand(d, d0, d1);
 
-    c0 += c1; d0 += d1;
+    c0 = v_add(c0, c1); d0 = v_add(d0, d1);
     return v_uint64x2(_mm_add_epi64(
         _mm_unpacklo_epi64(c0.val, d0.val),
         _mm_unpackhi_epi64(c0.val, d0.val)
     ));
 }
 inline v_uint64x2 v_dotprod_expand(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
 {
@@ -931,7 +924,7 @@ inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b)
     ));
 }
 inline v_int64x2 v_dotprod_expand(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 // 32 >> 64f
 inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
@@ -939,8 +932,8 @@ inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
 #if CV_SSE4_1
     return v_cvt_f64(v_dotprod(a, b));
 #else
-    v_float64x2 c = v_cvt_f64(a) * v_cvt_f64(b);
-    v_float64x2 d = v_cvt_f64_high(a) * v_cvt_f64_high(b);
+    v_float64x2 c = v_mul(v_cvt_f64(a), v_cvt_f64(b));
+    v_float64x2 d = v_mul(v_cvt_f64_high(a), v_cvt_f64_high(b));
 
     return v_float64x2(_mm_add_pd(
         _mm_unpacklo_pd(c.val, d.val),
@@ -949,7 +942,7 @@ inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
 #endif
 }
 inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 //////// Fast Dot Product ////////
 
@@ -957,13 +950,13 @@ inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, cons
 inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
 { return v_dotprod(a, b); }
 inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
-{ return v_dotprod(a, b) + c; }
+{ return v_add(v_dotprod(a, b), c); }
 
 // 32 >> 64
 inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
 { return v_dotprod(a, b); }
 inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_int64x2& c)
-{ return v_dotprod_fast(a, b) + c; }
+{ return v_add(v_dotprod_fast(a, b), c); }
 
 // 8 >> 32
 inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
@@ -977,7 +970,7 @@ inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b
     return v_uint32x4(_mm_add_epi32(p0, p1));
 }
 inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
-{ return v_dotprod_expand_fast(a, b) + c; }
+{ return v_add(v_dotprod_expand_fast(a, b), c); }
 
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
 {
@@ -994,7 +987,7 @@ inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
 #endif
 }
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
-{ return v_dotprod_expand_fast(a, b) + c; }
+{ return v_add(v_dotprod_expand_fast(a, b), c); }
 
 // 16 >> 64
 inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b)
@@ -1006,34 +999,34 @@ inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b
     v_expand(c, c0, c1);
     v_expand(d, d0, d1);
 
-    c0 += c1; d0 += d1;
-    return c0 + d0;
+    c0 = v_add(c0, c1); d0 = v_add(d0, d1);
+    return v_add(c0, d0);
 }
 inline v_uint64x2 v_dotprod_expand_fast(const v_uint16x8& a, const v_uint16x8& b, const v_uint64x2& c)
-{ return v_dotprod_expand_fast(a, b) + c; }
+{ return v_add(v_dotprod_expand_fast(a, b), c); }
 
 inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b)
 {
     v_int32x4 prod = v_dotprod(a, b);
     v_int64x2 c, d;
     v_expand(prod, c, d);
-    return c + d;
+    return v_add(c, d);
 }
 inline v_int64x2 v_dotprod_expand_fast(const v_int16x8& a, const v_int16x8& b, const v_int64x2& c)
-{ return v_dotprod_expand_fast(a, b) + c; }
+{ return v_add(v_dotprod_expand_fast(a, b), c); }
 
 // 32 >> 64f
 v_float64x2 v_fma(const v_float64x2& a, const v_float64x2& b, const v_float64x2& c);
 inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
-{ return v_fma(v_cvt_f64(a), v_cvt_f64(b), v_cvt_f64_high(a) * v_cvt_f64_high(b)); }
+{ return v_fma(v_cvt_f64(a), v_cvt_f64(b), v_mul(v_cvt_f64_high(a), v_cvt_f64_high(b))); }
 inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a,   const v_int32x4& b, const v_float64x2& c)
 { return v_fma(v_cvt_f64(a), v_cvt_f64(b), v_fma(v_cvt_f64_high(a), v_cvt_f64_high(b), c)); }
 
 #define OPENCV_HAL_IMPL_SSE_LOGIC_OP(_Tpvec, suffix, not_const) \
-    OPENCV_HAL_IMPL_SSE_BIN_OP(&, _Tpvec, _mm_and_##suffix) \
-    OPENCV_HAL_IMPL_SSE_BIN_OP(|, _Tpvec, _mm_or_##suffix) \
-    OPENCV_HAL_IMPL_SSE_BIN_OP(^, _Tpvec, _mm_xor_##suffix) \
-    inline _Tpvec operator ~ (const _Tpvec& a) \
+    OPENCV_HAL_IMPL_SSE_BIN_OP(v_and, _Tpvec, _mm_and_##suffix) \
+    OPENCV_HAL_IMPL_SSE_BIN_OP(v_or, _Tpvec, _mm_or_##suffix)   \
+    OPENCV_HAL_IMPL_SSE_BIN_OP(v_xor, _Tpvec, _mm_xor_##suffix) \
+    inline _Tpvec v_not(const _Tpvec& a) \
     { \
         return _Tpvec(_mm_xor_##suffix(a.val, not_const)); \
     }
@@ -1182,58 +1175,58 @@ inline v_int32x4 v_max(const v_int32x4& a, const v_int32x4& b)
 }
 
 #define OPENCV_HAL_IMPL_SSE_INT_CMP_OP(_Tpuvec, _Tpsvec, suffix, sbit) \
-inline _Tpuvec operator == (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_eq(const _Tpuvec& a, const _Tpuvec& b) \
 { return _Tpuvec(_mm_cmpeq_##suffix(a.val, b.val)); } \
-inline _Tpuvec operator != (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_ne(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     __m128i not_mask = _mm_set1_epi32(-1); \
     return _Tpuvec(_mm_xor_si128(_mm_cmpeq_##suffix(a.val, b.val), not_mask)); \
 } \
-inline _Tpsvec operator == (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_eq(const _Tpsvec& a, const _Tpsvec& b) \
 { return _Tpsvec(_mm_cmpeq_##suffix(a.val, b.val)); } \
-inline _Tpsvec operator != (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_ne(const _Tpsvec& a, const _Tpsvec& b) \
 { \
     __m128i not_mask = _mm_set1_epi32(-1); \
     return _Tpsvec(_mm_xor_si128(_mm_cmpeq_##suffix(a.val, b.val), not_mask)); \
 } \
-inline _Tpuvec operator < (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_lt(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     __m128i smask = _mm_set1_##suffix(sbit); \
     return _Tpuvec(_mm_cmpgt_##suffix(_mm_xor_si128(b.val, smask), _mm_xor_si128(a.val, smask))); \
 } \
-inline _Tpuvec operator > (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_gt(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     __m128i smask = _mm_set1_##suffix(sbit); \
     return _Tpuvec(_mm_cmpgt_##suffix(_mm_xor_si128(a.val, smask), _mm_xor_si128(b.val, smask))); \
 } \
-inline _Tpuvec operator <= (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_le(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     __m128i smask = _mm_set1_##suffix(sbit); \
     __m128i not_mask = _mm_set1_epi32(-1); \
     __m128i res = _mm_cmpgt_##suffix(_mm_xor_si128(a.val, smask), _mm_xor_si128(b.val, smask)); \
     return _Tpuvec(_mm_xor_si128(res, not_mask)); \
 } \
-inline _Tpuvec operator >= (const _Tpuvec& a, const _Tpuvec& b) \
+inline _Tpuvec v_ge(const _Tpuvec& a, const _Tpuvec& b) \
 { \
     __m128i smask = _mm_set1_##suffix(sbit); \
     __m128i not_mask = _mm_set1_epi32(-1); \
     __m128i res = _mm_cmpgt_##suffix(_mm_xor_si128(b.val, smask), _mm_xor_si128(a.val, smask)); \
     return _Tpuvec(_mm_xor_si128(res, not_mask)); \
 } \
-inline _Tpsvec operator < (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_lt(const _Tpsvec& a, const _Tpsvec& b) \
 { \
     return _Tpsvec(_mm_cmpgt_##suffix(b.val, a.val)); \
 } \
-inline _Tpsvec operator > (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_gt(const _Tpsvec& a, const _Tpsvec& b) \
 { \
     return _Tpsvec(_mm_cmpgt_##suffix(a.val, b.val)); \
 } \
-inline _Tpsvec operator <= (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_le(const _Tpsvec& a, const _Tpsvec& b) \
 { \
     __m128i not_mask = _mm_set1_epi32(-1); \
     return _Tpsvec(_mm_xor_si128(_mm_cmpgt_##suffix(a.val, b.val), not_mask)); \
 } \
-inline _Tpsvec operator >= (const _Tpsvec& a, const _Tpsvec& b) \
+inline _Tpsvec v_ge(const _Tpsvec& a, const _Tpsvec& b) \
 { \
     __m128i not_mask = _mm_set1_epi32(-1); \
     return _Tpsvec(_mm_xor_si128(_mm_cmpgt_##suffix(b.val, a.val), not_mask)); \
@@ -1244,17 +1237,17 @@ OPENCV_HAL_IMPL_SSE_INT_CMP_OP(v_uint16x8, v_int16x8, epi16, (short)-32768)
 OPENCV_HAL_IMPL_SSE_INT_CMP_OP(v_uint32x4, v_int32x4, epi32, (int)0x80000000)
 
 #define OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(_Tpvec, suffix) \
-inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmpeq_##suffix(a.val, b.val)); } \
-inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmpneq_##suffix(a.val, b.val)); } \
-inline _Tpvec operator < (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmplt_##suffix(a.val, b.val)); } \
-inline _Tpvec operator > (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_gt(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmpgt_##suffix(a.val, b.val)); } \
-inline _Tpvec operator <= (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmple_##suffix(a.val, b.val)); } \
-inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmpge_##suffix(a.val, b.val)); }
 
 OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(v_float32x4, ps)
@@ -1262,26 +1255,28 @@ OPENCV_HAL_IMPL_SSE_FLT_CMP_OP(v_float64x2, pd)
 
 #if CV_SSE4_1
 #define OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(_Tpvec) \
-inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_eq (const _Tpvec& a, const _Tpvec& b) \
 { return _Tpvec(_mm_cmpeq_epi64(a.val, b.val)); } \
-inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
-{ return ~(a == b); }
+inline _Tpvec v_ne (const _Tpvec& a, const _Tpvec& b) \
+{ return v_not(v_eq(a, b)); }
 #else
 #define OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(_Tpvec) \
-inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b) \
 { __m128i cmp = _mm_cmpeq_epi32(a.val, b.val); \
   return _Tpvec(_mm_and_si128(cmp, _mm_shuffle_epi32(cmp, _MM_SHUFFLE(2, 3, 0, 1)))); } \
-inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
-{ return ~(a == b); }
+inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b) \
+{ return v_not(v_eq(a, b)); }
 #endif
 
-inline v_int64x2 operator > (const v_int64x2& a, const v_int64x2& b)
+inline v_int64x2 v_gt(const v_int64x2& a, const v_int64x2& b)
 {
     __m128i s = _mm_srli_epi64(_mm_sub_epi64(b.val, a.val), 63);
     return v_int64x2(_mm_sub_epi64(_mm_setzero_si128(), s));
 }
-inline v_int64x2 operator < (const v_int64x2& a, const v_int64x2& b)
-{ return b > a; }
+inline v_int64x2 v_lt(const v_int64x2& a, const v_int64x2& b)
+{
+    return v_gt(b, a);
+}
 
 OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_uint64x2)
 OPENCV_HAL_IMPL_SSE_64BIT_CMP_OP(v_int64x2)
@@ -1319,17 +1314,17 @@ inline v_int8x16 v_mul_wrap(const v_int8x16& a, const v_int8x16& b)
 /** Absolute difference **/
 
 inline v_uint8x16 v_absdiff(const v_uint8x16& a, const v_uint8x16& b)
-{ return v_add_wrap(a - b,  b - a); }
+{ return v_add_wrap(v_sub(a, b),  v_sub(b, a)); }
 inline v_uint16x8 v_absdiff(const v_uint16x8& a, const v_uint16x8& b)
-{ return v_add_wrap(a - b,  b - a); }
+{ return v_add_wrap(v_sub(a, b),  v_sub(b, a)); }
 inline v_uint32x4 v_absdiff(const v_uint32x4& a, const v_uint32x4& b)
-{ return v_max(a, b) - v_min(a, b); }
+{ return v_sub(v_max(a, b), v_min(a, b)); }
 
 inline v_uint8x16 v_absdiff(const v_int8x16& a, const v_int8x16& b)
 {
     v_int8x16 d = v_sub_wrap(a, b);
-    v_int8x16 m = a < b;
-    return v_reinterpret_as_u8(v_sub_wrap(d ^ m, m));
+    v_int8x16 m = v_lt(a, b);
+    return v_reinterpret_as_u8(v_sub_wrap(v_xor(d, m), m));
 }
 inline v_uint16x8 v_absdiff(const v_int16x8& a, const v_int16x8& b)
 {
@@ -1337,25 +1332,25 @@ inline v_uint16x8 v_absdiff(const v_int16x8& a, const v_int16x8& b)
 }
 inline v_uint32x4 v_absdiff(const v_int32x4& a, const v_int32x4& b)
 {
-    v_int32x4 d = a - b;
-    v_int32x4 m = a < b;
-    return v_reinterpret_as_u32((d ^ m) - m);
+    v_int32x4 d = v_sub(a, b);
+    v_int32x4 m = v_lt(a, b);
+    return v_reinterpret_as_u32(v_sub(v_xor(d, m), m));
 }
 
 /** Saturating absolute difference **/
 inline v_int8x16 v_absdiffs(const v_int8x16& a, const v_int8x16& b)
 {
-    v_int8x16 d = a - b;
-    v_int8x16 m = a < b;
-    return (d ^ m) - m;
+    v_int8x16 d = v_sub(a, b);
+    v_int8x16 m = v_lt(a, b);
+    return v_sub(v_xor(d, m), m);
  }
 inline v_int16x8 v_absdiffs(const v_int16x8& a, const v_int16x8& b)
-{ return v_max(a, b) - v_min(a, b); }
+{ return v_sub(v_max(a, b), v_min(a, b)); }
 
 
 inline v_int32x4 v_fma(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
 {
-    return a * b + c;
+    return v_add(v_mul(a, b), c);
 }
 
 inline v_int32x4 v_muladd(const v_int32x4& a, const v_int32x4& b, const v_int32x4& c)
@@ -1389,12 +1384,12 @@ inline _Tpvec v_absdiff(const _Tpvec& a, const _Tpvec& b) \
 } \
 inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b) \
 { \
-    _Tpvec res = v_fma(a, a, b*b); \
+    _Tpvec res = v_fma(a, a, v_mul(b, b)); \
     return _Tpvec(_mm_sqrt_##suffix(res.val)); \
 } \
 inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b) \
 { \
-    return v_fma(a, a, b*b); \
+    return v_fma(a, a, v_mul(b, b)); \
 } \
 inline _Tpvec v_muladd(const _Tpvec& a, const _Tpvec& b, const _Tpvec& c) \
 { \
@@ -1405,19 +1400,19 @@ OPENCV_HAL_IMPL_SSE_MISC_FLT_OP(v_float32x4, float, __m128, ps, _mm_set1_epi32((
 OPENCV_HAL_IMPL_SSE_MISC_FLT_OP(v_float64x2, double, __m128d, pd, _mm_srli_epi64(_mm_set1_epi32(-1), 1))
 
 #define OPENCV_HAL_IMPL_SSE_SHIFT_OP(_Tpuvec, _Tpsvec, suffix, srai) \
-inline _Tpuvec operator << (const _Tpuvec& a, int imm) \
+inline _Tpuvec v_shl(const _Tpuvec& a, int imm) \
 { \
     return _Tpuvec(_mm_slli_##suffix(a.val, imm)); \
 } \
-inline _Tpsvec operator << (const _Tpsvec& a, int imm) \
+inline _Tpsvec v_shl(const _Tpsvec& a, int imm) \
 { \
     return _Tpsvec(_mm_slli_##suffix(a.val, imm)); \
 } \
-inline _Tpuvec operator >> (const _Tpuvec& a, int imm) \
+inline _Tpuvec v_shr(const _Tpuvec& a, int imm) \
 { \
     return _Tpuvec(_mm_srli_##suffix(a.val, imm)); \
 } \
-inline _Tpsvec operator >> (const _Tpsvec& a, int imm) \
+inline _Tpsvec v_shr(const _Tpsvec& a, int imm) \
 { \
     return _Tpsvec(srai(a.val, imm)); \
 } \
@@ -1719,9 +1714,9 @@ OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_int32x4, int, __m128i, epi32, OPENCV_HAL_N
 OPENCV_HAL_IMPL_SSE_REDUCE_OP_4_SUM(v_float32x4, float, __m128, ps, _mm_castps_si128, _mm_castsi128_ps, ss_f32)
 
 inline int v_reduce_sum(const v_int16x8& a)
-{ return v_reduce_sum(v_expand_low(a) + v_expand_high(a)); }
+{ return v_reduce_sum(v_add(v_expand_low(a), v_expand_high(a))); }
 inline unsigned v_reduce_sum(const v_uint16x8& a)
-{ return v_reduce_sum(v_expand_low(a) + v_expand_high(a)); }
+{ return v_reduce_sum(v_add(v_expand_low(a), v_expand_high(a))); }
 
 inline uint64 v_reduce_sum(const v_uint64x2& a)
 {
@@ -1778,13 +1773,13 @@ inline unsigned v_reduce_sad(const v_uint16x8& a, const v_uint16x8& b)
 {
     v_uint32x4 l, h;
     v_expand(v_absdiff(a, b), l, h);
-    return v_reduce_sum(l + h);
+    return v_reduce_sum(v_add(l, h));
 }
 inline unsigned v_reduce_sad(const v_int16x8& a, const v_int16x8& b)
 {
     v_uint32x4 l, h;
     v_expand(v_absdiff(a, b), l, h);
-    return v_reduce_sum(l + h);
+    return v_reduce_sum(v_add(l, h));
 }
 inline unsigned v_reduce_sad(const v_uint32x4& a, const v_uint32x4& b)
 {
@@ -1813,15 +1808,15 @@ inline v_uint8x16 v_popcount(const v_uint8x16& a)
 inline v_uint16x8 v_popcount(const v_uint16x8& a)
 {
     v_uint8x16 p = v_popcount(v_reinterpret_as_u8(a));
-    p += v_rotate_right<1>(p);
-    return v_reinterpret_as_u16(p) & v_setall_u16(0x00ff);
+    p = v_add(p, v_rotate_right<1>(p));
+    return v_and(v_reinterpret_as_u16(p), v_setall_u16(0x00ff));
 }
 inline v_uint32x4 v_popcount(const v_uint32x4& a)
 {
     v_uint8x16 p = v_popcount(v_reinterpret_as_u8(a));
-    p += v_rotate_right<1>(p);
-    p += v_rotate_right<2>(p);
-    return v_reinterpret_as_u32(p) & v_setall_u32(0x000000ff);
+    p = v_add(p, v_rotate_right<1>(p));
+    p = v_add(p, v_rotate_right<2>(p));
+    return v_and(v_reinterpret_as_u32(p), v_setall_u32(0x000000ff));
 }
 inline v_uint64x2 v_popcount(const v_uint64x2& a)
 {
@@ -3415,7 +3410,7 @@ inline v_float32x4 v_broadcast_element(const v_float32x4& v)
 
 ////////////// FP16 support ///////////////////////////
 
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
 #if CV_FP16
     return v_float32x4(_mm_cvtph_ps(_mm_loadu_si128((const __m128i*)ptr)));
@@ -3435,7 +3430,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
 #endif
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
 #if CV_FP16
     __m128i fp16_value = _mm_cvtps_ph(v.val, 0);

@@ -1,6 +1,8 @@
 //<![CDATA[
 window.MathJax = {
+    loader: {load: ['[tex]/ams']},
     tex: {
+        packages: {'[+]': ['ams']},
         macros: {
             matTT: [ "\\[ \\left|\\begin{array}{ccc} #1 & #2 & #3\\\\ #4 & #5 & #6\\\\ #7 & #8 & #9 \\end{array}\\right| \\]", 9],
             fork: ["\\left\\{ \\begin{array}{l l} #1 & \\mbox{#2}\\\\ #3 & \\mbox{#4}\\\\ \\end{array} \\right.", 4],
@@ -14,7 +16,8 @@ window.MathJax = {
             hdotsfor: ["\\dots", 1],
             mathbbm: ["\\mathbb{#1}", 1],
             bordermatrix: ["\\matrix{#1}", 1]
-        }
+        },
+        processEscapes: false
     }
 };
 //]]>

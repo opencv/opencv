@@ -4,7 +4,7 @@ Optical Flow {#tutorial_optical_flow}
 @tableofcontents
 
 @prev_tutorial{tutorial_meanshift}
-@next_tutorial{tutorial_cascade_classifier}
+@next_tutorial{tutorial_introduction_to_pca}
 
 Goal
 ----

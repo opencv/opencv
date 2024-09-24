@@ -308,10 +308,10 @@ static int sqsum32f( const float* src, const uchar* mask, double* sum, double* s
 static int sqsum64f( const double* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static int sqsum16f( const float16_t* src, const uchar* mask, float* sum, double* sqsum, int len, int cn )
+static int sqsum16f( const hfloat* src, const uchar* mask, float* sum, double* sqsum, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
-static int sqsum16bf( const bfloat16_t* src, const uchar* mask, float* sum, double* sqsum, int len, int cn )
+static int sqsum16bf( const bfloat* src, const uchar* mask, float* sum, double* sqsum, int len, int cn )
 { CV_INSTRUMENT_REGION(); return sumsqr_(src, mask, sum, sqsum, len, cn); }
 
 static int sqsum64u( const uint64* src, const uchar* mask, double* sum, double* sqsum, int len, int cn )

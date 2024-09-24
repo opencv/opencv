@@ -75,7 +75,7 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_CheckGE(inputs.size(), (size_t)2, "");
-        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_16F, "");
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_16F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_8S || inputs[0] == CV_8U, "");
         CV_CheckType(inputs[1], inputs[1] == CV_64S || inputs[1] == CV_32S, "");
         outputs.assign(1, inputs[0]);
     }
@@ -94,14 +94,40 @@ public:
         Mat& input = inputs[0];
         Mat& indices = inputs[1];
 
-        if (input.type() == CV_32F && indices.type() == CV_32S)
-            run<float, int32_t>(input, indices, outputs);
-        else if (input.type() == CV_32F && indices.type() == CV_64S)
-            run<float, int64_t>(input, indices, outputs);
-        else if (input.type() == CV_16F && indices.type() == CV_32S)
-            run<int16_t, int32_t>(input, indices, outputs);
-        else if (input.type() == CV_16F && indices.type() == CV_64S)
-            run<int16_t, int64_t>(input, indices, outputs);
+        if (indices.depth() == CV_32S)
+            typeDispatch<int32_t>(input.type(), input, indices, outputs);
+        else if (indices.depth() == CV_64S)
+            typeDispatch<int64_t>(input.type(), input, indices, outputs);
+        else
+            CV_Error(cv::Error::BadDepth, "Unsupported type.");
+    }
+
+    template<typename T_INDEX, typename... Args>
+    inline void typeDispatch(const int type, Args&&... args)
+    {
+        switch (type)
+        {
+            case CV_8S:
+                run<int8_t, T_INDEX>(std::forward<Args>(args)...);
+                break;
+            case CV_8U:
+                run<uint8_t, T_INDEX>(std::forward<Args>(args)...);
+                break;
+            case CV_32S:
+                run<int32_t, T_INDEX>(std::forward<Args>(args)...);
+                break;
+            case CV_64S:
+                run<int64_t, T_INDEX>(std::forward<Args>(args)...);
+                break;
+            case CV_32F:
+                run<float, T_INDEX>(std::forward<Args>(args)...);
+                break;
+            case CV_16F:
+                run<int16_t, T_INDEX>(std::forward<Args>(args)...);
+                break;
+            default:
+                CV_Error(cv::Error::BadDepth, "Unsupported type.");
+        };
     }
 
     template<typename T, typename INDEX_TYPE>
@@ -200,29 +226,29 @@ public:
         getMemoryShapes(inpShapes, 1, outShapes, internals);
 
         Mat zeros = Mat::zeros(1, total(outShapes[0]), CV_32F);
-        auto zeroInp = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{zeros.total()}, zeros.data);
+        auto zeroInp = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{zeros.total()}, zeros.data);
 
         int newShape = -1;
-        features = std::make_shared<ngraph::op::v1::Reshape>(
+        features = std::make_shared<ov::op::v1::Reshape>(
             features,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &newShape),
+            std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{1}, &newShape),
             true
         );
-        indices = std::make_shared<ngraph::op::v1::Reshape>(
+        indices = std::make_shared<ov::op::v1::Reshape>(
             indices,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &newShape),
+            std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{1}, &newShape),
             true
         );
-        if (indices.get_element_type() != ngraph::element::i32 && indices.get_element_type() != ngraph::element::i64) {
-            indices = std::make_shared<ngraph::op::Convert>(indices, ngraph::element::i64);
+        if (indices.get_element_type() != ov::element::i32 && indices.get_element_type() != ov::element::i64) {
+            indices = std::make_shared<ov::op::v0::Convert>(indices, ov::element::i64);
         }
 
         int axis = 0;
-        std::shared_ptr<ngraph::Node> unpool = std::make_shared<ngraph::op::ScatterElementsUpdate>(zeroInp, indices, features,
-            std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{1}, &axis));
+        std::shared_ptr<ov::Node> unpool = std::make_shared<ov::op::v3::ScatterElementsUpdate>(zeroInp, indices, features,
+            std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{1}, &axis));
 
-        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{outShapes[0].size()}, outShapes[0].data());
-        unpool = std::make_shared<ngraph::op::v1::Reshape>(unpool, shape, true);
+        auto shape = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{outShapes[0].size()}, outShapes[0].data());
+        unpool = std::make_shared<ov::op::v1::Reshape>(unpool, shape, true);
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(unpool));
     }

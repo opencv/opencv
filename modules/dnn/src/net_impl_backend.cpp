@@ -10,6 +10,10 @@
 #include "backend.hpp"
 #include "factory.hpp"
 
+#ifdef HAVE_CUDA
+#include "cuda4dnn/init.hpp"
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -62,7 +66,7 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
         {
             CV_Assert(haveCUDA());
 #ifdef HAVE_CUDA
-            CV_CheckType(host.depth(), host.depth() == CV_32F || host.depth() == CV_32S || host.depth() == CV_64S, "Unsupported type for CUDA");
+            CV_CheckType(host.depth(), host.depth() == CV_32F || host.depth() == CV_8S || host.depth() == CV_8U || host.depth() == CV_32S || host.depth() == CV_64S || host.depth() == CV_Bool, "Unsupported type for CUDA");
             CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
             switch (host.depth())
             {
@@ -71,10 +75,16 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
                     return CUDABackendWrapperFP16::create(baseBuffer, shape);
                 else
                     return CUDABackendWrapperFP32::create(baseBuffer, shape);
+            case CV_8S:
+                return CUDABackendWrapperINT8::create(baseBuffer, shape);
+            case CV_8U:
+                return CUDABackendWrapperUINT8::create(baseBuffer, shape);
             case CV_32S:
                 return CUDABackendWrapperINT32::create(baseBuffer, shape);
             case CV_64S:
                 return CUDABackendWrapperINT64::create(baseBuffer, shape);
+            case CV_Bool:
+                return CUDABackendWrapperBOOL::create(baseBuffer, shape);
             default:
                 CV_Error(Error::BadDepth, "Unsupported mat type for CUDA");
             }
@@ -234,6 +244,16 @@ void Net::Impl::setPreferableTarget(int targetId)
 #endif
         }
 
+        if (IS_DNN_CUDA_TARGET(targetId))
+        {
+            preferableTarget = DNN_TARGET_CPU;
+#ifdef HAVE_CUDA
+            if (cuda4dnn::doesDeviceSupportFP16() && targetId == DNN_TARGET_CUDA_FP16)
+                preferableTarget = DNN_TARGET_CUDA_FP16;
+            else
+                preferableTarget = DNN_TARGET_CUDA;
+#endif
+        }
 #if !defined(__arm64__) || !__arm64__
         if (targetId == DNN_TARGET_CPU_FP16)
         {

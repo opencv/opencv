@@ -42,7 +42,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp" // T-API like tests
-#include "opencv2/core/core_c.h"
+#include <fenv.h>
 
 namespace opencv_test {
 namespace {
@@ -1087,7 +1087,6 @@ bool CV_OperationsTest::operations1()
         Size sz(10, 20);
         if (sz.area() != 200) throw test_excep();
         if (sz.width != 10 || sz.height != 20) throw test_excep();
-        if (cvSize(sz).width != 10 || cvSize(sz).height != 20) throw test_excep();
 
         Rect r1(0, 0, 10, 20);
         Size sz1(5, 10);
@@ -1519,7 +1518,7 @@ TEST(Core_sortIdx, regression_8941)
     );
 
     cv::Mat result;
-    cv::sortIdx(src.col(0), result, CV_SORT_EVERY_COLUMN | CV_SORT_ASCENDING);
+    cv::sortIdx(src.col(0), result, cv::SORT_EVERY_COLUMN | cv::SORT_ASCENDING);
 #if 0
     std::cout << src.col(0) << std::endl;
     std::cout << result << std::endl;
@@ -1576,11 +1575,7 @@ TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/is
 typedef tuple<perf::MatDepth,int,int,int> Arith_Regression24163Param;
 typedef testing::TestWithParam<Arith_Regression24163Param> Core_Arith_Regression24163;
 
-#if defined __riscv
-TEST_P(Core_Arith_Regression24163, DISABLED_test_for_ties_to_even)
-#else
 TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
-#endif
 {
     const int matDepth = get<0>(GetParam());
     const int matHeight= get<1>(GetParam());
@@ -1602,9 +1597,12 @@ TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
     const Mat src2(matSize, matType, Scalar(beta, beta, beta, beta));
     const Mat result = ( src1 + src2 ) / 2;
 
-    // Expected that default is FE_TONEAREST(Ties to Even).
+    const int rounding = fegetround();
+    fesetround(FE_TONEAREST);
     const int mean = (int)lrint( static_cast<double>(alpha + beta) / 2.0 );
-    const Mat expected(matSize, matType, Scalar(mean,mean,mean,mean));
+    fesetround(rounding);
+
+    const Mat expected(matSize, matType, Scalar::all(mean));
 
     // Compare result and extected.
     ASSERT_EQ(expected.size(), result.size());

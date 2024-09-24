@@ -285,10 +285,8 @@ PERF_TEST_P(RenderingTest, rasterizeTriangles, ::testing::Combine(
     if (shadingType != RASTERIZE_SHADING_WHITE)
     {
         // let vertices be in BGR format to avoid later color conversions
-        // cvtColor does not work with 1d Mats
-        std::vector<Mat> xyz;
-        cv::split(colors, xyz);
-        cv::merge(std::vector<Mat>{xyz[2], xyz[1], xyz[0]}, colors);
+        // mixChannels does not support in-place operation
+        cv::mixChannels(Mat(colors).clone(), colors, {0, 2, 1, 1, 2, 0});
     }
 
     double zNear = 0.1, zFar = 50.0;
