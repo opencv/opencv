@@ -101,6 +101,9 @@ yolov4:
     url: "https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_optimal/yolov4.weights"
     sha1: "0143deb6c46fcc7f74dd35bf3c14edc3784e99ee"
   model: "yolov4.weights"
+  config_load_info:
+    url: "https://github.com/opencv/opencv_extra/raw/refs/heads/4.x/testdata/dnn/yolov4.cfg"
+    sha1: "ed0aeace88527af7524c3baf66ca44fbf049b878"
   config: "yolov4.cfg"
   mean: [0, 0, 0]
   scale: 0.00392
@@ -116,7 +119,10 @@ yolov4-tiny:
     url: "https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights"
     sha1: "451caaab22fb9831aa1a5ee9b5ba74a35ffa5dcb"
   model: "yolov4-tiny.weights"
-  config: "yolov4-tiny.cfg"
+  config_load_info:
+    url: "https://github.com/opencv/opencv_extra/raw/refs/heads/4.x/testdata/dnn/yolov4-tiny-2020-12.cfg"
+    sha1: "b161c2b0984b0c3b466c04b0d6cb3e52f06d93dd"
+  config: "yolov4-tiny-2020-12.cfg"
   mean: [0, 0, 0]
   scale: 0.00392
   width: 416
@@ -131,6 +137,9 @@ yolov3:
     url: "https://pjreddie.com/media/files/yolov3.weights"
     sha1: "520878f12e97cf820529daea502acca380f1cb8e"
   model: "yolov3.weights"
+  config_load_info:
+    url: "https://github.com/opencv/opencv_extra/raw/refs/heads/4.x/testdata/dnn/yolov3.cfg"
+    sha1: "caaf16a895b7bae3cd5c042199d1df0269f3dce6"
   config: "yolov3.cfg"
   mean: [0, 0, 0]
   scale: 0.00392
@@ -146,6 +155,9 @@ tiny-yolo-voc:
     url: "https://pjreddie.com/media/files/yolov2-tiny-voc.weights"
     sha1: "24b4bd049fc4fa5f5e95f684a8967e65c625dff9"
   model: "tiny-yolo-voc.weights"
+  config_load_info:
+    url: "https://github.com/opencv/opencv_extra/raw/refs/heads/4.x/testdata/dnn/tiny-yolo-voc.cfg"
+    sha1: "d26e2408ce4e20136278411760ba904d744fe5b5"
   config: "tiny-yolo-voc.cfg"
   mean: [0, 0, 0]
   scale: 0.00392
@@ -180,6 +192,9 @@ ssd_tf:
     download_name: "ssd_mobilenet_v1_coco_2017_11_17.tar.gz"
     member: "ssd_mobilenet_v1_coco_2017_11_17/frozen_inference_graph.pb"
   model: "ssd_mobilenet_v1_coco_2017_11_17.pb"
+  config_load_info:
+    url: "https://github.com/opencv/opencv_extra/raw/refs/heads/4.x/testdata/dnn/ssd_mobilenet_v1_coco_2017_11_17.pbtxt"
+    sha1: "c7cf985ce0a4a8953daaa4b8cacdd3c8e31437a6"
   config: "ssd_mobilenet_v1_coco_2017_11_17.pbtxt"
   mean: [0, 0, 0]
   scale: 1.0
@@ -198,6 +213,9 @@ faster_rcnn_tf:
     download_name: "faster_rcnn_inception_v2_coco_2018_01_28.tar.gz"
     member: "faster_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb"
   model: "faster_rcnn_inception_v2_coco_2018_01_28.pb"
+  config_load_info:
+    url: "https://github.com/opencv/opencv_extra/raw/refs/heads/4.x/testdata/dnn/faster_rcnn_inception_v2_coco_2018_01_28.pbtxt"
+    sha1: "059ee437fb4d6f82a6f1d2b3c7a8dd54c107687f"
   config: "faster_rcnn_inception_v2_coco_2018_01_28.pbtxt"
   mean: [0, 0, 0]
   scale: 1.0
