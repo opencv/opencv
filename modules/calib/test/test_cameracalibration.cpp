@@ -2519,7 +2519,7 @@ double CV_MultiviewCalibrationTest_CPP::calibrateStereoCamera( const vector<vect
         tvecs[i].convertTo(translationVectors[i], CV_64F);
     }
 
-    cv::Rodrigues(Rs[1], R);
+    Rs[1].copyTo(R);
     Ts[1].copyTo(T);
     distortions[0].copyTo(distCoeffs1);
     distortions[1].copyTo(distCoeffs2);
