@@ -233,6 +233,7 @@ protected:
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseAttention            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQuantDequant         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQAvgPool             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQConcat              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQConv                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -884,6 +885,9 @@ void ONNXImporter2::parseNode(const opencv_onnx::NodeProto& node_proto)
         {
             if (!have_errors)
                 CALL_MEMBER_FN(*this, iter->second)(layerParams, node_proto);
+        } else if (!have_errors) {
+            //try customly parsing the layer without explicit dispatch map
+            parseCustomLayer(layerParams, node_proto);
         } else {
             rememberMissingOp(layer_type);
         }
@@ -923,6 +927,15 @@ void ONNXImporter2::addLayer(LayerParams& layerParams,
     layer->netimpl = netimpl;
     CV_Assert(netimpl->dump_indent == 3);
     curr_prog.push_back(layer);
+}
+
+void ONNXImporter2::parseCustomLayer(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    const std::string& layer_type_domain = node_proto.has_domain() ? node_proto.domain() : std::string();
+    if (layer_type_domain.empty()){
+        rememberMissingOp(node_proto.op_type());
+    }
+    parseSimpleLayers(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseArgMinMax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
