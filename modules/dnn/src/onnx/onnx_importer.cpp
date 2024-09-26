@@ -4026,34 +4026,67 @@ void ONNXImporter::buildDispatchMap_COM_MICROSOFT(int opset_version)
 }
 
 
-Net readNetFromONNX(const String& onnxFile, bool useNewEngine)
+Net readNetFromONNX(const String& onnxFile, int engine)
 {
-    if (useNewEngine) {
-        Net net = readNetFromONNX2(onnxFile);
-        if (!net.empty())
-            return net;
+    switch(engine)
+    {
+        case ENGINE_CLASSIC:
+            return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
+        case ENGINE_NEW:
+            return readNetFromONNX2(onnxFile);
+        case ENGINE_AUTO:
+        {
+            Net net = readNetFromONNX2(onnxFile);
+            if (!net.empty())
+                return net;
+            else
+                return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
+        }
+        default:
+            CV_Error(Error::StsBadArg, "Invalid DNN engine selected!");
     }
-    return detail::readNetDiagnostic<ONNXImporter>(onnxFile.c_str());
 }
 
-Net readNetFromONNX(const char* buffer, size_t sizeBuffer, bool useNewEngine)
+Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
 {
-    if (useNewEngine) {
-        Net net = readNetFromONNX2(buffer, sizeBuffer);
-        if (!net.empty())
-            return net;
+    switch(engine)
+    {
+        case ENGINE_CLASSIC:
+            return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
+        case ENGINE_NEW:
+            return readNetFromONNX2(buffer, sizeBuffer);
+        case ENGINE_AUTO:
+        {
+            Net net = readNetFromONNX2(buffer, sizeBuffer);
+            if (!net.empty())
+                return net;
+            else
+                return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
+        }
+        default:
+            CV_Error(Error::StsBadArg, "Invalid DNN engine selected!");
     }
-    return detail::readNetDiagnostic<ONNXImporter>(buffer, sizeBuffer);
 }
 
-Net readNetFromONNX(const std::vector<uchar>& buffer, bool useNewEngine)
+Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
 {
-    if (useNewEngine) {
-        Net net = readNetFromONNX2(buffer);
-        if (!net.empty())
-            return net;
+    switch(engine)
+    {
+        case ENGINE_CLASSIC:
+            return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+        case ENGINE_NEW:
+            return readNetFromONNX2(buffer);
+        case ENGINE_AUTO:
+        {
+            Net net = readNetFromONNX2(buffer);
+            if (!net.empty())
+                return net;
+            else
+                return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+        }
+        default:
+            CV_Error(Error::StsBadArg, "Invalid DNN engine selected!");
     }
-    return readNetFromONNX(reinterpret_cast<const char*>(buffer.data()), buffer.size());
 }
 
 Mat readTensorFromONNX(const String& path)

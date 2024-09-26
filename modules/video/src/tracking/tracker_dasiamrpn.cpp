@@ -62,10 +62,11 @@ public:
     {
         // the tracker uses DNN models in quite sophisticated way,
         // so it's not supported yet by the new engine.
-        bool useNewEngine = false;
-        siamRPN = dnn::readNet(params.model, "", "", useNewEngine);
-        siamKernelCL1 = dnn::readNet(params.kernel_cls1, "", "", useNewEngine);
-        siamKernelR1 = dnn::readNet(params.kernel_r1, "", "", useNewEngine);
+        // BUG: https://github.com/opencv/opencv/issues/26201
+        dnn::EngineType engine = dnn::ENGINE_CLASSIC;
+        siamRPN = dnn::readNet(params.model, "", "", engine);
+        siamKernelCL1 = dnn::readNet(params.kernel_cls1, "", "", engine);
+        siamKernelR1 = dnn::readNet(params.kernel_r1, "", "", engine);
 
         CV_Assert(!siamRPN.empty());
         CV_Assert(!siamKernelCL1.empty());

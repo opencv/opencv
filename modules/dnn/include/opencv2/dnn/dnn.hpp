@@ -1196,31 +1196,39 @@ CV__DNN_INLINE_NS_BEGIN
     Net readNetFromModelOptimizer(const uchar* bufferModelConfigPtr, size_t bufferModelConfigSize,
                                            const uchar* bufferWeightsPtr, size_t bufferWeightsSize);
 
+
+    enum EngineType
+    {
+        ENGINE_CLASSIC=1, //!< Force use the new dnn engine
+        ENGINE_NEW=2,     //!< Force use the old dnn engine similar to 4.x branch
+        ENGINE_AUTO=3     //!< Try to use the new engine and then fall back to the classic version.
+    };
+
     /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
      *  @param onnxFile path to the .onnx file with text description of the network architecture.
-     *  @param useNewEngine the new engine is used to load and run the model
+     *  @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
      */
-    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, bool useNewEngine=true);
+    CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine=ENGINE_AUTO);
 
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer memory address of the first byte of the buffer.
      *  @param sizeBuffer size of the buffer.
-     *  @param useNewEngine the new engine is used to load and run the model
+     *  @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
      *  @returns Network object that ready to do forward, throw an exception
      *        in failure cases.
      */
-    CV_EXPORTS Net readNetFromONNX(const char* buffer, size_t sizeBuffer, bool useNewEngine=true);
+    CV_EXPORTS Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine=ENGINE_AUTO);
 
     /** @brief Reads a network model from <a href="https://onnx.ai/">ONNX</a>
      *         in-memory buffer.
      *  @param buffer in-memory buffer that stores the ONNX model bytes.
-     *  @param useNewEngine the new engine is used to load and run the model
+     *  @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
      *  @returns Network object that ready to do forward, throw an exception
      *        in failure cases.
      */
-    CV_EXPORTS_W Net readNetFromONNX(const std::vector<uchar>& buffer, bool useNewEngine=true);
+    CV_EXPORTS_W Net readNetFromONNX(const std::vector<uchar>& buffer, int engine=ENGINE_AUTO);
 
     /** @brief Creates blob from .pb file.
      *  @param path to the .pb file with input tensor.
