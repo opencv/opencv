@@ -560,13 +560,13 @@ GAPI_EXPORTS_W GMat sepFilter(const GMat& src, int ddepth, const Mat& kernelX, c
                               const Scalar& delta /*FIXME = GScalar(0)*/, int borderType = BORDER_DEFAULT,
                               const Scalar& borderValue = Scalar(0));
 
-/** @brief Convolves an image with the kernel.
+/** @brief Correlates an image with the kernel.
 
 The function applies an arbitrary linear filter to an image. When
 the aperture is partially outside the image, the function interpolates outlier pixel values
 according to the specified border mode.
 
-The function does actually compute correlation, not the convolution:
+The function does actually compute correlation, which is convolution with the kernel flipped on the X and Y axis:
 
 \f[\texttt{dst} (x,y) =  \sum _{ \substack{0\leq x' < \texttt{kernel.cols}\\{0\leq y' < \texttt{kernel.rows}}}}  \texttt{kernel} (x',y')* \texttt{src} (x+x'- \texttt{anchor.x} ,y+y'- \texttt{anchor.y} )\f]
 
