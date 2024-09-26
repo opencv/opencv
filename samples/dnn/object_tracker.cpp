@@ -20,16 +20,16 @@ using namespace std;
 using namespace cv::dnn;
 
 const string param_keys =
-        "{ help     h  |                   | Print help message }"
-        "{ @alias      |                   | An alias name of model to extract preprocessing parameters from models.yml file. }"
-        "{ input    i  |                   | Full path to input video folder, the specific camera index. (empty for camera 0) }"
-        "{ backbone    | backbone.onnx | Path to onnx model of backbone.onnx}"
-        "{ headneck    | headneck.onnx | Path to onnx model of headneck.onnx }"
-        "{ vit_net    | vitTracker.onnx | Path to onnx model of vitTracker.onnx}"
-        "{ tracking_score_threshold t | 0.3 | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }"
-        "{ dasiamrpn_net         | dasiamrpn_model.onnx | Path to onnx model of net}"
-        "{ kernel_cls1 | dasiamrpn_kernel_cls1.onnx | Path to onnx model of kernel_r1 }"
-        "{ kernel_r1   | dasiamrpn_kernel_r1.onnx | Path to onnx model of kernel_cls1 }";
+        "{ help     h    |                            | Print help message }"
+        "{ @alias        |                            | An alias name of model to extract preprocessing parameters from models.yml file. }"
+        "{ input    i    |                            | Full path to input video folder, the specific camera index. (empty for camera 0) }"
+        "{ backbone      |         backbone.onnx      | Path to onnx model of backbone.onnx}"
+        "{ headneck      |         headneck.onnx      | Path to onnx model of headneck.onnx }"
+        "{ vit_net       |       vitTracker.onnx      | Path to onnx model of vitTracker.onnx}"
+        "{ tracking_thrs |             0.3            | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }"
+        "{ dasiamrpn_net |     dasiamrpn_model.onnx   | Path to onnx model of net}"
+        "{ kernel_r1     |  dasiamrpn_kernel_r1.onnx  | Path to onnx model of kernel_cls1 }"
+        "{ kernel_cls1   | dasiamrpn_kernel_cls1.onnx | Path to onnx model of kernel_r1 }";
 
 const string backend_keys = format(
     "{ backend | default | Choose one of computation backends: "
@@ -183,7 +183,7 @@ static int run(int argc, char** argv)
 
     if (modelName == "vit"){
         net = parser.get<String>("vit_net");
-        float tracking_score_threshold = parser.get<float>("tracking_score_threshold");
+        float tracking_score_threshold = parser.get<float>("tracking_thrs");
 
         Ptr<TrackerVit> tracker;
         try
