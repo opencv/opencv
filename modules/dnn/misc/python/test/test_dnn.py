@@ -374,6 +374,7 @@ class dnn_test(NewOpenCVTests):
 
         self.assertTrue(all(cv.dnn.NMSBoxes(rects, confs, 0, 0.6).ravel() == (0, 1)))
 
+    # BUG: https://github.com/opencv/opencv/issues/26200
     @unittest.skip("custom layers are partially broken with transition to the new dnn engine")
     def test_custom_layer(self):
         class CropLayer(object):

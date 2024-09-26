@@ -1512,7 +1512,6 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
         printf("shape2: %s\n", shape2.str().c_str());
         CV_Assert(shape1 == shape2 && "shapes of compared arrays must be the same");
     }
-    //CV_Assert(src1.size == src2.size);
     CV_Assert( mask.empty() || (shape1 == mask.shape() && (mask.type() == CV_8U || mask.type() == CV_Bool)) );
     CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     const Mat *arrays[]={&src1, &src2, &mask, 0};

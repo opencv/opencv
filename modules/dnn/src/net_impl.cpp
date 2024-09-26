@@ -68,6 +68,8 @@ Net::Impl::Impl()
 
     accuracy = CV_32F;
     enableFP16 = haveFP16 = false;
+    // FP16 is not ready yet in the new DNN engine
+    // Ticket: https://github.com/opencv/opencv/issues/26196
     /*if (checkHardwareSupport(CV_CPU_FP16)) {
         enableFP16 = haveFP16 = true;
     }*/

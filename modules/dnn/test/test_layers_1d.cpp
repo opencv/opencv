@@ -1247,11 +1247,7 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
 
     MatShape ref_shape = output_ref.shape();
     MatShape out_shape = outputs[0].shape();
-    if (ref_shape != out_shape) {
-        printf("ref shape: %s\n", ref_shape.str().c_str());
-        printf("out shape: %s\n", out_shape.str().c_str());
-    }
-    ASSERT_EQ(ref_shape, out_shape);
+    ASSERT_EQ(ref_shape, out_shape) << "ref_shape " << ref_shape.str() << " does not match output shape " << out_shape.str();
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Reduce_Test, Combine(
@@ -1450,11 +1446,7 @@ TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
     ASSERT_EQ(1, outputs.size());
     MatShape ref_shape = output_ref.shape();
     MatShape out_shape = outputs[0].shape();
-    if (ref_shape != out_shape) {
-        printf("ref_shape: %s\n", ref_shape.str().c_str());
-        printf("out_shape: %s\n", out_shape.str().c_str());
-        ASSERT_EQ(ref_shape, out_shape);
-    }
+    ASSERT_EQ(ref_shape, out_shape) << "ref_shape " << ref_shape.str() << "does not match output shape " << out_shape.str();
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
@@ -1650,6 +1642,7 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
     normAssert(output_ref, outputs[0]);
 }
 
+// BUG: https://github.com/opencv/opencv/issues/26193
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Einsum_Test, testing::Values(
     //std::make_tuple(std::vector<int>({}), std::vector<int>({}), ",->"),
     //std::make_tuple(std::vector<int>({1}), std::vector<int>({}), "i,->i"),

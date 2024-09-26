@@ -1611,7 +1611,12 @@ private:
     int outWidth, outHeight, zoomFactor;
 };
 
-TEST_P(Test_Caffe_layers, Interp)
+// BUG: https://github.com/opencv/opencv/issues/26194
+// After unregistration of the custom 'Interp' the model uses the standard Resize layer.
+// According to the graph, the model must produce 2 x 3 x 18 x 16 tensor with Resize layer,
+// but the result is compared with 2 x 3 x 17 x 15 tensor, just like the custom 'Interp' layer produced,
+// so we get the test failure. It looks like the test needs to be fixed.
+TEST_P(Test_Caffe_layers, DISABLED_Interp)
 {
 #ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
     throw SkipTestException("Requires patched protobuf");
@@ -1639,11 +1644,7 @@ TEST_P(Test_Caffe_layers, Interp)
 
     // Test an implemented layer.
 
-    // After unregistration of the custom 'Interp' the model uses the standard Resize layer.
-    // According to the graph, the model must produce 2 x 3 x 18 x 16 tensor with Resize layer,
-    // but the result is compared with 2 x 3 x 17 x 15 tensor, just like the custom 'Interp' layer produced,
-    // so we get the test failure. It looks like the test needs to be fixed.
-    //testLayerUsingCaffeModels("layer_interp", false, false);
+    testLayerUsingCaffeModels("layer_interp", false, false);
 #endif
 }
 

@@ -620,7 +620,8 @@ bool _InputArray::empty(int i) const
 
 MatShape _InputArray::shape(int i) const
 {
-    int sizes[CV_MAX_DIM], dims = sizend(sizes, i);
+    int sizes[CV_MAX_DIM];
+    int dims = sizend(sizes, i);
 
     if (dims == 0 && empty(i))
         return MatShape();

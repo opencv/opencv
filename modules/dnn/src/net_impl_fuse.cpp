@@ -663,6 +663,9 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
             continue;  // Go to the next layer.
 
         // [TODO] temporarily disabled Concat optimization.
+        //
+        // Ticket: https://github.com/opencv/opencv/issues/26195
+        //
         // It's not quite compatible with dynamic shapes,
         // so we need to make sure that we correctly predicted shapes
         // of all the concatenated tensors and their offsets inside the result

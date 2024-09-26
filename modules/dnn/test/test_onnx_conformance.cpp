@@ -1226,10 +1226,9 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     std::string prefix = cv::format("dnn/onnx/conformance/node/%s", test_case.name);
 
     Net net;
-    std::string model_path;
     try
     {
-        model_path = findDataFile(prefix + "/model.onnx");
+        std::string model_path = findDataFile(prefix + "/model.onnx");
 
         //cout << "Read ONNX inputs..." << endl;
         for (int i = 0; i < test_case.inputs; ++i)

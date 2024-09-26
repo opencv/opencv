@@ -102,6 +102,7 @@ public:
 
         int numAxes = (int)inputs[0].size();
         /*
+           Ticket: https://github.com/opencv/opencv/issues/26197
            [TODO] this is not quite correct,
            in ONNX Flatten valid range is [0, numAxes],
            not [0, numAxes-1] which normalize_axis() produces.

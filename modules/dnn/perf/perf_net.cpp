@@ -66,6 +66,7 @@ public:
         net.getMemoryConsumption(netMatShapes, netMatTypes, weightsMemory, blobsMemory);
         int64 flops = net.getFLOPS(netMatShapes, netMatTypes);
         // [TODO] implement getFLOPS in the new engine
+        // Issue: https://github.com/opencv/opencv/issues/26199
         CV_Assert(flops > 0 || net.getMainGraph());
         std::cout << "Memory consumption:" << std::endl;
         std::cout << "    Weights(parameters): " << divUp(weightsMemory, 1u<<20) << " Mb" << std::endl;
