@@ -1644,10 +1644,10 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
 
 // BUG: https://github.com/opencv/opencv/issues/26193
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Einsum_Test, testing::Values(
-    //std::make_tuple(std::vector<int>({}), std::vector<int>({}), ",->"),
-    //std::make_tuple(std::vector<int>({1}), std::vector<int>({}), "i,->i"),
+    std::make_tuple(std::vector<int>({}), std::vector<int>({}), ",->"),
+    std::make_tuple(std::vector<int>({1}), std::vector<int>({}), "i,->i"),
     std::make_tuple(std::vector<int>({}), std::vector<int>({1}), ",i->i"),
-    //std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({}), "ij,->ij"),
+    std::make_tuple(std::vector<int>({4, 1}), std::vector<int>({}), "ij,->ij"),
     // std::make_tuple(std::vector<int>({}), std::vector<int>({4, 1}), ",ij->ij")), // mul function of arithm_op can not handle cases with different number of channels
     std::make_tuple(std::vector<int>({1}), std::vector<int>({1}), "i,i->i"),
     std::make_tuple(std::vector<int>({1}), std::vector<int>({1}), "i,i->"),
