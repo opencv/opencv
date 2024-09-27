@@ -884,6 +884,7 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
     int num_input_tensors = inputs.size();
     if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",") ) {
+        inputSubscriptIndices.resize(numInputs);
         return;
     }
     // if we have only one token and two inputs lets skip the check
