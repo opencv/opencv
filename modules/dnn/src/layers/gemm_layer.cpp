@@ -30,14 +30,28 @@ public:
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
 
-        if (!blobs.empty()) {
-            const_B = const_C = true;
-        } else {
-            const_B = const_C = false;
+        if (params.has("constB") || params.has("constB") || params.has("have_bias"))
+        {
+            // The params are not part of ONNX, but set by old ONNX parser
+            const_B = params.get<bool>("constB", false); // true means blobs[0] is B
+            const_C = params.get<bool>("constC", false); // true means blobs.back() is C
+            have_bias = params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
         }
-        // [TODO] the function should be smart enough to figure out the operation mode from the number of 'inputs' and number of 'blobs'.
-        // note, however, that 'inputs' may not be set yet in the constructor
-        have_bias = blobs.size() > 1 || params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
+        else
+        {
+            // TODO: With the new parser the function should be smart enough to figure out
+            // the operation mode from the number of 'inputs' and number of 'blobs'.
+            // note, however, that 'inputs' may not be set yet in the constructor
+            // Ticket: https://github.com/opencv/opencv/issues/26209
+
+            if (!blobs.empty()) {
+                const_B = const_C = true;
+            } else {
+                const_B = const_C = false;
+            }
+
+            have_bias = blobs.size() > 1 || params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
+        }
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
     }
@@ -72,6 +86,8 @@ public:
         int N = trans_b ? mb : nb;
         int K_a = trans_a ? ma : na;
         int K_b = trans_b ? nb : mb;
+
+
         CV_CheckEQ(K_a, K_b, "DNN/Gemm: Invalid dimension of dim K");
 
         bool have_bias_ = have_bias || inputs.size() == 3;
