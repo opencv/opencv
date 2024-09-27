@@ -4028,6 +4028,10 @@ void ONNXImporter::buildDispatchMap_COM_MICROSOFT(int opset_version)
 
 Net readNetFromONNX(const String& onnxFile, int engine)
 {
+    static const int engine_forced = (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+    if(engine_forced != ENGINE_AUTO)
+        engine = engine_forced;
+
     switch(engine)
     {
         case ENGINE_CLASSIC:
@@ -4049,6 +4053,10 @@ Net readNetFromONNX(const String& onnxFile, int engine)
 
 Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
 {
+    static const int engine_forced = (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+    if(engine_forced != ENGINE_AUTO)
+        engine = engine_forced;
+
     switch(engine)
     {
         case ENGINE_CLASSIC:
@@ -4070,6 +4078,10 @@ Net readNetFromONNX(const char* buffer, size_t sizeBuffer, int engine)
 
 Net readNetFromONNX(const std::vector<uchar>& buffer, int engine)
 {
+    static const int engine_forced = (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+    if(engine_forced != ENGINE_AUTO)
+        engine = engine_forced;
+
     switch(engine)
     {
         case ENGINE_CLASSIC:
