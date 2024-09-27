@@ -1023,6 +1023,13 @@ CV__DNN_INLINE_NS_BEGIN
         Ptr<Impl> impl;
     };
 
+    enum EngineType
+    {
+        ENGINE_CLASSIC=1, //!< Force use the new dnn engine
+        ENGINE_NEW=2,     //!< Force use the old dnn engine similar to 4.x branch
+        ENGINE_AUTO=3     //!< Try to use the new engine and then fall back to the classic version.
+    };
+
     /** @brief Reads a network model stored in <a href="https://pjreddie.com/darknet/">Darknet</a> model files.
     *  @param cfgFile      path to the .cfg file with text description of the network architecture.
     *  @param darknetModel path to the .weights file with learned network.
@@ -1149,7 +1156,7 @@ CV__DNN_INLINE_NS_BEGIN
      CV_EXPORTS_W Net readNet(CV_WRAP_FILE_PATH const String& model,
                               CV_WRAP_FILE_PATH const String& config = "",
                               const String& framework = "",
-                              bool useNewEngine = true);
+                              int engine = ENGINE_AUTO);
 
      /**
       * @brief Read deep learning network represented in one of the supported formats.
@@ -1196,13 +1203,6 @@ CV__DNN_INLINE_NS_BEGIN
     Net readNetFromModelOptimizer(const uchar* bufferModelConfigPtr, size_t bufferModelConfigSize,
                                            const uchar* bufferWeightsPtr, size_t bufferWeightsSize);
 
-
-    enum EngineType
-    {
-        ENGINE_CLASSIC=1, //!< Force use the new dnn engine
-        ENGINE_NEW=2,     //!< Force use the old dnn engine similar to 4.x branch
-        ENGINE_AUTO=3     //!< Try to use the new engine and then fall back to the classic version.
-    };
 
     /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
      *  @param onnxFile path to the .onnx file with text description of the network architecture.

@@ -512,7 +512,7 @@ class dnn_test(NewOpenCVTests):
         for backend, target in self.dnnBackendsAndTargets:
             printParams(backend, target)
 
-            net = cv.dnn.readNet(model_path, "", "", False)
+            net = cv.dnn.readNet(model_path, "", "", engine=cv.dnn.ENGINE_CLASSIC)
 
             node_name = net.getLayerNames()[0]
             w = net.getParam(node_name, 0) # returns the original tensor of three-dimensional shape
