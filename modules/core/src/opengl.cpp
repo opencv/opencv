@@ -971,6 +971,7 @@ void cv::ogl::VertexArray::setAutoRelease(bool flag)
 void cv::ogl::VertexArray::vertexAttribPointer(InputArray arr, unsigned int index, int size, int stride, int offset) const
 {
 #ifndef HAVE_OPENGL
+    CV_UNUSED(arr);
     CV_UNUSED(index);
     CV_UNUSED(size);
     CV_UNUSED(stride);
@@ -2179,8 +2180,15 @@ void unmapGLBuffer(UMat& u)
 
 void uniformMatrix4fv(int location, int count, float* value)
 {
+#if !defined(HAVE_OPENGL)
+    CV_UNUSED(location);
+    CV_UNUSED(count);
+    CV_UNUSED(value);
+    throw_no_ogl();
+#else
     gl::UniformMatrix4fv(location, count, gl::FALSE_, value);
     CV_CheckGlError();
+#endif
 }
 
 }} // namespace cv::ogl
