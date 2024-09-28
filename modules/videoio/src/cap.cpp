@@ -82,11 +82,11 @@ VideoCapture::VideoCapture(const String& filename, int apiPreference, const std:
     open(filename, apiPreference, params);
 }
 
-VideoCapture::VideoCapture(const std::vector<uchar>& buffer, int apiPreference, const std::vector<int>& params)
+VideoCapture::VideoCapture(Ptr<RawVideoSource> source, int apiPreference, const std::vector<int>& params)
     : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
-    open(buffer, apiPreference, params);
+    open(source, apiPreference, params);
 }
 
 VideoCapture::VideoCapture(int index, int apiPreference) : throwOnFail(false)
@@ -235,7 +235,7 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
     return false;
 }
 
-bool VideoCapture::open(const std::vector<uchar>& buffer, int apiPreference, const std::vector<int>& params)
+bool VideoCapture::open(Ptr<RawVideoSource> source, int apiPreference, const std::vector<int>& params)
 {
     CV_INSTRUMENT_REGION();
 
@@ -265,7 +265,7 @@ bool VideoCapture::open(const std::vector<uchar>& buffer, int apiPreference, con
             {
                 try
                 {
-                    icap = backend->createCapture(buffer, parameters);
+                    icap = backend->createCapture(source, parameters);
                     if (!icap.empty())
                     {
                         CV_CAPTURE_LOG_DEBUG(NULL,

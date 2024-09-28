@@ -725,6 +725,84 @@ class IVideoCapture;
 namespace internal { class VideoCapturePrivateAccessor; }
 //! @endcond IGNORED
 
+struct CV_EXPORTS_W_SIMPLE FormatInfo
+{
+    // CV_WRAP FormatInfo() : nBitDepthMinus8(-1), ulWidth(0), ulHeight(0), width(0), height(0), ulMaxWidth(0), ulMaxHeight(0), valid(false),
+    //     fps(0), ulNumDecodeSurfaces(0), videoFullRangeFlag(false), enableHistogram(false), nCounterBitDepth(0), nMaxHistogramBins(0){};
+
+    // CV_PROP_RW Codec codec;
+    // CV_PROP_RW ChromaFormat chromaFormat;
+    // CV_PROP_RW int nBitDepthMinus8;
+    // CV_PROP_RW int nBitDepthChromaMinus8;
+    // CV_PROP_RW int ulWidth;//!< Coded sequence width in pixels.
+    // CV_PROP_RW int ulHeight;//!< Coded sequence height in pixels.
+    // CV_PROP_RW int width;//!< Width of the decoded frame returned by nextFrame(frame).
+    // CV_PROP_RW int height;//!< Height of the decoded frame returned by nextFrame(frame).
+    // int ulMaxWidth;
+    // int ulMaxHeight;
+    // CV_PROP_RW Rect displayArea;//!< ROI inside the decoded frame returned by nextFrame(frame), containing the useable video frame.
+    // CV_PROP_RW bool valid;
+    // CV_PROP_RW double fps;
+    // CV_PROP_RW int ulNumDecodeSurfaces;//!< Maximum number of internal decode surfaces.
+    // CV_PROP_RW DeinterlaceMode deinterlaceMode;
+    // CV_PROP_RW cv::Size targetSz;//!< Post-processed size of the output frame.
+    // CV_PROP_RW cv::Rect srcRoi;//!< Region of interest decoded from video source.
+    // CV_PROP_RW cv::Rect targetRoi;//!< Region of interest in the output frame containing the decoded frame.
+    // CV_PROP_RW bool videoFullRangeFlag;//!< Output value indicating if the black level, luma and chroma of the source are represented using the full or limited range (AKA TV or "analogue" range) of values as defined in Annex E of the ITU-T Specification.  Internally the conversion from NV12 to BGR obeys ITU 709.
+    // CV_PROP_RW bool enableHistogram;//!< Flag requesting histogram output if supported. Exception will be thrown when requested but not supported.
+    // CV_PROP_RW int nCounterBitDepth;//!< Bit depth of histogram bins if histogram output is requested and supported.
+    // CV_PROP_RW int nMaxHistogramBins;//!< Max number of histogram bins if histogram output is requested and supported.
+};
+
+class CV_EXPORTS_W RawVideoSource
+{
+public:
+    virtual ~RawVideoSource() {}
+
+    /** @brief Returns next packet with RAW video frame.
+
+    @param data Pointer to frame data.
+    @param size Size in bytes of current frame.
+     */
+    virtual bool getNextPacket(unsigned char** data, size_t* size) = 0;
+
+    /** @brief Returns true if the last packet contained a key frame.
+     */
+    virtual bool lastPacketContainsKeyFrame() const { return false; }
+
+    /** @brief Returns information about video file format.
+    */
+    virtual FormatInfo format() const = 0;
+
+    /** @brief Updates the coded width and height inside format.
+    */
+    virtual void updateFormat(const FormatInfo& videoFormat) = 0;
+
+    /** @brief Returns any extra data associated with the video source.
+
+    @param extraData 1D cv::Mat containing the extra data if it exists.
+     */
+    virtual void getExtraData(cv::Mat& extraData) const = 0;
+
+    /** @brief Retrieves the specified property used by the VideoSource.
+
+    @param propertyId Property identifier from cv::VideoCaptureProperties (eg. cv::CAP_PROP_POS_MSEC, cv::CAP_PROP_POS_FRAMES, ...)
+    or one from @ref videoio_flags_others.
+    @param propertyVal Value for the specified property.
+
+    @return `true` unless the property is unset set or not supported.
+     */
+    virtual bool get(const int propertyId, double& propertyVal) const = 0;
+
+    /** @brief Retrieve the index of the first frame that will returned after construction.
+
+    @return index of the index of the first frame that will returned after construction.
+
+    @note To reduce the decoding overhead when initializing VideoReader to start its decoding from frame N, RawVideoSource should seek to the first valid key frame less than or equal to N and return that index here.
+     */
+    virtual int getFirstFrameIdx() const = 0;
+};
+
 /** @brief Class for video capturing from video files, image sequences or cameras.
 
 The class provides C++ API for capturing video from cameras or for reading video files and image sequences.
@@ -804,7 +882,7 @@ public:
     The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
     See cv::VideoCaptureProperties
     */
-    CV_WRAP explicit VideoCapture(const std::vector<uchar>& buffer, int apiPreference, const std::vector<int>& params);
+    CV_WRAP explicit VideoCapture(Ptr<RawVideoSource> source, int apiPreference, const std::vector<int>& params);
 
     /** @brief Default destructor
 
@@ -871,7 +949,7 @@ public:
 
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
-    CV_WRAP virtual bool open(const std::vector<uchar>& buffer, int apiPreference, const std::vector<int>& params);
+    CV_WRAP virtual bool open(Ptr<RawVideoSource> source, int apiPreference, const std::vector<int>& params);
 
     /** @brief Returns true if video capturing has been initialized already.
 

@@ -74,10 +74,10 @@ public:
     {
         open(filename, params);
     }
-    CvCapture_FFMPEG_proxy(const uint8_t* buffer, size_t buffer_size, const cv::VideoCaptureParameters& params)
+    CvCapture_FFMPEG_proxy(Ptr<RawVideoSource> source, const cv::VideoCaptureParameters& params)
         : ffmpegCapture(NULL)
     {
-        open(buffer, buffer_size, params);
+        open(source, params);
     }
     virtual ~CvCapture_FFMPEG_proxy() { close(); }
 
@@ -127,11 +127,11 @@ public:
         ffmpegCapture = cvCreateFileCaptureWithParams_FFMPEG(filename.c_str(), params);
         return ffmpegCapture != 0;
     }
-    bool open(const uint8_t* buffer, size_t buffer_size, const cv::VideoCaptureParameters& params)
+    bool open(Ptr<RawVideoSource> source, const cv::VideoCaptureParameters& params)
     {
         close();
 
-        ffmpegCapture = cvCreateBufferCaptureWithParams_FFMPEG(buffer, buffer_size, params);
+        ffmpegCapture = cvCreateBufferCaptureWithParams_FFMPEG(source, params);
         return ffmpegCapture != 0;
     }
     void close()
@@ -159,9 +159,9 @@ cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &f
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cvCreateBufferCapture_FFMPEG_proxy(const std::vector<uchar> &buffer, const cv::VideoCaptureParameters& params)
+cv::Ptr<cv::IVideoCapture> cvCreateBufferCapture_FFMPEG_proxy(Ptr<RawVideoSource> source, const cv::VideoCaptureParameters& params)
 {
-    cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(buffer.data(), buffer.size(), params);
+    cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(source, params);
     if (capture && capture->isOpened())
         return capture;
     return cv::Ptr<cv::IVideoCapture>();

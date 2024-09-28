@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include "opencv2/core/utils/filesystem.hpp"
 
 namespace opencv_test
 {
@@ -1046,19 +1047,32 @@ TEST_P(buffer_capture, read)
 
     VideoCapture cap;
     String video_file = BunnyParameters::getFilename(String(".avi"));
+    ASSERT_TRUE(utils::fs::exists(video_file));
 
-    // Read file content
-    std::vector<uint8_t> buffer;
-    std::ifstream ifs(video_file.c_str(), std::ios::in | std::ios::binary);
-    ASSERT_TRUE(ifs.is_open());
-    ifs.seekg(0, std::ios::end);
-    const size_t sz = ifs.tellg();
-    buffer.resize(sz);
-    ifs.seekg(0, std::ios::beg);
-    ifs.read((char*)buffer.data(), sz);
-    ASSERT_FALSE(ifs.fail());
+    class BufferSource : public RawVideoSource
+    {
+    public:
+        BufferSource(String path) : RawVideoSource()
+        {
+            ifs.open(path.c_str(), std::ios::in | std::ios::binary);
+        }
+        virtual bool getNextPacket(unsigned char** data, size_t* size) override
+        {
+            int sz = static_cast<int>(*size);
+            ifs.read(reinterpret_cast<char*>(*data), sz);
+            return true;
+        }
+        virtual FormatInfo format() const override {}
+        virtual void updateFormat(const FormatInfo& videoFormat) override {}
+        virtual void getExtraData(cv::Mat& extraData) const override {}
+        virtual bool get(const int propertyId, double& propertyVal) const override {}
+        virtual int getFirstFrameIdx() const override {}
+    private:
+        std::ifstream ifs;
+    };
+    auto stream = cv::makePtr<BufferSource>(video_file);
 
-    EXPECT_NO_THROW(cap.open(buffer, apiPref, {}));
+    EXPECT_NO_THROW(cap.open(stream, apiPref, {}));
     ASSERT_TRUE(cap.isOpened());
 
     const int numFrames = 10;
