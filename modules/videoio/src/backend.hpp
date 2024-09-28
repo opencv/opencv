@@ -18,7 +18,7 @@ public:
     virtual ~IBackend() {}
     virtual Ptr<IVideoCapture> createCapture(int camera, const VideoCaptureParameters& params) const = 0;
     virtual Ptr<IVideoCapture> createCapture(const std::string &filename, const VideoCaptureParameters& params) const = 0;
-    virtual Ptr<IVideoCapture> createCapture(Ptr<RawVideoSource> source, const VideoCaptureParameters& params) const = 0;
+    virtual Ptr<IVideoCapture> createCapture(std::istream& source, const VideoCaptureParameters& params) const = 0;
     virtual Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps, const cv::Size& sz,
                                            const VideoWriterParameters& params) const = 0;
 };
@@ -35,10 +35,10 @@ public:
 
 typedef Ptr<IVideoCapture> (*FN_createCaptureFile)(const std::string & filename);
 typedef Ptr<IVideoCapture> (*FN_createCaptureCamera)(int camera);
-typedef Ptr<IVideoCapture> (*FN_createCaptureBuffer)(Ptr<RawVideoSource> source);
+typedef Ptr<IVideoCapture> (*FN_createCaptureBuffer)(std::istream& source);
 typedef Ptr<IVideoCapture> (*FN_createCaptureFileWithParams)(const std::string & filename, const VideoCaptureParameters& params);
 typedef Ptr<IVideoCapture> (*FN_createCaptureCameraWithParams)(int camera, const VideoCaptureParameters& params);
-typedef Ptr<IVideoCapture> (*FN_createCaptureBufferWithParams)(Ptr<RawVideoSource> source, const VideoCaptureParameters& params);
+typedef Ptr<IVideoCapture> (*FN_createCaptureBufferWithParams)(std::istream& source, const VideoCaptureParameters& params);
 typedef Ptr<IVideoWriter>  (*FN_createWriter)(const std::string& filename, int fourcc, double fps, const Size& sz,
                                               const VideoWriterParameters& params);
 Ptr<IBackendFactory> createBackendFactory(FN_createCaptureFile createCaptureFile,

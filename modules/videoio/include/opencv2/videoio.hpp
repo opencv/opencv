@@ -882,7 +882,7 @@ public:
     The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
     See cv::VideoCaptureProperties
     */
-    CV_WRAP explicit VideoCapture(Ptr<RawVideoSource> source, int apiPreference, const std::vector<int>& params);
+    CV_WRAP explicit VideoCapture(std::istream& source, int apiPreference, const std::vector<int>& params);
 
     /** @brief Default destructor
 
@@ -949,7 +949,7 @@ public:
 
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
-    CV_WRAP virtual bool open(Ptr<RawVideoSource> source, int apiPreference, const std::vector<int>& params);
+    CV_WRAP virtual bool open(std::istream& source, int apiPreference, const std::vector<int>& params);
 
     /** @brief Returns true if video capturing has been initialized already.
 
