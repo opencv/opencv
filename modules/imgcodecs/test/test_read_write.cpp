@@ -529,12 +529,33 @@ TEST(Imgcodecs, imencodemulti_regression_26207)
     imgs.push_back(img);
     std::vector<uchar> buf;
     bool ret = false;
+
+    // Encode single image
     EXPECT_NO_THROW(ret = imencode(".tiff", img, buf));
     EXPECT_TRUE(ret);
     EXPECT_NO_THROW(ret = imencode(".tiff", imgs, buf));
     EXPECT_TRUE(ret);
     EXPECT_NO_THROW(ret = imencodemulti(".tiff", imgs, buf));
     EXPECT_TRUE(ret);
+
+    // Encode multiple images
+    imgs.push_back(img.clone());
+    EXPECT_NO_THROW(ret = imencode(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+    EXPECT_NO_THROW(ret = imencodemulti(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+
+    // Count stored images from buffer.
+    // imcount() doesn't support buffer, so encoded buffer outputs to file temporary.
+    const size_t len = buf.size();
+    const string filename = cv::tempfile(".tiff");
+    FILE *f = fopen(filename.c_str(), "wb");
+    EXPECT_NE(f, nullptr);
+    EXPECT_EQ(len, fwrite(&buf[0], 1, len, f));
+    fclose(f);
+
+    EXPECT_EQ(2, (int)imcount(filename));
+    EXPECT_EQ(0, remove(filename.c_str()));
 }
 #endif
 
