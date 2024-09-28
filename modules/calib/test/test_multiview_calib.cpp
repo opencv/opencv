@@ -148,4 +148,209 @@ TEST(multiview_calibration, accuracy) {
         EXPECT_MAT_NEAR(Ts_gt[c], Ts[c], T_tol);
     }
 }
+
+struct MultiViewTest : public ::testing::Test
+{
+    std::vector<cv::Vec3f> genAsymmetricObjectPoints(cv::Size board_size = cv::Size(8, 11), float square_size = 0.04)
+    {
+        std::vector<cv::Vec3f> objectPoints;
+        objectPoints.reserve(board_size.height*board_size.width);
+        for( int i = 0; i < board_size.height; i++ )
+        {
+            for( int j = 0; j < board_size.width; j++ )
+            {
+                objectPoints.push_back(cv::Point3f((2*j + i % 2)*square_size, i*square_size, 0));
+            }
+        }
+
+        return objectPoints;
+    }
+
+    void loadImagePoints(const std::string& base_dir, const std::vector<std::string> cameras, int frameCount,
+                         std::vector<std::vector<cv::Mat>>& image_points_all, cv::Mat& visibility)
+    {
+        image_points_all.clear();
+        visibility.create(static_cast<int>(cameras.size()), frameCount, CV_8UC1);
+        for (int c = 0; c < static_cast<int>(cameras.size()); c++)
+        {
+            std::vector<cv::Mat> camera_image_points;
+            std::string fname = base_dir + cameras[c] + ".json";
+            FileStorage fs(fname, cv::FileStorage::READ);
+            ASSERT_TRUE(fs.isOpened()) << "Cannot open points file " << fname;
+            for (int i = 0; i < frameCount; i++)
+            {
+                std::string nodeName = cv::format("frame_%d", i);
+                FileNode node = fs[nodeName];
+                if (!node.empty())
+                {
+                    camera_image_points.push_back(node.mat().reshape(2, 1));
+                    visibility.at<uchar>(c, i) = 255;
+                }
+                else
+                {
+                    camera_image_points.push_back(cv::Mat());
+                    visibility.at<uchar>(c, i) = 0;
+                }
+            }
+            fs.release();
+            image_points_all.push_back(camera_image_points);
+        }
+    }
+
+   void validateCamerasPose(const std::vector<cv::Mat>& Rs_gt,
+                             const std::vector<cv::Mat>& Ts_gt,
+                             const std::vector<cv::Mat>& Rs,
+                             const std::vector<cv::Mat>& Ts,
+                             double angle_tol = 1.*M_PI/180.,
+                             double pos_tol = 0.01)
+    {
+        ASSERT_EQ(Rs_gt.size(), Ts_gt.size());
+        ASSERT_EQ(Rs.size(), Ts.size());
+        ASSERT_EQ(Rs_gt.size(), Rs.size());
+
+        const int num_cameras = static_cast<int>(Rs_gt.size());
+        for (int c = 0; c < num_cameras; c++)
+        {
+            // compare the calculated R, T
+            double cos_r = (cv::trace(Rs_gt[c].t() * Rs[c])[0] - 1) / 2.;
+            double angle = std::acos(std::max(std::min(cos_r, 1.), -1.));
+            cv::Mat dist_mat;
+            double distance = cv::norm(Rs[c].t() * Ts[c]);
+            printf("Distance from camera %d to camera #0: %lf\n", c, distance);
+            subtract(Rs_gt[c].t() * Ts_gt[c], Rs[c].t() * Ts[c], dist_mat);
+            double dist = cv::norm(dist_mat);
+            CV_LOG_INFO(NULL, "rotation error: " << angle);
+            CV_LOG_INFO(NULL, "position error: " << dist);
+            EXPECT_NEAR(angle, 0., angle_tol);
+            EXPECT_NEAR(dist, 0., pos_tol);
+        }
+    }
+};
+
+TEST_F(MultiViewTest, OneLine)
+{
+    const string root = cvtest::TS::ptr()->get_data_path() + "cv/cameracalibration/multiview/3cams-one-line/";
+    const std::vector<std::string> cam_names = {"cam_0", "cam_1", "cam_3"};
+    const std::vector<cv::Size> image_sizes = {{1920, 1080}, {1920, 1080}, {1920, 1080} };
+    std::vector<bool> is_fisheye(3, false);
+
+    double rs_1_gt_data[9] = {
+        0.9996914489704484, -0.01160060078752197, -0.02196435559568884,
+        0.012283315339906, 0.9994374509454836, 0.03120739995344806,
+        0.02158997497973892, -0.03146756598408248, 0.9992715673286274
+    };
+    double rs_2_gt_data[9] = {
+        0.9988848194142131, -0.0255827884561986, -0.03968171466355882,
+        0.0261796234191418, 0.999550713317242, 0.0145944792515729,
+        0.03929051872229011, -0.0156170561181697, 0.9991057815350362
+    };
+
+    double ts_1_gt_data[3] = {0.5078811293323259, 0.002753469433719865, 0.02413521839310227};
+    double ts_2_gt_data[3] = {1.007213763725429, 0.01645068247976361, 0.05394643957910365};
+
+    std::vector<cv::Mat> Rs_gt = {
+        cv::Mat::eye(3, 3, CV_64FC1),
+        cv::Mat(3, 3, CV_64FC1, rs_1_gt_data),
+        cv::Mat(3, 3, CV_64FC1, rs_2_gt_data)
+    };
+
+    std::vector<cv::Mat> Ts_gt = {
+        cv::Mat::zeros(3, 1, CV_64FC1),
+        cv::Mat(3, 1, CV_64FC1, ts_1_gt_data),
+        cv::Mat(3, 1, CV_64FC1, ts_2_gt_data)
+    };
+
+    const int num_frames = 96;
+    std::vector<std::vector<cv::Mat>> image_points_all;
+    cv::Mat visibility;
+    loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
+
+    std::vector<cv::Vec3f> board_pattern = genAsymmetricObjectPoints();
+    std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board_pattern);
+
+    std::vector<int> flagsForIntrinsics(3, CALIB_RATIONAL_MODEL);
+
+    std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
+    cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
+    double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
+                    Rs_rvec, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs,
+                    false, flagsForIntrinsics);
+    CV_LOG_INFO(NULL, "RMS: "  << rms);
+
+    EXPECT_LE(rms, .3);
+
+    Rs.resize(Rs_rvec.size());
+    for(int c = 0; c < 3; c++)
+    {
+        cv::Rodrigues(Rs_rvec[c], Rs[c]);
+        CV_LOG_INFO(NULL, "R" << c << ":" << Rs[c]);
+        CV_LOG_INFO(NULL, "T" << c << ":" << Ts[c]);
+    }
+
+    validateCamerasPose(Rs_gt, Ts_gt, Rs, Ts);
+}
+
+TEST_F(MultiViewTest, CamsToFloor)
+{
+    const string root = cvtest::TS::ptr()->get_data_path() + "cv/cameracalibration/multiview/3cams-to-floor/";
+    const std::vector<std::string> cam_names = {"cam_0", "cam_1", "cam_2"};
+    std::vector<cv::Size> image_sizes = {{1920, 1080}, {1920, 1080}, {1280, 720}};
+    std::vector<bool> is_fisheye(3, false);
+
+    double rs_1_gt_data[9] = {
+        -0.05217184989559624, 0.6470741242690249, -0.7606399777686852,
+        -0.526982982144755, 0.6291523784496631, 0.5713634755748329,
+        0.8482729717539585, 0.4306534133065782, 0.3081730082260634
+    };
+    double rs_2_gt_data[9] = {
+        0.001580678474783847, -0.62542080411436, 0.7802860496231537,
+        0.4843796328138114, 0.683118871472744, 0.5465573883435866,
+        -0.8748564869569847, 0.3770907387072139, 0.304020890746888
+    };
+
+    double ts_1_gt_data[3] = {1.064278166833888, -0.7727142268275895, 1.140555926119704};
+    double ts_2_gt_data[3] = {-0.9391478506021244, -1.048084838193036, 1.3973875466639};
+
+    std::vector<cv::Mat> Rs_gt = {
+        cv::Mat::eye(3, 3, CV_64FC1),
+        cv::Mat(3, 3, CV_64FC1, rs_1_gt_data),
+        cv::Mat(3, 3, CV_64FC1, rs_2_gt_data)
+    };
+
+    std::vector<cv::Mat> Ts_gt = {
+        cv::Mat::zeros(3, 1, CV_64FC1),
+        cv::Mat(3, 1, CV_64FC1, ts_1_gt_data),
+        cv::Mat(3, 1, CV_64FC1, ts_2_gt_data)
+    };
+
+    const int num_frames = 125;
+    std::vector<std::vector<cv::Mat>> image_points_all;
+    cv::Mat visibility;
+    loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
+
+    std::vector<cv::Vec3f> board_pattern = genAsymmetricObjectPoints();
+    std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board_pattern);
+
+    std::vector<int> flagsForIntrinsics(3, cv::CALIB_RATIONAL_MODEL);
+
+    std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
+    cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
+    double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
+                    Rs_rvec, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs,
+                    false, flagsForIntrinsics);
+    CV_LOG_INFO(NULL, "RMS: "  << rms);
+
+    EXPECT_LE(rms, 1.);
+
+    Rs.resize(Rs_rvec.size());
+    for(int c = 0; c < 3; c++)
+    {
+        cv::Rodrigues(Rs_rvec[c], Rs[c]);
+        CV_LOG_INFO(NULL, "R" << c << ":" << Rs[c]);
+        CV_LOG_INFO(NULL, "T" << c << ":" << Ts[c]);
+    }
+
+    validateCamerasPose(Rs_gt, Ts_gt, Rs, Ts);
+}
+
 }}
