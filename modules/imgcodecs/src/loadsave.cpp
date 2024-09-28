@@ -1121,27 +1121,43 @@ bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, co
     }
 }
 
-bool imencode( const String& ext, InputArray _image,
+bool imencode( const String& ext, InputArray _img,
                std::vector<uchar>& buf, const std::vector<int>& params_ )
 {
     CV_TRACE_FUNCTION();
-
-    Mat image = _image.getMat();
-    CV_Assert(!image.empty());
-
-    int channels = image.channels();
-    CV_Assert( channels == 1 || channels == 3 || channels == 4 );
 
     ImageEncoder encoder = findEncoder( ext );
     if( !encoder )
         CV_Error( Error::StsError, "could not find encoder for the specified extension" );
 
-    if( !encoder->isFormatSupported(image.depth()) )
+    std::vector<Mat> img_vec;
+    CV_Assert(!_img.empty());
+    if (_img.isMatVector() || _img.isUMatVector())
+        _img.getMatVector(img_vec);
+    else
+        img_vec.push_back(_img.getMat());
+
+    CV_Assert(!img_vec.empty());
+    const bool isMultiImg = img_vec.size() > 1;
+
+    std::vector<Mat> write_vec;
+    for (size_t page = 0; page < img_vec.size(); page++)
     {
-        CV_Assert( encoder->isFormatSupported(CV_8U) );
+        Mat image = img_vec[page];
+        CV_Assert(!image.empty());
+
+        const int channels = image.channels();
+        CV_Assert( channels == 1 || channels == 3 || channels == 4 );
+
         Mat temp;
-        image.convertTo(temp, CV_8U);
-        image = temp;
+        if( !encoder->isFormatSupported(image.depth()) )
+        {
+            CV_Assert( encoder->isFormatSupported(CV_8U) );
+            image.convertTo( temp, CV_8U );
+            image = temp;
+        }
+
+        write_vec.push_back(image);
     }
 
 #if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
@@ -1169,7 +1185,11 @@ bool imencode( const String& ext, InputArray _image,
     bool code;
     if( encoder->setDestination(buf) )
     {
-        code = encoder->write(image, params);
+        if (!isMultiImg)
+            code = encoder->write(write_vec[0], params);
+        else
+            code = encoder->writemulti(write_vec, params);
+
         encoder->throwOnEror();
         CV_Assert( code );
     }
@@ -1179,7 +1199,11 @@ bool imencode( const String& ext, InputArray _image,
         code = encoder->setDestination(filename);
         CV_Assert( code );
 
-        code = encoder->write(image, params);
+        if (!isMultiImg)
+            code = encoder->write(write_vec[0], params);
+        else
+            code = encoder->writemulti(write_vec, params);
+
         encoder->throwOnEror();
         CV_Assert( code );
 

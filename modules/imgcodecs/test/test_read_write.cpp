@@ -520,6 +520,22 @@ TEST(ImgCodecs, multipage_collection_two_iterator_operatorpp)
          EXPECT_TRUE(cv::norm(img1, img[i], NORM_INF) == 0);
     }
 }
+
+// See https://github.com/opencv/opencv/issues/26207
+TEST(Imgcodecs, imencodemulti_regression_26207)
+{
+    vector<Mat> imgs;
+    Mat img(100, 100, CV_8UC1);
+    imgs.push_back(img);
+    std::vector<uchar> buf;
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imencode(".tiff", img, buf));
+    EXPECT_TRUE(ret);
+    EXPECT_NO_THROW(ret = imencode(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+    EXPECT_NO_THROW(ret = imencodemulti(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+}
 #endif
 
 
