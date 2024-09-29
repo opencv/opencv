@@ -314,4 +314,27 @@ TEST(Imgcodecs_EXR, read_RGBA_unchanged)
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
 
+// See https://github.com/opencv/opencv/pull/26211
+// ( related with https://github.com/opencv/opencv/issues/26207 )
+TEST(Imgcodecs_EXR, imencode_regression_26207_extra)
+{
+    // CV_8U is not supported depth for EXR Encoder.
+    cv::Mat src(100, 100, CV_8UC1);
+    std::vector<uchar> buf;
+    bool ret = false;
+    EXPECT_ANY_THROW(ret = imencode(".exr", src, buf));
+    EXPECT_FALSE(ret);
+}
+TEST(Imgcodecs_EXR, imwrite_regression_26207_extra)
+{
+    // CV_8U is not supported depth for EXR Encoder.
+    cv::Mat src(100, 100, CV_8UC1);
+    const string filename = cv::tempfile(".exr");
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imwrite(filename, src)); // imwrite() doesn't throw even if it is failed.
+    EXPECT_FALSE(ret);
+    remove(filename.c_str());
+}
+
+
 }} // namespace

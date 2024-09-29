@@ -559,6 +559,39 @@ TEST(Imgcodecs, imencodemulti_regression_26207)
 }
 #endif
 
+// See https://github.com/opencv/opencv/pull/26211
+// ( related with https://github.com/opencv/opencv/issues/26207 )
+TEST(Imgcodecs, imencode_regression_26207_extra)
+{
+    // CV_32F is not supported depth for BMP Encoder.
+    // Encoded buffer contains CV_8U image which is fallbacked.
+    cv::Mat src(100, 100, CV_32FC1);
+    std::vector<uchar> buf;
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imencode(".bmp", src, buf));
+    EXPECT_TRUE(ret);
+
+    cv::Mat dst;
+    EXPECT_NO_THROW(dst = imdecode(buf, IMREAD_GRAYSCALE));
+    EXPECT_FALSE(dst.empty());
+    EXPECT_EQ(CV_8UC1, dst.type());
+}
+TEST(Imgcodecs, imwrite_regression_26207_extra)
+{
+    // CV_32F is not supported depth for BMP Encoder.
+    // Encoded buffer contains CV_8U image which is fallbacked.
+    cv::Mat src(100, 100, CV_32FC1);
+    const string filename = cv::tempfile(".bmp");
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imwrite(filename, src));
+    EXPECT_TRUE(ret);
+
+    cv::Mat dst;
+    EXPECT_NO_THROW(dst = imread(filename, IMREAD_GRAYSCALE));
+    EXPECT_FALSE(dst.empty());
+    EXPECT_EQ(CV_8UC1, dst.type());
+    EXPECT_EQ(0, remove(filename.c_str()));
+}
 
 TEST(Imgcodecs_Params, imwrite_regression_22752)
 {

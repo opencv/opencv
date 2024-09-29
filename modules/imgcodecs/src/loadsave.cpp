@@ -721,9 +721,9 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
         CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
 
         Mat temp;
-        if( !encoder->isFormatSupported(image.depth()) )
+        if( (!encoder->isFormatSupported(image.depth())) && (encoder->isFormatSupported(CV_8U)) )
         {
-            CV_Assert( encoder->isFormatSupported(CV_8U) );
+            CV_LOG_ONCE_WARNING(NULL, "Unsupported depth image for selected encoder is fallbacked to CV_8U.");
             image.convertTo( temp, CV_8U );
             image = temp;
         }
@@ -1150,9 +1150,9 @@ bool imencode( const String& ext, InputArray _img,
         CV_Assert( channels == 1 || channels == 3 || channels == 4 );
 
         Mat temp;
-        if( !encoder->isFormatSupported(image.depth()) )
+        if( (!encoder->isFormatSupported(image.depth())) && (encoder->isFormatSupported(CV_8U)) )
         {
-            CV_Assert( encoder->isFormatSupported(CV_8U) );
+            CV_LOG_ONCE_WARNING(NULL, "Unsupported depth image for selected encoder is fallbacked to CV_8U.");
             image.convertTo( temp, CV_8U );
             image = temp;
         }
