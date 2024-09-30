@@ -27,7 +27,7 @@ TEST(multiview_calibration, accuracy) {
             board_pattern[j*board_size.width+i] = cv::Vec3f ((float)i, (float)j, 0)*board_len;
         }
     }
-    std::vector<bool> is_fisheye(num_cameras, false);
+    std::vector<uchar> models(num_cameras, cv::CALIB_MODEL_PINHOLE);
     std::vector<cv::Size> image_sizes(num_cameras);
     std::vector<cv::Mat> Ks_gt, distortions_gt, Rs_gt, Ts_gt;
     for (int c = 0; c < num_cameras; c++) {
@@ -87,7 +87,7 @@ TEST(multiview_calibration, accuracy) {
         int num_visible_patterns = 0;
         for (int c = 0; c < num_cameras; c++) {
             cv::Mat img_pts;
-            if (is_fisheye[c]) {
+            if (models[c] == cv::CALIB_MODEL_FISHEYE) {
                 cv::fisheye::projectPoints(pattern_new, img_pts, Rs_gt[c], Ts_gt[c], Ks_gt[c], distortions_gt[c]);
             } else {
                 cv::projectPoints(pattern_new, Rs_gt[c], Ts_gt[c], Ks_gt[c], distortions_gt[c], img_pts);
@@ -134,7 +134,7 @@ TEST(multiview_calibration, accuracy) {
     std::vector<cv::Mat> Ks, distortions, Rs, Ts;
     cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
     calibrateMultiview (objPoints, image_points_all, image_sizes, visibility_mat,
-       Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false);
+       Rs, Ts, Ks, distortions, rvecs0, tvecs0, models, errors_mat, output_pairs, false);
 
     const double K_err_tol = 1e1, dist_tol = 5e-2, R_tol = 1e-2, T_tol = 1e-2;
     for (int c = 0; c < num_cameras; c++) {
@@ -235,7 +235,7 @@ TEST_F(MultiViewTest, OneLine)
     const string root = cvtest::TS::ptr()->get_data_path() + "cv/cameracalibration/multiview/3cams-one-line/";
     const std::vector<std::string> cam_names = {"cam_0", "cam_1", "cam_3"};
     const std::vector<cv::Size> image_sizes = {{1920, 1080}, {1920, 1080}, {1920, 1080} };
-    std::vector<bool> is_fisheye(3, false);
+    std::vector<uchar> models(3, cv::CALIB_MODEL_PINHOLE);
 
     double rs_1_gt_data[9] = {
         0.9996914489704484, -0.01160060078752197, -0.02196435559568884,
@@ -281,7 +281,7 @@ TEST_F(MultiViewTest, OneLine)
     std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
     cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
-                    Rs_rvec, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs,
+                    Rs_rvec, Ts, Ks, distortions, rvecs0, tvecs0, models, errors_mat, output_pairs,
                     false, flagsForIntrinsics);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 
@@ -303,7 +303,7 @@ TEST_F(MultiViewTest, CamsToFloor)
     const string root = cvtest::TS::ptr()->get_data_path() + "cv/cameracalibration/multiview/3cams-to-floor/";
     const std::vector<std::string> cam_names = {"cam_0", "cam_1", "cam_2"};
     std::vector<cv::Size> image_sizes = {{1920, 1080}, {1920, 1080}, {1280, 720}};
-    std::vector<bool> is_fisheye(3, false);
+    std::vector<uchar> models(3, cv::CALIB_MODEL_PINHOLE);
 
     double rs_1_gt_data[9] = {
         -0.05217184989559624, 0.6470741242690249, -0.7606399777686852,
@@ -349,7 +349,7 @@ TEST_F(MultiViewTest, CamsToFloor)
     std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
     cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
-                    Rs_rvec, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs,
+                    Rs_rvec, Ts, Ks, distortions, rvecs0, tvecs0, models, errors_mat, output_pairs,
                     false, flagsForIntrinsics);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 

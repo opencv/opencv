@@ -1239,9 +1239,8 @@ To enable this, set the unobserved image points to be invalid points (eg. (-1., 
 @param[in] imageSize   Images resolution.
 @param[in] detectionMask Pattern detection mask. Each value defines if i-camera observes the calibration pattern in j-th frame.
 Expected size: NUM_CAMERAS x NUM_FRAMES. Expected type: CV_8U.
-@param[in] isFisheye indicates whether i-th camera is fisheye. In case the input data contains
-a mix of pinhole and fisheye cameras Rational distortion model is used. See @ref CALIB_RATIONAL_MODEL
-for details. Expected type: CV_8U.
+@param[in] models indicates camera models for each camera: cv::CALIB_MODEL_PINHOLE or cv::CALIB_MODEL_PINHOLE.
+Current implementation does not support mix of different camera models. Expected type: CV_8U.
 @param[in] useIntrinsicsGuess Use user-specified intrinsic parameters (internal camera matrix and distortion).
 If true intrinsics are not estimated during calibration.
 @param[in] flagsForIntrinsics Flags used for each camera intrinsics calibration.
@@ -1290,8 +1289,8 @@ points in all the available views from all cameras.
 
 CV_EXPORTS_W double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<Size> &imageSize, InputArray detectionMask,
-        OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, CV_IN_OUT std::vector<Mat> &Ks, CV_IN_OUT std::vector<Mat> &distortions,
-        OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
+        InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts, CV_IN_OUT std::vector<Mat> &Ks, CV_IN_OUT std::vector<Mat> &distortions,
+        OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray models,
         OutputArray perFrameErrors, OutputArray initializationPairs,
         bool useIntrinsicsGuess=false, InputArray flagsForIntrinsics=noArray());
 

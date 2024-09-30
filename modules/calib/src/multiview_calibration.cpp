@@ -63,7 +63,7 @@ static double robustWrapper (const Mat& ptsErrors, Mat& weights, const RobustFun
 }
 
 static double computeReprojectionMSE(const Mat &obj_points_, const Mat &img_points_, const Matx33d &K, const Mat &distortion,
-               const Mat &rvec, const Mat &tvec, InputArray rvec2, InputArray tvec2, bool is_fisheye) {
+               const Mat &rvec, const Mat &tvec, InputArray rvec2, InputArray tvec2, int model) {
     Mat r, t;
     if (!rvec2.empty() && !tvec2.empty()) {
         composeRT(rvec, tvec, rvec2, tvec2, r, t);
@@ -71,11 +71,15 @@ static double computeReprojectionMSE(const Mat &obj_points_, const Mat &img_poin
         r = rvec; t = tvec;
     }
     Mat tmpImagePoints, obj_points = obj_points_, img_points = img_points_;
-    if (is_fisheye) {
+    if (model == cv::CALIB_MODEL_FISHEYE) {
         obj_points = obj_points.reshape(3); // must be 3 channels
         fisheye::projectPoints(obj_points, tmpImagePoints, r, t, K, distortion);
-    } else
+    } else if (model == cv::CALIB_MODEL_PINHOLE) {
         projectPoints(obj_points, r, t, K, distortion, tmpImagePoints);
+    } else {
+        CV_Error(Error::StsBadArg, "Unsupported camera model!");
+    }
+
     if (img_points.channels() != tmpImagePoints.channels())
         img_points = img_points.reshape(tmpImagePoints.channels());
     if (img_points.rows != tmpImagePoints.rows)
@@ -257,7 +261,7 @@ static void thresholdPatternCameraAngles (int NUM_PATTERN_PTS, double THR_PATTER
 }
 
 static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pairs,
-        const std::vector<bool> &is_fisheye_vec, const std::vector<Mat> &objPoints_norm,
+        const cv::Mat &models, const std::vector<Mat> &objPoints_norm,
         const std::vector<std::vector<Mat>> &imagePoints, const std::vector<std::vector<int>> &overlaps,
         const std::vector<std::vector<bool>> &detection_mask_mat, const std::vector<Mat> &Ks,
         const std::vector<Mat> &distortions, std::vector<Matx33d> &Rs_vec, std::vector<Vec3d> &Ts_vec,
@@ -270,7 +274,8 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         grid_points.reserve(overlap);
         image_points1.reserve(overlap);
         image_points2.reserve(overlap);
-        const bool are_fisheye_cams = is_fisheye_vec[c1] && is_fisheye_vec[c2];
+        const bool are_fisheye_cams = models.at<uchar>(c1) == cv::CALIB_MODEL_FISHEYE &&
+                                      models.at<uchar>(c2) == cv::CALIB_MODEL_FISHEYE;
         for (int f = 0; f < NUM_FRAMES; f++) {
             if (detection_mask_mat[c1][f] && detection_mask_mat[c2][f]) {
                 grid_points.emplace_back((are_fisheye_cams && objPoints_norm[f].channels() != 3) ?
@@ -319,7 +324,7 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
          const std::vector<bool> &valid_frames, const std::vector<std::vector<bool>> &detection_mask_mat,
          const std::vector<Mat> &objPoints_norm, const std::vector<std::vector<Mat>> &imagePoints,
          const std::vector<Mat> &Ks, const std::vector<Mat> &distortions,
-         const std::vector<bool> &is_fisheye_vec, int NUM_PATTERN_PTS) {
+         const Mat& models, int NUM_PATTERN_PTS) {
     const int NUM_FRAMES = (int) objPoints_norm.size(), NUM_CAMERAS = (int)detection_mask_mat.size();
     int iters_lm = 0, cnt_valid_frame = 0;
     auto lmcallback = [&](InputOutputArray _param, OutputArray JtErr_, OutputArray JtJ_, double& errnorm) {
@@ -358,7 +363,7 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
                 Mat imgpt_ik = imagePoints[k][i].reshape(2, 1);
                 imgpt_ik.convertTo(imgpt_ik, CV_64FC2);
 
-                if (is_fisheye_vec[k]) {
+                if (models.at<uchar>(k)) {
                     if( JtJ_.needed() || JtErr_.needed() ) {
                         Mat jacobian; // of size num_points*2  x  15 (2 + 2 + 1 + 4 + 3 + 3; // f, c, alpha, k, om, T)
                         fisheye::projectPoints(objpt_i, tmpImagePoints, om[1], T[1], Ks[k], distortions[k], 0, jacobian);
@@ -485,35 +490,40 @@ static void checkConnected (const std::vector<std::vector<bool>> &detection_mask
 //TODO: use Input/OutputArrays for imagePoints, imageSize(?), Ks, distortions
 double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<Size> &imageSize, InputArray detectionMask,
-        OutputArrayOfArrays Rs, OutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
-        OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray isFisheye,
-        OutputArray perFrameErrors, OutputArray initializationPairs, bool useIntrinsicsGuess, InputArray flagsForIntrinsics) {
+        InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts, std::vector<Mat> &Ks, std::vector<Mat> &distortions,
+        OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray models,
+        OutputArray perFrameErrors, OutputArray initializationPairs,
+        bool useIntrinsicsGuess, InputArray flagsForIntrinsics) {
 
     CV_CheckEQ((int)objPoints.empty(), 0, "Objects points must not be empty!");
     CV_CheckEQ((int)imagePoints.empty(), 0, "Image points must not be empty!");
     CV_CheckEQ((int)imageSize.empty(), 0, "Image size per camera must not be empty!");
     CV_CheckEQ((int)detectionMask.empty(), 0, "detectionMask matrix must not be empty!");
-    CV_CheckEQ((int)isFisheye.empty(), 0, "Fisheye mask must not be empty!");
+    CV_CheckEQ((int)models.empty(), 0, "Fisheye mask must not be empty!");
 
-    Mat detection_mask_ = detectionMask.getMat(), is_fisheye_mat = isFisheye.getMat();
+    Mat detection_mask_ = detectionMask.getMat();
+    Mat  models_mat = models.getMat();
+
     CV_CheckEQ(detection_mask_.type(), CV_8U, "detectionMask must be of type CV_8U");
-    CV_CheckEQ(is_fisheye_mat.type(), CV_8U, "isFisheye must be of type CV_8U");
+    CV_CheckEQ(models_mat.type(), CV_8U, "models must be of type CV_8U");
 
     bool is_fisheye = false;
     bool is_pinhole = false;
 
-    for  (int i = 0; i < (int)is_fisheye_mat.total(); i++) {
-        if (is_fisheye_mat.at<uchar>(i)) {
+    for  (int i = 0; i < (int)models_mat.total(); i++) {
+        if (models_mat.at<uchar>(i) == cv::CALIB_MODEL_FISHEYE) {
             is_fisheye = true;
-        } else {
+        } else if (models_mat.at<uchar>(i) == cv::CALIB_MODEL_PINHOLE) {
             is_pinhole = true;
+        } else {
+            CV_Error(Error::StsBadArg, "Unsupported camera model");
         }
     }
     CV_CheckEQ(is_fisheye && is_pinhole, false, "Mix of pinhole and fisheye cameras is not supported for now");
 
     // equal number of cameras
     CV_Assert(imageSize.size() == imagePoints.size());
-    CV_Assert(detection_mask_.rows == std::max(isFisheye.rows(), isFisheye.cols()));
+    CV_Assert(detection_mask_.rows == std::max(models.rows(), models.cols()));
     CV_Assert(detection_mask_.rows == (int)imageSize.size());
     CV_Assert(detection_mask_.cols == std::max(objPoints.rows(), objPoints.cols())); // equal number of frames
     CV_Assert(Rs.isMatVector() == Ts.isMatVector());
@@ -555,11 +565,9 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     std::vector<bool> valid_frames(NUM_FRAMES, false);
     // process input and count all visible frames and points
 
-    std::vector<bool> is_fisheye_vec(NUM_CAMERAS);
     std::vector<std::vector<bool>> detection_mask_mat(NUM_CAMERAS, std::vector<bool>(NUM_FRAMES));
-    const auto * const detection_mask_ptr = detection_mask_.data, * const is_fisheye_ptr = is_fisheye_mat.data;
+    const auto * const detection_mask_ptr = detection_mask_.data;
     for (int c = 0; c < NUM_CAMERAS; c++) {
-        is_fisheye_vec[c] = is_fisheye_ptr[c] != 0;
         int num_visible_frames = 0;
         for (int f = 0; f < NUM_FRAMES; f++) {
             detection_mask_mat[c][f] = detection_mask_ptr[c*NUM_FRAMES + f] != 0;
@@ -601,21 +609,21 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
             img_points_.reserve(num_visible_frames_per_camera[camera]);
             for (int f = 0; f < NUM_FRAMES; f++) {
                 if (detection_mask_mat[camera][f]) {
-                    obj_points_.emplace_back((is_fisheye_vec[camera] && objPoints_norm[f].channels() != 3) ?
+                    obj_points_.emplace_back((models_mat.at<uchar>(camera) == cv::CALIB_MODEL_FISHEYE && objPoints_norm[f].channels() != 3) ?
                         objPoints_norm[f].reshape(3): objPoints_norm[f]);
-                    img_points_.emplace_back((is_fisheye_vec[camera] && imagePoints[camera][f].channels() != 2) ?
+                    img_points_.emplace_back((models_mat.at<uchar>(camera) == cv::CALIB_MODEL_FISHEYE && imagePoints[camera][f].channels() != 2) ?
                         imagePoints[camera][f].reshape(2) : imagePoints[camera][f]);
                 }
             }
             double repr_err;
-            if (is_fisheye_vec[camera]) {
+            if (models_mat.at<uchar>(camera) == cv::CALIB_MODEL_FISHEYE) {
                 repr_err = fisheye::calibrate(obj_points_, img_points_, imageSize[camera],
                     Ks[camera], distortions[camera], rvecs, tvecs, flagsForIntrinsics_mat.at<int>(camera));
                 // calibrate does not compute error per view, so compute it manually
                 errors_per_view = std::vector<double>(obj_points_.size());
                 for (int f = 0; f < (int) obj_points_.size(); f++) {
                     double err2 = multiview::computeReprojectionMSE(obj_points_[f],
-                        img_points_[f], Ks[camera], distortions[camera], rvecs.row(f), tvecs.row(f), noArray(), noArray(), true);
+                        img_points_[f], Ks[camera], distortions[camera], rvecs.row(f), tvecs.row(f), noArray(), noArray(), cv::CALIB_MODEL_FISHEYE);
                     errors_per_view[f] = sqrt(err2);
                 }
             } else {
@@ -647,7 +655,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                 solvePnP(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], rvec, tvec, false, SOLVEPNP_ITERATIVE);
                 rvecs_all[k][i] = rvec;
                 tvecs_all[k][i] = tvec;
-                const double err2 = multiview::computeReprojectionMSE(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), is_fisheye_vec[k]);
+                const double err2 = multiview::computeReprojectionMSE(objPoints_norm[i], imagePoints[k][i], Ks[k], distortions[k], Mat(rvec), Mat(tvec), noArray(), noArray(), models_mat.at<uchar>(k));
                 if (camera_rt_errors[i] > err2) {
                     camera_rt_errors[i] = err2;
                     camera_rt_best[i] = k;
@@ -687,7 +695,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
         }
         pairs_mat.copyTo(initializationPairs);
     }
-    multiview::pairwiseStereoCalibration(pairs, is_fisheye_vec, objPoints_norm, imagePoints,
+    multiview::pairwiseStereoCalibration(pairs, models_mat, objPoints_norm, imagePoints,
          overlaps, detection_mask_mat, Ks, distortions, Rs_vec, Ts_vec, flagsForIntrinsics_mat);
 
     const int NUM_VALID_FRAMES = countNonZero(valid_frames);
@@ -739,7 +747,8 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
     TermCriteria termCrit (TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6);
     const float RBS_FNC_SCALE = 30;
     multiview::RobustExpFunction robust_fnc(RBS_FNC_SCALE);
-    multiview::optimizeLM(param, robust_fnc, termCrit, valid_frames, detection_mask_mat, objPoints_norm, imagePoints, Ks, distortions, is_fisheye_vec, NUM_PATTERN_PTS);
+    multiview::optimizeLM(param, robust_fnc, termCrit, valid_frames, detection_mask_mat, objPoints_norm,
+                          imagePoints, Ks, distortions, models_mat, NUM_PATTERN_PTS);
     const auto * const params = &param[0];
 
     // extract extrinsics (R_i, t_i) for i = 1 ... NUM_CAMERAS:
@@ -833,7 +842,7 @@ double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::
                     const Mat rvec0 = rvecs_mat_vec ? rvecs0.getMat(f) : rvecs0_.row(f).t();
                     const Mat tvec0 = tvecs_mat_vec ? tvecs0.getMat(f) : tvecs0_.row(f).t();
                     const double err2 = multiview::computeReprojectionMSE(objPoints.getMat(f), imagePoints[c][f], Ks[c],
-                         distortions[c], rvec0, tvec0, rvec, tvec, is_fisheye_vec[c]);
+                         distortions[c], rvec0, tvec0, rvec, tvec, models_mat.at<uchar>(c));
                     (*errs_ptr++) = sqrt(err2);
                     sum_errors += err2;
                     cnt_errors += 1;
