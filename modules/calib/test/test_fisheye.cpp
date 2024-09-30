@@ -626,7 +626,7 @@ TEST_F(fisheyeTest, multiview_calibration)
     std::vector<int> all_flags(2, flag);
 
     calibrateMultiview (objectPoints, image_points_all, image_sizes, visibility_mat,
-       Rs, Ts, Ks, distortions, rvecs0, tvecs0, models, errors_mat, output_pairs, false, all_flags);
+       Rs, Ts, Ks, distortions, rvecs0, tvecs0, models, errors_mat, output_pairs, all_flags);
     cv::Matx33d R_correct(   0.9975587205950972,   0.06953016383322372, 0.006492709911733523,
                            -0.06956823121068059,    0.9975601387249519, 0.005833595226966235,
                           -0.006071257768382089, -0.006271040135405457, 0.9999619062167968);

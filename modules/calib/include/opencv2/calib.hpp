@@ -449,7 +449,7 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001, //!< Use user provided intrinsics as
        // for stereo rectification
        CALIB_ZERO_DISPARITY      = 0x00400, //!< Deprecated synonim of @ref STEREO_ZERO_DISPARITY. See @ref stereoRectify.
        CALIB_USE_LU              = (1 << 17), //!< use LU instead of SVD decomposition for solving. much faster but potentially less precise
-       CALIB_USE_EXTRINSIC_GUESS = (1 << 22), //!< For stereo calibration only. Use user provided extrinsics (R, T) as initial point for optimization
+       CALIB_USE_EXTRINSIC_GUESS = (1 << 22), //!< For stereo and multi-view calibration. Use user provided extrinsics (R, T) as initial point for optimization
        // fisheye only flags
        CALIB_RECOMPUTE_EXTRINSIC = (1 << 23), //!< For fisheye model only. Recompute board position on each calibration iteration
        CALIB_CHECK_COND          = (1 << 24), //!< For fisheye model only. Check SVD decomposition quality for each frame during extrinsics estimation
@@ -1241,10 +1241,9 @@ To enable this, set the unobserved image points to be invalid points (eg. (-1., 
 Expected size: NUM_CAMERAS x NUM_FRAMES. Expected type: CV_8U.
 @param[in] models indicates camera models for each camera: cv::CALIB_MODEL_PINHOLE or cv::CALIB_MODEL_PINHOLE.
 Current implementation does not support mix of different camera models. Expected type: CV_8U.
-@param[in] useIntrinsicsGuess Use user-specified intrinsic parameters (internal camera matrix and distortion).
-If true intrinsics are not estimated during calibration.
 @param[in] flagsForIntrinsics Flags used for each camera intrinsics calibration.
 Use per-camera call and the `useIntrinsicsGuess` flag to get custom intrinsics calibration for each camera.
+@param[in] flags Common multiview calibration flags. cv::CALIB_USE_INTRINSIC_GUESS and cv::CALIB_USE_EXTRINSIC_GUESS are supported.
 See @ref CALIB_USE_INTRINSIC_GUESS and other `CALIB_` constants. Expected shape: NUM_CAMERAS x 1. Supported data type: CV_32S.
 @param[out] Rs Rotation vectors relative to camera 0, where Rs[0] = 0. Output size: NUM_CAMERAS x 3 x 3.
 @param[out] Ts Estimated translation vectors relative to camera 0, where Ts[0] = 0. Output size: NUM_CAMERAS x 3 x 1.
@@ -1254,6 +1253,7 @@ See @ref CALIB_USE_INTRINSIC_GUESS and other `CALIB_` constants. Expected shape:
 @param[out] distortions Distortion coefficients. Output size: NUM_CAMERAS x NUM_PARAMS.
 @param[out] perFrameErrors RMSE value for each visible frame, (-1 for non-visible). Output size: NUM_CAMERAS x NUM_FRAMES.
 @param[out] initializationPairs Pairs with camera indices that were used for initial pairwise stereo calibration.
+
 Output size: (NUM_CAMERAS-1) x 2.
 
 @ref tutorial_multiview_camera_calibration provides a detailed tutorial of using this function. Please refer to it for more information.
@@ -1292,7 +1292,7 @@ CV_EXPORTS_W double calibrateMultiview (InputArrayOfArrays objPoints, const std:
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts, CV_IN_OUT std::vector<Mat> &Ks, CV_IN_OUT std::vector<Mat> &distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray models,
         OutputArray perFrameErrors, OutputArray initializationPairs,
-        bool useIntrinsicsGuess=false, InputArray flagsForIntrinsics=noArray());
+        InputArray flagsForIntrinsics=noArray(), int flags = 0);
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$

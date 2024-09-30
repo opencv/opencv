@@ -433,8 +433,8 @@ def calibrateFromPoints(
                 Ks=Ks,
                 distortions=distortions,
                 models=np.array(models, dtype=np.uint8),
-                useIntrinsicsGuess=USE_INTRINSICS_GUESS,
                 flagsForIntrinsics=np.array([pinhole_flag if models[x] == cv.CALIB_MODEL_PINHOLE else fisheye_flag for x in range(num_cameras)], dtype=int),
+                flags = cv.CALIB_USE_EXTRINSIC_GUESS if USE_INTRINSICS_GUESS else 0
             )
 # [multiview_calib]
 #    except Exception as e:

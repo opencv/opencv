@@ -134,7 +134,7 @@ TEST(multiview_calibration, accuracy) {
     std::vector<cv::Mat> Ks, distortions, Rs, Ts;
     cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
     calibrateMultiview (objPoints, image_points_all, image_sizes, visibility_mat,
-       Rs, Ts, Ks, distortions, rvecs0, tvecs0, models, errors_mat, output_pairs, false);
+       Rs, Ts, Ks, distortions, rvecs0, tvecs0, models, errors_mat, output_pairs);
 
     const double K_err_tol = 1e1, dist_tol = 5e-2, R_tol = 1e-2, T_tol = 1e-2;
     for (int c = 0; c < num_cameras; c++) {
@@ -195,6 +195,40 @@ struct MultiViewTest : public ::testing::Test
             fs.release();
             image_points_all.push_back(camera_image_points);
         }
+    }
+
+    double calibrateMono(const std::vector<cv::Vec3f>& board_pattern,
+                         const std::vector<cv::Mat>& image_points,
+                         const cv::Size& image_size,
+                         cv::CameraModel model,
+                         int flags,
+                         Mat& K,
+                         Mat& dist)
+    {
+        std::vector<cv::Mat> filtered_image_points;
+        for(size_t i = 0; i < image_points.size(); i++)
+        {
+            if(!image_points[i].empty())
+                filtered_image_points.push_back(image_points[i]);
+        }
+        std::vector<std::vector<cv::Vec3f>> objPoints(filtered_image_points.size(), board_pattern);
+
+        std::vector<cv::Mat> rvec, tvec;
+        cv::Mat K1, dist1;
+        if(model == cv::CALIB_MODEL_PINHOLE)
+        {
+            return cv::calibrateCamera(objPoints, filtered_image_points, image_size, K, dist, rvec, tvec, flags);
+        }
+        else if(model == cv::CALIB_MODEL_FISHEYE)
+        {
+            return cv::fisheye::calibrate(objPoints, filtered_image_points, image_size, K, dist, rvec, tvec, flags);
+        }
+        else
+        {
+            CV_Error(Error::StsBadArg, "Unsupported camera model!");
+        }
+
+        return FLT_MAX;
     }
 
     void validateCameraPose(const Mat& R, Mat T, const Mat& R_gt, const Mat& T_gt,
@@ -282,7 +316,113 @@ TEST_F(MultiViewTest, OneLine)
     cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
                     Rs_rvec, Ts, Ks, distortions, rvecs0, tvecs0, models, errors_mat, output_pairs,
-                    false, flagsForIntrinsics);
+                    flagsForIntrinsics);
+    CV_LOG_INFO(NULL, "RMS: "  << rms);
+
+    EXPECT_LE(rms, .3);
+
+    Rs.resize(Rs_rvec.size());
+    for(int c = 0; c < 3; c++)
+    {
+        cv::Rodrigues(Rs_rvec[c], Rs[c]);
+        CV_LOG_INFO(NULL, "R" << c << ":" << Rs[c]);
+        CV_LOG_INFO(NULL, "T" << c << ":" << Ts[c]);
+    }
+
+    validateAllPoses(Rs_gt, Ts_gt, Rs, Ts);
+}
+
+TEST_F(MultiViewTest, OneLineInitialGuess)
+{
+    const string root = cvtest::TS::ptr()->get_data_path() + "cv/cameracalibration/multiview/3cams-one-line/";
+    const std::vector<std::string> cam_names = {"cam_0", "cam_1", "cam_3"};
+    const std::vector<cv::Size> image_sizes = {{1920, 1080}, {1920, 1080}, {1920, 1080} };
+    std::vector<uchar> models(3, cv::CALIB_MODEL_PINHOLE);
+
+    double rs_1_gt_data[9] = {
+        0.9996914489704484, -0.01160060078752197, -0.02196435559568884,
+        0.012283315339906, 0.9994374509454836, 0.03120739995344806,
+        0.02158997497973892, -0.03146756598408248, 0.9992715673286274
+    };
+    double rs_2_gt_data[9] = {
+        0.9988848194142131, -0.0255827884561986, -0.03968171466355882,
+        0.0261796234191418, 0.999550713317242, 0.0145944792515729,
+        0.03929051872229011, -0.0156170561181697, 0.9991057815350362
+    };
+
+    double ts_1_gt_data[3] = {0.5078811293323259, 0.002753469433719865, 0.02413521839310227};
+    double ts_2_gt_data[3] = {1.007213763725429, 0.01645068247976361, 0.05394643957910365};
+
+    std::vector<cv::Mat> Rs_gt = {
+        cv::Mat::eye(3, 3, CV_64FC1),
+        cv::Mat(3, 3, CV_64FC1, rs_1_gt_data),
+        cv::Mat(3, 3, CV_64FC1, rs_2_gt_data)
+    };
+
+    std::vector<cv::Mat> Ts_gt = {
+        cv::Mat::zeros(3, 1, CV_64FC1),
+        cv::Mat(3, 1, CV_64FC1, ts_1_gt_data),
+        cv::Mat(3, 1, CV_64FC1, ts_2_gt_data)
+    };
+
+    const int num_frames = 96;
+    std::vector<std::vector<cv::Mat>> image_points_all;
+    cv::Mat visibility;
+    loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
+    EXPECT_EQ(cam_names.size(), image_points_all.size());
+    for(size_t i = 0; i < cam_names.size(); i++)
+    {
+        EXPECT_TRUE(!image_points_all[i].empty());
+    }
+
+    std::vector<cv::Vec3f> board_pattern = genAsymmetricObjectPoints();
+    std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board_pattern);
+
+    std::vector<int> flagsForIntrinsics(3, CALIB_RATIONAL_MODEL);
+
+    std::vector<cv::Mat> Ks, distortions;
+    std::vector<cv::Mat> Rs(3);
+    std::vector<cv::Mat> Ts(3);
+    std::vector<cv::Mat> Rs_rvec(3);
+    for(int c = 0; c < 3; c++)
+    {
+        Mat K, dist;
+        double mono_rms = calibrateMono(board_pattern, image_points_all[c], image_sizes[c],
+                                        cv::CALIB_MODEL_PINHOLE, cv::CALIB_RATIONAL_MODEL,
+                                        K, dist);
+
+        std::cout << "K:" << K << std::endl;
+        std::cout << "dist:" << dist << std::endl;
+        Ks.push_back(K);
+        distortions.push_back(dist);
+        CV_LOG_INFO(NULL, "Calibrate mono RMS #" << c << ": "  << mono_rms);
+        EXPECT_LE(mono_rms, .3);
+    }
+
+    const auto euler2rot = [] (double x, double y, double z) {
+        cv::Matx33d R_x(1, 0, 0, 0, cos(x), -sin(x), 0, sin(x), cos(x));
+        cv::Matx33d R_y(cos(y), 0, sin(y), 0, 1, 0, -sin(y), 0, cos(y));
+        cv::Matx33d R_z(cos(z), -sin(z), 0, sin(z), cos(z), 0, 0, 0, 1);
+        return cv::Mat(R_z * R_y * R_x);
+    };
+
+    // Introduce small noise by rotating ground truth camera pose a bit
+    Rs[0] = Rs_gt[0].clone();
+    Ts[0] = Ts_gt[0].clone();
+    double sign = 1.;
+    for (int c = 1; c < 3; c++)
+    {
+        Mat noise = euler2rot(0., sign*M_PI/180., 0.);
+        sign *= -1.;
+        Rs[c] = noise*Rs_gt[c];
+        Ts[c] = Ts_gt[c].clone();
+        cv::Rodrigues(Rs[c], Rs_rvec[c]);
+    }
+
+    cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
+    double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
+                    Rs_rvec, Ts, Ks, distortions, rvecs0, tvecs0, models, errors_mat, output_pairs,
+                    flagsForIntrinsics, cv::CALIB_USE_EXTRINSIC_GUESS | cv::CALIB_USE_INTRINSIC_GUESS);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 
     EXPECT_LE(rms, .3);
@@ -350,7 +490,7 @@ TEST_F(MultiViewTest, CamsToFloor)
     cv::Mat errors_mat, output_pairs, rvecs0, tvecs0;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
                     Rs_rvec, Ts, Ks, distortions, rvecs0, tvecs0, models, errors_mat, output_pairs,
-                    false, flagsForIntrinsics);
+                    flagsForIntrinsics);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 
     EXPECT_LE(rms, 1.);
@@ -368,40 +508,6 @@ TEST_F(MultiViewTest, CamsToFloor)
 
 struct RegisterCamerasTest: public MultiViewTest
 {
-    double calibrateMono(const std::vector<cv::Vec3f>& board_pattern,
-                         const std::vector<cv::Mat>& image_points,
-                         const cv::Size& image_size,
-                         cv::CameraModel model,
-                         int flags,
-                         Mat& K,
-                         Mat& dist)
-    {
-        std::vector<cv::Mat> filtered_image_points;
-        for(size_t i = 0; i < image_points.size(); i++)
-        {
-            if(!image_points[i].empty())
-                filtered_image_points.push_back(image_points[i]);
-        }
-        std::vector<std::vector<cv::Vec3f>> objPoints(filtered_image_points.size(), board_pattern);
-
-        std::vector<cv::Mat> rvec, tvec;
-        cv::Mat K1, dist1;
-        if(model == cv::CALIB_MODEL_PINHOLE)
-        {
-            return cv::calibrateCamera(objPoints, filtered_image_points, image_size, K, dist, rvec, tvec, flags);
-        }
-        else if(model == cv::CALIB_MODEL_FISHEYE)
-        {
-            return cv::fisheye::calibrate(objPoints, filtered_image_points, image_size, K, dist, rvec, tvec, flags);
-        }
-        else
-        {
-            CV_Error(Error::StsBadArg, "Unsupported camera model!");
-        }
-
-        return FLT_MAX;
-    }
-
     void filterPoints(const std::vector<std::vector<cv::Mat>>& image_points_all,
                       std::vector<cv::Mat>& visible_image_points1,
                       std::vector<cv::Mat>& visible_image_points2)
