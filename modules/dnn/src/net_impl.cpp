@@ -990,8 +990,11 @@ Mat Net::Impl::forward(const String& outputName)
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
-    if (mainGraph)
+    if (mainGraph) {
+        if (!outputName.empty())
+            CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
         return forwardWithSingleOutput(outputName);
+    }
 
     String layerName = outputName;
 
@@ -1014,6 +1017,9 @@ AsyncArray Net::Impl::forwardAsync(const String& outputName)
 {
     CV_Assert(!empty());
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
+
+    if (mainGraph)
+        CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support the async inference. If you want to run the sync inference, please call forward() instead of forwardAsync(). If you want to run the async inference, please use the old dnn engine");
 
     String layerName = outputName;
 
@@ -1044,8 +1050,9 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     if (mainGraph) {
-        std::vector<std::string> outBlobNames = {outputName};
-        forwardWithMultipleOutputs(outputBlobs, outBlobNames);
+        if (!outputName.empty())
+            CV_Error(Error::StsNotImplemented, "The new dnn engine doesn't support inference until a specified layer. If you want to run the whole model, please don't set the outputName argument in the forward() call. If you want to run the model until a specified layer, please use the old dnn engine");
+        forwardWithMultipleOutputs(outputBlobs, {});
         return;
     }
 
