@@ -331,7 +331,7 @@ TEST(Imgcodecs_EXR, imwrite_regression_26207_extra)
     cv::Mat src(100, 100, CV_8UC1);
     const string filename = cv::tempfile(".exr");
     bool ret = false;
-    EXPECT_NO_THROW(ret = imwrite(filename, src)); // imwrite() doesn't throw even if it is failed.
+    EXPECT_ANY_THROW(ret = imwrite(filename, src));
     EXPECT_FALSE(ret);
     remove(filename.c_str());
 }

@@ -787,10 +787,12 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: " << e.what());
+        throw;
     }
     catch (...)
     {
         CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: unknown exception");
+        throw;
     }
 
     return code;
@@ -1183,8 +1185,15 @@ bool imencode( const String& ext, InputArray _img,
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
 
     bool code;
-    if( encoder->setDestination(buf) )
+    String filename;
+    if( !encoder->setDestination(buf) )
     {
+        filename = tempfile();
+        code = encoder->setDestination(filename);
+        CV_Assert( code );
+    }
+
+    try {
         if (!isMultiImg)
             code = encoder->write(write_vec[0], params);
         else
@@ -1193,20 +1202,19 @@ bool imencode( const String& ext, InputArray _img,
         encoder->throwOnEror();
         CV_Assert( code );
     }
-    else
+    catch (const cv::Exception& e)
     {
-        String filename = tempfile();
-        code = encoder->setDestination(filename);
-        CV_Assert( code );
+        CV_LOG_ERROR(NULL, "imencode(): can't encode data: " << e.what());
+        throw;
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "imencode(): can't encode data: unknown exception");
+        throw;
+    }
 
-        if (!isMultiImg)
-            code = encoder->write(write_vec[0], params);
-        else
-            code = encoder->writemulti(write_vec, params);
-
-        encoder->throwOnEror();
-        CV_Assert( code );
-
+    if( !filename.empty() )
+    {
         FILE* f = fopen( filename.c_str(), "rb" );
         CV_Assert(f != 0);
         fseek( f, 0, SEEK_END );
