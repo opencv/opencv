@@ -1289,7 +1289,7 @@ points in all the available views from all cameras.
 
 CV_EXPORTS_W double calibrateMultiview (
         InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
-        std::vector<cv::Size> imageSize, InputArray detectionMask, InputArray models,
+        const std::vector<cv::Size>& imageSize, InputArray detectionMask, InputArray models,
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
         InputOutputArrayOfArrays Ks, InputOutputArrayOfArrays distortions,
         int flags = 0, InputArray flagsForIntrinsics=noArray(),

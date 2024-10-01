@@ -380,7 +380,7 @@ def calibrateFromPoints(
     with np.printoptions(threshold=np.inf):  # type: ignore
         print("detection mask Matrix:\n", str(detection_mask).replace('0\n ', '0').replace('1\n ', '1'))
 
-    pinhole_flag = cv.CALIB_ZERO_TANGENT_DIST
+    pinhole_flag = cv.CALIB_RATIONAL_MODEL
     fisheye_flag = cv.CALIB_RECOMPUTE_EXTRINSIC+cv.CALIB_FIX_SKEW
     if Ks is not None and distortions is not None:
         USE_INTRINSICS_GUESS = True
@@ -434,7 +434,7 @@ def calibrateFromPoints(
                 Ks=Ks,
                 distortions=distortions,
                 flagsForIntrinsics=np.array([pinhole_flag if models[x] == cv.CALIB_MODEL_PINHOLE else fisheye_flag for x in range(num_cameras)], dtype=int),
-                flags = cv.CALIB_USE_EXTRINSIC_GUESS if USE_INTRINSICS_GUESS else 0
+                flags = cv.CALIB_USE_INTRINSIC_GUESS if USE_INTRINSICS_GUESS else 0
             )
 # [multiview_calib]
 #    except Exception as e:
@@ -795,6 +795,8 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, models,
     if pattern_type.lower() == 'charuco':
         assert (board_dict_path is not None) and os.path.exists(board_dict_path)
         board_dict = json.load(open(board_dict_path, 'r'))
+    else:
+        board_dict = None
 
 # [calib_init]
 
@@ -1009,7 +1011,9 @@ if __name__ == '__main__':
     if params.gt_file is not None:
         assert os.path.exists(params.gt_file), f'Path to gt file does not exist: {params.gt_file}'
         compareGT(params.gt_file, **output)
-    visualizeResults(**output)
+
+    if params.visualize:
+        visualizeResults(**output)
 
     print('Saving:', params.path_to_save)
     saveToFile(params.path_to_save, **output)
