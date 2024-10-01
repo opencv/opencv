@@ -391,8 +391,8 @@ TEST_F(MultiViewTest, OneLineInitialGuess)
                                         cv::CALIB_MODEL_PINHOLE, cv::CALIB_RATIONAL_MODEL,
                                         K, dist);
 
-        std::cout << "K:" << K << std::endl;
-        std::cout << "dist:" << dist << std::endl;
+        CV_LOG_INFO(NULL, "K:" << K);
+        CV_LOG_INFO(NULL, "dist:" << dist);
         Ks.push_back(K);
         distortions.push_back(dist);
         CV_LOG_INFO(NULL, "Calibrate mono RMS #" << c << ": "  << mono_rms);

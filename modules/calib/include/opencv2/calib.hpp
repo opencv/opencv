@@ -1236,7 +1236,7 @@ CV_EXPORTS_W double registerCameras( InputArrayOfArrays objectPoints1,
 @param[in] imagePoints Detected pattern points on camera images. Expected shape: NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2.
 This function supports partial observation of the calibration pattern.
 To enable this, set the unobserved image points to be invalid points (eg. (-1., -1.)).
-@param[in] imageSize   Images resolution.
+@param[in] imageSize Images resolution array for each camera.
 @param[in] detectionMask Pattern detection mask. Each value defines if i-camera observes the calibration pattern in j-th frame.
 Expected size: NUM_CAMERAS x NUM_FRAMES. Expected type: CV_8U.
 @param[in] models indicates camera models for each camera: cv::CALIB_MODEL_PINHOLE or cv::CALIB_MODEL_PINHOLE.
@@ -1287,9 +1287,11 @@ points in all the available views from all cameras.
 @sa findChessboardCorners, findCirclesGrid, calibrateCamera, fisheye::calibrate, registerCameras
 */
 
-CV_EXPORTS_W double calibrateMultiview (InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
-        const std::vector<Size> &imageSize, InputArray detectionMask,
-        InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts, CV_IN_OUT std::vector<Mat> &Ks, CV_IN_OUT std::vector<Mat> &distortions,
+CV_EXPORTS_W double calibrateMultiview (
+        InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
+        std::vector<cv::Size> imageSize, InputArray detectionMask,
+        InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
+        InputOutputArrayOfArrays Ks, InputOutputArrayOfArrays distortions,
         OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray models,
         OutputArray perFrameErrors, OutputArray initializationPairs,
         InputArray flagsForIntrinsics=noArray(), int flags = 0);
