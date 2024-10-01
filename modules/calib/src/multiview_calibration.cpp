@@ -509,12 +509,12 @@ static void checkConnected (const std::vector<std::vector<bool>> &detection_mask
 //TODO: use Input/OutputArrays for imagePoints(?)
 double calibrateMultiview(
         InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
-        std::vector<cv::Size> imageSize, InputArray detectionMask,
+        std::vector<cv::Size> imageSize, InputArray detectionMask, InputArray models,
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
         InputOutputArrayOfArrays Ks, InputOutputArrayOfArrays distortions,
-        OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray models,
-        OutputArray perFrameErrors, OutputArray initializationPairs,
-        InputArray flagsForIntrinsics, int flags) {
+        int flags, InputArray flagsForIntrinsics,
+        OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0,
+        OutputArray perFrameErrors, OutputArray initializationPairs) {
 
     CV_CheckFalse(objPoints.empty(), "Objects points must not be empty!");
     CV_CheckFalse(imagePoints.empty(), "Image points must not be empty!");
@@ -866,26 +866,28 @@ double calibrateMultiview(
             tvecs0_.copyTo(tvecs0);
     }
     double sum_errors = 0, cnt_errors = 0;
-    if (perFrameErrors.needed()) {
-        const bool rvecs_mat_vec = rvecs0.needed() && rvecs0.isMatVector(), tvecs_mat_vec = tvecs0.needed() && tvecs0.isMatVector();
-        const bool r_mat_vec = Rs.isMatVector(), t_mat_vec = Ts.isMatVector();
-        Mat errs = Mat_<double>(NUM_CAMERAS, NUM_FRAMES);
-        auto * errs_ptr = (double *) errs.data;
-        for (int c = 0; c < NUM_CAMERAS; c++) {
-            const Mat rvec = r_mat_vec ? Rs.getMat(c) : Rs.getMat().row(c).t();
-            const Mat tvec = t_mat_vec ? Ts.getMat(c) : Ts.getMat().row(c).t();
-            for (int f = 0; f < NUM_FRAMES; f++) {
-                if (detection_mask_mat[c][f]) {
-                    const Mat rvec0 = rvecs_mat_vec ? rvecs0.getMat(f) : rvecs0_.row(f).t();
-                    const Mat tvec0 = tvecs_mat_vec ? tvecs0.getMat(f) : tvecs0_.row(f).t();
-                    const double err2 = multiview::computeReprojectionMSE(objPoints.getMat(f), imagePoints[c][f], Ks_vec[c],
-                         distortions_vec[c], rvec0, tvec0, rvec, tvec, models_mat.at<uchar>(c));
-                    (*errs_ptr++) = sqrt(err2);
-                    sum_errors += err2;
-                    cnt_errors += 1;
-                } else (*errs_ptr++) = -1.0;
-            }
+
+    const bool rvecs_mat_vec = rvecs0.needed() && rvecs0.isMatVector(), tvecs_mat_vec = tvecs0.needed() && tvecs0.isMatVector();
+    const bool r_mat_vec = Rs.isMatVector(), t_mat_vec = Ts.isMatVector();
+    Mat errs = Mat_<double>(NUM_CAMERAS, NUM_FRAMES);
+    auto * errs_ptr = (double *) errs.data;
+    for (int c = 0; c < NUM_CAMERAS; c++) {
+        const Mat rvec = r_mat_vec ? Rs.getMat(c) : Rs.getMat().row(c).t();
+        const Mat tvec = t_mat_vec ? Ts.getMat(c) : Ts.getMat().row(c).t();
+        for (int f = 0; f < NUM_FRAMES; f++) {
+            if (detection_mask_mat[c][f]) {
+                const Mat rvec0 = rvecs_mat_vec ? rvecs0.getMat(f) : rvecs0_.row(f).t();
+                const Mat tvec0 = tvecs_mat_vec ? tvecs0.getMat(f) : tvecs0_.row(f).t();
+                const double err2 = multiview::computeReprojectionMSE(objPoints.getMat(f), imagePoints[c][f], Ks_vec[c],
+                        distortions_vec[c], rvec0, tvec0, rvec, tvec, models_mat.at<uchar>(c));
+                (*errs_ptr++) = sqrt(err2);
+                sum_errors += err2;
+                cnt_errors += 1;
+            } else (*errs_ptr++) = -1.0;
         }
+    }
+
+    if (perFrameErrors.needed()) {
         errs.copyTo(perFrameErrors);
     }
 

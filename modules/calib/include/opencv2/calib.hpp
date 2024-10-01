@@ -1289,12 +1289,12 @@ points in all the available views from all cameras.
 
 CV_EXPORTS_W double calibrateMultiview (
         InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
-        std::vector<cv::Size> imageSize, InputArray detectionMask,
+        std::vector<cv::Size> imageSize, InputArray detectionMask, InputArray models,
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
         InputOutputArrayOfArrays Ks, InputOutputArrayOfArrays distortions,
-        OutputArrayOfArrays rvecs0, OutputArrayOfArrays tvecs0, InputArray models,
-        OutputArray perFrameErrors, OutputArray initializationPairs,
-        InputArray flagsForIntrinsics=noArray(), int flags = 0);
+        int flags = 0, InputArray flagsForIntrinsics=noArray(),
+        OutputArrayOfArrays rvecs0=noArray(), OutputArrayOfArrays tvecs0=noArray(),
+        OutputArray perFrameErrors=noArray(), OutputArray initializationPairs=noArray());
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$

@@ -23,7 +23,6 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
     std::vector<std::vector<cv::Mat>> image_points_all;
     std::vector<cv::Size> image_sizes;
     std::vector<cv::Mat> Ks, distortions, Ts, Rs;
-    cv::Mat rvecs0, tvecs0, errors_mat, output_pairs;
     if (pattern_type == "checkerboard" || pattern_type == "charuco") {
         for (int i = 0; i < pattern_size.height; i++) {
             for (int j = 0; j < pattern_size.width; j++) {
@@ -162,9 +161,9 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
     std::vector<std::vector<cv::Point3f>> objPoints(num_frames, board);
 
 // ! [multiview_calib]
+
     const double rmse = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
-                                           Rs, Ts, Ks, distortions, cv::noArray(), cv::noArray(),
-                                           models, errors_mat, output_pairs);
+                                           models, Rs, Ts, Ks, distortions);
 // ! [multiview_calib]
     std::cout << "average RMSE over detection mask " << rmse << "\n";
     for (int c = 0; c < (int)Rs.size(); c++) {

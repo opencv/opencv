@@ -2484,8 +2484,8 @@ double CV_MultiviewCalibrationTest_CPP::calibrateStereoCamera( const vector<vect
     Mat visibility_mat = Mat_<uchar>::ones(2, numImgs);
     std::vector<uchar> models(2, cv::CALIB_MODEL_PINHOLE);
     std::vector<int> all_flags(2, flags);
-    double rms = calibrateMultiview(objectPoints, image_points_all, image_sizes, visibility_mat,
-                                    Rs, Ts, Ks, distortions, rvecs, tvecs, models, errors_mat, noArray(), all_flags);
+    double rms = calibrateMultiview(objectPoints, image_points_all, image_sizes, visibility_mat, models,
+                                    Rs, Ts, Ks, distortions, 0, all_flags, rvecs, tvecs, errors_mat);
 
     if (perViewErrors1.size() != (size_t)numImgs)
     {

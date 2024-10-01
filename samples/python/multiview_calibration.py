@@ -428,11 +428,11 @@ def calibrateFromPoints(
                 imagePoints=image_points,
                 imageSize=image_sizes,
                 detectionMask=detection_mask,
+                models=np.array(models, dtype=np.uint8),
                 Rs=None,
                 Ts=None,
                 Ks=Ks,
                 distortions=distortions,
-                models=np.array(models, dtype=np.uint8),
                 flagsForIntrinsics=np.array([pinhole_flag if models[x] == cv.CALIB_MODEL_PINHOLE else fisheye_flag for x in range(num_cameras)], dtype=int),
                 flags = cv.CALIB_USE_EXTRINSIC_GUESS if USE_INTRINSICS_GUESS else 0
             )
