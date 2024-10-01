@@ -1354,6 +1354,9 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     int cn = _src.channels(), type = _src.type(), depth = _src.depth(),
             rowsPerWI = dev.isIntel() ? 4 : 1;
 
+    if(!dev.hasFP64() && depth == CV_64F)
+        return false;
+
     if (borderType == BORDER_TRANSPARENT || !(interpolation == INTER_LINEAR || interpolation == INTER_NEAREST)
             || _map1.type() == CV_16SC1 || _map2.type() == CV_16SC1)
         return false;
