@@ -2269,7 +2269,7 @@ inline v_int32x4 v_round(const v_float32x4& a)
 #endif
 inline v_int32x4 v_floor(const v_float32x4& a)
 {
-#if CV_NEON_AARCH64
+#if __ARM_ARCH > 7
     return v_int32x4(vcvtmq_s32_f32(a.val));
 #else
     int32x4_t a1 = vcvtq_s32_f32(a.val);

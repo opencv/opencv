@@ -72,7 +72,7 @@ OCL_PERF_TEST_P(WarpAffineFixture, WarpAffine,
     const WarpAffineParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interpolation = get<2>(params);
-    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 2 : interpolation == INTER_CUBIC ? 2e-3 : 3e-2;
+    const double eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : interpolation == INTER_CUBIC ? 2e-3 : 1e-4;
 
     checkDeviceMaxMemoryAllocSize(srcSize, type);
 
