@@ -1095,7 +1095,7 @@ void CV_WarpAffine_Test::run_func()
 
 float CV_WarpAffine_Test::get_success_error_level(int _interpolation, int _depth) const
 {
-    return _depth == CV_8U ? 1.f : CV_ImageWarpBaseTest::get_success_error_level(_interpolation, _depth);
+    return _depth == CV_8U ? 0.f : CV_ImageWarpBaseTest::get_success_error_level(_interpolation, _depth);
 }
 
 void CV_WarpAffine_Test::run_reference_func()
