@@ -259,6 +259,8 @@ struct MultiViewTest : public ::testing::Test
         for (size_t c = 1; c < num_cameras; c++)
         {
             validateCameraPose(Rs[c], Ts[c], Rs_gt[c], Ts_gt[c], angle_tol, pos_tol);
+            double distance0 = cv::norm(Rs[c].t()*Ts[c]);
+            CV_LOG_INFO(NULL, "distance to camera #0: " << distance0);
         }
     }
 };
@@ -416,7 +418,7 @@ TEST_F(MultiViewTest, OneLineInitialGuess)
         cv::Rodrigues(Rs[c], Rs_rvec[c]);
     }
 
-    int flags = cv::CALIB_USE_EXTRINSIC_GUESS | cv::CALIB_USE_INTRINSIC_GUESS;
+    int flags = cv::CALIB_USE_EXTRINSIC_GUESS | cv::CALIB_USE_INTRINSIC_GUESS | cv::CALIB_STEREO_REGISTRATION;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility, models,
                                     Rs_rvec, Ts, Ks, distortions, flags, flagsForIntrinsics);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
@@ -500,6 +502,75 @@ TEST_F(MultiViewTest, CamsToFloor)
     validateAllPoses(Rs_gt, Ts_gt, Rs, Ts);
 }
 
+TEST_F(MultiViewTest, Hetero)
+{
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+    const string root = cvtest::TS::ptr()->get_data_path() + "cv/cameracalibration/multiview/3cams-hetero/";
+    const std::vector<std::string> cam_names = {"cam_7", "cam_4", "cam_8"};
+    std::vector<cv::Size> image_sizes = {{1920, 1080}, {1920, 1080}, {2048, 2048}};
+    std::vector<uchar> models = { cv::CALIB_MODEL_PINHOLE, cv::CALIB_MODEL_PINHOLE, cv::CALIB_MODEL_FISHEYE};
+
+    double rs_1_gt_data[9] = {
+        0.9927140815671712, 0.1070962138895326, 0.05521913824730116,
+        -0.05355858010980671, -0.01832224712027507, 0.9983966014350634,
+        0.1079362346706077, -0.994079823872807, -0.0124528315711911
+    };
+    double rs_2_gt_data[9] = {
+        0.9974414183162762, 0.06892036265048015, 0.0189894876008139,
+        -0.06886936047115397, 0.9976201373221448, -0.003327581349727079,
+        -0.0191736333413733, 0.002011273594291581, 0.9998141460106571
+    };
+
+    double ts_1_gt_data[3] = {0.5106665738153067, -0.3450096979616873, 0.7854530821015541};
+    double ts_2_gt_data[3] = {1.01304902944076, 0.01197702701032772, -0.01801263208619407};
+
+    std::vector<cv::Mat> Rs_gt = {
+        cv::Mat::eye(3, 3, CV_64FC1),
+        cv::Mat(3, 3, CV_64FC1, rs_1_gt_data),
+        cv::Mat(3, 3, CV_64FC1, rs_2_gt_data)
+    };
+
+    std::vector<cv::Mat> Ts_gt = {
+        cv::Mat::zeros(3, 1, CV_64FC1),
+        cv::Mat(3, 1, CV_64FC1, ts_1_gt_data),
+        cv::Mat(3, 1, CV_64FC1, ts_2_gt_data)
+    };
+
+    const int num_frames = 127;
+    std::vector<std::vector<cv::Mat>> image_points_all;
+    cv::Mat visibility;
+    loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
+    EXPECT_EQ(cam_names.size(), image_points_all.size());
+    for(size_t i = 0; i < cam_names.size(); i++)
+    {
+        EXPECT_TRUE(!image_points_all[i].empty());
+    }
+
+    std::vector<cv::Vec3f> board_pattern = genAsymmetricObjectPoints();
+    std::vector<std::vector<cv::Vec3f>> objPoints(num_frames, board_pattern);
+
+    std::vector<int> flagsForIntrinsics= {
+        cv::CALIB_RATIONAL_MODEL, cv::CALIB_RATIONAL_MODEL,
+        cv::CALIB_RECOMPUTE_EXTRINSIC | cv::CALIB_FIX_SKEW};
+
+    std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
+    double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility, models,
+                                    Rs_rvec, Ts, Ks, distortions, 0, flagsForIntrinsics);
+    CV_LOG_INFO(NULL, "RMS: "  << rms);
+
+    EXPECT_LE(rms, 2.5);
+
+    Rs.resize(Rs_rvec.size());
+    for(int c = 0; c < 3; c++)
+    {
+        cv::Rodrigues(Rs_rvec[c], Rs[c]);
+        CV_LOG_INFO(NULL, "R" << c << ":" << Rs[c]);
+        CV_LOG_INFO(NULL, "T" << c << ":" << Ts[c]);
+    }
+
+    validateAllPoses(Rs_gt, Ts_gt, Rs, Ts);
+}
+
 struct RegisterCamerasTest: public MultiViewTest
 {
     void filterPoints(const std::vector<std::vector<cv::Mat>>& image_points_all,
@@ -523,7 +594,7 @@ TEST_F(RegisterCamerasTest, hetero1)
     const std::vector<std::string> cam_names = {"cam_7", "cam_4"};
     std::vector<cv::Size> image_sizes = {{1920, 1080}, {2048, 2048}};
     std::vector<cv::CameraModel> models = {cv::CALIB_MODEL_PINHOLE, cv::CALIB_MODEL_FISHEYE};
-    std::vector<int> flagsForIntrinsics = {cv::CALIB_RATIONAL_MODEL, cv::CALIB_RECOMPUTE_EXTRINSIC+cv::CALIB_FIX_SKEW};
+    std::vector<int> flagsForIntrinsics = {cv::CALIB_RATIONAL_MODEL, cv::CALIB_RECOMPUTE_EXTRINSIC | cv::CALIB_FIX_SKEW};
     const int num_frames = 127;
     std::vector<cv::Vec3f> board_pattern = genAsymmetricObjectPoints();
 
@@ -580,7 +651,7 @@ TEST_F(RegisterCamerasTest, hetero2)
     const std::vector<std::string> cam_names = {"cam_4", "cam_8"};
     std::vector<cv::Size> image_sizes = {{2048, 2048}, {1920, 1080}};
     std::vector<cv::CameraModel> models = {cv::CALIB_MODEL_FISHEYE, cv::CALIB_MODEL_PINHOLE};
-    std::vector<int> flagsForIntrinsics = { cv::CALIB_RECOMPUTE_EXTRINSIC+cv::CALIB_FIX_SKEW, cv::CALIB_RATIONAL_MODEL};
+    std::vector<int> flagsForIntrinsics = { cv::CALIB_RECOMPUTE_EXTRINSIC | cv::CALIB_FIX_SKEW, cv::CALIB_RATIONAL_MODEL};
     const int num_frames = 127;
     std::vector<cv::Vec3f> board_pattern = genAsymmetricObjectPoints();
 

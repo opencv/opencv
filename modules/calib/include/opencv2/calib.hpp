@@ -453,7 +453,8 @@ enum { CALIB_USE_INTRINSIC_GUESS = 0x00001, //!< Use user provided intrinsics as
        // fisheye only flags
        CALIB_RECOMPUTE_EXTRINSIC = (1 << 23), //!< For fisheye model only. Recompute board position on each calibration iteration
        CALIB_CHECK_COND          = (1 << 24), //!< For fisheye model only. Check SVD decomposition quality for each frame during extrinsics estimation
-       CALIB_FIX_SKEW            = (1 << 25)  //!< For fisheye model only. Skew coefficient (alpha) is set to zero and stay zero.
+       CALIB_FIX_SKEW            = (1 << 25), //!< For fisheye model only. Skew coefficient (alpha) is set to zero and stay zero.
+       CALIB_STEREO_REGISTRATION = (1 << 26)  //!< For multiview calibration only. Use stereo correspondence approach for initial extrinsics guess. Limitation: all cameras should have the same type.
      };
 
 enum HandEyeCalibrationMethod
