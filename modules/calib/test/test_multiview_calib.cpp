@@ -132,9 +132,8 @@ TEST(multiview_calibration, accuracy) {
     }
 
     std::vector<cv::Mat> Ks, distortions, Rs, Ts;
-    cv::Mat rvecs0, tvecs0;
     calibrateMultiview(objPoints, image_points_all, image_sizes, visibility_mat,
-                       models, Rs, Ts, Ks, distortions, 0, cv::noArray(), rvecs0, tvecs0);
+                       models, Rs, Ts, Ks, distortions);
 
     const double K_err_tol = 1e1, dist_tol = 5e-2, R_tol = 1e-2, T_tol = 1e-2;
     for (int c = 0; c < num_cameras; c++) {
@@ -313,9 +312,8 @@ TEST_F(MultiViewTest, OneLine)
     std::vector<int> flagsForIntrinsics(3, CALIB_RATIONAL_MODEL);
 
     std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
-    cv::Mat rvecs0, tvecs0;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility, models,
-                                    Rs_rvec, Ts, Ks, distortions, 0, flagsForIntrinsics, rvecs0, tvecs0);
+                                    Rs_rvec, Ts, Ks, distortions, 0, flagsForIntrinsics);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 
     EXPECT_LE(rms, .3);
@@ -418,10 +416,9 @@ TEST_F(MultiViewTest, OneLineInitialGuess)
         cv::Rodrigues(Rs[c], Rs_rvec[c]);
     }
 
-    cv::Mat rvecs0, tvecs0;
     int flags = cv::CALIB_USE_EXTRINSIC_GUESS | cv::CALIB_USE_INTRINSIC_GUESS;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility, models,
-                    Rs_rvec, Ts, Ks, distortions, flags, flagsForIntrinsics, rvecs0, tvecs0);
+                                    Rs_rvec, Ts, Ks, distortions, flags, flagsForIntrinsics);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 
     EXPECT_LE(rms, .3);
@@ -486,9 +483,8 @@ TEST_F(MultiViewTest, CamsToFloor)
     std::vector<int> flagsForIntrinsics(3, cv::CALIB_RATIONAL_MODEL);
 
     std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
-    cv::Mat rvecs0, tvecs0;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility, models,
-                                    Rs_rvec, Ts, Ks, distortions, 0, flagsForIntrinsics, rvecs0, tvecs0);
+                                    Rs_rvec, Ts, Ks, distortions, 0, flagsForIntrinsics);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 
     EXPECT_LE(rms, 1.);

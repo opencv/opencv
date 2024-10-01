@@ -825,46 +825,42 @@ double calibrateMultiview(
         ts.copyTo(Ts);
     }
     Mat rvecs0_, tvecs0_;
-    if (rvecs0.needed() || perFrameErrors.needed()) {
-        const bool is_mat_vec = rvecs0.needed() && rvecs0.isMatVector();
-        if (is_mat_vec) {
-            rvecs0.create(NUM_FRAMES, 1, CV_64F);
-        } else {
-            rvecs0_ = Mat_<double>(NUM_FRAMES, 3);
-        }
-        cnt_valid_frame = 0;
-        for (int f = 0; f < NUM_FRAMES; f++) {
-            if (!valid_frames[f]) continue;
-            if (is_mat_vec)
-                rvecs0.create(3, 1, CV_64F, f, true);
-            Mat store = is_mat_vec ? rvecs0.getMat(f) : rvecs0_.row(f);
-            memcpy(store.ptr(), params + (cnt_valid_frame + NUM_CAMERAS - 1)*6, 3*sizeof(double));
-            cnt_valid_frame += 1;
-        }
-        if (!is_mat_vec && rvecs0.needed())
-            rvecs0_.copyTo(rvecs0);
+    bool is_mat_vec = rvecs0.needed() && rvecs0.isMatVector();
+    if (is_mat_vec) {
+        rvecs0.create(NUM_FRAMES, 1, CV_64F);
+    } else {
+        rvecs0_ = Mat_<double>(NUM_FRAMES, 3);
     }
+    cnt_valid_frame = 0;
+    for (int f = 0; f < NUM_FRAMES; f++) {
+        if (!valid_frames[f]) continue;
+        if (is_mat_vec)
+            rvecs0.create(3, 1, CV_64F, f, true);
+        Mat store = is_mat_vec ? rvecs0.getMat(f) : rvecs0_.row(f);
+        memcpy(store.ptr(), params + (cnt_valid_frame + NUM_CAMERAS - 1)*6, 3*sizeof(double));
+        cnt_valid_frame += 1;
+    }
+    if (!is_mat_vec && rvecs0.needed())
+        rvecs0_.copyTo(rvecs0);
 
-    if (tvecs0.needed() || perFrameErrors.needed()) {
-        const bool is_mat_vec = tvecs0.needed() && tvecs0.isMatVector();
-        if (is_mat_vec) {
-            tvecs0.create(NUM_FRAMES, 1, CV_64F);
-        } else {
-            tvecs0_ = Mat_<double>(NUM_FRAMES, 3);
-        }
-        cnt_valid_frame = 0;
-        for (int f = 0; f < NUM_FRAMES; f++) {
-            if (!valid_frames[f]) continue;
-            if (is_mat_vec)
-                tvecs0.create(3, 1, CV_64F, f, true);
-            Mat store = is_mat_vec ? tvecs0.getMat(f) : tvecs0_.row(f);
-            memcpy(store.ptr(), params + (cnt_valid_frame + NUM_CAMERAS - 1)*6+3, 3*sizeof(double));
-            store *= scale_3d_pts;
-            cnt_valid_frame += 1;
-        }
-        if (!is_mat_vec && tvecs0.needed())
-            tvecs0_.copyTo(tvecs0);
+    is_mat_vec = tvecs0.needed() && tvecs0.isMatVector();
+    if (is_mat_vec) {
+        tvecs0.create(NUM_FRAMES, 1, CV_64F);
+    } else {
+        tvecs0_ = Mat_<double>(NUM_FRAMES, 3);
     }
+    cnt_valid_frame = 0;
+    for (int f = 0; f < NUM_FRAMES; f++) {
+        if (!valid_frames[f]) continue;
+        if (is_mat_vec)
+            tvecs0.create(3, 1, CV_64F, f, true);
+        Mat store = is_mat_vec ? tvecs0.getMat(f) : tvecs0_.row(f);
+        memcpy(store.ptr(), params + (cnt_valid_frame + NUM_CAMERAS - 1)*6+3, 3*sizeof(double));
+        store *= scale_3d_pts;
+        cnt_valid_frame += 1;
+    }
+    if (!is_mat_vec && tvecs0.needed())
+        tvecs0_.copyTo(tvecs0);
     double sum_errors = 0, cnt_errors = 0;
 
     const bool rvecs_mat_vec = rvecs0.needed() && rvecs0.isMatVector(), tvecs_mat_vec = tvecs0.needed() && tvecs0.isMatVector();
