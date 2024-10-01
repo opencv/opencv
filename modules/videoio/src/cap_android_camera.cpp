@@ -403,17 +403,17 @@ public:
     double getProperty(int property_id) const CV_OVERRIDE
     {
         switch (property_id) {
-            case CV_CAP_PROP_FRAME_WIDTH:
+            case CAP_PROP_FRAME_WIDTH:
                 return isOpened() ? frameWidth : desiredWidth;
-            case CV_CAP_PROP_FRAME_HEIGHT:
+            case CAP_PROP_FRAME_HEIGHT:
                 return isOpened() ? frameHeight : desiredHeight;
             case CAP_PROP_AUTO_EXPOSURE:
                 return autoExposure ? 1 : 0;
-            case CV_CAP_PROP_EXPOSURE:
+            case CAP_PROP_EXPOSURE:
                 return exposureTime;
-            case CV_CAP_PROP_ISO_SPEED:
+            case CAP_PROP_ISO_SPEED:
                 return sensitivity;
-            case CV_CAP_PROP_FOURCC:
+            case CAP_PROP_FOURCC:
                 return fourCC;
             default:
                 break;
@@ -425,7 +425,7 @@ public:
     bool setProperty(int property_id, double value) CV_OVERRIDE
     {
         switch (property_id) {
-            case CV_CAP_PROP_FRAME_WIDTH:
+            case CAP_PROP_FRAME_WIDTH:
                 desiredWidth = value;
                 settingWidth = true;
                 if (settingWidth && settingHeight) {
@@ -434,7 +434,7 @@ public:
                     settingHeight = false;
                 }
                 return true;
-            case CV_CAP_PROP_FRAME_HEIGHT:
+            case CAP_PROP_FRAME_HEIGHT:
                 desiredHeight = value;
                 settingHeight = true;
                 if (settingWidth && settingHeight) {
@@ -443,7 +443,7 @@ public:
                     settingHeight = false;
                 }
                 return true;
-            case CV_CAP_PROP_FOURCC:
+            case CAP_PROP_FOURCC:
                 {
                     uint32_t newFourCC = cvRound(value);
                     if (fourCC == newFourCC) {
@@ -485,18 +485,18 @@ public:
                     return status == ACAMERA_OK;
                 }
                 return true;
-            case CV_CAP_PROP_EXPOSURE:
+            case CAP_PROP_EXPOSURE:
                 if (isOpened() && exposureRange.Supported()) {
                     exposureTime = (int64_t)value;
-                    LOGI("Setting CV_CAP_PROP_EXPOSURE will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
+                    LOGI("Setting CAP_PROP_EXPOSURE will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
                     camera_status_t status = ACaptureRequest_setEntry_i64(captureRequest.get(), ACAMERA_SENSOR_EXPOSURE_TIME, 1, &exposureTime);
                     return status == ACAMERA_OK;
                 }
                 return false;
-            case CV_CAP_PROP_ISO_SPEED:
+            case CAP_PROP_ISO_SPEED:
                 if (isOpened() && sensitivityRange.Supported()) {
                     sensitivity = (int32_t)value;
-                    LOGI("Setting CV_CAP_PROP_ISO_SPEED will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
+                    LOGI("Setting CAP_PROP_ISO_SPEED will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
                     camera_status_t status = ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
                     return status == ACAMERA_OK;
                 }

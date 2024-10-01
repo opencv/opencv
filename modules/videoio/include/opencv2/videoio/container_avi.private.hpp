@@ -9,9 +9,11 @@
 #  error this is a private header which should not be used from outside of the OpenCV library
 #endif
 
-#include "opencv2/core/cvdef.h"
-#include "opencv2/videoio/videoio_c.h"
+#include "opencv2/core/types.hpp"
 #include <deque>
+#include <vector>
+#include <string>
+#include <memory>
 
 namespace cv
 {
@@ -80,8 +82,8 @@ class CV_EXPORTS AVIReadContainer
 public:
     AVIReadContainer();
 
-    void initStream(const String& filename);
-    void initStream(Ptr<VideoInputStream> m_file_stream_);
+    void initStream(const std::string& filename);
+    void initStream(std::shared_ptr<VideoInputStream> m_file_stream_);
 
     void close();
     //stores founded frames in m_frame_list which can be accessed via getFrames
@@ -121,7 +123,7 @@ protected:
 
     void printError(RiffChunk& chunk, unsigned int expected_fourcc);
 
-    Ptr<VideoInputStream> m_file_stream;
+    std::shared_ptr<VideoInputStream> m_file_stream;
     unsigned int   m_stream_id;
     unsigned long long int   m_movi_start;
     unsigned long long int    m_movi_end;
@@ -150,7 +152,7 @@ public:
     AVIWriteContainer();
     ~AVIWriteContainer();
 
-    bool initContainer(const String& filename, double fps, Size size, bool iscolor);
+    bool initContainer(const std::string& filename, double fps, cv::Size size, bool iscolor);
     void startWriteAVI(int stream_count);
     void writeStreamHeader(Codecs codec_);
     void startWriteChunk(uint32_t fourcc);
@@ -180,7 +182,7 @@ public:
     void jflushStream(unsigned currval, int bitIdx);
 
 private:
-    Ptr<BitStream> strm;
+    std::shared_ptr<BitStream> strm;
     int outfps;
     int width, height, channels;
     size_t moviPointer;

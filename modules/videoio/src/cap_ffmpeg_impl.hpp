@@ -569,7 +569,6 @@ struct CvCapture_FFMPEG
 
     int64_t frame_number, first_frame_number;
 
-    bool   rotation_auto;
     int    rotation_angle; // valid 0, 90, 180, 270
     double eps_zero;
 /*
@@ -634,11 +633,6 @@ void CvCapture_FFMPEG::init()
 
     rotation_angle = 0;
 
-#if (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 92, 100))
-    rotation_auto = true;
-#else
-    rotation_auto = false;
-#endif
     dict = NULL;
 
 #if USE_AV_INTERRUPT_CALLBACK
@@ -1808,9 +1802,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_FRAME_COUNT:
         return (double)get_total_frames();
     case CAP_PROP_FRAME_WIDTH:
-        return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.height : frame.width);
+        return frame.width;
     case CAP_PROP_FRAME_HEIGHT:
-        return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.width : frame.height);
+        return frame.height;
     case CAP_PROP_FRAME_TYPE:
         return (double)av_get_picture_type_char(picture->pict_type);
     case CAP_PROP_FPS:
@@ -1852,12 +1846,6 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return static_cast<double>(get_bitrate());
     case CAP_PROP_ORIENTATION_META:
         return static_cast<double>(rotation_angle);
-    case CAP_PROP_ORIENTATION_AUTO:
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
-        return static_cast<double>(rotation_auto);
-#else
-        return 0;
-#endif
 #if USE_AV_HW_CODECS
     case CAP_PROP_HW_ACCELERATION:
         return static_cast<double>(va_type);
@@ -2077,14 +2065,6 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
     case CAP_PROP_CONVERT_RGB:
         convertRGB = (value != 0);
         return true;
-    case CAP_PROP_ORIENTATION_AUTO:
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
-        rotation_auto = value != 0 ? true : false;
-        return true;
-#else
-        rotation_auto = false;
-        return false;
-#endif
     default:
         return false;
     }
