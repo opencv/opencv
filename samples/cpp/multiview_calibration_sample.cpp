@@ -13,17 +13,16 @@
 
 // ! [detectPointsAndCalibrate_signature]
 static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_distance, const std::string &pattern_type,
-           const std::vector<bool> &is_fisheye, const std::vector<std::string> &filenames,
+           const std::vector<uchar> &models, const std::vector<std::string> &filenames,
            const cv::String* dict_path=nullptr)
 // ! [detectPointsAndCalibrate_signature]
 {
 // ! [calib_init]
     std::vector<cv::Point3f> board (pattern_size.area());
-    const int num_cameras = (int)is_fisheye.size();
+    const int num_cameras = (int)models.size();
     std::vector<std::vector<cv::Mat>> image_points_all;
     std::vector<cv::Size> image_sizes;
     std::vector<cv::Mat> Ks, distortions, Ts, Rs;
-    cv::Mat rvecs0, tvecs0, errors_mat, output_pairs;
     if (pattern_type == "checkerboard" || pattern_type == "charuco") {
         for (int i = 0; i < pattern_size.height; i++) {
             for (int j = 0; j < pattern_size.width; j++) {
@@ -162,9 +161,9 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
     std::vector<std::vector<cv::Point3f>> objPoints(num_frames, board);
 
 // ! [multiview_calib]
+
     const double rmse = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
-                                           Rs, Ts, Ks, distortions, cv::noArray(), cv::noArray(),
-                                           is_fisheye, errors_mat, output_pairs);
+                                           models, Rs, Ts, Ks, distortions);
 // ! [multiview_calib]
     std::cout << "average RMSE over detection mask " << rmse << "\n";
     for (int c = 0; c < (int)Rs.size(); c++) {
@@ -219,13 +218,13 @@ int main (int argc, char **argv) {
     CV_Assert(pattern_size_count == 1);
     pattern_size.height = std::stoi(temp_str);
 
-    std::vector<bool> is_fisheye;
+    std::vector<uchar> models;
     const cv::String is_fisheye_str = parser.get<cv::String>("is_fisheye");
     for (char i : is_fisheye_str) {
         if (i == '0') {
-            is_fisheye.push_back(false);
+            models.push_back(cv::CALIB_MODEL_PINHOLE);
         } else if (i == '1') {
-            is_fisheye.push_back(true);
+            models.push_back(cv::CALIB_MODEL_FISHEYE);
         }
     }
     const cv::String filenames_str = parser.get<cv::String>("filenames");
@@ -240,13 +239,13 @@ int main (int argc, char **argv) {
         }
     }
     filenames.emplace_back(temp_str);
-    CV_CheckEQ(filenames.size(), is_fisheye.size(), "filenames size must be equal to number of cameras!");
+    CV_CheckEQ(filenames.size(), models.size(), "filenames size must be equal to number of cameras!");
 
     if (parser.has("board_dict_path")) {
         cv::String board_dict_path = parser.get<cv::String>("board_dict_path");
-        detectPointsAndCalibrate (pattern_size, parser.get<float>("pattern_distance"), parser.get<cv::String>("pattern_type"), is_fisheye, filenames, &board_dict_path);
+        detectPointsAndCalibrate (pattern_size, parser.get<float>("pattern_distance"), parser.get<cv::String>("pattern_type"), models, filenames, &board_dict_path);
     } else {
-        detectPointsAndCalibrate (pattern_size, parser.get<float>("pattern_distance"), parser.get<cv::String>("pattern_type"), is_fisheye, filenames);
+        detectPointsAndCalibrate (pattern_size, parser.get<float>("pattern_distance"), parser.get<cv::String>("pattern_type"), models, filenames);
     }
     return 0;
 }

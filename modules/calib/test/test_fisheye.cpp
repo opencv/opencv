@@ -615,9 +615,9 @@ TEST_F(fisheyeTest, multiview_calibration)
         right_pts.copyTo(image_points_all[1][i]);
     }
     std::vector<cv::Size> image_sizes(2, imageSize);
-    cv::Mat visibility_mat = cv::Mat_<uchar>::ones(2, (int)leftPoints.size()), errors_mat, output_pairs;
+    cv::Mat visibility_mat = cv::Mat_<uchar>::ones(2, (int)leftPoints.size());
     std::vector<cv::Mat> Rs, Ts, Ks, distortions, rvecs0, tvecs0;
-    std::vector<uchar> is_fisheye(2, true);
+    std::vector<uchar> models(2, cv::CALIB_MODEL_FISHEYE);
     int flag = 0;
     flag |= cv::CALIB_RECOMPUTE_EXTRINSIC;
     flag |= cv::CALIB_CHECK_COND;
@@ -625,8 +625,8 @@ TEST_F(fisheyeTest, multiview_calibration)
 
     std::vector<int> all_flags(2, flag);
 
-    calibrateMultiview (objectPoints, image_points_all, image_sizes, visibility_mat,
-       Rs, Ts, Ks, distortions, rvecs0, tvecs0, is_fisheye, errors_mat, output_pairs, false, all_flags);
+    calibrateMultiview(objectPoints, image_points_all, image_sizes, visibility_mat, models,
+                       Rs, Ts, Ks, distortions, 0, all_flags, rvecs0, tvecs0);
     cv::Matx33d R_correct(   0.9975587205950972,   0.06953016383322372, 0.006492709911733523,
                            -0.06956823121068059,    0.9975601387249519, 0.005833595226966235,
                           -0.006071257768382089, -0.006271040135405457, 0.9999619062167968);

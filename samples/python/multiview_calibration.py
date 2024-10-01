@@ -275,11 +275,11 @@ def showUndistorted(image_points, Ks, distortions, image_names):
 
 
 def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1,
-                   K, dist_coeff, is_fisheye, cam_idx, frame_idx, per_acc,
+                   K, dist_coeff, model, cam_idx, frame_idx, per_acc,
                    image=None):
     rvec2, tvec2 = cv.composeRT(rvec0, tvec0, rvec1, tvec1)[:2]
 
-    if is_fisheye:
+    if model == cv.CALIB_MODEL_FISHEYE:
         points_2d_est = cv.fisheye.projectPoints(
             pattern_points[:, None], rvec2, tvec2, K, dist_coeff.flatten()
         )[0].reshape(-1, 2)
@@ -361,7 +361,7 @@ def calibrateFromPoints(
         pattern_points,
         image_points,
         image_sizes,
-        is_fisheye,
+        models,
         image_names=None,
         find_intrinsics_in_python=False,
         Ks=None,
@@ -370,7 +370,7 @@ def calibrateFromPoints(
     """
     pattern_points: NUM_POINTS x 3 (numpy array)
     image_points: NUM_CAMERAS x NUM_FRAMES x NUM_POINTS x 2
-    is_fisheye: NUM_CAMERAS (bool)
+    models: NUM_CAMERAS (cv.CALIB_MODEL_PINHOLE | cv.CALIB_MODEL_FISHEYE)
     image_sizes: NUM_CAMERAS x [width, height]
     """
     num_cameras = len(image_points)
@@ -380,7 +380,7 @@ def calibrateFromPoints(
     with np.printoptions(threshold=np.inf):  # type: ignore
         print("detection mask Matrix:\n", str(detection_mask).replace('0\n ', '0').replace('1\n ', '1'))
 
-    pinhole_flag = cv.CALIB_ZERO_TANGENT_DIST
+    pinhole_flag = cv.CALIB_RATIONAL_MODEL
     fisheye_flag = cv.CALIB_RECOMPUTE_EXTRINSIC+cv.CALIB_FIX_SKEW
     if Ks is not None and distortions is not None:
         USE_INTRINSICS_GUESS = True
@@ -389,7 +389,7 @@ def calibrateFromPoints(
         if find_intrinsics_in_python:
             Ks, distortions = [], []
             for c in range(num_cameras):
-                if is_fisheye[c]:
+                if models[c] == cv.CALIB_MODEL_FISHEYE:
                     image_points_c = [
                         image_points[c][f][:, None] for f in range(num_frames) if len(image_points[c][f]) > 0
                     ]
@@ -428,13 +428,13 @@ def calibrateFromPoints(
                 imagePoints=image_points,
                 imageSize=image_sizes,
                 detectionMask=detection_mask,
+                models=np.array(models, dtype=np.uint8),
                 Rs=None,
                 Ts=None,
                 Ks=Ks,
                 distortions=distortions,
-                isFisheye=np.array(is_fisheye, dtype=np.uint8),
-                useIntrinsicsGuess=USE_INTRINSICS_GUESS,
-                flagsForIntrinsics=np.array([pinhole_flag if not is_fisheye[x] else fisheye_flag for x in range(num_cameras)], dtype=int),
+                flagsForIntrinsics=np.array([pinhole_flag if models[x] == cv.CALIB_MODEL_PINHOLE else fisheye_flag for x in range(num_cameras)], dtype=int),
+                flags = cv.CALIB_USE_INTRINSIC_GUESS if USE_INTRINSICS_GUESS else 0
             )
 # [multiview_calib]
 #    except Exception as e:
@@ -461,7 +461,7 @@ def calibrateFromPoints(
         'errors_per_frame': errors_per_frame,
         'output_pairs': output_pairs,
         'image_points': image_points,
-        'is_fisheye': is_fisheye,
+        'models': models,
         'image_sizes': image_sizes,
         'pattern_points': pattern_points,
         'detection_mask': detection_mask,
@@ -469,7 +469,7 @@ def calibrateFromPoints(
     }
 
 
-def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
+def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, models,
                      image_points, errors_per_frame, rvecs0, tvecs0,
                      pattern_points, image_sizes, output_pairs, image_names, cam_ids):
     rvecs = [cv.Rodrigues(R)[0] for R in Rs]
@@ -509,7 +509,7 @@ def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
             Ts[cam_idx],
             Ks[cam_idx],
             distortions[cam_idx],
-            is_fisheye[cam_idx],
+            models[cam_idx],
             cam_idx,
             frame_idx,
             (errors_per_frame[cam_idx, frame_idx] < errors).sum() * 100 / len(errors),
@@ -527,7 +527,7 @@ def visualizeFromFile(file):
     assert file_read.isOpened(), file
     read_keys = [
         'Rs', 'distortions', 'Ks', 'Ts', 'rvecs0', 'tvecs0',
-        'errors_per_frame', 'output_pairs', 'image_points', 'is_fisheye',
+        'errors_per_frame', 'output_pairs', 'image_points', 'models',
         'image_sizes', 'pattern_points', 'detection_mask', 'cam_ids',
     ]
     input = {}
@@ -549,7 +549,7 @@ def saveToFile(path_to_save, **kwargs):
         path_to_save = datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")+'.yaml'
     save_file = cv.FileStorage(path_to_save, cv.FileStorage_WRITE)
 
-    kwargs['is_fisheye'] = np.array(kwargs['is_fisheye'], dtype=int)
+    kwargs['models'] = np.array(kwargs['models'], dtype=int)
     image_points = kwargs['image_points']
 
     for i in range(len(image_points)):
@@ -574,7 +574,7 @@ def saveToFile(path_to_save, **kwargs):
 
     save_file.release()
 
-def compareGT(gt_file, detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
+def compareGT(gt_file, detection_mask, Rs, Ts, Ks, distortions, models,
                      image_points, errors_per_frame, rvecs0, tvecs0,
                      pattern_points, image_sizes, output_pairs, image_names, cam_ids):
 
@@ -610,7 +610,7 @@ def compareGT(gt_file, detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
 
         points = np.concatenate([X[:,:,None], Y[:,:,None]], axis=2).reshape([-1, 1, 2])
         # Undistort the image points with the estimated distortions
-        if is_fisheye[cam]:
+        if models[cam] == cv.CALIB_MODEL_FISHEYE:
             points_undist = cv.fisheye.undistortPoints(points, Ks[cam],distortions[cam])
         else:
             points_undist = cv.undistortPoints(points, Ks[cam], distortions[cam])
@@ -618,7 +618,7 @@ def compareGT(gt_file, detection_mask, Rs, Ts, Ks, distortions, is_fisheye,
         pt_norm = np.concatenate([points_undist, np.ones([points_undist.shape[0], 1, 1])], axis=2)
 
         # Distort the image points with the ground truth distortions
-        if is_fisheye[cam]:
+        if models[cam] == cv.CALIB_MODEL_FISHEYE:
             projected = cv.fisheye.projectPoints(pt_norm, np.zeros([3, 1]), np.zeros([3, 1]), Ks_gt[cam], distortions_gt[cam])[0]
         else:
             projected = cv.projectPoints(pt_norm, np.zeros([3, 1]), np.zeros([3, 1]), Ks_gt[cam], distortions_gt[cam])[0]
@@ -772,7 +772,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
         return cam_idx, frame_idx, img_size, np.array([], dtype=np.float32)
 
 
-def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
+def calibrateFromImages(files_with_images, grid_size, pattern_type, models,
                         dist_m, winsize, points_json_file, debug_corners,
                         RESIZE_IMAGE, find_intrinsics_in_python,
                         is_parallel_detection=True, cam_ids=None, intrinsics_dir='', board_dict_path=None):
@@ -780,7 +780,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
     files_with_images: NUM_CAMERAS - path to file containing image names (NUM_FRAMES)
     grid_size: [width, height] -- size of grid pattern
     dist_m: length of a grid cell
-    is_fisheye: NUM_CAMERAS (bool)
+    models: NUM_CAMERAS (cv.CALIB_MODEL_PINHOLE | cv.CALIB_MODEL_FISHEYE)
     """
 # [calib_init]
     if pattern_type.lower() == 'checkerboard' or pattern_type.lower() == 'charuco':
@@ -795,10 +795,12 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
     if pattern_type.lower() == 'charuco':
         assert (board_dict_path is not None) and os.path.exists(board_dict_path)
         board_dict = json.load(open(board_dict_path, 'r'))
+    else:
+        board_dict = None
 
 # [calib_init]
 
-    assert len(files_with_images) == len(is_fisheye) and len(grid_size) == 2
+    assert len(files_with_images) == len(models) and len(grid_size) == 2
     if cam_ids is None:
         cam_ids = list(range(len(files_with_images)))
 
@@ -887,7 +889,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
                 'object_points': pattern.tolist(),
                 'image_points': image_points_cameras_list,
                 'image_sizes': image_sizes,
-                'is_fisheye': is_fisheye,
+                'model': models,
                 }, wf)
 
     Ks = None
@@ -909,7 +911,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, is_fisheye,
         pattern,
         image_points_cameras,
         image_sizes,
-        is_fisheye,
+        models,
         all_images_names,
         find_intrinsics_in_python,
         Ks=Ks,
@@ -933,7 +935,7 @@ def calibrateFromJSON(json_file, find_intrinsics_in_python):
         np.array(data['object_points'], dtype=np.float32).T,
         data['image_points'],
         data['image_sizes'],
-        data['is_fisheye'],
+        data['models'],
         images_names,
         find_intrinsics_in_python,
         Ks,
@@ -992,7 +994,7 @@ if __name__ == '__main__':
             files_with_images=[x.strip() for x in params.filenames.split(',')],
             grid_size=[int(v) for v in params.pattern_size.split(',')],
             pattern_type=params.pattern_type,
-            is_fisheye=[bool(int(v)) for v in params.is_fisheye.split(',')],
+            models=[int(v) for v in params.is_fisheye.split(',')],
             dist_m=params.pattern_distance,
             winsize=tuple([int(v) for v in params.winsize.split(',')]),
             points_json_file=params.points_json_file,
@@ -1009,7 +1011,9 @@ if __name__ == '__main__':
     if params.gt_file is not None:
         assert os.path.exists(params.gt_file), f'Path to gt file does not exist: {params.gt_file}'
         compareGT(params.gt_file, **output)
-    visualizeResults(**output)
+
+    if params.visualize:
+        visualizeResults(**output)
 
     print('Saving:', params.path_to_save)
     saveToFile(params.path_to_save, **output)
