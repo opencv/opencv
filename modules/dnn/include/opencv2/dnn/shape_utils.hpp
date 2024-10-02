@@ -125,17 +125,12 @@ static inline MatShape shape(const int* dims, const int n)
 
 static inline MatShape shape(const Mat& mat)
 {
-    return shape(mat.size.p, mat.dims);
-}
-
-static inline MatShape shape(const MatSize& sz)
-{
-    return shape(sz.p, sz.dims());
+    return mat.shape();
 }
 
 static inline MatShape shape(const UMat& mat)
 {
-    return shape(mat.size.p, mat.dims);
+    return mat.shape();
 }
 
 #if 0  // issues with MatExpr wrapped into InputArray
@@ -298,14 +293,11 @@ Range normalize_axis_range(const Range& r, int axisSize)
 static inline
 bool isAllOnes(const MatShape &inputShape, int startPos, int endPos)
 {
-    CV_Assert(!inputShape.empty());
-
-    CV_CheckGE((int) inputShape.size(), startPos, "");
     CV_CheckGE(startPos, 0, "");
     CV_CheckLE(startPos, endPos, "");
-    CV_CheckLE((size_t)endPos, inputShape.size(), "");
+    CV_CheckLE(endPos, inputShape.dims, "");
 
-    for (size_t i = startPos; i < endPos; i++)
+    for (int i = startPos; i < endPos; i++)
     {
         if (inputShape[i] != 1)
             return false;

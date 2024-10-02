@@ -2643,7 +2643,7 @@ void ONNXImporter::parseConcat(LayerParams& layerParams, const opencv_onnx::Node
         for (size_t i = 0; i < inputs.size(); ++i)
         {
             inputs[i] = getBlob(node_proto, (int)i);
-            if (inputs[i].size.dims() > (int)inputShape.size())
+            if (inputs[i].dims > inputShape.dims)
             {
                 inputShape = shape(inputs[i]);
             }
