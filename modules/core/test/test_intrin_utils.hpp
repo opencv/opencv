@@ -300,14 +300,20 @@ template<typename R> struct TheTest
 #else
 #error "Configuration error"
 #endif
+        R setall_res3 = v_setall_<R>((LaneType)7);
+        R setall_resz = v_setzero_<R>();
 #if CV_SIMD_WIDTH > 0
         Data<R> setall_res1_; v_store(setall_res1_.d, setall_res1);
         Data<R> setall_res2_; v_store(setall_res2_.d, setall_res2);
+        Data<R> setall_res3_; v_store(setall_res3_.d, setall_res3);
+        Data<R> setall_resz_; v_store(setall_resz_.d, setall_resz);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((LaneType)5, setall_res1_[i]);
             EXPECT_EQ((LaneType)6, setall_res2_[i]);
+            EXPECT_EQ((LaneType)7, setall_res3_[i]);
+            EXPECT_EQ((LaneType)0, setall_resz_[i]);
         }
 #endif
 

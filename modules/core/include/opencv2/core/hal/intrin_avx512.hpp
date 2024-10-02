@@ -458,9 +458,9 @@ OPENCV_HAL_IMPL_AVX512_LOADSTORE_FLT(v_float64x8, double, pd, __m256d)
     { return _Tpvec(_mm512_setzero_si512()); }                                     \
     inline _Tpvec v512_setall_##suffix(_Tp v)                                      \
     { return _Tpvec(_mm512_set1_##ssuffix((ctype_s)v)); }                          \
-    inline _Tpvec v_setzero(_Tpvec /*unused*/)                                     \
+    template <> inline _Tpvec v_setzero_()                                         \
     { return v512_setzero_##suffix(); }                                            \
-    inline _Tpvec v_setall(_Tp v, _Tpvec /*unused*/)                               \
+    template <> inline _Tpvec v_setall_(_Tp v)                                     \
     { return v512_setall_##suffix(v); }                                            \
     OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint8x64,   suffix, OPENCV_HAL_NOP)      \
     OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int8x64,    suffix, OPENCV_HAL_NOP)      \
@@ -487,9 +487,9 @@ OPENCV_HAL_IMPL_AVX512_INIT(v_int64x8,   int64,    s64, epi64,  int64)
     { return _Tpvec(_mm512_setzero_##zsuffix()); }                          \
     inline _Tpvec v512_setall_##suffix(_Tp v)                               \
     { return _Tpvec(_mm512_set1_##zsuffix(v)); }                            \
-    inline _Tpvec v_setzero(_Tpvec /*unused*/)                              \
+    template <> inline _Tpvec v_setzero_()                                  \
     { return v512_setzero_##suffix(); }                                     \
-    inline _Tpvec v_setall(_Tp v, _Tpvec /*unused*/)                        \
+    template <> inline _Tpvec v_setall_(_Tp v)                              \
     { return v512_setall_##suffix(v); }                                     \
     OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint8x64,  suffix, cast)          \
     OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int8x64,   suffix, cast)          \

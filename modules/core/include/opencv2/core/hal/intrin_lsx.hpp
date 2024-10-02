@@ -417,9 +417,9 @@ inline __m128i _lsx_128_castpd_si128(const __m128d& v)
     { return _Tpvec(__lsx_vldi(0)); }                                             \
     inline _Tpvec v_setall_##suffix(_Tp v)                                        \
     { return _Tpvec(__lsx_vreplgr2vr_##ssuffix((ctype_s)v)); }                    \
-    inline _Tpvec v_setzero(_Tpvec /*unused*/)                                    \
+    template <> inline _Tpvec v_setzero_()                                        \
     { return v_setzero_##suffix(); }                                              \
-    inline _Tpvec v_setall(_Tp v, _Tpvec /*unused*/)                              \
+    template <> inline _Tpvec v_setall_(_Tp v)                                    \
     { return v_setall_##suffix(v); }                                              \
     OPENCV_HAL_IMPL_LSX_CAST(_Tpvec, v_uint8x16,  suffix, OPENCV_HAL_NOP)         \
     OPENCV_HAL_IMPL_LSX_CAST(_Tpvec, v_int8x16,   suffix, OPENCV_HAL_NOP)         \
@@ -452,9 +452,9 @@ inline __m128d _lsx_128_castsi128_pd(const __m128i &v)
     { return _Tpvec(__lsx_vldi(0)); }                                       \
     inline _Tpvec v_setall_##suffix(_Tp v)                                  \
     { return _Tpvec(_v128_setall_##zsuffix(v)); }                           \
-    inline _Tpvec v_setzero(_Tpvec /*unused*/)                              \
+    template <> inline _Tpvec v_setzero_()                                  \
     { return v_setzero_##suffix(); }                                        \
-    inline _Tpvec v_setall(_Tp v, _Tpvec /*unused*/)                        \
+    template <> inline _Tpvec v_setall_(_Tp v)                              \
     { return v_setall_##suffix(v); }                                        \
     OPENCV_HAL_IMPL_LSX_CAST(_Tpvec, v_uint8x16,     suffix,   cast)        \
     OPENCV_HAL_IMPL_LSX_CAST(_Tpvec, v_int8x16,      suffix,   cast)        \

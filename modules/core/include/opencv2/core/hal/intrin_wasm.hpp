@@ -392,8 +392,8 @@ inline v128_t v128_cvti32x4_i64x2_high(const v128_t& a)
 #define OPENCV_HAL_IMPL_WASM_INITVEC(_Tpvec, _Tp, suffix, zsuffix, _Tps) \
 inline _Tpvec v_setzero_##suffix() { return _Tpvec(wasm_##zsuffix##_splat((_Tps)0)); } \
 inline _Tpvec v_setall_##suffix(_Tp v) { return _Tpvec(wasm_##zsuffix##_splat((_Tps)v)); } \
-inline _Tpvec v_setzero(_Tpvec /*unused*/) { return v_setzero_##suffix(); } \
-inline _Tpvec v_setall(_Tp v, _Tpvec /*unused*/) { return v_setall_##suffix(v); } \
+template <> inline _Tpvec v_setzero_() { return v_setzero_##suffix(); } \
+template <> inline _Tpvec v_setall_(_Tp v) { return v_setall_##suffix(v); } \
 template<typename _Tpvec0> inline _Tpvec v_reinterpret_as_##suffix(const _Tpvec0& a) \
 { return _Tpvec(a.val); }
 

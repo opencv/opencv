@@ -381,8 +381,8 @@ private:
 #define OPENCV_HAL_IMPL_NEON_INIT(_Tpv, _Tp, suffix) \
 inline v_##_Tpv v_setzero_##suffix() { return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
 inline v_##_Tpv v_setall_##suffix(_Tp v) { return v_##_Tpv(vdupq_n_##suffix(v)); } \
-inline v_##_Tpv v_setzero(v_##_Tpv /*unused*/) { return v_setzero_##suffix(); } \
-inline v_##_Tpv v_setall(_Tp v, v_##_Tpv /*unused*/) { return v_setall_##suffix(v); } \
+template <> inline v_##_Tpv v_setzero_() { return v_setzero_##suffix(); } \
+template <> inline v_##_Tpv v_setall_(_Tp v) { return v_setall_##suffix(v); } \
 inline _Tpv##_t vreinterpretq_##suffix##_##suffix(_Tpv##_t v) { return v; } \
 inline v_uint8x16 v_reinterpret_as_u8(const v_##_Tpv& v) { return v_uint8x16(vreinterpretq_u8_##suffix(v.val)); } \
 inline v_int8x16 v_reinterpret_as_s8(const v_##_Tpv& v) { return v_int8x16(vreinterpretq_s8_##suffix(v.val)); } \
