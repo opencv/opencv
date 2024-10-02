@@ -2291,7 +2291,7 @@ TEST_P(Test_ONNX_nets, Googlenet)
         net.setInput(inp_i);
         ASSERT_FALSE(net.empty());
         Mat out_i = net.forward();
-        results.push_back(out_i);
+        results.push_back(out_i.clone());
     }
     Mat out;
     vconcat(results, out);
