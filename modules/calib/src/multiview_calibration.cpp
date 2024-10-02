@@ -260,6 +260,69 @@ static void thresholdPatternCameraAngles (int NUM_PATTERN_PTS, double THR_PATTER
     }
 }
 
+static void pairwiseRegistration (const std::vector<std::pair<int,int>> &pairs,
+        const cv::Mat &models, const std::vector<Mat> &objPoints_norm,
+        const std::vector<std::vector<Mat>> &imagePoints, const std::vector<std::vector<int>> &overlaps,
+        const std::vector<std::vector<bool>> &detection_mask_mat, const std::vector<Mat> &Ks,
+        const std::vector<Mat> &distortions, std::vector<Matx33d> &Rs_vec, std::vector<Vec3d> &Ts_vec,
+        Mat &intrinsic_flags, int extrinsic_flags = 0) {
+    CV_UNUSED(intrinsic_flags);
+    const int NUM_FRAMES = (int)objPoints_norm.size();
+    const int NUM_CAMERAS = (int)detection_mask_mat.size();
+    std::vector<Matx33d> Rs_prior;
+    std::vector<Vec3d> Ts_prior;
+    if (extrinsic_flags & cv::CALIB_USE_EXTRINSIC_GUESS) {
+        Rs_prior.resize(NUM_CAMERAS);
+        Ts_prior.resize(NUM_CAMERAS);
+        for (int i = 0; i < NUM_CAMERAS; i++) {
+            Rs_vec[i].copyTo(Rs_prior[i]);
+            Ts_vec[i].copyTo(Ts_prior[i]);
+        }
+    }
+
+    for (const auto &pair : pairs) {
+        const int c1 = pair.first, c2 = pair.second, overlap = overlaps[c1][c2];
+        // prepare image points of two cameras and grid points
+        std::vector<Mat> image_points1, image_points2, grid_points1, grid_points2;
+        grid_points1.reserve(overlap);
+        grid_points2.reserve(overlap);
+        image_points1.reserve(overlap);
+        image_points2.reserve(overlap);
+        for (int f = 0; f < NUM_FRAMES; f++) {
+            if (detection_mask_mat[c1][f] && detection_mask_mat[c2][f]) {
+                grid_points1.emplace_back(objPoints_norm[f]);
+                grid_points2.emplace_back(objPoints_norm[f]);
+                image_points1.emplace_back(imagePoints[c1][f]);
+                image_points2.emplace_back(imagePoints[c2][f]);
+            }
+        }
+        Matx33d R;
+        Vec3d T;
+
+        if (extrinsic_flags & cv::CALIB_USE_EXTRINSIC_GUESS) {
+            R = Rs_prior[c2] * Rs_prior[c1].t();
+            T = -R * Ts_prior[c1] + Ts_prior[c2];
+        }
+
+        extrinsic_flags |= CALIB_FIX_INTRINSIC;
+        registerCameras(grid_points1, grid_points2, image_points1, image_points2,
+                        Ks[c1], distortions[c1], cv::CameraModel(models.at<uchar>(c1)),
+                        Ks[c2], distortions[c2], cv::CameraModel(models.at<uchar>(c2)),
+                        R, T, noArray(), noArray(), noArray(), noArray(), noArray(), extrinsic_flags);
+
+        // R_0 = I
+        // R_ij = R_i R_j^T     =>  R_i = R_ij R_j
+        // t_ij = ti - R_ij tj  =>  t_i = t_ij + R_ij t_j
+        if (c1 == 0) {
+            Rs_vec[c2] = R;
+            Ts_vec[c2] = T;
+        } else {
+            Rs_vec[c2] = Matx33d(Mat(R * Rs_vec[c1]));
+            Ts_vec[c2] = Vec3d(Mat(T + R * Ts_vec[c1]));
+        }
+    }
+}
+
 static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pairs,
         const cv::Mat &models, const std::vector<Mat> &objPoints_norm,
         const std::vector<std::vector<Mat>> &imagePoints, const std::vector<std::vector<int>> &overlaps,
@@ -528,19 +591,22 @@ double calibrateMultiview(
     CV_CheckEQ(detection_mask_.type(), CV_8U, "detectionMask must be of type CV_8U");
     CV_CheckEQ(models_mat.type(), CV_8U, "models must be of type CV_8U");
 
-    bool is_fisheye = false;
-    bool is_pinhole = false;
+    if(flags & cv::CALIB_STEREO_REGISTRATION)
+    {
+        bool is_fisheye = false;
+        bool is_pinhole = false;
 
-    for  (int i = 0; i < (int)models_mat.total(); i++) {
-        if (models_mat.at<uchar>(i) == cv::CALIB_MODEL_FISHEYE) {
-            is_fisheye = true;
-        } else if (models_mat.at<uchar>(i) == cv::CALIB_MODEL_PINHOLE) {
-            is_pinhole = true;
-        } else {
-            CV_Error(Error::StsBadArg, "Unsupported camera model");
+        for  (int i = 0; i < (int)models_mat.total(); i++) {
+            if (models_mat.at<uchar>(i) == cv::CALIB_MODEL_FISHEYE) {
+                is_fisheye = true;
+            } else if (models_mat.at<uchar>(i) == cv::CALIB_MODEL_PINHOLE) {
+                is_pinhole = true;
+            } else {
+                CV_Error(Error::StsBadArg, "Unsupported camera model");
+            }
         }
+        CV_CheckEQ(is_fisheye && is_pinhole, false, "Mix of pinhole and fisheye cameras is not supported with CALIB_STEREO_REGISTRATION flag");
     }
-    CV_CheckEQ(is_fisheye && is_pinhole, false, "Mix of pinhole and fisheye cameras is not supported for now");
 
     // equal number of cameras
     CV_Assert(imageSize.size() == imagePoints.size());
@@ -732,8 +798,14 @@ double calibrateMultiview(
         }
         pairs_mat.copyTo(initializationPairs);
     }
-    multiview::pairwiseStereoCalibration(pairs, models_mat, objPoints_norm, imagePoints,
-         overlaps, detection_mask_mat, Ks_vec, distortions_vec, Rs_vec, Ts_vec, flagsForIntrinsics_mat);
+
+    if(flags & cv::CALIB_STEREO_REGISTRATION) {
+        multiview::pairwiseStereoCalibration(pairs, models_mat, objPoints_norm, imagePoints,
+            overlaps, detection_mask_mat, Ks_vec, distortions_vec, Rs_vec, Ts_vec, flagsForIntrinsics_mat);
+    } else {
+        multiview::pairwiseRegistration(pairs, models_mat, objPoints_norm, imagePoints,
+            overlaps, detection_mask_mat, Ks_vec, distortions_vec, Rs_vec, Ts_vec, flagsForIntrinsics_mat);
+    }
 
     const int NUM_VALID_FRAMES = countNonZero(valid_frames);
     const int nparams = (NUM_VALID_FRAMES + NUM_CAMERAS - 1) * 6; // rvecs + tvecs (6)
