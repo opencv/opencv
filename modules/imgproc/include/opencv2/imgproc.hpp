@@ -4382,6 +4382,18 @@ CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
  */
 CV_EXPORTS_W RotatedRect fitEllipseDirect( InputArray points );
 
+/** @brief Compute for each 2d point the nearest 2d point located on a given ellipse.
+
+ The function computes the nearest 2d location on a given ellipse for a vector of 2d points and is based on @cite Chatfield2017 code.
+ This function can be used to compute for instance the ellipse fitting error.
+
+ @param ellipse_params Ellipse parameters
+ @param _points Input 2d points
+ @param closest_pts For each 2d point, their corresponding closest 2d point located on a given ellipse
+ @see fitEllipse, fitEllipseAMS, fitEllipseDirect
+ */
+CV_EXPORTS_W void getClosestEllipsePoints( const RotatedRect& ellipse_params, InputArray _points, OutputArray closest_pts );
+
 /** @brief Fits a line to a 2D or 3D point set.
 
 The function fitLine fits a line to a 2D or 3D point set by minimizing \f$\sum_i \rho(r_i)\f$ where
