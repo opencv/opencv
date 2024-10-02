@@ -27,7 +27,9 @@
 //! @{
 
 /**
-@brief Lucas-Kanade optical flow for single pyramid layer. See calcOpticalFlowPyrLK
+@brief Lucas-Kanade optical flow for single pyramid layer. See calcOpticalFlowPyrLK.
+@note OpenCV builds pyramid levels with `win_size` padding. Out-of-bound access to source
+image data is legal within `+-win_size` range.
 @param prev_data previous frame image data
 @param prev_data_step previous frame image data step
 @param prev_deriv_data previous frame Schaar derivatives
@@ -69,6 +71,8 @@ inline int hal_ni_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_st
 
 /**
 @brief Computes Schaar derivatives with inteleaved layout xyxy...
+@note OpenCV builds pyramid levels with `win_size` padding. Out-of-bound access to source
+image data is legal within `+-win_size` range.
 @param src_data source image data
 @param src_step source image step
 @param dst_data destination buffer data
