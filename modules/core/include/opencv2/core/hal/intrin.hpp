@@ -192,28 +192,17 @@ CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(double, int64, uint64, double, void, double)
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 
-template <typename _VecTp> _VecTp v_setzero_()
-{ static_assert(false, "not implemented"); }
-template <typename _VecTp> _VecTp v_setall_(uchar)
-{ static_assert(false, "not implemented"); }
-template <typename _VecTp> _VecTp v_setall_(schar)
-{ static_assert(false, "not implemented"); }
-template <typename _VecTp> _VecTp v_setall_(ushort)
-{ static_assert(false, "not implemented"); }
-template <typename _VecTp> _VecTp v_setall_(short)
-{ static_assert(false, "not implemented"); }
-template <typename _VecTp> _VecTp v_setall_(unsigned)
-{ static_assert(false, "not implemented"); }
-template <typename _VecTp> _VecTp v_setall_(int)
-{ static_assert(false, "not implemented"); }
-template <typename _VecTp> _VecTp v_setall_(uint64)
-{ static_assert(false, "not implemented"); }
-template <typename _VecTp> _VecTp v_setall_(int64)
-{ static_assert(false, "not implemented"); }
-template <typename _VecTp> _VecTp v_setall_(float)
-{ static_assert(false, "not implemented"); }
-template <typename _VecTp> _VecTp v_setall_(double)
-{ static_assert(false, "not implemented"); }
+template <typename _VecTp> _VecTp v_setzero_();
+template <typename _VecTp> _VecTp v_setall_(uchar);
+template <typename _VecTp> _VecTp v_setall_(schar);
+template <typename _VecTp> _VecTp v_setall_(ushort);
+template <typename _VecTp> _VecTp v_setall_(short);
+template <typename _VecTp> _VecTp v_setall_(unsigned);
+template <typename _VecTp> _VecTp v_setall_(int);
+template <typename _VecTp> _VecTp v_setall_(uint64);
+template <typename _VecTp> _VecTp v_setall_(int64);
+template <typename _VecTp> _VecTp v_setall_(float);
+template <typename _VecTp> _VecTp v_setall_(double);
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
