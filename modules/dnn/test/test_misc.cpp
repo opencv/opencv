@@ -330,7 +330,10 @@ TEST_P(dump, Regression)
     Net net = readNet(findDataFile("dnn/squeezenet_v1.1.prototxt"),
                       findDataFile("dnn/squeezenet_v1.1.caffemodel", false));
 
-    ASSERT_EQ(net.getLayerInputs(net.getLayerId("fire2/concat")).size(), 2);
+    if (net.getMainGraph())
+        ASSERT_EQ(net.getLayer(net.getLayerId("fire2/concat"))->inputs.size(), 2);
+    else
+        ASSERT_EQ(net.getLayerInputs(net.getLayerId("fire2/concat")).size(), 2);
 
     int size[] = {1, 3, 227, 227};
     Mat input = cv::Mat::ones(4, size, CV_32F);

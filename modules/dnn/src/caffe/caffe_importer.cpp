@@ -436,6 +436,12 @@ public:
             }
         }
 
+        if (newEngine && net.layer(layersSize - 1).type() == "Silence")
+        {
+            CV_LOG_WARNING(NULL, "Caffe parser: Silence layer was ignored");
+            layersSize--;
+        }
+
         for (int li = 0; li < layersSize; li++)
         {
             const caffe::LayerParameter &layer = net.layer(li);
@@ -595,7 +601,7 @@ public:
                     if (newEngine)
                     {
                         Ptr<Layer> netLayer = addLayer(
-                            dstNet, type, name + "___" + std::to_string(i), layerParams,
+                            dstNet, type, layer.top(i), layerParams,
                             {layer.bottom(i)}, {layer.top(i)});
                         curr_prog.push_back(netLayer);
                     }
@@ -617,9 +623,9 @@ public:
                 if(!layerParams.has("axis"))
                     layerParams.set("axis", 1);
             }
-            else if ("Proposal" == type && layer.top_size() == 1)
+            else if ("Proposal" == type)
             {
-                if (newEngine)
+                if (newEngine && layer.top_size() == 1)
                 {
                     // Add unused optional second output and create the Proposal layer
                     std::vector<string> layerInputs;
@@ -629,6 +635,14 @@ public:
                         dstNet, type, name, layerParams,
                         layerInputs, {layer.top(0), name + "___output_scores"});
                     curr_prog.push_back(netLayer);
+                    continue;
+                }
+            }
+            else if ("Silence" == type)
+            {
+                if (newEngine)
+                {
+                    CV_LOG_WARNING(NULL, "Caffe parser: Silence layer was ignored");
                     continue;
                 }
             }
