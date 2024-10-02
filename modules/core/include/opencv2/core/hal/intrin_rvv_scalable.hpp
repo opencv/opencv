@@ -160,6 +160,14 @@ inline v_##_Tpvec v_setzero_##suffix1() \
 inline v_##_Tpvec v_setall_##suffix1(_Tp v) \
 { \
     return __riscv_vmv_v_x_##suffix2##m1(v, vl); \
+} \
+template <> inline v_##_Tpvec v_setzero_() \
+{ \
+    return v_setzero_##suffix1(); \
+} \
+template <> inline v_##_Tpvec v_setall_(_Tp v) \
+{ \
+    return v_setall_##suffix1(v); \
 }
 
 OPENCV_HAL_IMPL_RVV_INIT_INTEGER(uint8, uchar, u8, u8, VTraits<v_int8>::vlanes())
@@ -179,6 +187,14 @@ inline v_##_Tpv v_setzero_##suffix() \
 inline v_##_Tpv v_setall_##suffix(_Tp v) \
 { \
     return __riscv_vfmv_v_f_##suffix##m1(v, vl); \
+} \
+template <> inline v_##_Tpv v_setzero_() \
+{ \
+    return v_setzero_##suffix(); \
+} \
+template <> inline v_##_Tpv v_setall_(_Tp v) \
+{ \
+    return v_setall_##suffix(v); \
 }
 
 OPENCV_HAL_IMPL_RVV_INIT_FP(float32, float, f32, VTraits<v_float32>::vlanes())
@@ -2163,6 +2179,14 @@ inline v_float32 v_matmuladd(const v_float32& v, const v_float32& m0,
 }
 
 inline void v_cleanup() {}
+
+#include "intrin_math.hpp"
+inline v_float32 v_exp(v_float32 x) { return v_exp_default_32f<v_float32, v_int32>(x); }
+inline v_float32 v_log(v_float32 x) { return v_log_default_32f<v_float32, v_int32>(x); }
+inline v_float32 v_erf(v_float32 x) { return v_erf_default_32f<v_float32, v_int32>(x); }
+
+inline v_float64 v_exp(v_float64 x) { return v_exp_default_64f<v_float64, v_int64>(x); }
+inline v_float64 v_log(v_float64 x) { return v_log_default_64f<v_float64, v_int64>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
