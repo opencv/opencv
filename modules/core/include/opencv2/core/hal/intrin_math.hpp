@@ -449,7 +449,7 @@ inline void v_sincos_default_16f(const _TpVec16F &x, _TpVec16F &ysin, _TpVec16F 
     y1 = v_fma(v_coscof_p0, _vxx, v_coscof_p1);
     y1 = v_fma(y1, _vxx, v_coscof_p2);
     y1 = v_fma(y1, _vxx, v_setall_<_TpVec16F>(hfloat(-0.5f)));
-    y1 = v_fma(y1, _vxx, v_setall_<_TpVec16F>(hfloat(1)));
+    y1 = v_fma(y1, _vxx, v_setall_<_TpVec16F>(hfloat(1.f)));
 
     y2 = v_fma(v_sincof_p0, _vxx, v_sincof_p1);
     y2 = v_fma(y2, _vxx, v_sincof_p2);
@@ -471,7 +471,7 @@ inline void v_sincos_default_16f(const _TpVec16F &x, _TpVec16F &ysin, _TpVec16F 
 template<typename _TpVec16F, typename _TpVec16S>
 inline _TpVec16F v_sin_default_16f(const _TpVec16F &x) {
     _TpVec16F ysin, ycos;
-    v_sincos_default_16f<_TpVec16F, _TpVec16S>()(x, ysin, ycos);
+    v_sincos_default_16f<_TpVec16F, _TpVec16S>(x, ysin, ycos);
     return ysin;
 }
 
