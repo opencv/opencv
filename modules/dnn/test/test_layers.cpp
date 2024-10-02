@@ -231,7 +231,7 @@ void testReshape(const MatShape& inputShape, const MatShape& targetShape,
     runLayer(rl, inpVec, outVec);
 
     Mat& out = outVec[0];
-    MatShape shape(out.size.p, out.size.p + out.dims);
+    MatShape shape = out.shape();
     EXPECT_EQ(shape, targetShape);
 }
 
