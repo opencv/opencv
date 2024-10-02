@@ -360,7 +360,7 @@ function(ocv_target_include_directories target)
       set(__var_name __system_params)
     else()
       if(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
-          "${dir}" MATCHES "/usr/include$")
+          dir MATCHES "/usr/include$")
          # workaround for GCC 6.x bug
       else()
         get_filename_component(__abs_dir "${dir}" ABSOLUTE)
