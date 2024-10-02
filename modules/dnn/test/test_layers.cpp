@@ -864,7 +864,7 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
     std::vector<Mat> outs;
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
-    net.forward(outs, "output");
+    net.forward(outs);
 
     for (int i = 0; i < 2; ++i)
     {

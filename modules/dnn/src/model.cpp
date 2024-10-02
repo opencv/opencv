@@ -117,7 +117,8 @@ public:
         net.setInput(blob);
 
         // Faster-RCNN or R-FCN
-        if (!net.getMainGraph() && net.getLayer(0)->outputNameToIndex("im_info") != -1)
+        if ((net.getMainGraph() && net.haveArg("im_info") && net.argKind(net.getArg("im_info")) == DNN_ARG_INPUT) ||
+            (!net.getMainGraph() && net.getLayer(0)->outputNameToIndex("im_info") != -1))
         {
             Mat imInfo(Matx13f(size.height, size.width, 1.6f));
             net.setInput(imInfo, "im_info");
@@ -507,7 +508,12 @@ void DetectionModel::detect(InputArray frame, CV_OUT std::vector<int>& classIds,
 
     int frameWidth  = frame.cols();
     int frameHeight = frame.rows();
-    if (getNetwork_().getLayer(0)->outputNameToIndex("im_info") != -1)
+    if ((getNetwork_().getMainGraph() &&
+         getNetwork_().haveArg("im_info") &&
+         getNetwork_().argKind(getNetwork_().getArg("im_info")) == DNN_ARG_INPUT)
+        ||
+        (!getNetwork_().getMainGraph() &&
+         getNetwork_().getLayer(0)->outputNameToIndex("im_info") != -1))
     {
         frameWidth = impl->size.width;
         frameHeight = impl->size.height;
