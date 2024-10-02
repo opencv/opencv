@@ -263,7 +263,7 @@ Most of these operations return only one value.
 
 ### Other math
 
-- Some frequent operations: @ref v_sqrt, @ref v_invsqrt, @ref v_magnitude, @ref v_sqr_magnitude, @ref v_exp,
+- Some frequent operations: @ref v_sqrt, @ref v_invsqrt, @ref v_magnitude, @ref v_sqr_magnitude, @ref v_exp, @ref v_log,
                             @ref v_erf
 - Absolute values: @ref v_abs, @ref v_absdiff, @ref v_absdiffs
 
@@ -2801,7 +2801,8 @@ inline void v_transpose4x4( v_reg<_Tp, n>& a0, const v_reg<_Tp, n>& a1,
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_C_INIT_ZERO(_Tpvec, prefix, suffix) \
-inline _Tpvec prefix##_setzero_##suffix() { return _Tpvec::zero(); }
+inline _Tpvec prefix##_setzero_##suffix() { return _Tpvec::zero(); } \
+template <> inline _Tpvec v_setzero_() { return _Tpvec::zero(); }
 
 //! @name Init with zero
 //! @{
@@ -2847,7 +2848,8 @@ OPENCV_HAL_IMPL_C_INIT_ZERO(v_int64x8, v512, s64)
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_C_INIT_VAL(_Tpvec, _Tp, prefix, suffix) \
-inline _Tpvec prefix##_setall_##suffix(_Tp val) { return _Tpvec::all(val); }
+inline _Tpvec prefix##_setall_##suffix(_Tp val) { return _Tpvec::all(val); } \
+template <> inline _Tpvec v_setall_(_Tp val) { return _Tpvec::all(val); }
 
 //! @name Init with value
 //! @{

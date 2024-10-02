@@ -447,6 +447,10 @@ OPENCV_HAL_IMPL_AVX_LOADSTORE_FLT(v_float64x4, double, pd, __m128d)
     { return _Tpvec(_mm256_setzero_si256()); }                                   \
     inline _Tpvec v256_setall_##suffix(_Tp v)                                    \
     { return _Tpvec(_mm256_set1_##ssuffix((ctype_s)v)); }                        \
+    template <> inline _Tpvec v_setzero_()                                       \
+    { return v256_setzero_##suffix(); }                                          \
+    template <> inline _Tpvec v_setall_(_Tp v)                                   \
+    { return v256_setall_##suffix(v); }                                          \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint8x32,  suffix, OPENCV_HAL_NOP)        \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int8x32,   suffix, OPENCV_HAL_NOP)        \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint16x16, suffix, OPENCV_HAL_NOP)        \
@@ -472,6 +476,10 @@ OPENCV_HAL_IMPL_AVX_INIT(v_int64x4,   int64,    s64, epi64x, int64)
     { return _Tpvec(_mm256_setzero_##zsuffix()); }                       \
     inline _Tpvec v256_setall_##suffix(_Tp v)                            \
     { return _Tpvec(_mm256_set1_##zsuffix(v)); }                         \
+    template <> inline _Tpvec v_setzero_()                               \
+    { return v256_setzero_##suffix(); }                                  \
+    template <> inline _Tpvec v_setall_(_Tp v)                           \
+    { return v256_setall_##suffix(v); }                                  \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint8x32,  suffix, cast)          \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_int8x32,   suffix, cast)          \
     OPENCV_HAL_IMPL_AVX_CAST(_Tpvec, v_uint16x16, suffix, cast)          \
@@ -3157,6 +3165,14 @@ inline void v_pack_store(hfloat* ptr, const v_float32x8& a)
 //
 
 inline void v256_cleanup() { _mm256_zeroall(); }
+
+#include "intrin_math.hpp"
+inline v_float32x8 v_exp(v_float32x8 x) { return v_exp_default_32f<v_float32x8, v_int32x8>(x); }
+inline v_float32x8 v_log(v_float32x8 x) { return v_log_default_32f<v_float32x8, v_int32x8>(x); }
+inline v_float32x8 v_erf(v_float32x8 x) { return v_erf_default_32f<v_float32x8, v_int32x8>(x); }
+
+inline v_float64x4 v_exp(v_float64x4 x) { return v_exp_default_64f<v_float64x4, v_int64x4>(x); }
+inline v_float64x4 v_log(v_float64x4 x) { return v_log_default_64f<v_float64x4, v_int64x4>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
