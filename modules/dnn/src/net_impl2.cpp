@@ -614,6 +614,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     if (inputs_.empty()) {
         // inputs are already set; it's only possible to do with the main graph
         CV_Assert(isMainGraph);
+        for (i = 0; i < n_gr_inputs; i++)
+            CV_CheckFalse(argTensor(gr_inputs[i]).empty(), "Some of the model inputs were not set");
     }
     else {
         if (inputs_.total() != n_gr_inputs) {

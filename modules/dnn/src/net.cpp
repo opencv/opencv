@@ -187,7 +187,7 @@ String Net::dump()
 void Net::dumpToStream(std::ostream& strm) const
 {
     if (impl->mainGraph) {
-        impl->dump(std::cout);
+        impl->dump(strm);
     }
 }
 
