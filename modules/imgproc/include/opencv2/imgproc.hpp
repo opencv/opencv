@@ -2474,6 +2474,7 @@ flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
 the "outliers" in the source image are not modified by the function.
 @param borderValue value used in case of a constant border; by default, it is 0.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @sa  warpPerspective, resize, remap, getRectSubPix, transform
  */
@@ -2481,7 +2482,8 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               InputArray M, Size dsize,
                               int flags = INTER_LINEAR,
                               int borderMode = BORDER_CONSTANT,
-                              const Scalar& borderValue = Scalar());
+                              const Scalar& borderValue = Scalar(),
+                              AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
 /** @example samples/cpp/snippets/warpPerspective_demo.cpp
 An example program shows using cv::getPerspectiveTransform and cv::warpPerspective for image warping

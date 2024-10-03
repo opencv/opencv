@@ -748,8 +748,76 @@ struct DefaultRngAuto
 
 
 // test images generation functions
-void fillGradient(Mat& img, int delta = 5);
-void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
+template<typename T>
+void fillGradient(Mat& img, int delta = 5)
+{
+    CV_UNUSED(delta);
+    const int ch = img.channels();
+
+    int r, c, i;
+    for(r=0; r<img.rows; r++)
+    {
+        for(c=0; c<img.cols; c++)
+        {
+            T vals[] = {(T)r, (T)c, (T)(r*c), (T)(r*c/(r+c+1))};
+            T *p = (T*)img.ptr(r, c);
+            for(i=0; i<ch; i++) p[i] = (T)vals[i];
+        }
+    }
+}
+template<>
+void fillGradient<uint8_t>(Mat& img, int delta);
+
+template<typename T>
+void smoothBorder(Mat& img, const Scalar& color, int delta = 3)
+{
+    const int ch = img.channels();
+    CV_Assert(!img.empty() && ch <= 4);
+
+    Scalar s;
+    int n = 100/delta;
+    int nR = std::min(n, (img.rows+1)/2), nC = std::min(n, (img.cols+1)/2);
+
+    int r, c, i;
+    for(r=0; r<nR; r++)
+    {
+        double k1 = r*delta/100., k2 = 1-k1;
+        for(c=0; c<img.cols; c++)
+        {
+            auto *p = img.ptr<T>(r, c);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = static_cast<T>((s[i]));
+        }
+        for(c=0; c<img.cols; c++)
+        {
+            auto *p = img.ptr<T>(img.rows-r-1, c);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = static_cast<T>((s[i]));
+        }
+    }
+
+    for(r=0; r<img.rows; r++)
+    {
+        for(c=0; c<nC; c++)
+        {
+            double k1 = c*delta/100., k2 = 1-k1;
+            auto *p = img.ptr<T>(r, c);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = static_cast<T>((s[i]));
+        }
+        for(c=0; c<n; c++)
+        {
+            double k1 = c*delta/100., k2 = 1-k1;
+            auto *p = img.ptr<T>(r, img.cols-c-1);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = static_cast<T>((s[i]));
+        }
+    }
+}
 
 // Utility functions
 
