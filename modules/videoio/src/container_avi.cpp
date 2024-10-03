@@ -2,8 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#include "precomp.hpp"
 #include "opencv2/videoio/container_avi.private.hpp"
-#include <opencv2/core/utils/logger.hpp>
 #include <fstream>
 #include <limits>
 #include <typeinfo>
@@ -23,7 +23,8 @@ inline D safe_int_cast(S val, const char * msg = 0)
     if (!in_range_r || !in_range_l)
     {
         if (!msg)
-            CV_Error_(Error::StsOutOfRange, ("Can not convert integer values (%s -> %s), value 0x%jx is out of range", typeid(S).name(), typeid(D).name(), (uintmax_t)val));
+            CV_Error(Error::StsOutOfRange,
+                     cv::format("Can not convert integer values (%s -> %s), value 0x%jx is out of range", typeid(S).name(), typeid(D).name(), (uintmax_t)val));
         else
             CV_Error(Error::StsOutOfRange, msg);
     }
@@ -269,15 +270,15 @@ VideoInputStream::~VideoInputStream()
 
 AVIReadContainer::AVIReadContainer(): m_stream_id(0), m_movi_start(0), m_movi_end(0), m_width(0), m_height(0), m_fps(0), m_is_indx_present(false)
 {
-    m_file_stream = makePtr<VideoInputStream>();
+    m_file_stream = std::make_shared<VideoInputStream>();
 }
 
 void AVIReadContainer::initStream(const String &filename)
 {
-    m_file_stream = makePtr<VideoInputStream>(filename);
+    m_file_stream = std::make_shared<VideoInputStream>(filename);
 }
 
-void AVIReadContainer::initStream(Ptr<VideoInputStream> m_file_stream_)
+void AVIReadContainer::initStream(std::shared_ptr<VideoInputStream> m_file_stream_)
 {
     m_file_stream = m_file_stream_;
 }

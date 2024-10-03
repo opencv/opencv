@@ -8,23 +8,25 @@
 #endif
 
 using namespace std;
+using namespace cv;
 
 /**********************************************************************************/
 
-class CvCaptureCAM_XIMEA : public CvCapture
+class CvCaptureCAM_XIMEA : public IVideoCapture
 {
 public:
     CvCaptureCAM_XIMEA() { init(); }
-    virtual ~CvCaptureCAM_XIMEA() { close(); }
+    ~CvCaptureCAM_XIMEA() { close(); }
 
-    virtual bool open( int index );
+    bool open( int index );
     bool open( const char* deviceName );
-    virtual void close();
-    virtual double getProperty(int) const CV_OVERRIDE;
-    virtual bool setProperty(int, double) CV_OVERRIDE;
-    virtual bool grabFrame() CV_OVERRIDE;
-    virtual IplImage* retrieveFrame(int) CV_OVERRIDE;
-    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_XIAPI; }
+    void close();
+    double getProperty(int) const CV_OVERRIDE;
+    bool setProperty(int, double) CV_OVERRIDE;
+    bool grabFrame() CV_OVERRIDE;
+    bool retrieveFrame(int, OutputArray) CV_OVERRIDE;
+    int getCaptureDomain() CV_OVERRIDE { return CAP_XIAPI; }
+    bool isOpened() const CV_OVERRIDE { return hmv != NULL; }
 
 private:
     bool _open();
@@ -32,7 +34,7 @@ private:
     void errMsg(const char* msg, int errNum) const;
     void resetCvImage();
     int  ocvParamtoXimeaParam(int value) const;
-    IplImage* frame;
+    Mat frame;
 
     HANDLE    hmv;
     DWORD     numDevices;
@@ -44,23 +46,17 @@ private:
 
 cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_cam( int index )
 {
-    CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
-
+    Ptr<CvCaptureCAM_XIMEA> capture = makePtr<CvCaptureCAM_XIMEA>();
     if( capture->open( index ))
-        return cv::makePtr<cv::LegacyCapture>(capture);
-
-    delete capture;
+        return capture;
     return 0;
 }
 
 cv::Ptr<cv::IVideoCapture> cv::create_XIMEA_capture_file( const std::string &serialNumber )
 {
-    CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
-
+    Ptr<CvCaptureCAM_XIMEA> capture = makePtr<CvCaptureCAM_XIMEA>();
     if( capture->open( serialNumber.c_str() ))
-        return cv::makePtr<cv::LegacyCapture>(capture);
-
-    delete capture;
+        return capture;
     return 0;
 }
 
@@ -78,7 +74,7 @@ void CvCaptureCAM_XIMEA::init()
     }
 #endif
     hmv = NULL;
-    frame = NULL;
+    frame = Mat();
     timeout = 0;
     memset(&image, 0, sizeof(XI_IMG));
 }
@@ -156,7 +152,7 @@ bool CvCaptureCAM_XIMEA::_open()
         HandleXiResult(mvret);
 
         // allocate frame buffer for RGB24 image
-        frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
+        frame.create(Size(width, height), CV_8UC3);
     }
     else // for mono cameras
     {
@@ -165,7 +161,7 @@ bool CvCaptureCAM_XIMEA::_open()
         HandleXiResult(mvret);
 
         // allocate frame buffer for MONO8 image
-        frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 1);
+        frame.create(Size(width, height), CV_8UC1);
     }
 
     //default capture timeout 10s
@@ -190,8 +186,8 @@ error:
 
 void CvCaptureCAM_XIMEA::close()
 {
-    if(frame)
-        cvReleaseImage(&frame);
+    if(!frame.empty())
+        frame.release();
 
     if(hmv)
     {
@@ -224,26 +220,37 @@ bool CvCaptureCAM_XIMEA::grabFrame()
     return true;
 }
 
+// helper function - convert XIMEA image type to OpenCV image type
+inline static int getMatType(int xi_type)
+{
+    switch(xi_type)
+    {
+    case XI_MONO8       : // fallthrough
+    case XI_RAW8        : return CV_8UC1;
+    case XI_MONO16      : // fallthrough
+    case XI_RAW16       : return CV_16UC1;
+    case XI_RGB24       : // fallthrough
+    case XI_RGB_PLANAR  : return CV_8UC3;
+    case XI_RGB32       : return CV_8UC4;
+    }
+    return -1;
+}
+
 /**********************************************************************************/
 
-IplImage* CvCaptureCAM_XIMEA::retrieveFrame(int)
+bool CvCaptureCAM_XIMEA::retrieveFrame(int, OutputArray arr)
 {
     // update cvImage after format has changed
     resetCvImage();
 
     // copy pixel data
-    switch( image.frm)
+    const int image_type = getMatType(image.frm);
+    if (image_type != -1)
     {
-    case XI_MONO8       :
-    case XI_RAW8        : memcpy( frame->imageData, image.bp, image.width*image.height); break;
-    case XI_MONO16      :
-    case XI_RAW16       : memcpy( frame->imageData, image.bp, image.width*image.height*sizeof(WORD)); break;
-    case XI_RGB24       :
-    case XI_RGB_PLANAR  : memcpy( frame->imageData, image.bp, image.width*image.height*3); break;
-    case XI_RGB32       : memcpy( frame->imageData, image.bp, image.width*image.height*4); break;
-    default: break;
+        Mat(Size(image.width, image.height), image_type, image.bp).copyTo(arr);
+        return true;
     }
-    return frame;
+    return false;
 }
 
 /**********************************************************************************/
@@ -253,64 +260,16 @@ void CvCaptureCAM_XIMEA::resetCvImage()
    bool do_reset = false;
 
     // first check basic image resolution
-    if((int)image.width != frame->width || (int)image.height != frame->height)
+    if((int)image.width != frame.size().width || (int)image.height != frame.size().height)
         do_reset = true;
 
-    // afterwards check image format
-    switch( image.frm)
-    {
-    case XI_MONO8       :
-    case XI_RAW8         :
-        {
-            if(frame->depth != IPL_DEPTH_8U || frame->nChannels != 1)
-                do_reset = true;
-        }
-        break;
-    case XI_MONO16      :
-    case XI_RAW16        :
-        {
-            if(frame->depth != IPL_DEPTH_16U || frame->nChannels != 1)
-                do_reset = true;
-        }
-        break;
-    case XI_RGB24       :
-    case XI_RGB_PLANAR  :
-        {
-            if(frame->depth != IPL_DEPTH_8U || frame->nChannels != 3)
-                do_reset = true;
-        }
-        break;
-    case XI_RGB32       :
-        {
-            if(frame->depth != IPL_DEPTH_8U || frame->nChannels != 4)
-                do_reset = true;
-        }
-        break;
-    default:
-        errMsg("CvCaptureCAM_XIMEA::resetCvImage ERROR: Unknown format.", XI_NOT_SUPPORTED_DATA_FORMAT);
-        return;
-    }
+    const int image_type = getMatType(image.frm);
+    CV_Assert(image_type != -1);
+    if (frame.type() != image_type)
+        do_reset = true;
 
     if(do_reset)
-    {
-        if(frame) cvReleaseImage(&frame);
-        frame = NULL;
-
-        switch( image.frm)
-        {
-        case XI_MONO8       :
-        case XI_RAW8        : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 1); break;
-        case XI_MONO16      :
-        case XI_RAW16       : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_16U, 1); break;
-        case XI_RGB24       :
-        case XI_RGB_PLANAR  : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 3); break;
-        case XI_RGB32       : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 4); break;
-        default :
-            errMsg("CvCaptureCAM_XIMEA::resetCvImage ERROR: Unknown format.", XI_NOT_SUPPORTED_DATA_FORMAT);
-            return;
-        }
-    }
-    cvZero(frame);
+        frame = Mat::zeros(Size(image.width, image.height), image_type);
 }
 
 /**********************************************************************************/
@@ -321,17 +280,17 @@ int CvCaptureCAM_XIMEA::ocvParamtoXimeaParam(int property_id) const
     switch (property_id)
     {
         // OCV parameters
-    case CV_CAP_PROP_POS_FRAMES:
+    case CAP_PROP_POS_FRAMES:
         // Number of successfully transferred frames on transport layer.
         stat = xiSetParamInt(hmv, XI_PRM_COUNTER_SELECTOR, XI_CNT_SEL_TRANSPORT_TRANSFERRED_FRAMES);
         if (stat) errMsg("xiSetParamInt(XI_PRM_COUNTER_SELECTOR)", stat);
-        return CV_CAP_PROP_XI_COUNTER_VALUE;
-    case CV_CAP_PROP_FRAME_WIDTH: return CV_CAP_PROP_XI_WIDTH;
-    case CV_CAP_PROP_FRAME_HEIGHT: return CV_CAP_PROP_XI_HEIGHT;
-    case CV_CAP_PROP_FPS: return CV_CAP_PROP_XI_FRAMERATE;
-    case CV_CAP_PROP_GAIN: return CV_CAP_PROP_XI_GAIN;
-    case CV_CAP_PROP_EXPOSURE: return CV_CAP_PROP_XI_EXPOSURE;
-    case CV_CAP_PROP_XI_DATA_FORMAT: return CV_CAP_PROP_XI_IMAGE_DATA_FORMAT;
+        return CAP_PROP_XI_COUNTER_VALUE;
+    case CAP_PROP_FRAME_WIDTH: return CAP_PROP_XI_WIDTH;
+    case CAP_PROP_FRAME_HEIGHT: return CAP_PROP_XI_HEIGHT;
+    case CAP_PROP_FPS: return CAP_PROP_XI_FRAMERATE;
+    case CAP_PROP_GAIN: return CAP_PROP_XI_GAIN;
+    case CAP_PROP_EXPOSURE: return CAP_PROP_XI_EXPOSURE;
+    case CAP_PROP_XI_DATA_FORMAT: return CAP_PROP_XI_IMAGE_DATA_FORMAT;
     default:
         return property_id;
     }
@@ -361,641 +320,641 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     // decode OpenCV parameter to xiAPI parameter
     switch( property_id )
     {
-    case CV_CAP_PROP_XI_TIMEOUT:
+    case CAP_PROP_XI_TIMEOUT:
         timeout = (int) value;
         return true;
-    case CV_CAP_PROP_XI_EXPOSURE:
+    case CAP_PROP_XI_EXPOSURE:
         ximea_param = "exposure";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_EXPOSURE_BURST_COUNT:
+    case CAP_PROP_XI_EXPOSURE_BURST_COUNT:
         ximea_param = "exposure_burst_count";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_GAIN_SELECTOR:
+    case CAP_PROP_XI_GAIN_SELECTOR:
         ximea_param = "gain_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_GAIN:
+    case CAP_PROP_XI_GAIN:
         ximea_param = "gain";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_DOWNSAMPLING:
+    case CAP_PROP_XI_DOWNSAMPLING:
         ximea_param = "downsampling";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_DOWNSAMPLING_TYPE:
+    case CAP_PROP_XI_DOWNSAMPLING_TYPE:
         ximea_param = "downsampling_type";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_BINNING_SELECTOR:
+    case CAP_PROP_XI_BINNING_SELECTOR:
         ximea_param = "binning_selector";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_BINNING_VERTICAL:
+    case CAP_PROP_XI_BINNING_VERTICAL:
         ximea_param = "binning_vertical";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_BINNING_HORIZONTAL:
+    case CAP_PROP_XI_BINNING_HORIZONTAL:
         ximea_param = "binning_horizontal";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_BINNING_PATTERN:
+    case CAP_PROP_XI_BINNING_PATTERN:
         ximea_param = "binning_pattern";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_DECIMATION_SELECTOR:
+    case CAP_PROP_XI_DECIMATION_SELECTOR:
         ximea_param = "decimation_selector";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_DECIMATION_VERTICAL:
+    case CAP_PROP_XI_DECIMATION_VERTICAL:
         ximea_param = "decimation_vertical";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_DECIMATION_HORIZONTAL:
+    case CAP_PROP_XI_DECIMATION_HORIZONTAL:
         ximea_param = "decimation_horizontal";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_DECIMATION_PATTERN:
+    case CAP_PROP_XI_DECIMATION_PATTERN:
         ximea_param = "decimation_pattern";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_TEST_PATTERN_GENERATOR_SELECTOR:
+    case CAP_PROP_XI_TEST_PATTERN_GENERATOR_SELECTOR:
         ximea_param = "test_pattern_generator_selector";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_TEST_PATTERN:
+    case CAP_PROP_XI_TEST_PATTERN:
         ximea_param = "test_pattern";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_IMAGE_DATA_FORMAT:
+    case CAP_PROP_XI_IMAGE_DATA_FORMAT:
         ximea_param = "imgdataformat";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_SHUTTER_TYPE:
+    case CAP_PROP_XI_SHUTTER_TYPE:
         ximea_param = "shutter_type";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_SENSOR_TAPS:
+    case CAP_PROP_XI_SENSOR_TAPS:
         ximea_param = "sensor_taps";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_AEAG:
+    case CAP_PROP_XI_AEAG:
         ximea_param = "aeag";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_AEAG_ROI_OFFSET_X:
+    case CAP_PROP_XI_AEAG_ROI_OFFSET_X:
         ximea_param = "aeag_roi_offset_x";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_AEAG_ROI_OFFSET_Y:
+    case CAP_PROP_XI_AEAG_ROI_OFFSET_Y:
         ximea_param = "aeag_roi_offset_y";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_AEAG_ROI_WIDTH:
+    case CAP_PROP_XI_AEAG_ROI_WIDTH:
         ximea_param = "aeag_roi_width";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_AEAG_ROI_HEIGHT:
+    case CAP_PROP_XI_AEAG_ROI_HEIGHT:
         ximea_param = "aeag_roi_height";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_BPC:
+    case CAP_PROP_XI_BPC:
         ximea_param = "bpc";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_AUTO_WB:
+    case CAP_PROP_XI_AUTO_WB:
         ximea_param = "auto_wb";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_MANUAL_WB:
+    case CAP_PROP_XI_MANUAL_WB:
         ximea_param = "manual_wb";
         value_type = xiTypeCommand;
         break;
-    case CV_CAP_PROP_XI_WB_KR:
+    case CAP_PROP_XI_WB_KR:
         ximea_param = "wb_kr";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_WB_KG:
+    case CAP_PROP_XI_WB_KG:
         ximea_param = "wb_kg";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_WB_KB:
+    case CAP_PROP_XI_WB_KB:
         ximea_param = "wb_kb";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_WIDTH:
+    case CAP_PROP_XI_WIDTH:
         ximea_param = "width";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_HEIGHT:
+    case CAP_PROP_XI_HEIGHT:
         ximea_param = "height";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_OFFSET_X:
+    case CAP_PROP_XI_OFFSET_X:
         ximea_param = "offsetX";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_OFFSET_Y:
+    case CAP_PROP_XI_OFFSET_Y:
         ximea_param = "offsetY";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_REGION_SELECTOR :
+    case CAP_PROP_XI_REGION_SELECTOR :
         ximea_param = "region_selector";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_REGION_MODE :
+    case CAP_PROP_XI_REGION_MODE :
         ximea_param = "region_mode";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_EXP_PRIORITY:
+    case CAP_PROP_XI_EXP_PRIORITY:
         ximea_param = "exp_priority";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_AG_MAX_LIMIT:
+    case CAP_PROP_XI_AG_MAX_LIMIT:
         ximea_param = "ag_max_limit";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_AE_MAX_LIMIT:
+    case CAP_PROP_XI_AE_MAX_LIMIT:
         ximea_param = "ae_max_limit";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_AEAG_LEVEL:
+    case CAP_PROP_XI_AEAG_LEVEL:
         ximea_param = "aeag_level";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_LIMIT_BANDWIDTH:
+    case CAP_PROP_XI_LIMIT_BANDWIDTH:
         ximea_param = "limit_bandwidth";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_SENSOR_DATA_BIT_DEPTH:
+    case CAP_PROP_XI_SENSOR_DATA_BIT_DEPTH:
         ximea_param = "sensor_bit_depth";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_OUTPUT_DATA_BIT_DEPTH:
+    case CAP_PROP_XI_OUTPUT_DATA_BIT_DEPTH:
         ximea_param = "output_bit_depth";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_IMAGE_DATA_BIT_DEPTH:
+    case CAP_PROP_XI_IMAGE_DATA_BIT_DEPTH:
         ximea_param = "image_data_bit_depth";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_OUTPUT_DATA_PACKING:
+    case CAP_PROP_XI_OUTPUT_DATA_PACKING:
         ximea_param = "output_bit_packing";
         value_type = xiTypeBoolean;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_OUTPUT_DATA_PACKING_TYPE:
+    case CAP_PROP_XI_OUTPUT_DATA_PACKING_TYPE:
         ximea_param = "output_bit_packing_type";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_IS_COOLED:
+    case CAP_PROP_XI_IS_COOLED:
         ximea_param = "iscooled";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_COOLING:
+    case CAP_PROP_XI_COOLING:
         ximea_param = "cooling";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_TARGET_TEMP:
+    case CAP_PROP_XI_TARGET_TEMP:
         ximea_param = "target_temp";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CHIP_TEMP:
+    case CAP_PROP_XI_CHIP_TEMP:
         ximea_param = "chip_temp";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_HOUS_TEMP:
+    case CAP_PROP_XI_HOUS_TEMP:
         ximea_param = "hous_temp";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_HOUS_BACK_SIDE_TEMP:
+    case CAP_PROP_XI_HOUS_BACK_SIDE_TEMP:
         ximea_param = "hous_back_side_temp";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_SENSOR_BOARD_TEMP:
+    case CAP_PROP_XI_SENSOR_BOARD_TEMP:
         ximea_param = "sensor_board_temp";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CMS:
+    case CAP_PROP_XI_CMS:
         ximea_param = "cms";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_APPLY_CMS:
+    case CAP_PROP_XI_APPLY_CMS:
         ximea_param = "apply_cms";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_IMAGE_IS_COLOR:
+    case CAP_PROP_XI_IMAGE_IS_COLOR:
         ximea_param = "iscolor";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_COLOR_FILTER_ARRAY:
+    case CAP_PROP_XI_COLOR_FILTER_ARRAY:
         ximea_param = "cfa";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_GAMMAY:
+    case CAP_PROP_XI_GAMMAY:
         ximea_param = "gammaY";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_GAMMAC:
+    case CAP_PROP_XI_GAMMAC:
         ximea_param = "gammaC";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_SHARPNESS:
+    case CAP_PROP_XI_SHARPNESS:
         ximea_param = "sharpness";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_00:
+    case CAP_PROP_XI_CC_MATRIX_00:
         ximea_param = "ccMTX00";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_01:
+    case CAP_PROP_XI_CC_MATRIX_01:
         ximea_param = "ccMTX01";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_02:
+    case CAP_PROP_XI_CC_MATRIX_02:
         ximea_param = "ccMTX02";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_03:
+    case CAP_PROP_XI_CC_MATRIX_03:
         ximea_param = "ccMTX03";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_10:
+    case CAP_PROP_XI_CC_MATRIX_10:
         ximea_param = "ccMTX10";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_11:
+    case CAP_PROP_XI_CC_MATRIX_11:
         ximea_param = "ccMTX11";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_12:
+    case CAP_PROP_XI_CC_MATRIX_12:
         ximea_param = "ccMTX12";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_13:
+    case CAP_PROP_XI_CC_MATRIX_13:
         ximea_param = "ccMTX13";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_20:
+    case CAP_PROP_XI_CC_MATRIX_20:
         ximea_param = "ccMTX20";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_21:
+    case CAP_PROP_XI_CC_MATRIX_21:
         ximea_param = "ccMTX21";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_22:
+    case CAP_PROP_XI_CC_MATRIX_22:
         ximea_param = "ccMTX22";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_23:
+    case CAP_PROP_XI_CC_MATRIX_23:
         ximea_param = "ccMTX23";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_30:
+    case CAP_PROP_XI_CC_MATRIX_30:
         ximea_param = "ccMTX30";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_31:
+    case CAP_PROP_XI_CC_MATRIX_31:
         ximea_param = "ccMTX31";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_32:
+    case CAP_PROP_XI_CC_MATRIX_32:
         ximea_param = "ccMTX32";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_33:
+    case CAP_PROP_XI_CC_MATRIX_33:
         ximea_param = "ccMTX33";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_DEFAULT_CC_MATRIX:
+    case CAP_PROP_XI_DEFAULT_CC_MATRIX:
         ximea_param = "defccMTX";
         value_type = xiTypeCommand;
         break;
-    case CV_CAP_PROP_XI_TRG_SOURCE:
+    case CAP_PROP_XI_TRG_SOURCE:
         ximea_param = "trigger_source";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_TRG_SOFTWARE:
+    case CAP_PROP_XI_TRG_SOFTWARE:
         ximea_param = "trigger_software";
         value_type = xiTypeCommand;
         break;
-    case CV_CAP_PROP_XI_TRG_SELECTOR:
+    case CAP_PROP_XI_TRG_SELECTOR:
         ximea_param = "trigger_selector";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_ACQ_FRAME_BURST_COUNT:
+    case CAP_PROP_XI_ACQ_FRAME_BURST_COUNT:
         ximea_param = "acq_frame_burst_count";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_GPI_SELECTOR:
+    case CAP_PROP_XI_GPI_SELECTOR:
         ximea_param = "gpi_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_GPI_MODE:
+    case CAP_PROP_XI_GPI_MODE:
         ximea_param = "gpi_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_GPI_LEVEL:
+    case CAP_PROP_XI_GPI_LEVEL:
         ximea_param = "gpi_level";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_GPO_SELECTOR:
+    case CAP_PROP_XI_GPO_SELECTOR:
         ximea_param = "gpo_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_GPO_MODE:
+    case CAP_PROP_XI_GPO_MODE:
         ximea_param = "gpo_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_LED_SELECTOR:
+    case CAP_PROP_XI_LED_SELECTOR:
         ximea_param = "led_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_LED_MODE:
+    case CAP_PROP_XI_LED_MODE:
         ximea_param = "led_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_DEBOUNCE_EN:
+    case CAP_PROP_XI_DEBOUNCE_EN:
         ximea_param = "dbnc_en";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_DEBOUNCE_T0:
+    case CAP_PROP_XI_DEBOUNCE_T0:
         ximea_param = "dbnc_t0";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_DEBOUNCE_T1:
+    case CAP_PROP_XI_DEBOUNCE_T1:
         ximea_param = "dbnc_t1";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_DEBOUNCE_POL:
+    case CAP_PROP_XI_DEBOUNCE_POL:
         ximea_param = "dbnc_pol";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_LENS_MODE:
+    case CAP_PROP_XI_LENS_MODE:
         ximea_param = "lens_mode";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_LENS_APERTURE_VALUE:
+    case CAP_PROP_XI_LENS_APERTURE_VALUE:
         ximea_param = "lens_aperture_value";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_LENS_FOCUS_MOVEMENT_VALUE:
+    case CAP_PROP_XI_LENS_FOCUS_MOVEMENT_VALUE:
         ximea_param = "lens_focus_movement_value";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_LENS_FOCUS_MOVE:
+    case CAP_PROP_XI_LENS_FOCUS_MOVE:
         ximea_param = "lens_focus_move";
         value_type = xiTypeCommand;
         break;
-    case CV_CAP_PROP_XI_LENS_FOCUS_DISTANCE:
+    case CAP_PROP_XI_LENS_FOCUS_DISTANCE:
         ximea_param = "lens_focus_distance";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_LENS_FOCAL_LENGTH:
+    case CAP_PROP_XI_LENS_FOCAL_LENGTH:
         ximea_param = "lens_focal_length";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_LENS_FEATURE_SELECTOR:
+    case CAP_PROP_XI_LENS_FEATURE_SELECTOR:
         ximea_param = "lens_feature_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_LENS_FEATURE:
+    case CAP_PROP_XI_LENS_FEATURE:
         ximea_param = "lens_feature";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_DEVICE_MODEL_ID:
+    case CAP_PROP_XI_DEVICE_MODEL_ID:
         ximea_param = "device_model_id";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_DEVICE_SN:
+    case CAP_PROP_XI_DEVICE_SN:
         ximea_param = "device_sn";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_IMAGE_DATA_FORMAT_RGB32_ALPHA:
+    case CAP_PROP_XI_IMAGE_DATA_FORMAT_RGB32_ALPHA:
         ximea_param = "imgdataformatrgb32alpha";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_IMAGE_PAYLOAD_SIZE:
+    case CAP_PROP_XI_IMAGE_PAYLOAD_SIZE:
         ximea_param = "imgpayloadsize";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_TRANSPORT_PIXEL_FORMAT:
+    case CAP_PROP_XI_TRANSPORT_PIXEL_FORMAT:
         ximea_param = "transport_pixel_format";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_SENSOR_CLOCK_FREQ_HZ:
+    case CAP_PROP_XI_SENSOR_CLOCK_FREQ_HZ:
         ximea_param = "sensor_clock_freq_hz";
         value_type = xiTypeFloat;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_SENSOR_CLOCK_FREQ_INDEX:
+    case CAP_PROP_XI_SENSOR_CLOCK_FREQ_INDEX:
         ximea_param = "sensor_clock_freq_index";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_SENSOR_OUTPUT_CHANNEL_COUNT:
+    case CAP_PROP_XI_SENSOR_OUTPUT_CHANNEL_COUNT:
         ximea_param = "sensor_output_channel_count";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_FRAMERATE:
+    case CAP_PROP_XI_FRAMERATE:
         ximea_param = "framerate";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_COUNTER_SELECTOR:
+    case CAP_PROP_XI_COUNTER_SELECTOR:
         ximea_param = "counter_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_COUNTER_VALUE:
+    case CAP_PROP_XI_COUNTER_VALUE:
         ximea_param = "counter_value";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_ACQ_TIMING_MODE:
+    case CAP_PROP_XI_ACQ_TIMING_MODE:
         ximea_param = "acq_timing_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_AVAILABLE_BANDWIDTH:
+    case CAP_PROP_XI_AVAILABLE_BANDWIDTH:
         ximea_param = "available_bandwidth";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_BUFFER_POLICY:
+    case CAP_PROP_XI_BUFFER_POLICY:
         ximea_param = "buffer_policy";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_LUT_EN:
+    case CAP_PROP_XI_LUT_EN:
         ximea_param = "LUTEnable";
         value_type = xiTypeBoolean;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_LUT_INDEX:
+    case CAP_PROP_XI_LUT_INDEX:
         ximea_param = "LUTIndex";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_LUT_VALUE:
+    case CAP_PROP_XI_LUT_VALUE:
         ximea_param = "LUTValue";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_TRG_DELAY:
+    case CAP_PROP_XI_TRG_DELAY:
         ximea_param = "trigger_delay";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_TS_RST_MODE:
+    case CAP_PROP_XI_TS_RST_MODE:
         ximea_param = "ts_rst_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_TS_RST_SOURCE:
+    case CAP_PROP_XI_TS_RST_SOURCE:
         ximea_param = "ts_rst_source";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_IS_DEVICE_EXIST:
+    case CAP_PROP_XI_IS_DEVICE_EXIST:
         ximea_param = "isexist";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_ACQ_BUFFER_SIZE:
+    case CAP_PROP_XI_ACQ_BUFFER_SIZE:
         ximea_param = "acq_buffer_size";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_ACQ_BUFFER_SIZE_UNIT:
+    case CAP_PROP_XI_ACQ_BUFFER_SIZE_UNIT:
         ximea_param = "acq_buffer_size_unit";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_ACQ_TRANSPORT_BUFFER_SIZE:
+    case CAP_PROP_XI_ACQ_TRANSPORT_BUFFER_SIZE:
         ximea_param = "acq_transport_buffer_size";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_BUFFERS_QUEUE_SIZE:
+    case CAP_PROP_XI_BUFFERS_QUEUE_SIZE:
         ximea_param = "buffers_queue_size";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_ACQ_TRANSPORT_BUFFER_COMMIT:
+    case CAP_PROP_XI_ACQ_TRANSPORT_BUFFER_COMMIT:
         ximea_param = "acq_transport_buffer_commit";
         value_type = xiTypeInteger;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_RECENT_FRAME:
+    case CAP_PROP_XI_RECENT_FRAME:
         ximea_param = "recent_frame";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_DEVICE_RESET:
+    case CAP_PROP_XI_DEVICE_RESET:
         ximea_param = "device_reset";
         value_type = xiTypeCommand;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_COLUMN_FPN_CORRECTION:
+    case CAP_PROP_XI_COLUMN_FPN_CORRECTION:
         ximea_param = "column_fpn_correction";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_ROW_FPN_CORRECTION:
+    case CAP_PROP_XI_ROW_FPN_CORRECTION:
         ximea_param = "row_fpn_correction";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_SENSOR_MODE:
+    case CAP_PROP_XI_SENSOR_MODE:
         ximea_param = "sensor_mode";
         value_type = xiTypeEnum;
         doAcqReset = true;
         break;
-    case CV_CAP_PROP_XI_HDR:
+    case CAP_PROP_XI_HDR:
         ximea_param = "hdr";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_HDR_KNEEPOINT_COUNT:
+    case CAP_PROP_XI_HDR_KNEEPOINT_COUNT:
         ximea_param = "hdr_kneepoint_count";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_HDR_T1:
+    case CAP_PROP_XI_HDR_T1:
         ximea_param = "hdr_t1";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_HDR_T2:
+    case CAP_PROP_XI_HDR_T2:
         ximea_param = "hdr_t2";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_KNEEPOINT1:
+    case CAP_PROP_XI_KNEEPOINT1:
         ximea_param = "hdr_kneepoint1";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_KNEEPOINT2:
+    case CAP_PROP_XI_KNEEPOINT2:
         ximea_param = "hdr_kneepoint2";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_IMAGE_BLACK_LEVEL:
+    case CAP_PROP_XI_IMAGE_BLACK_LEVEL:
         ximea_param = "image_black_level";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_HW_REVISION:
+    case CAP_PROP_XI_HW_REVISION:
         ximea_param = "hw_revision";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_DEBUG_LEVEL:
+    case CAP_PROP_XI_DEBUG_LEVEL:
         ximea_param = "debug_level";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_AUTO_BANDWIDTH_CALCULATION:
+    case CAP_PROP_XI_AUTO_BANDWIDTH_CALCULATION:
         ximea_param = "auto_bandwidth_calculation";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_FFS_FILE_ID:
+    case CAP_PROP_XI_FFS_FILE_ID:
         ximea_param = "ffs_file_id";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_FFS_FILE_SIZE:
+    case CAP_PROP_XI_FFS_FILE_SIZE:
         ximea_param = "ffs_file_size";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_FREE_FFS_SIZE:
+    case CAP_PROP_XI_FREE_FFS_SIZE:
         ximea_param = "free_ffs_size";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_USED_FFS_SIZE:
+    case CAP_PROP_XI_USED_FFS_SIZE:
         ximea_param = "used_ffs_size";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_FFS_ACCESS_KEY:
+    case CAP_PROP_XI_FFS_ACCESS_KEY:
         ximea_param = "ffs_access_key";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_SENSOR_FEATURE_SELECTOR:
+    case CAP_PROP_XI_SENSOR_FEATURE_SELECTOR:
         ximea_param = "sensor_feature_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_SENSOR_FEATURE_VALUE:
+    case CAP_PROP_XI_SENSOR_FEATURE_VALUE:
         ximea_param = "sensor_feature_value";
         value_type = xiTypeInteger;
         break;
@@ -1069,597 +1028,597 @@ double CvCaptureCAM_XIMEA::getProperty( int property_id ) const
     // decode OpenCV parameter to xiAPI parameter
     switch( property_id )
     {
-    case CV_CAP_PROP_XI_TIMEOUT:
+    case CAP_PROP_XI_TIMEOUT:
         return (double) timeout;
-    case CV_CAP_PROP_XI_EXPOSURE:
+    case CAP_PROP_XI_EXPOSURE:
         ximea_param = "exposure";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_EXPOSURE_BURST_COUNT:
+    case CAP_PROP_XI_EXPOSURE_BURST_COUNT:
         ximea_param = "exposure_burst_count";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_GAIN_SELECTOR:
+    case CAP_PROP_XI_GAIN_SELECTOR:
         ximea_param = "gain_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_GAIN:
+    case CAP_PROP_XI_GAIN:
         ximea_param = "gain";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_DOWNSAMPLING:
+    case CAP_PROP_XI_DOWNSAMPLING:
         ximea_param = "downsampling";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_DOWNSAMPLING_TYPE:
+    case CAP_PROP_XI_DOWNSAMPLING_TYPE:
         ximea_param = "downsampling_type";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_BINNING_SELECTOR:
+    case CAP_PROP_XI_BINNING_SELECTOR:
         ximea_param = "binning_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_BINNING_VERTICAL:
+    case CAP_PROP_XI_BINNING_VERTICAL:
         ximea_param = "binning_vertical";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_BINNING_HORIZONTAL:
+    case CAP_PROP_XI_BINNING_HORIZONTAL:
         ximea_param = "binning_horizontal";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_BINNING_PATTERN:
+    case CAP_PROP_XI_BINNING_PATTERN:
         ximea_param = "binning_pattern";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_DECIMATION_SELECTOR:
+    case CAP_PROP_XI_DECIMATION_SELECTOR:
         ximea_param = "decimation_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_DECIMATION_VERTICAL:
+    case CAP_PROP_XI_DECIMATION_VERTICAL:
         ximea_param = "decimation_vertical";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_DECIMATION_HORIZONTAL:
+    case CAP_PROP_XI_DECIMATION_HORIZONTAL:
         ximea_param = "decimation_horizontal";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_DECIMATION_PATTERN:
+    case CAP_PROP_XI_DECIMATION_PATTERN:
         ximea_param = "decimation_pattern";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_TEST_PATTERN_GENERATOR_SELECTOR:
+    case CAP_PROP_XI_TEST_PATTERN_GENERATOR_SELECTOR:
         ximea_param = "test_pattern_generator_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_TEST_PATTERN:
+    case CAP_PROP_XI_TEST_PATTERN:
         ximea_param = "test_pattern";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_IMAGE_DATA_FORMAT:
+    case CAP_PROP_XI_IMAGE_DATA_FORMAT:
         ximea_param = "imgdataformat";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_SHUTTER_TYPE:
+    case CAP_PROP_XI_SHUTTER_TYPE:
         ximea_param = "shutter_type";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_SENSOR_TAPS:
+    case CAP_PROP_XI_SENSOR_TAPS:
         ximea_param = "sensor_taps";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_AEAG:
+    case CAP_PROP_XI_AEAG:
         ximea_param = "aeag";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_AEAG_ROI_OFFSET_X:
+    case CAP_PROP_XI_AEAG_ROI_OFFSET_X:
         ximea_param = "aeag_roi_offset_x";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_AEAG_ROI_OFFSET_Y:
+    case CAP_PROP_XI_AEAG_ROI_OFFSET_Y:
         ximea_param = "aeag_roi_offset_y";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_AEAG_ROI_WIDTH:
+    case CAP_PROP_XI_AEAG_ROI_WIDTH:
         ximea_param = "aeag_roi_width";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_AEAG_ROI_HEIGHT:
+    case CAP_PROP_XI_AEAG_ROI_HEIGHT:
         ximea_param = "aeag_roi_height";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_BPC:
+    case CAP_PROP_XI_BPC:
         ximea_param = "bpc";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_AUTO_WB:
+    case CAP_PROP_XI_AUTO_WB:
         ximea_param = "auto_wb";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_MANUAL_WB:
+    case CAP_PROP_XI_MANUAL_WB:
         ximea_param = "manual_wb";
         value_type = xiTypeCommand;
         break;
-    case CV_CAP_PROP_XI_WB_KR:
+    case CAP_PROP_XI_WB_KR:
         ximea_param = "wb_kr";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_WB_KG:
+    case CAP_PROP_XI_WB_KG:
         ximea_param = "wb_kg";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_WB_KB:
+    case CAP_PROP_XI_WB_KB:
         ximea_param = "wb_kb";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_WIDTH:
+    case CAP_PROP_XI_WIDTH:
         ximea_param = "width";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_HEIGHT:
+    case CAP_PROP_XI_HEIGHT:
         ximea_param = "height";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_OFFSET_X:
+    case CAP_PROP_XI_OFFSET_X:
         ximea_param = "offsetX";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_OFFSET_Y:
+    case CAP_PROP_XI_OFFSET_Y:
         ximea_param = "offsetY";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_REGION_SELECTOR :
+    case CAP_PROP_XI_REGION_SELECTOR :
         ximea_param = "region_selector";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_REGION_MODE :
+    case CAP_PROP_XI_REGION_MODE :
         ximea_param = "region_mode";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_EXP_PRIORITY:
+    case CAP_PROP_XI_EXP_PRIORITY:
         ximea_param = "exp_priority";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_AG_MAX_LIMIT:
+    case CAP_PROP_XI_AG_MAX_LIMIT:
         ximea_param = "ag_max_limit";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_AE_MAX_LIMIT:
+    case CAP_PROP_XI_AE_MAX_LIMIT:
         ximea_param = "ae_max_limit";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_AEAG_LEVEL:
+    case CAP_PROP_XI_AEAG_LEVEL:
         ximea_param = "aeag_level";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_LIMIT_BANDWIDTH:
+    case CAP_PROP_XI_LIMIT_BANDWIDTH:
         ximea_param = "limit_bandwidth";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_SENSOR_DATA_BIT_DEPTH:
+    case CAP_PROP_XI_SENSOR_DATA_BIT_DEPTH:
         ximea_param = "sensor_bit_depth";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_OUTPUT_DATA_BIT_DEPTH:
+    case CAP_PROP_XI_OUTPUT_DATA_BIT_DEPTH:
         ximea_param = "output_bit_depth";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_IMAGE_DATA_BIT_DEPTH:
+    case CAP_PROP_XI_IMAGE_DATA_BIT_DEPTH:
         ximea_param = "image_data_bit_depth";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_OUTPUT_DATA_PACKING:
+    case CAP_PROP_XI_OUTPUT_DATA_PACKING:
         ximea_param = "output_bit_packing";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_OUTPUT_DATA_PACKING_TYPE:
+    case CAP_PROP_XI_OUTPUT_DATA_PACKING_TYPE:
         ximea_param = "output_bit_packing_type";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_IS_COOLED:
+    case CAP_PROP_XI_IS_COOLED:
         ximea_param = "iscooled";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_COOLING:
+    case CAP_PROP_XI_COOLING:
         ximea_param = "cooling";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_TARGET_TEMP:
+    case CAP_PROP_XI_TARGET_TEMP:
         ximea_param = "target_temp";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CHIP_TEMP:
+    case CAP_PROP_XI_CHIP_TEMP:
         ximea_param = "chip_temp";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_HOUS_TEMP:
+    case CAP_PROP_XI_HOUS_TEMP:
         ximea_param = "hous_temp";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_HOUS_BACK_SIDE_TEMP:
+    case CAP_PROP_XI_HOUS_BACK_SIDE_TEMP:
         ximea_param = "hous_back_side_temp";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_SENSOR_BOARD_TEMP:
+    case CAP_PROP_XI_SENSOR_BOARD_TEMP:
         ximea_param = "sensor_board_temp";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CMS:
+    case CAP_PROP_XI_CMS:
         ximea_param = "cms";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_APPLY_CMS:
+    case CAP_PROP_XI_APPLY_CMS:
         ximea_param = "apply_cms";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_IMAGE_IS_COLOR:
+    case CAP_PROP_XI_IMAGE_IS_COLOR:
         ximea_param = "iscolor";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_COLOR_FILTER_ARRAY:
+    case CAP_PROP_XI_COLOR_FILTER_ARRAY:
         ximea_param = "cfa";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_GAMMAY:
+    case CAP_PROP_XI_GAMMAY:
         ximea_param = "gammaY";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_GAMMAC:
+    case CAP_PROP_XI_GAMMAC:
         ximea_param = "gammaC";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_SHARPNESS:
+    case CAP_PROP_XI_SHARPNESS:
         ximea_param = "sharpness";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_00:
+    case CAP_PROP_XI_CC_MATRIX_00:
         ximea_param = "ccMTX00";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_01:
+    case CAP_PROP_XI_CC_MATRIX_01:
         ximea_param = "ccMTX01";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_02:
+    case CAP_PROP_XI_CC_MATRIX_02:
         ximea_param = "ccMTX02";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_03:
+    case CAP_PROP_XI_CC_MATRIX_03:
         ximea_param = "ccMTX03";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_10:
+    case CAP_PROP_XI_CC_MATRIX_10:
         ximea_param = "ccMTX10";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_11:
+    case CAP_PROP_XI_CC_MATRIX_11:
         ximea_param = "ccMTX11";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_12:
+    case CAP_PROP_XI_CC_MATRIX_12:
         ximea_param = "ccMTX12";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_13:
+    case CAP_PROP_XI_CC_MATRIX_13:
         ximea_param = "ccMTX13";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_20:
+    case CAP_PROP_XI_CC_MATRIX_20:
         ximea_param = "ccMTX20";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_21:
+    case CAP_PROP_XI_CC_MATRIX_21:
         ximea_param = "ccMTX21";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_22:
+    case CAP_PROP_XI_CC_MATRIX_22:
         ximea_param = "ccMTX22";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_23:
+    case CAP_PROP_XI_CC_MATRIX_23:
         ximea_param = "ccMTX23";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_30:
+    case CAP_PROP_XI_CC_MATRIX_30:
         ximea_param = "ccMTX30";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_31:
+    case CAP_PROP_XI_CC_MATRIX_31:
         ximea_param = "ccMTX31";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_32:
+    case CAP_PROP_XI_CC_MATRIX_32:
         ximea_param = "ccMTX32";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_CC_MATRIX_33:
+    case CAP_PROP_XI_CC_MATRIX_33:
         ximea_param = "ccMTX33";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_DEFAULT_CC_MATRIX:
+    case CAP_PROP_XI_DEFAULT_CC_MATRIX:
         ximea_param = "defccMTX";
         value_type = xiTypeCommand;
         break;
-    case CV_CAP_PROP_XI_TRG_SOURCE:
+    case CAP_PROP_XI_TRG_SOURCE:
         ximea_param = "trigger_source";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_TRG_SOFTWARE:
+    case CAP_PROP_XI_TRG_SOFTWARE:
         ximea_param = "trigger_software";
         value_type = xiTypeCommand;
         break;
-    case CV_CAP_PROP_XI_TRG_SELECTOR:
+    case CAP_PROP_XI_TRG_SELECTOR:
         ximea_param = "trigger_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_ACQ_FRAME_BURST_COUNT:
+    case CAP_PROP_XI_ACQ_FRAME_BURST_COUNT:
         ximea_param = "acq_frame_burst_count";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_GPI_SELECTOR:
+    case CAP_PROP_XI_GPI_SELECTOR:
         ximea_param = "gpi_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_GPI_MODE:
+    case CAP_PROP_XI_GPI_MODE:
         ximea_param = "gpi_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_GPI_LEVEL:
+    case CAP_PROP_XI_GPI_LEVEL:
         ximea_param = "gpi_level";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_GPO_SELECTOR:
+    case CAP_PROP_XI_GPO_SELECTOR:
         ximea_param = "gpo_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_GPO_MODE:
+    case CAP_PROP_XI_GPO_MODE:
         ximea_param = "gpo_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_LED_SELECTOR:
+    case CAP_PROP_XI_LED_SELECTOR:
         ximea_param = "led_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_LED_MODE:
+    case CAP_PROP_XI_LED_MODE:
         ximea_param = "led_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_DEBOUNCE_EN:
+    case CAP_PROP_XI_DEBOUNCE_EN:
         ximea_param = "dbnc_en";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_DEBOUNCE_T0:
+    case CAP_PROP_XI_DEBOUNCE_T0:
         ximea_param = "dbnc_t0";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_DEBOUNCE_T1:
+    case CAP_PROP_XI_DEBOUNCE_T1:
         ximea_param = "dbnc_t1";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_DEBOUNCE_POL:
+    case CAP_PROP_XI_DEBOUNCE_POL:
         ximea_param = "dbnc_pol";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_LENS_MODE:
+    case CAP_PROP_XI_LENS_MODE:
         ximea_param = "lens_mode";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_LENS_APERTURE_VALUE:
+    case CAP_PROP_XI_LENS_APERTURE_VALUE:
         ximea_param = "lens_aperture_value";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_LENS_FOCUS_MOVEMENT_VALUE:
+    case CAP_PROP_XI_LENS_FOCUS_MOVEMENT_VALUE:
         ximea_param = "lens_focus_movement_value";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_LENS_FOCUS_MOVE:
+    case CAP_PROP_XI_LENS_FOCUS_MOVE:
         ximea_param = "lens_focus_move";
         value_type = xiTypeCommand;
         break;
-    case CV_CAP_PROP_XI_LENS_FOCUS_DISTANCE:
+    case CAP_PROP_XI_LENS_FOCUS_DISTANCE:
         ximea_param = "lens_focus_distance";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_LENS_FOCAL_LENGTH:
+    case CAP_PROP_XI_LENS_FOCAL_LENGTH:
         ximea_param = "lens_focal_length";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_LENS_FEATURE_SELECTOR:
+    case CAP_PROP_XI_LENS_FEATURE_SELECTOR:
         ximea_param = "lens_feature_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_LENS_FEATURE:
+    case CAP_PROP_XI_LENS_FEATURE:
         ximea_param = "lens_feature";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_DEVICE_MODEL_ID:
+    case CAP_PROP_XI_DEVICE_MODEL_ID:
         ximea_param = "device_model_id";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_DEVICE_SN:
+    case CAP_PROP_XI_DEVICE_SN:
         ximea_param = "device_sn";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_IMAGE_DATA_FORMAT_RGB32_ALPHA:
+    case CAP_PROP_XI_IMAGE_DATA_FORMAT_RGB32_ALPHA:
         ximea_param = "imgdataformatrgb32alpha";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_IMAGE_PAYLOAD_SIZE:
+    case CAP_PROP_XI_IMAGE_PAYLOAD_SIZE:
         ximea_param = "imgpayloadsize";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_TRANSPORT_PIXEL_FORMAT:
+    case CAP_PROP_XI_TRANSPORT_PIXEL_FORMAT:
         ximea_param = "transport_pixel_format";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_SENSOR_CLOCK_FREQ_HZ:
+    case CAP_PROP_XI_SENSOR_CLOCK_FREQ_HZ:
         ximea_param = "sensor_clock_freq_hz";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_SENSOR_CLOCK_FREQ_INDEX:
+    case CAP_PROP_XI_SENSOR_CLOCK_FREQ_INDEX:
         ximea_param = "sensor_clock_freq_index";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_SENSOR_OUTPUT_CHANNEL_COUNT:
+    case CAP_PROP_XI_SENSOR_OUTPUT_CHANNEL_COUNT:
         ximea_param = "sensor_output_channel_count";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_FRAMERATE:
+    case CAP_PROP_XI_FRAMERATE:
         ximea_param = "framerate";
         value_type = xiTypeFloat;
         break;
-    case CV_CAP_PROP_XI_COUNTER_SELECTOR:
+    case CAP_PROP_XI_COUNTER_SELECTOR:
         ximea_param = "counter_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_COUNTER_VALUE:
+    case CAP_PROP_XI_COUNTER_VALUE:
         ximea_param = "counter_value";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_ACQ_TIMING_MODE:
+    case CAP_PROP_XI_ACQ_TIMING_MODE:
         ximea_param = "acq_timing_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_AVAILABLE_BANDWIDTH:
+    case CAP_PROP_XI_AVAILABLE_BANDWIDTH:
         ximea_param = "available_bandwidth";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_BUFFER_POLICY:
+    case CAP_PROP_XI_BUFFER_POLICY:
         ximea_param = "buffer_policy";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_LUT_EN:
+    case CAP_PROP_XI_LUT_EN:
         ximea_param = "LUTEnable";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_LUT_INDEX:
+    case CAP_PROP_XI_LUT_INDEX:
         ximea_param = "LUTIndex";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_LUT_VALUE:
+    case CAP_PROP_XI_LUT_VALUE:
         ximea_param = "LUTValue";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_TRG_DELAY:
+    case CAP_PROP_XI_TRG_DELAY:
         ximea_param = "trigger_delay";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_TS_RST_MODE:
+    case CAP_PROP_XI_TS_RST_MODE:
         ximea_param = "ts_rst_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_TS_RST_SOURCE:
+    case CAP_PROP_XI_TS_RST_SOURCE:
         ximea_param = "ts_rst_source";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_IS_DEVICE_EXIST:
+    case CAP_PROP_XI_IS_DEVICE_EXIST:
         ximea_param = "isexist";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_ACQ_BUFFER_SIZE:
+    case CAP_PROP_XI_ACQ_BUFFER_SIZE:
         ximea_param = "acq_buffer_size";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_ACQ_BUFFER_SIZE_UNIT:
+    case CAP_PROP_XI_ACQ_BUFFER_SIZE_UNIT:
         ximea_param = "acq_buffer_size_unit";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_ACQ_TRANSPORT_BUFFER_SIZE:
+    case CAP_PROP_XI_ACQ_TRANSPORT_BUFFER_SIZE:
         ximea_param = "acq_transport_buffer_size";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_BUFFERS_QUEUE_SIZE:
+    case CAP_PROP_XI_BUFFERS_QUEUE_SIZE:
         ximea_param = "buffers_queue_size";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_ACQ_TRANSPORT_BUFFER_COMMIT:
+    case CAP_PROP_XI_ACQ_TRANSPORT_BUFFER_COMMIT:
         ximea_param = "acq_transport_buffer_commit";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_RECENT_FRAME:
+    case CAP_PROP_XI_RECENT_FRAME:
         ximea_param = "recent_frame";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_DEVICE_RESET:
+    case CAP_PROP_XI_DEVICE_RESET:
         ximea_param = "device_reset";
         value_type = xiTypeCommand;
         break;
-    case CV_CAP_PROP_XI_COLUMN_FPN_CORRECTION:
+    case CAP_PROP_XI_COLUMN_FPN_CORRECTION:
         ximea_param = "column_fpn_correction";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_ROW_FPN_CORRECTION:
+    case CAP_PROP_XI_ROW_FPN_CORRECTION:
         ximea_param = "row_fpn_correction";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_SENSOR_MODE:
+    case CAP_PROP_XI_SENSOR_MODE:
         ximea_param = "sensor_mode";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_HDR:
+    case CAP_PROP_XI_HDR:
         ximea_param = "hdr";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_HDR_KNEEPOINT_COUNT:
+    case CAP_PROP_XI_HDR_KNEEPOINT_COUNT:
         ximea_param = "hdr_kneepoint_count";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_HDR_T1:
+    case CAP_PROP_XI_HDR_T1:
         ximea_param = "hdr_t1";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_HDR_T2:
+    case CAP_PROP_XI_HDR_T2:
         ximea_param = "hdr_t2";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_KNEEPOINT1:
+    case CAP_PROP_XI_KNEEPOINT1:
         ximea_param = "hdr_kneepoint1";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_KNEEPOINT2:
+    case CAP_PROP_XI_KNEEPOINT2:
         ximea_param = "hdr_kneepoint2";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_IMAGE_BLACK_LEVEL:
+    case CAP_PROP_XI_IMAGE_BLACK_LEVEL:
         ximea_param = "image_black_level";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_HW_REVISION:
+    case CAP_PROP_XI_HW_REVISION:
         ximea_param = "hw_revision";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_DEBUG_LEVEL:
+    case CAP_PROP_XI_DEBUG_LEVEL:
         ximea_param = "debug_level";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_AUTO_BANDWIDTH_CALCULATION:
+    case CAP_PROP_XI_AUTO_BANDWIDTH_CALCULATION:
         ximea_param = "auto_bandwidth_calculation";
         value_type = xiTypeBoolean;
         break;
-    case CV_CAP_PROP_XI_FFS_FILE_ID:
+    case CAP_PROP_XI_FFS_FILE_ID:
         ximea_param = "ffs_file_id";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_FFS_FILE_SIZE:
+    case CAP_PROP_XI_FFS_FILE_SIZE:
         ximea_param = "ffs_file_size";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_FREE_FFS_SIZE:
+    case CAP_PROP_XI_FREE_FFS_SIZE:
         ximea_param = "free_ffs_size";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_USED_FFS_SIZE:
+    case CAP_PROP_XI_USED_FFS_SIZE:
         ximea_param = "used_ffs_size";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_FFS_ACCESS_KEY:
+    case CAP_PROP_XI_FFS_ACCESS_KEY:
         ximea_param = "ffs_access_key";
         value_type = xiTypeInteger;
         break;
-    case CV_CAP_PROP_XI_SENSOR_FEATURE_SELECTOR:
+    case CAP_PROP_XI_SENSOR_FEATURE_SELECTOR:
         ximea_param = "sensor_feature_selector";
         value_type = xiTypeEnum;
         break;
-    case CV_CAP_PROP_XI_SENSOR_FEATURE_VALUE:
+    case CAP_PROP_XI_SENSOR_FEATURE_VALUE:
         ximea_param = "sensor_feature_value";
         value_type = xiTypeInteger;
         break;
