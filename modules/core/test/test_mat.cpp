@@ -2669,4 +2669,61 @@ TEST(Mat, regression_26322)
     EXPECT_EQ(0, (int)mat3.total());
 }
 
+TEST(Mat, reshape_1d)
+{
+    std::vector<int> v = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    Mat m = Mat(v).reshape(0, 2);
+
+    int newrows = 2;
+    EXPECT_EQ(m.dims, newrows);
+    EXPECT_EQ(m.type(), CV_32S);
+    EXPECT_EQ(m.ptr<int>(), &v[0]);
+    EXPECT_EQ(m.rows, newrows);
+    EXPECT_EQ(m.total(), v.size());
+
+    int sz[] = {(int)v.size()};
+    Mat m1 = m.reshape(0, 1, sz);
+    EXPECT_EQ(m1.dims, 1);
+    EXPECT_EQ(m1.type(), CV_32S);
+    EXPECT_EQ(m1.ptr<int>(), &v[0]);
+    EXPECT_EQ(m1.rows, 1);
+    EXPECT_EQ(m1.total(), v.size());
+}
+
+TEST(Mat, reshape_0d)
+{
+    int v = 1001;
+    Mat m0d(0, nullptr, CV_32S, &v);
+
+    EXPECT_EQ(m0d.dims, 0);
+    EXPECT_EQ(m0d.type(), CV_32S);
+    EXPECT_EQ(m0d.ptr<int>(), &v);
+    EXPECT_EQ(m0d.rows, 1);
+    EXPECT_EQ(m0d.total(), 1);
+    EXPECT_EQ(m0d.empty(), false);
+
+    int sz = 1;
+    Mat m1d = m0d.reshape(0, 1, &sz);
+    EXPECT_EQ(m1d.dims, 1);
+    EXPECT_EQ(m1d.type(), CV_32S);
+    EXPECT_EQ(m1d.ptr<int>(), &v);
+    EXPECT_EQ(m1d.rows, 1);
+    EXPECT_EQ(m1d.total(), 1);
+
+    Mat m2d = m1d.reshape(0, 1);
+    EXPECT_EQ(m2d.dims, 2);
+    EXPECT_EQ(m2d.type(), CV_32S);
+    EXPECT_EQ(m2d.ptr<int>(), &v);
+    EXPECT_EQ(m2d.size(), Size(1, 1));
+    EXPECT_EQ(m2d.total(), 1);
+
+    Mat m0d_ = m2d.reshape(0, 0, nullptr);
+    EXPECT_EQ(m0d_.dims, 0);
+    EXPECT_EQ(m0d_.type(), CV_32S);
+    EXPECT_EQ(m0d_.ptr<int>(), &v);
+    EXPECT_EQ(m0d_.size(), Size(1, 1));
+    EXPECT_EQ(m0d_.total(), 1);
+    EXPECT_EQ(m0d_.empty(), false);
+}
+
 }} // namespace

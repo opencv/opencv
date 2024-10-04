@@ -1725,26 +1725,25 @@ Mat Mat::reshape(int new_cn, int new_rows) const
     int cn = channels();
     Mat hdr = *this;
 
+    if( new_cn == 0 )
+        new_cn = cn;
+
     if( dims > 2 )
     {
-        if( new_rows == 0 && new_cn != 0 && size[dims-1]*cn % new_cn == 0 )
+        if( new_rows == 0 )
         {
+            // special case: just change the number of channnels; retain the same shape,
+            // except for the last, innermost dimension
+            CV_Assert(size[dims-1]*cn % new_cn == 0);
             hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
             hdr.step[dims-1] = CV_ELEM_SIZE(hdr.flags);
             hdr.size[dims-1] = hdr.size[dims-1]*cn / new_cn;
             return hdr;
         }
-        if( new_rows > 0 )
-        {
-            int sz[] = { new_rows, (int)(total()*cn/new_rows) };
-            return reshape(new_cn, 2, sz);
-        }
+        CV_Assert( new_rows > 0 );
+        int sz[] = { new_rows, (int)(total()*cn/new_rows) };
+        return reshape(new_cn, 2, sz);
     }
-
-    CV_Assert( dims <= 2 );
-
-    if( new_cn == 0 )
-        new_cn = cn;
 
     int total_width = cols * cn;
 
