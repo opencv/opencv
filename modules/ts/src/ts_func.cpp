@@ -86,9 +86,13 @@ double getMinVal(int depth)
 {
     depth = CV_MAT_DEPTH(depth);
     double val = depth == CV_8U ? 0 : depth == CV_8S ? SCHAR_MIN : depth == CV_16U ? 0 :
-    depth == CV_16S ? SHRT_MIN : depth == CV_32S ? INT_MIN :
-    depth == CV_32F ? -FLT_MAX : depth == CV_64F ? -DBL_MAX :
-            depth == CV_16F ? -65504
+            depth == CV_16S ? SHRT_MIN : depth == CV_32S ? INT_MIN :
+            depth == CV_32F ? -FLT_MAX : depth == CV_64F ? -DBL_MAX :
+            depth == CV_16F ? -65504 :
+            depth == CV_16BF ? -FLT_MAX :
+            depth == CV_32U ? 0 :
+            depth == CV_64U ? 0 :
+            depth == CV_64S ? (double)0x8000000000000000LL
             : -1;
     CV_Assert(val != -1);
     return val;
@@ -98,9 +102,13 @@ double getMaxVal(int depth)
 {
     depth = CV_MAT_DEPTH(depth);
     double val = depth == CV_8U ? UCHAR_MAX : depth == CV_8S ? SCHAR_MAX : depth == CV_16U ? USHRT_MAX :
-    depth == CV_16S ? SHRT_MAX : depth == CV_32S ? INT_MAX :
-    depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX :
-            depth == CV_16F ? 65504
+            depth == CV_16S ? SHRT_MAX : depth == CV_32S ? INT_MAX :
+            depth == CV_32F ? FLT_MAX : depth == CV_64F ? DBL_MAX :
+            depth == CV_16F ? 65504 :
+            depth == CV_16BF ? FLT_MAX :
+            depth == CV_32U ? UINT_MAX :
+            depth == CV_64U ? (double)0xFFFFFFFFFFFFFFFFULL :
+            depth == CV_64S ? (double)0x7fffffffffffffffLL
             : -1;
     CV_Assert(val != -1);
     return val;
