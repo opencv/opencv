@@ -621,6 +621,8 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
         // There should be subscript index (subscript label) for each dim of the input
+        std::cout << "currSubscriptIndices: " << currSubscriptIndices << std::endl;
+        std::cout << "currSubscriptIndices.size(): " << currSubscriptIndices.size() << std::endl;
         CV_CheckEQ(input_dims.size(), currSubscriptIndices.size(),
             "Rank of the input must match number of subscript labels corresponding to the input");
 
@@ -697,8 +699,10 @@ void LayerEinsumImpl::parseEquation(String equation)
     // into lhs_eq_tokens vector
     std::stringstream src(lhs_eq);
     for (std::string token; std::getline(src, token, ',');) {
+        std::cout << "token: " << token << std::endl;
         lhs_eq_tokens.emplace_back(token);
     }
+    std::cout << "lhs_eq: " << lhs_eq << std::endl;
 }
 
 
@@ -883,7 +887,18 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
     // Check if number of tokens in equal to number of inputs.
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
     int num_input_tensors = inputs.size();
-    if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",") ) {
+
+    std::cout << "lhs_eq_tokens: " << numInputs << std::endl;
+    std::cout << "number of input tensors: " << lhs_eq_tokens.size() << std::endl;
+    std::cout << "lhs_eq: " << lhs_eq << std::endl;
+
+    for (auto token : lhs_eq_tokens) {
+        std::cout << "token: " << token << std::endl;
+    }
+
+    // if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",") ){ //  || (numInputs == 2 && lhs_eq[lhs_eq.length() - 1] == ',')) {
+    if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",") || (numInputs == 2 && lhs_eq[lhs_eq.length() - 1] == ',')) {
+        std::cout << "intializing the vector" << std::endl;
         inputSubscriptIndices.resize(numInputs);
         return;
     }
