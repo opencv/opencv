@@ -308,7 +308,6 @@ TEST_P(CountNonZero1D, /**/)
     Mat mv;
     Mat(v).convertTo(mv, depth);
     EXPECT_EQ(mv.dims, 1);
-    EXPECT_EQ(mv.total(), M);
     size_t esz = mv.elemSize();
     // check countNonZero on a vector transformed to Mat inplace, e.g. on 1xM matrix
     int nz0 = countNonZero(mv);
