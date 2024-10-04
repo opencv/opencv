@@ -163,7 +163,7 @@ static void detectPointsAndCalibrate (cv::Size pattern_size, float pattern_dista
 // ! [multiview_calib]
 
     const double rmse = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility,
-                                           models, Rs, Ts, Ks, distortions);
+                                           models, Ks, distortions, Rs, Ts);
 // ! [multiview_calib]
     std::cout << "average RMSE over detection mask " << rmse << "\n";
     for (int c = 0; c < (int)Rs.size(); c++) {

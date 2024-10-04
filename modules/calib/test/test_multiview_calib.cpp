@@ -133,7 +133,7 @@ TEST(multiview_calibration, accuracy) {
 
     std::vector<cv::Mat> Ks, distortions, Rs, Ts;
     calibrateMultiview(objPoints, image_points_all, image_sizes, visibility_mat,
-                       models, Rs, Ts, Ks, distortions);
+                       models, Ks, distortions, Rs, Ts);
 
     const double K_err_tol = 1e1, dist_tol = 5e-2, R_tol = 1e-2, T_tol = 1e-2;
     for (int c = 0; c < num_cameras; c++) {
@@ -169,7 +169,7 @@ struct MultiViewTest : public ::testing::Test
                          std::vector<std::vector<cv::Mat>>& image_points_all, cv::Mat& visibility)
     {
         image_points_all.clear();
-        visibility.create(static_cast<int>(cameras.size()), frameCount, CV_8UC1);
+        visibility.create(static_cast<int>(cameras.size()), frameCount, CV_BoolC1);
         for (int c = 0; c < static_cast<int>(cameras.size()); c++)
         {
             std::vector<cv::Mat> camera_image_points;
@@ -183,7 +183,7 @@ struct MultiViewTest : public ::testing::Test
                 if (!node.empty())
                 {
                     camera_image_points.push_back(node.mat().reshape(2, 1));
-                    visibility.at<uchar>(c, i) = 255;
+                    visibility.at<uchar>(c, i) = 1;
                 }
                 else
                 {
@@ -315,7 +315,7 @@ TEST_F(MultiViewTest, OneLine)
 
     std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility, models,
-                                    Rs_rvec, Ts, Ks, distortions, 0, flagsForIntrinsics);
+                                    Ks, distortions, Rs_rvec, Ts, flagsForIntrinsics);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 
     EXPECT_LE(rms, .3);
@@ -420,7 +420,7 @@ TEST_F(MultiViewTest, OneLineInitialGuess)
 
     int flags = cv::CALIB_USE_EXTRINSIC_GUESS | cv::CALIB_USE_INTRINSIC_GUESS | cv::CALIB_STEREO_REGISTRATION;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility, models,
-                                    Rs_rvec, Ts, Ks, distortions, flags, flagsForIntrinsics);
+                                    Ks, distortions, Rs_rvec, Ts, flagsForIntrinsics, flags);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 
     EXPECT_LE(rms, .3);
@@ -486,7 +486,7 @@ TEST_F(MultiViewTest, CamsToFloor)
 
     std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility, models,
-                                    Rs_rvec, Ts, Ks, distortions, 0, flagsForIntrinsics);
+                                    Ks, distortions, Rs_rvec, Ts, flagsForIntrinsics);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 
     EXPECT_LE(rms, 1.);
@@ -555,7 +555,7 @@ TEST_F(MultiViewTest, Hetero)
 
     std::vector<cv::Mat> Ks, distortions, Rs, Rs_rvec, Ts;
     double rms = calibrateMultiview(objPoints, image_points_all, image_sizes, visibility, models,
-                                    Rs_rvec, Ts, Ks, distortions, 0, flagsForIntrinsics);
+                                    Ks, distortions, Rs_rvec, Ts, flagsForIntrinsics);
     CV_LOG_INFO(NULL, "RMS: "  << rms);
 
     EXPECT_LE(rms, 2.5);
