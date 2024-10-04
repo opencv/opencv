@@ -16,13 +16,23 @@ public:
         setParamsFrom(params);
 
         // shape as param
-        CV_CheckTrue(params.has("shape"), "DNN/Expand: shape is required in Expand layer initialization");
-        DictValue param_shape = params.get("shape");
-        int ndims_shape = param_shape.size();
-        CV_CheckGT(ndims_shape, 0, "DNN/Expand: ndims of shape must be > 0");
-        target_shape.resize(ndims_shape);
-        for (int i = 0; i < ndims_shape; i++) {
-            target_shape[i] = param_shape.get<int>(i);
+        if (params.has("shape")) {
+            DictValue param_shape = params.get("shape");
+            int ndims_shape = param_shape.size();
+            CV_CheckGT(ndims_shape, 0, "DNN/Expand: ndims of shape must be > 0");
+            target_shape.resize(ndims_shape);
+            for (int i = 0; i < ndims_shape; i++) {
+                target_shape[i] = param_shape.get<int>(i);
+            }
+        } else if (params.blobs.size() == 1) {
+            Mat expand_shape = params.blobs[0];
+            CV_Assert(expand_shape.total() > 0);
+            target_shape.resize(expand_shape.total());
+            for (int i = 0; i < expand_shape.total(); i++) {
+                target_shape[i] = expand_shape.at<int64_t>(i);
+            }
+        } else {
+            CV_Error(Error::StsBadArg, "DNN/Expand: shape is required in Expand layer initialization");
         }
 
         // FIXME: remove when 0d/1d mat is available
