@@ -1062,7 +1062,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
 
     if (isContinuous())
     {
-        CV_Assert(_cn >= 0 && _newndims > 0 && _newndims <= CV_MAX_DIM && _newsz);
+        CV_Assert(_cn >= 0 && _newndims >= 0 && _newndims <= CV_MAX_DIM && _newsz);
 
         if (_cn == 0)
             _cn = this->channels();
@@ -1072,7 +1072,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
         size_t total_elem1_ref = this->total() * this->channels();
         size_t total_elem1 = _cn;
 
-        AutoBuffer<int, 4> newsz_buf( (size_t)_newndims );
+        AutoBuffer<int, 4> newsz_buf( (size_t)std::max(_newndims, 1) );
 
         for (int i = 0; i < _newndims; i++)
         {
