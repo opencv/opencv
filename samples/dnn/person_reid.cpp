@@ -260,8 +260,8 @@ int main(int argc, char **argv)
     int stdWeight = 400;
     int stdImgSize = 512;
     int imgWidth = -1; // Initialization
-    int fontSize = -1;
-    int fontWeight = -1;
+    int fontSize = 50;
+    int fontWeight = 500;
 
     Net reidNet = readNetFromONNX(modelPath);
     reidNet.setPreferableBackend(getBackendID(backend));
@@ -306,14 +306,20 @@ int main(int argc, char **argv)
             }
             if (imgWidth == -1){
                 imgWidth = min(image.rows, image.cols);
-                fontSize = (stdSize*imgWidth)/stdImgSize;
-                fontWeight = (stdWeight*imgWidth)/stdImgSize;
+                fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize);
+                fontWeight = min(fontWeight, (stdWeight*imgWidth)/stdImgSize);
             }
 
-            putText(image, "Press 's' to Draw Bounding Box, press 'Enter' after selecting", Point(10, 30), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+            const string label = "Press space bar to pause video to draw bounding box.";
+            Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
+            r.height += 2 * fontSize; // padding
+            r.width += 10; // padding
+            rectangle(image, r, Scalar::all(255), FILLED);
+            putText(image, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+            putText(image, "Press space bar after selecting.", Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
             imshow("TRACKING", image);
             int key = waitKey(200);
-            if(key == 's' || key == 'S'){
+            if(key == ' '){
                 Rect rect = selectROI("TRACKING", image);
 
                 if (rect.width > 0 && rect.height > 0) {
@@ -338,8 +344,8 @@ int main(int argc, char **argv)
         }
         if (imgWidth == -1){
             imgWidth = min(frame.rows, frame.cols);
-            fontSize = (stdSize*imgWidth)/stdImgSize;
-            fontWeight = (stdWeight*imgWidth)/stdImgSize;
+            fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize);
+            fontWeight = min(fontWeight, (stdWeight*imgWidth)/stdImgSize);
         }
         vector<Mat> detectedImages = yoloDetector(frame, net);
 
@@ -353,8 +359,12 @@ int main(int argc, char **argv)
             rectangle(frame, bbox, Scalar(0, 0, 255), 2);
             putText(frame, "Target", Point(bbox.x, bbox.y - 10), Scalar(0,0,255), fontFace, fontSize, fontWeight);
         }
-
-        putText(frame, "Tracking", Point(10, 30), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+        const string label = "Tracking";
+        Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
+        r.height += fontSize; // padding
+        r.width += 10; // padding
+        rectangle(frame, r, Scalar::all(255), FILLED);
+        putText(frame, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         imshow("TRACKING", frame);
         int key = waitKey(30);
         if (key == 'q' || key == 27) {

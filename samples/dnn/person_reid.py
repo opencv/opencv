@@ -176,8 +176,6 @@ def main():
         exit(1)
 
     args.model = findModel(args.model, args.sha1)
-    if not os.path.isfile(args.model):
-        raise OSError("Model not exist")
 
     if args.yolo_model is None:
         print("[ERROR] Please pass path to yolov8.onnx model file using --yolo_model.")
@@ -192,12 +190,12 @@ def main():
     cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
     query_images = []
 
-    stdSize = 0.65
+    stdSize = 0.6
     stdWeight = 2
     stdImgSize = 512
     imgWidth = -1 # Initialization
-    fontSize = -1
-    fontThickness = -1
+    fontSize = 1.5
+    fontThickness = 1
 
     if args.query:
         query_images = [cv.imread(findFile(args.query))]
@@ -209,14 +207,18 @@ def main():
                 return -1
             if imgWidth == -1:
                 imgWidth = min(image.shape[:2])
-                fontSize = (stdSize*imgWidth)/stdImgSize
-                fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
+                fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize)
+                fontThickness = max(fontThickness,(stdWeight*imgWidth)//stdImgSize)
 
-            cv.putText(image, "Press 's' to Draw Bounding Box, press 'Enter' after selecting", (10, 30), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+            label = "Press space bar to pause video to draw bounding box."
+            labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
+            cv.rectangle(image, (0, 0), (labelSize[0]+10, labelSize[1]+int(30*fontSize)), (255,255,255), cv.FILLED)
+            cv.putText(image, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+            cv.putText(image, "Press space bar after selecting.", (10, int(50*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
             cv.imshow('TRACKING', image)
 
             key = cv.waitKey(100) & 0xFF
-            if key == ord('s'):
+            if key == ord(' '):
                 rect = cv.selectROI("TRACKING", image)
                 if rect:
                     x, y, w, h = rect
@@ -234,8 +236,8 @@ def main():
             break
         if imgWidth == -1:
             imgWidth = min(frame.shape[:2])
-            fontSize = (stdSize*imgWidth)/stdImgSize
-            fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
+            fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize)
+            fontThickness = max(fontThickness,(stdWeight*imgWidth)//stdImgSize)
 
         images = yolo_detector(frame, yolo_net)
         gallery_feat = extract_feature(images, reid_net)
@@ -247,7 +249,10 @@ def main():
         cv.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
         cv.putText(frame, "Target", (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 255), fontThickness)
 
-        cv.putText(frame, "Tracking", (10, 30), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+        label="Tracking"
+        labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
+        cv.rectangle(frame, (0, 0), (labelSize[0]+10, labelSize[1]+10), (255,255,255), cv.FILLED)
+        cv.putText(frame, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
         cv.imshow("TRACKING", frame)
         if cv.waitKey(1) & 0xFF in [ord('q'), 27]:
             break
