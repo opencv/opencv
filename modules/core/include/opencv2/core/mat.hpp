@@ -584,6 +584,8 @@ struct CV_EXPORTS UMatData
 CV_ENUM_FLAGS(UMatData::MemoryFlag)
 
 
+#define CV_DIM_BUFLEN 5
+
 struct CV_EXPORTS MatSize
 {
     explicit MatSize(int* _p) CV_NOEXCEPT;
@@ -608,7 +610,7 @@ struct CV_EXPORTS MatStep
     MatStep& operator = (size_t s);
 
     size_t* p;
-    size_t buf[2];
+    size_t buf[CV_DIM_BUFLEN];
 protected:
     MatStep& operator = (const MatStep&);
 };
@@ -2136,6 +2138,12 @@ public:
     int dims;
     //! the number of rows and columns or (-1, -1) when the matrix has more than 2 dimensions
     int rows, cols;
+#if CV_DIM_BUFLEN > 2
+private:
+    int _padding_for_size[CV_DIM_BUFLEN - 2];
+public:
+#endif
+
     //! pointer to the data
     uchar* data;
 
@@ -2621,6 +2629,12 @@ public:
 
     //! number of columns in the matrix; -1 when the matrix has more than 2 dimensions
     int cols;
+
+#if CV_DIM_BUFLEN > 2
+private:
+    int _padding_for_size[CV_DIM_BUFLEN - 2];
+public:
+#endif
 
     //! custom allocator
     MatAllocator* allocator;

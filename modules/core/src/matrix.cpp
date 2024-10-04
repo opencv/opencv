@@ -226,7 +226,7 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
             m.step.p = m.step.buf;
             m.size.p = &m.rows;
         }
-        if( _dims > 2 )
+        if( _dims > CV_DIM_BUFLEN )
         {
             m.step.p = (size_t*)fastMalloc(_dims*sizeof(m.step.p[0]) + (_dims+1)*sizeof(m.size.p[0]));
             m.size.p = (int*)(m.step.p + _dims) + 1;
@@ -311,7 +311,7 @@ void finalizeHdr(Mat& m)
 {
     m.updateContinuityFlag();
     int d = m.dims;
-    if( d > 2 )
+    if( d > CV_DIM_BUFLEN )
         m.rows = m.cols = -1;
     if(m.u)
         m.datastart = m.data = m.u->data;
@@ -600,10 +600,13 @@ Mat::Mat(Mat&& m) CV_NOEXCEPT
       datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
       u(m.u), size(&rows)
 {
-    if (m.dims <= 2)  // move new step/size info
+    if (m.dims <= CV_DIM_BUFLEN) // move new step/size info
     {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
+        for (int i = 0; i < m.dims; ++i)
+        {
+            size[i] = m.size[i];
+            step[i] = m.step[i];
+        }
     }
     else
     {
@@ -635,10 +638,13 @@ Mat& Mat::operator=(Mat&& m)
         step.p = step.buf;
         size.p = &rows;
     }
-    if (m.dims <= 2) // move new step/size info
+    if (m.dims <= CV_DIM_BUFLEN) // move new step/size info
     {
-        step[0] = m.step[0];
-        step[1] = m.step[1];
+        for (int i = 0; i < m.dims; ++i)
+        {
+            size[i] = m.size[i];
+            step[i] = m.step[i];
+        }
     }
     else
     {
