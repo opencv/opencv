@@ -2726,4 +2726,20 @@ TEST(Mat, reshape_0d)
     EXPECT_EQ(m0d_.empty(), false);
 }
 
+TEST(Mat, reshape_empty)
+{
+    std::vector<int> v;
+    int sz = 0;
+    Mat m = Mat(v).reshape(0, 1, &sz);
+
+    EXPECT_EQ(m.empty(), true);
+    EXPECT_EQ(m.dims, 1);
+    EXPECT_EQ(m.type(), CV_32S);
+    EXPECT_EQ(m.ptr<int>(), nullptr);
+    EXPECT_EQ(m.rows, 1);
+    EXPECT_EQ(m.total(), 0);
+}
+
+
+
 }} // namespace
