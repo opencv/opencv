@@ -1288,14 +1288,22 @@ points in all the available views from all cameras.
 @sa findChessboardCorners, findCirclesGrid, calibrateCamera, fisheye::calibrate, registerCameras
 */
 
+CV_EXPORTS_AS(calibrateMultiviewExtended) double calibrateMultiview (
+        InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
+        const std::vector<cv::Size>& imageSize, InputArray detectionMask, InputArray models,
+        InputOutputArrayOfArrays Ks, InputOutputArrayOfArrays distortions,
+        InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
+        OutputArray initializationPairs, OutputArrayOfArrays rvecs0,
+        OutputArrayOfArrays tvecs0, OutputArray perFrameErrors,
+        InputArray flagsForIntrinsics=noArray(), int flags = 0);
+
+/// @overload
 CV_EXPORTS_W double calibrateMultiview (
         InputArrayOfArrays objPoints, const std::vector<std::vector<Mat>> &imagePoints,
         const std::vector<cv::Size>& imageSize, InputArray detectionMask, InputArray models,
-        InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
         InputOutputArrayOfArrays Ks, InputOutputArrayOfArrays distortions,
-        int flags = 0, InputArray flagsForIntrinsics=noArray(),
-        OutputArrayOfArrays rvecs0=noArray(), OutputArrayOfArrays tvecs0=noArray(),
-        OutputArray perFrameErrors=noArray(), OutputArray initializationPairs=noArray());
+        InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
+        InputArray flagsForIntrinsics=noArray(), int flags = 0);
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$

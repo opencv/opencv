@@ -423,7 +423,7 @@ def calibrateFromPoints(
 #    try:
 # [multiview_calib]
     rmse, Rs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = \
-            cv.calibrateMultiview(
+            cv.calibrateMultiviewExtended(
                 objPoints=pattern_points_all,
                 imagePoints=image_points,
                 imageSize=image_sizes,
