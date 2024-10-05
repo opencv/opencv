@@ -440,10 +440,8 @@ inline void v_sincos_default_16f(const _TpVec16F &x, _TpVec16F &ysin, _TpVec16F 
     _vx = v_fma(_vy, v_minus_DP2, _vx);
     _vx = v_fma(_vy, v_minus_DP3, _vx);
 
-    sign_mask_sin = v_xor(sign_mask_sin,
-                          v_reinterpret_as_f16(v_eq(v_and(emm2, v_setall_<_TpVec16S>((short)4)), v_setall_<_TpVec16S>((short)0))));
-    sign_mask_cos = v_reinterpret_as_f16(
-            v_eq(v_and(v_sub(emm2, v_setall_<_TpVec16S>((short)2)), v_setall_<_TpVec16S>((short)4)), v_setall_<_TpVec16S>((short)0)));
+    sign_mask_sin = v_xor(sign_mask_sin, v_reinterpret_as_f16(v_eq(v_and(emm2, v_setall_<_TpVec16S>((short)4)), v_setall_<_TpVec16S>((short)0))));
+    sign_mask_cos = v_reinterpret_as_f16(v_eq(v_and(v_sub(emm2, v_setall_<_TpVec16S>((short)2)), v_setall_<_TpVec16S>((short)4)), v_setall_<_TpVec16S>((short)0)));
 
     _TpVec16F _vxx = v_mul(_vx, _vx);
     _TpVec16F y1, y2;
@@ -646,7 +644,6 @@ inline _TpVec64F v_cos_default_64f(const _TpVec64F &x) {
     v_sincos_default_64f<_TpVec64F, _TpVec64S>(x, ysin, ycos);
     return ycos;
 }
-
 //! @}
 
 
