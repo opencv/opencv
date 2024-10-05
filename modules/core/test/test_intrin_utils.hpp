@@ -1915,6 +1915,32 @@ template<typename R> struct TheTest
 
     void __test_sincos(LaneType diff_thr, LaneType flt_min) {
         int n = VTraits<R>::vlanes();
+        // Test each value for a period, from -PI to PI
+        const LaneType step = (LaneType) 0.01;
+        for (LaneType i = 0; i <= (LaneType)M_PI;) {
+            Data<R> dataPosPI, dataNegPI;
+            for (int j = 0; j < n; ++j) {
+                dataPosPI[j] = i;
+                dataNegPI[j] = -i;
+                i += step;
+            }
+            R posPI = dataPosPI, negPI = dataNegPI, sinPos, cosPos, sinNeg, cosNeg;
+            v_sincos(posPI, sinPos, cosPos);
+            v_sincos(negPI, sinNeg, cosNeg);
+            Data<R> resSinPos = sinPos, resCosPos = cosPos, resSinNeg = sinNeg, resCosNeg = cosNeg;
+            for (int j = 0; j < n; ++j) {
+                LaneType std_sin_pos = (LaneType) std::sin(dataPosPI[j]);
+                LaneType std_cos_pos = (LaneType) std::cos(dataPosPI[j]);
+                LaneType std_sin_neg = (LaneType) std::sin(dataNegPI[j]);
+                LaneType std_cos_neg = (LaneType) std::cos(dataNegPI[j]);
+                SCOPED_TRACE(cv::format("Period test value: %lf and %lf", (double) dataPosPI[j], (double) dataNegPI[j]));
+                EXPECT_LT(std::abs(resSinPos[j] - std_sin_pos), diff_thr * (std::abs(std_sin_pos) + flt_min * 100));
+                EXPECT_LT(std::abs(resCosPos[j] - std_cos_pos), diff_thr * (std::abs(std_cos_pos) + flt_min * 100));
+                EXPECT_LT(std::abs(resSinNeg[j] - std_sin_neg), diff_thr * (std::abs(std_sin_neg) + flt_min * 100));
+                EXPECT_LT(std::abs(resCosNeg[j] - std_cos_neg), diff_thr * (std::abs(std_cos_neg) + flt_min * 100));
+            }
+        }
+
         // Test special values
         std::vector<LaneType> specialValues = {(LaneType) 0, (LaneType) M_PI, (LaneType) (M_PI / 2), (LaneType) INFINITY, (LaneType) -INFINITY, (LaneType) NAN};
         const int testRandNum = 10000;
@@ -1929,8 +1955,8 @@ template<typename R> struct TheTest
                     int specialValueIndex = rng.uniform(0, (int) specialValues.size());
                     dataRand[j] = specialValues[specialValueIndex];
                 } else {
-                    // Generate uniform random data in [-2*PI, 2*PI]
-                    dataRand[j] = (LaneType) rng.uniform(-2 * M_PI, 2 * M_PI);
+                    // Generate uniform random data in [-1000, 1000]
+                    dataRand[j] = (LaneType) rng.uniform(-1000, 1000);
                 }
             }
 
