@@ -409,7 +409,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
                (((_param2.rows == 1 || _param2.cols == 1) &&
                 (_param2.rows + _param2.cols - 1 == cn || _param2.rows + _param2.cols - 1 == 1 ||
                 (_param1.size() == Size(1, 4) && _param1.type() == CV_64F && cn <= 4))) ||
-                (_param2.rows == cn && _param2.cols == cn && disttype == NORMAL)));
+                (_param2.rows == cn && _param2.cols == cn && disttype == RNG::NORMAL)));
 
     Vec2i* ip = 0;
     Vec2d* dp = 0;
@@ -421,7 +421,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     int n1 = (int)_param1.total();
     int n2 = (int)_param2.total();
 
-    if( disttype == UNIFORM )
+    if( disttype == RNG::UNIFORM )
     {
         _parambuf.allocate(cn*8 + n1 + n2);
         double* parambuf = _parambuf.data();
@@ -535,7 +535,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         }
         CV_Assert( func != 0 );
     }
-    else if( disttype == CV_RAND_NORMAL )
+    else if( disttype == RNG::NORMAL )
     {
         _parambuf.allocate(MAX(n1, cn) + MAX(n2, cn));
         double* parambuf = _parambuf.data();
@@ -586,7 +586,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
     float* nbuf = 0;
     float* tmpbuf = 0;
 
-    if( disttype == UNIFORM )
+    if( disttype == RNG::UNIFORM )
     {
         buf.allocate(blockSize*cn*4);
         param = (uchar*)(double*)buf.data();
@@ -637,7 +637,7 @@ void RNG::fill( InputOutputArray _mat, int disttype,
         {
             int len = std::min(total - j, blockSize);
 
-            if( disttype == CV_RAND_UNI )
+            if( disttype == RNG::UNIFORM )
                 func( ptr, len*cn, &state, param, tmpbuf, smallFlag );
             else
             {
@@ -749,28 +749,6 @@ void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
     CV_Assert( func != 0 );
     func( dst, rng, iterFactor );
 }
-
-
-#ifndef OPENCV_EXCLUDE_C_API
-
-CV_IMPL void
-cvRandArr( CvRNG* _rng, CvArr* arr, int disttype, CvScalar param1, CvScalar param2 )
-{
-    cv::Mat mat = cv::cvarrToMat(arr);
-    // !!! this will only work for current 64-bit MWC RNG !!!
-    cv::RNG& rng = _rng ? (cv::RNG&)*_rng : cv::theRNG();
-    rng.fill(mat, disttype == CV_RAND_NORMAL ?
-        cv::RNG::NORMAL : cv::RNG::UNIFORM, cv::Scalar(param1), cv::Scalar(param2) );
-}
-
-CV_IMPL void cvRandShuffle( CvArr* arr, CvRNG* _rng, double iter_factor )
-{
-    cv::Mat dst = cv::cvarrToMat(arr);
-    cv::RNG& rng = _rng ? (cv::RNG&)*_rng : cv::theRNG();
-    cv::randShuffle( dst, iter_factor, &rng );
-}
-
-#endif  // OPENCV_EXCLUDE_C_API
 
 
 // Mersenne Twister random number generator.
