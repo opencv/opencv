@@ -1939,7 +1939,7 @@ template<typename R> struct TheTest
             v_sincos(x, s, c);
             Data<R> resSin = s, resCos = c;
             for (int j = 0; j < n; ++j) {
-                SCOPED_TRACE(cv::format("Random test value: %f", (double) dataRand[j]));
+                SCOPED_TRACE(cv::format("Random test value: %lf", (double) dataRand[j]));
                 LaneType std_sin = (LaneType) std::sin(dataRand[j]);
                 LaneType std_cos = (LaneType) std::cos(dataRand[j]);
                 // input NaN, +INF, -INF -> output NaN
