@@ -884,6 +884,9 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
 
     numInputs = inputs.size();
     inputSubscriptIndices.reserve(numInputs);
+    std::cout << "numInputs: " << numInputs << std::endl;
+    std::cout << "inputSubscriptIndices.size(): " << inputSubscriptIndices.size() << std::endl;
+    std::cout << "inputSubscriptIndices[0].size(): " << inputSubscriptIndices[0].size() << std::endl;
     // Check if number of tokens in equal to number of inputs.
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
     int num_input_tensors = inputs.size();
@@ -897,8 +900,9 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
     }
 
     // if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",") ){ //  || (numInputs == 2 && lhs_eq[lhs_eq.length() - 1] == ',')) {
-    if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",") || (numInputs == 2 && lhs_eq[lhs_eq.length() - 1] == ',')) {
+    if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",")) {
         std::cout << "intializing the vector" << std::endl;
+        std::cout << "inputSubscriptIndices.size(): " << inputSubscriptIndices.size() << std::endl;
         inputSubscriptIndices.resize(numInputs);
         return;
     }
@@ -1017,8 +1021,13 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
         CV_Assert(!(numOfEllipsisDims == 0 && dim_count != rank)
             && "The Einsum subscripts string does not contain required amount of subscript labels and no ellipsis is provided in the input.");
 
+        std::cout << "==>currTokenIndices.size(): " << currTokenIndices.size() << std::endl;
         inputSubscriptIndices.emplace_back(std::move(currTokenIndices));
+        std::cout << "==>inputSubscriptIndices.size(): " << inputSubscriptIndices.size() << std::endl;
         ++inputIdx;
+    }
+    if (numInputs == 2 && lhs_eq[lhs_eq.length() - 1] == ',') {
+        inputSubscriptIndices.emplace_back(std::vector<int>{});
     }
 }
 
