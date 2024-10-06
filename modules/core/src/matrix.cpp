@@ -1757,9 +1757,6 @@ Mat Mat::reshape(int new_cn, int new_rows) const
             CV_Error( cv::Error::BadStep,
             "The matrix is not continuous, thus its number of rows can not be changed" );
 
-        if( (unsigned)new_rows > (unsigned)total_size )
-            CV_Error( cv::Error::StsOutOfRange, "Bad new number of rows" );
-
         total_width = total_size / new_rows;
 
         if( total_width * new_rows != total_size )
@@ -1809,22 +1806,30 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
 
         AutoBuffer<int, 4> newsz_buf( (size_t)_newndims );
 
+        int m1_idx = -1;
+
         for (int i = 0; i < _newndims; i++)
         {
-            CV_Assert(_newsz[i] >= 0);
-
-            if (_newsz[i] > 0)
+            if (_newsz[i] >= 0) {
                 newsz_buf[i] = _newsz[i];
-            else if (i < dims)
-                newsz_buf[i] = this->size[i];
-            else
-                CV_Error(cv::Error::StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
-
-            total_elem1 *= (size_t)newsz_buf[i];
+                total_elem1 *= (size_t)newsz_buf[i];
+            } else {
+                if (m1_idx >= 0)
+                    CV_Error(cv::Error::StsBadSize, "More than one '-1' occured in the new shape");
+                m1_idx = i;
+            }
         }
 
-        if (total_elem1 != total_elem1_ref)
+        if (m1_idx >= 0) {
+            if (total_elem1 == 0) {
+                CV_Assert(total_elem1_ref == 0);
+                total_elem1 = 1;
+            }
+            CV_Assert(total_elem1_ref % total_elem1 == 0);
+            newsz_buf[m1_idx] = (int)(total_elem1_ref / total_elem1);
+        } else if (total_elem1 != total_elem1_ref) {
             CV_Error(cv::Error::StsUnmatchedSizes, "Requested and source matrices have different count of elements");
+        }
 
         Mat hdr = *this;
         hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
