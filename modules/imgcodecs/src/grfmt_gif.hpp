@@ -130,6 +130,12 @@ private:
         void  recurseReduce(const std::shared_ptr<OctreeNode>& node);
     };
 
+    enum GifDithering // normal dithering level is -1 to 2
+    {
+        GRFMT_GIF_None = 3,
+        GRFMT_GIF_FloydSteinberg = 4
+    };
+
     WLByteStream    strm;
     int             m_width, m_height;
 
@@ -139,12 +145,13 @@ private:
     uchar           opMode;
     uchar           criticalTransparency;
     uchar           transparentColor;
+    Vec3b           transparentRGB;
     int             top, left, width, height;
 
     OctreeColorQuant quantG;
     OctreeColorQuant quantL;
 
-    AutoBuffer<int>   lzwTable;
+    AutoBuffer<int16_t>   lzwTable;
     AutoBuffer<uchar> imgCodeStream;
 
     AutoBuffer<uchar> globalColorTable;
@@ -157,13 +164,14 @@ private:
     int             bitDepth;
     int             dithering;
     int             lzwMinCodeSize, lzwMaxCodeSize;
+    bool            fast;
 
-    bool writeFrames(std::vector<Mat>& img_vec, const std::vector<int>& params);
+    bool writeFrames(const std::vector<Mat>& img_vec, const std::vector<int>& params);
     bool writeHeader(const std::vector<Mat>& img_vec);
     bool writeFrame(const Mat& img);
     bool pixel2code(const Mat& img);
     void getColorTable(const std::vector<Mat>& img_vec, bool isGlobal);
-    static void ditheringKernel(Mat &img, int depth, uchar transparency);
+    static int ditheringKernel(const Mat &img, Mat &img_, int depth, uchar transparency);
     bool lzwEncode();
     void close();
 };

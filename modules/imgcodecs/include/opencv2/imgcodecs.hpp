@@ -114,10 +114,10 @@ enum ImwriteFlags {
        IMWRITE_AVIF_SPEED          = 514,//!< For AVIF, it is between 0 (slowest) and (fastest). Default is 9.
        IMWRITE_GIF_LOOP            = 1024,//!< For GIF, it can be a loop flag from 0 to 65535. Default is 0 - loop forever.
        IMWRITE_GIF_SPEED           = 1025,//!< For GIF, it is between 1 (slowest) and 100 (fastest). Default is 96.
-       IMWRITE_GIF_QUALITY         = 1026, //!< For GIF, it can be a quality from 1 to 8. Default is 8.
+       IMWRITE_GIF_QUALITY         = 1026, //!< For GIF, it can be a quality from 1 to 8. Default is 2. See cv::ImwriteGifCompressionFlags.
        IMWRITE_GIF_DITHER          = 1027, //!< For GIF, it can be a quality from -1(most dither) to 3(no dither). Default is 0.
        IMWRITE_GIF_TRANSPARENCY    = 1028, //!< For GIF, the alpha channel lower than this will be set to transparent. Default is 1.
-       IMWRITE_GIF_COLORTABLE      = 1029 //!< For GIF, 0 means global color table is used, 1 means local color table is used. Default is 0.
+       IMWRITE_GIF_COLORTABLE      = 1029  //!< For GIF, 0 means global color table is used, 1 means local color table is used. Default is 0.
      };
 
 enum ImwriteJPEGSamplingFactorParams {
@@ -220,6 +220,18 @@ enum ImwritePAMFlags {
 enum ImwriteHDRCompressionFlags {
     IMWRITE_HDR_COMPRESSION_NONE = 0,
     IMWRITE_HDR_COMPRESSION_RLE = 1
+};
+
+//! Imwrite GIF specific values for IMWRITE_GIF_QUALITY parameter key, if larger than 3, then its related to the size of the color table.
+enum ImwriteGIFCompressionFlags {
+    IMWRITE_GIF_FAST_NO_DITHER       = 1,
+    IMWRITE_GIF_FAST_FLOYD_DITHER    = 2,
+    IMWRITE_GIF_COLORTABLE_SIZE_8    = 3,
+    IMWRITE_GIF_COLORTABLE_SIZE_16   = 4,
+    IMWRITE_GIF_COLORTABLE_SIZE_32   = 5,
+    IMWRITE_GIF_COLORTABLE_SIZE_64   = 6,
+    IMWRITE_GIF_COLORTABLE_SIZE_128  = 7,
+    IMWRITE_GIF_COLORTABLE_SIZE_256  = 8
 };
 
 //! @} imgcodecs_flags

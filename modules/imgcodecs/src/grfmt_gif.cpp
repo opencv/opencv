@@ -465,9 +465,11 @@ GifEncoder::GifEncoder() {
     m_buf_supported = true;
     opMode = GRFMT_GIF_Cover;
     transparentColor = 0; // index of the transparent color, default 0. currently it is a constant number
+    transparentRGB = Vec3b(0, 0, 0); // the transparent color, default black
     lzwMaxCodeSize = 12; // the maximum code size, default 12. currently it is a constant number
 
     // default value of the params
+    fast = true;
     loopCount = 0; // infinite loops by default
     criticalTransparency = 1; // critical transparency, default 1, range from 0 to 255, 0 means no transparency
     frameDelay = 5; // 20fps by default, 10ms per unit
@@ -487,27 +489,15 @@ bool GifEncoder::isFormatSupported(int depth) const {
 }
 
 bool GifEncoder::write(const Mat &img, const std::vector<int> &params) {
-    std::vector<Mat> img_vec;
-    Mat img_;
-    img.copyTo(img_);
-    img_vec.push_back(img_);
+    std::vector<Mat> img_vec(1, img);
     return writeFrames(img_vec, params);
 }
 
 bool GifEncoder::writemulti(const std::vector<Mat> &img_vec, const std::vector<int> &params) {
-    std::vector<Mat> img_vec_;
-    for (const auto &img : img_vec) {
-        if (img.empty()) {
-            return false;
-        }
-        Mat img_;
-        img.copyTo(img_);
-        img_vec_.push_back(img_);
-    }
-    return writeFrames(img_vec_, params);
+    return writeFrames(img_vec, params);
 }
 
-bool GifEncoder::writeFrames(std::vector<Mat>& img_vec,
+bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
                              const std::vector<int>& params) {
     if (img_vec.empty()) {
         return false;
@@ -530,13 +520,9 @@ bool GifEncoder::writeFrames(std::vector<Mat>& img_vec,
             case IMWRITE_GIF_SPEED:
                 frameDelay = 100 - std::min(std::max(params[i + 1] - 1, 0), 99); // from 10ms to 1000ms
                 break;
-            case IMWRITE_GIF_QUALITY:
-                lzwMinCodeSize = std::min(std::max(params[i + 1], 3), 8);
-                colorNum = 1 << lzwMinCodeSize;
-                globalColorTableSize = colorNum;
-                break;
             case IMWRITE_GIF_DITHER:
                 dithering = std::min(std::max(params[i + 1], -1), 3);
+                fast = false;
                 break;
             case IMWRITE_GIF_TRANSPARENCY:
                 criticalTransparency = (uchar)std::min(std::max(params[i + 1], 0), 255);
@@ -544,6 +530,24 @@ bool GifEncoder::writeFrames(std::vector<Mat>& img_vec,
             case IMWRITE_GIF_COLORTABLE:
                 localColorTableSize = std::min(std::max(params[i + 1], 0), 1);
                 break;
+            case IMWRITE_GIF_QUALITY:
+                switch (params[i + 1]) {
+                    case IMWRITE_GIF_FAST_FLOYD_DITHER:
+                        fast = true;
+                        dithering = GRFMT_GIF_FloydSteinberg;
+                        break;
+                    case IMWRITE_GIF_FAST_NO_DITHER:
+                        fast = true;
+                        dithering = GRFMT_GIF_None;
+                        break;
+                    default:
+                        lzwMinCodeSize = std::min(std::max(params[i + 1], 3), 8);
+                        colorNum = 1 << lzwMinCodeSize;
+                        globalColorTableSize = colorNum;
+                        fast = false;
+                        break;
+                }
+                break; // case IMWRITE_GIF_QUALITY
         }
     }
     if (criticalTransparency) {
@@ -551,32 +555,55 @@ bool GifEncoder::writeFrames(std::vector<Mat>& img_vec,
         colorNum = 1 << lzwMinCodeSize;
         globalColorTableSize = colorNum;
     }
+    localColorTableSize = localColorTableSize ? colorNum : 0;
 
-    if (dithering != 3) {
-        for (auto &img : img_vec) {
-            int depth = (int)ceil(log2(colorNum) / 3) + dithering;
-            ditheringKernel(img, depth, criticalTransparency);
+    std::vector<Mat> img_vec_;
+    if (fast) {
+        const uchar transparent = 0x92; // 1001_0010: the middle of the color table
+        if (dithering == GRFMT_GIF_None) {
+            img_vec_ = img_vec;
+            transparentColor = transparent;
+        } else {
+            localColorTableSize = 0;
+            int transRGB;
+            const int depth = 3 << 8 | 3 << 4 | 2; // r:g:b = 3:3:2
+            for (auto &img: img_vec) {
+                Mat img_(img.size(), img.type());
+                transRGB = ditheringKernel(img, img_, depth, criticalTransparency);
+                if (transRGB >= 0) {
+                    transparentRGB = Vec3b((transRGB >> 16) & 0xFF, (transRGB >> 8) & 0xFF, transRGB & 0xFF);
+                    transparentColor = transparent;
+                }
+                img_vec_.push_back(img_);
+            }
+            if (transparentColor == 0) {
+                criticalTransparency = 0;
+            }
         }
+    } else if (dithering != GRFMT_GIF_None) {
+        int depth = (int)floor(log2(colorNum) / 3) + dithering;
+        depth = depth << 8 | depth << 4 | depth;
+        for (auto &img : img_vec) {
+            Mat img_(img.size(), img.type());
+            ditheringKernel(img, img_, depth, criticalTransparency);
+            img_vec_.push_back(img_);
+        }
+    } else {
+        img_vec_ = img_vec;
     }
-    bool result = writeHeader(img_vec);
+    bool result = writeHeader(img_vec_);
     if (!result) {
         strm.close();
         return false;
     }
 
-    for (const auto &img : img_vec) {
+    for (const auto &img : img_vec_) {
         result = writeFrame(img);
-        if (!result) {
-            strm.close();
-            if (!m_buf)
-                remove(m_filename.c_str());
-            return false;
-        }
     }
 
     strm.putByte(0x3B); // trailer
     strm.close();
-    return true;
+    return result;
 }
 
 ImageEncoder GifEncoder::newEncoder() const {
@@ -610,8 +637,7 @@ bool GifEncoder::writeFrame(const Mat &img) {
     strm.putWord(height);
     flag = localColorTableSize > 0 ? 0x80 : 0x00;
     if (localColorTableSize > 0) {
-        std::vector<Mat> img_vec;
-        img_vec.push_back(img);
+        std::vector<Mat> img_vec(1, img);
         getColorTable(img_vec, false);
     }
     flag |= lzwMinCodeSize - 1;
@@ -636,10 +662,10 @@ bool GifEncoder::lzwEncode() {
 
     lzwTable.allocate((1 << 12) * 256);
     // clear lzwTable
-    memset(lzwTable.data(), 0, (1 << 12) * 256 * sizeof(int));
+    memset(lzwTable.data(), 0, (1 << 20) * sizeof(int16_t)); // 20 = 12 + 8 = 2^12(max lzw table size) * 256
 
     // next code
-    int idx = (1 << lzwMinCodeSize) + 2;
+    auto idx = (int16_t)((1 << lzwMinCodeSize) + 2);
 
     int bufferLen = 0;
     uchar buffer[256];
@@ -676,9 +702,9 @@ bool GifEncoder::lzwEncode() {
             if(idx == (1 << lzwMaxCodeSize)){
                 output |= (((size_t)1 << lzwMinCodeSize) << bitLeft);
                 bitLeft += lzwCodeSize;
-                memset(lzwTable.data(), 0, (1 << 12) * 256 * sizeof(int));
+                memset(lzwTable.data(), 0, (1 << 20) * sizeof(int16_t)); // clear lzwTable
                 // next code
-                idx = (1 << lzwMinCodeSize) + 2;
+                idx = (int16_t)((1 << lzwMinCodeSize) + 2);
                 lzwCodeSize = lzwMinCodeSize + 1;
             }
         } else{
@@ -757,6 +783,45 @@ bool GifEncoder::pixel2code(const Mat &img) {
     if(img.empty()) return false;
     CV_Assert(img.rows == (top + height) && img.cols == (left + width));
 
+    if (fast) {
+        if (img.type() == CV_8UC3) {
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    uchar colorIdx = (img.at<Vec3b>(i, j)[2]       & 0xe0) |
+                                    ((img.at<Vec3b>(i, j)[1] >> 3) & 0x1c) |
+                                    ((img.at<Vec3b>(i, j)[0] >> 6) & 0x03);
+                    if (criticalTransparency && colorIdx == transparentColor) {
+                        imgCodeStream[i * width + j] =
+                                transparentColor - 4; // 4 means the minimum color change of green channel
+                    } else {
+                        imgCodeStream[i * width + j] = colorIdx;
+                    }
+                }
+            }
+        } else if (img.type() == CV_8UC4) {
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    if (img.at<Vec4b>(i, j)[3] < criticalTransparency) {
+                        imgCodeStream[i * width + j] = transparentColor;
+                        continue;
+                    }
+                    uchar colorIdx = (img.at<Vec4b>(i, j)[2]       & 0xe0) |
+                                    ((img.at<Vec4b>(i, j)[1] >> 3) & 0x1c) |
+                                    ((img.at<Vec4b>(i, j)[0] >> 6) & 0x03);
+                    if (criticalTransparency && colorIdx == transparentColor) {
+                        imgCodeStream[i * width + j] =
+                                transparentColor - 4; // 4 means the minimum color change of green channel
+                    } else {
+                        imgCodeStream[i * width + j] = colorIdx;
+                    }
+                }
+            }
+        } else {
+            CV_Assert(false);
+        }
+        return true;
+    }
+
     // turn the image into the code stream and set the colorNum
     CV_Assert(colorNum <= 256 && (colorNum <= localColorTableSize || colorNum <= globalColorTableSize));
     OctreeColorQuant quant = localColorTableSize > 0 ? quantL : quantG;
@@ -792,6 +857,18 @@ void GifEncoder::getColorTable(const std::vector<Mat> &img_vec, bool isGlobal) {
     // generate the global/local color table (color quantification)
     if (img_vec.empty()) return;
     CV_Assert(isGlobal || img_vec.size() == 1);
+    if (fast) {
+        globalColorTable.allocate(colorNum * 3);
+        for (int i = 0; i < 256; i++) {
+            globalColorTable[i * 3]     = ((i >> 5) & 7) * 36;
+            globalColorTable[i * 3 + 1] = ((i >> 2) & 7) * 36;
+            globalColorTable[i * 3 + 2] =  (i       & 3) * 85;
+        }
+        globalColorTable[transparentColor * 3]     = transparentRGB[0];
+        globalColorTable[transparentColor * 3 + 1] = transparentRGB[1];
+        globalColorTable[transparentColor * 3 + 2] = transparentRGB[2];
+        return;
+    }
     if (isGlobal) {
         quantG = OctreeColorQuant(colorNum, bitDepth, criticalTransparency);
         quantG.addMats(img_vec);
@@ -799,48 +876,61 @@ void GifEncoder::getColorTable(const std::vector<Mat> &img_vec, bool isGlobal) {
         quantG.getPalette(globalColorTable.data());
     } else {
         quantL = OctreeColorQuant(colorNum, bitDepth, criticalTransparency);
-        quantL.addMat(img_vec[0]);
+        quantL.addMats(img_vec);
         localColorTable.allocate(colorNum * 3);
         quantL.getPalette(localColorTable.data());
     }
 }
 
-void GifEncoder::ditheringKernel(Mat &img, int depth, uchar criticalTransparency) {
+int GifEncoder::ditheringKernel(const Mat &img, Mat &img_, int depth, uchar criticalTransparency) {
+    int transparentRGB = -1;
     if (img.empty()) {
-        return;
+        return -1;
     } else if (img.type() == CV_8UC3){
         Mat error = Mat::zeros(img.rows + 2, img.cols + 2, CV_32FC3);
-        int constant = (1 << (9 - depth)) - 1;
-        Vec3f bias = Vec3f(0.5, 0.5, 0.5);
+        int constant_r = 255 / ((1 << ((depth >> 8) & 0xf)) - 1);
+        int constant_g = 255 / ((1 << ((depth >> 4) & 0xf)) - 1);
+        int constant_b = 255 / ((1 << ((depth)      & 0xf)) - 1);
         for (int i = 0; i < img.rows; i++) {
             for (int j = 0; j < img.cols; j++) {
                 Vec3f old_pixel = (Vec3f)img.at<Vec3b>(i, j) + error.at<Vec3f>(i + 1, j + 1);
-                Vec3b new_pixel = (Vec3b)(old_pixel / constant + bias) * constant;
-                img.at<Vec3b>(i, j) = new_pixel;
+                Vec3b new_pixel;
+                new_pixel[0] = (uchar)(std::lround(std::min(std::max(old_pixel[0], 0.0f), 255.0f) / (float)constant_b) * constant_b);
+                new_pixel[1] = (uchar)(std::lround(std::min(std::max(old_pixel[1], 0.0f), 255.0f) / (float)constant_g) * constant_g);
+                new_pixel[2] = (uchar)(std::lround(std::min(std::max(old_pixel[2], 0.0f), 255.0f) / (float)constant_r) * constant_r);
+                img_.at<Vec3b>(i, j) = new_pixel;
                 Vec3f diff = old_pixel - (Vec3f)new_pixel;
                 error.at<Vec3f>(i + 1, j + 2) += diff * 7 / 16; //     (i, j + 1)
-                error.at<Vec3f>(i + 2, j) += diff * 3 / 16;     // (i + 1, j - 1)
+                error.at<Vec3f>(i + 2, j)     += diff * 3 / 16; // (i + 1, j - 1)
                 error.at<Vec3f>(i + 2, j + 1) += diff * 5 / 16; // (i + 1, j)
                 error.at<Vec3f>(i + 2, j + 2) += diff / 16;     // (i + 1, j + 1)
             }
         }
     } else if (img.type() == CV_8UC4) {
         Mat error = Mat::zeros(img.rows + 2, img.cols + 2, CV_32FC4);
-        int constant = (1 << (9 - depth)) - 1;
-        Vec4f bias = Vec4f(0.5, 0.5, 0.5, 0.5);
+        int constant_r = 255 / ((1 << ((depth >> 8) & 0xf)) - 1);
+        int constant_g = 255 / ((1 << ((depth >> 4) & 0xf)) - 1);
+        int constant_b = 255 / ((1 << ((depth)      & 0xf)) - 1);
         for (int i = 0; i < img.rows; i++) {
             for (int j = 0; j < img.cols; j++) {
                 // transparent color should not be dithered
                 if (img.at<Vec4b>(i, j)[3] < criticalTransparency) {
+                    transparentRGB = (img.at<Vec4b>(i, j)[2] << 16) |
+                                     (img.at<Vec4b>(i, j)[1] << 8) |
+                                     (img.at<Vec4b>(i, j)[0]);
+                    img_.at<Vec4b>(i, j) = img.at<Vec4b>(i, j);
                     continue;
                 }
                 Vec4f old_pixel = (Vec4f)img.at<Vec4b>(i, j) + error.at<Vec4f>(i + 1, j + 1);
-                Vec4b new_pixel = (Vec4b)(old_pixel / constant + bias) * constant;
+                Vec4b new_pixel;
+                new_pixel[0] = (uchar)(std::lround(std::min(std::max(old_pixel[0], 0.0f), 255.0f) / (float)constant_b) * constant_b);
+                new_pixel[1] = (uchar)(std::lround(std::min(std::max(old_pixel[1], 0.0f), 255.0f) / (float)constant_g) * constant_g);
+                new_pixel[2] = (uchar)(std::lround(std::min(std::max(old_pixel[2], 0.0f), 255.0f) / (float)constant_r) * constant_r);
                 new_pixel[3] = img.at<Vec4b>(i, j)[3];
-                img.at<Vec4b>(i, j) = new_pixel;
+                img_.at<Vec4b>(i, j) = new_pixel;
                 Vec4f diff = old_pixel - (Vec4f)new_pixel;
                 error.at<Vec4f>(i + 1, j + 2) += diff * 7 / 16; //     (i, j + 1)
-                error.at<Vec4f>(i + 2, j) += diff * 3 / 16;     // (i + 1, j - 1)
+                error.at<Vec4f>(i + 2, j)     += diff * 3 / 16; // (i + 1, j - 1)
                 error.at<Vec4f>(i + 2, j + 1) += diff * 5 / 16; // (i + 1, j)
                 error.at<Vec4f>(i + 2, j + 2) += diff / 16;     // (i + 1, j + 1)
             }
@@ -848,6 +938,7 @@ void GifEncoder::ditheringKernel(Mat &img, int depth, uchar criticalTransparency
     } else {
         CV_Assert(false);
     }
+    return transparentRGB;
 }
 
 void GifEncoder::close() {
