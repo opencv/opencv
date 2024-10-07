@@ -1141,7 +1141,10 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
         for (int i = 0; i < _newndims; i++)
         {
             if (_newsz[i] >= 0) {
-                newsz_buf[i] = _newsz[i];
+                if (_newsz[i] == 0 && i < dims)
+                    newsz_buf[i] = size.p[i];
+                else
+                    newsz_buf[i] = _newsz[i];
                 total_elem1 *= (size_t)newsz_buf[i];
             } else {
                 if (m1_idx >= 0)
