@@ -105,12 +105,19 @@ ocv_cmake_hook(CMAKE_INIT)
 
 # must go before the project()/enable_language() commands
 ocv_update(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
-if(NOT DEFINED CMAKE_BUILD_TYPE
-    AND NOT OPENCV_SKIP_DEFAULT_BUILD_TYPE
-)
-  message(STATUS "'Release' build type is used by default. Use CMAKE_BUILD_TYPE to specify build type (Release or Debug)")
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build")
+
+if(NOT DEFINED CMAKE_BUILD_TYPE AND NOT OPENCV_SKIP_DEFAULT_BUILD_TYPE)
+  # set the default build type here based on the generator type
+  set(default_build_type "Release")
+  if(CMAKE_GENERATOR STREQUAL "Xcode" OR CMAKE_GENERATOR MATCHES "Visual Studio")
+    set(default_build_type "Debug")
+  endif()
+
+  # the default_build_type is being used instead of hardcoded "Release"
+  message(STATUS "'${default_build_type}' build type is used by default. Use CMAKE_BUILD_TYPE to specify build type (Release or Debug)")
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build" FORCE)
 endif()
+
 if(DEFINED CMAKE_BUILD_TYPE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${CMAKE_CONFIGURATION_TYPES}")
 endif()
