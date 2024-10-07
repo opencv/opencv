@@ -753,12 +753,31 @@ void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
 
 #ifndef OPENCV_EXCLUDE_C_API
 
+// Related with https://github.com/opencv/opencv/issues/26258
+// To suppress cast-user-defined warning for casting CvRNG to cv::RNG& with GCC14.
+// ( CvRNG is uint64, and cv::RNG has only status member which is uint64. )
+
+#if defined(__GNUC__) && __GNUC__ >= 14
+#define CV_IGNORE_CAST_USER_DEFINED_WARNING
+#endif
+
 CV_IMPL void
 cvRandArr( CvRNG* _rng, CvArr* arr, int disttype, CvScalar param1, CvScalar param2 )
 {
     cv::Mat mat = cv::cvarrToMat(arr);
+
+#ifdef CV_IGNORE_CAST_USER_DEFINED_WARNING
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-user-defined"
+#endif
+
     // !!! this will only work for current 64-bit MWC RNG !!!
     cv::RNG& rng = _rng ? (cv::RNG&)*_rng : cv::theRNG();
+
+#ifdef CV_IGNORE_CAST_USER_DEFINED_WARNING
+#pragma GCC diagnostic pop
+#endif
+
     rng.fill(mat, disttype == CV_RAND_NORMAL ?
         cv::RNG::NORMAL : cv::RNG::UNIFORM, cv::Scalar(param1), cv::Scalar(param2) );
 }
@@ -766,9 +785,24 @@ cvRandArr( CvRNG* _rng, CvArr* arr, int disttype, CvScalar param1, CvScalar para
 CV_IMPL void cvRandShuffle( CvArr* arr, CvRNG* _rng, double iter_factor )
 {
     cv::Mat dst = cv::cvarrToMat(arr);
+
+#ifdef CV_IGNORE_CAST_USER_DEFINED_WARNING
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-user-defined"
+#endif
+
     cv::RNG& rng = _rng ? (cv::RNG&)*_rng : cv::theRNG();
+
+#ifdef CV_IGNORE_CAST_USER_DEFINED_WARNING
+#pragma GCC diagnostic pop
+#endif
+
     cv::randShuffle( dst, iter_factor, &rng );
 }
+
+#ifdef CV_IGNORE_CAST_USER_DEFINED_WARNING
+#undef CV_IGNORE_CAST_USER_DEFINED_WARNING
+#endif
 
 #endif  // OPENCV_EXCLUDE_C_API
 
