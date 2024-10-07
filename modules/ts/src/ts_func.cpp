@@ -92,7 +92,8 @@ double getMinVal(int depth)
             depth == CV_16BF ? -FLT_MAX :
             depth == CV_32U ? 0 :
             depth == CV_64U ? 0 :
-            depth == CV_64S ? (double)0x8000000000000000LL
+            depth == CV_64S ? (double)0x8000000000000000LL :
+            depth == CV_Bool ? 0
             : -1;
     CV_Assert(val != -1);
     return val;
@@ -108,7 +109,8 @@ double getMaxVal(int depth)
             depth == CV_16BF ? FLT_MAX :
             depth == CV_32U ? UINT_MAX :
             depth == CV_64U ? (double)0xFFFFFFFFFFFFFFFFULL :
-            depth == CV_64S ? (double)0x7fffffffffffffffLL
+            depth == CV_64S ? (double)0x7fffffffffffffffLL :
+            depth == CV_Bool ? 1
             : -1;
     CV_Assert(val != -1);
     return val;
