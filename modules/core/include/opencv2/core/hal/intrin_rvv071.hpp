@@ -360,7 +360,7 @@ template <> inline v_##_Tp##x##num v_setzero_() { return v_setzero_##suffix(); }
 template <> inline v_##_Tp##x##num v_setall_(__Tp v) { return v_setall_##suffix(v); }
 
 OPENCV_HAL_IMPL_RISCVV_INIT_SET(uchar, uint8, u8, u8, 16)
-OPENCV_HAL_IMPL_RISCVV_INIT_SET(char, int8, s8, i8, 16)
+OPENCV_HAL_IMPL_RISCVV_INIT_SET(schar, int8, s8, i8, 16)
 OPENCV_HAL_IMPL_RISCVV_INIT_SET(ushort, uint16, u16, u16, 8)
 OPENCV_HAL_IMPL_RISCVV_INIT_SET(short, int16, s16, i16, 8)
 OPENCV_HAL_IMPL_RISCVV_INIT_SET(unsigned int, uint32, u32, u32, 4)
