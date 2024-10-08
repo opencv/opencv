@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2 as cv
+import io
 
 from tests_common import NewOpenCVTests
 
@@ -36,7 +37,7 @@ class Bindings(NewOpenCVTests):
         if not cv.videoio_registry.getBufferBackends():
             raise self.skipTest("No available backends")
 
-        class BufferStream:
+        class BufferStream(io.BufferedIOBase):
             def __init__(self, filepath):
                 with open(filepath, "rb") as f:
                     self.data = f.read()

@@ -630,6 +630,16 @@ public:
         PyGILState_STATE gstate;
         gstate = PyGILState_Ensure();
 
+        PyObject* ioModule = PyImport_ImportModule("io");
+        PyObject* type = PyObject_GetAttrString(ioModule, "BufferedIOBase");
+        Py_DECREF(ioModule);
+        if (!PyObject_IsInstance(ioBase, type)) {
+            Py_DECREF(type);
+            PyGILState_Release(gstate);
+            CV_Error(cv::Error::StsBadArg, "Input stream should be derived from io.BufferedIOBase");
+        }
+        Py_DECREF(type);
+
         PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), NULL);
         char* data = PyBytes_AsString(res);
         int len = PyBytes_Size(res);
