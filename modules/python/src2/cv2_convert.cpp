@@ -1217,3 +1217,11 @@ PyObject* pyopencv_from(const std::pair<int, double>& src)
 {
     return Py_BuildValue("(id)", src.first, src.second);
 }
+
+// --- std::istream
+
+bool pyopencv_to(PyObject* obj, IOBaseWrapper& p, const ArgInfo&)
+{
+    p.ioBase = obj;
+    return true;
+}

@@ -620,4 +620,31 @@ PyObject* pyopencv_from(const std::tuple<Ts...>& cpp_tuple)
     return py_tuple;
 }
 
+// --- std::istream
+
+class IOBaseWrapper {
+public:
+    // For now, read the source stream all at once
+    operator std::istream&() {
+        CV_Assert(ioBase);
+        PyGILState_STATE gstate;
+        gstate = PyGILState_Ensure();
+
+        PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), NULL);
+        char* data = PyBytes_AsString(res);
+        int len = PyBytes_Size(res);
+        buf.str(std::string(data, len));
+        Py_DECREF(res);
+
+        PyGILState_Release(gstate);
+
+        return buf;
+    }
+
+    PyObject* ioBase = nullptr;
+    std::istringstream buf;
+};
+
+bool pyopencv_to(PyObject* obj, IOBaseWrapper& p, const ArgInfo& info);
+
 #endif // CV2_CONVERT_HPP
