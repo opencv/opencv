@@ -650,8 +650,8 @@ void Core_ArrayOpTest::run( int /* start_from */)
         MatND A(3, sz3, CV_32F), B(3, sz3, CV_16SC4);
         CvMatND matA = cvMatND(A), matB = cvMatND(B);
         RNG rng;
-        rng.fill(A, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
-        rng.fill(B, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
+        rng.fill(A, RNG::UNIFORM, Scalar::all(-10), Scalar::all(10));
+        rng.fill(B, RNG::UNIFORM, Scalar::all(-10), Scalar::all(10));
 
         int idx0[] = {3,4,5}, idx1[] = {0, 9, 7};
         float val0 = 130;
@@ -807,7 +807,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         all_vals.resize(nz0);
         all_vals2.resize(nz0);
         Mat_<double> _all_vals(all_vals), _all_vals2(all_vals2);
-        rng.fill(_all_vals, CV_RAND_UNI, Scalar(-1000), Scalar(1000));
+        rng.fill(_all_vals, RNG::UNIFORM, Scalar(-1000), Scalar(1000));
         if( depth == CV_32F )
         {
             Mat _all_vals_f;

@@ -558,7 +558,7 @@ int CV_WarpAffineTest::prepare_test_case( int test_case_idx )
     angle = cvtest::randReal(rng)*360;
     scale = ((double)dst.rows/src.rows + (double)dst.cols/src.cols)*0.5;
     getRotationMatrix2D(center, angle, scale).convertTo(mat, mat.depth());
-    rng.fill( tmp, CV_RAND_NORMAL, Scalar::all(1.), Scalar::all(0.01) );
+    rng.fill( tmp, RNG::NORMAL, Scalar::all(1.), Scalar::all(0.01) );
     cv::max(tmp, 0.9, tmp);
     cv::min(tmp, 1.1, tmp);
     cv::multiply(tmp, mat, mat, 1.);
@@ -673,7 +673,7 @@ int CV_WarpPerspectiveTest::prepare_test_case( int test_case_idx )
     float bufer[16];
     Mat tmp( 1, 16, CV_32FC1, bufer );
 
-    rng.fill( tmp, CV_RAND_NORMAL, Scalar::all(0.), Scalar::all(0.1) );
+    rng.fill( tmp, RNG::NORMAL, Scalar::all(0.), Scalar::all(0.1) );
 
     for( i = 0; i < 4; i++ )
     {
