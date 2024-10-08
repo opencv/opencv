@@ -3,10 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "precomp.hpp"
-
-#include "annoy/annoylib.h"
-#include "annoy/kissrandom.h"
-
+#include "../3rdparty/annoy/annoylib.h"
 #include <opencv2/core/utils/logger.hpp>
 
 
@@ -36,7 +33,7 @@ struct Random
     inline size_t index(size_t n)
     {
         // Draw random integer between 0 and n-1 where n is at most the number of data points you have
-        return rng(n);
+        return rng(unsigned(n));
     }
 
     inline void set_seed(uint64 seed)
