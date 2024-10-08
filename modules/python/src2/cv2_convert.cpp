@@ -1218,10 +1218,47 @@ PyObject* pyopencv_from(const std::pair<int, double>& src)
     return Py_BuildValue("(id)", src.first, src.second);
 }
 
-// --- std::istream
+// --- std::streambuf
+
+IOBaseWrapper::IOBaseWrapper(PyObject* obj) : ioBase(obj)
+{
+    if (!ioBase)
+        return;
+
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+
+    PyObject* ioModule = PyImport_ImportModule("io");
+    PyObject* type = PyObject_GetAttrString(ioModule, "BufferedIOBase");
+    Py_DECREF(ioModule);
+    if (!PyObject_IsInstance(ioBase, type))
+        CV_Error(cv::Error::StsBadArg, "Input stream should be derived from io.BufferedIOBase");
+    Py_DECREF(type);
+    PyGILState_Release(gstate);
+}
+
+std::streamsize IOBaseWrapper::xsgetn(char* s, std::streamsize n)
+{
+    CV_DbgAssert(ioBase);
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+
+    PyObject* size = pyopencv_from(n);
+
+    PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), size, NULL);
+    char* src = PyBytes_AsString(res);
+    int len = PyBytes_Size(res);
+    std::memcpy(s, src, len);
+    Py_DECREF(res);
+    Py_DECREF(size);
+
+    PyGILState_Release(gstate);
+
+    return len;
+}
 
 bool pyopencv_to(PyObject* obj, IOBaseWrapper& p, const ArgInfo&)
 {
-    p.ioBase = obj;
+    p = IOBaseWrapper(obj);
     return true;
 }

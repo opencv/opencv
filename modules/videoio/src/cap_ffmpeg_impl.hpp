@@ -526,7 +526,7 @@ inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
 
 struct CvCapture_FFMPEG
 {
-    bool open(const char* filename, std::istream& source, const VideoCaptureParameters& params);
+    bool open(const char* filename, std::streambuf& source, const VideoCaptureParameters& params);
     void close();
 
     double getProperty(int) const;
@@ -1028,7 +1028,7 @@ static bool isThreadSafe() {
     return threadSafe;
 }
 
-bool CvCapture_FFMPEG::open(const char* _filename, std::istream& source, const VideoCaptureParameters& params)
+bool CvCapture_FFMPEG::open(const char* _filename, std::streambuf& source, const VideoCaptureParameters& params)
 {
     const bool threadSafe = isThreadSafe();
     InternalFFMpegRegister::init(threadSafe);
@@ -1154,15 +1154,15 @@ bool CvCapture_FFMPEG::open(const char* _filename, std::istream& source, const V
       input_format = av_find_input_format(entry->value);
     }
 
-    if ((source.peek() || true) && !source.eof())
+    if (!_filename)
     {
         size_t avio_ctx_buffer_size = 4096;
         uint8_t* avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
         CV_Assert(avio_ctx_buffer);
         avio_context = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, &source,
             [](void *opaque, uint8_t *buf, int buf_size) -> int {
-                auto is = reinterpret_cast<std::istream*>(opaque);
-                is->read(reinterpret_cast<char*>(buf), buf_size);
+                auto is = reinterpret_cast<std::streambuf*>(opaque);
+                is->sgetn(reinterpret_cast<char*>(buf), buf_size);
                 return buf_size;
             },
             NULL, NULL);
@@ -3321,8 +3321,8 @@ CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, con
     if (!capture)
         return 0;
     capture->init();
-    std::istringstream buf;
-    if (capture->open(filename, buf, params))
+    std::stringbuf noBuf;
+    if (capture->open(filename, noBuf, params))
         return capture;
 
     capture->close();
@@ -3331,7 +3331,7 @@ CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, con
 }
 
 static
-CvCapture_FFMPEG* cvCreateBufferCaptureWithParams_FFMPEG(std::istream& source, const VideoCaptureParameters& params)
+CvCapture_FFMPEG* cvCreateBufferCaptureWithParams_FFMPEG(std::streambuf& source, const VideoCaptureParameters& params)
 {
     // FIXIT: remove unsafe malloc() approach
     CvCapture_FFMPEG* capture = (CvCapture_FFMPEG*)malloc(sizeof(*capture));

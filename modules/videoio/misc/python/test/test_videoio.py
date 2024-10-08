@@ -39,11 +39,13 @@ class Bindings(NewOpenCVTests):
 
         class BufferStream(io.BufferedIOBase):
             def __init__(self, filepath):
-                with open(filepath, "rb") as f:
-                    self.data = f.read()
+                self.f = open(filepath, "rb")
 
-            def read(self):
-                return self.data
+            def read(self, size=-1):
+                return self.f.read(size)
+
+            def __del__(self):
+                self.f.close()
 
         stream = BufferStream(self.find_file("cv/video/768x576.avi"))
 

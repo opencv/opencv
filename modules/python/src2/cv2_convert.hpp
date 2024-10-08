@@ -620,38 +620,17 @@ PyObject* pyopencv_from(const std::tuple<Ts...>& cpp_tuple)
     return py_tuple;
 }
 
-// --- std::istream
+// --- std::streambuf
 
-class IOBaseWrapper {
+class IOBaseWrapper : public std::streambuf
+{
 public:
-    // For now, read the source stream all at once
-    operator std::istream&() {
-        CV_Assert(ioBase);
-        PyGILState_STATE gstate;
-        gstate = PyGILState_Ensure();
+    IOBaseWrapper(PyObject* obj = nullptr);
 
-        PyObject* ioModule = PyImport_ImportModule("io");
-        PyObject* type = PyObject_GetAttrString(ioModule, "BufferedIOBase");
-        Py_DECREF(ioModule);
-        if (!PyObject_IsInstance(ioBase, type)) {
-            Py_DECREF(type);
-            PyGILState_Release(gstate);
-            CV_Error(cv::Error::StsBadArg, "Input stream should be derived from io.BufferedIOBase");
-        }
-        Py_DECREF(type);
+    std::streamsize xsgetn(char* s, std::streamsize n) override;
 
-        PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), NULL);
-        char* data = PyBytes_AsString(res);
-        int len = PyBytes_Size(res);
-        buf.str(std::string(data, len));
-        Py_DECREF(res);
-
-        PyGILState_Release(gstate);
-
-        return buf;
-    }
-
-    PyObject* ioBase = nullptr;
+private:
+    PyObject* ioBase;
     std::istringstream buf;
 };
 

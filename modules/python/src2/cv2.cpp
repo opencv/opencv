@@ -53,7 +53,7 @@ typedef std::vector<std::vector<Point3f> > vector_vector_Point3f;
 typedef std::vector<std::vector<DMatch> > vector_vector_DMatch;
 typedef std::vector<std::vector<KeyPoint> > vector_vector_KeyPoint;
 
-typedef IOBaseWrapper istream;
+typedef IOBaseWrapper streambuf;
 
 // enum { ARG_NONE = 0, ARG_MAT = 1, ARG_SCALAR = 2 };
 

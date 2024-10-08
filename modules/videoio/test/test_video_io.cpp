@@ -1051,7 +1051,7 @@ TEST_P(buffer_capture, read)
     std::ifstream ifs(video_file.c_str(), std::ios::in | std::ios::binary);
     ASSERT_TRUE(ifs.is_open());
 
-    EXPECT_NO_THROW(cap.open(ifs, apiPref, {}));
+    EXPECT_NO_THROW(cap.open(*ifs.rdbuf(), apiPref, {}));
     ASSERT_TRUE(cap.isOpened());
 
     const int numFrames = 10;
