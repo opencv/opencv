@@ -132,8 +132,8 @@ int filter(cvhalFilter2D *context,
     // ROI fully used in the computation
     int cal_width = width + ctx->kernel_width - 1;
     int cal_height = height + ctx->kernel_height - 1;
-    int cal_x = offset_x - ctx->anchor_x;
-    int cal_y = offset_y - ctx->anchor_y;
+    int cal_x = offset_x - ctx->anchor_x; // negative if left border exceeded
+    int cal_y = offset_y - ctx->anchor_y; // negative if top border exceeded
 
     // calculate source border
     ctx->padding.resize(cal_width * cal_height * cnes);
