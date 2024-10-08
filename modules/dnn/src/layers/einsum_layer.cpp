@@ -695,10 +695,29 @@ void LayerEinsumImpl::parseEquation(String equation)
 
     // split lhs_eq by ',' - comma and put all created token - splits
     // into lhs_eq_tokens vector
-    std::stringstream src(lhs_eq);
-    for (std::string token; std::getline(src, token, ',');) {
-        lhs_eq_tokens.emplace_back(token);
+    // the implementation does not ignore empty tokens and trailing comma
+    size_t start = 0;
+    while(start < lhs_eq.size())
+    {
+        size_t comma = lhs_eq.find(',', start);
+        if (comma != std::string::npos)
+        {
+            std::string token = lhs_eq.substr(start, comma-start);
+            lhs_eq_tokens.push_back(token);
+            start = comma+1;
+        }
+        else
+        {
+            std::string token = lhs_eq.substr(start);
+            lhs_eq_tokens.push_back(token);
+            start = lhs_eq.size()+1;
+        }
     }
+
+    // trailing comma without token
+    if (lhs_eq[lhs_eq.size()-1] == ',')
+        lhs_eq_tokens.push_back(std::string());
+
 }
 
 
@@ -883,7 +902,7 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
     // Check if number of tokens in equal to number of inputs.
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
     int num_input_tensors = inputs.size();
-    if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",") ) {
+    if (lhs_eq_tokens.empty() || (lhs_eq == ",") ) {
         inputSubscriptIndices.resize(numInputs);
         return;
     }
