@@ -2741,7 +2741,26 @@ static void testYOLO(const std::string& weightPath, const std::vector<int>& refC
 
     net.setInput(inp);
     std::vector<Mat> outs;
-    net.forward(outs, net.getUnconnectedOutLayersNames());
+    std::vector<std::string> out_names = net.getUnconnectedOutLayersNames();
+    net.forward(outs, out_names);
+    EXPECT_EQ(outs.size(), out_names.size());
+    if(outs.size() == 1)
+    {
+        // do nothing
+    }
+    else if (outs.size() == 2)
+    {
+        // sort outs by name. New and old DNN engines return otuput in different order!
+        if(out_names[0] > out_names[1])
+        {
+            std::swap(out_names[0], out_names[1]);
+            std::swap(outs[0], outs[1]);
+        }
+    }
+    else if (outs.size() > 2)
+    {
+        CV_Error(Error::StsUnsupportedFormat, "Too many Yolo network outputs!");
+    }
 
     // Retrieve
     std::vector<int> keep_classIds;
@@ -2778,6 +2797,8 @@ void yoloPostProcessing(
     }
 
     if (model_name == "yolonas"){
+        EXPECT_EQ(cv::MatShape({1, 8400, 80}), outs[0].shape());
+        EXPECT_EQ(cv::MatShape({1, 8400, 4}), outs[1].shape());
         // outs contains 2 elemets of shape [1, 8400, 80] and [1, 8400, 4]. Concat them to get [1, 8400, 84]
         Mat concat_out;
         // squeeze the first dimension
