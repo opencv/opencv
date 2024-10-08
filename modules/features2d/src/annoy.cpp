@@ -13,13 +13,45 @@
 namespace cv
 {
 
+struct Random
+{
+    static const uint64 default_seed = 1234567890987654321ULL;
+    #if __cplusplus < 201103L
+    typedef uint64 seed_type;
+    #endif
+
+    RNG rng;
+
+    Random(uint64 seed = default_seed)
+    {
+        rng.state = seed;
+    }
+
+    inline int flip()
+    {
+        // Draw random 0 or 1
+        return rng.next() & 1;
+    }
+
+    inline size_t index(size_t n)
+    {
+        // Draw random integer between 0 and n-1 where n is at most the number of data points you have
+        return rng(n);
+    }
+
+    inline void set_seed(uint64 seed)
+    {
+        rng.state = seed;
+    }
+};
+
 template <typename DataType, typename DistanceType>
 class ANNIndexImpl : public ANNIndex
 {
 public:
     ANNIndexImpl(int dimension) : dim(dimension)
     {
-        index = makePtr<::cvannoy::AnnoyIndex<int, DataType, DistanceType, ::cvannoy::Kiss32Random, ::cvannoy::AnnoyIndexSingleThreadedBuildPolicy>>(dimension);
+        index = makePtr<::cvannoy::AnnoyIndex<int, DataType, DistanceType, Random, ::cvannoy::AnnoyIndexSingleThreadedBuildPolicy>>(dimension);
     }
 
     bool addItems(InputArray _dataset) CV_OVERRIDE
@@ -178,7 +210,7 @@ public:
 
 private:
     int dim;
-    Ptr<::cvannoy::AnnoyIndex<int, DataType, DistanceType, ::cvannoy::Kiss32Random, ::cvannoy::AnnoyIndexSingleThreadedBuildPolicy>> index;
+    Ptr<::cvannoy::AnnoyIndex<int, DataType, DistanceType, Random, ::cvannoy::AnnoyIndexSingleThreadedBuildPolicy>> index;
 };
 
 Ptr<ANNIndex> ANNIndex::create(int dim, ANNIndex::Distance distType)
