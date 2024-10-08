@@ -1154,7 +1154,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, std::istream& source, const V
       input_format = av_find_input_format(entry->value);
     }
 
-    if (source)
+    if ((source.peek() || true) && !source.eof())
     {
         size_t avio_ctx_buffer_size = 4096;
         uint8_t* avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
