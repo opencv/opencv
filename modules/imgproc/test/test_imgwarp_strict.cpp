@@ -1042,16 +1042,16 @@ protected:
     virtual void run_func();
     virtual void run_reference_func();
 
+    template<int channels, typename T>
+    void newLinear(int x, float sx, float sy, const T *srcptr_, T *dstptr, int srccols, int srcrows, size_t srcstep,
+                   const T *bval, int borderType_x, int borderType_y);
+
     Mat M;
 private:
     void warpAffine(const Mat&, Mat&);
 
     template<typename T>
     void newWarpAffine(const Mat&, Mat&, const Mat&);
-
-    template<int channels, typename T>
-    void newLinear(int x, float sx, float sy, const T *srcptr_, T *dstptr, int srccols, int srcrows, size_t srcstep,
-                   const T *bval, int borderType_x, int borderType_y);
 };
 
 CV_WarpAffine_Test::CV_WarpAffine_Test() :
