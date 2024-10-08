@@ -453,6 +453,7 @@ bool PoseSolver::invertSPD3x3(const cv::Matx<double, 3, 3>& A, cv::Matx<double, 
     v[0]=L[6]*D[0];
     v[1]=L[7]*D[1];
     D[2]=A(2, 2)-L[6]*v[0]-L[7]*v[1];
+    if(D[2]<=1E-10) return false;
     //L[8]=1.0;
 
     D[0]=1.0/D[0];
@@ -510,7 +511,7 @@ bool PoseSolver::analyticalInverse3x3Symm(const cv::Matx<double, 3, 3>& Q,
     t12 = c * c;
     double det = -t4 * f + a * t2 + t7 * f - 2.0 * t9 * e + t12 * d;
 
-    if (fabs(det) < threshold) return false;
+    if (fabs(det) < threshold) { cv::invert(Q, Qinv, cv::DECOMP_SVD); return false; } // fall back to pseudoinverse
 
     // 3. Inverse
     double t15, t20, t24, t30;
