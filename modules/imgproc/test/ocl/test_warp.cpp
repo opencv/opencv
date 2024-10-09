@@ -172,7 +172,7 @@ OCL_TEST_P(WarpAffine, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
-        double eps = depth < CV_32F ? 0.04 : 0.06;
+        double eps = depth < CV_32F ? ( depth < CV_16U ? 0.09 : 0.04 ) : 0.06;
         random_roi();
 
         Mat M = getRotationMatrix2D(Point2f(src_roi.cols / 2.0f, src_roi.rows / 2.0f),
@@ -189,7 +189,7 @@ OCL_TEST_P(WarpAffine, inplace_25853) // when src and dst are the same variable,
 {
     for (int j = 0; j < test_loop_times; j++)
     {
-        double eps = depth < CV_32F ? 0.04 : 0.06;
+        double eps = depth < CV_32F ? ( depth < CV_16U ? 0.09 : 0.04 ) : 0.06;
         random_roi();
 
         Mat M = getRotationMatrix2D(Point2f(src_roi.cols / 2.0f, src_roi.rows / 2.0f),

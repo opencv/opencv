@@ -2535,7 +2535,7 @@ public:
 #elif CV_SIMD_WIDTH == 64
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
                 v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
-                bl = t0 + t3; gl = t1 + t4; rl = t2 + t5;
+                bl = v_add(t0, t3); gl = v_add(t1, t4); rl = v_add(t2, t5);
 #endif
                 s0 = v_add(vx_load_expand(S0 + 6 * VTraits<v_uint16>::vlanes()), vx_load_expand(S1 + 6 * VTraits<v_uint16>::vlanes()));
                 s1 = v_add(vx_load_expand(S0 + 7 * VTraits<v_uint16>::vlanes()), vx_load_expand(S1 + 7 * VTraits<v_uint16>::vlanes()));
@@ -2555,7 +2555,7 @@ public:
 #elif CV_SIMD_WIDTH == 64
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
                 v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
-                bh = t0 + t3; gh = t1 + t4; rh = t2 + t5;
+                bh = v_add(t0, t3); gh = v_add(t1, t4); rh = v_add(t2, t5);
 #endif
                 v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
             }
@@ -2617,8 +2617,8 @@ public:
                 v_uint32 r0, r1, r2, r3;
                 v_expand(vx_load(S0), r0, r1);
                 v_expand(vx_load(S1), r2, r3);
-                r0 += r2; r1 += r3;
-                v_rshr_pack_store<2>(D, r0 + v_rotate_left<1>(r1, r0));
+                r0 = v_add(r0, r2); r1 = v_add(r1, r3);
+                v_rshr_pack_store<2>(D, v_add(r0, v_rotate_left<1>(r1, r0)));
             }
 #else
                 v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_load_expand(S0), v_load_expand(S0 + 3)), v_load_expand(S1)), v_load_expand(S1 + 3)));
@@ -2642,7 +2642,7 @@ public:
                 bl = v_add(t0, t3); gl = v_add(t1, t4); rl = v_add(t2, t5);
 #else //CV_SIMD_WIDTH == 64
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                bl = s0 + s3; gl = s1 + s4; rl = s2 + s5;
+                bl = v_add(s0, s3); gl = v_add(s1, s4); rl = v_add(s2, s5);
 #endif
                 s0 = v_add(vx_load_expand(S0 + 6 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 6 * VTraits<v_uint32>::vlanes()));
                 s1 = v_add(vx_load_expand(S0 + 7 * VTraits<v_uint32>::vlanes()), vx_load_expand(S1 + 7 * VTraits<v_uint32>::vlanes()));
@@ -2658,7 +2658,7 @@ public:
                 bh = v_add(t0, t3); gh = v_add(t1, t4); rh = v_add(t2, t5);
 #else //CV_SIMD_WIDTH == 64
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                bh = s0 + s3; gh = s1 + s4; rh = s2 + s5;
+                bh = v_add(s0, s3); gh = v_add(s1, s4); rh = v_add(s2, s5);
 #endif
                 v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
             }
@@ -2696,7 +2696,7 @@ public:
                 v_expand(v_reinterpret_as_u16(r01), r01l, r01h);
                 v_expand(v_reinterpret_as_u16(r10), r10l, r10h);
                 v_expand(v_reinterpret_as_u16(r11), r11l, r11h);
-                v_store(D, v_rshr_pack<2>(r00l + r01l + r10l + r11l, r00h + r01h + r10h + r11h));
+                v_store(D, v_rshr_pack<2>(v_add(r00l, r01l, r10l, r11l), v_add(r00h, r01h, r10h, r11h)));
             }
 #else
             for ( ; dx <= w - VTraits<v_uint32>::vlanes(); dx += VTraits<v_uint32>::vlanes(), S0 += VTraits<v_uint16>::vlanes(), S1 += VTraits<v_uint16>::vlanes(), D += VTraits<v_uint32>::vlanes())
@@ -2772,7 +2772,7 @@ public:
                 bl = v_add(t0, t3); gl = v_add(t1, t4); rl = v_add(t2, t5);
 #else //CV_SIMD_WIDTH == 64
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                bl = s0 + s3; gl = s1 + s4; rl = s2 + s5;
+                bl = v_add(s0, s3); gl = v_add(s1, s4); rl = v_add(s2, s5);
 #endif
                 s0 = v_add(vx_load_expand(S0 + 6 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 6 * VTraits<v_int32>::vlanes()));
                 s1 = v_add(vx_load_expand(S0 + 7 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 7 * VTraits<v_int32>::vlanes()));
@@ -2788,7 +2788,7 @@ public:
                 bh = v_add(t0, t3); gh = v_add(t1, t4); rh = v_add(t2, t5);
 #else //CV_SIMD_WIDTH == 64
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
-                bh = s0 + s3; gh = s1 + s4; rh = s2 + s5;
+                bh = v_add(s0, s3); gh = v_add(s1, s4); rh = v_add(s2, s5);
 #endif
                 v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
             }
@@ -2825,7 +2825,7 @@ public:
                 v_expand(v_reinterpret_as_s16(r01), r01l, r01h);
                 v_expand(v_reinterpret_as_s16(r10), r10l, r10h);
                 v_expand(v_reinterpret_as_s16(r11), r11l, r11h);
-                v_store(D, v_rshr_pack<2>(r00l + r01l + r10l + r11l, r00h + r01h + r10h + r11h));
+                v_store(D, v_rshr_pack<2>(v_add(r00l, r01l, r10l, r11l), v_add(r00h, r01h, r10h, r11h)));
 #else
                 v_int32 r0, r1, r2, r3;
                 r0 = v_add(vx_load_expand(S0), vx_load_expand(S1));

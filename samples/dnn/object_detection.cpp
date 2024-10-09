@@ -294,9 +294,11 @@ int main(int argc, char** argv)
                     if (asyncNumReq) {
                         futureOutputs.push(net.forwardAsync());
                     } else {
+                        //![forward]
                         vector<Mat> outs;
                         net.forward(outs, net.getUnconnectedOutLayersNames());
                         predictionsQueue.push(outs);
+                        //![forward]
                     }
                 }
 
@@ -658,6 +660,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
 
 void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans, int stdSize, int stdWeight, int stdImgSize, int stdThickness)
 {
+    //![draw_boxes]
     int imgWidth = max(frame.rows, frame.cols);
     int size = (stdSize*imgWidth)/stdImgSize;
     int weight = (stdWeight*imgWidth)/stdImgSize;
@@ -687,6 +690,7 @@ void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& b
                 Point(left + labelSize.width, top), boxColor, FILLED);
         putText(frame, label, Point(left, top-size/4), getTextColor(boxColor), sans, size, weight);
     }
+    //![draw_boxes]
 }
 
 void callback(int pos, void*)

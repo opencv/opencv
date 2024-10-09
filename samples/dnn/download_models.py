@@ -342,6 +342,17 @@ def parseYAMLFile(yaml_filepath, save_dir):
                 models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir,
                     download_name=download_name, download_sha=download_sha, archive_member=archive_member))
 
+            config_load_info = params.get("config_load_info", None)
+            if config_load_info:
+                fname = os.path.basename(params.get("config"))
+                hash_sum = config_load_info.get("sha1")
+                url = config_load_info.get("url")
+                download_sha = config_load_info.get("download_sha")
+                download_name = config_load_info.get("download_name")
+                archive_member = config_load_info.get("member")
+                models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir,
+                    download_name=download_name, download_sha=download_sha, archive_member=archive_member))
+
     return models
 
 if __name__ == '__main__':
