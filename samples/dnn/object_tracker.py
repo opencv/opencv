@@ -12,22 +12,26 @@ For NanoTrack:
     nanotrack_headneck: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx
 For VitTrack:
     vitTracker: https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_vittrack/object_tracking_vittrack_2023sep.onnx
-USAGE:
-    tracker.py [alias] [-h] [--input INPUT_VIDEO]
-                    [--tracker_algo TRACKER_ALGO mil, dasiamrpn, nanotrack, vittrack]
-                    [--dasiamrpn_net DASIAMRPN_NET]
-                    [--dasiamrpn_kernel_r1 DASIAMRPN_KERNEL_R1]
-                    [--dasiamrpn_kernel_cls1 DASIAMRPN_KERNEL_CLS1]
-                    [--dasiamrpn_backend DASIAMRPN_BACKEND]
-                    [--dasiamrpn_target DASIAMRPN_TARGET]
-                    [--nanotrack_backbone NANOTRACK_BACKBONE]
-                    [--nanotrack_headneck NANOTRACK_TARGET]
-                    [--vittrack_net VITTRACK_MODEL]
 '''
 
 import cv2 as cv
 import argparse
 from common import *
+
+def help():
+    print(
+        '''
+        Use this script for Object Tracking using OpenCV.
+
+        To run:
+            nano:
+                Example: python object_tracker.py nano --backbone=<path to nanotrack_backbone onnx model> --headneck=<path to nanotrack_head onnx model>
+            vit:
+                Example: python object_tracker.py vit --vit_net=<path to vitTracker onnx model>
+            dasiamrpn:
+                Example: python object_tracker.py dasiamrpn --dasiamrpn_net=<path to dasiamrpn_model onnx model> --kernel_r1=<path to dasiamrpn_kernel_r1 onnx model> --kernel_cls1=<path to dasiamrpn_kernel_cls1 onnx model>
+        '''
+    )
 
 def createTracker():
     if args.alias == 'dasiamrpn':
@@ -46,74 +50,84 @@ def createTracker():
         params.net = findModel(args.vit_net, "")
         tracker = cv.TrackerVit_create(params)
     else:
-        print("Tracker {} is not recognized. Please use one of three available: mil, dasiamrpn, nanotrack.".format(args.alias))
+        help()
         exit(-1)
     return tracker
-
-def initializeTracker(image, tracker):
-    while True:
-        print('==> Select object ROI for tracker ...')
-        bbox = cv.selectROI('tracking', image)
-        print('ROI: {}'.format(bbox))
-        if bbox[2] <= 0 or bbox[3] <= 0:
-            print("ROI selection cancelled. Exiting...")
-            exit(-1)
-
-        try:
-            tracker.init(image, bbox)
-        except Exception as e:
-            print('Unable to initialize tracker with requested bounding box. Is there any object?')
-            print(e)
-            print('Try again ...')
-            continue
-
-        return
 
 def run():
     tracker = createTracker()
     videoPath = args.input
     print('Using video: {}'.format(videoPath))
-    camera = cv.VideoCapture(cv.samples.findFileOrKeep(videoPath))
-    if not camera.isOpened():
+    cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
+    if not cap.isOpened():
         print("Can't open video stream: {}".format(videoPath))
         exit(-1)
 
-    ok, image = camera.read()
-    if not ok:
-        print("Can't read first frame")
-        exit(-1)
-    assert image is not None
+    stdSize = 0.6
+    stdWeight = 2
+    stdImgSize = 512
+    imgWidth = -1 # Initialization
+    fontSize = 1.5
+    fontThickness = 1
 
-    cv.namedWindow('tracking')
-    initializeTracker(image, tracker)
+    while True:
+        ret, image = cap.read()
+        if not ret:
+            print("Error reading the video")
+            return -1
+        if imgWidth == -1:
+            imgWidth = min(image.shape[:2])
+            fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize)
+            fontThickness = max(fontThickness,(stdWeight*imgWidth)//stdImgSize)
 
-    print("==> Tracking is started. Press 'SPACE' to re-initialize tracker or 'ESC' for exit...")
+        label = "Press space bar to pause video to draw bounding box."
+        labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
+        cv.rectangle(image, (0, 0), (labelSize[0]+10, labelSize[1]+int(30*fontSize)), (255,255,255), cv.FILLED)
+        cv.putText(image, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+        cv.putText(image, "Press space bar after selecting.", (10, int(50*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+        cv.imshow('TRACKING', image)
 
-    while camera.isOpened():
-        ok, image = camera.read()
-        if not ok:
-            print("Can't read frame")
+        key = cv.waitKey(100) & 0xFF
+        if key == ord(' '):
+            bbox = cv.selectROI('TRACKING', image)
+            print('ROI: {}'.format(bbox))
+            if bbox:
+                break
+
+        if key == ord('q') or key == 27:
+            return
+    try:
+        tracker.init(image, bbox)
+    except Exception as e:
+        print('Unable to initialize tracker with requested bounding box. Is there any object?')
+        print(e)
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
             break
+        if imgWidth == -1:
+            imgWidth = min(frame.shape[:2])
+            fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize)
+            fontThickness = max(fontThickness,(stdWeight*imgWidth)//stdImgSize)
 
-        ok, newbox = tracker.update(image)
+        ok, newbox = tracker.update(frame)
         if ok:
-            cv.rectangle(image, newbox, (200, 0, 0), thickness=2)
+            cv.rectangle(frame, newbox, (200, 0, 0), thickness=2)
 
-        cv.imshow("tracking", image)
-        k = cv.waitKey(100)
-        if k == 32:  # SPACE
-            initializeTracker(image, tracker)
-        if k == 27:  # ESC
+        label="Tracking"
+        labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
+        cv.rectangle(frame, (0, 0), (labelSize[0]+10, labelSize[1]+10), (255,255,255), cv.FILLED)
+        cv.putText(frame, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+        cv.imshow("TRACKING", frame)
+        if cv.waitKey(100) & 0xFF in [ord('q'), 27]:
             break
-
-    print('Done')
-
 
 if __name__ == '__main__':
     print(__doc__)
     parser = argparse.ArgumentParser(description="Run tracker")
     parser.add_argument("alias", type=str, nargs='?', help="Path to video source")
-    parser.add_argument("--input", type=str, default="vtest.avi", help="Path to video source")
+    parser.add_argument("--input", type=str, help="Path to video source")
     parser.add_argument("--dasiamrpn_net", type=str, default="dasiamrpn_model.onnx", help="Path to onnx model of DaSiamRPN net")
     parser.add_argument("--kernel_r1", type=str, default="dasiamrpn_kernel_r1.onnx", help="Path to onnx model of DaSiamRPN kernel_r1")
     parser.add_argument("--kernel_cls1", type=str, default="dasiamrpn_kernel_cls1.onnx", help="Path to onnx model of DaSiamRPN kernel_cls1")

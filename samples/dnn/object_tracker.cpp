@@ -1,10 +1,15 @@
-// DaSiamRPN tracker.
-// Original paper: https://arxiv.org/abs/1808.06048
-// Link to original repo: https://github.com/foolwood/DaSiamRPN
-// Links to onnx models:
-// - network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
-// - kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
-// - kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
+/*
+For usage download models by following links
+    For DaSiamRPN:
+        network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
+        kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
+        kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
+    For NanoTrack:
+        nanotrack_backbone: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx
+        nanotrack_headneck: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx
+    For VitTrack:
+        vitTracker: https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_vittrack/object_tracking_vittrack_2023sep.onnx
+*/
 
 #include <iostream>
 #include <cmath>
@@ -19,17 +24,26 @@ using namespace cv;
 using namespace std;
 using namespace cv::dnn;
 
+const string about = "Use this script for Object Tracking using OpenCV. \n\n"
+        "To run:\n"
+            "\t Nano: \n"
+                "\t\t e.g: ./example_dnn_object_tracker nano --backbone=<path to nanotrack_backbone onnx model> --headneck=<path to nanotrack_head onnx model>\n\n"
+            "\t vit: \n"
+                "\t\t e.g: ./example_dnn_object_tracker vit --vit_net=<path to vitTracker onnx model>\n\n"
+            "\t dasiamrpn: \n"
+                "\t\t e.g: ./example_dnn_object_tracker dasiamrpn --dasiamrpn_net=<path to dasiamrpn_model onnx model> --kernel_r1=<path to dasiamrpn_kernel_r1 onnx model> --kernel_cls1=<path to dasiamrpn_kernel_cls1 onnx model>\n\n";
+
 const string param_keys =
         "{ help     h    |                            | Print help message }"
         "{ @alias        |                            | An alias name of model to extract preprocessing parameters from models.yml file. }"
         "{ input    i    |                            | Full path to input video folder, the specific camera index. (empty for camera 0) }"
-        "{ backbone      |         backbone.onnx      | Path to onnx model of backbone.onnx}"
-        "{ headneck      |         headneck.onnx      | Path to onnx model of headneck.onnx }"
-        "{ vit_net       |       vitTracker.onnx      | Path to onnx model of vitTracker.onnx}"
+        "{ backbone      |         backbone.onnx      | Path to onnx model of backbone.onnx for nano}"
+        "{ headneck      |         headneck.onnx      | Path to onnx model of headneck.onnx for nano}"
+        "{ vit_net       |       vitTracker.onnx      | Path to onnx model of vitTracker.onnx for vit}"
         "{ tracking_thrs |             0.3            | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }"
-        "{ dasiamrpn_net |     dasiamrpn_model.onnx   | Path to onnx model of net}"
-        "{ kernel_r1     |  dasiamrpn_kernel_r1.onnx  | Path to onnx model of kernel_cls1 }"
-        "{ kernel_cls1   | dasiamrpn_kernel_cls1.onnx | Path to onnx model of kernel_r1 }";
+        "{ dasiamrpn_net |     dasiamrpn_model.onnx   | Path to onnx model of net for dasiamrpn}"
+        "{ kernel_r1     |  dasiamrpn_kernel_r1.onnx  | Path to onnx model of kernel_cls1 for dasiamrpn}"
+        "{ kernel_cls1   | dasiamrpn_kernel_cls1.onnx | Path to onnx model of kernel_r1 for dasiamrpn}";
 
 const string backend_keys = format(
     "{ backend | default | Choose one of computation backends: "
@@ -52,7 +66,7 @@ const string target_keys = format(
 
 string keys = param_keys + backend_keys + target_keys;
 
-float getTrackingScore(Ptr<Tracker> tracker)
+static float getTrackingScore(Ptr<Tracker> tracker)
 {
     // Try casting to TrackerDaSiamRPN
     if (Ptr<TrackerDaSiamRPN> trackerDaSiam = dynamic_pointer_cast<TrackerDaSiamRPN>(tracker))
@@ -79,6 +93,14 @@ float getTrackingScore(Ptr<Tracker> tracker)
 static int trackObject(const string& windowName, Ptr<Tracker> tracker, const string& inputName)
 {
     namedWindow(windowName, WINDOW_AUTOSIZE);
+    FontFace fontFace("sans");
+    int stdSize = 20;
+    int stdWeight = 400;
+    int stdImgSize = 512;
+    int imgWidth = -1;
+    int fontSize = 50;
+    int fontWeight = 500;
+    Rect selectRect;
 
     // Open a video file or an image file or a camera stream.
     VideoCapture cap;
@@ -103,20 +125,44 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
         }
     }
 
-    // Read the first image.
     Mat image;
-    cap >> image;
-    if (image.empty())
+    char key;
+
+    for (;;)
     {
-        cerr << "Can't capture frame!" << endl;
-        return 2;
+        cap >> image;
+        if (image.empty())
+        {
+            cerr << "Can't capture frame. End of video stream?" << endl;
+            return 2;
+        }
+        else if (imgWidth == -1){
+            imgWidth = min(image.rows, image.cols);
+            fontSize = (stdSize*imgWidth)/stdImgSize;
+            fontWeight = (stdWeight*imgWidth)/stdImgSize;
+        }
+        const string label = "Press space bar to pause video to draw bounding box.";
+        Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
+        r.height += 2 * fontSize; // padding
+        r.width += 10; // padding
+        rectangle(image, r, Scalar::all(255), FILLED);
+        putText(image, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+        putText(image, "Press space bar after selecting.", Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+        imshow(windowName, image);
+        key = waitKey(200);
+        if (key == ' ')
+        {
+            selectRect = selectROI(windowName, image);
+            break;
+        }
+        if (key == 27) // ESC key to exit
+        {
+            exit(0);
+        }
     }
 
     Mat image_select = image.clone();
-    putText(image_select, "Select initial bounding box you want to track.", Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-    putText(image_select, "And Press the ENTER key.", Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
 
-    Rect selectRect = selectROI(windowName, image_select);
     cout << "ROI=" << selectRect << endl;
 
     tracker->init(image, selectRect);
@@ -148,15 +194,19 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
 
             string timeLabel = format("Inference time: %.2f ms", tickMeter.getTimeMilli());
             string scoreLabel = format("Score: %f", score);
-            putText(render_image, timeLabel, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-            putText(render_image, scoreLabel, Point(0, 35), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
-        }
+            Rect r = getTextSize(Size(), timeLabel, Point(), fontFace, fontSize, fontWeight);
+            r.height += 2 * fontSize; // padding
+            r.width += 10; // padding
+            rectangle(render_image, r, Scalar::all(255), FILLED);
+            putText(render_image, timeLabel, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+            putText(render_image, scoreLabel, Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+       }
 
         imshow(windowName, render_image);
 
         tickMeter.reset();
 
-        int c = waitKey(50);
+        int c = waitKey(100);
         if (c == 27 /*ESC*/)
             exit(0);
     }
@@ -170,6 +220,7 @@ static int run(int argc, char** argv)
 
     if (parser.has("help"))
     {
+        cout<<about<<endl;
         parser.printMessage();
         return 0;
     }
@@ -261,6 +312,7 @@ static int run(int argc, char** argv)
         cout<<"Pass the valid alias. Choices are { nano, vit, dasiamrpn }"<<endl;
         return -1;
     }
+    return 0;
 }
 
 
