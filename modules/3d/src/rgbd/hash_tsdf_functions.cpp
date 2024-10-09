@@ -408,7 +408,7 @@ void allocateVolumeUnits(
             Vec4i node = _thm.data[i];
             Vec3i idx(node[0], node[1], node[2]);
 
-            std::lock_guard<std::recursive_mutex> al(_mutex);
+            std::lock_guard<Mutex> al(_mutex);
 
             int result = _globalHashMap.insert(idx);
             if (result == 0)
