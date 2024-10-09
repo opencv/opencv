@@ -446,6 +446,22 @@ typedef OutputArray OutputArrayOfArrays;
 typedef const _InputOutputArray& InputOutputArray;
 typedef InputOutputArray InputOutputArrayOfArrays;
 
+/** @brief Returns an empty InputArray or OutputArray.
+
+ This function is used to provide an "empty" or "null" array when certain functions
+ take optional input or output arrays that you don't want to provide.
+
+ Many OpenCV functions accept optional arguments as `cv::InputArray` or `cv::OutputArray`.
+ When you don't want to pass any data for these optional parameters, you can use `cv::noArray()`
+ to indicate that you are omitting them.
+
+ @return An empty `cv::InputArray` or `cv::OutputArray` that can be used as a placeholder.
+
+ @note This is often used when a function has optional arrays, and you do not want to
+ provide a specific input or output array.
+
+ @see cv::InputArray, cv::OutputArray
+ */
 CV_EXPORTS InputOutputArray noArray();
 
 /////////////////////////////////// MatAllocator //////////////////////////////////////

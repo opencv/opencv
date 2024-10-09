@@ -9,10 +9,10 @@ def help(filename):
         '''
         {0} shows the usage of the OpenCV serialization functionality. \n\n
         usage:\n
-            python3 {0} outputfile.yml.gz\n\n
-        The output file may be either in XML, YAML or JSON. You can even compress it\n
-        by specifying this in its extension like xml.gz yaml.gz etc... With\n
-        FileStorage you can serialize objects in OpenCV.\n\n
+            python3 {0} [output file name] (default outputfile.yml.gz)\n\n
+        The output file may be XML (xml), YAML (yml/yaml), or JSON (json).\n
+        You can even compress it by specifying this in its extension like xml.gz yaml.gz etc...\n
+        With FileStorage you can serialize objects in OpenCV.\n\n
         For example: - create a class and have it serialized\n
                      - use it to read and write matrices.\n
         '''.format(filename)
@@ -49,7 +49,9 @@ class MyData:
 def main(argv):
     if len(argv) != 2:
         help(argv[0])
-        exit(1)
+        filename = 'outputfile.yml.gz'
+    else :
+        filename = argv[1]
 
     # write
     ## [iomati]
@@ -59,8 +61,6 @@ def main(argv):
     ## [customIOi]
     m = MyData()
     ## [customIOi]
-
-    filename = argv[1]
 
     ## [open]
     s = cv.FileStorage(filename, cv.FileStorage_WRITE)
@@ -98,7 +98,7 @@ def main(argv):
     ## [close]
     s.release()
     ## [close]
-    print ('Write Done.')
+    print ('Write operation to file:', filename, 'completed successfully.')
 
     # read
     print ('\nReading: ')
