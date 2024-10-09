@@ -1676,7 +1676,7 @@ Context& initializeContextFromGL()
                 CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't get platform extension string: %d", status));
 
             if (!strstr((const char*)extensionStr.data(), GL_SHARING_EXTENSION))
-                continue;cl_kh
+                continue;
         }
 
         clGetGLContextInfoKHR_fn clGetGLContextInfoKHR = (clGetGLContextInfoKHR_fn)
