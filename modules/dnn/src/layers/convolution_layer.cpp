@@ -1404,9 +1404,8 @@ public:
 
         outputs.resize(1, MatShape(outShape));
 
-        internals.assign(1,
-            is1x1() ? MatShape() :
-            computeColRowShape(inputs[0], outputs[0]));
+        if (!is1x1())
+            internals.push_back(computeColRowShape(inputs[0], outputs[0]));
 
         return false;
     }
