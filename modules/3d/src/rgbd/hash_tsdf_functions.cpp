@@ -408,7 +408,7 @@ void allocateVolumeUnits(
             Vec4i node = _thm.data[i];
             Vec3i idx(node[0], node[1], node[2]);
 
-            std::lock_guard<std::recursive_mutex> al(_mutex);
+            std::lock_guard<Mutex> al(_mutex);
 
             int result = _globalHashMap.insert(idx);
             if (result == 0)
@@ -799,9 +799,9 @@ Point3f getNormalVoxel(
     v_float32x8 czp = v_lut(vals, v256_load(idxzp));
     v_float32x8 czn = v_lut(vals, v256_load(idxzn));
 
-    v_float32x8 vcxv = cxn - cxp;
-    v_float32x8 vcyv = cyn - cyp;
-    v_float32x8 vczv = czn - czp;
+    v_float32x8 vcxv = v_sub(cxn, cxp);
+    v_float32x8 vcyv = v_sub(cyn, cyp);
+    v_float32x8 vczv = v_sub(czn, czp);
 
     v_store(cxv, vcxv);
     v_store(cyv, vcyv);
@@ -942,9 +942,9 @@ Point3f ocl_getNormalVoxel(
     v_float32x8 czp = v_lut(vals, v256_load(idxzp));
     v_float32x8 czn = v_lut(vals, v256_load(idxzn));
 
-    v_float32x8 vcxv = cxn - cxp;
-    v_float32x8 vcyv = cyn - cyp;
-    v_float32x8 vczv = czn - czp;
+    v_float32x8 vcxv = v_sub(cxn, cxp);
+    v_float32x8 vcyv = v_sub(cyn, cyp);
+    v_float32x8 vczv = v_sub(czn, czp);
 
     v_store(cxv, vcxv);
     v_store(cyv, vcyv);

@@ -6,9 +6,8 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-#include "../../zbuild.h"
-#include "../../adler32_p.h"
-#include "../../adler32_fold.h"
+#include "zbuild.h"
+#include "adler32_p.h"
 #include "adler32_ssse3_p.h"
 #include <immintrin.h>
 

@@ -1,6 +1,6 @@
 /* insert_string_roll.c -- insert_string rolling hash variant
  *
- * Copyright (C) 1995-2013 Jean-loup Gailly and Mark Adler
+ * Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  *
  */
@@ -10,7 +10,7 @@
 
 #define HASH_SLIDE           5
 
-#define HASH_CALC(s, h, val) h = ((h << HASH_SLIDE) ^ ((uint8_t)val))
+#define HASH_CALC(h, val)    h = ((h << HASH_SLIDE) ^ ((uint8_t)val))
 #define HASH_CALC_VAR        s->ins_h
 #define HASH_CALC_VAR_INIT
 #define HASH_CALC_READ       val = strstart[0]

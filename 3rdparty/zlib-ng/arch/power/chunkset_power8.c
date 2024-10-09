@@ -4,7 +4,7 @@
 
 #ifdef POWER8_VSX
 #include <altivec.h>
-#include "../../zbuild.h"
+#include "zbuild.h"
 
 typedef vector unsigned char chunk_t;
 
