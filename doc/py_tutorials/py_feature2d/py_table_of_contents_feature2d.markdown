@@ -30,7 +30,7 @@ Feature Detection and Description {#tutorial_py_table_of_contents_feature2d}
 
 -   @subpage tutorial_py_orb
 
-    SIFT and SURF are good in what they do, but what if you have to pay a few dollars every year to use them in your applications? Yeah, they are patented!!! To solve that problem, OpenCV devs came up with a new "FREE" alternative to SIFT & SURF, and that is ORB.
+    SURF is good in what it does, but what if you have to pay a few dollars every year to use it in your applications? Yeah, it is patented!!! To solve that problem, OpenCV devs came up with a new "FREE" alternative to SIFT & SURF, and that is ORB.
 
 -   @subpage tutorial_py_matcher
 

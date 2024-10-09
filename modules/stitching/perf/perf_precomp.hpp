@@ -16,6 +16,8 @@ static inline Ptr<Feature2D> getFeatureFinder(const std::string& name)
 {
     if (name == "orb")
         return ORB::create();
+    else if (name == "sift")
+        return SIFT::create();
 #if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
     else if (name == "surf")
         return xfeatures2d::SURF::create();
