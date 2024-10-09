@@ -12,7 +12,7 @@ class algorithm_rw_test(NewOpenCVTests):
         os.close(fd)
 
         # some arbitrary non-default parameters
-        gold = cv.features2d.ORB_create(nfeatures=200, scaleFactor=1.3f, nlevels=5, edgeThreshold=28)
+        gold = cv.features2d.ORB_create(nfeatures=200, scaleFactor=1.3, nlevels=5, edgeThreshold=28)
         gold.write(cv.FileStorage(fname, cv.FILE_STORAGE_WRITE), "ORB")
 
         fs = cv.FileStorage(fname, cv.FILE_STORAGE_READ)
@@ -20,7 +20,7 @@ class algorithm_rw_test(NewOpenCVTests):
         algorithm.read(fs.getNode("ORB"))
 
         self.assertEqual(algorithm.getMaxFeatures(), 200)
-        self.assertEqual(algorithm.getScaleFactor(), 1.3f)
+        self.assertEqual(algorithm.getScaleFactor(), 1.3)
         self.assertEqual(algorithm.getNLevels(), 5)
         self.assertEqual(algorithm.getEdgeThreshold(), 28)
 
