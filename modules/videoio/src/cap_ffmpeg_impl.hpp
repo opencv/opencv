@@ -1162,8 +1162,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, std::streambuf& source, const
         avio_context = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, &source,
             [](void *opaque, uint8_t *buf, int buf_size) -> int {
                 auto is = reinterpret_cast<std::streambuf*>(opaque);
-                is->sgetn(reinterpret_cast<char*>(buf), buf_size);
-                return buf_size;
+                return is->sgetn(reinterpret_cast<char*>(buf), buf_size);
             },
             NULL, NULL);
         CV_Assert(avio_context);

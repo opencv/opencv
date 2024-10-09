@@ -458,8 +458,7 @@ public:
         CV_Assert(plugin_api->v0.Capture_release);
 
         CvPluginCapture capture = NULL;
-        // bool fromStream = (source.peek() || true) && !source.eof();
-        bool fromStream = false;
+        bool fromStream = source.sgetc() != EOF;
         if (fromStream && plugin_api->api_header.api_version >= 2 && plugin_api->v2.Capture_open_buffer)
         {
             throw std::exception();

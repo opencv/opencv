@@ -746,7 +746,7 @@ public:
     virtual ~CvCapture_MSMF();
     bool configureHW(const cv::VideoCaptureParameters& params);
     virtual bool open(int, const cv::VideoCaptureParameters* params);
-    virtual bool open(const cv::String&, const uint8_t*, size_t, const cv::VideoCaptureParameters* params);
+    virtual bool open(const cv::String&, std::streambuf&, const cv::VideoCaptureParameters* params);
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
@@ -1034,7 +1034,8 @@ bool CvCapture_MSMF::configureHW(bool enable)
                             }
                         }
                         // Reopen if needed
-                        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), NULL, 0, NULL)) : true;
+                        std::stringbuf noBuf;
+                        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), noBuf, NULL)) : true;
                     }
                     D3DMgr.Release();
                 }
@@ -1050,7 +1051,8 @@ bool CvCapture_MSMF::configureHW(bool enable)
         if (D3DDev)
             D3DDev.Release();
         captureMode = MODE_SW;
-        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), NULL, 0, NULL)) : true;
+        std::stringbuf noBuf;
+        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), noBuf, NULL)) : true;
     }
 #else
     return !enable;
@@ -1249,10 +1251,10 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
     return isOpen;
 }
 
-bool CvCapture_MSMF::open(const cv::String& _filename, const uint8_t* buffer, size_t buffer_size, const cv::VideoCaptureParameters* params)
+bool CvCapture_MSMF::open(const cv::String& _filename, std::streambuf& buffer, const cv::VideoCaptureParameters* params)
 {
     close();
-    if (_filename.empty() && !buffer)
+    if (_filename.empty() && buffer.sgetc() == EOF)
         return false;
 
     if (params)
@@ -1270,11 +1272,17 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const uint8_t* buffer, si
         MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName.data(), (int)_filename.length() + 1);
         succeeded = SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName.data(), attr.Get(), &videoFileSource));
     }
-    else if (buffer)
+    else if (buffer.sgetc() != EOF)
     {
-        IStream* s = SHCreateMemStream(buffer, static_cast<UINT32>(buffer_size));
+        // TODO: implement read by chunks
+        std::vector<char> data;
+        data.resize(buffer.pubseekoff(0, std::ios_base::end));
+        buffer.pubseekoff(0, std::ios_base::beg);
+        buffer.sgetn(data.data(), data.size());
+        IStream* s = SHCreateMemStream(reinterpret_cast<const BYTE*>(data.data()), static_cast<UINT32>(data.size()));
         if (!s)
             return false;
+
         IMFByteStream *bs = nullptr;
         MFCreateMFByteStreamOnStream(s, &bs);
         if (!bs)
@@ -2397,19 +2405,20 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename,
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
-        capture->open(filename, nullptr, 0, &params);
+        std::stringbuf noBuf;
+        capture->open(filename, noBuf, &params);
         if (capture->isOpened())
             return capture;
     }
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const std::vector<uchar>& buffer, const cv::VideoCaptureParameters& params)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (std::streambuf& source, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
-        capture->open(std::string(), buffer.data(), buffer.size(), &params);
+        capture->open(std::string(), source, &params);
         if (capture->isOpened())
             return capture;
     }
