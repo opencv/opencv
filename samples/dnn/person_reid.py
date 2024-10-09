@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 '''
-You can download a baseline ReID model and sample input from:
-https://github.com/ReID-Team/ReID_extra_testdata
+This sample detects the query person in the given video file.
 
 Authors of samples and Youtu ReID baseline:
         Xing Sun <winfredsun@tencent.com>
@@ -12,229 +11,256 @@ Authors of samples and Youtu ReID baseline:
 
 Copyright (C) 2020-2021, Tencent.
 Copyright (C) 2020-2021, SUSTech.
+Copyright (C) 2024, Bigvision LLC.
+
+How to use:
+    sample command to run:
+        `python person_reid.py`
+
+    You can download ReID model using
+        `python download_models.py reid`
+    and yolo model using:
+        `python download_models.py yolov8`
+
+    Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to point to the directory where models are downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 '''
 import argparse
 import os.path
 import numpy as np
 import cv2 as cv
+from common import *
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT,
-    cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
-    cv.dnn.DNN_BACKEND_OPENCV,
-    cv.dnn.DNN_BACKEND_VKCOM,
-    cv.dnn.DNN_BACKEND_CUDA)
+def help():
+    print(
+        '''
+        Use this script for Person Re-identification using OpenCV.
 
-targets = (cv.dnn.DNN_TARGET_CPU,
-    cv.dnn.DNN_TARGET_OPENCL,
-    cv.dnn.DNN_TARGET_OPENCL_FP16,
-    cv.dnn.DNN_TARGET_MYRIAD,
-    cv.dnn.DNN_TARGET_HDDL,
-    cv.dnn.DNN_TARGET_VULKAN,
-    cv.dnn.DNN_TARGET_CUDA,
-    cv.dnn.DNN_TARGET_CUDA_FP16)
+        Firstly, download required models i.e. reid and yolov8 using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 
-MEAN = (0.485, 0.456, 0.406)
-STD = (0.229, 0.224, 0.225)
+        To run:
+        Example: python person_reid.py reid
 
-def preprocess(images, height, width):
+        Re-identification model path can also be specified using --model argument and detection model can be specified using --yolo_model argument.
+        '''
+    )
+
+def get_args_parser():
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
+                        help='An optional path to file with preprocessing parameters.')
+    parser.add_argument('--query', '-q', help='Path to target image. Skip this argument to select target in the video frame.')
+    parser.add_argument('--input', '-i', default=0, help='Path to video file.', required=False)
+    parser.add_argument('--backend', default="default", type=str, choices=backends,
+            help="Choose one of computation backends: "
+            "default: automatically (by default), "
+            "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+            "opencv: OpenCV implementation, "
+            "vkcom: VKCOM, "
+            "cuda: CUDA, "
+            "webnn: WebNN")
+    parser.add_argument('--target', default="cpu", type=str, choices=targets,
+            help="Choose one of target computation devices: "
+            "cpu: CPU target (by default), "
+            "opencl: OpenCL, "
+            "opencl_fp16: OpenCL fp16 (half-float precision), "
+            "ncs2_vpu: NCS2 VPU, "
+            "hddl_vpu: HDDL VPU, "
+            "vulkan: Vulkan, "
+            "cuda: CUDA, "
+            "cuda_fp16: CUDA fp16 (half-float preprocess)")
+    args, _ = parser.parse_known_args()
+    add_preproc_args(args.zoo, parser, 'person_reid', prefix="", alias="reid")
+    add_preproc_args(args.zoo, parser, 'person_reid', prefix="yolo_", alias="reid")
+    parser = argparse.ArgumentParser(parents=[parser],
+                                        description='Person Re-identification using OpenCV.',
+                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    return parser.parse_args()
+
+img_dict = {} # Dictionary to store bounding boxes for corresponding cropped image
+
+def yolo_detector(frame, net):
+    global img_dict
+    height, width, _ = frame.shape
+
+    length = max((height, width))
+    image = np.zeros((length, length, 3), np.uint8)
+    image[0:height, 0:width] = frame
+
+    scale = length/args.yolo_width
+    # Create blob from the frame with correct scale factor and size for the model
+
+    blob = cv.dnn.blobFromImage(image, scalefactor=args.yolo_scale, size=(args.yolo_width, args.yolo_height), swapRB=args.yolo_rgb)
+    net.setInput(blob)
+    outputs = net.forward()
+
+    outputs = np.array([cv.transpose(outputs[0])])
+    rows = outputs.shape[1]
+
+    boxes = []
+    scores = []
+    class_ids = []
+
+    for i in range(rows):
+        classes_scores = outputs[0][i][4:]
+        (_, maxScore, _, (x, maxClassIndex)) = cv.minMaxLoc(classes_scores)
+        if maxScore >= 0.25:
+            box = [
+                outputs[0][i][0] - (0.5 * outputs[0][i][2]),
+                outputs[0][i][1] - (0.5 * outputs[0][i][3]),
+                outputs[0][i][2],
+                outputs[0][i][3],
+            ]
+            boxes.append(box)
+            scores.append(maxScore)
+            class_ids.append(maxClassIndex)
+
+    # Apply Non-Maximum Suppression
+    indexes = cv.dnn.NMSBoxes(boxes, scores, 0.25, 0.45, 0.5)
+
+    images = []
+    for i in indexes:
+        x, y, w, h = boxes[i]
+        x = round(x*scale)
+        y = round(y*scale)
+        w = round(w*scale)
+        h = round(h*scale)
+
+        x, y = max(0, x), max(0, y)
+        w, h = min(w, frame.shape[1] - x), min(h, frame.shape[0] - y)
+        crop_img = frame[y:y+h, x:x+w]
+        images.append(crop_img)
+        img_dict[crop_img.tobytes()] = (x, y, w, h)
+    return images
+
+def extract_feature(images, net):
     """
-    Create 4-dimensional blob from image
-    :param image: input image
-    :param height: the height of the resized input image
-    :param width: the width of the resized input image
-    """
-    img_list = []
-    for image in images:
-        image = cv.resize(image, (width, height))
-        img_list.append(image[:, :, ::-1])
-
-    images = np.array(img_list)
-    images = (images / 255.0 - MEAN) / STD
-
-    input = cv.dnn.blobFromImages(images.astype(np.float32), ddepth = cv.CV_32F)
-    return input
-
-def extract_feature(img_dir, model_path, batch_size = 32, resize_h = 384, resize_w = 128, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU):
-    """
-    Extract features from images in a target directory
-    :param img_dir: the input image directory
-    :param model_path: path to ReID model
-    :param batch_size: the batch size for each network inference iteration
-    :param resize_h: the height of the input image
-    :param resize_w: the width of the input image
-    :param backend: name of computation backend
-    :param target: name of computation target
+    Extract features from images
+    :param images: the input images
+    :param net: the model network
     """
     feat_list = []
-    path_list = os.listdir(img_dir)
-    path_list = [os.path.join(img_dir, img_name) for img_name in path_list]
-    count = 0
+    # net = reid_net.copy()
+    for img in images:
+        blob = cv.dnn.blobFromImage(img, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=args.rgb, crop=False, ddepth=cv.CV_32F)
 
-    for i in range(0, len(path_list), batch_size):
-        print('Feature Extraction for images in', img_dir, 'Batch:', count, '/', len(path_list))
-        batch = path_list[i : min(i + batch_size, len(path_list))]
-        imgs = read_data(batch)
-        inputs = preprocess(imgs, resize_h, resize_w)
+        for j in range(blob.shape[1]):
+            blob[:, j, :, :] /= args.std[j]
 
-        feat = run_net(inputs, model_path, backend, target)
-
+        net.setInput(blob)
+        feat = net.forward()
+        feat = np.reshape(feat, (feat.shape[0], feat.shape[1]))
         feat_list.append(feat)
-        count += batch_size
 
     feats = np.concatenate(feat_list, axis = 0)
-    return feats, path_list
+    return feats
 
-def run_net(inputs, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU):
+def find_matching(query_feat, gallery_feat):
     """
-    Forword propagation for a batch of images.
-    :param inputs: input batch of images
-    :param model_path: path to ReID model
-    :param backend: name of computation backend
-    :param target: name of computation target
-    """
-    net = cv.dnn.readNet(model_path)
-    net.setPreferableBackend(backend)
-    net.setPreferableTarget(target)
-    net.setInput(inputs)
-    out = net.forward()
-    out = np.reshape(out, (out.shape[0], out.shape[1]))
-    return out
-
-def read_data(path_list):
-    """
-    Read all images from a directory into a list
-    :param path_list: the list of image path
-    """
-    img_list = []
-    for img_path in path_list:
-        img = cv.imread(img_path)
-        if img is None:
-            continue
-        img_list.append(img)
-    return img_list
-
-def normalize(nparray, order=2, axis=0):
-    """
-    Normalize a N-D numpy array along the specified axis.
-    :param nparry: the array of vectors to be normalized
-    :param order: order of the norm
-    :param axis: the axis of x along which to compute the vector norms
-    """
-    norm = np.linalg.norm(nparray, ord=order, axis=axis, keepdims=True)
-    return nparray / (norm + np.finfo(np.float32).eps)
-
-def similarity(array1, array2):
-    """
-    Compute the euclidean or cosine distance of all pairs.
-    :param  array1: numpy array with shape [m1, n]
-    :param  array2: numpy array with shape [m2, n]
-    Returns:
-      numpy array with shape [m1, m2]
-    """
-    array1 = normalize(array1, axis=1)
-    array2 = normalize(array2, axis=1)
-    dist = np.matmul(array1, array2.T)
-    return dist
-
-def topk(query_feat, gallery_feat, topk = 5):
-    """
-    Return the index of top K gallery images most similar to the query images
+    Return the index of the gallery image most similar to the query image
     :param query_feat: array of feature vectors of query images
     :param gallery_feat: array of feature vectors of gallery images
-    :param topk: number of gallery images to return
     """
-    sim = similarity(query_feat, gallery_feat)
-    index = np.argsort(-sim, axis = 1)
-    return [i[0:int(topk)] for i in index]
+    cv.normalize(query_feat, query_feat, 1.0, 0.0, cv.NORM_L2)
+    cv.normalize(gallery_feat, gallery_feat, 1.0, 0.0, cv.NORM_L2)
 
-def drawRankList(query_name, gallery_list, output_size = (128, 384)):
-    """
-    Draw the rank list
-    :param query_name: path of the query image
-    :param gallery_name: path of the gallery image
-    "param output_size: the output size of each image in the rank list
-    """
-    def addBorder(im, color):
-        bordersize = 5
-        border = cv.copyMakeBorder(
-            im,
-            top = bordersize,
-            bottom = bordersize,
-            left = bordersize,
-            right = bordersize,
-            borderType = cv.BORDER_CONSTANT,
-            value = color
-        )
-        return border
-    query_img = cv.imread(query_name)
-    query_img = cv.resize(query_img, output_size)
-    query_img = addBorder(query_img, [0, 0, 0])
-    cv.putText(query_img, 'Query', (10, 30), cv.FONT_HERSHEY_COMPLEX, 1., (0,255,0), 2)
+    sim = query_feat.dot(gallery_feat.T)
+    index = np.argmax(sim, axis=1)[0]
+    return index
 
-    gallery_img_list = []
-    for i, gallery_name in enumerate(gallery_list):
-        gallery_img = cv.imread(gallery_name)
-        gallery_img = cv.resize(gallery_img, output_size)
-        gallery_img = addBorder(gallery_img, [255, 255, 255])
-        cv.putText(gallery_img, 'G%02d'%i, (10, 30), cv.FONT_HERSHEY_COMPLEX, 1., (0,255,0), 2)
-        gallery_img_list.append(gallery_img)
-    ret = np.concatenate([query_img] + gallery_img_list, axis = 1)
-    return ret
+def main():
+    if hasattr(args, 'help'):
+        help()
+        exit(1)
 
+    args.model = findModel(args.model, args.sha1)
 
-def visualization(topk_idx, query_names, gallery_names, output_dir = 'vis'):
-    """
-    Visualize the retrieval results with the person ReID model
-    :param topk_idx: the index of ranked gallery images for each query image
-    :param query_names: the list of paths of query images
-    :param gallery_names: the list of paths of gallery images
-    :param output_dir: the path to save the visualize results
-    """
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
-    for i, idx in enumerate(topk_idx):
-        query_name = query_names[i]
-        topk_names = [gallery_names[j] for j in idx]
-        vis_img = drawRankList(query_name, topk_names)
-        output_path = os.path.join(output_dir, '%03d_%s'%(i, os.path.basename(query_name)))
-        cv.imwrite(output_path, vis_img)
+    if args.yolo_model is None:
+        print("[ERROR] Please pass path to yolov8.onnx model file using --yolo_model.")
+        exit(1)
+    else:
+        args.yolo_model = findModel(args.yolo_model, args.yolo_sha1)
+
+    yolo_net = cv.dnn.readNet(args.yolo_model)
+    reid_net = cv.dnn.readNet(args.model)
+    reid_net.setPreferableBackend(get_backend_id(args.backend))
+    reid_net.setPreferableTarget(get_target_id(args.target))
+    cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
+    query_images = []
+
+    stdSize = 0.6
+    stdWeight = 2
+    stdImgSize = 512
+    imgWidth = -1 # Initialization
+    fontSize = 1.5
+    fontThickness = 1
+
+    if args.query:
+        query_images = [cv.imread(findFile(args.query))]
+    else:
+        while True:
+            ret, image = cap.read()
+            if not ret:
+                print("Error reading the video")
+                return -1
+            if imgWidth == -1:
+                imgWidth = min(image.shape[:2])
+                fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize)
+                fontThickness = max(fontThickness,(stdWeight*imgWidth)//stdImgSize)
+
+            label = "Press space bar to pause video to draw bounding box."
+            labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
+            cv.rectangle(image, (0, 0), (labelSize[0]+10, labelSize[1]+int(30*fontSize)), (255,255,255), cv.FILLED)
+            cv.putText(image, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+            cv.putText(image, "Press space bar after selecting.", (10, int(50*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+            cv.imshow('TRACKING', image)
+
+            key = cv.waitKey(100) & 0xFF
+            if key == ord(' '):
+                rect = cv.selectROI("TRACKING", image)
+                if rect:
+                    x, y, w, h = rect
+                    query_image = image[y:y + h, x:x + w]
+                    query_images = [query_image]
+                    break
+
+            if key == ord('q') or key == 27:
+                return
+
+    query_feat = extract_feature(query_images, reid_net)
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if imgWidth == -1:
+            imgWidth = min(frame.shape[:2])
+            fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize)
+            fontThickness = max(fontThickness,(stdWeight*imgWidth)//stdImgSize)
+
+        images = yolo_detector(frame, yolo_net)
+        gallery_feat = extract_feature(images, reid_net)
+
+        match_idx = find_matching(query_feat, gallery_feat)
+
+        match_img = images[match_idx]
+        x, y, w, h = img_dict[match_img.tobytes()]
+        cv.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        cv.putText(frame, "Target", (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 255), fontThickness)
+
+        label="Tracking"
+        labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
+        cv.rectangle(frame, (0, 0), (labelSize[0]+10, labelSize[1]+10), (255,255,255), cv.FILLED)
+        cv.putText(frame, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+        cv.imshow("TRACKING", frame)
+        if cv.waitKey(1) & 0xFF in [ord('q'), 27]:
+            break
+
+    cap.release()
+    cv.destroyAllWindows()
+    return
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Use this script to run human parsing using JPPNet',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--query_dir', '-q', required=True, help='Path to query image.')
-    parser.add_argument('--gallery_dir', '-g', required=True, help='Path to gallery directory.')
-    parser.add_argument('--resize_h', default = 256, help='The height of the input for model inference.')
-    parser.add_argument('--resize_w', default = 128, help='The width of the input for model inference')
-    parser.add_argument('--model', '-m', default='reid.onnx', help='Path to pb model.')
-    parser.add_argument('--visualization_dir', default='vis', help='Path for the visualization results')
-    parser.add_argument('--topk', default=10, help='Number of images visualized in the rank list')
-    parser.add_argument('--batchsize', default=32, help='The batch size of each inference')
-    parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
-                        help="Choose one of computation backends: "
-                             "%d: automatically (by default), "
-                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                             "%d: OpenCV implementation, "
-                             "%d: VKCOM, "
-                             "%d: CUDA backend"% backends)
-    parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
-                        help='Choose one of target computation devices: '
-                             '%d: CPU target (by default), '
-                             '%d: OpenCL, '
-                             '%d: OpenCL fp16 (half-float precision), '
-                             '%d: NCS2 VPU, '
-                             '%d: HDDL VPU, '
-                             '%d: Vulkan, '
-                             '%d: CUDA, '
-                             '%d: CUDA FP16'
-                             % targets)
-    args, _ = parser.parse_known_args()
-
-    if not os.path.isfile(args.model):
-        raise OSError("Model not exist")
-
-    query_feat, query_names = extract_feature(args.query_dir, args.model, args.batchsize, args.resize_h, args.resize_w, args.backend, args.target)
-    gallery_feat, gallery_names = extract_feature(args.gallery_dir, args.model, args.batchsize, args.resize_h, args.resize_w, args.backend, args.target)
-
-    topk_idx = topk(query_feat, gallery_feat, args.topk)
-    visualization(topk_idx, query_names, gallery_names, output_dir = args.visualization_dir)
+    args = get_args_parser()
+    main()
