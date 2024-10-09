@@ -1684,7 +1684,7 @@ Context& initializeContextFromGL()
         if (!clGetGLContextInfoKHR)
             continue;
 
-#if defined (__APPLE__)
+#if defined (__APPLE__) || defined(MACOSX)
         CGLContextObj cGLContext = CGLGetCurrentContext();
         CGLShareGroupObj cglShareGroup = CGLGetShareGroup(cGLContext);
 #endif
@@ -1697,7 +1697,7 @@ Context& initializeContextFromGL()
             CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
 #elif defined (__APPLE__)
             CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties)cglShareGroup,
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(MACOSX)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
             CL_EGL_DISPLAY_KHR, (cl_context_properties)eglGetCurrentDisplay(),
