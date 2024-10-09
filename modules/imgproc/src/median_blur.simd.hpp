@@ -845,7 +845,7 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
     CV_INSTRUMENT_REGION();
 
     bool useSortNet = ksize == 3 || (ksize == 5
-#if !(CV_SIMD)
+#if !((CV_SIMD || CV_SIMD_SCALABLE))
             && ( src0.depth() > CV_8U || src0.channels() == 2 || src0.channels() > 4 )
 #endif
         );
@@ -867,7 +867,7 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
         else if( src.depth() == CV_32F )
             medianBlur_SortNet<MinMax32f, MinMaxVec32f>( src, dst, ksize );
         else
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(cv::Error::StsUnsupportedFormat, "");
 
         return;
     }
@@ -881,7 +881,7 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
 
         double img_size_mp = (double)(src0.total())/(1 << 20);
         if( ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*
-            (CV_SIMD ? 1 : 3))
+            ((CV_SIMD || CV_SIMD_SCALABLE) ? 1 : 3))
             medianBlur_8u_Om( src, dst, ksize );
         else
             medianBlur_8u_O1( src, dst, ksize );

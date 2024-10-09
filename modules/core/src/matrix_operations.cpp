@@ -954,7 +954,7 @@ void cv::reduce(InputArray _src, OutputArray _dst, int dim, int op, int dtype)
     }
 
     if( !func )
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
                   "Unsupported combination of input and output array formats" );
 
     func( src, temp );
@@ -1259,7 +1259,7 @@ void cv::sort( InputArray _src, OutputArray _dst, int flags )
     Mat dst = _dst.getMat();
     CV_IPP_RUN_FAST(ipp_sort(src, dst, flags));
 
-    static SortFunc tab[] =
+    static SortFunc tab[CV_DEPTH_MAX] =
     {
         sort_<uchar>, sort_<schar>, sort_<ushort>, sort_<short>,
         sort_<int>, sort_<float>, sort_<double>, 0
@@ -1284,7 +1284,7 @@ void cv::sortIdx( InputArray _src, OutputArray _dst, int flags )
 
     CV_IPP_RUN_FAST(ipp_sortIdx(src, dst, flags));
 
-    static SortFunc tab[] =
+    static SortFunc tab[CV_DEPTH_MAX] =
     {
         sortIdx_<uchar>, sortIdx_<schar>, sortIdx_<ushort>, sortIdx_<short>,
         sortIdx_<int>, sortIdx_<float>, sortIdx_<double>, 0

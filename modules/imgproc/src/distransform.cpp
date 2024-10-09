@@ -448,7 +448,7 @@ static void getDistanceTransformMask( int maskType, float *metrics )
         metrics[2] = 2.1969f;
         break;
     default:
-        CV_Error(CV_StsBadArg, "Unknown metric type");
+        CV_Error(cv::Error::StsBadArg, "Unknown metric type");
     }
 }
 
@@ -760,18 +760,18 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 
         _labels.create(src.size(), CV_32S);
         labels = _labels.getMat();
-        maskSize = CV_DIST_MASK_5;
+        maskSize = cv::DIST_MASK_5;
     }
 
     float _mask[5] = {0};
 
-    if( maskSize != CV_DIST_MASK_3 && maskSize != CV_DIST_MASK_5 && maskSize != CV_DIST_MASK_PRECISE )
-        CV_Error( CV_StsBadSize, "Mask size should be 3 or 5 or 0 (precise)" );
+    if( maskSize != cv::DIST_MASK_3 && maskSize != cv::DIST_MASK_5 && maskSize != cv::DIST_MASK_PRECISE )
+        CV_Error( cv::Error::StsBadSize, "Mask size should be 3 or 5 or 0 (precise)" );
 
-    if ((distType == CV_DIST_C || distType == CV_DIST_L1) && !need_labels)
-        maskSize = CV_DIST_MASK_3;
+    if ((distType == cv::DIST_C || distType == cv::DIST_L1) && !need_labels)
+        maskSize = cv::DIST_MASK_3;
 
-    if( maskSize == CV_DIST_MASK_PRECISE )
+    if( maskSize == cv::DIST_MASK_PRECISE )
     {
 
 #ifdef HAVE_IPP
@@ -809,22 +809,23 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
         return;
     }
 
-    CV_Assert( distType == CV_DIST_C || distType == CV_DIST_L1 || distType == CV_DIST_L2 );
+    CV_Assert( distType == cv::DIST_C || distType == cv::DIST_L1 || distType == cv::DIST_L2 );
 
-    getDistanceTransformMask( (distType == CV_DIST_C ? 0 :
-        distType == CV_DIST_L1 ? 1 : 2) + maskSize*10, _mask );
+    getDistanceTransformMask( (distType == cv::DIST_C ? 0 :
+        distType == cv::DIST_L1 ? 1 : 2) + maskSize*10, _mask );
 
     Size size = src.size();
 
-    int border = maskSize == CV_DIST_MASK_3 ? 1 : 2;
-    Mat temp( size.height + border*2, size.width + border*2, CV_32SC1 );
+    int border = maskSize == cv::DIST_MASK_3 ? 1 : 2;
+    Mat temp;
 
     if( !need_labels )
     {
-        if( maskSize == CV_DIST_MASK_3 )
+        if( maskSize == cv::DIST_MASK_3 )
         {
-#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700) && 0  // disabled: https://github.com/opencv/opencv/issues/15904
-            CV_IPP_CHECK()
+#if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
+            bool has_int_overflow = (int64)src.cols * src.rows >= INT_MAX;
+            if (!has_int_overflow && CV_IPP_CHECK_COND)
             {
                 IppiSize roi = { src.cols, src.rows };
                 if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_3x3_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0)
@@ -836,12 +837,14 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             }
 #endif
 
+            temp.create(size.height + border*2, size.width + border*2, CV_32SC1);
             distanceTransform_3x3(src, temp, dst, _mask);
         }
         else
         {
 #if defined (HAVE_IPP) && (IPP_VERSION_X100 >= 700)
-            CV_IPP_CHECK()
+            bool has_int_overflow = (int64)src.cols * src.rows >= INT_MAX;
+            if (!has_int_overflow && CV_IPP_CHECK_COND)
             {
                 IppiSize roi = { src.cols, src.rows };
                 if (CV_INSTRUMENT_FUN_IPP(ippiDistanceTransform_5x5_8u32f_C1R, src.ptr<uchar>(), (int)src.step, dst.ptr<float>(), (int)dst.step, roi, _mask) >= 0)
@@ -853,6 +856,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             }
 #endif
 
+            temp.create(size.height + border*2, size.width + border*2, CV_32SC1);
             distanceTransform_5x5(src, temp, dst, _mask);
         }
     }
@@ -860,7 +864,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
     {
         labels.setTo(Scalar::all(0));
 
-        if( labelType == CV_DIST_LABEL_CCOMP )
+        if( labelType == cv::DIST_LABEL_CCOMP )
         {
             Mat zpix = src == 0;
             connectedComponents(zpix, labels, 8, CV_32S, CCL_WU);
@@ -879,7 +883,8 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
             }
         }
 
-       distanceTransformEx_5x5( src, temp, dst, labels, _mask );
+        temp.create(size.height + border*2, size.width + border*2, CV_32SC1);
+        distanceTransformEx_5x5( src, temp, dst, labels, _mask );
     }
 }
 
@@ -888,7 +893,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst,
 {
     CV_INSTRUMENT_REGION();
 
-    if (distanceType == CV_DIST_L1 && dstType==CV_8U)
+    if (distanceType == cv::DIST_L1 && dstType==CV_8U)
         distanceTransform_L1_8U(_src, _dst);
     else
         distanceTransform(_src, _dst, noArray(), distanceType, maskSize, DIST_LABEL_PIXEL);

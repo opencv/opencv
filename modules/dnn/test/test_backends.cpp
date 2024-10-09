@@ -49,7 +49,10 @@ public:
         net.setInput(inp);
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
-        net.enableWinograd(useWinograd);
+
+        if (target == DNN_TARGET_CPU_FP16)
+            net.enableWinograd(false);
+
         if (backend == DNN_BACKEND_HALIDE && !halideScheduler.empty())
         {
             halideScheduler = findDataFile(halideScheduler);
@@ -99,6 +102,12 @@ public:
     Net net;
 };
 
+TEST_P(DNNTestNetwork, DISABLED_YOLOv8n) {
+    processNet("dnn/onnx/models/yolov8n.onnx", "", Size(640, 640), "output0");
+    expectNoFallbacksFromIE(net);
+    expectNoFallbacksFromCUDA(net);
+}
+
 TEST_P(DNNTestNetwork, AlexNet)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_1GB);
@@ -114,7 +123,7 @@ TEST_P(DNNTestNetwork, ResNet_50)
 {
     applyTestTag(
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
-        CV_TEST_TAG_DEBUG_LONG
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
     processNet("dnn/ResNet-50-model.caffemodel", "dnn/ResNet-50-deploy.prototxt",
@@ -327,8 +336,11 @@ TEST_P(DNNTestNetwork, MobileNet_SSD_v2_TensorFlow)
 
 TEST_P(DNNTestNetwork, SSD_VGG16)
 {
-    applyTestTag(CV_TEST_TAG_LONG, (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
-                 CV_TEST_TAG_DEBUG_VERYLONG);
+    applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
     if (backend == DNN_BACKEND_HALIDE && target == DNN_TARGET_CPU)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_HALIDE);  // TODO HALIDE_CPU
 
@@ -449,7 +461,7 @@ TEST_P(DNNTestNetwork, Inception_v2_SSD_TensorFlow)
 {
     applyTestTag(
         (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB),
-        CV_TEST_TAG_DEBUG_LONG
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 #if defined(INF_ENGINE_RELEASE)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 && target == DNN_TARGET_MYRIAD
@@ -545,7 +557,7 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
     else if (target == DNN_TARGET_CPU_FP16)
     {
         l1 = 0.4;
-        lInf = 19.;
+        lInf = 22.;
     }
     else if (target == DNN_TARGET_VULKAN)
     {
@@ -1511,6 +1523,71 @@ INSTANTIATE_TEST_CASE_P(Layer_Test_Backends, Eltwise, testing::Combine(
 /*weighted(for sum only)*/ testing::Bool(),
                dnnBackendsAndTargets()
 ));
+
+////////////////////////////////////////////////////////////////////////////////
+// Element-wise layers
+////////////////////////////////////////////////////////////////////////////////
+using NaryEltwiseConcat = TestWithParam<tuple<std::vector<int>, tuple<Backend, Target>>>;
+TEST_P(NaryEltwiseConcat, Accuracy) {
+    auto param = GetParam();
+    std::vector<int> input_shape = get<0>(param);
+    auto backend_id = get<0>(get<1>(param));
+    auto target_id = get<1>(get<1>(param));
+
+    /* Build the following net:
+
+           <1x4x84>
+           /
+        [Input] -+-> Mul(B<1x84>) -> Concat(axis=1) -> [Output]
+                 |                     |
+                 +-> Sigmoid ----------+
+
+    */
+    Net net;
+
+    std::vector<int> mul_B_shape(input_shape.size() - 1, 1);
+    mul_B_shape.back() = input_shape.back();
+    Mat mul_B(mul_B_shape, CV_32FC1);
+    randn(mul_B, 0.f, 1.f);
+    LayerParams mul_B_lp;
+    mul_B_lp.name = "mul_B";
+    mul_B_lp.type = "Const";
+    mul_B_lp.blobs.push_back(mul_B);
+    int id_mul_B = net.addLayer(mul_B_lp.name, mul_B_lp.type, mul_B_lp);
+
+    LayerParams mul_lp;
+    mul_lp.name = "mul";
+    mul_lp.type = "NaryEltwise";
+    mul_lp.set("operation", "mul");
+    int id_mul = net.addLayer(mul_lp.name, mul_lp.type, mul_lp);
+    net.connect(0, 0, id_mul, 0);
+    net.connect(id_mul_B, 0, id_mul, 1);
+
+    LayerParams sigmoid_lp;
+    sigmoid_lp.name = "sigmoid";
+    sigmoid_lp.type = "Sigmoid";
+    int id_sigmoid = net.addLayer(sigmoid_lp.name, sigmoid_lp.type, sigmoid_lp);
+    net.connect(0, 0, id_sigmoid, 0);
+
+    LayerParams concat_lp;
+    concat_lp.name = "concat";
+    concat_lp.type = "Concat";
+    concat_lp.set("axis", 1);
+    int id_concat = net.addLayer(concat_lp.name, concat_lp.type, concat_lp);
+    net.connect(id_mul, 0, id_concat, 0);
+    net.connect(id_sigmoid, 0, id_concat, 1);
+
+    // Run test
+    Mat input(input_shape, CV_32FC1);
+    testLayer(input, net, backend_id, target_id, false);
+}
+
+INSTANTIATE_TEST_CASE_P(Layer_Test_Backends, NaryEltwiseConcat, testing::Combine(
+    testing::Values(std::vector<int>{1, 4, 84}),
+    dnnBackendsAndTargets())
+);
+
+
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Test_layers_backends, dnnBackendsAndTargets());
 

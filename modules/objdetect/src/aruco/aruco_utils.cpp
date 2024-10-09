@@ -38,12 +38,12 @@ void _copyVector2Output(vector<vector<Point2f> > &vec, OutputArrayOfArrays out, 
     }
 }
 
-void _convertToGrey(InputArray _in, OutputArray _out) {
-    CV_Assert(_in.type() == CV_8UC1 || _in.type() == CV_8UC3);
-    if(_in.type() == CV_8UC3)
+void _convertToGrey(InputArray _in, Mat& _out) {
+    CV_Assert(_in.type() == CV_8UC1 || _in.type() == CV_8UC3 || _in.type() == CV_8UC4);
+    if(_in.type() != CV_8UC1)
         cvtColor(_in, _out, COLOR_BGR2GRAY);
     else
-        _in.copyTo(_out);
+        _out = _in.getMat();
 }
 
 }

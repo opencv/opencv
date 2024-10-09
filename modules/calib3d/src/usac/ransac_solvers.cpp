@@ -733,7 +733,7 @@ public:
             const bool is_prosac = params->getSampler() == SamplingMethod::SAMPLING_PROSAC;
             std::atomic_bool success(false);
             std::atomic_int num_hypothesis_tested(0), thread_cnt(0), max_number_inliers(0), subset_size, termination_length;
-            std::atomic<double> best_score_all(std::numeric_limits<double>::max());
+            std::atomic<float> best_score_all(std::numeric_limits<float>::max());
             std::vector<Score> best_scores(MAX_THREADS), best_scores_not_LO;
             std::vector<Mat> best_models(MAX_THREADS), best_models_not_LO, K1_apx, K2_apx;
             std::vector<int> num_tested_models_threads(MAX_THREADS), growth_function, non_random_inliers;
@@ -782,7 +782,7 @@ public:
                         model_verifier, local_optimization, termination, sampler, lo_sampler, weight_fnc, true);
                 bool is_last_from_LO_thread = false;
                 Mat best_model_thread, non_degenerate_model, lo_model, best_not_LO_thread;
-                Score best_score_thread, current_score, non_denegenerate_model_score, lo_score,best_score_all_threads, best_not_LO_score_thread;
+                Score best_score_thread, current_score, non_denegenerate_model_score, lo_score, best_score_all_threads, best_not_LO_score_thread;
                 std::vector<int> sample(estimator->getMinimalSampleSize()), best_sample_thread, supports;
                 supports.reserve(3*MAX_MODELS_ADAPT); // store model supports
                 std::vector<bool> best_inliers_mask_local(points_size, false), model_inliers_mask(points_size, false);
@@ -790,7 +790,8 @@ public:
                 auto update_best = [&] (const Score &new_score, const Mat &new_model, bool from_LO=false) {
                     // update best score of all threads
                     if (max_number_inliers < new_score.inlier_number) max_number_inliers = new_score.inlier_number;
-                    if (best_score_all > new_score.score) best_score_all = new_score.score;
+                    if (best_score_all > new_score.score)
+                        best_score_all = new_score.score;
                     best_score_all_threads = Score(max_number_inliers, best_score_all);
                     //
                     quality->getInliers(new_model, model_inliers_mask);
@@ -839,7 +840,7 @@ public:
                     success = num_hypothesis_tested++ > max_iters;
                     if (iters % 10 && !adapt) {
                         // Synchronize threads. just to speed verification of model.
-                        quality->setBestScore(std::min(best_score_thread.score, (double)best_score_all));
+                        quality->setBestScore(std::min(best_score_thread.score, (float)best_score_all));
                         model_verifier->update(best_score_thread.inlier_number > max_number_inliers ? best_score_thread : best_score_all_threads, iters);
                     }
 

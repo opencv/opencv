@@ -14,7 +14,7 @@
 #define CONV_NR_FP32 28
 
 // The FP16 can only be supported by ARM64 and with FP16 FMA supported.
-#if defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC) && CV_FP16 // check FP16 FMA.
+#if CV_FP16 && CV_TRY_NEON_FP16 // check FP16 FMA.
 #define CONV_ARM_FP16 1
 #endif
 
@@ -22,7 +22,6 @@
 // Currently, only ARM 64 support FP16.
 #define CONV_MR_FP16 8
 #define CONV_NR_FP16 24
-typedef __fp16 float16_t; // Fix conflict between float16_t in arm_neon.h and float16_t in cvdef.h.
 #endif
 
 #elif CV_NEON              // 16 registers.
@@ -58,17 +57,15 @@ struct FastConv
     int pad_top, pad_bottom, pad_left, pad_right, pad_front, pad_behind;
 
     std::vector<float> weightsBuf;     // For generic Conv 2D
-    float* weightsBufPtr;
     std::vector<float> weightsWinoBuf; // For Winograd F(6x6, 3x3).
-    float* weightsWinoBufPtr;
     std::vector<float> biasBuf;
+    float* getWeights();
+    float* getWeightsWino();
 
-#if CV_NEON && CV_NEON_AARCH64 && CV_FP16
-    std::vector<float16_t> weightsBuf_FP16;
-    float16_t* weightsBufPtr_FP16;
-    std::vector<float16_t> weightsWinoBuf_FP16;
-    float16_t* weightsWinoBufPtr_FP16;
-#endif
+    std::vector<hfloat> weightsBuf_FP16;
+    std::vector<hfloat> weightsWinoBuf_FP16;
+    hfloat* getWeightsFP16();
+    hfloat* getWeightsWinoFP16();
 
     int conv_type;
     int conv_dim;  // Flag for conv1d, conv2d, or conv3d.
@@ -114,6 +111,32 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
 
 int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv, int ntasks,
                   float minval, float maxval, ActivationLayer* activ, bool ifMinMaxAct);
+
+// Work around of NEON, the following functions are only used internally.
+namespace opt_NEON {
+#if CV_NEON
+void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR);
+
+void convBlockMR1_F32(int np, const float* a, const float* b, float* c, const float bias, bool init_c,
+                      const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR);
+
+#if CV_NEON_AARCH64
+/* Accumulate */
+void winofunc_accum_F32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock,
+                    const int winoIblock, const int winoKblock, const int winoAtom, const int winoNatom);
+
+/*Input transform*/
+void winofunc_BtXB_8x8_F32(const float* inptr, int inpstep,
+                       float* outptr, int Cg, const int winoIblock, const int winoAtom);
+
+/*Output transform*/
+void winofunc_AtXA_8x8_F32(const float* inptr, int inpstep,
+                       float* bpptr, int bpstep, float* outptr, int outstep,
+                       float bias, float minval, float maxval, bool ifMinMaxAct);
+#endif // CV_NEON_AARCH64
+#endif // CV_NEON
+} // namespace opt_NEON.
+
 
 } // namespace dnn
 } // namespace cv

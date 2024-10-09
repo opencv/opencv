@@ -150,7 +150,7 @@ INSTANTIATE_TEST_CASE_P(
                        ::testing::ValuesIn({1, 3, 4}),
                        ::testing::ValuesIn({0, 50, 100}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
-                                            IMREAD_COLOR})));
+                                            IMREAD_COLOR, IMREAD_COLOR_RGB})));
 
 class Imgcodecs_Avif_Image_EncodeDecodeSuite
     : public Imgcodecs_Avif_Image_RoundTripSuite {};
@@ -166,7 +166,7 @@ TEST_P(Imgcodecs_Avif_Image_EncodeDecodeSuite, imencode_imdecode) {
                  cv::Exception);
     return;
   }
-  bool result;
+  bool result = true;
   EXPECT_NO_THROW(
       result = cv::imencode(".avif", img_original, buf, encoding_params_););
   EXPECT_TRUE(result);
@@ -183,7 +183,7 @@ INSTANTIATE_TEST_CASE_P(
                        ::testing::ValuesIn({1, 3, 4}),
                        ::testing::ValuesIn({0, 50, 100}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
-                                            IMREAD_COLOR})));
+                                            IMREAD_COLOR, IMREAD_COLOR_RGB})));
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -296,6 +296,7 @@ TEST_P(Imgcodecs_Avif_Animation_WriteReadSuite, encode_decode) {
     return;
   }
   EXPECT_NO_THROW(cv::imwritemulti(output, anim_original, encoding_params_));
+  EXPECT_EQ(anim_original.size(), imcount(output));
 
   // Read from file.
   std::vector<cv::Mat> anim;
@@ -311,7 +312,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(::testing::ValuesIn({8, 10, 12}),
                        ::testing::ValuesIn({1, 3}), ::testing::ValuesIn({50}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
-                                            IMREAD_COLOR})));
+                                            IMREAD_COLOR, IMREAD_COLOR_RGB})));
 class Imgcodecs_Avif_Animation_WriteDecodeSuite
     : public Imgcodecs_Avif_Animation_RoundTripSuite {};
 
@@ -335,6 +336,7 @@ TEST_P(Imgcodecs_Avif_Animation_WriteDecodeSuite, encode_decode) {
   file.seekg(0, std::ios::beg);
   std::vector<unsigned char> buf(size);
   EXPECT_TRUE(file.read(reinterpret_cast<char*>(buf.data()), size));
+  file.close();
   EXPECT_EQ(0, remove(output.c_str()));
   std::vector<cv::Mat> anim;
   ASSERT_TRUE(cv::imdecodemulti(buf, imread_mode_, anim));
@@ -347,7 +349,7 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(::testing::ValuesIn({8, 10, 12}),
                        ::testing::ValuesIn({1, 3}), ::testing::ValuesIn({50}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
-                                            IMREAD_COLOR})));
+                                            IMREAD_COLOR, IMREAD_COLOR_RGB})));
 
 }  // namespace
 }  // namespace opencv_test

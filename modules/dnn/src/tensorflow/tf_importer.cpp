@@ -260,6 +260,11 @@ const tensorflow::AttrValue& getLayerAttr(const tensorflow::NodeDef &layer, cons
     return layer.attr().at(name);
 }
 
+#if defined(__GNUC__) && (__GNUC__ >= 13)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdangling-reference"
+#endif
+
 static DataLayout getDataLayout(const tensorflow::NodeDef& layer)
 {
     if (hasLayerAttr(layer, "data_format"))
@@ -2295,6 +2300,12 @@ void TFImporter::parseSoftmax(tensorflow::GraphDef& net, const tensorflow::NodeD
     CV_CheckGT(num_inputs, 0, "");
     if (hasLayerAttr(layer, "axis"))
         layerParams.set("axis", getLayerAttr(layer, "axis").i());
+    // if tf version is 2.x, use axis -1 as default
+    else if(netBin.has_versions() && (int)netBin.versions().producer() >= 2)
+        layerParams.set("axis", -1);
+    // else use axis 1 as default
+    else
+        layerParams.set("axis", 1);
 
     int id = dstNet.addLayer(name, "Softmax", layerParams);
     layer_id[name] = id;
@@ -2977,6 +2988,10 @@ static void addConstNodes(tensorflow::GraphDef& net, std::map<String, int>& cons
     }
     CV_LOG_DEBUG(NULL, "DNN/TF: layers_to_ignore.size() = " << layers_to_ignore.size());
 }
+
+#if defined(__GNUC__) && (__GNUC__ == 13)
+#pragma GCC diagnostic pop
+#endif
 
 // If all inputs of specific layer have the same data layout we can say that
 // this layer's output has this data layout too. Returns DNN_LAYOUT_UNKNOWN otherwise.

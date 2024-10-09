@@ -53,7 +53,7 @@ You can use the latest stable OpenCV version or you can grab the latest snapshot
 
 ### Getting the Latest Stable OpenCV Version
 
--   Go to our [downloads page](http://opencv.org/releases.html).
+-   Go to our [downloads page](https://opencv.org/releases).
 -   Download the source archive and unpack it.
 
 ### Getting the Cutting-edge OpenCV from the Git Repository

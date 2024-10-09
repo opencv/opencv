@@ -441,6 +441,48 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_NEON_DOTPROD(fn, args, mode, ...)  CV_CPU_CALL_NEON_DOTPROD(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_NEON_FP16
+#  define CV_TRY_NEON_FP16 1
+#  define CV_CPU_FORCE_NEON_FP16 1
+#  define CV_CPU_HAS_SUPPORT_NEON_FP16 1
+#  define CV_CPU_CALL_NEON_FP16(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_NEON_FP16_(fn, args) return (opt_NEON_FP16::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_NEON_FP16
+#  define CV_TRY_NEON_FP16 1
+#  define CV_CPU_FORCE_NEON_FP16 0
+#  define CV_CPU_HAS_SUPPORT_NEON_FP16 (cv::checkHardwareSupport(CV_CPU_NEON_FP16))
+#  define CV_CPU_CALL_NEON_FP16(fn, args) if (CV_CPU_HAS_SUPPORT_NEON_FP16) return (opt_NEON_FP16::fn args)
+#  define CV_CPU_CALL_NEON_FP16_(fn, args) if (CV_CPU_HAS_SUPPORT_NEON_FP16) return (opt_NEON_FP16::fn args)
+#else
+#  define CV_TRY_NEON_FP16 0
+#  define CV_CPU_FORCE_NEON_FP16 0
+#  define CV_CPU_HAS_SUPPORT_NEON_FP16 0
+#  define CV_CPU_CALL_NEON_FP16(fn, args)
+#  define CV_CPU_CALL_NEON_FP16_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_NEON_FP16(fn, args, mode, ...)  CV_CPU_CALL_NEON_FP16(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_NEON_BF16
+#  define CV_TRY_NEON_BF16 1
+#  define CV_CPU_FORCE_NEON_BF16 1
+#  define CV_CPU_HAS_SUPPORT_NEON_BF16 1
+#  define CV_CPU_CALL_NEON_BF16(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_NEON_BF16_(fn, args) return (opt_NEON_BF16::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_NEON_BF16
+#  define CV_TRY_NEON_BF16 1
+#  define CV_CPU_FORCE_NEON_BF16 0
+#  define CV_CPU_HAS_SUPPORT_NEON_BF16 (cv::checkHardwareSupport(CV_CPU_NEON_BF16))
+#  define CV_CPU_CALL_NEON_BF16(fn, args) if (CV_CPU_HAS_SUPPORT_NEON_BF16) return (opt_NEON_BF16::fn args)
+#  define CV_CPU_CALL_NEON_BF16_(fn, args) if (CV_CPU_HAS_SUPPORT_NEON_BF16) return (opt_NEON_BF16::fn args)
+#else
+#  define CV_TRY_NEON_BF16 0
+#  define CV_CPU_FORCE_NEON_BF16 0
+#  define CV_CPU_HAS_SUPPORT_NEON_BF16 0
+#  define CV_CPU_CALL_NEON_BF16(fn, args)
+#  define CV_CPU_CALL_NEON_BF16_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_NEON_BF16(fn, args, mode, ...)  CV_CPU_CALL_NEON_BF16(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_MSA
 #  define CV_TRY_MSA 1
 #  define CV_CPU_FORCE_MSA 1

@@ -8,16 +8,26 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR);
+void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR);
 
-#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_AVX
+
+// FP 16 branch.
+void convBlock_F16(int np, const char * _a, const char * _b, char * _c, int ldc, bool init_c, int width,
+                    const int convMR_fp16, const int convNR_fp16);
+
+void convBlockMR1_F16(int np, const char* _a, const char* _b, float *c, const float _bias, bool init_c,
+                       const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR_FP16);
+
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY)
+
+#if CV_AVX
 
 #if !CV_FMA3 // AVX workaround
 #undef _mm256_fmadd_ps
 #define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
 #endif
 
-void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR)
+void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR)
 {
     CV_Assert(convMR == 4 && convNR == 24);
     __m256 c00 = _mm256_set1_ps(0.f), c01 = c00, c02 = c00;
@@ -121,16 +131,11 @@ void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool i
     _mm256_zeroupper();
 }
 
-#endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+#endif
 
-CV_CPU_OPTIMIZATION_NAMESPACE_END
+#if CV_NEON
 
-// NEON code work around.
-namespace opt_NEON
-{
-#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_NEON
-
-void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR)
+void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bool init_c, int width, const int convMR, const int convNR)
 {
 #if CV_NEON_AARCH64
     if (convMR == 4 && convNR == 28) // AARCH64
@@ -298,104 +303,104 @@ void convBlock(int np, const float* a, const float* b, float* c, int ldc, bool i
     }
     else
 #endif
-    if (convMR == 4 && convNR == 12) // ARMv7
-    {
-        float32x4_t c0 = vdupq_n_f32(0.f), c1 = c0, c2 = c0;
-        float32x4_t c3 = vdupq_n_f32(0.f), c4 = c3, c5 = c3;
-        float32x4_t c6 = vdupq_n_f32(0.f), c7 = c6, c8 = c6;
-        float32x4_t c9 = vdupq_n_f32(0.f), c10 = c9, c11 = c9;
-
-        float32x2_t a0 = vdup_n_f32(0.0f), a1 = a0;
-        float32x4_t b0 = vdupq_n_f32(0.0f), b1 = vdupq_n_f32(0.0f), b2 = vdupq_n_f32(0.0f);
-
-        if (width > 8)
+        if (convMR == 4 && convNR == 12) // ARMv7
         {
-            for (int p = 0; p < np; p++, a += convMR, b += convNR)
+            float32x4_t c0 = vdupq_n_f32(0.f), c1 = c0, c2 = c0;
+            float32x4_t c3 = vdupq_n_f32(0.f), c4 = c3, c5 = c3;
+            float32x4_t c6 = vdupq_n_f32(0.f), c7 = c6, c8 = c6;
+            float32x4_t c9 = vdupq_n_f32(0.f), c10 = c9, c11 = c9;
+
+            float32x2_t a0 = vdup_n_f32(0.0f), a1 = a0;
+            float32x4_t b0 = vdupq_n_f32(0.0f), b1 = vdupq_n_f32(0.0f), b2 = vdupq_n_f32(0.0f);
+
+            if (width > 8)
             {
-                a0 = vld1_f32(a), a1 = vld1_f32(a+2);
-                b0 = vld1q_f32(b), b1 = vld1q_f32(b + 4), b2 = vld1q_f32(b + 8);
+                for (int p = 0; p < np; p++, a += convMR, b += convNR)
+                {
+                    a0 = vld1_f32(a), a1 = vld1_f32(a+2);
+                    b0 = vld1q_f32(b), b1 = vld1q_f32(b + 4), b2 = vld1q_f32(b + 8);
 
-                c0 = vmlaq_lane_f32(c0, b0, a0, 0);
-                c1 = vmlaq_lane_f32(c1, b1, a0, 0);
-                c2 = vmlaq_lane_f32(c2, b2, a0, 0);
+                    c0 = vmlaq_lane_f32(c0, b0, a0, 0);
+                    c1 = vmlaq_lane_f32(c1, b1, a0, 0);
+                    c2 = vmlaq_lane_f32(c2, b2, a0, 0);
 
-                c3 = vmlaq_lane_f32(c3, b0, a0, 1);
-                c4 = vmlaq_lane_f32(c4, b1, a0, 1);
-                c5 = vmlaq_lane_f32(c5, b2, a0, 1);
+                    c3 = vmlaq_lane_f32(c3, b0, a0, 1);
+                    c4 = vmlaq_lane_f32(c4, b1, a0, 1);
+                    c5 = vmlaq_lane_f32(c5, b2, a0, 1);
 
-                c6 = vmlaq_lane_f32(c6, b0, a1, 0);
-                c7 = vmlaq_lane_f32(c7, b1, a1, 0);
-                c8 = vmlaq_lane_f32(c8, b2, a1, 0);
+                    c6 = vmlaq_lane_f32(c6, b0, a1, 0);
+                    c7 = vmlaq_lane_f32(c7, b1, a1, 0);
+                    c8 = vmlaq_lane_f32(c8, b2, a1, 0);
 
-                c9  = vmlaq_lane_f32(c9 , b0, a1, 1);
-                c10 = vmlaq_lane_f32(c10, b1, a1, 1);
-                c11 = vmlaq_lane_f32(c11, b2, a1, 1);
+                    c9  = vmlaq_lane_f32(c9 , b0, a1, 1);
+                    c10 = vmlaq_lane_f32(c10, b1, a1, 1);
+                    c11 = vmlaq_lane_f32(c11, b2, a1, 1);
+                }
             }
-        }
-        else if (width > 4)
-        {
-            for (int p = 0; p < np; p++, a += convMR, b += convNR)
+            else if (width > 4)
             {
-                a0 = vld1_f32(a), a1 = vld1_f32(a+2);
-                b0 = vld1q_f32(b), b1 = vld1q_f32(b + 4);
+                for (int p = 0; p < np; p++, a += convMR, b += convNR)
+                {
+                    a0 = vld1_f32(a), a1 = vld1_f32(a+2);
+                    b0 = vld1q_f32(b), b1 = vld1q_f32(b + 4);
 
-                c0 = vmlaq_lane_f32(c0, b0, a0, 0);
-                c1 = vmlaq_lane_f32(c1, b1, a0, 0);
+                    c0 = vmlaq_lane_f32(c0, b0, a0, 0);
+                    c1 = vmlaq_lane_f32(c1, b1, a0, 0);
 
-                c3 = vmlaq_lane_f32(c3, b0, a0, 1);
-                c4 = vmlaq_lane_f32(c4, b1, a0, 1);
+                    c3 = vmlaq_lane_f32(c3, b0, a0, 1);
+                    c4 = vmlaq_lane_f32(c4, b1, a0, 1);
 
-                c6 = vmlaq_lane_f32(c6, b0, a1, 0);
-                c7 = vmlaq_lane_f32(c7, b1, a1, 0);
+                    c6 = vmlaq_lane_f32(c6, b0, a1, 0);
+                    c7 = vmlaq_lane_f32(c7, b1, a1, 0);
 
-                c9  = vmlaq_lane_f32(c9 , b0, a1, 1);
-                c10 = vmlaq_lane_f32(c10, b1, a1, 1);
+                    c9  = vmlaq_lane_f32(c9 , b0, a1, 1);
+                    c10 = vmlaq_lane_f32(c10, b1, a1, 1);
+                }
             }
+            else
+            {
+                for (int p = 0; p < np; p++, a += convMR, b += convNR)
+                {
+                    a0 = vld1_f32(a), a1 = vld1_f32(a+2);
+                    b0 = vld1q_f32(b);
+
+                    c0 = vmlaq_lane_f32(c0, b0, a0, 0);
+                    c3 = vmlaq_lane_f32(c3, b0, a0, 1);
+                    c6 = vmlaq_lane_f32(c6, b0, a1, 0);
+                    c9  = vmlaq_lane_f32(c9 , b0, a1, 1);
+                }
+            }
+
+            if (!init_c)
+            {
+                c0 = vaddq_f32(c0, vld1q_f32(c));
+                c1 = vaddq_f32(c1, vld1q_f32(c + 4));
+                c2 = vaddq_f32(c2, vld1q_f32(c + 8));
+
+                c3 = vaddq_f32(c3, vld1q_f32(c + ldc));
+                c4 = vaddq_f32(c4, vld1q_f32(c + ldc + 4));
+                c5 = vaddq_f32(c5, vld1q_f32(c + ldc + 8));
+
+                c6 = vaddq_f32(c6, vld1q_f32(c + ldc * 2));
+                c7 = vaddq_f32(c7, vld1q_f32(c + ldc * 2 + 4));
+                c8 = vaddq_f32(c8, vld1q_f32(c + ldc * 2 + 8));
+
+                c9  = vaddq_f32(c9 , vld1q_f32(c + ldc * 3));
+                c10 = vaddq_f32(c10, vld1q_f32(c + ldc * 3 + 4));
+                c11 = vaddq_f32(c11, vld1q_f32(c + ldc * 3 + 8));
+            }
+
+            vst1q_f32(c, c0), vst1q_f32(c+4, c1), vst1q_f32(c+8, c2);
+            vst1q_f32(c + ldc, c3), vst1q_f32(c + ldc + 4, c4), vst1q_f32(c + ldc + 8, c5);
+            vst1q_f32(c + ldc*2, c6), vst1q_f32(c + ldc*2 + 4, c7), vst1q_f32(c + ldc*2 + 8, c8);
+            vst1q_f32(c + ldc*3, c9), vst1q_f32(c + ldc*3 + 4, c10), vst1q_f32(c + ldc*3 + 8, c11);
         }
         else
-        {
-            for (int p = 0; p < np; p++, a += convMR, b += convNR)
-            {
-                a0 = vld1_f32(a), a1 = vld1_f32(a+2);
-                b0 = vld1q_f32(b);
-
-                c0 = vmlaq_lane_f32(c0, b0, a0, 0);
-                c3 = vmlaq_lane_f32(c3, b0, a0, 1);
-                c6 = vmlaq_lane_f32(c6, b0, a1, 0);
-                c9  = vmlaq_lane_f32(c9 , b0, a1, 1);
-            }
-        }
-
-        if (!init_c)
-        {
-            c0 = vaddq_f32(c0, vld1q_f32(c));
-            c1 = vaddq_f32(c1, vld1q_f32(c + 4));
-            c2 = vaddq_f32(c2, vld1q_f32(c + 8));
-
-            c3 = vaddq_f32(c3, vld1q_f32(c + ldc));
-            c4 = vaddq_f32(c4, vld1q_f32(c + ldc + 4));
-            c5 = vaddq_f32(c5, vld1q_f32(c + ldc + 8));
-
-            c6 = vaddq_f32(c6, vld1q_f32(c + ldc * 2));
-            c7 = vaddq_f32(c7, vld1q_f32(c + ldc * 2 + 4));
-            c8 = vaddq_f32(c8, vld1q_f32(c + ldc * 2 + 8));
-
-            c9  = vaddq_f32(c9 , vld1q_f32(c + ldc * 3));
-            c10 = vaddq_f32(c10, vld1q_f32(c + ldc * 3 + 4));
-            c11 = vaddq_f32(c11, vld1q_f32(c + ldc * 3 + 8));
-        }
-
-        vst1q_f32(c, c0), vst1q_f32(c+4, c1), vst1q_f32(c+8, c2);
-        vst1q_f32(c + ldc, c3), vst1q_f32(c + ldc + 4, c4), vst1q_f32(c + ldc + 8, c5);
-        vst1q_f32(c + ldc*2, c6), vst1q_f32(c + ldc*2 + 4, c7), vst1q_f32(c + ldc*2 + 8, c8);
-        vst1q_f32(c + ldc*3, c9), vst1q_f32(c + ldc*3 + 4, c10), vst1q_f32(c + ldc*3 + 8, c11);
-    }
-    else
-        CV_Error(Error::StsNotImplemented, "Unsupported convMR and/or convNR in opt_NEON::convBlock");
+            CV_Error(Error::StsNotImplemented, "Unsupported convMR and/or convNR in opt_NEON::convBlock");
 }
 
 void convBlockMR1_F32(int np, const float * a, const float * b, float *c, const float bias, bool init_c,
-                  const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR)
+                      const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR)
 {
     CV_Assert(convNR == 28);
     float32x4_t c0 = vdupq_n_f32(bias), c1 = c0, c2 = c0;
@@ -482,22 +487,16 @@ void convBlockMR1_F32(int np, const float * a, const float * b, float *c, const 
     vst1q_f32(c + 20, c5);
     vst1q_f32(c + 24, c6);
 }
-
-#if CV_NEON_AARCH64 && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
-// Fix conflict between float16_t in arm_neon.h and float16_t in cvdef.h.
-typedef __fp16 float16_t;
-
-#ifndef __ARM_FEATURE_FMA // Work around without FMA support.
-#define vfmaq_f16(a, b, c) (a + b * c)
 #endif
-void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc, bool init_c, int width,
+
+#if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
+
+void convBlock_F16(int np, const char * _a, const char * _b, char * _c, int ldc, bool init_c, int width,
                     const int convMR_fp16, const int convNR_fp16)
 {
-#if 1
-    const float16_t* a = (const float16_t*)_a;
-    const float16_t* b = (const float16_t*)_b;
-    float16_t* c = (float16_t*)_c;
-
+    const __fp16* a = (const __fp16*)_a;
+    const __fp16* b = (const __fp16*)_b;
+    __fp16* c = (__fp16*)_c;
     CV_Assert(convMR_fp16 == 8 && convNR_fp16 == 24);
 
     float16x8_t c00 = vdupq_n_f16(0), c01 = c00, c02 = c00;
@@ -603,8 +602,8 @@ void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc
 
     if (!init_c)
     {
-#undef _FX_UPDATE_CBUF_ROW
-#define _FX_UPDATE_CBUF_ROW(row) \
+        #undef _FX_UPDATE_CBUF_ROW
+        #define _FX_UPDATE_CBUF_ROW(row) \
         c##row##0 = c##row##0 + vld1q_f16(c + row*ldc); \
         c##row##1 = c##row##1 + vld1q_f16(c + row*ldc + 8); \
         c##row##2 = c##row##2 + vld1q_f16(c + row*ldc + 16)
@@ -619,8 +618,8 @@ void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc
         _FX_UPDATE_CBUF_ROW(7);
     }
 
-#undef _FX_STORE_CBUF_ROW
-#define _FX_STORE_CBUF_ROW(row) \
+    #undef _FX_STORE_CBUF_ROW
+    #define _FX_STORE_CBUF_ROW(row) \
     vst1q_f16(c + row*ldc, c##row##0); \
     vst1q_f16(c + row*ldc + 8, c##row##1); \
     vst1q_f16(c + row*ldc + 16, c##row##2)
@@ -633,51 +632,16 @@ void convBlock_FP16(int np, const char * _a, const char * _b, char * _c, int ldc
     _FX_STORE_CBUF_ROW(5);
     _FX_STORE_CBUF_ROW(6);
     _FX_STORE_CBUF_ROW(7);
-#else
-    // reference only.
-    const float16_t* a = (const float16_t*)_a;
-    const float16_t* b = (const float16_t*)_b;
-    float16_t* c = (float16_t*)_c;
-    float cbuf[convMR_fp16*convNR_fp16];
-    memset(cbuf, 0, sizeof(cbuf));
-
-    for( int p = 0; p < np; p++ )
-    {
-        for( int i = 0; i < convMR_fp16; i++ )
-        {
-            float ai = float(a[convMR_fp16*p + i]);
-                for( int j = 0; j < convNR_fp16; j++ )
-                    cbuf[i*convNR_fp16+j] += float(b[convNR_fp16*p + j]) * ai;
-        }
-    }
-
-    if (!init_c)
-    {
-    for(int i = 0; i < convMR_fp16; i++)
-        {
-            for(int j = 0; j < convNR_fp16; j++)
-                c[i*ldc + j] = float16_t(float(c[i*ldc + j]) + cbuf[i*convNR_fp16 + j]);
-        }
-    }
-    else
-    {
-        for(int i = 0; i < convMR_fp16; i++)
-        {
-            for(int j = 0; j < convNR_fp16; j++)
-                c[i*ldc + j] = (float16_t)(cbuf[i*convNR_fp16 + j]);
-        }
-    }
-#endif
 }
 
-void convBlockMR1_FP16(int np, const char* _a, const char* _b, float *c, const float _bias, bool init_c,
-                            const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR_FP16)
+void convBlockMR1_F16(int np, const char* _a, const char* _b, float *c, const float _bias, bool init_c,
+                       const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR_FP16)
 {
     CV_Assert(convNR_FP16 == 24); // CONV_NR_FP16 = 24
-    const float16_t* a = (const float16_t*)_a;
-    const float16_t* b = (const float16_t*)_b;
+    const __fp16* a = (const __fp16*)_a;
+    const __fp16* b = (const __fp16*)_b;
 
-    const float16_t bias = (float16_t)_bias;
+    const __fp16 bias = (__fp16)_bias;
 
     float16x8_t c0 = vdupq_n_f16(bias), c1 = c0, c2 = c0;
 
@@ -685,7 +649,7 @@ void convBlockMR1_FP16(int np, const char* _a, const char* _b, float *c, const f
     {
         for (int p = 0; p < np; p++, a++, b += convNR_FP16)
         {
-            float16x8_t a0= vdupq_n_f16(a[0]);
+            float16x8_t a0 = vdupq_n_f16(a[0]);
             float16x8_t b0 = vld1q_f16(b), b1 = vld1q_f16(b + 8), b2 = vld1q_f16(b + 16);
 
             c0 = vfmaq_f16(c0, a0, b0);
@@ -754,6 +718,7 @@ void convBlockMR1_FP16(int np, const char* _a, const char* _b, float *c, const f
 }
 #endif
 
-#endif
-}
+#endif // CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
+
+CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // namespace cv::dnn

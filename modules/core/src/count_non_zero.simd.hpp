@@ -196,7 +196,7 @@ static int countNonZero64f( const double* src, int len )
 
 CountNonZeroFunc getCountNonZeroTab(int depth)
 {
-    static CountNonZeroFunc countNonZeroTab[] =
+    static CountNonZeroFunc countNonZeroTab[CV_DEPTH_MAX] =
     {
         (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u),
         (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u),

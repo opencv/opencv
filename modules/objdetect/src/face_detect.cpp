@@ -48,6 +48,35 @@ public:
         topK = top_k;
     }
 
+    FaceDetectorYNImpl(const String& framework,
+                       const std::vector<uchar>& bufferModel,
+                       const std::vector<uchar>& bufferConfig,
+                       const Size& input_size,
+                       float score_threshold,
+                       float nms_threshold,
+                       int top_k,
+                       int backend_id,
+                       int target_id)
+                       :divisor(32),
+                       strides({8, 16, 32})
+    {
+        net = dnn::readNet(framework, bufferModel, bufferConfig);
+        CV_Assert(!net.empty());
+
+        net.setPreferableBackend(backend_id);
+        net.setPreferableTarget(target_id);
+
+        inputW = input_size.width;
+        inputH = input_size.height;
+
+        padW = (int((inputW - 1) / divisor) + 1) * divisor;
+        padH = (int((inputH - 1) / divisor) + 1) * divisor;
+
+        scoreThreshold = score_threshold;
+        nmsThreshold = nms_threshold;
+        topK = top_k;
+    }
+
     void setInputSize(const Size& input_size) override
     {
         inputW = input_size.width;
@@ -171,6 +200,9 @@ private:
                     float score = std::sqrt(cls_score * obj_score);
                     face.at<float>(0, 14) = score;
 
+                    // Checking if the score meets the threshold before adding the face
+                    if (score < scoreThreshold)
+                        continue;
                     // Get bounding box
                     float cx = ((c + bbox_v[idx * 4 + 0]) * strides[i]);
                     float cy = ((r + bbox_v[idx * 4 + 1]) * strides[i]);
@@ -260,6 +292,24 @@ Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& model,
     return makePtr<FaceDetectorYNImpl>(model, config, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
 #else
     CV_UNUSED(model); CV_UNUSED(config); CV_UNUSED(input_size); CV_UNUSED(score_threshold); CV_UNUSED(nms_threshold); CV_UNUSED(top_k); CV_UNUSED(backend_id); CV_UNUSED(target_id);
+    CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN requires enabled 'dnn' module.");
+#endif
+}
+
+Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& framework,
+                                           const std::vector<uchar>& bufferModel,
+                                           const std::vector<uchar>& bufferConfig,
+                                           const Size& input_size,
+                                           const float score_threshold,
+                                           const float nms_threshold,
+                                           const int top_k,
+                                           const int backend_id,
+                                           const int target_id)
+{
+#ifdef HAVE_OPENCV_DNN
+    return makePtr<FaceDetectorYNImpl>(framework, bufferModel, bufferConfig, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
+#else
+    CV_UNUSED(bufferModel); CV_UNUSED(bufferConfig); CV_UNUSED(input_size); CV_UNUSED(score_threshold); CV_UNUSED(nms_threshold); CV_UNUSED(top_k); CV_UNUSED(backend_id); CV_UNUSED(target_id);
     CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN requires enabled 'dnn' module.");
 #endif
 }

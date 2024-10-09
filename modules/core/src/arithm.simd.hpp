@@ -865,7 +865,7 @@ static void cmp_loop_nosimd(const double* src1, size_t step1, const double* src2
     }
 
 // todo: try to avoid define dispatcher functions using macros with these such cases
-DEFINE_SIMD_ALL(cmp)
+DEFINE_SIMD_ALL(cmp, void)
 
 //=========================================================================
 // scaling helpers for single and dual source

@@ -25,12 +25,19 @@ CV_EXPORTS @interface Range : NSObject
 
 @property int start;
 @property int end;
+#ifdef __cplusplus
+@property(readonly) cv::Range& nativeRef;
+#endif
 
 #pragma mark - Constructors
 
 - (instancetype)init;
 - (instancetype)initWithStart:(int)start end:(int)end;
 - (instancetype)initWithVals:(NSArray<NSNumber*>*)vals;
+
+#ifdef __cplusplus
++ (instancetype)fromNative:(cv::Range&)range;
+#endif
 
 #pragma mark - Methods
 

@@ -5,10 +5,10 @@ endif()
 set(the_description "Deep neural network module. It allows to load models from different frameworks and to make forward pass")
 
 ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX)
-ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX LASX)
-ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2)
+ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX RVV LASX)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_depthwise" AVX AVX2 RVV LASX)
-ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2 NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX2 NEON LASX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
@@ -164,6 +164,12 @@ if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
     endif()
   endforeach()
   unset(CC_LIST)
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+    list(APPEND libs ${CUDNN_LIBRARIES} CUDA::cublas${CUDA_LIB_EXT})
+    if(NOT CUDA_VERSION VERSION_LESS 10.1)
+      list(APPEND libs CUDA::cublasLt${CUDA_LIB_EXT})
+    endif()
+  endif()
 else()
   set(sources_options ${sources_options} EXCLUDE_CUDA)
 endif()
@@ -207,7 +213,7 @@ file(GLOB_RECURSE dnn_int_hdrs
 )
 set(dnn_plugin_srcs ${dnn_srcs} ${dnn_int_hdrs})
 ocv_list_filterout_ex(dnn_plugin_srcs
-    "/src/dnn.cpp$|/src/dnn_utils.cpp$|/src/dnn_utils.cpp$|/src/dnn_read.cpp$|/src/registry.cpp$|/src/backend.cpp$"
+    "/src/dnn.cpp$|/src/dnn_utils.cpp$|/src/dnn_read.cpp$|/src/registry.cpp$|/src/backend.cpp$"
     # importers
     "/src/(caffe|darknet|onnx|tensorflow|torch)/"
     # executors

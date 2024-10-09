@@ -55,6 +55,16 @@
 #define OPJ_COMPILER_GNUC
 #endif
 
+#if defined(OPJ_COMPILER_MSVC) && defined(_M_ARM64) \
+    && !defined(_M_ARM64EC) && !defined(_M_CEE_PURE) && !defined(__CUDACC__) \
+    && !defined(__INTEL_COMPILER) && !defined(__clang__)
+#define MSVC_NEON_INTRINSICS
+#endif
+
+#ifdef MSVC_NEON_INTRINSICS
+#include <arm64_neon.h>
+#endif
+
 //************************************************************************/
 /** @brief Displays the error message for disabling the decoding of SPP and
   * MRP passes
@@ -71,6 +81,9 @@ OPJ_UINT32 population_count(OPJ_UINT32 val)
 {
 #if defined(OPJ_COMPILER_MSVC) && (defined(_M_IX86) || defined(_M_AMD64))
     return (OPJ_UINT32)__popcnt(val);
+#elif defined(OPJ_COMPILER_MSVC) && defined(MSVC_NEON_INTRINSICS)
+    const __n64 temp = neon_cnt(__uint64ToN64_v(val));
+    return neon_addv8(temp).n8_i8[0];
 #elif (defined OPJ_COMPILER_GNUC)
     return (OPJ_UINT32)__builtin_popcount(val);
 #else
@@ -294,7 +307,7 @@ void mel_decode(dec_mel_t *melp)
   *  @param [in]  scup is the length of MEL+VLC segments
   */
 static INLINE
-void mel_init(dec_mel_t *melp, OPJ_UINT8* bbuf, int lcup, int scup)
+OPJ_BOOL mel_init(dec_mel_t *melp, OPJ_UINT8* bbuf, int lcup, int scup)
 {
     int num;
     int i;
@@ -316,7 +329,9 @@ void mel_init(dec_mel_t *melp, OPJ_UINT8* bbuf, int lcup, int scup)
         OPJ_UINT64 d;
         int d_bits;
 
-        assert(melp->unstuff == OPJ_FALSE || melp->data[0] <= 0x8F);
+        if (melp->unstuff == OPJ_TRUE && melp->data[0] > 0x8F) {
+            return OPJ_FALSE;
+        }
         d = (melp->size > 0) ? *melp->data : 0xFF; // if buffer is consumed
         // set data to 0xFF
         if (melp->size == 1) {
@@ -332,6 +347,7 @@ void mel_init(dec_mel_t *melp, OPJ_UINT8* bbuf, int lcup, int scup)
     }
     melp->tmp <<= (64 - melp->bits); //push all the way up so the first bit
     // is the MSB
+    return OPJ_TRUE;
 }
 
 //************************************************************************/
@@ -1063,7 +1079,7 @@ static OPJ_BOOL opj_t1_allocate_buffers(
         if (flagssize > t1->flagssize) {
 
             opj_aligned_free(t1->flags);
-            t1->flags = (opj_flag_t*) opj_aligned_malloc(flagssize);
+            t1->flags = (opj_flag_t*) opj_aligned_malloc(flagssize * sizeof(opj_flag_t));
             if (!t1->flags) {
                 /* FIXME event manager error callback */
                 return OPJ_FALSE;
@@ -1071,7 +1087,7 @@ static OPJ_BOOL opj_t1_allocate_buffers(
         }
         t1->flagssize = flagssize;
 
-        memset(t1->flags, 0, flagssize);
+        memset(t1->flags, 0, flagssize * sizeof(opj_flag_t));
     }
 
     t1->w = w;
@@ -1079,6 +1095,26 @@ static OPJ_BOOL opj_t1_allocate_buffers(
 
     return OPJ_TRUE;
 }
+
+/**
+Decode 1 HT code-block
+@param t1 T1 handle
+@param cblk Code-block coding parameters
+@param orient
+@param roishift Region of interest shifting value
+@param cblksty Code-block style
+@param p_manager the event manager
+@param p_manager_mutex mutex for the event manager
+@param check_pterm whether PTERM correct termination should be checked
+*/
+OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
+                               opj_tcd_cblk_dec_t* cblk,
+                               OPJ_UINT32 orient,
+                               OPJ_UINT32 roishift,
+                               OPJ_UINT32 cblksty,
+                               opj_event_mgr_t *p_manager,
+                               opj_mutex_t* p_manager_mutex,
+                               OPJ_BOOL check_pterm);
 
 //************************************************************************/
 /** @brief Decodes one codeblock, processing the cleanup, siginificance
@@ -1187,6 +1223,9 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
 
         /* Concatenate all chunks */
         cblkdata = t1->cblkdatabuffer;
+        if (cblkdata == NULL) {
+            return OPJ_FALSE;
+        }
         cblk_len = 0;
         for (i = 0; i < cblk->numchunks; i++) {
             memcpy(cblkdata + cblk_len, cblk->chunks[i].data, cblk->chunks[i].len);
@@ -1374,7 +1413,17 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
     }
 
     // init structures
-    mel_init(&mel, coded_data, lcup, scup);
+    if (mel_init(&mel, coded_data, lcup, scup) == OPJ_FALSE) {
+        if (p_manager_mutex) {
+            opj_mutex_lock(p_manager_mutex);
+        }
+        opj_event_msg(p_manager, EVT_ERROR, "Malformed HT codeblock. "
+                      "Incorrect MEL segment sequence.\n");
+        if (p_manager_mutex) {
+            opj_mutex_unlock(p_manager_mutex);
+        }
+        return OPJ_FALSE;
+    }
     rev_init(&vlc, coded_data, lcup, scup);
     frwd_init(&magsgn, coded_data, lcup - scup, 0xFF);
     if (num_passes > 1) { // needs to be tested

@@ -557,6 +557,10 @@ inline __m256i _lasx_256_castpd_si256(const __m256d& v)
     { return _Tpvec(__lasx_xvreplgr2vr_d(0)); }                                   \
     inline _Tpvec v256_setall_##suffix(_Tp v)                                     \
     { return _Tpvec(__lasx_xvreplgr2vr_##ssuffix((ctype_s)v)); }                  \
+    template <> inline _Tpvec v_setzero_()                                        \
+    { return v256_setzero_##suffix(); }                                           \
+    template <> inline _Tpvec v_setall_(_Tp v)                                    \
+    { return v256_setall_##suffix(v); }                                           \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_uint8x32,  suffix, OPENCV_HAL_NOP)        \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_int8x32,   suffix, OPENCV_HAL_NOP)        \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_uint16x16, suffix, OPENCV_HAL_NOP)        \
@@ -588,7 +592,11 @@ inline __m256d _lasx_256_castsi256_pd(const __m256i &v)
     inline _Tpvec v256_setzero_##suffix()                                 \
     { return _Tpvec(__lasx_xvreplgr2vr_d(0)); }                           \
     inline _Tpvec v256_setall_##suffix(_Tp v)                             \
-    { return _Tpvec(_v256_setall_##zsuffix(v)); }                   \
+    { return _Tpvec(_v256_setall_##zsuffix(v)); }                         \
+    template <> inline _Tpvec v_setzero_()                                \
+    { return v256_setzero_##suffix(); }                                   \
+    template <> inline _Tpvec v_setall_(_Tp v)                            \
+    { return v256_setall_##suffix(v); }                                   \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_uint8x32,  suffix, cast)          \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_int8x32,   suffix, cast)          \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_uint16x16, suffix, cast)          \
@@ -650,16 +658,18 @@ inline v_float32x8 v256_shuffle(const v_float32x8 &a)
 template<int m>
 inline v_float64x4 v256_shuffle(const v_float64x4 &a)
 {
-    int imm8 = m & 0b0001;  //0 or 1
-    if (m & 0x0b0010) imm8 |= 0b0100;
-    //else imm8 |= 0b0000;
-    if (m & 0x0b0100) imm8 |= 0b110000;  //2 or 3
-    else imm8 |= 0b100000;
-    if (m & 0x0b1000) imm8 |= 0b11000000;
-    else imm8 |= 0b10000000;
+    const int m1 = m & 0b1;
+    const int m2 = m & 0b10;
+    const int m3 = m & 0b100;
+    const int m4 = m & 0b1000;
+    const int m5 = m2 << 1;
+    const int m6 = m3 << 2;
+    const int m7 = m4 << 3;
+    const int m8 = m1 & m5 & m6 & m7;
 
-    return v_float64x4(__lasx_xvpermi_d(*((__m256i*)&a.val), imm8));
+    return v_float64x4(__lasx_xvshuf4i_d(*((__m256i*)&a.val), *((__m256i*)&a.val), m8));
 }
+
 template<typename _Tpvec>
 inline void v256_zip(const _Tpvec& a, const _Tpvec& b, _Tpvec& ab0, _Tpvec& ab1)
 {
@@ -744,53 +754,51 @@ OPENCV_HAL_IMPL_LASX_ZIP(v_float64x4)
 
 /** Arithmetics **/
 #define OPENCV_HAL_IMPL_LASX_BIN_OP(bin_op, _Tpvec, intrin)           \
-    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b)  \
-    { return _Tpvec(intrin(a.val, b.val)); }                          \
-    inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b)    \
-    { a.val = intrin(a.val, b.val); return a; }
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)            \
+    { return _Tpvec(intrin(a.val, b.val)); }
 
-OPENCV_HAL_IMPL_LASX_BIN_OP(+, v_uint8x32,  __lasx_xvsadd_bu)
-OPENCV_HAL_IMPL_LASX_BIN_OP(-, v_uint8x32,  __lasx_xvssub_bu)
-OPENCV_HAL_IMPL_LASX_BIN_OP(+, v_int8x32,   __lasx_xvsadd_b)
-OPENCV_HAL_IMPL_LASX_BIN_OP(-, v_int8x32,   __lasx_xvssub_b)
-OPENCV_HAL_IMPL_LASX_BIN_OP(+, v_uint16x16, __lasx_xvsadd_hu)
-OPENCV_HAL_IMPL_LASX_BIN_OP(-, v_uint16x16, __lasx_xvssub_hu)
-OPENCV_HAL_IMPL_LASX_BIN_OP(+, v_int16x16,  __lasx_xvsadd_h)
-OPENCV_HAL_IMPL_LASX_BIN_OP(-, v_int16x16,  __lasx_xvssub_h)
-OPENCV_HAL_IMPL_LASX_BIN_OP(+, v_uint32x8,  __lasx_xvadd_w)
-OPENCV_HAL_IMPL_LASX_BIN_OP(-, v_uint32x8,  __lasx_xvsub_w)
-OPENCV_HAL_IMPL_LASX_BIN_OP(*, v_uint32x8,  __lasx_xvmul_w)
-OPENCV_HAL_IMPL_LASX_BIN_OP(+, v_int32x8,   __lasx_xvadd_w)
-OPENCV_HAL_IMPL_LASX_BIN_OP(-, v_int32x8,   __lasx_xvsub_w)
-OPENCV_HAL_IMPL_LASX_BIN_OP(*, v_int32x8,   __lasx_xvmul_w)
-OPENCV_HAL_IMPL_LASX_BIN_OP(+, v_uint64x4,  __lasx_xvadd_d)
-OPENCV_HAL_IMPL_LASX_BIN_OP(-, v_uint64x4,  __lasx_xvsub_d)
-OPENCV_HAL_IMPL_LASX_BIN_OP(+, v_int64x4,   __lasx_xvadd_d)
-OPENCV_HAL_IMPL_LASX_BIN_OP(-, v_int64x4,   __lasx_xvsub_d)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_uint8x32,  __lasx_xvsadd_bu)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_sub, v_uint8x32,  __lasx_xvssub_bu)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_int8x32,   __lasx_xvsadd_b)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_sub, v_int8x32,   __lasx_xvssub_b)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_uint16x16, __lasx_xvsadd_hu)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_sub, v_uint16x16, __lasx_xvssub_hu)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_int16x16,  __lasx_xvsadd_h)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_sub, v_int16x16,  __lasx_xvssub_h)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_uint32x8,  __lasx_xvadd_w)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_sub, v_uint32x8,  __lasx_xvsub_w)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_mul, v_uint32x8,  __lasx_xvmul_w)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_int32x8,   __lasx_xvadd_w)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_sub, v_int32x8,   __lasx_xvsub_w)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_mul, v_int32x8,   __lasx_xvmul_w)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_uint64x4,  __lasx_xvadd_d)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_sub, v_uint64x4,  __lasx_xvsub_d)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_int64x4,   __lasx_xvadd_d)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_sub, v_int64x4,   __lasx_xvsub_d)
 
-OPENCV_HAL_IMPL_LASX_BIN_OP(+, v_float32x8, __lasx_xvfadd_s)
-OPENCV_HAL_IMPL_LASX_BIN_OP(-, v_float32x8, __lasx_xvfsub_s)
-OPENCV_HAL_IMPL_LASX_BIN_OP(*, v_float32x8, __lasx_xvfmul_s)
-OPENCV_HAL_IMPL_LASX_BIN_OP(/, v_float32x8, __lasx_xvfdiv_s)
-OPENCV_HAL_IMPL_LASX_BIN_OP(+, v_float64x4, __lasx_xvfadd_d)
-OPENCV_HAL_IMPL_LASX_BIN_OP(-, v_float64x4, __lasx_xvfsub_d)
-OPENCV_HAL_IMPL_LASX_BIN_OP(*, v_float64x4, __lasx_xvfmul_d)
-OPENCV_HAL_IMPL_LASX_BIN_OP(/, v_float64x4, __lasx_xvfdiv_d)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_float32x8, __lasx_xvfadd_s)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_sub, v_float32x8, __lasx_xvfsub_s)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_mul, v_float32x8, __lasx_xvfmul_s)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_div, v_float32x8, __lasx_xvfdiv_s)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_add, v_float64x4, __lasx_xvfadd_d)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_sub, v_float64x4, __lasx_xvfsub_d)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_mul, v_float64x4, __lasx_xvfmul_d)
+OPENCV_HAL_IMPL_LASX_BIN_OP(v_div, v_float64x4, __lasx_xvfdiv_d)
 
 // saturating multiply 8-bit, 16-bit
-inline v_uint8x32 operator * (const v_uint8x32& a, const v_uint8x32& b)
+inline v_uint8x32 v_mul(const v_uint8x32& a, const v_uint8x32& b)
 {
     v_uint16x16 c, d;
     v_mul_expand(a, b, c, d);
     return v_pack(c, d);
 }
-inline v_int8x32 operator * (const v_int8x32& a, const v_int8x32& b)
+inline v_int8x32 v_mul(const v_int8x32& a, const v_int8x32& b)
 {
     v_int16x16 c, d;
     v_mul_expand(a, b, c, d);
     return v_pack(c, d);
 }
-inline v_uint16x16 operator * (const v_uint16x16& a, const v_uint16x16& b)
+inline v_uint16x16 v_mul(const v_uint16x16& a, const v_uint16x16& b)
 {
     __m256i pl = __lasx_xvmul_h(a.val, b.val);
     __m256i ph = __lasx_xvmuh_hu(a.val, b.val);
@@ -798,7 +806,7 @@ inline v_uint16x16 operator * (const v_uint16x16& a, const v_uint16x16& b)
     __m256i p1 = __lasx_xvilvh_h(ph, pl);
     return v_uint16x16(_v256_packs_epu32(p0, p1));
 }
-inline v_int16x16 operator * (const v_int16x16& a, const v_int16x16& b)
+inline v_int16x16 v_mul(const v_int16x16& a, const v_int16x16& b)
 {
     __m256i pl = __lasx_xvmul_h(a.val, b.val);
     __m256i ph = __lasx_xvmuh_h(a.val, b.val);
@@ -806,14 +814,6 @@ inline v_int16x16 operator * (const v_int16x16& a, const v_int16x16& b)
     __m256i p1 = __lasx_xvilvh_h(ph, pl);
     return v_int16x16(_lasx_packs_w(p0, p1));
 }
-inline v_uint8x32& operator *= (v_uint8x32& a, const v_uint8x32& b)
-{ a = a * b; return a; }
-inline v_int8x32& operator *= (v_int8x32& a, const v_int8x32& b)
-{ a = a * b; return a; }
-inline v_uint16x16& operator *= (v_uint16x16& a, const v_uint16x16& b)
-{ a = a * b; return a; }
-inline v_int16x16& operator *= (v_int16x16& a, const v_int16x16& b)
-{ a = a * b; return a; }
 
 /** Non-saturating arithmetics **/
 
@@ -902,13 +902,13 @@ inline v_uint16x16 v_mul_hi(const v_uint16x16& a, const v_uint16x16& b) { return
 
 /** Bitwise shifts **/
 #define OPENCV_HAL_IMPL_LASX_SHIFT_OP(_Tpuvec, _Tpsvec, suffix, srai)                             \
-    inline _Tpuvec operator << (const _Tpuvec& a, int imm)                                        \
+    inline _Tpuvec v_shl(const _Tpuvec& a, int imm)                                               \
     { return _Tpuvec(__lasx_xvsll_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
-    inline _Tpsvec operator << (const _Tpsvec& a, int imm)                                        \
+    inline _Tpsvec v_shl(const _Tpsvec& a, int imm)                                               \
     { return _Tpsvec(__lasx_xvsll_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
-    inline _Tpuvec operator >> (const _Tpuvec& a, int imm)                                        \
+    inline _Tpuvec V_shr(const _Tpuvec& a, int imm)                                               \
     { return _Tpuvec(__lasx_xvsrl_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
-    inline _Tpsvec operator >> (const _Tpsvec& a, int imm)                                        \
+    inline _Tpsvec v_shr(const _Tpsvec& a, int imm)                                               \
     { return _Tpsvec(srai(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }                            \
     template<int imm>                                                                             \
     inline _Tpuvec v_shl(const _Tpuvec& a)                                                        \
@@ -930,10 +930,10 @@ OPENCV_HAL_IMPL_LASX_SHIFT_OP(v_uint64x4,  v_int64x4,  d, __lasx_xvsra_d)
 
 /** Bitwise logic **/
 #define OPENCV_HAL_IMPL_LASX_LOGIC_OP(_Tpvec, suffix, not_const)    \
-    OPENCV_HAL_IMPL_LASX_BIN_OP(&, _Tpvec, __lasx_xvand_##suffix)   \
-    OPENCV_HAL_IMPL_LASX_BIN_OP(|, _Tpvec, __lasx_xvor_##suffix)    \
-    OPENCV_HAL_IMPL_LASX_BIN_OP(^, _Tpvec, __lasx_xvxor_##suffix)   \
-    inline _Tpvec operator ~ (const _Tpvec& a)                      \
+    OPENCV_HAL_IMPL_LASX_BIN_OP(v_and, _Tpvec, __lasx_xvand_##suffix)  \
+    OPENCV_HAL_IMPL_LASX_BIN_OP(v_or, _Tpvec, __lasx_xvor_##suffix)    \
+    OPENCV_HAL_IMPL_LASX_BIN_OP(v_xor, _Tpvec, __lasx_xvxor_##suffix)  \
+    inline _Tpvec v_not(const _Tpvec& a)                               \
     { return _Tpvec(__lasx_xvnori_b(a.val, 0)); }
 
 OPENCV_HAL_IMPL_LASX_LOGIC_OP(v_uint8x32,   v, __lasx_xvreplgr2vr_w(-1))
@@ -946,16 +946,14 @@ OPENCV_HAL_IMPL_LASX_LOGIC_OP(v_uint64x4,   v, __lasx_xvreplgr2vr_d(-1))
 OPENCV_HAL_IMPL_LASX_LOGIC_OP(v_int64x4,    v, __lasx_xvreplgr2vr_d(-1))
 
 #define OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(bin_op, _Tpvec, intrin, cast)                         \
-    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b)                            \
-    { return _Tpvec(intrin(*((__m256i*)(&a.val)), *((__m256i*)(&b.val)))); }                    \
-    inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b)                              \
-    { __m256i c = intrin(*((__m256i*)(&a.val)), *((__m256i*)(&b.val))); a.val = cast(c); return a; }
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)                                      \
+    { return _Tpvec(intrin(*((__m256i*)(&a.val)), *((__m256i*)(&b.val)))); }
 
 #define OPENCV_HAL_IMPL_LASX_FLOAT_LOGIC_OP(_Tpvec, suffix, not_const, cast)       \
-    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(&, _Tpvec, __lasx_xvand_##suffix, cast)      \
-    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(|, _Tpvec, __lasx_xvor_##suffix, cast)       \
-    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(^, _Tpvec, __lasx_xvxor_##suffix, cast)      \
-    inline _Tpvec operator ~ (const _Tpvec& a)                                     \
+    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(v_and, _Tpvec, __lasx_xvand_##suffix, cast)  \
+    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(v_or, _Tpvec, __lasx_xvor_##suffix, cast)    \
+    OPENCV_HAL_IMPL_LASX_FLOAT_BIN_OP(v_xor, _Tpvec, __lasx_xvxor_##suffix, cast)  \
+    inline _Tpvec v_not(const _Tpvec& a)                                           \
     { return _Tpvec(__lasx_xvxor_##suffix(*((__m256i*)(&a.val)), not_const)); }
 
 OPENCV_HAL_IMPL_LASX_FLOAT_LOGIC_OP(v_float32x8,  v, __lasx_xvreplgr2vr_w(-1), _lasx_256_castsi256_ps)
@@ -981,25 +979,25 @@ inline v_float64x4 v_select(const v_float64x4 &mask, const v_float64x4 &a, const
 
 /** Comparison **/
 #define OPENCV_HAL_IMPL_LASX_CMP_OP_OV(_Tpvec)                     \
-    inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b)   \
-    { return ~(a == b); }                                          \
-    inline _Tpvec operator <  (const _Tpvec& a, const _Tpvec& b)   \
-    { return b > a; }                                              \
-    inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b)   \
-    { return ~(a < b); }                                           \
-    inline _Tpvec operator <= (const _Tpvec& a, const _Tpvec& b)   \
-    { return b >= a; }
+    inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)           \
+    { return v_not(v_eq(a, b)); }                                  \
+    inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b)           \
+    { return v_gt(b, a); }                                         \
+    inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b)           \
+    { return v_not(v_lt(a, b)); }                                  \
+    inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b)           \
+    { return v_ge(b, a); }
 
 #define OPENCV_HAL_IMPL_LASX_CMP_OP_INT(_Tpuvec, _Tpsvec, suffix, usuffix)   \
-    inline _Tpuvec operator == (const _Tpuvec& a, const _Tpuvec& b)          \
+    inline _Tpuvec v_eq(const _Tpuvec& a, const _Tpuvec& b)                  \
     { return _Tpuvec(__lasx_xvseq_##suffix(a.val, b.val)); }                 \
-    inline _Tpuvec operator > (const _Tpuvec& a, const _Tpuvec& b)           \
+    inline _Tpuvec v_gt(const _Tpuvec& a, const _Tpuvec& b)                  \
     {                                                                        \
         return _Tpuvec(__lasx_xvslt_##usuffix(b.val, a.val));                \
     }                                                                        \
-    inline _Tpsvec operator == (const _Tpsvec& a, const _Tpsvec& b)          \
+    inline _Tpsvec v_eq(const _Tpsvec& a, const _Tpsvec& b)                  \
     { return _Tpsvec(__lasx_xvseq_##suffix(a.val, b.val)); }                 \
-    inline _Tpsvec operator > (const _Tpsvec& a, const _Tpsvec& b)           \
+    inline _Tpsvec v_gt(const _Tpsvec& a, const _Tpsvec& b)                  \
     { return _Tpsvec(__lasx_xvslt_##suffix(b.val, a.val)); }                 \
     OPENCV_HAL_IMPL_LASX_CMP_OP_OV(_Tpuvec)                                  \
     OPENCV_HAL_IMPL_LASX_CMP_OP_OV(_Tpsvec)
@@ -1009,37 +1007,37 @@ OPENCV_HAL_IMPL_LASX_CMP_OP_INT(v_uint16x16, v_int16x16, h, hu)
 OPENCV_HAL_IMPL_LASX_CMP_OP_INT(v_uint32x8,  v_int32x8,  w, wu)
 
 #define OPENCV_HAL_IMPL_LASX_CMP_OP_64BIT(_Tpvec, suffix)         \
-    inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b)  \
+    inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b)          \
     { return _Tpvec(__lasx_xvseq_##suffix(a.val, b.val)); }       \
-    inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b)  \
-    { return ~(a == b); }
+    inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)          \
+    { return v_not(v_eq(a, b)); }
 
 OPENCV_HAL_IMPL_LASX_CMP_OP_64BIT(v_uint64x4, d)
 OPENCV_HAL_IMPL_LASX_CMP_OP_64BIT(v_int64x4, d)
 
 #define OPENCV_HAL_IMPL_LASX_CMP_FLT(bin_op, suffix, _Tpvec, ssuffix)    \
-    inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b)     \
+    inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b)               \
     { return _Tpvec(__lasx_##suffix##_##ssuffix(a.val, b.val)); }
 
 #define OPENCV_HAL_IMPL_LASX_CMP_OP_FLT(_Tpvec, ssuffix)              \
-    OPENCV_HAL_IMPL_LASX_CMP_FLT(==, xvfcmp_ceq, _Tpvec, ssuffix)     \
-    OPENCV_HAL_IMPL_LASX_CMP_FLT(!=, xvfcmp_cne, _Tpvec, ssuffix)     \
-    OPENCV_HAL_IMPL_LASX_CMP_FLT(<,  xvfcmp_clt, _Tpvec, ssuffix)     \
-    OPENCV_HAL_IMPL_LASX_CMP_FLT(<=, xvfcmp_cle, _Tpvec, ssuffix)
+    OPENCV_HAL_IMPL_LASX_CMP_FLT(v_eq, xvfcmp_ceq, _Tpvec, ssuffix)   \
+    OPENCV_HAL_IMPL_LASX_CMP_FLT(v_ne, xvfcmp_cne, _Tpvec, ssuffix)   \
+    OPENCV_HAL_IMPL_LASX_CMP_FLT(v_lt,  xvfcmp_clt, _Tpvec, ssuffix)  \
+    OPENCV_HAL_IMPL_LASX_CMP_FLT(v_le, xvfcmp_cle, _Tpvec, ssuffix)
 
 OPENCV_HAL_IMPL_LASX_CMP_OP_FLT(v_float32x8, s)
 OPENCV_HAL_IMPL_LASX_CMP_OP_FLT(v_float64x4, d)
 
-inline v_float32x8 operator > (const v_float32x8 &a, const v_float32x8 &b)
+inline v_float32x8 v_gt(const v_float32x8 &a, const v_float32x8 &b)
 { return v_float32x8(__lasx_xvfcmp_clt_s(b.val, a.val)); }
 
-inline v_float32x8 operator >= (const v_float32x8 &a, const v_float32x8 &b)
+inline v_float32x8 v_ge(const v_float32x8 &a, const v_float32x8 &b)
 { return v_float32x8(__lasx_xvfcmp_cle_s(b.val, a.val)); }
 
-inline v_float64x4 operator > (const v_float64x4 &a, const v_float64x4 &b)
+inline v_float64x4 v_gt(const v_float64x4 &a, const v_float64x4 &b)
 { return v_float64x4(__lasx_xvfcmp_clt_d(b.val, a.val)); }
 
-inline v_float64x4 operator >= (const v_float64x4 &a, const v_float64x4 &b)
+inline v_float64x4 v_ge(const v_float64x4 &a, const v_float64x4 &b)
 { return v_float64x4(__lasx_xvfcmp_cle_d(b.val, a.val)); }
 
 inline v_float32x8 v_not_nan(const v_float32x8& a)
@@ -1100,7 +1098,7 @@ inline v_uint8x32 v_rotate_right(const v_uint8x32& a, const v_uint8x32& b)
 template<int imm>
 inline v_uint8x32 v_rotate_left(const v_uint8x32& a)
 {
-    enum {IMM_L = (imm - 16) & 0xFF};
+    enum {IMM_L = ((imm - 16) & 0xFF) > 31 ? 31 : ((imm - 16) & 0xFF)};
     enum {IMM_R = (16 - imm) & 0xFF};
 
     if (imm == 0) return a;
@@ -1117,7 +1115,7 @@ inline v_uint8x32 v_rotate_left(const v_uint8x32& a)
 template<int imm>
 inline v_uint8x32 v_rotate_right(const v_uint8x32& a)
 {
-    enum {IMM_L = (imm - 16) & 0xFF};
+    enum {IMM_L = ((imm - 16) & 0xFF) > 31 ? 31 : ((imm - 16) & 0xFF)};
 
     if (imm == 0) return a;
     if (imm > 32) return v_uint8x32();
@@ -1307,9 +1305,9 @@ inline unsigned v_reduce_sum(const v_uint32x8& a)
 { return v_reduce_sum(v_reinterpret_as_s32(a)); }
 
 inline int v_reduce_sum(const v_int16x16& a)
-{ return v_reduce_sum(v_expand_low(a) + v_expand_high(a)); }
+{ return v_reduce_sum(v_add(v_expand_low(a), v_expand_high(a))); }
 inline unsigned v_reduce_sum(const v_uint16x16& a)
-{ return v_reduce_sum(v_expand_low(a) + v_expand_high(a)); }
+{ return v_reduce_sum(v_add(v_expand_low(a), v_expand_high(a))); }
 
 inline float v_reduce_sum(const v_float32x8& a)
 {
@@ -1377,27 +1375,27 @@ inline unsigned v_reduce_sad(const v_int8x32& a, const v_int8x32& b)
 inline unsigned v_reduce_sad(const v_uint16x16& a, const v_uint16x16& b)
 {
     v_uint32x8 l, h;
-    v_expand(v_add_wrap(a - b, b - a), l, h);
-    return v_reduce_sum(l + h);
+    v_expand(v_add_wrap(v_sub(a, b), v_sub(b, a)), l, h);
+    return v_reduce_sum(v_add(l, h));
 }
 inline unsigned v_reduce_sad(const v_int16x16& a, const v_int16x16& b)
 {
     v_uint32x8 l, h;
     v_expand(v_reinterpret_as_u16(v_sub_wrap(v_max(a, b), v_min(a, b))), l, h);
-    return v_reduce_sum(l + h);
+    return v_reduce_sum(v_add(l, h));
 }
 inline unsigned v_reduce_sad(const v_uint32x8& a, const v_uint32x8& b)
 {
-    return v_reduce_sum(v_max(a, b) - v_min(a, b));
+    return v_reduce_sum(v_sub(v_max(a, b), v_min(a, b)));
 }
 inline unsigned v_reduce_sad(const v_int32x8& a, const v_int32x8& b)
 {
-    v_int32x8 m = a < b;
-    return v_reduce_sum(v_reinterpret_as_u32(((a - b) ^ m) - m));
+    v_int32x8 m = v_lt(a, b);
+    return v_reduce_sum(v_reinterpret_as_u32(v_sub(v_xor(v_sub(a, b), m), m)));
 }
 inline float v_reduce_sad(const v_float32x8& a, const v_float32x8& b)
 {
-    v_float32x8 a_b = a - b;
+    v_float32x8 a_b = v_sub(a, b);
     return v_reduce_sum(v_float32x8(*((__m256i*)&a_b.val) & __lasx_xvreplgr2vr_w(0x7fffffff)));
 }
 
@@ -1418,20 +1416,6 @@ inline v_uint32x8 v_popcount(const v_int32x8& a)
 { return v_popcount(v_reinterpret_as_u32(a)); }
 inline v_uint64x4 v_popcount(const v_int64x4& a)
 { return v_popcount(v_reinterpret_as_u64(a)); }
-
-/** Mask **/
-#define OPENCV_HAL_IMPL_REINTERPRET_INT(ft, tt) \
-inline tt reinterpret_int(ft x) { union { ft l; tt i; } v; v.l = x; return v.i; }
-OPENCV_HAL_IMPL_REINTERPRET_INT(uchar, schar)
-OPENCV_HAL_IMPL_REINTERPRET_INT(schar, schar)
-OPENCV_HAL_IMPL_REINTERPRET_INT(ushort, short)
-OPENCV_HAL_IMPL_REINTERPRET_INT(short, short)
-OPENCV_HAL_IMPL_REINTERPRET_INT(unsigned, int)
-OPENCV_HAL_IMPL_REINTERPRET_INT(int, int)
-OPENCV_HAL_IMPL_REINTERPRET_INT(float, int)
-OPENCV_HAL_IMPL_REINTERPRET_INT(uint64, int64)
-OPENCV_HAL_IMPL_REINTERPRET_INT(int64, int64)
-OPENCV_HAL_IMPL_REINTERPRET_INT(double, int64)
 
 inline int v_signmask(const v_int8x32& a)
 {
@@ -1515,9 +1499,9 @@ OPENCV_HAL_IMPL_LASX_CHECK_SHORT(v_int16x16)
     inline _Tpvec v_sqrt(const _Tpvec& x)                                      \
     { return _Tpvec(__lasx_xvfsqrt_##suffix(x.val)); }                         \
     inline _Tpvec v_sqr_magnitude(const _Tpvec& a, const _Tpvec& b)            \
-    { return v_fma(a, a, b * b); }                                             \
+    { return v_fma(a, a, v_mul(b, b)); }                                       \
     inline _Tpvec v_magnitude(const _Tpvec& a, const _Tpvec& b)                \
-    { return v_sqrt(v_fma(a, a, b*b)); }
+    { return v_sqrt(v_fma(a, a, v_mul(b, b))); }
 
 OPENCV_HAL_IMPL_LASX_MULADD(v_float32x8, s)
 OPENCV_HAL_IMPL_LASX_MULADD(v_float64x4, d)
@@ -1568,20 +1552,20 @@ inline v_uint32x8 v_absdiff(const v_int32x8& a, const v_int32x8& b)
 { return (v_uint32x8)__lasx_xvabsd_w(a.val, b.val); }
 
 inline v_float32x8 v_absdiff(const v_float32x8& a, const v_float32x8& b)
-{ return v_abs(a - b); }
+{ return v_abs(v_sub(a, b)); }
 
 inline v_float64x4 v_absdiff(const v_float64x4& a, const v_float64x4& b)
-{ return v_abs(a - b); }
+{ return v_abs(v_sub(a, b)); }
 
 /** Saturating absolute difference **/
 inline v_int8x32 v_absdiffs(const v_int8x32& a, const v_int8x32& b)
 {
-    v_int8x32 d = a - b;
-    v_int8x32 m = a < b;
-    return (d ^ m) - m;
+    v_int8x32 d = v_sub(a, b);
+    v_int8x32 m = v_lt(a, b);
+    return v_sub(v_xor(d, m), m);
 }
 inline v_int16x16 v_absdiffs(const v_int16x16& a, const v_int16x16& b)
-{ return v_max(a, b) - v_min(a, b); }
+{ return v_sub(v_max(a, b), v_min(a, b)); }
 
 ////////// Conversions /////////
 
@@ -1903,7 +1887,7 @@ inline v_int32x8 v_dotprod(const v_int16x16& a, const v_int16x16& b)
 { return v_int32x8(__lasx_xvadd_w(__lasx_xvmulwev_w_h(a.val, b.val), __lasx_xvmulwod_w_h(a.val, b.val))); }
 
 inline v_int32x8 v_dotprod(const v_int16x16& a, const v_int16x16& b, const v_int32x8& c)
-{ return v_dotprod(a, b) + c; }
+{ return v_add(v_dotprod(a, b), c); }
 
 // 32 >> 64
 inline v_int64x4 v_dotprod(const v_int32x8& a, const v_int32x8& b)
@@ -1927,7 +1911,7 @@ inline v_uint32x8 v_dotprod_expand(const v_uint8x32& a, const v_uint8x32& b)
     return v_uint32x8(__lasx_xvadd_w(prod0, prod1));
 }
 inline v_uint32x8 v_dotprod_expand(const v_uint8x32& a, const v_uint8x32& b, const v_uint32x8& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 inline v_int32x8 v_dotprod_expand(const v_int8x32& a, const v_int8x32& b)
 {
@@ -1938,7 +1922,7 @@ inline v_int32x8 v_dotprod_expand(const v_int8x32& a, const v_int8x32& b)
     return v_int32x8(__lasx_xvadd_w(prod0, prod1));
 }
 inline v_int32x8 v_dotprod_expand(const v_int8x32& a, const v_int8x32& b, const v_int32x8& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 // 16 >> 64
 inline v_uint64x4 v_dotprod_expand(const v_uint16x16& a, const v_uint16x16& b)
@@ -1950,7 +1934,7 @@ inline v_uint64x4 v_dotprod_expand(const v_uint16x16& a, const v_uint16x16& b)
     return v_uint64x4(__lasx_xvadd_d(prod0, prod1));
 }
 inline v_uint64x4 v_dotprod_expand(const v_uint16x16& a, const v_uint16x16& b, const v_uint64x4& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 inline v_int64x4 v_dotprod_expand(const v_int16x16& a, const v_int16x16& b)
 {
@@ -1962,13 +1946,13 @@ inline v_int64x4 v_dotprod_expand(const v_int16x16& a, const v_int16x16& b)
 }
 
 inline v_int64x4 v_dotprod_expand(const v_int16x16& a, const v_int16x16& b, const v_int64x4& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 // 32 >> 64f
 inline v_float64x4 v_dotprod_expand(const v_int32x8& a, const v_int32x8& b)
 { return v_cvt_f64(v_dotprod(a, b)); }
 inline v_float64x4 v_dotprod_expand(const v_int32x8& a, const v_int32x8& b, const v_float64x4& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 
 //////// Fast Dot Product ////////
 
@@ -2005,7 +1989,7 @@ inline v_uint64x4 v_dotprod_expand_fast(const v_uint16x16& a, const v_uint16x16&
     return v_uint64x4(__lasx_xvadd_d(__lasx_xvilvl_d(prod1, prod0), __lasx_xvilvh_d(prod1, prod0)));
 }
 inline v_uint64x4 v_dotprod_expand_fast(const v_uint16x16& a, const v_uint16x16& b, const v_uint64x4& c)
-{ return v_dotprod_expand_fast(a, b) + c; }
+{ return v_add(v_dotprod_expand_fast(a, b), c); }
 
 inline v_int64x4 v_dotprod_expand_fast(const v_int16x16& a, const v_int16x16& b)
 {
@@ -2016,7 +2000,7 @@ inline v_int64x4 v_dotprod_expand_fast(const v_int16x16& a, const v_int16x16& b)
     return v_int64x4(__lasx_xvadd_d(lo, hi));
 }
 inline v_int64x4 v_dotprod_expand_fast(const v_int16x16& a, const v_int16x16& b, const v_int64x4& c)
-{ return v_dotprod_expand_fast(a, b) + c; }
+{ return v_add(v_dotprod_expand_fast(a, b), c); }
 
 // 32 >> 64f
 inline v_float64x4 v_dotprod_expand_fast(const v_int32x8& a, const v_int32x8& b)
@@ -2036,7 +2020,7 @@ inline v_float32x8 v_matmul(const v_float32x8& v, const v_float32x8& m0,
     v_float32x8 v15 = OPENCV_HAL_LASX_SPLAT2_PS(v, 0x55);
     v_float32x8 v26 = OPENCV_HAL_LASX_SPLAT2_PS(v, 0xAA);
     v_float32x8 v37 = OPENCV_HAL_LASX_SPLAT2_PS(v, 0xFF);
-    return v_fma(v04, m0, v_fma(v15, m1, v_fma(v26, m2, v37 * m3)));
+    return v_fma(v04, m0, v_fma(v15, m1, v_fma(v26, m2, v_mul(v37, m3))));
 }
 
 inline v_float32x8 v_matmuladd(const v_float32x8& v, const v_float32x8& m0,
@@ -2151,7 +2135,8 @@ template<int n> inline
 void v_rshr_pack_store(uchar* ptr, const v_uint16x16& a)
 {
     __m256i res = __lasx_xvssrlrni_bu_h(a.val, a.val, n);
-    __lsx_vst(_v256_extract_low(_v256_shuffle_odd_64(res)), ptr, 0);
+    __lasx_xvstelm_d(res, ptr, 0, 0);
+    __lasx_xvstelm_d(res, ptr, 8, 2);
 }
 
 template<int n> inline
@@ -2165,7 +2150,8 @@ template<int n> inline
 void v_rshr_pack_u_store(uchar* ptr, const v_int16x16& a)
 {
     __m256i res = __lasx_xvssrarni_bu_h(a.val, a.val, n);
-    __lsx_vst(_v256_extract_low(_v256_shuffle_odd_64(res)), ptr, 0);
+    __lasx_xvstelm_d(res, ptr, 0, 0);
+    __lasx_xvstelm_d(res, ptr, 8, 2);
 }
 
 template<int n> inline
@@ -2179,7 +2165,8 @@ template<int n> inline
 void v_rshr_pack_store(schar* ptr, const v_int16x16& a)
 {
     __m256i res = __lasx_xvssrarni_b_h(a.val, a.val, n);
-    __lsx_vst(_v256_extract_low(_v256_shuffle_odd_64(res)), ptr, 0);
+    __lasx_xvstelm_d(res, ptr, 0, 0);
+    __lasx_xvstelm_d(res, ptr, 8, 2);
 }
 
 // 32
@@ -2198,7 +2185,8 @@ inline void v_pack_store(short* ptr, const v_int32x8& a)
 inline void v_pack_store(ushort* ptr, const v_uint32x8& a)
 {
     __m256i res = __lasx_xvssrlrni_hu_w(a.val, a.val, 0);
-    __lsx_vst(_v256_extract_low(_v256_shuffle_odd_64(res)), ptr, 0);
+    __lasx_xvstelm_d(res, ptr, 0, 0);
+    __lasx_xvstelm_d(res, ptr, 8, 2);
 }
 
 inline void v_pack_u_store(ushort* ptr, const v_int32x8& a)
@@ -2212,7 +2200,8 @@ template<int n> inline
 void v_rshr_pack_store(ushort* ptr, const v_uint32x8& a)
 {
     __m256i res = __lasx_xvssrlrni_hu_w(a.val, a.val, n);
-    __lsx_vst(_v256_extract_low(_v256_shuffle_odd_64(res)), ptr, 0);
+    __lasx_xvstelm_d(res, ptr, 0, 0);
+    __lasx_xvstelm_d(res, ptr, 8, 2);
 }
 
 template<int n> inline
@@ -2223,7 +2212,8 @@ template<int n> inline
 void v_rshr_pack_u_store(ushort* ptr, const v_int32x8& a)
 {
     __m256i res = __lasx_xvssrarni_hu_w(a.val, a.val, n);
-    __lsx_vst(_v256_extract_low(_v256_shuffle_odd_64(res)), ptr, 0);
+    __lasx_xvstelm_d(res, ptr, 0, 0);
+    __lasx_xvstelm_d(res, ptr, 8, 2);
 }
 
 template<int n> inline
@@ -2234,7 +2224,8 @@ template<int n> inline
 void v_rshr_pack_store(short* ptr, const v_int32x8& a)
 {
     __m256i res = __lasx_xvssrarni_h_w(a.val, a.val, n);
-    __lsx_vst(_v256_extract_low(_v256_shuffle_odd_64(res)), ptr, 0);
+    __lasx_xvstelm_d(res, ptr, 0, 0);
+    __lasx_xvstelm_d(res, ptr, 8, 2);
 }
 
 // 64
@@ -2263,7 +2254,11 @@ v_uint32x8 v_rshr_pack(const v_uint64x4& a, const v_uint64x4& b)
 
 template<int n> inline
 void v_rshr_pack_store(unsigned* ptr, const v_uint64x4& a)
-{ __lsx_vst(_v256_shuffle_odd_64(__lasx_xvsrlrni_w_d(a.val, a.val, n)), ptr, 0); }
+{
+    __m256i res = __lasx_xvsrlrni_w_d(a.val, a.val, n);
+    __lasx_xvstelm_d(res, ptr, 0, 0);
+    __lasx_xvstelm_d(res, ptr, 8, 2);
+}
 
 template<int n> inline
 v_int32x8 v_rshr_pack(const v_int64x4& a, const v_int64x4& b)
@@ -2271,7 +2266,11 @@ v_int32x8 v_rshr_pack(const v_int64x4& a, const v_int64x4& b)
 
 template<int n> inline
 void v_rshr_pack_store(int* ptr, const v_int64x4& a)
-{ __lsx_vst(_v256_shuffle_odd_64(__lasx_xvsrarni_w_d(a.val, a.val, n)), ptr, 0); }
+{
+    __m256i res = __lasx_xvsrarni_w_d(a.val, a.val, n);
+    __lasx_xvstelm_d(res, ptr, 0, 0);
+    __lasx_xvstelm_d(res, ptr, 8, 2);
+}
 
 // pack boolean
 inline v_uint8x32 v_pack_b(const v_uint16x16& a, const v_uint16x16& b)
@@ -2982,7 +2981,7 @@ OPENCV_HAL_IMPL_LASX_LOADSTORE_INTERLEAVE(v_float64x4, double, f64, v_uint64x4, 
 // FP16
 //
 
-inline v_float32x8 v256_load_expand(const float16_t* ptr)
+inline v_float32x8 v256_load_expand(const hfloat* ptr)
 {
 #if CV_FP16
     //1-load128, 2-permi, 3-cvt
@@ -2995,7 +2994,7 @@ inline v_float32x8 v256_load_expand(const float16_t* ptr)
 #endif
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
+inline void v_pack_store(hfloat* ptr, const v_float32x8& a)
 {
 #if CV_FP16
     __m256i ah = __lasx_xvfcvt_h_s(a.val, a.val);
@@ -3004,7 +3003,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
     float CV_DECL_ALIGNED(32) buf[8];
     v_store_aligned(buf, a);
     for (int i = 0; i < 8; i++)
-        ptr[i] = float16_t(buf[i]);
+        ptr[i] = hfloat(buf[i]);
 #endif
 }
 
@@ -3013,6 +3012,14 @@ inline void v_pack_store(float16_t* ptr, const v_float32x8& a)
 //
 
 inline void v256_cleanup() {}
+
+#include "intrin_math.hpp"
+inline v_float32x8 v_exp(v_float32x8 x) { return v_exp_default_32f<v_float32x8, v_int32x8>(x); }
+inline v_float32x8 v_log(v_float32x8 x) { return v_log_default_32f<v_float32x8, v_int32x8>(x); }
+inline v_float32x8 v_erf(v_float32x8 x) { return v_erf_default_32f<v_float32x8, v_int32x8>(x); }
+
+inline v_float64x4 v_exp(v_float64x4 x) { return v_exp_default_64f<v_float64x4, v_int64x4>(x); }
+inline v_float64x4 v_log(v_float64x4 x) { return v_log_default_64f<v_float64x4, v_int64x4>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

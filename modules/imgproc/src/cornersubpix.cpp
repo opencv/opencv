@@ -49,8 +49,8 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
     const int MAX_ITERS = 100;
     int win_w = win.width * 2 + 1, win_h = win.height * 2 + 1;
     int i, j, k;
-    int max_iters = (criteria.type & CV_TERMCRIT_ITER) ? MIN(MAX(criteria.maxCount, 1), MAX_ITERS) : MAX_ITERS;
-    double eps = (criteria.type & CV_TERMCRIT_EPS) ? MAX(criteria.epsilon, 0.) : 0;
+    int max_iters = (criteria.type & TermCriteria::MAX_ITER) ? MIN(MAX(criteria.maxCount, 1), MAX_ITERS) : MAX_ITERS;
+    double eps = (criteria.type & TermCriteria::EPS) ? MAX(criteria.epsilon, 0.) : 0;
     eps *= eps; // use square of error in comparison operations
 
     cv::Mat src = _image.getMat(), cornersmat = _corners.getMat();
@@ -96,6 +96,7 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
     for( int pt_i = 0; pt_i < count; pt_i++ )
     {
         Point2f cT = corners[pt_i], cI = cT;
+        CV_Assert( Rect(0, 0, src.cols, src.rows).contains(cT) );
         int iter = 0;
         double err = 0;
 
@@ -140,9 +141,10 @@ void cv::cornerSubPix( InputArray _image, InputOutputArray _corners,
             cI2.x = (float)(cI.x + c*scale*bb1 - b*scale*bb2);
             cI2.y = (float)(cI.y - b*scale*bb1 + a*scale*bb2);
             err = (cI2.x - cI.x) * (cI2.x - cI.x) + (cI2.y - cI.y) * (cI2.y - cI.y);
-            cI = cI2;
-            if( cI.x < 0 || cI.x >= src.cols || cI.y < 0 || cI.y >= src.rows )
+            // if new point is out of image, leave previous point as the result
+            if( !Rect(0, 0, src.cols, src.rows).contains(cI2) )
                 break;
+            cI = cI2;
         }
         while( ++iter < max_iters && err > eps );
 

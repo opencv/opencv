@@ -26,6 +26,19 @@ void normalize_mean(const csl::Stream& stream, csl::Span<T> output, csl::View<T>
 template <class T>
 void normalize_mean_variance(const csl::Stream& stream, csl::Span<T> output, csl::View<T> input, csl::View<float> means, csl::View<float> scale, std::size_t inner_size);
 
+template <class T>
+void normalize_mean_variance_channelwise(const csl::Stream &stream, csl::Span<T> output, csl::View<T> input, csl::View<T> scale, csl::View<T> bias, csl::View<float> means, csl::View<float> inv_stddev, std::size_t inner_size, std::size_t C);
+
+template <class T>
+void normalize_mean_variance_layernorm(const csl::Stream &stream, csl::Span<T> output, csl::View<T> input, csl::View<T> scale, csl::View<float> means, csl::View<float> inv_stddev, std::size_t inner_size);
+
+template <class T>
+void normalize_mean_variance_layernorm(const csl::Stream &stream, csl::Span<T> output, csl::View<T> input, csl::View<T> scale, csl::View<T> bias, csl::View<float> means, csl::View<float> inv_stddev, std::size_t inner_size);
+
+template <class T>
+void normalize_mean_variance_groupwise(const csl::Stream &stream, csl::Span<T> output, csl::View<T> input, csl::View<T> scale, csl::View<T> bias, csl::View<float> means, csl::View<float> inv_stddev, std::size_t inner_size, std::size_t C, std::size_t num_groups, std::size_t group_size);
+
+
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */
 
 #endif /* OPENCV_DNN_SRC_CUDA4DNN_KERNELS_MVN_HPP */
