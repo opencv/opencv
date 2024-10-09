@@ -42,6 +42,12 @@
 
 #include "precomp.hpp"
 
+#if defined (__APPLE__) || defined(MACOSX)
+   #define GL_SHARING_EXTENSION "cl_APPLE_gl_sharing"
+#else
+   #define GL_SHARING_EXTENSION "cl_khr_gl_sharing"
+#endif
+
 #ifdef HAVE_OPENGL
 #  include "gl_core_3_1.hpp"
 #  ifdef HAVE_CUDA
@@ -1636,6 +1642,11 @@ Context& initializeContextFromGL()
     NO_OPENCL_SHARING_ERROR;
 #else
     cl_uint numPlatforms;
+    cl_device_id* devices = new cl_device_id[256];
+    cl_uint devCnt;
+    cl_uint devUsed;
+    cl_context context;
+
     cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
     if (status != CL_SUCCESS)
         CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't get number of platforms: %d", status));
@@ -1645,84 +1656,112 @@ Context& initializeContextFromGL()
     std::vector<cl_platform_id> platforms(numPlatforms);
     status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
     if (status != CL_SUCCESS)
-        CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't get number of platforms: %d", status));
+        CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't get platforms: %d", status));
+
 
     // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
+    bool sharingSupported = false;
 
-    int found = -1;
-    cl_device_id device = NULL;
-    cl_context context = NULL;
+    for (unsigned int i = 0; (!sharingSupported && (i < numPlatforms)); ++i) {
+        status = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, NULL, &devCnt);
+        if (status != CL_SUCCESS)
+            CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: No devices available: %d", status));
 
-    for (int i = 0; i < (int)numPlatforms; i++)
-    {
-        // query platform extension: presence of "cl_khr_gl_sharing" extension is required
-        {
-            AutoBuffer<char> extensionStr;
+        status = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, devCnt, devices, NULL);
+        if (status != CL_SUCCESS)
+            CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't get platform devices: %d", status));
 
+        for (unsigned int j = 0; (!sharingSupported && (j < devCnt)); ++j) {
             size_t extensionSize;
-            status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, 0, NULL, &extensionSize);
-            if (status == CL_SUCCESS)
-            {
-                extensionStr.allocate(extensionSize+1);
-                status = clGetPlatformInfo(platforms[i], CL_PLATFORM_EXTENSIONS, extensionSize, (char*)extensionStr.data(), NULL);
-            }
+            status = clGetDeviceInfo(devices[j], CL_DEVICE_EXTENSIONS, 0, NULL, &extensionSize );
             if (status != CL_SUCCESS)
-                CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't get platform extension string: %d", status));
+                CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: No devices available: %d", status));
 
-            if (!strstr((const char*)extensionStr.data(), "cl_khr_gl_sharing"))
-                continue;
+            if(extensionSize > 0)
+            {
+                char* extensions = (char*)malloc(extensionSize);
+                status = clGetDeviceInfo(devices[j], CL_DEVICE_EXTENSIONS, extensionSize, extensions, &extensionSize);
+                if (status != CL_SUCCESS)
+                    continue;
+
+                std::string stdDevString(extensions);
+                free(extensions);
+
+
+                size_t szOldPos = 0;
+                size_t szSpacePos = stdDevString.find(' ', szOldPos); // extensions string is space delimited
+                while (szSpacePos != stdDevString.npos) {
+                    if (strcmp(GL_SHARING_EXTENSION,
+                            stdDevString.substr(szOldPos, szSpacePos - szOldPos).c_str())
+                            == 0) {
+                        // Device supports context sharing with OpenGL
+                        devUsed = i;
+                        sharingSupported = true;
+                        break;
+                    }
+                    do {
+                        szOldPos = szSpacePos + 1;
+                        szSpacePos = stdDevString.find(' ', szOldPos);
+                    } while (szSpacePos == szOldPos);
+                }
+            }
         }
 
-        clGetGLContextInfoKHR_fn clGetGLContextInfoKHR = (clGetGLContextInfoKHR_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetGLContextInfoKHR");
-        if (!clGetGLContextInfoKHR)
-            continue;
+        if (!sharingSupported)
+            CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: OpenGL sharing not supported: %d", status));
 
-        cl_context_properties properties[] =
-        {
-#if defined(_WIN32)
-            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
-            CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
-            CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
-#elif defined(__ANDROID__)
-            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
-            CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
-            CL_EGL_DISPLAY_KHR, (cl_context_properties)eglGetCurrentDisplay(),
-#elif defined(__linux__)
-            CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
-            CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
-            CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
-#endif
-            0
-        };
 
-        // query device
-        device = NULL;
-        status = clGetGLContextInfoKHR(properties, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, sizeof(cl_device_id), (void*)&device, NULL);
+        // Define OS-specific context properties and create the OpenCL context
+        #if defined (__APPLE__)
+            CGLContextObj kCGLContext = CGLGetCurrentContext();
+            CGLShareGroupObj kCGLShareGroup = CGLGetShareGroup(kCGLContext);
+            cl_context_properties props[] =
+            {
+                CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties)kCGLShareGroup,
+                0
+            };
+            context = clCreateContext(props, 0,0, NULL, NULL, &ciErrNum);
+        #elif defined(__ANDROID__)
+            cl_context_properties props[] =
+            {
+                CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
+                CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
+                CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+                0
+            };
+            context = clCreateContext(props, 1, &devices[devUsed], NULL, NULL, &status);
+        #elif defined(_WIN32)
+            cl_context_properties props[] =
+            {
+                CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
+                CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
+                CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+                0
+            };
+            context = clCreateContext(props, 1, &devices[devUsed], NULL, NULL, &status);
+        #elif defined(__linux__)
+            cl_context_properties props[] =
+            {
+                CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
+                CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
+                CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+                0
+            };
+            context = clCreateContext(props, 1, &devices[devUsed], NULL, NULL, &status);
+        #endif
+
         if (status != CL_SUCCESS)
-            continue;
-
-        // create context
-        context = clCreateContext(properties, 1, &device, NULL, NULL, &status);
-        if (status != CL_SUCCESS)
-        {
-            clReleaseDevice(device);
-        }
+            CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't create context for OpenGL interop: %d", status));
         else
-        {
-            found = i;
             break;
-        }
     }
 
-    if (found < 0)
-        CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't create context for OpenGL interop");
 
-    cl_platform_id platform = platforms[found];
+    cl_platform_id platform = platforms[devUsed];
     std::string platformName = PlatformInfo(&platform).name();
 
-    OpenCLExecutionContext clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
-    clReleaseDevice(device);
+    OpenCLExecutionContext clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, devices[devUsed]);
+    clReleaseDevice(devices[devUsed]);
     clReleaseContext(context);
     clExecCtx.bind();
     return const_cast<Context&>(clExecCtx.getContext());
