@@ -108,8 +108,9 @@ ocv_update(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORC
 if(NOT DEFINED CMAKE_BUILD_TYPE
     AND NOT OPENCV_SKIP_DEFAULT_BUILD_TYPE
 )
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build" FORCE)
   message(STATUS "'Release' build type is used by default. Use CMAKE_BUILD_TYPE to specify build type (Release or Debug)")
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build")
+  
 endif()
 if(DEFINED CMAKE_BUILD_TYPE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${CMAKE_CONFIGURATION_TYPES}")
