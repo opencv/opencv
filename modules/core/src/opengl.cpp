@@ -1695,9 +1695,9 @@ Context& initializeContextFromGL()
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
             CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
-#elif defined (__APPLE__)
+#elif defined (__APPLE__) || defined(MACOSX)
             CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties)cglShareGroup,
-#elif defined(__ANDROID__) || defined(MACOSX)
+#elif defined(__ANDROID__)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
             CL_EGL_DISPLAY_KHR, (cl_context_properties)eglGetCurrentDisplay(),
