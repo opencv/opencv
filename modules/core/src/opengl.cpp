@@ -58,6 +58,12 @@
 #  define NO_OPENGL_SUPPORT_ERROR CV_Error(cv::Error::StsBadFunc, "OpenCV was build without OpenGL support")
 #endif // HAVE_OPENGL
 
+#if defined (__APPLE__) || defined(MACOSX)
+   #define GL_SHARING_EXTENSION "cl_APPLE_gl_sharing"
+#else
+   #define GL_SHARING_EXTENSION "cl_khr_gl_sharing"
+#endif
+
 using namespace cv;
 using namespace cv::cuda;
 
@@ -1674,7 +1680,7 @@ Context& initializeContextFromGL()
             if (status != CL_SUCCESS)
                 CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't get platform extension string: %d", status));
 
-            if (!strstr((const char*)extensionStr.data(), "cl_khr_gl_sharing"))
+            if (!strstr((const char*)extensionStr.data(), GL_SHARING_EXTENSION))
                 continue;
         }
 
@@ -1683,12 +1689,19 @@ Context& initializeContextFromGL()
         if (!clGetGLContextInfoKHR)
             continue;
 
+#if defined (__APPLE__)
+        CGLContextObj cGLContext = CGLGetCurrentContext();
+        CGLShareGroupObj cglShareGroup = CGLGetShareGroup(cGLContext);
+#endif
+
         cl_context_properties properties[] =
         {
 #if defined(_WIN32)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)wglGetCurrentContext(),
             CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
+#elif defined (__APPLE__)
+            CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties)cglShareGroup,
 #elif defined(__ANDROID__)
             CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
             CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
