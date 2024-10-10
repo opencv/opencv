@@ -109,6 +109,175 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(255, 0, 0));
 }
 
+TEST(Imgcodecs_Png, load_save_animation)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/OpenCV_logo_white.png";
+    Animation l_animation, s_animation;
+
+    Mat image = imread(filename, IMREAD_UNCHANGED);
+    s_animation.frames.push_back(image.clone());
+    Mat roi = image(Rect(0, 170, 164, 47));
+    int timestamp = 0;
+    s_animation.timestamps.push_back(timestamp);
+
+    for (int i = 0; i < 15; i++)
+    {
+        for (int x = 0; x < roi.rows; x++)
+            for (int y = 0; y < roi.cols; y++)
+            {
+                if (roi.at<Vec4b>(x, y)[0] > 220)
+                    roi.at<Vec4b>(x, y)[0] = roi.at<Vec4b>(x, y)[0] - 2;
+                if (roi.at<Vec4b>(x, y)[1] > 220)
+                    roi.at<Vec4b>(x, y)[1] = roi.at<Vec4b>(x, y)[1] - 2;
+                if (roi.at<Vec4b>(x, y)[2] > 220)
+                    roi.at<Vec4b>(x, y)[2] = roi.at<Vec4b>(x, y)[2] - 2;
+                if (roi.at<Vec4b>(x, y)[3] > 150)
+                    roi.at<Vec4b>(x, y)[3] = roi.at<Vec4b>(x, y)[3] - 5;
+            }
+        s_animation.frames.push_back(image.clone());
+        timestamp += 100;
+        s_animation.timestamps.push_back(timestamp);
+    }
+
+    string output = cv::tempfile(".png");
+
+    EXPECT_EQ(true, imwriteanimation(output, s_animation));
+    EXPECT_EQ(s_animation.frames.size(), imcount(output));
+    EXPECT_EQ(true, imreadanimation(output, l_animation));
+    EXPECT_EQ(l_animation.frames.size(), s_animation.frames.size());
+    image = imread(output, IMREAD_UNCHANGED);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), s_animation.frames[0], image);
+    image = imread(output, IMREAD_COLOR);
+    EXPECT_EQ(0, image.empty());
+    image = imread(output, IMREAD_GRAYSCALE);
+    EXPECT_EQ(0, image.empty());
+    EXPECT_EQ(0, remove(output.c_str()));
+
+    for (size_t i = 1; i < l_animation.frames.size(); i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), s_animation.frames[i], l_animation.frames[i]);
+        EXPECT_EQ(s_animation.timestamps[i], l_animation.timestamps[i]);
+    }
+}
+
+TEST(Imgcodecs_Png, load_save_multiframes_rgba)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/OpenCV_logo_white.png";
+    vector<Mat> png_frames;
+
+    Mat image = imread(filename, IMREAD_UNCHANGED);
+    png_frames.push_back(image.clone());
+    Mat roi = image(Rect(0, 170, 164, 47));
+
+    for (int i = 0; i < 15; i++)
+    {
+        for (int x = 0; x < roi.rows; x++)
+            for (int y = 0; y < roi.cols; y++)
+            {
+                if (roi.at<Vec4b>(x, y)[0] > 220)
+                    roi.at<Vec4b>(x, y)[0] = roi.at<Vec4b>(x, y)[0] - 2;
+                if (roi.at<Vec4b>(x, y)[1] > 220)
+                    roi.at<Vec4b>(x, y)[1] = roi.at<Vec4b>(x, y)[1] - 2;
+                if (roi.at<Vec4b>(x, y)[2] > 220)
+                    roi.at<Vec4b>(x, y)[2] = roi.at<Vec4b>(x, y)[2] - 2;
+                if (roi.at<Vec4b>(x, y)[3] > 150)
+                    roi.at<Vec4b>(x, y)[3] = roi.at<Vec4b>(x, y)[3] - 5;
+            }
+        png_frames.push_back(image.clone());
+    }
+
+    string output = cv::tempfile(".png");
+    EXPECT_EQ(true, imwrite(output, png_frames));
+    vector<Mat> read_frames;
+    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_UNCHANGED));
+    EXPECT_EQ(png_frames.size(), read_frames.size());
+    EXPECT_EQ(read_frames.size(), imcount(output));
+    EXPECT_EQ(0, remove(output.c_str()));
+    std::vector<uchar> buf;
+    EXPECT_EQ(true, imencode(".png", png_frames, buf));
+    EXPECT_EQ(true, imdecodemulti(buf, IMREAD_COLOR_RGB, read_frames));
+}
+
+TEST(Imgcodecs_Png, load_save_multiframes_rgb)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/OpenCV_logo_white.png";
+    vector<Mat> png_frames;
+
+    Mat image = imread(filename);
+    png_frames.push_back(image.clone());
+    Mat roi = image(Rect(0, 170, 164, 47));
+
+    for (int i = 0; i < 15; i++)
+    {
+        for (int x = 0; x < roi.rows; x++)
+            for (int y = 0; y < roi.cols; y++)
+            {
+                if (roi.at<Vec3b>(x, y)[0] > 220)
+                    roi.at<Vec3b>(x, y)[0] = roi.at<Vec3b>(x, y)[0] - 6;
+                if (roi.at<Vec3b>(x, y)[1] > 220)
+                    roi.at<Vec3b>(x, y)[1] = roi.at<Vec3b>(x, y)[1] - 6;
+                if (roi.at<Vec3b>(x, y)[2] > 220)
+                    roi.at<Vec3b>(x, y)[2] = roi.at<Vec3b>(x, y)[2] - 6;
+            }
+        png_frames.push_back(image.clone());
+    }
+
+    string output = cv::tempfile(".png");
+    EXPECT_EQ(true, imwrite(output, png_frames));
+    vector<Mat> read_frames;
+    EXPECT_EQ(true, imreadmulti(output, read_frames));
+    EXPECT_EQ(png_frames.size(), read_frames.size());
+    EXPECT_EQ(read_frames.size(), imcount(output));
+    EXPECT_EQ(0, remove(output.c_str()));
+
+    for (size_t i = 0; i < png_frames.size(); i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), png_frames[i], read_frames[i]);
+    }
+}
+
+TEST(Imgcodecs_Png, load_save_multiframes_gray)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/OpenCV_logo_white.png";
+    vector<Mat> png_frames;
+
+    Mat image = imread(filename, IMREAD_GRAYSCALE);
+    png_frames.push_back(image.clone());
+    Mat roi = image(Rect(0, 170, 164, 47));
+
+    for (size_t i = 0; i < 15; i++)
+    {
+        roi = roi - Scalar(10, 10, 10, 20);
+        png_frames.push_back(image.clone());
+    }
+
+    string output = cv::tempfile(".png");
+    EXPECT_EQ(true, imwrite(output, png_frames));
+    vector<Mat> read_frames;
+    EXPECT_EQ(true, imreadmulti(output, read_frames));
+    EXPECT_EQ(1, read_frames[0].channels());
+    read_frames.clear();
+    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_UNCHANGED));
+    EXPECT_EQ(1, read_frames[0].channels());
+    read_frames.clear();
+    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_COLOR));
+    EXPECT_EQ(3, read_frames[0].channels());
+    read_frames.clear();
+    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_GRAYSCALE));
+    EXPECT_EQ(png_frames.size(), read_frames.size());
+    EXPECT_EQ(read_frames.size(), imcount(output));
+    EXPECT_EQ(0, remove(output.c_str()));
+
+    for (size_t i = 0; i < png_frames.size(); i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), png_frames[i], read_frames[i]);
+    }
+}
+
 /**
  * Test for check whether reading exif orientation tag was processed successfully or not
  * The test info is the set of 8 images named testExifRotate_{1 to 8}.png

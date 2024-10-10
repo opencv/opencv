@@ -139,6 +139,8 @@ public:
      */
     virtual ImageDecoder newDecoder() const;
 
+    Animation animation() const { return m_animation; };
+
 protected:
     int m_width;          ///< Width of the image (set by readHeader).
     int m_height;         ///< Height of the image (set by readHeader).
@@ -151,6 +153,7 @@ protected:
     bool m_use_rgb;       ///< Flag indicating whether to decode the image in RGB order.
     ExifReader m_exif;    ///< Object for reading EXIF metadata from the image.
     size_t m_frame_count; ///< Number of frames in the image (for animations and multi-page images).
+    Animation m_animation;
 };
 
 
@@ -214,6 +217,8 @@ public:
      * @return true if multiple images were successfully written, false otherwise.
      */
     virtual bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params);
+
+    virtual bool writeanimation(const Animation& animation, const std::vector<int>& params);
 
     /**
      * @brief Get a description of the image encoder (e.g., the format it supports).

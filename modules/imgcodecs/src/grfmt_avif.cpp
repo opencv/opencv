@@ -293,16 +293,24 @@ bool AvifEncoder::isFormatSupported(int depth) const {
 
 bool AvifEncoder::write(const Mat &img, const std::vector<int> &params) {
   std::vector<Mat> img_vec(1, img);
-  return writeToOutput(img_vec, params);
+  return writemulti(img_vec, params);
 }
 
 bool AvifEncoder::writemulti(const std::vector<Mat> &img_vec,
                              const std::vector<int> &params) {
-  return writeToOutput(img_vec, params);
+    Animation animation;
+    animation.frames = img_vec;
+    int timestamp = 0;
+    for (size_t i = 0; i < animation.frames.size(); i++)
+    {
+        animation.timestamps.push_back(timestamp);
+        timestamp += 10;
+    }
+    return writeanimation(animation, params);
 }
 
-bool AvifEncoder::writeToOutput(const std::vector<Mat> &img_vec,
-                                const std::vector<int> &params) {
+bool AvifEncoder::writeanimation(const Animation& animinfo,
+                                 const std::vector<int> &params) {
   int bit_depth = 8;
   int speed = AVIF_SPEED_FASTEST;
   for (size_t i = 0; i < params.size(); i += 2) {
@@ -336,12 +344,12 @@ bool AvifEncoder::writeToOutput(const std::vector<Mat> &img_vec,
 #endif
   encoder_->speed = speed;
 
-  const avifAddImageFlags flag = (img_vec.size() == 1)
+  const avifAddImageFlags flag = (animinfo.frames.size() == 1)
                                      ? AVIF_ADD_IMAGE_FLAG_SINGLE
                                      : AVIF_ADD_IMAGE_FLAG_NONE;
   std::vector<AvifImageUniquePtr> images;
   std::vector<cv::Mat> imgs_scaled;
-  for (const cv::Mat &img : img_vec) {
+  for (const cv::Mat &img : animinfo.frames) {
     CV_CheckType(
         img.type(),
         (bit_depth == 8 && img.depth() == CV_8U) ||
@@ -354,13 +362,17 @@ bool AvifEncoder::writeToOutput(const std::vector<Mat> &img_vec,
 
     images.emplace_back(ConvertToAvif(img, do_lossless, bit_depth));
   }
-  for (const AvifImageUniquePtr &image : images) {
+
+  for (size_t i = 0; i < images.size(); i++)
+  {
+    int timestamp = i == 0 ? 0 : animinfo.timestamps[i] - animinfo.timestamps[i-1];
     OPENCV_AVIF_CHECK_STATUS(
-        avifEncoderAddImage(encoder_, image.get(), /*durationInTimescale=*/1,
+        avifEncoderAddImage(encoder_, images[i].get(), timestamp,
                             flag),
         encoder_);
   }
 
+  encoder_->timescale = 1000;
   OPENCV_AVIF_CHECK_STATUS(avifEncoderFinish(encoder_, output.get()), encoder_);
 
   if (m_buf) {
