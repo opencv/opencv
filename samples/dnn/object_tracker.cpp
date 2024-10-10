@@ -241,7 +241,7 @@ static int run(int argc, char** argv)
         try
         {
             if (net == ""){
-                cout<<"Pass model file using --vit_net argument."<<endl;
+                cout<<"Pass model file using --vit_net argument for using vit tracker."<<endl;
                 return -1;
             }
             TrackerVit::Params params;
@@ -269,7 +269,7 @@ static int run(int argc, char** argv)
         try
         {
             if (backbone == "" || headneck == ""){
-                cout<<"Pass model files using --headneck and --backbone arguments."<<endl;
+                cout<<"Pass model files using --headneck and --backbone arguments for using nano tracker."<<endl;
                 return -1;
             }
             TrackerNano::Params params;
@@ -299,7 +299,7 @@ static int run(int argc, char** argv)
         try
         {
             if (net == "" || kernel_cls1 == "" || kernel_r1 == ""){
-                cout<<"Pass model files using --dasiamrpn_net , --kernel_cls1 and --kernel_r1 arguments."<<endl;
+                cout<<"Pass model files using --dasiamrpn_net , --kernel_cls1 and --kernel_r1 arguments for using dasiamrpn tracker."<<endl;
                 return -1;
             }
             TrackerDaSiamRPN::Params params;

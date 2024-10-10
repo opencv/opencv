@@ -37,7 +37,7 @@ def help():
 def createTracker():
     if args.alias == 'dasiamrpn':
         if args.dasiamrpn_net is None or args.kernel_r1 is None or args.kernel_cls1 is None:
-            print("Pass model files using --dasiamrpn_net , --kernel_cls1 and --kernel_r1 arguments.")
+            print("Pass model files using --dasiamrpn_net , --kernel_cls1 and --kernel_r1 arguments for using dasiamrpn tracker.")
             exit(-1)
         params = cv.TrackerDaSiamRPN_Params()
         params.model = findModel(args.dasiamrpn_net, "")
@@ -46,7 +46,7 @@ def createTracker():
         tracker = cv.TrackerDaSiamRPN_create(params)
     elif args.alias == 'nano':
         if args.backbone is None or args.headneck is None:
-            print("Pass model files using --headneck and --backbone arguments.")
+            print("Pass model files using --headneck and --backbone arguments for using nano tracker.")
             exit(-1)
         params = cv.TrackerNano_Params()
         params.backbone = findModel(args.backbone, "")
@@ -54,7 +54,7 @@ def createTracker():
         tracker = cv.TrackerNano_create(params)
     elif args.alias == 'vit':
         if args.vit_net is None:
-            print("Pass model file using --vit_net argument.")
+            print("Pass model file using --vit_net argument for using vit tracker.")
             exit(-1)
         params = cv.TrackerVit_Params()
         params.net = findModel(args.vit_net, "")
