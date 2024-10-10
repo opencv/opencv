@@ -1030,7 +1030,10 @@ TEST_P(Layer_Concat_Test, Accuracy_01D)
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Concat_Test,
 /*input blob shape*/    testing::Values(
-    std::vector<int>({}),
+    // ONNX Concat produces output tensor of the same dimensionality as inputs.
+    // Therefore 0-dimensional tensors cannot be concatenated.
+    // They first need to be converted to 1D tensors, e.g. using Unsqueeze.
+    //std::vector<int>({}),
     std::vector<int>({1})
 ));
 
@@ -1140,13 +1143,11 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
     auto reduceOperation = [](const cv::Mat& input, const std::string& operation, int axis) -> cv::Mat {
         // Initialize result matrix
         cv::Mat result;
-        if (shape(input).size() == 0 || shape(input).size() == 1){
-            result = cv::Mat(shape(input).size(), shape(input).data(), CV_32F);
-            int sz[1] = {1};
-            if (!shape(input).empty() && shape(input)[0] != 1){
-                result = cv::Mat(1, 1, CV_32F);
-                result = result.reshape(1, 1, sz);
-            }
+        MatShape inpshape = input.shape();
+        if (inpshape.dims == 0) {
+            result = cv::Mat(0, nullptr, CV_32F);
+        } else if (inpshape.dims == 1) {
+            result = cv::Mat({1}, CV_32F);
         } else {
             if (axis == 0) {
                 result = cv::Mat::zeros(1, input.cols, CV_32F);
@@ -1225,11 +1226,16 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
     lp.type = "Reduce";
     lp.name = "reduceLayer";
     lp.set("reduce", reduce_operation);
-    lp.set("axes", axis);
+
+    // for scalar tensors we cannot specify reduction axis,
+    // because it will be out-of-range anyway
+    if (!input_shape.empty())
+        lp.set("axes", axis);
+
     lp.set("keepdims", true);
     Ptr<ReduceLayer> layer = ReduceLayer::create(lp);
 
-    cv::Mat input(input_shape.size(), input_shape.data(), CV_32F, 1.0);
+    cv::Mat input((int)input_shape.size(), input_shape.data(), CV_32F, 1.0);
     cv::randu(input, 0.0, 1.0);
 
     cv::Mat output_ref = reduceOperation(input, reduce_operation, axis);
@@ -1238,7 +1244,10 @@ TEST_P(Layer_Reduce_Test, Accuracy_01D)
 
     runLayer(layer, inputs, outputs);
     ASSERT_EQ(outputs.size(), 1);
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+
+    MatShape ref_shape = output_ref.shape();
+    MatShape out_shape = outputs[0].shape();
+    ASSERT_EQ(ref_shape, out_shape) << "ref_shape " << ref_shape.str() << " does not match output shape " << out_shape.str();
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Reduce_Test, Combine(
@@ -1398,7 +1407,10 @@ TEST_P(Layer_Padding_Test, Accuracy_01D){
 }
 INSTANTIATE_TEST_CASE_P(/*nothing*/,  Layer_Padding_Test,
 /*input blob shape*/ testing::Values(
-            std::vector<int>{},
+
+            //scalars cannot be padded
+            //std::vector<int>{},
+
             std::vector<int>{1},
             std::vector<int>{1, 4},
             std::vector<int>{4, 1}
@@ -1414,30 +1426,33 @@ TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
     lp.set("bias_term", false);
     lp.set("axis", 0);
 
-    std::vector<int> input_shape = get<0>(GetParam());
+    MatShape input_shape(get<0>(GetParam()));
 
     RNG& rng = TS::ptr()->get_rng();
     float inp_value = rng.uniform(0.0, 10.0);
-    Mat weights(std::vector<int>{total(input_shape), 1}, CV_32F, inp_value);
+    Mat weights({(int)input_shape.total(), 1}, CV_32F, inp_value);
     lp.blobs.push_back(weights);
 
     Ptr<Layer> layer = LayerFactory::createLayerInstance("InnerProduct", lp);
 
-    Mat input(input_shape.size(), input_shape.data(), CV_32F);
+    Mat input(input_shape, CV_32F);
     randn(input, 0, 1);
     Mat output_ref = input.reshape(1, 1) * weights;
-    output_ref.dims = input_shape.size();
+    output_ref.dims = input_shape.dims;
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;
     runLayer(layer, inputs, outputs);
     ASSERT_EQ(1, outputs.size());
-    ASSERT_EQ(shape(output_ref), shape(outputs[0]));
+    MatShape ref_shape = output_ref.shape();
+    MatShape out_shape = outputs[0].shape();
+    ASSERT_EQ(ref_shape, out_shape) << "ref_shape " << ref_shape.str() << "does not match output shape " << out_shape.str();
     normAssert(output_ref, outputs[0]);
 }
 INSTANTIATE_TEST_CASE_P(/*nothting*/, Layer_FullyConnected_Test,
                         testing::Values(
-                            std::vector<int>({}),
+                            //only bias could be broadcasted from a scalar
+                            //std::vector<int>({}),
                             std::vector<int>({1}),
                             std::vector<int>({4})
 ));
@@ -1577,8 +1592,8 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
     lp.set("equation", equation);
     lp.set("inputSize", 2);
     lp.set("outputSize", 1);
-    lp.set("inputShapes0", DictValue::arrayInt(&input_shape1[0], input_shape1.size()));
-    lp.set("inputShapes1", DictValue::arrayInt(&input_shape2[0], input_shape2.size()));
+    lp.set("inputShapes0", DictValue::arrayInt(input_shape1.data(), input_shape1.size()));
+    lp.set("inputShapes1", DictValue::arrayInt(input_shape2.data(), input_shape2.size()));
 
     Ptr<Layer> layer = EinsumLayer::create(lp);
 
@@ -1627,6 +1642,7 @@ TEST_P(Layer_Einsum_Test, Accuracy_01D)
     normAssert(output_ref, outputs[0]);
 }
 
+// BUG: https://github.com/opencv/opencv/issues/26193
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Layer_Einsum_Test, testing::Values(
     std::make_tuple(std::vector<int>({}), std::vector<int>({}), ",->"),
     std::make_tuple(std::vector<int>({1}), std::vector<int>({}), "i,->i"),

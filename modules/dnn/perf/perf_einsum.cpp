@@ -10,8 +10,8 @@ struct EinsumParams {
     int inputSize;
     int outputSize;
     std::string equation;
-    std::vector<MatShape> einsumInpShapes;
-    EinsumParams(std::string equation_, std::vector<MatShape> einsumInpShapes_ = std::vector<MatShape>())
+    std::vector<std::vector<int> > einsumInpShapes;
+    EinsumParams(std::string equation_, std::vector<std::vector<int> > einsumInpShapes_ = std::vector<std::vector<int> >())
     {
         inputSize = einsumInpShapes_.size();
         equation = equation_;
@@ -80,7 +80,7 @@ PERF_TEST_P_(Layer_Einsum, einsum) {
 
     for (int i = 0; i < params.inputSize; ++i) {
         // create inputs
-        inputs.emplace_back(Mat(params.einsumInpShapes[i].size(), params.einsumInpShapes[i].data(), CV_32FC1));
+        inputs.emplace_back(Mat(params.einsumInpShapes[i], CV_32FC1));
 
         // connect each input to the layer
         net.connect(0, i, id, i);

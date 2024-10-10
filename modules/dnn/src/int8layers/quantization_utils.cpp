@@ -185,7 +185,8 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3, "Number of inputs must be between 1 and 3 inclusive.");
-        Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
+        CV_Assert(requiredOutputs <= 1);
+        outputs.assign(1, inputs[0]);
         return false;
     }
 
@@ -356,7 +357,8 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Check(inputs.size(), inputs.size() >= 1 && inputs.size() <= 3, "Number of inputs must be between 1 and 3 inclusive.");
-        Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
+        CV_Assert(requiredOutputs <= 1);
+        outputs.assign(1, inputs[0]);
         return false;
     }
 

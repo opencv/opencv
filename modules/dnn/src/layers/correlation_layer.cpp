@@ -44,7 +44,7 @@ public:
         int neighborhood_grid_radius = max_displacement / stride_2;
         int neighborhood_grid_width = neighborhood_grid_radius * 2 + 1;
 
-        std::vector<int> outShape;
+        MatShape outShape;
 
         int num = inputs[0][0];
         outShape.push_back(num);

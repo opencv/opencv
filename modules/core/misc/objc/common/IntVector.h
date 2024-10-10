@@ -47,8 +47,8 @@ CV_EXPORTS @interface IntVector : NSObject
 * Create IntVector from std::vector<int>
 * @param src The std::vector<int> object to wrap
 */
--(instancetype)initWithStdVector:(std::vector<int>&)src;
-+(instancetype)fromNative:(std::vector<int>&)src;
+-(instancetype)initWithStdVector:(const std::vector<int>&)src;
++(instancetype)fromNative:(const std::vector<int>&)src;
 #endif
 
 #pragma mark - Properties
