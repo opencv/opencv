@@ -205,7 +205,7 @@ protected:
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLeakyRelu            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLRN                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    //void parseLSTM                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseLSTM                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMatMul               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMaxPool              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMaxUnpool            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -931,10 +931,6 @@ void ONNXImporter2::addLayer(LayerParams& layerParams,
 
 void ONNXImporter2::parseCustomLayer(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    const std::string& layer_type_domain = node_proto.has_domain() ? node_proto.domain() : std::string();
-    if (layer_type_domain.empty()){
-        rememberMissingOp(node_proto.op_type());
-    }
     parseSimpleLayers(layerParams, node_proto);
 }
 
@@ -1324,106 +1320,12 @@ void ONNXImporter2::lstm_add_transform(int num_directions, int batch_size, int h
         lstm_add_reshape(concat_proto.output(0), output_name, layerShape, sizeof(layerShape) / sizeof(layerShape[0]));
     }
 }
+*/
 
 void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
-    opencv_onnx::NodeProto lstm_proto = node_proto_;
-    layerParams.name += "/lstm";
-
-    // https://github.com/onnx/onnx/blob/main/docs/Operators.md#LSTM
-    CV_Assert(lstm_proto.input_size() >= 3);
-    for (size_t i = 1; i < 3; ++i)
-    {
-        const std::string& name = lstm_proto.input(i);
-        CV_Assert(!name.empty() && constBlobs.count(name) == 1);
-    }
-
-    IterShape_t shapeIt = outShapes.find(lstm_proto.input(0));
-    CV_Assert(shapeIt != outShapes.end());
-    const MatShape x_shape = shapeIt->second;
-
-    //if layout is 1, change batch and sequence dims
-    const int layout = layerParams.get<int>("layout", 0);
-    int batch_size, seq_length;
-    if (layout == 1){
-        batch_size = x_shape[0];
-        seq_length = x_shape[1];
-    }else{
-        seq_length = x_shape[0];
-        batch_size = x_shape[1];
-    }
-    const int input_size = x_shape[2];
-    const int hidden_size = layerParams.get<int>("hidden_size");
-    const int num_directions = constBlobs[lstm_proto.input(1)].size[0];
-
-    int w_size[] = {num_directions, 4*hidden_size, input_size};
-    lstm_extractConsts(layerParams, lstm_proto, 1, w_size, sizeof(w_size) / sizeof(w_size[0])); // W
-
-    int r_size[] =  {num_directions, 4*hidden_size, hidden_size};
-    lstm_extractConsts(layerParams, lstm_proto, 2, r_size, sizeof(r_size) / sizeof(r_size[0])); // R
-
-    int b_size[] = {num_directions, 8*hidden_size};
-    lstm_extractConsts(layerParams, lstm_proto, 3, b_size, sizeof(b_size) / sizeof(b_size[0])); // B
-
-    if (4 < lstm_proto.input_size() && !lstm_proto.input(4).empty())
-    {
-        Mat blob = getIntBlob(lstm_proto, 4);
-        CV_Assert(blob.total() == batch_size);
-        for (MatIterator_<int32_t> it = blob.begin<int32_t>(); it != blob.end<int32_t>(); ++it)
-        {
-            CV_Assert(*it == seq_length);
-        }
-    }
-
-    int h_size[] = {num_directions, batch_size, hidden_size};
-    lstm_extractConsts(layerParams, lstm_proto, 5, h_size, sizeof(h_size) / sizeof(h_size[0])); // initial_h
-
-    int c_size[] = {num_directions, batch_size, hidden_size};
-    lstm_extractConsts(layerParams, lstm_proto, 6, c_size, sizeof(c_size) / sizeof(c_size[0])); // initial_c
-
-    if (lstm_proto.input_size() > 7 && !lstm_proto.input(7).empty())
-    {
-        layerParams.set("use_peephole", true);
-        int p_size[] = {num_directions, 3 * hidden_size};
-        lstm_extractConsts(layerParams, lstm_proto, 7, p_size, sizeof(p_size) / sizeof(p_size[0])); // P
-    }
-
-    transformBlobs(layerParams.blobs);
-
-    layerParams.set("is_onnx", true);
-    layerParams.set("reverse", layerParams.get<String>("direction", "") == "reverse");
-    layerParams.set("bidirectional", layerParams.get<String>("direction", "") == "bidirectional");
-
-    bool need_yc = lstm_proto.output_size() > 2 && !lstm_proto.output(2).empty();
-    bool need_yh = lstm_proto.output_size() > 1 && !lstm_proto.output(1).empty();
-    bool need_y = lstm_proto.output_size() > 0 && !lstm_proto.output(0).empty();
-
-    const std::string y_name = need_y ? lstm_proto.output(0) : "";
-    const std::string yh_name = need_yh ? lstm_proto.output(1) : "";
-    const std::string yc_name = need_yc ? lstm_proto.output(2) : "";
-
-    layerParams.set("produce_cell_output", need_yc);
-
-    lstm_proto.clear_output();
-    if (need_y || need_yh)
-    {
-        // give random names to LSTMLayer's outputs because every output needs postprocessing
-        lstm_proto.add_output(format("%s_y", layerParams.name.c_str()));
-    }
-    if (need_yc)
-    {
-        lstm_proto.add_output(yc_name);
-    }
-
-    addLayer(layerParams, lstm_proto);
-
-    std::string y_output = lstm_fix_dims(layerParams, lstm_proto, batch_size, num_directions, hidden_size, need_y,
-                                         y_name, 0);
-    if (need_yh)
-    {
-        lstm_add_transform(num_directions, batch_size, hidden_size, 0, y_output, yh_name);
-    }
-}*/
+    rememberMissingOp(node_proto_.op_type());
+}
 
 /*void ONNXImporter2::parseGRU(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
@@ -2653,7 +2555,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Slice"] = &ONNXImporter2::parseSlice;
     dispatch["Split"] = &ONNXImporter2::parseSplit;
     dispatch["Constant"] = &ONNXImporter2::parseConstant;
-    //dispatch["LSTM"] = &ONNXImporter2::parseLSTM;
+    dispatch["LSTM"] = &ONNXImporter2::parseLSTM;
     //dispatch["GRU"] = &ONNXImporter2::parseGRU;
     dispatch["ImageScaler"] = &ONNXImporter2::parseImageScaler;
     dispatch["Clip"] = &ONNXImporter2::parseClip;
