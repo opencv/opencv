@@ -122,12 +122,12 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
 
     if (dx < dst_cols && dy < dst_rows)
     {
-        float X0 = M[0] * dx + M[1] * dy + M[2];
-        float Y0 = M[3] * dx + M[4] * dy + M[5];
         float W = M[6] * dx + M[7] * dy + M[8];
+        float X0 = (M[0] * dx + M[1] * dy + M[2]) / W;
+        float Y0 = (M[3] * dx + M[4] * dy + M[5]) / W;
 
-        int sx = convert_short_rtn(X0 / W);
-        int sy = convert_short_rtn(Y0 / W);
+        int sx = convert_short_rtn(X0);
+        int sy = convert_short_rtn(Y0);
         float ay = Y0 - (CT)sy;
         float ax = X0 - (CT)sx;
 
