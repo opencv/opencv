@@ -41,7 +41,6 @@
 
 #include "test_precomp.hpp"
 #include "test_chessboardgenerator.hpp"
-#include "opencv2/core/types_c.h"
 
 namespace opencv_test { namespace {
 
