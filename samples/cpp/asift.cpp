@@ -36,7 +36,7 @@ int main(int argc, char** argv)
     vector<String> fileName;
     cv::CommandLineParser parser(argc, argv,
         "{help h ||}"
-        "{feature|brisk|}"
+        "{feature|orb|}"
         "{flann||}"
         "{maxlines|50|}"
         "{image1|aero1.jpg|}{image2|aero3.jpg|}");
@@ -89,16 +89,19 @@ int main(int argc, char** argv)
         else
             matcher = DescriptorMatcher::create("BruteForce-Hamming");
     }
-#ifdef HAVE_OPENCV_XFEATURES2D
     else if (feature == "brisk")
     {
+#ifdef HAVE_OPENCV_XFEATURES2D
         backend = xfeatures2d::BRISK::create();
         if (useFlann)
             matcher = makePtr<FlannBasedMatcher>(makePtr<flann::LshIndexParams>(6, 12, 1));
         else
             matcher = DescriptorMatcher::create("BruteForce-Hamming");
-    }
+#else
+        cout << "OpenCV is built without opencv_contrib modules. BRISK algorithm is not available!" << std::endl;
+        return -1;
 #endif
+    }
     else
     {
         cerr << feature << " is not supported. See --help" << endl;

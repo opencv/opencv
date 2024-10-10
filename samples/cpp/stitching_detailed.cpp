@@ -422,16 +422,24 @@ int main(int argc, char* argv[])
     {
         finder = ORB::create();
     }
-#ifdef HAVE_OPENCV_XFEATURES2D
     else if (features_type == "akaze")
     {
+#ifdef HAVE_OPENCV_XFEATURES2D
         finder = xfeatures2d::AKAZE::create();
+#else
+        cout << "OpenCV is built without opencv_contrib modules. AKAZE algorithm is not available!" << std::endl;
+        return -1;
+#endif
     }
     else if (features_type == "surf")
     {
+#if defined(HAVE_OPENCV_XFEATURES2D) && defined(HAVE_OPENCV_NONFREE)
         finder = xfeatures2d::SURF::create();
-    }
+#else
+        cout << "OpenCV is built without NONFREE modules. SURF algorithm is not available!" << std::endl;
+        return -1;
 #endif
+    }
     else if (features_type == "sift")
     {
         finder = SIFT::create();
