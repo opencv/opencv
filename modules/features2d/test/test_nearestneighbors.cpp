@@ -330,4 +330,55 @@ TEST(Features2d_FLANN_Saved, regression) { CV_FlannSavedIndexTest test; test.saf
 
 #endif
 
+class CV_AnnoyTest : public NearestNeighborTest
+{
+public:
+    CV_AnnoyTest() : NearestNeighborTest(), index(NULL) {}
+
+protected:
+    void createModel(const Mat& data) CV_OVERRIDE
+    {
+        index = ANNIndex::create(data.cols);
+        index->addItems(data);
+        index->build();
+    }
+
+    int findNeighbors(Mat& points, Mat& neighbors) CV_OVERRIDE
+    {
+        Mat distances(points.rows, neighbors.cols, CV_32FC1);
+        int knn = 1;
+
+        index->knnSearch(points, neighbors, distances, knn);
+
+        Mat neighbors1(neighbors.size(), CV_32SC1);
+        for(int i = 0; i < points.rows; i++)
+        {
+            float* fltPtr = points.ptr<float>(i);
+            vector<float> query(fltPtr, fltPtr + points.cols);
+            vector<int> indices(neighbors1.cols, 0);
+            vector<float> dists(distances.cols, 0);
+
+            index->knnSearch(query, indices, dists, knn);
+
+            vector<int>::const_iterator it = indices.begin();
+            for(int j = 0; it != indices.end(); ++it, j++)
+                neighbors1.at<int>(i, j) = *it;
+        }
+
+        if (cvtest::norm(neighbors, neighbors1, NORM_L1) > 0)
+        {
+            ts->printf(cvtest::TS::LOG, "bad accuray of find nearest neighbors\n");
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        }
+
+        return ts->get_err_code();
+    }
+
+    void releaseModel() CV_OVERRIDE {}
+
+    Ptr<ANNIndex> index;
+};
+
+TEST(Features2d_ANNIndex, regression) {CV_AnnoyTest test; test.safe_run();}
+
 }} // namespace
