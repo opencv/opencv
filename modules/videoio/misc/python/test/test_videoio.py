@@ -44,6 +44,9 @@ class Bindings(NewOpenCVTests):
             def read(self, size=-1):
                 return self.f.read(size)
 
+            def seek(self, offset, whence):
+                return self.f.seek(offset, whence)
+
             def __del__(self):
                 self.f.close()
 

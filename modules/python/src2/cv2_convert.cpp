@@ -1243,11 +1243,11 @@ std::streamsize IOBaseWrapper::xsgetn(char* s, std::streamsize n)
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
-    PyObject* size = pyopencv_from(n);
+    PyObject* size = pyopencv_from(static_cast<int>(n));
 
     PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), size, NULL);
     char* src = PyBytes_AsString(res);
-    int len = PyBytes_Size(res);
+    size_t len = static_cast<size_t>(PyBytes_Size(res));
     std::memcpy(s, src, len);
     Py_DECREF(res);
     Py_DECREF(size);
@@ -1255,6 +1255,39 @@ std::streamsize IOBaseWrapper::xsgetn(char* s, std::streamsize n)
     PyGILState_Release(gstate);
 
     return len;
+}
+
+std::streampos IOBaseWrapper::seekoff(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode which)
+{
+    CV_DbgAssert(ioBase);
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+
+    PyObject* size = pyopencv_from(static_cast<int>(off));
+    PyObject* whence = pyopencv_from(way == std::ios_base::beg ? 0 : (way == std::ios_base::cur ? 1 : 2));
+
+    PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("seek"), size, whence, NULL);
+    int pos = PyLong_AsLong(res);
+    Py_DECREF(res);
+    Py_DECREF(size);
+    Py_DECREF(whence);
+
+    PyGILState_Release(gstate);
+
+    return pos;
+}
+
+
+int IOBaseWrapper::underflow()
+{
+    char s;
+    if (xsgetn(&s, 1) == 1)
+    {
+        seekoff(-1, std::ios_base::cur);
+        return static_cast<int>(s);
+    }
+    else
+        return EOF;
 }
 
 bool pyopencv_to(PyObject* obj, IOBaseWrapper& p, const ArgInfo&)
