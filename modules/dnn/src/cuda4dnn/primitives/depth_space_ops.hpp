@@ -22,17 +22,19 @@ namespace cv { namespace dnn { namespace cuda4dnn {
     public:
         using wrapper_type = GetCUDABackendWrapperType<T>;
 
-        DepthSpaceOps(csl::Stream stream_, const std::vector<int> &internal_shape_,
+        DepthSpaceOps(csl::Stream stream_, const MatShape& internal_shape_,
                      const std::vector<size_t> &permutation_)
             : stream(std::move(stream_)), internal_shape(internal_shape_),
               permutation(permutation_)
         {
-            transposed_internal_shape = std::vector<int>(internal_shape.size());
-            for (size_t i = 0; i < permutation.size(); i++) {
-                transposed_internal_shape[i] = internal_shape[permutation[i]];
+            int dims = internal_shape.dims;
+            int nperm = (int)permutation_.size();
+            transposed_internal_shape = MatShape(dims);
+            for (int i = 0; i < nperm; i++) {
+                transposed_internal_shape[i] = internal_shape[(int)permutation[i]];
             }
 
-            size_t num_elements = std::accumulate(internal_shape.begin(), internal_shape.end(), 1, std::multiplies<size_t>());
+            size_t num_elements = internal_shape.total();
             csl::WorkspaceBuilder builder;
             builder.require<T>(num_elements);
             scratch_mem_in_bytes = builder.required_workspace_size();
@@ -64,9 +66,9 @@ namespace cv { namespace dnn { namespace cuda4dnn {
 
     private:
         csl::Stream stream;
-        std::vector<int> internal_shape;
+        MatShape internal_shape;
         std::vector<size_t> permutation;
-        std::vector<int> transposed_internal_shape;
+        MatShape transposed_internal_shape;
 
         std::size_t scratch_mem_in_bytes;
     };

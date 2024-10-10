@@ -172,6 +172,11 @@ static inline Scalar_<double> broadcastRealScalar(const Scalar_<double>& _scale)
     return scale;
 }
 
+static inline void prindent(std::ostream& strm, int indent)
+{
+    for (int i = 0; i < indent; i++)
+        strm << ' ';
+}
 
 CV__DNN_INLINE_NS_END
 

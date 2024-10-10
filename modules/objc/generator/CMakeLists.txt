@@ -91,7 +91,7 @@ macro(ocv_add_objc_generated_target TARGET)
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}")
   add_custom_command(
       OUTPUT ${objc_generated_files} "${objc_${TARGET}_generated_output_dependecy}"
-      COMMAND ${PYTHON_DEFAULT_EXECUTABLE} "${OBJC_SOURCE_DIR}/generator/gen_objc.py"
+      COMMAND ${PYTHON3_EXECUTABLE} "${OBJC_SOURCE_DIR}/generator/gen_objc.py"
               -p "${OBJC_SOURCE_DIR}/../python/src2/gen2.py"
               -c "${CONFIG_FILE}"
               -t "${TARGET}"

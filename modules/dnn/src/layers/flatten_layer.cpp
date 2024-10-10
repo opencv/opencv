@@ -65,10 +65,14 @@ namespace dnn
 class FlattenLayerImpl CV_FINAL : public FlattenLayer
 {
 public:
+    bool _onnxMode;
+
     FlattenLayerImpl(const LayerParams &params)
     {
         _startAxis = params.get<int>("axis", 1);
         _endAxis = params.get<int>("end_axis", -1);
+        _onnxMode = params.get<bool>("onnx", false);
+
         setParamsFrom(params);
     }
 
@@ -94,24 +98,50 @@ public:
             CV_Assert(inputs[i] == inputs[0]);
         }
 
-        int numAxes = inputs[0].size();
+        MatShape outputShapeVec;
+
+        int numAxes = (int)inputs[0].size();
+        /*
+           Ticket: https://github.com/opencv/opencv/issues/26197
+           [TODO] this is not quite correct,
+           in ONNX Flatten valid range is [0, numAxes],
+           not [0, numAxes-1] which normalize_axis() produces.
+           But if we fix it, flatten_const.onnx from opencv_extra
+           is not processed correctly.
+           libprotobuf-c reads it correctly,
+           but the current version of libprotobuf does not
+        */
         int startAxis = normalize_axis(_startAxis, numAxes);
         int endAxis = normalize_axis(_endAxis, numAxes);
 
-        CV_Assert(startAxis >= 0);
-        CV_Assert(endAxis >= startAxis && endAxis < (int)numAxes);
+        CV_Assert(startAxis >= 0 && startAxis <= numAxes);
 
-        size_t flattenedDimensionSize = total(inputs[0], startAxis, endAxis + 1);
+        if (_onnxMode) {
+            size_t outer = 1, inner = 1;
+            int i = 0;
+            for (; i < startAxis; i++)
+                outer *= inputs[0][i];
+            for (; i < numAxes; i++)
+                inner *= inputs[0][i];
 
-        MatShape outputShapeVec;
-        for (int i = 0; i < startAxis; i++)
-        {
-            outputShapeVec.push_back(inputs[0][i]);
+            CV_Assert_N(inner <= (size_t)INT_MAX, outer < (size_t)INT_MAX);
+            outputShapeVec.push_back((int)outer);
+            outputShapeVec.push_back((int)inner);
         }
-        outputShapeVec.push_back(flattenedDimensionSize);
-        for (size_t i = endAxis + 1; i < numAxes; i++)
-        {
-            outputShapeVec.push_back(inputs[0][i]);
+        else {
+            CV_Assert(endAxis >= startAxis && endAxis <= numAxes);
+
+            size_t flattenedDimensionSize = total(inputs[0], startAxis, endAxis + 1);
+
+            for (int i = 0; i < startAxis; i++)
+            {
+                outputShapeVec.push_back(inputs[0][i]);
+            }
+            outputShapeVec.push_back(flattenedDimensionSize);
+            for (size_t i = endAxis + 1; i < numAxes; i++)
+            {
+                outputShapeVec.push_back(inputs[0][i]);
+            }
         }
 
         outputs.resize(inputs.size(), outputShapeVec);
@@ -126,17 +156,8 @@ public:
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size());
-        for (auto input : inputs)
-        {
-            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_32S || input == CV_64S || input == CV_8S || input == CV_8U || input == CV_Bool, "");
-            else
-                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S || input == CV_8S || input == CV_8U || input == CV_Bool, "");
-        }
-
         outputs.assign(requiredOutputs, inputs[0]);
     }
-
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
     {
@@ -165,7 +186,7 @@ public:
         {
             MatShape outShape = shape(outputs[i]);
             UMat& output = outputs_arr.getUMatRef(i);
-            output = inputs[i]->reshape(1, (int)outShape.size(), &outShape[0]);
+            inputs[i]->reshape(1, (int)outShape.size(), &outShape[0]).copyTo(output);
         }
 
         return true;

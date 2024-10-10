@@ -78,7 +78,9 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
+        CV_Assert(!inputs.empty());
+        outputs.assign(std::max(requiredOutputs, 1), inputs[0]);
+        internals.clear();
         return true;
     }
 
@@ -88,8 +90,9 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size());
-        outputs = inputs;
+        CV_Assert(!inputs.empty());
+        outputs.assign(std::max(requiredOutputs, 1), inputs[0]);
+        internals.clear();
     }
 
 
@@ -126,10 +129,12 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        size_t i, n = outputs.size();
-        for (i = 0; i < n; ++i)
-            if (outputs[i].data != inputs[i].data)
-                inputs[i].copyTo(outputs[i]);
+        size_t i, ninputs = inputs.size(), noutputs = outputs.size();
+        for (i = 0; i < noutputs; ++i) {
+            const Mat& inp = inputs[i < ninputs ? i : 0];
+            if (outputs[i].data != inp.data)
+                inp.copyTo(outputs[i]);
+        }
     }
 
 #ifdef HAVE_CANN

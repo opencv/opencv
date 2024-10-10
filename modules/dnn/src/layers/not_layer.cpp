@@ -56,11 +56,14 @@ public:
         CV_CheckTypeEQ(inputs[0].type(), CV_Bool, "");
         CV_CheckTypeEQ(outputs[0].type(), CV_Bool, "");
 
+        CV_Assert(inputs[0].isContinuous());
+        CV_Assert(outputs[0].isContinuous());
+
         bool* input = inputs[0].ptr<bool>();
         bool* output = outputs[0].ptr<bool>();
-        int size = inputs[0].total();
+        size_t size = inputs[0].total();
 
-        for (int i = 0; i < size; ++i)
+        for (size_t i = 0; i < size; ++i)
             output[i] = !input[i];
     }
 
