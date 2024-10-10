@@ -1042,16 +1042,16 @@ protected:
     virtual void run_func();
     virtual void run_reference_func();
 
+    template<int channels, typename T>
+    void newLinear(int x, float sx, float sy, const T *srcptr_, T *dstptr, int srccols, int srcrows, size_t srcstep,
+                   const T *bval, int borderType_x, int borderType_y);
+
     Mat M;
 private:
     void warpAffine(const Mat&, Mat&);
 
     template<typename T>
     void newWarpAffine(const Mat&, Mat&, const Mat&);
-
-    template<int channels, typename T>
-    void newLinear(int x, float sx, float sy, const T *srcptr_, T *dstptr, int srccols, int srcrows, size_t srcstep,
-                   const T *bval, int borderType_x, int borderType_y);
 };
 
 CV_WarpAffine_Test::CV_WarpAffine_Test() :
@@ -1336,6 +1336,9 @@ protected:
 
 private:
     void warpPerspective(const Mat&, Mat&);
+
+    template<typename T>
+    void newWarpPerspective(const Mat&, Mat&, const Mat&);
 };
 
 CV_WarpPerspective_Test::CV_WarpPerspective_Test() :
@@ -1369,7 +1372,8 @@ void CV_WarpPerspective_Test::generate_test_data()
 
 void CV_WarpPerspective_Test::run_func()
 {
-    cv::warpPerspective(src, dst, M, dst.size(), interpolation, borderType, borderValue);
+    cv::warpPerspective(src, dst, M, dst.size(), interpolation, borderType, borderValue, cv::ALGO_HINT_APPROX);
+    // cv::warpPerspective(src, dst, M, dst.size(), interpolation, borderType, borderValue);
 }
 
 float CV_WarpPerspective_Test::get_success_error_level(int _interpolation, int _depth) const
@@ -1382,6 +1386,54 @@ void CV_WarpPerspective_Test::run_reference_func()
     Mat tmp = Mat::zeros(dst.size(), dst.type());
     warpPerspective(src, tmp);
     tmp.convertTo(reference_dst, reference_dst.depth());
+}
+
+template<typename T>
+void CV_WarpPerspective_Test::newWarpPerspective(const Mat &_src, Mat &_dst, const Mat &tM)
+{
+    int num_channels = _dst.channels();
+    CV_CheckTrue(num_channels == 1 || num_channels == 3 || num_channels == 4, "");
+
+    auto *srcptr_ = _src.ptr<const T>();
+    auto *dstptr_ = _dst.ptr<T>();
+    size_t srcstep = _src.step/sizeof(T), dststep = _dst.step/sizeof(T);
+    int srccols = _src.cols, srcrows = _src.rows;
+    int dstcols = _dst.cols, dstrows = _dst.rows;
+
+    Mat tmp;
+    tM.convertTo(tmp, CV_32F);
+    auto *_M = tmp.ptr<const float>();
+
+    T bval[] = {
+        saturate_cast<T>(borderValue[0]),
+        saturate_cast<T>(borderValue[1]),
+        saturate_cast<T>(borderValue[2]),
+        saturate_cast<T>(borderValue[3]),
+    };
+
+    int borderType_x = borderType != BORDER_CONSTANT &&
+                       borderType != BORDER_TRANSPARENT &&
+                       srccols <= 1 ? BORDER_REPLICATE : borderType;
+    int borderType_y = borderType != BORDER_CONSTANT &&
+                       borderType != BORDER_TRANSPARENT &&
+                       srcrows <= 1 ? BORDER_REPLICATE : borderType;
+
+    for (int y = 0; y < dstrows; y++) {
+        T* dstptr = dstptr_ + y*dststep;
+        for (int x = 0; x < dstcols; x++) {
+            float w = x*_M[6] + y*_M[7] + _M[8];
+            float sx = (x*_M[0] + y*_M[1] + _M[2]) / w;
+            float sy = (x*_M[3] + y*_M[4] + _M[5]) / w;
+
+            if (num_channels == 3) {
+                newLinear<3>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+            } else if (num_channels == 4) {
+                newLinear<4>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+            } else {
+                newLinear<1>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+            }
+        }
+    }
 }
 
 void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
@@ -1409,6 +1461,17 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
     int inter = interpolation & INTER_MAX;
     if (inter == INTER_AREA)
         inter = INTER_LINEAR;
+
+    if (inter == INTER_LINEAR) {
+        int dst_depth = _dst.depth(), dst_channels = _dst.channels();
+        if (dst_depth == CV_8U && (dst_channels == 1 || dst_channels == 3 || dst_channels == 4)) {
+            return newWarpPerspective<uint8_t>(_src, _dst, M);
+        } else if (dst_depth == CV_16U && (dst_channels == 1 || dst_channels == 3 || dst_channels == 4)) {
+            return newWarpPerspective<uint16_t>(_src, _dst, M);
+        } else if (dst_depth == CV_32F && (dst_channels == 1 || dst_channels == 3 || dst_channels == 4)) {
+            return newWarpPerspective<float>(_src, _dst, M);
+        }
+    }
 
     mapx.create(dsize, CV_16SC2);
     if (inter != INTER_NEAREST)

@@ -122,16 +122,14 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
 
     if (dx < dst_cols && dy < dst_rows)
     {
-        CT X0 = M[0] * dx + M[1] * dy + M[2];
-        CT Y0 = M[3] * dx + M[4] * dy + M[5];
-        CT W = M[6] * dx + M[7] * dy + M[8];
-        W = W != 0.0f ? INTER_TAB_SIZE / W : 0.0f;
-        int X = rint(X0 * W), Y = rint(Y0 * W);
+        float W = M[6] * dx + M[7] * dy + M[8];
+        float X0 = (M[0] * dx + M[1] * dy + M[2]) / W;
+        float Y0 = (M[3] * dx + M[4] * dy + M[5]) / W;
 
-        short sx = convert_short_sat(X >> INTER_BITS);
-        short sy = convert_short_sat(Y >> INTER_BITS);
-        short ay = (short)(Y & (INTER_TAB_SIZE - 1));
-        short ax = (short)(X & (INTER_TAB_SIZE - 1));
+        int sx = convert_short_rtn(X0);
+        int sy = convert_short_rtn(Y0);
+        float ay = Y0 - (CT)sy;
+        float ax = X0 - (CT)sx;
 
         WT v0 = (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows) ?
             CONVERT_TO_WT(loadpix(srcptr + mad24(sy, src_step, src_offset + sx * pixsize))) : scalar;
@@ -142,24 +140,12 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
         WT v3 = (sx+1 >= 0 && sx+1 < src_cols && sy+1 >= 0 && sy+1 < src_rows) ?
             CONVERT_TO_WT(loadpix(srcptr + mad24(sy+1, src_step, src_offset + (sx+1) * pixsize))) : scalar;
 
-        float taby = 1.f/INTER_TAB_SIZE*ay;
-        float tabx = 1.f/INTER_TAB_SIZE*ax;
-
         int dst_index = mad24(dy, dst_step, dst_offset + dx * pixsize);
 
-#if SRC_DEPTH <= 4
-        int itab0 = convert_short_sat_rte( (1.0f-taby)*(1.0f-tabx) * INTER_REMAP_COEF_SCALE );
-        int itab1 = convert_short_sat_rte( (1.0f-taby)*tabx * INTER_REMAP_COEF_SCALE );
-        int itab2 = convert_short_sat_rte( taby*(1.0f-tabx) * INTER_REMAP_COEF_SCALE );
-        int itab3 = convert_short_sat_rte( taby*tabx * INTER_REMAP_COEF_SCALE );
-
-        WT val = v0 * itab0 +  v1 * itab1 + v2 * itab2 + v3 * itab3;
-        storepix(CONVERT_TO_T((val + (1 << (INTER_REMAP_COEF_BITS-1))) >> INTER_REMAP_COEF_BITS), dstptr + dst_index);
-#else
-        float tabx2 = 1.0f - tabx, taby2 = 1.0f - taby;
-        WT val = v0 * tabx2 * taby2 +  v1 * tabx * taby2 + v2 * tabx2 * taby + v3 * tabx * taby;
-        storepix(CONVERT_TO_T(val), dstptr + dst_index);
-#endif
+        v0 = fma(v1 - v0, ax, v0);
+        v2 = fma(v3 - v2, ax, v2);
+        v0 = fma(v2 - v0, ay, v0);
+        storepix(CONVERT_TO_T(v0), dstptr + dst_index);
     }
 }
 

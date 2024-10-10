@@ -2278,6 +2278,7 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
 
     if ( !dev.isIntel() || !(type == CV_8UC1) ||
          !(dtype == CV_8UC1) || !(_dst.cols() % 4 == 0) ||
+         (op_type == OCL_OP_PERSPECTIVE && (cn == 1 || cn == 3 || cn == 4)) ||
          !(borderType == cv::BORDER_CONSTANT &&
           (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)))
         return false;
@@ -2385,8 +2386,23 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
                       ocl::typeToStr(sctype), cn, rowsPerWI);
     }
-    else
+    else if (interpolation == INTER_LINEAR && op_type == OCL_OP_PERSPECTIVE)
     {
+        char cvt[2][50];
+        sctype = CV_MAKETYPE(CV_32F, scalarcn);
+        opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D SRC_DEPTH=%d"
+                      " -D CONVERT_TO_WT=%s -D CONVERT_TO_T=%s%s -D CT=%s -D CN=%d -D ROWS_PER_WI=%d",
+                      /* INTER, T */        interpolationMap[interpolation], ocl::typeToStr(type),
+                      /* T1 */              ocl::typeToStr(CV_MAT_DEPTH(type)),
+                      /* ST */              ocl::typeToStr(sctype),
+                      /* WT, SRC_DEPTH */   ocl::typeToStr(CV_MAKE_TYPE(CV_32F, cn)), depth,
+                      /* CONVERT_TO_WT */   ocl::convertTypeStr(depth, CV_32F, cn, cvt[0], sizeof(cvt[0])),
+                      /* CONVERT_TO_T */    ocl::convertTypeStr(CV_32F, depth, cn, cvt[1], sizeof(cvt[1])),
+                      /* CONVERT_TO_T */    doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                      /* CT */              useDouble ? "double" : "float",
+                      /* CN, ROWS_PER_WI */ cn, rowsPerWI);
+    }
+    else {
         char cvt[2][50];
         opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D SRC_DEPTH=%d"
                       " -D CONVERT_TO_WT=%s -D CONVERT_TO_T=%s%s -D CT=%s -D CN=%d -D ROWS_PER_WI=%d",
@@ -3256,12 +3272,58 @@ private:
 
 namespace hal {
 
-void warpPerspective(int src_type,
+static void warpPerspective(int src_type,
                     const uchar * src_data, size_t src_step, int src_width, int src_height,
                     uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
-                    const double M[9], int interpolation, int borderType, const double borderValue[4])
+                    const double M[9], int interpolation, int borderType, const double borderValue[4], AlgorithmHint hint)
 {
     CALL_HAL(warpPerspective, cv_hal_warpPerspective, src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, M, interpolation, borderType, borderValue);
+
+    if (interpolation == INTER_LINEAR) {
+        switch (src_type) {
+            case CV_8UC1: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                } else {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC1, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                }
+            }
+            case CV_8UC3: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                } else {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC3, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                }
+            }
+            case CV_8UC4: {
+                if (hint == cv::ALGO_HINT_APPROX) {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearApproxInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                } else {
+                    CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_8UC4, (src_data, src_step, src_height, src_width, dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+                }
+            }
+            case CV_16UC1: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            }
+            case CV_16UC3: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            }
+            case CV_16UC4: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_height, src_width, (uint16_t*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            }
+            case CV_32FC1: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC1, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            }
+            case CV_32FC3: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC3, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            }
+            case CV_32FC4: {
+                CV_CPU_DISPATCH(warpPerspectiveLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
+            }
+            // no default
+        }
+    }
+
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
     Mat dst(Size(dst_width, dst_height), src_type, dst_data, dst_step);
 
@@ -3342,9 +3404,13 @@ void warpPerspectiveBlockline(const double *M, short* xy, short* alpha, double X
 } // cv::
 
 void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
-                          Size dsize, int flags, int borderType, const Scalar& borderValue )
+                          Size dsize, int flags, int borderType, const Scalar& borderValue,
+                          AlgorithmHint hint )
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == cv::ALGO_HINT_DEFAULT)
+        hint = cv::getDefaultAlgorithmHint();
 
     CV_Assert( _src.total() > 0 );
 
@@ -3436,7 +3502,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
         invert(matM, matM);
 
     hal::warpPerspective(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
-                        matM.ptr<double>(), interpolation, borderType, borderValue.val);
+                        matM.ptr<double>(), interpolation, borderType, borderValue.val, hint);
 }
 
 
