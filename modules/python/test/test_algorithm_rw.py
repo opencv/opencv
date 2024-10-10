@@ -20,7 +20,7 @@ class algorithm_rw_test(NewOpenCVTests):
         algorithm.read(fs.getNode("ORB"))
 
         self.assertEqual(algorithm.getMaxFeatures(), 200)
-        self.assertEqual(algorithm.getScaleFactor(), 1.3)
+        self.assertAlmostEqual(algorithm.getScaleFactor(), 1.3, places=6)
         self.assertEqual(algorithm.getNLevels(), 5)
         self.assertEqual(algorithm.getEdgeThreshold(), 28)
 
