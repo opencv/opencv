@@ -3079,12 +3079,18 @@ inline int v_scan_forward(const v_float64x8& a) { return trailingZeros32(v_signm
 inline void v512_cleanup() { _mm256_zeroall(); }
 
 #include "intrin_math.hpp"
-inline v_float32x16 v_exp(v_float32x16 x) { return v_exp_default_32f<v_float32x16, v_int32x16>(x); }
-inline v_float32x16 v_log(v_float32x16 x) { return v_log_default_32f<v_float32x16, v_int32x16>(x); }
-inline v_float32x16 v_erf(v_float32x16 x) { return v_erf_default_32f<v_float32x16, v_int32x16>(x); }
+inline v_float32x16 v_exp(const v_float32x16& x) { return v_exp_default_32f<v_float32x16, v_int32x16>(x); }
+inline v_float32x16 v_log(const v_float32x16& x) { return v_log_default_32f<v_float32x16, v_int32x16>(x); }
+inline void v_sincos(const v_float32x16& x, v_float32x16& s, v_float32x16& c) { v_sincos_default_32f<v_float32x16, v_int32x16>(x, s, c); }
+inline v_float32x16 v_sin(const v_float32x16& x) { return v_sin_default_32f<v_float32x16, v_int32x16>(x); }
+inline v_float32x16 v_cos(const v_float32x16& x) { return v_cos_default_32f<v_float32x16, v_int32x16>(x); }
+inline v_float32x16 v_erf(const v_float32x16& x) { return v_erf_default_32f<v_float32x16, v_int32x16>(x); }
 
-inline v_float64x8 v_exp(v_float64x8 x) { return v_exp_default_64f<v_float64x8, v_int64x8>(x); }
-inline v_float64x8 v_log(v_float64x8 x) { return v_log_default_64f<v_float64x8, v_int64x8>(x); }
+inline v_float64x8 v_exp(const v_float64x8& x) { return v_exp_default_64f<v_float64x8, v_int64x8>(x); }
+inline v_float64x8 v_log(const v_float64x8& x) { return v_log_default_64f<v_float64x8, v_int64x8>(x); }
+inline void v_sincos(const v_float64x8& x, v_float64x8& s, v_float64x8& c) { v_sincos_default_64f<v_float64x8, v_int64x8>(x, s, c); }
+inline v_float64x8 v_sin(const v_float64x8& x) { return v_sin_default_64f<v_float64x8, v_int64x8>(x); }
+inline v_float64x8 v_cos(const v_float64x8& x) { return v_cos_default_64f<v_float64x8, v_int64x8>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 
