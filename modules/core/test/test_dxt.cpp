@@ -797,7 +797,7 @@ double CxCore_MulSpectrumsTest::get_success_error_level( int test_case_idx, int 
     CV_UNUSED(test_case_idx);
     CV_Assert(i == OUTPUT);
     CV_Assert(j == 0);
-    int elem_depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));
+    const int elem_depth = test_mat[i][j].depth();
     CV_Assert(elem_depth == CV_32F || elem_depth == CV_64F);
 
     element_wise_relative_error = false;
@@ -810,7 +810,7 @@ void CxCore_MulSpectrumsTest::run_func()
 {
     Mat& dst = !test_mat[TEMP].empty() && !test_mat[TEMP][0].empty() ?
         test_mat[TEMP][0] : test_mat[OUTPUT][0];
-    const Mat* src1 = &test_mat[INPUT][0], *src2 = &test_mat[INPUT][1];
+    Mat *src1 = &test_mat[INPUT][0], *src2 = &test_mat[INPUT][1];
 
     if( inplace )
     {

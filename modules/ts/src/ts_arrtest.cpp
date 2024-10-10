@@ -40,7 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/core_c.h"
 
 namespace cvtest
 {
@@ -48,18 +47,16 @@ namespace cvtest
 static const int default_test_case_count = 500;
 static const int default_max_log_array_size = 9;
 
-ArrayTest::ArrayTest()
+ArrayTest::ArrayTest() : test_array(*this)
 {
     test_case_count = default_test_case_count;
 
-    iplimage_allowed = true;
-    cvmat_allowed = true;
     optional_mask = false;
     min_log_array_size = 0;
     max_log_array_size = default_max_log_array_size;
     element_wise_relative_error = true;
 
-    test_array.resize(MAX_ARR);
+    test_mat.resize(MAX_ARR);
 }
 
 
@@ -71,11 +68,6 @@ ArrayTest::~ArrayTest()
 
 void ArrayTest::clear()
 {
-    for( size_t i = 0; i < test_array.size(); i++ )
-    {
-        for( size_t j = 0; j < test_array[i].size(); j++ )
-            cvRelease( &test_array[i][j] );
-    }
     BaseTest::clear();
 }
 
@@ -122,14 +114,6 @@ void ArrayTest::get_test_array_types_and_sizes( int /*test_case_idx*/, vector<ve
     }
 }
 
-
-static const unsigned int icvTsTypeToDepth[] =
-{
-    IPL_DEPTH_8U, IPL_DEPTH_8S, IPL_DEPTH_16U, IPL_DEPTH_16S,
-    IPL_DEPTH_32S, IPL_DEPTH_32F, IPL_DEPTH_64F
-};
-
-
 int ArrayTest::prepare_test_case( int test_case_idx )
 {
     int code = 1;
@@ -139,7 +123,6 @@ int ArrayTest::prepare_test_case( int test_case_idx )
     vector<vector<int> > types(max_arr);
     size_t i, j;
     RNG& rng = ts->get_rng();
-    bool is_image = false;
 
     for( i = 0; i < max_arr; i++ )
     {
@@ -158,10 +141,9 @@ int ArrayTest::prepare_test_case( int test_case_idx )
         {
             unsigned t = randInt(rng);
             bool create_mask = true, use_roi = false;
-            CvSize size = cvSize(sizes[i][j]), whole_size = size;
-            CvRect roi = CV_STRUCT_INITIALIZER;
+            Size size(sizes[i][j]), whole_size = size;
+            Rect roi(0, 0, 0, 0);
 
-            is_image = !cvmat_allowed ? true : iplimage_allowed ? (t & 1) != 0 : false;
             create_mask = (t & 6) == 0; // ~ each of 3 tests will use mask
             use_roi = (t & 8) != 0;
             if( use_roi )
@@ -170,7 +152,6 @@ int ArrayTest::prepare_test_case( int test_case_idx )
                 whole_size.height += randInt(rng) % 10;
             }
 
-            cvRelease( &test_array[i][j] );
             if( size.width > 0 && size.height > 0 &&
                 types[i][j] >= 0 && (i != MASK || create_mask) )
             {
@@ -184,43 +165,28 @@ int ArrayTest::prepare_test_case( int test_case_idx )
                     if( whole_size.height > size.height )
                         roi.y = randInt(rng) % (whole_size.height - size.height);
                 }
-
-                if( is_image )
+                if( use_roi )
                 {
-                    test_array[i][j] = cvCreateImage( whole_size,
-                        icvTsTypeToDepth[CV_MAT_DEPTH(types[i][j])], CV_MAT_CN(types[i][j]) );
-                    if( use_roi )
-                        cvSetImageROI( (IplImage*)test_array[i][j], roi );
+                    // TODO: re-enable actual ROI selection
+                    // test_mat[i][j] = test_mat[i][j](roi);
+                    // Size sz;
+                    // Point ofs;
+                    // test_mat[i][j].locateROI(sz, ofs);
+                    test_mat[i][j].create(roi.size(), types[i][j]);
                 }
                 else
                 {
-                    test_array[i][j] = cvCreateMat( whole_size.height, whole_size.width, types[i][j] );
-                    if( use_roi )
-                    {
-                        CvMat submat, *mat = (CvMat*)test_array[i][j];
-                        cvGetSubRect( test_array[i][j], &submat, roi );
-                        submat.refcount = mat->refcount;
-                        *mat = submat;
-                    }
+                    test_mat[i][j].create(whole_size, types[i][j]);
                 }
             }
-        }
-    }
-
-    test_mat.resize(test_array.size());
-    for( i = 0; i < max_arr; i++ )
-    {
-        size_t sizei = test_array[i].size();
-        test_mat[i].resize(sizei);
-        for( j = 0; j < sizei; j++ )
-        {
-            CvArr* arr = test_array[i][j];
-            test_mat[i][j] = cv::cvarrToMat(arr);
+            else
+            {
+                test_mat[i][j].create(Size(), CV_8U);
+            }
             if( !test_mat[i][j].empty() )
                 fill_array( test_case_idx, (int)i, (int)j, test_mat[i][j] );
         }
     }
-
     return code;
 }
 
@@ -267,7 +233,7 @@ void ArrayTest::fill_array( int /*test_case_idx*/, int i, int j, Mat& arr )
 
 double ArrayTest::get_success_error_level( int /*test_case_idx*/, int i, int j )
 {
-    int elem_depth = CV_MAT_DEPTH(cvGetElemType(test_array[i][j]));
+    const int elem_depth = test_mat[i][j].depth();
     CV_Assert( i == OUTPUT || i == INPUT_OUTPUT );
     return elem_depth < CV_32F ? 0 : elem_depth == CV_32F ? FLT_EPSILON*100: DBL_EPSILON*5000;
 }
@@ -291,15 +257,15 @@ int ArrayTest::validate_test_results( int test_case_idx )
     {
         int i0 = i == 0 ? OUTPUT : INPUT_OUTPUT;
         int i1 = i == 0 ? REF_OUTPUT : REF_INPUT_OUTPUT;
-        size_t sizei = test_array[i0].size();
+        size_t sizei = test_mat[i0].size();
 
-        CV_Assert( sizei == test_array[i1].size() );
+        CV_Assert( sizei == test_mat[i1].size() );
         for( j = 0; j < sizei; j++ )
         {
             double err_level;
             int code;
 
-            if( !test_array[i1][j] )
+            if( test_mat[i1][j].empty() )
                 continue;
 
             err_level = get_success_error_level( test_case_idx, i0, (int)j );
@@ -307,9 +273,10 @@ int ArrayTest::validate_test_results( int test_case_idx )
 
             if (code == 0) continue;
 
-            for( i0 = 0; i0 < (int)test_array.size(); i0++ )
+
+            for( i0 = 0; i0 < (int)test_mat.size(); i0++ )
             {
-                size_t sizei0 = test_array[i0].size();
+                size_t sizei0 = test_mat[i0].size();
                 if( i0 == REF_INPUT_OUTPUT || i0 == OUTPUT || i0 == TEMP )
                     continue;
                 for( i1 = 0; i1 < (int)sizei0; i1++ )
