@@ -1684,15 +1684,15 @@ Context& initializeContextFromGL()
                 if (status != CL_SUCCESS)
                     continue;
 
-                std::string stdDevString(extensions);
+                std::string devString(extensions);
                 free(extensions);
 
 
-                size_t szOldPos = 0;
-                size_t szSpacePos = stdDevString.find(' ', szOldPos); // extensions string is space delimited
-                while (szSpacePos != stdDevString.npos) {
+                size_t oldPos = 0;
+                size_t spacePos = devString.find(' ', oldPos); // extensions string is space delimited
+                while (spacePos != devString.npos) {
                     if (strcmp(GL_SHARING_EXTENSION,
-                            stdDevString.substr(szOldPos, szSpacePos - szOldPos).c_str())
+                            devString.substr(oldPos, spacePos - oldPos).c_str())
                             == 0) {
                         // Device supports context sharing with OpenGL
                         devUsed = i;
@@ -1700,9 +1700,9 @@ Context& initializeContextFromGL()
                         break;
                     }
                     do {
-                        szOldPos = szSpacePos + 1;
-                        szSpacePos = stdDevString.find(' ', szOldPos);
-                    } while (szSpacePos == szOldPos);
+                        oldPos = spacePos + 1;
+                        spacePos = devString.find(' ', oldPos);
+                    } while (spacePos == oldPos);
                 }
             }
         }
@@ -1713,11 +1713,11 @@ Context& initializeContextFromGL()
 
         // Define OS-specific context properties and create the OpenCL context
         #if defined (__APPLE__)
-            CGLContextObj kCGLContext = CGLGetCurrentContext();
-            CGLShareGroupObj kCGLShareGroup = CGLGetShareGroup(kCGLContext);
+            CGLContextObj cglContext = CGLGetCurrentContext();
+            CGLShareGroupObj cglShareGroup = CGLGetShareGroup(cglContext);
             cl_context_properties props[] =
             {
-                CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties)kCGLShareGroup,
+                CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties)cglShareGroup,
                 0
             };
             context = clCreateContext(props, 0,0, NULL, NULL, &ciErrNum);
