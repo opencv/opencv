@@ -114,7 +114,7 @@ static int funcname( const T* src, int len ) \
 DEFINE_NONZERO_FUNC(countNonZero8u, u8, u32, uchar, v_uint8, v_uint32, v_eq, v_add_wrap, UPDATE_SUM_U8, CHECK_NZ_INT)
 DEFINE_NONZERO_FUNC(countNonZero16u, u16, u32, ushort, v_uint16, v_uint32, v_eq, v_add_wrap, UPDATE_SUM_U16, CHECK_NZ_INT)
 DEFINE_NONZERO_FUNC(countNonZero32s, s32, s32, int, v_int32, v_int32, v_eq, v_add, UPDATE_SUM_S32, CHECK_NZ_INT)
-DEFINE_NONZERO_FUNC(countNonZero32f, s32, s32, int, v_int32, v_int32, VEC_CMP_EQ_Z_FP, v_add, UPDATE_SUM_S32, CHECK_NZ_FP)
+DEFINE_NONZERO_FUNC(countNonZero32f, u32, u32, uint, v_uint32, v_uint32, VEC_CMP_EQ_Z_FP, v_add, UPDATE_SUM_S32, CHECK_NZ_FP)
 DEFINE_NONZERO_FUNC(countNonZero16f, u16, u32, ushort, v_uint16, v_uint32, VEC_CMP_EQ_Z_FP16, v_add_wrap, UPDATE_SUM_U16, CHECK_NZ_FP)
 
 #undef DEFINE_NONZERO_FUNC_NOSIMD
