@@ -111,7 +111,7 @@ if(NOT DEFINED CMAKE_BUILD_TYPE AND NOT OPENCV_SKIP_DEFAULT_BUILD_TYPE)
     message(STATUS "'Debug' configuration will be used by default. Use the IDE to switch between configurations (Debug, Release, etc.).")
     # sets the default configurations for multi-configuration generators
     ocv_update(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
-  
+
   elseif(CMAKE_GENERATOR MATCHES "Unix Makefiles|Ninja|Watcom WMake")
     # for single-configuration generators
     if(CMAKE_GENERATOR MATCHES "Unix Makefiles")
@@ -121,9 +121,9 @@ if(NOT DEFINED CMAKE_BUILD_TYPE AND NOT OPENCV_SKIP_DEFAULT_BUILD_TYPE)
     elseif(CMAKE_GENERATOR MATCHES "Watcom WMake")
       message(STATUS "Watcom WMake = Generates Watcom WMake makefiles.")
     endif()
-    
+
     message(STATUS "'Release' build type is used by default for ${CMAKE_GENERATOR}. Use CMAKE_BUILD_TYPE to specify the build type (e.g., Release or Debug).")
-    
+
     # sets the default build type to Release for single-configuration generators
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build" FORCE)
 
