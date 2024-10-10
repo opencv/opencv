@@ -21,6 +21,7 @@ from common import *
 def help():
     print(
         '''
+        Firstly, download required models using the links provided in description.
         Use this script for Object Tracking using OpenCV.
 
         To run:
@@ -35,17 +36,26 @@ def help():
 
 def createTracker():
     if args.alias == 'dasiamrpn':
+        if args.dasiamrpn_net is None or args.kernel_r1 is None or args.kernel_cls1 is None:
+            print("Pass model files using --dasiamrpn_net , --kernel_cls1 and --kernel_r1 arguments.")
+            exit(-1)
         params = cv.TrackerDaSiamRPN_Params()
         params.model = findModel(args.dasiamrpn_net, "")
         params.kernel_cls1 = findModel(args.kernel_cls1, "")
         params.kernel_r1 = findModel(args.kernel_r1, "")
         tracker = cv.TrackerDaSiamRPN_create(params)
     elif args.alias == 'nano':
+        if args.backbone is None or args.headneck is None:
+            print("Pass model files using --headneck and --backbone arguments.")
+            exit(-1)
         params = cv.TrackerNano_Params()
         params.backbone = findModel(args.backbone, "")
         params.neckhead = findModel(args.headneck, "")
         tracker = cv.TrackerNano_create(params)
     elif args.alias == 'vit':
+        if args.vit_net is None:
+            print("Pass model file using --vit_net argument.")
+            exit(-1)
         params = cv.TrackerVit_Params()
         params.net = findModel(args.vit_net, "")
         tracker = cv.TrackerVit_create(params)
@@ -128,12 +138,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run tracker")
     parser.add_argument("alias", type=str, nargs='?', help="Path to video source")
     parser.add_argument("--input", type=str, help="Path to video source")
-    parser.add_argument("--dasiamrpn_net", type=str, default="dasiamrpn_model.onnx", help="Path to onnx model of DaSiamRPN net")
-    parser.add_argument("--kernel_r1", type=str, default="dasiamrpn_kernel_r1.onnx", help="Path to onnx model of DaSiamRPN kernel_r1")
-    parser.add_argument("--kernel_cls1", type=str, default="dasiamrpn_kernel_cls1.onnx", help="Path to onnx model of DaSiamRPN kernel_cls1")
-    parser.add_argument("--backbone", type=str, default="nanotrack_backbone_sim.onnx", help="Path to onnx model of NanoTrack backBone")
-    parser.add_argument("--headneck", type=str, default="nanotrack_head_sim.onnx", help="Path to onnx model of NanoTrack headNeck")
-    parser.add_argument("--vit_net", type=str, default="vitTracker.onnx", help="Path to onnx model of  vittrack")
+    parser.add_argument("--dasiamrpn_net", type=str, help="Path to onnx model of DaSiamRPN net")
+    parser.add_argument("--kernel_r1", type=str, help="Path to onnx model of DaSiamRPN kernel_r1")
+    parser.add_argument("--kernel_cls1", type=str, help="Path to onnx model of DaSiamRPN kernel_cls1")
+    parser.add_argument("--backbone", type=str, help="Path to onnx model of NanoTrack backBone")
+    parser.add_argument("--headneck", type=str, help="Path to onnx model of NanoTrack headNeck")
+    parser.add_argument("--vit_net", type=str, help="Path to onnx model of  vittrack")
 
     args = parser.parse_args()
     run()

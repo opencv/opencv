@@ -25,6 +25,7 @@ using namespace std;
 using namespace cv::dnn;
 
 const string about = "Use this script for Object Tracking using OpenCV. \n\n"
+        "Firstly, download required models using the links provided in description. \n"
         "To run:\n"
             "\t Nano: \n"
                 "\t\t e.g: ./example_dnn_object_tracker nano --backbone=<path to nanotrack_backbone onnx model> --headneck=<path to nanotrack_head onnx model>\n\n"
@@ -34,16 +35,16 @@ const string about = "Use this script for Object Tracking using OpenCV. \n\n"
                 "\t\t e.g: ./example_dnn_object_tracker dasiamrpn --dasiamrpn_net=<path to dasiamrpn_model onnx model> --kernel_r1=<path to dasiamrpn_kernel_r1 onnx model> --kernel_cls1=<path to dasiamrpn_kernel_cls1 onnx model>\n\n";
 
 const string param_keys =
-        "{ help     h    |                            | Print help message }"
-        "{ @alias        |                            | An alias name of model to extract preprocessing parameters from models.yml file. }"
-        "{ input    i    |                            | Full path to input video folder, the specific camera index. (empty for camera 0) }"
-        "{ backbone      |         backbone.onnx      | Path to onnx model of backbone.onnx for nano}"
-        "{ headneck      |         headneck.onnx      | Path to onnx model of headneck.onnx for nano}"
-        "{ vit_net       |       vitTracker.onnx      | Path to onnx model of vitTracker.onnx for vit}"
-        "{ tracking_thrs |             0.3            | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }"
-        "{ dasiamrpn_net |     dasiamrpn_model.onnx   | Path to onnx model of net for dasiamrpn}"
-        "{ kernel_r1     |  dasiamrpn_kernel_r1.onnx  | Path to onnx model of kernel_cls1 for dasiamrpn}"
-        "{ kernel_cls1   | dasiamrpn_kernel_cls1.onnx | Path to onnx model of kernel_r1 for dasiamrpn}";
+        "{ help     h    |     | Print help message }"
+        "{ @alias        |     | An alias name of model to extract preprocessing parameters from models.yml file. }"
+        "{ input    i    |     | Full path to input video folder, the specific camera index. (empty for camera 0) }"
+        "{ backbone      |     | Path to onnx model of backbone.onnx for nano}"
+        "{ headneck      |     | Path to onnx model of headneck.onnx for nano}"
+        "{ vit_net       |     | Path to onnx model of vitTracker.onnx for vit}"
+        "{ tracking_thrs | 0.3 | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }"
+        "{ dasiamrpn_net |     | Path to onnx model of net for dasiamrpn}"
+        "{ kernel_r1     |     | Path to onnx model of kernel_cls1 for dasiamrpn}"
+        "{ kernel_cls1   |     | Path to onnx model of kernel_r1 for dasiamrpn}";
 
 const string backend_keys = format(
     "{ backend | default | Choose one of computation backends: "
@@ -239,6 +240,10 @@ static int run(int argc, char** argv)
         Ptr<TrackerVit> tracker;
         try
         {
+            if (net == ""){
+                cout<<"Pass model file using --vit_net argument."<<endl;
+                return -1;
+            }
             TrackerVit::Params params;
             params.net = findModel(net, "");
             params.backend = backend;
@@ -263,6 +268,10 @@ static int run(int argc, char** argv)
         Ptr<TrackerNano> tracker;
         try
         {
+            if (backbone == "" || headneck == ""){
+                cout<<"Pass model files using --headneck and --backbone arguments."<<endl;
+                return -1;
+            }
             TrackerNano::Params params;
             params.backbone = findModel(backbone, "");
             params.neckhead = findModel(headneck, "");
@@ -289,6 +298,10 @@ static int run(int argc, char** argv)
         Ptr<TrackerDaSiamRPN> tracker;
         try
         {
+            if (net == "" || kernel_cls1 == "" || kernel_r1 == ""){
+                cout<<"Pass model files using --dasiamrpn_net , --kernel_cls1 and --kernel_r1 arguments."<<endl;
+                return -1;
+            }
             TrackerDaSiamRPN::Params params;
             params.model = findModel(net, "");
             params.kernel_cls1 = findModel(kernel_cls1, "");
