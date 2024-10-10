@@ -172,6 +172,7 @@ photo = {'': ['createAlignMTB', 'createCalibrateDebevec', 'createCalibrateRobert
               'createMergeDebevec', 'createMergeMertens', 'createMergeRobertson', \
               'createTonemapDrago', 'createTonemapMantiuk', 'createTonemapReinhard', 'inpaint'],
         'CalibrateCRF': ['process'],
+        'AlignExposures': ['process'],
         'AlignMTB' : ['calculateShift', 'shiftMat', 'computeBitmaps', 'getMaxBits', 'setMaxBits', \
                       'getExcludeRange', 'setExcludeRange', 'getCut', 'setCut'],
         'CalibrateDebevec' : ['getLambda', 'setLambda', 'getSamples', 'setSamples', 'getRandom', 'setRandom'],
@@ -208,6 +209,7 @@ calib3d = {
         'fisheye_initUndistortRectifyMap',
         'fisheye_projectPoints',
     ],
+    'UsacParams': ['UsacParams']
 }
 
 white_list = makeWhiteList([core, imgproc, objdetect, video, dnn, features2d, photo, calib3d])
