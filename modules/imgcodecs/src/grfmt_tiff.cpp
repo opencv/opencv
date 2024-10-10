@@ -1118,10 +1118,16 @@ public:
                                /*map=*/0, /*unmap=*/0 );
     }
 
-    static tmsize_t read( thandle_t /*handle*/, void* /*buffer*/, tmsize_t /*n*/ )
+    static tmsize_t read( thandle_t handle, void* buffer, tmsize_t n )
     {
-        // Not used for encoding.
-        return 0;
+        // Used for imencodemulti() to stores multi-images.
+        TiffEncoderBufHelper *helper = reinterpret_cast<TiffEncoderBufHelper*>(handle);
+        size_t begin = (size_t)helper->m_buf_pos;
+        size_t end = begin + n;
+        CV_CheckGT( helper->m_buf->size(), end , "do not be over-run buffer");
+        memcpy(buffer, &(*helper->m_buf)[begin], n);
+        helper->m_buf_pos = end;
+        return n;
     }
 
     static tmsize_t write( thandle_t handle, void* buffer, tmsize_t n )
