@@ -49,6 +49,11 @@
 #include <opencv2/core/utils/trace.hpp>
 #endif
 
+#ifdef _MSC_VER
+#  define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#  define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+#endif
+
 #if defined __linux__ || defined __APPLE__ || defined __HAIKU__
 #include <unistd.h>  // -D_FORTIFY_SOURCE=2 workaround: https://github.com/opencv/opencv/issues/15020
 #endif

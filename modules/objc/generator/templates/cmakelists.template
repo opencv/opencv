@@ -4,8 +4,8 @@ project($framework)
 
 set(MODULES "$modules")
 
-# Enable C++11
-set (CMAKE_CXX_STANDARD 11)
+# Enable C++17
+set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 set (OBJC_COMPILE_FLAGS "-fobjc-arc -fobjc-weak -fvisibility=hidden -fPIC -D__OPENCV_BUILD=1 $module_availability_defines")

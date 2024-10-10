@@ -43,6 +43,11 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
+#ifdef _MSC_VER
+#  define _SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING
+#  define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+#endif
+
 #ifdef BUILD_PLUGIN
 #include "opencv2/core/utility.hpp"
 #else  // BUILD_PLUGIN
