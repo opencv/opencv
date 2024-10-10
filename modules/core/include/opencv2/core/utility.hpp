@@ -340,11 +340,12 @@ public:
     //! stops counting ticks.
     CV_WRAP void stop()
     {
-        int64 time = cv::getTickCount();
+        const int64 time = cv::getTickCount();
         if (startTime == 0)
             return;
         ++counter;
-        sumTime += (time - startTime);
+        lastTime = time - startTime;
+        sumTime += lastTime;
         startTime = 0;
     }
 
@@ -367,9 +368,33 @@ public:
     }
 
     //! returns passed time in seconds.
-    CV_WRAP double getTimeSec()   const
+    CV_WRAP double getTimeSec() const
     {
         return (double)getTimeTicks() / getTickFrequency();
+    }
+
+    //! returns counted ticks of the last iteration.
+    CV_WRAP int64 getLastTimeTicks() const
+    {
+        return lastTime;
+    }
+
+    //! returns passed time of the last iteration in microseconds.
+    CV_WRAP double getLastTimeMicro() const
+    {
+        return getLastTimeMilli()*1e3;
+    }
+
+    //! returns passed time of the last iteration in milliseconds.
+    CV_WRAP double getLastTimeMilli() const
+    {
+        return getLastTimeSec()*1e3;
+    }
+
+    //! returns passed time of the last iteration in seconds.
+    CV_WRAP double getLastTimeSec() const
+    {
+        return (double)getLastTimeTicks() / getTickFrequency();
     }
 
     //! returns internal counter value.
@@ -404,15 +429,17 @@ public:
     //! resets internal values.
     CV_WRAP void reset()
     {
-        startTime = 0;
-        sumTime = 0;
         counter = 0;
+        sumTime = 0;
+        startTime = 0;
+        lastTime = 0;
     }
 
 private:
     int64 counter;
     int64 sumTime;
     int64 startTime;
+    int64 lastTime;
 };
 
 /** @brief output operator
