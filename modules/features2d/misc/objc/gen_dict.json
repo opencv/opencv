@@ -6,8 +6,7 @@
         }
     },
     "enum_fix" : {
-        "FastFeatureDetector" : { "DetectorType": "FastDetectorType" },
-        "AgastFeatureDetector" : { "DetectorType": "AgastDetectorType" }
+        "FastFeatureDetector" : { "DetectorType": "FastDetectorType" }
     },
     "func_arg_fix" : {
         "Feature2D": {

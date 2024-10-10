@@ -20,9 +20,9 @@ namespace ocl {
 typedef TestBaseWithParam<string> stitch;
 
 #if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
-#define TEST_DETECTORS testing::Values("surf", "orb", "akaze")
+#define TEST_DETECTORS testing::Values("surf", "sift", "orb", "akaze")
 #else
-#define TEST_DETECTORS testing::Values("orb", "akaze")
+#define TEST_DETECTORS testing::Values("orb", "sift")
 #endif
 
 OCL_PERF_TEST_P(stitch, a123, TEST_DETECTORS)

@@ -1,11 +1,14 @@
+#include <vector>
+#include <iostream>
+#include <iomanip>
+
+#ifdef HAVE_OPENCV_XFEATURES2D
 #include <opencv2/features2d.hpp>
+#include "opencv2/xfeatures2d.hpp"
 #include <opencv2/videoio.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/3d.hpp>
 #include <opencv2/highgui.hpp>      //for imshow
-#include <vector>
-#include <iostream>
-#include <iomanip>
 
 #include "stats.h" // Stats structure definition
 #include "utils.h" // Drawing and printing functions
@@ -148,7 +151,7 @@ int main(int argc, char **argv)
     }
 
     Stats stats, akaze_stats, orb_stats;
-    Ptr<AKAZE> akaze = AKAZE::create();
+    Ptr<xfeatures2d::AKAZE> akaze = xfeatures2d::AKAZE::create();
     akaze->setThreshold(akaze_thresh);
     Ptr<ORB> orb = ORB::create();
     Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce-Hamming");
@@ -211,3 +214,10 @@ int main(int argc, char **argv)
     printStatistics("ORB", orb_stats);
     return 0;
 }
+#else
+int main()
+{
+    std::cout << "This tutorial code needs the xfeatures2d contrib module to be run." << std::endl;
+    return 0;
+}
+#endif
