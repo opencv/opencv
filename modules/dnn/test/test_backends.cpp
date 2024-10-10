@@ -514,7 +514,8 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 #if defined(HAVE_INF_ENGINE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     expectNoFallbacksFromIE(net);
 #endif
-    expectNoFallbacksFromCUDA(net);
+    // [TODO] temporarily disabled check for no "fallbacks", since the new engine does not support CUDA yet
+    //expectNoFallbacksFromCUDA(net);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, DNNTestNetwork, dnnBackendsAndTargets(/* withInferenceEngine = */ true,

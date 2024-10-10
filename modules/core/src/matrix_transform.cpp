@@ -1081,6 +1081,16 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     }
 }
 
+void broadcast(InputArray _src, const MatShape& _shape, OutputArray _dst)
+{
+    if (_shape.dims < 0) {
+        _dst.release();
+    } else {
+        Mat shape(1, _shape.dims, CV_32S, (int*)_shape.p);
+        broadcast(_src, shape, _dst);
+    }
+}
+
 static void rotateImpl(InputArray _src, OutputArray _dst, int rotateMode)
 {
     switch (rotateMode)

@@ -71,7 +71,7 @@ public:
 
         const int axis_ = normalize_axis(axis, inpShape);
         // handle dims = 0 situation
-        if (!inpShape.empty())
+        if (inpShape.dims > 0)
             handleKeepDims(inpShape, axis_);
         outputs.assign(1, inpShape);
 
@@ -97,7 +97,7 @@ public:
         outputs_arr.getMatVector(outputs);
 
         CV_Assert_N(inputs.size() == 1, outputs.size() == 1);
-        std::vector<int> outShape = shape(outputs[0]);
+        MatShape outShape = shape(outputs[0]);
         Mat output(outShape, CV_32SC1);
 
         switch (op)

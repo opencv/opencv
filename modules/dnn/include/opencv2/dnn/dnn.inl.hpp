@@ -116,12 +116,24 @@ inline int64 DictValue::get<int64>(int idx) const
 template<>
 inline int DictValue::get<int>(int idx) const
 {
-    return (int)get<int64>(idx);
+    return saturate_cast<int>(get<int64>(idx));
 }
 
 inline int DictValue::getIntValue(int idx) const
 {
-    return (int)get<int64>(idx);
+    return saturate_cast<int>(get<int64>(idx));
+}
+
+template<>
+inline std::vector<int> DictValue::get<std::vector<int> >(int idx) const
+{
+    CV_Assert(idx == -1);
+    int size_ = size();
+    std::vector<int> values(size_);
+
+    for (int i = 0; i < size_; i++)
+        values[i] = get<int>(i);
+    return values;
 }
 
 template<>
@@ -368,6 +380,17 @@ inline T Dict::get(const String &key, const T &defaultValue) const
         return defaultValue;
 }
 
+template <typename T>
+inline std::vector<T> Dict::getVector(const String &key) const
+{
+    _Dict::const_iterator i = dict.find(key);
+
+    if (i != dict.end())
+        return i->second.get<std::vector<T> >();
+    else
+        return std::vector<T>();
+}
+
 template<typename T>
 inline const T &Dict::set(const String &key, const T &value)
 {
@@ -404,6 +427,18 @@ inline std::map<String, DictValue>::const_iterator Dict::end() const
 {
     return dict.end();
 }
+
+/////////////////////////////////////////////////////////////////
+
+inline Arg::Arg() : idx(0) {}
+
+inline Arg::Arg(int idx_) : idx(idx_) {}
+
+inline bool Arg::empty() const { return idx == 0; }
+
+inline Arg::operator bool() const { return idx != 0; }
+
+inline bool operator == (const Arg& a, const Arg& b) { return a.idx == b.idx; }
 
 CV__DNN_INLINE_NS_END
 }

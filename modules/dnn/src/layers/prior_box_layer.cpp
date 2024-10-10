@@ -580,10 +580,12 @@ public:
         auto image_shape = image_wrapper->getShape();
 
         PriorBoxConfiguration config;
-        config.feature_map_width = feature_map_shape.rbegin()[0];
-        config.feature_map_height = feature_map_shape.rbegin()[1];
-        config.image_width = image_shape.rbegin()[0];
-        config.image_height = image_shape.rbegin()[1];
+        int fm_dims = feature_map_shape.dims;
+        int im_dims = image_shape.dims;
+        config.feature_map_width = feature_map_shape.p[fm_dims-1];
+        config.feature_map_height = feature_map_shape.p[fm_dims-2];
+        config.image_width = image_shape[im_dims-1];
+        config.image_height = image_shape[im_dims-2];
 
         config.num_priors = _numPriors;
         config.box_widths = _boxWidths;

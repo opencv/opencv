@@ -30,9 +30,28 @@ public:
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
 
-        const_B = params.get<bool>("constB", false); // true means blobs[0] is B
-        const_C = params.get<bool>("constC", false); // true means blobs.back() is C
-        have_bias = params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
+        if (params.has("constB") || params.has("constB") || params.has("have_bias"))
+        {
+            // The params are not part of ONNX, but set by old ONNX parser
+            const_B = params.get<bool>("constB", false); // true means blobs[0] is B
+            const_C = params.get<bool>("constC", false); // true means blobs.back() is C
+            have_bias = params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
+        }
+        else
+        {
+            // TODO: With the new parser the function should be smart enough to figure out
+            // the operation mode from the number of 'inputs' and number of 'blobs'.
+            // note, however, that 'inputs' may not be set yet in the constructor
+            // Ticket: https://github.com/opencv/opencv/issues/26209
+
+            if (!blobs.empty()) {
+                const_B = const_C = true;
+            } else {
+                const_B = const_C = false;
+            }
+
+            have_bias = blobs.size() > 1 || params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
+        }
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
     }
@@ -67,18 +86,24 @@ public:
         int N = trans_b ? mb : nb;
         int K_a = trans_a ? ma : na;
         int K_b = trans_b ? nb : mb;
+
+
         CV_CheckEQ(K_a, K_b, "DNN/Gemm: Invalid dimension of dim K");
 
+        bool have_bias_ = have_bias || inputs.size() == 3;
+
         // Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
-        if (have_bias) {
+        if (have_bias_) {
             const auto shape_C = const_C ? shape(blobs.back()) : inputs.back();
 
             auto ndims_C = shape_C.size();
             CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
 
-            if (real_ndims_C == 1) { // (1,) or (N,)
+            int real_ndims_C_ = real_ndims_C >= 0 ? real_ndims_C : ndims_C;
+
+            if (real_ndims_C_ == 1) { // (1,) or (N,)
                 CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/Gemm: invalid dimension of C");
-            } else if (real_ndims_C == 2) { // (1, 1) or (1, N) or (M, 1) or (M, N)
+            } else if (real_ndims_C_ == 2) { // (1, 1) or (1, N) or (M, 1) or (M, N)
                 // printf("shape_C=[%d, %d]\n", shape_C[0], shape_C[1]);
                 CV_Check(shape_C[0], (shape_C[0] == 1 && shape_C[1] == 1) ||
                                      (shape_C[0] == 1 && shape_C[1] == N) ||
@@ -104,22 +129,23 @@ public:
     // TODO: replace with cv::broadcast() once 1d mat is supported
     // FIXME: fix if conditions if 1d mat is supported properly
     void broadcastCWtihBeta(int M, int N, const Mat &C) {
+        broadcast_C.clear();
+        broadcast_C.resize(M * N, 0.f);
         if (beta != 0 && !C.empty()) {
-            broadcast_C.clear();
-            broadcast_C.resize(M * N, 0.f);
+            int real_ndims_C_ = real_ndims_C >= 0 ? real_ndims_C : C.dims;
 
             const float *ptr_c = C.ptr<const float>();
             const auto shape_C = shape(C);
-            if ((real_ndims_C == 0) || (real_ndims_C == 1 && shape_C[0] == 1) ||
-                (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
+            if ((real_ndims_C_ == 0) || (real_ndims_C_ == 1 && shape_C[0] == 1) ||
+                (real_ndims_C_ == 2 && shape_C[0] == 1 && shape_C[1] == 1)) {
                 // (), (1,), (1, 1)
                 float c = *ptr_c;
                 int total = M * N;
                 for (int i = 0; i < total; ++i) {
                     broadcast_C[i] = beta * c;
                 }
-            } else if ((real_ndims_C == 1 && shape_C[0] == N) ||
-                       (real_ndims_C == 2 && shape_C[0] == 1 && shape_C[1] == N)) {
+            } else if ((real_ndims_C_ == 1 && shape_C[0] == N) ||
+                       (real_ndims_C_ == 2 && shape_C[0] == 1 && shape_C[1] == N)) {
                 // (N,), (1, N)
                 for (int i = 0; i < M; ++i) {
                     int step = i * N;
@@ -127,7 +153,7 @@ public:
                         broadcast_C[step + j] = beta * ptr_c[j];
                     }
                 }
-            } else if (real_ndims_C == 2 && shape_C[0] == M && shape_C[1] == 1) {
+            } else if (real_ndims_C_ == 2 && shape_C[0] == M && shape_C[1] == 1) {
                 // (M, 1)
                 for (int i = 0; i < M; ++i) {
                     int step = i * N;
@@ -191,11 +217,12 @@ public:
         size_t dims_Y = shape_Y.size();
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
+        bool have_bias_ = have_bias || inputs.size() == 3;
 
         // broadcast C and copy C to output
-        if (have_bias) {
-            if (!const_C) {
-                broadcastCWtihBeta(M, N, inputs.back());
+        if (have_bias_) {
+            if (!const_C || broadcast_C.empty()) {
+                broadcastCWtihBeta(M, N, (inputs.size() >= 3 ? inputs.back() : blobs.back()));
             }
             int step = M * N;
             CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(step), "DNN/Gemm: C is not broadcast properly");

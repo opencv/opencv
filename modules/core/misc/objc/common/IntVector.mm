@@ -50,7 +50,7 @@
     return v;
 }
 
--(instancetype)initWithStdVector:(std::vector<int>&)src {
+-(instancetype)initWithStdVector:(const std::vector<int>&)src {
     self = [super init];
     if (self) {
         v.insert(v.begin(), src.begin(), src.end());
@@ -58,7 +58,7 @@
     return self;
 }
 
-+(instancetype)fromNative:(std::vector<int>&)src {
++(instancetype)fromNative:(const std::vector<int>&)src {
     return [[IntVector alloc] initWithStdVector:src];
 }
 
