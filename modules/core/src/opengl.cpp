@@ -1681,14 +1681,27 @@ Context& initializeContextFromGL()
 
             if(extensionSize > 0)
             {
-                char* extensions = (char*)malloc(extensionSize);
-                status = clGetDeviceInfo(devices[j], CL_DEVICE_EXTENSIONS, extensionSize, extensions, &extensionSize);
-                if (status != CL_SUCCESS)
-                    continue;
+                char* extensions = nullptr;
 
-                std::string devString(extensions);
-                free(extensions);
+                try {
+                    extensions = new char[extensionSize];
 
+                    status = clGetDeviceInfo(devices[j], CL_DEVICE_EXTENSIONS, extensionSize, extensions, &extensionSize);
+                    if (status != CL_SUCCESS)
+                        continue;
+                } catch(std::exception& ex) {
+                    CV_Error(cv::Error::OpenCLInitError, "OpenCL: Exception thrown during device extensions gathering");
+                }
+
+                std::string devString;
+
+                if(extensions != nullptr) {
+                    devString = extensions;
+                    delete[] extensions;
+                }
+                else {
+                    CV_Error(cv::Error::OpenCLInitError, "OpenCL: Unexpected error during device extensions gathering");
+                }
 
                 size_t oldPos = 0;
                 size_t spacePos = devString.find(' ', oldPos); // extensions string is space delimited
@@ -1710,8 +1723,7 @@ Context& initializeContextFromGL()
         }
 
         if (!sharingSupported)
-            CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: OpenGL sharing not supported: %d", status));
-
+            continue;
 
         // Define OS-specific context properties and create the OpenCL context
         #if defined (__APPLE__)
