@@ -1,0 +1,18 @@
+This pull request implements HDR (High Dynamic Range) image processing using the Robertson and Reinhard tonemapping algorithms in the OpenCV library. 
+
+**Details**:
+- Added functions for HDR image creation and tonemapping using both the Robertson and Reinhard algorithms.
+- Integrated a user-friendly interface to allow users to apply these techniques easily.
+- Updated documentation to include usage examples and parameter descriptions.
+
+**Benefits**:
+- Improves the image processing capabilities of OpenCV by enabling better representation of images with extreme lighting conditions.
+- Users can achieve more realistic images with better detail retention in both highlights and shadows.
+
+**Testing**:
+- Conducted tests on a set of HDR images to validate the functionality of the implemented algorithms.
+- Verified that the output images retain the expected quality and detail after tonemapping.
+
+**Future Work**:
+- Further optimizations can be explored for the tonemapping process to enhance performance on large images.
+- Additional algorithms for HDR processing can be considered for future implementations.
