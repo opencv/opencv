@@ -1667,7 +1667,7 @@ Context& initializeContextFromGL()
         if (status != CL_SUCCESS)
             CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: No devices available: %d", status));
 
-        cl_device_id* devices = new cl_device_id[devCnt];
+        devices = new cl_device_id[devCnt];
 
         status = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, devCnt, devices, NULL);
         if (status != CL_SUCCESS)
