@@ -1642,8 +1642,8 @@ Context& initializeContextFromGL()
     NO_OPENCL_SHARING_ERROR;
 #else
     cl_uint numPlatforms;
-    cl_device_id* devices = new cl_device_id[256];
     cl_uint devCnt;
+    cl_device_id* devices;
     cl_uint devUsed;
     cl_context context;
 
@@ -1666,6 +1666,8 @@ Context& initializeContextFromGL()
         status = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, NULL, &devCnt);
         if (status != CL_SUCCESS)
             CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: No devices available: %d", status));
+
+        cl_device_id* devices = new cl_device_id[devCnt];
 
         status = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, devCnt, devices, NULL);
         if (status != CL_SUCCESS)
