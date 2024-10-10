@@ -2774,7 +2774,10 @@ CvResult CV_API_CALL cv_capture_open_with_params(
         cap = new CaptureT();
         bool res;
         if (filename)
-            res = cap->open(std::string(filename), nullptr, 0, &parameters);
+        {
+            std::stringbuf noBuf;
+            res = cap->open(std::string(filename), noBuf, &parameters);
+        }
         else
             res = cap->open(camera_index, &parameters);
         if (res)
@@ -2798,14 +2801,14 @@ CvResult CV_API_CALL cv_capture_open_with_params(
 
 static
 CvResult CV_API_CALL cv_capture_open_buffer(
-    const unsigned char* buffer, unsigned buffer_size,
+    std::streambuf& buffer,
     int* params, unsigned n_params,
     CV_OUT CvPluginCapture* handle
 )
 {
     if (!handle)
         return CV_ERROR_FAIL;
-    if (!buffer)
+    if (buffer.sgetc() == EOF)
         return CV_ERROR_FAIL;
     *handle = NULL;
     CaptureT* cap = 0;
@@ -2813,7 +2816,7 @@ CvResult CV_API_CALL cv_capture_open_buffer(
     {
         cv::VideoCaptureParameters parameters(params, n_params);
         cap = new CaptureT();
-        bool res = cap->open(std::string(), buffer, buffer_size, &parameters);
+        bool res = cap->open(std::string(), buffer, &parameters);
         if (res)
         {
             *handle = (CvPluginCapture)cap;

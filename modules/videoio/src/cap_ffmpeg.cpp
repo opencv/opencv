@@ -334,7 +334,7 @@ CvResult CV_API_CALL cv_capture_open_with_params(
 
 static
 CvResult CV_API_CALL cv_capture_open_buffer(
-        const unsigned char* buffer, unsigned int buffer_size,
+        std::streambuf& buffer,
         int* params, unsigned n_params,
         CV_OUT CvPluginCapture* handle
 )
@@ -342,13 +342,13 @@ CvResult CV_API_CALL cv_capture_open_buffer(
     if (!handle)
         return CV_ERROR_FAIL;
     *handle = NULL;
-    if (!buffer)
+    if (buffer.sgetc() == EOF)
         return CV_ERROR_FAIL;
     CvCapture_FFMPEG_proxy *cap = 0;
     try
     {
         cv::VideoCaptureParameters parameters(params, n_params);
-        cap = new CvCapture_FFMPEG_proxy(buffer, buffer_size, parameters);
+        cap = new CvCapture_FFMPEG_proxy(buffer, parameters);
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;

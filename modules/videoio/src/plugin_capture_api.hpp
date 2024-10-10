@@ -125,8 +125,7 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
 {
     /** @brief Open video capture from buffer with parameters
 
-    @param buffer Memory buffer pointer
-    @param buffer_size Memory buffer size
+    @param buffer Memory buffer
     @param params pointer on 2*n_params array of 'key,value' pairs
     @param n_params number of passed parameters
     @param[out] handle pointer on Capture handle
@@ -134,7 +133,7 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
     @note API-CALL 9, API-Version == 2
      */
     CvResult (CV_API_CALL *Capture_open_buffer)(
-        const unsigned char* buffer, unsigned int buffer_size,
+        std::streambuf& buffer,
         int* params, unsigned n_params,
         CV_OUT CvPluginCapture* handle);
 }; // OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries

@@ -461,18 +461,16 @@ public:
         bool fromStream = source.sgetc() != EOF;
         if (fromStream && plugin_api->api_header.api_version >= 2 && plugin_api->v2.Capture_open_buffer)
         {
-            throw std::exception();
-            // std::vector<int> vint_params = params.getIntVector();
-            // int* c_params = vint_params.data();
-            // unsigned n_params = (unsigned)(vint_params.size() / 2);
+            std::vector<int> vint_params = params.getIntVector();
+            int* c_params = vint_params.data();
+            unsigned n_params = (unsigned)(vint_params.size() / 2);
 
-            // if (CV_ERROR_OK == plugin_api->v2.Capture_open_buffer(
-            //         buffer.data(), static_cast<uint32_t>(buffer.size()),
-            //         c_params, n_params, &capture))
-            // {
-            //     CV_Assert(capture);
-            //     return makePtr<PluginCapture>(plugin_api, capture);
-            // }
+            if (CV_ERROR_OK == plugin_api->v2.Capture_open_buffer(
+                    source, c_params, n_params, &capture))
+            {
+                CV_Assert(capture);
+                return makePtr<PluginCapture>(plugin_api, capture);
+            }
         }
         else if (fromStream)
             return Ptr<PluginCapture>();

@@ -1257,7 +1257,7 @@ std::streamsize IOBaseWrapper::xsgetn(char* s, std::streamsize n)
     return len;
 }
 
-std::streampos IOBaseWrapper::seekoff(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode which)
+std::streampos IOBaseWrapper::seekoff(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode)
 {
     CV_DbgAssert(ioBase);
     PyGILState_STATE gstate;
@@ -1276,7 +1276,6 @@ std::streampos IOBaseWrapper::seekoff(std::streamoff off, std::ios_base::seekdir
 
     return pos;
 }
-
 
 int IOBaseWrapper::underflow()
 {
