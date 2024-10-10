@@ -1641,20 +1641,20 @@ Context& initializeContextFromGL()
 #elif !defined(HAVE_OPENCL_OPENGL_SHARING)
     NO_OPENCL_SHARING_ERROR;
 #else
-    cl_uint numPlatforms;
+    cl_uint platformsCnt;
     cl_uint devCnt;
     cl_device_id* devices;
     cl_uint devUsed;
     cl_context context;
 
-    cl_int status = clGetPlatformIDs(0, NULL, &numPlatforms);
+    cl_int status = clGetPlatformIDs(0, NULL, &platformsCnt);
     if (status != CL_SUCCESS)
         CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't get number of platforms: %d", status));
-    if (numPlatforms == 0)
+    if (platformsCnt == 0)
         CV_Error(cv::Error::OpenCLInitError, "OpenCL: No available platforms");
 
-    std::vector<cl_platform_id> platforms(numPlatforms);
-    status = clGetPlatformIDs(numPlatforms, &platforms[0], NULL);
+    std::vector<cl_platform_id> platforms(platformsCnt);
+    status = clGetPlatformIDs(platformsCnt, &platforms[0], NULL);
     if (status != CL_SUCCESS)
         CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't get platforms: %d", status));
 
@@ -1662,7 +1662,7 @@ Context& initializeContextFromGL()
     // TODO Filter platforms by name from OPENCV_OPENCL_DEVICE
     bool sharingSupported = false;
 
-    for (unsigned int i = 0; (!sharingSupported && (i < numPlatforms)); ++i) {
+    for (unsigned int i = 0; (!sharingSupported && (i < platformsCnt)); ++i) {
         status = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_GPU, 0, NULL, &devCnt);
         if (status != CL_SUCCESS)
             CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: No devices available: %d", status));
