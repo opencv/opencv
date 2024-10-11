@@ -1062,7 +1062,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
 
     if (isContinuous())
     {
-        CV_Assert(_cn >= 0 && _newndims > 0 && _newndims <= CV_MAX_DIM && _newsz);
+        CV_Assert(_cn >= 0 && _newndims >= 0 && _newndims <= CV_MAX_DIM && _newsz);
 
         if (_cn == 0)
             _cn = this->channels();
@@ -1072,7 +1072,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
         size_t total_elem1_ref = this->total() * this->channels();
         size_t total_elem1 = _cn;
 
-        AutoBuffer<int, 4> newsz_buf( (size_t)_newndims );
+        AutoBuffer<int, 4> newsz_buf( (size_t)std::max(_newndims, 1) );
 
         for (int i = 0; i < _newndims; i++)
         {
@@ -1230,7 +1230,7 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
     }
 #ifdef HAVE_OPENCL
     int cn = channels(), mtype = _mask.type(), mdepth = CV_MAT_DEPTH(mtype), mcn = CV_MAT_CN(mtype);
-    CV_Assert( mdepth == CV_8U && (mcn == 1 || mcn == cn) );
+    CV_Assert( (mdepth == CV_8U || mdepth == CV_8S || mdepth == CV_Bool) && (mcn == 1 || mcn == cn) );
 
     if (ocl::useOpenCL() && _dst.isUMat() && dims <= 2)
     {
@@ -1307,7 +1307,7 @@ UMat& UMat::setTo(InputArray _value, InputArray _mask)
             if( haveMask )
             {
                 mask = _mask.getUMat();
-                CV_Assert( mask.size() == size() && mask.type() == CV_8UC1 );
+                CV_Assert( mask.size() == size() && (mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool) );
                 ocl::KernelArg maskarg = ocl::KernelArg::ReadOnlyNoSize(mask),
                         dstarg = ocl::KernelArg::ReadWrite(*this);
                 setK.args(maskarg, dstarg, scalararg);

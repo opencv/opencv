@@ -74,11 +74,12 @@ See the OpenCV sample camshiftdemo.c that tracks colored objects.
 
 @note
 -   (Python) A sample explaining the camshift tracking algorithm can be found at
-    opencv_source_code/samples/python/camshift.py
+    opencv_source_code/samples/python/snippets/camshift.py
  */
 CV_EXPORTS_W RotatedRect CamShift( InputArray probImage, CV_IN_OUT Rect& window,
                                    TermCriteria criteria );
-/** @example samples/cpp/camshiftdemo.cpp
+
+/** @example samples/cpp/snippets/camshiftdemo.cpp
 An example using the mean-shift tracking algorithm
 */
 
@@ -126,6 +127,10 @@ CV_EXPORTS_W int buildOpticalFlowPyramid( InputArray img, OutputArrayOfArrays py
 
 /** @example samples/cpp/lkdemo.cpp
 An example using the Lucas-Kanade optical flow algorithm
+*/
+
+/** @example samples/python/snippets/lk_track.py
+An example using the Lucas-Kanade optical flow algorithm in python
 */
 
 /** @brief Calculates an optical flow for a sparse feature set using the iterative Lucas-Kanade method with
@@ -181,6 +186,10 @@ CV_EXPORTS_W void calcOpticalFlowPyrLK( InputArray prevImg, InputArray nextImg,
                                         Size winSize = Size(21,21), int maxLevel = 3,
                                         TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 30, 0.01),
                                         int flags = 0, double minEigThreshold = 1e-4 );
+
+/** @example samples/python/snippets/opt_flow.py
+An example to show optical flow in python
+*/
 
 /** @brief Computes a dense optical flow using the Gunnar Farneback's algorithm.
 
@@ -345,9 +354,14 @@ double findTransformECC(InputArray templateImage, InputArray inputImage,
     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
     InputArray inputMask = noArray());
 
-/** @example samples/cpp/kalman.cpp
+/** @example samples/cpp/snippets/kalman.cpp
 An example using the standard Kalman filter
 */
+
+
+/** @example samples/python/snippets/kalman.py
+An example using the standard Kalman filter in Python.
+ */
 
 /** @brief Kalman filter class.
 
@@ -429,6 +443,14 @@ CV_EXPORTS_W Mat readOpticalFlow( const String& path );
  to the flow in the horizontal direction (u), second - vertical (v).
  */
 CV_EXPORTS_W bool writeOpticalFlow( const String& path, InputArray flow );
+
+/** @example samples/python/snippets/dis_opt_flow.py
+An example using the dense optical flow and DIS optical flow algorithms in python
+*/
+
+/** @example samples/cpp/snippets/dis_opticalflow.cpp
+An example using the dense optical flow and DIS optical flow algorithms
+*/
 
 /**
    Base class for dense optical flow algorithms
@@ -789,47 +811,6 @@ public:
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
-
-
-/** @brief the GOTURN (Generic Object Tracking Using Regression Networks) tracker
- *
- *  GOTURN (@cite GOTURN) is kind of trackers based on Convolutional Neural Networks (CNN). While taking all advantages of CNN trackers,
- *  GOTURN is much faster due to offline training without online fine-tuning nature.
- *  GOTURN tracker addresses the problem of single target tracking: given a bounding box label of an object in the first frame of the video,
- *  we track that object through the rest of the video. NOTE: Current method of GOTURN does not handle occlusions; however, it is fairly
- *  robust to viewpoint changes, lighting changes, and deformations.
- *  Inputs of GOTURN are two RGB patches representing Target and Search patches resized to 227x227.
- *  Outputs of GOTURN are predicted bounding box coordinates, relative to Search patch coordinate system, in format X1,Y1,X2,Y2.
- *  Original paper is here: <http://davheld.github.io/GOTURN/GOTURN.pdf>
- *  As long as original authors implementation: <https://github.com/davheld/GOTURN#train-the-tracker>
- *  Implementation of training algorithm is placed in separately here due to 3d-party dependencies:
- *  <https://github.com/Auron-X/GOTURN_Training_Toolkit>
- *  GOTURN architecture goturn.prototxt and trained model goturn.caffemodel are accessible on opencv_extra GitHub repository.
- */
-class CV_EXPORTS_W TrackerGOTURN : public Tracker
-{
-protected:
-    TrackerGOTURN();  // use ::create()
-public:
-    virtual ~TrackerGOTURN() CV_OVERRIDE;
-
-    struct CV_EXPORTS_W_SIMPLE Params
-    {
-        CV_WRAP Params();
-        CV_PROP_RW std::string modelTxt;
-        CV_PROP_RW std::string modelBin;
-    };
-
-    /** @brief Constructor
-    @param parameters GOTURN parameters TrackerGOTURN::Params
-    */
-    static CV_WRAP
-    Ptr<TrackerGOTURN> create(const TrackerGOTURN::Params& parameters = TrackerGOTURN::Params());
-
-    //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
-    //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
-};
-
 class CV_EXPORTS_W TrackerDaSiamRPN : public Tracker
 {
 protected:
@@ -920,6 +901,7 @@ public:
         CV_PROP_RW int target;
         CV_PROP_RW Scalar meanvalue;
         CV_PROP_RW Scalar stdvalue;
+        CV_PROP_RW float tracking_score_threshold;
     };
 
     /** @brief Constructor

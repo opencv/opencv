@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <opencv2/dnn/shape_utils.hpp>
 #include "../precomp.hpp"
+#include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
 
@@ -64,12 +65,12 @@ static Mat Transpose(
 
 
 bool IsTransposeRequired(size_t input_rank, const std::vector<size_t>& permutation) {
-    CV_Assert(input_rank == permutation.size());
 
     // No transpose required for scalars
-    if (input_rank == 0){
+    if (input_rank == 0 || permutation.size() == 0){
         return false;
     }
+    CV_Assert(input_rank == permutation.size());
 
     // Weeds out cases where permutation is something like [0, 1, 2] for a 3D input and so on
     bool transpose_required = false;
@@ -304,7 +305,7 @@ public:
     MatShape einsumOutDims; // vector to store output dimentions
 
     // These hold equation subring, left hand side and right it of
-    String lhs_eq, rhs_eq;
+    String lhs_eq, rhs_eq, equation;
 
     // Holds token from left hand side of the equation
     std::vector<String> lhs_eq_tokens;
@@ -378,7 +379,7 @@ public:
     LayerEinsumImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        String equation = params.get<String>("equation");
+        equation = params.get<String>("equation");
         int outputSize = params.get<int>("outputSize");
         numInputs  = params.get<int>("inputSize");
 
@@ -423,6 +424,11 @@ public:
         calculateOutputShape();
     }
 
+    virtual bool supportBackend(int backendId) CV_OVERRIDE {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    }
+
     // getMeoryShapes
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
@@ -453,6 +459,7 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        CV_CheckEQ((size_t)inputs_arr.total(), (size_t)numInputs, "Number of inputs in forward and inputs during graph constructions do not match");
 
         if (inputs_arr.depth() == CV_16F)
         {
@@ -492,7 +499,7 @@ public:
             } else {
                 // Check if there is a pre-processed version of this input
                 // If so assign it to result
-                if (!preProcessedInputs[0].empty())
+                if (!preProcessedInputs.empty() && !preProcessedInputs[0].empty())
                 {
                     result = preProcessedInputs[0];
                 }
@@ -535,7 +542,7 @@ public:
                 // Use either the preprocessed inputs (if it is available) or the corresponding raw inputs
                 result = pairwiseOperandProcess(!result.empty() ? result : rawInputs[0],
                                                 !result.empty() ? tmpResult : homogenizedInputDims[0],
-                                                !preProcessedInputs[input].empty() ? preProcessedInputs[input] : rawInputs[input],
+                                                (!preProcessedInputs[input].empty()) ? preProcessedInputs[input] : rawInputs[input],
                                                 homogenizedInputDims[input],
                                                 reducedDims,
                                                 isFinalPair);
@@ -553,6 +560,19 @@ public:
         result = result.reshape(1, einsumOutDims.size(), einsumOutDims.data());
         result.copyTo(outputs[0]);
     } // forward
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >&,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
+        ov::OutputVector inputs(nodes.size());
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            inputs[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+        }
+        auto einsum = std::make_shared<ov::op::v7::Einsum>(inputs, equation);
+        return new InfEngineNgraphNode(einsum);
+    }
+#endif // HAVE_DNN_NGRAPH
+
 }; // EinsumClass
 
 Mat LayerEinsumImpl::reduceSum(Mat& src, MatShape& reduceAxis)
@@ -586,8 +606,8 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
     std::vector<cv::Mat> inputs;
     inputs_arr.getMatVector(inputs);
 
-    preProcessedInputs.reserve(inputs.size());
-    homogenizedInputDims.reserve(inputs.size());
+    preProcessedInputs.resize(inputs.size());
+    homogenizedInputDims.resize(inputs.size());
 
     int inputIter = 0;
     for(const Mat& input : inputs)
@@ -596,6 +616,11 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         // variable to hold processed version of the original input
         MatShape input_dims = shape(input);
+        if (input_dims.empty()){
+            homogenizedInputDims[inputIter] = MatShape(numLetterIndices, 1);
+            ++inputIter;
+            continue;
+        }
 
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
@@ -648,9 +673,9 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         {
             preprocessed = preprocessed.reshape(1, homogenizedInputDims_.size(), homogenizedInputDims_.data());
         }
+        preProcessedInputs[inputIter] = preprocessed;
+        homogenizedInputDims[inputIter] = homogenizedInputDims_;
 
-        preProcessedInputs.emplace_back(preprocessed);
-        homogenizedInputDims.emplace_back(homogenizedInputDims_);
         ++inputIter;
     }
 }
@@ -851,8 +876,13 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
     // Check if number of tokens in equal to number of inputs.
     // For install "ij, jk -> ik" needs to have 2 inputs tensors
     int num_input_tensors = inputs.size();
-    CV_CheckEQ(static_cast<int>(lhs_eq_tokens.size()), num_input_tensors,
-        "Number of input tensors does not match the number of subscripts in the input equation");
+    if (lhs_eq_tokens.empty() || (lhs_eq_tokens.size() == 1 && lhs_eq_tokens[0].empty() && lhs_eq == ",") ) {
+        return;
+    }
+    // if we have only one token and two inputs lets skip the check
+    if (lhs_eq_tokens.size() > 1)
+        CV_CheckEQ(static_cast<int>(lhs_eq_tokens.size()), num_input_tensors,
+            "Number of input tensors does not match the number of subscripts in the input equation");
 
     int inputIdx = 0;
     for (const auto& token : lhs_eq_tokens)
@@ -1344,7 +1374,14 @@ Mat LayerEinsumImpl::batchwiseMatMul(
         }
 
         output = Mat(M, N, reshapedInput1.type());
-        fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, output, opt);
+        if ((shape(reshapedInput1).empty() && shape(reshapedInput2).empty())  ||
+            (shape(reshapedInput1).empty() && !shape(reshapedInput2).empty()) ||
+            (!shape(reshapedInput1).empty() && shape(reshapedInput2).empty()))
+        {
+            output = reshapedInput1.mul(reshapedInput2); // fastGemm does not support 0D * 0D multiplication
+        } else {
+            fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, output, opt);
+        }
 
         output = output.reshape(1, {1, M, N});
     }

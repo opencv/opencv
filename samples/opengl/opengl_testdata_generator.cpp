@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN 1
@@ -78,6 +79,9 @@ public:
             upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 45.0;
+            zNear = 0.1;
+            zFar = 50;
+            scaleCoeff = 1000.0;
 
             vertices = std::vector<Vec3f>(4, {2.0f, 0, -2.0f});
             colors   = std::vector<Vec3f>(4, {0, 0, 1.0f});
@@ -91,6 +95,9 @@ public:
             upVector = Vec3d( 0.0, 1.0, 0.0);
 
             fovy = 45.0;
+            zNear = 0.1;
+            zFar = 50;
+            scaleCoeff = 1000.0;
 
             objectPath = objPath;
             std::vector<vector<int>> indvec;
@@ -119,6 +126,9 @@ public:
             upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 45.0;
+            zNear = 0.1;
+            zFar = 50;
+            scaleCoeff = 1000.0;
 
             vertices =
             {
@@ -152,6 +162,9 @@ public:
             upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 45.0;
+            zNear = 0.1;
+            zFar = 50;
+            scaleCoeff = 1000.0;
 
             vertices =
             {
@@ -181,6 +194,9 @@ public:
             upVector = Vec3d(0.0, 1.0, 0.0);
 
             fovy = 60.0;
+            zNear = 0.1;
+            zFar = 50;
+            scaleCoeff = 1000.0;
 
             vertices =
             {
@@ -208,11 +224,35 @@ public:
         }
     }
 
+    ModelData(std::string modelPath, double fov, double nearPlane, double farPlane, double scale, Vec3d pos, Vec3d center, Vec3d up)
+    {
+        objectPath = modelPath;
+        position = pos;
+        lookat   = center;
+        upVector = up;
+        fovy = fov;
+        zNear = nearPlane;
+        zFar = farPlane;
+        scaleCoeff = scale;
+
+        std::vector<vector<int>> indvec;
+
+        loadMesh(objectPath, vertices, indvec, noArray(), colors);
+        if (vertices.size() != colors.size())
+        {
+            std::runtime_error("Model should contain normals for each vertex");
+        }
+        for (const auto &vec : indvec)
+        {
+            indices.push_back({vec[0], vec[1], vec[2]});
+        }
+    }
+
     Vec3d position;
     Vec3d lookat;
     Vec3d upVector;
 
-    double fovy;
+    double fovy, zNear, zFar, scaleCoeff;
 
     std::vector<Vec3f> vertices;
     std::vector<Vec3i> indices;
@@ -239,12 +279,10 @@ void draw(void* userdata)
 }
 
 static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, TriangleCullingMode cullingMode,
-                          ModelType modelType, std::string modelPath, cv::Mat& colorImage, cv::Mat& depthImage)
+                          const ModelData& modelData, cv::Mat& colorImage, cv::Mat& depthImage)
 {
     namedWindow("OpenGL", WINDOW_OPENGL);
     resizeWindow("OpenGL", imgSz.width, imgSz.height);
-
-    ModelData modelData(modelType, modelPath);
 
     DrawData data;
 
@@ -293,10 +331,9 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
     data.arr.setColorArray(colors4f);
     data.indices.copyFrom(idxLinear);
 
-    double zNear = 0.1, zFar = 50;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(modelData.fovy, (double)imgSz.width / imgSz.height, zNear, zFar);
+    gluPerspective(modelData.fovy, (double)imgSz.width / imgSz.height, modelData.zNear, modelData.zFar);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -343,10 +380,10 @@ static void generateImage(cv::Size imgSz, TriangleShadingType shadingType, Trian
         // map from [0, 1] to [zNear, zFar]
         for (auto it = depthImage.begin<float>(); it != depthImage.end<float>(); ++it)
         {
-            *it = (float)(zNear * zFar / (double(*it) * (zNear - zFar) + zFar));
+            *it = (float)(modelData.zNear * modelData.zFar / (double(*it) * (modelData.zNear - modelData.zFar) + modelData.zFar));
         }
         cv::flip(depthImage, depthImage, 0);
-        depthImage.convertTo(depthImage, CV_16U, 1000.0);
+        depthImage.convertTo(depthImage, CV_16U, modelData.scaleCoeff);
 
         char key = (char)waitKey(40);
         if (key == 27)
@@ -364,6 +401,26 @@ int main(int argc, char* argv[])
             "{ help h usage ? |      | show this message }"
             "{ outPath        |      | output path for generated images }"
             "{ modelPath      |      | path to 3d model to render }"
+            "{ custom         |      | pass it to use custom camera parameters instead of iterating through test parameters }"
+            "{ fov            | 45.0 | (if custom parameters are used) field of view }"
+            "{ posx           | 1.0  | (if custom parameters are used) camera position x }"
+            "{ posy           | 1.0  | (if custom parameters are used) camera position y }"
+            "{ posz           | 1.0  | (if custom parameters are used) camera position z }"
+            "{ lookatx        | 0.0  | (if custom parameters are used) lookup camera direction x }"
+            "{ lookaty        | 0.0  | (if custom parameters are used) lookup camera direction y }"
+            "{ lookatz        | 0.0  | (if custom parameters are used) lookup camera direction z }"
+            "{ upx            | 0.0  | (if custom parameters are used) up camera direction x }"
+            "{ upy            | 1.0  | (if custom parameters are used) up camera direction y }"
+            "{ upz            | 0.0  | (if custom parameters are used) up camera direction z }"
+            "{ resx           | 640  | (if custom parameters are used) camera resolution x }"
+            "{ resy           | 480  | (if custom parameters are used) camera resolution y }"
+            "{ zNear          | 0.1  | (if custom parameters are used) near z clipping plane }"
+            "{ zFar           |  50  | (if custom parameters are used) far z clipping plane }"
+            "{ scaleCoeff     | 1000 | (if custom parameters are used) scale coefficient for saving depth }"
+            "{ shading        |      | (if custom parameters are used) shading type: white/flat/shaded }"
+            "{ culling        |      | (if custom parameters are used) culling type: none/cw/ccw }"
+            "{ colorPath      |      | (if custom parameters are used) output path for color image }"
+            "{ depthPath      |      | (if custom parameters are used) output path for depth image }"
     );
     parser.about("This app is used to generate test data for triangleRasterize() function");
 
@@ -380,77 +437,109 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    std::string outPath = parser.get<std::string>("outPath");
-    if (outPath.empty())
+    if (parser.has("custom"))
     {
-        std::cout << "No output path given" << std::endl;
-        return -1;
+        double fov = parser.get<double>("fov");
+        Vec3d position, lookat, upVector;
+        position[0] = parser.get<double>("posx");
+        position[1] = parser.get<double>("posy");
+        position[2] = parser.get<double>("posz");
+        lookat[0]   = parser.get<double>("lookatx");
+        lookat[1]   = parser.get<double>("lookaty");
+        lookat[2]   = parser.get<double>("lookatz");
+        upVector[0] = parser.get<double>("upx");
+        upVector[1] = parser.get<double>("upy");
+        upVector[2] = parser.get<double>("upz");
+        Size res;
+        res.width  = parser.get<int>("resx");
+        res.height = parser.get<int>("resy");
+        double zNear = parser.get<double>("zNear");
+        double zFar  = parser.get<double>("zFar");
+        double scaleCoeff = parser.get<double>("scaleCoeff");
+
+        std::map<std::string, cv::TriangleShadingType> shadingTxt = {
+            { "white",  RASTERIZE_SHADING_WHITE  },
+            { "flat",   RASTERIZE_SHADING_FLAT   },
+            { "shaded", RASTERIZE_SHADING_SHADED },
+        };
+        cv::TriangleShadingType shadingType = shadingTxt.at(parser.get<std::string>("shading"));
+
+        std::map<std::string, cv::TriangleCullingMode> cullingTxt = {
+            { "none", RASTERIZE_CULLING_NONE },
+            { "cw",   RASTERIZE_CULLING_CW   },
+            { "ccw",  RASTERIZE_CULLING_CCW  },
+        };
+        cv::TriangleCullingMode cullingMode = cullingTxt.at(parser.get<std::string>("culling"));
+
+        std::string colorPath = parser.get<std::string>("colorPath");
+        std::string depthPath = parser.get<std::string>("depthPath");
+
+        Mat colorImage, depthImage;
+        ModelData modelData(modelPath, fov, zNear, zFar, scaleCoeff, position, lookat, upVector);
+        generateImage(res, shadingType, cullingMode, modelData, colorImage, depthImage);
+
+        cv::imwrite(colorPath, colorImage);
+        cv::imwrite(depthPath, depthImage);
     }
-
-    std::array<cv::Size, 4> resolutions = { cv::Size {700, 700}, cv::Size {640, 480}, cv::Size(256, 256), cv::Size(320, 240) };
-    for (const auto& res : resolutions)
+    else
     {
-        for (const auto shadingType : {
-                RASTERIZE_SHADING_WHITE,
-                RASTERIZE_SHADING_FLAT,
-                RASTERIZE_SHADING_SHADED
-            })
+        std::string outPath = parser.get<std::string>("outPath");
+        if (outPath.empty())
         {
-            std::string shadingName;
-            switch (shadingType)
-            {
-            case RASTERIZE_SHADING_WHITE:  shadingName = "White";  break;
-            case RASTERIZE_SHADING_FLAT:   shadingName = "Flat";   break;
-            case RASTERIZE_SHADING_SHADED: shadingName = "Shaded"; break;
-            default:
-                break;
-            }
+            std::cout << "No output path given" << std::endl;
+            return -1;
+        }
 
-            for (const auto cullingMode : {
-                    RASTERIZE_CULLING_NONE,
-                    RASTERIZE_CULLING_CW,
-                    RASTERIZE_CULLING_CCW
-            })
-            {
-                std::string cullingName;
-                switch (cullingMode)
-                {
-                    case RASTERIZE_CULLING_NONE: cullingName = "None"; break;
-                    case RASTERIZE_CULLING_CW:   cullingName = "CW"; break;
-                    case RASTERIZE_CULLING_CCW:  cullingName = "CCW"; break;
-                    default: break;
-                }
+        std::array<cv::Size, 4> resolutions = {cv::Size{700, 700}, cv::Size{640, 480}, cv::Size(256, 256), cv::Size(320, 240)};
+        std::vector<std::pair<cv::TriangleShadingType, std::string>> shadingTxt = {
+            {RASTERIZE_SHADING_WHITE,  "White"},
+            {RASTERIZE_SHADING_FLAT,   "Flat"},
+            {RASTERIZE_SHADING_SHADED, "Shaded"},
+        };
+        std::vector<std::pair<cv::TriangleCullingMode, std::string>> cullingTxt = {
+            {RASTERIZE_CULLING_NONE, "None"},
+            {RASTERIZE_CULLING_CW,   "CW"},
+            {RASTERIZE_CULLING_CCW,  "CCW"},
+        };
+        std::vector<std::pair<ModelType, std::string>> modelTxt = {
+            {ModelType::File,     "File"},
+            {ModelType::Clipping, "Clipping"},
+            {ModelType::Color,    "Color"},
+            {ModelType::Centered, "Centered"},
+        };
 
-                for (const auto modelType : {
-                            ModelType::File,
-                            ModelType::Clipping,
-                            ModelType::Color,
-                            ModelType::Centered,
-                    })
+        for (const auto& res : resolutions)
+        {
+            for (const auto shadingPair : shadingTxt)
+            {
+                cv::TriangleShadingType shadingType = shadingPair.first;
+                std::string shadingName = shadingPair.second;
+
+                for (const auto cullingPair : cullingTxt)
                 {
-                    std::string modelName;
-                    switch (modelType)
+                    cv::TriangleCullingMode cullingMode = cullingPair.first;
+                    std::string cullingName = cullingPair.second;
+
+                    for (const auto modelPair : modelTxt)
                     {
-                    case ModelType::File:     modelName = "File";     break;
-                    case ModelType::Clipping: modelName = "Clipping"; break;
-                    case ModelType::Color:    modelName = "Color";    break;
-                    case ModelType::Centered: modelName = "Centered"; break;
-                    default:
-                        break;
+                        ModelType modelType = modelPair.first;
+                        std::string modelName = modelPair.second;
+
+                        std::string suffix = cv::format("%s_%dx%d_Cull%s", modelName.c_str(), res.width, res.height, cullingName.c_str());
+
+                        std::cout << suffix + "_" + shadingName << "..." << std::endl;
+
+                        cv::Mat colorImage, depthImage;
+
+                        ModelData modelData(modelType, modelPath);
+                        generateImage(res, shadingType, cullingMode, modelData, colorImage, depthImage);
+
+                        std::string gtPathColor = outPath + "/example_image_" + suffix + "_" + shadingName + ".png";
+                        std::string gtPathDepth = outPath + "/depth_image_"   + suffix + ".png";
+
+                        cv::imwrite(gtPathColor, colorImage);
+                        cv::imwrite(gtPathDepth, depthImage);
                     }
-
-                    std::string suffix = cv::format("%s_%dx%d_Cull%s", modelName.c_str(), res.width, res.height, cullingName.c_str());
-
-                    std::cout << suffix + "_" + shadingName << "..." << std::endl;
-
-                    cv::Mat colorImage, depthImage;
-                    generateImage(res, shadingType, cullingMode, modelType, modelPath, colorImage, depthImage);
-
-                    std::string gtPathColor = outPath + "/example_image_" + suffix + "_" + shadingName + ".png";
-                    std::string gtPathDepth = outPath + "/depth_image_"   + suffix + ".png";
-
-                    cv::imwrite(gtPathColor, colorImage);
-                    cv::imwrite(gtPathDepth, depthImage);
                 }
             }
         }

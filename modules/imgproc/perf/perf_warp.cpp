@@ -12,8 +12,8 @@ CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR)
 CV_ENUM(InterTypeExtended, INTER_NEAREST, INTER_LINEAR, WARP_RELATIVE_MAP)
 CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH)
 
-typedef TestBaseWithParam< tuple<Size, InterType, BorderMode> > TestWarpAffine;
-typedef TestBaseWithParam< tuple<Size, InterType, BorderMode> > TestWarpPerspective;
+typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpAffine;
+typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, int> > TestWarpPerspective;
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpPerspectiveNear_t;
 typedef TestBaseWithParam< tuple<MatType, Size, InterTypeExtended, BorderMode, RemapMode> > TestRemap;
 
@@ -23,80 +23,66 @@ PERF_TEST_P( TestWarpAffine, WarpAffine,
              Combine(
                 Values( szVGA, sz720p, sz1080p ),
                 InterType::all(),
-                BorderMode::all()
+                BorderMode::all(),
+                Values(CV_8UC3, CV_16UC3, CV_32FC3, CV_8UC1, CV_16UC1, CV_32FC1, CV_8UC4, CV_16UC4, CV_32FC4)
              )
 )
 {
     Size sz, szSrc(512, 512);
-    int borderMode, interType;
+    int type, borderMode, interType;
     sz         = get<0>(GetParam());
     interType  = get<1>(GetParam());
     borderMode = get<2>(GetParam());
+    type       = get<3>(GetParam());
     Scalar borderColor = Scalar::all(150);
 
-    Mat src(szSrc,CV_8UC4), dst(sz, CV_8UC4);
-    cvtest::fillGradient(src);
-    if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder(src, borderColor, 1);
+    Mat src(szSrc,type), dst(sz, type);
+    switch (src.depth()) {
+        case CV_8U: {
+            cvtest::fillGradient<uint8_t>(src);
+            if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder<uint8_t>(src, borderColor, 1);
+            break;
+        }
+        case CV_16U: {
+            cvtest::fillGradient<uint16_t>(src);
+            if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder<uint16_t>(src, borderColor, 1);
+            break;
+        }
+        case CV_32F: {
+            cvtest::fillGradient<float>(src);
+            if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder<float>(src, borderColor, 1);
+            break;
+        }
+    }
     Mat warpMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 30., 2.2);
     declare.in(src).out(dst);
 
     TEST_CYCLE() warpAffine( src, dst, warpMat, sz, interType, borderMode, borderColor );
 
-#ifdef __ANDROID__
-    SANITY_CHECK(dst, interType==INTER_LINEAR? 5 : 10);
-#else
     SANITY_CHECK(dst, 1);
-#endif
-}
-
-PERF_TEST_P(TestWarpAffine, DISABLED_WarpAffine_ovx,
-    Combine(
-        Values(szVGA, sz720p, sz1080p),
-        InterType::all(),
-        BorderMode::all()
-    )
-)
-{
-    Size sz, szSrc(512, 512);
-    int borderMode, interType;
-    sz = get<0>(GetParam());
-    interType = get<1>(GetParam());
-    borderMode = get<2>(GetParam());
-    Scalar borderColor = Scalar::all(150);
-
-    Mat src(szSrc, CV_8UC1), dst(sz, CV_8UC1);
-    cvtest::fillGradient(src);
-    if (borderMode == BORDER_CONSTANT) cvtest::smoothBorder(src, borderColor, 1);
-    Mat warpMat = getRotationMatrix2D(Point2f(src.cols / 2.f, src.rows / 2.f), 30., 2.2);
-    declare.in(src).out(dst);
-
-    TEST_CYCLE() warpAffine(src, dst, warpMat, sz, interType, borderMode, borderColor);
-
-#ifdef __ANDROID__
-    SANITY_CHECK(dst, interType == INTER_LINEAR ? 5 : 10);
-#else
-    SANITY_CHECK(dst, 1);
-#endif
 }
 
 PERF_TEST_P( TestWarpPerspective, WarpPerspective,
              Combine(
                 Values( szVGA, sz720p, sz1080p ),
                 InterType::all(),
-                BorderMode::all()
+                BorderMode::all(),
+                Values(1, 3, 4)
              )
 )
 {
     Size sz, szSrc(512, 512);
-    int borderMode, interType;
+    int borderMode, interType, channels;
     sz         = get<0>(GetParam());
     interType  = get<1>(GetParam());
     borderMode = get<2>(GetParam());
+    channels   = get<3>(GetParam());
+
     Scalar borderColor = Scalar::all(150);
 
-    Mat src(szSrc,CV_8UC4), dst(sz, CV_8UC4);
-    cvtest::fillGradient(src);
-    if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder(src, borderColor, 1);
+    Mat src(szSrc, CV_8UC(channels)), dst(sz, CV_8UC(channels));
+    cvtest::fillGradient<uint8_t>(src);
+    if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder<uint8_t>(src, borderColor, 1);
     Mat rotMat = getRotationMatrix2D(Point2f(src.cols/2.f, src.rows/2.f), 30., 2.2);
     Mat warpMat(3, 3, CV_64FC1);
     for(int r=0; r<2; r++)
@@ -110,49 +96,7 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
 
     TEST_CYCLE() warpPerspective( src, dst, warpMat, sz, interType, borderMode, borderColor );
 
-#ifdef __ANDROID__
-    SANITY_CHECK(dst, interType==INTER_LINEAR? 5 : 10);
-#else
     SANITY_CHECK(dst, 1);
-#endif
-}
-
-PERF_TEST_P(TestWarpPerspective, DISABLED_WarpPerspective_ovx,
-    Combine(
-        Values(szVGA, sz720p, sz1080p),
-        InterType::all(),
-        BorderMode::all()
-    )
-)
-{
-    Size sz, szSrc(512, 512);
-    int borderMode, interType;
-    sz = get<0>(GetParam());
-    interType = get<1>(GetParam());
-    borderMode = get<2>(GetParam());
-    Scalar borderColor = Scalar::all(150);
-
-    Mat src(szSrc, CV_8UC1), dst(sz, CV_8UC1);
-    cvtest::fillGradient(src);
-    if (borderMode == BORDER_CONSTANT) cvtest::smoothBorder(src, borderColor, 1);
-    Mat rotMat = getRotationMatrix2D(Point2f(src.cols / 2.f, src.rows / 2.f), 30., 2.2);
-    Mat warpMat(3, 3, CV_64FC1);
-    for (int r = 0; r<2; r++)
-        for (int c = 0; c<3; c++)
-            warpMat.at<double>(r, c) = rotMat.at<double>(r, c);
-    warpMat.at<double>(2, 0) = .3 / sz.width;
-    warpMat.at<double>(2, 1) = .3 / sz.height;
-    warpMat.at<double>(2, 2) = 1;
-
-    declare.in(src).out(dst);
-
-    TEST_CYCLE() warpPerspective(src, dst, warpMat, sz, interType, borderMode, borderColor);
-
-#ifdef __ANDROID__
-    SANITY_CHECK(dst, interType == INTER_LINEAR ? 5 : 10);
-#else
-    SANITY_CHECK(dst, 1);
-#endif
 }
 
 PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
@@ -173,8 +117,8 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
     Scalar borderColor = Scalar::all(150);
 
     Mat src(size, type), dst(size, type);
-    cvtest::fillGradient(src);
-    if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder(src, borderColor, 1);
+    cvtest::fillGradient<uint8_t>(src);
+    if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder<uint8_t>(src, borderColor, 1);
     int shift = static_cast<int>(src.cols*0.04);
     Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0),
                                             Vec2f(static_cast<float>(size.width-1), 0),
@@ -194,11 +138,7 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
         warpPerspective( src, dst, warpMat, size, interType, borderMode, borderColor );
     }
 
-#ifdef __ANDROID__
-    SANITY_CHECK(dst, interType==INTER_LINEAR? 5 : 10);
-#else
     SANITY_CHECK(dst, 1);
-#endif
 }
 
 PERF_TEST_P( TestRemap, remap,

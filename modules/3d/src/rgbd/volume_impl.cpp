@@ -563,6 +563,7 @@ void ColorTsdfVolume::reset()
         {
             RGBTsdfVoxel& v = reinterpret_cast<RGBTsdfVoxel&>(vv);
             v.tsdf = floatToTsdf(0.0f); v.weight = 0;
+            v.r = v.g = v.b = 0;
         });
 }
 

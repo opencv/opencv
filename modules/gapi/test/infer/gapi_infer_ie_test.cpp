@@ -1582,6 +1582,9 @@ TEST(Infer, SetInvalidNumberOfRequests)
 
 TEST(Infer, TestStreamingInfer)
 {
+    if (cvtest::skipUnstableTests)
+        throw SkipTestException("Skip InferROI.TestStreamingInfer as it hangs sporadically");
+
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");
@@ -1649,6 +1652,9 @@ TEST(Infer, TestStreamingInfer)
 
 TEST(InferROI, TestStreamingInfer)
 {
+    if (cvtest::skipUnstableTests)
+        throw SkipTestException("Skip InferROI.TestStreamingInfer as it hangs sporadically");
+
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");
@@ -1727,6 +1733,9 @@ TEST(InferROI, TestStreamingInfer)
 
 TEST(InferList, TestStreamingInfer)
 {
+    if (cvtest::skipUnstableTests)
+        throw SkipTestException("Skip InferList.TestStreamingInfer as it hangs sporadically");
+
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");
@@ -1816,6 +1825,9 @@ TEST(InferList, TestStreamingInfer)
 
 TEST(Infer2, TestStreamingInfer)
 {
+    if (cvtest::skipUnstableTests)
+        throw SkipTestException("Skip InferROI.TestStreamingInfer as it hangs sporadically");
+
     initDLDTDataPath();
 
     std::string filepath = findDataFile("cv/video/768x576.avi");

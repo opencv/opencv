@@ -6,7 +6,7 @@
 #define OPENCV_3D_HPP
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/types_c.h"
+#include "opencv2/core/utils/logger.hpp"
 
 #include "opencv2/3d/depth.hpp"
 #include "opencv2/3d/odometry.hpp"
@@ -792,8 +792,8 @@ correctly only when there are more than 50% of inliers. Finally, if there are no
 noise is rather small, use the default method (method=0).
 
 The function is used to find initial intrinsic and extrinsic matrices. Homography matrix is
-determined up to a scale. Thus, it is normalized so that \f$h_{33}=1\f$. Note that whenever an \f$H\f$ matrix
-cannot be estimated, an empty one will be returned.
+determined up to a scale. If \f$h_{33}\f$ is non-zero, the matrix is normalized so that \f$h_{33}=1\f$.
+@note Whenever an \f$H\f$ matrix cannot be estimated, an empty one will be returned.
 
 @sa
 getAffineTransform, estimateAffine2D, estimateAffinePartial2D, getPerspectiveTransform, warpPerspective,
@@ -1333,6 +1333,9 @@ The function converts 2D or 3D points from/to homogeneous coordinates by calling
  */
 CV_EXPORTS void convertPointsHomogeneous( InputArray src, OutputArray dst );
 
+/** @example samples/cpp/snippets/epipolar_lines.cpp
+An example using the findFundamentalMat function
+*/
 /** @brief Calculates a fundamental matrix from the corresponding points in two images.
 
 @param points1 Array of N points from the first image. The point coordinates should be
@@ -1407,13 +1410,13 @@ CV_EXPORTS_W Mat findFundamentalMat( InputArray points1, InputArray points2,
 
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
 be floating-point (single or double precision).
-@param points2 Array of the second image points of the same size and format as points1 .
+@param points2 Array of the second image points of the same size and format as points1.
 @param cameraMatrix Camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 Note that this function assumes that points1 and points2 are feature points from cameras with the
-same camera intrinsic matrix. If this assumption does not hold for your use case, use
-#undistortPoints with `P = cv::NoArray()` for both cameras to transform image points
-to normalized image coordinates, which are valid for the identity camera intrinsic matrix. When
-passing these coordinates, pass the identity matrix for this parameter.
+same camera intrinsic matrix. If this assumption does not hold for your use case, use another
+function overload or #undistortPoints with `P = cv::NoArray()` for both cameras to transform image
+points to normalized image coordinates, which are valid for the identity camera intrinsic matrix.
+When passing these coordinates, pass the identity matrix for this parameter.
 @param method Method for computing an essential matrix.
 -   @ref RANSAC for the RANSAC algorithm.
 -   @ref LMEDS for the LMedS algorithm.
@@ -1487,23 +1490,13 @@ Mat findEssentialMat(
 
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
 be floating-point (single or double precision).
-@param points2 Array of the second image points of the same size and format as points1 .
-@param cameraMatrix1 Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-Note that this function assumes that points1 and points2 are feature points from cameras with the
-same camera matrix. If this assumption does not hold for your use case, use
-#undistortPoints with `P = cv::NoArray()` for both cameras to transform image points
-to normalized image coordinates, which are valid for the identity camera matrix. When
-passing these coordinates, pass the identity matrix for this parameter.
-@param cameraMatrix2 Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-Note that this function assumes that points1 and points2 are feature points from cameras with the
-same camera matrix. If this assumption does not hold for your use case, use
-#undistortPoints with `P = cv::NoArray()` for both cameras to transform image points
-to normalized image coordinates, which are valid for the identity camera matrix. When
-passing these coordinates, pass the identity matrix for this parameter.
-@param distCoeffs1 Input vector of distortion coefficients
+@param points2 Array of the second image points of the same size and format as points1.
+@param cameraMatrix1 Camera matrix for the first camera \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix2 Camera matrix for the second camera \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param distCoeffs1 Input vector of distortion coefficients for the first camera
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
 of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param distCoeffs2 Input vector of distortion coefficients
+@param distCoeffs2 Input vector of distortion coefficients for the second camera
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
 of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 @param method Method for computing an essential matrix.
@@ -2519,9 +2512,24 @@ the number of points in the view.
 @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
 
 Note that the function assumes the camera intrinsic matrix of the undistorted points to be identity.
-This means if you want to distort image points you have to multiply them with \f$K^{-1}\f$.
+This means if you want to distort image points you have to multiply them with \f$K^{-1}\f$ or
+use another function overload.
  */
 CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
+
+/** @overload
+Overload of distortPoints function to handle cases when undistorted points are got with non-identity
+camera matrix, e.g. output of #estimateNewCameraMatrixForUndistortRectify.
+@param undistorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is
+the number of points in the view.
+@param Kundistorted Camera intrinsic matrix used as new camera matrix for undistortion.
+@param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+@param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+@param alpha The skew coefficient.
+@param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+@sa estimateNewCameraMatrixForUndistortRectify
+*/
+CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray Kundistorted, InputArray K, InputArray D, double alpha = 0);
 
 /** @brief Undistorts 2D points using fisheye model
 
@@ -2836,16 +2844,19 @@ protected:
 /** @brief Loads a point cloud from a file.
 *
 * The function loads point cloud from the specified file and returns it.
-* If the cloud cannot be read, throws an error
+* If the cloud cannot be read, throws an error.
+* Vertex coordinates, normals and colors are returned as they are saved in the file
+* even if these arrays have different sizes and their elements do not correspond to each other
+* (which is typical for OBJ files for example)
 *
 * Currently, the following file formats are supported:
 * -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file)
 * -  [Polygon File Format *.ply](https://en.wikipedia.org/wiki/PLY_(file_format))
 *
-* @param filename Name of the file.
-* @param vertices (vector of Point3f) Point coordinates of a point cloud
-* @param normals (vector of Point3f) Point normals of a point cloud
-* @param rgb (vector of Point3_<uchar>) Point RGB color of a point cloud
+* @param filename Name of the file
+* @param vertices vertex coordinates, each value contains 3 floats
+* @param normals per-vertex normals, each value contains 3 floats
+* @param rgb per-vertex colors, each value contains 3 floats
 */
 CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, OutputArray normals = noArray(), OutputArray rgb = noArray());
 
@@ -2854,10 +2865,10 @@ CV_EXPORTS_W void loadPointCloud(const String &filename, OutputArray vertices, O
 * The function saves point cloud to the specified file.
 * File format is chosen based on the filename extension.
 *
-* @param filename Name of the file.
-* @param vertices (vector of Point3f) Point coordinates of a point cloud
-* @param normals (vector of Point3f) Point normals of a point cloud
-* @param rgb (vector of Point3_<uchar>) Point RGB color of a point cloud
+* @param filename Name of the file
+* @param vertices vertex coordinates, each value contains 3 floats
+* @param normals per-vertex normals, each value contains 3 floats
+* @param rgb per-vertex colors, each value contains 3 floats
 */
 CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, InputArray normals = noArray(), InputArray rgb = noArray());
 
@@ -2865,18 +2876,24 @@ CV_EXPORTS_W void savePointCloud(const String &filename, InputArray vertices, In
 *
 * The function loads mesh from the specified file and returns it.
 * If the mesh cannot be read, throws an error
+* Vertex attributes (i.e. space and texture coodinates, normals and colors) are returned in same-sized
+* arrays with corresponding elements having the same indices.
+* This means that if a face uses a vertex with a normal or a texture coordinate with different indices
+* (which is typical for OBJ files for example), this vertex will be duplicated for each face it uses.
 *
 * Currently, the following file formats are supported:
 * -  [Wavefront obj file *.obj](https://en.wikipedia.org/wiki/Wavefront_.obj_file) (ONLY TRIANGULATED FACES)
 * -  [Polygon File Format *.ply](https://en.wikipedia.org/wiki/PLY_(file_format))
-* @param filename Name of the file.
-* @param vertices (vector of Point3f) vertex coordinates of a mesh
-* @param indices (vector of vectors of int) vertex normals of a mesh
-* @param normals (vector of Point3f) vertex normals of a mesh
-* @param colors (vector of Point3f) vertex colors of a mesh
+* @param filename Name of the file
+* @param vertices vertex coordinates, each value contains 3 floats
+* @param indices per-face list of vertices, each value is a vector of ints
+* @param normals per-vertex normals, each value contains 3 floats
+* @param colors per-vertex colors, each value contains 3 floats
+* @param texCoords per-vertex texture coordinates, each value contains 2 or 3 floats
 */
 CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays indices,
-                           OutputArray normals = noArray(), OutputArray colors = noArray());
+                           OutputArray normals = noArray(), OutputArray colors = noArray(),
+                           OutputArray texCoords = noArray());
 
 /** @brief Saves a mesh to a specified file.
 *
@@ -2884,13 +2901,14 @@ CV_EXPORTS_W void loadMesh(const String &filename, OutputArray vertices, OutputA
 * File format is chosen based on the filename extension.
 *
 * @param filename Name of the file.
-* @param vertices (vector of Point3f) vertex coordinates of a mesh
-* @param indices (vector of vectors of int) vertex normals of a mesh
-* @param normals (vector of Point3f) vertex normals of a mesh
-* @param colors (vector of Point3f) vertex colors of a mesh
+* @param vertices vertex coordinates, each value contains 3 floats
+* @param indices per-face list of vertices, each value is a vector of ints
+* @param normals per-vertex normals, each value contains 3 floats
+* @param colors per-vertex colors, each value contains 3 floats
+* @param texCoords per-vertex texture coordinates, each value contains 2 or 3 floats
 */
 CV_EXPORTS_W void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays indices,
-                           InputArray normals = noArray(), InputArray colors = noArray());
+                           InputArray normals = noArray(), InputArray colors = noArray(), InputArray texCoords = noArray());
 
 
 //! Triangle fill settings

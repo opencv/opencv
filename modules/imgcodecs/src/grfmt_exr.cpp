@@ -373,18 +373,35 @@ bool  ExrDecoder::readData( Mat& img )
 
         if( m_iscolor )
         {
-            if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
-                UpSample( data, channelstoread, step / xstep, m_blue->xSampling, m_blue->ySampling );
-            if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
-                UpSample( data + xstep, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
-            if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
-                UpSample( data + 2 * xstep, channelstoread, step / xstep, m_red->xSampling, m_red->ySampling );
+            if (m_use_rgb)
+            {
+                if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                    UpSample( data, channelstoread, step / xstep, m_red->xSampling, m_red->ySampling );
+                if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                    UpSample( data + xstep, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
+                if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                    UpSample( data + 2 * xstep, channelstoread, step / xstep, m_blue->xSampling, m_blue->ySampling );
+            }
+            else
+            {
+                if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                    UpSample( data, channelstoread, step / xstep, m_blue->xSampling, m_blue->ySampling );
+                if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                    UpSample( data + xstep, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
+                if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                    UpSample( data + 2 * xstep, channelstoread, step / xstep, m_red->xSampling, m_red->ySampling );
+            }
         }
         else if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
             UpSample( data, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
 
         if( chromatorgb )
-            ChromaToBGR( (float *)data, m_height, channelstoread, step / xstep );
+        {
+            if (m_use_rgb)
+                ChromaToRGB( (float *)data, m_height, channelstoread, step / xstep );
+            else
+                ChromaToBGR( (float *)data, m_height, channelstoread, step / xstep );
+        }
     }
     else
     {
@@ -406,7 +423,12 @@ bool  ExrDecoder::readData( Mat& img )
             else
             {
                 if( chromatorgb )
-                    ChromaToBGR( (float *)buffer, 1, defaultchannels, step );
+                {
+                    if (m_use_rgb)
+                        ChromaToRGB( (float *)buffer, 1, defaultchannels, step );
+                    else
+                        ChromaToBGR( (float *)buffer, 1, defaultchannels, step );
+                }
 
                 if( m_type == FLOAT )
                 {
@@ -430,12 +452,24 @@ bool  ExrDecoder::readData( Mat& img )
         }
         if( color )
         {
-            if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
-                UpSampleY( data, defaultchannels, step / xstep, m_blue->ySampling );
-            if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
-                UpSampleY( data + xstep, defaultchannels, step / xstep, m_green->ySampling );
-            if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
-                UpSampleY( data + 2 * xstep, defaultchannels, step / xstep, m_red->ySampling );
+            if (m_use_rgb)
+            {
+                if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                    UpSampleY( data, defaultchannels, step / xstep, m_red->ySampling );
+                if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                    UpSampleY( data + xstep, defaultchannels, step / xstep, m_green->ySampling );
+                if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                    UpSampleY( data + 2 * xstep, defaultchannels, step / xstep, m_blue->ySampling );
+            }
+            else
+            {
+                if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                    UpSampleY( data, defaultchannels, step / xstep, m_blue->ySampling );
+                if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                    UpSampleY( data + xstep, defaultchannels, step / xstep, m_green->ySampling );
+                if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                    UpSampleY( data + 2 * xstep, defaultchannels, step / xstep, m_red->ySampling );
+            }
         }
         else if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
             UpSampleY( data, 1, step / xstep, m_green->ySampling );
@@ -558,6 +592,47 @@ void  ExrDecoder::ChromaToBGR( float *data, int numlines, int xstep, int ystep )
     }
 }
 
+void  ExrDecoder::ChromaToRGB(float *data, int numlines, int xstep, int ystep)
+{
+    for( int y = 0; y < numlines; y++ )
+    {
+        for( int x = 0; x < m_width; x++ )
+        {
+            double b, Y, r;
+            if( m_type == FLOAT )
+            {
+                b = data[y * ystep + x * xstep];
+                Y = data[y * ystep + x * xstep + 1];
+                r = data[y * ystep + x * xstep + 2];
+            }
+            else
+            {
+                b = ((unsigned *)data)[y * ystep + x * xstep];
+                Y = ((unsigned *)data)[y * ystep + x * xstep + 1];
+                r = ((unsigned *)data)[y * ystep + x * xstep + 2];
+            }
+            r = (r + 1) * Y;
+            b = (b + 1) * Y;
+            Y = (Y - b * m_chroma.blue[1] - r * m_chroma.red[1]) / m_chroma.green[1];
+
+            if( m_type == FLOAT )
+            {
+                data[y * ystep + x * xstep] = (float)r;
+                data[y * ystep + x * xstep + 1] = (float)Y;
+                data[y * ystep + x * xstep + 2] = (float)b;
+            }
+            else
+            {
+                int t = cvRound(r);
+                ((unsigned *)data)[y * ystep + x * xstep + 0] = (unsigned)MAX(t, 0);
+                t = cvRound(Y);
+                ((unsigned *)data)[y * ystep + x * xstep + 1] = (unsigned)MAX(t, 0);
+                t = cvRound(b);
+                ((unsigned *)data)[y * ystep + x * xstep + 2] = (unsigned)MAX(t, 0);
+            }
+        }
+    }
+}
 
 /**
 // convert one row to gray
@@ -729,7 +804,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
     Mat exrMat;
     if( type == HALF )
     {
-        convertFp16(img, exrMat);
+        img.convertTo(exrMat, CV_16F);
         buffer = (char *)const_cast<uchar *>( exrMat.ptr() );
         bufferstep = exrMat.step;
         size = 2;

@@ -44,8 +44,6 @@
 
 namespace opencv_test { namespace {
 
-#define CORE_COUNTNONZERO_ERROR_COUNT 1
-
 #define MESSAGE_ERROR_COUNT "Count non zero elements returned by OpenCV function is incorrect."
 
 #define sign(a) a > 0 ? 1 : a == 0 ? 0 : -1
@@ -203,7 +201,7 @@ void CV_CountNonZeroTest::run(int)
                     cout << "Number of experiment: " << i << endl;
                     cout << "Method of data generation: RANDOM" << endl;
                     print_information(right, result);
-                    CV_Error(CORE_COUNTNONZERO_ERROR_COUNT, MESSAGE_ERROR_COUNT);
+                    CV_Error(cv::Error::StsError, MESSAGE_ERROR_COUNT);
                     return;
                 }
 
@@ -219,7 +217,7 @@ void CV_CountNonZeroTest::run(int)
                     cout << "Number of experiment: " << i << endl;
                     cout << "Method of data generation: HALF-RANDOM" << endl;
                     print_information(count_non_zero, result);
-                    CV_Error(CORE_COUNTNONZERO_ERROR_COUNT, MESSAGE_ERROR_COUNT);
+                    CV_Error(cv::Error::StsError, MESSAGE_ERROR_COUNT);
                     return;
                 }
 
@@ -235,7 +233,7 @@ void CV_CountNonZeroTest::run(int)
                     cout << "Number of experiment: " << i << endl;
                     cout << "Method of data generation: STATISTIC" << endl;
                     print_information(right, result);
-                    CV_Error(CORE_COUNTNONZERO_ERROR_COUNT, MESSAGE_ERROR_COUNT);
+                    CV_Error(cv::Error::StsError, MESSAGE_ERROR_COUNT);
                     return;
                 }
 
@@ -293,6 +291,51 @@ INSTANTIATE_TEST_CASE_P(Core, CountNonZeroBig,
         testing::Values(CV_8UC1, CV_32FC1),
         testing::Values(Size(1, 524190), Size(524190, 1), Size(3840, 2160))
     )
+);
+
+typedef testing::TestWithParam<int> CountNonZero1D;
+
+TEST_P(CountNonZero1D, /**/)
+{
+    const int depth = GetParam();
+    int i, M = 112 + depth, N = 3 + depth;
+    std::vector<uint8_t> v(M);
+    int nz_ref = 0;
+    for (i = 0; i < M; i++) {
+        v[i] = (uint8_t)(rand() % 7 == 0);
+        nz_ref += v[i] != 0;
+    }
+    Mat mv;
+    Mat(v).convertTo(mv, depth);
+    EXPECT_EQ(mv.dims, 1);
+    size_t esz = mv.elemSize();
+    // check countNonZero on a vector transformed to Mat inplace, e.g. on 1xM matrix
+    int nz0 = countNonZero(mv);
+    EXPECT_EQ(nz0, nz_ref);
+    // another method to get 1xM matrix, this time 2D matrix
+    int nz0_ = countNonZero(Mat(Size(M, 1), depth, mv.data));
+    EXPECT_EQ(nz0_, nz_ref);
+    // let's now transpose it and get Mx1
+    Mat m1 = mv.t();
+    int nz1 = countNonZero(m1);
+    EXPECT_EQ(nz1, nz_ref);
+    Mat mwide(M, N, mv.type());
+    randu(mwide, 0, 3);
+    int colidx = rand()%N;
+    Mat mcol = mwide.col(colidx);
+    EXPECT_EQ(mcol.data, mwide.data + colidx*esz);
+    // let's now embed this column into a wider matrix
+    // make sure it's copied inside, not reallocated.
+    m1.copyTo(mcol);
+    EXPECT_EQ(mcol.data, mwide.data + colidx*esz);
+    // now it's not continuous
+    EXPECT_EQ(mcol.isContinuous(), false);
+    int nz2 = countNonZero(mcol);
+    EXPECT_EQ(nz2, nz_ref);
+}
+
+INSTANTIATE_TEST_CASE_P(Core, CountNonZero1D,
+    testing::Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32U, CV_32S, CV_64U, CV_64S, CV_32F, CV_64F, CV_16F, CV_16BF, CV_Bool)
 );
 
 }} // namespace

@@ -261,7 +261,7 @@ private:
             h = rect.height; w = rect.width;
             pose = Matx23f(c, -s, -(float)rect.x,
                         s,  c, -(float)rect.y);
-            warpAffine(image, rotImage, pose, Size(w, h), INTER_LINEAR, BORDER_REPLICATE);
+            warpAffine(image, rotImage, pose, Size(w, h), INTER_LINEAR, BORDER_REPLICATE, Scalar(), cv::ALGO_HINT_ACCURATE);
         }
         if( tilt == 1 )
             warpedImage = rotImage;
@@ -275,7 +275,7 @@ private:
             pose(0, 2) /= tilt;
         }
         if( phi != 0 || tilt != 1 )
-            warpAffine(mask0, warpedMask, pose, warpedImage.size(), INTER_NEAREST);
+            warpAffine(mask0, warpedMask, pose, warpedImage.size(), INTER_NEAREST, BORDER_CONSTANT, Scalar(), cv::ALGO_HINT_ACCURATE);
         else
             warpedMask = mask0;
     }

@@ -172,10 +172,6 @@ public:
         if (result.durationImplOpenCL)
             ok &= this->printf(",tOCL=%lld", (long long int)result.durationImplOpenCL);
 #endif
-#ifdef HAVE_OPENVX
-        if (result.durationImplOpenVX)
-            ok &= this->printf(",tOVX=%lld", (long long int)result.durationImplOpenVX);
-#endif
         ok &= this->printf("\n");
         return ok;
     }
@@ -360,10 +356,6 @@ void Region::Impl::leaveRegion(TraceManagerThreadLocal& ctx)
         if (result.durationImplOpenCL)
             __itt_metadata_add(domain, itt_id, __itt_string_handle_create("tOpenCL"), __itt_metadata_u64, 1, &result.durationImplOpenCL);
 #endif
-#ifdef HAVE_OPENVX
-        if (result.durationImplOpenVX)
-            __itt_metadata_add(domain, itt_id, __itt_string_handle_create("tOpenVX"), __itt_metadata_u64, 1, &result.durationImplOpenVX);
-#endif
         __itt_task_end(domain);
     }
 #endif
@@ -493,12 +485,6 @@ Region::Region(const LocationStaticStorage& location) :
             ctx.stat_status.ignoreDepthImplOpenCL = currentDepth;
         break;
 #endif
-#ifdef HAVE_OPENVX
-    case REGION_FLAG_IMPL_OPENVX:
-        if (!ctx.stat_status.ignoreDepthImplOpenVX)
-            ctx.stat_status.ignoreDepthImplOpenVX = currentDepth;
-        break;
-#endif
     default:
         break;
     }
@@ -616,11 +602,6 @@ void Region::destroy()
             myCodePath = Impl::CODE_PATH_OPENCL;
             break;
 #endif
-#ifdef HAVE_OPENVX
-        case REGION_FLAG_IMPL_OPENVX:
-            myCodePath = Impl::CODE_PATH_OPENVX;
-            break;
-#endif
         default:
             break;
         }
@@ -663,19 +644,6 @@ void Region::destroy()
             else if (active)
             {
                 ctx.stat.durationImplOpenCL = duration;
-            }
-            break;
-#endif
-#ifdef HAVE_OPENVX
-        case Impl::CODE_PATH_OPENVX:
-            if (ctx.stat_status.ignoreDepthImplOpenVX == currentDepth)
-            {
-                ctx.stat.durationImplOpenVX += duration;
-                ctx.stat_status.ignoreDepthImplOpenVX = 0;
-            }
-            else if (active)
-            {
-                ctx.stat.durationImplOpenVX = duration;
             }
             break;
 #endif

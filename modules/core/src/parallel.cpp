@@ -72,6 +72,10 @@
     #endif
 #endif
 
+#if defined (__QNX__)
+    #include <sys/syspage.h>
+#endif
+
 #ifndef OPENCV_DISABLE_THREAD_SUPPORT
     #include <thread>
 #endif
@@ -870,7 +874,22 @@ int getNumberOfCPUsImpl(const char *filename)
 
 #if defined CV_HAVE_CGROUPS
 static inline
-unsigned getNumberOfCPUsCFS()
+unsigned getNumberOfCPUsCFSv2()
+{
+    int cfs_quota = 0;
+    int cfs_period = 0;
+
+    std::ifstream ss_cpu_max("/sys/fs/cgroup/cpu.max", std::ios::in | std::ios::binary);
+    ss_cpu_max >> cfs_quota >> cfs_period;
+
+    if (ss_cpu_max.fail() || cfs_quota < 1 || cfs_period < 1) /* values must not be 0 or negative */
+        return 0;
+
+    return (unsigned)max(1, cfs_quota/cfs_period);
+}
+
+static inline
+unsigned getNumberOfCPUsCFSv1()
 {
     int cfs_quota = 0;
     {
@@ -966,8 +985,11 @@ int getNumberOfCPUs_()
     static unsigned ncpus_impl_cpuset = (unsigned)getNumberOfCPUsImpl("/sys/fs/cgroup/cpuset/cpuset.cpus");
     ncpus = minNonZero(ncpus, ncpus_impl_cpuset);
 
-    static unsigned ncpus_impl_cfs = getNumberOfCPUsCFS();
-    ncpus = minNonZero(ncpus, ncpus_impl_cfs);
+    static unsigned ncpus_impl_cfs_v1 = getNumberOfCPUsCFSv1();
+    ncpus = minNonZero(ncpus, ncpus_impl_cfs_v1);
+
+    static unsigned ncpus_impl_cfs_v2 = getNumberOfCPUsCFSv2();
+    ncpus = minNonZero(ncpus, ncpus_impl_cfs_v2);
 #endif
 
     static unsigned ncpus_impl_devices = (unsigned)getNumberOfCPUsImpl("/sys/devices/system/cpu/online");
@@ -993,7 +1015,9 @@ int getNumberOfCPUs_()
 
     static unsigned cpu_count_sysconf = (unsigned)sysconf( _SC_NPROCESSORS_ONLN );
     ncpus = minNonZero(ncpus, cpu_count_sysconf);
-
+#elif defined (__QNX__)
+    static unsigned cpu_count_sysconf = _syspage_ptr->num_cpu;
+    ncpus = minNonZero(ncpus, cpu_count_sysconf);
 #endif
 
     return ncpus != 0 ? ncpus : 1;

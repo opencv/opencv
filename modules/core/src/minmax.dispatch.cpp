@@ -5,7 +5,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
-#include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 #include <algorithm>
@@ -22,6 +21,8 @@ static MinMaxIdxFunc getMinMaxIdxFunc(int depth)
                     CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// The function expects 1-based indexing for ofs
+// Zero is treated as invalid offset (not found)
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {
     int i, d = a.dims;
@@ -172,7 +173,7 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
     if ((haveMask || type == CV_32FC1) && dev.isAMD())
         return false;
 
-    CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U)) ||
+    CV_Assert( (cn == 1 && (!haveMask || _mask.type() == CV_8U || _mask.type() == CV_8S || _mask.type() == CV_Bool)) ||
               (cn >= 1 && !minLoc && !maxLoc) );
 
     if (ddepth < 0)
@@ -303,13 +304,40 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     CV_INSTRUMENT_REGION();
 
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-    CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U)) ||
-        (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
+    CV_Assert( (cn == 1 && (_mask.empty() || _mask.type() == CV_8U || _mask.type() == CV_8S || _mask.type() == CV_Bool)) ||
+               (cn > 1 && _mask.empty() && !minIdx && !maxIdx) );
 
     CV_OCL_RUN(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2  && (_mask.empty() || _src.size() == _mask.size()),
                ocl_minMaxIdx(_src, minVal, maxVal, minIdx, maxIdx, _mask))
 
     Mat src = _src.getMat(), mask = _mask.getMat();
+
+    if (src.dims <= 2)
+    {
+        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows,
+                 src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data);
+    }
+    else if (src.isContinuous())
+    {
+        int res = cv_hal_minMaxIdx(src.data, 0, (int)src.total()*cn, 1, src.depth(),
+                                   minVal, maxVal, minIdx, maxIdx, mask.data);
+
+        if (res == CV_HAL_ERROR_OK)
+        {
+            // minIdx[0] and minIdx[0] are always 0 for "flatten" version
+            if (minIdx)
+                ofs2idx(src, minIdx[1]+1, minIdx);
+            if (maxIdx)
+                ofs2idx(src, maxIdx[1]+1, maxIdx);
+            return;
+        }
+        else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+        {
+            CV_Error_(cv::Error::StsInternal,
+            ("HAL implementation minMaxIdx ==> " CVAUX_STR(cv_hal_minMaxIdx) " returned %d (0x%08x)", res, res));
+        }
+    }
+
     MinMaxIdxFunc func = getMinMaxIdxFunc(depth);
     CV_Assert( func != 0 );
 
@@ -457,12 +485,14 @@ static void reduceMinMax(cv::InputArray src, cv::OutputArray dst, ReduceMode mod
     CV_INSTRUMENT_REGION();
 
     cv::Mat srcMat = src.getMat();
-    axis = (axis + srcMat.dims) % srcMat.dims;
-    CV_Assert(srcMat.channels() == 1 && axis >= 0 && axis < srcMat.dims);
+    int dims = std::max(1, srcMat.dims);
+    axis = (axis + dims) % dims;
+    CV_Assert(srcMat.channels() == 1 && axis >= 0 && axis <= srcMat.dims);
 
     std::vector<int> sizes(srcMat.dims);
     std::copy(srcMat.size.p, srcMat.size.p + srcMat.dims, sizes.begin());
-    sizes[axis] = 1;
+    if(!sizes.empty())
+        sizes[axis] = 1;
 
     dst.create(srcMat.dims, sizes.data(), CV_32SC1); // indices
     cv::Mat dstMat = dst.getMat();

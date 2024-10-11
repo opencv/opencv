@@ -373,69 +373,49 @@ inline v_float64x2 v_setall_f64(double v) { return v_float64x2(vfmv_v_f_f64m1(v,
 
 
 #define OPENCV_HAL_IMPL_RISCVV_BIN_OP(bin_op, _Tpvec, intrin) \
-inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b) \
 { \
     return _Tpvec(intrin(a.val, b.val)); \
-} \
-inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b) \
-{ \
-    a.val = intrin(a.val, b.val); \
-    return a; \
 }
 
 #define OPENCV_HAL_IMPL_RISCVV_BIN_OPN(bin_op, _Tpvec, intrin, num) \
-inline _Tpvec operator bin_op (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec bin_op(const _Tpvec& a, const _Tpvec& b) \
 { \
     return _Tpvec(intrin(a.val, b.val, num)); \
-} \
-inline _Tpvec& operator bin_op##= (_Tpvec& a, const _Tpvec& b) \
-{ \
-    a.val = intrin(a.val, b.val, num); \
-    return a; \
 }
 
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint8x16, vsaddu_vv_u8m1, 16)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint8x16, vssubu_vv_u8m1, 16)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int8x16, vsadd_vv_i8m1, 16)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int8x16, vssub_vv_i8m1, 16)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint16x8, vsaddu_vv_u16m1, 8)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint16x8, vssubu_vv_u16m1, 8)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int16x8, vsadd_vv_i16m1, 8)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int16x8, vssub_vv_i16m1, 8)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int32x4, vadd_vv_i32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int32x4, vsub_vv_i32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_int32x4, vmul_vv_i32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint32x4, vadd_vv_u32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint32x4, vsub_vv_u32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_uint32x4, vmul_vv_u32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_int64x2, vadd_vv_i64m1, 2)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_int64x2, vsub_vv_i64m1, 2)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_uint64x2, vadd_vv_u64m1, 2)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_uint64x2, vsub_vv_u64m1, 2)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_float32x4, vfadd_vv_f32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_float32x4, vfsub_vv_f32m1, 4)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_float32x4, vfmul_vv_f32m1, 4)
-inline v_float32x4 operator / (const v_float32x4& a, const v_float32x4& b)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_add, v_uint8x16, vsaddu_vv_u8m1, 16)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_sub, v_uint8x16, vssubu_vv_u8m1, 16)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_add, v_int8x16, vsadd_vv_i8m1, 16)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_sub, v_int8x16, vssub_vv_i8m1, 16)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_add, v_uint16x8, vsaddu_vv_u16m1, 8)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_sub, v_uint16x8, vssubu_vv_u16m1, 8)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_add, v_int16x8, vsadd_vv_i16m1, 8)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_sub, v_int16x8, vssub_vv_i16m1, 8)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_add, v_int32x4, vadd_vv_i32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_sub, v_int32x4, vsub_vv_i32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_mul, v_int32x4, vmul_vv_i32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_add, v_uint32x4, vadd_vv_u32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_sub, v_uint32x4, vsub_vv_u32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_mul, v_uint32x4, vmul_vv_u32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_add, v_int64x2, vadd_vv_i64m1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_sub, v_int64x2, vsub_vv_i64m1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_add, v_uint64x2, vadd_vv_u64m1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_sub, v_uint64x2, vsub_vv_u64m1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_add, v_float32x4, vfadd_vv_f32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_sub, v_float32x4, vfsub_vv_f32m1, 4)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_mul, v_float32x4, vfmul_vv_f32m1, 4)
+inline v_float32x4 v_div(const v_float32x4& a, const v_float32x4& b)
 {
     return v_float32x4(vfdiv_vv_f32m1(a.val, b.val, 4));
 }
-inline v_float32x4& operator /= (v_float32x4& a, const v_float32x4& b)
-{
-    a.val = vfdiv_vv_f32m1(a.val, b.val, 4);
-    return a;
-}
 
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(+, v_float64x2, vfadd_vv_f64m1, 2)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(-, v_float64x2, vfsub_vv_f64m1, 2)
-OPENCV_HAL_IMPL_RISCVV_BIN_OPN(*, v_float64x2, vfmul_vv_f64m1, 2)
-inline v_float64x2 operator / (const v_float64x2& a, const v_float64x2& b)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_add, v_float64x2, vfadd_vv_f64m1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_sub, v_float64x2, vfsub_vv_f64m1, 2)
+OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_mul, v_float64x2, vfmul_vv_f64m1, 2)
+inline v_float64x2 v_div(const v_float64x2& a, const v_float64x2& b)
 {
     return v_float64x2(vfdiv_vv_f64m1(a.val, b.val, 2));
-}
-inline v_float64x2& operator /= (v_float64x2& a, const v_float64x2& b)
-{
-    a.val = vfdiv_vv_f64m1(a.val, b.val, 2);
-    return a;
 }
 // TODO: exp, log, sin, cos
 
@@ -562,10 +542,10 @@ inline v_float64x2 v_muladd(const v_float64x2& a, const v_float64x2& b, const v_
 }
 
 #define OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(_Tpvec, suffix, num) \
-    OPENCV_HAL_IMPL_RISCVV_BIN_OPN(&, _Tpvec, vand_vv_##suffix, num) \
-    OPENCV_HAL_IMPL_RISCVV_BIN_OPN(|, _Tpvec, vor_vv_##suffix, num) \
-    OPENCV_HAL_IMPL_RISCVV_BIN_OPN(^, _Tpvec, vxor_vv_##suffix, num) \
-    inline _Tpvec operator ~ (const _Tpvec & a) \
+    OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_and, _Tpvec, vand_vv_##suffix, num) \
+    OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_or, _Tpvec, vor_vv_##suffix, num)   \
+    OPENCV_HAL_IMPL_RISCVV_BIN_OPN(v_xor, _Tpvec, vxor_vv_##suffix, num) \
+    inline _Tpvec v_not(const _Tpvec & a) \
     { \
         return _Tpvec(vnot_v_##suffix(a.val, num)); \
     }
@@ -580,41 +560,31 @@ OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(v_int32x4,  i32m1, 4)
 OPENCV_HAL_IMPL_RISCVV_LOGIC_OPN(v_int64x2,  i64m1, 2)
 
 #define OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(bin_op, intrin) \
-inline v_float32x4 operator bin_op (const v_float32x4& a, const v_float32x4& b) \
+inline v_float32x4 bin_op(const v_float32x4& a, const v_float32x4& b) \
 { \
     return v_float32x4(vreinterpret_v_i32m1_f32m1(intrin(vreinterpret_v_f32m1_i32m1(a.val), vreinterpret_v_f32m1_i32m1(b.val), 4))); \
-} \
-inline v_float32x4& operator bin_op##= (v_float32x4& a, const v_float32x4& b) \
-{ \
-    a.val = vreinterpret_v_i32m1_f32m1(intrin(vreinterpret_v_f32m1_i32m1(a.val), vreinterpret_v_f32m1_i32m1(b.val), 4)); \
-    return a; \
 }
 
-OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(&, vand_vv_i32m1)
-OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(|, vor_vv_i32m1)
-OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(^, vxor_vv_i32m1)
+OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(v_and, vand_vv_i32m1)
+OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(v_or, vor_vv_i32m1)
+OPENCV_HAL_IMPL_RISCVV_FLT_BIT_OP(v_xor, vxor_vv_i32m1)
 
-inline v_float32x4 operator ~ (const v_float32x4& a)
+inline v_float32x4 v_not(const v_float32x4& a)
 {
     return v_float32x4(vreinterpret_v_i32m1_f32m1(vnot_v_i32m1(vreinterpret_v_f32m1_i32m1(a.val), 4)));
 }
 
 #define OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(bin_op, intrin) \
-inline v_float64x2 operator bin_op (const v_float64x2& a, const v_float64x2& b) \
+inline v_float64x2 bin_op(const v_float64x2& a, const v_float64x2& b) \
 { \
     return v_float64x2(vreinterpret_v_i64m1_f64m1(intrin(vreinterpret_v_f64m1_i64m1(a.val), vreinterpret_v_f64m1_i64m1(b.val), 2))); \
-} \
-inline v_float64x2& operator bin_op##= (v_float64x2& a, const v_float64x2& b) \
-{ \
-    a.val = vreinterpret_v_i64m1_f64m1(intrin(vreinterpret_v_f64m1_i64m1(a.val), vreinterpret_v_f64m1_i64m1(b.val), 2)); \
-    return a; \
 }
 
-OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(&, vand_vv_i64m1)
-OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(|, vor_vv_i64m1)
-OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(^, vxor_vv_i64m1)
+OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(v_and, vand_vv_i64m1)
+OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(v_or, vor_vv_i64m1)
+OPENCV_HAL_IMPL_RISCVV_FLT_64BIT_OP(v_xor, vxor_vv_i64m1)
 
-inline v_float64x2 operator ~ (const v_float64x2& a)
+inline v_float64x2 v_not(const v_float64x2& a)
 {
     return v_float64x2(vreinterpret_v_i64m1_f64m1(vnot_v_i64m1(vreinterpret_v_f64m1_i64m1(a.val), 2)));
 }
@@ -1174,32 +1144,32 @@ OPENCV_HAL_IMPL_RISCVV_REDUCE_SAD(v_int32x4, v_uint32x4)
 OPENCV_HAL_IMPL_RISCVV_REDUCE_SAD(v_uint32x4, v_uint32x4)
 
 #define OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(_Tpvec, _Tp, _T, num, uv) \
-inline _Tpvec operator == (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b) \
 { \
     vbool##_T##_t mask = vmseq_vv_##_Tp##_b##_T(a.val, b.val, num);    \
     return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
 } \
-inline _Tpvec operator != (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b) \
 { \
     vbool##_T##_t mask = vmsne_vv_##_Tp##_b##_T(a.val, b.val, num);    \
     return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
 } \
-inline _Tpvec operator < (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b) \
 { \
     vbool##_T##_t mask = vmslt##uv##_Tp##_b##_T(a.val, b.val, num);    \
     return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
 } \
-inline _Tpvec operator > (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_gt(const _Tpvec& a, const _Tpvec& b) \
 { \
     vbool##_T##_t mask = vmslt##uv##_Tp##_b##_T(b.val, a.val, num);    \
     return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
 } \
-inline _Tpvec operator <= (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b) \
 { \
     vbool##_T##_t mask = vmsle##uv##_Tp##_b##_T(a.val, b.val, num);    \
     return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
 } \
-inline _Tpvec operator >= (const _Tpvec& a, const _Tpvec& b) \
+inline _Tpvec v_ge(const _Tpvec& a, const _Tpvec& b) \
 { \
     vbool##_T##_t mask = vmsle##uv##_Tp##_b##_T(b.val, a.val, num);    \
     return _Tpvec(vmerge_vxm_##_Tp(mask, vmv_v_x_##_Tp(0, num), -1, num));    \
@@ -1215,37 +1185,37 @@ OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_uint32x4, u32m1, 32, 4, u_vv_)
 OPENCV_HAL_IMPL_RISCVV_INT_CMP_OP(v_uint64x2, u64m1, 64, 2, u_vv_)
 
 //TODO: ==
-inline v_float32x4 operator == (const v_float32x4& a, const v_float32x4& b)
+inline v_float32x4 v_eq(const v_float32x4& a, const v_float32x4& b)
 {
     vbool32_t mask = vmfeq_vv_f32m1_b32(a.val, b.val, 4);
     vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
     return v_float32x4(vreinterpret_v_i32m1_f32m1(res));
 }
-inline v_float32x4 operator != (const v_float32x4& a, const v_float32x4& b)
+inline v_float32x4 v_ne(const v_float32x4& a, const v_float32x4& b)
 {
     vbool32_t mask = vmfne_vv_f32m1_b32(a.val, b.val, 4);
     vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
     return v_float32x4(vreinterpret_v_i32m1_f32m1(res));
 }
-inline v_float32x4 operator < (const v_float32x4& a, const v_float32x4& b)
+inline v_float32x4 v_lt(const v_float32x4& a, const v_float32x4& b)
 {
     vbool32_t mask = vmflt_vv_f32m1_b32(a.val, b.val, 4);
     vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
     return v_float32x4(vreinterpret_v_i32m1_f32m1(res));
 }
-inline v_float32x4 operator <= (const v_float32x4& a, const v_float32x4& b)
+inline v_float32x4 v_le(const v_float32x4& a, const v_float32x4& b)
 {
     vbool32_t mask = vmfle_vv_f32m1_b32(a.val, b.val, 4);
     vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
     return v_float32x4(vreinterpret_v_i32m1_f32m1(res));
 }
-inline v_float32x4 operator > (const v_float32x4& a, const v_float32x4& b)
+inline v_float32x4 v_gt(const v_float32x4& a, const v_float32x4& b)
 {
     vbool32_t mask = vmfgt_vv_f32m1_b32(a.val, b.val, 4);
     vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
     return v_float32x4(vreinterpret_v_i32m1_f32m1(res));
 }
-inline v_float32x4 operator >= (const v_float32x4& a, const v_float32x4& b)
+inline v_float32x4 v_ge(const v_float32x4& a, const v_float32x4& b)
 {
     vbool32_t mask = vmfge_vv_f32m1_b32(a.val, b.val, 4);
     vint32m1_t res = vmerge_vxm_i32m1(mask, vmv_v_x_i32m1(0.0, 4), -1, 4);
@@ -1259,37 +1229,37 @@ inline v_float32x4 v_not_nan(const v_float32x4& a)
 }
 
 //TODO: ==
-inline v_float64x2 operator == (const v_float64x2& a, const v_float64x2& b)
+inline v_float64x2 v_eq(const v_float64x2& a, const v_float64x2& b)
 {
     vbool64_t mask = vmfeq_vv_f64m1_b64(a.val, b.val, 2);
     vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
     return v_float64x2(vreinterpret_v_i64m1_f64m1(res));
 }
-inline v_float64x2 operator != (const v_float64x2& a, const v_float64x2& b)
+inline v_float64x2 v_ne(const v_float64x2& a, const v_float64x2& b)
 {
     vbool64_t mask = vmfne_vv_f64m1_b64(a.val, b.val, 2);
     vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
     return v_float64x2(vreinterpret_v_i64m1_f64m1(res));
 }
-inline v_float64x2 operator < (const v_float64x2& a, const v_float64x2& b)
+inline v_float64x2 v_lt(const v_float64x2& a, const v_float64x2& b)
 {
     vbool64_t mask = vmflt_vv_f64m1_b64(a.val, b.val, 2);
     vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
     return v_float64x2(vreinterpret_v_i64m1_f64m1(res));
 }
-inline v_float64x2 operator <= (const v_float64x2& a, const v_float64x2& b)
+inline v_float64x2 v_le(const v_float64x2& a, const v_float64x2& b)
 {
     vbool64_t mask = vmfle_vv_f64m1_b64(a.val, b.val, 2);
     vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
     return v_float64x2(vreinterpret_v_i64m1_f64m1(res));
 }
-inline v_float64x2 operator > (const v_float64x2& a, const v_float64x2& b)
+inline v_float64x2 v_gt(const v_float64x2& a, const v_float64x2& b)
 {
     vbool64_t mask = vmfgt_vv_f64m1_b64(a.val, b.val, 2);
     vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
     return v_float64x2(vreinterpret_v_i64m1_f64m1(res));
 }
-inline v_float64x2 operator >= (const v_float64x2& a, const v_float64x2& b)
+inline v_float64x2 v_ge(const v_float64x2& a, const v_float64x2& b)
 {
     vbool64_t mask = vmfge_vv_f64m1_b64(a.val, b.val, 2);
     vint64m1_t res = vmerge_vxm_i64m1(mask, vmv_v_x_i64m1(0.0, 2), -1, 2);
@@ -1331,13 +1301,13 @@ OPENCV_HAL_IMPL_RISCVV_TRANSPOSE4x4(float, f32)
 
 
 #define OPENCV_HAL_IMPL_RISCVV_SHIFT_LEFT(_Tpvec, suffix, _T, num) \
-inline _Tpvec operator << (const _Tpvec& a, int n) \
+inline _Tpvec v_shl(const _Tpvec& a, int n) \
 { return _Tpvec((vsll_vx_##_T##m1(a.val, n, num))); } \
 template<int n> inline _Tpvec v_shl(const _Tpvec& a) \
 { return _Tpvec((vsll_vx_##_T##m1(a.val, n, num))); }
 
 #define OPENCV_HAL_IMPL_RISCVV_SHIFT_RIGHT(_Tpvec, suffix, _T, num, intric) \
-inline _Tpvec operator >> (const _Tpvec& a, int n) \
+inline _Tpvec v_shr(const _Tpvec& a, int n) \
 { return _Tpvec((v##intric##_vx_##_T##m1(a.val, n, num))); } \
 template<int n> inline _Tpvec v_shr(const _Tpvec& a) \
 { return _Tpvec((v##intric##_vx_##_T##m1(a.val, n, num))); }\
@@ -2037,13 +2007,11 @@ OPENCV_HAL_IMPL_RISCVV_PACK_U(16, 8, 32, 4, unsigned short)
 
 // saturating multiply 8-bit, 16-bit
 #define OPENCV_HAL_IMPL_RISCVV_MUL_SAT(_Tpvec, num, mul, cvt)   \
-    inline _Tpvec operator * (const _Tpvec& a, const _Tpvec& b) \
+    inline _Tpvec v_mul(const _Tpvec& a, const _Tpvec& b)       \
     {                                                           \
         auto res = mul(a.val, b.val, num);                      \
         return _Tpvec(cvt(res, 0, num));                        \
-    }                                                           \
-    inline _Tpvec& operator *= (_Tpvec& a, const _Tpvec& b)     \
-    { a = a * b; return a; }
+    }
 
 OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_int8x16,  16, vwmul_vv_i16m2, vnclip_wx_i8m1)
 OPENCV_HAL_IMPL_RISCVV_MUL_SAT(v_uint8x16, 16, vwmulu_vv_u16m2, vnclipu_wx_u8m1)
@@ -2845,7 +2813,7 @@ inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b)
 { return v_cvt_f64(v_dotprod(a, b)); }
 inline v_float64x2 v_dotprod_expand(const v_int32x4& a,   const v_int32x4& b,
                                     const v_float64x2& c)
-{ return v_dotprod_expand(a, b) + c; }
+{ return v_add(v_dotprod_expand(a, b), c); }
 inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
 {
     vint64m2_t v1 = vwmul_vv_i64m2(a.val, b.val, 4);
@@ -2854,18 +2822,18 @@ inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b)
 }
 inline v_float64x2 v_dotprod_expand_fast(const v_int32x4& a, const v_int32x4& b, const v_float64x2& c)
 { v_float64x2 res = v_dotprod_expand_fast(a, b);
-  return res + c; }
+  return v_add(res, c); }
 #endif
 ////// FP16 support ///////
 #if __riscv_v == 7000
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     vfloat16m1_t v = vle16_v_f16m1((__fp16*)ptr, 4);
     vfloat32m2_t v32 = vfwcvt_f_f_v_f32m2(v, 4);
     return v_float32x4(vget_v_f32m2_f32m1(v32, 0));
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     vfloat32m2_t v32 = vundefined_f32m2();
     v32 = vset_v_f32m1_f32m2(v32, 0, v.val);
@@ -2873,14 +2841,14 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
     vse16_v_f16m1((__fp16*)ptr, hv, 4);
 }
 #else
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     vfloat16mf2_t v = vle16_v_f16mf2((__fp16*)ptr, 4);
     vfloat32m1_t v32 = vfwcvt_f_f_v_f32m1(v, 4);
     return v_float32x4(v32);
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     //vfloat32m2_t v32 = vundefined_f32m2();
     //v32 = vset_f32m2(v32, 0, v.val);

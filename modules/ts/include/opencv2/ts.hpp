@@ -300,8 +300,8 @@ Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool 
 Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double maxVal, bool useRoi);
 void add(const Mat& a, double alpha, const Mat& b, double beta,
                       Scalar gamma, Mat& c, int ctype, bool calcAbs=false);
-void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1);
-void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1);
+void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1, int ctype=-1);
+void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1, int ctype=-1);
 
 void convert(const Mat& src, cv::OutputArray dst, int dtype, double alpha=1, double beta=0);
 void copy(const Mat& src, Mat& dst, const Mat& mask=Mat(), bool invertMask=false);
@@ -611,7 +611,7 @@ public:
     };
 
     // get RNG to generate random input data for a test
-    RNG& get_rng() { return rng; }
+    RNG& get_rng() { return cv::theRNG(); }
 
     // returns the current error code
     TS::FailureCode get_err_code() { return TS::FailureCode(current_test_info.code); }
@@ -629,7 +629,6 @@ public:
 protected:
 
     // these are allocated within a test to try to keep them valid in case of stack corruption
-    RNG rng;
 
     // information about the current test
     TestInfo current_test_info;
@@ -749,8 +748,76 @@ struct DefaultRngAuto
 
 
 // test images generation functions
-void fillGradient(Mat& img, int delta = 5);
-void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
+template<typename T>
+void fillGradient(Mat& img, int delta = 5)
+{
+    CV_UNUSED(delta);
+    const int ch = img.channels();
+
+    int r, c, i;
+    for(r=0; r<img.rows; r++)
+    {
+        for(c=0; c<img.cols; c++)
+        {
+            T vals[] = {(T)r, (T)c, (T)(r*c), (T)(r*c/(r+c+1))};
+            T *p = (T*)img.ptr(r, c);
+            for(i=0; i<ch; i++) p[i] = (T)vals[i];
+        }
+    }
+}
+template<>
+void fillGradient<uint8_t>(Mat& img, int delta);
+
+template<typename T>
+void smoothBorder(Mat& img, const Scalar& color, int delta = 3)
+{
+    const int ch = img.channels();
+    CV_Assert(!img.empty() && ch <= 4);
+
+    Scalar s;
+    int n = 100/delta;
+    int nR = std::min(n, (img.rows+1)/2), nC = std::min(n, (img.cols+1)/2);
+
+    int r, c, i;
+    for(r=0; r<nR; r++)
+    {
+        double k1 = r*delta/100., k2 = 1-k1;
+        for(c=0; c<img.cols; c++)
+        {
+            auto *p = img.ptr<T>(r, c);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = static_cast<T>((s[i]));
+        }
+        for(c=0; c<img.cols; c++)
+        {
+            auto *p = img.ptr<T>(img.rows-r-1, c);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = static_cast<T>((s[i]));
+        }
+    }
+
+    for(r=0; r<img.rows; r++)
+    {
+        for(c=0; c<nC; c++)
+        {
+            double k1 = c*delta/100., k2 = 1-k1;
+            auto *p = img.ptr<T>(r, c);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = static_cast<T>((s[i]));
+        }
+        for(c=0; c<n; c++)
+        {
+            double k1 = c*delta/100., k2 = 1-k1;
+            auto *p = img.ptr<T>(r, img.cols-c-1);
+            for(i=0; i<ch; i++) s[i] = p[i];
+            s = s * k1 + color * k2;
+            for(i=0; i<ch; i++) p[i] = static_cast<T>((s[i]));
+        }
+    }
+}
 
 // Utility functions
 

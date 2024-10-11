@@ -3,7 +3,6 @@ Helper module to download extra data from Internet
 '''
 from __future__ import print_function
 import os
-import cv2
 import sys
 import yaml
 import argparse
@@ -42,6 +41,9 @@ def getHashsumFromFile(filepath):
     return hashsum
 
 def checkHashsum(expected_sha, filepath, silent=True):
+    if not os.path.exists(filepath):
+        print(f"{filepath} does not exist. Skipping hashsum matching")
+        return False
     print('  expected SHA1: {}'.format(expected_sha))
     actual_sha = getHashsumFromFile(filepath)
     print('  actual SHA1:{}'.format(actual_sha))
@@ -159,6 +161,8 @@ class Loader(object):
                 if self.archive_member is None:
                     pathDict = dict((os.path.split(elem)[1], os.path.split(elem)[0]) for elem in f.getnames())
                     self.archive_member = pathDict[requested_file]
+                    if self.archive_member == "":
+                        self.archive_member = requested_file
                 assert self.archive_member in f.getnames()
                 self.save(filepath, f.extractfile(self.archive_member))
         except Exception as e:
@@ -335,6 +339,17 @@ def parseYAMLFile(yaml_filepath, save_dir):
                 download_sha = load_info.get("download_sha")
                 download_name = load_info.get("download_name")
                 archive_member = load_info.get("member")
+                models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir,
+                    download_name=download_name, download_sha=download_sha, archive_member=archive_member))
+
+            config_load_info = params.get("config_load_info", None)
+            if config_load_info:
+                fname = os.path.basename(params.get("config"))
+                hash_sum = config_load_info.get("sha1")
+                url = config_load_info.get("url")
+                download_sha = config_load_info.get("download_sha")
+                download_name = config_load_info.get("download_name")
+                archive_member = config_load_info.get("member")
                 models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir,
                     download_name=download_name, download_sha=download_sha, archive_member=archive_member))
 

@@ -182,16 +182,16 @@ public:
     {
         switch (property_id)
         {
-            case CV_CAP_PROP_FRAME_WIDTH:
+            case CAP_PROP_FRAME_WIDTH:
                 return (( videoOrientationAuto &&
                          (cv::ROTATE_90_CLOCKWISE == videoRotationCode || cv::ROTATE_90_COUNTERCLOCKWISE == videoRotationCode))
                         ? videoHeight : videoWidth);
-            case CV_CAP_PROP_FRAME_HEIGHT:
+            case CAP_PROP_FRAME_HEIGHT:
                 return (( videoOrientationAuto &&
                          (cv::ROTATE_90_CLOCKWISE == videoRotationCode || cv::ROTATE_90_COUNTERCLOCKWISE == videoRotationCode))
                         ? videoWidth : videoHeight);
-            case CV_CAP_PROP_FPS: return videoFrameRate;
-            case CV_CAP_PROP_FRAME_COUNT: return videoFrameCount;
+            case CAP_PROP_FPS: return videoFrameRate;
+            case CAP_PROP_FRAME_COUNT: return videoFrameCount;
             case CAP_PROP_ORIENTATION_META: return videoRotation;
             case CAP_PROP_ORIENTATION_AUTO: return videoOrientationAuto ? 1 : 0;
         }
@@ -587,6 +587,7 @@ public:
             LOGE("ERROR: AMediaCodec_createInputSurface (%d)", status);
             goto error;
         }
+        ANativeWindow_setBuffersGeometry(surface, width, height, AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM);
         #endif
 
         AMediaCodec_start(encoder);
@@ -660,7 +661,7 @@ const AndroidMediaNdkVideoWriter::FourCCInfo AndroidMediaNdkVideoWriter::FOURCC_
     { CV_FOURCC('H', '2', '6', '5'), "video/hevc", AMEDIAMUXER_OUTPUT_FORMAT_MPEG_4 },
     { CV_FOURCC('H', '2', '6', '3'), "video/3gpp", AMEDIAMUXER_OUTPUT_FORMAT_MPEG_4 },
     { CV_FOURCC('M', 'P', '4', 'V'), "video/mp4v-es", AMEDIAMUXER_OUTPUT_FORMAT_MPEG_4 },
-    { 0, NULL },
+    { 0, NULL, AMEDIAMUXER_OUTPUT_FORMAT_MPEG_4 },
 };
 
 

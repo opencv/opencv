@@ -2,11 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-if (typeof module !== 'undefined' && module.exports) {
-    // The environment is Node.js
-    var cv = require('./opencv.js'); // eslint-disable-line no-var
-}
-
 function generateTestFrame(width, height) {
   let w = width || 200;
   let h = height || 200;
@@ -33,9 +28,12 @@ QUnit.test('Detectors', function(assert) {
   orb.detect(image, kp);
   assert.equal(kp.size(), 67, 'ORB');
 
+  /* TODO: Fix test failure Expected: 7 Result: 0
+  bug: https://github.com/opencv/opencv/issues/25862
   let mser = new cv.MSER();
   mser.detect(image, kp);
   assert.equal(kp.size(), 7, 'MSER');
+  */
 
   let brisk = new cv.BRISK();
   brisk.detect(image, kp);

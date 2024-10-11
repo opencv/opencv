@@ -39,907 +39,18 @@
 //
 //M*/
 
+#include "opencv2/core/hal/interface.h"
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/cuda_test.hpp"
 #include "test_precomp.hpp"
-#include "opencv2/core/core_c.h"
 
 namespace opencv_test { namespace {
-
-CV_INLINE double
-cvTsDist( const Point2f& a, const Point2f& b )
-{
-    double dx = a.x - b.x;
-    double dy = a.y - b.y;
-    return sqrt(dx*dx + dy*dy);
-}
-
-CV_INLINE double
-cvTsPtLineDist( const Point2f& pt, const Point2f& a, const Point2f& b )
-{
-    double d0 = cvTsDist( pt, a ), d1;
-    double dd = cvTsDist( a, b );
-    if( dd < FLT_EPSILON )
-        return d0;
-    d1 = cvTsDist( pt, b );
-    dd = fabs((double)(pt.x - a.x)*(b.y - a.y) - (double)(pt.y - a.y)*(b.x - a.x))/dd;
-    d0 = MIN( d0, d1 );
-    return MIN( d0, dd );
-}
-
-static double
-cvTsPointPolygonTest( Point2f pt, const Point2f* vv, int n, int* _idx=0, int* _on_edge=0 )
-{
-    int i;
-    Point2f v = vv[n-1], v0;
-    double min_dist_num = FLT_MAX, min_dist_denom = 1;
-    int min_dist_idx = -1, min_on_edge = 0;
-    int counter = 0;
-    double result;
-
-    for( i = 0; i < n; i++ )
-    {
-        double dx, dy, dx1, dy1, dx2, dy2, dist_num, dist_denom = 1;
-        int on_edge = 0, idx = i;
-
-        v0 = v; v = vv[i];
-        dx = v.x - v0.x; dy = v.y - v0.y;
-        dx1 = pt.x - v0.x; dy1 = pt.y - v0.y;
-        dx2 = pt.x - v.x; dy2 = pt.y - v.y;
-
-        if( dx2*dx + dy2*dy >= 0 )
-            dist_num = dx2*dx2 + dy2*dy2;
-        else if( dx1*dx + dy1*dy <= 0 )
-        {
-            dist_num = dx1*dx1 + dy1*dy1;
-            idx = i - 1;
-            if( idx < 0 ) idx = n-1;
-        }
-        else
-        {
-            dist_num = (dy1*dx - dx1*dy);
-            dist_num *= dist_num;
-            dist_denom = dx*dx + dy*dy;
-            on_edge = 1;
-        }
-
-        if( dist_num*min_dist_denom < min_dist_num*dist_denom )
-        {
-            min_dist_num = dist_num;
-            min_dist_denom = dist_denom;
-            min_dist_idx = idx;
-            min_on_edge = on_edge;
-            if( min_dist_num == 0 )
-                break;
-        }
-
-        if( (v0.y <= pt.y && v.y <= pt.y) ||
-            (v0.y > pt.y && v.y > pt.y) ||
-            (v0.x < pt.x && v.x < pt.x) )
-            continue;
-
-        dist_num = dy1*dx - dx1*dy;
-        if( dy < 0 )
-            dist_num = -dist_num;
-        counter += dist_num > 0;
-    }
-
-    result = sqrt(min_dist_num/min_dist_denom);
-    if( counter % 2 == 0 )
-        result = -result;
-
-    if( _idx )
-        *_idx = min_dist_idx;
-    if( _on_edge )
-        *_on_edge = min_on_edge;
-
-    return result;
-}
-
-static cv::Point2f
-cvTsMiddlePoint(const cv::Point2f &a, const cv::Point2f &b)
-{
-    return cv::Point2f((a.x + b.x) / 2, (a.y + b.y) / 2);
-}
-
-static bool
-cvTsIsPointOnLineSegment(const cv::Point2f &x, const cv::Point2f &a, const cv::Point2f &b)
-{
-    double d1 = cvTsDist(x, a);
-    double d2 = cvTsDist(x, b);
-    double d3 = cvTsDist(a, b);
-
-    return (abs(d1 + d2 - d3) <= (1E-4));
-}
-
-
-/****************************************************************************************\
-*                              Base class for shape descriptor tests                     *
-\****************************************************************************************/
-
-class CV_BaseShapeDescrTest : public cvtest::BaseTest
-{
-public:
-    CV_BaseShapeDescrTest();
-    virtual ~CV_BaseShapeDescrTest();
-    void clear();
-
-protected:
-    int read_params( const cv::FileStorage& fs );
-    void run_func(void);
-    int prepare_test_case( int test_case_idx );
-    int validate_test_results( int test_case_idx );
-    virtual void generate_point_set( void* points );
-    virtual void extract_points();
-
-    int min_log_size;
-    int max_log_size;
-    int dims;
-    bool enable_flt_points;
-
-    CvSeq* points1;
-    CvMat* points2;
-    void* points;
-    void* result;
-    double low_high_range;
-    Scalar low, high;
-};
-
-
-CV_BaseShapeDescrTest::CV_BaseShapeDescrTest()
-{
-    points1 = 0;
-    points2 = 0;
-    points = 0;
-    test_case_count = 500;
-    min_log_size = 0;
-    max_log_size = 10;
-    low = high = cvScalarAll(0);
-    low_high_range = 50;
-    dims = 2;
-    enable_flt_points = true;
-}
-
-
-CV_BaseShapeDescrTest::~CV_BaseShapeDescrTest()
-{
-    clear();
-}
-
-
-void CV_BaseShapeDescrTest::clear()
-{
-    cvtest::BaseTest::clear();
-    cvReleaseMat( &points2 );
-    points1 = 0;
-    points = 0;
-}
-
-
-int CV_BaseShapeDescrTest::read_params( const cv::FileStorage& fs )
-{
-    int code = cvtest::BaseTest::read_params( fs );
-    if( code < 0 )
-        return code;
-
-    read( find_param( fs, "struct_count" ), test_case_count, test_case_count );
-    read( find_param( fs, "min_log_size" ), min_log_size, min_log_size );
-    read( find_param( fs, "max_log_size" ), max_log_size, max_log_size );
-
-    min_log_size = cvtest::clipInt( min_log_size, 0, 8 );
-    max_log_size = cvtest::clipInt( max_log_size, 0, 10 );
-    if( min_log_size > max_log_size )
-    {
-        int t;
-        CV_SWAP( min_log_size, max_log_size, t );
-    }
-
-    return 0;
-}
-
-
-void CV_BaseShapeDescrTest::generate_point_set( void* pointsSet )
-{
-    RNG& rng = ts->get_rng();
-    int i, k, n, total, point_type;
-    CvSeqReader reader;
-    uchar* data = 0;
-    double a[4], b[4];
-
-    for( k = 0; k < 4; k++ )
-    {
-        a[k] = high.val[k] - low.val[k];
-        b[k] = low.val[k];
-    }
-    memset( &reader, 0, sizeof(reader) );
-
-    if( CV_IS_SEQ(pointsSet) )
-    {
-        CvSeq* ptseq = (CvSeq*)pointsSet;
-        total = ptseq->total;
-        point_type = CV_SEQ_ELTYPE(ptseq);
-        cvStartReadSeq( ptseq, &reader );
-    }
-    else
-    {
-        CvMat* ptm = (CvMat*)pointsSet;
-        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
-        total = ptm->rows + ptm->cols - 1;
-        point_type = CV_MAT_TYPE(ptm->type);
-        data = ptm->data.ptr;
-    }
-
-    n = CV_MAT_CN(point_type);
-    point_type = CV_MAT_DEPTH(point_type);
-
-    CV_Assert( (point_type == CV_32S || point_type == CV_32F) && n <= 4 );
-
-    for( i = 0; i < total; i++ )
-    {
-        int* pi;
-        float* pf;
-        if( reader.ptr )
-        {
-            pi = (int*)reader.ptr;
-            pf = (float*)reader.ptr;
-            CV_NEXT_SEQ_ELEM( reader.seq->elem_size, reader );
-        }
-        else
-        {
-            pi = (int*)data + i*n;
-            pf = (float*)data + i*n;
-        }
-        if( point_type == CV_32S )
-            for( k = 0; k < n; k++ )
-                pi[k] = cvRound(cvtest::randReal(rng)*a[k] + b[k]);
-        else
-            for( k = 0; k < n; k++ )
-                pf[k] = (float)(cvtest::randReal(rng)*a[k] + b[k]);
-    }
-}
-
-
-int CV_BaseShapeDescrTest::prepare_test_case( int test_case_idx )
-{
-    int size;
-    int point_type;
-    int i;
-    RNG& rng = ts->get_rng();
-
-    cvtest::BaseTest::prepare_test_case( test_case_idx );
-
-    clear();
-    size = cvRound( exp((cvtest::randReal(rng) * (max_log_size - min_log_size) + min_log_size)*CV_LOG2) );
-    point_type = CV_MAKETYPE(cvtest::randInt(rng) %
-        (enable_flt_points ? 2 : 1) ? CV_32F : CV_32S, dims);
-
-    int rows = 1, cols = size;
-    if( cvtest::randInt(rng) % 2 )
-        rows = size, cols = 1;
-
-    points2 = cvCreateMat( rows, cols, point_type );
-    points = points2;
-
-    for( i = 0; i < 4; i++ )
-    {
-        low.val[i] = (cvtest::randReal(rng)-0.5)*low_high_range*2;
-        high.val[i] = (cvtest::randReal(rng)-0.5)*low_high_range*2;
-        if( low.val[i] > high.val[i] )
-        {
-            double t;
-            CV_SWAP( low.val[i], high.val[i], t );
-        }
-        if( high.val[i] < low.val[i] + 1 )
-            high.val[i] += 1;
-    }
-
-    generate_point_set( points );
-    return 1;
-}
-
-
-void CV_BaseShapeDescrTest::extract_points()
-{
-    if( points1 )
-    {
-        points2 = cvCreateMat( 1, points1->total, CV_SEQ_ELTYPE(points1) );
-        cvCvtSeqToArray( points1, points2->data.ptr );
-    }
-
-    if( CV_MAT_DEPTH(points2->type) != CV_32F && enable_flt_points )
-    {
-        CvMat tmp = cvMat( points2->rows, points2->cols,
-            (points2->type & ~CV_MAT_DEPTH_MASK) | CV_32F, points2->data.ptr );
-        cvConvert( points2, &tmp );
-    }
-}
-
-
-void CV_BaseShapeDescrTest::run_func(void)
-{
-}
-
-
-int CV_BaseShapeDescrTest::validate_test_results( int /*test_case_idx*/ )
-{
-    extract_points();
-    return 0;
-}
-
-
-/****************************************************************************************\
-*                                     Convex Hull Test                                   *
-\****************************************************************************************/
-
-class CV_ConvHullTest : public CV_BaseShapeDescrTest
-{
-public:
-    CV_ConvHullTest();
-    virtual ~CV_ConvHullTest();
-    void clear();
-
-protected:
-    void run_func(void);
-    int prepare_test_case( int test_case_idx );
-    int validate_test_results( int test_case_idx );
-
-    CvSeq* hull1;
-    CvMat* hull2;
-    bool clockwise;
-    int return_points;
-};
-
-
-CV_ConvHullTest::CV_ConvHullTest()
-{
-    hull1 = 0;
-    hull2 = 0;
-    return_points = 0;
-    clockwise = false;
-}
-
-
-CV_ConvHullTest::~CV_ConvHullTest()
-{
-    clear();
-}
-
-
-void CV_ConvHullTest::clear()
-{
-    CV_BaseShapeDescrTest::clear();
-    cvReleaseMat( &hull2 );
-    hull1 = 0;
-}
-
-
-int CV_ConvHullTest::prepare_test_case( int test_case_idx )
-{
-    int code = CV_BaseShapeDescrTest::prepare_test_case( test_case_idx );
-    RNG& rng = ts->get_rng();
-
-    if( code <= 0 )
-        return code;
-
-    clockwise = cvtest::randInt(rng) % 2 != 0;
-    return_points = cvtest::randInt(rng) % 2;
-
-    int rows, cols;
-    int sz = points1 ? points1->total : points2->cols + points2->rows - 1;
-    int point_type = points1 ? CV_SEQ_ELTYPE(points1) : CV_MAT_TYPE(points2->type);
-
-    if( cvtest::randInt(rng) % 2 )
-        rows = sz, cols = 1;
-    else
-        rows = 1, cols = sz;
-
-    hull2 = cvCreateMat( rows, cols, return_points ? point_type : CV_32SC1 );
-
-    return code;
-}
-
-
-void CV_ConvHullTest::run_func()
-{
-    cv::Mat _points = cv::cvarrToMat(points);
-    size_t n = 0;
-    if( !return_points )
-    {
-        std::vector<int> _hull;
-        cv::convexHull(_points, _hull, clockwise);
-        n = _hull.size();
-        memcpy(hull2->data.ptr, &_hull[0], n*sizeof(_hull[0]));
-    }
-    else if(_points.type() == CV_32SC2)
-    {
-        std::vector<cv::Point> _hull;
-        cv::convexHull(_points, _hull, clockwise);
-        n = _hull.size();
-        memcpy(hull2->data.ptr, &_hull[0], n*sizeof(_hull[0]));
-    }
-    else if(_points.type() == CV_32FC2)
-    {
-        std::vector<cv::Point2f> _hull;
-        cv::convexHull(_points, _hull, clockwise);
-        n = _hull.size();
-        memcpy(hull2->data.ptr, &_hull[0], n*sizeof(_hull[0]));
-    }
-    if(hull2->rows > hull2->cols)
-        hull2->rows = (int)n;
-    else
-        hull2->cols = (int)n;
-}
-
-
-int CV_ConvHullTest::validate_test_results( int test_case_idx )
-{
-    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
-    CvMat* hull = 0;
-    CvMat* mask = 0;
-    int i, point_count, hull_count;
-    Point2f *p, *h;
-    CvSeq header, hheader, *ptseq, *hseq;
-    CvSeqBlock block, hblock;
-
-    if( points1 )
-        ptseq = points1;
-    else
-        ptseq = cvMakeSeqHeaderForArray( CV_MAT_TYPE(points2->type),
-            sizeof(CvSeq), CV_ELEM_SIZE(points2->type), points2->data.ptr,
-            points2->rows + points2->cols - 1, &header, &block );
-    point_count = ptseq->total;
-    p = (Point2f*)(points2->data.ptr);
-
-    if( hull1 )
-        hseq = hull1;
-    else
-        hseq = cvMakeSeqHeaderForArray( CV_MAT_TYPE(hull2->type),
-            sizeof(CvSeq), CV_ELEM_SIZE(hull2->type), hull2->data.ptr,
-            hull2->rows + hull2->cols - 1, &hheader, &hblock );
-    hull_count = hseq->total;
-    hull = cvCreateMat( 1, hull_count, CV_32FC2 );
-    mask = cvCreateMat( 1, hull_count, CV_8UC1 );
-    cvZero( mask );
-    Mat _mask = cvarrToMat(mask);
-
-    h = (Point2f*)(hull->data.ptr);
-
-    // extract convex hull points
-    if( return_points )
-    {
-        cvCvtSeqToArray( hseq, hull->data.ptr );
-        if( CV_SEQ_ELTYPE(hseq) != CV_32FC2 )
-        {
-            CvMat tmp = cvMat( hull->rows, hull->cols, CV_32SC2, hull->data.ptr );
-            cvConvert( &tmp, hull );
-        }
-    }
-    else
-    {
-        CvSeqReader reader;
-        cvStartReadSeq( hseq, &reader );
-
-        for( i = 0; i < hull_count; i++ )
-        {
-            schar* ptr = reader.ptr;
-            int idx;
-            CV_NEXT_SEQ_ELEM( hseq->elem_size, reader );
-
-            if( hull1 )
-                idx = cvSeqElemIdx( ptseq, *(uchar**)ptr );
-            else
-                idx = *(int*)ptr;
-
-            if( idx < 0 || idx >= point_count )
-            {
-                ts->printf( cvtest::TS::LOG, "Invalid convex hull point #%d\n", i );
-                code = cvtest::TS::FAIL_INVALID_OUTPUT;
-                goto _exit_;
-            }
-            h[i] = p[idx];
-        }
-    }
-
-    // check that the convex hull is a convex polygon
-    if( hull_count >= 3 )
-    {
-        Point2f pt0 = h[hull_count-1];
-        for( i = 0; i < hull_count; i++ )
-        {
-            int j = i+1;
-            Point2f pt1 = h[i], pt2 = h[j < hull_count ? j : 0];
-            float dx0 = pt1.x - pt0.x, dy0 = pt1.y - pt0.y;
-            float dx1 = pt2.x - pt1.x, dy1 = pt2.y - pt1.y;
-            double t = (double)dx0*dy1 - (double)dx1*dy0;
-            if( (t < 0) ^ clockwise )
-            {
-                ts->printf( cvtest::TS::LOG, "The convex hull is not convex or has a wrong orientation (vtx %d)\n", i );
-                code = cvtest::TS::FAIL_INVALID_OUTPUT;
-                goto _exit_;
-            }
-            pt0 = pt1;
-        }
-    }
-
-    // check that all the points are inside the hull or on the hull edge
-    // and at least hull_point points are at the hull vertices
-    for( i = 0; i < point_count; i++ )
-    {
-        int idx = 0, on_edge = 0;
-        double pptresult = cvTsPointPolygonTest( p[i], h, hull_count, &idx, &on_edge );
-
-        if( pptresult < 0 )
-        {
-            ts->printf( cvtest::TS::LOG, "The point #%d is outside of the convex hull\n", i );
-            code = cvtest::TS::FAIL_BAD_ACCURACY;
-            goto _exit_;
-        }
-
-        if( pptresult < FLT_EPSILON && !on_edge )
-            mask->data.ptr[idx] = (uchar)1;
-    }
-
-    if( cvtest::norm( _mask, Mat::zeros(_mask.dims, _mask.size, _mask.type()), NORM_L1 ) != hull_count )
-    {
-        ts->printf( cvtest::TS::LOG, "Not every convex hull vertex coincides with some input point\n" );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-        goto _exit_;
-    }
-
-_exit_:
-
-    cvReleaseMat( &hull );
-    cvReleaseMat( &mask );
-    if( code < 0 )
-        ts->set_failed_test_info( code );
-    return code;
-}
-
-
-/****************************************************************************************\
-*                                     MinAreaRect Test                                   *
-\****************************************************************************************/
-
-class CV_MinAreaRectTest : public CV_BaseShapeDescrTest
-{
-public:
-    CV_MinAreaRectTest();
-
-protected:
-    void run_func(void);
-    int validate_test_results( int test_case_idx );
-
-    Point2f box_pt[4];
-};
-
-
-CV_MinAreaRectTest::CV_MinAreaRectTest()
-{
-}
-
-
-void CV_MinAreaRectTest::run_func()
-{
-    cv::RotatedRect r = cv::minAreaRect(cv::cvarrToMat(points));
-    r.points(box_pt);
-}
-
-
-int CV_MinAreaRectTest::validate_test_results( int test_case_idx )
-{
-    double eps = 1e-1;
-    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
-    int i, j, point_count = points2->rows + points2->cols - 1;
-    CvPoint2D32f *p = (CvPoint2D32f*)(points2->data.ptr);
-    int mask[] = {0,0,0,0};
-
-    // check that the bounding box is a rotated rectangle:
-    //  1. diagonals should be equal
-    //  2. they must intersect in their middle points
-    {
-        double d0 = cvTsDist( box_pt[0], box_pt[2] );
-        double d1 = cvTsDist( box_pt[1], box_pt[3] );
-
-        double x0 = (box_pt[0].x + box_pt[2].x)*0.5;
-        double y0 = (box_pt[0].y + box_pt[2].y)*0.5;
-        double x1 = (box_pt[1].x + box_pt[3].x)*0.5;
-        double y1 = (box_pt[1].y + box_pt[3].y)*0.5;
-
-        if( fabs(d0 - d1) + fabs(x0 - x1) + fabs(y0 - y1) > eps*MAX(d0,d1) )
-        {
-            ts->printf( cvtest::TS::LOG, "The bounding box is not a rectangle\n" );
-            code = cvtest::TS::FAIL_INVALID_OUTPUT;
-            goto _exit_;
-        }
-    }
-
-    // check that the box includes all the points
-    // and there is at least one point at (or very close to) every box side
-    for( i = 0; i < point_count; i++ )
-    {
-        int idx = 0, on_edge = 0;
-        double pptresult = cvTsPointPolygonTest( p[i], box_pt, 4, &idx, &on_edge );
-        if( pptresult < -eps )
-        {
-            ts->printf( cvtest::TS::LOG, "The point #%d is outside of the box\n", i );
-            code = cvtest::TS::FAIL_BAD_ACCURACY;
-            goto _exit_;
-        }
-
-        if( pptresult < eps )
-        {
-            for( j = 0; j < 4; j++ )
-            {
-                double d = cvTsPtLineDist( p[i], box_pt[(j-1)&3], box_pt[j] );
-                if( d < eps )
-                    mask[j] = (uchar)1;
-            }
-        }
-    }
-
-    if( mask[0] + mask[1] + mask[2] + mask[3] != 4 )
-    {
-        ts->printf( cvtest::TS::LOG, "Not every box side has a point nearby\n" );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-        goto _exit_;
-    }
-
-_exit_:
-
-    if( code < 0 )
-        ts->set_failed_test_info( code );
-    return code;
-}
-
-
-/****************************************************************************************\
-*                                   MinEnclosingTriangle Test                            *
-\****************************************************************************************/
-
-class CV_MinTriangleTest : public CV_BaseShapeDescrTest
-{
-public:
-    CV_MinTriangleTest();
-
-protected:
-    void run_func(void);
-    int validate_test_results( int test_case_idx );
-    std::vector<cv::Point2f> getTriangleMiddlePoints();
-
-    std::vector<cv::Point2f> convexPolygon;
-    std::vector<cv::Point2f> triangle;
-};
-
-
-CV_MinTriangleTest::CV_MinTriangleTest()
-{
-}
-
-std::vector<cv::Point2f> CV_MinTriangleTest::getTriangleMiddlePoints()
-{
-    std::vector<cv::Point2f> triangleMiddlePoints;
-
-    for (int i = 0; i < 3; i++) {
-        triangleMiddlePoints.push_back(cvTsMiddlePoint(triangle[i], triangle[(i + 1) % 3]));
-    }
-
-    return triangleMiddlePoints;
-}
-
-
-void CV_MinTriangleTest::run_func()
-{
-    std::vector<cv::Point2f> pointsAsVector;
-
-    cv::cvarrToMat(points).convertTo(pointsAsVector, CV_32F);
-
-    cv::minEnclosingTriangle(pointsAsVector, triangle);
-    cv::convexHull(pointsAsVector, convexPolygon, true, true);
-}
-
-
-int CV_MinTriangleTest::validate_test_results( int test_case_idx )
-{
-    bool errorEnclosed = false, errorMiddlePoints = false, errorFlush = true;
-    double eps = 1e-4;
-    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
-
-    int polygonVertices = (int) convexPolygon.size();
-
-    if (polygonVertices > 2) {
-        // Check if all points are enclosed by the triangle
-        for (int i = 0; (i < polygonVertices) && (!errorEnclosed); i++)
-        {
-            if (cv::pointPolygonTest(triangle, cv::Point2f(convexPolygon[i].x, convexPolygon[i].y), true) < (-eps))
-                errorEnclosed = true;
-        }
-
-        // Check if triangle edges middle points touch the polygon
-        std::vector<cv::Point2f> middlePoints = getTriangleMiddlePoints();
-
-        for (int i = 0; (i < 3) && (!errorMiddlePoints); i++)
-        {
-            bool isTouching = false;
-
-            for (int j = 0; (j < polygonVertices) && (!isTouching); j++)
-            {
-                if (cvTsIsPointOnLineSegment(middlePoints[i], convexPolygon[j],
-                                             convexPolygon[(j + 1) % polygonVertices]))
-                    isTouching = true;
-            }
-
-            errorMiddlePoints = (isTouching) ? false : true;
-        }
-
-        // Check if at least one of the edges is flush
-        for (int i = 0; (i < 3) && (errorFlush); i++)
-        {
-            for (int j = 0; (j < polygonVertices) && (errorFlush); j++)
-            {
-                if ((cvTsIsPointOnLineSegment(convexPolygon[j], triangle[i],
-                                              triangle[(i + 1) % 3])) &&
-                    (cvTsIsPointOnLineSegment(convexPolygon[(j + 1) % polygonVertices], triangle[i],
-                                              triangle[(i + 1) % 3])))
-                    errorFlush = false;
-            }
-        }
-
-        // Report any found errors
-        if (errorEnclosed)
-        {
-            ts->printf( cvtest::TS::LOG,
-            "All points should be enclosed by the triangle.\n" );
-            code = cvtest::TS::FAIL_BAD_ACCURACY;
-        }
-        else if (errorMiddlePoints)
-        {
-            ts->printf( cvtest::TS::LOG,
-            "All triangle edges middle points should touch the convex hull of the points.\n" );
-            code = cvtest::TS::FAIL_INVALID_OUTPUT;
-        }
-        else if (errorFlush)
-        {
-            ts->printf( cvtest::TS::LOG,
-            "At least one edge of the enclosing triangle should be flush with one edge of the polygon.\n" );
-            code = cvtest::TS::FAIL_INVALID_OUTPUT;
-        }
-    }
-
-    if ( code < 0 )
-        ts->set_failed_test_info( code );
-
-    return code;
-}
-
-
-/****************************************************************************************\
-*                                     MinEnclosingCircle Test                            *
-\****************************************************************************************/
-
-class CV_MinCircleTest : public CV_BaseShapeDescrTest
-{
-public:
-    CV_MinCircleTest();
-
-protected:
-    void run_func(void);
-    int validate_test_results( int test_case_idx );
-
-    Point2f center;
-    float radius;
-};
-
-
-CV_MinCircleTest::CV_MinCircleTest()
-{
-}
-
-
-void CV_MinCircleTest::run_func()
-{
-    cv::minEnclosingCircle(cv::cvarrToMat(points), center, radius);
-}
-
-
-int CV_MinCircleTest::validate_test_results( int test_case_idx )
-{
-    double eps = 1.03;
-    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
-    int i, j = 0, point_count = points2->rows + points2->cols - 1;
-    Point2f *p = (Point2f*)(points2->data.ptr);
-    Point2f v[3];
-
-    // check that the circle contains all the points inside and
-    // remember at most 3 points that are close to the boundary
-    for( i = 0; i < point_count; i++ )
-    {
-        double d = cvTsDist(p[i], center);
-        if( d > radius )
-        {
-            ts->printf( cvtest::TS::LOG, "The point #%d is outside of the circle\n", i );
-            code = cvtest::TS::FAIL_BAD_ACCURACY;
-            goto _exit_;
-        }
-
-        if( radius - d < eps*radius && j < 3 )
-            v[j++] = p[i];
-    }
-
-    if( point_count >= 2 && (j < 2 || (j == 2 && cvTsDist(v[0],v[1]) < (radius-1)*2/eps)) )
-    {
-        ts->printf( cvtest::TS::LOG,
-            "There should be at least 3 points near the circle boundary or 2 points on the diameter\n" );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-        goto _exit_;
-    }
-
-_exit_:
-
-    if( code < 0 )
-        ts->set_failed_test_info( code );
-    return code;
-}
-
-/****************************************************************************************\
-*                                 MinEnclosingCircle Test 2                              *
-\****************************************************************************************/
-
-class CV_MinCircleTest2 : public CV_BaseShapeDescrTest
-{
-public:
-    CV_MinCircleTest2();
-protected:
-    RNG rng;
-    void run_func(void);
-    int validate_test_results( int test_case_idx );
-    float delta;
-};
-
-
-CV_MinCircleTest2::CV_MinCircleTest2()
-{
-    rng = ts->get_rng();
-}
-
-
-void CV_MinCircleTest2::run_func()
-{
-    Point2f center = Point2f(rng.uniform(0.0f, 1000.0f), rng.uniform(0.0f, 1000.0f));;
-    float radius = rng.uniform(0.0f, 500.0f);
-    float angle = (float)rng.uniform(0.0f, (float)(CV_2PI));
-    vector<Point2f> pts;
-    pts.push_back(center + Point2f(radius * cos(angle), radius * sin(angle)));
-    angle += (float)CV_PI;
-    pts.push_back(center + Point2f(radius * cos(angle), radius * sin(angle)));
-    float radius2 = radius * radius;
-    float x = rng.uniform(center.x - radius, center.x + radius);
-    float deltaX = x - center.x;
-    float upperBoundY = sqrt(radius2 - deltaX * deltaX);
-    float y = rng.uniform(center.y - upperBoundY, center.y + upperBoundY);
-    pts.push_back(Point2f(x, y));
-    // Find the minimum area enclosing circle
-    Point2f calcCenter;
-    float calcRadius;
-    minEnclosingCircle(pts, calcCenter, calcRadius);
-    delta = (float)cv::norm(calcCenter - center) + abs(calcRadius - radius);
-}
-
-int CV_MinCircleTest2::validate_test_results( int test_case_idx )
-{
-    float eps = 1.0F;
-    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
-    if (delta > eps)
-    {
-        ts->printf( cvtest::TS::LOG, "Delta center and calcCenter > %f\n", eps );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-        ts->set_failed_test_info( code );
-    }
-    return code;
-}
 
 /****************************************************************************************\
 *                                 minEnclosingCircle Test 3                              *
 \****************************************************************************************/
 
-TEST(Imgproc_minEnclosingCircle, basic_test)
+TEST(minEnclosingCircle, basic_test)
 {
     vector<Point2f> pts;
     pts.push_back(Point2f(0, 0));
@@ -1015,478 +126,6 @@ TEST(Imgproc_minEnclosingCircle, regression_16051) {
     EXPECT_NEAR(center.y, 1414.1f, 1e-3);
     EXPECT_NEAR(2.1024551f, radius, 1e-3);
 }
-
-/****************************************************************************************\
-*                                   FitEllipse Test                                      *
-\****************************************************************************************/
-
-class CV_FitEllipseTest : public CV_BaseShapeDescrTest
-{
-public:
-    CV_FitEllipseTest();
-
-protected:
-    int prepare_test_case( int test_case_idx );
-    void generate_point_set( void* points );
-    void run_func(void);
-    int validate_test_results( int test_case_idx );
-    RotatedRect box0, box;
-    double min_ellipse_size, max_noise;
-};
-
-
-CV_FitEllipseTest::CV_FitEllipseTest()
-{
-    min_log_size = 5; // for robust ellipse fitting a dozen of points is needed at least
-    max_log_size = 10;
-    min_ellipse_size = 10;
-    max_noise = 0.05;
-}
-
-
-void CV_FitEllipseTest::generate_point_set( void* pointsSet )
-{
-    RNG& rng = ts->get_rng();
-    int i, total, point_type;
-    CvSeqReader reader;
-    uchar* data = 0;
-    double a, b;
-
-    box0.center.x = (float)((low.val[0] + high.val[0])*0.5);
-    box0.center.y = (float)((low.val[1] + high.val[1])*0.5);
-    box0.size.width = (float)(MAX(high.val[0] - low.val[0], min_ellipse_size)*2);
-    box0.size.height = (float)(MAX(high.val[1] - low.val[1], min_ellipse_size)*2);
-    box0.angle = (float)(cvtest::randReal(rng)*180);
-    a = cos(box0.angle*CV_PI/180.);
-    b = sin(box0.angle*CV_PI/180.);
-
-    if( box0.size.width > box0.size.height )
-    {
-        float t;
-        CV_SWAP( box0.size.width, box0.size.height, t );
-    }
-    memset( &reader, 0, sizeof(reader) );
-
-    if( CV_IS_SEQ(pointsSet) )
-    {
-        CvSeq* ptseq = (CvSeq*)pointsSet;
-        total = ptseq->total;
-        point_type = CV_SEQ_ELTYPE(ptseq);
-        cvStartReadSeq( ptseq, &reader );
-    }
-    else
-    {
-        CvMat* ptm = (CvMat*)pointsSet;
-        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
-        total = ptm->rows + ptm->cols - 1;
-        point_type = CV_MAT_TYPE(ptm->type);
-        data = ptm->data.ptr;
-    }
-
-    CV_Assert(point_type == CV_32SC2 || point_type == CV_32FC2);
-
-    for( i = 0; i < total; i++ )
-    {
-        CvPoint* pp;
-        CvPoint2D32f p = {0, 0};
-        double angle = cvtest::randReal(rng)*CV_PI*2;
-        double x = box0.size.height*0.5*(cos(angle) + (cvtest::randReal(rng)-0.5)*2*max_noise);
-        double y = box0.size.width*0.5*(sin(angle) + (cvtest::randReal(rng)-0.5)*2*max_noise);
-        p.x = (float)(box0.center.x + a*x + b*y);
-        p.y = (float)(box0.center.y - b*x + a*y);
-
-        if( reader.ptr )
-        {
-            pp = (CvPoint*)reader.ptr;
-            CV_NEXT_SEQ_ELEM( sizeof(*pp), reader );
-        }
-        else
-            pp = ((CvPoint*)data) + i;
-        if( point_type == CV_32SC2 )
-        {
-            pp->x = cvRound(p.x);
-            pp->y = cvRound(p.y);
-        }
-        else
-            *(CvPoint2D32f*)pp = p;
-    }
-}
-
-
-int CV_FitEllipseTest::prepare_test_case( int test_case_idx )
-{
-    min_log_size = MAX(min_log_size,4);
-    max_log_size = MAX(min_log_size,max_log_size);
-    return CV_BaseShapeDescrTest::prepare_test_case( test_case_idx );
-}
-
-
-void CV_FitEllipseTest::run_func()
-{
-    box = cv::fitEllipse(cv::cvarrToMat(points));
-}
-
-int CV_FitEllipseTest::validate_test_results( int test_case_idx )
-{
-    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
-    double diff_angle;
-
-    if( cvIsNaN(box.center.x) || cvIsInf(box.center.x) ||
-        cvIsNaN(box.center.y) || cvIsInf(box.center.y) ||
-        cvIsNaN(box.size.width) || cvIsInf(box.size.width) ||
-        cvIsNaN(box.size.height) || cvIsInf(box.size.height) ||
-        cvIsNaN(box.angle) || cvIsInf(box.angle) )
-    {
-        ts->printf( cvtest::TS::LOG, "Some of the computed ellipse parameters are invalid (x=%g,y=%g,w=%g,h=%g,angle=%g)\n",
-            box.center.x, box.center.y, box.size.width, box.size.height, box.angle );
-        code = cvtest::TS::FAIL_INVALID_OUTPUT;
-        goto _exit_;
-    }
-
-    box.angle = (float)(90-box.angle);
-    if( box.angle < 0 )
-        box.angle += 360;
-    if( box.angle > 360 )
-        box.angle -= 360;
-
-    if( fabs(box.center.x - box0.center.x) > 3 ||
-        fabs(box.center.y - box0.center.y) > 3 ||
-        fabs(box.size.width - box0.size.width) > 0.1*fabs(box0.size.width) ||
-        fabs(box.size.height - box0.size.height) > 0.1*fabs(box0.size.height) )
-    {
-        ts->printf( cvtest::TS::LOG, "The computed ellipse center and/or size are incorrect:\n\t"
-            "(x=%.1f,y=%.1f,w=%.1f,h=%.1f), while it should be (x=%.1f,y=%.1f,w=%.1f,h=%.1f)\n",
-            box.center.x, box.center.y, box.size.width, box.size.height,
-            box0.center.x, box0.center.y, box0.size.width, box0.size.height );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-        goto _exit_;
-    }
-
-    diff_angle = fabs(box0.angle - box.angle);
-    diff_angle = MIN( diff_angle, fabs(diff_angle - 360));
-    diff_angle = MIN( diff_angle, fabs(diff_angle - 180));
-
-    if( box0.size.height >= 1.3*box0.size.width && diff_angle > 30 )
-    {
-        ts->printf( cvtest::TS::LOG, "Incorrect ellipse angle (=%1.f, should be %1.f)\n",
-            box.angle, box0.angle );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-        goto _exit_;
-    }
-
-_exit_:
-
-    if( code < 0 )
-    {
-        ts->set_failed_test_info( code );
-    }
-    return code;
-}
-
-
-class CV_FitEllipseSmallTest : public cvtest::BaseTest
-{
-public:
-    CV_FitEllipseSmallTest() {}
-    ~CV_FitEllipseSmallTest() {}
-protected:
-    void run(int)
-    {
-        Size sz(50, 50);
-        vector<vector<Point> > c;
-        c.push_back(vector<Point>());
-        int scale = 1;
-        Point ofs = Point(0,0);//sz.width/2, sz.height/2) - Point(4,4)*scale;
-        c[0].push_back(Point(2, 0)*scale+ofs);
-        c[0].push_back(Point(0, 2)*scale+ofs);
-        c[0].push_back(Point(0, 6)*scale+ofs);
-        c[0].push_back(Point(2, 8)*scale+ofs);
-        c[0].push_back(Point(6, 8)*scale+ofs);
-        c[0].push_back(Point(8, 6)*scale+ofs);
-        c[0].push_back(Point(8, 2)*scale+ofs);
-        c[0].push_back(Point(6, 0)*scale+ofs);
-
-        RotatedRect e = fitEllipse(c[0]);
-        CV_Assert( fabs(e.center.x - 4) <= 1. &&
-                   fabs(e.center.y - 4) <= 1. &&
-                   fabs(e.size.width - 9) <= 1. &&
-                   fabs(e.size.height - 9) <= 1. );
-    }
-};
-
-
-// Regression test for incorrect fitEllipse result reported in Bug #3989
-// Check edge cases for rotation angles of ellipse ([-180, 90, 0, 90, 180] degrees)
-class CV_FitEllipseParallelTest : public CV_FitEllipseTest
-{
-public:
-    CV_FitEllipseParallelTest();
-    ~CV_FitEllipseParallelTest();
-protected:
-    void generate_point_set( void* points );
-    void run_func(void);
-    Mat pointsMat;
-};
-
-CV_FitEllipseParallelTest::CV_FitEllipseParallelTest()
-{
-    min_ellipse_size = 5;
-}
-
-void CV_FitEllipseParallelTest::generate_point_set( void* )
-{
-    RNG& rng = ts->get_rng();
-    int height = (int)(MAX(high.val[0] - low.val[0], min_ellipse_size));
-    int width = (int)(MAX(high.val[1] - low.val[1], min_ellipse_size));
-    const int angle = ( (cvtest::randInt(rng) % 5) - 2 ) * 90;
-    const int dim = max(height, width);
-    const Point center = Point(dim*2, dim*2);
-
-    if( width > height )
-    {
-        int t;
-        CV_SWAP( width, height, t );
-    }
-
-    Mat image = Mat::zeros(dim*4, dim*4, CV_8UC1);
-    ellipse(image, center, Size(height, width), angle,
-            0, 360, Scalar(255, 0, 0), 1, 8);
-
-    box0.center.x = (float)center.x;
-    box0.center.y = (float)center.y;
-    box0.size.width = (float)width*2;
-    box0.size.height = (float)height*2;
-    box0.angle = (float)angle;
-
-    vector<vector<Point> > contours;
-    findContours(image, contours,  RETR_EXTERNAL,  CHAIN_APPROX_NONE);
-    Mat(contours[0]).convertTo(pointsMat, CV_32F);
-}
-
-void CV_FitEllipseParallelTest::run_func()
-{
-    box = cv::fitEllipse(pointsMat);
-}
-
-CV_FitEllipseParallelTest::~CV_FitEllipseParallelTest(){
-    pointsMat.release();
-}
-
-/****************************************************************************************\
-*                                   FitLine Test                                         *
-\****************************************************************************************/
-
-class CV_FitLineTest : public CV_BaseShapeDescrTest
-{
-public:
-    CV_FitLineTest();
-
-protected:
-    int prepare_test_case( int test_case_idx );
-    void generate_point_set( void* points );
-    void run_func(void);
-    int validate_test_results( int test_case_idx );
-    double max_noise;
-    AutoBuffer<float> line, line0;
-    int dist_type;
-    double reps, aeps;
-};
-
-
-CV_FitLineTest::CV_FitLineTest()
-{
-    min_log_size = 5; // for robust line fitting a dozen of points is needed at least
-    max_log_size = 10;
-    max_noise = 0.05;
-}
-
-void CV_FitLineTest::generate_point_set( void* pointsSet )
-{
-    RNG& rng = ts->get_rng();
-    int i, k, n, total, point_type;
-    CvSeqReader reader;
-    uchar* data = 0;
-    double s = 0;
-
-    n = dims;
-    for( k = 0; k < n; k++ )
-    {
-        line0[k+n] = (float)((low.val[k] + high.val[k])*0.5);
-        line0[k] = (float)(high.val[k] - low.val[k]);
-        if( cvtest::randInt(rng) % 2 )
-            line0[k] = -line0[k];
-        s += (double)line0[k]*line0[k];
-    }
-
-    s = 1./sqrt(s);
-    for( k = 0; k < n; k++ )
-        line0[k] = (float)(line0[k]*s);
-
-    memset( &reader, 0, sizeof(reader) );
-
-    if( CV_IS_SEQ(pointsSet) )
-    {
-        CvSeq* ptseq = (CvSeq*)pointsSet;
-        total = ptseq->total;
-        point_type = CV_MAT_DEPTH(CV_SEQ_ELTYPE(ptseq));
-        cvStartReadSeq( ptseq, &reader );
-    }
-    else
-    {
-        CvMat* ptm = (CvMat*)pointsSet;
-        CV_Assert( CV_IS_MAT(ptm) && CV_IS_MAT_CONT(ptm->type) );
-        total = ptm->rows + ptm->cols - 1;
-        point_type = CV_MAT_DEPTH(CV_MAT_TYPE(ptm->type));
-        data = ptm->data.ptr;
-    }
-
-    for( i = 0; i < total; i++ )
-    {
-        int* pi;
-        float* pf;
-        float p[4], t;
-        if( reader.ptr )
-        {
-            pi = (int*)reader.ptr;
-            pf = (float*)reader.ptr;
-            CV_NEXT_SEQ_ELEM( reader.seq->elem_size, reader );
-        }
-        else
-        {
-            pi = (int*)data + i*n;
-            pf = (float*)data + i*n;
-        }
-
-        t = (float)((cvtest::randReal(rng)-0.5)*low_high_range*2);
-
-        for( k = 0; k < n; k++ )
-        {
-            p[k] = (float)((cvtest::randReal(rng)-0.5)*max_noise*2 + t*line0[k] + line0[k+n]);
-
-            if( point_type == CV_32S )
-                pi[k] = cvRound(p[k]);
-            else
-                pf[k] = p[k];
-        }
-    }
-}
-
-int CV_FitLineTest::prepare_test_case( int test_case_idx )
-{
-    RNG& rng = ts->get_rng();
-    dims = cvtest::randInt(rng) % 2 + 2;
-    line.allocate(dims * 2);
-    line0.allocate(dims * 2);
-    min_log_size = MAX(min_log_size,5);
-    max_log_size = MAX(min_log_size,max_log_size);
-    int code = CV_BaseShapeDescrTest::prepare_test_case( test_case_idx );
-    dist_type = cvtest::randInt(rng) % 6 + 1;
-    dist_type += dist_type == cv::DIST_C;
-    reps = 0.1; aeps = 0.01;
-    return code;
-}
-
-
-void CV_FitLineTest::run_func()
-{
-    if(dims == 2)
-        cv::fitLine(cv::cvarrToMat(points), (cv::Vec4f&)line[0], dist_type, 0, reps, aeps);
-    else
-        cv::fitLine(cv::cvarrToMat(points), (cv::Vec6f&)line[0], dist_type, 0, reps, aeps);
-}
-
-int CV_FitLineTest::validate_test_results( int test_case_idx )
-{
-    int code = CV_BaseShapeDescrTest::validate_test_results( test_case_idx );
-    int k, max_k = 0;
-    double vec_diff = 0, t;
-
-    //std::cout << dims << " " << Mat(1, dims*2, CV_32FC1, line.data()) << " " << Mat(1, dims, CV_32FC1, line0.data()) << std::endl;
-
-    for( k = 0; k < dims*2; k++ )
-    {
-        if( cvIsNaN(line[k]) || cvIsInf(line[k]) )
-        {
-            ts->printf( cvtest::TS::LOG, "Some of the computed line parameters are invalid (line[%d]=%g)\n",
-                k, line[k] );
-            code = cvtest::TS::FAIL_INVALID_OUTPUT;
-            goto _exit_;
-        }
-    }
-
-    if( fabs(line0[1]) > fabs(line0[0]) )
-        max_k = 1;
-    if( fabs(line0[dims-1]) > fabs(line0[max_k]) )
-        max_k = dims-1;
-    if( line0[max_k] < 0 )
-        for( k = 0; k < dims; k++ )
-            line0[k] = -line0[k];
-    if( line[max_k] < 0 )
-        for( k = 0; k < dims; k++ )
-            line[k] = -line[k];
-
-    for( k = 0; k < dims; k++ )
-    {
-        double dt = line[k] - line0[k];
-        vec_diff += dt*dt;
-    }
-
-    if( sqrt(vec_diff) > 0.05 )
-    {
-        if( dims == 2 )
-            ts->printf( cvtest::TS::LOG,
-                "The computed line vector (%.2f,%.2f) is different from the actual (%.2f,%.2f)\n",
-                line[0], line[1], line0[0], line0[1] );
-        else
-            ts->printf( cvtest::TS::LOG,
-                "The computed line vector (%.2f,%.2f,%.2f) is different from the actual (%.2f,%.2f,%.2f)\n",
-                line[0], line[1], line[2], line0[0], line0[1], line0[2] );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-        goto _exit_;
-    }
-
-    t = (line[max_k+dims] - line0[max_k+dims])/line0[max_k];
-    for( k = 0; k < dims; k++ )
-    {
-        double p = line0[k+dims] + t*line0[k] - line[k+dims];
-        vec_diff += p*p;
-    }
-
-    if( sqrt(vec_diff) > 1*MAX(fabs(t),1) )
-    {
-        if( dims == 2 )
-            ts->printf( cvtest::TS::LOG,
-                "The computed line point (%.2f,%.2f) is too far from the actual line\n",
-                line[2]+line0[2], line[3]+line0[3] );
-        else
-            ts->printf( cvtest::TS::LOG,
-                "The computed line point (%.2f,%.2f,%.2f) is too far from the actual line\n",
-                line[3]+line0[3], line[4]+line0[4], line[5]+line0[5] );
-        code = cvtest::TS::FAIL_BAD_ACCURACY;
-        goto _exit_;
-    }
-
-_exit_:
-
-    if( code < 0 )
-    {
-        ts->set_failed_test_info( code );
-    }
-    return code;
-}
-
-
-TEST(Imgproc_ConvexHull, accuracy) { CV_ConvHullTest test; test.safe_run(); }
-TEST(Imgproc_MinAreaRect, accuracy) { CV_MinAreaRectTest test; test.safe_run(); }
-TEST(Imgproc_MinTriangle, accuracy) { CV_MinTriangleTest test; test.safe_run(); }
-TEST(Imgproc_MinCircle, accuracy) { CV_MinCircleTest test; test.safe_run(); }
-TEST(Imgproc_MinCircle2, accuracy) { CV_MinCircleTest2 test; test.safe_run(); }
-TEST(Imgproc_FitEllipse, accuracy) { CV_FitEllipseTest test; test.safe_run(); }
-TEST(Imgproc_FitEllipse, parallel) { CV_FitEllipseParallelTest test; test.safe_run(); }
-TEST(Imgproc_FitLine, accuracy) { CV_FitLineTest test; test.safe_run(); }
-TEST(Imgproc_FitEllipse, small) { CV_FitEllipseSmallTest test; test.safe_run(); }
-
-
 
 PARAM_TEST_CASE(ConvexityDefects_regression_5908, bool, int)
 {
@@ -1910,6 +549,524 @@ TEST(Imgproc_minEnclosingTriangle, regression_mat_with_diff_channels)
 
     EXPECT_NO_THROW(minEnclosingTriangle(points1xN, triangle));
     EXPECT_NO_THROW(minEnclosingTriangle(pointsNx1, triangle));
+}
+
+//==============================================================================
+
+typedef testing::TestWithParam<tuple<int, int>> fitLine_Modes;
+
+TEST_P(fitLine_Modes, accuracy)
+{
+    const int data_type = get<0>(GetParam());
+    const int dist_type = get<1>(GetParam());
+    const int CN = CV_MAT_CN(data_type);
+    const int res_type = CV_32FC(CN);
+
+    for (int ITER = 0; ITER < 20; ++ITER)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", ITER));
+
+        Mat v0(1, 1, data_type), v1(1, 1, data_type); // pt = v0 + v1 * t
+        Mat v1n;
+
+        RNG& rng = TS::ptr()->get_rng();
+        cvtest::randUni(rng, v0, Scalar::all(1), Scalar::all(100));
+        cvtest::randUni(rng, v1, Scalar::all(1), Scalar::all(100));
+        normalize(v1, v1n, 1, 0, NORM_L2, res_type);
+        v0.convertTo(v0, res_type);
+        v1.convertTo(v1, res_type);
+
+        const int NUM = rng.uniform(30, 100);
+        Mat points(NUM, 1, data_type, Scalar::all(0));
+        for (int i = 0; i < NUM; ++i)
+        {
+            Mat pt = v0 + v1 * i;
+            if (CV_MAT_DEPTH(data_type) == CV_32F)
+            {
+                Mat noise = cvtest::randomMat(rng, Size(1, 1), res_type, -0.01, 0.01, false);
+                pt += noise;
+
+            }
+            pt.copyTo(points.row(i));
+        }
+
+        Mat line_;
+        cv::fitLine(points, line_, dist_type, 0, 0.1, 0.01);
+        Mat line = line_.reshape(points.channels(), 1);
+
+        // check result type and size
+        EXPECT_EQ(res_type, line.type());
+        EXPECT_EQ(Size(2, 1), line.size());
+
+        // check result pt1
+        const double angle = line.col(0).dot(v1n);
+        EXPECT_NEAR(abs(angle), 1, 1e-2);
+
+        // put result pt0 to the original equation (pt = v0 + v1 * t) and find "t"
+        Mat diff = line.col(1) - v0;
+        cv::divide(diff, v1, diff);
+        cv::divide(diff, diff.at<float>(0, 0), diff);
+        const Mat unit(1, 1, res_type, Scalar::all(1));
+        EXPECT_NEAR(cvtest::norm(diff, unit, NORM_L1), 0, 0.01);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    fitLine_Modes,
+    testing::Combine(
+        testing::Values(CV_32FC2, CV_32FC3, CV_32SC2, CV_32SC3),
+        testing::Values(DIST_L1, DIST_L2, DIST_L12, DIST_FAIR, DIST_WELSCH, DIST_HUBER)));
+
+//==============================================================================
+
+inline float normAngle(float angle_deg)
+{
+    while (angle_deg < 0.f)
+        angle_deg += 180.f;
+    while (angle_deg > 180.f)
+        angle_deg -= 180.f;
+    if (abs(angle_deg - 180.f) < 0.01) // border case
+        angle_deg = 0.f;
+    return angle_deg;
+}
+
+inline float angleToDeg(float angle_rad)
+{
+    return angle_rad * 180.f / (float)M_PI;
+}
+
+inline float angleDiff(float a, float b)
+{
+    float res = a - b;
+    return normAngle(res);
+}
+
+typedef testing::TestWithParam<int> fitEllipse_Modes;
+
+TEST_P(fitEllipse_Modes, accuracy)
+{
+    const int data_type = GetParam();
+    const float int_scale = 1000.f;
+    const Size sz(1, 2);
+    const Matx22f rot {0.f, -1.f, 1.f, 0.f};
+    RNG& rng = TS::ptr()->get_rng();
+
+    for (int ITER = 0; ITER < 20; ++ITER)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", ITER));
+
+        Mat f0(sz, CV_32FC1), f1(sz, CV_32FC1), f2(sz, CV_32FC1);
+        cvtest::randUni(rng, f0, Scalar::all(-100), Scalar::all(100));
+        cvtest::randUni(rng, f1, Scalar::all(-100), Scalar::all(100));
+        if (ITER % 4 == 0)
+        {
+            // 0/90 degrees case
+            f1.at<float>(0, 0) = 0.;
+        }
+        // f2 is orthogonal to f1 and scaled
+        f2 = rot * f1 * cvtest::randomDouble(0.01, 3);
+
+        const Point2f ref_center(f0.at<float>(0), f0.at<float>(1));
+        const Size2f ref_size(
+            (float)cvtest::norm(f1, NORM_L2) * 2.f,
+            (float)cvtest::norm(f2, NORM_L2) * 2.f);
+        const float ref_angle1 = angleToDeg(atan(f1.at<float>(1) / f1.at<float>(0)));
+        const float ref_angle2 = angleToDeg(atan(f2.at<float>(1) / f2.at<float>(0)));
+
+        const int NUM = rng.uniform(10, 30);
+        Mat points(NUM, 1, data_type, Scalar::all(0));
+        for (int i = 0; i < NUM; ++i)
+        {
+            Mat pt = f0 + f1 * sin(i) + f2 * cos(i);
+            pt = pt.reshape(2);
+            if (data_type == CV_32SC2)
+            {
+                pt.convertTo(points.row(i), CV_32SC2, int_scale);
+            }
+            else if (data_type == CV_32FC2)
+            {
+                pt.copyTo(points.row(i));
+            }
+            else
+            {
+                FAIL() << "unsupported data type: " << data_type;
+            }
+        }
+
+        RotatedRect res = cv::fitEllipse(points);
+
+        if (data_type == CV_32SC2)
+        {
+            res.center /= int_scale;
+            res.size = Size2f(res.size.width / int_scale, res.size.height / int_scale);
+        }
+        const bool sizeSwap = (res.size.width < res.size.height) != (ref_size.width < ref_size.height);
+        if (sizeSwap)
+        {
+            std::swap(res.size.width, res.size.height);
+        }
+        EXPECT_FALSE(res.size.empty());
+        EXPECT_POINT2_NEAR(res.center, ref_center, 0.01);
+        const float sizeDiff = (data_type == CV_32FC2) ? 0.1f : 1.f;
+        EXPECT_NEAR(min(res.size.width, res.size.height), min(ref_size.width, ref_size.height), sizeDiff);
+        EXPECT_NEAR(max(res.size.width, res.size.height), max(ref_size.width, ref_size.height), sizeDiff);
+        if (sizeSwap)
+        {
+            EXPECT_LE(angleDiff(ref_angle2, res.angle), 0.1);
+        }
+        else
+        {
+            EXPECT_LE(angleDiff(ref_angle1, res.angle), 0.1);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    fitEllipse_Modes,
+        testing::Values(CV_32FC2, CV_32SC2));
+
+//==============================================================================
+
+TEST(fitEllipse, small)
+{
+    Size sz(50, 50);
+    vector<vector<Point> > c;
+    c.push_back(vector<Point>());
+    int scale = 1;
+    Point ofs = Point(0,0);//sz.width/2, sz.height/2) - Point(4,4)*scale;
+    c[0].push_back(Point(2, 0)*scale+ofs);
+    c[0].push_back(Point(0, 2)*scale+ofs);
+    c[0].push_back(Point(0, 6)*scale+ofs);
+    c[0].push_back(Point(2, 8)*scale+ofs);
+    c[0].push_back(Point(6, 8)*scale+ofs);
+    c[0].push_back(Point(8, 6)*scale+ofs);
+    c[0].push_back(Point(8, 2)*scale+ofs);
+    c[0].push_back(Point(6, 0)*scale+ofs);
+
+    RotatedRect e = cv::fitEllipse(c[0]);
+
+    EXPECT_NEAR(e.center.x, 4, 1.f);
+    EXPECT_NEAR(e.center.y, 4, 1.f);
+    EXPECT_NEAR(e.size.width, 9, 1.);
+    EXPECT_NEAR(e.size.height, 9, 1.f);
+}
+
+//==============================================================================
+
+// points stored in rows
+inline static int findPointInMat(const Mat & data, const Mat & point)
+{
+    for (int i = 0; i < data.rows; ++i)
+        if (cvtest::norm(data.row(i), point, NORM_L1) == 0)
+            return i;
+    return -1;
+}
+
+// > 0 - "pt" is to the right of AB
+// < 0 - "pt" is to the left of AB
+// points stored in rows
+inline static double getSide(const Mat & ptA, const Mat & ptB, const Mat & pt)
+{
+    Mat d0 = pt - ptA, d1 = ptB - pt, prod;
+    vconcat(d0, d1, prod);
+    prod = prod.reshape(1);
+    if (prod.depth() == CV_32S)
+        prod.convertTo(prod, CV_32F);
+    return determinant(prod);
+}
+
+typedef testing::TestWithParam<perf::MatDepth> convexHull_Modes;
+
+TEST_P(convexHull_Modes, accuracy)
+{
+    const int data_type = CV_MAKE_TYPE(GetParam(), 2);
+    RNG & rng = TS::ptr()->get_rng();
+
+    for (int ITER = 0; ITER < 20; ++ITER)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", ITER));
+
+        const int NUM = cvtest::randomInt(5, 100);
+        Mat points(NUM, 1, data_type, Scalar::all(0));
+        cvtest::randUni(rng, points, Scalar(-10), Scalar::all(10));
+
+        Mat hull, c_hull, indexes;
+        cv::convexHull(points, hull, false, true); // default parameters
+        cv::convexHull(points, c_hull, true, true); // counter-clockwise
+        cv::convexHull(points, indexes, false, false); // point indexes
+
+        ASSERT_EQ(hull.size().width, 1);
+        ASSERT_GE(hull.size().height, 3);
+        ASSERT_EQ(hull.size(), c_hull.size());
+        ASSERT_EQ(hull.size(), indexes.size());
+
+        // find shift between hull and counter-clockwise hull
+        const int c_diff = findPointInMat(hull, c_hull.row(0));
+        ASSERT_NE(c_diff, -1);
+
+        const int sz = (int)hull.total();
+        for (int i = 0; i < sz; ++i)
+        {
+            SCOPED_TRACE(cv::format("vertex %d", i));
+
+            Mat prev = (i == 0) ? hull.row(sz - 1) : hull.row(i - 1);
+            Mat cur = hull.row(i);
+            Mat next = (i != sz - 1) ? hull.row(i + 1) : hull.row(0);
+            // 1. "cur' is one of points
+            EXPECT_NE(findPointInMat(points, cur), -1);
+            // 2. convexity: "cur" is on right side of "prev - next" edge
+            EXPECT_GE(getSide(prev, next, cur), 0);
+            // 3. all points are inside polygon - on the left side of "cur - next" edge
+            for (int j = 0; j < points.rows; ++j)
+            {
+                SCOPED_TRACE(cv::format("point %d", j));
+                EXPECT_LE(getSide(cur, next, points.row(j)), 0);
+            }
+            // check counter-clockwise hull
+            const int c_idx = (sz - i + c_diff) % sz;
+            Mat c_cur = c_hull.row(c_idx);
+            EXPECT_MAT_NEAR(cur, c_cur, 0);
+            // check indexed hull
+            const int pt_index = indexes.at<int>(i);
+            EXPECT_MAT_NEAR(cur, points.row(pt_index), 0);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    convexHull_Modes,
+        testing::Values(CV_32F, CV_32S));
+
+
+//==============================================================================
+
+typedef testing::TestWithParam<perf::MatDepth> minAreaRect_Modes;
+
+TEST_P(minAreaRect_Modes, accuracy)
+{
+    const int data_type = CV_MAKE_TYPE(GetParam(), 2);
+    RNG & rng = TS::ptr()->get_rng();
+    for (int ITER = 0; ITER < 20; ++ITER)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", ITER));
+
+        const int NUM = cvtest::randomInt(5, 100);
+        Mat points(NUM, 1, data_type, Scalar::all(0));
+        cvtest::randUni(rng, points, Scalar(-10), Scalar::all(10));
+
+        const RotatedRect res = cv::minAreaRect(points);
+        Point2f box_pts[4] {};
+        res.points(box_pts);
+
+        // check that the box contains all the points - all on one side
+        double common_side = 0.;
+        bool edgeHasPoint[4] {0};
+        for (int i = 0; i < 4; ++i)
+        {
+            const int j = (i == 3) ? 0 : i + 1;
+            Mat cur(1, 1, CV_32FC2, box_pts + i);
+            Mat next(1, 1, CV_32FC2, box_pts + j);
+            for (int k = 0; k < points.rows; ++k)
+            {
+                SCOPED_TRACE(cv::format("point %d", j));
+                Mat one_point;
+                points.row(k).convertTo(one_point, CV_32FC2);
+                const double side = getSide(cur, next, one_point);
+                if (abs(side) < 0.01) // point on edge - no need to check
+                {
+                    edgeHasPoint[i] = true;
+                    continue;
+                }
+                if (common_side == 0.) // initial state
+                {
+                    common_side = side > 0 ? 1. : -1.; // only sign matters
+                }
+                else
+                {
+                    EXPECT_EQ(common_side > 0, side > 0) << common_side << ", " << side;
+                }
+            }
+        }
+        EXPECT_TRUE(edgeHasPoint[0] && edgeHasPoint[1] && edgeHasPoint[2] && edgeHasPoint[3]);
+    }
+
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    minAreaRect_Modes,
+        testing::Values(CV_32F, CV_32S));
+
+
+//==============================================================================
+
+// true if "point" is on one of hull's edges
+inline static bool isPointOnHull(const Mat &hull, const Mat &point, const double thresh = 0.01)
+{
+    const int sz = hull.rows;
+    for (int k = 0; k < sz; ++k)
+    {
+        const double side = getSide(hull.row(k), hull.row(k == sz - 1 ? 0 : k + 1), point);
+        if (abs(side) < thresh)
+            return true;
+    }
+    return false;
+}
+
+// true if one of hull's edges touches "A-B"
+inline static bool isEdgeOnHull(const Mat &hull, const Mat &ptA, const Mat &ptB, const double thresh = 0.01)
+{
+    const int sz = hull.rows;
+    double prev_side = getSide(ptA, ptB, hull.row(sz - 1));
+    for (int k = 0; k < sz; ++k)
+    {
+        Mat cur = hull.row(k);
+        const double cur_side = getSide(ptA, ptB, cur);
+        if (abs(prev_side) < thresh && abs(cur_side) < thresh)
+            return true;
+        prev_side = cur_side;
+    }
+    return false;
+}
+
+typedef testing::TestWithParam<perf::MatDepth> minEnclosingTriangle_Modes;
+
+TEST_P(minEnclosingTriangle_Modes, accuracy)
+{
+    const int data_type = CV_MAKETYPE(GetParam(), 2);
+    RNG & rng = TS::ptr()->get_rng();
+    for (int ITER = 0; ITER < 20; ++ITER)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", ITER));
+
+        const int NUM = cvtest::randomInt(5, 100);
+        Mat points(NUM, 1, data_type, Scalar::all(0));
+        cvtest::randUni(rng, points, Scalar::all(-100), Scalar::all(100));
+
+        Mat triangle;
+        const double area = cv::minEnclosingTriangle(points, triangle);
+
+        ASSERT_GT(area, 0.0001);
+        ASSERT_EQ(triangle.type(), CV_32FC2);
+        triangle = triangle.reshape(2, 1);
+        ASSERT_EQ(triangle.size(), Size(3, 1));
+
+        Mat hull;
+        cv::convexHull(points, hull);
+        hull.convertTo(hull, CV_32FC2);
+
+        // check that all points are enclosed by triangle sides
+        double commonSide = 0.;
+        bool hasEdgeOnHull = false;
+        for (int i = 0; i < 3; ++i)
+        {
+            SCOPED_TRACE(cv::format("edge %d", i));
+            const int j = (i == 2) ? 0 : i + 1;
+            Mat cur = triangle.col(i);
+            Mat next = triangle.col(j);
+            for (int k = 0; k < points.rows; ++k)
+            {
+                SCOPED_TRACE(cv::format("point %d", k));
+                Mat pt;
+                points.row(k).convertTo(pt, CV_32FC2);
+                const double side = getSide(cur, next, pt);
+                if (abs(side) < 0.01) // point on edge - no need to check
+                    continue;
+                if (commonSide == 0.f) // initial state
+                {
+                    commonSide = side > 0 ? 1.f : -1.f; // only sign matters
+                }
+                else
+                {
+                    // either on the same side or close to zero
+                    EXPECT_EQ(commonSide > 0, side > 0) << commonSide << ", side=" << side;
+                }
+            }
+
+            // triangle mid-points must be on the hull edges
+            const Mat midPoint = (cur + next) / 2;
+            EXPECT_TRUE(isPointOnHull(hull, midPoint));
+
+            // at least one of hull edges must be on tirangle edge
+            hasEdgeOnHull = hasEdgeOnHull || isEdgeOnHull(hull, cur, next);
+        }
+        EXPECT_TRUE(hasEdgeOnHull);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    minEnclosingTriangle_Modes,
+        testing::Values(CV_32F, CV_32S));
+
+//==============================================================================
+
+typedef testing::TestWithParam<perf::MatDepth> minEnclosingCircle_Modes;
+
+TEST_P(minEnclosingCircle_Modes, accuracy)
+{
+    const int data_type = CV_MAKETYPE(GetParam(), 2);
+    RNG & rng = TS::ptr()->get_rng();
+    for (int ITER = 0; ITER < 20; ++ITER)
+    {
+        SCOPED_TRACE(cv::format("iteration %d", ITER));
+
+        const int NUM = cvtest::randomInt(5, 100);
+        Mat points(NUM, 1, data_type, Scalar::all(0)), fpoints;
+        cvtest::randUni(rng, points, Scalar::all(-100), Scalar::all(100));
+        points.convertTo(fpoints, CV_32FC2);
+
+        Point2f center {};
+        float radius = 0.f;
+        cv::minEnclosingCircle(points, center, radius);
+
+        vector<int> boundPts; // indexes
+        for (int i = 0; i < NUM; ++i)
+        {
+            Point2f pt = fpoints.at<Point2f>(i);
+            const double dist = cv::norm(pt - center);
+            EXPECT_LE(dist, radius);
+            if (abs(dist - radius) < 0.01)
+                boundPts.push_back(i);
+        }
+        // 2 points on diameter or at least 3 points on circle
+        EXPECT_GE(boundPts.size(), 2llu);
+
+        // 2 points on diameter
+        if (boundPts.size() == 2llu)
+        {
+            const Point2f diff = fpoints.at<Point2f>(boundPts[0]) - fpoints.at<Point2f>(boundPts[1]);
+            EXPECT_NEAR(cv::norm(diff), 2 * radius, 0.001);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    minEnclosingCircle_Modes,
+        testing::Values(CV_32F, CV_32S));
+
+//==============================================================================
+
+TEST(minEnclosingCircle, three_points)
+{
+    RNG & rng = TS::ptr()->get_rng();
+    Point2f center = Point2f(rng.uniform(0.0f, 1000.0f), rng.uniform(0.0f, 1000.0f));;
+    float radius = rng.uniform(0.0f, 500.0f);
+    float angle = (float)rng.uniform(0.0f, (float)(CV_2PI));
+    vector<Point2f> pts;
+    pts.push_back(center + Point2f(radius * cos(angle), radius * sin(angle)));
+    angle += (float)CV_PI;
+    pts.push_back(center + Point2f(radius * cos(angle), radius * sin(angle)));
+    float radius2 = radius * radius;
+    float x = rng.uniform(center.x - radius, center.x + radius);
+    float deltaX = x - center.x;
+    float upperBoundY = sqrt(radius2 - deltaX * deltaX);
+    float y = rng.uniform(center.y - upperBoundY, center.y + upperBoundY);
+    pts.push_back(Point2f(x, y));
+    // Find the minimum area enclosing circle
+    Point2f calcCenter;
+    float calcRadius;
+    cv::minEnclosingCircle(pts, calcCenter, calcRadius);
+    const float delta = (float)cv::norm(calcCenter - center) + abs(calcRadius - radius);
+    EXPECT_LE(delta, 1.f);
 }
 
 }} // namespace

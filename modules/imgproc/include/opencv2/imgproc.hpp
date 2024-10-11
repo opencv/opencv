@@ -236,7 +236,7 @@ enum MorphShapes {
     MORPH_CROSS   = 1, //!< a cross-shaped structuring element:
                        //!< \f[E_{ij} = \begin{cases} 1 & \texttt{if } {i=\texttt{anchor.y } {or } {j=\texttt{anchor.x}}} \\0 & \texttt{otherwise} \end{cases}\f]
     MORPH_ELLIPSE = 2 //!< an elliptic structuring element, that is, a filled ellipse inscribed
-                      //!< into the rectangle Rect(0, 0, esize.width, 0.esize.height)
+                      //!< into the rectangle Rect(0, 0, esize.width, esize.height)
 };
 
 //! @} imgproc_filter
@@ -645,112 +645,108 @@ enum ColorConversionCodes {
     COLOR_YUV2BGR      = 84,
     COLOR_YUV2RGB      = 85,
 
-    //! YUV 4:2:0 family to RGB
-    COLOR_YUV2RGB_NV12  = 90,
-    COLOR_YUV2BGR_NV12  = 91,
-    COLOR_YUV2RGB_NV21  = 92,
-    COLOR_YUV2BGR_NV21  = 93,
-    COLOR_YUV420sp2RGB  = COLOR_YUV2RGB_NV21,
-    COLOR_YUV420sp2BGR  = COLOR_YUV2BGR_NV21,
+    COLOR_YUV2RGB_NV12  = 90, //!< convert between 4:2:0-subsampled YUV NV12 and RGB, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_NV12  = 91, //!< convert between 4:2:0-subsampled YUV NV12 and BGR, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_NV21  = 92, //!< convert between 4:2:0-subsampled YUV NV21 and RGB, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_NV21  = 93, //!< convert between 4:2:0-subsampled YUV NV21 and BGR, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV420sp2RGB  = COLOR_YUV2RGB_NV21, //!< synonym to NV21
+    COLOR_YUV420sp2BGR  = COLOR_YUV2BGR_NV21, //!< synonym to NV21
 
-    COLOR_YUV2RGBA_NV12 = 94,
-    COLOR_YUV2BGRA_NV12 = 95,
-    COLOR_YUV2RGBA_NV21 = 96,
-    COLOR_YUV2BGRA_NV21 = 97,
-    COLOR_YUV420sp2RGBA = COLOR_YUV2RGBA_NV21,
-    COLOR_YUV420sp2BGRA = COLOR_YUV2BGRA_NV21,
+    COLOR_YUV2RGBA_NV12 = 94, //!< convert between 4:2:0-subsampled YUV NV12 and RGBA, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_NV12 = 95, //!< convert between 4:2:0-subsampled YUV NV12 and BGRA, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_NV21 = 96, //!< convert between 4:2:0-subsampled YUV NV21 and RGBA, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_NV21 = 97, //!< convert between 4:2:0-subsampled YUV NV21 and BGRA, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV420sp2RGBA = COLOR_YUV2RGBA_NV21, //!< synonym to NV21
+    COLOR_YUV420sp2BGRA = COLOR_YUV2BGRA_NV21, //!< synonym to NV21
 
-    COLOR_YUV2RGB_YV12  = 98,
-    COLOR_YUV2BGR_YV12  = 99,
-    COLOR_YUV2RGB_IYUV  = 100,
-    COLOR_YUV2BGR_IYUV  = 101,
-    COLOR_YUV2RGB_I420  = COLOR_YUV2RGB_IYUV,
-    COLOR_YUV2BGR_I420  = COLOR_YUV2BGR_IYUV,
-    COLOR_YUV420p2RGB   = COLOR_YUV2RGB_YV12,
-    COLOR_YUV420p2BGR   = COLOR_YUV2BGR_YV12,
+    COLOR_YUV2RGB_YV12  =  98, //!< convert between 4:2:0-subsampled YUV YV12 and RGB, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_YV12  =  99, //!< convert between 4:2:0-subsampled YUV YV12 and BGR, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_IYUV  = 100, //!< convert between 4:2:0-subsampled YUV IYUV and RGB, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_IYUV  = 101, //!< convert between 4:2:0-subsampled YUV IYUV and BGR, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_I420  = COLOR_YUV2RGB_IYUV, //!< synonym to IYUV
+    COLOR_YUV2BGR_I420  = COLOR_YUV2BGR_IYUV, //!< synonym to IYUV
+    COLOR_YUV420p2RGB   = COLOR_YUV2RGB_YV12, //!< synonym to YV12
+    COLOR_YUV420p2BGR   = COLOR_YUV2BGR_YV12, //!< synonym to YV12
 
-    COLOR_YUV2RGBA_YV12 = 102,
-    COLOR_YUV2BGRA_YV12 = 103,
-    COLOR_YUV2RGBA_IYUV = 104,
-    COLOR_YUV2BGRA_IYUV = 105,
-    COLOR_YUV2RGBA_I420 = COLOR_YUV2RGBA_IYUV,
-    COLOR_YUV2BGRA_I420 = COLOR_YUV2BGRA_IYUV,
-    COLOR_YUV420p2RGBA  = COLOR_YUV2RGBA_YV12,
-    COLOR_YUV420p2BGRA  = COLOR_YUV2BGRA_YV12,
+    COLOR_YUV2RGBA_YV12 = 102, //!< convert between 4:2:0-subsampled YUV YV12 and RGBA, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_YV12 = 103, //!< convert between 4:2:0-subsampled YUV YV12 and BGRA, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_IYUV = 104, //!< convert between 4:2:0-subsampled YUV YV12 and RGBA, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_IYUV = 105, //!< convert between 4:2:0-subsampled YUV YV12 and BGRA, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_I420 = COLOR_YUV2RGBA_IYUV, //!< synonym to IYUV
+    COLOR_YUV2BGRA_I420 = COLOR_YUV2BGRA_IYUV, //!< synonym to IYUV
+    COLOR_YUV420p2RGBA  = COLOR_YUV2RGBA_YV12, //!< synonym to YV12
+    COLOR_YUV420p2BGRA  = COLOR_YUV2BGRA_YV12, //!< synonym to YV12
 
-    COLOR_YUV2GRAY_420  = 106,
-    COLOR_YUV2GRAY_NV21 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_NV12 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_YV12 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_IYUV = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_I420 = COLOR_YUV2GRAY_420,
-    COLOR_YUV420sp2GRAY = COLOR_YUV2GRAY_420,
-    COLOR_YUV420p2GRAY  = COLOR_YUV2GRAY_420,
+    COLOR_YUV2GRAY_420  = 106, //!< extract Y channel from YUV 4:2:0 image
+    COLOR_YUV2GRAY_NV21 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_NV12 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_YV12 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_IYUV = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_I420 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV420sp2GRAY = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV420p2GRAY  = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
 
-    //! YUV 4:2:2 family to RGB
-    COLOR_YUV2RGB_UYVY = 107,
-    COLOR_YUV2BGR_UYVY = 108,
-    //COLOR_YUV2RGB_VYUY = 109,
-    //COLOR_YUV2BGR_VYUY = 110,
-    COLOR_YUV2RGB_Y422 = COLOR_YUV2RGB_UYVY,
-    COLOR_YUV2BGR_Y422 = COLOR_YUV2BGR_UYVY,
-    COLOR_YUV2RGB_UYNV = COLOR_YUV2RGB_UYVY,
-    COLOR_YUV2BGR_UYNV = COLOR_YUV2BGR_UYVY,
+    COLOR_YUV2RGB_UYVY = 107, //!< convert between YUV UYVY and RGB, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_UYVY = 108, //!< convert between YUV UYVY and BGR, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2RGB_VYUY = 109, //!< convert between YUV VYUY and RGB, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2BGR_VYUY = 110, //!< convert between YUV VYUY and BGR, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_Y422 = COLOR_YUV2RGB_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGR_Y422 = COLOR_YUV2BGR_UYVY, //!< synonym to UYVY
+    COLOR_YUV2RGB_UYNV = COLOR_YUV2RGB_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGR_UYNV = COLOR_YUV2BGR_UYVY, //!< synonym to UYVY
 
-    COLOR_YUV2RGBA_UYVY = 111,
-    COLOR_YUV2BGRA_UYVY = 112,
-    //COLOR_YUV2RGBA_VYUY = 113,
-    //COLOR_YUV2BGRA_VYUY = 114,
-    COLOR_YUV2RGBA_Y422 = COLOR_YUV2RGBA_UYVY,
-    COLOR_YUV2BGRA_Y422 = COLOR_YUV2BGRA_UYVY,
-    COLOR_YUV2RGBA_UYNV = COLOR_YUV2RGBA_UYVY,
-    COLOR_YUV2BGRA_UYNV = COLOR_YUV2BGRA_UYVY,
+    COLOR_YUV2RGBA_UYVY = 111, //!< convert between YUV UYVY and RGBA, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_UYVY = 112, //!< convert between YUV UYVY and BGRA, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2RGBA_VYUY = 113, //!< convert between YUV VYUY and RGBA, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2BGRA_VYUY = 114, //!< convert between YUV VYUY and BGRA, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_Y422 = COLOR_YUV2RGBA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGRA_Y422 = COLOR_YUV2BGRA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2RGBA_UYNV = COLOR_YUV2RGBA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGRA_UYNV = COLOR_YUV2BGRA_UYVY, //!< synonym to UYVY
 
-    COLOR_YUV2RGB_YUY2 = 115,
-    COLOR_YUV2BGR_YUY2 = 116,
-    COLOR_YUV2RGB_YVYU = 117,
-    COLOR_YUV2BGR_YVYU = 118,
-    COLOR_YUV2RGB_YUYV = COLOR_YUV2RGB_YUY2,
-    COLOR_YUV2BGR_YUYV = COLOR_YUV2BGR_YUY2,
-    COLOR_YUV2RGB_YUNV = COLOR_YUV2RGB_YUY2,
-    COLOR_YUV2BGR_YUNV = COLOR_YUV2BGR_YUY2,
+    COLOR_YUV2RGB_YUY2 = 115, //!< convert between YUV YUY2 and RGB, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_YUY2 = 116, //!< convert between YUV YUY2 and BGR, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_YVYU = 117, //!< convert between YUV YVYU and RGB, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_YVYU = 118, //!< convert between YUV YVYU and BGR, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_YUYV = COLOR_YUV2RGB_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGR_YUYV = COLOR_YUV2BGR_YUY2, //!< synonym to YUY2
+    COLOR_YUV2RGB_YUNV = COLOR_YUV2RGB_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGR_YUNV = COLOR_YUV2BGR_YUY2, //!< synonym to YUY2
 
-    COLOR_YUV2RGBA_YUY2 = 119,
-    COLOR_YUV2BGRA_YUY2 = 120,
-    COLOR_YUV2RGBA_YVYU = 121,
-    COLOR_YUV2BGRA_YVYU = 122,
-    COLOR_YUV2RGBA_YUYV = COLOR_YUV2RGBA_YUY2,
-    COLOR_YUV2BGRA_YUYV = COLOR_YUV2BGRA_YUY2,
-    COLOR_YUV2RGBA_YUNV = COLOR_YUV2RGBA_YUY2,
-    COLOR_YUV2BGRA_YUNV = COLOR_YUV2BGRA_YUY2,
+    COLOR_YUV2RGBA_YUY2 = 119, //!< convert between YUV YUY2 and RGBA, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_YUY2 = 120, //!< convert between YUV YUY2 and BGRA, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_YVYU = 121, //!< convert between YUV YVYU and RGBA, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_YVYU = 122, //!< convert between YUV YVYU and BGRA, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_YUYV = COLOR_YUV2RGBA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGRA_YUYV = COLOR_YUV2BGRA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2RGBA_YUNV = COLOR_YUV2RGBA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGRA_YUNV = COLOR_YUV2BGRA_YUY2, //!< synonym to YUY2
 
-    COLOR_YUV2GRAY_UYVY = 123,
-    COLOR_YUV2GRAY_YUY2 = 124,
+    COLOR_YUV2GRAY_UYVY = 123, //!< extract Y channel from YUV 4:2:2 image
+    COLOR_YUV2GRAY_YUY2 = 124, //!< extract Y channel from YUV 4:2:2 image
     //COLOR_YUV2GRAY_VYUY    = COLOR_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_Y422 = COLOR_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_UYNV = COLOR_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_YVYU = COLOR_YUV2GRAY_YUY2,
-    COLOR_YUV2GRAY_YUYV = COLOR_YUV2GRAY_YUY2,
-    COLOR_YUV2GRAY_YUNV = COLOR_YUV2GRAY_YUY2,
+    COLOR_YUV2GRAY_UYNV = COLOR_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    COLOR_YUV2GRAY_YVYU = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
+    COLOR_YUV2GRAY_YUYV = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
+    COLOR_YUV2GRAY_YUNV = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
 
     //! alpha premultiplication
     COLOR_RGBA2mRGBA    = 125,
     COLOR_mRGBA2RGBA    = 126,
 
-    //! RGB to YUV 4:2:0 family
-    COLOR_RGB2YUV_I420  = 127,
-    COLOR_BGR2YUV_I420  = 128,
-    COLOR_RGB2YUV_IYUV  = COLOR_RGB2YUV_I420,
-    COLOR_BGR2YUV_IYUV  = COLOR_BGR2YUV_I420,
+    COLOR_RGB2YUV_I420  = 127, //!< convert between RGB and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_I420  = 128, //!< convert between BGR and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_IYUV  = COLOR_RGB2YUV_I420, //!< synonym to I420
+    COLOR_BGR2YUV_IYUV  = COLOR_BGR2YUV_I420, //!< synonym to I420
 
-    COLOR_RGBA2YUV_I420 = 129,
-    COLOR_BGRA2YUV_I420 = 130,
-    COLOR_RGBA2YUV_IYUV = COLOR_RGBA2YUV_I420,
-    COLOR_BGRA2YUV_IYUV = COLOR_BGRA2YUV_I420,
-    COLOR_RGB2YUV_YV12  = 131,
-    COLOR_BGR2YUV_YV12  = 132,
-    COLOR_RGBA2YUV_YV12 = 133,
-    COLOR_BGRA2YUV_YV12 = 134,
+    COLOR_RGBA2YUV_I420 = 129, //!< convert between RGBA and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_I420 = 130, //!< convert between BGRA and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_IYUV = COLOR_RGBA2YUV_I420, //!< synonym to I420
+    COLOR_BGRA2YUV_IYUV = COLOR_BGRA2YUV_I420, //!< synonym to I420
+    COLOR_RGB2YUV_YV12  = 131, //!< convert between RGB and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_YV12  = 132, //!< convert between BGR and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_YV12 = 133, //!< convert between RGBA and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_YV12 = 134, //!< convert between BGRA and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
 
     //! Demosaicing, see @ref color_convert_bayer "color conversions" for additional information
     COLOR_BayerBG2BGR = 46, //!< equivalent to RGGB Bayer pattern
@@ -846,39 +842,37 @@ enum ColorConversionCodes {
     COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA, //!< equivalent to BGGR Bayer pattern
     COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA, //!< equivalent to GBRG Bayer pattern
 
-    //! RGB to YUV 4:2:2 family
+    COLOR_RGB2YUV_UYVY = 143, //!< convert between RGB and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_UYVY = 144, //!< convert between BGR and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_Y422 = COLOR_RGB2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGR2YUV_Y422 = COLOR_BGR2YUV_UYVY, //!< synonym to UYVY
+    COLOR_RGB2YUV_UYNV = COLOR_RGB2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGR2YUV_UYNV = COLOR_BGR2YUV_UYVY, //!< synonym to UYVY
 
-    COLOR_RGB2YUV_UYVY = 143,
-    COLOR_BGR2YUV_UYVY = 144,
-    COLOR_RGB2YUV_Y422 = COLOR_RGB2YUV_UYVY,
-    COLOR_BGR2YUV_Y422 = COLOR_BGR2YUV_UYVY,
-    COLOR_RGB2YUV_UYNV = COLOR_RGB2YUV_UYVY,
-    COLOR_BGR2YUV_UYNV = COLOR_BGR2YUV_UYVY,
+    COLOR_RGBA2YUV_UYVY = 145, //!< convert between RGBA and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_UYVY = 146, //!< convert between BGRA and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_Y422 = COLOR_RGBA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGRA2YUV_Y422 = COLOR_BGRA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_RGBA2YUV_UYNV = COLOR_RGBA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGRA2YUV_UYNV = COLOR_BGRA2YUV_UYVY, //!< synonym to UYVY
 
-    COLOR_RGBA2YUV_UYVY = 145,
-    COLOR_BGRA2YUV_UYVY = 146,
-    COLOR_RGBA2YUV_Y422 = COLOR_RGBA2YUV_UYVY,
-    COLOR_BGRA2YUV_Y422 = COLOR_BGRA2YUV_UYVY,
-    COLOR_RGBA2YUV_UYNV = COLOR_RGBA2YUV_UYVY,
-    COLOR_BGRA2YUV_UYNV = COLOR_BGRA2YUV_UYVY,
+    COLOR_RGB2YUV_YUY2 = 147, //!< convert between RGB and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_YUY2 = 148, //!< convert between BGR and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_YVYU = 149, //!< convert between RGB and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_YVYU = 150, //!< convert between BGR and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_YUYV = COLOR_RGB2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGR2YUV_YUYV = COLOR_BGR2YUV_YUY2, //!< synonym to YUY2
+    COLOR_RGB2YUV_YUNV = COLOR_RGB2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGR2YUV_YUNV = COLOR_BGR2YUV_YUY2, //!< synonym to YUY2
 
-    COLOR_RGB2YUV_YUY2 = 147,
-    COLOR_BGR2YUV_YUY2 = 148,
-    COLOR_RGB2YUV_YVYU = 149,
-    COLOR_BGR2YUV_YVYU = 150,
-    COLOR_RGB2YUV_YUYV = COLOR_RGB2YUV_YUY2,
-    COLOR_BGR2YUV_YUYV = COLOR_BGR2YUV_YUY2,
-    COLOR_RGB2YUV_YUNV = COLOR_RGB2YUV_YUY2,
-    COLOR_BGR2YUV_YUNV = COLOR_BGR2YUV_YUY2,
-
-    COLOR_RGBA2YUV_YUY2 = 151,
-    COLOR_BGRA2YUV_YUY2 = 152,
-    COLOR_RGBA2YUV_YVYU = 153,
-    COLOR_BGRA2YUV_YVYU = 154,
-    COLOR_RGBA2YUV_YUYV = COLOR_RGBA2YUV_YUY2,
-    COLOR_BGRA2YUV_YUYV = COLOR_BGRA2YUV_YUY2,
-    COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2,
-    COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2,
+    COLOR_RGBA2YUV_YUY2 = 151, //!< convert between RGBA and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_YUY2 = 152, //!< convert between BGRA and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_YVYU = 153, //!< convert between RGBA and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_YVYU = 154, //!< convert between BGRA and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_YUYV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGRA2YUV_YUYV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
 
     COLOR_COLORCVT_MAX  = 155
 };
@@ -1347,7 +1341,7 @@ protected:
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example samples/cpp/lsd_lines.cpp
+/** @example samples/cpp/snippets/lsd_lines.cpp
 An example using the LineSegmentDetector
 \image html building_lsd.png "Sample output image" width=434 height=300
 */
@@ -1547,12 +1541,14 @@ respectively (see #getGaussianKernel for details); to fully control the result r
 possible future modifications of all this semantics, it is recommended to specify all of ksize,
 sigmaX, and sigmaY.
 @param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @sa  sepFilter2D, filter2D, blur, boxFilter, bilateralFilter, medianBlur
  */
 CV_EXPORTS_W void GaussianBlur( InputArray src, OutputArray dst, Size ksize,
                                 double sigmaX, double sigmaY = 0,
-                                int borderType = BORDER_DEFAULT );
+                                int borderType = BORDER_DEFAULT,
+                                AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief Applies the bilateral filter to an image.
 
@@ -1850,8 +1846,11 @@ CV_EXPORTS_W void Scharr( InputArray src, OutputArray dst, int ddepth,
                           int dx, int dy, double scale = 1, double delta = 0,
                           int borderType = BORDER_DEFAULT );
 
-/** @example samples/cpp/laplace.cpp
-An example using Laplace transformations for edge detection
+/** @example samples/cpp/snippets/laplace.cpp
+An example using Laplace filter for edge detection
+*/
+/** @example samples/python/snippets/laplace.py
+An example using Laplace filter for edge detection in python
 */
 
 /** @brief Calculates the Laplacian of an image.
@@ -1886,7 +1885,7 @@ CV_EXPORTS_W void Laplacian( InputArray src, OutputArray dst, int ddepth,
 //! @addtogroup imgproc_feature
 //! @{
 
-/** @example samples/cpp/edge.cpp
+/** @example samples/cpp/snippets/edge.cpp
 This program demonstrates usage of the Canny edge detector
 
 Check @ref tutorial_canny_detector "the corresponding tutorial" for more details
@@ -1971,6 +1970,10 @@ size as src .
 CV_EXPORTS_W void cornerHarris( InputArray src, OutputArray dst, int blockSize,
                                 int ksize, double k,
                                 int borderType = BORDER_DEFAULT );
+
+/** @example samples/python/snippets/texture_flow.py
+An example using cornerEigenValsAndVecs in python
+*/
 
 /** @brief Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
@@ -2162,6 +2165,9 @@ CV_EXPORTS CV_WRAP_AS(goodFeaturesToTrackWithQuality) void goodFeaturesToTrack(
 An example using the Hough line detector
 ![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
 */
+/** @example samples/python/snippets/houghlines.py
+An example using the Hough line detector in python
+*/
 
 /** @brief Finds lines in a binary image using the standard Hough transform.
 
@@ -2251,6 +2257,9 @@ CV_EXPORTS_W void HoughLinesPointSet( InputArray point, OutputArray lines, int l
 
 /** @example samples/cpp/tutorial_code/ImgTrans/houghcircles.cpp
 An example using the Hough circle detector
+*/
+/** @example samples/python/snippets/houghcircles.py
+An example using the Hough circle detector in python
 */
 
 /** @brief Finds circles in a grayscale image using the Hough transform.
@@ -2465,6 +2474,7 @@ flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
 the "outliers" in the source image are not modified by the function.
 @param borderValue value used in case of a constant border; by default, it is 0.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @sa  warpPerspective, resize, remap, getRectSubPix, transform
  */
@@ -2472,9 +2482,10 @@ CV_EXPORTS_W void warpAffine( InputArray src, OutputArray dst,
                               InputArray M, Size dsize,
                               int flags = INTER_LINEAR,
                               int borderMode = BORDER_CONSTANT,
-                              const Scalar& borderValue = Scalar());
+                              const Scalar& borderValue = Scalar(),
+                              AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
-/** @example samples/cpp/warpPerspective_demo.cpp
+/** @example samples/cpp/snippets/warpPerspective_demo.cpp
 An example program shows using cv::getPerspectiveTransform and cv::warpPerspective for image warping
 */
 
@@ -2511,7 +2522,10 @@ CV_EXPORTS_W void warpPerspective( InputArray src, OutputArray dst,
 The function remap transforms the source image using the specified map:
 
 \f[\texttt{dst} (x,y) =  \texttt{src} (map_x(x,y),map_y(x,y))\f]
-\f[\texttt{dst} (x,y) =  \texttt{src} (x+map_x(x,y),y+map_y(x,y))\f] with WARP_RELATIVE_MAP
+
+with the WARP_RELATIVE_MAP flag :
+
+\f[\texttt{dst} (x,y) =  \texttt{src} (x+map_x(x,y),y+map_y(x,y))\f]
 
 where values of pixels with non-integer coordinates are computed using one of available
 interpolation methods. \f$map_x\f$ and \f$map_y\f$ can be encoded as separate floating-point maps
@@ -2532,7 +2546,7 @@ representation to fixed-point for speed.
 if map1 is (x,y) points), respectively.
 @param interpolation Interpolation method (see #InterpolationFlags). The methods #INTER_AREA
 #INTER_LINEAR_EXACT and #INTER_NEAREST_EXACT are not supported by this function.
-The extra flag WARP_RELATIVE_MAP that can be ORed to the interpolation method
+The extra flag WARP_RELATIVE_MAP can be ORed to the interpolation method
 (e.g. INTER_LINEAR | WARP_RELATIVE_MAP)
 @param borderMode Pixel extrapolation method (see #BorderTypes). When
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image that
@@ -2687,8 +2701,11 @@ source image. The center must be inside the image.
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
 
-/** @example samples/cpp/polar_transforms.cpp
+/** @example samples/cpp/snippets/polar_transforms.cpp
 An example using the cv::linearPolar and cv::logPolar operations
+*/
+/** @example samples/python/snippets/logpolar.py
+An example using the linearPolar and logPolar operations in python
 */
 
 /** @brief Remaps an image to semilog-polar coordinates space.
@@ -2843,7 +2860,7 @@ the destination image will have the given size therefore the area of the boundin
 You can get reverse mapping adding #WARP_INVERSE_MAP to `flags`
 \snippet polar_transforms.cpp InverseMap
 
-In addiction, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
+In addition, to calculate the original coordinate from a polar mapped coordinate \f$(rho, phi)->(x, y)\f$:
 \snippet polar_transforms.cpp InverseCoordinate
 
 @param src Source image.
@@ -3000,6 +3017,9 @@ floating-point.
 CV_EXPORTS_W void accumulateWeighted( InputArray src, InputOutputArray dst,
                                       double alpha, InputArray mask = noArray() );
 
+/** @example samples/cpp/snippets/phase_corr.cpp
+An example using the phaseCorrelate function
+*/
 /** @brief The function is used to detect translational shifts that occur between two images.
 
 The operation takes advantage of the Fourier shift theorem for detecting the translational shift in
@@ -3305,7 +3325,7 @@ images[0].channels() + images[1].channels()-1, and so on.
 size and depth as images[0] .
 @param ranges Array of arrays of the histogram bin boundaries in each dimension. See #calcHist .
 @param scale Optional scale factor for the output back projection.
-@param uniform Flag indicating whether the histogram is uniform or not (see above).
+@param uniform Flag indicating whether the histogram is uniform or not (see #calcHist).
 
 @sa calcHist, compareHist
  */
@@ -3418,8 +3438,11 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 //! @addtogroup imgproc_segmentation
 //! @{
 
-/** @example samples/cpp/watershed.cpp
+/** @example samples/cpp/snippets/watershed.cpp
 An example using the watershed algorithm
+*/
+/** @example samples/python/snippets/watershed.py
+An example using the watershed algorithm using python
 */
 
 /** @brief Performs a marker-based image segmentation using the watershed algorithm.
@@ -3530,8 +3553,11 @@ CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
 //! @addtogroup imgproc_misc
 //! @{
 
-/** @example samples/cpp/distrans.cpp
+/** @example samples/cpp/snippets/distrans.cpp
 An example on using the distance transform
+*/
+/** @example samples/python/snippets/distrans.py
+An example on using the distance transform in python
 */
 
 /** @brief Calculates the distance to the closest zero pixel for each pixel of the source image.
@@ -3682,7 +3708,7 @@ CV_EXPORTS_W int floodFill( InputOutputArray image, InputOutputArray mask,
                             Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
                             int flags = 4 );
 
-/** @example samples/cpp/ffilldemo.cpp
+/** @example samples/cpp/floodfill.cpp
 An example using the FloodFill technique
 */
 
@@ -3747,10 +3773,11 @@ floating-point.
 @param code color space conversion code (see #ColorConversionCodes).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
 channels is derived automatically from src and code.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @see @ref imgproc_color_conversions
  */
-CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0 );
+CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief Converts an image from one color space to another where the source image is
 stored in two planes.
@@ -3769,8 +3796,9 @@ This function only supports YUV420 to RGB conversion as of now.
 - #COLOR_YUV2RGB_NV21
 - #COLOR_YUV2BGRA_NV21
 - #COLOR_YUV2RGBA_NV21
+@param hint Implementation modfication flags. See #AlgorithmHint
 */
-CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code );
+CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief main function for all demosaicing processes
 
@@ -3814,8 +3842,8 @@ CV_EXPORTS_W void demosaicing(InputArray src, OutputArray dst, int code, int dst
 The function computes moments, up to the 3rd order, of a vector shape or a rasterized shape. The
 results are returned in the structure cv::Moments.
 
-@param array Raster image (single-channel, 8-bit or floating-point 2D array) or an array (
-\f$1 \times N\f$ or \f$N \times 1\f$ ) of 2D points (Point or Point2f ).
+@param array Single chanel raster image (CV_8U, CV_16U, CV_16S, CV_32F, CV_64F) or an array (
+\f$1 \times N\f$ or \f$N \times 1\f$ ) of 2D points (Point or Point2f).
 @param binaryImage If it is true, all non-zero image pixels are treated as 1's. The parameter is
 used for images only.
 @returns moments.
@@ -3899,6 +3927,9 @@ enum TemplateMatchModes {
 
 /** @example samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
 An example using Template Matching algorithm
+*/
+/** @example samples/cpp/snippets/mask_tmpl.cpp
+An example using Template Matching algorithm with mask
 */
 
 /** @brief Compares a template against overlapped image regions.
@@ -4051,14 +4082,21 @@ CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
 CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
-/** @example samples/cpp/squares.cpp
-A program using pyramid scaling, Canny, contours and contour simplification to find
-squares in a list of images (pic1-6.png). Returns sequence of squares detected on the image.
-*/
+//! @brief Find contours using link runs algorithm
+//!
+//! This function implements an algorithm different from cv::findContours:
+//! - doesn't allocate temporary image internally, thus it has reduced memory consumption
+//! - supports CV_8UC1 images only
+//! - outputs 2-level hierarhy only (RETR_CCOMP mode)
+//! - doesn't support approximation change other than CHAIN_APPROX_SIMPLE
+//! In all other aspects this function is compatible with cv::findContours.
+CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours, OutputArray hierarchy);
 
-/** @example samples/tapi/squares.cpp
-A program using pyramid scaling, Canny, contours and contour simplification to find
-squares in the input image.
+//! @overload
+CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
+
+/** @example samples/python/snippets/squares.py
+An example using approxPolyDP function in python.
 */
 
 /** @brief Approximates a polygonal curve(s) with the specified precision.
@@ -4077,6 +4115,28 @@ connected). Otherwise, it is not closed.
 CV_EXPORTS_W void approxPolyDP( InputArray curve,
                                 OutputArray approxCurve,
                                 double epsilon, bool closed );
+
+/** @brief Approximates a polygon with a convex hull with a specified accuracy and number of sides.
+
+The cv::approxPolyN function approximates a polygon with a convex hull
+so that the difference between the contour area of the original contour and the new polygon is minimal.
+It uses a greedy algorithm for contracting two vertices into one in such a way that the additional area is minimal.
+Straight lines formed by each edge of the convex contour are drawn and the areas of the resulting triangles are considered.
+Each vertex will lie either on the original contour or outside it.
+
+The algorithm based on the paper @cite LowIlie2003 .
+
+@param curve Input vector of a 2D points stored in std::vector or Mat, points must be float or integer.
+@param approxCurve Result of the approximation. The type is vector of a 2D point (Point2f or Point) in std::vector or Mat.
+@param nsides The parameter defines the number of sides of the result polygon.
+@param epsilon_percentage defines the percentage of the maximum of additional area.
+If it equals -1, it is not used. Otherwise algorighm stops if additional area is greater than contourArea(_curve) * percentage.
+If additional area exceeds the limit, algorithm returns as many vertices as there were at the moment the limit was exceeded.
+@param ensure_convex If it is true, algorithm creates a convex hull of input contour. Otherwise input vector should be convex.
+ */
+CV_EXPORTS_W void approxPolyN(InputArray curve, OutputArray approxCurve,
+                              int nsides, float epsilon_percentage = -1.0,
+                              bool ensure_convex = true);
 
 /** @brief Calculates a contour perimeter or a curve length.
 
@@ -4160,8 +4220,6 @@ The function finds the minimal enclosing circle of a 2D point set using an itera
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
-/** @example samples/cpp/minarea.cpp
-*/
 
 /** @brief Finds a triangle of minimum area enclosing a 2D point set and returns its area.
 
@@ -4196,8 +4254,8 @@ The function compares two shapes. All three implemented methods use the Hu invar
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
 
-/** @example samples/cpp/convexhull.cpp
-An example using the convexHull functionality
+/** @example samples/cpp/geometry.cpp
+An example program illustrates the use of cv::convexHull, cv::fitEllipse, cv::minEnclosingTriangle, cv::minEnclosingCircle and cv::minAreaRect.
 */
 
 /** @brief Finds the convex hull of a point set.
@@ -4258,7 +4316,7 @@ without self-intersections. Otherwise, the function output is undefined.
  */
 CV_EXPORTS_W bool isContourConvex( InputArray contour );
 
-/** @example samples/cpp/intersectExample.cpp
+/** @example samples/cpp/snippets/intersectExample.cpp
 Examples of how intersectConvexConvex works
 */
 
@@ -4271,16 +4329,13 @@ Examples of how intersectConvexConvex works
 When false, no intersection is found. If the polygons share a side or the vertex of one polygon lies on an edge
 of the other, they are not considered nested and an intersection will be found regardless of the value of handleNested.
 
-@returns Absolute value of area of intersecting polygon
+@returns Area of intersecting polygon. May be negative, if algorithm has not converged, e.g. non-convex input.
 
 @note intersectConvexConvex doesn't confirm that both polygons are convex and will return invalid results if they aren't.
  */
 CV_EXPORTS_W float intersectConvexConvex( InputArray p1, InputArray p2,
                                           OutputArray p12, bool handleNested = true );
 
-/** @example samples/cpp/fitellipse.cpp
-An example using the fitEllipse technique
-*/
 
 /** @brief Fits an ellipse around a set of 2D points.
 
@@ -4375,6 +4430,10 @@ CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
  @param points Input 2D point set, stored in std::vector\<\> or Mat
  */
 CV_EXPORTS_W RotatedRect fitEllipseDirect( InputArray points );
+
+/** @example samples/python/snippets/fitline.py
+An example for fitting line in python
+*/
 
 /** @brief Fits a line to a 2D or 3D point set.
 
@@ -4488,7 +4547,7 @@ enum ColormapTypes
     COLORMAP_DEEPGREEN = 21  //!< ![deepgreen](pics/colormaps/colorscale_deepgreen.jpg)
 };
 
-/** @example samples/cpp/falsecolor.cpp
+/** @example samples/cpp/snippets/falsecolor.cpp
 An example using applyColorMap function
 */
 
@@ -4737,12 +4796,11 @@ CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const i
                           int ncontours, bool isClosed, const Scalar& color,
                           int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
-/** @example samples/cpp/contours2.cpp
-An example program illustrates the use of cv::findContours and cv::drawContours
-\image html WindowsQtContoursOutput.png "Screenshot of the program"
+/** @example samples/python/snippets/contours.py
+An example program illustrates the use of findContours and drawContours in python
 */
 
-/** @example samples/cpp/segment_objects.cpp
+/** @example samples/cpp/snippets/segment_objects.cpp
 An example using drawContours to clean up a background segmentation result
 */
 

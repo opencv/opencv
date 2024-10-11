@@ -42,8 +42,6 @@
 #include "precomp.hpp"
 #include <opencv2/core/utils/configuration.private.hpp>
 
-#include "opencv2/core/core_c.h"
-
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -308,7 +306,7 @@ void BaseTest::safe_run( int start_from )
         }
         catch (const cv::Exception& exc)
         {
-            const char* errorStr = cvErrorStr(exc.code);
+            const char* errorStr = exc.codeMessage();
             char buf[1 << 16];
 
             const char* delim = exc.err.find('\n') == cv::String::npos ? "" : "\n";
@@ -522,7 +520,7 @@ string TS::str_from_code( const TS::FailureCode code )
     case FAIL_GENERIC:                 return "Generic/Unknown";
     case FAIL_MISSING_TEST_DATA:       return "No test data";
     case FAIL_INVALID_TEST_DATA:       return "Invalid test data";
-    case FAIL_ERROR_IN_CALLED_FUNC:    return "cvError invoked";
+    case FAIL_ERROR_IN_CALLED_FUNC:    return "Error invoked";
     case FAIL_EXCEPTION:               return "Hardware/OS exception";
     case FAIL_MEMORY_EXCEPTION:        return "Invalid memory access";
     case FAIL_ARITHM_EXCEPTION:        return "Arithmetic exception";
@@ -544,7 +542,7 @@ static int tsErrorCallback( int status, const char* func_name, const char* err_m
 {
     TS* ts = (TS*)data;
     const char* delim = std::string(err_msg).find('\n') == std::string::npos ? "" : "\n";
-    ts->printf(TS::LOG, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d\n", cvErrorStr(status), delim, err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
+    ts->printf(TS::LOG, "OpenCV Error:\n\t%d (%s%s) in %s, file %s, line %d\n", status, delim, err_msg, func_name[0] != 0 ? func_name : "unknown function", file_name, line);
     return 0;
 }
 
@@ -591,8 +589,6 @@ void TS::init( const string& modulename )
 
     if( params.use_optimized == 0 )
         cv::setUseOptimized(false);
-
-    rng = RNG(params.rng_seed);
 }
 
 
@@ -635,15 +631,11 @@ void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_conte
     {
         current_test_info.rng_seed = param_seed + test_case_idx;
         current_test_info.rng_seed0 = current_test_info.rng_seed;
-
-        rng = RNG(current_test_info.rng_seed);
-        cv::theRNG() = rng;
     }
 
     current_test_info.test = test;
     current_test_info.test_case_idx = test_case_idx;
     current_test_info.code = 0;
-    cvSetErrStatus( cv::Error::StsOk );
 }
 
 
@@ -694,7 +686,8 @@ TS* TS::ptr()
     return &ts;
 }
 
-void fillGradient(Mat& img, int delta)
+template<>
+void fillGradient<uint8_t>(Mat& img, int delta)
 {
     const int ch = img.channels();
     CV_Assert(!img.empty() && img.depth() == CV_8U && ch <= 4);
@@ -712,57 +705,6 @@ void fillGradient(Mat& img, int delta)
             uchar vals[] = {uchar(valR), uchar(valC), uchar(200*r/img.rows), uchar(255)};
             uchar *p = img.ptr(r, c);
             for(i=0; i<ch; i++) p[i] = vals[i];
-        }
-    }
-}
-
-void smoothBorder(Mat& img, const Scalar& color, int delta)
-{
-    const int ch = img.channels();
-    CV_Assert(!img.empty() && img.depth() == CV_8U && ch <= 4);
-
-    Scalar s;
-    uchar *p = NULL;
-    int n = 100/delta;
-    int nR = std::min(n, (img.rows+1)/2), nC = std::min(n, (img.cols+1)/2);
-
-    int r, c, i;
-    for(r=0; r<nR; r++)
-    {
-        double k1 = r*delta/100., k2 = 1-k1;
-        for(c=0; c<img.cols; c++)
-        {
-            p = img.ptr(r, c);
-            for(i=0; i<ch; i++) s[i] = p[i];
-            s = s * k1 + color * k2;
-            for(i=0; i<ch; i++) p[i] = uchar(s[i]);
-        }
-        for(c=0; c<img.cols; c++)
-        {
-            p = img.ptr(img.rows-r-1, c);
-            for(i=0; i<ch; i++) s[i] = p[i];
-            s = s * k1 + color * k2;
-            for(i=0; i<ch; i++) p[i] = uchar(s[i]);
-        }
-    }
-
-    for(r=0; r<img.rows; r++)
-    {
-        for(c=0; c<nC; c++)
-        {
-            double k1 = c*delta/100., k2 = 1-k1;
-            p = img.ptr(r, c);
-            for(i=0; i<ch; i++) s[i] = p[i];
-            s = s * k1 + color * k2;
-            for(i=0; i<ch; i++) p[i] = uchar(s[i]);
-        }
-        for(c=0; c<n; c++)
-        {
-            double k1 = c*delta/100., k2 = 1-k1;
-            p = img.ptr(r, img.cols-c-1);
-            for(i=0; i<ch; i++) s[i] = p[i];
-            s = s * k1 + color * k2;
-            for(i=0; i<ch; i++) p[i] = uchar(s[i]);
         }
     }
 }
@@ -1040,7 +982,8 @@ static std::string findData(const std::string& relative_path, bool required, boo
         }
     }
 #ifdef OPENCV_TEST_DATA_INSTALL_PATH
-    datapath = path_join("./", OPENCV_TEST_DATA_INSTALL_PATH);
+    datapath = OPENCV_TEST_DATA_INSTALL_PATH;
+
     if (isDirectory(datapath))
     {
         for(size_t i = search_subdir.size(); i > 0; i--)
@@ -1131,6 +1074,8 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
     recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
     recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
     recordPropertyVerbose("cv_compiler", "Compiler", getSnippetFromConfig("C++ Compiler:", "\n"));
+    recordPropertyVerbose("implementation_hint", "Algorithm hint", getSnippetFromConfig("Algorithm Hint:", "\n"));
+    recordPropertyVerbose("hal", "HAL", getSnippetFromConfig("Custom HAL:", "\n"));
     const char* parallelFramework = cv::currentParallelFramework();
     if (parallelFramework)
     {

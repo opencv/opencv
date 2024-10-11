@@ -48,6 +48,13 @@
 
 namespace cv {
 
+static inline double scaleFor(double x){
+    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1./x : 1.;
+}
+static inline float scaleFor(float x){
+    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1.f/x : 1.f;
+}
+
 /**
  * This class estimates a homography \f$H\in \mathbb{R}^{3\times 3}\f$
  * between \f$\mathbf{x} \in \mathbb{R}^3\f$ and
@@ -176,8 +183,7 @@ public:
         eigen( _LtL, matW, matV );
         _Htemp = _invHnorm*_H0;
         _H0 = _Htemp*_Hnorm2;
-        _H0.convertTo(_model, _H0.type(), 1./_H0.at<double>(2,2) );
-
+        _H0.convertTo(_model, _H0.type(), scaleFor(_H0.at<double>(2,2)));
         return 1;
     }
 
@@ -196,14 +202,14 @@ public:
         const Point2f* M = m1.ptr<Point2f>();
         const Point2f* m = m2.ptr<Point2f>();
         const double* H = model.ptr<double>();
-        float Hf[] = { (float)H[0], (float)H[1], (float)H[2], (float)H[3], (float)H[4], (float)H[5], (float)H[6], (float)H[7] };
+        float Hf[] = { (float)H[0], (float)H[1], (float)H[2], (float)H[3], (float)H[4], (float)H[5], (float)H[6], (float)H[7], (float)H[8] };
 
         _err.create(count, 1, CV_32F);
         float* err = _err.getMat().ptr<float>();
 
         for( i = 0; i < count; i++ )
         {
-            float ww = 1.f/(Hf[6]*M[i].x + Hf[7]*M[i].y + 1.f);
+            float ww = 1.f/(Hf[6]*M[i].x + Hf[7]*M[i].y + Hf[8]);
             float dx = (Hf[0]*M[i].x + Hf[1]*M[i].y + Hf[2])*ww - m[i].x;
             float dy = (Hf[3]*M[i].x + Hf[4]*M[i].y + Hf[5])*ww - m[i].y;
             err[i] = dx*dx + dy*dy;
@@ -357,7 +363,7 @@ Mat findHomography( InputArray _points1, InputArray _points2,
             dst = dst1;
             if( method == RANSAC || method == LMEDS )
                 cb->runKernel( src, dst, H );
-            Mat H8(8, 1, CV_64F, H.ptr<double>());
+            Mat H8(9, 1, CV_64F, H.ptr<double>());
 
             auto homographyRefineCallback = [src, dst](InputOutputArray _param, OutputArray _err, OutputArray _Jac) -> bool
             {
@@ -368,8 +374,9 @@ Mat findHomography( InputArray _points1, InputArray _points2,
                 if (_Jac.needed())
                 {
                     _Jac.create(count * 2, param.rows, CV_64F);
+                    _Jac.setTo(0.);
                     J = _Jac.getMat();
-                    CV_Assert(J.isContinuous() && J.cols == 8);
+                    CV_Assert(J.isContinuous() && J.cols == 9);
                 }
 
                 const Point2f* M = src.ptr<Point2f>();
@@ -381,7 +388,7 @@ Mat findHomography( InputArray _points1, InputArray _points2,
                 for (i = 0; i < count; i++)
                 {
                     double Mx = M[i].x, My = M[i].y;
-                    double ww = h[6] * Mx + h[7] * My + 1.;
+                    double ww = h[6] * Mx + h[7] * My + h[8];
                     ww = fabs(ww) > DBL_EPSILON ? 1. / ww : 0;
                     double xi = (h[0] * Mx + h[1] * My + h[2]) * ww;
                     double yi = (h[3] * Mx + h[4] * My + h[5]) * ww;
@@ -391,13 +398,11 @@ Mat findHomography( InputArray _points1, InputArray _points2,
                     if (Jptr)
                     {
                         Jptr[0] = Mx * ww; Jptr[1] = My * ww; Jptr[2] = ww;
-                        Jptr[3] = Jptr[4] = Jptr[5] = 0.;
-                        Jptr[6] = -Mx * ww * xi; Jptr[7] = -My * ww * xi;
-                        Jptr[8] = Jptr[9] = Jptr[10] = 0.;
-                        Jptr[11] = Mx * ww; Jptr[12] = My * ww; Jptr[13] = ww;
-                        Jptr[14] = -Mx * ww * yi; Jptr[15] = -My * ww * yi;
+                        Jptr[6] = -Mx * ww * xi; Jptr[7] = -My * ww * xi; Jptr[8] = -ww * xi;
+                        Jptr[12] = Mx * ww; Jptr[13] = My * ww; Jptr[14] = ww;
+                        Jptr[15] = -Mx * ww * yi; Jptr[16] = -My * ww * yi; Jptr[17] = -ww * yi;
 
-                        Jptr += 16;
+                        Jptr += 18;
                     }
                 }
 
@@ -408,6 +413,7 @@ Mat findHomography( InputArray _points1, InputArray _points2,
                            .setMaxIterations(10)
                            .setGeodesic(true));
             solver.optimize();
+            H.convertTo(H, H.type(), scaleFor(H.at<double>(2, 2)));
         }
     }
 
@@ -983,14 +989,6 @@ void computeCorrespondEpilines( InputArray _points, int whichImage,
         }
     }
 }
-
-static inline double scaleFor(double x){
-    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1./x : 1.;
-}
-static inline float scaleFor(float x){
-    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1.f/x : 1.f;
-}
-
 
 void convertPointsFromHomogeneous( InputArray _src, OutputArray _dst, int dtype )
 {

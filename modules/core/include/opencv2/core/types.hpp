@@ -320,9 +320,12 @@ struct Type< Point3_<_Tp> > { enum { value = CV_MAKETYPE(Depth<_Tp>::value, 3) }
 
 /** @brief Template class for specifying the size of an image or rectangle.
 
-The class includes two members called width and height. The structure can be converted to and from
-the old OpenCV structures CvSize and CvSize2D32f . The same set of arithmetic and comparison
+The class includes two members called width and height. The same set of arithmetic and comparison
 operations as for Point_ is available.
+
+For a 1d matrix, the size is (width, 1) and for a 0d matrix, it is (1, 1).
+
+For an empty matrix, it is (0, 0).
 
 OpenCV defines the following Size_\<\> aliases:
 @code
@@ -475,7 +478,14 @@ public:
     template<typename _Tp2> operator Rect_<_Tp2>() const;
 
     //! checks whether the rectangle contains the point
-    bool contains(const Point_<_Tp>& pt) const;
+    /*! @warning After OpenCV 4.11.0, when calling Rect.contains() with cv::Point2f / cv::Point2d point, point should not convert/round to int.
+     * ```
+     * Rect_<int> r(0,0,500,500); Point_<float> pt(250.0f, 499.9f);
+     * r.contains(pt) returns false.(OpenCV 4.10.0 or before)
+     * r.contains(pt) returns true. (OpenCV 4.11.0 or later)
+     * ```
+     */
+    template<typename _Tp2> inline bool contains(const Point_<_Tp2>& pt) const;
 
     _Tp x; //!< x coordinate of the top-left corner
     _Tp y; //!< y coordinate of the top-left corner
@@ -1858,12 +1868,29 @@ Rect_<_Tp>::operator Rect_<_Tp2>() const
     return Rect_<_Tp2>(saturate_cast<_Tp2>(x), saturate_cast<_Tp2>(y), saturate_cast<_Tp2>(width), saturate_cast<_Tp2>(height));
 }
 
-template<typename _Tp> inline
-bool Rect_<_Tp>::contains(const Point_<_Tp>& pt) const
+template<typename _Tp> template<typename _Tp2> inline
+bool Rect_<_Tp>::contains(const Point_<_Tp2>& pt) const
 {
     return x <= pt.x && pt.x < x + width && y <= pt.y && pt.y < y + height;
 }
-
+// See https://github.com/opencv/opencv/issues/26016
+template<> template<> inline
+bool Rect_<int>::contains(const Point_<double>& pt) const
+{
+    // std::numeric_limits<int>::digits is 31.
+    // std::numeric_limits<double>::digits is 53.
+    // So conversion int->double does not lead to accuracy errors.
+    const Rect_<double> _rect(static_cast<double>(x), static_cast<double>(y), static_cast<double>(width), static_cast<double>(height));
+    return _rect.contains(pt);
+}
+template<> template<> inline
+bool Rect_<int>::contains(const Point_<float>& _pt) const
+{
+    // std::numeric_limits<float>::digits is 24.
+    // std::numeric_limits<double>::digits is 53.
+    // So conversion float->double does not lead to accuracy errors.
+    return contains(Point_<double>(static_cast<double>(_pt.x), static_cast<double>(_pt.y)));
+}
 
 template<typename _Tp> static inline
 Rect_<_Tp>& operator += ( Rect_<_Tp>& a, const Point_<_Tp>& b )

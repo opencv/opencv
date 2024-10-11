@@ -274,6 +274,23 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<EinsumLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS HardmaxLayer : public Layer
+    {
+    public:
+        static Ptr<HardmaxLayer> create(const LayerParams& params);
+    };
+
+    /** @brief GatherND layer
+     *
+     * GatherND takes two inputs data and indices of rank r >= 1 and q >= 1 respectively,
+     * and an optional attribute batch_dims. It gathers slices from data into an output tensor.
+     */
+    class CV_EXPORTS GatherNDLayer : public Layer
+    {
+    public:
+        static Ptr<GatherNDLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS BaseConvolutionLayer : public Layer
     {
     public:
@@ -723,7 +740,7 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SqrtLayer> create(const LayerParams &params);
     };
 
-    class CV_EXPORTS NotLayer : public ActivationLayer
+    class CV_EXPORTS NotLayer : public Layer
     {
     public:
         static Ptr<NotLayer> create(const LayerParams &params);
@@ -1191,6 +1208,22 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS CastLayer : public Layer {
     public:
         static Ptr<CastLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS DepthToSpaceLayer : public Layer {
+    public:
+        static Ptr<DepthToSpaceLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS SpaceToDepthLayer : public Layer {
+    public:
+        static Ptr<SpaceToDepthLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS TopKLayer : public Layer
+    {
+    public:
+        static Ptr<TopKLayer> create(const LayerParams& params);
     };
 
 //! @}

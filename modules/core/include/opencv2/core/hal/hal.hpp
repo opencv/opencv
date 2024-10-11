@@ -91,10 +91,14 @@ CV_EXPORTS void exp64f(const double* src, double* dst, int n);
 CV_EXPORTS void log32f(const float* src, float* dst, int n);
 CV_EXPORTS void log64f(const double* src, double* dst, int n);
 
+CV_EXPORTS void cartToPolar32f(const float* x, const float* y, float* mag, float* angle, int n, bool angleInDegrees);
+CV_EXPORTS void cartToPolar64f(const double* x, const double* y, double* mag, double* angle, int n, bool angleInDegrees);
 CV_EXPORTS void fastAtan32f(const float* y, const float* x, float* dst, int n, bool angleInDegrees);
 CV_EXPORTS void fastAtan64f(const double* y, const double* x, double* dst, int n, bool angleInDegrees);
 CV_EXPORTS void magnitude32f(const float* x, const float* y, float* dst, int n);
 CV_EXPORTS void magnitude64f(const double* x, const double* y, double* dst, int n);
+CV_EXPORTS void polarToCart32f(const float* mag, const float* angle, float* x, float* y, int n, bool angleInDegrees);
+CV_EXPORTS void polarToCart64f(const double* mag, const double* angle, double* x, double* y, int n, bool angleInDegrees);
 CV_EXPORTS void sqrt32f(const float* src, float* dst, int len);
 CV_EXPORTS void sqrt64f(const double* src, double* dst, int len);
 CV_EXPORTS void invSqrt32f(const float* src, float* dst, int len);
@@ -245,8 +249,8 @@ CV_EXPORTS void addWeighted64u( const uint64* src1, size_t step1, const uint64* 
 CV_EXPORTS void addWeighted64s( const int64* src1, size_t step1, const int64* src2, size_t step2, int64* dst, size_t step, int width, int height, void* scalars );
 CV_EXPORTS void addWeighted32u( const unsigned* src1, size_t step1, const unsigned* src2, size_t step2, unsigned* dst, size_t step, int width, int height, void* scalars );
 
-CV_EXPORTS void cvt16f32f( const float16_t* src, float* dst, int len );
-CV_EXPORTS void cvt32f16f( const float* src, float16_t* dst, int len );
+CV_EXPORTS void cvt16f32f( const hfloat* src, float* dst, int len );
+CV_EXPORTS void cvt32f16f( const float* src, hfloat* dst, int len );
 CV_EXPORTS void cvt16bf32f( const bfloat* src, float* dst, int len );
 CV_EXPORTS void cvt32f16bf( const float* src, bfloat* dst, int len );
 

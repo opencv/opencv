@@ -19,7 +19,8 @@ void yoloPostProcessing(
     std::vector<Rect2d>& keep_boxes,
     float conf_threshold,
     float iou_threshold,
-    const std::string& test_name);
+    const std::string& model_name,
+    const int nc=80);
 
 template<typename TString>
 static std::string _tf(TString filename, bool required = true)
@@ -807,6 +808,26 @@ TEST_P(Test_ONNX_layers, CumSumExclusiveInplace)
     testONNXModels("cumsum_exclusive_inplace");
 }
 
+TEST_P(Test_ONNX_layers, RangeFloat)
+{
+    testONNXModels("range_float");
+    testONNXModels("range_float_negative");
+}
+
+TEST_P(Test_ONNX_layers, RangeInt32)
+{
+    testONNXModels("range_int32");
+    testONNXModels("range_int32_negative");
+}
+
+TEST_P(Test_ONNX_layers, RangeInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("range_int64");
+    testONNXModels("range_int64_negative");
+}
+
 TEST_P(Test_ONNX_layers, Eltwise3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
@@ -996,6 +1017,10 @@ TEST_P(Test_ONNX_layers, MatMul_init_2)
 TEST_P(Test_ONNX_layers, MatMul_init_bcast)
 {
     testONNXModels("matmul_init_bcast");
+}
+
+TEST_P(Test_ONNX_layers, MatMul_bcast_3dx2d) {
+    testONNXModels("matmul_bcast");
 }
 
 TEST_P(Test_ONNX_layers, MatMulAdd)
@@ -1283,6 +1308,9 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
 
 TEST_P(Test_ONNX_layers, LSTM_Activations)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // IE exception: Node Block1326/lstm/reshape_0/permute was not assigned on any pointed device
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
@@ -1474,6 +1502,8 @@ TEST_P(Test_ONNX_layers, Einsum_2D)
 
 TEST_P(Test_ONNX_layers, Einsum_2D_Ellipses)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("einsum_2d_ellipses", npy, 0, 0, false, false, 2);
 }
 
@@ -1505,6 +1535,8 @@ TEST_P(Test_ONNX_layers, Einsum_HadamardProduct)
 
 TEST_P(Test_ONNX_layers, Einsum_Batch_Diagonal)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
     testONNXModels("einsum_batch_diagonal", npy, 0, 0, false, false, 1);
 }
 
@@ -1520,6 +1552,10 @@ TEST_P(Test_ONNX_layers, Einsum_transpose)
 
 TEST_P(Test_ONNX_layers, Einsum_const_inputs) {
     testONNXModels("einsum_const_inputs", npy, 0, 0, false, false, 1);
+}
+
+TEST_P(Test_ONNX_layers, ReduceSum_Consts){
+    testONNXModels("reducesum_consts");
 }
 
 TEST_P(Test_ONNX_layers, Pad2d_Unfused)
@@ -1988,6 +2024,9 @@ TEST_P(Test_ONNX_layers, Gemm_bias)
 
 TEST_P(Test_ONNX_layers, Quantized_Convolution)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
+
     // The difference of QOperator and QDQ format:
     // https://onnxruntime.ai/docs/performance/quantization.html#onnx-quantization-representation-format.
     {
@@ -2034,6 +2073,8 @@ TEST_P(Test_ONNX_layers, Quantized_Eltwise)
 
 TEST_P(Test_ONNX_layers, Quantized_Eltwise_Scalar)
 {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
     testONNXModels("quantized_eltwise_scalar");
 }
 
@@ -2302,7 +2343,13 @@ TEST_P(Test_ONNX_nets, ResNet50v1)
     applyTestTag(CV_TEST_TAG_MEMORY_512MB);
 
     // output range: [-67; 75], after Softmax [0, 0.98]
+    size_t hwm0 = getTopMemoryUsageMB();
     testONNXModels("resnet50v1", pb, default_l1, default_lInf, true, target != DNN_TARGET_MYRIAD);
+    size_t hwm1 = getTopMemoryUsageMB();
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU)
+    {
+        EXPECT_LE(hwm1 - hwm0, 350) << "Top allocated memory";
+    }
 }
 
 TEST_P(Test_ONNX_nets, ResNet50_Int8)
@@ -2620,6 +2667,45 @@ TEST_P(Test_ONNX_layers, CumSum)
     testONNXModels("cumsum_1d_exclusive_1_reverse");
     testONNXModels("cumsum_2d_dim_1");
     testONNXModels("cumsum_3d_dim_2");
+    testONNXModels("cumsum_3d_dim_2_int32");
+}
+
+TEST_P(Test_ONNX_layers, CumSum_int64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("cumsum_3d_dim_2_int64");
+}
+
+TEST_P(Test_ONNX_layers, ReduceSumInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("reduce_sum_int64");
+}
+
+TEST_P(Test_ONNX_layers, ScatterInt32)
+{
+    testONNXModels("scatter_int32", npy, 0, 0, false, true, 3);
+}
+
+TEST_P(Test_ONNX_layers, ScatterInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("scatter_int64", npy, 0, 0, false, true, 3);
+}
+
+TEST_P(Test_ONNX_layers, TileInt32)
+{
+    testONNXModels("tile_int32");
+}
+
+TEST_P(Test_ONNX_layers, TileInt64)
+{
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // OpenVINO uses int32 precision for int64 operations
+    testONNXModels("tile_int64");
 }
 
 static void testYOLO(const std::string& weightPath, const std::vector<int>& refClassIds,
@@ -2658,7 +2744,8 @@ void yoloPostProcessing(
     std::vector<Rect2d>& keep_boxes,
     float conf_threshold,
     float iou_threshold,
-    const std::string& test_name
+    const std::string& model_name,
+    const int nc
 ){
 
     // Retrieve
@@ -2666,11 +2753,13 @@ void yoloPostProcessing(
     std::vector<float> confidences;
     std::vector<Rect2d> boxes;
 
-    if (test_name == "yolov8"){
+    if (model_name == "yolov8" || model_name == "yolov10" ||
+        model_name == "yolov9")
+    {
         cv::transposeND(outs[0], {0, 2, 1}, outs[0]);
     }
 
-    if (test_name == "yolonas"){
+    if (model_name == "yolonas"){
         // outs contains 2 elemets of shape [1, 8400, 80] and [1, 8400, 4]. Concat them to get [1, 8400, 84]
         Mat concat_out;
         // squeeze the first dimension
@@ -2684,22 +2773,27 @@ void yoloPostProcessing(
         outs[0] = outs[0].reshape(0, std::vector<int>{1, 8400, 84});
     }
 
+    // assert if last dim is 85 or 84
+    CV_CheckEQ(outs[0].dims, 3, "Invalid output shape. The shape should be [1, #anchors, 85 or 84]");
+    CV_CheckEQ((outs[0].size[2] == nc + 5 || outs[0].size[2] == 80 + 4), true, "Invalid output shape: ");
+
     for (auto preds : outs){
 
         preds = preds.reshape(1, preds.size[1]); // [1, 8400, 85] -> [8400, 85]
         for (int i = 0; i < preds.rows; ++i)
         {
             // filter out non object
-            float obj_conf = (test_name == "yolov8" || test_name == "yolonas") ? 1.0f : preds.at<float>(i, 4) ;
+            float obj_conf = (model_name == "yolov8" || model_name == "yolonas" ||
+                              model_name == "yolov9" || model_name == "yolov10") ? 1.0f : preds.at<float>(i, 4) ;
             if (obj_conf < conf_threshold)
                 continue;
 
-            Mat scores = preds.row(i).colRange((test_name == "yolov8" || test_name == "yolonas") ? 4 : 5, preds.cols);
+            Mat scores = preds.row(i).colRange((model_name == "yolov8" || model_name == "yolonas" || model_name == "yolov9" || model_name == "yolov10") ? 4 : 5, preds.cols);
             double conf;
             Point maxLoc;
             minMaxLoc(scores, 0, &conf, 0, &maxLoc);
 
-            conf = (test_name == "yolov8" || test_name == "yolonas") ? conf : conf * obj_conf;
+            conf = (model_name == "yolov8" || model_name == "yolonas" || model_name == "yolov9" || model_name == "yolov10") ? conf : conf * obj_conf;
             if (conf < conf_threshold)
                 continue;
 
@@ -2710,15 +2804,14 @@ void yoloPostProcessing(
             double w = det[2];
             double h = det[3];
 
-            // std::cout << "cx: " << cx << " cy: " << cy << " w: " << w << " h: " << h << " conf: " << conf << " idx: " << maxLoc.x << std::endl;
             // [x1, y1, x2, y2]
-            if (test_name == "yolonas"){
+            if (model_name == "yolonas" || model_name == "yolov10"){
                 boxes.push_back(Rect2d(cx, cy, w, h));
             } else {
                 boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
                                         cx + 0.5 * w, cy + 0.5 * h));
             }
-           classIds.push_back(maxLoc.x);
+            classIds.push_back(maxLoc.x);
             confidences.push_back(conf);
         }
     }
@@ -2735,7 +2828,75 @@ void yoloPostProcessing(
     }
 }
 
+TEST_P(Test_ONNX_nets, YOLOv10)
+{
 
+    std::string weightPath = _tf("models/yolov10s.onnx", false);
+
+    Size targetSize{640, 480};
+    float conf_threshold = 0.50;
+    float iou_threshold = 0.50;
+
+    std::vector<int> refClassIds{1, 16, 7};
+    std::vector<float> refScores{0.9510f, 0.9454f, 0.8404f};
+
+    std::vector<Rect2d> refBoxes{
+        Rect2d(105.5014, 112.8838, 472.9274, 350.0603),
+        Rect2d(109.8231, 185.7994, 258.5916, 452.9302),
+        Rect2d(388.5018,  62.1034, 576.6399, 143.3986)
+        };
+
+    Image2BlobParams imgParams(
+        Scalar::all(1 / 255.0),
+        targetSize,
+        Scalar::all(0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NCHW,
+        DNN_PMODE_LETTERBOX,
+        Scalar::all(114)
+        );
+
+    testYOLO(
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, conf_threshold, iou_threshold,
+        1.0e-4, 1.0e-4, "yolov10");
+}
+
+TEST_P(Test_ONNX_nets, YOLOv9)
+{
+
+    std::string weightPath = _tf("models/yolov9t.onnx", false);
+
+    Size targetSize{640, 480};
+    float conf_threshold = 0.50;
+    float iou_threshold = 0.50;
+
+    std::vector<int> refClassIds{1, 16, 2}; // wrong class mapping for yolov9
+    std::vector<float> refScores{0.959274f, 0.901125f, 0.559396f};
+
+    std::vector<Rect2d> refBoxes{
+        Rect2d(106.255, 107.927, 472.497, 350.309),
+        Rect2d(108.633, 185.256, 259.287, 450.672),
+        Rect2d(390.701, 62.1454, 576.928, 141.795)
+        };
+
+    Image2BlobParams imgParams(
+        Scalar::all(1 / 255.0),
+        targetSize,
+        Scalar::all(0),
+        true,
+        CV_32F,
+        DNN_LAYOUT_NCHW,
+        DNN_PMODE_LETTERBOX,
+        Scalar::all(114)
+        );
+
+    testYOLO(
+        weightPath, refClassIds, refScores, refBoxes,
+        imgParams, conf_threshold, iou_threshold,
+        1.0e-4, 1.0e-4, "yolov9");
+}
 TEST_P(Test_ONNX_nets, YOLOX)
 {
     applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
@@ -3022,6 +3183,20 @@ TEST_P(Test_ONNX_layers, Attention) {
 TEST_P(Test_ONNX_layers, AttentionSingleHead) {
     testONNXModels("attention_single_head");
 }
+TEST_P(Test_ONNX_layers, PyTorchAttentionSingleHead) {
+    // 5.x specific bug: https://github.com/opencv/opencv/issues/25921
+    if (target == DNN_TARGET_OPENCL)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL);
+
+    if (target == DNN_TARGET_OPENCL_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+
+    testONNXModels("pytorch_attention_single_head");
+}
+
+TEST_P(Test_ONNX_layers, PyTorchUnflatten){
+    testONNXModels("unflatten");
+}
 
 TEST_P(Test_ONNX_nets, ViT_B_32) {
     applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_LONG);
@@ -3054,6 +3229,15 @@ TEST_P(Test_ONNX_nets, ViT_B_32) {
         l1 = 0.008;
         lInf = 0.04;
     }
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
+        if (target == DNN_TARGET_CPU) {
+            l1 = 4.4e-5; // Expected: (normL1) <= (l1), actual: 4.31208e-05 vs 1e-05
+            lInf = 0.0002; // Expected: (normInf) <= (lInf), actual: 0.000194907 vs 0.0001
+        } else if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16) {
+            l1 = 0.0092; // Expected: (normL1) <= (l1), actual: 0.00918349 vs 4.4e-05
+            lInf = 0.056; // Expected: (normInf) <= (lInf), actual: 0.0556431 vs 0.0002
+        }
+    }
 
     normAssert(ref, out, "ViTB_32", l1, lInf);
 }
@@ -3082,6 +3266,52 @@ TEST_P(Test_ONNX_nets, VitTrack) {
 
 TEST_P(Test_ONNX_layers, LayerNormNoFusion) {
     testONNXModels("layer_norm_no_fusion");
+}
+
+TEST_P(Test_ONNX_layers, MatMulAddFusion) {
+    double l1 = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.0018 : default_l1;
+    double lInf = (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL) ? 0.011 : default_lInf;
+    testONNXModels("biased_matmul", npy, l1, lInf);
+}
+
+TEST_P(Test_ONNX_layers, ClipDivSharedConstant) {
+    testONNXModels("clip_div_shared_constant");
+}
+
+TEST_P(Test_ONNX_layers, TopK) {
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+        backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019 ||
+        backend == DNN_BACKEND_INFERENCE_ENGINE) {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE); // OpenVINO does not support int64
+    }
+    auto test = [&](const std::string &basename, double l1 = 0, double lInf = 0) {
+        std::string onnxmodel = _tf("models/" + basename + ".onnx", true);
+        Mat input = readTensorFromONNX(_tf("data/input_" + basename + ".pb"));
+        Mat output_ref_val = readTensorFromONNX(_tf("data/output_" + basename + "_0.pb")),
+            output_ref_ind = readTensorFromONNX(_tf("data/output_" + basename + "_1.pb"));
+
+        checkBackend(&input, &output_ref_val);
+        checkBackend(&input, &output_ref_ind);
+        Net net = readNetFromONNX(onnxmodel);
+        net.setPreferableBackend(backend);
+        net.setPreferableTarget(target);
+
+        net.setInput(input);
+        std::vector<Mat> outputs;
+        net.forward(outputs, std::vector<std::string>{"values", "indices"});
+
+        Mat output_res_val = outputs.front(),
+            output_res_ind = outputs.back();
+
+        normAssert(output_ref_val, output_res_val, (basename + " values").c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+        normAssert(output_ref_ind, output_res_ind, (basename + " indices").c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
+
+        expectNoFallbacksFromIE(net);
+    };
+
+    test("top_k");
+    test("top_k_negative_axis");
+    test("top_k_smallest");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());

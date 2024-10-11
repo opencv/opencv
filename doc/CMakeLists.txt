@@ -200,9 +200,6 @@ if(DOXYGEN_FOUND)
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tutorial-utils.js")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_HTML_FILES "${CMAKE_DOXYGEN_HTML_FILES}")
 
-  set(OPENCV_MATHJAX_RELPATH "https://cdn.jsdelivr.net/npm/mathjax@3.0.1" CACHE STRING "URI to a MathJax installation")
-
-
   if (DOXYGEN_DOT_EXECUTABLE)
     message(STATUS "Found DOT executable: ${DOXYGEN_DOT_EXECUTABLE}")
     set(init_dot_path "${DOXYGEN_DOT_EXECUTABLE}")
@@ -253,12 +250,6 @@ if(DOXYGEN_FOUND)
   elseif(DEFINED OPENCV_JS_LOCATION)
     list(APPEND js_assets "${OPENCV_JS_LOCATION}")
   endif()
-
-  # copy haar cascade files
-  # set(haar_cascade_files "")
-  # set(data_harrcascades_path "${OpenCV_SOURCE_DIR}/data/haarcascades/")
-  # list(APPEND js_tutorials_assets_deps "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
-  # list(APPEND js_assets "${data_harrcascades_path}/haarcascade_frontalface_default.xml" "${data_harrcascades_path}/haarcascade_eye.xml")
 
   foreach(f ${js_assets})
     get_filename_component(fname "${f}" NAME)

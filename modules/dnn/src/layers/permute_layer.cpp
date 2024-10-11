@@ -187,12 +187,10 @@ public:
         CV_Assert(inputs.size());
         for (auto input : inputs)
         {
-            if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S, "");
-            else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_32S || input == CV_64S, "");
+            if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+                CV_CheckType(input, input == CV_16F || input == CV_32S || input == CV_64S || input == CV_8S || input == CV_8U || input == CV_Bool, "");
             else
-                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_32S || input == CV_64S, "");
+                CV_CheckType(input, input == CV_32F || input == CV_32S || input == CV_64S || input == CV_8S || input == CV_8U || input == CV_Bool, "");
         }
 
         outputs.assign(requiredOutputs, inputs[0]);
@@ -339,11 +337,13 @@ public:
             mnew_stride.copyTo(unew_stride);
         }
 
-        bool use_half = (inps.depth() == CV_16F);
-        String opts = format("-DDtype=%s", use_half ? "half" : "float");
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            ocl::Kernel kernel("permute", ocl::dnn::permute_oclsrc, opts);
+            String matType = matTypeToOclType(inputs[0].type());
+            String opts = " -DDtype=" + matType;
+            String kname = "permute_" + matType;
+
+            ocl::Kernel kernel(kname.c_str(), ocl::dnn::permute_oclsrc, opts);
 
             kernel.set(0, (int)_count);
             kernel.set(1, ocl::KernelArg::PtrReadOnly(inputs[i]));
@@ -366,15 +366,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget) &&
-                   inputs_arr.depth() != CV_8S && inputs_arr.depth() != CV_64S,
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
-
-        if (inputs_arr.depth() == CV_16F)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
@@ -413,6 +406,12 @@ public:
                     break;
                 case CV_8S:
                     forward_impl<int8_t>(inputs[k], outputs[k]);
+                    break;
+                case CV_8U:
+                    forward_impl<uint8_t>(inputs[k], outputs[k]);
+                    break;
+                case CV_Bool:
+                    forward_impl<bool>(inputs[k], outputs[k]);
                     break;
                 default:
                     CV_Error(Error::BadDepth, "unsupported mat type");
@@ -491,9 +490,9 @@ public:
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<int64_t> order(_order.begin(), _order.end());
-        auto tr_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                       ngraph::Shape({order.size()}), order.data());
-        auto transpose = std::make_shared<ngraph::op::Transpose>(ieInpNode, tr_axes);
+        auto tr_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                       ov::Shape({order.size()}), order.data());
+        auto transpose = std::make_shared<ov::op::v1::Transpose>(ieInpNode, tr_axes);
         return Ptr<BackendNode>(new InfEngineNgraphNode(transpose));
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -521,7 +520,10 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-        return make_cuda_node_with_type<cuda4dnn::PermuteOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), _order);
+        if (inputs[0]->getHostMatDepth() == CV_Bool)
+            return make_cuda_node_bool<cuda4dnn::PermuteOp>(std::move(context->stream), _order);
+        else
+            return make_cuda_node_with_type<cuda4dnn::PermuteOp>(preferableTarget, inputs[0]->getHostMatDepth(), std::move(context->stream), _order);
     }
 #endif
 

@@ -188,6 +188,7 @@ private:
 
   const Size_<size_t> patternSize;
   CirclesGridFinderParameters parameters;
+  bool rotatedGrid = false;
 
   CirclesGridFinder& operator=(const CirclesGridFinder&);
   CirclesGridFinder(const CirclesGridFinder&);
