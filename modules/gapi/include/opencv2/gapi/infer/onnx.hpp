@@ -652,7 +652,7 @@ public:
 
     /** @brief Configures optimization level for ONNX Runtime.
 
-    @param opt_level [optimization level]: Default is 99 (all). Valid values are 0 (disable), 1 (basic), 2 (extended), 99 (all).
+    @param opt_level [optimization level]: Valid values are 0 (disable), 1 (basic), 2 (extended), 99 (all).
     Please see onnxruntime_c_api.h (enum GraphOptimizationLevel) for the full list of all optimization levels.
     @return the reference on modified object.
     */
