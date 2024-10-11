@@ -54,7 +54,9 @@
 #include "caffe_io.hpp"
 #endif
 
+#include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/fp_control_utils.hpp>
+
 
 namespace cv {
 namespace dnn {
@@ -357,7 +359,7 @@ public:
     std::vector<BlobNote> addedBlobs;
     std::map<String, int> layerCounter;
 
-    void populateNet(Net dstNet, bool newEngine=true)
+    void populateNet(Net dstNet, bool newEngine)
     {
         CV_TRACE_FUNCTION();
 
@@ -740,45 +742,59 @@ public:
 
 }
 
-Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
+Net readNetFromCaffe(const String &prototxt,
+                     const String &caffeModel, /*= String()*/
+                     int engine)
 {
+    static const int engine_forced = (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+    if(engine_forced != ENGINE_AUTO)
+        engine = engine_forced;
+
     CaffeImporter caffeImporter(prototxt.c_str(), caffeModel.c_str());
     Net net;
-    caffeImporter.populateNet(net);
+    caffeImporter.populateNet(net, engine == ENGINE_NEW || engine == ENGINE_AUTO);
     return net;
 }
 
 Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
-                     const char *bufferModel, size_t lenModel)
+                     const char *bufferModel, size_t lenModel,
+                     int engine)
 {
+    static const int engine_forced = (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+    if(engine_forced != ENGINE_AUTO)
+        engine = engine_forced;
+
     CaffeImporter caffeImporter(bufferProto, lenProto, bufferModel, lenModel);
     Net net;
-    caffeImporter.populateNet(net);
+    caffeImporter.populateNet(net, engine == ENGINE_NEW || engine == ENGINE_AUTO);
     return net;
 }
 
-Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uchar>& bufferModel)
+Net readNetFromCaffe(const std::vector<uchar>& bufferProto,
+                     const std::vector<uchar>& bufferModel,
+                     int engine)
 {
     const char* bufferProtoPtr = reinterpret_cast<const char*>(&bufferProto[0]);
     const char* bufferModelPtr = bufferModel.empty() ? NULL :
                                  reinterpret_cast<const char*>(&bufferModel[0]);
     return readNetFromCaffe(bufferProtoPtr, bufferProto.size(),
-                            bufferModelPtr, bufferModel.size());
+                            bufferModelPtr, bufferModel.size(),
+                            engine);
 }
 
 #else  // HAVE_PROTOBUF
 
 #define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/Caffe: Build OpenCV with Protobuf to import Caffe models")
 
-Net readNetFromCaffe(const String &, const String &) {
+Net readNetFromCaffe(const String &, const String &, int) {
     DNN_PROTOBUF_UNSUPPORTED();
 }
 
-Net readNetFromCaffe(const char *, size_t, const char *, size_t) {
+Net readNetFromCaffe(const char *, size_t, const char *, size_t, int) {
     DNN_PROTOBUF_UNSUPPORTED();
 }
 
-Net readNetFromCaffe(const std::vector<uchar>&, const std::vector<uchar>&) {
+Net readNetFromCaffe(const std::vector<uchar>&, const std::vector<uchar>&, int) {
     DNN_PROTOBUF_UNSUPPORTED();
 }
 

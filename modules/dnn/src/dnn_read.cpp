@@ -21,7 +21,7 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
     {
         if (modelExt == "prototxt" || configExt == "caffemodel")
             std::swap(model, config);
-        return readNetFromCaffe(config, model);
+        return readNetFromCaffe(config, model, engine);
     }
     if (framework == "tensorflow" || modelExt == "pb" || configExt == "pb" || modelExt == "pbtxt" || configExt == "pbtxt")
     {
@@ -61,7 +61,7 @@ Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
     if (framework == "onnx")
         return readNetFromONNX(bufferModel, engine);
     else if (framework == "caffe")
-        return readNetFromCaffe(bufferConfig, bufferModel);
+        return readNetFromCaffe(bufferConfig, bufferModel, engine);
     else if (framework == "tensorflow")
         return readNetFromTensorflow(bufferModel, bufferConfig);
     else if (framework == "darknet")
