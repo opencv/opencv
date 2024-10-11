@@ -1075,7 +1075,7 @@ void ONNXImporter2::parseReduce(LayerParams& layerParams, const opencv_onnx::Nod
         int num_axes = (int)mat_axes.total();
         std::vector<int> axes(num_axes);
         for (int i = 0; i < num_axes; ++i)
-            axes[i] = mat_axes.at<int>(i);
+            axes[i] = mat_axes.at<int64_t>(i);
         layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
     }
 
