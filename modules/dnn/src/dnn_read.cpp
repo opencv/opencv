@@ -51,15 +51,15 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
     {
         return readNetFromONNX(model, engine);
     }
-    CV_Error(Error::StsError, "Cannot determ    ine an origin framework of files: " + model + (config.empty() ? "" : ", " + config));
+    CV_Error(Error::StsError, "Cannot determine an origin framework of files: " + model + (config.empty() ? "" : ", " + config));
 }
 
 Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
-        const std::vector<uchar>& bufferConfig)
+        const std::vector<uchar>& bufferConfig, int engine)
 {
     String framework = toLowerCase(_framework);
     if (framework == "onnx")
-        return readNetFromONNX(bufferModel);
+        return readNetFromONNX(bufferModel, engine);
     else if (framework == "caffe")
         return readNetFromCaffe(bufferConfig, bufferModel);
     else if (framework == "tensorflow")

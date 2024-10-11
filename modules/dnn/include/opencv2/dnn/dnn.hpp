@@ -985,13 +985,6 @@ CV__DNN_INLINE_NS_BEGIN
          */
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
-        /** @brief Returns overall time for inference and timings (in seconds) for each type of layer, sorted by time in the decreasing order.
-         *
-         * @param[out] timings vector for tick timings for all layers.
-         * @return overall ticks for model inference.
-         */
-        double getPerfProfileSummary(CV_OUT std::vector<std::string>& names, CV_OUT std::vector<double>& timings);
-
         // Get the main model graph
         Ptr<Graph> getMainGraph() const;
 
@@ -1025,7 +1018,7 @@ CV__DNN_INLINE_NS_BEGIN
 
     enum EngineType
     {
-        ENGINE_CLASSIC=1, //!< Force use the new dnn engine
+        ENGINE_CLASSIC=1, //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
         ENGINE_NEW=2,     //!< Force use the old dnn engine similar to 4.x branch
         ENGINE_AUTO=3     //!< Try to use the new engine and then fall back to the classic version.
     };
@@ -1146,6 +1139,9 @@ CV__DNN_INLINE_NS_BEGIN
       *                  * `*.cfg` (Darknet, https://pjreddie.com/darknet/)
       *                  * `*.xml` (OpenVINO, https://software.intel.com/openvino-toolkit)
       * @param[in] framework Explicit framework name tag to determine a format.
+      * @param[in] engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
+      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
+      * Use ENGINE_CLASSIC if you want to use other back-ends.
       * @returns Net object.
       *
       * This function automatically detects an origin framework of trained model
@@ -1165,10 +1161,14 @@ CV__DNN_INLINE_NS_BEGIN
       * @param[in] framework    Name of origin framework.
       * @param[in] bufferModel  A buffer with a content of binary file with weights
       * @param[in] bufferConfig A buffer with a content of text file contains network configuration.
+      * @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
+      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
+      * Use ENGINE_CLASSIC if you want to use other back-ends.
       * @returns Net object.
       */
      CV_EXPORTS_W Net readNet(const String& framework, const std::vector<uchar>& bufferModel,
-                              const std::vector<uchar>& bufferConfig = std::vector<uchar>());
+                              const std::vector<uchar>& bufferConfig = std::vector<uchar>(),
+                              int engine = ENGINE_AUTO);
 
     /** @brief Load a network from Intel's Model Optimizer intermediate representation.
      *  @param[in] xml XML configuration file with network's topology.
@@ -1207,6 +1207,7 @@ CV__DNN_INLINE_NS_BEGIN
     /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
      *  @param onnxFile path to the .onnx file with text description of the network architecture.
      *  @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
+     *  Please pay attention that the new DNN does not support non-CPU back-ends for now.
      *  @returns Network object that ready to do forward, throw an exception in failure cases.
      */
     CV_EXPORTS_W Net readNetFromONNX(CV_WRAP_FILE_PATH const String &onnxFile, int engine=ENGINE_AUTO);
@@ -1225,6 +1226,7 @@ CV__DNN_INLINE_NS_BEGIN
      *         in-memory buffer.
      *  @param buffer in-memory buffer that stores the ONNX model bytes.
      *  @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
+     *  Please pay attention that the new DNN does not support non-CPU back-ends for now.
      *  @returns Network object that ready to do forward, throw an exception
      *        in failure cases.
      */
