@@ -25,26 +25,27 @@ using namespace std;
 using namespace cv::dnn;
 
 const string about = "Use this script for Object Tracking using OpenCV. \n\n"
-        "Firstly, download required models using the links provided in description. \n"
+        "Firstly, download required models using the links provided in description. For vit tracker download model using `python download_models.py vit`\n"
         "To run:\n"
             "\t Nano: \n"
-                "\t\t e.g: ./example_dnn_object_tracker nano --backbone=<path to nanotrack_backbone onnx model> --headneck=<path to nanotrack_head onnx model>\n\n"
+                "\t\t e.g: ./example_dnn_object_tracker nano --nanotrack_backbone=<path to nanotrack_backbone onnx model> --nanotrack_head=<path to nanotrack_head onnx model>\n\n"
             "\t vit: \n"
-                "\t\t e.g: ./example_dnn_object_tracker vit --vit_net=<path to vitTracker onnx model>\n\n"
+                "\t\t e.g: ./example_dnn_object_tracker vit --model=<path to vitTracker onnx model>\n\n"
             "\t dasiamrpn: \n"
-                "\t\t e.g: ./example_dnn_object_tracker dasiamrpn --dasiamrpn_net=<path to dasiamrpn_model onnx model> --kernel_r1=<path to dasiamrpn_kernel_r1 onnx model> --kernel_cls1=<path to dasiamrpn_kernel_cls1 onnx model>\n\n";
+                "\t\t e.g: ./example_dnn_object_tracker dasiamrpn --dasiamrpn_model=<path to dasiamrpn_model onnx model> --kernel_r1=<path to dasiamrpn_kernel_r1 onnx model> --kernel_cls1=<path to dasiamrpn_kernel_cls1 onnx model>\n\n";
 
 const string param_keys =
-        "{ help     h    |     | Print help message }"
-        "{ @alias        |     | An alias name of model to extract preprocessing parameters from models.yml file. }"
-        "{ input    i    |     | Full path to input video folder, the specific camera index. (empty for camera 0) }"
-        "{ backbone      |     | Path to onnx model of backbone.onnx for nano}"
-        "{ headneck      |     | Path to onnx model of headneck.onnx for nano}"
-        "{ vit_net       |     | Path to onnx model of vitTracker.onnx for vit}"
-        "{ tracking_thrs | 0.3 | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }"
-        "{ dasiamrpn_net |     | Path to onnx model of net for dasiamrpn}"
-        "{ kernel_r1     |     | Path to onnx model of kernel_cls1 for dasiamrpn}"
-        "{ kernel_cls1   |     | Path to onnx model of kernel_r1 for dasiamrpn}";
+        "{ help     h         |                   | Print help message }"
+        "{ @alias             |                   | An alias name of model to extract preprocessing parameters from models.yml file. }"
+        "{ zoo                | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
+        "{ input    i         |                   | Full path to input video folder, the specific camera index. (empty for camera 0) }"
+        "{ nanotrack_head     |                   | Path to onnx model of backbone.onnx for nano}"
+        "{ nanotrack_backbone |                   | Path to onnx model of headneck.onnx for nano}"
+        "{ model              |                   | Path to onnx model of vitTracker.onnx for vit}"
+        "{ tracking_thrs      |        0.3        | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }"
+        "{ dasiamrpn_model    |                   | Path to onnx model of net for dasiamrpn}"
+        "{ kernel_r1          |                   | Path to onnx model of kernel_cls1 for dasiamrpn}"
+        "{ kernel_cls1        |                   | Path to onnx model of kernel_r1 for dasiamrpn}";
 
 const string backend_keys = format(
     "{ backend | default | Choose one of computation backends: "
@@ -233,19 +234,26 @@ static int run(int argc, char** argv)
     int backend = getBackendID(parser.get<String>("backend"));
     int target = getTargetID(parser.get<String>("target"));
 
-    if (modelName == "vit"){
-        net = parser.get<String>("vit_net");
+    if (modelName == "vit" || parser.get<String>("model") != ""){
+        string sha1 = "";
+        string zooFile = parser.get<String>("zoo");
+
+        if (modelName == "vit"){
+            zooFile = findFile(zooFile);
+            keys += genPreprocArguments(modelName, zooFile);
+            parser = CommandLineParser(argc, argv, keys);
+            parser.about(about);
+            sha1 = parser.get<String>("sha1");
+        }
+        net = parser.get<String>("model");
         float tracking_score_threshold = parser.get<float>("tracking_thrs");
 
         Ptr<TrackerVit> tracker;
         try
         {
-            if (net == ""){
-                cout<<"Pass model file using --vit_net argument for using vit tracker."<<endl;
-                return -1;
-            }
+            cout<<"Using Vit Tracker."<<endl;
             TrackerVit::Params params;
-            params.net = findModel(net, "");
+            params.net = findModel(net, sha1);
             params.backend = backend;
             params.target = target;
             params.tracking_score_threshold = tracking_score_threshold;
@@ -261,17 +269,19 @@ static int run(int argc, char** argv)
 
         trackObject("vitTracker", tracker, inputName);
     }
-    else if (modelName == "nano"){
-        backbone = parser.get<String>("backbone");
-        headneck = parser.get<String>("headneck");
+    else if (modelName == "nano" || parser.get<String>("nanotrack_head") != ""){
+        backbone = parser.get<String>("nanotrack_backbone");
+        headneck = parser.get<String>("nanotrack_head");
 
         Ptr<TrackerNano> tracker;
         try
         {
             if (backbone == "" || headneck == ""){
-                cout<<"Pass model files using --headneck and --backbone arguments for using nano tracker."<<endl;
+                cout<<"Pass model files using --nanotrack_head and --nanotrack_backbone arguments for using nano tracker. Download nanotrack_head using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx"<<endl;
+                cout<<"And, download nanotrack_backbone using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx"<<endl;
                 return -1;
             }
+            cout<<"Using Nano Tracker."<<endl;
             TrackerNano::Params params;
             params.backbone = findModel(backbone, "");
             params.neckhead = findModel(headneck, "");
@@ -290,8 +300,8 @@ static int run(int argc, char** argv)
         trackObject("nanoTracker", tracker, inputName);
         trackObject("DaSiamRPNTracker", tracker, inputName);
     }
-    else if (modelName == "dasiamrpn"){
-        net = parser.get<String>("dasiamrpn_net");
+    else if (modelName == "dasiamrpn" || parser.get<String>("dasiamrpn_model") != ""){
+        net = parser.get<String>("dasiamrpn_model");
         kernel_cls1 = parser.get<String>("kernel_cls1");
         kernel_r1 = parser.get<String>("kernel_r1");
 
@@ -299,9 +309,12 @@ static int run(int argc, char** argv)
         try
         {
             if (net == "" || kernel_cls1 == "" || kernel_r1 == ""){
-                cout<<"Pass model files using --dasiamrpn_net , --kernel_cls1 and --kernel_r1 arguments for using dasiamrpn tracker."<<endl;
+                cout<<"Pass model files using --dasiamrpn_model , --kernel_cls1 and --kernel_r1 arguments for using dasiamrpn tracker. Download dasiamrpn_model using link: https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0"<<endl;
+                cout<<"And, download kernel_r1 using link: https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0"<<endl;
+                cout<<"And, download kernel_cls1 using link: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0"<<endl;
                 return -1;
             }
+            cout<<"Using Dasiamrpn Tracker."<<endl;
             TrackerDaSiamRPN::Params params;
             params.model = findModel(net, "");
             params.kernel_cls1 = findModel(kernel_cls1, "");

@@ -4,9 +4,9 @@ Tracker demo
 
 For usage download models by following links
 For DaSiamRPN:
-    network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
-    kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
-    kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
+    kernel_r1:       https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
+    kernel_cls1:     https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
+    dasiamrpn_model: https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
 For NanoTrack:
     nanotrack_backbone: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx
     nanotrack_headneck: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx
@@ -21,43 +21,49 @@ from common import *
 def help():
     print(
         '''
-        Firstly, download required models using the links provided in description.
+        Firstly, download required models using the links provided in description. For vit tracker download model using `python download_models.py vit`
         Use this script for Object Tracking using OpenCV.
 
         To run:
             nano:
-                Example: python object_tracker.py nano --backbone=<path to nanotrack_backbone onnx model> --headneck=<path to nanotrack_head onnx model>
+                Example: python object_tracker.py nano --nanotrack_backbone=<path to nanotrack_backbone onnx model> --nanotrack_head=<path to nanotrack_head onnx model>
             vit:
-                Example: python object_tracker.py vit --vit_net=<path to vitTracker onnx model>
+                Example: python object_tracker.py vit --model=<path to vitTracker onnx model>
             dasiamrpn:
-                Example: python object_tracker.py dasiamrpn --dasiamrpn_net=<path to dasiamrpn_model onnx model> --kernel_r1=<path to dasiamrpn_kernel_r1 onnx model> --kernel_cls1=<path to dasiamrpn_kernel_cls1 onnx model>
+                Example: python object_tracker.py dasiamrpn --dasiamrpn_model=<path to dasiamrpn_model onnx model> --kernel_r1=<path to dasiamrpn_kernel_r1 onnx model> --kernel_cls1=<path to dasiamrpn_kernel_cls1 onnx model>
         '''
     )
 
 def createTracker():
-    if args.alias == 'dasiamrpn':
-        if args.dasiamrpn_net is None or args.kernel_r1 is None or args.kernel_cls1 is None:
-            print("Pass model files using --dasiamrpn_net , --kernel_cls1 and --kernel_r1 arguments for using dasiamrpn tracker.")
+    if args.alias == 'dasiamrpn' or args.dasiamrpn_model is not None:
+        if args.dasiamrpn_model is None or args.kernel_r1 is None or args.kernel_cls1 is None:
+            print("Pass model files using --dasiamrpn_model , --kernel_cls1 and --kernel_r1 arguments for using dasiamrpn tracker. Download dasiamrpn_model using link: https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0")
+            print("And, download kernel_r1 using link: https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0")
+            print("And, download kernel_cls1 using link: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0")
             exit(-1)
+        print("Using Dasiamrpn Tracker.")
         params = cv.TrackerDaSiamRPN_Params()
-        params.model = findModel(args.dasiamrpn_net, "")
+        params.model = findModel(args.dasiamrpn_model, "")
         params.kernel_cls1 = findModel(args.kernel_cls1, "")
         params.kernel_r1 = findModel(args.kernel_r1, "")
         tracker = cv.TrackerDaSiamRPN_create(params)
-    elif args.alias == 'nano':
-        if args.backbone is None or args.headneck is None:
-            print("Pass model files using --headneck and --backbone arguments for using nano tracker.")
+    elif args.alias == 'nano' or args.nanotrack_head is not None:
+        if args.nanotrack_backbone is None or args.nanotrack_head is None:
+            print("Pass model files using --nanotrack_head and --nanotrack_backbone arguments for using nano tracker. Download nanotrack_head using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx")
+            print("And, download nanotrack_backbone using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx")
             exit(-1)
+        print("Using Nano Tracker.")
         params = cv.TrackerNano_Params()
-        params.backbone = findModel(args.backbone, "")
-        params.neckhead = findModel(args.headneck, "")
+        params.backbone = findModel(args.nanotrack_backbone, "")
+        params.neckhead = findModel(args.nanotrack_head, "")
         tracker = cv.TrackerNano_create(params)
-    elif args.alias == 'vit':
-        if args.vit_net is None:
-            print("Pass model file using --vit_net argument for using vit tracker.")
-            exit(-1)
+    elif args.alias == 'vit' or args.model is not None:
+        print("Using Vit Tracker.")
+        sha1 = ""
+        if hasattr(args, "sha1"):
+            sha1 = args.sha1
         params = cv.TrackerVit_Params()
-        params.net = findModel(args.vit_net, "")
+        params.net = findModel(args.model, sha1)
         tracker = cv.TrackerVit_create(params)
     else:
         help()
@@ -135,16 +141,25 @@ def run():
 
 if __name__ == '__main__':
     print(__doc__)
-    parser = argparse.ArgumentParser(description="Run tracker")
-    parser.add_argument("alias", type=str, nargs='?', help="Path to video source")
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("alias", type=str, nargs='?', help="alias i.e. (vit, nano, or dasiamrpn)")
+    parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
+                        help='An optional path to file with preprocessing parameters.')
     parser.add_argument("--input", type=str, help="Path to video source")
-    parser.add_argument("--dasiamrpn_net", type=str, help="Path to onnx model of DaSiamRPN net")
+    parser.add_argument("--dasiamrpn_model", type=str, help="Path to onnx model of DaSiamRPN net")
     parser.add_argument("--kernel_r1", type=str, help="Path to onnx model of DaSiamRPN kernel_r1")
     parser.add_argument("--kernel_cls1", type=str, help="Path to onnx model of DaSiamRPN kernel_cls1")
-    parser.add_argument("--backbone", type=str, help="Path to onnx model of NanoTrack backBone")
-    parser.add_argument("--headneck", type=str, help="Path to onnx model of NanoTrack headNeck")
-    parser.add_argument("--vit_net", type=str, help="Path to onnx model of  vittrack")
-
+    parser.add_argument("--nanotrack_backbone", type=str, help="Path to onnx model of NanoTrack backBone")
+    parser.add_argument("--nanotrack_head", type=str, help="Path to onnx model of NanoTrack headNeck")
+    args, _ = parser.parse_known_args()
+    if args.alias == "vit":
+        add_preproc_args(args.zoo, parser, 'object_tracker', alias="vit")
+        parser = argparse.ArgumentParser(parents=[parser],
+                                        description='Object tracking using OpenCV.',
+                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        parser.add_argument("--model", type=str, help="Path to onnx model of  vittrack")
+        parser = argparse.ArgumentParser(parents=[parser], add_help=True)
     args = parser.parse_args()
     run()
     cv.destroyAllWindows()

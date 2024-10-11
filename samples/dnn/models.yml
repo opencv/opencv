@@ -369,3 +369,14 @@ dexined:
   height: 512
   rgb: false
   sample: "edge_detection"
+
+################################################################################
+# Tracker models.
+################################################################################
+
+vit:
+  load_info:
+    url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_vittrack/object_tracking_vittrack_2023sep.onnx"
+    sha1: "50008bb4f6a27b1aa940ad886b1bd1936ac4ed3e"
+  model: "object_tracking_vittrack_2023sep.onnx"
+  sample: "object_tracker"
