@@ -1129,7 +1129,8 @@ TEST_P(Test_ONNX_layers, ResizeUnfusedTwoInputs)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
     testONNXModels("upsample_unfused_two_inputs_opset9_torch1.4", npy, 0, 0, false, true, 2);
-    testONNXModels("upsample_unfused_two_inputs_opset11_torch1.4", npy, 0, 0, false, true, 2);
+    // BUG: https://github.com/opencv/opencv/issues/26291
+    // testONNXModels("upsample_unfused_two_inputs_opset11_torch1.4", npy, 0, 0, false, true, 2);
 }
 
 TEST_P(Test_ONNX_layers, MultyInputs)
