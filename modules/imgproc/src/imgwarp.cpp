@@ -2278,7 +2278,7 @@ static bool ocl_warpTransform_cols4(InputArray _src, OutputArray _dst, InputArra
 
     if ( !dev.isIntel() || !(type == CV_8UC1) ||
          !(dtype == CV_8UC1) || !(_dst.cols() % 4 == 0) ||
-         (op_type == OCL_OP_PERSPECTIVE && (cn == 1 || cn == 3 || cn == 4)) ||
+         (op_type == OCL_OP_PERSPECTIVE && interpolation == INTER_LINEAR && (cn == 1 || cn == 3 || cn == 4)) ||
          !(borderType == cv::BORDER_CONSTANT &&
           (interpolation == cv::INTER_NEAREST || interpolation == cv::INTER_LINEAR || interpolation == cv::INTER_CUBIC)))
         return false;
@@ -2371,7 +2371,9 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
     const char * const kernelName = op_type == OCL_OP_AFFINE ? "warpAffine" : "warpPerspective";
 
     int scalarcn = cn == 3 ? 4 : cn;
-    bool is32f = !dev.isAMD() && (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) && op_type == OCL_OP_AFFINE;
+    bool is32f = op_type == OCL_OP_AFFINE ?
+                 /* Affine*/ !dev.isAMD() && (interpolation == INTER_CUBIC || interpolation == INTER_LINEAR) :
+                 /* Perspective*/ interpolation == INTER_LINEAR;
     int wdepth = interpolation == INTER_NEAREST ? depth : std::max(is32f ? CV_32F : CV_32S, depth);
     int sctype = CV_MAKETYPE(wdepth, scalarcn);
 
@@ -2385,22 +2387,6 @@ static bool ocl_warpTransform(InputArray _src, OutputArray _dst, InputArray _M0,
                       useDouble ? "double" : "float",
                       ocl::typeToStr(CV_MAT_DEPTH(type)),
                       ocl::typeToStr(sctype), cn, rowsPerWI);
-    }
-    else if (interpolation == INTER_LINEAR && op_type == OCL_OP_PERSPECTIVE)
-    {
-        char cvt[2][50];
-        sctype = CV_MAKETYPE(CV_32F, scalarcn);
-        opts = format("-D INTER_%s -D T=%s -D T1=%s -D ST=%s -D WT=%s -D SRC_DEPTH=%d"
-                      " -D CONVERT_TO_WT=%s -D CONVERT_TO_T=%s%s -D CT=%s -D CN=%d -D ROWS_PER_WI=%d",
-                      /* INTER, T */        interpolationMap[interpolation], ocl::typeToStr(type),
-                      /* T1 */              ocl::typeToStr(CV_MAT_DEPTH(type)),
-                      /* ST */              ocl::typeToStr(sctype),
-                      /* WT, SRC_DEPTH */   ocl::typeToStr(CV_MAKE_TYPE(CV_32F, cn)), depth,
-                      /* CONVERT_TO_WT */   ocl::convertTypeStr(depth, CV_32F, cn, cvt[0], sizeof(cvt[0])),
-                      /* CONVERT_TO_T */    ocl::convertTypeStr(CV_32F, depth, cn, cvt[1], sizeof(cvt[1])),
-                      /* CONVERT_TO_T */    doubleSupport ? " -D DOUBLE_SUPPORT" : "",
-                      /* CT */              useDouble ? "double" : "float",
-                      /* CN, ROWS_PER_WI */ cn, rowsPerWI);
     }
     else {
         char cvt[2][50];
