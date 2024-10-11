@@ -128,7 +128,6 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
     }
 
     Mat image;
-    char key;
 
     for (;;)
     {
@@ -151,7 +150,7 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
         putText(image, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         putText(image, "Press space bar after selecting.", Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         imshow(windowName, image);
-        key = waitKey(200);
+        int key = waitKey(200);
         if (key == ' ')
         {
             selectRect = selectROI(windowName, image);
