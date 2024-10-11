@@ -277,7 +277,7 @@ static int run(int argc, char** argv)
         try
         {
             if (backbone == "" || headneck == ""){
-                cout<<"Pass model files using --nanotrack_head and --nanotrack_backbone arguments for using nano tracker. Download nanotrack_head using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx"<<endl;
+                cout<<"Pass model files using --nanotrack_head and --nanotrack_backbone arguments for using nano tracker. \nDownload nanotrack_head using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx"<<endl;
                 cout<<"And, download nanotrack_backbone using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx"<<endl;
                 return -1;
             }
@@ -309,7 +309,7 @@ static int run(int argc, char** argv)
         try
         {
             if (net == "" || kernel_cls1 == "" || kernel_r1 == ""){
-                cout<<"Pass model files using --dasiamrpn_model , --kernel_cls1 and --kernel_r1 arguments for using dasiamrpn tracker. Download dasiamrpn_model using link: https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0"<<endl;
+                cout<<"Pass model files using --dasiamrpn_model , --kernel_cls1 and --kernel_r1 arguments for using dasiamrpn tracker. \nDownload dasiamrpn_model using link: https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0"<<endl;
                 cout<<"And, download kernel_r1 using link: https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0"<<endl;
                 cout<<"And, download kernel_cls1 using link: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0"<<endl;
                 return -1;
