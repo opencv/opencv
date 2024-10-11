@@ -705,23 +705,18 @@ static GraphOptimizationLevel convertToGraphOptimizationLevel(const int opt_leve
     switch (opt_level) {
     case ORT_DISABLE_ALL:
         return ORT_DISABLE_ALL;
-        break;
     case ORT_ENABLE_BASIC:
         return ORT_ENABLE_BASIC;
-        break;
     case ORT_ENABLE_EXTENDED:
         return ORT_ENABLE_EXTENDED;
-        break;
     case ORT_ENABLE_ALL:
         return ORT_ENABLE_ALL;
-        break;
     default:
         if (opt_level > ORT_ENABLE_ALL) {  // relax constraint
             return ORT_ENABLE_ALL;
         }
         else {
             cv::util::throw_error(std::invalid_argument("Invalid argument opt_level = " + std::to_string(opt_level)));
-            return ORT_ENABLE_ALL;
         }
     }
 }
