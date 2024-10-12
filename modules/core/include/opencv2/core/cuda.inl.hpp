@@ -364,7 +364,8 @@ Size GpuMat::size() const
 inline
 bool GpuMat::empty() const
 {
-    return data == 0;
+    //return data == 0;
+    return 0 == cols || 0 == rows;
 }
 
 inline
