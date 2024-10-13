@@ -769,7 +769,7 @@ TEST(Drawing, ttf_text)
     TextProp text[] =
     {
         {"The quick brown fox jumps over lazy dog. Fly, start, finish, shuffle shuttle.", false, 400, false},
-        {"vechicle #5 detected; fps=123.45.\n", false, 600, false},
+        {"vechicle #5 detected; fps=103.45.\n", false, 600, false},
         {"Съешь же ещё этих мягких французских булок, да выпей чаю!\n"
         "Dès Noël où un zéphyr haï me vêt de glaçons würmiens je dîne\nd’exquis rôtis de bœuf au kir à l’aÿ d’âge mûr & cætera!\n"
         "“Falsches Üben von Xylophonmusik quält jeden größeren Zwerg”.", false, 400, true},
