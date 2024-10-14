@@ -57,6 +57,59 @@
 #define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(CN, DEPTH) \
     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_##DEPTH(CN)
 
+// Shuffle (ARM NEON)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_LOAD() \
+    uint8x8x4_t t00 = { \
+        vld1_u8(src + addr[0]), \
+        vld1_u8(src + addr[1]), \
+        vld1_u8(src + addr[2]), \
+        vld1_u8(src + addr[3]) \
+    }; \
+    uint8x8x4_t t01 = { \
+        vld1_u8(src + addr[4]), \
+        vld1_u8(src + addr[5]), \
+        vld1_u8(src + addr[6]), \
+        vld1_u8(src + addr[7]) \
+    }; \
+    uint8x8x4_t t10 = { \
+        vld1_u8(src + addr[0] + srcstep), \
+        vld1_u8(src + addr[1] + srcstep), \
+        vld1_u8(src + addr[2] + srcstep), \
+        vld1_u8(src + addr[3] + srcstep) \
+    }; \
+    uint8x8x4_t t11 = { \
+        vld1_u8(src + addr[4] + srcstep), \
+        vld1_u8(src + addr[5] + srcstep), \
+        vld1_u8(src + addr[6] + srcstep), \
+        vld1_u8(src + addr[7] + srcstep) \
+    }; \
+    uint32x2_t p00_, p01_, p10_, p11_;
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(coords, suffix) \
+    p00_ = vreinterpret_u32_u8(vtbl4_u8(t00, coords)); \
+    p01_ = vreinterpret_u32_u8(vtbl4_u8(t01, coords)); \
+    p10_ = vreinterpret_u32_u8(vtbl4_u8(t10, coords)); \
+    p11_ = vreinterpret_u32_u8(vtbl4_u8(t11, coords)); \
+    p00##suffix = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_)); \
+    p01##suffix = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_)); \
+    p10##suffix = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_)); \
+    p11##suffix = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_C1() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_LOAD() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(grays, g)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_C3() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_LOAD() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(reds, r) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(greens, g) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(blues, b)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_C4() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_LOAD() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(reds, r) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(greens, g) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(blues, b) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(alphas, a)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(CN) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_##CN()
+
 
 // Shuffle (not all pixels within image)
 #define CV_WARP_LINEAR_VECTOR_SHUFFLE_STORE_CONSTANT_BORDER_8UC1() \
@@ -190,6 +243,25 @@
         CV_WARP_LINEAR_VECTOR_FETCH_PIXEL_##CN(1, 1, uf*3); \
     }
 
+// Shuffle (not all pixels within image) (ARM NEON)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(suffix, offset)\
+    p00##suffix = vld1_u8(pixbuf + offset);      \
+    p01##suffix = vld1_u8(pixbuf + offset + 8);  \
+    p10##suffix = vld1_u8(pixbuf + offset + 16); \
+    p11##suffix = vld1_u8(pixbuf + offset + 24);
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_C1() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(g, 0)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_C3() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(r, 0) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(g, 32) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(b, 64)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_C4() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(r, 0) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(g, 32) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(b, 64) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(a, 96)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(CN) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_##CN()
 
 // Load pixels for linear interpolation (uint8_t -> int16_t)
 #define CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16(cn, i) \
@@ -210,6 +282,26 @@
     CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16(a, 12)
 #define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(CN) \
     CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_##CN();
+
+// Load pixels for linear interpolation (uint8_t -> int16_t) (ARM NEON)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(suffix) \
+    v_int16 f00##suffix = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00##suffix))), \
+            f01##suffix = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01##suffix))), \
+            f10##suffix = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10##suffix))), \
+            f11##suffix = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11##suffix)));
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON_C1() \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(g)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON_C3() \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(b)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON_C4() \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(b) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(a)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(CN) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON_##CN();
 
 // Load pixels for linear interpolation (uint16_t -> uint16_t)
 #define CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16(cn, i) \

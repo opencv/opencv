@@ -222,7 +222,7 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
         }
         v_uint8 bval_v0 = vx_load_low(&bvalbuf[0]);
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-        uint8x8_t gray = {0, 8, 16, 24, 1, 9, 17, 25};
+        uint8x8_t grays = {0, 8, 16, 24, 1, 9, 17, 25};
     #endif
 #endif
 
@@ -254,45 +254,7 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    uint8x8x4_t t00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t t01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t t10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t t11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(t00, gray));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(t01, gray));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(t10, gray));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(t11, gray));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C1);
     #else
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C1, 8U);
     #endif
@@ -300,18 +262,12 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C1, 8U);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    p00g = vld1_u8(pixbuf);
-                    p01g = vld1_u8(pixbuf + 8);
-                    p10g = vld1_u8(pixbuf + 16);
-                    p11g = vld1_u8(pixbuf + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C1);
     #endif
                 }
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 // In case neon fp16 intrinsics are not available; still requires A64
-                v_int16 f00g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00g))),
-                        f01g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01g))),
-                        f10g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10g))),
-                        f11g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11g)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(C1);
     #else
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C1);
     #endif
@@ -440,65 +396,7 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    uint8x8x4_t p00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t p01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t p10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t p11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, reds));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, reds));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, reds));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, reds));
-
-                    p00r = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01r = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10r = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11r = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, greens));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, greens));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, greens));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, greens));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, blues));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, blues));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, blues));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, blues));
-
-                    p00b = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01b = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10b = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11b = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C3);
     #else
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C3, 8U);
     #endif
@@ -506,36 +404,12 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C3, 8U);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    p00r = vld1_u8(pixbuf);
-                    p01r = vld1_u8(pixbuf + 8);
-                    p10r = vld1_u8(pixbuf + 16);
-                    p11r = vld1_u8(pixbuf + 24);
-
-                    p00g = vld1_u8(pixbuf + 32);
-                    p01g = vld1_u8(pixbuf + 32 + 8);
-                    p10g = vld1_u8(pixbuf + 32 + 16);
-                    p11g = vld1_u8(pixbuf + 32 + 24);
-
-                    p00b = vld1_u8(pixbuf + 64);
-                    p01b = vld1_u8(pixbuf + 64 + 8);
-                    p10b = vld1_u8(pixbuf + 64 + 16);
-                    p11b = vld1_u8(pixbuf + 64 + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C3);
     #endif
                 }
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 // In case neon fp16 intrinsics are not available; still requires A64
-                v_int16 f00r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00r))),
-                        f01r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01r))),
-                        f10r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10r))),
-                        f11r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11r)));
-                v_int16 f00g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00g))),
-                        f01g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01g))),
-                        f10g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10g))),
-                        f11g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11g)));
-                v_int16 f00b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00b))),
-                        f01b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01b))),
-                        f10b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10b))),
-                        f11b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11b)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(C3);
     #else
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C3);
     #endif
@@ -670,75 +544,7 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    uint8x8x4_t p00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t p01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t p10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t p11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, reds));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, reds));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, reds));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, reds));
-
-                    p00r = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01r = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10r = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11r = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, greens));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, greens));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, greens));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, greens));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, blues));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, blues));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, blues));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, blues));
-
-                    p00b = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01b = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10b = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11b = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, alphas));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, alphas));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, alphas));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, alphas));
-
-                    p00a = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01a = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10a = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11a = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C4)
     #else
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 8U);
     #endif
@@ -746,45 +552,12 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    p00r = vld1_u8(pixbuf);
-                    p01r = vld1_u8(pixbuf + 8);
-                    p10r = vld1_u8(pixbuf + 16);
-                    p11r = vld1_u8(pixbuf + 24);
-
-                    p00g = vld1_u8(pixbuf + 32);
-                    p01g = vld1_u8(pixbuf + 32 + 8);
-                    p10g = vld1_u8(pixbuf + 32 + 16);
-                    p11g = vld1_u8(pixbuf + 32 + 24);
-
-                    p00b = vld1_u8(pixbuf + 64);
-                    p01b = vld1_u8(pixbuf + 64 + 8);
-                    p10b = vld1_u8(pixbuf + 64 + 16);
-                    p11b = vld1_u8(pixbuf + 64 + 24);
-
-                    p00a = vld1_u8(pixbuf + 96);
-                    p01a = vld1_u8(pixbuf + 96 + 8);
-                    p10a = vld1_u8(pixbuf + 96 + 16);
-                    p11a = vld1_u8(pixbuf + 96 + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C4);
     #endif
                 }
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 // In case neon fp16 intrinsics are not available; still requires A64
-                v_int16 f00r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00r))),
-                        f01r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01r))),
-                        f10r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10r))),
-                        f11r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11r)));
-                v_int16 f00g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00g))),
-                        f01g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01g))),
-                        f10g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10g))),
-                        f11g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11g)));
-                v_int16 f00b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00b))),
-                        f01b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01b))),
-                        f10b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10b))),
-                        f11b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11b)));
-                v_int16 f00a = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00a))),
-                        f01a = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01a))),
-                        f10a = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10a))),
-                        f11a = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11a)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(C4);
     #else
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C4);
     #endif
@@ -1584,7 +1357,7 @@ void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step
             bvalbuf[i] = bval[0];
         }
         v_uint8 bval_v0 = vx_load_low(&bvalbuf[0]);
-        uint8x8_t gray = {0, 8, 16, 24, 1, 9, 17, 25};
+        uint8x8_t grays = {0, 8, 16, 24, 1, 9, 17, 25};
 
         for (int y = r.start; y < r.end; y++) {
             uint8_t* dstptr = dst + y*dststep;
@@ -1610,52 +1383,11 @@ void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step
                 uint8x8_t p00g, p01g, p10g, p11g;
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    uint8x8x4_t t00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t t01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t t10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t t11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(t00, gray));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(t01, gray));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(t10, gray));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(t11, gray));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C1);
                 } else {
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C1, 8U);
 
-                    p00g = vld1_u8(pixbuf);
-                    p01g = vld1_u8(pixbuf + 8);
-                    p10g = vld1_u8(pixbuf + 16);
-                    p11g = vld1_u8(pixbuf + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C1);
                 }
 
                 v_float16 f00 = v_float16(vcvtq_f16_u16(vmovl_u8(p00g)));
@@ -1792,82 +1524,11 @@ void warpAffineLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step
                           p00b, p01b, p10b, p11b;
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    uint8x8x4_t p00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t p01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t p10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t p11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, reds));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, reds));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, reds));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, reds));
-
-                    p00r = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01r = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10r = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11r = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, greens));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, greens));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, greens));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, greens));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, blues));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, blues));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, blues));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, blues));
-
-                    p00b = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01b = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10b = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11b = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C3);
                 } else {
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C3, 8U);
 
-                    p00r = vld1_u8(pixbuf);
-                    p01r = vld1_u8(pixbuf + 8);
-                    p10r = vld1_u8(pixbuf + 16);
-                    p11r = vld1_u8(pixbuf + 24);
-
-                    p00g = vld1_u8(pixbuf + 32);
-                    p01g = vld1_u8(pixbuf + 32 + 8);
-                    p10g = vld1_u8(pixbuf + 32 + 16);
-                    p11g = vld1_u8(pixbuf + 32 + 24);
-
-                    p00b = vld1_u8(pixbuf + 64);
-                    p01b = vld1_u8(pixbuf + 64 + 8);
-                    p10b = vld1_u8(pixbuf + 64 + 16);
-                    p11b = vld1_u8(pixbuf + 64 + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C3);
                 }
 
                 v_float16 f00r = v_float16(vcvtq_f16_u16(vmovl_u8(p00r)));
@@ -2028,97 +1689,11 @@ void warpAffineLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step
                           p00a, p01a, p10a, p11a;
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    uint8x8x4_t p00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t p01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t p10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t p11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, reds));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, reds));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, reds));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, reds));
-
-                    p00r = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01r = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10r = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11r = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, greens));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, greens));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, greens));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, greens));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, blues));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, blues));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, blues));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, blues));
-
-                    p00b = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01b = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10b = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11b = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, alphas));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, alphas));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, alphas));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, alphas));
-
-                    p00a = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01a = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10a = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11a = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C4);
                 } else {
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
 
-                    p00r = vld1_u8(pixbuf);
-                    p01r = vld1_u8(pixbuf + 8);
-                    p10r = vld1_u8(pixbuf + 16);
-                    p11r = vld1_u8(pixbuf + 24);
-
-                    p00g = vld1_u8(pixbuf + 32);
-                    p01g = vld1_u8(pixbuf + 32 + 8);
-                    p10g = vld1_u8(pixbuf + 32 + 16);
-                    p11g = vld1_u8(pixbuf + 32 + 24);
-
-                    p00b = vld1_u8(pixbuf + 64);
-                    p01b = vld1_u8(pixbuf + 64 + 8);
-                    p10b = vld1_u8(pixbuf + 64 + 16);
-                    p11b = vld1_u8(pixbuf + 64 + 24);
-
-                    p00a = vld1_u8(pixbuf + 96);
-                    p01a = vld1_u8(pixbuf + 96 + 8);
-                    p10a = vld1_u8(pixbuf + 96 + 16);
-                    p11a = vld1_u8(pixbuf + 96 + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C4);
                 }
 
                 v_float16 f00r = v_float16(vcvtq_f16_u16(vmovl_u8(p00r)));
@@ -2251,7 +1826,7 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
         }
         v_uint8 bval_v0 = vx_load_low(&bvalbuf[0]);
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-        uint8x8_t gray = {0, 8, 16, 24, 1, 9, 17, 25};
+        uint8x8_t grays = {0, 8, 16, 24, 1, 9, 17, 25};
     #endif
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -2285,45 +1860,7 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    uint8x8x4_t t00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t t01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t t10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t t11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(t00, gray));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(t01, gray));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(t10, gray));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(t11, gray));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C1);
     #else
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C1, 8U);
     #endif
@@ -2331,18 +1868,12 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C1, 8U);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    p00g = vld1_u8(pixbuf);
-                    p01g = vld1_u8(pixbuf + 8);
-                    p10g = vld1_u8(pixbuf + 16);
-                    p11g = vld1_u8(pixbuf + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C1);
     #endif
                 }
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 // In case neon fp16 intrinsics are not available; still requires A64
-                v_int16 f00g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00g))),
-                        f01g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01g))),
-                        f10g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10g))),
-                        f11g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11g)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(C1);
     #else
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C1);
     #endif
@@ -2475,65 +2006,7 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    uint8x8x4_t p00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t p01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t p10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t p11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, reds));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, reds));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, reds));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, reds));
-
-                    p00r = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01r = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10r = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11r = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, greens));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, greens));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, greens));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, greens));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, blues));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, blues));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, blues));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, blues));
-
-                    p00b = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01b = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10b = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11b = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C3);
     #else
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C3, 8U);
     #endif
@@ -2541,36 +2014,12 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C3, 8U);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    p00r = vld1_u8(pixbuf);
-                    p01r = vld1_u8(pixbuf + 8);
-                    p10r = vld1_u8(pixbuf + 16);
-                    p11r = vld1_u8(pixbuf + 24);
-
-                    p00g = vld1_u8(pixbuf + 32);
-                    p01g = vld1_u8(pixbuf + 32 + 8);
-                    p10g = vld1_u8(pixbuf + 32 + 16);
-                    p11g = vld1_u8(pixbuf + 32 + 24);
-
-                    p00b = vld1_u8(pixbuf + 64);
-                    p01b = vld1_u8(pixbuf + 64 + 8);
-                    p10b = vld1_u8(pixbuf + 64 + 16);
-                    p11b = vld1_u8(pixbuf + 64 + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C3);
     #endif
                 }
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 // In case neon fp16 intrinsics are not available; still requires A64
-                v_int16 f00r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00r))),
-                        f01r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01r))),
-                        f10r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10r))),
-                        f11r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11r)));
-                v_int16 f00g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00g))),
-                        f01g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01g))),
-                        f10g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10g))),
-                        f11g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11g)));
-                v_int16 f00b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00b))),
-                        f01b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01b))),
-                        f10b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10b))),
-                        f11b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11b)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(C3);
     #else
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C3);
     #endif
@@ -2708,75 +2157,7 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    uint8x8x4_t p00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t p01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t p10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t p11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, reds));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, reds));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, reds));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, reds));
-
-                    p00r = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01r = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10r = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11r = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, greens));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, greens));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, greens));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, greens));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, blues));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, blues));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, blues));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, blues));
-
-                    p00b = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01b = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10b = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11b = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, alphas));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, alphas));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, alphas));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, alphas));
-
-                    p00a = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01a = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10a = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11a = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C4);
     #else
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 8U);
     #endif
@@ -2784,45 +2165,12 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    p00r = vld1_u8(pixbuf);
-                    p01r = vld1_u8(pixbuf + 8);
-                    p10r = vld1_u8(pixbuf + 16);
-                    p11r = vld1_u8(pixbuf + 24);
-
-                    p00g = vld1_u8(pixbuf + 32);
-                    p01g = vld1_u8(pixbuf + 32 + 8);
-                    p10g = vld1_u8(pixbuf + 32 + 16);
-                    p11g = vld1_u8(pixbuf + 32 + 24);
-
-                    p00b = vld1_u8(pixbuf + 64);
-                    p01b = vld1_u8(pixbuf + 64 + 8);
-                    p10b = vld1_u8(pixbuf + 64 + 16);
-                    p11b = vld1_u8(pixbuf + 64 + 24);
-
-                    p00a = vld1_u8(pixbuf + 96);
-                    p01a = vld1_u8(pixbuf + 96 + 8);
-                    p10a = vld1_u8(pixbuf + 96 + 16);
-                    p11a = vld1_u8(pixbuf + 96 + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C4);
     #endif
                 }
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 // In case neon fp16 intrinsics are not available; still requires A64
-                v_int16 f00r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00r))),
-                        f01r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01r))),
-                        f10r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10r))),
-                        f11r = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11r)));
-                v_int16 f00g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00g))),
-                        f01g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01g))),
-                        f10g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10g))),
-                        f11g = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11g)));
-                v_int16 f00b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00b))),
-                        f01b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01b))),
-                        f10b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10b))),
-                        f11b = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11b)));
-                v_int16 f00a = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00a))),
-                        f01a = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01a))),
-                        f10a = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10a))),
-                        f11a = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11a)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(C4);
     #else
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C4);
     #endif
@@ -3639,7 +2987,7 @@ void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src
             bvalbuf[i] = bval[0];
         }
         v_uint8 bval_v0 = vx_load_low(&bvalbuf[0]);
-        uint8x8_t gray = {0, 8, 16, 24, 1, 9, 17, 25};
+        uint8x8_t grays = {0, 8, 16, 24, 1, 9, 17, 25};
 
         for (int y = r.start; y < r.end; y++) {
             uint8_t* dstptr = dst + y*dststep;
@@ -3667,52 +3015,11 @@ void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src
                 uint8x8_t p00g, p01g, p10g, p11g;
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    uint8x8x4_t t00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t t01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t t10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t t11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(t00, gray));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(t01, gray));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(t10, gray));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(t11, gray));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C1);
                 } else {
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C1, 8U);
 
-                    p00g = vld1_u8(pixbuf);
-                    p01g = vld1_u8(pixbuf + 8);
-                    p10g = vld1_u8(pixbuf + 16);
-                    p11g = vld1_u8(pixbuf + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C1);
                 }
 
                 v_float16 f00 = v_float16(vcvtq_f16_u16(vmovl_u8(p00g)));
@@ -3852,82 +3159,11 @@ void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src
                           p00b, p01b, p10b, p11b;
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    uint8x8x4_t p00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t p01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t p10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t p11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, reds));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, reds));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, reds));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, reds));
-
-                    p00r = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01r = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10r = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11r = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, greens));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, greens));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, greens));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, greens));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, blues));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, blues));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, blues));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, blues));
-
-                    p00b = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01b = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10b = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11b = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C3);
                 } else {
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C3, 8U);
 
-                    p00r = vld1_u8(pixbuf);
-                    p01r = vld1_u8(pixbuf + 8);
-                    p10r = vld1_u8(pixbuf + 16);
-                    p11r = vld1_u8(pixbuf + 24);
-
-                    p00g = vld1_u8(pixbuf + 32);
-                    p01g = vld1_u8(pixbuf + 32 + 8);
-                    p10g = vld1_u8(pixbuf + 32 + 16);
-                    p11g = vld1_u8(pixbuf + 32 + 24);
-
-                    p00b = vld1_u8(pixbuf + 64);
-                    p01b = vld1_u8(pixbuf + 64 + 8);
-                    p10b = vld1_u8(pixbuf + 64 + 16);
-                    p11b = vld1_u8(pixbuf + 64 + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C3);
                 }
 
                 v_float16 f00r = v_float16(vcvtq_f16_u16(vmovl_u8(p00r)));
@@ -4088,97 +3324,11 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
                           p00a, p01a, p10a, p11a;
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    uint8x8x4_t p00 = {
-                        vld1_u8(src + addr[0]),
-                        vld1_u8(src + addr[1]),
-                        vld1_u8(src + addr[2]),
-                        vld1_u8(src + addr[3])
-                    };
-
-                    uint8x8x4_t p01 = {
-                        vld1_u8(src + addr[4]),
-                        vld1_u8(src + addr[5]),
-                        vld1_u8(src + addr[6]),
-                        vld1_u8(src + addr[7])
-                    };
-
-                    uint8x8x4_t p10 = {
-                        vld1_u8(src + addr[0] + srcstep),
-                        vld1_u8(src + addr[1] + srcstep),
-                        vld1_u8(src + addr[2] + srcstep),
-                        vld1_u8(src + addr[3] + srcstep)
-                    };
-
-                    uint8x8x4_t p11 = {
-                        vld1_u8(src + addr[4] + srcstep),
-                        vld1_u8(src + addr[5] + srcstep),
-                        vld1_u8(src + addr[6] + srcstep),
-                        vld1_u8(src + addr[7] + srcstep)
-                    };
-
-                    uint32x2_t p00_, p01_, p10_, p11_;
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, reds));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, reds));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, reds));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, reds));
-
-                    p00r = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01r = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10r = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11r = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, greens));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, greens));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, greens));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, greens));
-
-                    p00g = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01g = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10g = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11g = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, blues));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, blues));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, blues));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, blues));
-
-                    p00b = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01b = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10b = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11b = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
-
-                    p00_ = vreinterpret_u32_u8(vtbl4_u8(p00, alphas));
-                    p01_ = vreinterpret_u32_u8(vtbl4_u8(p01, alphas));
-                    p10_ = vreinterpret_u32_u8(vtbl4_u8(p10, alphas));
-                    p11_ = vreinterpret_u32_u8(vtbl4_u8(p11, alphas));
-
-                    p00a = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_));
-                    p01a = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_));
-                    p10a = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_));
-                    p11a = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C4);
                 } else {
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
 
-                    p00r = vld1_u8(pixbuf);
-                    p01r = vld1_u8(pixbuf + 8);
-                    p10r = vld1_u8(pixbuf + 16);
-                    p11r = vld1_u8(pixbuf + 24);
-
-                    p00g = vld1_u8(pixbuf + 32);
-                    p01g = vld1_u8(pixbuf + 32 + 8);
-                    p10g = vld1_u8(pixbuf + 32 + 16);
-                    p11g = vld1_u8(pixbuf + 32 + 24);
-
-                    p00b = vld1_u8(pixbuf + 64);
-                    p01b = vld1_u8(pixbuf + 64 + 8);
-                    p10b = vld1_u8(pixbuf + 64 + 16);
-                    p11b = vld1_u8(pixbuf + 64 + 24);
-
-                    p00a = vld1_u8(pixbuf + 96);
-                    p01a = vld1_u8(pixbuf + 96 + 8);
-                    p10a = vld1_u8(pixbuf + 96 + 16);
-                    p11a = vld1_u8(pixbuf + 96 + 24);
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C4);
                 }
 
                 v_float16 f00r = v_float16(vcvtq_f16_u16(vmovl_u8(p00r)));
