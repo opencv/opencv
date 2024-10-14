@@ -92,7 +92,7 @@ Scalar mean_v, stnd;
 
 static void extractFeatures(vector<Mat> &imglist, Net &net, vector<Mat> &features)
 {
-    for (int st = 0; st < (int)imglist.size(); st++)
+    for (size_t st = 0; st < imglist.size(); st++)
     {
         Mat blob;
         blobFromImage(imglist[st], blob, scale, Size(width, height), mean_v, swapRB, false, CV_32F);
@@ -107,16 +107,10 @@ static void extractFeatures(vector<Mat> &imglist, Net &net, vector<Mat> &feature
         Mat out=net.forward();
         vector<int> s {out.size[0], out.size[1]};
         out = out.reshape(1, s);
+        features.resize(out.rows);
         for (int i = 0; i < out.rows; i++)
         {
-            Mat temp_feature(1, out.cols, CV_32F);
-            for (int j = 0; j < out.cols; j++)
-            {
-                temp_feature.at<float>(0, j) = out.at<float>(i, j);
-            }
-            Mat norm_feature;
-            normalize(temp_feature, norm_feature, 1.0, 0.0, NORM_L2);
-            features.push_back(norm_feature);
+            normalize(out.row(i), features[i], 1.0, 0.0, NORM_L2);
         }
     }
     return;
@@ -142,7 +136,7 @@ static int findMatching(const Mat &queryFeatures, const vector<Mat> &galleryFeat
     return bestIndex;
 }
 
-static vector<Mat> yoloDetector(Mat &frame, Net &net)
+static void yoloDetector(Mat &frame, Net &net, vector<Mat>& images)
 {
     int ht = frame.rows;
     int wt = frame.cols;
@@ -200,8 +194,9 @@ static vector<Mat> yoloDetector(Mat &frame, Net &net)
     vector<int> indexes;
     NMSBoxes(boxes, scores, 0.25f, 0.45f, indexes, 0.5f, 0);
 
-    vector<Mat> images;
-    for (int index : indexes) {
+    images.resize(indexes.size());
+    for (size_t i = 0; i < indexes.size(); i++) {
+        int index = indexes[i];
         int x = static_cast<int>(round(boxes[index].x * norm_scale));
         int y = static_cast<int>(round(boxes[index].y * norm_scale));
         int w = static_cast<int>(round(boxes[index].width * norm_scale));
@@ -214,11 +209,9 @@ static vector<Mat> yoloDetector(Mat &frame, Net &net)
 
         // Crop the image
         Rect roi(x, y, w, h); // Define a region of interest
-        Mat crop_img = frame(roi); // Crop the region from the frame
-        images.push_back(crop_img);
-        imgDict[crop_img] = roi;
+        images[i] = frame(roi); // Crop the region from the frame
+        imgDict[images[i]] = roi;
     }
-    return images;
 }
 
 int main(int argc, char **argv)
@@ -338,6 +331,8 @@ int main(int argc, char **argv)
     vector<Mat> queryFeatures;
     extractFeatures(queryImages, reidNet, queryFeatures);
 
+    vector<Mat> detectedImages;
+    vector<Mat> galleryFeatures;
     for(;;) {
         if (!cap.read(frame) || frame.empty()) {
             break;
@@ -347,9 +342,8 @@ int main(int argc, char **argv)
             fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize);
             fontWeight = min(fontWeight, (stdWeight*imgWidth)/stdImgSize);
         }
-        vector<Mat> detectedImages = yoloDetector(frame, net);
 
-        vector<Mat> galleryFeatures;
+        yoloDetector(frame, net, detectedImages);
         extractFeatures(detectedImages, reidNet, galleryFeatures);
 
         int match_idx = findMatching(queryFeatures[0], galleryFeatures);
