@@ -4,6 +4,7 @@ from __future__ import print_function
 import numpy as np
 import cv2 as cv
 import io
+import sys
 
 from tests_common import NewOpenCVTests
 
@@ -23,6 +24,9 @@ class Bindings(NewOpenCVTests):
             self.check_name(cv.videoio_registry.getBackendName(backend))
 
     def test_capture_stream_file(self):
+        if sys.version_info[0] < 3:
+            raise self.skipTest('Python 3.x required')
+
         if not cv.videoio_registry.getBufferBackends():
             raise self.skipTest("No available backends")
 
@@ -34,6 +38,9 @@ class Bindings(NewOpenCVTests):
             self.assertEqual(frame.shape, (576, 768, 3))
 
     def test_capture_stream_buffer(self):
+        if sys.version_info[0] < 3:
+            raise self.skipTest('Python 3.x required')
+
         if not cv.videoio_registry.getBufferBackends():
             raise self.skipTest("No available backends")
 
