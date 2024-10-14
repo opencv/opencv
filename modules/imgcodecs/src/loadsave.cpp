@@ -1228,7 +1228,7 @@ bool imencode( const String& ext, InputArray _img,
     return code;
 }
 
-bool imencodemulti( const String& ext, InputArrayOfArrays img,
+bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
                     std::vector<uchar>& buf, const std::vector<int>& params)
 {
     return imencode(ext, imgs, buf, params);
