@@ -405,7 +405,7 @@ The function imencode compresses the image and stores it in the memory buffer th
 result. See cv::imwrite for the list of supported formats and flags description.
 
 @param ext File extension that defines the output format. Must include a leading period.
-@param img (Mat or vector of Mat) Image or Images to be written.
+@param img Image to be compressed.
 @param buf Output buffer resized to fit the compressed image.
 @param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
 */
@@ -413,14 +413,19 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
 
-//! @brief multi-image overload for bindings
-CV_WRAP static inline
-bool imencodemulti(const String& ext, InputArrayOfArrays img,
-                   CV_OUT std::vector<uchar>& buf,
-                   const std::vector<int>& params = std::vector<int>())
-{
-    return imencode(ext, img, buf, params);
-}
+/** @brief Encodes array of images into a memory buffer.
+
+The function is analog of cv::imencode for in-memory multi-page images compression.
+See cv::imwrite for the list of supported formats and flags description.
+
+@param ext File extension that defines the output format. Must include a leading period.
+@param imgs Vector of images be written.
+@param buf Output buffer resized to fit the compressed data.
+@param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
+*/
+CV_EXPORTS_W bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
+                                 CV_OUT std::vector<uchar>& buf,
+                                 const std::vector<int>& params = std::vector<int>());
 
 /** @brief Checks if the specified image file can be decoded by OpenCV.
 

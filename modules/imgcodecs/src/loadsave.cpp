@@ -787,12 +787,12 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: " << e.what());
-        throw;
+        code = false;
     }
     catch (...)
     {
         CV_LOG_ERROR(NULL, "imwrite_('" << filename << "'): can't write data: unknown exception");
-        throw;
+        code = false;
     }
 
     return code;
@@ -980,7 +980,7 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
 
     ImageDecoder decoder = findDecoder(buf_row);
     if (!decoder)
-        return 0;
+        return false;
 
     // Try to decode image by RGB instead of BGR.
     if (flags & IMREAD_COLOR_RGB && flags != IMREAD_UNCHANGED)
@@ -997,7 +997,7 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
         filename = tempfile();
         FILE* f = fopen(filename.c_str(), "wb");
         if (!f)
-            return 0;
+            return false;
         size_t bufSize = buf_row.total() * buf.elemSize();
         if (fwrite(buf_row.ptr(), 1, bufSize, f) != bufSize)
         {
@@ -1184,7 +1184,7 @@ bool imencode( const String& ext, InputArray _img,
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
 
-    bool code;
+    bool code = false;
     String filename;
     if( !encoder->setDestination(buf) )
     {
@@ -1205,15 +1205,15 @@ bool imencode( const String& ext, InputArray _img,
     catch (const cv::Exception& e)
     {
         CV_LOG_ERROR(NULL, "imencode(): can't encode data: " << e.what());
-        throw;
+        code = false;
     }
     catch (...)
     {
         CV_LOG_ERROR(NULL, "imencode(): can't encode data: unknown exception");
-        throw;
+        code = false;
     }
 
-    if( !filename.empty() )
+    if( !filename.empty() && code )
     {
         FILE* f = fopen( filename.c_str(), "rb" );
         CV_Assert(f != 0);
@@ -1226,6 +1226,12 @@ bool imencode( const String& ext, InputArray _img,
         remove(filename.c_str());
     }
     return code;
+}
+
+bool imencodemulti( const String& ext, InputArrayOfArrays img,
+                    std::vector<uchar>& buf, const std::vector<int>& params)
+{
+    return imencode(ext, imgs, buf, params);
 }
 
 bool haveImageReader( const String& filename )
