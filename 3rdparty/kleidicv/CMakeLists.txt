@@ -17,7 +17,12 @@ else()
                 ID KLEIDICV
                 STATUS res
                 UNPACK RELATIVE_URL)
-  set(THE_ROOT "${OpenCV_BINARY_DIR}/3rdparty/kleidicv/kleidicv-${KLEIDICV_SRC_COMMIT}")
+  if(res)
+    set(THE_ROOT "${OpenCV_BINARY_DIR}/3rdparty/kleidicv/kleidicv-${KLEIDICV_SRC_COMMIT}")
+  endif()
 endif()
 
-include("${THE_ROOT}/adapters/opencv/CMakeLists.txt")
+if(THE_ROOT)
+  include("${THE_ROOT}/adapters/opencv/CMakeLists.txt")
+  set(HAVE_KLEIDICV ON PARENT_SCOPE)
+endif()
