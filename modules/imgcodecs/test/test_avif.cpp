@@ -336,11 +336,21 @@ TEST_P(Imgcodecs_Avif_Animation_WriteDecodeSuite, encode_decode) {
   file.seekg(0, std::ios::beg);
   std::vector<unsigned char> buf(size);
   EXPECT_TRUE(file.read(reinterpret_cast<char*>(buf.data()), size));
-  EXPECT_EQ(0, remove(output.c_str()));
+  file.close();
   std::vector<cv::Mat> anim;
   ASSERT_TRUE(cv::imdecodemulti(buf, imread_mode_, anim));
 
   ValidateRead(anim_original, anim);
+
+  if (imread_mode_ == IMREAD_UNCHANGED) {
+    ImageCollection collection(output, IMREAD_UNCHANGED);
+    anim.clear();
+    for (auto&& i : collection)
+      anim.push_back(i);
+    ValidateRead(anim_original, anim);
+  }
+
+  EXPECT_EQ(0, remove(output.c_str()));
 }
 
 INSTANTIATE_TEST_CASE_P(
