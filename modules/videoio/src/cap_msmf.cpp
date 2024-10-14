@@ -789,6 +789,7 @@ protected:
     _ComPtr<ID3D11Device> D3DDev;
     _ComPtr<IMFDXGIDeviceManager> D3DMgr;
 #endif
+    _ComPtr<IMFByteStream> byteStream;
     _ComPtr<IMFSourceReader> videoFileSource;
     _ComPtr<IMFSourceReaderCallback> readCallback;  // non-NULL for "live" streams (camera capture)
     std::vector<DWORD> dwStreamIndices;
@@ -1283,11 +1284,12 @@ bool CvCapture_MSMF::open(const cv::String& _filename, std::streambuf& buffer, c
         if (!s)
             return false;
 
-        IMFByteStream *bs = nullptr;
-        MFCreateMFByteStreamOnStream(s, &bs);
-        if (!bs)
+        succeeded = SUCCEEDED(MFCreateMFByteStreamOnStream(s, &byteStream));
+        if (!succeeded)
             return false;
-        succeeded = SUCCEEDED(MFCreateSourceReaderFromByteStream(bs, attr.Get(), &videoFileSource));
+        if (!SUCCEEDED(MFStartup(MF_VERSION)))
+            return false;
+        succeeded = SUCCEEDED(MFCreateSourceReaderFromByteStream(byteStream.Get(), attr.Get(), &videoFileSource));
     }
 
     if (succeeded)
