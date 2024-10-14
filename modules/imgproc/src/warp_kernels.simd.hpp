@@ -7,7 +7,33 @@
 #include "warp_common.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#define CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD() \
+#define CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1() \
+    v_float32 dst_x0 = vx_load(start_indices.data()); \
+    v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32))); \
+    v_float32 M0 = vx_setall_f32(M[0]), \
+              M3 = vx_setall_f32(M[3]); \
+    v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])), \
+              M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+#define CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1() \
+    CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1() \
+    v_float32 M6 = vx_setall_f32(M[6]); \
+    v_float32 M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+
+#define CV_WARP_LINEAR_VECTOR_GET_ADDR_C1() \
+    v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0), \
+            addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
+#define CV_WARP_LINEAR_VECTOR_GET_ADDR_C3() \
+    v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)), \
+            addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
+#define CV_WARP_LINEAR_VECTOR_GET_ADDR_C4() \
+    v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)), \
+            addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
+#define CV_WARP_LINEAR_VECTOR_GET_ADDR(CN) \
+    CV_WARP_LINEAR_VECTOR_GET_ADDR_##CN() \
+    vx_store(addr, addr_0); \
+    vx_store(addr + vlanes_32, addr_1);
+
+#define CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(CN) \
     v_float32 src_x0 = v_fma(M0, dst_x0, M_x), \
               src_y0 = v_fma(M3, dst_x0, M_y), \
               src_x1 = v_fma(M0, dst_x1, M_x), \
@@ -26,9 +52,10 @@
     src_x0 = v_sub(src_x0, v_cvt_f32(src_ix0)); \
     src_y0 = v_sub(src_y0, v_cvt_f32(src_iy0)); \
     src_x1 = v_sub(src_x1, v_cvt_f32(src_ix1)); \
-    src_y1 = v_sub(src_y1, v_cvt_f32(src_iy1));
+    src_y1 = v_sub(src_y1, v_cvt_f32(src_iy1)); \
+    CV_WARP_LINEAR_VECTOR_GET_ADDR(CN);
 
-#define CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD() \
+#define CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(CN) \
     v_float32 src_x0 = v_fma(M0, dst_x0, M_x), \
               src_y0 = v_fma(M3, dst_x0, M_y), \
               src_w0 = v_fma(M6, dst_x0, M_w), \
@@ -53,7 +80,8 @@
     src_x0 = v_sub(src_x0, v_cvt_f32(src_ix0)); \
     src_y0 = v_sub(src_y0, v_cvt_f32(src_iy0)); \
     src_x1 = v_sub(src_x1, v_cvt_f32(src_ix1)); \
-    src_y1 = v_sub(src_y1, v_cvt_f32(src_iy1));
+    src_y1 = v_sub(src_y1, v_cvt_f32(src_iy1)); \
+    CV_WARP_LINEAR_VECTOR_GET_ADDR(CN);
 
 namespace cv{
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
@@ -231,22 +259,12 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0),
-                        addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00g, p01g, p10g, p11g;
@@ -371,22 +389,12 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
@@ -518,22 +526,12 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
@@ -652,22 +650,12 @@ void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, in
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0),
-                        addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C1, 16U);
@@ -771,22 +759,12 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C3, 16U);
@@ -893,22 +871,12 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 16U);
@@ -1009,22 +977,12 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0),
-                        addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C1, 32F);
@@ -1128,22 +1086,12 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C3, 32F);
@@ -1251,22 +1199,12 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 32F);
@@ -1363,22 +1301,12 @@ void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0),
-                        addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
 
                 uint8x8_t p00g, p01g, p10g, p11g;
 
@@ -1390,23 +1318,11 @@ void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C1);
                 }
 
-                v_float16 f00 = v_float16(vcvtq_f16_u16(vmovl_u8(p00g)));
-                v_float16 f01 = v_float16(vcvtq_f16_u16(vmovl_u8(p01g)));
-                v_float16 f10 = v_float16(vcvtq_f16_u16(vmovl_u8(p10g)));
-                v_float16 f11 = v_float16(vcvtq_f16_u16(vmovl_u8(p11g)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16(C1);
 
-                v_float16 alpha = v_cvt_f16(src_x0, src_x1),
-                          beta = v_cvt_f16(src_y0, src_y1);
+                CV_WARP_LINEAR_VECTOR_INTER_CALC_F16(C1);
 
-                f00 = v_fma(alpha, v_sub(f01, f00), f00);
-                f10 = v_fma(alpha, v_sub(f11, f10), f10);
-                f00 = v_fma(beta,  v_sub(f10, f00), f00);
-
-                uint8x8_t result = {
-                    vqmovun_s16(vcvtnq_s16_f16(f00.val)),
-                };
-
-                vst1_u8(dstptr + x, result);
+                CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8(C1);
             }
 
             for (; x < dstcols; x++) {
@@ -1502,22 +1418,12 @@ void warpAffineLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
 
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
@@ -1531,43 +1437,11 @@ void warpAffineLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C3);
                 }
 
-                v_float16 f00r = v_float16(vcvtq_f16_u16(vmovl_u8(p00r)));
-                v_float16 f01r = v_float16(vcvtq_f16_u16(vmovl_u8(p01r)));
-                v_float16 f10r = v_float16(vcvtq_f16_u16(vmovl_u8(p10r)));
-                v_float16 f11r = v_float16(vcvtq_f16_u16(vmovl_u8(p11r)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16(C3);
 
-                v_float16 f00g = v_float16(vcvtq_f16_u16(vmovl_u8(p00g)));
-                v_float16 f01g = v_float16(vcvtq_f16_u16(vmovl_u8(p01g)));
-                v_float16 f10g = v_float16(vcvtq_f16_u16(vmovl_u8(p10g)));
-                v_float16 f11g = v_float16(vcvtq_f16_u16(vmovl_u8(p11g)));
+                CV_WARP_LINEAR_VECTOR_INTER_CALC_F16(C3);
 
-                v_float16 f00b = v_float16(vcvtq_f16_u16(vmovl_u8(p00b)));
-                v_float16 f01b = v_float16(vcvtq_f16_u16(vmovl_u8(p01b)));
-                v_float16 f10b = v_float16(vcvtq_f16_u16(vmovl_u8(p10b)));
-                v_float16 f11b = v_float16(vcvtq_f16_u16(vmovl_u8(p11b)));
-
-                v_float16 alpha = v_cvt_f16(src_x0, src_x1),
-                          beta = v_cvt_f16(src_y0, src_y1);
-
-                f00r = v_fma(alpha, v_sub(f01r, f00r), f00r);
-                f10r = v_fma(alpha, v_sub(f11r, f10r), f10r);
-
-                f00g = v_fma(alpha, v_sub(f01g, f00g), f00g);
-                f10g = v_fma(alpha, v_sub(f11g, f10g), f10g);
-
-                f00b = v_fma(alpha, v_sub(f01b, f00b), f00b);
-                f10b = v_fma(alpha, v_sub(f11b, f10b), f10b);
-
-                f00r = v_fma(beta,  v_sub(f10r, f00r), f00r);
-                f00g = v_fma(beta,  v_sub(f10g, f00g), f00g);
-                f00b = v_fma(beta,  v_sub(f10b, f00b), f00b);
-
-                uint8x8x3_t result = {
-                    vqmovun_s16(vcvtnq_s16_f16(f00r.val)),
-                    vqmovun_s16(vcvtnq_s16_f16(f00g.val)),
-                    vqmovun_s16(vcvtnq_s16_f16(f00b.val)),
-                };
-                vst3_u8(dstptr + x*3, result);
+                CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8(C3);
             }
 
             for (; x < dstcols; x++) {
@@ -1666,22 +1540,12 @@ void warpAffineLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
@@ -1696,53 +1560,11 @@ void warpAffineLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C4);
                 }
 
-                v_float16 f00r = v_float16(vcvtq_f16_u16(vmovl_u8(p00r)));
-                v_float16 f01r = v_float16(vcvtq_f16_u16(vmovl_u8(p01r)));
-                v_float16 f10r = v_float16(vcvtq_f16_u16(vmovl_u8(p10r)));
-                v_float16 f11r = v_float16(vcvtq_f16_u16(vmovl_u8(p11r)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16(C4);
 
-                v_float16 f00g = v_float16(vcvtq_f16_u16(vmovl_u8(p00g)));
-                v_float16 f01g = v_float16(vcvtq_f16_u16(vmovl_u8(p01g)));
-                v_float16 f10g = v_float16(vcvtq_f16_u16(vmovl_u8(p10g)));
-                v_float16 f11g = v_float16(vcvtq_f16_u16(vmovl_u8(p11g)));
+                CV_WARP_LINEAR_VECTOR_INTER_CALC_F16(C4);
 
-                v_float16 f00b = v_float16(vcvtq_f16_u16(vmovl_u8(p00b)));
-                v_float16 f01b = v_float16(vcvtq_f16_u16(vmovl_u8(p01b)));
-                v_float16 f10b = v_float16(vcvtq_f16_u16(vmovl_u8(p10b)));
-                v_float16 f11b = v_float16(vcvtq_f16_u16(vmovl_u8(p11b)));
-
-                v_float16 f00a = v_float16(vcvtq_f16_u16(vmovl_u8(p00a)));
-                v_float16 f01a = v_float16(vcvtq_f16_u16(vmovl_u8(p01a)));
-                v_float16 f10a = v_float16(vcvtq_f16_u16(vmovl_u8(p10a)));
-                v_float16 f11a = v_float16(vcvtq_f16_u16(vmovl_u8(p11a)));
-
-                v_float16 alpha = v_cvt_f16(src_x0, src_x1),
-                          beta = v_cvt_f16(src_y0, src_y1);
-
-                f00r = v_fma(alpha, v_sub(f01r, f00r), f00r);
-                f10r = v_fma(alpha, v_sub(f11r, f10r), f10r);
-
-                f00g = v_fma(alpha, v_sub(f01g, f00g), f00g);
-                f10g = v_fma(alpha, v_sub(f11g, f10g), f10g);
-
-                f00b = v_fma(alpha, v_sub(f01b, f00b), f00b);
-                f10b = v_fma(alpha, v_sub(f11b, f10b), f10b);
-
-                f00a = v_fma(alpha, v_sub(f01a, f00a), f00a);
-                f10a = v_fma(alpha, v_sub(f11a, f10a), f10a);
-
-                f00r = v_fma(beta,  v_sub(f10r, f00r), f00r);
-                f00g = v_fma(beta,  v_sub(f10g, f00g), f00g);
-                f00b = v_fma(beta,  v_sub(f10b, f00b), f00b);
-                f00a = v_fma(beta,  v_sub(f10a, f00a), f00a);
-
-                uint8x8x4_t result = {
-                    vqmovun_s16(vcvtnq_s16_f16(f00r.val)),
-                    vqmovun_s16(vcvtnq_s16_f16(f00g.val)),
-                    vqmovun_s16(vcvtnq_s16_f16(f00b.val)),
-                    vqmovun_s16(vcvtnq_s16_f16(f00a.val)),
-                };
-                vst4_u8(dstptr + x*4, result);
+                CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8(C4);
             }
 
             for (; x < dstcols; x++) {
@@ -1835,24 +1657,12 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0),
-                        addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00g, p01g, p10g, p11g;
@@ -1979,24 +1789,12 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
@@ -2129,24 +1927,12 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
@@ -2266,24 +2052,12 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0),
-                        addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C1, 16U);
@@ -2387,24 +2161,12 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C3, 16U);
@@ -2511,24 +2273,12 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 16U);
@@ -2630,24 +2380,12 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0),
-                        addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C1, 32F);
@@ -2752,24 +2490,12 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C3, 32F);
@@ -2878,24 +2604,12 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 32F);
@@ -2993,24 +2707,12 @@ void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0),
-                        addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
 
                 uint8x8_t p00g, p01g, p10g, p11g;
 
@@ -3022,23 +2724,11 @@ void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C1);
                 }
 
-                v_float16 f00 = v_float16(vcvtq_f16_u16(vmovl_u8(p00g)));
-                v_float16 f01 = v_float16(vcvtq_f16_u16(vmovl_u8(p01g)));
-                v_float16 f10 = v_float16(vcvtq_f16_u16(vmovl_u8(p10g)));
-                v_float16 f11 = v_float16(vcvtq_f16_u16(vmovl_u8(p11g)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16(C1);
 
-                v_float16 alpha = v_cvt_f16(src_x0, src_x1),
-                          beta = v_cvt_f16(src_y0, src_y1);
+                CV_WARP_LINEAR_VECTOR_INTER_CALC_F16(C1);
 
-                f00 = v_fma(alpha, v_sub(f01, f00), f00);
-                f10 = v_fma(alpha, v_sub(f11, f10), f10);
-                f00 = v_fma(beta,  v_sub(f10, f00), f00);
-
-                uint8x8_t result = {
-                    vqmovun_s16(vcvtnq_s16_f16(f00.val)),
-                };
-
-                vst1_u8(dstptr + x, result);
+                CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8(C1);
             }
 
             for (; x < dstcols; x++) {
@@ -3135,24 +2825,12 @@ void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]),
-                      M6 = vx_setall_f32(M[6]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5])),
-                      M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
 
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
@@ -3166,43 +2844,11 @@ void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C3);
                 }
 
-                v_float16 f00r = v_float16(vcvtq_f16_u16(vmovl_u8(p00r)));
-                v_float16 f01r = v_float16(vcvtq_f16_u16(vmovl_u8(p01r)));
-                v_float16 f10r = v_float16(vcvtq_f16_u16(vmovl_u8(p10r)));
-                v_float16 f11r = v_float16(vcvtq_f16_u16(vmovl_u8(p11r)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16(C3);
 
-                v_float16 f00g = v_float16(vcvtq_f16_u16(vmovl_u8(p00g)));
-                v_float16 f01g = v_float16(vcvtq_f16_u16(vmovl_u8(p01g)));
-                v_float16 f10g = v_float16(vcvtq_f16_u16(vmovl_u8(p10g)));
-                v_float16 f11g = v_float16(vcvtq_f16_u16(vmovl_u8(p11g)));
+                CV_WARP_LINEAR_VECTOR_INTER_CALC_F16(C3);
 
-                v_float16 f00b = v_float16(vcvtq_f16_u16(vmovl_u8(p00b)));
-                v_float16 f01b = v_float16(vcvtq_f16_u16(vmovl_u8(p01b)));
-                v_float16 f10b = v_float16(vcvtq_f16_u16(vmovl_u8(p10b)));
-                v_float16 f11b = v_float16(vcvtq_f16_u16(vmovl_u8(p11b)));
-
-                v_float16 alpha = v_cvt_f16(src_x0, src_x1),
-                          beta = v_cvt_f16(src_y0, src_y1);
-
-                f00r = v_fma(alpha, v_sub(f01r, f00r), f00r);
-                f10r = v_fma(alpha, v_sub(f11r, f10r), f10r);
-
-                f00g = v_fma(alpha, v_sub(f01g, f00g), f00g);
-                f10g = v_fma(alpha, v_sub(f11g, f10g), f10g);
-
-                f00b = v_fma(alpha, v_sub(f01b, f00b), f00b);
-                f10b = v_fma(alpha, v_sub(f11b, f10b), f10b);
-
-                f00r = v_fma(beta,  v_sub(f10r, f00r), f00r);
-                f00g = v_fma(beta,  v_sub(f10g, f00g), f00g);
-                f00b = v_fma(beta,  v_sub(f10b, f00b), f00b);
-
-                uint8x8x3_t result = {
-                    vqmovun_s16(vcvtnq_s16_f16(f00r.val)),
-                    vqmovun_s16(vcvtnq_s16_f16(f00g.val)),
-                    vqmovun_s16(vcvtnq_s16_f16(f00b.val)),
-                };
-                vst3_u8(dstptr + x*3, result);
+                CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8(C3);
             }
 
             for (; x < dstcols; x++) {
@@ -3301,22 +2947,12 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-            v_float32 dst_x0 = vx_load(start_indices.data());
-            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
-            v_float32 M0 = vx_setall_f32(M[0]),
-                      M3 = vx_setall_f32(M[3]);
-            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
-                      M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x < dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD();
-
-                v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)),
-                        addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
-                vx_store(addr, addr_0);
-                vx_store(addr + vlanes_32, addr_1);
+                CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
@@ -3331,53 +2967,11 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C4);
                 }
 
-                v_float16 f00r = v_float16(vcvtq_f16_u16(vmovl_u8(p00r)));
-                v_float16 f01r = v_float16(vcvtq_f16_u16(vmovl_u8(p01r)));
-                v_float16 f10r = v_float16(vcvtq_f16_u16(vmovl_u8(p10r)));
-                v_float16 f11r = v_float16(vcvtq_f16_u16(vmovl_u8(p11r)));
+                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16(C4);
 
-                v_float16 f00g = v_float16(vcvtq_f16_u16(vmovl_u8(p00g)));
-                v_float16 f01g = v_float16(vcvtq_f16_u16(vmovl_u8(p01g)));
-                v_float16 f10g = v_float16(vcvtq_f16_u16(vmovl_u8(p10g)));
-                v_float16 f11g = v_float16(vcvtq_f16_u16(vmovl_u8(p11g)));
+                CV_WARP_LINEAR_VECTOR_INTER_CALC_F16(C4);
 
-                v_float16 f00b = v_float16(vcvtq_f16_u16(vmovl_u8(p00b)));
-                v_float16 f01b = v_float16(vcvtq_f16_u16(vmovl_u8(p01b)));
-                v_float16 f10b = v_float16(vcvtq_f16_u16(vmovl_u8(p10b)));
-                v_float16 f11b = v_float16(vcvtq_f16_u16(vmovl_u8(p11b)));
-
-                v_float16 f00a = v_float16(vcvtq_f16_u16(vmovl_u8(p00a)));
-                v_float16 f01a = v_float16(vcvtq_f16_u16(vmovl_u8(p01a)));
-                v_float16 f10a = v_float16(vcvtq_f16_u16(vmovl_u8(p10a)));
-                v_float16 f11a = v_float16(vcvtq_f16_u16(vmovl_u8(p11a)));
-
-                v_float16 alpha = v_cvt_f16(src_x0, src_x1),
-                          beta = v_cvt_f16(src_y0, src_y1);
-
-                f00r = v_fma(alpha, v_sub(f01r, f00r), f00r);
-                f10r = v_fma(alpha, v_sub(f11r, f10r), f10r);
-
-                f00g = v_fma(alpha, v_sub(f01g, f00g), f00g);
-                f10g = v_fma(alpha, v_sub(f11g, f10g), f10g);
-
-                f00b = v_fma(alpha, v_sub(f01b, f00b), f00b);
-                f10b = v_fma(alpha, v_sub(f11b, f10b), f10b);
-
-                f00a = v_fma(alpha, v_sub(f01a, f00a), f00a);
-                f10a = v_fma(alpha, v_sub(f11a, f10a), f10a);
-
-                f00r = v_fma(beta,  v_sub(f10r, f00r), f00r);
-                f00g = v_fma(beta,  v_sub(f10g, f00g), f00g);
-                f00b = v_fma(beta,  v_sub(f10b, f00b), f00b);
-                f00a = v_fma(beta,  v_sub(f10a, f00a), f00a);
-
-                uint8x8x4_t result = {
-                    vqmovun_s16(vcvtnq_s16_f16(f00r.val)),
-                    vqmovun_s16(vcvtnq_s16_f16(f00g.val)),
-                    vqmovun_s16(vcvtnq_s16_f16(f00b.val)),
-                    vqmovun_s16(vcvtnq_s16_f16(f00a.val)),
-                };
-                vst4_u8(dstptr + x*4, result);
+                CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8(C4);
             }
 
             for (; x < dstcols; x++) {
