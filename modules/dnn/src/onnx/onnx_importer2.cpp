@@ -1667,7 +1667,7 @@ void ONNXImporter2::parseTile(LayerParams& layerParams, const opencv_onnx::NodeP
 {
     // for Tile>1, only the case of 'repeats' being constant is supported.
     // 'repeats' is treated as a parameter instead of an input to determine shape in pre-run.
-    CV_Assert(node_proto.input_size() == 2 || node_proto.input_size() == 3); // tile-1: 3 inputs, tile>1: 2 inputs
+    layerParams.type = "Tile2";
     addLayer(layerParams, node_proto);
 }
 

@@ -114,14 +114,15 @@ public:
         }
     }
 
-    bool getMemoryShapes(const std::vector<MatShape>&,
+    bool getMemoryShapes(const std::vector<MatShape>& inputs,
                          const int,
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(!dynamicOutputShapes());
 
-        CV_Assert(this->inputs.size() == (size_t)3);
+        CV_Assert(inputs.size() == (size_t)3);
+        CV_Assert(inputs.size() == this->inputs.size());
         Net::Impl* netimpl_ = getNetImpl(this);
 
         Mat startTensor = netimpl_->argTensor(this->inputs[0]);
@@ -220,4 +221,3 @@ Ptr<RangeLayer> RangeLayer::create(const LayerParams& params)
 
 }
 }
-
