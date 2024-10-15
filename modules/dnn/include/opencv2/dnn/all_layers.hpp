@@ -692,6 +692,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<PaddingLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS Pad2Layer : public Layer
+    {
+    public:
+        static Ptr<Pad2Layer> create(const LayerParams& params);
+    };
+
     /* Activations */
     class CV_EXPORTS ActivationLayer : public Layer
     {

@@ -1416,7 +1416,7 @@ void ONNXImporter2::parseReshape(LayerParams& layerParams, const opencv_onnx::No
 
 void ONNXImporter2::parsePad(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "Padding";
+    layerParams.type = "Pad2";
     addLayer(layerParams, node_proto);
 }
 
