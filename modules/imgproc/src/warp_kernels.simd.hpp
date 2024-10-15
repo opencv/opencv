@@ -261,7 +261,7 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
@@ -391,7 +391,7 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
@@ -528,7 +528,7 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
@@ -652,7 +652,7 @@ void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, in
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
@@ -761,7 +761,7 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
@@ -873,7 +873,7 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
@@ -979,7 +979,7 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
@@ -1088,7 +1088,7 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
@@ -1201,7 +1201,7 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
@@ -1303,7 +1303,7 @@ void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step
 
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
@@ -1420,7 +1420,7 @@ void warpAffineLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step
 
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
@@ -1542,7 +1542,7 @@ void warpAffineLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step
 
             CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
@@ -1659,7 +1659,7 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
@@ -1791,7 +1791,7 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
@@ -1929,7 +1929,7 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
@@ -2054,7 +2054,7 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
@@ -2163,7 +2163,7 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
@@ -2275,7 +2275,7 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
@@ -2382,7 +2382,7 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
@@ -2492,7 +2492,7 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
@@ -2606,7 +2606,7 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
@@ -2709,7 +2709,7 @@ void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src
 
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
@@ -2827,7 +2827,7 @@ void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src
 
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C3);
@@ -2949,7 +2949,7 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
 
             CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
 
-            for (; x < dstcols - uf; x += uf) {
+            for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
