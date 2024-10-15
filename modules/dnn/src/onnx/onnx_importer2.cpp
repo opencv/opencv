@@ -198,6 +198,7 @@ protected:
     void parseMatMul               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMaxPool              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseMaxUnpool            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseNeg                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parsePad                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parsePRelu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -916,6 +917,13 @@ void ONNXImporter2::addLayer(LayerParams& layerParams,
     layer->netimpl = netimpl;
     CV_Assert(netimpl->dump_indent == 3);
     curr_prog.push_back(layer);
+}
+
+void ONNXImporter2::parseNeg(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Power";
+    layerParams.set("scale", -1);
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseCustomLayer(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -2294,6 +2302,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
             dispatch["ReduceL2"] = dispatch["ReduceLogSum"] = dispatch["ReduceLogSumExp"] = &ONNXImporter2::parseReduce;
     dispatch["Slice"] = &ONNXImporter2::parseSlice;
     dispatch["Split"] = &ONNXImporter2::parseSplit;
+    dispatch["Neg"] = &ONNXImporter2::parseNeg;
     dispatch["Constant"] = &ONNXImporter2::parseConstant;
     dispatch["LSTM"] = &ONNXImporter2::parseLSTM;
     dispatch["GRU"] = &ONNXImporter2::parseGRU;
@@ -2348,7 +2357,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     std::vector<std::string> simpleLayers {
         "Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
         "Cosh", "Dropout", "Erf", "Exp", "Floor", "HardSigmoid", "HardSwish",
-        "Identity", "Log", "Neg", "Not", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh",
+        "Identity", "Log", "Not", "Round", "Reciprocal", "Selu", "Sign", "Sigmoid", "Sin", "Sinh",
         "Softplus", "Softsign", "Shrink", "Sqrt", "Tan", "ThresholdedRelu", "Gelu",
         "GeluApproximation"
     };
