@@ -703,6 +703,16 @@ protected:
     virtual void run_func();
     virtual void run_reference_func();
 
+    template<typename T>
+    void new_linear_c1(int x, float sx, float sy, const T *srcptr_, T *dstptr, int srccols, int srcrows, size_t srcstep,
+                       const T *bval, int borderType_x, int borderType_y);
+    template<typename T>
+    void new_linear_c3(int x, float sx, float sy, const T *srcptr_, T *dstptr, int srccols, int srcrows, size_t srcstep,
+                       const T *bval, int borderType_x, int borderType_y);
+    template<typename T>
+    void new_linear_c4(int x, float sx, float sy, const T *srcptr_, T *dstptr, int srccols, int srcrows, size_t srcstep,
+                       const T *bval, int borderType_x, int borderType_y);
+
     Mat mapx, mapy;
     int borderType;
     Scalar borderValue;
@@ -710,6 +720,7 @@ protected:
     remap_func funcs[2];
 
 private:
+    template <typename T> void new_remap(const Mat&, Mat&);
     void remap_nearest(const Mat&, Mat&);
     void remap_generic(const Mat&, Mat&);
 
@@ -865,13 +876,232 @@ void CV_Remap_Test::prepare_test_data_for_reference_func()
 
 void CV_Remap_Test::run_reference_func()
 {
-    prepare_test_data_for_reference_func();
-
     if (interpolation == INTER_AREA)
         interpolation = INTER_LINEAR;
 
+    if (interpolation == INTER_LINEAR && mapx.depth() == CV_32F) {
+        int src_depth = src.depth(), src_channels = src.channels();
+        Mat tmp = Mat::zeros(dst.size(), dst.type());
+        if (src_depth == CV_8U && (src_channels == 1 || src_channels == 3 || src_channels == 4)) {
+            new_remap<uint8_t>(src, tmp);
+            tmp.convertTo(reference_dst, reference_dst.depth());
+            return;
+        } else if (src_depth == CV_16U && (src_channels == 1 || src_channels == 3 || src_channels == 4)) {
+            new_remap<uint16_t>(src, tmp);
+            tmp.convertTo(reference_dst, reference_dst.depth());
+            return;
+        } else if (src_depth == CV_32F && (src_channels == 1 || src_channels == 3 || src_channels == 4)) {
+            new_remap<float>(src, tmp);
+            tmp.convertTo(reference_dst, reference_dst.depth());
+            return;
+        }
+    }
+
+    prepare_test_data_for_reference_func();
+
     int index = interpolation == INTER_NEAREST ? 0 : 1;
     (this->*funcs[index])(src, reference_dst);
+}
+
+#define FETCH_PIXEL_SCALAR(cn, dy, dx) \
+    if ((((unsigned)(ix + dx) < (unsigned)srccols) & ((unsigned)(iy + dy) < (unsigned)srcrows)) != 0) { \
+        size_t ofs = dy*srcstep + dx*cn; \
+        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = srcptr[ofs+ci];} \
+    } else if (borderType == BORDER_CONSTANT) { \
+        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = bval[ci];} \
+    } else if (borderType == BORDER_TRANSPARENT) { \
+        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = dstptr[x*cn+ci];} \
+    } else { \
+        int ix_ = borderInterpolate(ix + dx, srccols, borderType_x); \
+        int iy_ = borderInterpolate(iy + dy, srcrows, borderType_y); \
+        size_t glob_ofs = iy_*srcstep + ix_*cn; \
+        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = srcptr_[glob_ofs+ci];} \
+    }
+
+#define WARPAFFINE_SHUFFLE(cn) \
+    if ((((unsigned)ix < (unsigned)(srccols-1)) & \
+        ((unsigned)iy < (unsigned)(srcrows-1))) != 0) { \
+        for (int ci = 0; ci < cn; ci++) { \
+            pxy[ci] = srcptr[ci]; \
+            pxy[ci+cn] = srcptr[ci+cn]; \
+            pxy[ci+cn*2] = srcptr[srcstep+ci]; \
+            pxy[ci+cn*3] = srcptr[srcstep+ci+cn]; \
+        } \
+    } else { \
+        if ((borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT) && \
+            (((unsigned)(ix+1) >= (unsigned)(srccols+1))| \
+            ((unsigned)(iy+1) >= (unsigned)(srcrows+1))) != 0) { \
+            if (borderType == BORDER_CONSTANT) { \
+                for (int ci = 0; ci < cn; ci++) { dstptr[x*cn+ci] = bval[ci]; } \
+            } \
+            return; \
+        } \
+        FETCH_PIXEL_SCALAR(cn, 0, 0); \
+        FETCH_PIXEL_SCALAR(cn, 0, 1); \
+        FETCH_PIXEL_SCALAR(cn, 1, 0); \
+        FETCH_PIXEL_SCALAR(cn, 1, 1); \
+    }
+
+template<typename T1, typename T2>
+static inline void warpaffine_linear_calc(int cn, const T1 *pxy, T2 *dst, float sx, float sy)
+{
+    for (int ci = 0; ci < cn; ci++) {
+        float p00 = pxy[ci];
+        float p01 = pxy[ci+cn];
+        float p10 = pxy[ci+cn*2];
+        float p11 = pxy[ci+cn*3];
+        float v0 = p00 + sx*(p01 - p00);
+        float v1 = p10 + sx*(p11 - p10);
+        v0 += sy*(v1 - v0);
+        dst[ci] = saturate_cast<T2>(v0);
+    }
+}
+
+template<typename T>
+void CV_Remap_Test::new_linear_c1(int x, float sx, float sy, const T *srcptr_, T *dstptr,
+                                  int srccols, int srcrows, size_t srcstep,
+                                  const T *bval, int borderType_x, int borderType_y)
+{
+    int ix = (int)floorf(sx), iy = (int)floorf(sy);
+    sx -= ix; sy -= iy;
+
+    int pxy[4];
+    const T *srcptr = srcptr_ + srcstep*iy + ix;
+
+    WARPAFFINE_SHUFFLE(1);
+
+    warpaffine_linear_calc(1, pxy, dstptr+x, sx, sy);
+}
+template<>
+void CV_Remap_Test::new_linear_c1<float>(int x, float sx, float sy, const float *srcptr_, float *dstptr,
+                                         int srccols, int srcrows, size_t srcstep,
+                                         const float *bval, int borderType_x, int borderType_y)
+{
+    int ix = (int)floorf(sx), iy = (int)floorf(sy);
+    sx -= ix; sy -= iy;
+
+    float pxy[4];
+    const float *srcptr = srcptr_ + srcstep*iy + ix;
+
+    WARPAFFINE_SHUFFLE(1);
+
+    warpaffine_linear_calc(1, pxy, dstptr+x, sx, sy);
+}
+
+template<typename T>
+void CV_Remap_Test::new_linear_c3(int x, float sx, float sy, const T *srcptr_, T *dstptr,
+                                  int srccols, int srcrows, size_t srcstep,
+                                  const T *bval, int borderType_x, int borderType_y)
+{
+    int ix = (int)floorf(sx), iy = (int)floorf(sy);
+    sx -= ix; sy -= iy;
+
+    int pxy[12];
+    const T *srcptr = srcptr_ + srcstep*iy + ix*3;
+
+    WARPAFFINE_SHUFFLE(3);
+
+    warpaffine_linear_calc(3, pxy, dstptr+x*3, sx, sy);
+}
+template<>
+void CV_Remap_Test::new_linear_c3<float>(int x, float sx, float sy, const float *srcptr_, float *dstptr,
+                                         int srccols, int srcrows, size_t srcstep,
+                                         const float *bval, int borderType_x, int borderType_y)
+{
+    int ix = (int)floorf(sx), iy = (int)floorf(sy);
+    sx -= ix; sy -= iy;
+
+    float pxy[12];
+    const float *srcptr = srcptr_ + srcstep*iy + ix*3;
+
+    WARPAFFINE_SHUFFLE(3);
+
+    warpaffine_linear_calc(3, pxy, dstptr+x*3, sx, sy);
+}
+
+template<typename T>
+void CV_Remap_Test::new_linear_c4(int x, float sx, float sy, const T *srcptr_, T *dstptr,
+                                  int srccols, int srcrows, size_t srcstep,
+                                  const T *bval, int borderType_x, int borderType_y)
+{
+    int ix = (int)floorf(sx), iy = (int)floorf(sy);
+    sx -= ix; sy -= iy;
+
+    int pxy[16];
+    const T *srcptr = srcptr_ + srcstep*iy + ix*4;
+
+    WARPAFFINE_SHUFFLE(4);
+
+    warpaffine_linear_calc(4, pxy, dstptr+x*4, sx, sy);
+}
+template<>
+void CV_Remap_Test::new_linear_c4<float>(int x, float sx, float sy, const float *srcptr_, float *dstptr,
+                                         int srccols, int srcrows, size_t srcstep,
+                                         const float *bval, int borderType_x, int borderType_y)
+{
+    int ix = (int)floorf(sx), iy = (int)floorf(sy);
+    sx -= ix; sy -= iy;
+
+    float pxy[16];
+    const float *srcptr = srcptr_ + srcstep*iy + ix*4;
+
+    WARPAFFINE_SHUFFLE(4);
+
+    warpaffine_linear_calc(4, pxy, dstptr+x*4, sx, sy);
+}
+
+template <typename T>
+void CV_Remap_Test::new_remap(const Mat &src, Mat &dst) {
+    int src_channels = src.channels();
+    CV_CheckTrue(src.channels() == 1 || src.channels() == 3 || src.channels() == 4, "");
+    CV_CheckTrue(mapx.depth() == CV_32F, "");
+    CV_CheckTrue(mapx.channels() == 1 || mapx.channels() == 2, "");
+
+    auto *srcptr_ = src.ptr<const T>();
+    auto *dstptr_ = dst.ptr<T>();
+    size_t srcstep = src.step/sizeof(T), dststep = dst.step/sizeof(T);
+    int srccols = src.cols, srcrows = src.rows;
+    int dstcols = dst.cols, dstrows = dst.rows;
+
+    T bval[] = {
+        saturate_cast<T>(borderValue[0]),
+        saturate_cast<T>(borderValue[1]),
+        saturate_cast<T>(borderValue[2]),
+        saturate_cast<T>(borderValue[3]),
+    };
+
+    int borderType_x = borderType != BORDER_CONSTANT &&
+                       borderType != BORDER_TRANSPARENT &&
+                       srccols <= 1 ? BORDER_REPLICATE : borderType;
+    int borderType_y = borderType != BORDER_CONSTANT &&
+                       borderType != BORDER_TRANSPARENT &&
+                       srcrows <= 1 ? BORDER_REPLICATE : borderType;
+
+    const float *mapx_data = mapx.ptr<const float>(),
+                *mapy_data = mapy.ptr<const float>();
+    int mapx_channels = mapx.channels();
+    for (int y = 0; y < dstrows; y++) {
+        T* dstptr = dstptr_ + y*dststep;
+        for (int x = 0; x < dstcols; x++) {
+            float sx, sy;
+            size_t offset = y * dstcols + x;
+            if (mapx_channels == 1) {
+                sx = mapx_data[offset];
+                sy = mapy_data[offset];
+            } else { // mapx_channels == 2
+                sx = mapx_data[2*offset];
+                sy = mapx_data[2*offset+1];
+            }
+
+            if (src_channels == 3) {
+                new_linear_c3(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+            } else if (src_channels == 4) {
+                new_linear_c4(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+            } else {
+                new_linear_c1(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+            }
+        }
+    }
 }
 
 void CV_Remap_Test::remap_nearest(const Mat& _src, Mat& _dst)
@@ -1042,10 +1272,6 @@ protected:
     virtual void run_func();
     virtual void run_reference_func();
 
-    template<int channels, typename T>
-    void newLinear(int x, float sx, float sy, const T *srcptr_, T *dstptr, int srccols, int srcrows, size_t srcstep,
-                   const T *bval, int borderType_x, int borderType_y);
-
     Mat M;
 private:
     void warpAffine(const Mat&, Mat&);
@@ -1105,105 +1331,6 @@ void CV_WarpAffine_Test::run_reference_func()
     tmp.convertTo(reference_dst, reference_dst.depth());
 }
 
-#define FETCH_PIXEL_SCALAR(cn, dy, dx) \
-    if ((((unsigned)(ix + dx) < (unsigned)srccols) & ((unsigned)(iy + dy) < (unsigned)srcrows)) != 0) { \
-        size_t ofs = dy*srcstep + dx*cn; \
-        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = srcptr[ofs+ci];} \
-    } else if (borderType == BORDER_CONSTANT) { \
-        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = bval[ci];} \
-    } else if (borderType == BORDER_TRANSPARENT) { \
-        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = dstptr[x*cn+ci];} \
-    } else { \
-        int ix_ = borderInterpolate(ix + dx, srccols, borderType_x); \
-        int iy_ = borderInterpolate(iy + dy, srcrows, borderType_y); \
-        size_t glob_ofs = iy_*srcstep + ix_*cn; \
-        for (int ci = 0; ci < cn; ci++) { pxy[2*dy*cn+dx*cn+ci] = srcptr_[glob_ofs+ci];} \
-    }
-
-#define WARPAFFINE_SHUFFLE(cn) \
-    if ((((unsigned)ix < (unsigned)(srccols-1)) & \
-        ((unsigned)iy < (unsigned)(srcrows-1))) != 0) { \
-        for (int ci = 0; ci < cn; ci++) { \
-            pxy[ci] = srcptr[ci]; \
-            pxy[ci+cn] = srcptr[ci+cn]; \
-            pxy[ci+cn*2] = srcptr[srcstep+ci]; \
-            pxy[ci+cn*3] = srcptr[srcstep+ci+cn]; \
-        } \
-    } else { \
-        if ((borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT) && \
-            (((unsigned)(ix+1) >= (unsigned)(srccols+1))| \
-            ((unsigned)(iy+1) >= (unsigned)(srcrows+1))) != 0) { \
-            if (borderType == BORDER_CONSTANT) { \
-                for (int ci = 0; ci < cn; ci++) { dstptr[x*cn+ci] = bval[ci]; } \
-            } \
-            return; \
-        } \
-        FETCH_PIXEL_SCALAR(cn, 0, 0); \
-        FETCH_PIXEL_SCALAR(cn, 0, 1); \
-        FETCH_PIXEL_SCALAR(cn, 1, 0); \
-        FETCH_PIXEL_SCALAR(cn, 1, 1); \
-    }
-
-template<typename T>
-static inline void warpaffine_linear_calc(int cn, const T *pxy, T *dst, float sx, float sy)
-{
-    for (int ci = 0; ci < cn; ci++) {
-        float p00 = pxy[ci];
-        float p01 = pxy[ci+cn];
-        float p10 = pxy[ci+cn*2];
-        float p11 = pxy[ci+cn*3];
-        float v0 = p00 + sx*(p01 - p00);
-        float v1 = p10 + sx*(p11 - p10);
-        v0 += sy*(v1 - v0);
-        dst[ci] = saturate_cast<T>(v0);
-    }
-}
-template<>
-inline void warpaffine_linear_calc<float>(int cn, const float *pxy, float *dst, float sx, float sy)
-{
-    for (int ci = 0; ci < cn; ci++) {
-        float p00 = pxy[ci];
-        float p01 = pxy[ci+cn];
-        float p10 = pxy[ci+cn*2];
-        float p11 = pxy[ci+cn*3];
-        float v0 = p00 + sx*(p01 - p00);
-        float v1 = p10 + sx*(p11 - p10);
-        v0 += sy*(v1 - v0);
-        dst[ci] = v0;
-    }
-}
-
-template<int channels, typename T>
-void CV_WarpAffine_Test::newLinear(int x, float sx, float sy, const T *srcptr_, T *dstptr,
-                                   int srccols, int srcrows, size_t srcstep,
-                                   const T *bval, int borderType_x, int borderType_y)
-{
-    int ix = (int)floorf(sx), iy = (int)floorf(sy);
-    sx -= ix; sy -= iy;
-
-    T pxy[channels*4];
-    const T *srcptr = srcptr_ + srcstep*iy + ix*channels;
-
-    WARPAFFINE_SHUFFLE(channels);
-
-    warpaffine_linear_calc(channels, pxy, dstptr+x*channels, sx, sy);
-}
-template<>
-void CV_WarpAffine_Test::newLinear<3, float>(int x, float sx, float sy, const float *srcptr_, float *dstptr,
-                                          int srccols, int srcrows, size_t srcstep,
-                                          const float *bval, int borderType_x, int borderType_y)
-{
-    int ix = (int)floorf(sx), iy = (int)floorf(sy);
-    sx -= ix; sy -= iy;
-
-    float pxy[12];
-    const float *srcptr = srcptr_ + srcstep*iy + ix*3;
-
-    WARPAFFINE_SHUFFLE(3);
-
-    warpaffine_linear_calc(3, pxy, dstptr+x*3, sx, sy);
-}
-
 template<typename T>
 void CV_WarpAffine_Test::newWarpAffine(const Mat &_src, Mat &_dst, const Mat &tM)
 {
@@ -1241,11 +1368,11 @@ void CV_WarpAffine_Test::newWarpAffine(const Mat &_src, Mat &_dst, const Mat &tM
             float sy = x*_M[3] + y*_M[4] + _M[5];
 
             if (num_channels == 3) {
-                newLinear<3>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+                new_linear_c3(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
             } else if (num_channels == 4) {
-                newLinear<4>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+                new_linear_c4(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
             } else {
-                newLinear<1>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+                new_linear_c1(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
             }
         }
     }
@@ -1372,8 +1499,7 @@ void CV_WarpPerspective_Test::generate_test_data()
 
 void CV_WarpPerspective_Test::run_func()
 {
-    cv::warpPerspective(src, dst, M, dst.size(), interpolation, borderType, borderValue, cv::ALGO_HINT_APPROX);
-    // cv::warpPerspective(src, dst, M, dst.size(), interpolation, borderType, borderValue);
+    cv::warpPerspective(src, dst, M, dst.size(), interpolation, borderType, borderValue);
 }
 
 float CV_WarpPerspective_Test::get_success_error_level(int _interpolation, int _depth) const
@@ -1426,11 +1552,11 @@ void CV_WarpPerspective_Test::newWarpPerspective(const Mat &_src, Mat &_dst, con
             float sy = (x*_M[3] + y*_M[4] + _M[5]) / w;
 
             if (num_channels == 3) {
-                newLinear<3>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+                new_linear_c3(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
             } else if (num_channels == 4) {
-                newLinear<4>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+                new_linear_c4(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
             } else {
-                newLinear<1>(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
+                new_linear_c1(x, sx, sy, srcptr_, dstptr, srccols, srcrows, srcstep, bval, borderType_x, borderType_y);
             }
         }
     }
