@@ -11,8 +11,6 @@ namespace cv
 namespace dnn
 {
 
-static constexpr int EXPAND_MAX_DIMS = 6;
-
 /*
     Expand layer, as defined in ONNX specification:
     https://onnx.ai/onnx/operators/onnx__Expand.html
