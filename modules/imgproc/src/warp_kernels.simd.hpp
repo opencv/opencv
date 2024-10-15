@@ -289,7 +289,7 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
     #else
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C1);
     #endif
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32(C1);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C1);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C1);
 
@@ -421,7 +421,7 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
     #else
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C3);
     #endif
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32(C3);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C3);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C3);
 
@@ -560,7 +560,7 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C4);
     #endif
 
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32(C4);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C4);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
 
@@ -665,7 +665,7 @@ void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, in
 
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C1);
 
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32(C1);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C1);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C1);
 
@@ -774,7 +774,7 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
 
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C3);
 
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32(C3);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C3);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C3);
 
@@ -886,7 +886,7 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
 
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C4);
 
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32(C4);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C4);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
 
@@ -1688,7 +1688,7 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C1);
     #endif
 
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32(C1);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C1);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C1);
 
@@ -1822,7 +1822,7 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C3);
     #endif
 
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32(C3);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C3);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C3);
 
@@ -1961,7 +1961,7 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C4);
     #endif
 
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32(C4);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C4);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
 
@@ -2067,7 +2067,7 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
 
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C1);
 
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32(C1);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C1);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C1);
 
@@ -2176,7 +2176,7 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
 
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C3);
 
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32(C3);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C3);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C3);
 
@@ -2288,7 +2288,7 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
 
                 CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C4);
 
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32(C4);
+                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C4);
 
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
 
