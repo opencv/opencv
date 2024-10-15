@@ -343,23 +343,24 @@ void tensorToScalar(const Mat& tensor, int type, void* value)
     int type0 = tensor.type();
     int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert(cn == 1);
-    double v;
+    double v = 0;
+    int64_t iv = 0;
+    bool isflt = type0 == CV_32F || type0 == CV_64F || type0 == CV_16F || type0 == CV_16BF;
+
     if (type0 == CV_8U)
-        v = *tensor.ptr<uint8_t>();
+        iv = *tensor.ptr<uint8_t>();
     else if (type0 == CV_8S)
-        v = *tensor.ptr<int8_t>();
+        iv = *tensor.ptr<uint8_t>();
     else if (type0 == CV_16U)
-        v = *tensor.ptr<uint16_t>();
+        iv = *tensor.ptr<uint8_t>();
     else if (type0 == CV_16S)
-        v = *tensor.ptr<int16_t>();
+        iv = *tensor.ptr<int16_t>();
     else if (type0 == CV_32U)
-        v = (double)*tensor.ptr<uint32_t>();
+        iv = *tensor.ptr<uint32_t>();
     else if (type0 == CV_32S)
-        v = *tensor.ptr<int32_t>();
-    else if (type0 == CV_64U)
-        v = (double)*tensor.ptr<uint64_t>();
+        iv = *tensor.ptr<int32_t>();
     else if (type0 == CV_64S)
-        v = (double)*tensor.ptr<int64_t>();
+        iv = *tensor.ptr<int64_t>();
     else if (type0 == CV_32F)
         v = *tensor.ptr<float>();
     else if (type0 == CV_64F)
@@ -369,37 +370,37 @@ void tensorToScalar(const Mat& tensor, int type, void* value)
     else if (type0 == CV_16BF)
         v = (float)*tensor.ptr<bfloat>();
     else if (type0 == CV_Bool)
-        v = *tensor.ptr<uint8_t>() != 0;
+        iv = *tensor.ptr<uint8_t>() != 0;
     else {
         CV_Error_(Error::StsNotImplemented, ("type %s is not supported", typeToString(type0).c_str()));
     }
 
     if (depth == CV_8U)
-        *reinterpret_cast<uint8_t*>(value) = saturate_cast<uint8_t>(v);
+        *reinterpret_cast<uint8_t*>(value) = isflt ? saturate_cast<uint8_t>(v) : saturate_cast<uint8_t>(iv);
     else if (depth == CV_8S)
-        *reinterpret_cast<int8_t*>(value) = saturate_cast<int8_t>(v);
+        *reinterpret_cast<int8_t*>(value) = isflt ? saturate_cast<int8_t>(v) : saturate_cast<int8_t>(iv);
     else if (depth == CV_16U)
-        *reinterpret_cast<uint16_t*>(value) = saturate_cast<uint16_t>(v);
+        *reinterpret_cast<uint16_t*>(value) = isflt ? saturate_cast<uint16_t>(v) : saturate_cast<uint16_t>(iv);
     else if (depth == CV_16S)
-        *reinterpret_cast<int16_t*>(value) = saturate_cast<int16_t>(v);
+        *reinterpret_cast<int16_t*>(value) = isflt ? saturate_cast<int16_t>(v) : saturate_cast<int16_t>(iv);
     else if (depth == CV_32U)
-        *reinterpret_cast<uint32_t*>(value) = saturate_cast<uint32_t>(v);
+        *reinterpret_cast<uint32_t*>(value) = isflt ? saturate_cast<uint32_t>(v) : saturate_cast<uint32_t>(iv);
     else if (depth == CV_32S)
-        *reinterpret_cast<int32_t*>(value) = saturate_cast<int32_t>(v);
+        *reinterpret_cast<int32_t*>(value) = isflt ? saturate_cast<int32_t>(v) : saturate_cast<int32_t>(iv);
     else if (depth == CV_64U)
-        *reinterpret_cast<uint64_t*>(value) = saturate_cast<uint64_t>(v);
+        *reinterpret_cast<uint64_t*>(value) = isflt ? saturate_cast<uint64_t>(v) : saturate_cast<uint64_t>(iv);
     else if (depth == CV_64S)
-        *reinterpret_cast<int64_t*>(value) = saturate_cast<int64_t>(v);
+        *reinterpret_cast<int64_t*>(value) = isflt ? saturate_cast<int64_t>(v) : iv;
     else if (depth == CV_32F)
-        *reinterpret_cast<float*>(value) = saturate_cast<float>(v);
+        *reinterpret_cast<float*>(value) = isflt ? (float)v : saturate_cast<float>(iv);
     else if (depth == CV_64F)
-        *reinterpret_cast<double*>(value) = saturate_cast<double>(v);
+        *reinterpret_cast<double*>(value) = isflt ? v : saturate_cast<double>(iv);
     else if (depth == CV_16F)
-        *reinterpret_cast<hfloat*>(value) = saturate_cast<hfloat>(v);
+        *reinterpret_cast<hfloat*>(value) = isflt ? saturate_cast<hfloat>(v) : saturate_cast<hfloat>(iv);
     else if (depth == CV_16BF)
-        *reinterpret_cast<bfloat*>(value) = saturate_cast<bfloat>(v);
+        *reinterpret_cast<bfloat*>(value) = isflt ? saturate_cast<bfloat>(v) : saturate_cast<bfloat>(iv);
     else if (depth == CV_Bool)
-        *reinterpret_cast<uint8_t*>(value) = (uint8_t)(v != 0);
+        *reinterpret_cast<uint8_t*>(value) = isflt ? (uint8_t)(v != 0) : (uint8_t)(iv != 0);
     else {
         CV_Error_(Error::StsNotImplemented, ("type %s is not supported", typeToString(depth).c_str()));
     }

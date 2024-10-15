@@ -23,10 +23,18 @@ static int rangeSize(double start, double limit, double delta)
     return std::max((int)ceil((limit - start)/delta), 0);
 }
 
-// out must be pre-allocated
-static void makeRange(double start, double limit, double delta, Mat& out)
+static int rangeSize(int64_t start, int64_t limit, int64_t delta)
 {
-    int i, nout = rangeSize(start, limit, delta);
+    return delta > 0 ?
+        std::max((int)((limit - start + delta - 1)/delta), 0) :
+        std::max((int)((start - limit - delta - 1)/-delta), 0);
+}
+
+// out must be pre-allocated
+template <typename _Tp>
+static void makeRange(_Tp start, _Tp limit, _Tp delta, Mat& out)
+{
+    int nout = rangeSize(start, limit, delta);
     CV_Assert(out.dims == 1);
     CV_Assert(out.total() == (size_t)nout);
     uchar* outdata_ = out.data;
@@ -37,7 +45,7 @@ static void makeRange(double start, double limit, double delta, Mat& out)
     #define IMPL_RANGE(T) \
         T* outdata = (T*)outdata_; \
         for (int i = 0; i < nout; i++) \
-            outdata[i] = T(start + i*delta)
+            outdata[i] = saturate_cast<T>(start + i*delta)
 
     if (type == CV_32F) {
         IMPL_RANGE(float);
@@ -74,6 +82,38 @@ public:
                 !netimpl_->isConstArg(this->inputs[2]);
     }
 
+    int getRangeParams(const Mat& startTensor, const Mat& limitTensor, const Mat& deltaTensor,
+                       double& fstart, double& flimit, double& fdelta,
+                       int64_t& istart, int64_t& ilimit, int64_t& idelta, bool& isflt) const
+    {
+        CV_Assert(startTensor.total() == (size_t)1);
+        CV_Assert(limitTensor.total() == (size_t)1);
+        CV_Assert(deltaTensor.total() == (size_t)1);
+
+        int rtype = startTensor.type();
+        CV_Assert(rtype == limitTensor.type());
+        CV_Assert(rtype == deltaTensor.type());
+
+        fstart = flimit = fdelta = 0.;
+        istart = ilimit = idelta = 0;
+
+        isflt = rtype == CV_32F || rtype == CV_64F || rtype == CV_16F || rtype == CV_16BF;
+
+        if (isflt) {
+            fstart = tensorToScalar<double>(startTensor);
+            flimit = tensorToScalar<double>(limitTensor);
+            fdelta = tensorToScalar<double>(deltaTensor);
+
+            return rangeSize(fstart, flimit, fdelta);
+        } else {
+            istart = tensorToScalar<int64_t>(startTensor);
+            ilimit = tensorToScalar<int64_t>(limitTensor);
+            idelta = tensorToScalar<int64_t>(deltaTensor);
+
+            return rangeSize(istart, ilimit, idelta);
+        }
+    }
+
     bool getMemoryShapes(const std::vector<MatShape>&,
                          const int,
                          std::vector<MatShape> &outputs,
@@ -83,11 +123,19 @@ public:
 
         CV_Assert(this->inputs.size() == (size_t)3);
         Net::Impl* netimpl_ = getNetImpl(this);
-        double start = tensorToScalar<double>(netimpl_->argTensor(this->inputs[0]));
-        double limit = tensorToScalar<double>(netimpl_->argTensor(this->inputs[1]));
-        double delta = tensorToScalar<double>(netimpl_->argTensor(this->inputs[2]));
+
+        Mat startTensor = netimpl_->argTensor(this->inputs[0]);
+        Mat limitTensor = netimpl_->argTensor(this->inputs[1]);
+        Mat deltaTensor = netimpl_->argTensor(this->inputs[2]);
+
+        double fstart, flimit, fdelta;
+        int64_t istart, ilimit, idelta;
+        bool isflt;
+
+        int nout = getRangeParams(startTensor, limitTensor, deltaTensor,
+                                  fstart, flimit, fdelta, istart, ilimit, idelta, isflt);
         MatShape shape(1);
-        shape[0] = rangeSize(start, limit, delta);
+        shape[0] = nout;
         outputs.assign(1, shape);
         internals.clear();
         return true;
@@ -127,33 +175,37 @@ public:
         Mat limitTensor = inputs_arr.getMat(1);
         Mat deltaTensor = inputs_arr.getMat(2);
 
-        CV_Assert(startTensor.total() == (size_t)1);
-        CV_Assert(limitTensor.total() == (size_t)1);
-        CV_Assert(deltaTensor.total() == (size_t)1);
+        double fstart, flimit, fdelta;
+        int64_t istart, ilimit, idelta;
+        bool isflt;
 
-        int type = startTensor.type();
-        CV_Assert(type == limitTensor.type());
-        CV_Assert(type == deltaTensor.type());
-
-        double start = tensorToScalar<double>(startTensor);
-        double limit = tensorToScalar<double>(limitTensor);
-        double delta = tensorToScalar<double>(deltaTensor);
-
+        int nout = getRangeParams(startTensor, limitTensor, deltaTensor,
+                                  fstart, flimit, fdelta, istart, ilimit, idelta, isflt);
         MatShape shape(1);
-        shape[0] = rangeSize(start, limit, delta);
+        shape[0] = nout;
+
+        int rtype = startTensor.type();
 
         auto kind = outputs_arr.kind();
         if (kind == _InputArray::STD_VECTOR_MAT) {
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             outs.resize(1);
-            outs[0].fit(shape, type);
-            makeRange(start, limit, delta, outs[0]);
+            outs[0].fit(shape, rtype);
+            if (isflt) {
+                makeRange(fstart, flimit, fdelta, outs[0]);
+            } else {
+                makeRange(istart, ilimit, idelta, outs[0]);
+            }
         } else if (kind == _InputArray::STD_VECTOR_UMAT) {
             std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
             outs.resize(1);
-            outs[0].fit(shape, type);
-            Mat temp(shape, type);
-            makeRange(start, limit, delta, temp);
+            outs[0].fit(shape, rtype);
+            Mat temp(shape, rtype);
+            if (isflt) {
+                makeRange(fstart, flimit, fdelta, temp);
+            } else {
+                makeRange(istart, ilimit, idelta, temp);
+            }
             temp.copyTo(outs[0]);
         } else {
             CV_Error(Error::StsNotImplemented, "");
