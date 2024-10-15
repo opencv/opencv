@@ -415,11 +415,11 @@ CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
 
 /** @brief Encodes array of images into a memory buffer.
 
-The function is analog of cv::imencode for in-memory multi-page images compression.
+The function is analog to cv::imencode for in-memory multi-page image compression.
 See cv::imwrite for the list of supported formats and flags description.
 
 @param ext File extension that defines the output format. Must include a leading period.
-@param imgs Vector of images be written.
+@param imgs Vector of images to be written.
 @param buf Output buffer resized to fit the compressed data.
 @param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
 */
