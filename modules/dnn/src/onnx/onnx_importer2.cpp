@@ -1401,12 +1401,7 @@ void ONNXImporter2::parseUnsqueeze(LayerParams& layerParams, const opencv_onnx::
 
 void ONNXImporter2::parseExpand(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    //check if the node has an initializer for the second input
-    if (node_proto.input_size() == 2 && net.isConstArg(node_inputs[1])) {
-        Mat shape = net.argTensor(node_inputs[1]);
-        layerParams.blobs.push_back(shape);
-    }
-    CV_CheckEQ(node_proto.input_size(), 2, "DNN/ONNX Expand: two inputs are required");
+    layerParams.type = "Expand2";
     addLayer(layerParams, node_proto);
 }
 

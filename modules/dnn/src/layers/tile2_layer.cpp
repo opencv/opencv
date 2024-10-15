@@ -76,17 +76,15 @@ static void tile(const Mat& inp, const int* repeats_, Mat& out)
     if (total_size < 1000000)
         ntasks = 1;
 
-    //parallel_for_(Range(0, ntasks), [&](const Range& r)
-    //Range r(0, ntasks);
+    parallel_for_(Range(0, ntasks), [&](const Range& r)
     {
         int sz0 = inpshape[0], sz1 = inpshape[1], sz2 = inpshape[2];
         int sz3 = inpshape[3], sz4 = inpshape[4], sz5 = inpshape[5];
 
         int64_t outstep_prelast = outstep[TILE_MAX_DIMS-2];
-        //int64_t j0 = r.start*total_repeats/ntasks, j1 = r.end*total_repeats/ntasks;
+        int64_t j0 = r.start*total_repeats/ntasks, j1 = r.end*total_repeats/ntasks;
 
-        //for (int64_t j = j0; j < j1; j++)
-        for (int64_t j = 0; j < total_repeats; j++)
+        for (int64_t j = j0; j < j1; j++)
         {
             // convert raw tile index into n-dim tile index.
             // but we don't need this nd-index itself, we just need the
@@ -125,7 +123,7 @@ static void tile(const Mat& inp, const int* repeats_, Mat& out)
             }
         }
     }
-    //, ntasks);
+    , ntasks);
 }
 
 class Tile2LayerImpl CV_FINAL : public Tile2Layer

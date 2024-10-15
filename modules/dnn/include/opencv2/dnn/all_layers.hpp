@@ -1270,6 +1270,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ExpandLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS Expand2Layer : public Layer
+    {
+    public:
+        static Ptr<Expand2Layer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS InstanceNormLayer : public Layer {
     public:
         float epsilon;
