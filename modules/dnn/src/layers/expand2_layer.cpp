@@ -23,6 +23,7 @@ class Expand2LayerImpl CV_FINAL : public Expand2Layer
 public:
     Expand2LayerImpl(const LayerParams& params)
     {
+        setParamsFrom(params);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE

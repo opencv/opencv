@@ -65,6 +65,7 @@ class RangeLayerImpl CV_FINAL : public RangeLayer
 public:
     RangeLayerImpl(const LayerParams& params)
     {
+        setParamsFrom(params);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE

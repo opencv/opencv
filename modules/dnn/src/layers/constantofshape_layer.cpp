@@ -55,7 +55,7 @@ class ConstantOfShapeLayerImpl CV_FINAL : public ConstantOfShapeLayer
 public:
     ConstantOfShapeLayerImpl(const LayerParams& params)
     {
-        blobs = params.blobs;
+        setParamsFrom(params);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE

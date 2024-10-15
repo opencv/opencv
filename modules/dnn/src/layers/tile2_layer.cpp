@@ -131,6 +131,7 @@ class Tile2LayerImpl CV_FINAL : public Tile2Layer
 public:
     Tile2LayerImpl(const LayerParams& params)
     {
+        setParamsFrom(params);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
