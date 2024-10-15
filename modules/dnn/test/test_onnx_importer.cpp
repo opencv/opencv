@@ -142,10 +142,8 @@ public:
             l1 = std::max(l1, 1.4e-3);
             lInf = std::max(lInf, 8e-3);
         }
-        if (ref.shape() != out.shape()) {
-            printf("ref shape: %s\n", ref.shape().str().c_str());
-            printf("out shape: %s\n", out.shape().str().c_str());
-        }
+
+        EXPECT_EQ(ref.shape(), out.shape());
         normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         if (checkNoFallbacks)
             expectNoFallbacksFromIE(net);
@@ -330,7 +328,8 @@ TEST_P(Test_ONNX_layers, Deconvolution)
         testONNXModels("deconv_adjpad_2d", npy, 0, 0, false, false);
 }
 
-TEST_P(Test_ONNX_layers, Deconvolution3D)
+// BUG: https://github.com/opencv/opencv/issues/26307
+TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -350,16 +349,17 @@ TEST_P(Test_ONNX_layers, Deconvolution3D)
     }
 #endif
 
-    //if (backend == DNN_BACKEND_OPENCV)
-    throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
+    if (backend == DNN_BACKEND_OPENCV)
+        throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
 
-    //if (backend == DNN_BACKEND_VKCOM)
-    //    applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
-    //testONNXModels("deconv3d");
+    testONNXModels("deconv3d");
 }
 
-TEST_P(Test_ONNX_layers, Deconvolution3D_bias)
+// BUG: https://github.com/opencv/opencv/issues/26307
+TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D_bias)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -379,16 +379,17 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_bias)
     }
 #endif
 
-    //if (backend == DNN_BACKEND_OPENCV)
+    if (backend == DNN_BACKEND_OPENCV)
         throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
 
-    //if (backend == DNN_BACKEND_VKCOM)
-    //    applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
-    //testONNXModels("deconv3d_bias");
+    testONNXModels("deconv3d_bias");
 }
 
-TEST_P(Test_ONNX_layers, Deconvolution3D_pad)
+// BUG: https://github.com/opencv/opencv/issues/26307
+TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D_pad)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -417,7 +418,8 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_pad)
     //testONNXModels("deconv3d_pad");
 }
 
-TEST_P(Test_ONNX_layers, Deconvolution3D_adjpad)
+// BUG: https://github.com/opencv/opencv/issues/26307
+TEST_P(Test_ONNX_layers, DISABLED_Deconvolution3D_adjpad)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
@@ -437,13 +439,13 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_adjpad)
     }
 #endif
 
-    //if (backend == DNN_BACKEND_OPENCV)
+    if (backend == DNN_BACKEND_OPENCV)
         throw SkipTestException("OpenCV backend is not supported");  // FIXIT use tags
 
-    //if (backend == DNN_BACKEND_VKCOM)
-    //    applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
+    if (backend == DNN_BACKEND_VKCOM)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN);
 
-    //testONNXModels("deconv3d_adjpad");
+    testONNXModels("deconv3d_adjpad");
 }
 
 TEST_P(Test_ONNX_layers, Dropout)

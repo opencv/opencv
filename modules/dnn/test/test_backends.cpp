@@ -514,7 +514,8 @@ TEST_P(DNNTestNetwork, FastNeuralStyle_eccv16)
 #if defined(HAVE_INF_ENGINE) && INF_ENGINE_VER_MAJOR_GE(2019010000)
     expectNoFallbacksFromIE(net);
 #endif
-    // [TODO] temporarily disabled check for no "fallbacks", since the new engine does not support CUDA yet
+    // BUG: https://github.com/opencv/opencv/issues/26306
+    // Temporarily disabled check for no "fallbacks", since the new engine does not support CUDA yet
     //expectNoFallbacksFromCUDA(net);
 }
 
