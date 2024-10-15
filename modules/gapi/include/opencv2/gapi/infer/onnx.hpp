@@ -660,7 +660,7 @@ public:
         desc.opt_level = cv::util::make_optional(opt_level);
         return *this;
     }
-    
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::onnx::backend(); }
     std::string   tag()     const { return Net::tag(); }
