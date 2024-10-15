@@ -191,8 +191,6 @@ const uint64_t AT_HWCAP = NT_GNU_HWCAP;
 #undef abs
 #include <tchar.h>
 
-
-#endif
 #else
 #ifndef OPENCV_DISABLE_THREAD_SUPPORT
 #include <pthread.h>
