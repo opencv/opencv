@@ -99,6 +99,7 @@ namespace
 
 }
 #else // defined _WIN32
+# include <dirent.h>
 # include <sys/stat.h>
 const char dir_separators[] = "/";
 #endif // defined _WIN32
