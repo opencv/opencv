@@ -36,12 +36,14 @@ class LayerNormLayerImpl CV_FINAL : public LayerNormLayer
 #endif
 
 public:
+    int axis0;
+
     LayerNormLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
 
         // standard attr
-        axis = params.get<int>("axis", -1);
+        axis = axis0 = params.get<int>("axis", -1);
         epsilon = params.get<float>("epsilon", 1e-5);
     }
 
@@ -61,6 +63,9 @@ public:
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        int noutputs = std::max(requiredOutputs > 0 ? requiredOutputs : (int)this->outputs.size(), 1);
+        CV_Assert(noutputs == 1 || noutputs == 3);
+
         // check shapes of weight and bias if existed
         // inputs >= 2 (X and Weight are required, bias is optional)
         int num_inputs = inputs.size() + blobs.size();
@@ -69,14 +74,16 @@ public:
         auto x_shape = inputs[0];
         int x_ndims = static_cast<int>(x_shape.size());
 
+        int axis_ = normalize_axis(axis0, x_shape.dims);
+
         // Weight and bias are either constants or variable
         auto w_shape = blobs.empty() ? inputs[1] : shape(blobs.front());
         // if axis == last_dim, scale and b are both 1d tensor (represented as 2d mat nx1)
         int w_ndims = static_cast<int>(w_shape.size());
-        w_ndims = (axis == x_ndims - 1 && w_ndims == 2) ? w_ndims - 1 : w_ndims;
-        CV_CheckEQ(x_ndims - axis, w_ndims, "LayerNorm: shape of weight does not match with given axis and shape of input");
+        w_ndims = (axis_ == x_ndims - 1 && w_ndims == 2) ? w_ndims - 1 : w_ndims;
+        CV_CheckEQ(x_ndims - axis_, w_ndims, "LayerNorm: shape of weight does not match with given axis and shape of input");
         for (int i = 0; i < w_ndims; ++i)
-            CV_CheckEQ(x_shape[axis+i], w_shape[i], "LayerNorm: weight dimensions does not match with input dimensions");
+            CV_CheckEQ(x_shape[axis_+i], w_shape[i], "LayerNorm: weight dimensions does not match with input dimensions");
         if (num_inputs >= 3)
         {
             auto b_shape = blobs.empty() ? inputs[2] : shape(blobs.back());
@@ -85,7 +92,18 @@ public:
                 CV_CheckEQ(w_shape[i], b_shape[i], "LayerNorm: bias dimensions does not match with weight dimensions");
         }
 
-        outputs.assign(1, inputs[0]);
+        outputs.resize(noutputs, inputs[0]);
+
+        /*
+            even though OpenCV currently does not compute the other outputs
+            of LayerNormalization op, we correctly compute their shapes,
+            according to the specs:
+            https://onnx.ai/onnx/operators/onnx__LayerNormalization.html
+        */
+        for (int i = 1; i < noutputs; i++) {
+            for (int j = axis_; j < x_ndims; j++)
+                outputs[i][j] = 1;
+        }
         return false;
     }
 
@@ -94,7 +112,7 @@ public:
         inputs_arr.getMatVector(inputs);
 
         const auto input_shape = shape(inputs[0]);
-        axis = normalize_axis(axis, static_cast<int>(input_shape.size()));
+        axis = normalize_axis(axis0, static_cast<int>(input_shape.size()));
 
 #ifdef HAVE_OPENCL
         weight_umat.release();
@@ -124,6 +142,8 @@ public:
         const auto &scale = blobs.empty() ? inputs[1] : blobs.front();
         auto &output = outputs[0];
 
+        axis = normalize_axis(axis0, input.dims);
+
         if ((inputs.size() + blobs.size()) >= 3) {
             const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
             fastNorm(input, scale, bias, output, epsilon, static_cast<size_t>(axis));
@@ -150,6 +170,7 @@ public:
         auto &output = outputs[0];
 
         const auto input_shape = shape(input);
+        axis = normalize_axis(axis0, input_shape.dims);
         size_t loops = static_cast<size_t>(total(input_shape, 0, axis)),
                norm_size = static_cast<size_t>(total(input_shape, axis));
         float inv_norm_size = 1.f / norm_size;

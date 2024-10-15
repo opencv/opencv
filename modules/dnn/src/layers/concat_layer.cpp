@@ -109,11 +109,9 @@ public:
                 }
             }
 
-            axisSum += (!curShape.empty()) ? curShape[cAxis] : 1;
+            axisSum += curShape.dims >= cAxis ? curShape[cAxis] : 1;
         }
-        if (inputs[0].empty()){
-            outputs[0] = MatShape(1);
-        }
+        outputs[0].dims = std::max(outputs[0].dims, 1);
         outputs[0][cAxis] = axisSum;
         return false;
     }

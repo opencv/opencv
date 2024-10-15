@@ -1124,6 +1124,13 @@ CV_EXPORTS_W void flipND(InputArray src, OutputArray dst, int axis);
  */
 CV_EXPORTS_W void broadcast(InputArray src, InputArray shape, OutputArray dst);
 
+/** @brief Broadcast the given Mat to the given shape.
+ * @param src input array
+ * @param shape target shape. Note that negative values are not supported.
+ * @param dst output array that has the given shape
+ */
+CV_EXPORTS void broadcast(InputArray src, const MatShape& shape, OutputArray dst);
+
 enum RotateFlags {
     ROTATE_90_CLOCKWISE = 0, //!<Rotate 90 degrees clockwise
     ROTATE_180 = 1, //!<Rotate 180 degrees clockwise

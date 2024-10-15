@@ -110,6 +110,12 @@
             "to_cpp": "%(n)s.nativeRef",
             "from_cpp": "[TermCriteria fromNative:%(n)s]"
         },
+        "DataLayout": {
+            "objc_type": "int",
+            "from_cpp": "(int)%(n)s",
+            "to_cpp": "(cv::DataLayout)%(n)s",
+            "is_primitive": true
+        },
         "DMatch": {
             "objc_type": "DMatch*"
         },

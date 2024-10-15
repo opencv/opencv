@@ -175,7 +175,6 @@ Ptr<FastConv> initFastConv(
 #endif
 
     Mat weightsMat = _weightsMat.getMat();
-    auto wShape = shape(weightsMat);
     const size_t wstep = weightsMat.step1();
 
     conv->useFP16 = false;
