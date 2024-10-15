@@ -28,7 +28,7 @@ Using this approach OpenCV provides some basic low level functionality for exter
 #endif
 
 #ifndef CV_PLUGIN_EXPORTS
-#if (defined _WIN32 || defined WINCE || defined __CYGWIN__)
+#if (defined _WIN32 || defined __CYGWIN__)
 #  define CV_PLUGIN_EXPORTS __declspec(dllexport)
 #elif defined __GNUC__ && __GNUC__ >= 4
 #  define CV_PLUGIN_EXPORTS __attribute__ ((visibility ("default")))

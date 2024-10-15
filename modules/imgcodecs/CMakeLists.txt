@@ -9,10 +9,6 @@ ocv_add_module(imgcodecs opencv_imgproc WRAP java objc python)
 
 ocv_clear_vars(GRFMT_LIBS)
 
-if(HAVE_WINRT_CX AND NOT WINRT)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
-endif()
-
 if (HAVE_AVIF)
   ocv_include_directories(${AVIF_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${AVIF_LIBRARY})

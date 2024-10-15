@@ -1,7 +1,3 @@
-if(WINRT)
-  ocv_module_disable(dnn)
-endif()
-
 set(the_description "Deep neural network module. It allows to load models from different frameworks and to make forward pass")
 
 ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX)

@@ -21,7 +21,6 @@ namespace {
 // FIXME: taken from DNN module
 void initDLDTDataPath()
 {
-#ifndef WINRT
     static bool initialized = false;
     if (!initialized)
     {
@@ -36,7 +35,6 @@ void initDLDTDataPath()
         }
         initialized = true;
     }
-#endif // WINRT
 }
 
 static const std::string SUBDIR = "intel/age-gender-recognition-retail-0013/FP32/";

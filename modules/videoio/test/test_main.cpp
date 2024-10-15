@@ -11,7 +11,6 @@
 static
 void initTests()
 {
-#ifndef WINRT  // missing getenv
     const std::vector<cv::VideoCaptureAPIs> backends = cv::videoio_registry::getStreamBackends();
     const char* requireFFmpeg = getenv("OPENCV_TEST_VIDEOIO_BACKEND_REQUIRE_FFMPEG");
     if (requireFFmpeg && !isBackendAvailable(cv::CAP_FFMPEG, backends))
@@ -19,7 +18,6 @@ void initTests()
         CV_LOG_FATAL(NULL, "OpenCV-Test: required FFmpeg backend is not available (broken plugin?). STOP.");
         exit(1);
     }
-#endif
 }
 
 CV_TEST_MAIN("highgui", initTests())

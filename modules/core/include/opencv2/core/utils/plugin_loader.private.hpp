@@ -74,11 +74,7 @@ static inline
 LibHandle_t libraryLoad_(const FileSystemPath_t& filename)
 {
 #if defined(_WIN32)
-# ifdef WINRT
-    return LoadPackagedLibrary(filename.c_str(), 0);
-# else
     return LoadLibraryW(filename.c_str());
-#endif
 #elif defined(__linux__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__HAIKU__) || defined(__GLIBC__) || defined(__EMSCRIPTEN__)
     void* handle = dlopen(filename.c_str(), RTLD_NOW);
     CV_LOG_IF_DEBUG(NULL, !handle, "dlopen() error: " << dlerror());

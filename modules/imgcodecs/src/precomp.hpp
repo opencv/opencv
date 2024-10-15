@@ -53,7 +53,7 @@
 #include <limits.h>
 #include <ctype.h>
 
-#if defined _WIN32 || defined WINCE
+#if defined _WIN32
     #include <windows.h>
     #undef small
     #undef min

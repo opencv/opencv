@@ -1,6 +1,6 @@
 if(PROJECT_NAME STREQUAL "OpenCV")
   set(ENABLE_PLUGINS_DEFAULT ON)
-  if(EMSCRIPTEN OR IOS OR WINRT)
+  if(EMSCRIPTEN OR IOS)
     set(ENABLE_PLUGINS_DEFAULT OFF)
   endif()
   set(DNN_PLUGIN_LIST "" CACHE STRING "List of DNN backends to be compiled as plugins (openvino, etc or special value 'all')")

@@ -18,13 +18,6 @@
 #include "cap_mfx_writer.hpp"
 #endif
 
-// All WinRT versions older than 8.0 should provide classes used for video support
-#if defined(WINRT) && !defined(WINRT_8_0) && defined(__cplusplus_winrt)
-#   include "cap_winrt_capture.hpp"
-#   include "cap_winrt_bridge.hpp"
-#   define WINRT_VIDEO
-#endif
-
 #if defined _M_X64 && defined _MSC_VER && !defined CV_ICC
 #pragma optimize("",off)
 #pragma warning(disable: 4748)
@@ -52,7 +45,7 @@ namespace {
 
 /** Ordering guidelines:
 - modern optimized, multi-platform libraries: ffmpeg, gstreamer, Media SDK
-- platform specific universal SDK: WINRT, AVFOUNDATION, MSMF/DSHOW, V4L/V4L2
+- platform specific universal SDK: AVFOUNDATION, MSMF/DSHOW, V4L/V4L2
 - RGB-D: OpenNI/OpenNI2, REALSENSE, OBSENSOR
 - special OpenCV (file-based): "images", "mjpeg"
 - special camera SDKs, including stereo: other special SDKs: FIREWIRE/1394, XIMEA/ARAVIS/GIGANETIX/PVAPI(GigE)/uEye
@@ -84,10 +77,6 @@ static const struct VideoBackendInfo builtin_backends[] =
 #endif
 
     // Windows
-#ifdef WINRT_VIDEO
-    DECLARE_STATIC_BACKEND(CAP_WINRT, "WINRT", MODE_CAPTURE_BY_INDEX, 0, create_WRT_capture, 0)
-#endif
-
 #ifdef HAVE_MSMF
     DECLARE_STATIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_WRITER, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateVideoWriter_MSMF)
 #elif defined(ENABLE_PLUGINS) && defined(_WIN32)

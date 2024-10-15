@@ -173,7 +173,7 @@ const uint64_t AT_HWCAP = NT_GNU_HWCAP;
 #define LA_HWCAP_LASX  (1<<5)
 #endif
 
-#if defined _WIN32 || defined WINCE
+#if defined _WIN32
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
 #endif
@@ -191,58 +191,6 @@ const uint64_t AT_HWCAP = NT_GNU_HWCAP;
 #undef abs
 #include <tchar.h>
 
-#ifdef WINRT
-#include <wrl/client.h>
-#ifndef __cplusplus_winrt
-#include <windows.storage.h>
-#pragma comment(lib, "runtimeobject.lib")
-#endif // WINRT
-
-std::wstring GetTempPathWinRT()
-{
-#ifdef __cplusplus_winrt
-    return std::wstring(Windows::Storage::ApplicationData::Current->TemporaryFolder->Path->Data());
-#else
-    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IApplicationDataStatics> appdataFactory;
-    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IApplicationData> appdataRef;
-    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IStorageFolder> storagefolderRef;
-    Microsoft::WRL::ComPtr<ABI::Windows::Storage::IStorageItem> storageitemRef;
-    HSTRING str;
-    HSTRING_HEADER hstrHead;
-    std::wstring wstr;
-    if (FAILED(WindowsCreateStringReference(RuntimeClass_Windows_Storage_ApplicationData,
-                                            (UINT32)wcslen(RuntimeClass_Windows_Storage_ApplicationData), &hstrHead, &str)))
-        return wstr;
-    if (FAILED(RoGetActivationFactory(str, IID_PPV_ARGS(appdataFactory.ReleaseAndGetAddressOf()))))
-        return wstr;
-    if (FAILED(appdataFactory->get_Current(appdataRef.ReleaseAndGetAddressOf())))
-        return wstr;
-    if (FAILED(appdataRef->get_TemporaryFolder(storagefolderRef.ReleaseAndGetAddressOf())))
-        return wstr;
-    if (FAILED(storagefolderRef.As(&storageitemRef)))
-        return wstr;
-    str = NULL;
-    if (FAILED(storageitemRef->get_Path(&str)))
-        return wstr;
-    wstr = WindowsGetStringRawBuffer(str, NULL);
-    WindowsDeleteString(str);
-    return wstr;
-#endif
-}
-
-std::wstring GetTempFileNameWinRT(std::wstring prefix)
-{
-    wchar_t guidStr[40];
-    GUID g;
-    CoCreateGuid(&g);
-    wchar_t* mask = L"%08x_%04x_%04x_%02x%02x_%02x%02x%02x%02x%02x%02x";
-    swprintf(&guidStr[0], sizeof(guidStr)/sizeof(wchar_t), mask,
-             g.Data1, g.Data2, g.Data3, UINT(g.Data4[0]), UINT(g.Data4[1]),
-             UINT(g.Data4[2]), UINT(g.Data4[3]), UINT(g.Data4[4]),
-             UINT(g.Data4[5]), UINT(g.Data4[6]), UINT(g.Data4[7]));
-
-    return prefix.append(std::wstring(guidStr));
-}
 
 #endif
 #else
@@ -1142,37 +1090,6 @@ String tempfile( const char* suffix )
 #endif
 
 #if defined _WIN32
-#ifdef WINRT
-    RoInitialize(RO_INIT_MULTITHREADED);
-    std::wstring temp_dir = GetTempPathWinRT();
-
-    std::wstring temp_file = GetTempFileNameWinRT(L"ocv");
-    if (temp_file.empty())
-        return String();
-
-    temp_file = temp_dir.append(std::wstring(L"\\")).append(temp_file);
-    DeleteFileW(temp_file.c_str());
-
-    char aname[MAX_PATH];
-    size_t copied = wcstombs(aname, temp_file.c_str(), MAX_PATH);
-    CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
-    fname = String(aname);
-    RoUninitialize();
-#elif defined(_WIN32_WCE)
-    const auto kMaxPathSize = MAX_PATH+1;
-    wchar_t temp_dir[kMaxPathSize] = {0};
-    wchar_t temp_file[kMaxPathSize] = {0};
-
-    ::GetTempPathW(kMaxPathSize, temp_dir);
-
-    if(0 != ::GetTempFileNameW(temp_dir, L"ocv", 0, temp_file)) {
-        DeleteFileW(temp_file);
-        char aname[MAX_PATH];
-        size_t copied = wcstombs(aname, temp_file, MAX_PATH);
-        CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
-        fname = String(aname);
-    }
-#else
     char temp_dir2[MAX_PATH] = { 0 };
     char temp_file[MAX_PATH] = { 0 };
 
@@ -1187,7 +1104,6 @@ String tempfile( const char* suffix )
     DeleteFileA(temp_file);
 
     fname = temp_file;
-#endif
 # else
 #  ifdef __ANDROID__
     //char defaultTemplate[] = "/mnt/sdcard/__opencv_temp.XXXXXX";
@@ -1482,10 +1398,8 @@ public:
 private:
 
 #ifdef _WIN32
-#ifndef WINRT
     DWORD tlsKey;
     bool disposed;
-#endif
 #else // _WIN32
     pthread_key_t  tlsKey;
     std::atomic<bool> disposed;
@@ -1516,22 +1430,6 @@ static TlsAbstraction* getTlsAbstraction()
 
 
 #ifdef _WIN32
-#ifdef WINRT
-static __declspec( thread ) void* tlsData = NULL; // using C++11 thread attribute for local thread data
-TlsAbstraction::TlsAbstraction() {}
-void TlsAbstraction::releaseSystemResources()
-{
-    cv::__termination = true;  // DllMain is missing in static builds
-}
-void* TlsAbstraction::getData() const
-{
-    return tlsData;
-}
-void TlsAbstraction::setData(void *pData)
-{
-    tlsData = pData;
-}
-#else //WINRT
 #ifdef CV_USE_FLS
 static void NTAPI opencv_fls_destructor(void* pData);
 #endif // CV_USE_FLS
@@ -1576,7 +1474,6 @@ void TlsAbstraction::setData(void *pData)
     CV_Assert(FlsSetValue(tlsKey, pData) == TRUE);
 #endif // CV_USE_FLS
 }
-#endif // WINRT
 #else // _WIN32
 static void opencv_tls_destructor(void* pData);
 TlsAbstraction::TlsAbstraction()
@@ -2065,10 +1962,7 @@ CoreTLSData& getCoreTlsData()
     return getCoreTlsDataTLS().getRef();
 }
 
-#if defined CVAPI_EXPORTS && defined _WIN32 && !defined WINCE
-#ifdef WINRT
-    #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
-#endif
+#if defined CVAPI_EXPORTS && defined _WIN32
 
 extern "C"
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID lpReserved);

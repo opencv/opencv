@@ -45,7 +45,7 @@
 #ifdef HAVE_OPENCL
 
 #ifndef CL_RUNTIME_EXPORT
-#if (defined(BUILD_SHARED_LIBS) || defined(OPENCV_CORE_SHARED)) && (defined _WIN32 || defined WINCE) && \
+#if (defined(BUILD_SHARED_LIBS) || defined(OPENCV_CORE_SHARED)) && (defined _WIN32) && \
     !(defined(__OPENCV_BUILD) && defined(OPENCV_MODULE_IS_PART_OF_WORLD))
 #define CL_RUNTIME_EXPORT __declspec(dllimport)
 #else

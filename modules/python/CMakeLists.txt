@@ -3,7 +3,7 @@
 # ----------------------------------------------------------------------------
 if(DEFINED OPENCV_INITIAL_PASS)  # OpenCV build
 
-if(ANDROID OR APPLE_FRAMEWORK OR WINRT)
+if(ANDROID OR APPLE_FRAMEWORK)
   ocv_module_disable_(python3)
   return()
 elseif(BUILD_opencv_world OR (WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug"))

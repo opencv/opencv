@@ -192,11 +192,7 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
         return;
     }
 
-#ifndef WINRT
     const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
-#else
-    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
-#endif
 
     cvtest::addDataSearchSubDirectory("");
     cvtest::addDataSearchSubDirectory(testSuitName);
@@ -1134,11 +1130,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #endif
 
     {
-#ifndef WINRT
         const char* path = getenv("OPENCV_PERF_VALIDATION_DIR");
-#else
-        const char* path = OPENCV_PERF_VALIDATION_DIR;
-#endif
         if (path)
             perf_validation_results_directory = path;
     }
@@ -1406,11 +1398,7 @@ bool TestBase::next()
                         printf("Performance is unstable, it may be a result of overheat problems\n");
                         printf("Idle delay for %d ms... \n", perf_validation_idle_delay_ms);
 #if defined _WIN32
-#ifndef WINRT_8_0
                         Sleep(perf_validation_idle_delay_ms);
-#else
-                        WaitForSingleObjectEx(GetCurrentThread(), perf_validation_idle_delay_ms, FALSE);
-#endif
 #else
                         usleep(perf_validation_idle_delay_ms * 1000);
 #endif
@@ -1897,11 +1885,7 @@ std::string TestBase::getDataPath(const std::string& relativePath)
         throw PerfEarlyExitException();
     }
 
-#ifndef WINRT
     const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
-#else
-    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
-#endif
     const char *path_separator = "/";
 
     std::string path;

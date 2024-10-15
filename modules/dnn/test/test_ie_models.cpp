@@ -35,7 +35,6 @@ namespace opencv_test { namespace {
 
 static void initDLDTDataPath()
 {
-#ifndef WINRT
     static bool initialized = false;
     if (!initialized)
     {
@@ -53,7 +52,6 @@ static void initDLDTDataPath()
 #endif
         initialized = true;
     }
-#endif
 }
 
 using namespace cv;

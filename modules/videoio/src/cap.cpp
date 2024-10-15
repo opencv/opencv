@@ -427,29 +427,7 @@ bool VideoCapture::read(OutputArray image)
 
 VideoCapture& VideoCapture::operator >> (Mat& image)
 {
-#ifdef WINRT_VIDEO
-    // FIXIT grab/retrieve methods() should work too
-    if (grab())
-    {
-        if (retrieve(image))
-        {
-            std::lock_guard<std::mutex> lock(VideoioBridge::getInstance().inputBufferMutex);
-            VideoioBridge& bridge = VideoioBridge::getInstance();
-
-            // double buffering
-            bridge.swapInputBuffers();
-            auto p = bridge.frontInputPtr;
-
-            bridge.bIsFrameNew = false;
-
-            // needed here because setting Mat 'image' is not allowed by OutputArray in read()
-            Mat m(bridge.getHeight(), bridge.getWidth(), CV_8UC3, p);
-            image = m;
-        }
-    }
-#else
     read(image);
-#endif
     return *this;
 }
 
