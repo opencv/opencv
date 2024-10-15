@@ -57,6 +57,59 @@
 #define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(CN, DEPTH) \
     CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_##DEPTH(CN)
 
+// Shuffle (ARM NEON)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_LOAD() \
+    uint8x8x4_t t00 = { \
+        vld1_u8(src + addr[0]), \
+        vld1_u8(src + addr[1]), \
+        vld1_u8(src + addr[2]), \
+        vld1_u8(src + addr[3]) \
+    }; \
+    uint8x8x4_t t01 = { \
+        vld1_u8(src + addr[4]), \
+        vld1_u8(src + addr[5]), \
+        vld1_u8(src + addr[6]), \
+        vld1_u8(src + addr[7]) \
+    }; \
+    uint8x8x4_t t10 = { \
+        vld1_u8(src + addr[0] + srcstep), \
+        vld1_u8(src + addr[1] + srcstep), \
+        vld1_u8(src + addr[2] + srcstep), \
+        vld1_u8(src + addr[3] + srcstep) \
+    }; \
+    uint8x8x4_t t11 = { \
+        vld1_u8(src + addr[4] + srcstep), \
+        vld1_u8(src + addr[5] + srcstep), \
+        vld1_u8(src + addr[6] + srcstep), \
+        vld1_u8(src + addr[7] + srcstep) \
+    }; \
+    uint32x2_t p00_, p01_, p10_, p11_;
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(coords, cn) \
+    p00_ = vreinterpret_u32_u8(vtbl4_u8(t00, coords)); \
+    p01_ = vreinterpret_u32_u8(vtbl4_u8(t01, coords)); \
+    p10_ = vreinterpret_u32_u8(vtbl4_u8(t10, coords)); \
+    p11_ = vreinterpret_u32_u8(vtbl4_u8(t11, coords)); \
+    p00##cn = vreinterpret_u8_u32(vtrn1_u32(p00_, p01_)); \
+    p01##cn = vreinterpret_u8_u32(vtrn2_u32(p00_, p01_)); \
+    p10##cn = vreinterpret_u8_u32(vtrn1_u32(p10_, p11_)); \
+    p11##cn = vreinterpret_u8_u32(vtrn2_u32(p10_, p11_));
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_C1() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_LOAD() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(grays, g)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_C3() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_LOAD() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(reds, r) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(greens, g) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(blues, b)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_C4() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_LOAD() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(reds, r) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(greens, g) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(blues, b) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_TRN(alphas, a)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(CN) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8_##CN()
+
 
 // Shuffle (not all pixels within image)
 #define CV_WARP_LINEAR_VECTOR_SHUFFLE_STORE_CONSTANT_BORDER_8UC1() \
@@ -190,6 +243,25 @@
         CV_WARP_LINEAR_VECTOR_FETCH_PIXEL_##CN(1, 1, uf*3); \
     }
 
+// Shuffle (not all pixels within image) (ARM NEON)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(cn, offset)\
+    p00##cn = vld1_u8(pixbuf + offset);      \
+    p01##cn = vld1_u8(pixbuf + offset + 8);  \
+    p10##cn = vld1_u8(pixbuf + offset + 16); \
+    p11##cn = vld1_u8(pixbuf + offset + 24);
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_C1() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(g, 0)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_C3() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(r, 0) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(g, 32) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(b, 64)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_C4() \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(r, 0) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(g, 32) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(b, 64) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_LOAD(a, 96)
+#define CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(CN) \
+    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8_##CN()
 
 // Load pixels for linear interpolation (uint8_t -> int16_t)
 #define CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16(cn, i) \
@@ -210,6 +282,26 @@
     CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16(a, 12)
 #define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(CN) \
     CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_##CN();
+
+// Load pixels for linear interpolation (uint8_t -> int16_t) (ARM NEON)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(cn) \
+    v_int16 f00##cn = v_reinterpret_as_s16(v_uint16(vmovl_u8(p00##cn))), \
+            f01##cn = v_reinterpret_as_s16(v_uint16(vmovl_u8(p01##cn))), \
+            f10##cn = v_reinterpret_as_s16(v_uint16(vmovl_u8(p10##cn))), \
+            f11##cn = v_reinterpret_as_s16(v_uint16(vmovl_u8(p11##cn)));
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON_C1() \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(g)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON_C3() \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(b)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON_C4() \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(b) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8S16_NEON(a)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(CN) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON_##CN();
 
 // Load pixels for linear interpolation (uint16_t -> uint16_t)
 #define CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16(cn, i) \
@@ -232,44 +324,44 @@
     CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16_##CN();
 
 // Load pixels for linear interpolation (int16_t -> float)
-#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_S16F32(cn) \
+#define CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_S16F32(cn) \
     v_float32 f00##cn##l = v_cvt_f32(v_expand_low(f00##cn)), f00##cn##h = v_cvt_f32(v_expand_high(f00##cn)), \
               f01##cn##l = v_cvt_f32(v_expand_low(f01##cn)), f01##cn##h = v_cvt_f32(v_expand_high(f01##cn)), \
               f10##cn##l = v_cvt_f32(v_expand_low(f10##cn)), f10##cn##h = v_cvt_f32(v_expand_high(f10##cn)), \
               f11##cn##l = v_cvt_f32(v_expand_low(f11##cn)), f11##cn##h = v_cvt_f32(v_expand_high(f11##cn));
-#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32_C1() \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_S16F32(g)
-#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32_C3() \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_S16F32(r) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_S16F32(g) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_S16F32(b)
-#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32_C4() \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_S16F32(r) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_S16F32(g) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_S16F32(b) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_S16F32(a)
-#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32(CN) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_S16F32_##CN()
+#define CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32_C1() \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_S16F32(g)
+#define CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32_C3() \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_S16F32(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_S16F32(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_S16F32(b)
+#define CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32_C4() \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_S16F32(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_S16F32(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_S16F32(b) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_S16F32(a)
+#define CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(CN) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32_##CN()
 
 // Load pixels for linear interpolation (uint16_t -> float)
-#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16F32(cn) \
+#define CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_U16F32(cn) \
     v_float32 f00##cn##l = v_cvt_f32(v_reinterpret_as_s32(v_expand_low(f00##cn))), f00##cn##h = v_cvt_f32(v_reinterpret_as_s32(v_expand_high(f00##cn))), \
               f01##cn##l = v_cvt_f32(v_reinterpret_as_s32(v_expand_low(f01##cn))), f01##cn##h = v_cvt_f32(v_reinterpret_as_s32(v_expand_high(f01##cn))), \
               f10##cn##l = v_cvt_f32(v_reinterpret_as_s32(v_expand_low(f10##cn))), f10##cn##h = v_cvt_f32(v_reinterpret_as_s32(v_expand_high(f10##cn))), \
               f11##cn##l = v_cvt_f32(v_reinterpret_as_s32(v_expand_low(f11##cn))), f11##cn##h = v_cvt_f32(v_reinterpret_as_s32(v_expand_high(f11##cn)));
-#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32_C1() \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16F32(g)
-#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32_C3() \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16F32(r) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16F32(g) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16F32(b)
-#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32_C4() \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16F32(r) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16F32(g) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16F32(b) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U16F32(a)
-#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32(CN) \
-    CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16F32_##CN()
+#define CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32_C1() \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_U16F32(g)
+#define CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32_C3() \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_U16F32(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_U16F32(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_U16F32(b)
+#define CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32_C4() \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_U16F32(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_U16F32(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_U16F32(b) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_CN_U16F32(a)
+#define CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(CN) \
+    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32_##CN()
 
 // Load pixels for linear interpolation (float -> float)
 #define CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_F32(cn, i) \
@@ -291,8 +383,27 @@
 #define CV_WARP_LINEAR_VECTOR_INTER_LOAD_F32(CN) \
     CV_WARP_LINEAR_VECTOR_INTER_LOAD_F32_##CN()
 
+// Load pixels for linear interpolation (uint8_t -> float16)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8F16(cn) \
+    v_float16 f00##cn = v_float16(vcvtq_f16_u16(vmovl_u8(p00##cn))), \
+              f01##cn = v_float16(vcvtq_f16_u16(vmovl_u8(p01##cn))), \
+              f10##cn = v_float16(vcvtq_f16_u16(vmovl_u8(p10##cn))), \
+              f11##cn = v_float16(vcvtq_f16_u16(vmovl_u8(p11##cn)));
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16_C1() \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8F16(g)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16_C3() \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8F16(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8F16(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8F16(b)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16_C4() \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8F16(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8F16(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8F16(b) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_CN_U8F16(a)
+#define CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16(CN) \
+    CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8F16_##CN()
 
-// Linear interpolation calculation
+// Linear interpolation calculation (F32)
 #define CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F32(cn) \
     f00##cn##l = v_fma(alphal, v_sub(f01##cn##l, f00##cn##l), f00##cn##l); f00##cn##h = v_fma(alphah, v_sub(f01##cn##h, f00##cn##h), f00##cn##h); \
     f10##cn##l = v_fma(alphal, v_sub(f11##cn##l, f10##cn##l), f10##cn##l); f10##cn##h = v_fma(alphah, v_sub(f11##cn##h, f10##cn##h), f10##cn##h);
@@ -327,6 +438,42 @@
               betal = src_y0, betah = src_y1; \
     CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F32_##CN() \
     CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F32_##CN()
+
+// Linear interpolation calculation (F16)
+#define CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16(cn) \
+    f00##cn = v_fma(alpha, v_sub(f01##cn, f00##cn), f00##cn); \
+    f10##cn = v_fma(alpha, v_sub(f11##cn, f10##cn), f10##cn);
+#define CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16_C1() \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16(g)
+#define CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16_C3() \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16(b)
+#define CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16_C4() \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16(b) \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16(a)
+
+#define CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16(cn) \
+    f00##cn = v_fma(beta,  v_sub(f10##cn, f00##cn), f00##cn);
+#define CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16_C1() \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16(g)
+#define CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16_C3() \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16(b)
+#define CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16_C4() \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16(r) \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16(g) \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16(b) \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16(a)
+
+#define CV_WARP_LINEAR_VECTOR_INTER_CALC_F16(CN) \
+    v_float16 alpha = v_cvt_f16(src_x0, src_x1), \
+              beta = v_cvt_f16(src_y0, src_y1); \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_ALPHA_F16_##CN() \
+    CV_WARP_LINEAR_VECTOR_INTER_CALC_BETA_F16_##CN()
 
 
 // Store
@@ -385,3 +532,26 @@
     v_store_interleave(dstptr + x*4 + vlanes_32*4, f00rh, f00gh, f00bh, f00ah);
 #define CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(CN) \
     CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32_##CN()
+
+#define CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8_C1() \
+    uint8x8_t result = { \
+        vqmovun_s16(vcvtnq_s16_f16(f00g.val)), \
+    }; \
+    vst1_u8(dstptr + x, result);
+#define CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8_C3() \
+    uint8x8x3_t result = { \
+        vqmovun_s16(vcvtnq_s16_f16(f00r.val)), \
+        vqmovun_s16(vcvtnq_s16_f16(f00g.val)), \
+        vqmovun_s16(vcvtnq_s16_f16(f00b.val)), \
+    }; \
+    vst3_u8(dstptr + x*3, result);
+#define CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8_C4() \
+    uint8x8x4_t result = { \
+        vqmovun_s16(vcvtnq_s16_f16(f00r.val)), \
+        vqmovun_s16(vcvtnq_s16_f16(f00g.val)), \
+        vqmovun_s16(vcvtnq_s16_f16(f00b.val)), \
+        vqmovun_s16(vcvtnq_s16_f16(f00a.val)), \
+    }; \
+    vst4_u8(dstptr + x*4, result);
+#define CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8(CN) \
+    CV_WARP_LINEAR_VECTOR_INTER_STORE_F16U8_##CN()
