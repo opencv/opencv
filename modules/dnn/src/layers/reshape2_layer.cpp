@@ -116,13 +116,6 @@ public:
         return outShape;
     }
 
-    MatShape tensorToShapeSpec(const Mat& shapeTensor) const
-    {
-        std::vector<int> shapeSpecVec;
-        tensorToIntVec(shapeTensor, shapeSpecVec);
-        return MatShape(shapeSpecVec);
-    }
-
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int,
                          std::vector<MatShape> &outputs,
@@ -138,7 +131,7 @@ public:
             CV_Assert(this->inputs.size() == 2);
             Net::Impl* netimpl_ = getNetImpl(this);
             Mat shapeTensor = netimpl_->argTensor(this->inputs[1]);
-            shapeSpec = tensorToShapeSpec(shapeTensor);
+            shapeSpec = tensorToShape(shapeTensor);
         } else {
             CV_Assert(shapeSpec.dims >= 0);
         }
@@ -181,7 +174,7 @@ public:
         MatShape shapeSpec = newShapeDesc;
         if (!haveShapeSpec_) {
             Mat shapeTensor = inputs_arr.getMat(1);
-            shapeSpec = tensorToShapeSpec(shapeTensor);
+            shapeSpec = tensorToShape(shapeTensor);
         }
         MatShape outShape = getOutShape(inpShape, shapeSpec);
         reshapeAndCopyFirst(inputs_arr, outputs_arr, outShape);

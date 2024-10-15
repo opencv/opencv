@@ -84,6 +84,9 @@ double getWeightScale(const Mat& weightsMat);
 void tensorToIntVec(const Mat& tensor, std::vector<int>& vec);
 void tensorToFloatVec(const Mat& tensor, std::vector<float>& vec);
 
+// tensor to mat shape
+MatShape tensorToShape(const Mat& shapeTensor);
+
 // inputs and outputs are both vector<Mat>'s or both are vector<UMat>'s.
 // the function does the following:
 //

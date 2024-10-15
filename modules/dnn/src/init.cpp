@@ -86,6 +86,7 @@ void initializeLayerFactory()
 
     CV_DNN_REGISTER_LAYER_CLASS(Concat,         ConcatLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Concat2,        Concat2Layer);
+    CV_DNN_REGISTER_LAYER_CLASS(ConstantOfShape, ConstantOfShapeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(CropAndResize,  CropAndResizeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Flatten,        FlattenLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Interp,         InterpLayer);

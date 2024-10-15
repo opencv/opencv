@@ -330,5 +330,12 @@ void reshapeAndCopyFirst(InputArrayOfArrays inputs,
     }
 }
 
+MatShape tensorToShape(const Mat& shapeTensor)
+{
+    std::vector<int> shapeSpecVec;
+    tensorToIntVec(shapeTensor, shapeSpecVec);
+    return MatShape(shapeSpecVec);
+}
+
 }
 }
