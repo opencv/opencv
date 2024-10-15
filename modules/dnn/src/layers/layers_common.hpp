@@ -83,6 +83,13 @@ double getWeightScale(const Mat& weightsMat);
 // Here are helper functions to extract this data
 void tensorToIntVec(const Mat& tensor, std::vector<int>& vec);
 void tensorToFloatVec(const Mat& tensor, std::vector<float>& vec);
+void tensorToScalar(const Mat& tensor, int type, void* value);
+template<typename _Tp> _Tp tensorToScalar(const Mat& tensor)
+{
+    _Tp value = _Tp(0);
+    tensorToScalar(tensor, DataType<_Tp>::type, &value);
+    return value;
+}
 
 // tensor to mat shape
 MatShape tensorToShape(const Mat& shapeTensor);

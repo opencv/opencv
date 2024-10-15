@@ -15,7 +15,7 @@ namespace dnn
     ConstantOfShape layer, as defined in ONNX specification:
     https://onnx.ai/onnx/operators/onnx__ConstantOfShape.html
 
-    Opset's 1 to 23 are covered.
+    Opset's 9 to 23 are covered.
 */
 
 // out must be pre-allocated
