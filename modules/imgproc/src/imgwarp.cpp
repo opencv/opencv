@@ -2661,7 +2661,7 @@ static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation
     return true;
 #else
     CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(interpolation);
-    CV_UNUSED(borderType); CV_UNUSED(_M); CV_UNUSED(flags);
+    CV_UNUSED(borderType); CV_UNUSED(borderValue); CV_UNUSED(_M); CV_UNUSED(flags);
     return false;
 #endif
 }
