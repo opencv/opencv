@@ -172,7 +172,7 @@ public:
     MatShape computeColRowShape(const MatShape &inpShape, const MatShape &outShape) const CV_OVERRIDE
     {
         CV_Assert(!blobs.empty());
-        int dims = inpShape.size();
+        int dims = (int)inpShape.size();
         int inpD = dims == 5 ? inpShape[2] : 1;
         int inpH = inpShape[dims - 2];
         int inpW = inpShape.back();
@@ -236,7 +236,7 @@ public:
                      "be multiple of %d but got %d", weightShape[1], inpCn));
         CV_Assert(ngroups > 0 && inpCn % ngroups == 0 && outCn % ngroups == 0);
 
-        outputs.resize(1, outShape);
+        outputs.resize(1, MatShape(outShape));
 
         return false;
     }

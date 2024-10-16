@@ -25,12 +25,16 @@
 
 #include "legacy_backend.hpp"  // wrapMat BlobManager OpenCLBackendWrapper
 
+#include <unordered_map>
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 using std::make_pair;
 using std::string;
+
+typedef std::unordered_map<std::string, int64_t> NamesHash;
 
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
@@ -66,6 +70,35 @@ struct Net::Impl : public detail::NetImplBase
     bool useWinograd;
     std::vector<int64> layersTimings;
 
+    std::string modelFileName;
+    ModelFormat modelFormat;
+    DataLayout originalLayout;
+    int onnx_opset;
+
+    NamesHash argnames;
+    NamesHash dimnames;
+    NamesHash graphofs;
+    size_t totalLayers;
+    std::vector<std::string> dimnames_vec;
+    std::vector<ArgData> args;
+    std::vector<Mat> __tensors__;
+    std::vector<int> bufidxs;
+    std::vector<Mat> buffers;
+    std::vector<Mat> scratchBufs;
+    std::vector<Ptr<Graph> > allgraphs;
+
+    Ptr<Graph> mainGraph;
+    int globGraphIdx;
+
+    int accuracy;
+    bool enableFP16, haveFP16;
+    bool prepared; // need to rerun graph transformations/optimizations
+    bool finalizeLayers; // need to initialize each layer
+    TracingMode tracingMode;
+    ProfilingMode profilingMode;
+    std::vector<int64_t> dimvalues;
+    std::ostream* dump_strm;
+    int dump_indent;
 
     virtual bool empty() const;
     virtual void setPreferableBackend(Net& net, int backendId);
@@ -282,8 +315,119 @@ struct Net::Impl : public detail::NetImplBase
 
     void dumpNetworkToFile() const;
 
+    ///////////////////////////// the new engine ////////////////////////////
+
+    // Create a new graph/subgraph, mode 2: we construct the graph manually.
+    // First, we create empty graph with certain input Args (they may or may not have names).
+    // once the graph is constructed, we set the graph outputs using Graph::setOutputs().
+    // When it's the first created graph, it automatically becomes the main model graph.
+    Ptr<Graph> newGraph(const std::string& name,
+                        const std::vector<Arg>& inputs,
+                        bool isMainGraph);
+
+    const ArgData& argData(Arg arg) const;
+    const std::string& argName(Arg arg) const;
+    ArgKind argKind(Arg arg) const;
+
+    // if the name is empty, always creates a new argument;
+    // if it's not empty, returns argument with the specific name if it already exists,
+    // otherwise creates new argument with the specified name
+    Arg getArg(const std::string& name);
+    bool haveArg(const std::string& name) const;
+
+    Arg newConstArg(const std::string& name, const Mat& m);
+    Arg newConstScalarArg(const std::string& name, int type, const void* value);
+    Arg newArg(const std::string& name, ArgKind kind, bool allowEmptyName=false);
+    bool isConstArg(Arg arg) const;
+    Mat& argTensor(Arg arg) const;
+    int argType(Arg arg) const;
+    void checkArg(Arg arg) const;
+    void checkArgs(const std::vector<Arg>& args) const;
+
+    int findDim(const std::string& name, bool insert=false);
+
+    void prepareForInference();
+
+    // pre-allocates memory for output tensors.
+    // if useBufferPool==true, the method uses 'buffers'
+    // for outputs (according to bufidxs)
+    // instead of allocating fresh outputs
+    void allocateLayerOutputs(const Ptr<Layer>& layer,
+                              const std::vector<int>& inpTypes,
+                              const std::vector<MatShape>& inpShapes,
+                              std::vector<int>& outTypes,
+                              std::vector<MatShape>& outShapes,
+                              std::vector<std::pair<uchar*, size_t> >& outOrigData,
+                              std::vector<Mat>& outputs, // [TODO] replace with something else to cover other backends
+                              std::vector<int>& tempTypes,
+                              std::vector<MatShape>& tempShapes,
+                              std::vector<Mat>& temps, // [TODO] ditto
+                              std::vector<Mat>& globalTemps,
+                              bool useBufferPool
+                              );
+
+    // set input of the model before running it
+    void setMainGraphInput(InputArray blob, const std::string& name);
+    // set input in some graph, the main one or a subgraph
+    void setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m);
+    // run graph or subgraph.
+    void forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs, OutputArrayOfArrays outputs, bool isMainGraph);
+    // run the whole model
+    void forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs);
+    // run the whole model, convenience wrapper
+    Mat forwardWithSingleOutput(const std::string& outname);
+    // run the whole model, convenience wrapper
+    void forwardWithMultipleOutputs(OutputArrayOfArrays outputBlobs,
+                                    const std::vector<std::string>& outBlobNames);
+    // try infer shapes; if some layers produce tensors with dynamic shapes, shape inference is impossible
+    bool tryInferShapes(const std::vector<MatShape>& suggestedInpShapes,
+                        const std::vector<MatType>& suggestedInpTypes,
+                        LayerShapes& shapes,
+                        std::vector<MatShape>& shapeCache,
+                        std::vector<MatType>& typeCache) const;
+    bool tryInferGraphShapes(const Ptr<Graph>& graph,
+                             std::vector<MatShape>& shapeCache,
+                             std::vector<MatType>& typeCache) const;
+
+    // helper function for useCounts()
+    void updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& usecounts) const;
+    // computes how many times each argument is used, i.e. on output usecounts.size() == args.size()
+    void useCounts(std::vector<int>& usecounts) const;
+
+    int updateGraphOfs(const Ptr<Graph>& graph, int currofs, bool ismain);
+
+    // deals with numeric and symblic shape values.
+    void checkAndUpdateDim(const Ptr<Graph>& graph, const Layer* layer, Arg inp, int j, int64_t value);
+
+    // dump information about certain input or output argument of an operation
+    void traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg arg, bool dumpdata);
+    std::ostream& dumpArg(std::ostream& strm, Arg arg, int indent,
+                          bool comma, bool dump_details) const;
+    std::ostream& dumpDim(std::ostream& strm, int value) const;
+    std::ostream& dumpTypeShape(std::ostream& strm, int type, const MatShape& shape) const;
+    std::ostream& dump(std::ostream& strm);
+
+    // infers all types
+    void inferTypes();
+    // infers all shapes
+    void inferShapes(bool symbolic);
+    // sets certain buffer index for each intermediate argument (Arg)
+    void assignBuffers();
+    //void useBlockLayout();
+    void fuse();
+    void constFold();
+    void constArgs();
+
 };  // Net::Impl
 
+inline Net::Impl* getNetImpl(const Layer* layer)
+{
+    return reinterpret_cast<Net::Impl*>(layer->netimpl);
+}
+
+Net readNetFromONNX2(const String&);
+Net readNetFromONNX2(const char*, size_t);
+Net readNetFromONNX2(const std::vector<uchar>&);
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

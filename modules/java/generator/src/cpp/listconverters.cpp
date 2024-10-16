@@ -110,7 +110,7 @@ void Copy_vector_string_to_List(JNIEnv* env, std::vector<std::string>& vs, jobje
 }
 
 #ifdef HAVE_OPENCV_DNN
-void Copy_vector_MatShape_to_List(JNIEnv* env, std::vector<cv::dnn::MatShape>& vs, jobject list)
+void Copy_vector_MatShape_to_List(JNIEnv* env, std::vector<cv::MatShape>& vs, jobject list)
 {
     static jclass juArrayList       = ARRAYLIST(env);
     jmethodID m_clear     = LIST_CLEAR(env, juArrayList);

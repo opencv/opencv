@@ -134,7 +134,7 @@ public:
                 applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD);
 #endif
 
-            std::vector<int> sz2 = shape(inp);
+            MatShape sz2 = shape(inp);
             sz2[0] = 2;
 
             Net net2 = readNet(cfg, model);

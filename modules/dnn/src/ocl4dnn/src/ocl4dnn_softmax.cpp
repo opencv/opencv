@@ -57,17 +57,17 @@ OCL4DNNSoftmax<Dtype>::OCL4DNNSoftmax(OCL4DNNSoftmaxConfig config)
     inner_num_ = 1;
     outer_num_ = 1;
     count_ = 1;
-    int32_t scale_sz = 1;
-    for (int32_t i = softmax_axis_ + 1; i < config.in_shape.size(); i++)
+    int scale_sz = 1;
+    for (int i = (int)softmax_axis_ + 1; i < config.in_shape.dims; i++)
         inner_num_ *= config.in_shape[i];
     use_slm_ = (config.in_shape[softmax_axis_] * inner_num_ + inner_num_ * 17) <= 8192;
-    for (int32_t i = 0; i < softmax_axis_; i++)
+    for (int i = 0; i < (int)softmax_axis_; i++)
         outer_num_ *= config.in_shape[i];
     count_ = inner_num_ + outer_num_;
 
-    std::vector<int32_t> scale_dims = config.in_shape;
+    auto scale_dims = config.in_shape;
     scale_dims[softmax_axis_] = use_slm_ ? 1 : 17;
-    for (int32_t i = 0; i < scale_dims.size(); i++)
+    for (int i = 0; i < scale_dims.dims; i++)
         scale_sz *= scale_dims[i];
 
     scale_data_.create(1, scale_sz, CV_32FC1);
