@@ -39,6 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include<limits>
 #include<stack>
 #include<vector>
 using namespace cv;
@@ -2477,10 +2478,14 @@ namespace cv
                                  const Scalar &color, int thickness, int lineType,
                                  InputArray _hierarchy, Point offset)
     {
-        // Ensure the hierarchy is not empty
-        CV_Assert(!_hierarchy.empty());
-        Mat hierarchy = _hierarchy.getMat();
+        // Check if hierarchy is empty and return if it is
+        if (_hierarchy.empty())
+        {
+            CV_Error(Error::StsBadArg, "Hierarchy is empty");
+            return;
+        }
 
+        Mat hierarchy = _hierarchy.getMat();
         std::stack<int> contourStack;
         contourStack.push(idx);
 
