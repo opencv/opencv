@@ -2481,7 +2481,7 @@ namespace cv
         // Check if hierarchy is empty and return if it is
         if (_hierarchy.empty())
         {
-            CV_Error(Error::StsBadArg, "Hierarchy is empty");
+            CV_Error(Error::StsBadArg, "Hierarchy is empty. Contours cannot be drawn.");
             return;
         }
 
@@ -2536,7 +2536,11 @@ namespace cv
         CV_Assert(ncontours <= (size_t)std::numeric_limits<int>::max());
         if (lineType == cv::LINE_AA && _image.depth() != CV_8U)
             lineType = 8;
-        Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
+        Mat image = _image.getMat(), hierarchy;
+        if (!_hierarchy.empty())
+        {
+            hierarchy = _hierarchy.getMat();
+        }
 
         (void)maxLevel; // Suppress unused parameter warning
 
@@ -2547,6 +2551,12 @@ namespace cv
 
             if (contourIdx >= 0)
             {
+                // Ensure the hierarchy is valid when drawing a specific contour
+                if (_hierarchy.empty() && maxLevel > 0)
+                {
+                    CV_Error(Error::StsBadArg, "Hierarchy is required for contourIdx >= 0");
+                    return;
+                }
                 drawContoursIteratively(image, _contours, contourIdx, color, thickness, lineType, _hierarchy, offset);
             }
             else
@@ -2565,6 +2575,7 @@ namespace cv
 
             if (hierarchy.empty())
             {
+                // If hierarchy is empty, fill all contours directly
                 for (; i != end; ++i)
                     indexesToFill.push_back(i);
             }
@@ -2573,6 +2584,7 @@ namespace cv
                 std::stack<int> indexes;
                 for (; i != end; ++i)
                 {
+                    // Check if it's an outermost contour or if we're processing a specific contour
                     if (hierarchy.at<Vec4i>(i)[3] < 0 || contourIdx >= 0)
                         indexes.push(i);
                 }
@@ -2582,6 +2594,7 @@ namespace cv
                     const int cur = indexes.top();
                     indexes.pop();
 
+                    // Traverse up the hierarchy
                     int par = cur;
                     while (par >= 0)
                     {
@@ -2590,6 +2603,7 @@ namespace cv
 
                     indexesToFill.push_back(cur);
 
+                    // Traverse children and siblings
                     int next = hierarchy.at<Vec4i>(cur)[2]; // First child
                     while (next >= 0)
                     {
@@ -2607,6 +2621,7 @@ namespace cv
         }
     }
 }
+
 static const int CodeDeltas[8][2] =
 { {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
 
