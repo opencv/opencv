@@ -534,6 +534,15 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<DequantizeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS DequantizeLinearLayer : public Layer
+    {
+    public:
+        int axis;
+        int block_size;
+
+        static Ptr<DequantizeLinearLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS RequantizeLayer : public Layer
     {
     public:

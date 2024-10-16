@@ -222,7 +222,8 @@ protected:
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseAttention            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseQuantDequant         (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDequantizeLinear     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseQuantizeLinear       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQAvgPool             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     //void parseQConcat              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1696,10 +1697,8 @@ void ONNXImporter2::parseEinsum(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter2::parseQuantDequant(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter2::parseDequantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    CV_Assert(node_proto.input_size() == 2 || node_proto.input_size() == 3);
-    layerParams.type = (node_proto.op_type() == "QuantizeLinear") ? "Quantize" : "Dequantize";
     addLayer(layerParams, node_proto);
 }
 
@@ -2363,7 +2362,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
 
     // BUG: https://github.com/opencv/opencv/issues/26310
     // ai.onnx: opset 10+
-    //dispatch["QuantizeLinear"] = dispatch["DequantizeLinear"] = &ONNXImporter2::parseQuantDequant;
+    dispatch["DequantizeLinear"] = &ONNXImporter2::parseDequantizeLinear;
     //dispatch["QLinearConv"] = &ONNXImporter2::parseQConv;
     //dispatch["QLinearMatMul"] = &ONNXImporter2::parseQMatMul;
 
