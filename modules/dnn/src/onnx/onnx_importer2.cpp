@@ -1702,6 +1702,16 @@ void ONNXImporter2::parseDequantizeLinear(LayerParams& layerParams, const opencv
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseQuantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    int dt = layerParams.get<int>("output_dtype", -1);
+    if (dt >= 0)
+    {
+        layerParams.set<int>("output_dtype", dataType2cv((opencv_onnx::TensorProto_DataType)dt));
+    }
+    addLayer(layerParams, node_proto);
+}
+
 // BUG: https://github.com/opencv/opencv/issues/26310
 /*void ONNXImporter2::parseQConv(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
@@ -2363,6 +2373,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     // BUG: https://github.com/opencv/opencv/issues/26310
     // ai.onnx: opset 10+
     dispatch["DequantizeLinear"] = &ONNXImporter2::parseDequantizeLinear;
+    dispatch["QuantizeLinear"] = &ONNXImporter2::parseQuantizeLinear;
     //dispatch["QLinearConv"] = &ONNXImporter2::parseQConv;
     //dispatch["QLinearMatMul"] = &ONNXImporter2::parseQMatMul;
 

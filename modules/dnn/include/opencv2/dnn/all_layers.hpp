@@ -526,6 +526,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<QuantizeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS QuantizeLinearLayer : public Layer
+    {
+    public:
+        int axis;
+        int block_size;
+        int output_dtype;
+        bool saturate;
+
+        static Ptr<QuantizeLinearLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS DequantizeLayer : public Layer
     {
     public:
