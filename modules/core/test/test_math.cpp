@@ -11,6 +11,7 @@
 #include <math.h>
 #include "opencv2/core/softfloat.hpp"
 #include "opencv2/core/core_c.h"
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace opencv_test { namespace {
 
@@ -3352,6 +3353,81 @@ TEST(Core_FastMath, InlineIsInf)
     EXPECT_EQ( cvIsInf(suf.f), 0);
     suf.u = 0x7FF0000012345678UL;
     EXPECT_EQ( cvIsInf(suf.f), 0);
+}
+
+TEST(Core_BFloat, convert)
+{
+    float data[] = {0.f, -1.f, 1.f, expf(1.f), FLT_MAX, -FLT_MAX, 1.f/0.f, -1.f/0.f, 0.f/0.f};
+    size_t n0 = sizeof(data)/sizeof(data[0]);
+    for (size_t i = 0; i < n0; i++) {
+        float x = data[i];
+        Cv32suf suf0, suf1;
+        suf0.f = x;
+        uint16_t x0 = (uint16_t)(suf0.u >> 16);
+        bfloat x1 = bfloat(x);
+        suf0.u = x0 << 16;
+        suf1.f = (float)x1;
+        if (suf0.u != suf1.u) {
+            EXPECT_LE(fabs(suf1.f - x), fabs(suf0.f - x));
+        }
+    }
+    size_t N = 1 << 20;
+    std::vector<float> bigdata(N);
+    std::vector<bfloat> bfdata(N);
+    RNG& rng = theRNG();
+    int m_max = 1 << 24;
+    double m_scale = 1./m_max;
+    for (size_t i = 0; i < N; i++) {
+        double m = (m_max + rng.uniform(0, m_max))*m_scale;
+        double e = pow(2., rng.uniform(-127, 127));
+        double s = rng.uniform(0, 2)*2 - 1;
+        float x = (float)(s*m*e);
+        bigdata[i] = x;
+    }
+
+    int vlanes = VTraits<v_float32>::vlanes();
+    for (size_t i = 0; i < N; i += vlanes)
+    {
+        v_float32 x = v_load(&bigdata[i]);
+        v_pack_store(&bfdata[i], x);
+    }
+
+    double sum0 = 0, sqsum0 = 0, maxerr0 = 0, maxerr1 = 0, sum1 = 0, sqsum1 = 0;
+    int vecerr = 0;
+    for (size_t i = 0; i < N; i++) {
+        float x = bigdata[i];
+        Cv32suf suf0, suf1;
+        suf0.f = suf1.f = x;
+        uint16_t x0 = (uint16_t)(suf0.u >> 16);
+        bfloat x1 = bfloat(suf1.f);
+        suf0.u = x0 << 16;
+        suf1.f = (float)x1;
+        double err0 = fabs(x - suf0.f)/(fabs(x) + DBL_EPSILON);
+        double err1 = fabs(x - suf1.f)/(fabs(x) + DBL_EPSILON);
+        maxerr0 = std::max(maxerr0, err0);
+        maxerr1 = std::max(maxerr1, err1);
+        sum0 += err0;
+        sqsum0 += err0*err0;
+        sum1 += err1;
+        sqsum1 += err1*err1;
+        suf0.f = (float)bfdata[i];
+        vecerr += suf0.u != suf1.u;
+    }
+    double mean0 = sum0/N;
+    double stddev0 = sqrt(std::max(sqsum0 - N*mean0*mean0, 0.)/(N-1));
+    double mean1 = sum1/N;
+    double stddev1 = sqrt(std::max(sqsum1 - N*mean1*mean1, 0.)/(N-1));
+
+    //if (maxerr1 > maxerr0 || mean1 > mean0 || stddev1 > stddev0)
+    {
+        printf("maxerr0 = %g, mean0 = %g, stddev0 = %g\nmaxerr1 = %g, mean1 = %g, stddev1 = %g\n",
+               maxerr0, mean0, stddev0, maxerr1, mean1, stddev1);
+    }
+
+    EXPECT_EQ(0, vecerr);
+    EXPECT_LE(maxerr1, maxerr0);
+    EXPECT_LE(mean1, mean0);
+    EXPECT_LE(stddev1, stddev0);
 }
 
 }} // namespace
