@@ -2465,146 +2465,143 @@ void cv::polylines(InputOutputArray img, InputArrayOfArrays pts,
     polylines(img, (const Point**)ptsptr, npts, (int)ncontours, isClosed, color, thickness, lineType, shift);
 }
 
-namespace cv {
-    // this is a function for recursive contour drawings
+namespace cv
+{
+    // Forward declaration of the helper function to draw contours iteratively
+    void drawContoursIteratively(Mat &image, InputArrayOfArrays _contours, int idx,
+                                 const Scalar &color, int thickness, int lineType,
+                                 InputArray _hierarchy, Point offset);
 
-    void drawContourRecursively(Mat &image, InputArrayOfArrays _contours,
-                                int idx, const Scalar &color, int thickness,
-                                int lineType, InputArray _hierarchy, Point offset);
-}
+    // Helper function for drawing contours iteratively
+    void drawContoursIteratively(Mat &image, InputArrayOfArrays _contours, int idx,
+                                 const Scalar &color, int thickness, int lineType,
+                                 InputArray _hierarchy, Point offset)
+    {
+        // Ensure the hierarchy is not empty
+        CV_Assert(!_hierarchy.empty());
+        Mat hierarchy = _hierarchy.getMat();
 
-void cv::drawContours(InputOutputArray _image, InputArrayOfArrays _contours,
-                      int contourIdx, const Scalar& color, int thickness,
+        std::stack<int> contourStack;
+        contourStack.push(idx);
+
+        while (!contourStack.empty())
+        {
+            int currentIdx = contourStack.top();
+            contourStack.pop();
+
+            Mat cnt = _contours.getMat(currentIdx);
+            if (!cnt.empty())
+            {
+                const int npoints = cnt.checkVector(2, CV_32S);
+                CV_Assert(npoints > 0);
+                double color_buf[4];
+                scalarToRawData(color, color_buf, image.type(), 0);
+
+                for (int j = 0; j < npoints; ++j)
+                {
+                    const Point pt1 = cnt.at<Point>(j);
+                    const Point pt2 = cnt.at<Point>((j + 1) % npoints);
+                    cv::ThickLine(image, pt1 + offset, pt2 + offset, color_buf, thickness, lineType, 2, 0);
+                }
+            }
+
+            // Traverse child contours and push them onto the stack
+            int childIdx = hierarchy.at<Vec4i>(currentIdx)[2];
+            while (childIdx >= 0)
+            {
+                contourStack.push(childIdx);
+                childIdx = hierarchy.at<Vec4i>(childIdx)[0];
+            }
+        }
+    }
+
+    // Function for drawing contours
+    void drawContours(InputOutputArray _image, InputArrayOfArrays _contours,
+                      int contourIdx, const Scalar &color, int thickness,
                       int lineType, InputArray _hierarchy,
                       int maxLevel, Point offset)
-{
-    CV_INSTRUMENT_REGION();
-    CV_Assert(thickness <= MAX_THICKNESS);
-
-    const size_t ncontours = _contours.total();
-    if (!ncontours) return;
-
-    CV_Assert(ncontours <= (size_t)std::numeric_limits<int>::max());
-    if (lineType == cv::LINE_AA && _image.depth() != CV_8U)
-        lineType = 8;
-    Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
-
-    if (thickness >= 0) // contour lines
     {
-        double color_buf[4] = {};
-        scalarToRawData(color, color_buf, _image.type(), 0);
+        CV_INSTRUMENT_REGION();
+        CV_Assert(thickness <= MAX_THICKNESS);
 
-        int i = 0, end = (int)ncontours;
-        if (contourIdx >= 0)
-        {
-            i = contourIdx;
-            end = i + 1;
-        }
-        std::vector<bool> drawn(ncontours, false); // this is to avoid redundant drawings
-        for (; i < end; ++i)
-        {
-            std::stack<int> contourStack;
-            contourStack.push(i);
+        const size_t ncontours = _contours.total();
+        if (!ncontours)
+            return;
 
-            while (!contourStack.empty())
+        CV_Assert(ncontours <= (size_t)std::numeric_limits<int>::max());
+        if (lineType == cv::LINE_AA && _image.depth() != CV_8U)
+            lineType = 8;
+        Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
+
+        (void)maxLevel; // Suppress unused parameter warning
+
+        if (thickness >= 0) // Draw contour lines
+        {
+            double color_buf[4] = {};
+            scalarToRawData(color, color_buf, _image.type(), 0);
+
+            if (contourIdx >= 0)
             {
-                int idx = contourStack.top();
-                contourStack.pop();
-
-                if (drawn[idx]) continue; // this skips all the contours that were already drawn
-                drawn[idx] = true;
-
-                // the contours are drawn recursively ..
-
-                drawContourRecursively(image, _contours, idx, color, thickness,
-                                       lineType, _hierarchy, offset);
-
-                // the following snippet pushes the child contours into the stack if they exist
-
-                int childIdx = hierarchy.at<Vec4i>(idx)[2]; // first child
-                while (childIdx >= 0)
+                drawContoursIteratively(image, _contours, contourIdx, color, thickness, lineType, _hierarchy, offset);
+            }
+            else
+            {
+                for (int i = 0; i < (int)ncontours; ++i)
                 {
-                    contourStack.push(childIdx);
-                    childIdx = hierarchy.at<Vec4i>(childIdx)[0]; // next sibling
+                    drawContoursIteratively(image, _contours, i, color, thickness, lineType, _hierarchy, offset);
                 }
             }
         }
-    }
-    else // filled polygons
-    {
-        int i = 0, end = (int)ncontours;
-        if (contourIdx >= 0)
+        else // Draw filled polygons
         {
-            i = contourIdx;
-            end = i + 1;
-        }
-        std::vector<int> indexesToFill;
-        std::vector<bool> processed(ncontours, false); // this avoids redundant filling
+            std::vector<int> indexesToFill;
+            int i = (contourIdx >= 0) ? contourIdx : 0;
+            int end = (contourIdx >= 0) ? i + 1 : (int)ncontours;
 
-        std::stack<int> indexes;
-        for (; i != end; ++i)
-        {
-            if (hierarchy.at<Vec4i>(i)[3] < 0 || contourIdx >= 0)
-                indexes.push(i);
-        }
-        while (!indexes.empty())
-        {
-            const int cur = indexes.top();
-            indexes.pop();
-
-            if (processed[cur]) continue; // this skips all the contours that were already drawn
-            processed[cur] = true;
-
-            int curLevel = -1;
-            int par = cur;
-            while (par >= 0)
+            if (hierarchy.empty())
             {
-                par = hierarchy.at<Vec4i>(par)[3]; // this is the parent
-                ++curLevel;
+                for (; i != end; ++i)
+                    indexesToFill.push_back(i);
             }
-            if (curLevel <= maxLevel)
+            else
             {
-                indexesToFill.push_back(cur);
+                std::stack<int> indexes;
+                for (; i != end; ++i)
+                {
+                    if (hierarchy.at<Vec4i>(i)[3] < 0 || contourIdx >= 0)
+                        indexes.push(i);
+                }
+
+                while (!indexes.empty())
+                {
+                    const int cur = indexes.top();
+                    indexes.pop();
+
+                    int par = cur;
+                    while (par >= 0)
+                    {
+                        par = hierarchy.at<Vec4i>(par)[3]; // Traverse parent hierarchy
+                    }
+
+                    indexesToFill.push_back(cur);
+
+                    int next = hierarchy.at<Vec4i>(cur)[2]; // First child
+                    while (next >= 0)
+                    {
+                        indexes.push(next);
+                        next = hierarchy.at<Vec4i>(next)[0]; // Next sibling
+                    }
+                }
             }
 
-            int next = hierarchy.at<Vec4i>(cur)[2]; // first child
-            while (next > 0)
-            {
-                indexes.push(next);
-                next = hierarchy.at<Vec4i>(next)[0]; // next sibling
-            }
+            std::vector<Mat> contoursToFill;
+            for (const int &idx : indexesToFill)
+                contoursToFill.push_back(_contours.getMat(idx));
+
+            fillPoly(image, contoursToFill, color, lineType, 0, offset);
         }
-
-        std::vector<Mat> contoursToFill;
-        for (const int &idx : indexesToFill)
-            contoursToFill.push_back(_contours.getMat(idx));
-        fillPoly(image, contoursToFill, color, lineType, 0, offset);
     }
 }
-
-// this particular function recursively draws each contour
-void cv::drawContourRecursively(Mat &image, InputArrayOfArrays _contours, int idx, const Scalar &color, int thickness, int lineType, InputArray _hierarchy, Point offset)
-{
-    double color_buf[4] = {};
-    scalarToRawData(color, color_buf, image.type(), 0);  // Convert Scalar to raw data
-
-    Mat cnt = _contours.getMat(idx);
-    if (cnt.empty())
-        return;
-
-    const int npoints = cnt.checkVector(2, CV_32S);
-    CV_Assert(npoints > 0);
-
-    for (int j = 0; j < npoints; ++j)
-    {
-        const bool isLastIter = j == npoints - 1;
-        const Point pt1 = cnt.at<Point>(j);
-        const Point pt2 = cnt.at<Point>(isLastIter ? 0 : j + 1);
-        cv::ThickLine(image, pt1 + offset, pt2 + offset, color_buf, thickness, lineType, 2, 0);
-    }
-}
-
-
 static const int CodeDeltas[8][2] =
 { {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1} };
 
