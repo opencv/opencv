@@ -191,6 +191,19 @@ CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(double, int64, uint64, double, void, double)
 #endif // CV_CPU_OPTIMIZATION_HAL_NAMESPACE
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+
+template <typename _VecTp> inline _VecTp v_setzero_();
+template <typename _VecTp> inline _VecTp v_setall_(uchar);
+template <typename _VecTp> inline _VecTp v_setall_(schar);
+template <typename _VecTp> inline _VecTp v_setall_(ushort);
+template <typename _VecTp> inline _VecTp v_setall_(short);
+template <typename _VecTp> inline _VecTp v_setall_(unsigned);
+template <typename _VecTp> inline _VecTp v_setall_(int);
+template <typename _VecTp> inline _VecTp v_setall_(uint64);
+template <typename _VecTp> inline _VecTp v_setall_(int64);
+template <typename _VecTp> inline _VecTp v_setall_(float);
+template <typename _VecTp> inline _VecTp v_setall_(double);
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #endif
@@ -958,7 +971,6 @@ namespace CV__SIMD_NAMESPACE {
 #define CV_SIMD 0
 #endif
 
-#include "intrin_math.hpp"
 #include "simd_utils.impl.hpp"
 
 #ifndef CV_DOXYGEN
