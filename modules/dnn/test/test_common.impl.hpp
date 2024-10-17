@@ -437,14 +437,7 @@ bool validateVPUType()
 
 void initDNNTests()
 {
-    const char* extraTestDataPath =
-#ifdef WINRT
-        NULL;
-#else
-        getenv("OPENCV_DNN_TEST_DATA_PATH");
-#endif
-    if (extraTestDataPath)
-        cvtest::addDataSearchPath(extraTestDataPath);
+    cvtest::addDataSearchEnv("OPENCV_DNN_TEST_DATA_PATH");
 
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND,

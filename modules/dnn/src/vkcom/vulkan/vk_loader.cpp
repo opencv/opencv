@@ -115,16 +115,7 @@ bool loadVulkanLibrary()
     if (handle != nullptr)
         return true;
 
-    const char* path;
-    const char* envPath = getenv("OPENCV_VULKAN_RUNTIME");
-    if (envPath)
-    {
-        path = envPath;
-    }
-    else
-    {
-        path = DEFAULT_VK_LIBRARY_PATH;
-    }
+    const std::string path = utils::getConfigurationParameterString("OPENCV_VULKAN_RUNTIME", DEFAULT_VK_LIBRARY_PATH);
 
     handle = LOAD_VK_LIBRARY(path);
     if( handle == nullptr )

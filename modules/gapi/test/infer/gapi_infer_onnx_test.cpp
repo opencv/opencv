@@ -58,10 +58,7 @@ public:
 };
 struct ONNXInitPath {
     ONNXInitPath() {
-        const char* env_path = getenv("OPENCV_GAPI_ONNX_MODEL_PATH");
-        if (env_path) {
-            cvtest::addDataSearchPath(env_path);
-        }
+        cvtest::addDataSearchEnv("OPENCV_GAPI_ONNX_MODEL_PATH");
     }
 };
 static ONNXInitPath g_init_path;
