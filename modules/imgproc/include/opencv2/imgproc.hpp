@@ -2508,6 +2508,7 @@ optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 \f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
 @param borderMode pixel extrapolation method (#BORDER_CONSTANT or #BORDER_REPLICATE).
 @param borderValue value used in case of a constant border; by default, it equals 0.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @sa  warpAffine, resize, remap, getRectSubPix, perspectiveTransform
  */
@@ -2515,7 +2516,8 @@ CV_EXPORTS_W void warpPerspective( InputArray src, OutputArray dst,
                                    InputArray M, Size dsize,
                                    int flags = INTER_LINEAR,
                                    int borderMode = BORDER_CONSTANT,
-                                   const Scalar& borderValue = Scalar());
+                                   const Scalar& borderValue = Scalar(),
+                                   AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
 /** @brief Applies a generic geometrical transformation to an image.
 

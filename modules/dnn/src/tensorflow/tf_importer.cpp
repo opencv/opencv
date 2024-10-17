@@ -1164,9 +1164,9 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     std::vector<MatType> netInputTypes(netInputShapes.size(), CV_32F);
     dstNet.getLayerShapes(netInputShapes, netInputTypes, inpIdindex, inShape_, outShape_);
     MatShape inpShape = outShape_[0];
-    std::vector<int> outShape = inpShape;
+    MatShape outShape = inpShape;
 
-    int outShapeSize = outShape.size();
+    int outShapeSize = (int)outShape.size();
 
     CV_Assert(inpShape.size() >= 1);
     // 2nd blob is dims tensor
@@ -1175,10 +1175,10 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     // Convert negative numbers to positive numbers, axis can be in range [-(D+1), D].
     if(axis < 0)
     {
-        axis = inpShape.size() + axis + 1;
+        axis = (int)inpShape.size() + axis + 1;
     }
 
-    CV_Assert(0 <= axis && axis <= inpShape.size());
+    CV_Assert(0 <= axis && axis <= (int)inpShape.size());
 
     // After ExpendDims, 3-dim data will become 4-dim data, and OpenCV retains 4-dim data as NCHW data layout.
     // Convert OpenCV's NHC to NCH first.

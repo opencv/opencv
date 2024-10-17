@@ -666,8 +666,6 @@ protected:
     virtual void get_minmax_bounds( int i, int j, int type, Scalar& low, Scalar& high );
     virtual double get_success_error_level( int test_case_idx, int i, int j );
 
-    bool cvmat_allowed;
-    bool iplimage_allowed;
     bool optional_mask;
     bool element_wise_relative_error;
 
@@ -676,8 +674,31 @@ protected:
 
     enum { INPUT, INPUT_OUTPUT, OUTPUT, REF_INPUT_OUTPUT, REF_OUTPUT, TEMP, MASK, MAX_ARR };
 
-    vector<vector<void*> > test_array;
-    vector<vector<Mat> > test_mat;
+    // Helper classes to proxy specific calls to test_mat array, emulates vector<vector<void*>>
+    // allowed calls:
+    // test_array.size() - always MAX_ARR
+    // test_array[i].size()
+    // test_array[i].push_back(NULL) - only NULL is supported
+    // test_array[i].pop_back()
+    struct ProxyAccessor {
+        ProxyAccessor(ArrayTest & parent_, size_t idx_) : parent(parent_), idx(idx_) {}
+        inline void push_back(void * ptr) const { CV_Assert(ptr == NULL); parent.test_mat[idx].push_back(Mat()); }
+        inline void pop_back() const { CV_Assert(parent.test_mat[idx].size() > 0); parent.test_mat[idx].pop_back(); }
+        inline size_t size() const { return parent.test_mat[idx].size(); }
+    private:
+        ArrayTest &parent;
+        size_t idx;
+    };
+    struct ProxyInterface {
+        ProxyInterface(ArrayTest & parent_) : parent(parent_) {}
+        inline ProxyAccessor operator[](size_t idx) const { return ProxyAccessor(parent, idx); }
+        inline size_t size() const { return MAX_ARR; }
+    private:
+        ArrayTest &parent;
+    };
+
+    ProxyInterface test_array; // former vector<vector<void*> > test_array;
+    std::vector<std::vector<cv::Mat> > test_mat;
     float buf[4];
 };
 

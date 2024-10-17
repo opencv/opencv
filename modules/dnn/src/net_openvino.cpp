@@ -667,7 +667,7 @@ Net NetImplOpenVINO::createNetworkFromModelOptimizer(std::shared_ptr<ov::Model>&
     {
         inputsNames.push_back(it->get_friendly_name());
         std::vector<size_t> dims = it->get_shape();
-        inp_shapes.push_back(std::vector<int>(dims.begin(), dims.end()));
+        inp_shapes.push_back(MatShape(dims.begin(), dims.end()));
     }
     // nGraph models produce output "Result" layers which have "/sink_port" suffix in their names.
     // Their inputs are actual model outputs and we change friendly name to it.

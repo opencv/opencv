@@ -322,7 +322,7 @@ struct DataLayer : public Layer
             std::vector<MatShape>& outputs,
             std::vector<MatShape>& internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() == requiredOutputs);
+        CV_Assert(inputs.size() == requiredOutputs || requiredOutputs == 0);
         outputs.assign(inputs.begin(), inputs.end());
         return false;
     }

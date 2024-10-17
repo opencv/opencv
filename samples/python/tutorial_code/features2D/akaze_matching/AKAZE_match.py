@@ -22,7 +22,7 @@ homography = fs.getFirstTopLevelNode().mat()
 ## [load]
 
 ## [AKAZE]
-akaze = cv.AKAZE_create()
+akaze = cv.xfeatures2d.AKAZE_create()
 kpts1, desc1 = akaze.detectAndCompute(img1, None)
 kpts2, desc2 = akaze.detectAndCompute(img2, None)
 ## [AKAZE]

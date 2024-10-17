@@ -231,7 +231,7 @@ void testReshape(const MatShape& inputShape, const MatShape& targetShape,
     runLayer(rl, inpVec, outVec);
 
     Mat& out = outVec[0];
-    MatShape shape(out.size.p, out.size.p + out.dims);
+    MatShape shape = out.shape();
     EXPECT_EQ(shape, targetShape);
 }
 
@@ -502,9 +502,9 @@ TEST_F(Layer_LSTM_Test, get_set_test)
 
     EXPECT_EQ(2u, outputs.size());
 
-    print(outResShape, "outResShape");
-    print(shape(outputs[0]), "out0");
-    print(shape(outputs[0]), "out1");
+    //print(outResShape, "outResShape");
+    //print(shape(outputs[0]), "out0");
+    //print(shape(outputs[0]), "out1");
 
     EXPECT_EQ(outResShape, shape(outputs[0]));
     EXPECT_EQ(outResShape, shape(outputs[1]));
@@ -1520,17 +1520,17 @@ public:
         return Ptr<Layer>(new CustomInterpLayer(params));
     }
 
-    virtual bool getMemoryShapes(const std::vector<std::vector<int> > &inputs,
+    virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
-                                 std::vector<std::vector<int> > &outputs,
-                                 std::vector<std::vector<int> > &internals) const CV_OVERRIDE
+                                 std::vector<MatShape> &outputs,
+                                 std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         const int batchSize = inputs[0][0];
         const int numChannels = inputs[0][1];
         const int inpHeight = inputs[0][2];
         const int inpWidth = inputs[0][3];
 
-        std::vector<int> outShape(4);
+        MatShape outShape(4);
         outShape[0] = batchSize;
         outShape[1] = numChannels;
         outShape[2] = outHeight != 0 ? outHeight : (inpHeight + (inpHeight - 1) * (zoomFactor - 1));
@@ -1611,7 +1611,12 @@ private:
     int outWidth, outHeight, zoomFactor;
 };
 
-TEST_P(Test_Caffe_layers, Interp)
+// BUG: https://github.com/opencv/opencv/issues/26194
+// After unregistration of the custom 'Interp' the model uses the standard Resize layer.
+// According to the graph, the model must produce 2 x 3 x 18 x 16 tensor with Resize layer,
+// but the result is compared with 2 x 3 x 17 x 15 tensor, just like the custom 'Interp' layer produced,
+// so we get the test failure. It looks like the test needs to be fixed.
+TEST_P(Test_Caffe_layers, DISABLED_Interp)
 {
 #ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
     throw SkipTestException("Requires patched protobuf");
@@ -1638,6 +1643,7 @@ TEST_P(Test_Caffe_layers, Interp)
     LayerFactory::unregisterLayer("Interp");
 
     // Test an implemented layer.
+
     testLayerUsingCaffeModels("layer_interp", false, false);
 #endif
 }

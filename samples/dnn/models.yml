@@ -371,6 +371,30 @@ dexined:
   sample: "edge_detection"
 
 ################################################################################
+# Edge Detection models.
+################################################################################
+
+reid:
+  load_info:
+    url: "https://github.com/opencv/opencv_zoo/raw/main/models/person_reid_youtureid/person_reid_youtu_2021nov.onnx?download="
+    sha1: "d4316b100db40f8840aa82626e1cf3f519a7f1ae"
+  model: "person_reid_youtu_2021nov.onnx"
+  yolo_load_info:
+    yolo_sha1: "68f864475d06e2ec4037181052739f268eeac38d"
+  yolo_model: "yolov8n.onnx"
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  scale: 0.00392
+  yolo_scale: 0.00392
+  yolo_width: 640
+  yolo_height: 640
+  width: 128
+  height: 256
+  rgb: false
+  yolo_rgb: true
+  sample: "person_reid"
+
+################################################################################
 # Tracker models.
 ################################################################################
 

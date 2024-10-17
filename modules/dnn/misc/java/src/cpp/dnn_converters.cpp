@@ -8,19 +8,19 @@
 
 #define LOG_TAG "org.opencv.dnn"
 
-void Mat_to_MatShape(cv::Mat& mat, MatShape& matshape)
+void Mat_to_MatShape(cv::Mat& mat, cv::MatShape& matshape)
 {
     matshape.clear();
     CHECK_MAT(mat.type()==CV_32SC1 && mat.cols==1);
-    matshape = (MatShape) mat;
+    matshape = (cv::MatShape) mat;
 }
 
-void MatShape_to_Mat(MatShape& matshape, cv::Mat& mat)
+void MatShape_to_Mat(cv::MatShape& matshape, cv::Mat& mat)
 {
     mat = cv::Mat(matshape, true);
 }
 
-std::vector<MatShape> List_to_vector_MatShape(JNIEnv* env, jobject list)
+std::vector<cv::MatShape> List_to_vector_MatShape(JNIEnv* env, jobject list)
 {
     static jclass juArrayList       = ARRAYLIST(env);
     jmethodID m_size       = LIST_SIZE(env, juArrayList);
@@ -29,13 +29,13 @@ std::vector<MatShape> List_to_vector_MatShape(JNIEnv* env, jobject list)
     static jclass jMatOfInt = MATOFINT(env);
 
     jint len = env->CallIntMethod(list, m_size);
-    std::vector<MatShape> result;
+    std::vector<cv::MatShape> result;
     result.reserve(len);
     for (jint i=0; i<len; i++)
     {
         jobject element = static_cast<jobject>(env->CallObjectMethod(list, m_get, i));
         cv::Mat& mat = *((cv::Mat*) GETNATIVEOBJ(env, jMatOfInt, element) );
-        MatShape matshape = (MatShape) mat;
+        cv::MatShape matshape = (cv::MatShape) mat;
         result.push_back(matshape);
         env->DeleteLocalRef(element);
     }

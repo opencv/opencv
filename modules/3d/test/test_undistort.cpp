@@ -178,8 +178,8 @@ private:
 
     int matrix_type;
 
-    static const int MAX_X = 2048;
-    static const int MAX_Y = 2048;
+    static const int MAX_X = 2000;
+    static const int MAX_Y = 2000;
 };
 
 CV_GetOptimalNewCameraMatrixNoDistortionTest::CV_GetOptimalNewCameraMatrixNoDistortionTest()
