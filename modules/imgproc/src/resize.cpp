@@ -2778,8 +2778,8 @@ public:
                 v_uint32 r0, r1, r2, r3;
                 v_expand(vx_load(S0), r0, r1);
                 v_expand(vx_load(S1), r2, r3);
-                r0 += r2; r1 += r3;
-                v_rshr_pack_store<2>(D, r0 + v_rotate_left<1>(r1, r0));
+                r0 = v_add(r0, r2); r1 = v_add(r1, r3);
+                v_rshr_pack_store<2>(D, v_add(r0, v_rotate_left<1>(r1, r0)));
             }
 #else
                 v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_load_expand(S0), v_load_expand(S0 + 3)), v_load_expand(S1)), v_load_expand(S1 + 3)));

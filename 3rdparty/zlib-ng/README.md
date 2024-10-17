@@ -21,7 +21,6 @@ Features
 * Support for CPU intrinsics when available
   * Adler32 implementation using SSSE3, AVX2, AVX512, AVX512-VNNI, Neon, VMX & VSX
   * CRC32-B implementation using PCLMULQDQ, VPCLMULQDQ, ACLE, & IBM Z
-  * Hash table implementation using CRC32-C intrinsics on x86 and ARM
   * Slide hash implementations using SSE2, AVX2, ARMv6, Neon, VMX & VSX
   * Compare256 implementations using SSE2, AVX2, Neon, POWER9 & RVV
   * Inflate chunk copying using SSE2, SSSE3, AVX, Neon & VSX
@@ -95,20 +94,21 @@ make test
 Build Options
 -------------
 
-| CMake                    | configure                | Description                                                                           | Default |
-|:-------------------------|:-------------------------|:--------------------------------------------------------------------------------------|---------|
-| ZLIB_COMPAT              | --zlib-compat            | Compile with zlib compatible API                                                      | OFF     |
-| ZLIB_ENABLE_TESTS        |                          | Build test binaries                                                                   | ON      |
-| WITH_GZFILEOP            | --without-gzfileops      | Compile with support for gzFile related functions                                     | ON      |
-| WITH_OPTIM               | --without-optimizations  | Build with optimisations                                                              | ON      |
-| WITH_NEW_STRATEGIES      | --without-new-strategies | Use new strategies                                                                    | ON      |
-| WITH_NATIVE_INSTRUCTIONS |                          | Compiles with full instruction set supported on this host (gcc/clang -march=native)   | OFF     |
-| WITH_SANITIZER           |                          | Build with sanitizer (memory, address, undefined)                                     | OFF     |
-| WITH_GTEST               |                          | Build gtest_zlib                                                                      | ON      |
-| WITH_FUZZERS             |                          | Build test/fuzz                                                                       | OFF     |
-| WITH_BENCHMARKS          |                          | Build test/benchmarks                                                                 | OFF     |
-| WITH_MAINTAINER_WARNINGS |                          | Build with project maintainer warnings                                                | OFF     |
-| WITH_CODE_COVERAGE       |                          | Enable code coverage reporting                                                        | OFF     |
+| CMake                      | configure                | Description                                                                         | Default |
+|:---------------------------|:-------------------------|:------------------------------------------------------------------------------------|---------|
+| ZLIB_COMPAT                | --zlib-compat            | Compile with zlib compatible API                                                    | OFF     |
+| ZLIB_ENABLE_TESTS          |                          | Build test binaries                                                                 | ON      |
+| WITH_GZFILEOP              | --without-gzfileops      | Compile with support for gzFile related functions                                   | ON      |
+| WITH_OPTIM                 | --without-optimizations  | Build with optimisations                                                            | ON      |
+| WITH_NEW_STRATEGIES        | --without-new-strategies | Use new strategies                                                                  | ON      |
+| WITH_NATIVE_INSTRUCTIONS   |                          | Compiles with full instruction set supported on this host (gcc/clang -march=native) | OFF     |
+| WITH_RUNTIME_CPU_DETECTION |                          | Compiles with runtime CPU detection                                                 | ON      |
+| WITH_SANITIZER             |                          | Build with sanitizer (memory, address, undefined)                                   | OFF     |
+| WITH_GTEST                 |                          | Build gtest_zlib                                                                    | ON      |
+| WITH_FUZZERS               |                          | Build test/fuzz                                                                     | OFF     |
+| WITH_BENCHMARKS            |                          | Build test/benchmarks                                                               | OFF     |
+| WITH_MAINTAINER_WARNINGS   |                          | Build with project maintainer warnings                                              | OFF     |
+| WITH_CODE_COVERAGE         |                          | Enable code coverage reporting                                                      | OFF     |
 
 
 Install

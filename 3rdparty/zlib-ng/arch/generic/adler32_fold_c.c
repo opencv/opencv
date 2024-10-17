@@ -5,12 +5,11 @@
 
 #include "zbuild.h"
 #include "functable.h"
-#include "adler32_fold.h"
 
 #include <limits.h>
 
 Z_INTERNAL uint32_t adler32_fold_copy_c(uint32_t adler, uint8_t *dst, const uint8_t *src, size_t len) {
-    adler = functable.adler32(adler, src, len);
+    adler = FUNCTABLE_CALL(adler32)(adler, src, len);
     memcpy(dst, src, len);
     return adler;
 }
