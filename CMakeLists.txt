@@ -52,6 +52,10 @@ if(POLICY CMP0056)
   cmake_policy(SET CMP0056 NEW)  # try_compile(): link flags
 endif()
 
+if(POLICY CMP0057)
+  cmake_policy(SET CMP0057 NEW)  # CMake 3.3: if(IN_LIST) support
+endif()
+
 if(POLICY CMP0066)
   cmake_policy(SET CMP0066 NEW)  # CMake 3.7: try_compile(): use per-config flags, like CMAKE_CXX_FLAGS_RELEASE
 endif()
