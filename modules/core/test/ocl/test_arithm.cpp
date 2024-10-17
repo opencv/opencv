@@ -1672,9 +1672,9 @@ OCL_TEST_P(ConvertFp16, Mat)
     for (int j = 0; j < test_loop_times; j++)
     {
         generateTestData();
-
-        OCL_OFF(cv::convertFp16(src_roi, dst_roi));
-        OCL_ON(cv::convertFp16(usrc_roi, udst_roi));
+        int cvt_code = src_roi.depth() == CV_32F ? CV_16F : CV_32F;
+        OCL_OFF(src_roi.convertTo(dst_roi, cvt_code));
+        OCL_ON(usrc_roi.convertTo(udst_roi, cvt_code));
 
         Near(1);
     }
