@@ -70,7 +70,7 @@ def createTracker():
         exit(-1)
     return tracker
 
-def run():
+def main():
     tracker = createTracker()
     videoPath = args.input
     print('Using video: {}'.format(videoPath))
@@ -161,5 +161,5 @@ if __name__ == '__main__':
         parser.add_argument("--model", type=str, help="Path to onnx model of  vittrack")
         parser = argparse.ArgumentParser(parents=[parser], add_help=True)
     args = parser.parse_args()
-    run()
+    main()
     cv.destroyAllWindows()

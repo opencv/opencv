@@ -214,7 +214,7 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
     return 0;
 }
 
-static int run(int argc, char** argv)
+int main(int argc, char** argv)
 {
     // Parse command line arguments.
     CommandLineParser parser(argc, argv, keys);
@@ -338,18 +338,4 @@ static int run(int argc, char** argv)
         return -1;
     }
     return 0;
-}
-
-
-int main(int argc, char **argv)
-{
-    try
-    {
-        return run(argc, argv);
-    }
-    catch (const exception& e)
-    {
-        cerr << "FATAL: C++ exception: " << e.what() << endl;
-        return 1;
-    }
 }
