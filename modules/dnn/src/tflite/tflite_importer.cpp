@@ -80,7 +80,7 @@ private:
     void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
     void addLayer(LayerParams& layerParams, const Operator& op, bool additionalPreLayer = false, bool additionalPostLayer = false);
-    void addLayer(LayerParams& layerParams, std::vector<std::string> inputTensors, std::vector<std::string> outputTensors);
+    void addLayer(LayerParams& layerParams, const std::vector<std::string>& inputTensors, const std::vector<std::string>& outputTensors);
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId, int dtype, int inpTensorId);
     int addReshapeLayer(const std::vector<int>& shape, int axis, int num_axes,
                         const std::string& name, const std::pair<int, int>& inpId, int dtype, int inpTensorId);
@@ -454,7 +454,7 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op, bool
         addLayer(layerParams, inputTensors, outputTensors);
 }
 
-void TFLiteImporter::addLayer(LayerParams& layerParams, std::vector<std::string> inputTensors, std::vector<std::string> outputTensors) {
+void TFLiteImporter::addLayer(LayerParams& layerParams, const std::vector<std::string>& inputTensors, const std::vector<std::string>& outputTensors) {
     Ptr<Layer> layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
     if (!layer)
         CV_Error(Error::StsError, "Can't create layer " + layerParams.name + " with type " + layerParams.type);
