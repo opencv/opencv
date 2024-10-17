@@ -2465,9 +2465,60 @@ void cv::polylines(InputOutputArray img, InputArrayOfArrays pts,
     }
     polylines(img, (const Point**)ptsptr, npts, (int)ncontours, isClosed, color, thickness, lineType, shift);
 }
-
 namespace cv
 {
+    // Declaration of the helper function to draw contours iteratively
+    void drawContoursIteratively(Mat &image, InputArrayOfArrays _contours, int idx,
+                                 const Scalar &color, int thickness, int lineType,
+                                 InputArray _hierarchy, Point offset);
+
+    // Helper function for drawing contours iteratively
+    void drawContoursIteratively(Mat &image, InputArrayOfArrays _contours, int idx,
+                                 const Scalar &color, int thickness, int lineType,
+                                 InputArray _hierarchy, Point offset)
+    {
+        // Check if hierarchy is empty and return if it is
+        if (_hierarchy.empty())
+        {
+            CV_Error(Error::StsBadArg, "Hierarchy is empty. Contours cannot be drawn.");
+            return;
+        }
+
+        Mat hierarchy = _hierarchy.getMat();
+        std::stack<int> contourStack;
+        contourStack.push(idx);
+
+        while (!contourStack.empty())
+        {
+            int currentIdx = contourStack.top();
+            contourStack.pop();
+
+            Mat cnt = _contours.getMat(currentIdx);
+            if (!cnt.empty())
+            {
+                const int npoints = cnt.checkVector(2, CV_32S);
+                CV_Assert(npoints > 0);
+                double color_buf[4];
+                scalarToRawData(color, color_buf, image.type(), 0);
+
+                for (int j = 0; j < npoints; ++j)
+                {
+                    const Point pt1 = cnt.at<Point>(j);
+                    const Point pt2 = cnt.at<Point>((j + 1) % npoints);
+                    cv::ThickLine(image, pt1 + offset, pt2 + offset, color_buf, thickness, lineType, 2, 0);
+                }
+            }
+
+            // Traverse child contours and push them onto the stack
+            int childIdx = hierarchy.at<Vec4i>(currentIdx)[2];
+            while (childIdx >= 0)
+            {
+                contourStack.push(childIdx);
+                childIdx = hierarchy.at<Vec4i>(childIdx)[0];
+            }
+        }
+    }
+
     // Function for drawing contours
     void drawContours(InputOutputArray _image, InputArrayOfArrays _contours,
                       int contourIdx, const Scalar &color, int thickness,
