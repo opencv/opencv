@@ -766,10 +766,11 @@ namespace CV__SIMD_NAMESPACE {
 
     inline void v_pack_store(const bfloat* ptr, const v_float32& v)
     {
-        v_int32 iv = v_shr<16>(v_reinterpret_as_s32(v));
-        cv::v_pack_store((short*)ptr, iv);
+        v_int32 av = v_reinterpret_as_s32(v_abs(v));
+        v_int32 iv = v_reinterpret_as_s32(v);
+        iv = v_add(iv, v_and(v_le(av, vx_setall_s32(0x7f7f7fff)), vx_setall_s32(0x8000)));
+        cv::v_pack_store((short*)ptr, v_shr<16>(iv));
     }
-
     #endif
 
     /** @brief SIMD processing state cleanup call */

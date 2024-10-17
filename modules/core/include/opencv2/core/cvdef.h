@@ -947,7 +947,7 @@ public:
     {
         Cv32suf in;
         in.f = x;
-        w = (ushort)(in.u >> 16);
+        w = (ushort)((in.u + (((in.u & 0x7fffffff) <= 0x7f7f7fff) << 15)) >> 16);
     }
 
     operator float() const
