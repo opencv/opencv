@@ -161,14 +161,14 @@ TEST_P(Imgcodecs_Avif_Image_EncodeDecodeSuite, imencode_imdecode) {
 
   // Encode.
   std::vector<unsigned char> buf;
-  if (!IsBitDepthValid()) {
-    EXPECT_THROW(cv::imencode(".avif", img_original, buf, encoding_params_),
-                 cv::Exception);
-    return;
-  }
   bool result = true;
   EXPECT_NO_THROW(
       result = cv::imencode(".avif", img_original, buf, encoding_params_););
+
+  if (!IsBitDepthValid()) {
+    EXPECT_FALSE(result);
+    return;
+  }
   EXPECT_TRUE(result);
 
   // Read back.
