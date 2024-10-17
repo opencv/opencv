@@ -280,7 +280,7 @@ public:
 
         for (size_t i = 0; i < inputs.size(); i++)
         {
-            MatShape inpShape = shape(inputs[i].size);
+            MatShape inpShape = inputs[i].shape();
             if (isAllOnes(inpShape, 0, inputs[i].dims))
             {
                 hasVecInput = true;
@@ -710,15 +710,15 @@ public:
         {
             for (size_t i = 0; i < inputs.size(); i++)
             {
-                MatShape inpShape = shape(inputs[i].size);
+                MatShape inpShape = inputs[i].shape();
                 bool allOnes = isAllOnes(inpShape, 2, inputs[i].dims);
 
                 if (allOnes)
                 {
                     Mat tmpInput = inputs[i];
-                    MatShape outShape = shape(outputs[0].size);
+                    MatShape outShape = outputs[0].shape();
                     size_t xSize = outShape[2];
-                    for (size_t j = 3; j < outShape.size(); j++)
+                    for (int j = 3; j < outShape.dims; j++)
                         xSize *= outShape[j];
 
                     int dimVec[3] = {outShape[0], outShape[1], (int) xSize};

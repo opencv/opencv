@@ -706,7 +706,7 @@ public:
         std::vector<size_t> local_kernel;
         if (globalPooling) {
             for (int i = 0; i < inpShape.size(); i++) {
-                int idx = isGlobalPooling.size() - inpShape.size() + i;
+                size_t idx = isGlobalPooling.size() - inpShape.size() + i;
                 local_kernel.push_back(isGlobalPooling[idx] ? inpShape[i] : kernel_size[idx]);
             }
         } else {
@@ -741,7 +741,7 @@ public:
                                  std::vector<size_t>(local_kernel.size(), 1), outShape);
         }
 
-        outputs.assign(1, outShape);
+        outputs.assign(1, MatShape(outShape));
         return false;
     }
 

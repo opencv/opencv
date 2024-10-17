@@ -28,6 +28,12 @@ class Test_Graph_Simplifier : public ::testing::Test {
 
         // remove Const, Identity (output layer), __NetInputLayer__ (input layer)
         layers.erase(std::remove_if(layers.begin(), layers.end(), [] (const std::string l) { return l == "Const" || l == "Identity" || l == "__NetInputLayer__"; }), layers.end());
+        // Instead of 'Tile', 'Expand' etc. we may now have 'Tile2', 'Expand2' etc.
+        // We should correctly match them with the respective patterns
+        for (auto& l: layers) {
+            if (!l.empty() && l[l.size()-1] == '2')
+                l = l.substr(0, l.size()-1);
+        }
 
         EXPECT_EQ(layers, expected_layers);
     }

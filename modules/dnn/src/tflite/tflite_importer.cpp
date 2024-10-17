@@ -180,16 +180,16 @@ void TFLiteImporter::populateNet()
     std::vector<MatShape> inputsShapes(subgraph_inputs_size);
     for (size_t i = 0; i < subgraph_inputs_size; ++i)
     {
-        int idx = subgraph_inputs->Get(i);
+        size_t idx = subgraph_inputs->Get(i);
         layerIds[idx] = std::make_pair(0, i);
         const auto tensor = modelTensors->Get(idx);
         if (!tensor)
-            CV_Error(Error::StsError, cv::format("DNN/TFLite: subgraph input %d (%d) is NULL", (int)i, idx));
+            CV_Error(Error::StsError, cv::format("DNN/TFLite: subgraph input %zu (%zu) is NULL", i, idx));
         layouts[idx] = estimateLayout(*tensor);
 
         // Keep info about origin inputs names and shapes
         inputsNames[i] = tensor->name()->str();
-        std::vector<int> shape(tensor->shape()->begin(), tensor->shape()->end());
+        MatShape shape(tensor->shape()->begin(), tensor->shape()->end());
         if (layouts[idx] == DNN_LAYOUT_NHWC) {
             CV_CheckEQ(shape.size(), (size_t)4, "");
             std::swap(shape[2], shape[3]);

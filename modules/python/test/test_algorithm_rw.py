@@ -12,16 +12,16 @@ class algorithm_rw_test(NewOpenCVTests):
         os.close(fd)
 
         # some arbitrary non-default parameters
-        gold = cv.AKAZE_create(descriptor_size=1, descriptor_channels=2, nOctaves=3, threshold=4.0)
-        gold.write(cv.FileStorage(fname, cv.FILE_STORAGE_WRITE), "AKAZE")
+        gold = cv.ORB_create(nfeatures=200, scaleFactor=1.3, nlevels=5, edgeThreshold=28)
+        gold.write(cv.FileStorage(fname, cv.FILE_STORAGE_WRITE), "ORB")
 
         fs = cv.FileStorage(fname, cv.FILE_STORAGE_READ)
-        algorithm = cv.AKAZE_create()
-        algorithm.read(fs.getNode("AKAZE"))
+        algorithm = cv.ORB_create()
+        algorithm.read(fs.getNode("ORB"))
 
-        self.assertEqual(algorithm.getDescriptorSize(), 1)
-        self.assertEqual(algorithm.getDescriptorChannels(), 2)
-        self.assertEqual(algorithm.getNOctaves(), 3)
-        self.assertEqual(algorithm.getThreshold(), 4.0)
+        self.assertEqual(algorithm.getMaxFeatures(), 200)
+        self.assertAlmostEqual(algorithm.getScaleFactor(), 1.3, places=6)
+        self.assertEqual(algorithm.getNLevels(), 5)
+        self.assertEqual(algorithm.getEdgeThreshold(), 28)
 
         os.remove(fname)

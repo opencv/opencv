@@ -127,8 +127,8 @@ public:
         startAxis = normalize_axis(startAxis, inp0.dims);
         endAxis = normalize_axis(endAxis, inp0.dims);
 
-        size_t num = total(shape(inp0.size), 0, startAxis);
-        size_t numPlanes = total(shape(inp0.size), startAxis, endAxis + 1);
+        size_t num = total(inp0.shape(), 0, startAxis);
+        size_t numPlanes = total(inp0.shape(), startAxis, endAxis + 1);
         size_t planeSize = inp0.total() / (num * numPlanes);
         MatShape s = shape(1, inputs[0].total());
         UMat inp = inputs[0].reshape(1, s.size(), &s[0]).reshape(1, num);
