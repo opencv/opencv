@@ -58,7 +58,6 @@
     @defgroup videoio_flags_others Additional flags for video I/O API backends
     @defgroup videoio_hwaccel Hardware-accelerated video decoding and encoding
     @defgroup videoio_ios iOS glue for video I/O
-    @defgroup videoio_winrt WinRT glue for video I/O
     @defgroup videoio_registry Query I/O API backends registry
   @}
 */
@@ -106,7 +105,6 @@ enum VideoCaptureAPIs {
        CAP_XIAPI        = 1100,         //!< XIMEA Camera API
        CAP_AVFOUNDATION = 1200,         //!< AVFoundation framework for iOS (OS X Lion will have the same API)
        CAP_MSMF         = 1400,         //!< Microsoft Media Foundation (via videoInput). See platform specific notes above.
-       CAP_WINRT        = 1410,         //!< Microsoft Windows Runtime using Media Foundation
        CAP_INTELPERC    = 1500,         //!< RealSense (former Intel Perceptual Computing SDK)
        CAP_REALSENSE    = 1500,         //!< Synonym for CAP_INTELPERC
        CAP_OPENNI2      = 1600,         //!< OpenNI2 (for Kinect)

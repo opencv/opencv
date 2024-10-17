@@ -101,7 +101,6 @@ public:
 // FIXME: taken from DNN module
 static void initDLDTDataPath()
 {
-#ifndef WINRT
     static bool initialized = false;
     if (!initialized)
     {
@@ -116,7 +115,6 @@ static void initDLDTDataPath()
         }
         initialized = true;
     }
-#endif // WINRT
 }
 
 #if INF_ENGINE_RELEASE >= 2020010000

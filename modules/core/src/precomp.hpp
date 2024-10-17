@@ -368,7 +368,7 @@ struct CoreTLSData
 CoreTLSData& getCoreTlsData();
 
 #if defined(BUILD_SHARED_LIBS)
-#if defined _WIN32 || defined WINCE
+#if defined _WIN32
 #define CL_RUNTIME_EXPORT __declspec(dllexport)
 #elif defined __GNUC__ && __GNUC__ >= 4
 #define CL_RUNTIME_EXPORT __attribute__ ((visibility ("default")))
