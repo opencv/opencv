@@ -133,7 +133,7 @@ protected:
     bool readPrioritySettings()
     {
         bool hasChanges = false;
-        cv::String prioritized_backends = utils::getConfigurationParameterString("OPENCV_UI_PRIORITY_LIST", NULL);
+        cv::String prioritized_backends = utils::getConfigurationParameterString("OPENCV_UI_PRIORITY_LIST");
         if (prioritized_backends.empty())
             return hasChanges;
         CV_LOG_INFO(NULL, "UI: Configured priority list (OPENCV_UI_PRIORITY_LIST): " << prioritized_backends);

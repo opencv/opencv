@@ -115,21 +115,12 @@ bool loadVulkanLibrary()
     if (handle != nullptr)
         return true;
 
-    const char* path;
-    const char* envPath = getenv("OPENCV_VULKAN_RUNTIME");
-    if (envPath)
-    {
-        path = envPath;
-    }
-    else
-    {
-        path = DEFAULT_VK_LIBRARY_PATH;
-    }
+    const std::string path = cv::utils::getConfigurationParameterString("OPENCV_VULKAN_RUNTIME", DEFAULT_VK_LIBRARY_PATH);
 
-    handle = LOAD_VK_LIBRARY(path);
+    handle = LOAD_VK_LIBRARY(path.c_str());
     if( handle == nullptr )
     {
-        fprintf(stderr, "Could not load Vulkan library: %s!\n", path);
+        fprintf(stderr, "Could not load Vulkan library: %s!\n", path.c_str());
         fprintf(stderr, "Please download the Vulkan SDK and set the environment variable of OPENCV_VULKAN_RUNTIME according "
                         "to your system environment.\n");
         fprintf(stderr, "For M1 Mac and IOS, we use MoltenVK to map the Vulkan code to native apple Metal code.\n");

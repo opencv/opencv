@@ -1378,7 +1378,7 @@ int cv_wl_buffer::create_tmpfile(std::string const &tmpname) {
 }
 
 int cv_wl_buffer::create_anonymous_file(off_t size) {
-    auto path = getenv("XDG_RUNTIME_DIR") + std::string("/opencv-shared-XXXXXX");
+    auto path = cv::utils::getConfigurationParameterString("XDG_RUNTIME_DIR") + std::string("/opencv-shared-XXXXXX");
     int fd = create_tmpfile(path);
 
     int ret = posix_fallocate(fd, 0, size);
