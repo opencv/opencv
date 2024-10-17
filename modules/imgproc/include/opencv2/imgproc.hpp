@@ -4297,6 +4297,9 @@ ellipse/rotatedRect data contains negative indices, due to the data points being
 border of the containing Mat element.
 
 @param points Input 2D point set, stored in std::vector\<\> or Mat
+
+@note Input point types are @ref Point2i or @ref Point2f
+@note @ref getClosestEllipsePoints function can be used to compute the ellipse fitting error.
  */
 CV_EXPORTS_W RotatedRect fitEllipse( InputArray points );
 
@@ -4334,6 +4337,9 @@ CV_EXPORTS_W RotatedRect fitEllipse( InputArray points );
  \f}
 
  @param points Input 2D point set, stored in std::vector\<\> or Mat
+
+ @note Input point types are @ref Point2i or @ref Point2f
+ @note @ref getClosestEllipsePoints function can be used to compute the ellipse fitting error.
  */
 CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
 
@@ -4379,8 +4385,25 @@ CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
  The scaling factor guarantees that  \f$A^T C A =1\f$.
 
  @param points Input 2D point set, stored in std::vector\<\> or Mat
+
+ @note Input point types are @ref Point2i or @ref Point2f
+ @note @ref getClosestEllipsePoints function can be used to compute the ellipse fitting error.
  */
 CV_EXPORTS_W RotatedRect fitEllipseDirect( InputArray points );
+
+/** @brief Compute for each 2d point the nearest 2d point located on a given ellipse.
+
+ The function computes the nearest 2d location on a given ellipse for a vector of 2d points and is based on @cite Chatfield2017 code.
+ This function can be used to compute for instance the ellipse fitting error.
+
+ @param ellipse_params Ellipse parameters
+ @param points Input 2d points
+ @param closest_pts For each 2d point, their corresponding closest 2d point located on a given ellipse
+
+ @note Input point types are @ref Point2i or @ref Point2f
+ @see fitEllipse, fitEllipseAMS, fitEllipseDirect
+ */
+CV_EXPORTS_W void getClosestEllipsePoints( const RotatedRect& ellipse_params, InputArray points, OutputArray closest_pts );
 
 /** @brief Fits a line to a 2D or 3D point set.
 
