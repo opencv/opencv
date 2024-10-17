@@ -80,6 +80,7 @@ private:
     void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
     void addLayer(LayerParams& layerParams, const Operator& op, bool additionalPreLayer = false, bool additionalPostLayer = false);
+    void addLayer(LayerParams& layerParams, std::vector<std::string> inputTensors, std::vector<std::string> outputTensors);
     int addPermuteLayer(const std::vector<int>& order, const std::string& permName, const std::pair<int, int>& inpId, int dtype, int inpTensorId);
     int addReshapeLayer(const std::vector<int>& shape, int axis, int num_axes,
                         const std::string& name, const std::pair<int, int>& inpId, int dtype, int inpTensorId);
@@ -381,22 +382,13 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op, bool
         }
     }
 
-    Ptr<Layer> layer;
     int layerId;
-    if (newEngine)
-    {
-        layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
-        if (!layer)
-            CV_Error(Error::StsError, "Can't create layer " + layerParams.name + " with type " + layerParams.type);
-        layer->netimpl = dstNet.getImpl();
-    }
-    else
-    {
+    if (!newEngine)
         layerId = dstNet.addLayer(layerParams.name, layerParams.type, dtype, layerParams);
-    }
 
     // Connect layer to inputs
     int i = 0;
+    std::vector<string> inputTensors;
     std::vector<DataLayout> inpLayouts;
     for (int idx : *op_inputs) {
         if (layerIds.find(idx) == layerIds.end()) {
@@ -409,7 +401,7 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op, bool
             std::string tensorName = modelTensors->Get(idx)->name()->str();
             if (additionalPreLayer)
                 tensorName += "_additional_pre_layer";
-            layer->inputs.push_back(dstNet.getArg(tensorName));
+            inputTensors.push_back(tensorName);
         }
         else
         {
@@ -438,14 +430,14 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op, bool
 
     // Register outputs
     i = 0;
+    std::vector<string> outputTensors;
     for (int idx : *op_outputs) {
         if (newEngine)
         {
             std::string tensorName = modelTensors->Get(idx)->name()->str();
             if (additionalPostLayer)
                 tensorName = tensorName + "_additional_post_layer";
-            layer->outputs.push_back(dstNet.getArg(tensorName));
-
+            outputTensors.push_back(tensorName);
             layerIds[idx] = std::make_pair(-1, -1);
         }
         else
@@ -459,7 +451,19 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op, bool
     }
 
     if (newEngine)
-        curProg.push_back(layer);
+        addLayer(layerParams, inputTensors, outputTensors);
+}
+
+void TFLiteImporter::addLayer(LayerParams& layerParams, std::vector<std::string> inputTensors, std::vector<std::string> outputTensors) {
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
+    if (!layer)
+        CV_Error(Error::StsError, "Can't create layer " + layerParams.name + " with type " + layerParams.type);
+    layer->netimpl = dstNet.getImpl();
+    for (const std::string& inputName : inputTensors)
+        layer->inputs.push_back(dstNet.getArg(inputName));
+    for (const std::string& outputName : outputTensors)
+        layer->outputs.push_back(dstNet.getArg(outputName));
+    curProg.push_back(layer);
 }
 
 void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -918,15 +922,8 @@ int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::st
     {
         permLP.type = "Permute";
         permLP.name = permName;
-
-        Ptr<Layer> layer = LayerFactory::createLayerInstance(permLP.type, permLP);
-        if (!layer)
-            CV_Error(Error::StsError, "Can't create layer " + permLP.name + " with type " + permLP.type);
-        layer->netimpl = dstNet.getImpl();
         std::string tensorName = modelTensors->Get(inpTensorId)->name()->str();
-        layer->inputs.push_back(dstNet.getArg(tensorName));
-        layer->outputs.push_back(dstNet.getArg(tensorName + "_additional_pre_layer"));
-        curProg.push_back(layer);
+        addLayer(permLP, {tensorName}, {tensorName + "_additional_pre_layer"});
         return -1;
     }
     else
@@ -948,15 +945,8 @@ int TFLiteImporter::addReshapeLayer(const std::vector<int>& shape, int axis, int
     {
         lp.type = "Reshape";
         lp.name = name;
-
-        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
-        if (!layer)
-            CV_Error(Error::StsError, "Can't create layer " + lp.name + " with type " + lp.type);
-        layer->netimpl = dstNet.getImpl();
         std::string tensorName = modelTensors->Get(inpTensorId)->name()->str();
-        layer->inputs.push_back(dstNet.getArg(tensorName));
-        layer->outputs.push_back(dstNet.getArg(tensorName + "_additional_pre_layer"));
-        curProg.push_back(layer);
+        addLayer(lp, {tensorName}, {tensorName + "_additional_pre_layer"});
         return -1;
     }
     else
@@ -976,15 +966,8 @@ int TFLiteImporter::addFlattenLayer(int axis, int end_axis, const std::string& n
     {
         lp.type = "Flatten";
         lp.name = name;
-
-        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
-        if (!layer)
-            CV_Error(Error::StsError, "Can't create layer " + lp.name + " with type " + lp.type);
-        layer->netimpl = dstNet.getImpl();
         std::string tensorName = modelTensors->Get(outTensorId)->name()->str();
-        layer->inputs.push_back(dstNet.getArg(tensorName + "_additional_post_layer"));
-        layer->outputs.push_back(dstNet.getArg(tensorName));
-        curProg.push_back(layer);
+        addLayer(lp, {tensorName + "_additional_post_layer"}, {tensorName});
         return -1;
     }
     else
@@ -1182,14 +1165,8 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
 
     if (newEngine)
     {
-        Ptr<Layer> layer = LayerFactory::createLayerInstance(priorsLP.type, priorsLP);
-        if (!layer)
-            CV_Error(Error::StsError, "Can't create layer " + priorsLP.name + " with type " + priorsLP.type);
-        layer->netimpl = dstNet.getImpl();
-        std::string tensorName = modelTensors->Get(op.inputs()->Get(2))->name()->str();
-        layer->outputs.push_back(dstNet.getArg(tensorName));
-        curProg.push_back(layer);
-
+        std::string outTensorName = modelTensors->Get(op.inputs()->Get(2))->name()->str();
+        addLayer(priorsLP, {}, {outTensorName});
         layerIds[op.inputs()->Get(2)] = std::make_pair(-1, -1);
     }
     else
@@ -1276,16 +1253,8 @@ void TFLiteImporter::parseActivation(const Operator& op, const std::string& opco
     if (isFused) {
         if (newEngine)
         {
-            CV_CheckEQ(op.outputs()->size(), 1, "NEW ENGINE: Can't parse layer with several outputs and fused activation");
-            Ptr<Layer> layer = LayerFactory::createLayerInstance(activParams.type, activParams);
-            if (!layer)
-                CV_Error(Error::StsError, "Can't create layer " + activParams.name + " with type " + activParams.type);
-            layer->netimpl = dstNet.getImpl();
             std::string tensorName = modelTensors->Get(op.outputs()->Get(0))->name()->str();
-            layer->inputs.push_back(dstNet.getArg(tensorName + "_additional_post_layer"));
-            layer->outputs.push_back(dstNet.getArg(tensorName));
-            curProg.push_back(layer);
-
+            addLayer(activParams, {tensorName + "_additional_post_layer"}, {tensorName});
             layerIds[op.outputs()->Get(0)] = std::make_pair(-1, -1);
         }
         else
