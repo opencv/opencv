@@ -54,6 +54,9 @@ public:
     GAPI_WRAP
     PyParams& cfgSessionOptions(const std::map<std::string, std::string>& options);
 
+    GAPI_WRAP
+    PyParams& cfgOptLevel(const int opt_level);
+
     GBackend backend() const;
     std::string tag() const;
     cv::util::any params() const;

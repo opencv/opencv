@@ -15,6 +15,7 @@
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>
+#include <opencv2/gapi/util/optional.hpp>
 
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
@@ -354,6 +355,7 @@ struct ParamDesc {
     std::map<std::string, std::string> session_options;
     std::vector<cv::gapi::onnx::ep::EP> execution_providers;
     bool disable_mem_pattern;
+    cv::util::optional<int> opt_level;
 };
 } // namespace detail
 
@@ -648,6 +650,17 @@ public:
         return *this;
     }
 
+    /** @brief Configures optimization level for ONNX Runtime.
+
+    @param opt_level [optimization level]: Valid values are 0 (disable), 1 (basic), 2 (extended), 99 (all).
+    Please see onnxruntime_c_api.h (enum GraphOptimizationLevel) for the full list of all optimization levels.
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgOptLevel(const int opt_level) {
+        desc.opt_level = cv::util::make_optional(opt_level);
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::onnx::backend(); }
     std::string   tag()     const { return Net::tag(); }
@@ -675,7 +688,7 @@ public:
     @param model_path path to model file (.onnx file).
     */
     Params(const std::string& tag, const std::string& model_path)
-        : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {}, {}, {}, false}, m_tag(tag) {}
+        : desc{ model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {}, {}, {}, false, {} }, m_tag(tag) {}
 
     /** @see onnx::Params::cfgMeanStdDev. */
     void cfgMeanStdDev(const std::string &layer,
@@ -722,6 +735,11 @@ public:
     /** @see onnx::Params::cfgSessionOptions. */
     void cfgSessionOptions(const std::map<std::string, std::string>& options) {
         desc.session_options.insert(options.begin(), options.end());
+    }
+
+/** @see onnx::Params::cfgOptLevel. */
+    void cfgOptLevel(const int opt_level) {
+        desc.opt_level = cv::util::make_optional(opt_level);
     }
 
     // BEGIN(G-API's network parametrization API)
