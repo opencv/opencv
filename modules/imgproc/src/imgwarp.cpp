@@ -2599,7 +2599,7 @@ private:
 
 #endif
 
-static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation, int borderType, InputArray _M, int flags )
+static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation, int borderType, const Scalar & borderValue, InputArray _M, int flags )
 {
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP();
@@ -2618,7 +2618,7 @@ static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation
         Mat dst = _dst.getMat();
         ::ipp::IwiImage        iwSrc = ippiGetImage(src);
         ::ipp::IwiImage        iwDst = ippiGetImage(dst);
-        ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType));
+        ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType), ippiGetValue(borderValue));
         IwTransDirection       iwTransDirection;
         if(!ippBorder)
             return false;
@@ -2661,7 +2661,7 @@ static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation
     return true;
 #else
     CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(interpolation);
-    CV_UNUSED(borderType); CV_UNUSED(_M); CV_UNUSED(flags);
+    CV_UNUSED(borderType); CV_UNUSED(borderValue); CV_UNUSED(_M); CV_UNUSED(flags);
     return false;
 #endif
 }
@@ -2828,7 +2828,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
 
-    CV_IPP_RUN_FAST(ipp_warpAffine(src, dst, interpolation, borderType, matM, flags));
+    CV_IPP_RUN_FAST(ipp_warpAffine(src, dst, interpolation, borderType, borderValue, matM, flags));
 
     if( !(flags & WARP_INVERSE_MAP) )
     {
