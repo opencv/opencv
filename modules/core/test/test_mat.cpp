@@ -2657,7 +2657,7 @@ TEST(Mat, regression_26322)
     EXPECT_TRUE(mat2.empty());
     EXPECT_EQ(mat.cols, mat2.cols);
     EXPECT_EQ(mat.rows, mat2.rows);
-    EXPECT_EQ(0, mat2.cols * mat2.rows * mat2.elemSize());
+    EXPECT_EQ(0, (int)(mat2.cols * mat2.rows * mat2.elemSize()));
     EXPECT_EQ(0, (int)mat2.total());
 
     // the new way of doing the same in 5.x
@@ -2665,7 +2665,7 @@ TEST(Mat, regression_26322)
     EXPECT_TRUE(mat3.empty());
     EXPECT_EQ(mat.cols, mat3.cols);
     EXPECT_EQ(mat.rows, mat3.rows);
-    EXPECT_EQ(0, mat3.cols * mat3.rows * mat3.elemSize());
+    EXPECT_EQ(0, (int)(mat3.cols * mat3.rows * mat3.elemSize()));
     EXPECT_EQ(0, (int)mat3.total());
 }
 
