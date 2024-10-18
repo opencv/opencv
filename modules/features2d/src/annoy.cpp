@@ -12,7 +12,7 @@ namespace cv
 
 struct Random
 {
-    static const uint64 default_seed = 1234567890987654321ULL;
+    static const uint64 default_seed = 0xffffffff;
     #if __cplusplus < 201103L
     typedef uint64 seed_type;
     #endif
@@ -200,8 +200,6 @@ public:
 
     void setSeed(int seed) CV_OVERRIDE
     {
-        CV_Assert(seed >= 0 && seed <= 4294967295);
-
         index->set_seed(static_cast<uint32_t>(seed));
     }
 
