@@ -190,7 +190,7 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
     {
         if (mainGraph)
         {
-            CV_LOG_WARNING(NULL, "Back-ends are not supported by the new graph egine for now");
+            CV_LOG_WARNING(NULL, "Back-ends are not supported by the new graph engine for now");
             preferableBackend = backendId;
             return;
         }
@@ -226,7 +226,7 @@ void Net::Impl::setPreferableTarget(int targetId)
 {
     if (mainGraph)
     {
-        CV_LOG_WARNING(NULL, "Targtes are not supported by the new graph egine for now");
+        CV_LOG_WARNING(NULL, "Targets are not supported by the new graph engine for now");
         return;
     }
     if (netWasQuantized && targetId != DNN_TARGET_CPU &&

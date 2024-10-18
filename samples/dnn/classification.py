@@ -82,14 +82,10 @@ def main(func_args=None):
             labels = f.read().rstrip('\n').split('\n')
 
     # Load a network
-    engine = cv.dnn.ENGINE_NEW
-    if args.backend != "default" or args.target != "cpu":
-        engine = cv.dnn.ENGINE_CLASSIC
+    engine = cv.dnn.ENGINE_AUTO
     net = cv.dnn.readNetFromONNX(args.model, engine)
-
-    if engine == cv.dnn.ENGINE_CLASSIC:
-        net.setPreferableBackend(get_backend_id(args.backend))
-        net.setPreferableTarget(get_target_id(args.target))
+    net.setPreferableBackend(get_backend_id(args.backend))
+    net.setPreferableTarget(get_target_id(args.target))
 
     winName = 'Deep learning image classification in OpenCV'
     cv.namedWindow(winName, cv.WINDOW_NORMAL)

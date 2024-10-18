@@ -256,7 +256,8 @@ int main(int argc, char **argv)
     int fontSize = 50;
     int fontWeight = 500;
 
-    Net reidNet = readNetFromONNX(modelPath);
+    EngineType engine = ENGINE_CLASSIC;
+    Net reidNet = readNetFromONNX(modelPath, engine);
     reidNet.setPreferableBackend(getBackendID(backend));
     reidNet.setPreferableTarget(getTargetID(target));
 
@@ -264,7 +265,7 @@ int main(int argc, char **argv)
         cout<<"[ERROR] Please pass path to yolov8.onnx model file using --yolo_model."<<endl;
         return -1;
     }
-    Net net = readNetFromONNX(yoloPath);
+    Net net = readNetFromONNX(yoloPath, engine);
 
     FontFace fontFace("sans");
 
