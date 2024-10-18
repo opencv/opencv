@@ -15,7 +15,7 @@ using namespace cv;
 using namespace std;
 
 string keys =
-"{input i | | Path to input image or video file. Skip this argument to capture frames from a camera.}"
+"{input i | 0 | Path to input image or video file. Skip this argument to capture frames from a camera.}"
 "{help  h | | print usage}";
 
 int main(int argc, char** argv)
@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     CommandLineParser parser(argc, argv, keys);
 
     parser.about("This sample demonstrates how to read and display frames from a video file, a camera device or an image sequence \n"
-                 "Usage:\n --input/-i=<video file, image sequence> Skip this argument to capture frames from a camera\n"
+                 "Usage:\n --input/-i=<video file, image sequence in format like ../data/left%02d.jpg or camera index>\n"
                  "q,Q,esc -- quit\n"
                  "You can also pass the path to an image sequence and OpenCV will treat the sequence just like a video\n"
                  "example: --input=right%02d.jpg\n");
@@ -42,9 +42,10 @@ int main(int argc, char** argv)
     vector<vector<Mat>> audioData;
     VideoCapture cap;
 
-    if (file.empty()) {
+    if (isdigit(file[0])) {
         // No input file, capture video from default camera
-        cap.open(0, CAP_ANY);
+        int idx = file[0] - '0';
+        cap.open(idx, CAP_ANY);
         if (!cap.isOpened()) {
             cerr << "ERROR! Unable to open camera" << endl;
             return -1;
@@ -67,7 +68,7 @@ int main(int argc, char** argv)
     for (;;)
     {
         if (!cap.grab()) {
-            cerr << "Error during frame capture" << endl;
+            cerr << "End of input stream" << endl;
             break;
         }
 
