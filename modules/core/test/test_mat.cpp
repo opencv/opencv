@@ -2647,4 +2647,23 @@ TEST(InputArray, dumpEmpty)
     EXPECT_EQ(s, "InputArray: empty()=true kind=0x00010000 flags=0x01010000 total(-1)=0 dims(-1)=0 size(-1)=0x0 type(-1)=CV_8UC1");
 }
 
+#if __cplusplus >= 202002L
+template<typename M>
+concept IsConstMat_ =
+!requires(M&m) { m = 1; } &&
+!requires(M&m) { m(0) = 1; } &&
+!requires(M&m) { m(0, 0) = 1; } &&
+!requires(M&m) { m(0, 0, 0) = 1; } &&
+!requires(M&m) { *m.begin() = 1; } &&
+!requires(M&m) { *(m.end() - 1) = 1; } &&
+!requires(M&m) { *m.rbegin() = 1; } &&
+!requires(M&m) { *(m.rend() - 1) = 1; } &&
+!requires(M&m) { m.setTo(1); };
+
+TEST(Mat_, Const)
+{
+    static_assert(IsConstMat_<cv::Mat_<const char>>, "Mat_<const> cannot be implemented");
+}
+#endif
+
 }} // namespace
