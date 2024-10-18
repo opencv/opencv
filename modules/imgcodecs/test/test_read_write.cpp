@@ -525,7 +525,7 @@ TEST(ImgCodecs, multipage_collection_two_iterator_operatorpp)
 TEST(Imgcodecs, imencodemulti_regression_26207)
 {
     vector<Mat> imgs;
-    Mat img(100, 100, CV_8UC1);
+    const cv::Mat img(100, 100, CV_8UC1, cv::Scalar::all(0));
     imgs.push_back(img);
     std::vector<uchar> buf;
     bool ret = false;
@@ -565,7 +565,7 @@ TEST(Imgcodecs, imencode_regression_26207_extra)
 {
     // CV_32F is not supported depth for BMP Encoder.
     // Encoded buffer contains CV_8U image which is fallbacked.
-    cv::Mat src(100, 100, CV_32FC1);
+    const cv::Mat src(100, 100, CV_32FC1, cv::Scalar::all(0));
     std::vector<uchar> buf;
     bool ret = false;
     EXPECT_NO_THROW(ret = imencode(".bmp", src, buf));
@@ -580,7 +580,7 @@ TEST(Imgcodecs, imwrite_regression_26207_extra)
 {
     // CV_32F is not supported depth for BMP Encoder.
     // Encoded buffer contains CV_8U image which is fallbacked.
-    cv::Mat src(100, 100, CV_32FC1);
+    const cv::Mat src(100, 100, CV_32FC1, cv::Scalar::all(0));
     const string filename = cv::tempfile(".bmp");
     bool ret = false;
     EXPECT_NO_THROW(ret = imwrite(filename, src));

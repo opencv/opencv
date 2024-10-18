@@ -319,7 +319,7 @@ TEST(Imgcodecs_EXR, read_RGBA_unchanged)
 TEST(Imgcodecs_EXR, imencode_regression_26207_extra)
 {
     // CV_8U is not supported depth for EXR Encoder.
-    cv::Mat src(100, 100, CV_8UC1);
+    const cv::Mat src(100, 100, CV_8UC1, cv::Scalar::all(0));
     std::vector<uchar> buf;
     bool ret = false;
     EXPECT_ANY_THROW(ret = imencode(".exr", src, buf));
@@ -328,7 +328,7 @@ TEST(Imgcodecs_EXR, imencode_regression_26207_extra)
 TEST(Imgcodecs_EXR, imwrite_regression_26207_extra)
 {
     // CV_8U is not supported depth for EXR Encoder.
-    cv::Mat src(100, 100, CV_8UC1);
+    const cv::Mat src(100, 100, CV_8UC1, cv::Scalar::all(0));
     const string filename = cv::tempfile(".exr");
     bool ret = false;
     EXPECT_ANY_THROW(ret = imwrite(filename, src));
