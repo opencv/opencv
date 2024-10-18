@@ -81,7 +81,6 @@ OCL_PERF_TEST_P(ConvertToFixture, ConvertTo,
 }
 
 
-//#define RUN_CONVERTFP16
 static Size convertFP16_srcSize(4000, 4000);
 
 OCL_PERF_TEST(Core, ConvertFP32FP16MatMat)
@@ -97,11 +96,7 @@ OCL_PERF_TEST(Core, ConvertFP32FP16MatMat)
     Mat dst(srcSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-#ifdef RUN_CONVERTFP16
-    OCL_TEST_CYCLE() convertFp16(src, dst);
-#else
     OCL_TEST_CYCLE() src.convertTo(dst, dtype);
-#endif
 
     SANITY_CHECK_NOTHING();
 }
@@ -119,11 +114,7 @@ OCL_PERF_TEST(Core, ConvertFP32FP16MatUMat)
     UMat dst(srcSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-#ifdef RUN_CONVERTFP16
-    OCL_TEST_CYCLE() convertFp16(src, dst);
-#else
     OCL_TEST_CYCLE() src.convertTo(dst, dtype);
-#endif
 
     SANITY_CHECK_NOTHING();
 }
@@ -141,11 +132,7 @@ OCL_PERF_TEST(Core, ConvertFP32FP16UMatMat)
     Mat dst(srcSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-#ifdef RUN_CONVERTFP16
-    OCL_TEST_CYCLE() convertFp16(src, dst);
-#else
     OCL_TEST_CYCLE() src.convertTo(dst, dtype);
-#endif
 
     SANITY_CHECK_NOTHING();
 }
@@ -163,11 +150,7 @@ OCL_PERF_TEST(Core, ConvertFP32FP16UMatUMat)
     UMat dst(srcSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-#ifdef RUN_CONVERTFP16
-    OCL_TEST_CYCLE() convertFp16(src, dst);
-#else
     OCL_TEST_CYCLE() src.convertTo(dst, dtype);
-#endif
 
     SANITY_CHECK_NOTHING();
 }
@@ -185,11 +168,7 @@ OCL_PERF_TEST(Core, ConvertFP16FP32MatMat)
     Mat dst(srcSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-#ifdef RUN_CONVERTFP16
-    OCL_TEST_CYCLE() convertFp16(src, dst);
-#else
     OCL_TEST_CYCLE() src.convertTo(dst, dtype);
-#endif
 
     SANITY_CHECK_NOTHING();
 }
@@ -207,11 +186,7 @@ OCL_PERF_TEST(Core, ConvertFP16FP32MatUMat)
     UMat dst(srcSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-#ifdef RUN_CONVERTFP16
-    OCL_TEST_CYCLE() convertFp16(src, dst);
-#else
     OCL_TEST_CYCLE() src.convertTo(dst, dtype);
-#endif
 
     SANITY_CHECK_NOTHING();
 }
@@ -229,11 +204,7 @@ OCL_PERF_TEST(Core, ConvertFP16FP32UMatMat)
     Mat dst(srcSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-#ifdef RUN_CONVERTFP16
-    OCL_TEST_CYCLE() convertFp16(src, dst);
-#else
     OCL_TEST_CYCLE() src.convertTo(dst, dtype);
-#endif
 
     SANITY_CHECK_NOTHING();
 }
@@ -251,11 +222,7 @@ OCL_PERF_TEST(Core, ConvertFP16FP32UMatUMat)
     UMat dst(srcSize, dtype);
     declare.in(src, WARMUP_RNG).out(dst);
 
-#ifdef RUN_CONVERTFP16
-    OCL_TEST_CYCLE() convertFp16(src, dst);
-#else
     OCL_TEST_CYCLE() src.convertTo(dst, dtype);
-#endif
 
     SANITY_CHECK_NOTHING();
 }

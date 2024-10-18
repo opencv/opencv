@@ -924,8 +924,16 @@ struct ConvertScaleFp16Op : public BaseElemWiseOp
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
     {
         Mat m;
-        convertFp16(src[0], m);
-        convertFp16(m, dst);
+        if (src[0].depth() == CV_32F)
+        {
+            src[0].convertTo(m, CV_16F);
+            m.convertTo(dst, CV_32F);
+        }
+        else
+        {
+            src[0].convertTo(m, CV_32F);
+            m.convertTo(dst, CV_16F);
+        }
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
     {
@@ -935,7 +943,7 @@ struct ConvertScaleFp16Op : public BaseElemWiseOp
     {
         // 0: FP32 -> FP16 -> FP32
         // 1: FP16 -> FP32 -> FP16
-        int srctype = (nextRange & 1) == 0 ? CV_32F : CV_16S;
+        int srctype = (nextRange & 1) == 0 ? CV_32F : CV_16F;
         return srctype;
     }
     void getValueRange(int, double& minval, double& maxval)
