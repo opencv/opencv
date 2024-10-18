@@ -2647,4 +2647,26 @@ TEST(InputArray, dumpEmpty)
     EXPECT_EQ(s, "InputArray: empty()=true kind=0x00010000 flags=0x01010000 total(-1)=0 dims(-1)=0 size(-1)=0x0 type(-1)=CV_8UC1");
 }
 
+TEST(Mat, regression_26322)
+{
+    cv::Mat1b mat;
+    EXPECT_TRUE(mat.empty());
+    EXPECT_EQ(0, (int)mat.total());
+
+    cv::Mat mat2(mat.dims, mat.size.p, mat.type(), mat.data, mat.step.p);
+    EXPECT_TRUE(mat2.empty());
+    EXPECT_EQ(mat.cols, mat2.cols);
+    EXPECT_EQ(mat.rows, mat2.rows);
+    EXPECT_EQ(0, mat2.cols * mat2.rows * mat2.elemSize());
+    EXPECT_EQ(0, (int)mat2.total());
+
+    // the new way of doing the same in 5.x
+    cv::Mat mat3(mat.shape(), mat.type(), mat.data, mat.step.p);
+    EXPECT_TRUE(mat3.empty());
+    EXPECT_EQ(mat.cols, mat3.cols);
+    EXPECT_EQ(mat.rows, mat3.rows);
+    EXPECT_EQ(0, mat3.cols * mat3.rows * mat3.elemSize());
+    EXPECT_EQ(0, (int)mat3.total());
+}
+
 }} // namespace
