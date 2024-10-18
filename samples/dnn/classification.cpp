@@ -143,9 +143,15 @@ int main(int argc, char** argv)
     }
     CV_Assert(!model.empty());
     //! [Read and initialize network]
-    Net net = readNetFromONNX(model);
-    net.setPreferableBackend(getBackendID(backend));
-    net.setPreferableTarget(getTargetID(target));
+    EngineType engine = ENGINE_NEW;
+    if (backend != "default" || target != "cpu"){
+        engine = ENGINE_CLASSIC;
+    }
+    Net net = readNetFromONNX(model, engine);
+    if (engine == ENGINE_CLASSIC){
+        net.setPreferableBackend(getBackendID(backend));
+        net.setPreferableTarget(getTargetID(target));
+    }
     //! [Read and initialize network]
 
     // Create a window
