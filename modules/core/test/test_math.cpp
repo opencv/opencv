@@ -3355,23 +3355,13 @@ TEST(Core_FastMath, InlineIsInf)
     EXPECT_EQ( cvIsInf(suf.f), 0);
 }
 
-static float inf()
+TEST(Core_BFloat, CornerCases)
 {
-    Cv32suf suf;
-    suf.u = 0x7f800000;
-    return suf.f;
-}
-
-static float nan()
-{
-    Cv32suf suf;
-    suf.u = 0x7fc00000;
-    return suf.f;
-}
-
-TEST(Core_BFloat, convert)
-{
-    float data[] = {0.f, -0.f, 1.f, -1.f, expf(1.f), FLT_MAX, -FLT_MAX, inf(), -inf(), nan()};
+    float data[] = {0.f, -0.f, 1.f, -1.f, expf(1.f), FLT_MAX, -FLT_MAX,
+                    std::numeric_limits<float>::infinity(),
+                    -std::numeric_limits<float>::infinity(),
+                    std::numeric_limits<float>::quiet_NaN()
+    };
     size_t n0 = sizeof(data)/sizeof(data[0]);
     for (size_t i = 0; i < n0; i++) {
         float x = data[i];
@@ -3386,6 +3376,10 @@ TEST(Core_BFloat, convert)
             EXPECT_LE(fabs(suf1.f - x), fabs(suf0.f - x));
         }
     }
+}
+
+TEST(Core_BFloat, convert)
+{
     size_t N = 1 << 20;
     std::vector<float> bigdata(N);
     RNG& rng = theRNG();
