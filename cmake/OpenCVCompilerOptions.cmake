@@ -340,6 +340,11 @@ if(MSVC)
   if(AARCH64 AND NOT MSVC_VERSION LESS 1930)
     set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /D _ARM64_DISTINCT_NEON_TYPES")
   endif()
+
+  if(HAVE_CXX17)
+    add_definitions(-D_SILENCE_CXX17_C_HEADER_DEPRECATION_WARNING) # ccomplex removed in C++20, but complex.h is not
+    add_definitions(-D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING) # removed in C++26
+  endif()
 endif()
 
 if(PROJECT_NAME STREQUAL "OpenCV")

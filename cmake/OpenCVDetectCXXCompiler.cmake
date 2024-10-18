@@ -197,38 +197,41 @@ elseif(MINGW)
   endif()
 endif()
 
-# Fix handling of duplicated files in the same static library:
-# https://public.kitware.com/Bug/view.php?id=14874
-if(CMAKE_VERSION VERSION_LESS "3.1")
-  foreach(var CMAKE_C_ARCHIVE_APPEND CMAKE_CXX_ARCHIVE_APPEND)
-    if(${var} MATCHES "^<CMAKE_AR> r")
-      string(REPLACE "<CMAKE_AR> r" "<CMAKE_AR> q" ${var} "${${var}}")
-    endif()
-  endforeach()
-endif()
-
 if(NOT OPENCV_SKIP_CMAKE_CXX_STANDARD)
-  ocv_update(CMAKE_CXX_STANDARD 11)
+  ocv_update(CMAKE_CXX_STANDARD 17)
   ocv_update(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-  ocv_update(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++11 instead of -std=gnu++11
-  if(CMAKE_CXX11_COMPILE_FEATURES)
+  ocv_update(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++17 instead of -std=gnu++17
+  if("cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
     set(HAVE_CXX11 ON)
   endif()
-endif()
-if(NOT HAVE_CXX11)
-  ocv_check_compiler_flag(CXX "" HAVE_CXX11 "${OpenCV_SOURCE_DIR}/cmake/checks/cxx11.cpp")
-  if(NOT HAVE_CXX11)
-    ocv_check_compiler_flag(CXX "-std=c++11" HAVE_STD_CXX11 "${OpenCV_SOURCE_DIR}/cmake/checks/cxx11.cpp")
-    if(HAVE_STD_CXX11)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-      set(HAVE_CXX11 ON)
-    endif()
+  if("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    set(HAVE_CXX17 ON)
   endif()
 endif()
 
 if(NOT HAVE_CXX11)
-  message(FATAL_ERROR "OpenCV 4.x requires C++11")
+  message(WARNING "OpenCV 5.x requires C++11 support, but it was not detected. Your compilation may fail.")
 endif()
+if(NOT HAVE_CXX17)
+  message(WARNING "OpenCV 5.x requires C++17 support, but it was not detected. Your compilation may fail.")
+endif()
+
+# Debian 10 - GCC 8.3.0
+if(CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8)
+  message(WARNING "OpenCV requires GCC >= 8.x (detected ${CMAKE_CXX_COMPILER_VERSION}). Your compilation may fail.")
+endif()
+
+# Debian 10 - Clang 7.0
+if(CV_CLANG AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7)
+  message(WARNING "OpenCV requires LLVM/Clang >= 7.x (detected ${CMAKE_CXX_COMPILER_VERSION}). Your compilation may fail.")
+endif()
+
+# Visual Studio 2017 15.7
+if(MSVC AND MSVC_VERSION LESS 1914)
+  message(WARNING "OpenCV requires MSVC >= 2017 15.7 / 1914 (detected ${CMAKE_CXX_COMPILER_VERSION} / ${MSVC_VERSION}). Your compilation may fail.")
+endif()
+
+# TODO: check other known compilers versions
 
 set(__OPENCV_ENABLE_ATOMIC_LONG_LONG OFF)
 if(HAVE_CXX11 AND (X86 OR X86_64))
