@@ -662,7 +662,7 @@ int cv::waitKey(int delay)
     static int use_legacy = -1;
     if (use_legacy < 0)
     {
-        use_legacy = getenv("OPENCV_LEGACY_WAITKEY") != NULL ? 1 : 0;
+        use_legacy = utils::getConfigurationParameterBool("OPENCV_LEGACY_WAITKEY");
     }
     if (use_legacy > 0)
         return code;
