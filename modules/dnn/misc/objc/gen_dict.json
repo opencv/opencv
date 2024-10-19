@@ -9,8 +9,8 @@
             "(Net*)readNetFromONNX:(ByteVector*)buffer engine:(int)engine" : { "readNetFromONNX" : {"name" : "readNetFromONNXBuffer"} },
             "(Net*)readNetFromTensorflow:(NSString*)model config:(NSString*)config" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowFile"} },
             "(Net*)readNetFromTensorflow:(ByteVector*)bufferModel bufferConfig:(ByteVector*)bufferConfig" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowBuffer"} },
-            "(Net*)readNetFromTFLite:(NSString*)model" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteFile"} },
-            "(Net*)readNetFromTFLite:(ByteVector*)buffer" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteBuffer"} }
+            "(Net*)readNetFromTFLite:(NSString*)model engine:(int)engine" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteFile"} },
+            "(Net*)readNetFromTFLite:(ByteVector*)buffer engine:(int)engine" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteBuffer"} }
         },
         "Net": {
             "(void)forward:(NSMutableArray<Mat*>*)outputBlobs outputName:(NSString*)outputName" : { "forward" : {"name" : "forwardOutputBlobs"} },
