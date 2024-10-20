@@ -77,6 +77,8 @@ Code
 
 This tutorial code's is shown lines below.
 
+### Code examples
+
 @add_toggle_cpp
 You can also download it from
 [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp)
