@@ -1051,17 +1051,17 @@ void CV_Remap_Test::new_linear_c4<float>(int x, float sx, float sy, const float 
 }
 
 template <typename T>
-void CV_Remap_Test::new_remap(const Mat &src, Mat &dst) {
-    int src_channels = src.channels();
-    CV_CheckTrue(src.channels() == 1 || src.channels() == 3 || src.channels() == 4, "");
+void CV_Remap_Test::new_remap(const Mat &_src, Mat &_dst) {
+    int src_channels = _src.channels();
+    CV_CheckTrue(_src.channels() == 1 || _src.channels() == 3 || _src.channels() == 4, "");
     CV_CheckTrue(mapx.depth() == CV_32F, "");
     CV_CheckTrue(mapx.channels() == 1 || mapx.channels() == 2, "");
 
-    auto *srcptr_ = src.ptr<const T>();
-    auto *dstptr_ = dst.ptr<T>();
-    size_t srcstep = src.step/sizeof(T), dststep = dst.step/sizeof(T);
-    int srccols = src.cols, srcrows = src.rows;
-    int dstcols = dst.cols, dstrows = dst.rows;
+    auto *srcptr_ = _src.ptr<const T>();
+    auto *dstptr_ = _dst.ptr<T>();
+    size_t srcstep = _src.step/sizeof(T), dststep = _dst.step/sizeof(T);
+    int srccols = _src.cols, srcrows = _src.rows;
+    int dstcols = _dst.cols, dstrows = _dst.rows;
 
     T bval[] = {
         saturate_cast<T>(borderValue[0]),
