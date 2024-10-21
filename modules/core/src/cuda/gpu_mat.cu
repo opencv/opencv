@@ -597,7 +597,10 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, doub
         {convertToScale<double, uchar>, convertToScale<double, schar>, convertToScale<double, ushort>, convertToScale<double, short>, convertToScale<double, int>, convertToScale<double, float>, convertToScale<double, double>}
     };
 
-    funcs[sdepth][ddepth](src.reshape(1), dst.reshape(1), alpha, beta, stream);
+    func_t func = funcs[sdepth][ddepth];
+    CV_Assert(func);
+
+    func(src.reshape(1), dst.reshape(1), alpha, beta, stream);
 }
 
 void cv::cuda::convertFp16(InputArray _src, OutputArray _dst, Stream& stream)
@@ -608,9 +611,9 @@ void cv::cuda::convertFp16(InputArray _src, OutputArray _dst, Stream& stream)
     switch(src.depth())
     {
     case CV_32F:
-        ddepth = CV_16S;
+        ddepth = CV_16F;
         break;
-    case CV_16S:
+    case CV_16F:
         ddepth = CV_32F;
         break;
     default:
@@ -625,11 +628,13 @@ void cv::cuda::convertFp16(InputArray _src, OutputArray _dst, Stream& stream)
     static const func_t funcs[] =
     {
         0, 0, 0,
-        convertScaleHalf<float, short>, 0, convertScaleHalf<short, float>,
-        0, 0,
+        0, 0, convertScaleHalf<short, float>,
+        0, convertScaleHalf<float, short>, 0,
     };
 
-    funcs[ddepth](src.reshape(1), dst.reshape(1), stream);
+    func_t func = funcs[ddepth];
+    CV_Assert(func);
+    func(src.reshape(1), dst.reshape(1), stream);
 }
 
 #endif
