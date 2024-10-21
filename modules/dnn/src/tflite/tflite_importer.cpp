@@ -1310,8 +1310,8 @@ void TFLiteImporter::getQuantParams(const Operator& op, float& inpScale, int& in
     }
 }
 
-Net readNetFromTFLite(const String &modelPath, EngineType engine) {
-    static const EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+Net readNetFromTFLite(const String &modelPath, int engine) {
+    static const int engine_forced = utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
     if(engine_forced != ENGINE_AUTO)
         engine = engine_forced;
 
@@ -1337,12 +1337,12 @@ Net readNetFromTFLite(const String &modelPath, EngineType engine) {
     return net;
 }
 
-Net readNetFromTFLite(const std::vector<uchar>& bufferModel, EngineType engine) {
+Net readNetFromTFLite(const std::vector<uchar>& bufferModel, int engine) {
     return readNetFromTFLite((const char*)bufferModel.data(), bufferModel.size());
 }
 
-Net readNetFromTFLite(const char *bufferModel, size_t bufSize, EngineType engine) {
-    static const EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+Net readNetFromTFLite(const char *bufferModel, size_t bufSize, int engine) {
+    static const int engine_forced = utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
     if(engine_forced != ENGINE_AUTO)
         engine = engine_forced;
 
@@ -1355,15 +1355,15 @@ Net readNetFromTFLite(const char *bufferModel, size_t bufSize, EngineType engine
 
 #define DNN_TFLITE_UNSUPPORTED() CV_Error(Error::StsError, "DNN/TFLite: Build OpenCV with FlatBuffers to import TFLite models: https://github.com/opencv/opencv/pull/23161")
 
-Net readNetFromTFLite(const String &, EngineType) {
+Net readNetFromTFLite(const String &, int) {
     DNN_TFLITE_UNSUPPORTED();
 }
 
-Net readNetFromTFLite(const std::vector<uchar>&, EngineType) {
+Net readNetFromTFLite(const std::vector<uchar>&, int) {
     DNN_TFLITE_UNSUPPORTED();
 }
 
-Net readNetFromTFLite(const char *, size_t, EngineType) {
+Net readNetFromTFLite(const char *, size_t, int) {
     DNN_TFLITE_UNSUPPORTED();
 }
 
