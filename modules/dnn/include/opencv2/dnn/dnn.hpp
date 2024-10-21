@@ -1109,7 +1109,7 @@ CV__DNN_INLINE_NS_BEGIN
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromTFLite(CV_WRAP_FILE_PATH const String &model, int engine=ENGINE_AUTO);
+    CV_EXPORTS_W Net readNetFromTFLite(CV_WRAP_FILE_PATH const String &model, EngineType engine=ENGINE_AUTO);
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @param bufferModel buffer containing the content of the tflite file
@@ -1117,7 +1117,7 @@ CV__DNN_INLINE_NS_BEGIN
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromTFLite(const std::vector<uchar>& bufferModel, int engine=ENGINE_AUTO);
+    CV_EXPORTS_W Net readNetFromTFLite(const std::vector<uchar>& bufferModel, EngineType engine=ENGINE_AUTO);
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @details This is an overloaded member function, provided for convenience.
@@ -1127,7 +1127,7 @@ CV__DNN_INLINE_NS_BEGIN
       * @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       */
-    CV_EXPORTS Net readNetFromTFLite(const char *bufferModel, size_t lenModel, int engine=ENGINE_AUTO);
+    CV_EXPORTS Net readNetFromTFLite(const char *bufferModel, size_t lenModel, EngineType engine=ENGINE_AUTO);
 
      /**
       * @brief Read deep learning network represented in one of the supported formats.

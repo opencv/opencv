@@ -302,7 +302,7 @@ void TFLiteImporter::populateNet()
     }
     if (newEngine)
     {
-        Ptr<Graph> curr_graph = netImpl->newGraph("GRAPH_NAME_TODO", modelInputs, true);
+        Ptr<Graph> curr_graph = netImpl->newGraph(subgraph->name()->str(), modelInputs, true);
         curr_graph->setOutputs(modelOutputs);
         curr_graph->setProg(curProg);
 
@@ -382,7 +382,7 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op, bool
         }
     }
 
-    int layerId;
+    int layerId = -1;
     if (!newEngine)
         layerId = dstNet.addLayer(layerParams.name, layerParams.type, dtype, layerParams);
 
@@ -451,7 +451,11 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op, bool
     }
 
     if (newEngine)
+    {
+        if (additionalPostLayer)
+            layerParams.name += "_pre";
         addLayer(layerParams, inputTensors, outputTensors);
+    }
 }
 
 void TFLiteImporter::addLayer(LayerParams& layerParams, const std::vector<std::string>& inputTensors, const std::vector<std::string>& outputTensors) {
@@ -1179,7 +1183,9 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
 
 void TFLiteImporter::parseFusedActivation(const Operator& op, ActivationFunctionType activ) {
     LayerParams activParams;
-    activParams.name = modelTensors->Get(op.outputs()->Get(0))->name()->str() + "/activ";
+    activParams.name = modelTensors->Get(op.outputs()->Get(0))->name()->str();
+    if (!newEngine)
+        activParams.name += "/activ";
     parseActivation(op, EnumNameActivationFunctionType(activ), activParams, true);
 }
 
@@ -1304,8 +1310,8 @@ void TFLiteImporter::getQuantParams(const Operator& op, float& inpScale, int& in
     }
 }
 
-Net readNetFromTFLite(const String &modelPath, int engine) {
-    static const int engine_forced = (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+Net readNetFromTFLite(const String &modelPath, EngineType engine) {
+    static const EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
     if(engine_forced != ENGINE_AUTO)
         engine = engine_forced;
 
@@ -1331,12 +1337,12 @@ Net readNetFromTFLite(const String &modelPath, int engine) {
     return net;
 }
 
-Net readNetFromTFLite(const std::vector<uchar>& bufferModel, int engine) {
+Net readNetFromTFLite(const std::vector<uchar>& bufferModel, EngineType engine) {
     return readNetFromTFLite((const char*)bufferModel.data(), bufferModel.size());
 }
 
-Net readNetFromTFLite(const char *bufferModel, size_t bufSize, int engine) {
-    static const int engine_forced = (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+Net readNetFromTFLite(const char *bufferModel, size_t bufSize, EngineType engine) {
+    static const EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
     if(engine_forced != ENGINE_AUTO)
         engine = engine_forced;
 
@@ -1349,15 +1355,15 @@ Net readNetFromTFLite(const char *bufferModel, size_t bufSize, int engine) {
 
 #define DNN_TFLITE_UNSUPPORTED() CV_Error(Error::StsError, "DNN/TFLite: Build OpenCV with FlatBuffers to import TFLite models: https://github.com/opencv/opencv/pull/23161")
 
-Net readNetFromTFLite(const String &, int) {
+Net readNetFromTFLite(const String &, EngineType) {
     DNN_TFLITE_UNSUPPORTED();
 }
 
-Net readNetFromTFLite(const std::vector<uchar>&, int) {
+Net readNetFromTFLite(const std::vector<uchar>&, EngineType) {
     DNN_TFLITE_UNSUPPORTED();
 }
 
-Net readNetFromTFLite(const char *, size_t, int) {
+Net readNetFromTFLite(const char *, size_t, EngineType) {
     DNN_TFLITE_UNSUPPORTED();
 }
 
