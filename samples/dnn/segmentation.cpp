@@ -108,7 +108,7 @@ static void colorizeSegmentation(const Mat &score, Mat &segm)
     }
 }
 
-static void showLegend()
+static void showLegend(FontFace fontFace)
 {
     static const int kBlockHeight = 30;
     static Mat legend;
@@ -126,7 +126,11 @@ static void showLegend()
         {
             Mat block = legend.rowRange(i * kBlockHeight, (i + 1) * kBlockHeight);
             block.setTo(colors[i]);
-            putText(block, labels[i], Point(0, kBlockHeight / 2), FONT_HERSHEY_SIMPLEX, 0.5, Vec3b(255, 255, 255));
+            Rect r = getTextSize(Size(), labels[i], Point(), fontFace, 15, 400);
+            r.height += 15; // padding
+            r.width += 10; // padding
+            rectangle(block, r, Scalar::all(255), FILLED);
+            putText(block, labels[i], Point(10, kBlockHeight/2), Scalar(0,0,0), fontFace, 15, 400);
         }
         namedWindow("Legend", WINDOW_AUTOSIZE);
         imshow("Legend", legend);
@@ -158,6 +162,13 @@ int main(int argc, char **argv)
     String model = findModel(parser.get<String>("model"), sha1);
     int backendId = getBackendID(parser.get<String>("backend"));
     int targetId = getTargetID(parser.get<String>("target"));
+    int stdSize = 20;
+    int stdWeight = 400;
+    int stdImgSize = 512;
+    int imgWidth = -1; // Initialization
+    int fontSize = 50;
+    int fontWeight = 500;
+    FontFace fontFace("sans");
 
     // Open file with labels names.
     if (parser.has("labels"))
@@ -225,6 +236,11 @@ int main(int argc, char **argv)
             waitKey();
             break;
         }
+        if (imgWidth == -1){
+            imgWidth = max(frame.rows, frame.cols);
+            fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize);
+            fontWeight = min(fontWeight, (stdWeight*imgWidth)/stdImgSize);
+        }
         imshow("Original Image", frame);
         //! [Create a 4D blob from a frame]
         blobFromImage(frame, blob, scale, Size(inpWidth, inpHeight), mean, swapRB, false);
@@ -269,11 +285,15 @@ int main(int argc, char **argv)
         double freq = getTickFrequency() / 1000;
         double t = net.getPerfProfile(layersTimes) / freq;
         string label = format("Inference time: %.2f ms", t);
-        putText(frame, label, Point(0, 15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(0, 255, 0));
+        Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
+        r.height += fontSize; // padding
+        r.width += 10; // padding
+        rectangle(frame, r, Scalar::all(255), FILLED);
+        putText(frame, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
 
         imshow(kWinName, frame);
         if (!labels.empty())
-            showLegend();
+            showLegend(fontFace);
     }
     return 0;
 }

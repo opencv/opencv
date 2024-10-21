@@ -61,7 +61,7 @@ def showLegend(labels, colors, legend):
         for i in range(len(labels)):
             block = legend[i * blockHeight:(i + 1) * blockHeight]
             block[:,:] = colors[i]
-            cv.putText(block, labels[i], (0, blockHeight//2), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
+            cv.putText(block, labels[i], (0, blockHeight//2), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
         cv.namedWindow('Legend', cv.WINDOW_AUTOSIZE)
         cv.imshow('Legend', legend)
@@ -78,6 +78,13 @@ def main(func_args=None):
         args.labels = findFile(args.labels)
 
     np.random.seed(324)
+
+    stdSize = 0.8
+    stdWeight = 2
+    stdImgSize = 512
+    imgWidth = -1 # Initialization
+    fontSize = 1.5
+    fontThickness = 1
 
     # Load names of labels
     labels = None
@@ -107,6 +114,10 @@ def main(func_args=None):
         if not hasFrame:
             cv.waitKey()
             break
+        if imgWidth == -1:
+            imgWidth = max(frame.shape[:2])
+            fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize)
+            fontThickness = max(fontThickness,(stdWeight*imgWidth)//stdImgSize)
 
         cv.imshow("Original Image", frame)
         frameHeight = frame.shape[0]
@@ -153,7 +164,9 @@ def main(func_args=None):
         # Put efficiency information.
         t, _ = net.getPerfProfile()
         label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
-        cv.putText(frame, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+        labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
+        cv.rectangle(frame, (0, 0), (labelSize[0]+10, labelSize[1]), (255,255,255), cv.FILLED)
+        cv.putText(frame, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
 
         cv.imshow(winName, frame)
 
