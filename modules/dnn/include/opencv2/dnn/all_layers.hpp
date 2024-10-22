@@ -174,6 +174,13 @@ CV__DNN_INLINE_NS_BEGIN
         int outputNameToIndex(const String& outputName) CV_OVERRIDE;
     };
 
+    class CV_EXPORTS LSTM2Layer : public Layer
+    {
+    public:
+        /** Creates instance of LSTM layer */
+        static Ptr<LSTM2Layer> create(const LayerParams& params);
+    };
+
     /** @brief GRU recurrent one-layer
      *
      * Accepts input sequence and computes the final hidden state for each element in the batch.
