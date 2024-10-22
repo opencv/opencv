@@ -51,7 +51,7 @@ public:
         index = makePtr<::cvannoy::AnnoyIndex<int, DataType, DistanceType, Random, ::cvannoy::AnnoyIndexSingleThreadedBuildPolicy>>(dimension);
     }
 
-    bool addItems(InputArray _dataset) CV_OVERRIDE
+    void addItems(InputArray _dataset) CV_OVERRIDE
     {
         CV_Assert(!_dataset.empty());
 
@@ -60,51 +60,63 @@ public:
         CV_Assert(features.type() == cv::DataType<DataType>::type);
 
         int num = features.rows;
-        String errorMsg;
-        char* msg = const_cast<char*>(errorMsg.c_str());
-        if(!index->add_item(0, features.ptr<DataType>(0), &msg))
+        char* msg = nullptr;
+        if (!index->add_item(0, features.ptr<DataType>(0), &msg))
         {
-            CV_LOG_ERROR(NULL, errorMsg);
-            return false;
+            if (msg)
+            {
+                String errorMsg = msg;
+                free(msg);
+                CV_Error(Error::StsError, errorMsg);
+            }
+            else
+            {
+                CV_Error(Error::StsError, "Fail to add an item.");
+            }
         }
         for (int i = 1; i < num; ++i)
             index->add_item(i, features.ptr<DataType>(i));
-
-        return true;
     }
 
-    bool build(int trees) CV_OVERRIDE
+    void build(int trees) CV_OVERRIDE
     {
+        if (index->get_n_items() <= 0)
+            CV_Error(Error::StsError, "No items added. Please add items before building the index.");
+
         if (trees <= 0)
             trees = -1;
 
-        String errorMsg;
-        char* msg = const_cast<char*>(errorMsg.c_str());
-        if (index->build(trees, -1, &msg))
-            return true;
-        else
+        char* msg = nullptr;
+        if (!index->build(trees, -1, &msg))
         {
-            CV_LOG_ERROR(NULL, errorMsg);
-            return false;
+            if (msg)
+            {
+                String errorMsg = msg;
+                free(msg);
+                CV_Error(Error::StsError, errorMsg);
+            }
+            else
+            {
+                CV_Error(Error::StsError, "Fail to build the index.");
+            }
         }
     }
 
     void knnSearch(InputArray _query, OutputArray _indices, OutputArray _dists, int knn, int search_k) CV_OVERRIDE
     {
         CV_Assert(!_query.empty() && _query.isContinuous());
-        CV_Assert(knn <= index->get_n_items());
-
         Mat query = _query.getMat(), indices, dists;
         CV_Assert(query.type() == cv::DataType<DataType>::type);
+        CV_Assert(knn > 0 && knn <= index->get_n_items());
 
         int numQuery = query.rows;
         if (_indices.needed())
         {
             indices = _indices.getMat();
-            if(!indices.isContinuous() || indices.type() != CV_32S ||
+            if (!indices.isContinuous() || indices.type() != CV_32S ||
                 indices.rows != numQuery || indices.cols != knn)
             {
-                if(!indices.isContinuous())
+                if (!indices.isContinuous())
                     _indices.release();
                 _indices.create(numQuery, knn, CV_32S);
                 indices = _indices.getMat();
@@ -113,13 +125,13 @@ public:
         else
             indices.create(numQuery, knn, CV_32S);
 
-        if(_dists.needed())
+        if (_dists.needed())
         {
             dists = _dists.getMat();
-            if(!dists.isContinuous() || dists.type() != cv::DataType<DataType>::type ||
+            if (!dists.isContinuous() || dists.type() != cv::DataType<DataType>::type ||
                 dists.rows != numQuery || dists.cols != knn)
             {
-                if(!_dists.isContinuous())
+                if (!_dists.isContinuous())
                     _dists.release();
                 _dists.create(numQuery, knn, cv::DataType<DataType>::type);
                 dists = _dists.getMat();
@@ -149,29 +161,39 @@ public:
         parallel_for_(Range(0, numQuery), processBatch);
     }
 
-    bool save(const String &filename, bool prefault) CV_OVERRIDE
+    void save(const String &filename, bool prefault) CV_OVERRIDE
     {
-        String errorMsg;
-        char* msg = const_cast<char*>(errorMsg.c_str());
-        if (index->save(filename.c_str(), prefault, &msg))
-            return true;
-        else
+        char* msg = nullptr;
+        if (!index->save(filename.c_str(), prefault, &msg))
         {
-            CV_LOG_ERROR(NULL, errorMsg);
-            return false;
+            if (msg)
+            {
+                String errorMsg = msg;
+                free(msg);
+                CV_Error(Error::StsError, errorMsg);
+            }
+            else
+            {
+                CV_Error(Error::StsError, "Fail to save the index.");
+            }
         }
     }
 
-    bool load(const String &filename, bool prefault) CV_OVERRIDE
+    void load(const String &filename, bool prefault) CV_OVERRIDE
     {
-        String errorMsg;
-        char* msg = const_cast<char*>(errorMsg.c_str());
-        if (index->load(filename.c_str(), prefault, &msg))
-            return true;
-        else
+        char* msg = nullptr;
+        if (!index->load(filename.c_str(), prefault, &msg))
         {
-            CV_LOG_ERROR(NULL, errorMsg);
-            return false;
+            if (msg)
+            {
+                String errorMsg = msg;
+                free(msg);
+                CV_Error(Error::StsError, errorMsg);
+            }
+            else
+            {
+                CV_Error(Error::StsError, "Fail to load the index.");
+            }
         }
     }
 
@@ -187,13 +209,21 @@ public:
 
     bool setOnDiskBuild(const String &filename) CV_OVERRIDE
     {
-        String errorMsg;
-        char* msg = const_cast<char*>(errorMsg.c_str());
+        char* msg = nullptr;
         if (index->on_disk_build(filename.c_str(), &msg))
             return true;
         else
         {
-            CV_LOG_ERROR(NULL, errorMsg);
+            if (msg)
+            {
+                String errorMsg = msg;
+                CV_LOG_ERROR(NULL, errorMsg);
+                free(msg);
+            }
+            else
+            {
+                CV_LOG_ERROR(NULL, "Cannot set build on disk.");
+            }
             return false;
         }
     }

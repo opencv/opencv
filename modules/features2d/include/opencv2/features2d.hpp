@@ -1615,14 +1615,14 @@ public:
      * @param features Matrix containing the feature vectors to index. The size of the matrix is
         num_features x feature_dimension.
      */
-    CV_WRAP virtual bool addItems(InputArray features) = 0;
+    CV_WRAP virtual void addItems(InputArray features) = 0;
 
     /** @brief Build the index.
      *
      *  @param trees Number of trees in the index. If not provided, the number is determined automatically
      *  in a way that at most 2x as much memory as the features vectors take is used.
      */
-    CV_WRAP virtual bool build(int trees=-1) = 0;
+    CV_WRAP virtual void build(int trees=-1) = 0;
 
     /** @brief Performs a K-nearest neighbor search for given query vector(s) using the index.
      *
@@ -1642,7 +1642,7 @@ public:
      *  @param prefault If prefault is set to true, it will pre-read the entire file into memory (using mmap
      *  with MAP_POPULATE). Default is false.
      */
-    CV_WRAP virtual bool save(const String &filename, bool prefault=false) = 0;
+    CV_WRAP virtual void save(const String &filename, bool prefault=false) = 0;
 
     /** @brief Loads (mmaps) an index from disk.
      *
@@ -1650,7 +1650,7 @@ public:
      *  @param prefault If prefault is set to true, it will pre-read the entire file into memory (using mmap
      *  with MAP_POPULATE). Default is false.
      */
-    CV_WRAP virtual bool load(const String &filename, bool prefault=false) = 0;
+    CV_WRAP virtual void load(const String &filename, bool prefault=false) = 0;
 
     /** @brief Return the number of trees in the index.
      */
