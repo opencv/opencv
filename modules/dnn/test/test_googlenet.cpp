@@ -80,7 +80,13 @@ TEST_P(Reproducibility_GoogLeNet, Batching)
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
     net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false), "data");
-    Mat out = net.forward("prob");
+
+    // BUG: https://github.com/opencv/opencv/issues/26349
+    Mat out;
+    if(net.getMainGraph())
+        out = net.forward();
+    else
+        out = net.forward("prob");
 
     Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
     normAssert(out, ref);

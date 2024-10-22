@@ -41,7 +41,13 @@ public:
         Net netDefault = readNet(weights, proto);
         netDefault.setPreferableBackend(DNN_BACKEND_OPENCV);
         netDefault.setInput(inp);
-        Mat outDefault = netDefault.forward(outputLayer).clone();
+
+        // BUG: https://github.com/opencv/opencv/issues/26349
+        Mat outDefault;
+        if(netDefault.getMainGraph())
+            outDefault = netDefault.forward().clone();
+        else
+            outDefault = netDefault.forward(outputLayer).clone();
 
         net = readNet(weights, proto);
         net.setInput(inp);
@@ -51,7 +57,12 @@ public:
         if (target == DNN_TARGET_CPU_FP16)
             net.enableWinograd(false);
 
-        Mat out = net.forward(outputLayer).clone();
+        // BUG: https://github.com/opencv/opencv/issues/26349
+        Mat out;
+        if(net.getMainGraph())
+            out = net.forward().clone();
+        else
+            out = net.forward(outputLayer).clone();
 
         check(outDefault, out, outputLayer, l1, lInf, detectionConfThresh, "First run");
 
@@ -65,8 +76,17 @@ public:
         }
         netDefault.setInput(inp);
         net.setInput(inp);
-        outDefault = netDefault.forward(outputLayer).clone();
-        out = net.forward(outputLayer).clone();
+
+        if(netDefault.getMainGraph())
+            outDefault = netDefault.forward().clone();
+        else
+            outDefault = netDefault.forward(outputLayer).clone();
+
+        if(net.getMainGraph())
+            out = net.forward().clone();
+        else
+            out = net.forward(outputLayer).clone();
+
         check(outDefault, out, outputLayer, l1, lInf, detectionConfThresh, "Second run");
     }
 
