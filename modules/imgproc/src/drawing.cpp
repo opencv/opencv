@@ -262,7 +262,7 @@ void LineIterator::init( const Mat* img, Rect rect, Point pt1_, Point pt2_, int 
 
 static void
 Line( Mat& img, Point pt1, Point pt2,
-      const void* _color, int connectivity = 8 )
+      const void* _color, int connectivity = 8, float alpha = 1 )
 {
     if( connectivity == 0 )
         connectivity = 8;
@@ -270,18 +270,19 @@ Line( Mat& img, Point pt1, Point pt2,
         connectivity = 4;
 
     LineIterator iterator(img, pt1, pt2, connectivity, true);
-    int i, count = iterator.count;
+    int i, j, count = iterator.count;
     int pix_size = (int)img.elemSize();
     const uchar* color = (const uchar*)_color;
+    float beta = 1 - alpha;
 
     if( pix_size == 3 )
     {
         for( i = 0; i < count; i++, ++iterator )
         {
             uchar* ptr = *iterator;
-            ptr[0] = color[0];
-            ptr[1] = color[1];
-            ptr[2] = color[2];
+            ptr[0] = color[0] * alpha + ptr[0] * beta;
+            ptr[1] = color[1] * alpha + ptr[1] * beta;
+            ptr[2] = color[2] * alpha + ptr[2] * beta;
         }
     }
     else
@@ -289,10 +290,10 @@ Line( Mat& img, Point pt1, Point pt2,
         for( i = 0; i < count; i++, ++iterator )
         {
             uchar* ptr = *iterator;
-            if( pix_size == 1 )
-                ptr[0] = color[0];
-            else
-                memcpy( *iterator, color, pix_size );
+            for( j = 0; j < pix_size; j++ )
+            {
+                ptr[i] = color[i] * alpha + ptr[i] * beta;
+            }
         }
     }
 }
@@ -313,7 +314,7 @@ static const int FilterTable[] = {
 };
 
 static void
-LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
+LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color, float alpha = 1 )
 {
     int64 dx, dy;
     int ecount, scount = 0;
@@ -328,10 +329,11 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
     uchar* ptr = img.ptr();
     size_t step = img.step;
     Size2l size0(img.size()), size = size0;
+    float beta = 1 - alpha;
 
     if( !((nch == 1 || nch == 3 || nch == 4) && img.depth() == CV_8U) )
     {
-        Line(img, Point((int)(pt1.x>>XY_SHIFT), (int)(pt1.y>>XY_SHIFT)), Point((int)(pt2.x>>XY_SHIFT), (int)(pt2.y>>XY_SHIFT)), color);
+        Line(img, Point((int)(pt1.x>>XY_SHIFT), (int)(pt1.y>>XY_SHIFT)), Point((int)(pt2.x>>XY_SHIFT), (int)(pt2.y>>XY_SHIFT)), color, alpha);
         return;
     }
 
@@ -427,9 +429,9 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
             _cr = tptr[2];                  \
             _cr += ((cr - _cr)*a + 127)>> 8;\
             _cr += ((cr - _cr)*a + 127)>> 8;\
-            tptr[0] = (uchar)_cb;           \
-            tptr[1] = (uchar)_cg;           \
-            tptr[2] = (uchar)_cr;           \
+            tptr[0] = (uchar) (_cb * alpha + tptr[0] * beta); \
+            tptr[1] = (uchar) (_cg * alpha + tptr[1] * beta); \
+            tptr[2] = (uchar) (_cr * alpha + tptr[2] * beta); \
         }
         if( ax > ay )
         {
@@ -494,7 +496,7 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
             _cb = tptr[0];                  \
             _cb += ((cb - _cb)*a + 127)>> 8;\
             _cb += ((cb - _cb)*a + 127)>> 8;\
-            tptr[0] = (uchar)_cb;           \
+            tptr[0] = (uchar) (_cb * alpha + tptr[0] * beta); \
         }
 
         if( ax > ay )
@@ -633,7 +635,7 @@ LineAA( Mat& img, Point2l pt1, Point2l pt2, const void* color )
 
 
 static void
-Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
+Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color, float alpha = 1 )
 {
     int64 dx, dy;
     int ecount;
@@ -648,6 +650,7 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
     uchar *ptr = img.ptr(), *tptr;
     size_t step = img.step;
     Size size = img.size();
+    float beta = 1 - alpha;
 
     //CV_Assert( img && (nch == 1 || nch == 3) && img.depth() == CV_8U );
 
@@ -703,9 +706,9 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
             0 <= y && y < size.height ) \
         {                               \
             tptr = ptr + y*step + x*3;  \
-            tptr[0] = (uchar)cb;        \
-            tptr[1] = (uchar)cg;        \
-            tptr[2] = (uchar)cr;        \
+            tptr[0] = (uchar) (cb * alpha + tptr[0] * beta); \
+            tptr[1] = (uchar) (cg * alpha + tptr[1] * beta); \
+            tptr[2] = (uchar) (cr * alpha + tptr[2] * beta); \
         }
 
         ICV_PUT_POINT((int)((pt2.x + (XY_ONE >> 1)) >> XY_SHIFT),
@@ -746,7 +749,7 @@ Line2( Mat& img, Point2l pt1, Point2l pt2, const void* color)
             0 <= y && y < size.height ) \
         {                           \
             tptr = ptr + y*step + x;\
-            tptr[0] = (uchar)cb;    \
+            tptr[0] = (uchar) (cb * alpha + tptr[0] * beta); \
         }
 
         ICV_PUT_POINT((int)((pt2.x + (XY_ONE >> 1)) >> XY_SHIFT),
@@ -1643,7 +1646,7 @@ Circle( Mat& img, Point center, int radius, const void* color, int fill )
 
 static void
 ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
-           int thickness, int line_type, int flags, int shift )
+           int thickness, int line_type, int flags, int shift, float alpha = 1 )
 {
     static const double INV_XY_ONE = 1./XY_ONE;
 
@@ -1662,13 +1665,13 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
                 p0.y = (p0.y + (XY_ONE>>1)) >> XY_SHIFT;
                 p1.x = (p1.x + (XY_ONE>>1)) >> XY_SHIFT;
                 p1.y = (p1.y + (XY_ONE>>1)) >> XY_SHIFT;
-                Line( img, p0, p1, color, line_type );
+                Line( img, p0, p1, color, line_type, alpha );
             }
             else
-                Line2( img, p0, p1, color );
+                Line2( img, p0, p1, color, alpha );
         }
         else
-            LineAA( img, p0, p1, color );
+            LineAA( img, p0, p1, color, alpha );
     }
     else
     {
@@ -1812,7 +1815,7 @@ void drawMarker(InputOutputArray img, Point position, const Scalar& color, int m
 \****************************************************************************************/
 
 void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
-           int thickness, int line_type, int shift )
+           int thickness, int line_type, int shift, float alpha )
 {
     CV_INSTRUMENT_REGION();
 
@@ -1823,10 +1826,11 @@ void line( InputOutputArray _img, Point pt1, Point pt2, const Scalar& color,
 
     CV_Assert( 0 < thickness && thickness <= MAX_THICKNESS );
     CV_Assert( 0 <= shift && shift <= XY_SHIFT );
+    CV_Assert( 0 <= alpha && alpha <= 1 );
 
     double buf[4];
     scalarToRawData( color, buf, img.type(), 0 );
-    ThickLine( img, pt1, pt2, buf, thickness, line_type, 3, shift );
+    ThickLine( img, pt1, pt2, buf, thickness, line_type, 3, shift, alpha );
 }
 
 void arrowedLine(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
