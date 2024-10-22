@@ -408,7 +408,11 @@ TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
     rng.fill(input, RNG::UNIFORM, -1, 1);
 
     net.setInput(input, "input");
-    Mat output = net.forward("output");
+    Mat output;
+    if (net.getMainGraph())
+        output = net.forward();
+    else
+        output = net.forward("output");
 
     normAssert(input, output, "", default_l1, default_lInf);
 }

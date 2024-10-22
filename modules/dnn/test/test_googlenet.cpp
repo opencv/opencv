@@ -99,8 +99,9 @@ TEST_P(Reproducibility_GoogLeNet, IntermediateBlobs)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (targetId == DNN_TARGET_CPU_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+    // BUG: https://github.com/opencv/opencv/issues/26349
     Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
-                               findDataFile("dnn/bvlc_googlenet.caffemodel", false));
+                               findDataFile("dnn/bvlc_googlenet.caffemodel", false), ENGINE_CLASSIC);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
@@ -132,8 +133,9 @@ TEST_P(Reproducibility_GoogLeNet, SeveralCalls)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (targetId == DNN_TARGET_CPU_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+    // BUG: https://github.com/opencv/opencv/issues/26349
     Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
-                               findDataFile("dnn/bvlc_googlenet.caffemodel", false));
+                               findDataFile("dnn/bvlc_googlenet.caffemodel", false), ENGINE_CLASSIC);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
