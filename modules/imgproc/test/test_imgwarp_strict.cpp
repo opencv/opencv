@@ -942,8 +942,8 @@ void CV_Remap_Test::run_reference_func()
         FETCH_PIXEL_SCALAR(cn, 1, 1); \
     }
 
-template<typename T1, typename T2>
-static inline void warpaffine_linear_calc(int cn, const T1 *pxy, T2 *dst, float sx, float sy)
+template<typename T>
+static inline void warpaffine_linear_calc(int cn, const T *pxy, T *dst, float sx, float sy)
 {
     for (int ci = 0; ci < cn; ci++) {
         float p00 = pxy[ci];
@@ -953,7 +953,7 @@ static inline void warpaffine_linear_calc(int cn, const T1 *pxy, T2 *dst, float 
         float v0 = p00 + sx*(p01 - p00);
         float v1 = p10 + sx*(p11 - p10);
         v0 += sy*(v1 - v0);
-        dst[ci] = saturate_cast<T2>(v0);
+        dst[ci] = saturate_cast<T>(v0);
     }
 }
 
@@ -965,23 +965,8 @@ void CV_Remap_Test::new_linear_c1(int x, float sx, float sy, const T *srcptr_, T
     int ix = (int)floorf(sx), iy = (int)floorf(sy);
     sx -= ix; sy -= iy;
 
-    int pxy[4];
+    T pxy[4];
     const T *srcptr = srcptr_ + srcstep*iy + ix;
-
-    WARPAFFINE_SHUFFLE(1);
-
-    warpaffine_linear_calc(1, pxy, dstptr+x, sx, sy);
-}
-template<>
-void CV_Remap_Test::new_linear_c1<float>(int x, float sx, float sy, const float *srcptr_, float *dstptr,
-                                         int srccols, int srcrows, size_t srcstep,
-                                         const float *bval, int borderType_x, int borderType_y)
-{
-    int ix = (int)floorf(sx), iy = (int)floorf(sy);
-    sx -= ix; sy -= iy;
-
-    float pxy[4];
-    const float *srcptr = srcptr_ + srcstep*iy + ix;
 
     WARPAFFINE_SHUFFLE(1);
 
@@ -996,23 +981,8 @@ void CV_Remap_Test::new_linear_c3(int x, float sx, float sy, const T *srcptr_, T
     int ix = (int)floorf(sx), iy = (int)floorf(sy);
     sx -= ix; sy -= iy;
 
-    int pxy[12];
+    T pxy[12];
     const T *srcptr = srcptr_ + srcstep*iy + ix*3;
-
-    WARPAFFINE_SHUFFLE(3);
-
-    warpaffine_linear_calc(3, pxy, dstptr+x*3, sx, sy);
-}
-template<>
-void CV_Remap_Test::new_linear_c3<float>(int x, float sx, float sy, const float *srcptr_, float *dstptr,
-                                         int srccols, int srcrows, size_t srcstep,
-                                         const float *bval, int borderType_x, int borderType_y)
-{
-    int ix = (int)floorf(sx), iy = (int)floorf(sy);
-    sx -= ix; sy -= iy;
-
-    float pxy[12];
-    const float *srcptr = srcptr_ + srcstep*iy + ix*3;
 
     WARPAFFINE_SHUFFLE(3);
 
@@ -1027,23 +997,8 @@ void CV_Remap_Test::new_linear_c4(int x, float sx, float sy, const T *srcptr_, T
     int ix = (int)floorf(sx), iy = (int)floorf(sy);
     sx -= ix; sy -= iy;
 
-    int pxy[16];
+    T pxy[16];
     const T *srcptr = srcptr_ + srcstep*iy + ix*4;
-
-    WARPAFFINE_SHUFFLE(4);
-
-    warpaffine_linear_calc(4, pxy, dstptr+x*4, sx, sy);
-}
-template<>
-void CV_Remap_Test::new_linear_c4<float>(int x, float sx, float sy, const float *srcptr_, float *dstptr,
-                                         int srccols, int srcrows, size_t srcstep,
-                                         const float *bval, int borderType_x, int borderType_y)
-{
-    int ix = (int)floorf(sx), iy = (int)floorf(sy);
-    sx -= ix; sy -= iy;
-
-    float pxy[16];
-    const float *srcptr = srcptr_ + srcstep*iy + ix*4;
 
     WARPAFFINE_SHUFFLE(4);
 
