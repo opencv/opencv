@@ -47,7 +47,7 @@
 
 using namespace cv;
 
-#if !(defined(_WIN32) || defined(WINCE))
+#if !defined(_WIN32)
 # include <pthread.h>
 #endif
 #include <algorithm>
@@ -766,7 +766,7 @@ private:
     ImplMutex& operator = (const ImplMutex& m);
 };
 
-#if defined _WIN32 || defined WINCE
+#if defined _WIN32
 
 struct ImplMutex::Impl
 {

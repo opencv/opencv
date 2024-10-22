@@ -905,27 +905,6 @@ macro(ocv_create_module)
     set(the_module_target ${the_module})
   endif()
 
-  if(WINRT AND BUILD_TESTS)
-    # removing APPCONTAINER from modules to run from console
-    # in case of usual starting of WinRT test apps output is missing
-    # so starting of console version w/o APPCONTAINER is required to get test results
-    # also this allows to use opencv_extra test data for these tests
-    if(NOT "${the_module}" STREQUAL "opencv_ts" AND NOT "${the_module}" STREQUAL "opencv_hal")
-      add_custom_command(TARGET ${the_module}
-                         POST_BUILD
-                         COMMAND link.exe /edit /APPCONTAINER:NO $(TargetPath))
-    endif()
-
-    if("${the_module}" STREQUAL "opencv_ts")
-      # copy required dll files; WinRT apps need these dlls that are usually substituted by Visual Studio
-      # however they are not on path and need to be placed with executables to run from console w/o APPCONTAINER
-      add_custom_command(TARGET ${the_module}
-        POST_BUILD
-        COMMAND copy /y "\"$(VCInstallDir)redist\\$(PlatformTarget)\\Microsoft.VC$(PlatformToolsetVersion).CRT\\msvcp$(PlatformToolsetVersion).dll\"" "\"${CMAKE_BINARY_DIR}\\bin\\$(Configuration)\\msvcp$(PlatformToolsetVersion)_app.dll\""
-        COMMAND copy /y "\"$(VCInstallDir)redist\\$(PlatformTarget)\\Microsoft.VC$(PlatformToolsetVersion).CRT\\msvcr$(PlatformToolsetVersion).dll\"" "\"${CMAKE_BINARY_DIR}\\bin\\$(Configuration)\\msvcr$(PlatformToolsetVersion)_app.dll\""
-        COMMAND copy /y "\"$(VCInstallDir)redist\\$(PlatformTarget)\\Microsoft.VC$(PlatformToolsetVersion).CRT\\vccorlib$(PlatformToolsetVersion).dll\"" "\"${CMAKE_BINARY_DIR}\\bin\\$(Configuration)\\vccorlib$(PlatformToolsetVersion)_app.dll\"")
-    endif()
-  endif()
 endmacro()
 
 macro(_ocv_create_module)
@@ -1192,10 +1171,6 @@ ocv_check_environment_variables(OPENCV_TEST_EXTRA_CXX_FLAGS_Release)
 function(ocv_add_perf_tests)
   ocv_debug_message("ocv_add_perf_tests(" ${ARGN} ")")
 
-  if(WINRT)
-    set(OPENCV_DEBUG_POSTFIX "")
-  endif()
-
   set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
   if(BUILD_PERF_TESTS AND EXISTS "${perf_path}"
       AND (NOT DEFINED OPENCV_BUILD_PERF_TEST_MODULES_LIST
@@ -1256,14 +1231,6 @@ function(ocv_add_perf_tests)
       )
       if(ENABLE_SOLUTION_FOLDERS)
         set_target_properties(${the_target} PROPERTIES FOLDER "tests performance")
-      endif()
-
-      if(WINRT)
-        # removing APPCONTAINER from tests to run from console
-        # look for detailed description inside of ocv_create_module macro above
-        add_custom_command(TARGET "opencv_perf_${name}"
-                           POST_BUILD
-                           COMMAND link.exe /edit /APPCONTAINER:NO $(TargetPath))
       endif()
 
       if(NOT BUILD_opencv_world)

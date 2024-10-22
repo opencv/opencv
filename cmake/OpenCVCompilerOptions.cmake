@@ -65,18 +65,6 @@ macro(add_extra_compiler_option_force option)
 endmacro()
 
 
-# Gets environment variable and puts its value to the corresponding preprocessor definition
-# Useful for WINRT that has no access to environment variables
-macro(add_env_definitions option)
-  set(value $ENV{${option}})
-  if("${value}" STREQUAL "")
-    message(WARNING "${option} environment variable is empty. Please set it to appropriate location to get correct results")
-  else()
-    string(REPLACE "\\" "\\\\" value ${value})
-  endif()
-  add_definitions("-D${option}=\"${value}\"")
-endmacro()
-
 # Use same flags for native AArch64 and RISC-V compilation as for cross-compile (Linux)
 if(NOT CMAKE_CROSSCOMPILING AND NOT CMAKE_TOOLCHAIN_FILE AND COMMAND ocv_set_platform_flags)
   unset(platform_flags)

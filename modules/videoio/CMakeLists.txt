@@ -1,5 +1,5 @@
 set(VIDEOIO_ENABLE_PLUGINS_DEFAULT ON)
-if(EMSCRIPTEN OR IOS OR XROS OR WINRT)
+if(EMSCRIPTEN OR IOS OR XROS)
   set(VIDEOIO_ENABLE_PLUGINS_DEFAULT OFF)
 endif()
 
@@ -43,41 +43,8 @@ if(OPENCV_DEBUG_POSTFIX)
   ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/backend_plugin.cpp" "DEBUG_POSTFIX=${OPENCV_DEBUG_POSTFIX}")
 endif()
 
-# Removing WinRT API headers by default
-list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")
-
 # Remove iOS API header by default
 list(REMOVE_ITEM videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_ios.h")
-
-if(DEFINED WINRT AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
-endif()
-
-# Dependencies used by the implementation referenced
-# below are not available on WinRT 8.0.
-# Enabling it for WiRT 8.1+ only.
-if(DEFINED WINRT AND NOT DEFINED WINRT_8_0 AND NOT DEFINED ENABLE_WINRT_MODE_NATIVE)
-
-    # WinRT detected. Adding WinRT API header
-    message(STATUS "  ${name}: WinRT detected. Adding WinRT API header")
-    list(APPEND videoio_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/cap_winrt.hpp")
-
-    # Adding WinRT internal sources and headers
-    list(APPEND videoio_srcs
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_capture.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_bridge.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_video.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/CaptureFrameGrabber.cpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/MediaStreamSink.cpp)
-    list(APPEND videoio_hdrs
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_capture.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_bridge.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt_video.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/MFIncludes.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/CaptureFrameGrabber.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/MediaSink.hpp
-        ${CMAKE_CURRENT_LIST_DIR}/src/cap_winrt/MediaStreamSink.hpp)
-endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
 

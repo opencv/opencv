@@ -431,11 +431,7 @@ bool validateVPUType()
 void initDNNTests()
 {
     const char* extraTestDataPath =
-#ifdef WINRT
-        NULL;
-#else
         getenv("OPENCV_DNN_TEST_DATA_PATH");
-#endif
     if (extraTestDataPath)
         cvtest::addDataSearchPath(extraTestDataPath);
 

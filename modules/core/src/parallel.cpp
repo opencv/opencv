@@ -48,7 +48,7 @@
 #include "opencv2/core/parallel/parallel_backend.hpp"
 #include "parallel/parallel.hpp"
 
-#if defined _WIN32 || defined WINCE
+#if defined _WIN32
     #include <windows.h>
     #undef small
     #undef min
@@ -97,7 +97,6 @@
    - HAVE_HPX         - 3rdparty library, should be explicitly enabled
    - HAVE_OPENMP      - integrated to compiler, should be explicitly enabled
    - HAVE_GCD         - system wide, used automatically        (APPLE only)
-   - WINRT            - system wide, used automatically        (Windows RT only)
    - HAVE_CONCURRENCY - part of runtime, used automatically    (Windows only - MSVS 10, MSVS 11)
    - HAVE_PTHREADS_PF - pthreads if available
 */
@@ -128,8 +127,6 @@
 #elif defined HAVE_GCD
     #include <dispatch/dispatch.h>
     #include <pthread.h>
-#elif defined WINRT && _MSC_VER < 1900
-    #include <ppltasks.h>
 #elif defined HAVE_CONCURRENCY
     #include <ppl.h>
 #elif defined HAVE_PTHREADS_PF
@@ -145,8 +142,6 @@
 #  define CV_PARALLEL_FRAMEWORK "openmp"
 #elif defined HAVE_GCD
 #  define CV_PARALLEL_FRAMEWORK "gcd"
-#elif defined WINRT
-#  define CV_PARALLEL_FRAMEWORK "winrt-concurrency"
 #elif defined HAVE_CONCURRENCY
 #  define CV_PARALLEL_FRAMEWORK "ms-concurrency"
 #elif defined HAVE_PTHREADS_PF
@@ -436,7 +431,7 @@ namespace {
         ProxyLoopBody* ptr_body = static_cast<ProxyLoopBody*>(context);
         (*ptr_body)(cv::Range((int)index, (int)index + 1));
     }
-#elif defined WINRT || defined HAVE_CONCURRENCY
+#elif defined HAVE_CONCURRENCY
     class ProxyLoopBody : public ParallelLoopBodyWrapper
     {
     public:
@@ -474,8 +469,6 @@ static inline int _initMaxThreads()
 static int numThreadsMax = _initMaxThreads();
 #elif defined HAVE_GCD
 // nothing for GCD
-#elif defined WINRT
-// nothing for WINRT
 #elif defined HAVE_CONCURRENCY
 
 class SchedPtr
@@ -595,10 +588,6 @@ static void parallel_for_impl(const cv::Range& range, const cv::ParallelLoopBody
         dispatch_queue_t concurrent_queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
         dispatch_apply_f(stripeRange.end - stripeRange.start, concurrent_queue, &pbody, block_function);
 
-#elif defined WINRT
-
-        Concurrency::parallel_for(stripeRange.start, stripeRange.end, pbody);
-
 #elif defined HAVE_CONCURRENCY
 
         if(!pplScheduler || pplScheduler->Id() == Concurrency::CurrentScheduler::Id())
@@ -669,10 +658,6 @@ int getNumThreads(void)
 #elif defined HAVE_GCD
 
     return cv::getNumberOfCPUs(); // the GCD thread pool limit
-
-#elif defined WINRT
-
-    return 0;
 
 #elif defined HAVE_CONCURRENCY
 
@@ -748,10 +733,6 @@ void setNumThreads( int threads_ )
     // unsupported
     // there is only private dispatch_queue_set_width() and only for desktop
 
-#elif defined WINRT
-
-    return;
-
 #elif defined HAVE_CONCURRENCY
 
     if (threads <= 0)
@@ -800,8 +781,6 @@ int getThreadNum()
     return omp_get_thread_num();
 #elif defined HAVE_GCD
     return (int)(size_t)(void*)pthread_self(); // no zero-based indexing
-#elif defined WINRT
-    return 0;
 #elif defined HAVE_CONCURRENCY
     return std::max(0, (int)Concurrency::Context::VirtualProcessorId()); // zero for master thread, unique number for others but not necessary 1,2,3,...
 #elif defined HAVE_PTHREADS_PF
@@ -947,7 +926,7 @@ int getNumberOfCPUs_()
 #if defined _WIN32
 
     SYSTEM_INFO sysinfo = {};
-#if (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_X64) || defined(WINRT)) && _WIN32_WINNT >= 0x501
+#if (defined(_M_ARM) || defined(_M_ARM64) || defined(_M_X64)) && _WIN32_WINNT >= 0x501
     GetNativeSystemInfo( &sysinfo );
 #else
     GetSystemInfo( &sysinfo );

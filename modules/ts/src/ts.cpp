@@ -67,7 +67,7 @@
 #endif
 
 // isDirectory
-#if defined _WIN32 || defined WINCE
+#if defined _WIN32
 # include <windows.h>
 #else
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
@@ -551,11 +551,7 @@ static int tsErrorCallback( int status, const char* func_name, const char* err_m
 void TS::init( const string& modulename )
 {
     data_search_subdir.push_back(modulename);
-#ifndef WINRT
     char* datapath_dir = getenv("OPENCV_TEST_DATA_PATH");
-#else
-    char* datapath_dir = OPENCV_TEST_DATA_PATH;
-#endif
 
     if( datapath_dir )
     {
@@ -850,11 +846,7 @@ void parseCustomOptions(int argc, char **argv)
 
     test_ipp_check = parser.get<bool>("test_ipp_check");
     if (!test_ipp_check)
-#ifndef WINRT
         test_ipp_check = getenv("OPENCV_IPP_CHECK") != NULL;
-#else
-        test_ipp_check = false;
-#endif
 
     param_seed = parser.get<unsigned int>("test_seed");
 
@@ -878,16 +870,9 @@ void parseCustomOptions(int argc, char **argv)
 
 static bool isDirectory(const std::string& path)
 {
-#if defined _WIN32 || defined WINCE
+#if defined _WIN32
     WIN32_FILE_ATTRIBUTE_DATA all_attrs;
-#ifdef WINRT
-    wchar_t wpath[MAX_PATH];
-    size_t copied = mbstowcs(wpath, path.c_str(), MAX_PATH);
-    CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
-    BOOL status = ::GetFileAttributesExW(wpath, GetFileExInfoStandard, &all_attrs);
-#else
     BOOL status = ::GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &all_attrs);
-#endif
     DWORD attributes = all_attrs.dwFileAttributes;
     return status && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
 #else
@@ -948,11 +933,7 @@ static std::string findData(const std::string& relative_path, bool required, boo
 
     const std::vector<std::string>& search_subdir = TS::ptr()->data_search_subdir;
 
-#ifndef WINRT
     char* datapath_dir = getenv("OPENCV_TEST_DATA_PATH");
-#else
-    char* datapath_dir = OPENCV_TEST_DATA_PATH;
-#endif
 
     std::string datapath;
     if (datapath_dir)
