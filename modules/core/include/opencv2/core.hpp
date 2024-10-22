@@ -492,20 +492,6 @@ For example:
 CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
                                   double alpha = 1, double beta = 0);
 
-/** @brief Converts an array to half precision floating number.
-
-This function converts FP32 (single precision floating point) from/to FP16 (half precision floating point). CV_16S format is used to represent FP16 data.
-There are two use modes (src -> dst): CV_32F -> CV_16S and CV_16S -> CV_32F. The input array has to have type of CV_32F or
-CV_16S to represent the bit depth. If the input array is neither of them, the function will raise an error.
-The format of half precision floating point is defined in IEEE 754-2008.
-
-@param src input array.
-@param dst output array.
-
-@deprecated Use Mat::convertTo with CV_16F instead.
-*/
-CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst);
-
 /** @brief Performs a look-up table transform of an array.
 
 The function LUT fills the output array with values from the look-up table. Indices of the entries
