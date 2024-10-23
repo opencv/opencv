@@ -786,6 +786,14 @@ public:
     */
     CV_WRAP explicit VideoCapture(int index, int apiPreference, const std::vector<int>& params);
 
+    /** @overload
+    @brief Opens a video file stored in memory buffer.
+
+    The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
+    See cv::VideoCaptureProperties
+    */
+    CV_WRAP explicit VideoCapture(std::streambuf& source, int apiPreference, const std::vector<int>& params);
+
     /** @brief Default destructor
 
     The method first calls VideoCapture::release to close the already opened file or camera.
@@ -839,6 +847,19 @@ public:
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
     CV_WRAP virtual bool open(int index, int apiPreference, const std::vector<int>& params);
+
+    /** @brief  Opens a video file stored in memory buffer.
+
+    @overload
+
+    The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
+    See cv::VideoCaptureProperties
+
+    @return `true` if the file has been successfully opened
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+     */
+    CV_WRAP virtual bool open(std::streambuf& source, int apiPreference, const std::vector<int>& params);
 
     /** @brief Returns true if video capturing has been initialized already.
 

@@ -74,6 +74,11 @@ public:
     {
         open(filename, params);
     }
+    CvCapture_FFMPEG_proxy(std::streambuf& source, const cv::VideoCaptureParameters& params)
+        : ffmpegCapture(NULL)
+    {
+        open(source, params);
+    }
     virtual ~CvCapture_FFMPEG_proxy() { close(); }
 
     virtual double getProperty_(int propId) const CV_OVERRIDE
@@ -122,6 +127,13 @@ public:
         ffmpegCapture = cvCreateFileCaptureWithParams_FFMPEG(filename.c_str(), params);
         return ffmpegCapture != 0;
     }
+    bool open(std::streambuf& source, const cv::VideoCaptureParameters& params)
+    {
+        close();
+
+        ffmpegCapture = cvCreateBufferCaptureWithParams_FFMPEG(source, params);
+        return ffmpegCapture != 0;
+    }
     void close()
     {
         if (ffmpegCapture)
@@ -142,6 +154,14 @@ protected:
 cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(filename, params);
+    if (capture && capture->isOpened())
+        return capture;
+    return cv::Ptr<cv::IVideoCapture>();
+}
+
+cv::Ptr<cv::IVideoCapture> cvCreateBufferCapture_FFMPEG_proxy(std::streambuf& source, const cv::VideoCaptureParameters& params)
+{
+    cv::Ptr<CvCapture_FFMPEG_proxy> capture = std::make_shared<CvCapture_FFMPEG_proxy>(source, params);
     if (capture && capture->isOpened())
         return capture;
     return cv::Ptr<cv::IVideoCapture>();
@@ -234,7 +254,7 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
 #include "plugin_api.hpp"
 #else
 #define CAPTURE_ABI_VERSION 1
-#define CAPTURE_API_VERSION 1
+#define CAPTURE_API_VERSION 2
 #include "plugin_capture_api.hpp"
 #define WRITER_ABI_VERSION 1
 #define WRITER_API_VERSION 1
@@ -293,6 +313,42 @@ CvResult CV_API_CALL cv_capture_open_with_params(
     {
         cv::VideoCaptureParameters parameters(params, n_params);
         cap = new CvCapture_FFMPEG_proxy(filename, parameters);
+        if (cap->isOpened())
+        {
+            *handle = (CvPluginCapture)cap;
+            return CV_ERROR_OK;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
+    }
+    if (cap)
+        delete cap;
+    return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_capture_open_buffer(
+        std::streambuf& buffer,
+        int* params, unsigned n_params,
+        CV_OUT CvPluginCapture* handle
+)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+    *handle = NULL;
+    if (buffer.sgetc() == EOF)
+        return CV_ERROR_FAIL;
+    CvCapture_FFMPEG_proxy *cap = 0;
+    try
+    {
+        cv::VideoCaptureParameters parameters(params, n_params);
+        cap = new CvCapture_FFMPEG_proxy(buffer, parameters);
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;
@@ -598,6 +654,9 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
     },
     {
         /*  8*/cv_capture_open_with_params,
+    },
+    {
+        /*  9*/cv_capture_open_buffer,
     }
 };
 
