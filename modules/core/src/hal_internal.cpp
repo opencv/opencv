@@ -47,6 +47,8 @@
 
 #ifdef HAVE_LAPACK
 
+
+
 #include <complex.h>
 #include "opencv_lapack.h"
 

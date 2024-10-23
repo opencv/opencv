@@ -44,7 +44,7 @@ else:
 sys.path.insert(0, os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../apple'))
 from cv_build_utils import execute, print_error, get_xcode_major, get_xcode_setting, get_xcode_version, get_cmake_version
 
-IPHONEOS_DEPLOYMENT_TARGET='9.0'  # default, can be changed via command line options or environment variable
+IPHONEOS_DEPLOYMENT_TARGET='11.0'  # default, can be changed via command line options or environment variable
 
 CURRENT_FILE_DIR = os.path.dirname(__file__)
 
@@ -286,7 +286,8 @@ class Builder:
                 cmakecmd.append("-DCPU_BASELINE=DETECT")
                 cmakecmd.append("-DCMAKE_CROSSCOMPILING=ON")
                 cmakecmd.append("-DOPENCV_WORKAROUND_CMAKE_20989=ON")
-
+        if target.lower() == "iphone" and arch == "armv7s":
+            cmakecmd.append("-DWITH_PROTOBUF=OFF")
         cmakecmd.append(dir)
         cmakecmd.extend(cmakeargs)
         return cmakecmd
@@ -306,7 +307,14 @@ class Builder:
         print("CMake")
         print("=================================")
         print("")
-        execute(cmakecmd, cwd = builddir)
+        try:
+            execute(cmakecmd, cwd = builddir)
+        except Exception as e:
+            print("=== CMakeError.log")
+            with open(os.path.join(builddir, "CMakeFiles", "CMakeError.log")) as f:
+                for l in f.readlines():
+                    print(l.rstrip())
+            raise e
         print("")
         print("=================================")
         print("Xcodebuild")
