@@ -127,28 +127,28 @@ CV_EXPORTS CV_NORETURN void error(const Exception& exc);
 By default the function prints information about the error to stderr,
 then it either stops if setBreakOnError() had been called before or raises the exception.
 It is possible to alternate error processing by using redirectError().
-@param _code - error code (Error::Code)
-@param _err - error description
-@param _func - function name. Available only when the compiler supports getting it
-@param _file - source file name where the error has occurred
-@param _line - line number in the source file where the error has occurred
+@param code - error code (Error::Code)
+@param err - error description
+@param func - function name. Available only when the compiler supports getting it
+@param file - source file name where the error has occurred
+@param line - line number in the source file where the error has occurred
 @see CV_Error, CV_Error_, CV_Assert, CV_DbgAssert
  */
-CV_EXPORTS CV_NORETURN void error(Error::Code _code, const String& _err, const char* _func, const char* _file, int _line);
+CV_EXPORTS CV_NORETURN void error(Error::Code code, const String& err, const char* func, const char* file, int line);
 
 /*! @brief Signals an error and terminate application.
 
 By default the function prints information about the error to stderr, then it terminates application
 with std::terminate. The function is designed for invariants check in functions and methods with
 noexcept attribute.
-@param _code - error code (Error::Code)
-@param _err - error description
-@param _func - function name. Available only when the compiler supports getting it
-@param _file - source file name where the error has occurred
-@param _line - line number in the source file where the error has occurred
+@param code - error code (Error::Code)
+@param err - error description
+@param func - function name. Available only when the compiler supports getting it
+@param file - source file name where the error has occurred
+@param line - line number in the source file where the error has occurred
 @see CV_AssertTerminate
  */
-CV_EXPORTS CV_NORETURN void terminate(Error::Code _code, const String& _err, const char* _func, const char* _file, int _line) CV_NOEXCEPT;
+CV_EXPORTS CV_NORETURN void terminate(Error::Code code, const String& err, const char* func, const char* file, int line) CV_NOEXCEPT;
 
 
 #ifdef CV_STATIC_ANALYSIS

@@ -53,7 +53,7 @@
 #include <unistd.h>  // -D_FORTIFY_SOURCE=2 workaround: https://github.com/opencv/opencv/issues/15020
 #endif
 
-
+#include "opencv2/core/cvdef.h"
 #include "opencv2/videoio.hpp"
 
 #include "opencv2/core/utility.hpp"

@@ -8,8 +8,17 @@
 #include <limits>
 #include <cstring>
 #include <algorithm>
-#include <emscripten/version.h>
 #include "opencv2/core/saturate.hpp"
+
+
+// Emscripten v2.0.13 (latest officially supported, as of 07/30/2024):
+// __EMSCRIPTEN_major__, __EMSCRIPTEN_minor__ and __EMSCRIPTEN_tiny__ are defined via commandline in
+// https://github.com/emscripten-core/emscripten/blob/1690a5802cd1241adc9714fb7fa2f633d38860dc/tools/shared.py#L506-L515
+//
+// See https://github.com/opencv/opencv/pull/25909
+#ifndef __EMSCRIPTEN_major__
+#include <emscripten/version.h>
+#endif
 
 #define CV_SIMD128 1
 #define CV_SIMD128_64F 0 // Now all implementation of f64 use fallback, so disable it.
@@ -392,6 +401,8 @@ inline v128_t v128_cvti32x4_i64x2_high(const v128_t& a)
 #define OPENCV_HAL_IMPL_WASM_INITVEC(_Tpvec, _Tp, suffix, zsuffix, _Tps) \
 inline _Tpvec v_setzero_##suffix() { return _Tpvec(wasm_##zsuffix##_splat((_Tps)0)); } \
 inline _Tpvec v_setall_##suffix(_Tp v) { return _Tpvec(wasm_##zsuffix##_splat((_Tps)v)); } \
+template <> inline _Tpvec v_setzero_() { return v_setzero_##suffix(); } \
+template <> inline _Tpvec v_setall_(_Tp v) { return v_setall_##suffix(v); } \
 template<typename _Tpvec0> inline _Tpvec v_reinterpret_as_##suffix(const _Tpvec0& a) \
 { return _Tpvec(a.val); }
 
@@ -2766,6 +2777,20 @@ inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 }
 
 inline void v_cleanup() {}
+
+#include "intrin_math.hpp"
+inline v_float32x4 v_exp(const v_float32x4& x) { return v_exp_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_log(const v_float32x4& x) { return v_log_default_32f<v_float32x4, v_int32x4>(x); }
+inline void v_sincos(const v_float32x4& x, v_float32x4& s, v_float32x4& c) { v_sincos_default_32f<v_float32x4, v_int32x4>(x, s, c); }
+inline v_float32x4 v_sin(const v_float32x4& x) { return v_sin_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_cos(const v_float32x4& x) { return v_cos_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_erf(const v_float32x4& x) { return v_erf_default_32f<v_float32x4, v_int32x4>(x); }
+
+inline v_float64x2 v_exp(const v_float64x2& x) { return v_exp_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_log(const v_float64x2& x) { return v_log_default_64f<v_float64x2, v_int64x2>(x); }
+inline void v_sincos(const v_float64x2& x, v_float64x2& s, v_float64x2& c) { v_sincos_default_64f<v_float64x2, v_int64x2>(x, s, c); }
+inline v_float64x2 v_sin(const v_float64x2& x) { return v_sin_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_cos(const v_float64x2& x) { return v_cos_default_64f<v_float64x2, v_int64x2>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

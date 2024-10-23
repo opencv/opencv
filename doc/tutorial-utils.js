@@ -72,12 +72,23 @@ function buttonsToAdd($elements, $heading, $type) {
 }
 
 function addTutorialsButtons() {
-    $("h1").each(function() {
-        var $elements = $(this).nextUntil("h1")
+    // See https://github.com/opencv/opencv/issues/26339
+    $lastHeader = undefined
+    $("h1,h2,h3,div.newInnerHTML").each(function() {
+        if( this.tagName.startsWith("H") ) {
+            $lastHeader = $(this)
+            return true // loop-continue
+        }
+        if( $lastHeader === undefined ) {
+            return true // loop-continue
+        }
+        var $toggleHeader = $lastHeader.tagName
+        var $elements = $lastHeader.nextUntil($toggleHeader)
         var $lower = $elements.find("div.newInnerHTML")
         $elements = $elements.add($lower)
         $elements = $elements.filter("div.newInnerHTML")
-        buttonsToAdd($elements, $(this), "h1")
+        buttonsToAdd($elements, $lastHeader, $toggleHeader)
+        $lastHeader = undefined
     });
     $(".toggleable_button").first().click();
     var $clickDefault = $('.toggleable_button.label_python').first();
