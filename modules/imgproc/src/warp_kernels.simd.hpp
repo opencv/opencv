@@ -181,52 +181,52 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
 void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                              uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                              int border_type, const double border_value[4],
-                             const float *map1_data, const float *map2_data, bool is_relative);
+                             const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                              uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                              int border_type, const double border_value[4],
-                             const float *map1_data, const float *map2_data, bool is_relative);
+                             const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                              uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                              int border_type, const double border_value[4],
-                             const float *map1_data, const float *map2_data, bool is_relative);
+                             const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
                               uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative);
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
                               uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative);
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
                               uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative);
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative);
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative);
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative);
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 // Approximate branch that uses FP16 intrinsics if possible
 void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                    int border_type, const double border_value[4],
-                                   const float *map1_data, const float *map2_data, bool is_relative);
+                                   const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                    int border_type, const double border_value[4],
-                                   const float *map1_data, const float *map2_data, bool is_relative);
+                                   const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                    int border_type, const double border_value[4],
-                                   const float *map1_data, const float *map2_data, bool is_relative);
+                                   const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -2957,13 +2957,15 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
 void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                              uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                              int border_type, const double border_value[4],
-                             const float *map1_data, const float *map2_data, bool is_relative) {
+                             const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step, dststep = dst_step;
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step, dststep = dst_step,
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         uint8_t bval[] = {
@@ -3013,10 +3015,9 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
 
         for (int y = r.start; y < r.end; y++) {
             uint8_t* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -3028,26 +3029,6 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
                 // [TODO] apply halide trick
 
                 CV_REMAP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C1);
-                // v_float32 src_x0, src_y0,
-                //           src_x1, src_y1;
-                // if (map2_data == nullptr) {
-                //     v_load_deinterleave(sx_data + 2*x, src_x0, src_y0);
-                //     v_load_deinterleave(sy_data + 2*(x+vlanes_32), src_x1, src_y1);
-                // } else {
-                //     src_x0 = vx_load(sx_data+x);
-                //     src_y0 = vx_load(sy_data+x);
-                //     src_x1 = vx_load(sx_data+x+vlanes_32);
-                //     src_y1 = vx_load(sy_data+x+vlanes_32);
-                // }
-                // if (is_relative) {
-                //     src_x0 = v_add(src_x0, dst_x0);
-                //     src_y0 = v_add(src_y0, dst_y);
-                //     src_x1 = v_add(src_x1, dst_x1);
-                //     src_y1 = v_add(src_y1, dst_y);
-                //     dst_x0 = v_add(dst_x0, delta);
-                //     dst_x1 = v_add(dst_x1, delta);
-                // }
-                // CV_WARP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD(C1)
 
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00g, p01g, p10g, p11g;
@@ -3110,13 +3091,15 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
 void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                              uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                              int border_type, const double border_value[4],
-                             const float *map1_data, const float *map2_data, bool is_relative) {
+                             const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step, dststep = dst_step;
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step, dststep = dst_step,
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         uint8_t bval[] = {
@@ -3174,10 +3157,9 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
 
         for (int y = r.start; y < r.end; y++) {
             uint8_t* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -3253,13 +3235,15 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
 void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                              uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                              int border_type, const double border_value[4],
-                             const float *map1_data, const float *map2_data, bool is_relative) {
+                             const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step, dststep = dst_step;
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step, dststep = dst_step,
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
 
@@ -3321,10 +3305,9 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
 
         for (int y = r.start; y < r.end; y++) {
             uint8_t* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -3401,13 +3384,15 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
 void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
                               uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative) {
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t);
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t),
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
 
@@ -3455,10 +3440,9 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
 
         for (int y = r.start; y < r.end; y++) {
             uint16_t* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -3516,13 +3500,15 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
 void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
                               uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative) {
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t);
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t),
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
 
@@ -3574,10 +3560,9 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
 
         for (int y = r.start; y < r.end; y++) {
             uint16_t* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -3635,13 +3620,15 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
 void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src_rows, int src_cols,
                               uint16_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative) {
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t);
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t),
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
 
@@ -3695,10 +3682,9 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
 
         for (int y = r.start; y < r.end; y++) {
             uint16_t* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -3756,13 +3742,15 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
 void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_rows, int src_cols,
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative) {
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float),
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
 
@@ -3811,10 +3799,9 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
 
         for (int y = r.start; y < r.end; y++) {
             float* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -3870,13 +3857,15 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
 void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_rows, int src_cols,
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative) {
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float),
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
 
@@ -3931,10 +3920,9 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
 
         for (int y = r.start; y < r.end; y++) {
             float* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -3990,13 +3978,15 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
 void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_rows, int src_cols,
                               float *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                               int border_type, const double border_value[4],
-                              const float *map1_data, const float *map2_data, bool is_relative) {
+                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float),
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
 
@@ -4054,10 +4044,9 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
 
         for (int y = r.start; y < r.end; y++) {
             float* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -4113,14 +4102,16 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
 void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                    int border_type, const double border_value[4],
-                                   const float *map1_data, const float *map2_data, bool is_relative) {
+                                   const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
 #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && CV_SIMD128_FP16
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step, dststep = dst_step;
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step, dststep = dst_step,
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         uint8_t bval[] = {
@@ -4166,10 +4157,9 @@ void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
 
         for (int y = r.start; y < r.end; y++) {
             uint8_t* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -4226,20 +4216,22 @@ void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
     remapLinearInvoker_8UC1(src_data, src_step, src_rows, src_cols,
                             dst_data, dst_step, dst_rows, dst_cols,
                             border_type, border_value,
-                            map1_data, map2_data, is_relative);
+                            map1_data, map1_step, map2_data, map2_step, is_relative);
 #endif
 }
 void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                    int border_type, const double border_value[4],
-                                   const float *map1_data, const float *map2_data, bool is_relative) {
+                                   const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
 #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && CV_SIMD128_FP16
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step, dststep = dst_step;
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step, dststep = dst_step,
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         uint8_t bval[] = {
@@ -4291,10 +4283,9 @@ void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
 
         for (int y = r.start; y < r.end; y++) {
             uint8_t* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -4353,20 +4344,22 @@ void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
     remapLinearInvoker_8UC3(src_data, src_step, src_rows, src_cols,
                             dst_data, dst_step, dst_rows, dst_cols,
                             border_type, border_value,
-                            map1_data, map2_data, is_relative);
+                            map1_data, map1_step, map2_data, map2_step, is_relative);
 #endif
 }
 void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
                                    uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                                    int border_type, const double border_value[4],
-                                   const float *map1_data, const float *map2_data, bool is_relative) {
+                                   const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
 #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 && CV_SIMD128_FP16
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        size_t srcstep = src_step, dststep = dst_step;
+        auto *map1 = map1_data, *map2 = map2_data;
+        size_t srcstep = src_step, dststep = dst_step,
+               map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         uint8_t bval[] = {
@@ -4421,10 +4414,9 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
 
         for (int y = r.start; y < r.end; y++) {
             uint8_t* dstptr = dst + y*dststep;
-            const float *sx_data = map1_data + y*dstcols;
-            const float *sy_data = map2_data + y*dstcols;
+            const float *sx_data = map1 + y*map1step;
+            const float *sy_data = map2 + y*map2step;
             if (map2_data == nullptr) {
-                sx_data += y*dstcols;
                 sy_data = sx_data;
             }
             int x = 0;
@@ -4484,7 +4476,7 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
     remapLinearInvoker_8UC4(src_data, src_step, src_rows, src_cols,
                             dst_data, dst_step, dst_rows, dst_cols,
                             border_type, border_value,
-                            map1_data, map2_data, is_relative);
+                            map1_data, map1_step, map2_data, map2_step, is_relative);
 #endif
 }
 
