@@ -82,9 +82,8 @@ def main(func_args=None):
             labels = f.read().rstrip('\n').split('\n')
 
     # Load a network
-
-    net = cv.dnn.readNet(args.model)
-
+    engine = cv.dnn.ENGINE_AUTO
+    net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(get_backend_id(args.backend))
     net.setPreferableTarget(get_target_id(args.target))
 
