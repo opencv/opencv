@@ -337,7 +337,7 @@ class dnn_test(NewOpenCVTests):
 
             printParams(backend, target)
 
-            netSync = cv.dnn.readNet(proto, model)
+            netSync = cv.dnn.readNet(proto, model, engine=cv.dnn.ENGINE_CLASSIC)
             netSync.setPreferableBackend(backend)
             netSync.setPreferableTarget(target)
 
@@ -463,7 +463,7 @@ class dnn_test(NewOpenCVTests):
         for backend, target in self.dnnBackendsAndTargets:
             printParams(backend, target)
 
-            net = cv.dnn.readNet(model)
+            net = cv.dnn.readNet(model, engine=cv.dnn.ENGINE_CLASSIC)
 
             net.setPreferableBackend(backend)
             net.setPreferableTarget(target)

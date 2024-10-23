@@ -80,7 +80,13 @@ TEST_P(Reproducibility_GoogLeNet, Batching)
     ASSERT_TRUE(!inpMats[0].empty() && !inpMats[1].empty());
 
     net.setInput(blobFromImages(inpMats, 1.0f, Size(), Scalar(), false), "data");
-    Mat out = net.forward("prob");
+
+    // BUG: https://github.com/opencv/opencv/issues/26349
+    Mat out;
+    if(net.getMainGraph())
+        out = net.forward();
+    else
+        out = net.forward("prob");
 
     Mat ref = blobFromNPY(_tf("googlenet_prob.npy"));
     normAssert(out, ref);
@@ -93,8 +99,9 @@ TEST_P(Reproducibility_GoogLeNet, IntermediateBlobs)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (targetId == DNN_TARGET_CPU_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+    // BUG: https://github.com/opencv/opencv/issues/26349
     Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
-                               findDataFile("dnn/bvlc_googlenet.caffemodel", false));
+                               findDataFile("dnn/bvlc_googlenet.caffemodel", false), ENGINE_CLASSIC);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
@@ -126,8 +133,9 @@ TEST_P(Reproducibility_GoogLeNet, SeveralCalls)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
     if (targetId == DNN_TARGET_CPU_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+    // BUG: https://github.com/opencv/opencv/issues/26349
     Net net = readNetFromCaffe(findDataFile("dnn/bvlc_googlenet.prototxt"),
-                               findDataFile("dnn/bvlc_googlenet.caffemodel", false));
+                               findDataFile("dnn/bvlc_googlenet.caffemodel", false), ENGINE_CLASSIC);
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     net.setPreferableTarget(targetId);
 
