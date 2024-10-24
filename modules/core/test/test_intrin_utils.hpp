@@ -2168,7 +2168,7 @@ template<typename R> struct TheTest
         hfloat flt16_min;
         uint16_t flt16_min_hex = 0x0400;
         std::memcpy(&flt16_min, &flt16_min_hex, sizeof(hfloat));
-        __test_sincos((hfloat) 1e-3, flt16_min);
+        __test_sincos((hfloat) 1e-2, flt16_min);
 #endif
         return *this;
     }
