@@ -437,7 +437,6 @@ OPENCV_HAL_IMPL_NEON_INIT(uint64x2, uint64, uint64, u64)
 OPENCV_HAL_IMPL_NEON_INIT(int64x2, int64, int64, s64)
 #if CV_SIMD128_FP16
 OPENCV_HAL_IMPL_NEON_INIT(float16x8, hfloat, __fp16,  f16);
-template <> inline v_float16x8 v_setall_(float v) { return v_setall_f16((hfloat)v); }
 #define OPENCV_HAL_IMPL_NEON_INIT_FP16(_Tpv, suffix) \
 inline v_float16x8 v_reinterpret_as_f16(const v_##_Tpv& v) { return v_float16x8(vreinterpretq_f16_##suffix(v.val)); }
 OPENCV_HAL_IMPL_NEON_INIT_FP16(uint8x16, u8)

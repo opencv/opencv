@@ -38,19 +38,19 @@
 // Implementation is the same as float32 vector.
 template<typename _TpVec16F, typename _TpVec16S>
 inline _TpVec16F v_exp_default_16f(const _TpVec16F &x) {
-    const _TpVec16F _vexp_lo_f16 = v_setall_<_TpVec16F>(-10.7421875f);
-    const _TpVec16F _vexp_hi_f16 = v_setall_<_TpVec16F>(11.f);
-    const _TpVec16F _vexp_half_fp16 = v_setall_<_TpVec16F>(0.5f);
-    const _TpVec16F _vexp_one_fp16 = v_setall_<_TpVec16F>(1.f);
-    const _TpVec16F _vexp_LOG2EF_f16 = v_setall_<_TpVec16F>(1.44269504088896341f);
-    const _TpVec16F _vexp_C1_f16 = v_setall_<_TpVec16F>(-6.93359375E-1f);
-    const _TpVec16F _vexp_C2_f16 = v_setall_<_TpVec16F>(2.12194440E-4f);
-    const _TpVec16F _vexp_p0_f16 = v_setall_<_TpVec16F>(1.9875691500E-4f);
-    const _TpVec16F _vexp_p1_f16 = v_setall_<_TpVec16F>(1.3981999507E-3f);
-    const _TpVec16F _vexp_p2_f16 = v_setall_<_TpVec16F>(8.3334519073E-3f);
-    const _TpVec16F _vexp_p3_f16 = v_setall_<_TpVec16F>(4.1665795894E-2f);
-    const _TpVec16F _vexp_p4_f16 = v_setall_<_TpVec16F>(1.6666665459E-1f);
-    const _TpVec16F _vexp_p5_f16 = v_setall_<_TpVec16F>(5.0000001201E-1f);
+    const _TpVec16F _vexp_lo_f16 = v_setall_<_TpVec16F>(hfloat(-10.7421875f));
+    const _TpVec16F _vexp_hi_f16 = v_setall_<_TpVec16F>(hfloat(11.f));
+    const _TpVec16F _vexp_half_fp16 = v_setall_<_TpVec16F>(hfloat(0.5f));
+    const _TpVec16F _vexp_one_fp16 = v_setall_<_TpVec16F>(hfloat(1.f));
+    const _TpVec16F _vexp_LOG2EF_f16 = v_setall_<_TpVec16F>(hfloat(1.44269504088896341f));
+    const _TpVec16F _vexp_C1_f16 = v_setall_<_TpVec16F>(hfloat(-6.93359375E-1f));
+    const _TpVec16F _vexp_C2_f16 = v_setall_<_TpVec16F>(hfloat(2.12194440E-4f));
+    const _TpVec16F _vexp_p0_f16 = v_setall_<_TpVec16F>(hfloat(1.9875691500E-4f));
+    const _TpVec16F _vexp_p1_f16 = v_setall_<_TpVec16F>(hfloat(1.3981999507E-3f));
+    const _TpVec16F _vexp_p2_f16 = v_setall_<_TpVec16F>(hfloat(8.3334519073E-3f));
+    const _TpVec16F _vexp_p3_f16 = v_setall_<_TpVec16F>(hfloat(4.1665795894E-2f));
+    const _TpVec16F _vexp_p4_f16 = v_setall_<_TpVec16F>(hfloat(1.6666665459E-1f));
+    const _TpVec16F _vexp_p5_f16 = v_setall_<_TpVec16F>(hfloat(5.0000001201E-1f));
 
     _TpVec16F _vexp_, _vexp_x, _vexp_y, _vexp_xx;
     _TpVec16S _vexp_mm;
@@ -192,19 +192,19 @@ inline _TpVec64F v_exp_default_64f(const _TpVec64F &x) {
 //! @{
 template<typename _TpVec16F, typename _TpVec16S>
 inline _TpVec16F v_log_default_16f(const _TpVec16F &x) {
-    const _TpVec16F _vlog_one_fp16 = v_setall_<_TpVec16F>(1.0f);
-    const _TpVec16F _vlog_SQRTHF_fp16 = v_setall_<_TpVec16F>(0.707106781186547524f);
-    const _TpVec16F _vlog_q1_fp16 = v_setall_<_TpVec16F>(-2.12194440E-4f);
-    const _TpVec16F _vlog_q2_fp16 = v_setall_<_TpVec16F>(0.693359375f);
-    const _TpVec16F _vlog_p0_fp16 = v_setall_<_TpVec16F>(7.0376836292E-2f);
-    const _TpVec16F _vlog_p1_fp16 = v_setall_<_TpVec16F>(-1.1514610310E-1f);
-    const _TpVec16F _vlog_p2_fp16 = v_setall_<_TpVec16F>(1.1676998740E-1f);
-    const _TpVec16F _vlog_p3_fp16 = v_setall_<_TpVec16F>(-1.2420140846E-1f);
-    const _TpVec16F _vlog_p4_fp16 = v_setall_<_TpVec16F>(1.4249322787E-1f);
-    const _TpVec16F _vlog_p5_fp16 = v_setall_<_TpVec16F>(-1.6668057665E-1f);
-    const _TpVec16F _vlog_p6_fp16 = v_setall_<_TpVec16F>(2.0000714765E-1f);
-    const _TpVec16F _vlog_p7_fp16 = v_setall_<_TpVec16F>(-2.4999993993E-1f);
-    const _TpVec16F _vlog_p8_fp16 = v_setall_<_TpVec16F>(3.3333331174E-1f);
+    const _TpVec16F _vlog_one_fp16 = v_setall_<_TpVec16F>(hfloat(1.0f));
+    const _TpVec16F _vlog_SQRTHF_fp16 = v_setall_<_TpVec16F>(hfloat(0.707106781186547524f));
+    const _TpVec16F _vlog_q1_fp16 = v_setall_<_TpVec16F>(hfloat(-2.12194440E-4f));
+    const _TpVec16F _vlog_q2_fp16 = v_setall_<_TpVec16F>(hfloat(0.693359375f));
+    const _TpVec16F _vlog_p0_fp16 = v_setall_<_TpVec16F>(hfloat(7.0376836292E-2f));
+    const _TpVec16F _vlog_p1_fp16 = v_setall_<_TpVec16F>(hfloat(-1.1514610310E-1f));
+    const _TpVec16F _vlog_p2_fp16 = v_setall_<_TpVec16F>(hfloat(1.1676998740E-1f));
+    const _TpVec16F _vlog_p3_fp16 = v_setall_<_TpVec16F>(hfloat(-1.2420140846E-1f));
+    const _TpVec16F _vlog_p4_fp16 = v_setall_<_TpVec16F>(hfloat(1.4249322787E-1f));
+    const _TpVec16F _vlog_p5_fp16 = v_setall_<_TpVec16F>(hfloat(-1.6668057665E-1f));
+    const _TpVec16F _vlog_p6_fp16 = v_setall_<_TpVec16F>(hfloat(2.0000714765E-1f));
+    const _TpVec16F _vlog_p7_fp16 = v_setall_<_TpVec16F>(hfloat(-2.4999993993E-1f));
+    const _TpVec16F _vlog_p8_fp16 = v_setall_<_TpVec16F>(hfloat(3.3333331174E-1f));
 
     _TpVec16F _vlog_x, _vlog_e, _vlog_y, _vlog_z, _vlog_tmp;
     _TpVec16S _vlog_ux, _vlog_emm0;
@@ -214,7 +214,7 @@ inline _TpVec16F v_log_default_16f(const _TpVec16F &x) {
     _vlog_emm0 = v_shr(_vlog_ux, 10);
 
     _vlog_ux = v_and(_vlog_ux, _vlog_inv_mant_mask_s16);
-    _vlog_ux = v_or(_vlog_ux, v_reinterpret_as_s16(v_setall_<_TpVec16F>(0.5f)));
+    _vlog_ux = v_or(_vlog_ux, v_reinterpret_as_s16(v_setall_<_TpVec16F>(hfloat(0.5f))));
     _vlog_x = v_reinterpret_as_f16(_vlog_ux);
 
     _vlog_emm0 = v_sub(_vlog_emm0, v_setall_<_TpVec16S>((short)0xf));
@@ -243,7 +243,7 @@ inline _TpVec16F v_log_default_16f(const _TpVec16F &x) {
 
     _vlog_y = v_fma(_vlog_e, _vlog_q1_fp16, _vlog_y);
 
-    _vlog_y = v_sub(_vlog_y, v_mul(_vlog_z, v_setall_<_TpVec16F>(0.5f)));
+    _vlog_y = v_sub(_vlog_y, v_mul(_vlog_z, v_setall_<_TpVec16F>(hfloat(0.5f))));
 
     _vlog_x = v_add(_vlog_x, _vlog_y);
     _vlog_x = v_fma(_vlog_e, _vlog_q2_fp16, _vlog_x);
