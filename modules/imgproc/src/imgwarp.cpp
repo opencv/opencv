@@ -1634,77 +1634,13 @@ private:
 
 void cv::remap( InputArray _src, OutputArray _dst,
                 InputArray _map1, InputArray _map2,
-                int interpolation, int borderType, const Scalar& borderValue )
+                int interpolation, int borderType, const Scalar& borderValue,
+                AlgorithmHint hint )
 {
     CV_INSTRUMENT_REGION();
 
-    const bool hasRelativeFlag = ((interpolation & cv::WARP_RELATIVE_MAP) != 0);
-
-    static RemapNNFunc nn_tab[2][CV_DEPTH_MAX] =
-    {
-        {
-            remapNearest<uchar, false>, remapNearest<schar, false>, remapNearest<ushort, false>, remapNearest<short, false>,
-            remapNearest<int, false>, remapNearest<float, false>, remapNearest<double, false>, 0
-        },
-        {
-            remapNearest<uchar, true>, remapNearest<schar, true>, remapNearest<ushort, true>, remapNearest<short, true>,
-            remapNearest<int, true>, remapNearest<float, true>, remapNearest<double, true>, 0
-        }
-    };
-
-    static RemapFunc linear_tab[2][CV_DEPTH_MAX] =
-    {
-        {
-            remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<false>, short, false>, 0,
-            remapBilinear<Cast<float, ushort>, RemapNoVec<false>, float, false>,
-            remapBilinear<Cast<float, short>, RemapNoVec<false>, float, false>, 0,
-            remapBilinear<Cast<float, float>, RemapNoVec<false>, float, false>,
-            remapBilinear<Cast<double, double>, RemapNoVec<false>, float, false>, 0
-        },
-        {
-            remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<true>, short, true>, 0,
-            remapBilinear<Cast<float, ushort>, RemapNoVec<true>, float, true>,
-            remapBilinear<Cast<float, short>, RemapNoVec<true>, float, true>, 0,
-            remapBilinear<Cast<float, float>, RemapNoVec<true>, float, true>,
-            remapBilinear<Cast<double, double>, RemapNoVec<true>, float, true>, 0
-        }
-    };
-
-    static RemapFunc cubic_tab[2][CV_DEPTH_MAX] =
-    {
-        {
-            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
-            remapBicubic<Cast<float, ushort>, float, 1, false>,
-            remapBicubic<Cast<float, short>, float, 1, false>, 0,
-            remapBicubic<Cast<float, float>, float, 1, false>,
-            remapBicubic<Cast<double, double>, float, 1, false>, 0
-        },
-        {
-            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
-            remapBicubic<Cast<float, ushort>, float, 1, true>,
-            remapBicubic<Cast<float, short>, float, 1, true>, 0,
-            remapBicubic<Cast<float, float>, float, 1, true>,
-            remapBicubic<Cast<double, double>, float, 1, true>, 0
-        }
-};
-
-    static RemapFunc lanczos4_tab[2][8] =
-    {
-        {
-            remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
-            remapLanczos4<Cast<float, ushort>, float, 1, false>,
-            remapLanczos4<Cast<float, short>, float, 1, false>, 0,
-            remapLanczos4<Cast<float, float>, float, 1, false>,
-            remapLanczos4<Cast<double, double>, float, 1, false>, 0
-        },
-        {
-            remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
-            remapLanczos4<Cast<float, ushort>, float, 1, true>,
-            remapLanczos4<Cast<float, short>, float, 1, true>, 0,
-            remapLanczos4<Cast<float, float>, float, 1, true>,
-            remapLanczos4<Cast<double, double>, float, 1, true>, 0
-        }
-};
+    if (hint == cv::ALGO_HINT_DEFAULT)
+        hint = cv::getDefaultAlgorithmHint();
 
     CV_Assert( !_map1.empty() );
     CV_Assert( _map2.empty() || (_map2.size() == _map1.size()));
@@ -1728,11 +1664,77 @@ void cv::remap( InputArray _src, OutputArray _dst,
                  map1.ptr<float>(), map1.step, map2.ptr<float>(), map2.step, interpolation, borderType, borderValue.val);
     }
 
+    const bool hasRelativeFlag = ((interpolation & cv::WARP_RELATIVE_MAP) != 0);
+
     interpolation &= ~cv::WARP_RELATIVE_MAP;
     if( interpolation == INTER_AREA )
         interpolation = INTER_LINEAR;
 
     int type = src.type(), depth = CV_MAT_DEPTH(type);
+
+    if (interpolation == INTER_LINEAR) {
+        if (map1.depth() == CV_32F) {
+            const auto *src_data = src.ptr<const uint8_t>();
+            auto *dst_data = dst.ptr<uint8_t>();
+            size_t src_step = src.step, dst_step = dst.step,
+                   map1_step = map1.step, map2_step = map2.step;
+            int src_rows = src.rows, src_cols = src.cols;
+            int dst_rows = dst.rows, dst_cols = dst.cols;
+            const float *map1_data = map1.ptr<const float>();
+            const float *map2_data = map2.ptr<const float>();
+            switch (src.type()) {
+                case CV_8UC1: {
+                    if (hint == cv::ALGO_HINT_APPROX) {
+                        CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC1, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    } else {
+                        CV_CPU_DISPATCH(remapLinearInvoker_8UC1, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    }
+                    break;
+                }
+                case CV_8UC3: {
+                    if (hint == cv::ALGO_HINT_APPROX) {
+                        CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC3, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    } else {
+                        CV_CPU_DISPATCH(remapLinearInvoker_8UC3, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    }
+                    break;
+                }
+                case CV_8UC4: {
+                    if (hint == cv::ALGO_HINT_APPROX) {
+                        CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC4, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    } else {
+                        CV_CPU_DISPATCH(remapLinearInvoker_8UC4, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    }
+                    break;
+                }
+                case CV_16UC1: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_16UC1, ((uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_16UC3: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_16UC3, ((uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_16UC4: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_16UC4, ((uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_32FC1: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_32FC1, ((float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_32FC3: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_32FC3, ((float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                case CV_32FC4: {
+                    CV_CPU_DISPATCH(remapLinearInvoker_32FC4, ((float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    break;
+                }
+                // no default
+            }
+        }
+    }
 
 #if defined HAVE_IPP && !IPP_DISABLE_REMAP
     CV_IPP_CHECK()
@@ -1780,6 +1782,72 @@ void cv::remap( InputArray _src, OutputArray _dst,
     const void* ctab = 0;
     bool fixpt = depth == CV_8U;
     bool planar_input = false;
+
+    static RemapNNFunc nn_tab[2][CV_DEPTH_MAX] =
+    {
+        {
+            remapNearest<uchar, false>, remapNearest<schar, false>, remapNearest<ushort, false>, remapNearest<short, false>,
+            remapNearest<int, false>, remapNearest<float, false>, remapNearest<double, false>, 0
+        },
+        {
+            remapNearest<uchar, true>, remapNearest<schar, true>, remapNearest<ushort, true>, remapNearest<short, true>,
+            remapNearest<int, true>, remapNearest<float, true>, remapNearest<double, true>, 0
+        }
+    };
+
+    static RemapFunc linear_tab[2][CV_DEPTH_MAX] =
+    {
+        {
+            remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<false>, short, false>, 0,
+            remapBilinear<Cast<float, ushort>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<float, short>, RemapNoVec<false>, float, false>, 0,
+            remapBilinear<Cast<float, float>, RemapNoVec<false>, float, false>,
+            remapBilinear<Cast<double, double>, RemapNoVec<false>, float, false>, 0
+        },
+        {
+            remapBilinear<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, RemapVec_8u<true>, short, true>, 0,
+            remapBilinear<Cast<float, ushort>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<float, short>, RemapNoVec<true>, float, true>, 0,
+            remapBilinear<Cast<float, float>, RemapNoVec<true>, float, true>,
+            remapBilinear<Cast<double, double>, RemapNoVec<true>, float, true>, 0
+        }
+    };
+
+    static RemapFunc cubic_tab[2][CV_DEPTH_MAX] =
+    {
+        {
+            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
+            remapBicubic<Cast<float, ushort>, float, 1, false>,
+            remapBicubic<Cast<float, short>, float, 1, false>, 0,
+            remapBicubic<Cast<float, float>, float, 1, false>,
+            remapBicubic<Cast<double, double>, float, 1, false>, 0
+        },
+        {
+            remapBicubic<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
+            remapBicubic<Cast<float, ushort>, float, 1, true>,
+            remapBicubic<Cast<float, short>, float, 1, true>, 0,
+            remapBicubic<Cast<float, float>, float, 1, true>,
+            remapBicubic<Cast<double, double>, float, 1, true>, 0
+        }
+    };
+
+    static RemapFunc lanczos4_tab[2][8] =
+    {
+        {
+            remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, false>, 0,
+            remapLanczos4<Cast<float, ushort>, float, 1, false>,
+            remapLanczos4<Cast<float, short>, float, 1, false>, 0,
+            remapLanczos4<Cast<float, float>, float, 1, false>,
+            remapLanczos4<Cast<double, double>, float, 1, false>, 0
+        },
+        {
+            remapLanczos4<FixedPtCast<int, uchar, INTER_REMAP_COEF_BITS>, short, INTER_REMAP_COEF_SCALE, true>, 0,
+            remapLanczos4<Cast<float, ushort>, float, 1, true>,
+            remapLanczos4<Cast<float, short>, float, 1, true>, 0,
+            remapLanczos4<Cast<float, float>, float, 1, true>,
+            remapLanczos4<Cast<double, double>, float, 1, true>, 0
+        }
+    };
 
     const int relativeOptionIndex = (hasRelativeFlag ? 1 : 0);
     if( interpolation == INTER_NEAREST )

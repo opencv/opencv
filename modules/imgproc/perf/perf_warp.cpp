@@ -5,19 +5,16 @@
 
 namespace opencv_test {
 
-enum{HALF_SIZE=0, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH};
-
 CV_ENUM(BorderMode, BORDER_CONSTANT, BORDER_REPLICATE)
 CV_ENUM(InterType, INTER_NEAREST, INTER_LINEAR)
 CV_ENUM(InterTypeExtended, INTER_NEAREST, INTER_LINEAR, WARP_RELATIVE_MAP)
-CV_ENUM(RemapMode, HALF_SIZE, UPSIDE_DOWN, REFLECTION_X, REFLECTION_BOTH)
 
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpAffine;
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpPerspective;
 typedef TestBaseWithParam< tuple<Size, InterType, BorderMode, MatType> > TestWarpPerspectiveNear_t;
-typedef TestBaseWithParam< tuple<MatType, Size, InterTypeExtended, BorderMode, RemapMode> > TestRemap;
+typedef TestBaseWithParam< tuple<Size, InterTypeExtended, BorderMode, MatType> > TestRemap;
 
-void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode, bool relative = false );
+void update_map(const Mat& src, Mat& map_x, Mat& map_y, bool relative = false );
 
 PERF_TEST_P( TestWarpAffine, WarpAffine,
              Combine(
@@ -156,21 +153,19 @@ PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
     SANITY_CHECK(dst, 1);
 }
 
-PERF_TEST_P( TestRemap, remap,
+PERF_TEST_P( TestRemap, map1_32fc1,
              Combine(
-                 Values( CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1 ),
                  Values( szVGA, sz1080p ),
                  InterTypeExtended::all(),
                  BorderMode::all(),
-                 RemapMode::all()
+                 Values(CV_8UC3, CV_16UC3, CV_32FC3, CV_8UC1, CV_16UC1, CV_32FC1, CV_8UC4, CV_16UC4, CV_32FC4)
                  )
              )
 {
-    int type = get<0>(GetParam());
-    Size size = get<1>(GetParam());
-    int interpolationType = get<2>(GetParam());
-    int borderMode = get<3>(GetParam());
-    int remapMode = get<4>(GetParam());
+    Size size = get<0>(GetParam());
+    int interpolationType = get<1>(GetParam());
+    int borderMode = get<2>(GetParam());
+    int type = get<3>(GetParam());
     unsigned int height = size.height;
     unsigned int width = size.width;
     Mat source(height, width, type);
@@ -180,7 +175,7 @@ PERF_TEST_P( TestRemap, remap,
 
     declare.in(source, WARMUP_RNG);
 
-    update_map(source, map_x, map_y, remapMode, ((interpolationType & WARP_RELATIVE_MAP) != 0));
+    update_map(source, map_x, map_y, ((interpolationType & WARP_RELATIVE_MAP) != 0));
 
     TEST_CYCLE()
     {
@@ -190,15 +185,68 @@ PERF_TEST_P( TestRemap, remap,
     SANITY_CHECK_NOTHING();
 }
 
-void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode, bool relative )
+PERF_TEST_P( TestRemap, map1_32fc2,
+             Combine(
+                 Values( szVGA, sz1080p ),
+                 InterTypeExtended::all(),
+                 BorderMode::all(),
+                 Values(CV_8UC3, CV_16UC3, CV_32FC3, CV_8UC1, CV_16UC1, CV_32FC1, CV_8UC4, CV_16UC4, CV_32FC4)
+                 )
+             )
 {
-    for( int j = 0; j < src.rows; j++ )
+    Size size = get<0>(GetParam());
+    int interpolationType = get<1>(GetParam());
+    int borderMode = get<2>(GetParam());
+    int type = get<3>(GetParam());
+    unsigned int height = size.height;
+    unsigned int width = size.width;
+    Mat source(height, width, type);
+    Mat destination;
+    Mat map_x(height, width, CV_32FC2);
+    Mat map_y;
+
+    declare.in(source, WARMUP_RNG);
+
+    update_map(source, map_x, map_y, ((interpolationType & WARP_RELATIVE_MAP) != 0));
+
+    TEST_CYCLE()
     {
-        for( int i = 0; i < src.cols; i++ )
+        remap(source, destination, map_x, map_y, interpolationType, borderMode);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+void update_map(const Mat& src, Mat& map_x, Mat& map_y, bool relative )
+{
+    if (map_y.empty()) {
+        float *ptr_x = map_x.ptr<float>();
+        for (int j = 0; j < src.rows; j++) {
+            for (int i = 0; i < src.cols; i++) {
+                size_t offset = 2 * j * src.cols + 2 * i;
+                if( i > src.cols*0.25 && i < src.cols*0.75 && j > src.rows*0.25 && j < src.rows*0.75 )
+                {
+                    ptr_x[offset]   = 2*( i - src.cols*0.25f ) + 0.5f ;
+                    ptr_x[offset+1] = 2*( j - src.rows*0.25f ) + 0.5f ;
+                }
+                else
+                {
+                    ptr_x[offset]   = 0 ;
+                    ptr_x[offset+1] = 0 ;
+                }
+
+                if( relative )
+                {
+                    ptr_x[offset]   -= static_cast<float>(i) ;
+                    ptr_x[offset+1] -= static_cast<float>(j) ;
+                }
+            }
+        }
+    } else {
+        for( int j = 0; j < src.rows; j++ )
         {
-            switch( remapMode )
+            for( int i = 0; i < src.cols; i++ )
             {
-            case HALF_SIZE:
                 if( i > src.cols*0.25 && i < src.cols*0.75 && j > src.rows*0.25 && j < src.rows*0.75 )
                 {
                     map_x.at<float>(j,i) = 2*( i - src.cols*0.25f ) + 0.5f ;
@@ -209,25 +257,12 @@ void update_map(const Mat& src, Mat& map_x, Mat& map_y, const int remapMode, boo
                     map_x.at<float>(j,i) = 0 ;
                     map_y.at<float>(j,i) = 0 ;
                 }
-                break;
-            case UPSIDE_DOWN:
-                map_x.at<float>(j,i) = static_cast<float>(i) ;
-                map_y.at<float>(j,i) = static_cast<float>(src.rows - j) ;
-                break;
-            case REFLECTION_X:
-                map_x.at<float>(j,i) = static_cast<float>(src.cols - i) ;
-                map_y.at<float>(j,i) = static_cast<float>(j) ;
-                break;
-            case REFLECTION_BOTH:
-                map_x.at<float>(j,i) = static_cast<float>(src.cols - i) ;
-                map_y.at<float>(j,i) = static_cast<float>(src.rows - j) ;
-                break;
-            } // end of switch
 
-            if( relative )
-            {
-                map_x.at<float>(j,i) -= static_cast<float>(i);
-                map_y.at<float>(j,i) -= static_cast<float>(j);
+                if( relative )
+                {
+                    map_x.at<float>(j,i) -= static_cast<float>(i);
+                    map_y.at<float>(j,i) -= static_cast<float>(j);
+                }
             }
         }
     }

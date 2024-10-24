@@ -2474,7 +2474,8 @@ flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
 the "outliers" in the source image are not modified by the function.
 @param borderValue value used in case of a constant border; by default, it is 0.
-@param hint Implementation modfication flags. See #AlgorithmHint
+@param hint Implementation modfication flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
+for linear calculation for faster speed. See #AlgorithmHint.
 
 @sa  warpPerspective, resize, remap, getRectSubPix, transform
  */
@@ -2508,7 +2509,8 @@ optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 \f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
 @param borderMode pixel extrapolation method (#BORDER_CONSTANT or #BORDER_REPLICATE).
 @param borderValue value used in case of a constant border; by default, it equals 0.
-@param hint Implementation modfication flags. See #AlgorithmHint
+@param hint Implementation modfication flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
+for linear calculation for faster speed. See #AlgorithmHint.
 
 @sa  warpAffine, resize, remap, getRectSubPix, perspectiveTransform
  */
@@ -2554,13 +2556,16 @@ The extra flag WARP_RELATIVE_MAP can be ORed to the interpolation method
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
+@param hint Implementation modfication flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
+for linear calculation for faster speed. See #AlgorithmHint.
 @note
 Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
  */
 CV_EXPORTS_W void remap( InputArray src, OutputArray dst,
                          InputArray map1, InputArray map2,
                          int interpolation, int borderMode = BORDER_CONSTANT,
-                         const Scalar& borderValue = Scalar());
+                         const Scalar& borderValue = Scalar(),
+                         AlgorithmHint hint = cv::ALGO_HINT_DEFAULT);
 
 /** @brief Converts image transformation maps from one representation to another.
 
