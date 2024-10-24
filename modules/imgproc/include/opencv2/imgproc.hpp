@@ -48,7 +48,7 @@
 /**
 @defgroup imgproc Image Processing
 
-This module includes image-processing functions.
+This module offers a comprehensive suite of image processing functions, enabling tasks such as those listed above.
 
 @{
     @defgroup imgproc_filter Image Filtering

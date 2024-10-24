@@ -142,8 +142,7 @@ static constexpr size_t kAvifSignatureSize = 500;
 AvifDecoder::AvifDecoder() {
   m_buf_supported = true;
   channels_ = 0;
-  decoder_ = avifDecoderCreate();
-  decoder_->strictFlags = AVIF_STRICT_DISABLED;
+  decoder_ = nullptr;
 }
 
 AvifDecoder::~AvifDecoder() {
@@ -181,6 +180,11 @@ bool AvifDecoder::checkSignature(const String &signature) const {
 ImageDecoder AvifDecoder::newDecoder() const { return makePtr<AvifDecoder>(); }
 
 bool AvifDecoder::readHeader() {
+  if (decoder_)
+    return true;
+
+  decoder_ = avifDecoderCreate();
+  decoder_->strictFlags = AVIF_STRICT_DISABLED;
   if (!m_buf.empty()) {
     CV_Assert(m_buf.type() == CV_8UC1);
     CV_Assert(m_buf.rows == 1);

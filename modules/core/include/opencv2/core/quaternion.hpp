@@ -31,7 +31,7 @@
 #include <iostream>
 namespace cv
 {
-//! @addtogroup core
+//! @addtogroup core_quaternion
 //! @{
 
 //! Unit quaternion flag

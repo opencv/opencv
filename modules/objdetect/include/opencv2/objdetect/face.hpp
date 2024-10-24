@@ -155,6 +155,22 @@ public:
      *  @param target_id the id of target device
      */
     CV_WRAP static Ptr<FaceRecognizerSF> create(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config, int backend_id = 0, int target_id = 0);
+
+    /**
+     *  @brief Creates an instance of this class from a buffer containing the model weights and configuration.
+     *  @param framework Name of the framework (ONNX, etc.)
+     *  @param bufferModel A buffer containing the binary model weights.
+     *  @param bufferConfig A buffer containing the network configuration.
+     *  @param backend_id The id of the backend.
+     *  @param target_id The id of the target device.
+     *
+     *  @return A pointer to the created instance of FaceRecognizerSF.
+     */
+    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& framework,
+                                                const std::vector<uchar>& bufferModel,
+                                                const std::vector<uchar>& bufferConfig,
+                                                int backend_id = 0,
+                                                int target_id = 0);
 };
 
 //! @}

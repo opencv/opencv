@@ -857,6 +857,74 @@ TEST(Drawing, ttf_text)
 }
 #endif
 
+TEST(Drawing, fillpoly_contours)
+{
+    const int imgSize = 50;
+    const int type = CV_8UC1;
+    const int shift = 0;
+    const Scalar cl = Scalar::all(255);
+    const cv::LineTypes lineType = LINE_8;
+
+    // check that contours of fillPoly and polylines match
+    {
+        cv::Mat img(imgSize, imgSize, type);
+        img = 0;
+        std::vector<std::vector<cv::Point>> polygonPoints{
+            { {44, 27}, {7, 37}, {7, 19}, {38, 19} }
+        };
+        cv::fillPoly(img, polygonPoints, cl, lineType, shift);
+        cv::polylines(img, polygonPoints, true, 0, 1, lineType, shift);
+
+        {
+            cv::Mat labelImage(img.size(), CV_32S);
+            int labels = cv::connectedComponents(img, labelImage, 4);
+            EXPECT_EQ(2, labels) << "filling went over the border";
+        }
+    }
+
+    // check that line generated with fillPoly and polylines match
+    {
+        cv::Mat img1(imgSize, imgSize, type), img2(imgSize, imgSize, type);
+        img1 = 0;
+        img2 = 0;
+        std::vector<std::vector<cv::Point>> polygonPoints{
+            { {44, 27}, {38, 19} }
+        };
+        cv::fillPoly(img1, polygonPoints, cl, lineType, shift);
+        cv::polylines(img2, polygonPoints, true, cl, 1, lineType, shift);
+        EXPECT_MAT_N_DIFF(img1, img2, 0);
+    }
+}
+
+TEST(Drawing, fillpoly_match_lines)
+{
+    const int imgSize = 49;
+    const int type = CV_8UC1;
+    const int shift = 0;
+    const Scalar cl = Scalar::all(255);
+    const cv::LineTypes lineType = LINE_8;
+    cv::Mat img1(imgSize, imgSize, type), img2(imgSize, imgSize, type);
+    for (int x1 = 0; x1 < imgSize; x1 += imgSize / 2)
+    {
+        for (int y1 = 0; y1 < imgSize; y1 += imgSize / 2)
+        {
+            for (int x2 = 0; x2 < imgSize; x2++)
+            {
+                for (int y2 = 0; y2 < imgSize; y2++)
+                {
+                    img1 = 0;
+                    img2 = 0;
+                    std::vector<std::vector<cv::Point>> polygonPoints{
+                        { {x1, y1}, {x2, y2} }
+                    };
+                    cv::fillPoly(img1, polygonPoints, cl, lineType, shift);
+                    cv::polylines(img2, polygonPoints, true, cl, 1, lineType, shift);
+                    EXPECT_MAT_N_DIFF(img1, img2, 0);
+                }
+            }
+        }
+    }
+}
 
 TEST(Drawing, fillpoly_fully)
 {

@@ -19,4 +19,8 @@
 #include "version/hal_rvv_071.hpp"
 #endif
 
+#if defined(__riscv_v) && __riscv_v == 1000000
+#include "hal_rvv_1p0/merge.hpp" // core
+#endif
+
 #endif

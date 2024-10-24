@@ -64,7 +64,7 @@ CollectPolyEdges( Mat& img, const Point2l* v, int npts,
                   int shift, Point offset=Point() );
 
 static void
-FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color, int line_type);
+FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color );
 
 static void
 PolyLine( Mat& img, const Point2l* v, int npts, bool closed,
@@ -1051,7 +1051,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
         v.push_back(center);
         std::vector<PolyEdge> edges;
         CollectPolyEdges( img,  &v[0], (int)v.size(), edges, color, line_type, XY_SHIFT );
-        FillEdgeCollection( img, edges, color, line_type );
+        FillEdgeCollection( img, edges, color );
     }
 }
 
@@ -1299,15 +1299,11 @@ CollectPolyEdges( Mat& img, const Point2l* v, int count, std::vector<PolyEdge>& 
                 if (t0.y != t1.y)
                 {
                     pt0c.y = t0.y; pt1c.y = t1.y;
-                    pt0c.x = (int64)(t0.x) << XY_SHIFT;
-                    pt1c.x = (int64)(t1.x) << XY_SHIFT;
                 }
             }
-            else
-            {
-                pt0c.x += XY_ONE >> 1;
-                pt1c.x += XY_ONE >> 1;
-            }
+
+            pt0c.x = (int64)(t0.x) << XY_SHIFT;
+            pt1c.x = (int64)(t1.x) << XY_SHIFT;
         }
         else
         {
@@ -1349,7 +1345,7 @@ struct CmpEdges
 /**************** helper macros and functions for sequence/contour processing ***********/
 
 static void
-FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color, int line_type)
+FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
 {
     PolyEdge tmp;
     int i, y, total = (int)edges.size();
@@ -1358,12 +1354,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color, i
     int y_max = INT_MIN, y_min = INT_MAX;
     int64 x_max = 0xFFFFFFFFFFFFFFFF, x_min = 0x7FFFFFFFFFFFFFFF;
     int pix_size = (int)img.elemSize();
-    int delta;
-
-    if (line_type < LINE_AA)
-        delta = 0;
-    else
-        delta = XY_ONE - 1;
+    int delta = XY_ONE - 1;
 
     if( total < 2 )
         return;
@@ -2051,7 +2042,7 @@ void fillPoly( InputOutputArray _img, const Point** pts, const int* npts, int nc
         }
     }
 
-    FillEdgeCollection(img, edges, buf, line_type);
+    FillEdgeCollection(img, edges, buf);
 }
 
 void polylines( InputOutputArray _img, const Point* const* pts, const int* npts, int ncontours, bool isClosed,
