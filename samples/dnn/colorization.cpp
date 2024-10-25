@@ -84,6 +84,9 @@ int main(int argc, char** argv) {
 
     // Prepare the model
     EngineType engine = ENGINE_AUTO;
+    if (backendId != 0 || targetId != 0){
+        engine = ENGINE_CLASSIC;
+    }
     dnn::Net net = dnn::readNetFromONNX(onnxModelPath, engine);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);

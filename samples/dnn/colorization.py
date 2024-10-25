@@ -45,6 +45,8 @@ if __name__ == '__main__':
 
     onnx_model_path = args.onnx_model_path  # Update this path to your ONNX model's path
     engine = cv.dnn.ENGINE_AUTO
+    if args.backend != 0 or args.target != 0:
+        engine = cv.dnn.ENGINE_CLASSIC
     session = cv.dnn.readNetFromONNX(onnx_model_path, engine)
     session.setPreferableBackend(args.backend)
     session.setPreferableTarget(args.target)
