@@ -18,7 +18,7 @@ const char* getFastCVErrorString(int status)
         case FASTCV_EUNSUPPORTED: return "Unsupported feature";
         case FASTCV_EHWQDSP: return "Hardware QDSP failed to respond";
         case FASTCV_EHWGPU: return "Hardware GPU failed to respond";
-        default: return "Unknow FastCV Error";
+        default: return "Unknown FastCV Error";
     }
 }
 
@@ -32,7 +32,7 @@ const char* borderToString(int border)
         case 3: return "BORDER_WRAP";
         case 4: return "BORDER_REFLECT_101";
         case 5: return "BORDER_TRANSPARENT";
-        default: return "Unknow border type";
+        default: return "Unknown border type";
     }
 }
 
@@ -51,6 +51,6 @@ const char* interpolationToString(int interpolation)
         case 8: return "WARP_FILL_OUTLIERS";
         case 16: return "WARP_INVERSE_MAP";
         case 32: return "WARP_RELATIVE_MAP";
-        default: return "Unknow border type";
+        default: return "Unknown interpolation type";
     }
 }
