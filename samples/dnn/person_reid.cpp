@@ -259,6 +259,9 @@ int main(int argc, char **argv)
     int fontWeight = 500;
 
     EngineType engine = ENGINE_AUTO;
+    if (backend != "default" || target != "cpu"){
+        engine = ENGINE_CLASSIC;
+    }
     Net reidNet = readNetFromONNX(modelPath, engine);
     reidNet.setPreferableBackend(getBackendID(backend));
     reidNet.setPreferableTarget(getTargetID(target));
