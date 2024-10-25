@@ -147,9 +147,10 @@ int main(int argc, char **argv)
     keys += genPreprocArguments(modelName, zooFile);
 
     parser = CommandLineParser(argc, argv, keys);
+    parser.about(about);
     if (!parser.has("@alias") || parser.has("help"))
     {
-        cout<<about<<endl;
+        parser.printMessage();
         return 0;
     }
 
@@ -160,8 +161,8 @@ int main(int argc, char **argv)
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
     String model = findModel(parser.get<String>("model"), sha1);
-    int backendId = getBackendID(parser.get<String>("backend"));
-    int targetId = getTargetID(parser.get<String>("target"));
+    const string backend = parser.get<String>("backend");
+    const string target = parser.get<String>("target");
     int stdSize = 20;
     int stdWeight = 400;
     int stdImgSize = 512;
@@ -211,9 +212,12 @@ int main(int argc, char **argv)
     CV_Assert(!model.empty());
     //! [Read and initialize network]
     EngineType engine = ENGINE_AUTO;
+    if (backend != "default" || target != "cpu"){
+        engine = ENGINE_CLASSIC;
+    }
     Net net = readNetFromONNX(model, engine);
-    net.setPreferableBackend(backendId);
-    net.setPreferableTarget(targetId);
+    net.setPreferableBackend(getBackendID(backend));
+    net.setPreferableTarget(getTargetID(target));
     //! [Read and initialize network]
     // Create a window
     static const string kWinName = "Deep learning semantic segmentation in OpenCV";
