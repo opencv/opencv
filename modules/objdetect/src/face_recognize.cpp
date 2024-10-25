@@ -210,7 +210,7 @@ Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& framework,
 #ifdef HAVE_OPENCV_DNN
     return makePtr<FaceRecognizerSFImpl>(framework, bufferModel, bufferConfig, backend_id, target_id);
 #else
-    CV_UNUSED(bufferModel); CV_UNUSED(bufferConfig); CV_UNUSED(backend_id); CV_UNUSED(target_id);
+    CV_UNUSED(framework);  CV_UNUSED(bufferModel); CV_UNUSED(bufferConfig); CV_UNUSED(backend_id); CV_UNUSED(target_id);
     CV_Error(cv::Error::StsNotImplemented, "cv::FaceRecognizerSF requires enabled 'dnn' module");
 #endif
 }
