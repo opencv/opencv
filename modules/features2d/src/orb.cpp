@@ -1036,7 +1036,11 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
     bool useOCL = false;
 #endif
 
-    Mat image = _image.getMat(), mask = _mask.getMat();
+    Mat image = _image.getMat(), mask;
+    if (!_mask.empty())
+    {
+        cv::threshold(_mask.getMat(), mask, 0, 255, cv::THRESH_BINARY);
+    }
     if( image.type() != CV_8UC1 )
         cvtColor(_image, image, COLOR_BGR2GRAY);
 

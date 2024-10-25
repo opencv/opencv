@@ -168,4 +168,44 @@ BIGDATA_TEST(Features2D_ORB, regression_opencv_python_537)  // memory usage: ~3 
     ASSERT_NO_THROW(orbPtr->detectAndCompute(img, noArray(), kps, fv));
 }
 
+TEST(Features2D_ORB, MaskValue)
+{
+    Mat gray = imread("features2d/tsukuba.png", IMREAD_GRAYSCALE);
+    ASSERT_FALSE(gray.empty());
+
+    cv::Rect roi(gray.cols/4, gray.rows/4, gray.cols/2, gray.rows/2);
+
+    Mat mask255 = Mat::zeros(gray.size(), CV_8UC1);
+    Mat mask1 = Mat::zeros(gray.size(), CV_8UC1);
+    mask255(roi).setTo(255);
+    mask1(roi).setTo(1);
+
+    Ptr<ORB> orb = cv::ORB::create();
+
+    vector<KeyPoint> keypoints_mask255, keypoints_mask1;
+    Mat descriptors_mask255, descriptors_mask1;
+
+    orb->detectAndCompute(gray, mask255, keypoints_mask255, descriptors_mask255, false);
+    orb->detectAndCompute(gray, mask1, keypoints_mask1, descriptors_mask1, false);
+
+    std::cout << "keypoints_mask255.size(): " << keypoints_mask255.size() << std::endl;
+    std::cout << "descriptors_mask255.size(): " << descriptors_mask255.size() << std::endl;
+    std::cout << "keypoints_mask1.size(): " << keypoints_mask1.size() << std::endl;
+    std::cout << "descriptors_mask1.size(): " << descriptors_mask1.size() << std::endl;
+
+    ASSERT_EQ(keypoints_mask255.size(), keypoints_mask1.size())
+        << "Number of keypoints differs between mask values 255 and 1";
+
+    if (keypoints_mask255.size() == keypoints_mask1.size())
+    {
+        ASSERT_EQ(descriptors_mask255.size, descriptors_mask1.size)
+            << "Descriptor sizes do not match";
+        ASSERT_EQ(descriptors_mask255.type(), descriptors_mask1.type())
+            << "Descriptor types do not match";
+
+        Mat diff = descriptors_mask255 != descriptors_mask1;
+        ASSERT_EQ(countNonZero(diff), 0)
+            << "Descriptors are not identical";
+    }
+}
 }} // namespace
