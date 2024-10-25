@@ -1018,8 +1018,8 @@ CV__DNN_INLINE_NS_BEGIN
 
     enum EngineType
     {
-        ENGINE_CLASSIC=1, //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
-        ENGINE_NEW=2,     //!< Force use the old dnn engine similar to 4.x branch
+        ENGINE_CLASSIC=1, //!< Force use the old dnn engine similar to 4.x branch
+        ENGINE_NEW=2,     //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
         ENGINE_AUTO=3     //!< Try to use the new engine and then fall back to the classic version.
     };
 
