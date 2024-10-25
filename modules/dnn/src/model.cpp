@@ -114,14 +114,17 @@ public:
         }
         Mat blob = dnn::blobFromImageWithParams(frame, param); // [1, 10, 10, 4]
 
-        net.setInput(blob);
-
         // Faster-RCNN or R-FCN
         if ((net.getMainGraph() && net.haveArg("im_info") && net.argKind(net.getArg("im_info")) == DNN_ARG_INPUT) ||
             (!net.getMainGraph() && net.getLayer(0)->outputNameToIndex("im_info") != -1))
         {
+            net.setInput(blob, "data");
             Mat imInfo(Matx13f(size.height, size.width, 1.6f));
             net.setInput(imInfo, "im_info");
+        }
+        else
+        {
+            net.setInput(blob);
         }
 
         net.forward(outs, outNames);

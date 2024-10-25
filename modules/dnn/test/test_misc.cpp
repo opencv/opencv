@@ -605,7 +605,14 @@ TEST(Net, forwardAndRetrieve)
     outNames.push_back("testLayer");
     std::vector<std::vector<Mat> > outBlobs;
 
-    net.forward(outBlobs, outNames);
+    if (net.getMainGraph())
+    {
+        // Issue: https://github.com/opencv/opencv/issues/26349
+        outBlobs.push_back({});
+        net.forward(outBlobs[0]);
+    }
+    else
+        net.forward(outBlobs, outNames);
 
     EXPECT_EQ(outBlobs.size(), 1);
     EXPECT_EQ(outBlobs[0].size(), 2);

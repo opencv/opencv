@@ -324,8 +324,8 @@ public:
     }
 
     Ptr<Layer> addLayer(Net& dstNet,
-                        String type,
-                        String name,
+                        const String& type,
+                        const String& name,
                         LayerParams& layerParams,
                         const std::vector<String>& inputs,
                         const std::vector<String>& outputs)
@@ -367,8 +367,11 @@ public:
         layerCounter.clear();
 
         // OLD ENGINE
-        addedBlobs.clear();
-        addedBlobs.reserve(layersSize + 1);
+        if(!newEngine)
+        {
+            addedBlobs.clear();
+            addedBlobs.reserve(layersSize + 1);
+        }
         std::vector<String> netInputs(net.input_size());
         std::vector<MatShape> inp_shapes;
 
@@ -674,7 +677,7 @@ public:
 
         if (newEngine)
         {
-            Ptr<Graph> curr_graph = netImpl->newGraph("GRAPH_NAME_TODO", modelInputs, true);
+            Ptr<Graph> curr_graph = netImpl->newGraph(net.name(), modelInputs, true);
             curr_graph->setOutputs(modelOutputs);
             curr_graph->setProg(curr_prog);
 
