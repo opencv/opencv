@@ -83,6 +83,7 @@ public:
                         bool testShapes = true, bool useWinograd = true)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
+        std::cout << "basename: " << basename << std::endl;
         std::vector<Mat> inps(numInps);
         Mat ref;
         if (ext == npy) {
@@ -142,7 +143,11 @@ public:
             l1 = std::max(l1, 1.4e-3);
             lInf = std::max(lInf, 8e-3);
         }
-
+        std::cout << "\n===> logs from testONNXModels" << std::endl;
+        std::cout << "ref shape: " << ref.shape() << std::endl;
+        std::cout << "ref sum: " << cv::sum(ref) << std::endl;
+        std::cout << "out shape: " << out.shape() << std::endl;
+        std::cout << "out sum: " << cv::sum(out) << std::endl;
         EXPECT_EQ(ref.shape(), out.shape());
         normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         if (checkNoFallbacks)

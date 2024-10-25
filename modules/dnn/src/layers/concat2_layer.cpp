@@ -133,6 +133,7 @@ public:
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::cout << "\n==>ConcatLayerImpl::forward" << std::endl;
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
@@ -159,6 +160,13 @@ public:
         if (outKind == _InputArray::STD_VECTOR_MAT) {
             std::vector<Mat> inps;
             inputs_arr.getMatVector(inps);
+            for (int i = 0; i < ninputs; i++) {
+                std::cout << "input shape: " << inps[i].size << std::endl;
+                std::cout << "input sum: " << cv::sum(inps[i]) << std::endl;
+                std::cout << "--------------------------------" << std::endl;
+            }
+
+
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             outs.resize(1);
             outs[0].fit(outShape, inpType);
@@ -167,6 +175,10 @@ public:
             // [TODO] more efficient OpenCL implementation
             std::vector<Mat> inps;
             inputs_arr.getMatVector(inps);
+            for (auto &inp : inps) {
+                std::cout << "input shape: " << inp.size << std::endl;
+                std::cout << "input sum: " << cv::sum(inp) << std::endl;
+            }
             std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
             outs.resize(1);
             outs[0].fit(outShape, inpType);

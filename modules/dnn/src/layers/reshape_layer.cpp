@@ -235,6 +235,10 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
 
+        std::cout << "ReshapeLayerImpl::getMemoryShapes" << std::endl;
+        for (auto &inp : inputs) {
+            std::cout << "input shape: " << inp << std::endl;
+        }
         if (inputs.size() == 1 || inputs.size() == requiredOutputs)
         {
             outputs.clear();
@@ -328,6 +332,7 @@ public:
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
+        std::cout << "\n==>ReshapeLayerImpl::forward" << std::endl;
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
@@ -337,12 +342,33 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+        for (auto &inp : inputs) {
+            std::cout << "input shape: " << inp.size << std::endl;
+            std::cout << "input sum: " << cv::sum(inp) << std::endl;
+            // inp is 3d mat. let's print the first 10 elements
+            // std::cout << "reshaped input first 10 elements: " << inp.row(0).colRange(0, 10) << std::endl;
+        }
+        auto *inp_ptr = inputs[0].ptr<float>();
+        for (int i = 0; i < inputs[0].total(); i++){
+            std::cout << inp_ptr[i] << " ";
+        }
+        std::cout << std::endl;
         for (size_t i = 0; i < outputs.size(); i++)
         {
             Mat srcBlob = inputs[i];
             if (outputs[i].data != srcBlob.data)
                 srcBlob.reshape(1, shape(outputs[i])).copyTo(outputs[i]);
         }
+        for (auto &out : outputs) {
+            std::cout << "output shape: " << out.size << std::endl;
+            std::cout << "output sum: " << cv::sum(out) << std::endl;
+        }
+
+        auto *out_ptr = outputs[0].ptr<float>();
+        for (int i = 0; i < outputs[0].total(); i++){
+            std::cout << out_ptr[i] << " ";
+        }
+        std::cout << "==>ReshapeLayerImpl::forward::done\n" << std::endl;
     }
 
 #ifdef HAVE_CANN

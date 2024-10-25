@@ -906,6 +906,7 @@ void ONNXImporter2::addLayer(LayerParams& layerParams,
                              const opencv_onnx::NodeProto& node_proto,
                              int max_inputs)
 {
+    std::cout << "\n==>addLayer" << std::endl;
     Ptr<Layer> layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
     if (!layer) {
         rememberMissingOp(layerParams.type);
@@ -914,10 +915,12 @@ void ONNXImporter2::addLayer(LayerParams& layerParams,
     size_t actual_inputs = std::min((size_t)max_inputs, node_inputs.size());
     layer->inputs = node_inputs;
     layer->inputs.resize(actual_inputs);
+    std::cout << "node outputs size: " << node_outputs.size() << std::endl;
     layer->outputs = node_outputs;
     layer->netimpl = netimpl;
     CV_Assert(netimpl->dump_indent == 3);
     curr_prog.push_back(layer);
+    std::cout << "==>addLayer done\n" << std::endl;
 }
 
 void ONNXImporter2::parseNeg(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1113,7 +1116,53 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
 // BUG: https://github.com/opencv/opencv/issues/26308
 void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
-    rememberMissingOp(node_proto_.op_type());
+    std::cout << "\n==>parseLSTM" << std::endl;
+    opencv_onnx::NodeProto lstm_proto = node_proto_;
+    layerParams.type = "LSTM2";
+
+    layerParams.set("is_onnx", true);
+    layerParams.set("reverse", layerParams.get<String>("direction", "") == "reverse");
+    layerParams.set("bidirectional", layerParams.get<String>("direction", "") == "bidirectional");
+
+    std::cout << "initial proto node output size: " << lstm_proto.output_size() << std::endl;
+
+    for (int i = 0; i < lstm_proto.output_size(); i++)
+        std::cout << "output [" << i << "] is empty: " << lstm_proto.output(i).empty() << std::endl;
+
+    bool need_yc = lstm_proto.output_size() > 2 && !lstm_proto.output(2).empty();
+    bool need_yh = lstm_proto.output_size() > 1 && !lstm_proto.output(1).empty();
+    bool need_y  = lstm_proto.output_size() > 0 && !lstm_proto.output(0).empty();
+
+    const std::string y_name = need_y ? lstm_proto.output(0) : "";
+    const std::string yh_name = need_yh ? lstm_proto.output(1) : "";
+    const std::string yc_name = need_yc ? lstm_proto.output(2) : "";
+
+    layerParams.set("produce_cell_output", need_yc);
+    layerParams.set("produce_output_yh", need_yh);
+    std::cout << "needs_yc: " << need_yc << std::endl;
+    std::cout << "needs_yh: " << need_yh << std::endl;
+    std::cout << "needs_y: " << need_y << std::endl;
+
+    // print names of the outputs
+    for (int i = 0; i < lstm_proto.output_size(); i++)
+        std::cout << "output [" << i << "] name: " << lstm_proto.output(i) << std::endl;
+
+    // lstm_proto.clear_output();
+    // std::cout << "after clear proto node output size: " << lstm_proto.output_size() << std::endl;
+    // if (need_y || need_yh)
+    // {
+    //     // give random names to LSTMLayer's outputs because every output needs postprocessing
+    //     std::cout << "layerParams.name: " << cv::format("%s_y", layerParams.name.c_str()) << std::endl;
+    //     lstm_proto.add_output(cv::format("%s_y", layerParams.name.c_str()));
+    // }
+    // if (need_yc)
+    // {
+    //     lstm_proto.add_output(yc_name);
+    // }
+    std::cout << "before addLayer num proto outputs: " << lstm_proto.output_size() << std::endl;
+
+    addLayer(layerParams, lstm_proto);
+    std::cout << "==>parseLSTM done\n" << std::endl;
 }
 
  // BUG: https://github.com/opencv/opencv/issues/26309
