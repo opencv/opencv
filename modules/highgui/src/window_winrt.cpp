@@ -41,10 +41,13 @@
     __FILE__, __LINE__ );                       \
 }
 
+#ifdef CV_ERROR
+#undef CV_ERROR
 #define CV_ERROR( Code, Msg )                                       \
 {                                                                   \
     cvError( (Code), cvFuncName, Msg, __FILE__, __LINE__ );         \
 };
+#endif
 
 /********************************** WinRT Specific API Implementation ******************************************/
 
@@ -86,6 +89,7 @@ CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
 
 CV_IMPL int cvNamedWindow(const char* name, int flags)
 {
+    CV_UNUSED(flags);
     CV_FUNCNAME("cvNamedWindow");
 
     if (!name)
@@ -115,8 +119,6 @@ CV_IMPL int cvCreateTrackbar2(const char* trackbar_name, const char* window_name
     int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
 {
     CV_FUNCNAME("cvCreateTrackbar2");
-
-    int pos = 0;
 
     if (!window_name || !trackbar_name)
         CV_ERROR(cv::Error::StsNullPtr, "NULL window or trackbar name");
@@ -197,7 +199,7 @@ CV_IMPL int cvGetTrackbarPos(const char* trackbar_name, const char* window_name)
     CvTrackbar* trackbar = HighguiBridge::getInstance().findTrackbarByName(trackbar_name, window_name);
 
     if (trackbar)
-        pos = trackbar->getPosition();
+        pos = (int)trackbar->getPosition();
 
     return pos;
 }
@@ -209,11 +211,11 @@ CV_IMPL int cvWaitKey(int delay)
     CV_WINRT_NO_GUI_ERROR("cvWaitKey");
 
     // see https://msdn.microsoft.com/en-us/library/windows/desktop/ms724411(v=vs.85).aspx
-    int time0 = GetTickCount64();
+    //int time0 = GetTickCount64();
 
     for (;;)
     {
-        CvWindow* window;
+        // CvWindow* window;
 
         if (delay <= 0)
         {
@@ -224,6 +226,7 @@ CV_IMPL int cvWaitKey(int delay)
 
 CV_IMPL void cvSetMouseCallback(const char* window_name, CvMouseCallback on_mouse, void* param)
 {
+    CV_UNUSED(on_mouse); CV_UNUSED(param);
     CV_WINRT_NO_GUI_ERROR("cvSetMouseCallback");
 
     CV_FUNCNAME("cvSetMouseCallback");
@@ -242,11 +245,13 @@ CV_IMPL void cvSetMouseCallback(const char* window_name, CvMouseCallback on_mous
 
 CV_IMPL void cvMoveWindow(const char* name, int x, int y)
 {
+    CV_UNUSED(name); CV_UNUSED(x); CV_UNUSED(y);
     CV_WINRT_NO_GUI_ERROR("cvMoveWindow");
 }
 
 CV_IMPL void cvResizeWindow(const char* name, int width, int height)
 {
+    CV_UNUSED(name); CV_UNUSED(width); CV_UNUSED(height);
     CV_WINRT_NO_GUI_ERROR("cvResizeWindow");
 }
 
@@ -269,10 +274,12 @@ CV_IMPL const char* cvGetWindowName(void*)
 }
 
 void cvSetModeWindow_WinRT(const char* name, double prop_value) {
+    CV_UNUSED(name); CV_UNUSED(prop_value);
     CV_WINRT_NO_GUI_ERROR("cvSetModeWindow");
 }
 
 double cvGetModeWindow_WinRT(const char* name) {
+    CV_UNUSED(name);
     CV_WINRT_NO_GUI_ERROR("cvGetModeWindow");
     return cv::Error::StsNotImplemented;
 }
