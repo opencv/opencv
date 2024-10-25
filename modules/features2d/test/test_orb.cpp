@@ -170,7 +170,7 @@ BIGDATA_TEST(Features2D_ORB, regression_opencv_python_537)  // memory usage: ~3 
 
 TEST(Features2D_ORB, MaskValue)
 {
-    Mat gray = imread("features2d/tsukuba.png", IMREAD_GRAYSCALE);
+    Mat gray = imread(cvtest::findDataFile("features2d/tsukuba.png"), IMREAD_GRAYSCALE);
     ASSERT_FALSE(gray.empty());
 
     cv::Rect roi(gray.cols/4, gray.rows/4, gray.cols/2, gray.rows/2);
