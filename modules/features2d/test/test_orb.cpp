@@ -188,24 +188,11 @@ TEST(Features2D_ORB, MaskValue)
     orb->detectAndCompute(gray, mask255, keypoints_mask255, descriptors_mask255, false);
     orb->detectAndCompute(gray, mask1, keypoints_mask1, descriptors_mask1, false);
 
-    std::cout << "keypoints_mask255.size(): " << keypoints_mask255.size() << std::endl;
-    std::cout << "descriptors_mask255.size(): " << descriptors_mask255.size() << std::endl;
-    std::cout << "keypoints_mask1.size(): " << keypoints_mask1.size() << std::endl;
-    std::cout << "descriptors_mask1.size(): " << descriptors_mask1.size() << std::endl;
-
     ASSERT_EQ(keypoints_mask255.size(), keypoints_mask1.size())
         << "Number of keypoints differs between mask values 255 and 1";
 
-    if (keypoints_mask255.size() == keypoints_mask1.size())
-    {
-        ASSERT_EQ(descriptors_mask255.size, descriptors_mask1.size)
-            << "Descriptor sizes do not match";
-        ASSERT_EQ(descriptors_mask255.type(), descriptors_mask1.type())
-            << "Descriptor types do not match";
-
-        Mat diff = descriptors_mask255 != descriptors_mask1;
-        ASSERT_EQ(countNonZero(diff), 0)
-            << "Descriptors are not identical";
-    }
+    Mat diff = descriptors_mask255 != descriptors_mask1;
+    ASSERT_EQ(countNonZero(diff), 0);
 }
+
 }} // namespace
