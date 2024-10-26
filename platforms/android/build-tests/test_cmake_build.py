@@ -9,8 +9,8 @@ log.basicConfig(format='%(message)s', level=log.DEBUG)
 CMAKE_TEMPLATE='''\
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-# Enable C++11
-set(CMAKE_CXX_STANDARD 11)
+# Enable C++17
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 SET(PROJECT_NAME hello-android)
