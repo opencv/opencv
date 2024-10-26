@@ -2162,14 +2162,11 @@ template<typename R> struct TheTest
         }
     }
 
-    // BUG: https://github.com/opencv/opencv/issues/26362
     TheTest &test_sincos_fp16() {
-#if 0 // CV_SIMD_FP16
         hfloat flt16_min;
         uint16_t flt16_min_hex = 0x0400;
         std::memcpy(&flt16_min, &flt16_min_hex, sizeof(hfloat));
-        __test_sincos((hfloat) 1e-3, flt16_min);
-#endif
+        __test_sincos((hfloat) 4e-3, flt16_min);
         return *this;
     }
 
