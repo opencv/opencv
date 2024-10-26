@@ -112,7 +112,7 @@ class dnn_test(NewOpenCVTests):
     def checkIETarget(self, backend, target):
         proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
         model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
-        net = cv.dnn.readNet(proto, model)
+        net = cv.dnn.readNet(proto, model, engine=cv.dnn.ENGINE_CLASSIC)
         try:
             net.setPreferableBackend(backend)
             net.setPreferableTarget(target)
