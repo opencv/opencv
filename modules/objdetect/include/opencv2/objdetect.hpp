@@ -87,6 +87,7 @@ namespace cv
 //! @addtogroup objdetect_qrcode
 //! @{
 
+/** @brief QR code encoder. */
 class CV_EXPORTS_W QRCodeEncoder {
 protected:
     QRCodeEncoder();  // use ::create()
@@ -151,6 +152,8 @@ public:
     CV_WRAP virtual void encodeStructuredAppend(const String& encoded_info, OutputArrayOfArrays qrcodes) = 0;
 
 };
+
+/** @brief QR code detector. */
 class CV_EXPORTS_W_SIMPLE QRCodeDetector : public GraphicalCodeDetector
 {
 public:
@@ -192,6 +195,7 @@ public:
                                               OutputArray straight_qrcode = noArray());
 };
 
+/** @brief QR code detector with Aruco. */
 class CV_EXPORTS_W_SIMPLE QRCodeDetectorAruco : public GraphicalCodeDetector {
 public:
     CV_WRAP QRCodeDetectorAruco();
