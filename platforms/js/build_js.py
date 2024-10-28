@@ -254,12 +254,12 @@ if __name__ == "__main__":
     parser.add_argument('--cmake_option', action='append', help="Append CMake options")
     # Use flag --build_flags="-s USE_PTHREADS=0 -Os" for one and more arguments as in the example
     parser.add_argument('--build_flags', help="Append Emscripten build options")
-    parser.add_argument('--build_wasm_intrin_test', default=False, action="store_true", help="Build WASM intrin tests")
+    parser.add_argument('--build_wasm_intrin_test', action="store_true", help="Build WASM intrin tests")
     # Write a path to modify file like argument of this flag
     parser.add_argument('--config', help="Specify configuration file with own list of exported into JS functions")
     parser.add_argument('--webnn', action="store_true", help="Enable WebNN Backend")
 
-    transformed_args = ["--cmake_option=%s".format(arg) if arg[:2] == "-D" else arg for arg in sys.argv[1:]]
+    transformed_args = ["--cmake_option={}".format(arg) if arg[:2] == "-D" else arg for arg in sys.argv[1:]]
     args = parser.parse_args(transformed_args)
 
     log.debug("Args: %s", args)
