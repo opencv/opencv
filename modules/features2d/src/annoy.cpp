@@ -149,9 +149,8 @@ public:
             {
                 index->get_nns_by_vector(query.ptr<DataType>(i), knn, search_k, &nns, &distances);
 
-                int num = int(nns.size());
-                memcpy(indices.ptr<int>(i), nns.data(), num*sizeof(int));
-                memcpy(dists.ptr<DataType>(i), distances.data(), num*sizeof(DataType));
+                std::copy(nns.begin(), nns.end(), indices.ptr<int>(i));
+                std::copy(distances.begin(), distances.end(), dists.ptr<DataType>(i));
 
                 nns.clear();
                 distances.clear();
