@@ -157,6 +157,9 @@ const string exts[] = {
 #ifdef HAVE_JPEG
     "jpg",
 #endif
+#ifdef HAVE_JPEGXL
+    "jxl",
+#endif
 #if (defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)) \
     || defined(HAVE_OPENJPEG)
     "jp2",

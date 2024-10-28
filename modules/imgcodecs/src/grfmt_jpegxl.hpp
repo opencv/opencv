@@ -7,10 +7,11 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +24,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -39,27 +40,75 @@
 //
 //M*/
 
-#ifndef _GRFMTS_H_
-#define _GRFMTS_H_
+#ifndef _GRFMT_JPEGXL_H_
+#define _GRFMT_JPEGXL_H_
 
 #include "grfmt_base.hpp"
-#include "grfmt_avif.hpp"
-#include "grfmt_bmp.hpp"
-#include "grfmt_sunras.hpp"
-#include "grfmt_jpeg.hpp"
-#include "grfmt_jpegxl.hpp"
-#include "grfmt_pxm.hpp"
-#include "grfmt_pfm.hpp"
-#include "grfmt_tiff.hpp"
-#include "grfmt_spng.hpp"
-#include "grfmt_png.hpp"
-#include "grfmt_jpeg2000.hpp"
-#include "grfmt_jpeg2000_openjpeg.hpp"
-#include "grfmt_exr.hpp"
-#include "grfmt_webp.hpp"
-#include "grfmt_hdr.hpp"
-#include "grfmt_gdal.hpp"
-#include "grfmt_gdcm.hpp"
-#include "grfmt_pam.hpp"
+#include <jxl/encode_cxx.h>
+#include <jxl/decode_cxx.h>
+#include <jxl/thread_parallel_runner_cxx.h>
+#include <vector>
+#include <memory>
 
-#endif/*_GRFMTS_H_*/
+#ifdef HAVE_JPEGXL
+
+// Jpeg XL codec
+
+namespace cv
+{
+
+/**
+* @brief JpegXL codec using libjxl library
+*/
+
+class JpegXLDecoder CV_FINAL : public BaseImageDecoder
+{
+public:
+
+    JpegXLDecoder();
+    virtual ~JpegXLDecoder();
+
+    bool  readData( Mat& img ) CV_OVERRIDE;
+    bool  readHeader() CV_OVERRIDE;
+    void  close();
+
+    ImageDecoder newDecoder() const CV_OVERRIDE;
+
+protected:
+    std::unique_ptr<FILE, decltype(&fclose)> m_f;
+    JxlDecoderPtr m_decoder;
+    JxlThreadParallelRunnerPtr m_parallel_runner;
+    JxlPixelFormat m_format;
+    std::vector<uint8_t> m_read_buffer;
+
+private:
+    JpegXLDecoder(const JpegXLDecoder &); // copy disabled
+    JpegXLDecoder& operator=(const JpegXLDecoder &); // assign disabled
+
+    bool read(Mat* pimg);
+};
+
+
+class JpegXLEncoder CV_FINAL : public BaseImageEncoder
+{
+public:
+    JpegXLEncoder();
+    virtual ~JpegXLEncoder();
+
+    bool  write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
+    ImageEncoder newEncoder() const CV_OVERRIDE;
+
+protected:
+    JxlEncoder* m_encoder;
+    JxlEncoderStatus m_status;
+
+private:
+    JpegXLEncoder(const JpegXLEncoder &); // copy disabled
+    JpegXLEncoder& operator=(const JpegXLEncoder &); // assign disabled
+};
+
+}
+
+#endif
+
+#endif/*_GRFMT_JPEGXL_H_*/

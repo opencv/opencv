@@ -203,6 +203,10 @@ struct ImageCodecInitializer
         decoders.push_back( makePtr<Jpeg2KDecoder>() );
         encoders.push_back( makePtr<Jpeg2KEncoder>() );
     #endif
+    #ifdef HAVE_JPEGXL
+        decoders.push_back( makePtr<JpegXLDecoder>() );
+        encoders.push_back( makePtr<JpegXLEncoder>() );
+    #endif
     #ifdef HAVE_OPENJPEG
         decoders.push_back( makePtr<Jpeg2KJP2OpjDecoder>() );
         decoders.push_back( makePtr<Jpeg2KJ2KOpjDecoder>() );
