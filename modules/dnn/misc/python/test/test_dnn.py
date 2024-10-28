@@ -112,7 +112,7 @@ class dnn_test(NewOpenCVTests):
     def checkIETarget(self, backend, target):
         proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
         model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
-        net = cv.dnn.readNet(proto, model)
+        net = cv.dnn.readNet(proto, model, engine=cv.dnn.ENGINE_CLASSIC)
         try:
             net.setPreferableBackend(backend)
             net.setPreferableTarget(target)
@@ -324,6 +324,9 @@ class dnn_test(NewOpenCVTests):
                                  testScores, testBoxes, 0.5)
 
     def test_async(self):
+        # bug: https://github.com/opencv/opencv/issues/26376
+        raise unittest.SkipTest("The new dnn engine does not support async inference")
+
         timeout = 10*1000*10**6  # in nanoseconds (10 sec)
         proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
         model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
@@ -337,7 +340,7 @@ class dnn_test(NewOpenCVTests):
 
             printParams(backend, target)
 
-            netSync = cv.dnn.readNet(proto, model)
+            netSync = cv.dnn.readNet(proto, model, engine=cv.dnn.ENGINE_CLASSIC)
             netSync.setPreferableBackend(backend)
             netSync.setPreferableTarget(target)
 
@@ -463,7 +466,7 @@ class dnn_test(NewOpenCVTests):
         for backend, target in self.dnnBackendsAndTargets:
             printParams(backend, target)
 
-            net = cv.dnn.readNet(model)
+            net = cv.dnn.readNet(model, engine=cv.dnn.ENGINE_CLASSIC)
 
             net.setPreferableBackend(backend)
             net.setPreferableTarget(target)
