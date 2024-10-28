@@ -183,8 +183,11 @@ def main():
     else:
         args.yolo_model = findModel(args.yolo_model, args.yolo_sha1)
 
-    yolo_net = cv.dnn.readNet(args.yolo_model)
-    reid_net = cv.dnn.readNet(args.model)
+    engine = cv.dnn.ENGINE_AUTO
+    if args.backend != "default" or args.backend != "cpu":
+        engine = cv.dnn.ENGINE_CLASSIC
+    yolo_net = cv.dnn.readNetFromONNX(args.yolo_model, engine)
+    reid_net = cv.dnn.readNetFromONNX(args.model, engine)
     reid_net.setPreferableBackend(get_backend_id(args.backend))
     reid_net.setPreferableTarget(get_target_id(args.target))
     cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
