@@ -195,7 +195,7 @@ public:
                                               OutputArray straight_qrcode = noArray());
 };
 
-/** @brief QR code detector with Aruco. */
+/** @brief QR code detector based on Aruco markers detection code. */
 class CV_EXPORTS_W_SIMPLE QRCodeDetectorAruco : public GraphicalCodeDetector {
 public:
     CV_WRAP QRCodeDetectorAruco();
