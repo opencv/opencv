@@ -3114,6 +3114,10 @@ class CV_EXPORTS Algorithm;
 template<typename _Tp, typename _EnumTp = void> struct ParamType {};
 
 
+/** @example samples/cpp/snippets/detect_blob.cpp
+An example using the BLOB to detect and filter region.
+*/
+
 /** @brief This is a base class for all more or less complex algorithms in OpenCV
 
 especially for classes of algorithms, for which there can be multiple implementations. The examples
@@ -3124,9 +3128,6 @@ etc.).
 
 Here is example of SimpleBlobDetector use in your application via Algorithm interface:
 @snippet snippets/core_various.cpp Algorithm
-
-@example samples/cpp/snippets/detect_blob.cpp
-An example using the BLOB to detect and filter region.
 
 */
 class CV_EXPORTS_W Algorithm
