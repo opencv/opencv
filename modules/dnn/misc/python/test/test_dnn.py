@@ -324,6 +324,9 @@ class dnn_test(NewOpenCVTests):
                                  testScores, testBoxes, 0.5)
 
     def test_async(self):
+        # bug: https://github.com/opencv/opencv/issues/26376
+        raise unittest.SkipTest("The new dnn engine does not support async inference")
+
         timeout = 10*1000*10**6  # in nanoseconds (10 sec)
         proto = self.find_dnn_file('dnn/layers/layer_convolution.prototxt')
         model = self.find_dnn_file('dnn/layers/layer_convolution.caffemodel')
