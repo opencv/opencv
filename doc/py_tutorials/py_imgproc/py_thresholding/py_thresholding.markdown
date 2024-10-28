@@ -11,7 +11,8 @@ Simple Thresholding
 -------------------
 
 Here, the matter is straight-forward. For every pixel, the same threshold value is applied.
-If the pixel value is smaller than or equal to the threshold, it is set to 0, otherwise it is set to a maximum value.
+In simple thresholding, all pixels with values greater than the threshold are changed to have the maximum value, 
+while all pixels with values less than or equal to the threshold are set to 0.
 The function **cv.threshold** is used to apply the thresholding.
 The first argument is the source image, which **should be a grayscale image**.
 The second argument is the threshold value which is used to classify the pixel values.
