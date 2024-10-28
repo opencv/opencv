@@ -1627,10 +1627,8 @@ public:
     /** @brief Performs a K-nearest neighbor search for given query vector(s) using the index.
      *
      *  @param query The query vector(s).
-     *  @param indices Matrix that contains the indices of the K-nearest neighbors found. It must have
-        at least knn size.
-     *  @param dists Matrix that contains the distances to the K-nearest neighbors found. It must have
-        at least knn size.
+     *  @param indices Matrix that will contain the indices of the K-nearest neighbors found, optional.
+     *  @param dists Matrix that will contain the distances to the K-nearest neighbors found, optional.
      *  @param knn Number of nearest neighbors to search for.
      *  @param search_k The maximum number of nodes to inspect, which defaults to trees x knn if not provided.
      */
