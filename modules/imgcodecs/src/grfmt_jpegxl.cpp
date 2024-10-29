@@ -1,44 +1,6 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                        Intel License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of Intel Corporation may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
-
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "precomp.hpp"
 #include "grfmt_jpegxl.hpp"
 
@@ -51,12 +13,12 @@ namespace cv
 
 /////////////////////// JpegXLDecoder ///////////////////
 
-JpegXLDecoder::JpegXLDecoder() : m_f(nullptr, fclose)
+JpegXLDecoder::JpegXLDecoder() : m_f(nullptr, &fclose)
 {
     m_signature = "\xFF\x0A";
     m_decoder = nullptr;
     m_buf_supported = true;
-    m_type = -1;
+    m_type = m_convert = -1;
 }
 
 JpegXLDecoder::~JpegXLDecoder()
@@ -72,7 +34,7 @@ void JpegXLDecoder::close()
         m_f.release();
     m_read_buffer = {};
     m_width = m_height = 0;
-    m_type = -1;
+    m_type = m_convert = -1;
 }
 
 ImageDecoder JpegXLDecoder::newDecoder() const
@@ -102,7 +64,7 @@ bool JpegXLDecoder::read(Mat* pimg)
 
     // Set up parallel m_parallel_runner
     if (!m_parallel_runner) {
-        m_parallel_runner = JxlThreadParallelRunnerMake(nullptr, JxlThreadParallelRunnerDefaultNumWorkerThreads());
+        m_parallel_runner = JxlThreadParallelRunnerMake(nullptr, cv::getNumThreads());
         if (JXL_DEC_SUCCESS != JxlDecoderSetParallelRunner(m_decoder.get(),
                                                             JxlThreadParallelRunner,
                                                             m_parallel_runner.get())) {
@@ -121,9 +83,9 @@ bool JpegXLDecoder::read(Mat* pimg)
         if (!pimg->isContinuous())
             return false;
         if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutBuffer(m_decoder.get(), 
-                                                        &m_format,
-                                                        pimg->ptr<uint8_t>(),
-                                                        pimg->total() * pimg->elemSize())) {
+                                                           &m_format,
+                                                           pimg->ptr<uint8_t>(),
+                                                           pimg->total() * pimg->elemSize())) {
             return false;
         }
     }
@@ -135,27 +97,27 @@ bool JpegXLDecoder::read(Mat* pimg)
         if (status == JXL_DEC_NEED_MORE_INPUT) {
             size_t remaining = JxlDecoderReleaseInput(m_decoder.get());
             // Move any remaining bytes to the beginning
-            if (remaining > 0) {
+            if (remaining > 0)
                 memmove(m_read_buffer.data(), m_read_buffer.data() + m_read_buffer.size() - remaining, remaining);
-            }
-            
             // Read more data from file
             size_t bytes_read = fread(m_read_buffer.data() + remaining, 
                                     1, m_read_buffer.size() - remaining, m_f.get());
             if (bytes_read == 0) {
                 if (ferror(m_f.get())) {
-                    throw std::runtime_error("Error reading input file");
+                    CV_LOG_WARNING(NULL, "Error reading input file");
+                    return false;
                 }
                 // If we reached EOF but decoder needs more input, file is truncated
                 if (status == JXL_DEC_NEED_MORE_INPUT) {
-                    throw std::runtime_error("Truncated JXL file");
+                    CV_LOG_WARNING(NULL, "Truncated JXL file");
+                    return false;
                 }
             }
             
             // Set input buffer
             if (JXL_DEC_SUCCESS != JxlDecoderSetInput(m_decoder.get(), 
-                                                        m_read_buffer.data(),
-                                                        bytes_read + remaining)) {
+                                                      m_read_buffer.data(),
+                                                      bytes_read + remaining)) {
                 return false;
             }
         }
@@ -179,15 +141,17 @@ bool JpegXLDecoder::read(Mat* pimg)
                     JXL_LITTLE_ENDIAN, // endianness
                     0 // align stride to bytes
                 };
-                switch (info.num_color_channels) {
-                case 3:
-                    m_convert = cv::COLOR_RGB2BGR;
-                    break;
-                case 4:
-                    m_convert = cv::COLOR_RGBA2BGRA;
-                    break;
-                default:
-                    m_convert = -1;
+                if (!m_use_rgb) {
+                    switch (info.num_color_channels) {
+                    case 3:
+                        m_convert = cv::COLOR_RGB2BGR;
+                        break;
+                    case 4:
+                        m_convert = cv::COLOR_RGBA2BGRA;
+                        break;
+                    default:
+                        m_convert = -1;
+                    }
                 }
                 if (info.exponent_bits_per_sample > 0) {
                     m_format.data_type = JXL_TYPE_FLOAT;
@@ -219,6 +183,8 @@ bool JpegXLDecoder::read(Mat* pimg)
                 close();
                 return false;
             }
+            default:
+                break;
         }
     } while (status != JXL_DEC_SUCCESS);
 
@@ -228,7 +194,6 @@ bool JpegXLDecoder::read(Mat* pimg)
 bool JpegXLDecoder::readHeader()
 {
     close();
-
     return read(nullptr);
 }
 
@@ -236,7 +201,6 @@ bool JpegXLDecoder::readData(Mat& img)
 {
     if (!m_decoder || m_width == 0 || m_height == 0)
         return false;
-
     return read(&img);
 }
 
@@ -266,11 +230,8 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
         return false;
 
     JxlThreadParallelRunnerPtr runner = JxlThreadParallelRunnerMake(
-        /*memory_manager=*/nullptr,
-        JxlThreadParallelRunnerDefaultNumWorkerThreads());
-    if (JXL_ENC_SUCCESS != JxlEncoderSetParallelRunner(encoder.get(),
-        JxlThreadParallelRunner,
-        runner.get()))
+        /*memory_manager=*/nullptr, cv::getNumThreads());
+    if (JXL_ENC_SUCCESS != JxlEncoderSetParallelRunner(encoder.get(),  JxlThreadParallelRunner, runner.get()))
         return false;
 
     JxlBasicInfo info;
@@ -291,7 +252,7 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
         type = JXL_TYPE_UINT16;
     JxlPixelFormat format = {(uint32_t)img.channels(), type, JXL_NATIVE_ENDIAN, 0};
     JxlColorEncoding color_encoding = {};
-    JXL_BOOL is_gray = TO_JXL_BOOL(format.num_channels < 3);
+    JXL_BOOL is_gray(format.num_channels < 3 ? JXL_TRUE : JXL_FALSE);
     JxlColorEncodingSetToSRGB(&color_encoding, is_gray);
     if (JXL_ENC_SUCCESS != JxlEncoderSetColorEncoding(encoder.get(), &color_encoding))
         return false;
@@ -353,7 +314,7 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
     JxlEncoderCloseInput(encoder.get());
 
     const size_t buffer_size = 16384;  // 16KB chunks
-    std::unique_ptr<FILE, decltype(&fclose)> f(fopen(m_filename.c_str(), "wb"), fclose);
+    std::unique_ptr<FILE, int (*)(FILE*)> f(fopen(m_filename.c_str(), "wb"), &fclose);
     std::vector<uint8_t> compressed(buffer_size);
     JxlEncoderStatus process_result = JXL_ENC_NEED_MORE_OUTPUT;
     while (process_result == JXL_ENC_NEED_MORE_OUTPUT) {
@@ -363,8 +324,10 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
         if (JXL_ENC_ERROR == process_result)
             return false;
         const size_t offset = next_out - compressed.data();
-        if (offset != fwrite(compressed.data(), 1, offset, f.get()))
+        if (offset != fwrite(compressed.data(), 1, offset, f.get())) {
+            CV_LOG_WARNING(NULL, "Error writing to output file");
             return false;
+        }
     }
     return true;
 }
