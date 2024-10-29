@@ -14,6 +14,7 @@ For VitTrack:
     vitTracker: https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_vittrack/object_tracking_vittrack_2023sep.onnx
 '''
 
+import sys
 import cv2 as cv
 import argparse
 from common import *
@@ -26,44 +27,32 @@ def help():
 
         To run:
             nano:
-                Example: python object_tracker.py nano --nanotrack_backbone=<path to nanotrack_backbone onnx model> --nanotrack_head=<path to nanotrack_head onnx model>
+                Example: python object_tracker.py nano
             vit:
-                Example: python object_tracker.py vit --model=<path to vitTracker onnx model>
+                Example: python object_tracker.py vit
             dasiamrpn:
-                Example: python object_tracker.py dasiamrpn --dasiamrpn_model=<path to dasiamrpn_model onnx model> --kernel_r1=<path to dasiamrpn_kernel_r1 onnx model> --kernel_cls1=<path to dasiamrpn_kernel_cls1 onnx model>
+                Example: python object_tracker.py dasiamrpn
         '''
     )
 
 def createTracker():
-    if args.alias == 'dasiamrpn' or args.dasiamrpn_model is not None:
-        if args.dasiamrpn_model is None or args.kernel_r1 is None or args.kernel_cls1 is None:
-            print("Pass model files using --dasiamrpn_model , --kernel_cls1 and --kernel_r1 arguments for using dasiamrpn tracker. \nDownload dasiamrpn_model using link: https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0")
-            print("And, download kernel_r1 using link: https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0")
-            print("And, download kernel_cls1 using link: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0")
-            exit(-1)
+    if args.alias == 'dasiamrpn':
         print("Using Dasiamrpn Tracker.")
         params = cv.TrackerDaSiamRPN_Params()
-        params.model = findModel(args.dasiamrpn_model, "")
-        params.kernel_cls1 = findModel(args.kernel_cls1, "")
-        params.kernel_r1 = findModel(args.kernel_r1, "")
+        params.model = findModel(args.model, args.sha1)
+        params.kernel_cls1 = findModel(args.dasiamrpn_kernel_cls_model, args.dasiamrpn_kernel_cls_sha1)
+        params.kernel_r1 = findModel(args.dasiamrpn_kernel_r1_model, args.dasiamrpn_kernel_r1_sha1)
         tracker = cv.TrackerDaSiamRPN_create(params)
-    elif args.alias == 'nano' or args.nanotrack_head is not None:
-        if args.nanotrack_backbone is None or args.nanotrack_head is None:
-            print("Pass model files using --nanotrack_head and --nanotrack_backbone arguments for using nano tracker. \nDownload nanotrack_head using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx")
-            print("And, download nanotrack_backbone using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx")
-            exit(-1)
+    elif args.alias == 'nano':
         print("Using Nano Tracker.")
         params = cv.TrackerNano_Params()
-        params.backbone = findModel(args.nanotrack_backbone, "")
-        params.neckhead = findModel(args.nanotrack_head, "")
+        params.backbone = findModel(args.nanotrack_back_model, args.nanotrack_back_sha1)
+        params.neckhead = findModel(args.nanotrack_head_model, args.nanotrack_head_sha1)
         tracker = cv.TrackerNano_create(params)
-    elif args.alias == 'vit' or args.model is not None:
+    elif args.alias == 'vit':
         print("Using Vit Tracker.")
-        sha1 = ""
-        if hasattr(args, "sha1"):
-            sha1 = args.sha1
         params = cv.TrackerVit_Params()
-        params.net = findModel(args.model, sha1)
+        params.net = findModel(args.model, args.sha1)
         tracker = cv.TrackerVit_create(params)
     else:
         help()
@@ -142,24 +131,25 @@ def main():
 if __name__ == '__main__':
     print(__doc__)
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("alias", type=str, nargs='?', help="alias i.e. (vit, nano, or dasiamrpn)")
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument("--input", type=str, help="Path to video source")
-    parser.add_argument("--dasiamrpn_model", type=str, help="Path to onnx model of DaSiamRPN net")
-    parser.add_argument("--kernel_r1", type=str, help="Path to onnx model of DaSiamRPN kernel_r1")
-    parser.add_argument("--kernel_cls1", type=str, help="Path to onnx model of DaSiamRPN kernel_cls1")
-    parser.add_argument("--nanotrack_backbone", type=str, help="Path to onnx model of NanoTrack backBone")
-    parser.add_argument("--nanotrack_head", type=str, help="Path to onnx model of NanoTrack headNeck")
     args, _ = parser.parse_known_args()
-    if args.alias == "vit":
-        add_preproc_args(args.zoo, parser, 'object_tracker', alias="vit")
-        parser = argparse.ArgumentParser(parents=[parser],
-                                        description='Object tracking using OpenCV.',
-                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    else:
-        parser.add_argument("--model", type=str, help="Path to onnx model of  vittrack")
-        parser = argparse.ArgumentParser(parents=[parser], add_help=True)
+
+    model_name = sys.argv[1]
+    add_preproc_args(args.zoo, parser, 'object_tracker')
+    if model_name == "dasiamrpn":
+        add_preproc_args(args.zoo, parser, 'object_tracker', prefix="dasiamrpn_kernel_r1_")
+        add_preproc_args(args.zoo, parser, 'object_tracker', prefix="dasiamrpn_kernel_cls_")
+    elif model_name == "nano":
+        add_preproc_args(args.zoo, parser, 'object_tracker', prefix="nanotrack_back_")
+        add_preproc_args(args.zoo, parser, 'object_tracker', prefix="nanotrack_head_")
+    elif model_name != "vit":
+        print("Pass the valid alias. Choices are { nano, vit, dasiamrpn }")
+        exit(0)
+    parser = argparse.ArgumentParser(parents=[parser],
+                                    description='Object tracking using OpenCV.',
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     args = parser.parse_args()
     main()
     cv.destroyAllWindows()

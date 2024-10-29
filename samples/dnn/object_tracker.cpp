@@ -1,15 +1,10 @@
-/*
-For usage download models by following links
-    For DaSiamRPN:
-        network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
-        kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
-        kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
-    For NanoTrack:
-        nanotrack_backbone: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx
-        nanotrack_headneck: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx
-    For VitTrack:
-        vitTracker: https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_vittrack/object_tracking_vittrack_2023sep.onnx
-*/
+// DaSiamRPN tracker.
+// Original paper: https://arxiv.org/abs/1808.06048
+// Link to original repo: https://github.com/foolwood/DaSiamRPN
+// Links to onnx models:
+// - network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
+// - kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
+// - kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
 
 #include <iostream>
 #include <cmath>
@@ -28,24 +23,18 @@ const string about = "Use this script for Object Tracking using OpenCV. \n\n"
         "Firstly, download required models using the links provided in description. For vit tracker download model using `python download_models.py vit`\n"
         "To run:\n"
             "\t Nano: \n"
-                "\t\t e.g: ./example_dnn_object_tracker nano --nanotrack_backbone=<path to nanotrack_backbone onnx model> --nanotrack_head=<path to nanotrack_head onnx model>\n\n"
+                "\t\t e.g: ./example_dnn_object_tracker nano\n\n"
             "\t vit: \n"
-                "\t\t e.g: ./example_dnn_object_tracker vit --model=<path to vitTracker onnx model>\n\n"
+                "\t\t e.g: ./example_dnn_object_tracker vit\n\n"
             "\t dasiamrpn: \n"
-                "\t\t e.g: ./example_dnn_object_tracker dasiamrpn --dasiamrpn_model=<path to dasiamrpn_model onnx model> --kernel_r1=<path to dasiamrpn_kernel_r1 onnx model> --kernel_cls1=<path to dasiamrpn_kernel_cls1 onnx model>\n\n";
+                "\t\t e.g: ./example_dnn_object_tracker dasiamrpn\n\n";
 
 const string param_keys =
-        "{ help     h         |                   | Print help message }"
-        "{ @alias             |                   | An alias name of model to extract preprocessing parameters from models.yml file. }"
-        "{ zoo                | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
-        "{ input    i         |                   | Full path to input video folder, the specific camera index. (empty for camera 0) }"
-        "{ nanotrack_head     |                   | Path to onnx model of backbone.onnx for nano}"
-        "{ nanotrack_backbone |                   | Path to onnx model of headneck.onnx for nano}"
-        "{ model              |                   | Path to onnx model of vitTracker.onnx for vit}"
-        "{ tracking_thrs      |        0.3        | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }"
-        "{ dasiamrpn_model    |                   | Path to onnx model of net for dasiamrpn}"
-        "{ kernel_r1          |                   | Path to onnx model of kernel_cls1 for dasiamrpn}"
-        "{ kernel_cls1        |                   | Path to onnx model of kernel_r1 for dasiamrpn}";
+        "{ help     h    |                            | Print help message }"
+        "{ @alias        |                            | An alias name of model to extract preprocessing parameters from models.yml file. }"
+        "{ zoo           |      ../dnn/models.yml     | An optional path to file with preprocessing parameters }"
+        "{ input    i    |                            | Full path to input video folder, the specific camera index. (empty for camera 0) }"
+        "{ tracking_thrs |             0.3            | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }";
 
 const string backend_keys = format(
     "{ backend | default | Choose one of computation backends: "
@@ -150,7 +139,7 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
         putText(image, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         putText(image, "Press space bar after selecting.", Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         imshow(windowName, image);
-        int key = waitKey(200);
+        int key = waitKey(30);
         if (key == ' ')
         {
             selectRect = selectROI(windowName, image);
@@ -163,9 +152,7 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
     }
 
     Mat image_select = image.clone();
-
     cout << "ROI=" << selectRect << endl;
-
     tracker->init(image, selectRect);
 
     TickMeter tickMeter;
@@ -201,13 +188,13 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
             rectangle(render_image, r, Scalar::all(255), FILLED);
             putText(render_image, timeLabel, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
             putText(render_image, scoreLabel, Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
-       }
+        }
 
         imshow(windowName, render_image);
 
         tickMeter.reset();
 
-        int c = waitKey(100);
+        int c = waitKey(30);
         if (c == 27 /*ESC*/)
             exit(0);
     }
@@ -219,38 +206,30 @@ int main(int argc, char** argv)
     // Parse command line arguments.
     CommandLineParser parser(argc, argv, keys);
 
-    if (parser.has("help"))
+    if (!parser.has("@alias") || parser.has("help"))
     {
-        cout<<about<<endl;
         parser.printMessage();
         return 0;
     }
 
-    string inputName = parser.get<String>("input");
     string modelName = parser.get<String>("@alias");
-    string net, headneck, backbone, kernel_cls1, kernel_r1;
+    const string zooFile = findFile(parser.get<String>("zoo"));
+    string inputName = parser.get<String>("input");
 
     int backend = getBackendID(parser.get<String>("backend"));
     int target = getTargetID(parser.get<String>("target"));
 
-    if (modelName == "vit" || parser.get<String>("model") != ""){
-        string sha1 = "";
-        string zooFile = parser.get<String>("zoo");
-
-        if (modelName == "vit"){
-            zooFile = findFile(zooFile);
-            keys += genPreprocArguments(modelName, zooFile);
-            parser = CommandLineParser(argc, argv, keys);
-            parser.about(about);
-            sha1 = parser.get<String>("sha1");
-        }
-        net = parser.get<String>("model");
+    if (modelName == "vit"){
+        keys += genPreprocArguments(modelName, zooFile, "");
+        parser = CommandLineParser(argc, argv, keys);
+        parser.about(about);
+        const string net = parser.get<String>("model");
+        const string sha1 = parser.get<String>("sha1");
         float tracking_score_threshold = parser.get<float>("tracking_thrs");
 
         Ptr<TrackerVit> tracker;
         try
         {
-            cout<<"Using Vit Tracker."<<endl;
             TrackerVit::Params params;
             params.net = findModel(net, sha1);
             params.backend = backend;
@@ -268,22 +247,22 @@ int main(int argc, char** argv)
 
         trackObject("vitTracker", tracker, inputName);
     }
-    else if (modelName == "nano" || parser.get<String>("nanotrack_head") != ""){
-        backbone = parser.get<String>("nanotrack_backbone");
-        headneck = parser.get<String>("nanotrack_head");
+    else if (modelName == "nano"){
+        keys += genPreprocArguments(modelName, zooFile, "nanotrack_head_");
+        keys += genPreprocArguments(modelName, zooFile, "nanotrack_back_");
+        parser = CommandLineParser(argc, argv, keys);
+        parser.about(about);
+        const string backbone = parser.get<String>("nanotrack_back_model");
+        const string backSha1 = parser.get<String>("nanotrack_back_sha1");
+        const string headneck = parser.get<String>("nanotrack_head_model");
+        const string headSha1 = parser.get<String>("nanotrack_head_sha1");
 
         Ptr<TrackerNano> tracker;
         try
         {
-            if (backbone == "" || headneck == ""){
-                cout<<"Pass model files using --nanotrack_head and --nanotrack_backbone arguments for using nano tracker. \nDownload nanotrack_head using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx"<<endl;
-                cout<<"And, download nanotrack_backbone using link: https://github.com/HonglinChu/SiamTrackers/blob/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx"<<endl;
-                return -1;
-            }
-            cout<<"Using Nano Tracker."<<endl;
             TrackerNano::Params params;
-            params.backbone = findModel(backbone, "");
-            params.neckhead = findModel(headneck, "");
+            params.backbone = findModel(backbone, backSha1);
+            params.neckhead = findModel(headneck, headSha1);
             params.backend = backend;
             params.target = target;
             tracker = TrackerNano::create(params);
@@ -299,25 +278,26 @@ int main(int argc, char** argv)
         trackObject("nanoTracker", tracker, inputName);
         trackObject("DaSiamRPNTracker", tracker, inputName);
     }
-    else if (modelName == "dasiamrpn" || parser.get<String>("dasiamrpn_model") != ""){
-        net = parser.get<String>("dasiamrpn_model");
-        kernel_cls1 = parser.get<String>("kernel_cls1");
-        kernel_r1 = parser.get<String>("kernel_r1");
+    else if (modelName == "dasiamrpn"){
+        keys += genPreprocArguments(modelName, zooFile, "");
+        keys += genPreprocArguments(modelName, zooFile, "dasiamrpn_kernel_r1_");
+        keys += genPreprocArguments(modelName, zooFile, "dasiamrpn_kernel_cls_");
+        parser = CommandLineParser(argc, argv, keys);
+        parser.about(about);
+        const string net = parser.get<String>("model");
+        const string sha1 = parser.get<String>("sha1");
+        const string kernel_cls1 = parser.get<String>("dasiamrpn_kernel_cls_model");
+        const string kernel_cls_sha1 = parser.get<String>("dasiamrpn_kernel_cls_sha1");
+        const string kernel_r1 = parser.get<String>("dasiamrpn_kernel_r1_model");
+        const string kernel_sha1 = parser.get<String>("dasiamrpn_kernel_r1_sha1");
 
         Ptr<TrackerDaSiamRPN> tracker;
         try
         {
-            if (net == "" || kernel_cls1 == "" || kernel_r1 == ""){
-                cout<<"Pass model files using --dasiamrpn_model , --kernel_cls1 and --kernel_r1 arguments for using dasiamrpn tracker. \nDownload dasiamrpn_model using link: https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0"<<endl;
-                cout<<"And, download kernel_r1 using link: https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0"<<endl;
-                cout<<"And, download kernel_cls1 using link: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0"<<endl;
-                return -1;
-            }
-            cout<<"Using Dasiamrpn Tracker."<<endl;
             TrackerDaSiamRPN::Params params;
-            params.model = findModel(net, "");
-            params.kernel_cls1 = findModel(kernel_cls1, "");
-            params.kernel_r1 = findModel(kernel_r1, "");
+            params.model = findModel(net, sha1);
+            params.kernel_cls1 = findModel(kernel_cls1, kernel_cls_sha1);
+            params.kernel_r1 = findModel(kernel_r1, kernel_sha1);
             params.backend = backend;
             params.target = target;
             tracker = TrackerDaSiamRPN::create(params);
@@ -337,5 +317,4 @@ int main(int argc, char** argv)
         cout<<"Pass the valid alias. Choices are { nano, vit, dasiamrpn }"<<endl;
         return -1;
     }
-    return 0;
 }
