@@ -15,7 +15,12 @@ function(download_fastcv root_dir)
       set(FCV_PACKAGE_HASH  "04d89219c44d54166b2b7f8c0ed5143b")
     endif()
   elseif(UNIX AND NOT APPLE AND NOT IOS AND NOT XROS)
-    message("FastCV: fastcv lib for Linux is not supported for now!")
+    if(AARCH64)
+      set(FCV_PACKAGE_NAME  "fastcv_linux_aarch64_2024_10_24.tgz")
+      set(FCV_PACKAGE_HASH  "af78457583e770a24c68bef603ed1acb")
+    else()
+      message("FastCV: fastcv lib for 32-bit Linux is not supported for now!")
+    endif()
   endif(ANDROID)
 
   # Download Package
