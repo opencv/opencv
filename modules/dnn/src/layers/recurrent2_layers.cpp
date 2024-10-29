@@ -359,6 +359,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             const bool needYcTransform = blobsInitializers ? true : false; // if the producer is onnx
 
             Mat cOut = produceCellOutput ? output[0].clone() : Mat();
+            Mat hOut = produceOutputYh ? output[0].clone() : Mat();
             const int numDirs = 1 + static_cast<int>(bidirectional);
 
             for (int i = 0; i < numDirs; i++)
@@ -420,11 +421,13 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 std::cout << "seqLenth: " << seqLenth << std::endl;
                 std::cout << "batchSize: " << batchSize << std::endl;
 
+                // TODO: check how batchSizeTotal behaves when numDirs > 1
                 int batchSizeTotal = seqLenth*batchSize;
                 Mat xTs = input[0].reshape(1, batchSizeTotal);
 
-
                 Mat hOutTs = output[0].reshape(1, batchSizeTotal);
+                hOutTs = hOutTs.colRange(i * hOutTs.cols / numDirs, (i + 1) * hOutTs.cols / numDirs);
+
                 std::cout << "xTs shape: " << xTs.size << std::endl;
                 std::cout << "hOutTs shape: " << hOutTs.size << std::endl;
                 std::cout << "hInternal shape: " << hInternal.size << std::endl;
@@ -439,13 +442,16 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 std::cout << "cInternal sum: " << cv::sum(cInternal) << std::endl;
                 std::cout << "dummyOnes sum: " << cv::sum(dummyOnes) << std::endl;
                 std::cout << "gates sum: " << cv::sum(gates) << std::endl;
-                Mat cOutTs;
 
+                std::cout <<"cOut shape: " << cOut.size << std::endl;
+                Mat cOutTs;
                 if (produceCellOutput)
                 {
                     cOutTs = cOut.reshape(1, batchSizeTotal);
                     cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
                 }
+                std::cout <<"cOut shape: " << cOut.size << std::endl;
+                std::cout << "cOutTs shape: " << cOutTs.size << std::endl;
 
                 for (int ts = 0; ts < seqLenth; ts++)
                 {
@@ -468,9 +474,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     std::cout << "gates shape: " << gates.size << std::endl;
                     gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);  //+Wh * h_{t-1}
                     std::cout << "gates sum: " << cv::sum(gates) << std::endl;
-
-
-
 
                     Mat gateI = gates.colRange(0*hidSize, 1*hidSize);
                     Mat gateF = gates.colRange(1*hidSize, 2*hidSize);
@@ -522,40 +525,31 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     multiply(gateO, hInternal, hInternal);
 
                     //save results in output blobs
+                    std::cout << "curRowRange: " << curRowRange << std::endl;
                     hInternal.copyTo(hOutTs.rowRange(curRowRange));
+
                     std::cout << " ===> " << std::endl;
                     std::cout << "produceCellOutput: " << produceCellOutput << std::endl;
+
                     std::cout << "cInternal shape: " << cInternal.size << std::endl;
                     std::cout << "cOutTs shape: " << cOutTs.size << std::endl;
+                    std::cout << "cInternal sum: " << cv::sum(cInternal) << std::endl;
+                    std::cout << "cOutTs sum: " << cv::sum(cOutTs) << std::endl;
 
                     std::cout << "hInternal shape: " << hInternal.size << std::endl;
                     std::cout << "hOutTs shape: " << hOutTs.size << std::endl;
-
-                    std::cout << "cInternal sum: " << cv::sum(cInternal) << std::endl;
-                    std::cout << "cOutTs sum: " << cv::sum(cOutTs) << std::endl;
                     std::cout << "hInternal sum: " << cv::sum(hInternal) << std::endl;
                     std::cout << "hOutTs sum: " << cv::sum(hOutTs) << std::endl;
-                    std::cout << "curRowRange: " << curRowRange << std::endl;
 
 
                     std::cout << "cOutTs type: " << cOutTs.type() << std::endl;
                     std::cout << "cInternal type: " << cInternal.type() << std::endl;
+
                     if (produceCellOutput)
                         cInternal.copyTo(cOutTs.rowRange(curRowRange));
                     std::cout << "cOutTs sum: " << cv::sum(cOutTs) << std::endl;
                 }
             }
-
-            // // get output shape
-            // MatSize inpSize = input[0].size;
-            // MatShape inpShape(inpSize.dims(), inpSize.p);
-
-            // MatSize outSize = output[0].size;
-            // MatShape outShape(outSize.dims(), outSize.p);
-            // MatShape newShape = getOutputShape(inpShape, outShape);
-            // std::cout << "newShape: " << newShape << std::endl;
-            // output[0].fit(newShape, output[0].type());
-
 
             if (layout == BATCH_SEQ_HID){
                 std::cout << "call transposeND" << std::endl;
@@ -565,85 +559,42 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
             if (needYcTransform && produceCellOutput)
             {
+                // produce Yc output
                 std::cout << "call fixCellState" << std::endl;
                 fixCellState(cOut, numDirs);
                 std::cout << "fixCellState done" << std::endl;
                 std::cout << "cOut shape: " << cOut.size << std::endl;
                 std::cout << "cOut sum: " << cv::sum(cOut) << std::endl;
+
+                // copy cOut to output[1]
+                cOut.copyTo(output[2]);
             }
-            if (produceCellOutput)
-            {
-                cOut.copyTo(output[1]);
+
+            if (produceOutputYh){
+                // produce Yh output
+
+                std::cout << "produceOutputYh needs to be produced" << std::endl;
+                // check the shape of output[1]
+                std::cout << "output[2] shape: " << output[2].size << std::endl;
+
+                // take a slice of output[0]
+                Mat hOut = output[0].rowRange(output[0].size[0] - 1, output[0].size[0]);
+                // reshape 1x1xBxH -> 1xBxH
+                int shp[] = {1, batchSize, numHidden};
+                hOut = hOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
+                std::cout << "hOut shape: " << hOut.size << std::endl;
+                std::cout << "hOut sum: " << cv::sum(hOut) << std::endl;
+                hOut.copyTo(output[1]);
             }
 
-            // std::cout << "shapes and sums of outputs before fixLSTMDims" << std::endl;
-            // for (int i = 0; i < output.size(); i++){
-            //     std::cout << "output[ " << i << "] shape: " << output[i].size << std::endl;
-            //     std::cout << "output[ " << i << "] sum: " << cv::sum(output[i]) << std::endl;
-            // }
 
-            // fixLSTMDims(output[0], batchSize, numDirs, numHidden);
-
-            // std::cout << "shapes and sums of outputs after fixLSTMDims" << std::endl;
-            // for (int i = 0; i < output.size(); i++){
-            //     std::cout << "output[ " << i << "] shape: " << output[i].size << std::endl;
-            //     std::cout << "output[ " << i << "] sum: " << cv::sum(output[i]) << std::endl;
-            // }
-
-            // if needs outputYh
-            // if (needYhTransform){
-
-            // std::cout << "shapes and sums of outputs before addTransform" << std::endl;
-            // for (int i = 0; i < output.size(); i++){
-            //     std::cout << "output[ " << i << "] shape: " << output[i].size << std::endl;
-            //     std::cout << "output[ " << i << "] sum: " << cv::sum(output[i]) << std::endl;
-            // }
-            // addTransform(output[0], numDirs, batchSize, numHidden);
-            // }
-
-            // std::cout << "shapes and sums of outputs after addTransform" << std::endl;
             for (int i = 0; i < output.size(); i++){
                 std::cout << "output[ " << i << "] shape: " << output[i].size << std::endl;
                 std::cout << "output[ " << i << "] sum: " << cv::sum(output[i]) << std::endl;
             }
 
-
             // getvector from outputs_arr and print shape and sum
             std::cout << "==>LSTM forward done\n" << std::endl;
-        }
-
-        void addTransform(Mat &output, int num_directions, int batch_size, int hidden_size)
-        {
-            std::cout << "addTransform" << std::endl;
-            if (num_directions == 1)
-            {
-                // Slice: Yh = Y[-1, :, :, :]
-                Range ranges[] = {cv::Range(output.size[0] - 1, output.size[0]), cv::Range::all(), cv::Range::all(), cv::Range::all()};
-                output = output(ranges);
-                std::cout << "after slice output shape: " << output.size << std::endl;
-                // Reshape: 1x1xBxH -> 1xBxH
-                int shp[] = {1, batch_size, hidden_size};
-                output = output.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-                std::cout << "after reshape output shape: " << output.size << std::endl;
-            } else {
-                CV_Error(Error::StsNotImplemented, "LSTM2LayerImpl::addTransform: num_directions != 1");
-            }
-        }
-
-        void fixLSTMDims(Mat& output, int batch_size, int num_directions, int hidden_size)
-        {
-            std::cout << "fixLSTMDims" << std::endl;
-            // reshape from [seq, batch, dirs * hidden] -> [seq, batch, dirs, hidden]
-            int shp[] = {0, batch_size, num_directions, hidden_size};
-            output = output.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-            std::cout << "after reshape output shape: " << output.size << std::endl;
-
-
-            // permute to [seq, dirs, batch, hidden]
-            cv::Mat newOutput;
-            cv::transposeND(output, {0, 2, 1, 3}, newOutput);
-            output = newOutput;
-            std::cout << "after transpose output shape: " << output.size << std::endl;
         }
 
         void fixCellState(Mat& cOut, int numDirs)
