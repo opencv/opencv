@@ -1535,11 +1535,13 @@ void ONNXImporter::lstm_extractConsts(LayerParams& layerParams, const opencv_onn
         {
             blob = Mat(blobShape, CV_32FC1, 0.);
         }
+        std::cout << "shape of the blob: " << blob.size << std::endl;
         layerParams.blobs.push_back(blob);
 }
 
 void ONNXImporter::lstm_add_reshape(const std::string& input_name, const std::string& output_name, int* layerShape, size_t n)
 {
+    std::cout << "\n==>lstm_add_reshape" << std::endl;
     LayerParams reshapeLp;
     reshapeLp.name = cv::format("%s/reshape", input_name.c_str());
     reshapeLp.type = "Reshape";
@@ -1551,6 +1553,7 @@ void ONNXImporter::lstm_add_reshape(const std::string& input_name, const std::st
     reshape_proto.add_input(input_name);
     reshape_proto.add_output(output_name);
     addLayer(reshapeLp, reshape_proto);
+    std::cout << "==>lstm_add_reshape done\n" << std::endl;
 }
 
 std::string ONNXImporter::lstm_add_slice(int index, const std::string& input_name, int* begin, int* end, size_t n)
@@ -1576,6 +1579,7 @@ std::string ONNXImporter::lstm_fix_dims(LayerParams& layerParams, const opencv_o
                                         int batch_size, int num_directions, int hidden_size, bool need_y, const std::string& y_name,
                                         const int index)
 {
+    std::cout << "\n==>lstm_fix_dims" << std::endl;
     std::string reshape_output = cv::format("%s/reshape_%d", layerParams.name.c_str(), index);
 
     // reshape from Seq, Batch, Dirs*Hidden to Seq, Batch, Dirs, Hidden
@@ -1596,13 +1600,14 @@ std::string ONNXImporter::lstm_fix_dims(LayerParams& layerParams, const opencv_o
     permute_proto.add_input(reshape_output);
     permute_proto.add_output((need_y && index == 0) ? y_name : static_cast<std::string>(permuteLP.name));
     addLayer(permuteLP, permute_proto);
-
+    std::cout << "==>lstm_fix_dims done\n" << std::endl;
     return permute_proto.output(0);
 }
 
 void ONNXImporter::lstm_add_transform(int num_directions, int batch_size, int hidden_size,
                                       int index, const std::string& input_name, const std::string& output_name)
 {
+    std::cout << "\n==>lstm_add_transform" << std::endl;
     if (num_directions == 1)
     {
         // Slice: Yh = Y[-1, :, :, :]
@@ -1640,10 +1645,12 @@ void ONNXImporter::lstm_add_transform(int num_directions, int batch_size, int hi
         int layerShape[] = {2, batch_size, hidden_size};
         lstm_add_reshape(concat_proto.output(0), output_name, layerShape, sizeof(layerShape) / sizeof(layerShape[0]));
     }
+    std::cout << "==>lstm_add_transform done\n" << std::endl;
 }
 
 void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
+    std::cout << "\n==>parseLSTM" << std::endl;
     opencv_onnx::NodeProto lstm_proto = node_proto_;
     layerParams.name += "/lstm";
 
@@ -1711,6 +1718,11 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     layerParams.set("reverse", layerParams.get<String>("direction", "") == "reverse");
     layerParams.set("bidirectional", layerParams.get<String>("direction", "") == "bidirectional");
 
+
+    // print names of the outputs
+    for (int i = 0; i < lstm_proto.output_size(); i++)
+        std::cout << "output [" << i << "] name: " << lstm_proto.output(i) << "is empty: " << lstm_proto.output(i).empty() << std::endl;
+
     bool need_yc = lstm_proto.output_size() > 2 && !lstm_proto.output(2).empty();
     bool need_yh = lstm_proto.output_size() > 1 && !lstm_proto.output(1).empty();
     bool need_y = lstm_proto.output_size() > 0 && !lstm_proto.output(0).empty();
@@ -1721,7 +1733,13 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
 
     layerParams.set("produce_cell_output", need_yc);
 
+    std::cout << "needs_yc: " << need_yc << std::endl;
+    std::cout << "needs_yh: " << need_yh << std::endl;
+    std::cout << "needs_y: " << need_y << std::endl;
+
+    std::cout << "==>num proto outputs: " << lstm_proto.output_size() << std::endl;
     lstm_proto.clear_output();
+    std::cout << "==>num proto outputs: " << lstm_proto.output_size() << std::endl;
     if (need_y || need_yh)
     {
         // give random names to LSTMLayer's outputs because every output needs postprocessing
@@ -1732,7 +1750,9 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
         lstm_proto.add_output(yc_name);
     }
 
+    std::cout << "==>num proto outputs: " << lstm_proto.output_size() << std::endl;
     addLayer(layerParams, lstm_proto);
+    std::cout << "==>num proto outputs: " << lstm_proto.output_size() << std::endl;
 
     std::string y_output = lstm_fix_dims(layerParams, lstm_proto, batch_size, num_directions, hidden_size, need_y,
                                          y_name, 0);
@@ -1740,6 +1760,8 @@ void ONNXImporter::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodePr
     {
         lstm_add_transform(num_directions, batch_size, hidden_size, 0, y_output, yh_name);
     }
+    std::cout << "==>num proto outputs: " << lstm_proto.output_size() << std::endl;
+    std::cout << "==>parseLSTM done<===\n" << std::endl;
 }
 
 void ONNXImporter::parseGRU(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)

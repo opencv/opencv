@@ -72,6 +72,7 @@ public:
     virtual const std::vector<Arg>& append(Ptr<Layer>& layer,
                 const std::vector<std::string>& outnames) override
     {
+        std::cout << "==>append" << std::endl;
         CV_Assert(layer);
         int i, noutputs = (int)outnames.size();
         //CV_Assert(layer->minNumOutputs() <= noutputs && noutputs <= layer->maxNumOutputs());
@@ -331,8 +332,14 @@ void Net::Impl::allocateLayerOutputs(
     outTypes.clear();
     tempShapes.clear();
     tempTypes.clear();
+    std::cout << "==>noutputs: " << noutputs << std::endl;
+    std::cout << "==>outShapes size: " << outShapes.size() << std::endl;
     layer->getMemoryShapes(inpShapes, (int)noutputs, outShapes, tempShapes);
+    std::cout << "==>noutputs: " << noutputs << std::endl;
+    std::cout << "==>tempShapes size: " << tempShapes.size() << std::endl;
     layer->getTypes(inpTypes, (int)noutputs, (int)tempShapes.size(), outTypes, tempTypes);
+    std::cout << "==>outShapes size: " << outShapes.size() << std::endl;
+    std::cout << "==>outTypes size: " << outTypes.size() << std::endl;
     CV_Assert(tempShapes.size() == tempTypes.size());
     CV_Assert(outShapes.size() == outTypes.size());
     CV_Assert(outShapes.size() == noutputs);
@@ -680,6 +687,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         if (finalizeLayers)
             layer->finalize(inpMats, outMats);
         layer->forward(inpMats, outMats, tempMats);
+        std::cout << "==>graph engine forward done" << std::endl;
+        std::cout << "outMats size: " << outMats.size() << std::endl;
+        std::cout << "noutputs: " << noutputs << std::endl;
+        std::cout << "outMats[0] shape: " << outMats[0].shape() << std::endl;
+        std::cout << "outMats[0] sum: " << cv::sum(outMats[0]) << std::endl;
         CV_Assert(outMats.size() == noutputs);
 
         for (i = 0; i < noutputs; i++) {
@@ -991,6 +1003,9 @@ bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
         }
 
         layer->getMemoryShapes(inpShapes, noutputs, outShapes, tempShapes);
+        std::cout << "==>noutputs: " << noutputs << std::endl;
+        std::cout << "==>outShapes size: " << outShapes.size() << std::endl;
+        std::cout << "==>tempShapes size: " << tempShapes.size() << std::endl;
         CV_Assert((int)outShapes.size() == noutputs);
         layer->getTypes(inpTypes, noutputs, (int)tempShapes.size(), outTypes, tempTypes);
         CV_Assert((int)outTypes.size() == noutputs);

@@ -282,6 +282,7 @@ public:
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
+        std::cout << "\n==>ConcatLayerImpl::forward" << std::endl;
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
@@ -292,6 +293,11 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+        for (auto &inp : inputs) {
+            std::cout << "input shape: " << inp.size << std::endl;
+            std::cout << "input sum: " << cv::sum(inp) << std::endl;
+            std::cout << "--------------------------------" << std::endl;
+        }
 
         int cAxis = normalize_axis(axis, inputs[0].dims);
         Mat& outMat = outputs[0];

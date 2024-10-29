@@ -242,6 +242,10 @@ public:
                             std::vector<MatShape> &outputs,
                             std::vector<MatShape> &internals) const CV_OVERRIDE
     {
+        std::cout << "SliceLayerImpl::getMemoryShapes" << std::endl;
+        for (auto &inp : inputs) {
+            std::cout << "input shape: " << inp << std::endl;
+        }
         CV_Assert(inputs.size() == 1);
         MatShape inpShape = inputs[0];
 
@@ -614,12 +618,16 @@ public:
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
+        std::cout << "\n==>SliceLayerImpl::forward" << std::endl;
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
+        for (auto &inp : inputs) {
+            std::cout << "input shape: " << inp.size << std::endl;
+        }
 
         CV_OCL_RUN((IS_DNN_OPENCL_TARGET(preferableTarget) &&
                     (outputs[0].type() != CV_32S && outputs[0].type() != CV_64S)),
@@ -662,6 +670,10 @@ public:
                 // flip for negative steps
                 flip(outputs[i]);
             }
+        }
+        std::cout << "SliceLayerImpl::forward::done" << std::endl;
+        for (auto &out : outputs) {
+            std::cout << "output shape: " << out.size << std::endl;
         }
     }
 

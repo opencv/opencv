@@ -94,7 +94,6 @@ static ActivationFunction get_activation_function(const String& activation) {
     }
 }
 
-
 class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 {
     int seqLenth, batchSize, numHidden;
@@ -551,11 +550,11 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 }
             }
 
-            if (layout == BATCH_SEQ_HID){
-                std::cout << "call transposeND" << std::endl;
-                cv::transposeND(output[0], {1, 0, 2}, output[0]);
-                std::cout << "transposeND done" << std::endl;
-            }
+            // if (layout == BATCH_SEQ_HID){
+            //     std::cout << "call transposeND" << std::endl;
+            //     cv::transposeND(output[0], {1, 0, 2}, output[0]);
+            //     std::cout << "transposeND done" << std::endl;
+            // }
 
             if (needYcTransform && produceCellOutput)
             {
@@ -566,7 +565,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 std::cout << "cOut shape: " << cOut.size << std::endl;
                 std::cout << "cOut sum: " << cv::sum(cOut) << std::endl;
 
-                // copy cOut to output[1]
+                // copy cOut to output[2]
                 cOut.copyTo(output[2]);
             }
 
@@ -596,6 +595,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             // getvector from outputs_arr and print shape and sum
             std::cout << "==>LSTM forward done\n" << std::endl;
         }
+
 
         void fixCellState(Mat& cOut, int numDirs)
         {
