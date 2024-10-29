@@ -1,5 +1,5 @@
 # cmake needs this line
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.13)
 
 # Define project name
 project(opencv_example_project)
