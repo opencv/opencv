@@ -162,7 +162,7 @@ void InfEngineNgraphNet::createNet(Target targetId) {
             CV_LOG_DEBUG(NULL, "DNN/NGRAPH: Add 'Result' output: " << output_node_it->first);
             CV_Assert(output_node_it->second);
             auto out = std::make_shared<ov::op::v0::Result>(output_node_it->second->node);
-            std::string name = output_node_it->first + (output_node_it->second->node.get_node()->get_output_size() == 1 ? "" : ".0")
+            std::string name = output_node_it->first + (output_node_it->second->node.get_node()->get_output_size() == 1 ? "" : ".0");
             CV_LOG_DEBUG(NULL, "DNN-IE: Change friendly name from " << out->get_friendly_name() << " to " << name);
             out->set_friendly_name(name);
             outs.push_back(out);
