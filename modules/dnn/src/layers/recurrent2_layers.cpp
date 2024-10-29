@@ -240,6 +240,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             outResShape.push_back(1 + static_cast<int>(bidirectional));
             outResShape.push_back(_batchSize);
             outResShape.push_back(_hidSize);
+            // outResShape.insert(outResShape.end(), outTailShape_.begin(), outTailShape_.end());
+            // outResShape.back() *= (1 + static_cast<int>(bidirectional));
             std::cout << "outResShape: " << outResShape << std::endl;
             outputs.assign(1, outResShape);
 
@@ -503,6 +505,18 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     multiply(gateI, gateG, gateI);      // i_t (*) g_t
                     add(gateF, gateI, cInternal);       // c_t = f_t (*) c_{t-1} + i_t (*) g_t
 
+                    if (useCellClip)
+                    {
+                        min(cInternal, cellClip, cInternal);
+                        max(cInternal, -cellClip, cInternal);
+                    }
+
+                    if (usePeephole)
+                    {
+                        gemm(cInternal, pO, 1, gateO, 1, gateO);
+                        f_activation(gateO, gateO);
+                    }
+
                     //compute h_t
                     h_activation(cInternal, hInternal);
                     multiply(gateO, hInternal, hInternal);
@@ -587,7 +601,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             // addTransform(output[0], numDirs, batchSize, numHidden);
             // }
 
-            std::cout << "shapes and sums of outputs after addTransform" << std::endl;
+            // std::cout << "shapes and sums of outputs after addTransform" << std::endl;
             for (int i = 0; i < output.size(); i++){
                 std::cout << "output[ " << i << "] shape: " << output[i].size << std::endl;
                 std::cout << "output[ " << i << "] sum: " << cv::sum(output[i]) << std::endl;
