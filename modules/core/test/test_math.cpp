@@ -3432,7 +3432,7 @@ TEST(Core_BFloat, convert)
     int vlanes = VTraits<v_float32>::vlanes();
     for (size_t i = 0; i < N; i += vlanes)
     {
-        v_float32 x = v_load(&bigdata[i]);
+        v_float32 x = vx_load(&bigdata[i]);
         v_pack_store(&bfdata[i], x);
     }
 
