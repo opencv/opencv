@@ -67,15 +67,10 @@ JpegXLDecoder::~JpegXLDecoder()
 void JpegXLDecoder::close()
 {
     if (m_decoder)
-    {
         m_decoder.release();
-    }
-
     if (m_f)
-    {
         m_f.release();
-    }
-
+    m_read_buffer = {};
     m_width = m_height = 0;
     m_type = -1;
 }
@@ -99,6 +94,10 @@ bool JpegXLDecoder::read(Mat* pimg)
         m_decoder = JxlDecoderMake(nullptr);
         if (!m_decoder)
             return false;
+        // Subscribe to the basic info event
+        JxlDecoderStatus status = JxlDecoderSubscribeEvents(m_decoder.get(), JXL_DEC_BASIC_INFO | JXL_DEC_FULL_IMAGE);
+        if (status != JXL_DEC_SUCCESS)
+            return false;
     }
 
     // Set up parallel m_parallel_runner
@@ -113,26 +112,25 @@ bool JpegXLDecoder::read(Mat* pimg)
 
     // Create buffer for reading
     const size_t read_buffer_size = 16384;  // 16KB chunks
-    if (m_read_buffer.capacity() < read_buffer_size) {
+    if (m_read_buffer.capacity() < read_buffer_size)
         m_read_buffer.resize(read_buffer_size);
-    }
-    
-    // Start decoding loop
-    JxlDecoderStatus status = JXL_DEC_SUCCESS;
-    do {
-        if (m_type != -1 && pimg) {
-            pimg->create(m_height, m_width, m_type);
-            // Set desired output format
-            if (!pimg->isContinuous())
-                return false;
-            if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutBuffer(m_decoder.get(), 
-                                                            &m_format,
-                                                            pimg->ptr<uint8_t>(),
-                                                            pimg->total() * pimg->elemSize())) {
-                return false;
-            }
-        }
 
+    // Create image if needed
+    if (m_type != -1 && pimg) {
+        pimg->create(m_height, m_width, m_type);
+        if (!pimg->isContinuous())
+            return false;
+        if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutBuffer(m_decoder.get(), 
+                                                        &m_format,
+                                                        pimg->ptr<uint8_t>(),
+                                                        pimg->total() * pimg->elemSize())) {
+            return false;
+        }
+    }
+
+    // Start decoding loop
+    JxlDecoderStatus status = JXL_DEC_NEED_MORE_INPUT;
+    do {
         // Check if we need more input
         if (status == JXL_DEC_NEED_MORE_INPUT) {
             size_t remaining = JxlDecoderReleaseInput(m_decoder.get());
@@ -158,7 +156,7 @@ bool JpegXLDecoder::read(Mat* pimg)
             if (JXL_DEC_SUCCESS != JxlDecoderSetInput(m_decoder.get(), 
                                                         m_read_buffer.data(),
                                                         bytes_read + remaining)) {
-                throw std::runtime_error("JxlDecoderSetInput failed");
+                return false;
             }
         }
 
@@ -169,24 +167,39 @@ bool JpegXLDecoder::read(Mat* pimg)
         switch (status) {
             case JXL_DEC_BASIC_INFO: {
                 if (m_type != -1)
-                    return false; // duplicate info
+                    return false;
                 JxlBasicInfo info;
-                if (JXL_DEC_SUCCESS != JxlDecoderGetBasicInfo(m_decoder.get(), &info)) {
-                    throw std::runtime_error("JxlDecoderGetBasicInfo failed");
-                }
+                if (JXL_DEC_SUCCESS != JxlDecoderGetBasicInfo(m_decoder.get(), &info))
+                    return false;
                 m_width = info.xsize;
                 m_height = info.ysize;
-                m_format = {info.num_color_channels, JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
+                m_format = {
+                    info.num_color_channels, // num channels (BGR/RGB + Alpha)
+                    JXL_TYPE_UINT8, // 8 bits per channel
+                    JXL_LITTLE_ENDIAN, // endianness
+                    0 // align stride to bytes
+                };
+                switch (info.num_color_channels) {
+                case 3:
+                    m_convert = cv::COLOR_RGB2BGR;
+                    break;
+                case 4:
+                    m_convert = cv::COLOR_RGBA2BGRA;
+                    break;
+                default:
+                    m_convert = -1;
+                }
                 if (info.exponent_bits_per_sample > 0) {
                     m_format.data_type = JXL_TYPE_FLOAT;
-                    m_type = info.num_color_channels == 3 ? CV_32FC3 : CV_32FC1;
+                    m_type = info.num_color_channels == 3 ? CV_32FC3 : (info.num_color_channels == 4 ? CV_32FC4 : CV_32FC1);
                 } else {
                     switch (info.bits_per_sample) {
                         case 8:
-                            m_type = info.num_color_channels == 3 ? CV_8UC3 : CV_8UC1;
+                            m_type = info.num_color_channels == 3 ? CV_8UC3 : (info.num_color_channels == 4 ? CV_8UC4 : CV_8UC1);
                             break;
                         case 16:
-                            m_type = info.num_color_channels == 3 ? CV_16UC3 : CV_16UC1;
+                            m_format.data_type = JXL_TYPE_UINT16;
+                            m_type = info.num_color_channels == 3 ? CV_16UC3 : (info.num_color_channels == 4 ? CV_16UC4 : CV_16UC1);
                             break;
                         default:
                             return false;
@@ -196,24 +209,15 @@ bool JpegXLDecoder::read(Mat* pimg)
                     return true;
                 break;
             }
-            case JXL_DEC_NEED_IMAGE_OUT_BUFFER: {
-                // Buffer already set in BASIC_INFO
-                break;
-            }
             case JXL_DEC_FULL_IMAGE: {
                 // Image is ready
-                break;
-            }
-            case JXL_DEC_SUCCESS: {
-                // Decoding finished
+                if (m_convert != -1)
+                    cv::cvtColor(*pimg, *pimg, m_convert);
                 break;
             }
             case JXL_DEC_ERROR: {
-                throw std::runtime_error("Decoder error");
-            }
-            default: {
-                // Other events we don't handle for this example
-                break;
+                close();
+                return false;
             }
         }
     } while (status != JXL_DEC_SUCCESS);
@@ -257,85 +261,111 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
 {
     m_last_error.clear();
 
-    JxlEncoder* encoder = JxlEncoderCreate(nullptr);
+    JxlEncoderPtr encoder = JxlEncoderMake(nullptr);
     if (!encoder)
         return false;
 
-    JxlEncoderFrameSettings* frame_settings = JxlEncoderFrameSettingsCreate(encoder, nullptr);
-    if (!frame_settings)
-    {
-        JxlEncoderDestroy(encoder);
+    JxlThreadParallelRunnerPtr runner = JxlThreadParallelRunnerMake(
+        /*memory_manager=*/nullptr,
+        JxlThreadParallelRunnerDefaultNumWorkerThreads());
+    if (JXL_ENC_SUCCESS != JxlEncoderSetParallelRunner(encoder.get(),
+        JxlThreadParallelRunner,
+        runner.get()))
         return false;
-    }
 
     JxlBasicInfo info;
     JxlEncoderInitBasicInfo(&info);
     info.xsize = img.cols;
     info.ysize = img.rows;
     info.num_color_channels = img.channels();
-    info.bits_per_sample = 8;
-
-    if (JxlEncoderSetBasicInfo(encoder, &info) != JXL_ENC_SUCCESS)
-    {
-        JxlEncoderDestroy(encoder);
+    info.bits_per_sample = 8 * int(img.elemSize() / img.channels());
+    info.exponent_bits_per_sample = img.depth() == CV_32F ? 8 : 0;
+    info.uses_original_profile = JXL_FALSE;
+    if (JxlEncoderSetBasicInfo(encoder.get(), &info) != JXL_ENC_SUCCESS)
         return false;
-    }
 
-    JxlPixelFormat format = {img.channels(), JXL_TYPE_UINT8, JXL_NATIVE_ENDIAN, 0};
-    if (JxlEncoderAddImageFrame(frame_settings, &format, img.data, img.total() * img.elemSize()) != JXL_ENC_SUCCESS)
-    {
-        JxlEncoderDestroy(encoder);
+    JxlDataType type = JXL_TYPE_UINT8;
+    if (img.depth() == CV_32F)
+        type = JXL_TYPE_FLOAT;
+    else if (img.depth() == CV_16U)
+        type = JXL_TYPE_UINT16;
+    JxlPixelFormat format = {(uint32_t)img.channels(), type, JXL_NATIVE_ENDIAN, 0};
+    JxlColorEncoding color_encoding = {};
+    JXL_BOOL is_gray = TO_JXL_BOOL(format.num_channels < 3);
+    JxlColorEncodingSetToSRGB(&color_encoding, is_gray);
+    if (JXL_ENC_SUCCESS != JxlEncoderSetColorEncoding(encoder.get(), &color_encoding))
         return false;
+
+    Mat image;
+    switch (info.num_color_channels) {
+    case 3:
+        cv::cvtColor(img, image, cv::COLOR_BGR2RGB);
+        break;
+    case 4:
+        cv::cvtColor(img, image, cv::COLOR_BGRA2RGBA);
+        break;
+    default:
+        image = img;
     }
+    if (!image.isContinuous())
+        return false;
 
-    JxlEncoderCloseInput(encoder);
-
-    std::vector<uint8_t> compressed;
-    compressed.resize(1 << 20);
-
-    uint8_t* next_out = compressed.data();
-    size_t avail_out = compressed.size();
-
-    JxlEncoderStatus status = JXL_ENC_NEED_MORE_OUTPUT;
-    while (status == JXL_ENC_NEED_MORE_OUTPUT)
+    JxlEncoderFrameSettings* frame_settings = JxlEncoderFrameSettingsCreate(encoder.get(), nullptr);
+    // set frame settings from params if available
+    for( size_t i = 0; i < params.size(); i += 2 )
     {
-        status = JxlEncoderProcessOutput(encoder, &next_out, &avail_out);
-        if (status == JXL_ENC_NEED_MORE_OUTPUT)
+        if( params[i] == IMWRITE_JPEG_QUALITY )
         {
-            size_t offset = next_out - compressed.data();
-            compressed.resize(compressed.size() * 2);
-            next_out = compressed.data() + offset;
-            avail_out = compressed.size() - offset;
+            int quality = params[i+1];
+            quality = MIN(MAX(quality, 0), 100);
+            const float distance = JxlEncoderDistanceFromQuality(quality);
+            JxlEncoderSetFrameDistance(frame_settings, distance);
+            if (distance == 0)
+                JxlEncoderSetFrameLossless(frame_settings, JXL_TRUE);
+        }
+        if( params[i] == IMWRITE_JPEGXL_DISTANCE )
+        {
+            int distance = params[i+1];
+            distance = MIN(MAX(distance, 0), 25);
+            JxlEncoderSetFrameDistance(frame_settings, distance);
+            if (distance == 0)
+                JxlEncoderSetFrameLossless(frame_settings, JXL_TRUE);
+        }
+        if( params[i] == IMWRITE_JPEGXL_EFFORT )
+        {
+            int effort = params[i+1];
+            effort = MIN(MAX(effort, 1), 10);
+            JxlEncoderFrameSettingsSetOption(frame_settings, JXL_ENC_FRAME_SETTING_EFFORT, effort);
+        }
+        if( params[i] == IMWRITE_JPEGXL_DECODING_SPEED )
+        {
+            int speed = params[i+1];
+            speed = MIN(MAX(speed, 0), 4);
+            JxlEncoderFrameSettingsSetOption(frame_settings, JXL_ENC_FRAME_SETTING_DECODING_SPEED, speed);
         }
     }
-
-    if (status != JXL_ENC_SUCCESS)
-    {
-        JxlEncoderDestroy(encoder);
+    if (JXL_ENC_SUCCESS !=
+        JxlEncoderAddImageFrame(frame_settings, &format,
+            static_cast<const void*>(image.ptr<uint8_t>()),
+            image.total() * image.elemSize())) {
         return false;
     }
+    JxlEncoderCloseInput(encoder.get());
 
-    compressed.resize(next_out - compressed.data());
-
-    if (!m_buf)
-    {
-        FILE* f = fopen(m_filename.c_str(), "wb");
-        if (!f)
-        {
-            JxlEncoderDestroy(encoder);
+    const size_t buffer_size = 16384;  // 16KB chunks
+    std::unique_ptr<FILE, decltype(&fclose)> f(fopen(m_filename.c_str(), "wb"), fclose);
+    std::vector<uint8_t> compressed(buffer_size);
+    JxlEncoderStatus process_result = JXL_ENC_NEED_MORE_OUTPUT;
+    while (process_result == JXL_ENC_NEED_MORE_OUTPUT) {
+        uint8_t* next_out = compressed.data();
+        size_t avail_out = buffer_size;
+        process_result = JxlEncoderProcessOutput(encoder.get(), &next_out, &avail_out);
+        if (JXL_ENC_ERROR == process_result)
             return false;
-        }
-
-        fwrite(compressed.data(), 1, compressed.size(), f);
-        fclose(f);
+        const size_t offset = next_out - compressed.data();
+        if (offset != fwrite(compressed.data(), 1, offset, f.get()))
+            return false;
     }
-    // else
-    // {
-    //     m_buf.create(1, compressed.size(), CV_8UC1);
-    //     memcpy(m_buf.data, compressed.data(), compressed.size());
-    // }
-
-    JxlEncoderDestroy(encoder);
     return true;
 }
 

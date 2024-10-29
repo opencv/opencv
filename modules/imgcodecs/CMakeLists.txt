@@ -60,7 +60,6 @@ if(HAVE_JPEGXL)
   ocv_include_directories(${JPEGXL_INCLUDE_DIRS})
   message(STATUS "JPEGXL_INCLUDE_DIRS: ${JPEGXL_INCLUDE_DIRS}")
   list(APPEND GRFMT_LIBS ${JPEGXL_LIBRARIES})
-  message(STATUS "+++++++++++++++++++++++++++++++++++++++++++++++++JPEGXL_LIBRARIES: ${JPEGXL_LIBRARIES}")
 endif()
 
 if(HAVE_OPENJPEG)

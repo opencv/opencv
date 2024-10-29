@@ -79,12 +79,10 @@ protected:
     JxlDecoderPtr m_decoder;
     JxlThreadParallelRunnerPtr m_parallel_runner;
     JxlPixelFormat m_format;
+    int m_convert;
     std::vector<uint8_t> m_read_buffer;
 
 private:
-    JpegXLDecoder(const JpegXLDecoder &); // copy disabled
-    JpegXLDecoder& operator=(const JpegXLDecoder &); // assign disabled
-
     bool read(Mat* pimg);
 };
 
@@ -97,14 +95,6 @@ public:
 
     bool  write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
     ImageEncoder newEncoder() const CV_OVERRIDE;
-
-protected:
-    JxlEncoder* m_encoder;
-    JxlEncoderStatus m_status;
-
-private:
-    JpegXLEncoder(const JpegXLEncoder &); // copy disabled
-    JpegXLEncoder& operator=(const JpegXLEncoder &); // assign disabled
 };
 
 }
