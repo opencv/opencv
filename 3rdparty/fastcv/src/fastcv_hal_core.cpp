@@ -7,22 +7,19 @@
 #include "fastcv_hal_utils.hpp"
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/base.hpp>
-#include <opencv2/core/utils/logger.hpp>
 
-bool isInitialized = false;
 
 class ParallelTableLookup : public cv::ParallelLoopBody
 {
 public:
 
-    ParallelTableLookup(const uchar* src_data_, int width_, int height_, size_t src_step_, const uchar* lut_data_, uchar* dst_data_, size_t dst_step_) :
-        cv::ParallelLoopBody(), src_data(src_data_), width(width_), height(height_), src_step(src_step_), lut_data(lut_data_), dst_data(dst_data_), dst_step(dst_step_)
+    ParallelTableLookup(const uchar* src_data_, int width_, size_t src_step_, const uchar* lut_data_, uchar* dst_data_, size_t dst_step_) :
+        cv::ParallelLoopBody(), src_data(src_data_), width(width_), src_step(src_step_), lut_data(lut_data_), dst_data(dst_data_), dst_step(dst_step_)
     {
     }
 
     virtual void operator()(const cv::Range& range) const CV_OVERRIDE
     {
-        CV_UNUSED(height);
         fcvStatus status = FASTCV_SUCCESS;
         for (int y = range.start; y < range.end; y++) {
             status = fcvTableLookupu8((uint8_t*)src_data + y * src_step, width, 1, src_step, (uint8_t*)lut_data, (uint8_t*)dst_data + y * dst_step, dst_step);
@@ -34,7 +31,6 @@ public:
 private:
     const uchar* src_data;
     int          width;
-    int          height;
     size_t       src_step;
     const uchar* lut_data;
     uchar*       dst_data;
@@ -57,11 +53,12 @@ int fastcv_hal_lut(
         CV_HAL_RETURN_NOT_IMPLEMENTED("Switching to default OpenCV solution!");
 
     INITIALIZATION_CHECK;
+
     fcvStatus           status;
     if (src_type == CV_8UC1 && lut_channels == 1 && lut_channel_size == 1)
     {
         cv::parallel_for_(cv::Range(0, height),
-            ParallelTableLookup(src_data, width, height, src_step, lut_data, dst_data, dst_step));
+            ParallelTableLookup(src_data, width, src_step, lut_data, dst_data, dst_step));
         status = FASTCV_SUCCESS;
         CV_HAL_RETURN(status, hal_lut);
     }

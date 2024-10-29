@@ -6,10 +6,8 @@
 #include "fastcv_hal_imgproc.hpp"
 #include "fastcv_hal_utils.hpp"
 #include <opencv2/core/base.hpp>
-#include <opencv2/core/utils/logger.hpp>
 #include <opencv2/imgproc.hpp>
 
-extern bool isInitialized;
 
 int fastcv_hal_medianBlur(
     const uchar*    src_data,

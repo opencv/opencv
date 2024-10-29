@@ -7,15 +7,13 @@
 #define OPENCV_FASTCV_HAL_UTILS_HPP_INCLUDED
 
 #include "fastcv.h"
+#include <opencv2/core/utils/logger.hpp>
 
 #define INITIALIZATION_CHECK                                        \
 {                                                                   \
-    if(!isInitialized)                                              \
+    if (!FastCvContext::getContext().isInitialized)                 \
     {                                                               \
-        if (fcvSetOperationMode(FASTCV_OP_CPU_PERFORMANCE) != 0)    \
-            return CV_HAL_ERROR_UNKNOWN;                            \
-        else                                                        \
-            isInitialized = true;                                   \
+        return CV_HAL_ERROR_UNKNOWN;                                \
     }                                                               \
 }
 
@@ -53,5 +51,33 @@
 const char* getFastCVErrorString(int status);
 const char* borderToString(int border);
 const char* interpolationToString(int interpolation);
+
+struct FastCvContext
+{
+public:
+    // initialize at first call
+    // Defines a static local variable context. Variable is created only once.
+    static FastCvContext& getContext()
+    {
+        static FastCvContext context;
+        return context;
+    }
+
+    FastCvContext()
+    {
+        if (fcvSetOperationMode(FASTCV_OP_CPU_PERFORMANCE) != 0)
+        {
+            CV_LOG_WARNING(NULL, "Failed to switch FastCV operation mode");
+            isInitialized = false;
+        }
+        else
+        {
+            CV_LOG_INFO(NULL, "FastCV Operation Mode Switched");
+            isInitialized = true;
+        }
+    }
+
+    bool isInitialized;
+};
 
 #endif
