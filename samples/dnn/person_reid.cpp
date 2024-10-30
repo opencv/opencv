@@ -107,10 +107,11 @@ static void extractFeatures(vector<Mat> &imglist, Net &net, vector<Mat> &feature
         Mat out=net.forward();
         vector<int> s {out.size[0], out.size[1]};
         out = out.reshape(1, s);
-        features.resize(out.rows);
         for (int i = 0; i < out.rows; i++)
         {
-            normalize(out.row(i), features[i], 1.0, 0.0, NORM_L2);
+            Mat norm_features;
+            normalize(out.row(i), norm_features, 1.0, 0.0, NORM_L2);
+            features.push_back(norm_features);
         }
     }
     return;
@@ -212,6 +213,7 @@ static void yoloDetector(Mat &frame, Net &net, vector<Mat>& images)
         images[i] = frame(roi); // Crop the region from the frame
         imgDict[images[i]] = roi;
     }
+    return;
 }
 
 int main(int argc, char **argv)
@@ -256,7 +258,11 @@ int main(int argc, char **argv)
     int fontSize = 50;
     int fontWeight = 500;
 
-    Net reidNet = readNetFromONNX(modelPath);
+    EngineType engine = ENGINE_AUTO;
+    if (backend != "default" || target != "cpu"){
+        engine = ENGINE_CLASSIC;
+    }
+    Net reidNet = readNetFromONNX(modelPath, engine);
     reidNet.setPreferableBackend(getBackendID(backend));
     reidNet.setPreferableTarget(getTargetID(target));
 
@@ -264,7 +270,7 @@ int main(int argc, char **argv)
         cout<<"[ERROR] Please pass path to yolov8.onnx model file using --yolo_model."<<endl;
         return -1;
     }
-    Net net = readNetFromONNX(yoloPath);
+    Net net = readNetFromONNX(yoloPath, engine);
 
     FontFace fontFace("sans");
 
@@ -342,6 +348,8 @@ int main(int argc, char **argv)
             fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize);
             fontWeight = min(fontWeight, (stdWeight*imgWidth)/stdImgSize);
         }
+        detectedImages.clear();
+        galleryFeatures.clear();
 
         yoloDetector(frame, net, detectedImages);
         extractFeatures(detectedImages, reidNet, galleryFeatures);

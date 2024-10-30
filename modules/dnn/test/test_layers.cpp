@@ -408,7 +408,11 @@ TEST_P(Test_Caffe_layers, Reshape_Split_Slice)
     rng.fill(input, RNG::UNIFORM, -1, 1);
 
     net.setInput(input, "input");
-    Mat output = net.forward("output");
+    Mat output;
+    if (net.getMainGraph())
+        output = net.forward();
+    else
+        output = net.forward("output");
 
     normAssert(input, output, "", default_l1, default_lInf);
 }
@@ -864,7 +868,7 @@ TEST_P(Test_Caffe_layers, FasterRCNN_Proposal)
     std::vector<Mat> outs;
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
-    net.forward(outs, "output");
+    net.forward(outs);
 
     for (int i = 0; i < 2; ++i)
     {

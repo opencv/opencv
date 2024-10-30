@@ -399,7 +399,7 @@ void preprocess(const Mat& frame, Net& net, Size inpSize)
     else{
         //![preprocess_call]
         Image2BlobParams imgParams(
-            scale,
+            Scalar::all(scale),
             size,
             meanv,
             swapRB,
@@ -603,7 +603,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
         }
         if (framework == "onnx"){
             Image2BlobParams paramNet;
-                paramNet.scalefactor = scale;
+                paramNet.scalefactor = Scalar::all(scale);
                 paramNet.size = Size(inpWidth, inpHeight);
                 paramNet.mean = meanv;
                 paramNet.swapRB = swapRB;

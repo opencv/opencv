@@ -701,6 +701,26 @@ namespace cv {
 namespace gimpl {
 namespace onnx {
 
+static GraphOptimizationLevel convertToGraphOptimizationLevel(const int opt_level) {
+    switch (opt_level) {
+    case ORT_DISABLE_ALL:
+        return ORT_DISABLE_ALL;
+    case ORT_ENABLE_BASIC:
+        return ORT_ENABLE_BASIC;
+    case ORT_ENABLE_EXTENDED:
+        return ORT_ENABLE_EXTENDED;
+    case ORT_ENABLE_ALL:
+        return ORT_ENABLE_ALL;
+    default:
+        if (opt_level > ORT_ENABLE_ALL) {  // relax constraint
+            return ORT_ENABLE_ALL;
+        }
+        else {
+            cv::util::throw_error(std::invalid_argument("Invalid argument opt_level = " + std::to_string(opt_level)));
+        }
+    }
+}
+
 ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     : params(pp) {
     // Validate input parameters before allocating any resources
@@ -725,6 +745,10 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
 
     if (pp.disable_mem_pattern) {
         session_options.DisableMemPattern();
+    }
+
+    if (pp.opt_level.has_value()) {
+        session_options.SetGraphOptimizationLevel(convertToGraphOptimizationLevel(pp.opt_level.value()));
     }
     this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
 #ifndef _WIN32
