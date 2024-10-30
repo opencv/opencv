@@ -3,11 +3,11 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "precomp.hpp"
 #include "grfmt_jpegxl.hpp"
-#include <jxl/encode_cxx.h>
-#include <jxl/version.h>
 
 #ifdef HAVE_JPEGXL
 
+#include <jxl/encode_cxx.h>
+#include <jxl/version.h>
 #include <opencv2/core/utils/logger.hpp>
 
 namespace cv
