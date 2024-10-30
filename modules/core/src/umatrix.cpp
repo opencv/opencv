@@ -1265,9 +1265,16 @@ void UMat::copyTo(OutputArray _dst) const
         return;
     }
 
-    if( empty() )
+    if( dims == 0 && empty() )
     {
         _dst.release();
+        void* obj = _dst.getObj();
+        if (_dst.isMat())
+            reinterpret_cast<Mat*>(obj)->flags = Mat::MAGIC_VAL | Mat::CONTINUOUS_FLAG | type();
+        else if (_dst.isUMat())
+            reinterpret_cast<UMat*>(obj)->flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | type();
+        else if (_dst.isGpuMat())
+            reinterpret_cast<cuda::GpuMat*>(obj)->flags = type();
         return;
     }
 
@@ -1281,6 +1288,9 @@ void UMat::copyTo(OutputArray _dst) const
     srcofs[d-1] *= esz;
 
     _dst.create( dims, size.p, type() );
+    if (empty())
+        return;
+
     if( _dst.isUMat() )
     {
         UMat dst = _dst.getUMat();
