@@ -80,7 +80,7 @@
 #define CV_REMAP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(CN) \
     v_float32 src_x0, src_y0, \
               src_x1, src_y1; \
-    if (map2_data == nullptr) { \
+    if (map2 == nullptr) { \
         v_load_deinterleave(sx_data + 2*x, src_x0, src_y0); \
         v_load_deinterleave(sy_data + 2*(x+vlanes_32), src_x1, src_y1); \
     } else { \
@@ -89,7 +89,7 @@
         src_x1 = vx_load(sx_data+x+vlanes_32); \
         src_y1 = vx_load(sy_data+x+vlanes_32); \
     } \
-    if (is_relative) { \
+    if (relative) { \
         src_x0 = v_add(src_x0, dst_x0); \
         src_y0 = v_add(src_y0, dst_y); \
         src_x1 = v_add(src_x1, dst_x1); \
@@ -2968,6 +2968,8 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
+
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -3072,7 +3074,7 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -3102,6 +3104,8 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
+
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -3216,7 +3220,7 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -3236,6 +3240,7 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
                              uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                              int border_type, const double border_value[4],
                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
+    // printf("In remapLinearInvoker_8UC4\n");
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
@@ -3244,8 +3249,13 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step, dststep = dst_step,
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
 
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
@@ -3282,7 +3292,6 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
         int32_t addr[max_uf],
                 src_ix[max_uf],
                 src_iy[max_uf];
-        uint8_t pixbuf[max_uf*4*4];
 
         uint8_t bvalbuf[max_uf*4];
         for (int i = 0; i < uf; i++) {
@@ -3295,21 +3304,12 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
         v_uint8 bval_v1 = vx_load_low(&bvalbuf[uf]);
         v_uint8 bval_v2 = vx_load_low(&bvalbuf[uf*2]);
         v_uint8 bval_v3 = vx_load_low(&bvalbuf[uf*3]);
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-        uint8x8_t reds = {0, 8, 16, 24, 4, 12, 20, 28},
-                  greens = {1, 9, 17, 25, 5, 13, 21, 29},
-                  blues = {2, 10, 18, 26, 6, 14, 22, 30},
-                  alphas = {3, 11, 19, 27, 7, 15, 23, 31};
-    #endif
 #endif
 
         for (int y = r.start; y < r.end; y++) {
             uint8_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3320,44 +3320,174 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
 
                 CV_REMAP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                uint8x8_t p00r, p01r, p10r, p11r,
-                          p00g, p01g, p10g, p11g,
-                          p00b, p01b, p10b, p11b,
-                          p00a, p01a, p10a, p11a;
-    #endif
-
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C4)
-    #else
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 8U);
-    #endif
+                    float valpha[max_uf], vbeta[max_uf];
+                    v_store_low(valpha, src_x0);
+                    v_store_high(valpha+vlanes_32, src_x1);
+                    v_store_low(vbeta, src_y0);
+                    v_store_high(vbeta+vlanes_32, src_y1);
+        #if CV_SIMD128
+                    for (int i = 0; i < uf; i+=vlanes_32) {
+                        #define VECTOR_LOAD_AND_INTER(ofs) \
+                            const uint8_t *srcptr##ofs = src + addr[i+ofs]; \
+                            auto i##ofs##_pix01 = v_reinterpret_as_s16(vx_load_expand(srcptr##ofs)); \
+                            auto i##ofs##_pix23 = v_reinterpret_as_s16(vx_load_expand(srcptr##ofs+srcstep)); \
+                            v_float32 i##ofs##_pix0 = v_cvt_f32(v_expand_low( i##ofs##_pix01)); \
+                            v_float32 i##ofs##_pix1 = v_cvt_f32(v_expand_high(i##ofs##_pix01)); \
+                            v_float32 i##ofs##_pix2 = v_cvt_f32(v_expand_low( i##ofs##_pix23)); \
+                            v_float32 i##ofs##_pix3 = v_cvt_f32(v_expand_high(i##ofs##_pix23)); \
+                            v_float32 i##ofs##_alpha = vx_setall_f32(valpha[i+ofs]), \
+                                      i##ofs##_beta  = vx_setall_f32(vbeta[i+ofs]);  \
+                            i##ofs##_pix0 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_pix1, i##ofs##_pix0), i##ofs##_pix0); \
+                            i##ofs##_pix2 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_pix3, i##ofs##_pix2), i##ofs##_pix2); \
+                            i##ofs##_pix0 = v_fma(i##ofs##_beta,  v_sub(i##ofs##_pix2, i##ofs##_pix0), i##ofs##_pix0);
+                            VECTOR_LOAD_AND_INTER(0);
+                            VECTOR_LOAD_AND_INTER(1);
+                            VECTOR_LOAD_AND_INTER(2);
+                            VECTOR_LOAD_AND_INTER(3);
+                        #undef VECTOR_LOAD_AND_INTER
+
+                        // pack and store
+                        auto i01_pix = v_pack_u(v_round(i0_pix0), v_round(i1_pix0)),
+                             i23_pix = v_pack_u(v_round(i2_pix0), v_round(i3_pix0));
+                        v_pack_store(dstptr + 4*(x+i), i01_pix);
+                        v_pack_store(dstptr + 4*(x+i+2), i23_pix);
+                    }
+        #elif CV_SIMD256
+                    for (int i = 0; i < uf; i+=vlanes_32) {
+                        #define SIMD256_LOAD_SHUFFLE_INTER(ofs0, ofs1) \
+                            const uint8_t *srcptr##ofs0 = src + addr[i+ofs0]; \
+                            const uint8_t *srcptr##ofs1 = src + addr[i+ofs1]; \
+                            v_int32 i##ofs0##_pix01 = v_reinterpret_as_s32(v256_load_expand_q(srcptr##ofs0)), \
+                                    i##ofs0##_pix23 = v_reinterpret_as_s32(v256_load_expand_q(srcptr##ofs0+srcstep)); \
+                            v_int32 i##ofs1##_pix01 = v_reinterpret_as_s32(v256_load_expand_q(srcptr##ofs1)), \
+                                    i##ofs1##_pix23 = v_reinterpret_as_s32(v256_load_expand_q(srcptr##ofs1+srcstep)); \
+                            v_float32 i##ofs0##_fpix01 = v_cvt_f32(i##ofs0##_pix01), i##ofs0##_fpix23 = v_cvt_f32(i##ofs0##_pix23); \
+                            v_float32 i##ofs1##_fpix01 = v_cvt_f32(i##ofs1##_pix01), i##ofs1##_fpix23 = v_cvt_f32(i##ofs1##_pix23); \
+                            v_float32 i##ofs0##ofs1##_fpix00, i##ofs0##ofs1##_fpix11, \
+                                      i##ofs0##ofs1##_fpix22, i##ofs0##ofs1##_fpix33; \
+                            v256_zip(i##ofs0##_fpix01, i##ofs1##_fpix01, i##ofs0##ofs1##_fpix00, i##ofs0##ofs1##_fpix11); \
+                            v256_zip(i##ofs0##_fpix23, i##ofs1##_fpix23, i##ofs0##ofs1##_fpix22, i##ofs0##ofs1##_fpix33); \
+                            v_float32 i##ofs0##_alpha = vx_setall_f32(valpha[i+ofs0]), \
+                                      i##ofs1##_alpha = vx_setall_f32(valpha[i+ofs1]), \
+                                      i##ofs0##_beta  = vx_setall_f32(vbeta[i+ofs0]), \
+                                      i##ofs1##_beta  = vx_setall_f32(vbeta[i+ofs1]); \
+                            v_float32 i##ofs0##ofs1##_alpha = v_combine_low(i##ofs0##_alpha, i##ofs1##_alpha), \
+                                      i##ofs0##ofs1##_beta  = v_combine_low(i##ofs0##_beta,  i##ofs1##_beta); \
+                            i##ofs0##ofs1##_fpix00 = v_fma(i##ofs0##ofs1##_alpha, v_sub(i##ofs0##ofs1##_fpix11, i##ofs0##ofs1##_fpix00), i##ofs0##ofs1##_fpix00); \
+                            i##ofs0##ofs1##_fpix22 = v_fma(i##ofs0##ofs1##_alpha, v_sub(i##ofs0##ofs1##_fpix33, i##ofs0##ofs1##_fpix22), i##ofs0##ofs1##_fpix22); \
+                            i##ofs0##ofs1##_fpix00 = v_fma(i##ofs0##ofs1##_beta,  v_sub(i##ofs0##ofs1##_fpix22, i##ofs0##ofs1##_fpix00), i##ofs0##ofs1##_fpix00);
+                            SIMD256_LOAD_SHUFFLE_INTER(0, 1);
+                            SIMD256_LOAD_SHUFFLE_INTER(2, 3);
+                        #undef SIMD256_LOAD_SHUFFLE_INTER
+
+                        // Store
+                        auto i01_pix = v_round(i01_fpix00), i23_pix = v_round(i23_fpix00);
+                        v_pack_store(dstptr + 4*x, v_pack_u(i01_pix, i23_pix));
+                    }
+        #else // CV_SIMD_SCALABLE
+                    for (int i = 0; i < uf; i+=vlanes_32) {
+                        #define VECTOR_LOAD_INTER(ofs) \
+                            const uint8_t *srcptr##ofs = src + addr[i+ofs]; \
+                            v_uint32 i##ofs##_pix0 = v_load_expand_q<4>(srcptr##ofs), \
+                                     i##ofs##_pix1 = v_load_expand_q<4>(srcptr##ofs+4), \
+                                     i##ofs##_pix2 = v_load_expand_q<4>(srcptr##ofs+srcstep), \
+                                     i##ofs##_pix3 = v_load_expand_q<4>(srcptr##ofs+srcstep+4); \
+                            v_float32 i##ofs##_fpix0 = v_cvt_f32(v_reinterpret_as_s32(i##ofs##_pix0)), \
+                                      i##ofs##_fpix1 = v_cvt_f32(v_reinterpret_as_s32(i##ofs##_pix1)), \
+                                      i##ofs##_fpix2 = v_cvt_f32(v_reinterpret_as_s32(i##ofs##_pix2)), \
+                                      i##ofs##_fpix3 = v_cvt_f32(v_reinterpret_as_s32(i##ofs##_pix3)); \
+                            v_float32 i##ofs##_alpha = vx_setall_f32(valpha[i+ofs]), \
+                                      i##ofs##_beta  = vx_setall_f32(vbeta[i+ofs]); \
+                            i##ofs##_fpix0 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_fpix1, i##ofs##_fpix0), i##ofs##_fpix0); \
+                            i##ofs##_fpix2 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_fpix3, i##ofs##_fpix2), i##ofs##_fpix2); \
+                            i##ofs##_fpix0 = v_fma(i##ofs##_beta,  v_sub(i##ofs##_fpix2, i##ofs##_fpix0), i##ofs##_fpix0);
+                            VECTOR_LOAD_INTER(0);
+                            VECTOR_LOAD_INTER(1);
+                            VECTOR_LOAD_INTER(2);
+                            VECTOR_LOAD_INTER(3);
+                        #undef VECTOR_LOAD_INTER
+
+                        // Pack and store
+                        auto i01_pix = v_pack(v_round(i0_fpix0), v_round(i1_fpix0)),
+                             i23_pix = v_pack(v_round(i2_fpix0), v_round(i3_fpix0));
+                        v_pack_u_store<8>(dstptr + 4*(x+i), i01_pix);
+                        v_pack_u_store<8>(dstptr + 4*(x+i+2), i23_pix);
+                    }
+        #endif
                 } else {
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
+                    int pixbuf[max_uf*4*4];
+                    // CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
+                    if (border_type == BORDER_CONSTANT || border_type == BORDER_TRANSPARENT) {
+                        mask_0 = v_lt(v_reinterpret_as_u32(v_add(src_ix0, one)), outer_scols);
+                        mask_1 = v_lt(v_reinterpret_as_u32(v_add(src_ix1, one)), outer_scols);
+                        mask_0 = v_and(mask_0, v_lt(v_reinterpret_as_u32(v_add(src_iy0, one)), outer_srows));
+                        mask_1 = v_and(mask_1, v_lt(v_reinterpret_as_u32(v_add(src_iy1, one)), outer_srows));
+                        v_uint16 outer_mask = v_pack(mask_0, mask_1);
+                        if (v_reduce_max(outer_mask) == 0) {
+                            if (border_type == BORDER_CONSTANT) {
+                                v_store_low(dstptr + x*4,        bval_v0);
+                                v_store_low(dstptr + x*4 + uf,   bval_v1);
+                                v_store_low(dstptr + x*4 + uf*2, bval_v2);
+                                v_store_low(dstptr + x*4 + uf*3, bval_v3);
+                            }
+                            continue;
+                        }
+                    }
+                    vx_store(src_ix, src_ix0);
+                    vx_store(src_iy, src_iy0);
+                    vx_store(src_ix + vlanes_32, src_ix1);
+                    vx_store(src_iy + vlanes_32, src_iy1);
+                    for (int i = 0; i < uf; i++) {
+                        int ix = src_ix[i], iy = src_iy[i];
+                        CV_WARP_LINEAR_VECTOR_FETCH_PIXEL_C4(0, 0, 0);
+                        CV_WARP_LINEAR_VECTOR_FETCH_PIXEL_C4(0, 1, uf);
+                        CV_WARP_LINEAR_VECTOR_FETCH_PIXEL_C4(1, 0, uf*2);
+                        CV_WARP_LINEAR_VECTOR_FETCH_PIXEL_C4(1, 1, uf*3);
+                    }
+                    v_int32  f00r = vx_load(pixbuf + uf * 0),
+                             f01r = vx_load(pixbuf + uf * (0+1)),
+                             f10r = vx_load(pixbuf + uf * (0+2)),
+                             f11r = vx_load(pixbuf + uf * (0+3));
+                    v_int32  f00g = vx_load(pixbuf + uf * 4),
+                             f01g = vx_load(pixbuf + uf * (4+1)),
+                             f10g = vx_load(pixbuf + uf * (4+2)),
+                             f11g = vx_load(pixbuf + uf * (4+3));
+                    v_int32  f00b = vx_load(pixbuf + uf * 8),
+                             f01b = vx_load(pixbuf + uf * (8+1)),
+                             f10b = vx_load(pixbuf + uf * (8+2)),
+                             f11b = vx_load(pixbuf + uf * (8+3));
+                    v_int32  f00a = vx_load(pixbuf + uf * 12),
+                             f01a = vx_load(pixbuf + uf * (12+1)),
+                             f10a = vx_load(pixbuf + uf * (12+2)),
+                             f11a = vx_load(pixbuf + uf * (12+3));
 
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C4);
-    #endif
+                    v_float32 f00rl = v_cvt_f32(f00r), f00rh = v_cvt_f32(f00r),
+                              f01rl = v_cvt_f32(f01r), f01rh = v_cvt_f32(f01r),
+                              f10rl = v_cvt_f32(f10r), f10rh = v_cvt_f32(f10r),
+                              f11rl = v_cvt_f32(f11r), f11rh = v_cvt_f32(f11r);
+                    v_float32 f00gl = v_cvt_f32(f00g), f00gh = v_cvt_f32(f00g),
+                              f01gl = v_cvt_f32(f01g), f01gh = v_cvt_f32(f01g),
+                              f10gl = v_cvt_f32(f10g), f10gh = v_cvt_f32(f10g),
+                              f11gl = v_cvt_f32(f11g), f11gh = v_cvt_f32(f11g);
+                    v_float32 f00bl = v_cvt_f32(f00b), f00bh = v_cvt_f32(f00b),
+                              f01bl = v_cvt_f32(f01b), f01bh = v_cvt_f32(f01b),
+                              f10bl = v_cvt_f32(f10b), f10bh = v_cvt_f32(f10b),
+                              f11bl = v_cvt_f32(f11b), f11bh = v_cvt_f32(f11b);
+                    v_float32 f00al = v_cvt_f32(f00a), f00ah = v_cvt_f32(f00a),
+                              f01al = v_cvt_f32(f01a), f01ah = v_cvt_f32(f01a),
+                              f10al = v_cvt_f32(f10a), f10ah = v_cvt_f32(f10a),
+                              f11al = v_cvt_f32(f11a), f11ah = v_cvt_f32(f11a);
+
+                    CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C4);
                 }
-
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 // In case neon fp16 intrinsics are not available; still requires A64
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(C4);
-    #else
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C4);
-    #endif
-
-                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C4);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map2 == nullptr) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -3365,7 +3495,7 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -3395,6 +3525,7 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
 
         uint16_t bval[] = {
             saturate_cast<uint16_t>(border_value[0]),
@@ -3481,7 +3612,7 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -3511,6 +3642,7 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
 
         uint16_t bval[] = {
             saturate_cast<uint16_t>(border_value[0]),
@@ -3601,7 +3733,7 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -3631,6 +3763,7 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
 
         uint16_t bval[] = {
             saturate_cast<uint16_t>(border_value[0]),
@@ -3723,7 +3856,7 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -3753,6 +3886,7 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
 
         float bval[] = {
             saturate_cast<float>(border_value[0]),
@@ -3838,7 +3972,7 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -3868,6 +4002,7 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
 
         float bval[] = {
             saturate_cast<float>(border_value[0]),
@@ -3959,7 +4094,7 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -3989,6 +4124,7 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
 
         float bval[] = {
             saturate_cast<float>(border_value[0]),
@@ -4083,7 +4219,7 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -4114,6 +4250,7 @@ void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -4198,7 +4335,7 @@ void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -4234,6 +4371,7 @@ void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -4326,7 +4464,7 @@ void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
@@ -4362,6 +4500,7 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
+        bool relative = is_relative;
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -4458,7 +4597,7 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
                     sy = sy_data[x];
                 }
 
-                if (is_relative) {
+                if (relative) {
                     sx += x;
                     sy += y;
                 }
