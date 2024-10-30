@@ -5,7 +5,6 @@
 #define _GRFMT_JPEGXL_H_
 
 #include "grfmt_base.hpp"
-#include <jxl/encode_cxx.h>
 #include <jxl/decode_cxx.h>
 #include <jxl/thread_parallel_runner_cxx.h>
 #include <vector>

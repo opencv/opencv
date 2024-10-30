@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "precomp.hpp"
 #include "grfmt_jpegxl.hpp"
+#include <jxl/encode_cxx.h>
+#include <jxl/version.h>
 
 #ifdef HAVE_JPEGXL
 
@@ -277,12 +279,16 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
     {
         if( params[i] == IMWRITE_JPEG_QUALITY )
         {
+            #if JPEGXL_MAJOR_VERSION > 0 || JPEGXL_MINOR_VERSION >= 10
             int quality = params[i+1];
             quality = MIN(MAX(quality, 0), 100);
             const float distance = JxlEncoderDistanceFromQuality(quality);
             JxlEncoderSetFrameDistance(frame_settings, distance);
             if (distance == 0)
                 JxlEncoderSetFrameLossless(frame_settings, JXL_TRUE);
+            #else
+            CV_LOG_WARNING(NULL, "Quality parameter is not supported in this version of libjxl");
+            #endif
         }
         if( params[i] == IMWRITE_JPEGXL_DISTANCE )
         {
