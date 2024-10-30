@@ -4,13 +4,13 @@
 #ifndef _GRFMT_JPEGXL_H_
 #define _GRFMT_JPEGXL_H_
 
+#ifdef HAVE_JPEGXL
+
 #include "grfmt_base.hpp"
 #include <jxl/decode_cxx.h>
 #include <jxl/thread_parallel_runner_cxx.h>
 #include <vector>
 #include <memory>
-
-#ifdef HAVE_JPEGXL
 
 // Jpeg XL codec
 
