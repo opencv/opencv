@@ -344,6 +344,9 @@ public:
         outputs_arr.getMatVector(outputs);
         for (auto &inp : inputs) {
             std::cout << "input shape: " << inp.size << std::endl;
+            std::cout << "input sum: " << cv::sum(inp) << std::endl;
+            // inp is 3d mat. let's print the first 10 elements
+            std::cout << "reshaped input first 10 elements: " << inp.row(0).colRange(0, 10) << std::endl;
         }
         for (size_t i = 0; i < outputs.size(); i++)
         {
@@ -351,10 +354,11 @@ public:
             if (outputs[i].data != srcBlob.data)
                 srcBlob.reshape(1, shape(outputs[i])).copyTo(outputs[i]);
         }
-        std::cout << "ReshapeLayerImpl::forward::done" << std::endl;
         for (auto &out : outputs) {
             std::cout << "output shape: " << out.size << std::endl;
+            std::cout << "output sum: " << cv::sum(out) << std::endl;
         }
+        std::cout << "==>ReshapeLayerImpl::forward::done\n" << std::endl;
     }
 
 #ifdef HAVE_CANN

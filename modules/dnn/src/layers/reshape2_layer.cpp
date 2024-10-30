@@ -161,6 +161,7 @@ public:
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::cout << "\n==>Reshape2LayerImpl::forward" << std::endl;
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
@@ -178,6 +179,8 @@ public:
         }
         MatShape outShape = getOutShape(inpShape, shapeSpec);
         reshapeAndCopyFirst(inputs_arr, outputs_arr, outShape);
+        std::cout << "output sum: " << cv::sum(outputs_arr.getMat(0)) << std::endl;
+        std::cout << "==>Reshape2LayerImpl::forward::done\n" << std::endl;
     }
 };
 

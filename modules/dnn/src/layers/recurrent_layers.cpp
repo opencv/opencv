@@ -427,6 +427,11 @@ public:
         outputs_arr.getMatVector(output);
         internals_arr.getMatVector(internals);
 
+        for (const auto& inp : input) {
+            std::cout << "input shape: " << inp.size << std::endl;
+            std::cout << "input sum: " << cv::sum(inp)[0] << std::endl;
+        }
+
         for (int i = 0; i < internals.size(); i++) {
             std::cout << "internal[" << i << "] shape: " << internals[i].size << std::endl;
         }
@@ -452,29 +457,29 @@ public:
         std::cout << "numDirs: " << numDirs << std::endl;
         for (int i = 0; i < numDirs; ++i)
         {
+            std::cout << "*********************" << std::endl;
             Mat Wh = blobs[0];
             Mat Wx = blobs[1];
             Mat bias = blobs[2];
 
-            std::cout << "Wx sum: " << cv::sum(Wx)[0] << std::endl;
-            std::cout << "Wh sum: " << cv::sum(Wh)[0] << std::endl;
-            std::cout << "bias sum: " << cv::sum(bias)[0] << std::endl;
-
-            std::cout << "Wx shape: " << Wx.size << std::endl;
-            std::cout << "Wh shape: " << Wh.size << std::endl;
-            std::cout << "bias shape: " << bias.size << std::endl;
-
-
-            // std::cout << "Wx: " << Wx << std::endl;
-            // std::cout << "Wh: " << Wh << std::endl;
-            // std::cout << "bias: " << bias << std::endl;
+           std::cout << "bias shape: " << bias.size << std::endl;
 
             Mat h_0, c_0;
             // Handle h_0 and c_0 based on input size
             h_0 = (input.size() >= 2) ? input[1].reshape(1, input[1].size[0] * input[1].size[1]) : blobs[3];
             c_0 = (input.size() == 3) ? input[2].reshape(1, input[2].size[0] * input[2].size[1]) : blobs[4];
 
-            std::cout << "h_0 shape: " << h_0.size << std::endl;
+            std::cout << "Wx sum: " << cv::sum(Wx)[0] << std::endl;
+            std::cout << "Wh sum: " << cv::sum(Wh)[0] << std::endl;
+            std::cout << "bias sum: " << cv::sum(bias)[0] << std::endl;
+            std::cout << "h_0 sum: " << cv::sum(h_0)[0] << std::endl;
+            std::cout << "c_0 sum: " << cv::sum(c_0)[0] << std::endl;
+
+
+            std::cout << "Wx shape: " << Wx.size << std::endl;
+            std::cout << "Wh shape: " << Wh.size << std::endl;
+            std::cout << "bias shape: " << bias.size << std::endl;
+            std::cout << " h_0 shape: " << h_0.size << std::endl;
             std::cout << "c_0 shape: " << c_0.size << std::endl;
 
             // Perform checks if input size is 2 or 3
@@ -493,6 +498,11 @@ public:
             h_0 = h_0.rowRange(i * h_0.rows / numDirs, (i + 1) * h_0.rows / numDirs);
             c_0 = c_0.rowRange(i * c_0.rows / numDirs, (i + 1) * c_0.rows / numDirs);
 
+            std::cout << "Wx sum: " << cv::sum(Wx)[0] << std::endl;
+            std::cout << "Wh sum: " << cv::sum(Wh)[0] << std::endl;
+            std::cout << "bias sum: " << cv::sum(bias)[0] << std::endl;
+            std::cout << "h_0 sum: " << cv::sum(h_0)[0] << std::endl;
+            std::cout << "c_0 sum: " << cv::sum(c_0)[0] << std::endl;
 
             std::cout << "Wx shape: " << Wx.size << std::endl;
             std::cout << "Wh shape: " << Wh.size << std::endl;
@@ -533,6 +543,7 @@ public:
             std::cout << "hInternal sum: " << cv::sum(hInternal) << std::endl;
             std::cout << "cInternal sum: " << cv::sum(cInternal) << std::endl;
             std::cout << "dummyOnes sum: " << cv::sum(dummyOnes) << std::endl;
+            std::cout << "gates sum: " << cv::sum(gates) << std::endl;
 
 
             Mat hOutTs = output[0].reshape(1, numSamplesTotal);
@@ -567,8 +578,10 @@ public:
             }
             std::cout << "numTimeStamps: " << numTimeStamps << std::endl;
             std::cout << "numSamples: " << numSamples << std::endl;
+            std::cout << "========================" << std::endl;
             for (int ts = tsStart; ts != tsEnd; ts += tsInc)
             {
+                std::cout << "ts: " << ts << std::endl;
                 Range curRowRange(ts*numSamples, (ts + 1)*numSamples);
                 Mat xCurr = xTs.rowRange(curRowRange);
 
@@ -608,8 +621,15 @@ public:
 #endif
                 {
                     std::cout << "xCurr shape: " << xCurr.size << std::endl;
+                    std::cout << "xCurr sum: " << cv::sum(xCurr) << std::endl;
+
                     std::cout << "Wx shape: " << Wx.size << std::endl;
+                    std::cout << "Wx sum: " << cv::sum(Wx)[0] << std::endl;
+
                     std::cout << "gates shape: " << gates.size << std::endl;
+                    std::cout << "gates sum: " << cv::sum(gates)[0] << std::endl;
+                    std::cout << "xCurr: " << xCurr << std::endl;
+                    std::cout << "Wx: " << Wx << std::endl;
                     gemm(xCurr, Wx, 1, gates, 0, gates, GEMM_2_T);      // Wx * x_t
                     std::cout << "gates sum: " << cv::sum(gates) << std::endl;
 
@@ -719,11 +739,12 @@ public:
                 std::cout << "hOutTs sum: " << cv::sum(hOutTs) << std::endl;
                 std::cout << "curRowRange: " << curRowRange << std::endl;
 
-                                std::cout << "cOutTs type: " << cOutTs.type() << std::endl;
-            std::cout << "cInternal type: " << cInternal.type() << std::endl;
+                std::cout << "cOutTs type: " << cOutTs.type() << std::endl;
+                std::cout << "cInternal type: " << cInternal.type() << std::endl;
                 if (produceCellOutput)
                     cInternal.copyTo(cOutTs.rowRange(curRowRange));
                 std::cout << "cOutTs sum: " << cv::sum(cOutTs) << std::endl;
+                std::cout << "--------------------------------" << std::endl;
             }
         }
 
