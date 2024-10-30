@@ -194,6 +194,20 @@ CV_INTRIN_DEF_TYPE_TRAITS_NO_Q_TYPE(double, int64, uint64, double, void, double)
 #endif // CV_CPU_OPTIMIZATION_HAL_NAMESPACE
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
+
+template <typename _VecTp> inline _VecTp v_setzero_();
+template <typename _VecTp> inline _VecTp v_setall_(uchar);
+template <typename _VecTp> inline _VecTp v_setall_(schar);
+template <typename _VecTp> inline _VecTp v_setall_(ushort);
+template <typename _VecTp> inline _VecTp v_setall_(short);
+template <typename _VecTp> inline _VecTp v_setall_(unsigned);
+template <typename _VecTp> inline _VecTp v_setall_(int);
+template <typename _VecTp> inline _VecTp v_setall_(uint64);
+template <typename _VecTp> inline _VecTp v_setall_(int64);
+template <typename _VecTp> inline _VecTp v_setall_(float);
+template <typename _VecTp> inline _VecTp v_setall_(double);
+template <typename _VecTp> inline _VecTp v_setall_(hfloat);
+
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 using namespace CV_CPU_OPTIMIZATION_HAL_NAMESPACE;
 #endif
@@ -766,10 +780,11 @@ namespace CV__SIMD_NAMESPACE {
 
     inline void v_pack_store(const bfloat* ptr, const v_float32& v)
     {
-        v_int32 iv = v_shr<16>(v_reinterpret_as_s32(v));
-        cv::v_pack_store((short*)ptr, iv);
+        v_int32 av = v_reinterpret_as_s32(v_abs(v));
+        v_int32 iv = v_reinterpret_as_s32(v);
+        iv = v_add(iv, v_and(v_le(av, vx_setall_s32(0x7f7f7fff)), vx_setall_s32(0x8000)));
+        cv::v_pack_store((short*)ptr, v_shr<16>(iv));
     }
-
     #endif
 
     /** @brief SIMD processing state cleanup call */

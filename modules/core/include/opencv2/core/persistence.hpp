@@ -53,50 +53,6 @@
 #  error persistence.hpp header must be compiled as C++
 #endif
 
-//! @addtogroup core_c
-//! @{
-
-/** @brief "black box" representation of the file storage associated with a file on disk.
-
-Several functions that are described below take CvFileStorage\* as inputs and allow the user to
-save or to load hierarchical collections that consist of scalar values, standard CXCore objects
-(such as matrices, sequences, graphs), and user-defined objects.
-
-OpenCV can read and write data in XML (<http://www.w3c.org/XML>), YAML (<http://www.yaml.org>) or
-JSON (<http://www.json.org/>) formats. Below is an example of 3x3 floating-point identity matrix A,
-stored in XML and YAML files
-using CXCore functions:
-XML:
-@code{.xml}
-    <?xml version="1.0">
-    <opencv_storage>
-    <A type_id="opencv-matrix">
-      <rows>3</rows>
-      <cols>3</cols>
-      <dt>f</dt>
-      <data>1. 0. 0. 0. 1. 0. 0. 0. 1.</data>
-    </A>
-    </opencv_storage>
-@endcode
-YAML:
-@code{.yaml}
-    %YAML:1.0
-    A: !!opencv-matrix
-      rows: 3
-      cols: 3
-      dt: f
-      data: [ 1., 0., 0., 0., 1., 0., 0., 0., 1.]
-@endcode
-As it can be seen from the examples, XML uses nested tags to represent hierarchy, while YAML uses
-indentation for that purpose (similar to the Python programming language).
-
-The same functions can read and write data in both formats; the particular format is determined by
-the extension of the opened file, ".xml" for XML files, ".yml" or ".yaml" for YAML and ".json" for
-JSON.
- */
-
-//! @} core_c
-
 #include "opencv2/core/types.hpp"
 #include "opencv2/core/mat.hpp"
 
@@ -283,13 +239,14 @@ element is a structure of 2 integers, followed by a single-precision floating-po
 equivalent notations of the above specification are `iif`, `2i1f` and so forth. Other examples: `u`
 means that the array consists of bytes, and `2d` means the array consists of pairs of doubles.
 
-@see @ref samples/cpp/filestorage.cpp
+@see @ref samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp
 */
 
 //! @{
 
-/** @example samples/cpp/filestorage.cpp
+/** @example samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp
 A complete example using the FileStorage interface
+Check @ref tutorial_file_input_output_with_xml_yml "the corresponding tutorial" for more details
 */
 
 ////////////////////////// XML & YAML I/O //////////////////////////
@@ -322,10 +279,10 @@ public:
     };
     enum State
     {
-        UNDEFINED      = 0,
-        VALUE_EXPECTED = 1,
-        NAME_EXPECTED  = 2,
-        INSIDE_MAP     = 4
+        UNDEFINED      = 0,  //!< Initial or uninitialized state.
+        VALUE_EXPECTED = 1,  //!< Expecting a value in the current position.
+        NAME_EXPECTED  = 2,  //!< Expecting a key/name in the current position.
+        INSIDE_MAP     = 4   //!< Indicates being inside a map (a set of key-value pairs).
     };
 
     /** @brief The constructors.

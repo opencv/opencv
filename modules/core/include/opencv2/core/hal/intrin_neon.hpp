@@ -414,6 +414,8 @@ private:
 #define OPENCV_HAL_IMPL_NEON_INIT(_Tpv, _Tp, _TpCast, suffix) \
 inline v_##_Tpv v_setzero_##suffix() { return v_##_Tpv(vdupq_n_##suffix((_TpCast)0)); } \
 inline v_##_Tpv v_setall_##suffix(_Tp v) { return v_##_Tpv(vdupq_n_##suffix((_TpCast)v)); } \
+template <> inline v_##_Tpv v_setzero_() { return v_setzero_##suffix(); } \
+template <> inline v_##_Tpv v_setall_(_Tp v) { return v_setall_##suffix(v); } \
 inline _Tpv##_t vreinterpretq_##suffix##_##suffix(_Tpv##_t v) { return v; } \
 inline v_uint8x16 v_reinterpret_as_u8(const v_##_Tpv& v) { return v_uint8x16(vreinterpretq_u8_##suffix(v.val)); } \
 inline v_int8x16 v_reinterpret_as_s8(const v_##_Tpv& v) { return v_int8x16(vreinterpretq_s8_##suffix(v.val)); } \
@@ -3029,6 +3031,28 @@ inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 #endif
 
 inline void v_cleanup() {}
+
+#include "intrin_math.hpp"
+#if CV_SIMD128_FP16
+inline v_float16x8 v_exp(const v_float16x8& x) { return v_exp_default_16f<v_float16x8, v_int16x8>(x); }
+inline v_float16x8 v_log(const v_float16x8& x) { return v_log_default_16f<v_float16x8, v_int16x8>(x); }
+inline void v_sincos(const v_float16x8& x, v_float16x8& s, v_float16x8& c) { v_sincos_default_16f<v_float16x8, v_int16x8>(x, s, c); }
+inline v_float16x8 v_sin(const v_float16x8& x) { return v_sin_default_16f<v_float16x8, v_int16x8>(x); }
+inline v_float16x8 v_cos(const v_float16x8& x) { return v_cos_default_16f<v_float16x8, v_int16x8>(x); }
+#endif
+inline v_float32x4 v_exp(const v_float32x4& x) { return v_exp_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_log(const v_float32x4& x) { return v_log_default_32f<v_float32x4, v_int32x4>(x); }
+inline void v_sincos(const v_float32x4& x, v_float32x4& s, v_float32x4& c) { v_sincos_default_32f<v_float32x4, v_int32x4>(x, s, c); }
+inline v_float32x4 v_sin(const v_float32x4& x) { return v_sin_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_cos(const v_float32x4& x) { return v_cos_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_erf(const v_float32x4& x) { return v_erf_default_32f<v_float32x4, v_int32x4>(x); }
+#if CV_SIMD128_64F
+inline v_float64x2 v_exp(const v_float64x2& x) { return v_exp_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_log(const v_float64x2& x) { return v_log_default_64f<v_float64x2, v_int64x2>(x); }
+inline void v_sincos(const v_float64x2& x, v_float64x2& s, v_float64x2& c) { v_sincos_default_64f<v_float64x2, v_int64x2>(x, s, c); }
+inline v_float64x2 v_sin(const v_float64x2& x) { return v_sin_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_cos(const v_float64x2& x) { return v_cos_default_64f<v_float64x2, v_int64x2>(x); }
+#endif
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

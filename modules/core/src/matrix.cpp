@@ -1372,7 +1372,8 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
 {
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
-    setSize(*this, _dims, _sizes, _steps, true);
+    if (_dims > 0 || _data != nullptr)
+        setSize(*this, _dims, _sizes, _steps, true);
     finalizeHdr(*this);
 }
 
@@ -1383,7 +1384,9 @@ Mat::Mat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _
 {
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
-    setSize(*this, (int)_sizes.size(), _sizes.data(), _steps, true);
+    int _dims = (int)_sizes.size();
+    if (_dims > 0 || _data != nullptr)
+        setSize(*this, _dims, _sizes.data(), _steps, true);
     finalizeHdr(*this);
 }
 
@@ -1407,15 +1410,16 @@ Mat::Mat(std::initializer_list<int> _shape, int _type, void* _data, const size_t
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     int new_shape[MatShape::MAX_DIMS];
-    int new_ndims = (int)_shape.size();
-    CV_Assert(new_ndims <= MatShape::MAX_DIMS);
+    int _dims = (int)_shape.size();
+    CV_Assert(_dims <= MatShape::MAX_DIMS);
     auto it = _shape.begin();
-    for (int i = 0; i < new_ndims; i++, ++it)
+    for (int i = 0; i < _dims; i++, ++it)
         new_shape[i] = *it;
 
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
-    setSize(*this, new_ndims, new_shape, _steps, true);
+    if (_dims > 0 || _data != nullptr)
+        setSize(*this, _dims, new_shape, _steps, true);
     finalizeHdr(*this);
 }
 
