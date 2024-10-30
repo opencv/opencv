@@ -630,7 +630,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     hOut = hOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
                     std::cout << "hOut shape: " << hOut.size << std::endl;
                     std::cout << "hOut sum: " << cv::sum(hOut) << std::endl;
-                    // hOut.copyTo(output[1]);
+                    hOut.copyTo(output[1]);
                 } else {
 
                     // Slice: SxDxBxH -> last sequence, first direction
@@ -655,7 +655,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
                     std::cout << "hOut shape: " << hOut.size << std::endl;
                     std::cout << "hOut sum: " << cv::sum(hOut) << std::endl;
-                    // hOut.copyTo(output[2]);
+                    hOut.copyTo(output[1]);
                 }
             }
 
