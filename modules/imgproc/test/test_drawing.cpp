@@ -262,7 +262,7 @@ int CV_DrawingTest_CPP::checkLineVirtualIterator(  )
         int x3 = randomGenerator.uniform(-512, 1024+1);
         int y3 = randomGenerator.uniform(-512, 1024+1);
         int channels = randomGenerator.uniform(1, 3+1);
-        Mat m(cv::Size(width, height), CV_MAKETYPE(8U, channels));
+        Mat m(cv::Size(width, height), CV_MAKETYPE(CV_8U, channels));
         Point p1(x1, y1);
         Point p2(x2, y2);
         Point offset(x3, y3);
