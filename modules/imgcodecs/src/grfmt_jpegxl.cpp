@@ -84,7 +84,7 @@ bool JpegXLDecoder::read(Mat* pimg)
         pimg->create(m_height, m_width, m_type);
         if (!pimg->isContinuous())
             return false;
-        if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutBuffer(m_decoder.get(), 
+        if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutBuffer(m_decoder.get(),
                                                            &m_format,
                                                            pimg->ptr<uint8_t>(),
                                                            pimg->total() * pimg->elemSize())) {
@@ -102,7 +102,7 @@ bool JpegXLDecoder::read(Mat* pimg)
             if (remaining > 0)
                 memmove(m_read_buffer.data(), m_read_buffer.data() + m_read_buffer.size() - remaining, remaining);
             // Read more data from file
-            size_t bytes_read = fread(m_read_buffer.data() + remaining, 
+            size_t bytes_read = fread(m_read_buffer.data() + remaining,
                                     1, m_read_buffer.size() - remaining, m_f.get());
             if (bytes_read == 0) {
                 if (ferror(m_f.get())) {
@@ -115,9 +115,9 @@ bool JpegXLDecoder::read(Mat* pimg)
                     return false;
                 }
             }
-            
+
             // Set input buffer
-            if (JXL_DEC_SUCCESS != JxlDecoderSetInput(m_decoder.get(), 
+            if (JXL_DEC_SUCCESS != JxlDecoderSetInput(m_decoder.get(),
                                                       m_read_buffer.data(),
                                                       bytes_read + remaining)) {
                 return false;
