@@ -74,9 +74,8 @@ int fastcv_hal_sobel(
     int             border_type)
 {
 
-    // @todo unused parameters
-    CV_UNUSED(scale);
-    CV_UNUSED(delta);
+    if(scale != 1.0f || delta != 0.0f)
+        CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Scale:%f, delta:%f is not supported", scale, delta));
 
     // Do not support inplace case
     if (src_data == dst_data)
