@@ -171,6 +171,12 @@ public:
         CV_Assert((ninputs == 1 && haveShapeSpec_) ||
                   (ninputs == 2 && !haveShapeSpec_));
 
+        auto *inp_ptr = inputs_arr.getMat(0).ptr<float>();
+        for (int i = 0; i < inputs_arr.getMat(0).total(); i++){
+            std::cout << inp_ptr[i] << " ";
+        }
+        std::cout << std::endl;
+
         MatShape inpShape = inputs_arr.shape(0);
         MatShape shapeSpec = newShapeDesc;
         if (!haveShapeSpec_) {
@@ -180,6 +186,12 @@ public:
         MatShape outShape = getOutShape(inpShape, shapeSpec);
         reshapeAndCopyFirst(inputs_arr, outputs_arr, outShape);
         std::cout << "output sum: " << cv::sum(outputs_arr.getMat(0)) << std::endl;
+
+        auto *out_ptr = outputs_arr.getMat(0).ptr<float>();
+        for (int i = 0; i < outputs_arr.getMat(0).total(); i++){
+            std::cout << out_ptr[i] << " ";
+        }
+        std::cout << std::endl;
         std::cout << "==>Reshape2LayerImpl::forward::done\n" << std::endl;
     }
 };

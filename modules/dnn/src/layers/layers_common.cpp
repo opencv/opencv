@@ -318,7 +318,7 @@ void reshapeAndCopyFirst(InputArrayOfArrays inputs,
         Mat inp_ = inp.reshape(0, shape);
         std::cout << "inp sum: " << cv::sum(inp) << std::endl;
         std::cout << "inp_ sum: " << cv::sum(inp_) << std::endl;
-        std::cout << "reshaped input first 10 elements: " << inp_.row(0).colRange(0, 10) << std::endl;
+        // std::cout << "reshaped input first 10 elements: " << inp_.row(0).colRange(0, 10) << std::endl;
         if (inp_.data != outref[0].data)
             inp_.copyTo(outref[0]);
     }

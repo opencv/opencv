@@ -779,6 +779,11 @@ public:
             std::cout << "output[" << i << "] shape: " << output[i].size << std::endl;
             std::cout << "output[" << i << "] sum: " << cv::sum(output[i]) << std::endl;
         }
+
+        auto *out_ptr = output[0].ptr<float>();
+        for (int i = 0; i < output[0].total(); i++){
+            std::cout << out_ptr[i] << " ";
+        }
         std::cout << "\n==>LSTM forward done\n" << std::endl;
         // exit(0);
     }

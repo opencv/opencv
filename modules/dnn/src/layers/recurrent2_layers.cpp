@@ -180,11 +180,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             std::cout << "ninputs: " << ninputs << std::endl;
             std::cout << "noutputs: " << noutputs << std::endl;
 
-            // for (int i = 0; i < ninputs; i++)
-            // {
-            //     std::cout << "input " << netimpl_->argName(this->inputs[i]) << " is constant:" << netimpl_->isConstArg(this->inputs[i]) << " shape: " << inputs[i] << std::endl;
-            // }
-
             const MatShape& inp0 = inputs[0];
             const MatShape& Wx = inputs[1];
             const MatShape& Wh = inputs[2];
@@ -192,15 +187,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             const MatShape& seq_len = inputs[4];
             const MatShape& initial_h = inputs[5];
             const MatShape& initial_c = inputs[6];
-
-            // std::cout << "inp0: " << inp0 << " is constant: " << netimpl_->isConstArg(this->inputs[0]) << std::endl;
-            // std::cout << "Wx: " << Wx << " is constant: " << netimpl_->isConstArg(this->inputs[1]) << std::endl;
-            // std::cout << "Wh: " << Wh << " is constant: " << netimpl_->isConstArg(this->inputs[2]) << std::endl;
-            // std::cout << "bias: " << bias << " is constant: " << netimpl_->isConstArg(this->inputs[3]) << std::endl;
-            // std::cout << "seq_len: " << seq_len << " is constant: " << netimpl_->isConstArg(this->inputs[4]) << std::endl;
-            // std::cout << "initial_h: " << initial_h << " is constant: " << netimpl_->isConstArg(this->inputs[5]) << std::endl;
-            // std::cout << "initial_c: " << initial_c << " is constant: " << netimpl_->isConstArg(this->inputs[6]) << std::endl;
-            // std::cout << "output size: " << outputs.size() << std::endl;
 
             int _hidSize = Wh[2];
             int _inpSize = Wx[2];
@@ -270,18 +256,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 outputs.push_back(newShape);
             }
 
-            // outputs[0].insert(outputs[0].begin() + 1, 1); // this is just a hack. Needs to be replaces with
-                                                          // something more that make sense
-
-
-            // lets add funtionality of fixLSTMDims for shape inference
-
-
-            // lets print output names
-            // for (int i = 0; i < outputs.size(); i++) {
-            //     std::cout << "output[" << i << "] name: " << netimpl_->argName(this->outputs[i]) << std::endl;
-            // }
-
             // internal shapes need during forward pass
             internals.assign(1, shape(_batchSize, _hidSize)); // hInternal
             internals.push_back(shape(_batchSize, _hidSize)); // cInternal
@@ -309,23 +283,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             std::cout << "\n==>LSTM getTypes" << std::endl;
             outputs.assign(requiredOutputs, inputs[0]);
             internals.assign(4, inputs[0]);
-            // CV_Assert(requiredInternals == 0);
-            // internals.clear();
             std::cout << "==>LSTM getTypes done\n" << std::endl;
         }
 
 
-        MatShape getOutputShape(const MatShape& inpShape, MatShape& compOutShape){
-            std::cout << "\n==>LSTM getOutputShape" << std::endl;
-            std::cout << "inpShape: " << inpShape << std::endl;
-            std::cout << "compOutShape: " << compOutShape << std::endl;
-
-            compOutShape.insert(compOutShape.begin() + 1, 1); // this is just a hack. Needs to be replaces with
-                                                            // something more that make sense
-
-            std::cout << "==>LSTM getOutputShape done\n" << std::endl;
-            return compOutShape;
-        }
         void forward(InputArrayOfArrays inputs_arr,
                      OutputArrayOfArrays outputs_arr,
                      OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -631,8 +592,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     std::cout << "hOut shape: " << hOut.size << std::endl;
                     std::cout << "hOut sum: " << cv::sum(hOut) << std::endl;
                     hOut.copyTo(output[1]);
+
                 } else {
 
+                    // there is issue here.
                     // Slice: SxDxBxH -> last sequence, first direction
                     Range ranges1[] = {cv::Range(output[0].size[0] - 1, output[0].size[0]), cv::Range(0, 1), cv::Range::all(), cv::Range::all()};
                     Mat part1 = output[0](ranges1);
@@ -665,6 +628,13 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 std::cout << "output[ " << i << "] sum: " << cv::sum(output[i]) << std::endl;
             }
 
+
+            // print output
+            auto *out_ptr = output[0].ptr<float>();
+            for (int i = 0; i < output[0].total(); i++){
+                std::cout << out_ptr[i] << " ";
+            }
+            std::cout << std::endl;
             // getvector from outputs_arr and print shape and sum
             std::cout << "==>LSTM forward done\n" << std::endl;
         }

@@ -170,6 +170,7 @@ public:
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays) CV_OVERRIDE
     {
+        std::cout << "\n==>TransposeLayerImpl::forward" << std::endl;
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
@@ -178,7 +179,13 @@ public:
         CV_Assert(ninputs == 1);
 
         MatShape inpShape = inputs_arr.shape(0);
+        std::cout << "input shape: " << inpShape << std::endl;
+        auto *inp_ptr = inputs_arr.getMat(0).ptr<float>();
+        for (int i = 0; i < inputs_arr.getMat(0).total(); i++){
+            std::cout << inp_ptr[i] << " ";
+        }
         MatShape outShape = getOutShape(inpShape);
+        std::cout << "output shape" << outShape << std::endl;
         int inpType = inputs_arr.type(0);
         int outKind = outputs_arr.kind();
 
@@ -201,6 +208,12 @@ public:
             runOp(inp, temp);
             temp.copyTo(outs[0]);
         }
+        auto *out_ptr = outputs_arr.getMat(0).ptr<float>();
+        for (int i = 0; i < outputs_arr.getMat(0).total(); i++){
+            std::cout << out_ptr[i] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "==>TransposeLayerImpl::forward::done\n" << std::endl;
     }
 
     void runOp(const Mat& inp, Mat& out)

@@ -381,6 +381,11 @@ public:
         for (auto &inp : inputs) {
             std::cout << "input shape: " << inp.size << std::endl;
         }
+        auto *inp_ptr = inputs_arr.getMat(0).ptr<float>();
+        for (int i = 0; i < inputs_arr.getMat(0).total(); i++){
+            std::cout << inp_ptr[i] << " ";
+        }
+        std::cout << std::endl;
         size_t k, ninputs = inputs.size();
         if(!_needsPermute)
         {
@@ -426,10 +431,15 @@ public:
                 }
             }
         }
-        std::cout << "PermuteLayerImpl::forward::done" << std::endl;
         for (auto &out : outputs) {
             std::cout << "output shape: " << out.size << std::endl;
         }
+        auto *out_ptr = outputs_arr.getMat(0).ptr<float>();
+        for (int i = 0; i < outputs_arr.getMat(0).total(); i++){
+            std::cout << out_ptr[i] << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "==>PermuteLayerImpl::forward::done\n" << std::endl;
     }
 
     template <class T>
