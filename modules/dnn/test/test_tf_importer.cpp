@@ -46,7 +46,7 @@ TEST(Test_TensorFlow, read_inception)
     Mat inputBlob = blobFromImage(input);
 
     net.setInput(inputBlob, "input");
-    Mat out = net.forward("softmax2");
+    Mat out = net.forward();
 
     std::cout << out.dims << std::endl;
 }
@@ -66,7 +66,7 @@ TEST(Test_TensorFlow, inception_accuracy)
     Mat inputBlob = blobFromImage(sample, 1.0, Size(224, 224), Scalar(), /*swapRB*/true);
 
     net.setInput(inputBlob, "input");
-    Mat out = net.forward("softmax2");
+    Mat out = net.forward();
 
     Mat ref = blobFromNPY(_tf("tf_inception_prob.npy"));
 

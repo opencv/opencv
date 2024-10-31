@@ -27,11 +27,11 @@ Net readNet(const String& _model, const String& _config, const String& _framewor
     {
         if (modelExt == "pbtxt" || configExt == "pb")
             std::swap(model, config);
-        return readNetFromTensorflow(model, config);
+        return readNetFromTensorflow(model, config, engine);
     }
     if (framework == "tflite" || modelExt == "tflite")
     {
-        return readNetFromTFLite(model);
+        return readNetFromTFLite(model, engine);
     }
     if (framework == "darknet" || modelExt == "weights" || configExt == "weights" || modelExt == "cfg" || configExt == "cfg")
     {
@@ -63,13 +63,13 @@ Net readNet(const String& _framework, const std::vector<uchar>& bufferModel,
     else if (framework == "caffe")
         return readNetFromCaffe(bufferConfig, bufferModel, engine);
     else if (framework == "tensorflow")
-        return readNetFromTensorflow(bufferModel, bufferConfig);
+        return readNetFromTensorflow(bufferModel, bufferConfig, engine);
     else if (framework == "darknet")
         return readNetFromDarknet(bufferConfig, bufferModel);
     else if (framework == "dldt" || framework == "openvino")
         return readNetFromModelOptimizer(bufferConfig, bufferModel);
     else if (framework == "tflite")
-        return readNetFromTFLite(bufferModel);
+        return readNetFromTFLite(bufferModel, engine);
     CV_Error(Error::StsError, "Cannot determine an origin framework with a name " + framework);
 }
 
