@@ -321,6 +321,8 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
 
     const size_t buffer_size = 16384;  // 16KB chunks
     std::unique_ptr<FILE, int (*)(FILE*)> f(fopen(m_filename.c_str(), "wb"), &fclose);
+    if(!f)
+        return false;
     std::vector<uint8_t> compressed(buffer_size);
     JxlEncoderStatus process_result = JXL_ENC_NEED_MORE_OUTPUT;
     while (process_result == JXL_ENC_NEED_MORE_OUTPUT) {
