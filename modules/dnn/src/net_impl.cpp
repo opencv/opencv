@@ -679,7 +679,7 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
 }
 
 
-#define TRACE_INFERENCE 0
+#define TRACE_INFERENCE 1
 
 void Net::Impl::forwardLayer(LayerData& ld)
 {
@@ -926,6 +926,15 @@ void Net::Impl::forwardLayer(LayerData& ld)
             printf("Output %zu.\n", i);
             printf("  Type: %s\n", typeToString(out.type()).c_str());
             printf("  Shape: ");
+
+            printf("sum: %f\n", cv::sum(out)[0]);
+            std::cout << "pointer to data: " << std::endl;
+            auto *ptr = out.ptr<float>();
+            for (int j = 0; j < out.total(); j++) {
+                printf("%f ", ptr[j]);
+            }
+            printf("\n");
+
             if (out.empty()) {
                 printf("<empty>\n");
             } else if (out.dims == 0) {

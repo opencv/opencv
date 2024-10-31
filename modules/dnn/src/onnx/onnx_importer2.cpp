@@ -1143,6 +1143,11 @@ void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeP
     std::cout << "needs_yh: " << need_yh << std::endl;
     std::cout << "needs_y: " << need_y << std::endl;
 
+
+    std::cout << "input size: " << lstm_proto.input_size() << std::endl;
+    if (lstm_proto.input_size() == 8)
+        layerParams.set("use_peephole", true);
+
     // print names of the outputs
     for (int i = 0; i < lstm_proto.output_size(); i++)
         std::cout << "output [" << i << "] name: " << lstm_proto.output(i) << std::endl;

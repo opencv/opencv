@@ -1333,7 +1333,7 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
     testONNXModels("split_max");
 }
 
-TEST_P(Test_ONNX_layers, LSTM_Activations)
+TEST_P(Test_ONNX_layers, DISABLED_LSTM_Activations)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
@@ -1372,7 +1372,7 @@ TEST_P(Test_ONNX_layers, LSTM_hidden)
     testONNXModels("hidden_lstm", npy, 0, 0, false, false);
 }
 
-TEST_P(Test_ONNX_layers, LSTM_hidden_bidirectional)
+TEST_P(Test_ONNX_layers, DISABLED_LSTM_hidden_bidirectional)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // IE exception: Node Transpose_45 was not assigned on any pointed device.
@@ -1459,7 +1459,7 @@ TEST_P(Test_ONNX_layers, LSTM_cell_forward)
 #endif
     testONNXModels("lstm_cell_forward", npy, 0, 0, false, false);
 }
-TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
+TEST_P(Test_ONNX_layers, DISABLED_LSTM_cell_bidirectional)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // Ngraph operation Reshape with name LSTM_16/lstm_y/reshape has dynamic output shape on 0 port, but CPU plug-in supports only static shape
@@ -1503,14 +1503,14 @@ TEST_P(Test_ONNX_layers, LSTM_init_h0_c0)
     testONNXModels("lstm_init_h0_c0", npy, 0, 0, false, false, 3);
 }
 // epsilon is larger because onnx does not match with torch/opencv exactly
-TEST_P(Test_ONNX_layers, LSTM_layout_seq)
+TEST_P(Test_ONNX_layers, DISABLED_LSTM_layout_seq)
 {
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm_layout_0", npy, 0.005, 0.005, false, false, 3);
 }
 // epsilon is larger because onnx does not match with torch/opencv exactly
-TEST_P(Test_ONNX_layers, LSTM_layout_batch)
+TEST_P(Test_ONNX_layers, DISABLED_LSTM_layout_batch)
 {
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);

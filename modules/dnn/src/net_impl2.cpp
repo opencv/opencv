@@ -687,17 +687,22 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         if (finalizeLayers)
             layer->finalize(inpMats, outMats);
         layer->forward(inpMats, outMats, tempMats);
-        std::cout << "==>graph engine forward done" << std::endl;
-        std::cout << "outMats size: " << outMats.size() << std::endl;
-        std::cout << "noutputs: " << noutputs << std::endl;
-        std::cout << "outMats[0] shape: " << outMats[0].shape() << std::endl;
-        std::cout << "outMats[0] sum: " << cv::sum(outMats[0]) << std::endl;
+        std::cout << "==>layer forward done" << std::endl;
         CV_Assert(outMats.size() == noutputs);
 
         for (i = 0; i < noutputs; i++) {
             Arg out = outputs[i];
             ArgData& adata = args[out.idx];
             const Mat& m = outMats[i];
+            std::cout << "outMats[" << i << "] shape: " << m.shape() << std::endl;
+            std::cout << "outMats[" << i << "] sum: " << cv::sum(m) << std::endl;
+            std::cout << "pointer to data: " << std::endl;
+            auto *ptr = m.ptr<float>();
+            for (int j = 0; j < m.total(); j++) {
+                std::cout << ptr[j] << " ";
+            }
+            std::cout << std::endl;
+
             //checkRange(m, false);
             adata.type = m.type();
             adata.shape = m.shape();

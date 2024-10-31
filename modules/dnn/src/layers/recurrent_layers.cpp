@@ -427,13 +427,31 @@ public:
         outputs_arr.getMatVector(output);
         internals_arr.getMatVector(internals);
 
-        for (const auto& inp : input) {
-            std::cout << "input shape: " << inp.size << std::endl;
-            std::cout << "input sum: " << cv::sum(inp)[0] << std::endl;
+        std::cout << "Input vector size: " << input.size() << std::endl;
+        for (size_t i = 0; i < input.size(); i++) {
+            std::cout << "Input[" << i << "] shape: " << input[i].size
+                    << ", type: " << input[i].type()
+                    << ", continuous: " << input[i].isContinuous()
+                    << ", empty: " << input[i].empty()
+                    << ", sum: " << cv::sum(input[i])[0] << std::endl;
         }
 
-        for (int i = 0; i < internals.size(); i++) {
-            std::cout << "internal[" << i << "] shape: " << internals[i].size << std::endl;
+        std::cout << "Internals vector size: " << internals.size() << std::endl;
+        for (size_t i = 0; i < internals.size(); i++) {
+            std::cout << "Internals[" << i << "] shape: " << internals[i].size
+                    << ", type: " << internals[i].type()
+                    << ", continuous: " << internals[i].isContinuous()
+                    << ", empty: " << internals[i].empty()
+                    << ", sum: " << cv::sum(internals[i])[0] << std::endl;
+        }
+
+        std::cout << "Output vector size: " << output.size() << std::endl;
+        for (size_t i = 0; i < output.size(); i++) {
+            std::cout << "output[" << i << "] shape: " << output[i].size
+                    << ", type: " << output[i].type()
+                    << ", continuous: " << output[i].isContinuous()
+                    << ", empty: " << output[i].empty()
+                    << ", sum: " << cv::sum(output[i])[0] << std::endl;
         }
 
         if (layout == BATCH_SEQ_HID){
@@ -458,6 +476,7 @@ public:
         for (int i = 0; i < numDirs; ++i)
         {
             std::cout << "*********************" << std::endl;
+            std::cout << "\nProcessing direction " << i << " of " << numDirs << std::endl;
             Mat Wh = blobs[0];
             Mat Wx = blobs[1];
             Mat bias = blobs[2];
@@ -469,17 +488,17 @@ public:
             h_0 = (input.size() >= 2) ? input[1].reshape(1, input[1].size[0] * input[1].size[1]) : blobs[3];
             c_0 = (input.size() == 3) ? input[2].reshape(1, input[2].size[0] * input[2].size[1]) : blobs[4];
 
+            std::cout << "Before slicing the weight matrices:" << std::endl;
             std::cout << "Wx sum: " << cv::sum(Wx)[0] << std::endl;
             std::cout << "Wh sum: " << cv::sum(Wh)[0] << std::endl;
             std::cout << "bias sum: " << cv::sum(bias)[0] << std::endl;
             std::cout << "h_0 sum: " << cv::sum(h_0)[0] << std::endl;
             std::cout << "c_0 sum: " << cv::sum(c_0)[0] << std::endl;
 
-
             std::cout << "Wx shape: " << Wx.size << std::endl;
             std::cout << "Wh shape: " << Wh.size << std::endl;
             std::cout << "bias shape: " << bias.size << std::endl;
-            std::cout << " h_0 shape: " << h_0.size << std::endl;
+            std::cout << "h_0 shape: " << h_0.size << std::endl;
             std::cout << "c_0 shape: " << c_0.size << std::endl;
 
             // Perform checks if input size is 2 or 3
@@ -498,18 +517,6 @@ public:
             h_0 = h_0.rowRange(i * h_0.rows / numDirs, (i + 1) * h_0.rows / numDirs);
             c_0 = c_0.rowRange(i * c_0.rows / numDirs, (i + 1) * c_0.rows / numDirs);
 
-            std::cout << "Wx sum: " << cv::sum(Wx)[0] << std::endl;
-            std::cout << "Wh sum: " << cv::sum(Wh)[0] << std::endl;
-            std::cout << "bias sum: " << cv::sum(bias)[0] << std::endl;
-            std::cout << "h_0 sum: " << cv::sum(h_0)[0] << std::endl;
-            std::cout << "c_0 sum: " << cv::sum(c_0)[0] << std::endl;
-
-            std::cout << "Wx shape: " << Wx.size << std::endl;
-            std::cout << "Wh shape: " << Wh.size << std::endl;
-            std::cout << "bias shape: " << bias.size << std::endl;
-            std::cout << "h_0 shape: " << h_0.size << std::endl;
-            std::cout << "c_0 shape: " << c_0.size << std::endl;
-
             if (usePeephole)
             {
                 pI = blobs[5];
@@ -526,6 +533,23 @@ public:
                 pO = pO.colRange(i * pO.cols / numDirs, (i + 1) * pO.cols / numDirs);
             }
 
+            std::cout << "After slicing the weight matrices:" << std::endl;
+            std::cout << "Wx sum: " << cv::sum(Wx)[0] << std::endl;
+            std::cout << "Wh sum: " << cv::sum(Wh)[0] << std::endl;
+            std::cout << "bias sum: " << cv::sum(bias)[0] << std::endl;
+            std::cout << "h_0 sum: " << cv::sum(h_0)[0] << std::endl;
+            std::cout << "c_0 sum: " << cv::sum(c_0)[0] << std::endl;
+
+            std::cout << "Wx shape: " << Wx.size << std::endl;
+            std::cout << "Wh shape: " << Wh.size << std::endl;
+            std::cout << "bias shape: " << bias.size << std::endl;
+            std::cout << "h_0 shape: " << h_0.size << std::endl;
+            std::cout << "c_0 shape: " << c_0.size << std::endl;
+
+            std::cout << "pI shape: " << pI.size << std::endl;
+            std::cout << "pF shape: " << pF.size << std::endl;
+            std::cout << "pO shape: " << pO.size << std::endl;
+
             int numOut = Wh.size[1];
 
             Mat hInternal = internals[0], cInternal = internals[1],
@@ -536,25 +560,40 @@ public:
             dummyOnes.setTo(1.);
 
             int numSamplesTotal = numTimeStamps*numSamples;
-            std::cout << "numSamplesTotal: " << numSamplesTotal << std::endl;
             Mat xTs = input[0].reshape(1, numSamplesTotal);
-            std::cout << "input shape: " << xTs.size << std::endl;
-            std::cout << "input[0] sum: " << cv::sum(xTs) << std::endl;
-            std::cout << "hInternal sum: " << cv::sum(hInternal) << std::endl;
-            std::cout << "cInternal sum: " << cv::sum(cInternal) << std::endl;
-            std::cout << "dummyOnes sum: " << cv::sum(dummyOnes) << std::endl;
-            std::cout << "gates sum: " << cv::sum(gates) << std::endl;
-
 
             Mat hOutTs = output[0].reshape(1, numSamplesTotal);
             hOutTs = hOutTs.colRange(i * hOutTs.cols / numDirs, (i + 1) * hOutTs.cols / numDirs);
+
+            std::cout << "After reshaping the input and output:" << std::endl;
+            std::cout << "xTs shape: " << xTs.size << std::endl;
+            std::cout << "xTs sum: " << cv::sum(xTs) << std::endl;
+
             std::cout << "hOutTs shape: " << hOutTs.size << std::endl;
+            std::cout << "hOutTs sum: " << cv::sum(hOutTs) << std::endl;
+
+            std::cout << "hInternal shape: " << hInternal.size << std::endl;
+            std::cout << "hInternal sum: " << cv::sum(hInternal) << std::endl;
+
+            std::cout << "cInternal shape: " << cInternal.size << std::endl;
+            std::cout << "cInternal sum: " << cv::sum(cInternal) << std::endl;
+
+            std::cout << "dummyOnes shape: " << dummyOnes.size << std::endl;
+            std::cout << "dummyOnes sum: " << cv::sum(dummyOnes) << std::endl;
+
+            std::cout << "gates shape: " << gates.size << std::endl;
+            std::cout << "gates sum: " << cv::sum(gates) << std::endl;
+
+            std::cout <<"cOut shape: " << cOut.size << std::endl;
+
             Mat cOutTs;
             if (produceCellOutput)
             {
                 cOutTs = cOut.reshape(1, numSamplesTotal);
                 cOutTs = cOutTs.colRange(i * cOutTs.cols / numDirs, (i + 1) * cOutTs.cols / numDirs);
             }
+            std::cout <<"cOut shape: " << cOut.size << std::endl;
+            std::cout << "cOutTs shape: " << cOutTs.size << std::endl;
 
 #if CV_TRY_AVX2 || CV_TRY_AVX
             bool canUseAvx = gates.isContinuous() && bias.isContinuous()
@@ -578,9 +617,11 @@ public:
             }
             std::cout << "numTimeStamps: " << numTimeStamps << std::endl;
             std::cout << "numSamples: " << numSamples << std::endl;
-            std::cout << "========================" << std::endl;
+            std::cout << "total numSamples: " << numSamplesTotal << std::endl;
+            std::cout << "*********************" << std::endl;
             for (int ts = tsStart; ts != tsEnd; ts += tsInc)
             {
+                std::cout << " ------------------ " << std::endl;
                 std::cout << "ts: " << ts << std::endl;
                 Range curRowRange(ts*numSamples, (ts + 1)*numSamples);
                 Mat xCurr = xTs.rowRange(curRowRange);
@@ -628,8 +669,10 @@ public:
 
                     std::cout << "gates shape: " << gates.size << std::endl;
                     std::cout << "gates sum: " << cv::sum(gates)[0] << std::endl;
+
                     std::cout << "xCurr: " << xCurr << std::endl;
                     std::cout << "Wx: " << Wx << std::endl;
+
                     gemm(xCurr, Wx, 1, gates, 0, gates, GEMM_2_T);      // Wx * x_t
                     std::cout << "gates sum: " << cv::sum(gates) << std::endl;
 
@@ -686,6 +729,13 @@ public:
                 Mat gateO = gates.colRange(2*numOut, 3*numOut);
                 Mat gateG = gates.colRange(3*numOut, 4*numOut);
 
+
+                std::cout << "gateI shape: " << gateI.size << std::endl;
+                std::cout << "gateF shape: " << gateF.size << std::endl;
+                std::cout << "gateO shape: " << gateO.size << std::endl;
+                std::cout << "gateG shape: " << gateG.size << std::endl;
+
+
                 if (forgetBias)
                     add(gateF, forgetBias, gateF);
 
@@ -704,10 +754,17 @@ public:
 
                 g_activation(gateG, gateG);
 
+                std::cout << "gateG shape: " << gateG.size << std::endl;
+                std::cout << "gateG sum: " << cv::sum(gateG) << std::endl;
+
+
                 //compute c_t
                 multiply(gateF, cInternal, gateF);  // f_t (*) c_{t-1}
                 multiply(gateI, gateG, gateI);      // i_t (*) g_t
                 add(gateF, gateI, cInternal);       // c_t = f_t (*) c_{t-1} + i_t (*) g_t
+
+                std::cout << "cInternal shape: " << cInternal.size << std::endl;
+                std::cout << "cInternal sum: " << cv::sum(cInternal) << std::endl;
 
                 if (useCellClip)
                 {
@@ -724,25 +781,31 @@ public:
                 h_activation(cInternal, hInternal);
                 multiply(gateO, hInternal, hInternal);
 
+                std::cout << "curRowRange: " << curRowRange << std::endl;
                 hInternal.copyTo(hOutTs.rowRange(curRowRange));
                 //save results in output blobs
+
                 std::cout << "produceCellOutput: " << produceCellOutput << std::endl;
+
                 std::cout << "cInternal shape: " << cInternal.size << std::endl;
+                std::cout << "cInternal sum: " << cv::sum(cInternal) << std::endl;
+
                 std::cout << "cOutTs shape: " << cOutTs.size << std::endl;
+                std::cout << "cOutTs sum: " << cv::sum(cOutTs) << std::endl;
 
                 std::cout << "hInternal shape: " << hInternal.size << std::endl;
-                std::cout << "hOutTs shape: " << hOutTs.size << std::endl;
-
-                std::cout << "cInternal sum: " << cv::sum(cInternal) << std::endl;
-                std::cout << "cOutTs sum: " << cv::sum(cOutTs) << std::endl;
                 std::cout << "hInternal sum: " << cv::sum(hInternal) << std::endl;
+
+                std::cout << "hOutTs shape: " << hOutTs.size << std::endl;
                 std::cout << "hOutTs sum: " << cv::sum(hOutTs) << std::endl;
-                std::cout << "curRowRange: " << curRowRange << std::endl;
+
 
                 std::cout << "cOutTs type: " << cOutTs.type() << std::endl;
                 std::cout << "cInternal type: " << cInternal.type() << std::endl;
+
                 if (produceCellOutput)
                     cInternal.copyTo(cOutTs.rowRange(curRowRange));
+
                 std::cout << "cOutTs sum: " << cv::sum(cOutTs) << std::endl;
                 std::cout << "--------------------------------" << std::endl;
             }
@@ -775,17 +838,18 @@ public:
             cOut.copyTo(output[1]);
         }
 
-        for (int i = 0; i < output.size(); i++) {
-            std::cout << "output[" << i << "] shape: " << output[i].size << std::endl;
-            std::cout << "output[" << i << "] sum: " << cv::sum(output[i]) << std::endl;
-        }
 
-        auto *out_ptr = output[0].ptr<float>();
-        for (int i = 0; i < output[0].total(); i++){
-            std::cout << out_ptr[i] << " ";
+        for (int i = 0; i < output.size(); i++){
+            std::cout << "output[ " << i << "] shape: " << output[i].size << std::endl;
+            std::cout << "output[ " << i << "] sum: " << cv::sum(output[i]) << std::endl;
+            std::cout << "output[ " << i << "]: ";
+            auto *out_ptr = output[i].ptr<float>();
+            for (int j = 0; j < output[i].total(); j++){
+                std::cout << out_ptr[j] << " ";
+            }
+            std::cout << std::endl;
         }
         std::cout << "\n==>LSTM forward done\n" << std::endl;
-        // exit(0);
     }
 
     void fixCellState(Mat& cOut, int numDirs)
