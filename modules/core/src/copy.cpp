@@ -329,10 +329,11 @@ void Mat::copyTo( OutputArray _dst ) const
     }
 #endif
 
+    int stype = type();
     int dtype = _dst.type();
-    if( _dst.fixedType() && dtype != type() )
+    if( _dst.fixedType() && dtype != stype )
     {
-        CV_Assert( channels() == CV_MAT_CN(dtype) );
+        CV_Assert( CV_MAT_CN(stype) == CV_MAT_CN(dtype) );
         convertTo( _dst, dtype );
         return;
     }
@@ -342,11 +343,11 @@ void Mat::copyTo( OutputArray _dst ) const
         _dst.release();
         void* obj = _dst.getObj();
         if (_dst.isMat())
-            reinterpret_cast<Mat*>(obj)->flags = Mat::MAGIC_VAL | Mat::CONTINUOUS_FLAG | type();
+            reinterpret_cast<Mat*>(obj)->flags = Mat::MAGIC_VAL | Mat::CONTINUOUS_FLAG | stype;
         else if (_dst.isUMat())
-            reinterpret_cast<UMat*>(obj)->flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | type();
+            reinterpret_cast<UMat*>(obj)->flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | stype;
         else if (_dst.isGpuMat())
-            reinterpret_cast<cuda::GpuMat*>(obj)->flags = type();
+            reinterpret_cast<cuda::GpuMat*>(obj)->flags = stype;
         return;
     }
 
@@ -355,12 +356,12 @@ void Mat::copyTo( OutputArray _dst ) const
         (_dst.fixedSize() && _dst.dims() == 1);
     if( _dst.isUMat() )
     {
-        _dst.create( dims, size.p, type(), -1, allowTransposed );
+        _dst.create( dims, size.p, stype, -1, allowTransposed );
         if (empty())
             return;
         UMat dst = _dst.getUMat();
         CV_Assert(dst.u != NULL);
-        size_t i, sz[CV_MAX_DIM] = {1}, dstofs[CV_MAX_DIM] = {0}, esz = elemSize();
+        size_t i, sz[CV_MAX_DIM] = {1}, dstofs[CV_MAX_DIM] = {0}, esz = CV_ELEM_SIZE(stype);
         CV_Assert(dims >= 0 && dims < CV_MAX_DIM);
         for( i = 0; i < (size_t)dims; i++ )
             sz[i] = size.p[i];
@@ -374,7 +375,7 @@ void Mat::copyTo( OutputArray _dst ) const
 
     if( dims <= 2 )
     {
-        _dst.create( dims, size.p, type(), -1, allowTransposed );
+        _dst.create( dims, size.p, stype, -1, allowTransposed );
         Mat dst = _dst.getMat();
         if( data == dst.data )
             return;
@@ -398,7 +399,7 @@ void Mat::copyTo( OutputArray _dst ) const
         return;
     }
 
-    _dst.create( dims, size, type() );
+    _dst.create( dims, size, stype );
     Mat dst = _dst.getMat();
     if( data == dst.data )
         return;

@@ -1257,10 +1257,11 @@ void UMat::copyTo(OutputArray _dst) const
     }
 #endif
 
+    int stype = type();
     int dtype = _dst.type();
-    if( _dst.fixedType() && dtype != type() )
+    if( _dst.fixedType() && dtype != stype )
     {
-        CV_Assert( channels() == CV_MAT_CN(dtype) );
+        CV_Assert( CV_MAT_CN(stype) == CV_MAT_CN(dtype) );
         convertTo( _dst, dtype );
         return;
     }
@@ -1270,16 +1271,16 @@ void UMat::copyTo(OutputArray _dst) const
         _dst.release();
         void* obj = _dst.getObj();
         if (_dst.isMat())
-            reinterpret_cast<Mat*>(obj)->flags = Mat::MAGIC_VAL | Mat::CONTINUOUS_FLAG | type();
+            reinterpret_cast<Mat*>(obj)->flags = Mat::MAGIC_VAL | Mat::CONTINUOUS_FLAG | stype;
         else if (_dst.isUMat())
-            reinterpret_cast<UMat*>(obj)->flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | type();
+            reinterpret_cast<UMat*>(obj)->flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | stype;
         else if (_dst.isGpuMat())
-            reinterpret_cast<cuda::GpuMat*>(obj)->flags = type();
+            reinterpret_cast<cuda::GpuMat*>(obj)->flags = stype;
         return;
     }
 
     size_t sz[CV_MAX_DIM] = {1}, srcofs[CV_MAX_DIM]={0}, dstofs[CV_MAX_DIM]={0};
-    size_t esz = elemSize();
+    size_t esz = CV_ELEM_SIZE(stype);
     int i, d = std::max(dims, 1);
     for( i = 0; i < d; i++ )
         sz[i] = size.p[i];
@@ -1287,7 +1288,7 @@ void UMat::copyTo(OutputArray _dst) const
     ndoffset(srcofs);
     srcofs[d-1] *= esz;
 
-    _dst.create( dims, size.p, type() );
+    _dst.create( dims, size.p, stype );
     if (empty())
         return;
 
