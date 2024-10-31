@@ -19,7 +19,7 @@ JpegXLDecoder::JpegXLDecoder() : m_f(nullptr, &fclose)
 {
     m_signature = "\xFF\x0A";
     m_decoder = nullptr;
-    m_buf_supported = true;
+    m_buf_supported = false;
     m_type = m_convert = -1;
 }
 
@@ -223,6 +223,11 @@ ImageEncoder JpegXLEncoder::newEncoder() const
     return makePtr<JpegXLEncoder>();
 }
 
+bool JpegXLEncoder::isFormatSupported( int depth ) const
+{
+    return depth == CV_8U || depth == CV_16U || depth == CV_32F;
+}
+
 bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
 {
     m_last_error.clear();
@@ -235,6 +240,19 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
         /*memory_manager=*/nullptr, cv::getNumThreads());
     if (JXL_ENC_SUCCESS != JxlEncoderSetParallelRunner(encoder.get(),  JxlThreadParallelRunner, runner.get()))
         return false;
+
+    CV_CheckChannels(img.channels(),
+             img.channels() == 1 || img.channels() == 3 || img.channels() == 4,
+             "JPEG XL encoder only supports 1, 3, 4 channels");
+
+    WLByteStream strm;
+    if( m_buf ) {
+        if( !strm.open( *m_buf ) )
+            return false;
+    }
+    else if( !strm.open( m_filename )) {
+        return false;
+    }
 
     JxlBasicInfo info;
     JxlEncoderInitBasicInfo(&info);
@@ -320,9 +338,7 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
     JxlEncoderCloseInput(encoder.get());
 
     const size_t buffer_size = 16384;  // 16KB chunks
-    std::unique_ptr<FILE, int (*)(FILE*)> f(fopen(m_filename.c_str(), "wb"), &fclose);
-    if(!f)
-        return false;
+
     std::vector<uint8_t> compressed(buffer_size);
     JxlEncoderStatus process_result = JXL_ENC_NEED_MORE_OUTPUT;
     while (process_result == JXL_ENC_NEED_MORE_OUTPUT) {
@@ -331,11 +347,9 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
         process_result = JxlEncoderProcessOutput(encoder.get(), &next_out, &avail_out);
         if (JXL_ENC_ERROR == process_result)
             return false;
-        const size_t offset = next_out - compressed.data();
-        if (offset != fwrite(compressed.data(), 1, offset, f.get())) {
-            CV_LOG_WARNING(NULL, "Error writing to output file");
+        const size_t write_size = buffer_size - avail_out;
+        if ( strm.putBytes(compressed.data(), write_size) == false )
             return false;
-        }
     }
     return true;
 }

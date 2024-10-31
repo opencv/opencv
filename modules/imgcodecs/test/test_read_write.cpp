@@ -241,6 +241,8 @@ TEST_P(Imgcodecs_Image, read_write_BGR)
     double psnrThreshold = 100;
     if (ext == "jpg")
         psnrThreshold = 32;
+    if (ext == "jxl")
+        psnrThreshold = 30;
 #if defined(HAVE_JASPER)
     if (ext == "jp2")
         psnrThreshold = 95;
@@ -270,6 +272,8 @@ TEST_P(Imgcodecs_Image, read_write_GRAYSCALE)
 
     double psnrThreshold = 100;
     if (ext == "jpg")
+        psnrThreshold = 40;
+    if (ext == "jxl")
         psnrThreshold = 40;
 #if defined(HAVE_JASPER)
     if (ext == "jp2")
