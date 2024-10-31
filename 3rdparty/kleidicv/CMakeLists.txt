@@ -20,4 +20,5 @@ else()
   set(THE_ROOT "${OpenCV_BINARY_DIR}/3rdparty/kleidicv/kleidicv-${KLEIDICV_SRC_COMMIT}")
 endif()
 
+option(KLEIDICV_ENABLE_SME2 "" OFF) # not compatible with some CLang versions in NDK
 include("${THE_ROOT}/adapters/opencv/CMakeLists.txt")
