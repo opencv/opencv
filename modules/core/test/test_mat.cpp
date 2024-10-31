@@ -2675,7 +2675,7 @@ TEST(Mat, reshape_1d)
     int newrows = 2;
     Mat m = Mat(v).reshape(0, newrows);
 
-    EXPECT_EQ(m.dims, newrows);
+    EXPECT_EQ(m.dims, 2);
     EXPECT_EQ(m.type(), CV_32S);
     EXPECT_EQ(m.ptr<int>(), &v[0]);
     EXPECT_EQ(m.rows, newrows);
@@ -2708,7 +2708,7 @@ TEST(UMat, reshape_1d)
     Mat(v).copyTo(m_);
     m = m_.reshape(0, newrows);
 
-    EXPECT_EQ(m.dims, newrows);
+    EXPECT_EQ(m.dims, 2);
     EXPECT_EQ(m.type(), CV_32S);
     EXPECT_EQ(m.u->handle, m_.u->handle);
     EXPECT_EQ(m.offset, m_.offset);
