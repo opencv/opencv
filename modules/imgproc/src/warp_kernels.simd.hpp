@@ -3322,10 +3322,10 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
                     float valpha[max_uf], vbeta[max_uf];
-                    v_store_low(valpha, src_x0);
-                    v_store_high(valpha+vlanes_32, src_x1);
-                    v_store_low(vbeta, src_y0);
-                    v_store_high(vbeta+vlanes_32, src_y1);
+                    vx_store(valpha, src_x0);
+                    vx_store(valpha+vlanes_32, src_x1);
+                    vx_store(vbeta, src_y0);
+                    vx_store(vbeta+vlanes_32, src_y1);
         #if CV_SIMD128
                     for (int i = 0; i < uf; i+=vlanes_32) {
                         #define VECTOR_LOAD_AND_INTER(ofs) \
@@ -3416,69 +3416,10 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
                     }
         #endif
                 } else {
-                    int pixbuf[max_uf*4*4];
-                    // CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
-                    if (border_type == BORDER_CONSTANT || border_type == BORDER_TRANSPARENT) {
-                        mask_0 = v_lt(v_reinterpret_as_u32(v_add(src_ix0, one)), outer_scols);
-                        mask_1 = v_lt(v_reinterpret_as_u32(v_add(src_ix1, one)), outer_scols);
-                        mask_0 = v_and(mask_0, v_lt(v_reinterpret_as_u32(v_add(src_iy0, one)), outer_srows));
-                        mask_1 = v_and(mask_1, v_lt(v_reinterpret_as_u32(v_add(src_iy1, one)), outer_srows));
-                        v_uint16 outer_mask = v_pack(mask_0, mask_1);
-                        if (v_reduce_max(outer_mask) == 0) {
-                            if (border_type == BORDER_CONSTANT) {
-                                v_store_low(dstptr + x*4,        bval_v0);
-                                v_store_low(dstptr + x*4 + uf,   bval_v1);
-                                v_store_low(dstptr + x*4 + uf*2, bval_v2);
-                                v_store_low(dstptr + x*4 + uf*3, bval_v3);
-                            }
-                            continue;
-                        }
-                    }
-                    vx_store(src_ix, src_ix0);
-                    vx_store(src_iy, src_iy0);
-                    vx_store(src_ix + vlanes_32, src_ix1);
-                    vx_store(src_iy + vlanes_32, src_iy1);
-                    for (int i = 0; i < uf; i++) {
-                        int ix = src_ix[i], iy = src_iy[i];
-                        CV_WARP_LINEAR_VECTOR_FETCH_PIXEL_C4(0, 0, 0);
-                        CV_WARP_LINEAR_VECTOR_FETCH_PIXEL_C4(0, 1, uf);
-                        CV_WARP_LINEAR_VECTOR_FETCH_PIXEL_C4(1, 0, uf*2);
-                        CV_WARP_LINEAR_VECTOR_FETCH_PIXEL_C4(1, 1, uf*3);
-                    }
-                    v_int32  f00r = vx_load(pixbuf + uf * 0),
-                             f01r = vx_load(pixbuf + uf * (0+1)),
-                             f10r = vx_load(pixbuf + uf * (0+2)),
-                             f11r = vx_load(pixbuf + uf * (0+3));
-                    v_int32  f00g = vx_load(pixbuf + uf * 4),
-                             f01g = vx_load(pixbuf + uf * (4+1)),
-                             f10g = vx_load(pixbuf + uf * (4+2)),
-                             f11g = vx_load(pixbuf + uf * (4+3));
-                    v_int32  f00b = vx_load(pixbuf + uf * 8),
-                             f01b = vx_load(pixbuf + uf * (8+1)),
-                             f10b = vx_load(pixbuf + uf * (8+2)),
-                             f11b = vx_load(pixbuf + uf * (8+3));
-                    v_int32  f00a = vx_load(pixbuf + uf * 12),
-                             f01a = vx_load(pixbuf + uf * (12+1)),
-                             f10a = vx_load(pixbuf + uf * (12+2)),
-                             f11a = vx_load(pixbuf + uf * (12+3));
-
-                    v_float32 f00rl = v_cvt_f32(f00r), f00rh = v_cvt_f32(f00r),
-                              f01rl = v_cvt_f32(f01r), f01rh = v_cvt_f32(f01r),
-                              f10rl = v_cvt_f32(f10r), f10rh = v_cvt_f32(f10r),
-                              f11rl = v_cvt_f32(f11r), f11rh = v_cvt_f32(f11r);
-                    v_float32 f00gl = v_cvt_f32(f00g), f00gh = v_cvt_f32(f00g),
-                              f01gl = v_cvt_f32(f01g), f01gh = v_cvt_f32(f01g),
-                              f10gl = v_cvt_f32(f10g), f10gh = v_cvt_f32(f10g),
-                              f11gl = v_cvt_f32(f11g), f11gh = v_cvt_f32(f11g);
-                    v_float32 f00bl = v_cvt_f32(f00b), f00bh = v_cvt_f32(f00b),
-                              f01bl = v_cvt_f32(f01b), f01bh = v_cvt_f32(f01b),
-                              f10bl = v_cvt_f32(f10b), f10bh = v_cvt_f32(f10b),
-                              f11bl = v_cvt_f32(f11b), f11bh = v_cvt_f32(f11b);
-                    v_float32 f00al = v_cvt_f32(f00a), f00ah = v_cvt_f32(f00a),
-                              f01al = v_cvt_f32(f01a), f01ah = v_cvt_f32(f01a),
-                              f10al = v_cvt_f32(f10a), f10ah = v_cvt_f32(f10a),
-                              f11al = v_cvt_f32(f11a), f11ah = v_cvt_f32(f11a);
-
+                    uint8_t pixbuf[max_uf*4*4];
+                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
+                    CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C4);
                     CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
                     CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C4);
                 }
