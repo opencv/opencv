@@ -176,7 +176,7 @@ char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision,
     return buf;
 }
 
-static const char symbols[] = "ucwsifdhHbLUn";
+static const char symbols[] = "ucwsifdhHbUIn";
 
 static char typeSymbol(int depth)
 {
@@ -354,6 +354,20 @@ static inline int readInt(const uchar* p)
 #endif
 }
 
+static inline int64_t readLong(const uchar* p)
+{
+    // On little endian CPUs, both branches produce the same result. On big endian, only the else branch does.
+#if CV_LITTLE_ENDIAN_MEM_ACCESS
+    int64_t val;
+    memcpy(&val, p, sizeof(val));
+    return val;
+#else
+    int64_t val = (int64_t)(p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24));
+    val |= (int64_t)(p[4] | (p[5] << 8) | (p[6] << 16) | (p[7] << 24)) << 32;
+    return val;
+#endif
+}
+
 static inline double readReal(const uchar* p)
 {
     // On little endian CPUs, both branches produce the same result. On big endian, only the else branch does.
@@ -370,16 +384,15 @@ static inline double readReal(const uchar* p)
 #endif
 }
 
-static inline void writeInt(uchar* p, int ival)
+template <typename T>
+static inline void writeInt(uchar* p, T ival)
 {
     // On little endian CPUs, both branches produce the same result. On big endian, only the else branch does.
 #if CV_LITTLE_ENDIAN_MEM_ACCESS
     memcpy(p, &ival, sizeof(ival));
 #else
-    p[0] = (uchar)ival;
-    p[1] = (uchar)(ival >> 8);
-    p[2] = (uchar)(ival >> 16);
-    p[3] = (uchar)(ival >> 24);
+    for (size_t i = 0, j = 0; i < sizeof(ival); ++i, j += 8)
+        p[i] = (uchar)(ival >> j);
 #endif
 }
 
@@ -1083,6 +1096,11 @@ void FileStorage::Impl::write(const String &key, int value) {
     getEmitter().write(key.c_str(), value);
 }
 
+void FileStorage::Impl::write(const String &key, int64_t value) {
+    CV_Assert(write_mode);
+    getEmitter().write(key.c_str(), value);
+}
+
 void FileStorage::Impl::write(const String &key, double value) {
     CV_Assert(write_mode);
     getEmitter().write(key.c_str(), value);
@@ -1455,7 +1473,7 @@ void FileStorage::Impl::convertToCollection(int type, FileNode &node) {
     bool named = node.isNamed();
     uchar *ptr = node.ptr() + 1 + (named ? 4 : 0);
 
-    int ival = 0;
+    int64_t ival = 0;
     double fval = 0;
     std::string sval;
     bool add_first_scalar = false;
@@ -1468,7 +1486,7 @@ void FileStorage::Impl::convertToCollection(int type, FileNode &node) {
         // otherwise we don't know where to get the element names from
         CV_Assert(type == FileNode::SEQ);
         if (node_type == FileNode::INT) {
-            ival = readInt(ptr);
+            ival = readLong(ptr);
             add_first_scalar = true;
         } else if (node_type == FileNode::REAL) {
             fval = readReal(ptr);
@@ -1830,7 +1848,7 @@ char *FileStorage::Impl::parseBase64(char *ptr, int indent, FileNode &collection
 
     int fmt_pairs[CV_FS_MAX_FMT_PAIRS * 2];
     int fmt_pair_count = fs::decodeFormat(dt, fmt_pairs, CV_FS_MAX_FMT_PAIRS);
-    int ival = 0;
+    int64_t ival = 0;
     double fval = 0;
 
     for (;;) {
@@ -2070,6 +2088,11 @@ void writeScalar( FileStorage& fs, int value )
     fs.p->write(String(), value);
 }
 
+void writeScalar( FileStorage& fs, int64_t value )
+{
+    fs.p->write(String(), value);
+}
+
 void writeScalar( FileStorage& fs, float value )
 {
     fs.p->write(String(), (double)value);
@@ -2090,6 +2113,11 @@ void write( FileStorage& fs, const String& name, int value )
     fs.p->write(name, value);
 }
 
+void write( FileStorage& fs, const String& name, int64_t value )
+{
+    fs.p->write(name, value);
+}
+
 void write( FileStorage& fs, const String& name, float value )
 {
     fs.p->write(name, (double)value);
@@ -2106,6 +2134,7 @@ void write( FileStorage& fs, const String& name, const String& value )
 }
 
 void FileStorage::write(const String& name, int val) { p->write(name, val); }
+void FileStorage::write(const String& name, int64_t val) { p->write(name, val); }
 void FileStorage::write(const String& name, double val) { p->write(name, val); }
 void FileStorage::write(const String& name, const String& val) { p->write(name, val); }
 void FileStorage::write(const String& name, const Mat& val) { cv::write(*this, name, val); }
@@ -2326,6 +2355,27 @@ FileNode::operator int() const
         return 0x7fffffff;
 }
 
+FileNode::operator int64_t() const
+{
+    const uchar* p = ptr();
+    if(!p)
+        return 0;
+    int tag = *p;
+    int type = (tag & TYPE_MASK);
+    p += (tag & NAMED) ? 5 : 1;
+
+    if( type == INT )
+    {
+        return readLong(p);
+    }
+    else if( type == REAL )
+    {
+        return cvRound(readReal(p));
+    }
+    else
+        return 0x7fffffff;
+}
+
 FileNode::operator float() const
 {
     const uchar* p = ptr();
@@ -2450,7 +2500,13 @@ void FileNode::setValue( int type, const void* value, int len )
         sz += 4;
 
     if( type == INT )
-        sz += 4;
+    {
+        int64_t ival = *(const int64_t*)value;
+        if (ival > INT_MAX || ival < INT_MIN)
+            sz += 8;
+        else
+            sz += 4;
+    }
     else if( type == REAL )
         sz += 8;
     else if( type == STRING )
@@ -2470,8 +2526,11 @@ void FileNode::setValue( int type, const void* value, int len )
 
     if( type == INT )
     {
-        int ival = *(const int*)value;
-        writeInt(p, ival);
+        int64_t ival = *(const int64_t*)value;
+        if (sz > 8)
+            writeInt(p, ival);
+        else
+            writeInt(p, static_cast<int>(ival));
     }
     else if( type == REAL )
     {
@@ -2622,12 +2681,12 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                 offset = alignSize( offset, elem_size );
                 uchar* data = data0 + offset;
 
-                for( int i = 0; i < count; i++, ++(*this) )
+                for( int i = 0; i < count; i++ )
                 {
                     FileNode node = *(*this);
                     if( node.isInt() )
                     {
-                        int ival = (int)node;
+                        int64_t ival = static_cast<int64_t>(elem_size == 8 ? (int64_t)node : (int)node);
                         switch( elem_type )
                         {
                         case CV_8U:
@@ -2651,11 +2710,11 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                             data += sizeof(short);
                             break;
                         case CV_32U:
-                            *(unsigned*)data = (unsigned)std::max(ival, 0);
+                            *(unsigned*)data = (unsigned)std::max(ival, (int64_t)0);
                             data += sizeof(unsigned);
                             break;
                         case CV_32S:
-                            *(int*)data = ival;
+                            *(int*)data = (int)ival;
                             data += sizeof(int);
                             break;
                         case CV_32F:
@@ -2746,6 +2805,11 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                     }
                     else
                         CV_Error( Error::StsError, "readRawData can only be used to read plain sequences of numbers" );
+                    ++(*this);
+                    if (elem_type == CV_64S)
+                    {
+                        ofs += 4;
+                    }
                 }
                 offset = (int)(data - data0);
             }
@@ -2782,6 +2846,15 @@ void read(const FileNode& node, int& val, int default_val)
     if( !node.empty() )
     {
         val = (int)node;
+    }
+}
+
+void read(const FileNode& node, int64_t& val, int64_t default_val)
+{
+    val = default_val;
+    if( !node.empty() )
+    {
+        val = (int64_t)node;
     }
 }
 

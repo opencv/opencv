@@ -2066,6 +2066,27 @@ TEST_P(FileStorage_exact_type, mat_1d)
     testExactMat(Mat({1}, CV_32S, Scalar(8)), GetParam());
 }
 
+TEST_P(FileStorage_exact_type, long_int)
+{
+    for (const int64_t expected : std::vector<int64_t>{INT64_MAX, INT64_MIN, -1, 1, 0})
+    {
+        int64_t value = fsWriteRead(expected, GetParam());
+        EXPECT_EQ(value, expected);
+    }
+}
+
+TEST_P(FileStorage_exact_type, long_int_mat)
+{
+    Mat src(2, 4, CV_64SC(3));
+    int64_t* data = src.ptr<int64_t>();
+    for (size_t i = 0; i < src.total() * src.channels(); ++i)
+    {
+        data[i] = INT64_MAX - static_cast<int64_t>(std::rand());
+    }
+    Mat dst = fsWriteRead(src, GetParam());
+    EXPECT_EQ(cv::norm(src, dst, NORM_INF), 0.0);
+}
+
 INSTANTIATE_TEST_CASE_P(Core_InputOutput,
     FileStorage_exact_type, Values(".yml", ".xml", ".json")
 );

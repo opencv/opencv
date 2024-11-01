@@ -194,6 +194,7 @@ public:
                                           int struct_flags, const char* type_name=0 ) = 0;
     virtual void endWriteStruct(const FStructData& current_struct) = 0;
     virtual void write(const char* key, int value) = 0;
+    virtual void write(const char* key, int64_t value) = 0;
     virtual void write(const char* key, double value) = 0;
     virtual void write(const char* key, const char* value, bool quote) = 0;
     virtual void writeScalar(const char* key, const char* value) = 0;
