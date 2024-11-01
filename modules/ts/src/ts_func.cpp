@@ -1391,7 +1391,7 @@ norm_flt_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, 
             for( int c = 0; c < cn; c++ )
             {
                 for( i = 0; i < total; i++ )
-                    if( mask[i] && isrc1[i] != isrc2[i] )
+                    if( mask[i] && isrc1[i*cn + c] != isrc2[i*cn + c] )
                         result = std::max(result, std::abs((double)src1[i*cn + c] - (double)src2[i*cn + c]));
             }
     }
@@ -1407,7 +1407,7 @@ norm_flt_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, 
             for( int c = 0; c < cn; c++ )
             {
                 for( i = 0; i < total; i++ )
-                    if( mask[i] && isrc1[i] != isrc2[i] )
+                    if( mask[i] && isrc1[i*cn + c] != isrc2[i*cn + c] )
                         result += std::abs((double)src1[i*cn + c] - (double)src2[i*cn + c]);
             }
     }
@@ -1425,7 +1425,7 @@ norm_flt_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, 
             for( int c = 0; c < cn; c++ )
             {
                 for( i = 0; i < total; i++ )
-                    if( mask[i] && isrc1[i] != isrc2[i] )
+                    if( mask[i] && isrc1[i*cn + c] != isrc2[i*cn + c] )
                     {
                         double v = (double)src1[i*cn + c] - (double)src2[i*cn + c];
                         result += v*v;
