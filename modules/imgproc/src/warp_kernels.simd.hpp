@@ -557,7 +557,6 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
         int32_t addr[max_uf],
                 src_ix[max_uf],
                 src_iy[max_uf];
-        uint8_t pixbuf[max_uf*4*4];
 
         uint8_t bvalbuf[max_uf*4];
         for (int i = 0; i < uf; i++) {
@@ -570,12 +569,6 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
         v_uint8 bval_v1 = vx_load_low(&bvalbuf[uf]);
         v_uint8 bval_v2 = vx_load_low(&bvalbuf[uf*2]);
         v_uint8 bval_v3 = vx_load_low(&bvalbuf[uf*3]);
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-        uint8x8_t reds = {0, 8, 16, 24, 4, 12, 20, 28},
-                  greens = {1, 9, 17, 25, 5, 13, 21, 29},
-                  blues = {2, 10, 18, 26, 6, 14, 22, 30},
-                  alphas = {3, 11, 19, 27, 7, 15, 23, 31};
-    #endif
 #endif
 
         for (int y = r.start; y < r.end; y++) {
@@ -590,38 +583,27 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
 
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                uint8x8_t p00r, p01r, p10r, p11r,
-                          p00g, p01g, p10g, p11g,
-                          p00b, p01b, p10b, p11b,
-                          p00a, p01a, p10a, p11a;
-    #endif
-
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C4)
-    #else
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 8U);
-    #endif
+                    float valpha[max_uf], vbeta[max_uf];
+                    vx_store(valpha, src_x0);
+                    vx_store(valpha+vlanes_32, src_x1);
+                    vx_store(vbeta, src_y0);
+                    vx_store(vbeta+vlanes_32, src_y1);
+        #if CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
+        #elif CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+        #else // CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+        #endif
                 } else {
+                    uint8_t pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
-
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C4);
-    #endif
+                    CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C4);
                 }
-
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 // In case neon fp16 intrinsics are not available; still requires A64
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(C4);
-    #else
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C4);
-    #endif
-
-                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C4);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -1902,7 +1884,6 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
         int32_t addr[max_uf],
                 src_ix[max_uf],
                 src_iy[max_uf];
-        uint8_t pixbuf[max_uf*4*4];
 
         uint8_t bvalbuf[max_uf*4];
         for (int i = 0; i < uf; i++) {
@@ -1915,12 +1896,6 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
         v_uint8 bval_v1 = vx_load_low(&bvalbuf[uf]);
         v_uint8 bval_v2 = vx_load_low(&bvalbuf[uf*2]);
         v_uint8 bval_v3 = vx_load_low(&bvalbuf[uf*3]);
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-        uint8x8_t reds = {0, 8, 16, 24, 4, 12, 20, 28},
-                  greens = {1, 9, 17, 25, 5, 13, 21, 29},
-                  blues = {2, 10, 18, 26, 6, 14, 22, 30},
-                  alphas = {3, 11, 19, 27, 7, 15, 23, 31};
-    #endif
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
         for (int y = r.start; y < r.end; y++) {
@@ -1935,38 +1910,27 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                uint8x8_t p00r, p01r, p10r, p11r,
-                          p00g, p01g, p10g, p11g,
-                          p00b, p01b, p10b, p11b,
-                          p00a, p01a, p10a, p11a;
-    #endif
-
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN_NEON_U8(C4);
-    #else
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 8U);
-    #endif
+                    float valpha[max_uf], vbeta[max_uf];
+                    vx_store(valpha, src_x0);
+                    vx_store(valpha+vlanes_32, src_x1);
+                    vx_store(vbeta, src_y0);
+                    vx_store(vbeta+vlanes_32, src_y1);
+        #if CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
+        #elif CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+        #else // CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+        #endif
                 } else {
+                    uint8_t pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
-
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN_NEON_U8(C4);
-    #endif
+                    CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C4);
                 }
-
-    #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64 // In case neon fp16 intrinsics are not available; still requires A64
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16_NEON(C4);
-    #else
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U8S16(C4);
-    #endif
-
-                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_S16F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C4);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -3240,7 +3204,6 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
                              uint8_t *dst_data, size_t dst_step, int dst_rows, int dst_cols,
                              int border_type, const double border_value[4],
                              const float *map1_data, size_t map1_step, const float *map2_data, size_t map2_step, bool is_relative) {
-    // printf("In remapLinearInvoker_8UC4\n");
     auto worker = [&](const Range &r) {
         CV_INSTRUMENT_REGION();
 
