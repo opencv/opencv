@@ -7,11 +7,13 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_JPEGXL
 
-typedef testing::TestWithParam<perf::MatType> Imgcodecs_JpegXL_MatType;
+typedef tuple<perf::MatType, int> MatType_and_Distance;
+typedef testing::TestWithParam<MatType_and_Distance> Imgcodecs_JpegXL_MatType;
 
 TEST_P(Imgcodecs_JpegXL_MatType, write_read)
 {
-    const int matType  = GetParam();
+    const int matType  = get<0>(GetParam());
+    const int distanceParam = get<1>(GetParam());
 
     cv::Scalar col;
     // Jpeg XL is lossy compression.
@@ -24,7 +26,7 @@ TEST_P(Imgcodecs_JpegXL_MatType, write_read)
             col = cv::Scalar(124 * 255, 76 * 255, 42 * 255 );
             th = 656; // = 65535 / 100;
             break;
-        case CV_32F : 
+        case CV_32F:
             col = cv::Scalar(0.486, 0.298, 0.165);
             th = 1.0 / 100.0;
             break;
@@ -35,10 +37,15 @@ TEST_P(Imgcodecs_JpegXL_MatType, write_read)
             break;
     }
 
+    // If increasing distanceParam, threshold should be increased.
+    th *= ( distanceParam > 2 )? 3 : (distanceParam == 2) ? 2: 1;
+
     bool ret = false;
     string tmp_fname = cv::tempfile(".jxl");
     Mat img_org(320, 480, matType, col);
     vector<int> param;
+    param.push_back(IMWRITE_JPEGXL_DISTANCE);
+    param.push_back(distanceParam);
     EXPECT_NO_THROW(ret = imwrite(tmp_fname, img_org, param));
     EXPECT_TRUE(ret);
     Mat img_decoded;
@@ -52,7 +59,8 @@ TEST_P(Imgcodecs_JpegXL_MatType, write_read)
 
 TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
 {
-    const int matType  = GetParam();
+    const int matType  = get<0>(GetParam());
+    const int distanceParam  = get<1>(GetParam());
 
     cv::Scalar col;
     // Jpeg XL is lossy compression.
@@ -65,7 +73,7 @@ TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
             col = cv::Scalar(124 * 255, 76 * 255, 42 * 255 );
             th = 656; // = 65535 / 100;
             break;
-        case CV_32F : 
+        case CV_32F:
             col = cv::Scalar(0.486, 0.298, 0.165);
             th = 1.0 / 100.0;
             break;
@@ -75,11 +83,15 @@ TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
             th = 3; // = 255 / 100 (1%);
             break;
     }
+    // If increasing distanceParam, threshold should be increased.
+    th *= ( distanceParam > 2 )? 3 : (distanceParam == 2) ? 2: 1;
 
     bool ret = false;
     vector<uchar> buff;
     Mat img_org(320, 480, matType, col);
     vector<int> param;
+    param.push_back(IMWRITE_JPEGXL_DISTANCE);
+    param.push_back(distanceParam);
     EXPECT_NO_THROW(ret = imencode(".jxl", img_org, buff, param));
     EXPECT_TRUE(ret);
     Mat img_decoded;
@@ -92,11 +104,66 @@ TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
 INSTANTIATE_TEST_CASE_P(
     /**/,
     Imgcodecs_JpegXL_MatType,
-    testing::Values(
-        CV_8UC1,  CV_8UC3,  // CV_8UC4,
-        CV_16UC1, CV_16UC3, // CV_16UC4,
-        CV_32FC1, CV_32FC3  // CV_32FC4,
-    ) );
+    testing::Combine(
+        testing::Values(
+            CV_8UC1,  CV_8UC3,  // CV_8UC4,
+            CV_16UC1, CV_16UC3, // CV_16UC4,
+            CV_32FC1, CV_32FC3  // CV_32FC4,
+        ),
+        testing::Values( // Distance
+            0, // Lossless
+            1, // Default
+            3, // Recomended Lossy Max
+            25 // Specification Max
+        )
+) );
+
+
+typedef tuple<int, int> Effort_and_Decoding_speed;
+typedef testing::TestWithParam<Effort_and_Decoding_speed> Imgcodecs_JpegXL_Effort_DecodingSpeed;
+
+TEST_P(Imgcodecs_JpegXL_Effort_DecodingSpeed, encode_decode)
+{
+    const int effort = get<0>(GetParam());
+    const int speed  = get<1>(GetParam());
+
+    cv::Scalar col = cv::Scalar(124,76,42);
+    // Jpeg XL is lossy compression.
+    // There may be small differences in decoding results by environments.
+    double th = 3; // = 255 / 100 (1%);
+
+    bool ret = false;
+    vector<uchar> buff;
+    Mat img_org(320, 480, CV_8UC3, col);
+    vector<int> param;
+    param.push_back(IMWRITE_JPEGXL_EFFORT);
+    param.push_back(effort);
+    param.push_back(IMWRITE_JPEGXL_DECODING_SPEED);
+    param.push_back(speed);
+    EXPECT_NO_THROW(ret = imencode(".jxl", img_org, buff, param));
+    EXPECT_TRUE(ret);
+    Mat img_decoded;
+    EXPECT_NO_THROW(img_decoded = imdecode(buff, IMREAD_UNCHANGED));
+    EXPECT_FALSE(img_decoded.empty());
+
+    EXPECT_LE(cvtest::norm(img_org, img_decoded, NORM_INF), th);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    /**/,
+    Imgcodecs_JpegXL_Effort_DecodingSpeed,
+    testing::Combine(
+        testing::Values( // Effort
+            1,  // fastest
+            7,  // default
+            9  // slowest
+        ),
+        testing::Values( // Decoding Speed
+            0,  // default, slowest, and best quality/density
+            2,
+            4   // fastest, at the cost of some qulity/density
+        )
+) );
 
 #endif  // HAVE_JPEGXL
 
