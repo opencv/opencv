@@ -1369,6 +1369,72 @@ norm_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, doub
     return result;
 }
 
+template<typename _Tp, typename _IntTp=_Tp> static double
+norm_flt_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, double startval, const uchar* mask)
+{
+    size_t i;
+    double result = startval;
+    const _IntTp* isrc1 = reinterpret_cast<const _IntTp*>(src1);
+    const _IntTp* isrc2 = reinterpret_cast<const _IntTp*>(src2);
+    if( !mask )
+        total *= cn;
+
+    if( normType == NORM_INF )
+    {
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                if (isrc1[i] != isrc2[i])
+                    result = std::max(result, std::abs((double)src1[i] - (double)src2[i]));
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] && isrc1[i] != isrc2[i] )
+                        result = std::max(result, std::abs((double)src1[i*cn + c] - (double)src2[i*cn + c]));
+            }
+    }
+    else if( normType == NORM_L1 )
+    {
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                if (isrc1[i] != isrc2[i])
+                    result += std::abs((double)src1[i] - (double)src2[i]);
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] && isrc1[i] != isrc2[i] )
+                        result += std::abs((double)src1[i*cn + c] - (double)src2[i*cn + c]);
+            }
+    }
+    else
+    {
+        if( !mask )
+            for( i = 0; i < total; i++ )
+            {
+                if (isrc1[i] != isrc2[i]) {
+                    double v = (double)src1[i] - (double)src2[i];
+                    result += v*v;
+                }
+            }
+        else
+            for( int c = 0; c < cn; c++ )
+            {
+                for( i = 0; i < total; i++ )
+                    if( mask[i] && isrc1[i] != isrc2[i] )
+                    {
+                        double v = (double)src1[i*cn + c] - (double)src2[i*cn + c];
+                        result += v*v;
+                    }
+            }
+    }
+    return result;
+}
+
 
 double norm(InputArray _src, int normType, InputArray _mask)
 {
@@ -1478,13 +1544,6 @@ double norm(InputArray _src, int normType, InputArray _mask)
 double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
-    if( src1.depth() == CV_16F || src1.depth() == CV_16BF )
-    {
-        Mat src1_32f, src2_32f;
-        src1.convertTo(src1_32f, CV_32F);
-        src2.convertTo(src2_32f, CV_32F);
-        return cvtest::norm(src1_32f, src2_32f, normType, _mask);
-    }
 
     bool isRelative = (normType & NORM_RELATIVE) != 0;
     normType &= ~NORM_RELATIVE;
@@ -1569,16 +1628,16 @@ double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
             result = norm_((const int64*)sptr1, (const int64*)sptr2, total, cn, normType, result, mptr);
             break;
         case CV_32F:
-            result = norm_((const float*)sptr1, (const float*)sptr2, total, cn, normType, result, mptr);
+            result = norm_flt_<float, int>((const float*)sptr1, (const float*)sptr2, total, cn, normType, result, mptr);
             break;
         case CV_64F:
-            result = norm_((const double*)sptr1, (const double*)sptr2, total, cn, normType, result, mptr);
+            result = norm_flt_<double, int64>((const double*)sptr1, (const double*)sptr2, total, cn, normType, result, mptr);
             break;
         case CV_16F:
-            result = norm_((const cv::hfloat*)sptr1, (const cv::hfloat*)sptr2, total, cn, normType, result, mptr);
+            result = norm_flt_<cv::hfloat, short>((const cv::hfloat*)sptr1, (const cv::hfloat*)sptr2, total, cn, normType, result, mptr);
             break;
         case CV_16BF:
-            result = norm_((const cv::bfloat*)sptr1, (const cv::bfloat*)sptr2, total, cn, normType, result, mptr);
+            result = norm_flt_<cv::bfloat, short>((const cv::bfloat*)sptr1, (const cv::bfloat*)sptr2, total, cn, normType, result, mptr);
             break;
         default:
             CV_Error(Error::StsUnsupportedFormat, "");
@@ -2189,14 +2248,6 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
 {
     Mat arr = arr_, refarr = refarr_;
     CV_Assert( arr.type() == refarr.type() && arr.size == refarr.size );
-    if( arr.depth() == CV_16F || arr.depth() == CV_16BF )
-    {
-        Mat arr32f, refarr32f;
-        arr.convertTo(arr32f, CV_32F);
-        refarr.convertTo(refarr32f, CV_32F);
-        arr = arr32f;
-        refarr = refarr32f;
-    }
 
     int depth = refarr.depth();
     int ilevel = depth <= CV_32S || depth == CV_32U || depth == CV_64U || depth == CV_64S ? cvFloor(success_err_level) : 0;
@@ -2252,6 +2303,68 @@ int cmpEps( const Mat& arr_, const Mat& refarr_, double* _realmaxdiff,
             break;
         case CV_64U:
             realmaxdiff = cmpUlpsInt_((const uint64_t*)sptr1, (const uint64_t*)sptr2, total, ilevel, startidx, idx);
+            break;
+        case CV_16F:
+            for( j = 0; j < total; j++ )
+            {
+                if( ((short*)sptr1)[j] == ((short*)sptr2)[j] )
+                    continue;
+                double a_val = (float)((cv::hfloat*)sptr1)[j];
+                double b_val = (float)((cv::hfloat*)sptr2)[j];
+                double threshold;
+                if( cvIsNaN(a_val) || cvIsInf(a_val) )
+                {
+                    result = CMP_EPS_INVALID_TEST_DATA;
+                    idx = startidx + j;
+                    break;
+                }
+                if( cvIsNaN(b_val) || cvIsInf(b_val) )
+                {
+                    result = CMP_EPS_INVALID_REF_DATA;
+                    idx = startidx + j;
+                    break;
+                }
+                a_val = fabs(a_val - b_val);
+                threshold = element_wise_relative_error ? fabs(b_val) + 1 : maxval;
+                if( a_val > threshold*success_err_level )
+                {
+                    realmaxdiff = a_val/threshold;
+                    if( idx == 0 )
+                        idx = startidx + j;
+                    break;
+                }
+            }
+            break;
+        case CV_16BF:
+            for( j = 0; j < total; j++ )
+            {
+                if( ((short*)sptr1)[j] == ((short*)sptr2)[j] )
+                    continue;
+                double a_val = (float)((cv::bfloat*)sptr1)[j];
+                double b_val = (float)((cv::bfloat*)sptr2)[j];
+                double threshold;
+                if( cvIsNaN(a_val) || cvIsInf(a_val) )
+                {
+                    result = CMP_EPS_INVALID_TEST_DATA;
+                    idx = startidx + j;
+                    break;
+                }
+                if( cvIsNaN(b_val) || cvIsInf(b_val) )
+                {
+                    result = CMP_EPS_INVALID_REF_DATA;
+                    idx = startidx + j;
+                    break;
+                }
+                a_val = fabs(a_val - b_val);
+                threshold = element_wise_relative_error ? fabs(b_val) + 1 : maxval;
+                if( a_val > threshold*success_err_level )
+                {
+                    realmaxdiff = a_val/threshold;
+                    if( idx == 0 )
+                        idx = startidx + j;
+                    break;
+                }
+            }
             break;
         case CV_32F:
             for( j = 0; j < total; j++ )
