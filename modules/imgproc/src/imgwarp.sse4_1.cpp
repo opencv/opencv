@@ -173,42 +173,6 @@ void convertMaps_32f2c16s_SSE41(const float* src1f, short* dst1, ushort* dst2, i
     }
 }
 
-void WarpAffineInvoker_Blockline_SSE41(int *adelta, int *bdelta, short* xy, int X0, int Y0, int bw)
-{
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
-    int x1 = 0;
-
-    __m128i v_X0 = _mm_set1_epi32(X0);
-    __m128i v_Y0 = _mm_set1_epi32(Y0);
-    for (; x1 <= bw - 16; x1 += 16)
-    {
-        __m128i v_x0 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x1))), AB_BITS),
-            _mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x1 + 4))), AB_BITS));
-        __m128i v_x1 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x1 + 8))), AB_BITS),
-            _mm_srai_epi32(_mm_add_epi32(v_X0, _mm_loadu_si128((__m128i const *)(adelta + x1 + 12))), AB_BITS));
-
-        __m128i v_y0 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x1))), AB_BITS),
-            _mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x1 + 4))), AB_BITS));
-        __m128i v_y1 = _mm_packs_epi32(_mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x1 + 8))), AB_BITS),
-            _mm_srai_epi32(_mm_add_epi32(v_Y0, _mm_loadu_si128((__m128i const *)(bdelta + x1 + 12))), AB_BITS));
-
-        _mm_interleave_epi16(v_x0, v_x1, v_y0, v_y1);
-
-        _mm_storeu_si128((__m128i *)(xy + x1 * 2), v_x0);
-        _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 8), v_x1);
-        _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 16), v_y0);
-        _mm_storeu_si128((__m128i *)(xy + x1 * 2 + 24), v_y1);
-    }
-    for (; x1 < bw; x1++)
-    {
-        int X = (X0 + adelta[x1]) >> AB_BITS;
-        int Y = (Y0 + bdelta[x1]) >> AB_BITS;
-        xy[x1 * 2] = saturate_cast<short>(X);
-        xy[x1 * 2 + 1] = saturate_cast<short>(Y);
-    }
-}
-
-
 class WarpPerspectiveLine_SSE4_Impl CV_FINAL : public WarpPerspectiveLine_SSE4
 {
 public:
