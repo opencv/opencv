@@ -23,22 +23,22 @@ TEST_P(Imgcodecs_JpegXL_MatType, write_read)
     switch( CV_MAT_DEPTH(matType) )
     {
         case CV_16U:
-            col = cv::Scalar(124 * 255, 76 * 255, 42 * 255 );
+            col = cv::Scalar(124 * 256, 76 * 256, 42 * 256, 192 * 256 );
             th = 656; // = 65535 / 100;
             break;
         case CV_32F:
-            col = cv::Scalar(0.486, 0.298, 0.165);
+            col = cv::Scalar(0.486, 0.298, 0.165, 0.75);
             th = 1.0 / 100.0;
             break;
         default:
         case CV_8U:
-            col = cv::Scalar(124,76,42);
+            col = cv::Scalar(124, 76, 42, 192);
             th = 3; // = 255 / 100 (1%);
             break;
     }
 
     // If increasing distanceParam, threshold should be increased.
-    th *= ( distanceParam > 2 )? 3 : (distanceParam == 2) ? 2: 1;
+    th *= (distanceParam >= 25) ? 5 : ( distanceParam > 2 ) ? 3 : (distanceParam == 2) ? 2: 1;
 
     bool ret = false;
     string tmp_fname = cv::tempfile(".jxl");
@@ -67,24 +67,26 @@ TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
     // There may be small differences in decoding results by environments.
     double th;
 
+    // If alpha=0, libjxl modify color channels(BGR). So do not set it.
     switch( CV_MAT_DEPTH(matType) )
     {
         case CV_16U:
-            col = cv::Scalar(124 * 255, 76 * 255, 42 * 255 );
+            col = cv::Scalar(124 * 256, 76 * 256, 42 * 256, 192 * 256 );
             th = 656; // = 65535 / 100;
             break;
         case CV_32F:
-            col = cv::Scalar(0.486, 0.298, 0.165);
+            col = cv::Scalar(0.486, 0.298, 0.165, 0.75);
             th = 1.0 / 100.0;
             break;
         default:
         case CV_8U:
-            col = cv::Scalar(124,76,42);
+            col = cv::Scalar(124, 76, 42, 192);
             th = 3; // = 255 / 100 (1%);
             break;
     }
+
     // If increasing distanceParam, threshold should be increased.
-    th *= ( distanceParam > 2 )? 3 : (distanceParam == 2) ? 2: 1;
+    th *= (distanceParam >= 25) ? 5 : ( distanceParam > 2 ) ? 3 : (distanceParam == 2) ? 2: 1;
 
     bool ret = false;
     vector<uchar> buff;
@@ -106,9 +108,9 @@ INSTANTIATE_TEST_CASE_P(
     Imgcodecs_JpegXL_MatType,
     testing::Combine(
         testing::Values(
-            CV_8UC1,  CV_8UC3,  // CV_8UC4,
-            CV_16UC1, CV_16UC3, // CV_16UC4,
-            CV_32FC1, CV_32FC3  // CV_32FC4,
+            CV_8UC1,  CV_8UC3,  CV_8UC4,
+            CV_16UC1, CV_16UC3, CV_16UC4,
+            CV_32FC1, CV_32FC3, CV_32FC4
         ),
         testing::Values( // Distance
             0, // Lossless

@@ -31,6 +31,8 @@ public:
     bool  readData( Mat& img ) CV_OVERRIDE;
     bool  readHeader() CV_OVERRIDE;
     void  close();
+    size_t signatureLength() const CV_OVERRIDE;
+    bool checkSignature( const String& signature ) const CV_OVERRIDE;
 
     ImageDecoder newDecoder() const CV_OVERRIDE;
 

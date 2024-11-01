@@ -41,6 +41,36 @@ void JpegXLDecoder::close()
     m_status = JXL_DEC_NEED_MORE_INPUT;
 }
 
+// see https://github.com/libjxl/libjxl/blob/v0.10.0/doc/format_overview.md
+size_t JpegXLDecoder::signatureLength() const
+{
+    return 12; // For an ISOBMFF-based container
+}
+
+bool JpegXLDecoder::checkSignature( const String& signature ) const
+{
+    // A "naked" codestream.
+    if (
+        ( signature.size() >= 2 ) &&
+        ( memcmp( signature.c_str(), "\xFF\x0A", 2 ) == 0 )
+    )
+    {
+        return true;
+    }
+
+    // An ISOBMFF-based container.
+    // 0x0000_000C_4A58_4C20_0D0A_870A.
+    if (
+        ( signature.size() >= 12 ) &&
+        ( memcmp( signature.c_str(), "\x00\x00\x00\x0C\x4A\x58\x4C\x20\x0D\x0A\x87\x0A", 12 ) == 0 )
+    )
+    {
+        return true;
+    }
+
+    return false;
+}
+
 ImageDecoder JpegXLDecoder::newDecoder() const
 {
     return makePtr<JpegXLDecoder>();
@@ -136,16 +166,20 @@ bool JpegXLDecoder::read(Mat* pimg)
                 JxlBasicInfo info;
                 if (JXL_DEC_SUCCESS != JxlDecoderGetBasicInfo(m_decoder.get(), &info))
                     return false;
+
+                // total channels (Color + Alpha)
+                const uint32_t ncn = info.num_color_channels + info.num_extra_channels;
+
                 m_width = info.xsize;
                 m_height = info.ysize;
                 m_format = {
-                    info.num_color_channels, // num channels (BGR/RGB + Alpha)
-                    JXL_TYPE_UINT8, // 8 bits per channel
+                    ncn,
+                    JXL_TYPE_UINT8, // (temporary)
                     JXL_LITTLE_ENDIAN, // endianness
                     0 // align stride to bytes
                 };
                 if (!m_use_rgb) {
-                    switch (info.num_color_channels) {
+                    switch (ncn) {
                     case 3:
                         m_convert = cv::COLOR_RGB2BGR;
                         break;
@@ -158,15 +192,16 @@ bool JpegXLDecoder::read(Mat* pimg)
                 }
                 if (info.exponent_bits_per_sample > 0) {
                     m_format.data_type = JXL_TYPE_FLOAT;
-                    m_type = info.num_color_channels == 3 ? CV_32FC3 : (info.num_color_channels == 4 ? CV_32FC4 : CV_32FC1);
+                    m_type = CV_MAKETYPE( CV_32F, ncn );
                 } else {
                     switch (info.bits_per_sample) {
                         case 8:
-                            m_type = info.num_color_channels == 3 ? CV_8UC3 : (info.num_color_channels == 4 ? CV_8UC4 : CV_8UC1);
+                            m_format.data_type = JXL_TYPE_UINT8;
+                            m_type = CV_MAKETYPE( CV_8U, ncn );
                             break;
                         case 16:
                             m_format.data_type = JXL_TYPE_UINT16;
-                            m_type = info.num_color_channels == 3 ? CV_16UC3 : (info.num_color_channels == 4 ? CV_16UC4 : CV_16UC1);
+                            m_type = CV_MAKETYPE( CV_16U, ncn );
                             break;
                         default:
                             return false;
@@ -242,10 +277,12 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
     if (JXL_ENC_SUCCESS != JxlEncoderSetParallelRunner(encoder.get(),  JxlThreadParallelRunner, runner.get()))
         return false;
 
-    // TODO: BGRA and RGBA must be supported.
+    CV_CheckDepth(img.depth(),
+             ( img.depth() == CV_8U || img.depth() == CV_16U || img.depth() == CV_32F ),
+             "JPEG XL encoder only supports CV_8U, CV_16U, CV_32F");
     CV_CheckChannels(img.channels(),
-             ( img.channels() == 1 || img.channels() == 3) ,
-             "JPEG XL encoder only supports 1, 3 channels");
+             ( img.channels() == 1 || img.channels() == 3 || img.channels() == 4) ,
+             "JPEG XL encoder only supports 1, 3, 4 channels");
 
     WLByteStream strm;
     if( m_buf ) {
@@ -260,10 +297,24 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
     JxlEncoderInitBasicInfo(&info);
     info.xsize = img.cols;
     info.ysize = img.rows;
-    info.num_color_channels = img.channels();
-    info.bits_per_sample = 8 * int(img.elemSize() / img.channels());
-    info.exponent_bits_per_sample = img.depth() == CV_32F ? 8 : 0;
     info.uses_original_profile = JXL_FALSE;
+
+    if( img.channels() == 4 )
+    {
+        info.num_color_channels = 3;
+        info.num_extra_channels = 1;
+
+        info.bits_per_sample =
+        info.alpha_bits      = 8 * static_cast<int>(img.elemSize1());
+
+        info.exponent_bits_per_sample =
+        info.alpha_exponent_bits      = img.depth() == CV_32F ? 8 : 0;
+    }else{
+        info.num_color_channels = img.channels();
+        info.bits_per_sample = 8 * static_cast<int>(img.elemSize1());
+        info.exponent_bits_per_sample = img.depth() == CV_32F ? 8 : 0;
+    }
+
     if (JxlEncoderSetBasicInfo(encoder.get(), &info) != JXL_ENC_SUCCESS)
         return false;
 
@@ -280,7 +331,7 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
         return false;
 
     Mat image;
-    switch (info.num_color_channels) {
+    switch ( img.channels() ) {
     case 3:
         cv::cvtColor(img, image, cv::COLOR_BGR2RGB);
         break;
