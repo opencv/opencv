@@ -136,6 +136,7 @@ public:
             String v = toLowerCase(params.get<String>("output_channels_mode"));
             if (v == "same")
             {
+                printf("\nSame called\n");
                 channelsModeInput = ELTWISE_CHANNNELS_SAME;
             }
             else if (v == "input_0")
@@ -213,6 +214,7 @@ public:
 
             if (channelsModeInput == ELTWISE_CHANNNELS_SAME)
             {
+                std::cout << "numChannels: " << numChannels << " input_channels: " << input_channels << std::endl;
                 CV_Assert(numChannels == input_channels);
             }
             else if (channelsModeInput == ELTWISE_CHANNNELS_INPUT_0)

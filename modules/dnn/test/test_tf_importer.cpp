@@ -1825,13 +1825,12 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
     net.setInput(blob);
 
     // Mask-RCNN predicts bounding boxes and segmentation masks.
-    std::vector<String> outNames(2);
+    std::vector<std::string> outNames(2);
     outNames[0] = "detection_out_final";
     outNames[1] = "detection_masks";
 
     std::vector<Mat> outs;
     net.forward(outs, outNames);
-
     Mat outDetections = outs[0];
     Mat outMasks = outs[1];
 

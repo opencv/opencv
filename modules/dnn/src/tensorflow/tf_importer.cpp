@@ -1158,11 +1158,11 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
                 }
             }
         }
-        layerParams.set("dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShapeSize));
+        layerParams.set("shape", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShapeSize));
 
         std::string setName = changedType ? name + "/realReshape" : name;
 
-        addLayer(setName, "Reshape", layerParams, {inputName});
+        addLayer(setName, "Reshape2", layerParams, {inputName});
         inputName = setName;
 
         if ((inpLayout == DNN_LAYOUT_NHWC || inpLayout == DNN_LAYOUT_UNKNOWN || inpLayout == DNN_LAYOUT_PLANAR) &&
@@ -1179,7 +1179,7 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
     }
     else
     {
-        addLayer(name, "Reshape", layerParams, {layer.input(0), layer.input(1)});
+        addLayer(name, "Reshape2", layerParams, {layer.input(0), layer.input(1)});
         data_layouts[name] = inpLayout;
     }
 }
@@ -2959,33 +2959,36 @@ void TFImporter::populateNet()
         << ". Number of nodes = " << netBin.node_size()
     );
 
-    if (netTxtSize)
+    if(!newEngine)
     {
-        CV_LOG_INFO(NULL, "DNN/TF: parsing config"
-            << (netTxt.has_versions() ? cv::format(" produced by TF v%d (min_consumer=%d)", (int)netTxt.versions().producer(), (int)netTxt.versions().min_consumer()) : cv::String(" (N/A version info)"))
-            << ". Number of nodes = " << netTxt.node_size()
-        );
+        if (netTxtSize)
+        {
+            CV_LOG_INFO(NULL, "DNN/TF: parsing config"
+                << (netTxt.has_versions() ? cv::format(" produced by TF v%d (min_consumer=%d)", (int)netTxt.versions().producer(), (int)netTxt.versions().min_consumer()) : cv::String(" (N/A version info)"))
+                << ". Number of nodes = " << netTxt.node_size()
+            );
 
-        RemoveIdentityOps(netBin);
-        CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
-        RemoveIdentityOps(netTxt);
-        CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(config) => " << netTxt.node_size() << " nodes");
+            RemoveIdentityOps(netBin);
+            CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
+            RemoveIdentityOps(netTxt);
+            CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(config) => " << netTxt.node_size() << " nodes");
 
-        sortByExecutionOrder(netTxt);
-        CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(config) => " << netTxt.node_size() << " nodes");
-    }
-    else
-    {
-        removePhaseSwitches(netBin);
-        CV_LOG_DEBUG(NULL, "DNN/TF: removePhaseSwitches(model) => " << netBin.node_size() << " nodes");
+            sortByExecutionOrder(netTxt);
+            CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(config) => " << netTxt.node_size() << " nodes");
+        }
+        else
+        {
+            removePhaseSwitches(netBin);
+            CV_LOG_DEBUG(NULL, "DNN/TF: removePhaseSwitches(model) => " << netBin.node_size() << " nodes");
 
-        RemoveIdentityOps(netBin);
-        CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
+            RemoveIdentityOps(netBin);
+            CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
 
-        simplifySubgraphs(netBin);
-        CV_LOG_DEBUG(NULL, "DNN/TF: simplifySubgraphs(model) => " << netBin.node_size() << " nodes");
-        sortByExecutionOrder(netBin);
-        CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(model) => " << netBin.node_size() << " nodes");
+            simplifySubgraphs(netBin);
+            CV_LOG_DEBUG(NULL, "DNN/TF: simplifySubgraphs(model) => " << netBin.node_size() << " nodes");
+            sortByExecutionOrder(netBin);
+            CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(model) => " << netBin.node_size() << " nodes");
+        }
     }
 
     tensorflow::GraphDef& net = netTxtSize != 0 ? netTxt : netBin;
