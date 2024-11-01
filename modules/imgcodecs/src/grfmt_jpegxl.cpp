@@ -21,6 +21,7 @@ JpegXLDecoder::JpegXLDecoder() : m_f(nullptr, &fclose)
     m_decoder = nullptr;
     m_buf_supported = false;
     m_type = m_convert = -1;
+    m_status = JXL_DEC_NEED_MORE_INPUT;
 }
 
 JpegXLDecoder::~JpegXLDecoder()
@@ -37,6 +38,7 @@ void JpegXLDecoder::close()
     m_read_buffer = {};
     m_width = m_height = 0;
     m_type = m_convert = -1;
+    m_status = JXL_DEC_NEED_MORE_INPUT;
 }
 
 ImageDecoder JpegXLDecoder::newDecoder() const
@@ -93,10 +95,9 @@ bool JpegXLDecoder::read(Mat* pimg)
     }
 
     // Start decoding loop
-    JxlDecoderStatus status = JXL_DEC_NEED_MORE_INPUT;
     do {
         // Check if we need more input
-        if (status == JXL_DEC_NEED_MORE_INPUT) {
+        if (m_status == JXL_DEC_NEED_MORE_INPUT) {
             size_t remaining = JxlDecoderReleaseInput(m_decoder.get());
             // Move any remaining bytes to the beginning
             if (remaining > 0)
@@ -110,7 +111,7 @@ bool JpegXLDecoder::read(Mat* pimg)
                     return false;
                 }
                 // If we reached EOF but decoder needs more input, file is truncated
-                if (status == JXL_DEC_NEED_MORE_INPUT) {
+                if (m_status == JXL_DEC_NEED_MORE_INPUT) {
                     CV_LOG_WARNING(NULL, "Truncated JXL file");
                     return false;
                 }
@@ -125,10 +126,10 @@ bool JpegXLDecoder::read(Mat* pimg)
         }
 
         // Get the next decoder status
-        status = JxlDecoderProcessInput(m_decoder.get());
+        m_status = JxlDecoderProcessInput(m_decoder.get());
 
         // Handle different decoder states
-        switch (status) {
+        switch (m_status) {
             case JXL_DEC_BASIC_INFO: {
                 if (m_type != -1)
                     return false;
@@ -188,7 +189,7 @@ bool JpegXLDecoder::read(Mat* pimg)
             default:
                 break;
         }
-    } while (status != JXL_DEC_SUCCESS);
+    } while (m_status != JXL_DEC_SUCCESS);
 
     return true;
 }
@@ -241,9 +242,10 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
     if (JXL_ENC_SUCCESS != JxlEncoderSetParallelRunner(encoder.get(),  JxlThreadParallelRunner, runner.get()))
         return false;
 
+    // TODO: BGRA and RGBA must be supported.
     CV_CheckChannels(img.channels(),
-             img.channels() == 1 || img.channels() == 3 || img.channels() == 4,
-             "JPEG XL encoder only supports 1, 3, 4 channels");
+             ( img.channels() == 1 || img.channels() == 3) ,
+             "JPEG XL encoder only supports 1, 3 channels");
 
     WLByteStream strm;
     if( m_buf ) {
@@ -295,18 +297,18 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
     // set frame settings from params if available
     for( size_t i = 0; i < params.size(); i += 2 )
     {
-        if( params[i] == IMWRITE_JPEG_QUALITY )
+        if( params[i] == IMWRITE_JPEGXL_QUALITY )
         {
-            #if JPEGXL_MAJOR_VERSION > 0 || JPEGXL_MINOR_VERSION >= 10
+#if JPEGXL_MAJOR_VERSION > 0 || JPEGXL_MINOR_VERSION >= 10
             int quality = params[i+1];
             quality = MIN(MAX(quality, 0), 100);
-            const float distance = JxlEncoderDistanceFromQuality(quality);
+            const float distance = JxlEncoderDistanceFromQuality(static_cast<float>(quality));
             JxlEncoderSetFrameDistance(frame_settings, distance);
             if (distance == 0)
                 JxlEncoderSetFrameLossless(frame_settings, JXL_TRUE);
-            #else
-            CV_LOG_WARNING(NULL, "Quality parameter is not supported in this version of libjxl");
-            #endif
+#else
+            CV_LOG_ONCE_WARNING(NULL, "Quality parameter is supported with libjxl v0.10.0 or later");
+#endif
         }
         if( params[i] == IMWRITE_JPEGXL_DISTANCE )
         {
