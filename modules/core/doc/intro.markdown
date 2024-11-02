@@ -20,7 +20,7 @@ libraries. The following modules are available:
 -   @ref video (**video**) - a video analysis module that includes motion estimation, background subtraction,
     and object tracking algorithms.
 -   @ref _3d "3d" (**3d**) - basic multiple-view geometry algorithms, object pose estimation and elements of 3D reconstruction.
--   @ref features2d (**features2d**) - salient feature detectors, descriptors, and descriptor matchers.
+-   @ref features (**features**) - salient feature detectors, descriptors, and descriptor matchers.
 -   @ref objdetect (**objdetect**) - detection of objects and instances of the predefined classes (for example,
     faces, eyes, mugs, people, cars, and so on).
 -   @ref calib (**calib**) - single and stereo camera calibration

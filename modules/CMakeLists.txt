@@ -20,7 +20,7 @@ foreach(mod ${OPENCV_MODULES_BUILD} ${OPENCV_MODULES_DISABLED_USER} ${OPENCV_MOD
 endforeach()
 ocv_list_sort(OPENCV_MODULES_MAIN)
 ocv_list_sort(OPENCV_MODULES_EXTRA)
-set(FIXED_ORDER_MODULES core imgproc imgcodecs videoio highgui video 3d stereo features2d calib objdetect dnn flann photo stitching)
+set(FIXED_ORDER_MODULES core imgproc imgcodecs videoio highgui video 3d stereo features calib objdetect dnn flann photo stitching)
 list(REMOVE_ITEM OPENCV_MODULES_MAIN ${FIXED_ORDER_MODULES})
 set(OPENCV_MODULES_MAIN ${FIXED_ORDER_MODULES} ${OPENCV_MODULES_MAIN})
 

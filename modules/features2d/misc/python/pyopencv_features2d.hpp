@@ -1,6 +1,0 @@
-#ifdef HAVE_OPENCV_FEATURES2D
-typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
-typedef FastFeatureDetector::DetectorType FastFeatureDetector_DetectorType;
-typedef DescriptorMatcher::MatcherType DescriptorMatcher_MatcherType;
-typedef ORB::ScoreType ORB_ScoreType;
-#endif

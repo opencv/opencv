@@ -10,7 +10,7 @@ set(OPENCV_CPP_SAMPLES_REQUIRED_DEPS
   opencv_video
   opencv_objdetect
   opencv_photo
-  opencv_features2d
+  opencv_features
   opencv_3d
   opencv_stereo
   opencv_calib

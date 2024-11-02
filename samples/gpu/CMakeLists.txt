@@ -10,7 +10,7 @@ set(OPENCV_CUDA_SAMPLES_REQUIRED_DEPS
   opencv_ml
   opencv_video
   opencv_objdetect
-  opencv_features2d
+  opencv_features
   opencv_3d
   opencv_superres
   opencv_cudaarithm

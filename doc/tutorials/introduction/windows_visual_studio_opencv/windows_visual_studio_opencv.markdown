@@ -139,7 +139,7 @@ A full list, for the latest version would contain:
 @code{.bash}
 opencv_calib3d300d.lib
 opencv_core300d.lib
-opencv_features2d300d.lib
+opencv_features300d.lib
 opencv_flann300d.lib
 opencv_highgui300d.lib
 opencv_imgcodecs300d.lib
