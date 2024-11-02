@@ -116,6 +116,12 @@ find_package_handle_standard_args(JPEGXL
     REQUIRED_VARS JPEGXL_LIBRARY JPEGXL_INCLUDE_DIR
     VERSION_VAR JPEGXL_VERSION
 )
+if (NOT EXISTS "${JPEGXL_INCLUDE_DIR}/jxl/version.h")
+  # the library version older 0.6 is not supported (no version.h file there)
+  set(JPEGXL_FOUND FALSE CACHE BOOL "libjxl found" FORCE)
+  message(STATUS "Ignored incompatible version of libjxl")
+endif ()
+
 if (JPEGXL_LIBRARY AND NOT TARGET JPEGXL::jxl)
     add_library(JPEGXL::jxl UNKNOWN IMPORTED GLOBAL)
     set_target_properties(JPEGXL::jxl PROPERTIES
