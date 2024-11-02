@@ -175,7 +175,7 @@ TEST(Imgcodecs_JpegXL, encode_from_uncontinued_image)
 
     vector<uint8_t> buff;
     vector<int> param;
-    bool ret;
+    bool ret = false;
     EXPECT_NO_THROW(ret = cv::imencode(".jxl", roi, buff, param));
     EXPECT_TRUE(ret);
 }
