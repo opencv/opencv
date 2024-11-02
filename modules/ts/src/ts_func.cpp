@@ -1411,7 +1411,7 @@ norm_flt_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, 
                         result += std::abs((double)src1[i*cn + c] - (double)src2[i*cn + c]);
             }
     }
-    else
+    else if( normType == NORM_L2 )
     {
         if( !mask )
             for( i = 0; i < total; i++ )
@@ -1432,6 +1432,11 @@ norm_flt_(const _Tp* src1, const _Tp* src2, size_t total, int cn, int normType, 
                     }
             }
     }
+    else
+    {
+        CV_Error(Error::StsBadArg, "Unexpected normType value in test");
+    }
+
     return result;
 }
 
