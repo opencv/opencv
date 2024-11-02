@@ -116,6 +116,12 @@ find_package_handle_standard_args(JPEGXL
     REQUIRED_VARS JPEGXL_LIBRARY JPEGXL_INCLUDE_DIR
     VERSION_VAR JPEGXL_VERSION
 )
+if (NOT EXISTS "${JPEGXL_INCLUDE_DIR}/jxl/version.h")
+  # the library version older 0.6 is not supported (no version.h file there)
+  set(JPEGXL_FOUND FALSE CACHE BOOL "libjxl found" FORCE)
+  message(STATUS "Ignored incompatible version of libjxl")
+endif ()
+
 if (JPEGXL_LIBRARY AND NOT TARGET JPEGXL::jxl)
     add_library(JPEGXL::jxl UNKNOWN IMPORTED GLOBAL)
     set_target_properties(JPEGXL::jxl PROPERTIES
@@ -128,7 +134,7 @@ mark_as_advanced(JPEGXL_INCLUDE_DIR JPEGXL_LIBRARY)
 if (JPEGXL_FOUND)
     set(JPEGXL_LIBRARIES ${JPEGXL_LIBRARY})
     set(JPEGXL_INCLUDE_DIRS ${JPEGXL_INCLUDE_DIR})
-    if (NOT JPEGXL_VERSION AND EXISTS "${JPEGXL_INCLUDE_DIR}/jxl/version.h")
+    if (NOT JPEGXL_VERSION)
         file(READ "${JPEGXL_INCLUDE_DIR}/jxl/version.h" VERSION_HEADER_CONTENTS)
         string(REGEX MATCH "#define JPEGXL_MAJOR_VERSION ([0-9]+)" _ ${VERSION_HEADER_CONTENTS})
         set(JXL_VERSION_MAJOR ${CMAKE_MATCH_1})
