@@ -1531,7 +1531,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
 
         if(fixedType())
         {
-            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_DEPTH(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
                 CV_CheckTypeEQ(m.type(), CV_MAT_TYPE(mtype), "Can't reallocate UMat with locked type (probably due to misused 'const' modifier)");
@@ -1585,7 +1585,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
         int esz = CV_ELEM_SIZE(typ);
 
         CV_Assert( k == STD_VECTOR_VECTOR || i < 0 );
-        if (k == STD_VECTOR || i < 0) {
+        if (k == STD_VECTOR || i >= 0) {
             CV_Assert( mtype == typ || (CV_MAT_CN(mtype) == CV_MAT_CN(typ) && ((1 << depth) & fixedDepthMask) != 0) );
         }
 
@@ -1721,7 +1721,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
 
         if(fixedType())
         {
-            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_DEPTH(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
                 CV_Assert(CV_MAT_TYPE(mtype) == m.type());
@@ -1779,7 +1779,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
 
         if(fixedType())
         {
-            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_DEPTH(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
                 CV_Assert(CV_MAT_TYPE(mtype) == m.type());
@@ -1839,7 +1839,7 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
 
         if(fixedType())
         {
-            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_TYPE(flags)) & fixedDepthMask) != 0 )
+            if(CV_MAT_CN(mtype) == m.channels() && ((1 << CV_MAT_DEPTH(flags)) & fixedDepthMask) != 0 )
                 mtype = m.type();
             else
                 CV_Assert(CV_MAT_TYPE(mtype) == m.type());

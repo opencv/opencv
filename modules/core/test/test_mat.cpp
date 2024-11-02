@@ -2908,11 +2908,11 @@ TEST(Core_InputOutputArray, std_vector_vector)
     merge(cn_s, vv1_s);
 
     double err0 = cvtest::norm(vv0_s, vv1_s, NORM_INF);
-    EXPECT_EQ(0, err0);
+    EXPECT_EQ(0., err0);
 
     _InputArray iarr_s(cn_s);
     _OutputArray oarr_s(cn_s);
-    EXPECT_EQ(3, iarr_s.total(-1));
+    EXPECT_EQ((size_t)3, iarr_s.total(-1));
     size_t newsize_s = vv0_s.size()*2;
     oarr_s.create(Size((int)newsize_s, 1), CV_64F, 2);
     EXPECT_EQ(newsize_s, cn_s[2].size());
@@ -2927,11 +2927,11 @@ TEST(Core_InputOutputArray, std_vector_vector)
     merge(cn_d, vv1_d);
 
     double err1 = cvtest::norm(vv0_d, vv1_d, NORM_INF);
-    EXPECT_EQ(0, err1);
+    EXPECT_EQ(0., err1);
 
     _InputArray iarr_d(cn_d);
     _OutputArray oarr_d(cn_d);
-    EXPECT_EQ(4, iarr_d.total(-1));
+    EXPECT_EQ((size_t)4, iarr_d.total(-1));
     size_t newsize_d = vv0_d.size()*3;
     oarr_d.create(Size((int)newsize_d, 1), CV_64F, 3);
     EXPECT_EQ(newsize_d, cn_d[3].size());
@@ -2941,7 +2941,7 @@ TEST(Core_InputOutputArray, std_vector_vector)
 
     double err2 = cvtest::norm(m2, Mat(cn_d[2]), NORM_INF);
     EXPECT_EQ(m2.ptr<double>(), &cn_d[2][0]);
-    EXPECT_EQ(0, err2);
+    EXPECT_EQ(0., err2);
 }
 
 }} // namespace
