@@ -2914,7 +2914,7 @@ TEST(Core_InputOutputArray, std_vector_vector)
     _OutputArray oarr_s(cn_s);
     EXPECT_EQ((size_t)3, iarr_s.total(-1));
     size_t newsize_s = vv0_s.size()*2;
-    oarr_s.create(Size((int)newsize_s, 1), CV_64F, 2);
+    oarr_s.create(Size((int)newsize_s, 1), CV_16S, 2);
     EXPECT_EQ(newsize_s, cn_s[2].size());
     cn_s[1].clear();
     EXPECT_EQ(true, oarr_s.empty(1));
