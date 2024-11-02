@@ -338,8 +338,14 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
     case 4:
         cv::cvtColor(img, image, cv::COLOR_BGRA2RGBA);
         break;
+    case 1:
     default:
-        image = img;
+        if(img.isContinuous()) {
+            image = img;
+        } else {
+            image = img.clone(); // reconstruction as continuous image.
+        }
+        break;
     }
     if (!image.isContinuous())
         return false;

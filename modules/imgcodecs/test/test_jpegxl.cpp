@@ -158,7 +158,7 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values( // Effort
             1,  // fastest
             7,  // default
-            9  // slowest
+            9   // slowest
         ),
         testing::Values( // Decoding Speed
             0,  // default, slowest, and best quality/density
@@ -166,6 +166,19 @@ INSTANTIATE_TEST_CASE_P(
             4   // fastest, at the cost of some qulity/density
         )
 ) );
+
+TEST(Imgcodecs_JpegXL, encode_from_uncontinued_image)
+{
+    cv::Mat src(100, 100, CV_8UC1, Scalar(40,50,10));
+    cv::Mat roi = src(cv::Rect(10,20,30,50));
+    EXPECT_FALSE(roi.isContinuous()); // uncontinued image
+
+    vector<uint8_t> buff;
+    vector<int> param;
+    bool ret;
+    EXPECT_NO_THROW(ret = cv::imencode(".jxl", roi, buff, param));
+    EXPECT_TRUE(ret);
+}
 
 #endif  // HAVE_JPEGXL
 
