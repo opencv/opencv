@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "hal_replacement.hpp"
 #include "distortion_model.hpp"
+#include "calib3d_c_api.h"
 #include <stdio.h>
 #include <iterator>
 
@@ -143,7 +144,7 @@ void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
     double J[27] = {0};
     Mat matJ( 3, 9, CV_64F, J);
 
-    dst.setZero();
+    dst.setTo(0);
 
     if( depth != CV_32F && depth != CV_64F )
         CV_Error( cv::Error::StsUnsupportedFormat, "The matrices must have 32f or 64f data type" );
@@ -195,7 +196,7 @@ void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
 
             // R = cos(theta)*I + (1 - cos(theta))*r*rT + sin(theta)*[r_x]
             Matx33d R = c*Matx33d::eye() + c1*rrt + s*r_x;
-            R.convertTo(dst, depth);
+            Mat(R).convertTo(dst, depth);
 
             if( jacobian.data )
             {
@@ -230,9 +231,9 @@ void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
 
         if( !checkRange(R, true, NULL, -100, 100) )
         {
-            dst.setZero();
+            dst.setTo(0);
             if (jacobian.data)
-                jacobian.setZero();
+                jacobian.setTo(0);
             return;
         }
 
@@ -465,9 +466,9 @@ void cv::composeRT( InputArray _rvec1, InputArray _tvec1,
     }
 
     if( dr3dt1.data )
-        dr3dt1.setZero();
+        dr3dt1.setTo(0);
     if( dr3dt2.data )
-        dr3dt2.setZero();
+        dr3dt2.setTo(0);
 
     double _t1[3], _t2[3], _t3[3], _dxdR2[3*9], _dxdt1[3*3], _W3[3*3];
     Mat t1(3,1,CV_64F,_t1), t2(3,1,CV_64F,_t2);
@@ -496,7 +497,7 @@ void cv::composeRT( InputArray _rvec1, InputArray _tvec1,
     if( dt3dt2.data )
         setIdentity(dt3dt2);
     if( dt3dr1.data )
-        dt3dr1.setZero();
+        dt3dr1.setTo(0);
 }
 
 static const char* cvDistCoeffErr =
@@ -609,7 +610,7 @@ void cv::projectPoints( InputArray _objectPoints,
         Mat _k(distCoeffs.size(), CV_64FC(kcn), k);
         distCoeffs.convertTo(_k, CV_64F);
         if(k[12] != 0 || k[13] != 0)
-            computeTiltProjectionMatrix(k[12], k[13], &matTilt, &dMatTiltdTauX, &dMatTiltdTauY);
+            detail::computeTiltProjectionMatrix(k[12], k[13], &matTilt, &dMatTiltdTauX, &dMatTiltdTauY);
     }
 
     if( _dpdr.needed() )
@@ -1175,15 +1176,15 @@ cv::Vec3d cv::RQDecomp3x3( InputArray _Marr,
     Q = M*Qx.t();
 
     /* Save R and Q matrices. */
-    R.convertTo(_Rarr, depth);
-    Q.convertTo(_Qarr, depth);
+    Mat(R).convertTo(_Rarr, depth);
+    Mat(Q).convertTo(_Qarr, depth);
 
     if(_Qx.needed())
-        Qx.convertTo(_Qx, depth);
+        Mat(Qx).convertTo(_Qx, depth);
     if(_Qy.needed())
-        Qy.convertTo(_Qy, depth);
+        Mat(Qy).convertTo(_Qy, depth);
     if(_Qz.needed())
-        Qz.convertTo(_Qz, depth);
+        Mat(Qz).convertTo(_Qz, depth);
     return eulerAngles;
 }
 
@@ -1208,12 +1209,11 @@ void cv::decomposeProjectionMatrix( InputArray _projMatrix, OutputArray _cameraM
     Matx33d M(P(0, 0), P(0, 1), P(0, 2),
               P(1, 0), P(1, 1), P(1, 2),
               P(2, 0), P(2, 1), P(2, 2));
-    t.convertTo(_transVect, depth);
+    Mat(t).convertTo(_transVect, depth);
     Vec3d eulerAngles = RQDecomp3x3(M, _cameraMatrix, _rotMatrix, _rotMatrixX, _rotMatrixY, _rotMatrixZ);
     if (_eulerAngles.needed())
-        eulerAngles.convertTo(_eulerAngles, depth);
+        Mat(eulerAngles).convertTo(_eulerAngles, depth);
 }
-
 
 void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
                   const Mat& imagePoints, const Mat& A,
@@ -1242,12 +1242,16 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
     count = MAX(objectPoints.cols, objectPoints.rows);
     if (objectPoints.checkVector(3) > 0)
         objectPoints.convertTo(matM, CV_64F);
-    else
-        convertPointsFromHomogeneous(objectPoints, matM, CV_64F);
+    else {
+        convertPointsFromHomogeneous(objectPoints, matM);
+        matM.convertTo(matM, CV_64F);
+    }
     if (imagePoints.checkVector(2) > 0)
         imagePoints.convertTo(_m, CV_64F);
-    else
-        convertPointsFromHomogeneous(imagePoints, _m, CV_64F);
+    else {
+        convertPointsFromHomogeneous(imagePoints, _m);
+        _m.convertTo(_m, CV_64F);
+    }
     A.convertTo(matA, CV_64F);
 
     CV_Assert((count >= 4) || (count == 3 && useExtrinsicGuess)); // it is unsafe to call LM optimisation without an extrinsic guess in the case of 3 points. This is because there is no guarantee that it will converge on the correct solution.
@@ -1330,7 +1334,7 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
             else
             {
                 setIdentity(matR);
-                _t.setZero();
+                _t.setTo(0);
             }
 
             Rodrigues( matR, _r );
@@ -1388,12 +1392,18 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
     _mn = _mn.reshape(2, 1);
 
     // refine extrinsic parameters using iterative algorithm
-    auto callback = [matM, _m, matA, distCoeffs]
-        (InputOutputArray param_, OutputArray _err, OutputArray _Jac) -> bool
+#if 0
+    // The C++ LMSolver is not as good as CvLevMarq to pass the tests, maybe due to _completeSymmFlag in CvLevMarq.
+    class RefineLMCallback CV_FINAL : public LMSolver::Callback
     {
-        const Mat& objpt = matM;
-        const Mat& imgpt = _m;
-        const Mat& cameraMatrix = matA;
+    public:
+    RefineLMCallback(const Mat &matM, const Mat &_m, const Mat &matA, const Mat& distCoeffs) : matM_(matM), _m_(_m), matA_(matA), distCoeffs_(distCoeffs) {
+    }
+    bool compute(InputArray param_, OutputArray _err, OutputArray _Jac) const CV_OVERRIDE
+    {
+        const Mat& objpt = matM_;
+        const Mat& imgpt = _m_;
+        const Mat& cameraMatrix = matA_;
         Mat x = param_.getMat();
         CV_Assert((x.cols == 1 || x.rows == 1) && x.total() == 6 && x.type() == CV_64F);
         double* pdata = x.ptr<double>();
@@ -1409,25 +1419,58 @@ void cv::findExtrinsicCameraParams2( const Mat& objectPoints,
             Mat Jac = _Jac.getMat();
             Mat dpdr = Jac.colRange(0, 3);
             Mat dpdt = Jac.colRange(3, 6);
-            projectPoints(objpt, rv, tv, cameraMatrix, distCoeffs,
+            projectPoints(objpt, rv, tv, cameraMatrix, distCoeffs_,
                 err, dpdr, dpdt, noArray(), noArray(), noArray(), noArray());
         }
         else
         {
-            projectPoints(objpt, rv, tv, cameraMatrix, distCoeffs, err);
+            projectPoints(objpt, rv, tv, cameraMatrix, distCoeffs_, err);
         }
-        err = err - imgpt;
+        err = err - (imgpt.rows == 1 ? imgpt.t() : imgpt);
         err = err.reshape(1, 2 * errCount);
         return true;
     };
+    private:
+    const Mat &matM_, &_m_, &matA_, &distCoeffs_;
+    };
 
-    LevMarq solver(_param, callback, LevMarq::Settings().setMaxIterations((unsigned int)max_iter).setGeodesic(true));
-    solver.optimize();
+    LMSolver::create(makePtr<RefineLMCallback>(matM, _m, matA, distCoeffs), max_iter, FLT_EPSILON)->run(_param);
+#else
+    CvLevMarq solver( 6, count*2, cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER,max_iter,FLT_EPSILON), true);
+    _param.copyTo(cvarrToMat(solver.param));
 
-    _param.rowRange(0, 3).copyTo(rvec);
-    _param.rowRange(3, 6).copyTo(tvec);
+    for(;;)
+    {
+        CvMat *matJ = 0, *_err = 0;
+        const CvMat *__param = 0;
+        bool proceed = solver.update( __param, matJ, _err );
+        cvarrToMat(__param).copyTo(_param );
+        if( !proceed || !_err )
+            break;
+        int errCount = matM.rows + matM.cols - 1;
+        Mat err = cvarrToMat(_err);
+        err = err.reshape(2, errCount);
+        if( matJ )
+        {
+            Mat Jac = cvarrToMat(matJ);
+            Mat dpdr = Jac.colRange(0, 3);
+            Mat dpdt = Jac.colRange(3, 6);
+            projectPoints(matM, _r, _t, matA, distCoeffs,
+                err, dpdr, dpdt, noArray(), noArray(), noArray(), noArray());
+        }
+        else
+        {
+            projectPoints(matM, _r, _t, matA, distCoeffs, err);
+        }
+        subtract(err, _m.rows == 1 ? _m.t() : _m, err);
+        cvReshape( _err, _err, 1, 2*count );
+    }
+    cvarrToMat(solver.param).copyTo(_param );
+#endif
+
+    _param.rowRange(0, 3).convertTo(rvec, rvec.depth());
+    _param.rowRange(3, 6).convertTo(tvec, tvec.depth());
 }
-
 
 void cv::projectPoints( InputArray _opoints,
                         InputArray _rvec,
@@ -1477,7 +1520,7 @@ void cv::projectPoints( InputArray _opoints,
     }
 }
 
-void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
+static void getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
               InputArray R, InputArray newCameraMatrix, Size imgSize,
               Rect_<double>& inner, Rect_<double>& outer )
 {
@@ -1593,6 +1636,7 @@ cv::Mat cv::getOptimalNewCameraMatrix( InputArray _cameraMatrix, InputArray _dis
             *validPixROI = r;
         }
     }
+    M.convertTo(M, cameraMatrix.type());
 
     return M;
 }
