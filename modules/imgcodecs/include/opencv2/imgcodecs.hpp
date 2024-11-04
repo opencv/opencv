@@ -218,6 +218,31 @@ enum ImwriteHDRCompressionFlags {
 
 //! @} imgcodecs_flags
 
+/** @brief Represents an animation with multiple frames.
+The Animation struct is used to store and manage the data for an animated sequence.
+It includes information about the number of times the animation should loop, the background color,
+timestamps for each frame, and the frames themselves.
+*/
+struct CV_EXPORTS_W_SIMPLE Animation
+{
+    //! Number of times the animation should loop. 0 means infinite looping.
+    CV_PROP_RW int loop_count;
+    //! Background color of the animation in RGBA format.
+    CV_PROP_RW Scalar bgcolor;
+    //! Timestamps for each frame in milliseconds.
+    CV_PROP_RW std::vector<int> timestamps;
+    //! Vector of frames, where each Mat represents a single frame.
+    CV_PROP_RW std::vector<Mat> frames;
+
+    // Default constructor
+    Animation(int loopCount = 0, Scalar bgColor = Scalar())
+        : loop_count(loopCount), bgcolor(bgColor)
+    {
+        if (loopCount < 0 || loopCount > 0xffff)
+            this->loop_count = 0; // loop_count should be non-negative
+    }
+};
+
 /** @brief Loads an image from a file.
 
 @anchor imread
@@ -303,6 +328,33 @@ The function imreadmulti loads a specified range from a multi-page image from th
 @sa cv::imread
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
+
+/** @brief Loads images from an animated file into an Animation structure.
+
+The function imreadanimation loads frames from an animated file (e.g., AVIF, PNG, WEBP) into the provided Animation struct.
+
+@param filename A string containing the path to the file. The file must be in a supported animated format (such as AVIF, PNG, or WebP).
+@param animation A reference to an Animation structure where the loaded frames will be stored. It should be initialized before the function is called.
+@param start The index of the first frame to load. This is optional and defaults to 0.
+@param count The number of frames to load. This is optional and defaults to 32767.
+
+@return Returns true if the file was successfully loaded and frames were extracted; returns false otherwise.
+*/
+CV_EXPORTS_W bool imreadanimation(const String& filename, CV_OUT Animation& animation, int start = 0, int count = INT16_MAX);
+
+/** @brief Saves an animation to a specified file.
+
+The function imwriteanimation saves the provided Animation data to the specified file in an animated format.
+Supported formats depend on the implementation and may include formats like AVIF, PNG, or WEBP.
+
+@param filename The name of the file where the animation will be saved. The file extension determines the format.
+@param animation A constant reference to an Animation struct containing the frames and metadata to be saved.
+@param params Optional format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ...).
+These parameters are used to specify additional options for the encoding process. Refer to `cv::ImwriteFlags` for details on possible parameters.
+
+@return Returns true if the animation was successfully saved; returns false otherwise.
+*/
+CV_EXPORTS_W bool imwriteanimation(const String& filename, const Animation& animation, const std::vector<int>& params = std::vector<int>());
 
 /** @brief Returns the number of images inside the given file
 
