@@ -332,3 +332,55 @@ int fastcv_hal_rotate(
     }
     CV_HAL_RETURN(status, hal_rotate);
 }
+
+int fastcv_hal_addWeighted8u(
+    const uchar*    src1_data,
+    size_t          src1_step,
+    const uchar*    src2_data,
+    size_t          src2_step,
+    uchar*          dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    const double    scalars[3])
+{
+    if( (scalars[0] < -128.0f) || (scalars[0] >= 128.0f) ||
+        (scalars[1] < -128.0f) || (scalars[1] >= 128.0f) ||
+        (scalars[2] < -(1<<23))|| (scalars[2] >= 1<<23))
+        CV_HAL_RETURN_NOT_IMPLEMENTED(
+            cv::format("Alpha:%f,Beta:%f,Gamma:%f is not supported because it's too large or too small\n",
+            scalars[0],scalars[1],scalars[2]));
+
+    INITIALIZATION_CHECK;
+
+    fcvStatus status = FASTCV_SUCCESS;
+
+    if (height == 1)
+    {
+        src1_step = width*sizeof(uchar);
+        src2_step = width*sizeof(uchar);
+        dst_step  = width*sizeof(uchar);
+
+        cv::parallel_for_(cv::Range(0, width), [&](const cv::Range &range){
+            int rangeWidth = range.end - range.start;
+            const uint8_t *src1 = src1_data + range.start;
+            const uint8_t *src2 = src2_data + range.start;
+            uint8_t *dst = dst_data + range.start;
+            fcvAddWeightedu8_v2(src1, rangeWidth, height, src1_step, src2, src2_step,
+                scalars[0], scalars[1], scalars[2], dst, dst_step);
+            });
+    }
+    else
+    {
+        cv::parallel_for_(cv::Range(0, height), [&](const cv::Range &range){
+            int rangeHeight = range.end - range.start;
+            const uint8_t *src1 = src1_data + range.start * src1_step;
+            const uint8_t *src2 = src2_data + range.start * src2_step;
+            uint8_t *dst = dst_data + range.start * dst_step;
+            fcvAddWeightedu8_v2(src1, width, rangeHeight, src1_step, src2, src2_step,
+                scalars[0], scalars[1], scalars[2], dst, dst_step);
+            });
+    }
+
+    CV_HAL_RETURN(status, hal_addWeighted8u_v2);
+}
