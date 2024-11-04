@@ -316,3 +316,144 @@ int fastcv_hal_adaptiveThreshold(
 
     CV_HAL_RETURN(status,hal_adaptiveThreshold);
 }
+
+class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
+{
+    public:
+
+    FcvGaussianBlurLoop_Invoker(const uchar* _src_data, size_t _src_step, uchar* _dst_data, size_t _dst_step, int _width,
+        int _height, int _ksize, int _depth, fcvBorderType _fcvBorder, int _fcvBorderValue) :
+        cv::ParallelLoopBody(), src_data(_src_data), src_step(_src_step), dst_data(_dst_data), dst_step(_dst_step), width(_width),
+        height(_height), ksize(_ksize), depth(_depth), fcvBorder(_fcvBorder), fcvBorderValue(_fcvBorderValue)
+    {
+        half_ksize = ksize/2;
+        fcvFuncType = FCV_MAKETYPE(ksize,depth);
+    }
+
+    virtual void operator()(const cv::Range& range) const CV_OVERRIDE
+    {
+        fcvStatus status = FASTCV_SUCCESS;
+        int topLines    = 0;
+        int rangeHeight = range.end-range.start;
+
+        if(range.start >= half_ksize)
+        {
+            topLines  += half_ksize;
+            rangeHeight += half_ksize;
+        }
+
+        if(range.end <= height-half_ksize)
+        {
+            rangeHeight += half_ksize;
+        }
+
+        const uchar* src = src_data + (range.start-topLines)*src_step;
+        uchar dst[dst_step*rangeHeight];
+
+        if (fcvFuncType == FCV_MAKETYPE(3,CV_8U))
+            status = fcvFilterGaussian3x3u8_v4(src, width, rangeHeight, src_step, dst, dst_step, fcvBorder, 0);
+        else if (fcvFuncType == FCV_MAKETYPE(5,CV_8U))
+            status = fcvFilterGaussian5x5u8_v3(src, width, rangeHeight, src_step, dst, dst_step, fcvBorder, 0);
+
+        uchar* dptr = dst_data+range.start*dst_step;
+        uchar* sptr = dst+topLines*dst_step;
+        memcpy(dptr,sptr, (range.end-range.start)*dst_step);
+    }
+
+    private:
+    const uchar*    src_data;
+    const size_t    src_step;
+    uchar*          dst_data;
+    const size_t    dst_step;
+    const int       width;
+    const int       height;
+    const int       ksize;
+    const int       depth;
+    int             half_ksize;
+    int             fcvFuncType;
+    fcvBorderType   fcvBorder;
+    int             fcvBorderValue;
+
+    FcvGaussianBlurLoop_Invoker(const FcvGaussianBlurLoop_Invoker &);  // = delete;
+    const FcvGaussianBlurLoop_Invoker& operator= (const FcvGaussianBlurLoop_Invoker &);  // = delete;
+};
+
+int fastcv_hal_gaussianBlurBinomial(
+    const uchar*    src_data,
+    size_t          src_step,
+    uchar*          dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    int             depth,
+    int             cn,
+    size_t          margin_left,
+    size_t          margin_top,
+    size_t          margin_right,
+    size_t          margin_bottom,
+    size_t          ksize,
+    int             border_type)
+{
+    // Do not support inplace case
+    if (src_data == dst_data)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Inplace is not supported");
+
+    // The input image width and height should greater than kernel size
+    if ((height <= ksize) || (width <= ksize))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Input image size should be larger than kernel size");
+
+    // The input channel should be 1
+    if (cn != 1)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Multi-channels is not supported");
+
+    // Do not support for ROI case
+    if((margin_left!=0) || (margin_top != 0) || (margin_right != 0) || (margin_bottom !=0))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("ROI is not supported");
+
+    INITIALIZATION_CHECK;
+
+    fcvStatus status = FASTCV_SUCCESS;
+    fcvBorderType fcvBorder = fcvBorderType::FASTCV_BORDER_UNDEFINED;
+    int fcvFuncType = FCV_MAKETYPE(ksize,depth);
+
+    switch (border_type)
+    {
+        case cv::BorderTypes::BORDER_REPLICATE:
+        {
+            fcvBorder = fcvBorderType::FASTCV_BORDER_REPLICATE;
+            break;
+        }
+        // For constant border, there are no border value, OpenCV default value is 0
+        case cv::BorderTypes::BORDER_CONSTANT:
+        {
+            fcvBorder = fcvBorderType::FASTCV_BORDER_CONSTANT;
+            break;
+        }
+        case cv::BorderTypes::BORDER_REFLECT:
+        {
+            fcvBorder = fcvBorderType::FASTCV_BORDER_REFLECT;
+            break;
+        }
+        case cv::BorderTypes::BORDER_REFLECT_101:
+        {
+            fcvBorder = fcvBorderType::FASTCV_BORDER_REFLECT_V2;
+            break;
+        }
+        default:
+            CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Border type:%s is not supported", borderToString(border_type)));
+    }
+
+    switch (fcvFuncType)
+    {
+        case FCV_MAKETYPE(3,CV_8U):
+        case FCV_MAKETYPE(5,CV_8U):
+            cv::parallel_for_(cv::Range(0, height),
+                FcvGaussianBlurLoop_Invoker(src_data, src_step, dst_data, dst_step, width, height, ksize, depth, fcvBorder, 0),
+                std::max(1, std::min(cv::getNumThreads(), cv::getNumberOfCPUs())));
+            break;
+        default:
+            CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Ksize:%d, depth:%s is not supported", ksize, cv::depthToString(depth)));
+    }
+
+    CV_HAL_RETURN(status, hal_gaussianBlurBinomial);
+}

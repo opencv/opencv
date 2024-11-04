@@ -12,10 +12,12 @@
 #define cv_hal_medianBlur           fastcv_hal_medianBlur
 #undef  cv_hal_sobel
 #define cv_hal_sobel                fastcv_hal_sobel
-#undef cv_hal_boxFilter
+#undef  cv_hal_boxFilter
 #define cv_hal_boxFilter            fastcv_hal_boxFilter
-#undef cv_hal_adaptiveThreshold
+#undef  cv_hal_adaptiveThreshold
 #define cv_hal_adaptiveThreshold    fastcv_hal_adaptiveThreshold
+#undef  cv_hal_gaussianBlurBinomial
+#define cv_hal_gaussianBlurBinomial fastcv_hal_gaussianBlurBinomial
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief Calculate medianBlur filter
@@ -147,5 +149,39 @@ int fastcv_hal_adaptiveThreshold(
     int             thresholdType,
     int             blockSize,
     double          C);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// @brief Blurs an image using a Gaussian filter.
+/// @param src_data         Source image data
+/// @param src_step         Source image step
+/// @param dst_data         Destination image data
+/// @param dst_step         Destination image step
+/// @param width            Source image width
+/// @param height           Source image height
+/// @param depth            Depth of source and destination image
+/// @param cn               Number of channels
+/// @param margin_left      Left margins for source image
+/// @param margin_top       Top margins for source image
+/// @param margin_right     Right margins for source image
+/// @param margin_bottom    Bottom margins for source image
+/// @param ksize            Kernel size
+/// @param border_type      Border type
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_gaussianBlurBinomial(
+    const uchar*    src_data,
+    size_t          src_step,
+    uchar*          dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    int             depth,
+    int             cn,
+    size_t          margin_left,
+    size_t          margin_top,
+    size_t          margin_right,
+    size_t          margin_bottom,
+    size_t          ksize,
+    int             border_type);
+
 
 #endif
