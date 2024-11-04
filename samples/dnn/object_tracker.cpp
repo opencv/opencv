@@ -57,9 +57,95 @@ const string target_keys = format(
 
 string keys = param_keys + backend_keys + target_keys;
 
-static int trackObject(const string& windowName, Ptr<Tracker> tracker, const string& inputName)
+static void loadParser(const string &modelName, const string &zooFile)
 {
-    namedWindow(windowName, WINDOW_AUTOSIZE);
+    // Load appropriate preprocessing arguments based on model name
+    if (modelName == "vit")
+    {
+        keys += genPreprocArguments(modelName, zooFile, "");
+    }
+    else if (modelName == "nano")
+    {
+        keys += genPreprocArguments(modelName, zooFile, "nanotrack_head_");
+        keys += genPreprocArguments(modelName, zooFile, "nanotrack_back_");
+    }
+    else if (modelName == "dasiamrpn")
+    {
+        keys += genPreprocArguments(modelName, zooFile, "dasiamrpn_");
+        keys += genPreprocArguments(modelName, zooFile, "dasiamrpn_kernel_r1_");
+        keys += genPreprocArguments(modelName, zooFile, "dasiamrpn_kernel_cls_");
+    }
+    return;
+}
+
+
+static void createTracker(const string &modelName, CommandLineParser &parser, Ptr<Tracker> &tracker) {
+    int backend = getBackendID(parser.get<String>("backend"));
+    int target = getTargetID(parser.get<String>("target"));
+    if (modelName == "dasiamrpn") {
+        const string net = parser.get<String>("dasiamrpn_model");
+        const string sha1 = parser.get<String>("dasiamrpn_sha1");
+        const string kernel_cls1 = parser.get<String>("dasiamrpn_kernel_cls_model");
+        const string kernel_cls_sha1 = parser.get<String>("dasiamrpn_kernel_cls_sha1");
+        const string kernel_r1 = parser.get<String>("dasiamrpn_kernel_r1_model");
+        const string kernel_sha1 = parser.get<String>("dasiamrpn_kernel_r1_sha1");
+
+        TrackerDaSiamRPN::Params params;
+        params.model = findModel(net, sha1);
+        params.kernel_cls1 = findModel(kernel_cls1, kernel_cls_sha1);
+        params.kernel_r1 = findModel(kernel_r1, kernel_sha1);
+        params.backend = backend;
+        params.target = target;
+        tracker = TrackerDaSiamRPN::create(params);
+    } else if (modelName == "nano") {
+        const string backbone = parser.get<String>("nanotrack_back_model");
+        const string backSha1 = parser.get<String>("nanotrack_back_sha1");
+        const string headneck = parser.get<String>("nanotrack_head_model");
+        const string headSha1 = parser.get<String>("nanotrack_head_sha1");
+
+        TrackerNano::Params params;
+        params.backbone = findModel(backbone, backSha1);
+        params.neckhead = findModel(headneck, headSha1);
+        params.backend = backend;
+        params.target = target;
+        tracker = TrackerNano::create(params);
+    } else if (modelName == "vit") {
+        const string net = parser.get<String>("model");
+        const string sha1 = parser.get<String>("sha1");
+        float tracking_score_threshold = parser.get<float>("tracking_thrs");
+
+        TrackerVit::Params params;
+        params.net = findModel(net, sha1);
+        params.backend = backend;
+        params.target = target;
+        params.tracking_score_threshold = tracking_score_threshold;
+        tracker = TrackerVit::create(params);
+    } else {
+        cout<<"Pass the valid alias. Choices are { nano, vit, dasiamrpn }"<<endl;
+    }
+    return;
+}
+
+int main(int argc, char** argv)
+{
+    CommandLineParser parser(argc, argv, keys);
+    parser.about(about);
+    if (!parser.has("@alias") || parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
+
+    string modelName = parser.get<String>("@alias");
+    const string zooFile = findFile(parser.get<String>("zoo"));
+    loadParser(modelName, zooFile);
+    parser = CommandLineParser(argc, argv, keys);
+
+    Ptr<Tracker> tracker;
+    createTracker(modelName, parser, tracker);
+
+    const string windowName = "TRACKING";
+    namedWindow(windowName, WINDOW_NORMAL);
     FontFace fontFace("sans");
     int stdSize = 20;
     int stdWeight = 400;
@@ -67,8 +153,9 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
     int imgWidth = -1;
     int fontSize = 50;
     int fontWeight = 500;
+    double alpha = 0.4;
     Rect selectRect;
-
+    string inputName = parser.get<String>("input");
     // Open a video file or an image file or a camera stream.
     VideoCapture cap;
 
@@ -107,11 +194,13 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
             fontSize = (stdSize*imgWidth)/stdImgSize;
             fontWeight = (stdWeight*imgWidth)/stdImgSize;
         }
+        Mat org_img = image.clone();
         const string label = "Press space bar to pause video to draw bounding box.";
         Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
         r.height += 2 * fontSize; // padding
         r.width += 10; // padding
         rectangle(image, r, Scalar::all(255), FILLED);
+        addWeighted(image, alpha, org_img, 1 - alpha, 0, image);
         putText(image, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         putText(image, "Press space bar after selecting.", Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         imshow(windowName, image);
@@ -151,28 +240,55 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
         Mat render_image = image.clone();
 
 
-        int key = waitKey(10);
-        if (ok)
-        {
-            string label = "Press space bar to select new target";
-            Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
-            r.height += 3 * fontSize; // padding
-            r.width += 10; // padding
-            rectangle(render_image, r, Scalar::all(255), FILLED);
-            putText(render_image, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+        int key = waitKey(30);
+        string label = "Press space bar to select new target";
+        int h = image.rows;
+        int w = image.cols;
+        Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
+        r.height += 4 * fontSize; // padding
+        r.width += 10; // padding
+        rectangle(render_image, r, Scalar::all(255), FILLED);
+        rectangle(render_image, cv::Point(0, int(h - int(1.5*fontSize))), cv::Point(w, h), Scalar::all(255), FILLED);
+        addWeighted(render_image, alpha, image, 1 - alpha, 0, render_image);
+        putText(render_image, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+        putText(render_image, "For switching between trackers: press 'v' for ViT, 'n' for Nano, and 'd' for DaSiamRPN.", Point(10, h-10), Scalar(0,0,0), fontFace, int(0.8*fontSize), fontWeight);
 
+        if (ok){
             if (key == ' '){
                 putText(render_image, "Select the new target", Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
                 selectRect = selectROI(windowName, render_image);
                 tracker->init(image, selectRect);
             }
+            else if (key == 'v'){
+                modelName = "vit";
+                loadParser(modelName, zooFile);
+                parser = CommandLineParser(argc, argv, keys);
+                createTracker(modelName, parser, tracker);
+                tracker->init(image, rect);
+            }
+            else if (key == 'n'){
+                modelName = "nano";
+                loadParser(modelName, zooFile);
+                parser = CommandLineParser(argc, argv, keys);
+                createTracker(modelName, parser, tracker);
+                tracker->init(image, rect);
+            }
+            else if (key == 'd'){
+                modelName = "dasiamrpn";
+                loadParser(modelName, zooFile);
+                parser = CommandLineParser(argc, argv, keys);
+                createTracker(modelName, parser, tracker);
+                tracker->init(image, rect);
+            }
             rectangle(render_image, rect, Scalar(0, 255, 0), 2);
-
-            string timeLabel = format("Inference time: %.2f ms", tickMeter.getTimeMilli());
-            string scoreLabel = format("Score: %f", score);
-            putText(render_image, timeLabel, Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
-            putText(render_image, scoreLabel, Point(10, 3*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         }
+
+        string timeLabel = format("Inference time: %.2f ms", tickMeter.getTimeMilli());
+        string scoreLabel = format("Score: %f", score);
+        string algoLabel = "Algorithm: " + modelName;
+        putText(render_image, timeLabel, Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+        putText(render_image, scoreLabel, Point(10, 3*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+        putText(render_image, algoLabel, Point(10, 4*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
 
         imshow(windowName, render_image);
 
@@ -182,122 +298,4 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
             exit(0);
     }
     return 0;
-}
-
-int main(int argc, char** argv)
-{
-    // Parse command line arguments.
-    CommandLineParser parser(argc, argv, keys);
-
-    if (!parser.has("@alias") || parser.has("help"))
-    {
-        parser.printMessage();
-        return 0;
-    }
-
-    string modelName = parser.get<String>("@alias");
-    const string zooFile = findFile(parser.get<String>("zoo"));
-    string inputName = parser.get<String>("input");
-
-    int backend = getBackendID(parser.get<String>("backend"));
-    int target = getTargetID(parser.get<String>("target"));
-
-    if (modelName == "vit"){
-        keys += genPreprocArguments(modelName, zooFile, "");
-        parser = CommandLineParser(argc, argv, keys);
-        parser.about(about);
-        const string net = parser.get<String>("model");
-        const string sha1 = parser.get<String>("sha1");
-        float tracking_score_threshold = parser.get<float>("tracking_thrs");
-
-        Ptr<TrackerVit> tracker;
-        try
-        {
-            TrackerVit::Params params;
-            params.net = findModel(net, sha1);
-            params.backend = backend;
-            params.target = target;
-            params.tracking_score_threshold = tracking_score_threshold;
-            tracker = TrackerVit::create(params);
-        }
-        catch (const cv::Exception& ee)
-        {
-            std::cerr << "Exception: " << ee.what() << std::endl;
-            std::cout << "Can't load the network by using the following files:" << std::endl;
-            std::cout << "net : " << net << std::endl;
-            return 2;
-        }
-
-        trackObject("vitTracker", tracker, inputName);
-    }
-    else if (modelName == "nano"){
-        keys += genPreprocArguments(modelName, zooFile, "nanotrack_head_");
-        keys += genPreprocArguments(modelName, zooFile, "nanotrack_back_");
-        parser = CommandLineParser(argc, argv, keys);
-        parser.about(about);
-        const string backbone = parser.get<String>("nanotrack_back_model");
-        const string backSha1 = parser.get<String>("nanotrack_back_sha1");
-        const string headneck = parser.get<String>("nanotrack_head_model");
-        const string headSha1 = parser.get<String>("nanotrack_head_sha1");
-
-        Ptr<TrackerNano> tracker;
-        try
-        {
-            TrackerNano::Params params;
-            params.backbone = findModel(backbone, backSha1);
-            params.neckhead = findModel(headneck, headSha1);
-            params.backend = backend;
-            params.target = target;
-            tracker = TrackerNano::create(params);
-        }
-        catch (const cv::Exception& ee)
-        {
-            std::cerr << "Exception: " << ee.what() << std::endl;
-            std::cout << "Can't load the network by using the following files:" << std::endl;
-            std::cout << "backbone : " << backbone << std::endl;
-            std::cout << "headneck : " << headneck << std::endl;
-            return 2;
-        }
-        trackObject("nanoTracker", tracker, inputName);
-        trackObject("DaSiamRPNTracker", tracker, inputName);
-    }
-    else if (modelName == "dasiamrpn"){
-        keys += genPreprocArguments(modelName, zooFile, "");
-        keys += genPreprocArguments(modelName, zooFile, "dasiamrpn_kernel_r1_");
-        keys += genPreprocArguments(modelName, zooFile, "dasiamrpn_kernel_cls_");
-        parser = CommandLineParser(argc, argv, keys);
-        parser.about(about);
-        const string net = parser.get<String>("model");
-        const string sha1 = parser.get<String>("sha1");
-        const string kernel_cls1 = parser.get<String>("dasiamrpn_kernel_cls_model");
-        const string kernel_cls_sha1 = parser.get<String>("dasiamrpn_kernel_cls_sha1");
-        const string kernel_r1 = parser.get<String>("dasiamrpn_kernel_r1_model");
-        const string kernel_sha1 = parser.get<String>("dasiamrpn_kernel_r1_sha1");
-
-        Ptr<TrackerDaSiamRPN> tracker;
-        try
-        {
-            TrackerDaSiamRPN::Params params;
-            params.model = findModel(net, sha1);
-            params.kernel_cls1 = findModel(kernel_cls1, kernel_cls_sha1);
-            params.kernel_r1 = findModel(kernel_r1, kernel_sha1);
-            params.backend = backend;
-            params.target = target;
-            tracker = TrackerDaSiamRPN::create(params);
-        }
-        catch (const cv::Exception& ee)
-        {
-            cerr << "Exception: " << ee.what() << endl;
-            cout << "Can't load the network by using the following files:" << endl;
-            cout << "siamRPN : " << net << endl;
-            cout << "siamKernelCL1 : " << kernel_cls1 << endl;
-            cout << "siamKernelR1 : " << kernel_r1 << endl;
-            return 2;
-        }
-        trackObject("DaSiamRPNTracker", tracker, inputName);
-    }
-    else{
-        cout<<"Pass the valid alias. Choices are { nano, vit, dasiamrpn }"<<endl;
-        return -1;
-    }
 }

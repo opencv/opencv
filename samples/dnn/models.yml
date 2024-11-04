@@ -417,10 +417,10 @@ nano:
   sample: "object_tracker"
 
 dasiamrpn:
-  load_info:
-    url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_model_2021nov.onnx?download="
-    sha1: "50008bb4f6a27b1aa940ad886b1bd1936ac4ed3e"
-  model: "object_tracking_dasiamrpn_model_2021nov.onnx"
+  dasiamrpn_load_info:
+    dasiamrpn_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_model_2021nov.onnx?download="
+    dasiamrpn_sha1: "50008bb4f6a27b1aa940ad886b1bd1936ac4ed3e"
+  dasiamrpn_model: "object_tracking_dasiamrpn_model_2021nov.onnx"
   dasiamrpn_kernel_r1_load_info:
     dasiamrpn_kernel_r1_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_kernel_r1_2021nov.onnx?download="
     dasiamrpn_kernel_r1_sha1: "39f168489671700cf739e402dfc67d41ce648aef"
