@@ -769,6 +769,11 @@ public:
     */
     CV_WRAP virtual
     bool update(InputArray image, CV_OUT Rect& boundingBox) = 0;
+
+    /** @brief Return tracking score
+    */
+    CV_WRAP virtual float getTrackingScore() { return -1; }
+
 };
 
 
@@ -834,10 +839,6 @@ public:
     static CV_WRAP
     Ptr<TrackerDaSiamRPN> create(const TrackerDaSiamRPN::Params& parameters = TrackerDaSiamRPN::Params());
 
-    /** @brief Return tracking score
-    */
-    CV_WRAP virtual float getTrackingScore() = 0;
-
     //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
@@ -872,10 +873,6 @@ public:
     static CV_WRAP
     Ptr<TrackerNano> create(const TrackerNano::Params& parameters = TrackerNano::Params());
 
-    /** @brief Return tracking score
-    */
-    CV_WRAP virtual float getTrackingScore() = 0;
-
     //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
@@ -909,10 +906,6 @@ public:
     */
     static CV_WRAP
     Ptr<TrackerVit> create(const TrackerVit::Params& parameters = TrackerVit::Params());
-
-    /** @brief Return tracking score
-    */
-    CV_WRAP virtual float getTrackingScore() = 0;
 
     // void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     // bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;

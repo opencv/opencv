@@ -107,6 +107,7 @@ def main():
         print('Unable to initialize tracker with requested bounding box. Is there any object?')
         print(e)
 
+    tick_meter = cv.TickMeter()
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
@@ -115,17 +116,33 @@ def main():
             imgWidth = min(frame.shape[:2])
             fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize)
             fontThickness = max(fontThickness,(stdWeight*imgWidth)//stdImgSize)
-
+        tick_meter.start()
         ok, newbox = tracker.update(frame)
-        if ok:
-            cv.rectangle(frame, newbox, (200, 0, 0), thickness=2)
+        tick_meter.stop()
+        score = tracker.getTrackingScore()
+        render_image = frame.copy()
 
-        label="Tracking"
-        labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
-        cv.rectangle(frame, (0, 0), (labelSize[0]+10, labelSize[1]+10), (255,255,255), cv.FILLED)
-        cv.putText(frame, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
-        cv.imshow("TRACKING", frame)
-        if cv.waitKey(100) & 0xFF in [ord('q'), 27]:
+        key = cv.waitKey(10) & 0xFF
+        if ok:
+            label="Press space bar to select new target"
+            labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
+            cv.rectangle(render_image, (0, 0), (labelSize[0]+10, labelSize[1]+int(50*fontSize)), (255,255,255), cv.FILLED)
+            cv.putText(render_image, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+
+            if key == ord(' '):
+                print("space bar is pressed")
+                cv.putText(render_image, "Select the new target", (10, int(50*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+                bbox = cv.selectROI('TRACKING', render_image)
+                tracker.init(frame, bbox)
+
+            cv.rectangle(render_image, newbox, (200, 0, 0), thickness=2)
+            time_label = f"Inference time: {tick_meter.getTimeMilli():.2f} ms"
+            score_label = f"Score: {score:.2f} ms"
+
+            cv.putText(render_image, time_label, (10, int(50*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+            cv.putText(render_image, score_label, (10, int(75*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+        cv.imshow("TRACKING", render_image)
+        if key in [ord('q'), 27]:
             break
 
 if __name__ == '__main__':

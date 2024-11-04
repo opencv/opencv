@@ -57,30 +57,6 @@ const string target_keys = format(
 
 string keys = param_keys + backend_keys + target_keys;
 
-static float getTrackingScore(Ptr<Tracker> tracker)
-{
-    // Try casting to TrackerDaSiamRPN
-    if (Ptr<TrackerDaSiamRPN> trackerDaSiam = dynamic_pointer_cast<TrackerDaSiamRPN>(tracker))
-    {
-        return trackerDaSiam->getTrackingScore();
-    }
-
-    // Try casting to TrackerVit
-    if (Ptr<TrackerVit> trackerVit = dynamic_pointer_cast<TrackerVit>(tracker))
-    {
-        return trackerVit->getTrackingScore();
-    }
-
-    // Try casting to TrackerVit
-    if (Ptr<TrackerNano> trackerVit = dynamic_pointer_cast<TrackerNano>(tracker))
-    {
-        return trackerVit->getTrackingScore();
-    }
-
-    // If tracker type does not have getTrackingScore
-    return -1;  // Return -1 or some other default value indicating no score available
-}
-
 static int trackObject(const string& windowName, Ptr<Tracker> tracker, const string& inputName)
 {
     namedWindow(windowName, WINDOW_AUTOSIZE);
@@ -151,7 +127,6 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
         }
     }
 
-    Mat image_select = image.clone();
     cout << "ROI=" << selectRect << endl;
     tracker->init(image, selectRect);
 
@@ -165,37 +140,45 @@ static int trackObject(const string& windowName, Ptr<Tracker> tracker, const str
             cerr << "Can't capture frame " << count << ". End of video stream?" << endl;
             break;
         }
-
         Rect rect;
 
         tickMeter.start();
         bool ok = tracker->update(image, rect);
         tickMeter.stop();
 
-        float score = getTrackingScore(tracker);
+        float score = tracker->getTrackingScore();
 
         Mat render_image = image.clone();
 
+
+        int key = waitKey(10);
         if (ok)
         {
+            string label = "Press space bar to select new target";
+            Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
+            r.height += 3 * fontSize; // padding
+            r.width += 10; // padding
+            rectangle(render_image, r, Scalar::all(255), FILLED);
+            putText(render_image, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+
+            if (key == ' '){
+                putText(render_image, "Select the new target", Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+                selectRect = selectROI(windowName, render_image);
+                tracker->init(image, selectRect);
+            }
             rectangle(render_image, rect, Scalar(0, 255, 0), 2);
 
             string timeLabel = format("Inference time: %.2f ms", tickMeter.getTimeMilli());
             string scoreLabel = format("Score: %f", score);
-            Rect r = getTextSize(Size(), timeLabel, Point(), fontFace, fontSize, fontWeight);
-            r.height += 2 * fontSize; // padding
-            r.width += 10; // padding
-            rectangle(render_image, r, Scalar::all(255), FILLED);
-            putText(render_image, timeLabel, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
-            putText(render_image, scoreLabel, Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+            putText(render_image, timeLabel, Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+            putText(render_image, scoreLabel, Point(10, 3*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         }
 
         imshow(windowName, render_image);
 
         tickMeter.reset();
 
-        int c = waitKey(30);
-        if (c == 27 /*ESC*/)
+        if (key == 27 /*ESC*/)
             exit(0);
     }
     return 0;
