@@ -457,3 +457,138 @@ int fastcv_hal_gaussianBlurBinomial(
 
     CV_HAL_RETURN(status, hal_gaussianBlurBinomial);
 }
+
+class FcvWarpPerspectiveLoop_Invoker : public cv::ParallelLoopBody
+{
+    public:
+
+    FcvWarpPerspectiveLoop_Invoker(const uchar* _src_data, int _src_width, int _src_height, size_t _src_step, uchar* _dst_data,
+        int _dst_width, int _dst_height, size_t _dst_step, int _type, const double* _M,
+        fcvInterpolationType _fcvInterpolation, fcvBorderType _fcvBorder, int _fcvBorderValue) :
+        cv::ParallelLoopBody(), src_data(_src_data), src_width(_src_width), src_height(_src_height), src_step(_src_step),
+        dst_data(_dst_data), dst_width(_dst_width), dst_height(_dst_height), dst_step(_dst_step), type(_type),
+        M(_M), fcvInterpolation(_fcvInterpolation),fcvBorder(_fcvBorder),
+        fcvBorderValue(_fcvBorderValue) {}
+
+    virtual void operator()(const cv::Range& range) const CV_OVERRIDE
+    {
+        fcvStatus status = FASTCV_SUCCESS;
+        uchar* dst = dst_data + range.start*dst_step;
+        int rangeHeight = range.end - range.start;
+
+        float rangeMatrix[9];
+        rangeMatrix[0] = (float)(M[0]);
+        rangeMatrix[1] = (float)(M[1]);
+        rangeMatrix[2] = (float)(M[2]+range.start*M[1]);
+        rangeMatrix[3] = (float)(M[3]);
+        rangeMatrix[4] = (float)(M[4]);
+        rangeMatrix[5] = (float)(M[5]+range.start*M[4]);
+        rangeMatrix[6] = (float)(M[6]);
+        rangeMatrix[7] = (float)(M[7]);
+        rangeMatrix[8] = (float)(M[8]+range.start*M[7]);
+        status = fcvWarpPerspectiveu8_v5(src_data, src_width, src_height, src_step, CV_MAT_CN(type), dst, dst_width, rangeHeight,
+                    dst_step, rangeMatrix, fcvInterpolation, fcvBorder, fcvBorderValue);
+    }
+
+    private:
+    const uchar*            src_data;
+    const int               src_width;
+    const int               src_height;
+    const size_t            src_step;
+    uchar*                  dst_data;
+    const int               dst_width;
+    const int               dst_height;
+    const size_t            dst_step;
+    const int               type;
+    const double*           M;
+    fcvInterpolationType    fcvInterpolation;
+    fcvBorderType           fcvBorder;
+    int                     fcvBorderValue;
+
+    FcvWarpPerspectiveLoop_Invoker(const FcvWarpPerspectiveLoop_Invoker &);  // = delete;
+    const FcvWarpPerspectiveLoop_Invoker& operator= (const FcvWarpPerspectiveLoop_Invoker &);  // = delete;
+};
+
+int fastcv_hal_warpPerspective(
+    int             src_type,
+    const uchar*    src_data,
+    size_t          src_step,
+    int             src_width,
+    int             src_height,
+    uchar*          dst_data,
+    size_t          dst_step,
+    int             dst_width,
+    int             dst_height,
+    const double    M[9],
+    int             interpolation,
+    int             border_type,
+    const double    border_value[4])
+{
+    // Do not support inplace case
+    if (src_data == dst_data)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Inplace is not supported");
+
+    INITIALIZATION_CHECK;
+
+    fcvStatus               status;
+    fcvBorderType           fcvBorder;
+    uint8_t                 fcvBorderValue;
+    fcvInterpolationType    fcvInterpolation;
+
+    switch (border_type)
+    {
+        case cv::BorderTypes::BORDER_CONSTANT:
+        {
+            if ((border_value[0] == border_value[1]) &&
+                (border_value[0] == border_value[2]) &&
+                (border_value[0] == border_value[3]))
+            {
+                fcvBorder       = fcvBorderType::FASTCV_BORDER_CONSTANT;
+                fcvBorderValue  = static_cast<uint8_t>(border_value[0]);
+                break;
+            }
+            else
+                CV_HAL_RETURN_NOT_IMPLEMENTED("Different border value is not supported");
+        }
+        case cv::BorderTypes::BORDER_REPLICATE:
+        {
+            fcvBorder = fcvBorderType::FASTCV_BORDER_REPLICATE;
+            break;
+        }
+        case cv::BorderTypes::BORDER_TRANSPARENT:
+        {
+            fcvBorder = fcvBorderType::FASTCV_BORDER_UNDEFINED;
+            break;
+        }
+        default:
+            CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Border type:%s is not supported", borderToString(border_type)));
+    }
+
+    switch(interpolation)
+    {
+        case cv::InterpolationFlags::INTER_NEAREST:
+        {
+            fcvInterpolation = FASTCV_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
+            break;
+        }
+        case cv::InterpolationFlags::INTER_LINEAR:
+        {
+            fcvInterpolation = FASTCV_INTERPOLATION_TYPE_BILINEAR;
+            break;
+        }
+        default:
+            CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Interpolation type:%s is not supported",
+                                          interpolationToString(interpolation)));
+    }
+
+    if(CV_MAT_DEPTH(src_type) == CV_8U)
+    {
+        cv::parallel_for_(cv::Range(0, dst_height),
+            FcvWarpPerspectiveLoop_Invoker(src_data, src_width, src_height, src_step, dst_data, dst_width, dst_height, 
+            dst_step, src_type, M, fcvInterpolation, fcvBorder, fcvBorderValue), 16);
+    }
+    else
+        CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Src type:%s is not supported", cv::typeToString(src_type).c_str()));
+
+    CV_HAL_RETURN(status, hal_warpPerspective);
+}
