@@ -12,3 +12,11 @@ p, div, table, dl {
 td.memSeparator {
     display: none !important;
 }
+
+/*
+ * With Doxygen 1.9.8, some page contents are hidden by the ToC after scrolling.
+ * To workaround, ToC position is changed to"relative".
+ */
+div.toc {
+    position: relative !important;
+}
