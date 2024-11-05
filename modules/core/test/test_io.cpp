@@ -2040,25 +2040,30 @@ T fsWriteRead(const T& expectedValue, const char* ext)
     return value;
 }
 
-typedef testing::TestWithParam<const char*> FileStorage_exact_type;
-TEST_P(FileStorage_exact_type, mat_0d)
+void testExactMat(const Mat& src, const char* ext)
 {
-    Mat src({}, CV_32S, Scalar(8));
-    CV_CheckEQ(src.dims, 0, "");
-    Mat dst = fsWriteRead(src, GetParam());
+    bool srcIsEmpty = src.empty();
+    Mat dst = fsWriteRead(src, ext);
+    EXPECT_EQ(dst.empty(), srcIsEmpty);
     EXPECT_EQ(src.dims, dst.dims);
     EXPECT_EQ(src.size, dst.size);
     EXPECT_EQ(cv::norm(src, dst, NORM_INF), 0.0);
 }
 
+typedef testing::TestWithParam<const char*> FileStorage_exact_type;
+TEST_P(FileStorage_exact_type, empty_mat)
+{
+    testExactMat(Mat(), GetParam());
+}
+
+TEST_P(FileStorage_exact_type, mat_0d)
+{
+    testExactMat(Mat({}, CV_32S, Scalar(8)), GetParam());
+}
+
 TEST_P(FileStorage_exact_type, mat_1d)
 {
-    Mat src({1}, CV_32S, Scalar(8));
-    CV_CheckEQ(src.dims, 1, "");
-    Mat dst = fsWriteRead(src, GetParam());
-    EXPECT_EQ(src.dims, dst.dims);
-    EXPECT_EQ(src.size, dst.size);
-    EXPECT_EQ(cv::norm(src, dst, NORM_INF), 0.0);
+    testExactMat(Mat({1}, CV_32S, Scalar(8)), GetParam());
 }
 
 INSTANTIATE_TEST_CASE_P(Core_InputOutput,
