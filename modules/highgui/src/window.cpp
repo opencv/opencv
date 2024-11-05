@@ -646,16 +646,7 @@ int cv::waitKeyEx(int delay)
 int cv::waitKey(int delay)
 {
     CV_TRACE_FUNCTION();
-    int code = waitKeyEx(delay);
-#ifndef WINRT
-    static int use_legacy = -1;
-    if (use_legacy < 0)
-    {
-        use_legacy = getenv("OPENCV_LEGACY_WAITKEY") != NULL ? 1 : 0;
-    }
-    if (use_legacy > 0)
-        return code;
-#endif
+    const int code = waitKeyEx(delay);
     return (code != -1) ? (code & 0xff) : -1;
 }
 
