@@ -80,6 +80,7 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
+#if 0 // disabled for now
 static void
 medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 {
@@ -489,16 +490,21 @@ medianBlur_8u_Om( const Mat& _src, Mat& _dst, int m )
 #undef N
 #undef UPDATE_ACC
 }
+#endif
 
 // Binary search to find the median offset in the histogram
 static inline void
 get_median_ofs256(int &ofs, const uint16_t *hist, const int halfsum) {
-    const int lanes = VTraits<v_uint16>::vlanes();
     int s = 0, step = 128;
     uint16_t ds, m;
 
+#if CV_SIMD || CV_SIMD_SCALABLE
+    const int lanes = VTraits<v_uint16>::vlanes();
+#endif
+
     ofs = 0;
     while (step) {
+#if CV_SIMD || CV_SIMD_SCALABLE
         // Use SIMD instructions when the step is larger than or equal to the lane size
         if (step >= lanes) {
             v_uint16 v_ds = vx_load(hist + ofs);
@@ -507,7 +513,9 @@ get_median_ofs256(int &ofs, const uint16_t *hist, const int halfsum) {
             ds = v_reduce_sum(v_ds);
         }
             // For smaller steps, use scalar accumulation
-        else {
+        else
+#endif
+        {
             ds = hist[ofs];
             for (int i = 1; i < step; i++)
                 ds += hist[ofs + i];
@@ -584,7 +592,7 @@ medianBlur_8u(const Mat &_src, Mat &_dst, int ksize) {
                 }
 
                 for (int c = 0; c < channels; ++c) {
-                    int ofs;
+                    int ofs = 0;
                     get_median_ofs256(ofs, hist256[c].data(), win_half_size);
                     dst_pixel_ptr[c] = static_cast<uint8_t>(ofs);
                 }
