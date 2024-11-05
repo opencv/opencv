@@ -1,11 +1,3 @@
-// DaSiamRPN tracker.
-// Original paper: https://arxiv.org/abs/1808.06048
-// Link to original repo: https://github.com/foolwood/DaSiamRPN
-// Links to onnx models:
-// - network:     https://www.dropbox.com/s/rr1lk9355vzolqv/dasiamrpn_model.onnx?dl=0
-// - kernel_r1:   https://www.dropbox.com/s/999cqx5zrfi7w4p/dasiamrpn_kernel_r1.onnx?dl=0
-// - kernel_cls1: https://www.dropbox.com/s/qvmtszx5h339a0w/dasiamrpn_kernel_cls1.onnx?dl=0
-
 #include <iostream>
 #include <cmath>
 
@@ -20,8 +12,8 @@ using namespace std;
 using namespace cv::dnn;
 
 const string about = "Use this script for Object Tracking using OpenCV. \n\n"
-        "Firstly, download required models using the links provided in description. For vit tracker download model using `python download_models.py vit`\n"
-        "To run:\n"
+        "Firstly, download required models using the download_models.py. For vit tracker download model using `python download_models.py vit`\n"
+        "To run provide alias/model_name:\n"
             "\t Nano: \n"
                 "\t\t e.g: ./example_dnn_object_tracker nano\n\n"
             "\t vit: \n"
@@ -156,6 +148,8 @@ int main(int argc, char** argv)
     double alpha = 0.4;
     Rect selectRect;
     string inputName = parser.get<String>("input");
+    string instructionLabel = "Press space bar to pause video to draw bounding box.";
+    Rect banner;
     // Open a video file or an image file or a camera stream.
     VideoCapture cap;
 
@@ -166,7 +160,7 @@ int main(int argc, char** argv)
         if (!cap.open(c))
         {
             cout << "Capture from camera #" << c << " didn't work. Specify -i=<video> parameter to read from video file" << endl;
-            return 2;
+            return 0;
         }
     }
     else if (inputName.size())
@@ -175,7 +169,7 @@ int main(int argc, char** argv)
         if (!cap.open(filePath))
         {
             cout << "Could not open: " << inputName << endl;
-            return 2;
+            return 0;
         }
     }
 
@@ -187,24 +181,23 @@ int main(int argc, char** argv)
         if (image.empty())
         {
             cerr << "Can't capture frame. End of video stream?" << endl;
-            return 2;
+            return 0;
         }
         else if (imgWidth == -1){
             imgWidth = min(image.rows, image.cols);
             fontSize = (stdSize*imgWidth)/stdImgSize;
             fontWeight = (stdWeight*imgWidth)/stdImgSize;
+            banner = getTextSize(Size(), instructionLabel, Point(), fontFace, fontSize, fontWeight);
+            banner.height += 2 * fontSize; // padding
+            banner.width += 10; // padding
         }
         Mat org_img = image.clone();
-        const string label = "Press space bar to pause video to draw bounding box.";
-        Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
-        r.height += 2 * fontSize; // padding
-        r.width += 10; // padding
-        rectangle(image, r, Scalar::all(255), FILLED);
+        rectangle(image, banner, Scalar::all(255), FILLED);
         addWeighted(image, alpha, org_img, 1 - alpha, 0, image);
-        putText(image, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+        putText(image, instructionLabel, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         putText(image, "Press space bar after selecting.", Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         imshow(windowName, image);
-        int key = waitKey(30);
+        int key = waitKey(30); //Simulating 30 FPS, if reduced frames move really fast
         if (key == ' ')
         {
             selectRect = selectROI(windowName, image);
@@ -218,6 +211,10 @@ int main(int argc, char** argv)
 
     cout << "ROI=" << selectRect << endl;
     tracker->init(image, selectRect);
+    instructionLabel = "Press space bar to select new target";
+    banner = getTextSize(Size(), instructionLabel, Point(), fontFace, fontSize, fontWeight);
+    banner.height += 4 * fontSize; // padding
+    banner.width += 10; // padding
 
     TickMeter tickMeter;
 
@@ -239,18 +236,13 @@ int main(int argc, char** argv)
 
         Mat render_image = image.clone();
 
-
-        int key = waitKey(30);
-        string label = "Press space bar to select new target";
+        int key = waitKey(30); //Simulating 30 FPS, if reduced frames move really fast
         int h = image.rows;
         int w = image.cols;
-        Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
-        r.height += 4 * fontSize; // padding
-        r.width += 10; // padding
-        rectangle(render_image, r, Scalar::all(255), FILLED);
+        rectangle(render_image, banner, Scalar::all(255), FILLED);
         rectangle(render_image, cv::Point(0, int(h - int(1.5*fontSize))), cv::Point(w, h), Scalar::all(255), FILLED);
         addWeighted(render_image, alpha, image, 1 - alpha, 0, render_image);
-        putText(render_image, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+        putText(render_image, instructionLabel, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
         putText(render_image, "For switching between trackers: press 'v' for ViT, 'n' for Nano, and 'd' for DaSiamRPN.", Point(10, h-10), Scalar(0,0,0), fontFace, int(0.8*fontSize), fontWeight);
 
         if (ok){
