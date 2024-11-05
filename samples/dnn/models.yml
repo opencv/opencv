@@ -419,14 +419,14 @@ nano:
 dasiamrpn:
   dasiamrpn_load_info:
     dasiamrpn_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_model_2021nov.onnx?download="
-    dasiamrpn_sha1: "50008bb4f6a27b1aa940ad886b1bd1936ac4ed3e"
+    dasiamrpn_sha1: "91b774fce7df4c0e4918469f0f482d9a27d0e2d4"
   dasiamrpn_model: "object_tracking_dasiamrpn_model_2021nov.onnx"
   dasiamrpn_kernel_r1_load_info:
     dasiamrpn_kernel_r1_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_kernel_r1_2021nov.onnx?download="
-    dasiamrpn_kernel_r1_sha1: "39f168489671700cf739e402dfc67d41ce648aef"
+    dasiamrpn_kernel_r1_sha1: "bb64620a54348657133eb28be2d3a2a8c76b84b3"
   dasiamrpn_kernel_r1_model: "object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx"
   dasiamrpn_kernel_cls_load_info:
     dasiamrpn_kernel_cls_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx?download="
-    dasiamrpn_kernel_cls_sha1: "6e773a364457b78574f9f63a23b0659ee8646f8f"
+    dasiamrpn_kernel_cls_sha1: "e9ccd270ce8059bdf7ed0d1845c03ef4a951ee0f"
   dasiamrpn_kernel_cls_model: "object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx"
   sample: "object_tracker"
