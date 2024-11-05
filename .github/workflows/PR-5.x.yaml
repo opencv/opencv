@@ -7,58 +7,58 @@ on:
 
 jobs:
   Ubuntu2004-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64.yaml@as/features2d_to_features
 
   Ubuntu2004-ARM64-Debug:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64-Debug.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-ARM64-Debug.yaml@as/features2d_to_features
 
   Ubuntu2004-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20.yaml@as/features2d_to_features
 
   Ubuntu2004-x64-OpenVINO:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-OpenVINO.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-OpenVINO.yaml@as/features2d_to_features
 
   Ubuntu2204-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U22.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U22.yaml@as/features2d_to_features
 
   Ubuntu2404-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U24.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U24.yaml@as/features2d_to_features
 
   Ubuntu2004-x64-CUDA:
     if: "${{ contains(github.event.pull_request.labels.*.name, 'category: dnn') }} || ${{ contains(github.event.pull_request.labels.*.name, 'category: dnn (onnx)') }}"
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-Cuda.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-U20-Cuda.yaml@as/features2d_to_features
 
   Windows10-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10.yaml@as/features2d_to_features
 
   Windows10-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10-ARM64.yaml@as/features2d_to_features
 
 # Vulkan configuration disabled as Vulkan backend for DNN does not support int/int64 for now
 # Details: https://github.com/opencv/opencv/issues/25110
 #  Windows10-x64-Vulkan:
-#    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10-Vulkan.yaml@main
+#    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-W10-Vulkan.yaml@as/features2d_to_features
 
   macOS-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64.yaml@as/features2d_to_features
 
 #  macOS-ARM64-Vulkan:
-#    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64-Vulkan.yaml@main
+#    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-ARM64-Vulkan.yaml@as/features2d_to_features
 
   macOS-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-x86_64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-macOS-x86_64.yaml@as/features2d_to_features
 
   iOS:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-iOS.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-iOS.yaml@as/features2d_to_features
 
   Android:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-Android.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-Android.yaml@as/features2d_to_features
 
   TIM-VX:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@as/features2d_to_features
 
   docs:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-docs.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-docs.yaml@as/features2d_to_features
 
   Linux-RISC-V-Clang:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-RISCV.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-5.x-RISCV.yaml@as/features2d_to_features
