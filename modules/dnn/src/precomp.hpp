@@ -47,6 +47,7 @@
 #endif
 
 #include <opencv2/core.hpp>
+#include "opencv2/core/utils/configuration.private.hpp"
 
 #ifndef CV_OCL4DNN
 #define CV_OCL4DNN 0

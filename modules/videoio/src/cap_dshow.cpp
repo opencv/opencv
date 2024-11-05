@@ -303,15 +303,7 @@ interface ISampleGrabber : public IUnknown
 
 static void DebugPrintOut(const char *format, ...)
 {
-    static int gs_verbose = -1;
-    if (gs_verbose < 0)
-    {
-        // Fetch initial debug state from environment - defaults to disabled
-        const char* s = getenv("OPENCV_DSHOW_DEBUG");
-        gs_verbose = s != NULL && atoi(s) != 0;
-    }
-
-
+    static const bool gs_verbose = utils::getConfigurationParameterBool("OPENCV_DSHOW_DEBUG");
     if (gs_verbose)
     {
         va_list args;
@@ -2982,18 +2974,18 @@ int videoInput::start(int deviceID, videoDevice *VD){
     VD->readyToCapture = true;
 
     // check for optional saving the direct show graph to a file
-    const char* graph_filename = getenv("OPENCV_DSHOW_SAVEGRAPH_FILENAME");
-    if (graph_filename) {
-        size_t filename_len = strlen(graph_filename);
+    std::string graph_filename = utils::getConfigurationParameterString("OPENCV_DSHOW_SAVEGRAPH_FILENAME");
+    if (!graph_filename.empty()) {
+        size_t filename_len = graph_filename.size();
         std::vector<WCHAR> wfilename(filename_len + 1);
-        size_t len = mbstowcs(&wfilename[0], graph_filename, filename_len  + 1);
+        size_t len = mbstowcs(&wfilename[0], &graph_filename[0], filename_len  + 1);
         CV_Assert(len == filename_len);
 
         HRESULT res = SaveGraphFile(VD->pGraph, &wfilename[0]);
         if (SUCCEEDED(res)) {
-            DebugPrintOut("Saved DSHOW graph to %s\n", graph_filename);
+            DebugPrintOut("Saved DSHOW graph to %s\n", graph_filename.c_str());
         } else {
-            DebugPrintOut("Failed to save DSHOW graph to %s\n", graph_filename);
+            DebugPrintOut("Failed to save DSHOW graph to %s\n", graph_filename.c_str());
         }
     }
 

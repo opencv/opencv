@@ -13,6 +13,7 @@
 #include "opencv2/videoio.hpp"
 #include "opencv2/videoio/registry.hpp"
 #include "opencv2/core/private.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
 
 namespace cv {
 

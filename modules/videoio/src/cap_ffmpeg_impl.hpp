@@ -928,21 +928,19 @@ public:
     }
     static void initLogger_()
     {
-#ifndef NO_GETENV
-        char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
-        char* level_option = getenv("OPENCV_FFMPEG_LOGLEVEL");
+        const bool debug_option = utils::getConfigurationParameterBool("OPENCV_FFMPEG_DEBUG");
+        std::string level_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_LOGLEVEL");
         int level = AV_LOG_VERBOSE;
-        if (level_option != NULL)
+        if (!level_option.empty())
         {
-            level = atoi(level_option);
+            level = atoi(level_option.c_str());
         }
-        if ( (debug_option != NULL) || (level_option != NULL) )
+        if ( debug_option || (!level_option.empty()) )
         {
             av_log_set_level(level);
             av_log_set_callback(ffmpeg_log_callback);
         }
         else
-#endif
         {
             av_log_set_level(AV_LOG_ERROR);
         }
@@ -979,10 +977,10 @@ inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
     {
         int nCpus = cv::getNumberOfCPUs();
         int requestedThreads = std::min(nCpus, 16);  // [OPENCV:FFMPEG:24] Application has requested XX threads. Using a thread count greater than 16 is not recommended.
-        char* threads_option = getenv("OPENCV_FFMPEG_THREADS");
-        if (threads_option != NULL)
+        std::string threads_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_THREADS");
+        if (!threads_option.empty())
         {
-            requestedThreads = atoi(threads_option);
+            requestedThreads = atoi(threads_option.c_str());
         }
         enc->thread_count = requestedThreads;
     }
@@ -1122,9 +1120,8 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     ic->interrupt_callback.opaque = &interrupt_metadata;
 #endif
 
-#ifndef NO_GETENV
-    char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
-    if(options == NULL)
+    std::string options = utils::getConfigurationParameterString("OPENCV_FFMPEG_CAPTURE_OPTIONS");
+    if(!options.empty())
     {
 #if LIBAVFORMAT_VERSION_MICRO >= 100  && LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 48, 100)
         av_dict_set(&dict, "rtsp_flags", "prefer_tcp", 0);
@@ -1136,14 +1133,11 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     {
         CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: using capture options from environment: " << options);
 #if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 ? CALC_FFMPEG_VERSION(52, 17, 100) : CALC_FFMPEG_VERSION(52, 7, 0))
-        av_dict_parse_string(&dict, options, ";", "|", 0);
+        av_dict_parse_string(&dict, options.c_str(), ";", "|", 0);
 #else
         av_dict_set(&dict, "rtsp_transport", "tcp", 0);
 #endif
     }
-#else
-    av_dict_set(&dict, "rtsp_transport", "tcp", 0);
-#endif
     CV_FFMPEG_FMT_CONST AVInputFormat* input_format = NULL;
     AVDictionaryEntry* entry = av_dict_get(dict, "input_format", NULL, 0);
     if (entry != 0)
@@ -3095,12 +3089,12 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     AVDictionary *dict = NULL;
-#if !defined(NO_GETENV) && (LIBAVUTIL_VERSION_MAJOR >= 53)
-    char* options = getenv("OPENCV_FFMPEG_WRITER_OPTIONS");
-    if (options)
+#if (LIBAVUTIL_VERSION_MAJOR >= 53)
+    std::string options = utils::getConfigurationParameterString("OPENCV_FFMPEG_WRITER_OPTIONS");
+    if (!options.empty())
     {
         CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: using writer options from environment: " << options);
-        av_dict_parse_string(&dict, options, ";", "|", 0);
+        av_dict_parse_string(&dict, options.c_str(), ";", "|", 0);
     }
 #endif
 

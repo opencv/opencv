@@ -7,6 +7,7 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/video.hpp"
 #include <opencv2/ts/ts_perf.hpp>
+#include "opencv2/core/utils/configuration.private.hpp"
 
 namespace opencv_test {
 using namespace perf;

@@ -1,5 +1,6 @@
 #include "opencv2/ts.hpp"
 #include <opencv2/core/utils/logger.hpp>
+#include "opencv2/core/utils/configuration.private.hpp"
 #include "opencv2/core/utility.hpp"
 #if !defined(__EMSCRIPTEN__)
 #include "opencv2/core/private.hpp"

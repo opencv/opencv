@@ -11,14 +11,7 @@ static
 void initTests()
 {
 #ifdef HAVE_OPENCV_DNN
-    const char* extraTestDataPath =
-#ifdef WINRT
-        NULL;
-#else
-        getenv("OPENCV_DNN_TEST_DATA_PATH");
-#endif
-    if (extraTestDataPath)
-        cvtest::addDataSearchPath(extraTestDataPath);
+    cvtest::addDataSearchEnv("OPENCV_DNN_TEST_DATA_PATH");
 #endif  // HAVE_OPENCV_DNN
 }
 
