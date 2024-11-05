@@ -589,13 +589,17 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
                     vx_store(valpha+vlanes_32, src_x1);
                     vx_store(vbeta, src_y0);
                     vx_store(vbeta+vlanes_32, src_y1);
-        #if CV_SIMD128
-                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
-        #elif CV_SIMD256
-                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
-        #else // CV_SIMD_SCALABLE
-                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+    #if CV_SIMD128
+        #if CV_SIMD_WIDTH == 16
+                    CV_WARP_SIMD128_W16_LOAD_SHUFFLE_INTER_8UC4();
+        #else
+                    CV_WARP_SIMD128_W32_LOAD_SHUFFLE_INTER_8UC4();
         #endif
+    #elif CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+    #elif CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+    #endif
                 } else {
                     uint8_t pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
@@ -1916,13 +1920,17 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
                     vx_store(valpha+vlanes_32, src_x1);
                     vx_store(vbeta, src_y0);
                     vx_store(vbeta+vlanes_32, src_y1);
-        #if CV_SIMD128
-                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
-        #elif CV_SIMD256
-                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
-        #else // CV_SIMD_SCALABLE
-                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+    #if CV_SIMD128
+        #if CV_SIMD_WIDTH == 16
+                    CV_WARP_SIMD128_W16_LOAD_SHUFFLE_INTER_8UC4();
+        #else
+                    CV_WARP_SIMD128_W32_LOAD_SHUFFLE_INTER_8UC4();
         #endif
+    #elif CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+    #elif CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+    #endif
                 } else {
                     uint8_t pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);
@@ -3209,13 +3217,9 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
 
         const auto *src = src_data;
         auto *dst = dst_data;
-        auto *map1 = map1_data, *map2 = map2_data;
+        const auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step, dststep = dst_step,
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
-        if (map2 == nullptr) {
-            map2 = map1;
-            map2step = map1step;
-        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -3273,6 +3277,9 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
             uint8_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
+            if (map2 == nullptr) {
+                sy_data = sx_data;
+            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3289,13 +3296,17 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
                     vx_store(valpha+vlanes_32, src_x1);
                     vx_store(vbeta, src_y0);
                     vx_store(vbeta+vlanes_32, src_y1);
-        #if CV_SIMD128
-                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
-        #elif CV_SIMD256
-                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
-        #else // CV_SIMD_SCALABLE
-                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+    #if CV_SIMD128
+        #if CV_SIMD_WIDTH == 16
+                    CV_WARP_SIMD128_W16_LOAD_SHUFFLE_INTER_8UC4();
+        #else
+                    CV_WARP_SIMD128_W32_LOAD_SHUFFLE_INTER_8UC4();
         #endif
+    #elif CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+    #elif CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+    #endif
                 } else {
                     uint8_t pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 8U);

@@ -560,18 +560,18 @@
 // Special case for C4 load, shuffle and bilinear interpolation
 #define CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(ofs) \
     const uint8_t *srcptr##ofs = src + addr[i+ofs]; \
-    auto i##ofs##_pix01 = v_reinterpret_as_s16(vx_load_expand(srcptr##ofs)); \
-    auto i##ofs##_pix23 = v_reinterpret_as_s16(vx_load_expand(srcptr##ofs+srcstep)); \
-    v_float32 i##ofs##_pix0 = v_cvt_f32(v_expand_low( i##ofs##_pix01)); \
-    v_float32 i##ofs##_pix1 = v_cvt_f32(v_expand_high(i##ofs##_pix01)); \
-    v_float32 i##ofs##_pix2 = v_cvt_f32(v_expand_low( i##ofs##_pix23)); \
-    v_float32 i##ofs##_pix3 = v_cvt_f32(v_expand_high(i##ofs##_pix23)); \
-    v_float32 i##ofs##_alpha = vx_setall_f32(valpha[i+ofs]), \
-                i##ofs##_beta  = vx_setall_f32(vbeta[i+ofs]);  \
+    v_int16x8 i##ofs##_pix01 = v_reinterpret_as_s16(v_load_expand(srcptr##ofs)); \
+    v_int16x8 i##ofs##_pix23 = v_reinterpret_as_s16(v_load_expand(srcptr##ofs+srcstep)); \
+    v_float32x4 i##ofs##_pix0 = v_cvt_f32(v_expand_low( i##ofs##_pix01)); \
+    v_float32x4 i##ofs##_pix1 = v_cvt_f32(v_expand_high(i##ofs##_pix01)); \
+    v_float32x4 i##ofs##_pix2 = v_cvt_f32(v_expand_low( i##ofs##_pix23)); \
+    v_float32x4 i##ofs##_pix3 = v_cvt_f32(v_expand_high(i##ofs##_pix23)); \
+    v_float32x4 i##ofs##_alpha = v_setall_f32(valpha[i+ofs]), \
+                i##ofs##_beta  = v_setall_f32(vbeta[i+ofs]);  \
     i##ofs##_pix0 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_pix1, i##ofs##_pix0), i##ofs##_pix0); \
     i##ofs##_pix2 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_pix3, i##ofs##_pix2), i##ofs##_pix2); \
     i##ofs##_pix0 = v_fma(i##ofs##_beta,  v_sub(i##ofs##_pix2, i##ofs##_pix0), i##ofs##_pix0);
-#define CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4() \
+#define CV_WARP_SIMD128_W16_LOAD_SHUFFLE_INTER_8UC4() \
     for (int i = 0; i < uf; i+=vlanes_32) { \
         CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(0); \
         CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(1); \
@@ -581,6 +581,25 @@
              i23_pix = v_pack_u(v_round(i2_pix0), v_round(i3_pix0)); \
         v_pack_store(dstptr + 4*(x+i), i01_pix); \
         v_pack_store(dstptr + 4*(x+i+2), i23_pix); \
+    }
+#define CV_WARP_SIMD128_W32_LOAD_SHUFFLE_INTER_8UC4() \
+    for (int i = 0; i < uf; i+=vlanes_32) { \
+        CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(0); \
+        CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(1); \
+        CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(2); \
+        CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(3); \
+        CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(4); \
+        CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(5); \
+        CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(6); \
+        CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(7); \
+        v_uint16x8 i01_pix = v_pack_u(v_round(i0_pix0), v_round(i1_pix0)), \
+                   i23_pix = v_pack_u(v_round(i2_pix0), v_round(i3_pix0)); \
+        v_pack_store(dstptr + 4*(x+i), i01_pix); \
+        v_pack_store(dstptr + 4*(x+i+2), i23_pix); \
+        v_uint16x8 i45_pix = v_pack_u(v_round(i4_pix0), v_round(i5_pix0)), \
+                   i67_pix = v_pack_u(v_round(i6_pix0), v_round(i7_pix0)); \
+        v_pack_store(dstptr + 4*(x+i+4), i45_pix); \
+        v_pack_store(dstptr + 4*(x+i+6), i67_pix); \
     }
 #define CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4_I(ofs0, ofs1) \
     const uint8_t *srcptr##ofs0 = src + addr[i+ofs0]; \
@@ -610,6 +629,10 @@
         CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4_I(2, 3); \
         auto i01_pix = v_round(i01_fpix00), i23_pix = v_round(i23_fpix00); \
         v_pack_store(dstptr + 4*x, v_pack_u(i01_pix, i23_pix)); \
+        CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4_I(4, 5); \
+        CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4_I(6, 7); \
+        auto i45_pix = v_round(i45_fpix00), i67_pix = v_ \round(i67_fpix00); \
+        v_pack_store(dstptr + 4*(x+i+4), v_pack_u(i45_pix, i67_pix)); \
     }
 #define CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4_I(ofs) \
     const uint8_t *srcptr##ofs = src + addr[i+ofs]; \
