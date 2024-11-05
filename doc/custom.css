@@ -1,12 +1,4 @@
 /*
- * To display all formulas for cv::NormTypes
- * see https://github.com/opencv/opencv/issues/24573
- */
-p, div, table, dl {
-    white-space: normal !important;
-}
-
-/*
  * To narrow the separator height for class members.
  */
 td.memSeparator {
