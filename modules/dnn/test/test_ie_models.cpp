@@ -40,15 +40,11 @@ static void initDLDTDataPath()
     if (!initialized)
     {
 #if INF_ENGINE_RELEASE <= 2018050000
-        const char* dldtTestDataPath = getenv("INTEL_CVSDK_DIR");
-        if (dldtTestDataPath)
-            cvtest::addDataSearchPath(dldtTestDataPath);
+        cvtest::addDataSearchEnv("INTEL_CVSDK_DIR");
 #else
-        const char* omzDataPath = getenv("OPENCV_OPEN_MODEL_ZOO_DATA_PATH");
-        if (omzDataPath)
-            cvtest::addDataSearchPath(omzDataPath);
-        const char* dnnDataPath = getenv("OPENCV_DNN_TEST_DATA_PATH");
-        if (dnnDataPath)
+        cvtest::addDataSearchEnv("OPENCV_OPEN_MODEL_ZOO_DATA_PATH");
+        const std::string dnnDataPath = cv::utils::getConfigurationParameterString("OPENCV_DNN_TEST_DATA_PATH");
+        if (!dnnDataPath.empty())
             cvtest::addDataSearchPath(std::string(dnnDataPath) + "/omz_intel_models");
 #endif
         initialized = true;

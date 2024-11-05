@@ -44,6 +44,7 @@
 #if defined(HAVE_OPENCL)
 
 #include "opencv2/core.hpp" // CV_Error
+#include "opencv2/core/utils/configuration.private.hpp"
 
 #if defined(HAVE_OPENCL_STATIC)
 #if defined __APPLE__
@@ -64,18 +65,14 @@ CV_SUPPRESS_DEPRECATED_END
 #define ERROR_MSG_CANT_LOAD "Failed to load OpenCL runtime\n"
 #define ERROR_MSG_INVALID_VERSION "Failed to load OpenCL runtime (expected version 1.1+)\n"
 
-static const char* getRuntimePath(const char* defaultPath)
+static std::string getRuntimePath(const std::string & defaultPath)
 {
-    const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
-    if (envPath)
-    {
-        static const char disabled_str[] = "disabled";
-        if ((strlen(envPath) == sizeof(disabled_str) - 1) &&
-                (memcmp(envPath, disabled_str, sizeof(disabled_str) - 1) == 0))
-            return NULL;
-        return envPath;
-    }
-    return defaultPath;
+    const std::string res = cv::utils::getConfigurationParameterString(
+        "OPENCV_OPENCL_RUNTIME", defaultPath);
+    if (res == "disabled")
+        return std::string();
+    else
+        return res;
 }
 
 #if defined(__APPLE__)
@@ -91,9 +88,9 @@ static void* AppleCLGetProcAddress(const char* name)
         if (!initialized)
         {
             const char* defaultPath = "/System/Library/Frameworks/OpenCL.framework/Versions/Current/OpenCL";
-            const char* path = getRuntimePath(defaultPath);
-            if (path)
-                handle = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
+            std::string path = getRuntimePath(defaultPath);
+            if (!path.empty())
+                handle = dlopen(path.c_str(), RTLD_LAZY | RTLD_GLOBAL);
             if (handle == NULL)
             {
                 if (path != NULL && path != defaultPath)
@@ -129,13 +126,13 @@ static void* WinGetProcAddress(const char* name)
             handle = GetModuleHandleA("OpenCL.dll");
             if (!handle)
             {
-                const char* defaultPath = "OpenCL.dll";
-                const char* path = getRuntimePath(defaultPath);
-                if (path)
-                    handle = LoadLibraryA(path);
+                const std::string defaultPath = "OpenCL.dll";
+                const std::string path = getRuntimePath(defaultPath);
+                if (!path.empty())
+                    handle = LoadLibraryA(path.c_str());
                 if (!handle)
                 {
-                    if (path != NULL && path != defaultPath)
+                    if (!path.empty() && path != defaultPath)
                         fprintf(stderr, ERROR_MSG_CANT_LOAD);
                 }
                 else if (GetProcAddress(handle, OPENCL_FUNC_TO_CHECK_1_1) == NULL)
@@ -205,8 +202,8 @@ static void* GetProcAddress(const char* name)
             bool foundOpenCL = false;
             for (unsigned int i = 0; i < (sizeof(defaultAndroidPaths)/sizeof(char*)); i++)
             {
-                const char* path = (i==0) ? getRuntimePath(defaultAndroidPaths[i]) : defaultAndroidPaths[i];
-                if (path) {
+                const std::string path = (i==0) ? getRuntimePath(defaultAndroidPaths[i]) : defaultAndroidPaths[i];
+                if (!path.empty()) {
                     handle = GetHandle(path);
                     if (handle) {
                         foundOpenCL = true;
@@ -236,10 +233,10 @@ static void* GetProcAddress(const char* name)
         if (!initialized)
         {
             const char* defaultPath = "libOpenCL.so";
-            const char* path = getRuntimePath(defaultPath);
-            if (path)
+            const std::string path = getRuntimePath(defaultPath);
+            if (!path.empty())
             {
-                handle = GetHandle(path);
+                handle = GetHandle(path.c_str());
                 if (!handle)
                 {
                     if (path == defaultPath)

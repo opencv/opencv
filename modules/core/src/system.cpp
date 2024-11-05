@@ -450,13 +450,11 @@ struct HWFeatures
 
     void initialize(void)
     {
-#ifndef NO_GETENV
-        if (getenv("OPENCV_DUMP_CONFIG"))
+        if (utils::getConfigurationParameterBool("OPENCV_DUMP_CONFIG"))
         {
             fprintf(stderr, "\nOpenCV build configuration is:\n%s\n",
                 cv::getBuildInformation().c_str());
         }
-#endif
 
         initializeNames();
 
@@ -731,12 +729,10 @@ struct HWFeatures
     #endif
 
         bool skip_baseline_check = false;
-#ifndef NO_GETENV
-        if (getenv("OPENCV_SKIP_CPU_BASELINE_CHECK"))
+        if (utils::getConfigurationParameterBool("OPENCV_SKIP_CPU_BASELINE_CHECK"))
         {
             skip_baseline_check = true;
         }
-#endif
         int baseline_features[] = { CV_CPU_BASELINE_FEATURES };
         if (!checkFeatures(baseline_features, sizeof(baseline_features) / sizeof(baseline_features[0]))
             && !skip_baseline_check)
@@ -786,15 +782,10 @@ struct HWFeatures
     void readSettings(const int* baseline_features, int baseline_count)
     {
         bool dump = true;
-        const char* disabled_features =
-#ifdef NO_GETENV
-                NULL;
-#else
-                getenv("OPENCV_CPU_DISABLE");
-#endif
-        if (disabled_features && disabled_features[0] != 0)
+        std::string disabled_features = utils::getConfigurationParameterString("OPENCV_CPU_DISABLE");
+        if (!disabled_features.empty())
         {
-            const char* start = disabled_features;
+            const char* start = disabled_features.c_str();
             for (;;)
             {
                 while (start[0] != 0 && isSymbolSeparator(start[0]))
@@ -1080,20 +1071,19 @@ String tempfile( const char* suffix )
 {
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     String fname;
-#ifndef NO_GETENV
-    const char *temp_dir = getenv("OPENCV_TEMP_PATH");
-#endif
+
+    std::string temp_dir = utils::getConfigurationParameterString("OPENCV_TEMP_PATH");
 
 #if defined _WIN32
 #ifdef WINRT
     RoInitialize(RO_INIT_MULTITHREADED);
-    std::wstring temp_dir = GetTempPathWinRT();
+    std::wstring temp_dir_rt = GetTempPathWinRT();
 
     std::wstring temp_file = GetTempFileNameWinRT(L"ocv");
     if (temp_file.empty())
         return String();
 
-    temp_file = temp_dir.append(std::wstring(L"\\")).append(temp_file);
+    temp_file = temp_dir_rt.append(std::wstring(L"\\")).append(temp_file);
     DeleteFileW(temp_file.c_str());
 
     char aname[MAX_PATH];
@@ -1103,12 +1093,12 @@ String tempfile( const char* suffix )
     RoUninitialize();
 #elif defined(_WIN32_WCE)
     const auto kMaxPathSize = MAX_PATH+1;
-    wchar_t temp_dir[kMaxPathSize] = {0};
+    wchar_t temp_dir_ce[kMaxPathSize] = {0};
     wchar_t temp_file[kMaxPathSize] = {0};
 
-    ::GetTempPathW(kMaxPathSize, temp_dir);
+    ::GetTempPathW(kMaxPathSize, temp_dir_ce);
 
-    if(0 != ::GetTempFileNameW(temp_dir, L"ocv", 0, temp_file)) {
+    if(0 != ::GetTempFileNameW(temp_dir_ce, L"ocv", 0, temp_file)) {
         DeleteFileW(temp_file);
         char aname[MAX_PATH];
         size_t copied = wcstombs(aname, temp_file, MAX_PATH);
@@ -1119,12 +1109,12 @@ String tempfile( const char* suffix )
     char temp_dir2[MAX_PATH] = { 0 };
     char temp_file[MAX_PATH] = { 0 };
 
-    if (temp_dir == 0 || temp_dir[0] == 0)
+    if (temp_dir.empty())
     {
         ::GetTempPathA(sizeof(temp_dir2), temp_dir2);
-        temp_dir = temp_dir2;
+        temp_dir = std::string(temp_dir2);
     }
-    if(0 == ::GetTempFileNameA(temp_dir, "ocv", 0, temp_file))
+    if(0 == ::GetTempFileNameA(temp_dir.c_str(), "ocv", 0, temp_file))
         return String();
 
     DeleteFileA(temp_file);
@@ -1139,7 +1129,7 @@ String tempfile( const char* suffix )
     char defaultTemplate[] = "/tmp/__opencv_temp.XXXXXX";
 #  endif
 
-    if (temp_dir == 0 || temp_dir[0] == 0)
+    if (temp_dir.empty())
         fname = defaultTemplate;
     else
     {
@@ -2289,9 +2279,9 @@ size_t utils::getConfigurationParameterSizeT(const char* name, size_t defaultVal
     return read<size_t>(name, defaultValue);
 }
 
-cv::String utils::getConfigurationParameterString(const char* name, const char* defaultValue)
+std::string utils::getConfigurationParameterString(const char* name, const std::string & defaultValue)
 {
-    return read<cv::String>(name, defaultValue ? cv::String(defaultValue) : cv::String());
+    return read<cv::String>(name, defaultValue);
 }
 
 utils::Paths utils::getConfigurationParameterPaths(const char* name, const utils::Paths &defaultValue)
@@ -2588,11 +2578,8 @@ public:
         }
         ippFeatures = cpuFeatures;
 
-        const char* pIppEnv = getenv("OPENCV_IPP");
-        cv::String env;
-        if(pIppEnv != NULL)
-            env = pIppEnv;
-        if(env.size())
+        std::string env = utils::getConfigurationParameterString("OPENCV_IPP");
+        if(!env.empty())
         {
 #if IPP_VERSION_X100 >= 201900
             const Ipp64u minorFeatures = ippCPUID_MOVBE|ippCPUID_AES|ippCPUID_CLMUL|ippCPUID_ABR|ippCPUID_RDRAND|ippCPUID_F16C|
