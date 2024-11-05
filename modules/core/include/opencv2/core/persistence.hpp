@@ -98,7 +98,7 @@ JSON.
 //! @} core_c
 
 #include "opencv2/core/types.hpp"
-#include "opencv2/core/mat.hpp"
+#include "opencv2/core/mat_def.hpp"
 
 namespace cv {
 

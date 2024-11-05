@@ -48,8 +48,9 @@
 #  error cuda.hpp header must be compiled as C++
 #endif
 
-#include "opencv2/core.hpp"
+#include "opencv2/core/cvdef.h"
 #include "opencv2/core/cuda_types.hpp"
+#include "opencv2/core/types.hpp"
 
 /**
   @defgroup cuda CUDA-accelerated Computer Vision
@@ -62,7 +63,15 @@
   @}
  */
 
-namespace cv { namespace cuda {
+namespace cv {
+
+class CV_EXPORTS _InputArray;
+using InputArray = const _InputArray&;
+class CV_EXPORTS _OutputArray;
+using OutputArray = const _OutputArray&;
+class CV_EXPORTS MatAllocator;
+
+namespace cuda {
 
 //! @addtogroup cudacore_struct
 //! @{
@@ -135,8 +144,10 @@ public:
     CV_WRAP GpuMat(const GpuMat& m);
 
     //! constructor for GpuMat headers pointing to user-allocated data
-    GpuMat(int rows, int cols, int type, void* data, size_t step = Mat::AUTO_STEP);
-    GpuMat(Size size, int type, void* data, size_t step = Mat::AUTO_STEP);
+    GpuMat(int rows, int cols, int type, void* data);
+    GpuMat(int rows, int cols, int type, void* data, size_t step);
+    GpuMat(Size size, int type, void* data);
+    GpuMat(Size size, int type, void* data, size_t step);
 
     //! creates a GpuMat header for a part of the bigger matrix
     CV_WRAP GpuMat(const GpuMat& m, Range rowRange, Range colRange);
@@ -201,30 +212,22 @@ public:
     //! copies the GpuMat content to device memory (Blocking call)
     void copyTo(OutputArray dst) const;
     //! bindings overload which copies the GpuMat content to device memory (Blocking call)
-    CV_WRAP void copyTo(CV_OUT GpuMat& dst) const {
-        copyTo(static_cast<OutputArray>(dst));
-    }
+    CV_WRAP void copyTo(CV_OUT GpuMat& dst) const;
 
     //! copies the GpuMat content to device memory (Non-Blocking call)
     void copyTo(OutputArray dst, Stream& stream) const;
     //! bindings overload which copies the GpuMat content to device memory (Non-Blocking call)
-    CV_WRAP void copyTo(CV_OUT GpuMat& dst, Stream& stream) const {
-        copyTo(static_cast<OutputArray>(dst), stream);
-    }
+    CV_WRAP void copyTo(CV_OUT GpuMat& dst, Stream& stream) const;
 
     //! copies those GpuMat elements to "m" that are marked with non-zero mask elements (Blocking call)
     void copyTo(OutputArray dst, InputArray mask) const;
     //! bindings overload which copies those GpuMat elements to "m" that are marked with non-zero mask elements (Blocking call)
-    CV_WRAP void copyTo(CV_OUT GpuMat& dst, GpuMat& mask) const {
-        copyTo(static_cast<OutputArray>(dst), static_cast<InputArray>(mask));
-    }
+    CV_WRAP void copyTo(CV_OUT GpuMat& dst, GpuMat& mask) const;
 
     //! copies those GpuMat elements to "m" that are marked with non-zero mask elements (Non-Blocking call)
     void copyTo(OutputArray dst, InputArray mask, Stream& stream) const;
     //! bindings overload which copies those GpuMat elements to "m" that are marked with non-zero mask elements (Non-Blocking call)
-    CV_WRAP void copyTo(CV_OUT GpuMat& dst, GpuMat& mask, Stream& stream) const {
-        copyTo(static_cast<OutputArray>(dst), static_cast<InputArray>(mask), stream);
-    }
+    CV_WRAP void copyTo(CV_OUT GpuMat& dst, GpuMat& mask, Stream& stream) const;
 
     //! sets some of the GpuMat elements to s (Blocking call)
     CV_WRAP GpuMat& setTo(Scalar s);
@@ -244,16 +247,12 @@ public:
     //! converts GpuMat to another datatype (Non-Blocking call)
     void convertTo(OutputArray dst, int rtype, Stream& stream) const;
     //! bindings overload which converts GpuMat to another datatype (Non-Blocking call)
-    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, Stream& stream) const {
-        convertTo(static_cast<OutputArray>(dst), rtype, stream);
-    }
+    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, Stream& stream) const;
 
     //! converts GpuMat to another datatype with scaling (Blocking call)
     void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
     //! bindings overload which converts GpuMat to another datatype with scaling(Blocking call)
-    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, double alpha = 1.0, double beta = 0.0) const {
-        convertTo(static_cast<OutputArray>(dst), rtype, alpha, beta);
-    }
+    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, double alpha = 1.0, double beta = 0.0) const;
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
     void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
@@ -261,9 +260,7 @@ public:
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
     void convertTo(OutputArray dst, int rtype, double alpha, double beta, Stream& stream) const;
     //! bindings overload which converts GpuMat to another datatype with scaling (Non-Blocking call)
-    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, double alpha, double beta, Stream& stream) const {
-        convertTo(static_cast<OutputArray>(dst), rtype, alpha, beta, stream);
-    }
+    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, double alpha, double beta, Stream& stream) const;
 
     CV_WRAP void assignTo(GpuMat& m, int type = -1) const;
 
@@ -604,9 +601,8 @@ CV_EXPORTS_W void ensureSizeIsEnough(int rows, int cols, int type, OutputArray a
 @param step Number of bytes each matrix row occupies. The value should include the padding bytes at the end of each row, if any. If the parameter is missing (set to Mat::AUTO_STEP ), no padding is assumed and the actual step is calculated as cols*elemSize(). See GpuMat::elemSize.
 @note Overload for generation of bindings only, not exported or intended for use internally from C++.
  */
-CV_EXPORTS_W GpuMat inline createGpuMatFromCudaMemory(int rows, int cols, int type, size_t cudaMemoryAddress, size_t step = Mat::AUTO_STEP) {
-    return GpuMat(rows, cols, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
-}
+CV_EXPORTS_W GpuMat createGpuMatFromCudaMemory(int rows, int cols, int type, size_t cudaMemoryAddress);
+CV_EXPORTS_W GpuMat createGpuMatFromCudaMemory(int rows, int cols, int type, size_t cudaMemoryAddress, size_t step);
 
  /** @overload
 @param size 2D array size: Size(cols, rows). In the Size() constructor, the number of rows and the number of columns go in the reverse order.
@@ -615,9 +611,8 @@ CV_EXPORTS_W GpuMat inline createGpuMatFromCudaMemory(int rows, int cols, int ty
 @param step Number of bytes each matrix row occupies. The value should include the padding bytes at the end of each row, if any. If the parameter is missing (set to Mat::AUTO_STEP ), no padding is assumed and the actual step is calculated as cols*elemSize(). See GpuMat::elemSize.
 @note Overload for generation of bindings only, not exported or intended for use internally from C++.
  */
-CV_EXPORTS_W inline GpuMat createGpuMatFromCudaMemory(Size size, int type, size_t cudaMemoryAddress, size_t step = Mat::AUTO_STEP) {
-    return GpuMat(size, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
-}
+CV_EXPORTS_W GpuMat createGpuMatFromCudaMemory(Size size, int type, size_t cudaMemoryAddress);
+CV_EXPORTS_W GpuMat createGpuMatFromCudaMemory(Size size, int type, size_t cudaMemoryAddress, size_t step);
 
 /** @brief BufferPool for use with CUDA streams
 

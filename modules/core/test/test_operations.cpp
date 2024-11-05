@@ -773,8 +773,8 @@ bool CV_OperationsTest::TestTemplateMat()
         mvf.push_back(Mat_<float>::zeros(4, 3));
         merge(mvf, mf2);
         split(mf2, mvf2);
-        CV_Assert( cvtest::norm(mvf2[0], mvf[0], CV_C) == 0 &&
-                  cvtest::norm(mvf2[1], mvf[1], CV_C) == 0 );
+        CV_Assert(cvtest::norm(mvf2[0], mvf[0], CV_C) == 0);
+        CV_Assert(cvtest::norm(mvf2[1], mvf[1], CV_C) == 0);
 
         {
         Mat a(2,2,CV_32F,1.f);

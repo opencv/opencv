@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include "opencv2/core/mat.hpp"
 #include <atomic>
 #include <limits>
 #include <iostream>
@@ -791,7 +792,7 @@ struct iPow_SIMD
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
 template <>
-struct iPow_SIMD<uchar, unsigned>
+struct iPow_SIMD<uchar, int>
 {
     int operator() ( const uchar * src, uchar * dst, int len, int power )
     {
@@ -871,7 +872,7 @@ struct iPow_SIMD<schar, int>
 };
 
 template <>
-struct iPow_SIMD<ushort, unsigned>
+struct iPow_SIMD<ushort, int>
 {
     int operator() ( const ushort * src, ushort * dst, int len, int power)
     {
@@ -1203,6 +1204,16 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     _dst.createSameSize(_src, type);
     if (is_ipower)
     {
+        if (ipower == 0)
+        {
+            _dst.setTo(Scalar::all(1));
+            return true;
+        }
+        if (ipower == 1)
+        {
+            _src.copyTo(_dst);
+            return true;
+        }
         if( ipower < 0 )
         {
             if( depth == CV_32F || depth == CV_64F )
@@ -1261,7 +1272,11 @@ void pow( InputArray _src, double power, OutputArray _dst )
     bool useOpenCL = _dst.isUMat() && _src.dims() <= 2;
 #endif
 
-    if (is_ipower)
+    if( is_ipower
+#ifdef HAVE_OPENCL
+            && !(useOpenCL && ocl::Device::getDefault().isIntel() && depth != CV_64F)
+#endif
+      )
     {
         switch( ipower )
         {
@@ -1277,6 +1292,8 @@ void pow( InputArray _src, double power, OutputArray _dst )
             return;
         }
     }
+    else
+        CV_Assert( depth == CV_32F || depth == CV_64F );
 
     CV_OCL_RUN(useOpenCL, ocl_pow(_src, power, _dst, is_ipower, ipower))
 
@@ -1561,8 +1578,8 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         else
         {
             Cv64suf a, b;
-            int64 ia, ib;
-            const int64* isrc = src.ptr<int64>();
+            int64_t ia, ib;
+            const int64_t* isrc = src.ptr<int64_t>();
             size_t step = src.step/sizeof(isrc[0]);
 
             a.f = minVal;
@@ -1575,7 +1592,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
             {
                 for( i = 0; i < size.width; i++ )
                 {
-                    int64 val = isrc[i];
+                    int64_t val = isrc[i];
                     val = CV_TOGGLE_DBL(val);
 
                     if( val < ia || val >= ib )

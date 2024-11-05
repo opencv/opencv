@@ -47,7 +47,6 @@
 #  error opengl.hpp header must be compiled as C++
 #endif
 
-#include "opencv2/core.hpp"
 #include "ocl.hpp"
 
 namespace cv { namespace ogl {

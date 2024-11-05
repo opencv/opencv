@@ -628,13 +628,7 @@ void parallel_for_(const Range& range, std::function<void(const Range&)> functor
 /////////////////////////////// forEach method of cv::Mat ////////////////////////////
 template<typename _Tp, typename Functor> inline
 void Mat::forEach_impl(const Functor& operation) {
-    if (false) {
-        operation(*reinterpret_cast<_Tp*>(0), reinterpret_cast<int*>(0));
-        // If your compiler fails in this line.
-        // Please check that your functor signature is
-        //     (_Tp&, const int*)   <- multi-dimensional
-        //  or (_Tp&, void*)        <- in case you don't need current idx.
-    }
+    static_assert(std::is_invocable_v<const Functor&, _Tp&, int*>);
 
     CV_Assert(!empty());
     CV_Assert(this->total() / this->size[this->dims - 1] <= INT_MAX);

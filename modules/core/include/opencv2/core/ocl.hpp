@@ -42,11 +42,14 @@
 #ifndef OPENCV_OPENCL_HPP
 #define OPENCV_OPENCL_HPP
 
-#include "opencv2/core.hpp"
+#include "opencv2/core/cvdef.h"
+#include "opencv2/core/mat_def.hpp"
+#include "opencv2/core/types.hpp"
 #include <typeinfo>
 #include <typeindex>
 
-namespace cv { namespace ocl {
+namespace cv {
+namespace ocl {
 
 //! @addtogroup core_opencl
 //! @{

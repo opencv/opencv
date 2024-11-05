@@ -10,7 +10,7 @@
 // */
 
 #include "precomp.hpp"
-#include <opencv2/core/utils/logger.hpp>
+#include "opencv2/core/utils/logger.hpp"
 
 namespace cv
 {
@@ -1832,7 +1832,7 @@ void MatExpr::swap(MatExpr& other)
     swap(s, other.s);
 }
 
-_InputArray::_InputArray(const MatExpr& expr)
+static const MatExpr& maybe_swap(const MatExpr& expr)
 {
     if (!isIdentity(expr))
     {
@@ -1841,7 +1841,31 @@ _InputArray::_InputArray(const MatExpr& expr)
         swap(const_cast<MatExpr&>(expr), result_expr);
     }
     CV_Assert(isIdentity(expr));
-    init(FIXED_TYPE + FIXED_SIZE + MAT + ACCESS_READ, &expr.a);
+    return expr;
+}
+
+_InputArray::_InputArray(const MatExpr& expr)
+: _InputArray(FIXED_TYPE + FIXED_SIZE + MAT, const_cast<Mat*>(&maybe_swap(expr).a))
+{}
+
+uchar* matrix_data(Mat& mat)
+{
+    return mat.data;
+}
+
+const uchar* matrix_data(const Mat& mat)
+{
+    return mat.data;
+}
+
+UMatData* matrix_data(UMat& mat)
+{
+    return mat.u;
+}
+
+const UMatData* matrix_data(const UMat& mat)
+{
+    return mat.u;
 }
 
 } // cv::

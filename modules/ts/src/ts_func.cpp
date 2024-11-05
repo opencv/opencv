@@ -1350,7 +1350,9 @@ double norm(InputArray _src, int normType, InputArray _mask)
 
 double norm(InputArray _src1, InputArray _src2, int normType, InputArray _mask)
 {
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    Mat src1 = _src1.getMat();
+    Mat src2 = _src2.getMat();
+    Mat mask = _mask.getMat();
     if( src1.depth() == CV_16F )
     {
         Mat src1_32f, src2_32f;

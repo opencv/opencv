@@ -53,6 +53,10 @@ void cv::cuda::GpuMat::updateContinuityFlag()
     flags = cv::updateContinuityFlag(flags, 2, sz, steps);
 }
 
+cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_) :
+    GpuMat(rows_, cols_, type_, data_, Mat::AUTO_STEP)
+{}
+
 cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
@@ -76,6 +80,10 @@ cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t st
     dataend += step * (rows - 1) + minstep;
     updateContinuityFlag();
 }
+
+cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_) :
+    GpuMat(size_, type_, data_, Mat::AUTO_STEP)
+{}
 
 cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(size_.height), cols(size_.width),
@@ -515,6 +523,105 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, doub
     CV_UNUSED(beta);
     CV_UNUSED(_stream);
     throw_no_cuda();
+}
+
+namespace cv::cuda {
+CV_WRAP void GpuMat::copyTo(CV_OUT GpuMat& dst) const {
+    copyTo(static_cast<OutputArray>(dst));
+}
+
+CV_WRAP void GpuMat::copyTo(CV_OUT GpuMat& dst, Stream& stream) const {
+    copyTo(static_cast<OutputArray>(dst), stream);
+}
+
+CV_WRAP void GpuMat::copyTo(CV_OUT GpuMat& dst, GpuMat& mask) const {
+    copyTo(static_cast<OutputArray>(dst), static_cast<InputArray>(mask));
+}
+
+CV_WRAP void GpuMat::convertTo(CV_OUT GpuMat& dst, int rtype, Stream& stream) const {
+    convertTo(static_cast<OutputArray>(dst), rtype, stream);
+}
+
+CV_WRAP void GpuMat::convertTo(CV_OUT GpuMat& dst, int rtype, double alpha, double beta) const {
+    convertTo(static_cast<OutputArray>(dst), rtype, alpha, beta);
+}
+
+CV_EXPORTS_W GpuMat createGpuMatFromCudaMemory(int rows, int cols, int type, size_t cudaMemoryAddress) {
+    return GpuMat(rows, cols, type, reinterpret_cast<void*>(cudaMemoryAddress), Mat::AUTO_STEP);
+}
+
+CV_EXPORTS_W GpuMat createGpuMatFromCudaMemory(int rows, int cols, int type, size_t cudaMemoryAddress, size_t step) {
+    return GpuMat(rows, cols, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
+}
+
+CV_EXPORTS_W GpuMat createGpuMatFromCudaMemory(Size size, int type, size_t cudaMemoryAddress) {
+    return GpuMat(size, type, reinterpret_cast<void*>(cudaMemoryAddress), Mat::AUTO_STEP);
+}
+
+CV_EXPORTS_W GpuMat createGpuMatFromCudaMemory(Size size, int type, size_t cudaMemoryAddress, size_t step) {
+    return GpuMat(size, type, reinterpret_cast<void*>(cudaMemoryAddress), step);
+}
+
+bool GpuMat::isContinuous() const
+{
+    return (flags & Mat::CONTINUOUS_FLAG) != 0;
+}
+
+bool GpuMatND::isContinuous() const
+{
+    return (flags & Mat::CONTINUOUS_FLAG) != 0;
+}
+
+bool GpuMatND::isSubmatrix() const
+{
+    return (flags & Mat::SUBMATRIX_FLAG) != 0;
+}
+
+HostMem::HostMem(InputArray arr, AllocType alloc_type_)
+    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(alloc_type_)
+{
+    arr.getMat().copyTo(*this);
+}
+
+HostMem HostMem::clone() const
+{
+    HostMem m(size(), type(), alloc_type);
+    createMatHeader().copyTo(m);
+    return m;
+}
+
+Mat HostMem::createMatHeader() const
+{
+    return Mat(size(), type(), data, step);
+}
+
+bool HostMem::isContinuous() const
+{
+    return (flags & Mat::CONTINUOUS_FLAG) != 0;
+}
+
+void createContinuous(Size size, int type, OutputArray arr)
+{
+    createContinuous(size.height, size.width, type, arr);
+}
+
+GpuMat createContinuous(Size size, int type)
+{
+    GpuMat m;
+    createContinuous(size, type, m);
+    return m;
+}
+
+void ensureSizeIsEnough(Size size, int type, OutputArray arr)
+{
+    ensureSizeIsEnough(size.height, size.width, type, arr);
+}
+}
+
+cv::Mat::Mat(const cuda::GpuMat& m)
+    : flags(0), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows)
+{
+    m.download(*this);
 }
 
 #endif

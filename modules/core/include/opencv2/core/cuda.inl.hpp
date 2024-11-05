@@ -314,12 +314,6 @@ GpuMat GpuMat::operator ()(Rect roi) const
 }
 
 inline
-bool GpuMat::isContinuous() const
-{
-    return (flags & Mat::CONTINUOUS_FLAG) != 0;
-}
-
-inline
 size_t GpuMat::elemSize() const
 {
     return CV_ELEM_SIZE(flags);
@@ -373,33 +367,10 @@ void* GpuMat::cudaPtr() const
     return data;
 }
 
-static inline
-GpuMat createContinuous(int rows, int cols, int type)
-{
-    GpuMat m;
-    createContinuous(rows, cols, type, m);
-    return m;
-}
-
-static inline
-void createContinuous(Size size, int type, OutputArray arr)
-{
-    createContinuous(size.height, size.width, type, arr);
-}
-
-static inline
-GpuMat createContinuous(Size size, int type)
-{
-    GpuMat m;
-    createContinuous(size, type, m);
-    return m;
-}
-
-static inline
-void ensureSizeIsEnough(Size size, int type, OutputArray arr)
-{
-    ensureSizeIsEnough(size.height, size.width, type, arr);
-}
+GpuMat createContinuous(int rows, int cols, int type);
+void createContinuous(Size size, int type, OutputArray arr);
+GpuMat createContinuous(Size size, int type);
+void ensureSizeIsEnough(Size size, int type, OutputArray arr);
 
 static inline
 void swap(GpuMat& a, GpuMat& b)
@@ -428,18 +399,6 @@ inline
 void GpuMatND::swap(GpuMatND& m) noexcept
 {
     std::swap(*this, m);
-}
-
-inline
-bool GpuMatND::isContinuous() const
-{
-    return (flags & Mat::CONTINUOUS_FLAG) != 0;
-}
-
-inline
-bool GpuMatND::isSubmatrix() const
-{
-    return (flags & Mat::SUBMATRIX_FLAG) != 0;
 }
 
 inline
@@ -528,13 +487,6 @@ HostMem::HostMem(Size size_, int type_, AllocType alloc_type_)
 }
 
 inline
-HostMem::HostMem(InputArray arr, AllocType alloc_type_)
-    : flags(0), rows(0), cols(0), step(0), data(0), refcount(0), datastart(0), dataend(0), alloc_type(alloc_type_)
-{
-    arr.getMat().copyTo(*this);
-}
-
-inline
 HostMem::~HostMem()
 {
     release();
@@ -567,29 +519,9 @@ void HostMem::swap(HostMem& b)
 }
 
 inline
-HostMem HostMem::clone() const
-{
-    HostMem m(size(), type(), alloc_type);
-    createMatHeader().copyTo(m);
-    return m;
-}
-
-inline
 void HostMem::create(Size size_, int type_)
 {
     create(size_.height, size_.width, type_);
-}
-
-inline
-Mat HostMem::createMatHeader() const
-{
-    return Mat(size(), type(), data, step);
-}
-
-inline
-bool HostMem::isContinuous() const
-{
-    return (flags & Mat::CONTINUOUS_FLAG) != 0;
 }
 
 inline
@@ -742,21 +674,6 @@ bool DeviceInfo::supports(FeatureSet feature_set) const
 
 
 }} // namespace cv { namespace cuda {
-
-//===================================================================================
-// Mat
-//===================================================================================
-
-namespace cv {
-
-inline
-Mat::Mat(const cuda::GpuMat& m)
-    : flags(0), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows)
-{
-    m.download(*this);
-}
-
-}
 
 //! @endcond
 

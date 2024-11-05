@@ -123,12 +123,12 @@ public:
      Instead, the macros CV_Error(), CV_Error_() and CV_Assert() are used.
     */
     Exception(int _code, const String& _err, const String& _func, const String& _file, int _line);
-    virtual ~Exception() CV_NOEXCEPT;
+    virtual ~Exception() throw();
 
     /*!
      \return the error description and the context as a text string.
     */
-    virtual const char *what() const CV_NOEXCEPT CV_OVERRIDE;
+    virtual const char *what() const throw() CV_OVERRIDE;
     void formatMessage();
 
     String msg; ///< the formatted error message
@@ -855,21 +855,13 @@ CV_EXPORTS void normalize( const SparseMat& src, SparseMat& dst, double alpha, i
 /** @brief Finds the global minimum and maximum in an array.
 
 The function cv::minMaxLoc finds the minimum and maximum element values and their positions. The
-extrema are searched across the whole array or, if mask is not an empty array, in the specified
+extremums are searched across the whole array or, if mask is not an empty array, in the specified
 array region.
 
-In C++, if the input is multi-channel, you should omit the minLoc, maxLoc, and mask arguments
-(i.e. leave them as NULL, NULL, and noArray() respectively). These arguments are not
-supported for multi-channel input arrays. If working with multi-channel input and you
-need the minLoc, maxLoc, or mask arguments, then use Mat::reshape first to reinterpret
-the array as single-channel. Alternatively, you can extract the particular channel using either
-extractImageCOI, mixChannels, or split.
-
-In Python, multi-channel input is not supported at all due to a limitation in the
-binding generation process (there is no way to set minLoc and maxLoc to NULL). A
-workaround is to operate on each channel individually or to use NumPy to achieve the same
-functionality.
-
+The function do not work with multi-channel arrays. If you need to find minimum or maximum
+elements across all the channels, use Mat::reshape first to reinterpret the array as
+single-channel. Or you may extract the particular channel using either extractImageCOI, or
+mixChannels, or split.
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
@@ -2912,7 +2904,7 @@ public:
     /** @overload
     @param state 64-bit value used to initialize the RNG.
     */
-    RNG(uint64 state);
+    RNG(uint64_t state);
     /**The method updates the state using the MWC algorithm and returns the
     next 32-bit random number.*/
     unsigned next();
@@ -3040,7 +3032,7 @@ public:
     */
     double gaussian(double sigma);
 
-    uint64 state;
+    uint64_t state;
 
     bool operator ==(const RNG& other) const;
 };
@@ -3383,10 +3375,10 @@ template<> struct ParamType<unsigned>
     static const Param type = Param::UNSIGNED_INT;
 };
 
-template<> struct ParamType<uint64>
+template<> struct ParamType<uint64_t>
 {
-    typedef uint64 const_param_type;
-    typedef uint64 member_type;
+    typedef uint64_t const_param_type;
+    typedef uint64_t member_type;
 
     static const Param type = Param::UINT64;
 };
