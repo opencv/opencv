@@ -651,10 +651,10 @@
     i##ofs##_fpix0 = v_fma(i##ofs##_beta,  v_sub(i##ofs##_fpix2, i##ofs##_fpix0), i##ofs##_fpix0);
 #define CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4() \
     for (int i = 0; i < uf; i+=vlanes_32) { \
-        CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4(0); \
-        CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4(1); \
-        CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4(2); \
-        CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4(3); \
+        CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4_I(0); \
+        CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4_I(1); \
+        CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4_I(2); \
+        CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4_I(3); \
         auto i01_pix = v_pack(v_round(i0_fpix0), v_round(i1_fpix0)), \
              i23_pix = v_pack(v_round(i2_fpix0), v_round(i3_fpix0)); \
         v_pack_u_store<8>(dstptr + 4*(x+i), i01_pix); \
