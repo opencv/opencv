@@ -50,8 +50,6 @@ public:
 
     MatShape getOutShape(const MatShape& inpShape, const std::vector<int>& axes_) const
     {
-        std::cout << "\n===> SqueezeLayerImpl::getOutShape" << std::endl;
-        std::cout << "inpShape: " << inpShape << std::endl;
         bool squeezeMask[MatShape::MAX_DIMS];
 
         if (axes_.empty()) {
@@ -80,8 +78,6 @@ public:
                 outShape[j++] = inpShape[i];
         }
         outShape.dims = j;
-        std::cout << "outShape: " << outShape << std::endl;
-        std::cout << "===> SqueezeLayerImpl::getOutShape done\n" << std::endl;
         return outShape;
     }
 
@@ -90,10 +86,6 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        std::cout << "\n===> SqueezeLayerImpl::getMemoryShapes" << std::endl;
-        for (auto &inp : inputs) {
-            std::cout << "input shape: " << inp << std::endl;
-        }
         CV_Assert(inputs.size() == 1 || inputs.size() == 2);
         MatShape outShape;
         std::vector<int> tempAxes;
@@ -110,10 +102,6 @@ public:
         }
         outputs.assign(1, getOutShape(inputs[0], *axes_));
         internals.clear();
-        for (auto &out : outputs) {
-            std::cout << "output shape: " << out << std::endl;
-        }
-        std::cout << "===> SqueezeLayerImpl::getMemoryShapes done\n" << std::endl;
         return true;
     }
 
@@ -138,7 +126,6 @@ public:
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays) CV_OVERRIDE
     {
-        std::cout << "\n===> SqueezeLayerImpl::forward" << std::endl;
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
@@ -160,11 +147,6 @@ public:
         }
         MatShape outShape = getOutShape(inpShape, *axes_);
         reshapeAndCopyFirst(inputs_arr, outputs_arr, outShape);
-        std::vector<Mat>& outref = outputs_arr.getMatVecRef();
-        for (auto &out : outref) {
-            std::cout << "output shape: " << out.size << std::endl;
-        }
-        std::cout << "===> SqueezeLayerImpl::forward::done\n" << std::endl;
     }
 };
 

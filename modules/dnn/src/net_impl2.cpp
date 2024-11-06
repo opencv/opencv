@@ -72,7 +72,6 @@ public:
     virtual const std::vector<Arg>& append(Ptr<Layer>& layer,
                 const std::vector<std::string>& outnames) override
     {
-        std::cout << "==>append" << std::endl;
         CV_Assert(layer);
         int i, noutputs = (int)outnames.size();
         //CV_Assert(layer->minNumOutputs() <= noutputs && noutputs <= layer->maxNumOutputs());
@@ -332,14 +331,8 @@ void Net::Impl::allocateLayerOutputs(
     outTypes.clear();
     tempShapes.clear();
     tempTypes.clear();
-    std::cout << "==>noutputs: " << noutputs << std::endl;
-    std::cout << "==>outShapes size: " << outShapes.size() << std::endl;
     layer->getMemoryShapes(inpShapes, (int)noutputs, outShapes, tempShapes);
-    std::cout << "==>noutputs: " << noutputs << std::endl;
-    std::cout << "==>tempShapes size: " << tempShapes.size() << std::endl;
     layer->getTypes(inpTypes, (int)noutputs, (int)tempShapes.size(), outTypes, tempTypes);
-    std::cout << "==>outShapes size: " << outShapes.size() << std::endl;
-    std::cout << "==>outTypes size: " << outTypes.size() << std::endl;
     CV_Assert(tempShapes.size() == tempTypes.size());
     CV_Assert(outShapes.size() == outTypes.size());
     CV_Assert(outShapes.size() == noutputs);
@@ -687,22 +680,12 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         if (finalizeLayers)
             layer->finalize(inpMats, outMats);
         layer->forward(inpMats, outMats, tempMats);
-        std::cout << "==>layer forward done" << std::endl;
         CV_Assert(outMats.size() == noutputs);
 
         for (i = 0; i < noutputs; i++) {
             Arg out = outputs[i];
             ArgData& adata = args[out.idx];
             const Mat& m = outMats[i];
-            std::cout << "outMats[" << i << "] shape: " << m.shape() << std::endl;
-            std::cout << "outMats[" << i << "] sum: " << cv::sum(m) << std::endl;
-            std::cout << "pointer to data: " << std::endl;
-            auto *ptr = m.ptr<float>();
-            for (int j = 0; j < m.total(); j++) {
-                std::cout << ptr[j] << " ";
-            }
-            std::cout << std::endl;
-
             //checkRange(m, false);
             adata.type = m.type();
             adata.shape = m.shape();
@@ -1008,9 +991,6 @@ bool Net::Impl::tryInferGraphShapes(const Ptr<Graph>& graph,
         }
 
         layer->getMemoryShapes(inpShapes, noutputs, outShapes, tempShapes);
-        std::cout << "==>noutputs: " << noutputs << std::endl;
-        std::cout << "==>outShapes size: " << outShapes.size() << std::endl;
-        std::cout << "==>tempShapes size: " << tempShapes.size() << std::endl;
         CV_Assert((int)outShapes.size() == noutputs);
         layer->getTypes(inpTypes, noutputs, (int)tempShapes.size(), outTypes, tempTypes);
         CV_Assert((int)outTypes.size() == noutputs);

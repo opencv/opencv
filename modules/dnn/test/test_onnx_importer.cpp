@@ -83,7 +83,6 @@ public:
                         bool testShapes = true, bool useWinograd = true)
     {
         String onnxmodel = _tf("models/" + basename + ".onnx", required);
-        std::cout << "basename: " << basename << std::endl;
         std::vector<Mat> inps(numInps);
         Mat ref;
         if (ext == npy) {
@@ -143,11 +142,7 @@ public:
             l1 = std::max(l1, 1.4e-3);
             lInf = std::max(lInf, 8e-3);
         }
-        std::cout << "\n===> logs from testONNXModels" << std::endl;
-        std::cout << "ref shape: " << ref.shape() << std::endl;
-        std::cout << "ref sum: " << cv::sum(ref) << std::endl;
-        std::cout << "out shape: " << out.shape() << std::endl;
-        std::cout << "out sum: " << cv::sum(out) << std::endl;
+
         EXPECT_EQ(ref.shape(), out.shape());
         normAssert(ref, out, basename.c_str(), l1 ? l1 : default_l1, lInf ? lInf : default_lInf);
         if (checkNoFallbacks)
@@ -1372,7 +1367,7 @@ TEST_P(Test_ONNX_layers, LSTM_hidden)
     testONNXModels("hidden_lstm", npy, 0, 0, false, false);
 }
 
-TEST_P(Test_ONNX_layers, DISABLED_LSTM_hidden_bidirectional)
+TEST_P(Test_ONNX_layers, LSTM_hidden_bidirectional)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // IE exception: Node Transpose_45 was not assigned on any pointed device.
@@ -1459,7 +1454,7 @@ TEST_P(Test_ONNX_layers, LSTM_cell_forward)
 #endif
     testONNXModels("lstm_cell_forward", npy, 0, 0, false, false);
 }
-TEST_P(Test_ONNX_layers, DISABLED_LSTM_cell_bidirectional)
+TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // Ngraph operation Reshape with name LSTM_16/lstm_y/reshape has dynamic output shape on 0 port, but CPU plug-in supports only static shape

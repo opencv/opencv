@@ -152,10 +152,6 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        std::cout << "PermuteLayerImpl::getMemoryShapes" << std::endl;
-        for (auto &inp : inputs) {
-            std::cout << "input shape: " << inp << std::endl;
-        }
         if(!_needsPermute)
         {
             Layer::getMemoryShapes(inputs, requiredOutputs, outputs, internals);
@@ -367,7 +363,6 @@ public:
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        std::cout << "\n==>PermuteLayerImpl::forward" << std::endl;
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
@@ -378,14 +373,6 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        for (auto &inp : inputs) {
-            std::cout << "input shape: " << inp.size << std::endl;
-        }
-        auto *inp_ptr = inputs_arr.getMat(0).ptr<float>();
-        for (int i = 0; i < inputs_arr.getMat(0).total(); i++){
-            std::cout << inp_ptr[i] << " ";
-        }
-        std::cout << std::endl;
         size_t k, ninputs = inputs.size();
         if(!_needsPermute)
         {
@@ -431,15 +418,6 @@ public:
                 }
             }
         }
-        for (auto &out : outputs) {
-            std::cout << "output shape: " << out.size << std::endl;
-        }
-        auto *out_ptr = outputs_arr.getMat(0).ptr<float>();
-        for (int i = 0; i < outputs_arr.getMat(0).total(); i++){
-            std::cout << out_ptr[i] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "==>PermuteLayerImpl::forward::done\n" << std::endl;
     }
 
     template <class T>
