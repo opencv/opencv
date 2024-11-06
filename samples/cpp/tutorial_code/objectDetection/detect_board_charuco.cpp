@@ -28,7 +28,13 @@ const char* keys  =
         "{rs       |       | Apply refind strategy }";
 }
 
-
+/**
+ * @brief Main function for ChArUco board pose estimation.
+ *
+ * @param argc Number of command line arguments.
+ * @param argv Array of command line arguments.
+ * @return int Returns 0 on successful execution.
+ */
 int main(int argc, char *argv[]) {
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
@@ -39,6 +45,7 @@ int main(int argc, char *argv[]) {
     }
 
     //! [charuco_detect_board_full_sample]
+    // Parse command line arguments
     int squaresX = parser.get<int>("w");
     int squaresY = parser.get<int>("h");
     float squareLength = parser.get<float>("sl");
@@ -51,6 +58,7 @@ int main(int argc, char *argv[]) {
         video = parser.get<string>("v");
     }
 
+    // Read camera parameters and detector parameters
     Mat camMatrix, distCoeffs;
     readCameraParamsFromCommandLine(parser, camMatrix, distCoeffs);
     aruco::DetectorParameters detectorParams = readDetectorParamsFromCommandLine(parser);
@@ -61,6 +69,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    // Setup video capture
     VideoCapture inputVideo;
     int waitTime = 0;
     if(!video.empty()) {
@@ -70,16 +79,22 @@ int main(int argc, char *argv[]) {
         waitTime = 10;
     }
 
-    float axisLength = 0.5f * ((float)min(squaresX, squaresY) * (squareLength));
+    if(!inputVideo.isOpened()) {
+        cerr << "Error: Could not open video file or camera" << endl;
+        return 1;
+    }
 
-    // create charuco board object
+    // Calculate axis length for drawing
+    float axisLength = 0.5f * ((float)min(squaresX, squaresY) * squareLength);
+
+    // Create ChArUco board object
     aruco::CharucoBoard charucoBoard(Size(squaresX, squaresY), squareLength, markerLength, dictionary);
 
-    // create charuco detector
+    // Create ChArUco detector
     aruco::CharucoParameters charucoParams;
-    charucoParams.tryRefineMarkers = refine; // if tryRefineMarkers, refineDetectedMarkers() will be used in detectBoard()
-    charucoParams.cameraMatrix = camMatrix; // cameraMatrix can be used in detectBoard()
-    charucoParams.distCoeffs = distCoeffs; // distCoeffs can be used in detectBoard()
+    charucoParams.tryRefineMarkers = refine; // If true, refines detected markers
+    charucoParams.cameraMatrix = camMatrix; // Camera matrix for pose estimation
+    charucoParams.distCoeffs = distCoeffs; // Distortion coefficients for pose estimation
     aruco::CharucoDetector charucoDetector(charucoBoard, charucoParams, detectorParams);
 
     double totalTime = 0;
@@ -87,24 +102,28 @@ int main(int argc, char *argv[]) {
 
     while(inputVideo.grab()) {
         //! [inputImg]
+        // Retrieve image from video capture
         Mat image, imageCopy;
         inputVideo.retrieve(image);
+        image.copyTo(imageCopy);
         //! [inputImg]
 
         double tick = (double)getTickCount();
 
+        // Vectors for detected markers and ChArUco corners
         vector<int> markerIds, charucoIds;
         vector<vector<Point2f> > markerCorners;
         vector<Point2f> charucoCorners;
         Vec3d rvec, tvec;
 
         //! [interpolateCornersCharuco]
-        // detect markers and charuco corners
-        charucoDetector.detectBoard(image, charucoCorners, charucoIds, markerCorners, markerIds);
+        // Detect markers and ChArUco corners
+        bool validDetection = charucoDetector.detectBoard(image, charucoCorners, charucoIds, markerCorners, markerIds);
+        if(!validDetection) continue;
         //! [interpolateCornersCharuco]
 
         //! [poseCharuco]
-        // estimate charuco board pose
+        // Estimate ChArUco board pose
         bool validPose = false;
         if(camMatrix.total() != 0 && distCoeffs.total() != 0 && charucoIds.size() >= 4) {
             Mat objPoints, imgPoints;
@@ -121,8 +140,7 @@ int main(int argc, char *argv[]) {
                  << "(Mean = " << 1000 * totalTime / double(totalIterations) << " ms)" << endl;
         }
 
-        // draw results
-        image.copyTo(imageCopy);
+        // Draw results
         if(markerIds.size() > 0) {
             aruco::drawDetectedMarkers(imageCopy, markerCorners);
         }
@@ -137,7 +155,7 @@ int main(int argc, char *argv[]) {
             cv::drawFrameAxes(imageCopy, camMatrix, distCoeffs, rvec, tvec, axisLength);
 
         imshow("out", imageCopy);
-        if(waitKey(waitTime) == 27) break;
+        if(waitKey(waitTime) == 27) break; // Exit if 'ESC' is pressed
     }
     //! [charuco_detect_board_full_sample]
     return 0;
