@@ -560,14 +560,12 @@
 // Special case for C4 load, shuffle and bilinear interpolation
 #define CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4_I(ofs) \
     const uint8_t *srcptr##ofs = src + addr[i+ofs]; \
-    v_int16 i##ofs##_pix01 = v_reinterpret_as_s16(v_load_expand(srcptr##ofs)); \
-    v_int16 i##ofs##_pix23 = v_reinterpret_as_s16(v_load_expand(srcptr##ofs+srcstep)); \
-    v_float32 i##ofs##_pix0 = v_cvt_f32(v_expand_low( i##ofs##_pix01)); \
-    v_float32 i##ofs##_pix1 = v_cvt_f32(v_expand_high(i##ofs##_pix01)); \
-    v_float32 i##ofs##_pix2 = v_cvt_f32(v_expand_low( i##ofs##_pix23)); \
-    v_float32 i##ofs##_pix3 = v_cvt_f32(v_expand_high(i##ofs##_pix23)); \
-    v_float32 i##ofs##_alpha = v_setall_f32(valpha[i+ofs]), \
-              i##ofs##_beta  = v_setall_f32(vbeta[i+ofs]);  \
+    v_float32 i##ofs##_pix0 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(srcptr##ofs))); \
+    v_float32 i##ofs##_pix1 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(srcptr##ofs+4))); \
+    v_float32 i##ofs##_pix2 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(srcptr##ofs+srcstep))); \
+    v_float32 i##ofs##_pix3 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q(srcptr##ofs+srcstep+4))); \
+    v_float32 i##ofs##_alpha = vx_setall_f32(valpha[i+ofs]), \
+              i##ofs##_beta  = vx_setall_f32(vbeta[i+ofs]);  \
     i##ofs##_pix0 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_pix1, i##ofs##_pix0), i##ofs##_pix0); \
     i##ofs##_pix2 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_pix3, i##ofs##_pix2), i##ofs##_pix2); \
     i##ofs##_pix0 = v_fma(i##ofs##_beta,  v_sub(i##ofs##_pix2, i##ofs##_pix0), i##ofs##_pix0);
@@ -593,8 +591,8 @@
     v_float32 i##ofs1##_fpix01 = v_cvt_f32(i##ofs1##_pix01), i##ofs1##_fpix23 = v_cvt_f32(i##ofs1##_pix23); \
     v_float32 i##ofs0##ofs1##_fpix00, i##ofs0##ofs1##_fpix11, \
               i##ofs0##ofs1##_fpix22, i##ofs0##ofs1##_fpix33; \
-    v256_zip(i##ofs0##_fpix01, i##ofs1##_fpix01, i##ofs0##ofs1##_fpix00, i##ofs0##ofs1##_fpix11); \
-    v256_zip(i##ofs0##_fpix23, i##ofs1##_fpix23, i##ofs0##ofs1##_fpix22, i##ofs0##ofs1##_fpix33); \
+    v_recombine(i##ofs0##_fpix01, i##ofs1##_fpix01, i##ofs0##ofs1##_fpix00, i##ofs0##ofs1##_fpix11); \
+    v_recombine(i##ofs0##_fpix23, i##ofs1##_fpix23, i##ofs0##ofs1##_fpix22, i##ofs0##ofs1##_fpix33); \
     v_float32 i##ofs0##_alpha = vx_setall_f32(valpha[i+ofs0]), \
               i##ofs1##_alpha = vx_setall_f32(valpha[i+ofs1]), \
               i##ofs0##_beta  = vx_setall_f32(vbeta[i+ofs0]), \
@@ -617,14 +615,10 @@
     }
 #define CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4_I(ofs) \
     const uint8_t *srcptr##ofs = src + addr[i+ofs]; \
-    v_uint32 i##ofs##_pix0 = v_load_expand_q<4>(srcptr##ofs), \
-             i##ofs##_pix1 = v_load_expand_q<4>(srcptr##ofs+4), \
-             i##ofs##_pix2 = v_load_expand_q<4>(srcptr##ofs+srcstep), \
-             i##ofs##_pix3 = v_load_expand_q<4>(srcptr##ofs+srcstep+4); \
-    v_float32 i##ofs##_fpix0 = v_cvt_f32(v_reinterpret_as_s32(i##ofs##_pix0)), \
-              i##ofs##_fpix1 = v_cvt_f32(v_reinterpret_as_s32(i##ofs##_pix1)), \
-              i##ofs##_fpix2 = v_cvt_f32(v_reinterpret_as_s32(i##ofs##_pix2)), \
-              i##ofs##_fpix3 = v_cvt_f32(v_reinterpret_as_s32(i##ofs##_pix3)); \
+    v_float32 i##ofs##_fpix0 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q<4>(srcptr##ofs))), \
+              i##ofs##_fpix1 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q<4>(srcptr##ofs+4))), \
+              i##ofs##_fpix2 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q<4>(srcptr##ofs+srcstep))), \
+              i##ofs##_fpix3 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q<4>(srcptr##ofs+srcstep+4))); \
     v_float32 i##ofs##_alpha = vx_setall_f32(valpha[i+ofs]), \
               i##ofs##_beta  = vx_setall_f32(vbeta[i+ofs]); \
     i##ofs##_fpix0 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_fpix1, i##ofs##_fpix0), i##ofs##_fpix0); \
