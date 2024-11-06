@@ -11,15 +11,18 @@ using namespace cv;
 using namespace std;
 using namespace cv::dnn;
 
-const string about = "Use this script for Object Tracking using OpenCV. \n\n"
-        "Firstly, download required models using the download_models.py. For vit tracker download model using `python download_models.py vit`\n"
-        "To run provide alias/model_name:\n"
-            "\t Nano: \n"
+const string about = "Use this script for testing Object Tracking using OpenCV. \n\n"
+        "Firstly, download required models using the download_models.py <alias>.\n"
+        "Valid alias names are nanotrack, vit and dasiamrpn.\n\n"
+        "To run:\n"
+            "\t nanotrack: \n"
                 "\t\t e.g: ./example_dnn_object_tracker nanotrack\n\n"
             "\t vit: \n"
                 "\t\t e.g: ./example_dnn_object_tracker vit\n\n"
             "\t dasiamrpn: \n"
-                "\t\t e.g: ./example_dnn_object_tracker dasiamrpn\n\n";
+                "\t\t e.g: ./example_dnn_object_tracker dasiamrpn\n\n"
+
+        "To switch between models in runtime, make sure all the models are downloaded using download_models.py\n";
 
 const string param_keys =
         "{ help     h    |                            | Print help message }"

@@ -7,17 +7,19 @@ from common import *
 def help():
     print(
         '''
-        Firstly, download required models using the links provided in description. For vit tracker download model using `python download_models.py vit`
-        Use this script for Object Tracking using OpenCV.
-
+        Use this script for testing Object Tracking using OpenCV.
+        Firstly, download required models using the download_models.py.
         To run:
-            nano:
-                Example: python object_tracker.py nano
+            nanotrack:
+                Download Model: python download_models.py nanotrack
+                Example: python object_tracker.py nanotrack
             vit:
+                Download Model: python download_models.py vit
                 Example: python object_tracker.py vit
             dasiamrpn:
+                Download Model: python download_models.py dasiamrpn
                 Example: python object_tracker.py dasiamrpn
-        '''
+        To switch between models in runtime, make sure all the models are downloaded using download_models.py'''
     )
 
 def load_parser(model_name):
@@ -32,23 +34,16 @@ def load_parser(model_name):
         add_preproc_args(args.zoo, parser, 'object_tracker', prefix="dasiamrpn_", alias="dasiamrpn")
         add_preproc_args(args.zoo, parser, 'object_tracker', prefix="dasiamrpn_kernel_r1_", alias="dasiamrpn")
         add_preproc_args(args.zoo, parser, 'object_tracker', prefix="dasiamrpn_kernel_cls_", alias="dasiamrpn")
-    elif model_name == "nano":
-        add_preproc_args(args.zoo, parser, 'object_tracker', prefix="nanotrack_back_", alias="nano")
-        add_preproc_args(args.zoo, parser, 'object_tracker', prefix="nanotrack_head_", alias="nano")
+    elif model_name == "nanotrack":
+        add_preproc_args(args.zoo, parser, 'object_tracker', prefix="nanotrack_back_", alias="nanotrack")
+        add_preproc_args(args.zoo, parser, 'object_tracker', prefix="nanotrack_head_", alias="nanotrack")
     elif model_name != "vit":
-        print("Pass the valid alias. Choices are { nano, vit, dasiamrpn }")
+        print("Pass the valid alias. Choices are { nanotrack, vit, dasiamrpn }")
         exit(0)
     parser = argparse.ArgumentParser(parents=[parser],
                                     description='''
     Firstly, download required models using `python download_models.py {modelName}`
-    Use this script for Object Tracking using OpenCV.
-    To run:
-        nano:
-            Example: python object_tracker.py nano
-        vit:
-            Example: python object_tracker.py vit
-        dasiamrpn:
-            Example: python object_tracker.py dasiamrpn
+    Run using python object_tracker.py {modelName}.
     ''',
                                     formatter_class=argparse.RawTextHelpFormatter)
     return parser.parse_args()
@@ -61,7 +56,7 @@ def createTracker(model_name, args):
         params.kernel_cls1 = findModel(args.dasiamrpn_kernel_cls_model, args.dasiamrpn_kernel_cls_sha1)
         params.kernel_r1 = findModel(args.dasiamrpn_kernel_r1_model, args.dasiamrpn_kernel_r1_sha1)
         tracker = cv.TrackerDaSiamRPN_create(params)
-    elif model_name == 'nano':
+    elif model_name == 'nanotrack':
         print("Using Nano Tracker.")
         params = cv.TrackerNano_Params()
         params.backbone = findModel(args.nanotrack_back_model, args.nanotrack_back_sha1)
@@ -105,9 +100,9 @@ def main(model_name, args):
             imgWidth = min(image.shape[:2])
             fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize)
             fontThickness = max(fontThickness,(stdWeight*imgWidth)//stdImgSize)
+            label = "Press space bar to pause video to draw bounding box."
+            labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
         org_img = image.copy()
-        label = "Press space bar to pause video to draw bounding box."
-        labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
         cv.rectangle(image, (0, 0), (labelSize[0]+10, labelSize[1]+int(40*fontSize)), (255,255,255), cv.FILLED)
         cv.addWeighted(image, alpha, org_img, 1 - alpha, 0, image)
         cv.putText(image, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
@@ -138,22 +133,21 @@ def main(model_name, args):
             imgWidth = min(frame.shape[:2])
             fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize)
             fontThickness = max(fontThickness,(stdWeight*imgWidth)//stdImgSize)
+            label="Press space bar to select new target"
+            labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
         tick_meter.reset()
         tick_meter.start()
         ok, newbox = tracker.update(frame)
         tick_meter.stop()
         score = tracker.getTrackingScore()
         render_image = frame.copy()
-
         key = cv.waitKey(30) & 0xFF
-        label="Press space bar to select new target"
-        labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
         h, w = frame.shape[:2]
         cv.rectangle(render_image, (0, 0), (labelSize[0]+10, labelSize[1]+int(100*fontSize)), (255,255,255), cv.FILLED)
         cv.rectangle(render_image, (0, int(h-45*fontSize)), (w, h), (255,255,255), cv.FILLED)
         cv.addWeighted(render_image, alpha, frame, 1 - alpha, 0, render_image)
         cv.putText(render_image, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
-        cv.putText(render_image, "For switching between trackers: press 'v' for ViT, 'n' for Nano, and 'd' for DaSiamRPN.", (10, h-10), cv.FONT_HERSHEY_SIMPLEX, 0.8*fontSize, (0, 0, 0), fontThickness)
+        cv.putText(render_image, "For switching between trackers: press 'v' for ViT, 'n' for Nanotrack, and 'd' for DaSiamRPN.", (10, h-10), cv.FONT_HERSHEY_SIMPLEX, 0.8*fontSize, (0, 0, 0), fontThickness)
 
         if ok:
             if key == ord(' '):
@@ -168,7 +162,7 @@ def main(model_name, args):
                 tracker = createTracker(model_name, args)
                 tracker.init(frame, newbox)
             elif key == ord('n'):
-                model_name = "nano"
+                model_name = "nanotrack"
                 args = load_parser(model_name)
                 tracker = createTracker(model_name, args)
                 tracker.init(frame, newbox)
