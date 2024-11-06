@@ -7,7 +7,7 @@
 namespace opencv_test {
 namespace ocl {
 
-OCL_PERF_TEST_P(features, detect, testing::Combine(Feature2DType::all(), TEST_IMAGES))
+OCL_PERF_TEST_P(features2d, detect, testing::Combine(Feature2DType::all(), TEST_IMAGES))
 {
     Ptr<Feature2D> detector = getFeature2D(get<0>(GetParam()));
     std::string filename = getDataPath(get<1>(GetParam()));
@@ -27,7 +27,7 @@ OCL_PERF_TEST_P(features, detect, testing::Combine(Feature2DType::all(), TEST_IM
     SANITY_CHECK_NOTHING();
 }
 
-OCL_PERF_TEST_P(features, extract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
+OCL_PERF_TEST_P(features2d, extract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
 {
     Ptr<Feature2D> detector = ORB::create();
     Ptr<Feature2D> extractor = getFeature2D(get<0>(GetParam()));
@@ -53,7 +53,7 @@ OCL_PERF_TEST_P(features, extract, testing::Combine(testing::Values(DETECTORS_EX
     SANITY_CHECK_NOTHING();
 }
 
-OCL_PERF_TEST_P(features, detectAndExtract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
+OCL_PERF_TEST_P(features2d, detectAndExtract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
 {
     Ptr<Feature2D> detector = getFeature2D(get<0>(GetParam()));
     std::string filename = getDataPath(get<1>(GetParam()));
