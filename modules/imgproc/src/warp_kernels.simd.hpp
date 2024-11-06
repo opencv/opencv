@@ -3245,6 +3245,7 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
+        printf("vlanes_32=%d, uf=%d, simd128=%d, simd256=%d, simdx=%d\n", vlanes_32, uf, CV_SIMD128, CV_SIMD256, CV_SIMD_SCALABLE);
 
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
