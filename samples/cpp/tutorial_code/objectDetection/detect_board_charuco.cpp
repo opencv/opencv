@@ -118,8 +118,9 @@ int main(int argc, char *argv[]) {
 
         //! [interpolateCornersCharuco]
         // Detect markers and ChArUco corners
-        bool validDetection = charucoDetector.detectBoard(image, charucoCorners, charucoIds, markerCorners, markerIds);
-        if(!validDetection) continue;
+        charucoDetector.detectBoard(image, charucoCorners, charucoIds, markerCorners, markerIds);
+        if (charucoIds.size() < 4)
+            continue;
         //! [interpolateCornersCharuco]
 
         //! [poseCharuco]
