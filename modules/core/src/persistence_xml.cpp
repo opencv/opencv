@@ -562,7 +562,7 @@ public:
                     }
                     else
                     {
-                        int64_t ival = strtol( ptr, &endptr, 0 );
+                        int64_t ival = strtoll( ptr, &endptr, 0 );
                         elem->setValue(FileNode::INT, &ival);
                     }
 
