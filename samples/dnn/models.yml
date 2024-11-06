@@ -405,7 +405,7 @@ vit:
   model: "object_tracking_vittrack_2023sep.onnx"
   sample: "object_tracker"
 
-nano:
+nanotrack:
   nanotrack_head_load_info:
     nanotrack_head_url: "https://github.com/HonglinChu/SiamTrackers/raw/refs/heads/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx"
     nanotrack_head_sha1: "39f168489671700cf739e402dfc67d41ce648aef"

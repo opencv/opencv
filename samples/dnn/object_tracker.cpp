@@ -15,7 +15,7 @@ const string about = "Use this script for Object Tracking using OpenCV. \n\n"
         "Firstly, download required models using the download_models.py. For vit tracker download model using `python download_models.py vit`\n"
         "To run provide alias/model_name:\n"
             "\t Nano: \n"
-                "\t\t e.g: ./example_dnn_object_tracker nano\n\n"
+                "\t\t e.g: ./example_dnn_object_tracker nanotrack\n\n"
             "\t vit: \n"
                 "\t\t e.g: ./example_dnn_object_tracker vit\n\n"
             "\t dasiamrpn: \n"
@@ -56,7 +56,7 @@ static void loadParser(const string &modelName, const string &zooFile)
     {
         keys += genPreprocArguments(modelName, zooFile, "");
     }
-    else if (modelName == "nano")
+    else if (modelName == "nanotrack")
     {
         keys += genPreprocArguments(modelName, zooFile, "nanotrack_head_");
         keys += genPreprocArguments(modelName, zooFile, "nanotrack_back_");
@@ -89,7 +89,7 @@ static void createTracker(const string &modelName, CommandLineParser &parser, Pt
         params.backend = backend;
         params.target = target;
         tracker = TrackerDaSiamRPN::create(params);
-    } else if (modelName == "nano") {
+    } else if (modelName == "nanotrack") {
         const string backbone = parser.get<String>("nanotrack_back_model");
         const string backSha1 = parser.get<String>("nanotrack_back_sha1");
         const string headneck = parser.get<String>("nanotrack_head_model");
@@ -113,7 +113,8 @@ static void createTracker(const string &modelName, CommandLineParser &parser, Pt
         params.tracking_score_threshold = tracking_score_threshold;
         tracker = TrackerVit::create(params);
     } else {
-        cout<<"Pass the valid alias. Choices are { nano, vit, dasiamrpn }"<<endl;
+        cout<<"Pass the valid alias. Choices are {vit, nanotrack, dasiamrpn }."<<endl;
+        exit(0);
     }
     return;
 }
@@ -203,7 +204,7 @@ int main(int argc, char** argv)
             selectRect = selectROI(windowName, image);
             break;
         }
-        if (key == 27) // ESC key to exit
+        else if (key == 27) // ESC key to exit
         {
             exit(0);
         }
@@ -259,7 +260,7 @@ int main(int argc, char** argv)
                 tracker->init(image, rect);
             }
             else if (key == 'n'){
-                modelName = "nano";
+                modelName = "nanotrack";
                 loadParser(modelName, zooFile);
                 parser = CommandLineParser(argc, argv, keys);
                 createTracker(modelName, parser, tracker);
