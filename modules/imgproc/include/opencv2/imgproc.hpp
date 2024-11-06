@@ -4528,7 +4528,8 @@ CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, InputArray user
 The function line draws the line segment between pt1 and pt2 points in the image. The line is
 clipped by the image boundaries. For non-antialiased lines with integer coordinates, the 8-connected
 or 4-connected Bresenham algorithm is used. Thick lines are drawn with rounding endings. Antialiased
-lines are drawn using Gaussian filtering.
+lines are drawn using Gaussian filtering. Optional alpha value only works on images with 3 or less
+channels, due to ambiguity between Scalar-encoded alpha channel and provided alpha value.
 
 @param img Image.
 @param pt1 First point of the line segment.
@@ -4537,9 +4538,11 @@ lines are drawn using Gaussian filtering.
 @param thickness Line thickness.
 @param lineType Type of the line. See #LineTypes.
 @param shift Number of fractional bits in the point coordinates.
+@param alpha Alpha value between 0 and 1 with which to alpha blend line and background. Value of 0
+will make line transparent, value of 1 will completely draw over the background. Only works for lines with thickness of 1.
  */
 CV_EXPORTS_W void line(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
-                     int thickness = 1, int lineType = LINE_8, int shift = 0);
+                     int thickness = 1, int lineType = LINE_8, int shift = 0, float alpha = 1);
 
 /** @brief Draws an arrow segment pointing from the first point to the second one.
 
