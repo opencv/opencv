@@ -589,14 +589,10 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
                     vx_store(valpha+vlanes_32, src_x1);
                     vx_store(vbeta, src_y0);
                     vx_store(vbeta+vlanes_32, src_y1);
-    #if CV_SIMD128
-        #if CV_SIMD_WIDTH == 16
-                    CV_WARP_SIMD128_W16_LOAD_SHUFFLE_INTER_8UC4();
-        #else
-                    CV_WARP_SIMD128_W32_LOAD_SHUFFLE_INTER_8UC4();
-        #endif
-    #elif CV_SIMD256
+    #if CV_SIMD256
                     CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+    #elif CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
     #elif CV_SIMD_SCALABLE
                     CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
     #endif
@@ -1920,14 +1916,10 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
                     vx_store(valpha+vlanes_32, src_x1);
                     vx_store(vbeta, src_y0);
                     vx_store(vbeta+vlanes_32, src_y1);
-    #if CV_SIMD128
-        #if CV_SIMD_WIDTH == 16
-                    CV_WARP_SIMD128_W16_LOAD_SHUFFLE_INTER_8UC4();
-        #else
-                    CV_WARP_SIMD128_W32_LOAD_SHUFFLE_INTER_8UC4();
-        #endif
-    #elif CV_SIMD256
+    #if CV_SIMD256
                     CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+    #elif CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
     #elif CV_SIMD_SCALABLE
                     CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
     #endif
@@ -3245,7 +3237,6 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
-        printf("vlanes_32=%d, uf=%d, simd128=%d, simd256=%d, simdx=%d\n", vlanes_32, uf, CV_SIMD128, CV_SIMD256, CV_SIMD_SCALABLE);
 
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
@@ -3297,14 +3288,10 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
                     vx_store(valpha+vlanes_32, src_x1);
                     vx_store(vbeta, src_y0);
                     vx_store(vbeta+vlanes_32, src_y1);
-    #if CV_SIMD128
-        #if CV_SIMD_WIDTH == 16
-                    CV_WARP_SIMD128_W16_LOAD_SHUFFLE_INTER_8UC4();
-        #else
-                    CV_WARP_SIMD128_W32_LOAD_SHUFFLE_INTER_8UC4();
-        #endif
-    #elif CV_SIMD256
+    #if CV_SIMD256
                     CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+    #elif CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
     #elif CV_SIMD_SCALABLE
                     CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
     #endif
