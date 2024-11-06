@@ -155,6 +155,9 @@ TEST_P(Test_TFLite, max_unpooling)
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
+    if (net.getMainGraph())
+        throw SkipTestException("The new dnn engine doesn't support forward to specified layers"); // https://github.com/opencv/opencv/issues/26349
+
     Mat input = imread(findDataFile("cv/shared/lena.png"));
     cvtColor(input, input, COLOR_BGR2RGBA);
     input = input.mul(Scalar(1, 1, 1, 0));

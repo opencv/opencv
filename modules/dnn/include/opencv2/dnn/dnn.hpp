@@ -1018,8 +1018,8 @@ CV__DNN_INLINE_NS_BEGIN
 
     enum EngineType
     {
-        ENGINE_CLASSIC=1, //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
-        ENGINE_NEW=2,     //!< Force use the old dnn engine similar to 4.x branch
+        ENGINE_CLASSIC=1, //!< Force use the old dnn engine similar to 4.x branch
+        ENGINE_NEW=2,     //!< Force use the new dnn engine. The engine does not support non CPU back-ends for now.
         ENGINE_AUTO=3     //!< Try to use the new engine and then fall back to the classic version.
     };
 
@@ -1051,17 +1051,24 @@ CV__DNN_INLINE_NS_BEGIN
     /** @brief Reads a network model stored in <a href="http://caffe.berkeleyvision.org">Caffe</a> framework's format.
       * @param prototxt   path to the .prototxt file with text description of the network architecture.
       * @param caffeModel path to the .caffemodel file with learned network.
+      * @param engine select DNN engine to be used. With auto selection the new engine is used.
+      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromCaffe(CV_WRAP_FILE_PATH const String &prototxt, CV_WRAP_FILE_PATH const String &caffeModel = String());
+    CV_EXPORTS_W Net readNetFromCaffe(CV_WRAP_FILE_PATH const String &prototxt,
+                                      CV_WRAP_FILE_PATH const String &caffeModel = String(),
+                                      int engine = ENGINE_AUTO);
 
     /** @brief Reads a network model stored in Caffe model in memory.
       * @param bufferProto buffer containing the content of the .prototxt file
       * @param bufferModel buffer containing the content of the .caffemodel file
+      * @param engine select DNN engine to be used. With auto selection the new engine is used.
+      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
     CV_EXPORTS_W Net readNetFromCaffe(const std::vector<uchar>& bufferProto,
-                                      const std::vector<uchar>& bufferModel = std::vector<uchar>());
+                                      const std::vector<uchar>& bufferModel = std::vector<uchar>(),
+                                      int engine = ENGINE_AUTO);
 
     /** @brief Reads a network model stored in Caffe model in memory.
       * @details This is an overloaded member function, provided for convenience.
@@ -1070,10 +1077,13 @@ CV__DNN_INLINE_NS_BEGIN
       * @param lenProto length of bufferProto
       * @param bufferModel buffer containing the content of the .caffemodel file
       * @param lenModel length of bufferModel
+      * @param engine select DNN engine to be used. With auto selection the new engine is used.
+      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
     CV_EXPORTS Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
-                                    const char *bufferModel = NULL, size_t lenModel = 0);
+                                    const char *bufferModel = NULL, size_t lenModel = 0,
+                                    int engine = ENGINE_AUTO);
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
       * @param model  path to the .pb file with binary protobuf description of the network architecture
@@ -1105,23 +1115,29 @@ CV__DNN_INLINE_NS_BEGIN
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @param model  path to the .tflite file with binary flatbuffers description of the network architecture
+      * @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
+      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromTFLite(CV_WRAP_FILE_PATH const String &model);
+    CV_EXPORTS_W Net readNetFromTFLite(CV_WRAP_FILE_PATH const String &model, int engine=ENGINE_AUTO);
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @param bufferModel buffer containing the content of the tflite file
+      * @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
+      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
-    CV_EXPORTS_W Net readNetFromTFLite(const std::vector<uchar>& bufferModel);
+    CV_EXPORTS_W Net readNetFromTFLite(const std::vector<uchar>& bufferModel, int engine=ENGINE_AUTO);
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @details This is an overloaded member function, provided for convenience.
       * It differs from the above function only in what argument(s) it accepts.
       * @param bufferModel buffer containing the content of the tflite file
       * @param lenModel length of bufferModel
+      * @param engine select DNN engine to be used. With auto selection the new engine is used first and falls back to classic.
+      * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       */
-    CV_EXPORTS Net readNetFromTFLite(const char *bufferModel, size_t lenModel);
+    CV_EXPORTS Net readNetFromTFLite(const char *bufferModel, size_t lenModel, int engine=ENGINE_AUTO);
 
      /**
       * @brief Read deep learning network represented in one of the supported formats.

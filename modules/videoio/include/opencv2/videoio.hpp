@@ -710,9 +710,12 @@ namespace internal { class VideoCapturePrivateAccessor; }
 
 The class provides C++ API for capturing video from cameras or for reading video files and image sequences.
 
+Here is how the class can be used:
+@include samples/cpp/snippets/videocapture_basic.cpp
+
 @note
 -   (C++) A basic sample on using the %VideoCapture interface can be found at
-    `OPENCV_SOURCE_CODE/samples/cpp/videocapture_starter.cpp`
+    `OPENCV_SOURCE_CODE/samples/cpp/videocapture_combined.cpp`
 -   (Python) A basic sample on using the %VideoCapture interface can be found at
     `OPENCV_SOURCE_CODE/samples/python/video.py`
 -   (Python) A multi threaded video processing sample can be found at
@@ -979,8 +982,8 @@ class IVideoWriter;
 Check @ref tutorial_video_write "the corresponding tutorial" for more details
 */
 
-/** @example samples/cpp/videowriter_basic.cpp
-An example using VideoWriter class
+/** @example samples/cpp/videowriter.cpp
+An example using VideoCapture and VideoWriter class
 */
 
 /** @brief Video writer class.

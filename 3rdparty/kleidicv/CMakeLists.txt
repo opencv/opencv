@@ -1,8 +1,8 @@
 project(kleidicv_hal)
 
 set(KLEIDICV_SOURCE_PATH "" CACHE PATH "Directory containing KleidiCV sources")
-ocv_update(KLEIDICV_SRC_COMMIT "0.1.0")
-ocv_update(KLEIDICV_SRC_HASH "9388f28cf2fbe3338197b2b57d491468")
+ocv_update(KLEIDICV_SRC_COMMIT "0.2.0")
+ocv_update(KLEIDICV_SRC_HASH "dabe522e8f55ac342d07a787391dab80")
 
 if(KLEIDICV_SOURCE_PATH)
   set(THE_ROOT "${KLEIDICV_SOURCE_PATH}")
@@ -20,4 +20,5 @@ else()
   set(THE_ROOT "${OpenCV_BINARY_DIR}/3rdparty/kleidicv/kleidicv-${KLEIDICV_SRC_COMMIT}")
 endif()
 
+option(KLEIDICV_ENABLE_SME2 "" OFF) # not compatible with some CLang versions in NDK
 include("${THE_ROOT}/adapters/opencv/CMakeLists.txt")

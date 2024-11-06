@@ -60,11 +60,16 @@
 
 /**
 @defgroup core Core functionality
+
+The Core module is the backbone of OpenCV, offering fundamental data structures, matrix operations,
+and utility functions that other modules depend on. It’s essential for handling image data,
+performing mathematical computations, and managing memory efficiently within the OpenCV ecosystem.
+
 @{
     @defgroup core_basic Basic structures
     @defgroup core_array Operations on arrays
     @defgroup core_async Asynchronous API
-    @defgroup core_xml XML/YAML Persistence
+    @defgroup core_xml XML/YAML/JSON Persistence
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
@@ -76,7 +81,6 @@
         @defgroup core_utils_samples Utility functions for OpenCV samples
     @}
     @defgroup core_opengl OpenGL interoperability
-    @defgroup core_ipp Intel IPP Asynchronous C/C++ Converters
     @defgroup core_optim Optimization Algorithms
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
@@ -96,12 +100,13 @@
     @{
         @defgroup core_parallel_backend Parallel backends API
     @}
+    @defgroup core_quaternion Quaternion
 @}
  */
 
 namespace cv {
 
-//! @addtogroup core
+//! @addtogroup core_utils
 //! @{
 
 enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independently
@@ -114,6 +119,11 @@ enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independe
                                         //!< descending order; this flag and the previous one are also
                                         //!< mutually exclusive.
                };
+
+//! @} core_utils
+
+//! @addtogroup core_array
+//! @{
 
 //! Covariation flags
 enum CovarFlags {
@@ -151,27 +161,6 @@ enum CovarFlags {
     COVAR_COLS      = 16
 };
 
-//! @addtogroup core_cluster
-//!  @{
-
-//! k-Means flags
-enum KmeansFlags {
-    /** Select random initial centers in each attempt.*/
-    KMEANS_RANDOM_CENTERS     = 0,
-    /** Use kmeans++ center initialization by Arthur and Vassilvitskii [Arthur2007].*/
-    KMEANS_PP_CENTERS         = 2,
-    /** During the first (and possibly the only) attempt, use the
-        user-supplied labels instead of computing them from the initial centers. For the second and
-        further attempts, use the random or semi-random centers. Use one of KMEANS_\*_CENTERS flag
-        to specify the exact method.*/
-    KMEANS_USE_INITIAL_LABELS = 1
-};
-
-//! @} core_cluster
-
-//! @addtogroup core_array
-//! @{
-
 enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/columns of the matrix.
                    REDUCE_AVG = 1, //!< the output is the mean vector of all rows/columns of the matrix.
                    REDUCE_MAX = 2, //!< the output is the maximum (column/row-wise) of all rows/columns of the matrix.
@@ -179,18 +168,11 @@ enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/column
                    REDUCE_SUM2 = 4  //!< the output is the sum of all squared rows/columns of the matrix.
                  };
 
-//! @} core_array
-
 /** @brief Swaps two matrices
 */
 CV_EXPORTS void swap(Mat& a, Mat& b);
 /** @overload */
 CV_EXPORTS void swap( UMat& a, UMat& b );
-
-//! @} core
-
-//! @addtogroup core_array
-//! @{
 
 /** @brief Computes the source location of an extrapolated pixel.
 
@@ -492,19 +474,9 @@ For example:
 CV_EXPORTS_W void convertScaleAbs(InputArray src, OutputArray dst,
                                   double alpha = 1, double beta = 0);
 
-/** @brief Converts an array to half precision floating number.
-
-This function converts FP32 (single precision floating point) from/to FP16 (half precision floating point). CV_16S format is used to represent FP16 data.
-There are two use modes (src -> dst): CV_32F -> CV_16S and CV_16S -> CV_32F. The input array has to have type of CV_32F or
-CV_16S to represent the bit depth. If the input array is neither of them, the function will raise an error.
-The format of half precision floating point is defined in IEEE 754-2008.
-
-@param src input array.
-@param dst output array.
-
-@deprecated Use Mat::convertTo with CV_16F instead.
+/** @example samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
+Check @ref tutorial_how_to_scan_images "the corresponding tutorial" for more details
 */
-CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst);
 
 /** @brief Performs a look-up table transform of an array.
 
@@ -3021,6 +2993,19 @@ private:
 //! @addtogroup core_cluster
 //!  @{
 
+//! k-means flags
+enum KmeansFlags {
+    /** Select random initial centers in each attempt.*/
+    KMEANS_RANDOM_CENTERS     = 0,
+    /** Use kmeans++ center initialization by Arthur and Vassilvitskii [Arthur2007].*/
+    KMEANS_PP_CENTERS         = 2,
+    /** During the first (and possibly the only) attempt, use the
+        user-supplied labels instead of computing them from the initial centers. For the second and
+        further attempts, use the random or semi-random centers. Use one of KMEANS_\*_CENTERS flag
+        to specify the exact method.*/
+    KMEANS_USE_INITIAL_LABELS = 1
+};
+
 /** @example samples/cpp/snippets/kmeans.cpp
 An example on k-means clustering
 */
@@ -3035,7 +3020,7 @@ and groups the input samples around the clusters. As an output, \f$\texttt{bestL
 0-based cluster index for the sample stored in the \f$i^{th}\f$ row of the samples matrix.
 
 @note
--   (Python) An example on K-means clustering can be found at
+-   (Python) An example on k-means clustering can be found at
     opencv_source_code/samples/python/kmeans.py
 @param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
 Examples of this array can be:
@@ -3129,6 +3114,10 @@ class CV_EXPORTS Algorithm;
 template<typename _Tp, typename _EnumTp = void> struct ParamType {};
 
 
+/** @example samples/cpp/snippets/detect_blob.cpp
+An example using the BLOB to detect and filter region.
+*/
+
 /** @brief This is a base class for all more or less complex algorithms in OpenCV
 
 especially for classes of algorithms, for which there can be multiple implementations. The examples
@@ -3139,9 +3128,6 @@ etc.).
 
 Here is example of SimpleBlobDetector use in your application via Algorithm interface:
 @snippet snippets/core_various.cpp Algorithm
-
-@example samples/cpp/snippets/detect_blob.cpp
-An example using the BLOB to detect and filter region.
 
 */
 class CV_EXPORTS_W Algorithm

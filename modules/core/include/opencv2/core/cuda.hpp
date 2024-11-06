@@ -1324,7 +1324,7 @@ CV_EXPORTS_W void printShortCudaDeviceInfo(int device);
 @param _src input array.
 @param _dst output array.
 @param stream Stream for the asynchronous version.
-@sa convertFp16
+@sa cv::Mat::convertTo
 */
 CV_EXPORTS void convertFp16(InputArray _src, OutputArray _dst, Stream& stream = Stream::Null());
 

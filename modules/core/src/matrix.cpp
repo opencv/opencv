@@ -1372,7 +1372,8 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
 {
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
-    setSize(*this, _dims, _sizes, _steps, true);
+    if (_dims > 0 || _data != nullptr)
+        setSize(*this, _dims, _sizes, _steps, true);
     finalizeHdr(*this);
 }
 
@@ -1383,7 +1384,9 @@ Mat::Mat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _
 {
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
-    setSize(*this, (int)_sizes.size(), _sizes.data(), _steps, true);
+    int _dims = (int)_sizes.size();
+    if (_dims > 0 || _data != nullptr)
+        setSize(*this, _dims, _sizes.data(), _steps, true);
     finalizeHdr(*this);
 }
 
@@ -1407,15 +1410,16 @@ Mat::Mat(std::initializer_list<int> _shape, int _type, void* _data, const size_t
       datalimit(0), allocator(0), u(0), size(&rows)
 {
     int new_shape[MatShape::MAX_DIMS];
-    int new_ndims = (int)_shape.size();
-    CV_Assert(new_ndims <= MatShape::MAX_DIMS);
+    int _dims = (int)_shape.size();
+    CV_Assert(_dims <= MatShape::MAX_DIMS);
     auto it = _shape.begin();
-    for (int i = 0; i < new_ndims; i++, ++it)
+    for (int i = 0; i < _dims; i++, ++it)
         new_shape[i] = *it;
 
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
-    setSize(*this, new_ndims, new_shape, _steps, true);
+    if (_dims > 0 || _data != nullptr)
+        setSize(*this, _dims, new_shape, _steps, true);
     finalizeHdr(*this);
 }
 
@@ -1721,26 +1725,25 @@ Mat Mat::reshape(int new_cn, int new_rows) const
     int cn = channels();
     Mat hdr = *this;
 
+    if( new_cn == 0 )
+        new_cn = cn;
+
     if( dims > 2 )
     {
-        if( new_rows == 0 && new_cn != 0 && size[dims-1]*cn % new_cn == 0 )
+        if( new_rows == 0 )
         {
+            // special case: just change the number of channnels; retain the same shape,
+            // except for the last, innermost dimension
+            CV_Assert(size[dims-1]*cn % new_cn == 0);
             hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
             hdr.step[dims-1] = CV_ELEM_SIZE(hdr.flags);
             hdr.size[dims-1] = hdr.size[dims-1]*cn / new_cn;
             return hdr;
         }
-        if( new_rows > 0 )
-        {
-            int sz[] = { new_rows, (int)(total()*cn/new_rows) };
-            return reshape(new_cn, 2, sz);
-        }
+        CV_Assert( new_rows > 0 );
+        int sz[] = { new_rows, (int)(total()*cn/new_rows) };
+        return reshape(new_cn, 2, sz);
     }
-
-    CV_Assert( dims <= 2 );
-
-    if( new_cn == 0 )
-        new_cn = cn;
 
     int total_width = cols * cn;
 
@@ -1753,9 +1756,6 @@ Mat Mat::reshape(int new_cn, int new_rows) const
         if( !isContinuous() )
             CV_Error( cv::Error::BadStep,
             "The matrix is not continuous, thus its number of rows can not be changed" );
-
-        if( (unsigned)new_rows > (unsigned)total_size )
-            CV_Error( cv::Error::StsOutOfRange, "Bad new number of rows" );
 
         total_width = total_size / new_rows;
 
@@ -1806,22 +1806,33 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
 
         AutoBuffer<int, 4> newsz_buf( (size_t)_newndims );
 
+        int m1_idx = -1;
+
         for (int i = 0; i < _newndims; i++)
         {
-            CV_Assert(_newsz[i] >= 0);
-
-            if (_newsz[i] > 0)
-                newsz_buf[i] = _newsz[i];
-            else if (i < dims)
-                newsz_buf[i] = this->size[i];
-            else
-                CV_Error(cv::Error::StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
-
-            total_elem1 *= (size_t)newsz_buf[i];
+            if (_newsz[i] >= 0) {
+                if (_newsz[i] == 0 && i < dims)
+                    newsz_buf[i] = size.p[i];
+                else
+                    newsz_buf[i] = _newsz[i];
+                total_elem1 *= (size_t)newsz_buf[i];
+            } else {
+                if (m1_idx >= 0)
+                    CV_Error(cv::Error::StsBadSize, "More than one '-1' occured in the new shape");
+                m1_idx = i;
+            }
         }
 
-        if (total_elem1 != total_elem1_ref)
+        if (m1_idx >= 0) {
+            if (total_elem1 == 0) {
+                CV_Assert(total_elem1_ref == 0);
+                total_elem1 = 1;
+            }
+            CV_Assert(total_elem1_ref % total_elem1 == 0);
+            newsz_buf[m1_idx] = (int)(total_elem1_ref / total_elem1);
+        } else if (total_elem1 != total_elem1_ref) {
             CV_Error(cv::Error::StsUnmatchedSizes, "Requested and source matrices have different count of elements");
+        }
 
         Mat hdr = *this;
         hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);

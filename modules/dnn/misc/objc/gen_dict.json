@@ -1,16 +1,16 @@
 {
     "func_arg_fix" : {
         "Dnn": {
-            "(Net*)readNetFromCaffe:(NSString*)prototxt caffeModel:(NSString*)caffeModel" : { "readNetFromCaffe" : {"name" : "readNetFromCaffeFile"} },
-            "(Net*)readNetFromCaffe:(ByteVector*)bufferProto bufferModel:(ByteVector*)bufferModel" : { "readNetFromCaffe" : {"name" : "readNetFromCaffeBuffer"} },
+            "(Net*)readNetFromCaffe:(NSString*)prototxt caffeModel:(NSString*)caffeModel engine:(int)engine" : { "readNetFromCaffe" : {"name" : "readNetFromCaffeFile"} },
+            "(Net*)readNetFromCaffe:(ByteVector*)bufferProto bufferModel:(ByteVector*)bufferModel engine:(int)engine" : { "readNetFromCaffe" : {"name" : "readNetFromCaffeBuffer"} },
             "(Net*)readNetFromDarknet:(NSString*)cfgFile darknetModel:(NSString*)darknetModel" : { "readNetFromDarknet" : {"name" : "readNetFromDarknetFile"} },
             "(Net*)readNetFromDarknet:(ByteVector*)bufferCfg bufferModel:(ByteVector*)bufferModel" : { "readNetFromDarknet" : {"name" : "readNetFromDarknetBuffer"} },
             "(Net*)readNetFromONNX:(NSString*)onnxFile engine:(int)engine" : { "readNetFromONNX" : {"name" : "readNetFromONNXFile"} },
             "(Net*)readNetFromONNX:(ByteVector*)buffer engine:(int)engine" : { "readNetFromONNX" : {"name" : "readNetFromONNXBuffer"} },
             "(Net*)readNetFromTensorflow:(NSString*)model config:(NSString*)config" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowFile"} },
             "(Net*)readNetFromTensorflow:(ByteVector*)bufferModel bufferConfig:(ByteVector*)bufferConfig" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowBuffer"} },
-            "(Net*)readNetFromTFLite:(NSString*)model" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteFile"} },
-            "(Net*)readNetFromTFLite:(ByteVector*)buffer" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteBuffer"} }
+            "(Net*)readNetFromTFLite:(NSString*)model engine:(int)engine" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteFile"} },
+            "(Net*)readNetFromTFLite:(ByteVector*)buffer engine:(int)engine" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteBuffer"} }
         },
         "Net": {
             "(void)forward:(NSMutableArray<Mat*>*)outputBlobs outputName:(NSString*)outputName" : { "forward" : {"name" : "forwardOutputBlobs"} },

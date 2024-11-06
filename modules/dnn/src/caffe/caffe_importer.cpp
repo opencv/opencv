@@ -40,6 +40,7 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
 
 #ifdef HAVE_PROTOBUF
 #include <iostream>
@@ -53,7 +54,9 @@
 #include "caffe_io.hpp"
 #endif
 
+#include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/fp_control_utils.hpp>
+
 
 namespace cv {
 namespace dnn {
@@ -320,6 +323,30 @@ public:
         }
     }
 
+    Ptr<Layer> addLayer(Net& dstNet,
+                        const String& type,
+                        const String& name,
+                        LayerParams& layerParams,
+                        const std::vector<String>& inputs,
+                        const std::vector<String>& outputs)
+    {
+        layerParams.type = type;
+        layerParams.name = name;
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(type, layerParams);
+        if (!layer) {
+            CV_Error(Error::StsError, "Can't create layer " + name + " with type " + type);
+            return nullptr;
+        }
+
+        for (const String& inputName : inputs)
+            layer->inputs.push_back(dstNet.getArg(inputName));
+        for (const String& outputName : outputs)
+            layer->outputs.push_back(dstNet.getArg(outputName));
+        layer->netimpl = dstNet.getImpl();
+        CV_Assert(dstNet.getImpl()->dump_indent == 3);
+        return layer;
+    }
+
     struct BlobNote
     {
         BlobNote(const std::string &_name, int _layerId, int _outNum) :
@@ -332,24 +359,41 @@ public:
     std::vector<BlobNote> addedBlobs;
     std::map<String, int> layerCounter;
 
-    void populateNet(Net dstNet)
+    void populateNet(Net dstNet, bool newEngine)
     {
         CV_TRACE_FUNCTION();
 
         int layersSize = net.layer_size();
         layerCounter.clear();
-        addedBlobs.clear();
-        addedBlobs.reserve(layersSize + 1);
 
-        //setup input layer names
+        // OLD ENGINE
+        if(!newEngine)
+        {
+            addedBlobs.clear();
+            addedBlobs.reserve(layersSize + 1);
+        }
         std::vector<String> netInputs(net.input_size());
         std::vector<MatShape> inp_shapes;
+
+        // NEW ENGINE
+        Net::Impl* netImpl = dstNet.getImpl();
+        std::vector<Ptr<Layer>> curr_prog;
+        std::vector<Arg> modelInputs, modelOutputs;
+
         {
             int net_input_size = net.input_size();
             for (int inNum = 0; inNum < net_input_size; inNum++)
             {
-                addedBlobs.push_back(BlobNote(net.input(inNum), 0, inNum));
-                netInputs[inNum] = net.input(inNum);
+                if (newEngine)
+                {
+                    modelInputs.push_back(netImpl->newArg(net.input(inNum), DNN_ARG_INPUT));
+                    netImpl->args.at(modelInputs.back().idx).type = CV_32F;
+                }
+                else
+                {
+                    addedBlobs.push_back(BlobNote(net.input(inNum), 0, inNum));
+                    netInputs[inNum] = net.input(inNum);
+                }
             }
 
             if (net.input_dim_size() > 0)  // deprecated in Caffe proto
@@ -365,7 +409,10 @@ public:
                     shape[1] = net.input_dim(dim+1);
                     shape[2] = net.input_dim(dim+2);
                     shape[3] = net.input_dim(dim+3);
-                    inp_shapes.push_back(shape);
+                    if (newEngine)
+                        netImpl->args.at(modelInputs[inp_id].idx).shape = shape;
+                    else
+                        inp_shapes.push_back(shape);
                 }
             }
             else if (net.input_shape_size() > 0)  // deprecated in Caffe proto
@@ -375,7 +422,10 @@ public:
                 for (int inp_id = 0; inp_id < net_input_shape_size; inp_id++)
                 {
                     MatShape shape = parseBlobShape(net.input_shape(inp_id));
-                    inp_shapes.push_back(shape);
+                    if (newEngine)
+                        netImpl->args.at(modelInputs[inp_id].idx).shape = shape;
+                    else
+                        inp_shapes.push_back(shape);
                 }
             }
             else
@@ -383,9 +433,18 @@ public:
                 for (int inp_id = 0; inp_id < net_input_size; inp_id++)
                 {
                     MatShape shape; // empty
-                    inp_shapes.push_back(shape);
+                    if (newEngine)
+                        netImpl->args.at(modelInputs[inp_id].idx).shape = shape;
+                    else
+                        inp_shapes.push_back(shape);
                 }
             }
+        }
+
+        if (newEngine && net.layer(layersSize - 1).type() == "Silence")
+        {
+            CV_LOG_WARNING(NULL, "Caffe parser: Silence layer was ignored");
+            layersSize--;
         }
 
         for (int li = 0; li < layersSize; li++)
@@ -398,6 +457,12 @@ public:
             extractLayerParams(layer, layerParams);
             extractBinaryLayerParams(layer, layerParams);
 
+            if (newEngine && li == layersSize - 1)
+            {
+                for (int outNum = 0; outNum < layer.top_size(); outNum++)
+                    modelOutputs.push_back(netImpl->newArg(layer.top(outNum), DNN_ARG_OUTPUT));
+            }
+
             int repetitions = layerCounter[name]++;
             if (repetitions)
                 name += String("_") + toString(repetitions);
@@ -406,9 +471,17 @@ public:
             {
                 for (int outNum = 0; outNum < layer.top_size(); outNum++)
                 {
-                    addOutput(layer, 0, outNum);
-                    addedBlobs.back().outNum = netInputs.size();
-                    netInputs.push_back(addedBlobs.back().name);
+                    if (newEngine)
+                    {
+                        modelInputs.push_back(netImpl->newArg(layer.top(outNum), DNN_ARG_INPUT));
+                        netImpl->args.at(modelInputs.back().idx).type = CV_32F;
+                    }
+                    else
+                    {
+                        addOutput(layer, 0, outNum);
+                        addedBlobs.back().outNum = netInputs.size();
+                        netInputs.push_back(addedBlobs.back().name);
+                    }
                 }
                 if (layer.has_input_param())
                 {
@@ -418,7 +491,15 @@ public:
                     for (int inp_id = 0; inp_id < input_shape_size; inp_id++)
                     {
                         MatShape shape = parseBlobShape(inputParameter.shape(inp_id));
-                        inp_shapes.push_back(shape);
+                        if (newEngine)
+                        {
+                            int inputIdx = modelInputs.size() - input_shape_size + inp_id;
+                            netImpl->args.at(modelInputs[inputIdx].idx).shape = shape;
+                        }
+                        else
+                        {
+                            inp_shapes.push_back(shape);
+                        }
                     }
                 }
                 continue;
@@ -437,12 +518,24 @@ public:
                     if (repetitions)
                         mvnName += String("_") + toString(repetitions);
 
-                    int mvnId = dstNet.addLayer(mvnName, "MVN", mvnParams);
-                    addInput(layer.bottom(0), mvnId, 0, dstNet);
-                    addOutput(layer, mvnId, 0);
-                    net.mutable_layer(li)->set_bottom(0, layer.top(0));
-                    layerParams.blobs[0].setTo(0);  // mean
-                    layerParams.blobs[1].setTo(1);  // std
+                    if (newEngine)
+                    {
+                        Ptr<Layer> netLayer = addLayer(
+                            dstNet, "MVN", mvnName, mvnParams,
+                            {layer.bottom(0)},
+                            {layer.top(0)});
+                        curr_prog.push_back(netLayer);
+                        continue;
+                    }
+                    else
+                    {
+                        int mvnId = dstNet.addLayer(mvnName, "MVN", mvnParams);
+                        addInput(layer.bottom(0), mvnId, 0, dstNet);
+                        addOutput(layer, mvnId, 0);
+                        net.mutable_layer(li)->set_bottom(0, layer.top(0));
+                        layerParams.blobs[0].setTo(0);  // mean
+                        layerParams.blobs[1].setTo(1);  // std
+                    }
                 }
             }
             else if (type == "Axpy")
@@ -458,13 +551,34 @@ public:
                 LayerParams scaleParams;
                 scaleParams.set("axis", 1);
                 scaleParams.set("has_bias", false);
-                int scaleId = dstNet.addLayer(scaleName, "Scale", scaleParams);
-                addInput(layer.bottom(2), scaleId, 0, dstNet);
-                addInput(layer.bottom(0), scaleId, 1, dstNet);
-                addOutput(layer, scaleId, 0);
-                net.mutable_layer(li)->set_bottom(0, layer.top(0));
-                net.mutable_layer(li)->mutable_bottom()->RemoveLast();
-                type = "Eltwise";
+
+                if (newEngine)
+                {
+                    std::string intermediateTensor = scaleName + "_intermediate_output";
+                    Ptr<Layer> netLayerScale= addLayer(
+                        dstNet, "Scale", scaleName, scaleParams,
+                        {layer.bottom(2), layer.bottom(0)},
+                        {intermediateTensor});
+                    curr_prog.push_back(netLayerScale);
+
+                    LayerParams eltwiseParams;
+                    Ptr<Layer> netLayerEltwise = addLayer(
+                        dstNet, "Eltwise", name, eltwiseParams,
+                        {intermediateTensor, layer.bottom(1)},
+                        {layer.top(0)});
+                    curr_prog.push_back(netLayerEltwise);
+                    continue;
+                }
+                else
+                {
+                    int scaleId = dstNet.addLayer(scaleName, "Scale", scaleParams);
+                    addInput(layer.bottom(2), scaleId, 0, dstNet);
+                    addInput(layer.bottom(0), scaleId, 1, dstNet);
+                    addOutput(layer, scaleId, 0);
+                    net.mutable_layer(li)->set_bottom(0, layer.top(0));
+                    net.mutable_layer(li)->mutable_bottom()->RemoveLast();
+                    type = "Eltwise";
+                }
             }
             else if (type == "Resample")
             {
@@ -489,9 +603,19 @@ public:
                 CV_Assert(layer.bottom_size() == layer.top_size());
                 for (int i = 0; i < layer.bottom_size(); i++)
                 {
-                    int conv_id = dstNet.addLayer(layer.top(i), type, layerParams);
-                    addInput(layer.bottom(i), conv_id, 0, dstNet);
-                    addedBlobs.push_back(BlobNote(layer.top(i), conv_id, 0));
+                    if (newEngine)
+                    {
+                        Ptr<Layer> netLayer = addLayer(
+                            dstNet, type, layer.top(i), layerParams,
+                            {layer.bottom(i)}, {layer.top(i)});
+                        curr_prog.push_back(netLayer);
+                    }
+                    else
+                    {
+                        int conv_id = dstNet.addLayer(layer.top(i), type, layerParams);
+                        addInput(layer.bottom(i), conv_id, 0, dstNet);
+                        addedBlobs.push_back(BlobNote(layer.top(i), conv_id, 0));
+                    }
                 }
                 continue;
             }
@@ -504,25 +628,77 @@ public:
                 if(!layerParams.has("axis"))
                     layerParams.set("axis", 1);
             }
+            else if ("Proposal" == type)
+            {
+                if (newEngine && layer.top_size() == 1)
+                {
+                    // Add unused optional second output and create the Proposal layer
+                    std::vector<string> layerInputs;
+                    for (int inNum = 0; inNum < layer.bottom_size(); inNum++)
+                        layerInputs.push_back(layer.bottom(inNum));
+                    Ptr<Layer> netLayer = addLayer(
+                        dstNet, type, name, layerParams,
+                        layerInputs, {layer.top(0), name + "___output_scores"});
+                    curr_prog.push_back(netLayer);
+                    continue;
+                }
+            }
+            else if ("Silence" == type)
+            {
+                if (newEngine)
+                {
+                    CV_LOG_WARNING(NULL, "Caffe parser: Silence layer was ignored");
+                    continue;
+                }
+            }
 
-            int id = dstNet.addLayer(name, type, layerParams);
+            if (newEngine)
+            {
+                std::vector<string> layerInputs, layerOutputs;
+                for (int inNum = 0; inNum < layer.bottom_size(); inNum++)
+                    layerInputs.push_back(layer.bottom(inNum));
+                for (int outNum = 0; outNum < layer.top_size(); outNum++)
+                    layerOutputs.push_back(layer.top(outNum));
 
-            for (int inNum = 0; inNum < layer.bottom_size(); inNum++)
-                addInput(layer.bottom(inNum), id, inNum, dstNet);
-
-            for (int outNum = 0; outNum < layer.top_size(); outNum++)
-                addOutput(layer, id, outNum);
+                Ptr<Layer> netLayer = addLayer(
+                    dstNet, type, name, layerParams,
+                    layerInputs, layerOutputs);
+                curr_prog.push_back(netLayer);
+            }
+            else
+            {
+                int id = dstNet.addLayer(name, type, layerParams);
+                for (int inNum = 0; inNum < layer.bottom_size(); inNum++)
+                    addInput(layer.bottom(inNum), id, inNum, dstNet);
+                for (int outNum = 0; outNum < layer.top_size(); outNum++)
+                    addOutput(layer, id, outNum);
+            }
         }
-        dstNet.setInputsNames(netInputs);
 
-        if (inp_shapes.size() > 0)
+        if (newEngine)
         {
-            CV_CheckEQ(inp_shapes.size(), netInputs.size(), "");
-            for (int inp_id = 0; inp_id < inp_shapes.size(); inp_id++)
-                dstNet.setInputShape(netInputs[inp_id], inp_shapes[inp_id]);
-        }
+            Ptr<Graph> curr_graph = netImpl->newGraph(net.name(), modelInputs, true);
+            curr_graph->setOutputs(modelOutputs);
+            curr_graph->setProg(curr_prog);
 
-        addedBlobs.clear();
+            netImpl->mainGraph = curr_graph;
+            netImpl->modelFormat = DNN_MODEL_CAFFE;
+            netImpl->originalLayout = DATA_LAYOUT_NCHW;
+            netImpl->prepareForInference();
+        }
+        else
+        {
+            dstNet.setInputsNames(netInputs);
+
+            if (inp_shapes.size() > 0)
+            {
+                CV_CheckEQ(inp_shapes.size(), netInputs.size(), "");
+                for (int inp_id = 0; inp_id < inp_shapes.size(); inp_id++)
+                    dstNet.setInputShape(netInputs[inp_id], inp_shapes[inp_id]);
+            }
+
+            addedBlobs.clear();
+        }
     }
 
     void addOutput(const caffe::LayerParameter &layer, int layerId, int outNum)
@@ -569,45 +745,59 @@ public:
 
 }
 
-Net readNetFromCaffe(const String &prototxt, const String &caffeModel /*= String()*/)
+Net readNetFromCaffe(const String &prototxt,
+                     const String &caffeModel, /*= String()*/
+                     int engine)
 {
+    static const int engine_forced = (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+    if(engine_forced != ENGINE_AUTO)
+        engine = engine_forced;
+
     CaffeImporter caffeImporter(prototxt.c_str(), caffeModel.c_str());
     Net net;
-    caffeImporter.populateNet(net);
+    caffeImporter.populateNet(net, engine == ENGINE_NEW || engine == ENGINE_AUTO);
     return net;
 }
 
 Net readNetFromCaffe(const char *bufferProto, size_t lenProto,
-                     const char *bufferModel, size_t lenModel)
+                     const char *bufferModel, size_t lenModel,
+                     int engine)
 {
+    static const int engine_forced = (int)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+    if(engine_forced != ENGINE_AUTO)
+        engine = engine_forced;
+
     CaffeImporter caffeImporter(bufferProto, lenProto, bufferModel, lenModel);
     Net net;
-    caffeImporter.populateNet(net);
+    caffeImporter.populateNet(net, engine == ENGINE_NEW || engine == ENGINE_AUTO);
     return net;
 }
 
-Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uchar>& bufferModel)
+Net readNetFromCaffe(const std::vector<uchar>& bufferProto,
+                     const std::vector<uchar>& bufferModel,
+                     int engine)
 {
     const char* bufferProtoPtr = reinterpret_cast<const char*>(&bufferProto[0]);
     const char* bufferModelPtr = bufferModel.empty() ? NULL :
                                  reinterpret_cast<const char*>(&bufferModel[0]);
     return readNetFromCaffe(bufferProtoPtr, bufferProto.size(),
-                            bufferModelPtr, bufferModel.size());
+                            bufferModelPtr, bufferModel.size(),
+                            engine);
 }
 
 #else  // HAVE_PROTOBUF
 
 #define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/Caffe: Build OpenCV with Protobuf to import Caffe models")
 
-Net readNetFromCaffe(const String &, const String &) {
+Net readNetFromCaffe(const String &, const String &, int) {
     DNN_PROTOBUF_UNSUPPORTED();
 }
 
-Net readNetFromCaffe(const char *, size_t, const char *, size_t) {
+Net readNetFromCaffe(const char *, size_t, const char *, size_t, int) {
     DNN_PROTOBUF_UNSUPPORTED();
 }
 
-Net readNetFromCaffe(const std::vector<uchar>&, const std::vector<uchar>&) {
+Net readNetFromCaffe(const std::vector<uchar>&, const std::vector<uchar>&, int) {
     DNN_PROTOBUF_UNSUPPORTED();
 }
 

@@ -2508,7 +2508,7 @@ private:
 
 #endif
 
-static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation, int borderType, InputArray _M, int flags )
+static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation, int borderType, const Scalar & borderValue, InputArray _M, int flags )
 {
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP();
@@ -2527,7 +2527,7 @@ static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation
         Mat dst = _dst.getMat();
         ::ipp::IwiImage        iwSrc = ippiGetImage(src);
         ::ipp::IwiImage        iwDst = ippiGetImage(dst);
-        ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType));
+        ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType), ippiGetValue(borderValue));
         IwTransDirection       iwTransDirection;
         if(!ippBorder)
             return false;
@@ -2570,7 +2570,7 @@ static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation
     return true;
 #else
     CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(interpolation);
-    CV_UNUSED(borderType); CV_UNUSED(_M); CV_UNUSED(flags);
+    CV_UNUSED(borderType); CV_UNUSED(borderValue); CV_UNUSED(_M); CV_UNUSED(flags);
     return false;
 #endif
 }
@@ -2666,38 +2666,29 @@ void warpAffineBlocklineNN(int *adelta, int *bdelta, short* xy, int X0, int Y0, 
 {
     CALL_HAL(warpAffineBlocklineNN, cv_hal_warpAffineBlocklineNN, adelta, bdelta, xy, X0, Y0, bw);
 
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
+    constexpr int AB_BITS = MAX(10, static_cast<int>(INTER_BITS));
     int x1 = 0;
-    #if CV_TRY_SSE4_1
-    bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
-    if( useSSE4_1 )
-        opt_SSE4_1::WarpAffineInvoker_Blockline_SSE41(adelta, bdelta, xy, X0, Y0, bw);
-    else
-    #endif
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     {
-        #if CV_SIMD128
+        const v_int32 v_X0 = vx_setall_s32(X0);
+        const v_int32 v_Y0 = vx_setall_s32(Y0);
+        const int step = VTraits<v_int16>::vlanes();
+        for (; x1 <= bw - step; x1 += step)
         {
-            v_int32x4 v_X0 = v_setall_s32(X0), v_Y0 = v_setall_s32(Y0);
-            int span = VTraits<v_uint16x8>::vlanes();
-            for( ; x1 <= bw - span; x1 += span )
-            {
-                v_int16x8 v_dst[2];
-                #define CV_CONVERT_MAP(ptr,offset,shift) v_pack(v_shr<AB_BITS>(v_add(shift,v_load(ptr + offset))),\
-                                                                v_shr<AB_BITS>(v_add(shift,v_load(ptr + offset + 4))))
-                v_dst[0] = CV_CONVERT_MAP(adelta, x1, v_X0);
-                v_dst[1] = CV_CONVERT_MAP(bdelta, x1, v_Y0);
-                #undef CV_CONVERT_MAP
-                v_store_interleave(xy + (x1 << 1), v_dst[0], v_dst[1]);
-            }
+            v_int16 v_X = v_pack(v_shr<AB_BITS>(v_add(v_X0, vx_load(adelta + x1))),
+                                 v_shr<AB_BITS>(v_add(v_X0, vx_load(adelta + x1 + step / 2))));
+            v_int16 v_Y = v_pack(v_shr<AB_BITS>(v_add(v_Y0, vx_load(bdelta + x1))),
+                                 v_shr<AB_BITS>(v_add(v_Y0, vx_load(bdelta + x1 + step / 2))));
+            v_store_interleave(xy + 2 * x1, v_X, v_Y);
         }
-        #endif
-        for( ; x1 < bw; x1++ )
-        {
-            int X = (X0 + adelta[x1]) >> AB_BITS;
-            int Y = (Y0 + bdelta[x1]) >> AB_BITS;
-            xy[x1*2] = saturate_cast<short>(X);
-            xy[x1*2+1] = saturate_cast<short>(Y);
-        }
+    }
+#endif
+    for (; x1 < bw; x1++)
+    {
+        const int X = (X0 + adelta[x1]) >> AB_BITS;
+        const int Y = (Y0 + bdelta[x1]) >> AB_BITS;
+        xy[x1 * 2] = saturate_cast<short>(X);
+        xy[x1 * 2 + 1] = saturate_cast<short>(Y);
     }
 }
 
@@ -2795,7 +2786,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
 
-    CV_IPP_RUN_FAST(ipp_warpAffine(src, dst, interpolation, borderType, matM, flags));
+    CV_IPP_RUN_FAST(ipp_warpAffine(src, dst, interpolation, borderType, borderValue, matM, flags));
 
     if( !(flags & WARP_INVERSE_MAP) )
     {

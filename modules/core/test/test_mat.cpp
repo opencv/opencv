@@ -2647,4 +2647,241 @@ TEST(InputArray, dumpEmpty)
     EXPECT_EQ(s, "InputArray: empty()=true kind=0x00010000 flags=0x01010000 total(-1)=0 dims(-1)=0 size(-1)=0x0 type(-1)=CV_8UC1");
 }
 
+TEST(Mat, regression_26322)
+{
+    cv::Mat1b mat;
+    EXPECT_TRUE(mat.empty());
+    EXPECT_EQ(0, (int)mat.total());
+
+    cv::Mat mat2(mat.dims, mat.size.p, mat.type(), mat.data, mat.step.p);
+    EXPECT_TRUE(mat2.empty());
+    EXPECT_EQ(mat.cols, mat2.cols);
+    EXPECT_EQ(mat.rows, mat2.rows);
+    EXPECT_EQ(0, (int)(mat2.cols * mat2.rows * mat2.elemSize()));
+    EXPECT_EQ(0, (int)mat2.total());
+
+    // the new way of doing the same in 5.x
+    cv::Mat mat3(mat.shape(), mat.type(), mat.data, mat.step.p);
+    EXPECT_TRUE(mat3.empty());
+    EXPECT_EQ(mat.cols, mat3.cols);
+    EXPECT_EQ(mat.rows, mat3.rows);
+    EXPECT_EQ(0, (int)(mat3.cols * mat3.rows * mat3.elemSize()));
+    EXPECT_EQ(0, (int)mat3.total());
+}
+
+TEST(Mat, reshape_1d)
+{
+    std::vector<int> v = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    int newrows = 2;
+    Mat m = Mat(v).reshape(0, newrows);
+
+    EXPECT_EQ(m.dims, 2);
+    EXPECT_EQ(m.type(), CV_32S);
+    EXPECT_EQ(m.ptr<int>(), &v[0]);
+    EXPECT_EQ(m.rows, newrows);
+    EXPECT_EQ(m.total(), v.size());
+
+    int sz[] = {(int)v.size()};
+    Mat m1 = m.reshape(0, 1, sz);
+    EXPECT_EQ(m1.dims, 1);
+    EXPECT_EQ(m1.type(), CV_32S);
+    EXPECT_EQ(m1.ptr<int>(), &v[0]);
+    EXPECT_EQ(m1.rows, 1);
+    EXPECT_EQ(m1.total(), v.size());
+
+    int sz3d[] = {2, -1, 3};
+    Mat m3 = m1.reshape(0, 3, sz3d);
+    EXPECT_EQ(m3.dims, 3);
+    EXPECT_EQ(m3.type(), CV_32S);
+    EXPECT_EQ(m3.ptr<int>(), &v[0]);
+    EXPECT_EQ(m3.size[0], 2);
+    EXPECT_EQ(m3.size[1], 2);
+    EXPECT_EQ(m3.size[2], 3);
+    EXPECT_EQ(m3.total(), v.size());
+}
+
+TEST(UMat, reshape_1d)
+{
+    std::vector<int> v = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    UMat m_, m;
+    int newrows = 2;
+    Mat(v).copyTo(m_);
+    m = m_.reshape(0, newrows);
+
+    EXPECT_EQ(m.dims, 2);
+    EXPECT_EQ(m.type(), CV_32S);
+    EXPECT_EQ(m.u->handle, m_.u->handle);
+    EXPECT_EQ(m.offset, m_.offset);
+    EXPECT_EQ(m.rows, newrows);
+    EXPECT_EQ(m.total(), v.size());
+
+    int sz[] = {(int)v.size()};
+    UMat m1 = m.reshape(0, 1, sz);
+    EXPECT_EQ(m1.dims, 1);
+    EXPECT_EQ(m1.type(), CV_32S);
+    EXPECT_EQ(m.u->handle, m_.u->handle);
+    EXPECT_EQ(m.offset, m_.offset);
+    EXPECT_EQ(m1.rows, 1);
+    EXPECT_EQ(m1.total(), v.size());
+
+    int sz3d[] = {2, -1, 3};
+    UMat m3 = m1.reshape(0, 3, sz3d);
+    EXPECT_EQ(m3.dims, 3);
+    EXPECT_EQ(m3.type(), CV_32S);
+    EXPECT_EQ(m.u->handle, m_.u->handle);
+    EXPECT_EQ(m.offset, m_.offset);
+    EXPECT_EQ(m3.size[0], 2);
+    EXPECT_EQ(m3.size[1], 2);
+    EXPECT_EQ(m3.size[2], 3);
+    EXPECT_EQ(m3.total(), v.size());
+}
+
+TEST(Mat, reshape_0d)
+{
+    int v = 1001;
+    Mat m0d(0, nullptr, CV_32S, &v);
+
+    EXPECT_EQ(m0d.dims, 0);
+    EXPECT_EQ(m0d.type(), CV_32S);
+    EXPECT_EQ(m0d.ptr<int>(), &v);
+    EXPECT_EQ(m0d.rows, 1);
+    EXPECT_EQ(m0d.total(), (size_t)1);
+    EXPECT_EQ(m0d.empty(), false);
+
+    int sz = 1;
+    Mat m1d = m0d.reshape(0, 1, &sz);
+    EXPECT_EQ(m1d.dims, 1);
+    EXPECT_EQ(m1d.type(), CV_32S);
+    EXPECT_EQ(m1d.ptr<int>(), &v);
+    EXPECT_EQ(m1d.rows, 1);
+    EXPECT_EQ(m1d.total(), (size_t)1);
+
+    Mat m2d = m1d.reshape(0, 1);
+    EXPECT_EQ(m2d.dims, 2);
+    EXPECT_EQ(m2d.type(), CV_32S);
+    EXPECT_EQ(m2d.ptr<int>(), &v);
+    EXPECT_EQ(m2d.size(), Size(1, 1));
+    EXPECT_EQ(m2d.total(), (size_t)1);
+
+    Mat m0d_ = m2d.reshape(0, 0, nullptr);
+    EXPECT_EQ(m0d_.dims, 0);
+    EXPECT_EQ(m0d_.type(), CV_32S);
+    EXPECT_EQ(m0d_.ptr<int>(), &v);
+    EXPECT_EQ(m0d_.size(), Size(1, 1));
+    EXPECT_EQ(m0d_.total(), (size_t)1);
+    EXPECT_EQ(m0d_.empty(), false);
+}
+
+TEST(UMat, reshape_0d)
+{
+    int v = 1001;
+    Mat m0dcpu(0, nullptr, CV_32S, &v);
+    UMat m0d;
+    m0dcpu.copyTo(m0d);
+
+    EXPECT_EQ(m0d.dims, 0);
+    EXPECT_EQ(m0d.type(), CV_32S);
+    EXPECT_EQ(m0d.rows, 1);
+    EXPECT_EQ(m0d.total(), (size_t)1);
+    EXPECT_EQ(m0d.empty(), false);
+
+    int sz = 1;
+    UMat m1d = m0d.reshape(0, 1, &sz);
+    EXPECT_EQ(m1d.dims, 1);
+    EXPECT_EQ(m1d.type(), CV_32S);
+    EXPECT_EQ(m1d.u->handle, m0d.u->handle);
+    EXPECT_EQ(m1d.offset, m0d.offset);
+    EXPECT_EQ(m1d.rows, 1);
+    EXPECT_EQ(m1d.total(), (size_t)1);
+
+    UMat m2d = m1d.reshape(0, 1);
+    EXPECT_EQ(m2d.dims, 2);
+    EXPECT_EQ(m2d.type(), CV_32S);
+    EXPECT_EQ(m2d.u->handle, m0d.u->handle);
+    EXPECT_EQ(m2d.offset, m0d.offset);
+    EXPECT_EQ(m2d.size(), Size(1, 1));
+    EXPECT_EQ(m2d.total(), (size_t)1);
+
+    UMat m0d_ = m2d.reshape(0, 0, nullptr);
+    EXPECT_EQ(m0d_.dims, 0);
+    EXPECT_EQ(m0d_.type(), CV_32S);
+    EXPECT_EQ(m0d_.u->handle, m0d.u->handle);
+    EXPECT_EQ(m0d_.offset, m0d.offset);
+    EXPECT_EQ(m0d_.size(), Size(1, 1));
+    EXPECT_EQ(m0d_.total(), (size_t)1);
+    EXPECT_EQ(m0d_.empty(), false);
+}
+
+
+TEST(Mat, reshape_empty)
+{
+    std::vector<int> v;
+    int sz = 0;
+    Mat m = Mat(v).reshape(0, 1, &sz);
+
+    EXPECT_EQ(m.empty(), true);
+    EXPECT_EQ(m.dims, 1);
+    EXPECT_EQ(m.type(), CV_32S);
+    EXPECT_EQ(m.ptr<int>(), nullptr);
+    EXPECT_EQ(m.rows, 1);
+    EXPECT_EQ(m.total(), (size_t)0);
+
+    Mat m2d = m.reshape(0, 2); // let's make it 2x0
+
+    EXPECT_EQ(m2d.empty(), true);
+    EXPECT_EQ(m2d.dims, 2);
+    EXPECT_EQ(m2d.type(), CV_32S);
+    EXPECT_EQ(m2d.ptr<int>(), nullptr);
+    EXPECT_EQ(m2d.rows, 2);
+    EXPECT_EQ(m2d.total(), (size_t)0);
+
+    int sz4[] = { 3, 7, 1, 0 };
+    Mat m4d = m2d.reshape(0, 4, sz4); // let's make it 2x0
+
+    EXPECT_EQ(m4d.empty(), true);
+    EXPECT_EQ(m4d.dims, 4);
+    EXPECT_EQ(m4d.type(), CV_32S);
+    EXPECT_EQ(m4d.ptr<int>(), nullptr);
+    EXPECT_EQ(m4d.size[0], 3);
+    EXPECT_EQ(m4d.size[1], 7);
+    EXPECT_EQ(m4d.size[2], 1);
+    EXPECT_EQ(m4d.size[3], 0);
+    EXPECT_EQ(m4d.total(), (size_t)0);
+}
+
+TEST(UMat, reshape_empty)
+{
+    std::vector<int> v;
+    int sz = 0;
+    UMat m_, m;
+    Mat(v).copyTo(m_);
+    m = m_.reshape(0, 1, &sz);
+
+    EXPECT_EQ(m.empty(), true);
+    EXPECT_EQ(m.dims, 1);
+    EXPECT_EQ(m.type(), CV_32S);
+    EXPECT_EQ(m.rows, 1);
+    EXPECT_EQ(m.total(), (size_t)0);
+
+    UMat m2d = m.reshape(0, 2); // let's make it 2x0
+
+    EXPECT_EQ(m2d.empty(), true);
+    EXPECT_EQ(m2d.dims, 2);
+    EXPECT_EQ(m2d.type(), CV_32S);
+    EXPECT_EQ(m2d.rows, 2);
+    EXPECT_EQ(m2d.total(), (size_t)0);
+
+    int sz4[] = { 3, 7, 1, 0 };
+    UMat m4d = m2d.reshape(0, 4, sz4); // let's make it 2x0
+
+    EXPECT_EQ(m4d.empty(), true);
+    EXPECT_EQ(m4d.dims, 4);
+    EXPECT_EQ(m4d.type(), CV_32S);
+    EXPECT_EQ(m4d.size[0], 3);
+    EXPECT_EQ(m4d.size[1], 7);
+    EXPECT_EQ(m4d.size[2], 1);
+    EXPECT_EQ(m4d.size[3], 0);
+    EXPECT_EQ(m4d.total(), (size_t)0);
+}
+
 }} // namespace

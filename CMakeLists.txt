@@ -15,67 +15,11 @@ endif()
 
 include(cmake/OpenCVMinDepVersions.cmake)
 
-if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
-  cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-  #Required to resolve linker error issues due to incompatibility with CMake v3.0+ policies.
-  #CMake fails to find _fseeko() which leads to subsequent linker error.
-  #See details here: http://www.cmake.org/Wiki/CMake/Policies
-  cmake_policy(VERSION 2.8)
-else()
-  cmake_minimum_required(VERSION "${MIN_VER_CMAKE}" FATAL_ERROR)
-endif()
+cmake_minimum_required(VERSION "${MIN_VER_CMAKE}" FATAL_ERROR)
 
 #
 # Configure CMake policies
 #
-if(POLICY CMP0026)
-  cmake_policy(SET CMP0026 NEW)
-endif()
-
-if(POLICY CMP0042)
-  cmake_policy(SET CMP0042 NEW)  # CMake 3.0+ (2.8.12): MacOS "@rpath" in target's install name
-endif()
-
-if(POLICY CMP0046)
-  cmake_policy(SET CMP0046 NEW)  # warn about non-existed dependencies
-endif()
-
-if(POLICY CMP0051)
-  cmake_policy(SET CMP0051 NEW)
-endif()
-
-if(POLICY CMP0054)  # CMake 3.1: Only interpret if() arguments as variables or keywords when unquoted.
-  cmake_policy(SET CMP0054 NEW)
-endif()
-
-if(POLICY CMP0056)
-  cmake_policy(SET CMP0056 NEW)  # try_compile(): link flags
-endif()
-
-if(POLICY CMP0066)
-  cmake_policy(SET CMP0066 NEW)  # CMake 3.7: try_compile(): use per-config flags, like CMAKE_CXX_FLAGS_RELEASE
-endif()
-
-if(POLICY CMP0067)
-  cmake_policy(SET CMP0067 NEW)  # CMake 3.8: try_compile(): honor language standard variables (like C++11)
-endif()
-
-if(POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)  # CMake 3.9+: `RPATH` settings on macOS do not affect `install_name`.
-endif()
-
-if(POLICY CMP0071)
-  cmake_policy(SET CMP0071 NEW)  # CMake 3.10+: Let `AUTOMOC` and `AUTOUIC` process `GENERATED` files.
-endif()
-
-if(POLICY CMP0075)
-  cmake_policy(SET CMP0075 NEW)  # CMake 3.12+: Include file check macros honor `CMAKE_REQUIRED_LIBRARIES`
-endif()
-
-if(POLICY CMP0077)
-  cmake_policy(SET CMP0077 NEW)  # CMake 3.13+: option() honors normal variables.
-endif()
-
 if(POLICY CMP0091)
   cmake_policy(SET CMP0091 NEW) # CMake 3.15+: leave MSVC runtime selection out of default CMAKE_<LANG>_FLAGS_<CONFIG> flags
 endif()
@@ -217,7 +161,7 @@ OCV_OPTION(WITH_1394 "Include IEEE1394 support" OFF
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/visionOS/Mac)" ON
   VISIBLE_IF APPLE
   VERIFY HAVE_AVFOUNDATION)
-OCV_OPTION(WITH_AVIF "Enable AVIF support" OFF
+OCV_OPTION(WITH_AVIF "Enable AVIF support" ON
   VERIFY HAVE_AVIF)
 OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VISIBLE_IF IOS

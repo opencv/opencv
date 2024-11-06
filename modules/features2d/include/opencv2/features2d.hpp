@@ -67,6 +67,13 @@
     @{
         @defgroup features2d_hal_interface Interface
     @}
+
+    @defgroup features2d_annoy Approximate Nearest Neighbors Search in Multi-Dimensional Spaces
+
+    This section documents OpenCV's interface to the Annoy. Annoy (Approximate Nearest Neighbors Oh Yeah)
+    is a library to search for points in space that are close to a given query point. It also creates
+    large read-only file-based data structures that are mmapped into memory so that many processes may
+    share the same data.
   @}
  */
 
@@ -1178,6 +1185,102 @@ CV_EXPORTS int getNearestPoint( const std::vector<Point2f>& recallPrecisionCurve
 
 //! @}
 
+
+/****************************************************************************************\
+*                             Approximate Nearest Neighbors                              *
+\****************************************************************************************/
+
+//! @addtogroup features2d_annoy
+//! @{
+
+class CV_EXPORTS_W ANNIndex
+{
+public:
+    /** @brief Metrics used to calculate the distance between two feature vectors.
+     */
+    enum Distance
+    {
+        DIST_EUCLIDEAN,
+        DIST_MANHATTAN,
+        DIST_ANGULAR,
+        DIST_HAMMING,
+        DIST_DOTPRODUCT
+    };
+
+    virtual ~ANNIndex() = default;
+
+    /** @brief Add feature vectors to index.
+     *
+     * @param features Matrix containing the feature vectors to index. The size of the matrix is
+        num_features x feature_dimension.
+     */
+    CV_WRAP virtual void addItems(InputArray features) = 0;
+
+    /** @brief Build the index.
+     *
+     *  @param trees Number of trees in the index. If not provided, the number is determined automatically
+     *  in a way that at most 2x as much memory as the features vectors take is used.
+     */
+    CV_WRAP virtual void build(int trees=-1) = 0;
+
+    /** @brief Performs a K-nearest neighbor search for given query vector(s) using the index.
+     *
+     *  @param query The query vector(s).
+     *  @param indices Matrix that will contain the indices of the K-nearest neighbors found, optional.
+     *  @param dists Matrix that will contain the distances to the K-nearest neighbors found, optional.
+     *  @param knn Number of nearest neighbors to search for.
+     *  @param search_k The maximum number of nodes to inspect, which defaults to trees x knn if not provided.
+     */
+    CV_WRAP virtual void knnSearch(InputArray query, OutputArray indices, OutputArray dists, int knn, int search_k=-1) = 0;
+
+    /** @brief Save the index to disk and loads it. After saving, no more vectors can be added.
+     *
+     *  @param filename Filename of the index to be saved.
+     *  @param prefault If prefault is set to true, it will pre-read the entire file into memory (using mmap
+     *  with MAP_POPULATE). Default is false.
+     */
+    CV_WRAP virtual void save(const String &filename, bool prefault=false) = 0;
+
+    /** @brief Loads (mmaps) an index from disk.
+     *
+     *  @param filename Filename of the index to be loaded.
+     *  @param prefault If prefault is set to true, it will pre-read the entire file into memory (using mmap
+     *  with MAP_POPULATE). Default is false.
+     */
+    CV_WRAP virtual void load(const String &filename, bool prefault=false) = 0;
+
+    /** @brief Return the number of trees in the index.
+     */
+    CV_WRAP virtual int getTreeNumber() = 0;
+
+    /** @brief Return the number of feature vectors in the index.
+     */
+    CV_WRAP virtual int getItemNumber() = 0;
+
+    /** @brief  Prepare to build the index in the specified file instead of RAM (execute before adding
+     * items, no need to save after build)
+     *
+     *  @param filename Filename of the index to be built.
+     */
+    CV_WRAP virtual bool setOnDiskBuild(const String &filename) = 0;
+
+    /** @brief Initialize the random number generator with the given seed. Only necessary to pass this
+     *  before adding the items. Will have no effect after calling build() or load().
+     *
+     *  @param seed The given seed of the random number generator. Its value should be within the range of uint32_t.
+     */
+    CV_WRAP virtual void setSeed(int seed) = 0;
+
+    /** @brief Creates an instance of annoy index class with given parameters
+     *
+     *  @param dim The dimension of the feature vector.
+     *  @param distType Metric to calculate the distance between two feature vectors, can be DIST_EUCLIDEAN,
+        DIST_MANHATTAN, DIST_ANGULAR, DIST_HAMMING, or DIST_DOTPRODUCT.
+     */
+    CV_WRAP static Ptr<ANNIndex> create(int dim, ANNIndex::Distance distType=ANNIndex::DIST_EUCLIDEAN);
+};
+
+//! @} features2d_annoy
 
 } /* namespace cv */
 
