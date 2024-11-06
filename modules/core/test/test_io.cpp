@@ -2025,4 +2025,49 @@ TEST(Core_InputOutput, FileStorage_invalid_attribute_value_regression_25946)
     ASSERT_EQ(0, std::remove(fileName.c_str()));
 }
 
+template <typename T>
+T fsWriteRead(const T& expectedValue, const char* ext)
+{
+    std::string fname = cv::tempfile(ext);
+    FileStorage fs_w(fname, FileStorage::WRITE);
+    fs_w << "value" << expectedValue;
+    fs_w.release();
+
+    FileStorage fs_r(fname, FileStorage::READ);
+
+    T value;
+    fs_r["value"] >> value;
+    return value;
+}
+
+void testExactMat(const Mat& src, const char* ext)
+{
+    bool srcIsEmpty = src.empty();
+    Mat dst = fsWriteRead(src, ext);
+    EXPECT_EQ(dst.empty(), srcIsEmpty);
+    EXPECT_EQ(src.dims, dst.dims);
+    EXPECT_EQ(src.size, dst.size);
+    EXPECT_EQ(cv::norm(src, dst, NORM_INF), 0.0);
+}
+
+typedef testing::TestWithParam<const char*> FileStorage_exact_type;
+TEST_P(FileStorage_exact_type, empty_mat)
+{
+    testExactMat(Mat(), GetParam());
+}
+
+TEST_P(FileStorage_exact_type, mat_0d)
+{
+    testExactMat(Mat({}, CV_32S, Scalar(8)), GetParam());
+}
+
+TEST_P(FileStorage_exact_type, mat_1d)
+{
+    testExactMat(Mat({1}, CV_32S, Scalar(8)), GetParam());
+}
+
+INSTANTIATE_TEST_CASE_P(Core_InputOutput,
+    FileStorage_exact_type, Values(".yml", ".xml", ".json")
+);
+
 }} // namespace

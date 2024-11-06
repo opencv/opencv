@@ -12,7 +12,7 @@ void write( FileStorage& fs, const String& name, const Mat& m )
 {
     char dt[22];
 
-    if( m.dims <= 2 )
+    if( m.dims == 2 || m.empty() )
     {
         fs.startWriteStruct(name, FileNode::MAP, String("opencv-matrix"));
         fs << "rows" << m.rows;
@@ -151,6 +151,8 @@ void read(const FileNode& node, Mat& m, const Mat& default_mat)
     CV_Assert(!data_node.empty());
 
     size_t nelems = data_node.size();
+    if (nelems == 0)
+        m = Mat();
     CV_Assert(nelems == m.total()*m.channels());
 
     data_node.readRaw(dt, (uchar*)m.ptr(), m.total()*m.elemSize());
