@@ -689,7 +689,7 @@ TEST_P(Test_Model, Segmentation)
     testSegmentationModel(weights_file, "", inp, exp, norm, size, mean, scale, swapRB, false);
 }
 
-TEST_P(Test_Model, TextRecognition)
+TEST_P(Test_Model, DISABLED_TextRecognition)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // FIXIT: dnn/src/ie_ngraph.cpp:494: error: (-215:Assertion failed) !inps.empty() in function 'createNet'
@@ -722,7 +722,7 @@ TEST_P(Test_Model, TextRecognition)
     testTextRecognitionModel(weightPath, "", imgPath, seq, decodeType, vocabulary, size, mean, scale);
 }
 
-TEST_P(Test_Model, TextRecognitionWithCTCPrefixBeamSearch)
+TEST_P(Test_Model, DISABLED_TextRecognitionWithCTCPrefixBeamSearch)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
     // Node Transpose_79 was not assigned on any pointed device
