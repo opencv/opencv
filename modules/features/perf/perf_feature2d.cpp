@@ -4,7 +4,7 @@ namespace opencv_test
 {
 using namespace perf;
 
-PERF_TEST_P(features2d, detect, testing::Combine(Feature2DType::all(), TEST_IMAGES))
+PERF_TEST_P(feature2d, detect, testing::Combine(Feature2DType::all(), TEST_IMAGES))
 {
     Ptr<Feature2D> detector = getFeature2D(get<0>(GetParam()));
     std::string filename = getDataPath(get<1>(GetParam()));
@@ -23,7 +23,7 @@ PERF_TEST_P(features2d, detect, testing::Combine(Feature2DType::all(), TEST_IMAG
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(features2d, extract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
+PERF_TEST_P(feature2d, extract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
 {
     Ptr<Feature2D> detector = ORB::create();
     Ptr<Feature2D> extractor = getFeature2D(get<0>(GetParam()));
@@ -48,7 +48,7 @@ PERF_TEST_P(features2d, extract, testing::Combine(testing::Values(DETECTORS_EXTR
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(features2d, detectAndExtract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
+PERF_TEST_P(feature2d, detectAndExtract, testing::Combine(testing::Values(DETECTORS_EXTRACTORS), TEST_IMAGES))
 {
     Ptr<Feature2D> detector = getFeature2D(get<0>(GetParam()));
     std::string filename = getDataPath(get<1>(GetParam()));

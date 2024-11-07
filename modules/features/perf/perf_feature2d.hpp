@@ -25,7 +25,7 @@ enum Feature2DVals { DETECTORS_ONLY, DETECTORS_EXTRACTORS };
 CV_ENUM_EXPAND(Feature2DType, DETECTORS_ONLY, DETECTORS_EXTRACTORS)
 
 typedef tuple<Feature2DType, string> Feature2DType_String_t;
-typedef perf::TestBaseWithParam<Feature2DType_String_t> features2d;
+typedef perf::TestBaseWithParam<Feature2DType_String_t> feature2d;
 
 #define TEST_IMAGES testing::Values(\
     "cv/detectors_descriptors_evaluation/images_datasets/leuven/img1.png",\
