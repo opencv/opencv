@@ -80,7 +80,7 @@
 #define CV_REMAP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(CN) \
     v_float32 src_x0, src_y0, \
               src_x1, src_y1; \
-    if (map2 == nullptr) { \
+    if (map1 == map2) { \
         v_load_deinterleave(sx_data + 2*x, src_x0, src_y0); \
         v_load_deinterleave(sy_data + 2*(x+vlanes_32), src_x1, src_y1); \
     } else { \
@@ -2930,6 +2930,10 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step, dststep = dst_step,
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -2983,9 +2987,6 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
             uint8_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3030,7 +3031,7 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -3066,6 +3067,10 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step, dststep = dst_step,
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -3127,9 +3132,6 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
             uint8_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3176,7 +3178,7 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -3212,6 +3214,10 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
         const auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step, dststep = dst_step,
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -3269,9 +3275,6 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
             uint8_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2 == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3308,7 +3311,7 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2 == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -3344,6 +3347,10 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t),
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -3394,9 +3401,6 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
             uint16_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3425,7 +3429,7 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -3461,6 +3465,10 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t),
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -3515,9 +3523,6 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
             uint16_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3546,7 +3551,7 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -3582,6 +3587,10 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t),
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -3638,9 +3647,6 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
             uint16_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3669,7 +3675,7 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -3705,6 +3711,10 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float),
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -3756,9 +3766,6 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
             float* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3785,7 +3792,7 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -3821,6 +3828,10 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float),
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -3878,9 +3889,6 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
             float* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -3907,7 +3915,7 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -3943,6 +3951,10 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float),
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -4003,9 +4015,6 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
             float* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -4032,7 +4041,7 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -4069,6 +4078,10 @@ void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step, dststep = dst_step,
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -4117,9 +4130,6 @@ void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
             uint8_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
             CV_REMAP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
@@ -4148,7 +4158,7 @@ void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -4190,6 +4200,10 @@ void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step, dststep = dst_step,
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -4244,9 +4258,6 @@ void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
             uint8_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
             CV_REMAP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
@@ -4277,7 +4288,7 @@ void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
@@ -4319,6 +4330,10 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
         auto *map1 = map1_data, *map2 = map2_data;
         size_t srcstep = src_step, dststep = dst_step,
                map1step = map1_step/sizeof(float), map2step=map2_step/sizeof(float);
+        if (map2 == nullptr) {
+            map2 = map1;
+            map2step = map1step;
+        }
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
         bool relative = is_relative;
@@ -4376,9 +4391,6 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
             uint8_t* dstptr = dst + y*dststep;
             const float *sx_data = map1 + y*map1step;
             const float *sy_data = map2 + y*map2step;
-            if (map2_data == nullptr) {
-                sy_data = sx_data;
-            }
             int x = 0;
 
             CV_REMAP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD1();
@@ -4410,7 +4422,7 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
 
             for (; x < dstcols; x++) {
                 float sx, sy;
-                if (map2_data == nullptr) {
+                if (map1 == map2) {
                     sx = sx_data[2*x];
                     sy = sy_data[2*x+1];
                 } else {
