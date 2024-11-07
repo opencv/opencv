@@ -362,9 +362,9 @@ static inline int64_t readLong(const uchar* p)
     memcpy(&val, p, sizeof(val));
     return val;
 #else
-    int64_t val = (int64_t)(p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24));
-    val |= (int64_t)(p[4] | (p[5] << 8) | (p[6] << 16) | (p[7] << 24)) << 32;
-    return val;
+    unsigned val0 = (unsigned)(p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24));
+    unsigned val1 = (unsigned)(p[4] | (p[5] << 8) | (p[6] << 16) | (p[7] << 24));
+    return val0 | ((int64_t)val1 << 32);
 #endif
 }
 
