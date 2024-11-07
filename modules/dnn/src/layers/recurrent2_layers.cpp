@@ -103,7 +103,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
         BATCH_SEQ_HID = 1
     };
 
-    bool blobsInitializers{false};
     bool useTimestampDim;
     bool produceCellOutput, produceOutputYh;
     bool useCellClip, usePeephole;
@@ -158,12 +157,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             outTailShape.clear();
         }
 
-        void weightsConstants(){
-            Net::Impl* netimpl_ = getNetImpl(this);
-            CV_Assert(netimpl_);
-            blobsInitializers = netimpl_->isConstArg(this->inputs[1]) && netimpl_->isConstArg(this->inputs[2]) && netimpl_->isConstArg(this->inputs[3]);
-        }
-
         bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -209,19 +202,17 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             outResShape.push_back(_hidSize);
             outputs.assign(1, outResShape);
 
+            int shp[] = {1 + static_cast<int>(bidirectional), _batchSize, numHidden};
+            MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
+
             // compute output shape of yc
             if (produceCellOutput)
             {
-                    int shp[] = {(1 + static_cast<int>(bidirectional)), _batchSize, numHidden};
-                    MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
-                    outputs.push_back(newShape);
+                outputs.push_back(newShape);
             }
-
             // compute output shape of yh
             if (produceOutputYh)
             {
-                int shp[] = {1 + static_cast<int>(bidirectional), _batchSize, numHidden};
-                MatShape newShape(shp, shp + sizeof(shp)/sizeof(shp[0]));
                 outputs.push_back(newShape);
             }
 
@@ -230,7 +221,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             internals.push_back(shape(_batchSize, _hidSize)); // cInternal
             internals.push_back(shape(_batchSize, 1)); // dummyOnes
             internals.push_back(shape(_batchSize, 4*_hidSize)); // gates
-
 
             return false;
         }
@@ -252,11 +242,9 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
         {
 
             std::vector<Mat> input, output, internals;
-
             inputs_arr.getMatVector(input);
             outputs_arr.getMatVector(output);
             internals_arr.getMatVector(internals);
-
 
             // set outputs to 0
             for (auto& out : output)
@@ -268,92 +256,73 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 blobs_.push_back(input[7]);
             }
 
-
+            // convert weights to 2d matrices ease of use later in the forward pass
             transformBlobs(blobs_);
 
+            // get hidden and input sizes
+            int inpSize = blobs_[0].size[1];
+            int hidSize = blobs_[1].size[1];
 
-            //TODO: Maybe remove this complitely
-            // weightsConstants(); //TODO: Call inside the constructor??
-            // const bool needYcTransform = blobsInitializers ? true : false; // if the producer is onnx
+            // determine seqLen and batchSize
+            if (useTimestampDim)
+            {
+                CV_Assert(input[0].dims >= 2 && (int)input[0].total(2) == inpSize);
+                if (layout == SEQ_BATCH_HID){
+                    seqLenth = input[0].size[0];
+                    batchSize = input[0].size[1];
+                }else{
+                    seqLenth = input[0].size[1];
+                    batchSize = input[0].size[0];
+                }
+            } else {
+                CV_Assert(input[0].dims >= 2 && (int)input[0].total(1) == inpSize);
+                seqLenth = 1;
+                batchSize = input[0].size[0];
+            }
 
             const int numDirs = 1 + static_cast<int>(bidirectional);
+            const int batchSizeTotal = seqLenth * batchSize;
 
+            Mat hInternal = internals[0],
+                cInternal = internals[1],
+                dummyOnes = internals[2],
+                gates = internals[3];
+
+
+            Mat cOutTs;
             Mat cOut = produceCellOutput ? output[0].clone() : Mat();
-            Mat hOut = produceOutputYh ? output[0].clone() : Mat();
-            std::vector<Mat> tempOutputs;
+            Mat hOutTs = Mat::zeros(seqLenth * batchSize, hidSize, output[0].type());
+            Mat xTs = input[0].reshape(1, batchSizeTotal);
+
+            // Prepare output[0] buffer to store the results
+            int shp0[] = {seqLenth * batchSize, numDirs * numHidden};
+            output[0] = output[0].reshape(1, sizeof(shp0)/sizeof(shp0[0]), shp0);
+
+            // Initialize Wx, Wh, bias, h_0, c_0, pI, pF, pO
+            Mat Wx, Wh, bias, h_0, c_0, pI, pF, pO;
+
             for (int i = 0; i < numDirs; i++)
             {
+                // slice required weights for each direction
+                Wx = blobs_[0].rowRange(i * blobs_[0].rows / numDirs, (i + 1) * blobs_[0].rows / numDirs);
+                Wh = blobs_[1].rowRange(i * blobs_[1].rows / numDirs, (i + 1) * blobs_[1].rows / numDirs);
+                bias = blobs_[2].colRange(i * blobs_[2].cols / numDirs, (i + 1) * blobs_[2].cols / numDirs);
+                h_0 = blobs_[3].rowRange(i * blobs_[3].rows / numDirs, (i + 1) * blobs_[3].rows / numDirs);
+                c_0 = blobs_[4].rowRange(i * blobs_[4].rows / numDirs, (i + 1) * blobs_[4].rows / numDirs);
 
-                // get weights
-                Mat Wx = blobs_[0].clone();
-                Mat Wh = blobs_[1].clone();
-                Mat bias = blobs_[2].clone();
-                Mat h_0 = blobs_[3].clone();
-                Mat c_0 = blobs_[4].clone();
-
-
-
-                // get hidden and input sizes
-                int hidSize = Wh.size[1];
-                int inpSize = Wx.size[1];
-
-                Wh = Wh.rowRange(i * Wh.rows / numDirs, (i + 1) * Wh.rows / numDirs);
-                Wx = Wx.rowRange(i * Wx.rows / numDirs, (i + 1) * Wx.rows / numDirs);
-                bias = bias.colRange(i * bias.cols / numDirs, (i + 1) * bias.cols / numDirs);
-                h_0 = h_0.rowRange(i * h_0.rows / numDirs, (i + 1) * h_0.rows / numDirs);
-                c_0 = c_0.rowRange(i * c_0.rows / numDirs, (i + 1) * c_0.rows / numDirs);
-
-                Mat pI, pF, pO;
                 if (usePeephole)
                 {
-                    pI = blobs_[5];
-                    pF = blobs_[6];
-                    pO = blobs_[7];
-
-                    pI = pI.rowRange(i * pI.rows / numDirs, (i + 1) * pI.rows / numDirs);
-                    pI = pI.colRange(i * pI.cols / numDirs, (i + 1) * pI.cols / numDirs);
-
-                    pF = pF.rowRange(i * pF.rows / numDirs, (i + 1) * pF.rows / numDirs);
-                    pF = pF.colRange(i * pF.cols / numDirs, (i + 1) * pF.cols / numDirs);
-
-                    pO = pO.rowRange(i * pO.rows / numDirs, (i + 1) * pO.rows / numDirs);
-                    pO = pO.colRange(i * pO.cols / numDirs, (i + 1) * pO.cols / numDirs);
+                    // slice required weights for each direction
+                    pI = blobs_[5].rowRange(i * blobs_[5].rows / numDirs, (i + 1) * blobs_[5].rows / numDirs);
+                    pF = blobs_[6].rowRange(i * blobs_[6].rows / numDirs, (i + 1) * blobs_[6].rows / numDirs);
+                    pO = blobs_[7].rowRange(i * blobs_[7].rows / numDirs, (i + 1) * blobs_[7].rows / numDirs);
                 }
-
-
-                Mat hInternal = internals[0],
-                    cInternal = internals[1],
-                    dummyOnes = internals[2],
-                    gates = internals[3];
 
                 h_0.copyTo(hInternal);
                 c_0.copyTo(cInternal);
                 dummyOnes.setTo(1.);
                 gates.setTo(0.);
 
-                // determine seqLen and batchSize
-                // TODO: could be moved out of the loop
-                if (useTimestampDim)
-                {
-                    CV_Assert(input[0].dims >= 2 && (int)input[0].total(2) == inpSize);
-                    if (layout == SEQ_BATCH_HID){
-                        seqLenth = input[0].size[0];
-                        batchSize = input[0].size[1];
-                    }else{
-                        seqLenth = input[0].size[1];
-                        batchSize = input[0].size[0];
-                    }
-                } else {
-                    CV_Assert(input[0].dims >= 2 && (int)input[0].total(1) == inpSize);
-                    seqLenth = 1;
-                    batchSize = input[0].size[0];
-                }
-
-                int batchSizeTotal = seqLenth*batchSize;
-                Mat xTs = input[0].reshape(1, batchSizeTotal);
-
-                Mat hOutTs = Mat::zeros(seqLenth * batchSize, hidSize, output[0].type());
-                Mat cOutTs;
                 if (produceCellOutput)
                 {
                     cOutTs = cOut.reshape(1, batchSizeTotal);
@@ -372,23 +341,20 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     tsInc = 1;
                 }
 
+                // main loop of LSTM forward pass
                 for (int ts = tsStart; ts != tsEnd; ts += tsInc)
                 {
                     Range curRowRange(ts*batchSize, (ts + 1)*batchSize);
                     Mat xCurr = xTs.rowRange(curRowRange);
 
-
                     gemm(xCurr, Wx, 1, gates, 0, gates, GEMM_2_T);      // Wx * x_t
-
                     gemm(dummyOnes, bias, 1, gates, 1, gates);          //+b
-
                     gemm(hInternal, Wh, 1, gates, 1, gates, GEMM_2_T);  //+Wh * h_{t-1}
 
                     Mat gateI = gates.colRange(0*hidSize, 1*hidSize);
                     Mat gateF = gates.colRange(1*hidSize, 2*hidSize);
                     Mat gateO = gates.colRange(2*hidSize, 3*hidSize);
                     Mat gateG = gates.colRange(3*hidSize, 4*hidSize);
-
 
                     if (forgetBias){
                         add(gateF, forgetBias, gateF);
@@ -408,8 +374,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     }
 
                     g_activation(gateG, gateG);
-
-
 
                     //compute c_t
                     multiply(gateF, cInternal, gateF);  // f_t (*) c_{t-1}
@@ -432,57 +396,39 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                     h_activation(cInternal, hInternal);
                     multiply(gateO, hInternal, hInternal);
 
-
                     //save results in output blobs
                     hInternal.copyTo(hOutTs.rowRange(curRowRange));
-
-
 
                     if (produceCellOutput)
                         cInternal.copyTo(cOutTs.rowRange(curRowRange));
 
                 }
 
-                // collect hOutTs for each direction
-                tempOutputs.push_back(hOutTs.clone());
-
+                // slice in the result from each direction to the output[0] buffer
+                hOutTs.copyTo(output[0].colRange(i * hOutTs.cols, (i + 1) * hOutTs.cols));
             }
 
-            if (numDirs == 2){
-                hconcat(tempOutputs[0], tempOutputs[1], output[0]);
-            }
-            else{
-                output[0] = tempOutputs[0];
-            }
-
-
-            int shp[] = {seqLenth, batchSize, numDirs * numHidden};
-            output[0] = output[0].reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-
-
+            // this one is needed to make make the output[0] compatible with ONNX LSTM layer standard
             int shp1[] = {seqLenth, batchSize, numDirs, numHidden};
             output[0] = output[0].reshape(1, sizeof(shp1)/sizeof(shp1[0]), shp1);
 
-
+            // this transpose is needed to make the output[0] compatible with ONNX LSTM layer standard
             Mat tmp = output[0].clone();
             cv::transposeND(tmp, {0, 2, 1, 3}, output[0]);
 
-
             if (produceOutputYh){
-                fixCellStateYh(output[0], output[1], numDirs);
+                getCellStateYh(output[0], output[1], numDirs);
             }
 
             if (produceCellOutput){
-                fixCellStateYc(cOut, numDirs);
-                cOut.copyTo(output[2]);
+                getCellStateYc(cOut, output[2], numDirs);
             }
-
 
             // Make sure changes are written back to outputs_arr
             outputs_arr.assign(output);
         }
 
-        void fixCellStateYh(Mat& scr, Mat& dst, int numDirs)
+        void getCellStateYh(Mat& scr, Mat& dst, int numDirs)
         {
             // TODO: implement
             if (numDirs == 1){
@@ -519,7 +465,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
         }
 
 
-        void fixCellStateYc(Mat& cOut, int numDirs)
+        void getCellStateYc(Mat& cOut, Mat& dst, int numDirs)
         {
             // seq, batch, dirs, hidden
             int shp[] = {0, batchSize, numDirs, numHidden};
@@ -544,6 +490,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 // Reshape: 1x1xBxH -> 1xBxH
                 int shp[] = {1, batchSize, numHidden};
                 cOut = cOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
+                cOut.copyTo(dst);
             }
             else
             {
@@ -564,6 +511,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 // Reshape: 1x2xBxH -> 2xBxH
                 int finalShape[] = {2, batchSize, numHidden};
                 cOut = cOut.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
+                cOut.copyTo(dst);
             }
         }
 
