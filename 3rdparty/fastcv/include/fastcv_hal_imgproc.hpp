@@ -1,12 +1,12 @@
 /*
  * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0  
+ * SPDX-License-Identifier: Apache-2.0
 */
 
 #ifndef OPENCV_FASTCV_HAL_IMGPROC_HPP_INCLUDED
 #define OPENCV_FASTCV_HAL_IMGPROC_HPP_INCLUDED
 
-#include <opencv2/core/hal/interface.h>
+#include <opencv2/core/base.hpp>
 
 #undef  cv_hal_medianBlur
 #define cv_hal_medianBlur           fastcv_hal_medianBlur

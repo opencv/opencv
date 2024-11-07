@@ -3,12 +3,14 @@ function(download_fastcv root_dir)
   # Commit SHA in the opencv_3rdparty repo
   set(FASTCV_COMMIT "65f40fc8f7a6aac44936ae9538e69edede6c4b15")
 
-  # Define actual FCV versions
+  # Define actual FastCV versions
   if(ANDROID)
     if(AARCH64)
+      message(STATUS "Download FastCV for Android aarch64")
       set(FCV_PACKAGE_NAME  "fastcv_android_aarch64_2024_10_24.tgz")
       set(FCV_PACKAGE_HASH  "8a259eea80064643bad20f72ba0b6066")
     else()
+      message(STATUS "Download FastCV for Android armv7")
       set(FCV_PACKAGE_NAME  "fastcv_android_arm32_2024_10_24.tgz")
       set(FCV_PACKAGE_HASH  "04d89219c44d54166b2b7f8c0ed5143b")
     endif()
@@ -27,9 +29,10 @@ function(download_fastcv root_dir)
                 STATUS          res
                 UNPACK
                 RELATIVE_URL)
-
-  if(NOT res)
-    message("FastCV: package download failed! Please download FastCV manually and put it at ${root_dir}.")
+  if(res)
+    set(HAVE_FASTCV TRUE CACHE BOOL "FastCV status")
+  else()
+    message(WARNING "FastCV: package download failed!")
   endif()
 
 endfunction()

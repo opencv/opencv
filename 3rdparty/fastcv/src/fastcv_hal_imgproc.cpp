@@ -89,7 +89,7 @@ int fastcv_hal_sobel(
     // The input channel should be 1
     if (cn != 1)
         CV_HAL_RETURN_NOT_IMPLEMENTED("Multi-channels is not supported");
-    
+
     // Do not support for ROI case
     if((margin_left!=0) || (margin_top != 0) || (margin_right != 0) || (margin_bottom !=0))
         CV_HAL_RETURN_NOT_IMPLEMENTED("ROI is not supported");
@@ -236,7 +236,7 @@ int fastcv_hal_boxFilter(
         default:
             CV_HAL_RETURN_NOT_IMPLEMENTED("border type not supported");
     }
-    
+
     fcvStatus status = FASTCV_SUCCESS;
     if(ksize_width == 3)
     {

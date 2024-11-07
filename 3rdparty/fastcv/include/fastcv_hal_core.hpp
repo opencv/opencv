@@ -6,7 +6,7 @@
 #ifndef OPENCV_FASTCV_HAL_CORE_HPP_INCLUDED
 #define OPENCV_FASTCV_HAL_CORE_HPP_INCLUDED
 
-#include <opencv2/core/hal/interface.h>
+#include <opencv2/core/base.hpp>
 
 #undef  cv_hal_lut
 #define cv_hal_lut                  fastcv_hal_lut

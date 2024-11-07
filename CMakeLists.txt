@@ -1805,6 +1805,9 @@ endif()
 if(WITH_OPENVX OR HAVE_OPENVX)
   status("    OpenVX:"     HAVE_OPENVX      THEN "YES (${OPENVX_LIBRARIES})" ELSE "NO")
 endif()
+if(WITH_FASTCV OR HAVE_FASTCV)
+  status("    FastCV:"     HAVE_FASTCV      THEN "YES (${FASTCV_LIBRARY})" ELSE "NO")
+endif()
 
 status("    Custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")
 
