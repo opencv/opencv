@@ -115,20 +115,20 @@ protected:
 
 
 // Registration of tests
-TEST(Features_Detector_Keypoints_FAST, validation)
+TEST(Features2d_Detector_Keypoints_FAST, validation)
 {
     CV_FeatureDetectorKeypointsTest test(FastFeatureDetector::create());
     test.safe_run();
 }
 
-TEST(Features_Detector_Keypoints_HARRIS, validation)
+TEST(Features2d_Detector_Keypoints_HARRIS, validation)
 {
 
     CV_FeatureDetectorKeypointsTest test(GFTTDetector::create(1000, 0.01, 1, 3, 3, true, 0.04));
     test.safe_run();
 }
 
-TEST(Features_Detector_Keypoints_GFTT, validation)
+TEST(Features2d_Detector_Keypoints_GFTT, validation)
 {
     Ptr<GFTTDetector> gftt = GFTTDetector::create();
     gftt->setHarrisDetector(true);
@@ -136,19 +136,19 @@ TEST(Features_Detector_Keypoints_GFTT, validation)
     test.safe_run();
 }
 
-TEST(Features_Detector_Keypoints_MSER, validation)
+TEST(Features2d_Detector_Keypoints_MSER, validation)
 {
     CV_FeatureDetectorKeypointsTest test(MSER::create());
     test.safe_run();
 }
 
-TEST(Features_Detector_Keypoints_ORB, validation)
+TEST(Features2d_Detector_Keypoints_ORB, validation)
 {
     CV_FeatureDetectorKeypointsTest test(ORB::create());
     test.safe_run();
 }
 
-TEST(Features_Detector_Keypoints_SIFT, validation)
+TEST(Features2d_Detector_Keypoints_SIFT, validation)
 {
     CV_FeatureDetectorKeypointsTest test(SIFT::create());
     test.safe_run();

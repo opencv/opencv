@@ -601,7 +601,7 @@ TEST( Features_FlannBasedMatcher, read_write )
 }
 #endif
 
-TEST(Features_DMatch, issue_11855)
+TEST(Features2d_DMatch, issue_11855)
 {
     Mat sources = (Mat_<uchar>(2, 3) << 1, 1, 0,
                                         1, 1, 1);
@@ -618,7 +618,7 @@ TEST(Features_DMatch, issue_11855)
     EXPECT_EQ(0.0f, match[0][0].distance);
 }
 
-TEST(Features_DMatch, issue_17771)
+TEST(Features2d_DMatch, issue_17771)
 {
     Mat sources = (Mat_<uchar>(2, 3) << 1, 1, 0,
                                         1, 1, 1);

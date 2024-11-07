@@ -5,7 +5,7 @@
 
 namespace opencv_test { namespace {
 
-TEST(Features_KeypointUtils, retainBest_issue_12594)
+TEST(Features2D_KeypointUtils, retainBest_issue_12594)
 {
     const size_t N = 9;
 

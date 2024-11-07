@@ -26,7 +26,7 @@ static bool isSimilarKeypoints( const KeyPoint& p1, const KeyPoint& p2 )
 }
 #endif
 
-TEST(Features_AFFINE_FEATURE, regression)
+TEST(Features2d_AFFINE_FEATURE, regression)
 {
     Mat image = imread(cvtest::findDataFile("features2d/tsukuba.png"));
     string xml = cvtest::TS::ptr()->get_data_path() + "asift/regression_cpp.xml.gz";
@@ -182,7 +182,7 @@ TEST(Features_AFFINE_FEATURE, regression)
 #endif
 }
 
-TEST(Features_AFFINE_FEATURE, mask)
+TEST(Features2d_AFFINE_FEATURE, mask)
 {
     Mat gray = imread(cvtest::findDataFile("features2d/tsukuba.png"), IMREAD_GRAYSCALE);
     ASSERT_FALSE(gray.empty()) << "features2d/tsukuba.png image was not found in test data!";

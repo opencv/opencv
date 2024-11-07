@@ -6,7 +6,7 @@
 
 namespace opencv_test { namespace {
 
-TEST(Features_SIFT, descriptor_type)
+TEST(Features2d_SIFT, descriptor_type)
 {
     Mat image = imread(cvtest::findDataFile("features2d/tsukuba.png"));
     ASSERT_FALSE(image.empty());
@@ -30,7 +30,7 @@ TEST(Features_SIFT, descriptor_type)
     ASSERT_EQ(countNonZero(diff), 0) << "descriptors are not identical";
 }
 
-TEST(Features_SIFT, regression_26139)
+TEST(Features2d_SIFT, regression_26139)
 {
     auto extractor = cv::SIFT::create();
     cv::Mat1b image{cv::Size{300, 300}, 0};

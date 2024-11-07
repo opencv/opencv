@@ -321,12 +321,12 @@ void CV_FlannSavedIndexTest::createModel(const cv::Mat &data)
     remove( filename.c_str() );
 }
 
-TEST(Features_FLANN_Linear, regression) { CV_FlannLinearIndexTest test; test.safe_run(); }
-TEST(Features_FLANN_KMeans, regression) { CV_FlannKMeansIndexTest test; test.safe_run(); }
-TEST(Features_FLANN_KDTree, regression) { CV_FlannKDTreeIndexTest test; test.safe_run(); }
-TEST(Features_FLANN_Composite, regression) { CV_FlannCompositeIndexTest test; test.safe_run(); }
-TEST(Features_FLANN_Auto, regression) { CV_FlannAutotunedIndexTest test; test.safe_run(); }
-TEST(Features_FLANN_Saved, regression) { CV_FlannSavedIndexTest test; test.safe_run(); }
+TEST(Features2d_FLANN_Linear, regression) { CV_FlannLinearIndexTest test; test.safe_run(); }
+TEST(Features2d_FLANN_KMeans, regression) { CV_FlannKMeansIndexTest test; test.safe_run(); }
+TEST(Features2d_FLANN_KDTree, regression) { CV_FlannKDTreeIndexTest test; test.safe_run(); }
+TEST(Features2d_FLANN_Composite, regression) { CV_FlannCompositeIndexTest test; test.safe_run(); }
+TEST(Features2d_FLANN_Auto, regression) { CV_FlannAutotunedIndexTest test; test.safe_run(); }
+TEST(Features2d_FLANN_Saved, regression) { CV_FlannSavedIndexTest test; test.safe_run(); }
 
 #endif
 
@@ -379,6 +379,6 @@ protected:
     Ptr<ANNIndex> index;
 };
 
-TEST(Features_ANNIndex, regression) {CV_AnnoyTest test; test.safe_run();}
+TEST(Features2d_ANNIndex, regression) {CV_AnnoyTest test; test.safe_run();}
 
 }} // namespace

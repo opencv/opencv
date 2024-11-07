@@ -67,7 +67,7 @@ static void renderMSERs(const Mat& gray, Mat& img, const vector<vector<Point> >&
 }
 #endif
 
-TEST(Features_MSER, cases)
+TEST(Features2d_MSER, cases)
 {
     uchar buf[] =
     {
@@ -157,7 +157,7 @@ TEST(Features_MSER, cases)
     }
 }
 
-TEST(Features_MSER, history_update_regression)
+TEST(Features2d_MSER, history_update_regression)
 {
     String dataPath = cvtest::TS::ptr()->get_data_path() + "mser/";
     vector<Mat> tstImages;
@@ -182,7 +182,7 @@ TEST(Features_MSER, history_update_regression)
 }
 
 
-TEST(Features_MSER, bug_5630)
+TEST(Features2d_MSER, bug_5630)
 {
     String dataPath = cvtest::TS::ptr()->get_data_path() + "mser/";
     Mat img = imread(dataPath + "mser_test.png", IMREAD_GRAYSCALE);

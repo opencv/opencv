@@ -133,6 +133,6 @@ void CV_FastTest::run( int )
   ts->set_failed_test_info(cvtest::TS::OK);
 }
 
-TEST(Features_FAST, regression) { CV_FastTest test; test.safe_run(); }
+TEST(Features2d_FAST, regression) { CV_FastTest test; test.safe_run(); }
 
 }} // namespace
