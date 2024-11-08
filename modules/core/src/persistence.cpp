@@ -56,6 +56,28 @@ char* itoa( int _val, char* buffer, int /*radix*/ )
     return ptr;
 }
 
+char* itoa( int64_t _val, char* buffer, int /*radix*/, bool _signed)
+{
+    const int radix = 10;
+    char* ptr=buffer + 23 /* enough even for 64-bit integers */;
+    int sign = _signed && _val < 0 ? -1 : 1;
+    uint64_t val = !_signed ? (uint64_t)_val : abs(_val);
+
+    *ptr = '\0';
+    do
+    {
+        uint64_t r = val / radix;
+        *--ptr = (char)(val - (r*radix) + '0');
+        val = r;
+    }
+    while( val != 0 );
+
+    if( sign < 0 )
+        *--ptr = '-';
+
+    return ptr;
+}
+
 char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero )
 {
     Cv64suf val;
@@ -2634,7 +2656,7 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                 offset = alignSize( offset, elem_size );
                 uchar* data = data0 + offset;
 
-                for( int i = 0; i < count; i++ )
+                for( int i = 0; i < count; i++, ++(*this) )
                 {
                     FileNode node = *(*this);
                     if( node.isInt() )
@@ -2722,11 +2744,6 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                     }
                     else
                         CV_Error( Error::StsError, "readRawData can only be used to read plain sequences of numbers" );
-                    ++(*this);
-                    if (elem_type == CV_64S)
-                    {
-                        ofs += 4;
-                    }
                 }
                 offset = (int)(data - data0);
             }
