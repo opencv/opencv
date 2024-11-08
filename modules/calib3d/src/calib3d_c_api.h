@@ -111,23 +111,6 @@ void cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2,
 void cvCorrectMatches(CvMat* F, CvMat* points1, CvMat* points2,
                       CvMat* new_points1, CvMat* new_points2);
 
-
-/* Computes the optimal new camera matrix according to the free scaling parameter alpha:
-   alpha=0 - only valid pixels will be retained in the undistorted image
-   alpha=1 - all the source image pixels will be retained in the undistorted image
-*/
-void cvGetOptimalNewCameraMatrix( const CvMat* camera_matrix,
-                                  const CvMat* dist_coeffs,
-                                  CvSize image_size, double alpha,
-                                  CvMat* new_camera_matrix,
-                                  CvSize new_imag_size CV_DEFAULT(cvSize(0,0)),
-                                  CvRect* valid_pixel_ROI CV_DEFAULT(0),
-                                  int center_principal_point CV_DEFAULT(0));
-
-/* Converts rotation vector to rotation matrix or vice versa */
-int cvRodrigues2( const CvMat* src, CvMat* dst,
-                  CvMat* jacobian CV_DEFAULT(0) );
-
 /* Finds perspective transformation between the object plane and image (view) plane */
 int cvFindHomography( const CvMat* src_points,
                       const CvMat* dst_points,
@@ -137,54 +120,6 @@ int cvFindHomography( const CvMat* src_points,
                       CvMat* mask CV_DEFAULT(0),
                       int maxIters CV_DEFAULT(2000),
                       double confidence CV_DEFAULT(0.995));
-
-/* Computes RQ decomposition for 3x3 matrices */
-void cvRQDecomp3x3( const CvMat *matrixM, CvMat *matrixR, CvMat *matrixQ,
-                    CvMat *matrixQx CV_DEFAULT(NULL),
-                    CvMat *matrixQy CV_DEFAULT(NULL),
-                    CvMat *matrixQz CV_DEFAULT(NULL),
-                    CvPoint3D64f *eulerAngles CV_DEFAULT(NULL));
-
-/* Computes projection matrix decomposition */
-void cvDecomposeProjectionMatrix( const CvMat *projMatr, CvMat *calibMatr,
-                                  CvMat *rotMatr, CvMat *posVect,
-                                  CvMat *rotMatrX CV_DEFAULT(NULL),
-                                  CvMat *rotMatrY CV_DEFAULT(NULL),
-                                  CvMat *rotMatrZ CV_DEFAULT(NULL),
-                                  CvPoint3D64f *eulerAngles CV_DEFAULT(NULL));
-
-/* Computes d(AB)/dA and d(AB)/dB */
-void cvCalcMatMulDeriv( const CvMat* A, const CvMat* B, CvMat* dABdA, CvMat* dABdB );
-
-/* Computes r3 = rodrigues(rodrigues(r2)*rodrigues(r1)),
-   t3 = rodrigues(r2)*t1 + t2 and the respective derivatives */
-void cvComposeRT( const CvMat* _rvec1, const CvMat* _tvec1,
-                  const CvMat* _rvec2, const CvMat* _tvec2,
-                  CvMat* _rvec3, CvMat* _tvec3,
-                  CvMat* dr3dr1 CV_DEFAULT(0), CvMat* dr3dt1 CV_DEFAULT(0),
-                  CvMat* dr3dr2 CV_DEFAULT(0), CvMat* dr3dt2 CV_DEFAULT(0),
-                  CvMat* dt3dr1 CV_DEFAULT(0), CvMat* dt3dt1 CV_DEFAULT(0),
-                  CvMat* dt3dr2 CV_DEFAULT(0), CvMat* dt3dt2 CV_DEFAULT(0) );
-
-/* Projects object points to the view plane using
-   the specified extrinsic and intrinsic camera parameters */
-void cvProjectPoints2( const CvMat* object_points, const CvMat* rotation_vector,
-                       const CvMat* translation_vector, const CvMat* camera_matrix,
-                       const CvMat* distortion_coeffs, CvMat* image_points,
-                       CvMat* dpdrot CV_DEFAULT(NULL), CvMat* dpdt CV_DEFAULT(NULL),
-                       CvMat* dpdf CV_DEFAULT(NULL), CvMat* dpdc CV_DEFAULT(NULL),
-                       CvMat* dpddist CV_DEFAULT(NULL),
-                       double aspect_ratio CV_DEFAULT(0));
-
-/* Finds extrinsic camera parameters from
-   a few known corresponding point pairs and intrinsic parameters */
-void cvFindExtrinsicCameraParams2( const CvMat* object_points,
-                                const CvMat* image_points,
-                                const CvMat* camera_matrix,
-                                const CvMat* distortion_coeffs,
-                                CvMat* rotation_vector,
-                                CvMat* translation_vector,
-                                int use_extrinsic_guess CV_DEFAULT(0) );
 
 /* Computes initial estimate of the intrinsic camera parameters
    in case of planar calibration target (e.g. chessboard) */
