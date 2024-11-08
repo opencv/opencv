@@ -44,7 +44,11 @@ public:
     TrackerVitImpl(const TrackerVit::Params& parameters)
         : params(parameters)
     {
-        net = dnn::readNet(params.net);
+        dnn::EngineType engine = dnn::ENGINE_AUTO;
+        if (params.backend != 0 || params.target != 0){
+            engine = dnn::ENGINE_CLASSIC;
+        }
+        net = dnn::readNet(params.net, "", "", engine);
         CV_Assert(!net.empty());
 
         net.setPreferableBackend(params.backend);
