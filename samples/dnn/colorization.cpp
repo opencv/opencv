@@ -83,7 +83,11 @@ int main(int argc, char** argv) {
     resize(imgL, imgLResized, Size(256, 256), 0, 0, INTER_CUBIC);
 
     // Prepare the model
-    dnn::Net net = dnn::readNetFromONNX(onnxModelPath);
+    EngineType engine = ENGINE_AUTO;
+    if (backendId != 0 || targetId != 0){
+        engine = ENGINE_CLASSIC;
+    }
+    dnn::Net net = dnn::readNetFromONNX(onnxModelPath, engine);
     net.setPreferableBackend(backendId);
     net.setPreferableTarget(targetId);
     //! [Read and initialize network]
