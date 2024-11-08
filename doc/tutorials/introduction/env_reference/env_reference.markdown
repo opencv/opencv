@@ -119,7 +119,6 @@ Links:
 
 
 ## backends
-OPENCV_LEGACY_WAITKEY
 Some modules have multiple available backends, following variables allow choosing specific backend or changing default priorities in which backends will be probed (e.g. when opening a video file).
 
 | name | type | default | description |
@@ -327,7 +326,6 @@ Some external dependencies can be detached into a dynamic library, which will be
 
 | name | type | default | description |
 |------|------|---------|-------------|
-| OPENCV_LEGACY_WAITKEY | non-null | | switch `waitKey` return result (default behavior: `return code & 0xff` (or -1), legacy behavior: `return code`) |
 | $XDG_RUNTIME_DIR | | | Wayland backend specific - create shared memory-mapped file for interprocess communication (named `opencv-shared-??????`) |
 | OPENCV_HIGHGUI_FB_MODE | string | `FB` | Selects output mode for the framebuffer backend (`FB` - regular frambuffer, `EMU` - emulation, perform internal checks but does nothing, `XVFB` - compatible with _xvfb_ virtual frambuffer) |
 | OPENCV_HIGHGUI_FB_DEVICE | file path | | Path to frambuffer device to use (will be checked first) |

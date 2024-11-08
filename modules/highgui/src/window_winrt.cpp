@@ -34,7 +34,20 @@
 #include <opencv2\highgui\highgui_winrt.hpp>
 #include "window_winrt_bridge.hpp"
 
-#define CV_WINRT_NO_GUI_ERROR( funcname )  CV_Error(cv::Error::StsNotImplemented, "The function is not implemented")
+#define CV_WINRT_NO_GUI_ERROR( funcname )       \
+{                                               \
+    cvError( cv::Error::StsNotImplemented, funcname,    \
+    "The function is not implemented. ",        \
+    __FILE__, __LINE__ );                       \
+}
+
+#ifdef CV_ERROR
+#undef CV_ERROR
+#define CV_ERROR( Code, Msg )                                       \
+{                                                                   \
+    cvError( (Code), cvFuncName, Msg, __FILE__, __LINE__ );         \
+};
+#endif
 
 /********************************** WinRT Specific API Implementation ******************************************/
 
@@ -70,6 +83,8 @@ void showImageImpl(const char* name, InputArray arr)
 
 int namedWindowImpl(const char* name, int flags)
 {
+    CV_UNUSED(flags);
+
     if (!name)
         CV_Error(cv::Error::StsNullPtr, "NULL name");
 
@@ -94,8 +109,6 @@ void destroyAllWindowsImpl()
 int createTrackbar2Impl(const char* trackbar_name, const char* window_name,
     int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
 {
-    int pos = 0;
-
     if (!window_name || !trackbar_name)
         CV_Error(cv::Error::StsNullPtr, "NULL window or trackbar name");
 
@@ -167,7 +180,7 @@ int getTrackbarPosImpl(const char* trackbar_name, const char* window_name)
     CvTrackbar* trackbar = HighguiBridge::getInstance().findTrackbarByName(trackbar_name, window_name);
 
     if (trackbar)
-        pos = trackbar->getPosition();
+        pos = (int)trackbar->getPosition();
 
     return pos;
 }
@@ -179,11 +192,11 @@ int waitKeyImpl(int delay)
     CV_WINRT_NO_GUI_ERROR("waitKeyImpl");
 
     // see https://msdn.microsoft.com/en-us/library/windows/desktop/ms724411(v=vs.85).aspx
-    int time0 = GetTickCount64();
+    //int time0 = GetTickCount64();
 
     for (;;)
     {
-        CvWindow* window;
+        // CvWindow* window;
 
         if (delay <= 0)
         {
@@ -194,6 +207,7 @@ int waitKeyImpl(int delay)
 
 void setMouseCallbackImpl(const char* window_name, CvMouseCallback on_mouse, void* param)
 {
+    CV_UNUSED(on_mouse); CV_UNUSED(param);
     CV_WINRT_NO_GUI_ERROR("setMouseCallbackImpl");
 
     if (!window_name)
@@ -210,19 +224,23 @@ void setMouseCallbackImpl(const char* window_name, CvMouseCallback on_mouse, voi
 
 void moveWindowImpl(const char* name, int x, int y)
 {
+    CV_UNUSED(name); CV_UNUSED(x); CV_UNUSED(y);
     CV_WINRT_NO_GUI_ERROR("moveWindowImpl");
 }
 
 void resizeWindowImpl(const char* name, int width, int height)
 {
+    CV_UNUSED(name); CV_UNUSED(width); CV_UNUSED(height);
     CV_WINRT_NO_GUI_ERROR("resizeWindowImpl");
 }
 
 void cvSetModeWindow_WinRT(const char* name, double prop_value) {
+    CV_UNUSED(name); CV_UNUSED(prop_value);
     CV_WINRT_NO_GUI_ERROR("cvSetModeWindow");
 }
 
 double cvGetModeWindow_WinRT(const char* name) {
+    CV_UNUSED(name);
     CV_WINRT_NO_GUI_ERROR("cvGetModeWindow");
     return cv::Error::StsNotImplemented;
 }
