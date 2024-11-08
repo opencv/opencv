@@ -4,4 +4,4 @@
     #include <hpx/hpx_main.hpp>
 #endif
 
-CV_PERF_TEST_MAIN(features)
+CV_PERF_TEST_MAIN(features2d)
