@@ -145,6 +145,12 @@ public:
         writeScalar( key, ptr);
     }
 
+    void write(const char* key, int64_t value)
+    {
+        char buf[128], *ptr = fs::itoa( value, buf, 10, true );
+        writeScalar( key, ptr);
+    }
+
     void write( const char* key, double value )
     {
         char buf[128];
@@ -556,7 +562,7 @@ public:
                     }
                     else
                     {
-                        int ival = (int)strtol( ptr, &endptr, 0 );
+                        int64_t ival = strtoll( ptr, &endptr, 0 );
                         elem->setValue(FileNode::INT, &ival);
                     }
 
