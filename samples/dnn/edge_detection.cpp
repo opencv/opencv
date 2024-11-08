@@ -29,8 +29,8 @@ static void applyCanny(const Mat& image, Mat& result) {
 }
 
 // Load Model
-static void loadModel(const string modelPath, String backend, String target, Net &net){
-    net = readNetFromONNX(modelPath);
+static void loadModel(const string modelPath, String backend, String target, Net &net, EngineType engine){
+    net = readNetFromONNX(modelPath, engine);
     net.setPreferableBackend(getBackendID(backend));
     net.setPreferableTarget(getTargetID(target));
 }
@@ -159,6 +159,10 @@ int main(int argc, char** argv) {
     string method = parser.get<String>("method");
     String sha1 = parser.get<String>("sha1");
     string model = findModel(parser.get<String>("model"), sha1);
+    EngineType engine = ENGINE_AUTO;
+    if (backend != "default" || target != "cpu"){
+        engine = ENGINE_CLASSIC;
+    }
     parser.about(about);
 
     VideoCapture cap;
@@ -179,7 +183,7 @@ int main(int argc, char** argv) {
     }
 
     if (method == "dexined") {
-        loadModel(model, backend, target, net);
+        loadModel(model, backend, target, net, engine);
     }
     else{
         Mat dummy = Mat::zeros(512, 512, CV_8UC3);
@@ -218,7 +222,7 @@ int main(int argc, char** argv) {
             if (!model.empty()){
                 method = "dexined";
                 if (net.empty())
-                    loadModel(model, backend, target, net);
+                    loadModel(model, backend, target, net, engine);
                 destroyWindow("Output");
                 namedWindow("Input", WINDOW_AUTOSIZE);
                 namedWindow("Output", WINDOW_AUTOSIZE);

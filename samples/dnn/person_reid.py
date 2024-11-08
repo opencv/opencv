@@ -184,7 +184,8 @@ def main():
         args.yolo_model = findModel(args.yolo_model, args.yolo_sha1)
 
     engine = cv.dnn.ENGINE_AUTO
-    if args.backend != "default" or args.backend != "cpu":
+
+    if args.backend != "default" or args.target != "cpu":
         engine = cv.dnn.ENGINE_CLASSIC
     yolo_net = cv.dnn.readNetFromONNX(args.yolo_model, engine)
     reid_net = cv.dnn.readNetFromONNX(args.model, engine)

@@ -44,7 +44,10 @@ if __name__ == '__main__':
     img_gray_rs *= (100.0 / 255.0)      # Scale L channel to 0-100 range
 
     onnx_model_path = args.onnx_model_path  # Update this path to your ONNX model's path
-    session = cv.dnn.readNetFromONNX(onnx_model_path)
+    engine = cv.dnn.ENGINE_AUTO
+    if args.backend != 0 or args.target != 0:
+        engine = cv.dnn.ENGINE_CLASSIC
+    session = cv.dnn.readNetFromONNX(onnx_model_path, engine)
     session.setPreferableBackend(args.backend)
     session.setPreferableTarget(args.target)
 

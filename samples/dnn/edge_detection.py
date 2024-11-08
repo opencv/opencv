@@ -92,8 +92,8 @@ def setupCannyWindow(image):
     cv.createTrackbar('thrs2', 'Output', threshold2, 255, lambda value: [globals().__setitem__('threshold2', value), apply_canny(gray)])
     cv.createTrackbar('blur', 'Output', blur_amount, 20, lambda value: [globals().__setitem__('blur_amount', value), apply_canny(gray)])
 
-def loadModel(args):
-    net = cv.dnn.readNetFromONNX(args.model)
+def loadModel(args, engine):
+    net = cv.dnn.readNetFromONNX(args.model, engine)
     net.setPreferableBackend(get_backend_id(args.backend))
     net.setPreferableTarget(get_target_id(args.target))
     return net
@@ -109,6 +109,9 @@ def apply_dexined(model, image):
 
 def main(func_args=None):
     args = get_args_parser(func_args)
+    engine = cv.dnn.ENGINE_AUTO
+    if args.backend != "default" or args.target != "cpu":
+        engine = cv.dnn.ENGINE_CLASSIC
 
     cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
     if not cap.isOpened():
@@ -136,7 +139,7 @@ def main(func_args=None):
         setupCannyWindow(dummy)
     net = None
     if method == "dexined":
-        net = loadModel(args)
+        net = loadModel(args, engine)
     while cv.waitKey(1) < 0:
         hasFrame, image = cap.read()
         if not hasFrame:
@@ -160,7 +163,7 @@ def main(func_args=None):
                 print("model: ", args.model)
                 method = "dexined"
                 if net is None:
-                    net = loadModel(args)
+                    net = loadModel(args, engine)
                 cv.destroyWindow('Output')
                 cv.namedWindow('Output', cv.WINDOW_AUTOSIZE)
                 cv.moveWindow('Output', 200, 50)

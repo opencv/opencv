@@ -164,9 +164,9 @@ bool getBinLocation(std::string& dst)
 #ifdef _WIN32
 bool getBinLocation(std::wstring& dst)
 {
-    void* addr = (void*)getModuleLocation; // using code address, doesn't work with static linkage!
     HMODULE m = 0;
 #if _WIN32_WINNT >= 0x0501 && (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP))
+    void* addr = (void*)getModuleLocation; // using code address, doesn't work with static linkage!
     ::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
         reinterpret_cast<LPCTSTR>(addr),
         &m);
