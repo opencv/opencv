@@ -679,82 +679,6 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                                       distCoeffs, rvecs, tvecs, NULL, NULL, NULL, flags, termCrit);
 }
 
-CV_IMPL double cvCalibrateCamera4( const CvMat* objectPoints,
-                    const CvMat* imagePoints, const CvMat* npoints,
-                    CvSize imageSize, int iFixedPoint, CvMat* cameraMatrix, CvMat* distCoeffs,
-                    CvMat* rvecs, CvMat* tvecs, CvMat* newObjPoints, int flags, CvTermCriteria termCrit )
-{
-    if( !CV_IS_MAT(npoints) )
-        CV_Error( cv::Error::StsBadArg, "npoints is not a valid matrix" );
-    if( CV_MAT_TYPE(npoints->type) != CV_32SC1 ||
-        (npoints->rows != 1 && npoints->cols != 1) )
-        CV_Error( cv::Error::StsUnsupportedFormat,
-            "the array of point counters must be 1-dimensional integer vector" );
-
-    bool releaseObject = iFixedPoint > 0 && iFixedPoint < npoints->data.i[0] - 1;
-    int nimages = npoints->rows * npoints->cols;
-    int npstep = npoints->rows == 1 ? 1 : npoints->step / CV_ELEM_SIZE(npoints->type);
-    int i, ni;
-    // check object points. If not qualified, report errors.
-    if( releaseObject )
-    {
-        if( !CV_IS_MAT(objectPoints) )
-            CV_Error( cv::Error::StsBadArg, "objectPoints is not a valid matrix" );
-        Mat matM;
-        if(CV_MAT_CN(objectPoints->type) == 3) {
-            matM = cvarrToMat(objectPoints);
-        } else {
-            convertPointsHomogeneous(cvarrToMat(objectPoints), matM);
-        }
-
-        matM = matM.reshape(3, 1);
-        ni = npoints->data.i[0];
-        for( i = 1; i < nimages; i++ )
-        {
-            if( npoints->data.i[i * npstep] != ni )
-            {
-                CV_Error( cv::Error::StsBadArg, "All objectPoints[i].size() should be equal when "
-                                        "object-releasing method is requested." );
-            }
-            Mat ocmp = matM.colRange(ni * i, ni * i + ni) != matM.colRange(0, ni);
-            ocmp = ocmp.reshape(1);
-            if( countNonZero(ocmp) )
-            {
-                CV_Error( cv::Error::StsBadArg, "All objectPoints[i] should be identical when object-releasing"
-                                        " method is requested." );
-            }
-        }
-    }
-
-    return cvCalibrateCamera2Internal(objectPoints, imagePoints, npoints, imageSize, iFixedPoint,
-                                      cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints, NULL,
-                                      NULL, flags, termCrit);
-}
-
-void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
-    double apertureWidth, double apertureHeight, double *fovx, double *fovy,
-    double *focalLength, CvPoint2D64f *principalPoint, double *pasp )
-{
-    /* Validate parameters. */
-    if(calibMatr == 0)
-        CV_Error(cv::Error::StsNullPtr, "Some of parameters is a NULL pointer!");
-
-    if(!CV_IS_MAT(calibMatr))
-        CV_Error(cv::Error::StsUnsupportedFormat, "Input parameters must be matrices!");
-
-    double dummy = .0;
-    Point2d pp;
-    cv::calibrationMatrixValues(cvarrToMat(calibMatr), imgSize, apertureWidth, apertureHeight,
-            fovx ? *fovx : dummy,
-            fovy ? *fovy : dummy,
-            focalLength ? *focalLength : dummy,
-            pp,
-            pasp ? *pasp : dummy);
-
-    if(principalPoint)
-        *principalPoint = cvPoint2D64f(pp.x, pp.y);
-}
-
 
 //////////////////////////////// Stereo Calibration ///////////////////////////////////
 
@@ -1867,21 +1791,6 @@ void cv::reprojectImageTo3D( InputArray _disparity,
             }
         }
     }
-}
-
-
-void cvReprojectImageTo3D( const CvArr* disparityImage,
-                           CvArr* _3dImage, const CvMat* matQ,
-                           int handleMissingValues )
-{
-    cv::Mat disp = cv::cvarrToMat(disparityImage);
-    cv::Mat _3dimg = cv::cvarrToMat(_3dImage);
-    cv::Mat mq = cv::cvarrToMat(matQ);
-    CV_Assert( disp.size() == _3dimg.size() );
-    int dtype = _3dimg.type();
-    CV_Assert( dtype == CV_16SC3 || dtype == CV_32SC3 || dtype == CV_32FC3 );
-
-    cv::reprojectImageTo3D(disp, _3dimg, mq, handleMissingValues != 0, dtype );
 }
 
 
