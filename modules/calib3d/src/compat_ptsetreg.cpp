@@ -322,12 +322,6 @@ void CvLevMarq::step()
         param->data.db[i] = prevParam->data.db[i] - (mask->data.ptr[i] ? nonzero_param(j++) : 0);
 }
 
-CV_IMPL int cvRANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters )
-{
-    return cv::RANSACUpdateNumIters(p, ep, modelPoints, maxIters);
-}
-
-
 CV_IMPL int cvFindHomography( const CvMat* _src, const CvMat* _dst, CvMat* __H, int method,
                               double ransacReprojThreshold, CvMat* _mask, int maxIters,
                               double confidence)
@@ -362,35 +356,6 @@ CV_IMPL int cvFindHomography( const CvMat* _src, const CvMat* _dst, CvMat* __H, 
     }
     H0.convertTo(H, H.type());
     return 1;
-}
-
-
-CV_IMPL int cvFindFundamentalMat( const CvMat* points1, const CvMat* points2,
-                                  CvMat* fmatrix, int method,
-                                  double param1, double param2, CvMat* _mask )
-{
-    cv::Mat m1 = cv::cvarrToMat(points1), m2 = cv::cvarrToMat(points2);
-
-    if( m1.channels() == 1 && (m1.rows == 2 || m1.rows == 3) && m1.cols > 3 )
-        cv::transpose(m1, m1);
-    if( m2.channels() == 1 && (m2.rows == 2 || m2.rows == 3) && m2.cols > 3 )
-        cv::transpose(m2, m2);
-
-    const cv::Mat FM = cv::cvarrToMat(fmatrix), mask = cv::cvarrToMat(_mask);
-    cv::Mat FM0 = cv::findFundamentalMat(m1, m2, method, param1, param2,
-                                         _mask ? cv::_OutputArray(mask) : cv::_OutputArray());
-
-    if( FM0.empty() )
-    {
-        cv::Mat FM0z = cv::cvarrToMat(fmatrix);
-        FM0z.setTo(cv::Scalar::all(0));
-        return 0;
-    }
-
-    CV_Assert( FM0.cols == 3 && FM0.rows % 3 == 0 && FM.cols == 3 && FM.rows % 3 == 0 && FM.channels() == 1 );
-    cv::Mat FM1 = FM.rowRange(0, MIN(FM0.rows, FM.rows));
-    FM0.rowRange(0, FM1.rows).convertTo(FM1, FM1.type());
-    return FM1.rows / 3;
 }
 
 
