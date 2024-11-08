@@ -219,9 +219,8 @@ enum ImwriteHDRCompressionFlags {
 //! @} imgcodecs_flags
 
 /** @brief Represents an animation with multiple frames.
-The Animation struct is used to store and manage the data for an animated sequence.
-It includes information about the number of times the animation should loop, the background color,
-timestamps for each frame, and the frames themselves.
+The `Animation` struct is designed to store and manage data for animated sequences such as those from animated formats (e.g., GIF, APNG, WebP).
+It provides support for looping, background color settings, frame timing, and frame storage.
 */
 struct CV_EXPORTS_W_SIMPLE Animation
 {
@@ -234,7 +233,18 @@ struct CV_EXPORTS_W_SIMPLE Animation
     //! Vector of frames, where each Mat represents a single frame.
     CV_PROP_RW std::vector<Mat> frames;
 
-    // Default constructor
+    /** @brief Constructs an Animation object with optional loop count and background color.
+
+    @param loopCount An integer representing the number of times the animation should loop:
+    - `0` (default) indicates infinite looping, meaning the animation will replay continuously.
+    - Positive values denote finite repeat counts, allowing the animation to play a limited number of times.
+    - If a negative value or a value beyond the maximum of `0xffff` (65535) is provided, it is reset to `0`
+    (infinite looping) to maintain valid bounds.
+
+    @param bgColor A `Scalar` object representing the background color in RGBA format:
+    - Defaults to `Scalar()`, indicating an empty color (usually transparent if supported).
+    - This background color provides a solid fill behind frames that have transparency, ensuring a consistent display appearance.
+    */
     Animation(int loopCount = 0, Scalar bgColor = Scalar())
         : loop_count(loopCount), bgcolor(bgColor)
     {
@@ -328,6 +338,11 @@ The function imreadmulti loads a specified range from a multi-page image from th
 @sa cv::imread
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
+
+/** @example samples/cpp/tutorial_code/imgcodecs/animations.cpp
+An example to show usage of imreadanimation and imwriteanimation functions.
+Check @ref tutorial_animations "the corresponding tutorial" for more details
+*/
 
 /** @brief Loads images from an animated file into an Animation structure.
 
