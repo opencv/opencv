@@ -210,7 +210,7 @@ void stereoRectify( InputArray _cameraMatrix1, InputArray _distCoeffs1,
 
     // For simplicity, set the principal points for both cameras to be the average
     // of the two principal points (either one of or both x- and y- coordinates)
-    if( flags & STEREO_ZERO_DISPARITY )
+    if( flags & CALIB_ZERO_DISPARITY )
     {
         cc_new[0].x = cc_new[1].x = (cc_new[0].x + cc_new[1].x)*0.5;
         cc_new[0].y = cc_new[1].y = (cc_new[0].y + cc_new[1].y)*0.5;
@@ -471,7 +471,8 @@ bool stereoRectifyUncalibrated( InputArray _points1, InputArray _points2,
     perspectiveTransform( _m1, _m1, H0 );
     perspectiveTransform( _m2, _m2, H2 );
     Mat A, X;
-    convertPointsToHomogeneous(_m1, A, CV_64F);
+    convertPointsToHomogeneous(_m1, A);
+    A.convertTo(A, CV_64F);
     A = A.reshape(1, npoints);
     Mat BxBy = _m2.reshape(1, npoints);
     Mat B = BxBy.col(0);
@@ -689,7 +690,7 @@ void cv::fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, In
     // Vertical focal length must be the same for both images to keep the epipolar constraint use fy for fx also.
     // For simplicity, set the principal points for both cameras to be the average
     // of the two principal points (either one of or both x- and y- coordinates)
-    if( flags & STEREO_ZERO_DISPARITY )
+    if( flags & CALIB_ZERO_DISPARITY )
         cc_new[0] = cc_new[1] = (cc_new[0] + cc_new[1]) * 0.5;
     else
         cc_new[0].y = cc_new[1].y = (cc_new[0].y + cc_new[1].y)*0.5;
