@@ -1345,36 +1345,49 @@ static bool openvx_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz,
 }
 #endif
 
-void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
+void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& dsz, int borderType )
 {
     CV_INSTRUMENT_REGION();
 
     CV_Assert(borderType != BORDER_CONSTANT);
 
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
-               ocl_pyrDown(_src, _dst, _dsz, borderType))
+               ocl_pyrDown(_src, _dst, dsz, borderType))
 
     CV_OVX_RUN(_src.dims() <= 2,
-               openvx_pyrDown(_src, _dst, _dsz, borderType))
+               openvx_pyrDown(_src, _dst, dsz, borderType))
 
     Mat src = _src.getMat();
-    Size dsz = _dsz.empty() ? Size((src.cols + 1)/2, (src.rows + 1)/2) : _dsz;
-    _dst.create( dsz, src.type() );
+    Size sz = !dsz.empty() ? dsz : Size((src.cols + 1)/2, (src.rows + 1)/2);
+    _dst.create( sz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
+
+    Size adjustedSize(src.cols - (src.cols % 2), src.rows - (src.rows % 2));
+    Mat adjustedSrc = src(Rect(0, 0, adjustedSize.width, adjustedSize.height));
+    Size adjustedDstSize(adjustedSize.width/2, adjustedSize.height/2);
+    Mat adjustedDstROI = dst(Rect(0, 0, adjustedDstSize.width, adjustedDstSize.height));
 
     if(src.isSubmatrix() && !(borderType & BORDER_ISOLATED))
     {
         Point ofs;
         Size wsz(src.cols, src.rows);
         src.locateROI( wsz, ofs );
-        CALL_HAL(pyrDown, cv_hal_pyrdown_offset, src.data, src.step, src.cols, src.rows,
-                 dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(),
-                 ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, borderType & (~BORDER_ISOLATED));
+        CALL_HAL(pyrDown, cv_hal_pyrdown_offset,
+                 adjustedSrc.data, adjustedSrc.step, adjustedSrc.cols, adjustedSrc.rows,
+                 adjustedDstROI.data, adjustedDstROI.step, adjustedDstROI.cols, adjustedDstROI.rows,
+                 depth, adjustedSrc.channels(),
+                 ofs.x, ofs.y,
+                 wsz.width - adjustedSrc.cols - ofs.x,
+                 wsz.height - adjustedSrc.rows - ofs.y,
+                 borderType & (~BORDER_ISOLATED));
     }
     else
     {
-        CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
+        CALL_HAL(pyrDown, cv_hal_pyrdown,
+                adjustedSrc.data, adjustedSrc.step, adjustedSrc.cols, adjustedSrc.rows,
+                adjustedDstROI.data, adjustedDstROI.step, adjustedDstROI.cols, adjustedDstROI.rows,
+                depth, adjustedSrc.channels(), borderType);
     }
 
     PyrFunc func = 0;
@@ -1391,7 +1404,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
-    func( src, dst, borderType );
+    func(adjustedSrc, adjustedDstROI, borderType);
 }
 
 
