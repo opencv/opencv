@@ -12,7 +12,7 @@ void write( FileStorage& fs, const String& name, const Mat& m )
 {
     char dt[22];
 
-    if( m.dims == 2 || m.empty() )
+    if( m.dims <= 2 )
     {
         fs.startWriteStruct(name, FileNode::MAP, String("opencv-matrix"));
         fs << "rows" << m.rows;
