@@ -1,44 +1,6 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
-// Copyright (C) 2017, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
 #include <iostream>
@@ -231,6 +193,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                       std::vector<MatType>& outputs,
                       std::vector<MatType>& internals) const CV_OVERRIDE
         {
+            CV_Assert(inputs[0] == CV_32F || inputs[0] == CV_64F);  // Only floating-point types are supported currently
             outputs.assign(requiredOutputs, inputs[0]);
             internals.assign(4, inputs[0]);
         }
@@ -245,6 +208,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             inputs_arr.getMatVector(input);
             outputs_arr.getMatVector(output);
             internals_arr.getMatVector(internals);
+
+            size_t minInputs = usePeephole ? 7 : 6;
+            CV_Assert(input.size() >= minInputs && "Insufficient inputs for LSTM layer. "
+                     "Required inputs: X, W, R, B, h0, c0 [, P for peephole]");
 
             // set outputs to 0
             for (auto& out : output)
@@ -460,7 +427,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
                 int finalShape[] = {2, batchSize, numHidden};
                 dst = dst.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
-
             }
         }
 
@@ -521,11 +487,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             Mat &Wh = blobs[1];
             Mat &b = blobs[2];
 
-            // std::vector<Mat> cudaWorkaround;
-            // cudaWorkaround.push_back(Wx.clone());
-            // cudaWorkaround.push_back(Wh.clone());
-            // cudaWorkaround.push_back(b.clone());
-
             const int numHidden = Wh.size[2];
 
             Mat h0, c0;
@@ -576,13 +537,9 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             }
 
             if (blobs.size() == 5) {
-                // TODO: fix
-                // so that future patch removing copies can leave all indexing as is
-                // blobs.insert(blobs.begin(), cudaWorkaround.begin(), cudaWorkaround.end());
                 return;
             }
 
-            // TODO: fix this. Currently blobs.size = 5 only
             Mat P = blobs[5];
             blobs[5] = P.colRange(0, numHidden);
             blobs[5] = blobs[5].clone().reshape(1, blobs[5].total());  // Single column.
@@ -595,10 +552,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             blobs.push_back(P.colRange(2 * numHidden, 3 * numHidden));
             blobs[7] = blobs[7].clone().reshape(1, blobs[7].total());  // Single column.
             blobs[7] = Mat::diag(blobs[7]);
-
-
-            // so that future patch removing copies can leave all indexing as is
-            // blobs.insert(blobs.begin(), cudaWorkaround.begin(), cudaWorkaround.end());
             return;
         }
 };
