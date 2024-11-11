@@ -2043,7 +2043,10 @@ void testExactMat(const Mat& src, const char* ext)
     EXPECT_EQ(dst.empty(), srcIsEmpty);
     EXPECT_EQ(src.dims, dst.dims);
     EXPECT_EQ(src.size, dst.size);
-    EXPECT_EQ(cv::norm(src, dst, NORM_INF), 0.0);
+    if (!srcIsEmpty)
+    {
+        EXPECT_EQ(0.0, cv::norm(src, dst, NORM_INF));
+    }
 }
 
 typedef testing::TestWithParam<const char*> FileStorage_exact_type;
