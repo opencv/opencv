@@ -18,25 +18,25 @@ namespace opencv_test { namespace {
 *                                Tests registrations                                     *
 \****************************************************************************************/
 
-TEST( Features_Detector_SIFT, regression )
+TEST( Features2d_Detector_SIFT, regression )
 {
     CV_FeatureDetectorTest test( "detector-sift", SIFT::create() );
     test.safe_run();
 }
 
-TEST( Features_Detector_FAST, regression )
+TEST( Features2d_Detector_FAST, regression )
 {
     CV_FeatureDetectorTest test( "detector-fast", FastFeatureDetector::create() );
     test.safe_run();
 }
 
-TEST( Features_Detector_GFTT, regression )
+TEST( Features2d_Detector_GFTT, regression )
 {
     CV_FeatureDetectorTest test( "detector-gftt", GFTTDetector::create() );
     test.safe_run();
 }
 
-TEST( Features_Detector_Harris, regression )
+TEST( Features2d_Detector_Harris, regression )
 {
     Ptr<GFTTDetector> gftt = GFTTDetector::create();
     gftt->setHarrisDetector(true);
@@ -44,13 +44,13 @@ TEST( Features_Detector_Harris, regression )
     test.safe_run();
 }
 
-TEST( Features_Detector_MSER, DISABLED_regression )
+TEST( Features2d_Detector_MSER, DISABLED_regression )
 {
     CV_FeatureDetectorTest test( "detector-mser", MSER::create() );
     test.safe_run();
 }
 
-TEST( Features_Detector_ORB, regression )
+TEST( Features2d_Detector_ORB, regression )
 {
     CV_FeatureDetectorTest test( "detector-orb", ORB::create() );
     test.safe_run();

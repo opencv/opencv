@@ -28,8 +28,8 @@ Mat getReference_DrawKeypoint(int cn)
     return res;
 }
 
-typedef testing::TestWithParam<MatType> Features_drawKeypoints;
-TEST_P(Features_drawKeypoints, Accuracy)
+typedef testing::TestWithParam<MatType> Features2D_drawKeypoints;
+TEST_P(Features2D_drawKeypoints, Accuracy)
 {
     const int cn = CV_MAT_CN(GetParam());
     Mat inpImg(11, 11, GetParam(), Scalar(1, 1, 1, 255)), outImg;
@@ -41,10 +41,10 @@ TEST_P(Features_drawKeypoints, Accuracy)
     Mat ref_ = getReference_DrawKeypoint(cn);
     EXPECT_EQ(0, cv::norm(outImg, ref_, NORM_INF));
 }
-INSTANTIATE_TEST_CASE_P(/**/, Features_drawKeypoints, Values(CV_8UC1, CV_8UC3, CV_8UC4));
+INSTANTIATE_TEST_CASE_P(/**/, Features2D_drawKeypoints, Values(CV_8UC1, CV_8UC3, CV_8UC4));
 
-typedef testing::TestWithParam<tuple<MatType, MatType> > Features_drawMatches;
-TEST_P(Features_drawMatches, Accuracy)
+typedef testing::TestWithParam<tuple<MatType, MatType> > Features2D_drawMatches;
+TEST_P(Features2D_drawMatches, Accuracy)
 {
     Mat inpImg1(11, 11, get<0>(GetParam()), Scalar(1, 1, 1, 255));
     Mat inpImg2(11, 11, get<1>(GetParam()), Scalar(2, 2, 2, 255)), outImg2, outImg;
@@ -70,7 +70,7 @@ TEST_P(Features_drawMatches, Accuracy)
 
     EXPECT_EQ(0, cv::norm(outImg, concattedRef, NORM_INF));
 }
-INSTANTIATE_TEST_CASE_P(/**/, Features_drawMatches, Combine(
+INSTANTIATE_TEST_CASE_P(/**/, Features2D_drawMatches, Combine(
     Values(CV_8UC1, CV_8UC3, CV_8UC4),
     Values(CV_8UC1, CV_8UC3, CV_8UC4)
 ));

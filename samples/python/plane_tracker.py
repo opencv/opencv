@@ -4,7 +4,7 @@
 Multitarget planar tracking
 ==================
 
-Example of using features framework for interactive video homography matching.
+Example of using "features" framework for interactive video homography matching.
 ORB features and FLANN matcher are used. This sample provides PlaneTracker class
 and an example of its usage.
 

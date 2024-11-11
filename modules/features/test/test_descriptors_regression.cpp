@@ -18,14 +18,14 @@ namespace opencv_test { namespace {
 *                                Tests registrations                                     *
 \****************************************************************************************/
 
-TEST( Features_DescriptorExtractor_SIFT, regression )
+TEST( Features2d_DescriptorExtractor_SIFT, regression )
 {
     CV_DescriptorExtractorTest<L1<float> > test( "descriptor-sift", 1.0f,
                                                 SIFT::create() );
     test.safe_run();
 }
 
-TEST( Features_DescriptorExtractor_ORB, regression )
+TEST( Features2d_DescriptorExtractor_ORB, regression )
 {
     // TODO adjust the parameters below
     CV_DescriptorExtractorTest<Hamming> test( "descriptor-orb",
@@ -38,7 +38,7 @@ TEST( Features_DescriptorExtractor_ORB, regression )
     test.safe_run();
 }
 
-TEST( Features_DescriptorExtractor, batch_ORB )
+TEST( Features2d_DescriptorExtractor, batch_ORB )
 {
     string path = string(cvtest::TS::ptr()->get_data_path() + "detectors_descriptors_evaluation/images_datasets/graf");
     vector<Mat> imgs, descriptors;
@@ -66,7 +66,7 @@ TEST( Features_DescriptorExtractor, batch_ORB )
     }
 }
 
-TEST( Features_DescriptorExtractor, batch_SIFT )
+TEST( Features2d_DescriptorExtractor, batch_SIFT )
 {
     string path = string(cvtest::TS::ptr()->get_data_path() + "detectors_descriptors_evaluation/images_datasets/graf");
     vector<Mat> imgs, descriptors;
@@ -146,7 +146,7 @@ TEST_P(DescriptorImage, no_crash)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(Features, DescriptorImage,
+INSTANTIATE_TEST_CASE_P(Features2d, DescriptorImage,
         testing::Values(
             "shared/lena.png",
             "shared/box*.png",

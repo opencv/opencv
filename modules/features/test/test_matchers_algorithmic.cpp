@@ -532,7 +532,7 @@ void CV_DescriptorMatcherTest::run( int )
 *                                Tests registrations                                     *
 \****************************************************************************************/
 
-TEST( Features_DescriptorMatcher_BruteForce, regression )
+TEST( Features2d_DescriptorMatcher_BruteForce, regression )
 {
     CV_DescriptorMatcherTest test( "descriptor-matcher-brute-force",
                                   DescriptorMatcher::create("BruteForce"), 0.01f );
@@ -540,7 +540,7 @@ TEST( Features_DescriptorMatcher_BruteForce, regression )
 }
 
 #ifdef HAVE_OPENCV_FLANN
-TEST( Features_DescriptorMatcher_FlannBased, regression )
+TEST( Features2d_DescriptorMatcher_FlannBased, regression )
 {
     CV_DescriptorMatcherTest test( "descriptor-matcher-flann-based",
                                   DescriptorMatcher::create("FlannBased"), 0.04f );
@@ -548,7 +548,7 @@ TEST( Features_DescriptorMatcher_FlannBased, regression )
 }
 #endif
 
-TEST( Features_DMatch, read_write )
+TEST( Features2d_DMatch, read_write )
 {
     FileStorage fs(".xml", FileStorage::WRITE + FileStorage::MEMORY);
     vector<DMatch> matches;
@@ -559,7 +559,7 @@ TEST( Features_DMatch, read_write )
 }
 
 #ifdef HAVE_OPENCV_FLANN
-TEST( Features_FlannBasedMatcher, read_write )
+TEST( Features2d_FlannBasedMatcher, read_write )
 {
     static const char* ymlfile = "%YAML:1.0\n---\n"
     "format: 3\n"
