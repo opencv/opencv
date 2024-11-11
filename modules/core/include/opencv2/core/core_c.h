@@ -220,8 +220,6 @@ allocated using cvCreateData or set explicitly to user-allocated data via cvSetD
  */
 CVAPI(CvMat*)  cvCreateMatHeader( int rows, int cols, int type );
 
-#define CV_AUTOSTEP  0x7fffffff
-
 /** @brief Initializes a pre-allocated matrix header.
 
 This function is often used to process raw data with OpenCV matrix functions. For example, the

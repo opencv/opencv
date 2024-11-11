@@ -2,7 +2,8 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
-#include "opencv2/core/core_c.h"
+
+#define CV_TEST_DXT_MUL_CONJ 8 /**< conjugate the second argument of cvMulSpectrums */
 
 namespace opencv_test { namespace {
 
@@ -450,7 +451,7 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
             const float* b = src2_->ptr<float>(i);
             float* c = dst.ptr<float>(i);
 
-            if( !(flags & CV_DXT_MUL_CONJ) )
+            if( !(flags & CV_TEST_DXT_MUL_CONJ) )
                 for( j = 0; j < cols; j += 2 )
                 {
                     double re = (double)a[j]*(double)b[j] - (double)a[j+1]*(double)b[j+1];
@@ -475,7 +476,7 @@ static void mulComplex( const Mat& src1, const Mat& src2, Mat& dst, int flags )
             const double* b = src2_->ptr<double>(i);
             double* c = dst.ptr<double>(i);
 
-            if( !(flags & CV_DXT_MUL_CONJ) )
+            if( !(flags & CV_TEST_DXT_MUL_CONJ) )
                 for( j = 0; j < cols; j += 2 )
                 {
                     double re = a[j]*b[j] - a[j+1]*b[j+1];
@@ -547,22 +548,22 @@ void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     Size size;
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
 
-    flags = bits & (CV_DXT_INVERSE | CV_DXT_SCALE | CV_DXT_ROWS | CV_DXT_MUL_CONJ);
+    flags = bits & (cv::DFT_INVERSE | cv::DFT_SCALE | cv::DFT_ROWS | CV_TEST_DXT_MUL_CONJ);
     if( spectrum_mode )
-        flags &= ~CV_DXT_INVERSE;
+        flags &= ~cv::DFT_INVERSE;
     types[TEMP][0] = types[TEMP][1] = types[INPUT][0] =
     types[OUTPUT][0] = CV_MAKETYPE(depth, cn);
     size = sizes[INPUT][0];
 
     temp_dst = false;
 
-    if( flags & CV_DXT_ROWS && (bits&1024) )
+    if( flags & cv::DFT_ROWS && (bits&1024) )
     {
         if( bits&16 )
             size.width = 1;
         else
             size.height = 1;
-        flags &= ~CV_DXT_ROWS;
+        flags &= ~cv::DFT_ROWS;
     }
 
     const int P2_MIN_SIZE = 32;
@@ -579,12 +580,12 @@ void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
         if( size.width > 1 && (size.width&1) != 0 )
             size.width = (size.width + 1) & -2;
 
-        if( size.height > 1 && (size.height&1) != 0 && !(flags & CV_DXT_ROWS) )
+        if( size.height > 1 && (size.height&1) != 0 && !(flags & cv::DFT_ROWS) )
             size.height = (size.height + 1) & -2;
     }
 
     sizes[INPUT][0] = sizes[OUTPUT][0] = size;
-    sizes[TEMP][0] = sizes[TEMP][1] = cvSize(0,0);
+    sizes[TEMP][0] = sizes[TEMP][1] = cv::Size(0,0);
 
     if( spectrum_mode )
     {
@@ -600,9 +601,9 @@ void CxCore_DXTBaseTest::get_test_array_types_and_sizes( int test_case_idx,
     {
         types[TEMP][0] = CV_MAKETYPE(depth, 2); // CV_??FC2
         sizes[TEMP][0] = size;
-        size = cvSize(size.width/2+1, size.height);
+        size = cv::Size(size.width/2+1, size.height);
 
-        if( flags & CV_DXT_INVERSE )
+        if( flags & cv::DFT_INVERSE )
         {
             if( cn == 2 )
             {
@@ -692,10 +693,10 @@ void CxCore_DFTTest::run_func()
     Mat& dst = temp_dst ? test_mat[TEMP][1] : test_mat[OUTPUT][0];
     const Mat& src = inplace ? dst : test_mat[INPUT][0];
 
-    if(!(flags & CV_DXT_INVERSE))
+    if(!(flags & cv::DFT_INVERSE))
         cv::dft( src, dst, flags );
     else
-        cv::idft(src, dst, flags & ~CV_DXT_INVERSE);
+        cv::idft(src, dst, flags & ~cv::DFT_INVERSE);
 }
 
 
@@ -712,7 +713,7 @@ void CxCore_DFTTest::prepare_to_validation( int /*test_case_idx*/ )
     {
         tmp_src = &test_mat[TEMP][0];
 
-        if( !(flags & CV_DXT_INVERSE ) )
+        if( !(flags & cv::DFT_INVERSE ) )
         {
             Mat& cvdft_dst = test_mat[TEMP][1];
             convertFromCCS( cvdft_dst, cvdft_dst,
@@ -727,7 +728,7 @@ void CxCore_DFTTest::prepare_to_validation( int /*test_case_idx*/ )
         }
     }
 
-    if( src.rows == 1 || (src.cols == 1 && !(flags & CV_DXT_ROWS)) )
+    if( src.rows == 1 || (src.cols == 1 && !(flags & cv::DFT_ROWS)) )
         DFT_1D( *tmp_src, *tmp_dst, flags );
     else
         DFT_2D( *tmp_src, *tmp_dst, flags );
@@ -757,10 +758,10 @@ void CxCore_DCTTest::run_func()
     Mat& dst = test_mat[OUTPUT][0];
     const Mat& src = inplace ? dst : test_mat[INPUT][0];
 
-    if(!(flags & CV_DXT_INVERSE))
+    if(!(flags & cv::DFT_INVERSE))
         cv::dct( src, dst, flags );
     else
-        cv::idct( src, dst, flags & ~CV_DXT_INVERSE);
+        cv::idct( src, dst, flags & ~cv::DFT_INVERSE);
 }
 
 
@@ -769,7 +770,7 @@ void CxCore_DCTTest::prepare_to_validation( int /*test_case_idx*/ )
     const Mat& src = test_mat[INPUT][0];
     Mat& dst = test_mat[REF_OUTPUT][0];
 
-    if( src.rows == 1 || (src.cols == 1 && !(flags & CV_DXT_ROWS)) )
+    if( src.rows == 1 || (src.cols == 1 && !(flags & cv::DFT_ROWS)) )
         DCT_1D( src, dst, flags );
     else
         DCT_2D( src, dst, flags );
@@ -820,7 +821,7 @@ void CxCore_MulSpectrumsTest::run_func()
             src1 = &dst;
     }
 
-    cv::mulSpectrums( *src1, *src2, dst, flags, (flags & CV_DXT_MUL_CONJ) != 0 );
+    cv::mulSpectrums( *src1, *src2, dst, flags, (flags & CV_TEST_DXT_MUL_CONJ) != 0 );
 }
 
 

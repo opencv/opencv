@@ -2,7 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
-#include "opencv2/core/core_c.h"
 #include <fstream>
 
 namespace opencv_test { namespace {
@@ -94,7 +93,6 @@ protected:
         RNG& rng = ts->get_rng();
         RNG rng0;
         int progress = 0;
-        MemStorage storage(cvCreateMemStorage(0));
         const char * suffixs[3] = {".yml", ".xml", ".json" };
         test_case_count = 6;
 
@@ -102,8 +100,6 @@ protected:
         {
             ts->update_context( this, idx, false );
             progress = update_progress( progress, idx, test_case_count, 0 );
-
-            cvClearMemStorage(storage);
 
             bool mem = (idx % test_case_count) >= (test_case_count >> 1);
             string filename = tempfile(suffixs[idx % (test_case_count >> 1)]);
@@ -611,14 +607,14 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         {   /* init */
 
             /* a normal mat */
-            _2d_out = cv::Mat(10, 20, CV_8UC3, cvScalar(1U, 2U, 127U));
+            _2d_out = cv::Mat(10, 20, CV_8UC3, cv::Scalar(1U, 2U, 127U));
             for (int i = 0; i < _2d_out.rows; ++i)
                 for (int j = 0; j < _2d_out.cols; ++j)
                     _2d_out.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
 
             /* a 4d mat */
             const int Size[] = {4, 4, 4, 4};
-            cv::Mat _4d(4, Size, CV_64FC4, cvScalar(0.888, 0.111, 0.666, 0.444));
+            cv::Mat _4d(4, Size, CV_64FC4, cv::Scalar(0.888, 0.111, 0.666, 0.444));
             const cv::Range ranges[] = {
                 cv::Range(0, 2),
                 cv::Range(0, 2),

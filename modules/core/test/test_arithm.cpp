@@ -3,8 +3,6 @@
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
 #include "ref_reduce_arg.impl.hpp"
-#include "opencv2/core/core_c.h"
-
 #include <algorithm>
 
 namespace opencv_test { namespace {
