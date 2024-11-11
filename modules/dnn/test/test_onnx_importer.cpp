@@ -1327,7 +1327,7 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
 #endif
     testONNXModels("split_max");
 }
-
+// Disables due to output shape [?, N, OutputSize] not supported by new graph engine
 TEST_P(Test_ONNX_layers, DISABLED_LSTM_Activations)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
