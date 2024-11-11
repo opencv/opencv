@@ -391,6 +391,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 getCellStateYc(cOut, output[2], numDirs);
             }
 
+            if (layout == BATCH_SEQ_HID) {
+                cv::transposeND(output[0], {2, 0, 1, 3}, output[0]);
+            }
+
             // Make sure changes are written back to outputs_arr
             outputs_arr.assign(output);
         }
