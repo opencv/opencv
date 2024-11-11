@@ -1626,6 +1626,24 @@ inline v_int32 v_load_expand_q(const schar* ptr)
     return __riscv_vwcvt_x(__riscv_vwcvt_x(__riscv_vle8_v_i8mf2(ptr, VTraits<v_int32>::vlanes()), VTraits<v_int32>::vlanes()), VTraits<v_int32>::vlanes());
 }
 
+template <int N = VTraits<v_uint32>::max_nlanes>
+inline v_uint32 v_load_expand_q(const uchar* ptr, int n = N)
+{
+    uchar buf[VTraits<v_uint8>::max_nlanes];
+    v_store(buf, v_setzero_u8());
+    for (int i = 0; i < n; i++) {
+        buf[i] = ptr[i];
+    }
+    return v_load_expand_q(buf);
+}
+template <> inline v_uint32 v_load_expand_q<4>(const uchar* ptr, int n)
+{
+    uchar buf[VTraits<v_uint8>::max_nlanes];
+    v_store(buf, v_setzero_u8());
+    buf[0] = ptr[0]; buf[1] = ptr[1]; buf[2] = ptr[2]; buf[3] = ptr[3];
+    return v_load_expand_q(buf);
+}
+
 #define OPENCV_HAL_IMPL_RVV_PACK(_Tpvec, _Tp, _wTpvec, hwidth, hsuffix, suffix, rshr, shr) \
 inline _Tpvec v_pack(const _wTpvec& a, const _wTpvec& b) \
 { \
@@ -1695,6 +1713,23 @@ void v_rshr_pack_u_store(_Tp* ptr, const _wTpvec& a, int n = N) \
 
 OPENCV_HAL_IMPL_RVV_PACK_U(v_uint8, uchar, v_int16, short, 8, 16, u8, i16, __riscv_vreinterpret_v_i16m4_u16m4, VTraits<v_int16>::vlanes(), VTraits<v_uint8>::vlanes())
 OPENCV_HAL_IMPL_RVV_PACK_U(v_uint16, ushort, v_int32, int, 16, 32, u16, i32,  __riscv_vreinterpret_v_i32m4_u32m4, VTraits<v_int32>::vlanes(), VTraits<v_uint16>::vlanes())
+
+template <int N = VTraits<v_int16>::max_nlanes>
+inline void v_pack_u_store(uchar* ptr, const v_int16& a, int n = N)
+{
+    uchar buf[VTraits<v_uint8>::max_nlanes];
+    v_pack_u_store(buf, a);
+    for (int i = 0; i < n; i++) {
+        ptr[i] = buf[i];
+    }
+}
+template <> inline void v_pack_u_store<8>(uchar* ptr, const v_int16& a, int n)
+{
+    uchar buf[VTraits<v_uint8>::max_nlanes];
+    v_pack_u_store(buf, a);
+    ptr[0] = buf[0]; ptr[1] = buf[1]; ptr[2] = buf[2]; ptr[3] = buf[3];
+    ptr[4] = buf[4]; ptr[5] = buf[5]; ptr[6] = buf[6]; ptr[7] = buf[7];
+}
 
 
 /* void v_zip(const _Tpvec& a0, const _Tpvec& a1, _Tpvec& b0, _Tpvec& b1)
