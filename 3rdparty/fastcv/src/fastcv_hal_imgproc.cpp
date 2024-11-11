@@ -332,17 +332,16 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
 
     virtual void operator()(const cv::Range& range) const CV_OVERRIDE
     {
-        fcvStatus status = FASTCV_SUCCESS;
         int topLines    = 0;
         int rangeHeight = range.end-range.start;
 
-        if(range.start >= half_ksize)
+        if(range.start != 0)
         {
             topLines  += half_ksize;
             rangeHeight += half_ksize;
         }
 
-        if(range.end <= height-half_ksize)
+        if(range.end != height)
         {
             rangeHeight += half_ksize;
         }
@@ -351,9 +350,9 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
         uchar dst[dst_step*rangeHeight];
 
         if (fcvFuncType == FCV_MAKETYPE(3,CV_8U))
-            status = fcvFilterGaussian3x3u8_v4(src, width, rangeHeight, src_step, dst, dst_step, fcvBorder, 0);
+            fcvFilterGaussian3x3u8_v4(src, width, rangeHeight, src_step, dst, dst_step, fcvBorder, 0);
         else if (fcvFuncType == FCV_MAKETYPE(5,CV_8U))
-            status = fcvFilterGaussian5x5u8_v3(src, width, rangeHeight, src_step, dst, dst_step, fcvBorder, 0);
+            fcvFilterGaussian5x5u8_v3(src, width, rangeHeight, src_step, dst, dst_step, fcvBorder, 0);
 
         uchar* dptr = dst_data+range.start*dst_step;
         uchar* sptr = dst+topLines*dst_step;
@@ -399,7 +398,7 @@ int fastcv_hal_gaussianBlurBinomial(
         CV_HAL_RETURN_NOT_IMPLEMENTED("Inplace is not supported");
 
     // The input image width and height should greater than kernel size
-    if ((height <= ksize) || (width <= ksize))
+    if (((size_t)height <= ksize) || ((size_t)width <= ksize))
         CV_HAL_RETURN_NOT_IMPLEMENTED("Input image size should be larger than kernel size");
 
     // The input channel should be 1
@@ -443,13 +442,15 @@ int fastcv_hal_gaussianBlurBinomial(
             CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Border type:%s is not supported", borderToString(border_type)));
     }
 
+    int nStripes = height / 80 == 0 ? 1 : height / 80;
+
     switch (fcvFuncType)
     {
         case FCV_MAKETYPE(3,CV_8U):
         case FCV_MAKETYPE(5,CV_8U):
             cv::parallel_for_(cv::Range(0, height),
                 FcvGaussianBlurLoop_Invoker(src_data, src_step, dst_data, dst_step, width, height, ksize, depth, fcvBorder, 0),
-                std::max(1, std::min(cv::getNumThreads(), cv::getNumberOfCPUs())));
+                nStripes);
             break;
         default:
             CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Ksize:%d, depth:%s is not supported", ksize, cv::depthToString(depth)));
@@ -472,7 +473,6 @@ class FcvWarpPerspectiveLoop_Invoker : public cv::ParallelLoopBody
 
     virtual void operator()(const cv::Range& range) const CV_OVERRIDE
     {
-        fcvStatus status = FASTCV_SUCCESS;
         uchar* dst = dst_data + range.start*dst_step;
         int rangeHeight = range.end - range.start;
 
@@ -486,8 +486,8 @@ class FcvWarpPerspectiveLoop_Invoker : public cv::ParallelLoopBody
         rangeMatrix[6] = (float)(M[6]);
         rangeMatrix[7] = (float)(M[7]);
         rangeMatrix[8] = (float)(M[8]+range.start*M[7]);
-        status = fcvWarpPerspectiveu8_v5(src_data, src_width, src_height, src_step, CV_MAT_CN(type), dst, dst_width, rangeHeight,
-                    dst_step, rangeMatrix, fcvInterpolation, fcvBorder, fcvBorderValue);
+        fcvWarpPerspectiveu8_v5(src_data, src_width, src_height, src_step, CV_MAT_CN(type), dst, dst_width, rangeHeight,
+            dst_step, rangeMatrix, fcvInterpolation, fcvBorder, fcvBorderValue);
     }
 
     private:
@@ -530,7 +530,7 @@ int fastcv_hal_warpPerspective(
 
     INITIALIZATION_CHECK;
 
-    fcvStatus               status;
+    fcvStatus               status = FASTCV_SUCCESS;
     fcvBorderType           fcvBorder;
     uint8_t                 fcvBorderValue;
     fcvInterpolationType    fcvInterpolation;
@@ -571,11 +571,6 @@ int fastcv_hal_warpPerspective(
             fcvInterpolation = FASTCV_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
             break;
         }
-        case cv::InterpolationFlags::INTER_LINEAR:
-        {
-            fcvInterpolation = FASTCV_INTERPOLATION_TYPE_BILINEAR;
-            break;
-        }
         default:
             CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Interpolation type:%s is not supported",
                                           interpolationToString(interpolation)));
@@ -584,7 +579,7 @@ int fastcv_hal_warpPerspective(
     if(CV_MAT_DEPTH(src_type) == CV_8U)
     {
         cv::parallel_for_(cv::Range(0, dst_height),
-            FcvWarpPerspectiveLoop_Invoker(src_data, src_width, src_height, src_step, dst_data, dst_width, dst_height, 
+            FcvWarpPerspectiveLoop_Invoker(src_data, src_width, src_height, src_step, dst_data, dst_width, dst_height,
             dst_step, src_type, M, fcvInterpolation, fcvBorder, fcvBorderValue), 16);
     }
     else
