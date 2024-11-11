@@ -10,7 +10,6 @@
 #include <float.h>
 #include <math.h>
 #include "opencv2/core/softfloat.hpp"
-#include "opencv2/core/core_c.h"
 #include "opencv2/core/hal/intrin.hpp"
 
 namespace opencv_test { namespace {
@@ -604,24 +603,24 @@ void Core_GEMMTest::get_test_array_types_and_sizes( int test_case_idx, vector<ve
 
     tabc_flag = cvtest::randInt(rng) & 7;
 
-    switch( tabc_flag & (CV_GEMM_A_T|CV_GEMM_B_T) )
+    switch( tabc_flag & (cv::GEMM_1_T|cv::GEMM_2_T) )
     {
         case 0:
             sizes[INPUT][1].height = sizes[INPUT][0].width;
             sizes[OUTPUT][0].height = sizes[INPUT][0].height;
             sizes[OUTPUT][0].width = sizes[INPUT][1].width;
             break;
-        case CV_GEMM_B_T:
+        case cv::GEMM_2_T:
             sizes[INPUT][1].width = sizes[INPUT][0].width;
             sizes[OUTPUT][0].height = sizes[INPUT][0].height;
             sizes[OUTPUT][0].width = sizes[INPUT][1].height;
             break;
-        case CV_GEMM_A_T:
+        case cv::GEMM_1_T:
             sizes[INPUT][1].height = sizes[INPUT][0].height;
             sizes[OUTPUT][0].height = sizes[INPUT][0].width;
             sizes[OUTPUT][0].width = sizes[INPUT][1].width;
             break;
-        case CV_GEMM_A_T | CV_GEMM_B_T:
+        case cv::GEMM_1_T | cv::GEMM_2_T:
             sizes[INPUT][1].width = sizes[INPUT][0].height;
             sizes[OUTPUT][0].height = sizes[INPUT][0].width;
             sizes[OUTPUT][0].width = sizes[INPUT][1].height;
@@ -632,7 +631,7 @@ void Core_GEMMTest::get_test_array_types_and_sizes( int test_case_idx, vector<ve
 
     if( cvtest::randInt(rng) & 1 )
         sizes[INPUT][4] = Size(0,0);
-    else if( !(tabc_flag & CV_GEMM_C_T) )
+    else if( !(tabc_flag & cv::GEMM_3_T) )
         sizes[INPUT][4] = sizes[OUTPUT][0];
     else
     {
@@ -742,8 +741,8 @@ void Core_MulTransposedTest::get_test_array_types_and_sizes( int test_case_idx, 
 
 void Core_MulTransposedTest::get_minmax_bounds( int /*i*/, int /*j*/, int /*type*/, Scalar& low, Scalar& high )
 {
-    low = cvScalarAll(-10.);
-    high = cvScalarAll(10.);
+    low = cv::Scalar::all(-10.);
+    high = cv::Scalar::all(10.);
 }
 
 
@@ -1126,7 +1125,7 @@ void Core_MahalanobisTest::prepare_to_validation( int )
         cvtest::gemm( test_mat[INPUT][2], test_mat[TEMP][0], 1.,
                  Mat(), 0., test_mat[TEMP][1], 0 );
 
-    test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = cvRealScalar(sqrt(cvtest::crossCorr(test_mat[TEMP][0], test_mat[TEMP][1])));
+    test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = cv::Scalar(sqrt(cvtest::crossCorr(test_mat[TEMP][0], test_mat[TEMP][1])));
 }
 
 
@@ -1186,8 +1185,8 @@ void Core_DetTest::get_test_array_types_and_sizes( int test_case_idx, vector<vec
 
 void Core_DetTest::get_minmax_bounds( int /*i*/, int /*j*/, int /*type*/, Scalar& low, Scalar& high )
 {
-    low = cvScalarAll(-2.);
-    high = cvScalarAll(2.);
+    low = cv::Scalar::all(-2.);
+    high = cv::Scalar::all(2.);
 }
 
 
@@ -1214,21 +1213,17 @@ void Core_DetTest::run_func()
 
 
 // LU method that chooses the optimal in a column pivot element
-static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
+static double cvTsLU( cv::Mat a )
 {
-    int i, j, k, N = a->rows, N1 = a->cols, Nm = MIN(N, N1), step = a->step/sizeof(double);
-    int M = b ? b->cols : 0, b_step = b ? b->step/sizeof(double) : 0;
-    int x_step = x ? x->step/sizeof(double) : 0;
-    double *a0 = a->data.db, *b0 = b ? b->data.db : 0;
-    double *x0 = x ? x->data.db : 0;
+    CV_Assert(a.type() == CV_64FC1);
+    int i, j, k, N = a.rows, N1 = a.cols, Nm = MIN(N, N1), step = (int)(a.step/sizeof(double));
+    double *a0 = a.ptr<double>();
     double t, det = 1.;
-    CV_Assert( CV_MAT_TYPE(a->type) == CV_64FC1 &&
-               (!b || CV_ARE_TYPES_EQ(a,b)) && (!x || CV_ARE_TYPES_EQ(a,x)));
 
     for( i = 0; i < Nm; i++ )
     {
         double max_val = fabs(a0[i*step + i]);
-        double *a1, *a2, *b1 = 0, *b2 = 0;
+        double *a1, *a2;
         k = i;
 
         for( j = i+1; j < N; j++ )
@@ -1245,57 +1240,27 @@ static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
         {
             for( j = i; j < N1; j++ )
                 CV_SWAP( a0[i*step + j], a0[k*step + j], t );
-
-            for( j = 0; j < M; j++ )
-                CV_SWAP( b0[i*b_step + j], b0[k*b_step + j], t );
             det = -det;
         }
 
         if( max_val == 0 )
         {
-            if( rank )
-                *rank = i;
             return 0.;
         }
 
         a1 = a0 + i*step;
         a2 = a1 + step;
-        b1 = b0 + i*b_step;
-        b2 = b1 + b_step;
 
-        for( j = i+1; j < N; j++, a2 += step, b2 += b_step )
+        for( j = i+1; j < N; j++, a2 += step )
         {
             t = a2[i]/a1[i];
             for( k = i+1; k < N1; k++ )
                 a2[k] -= t*a1[k];
-
-            for( k = 0; k < M; k++ )
-                b2[k] -= t*b1[k];
         }
 
         det *= a1[i];
     }
 
-    if( x )
-    {
-        CV_Assert( b );
-
-        for( i = N-1; i >= 0; i-- )
-        {
-            double* a1 = a0 + i*step;
-            double* b1 = b0 + i*b_step;
-            for( j = 0; j < M; j++ )
-            {
-                t = b1[j];
-                for( k = i+1; k < N1; k++ )
-                    t -= a1[k]*x0[k*x_step + j];
-                x0[i*x_step + j] = t/a1[i];
-            }
-        }
-    }
-
-    if( rank )
-        *rank = i;
     return det;
 }
 
@@ -1303,8 +1268,7 @@ static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
 void Core_DetTest::prepare_to_validation( int )
 {
     test_mat[INPUT][0].convertTo(test_mat[TEMP][0], test_mat[TEMP][0].type());
-    CvMat temp0 = cvMat(test_mat[TEMP][0]);
-    test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = cvRealScalar(cvTsLU(&temp0, 0, 0));
+    test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = cv::Scalar(cvTsLU(test_mat[TEMP][0]));
 }
 
 
@@ -1384,7 +1348,7 @@ int Core_InvertTest::prepare_test_case( int test_case_idx )
         if( method == cv::DECOMP_CHOLESKY )
         {
             cvtest::gemm( test_mat[INPUT][0], test_mat[INPUT][0], 1.,
-                     Mat(), 0., test_mat[TEMP][0], CV_GEMM_B_T );
+                     Mat(), 0., test_mat[TEMP][0], cv::GEMM_2_T );
             cvtest::copy( test_mat[TEMP][0], test_mat[INPUT][0] );
         }
     }
@@ -1396,8 +1360,8 @@ int Core_InvertTest::prepare_test_case( int test_case_idx )
 
 void Core_InvertTest::get_minmax_bounds( int /*i*/, int /*j*/, int /*type*/, Scalar& low, Scalar& high )
 {
-    low = cvScalarAll(-1.);
-    high = cvScalarAll(1.);
+    low = cv::Scalar::all(-1.);
+    high = cv::Scalar::all(1.);
 }
 
 void Core_InvertTest::run_func()
@@ -1493,9 +1457,9 @@ void Core_SolveTest::get_test_array_types_and_sizes( int test_case_idx, vector<v
     RNG& rng = cv::theRNG();
     int bits = cvtest::randInt(rng);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
-    CvSize in_sz = cvSize(sizes[INPUT][0]);
+    cv::Size in_sz = cv::Size(sizes[INPUT][0]);
     if( in_sz.width > in_sz.height )
-        in_sz = cvSize(in_sz.height, in_sz.width);
+        in_sz = cv::Size(in_sz.height, in_sz.width);
     Base::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     sizes[INPUT][0] = in_sz;
     int min_size = MIN( sizes[INPUT][0].width, sizes[INPUT][0].height );
@@ -1534,8 +1498,8 @@ int Core_SolveTest::prepare_test_case( int test_case_idx )
 
 void Core_SolveTest::get_minmax_bounds( int /*i*/, int /*j*/, int /*type*/, Scalar& low, Scalar& high )
 {
-    low = cvScalarAll(-1.);
-    high = cvScalarAll(1.);
+    low = cv::Scalar::all(-1.);
+    high = cv::Scalar::all(1.);
 }
 
 
@@ -1564,8 +1528,7 @@ void Core_SolveTest::prepare_to_validation( int )
             Mat& temp1 = test_mat[TEMP][1];
             cvtest::convert(input, temp1, temp1.type());
             dst = Scalar::all(0);
-            CvMat _temp1 = cvMat(temp1);
-            double det = cvTsLU( &_temp1, 0, 0 );
+            double det = cvTsLU( temp1 );
             dst0 = Scalar::all(det != 0);
             return;
         }
@@ -1584,7 +1547,7 @@ void Core_SolveTest::prepare_to_validation( int )
 
     cvtest::gemm( input, test_mat[TEMP][0], 1., test_mat[INPUT][1], -1., *pdst, 0 );
     if( pdst != &dst )
-        cvtest::gemm( input, *pdst, 1., Mat(), 0., dst, CV_GEMM_A_T );
+        cvtest::gemm( input, *pdst, 1., Mat(), 0., dst, cv::GEMM_1_T );
     dst0 = Scalar::all(0);
 }
 
@@ -1624,7 +1587,6 @@ Core_SolvePolyTest::~Core_SolvePolyTest() {}
 void Core_SolvePolyTest::run( int )
 {
     RNG& rng = cv::theRNG();
-    int fig = 100;
     double range = 50;
     double err_eps = 1e-4;
 
@@ -1673,10 +1635,8 @@ void Core_SolvePolyTest::run( int )
             for (int j = 0; j < n + 1; ++j)
                 a[j] = c[j].real();
 
-            CvMat amat, umat;
-            cvInitMatHeader(&amat, n + 1, 1, CV_64FC1, &a[0]);
-            cvInitMatHeader(&umat, n, 1, CV_64FC2, &u[0]);
-            cvSolvePoly(&amat, &umat, maxiter, fig);
+            Mat amat(n + 1, 1, CV_64FC1, &a[0]), umat(n, 1, CV_64FC2, &u[0]);
+            cv::solvePoly(amat, umat, maxiter);
 
             for (int j = 0; j < n; ++j)
                 ar[j] = complex_type(u[j * 2], u[j * 2 + 1]);
@@ -1689,13 +1649,13 @@ void Core_SolvePolyTest::run( int )
             {
                 ar2.resize(n);
                 cv::Mat _umat2(3, 1, CV_64F, &ar2[0]), umat2 = _umat2;
-                cvFlip(&amat, &amat, 0);
+                cv::flip(amat, amat, 0);
                 int nr2;
                 if( cubic_case == 0 )
-                    nr2 = cv::solveCubic(cv::cvarrToMat(&amat),umat2);
+                    nr2 = cv::solveCubic(amat,umat2);
                 else
-                    nr2 = cv::solveCubic(cv::Mat_<float>(cv::cvarrToMat(&amat)), umat2);
-                cvFlip(&amat, &amat, 0);
+                    nr2 = cv::solveCubic(cv::Mat_<float>(amat), umat2);
+                cv::flip(amat, amat, 0);
                 if(nr2 > 0)
                     std::sort(ar2.begin(), ar2.begin()+nr2, pred_double());
                 ar2.resize(nr2);
@@ -2317,7 +2277,7 @@ TEST(CovariationMatrixVectorOfMat, accuracy)
 {
     unsigned int col_problem_size = 8, row_problem_size = 8, vector_size = 16;
     cv::Mat src(vector_size, col_problem_size * row_problem_size, CV_32F);
-    int singleMatFlags = CV_COVAR_ROWS;
+    int singleMatFlags = cv::COVAR_ROWS;
 
     cv::Mat gold;
     cv::Mat goldMean;
@@ -2348,7 +2308,7 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
 {
     unsigned int col_problem_size = 8, row_problem_size = 8, vector_size = 16;
     cv::Mat src(vector_size, col_problem_size * row_problem_size, CV_32F);
-    int singleMatFlags = CV_COVAR_ROWS | CV_COVAR_USE_AVG;
+    int singleMatFlags = cv::COVAR_ROWS | cv::COVAR_USE_AVG;
 
     cv::Mat gold;
     cv::randu(src,cv::Scalar(-128), cv::Scalar(128));
@@ -2448,7 +2408,7 @@ TEST(Core_Cholesky, accuracy64f)
    for (int i = 0; i < A.rows; i++)
        for (int j = i + 1; j < A.cols; j++)
            A.at<double>(i, j) = 0.0;
-   EXPECT_LE(cvtest::norm(refA, A*A.t(), CV_RELATIVE_L2), FLT_EPSILON);
+   EXPECT_LE(cvtest::norm(refA, A*A.t(), cv::NORM_L2 | cv::NORM_RELATIVE), FLT_EPSILON);
 }
 
 TEST(Core_QR_Solver, accuracy64f)
@@ -2468,7 +2428,7 @@ TEST(Core_QR_Solver, accuracy64f)
 
     //solve system with square matrix
     solve(A, B, solutionQR, DECOMP_QR);
-    EXPECT_LE(cvtest::norm(A*solutionQR, B, CV_RELATIVE_L2), FLT_EPSILON);
+    EXPECT_LE(cvtest::norm(A*solutionQR, B, cv::NORM_L2 | cv::NORM_RELATIVE), FLT_EPSILON);
 
     A = Mat(m, n, CV_64F);
     B = Mat(m, n, CV_64F);
@@ -2477,13 +2437,13 @@ TEST(Core_QR_Solver, accuracy64f)
 
     //solve normal system
     solve(A, B, solutionQR, DECOMP_QR | DECOMP_NORMAL);
-    EXPECT_LE(cvtest::norm(A.t()*(A*solutionQR), A.t()*B, CV_RELATIVE_L2), FLT_EPSILON);
+    EXPECT_LE(cvtest::norm(A.t()*(A*solutionQR), A.t()*B, cv::NORM_L2 | cv::NORM_RELATIVE), FLT_EPSILON);
 
     //solve overdeterminated system as a least squares problem
     Mat solutionSVD;
     solve(A, B, solutionQR, DECOMP_QR);
     solve(A, B, solutionSVD, DECOMP_SVD);
-    EXPECT_LE(cvtest::norm(solutionQR, solutionSVD, CV_RELATIVE_L2), FLT_EPSILON);
+    EXPECT_LE(cvtest::norm(solutionQR, solutionSVD, cv::NORM_L2 | cv::NORM_RELATIVE), FLT_EPSILON);
 
     //solve system with singular matrix
     A = Mat(10, 10, CV_64F);

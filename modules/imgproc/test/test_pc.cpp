@@ -42,7 +42,7 @@
 
 #include "test_precomp.hpp"
 
-#define CV_DXT_MUL_CONJ 8
+#define CV_TEST_DXT_MUL_CONJ 8
 
 namespace opencv_test { namespace {
 
@@ -183,7 +183,7 @@ void CV_DivSpectrumsTest::get_test_array_types_and_sizes( int test_case_idx, vec
 
     // Get the flag of the input.
     const int rand_int_flags = cvtest::randInt(rng);
-    flags = rand_int_flags & (CV_DXT_MUL_CONJ | DFT_ROWS);
+    flags = rand_int_flags & (CV_TEST_DXT_MUL_CONJ | DFT_ROWS);
 
     // Get input type.
     const int rand_int_type = cvtest::randInt(rng);
@@ -354,7 +354,7 @@ static void div_complex_helper( const Mat& src1, const Mat& src2, Mat& dst, int 
             std::pair<double, double> result =
                     divide_complex_numbers( src1_data[j], src1_data[j + 1],
                                             src2_data[j], src2_data[j + 1],
-                                            (flags & CV_DXT_MUL_CONJ) != 0 );
+                                            (flags & CV_TEST_DXT_MUL_CONJ) != 0 );
             dst_data[j] = (depth_t)result.first;
             dst_data[j + 1] = (depth_t)result.second;
         }
@@ -411,7 +411,7 @@ void CV_DivSpectrumsTest::run_func()
     if ( cn == 1 )
     {
         Mat &dst = test_mat[TEMP][2];
-        cv::divSpectrums( src1, src2, dst, flags, (flags & CV_DXT_MUL_CONJ) != 0 );
+        cv::divSpectrums( src1, src2, dst, flags, (flags & CV_TEST_DXT_MUL_CONJ) != 0 );
         Mat &converted_dst = test_mat[OUTPUT][0];
         convert_from_ccs( dst, dst, converted_dst, flags );
     }
@@ -419,7 +419,7 @@ void CV_DivSpectrumsTest::run_func()
     else
     {
         Mat &dst = test_mat[OUTPUT][0];
-        cv::divSpectrums( src1, src2, dst, flags, (flags & CV_DXT_MUL_CONJ) != 0 );
+        cv::divSpectrums( src1, src2, dst, flags, (flags & CV_TEST_DXT_MUL_CONJ) != 0 );
     }
 }
 
