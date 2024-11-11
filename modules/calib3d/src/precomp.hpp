@@ -150,6 +150,10 @@ void projectPoints( InputArray objectPoints,
                     OutputArray dpdc=noArray(), OutputArray dpdk=noArray(),
                     OutputArray dpdo=noArray(), double aspectRatio=0.);
 
+void getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
+              InputArray R, InputArray newCameraMatrix, Size imgSize,
+              Rect_<double>& inner, Rect_<double>& outer );
+
 } // namespace cv
 
 int checkChessboardBinary(const cv::Mat & img, const cv::Size & size);
