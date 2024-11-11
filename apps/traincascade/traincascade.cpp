@@ -11,6 +11,7 @@ and other data related to training in form of command line argument.
 */
 //testing1
 //testing2
+//testing3
 int main( int argc, char* argv[] )
 {
     CvCascadeClassifier classifier;
