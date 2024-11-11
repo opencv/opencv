@@ -43,7 +43,8 @@
 #include "precomp.hpp"
 #include "hal_replacement.hpp"
 #include "distortion_model.hpp"
-#include "calib3d_c_api.h"
+#include "opencv2/calib3d/calib3d_c.h"
+#include "opencv2/core/core_c.h"
 #include <stdio.h>
 #include <iterator>
 
@@ -1520,7 +1521,7 @@ void cv::projectPoints( InputArray _opoints,
     }
 }
 
-static void getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
+void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
               InputArray R, InputArray newCameraMatrix, Size imgSize,
               Rect_<double>& inner, Rect_<double>& outer )
 {

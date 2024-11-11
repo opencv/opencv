@@ -55,16 +55,6 @@ extern "C" {
 *                      Camera Calibration, Pose Estimation and Stereo                    *
 \****************************************************************************************/
 
-void cvConvertPointsHomogeneous( const CvMat* src, CvMat* dst );
-
-/* For each input point on one of images
-   computes parameters of the corresponding
-   epipolar line on the other image */
-void cvComputeCorrespondEpilines( const CvMat* points,
-                                  int which_image,
-                                  const CvMat* fundamental_matrix,
-                                  CvMat* correspondent_lines );
-
 /* Finds perspective transformation between the object plane and image (view) plane */
 int cvFindHomography( const CvMat* src_points,
                       const CvMat* dst_points,
@@ -96,51 +86,6 @@ double cvCalibrateCamera2( const CvMat* object_points,
                                 int flags CV_DEFAULT(0),
                                 CvTermCriteria term_crit CV_DEFAULT(cvTermCriteria(
                                     CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON)) );
-
-/* Computes the transformation from one camera coordinate system to another one
-   from a few correspondent views of the same calibration target. Optionally, calibrates
-   both cameras */
-double cvStereoCalibrate( const CvMat* object_points, const CvMat* image_points1,
-                          const CvMat* image_points2, const CvMat* npoints,
-                          CvMat* camera_matrix1, CvMat* dist_coeffs1,
-                          CvMat* camera_matrix2, CvMat* dist_coeffs2,
-                          CvSize image_size, CvMat* R, CvMat* T,
-                          CvMat* E CV_DEFAULT(0), CvMat* F CV_DEFAULT(0),
-                          int flags CV_DEFAULT(CV_CALIB_FIX_INTRINSIC),
-                          CvTermCriteria term_crit CV_DEFAULT(cvTermCriteria(
-                              CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,1e-6)) );
-
-#define CV_CALIB_ZERO_DISPARITY 1024
-
-/* Computes 3D rotations (+ optional shift) for each camera coordinate system to make both
-   views parallel (=> to make all the epipolar lines horizontal or vertical) */
-void cvStereoRectify( const CvMat* camera_matrix1, const CvMat* camera_matrix2,
-                      const CvMat* dist_coeffs1, const CvMat* dist_coeffs2,
-                      CvSize image_size, const CvMat* R, const CvMat* T,
-                      CvMat* R1, CvMat* R2, CvMat* P1, CvMat* P2,
-                      CvMat* Q CV_DEFAULT(0),
-                      int flags CV_DEFAULT(CV_CALIB_ZERO_DISPARITY),
-                      double alpha CV_DEFAULT(-1),
-                      CvSize new_image_size CV_DEFAULT(cvSize(0,0)),
-                      CvRect* valid_pix_ROI1 CV_DEFAULT(0),
-                      CvRect* valid_pix_ROI2 CV_DEFAULT(0));
-
-/* Computes rectification transformations for uncalibrated pair of images using a set
-   of point correspondences */
-int cvStereoRectifyUncalibrated( const CvMat* points1, const CvMat* points2,
-                                 const CvMat* F, CvSize img_size,
-                                 CvMat* H1, CvMat* H2,
-                                 double threshold CV_DEFAULT(5));
-
-/** @brief Computes the original (undistorted) feature coordinates
-   from the observed (distorted) coordinates
-@see cv::undistortPoints
-*/
-void cvUndistortPoints( const CvMat* src, CvMat* dst,
-                        const CvMat* camera_matrix,
-                        const CvMat* dist_coeffs,
-                        const CvMat* R CV_DEFAULT(0),
-                        const CvMat* P CV_DEFAULT(0));
 
 #ifdef __cplusplus
 } // extern "C"

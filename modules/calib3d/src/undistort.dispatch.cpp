@@ -40,11 +40,10 @@
 //
 //M*/
 
+#include "opencv2/core/core_c.h"
 #include "opencv2/core/types.hpp"
 #include "precomp.hpp"
 #include "distortion_model.hpp"
-
-#include "calib3d_c_api.h"
 
 #include "undistort.simd.hpp"
 #include "undistort.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
@@ -506,14 +505,6 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
             dstd[i*dstep].y = y;
         }
     }
-}
-
-void cvUndistortPoints(const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatrix,
-                       const CvMat* _distCoeffs,
-                       const CvMat* matR, const CvMat* matP)
-{
-    cvUndistortPointsInternal(_src, _dst, _cameraMatrix, _distCoeffs, matR, matP,
-                              cv::TermCriteria(cv::TermCriteria::COUNT, 5, 0.01));
 }
 
 namespace cv {
