@@ -15,13 +15,4 @@
 #include <opencv2/core/ocl.hpp>
 #endif
 
-namespace cvtest
-{
-    void Rodrigues(const Mat& src, Mat& dst, Mat* jac=0);
-}
-
-namespace opencv_test {
-CVTEST_GUARD_SYMBOL(Rodrigues)
-} // namespace
-
 #endif
