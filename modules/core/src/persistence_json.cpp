@@ -81,6 +81,12 @@ public:
         writeScalar( key, fs::itoa( value, buf, 10 ));
     }
 
+    void write(const char* key, int64_t value)
+    {
+        char buf[128];
+        writeScalar( key, fs::itoa( value, buf, 10, true ));
+    }
+
     void write( const char* key, double value )
     {
         char buf[128];
@@ -596,7 +602,7 @@ public:
             }
             else
             {
-                int ival = (int)strtol( beg, &ptr, 0 );
+                int64_t ival = strtoll( beg, &ptr, 0 );
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
 
                 node.setValue(FileNode::INT, &ival);
@@ -623,7 +629,7 @@ public:
             else if( (len == 4 && memcmp( beg, "true", 4 ) == 0) ||
                      (len == 5 && memcmp( beg, "false", 5 ) == 0) )
             {
-                int ival = *beg == 't' ? 1 : 0;
+                int64_t ival = *beg == 't' ? 1 : 0;
                 node.setValue(FileNode::INT, &ival);
             }
             else
