@@ -209,26 +209,17 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             outputs_arr.getMatVector(output);
             internals_arr.getMatVector(internals);
 
-            size_t minInputs = usePeephole ? 7 : 6;
-            CV_Assert(input.size() >= minInputs && "Insufficient inputs for LSTM layer. "
-                     "Required inputs: X, W, R, B, h0, c0 [, P for peephole]");
+            int numInputs = input.size();
+            std::cout << "size of input: " << numInputs << std::endl;
 
-            // set outputs to 0
-            for (auto& out : output)
-                out.setTo(0);
-
-            // transform weights matrices similar to old LSTM parser
-            std::vector<Mat> blobs_ = {input[1], input[2], input[3], input[5], input[6]};
-            if (usePeephole){
-                blobs_.push_back(input[7]);
+            for (auto& inp : input) {
+                std::cout << "size of input: " << inp.size << std::endl;
             }
 
-            // convert weights to 2d matrices ease of use later in the forward pass
-            transformBlobs(blobs_);
-
-            // get hidden and input sizes
-            int inpSize = blobs_[0].size[1];
-            int hidSize = blobs_[1].size[1];
+            int inpSize = input[0].size[2];
+            int hidSize = numHidden;
+            std::cout << "inpSize: " << inpSize << std::endl;
+            std::cout << "hidSize: " << hidSize << std::endl;
 
             // determine seqLen and batchSize
             if (useTimestampDim)
@@ -246,6 +237,97 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 seqLenth = 1;
                 batchSize = input[0].size[0];
             }
+
+            std::cout << "batchSize: " << batchSize << std::endl;
+            std::cout << "numHidden: " << numHidden << std::endl;
+
+            std::vector<Mat> blobs_;
+            int hidShape [] = {1 + static_cast<int>(bidirectional), batchSize, numHidden};
+            int biasShape [] = {1 + static_cast<int>(bidirectional), 8 * numHidden};
+            switch (numInputs) {
+                case 3:
+                    // X, W, R are given
+                    blobs_.push_back(input[1]);
+                    blobs_.push_back(input[2]);
+                    // create bias
+                    blobs_.push_back(Mat::zeros(2, biasShape, input[0].type()));
+                    // create h0, c0
+                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
+                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
+                    break;
+                case 4:
+                    // X, W, R, B are given
+                    blobs_.push_back(input[1]);
+                    blobs_.push_back(input[2]);
+                    blobs_.push_back(input[3]);
+                    // create h0, c0
+                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
+                    blobs_.push_back(Mat::zeros(3, hidShape, input[0].type()));
+                    break;
+                case 7:
+                    // X, W, R, B, h0, c0 are given
+                    blobs_.push_back(input[1]);
+                    blobs_.push_back(input[2]);
+                    blobs_.push_back(input[3]);
+                    blobs_.push_back(input[5]);
+                    blobs_.push_back(input[6]);
+                    break;
+                case 8:
+                    // X, W, R, B, seqlen, h0, c0, P are given
+                    blobs_.push_back(input[1]);
+                    blobs_.push_back(input[2]);
+                    blobs_.push_back(input[3]);
+                    blobs_.push_back(input[5]);
+                    blobs_.push_back(input[6]);
+                    blobs_.push_back(input[7]);
+                    break;
+                default:
+                    CV_Error(Error::StsNotImplemented, "Insufficient inputs for LSTM layer. "
+                             "Required inputs: X, W, R, B, seqLen, h0, c0 [, P for peephole]");
+            }
+
+            for (auto& blob : blobs_) {
+                std::cout << "size of blob: " << blob.size << std::endl;
+            }
+
+            // set outputs to 0
+            for (auto& out : output)
+                out.setTo(0);
+
+            // transform weights matrices similar to old LSTM parser
+            // std::vector<Mat> blobs_ = {input[1], input[2], input[3], input[5], input[6]};
+            // if (usePeephole){
+            //     blobs_.push_back(input[7]);
+            // }
+
+            // convert weights to 2d matrices ease of use later in the forward pass
+            transformBlobs(blobs_);
+
+            for (auto& blob : blobs_) {
+                std::cout << "size of transformed blob: " << blob.size << std::endl;
+            }
+
+
+            // get hidden and input sizes
+            // int inpSize = blobs_[0].size[1];
+            // int hidSize = blobs_[1].size[1];
+
+            // // determine seqLen and batchSize
+            // if (useTimestampDim)
+            // {
+            //     CV_Assert(input[0].dims >= 2 && (int)input[0].total(2) == inpSize);
+            //     if (layout == SEQ_BATCH_HID){
+            //         seqLenth = input[0].size[0];
+            //         batchSize = input[0].size[1];
+            //     }else{
+            //         seqLenth = input[0].size[1];
+            //         batchSize = input[0].size[0];
+            //     }
+            // } else {
+            //     CV_Assert(input[0].dims >= 2 && (int)input[0].total(1) == inpSize);
+            //     seqLenth = 1;
+            //     batchSize = input[0].size[0];
+            // }
 
             const int numDirs = 1 + static_cast<int>(bidirectional);
             const int batchSizeTotal = seqLenth * batchSize;
@@ -409,7 +491,13 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 // reshape 1x1xBxH -> 1xBxH
                 int shp[] = {1, batchSize, numHidden};
                 hOut = hOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
-                hOut.copyTo(dst);
+
+                if (layout == BATCH_SEQ_HID){
+                    cv::transposeND(hOut, {1, 0, 2}, dst);
+                }
+                else{
+                    hOut.copyTo(dst);
+                }
 
             } else {
                 // there is issue here.
@@ -431,6 +519,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
                 int finalShape[] = {2, batchSize, numHidden};
                 dst = dst.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
+
+                if (layout == BATCH_SEQ_HID){
+                    cv::transposeND(dst, {1, 0, 2}, dst);
+                }
             }
         }
 
