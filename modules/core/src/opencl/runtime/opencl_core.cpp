@@ -204,7 +204,7 @@ static void* GetProcAddress(const char* name)
             {
                 const std::string path = (i==0) ? getRuntimePath(defaultAndroidPaths[i]) : defaultAndroidPaths[i];
                 if (!path.empty()) {
-                    handle = GetHandle(path);
+                    handle = GetHandle(path.c_str());
                     if (handle) {
                         foundOpenCL = true;
                         break;
