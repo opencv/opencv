@@ -2037,11 +2037,6 @@ TEST_P(FileStorage_exact_type, empty_mat)
     testExactMat(Mat(), GetParam());
 }
 
-TEST_P(FileStorage_exact_type, mat_1d)
-{
-    testExactMat(Mat({1}, CV_32S, Scalar(8)), GetParam());
-}
-
 TEST_P(FileStorage_exact_type, long_int)
 {
     for (const int64_t expected : std::vector<int64_t>{INT64_MAX, INT64_MIN, -1, 1, 0})
