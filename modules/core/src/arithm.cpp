@@ -870,7 +870,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 const uchar* extSptr1 = sptr1;
                 const uchar* extSptr2 = sptr2;
                 if( swapped12 )
-                    std::swap(extSptr1, extSptr1);
+                    std::swap(extSptr1, extSptr2);
 
                 // try to perform operation in 1 call, fallback to classic way if fail
                 uchar* opconverted = haveMask ? maskbuf : dptr;
