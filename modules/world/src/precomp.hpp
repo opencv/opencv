@@ -50,10 +50,10 @@
 #ifdef HAVE_OPENCV_VIDEO
 #include "opencv2/video.hpp"
 #endif
-#ifdef HAVE_OPENCV_FEATURES2D
-#include "opencv2/features2d.hpp"
+#ifdef HAVE_OPENCV_FEATURES
+#include "opencv2/features.hpp"
 #endif
-#ifdef HAVE_OPENCV_XFEATURES2D
+#ifdef HAVE_OPENCV_XFEATURES
 #include "opencv2/xfeatures2d/nonfree.hpp"
 #endif
 

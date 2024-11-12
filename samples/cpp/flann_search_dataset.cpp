@@ -6,7 +6,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/utils/filesystem.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/features2d.hpp"
+#include "opencv2/features.hpp"
 #include "opencv2/flann.hpp"
 
 using namespace cv;

@@ -51,7 +51,7 @@ testrunner.run(
                 'test_imgproc.js',
                 'test_objdetect.js',
                 'test_video.js',
-                'test_features2d.js',
+                'test_features.js',
                 'test_photo.js',
                 'test_calib3d.js',
         ],

@@ -42,7 +42,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <opencv2/features2d.hpp>
+#include <opencv2/features.hpp>
 
 namespace opencv_test { namespace {
 

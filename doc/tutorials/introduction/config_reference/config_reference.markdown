@@ -151,7 +151,7 @@ cmake -DBUILD_LIST=calib3d,videoio,ts ../opencv
 In this example we requested 3 modules and configuration script has determined all dependencies automatically:
 ```
 --   OpenCV modules:
---     To be built:                 calib3d core features2d flann highgui imgcodecs imgproc ts videoio
+--     To be built:                 calib3d core features flann highgui imgcodecs imgproc ts videoio
 ```
 
 

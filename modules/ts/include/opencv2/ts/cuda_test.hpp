@@ -331,7 +331,7 @@ namespace cvtest
     CV_FLAGS(WarpFlags, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, WARP_INVERSE_MAP)
 
     //////////////////////////////////////////////////////////////////////
-    // Features2D
+    // Features
 
     testing::AssertionResult assertKeyPointsEquals(const char* gold_expr, const char* actual_expr, std::vector<cv::KeyPoint>& gold, std::vector<cv::KeyPoint>& actual);
 

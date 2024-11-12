@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-#include <opencv2/features2d.hpp>
+#include <opencv2/features.hpp>
 #include "PnPProblem.h"
 
 // Draw a text with the question point

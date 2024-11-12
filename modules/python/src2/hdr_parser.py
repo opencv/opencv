@@ -14,7 +14,7 @@ opencv_hdr_list = [
 "../../3d/include/opencv2/3d.hpp",
 "../../stereo/include/opencv2/stereo.hpp",
 "../../calib/include/opencv2/calib.hpp",
-"../../features2d/include/opencv2/features2d.hpp",
+"../../features/include/opencv2/features.hpp",
 "../../video/include/opencv2/video/tracking.hpp",
 "../../video/include/opencv2/video/background_segm.hpp",
 "../../objdetect/include/opencv2/objdetect.hpp",
