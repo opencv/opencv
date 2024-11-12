@@ -938,7 +938,20 @@ static int addScalar32f32fWrapper(const uchar* src, size_t step_src, uchar* dst,
         return res;
     else
     {
-        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_sub8u32f)
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static int addScalar16s16sWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                  void* scalar, bool /*scalarIsFirst*/)
+{
+    int res = cv_hal_addScalar16s16s((const int16_t*)src, step_src, (int16_t *)dst, step_dst, width, height, (const int16_t*)scalar);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar16s16s ==> " CVAUX_STR(cv_hal_addScalar16s16s)
                                            " returned %d (0x%08x)", res, res));
     }
 }
@@ -948,6 +961,10 @@ static ScalarFunc getAddScalarFunc(int srcType, int dstType)
     if (srcType == CV_32F && dstType == CV_32F)
     {
         return addScalar32f32fWrapper;
+    }
+    else if (srcType == CV_16S && dstType == CV_16S)
+    {
+        return addScalar16s16sWrapper;
     }
     else
     {
