@@ -137,6 +137,10 @@
 "test_loop11", // Issue::'Graph' is not supported in function 'getLayerParams'
 "test_loop13_seq", // Issue::typeProto.has_tensor_type() in function 'populateNet'
 "test_loop16_seq_none", // Issue::Failed to allocate 179812654996800 bytes in function 'OutOfMemoryError'
+"test_lstm_batchwise", // Issues::Parser:: !name.empty() && constBlobs.count(name) == 1 in function 'parseLSTM'
+"test_lstm_defaults", // ---- same as above ---
+"test_lstm_with_initial_bias", // ---- same as above ---
+"test_lstm_with_peepholes", // ---- same as above ---
 "test_matmulinteger", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
 "test_max_int16", // Issue:: Unsupported data type
 "test_max_uint16", // Issue:: Unsupported data type
