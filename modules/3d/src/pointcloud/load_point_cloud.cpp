@@ -78,6 +78,7 @@ void loadPointCloud(const String &filename, OutputArray vertices, OutputArray no
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
     CV_UNUSED(normals);
+    CV_UNUSED(rgb);
     CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 }
@@ -116,6 +117,7 @@ void savePointCloud(const String &filename, InputArray vertices, InputArray norm
     CV_UNUSED(filename);
     CV_UNUSED(vertices);
     CV_UNUSED(normals);
+    CV_UNUSED(rgb);
     CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 }
@@ -243,6 +245,7 @@ void loadMesh(const String &filename, OutputArray vertices, OutputArrayOfArrays 
     CV_UNUSED(normals);
     CV_UNUSED(colors);
     CV_UNUSED(indices);
+    CV_UNUSED(texCoords);
     CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 }
@@ -328,6 +331,7 @@ void saveMesh(const String &filename, InputArray vertices, InputArrayOfArrays in
     CV_UNUSED(colors);
     CV_UNUSED(normals);
     CV_UNUSED(indices);
+    CV_UNUSED(texCoords);
     CV_LOG_WARNING(NULL, "File system support is disabled in this OpenCV build!");
 #endif
 
