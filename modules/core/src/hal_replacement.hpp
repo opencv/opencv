@@ -109,9 +109,10 @@ Add scalar: _dst[i] = src[i] + scalar
 @param width width of the images
 @param height height of the images
 @param scalar_data pointer to scalar value
+@param nChannels number of channels per element
 */
-inline int hal_ni_addScalar32f32f(const float *src_data, size_t src_step, float *dst_data, size_t dst_step, int width, int height, const float* scalar_data) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_addScalar16s16s(const int16_t *src_data, size_t src_step, int16_t *dst_data, size_t dst_step, int width, int height, const int16_t* scalar_data) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_addScalar32f32f(const float*   src_data, size_t src_step, float*   dst_data, size_t dst_step, int width, int height, const float*   scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_addScalar16s16s(const int16_t* src_data, size_t src_step, int16_t* dst_data, size_t dst_step, int width, int height, const int16_t* scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
 
 /**

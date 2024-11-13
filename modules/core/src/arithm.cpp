@@ -1055,7 +1055,17 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
         return;
     }
 
-    ScalarFunc scalarFunc = getAddScalarFunc(src1.depth(), dtype < 0 ? dst.depth() : dtype);
+    int sdepth;
+    if (checkScalar(src1, src1.type(), src1.kind(), _InputArray::MATX))
+    {
+        sdepth = src2.type();
+    }
+    if (checkScalar(src2, src2.type(), src2.kind(), _InputArray::MATX))
+    {
+        sdepth = src1.type();
+    }
+
+    ScalarFunc scalarFunc = getAddScalarFunc(sdepth, dtype < 0 ? dst.depth() : dtype);
     arithm_op(src1, src2, dst, mask, dtype, getAddTab(), false, 0, OCL_OP_ADD, nullptr,
               /* scalarFunc */ scalarFunc );
 }
