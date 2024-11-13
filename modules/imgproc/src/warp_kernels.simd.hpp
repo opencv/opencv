@@ -590,11 +590,11 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
                     vx_store(vbeta, src_y0);
                     vx_store(vbeta+vlanes_32, src_y1);
     #if CV_SIMD256
-                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_C4(8U);
     #elif CV_SIMD128
-                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_C4(8U);
     #elif CV_SIMD_SCALABLE
-                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_C4(8U);
     #endif
                 } else {
                     uint8_t pixbuf[max_uf*4*4];
@@ -876,7 +876,6 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
         int32_t addr[max_uf],
                 src_ix[max_uf],
                 src_iy[max_uf];
-        uint16_t pixbuf[max_uf*4*4];
 
         uint16_t bvalbuf[max_uf*4];
         for (int i = 0; i < uf; i++) {
@@ -904,18 +903,26 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 16U);
+                    float valpha[max_uf], vbeta[max_uf];
+                    vx_store(valpha, src_x0);
+                    vx_store(valpha+vlanes_32, src_x1);
+                    vx_store(vbeta, src_y0);
+                    vx_store(vbeta+vlanes_32, src_y1);
+    #if CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_C4(16U);
+    #elif CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_C4(16U);
+    #elif CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_C4(16U);
+    #endif
                 } else {
+                    uint16_t pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 16U);
+                    CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U16(C4);
                 }
-
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U16(C4);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -1186,7 +1193,6 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
         int32_t addr[max_uf],
                 src_ix[max_uf],
                 src_iy[max_uf];
-        float pixbuf[max_uf*4*4];
 
         float bvalbuf[max_uf*4];
         for (int i = 0; i < uf; i++) {
@@ -1218,16 +1224,25 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
                 CV_WARPAFFINE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 32F);
+                    float valpha[max_uf], vbeta[max_uf];
+                    vx_store(valpha, src_x0);
+                    vx_store(valpha+vlanes_32, src_x1);
+                    vx_store(vbeta, src_y0);
+                    vx_store(vbeta+vlanes_32, src_y1);
+    #if CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_C4(32F);
+    #elif CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_C4(32F);
+    #elif CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_C4(32F);
+    #endif
                 } else {
+                    float pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 32F);
+                    CV_WARP_LINEAR_VECTOR_INTER_LOAD_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C4);
                 }
-
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C4);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -1917,11 +1932,11 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
                     vx_store(vbeta, src_y0);
                     vx_store(vbeta+vlanes_32, src_y1);
     #if CV_SIMD256
-                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_C4(8U);
     #elif CV_SIMD128
-                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_C4(8U);
     #elif CV_SIMD_SCALABLE
-                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_C4(8U);
     #endif
                 } else {
                     uint8_t pixbuf[max_uf*4*4];
@@ -2204,7 +2219,6 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
         int32_t addr[max_uf],
                 src_ix[max_uf],
                 src_iy[max_uf];
-        uint16_t pixbuf[max_uf*4*4];
 
         uint16_t bvalbuf[max_uf*4];
         for (int i = 0; i < uf; i++) {
@@ -2232,18 +2246,26 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 16U);
+                    float valpha[max_uf], vbeta[max_uf];
+                    vx_store(valpha, src_x0);
+                    vx_store(valpha+vlanes_32, src_x1);
+                    vx_store(vbeta, src_y0);
+                    vx_store(vbeta+vlanes_32, src_y1);
+    #if CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_C4(16U);
+    #elif CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_C4(16U);
+    #elif CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_C4(16U);
+    #endif
                 } else {
+                    uint16_t pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 16U);
+                    CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U16(C4);
                 }
-
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U16(C4);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -2517,7 +2539,6 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
         int32_t addr[max_uf],
                 src_ix[max_uf],
                 src_iy[max_uf];
-        float pixbuf[max_uf*4*4];
 
         float bvalbuf[max_uf*4];
         for (int i = 0; i < uf; i++) {
@@ -2549,16 +2570,25 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
                 CV_WARPPERSPECTIVE_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 32F);
+                    float valpha[max_uf], vbeta[max_uf];
+                    vx_store(valpha, src_x0);
+                    vx_store(valpha+vlanes_32, src_x1);
+                    vx_store(vbeta, src_y0);
+                    vx_store(vbeta+vlanes_32, src_y1);
+    #if CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_C4(32F);
+    #elif CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_C4(32F);
+    #elif CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_C4(32F);
+    #endif
                 } else {
+                    float pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 32F);
+                    CV_WARP_LINEAR_VECTOR_INTER_LOAD_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C4);
                 }
-
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C4);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -3292,11 +3322,11 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
                     vx_store(vbeta, src_y0);
                     vx_store(vbeta+vlanes_32, src_y1);
     #if CV_SIMD256
-                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_8UC4();
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_C4(8U);
     #elif CV_SIMD128
-                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_8UC4();
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_C4(8U);
     #elif CV_SIMD_SCALABLE
-                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_8UC4();
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_C4(8U);
     #endif
                 } else {
                     uint8_t pixbuf[max_uf*4*4];
@@ -3628,7 +3658,6 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
         int32_t addr[max_uf],
                 src_ix[max_uf],
                 src_iy[max_uf];
-        uint16_t pixbuf[max_uf*4*4];
 
         uint16_t bvalbuf[max_uf*4];
         for (int i = 0; i < uf; i++) {
@@ -3658,18 +3687,26 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
                 CV_REMAP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 16U);
+                    float valpha[max_uf], vbeta[max_uf];
+                    vx_store(valpha, src_x0);
+                    vx_store(valpha+vlanes_32, src_x1);
+                    vx_store(vbeta, src_y0);
+                    vx_store(vbeta+vlanes_32, src_y1);
+    #if CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_C4(16U);
+    #elif CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_C4(16U);
+    #elif CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_C4(16U);
+    #endif
                 } else {
+                    uint16_t pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 16U);
+                    CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U16(C4);
                 }
-
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_U16(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CONVERT_U16F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U16(C4);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -3992,7 +4029,6 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
         int32_t addr[max_uf],
                 src_ix[max_uf],
                 src_iy[max_uf];
-        float pixbuf[max_uf*4*4];
 
         float bvalbuf[max_uf*4];
         for (int i = 0; i < uf; i++) {
@@ -4026,16 +4062,25 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
                 CV_REMAP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD2(C4);
 
                 if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
-                    CV_WARP_LINEAR_VECTOR_SHUFFLE_ALLWITHIN(C4, 32F);
+                    float valpha[max_uf], vbeta[max_uf];
+                    vx_store(valpha, src_x0);
+                    vx_store(valpha+vlanes_32, src_x1);
+                    vx_store(vbeta, src_y0);
+                    vx_store(vbeta+vlanes_32, src_y1);
+    #if CV_SIMD256
+                    CV_WARP_SIMD256_LOAD_SHUFFLE_INTER_C4(32F);
+    #elif CV_SIMD128
+                    CV_WARP_SIMD128_LOAD_SHUFFLE_INTER_C4(32F);
+    #elif CV_SIMD_SCALABLE
+                    CV_WARP_SIMDX_LOAD_SHUFFLE_INTER_C4(32F);
+    #endif
                 } else {
+                    float pixbuf[max_uf*4*4];
                     CV_WARP_LINEAR_VECTOR_SHUFFLE_NOTALLWITHIN(C4, 32F);
+                    CV_WARP_LINEAR_VECTOR_INTER_LOAD_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
+                    CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C4);
                 }
-
-                CV_WARP_LINEAR_VECTOR_INTER_LOAD_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C4);
-
-                CV_WARP_LINEAR_VECTOR_INTER_STORE_F32F32(C4);
             }
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
