@@ -1026,7 +1026,7 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
 #if IPP_VERSION_X100 >= 700
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
 
-    if( normType & CV_RELATIVE )
+    if( normType & NORM_RELATIVE )
     {
         normType &= NORM_TYPE_MASK;
 
@@ -1257,9 +1257,9 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(_src1, _src2, normType, _mask, _result), _result);
 
-    if( normType & CV_RELATIVE )
+    if( normType & NORM_RELATIVE )
     {
-        return norm(_src1, _src2, normType & ~CV_RELATIVE, _mask)/(norm(_src2, normType, _mask) + DBL_EPSILON);
+        return norm(_src1, _src2, normType & ~NORM_RELATIVE, _mask)/(norm(_src2, normType, _mask) + DBL_EPSILON);
     }
 
     Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();

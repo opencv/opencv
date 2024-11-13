@@ -56,7 +56,6 @@
 #include "cvconfig.h"
 
 #include "opencv2/core/utility.hpp"
-#include "opencv2/core/core_c.h"
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/va_intel.hpp"

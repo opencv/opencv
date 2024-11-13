@@ -11,6 +11,8 @@
 
 #include <opencv2/core/utils/logger.hpp>
 
+#define CV_SEQ_ELTYPE_PTR            CV_MAKE_TYPE(CV_8U, 8 /*sizeof(void*)*/)
+
 namespace cv
 {
 
