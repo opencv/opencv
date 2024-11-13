@@ -6,7 +6,7 @@ if(WIN32)
     OUTPUT_VARIABLE TRY_OUT
   )
   if(NOT __VALID_DIRECTML)
-    message(STATUS "No support for DirectML (d3d12, dxcore, directml libs are required)")
+    message(STATUS "No support for DirectML. d3d12, dxcore, directml libs are required, first bundled with Windows SDK 10.0.19041.0.")
     return()
   endif()
   set(HAVE_DIRECTML ON)
