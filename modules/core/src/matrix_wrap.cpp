@@ -524,23 +524,9 @@ int _InputArray::dims(int i) const
     if( k == NONE )
         return 0;
 
-    if( k == STD_VECTOR_VECTOR )
-    {
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        if( i < 0 )
-            return 1;
-        CV_Assert( i < (int)vv.size() );
-        return 2;
-    }
-
-    if( k == STD_VECTOR_MAT )
-    {
-        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        if( i < 0 )
-            return 1;
-        CV_Assert( i < (int)vv.size() );
-
-        return vv[i].dims;
+    if (k == STD_VECTOR_VECTOR || k == STD_VECTOR_MAT || k == STD_VECTOR_UMAT) {
+      CV_Assert(ops != nullptr);
+      return ops->dims(*this, i);
     }
 
     if( k == STD_ARRAY_MAT )
@@ -549,16 +535,6 @@ int _InputArray::dims(int i) const
         if( i < 0 )
             return 1;
         CV_Assert( i < sz.height );
-
-        return vv[i].dims;
-    }
-
-    if( k == STD_VECTOR_UMAT )
-    {
-        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        if( i < 0 )
-            return 1;
-        CV_Assert( i < (int)vv.size() );
 
         return vv[i].dims;
     }

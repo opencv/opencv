@@ -53,6 +53,7 @@ struct _ArrayOpsBase {
   virtual UMat getUMat(const _InputArray& self, int i) const = 0;
   virtual std::vector<Mat> getMatVector(const _InputArray& self) const = 0;
   virtual std::vector<UMat> getUMatVector(const _InputArray& self) const = 0;
+  virtual int dims(const _InputArray& self, int i) const = 0;
   virtual Size size(const _InputArray& self, int i) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
@@ -196,6 +197,29 @@ struct _ArrayOps final : _ArrayOpsBase {
     }
     else {
       CV_Assert(false && "unreachable");
+    }
+  }
+
+  int dims(const _InputArray& self, const int i) const final
+  {
+    using value_type = typename T::value_type;
+    T& v = get(self.getObj());
+    if constexpr (is_vector<value_type> || is_Mat<value_type> || is_UMat<value_type>) {
+      if (i < 0) {
+        return 1;
+      }
+
+      if constexpr (is_vector<value_type>) {
+        CV_Assert(static_cast<std::size_t>(i) < v.size());
+        return 2;
+      }
+      else {
+        return v[i].dims;
+      }
+    }
+    else {
+      CV_Assert(i < 0);
+      return 1;
     }
   }
 
