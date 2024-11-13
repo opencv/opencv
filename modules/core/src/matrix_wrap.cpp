@@ -93,10 +93,8 @@ UMat _InputArray::getUMat(int i) const
 
     if( k == STD_VECTOR_UMAT )
     {
-        const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
-        CV_Assert( 0 <= i && i < (int)v.size() );
-
-        return v[i];
+        CV_Assert(ops != nullptr);
+        return ops->getUMat(*this, i);
     }
 
     if( k == MAT )

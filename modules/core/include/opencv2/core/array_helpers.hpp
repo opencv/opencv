@@ -50,6 +50,7 @@
 namespace cv {
 struct _ArrayOpsBase {
   virtual Mat getMat_(const _InputArray& self, int i = -1) const = 0;
+  virtual UMat getUMat(const _InputArray& self, int i) const = 0;
   virtual Size size(const _InputArray& self, int i) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
@@ -125,7 +126,21 @@ struct _ArrayOps final : _ArrayOpsBase {
     }
   }
 
-    Size size(const _InputArray& self, const int i) const final {
+  UMat getUMat(const _InputArray& self, const int i) const final {
+    using value_type = typename T::value_type;
+
+    if constexpr (is_UMat<value_type>) {
+      T& v = get(self.getObj());
+      CV_Assert(0 <= i);
+      CV_Assert(static_cast<std::size_t>(i) < v.size());
+      return v[i];
+    }
+    else {
+      CV_Assert(false && "unreachable");
+    }
+  }
+
+  Size size(const _InputArray& self, const int i) const final {
     using value_type = typename T::value_type;
     auto& v = get(self.getObj());
 
