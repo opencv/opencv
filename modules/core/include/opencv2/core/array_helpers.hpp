@@ -51,6 +51,8 @@ namespace cv {
 struct _ArrayOpsBase {
   virtual Mat getMat_(const _InputArray& self, int i = -1) const = 0;
   virtual UMat getUMat(const _InputArray& self, int i) const = 0;
+  virtual std::vector<Mat> getMatVector(const _InputArray& self) const = 0;
+  virtual std::vector<UMat> getUMatVector(const _InputArray& self) const = 0;
   virtual Size size(const _InputArray& self, int i) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
@@ -134,6 +136,63 @@ struct _ArrayOps final : _ArrayOpsBase {
       CV_Assert(0 <= i);
       CV_Assert(static_cast<std::size_t>(i) < v.size());
       return v[i];
+    }
+    else {
+      CV_Assert(false && "unreachable");
+    }
+  }
+
+  std::vector<Mat> getMatVector(const _InputArray& self) const final
+  {
+    using value_type = typename T::value_type;
+    auto& v = get(self.getObj());
+    if constexpr (is_Mat<value_type>) {
+      return {v.begin(), v.end()};
+    }
+    else if constexpr (!is_cuda_GpuMat<value_type>) {
+      const int flags = self.getFlags();
+      [[maybe_unused]] const int type = CV_MAT_TYPE(flags);
+      [[maybe_unused]] const int column_number = CV_MAT_CN(flags);
+
+      std::vector<Mat> result;
+      result.reserve(v.size());
+
+      for (std::size_t i = 0; i < v.size(); ++i) {
+        if constexpr (is_UMat<value_type>) {
+          result.emplace_back(v[i].getMat(flags & ACCESS_MASK));
+        }
+        else if constexpr (is_vector<value_type>) {
+          result.emplace_back(size(self, i), type, static_cast<void*>(v[i].data()));
+        }
+        else if constexpr (!std::is_same_v<value_type, bool>) {
+          result.emplace_back(1, column_number, type, static_cast<void*>(&v[i]));
+        }
+      }
+
+      return result;
+    }
+    else {
+      CV_Assert(false && "unreachable");
+    }
+  }
+
+  std::vector<UMat> getUMatVector(const _InputArray& self) const final
+  {
+    using value_type = typename T::value_type;
+    auto& v = get(self.getObj());
+    [[maybe_unused]] const int flags = self.getFlags();
+
+    if constexpr (is_UMat<value_type>) {
+      return v;
+    }
+    else if constexpr (is_Mat<value_type>) {
+      std::vector<UMat> result;
+      result.reserve(v.size());
+      for (std::size_t i = 0; i < v.size(); ++i) {
+        result.emplace_back(v[i].getUMat(flags & ACCESS_MASK));
+      }
+
+      return result;
     }
     else {
       CV_Assert(false && "unreachable");

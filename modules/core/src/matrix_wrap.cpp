@@ -111,7 +111,6 @@ UMat _InputArray::getUMat(int i) const
 void _InputArray::getMatVector(std::vector<Mat>& mv) const
 {
     _InputArray::KindFlag k = kind();
-    AccessFlag accessFlags = flags & ACCESS_MASK;
 
     if( k == MAT )
     {
@@ -136,48 +135,16 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         return;
     }
 
-    if( k == STD_VECTOR )
-    {
-        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
-
-        size_t n = size().width, esz = CV_ELEM_SIZE(flags);
-        int t = CV_MAT_DEPTH(flags), cn = CV_MAT_CN(flags);
-        mv.resize(n);
-
-        for( size_t i = 0; i < n; i++ )
-            mv[i] = Mat(1, cn, t, (void*)(&v[0] + esz*i));
-        return;
+    if (k == STD_VECTOR || k == STD_VECTOR_VECTOR || k == STD_VECTOR_MAT ||
+        k == STD_VECTOR_UMAT) {
+      CV_Assert(ops != nullptr);
+      mv = ops->getMatVector(*this);
+      return;
     }
 
     if( k == NONE )
     {
         mv.clear();
-        return;
-    }
-
-    if( k == STD_VECTOR_VECTOR )
-    {
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        int n = (int)vv.size();
-        int t = CV_MAT_TYPE(flags);
-        mv.resize(n);
-
-        for( int i = 0; i < n; i++ )
-        {
-            const std::vector<uchar>& v = vv[i];
-            mv[i] = Mat(size(i), t, (void*)&v[0]);
-        }
-        return;
-    }
-
-    if( k == STD_VECTOR_MAT )
-    {
-        const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
-        size_t n = v.size();
-        mv.resize(n);
-
-        for( size_t i = 0; i < n; i++ )
-            mv[i] = v[i];
         return;
     }
 
@@ -189,17 +156,6 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
 
         for( size_t i = 0; i < n; i++ )
             mv[i] = v[i];
-        return;
-    }
-
-    if( k == STD_VECTOR_UMAT )
-    {
-        const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
-        size_t n = v.size();
-        mv.resize(n);
-
-        for( size_t i = 0; i < n; i++ )
-            mv[i] = v[i].getMat(accessFlags);
         return;
     }
 
@@ -217,15 +173,10 @@ void _InputArray::getUMatVector(std::vector<UMat>& umv) const
         return;
     }
 
-    if( k == STD_VECTOR_MAT )
-    {
-        const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
-        size_t n = v.size();
-        umv.resize(n);
-
-        for( size_t i = 0; i < n; i++ )
-            umv[i] = v[i].getUMat(accessFlags);
-        return;
+    if (k == STD_VECTOR_MAT || k == STD_VECTOR_UMAT) {
+      CV_Assert(ops != nullptr);
+      umv = ops->getUMatVector(*this);
+      return;
     }
 
     if( k == STD_ARRAY_MAT )
@@ -238,18 +189,6 @@ void _InputArray::getUMatVector(std::vector<UMat>& umv) const
             umv[i] = v[i].getUMat(accessFlags);
         return;
     }
-
-    if( k == STD_VECTOR_UMAT )
-    {
-        const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
-        size_t n = v.size();
-        umv.resize(n);
-
-        for( size_t i = 0; i < n; i++ )
-            umv[i] = v[i];
-        return;
-    }
-
     if( k == UMAT )
     {
         UMat& v = *(UMat*)obj;
