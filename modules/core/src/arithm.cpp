@@ -1041,6 +1041,66 @@ static BinaryFuncC* getAbsDiffTab()
     return absDiffTab;
 }
 
+
+static int absDiffScalar32f32fWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                      void* scalar, bool /*scalarIsFirst*/, int nChannels)
+{
+    int res = cv_hal_absDiffScalar32f32f((const float*)src, step_src, (float *)dst, step_dst, width, height, (const float*)scalar, nChannels);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static int absDiffScalar32s32sWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                      void* scalar, bool /*scalarIsFirst*/, int nChannels)
+{
+    int res = cv_hal_absDiffScalar32s32s((const int*)src, step_src, (int*)dst, step_dst, width, height, (const int*)scalar, nChannels);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static int absDiffScalar8u8uWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                      void* scalar, bool /*scalarIsFirst*/, int nChannels)
+{
+    int res = cv_hal_absDiffScalar8u8u((const uchar*)src, step_src, (uchar*)dst, step_dst, width, height, (const uchar*)scalar, nChannels);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static ScalarFunc getAbsDiffScalarFunc(int srcType, int dstType)
+{
+    if (srcType == CV_32F && dstType == CV_32F)
+    {
+        return absDiffScalar32f32fWrapper;
+    }
+    else if (srcType == CV_32S && dstType == CV_32S)
+    {
+        return absDiffScalar32s32sWrapper;
+    }
+    else if (srcType == CV_8U && dstType == CV_8U)
+    {
+        return absDiffScalar8u8uWrapper;
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
 }
 
 void cv::add( InputArray src1, InputArray src2, OutputArray dst,
@@ -1098,7 +1158,18 @@ void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
         return;
     }
 
-    arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF);
+    int sdepth;
+    if (checkScalar(src1, src1.type(), src1.kind(), _InputArray::MATX))
+    {
+        sdepth = src2.type();
+    }
+    if (checkScalar(src2, src2.type(), src2.kind(), _InputArray::MATX))
+    {
+        sdepth = src1.type();
+    }
+    ScalarFunc scalarFunc = getAbsDiffScalarFunc(sdepth, dst.depth());
+    arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF,
+              /* extendedFunc */ nullptr, scalarFunc);
 }
 
 void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
