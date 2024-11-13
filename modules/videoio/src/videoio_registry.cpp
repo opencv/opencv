@@ -253,7 +253,7 @@ protected:
     bool readPrioritySettings()
     {
         bool hasChanges = false;
-        cv::String prioritized_backends = utils::getConfigurationParameterString("OPENCV_VIDEOIO_PRIORITY_LIST", NULL);
+        cv::String prioritized_backends = utils::getConfigurationParameterString("OPENCV_VIDEOIO_PRIORITY_LIST");
         if (prioritized_backends.empty())
             return hasChanges;
         CV_LOG_INFO(NULL, "VIDEOIO: Configured priority list (OPENCV_VIDEOIO_PRIORITY_LIST): " << prioritized_backends);

@@ -55,6 +55,7 @@
 #include "opencv2/core/utility.hpp"
 #if defined(__OPENCV_BUILD)
 #include "opencv2/core/private.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
 #endif
 
 #include "opencv2/imgproc.hpp"

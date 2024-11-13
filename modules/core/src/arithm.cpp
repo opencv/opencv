@@ -611,6 +611,10 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 #endif
 
+typedef int (*ScalarFunc)(const uchar* src, size_t step_src,
+                          uchar* dst, size_t step_dst, int width, int height,
+                          void* scalar, bool scalarIsFirst);
+
 typedef int (*ExtendedTypeFunc)(const uchar* src1, size_t step1,
                                 const uchar* src2, size_t step2,
                                 uchar* dst, size_t step, int width, int height,
@@ -618,7 +622,8 @@ typedef int (*ExtendedTypeFunc)(const uchar* src1, size_t step1,
 
 static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                       InputArray _mask, int dtype, BinaryFuncC* tab, bool muldiv=false,
-                      void* usrdata=0, int oclop=-1, ExtendedTypeFunc extendedFunc = nullptr )
+                      void* usrdata=0, int oclop=-1, ExtendedTypeFunc extendedFunc = nullptr,
+                      ScalarFunc scalarFunc = nullptr)
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
     _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
@@ -664,8 +669,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         (kind1 == _InputArray::MATX && (sz1 == Size(1,4) || sz1 == Size(1,1))) ||
         (kind2 == _InputArray::MATX && (sz2 == Size(1,4) || sz2 == Size(1,1))) )
     {
-        if ((type1 == CV_64F && (sz1.height == 1 || sz1.height == 4)) &&
-            checkScalar(*psrc1, type2, kind1, kind2))
+        if ((type1 == CV_64F && (sz1.height == 1 || sz1.height == 4)) && src1Scalar)
         {
             // src1 is a scalar; swap it with src2
             swap(psrc1, psrc2);
@@ -680,7 +684,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             if ( oclop == OCL_OP_DIV_SCALE )
                 oclop = OCL_OP_RDIV_SCALE;
         }
-        else if( !checkScalar(*psrc2, type1, kind2, kind1) )
+        else if( !src2Scalar )
             CV_Error( cv::Error::StsUnmatchedSizes,
                      "The operation is neither 'array op array' "
                      "(where arrays have the same size and the same number of channels), "
@@ -891,32 +895,38 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 const uchar* extSptr1 = sptr1;
                 const uchar* extSptr2 = sptr2;
                 if( swapped12 )
-                    std::swap(extSptr1, extSptr1);
+                    std::swap(extSptr1, extSptr2);
 
-                // try to perform operation with conversion in one call
-                // if fail, use converter functions
+                // try to perform operation in 1 call, fallback to classic way if fail
                 uchar* opconverted = haveMask ? maskbuf : dptr;
-                if (!extendedFunc || extendedFunc(extSptr1, 1, extSptr2, 1, opconverted, 1,
-                                                  bszn.width, bszn.height, usrdata) != 0)
+                if (!scalarFunc || src2.total() != 1 ||
+                    scalarFunc(extSptr1, 1, opconverted, 1, bszn.width, bszn.height, (void*)extSptr2, swapped12) != 0)
                 {
-                    if( cvtsrc1 )
+                    // try to perform operation with conversion in one call
+                    // if fail, use converter functions
+
+                    if (!extendedFunc || extendedFunc(extSptr1, 1, extSptr2, 1, opconverted, 1,
+                                                    bszn.width, bszn.height, usrdata) != 0)
                     {
-                        cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
-                        sptr1 = buf1;
+                        if( cvtsrc1 )
+                        {
+                            cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
+                            sptr1 = buf1;
+                        }
+
+                        if( swapped12 )
+                            std::swap(sptr1, sptr2);
+
+                        uchar* fdst = ( haveMask || cvtdst ) ? wbuf : dptr;
+                        func( sptr1, 1, sptr2, 1, fdst, 1, bszn.width, bszn.height, usrdata );
+
+                        if (cvtdst)
+                        {
+                            uchar* cdst = haveMask ? maskbuf : dptr;
+                            cvtdst(wbuf, 1, 0, 1, cdst, 1, bszn, 0);
+                        }
+                        opconverted = cvtdst ? maskbuf : wbuf;
                     }
-
-                    if( swapped12 )
-                        std::swap(sptr1, sptr2);
-
-                    uchar* fdst = ( haveMask || cvtdst ) ? wbuf : dptr;
-                    func( sptr1, 1, sptr2, 1, fdst, 1, bszn.width, bszn.height, usrdata );
-
-                    if (cvtdst)
-                    {
-                        uchar* cdst = haveMask ? maskbuf : dptr;
-                        cvtdst(wbuf, 1, 0, 1, cdst, 1, bszn, 0);
-                    }
-                    opconverted = cvtdst ? maskbuf : wbuf;
                 }
 
                 if (haveMask)
@@ -952,6 +962,48 @@ static BinaryFuncC* getAddTab()
     };
 
     return addTab;
+}
+
+static int addScalar32f32fWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                  void* scalar, bool /*scalarIsFirst*/)
+{
+    int res = cv_hal_addScalar32f32f((const float*)src, step_src, (float *)dst, step_dst, width, height, (const float*)scalar);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static int addScalar16s16sWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                  void* scalar, bool /*scalarIsFirst*/)
+{
+    int res = cv_hal_addScalar16s16s((const int16_t*)src, step_src, (int16_t *)dst, step_dst, width, height, (const int16_t*)scalar);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar16s16s ==> " CVAUX_STR(cv_hal_addScalar16s16s)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static ScalarFunc getAddScalarFunc(int srcType, int dstType)
+{
+    if (srcType == CV_32F && dstType == CV_32F)
+    {
+        return addScalar32f32fWrapper;
+    }
+    else if (srcType == CV_16S && dstType == CV_16S)
+    {
+        return addScalar16s16sWrapper;
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
 static int sub8u32fWrapper(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
@@ -1056,7 +1108,9 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
         return;
     }
 
-    arithm_op(src1, src2, dst, mask, dtype, getAddTab(), false, 0, OCL_OP_ADD );
+    ScalarFunc scalarFunc = getAddScalarFunc(src1.depth(), dtype < 0 ? dst.depth() : dtype);
+    arithm_op(src1, src2, dst, mask, dtype, getAddTab(), false, 0, OCL_OP_ADD, nullptr,
+              /* scalarFunc */ scalarFunc );
 }
 
 void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
