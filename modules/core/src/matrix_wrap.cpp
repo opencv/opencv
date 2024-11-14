@@ -350,6 +350,9 @@ int _InputArray::sizend(int* arrsz, int i) const
     int j, d = 0;
     _InputArray::KindFlag k = kind();
 
+    const bool is_nd_vector = (k == STD_VECTOR_MAT || k == STD_VECTOR_UMAT) && (i >= 0);
+    const bool is_1d_vector = k == STD_VECTOR && i < 0;
+
     if( k == NONE )
         ;
     else if( k == MAT )
@@ -370,15 +373,10 @@ int _InputArray::sizend(int* arrsz, int i) const
             for(j = 0; j < d; j++)
                 arrsz[j] = m.size.p[j];
     }
-    else if( k == STD_VECTOR_MAT && i >= 0 )
+    else if( is_nd_vector || is_1d_vector )
     {
-        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        CV_Assert( i < (int)vv.size() );
-        const Mat& m = vv[i];
-        d = m.dims;
-        if(arrsz)
-            for(j = 0; j < d; j++)
-                arrsz[j] = m.size.p[j];
+        CV_Assert(ops != nullptr);
+        return ops->sizend(*this, arrsz, i);
     }
     else if( k == STD_ARRAY_MAT && i >= 0 )
     {
@@ -389,25 +387,6 @@ int _InputArray::sizend(int* arrsz, int i) const
         if(arrsz)
             for(j = 0; j < d; j++)
                 arrsz[j] = m.size.p[j];
-    }
-    else if( k == STD_VECTOR_UMAT && i >= 0 )
-    {
-        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        CV_Assert( i < (int)vv.size() );
-        const UMat& m = vv[i];
-        d = m.dims;
-        if(arrsz)
-            for(j = 0; j < d; j++)
-                arrsz[j] = m.size.p[j];
-    }
-    else if (k == STD_VECTOR && i < 0 )
-    {
-        Size sz2d = size();
-        d = 1;
-        if(arrsz)
-        {
-            arrsz[0] = sz2d.width;
-        }
     }
     else
     {
@@ -686,7 +665,7 @@ int _InputArray::type(int i) const
     if( k == CUDA_HOST_MEM )
         return ((const cuda::HostMem*)obj)->type();
 
-    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+        CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
 int _InputArray::depth(int i) const
@@ -2045,6 +2024,19 @@ template<>
         CV_Assert(index < v.size());
         return v[index].size();
     }
+}
+
+template<>
+[[gnu::visibility("default")]] int _ArrayOps<std::vector<cuda::GpuMat>>::sizend(const _InputArray& self, int* const arraySize, const int i) const
+{
+    std::vector<cuda::GpuMat>& v = get(self.getObj());
+    CV_Assert(i < 0);
+    Size sz2d = Size(v.size(), 1);
+    if (arraySize != nullptr) {
+        arraySize[0] = sz2d.width;
+    }
+
+    return 1;
 }
 
 } // cv::
