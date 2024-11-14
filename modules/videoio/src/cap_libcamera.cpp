@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #include "precomp.hpp"
 #include <opencv2/core/utils/logger.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
@@ -1157,3 +1158,8 @@ Ptr<IVideoCapture> createLibcameraCapture_cam(int index)
 }
 
 } //namespace
+=======
+/*
+Implement libcamera support here.
+*/
+>>>>>>> 2f589c7750 (create cap_libcamera.cpp src file)
