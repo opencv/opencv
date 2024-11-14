@@ -1115,14 +1115,14 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
         return;
     }
 
-    int sdepth;
+    int sdepth = src1.depth();
     if (checkScalar(src1, src1.type(), src1.kind(), _InputArray::MATX))
     {
-        sdepth = src2.type();
+        sdepth = src2.depth();
     }
     if (checkScalar(src2, src2.type(), src2.kind(), _InputArray::MATX))
     {
-        sdepth = src1.type();
+        sdepth = src1.depth();
     }
 
     ScalarFunc scalarFunc = getAddScalarFunc(sdepth, dtype < 0 ? dst.depth() : dtype);
@@ -1158,14 +1158,14 @@ void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
         return;
     }
 
-    int sdepth;
+    int sdepth = src1.depth();
     if (checkScalar(src1, src1.type(), src1.kind(), _InputArray::MATX))
     {
-        sdepth = src2.type();
+        sdepth = src2.depth();
     }
     if (checkScalar(src2, src2.type(), src2.kind(), _InputArray::MATX))
     {
-        sdepth = src1.type();
+        sdepth = src1.depth();
     }
     ScalarFunc scalarFunc = getAbsDiffScalarFunc(sdepth, dst.depth());
     arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF,
