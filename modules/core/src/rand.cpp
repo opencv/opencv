@@ -47,6 +47,8 @@ namespace cv
 
 ///////////////////////////// Functions Declaration //////////////////////////////////////
 
+#define CV_RNG_COEFF 4164903690U
+
 /*
    Multiply-with-carry generator is used here:
    temp = ( A*X(n) + carry )

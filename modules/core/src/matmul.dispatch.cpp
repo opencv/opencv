@@ -696,7 +696,7 @@ void calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean, int
     Mat mean;
     ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), _mean.depth()), CV_32F);
 
-    if( (flags & CV_COVAR_USE_AVG) != 0 )
+    if( (flags & cv::COVAR_USE_AVG) != 0 )
     {
         CV_Assert( _mean.size() == size );
         if( _mean.isContinuous() && _mean.type() == ctype )
@@ -722,8 +722,8 @@ void calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean, int
         }
     }
 
-    calcCovarMatrix( _data, covar, mean, (flags & ~(CV_COVAR_ROWS|CV_COVAR_COLS)) | CV_COVAR_ROWS, ctype );
-    if( (flags & CV_COVAR_USE_AVG) == 0 )
+    calcCovarMatrix( _data, covar, mean, (flags & ~(cv::COVAR_ROWS|cv::COVAR_COLS)) | cv::COVAR_ROWS, ctype );
+    if( (flags & cv::COVAR_USE_AVG) == 0 )
         _mean = mean.reshape(1, size.height);
 }
 
@@ -754,7 +754,7 @@ void calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mea
         }
 
         Mat mean;
-        if( (flags & CV_COVAR_USE_AVG) != 0 )
+        if( (flags & cv::COVAR_USE_AVG) != 0 )
         {
             CV_Assert( _mean.size() == size );
 
@@ -770,9 +770,9 @@ void calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mea
             mean = _mean.getMat().reshape(1, 1);
         }
 
-        calcCovarMatrix( _data, _covar, mean, (flags & ~(CV_COVAR_ROWS|CV_COVAR_COLS)) | CV_COVAR_ROWS, ctype );
+        calcCovarMatrix( _data, _covar, mean, (flags & ~(cv::COVAR_ROWS|cv::COVAR_COLS)) | cv::COVAR_ROWS, ctype );
 
-        if( (flags & CV_COVAR_USE_AVG) == 0 )
+        if( (flags & cv::COVAR_USE_AVG) == 0 )
         {
             mean = mean.reshape(1, size.height);
             mean.copyTo(_mean);
@@ -781,14 +781,14 @@ void calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mea
     }
 
     Mat data = _src.getMat(), mean;
-    CV_Assert( ((flags & CV_COVAR_ROWS) != 0) ^ ((flags & CV_COVAR_COLS) != 0) );
-    bool takeRows = (flags & CV_COVAR_ROWS) != 0;
+    CV_Assert( ((flags & cv::COVAR_ROWS) != 0) ^ ((flags & cv::COVAR_COLS) != 0) );
+    bool takeRows = (flags & cv::COVAR_ROWS) != 0;
     int type = data.type();
     int nsamples = takeRows ? data.rows : data.cols;
     CV_Assert( nsamples > 0 );
     Size size = takeRows ? Size(data.cols, 1) : Size(1, data.rows);
 
-    if( (flags & CV_COVAR_USE_AVG) != 0 )
+    if( (flags & cv::COVAR_USE_AVG) != 0 )
     {
         mean = _mean.getMat();
         ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), mean.depth()), CV_32F);
@@ -808,8 +808,8 @@ void calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mea
         mean = _mean.getMat();
     }
 
-    mulTransposed( data, _covar, ((flags & CV_COVAR_NORMAL) == 0) ^ takeRows,
-        mean, (flags & CV_COVAR_SCALE) != 0 ? 1./nsamples : 1, ctype );
+    mulTransposed( data, _covar, ((flags & cv::COVAR_NORMAL) == 0) ^ takeRows,
+        mean, (flags & cv::COVAR_SCALE) != 0 ? 1./nsamples : 1, ctype );
 }
 
 
@@ -1097,233 +1097,4 @@ double UMat::dot(InputArray m) const
 }
 
 }  // namespace cv::
-
-
-#ifndef OPENCV_EXCLUDE_C_API
-/****************************************************************************************\
-*                                    Earlier API                                         *
-\****************************************************************************************/
-
-CV_IMPL void cvGEMM( const CvArr* Aarr, const CvArr* Barr, double alpha,
-                     const CvArr* Carr, double beta, CvArr* Darr, int flags )
-{
-    cv::Mat A = cv::cvarrToMat(Aarr), B = cv::cvarrToMat(Barr);
-    cv::Mat C, D = cv::cvarrToMat(Darr);
-
-    if( Carr )
-        C = cv::cvarrToMat(Carr);
-
-    CV_Assert_N( (D.rows == ((flags & CV_GEMM_A_T) == 0 ? A.rows : A.cols)),
-               (D.cols == ((flags & CV_GEMM_B_T) == 0 ? B.cols : B.rows)),
-               D.type() == A.type() );
-
-    gemm( A, B, alpha, C, beta, D, flags );
-}
-
-
-CV_IMPL void
-cvTransform( const CvArr* srcarr, CvArr* dstarr,
-             const CvMat* transmat, const CvMat* shiftvec )
-{
-    cv::Mat m = cv::cvarrToMat(transmat), src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-
-    if( shiftvec )
-    {
-        cv::Mat v = cv::cvarrToMat(shiftvec).reshape(1,m.rows),
-            _m(m.rows, m.cols + 1, m.type()), m1 = _m.colRange(0,m.cols), v1 = _m.col(m.cols);
-        m.convertTo(m1, m1.type());
-        v.convertTo(v1, v1.type());
-        m = _m;
-    }
-
-    CV_Assert_N( dst.depth() == src.depth(), dst.channels() == m.rows );
-    cv::transform( src, dst, m );
-}
-
-
-CV_IMPL void
-cvPerspectiveTransform( const CvArr* srcarr, CvArr* dstarr, const CvMat* mat )
-{
-    cv::Mat m = cv::cvarrToMat(mat), src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr);
-
-    CV_Assert_N( dst.type() == src.type(), dst.channels() == m.rows-1 );
-    cv::perspectiveTransform( src, dst, m );
-}
-
-
-CV_IMPL void cvScaleAdd( const CvArr* srcarr1, CvScalar scale,
-                         const CvArr* srcarr2, CvArr* dstarr )
-{
-    cv::Mat src1 = cv::cvarrToMat(srcarr1), dst = cv::cvarrToMat(dstarr);
-
-    CV_Assert_N( src1.size == dst.size, src1.type() == dst.type() );
-    cv::scaleAdd( src1, scale.val[0], cv::cvarrToMat(srcarr2), dst );
-}
-
-
-CV_IMPL void
-cvCalcCovarMatrix( const CvArr** vecarr, int count,
-                   CvArr* covarr, CvArr* avgarr, int flags )
-{
-    cv::Mat cov0 = cv::cvarrToMat(covarr), cov = cov0, mean0, mean;
-    CV_Assert_N( vecarr != 0, count >= 1 );
-
-    if( avgarr )
-        mean = mean0 = cv::cvarrToMat(avgarr);
-
-    if( (flags & CV_COVAR_COLS) != 0 || (flags & CV_COVAR_ROWS) != 0 )
-    {
-
-        cv::Mat data = cv::cvarrToMat(vecarr[0]);
-        cv::calcCovarMatrix( data, cov, mean, flags, cov.type() );
-    }
-    else
-    {
-        std::vector<cv::Mat> data(count);
-        for( int i = 0; i < count; i++ )
-            data[i] = cv::cvarrToMat(vecarr[i]);
-        cv::calcCovarMatrix( &data[0], count, cov, mean, flags, cov.type() );
-    }
-
-    if( mean.data != mean0.data && mean0.data )
-        mean.convertTo(mean0, mean0.type());
-
-    if( cov.data != cov0.data )
-        cov.convertTo(cov0, cov0.type());
-}
-
-
-CV_IMPL double
-cvMahalanobis( const CvArr* srcAarr, const CvArr* srcBarr, const CvArr* matarr )
-{
-    return cv::Mahalanobis(cv::cvarrToMat(srcAarr),
-        cv::cvarrToMat(srcBarr), cv::cvarrToMat(matarr));
-}
-
-CV_IMPL void
-cvMulTransposed( const CvArr* srcarr, CvArr* dstarr,
-                 int order, const CvArr* deltaarr, double scale )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst0 = cv::cvarrToMat(dstarr), dst = dst0, delta;
-    if( deltaarr )
-        delta = cv::cvarrToMat(deltaarr);
-    cv::mulTransposed( src, dst, order != 0, delta, scale, dst.type());
-    if( dst.data != dst0.data )
-        dst.convertTo(dst0, dst0.type());
-}
-
-CV_IMPL double cvDotProduct( const CvArr* srcAarr, const CvArr* srcBarr )
-{
-    return cv::cvarrToMat(srcAarr).dot(cv::cvarrToMat(srcBarr));
-}
-
-
-CV_IMPL void
-cvCalcPCA( const CvArr* data_arr, CvArr* avg_arr, CvArr* eigenvals, CvArr* eigenvects, int flags )
-{
-    cv::Mat data = cv::cvarrToMat(data_arr), mean0 = cv::cvarrToMat(avg_arr);
-    cv::Mat evals0 = cv::cvarrToMat(eigenvals), evects0 = cv::cvarrToMat(eigenvects);
-    cv::Mat mean = mean0, evals = evals0, evects = evects0;
-
-    cv::PCA pca;
-    pca.mean = mean;
-    pca.eigenvalues = evals;
-    pca.eigenvectors = evects;
-
-    pca(data, (flags & cv::PCA::USE_AVG) ? mean : cv::Mat(),
-        flags, !evals.empty() ? evals.rows + evals.cols - 1 : 0);
-
-    if( pca.mean.size() == mean.size() )
-        pca.mean.convertTo( mean, mean.type() );
-    else
-    {
-        cv::Mat temp; pca.mean.convertTo( temp, mean.type() );
-        transpose( temp, mean );
-    }
-
-    evals = pca.eigenvalues;
-    evects = pca.eigenvectors;
-    int ecount0 = evals0.cols + evals0.rows - 1;
-    int ecount = evals.cols + evals.rows - 1;
-
-    CV_Assert_N( (evals0.cols == 1 || evals0.rows == 1),
-                ecount0 <= ecount,
-                evects0.cols == evects.cols,
-                evects0.rows == ecount0 );
-
-    cv::Mat temp = evals0;
-    if( evals.rows == 1 )
-        evals.colRange(0, ecount0).convertTo(temp, evals0.type());
-    else
-        evals.rowRange(0, ecount0).convertTo(temp, evals0.type());
-    if( temp.data != evals0.data )
-        transpose(temp, evals0);
-    evects.rowRange(0, ecount0).convertTo( evects0, evects0.type() );
-
-    // otherwise some datatype's or size's were incorrect, so the output arrays have been reallocated
-    CV_Assert( mean0.data == mean.data );
-}
-
-
-CV_IMPL void
-cvProjectPCA( const CvArr* data_arr, const CvArr* avg_arr,
-              const CvArr* eigenvects, CvArr* result_arr )
-{
-    cv::Mat data = cv::cvarrToMat(data_arr), mean = cv::cvarrToMat(avg_arr);
-    cv::Mat evects = cv::cvarrToMat(eigenvects), dst0 = cv::cvarrToMat(result_arr), dst = dst0;
-
-    cv::PCA pca;
-    pca.mean = mean;
-    int n;
-    if( mean.rows == 1 )
-    {
-        CV_Assert_N(dst.cols <= evects.rows, dst.rows == data.rows);
-        n = dst.cols;
-    }
-    else
-    {
-        CV_Assert_N(dst.rows <= evects.rows, dst.cols == data.cols);
-        n = dst.rows;
-    }
-    pca.eigenvectors = evects.rowRange(0, n);
-
-    cv::Mat result = pca.project(data);
-    if( result.cols != dst.cols )
-        result = result.reshape(1, 1);
-    result.convertTo(dst, dst.type());
-
-    CV_Assert(dst0.data == dst.data);
-}
-
-
-CV_IMPL void
-cvBackProjectPCA( const CvArr* proj_arr, const CvArr* avg_arr,
-                  const CvArr* eigenvects, CvArr* result_arr )
-{
-    cv::Mat data = cv::cvarrToMat(proj_arr), mean = cv::cvarrToMat(avg_arr);
-    cv::Mat evects = cv::cvarrToMat(eigenvects), dst0 = cv::cvarrToMat(result_arr), dst = dst0;
-
-    cv::PCA pca;
-    pca.mean = mean;
-    int n;
-    if( mean.rows == 1 )
-    {
-        CV_Assert_N(data.cols <= evects.rows, dst.rows == data.rows);
-        n = data.cols;
-    }
-    else
-    {
-        CV_Assert_N(data.rows <= evects.rows, dst.cols == data.cols);
-        n = data.rows;
-    }
-    pca.eigenvectors = evects.rowRange(0, n);
-
-    cv::Mat result = pca.backProject(data);
-    result.convertTo(dst, dst.type());
-
-    CV_Assert(dst0.data == dst.data);
-}
-
-#endif  // OPENCV_EXCLUDE_C_API
-
 /* End of file. */

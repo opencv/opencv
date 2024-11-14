@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+//#include "opencv2/core/core_c.h"
 #include <atomic>
 #include <iostream>
 #include <ostream>
@@ -1378,57 +1379,6 @@ void terminate(Error::Code _code, const String& _err, const char* _func, const c
     std::terminate();
 }
 
-}
-
-CV_IMPL int cvGetErrMode(void)
-{
-    return 0;
-}
-
-CV_IMPL int cvSetErrMode(int)
-{
-    return 0;
-}
-
-CV_IMPL int cvGetErrStatus(void)
-{
-    return 0;
-}
-
-CV_IMPL void cvSetErrStatus(int)
-{
-}
-
-/* function, which converts int to int */
-CV_IMPL int
-cvErrorFromIppStatus( int status )
-{
-    switch (status)
-    {
-    case CV_BADSIZE_ERR:               return cv::Error::StsBadSize;
-    case CV_BADMEMBLOCK_ERR:           return cv::Error::StsBadMemBlock;
-    case CV_NULLPTR_ERR:               return cv::Error::StsNullPtr;
-    case CV_DIV_BY_ZERO_ERR:           return cv::Error::StsDivByZero;
-    case CV_BADSTEP_ERR:               return cv::Error::BadStep;
-    case CV_OUTOFMEM_ERR:              return cv::Error::StsNoMem;
-    case CV_BADARG_ERR:                return cv::Error::StsBadArg;
-    case CV_NOTDEFINED_ERR:            return cv::Error::StsError;
-    case CV_INPLACE_NOT_SUPPORTED_ERR: return cv::Error::StsInplaceNotSupported;
-    case CV_NOTFOUND_ERR:              return cv::Error::StsObjectNotFound;
-    case CV_BADCONVERGENCE_ERR:        return cv::Error::StsNoConv;
-    case CV_BADDEPTH_ERR:              return cv::Error::BadDepth;
-    case CV_UNMATCHED_FORMATS_ERR:     return cv::Error::StsUnmatchedFormats;
-    case CV_UNSUPPORTED_COI_ERR:       return cv::Error::BadCOI;
-    case CV_UNSUPPORTED_CHANNELS_ERR:  return cv::Error::BadNumChannels;
-    case CV_BADFLAG_ERR:               return cv::Error::StsBadFlag;
-    case CV_BADRANGE_ERR:              return cv::Error::StsBadArg;
-    case CV_BADCOEF_ERR:               return cv::Error::StsBadArg;
-    case CV_BADFACTOR_ERR:             return cv::Error::StsBadArg;
-    case CV_BADPOINT_ERR:              return cv::Error::StsBadPoint;
-
-    default:
-      return cv::Error::StsError;
-    }
 }
 
 namespace cv {
