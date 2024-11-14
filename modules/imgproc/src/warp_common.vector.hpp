@@ -735,13 +735,13 @@
     i##ofs##_fpix2 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_fpix3, i##ofs##_fpix2), i##ofs##_fpix2); \
     i##ofs##_fpix0 = v_fma(i##ofs##_beta,  v_sub(i##ofs##_fpix2, i##ofs##_fpix0), i##ofs##_fpix0);
 #define CV_WARP_SIMDX_STORE_8UC4_I() \
-    auto i01_pix = v_pack(v_round(i0_fpix0), v_round(i1_fpix0)), \
-         i23_pix = v_pack(v_round(i2_fpix0), v_round(i3_fpix0)); \
-    v_pack_u_store<8>(dstptr + 4*(x+i),   i01_pix); \
-    v_pack_u_store<8>(dstptr + 4*(x+i+2), i23_pix);
+    auto i01_pix = v_pack_u<4>(v_round(i0_fpix0), v_round(i1_fpix0)), \
+         i23_pix = v_pack_u<4>(v_round(i2_fpix0), v_round(i3_fpix0)); \
+    v_pack_store<8>(dstptr + 4*(x+i),   i01_pix); \
+    v_pack_store<8>(dstptr + 4*(x+i+2), i23_pix);
 #define CV_WARP_SIMDX_STORE_16UC4_I() \
-    auto i01_pix = v_pack_u(v_round(i0_fpix0), v_round(i1_fpix0)), \
-         i23_pix = v_pack_u(v_round(i2_fpix0), v_round(i3_fpix0)); \
+    auto i01_pix = v_pack_u<4>(v_round(i0_fpix0), v_round(i1_fpix0)), \
+         i23_pix = v_pack_u<4>(v_round(i2_fpix0), v_round(i3_fpix0)); \
     v_store<8>(dstptr + 4*(x+i),   i01_pix); \
     v_store<8>(dstptr + 4*(x+i+2), i23_pix);
 #define CV_WARP_SIMDX_STORE_32FC4_I() \
