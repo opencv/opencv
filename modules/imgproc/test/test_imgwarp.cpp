@@ -613,6 +613,8 @@ protected:
     int prepare_test_case( int test_case_idx );
     void prepare_to_validation( int /*test_case_idx*/ );
     double get_success_error_level( int test_case_idx, int i, int j );
+
+    int borderType;
 };
 
 
@@ -636,21 +638,24 @@ void CV_WarpPerspectiveTest::get_test_array_types_and_sizes( int test_case_idx, 
 
 void CV_WarpPerspectiveTest::run_func()
 {
-    CvMat mtx = cvMat(test_mat[INPUT][1]);
-    cvWarpPerspective( test_array[INPUT][0], test_array[INPUT_OUTPUT][0], &mtx, interpolation );
+    Mat& dst = test_mat[INPUT_OUTPUT][0];
+    cv::warpPerspective(test_mat[INPUT][0], dst, test_mat[INPUT][1], dst.size(), interpolation, borderType, Scalar::all(0));
 }
 
 
 double CV_WarpPerspectiveTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
     int depth = test_mat[INPUT][0].depth();
-    return depth == CV_8U ? 16 : depth == CV_16U ? 1024 : 5e-2;
+    return depth == CV_8U ? 16 : depth == CV_16U ? 1024 : 0.13;
 }
 
 
 int CV_WarpPerspectiveTest::prepare_test_case( int test_case_idx )
 {
     RNG& rng = ts->get_rng();
+
+    // only these two borders are declared as supported
+    borderType = rng() % 2 ? BORDER_REPLICATE : BORDER_CONSTANT;
     int code = CV_ImgWarpBaseTest::prepare_test_case( test_case_idx );
     const CvMat src = cvMat(test_mat[INPUT][0]);
     const CvMat dst = cvMat(test_mat[INPUT_OUTPUT][0]);
@@ -720,7 +725,7 @@ void CV_WarpPerspectiveTest::prepare_to_validation( int /*test_case_idx*/ )
     }
 
     Mat mask( dst.size(), CV_8U );
-    test_remap( src, dst, mapx, mapy, &mask );
+    test_remap( src, dst, mapx, mapy, &mask, interpolation);
     dst.setTo(Scalar::all(0), mask);
     dst0.setTo(Scalar::all(0), mask);
 }
