@@ -380,6 +380,7 @@ reid:
     sha1: "d4316b100db40f8840aa82626e1cf3f519a7f1ae"
   model: "person_reid_youtu_2021nov.onnx"
   yolo_load_info:
+    yolo_url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
     yolo_sha1: "68f864475d06e2ec4037181052739f268eeac38d"
   yolo_model: "yolov8n.onnx"
   mean: [0.485, 0.456, 0.406]

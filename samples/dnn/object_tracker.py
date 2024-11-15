@@ -16,6 +16,8 @@ def help():
             vit:
                 Download Model: python download_models.py vit
                 Example: python object_tracker.py vit
+                                or
+                        python object_tracker.py
             dasiamrpn:
                 Download Model: python download_models.py dasiamrpn
                 Example: python object_tracker.py dasiamrpn
@@ -113,7 +115,7 @@ def main(model_name, args):
         if key == ord(' '):
             bbox = cv.selectROI(windowName, image)
             print('ROI: {}'.format(bbox))
-            if bbox:
+            if bbox != (0, 0, 0, 0):
                 break
 
         if key == ord('q') or key == 27:
@@ -154,7 +156,7 @@ def main(model_name, args):
                 cv.putText(render_image, "Select the new target", (10, int(55*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
                 bbox = cv.selectROI(windowName, render_image)
                 print('ROI:', bbox)
-                if bbox:
+                if bbox != (0, 0, 0, 0):
                     tracker.init(frame, bbox)
             elif key == ord('v'):
                 model_name = "vit"
@@ -175,7 +177,7 @@ def main(model_name, args):
                 return
 
             cv.rectangle(render_image, newbox, (200, 0, 0), thickness=2)
-        time_label = f"Inference time: {tick_meter.getTimeMilli():.2f} ms"
+        time_label = f"FPS: {tick_meter.getFPS():.2f}"
         score_label = f"Tracking score: {score:.2f}"
         algo_label = f"Algorithm: {model_name}"
         cv.putText(render_image, time_label, (10, int(55*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
@@ -187,11 +189,11 @@ def main(model_name, args):
             break
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        help()
-        exit(-1)
-
-    model_name = sys.argv[1]
+    help()
+    if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
+        model_name = "vit"
+    else:
+        model_name = sys.argv[1]
     args = load_parser(model_name)
 
     main(model_name, args)

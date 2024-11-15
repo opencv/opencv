@@ -26,7 +26,7 @@ const string about = "Use this script for testing Object Tracking using OpenCV. 
 
 const string param_keys =
         "{ help     h    |                            | Print help message }"
-        "{ @alias        |                            | An alias name of model to extract preprocessing parameters from models.yml file. }"
+        "{ @alias        |             vit            | An alias name of model to extract preprocessing parameters from models.yml file. }"
         "{ zoo           |      ../dnn/models.yml     | An optional path to file with preprocessing parameters }"
         "{ input    i    |                            | Full path to input video folder, the specific camera index. (empty for camera 0) }"
         "{ tracking_thrs |             0.3            | Tracking score threshold. If a bbox of score >= 0.3, it is considered as found }";
@@ -205,7 +205,14 @@ int main(int argc, char** argv)
         if (key == ' ')
         {
             selectRect = selectROI(windowName, image);
-            break;
+            if (selectRect.width > 0 && selectRect.height > 0)
+            {
+                break;
+            }
+            else
+            {
+                cout << "No valid selection made. Please select again." << endl;
+            }
         }
         else if (key == 27) // ESC key to exit
         {
@@ -253,7 +260,12 @@ int main(int argc, char** argv)
             if (key == ' '){
                 putText(render_image, "Select the new target", Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
                 selectRect = selectROI(windowName, render_image);
-                tracker->init(image, selectRect);
+                if (selectRect.width > 0 && selectRect.height > 0){
+                    tracker->init(image, selectRect);
+                }
+                else{
+                    cout<<"New target is not selected, switching to previous target"<<endl;
+                }
             }
             else if (key == 'v'){
                 modelName = "vit";
@@ -279,7 +291,7 @@ int main(int argc, char** argv)
             rectangle(render_image, rect, Scalar(0, 255, 0), 2);
         }
 
-        string timeLabel = format("Inference time: %.2f ms", tickMeter.getTimeMilli());
+        string timeLabel = format("FPS: %.2f", tickMeter.getFPS());
         string scoreLabel = format("Score: %f", score);
         string algoLabel = "Algorithm: " + modelName;
         putText(render_image, timeLabel, Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);

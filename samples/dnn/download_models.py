@@ -331,21 +331,32 @@ def parseYAMLFile(yaml_filepath, save_dir, model_name):
     with open(yaml_filepath, 'r') as stream:
         data_loaded = yaml.safe_load(stream)
         for name, params in data_loaded.items():
-            if name != model_name:
+            if model_name != "" and name != model_name:
                 continue
             for key in params.keys():
                 if key.endswith("load_info"):
                     prefix = key[:-len('load_info')]
                     load_info = params.get(prefix+"load_info", None)
                     if load_info:
-                        fname = os.path.basename(params.get(prefix+"model"))
-                        hash_sum = load_info.get(prefix+"sha1")
-                        url = load_info.get(prefix+"url")
-                        download_sha = load_info.get(prefix+"download_sha")
-                        download_name = load_info.get(prefix+"download_name")
-                        archive_member = load_info.get(prefix+"member")
-                        models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir,
-                            download_name=download_name, download_sha=download_sha, archive_member=archive_member))
+                        print(prefix)
+                        if prefix == "config_":
+                            fname = os.path.basename(params.get("config"))
+                            hash_sum = load_info.get("sha1")
+                            url = load_info.get("url")
+                            download_sha = load_info.get("download_sha")
+                            download_name = load_info.get("download_name")
+                            archive_member = load_info.get("member")
+                            models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir,
+                                download_name=download_name, download_sha=download_sha, archive_member=archive_member))
+                        else:
+                            fname = os.path.basename(params.get(prefix+"model"))
+                            hash_sum = load_info.get(prefix+"sha1")
+                            url = load_info.get(prefix+"url")
+                            download_sha = load_info.get(prefix+"download_sha")
+                            download_name = load_info.get(prefix+"download_name")
+                            archive_member = load_info.get(prefix+"member")
+                            models.append(produceDownloadInstance(name, fname, hash_sum, url, save_dir,
+                                download_name=download_name, download_sha=download_sha, archive_member=archive_member))
 
     return models
 
