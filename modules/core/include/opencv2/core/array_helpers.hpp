@@ -56,6 +56,7 @@ struct _ArrayOpsBase {
   virtual int dims(const _InputArray& self, int i) const = 0;
   virtual Size size(const _InputArray& self, int i) const = 0;
   virtual int sizend(const _InputArray& self, int* arraySize, int i) const = 0;
+  virtual int type(const _InputArray& self, int i) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
 };
@@ -278,6 +279,25 @@ struct _ArrayOps final : _ArrayOpsBase {
       }
 
       return 1;
+    }
+  }
+
+  int type(const _InputArray& self, const int i) const final
+  {
+    using value_type = typename T::value_type;
+    if constexpr (is_Mat<value_type> || is_UMat<value_type>) {
+      T& v = get(self.getObj());
+      if (v.empty()) {
+        const int flags = self.getFlags();
+        CV_Assert((flags & _InputArray::FIXED_TYPE) != 0);
+        return CV_MAT_TYPE(flags);
+      }
+
+      CV_Assert(i < static_cast<int>(v.size()));
+      return v[i >= 0 ? i : 0].type();
+    }
+    else {
+      CV_Assert(false && "unreachable");
     }
   }
 

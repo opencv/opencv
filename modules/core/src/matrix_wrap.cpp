@@ -604,28 +604,9 @@ int _InputArray::type(int i) const
     if( k == NONE )
         return -1;
 
-    if( k == STD_VECTOR_UMAT )
-    {
-        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        if( vv.empty() )
-        {
-            CV_Assert((flags & FIXED_TYPE) != 0);
-            return CV_MAT_TYPE(flags);
-        }
-        CV_Assert( i < (int)vv.size() );
-        return vv[i >= 0 ? i : 0].type();
-    }
-
-    if( k == STD_VECTOR_MAT )
-    {
-        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        if( vv.empty() )
-        {
-            CV_Assert((flags & FIXED_TYPE) != 0);
-            return CV_MAT_TYPE(flags);
-        }
-        CV_Assert( i < (int)vv.size() );
-        return vv[i >= 0 ? i : 0].type();
+    if (k == STD_VECTOR_UMAT || k == STD_VECTOR_MAT || k == STD_VECTOR_CUDA_GPU_MAT) {
+      CV_Assert(ops != nullptr);
+      return ops->type(*this, i);
     }
 
     if( k == STD_ARRAY_MAT )
@@ -640,22 +621,6 @@ int _InputArray::type(int i) const
         return vv[i >= 0 ? i : 0].type();
     }
 
-    if (k == STD_VECTOR_CUDA_GPU_MAT)
-    {
-#ifdef HAVE_CUDA
-        const std::vector<cuda::GpuMat>& vv = *(const std::vector<cuda::GpuMat>*)obj;
-        if (vv.empty())
-        {
-            CV_Assert((flags & FIXED_TYPE) != 0);
-            return CV_MAT_TYPE(flags);
-        }
-        CV_Assert(i < (int)vv.size());
-        return vv[i >= 0 ? i : 0].type();
-#else
-        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
-#endif
-    }
-
     if( k == OPENGL_BUFFER )
         return ((const ogl::Buffer*)obj)->type();
 
@@ -665,7 +630,7 @@ int _InputArray::type(int i) const
     if( k == CUDA_HOST_MEM )
         return ((const cuda::HostMem*)obj)->type();
 
-        CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
 int _InputArray::depth(int i) const
@@ -2037,6 +2002,24 @@ template<>
     }
 
     return 1;
+}
+
+template<>
+[[gnu::visibility("default")]] int _ArrayOps<std::vector<cuda::GpuMat>>::type(const _InputArray& self, const int i) const
+{
+    if constexpr (!have_cuda) {
+      noCudaError();
+    } else {
+        std::vector<cuda::GpuMat>& v = get(self.getObj());
+        if (v.empty()) {
+            const int flags = self.getFlags();
+            CV_Assert((flags & _InputArray::FIXED_TYPE) != 0);
+            return CV_MAT_TYPE(flags);
+        }
+
+        CV_Assert(i < static_cast<int>(v.size()));
+        return v[i >= 0 ? i : 0].type();
+    }
 }
 
 } // cv::
