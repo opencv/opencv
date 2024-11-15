@@ -350,17 +350,13 @@ Size _InputArray::size(int i) const
     if( k == MAT )
     {
         CV_Assert( i < 0 );
-        const Mat* m = (const Mat*)obj;
-        CV_Assert(m->dims <= 2);
-        return Size(m->cols, m->rows);
+        return ((const Mat*)obj)->size();
     }
 
     if( k == UMAT )
     {
         CV_Assert( i < 0 );
-        const UMat* m = (const UMat*)obj;
-        CV_Assert(m->dims <= 2);
-        return Size(m->cols, m->rows);
+        return ((const UMat*)obj)->size();
     }
 
     if (k == MATX)
@@ -368,47 +364,15 @@ Size _InputArray::size(int i) const
         CV_Assert( i < 0 );
         return sz;
     }
-
-    if( k == STD_VECTOR )
-    {
-        CV_Assert( i < 0 );
-        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
-        const std::vector<int>& iv = *(const std::vector<int>*)obj;
-        size_t szb = v.size(), szi = iv.size();
-        return szb == szi ? Size((int)szb, 1) : Size((int)(szb/CV_ELEM_SIZE(flags)), 1);
-    }
-
-    if( k == STD_BOOL_VECTOR )
-    {
-        CV_Assert( i < 0 );
-        const std::vector<bool>& v = *(const std::vector<bool>*)obj;
-        return Size((int)v.size(), 1);
+    if (k == STD_VECTOR || k == STD_BOOL_VECTOR || k == STD_VECTOR_VECTOR ||
+        k == STD_VECTOR_MAT || k == STD_VECTOR_UMAT ||
+        k == STD_VECTOR_CUDA_GPU_MAT) {
+      CV_Assert(ops != nullptr);
+      return ops->size(*this, i);
     }
 
     if( k == NONE )
         return Size();
-
-    if( k == STD_VECTOR_VECTOR )
-    {
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        if( i < 0 )
-            return vv.empty() ? Size() : Size((int)vv.size(), 1);
-        CV_Assert( i < (int)vv.size() );
-        const std::vector<std::vector<int> >& ivv = *(const std::vector<std::vector<int> >*)obj;
-
-        size_t szb = vv[i].size(), szi = ivv[i].size();
-        return szb == szi ? Size((int)szb, 1) : Size((int)(szb/CV_ELEM_SIZE(flags)), 1);
-    }
-
-    if( k == STD_VECTOR_MAT )
-    {
-        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        if( i < 0 )
-            return vv.empty() ? Size() : Size((int)vv.size(), 1);
-        CV_Assert( i < (int)vv.size() );
-
-        return vv[i].size();
-    }
 
     if( k == STD_ARRAY_MAT )
     {
@@ -416,29 +380,6 @@ Size _InputArray::size(int i) const
         if( i < 0 )
             return sz.height==0 ? Size() : Size(sz.height, 1);
         CV_Assert( i < sz.height );
-
-        return vv[i].size();
-    }
-
-    if (k == STD_VECTOR_CUDA_GPU_MAT)
-    {
-#ifdef HAVE_CUDA
-        const std::vector<cuda::GpuMat>& vv = *(const std::vector<cuda::GpuMat>*)obj;
-        if (i < 0)
-            return vv.empty() ? Size() : Size((int)vv.size(), 1);
-        CV_Assert(i < (int)vv.size());
-        return vv[i].size();
-#else
-        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
-#endif
-    }
-
-    if( k == STD_VECTOR_UMAT )
-    {
-        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        if( i < 0 )
-            return vv.empty() ? Size() : Size((int)vv.size(), 1);
-        CV_Assert( i < (int)vv.size() );
 
         return vv[i].size();
     }
@@ -464,7 +405,7 @@ Size _InputArray::size(int i) const
         return cuda_mem->size();
     }
 
-        CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
 int _InputArray::sizend(int* arrsz, int i) const
@@ -2168,6 +2109,29 @@ template<>
     const int type = CV_MAT_TYPE(self.getFlags());
     const int width = static_cast<int>(v.size());
     return v.empty() ? Mat() : Mat(1, &width, type, v.data());
+}
+
+[[noreturn]] static void noCudaError() {
+  CV_Error(
+      Error::StsNotImplemented,
+      "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
+}
+
+template<>
+[[gnu::visibility("default")]] Size _ArrayOps<std::vector<cuda::GpuMat>>::size(const _InputArray& self, const int i) const
+{
+    if constexpr (!have_cuda) {
+        noCudaError();
+    } else {
+        const std::vector<cuda::GpuMat>& v = get(self.getObj());
+        if (i < 0) {
+            return v.empty() ? Size() : Size(static_cast<int>(v.size()), 1);
+        }
+
+        const auto index = static_cast<std::size_t>(i);
+        CV_Assert(index < v.size());
+        return v[index].size();
+    }
 }
 
 } // cv::

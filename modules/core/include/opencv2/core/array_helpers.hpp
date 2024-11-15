@@ -50,6 +50,7 @@
 namespace cv {
 struct _ArrayOpsBase {
   virtual Mat getMat_(const _InputArray& self, int i = -1) const = 0;
+  virtual Size size(const _InputArray& self, int i) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
 };
@@ -124,7 +125,36 @@ struct _ArrayOps final : _ArrayOpsBase {
     }
   }
 
-  static const T& get(const void* const data) {
+    Size size(const _InputArray& self, const int i) const final {
+    using value_type = typename T::value_type;
+    auto& v = get(self.getObj());
+
+    if constexpr (is_Mat<value_type> || is_UMat<value_type>) {
+      if (i < 0) {
+        return v.empty() ? Size() : Size(static_cast<int>(v.size()), 1);
+      }
+
+      const auto index = static_cast<std::size_t>(i);
+      CV_Assert(index < v.size());
+      return v[index].size();
+    }
+    else if constexpr (is_vector<value_type>) {
+      if (i < 0) {
+        return v.empty() ? Size() : Size(static_cast<int>(v.size()), 1);
+      }
+
+      const auto index = static_cast<std::size_t>(i);
+      CV_Assert(index < v.size());
+      return Size(static_cast<int>(v[index].size()), 1);
+    }
+    else {
+      CV_Assert(i < 0);
+      return Size(static_cast<int>(v.size()), 1);
+    }
+  }
+
+  static const T& get(const void* const data)
+  {
     return *static_cast<const T*>(data);
   }
 
@@ -136,6 +166,9 @@ struct _ArrayOps final : _ArrayOpsBase {
 
 template<>
 Mat _ArrayOps<std::vector<cuda::GpuMat>>::getMat_(const _InputArray& self, const int i) const;
+
+template<>
+Size _ArrayOps<std::vector<cuda::GpuMat>>::size(const _InputArray& self, const int i) const;
 
 template<class T>
 inline constexpr _ArrayOps<T> array_ops;
