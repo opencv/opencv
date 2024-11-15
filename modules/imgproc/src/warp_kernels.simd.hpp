@@ -298,7 +298,7 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -418,7 +418,7 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -547,7 +547,7 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -660,7 +660,7 @@ void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, in
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -761,7 +761,7 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -866,7 +866,7 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -979,7 +979,7 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -1078,7 +1078,7 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -1183,7 +1183,7 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -1299,7 +1299,7 @@ void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -1406,7 +1406,7 @@ void warpAffineLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -1520,7 +1520,7 @@ void warpAffineLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -1637,7 +1637,7 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -1759,7 +1759,7 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -1889,7 +1889,7 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -2003,7 +2003,7 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -2104,7 +2104,7 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -2209,7 +2209,7 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -2323,7 +2323,7 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -2423,7 +2423,7 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -2529,7 +2529,7 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -2646,7 +2646,7 @@ void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -2754,7 +2754,7 @@ void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -2868,7 +2868,7 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -2991,7 +2991,7 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -3130,7 +3130,7 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -3277,7 +3277,7 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -3408,7 +3408,7 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -3526,7 +3526,7 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -3648,7 +3648,7 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -3779,7 +3779,7 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -3896,7 +3896,7 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -4019,7 +4019,7 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -4152,7 +4152,7 @@ void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -4274,7 +4274,7 @@ void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
@@ -4404,7 +4404,7 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
         std::array<float, max_vlanes_32> start_indices;
         std::iota(start_indices.data(), start_indices.data() + max_vlanes_32, 0.f);
 
-        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 2),
+        v_uint32 inner_srows = vx_setall_u32((unsigned)srcrows - 1),
                  inner_scols = vx_setall_u32((unsigned)srccols - 1),
                  outer_srows = vx_setall_u32((unsigned)srcrows + 1),
                  outer_scols = vx_setall_u32((unsigned)srccols + 1);
