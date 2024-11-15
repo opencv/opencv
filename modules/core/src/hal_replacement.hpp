@@ -179,9 +179,9 @@ Absolute difference with scalar: _dst[i] = | src[i] - scalar |_
 @param scalar_data pointer to scalar value
 @param nChannels number of channels per element
 */
-inline int hal_ni_absDiffScalar32f32f(const float* src_data, size_t src_step, float* dst_data, size_t dst_step, int width, int height, const float* scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_absDiffScalar32s32s(const int*   src_data, size_t src_step, int*   dst_data, size_t dst_step, int width, int height, const int*   scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_absDiffScalar8u8u  (const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, const uchar* scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_absDiffScalar32f32f(const float* src_data, size_t src_step, float*    dst_data, size_t dst_step, int width, int height, const float* scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_absDiffScalar32s32u(const int*   src_data, size_t src_step, uint32_t* dst_data, size_t dst_step, int width, int height, const int*   scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_absDiffScalar8u8u  (const uchar* src_data, size_t src_step, uchar*    dst_data, size_t dst_step, int width, int height, const uchar* scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @}
 
@@ -248,7 +248,7 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 #define cv_hal_absdiff32f hal_ni_absdiff32f
 #define cv_hal_absdiff64f hal_ni_absdiff64f
 #define cv_hal_absDiffScalar32f32f hal_ni_absDiffScalar32f32f
-#define cv_hal_absDiffScalar32s32s hal_ni_absDiffScalar32s32s
+#define cv_hal_absDiffScalar32s32u hal_ni_absDiffScalar32s32u
 #define cv_hal_absDiffScalar8u8u   hal_ni_absDiffScalar8u8u
 #define cv_hal_and8u hal_ni_and8u
 #define cv_hal_or8u hal_ni_or8u

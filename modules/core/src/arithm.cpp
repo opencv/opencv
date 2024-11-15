@@ -1055,10 +1055,10 @@ static int absDiffScalar32f32fWrapper(const uchar* src, size_t step_src, uchar* 
     }
 }
 
-static int absDiffScalar32s32sWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+static int absDiffScalar32s32uWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
                                       void* scalar, bool /*scalarIsFirst*/, int nChannels)
 {
-    int res = cv_hal_absDiffScalar32s32s((const int*)src, step_src, (int*)dst, step_dst, width, height, (const int*)scalar, nChannels);
+    int res = cv_hal_absDiffScalar32s32u((const int*)src, step_src, (uint32_t*)dst, step_dst, width, height, (const int*)scalar, nChannels);
     if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
         return res;
     else
@@ -1087,9 +1087,10 @@ static ScalarFunc getAbsDiffScalarFunc(int srcType, int dstType)
     {
         return absDiffScalar32f32fWrapper;
     }
+    // resulting type is 32U in fact
     else if (srcType == CV_32S && dstType == CV_32S)
     {
-        return absDiffScalar32s32sWrapper;
+        return absDiffScalar32s32uWrapper;
     }
     else if (srcType == CV_8U && dstType == CV_8U)
     {
