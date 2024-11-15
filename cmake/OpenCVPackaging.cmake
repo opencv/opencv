@@ -123,7 +123,7 @@ endif()
 set(STD_OPENCV_LIBS opencv-data)
 set(STD_OPENCV_DEV libopencv-dev)
 
-foreach(module 3d calib core dnn features flann gapi highgui
+foreach(module 3d calib core dnn features flann highgui
                imgcodecs imgproc ml objdetect
                photo stereo stitching ts video videoio)
   if(HAVE_opencv_${module})

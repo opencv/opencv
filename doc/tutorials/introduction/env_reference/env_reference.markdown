@@ -301,26 +301,6 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_TEST_CAMERA_%d_FPS | num | | fps to set for N-th camera (0-based index) (waitAny_V4L test) |
 
 
-## gapi
-| name | type | default | description |
-|------|------|---------|-------------|
-| ⭐ GRAPH_DUMP_PATH | file path | | dump graph (dot format) |
-| PIPELINE_MODELS_PATH | dir path | | pipeline_modeling_tool sample application uses this var |
-| OPENCV_GAPI_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND | bool | true (Windows, Apple), false (others) | similar to OPENCV_DNN_INFERENCE_ENGINE_CORE_LIFETIME_WORKAROUND |
-
-### gapi tests/samples
-| name | type | default | description |
-|------|------|---------|-------------|
-| PLAIDML_DEVICE | string | | specific to PlaidML backend test |
-| PLAIDML_TARGET | string | | specific to PlaidML backend test |
-| OPENCV_GAPI_ONNX_MODEL_PATH | dir path | | search location for ONNX models test |
-| OPENCV_TEST_FREETYPE_FONT_PATH | file path | | location of TrueType font for one of tests |
-
-### Links:
-* https://github.com/opencv/opencv/wiki/Using-G-API-with-OpenVINO-Toolkit
-* https://github.com/opencv/opencv/wiki/Using-G-API-with-MS-ONNX-Runtime
-
-
 ## highgui
 
 | name | type | default | description |
