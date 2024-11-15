@@ -148,25 +148,6 @@ inline void* _InputArray::getObj() const { return obj; }
 inline int _InputArray::getFlags() const { return flags; }
 inline Size _InputArray::getSz() const { return sz; }
 
-template<class T>
-_InputArray::_InputArray(int _flags, T* _obj)
-: _InputArray(_flags, _obj, {})
-{}
-
-template<class T>
-_InputArray::_InputArray(int _flags, T* _obj, Size _sz)
-: flags(_flags)
-, obj(_obj)
-, sz(_sz)
-{}
-
-template<class T>
-_InputArray::_InputArray(int _flags, const T* _obj, Size _sz)
-: flags(_flags)
-, obj(const_cast<T*>(_obj))
-, sz(_sz)
-{}
-
 inline _InputArray::_InputArray(const Mat& m)
 : _InputArray(+MAT+ACCESS_READ, &m)
 {}

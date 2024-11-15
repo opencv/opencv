@@ -38,52 +38,14 @@ Mat _InputArray::getMat_(int i) const
         return Mat(sz, flags, obj);
     }
 
-    if( k == STD_VECTOR )
-    {
-        CV_Assert( i < 0 );
-        int t = CV_MAT_TYPE(flags);
-        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
-        int v_size = size().width;
-
-        return !v.empty() ? Mat(1, &v_size, t, (void*)&v[0]) : Mat();
-    }
-
-    if( k == STD_BOOL_VECTOR )
-    {
-        CV_Assert( i < 0 );
-        int t = CV_8U;
-        const std::vector<bool>& v = *(const std::vector<bool>*)obj;
-        int j, n = (int)v.size();
-        if( n == 0 )
-            return Mat();
-        Mat m(1, &n, t);
-        uchar* dst = m.data;
-        for( j = 0; j < n; j++ )
-            dst[j] = (uchar)v[j];
-        return m;
+    if (k == STD_VECTOR || k == STD_BOOL_VECTOR || k == STD_VECTOR_VECTOR ||
+        k == STD_VECTOR_MAT || k == STD_VECTOR_UMAT) {
+      CV_Assert(ops != nullptr);
+      return ops->getMat_(*this, i);
     }
 
     if( k == NONE )
         return Mat();
-
-    if( k == STD_VECTOR_VECTOR )
-    {
-        int t = type(i);
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        CV_Assert( 0 <= i && i < (int)vv.size() );
-        const std::vector<uchar>& v = vv[i];
-        int v_size = size(i).width;
-
-        return !v.empty() ? Mat(1, &v_size, t, (void*)&v[0]) : Mat();
-    }
-
-    if( k == STD_VECTOR_MAT )
-    {
-        const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
-        CV_Assert( 0 <= i && i < (int)v.size() );
-
-        return v[i];
-    }
 
     if( k == STD_ARRAY_MAT )
     {
@@ -92,15 +54,6 @@ Mat _InputArray::getMat_(int i) const
 
         return v[i];
     }
-
-    if( k == STD_VECTOR_UMAT )
-    {
-        const std::vector<UMat>& v = *(const std::vector<UMat>*)obj;
-        CV_Assert( 0 <= i && i < (int)v.size() );
-
-        return v[i].getMat(accessFlags);
-    }
-
     if( k == OPENGL_BUFFER )
     {
         CV_Assert( i < 0 );
@@ -511,7 +464,7 @@ Size _InputArray::size(int i) const
         return cuda_mem->size();
     }
 
-    CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
+        CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
 int _InputArray::sizend(int* arrsz, int i) const
@@ -2206,5 +2159,15 @@ void _OutputArray::assign(const std::vector<Mat>& v) const
 
 static _InputOutputArray _none;
 InputOutputArray noArray() { return _none; }
+
+template<>
+[[gnu::visibility("default")]] Mat _ArrayOps<std::vector<cuda::GpuMat>>::getMat_(const _InputArray& self, const int i) const
+{
+    std::vector<cuda::GpuMat>& v = get(self.getObj());
+    CV_Assert(i < 0);
+    const int type = CV_MAT_TYPE(self.getFlags());
+    const int width = static_cast<int>(v.size());
+    return v.empty() ? Mat() : Mat(1, &width, type, v.data());
+}
 
 } // cv::

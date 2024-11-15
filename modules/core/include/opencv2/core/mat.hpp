@@ -4110,5 +4110,6 @@ CV_EXPORTS MatExpr abs(const MatExpr& e);
 } // cv
 
 #include "opencv2/core/mat.inl.hpp"
+#include "opencv2/core/array_helpers.hpp"
 
 #endif // OPENCV_CORE_MAT_HPP
