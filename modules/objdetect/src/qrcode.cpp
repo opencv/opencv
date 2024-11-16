@@ -10,6 +10,8 @@
 #include "opencv2/calib3d.hpp"
 #include <opencv2/core/utils/logger.hpp>
 #include "graphical_code_detector_impl.hpp"
+#include "qbarstruct.hpp"
+#include "qbardecoder.hpp"
 
 #ifdef HAVE_QUIRC
 #include "quirc.h"
@@ -4702,6 +4704,146 @@ const aruco::DetectorParameters& QRCodeDetectorAruco::getArucoParameters() const
 
 void QRCodeDetectorAruco::setArucoParameters(const aruco::DetectorParameters& params) {
     std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoDetector.setDetectorParameters(params);
+}
+
+struct PimplCode : public ImplContour {
+    std::shared_ptr<QBarDecoder> qbarDecode_;
+
+    PimplCode() {
+        qbarDecode_ = make_shared<QBarDecoder>();
+    }
+
+    bool detectMulti(InputArray in, OutputArray points) const override {
+        Mat gray;
+        if (!checkQRInputImage(in, gray)) {
+            points.release();
+            return false;
+        }
+        
+        std::vector<DetectInfo> _detect_results;
+
+        qbarDecode_->Detect(gray, _detect_results);
+
+        vector<Point2f> result;
+        for (size_t i = 0; i < _detect_results.size(); i++) {
+            result.push_back(Point2f(_detect_results[i].x                           , _detect_results[i].y));
+            result.push_back(Point2f(_detect_results[i].x + _detect_results[i].width, _detect_results[i].y));
+            result.push_back(Point2f(_detect_results[i].x                           , _detect_results[i].y + _detect_results[i].height));
+            result.push_back(Point2f(_detect_results[i].x + _detect_results[i].width, _detect_results[i].y + _detect_results[i].height));
+        }
+
+        if (result.size() >= 4) {
+            updatePointsResult(points, result);
+            return true;
+        }
+
+        return false;
+    }
+
+    bool decodeMulti(
+        InputArray img,
+        InputArray points,
+        CV_OUT std::vector<cv::String>& decoded_info,
+        OutputArrayOfArrays straight_qrcode
+    ) const override {
+        Mat gray;
+        if (!checkQRInputImage(img, gray))
+            return false;
+        
+        CV_Assert(points.size().width > 0);
+        CV_Assert((points.size().width % 4) == 0);
+
+        std::vector<DetectInfo> bboxes;
+        Mat qr_points = points.getMat();
+        qr_points = qr_points.reshape(2, 1);
+        for (int i = 0; i < qr_points.size().width; i += 4)
+        {
+            std::vector<Point2f> tempMat = qr_points.colRange(i, i + 4);
+
+            DetectInfo bbox;
+            bbox.x = tempMat[0].x;
+            bbox.y = tempMat[0].y;
+            bbox.width = tempMat[3].x - tempMat[0].x;
+            bbox.height = tempMat[3].y - tempMat[0].y;
+            bboxes.push_back(bbox);
+        }
+        if (bboxes.size() == 0) {
+            DetectInfo bbox;
+            bbox.x = 0;
+            bbox.y = 0;
+            bbox.width = gray.cols;
+            bbox.height = gray.rows;
+
+            bboxes.push_back(bbox);
+        }
+
+        std::vector<QBAR_RESULT> results;
+        results = qbarDecode_->Decode(gray, bboxes);
+
+        decoded_info.clear();
+        for (size_t i = 0; i < results.size(); i++) {
+            if(results[i].typeID != 0)
+                decoded_info.push_back(results[i].data);
+            else
+                decoded_info.push_back("");
+        }
+
+        if (!decoded_info.empty())
+            return true;
+        else
+            return false;
+        }
+};
+
+CodeDetector::CodeDetector(const std::string& detection_model_path_,
+                            const std::string& super_resolution_model_path_,
+                            const std::vector<DECODER_READER>& readers,
+                            const float detector_iou_thres,
+                            const float decoder_iou_thres,
+                            const float score_thres,
+                            const int reference_size) {
+    p = makePtr<PimplCode>();
+
+    QBAR_MODE mode;
+    mode.useAI = true;
+    mode.qbar_ml_mode.detection_model_path_ = detection_model_path_;
+    mode.qbar_ml_mode.super_resolution_model_path_ = super_resolution_model_path_;
+
+    int ret = std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->InitAIModel(mode.qbar_ml_mode);
+
+    if (ret) {
+        return;
+    }
+
+    if (readers.empty()) {
+        std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->SetReaders({ONED_BARCODE, QRCODE, PDF417, DATAMATRIX});
+    }
+    else {
+        unordered_set<QBAR_READER> readers_;
+        for (const auto& reader : readers) {
+            readers_.insert(static_cast<QBAR_READER>(reader));
+        }
+        
+        std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->SetReaders(readers_);
+    }
+
+    std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->setDetectorReferenceSize(reference_size);
+    std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->setDetectorScoreThres(score_thres);
+    std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->setDetectorIouThres(detector_iou_thres);
+    std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->setDecoderIouThres(decoder_iou_thres);
+}
+
+void CodeDetector::setDetectorReferenceSize(int reference_size) {
+    std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->setDetectorReferenceSize(reference_size);
+}
+void CodeDetector::setDetectorScoreThres(float score_thres) {
+    std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->setDetectorScoreThres(score_thres);
+}
+void CodeDetector::setDetectorIouThres(float iou_thres) {
+    std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->setDetectorIouThres(iou_thres);
+}
+void CodeDetector::setDecoderIouThres(float iou_thres) {
+    std::dynamic_pointer_cast<PimplCode>(p)->qbarDecode_->setDecoderIouThres(iou_thres);
 }
 
 }  // namespace
