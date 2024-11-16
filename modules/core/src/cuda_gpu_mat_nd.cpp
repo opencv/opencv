@@ -13,7 +13,7 @@ GpuMatND::GpuMatND(SizeArray _size, int _type, void* _data, StepArray _step) :
     flags(0), dims(0), data(static_cast<uchar*>(_data)), offset(0)
 {
     CV_Assert(_step.empty() || _size.size() == _step.size() + 1 ||
-              (_size.size() == _step.size() && _step.back() == CV_ELEM_SIZE(_type)));
+              (_size.size() == _step.size() && _step.back() == (size_t)CV_ELEM_SIZE(_type)));
 
     setFields(std::move(_size), _type, std::move(_step));
 }
