@@ -318,17 +318,6 @@ std::vector<QBAR_RESULT> QBarDecoder::Decode(Mat srcImage, std::vector<DetectInf
     
     parallel_for_(Range(0, int(detect_results.size())), parallelDecode);
     
-    std::vector<QBAR_RESULT> for_copy;
-    for (size_t i = 0; i < results.size(); i++) {
-        if (results[i].typeID != 0) { 
-            for_copy.push_back(results[i]);
-        }
-    }
-    
-    results = for_copy;
-
-    this->nms(results, iou_thres);
-    
     return results;
 }
 

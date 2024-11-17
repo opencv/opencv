@@ -61,6 +61,8 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, ErrorHandler & err_handl
     // Used for mirrored qrcode
     int width = bits->getWidth();
     int height = bits->getHeight();
+
+    std::cout << width << ' ' << height << '\n';
     
     Ref<BitMatrix> bits2(new BitMatrix(width, height, reinterpret_cast<bool*>(bits->getPtr()), err_handler));
     if (err_handler.ErrCode())   {

@@ -4792,7 +4792,29 @@ struct PimplCode : public ImplContour {
             return true;
         else
             return false;
+    }
+
+    bool detectAndDecodeMulti(
+        InputArray img,
+        CV_OUT std::vector<cv::String>& decoded_info,
+        OutputArray points_,
+        OutputArrayOfArrays straight_qrcode
+    ) const override {
+        decoded_info.clear();
+        points_.clear();
+
+        Mat gray;
+        if (!checkQRInputImage(img, gray))
+            return false;
+
+        bool ok = detectMulti(gray, points_);
+        
+        if(!ok) {
+            return false;
         }
+
+        return decodeMulti(gray, points_, decoded_info, straight_qrcode);
+    }
 };
 
 CodeDetector::CodeDetector(const std::string& detection_model_path_,
