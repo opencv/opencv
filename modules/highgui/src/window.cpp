@@ -694,6 +694,21 @@ int cv::pollKey()
 #endif
 }
 
+/**
+ * @brief Creates a trackbar and attaches it to the specified window.
+ *
+ * @param trackbarname Name of the created trackbar.
+ * @param winname Name of the window that will contain the trackbar.
+ * @param value Pointer to the integer value that will be changed by the trackbar. Pass `nullptr` if not used.
+ * @param count Maximum position of the trackbar.
+ * @param onChange Pointer to the function to be called when the value changes.
+ * @param userdata Optional user data that is passed to the callback.
+ *
+ * @note If the value pointer is not used (e.g., `nullptr` is passed), you must manually handle the value in the callback.
+ *       To set an initial value without using the pointer, manually call the callback function with the desired initial value.
+ */
+
+
 int cv::createTrackbar(const String& trackbarName, const String& winName,
                    int* value, int count, TrackbarCallback callback,
                    void* userdata)

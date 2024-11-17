@@ -27,9 +27,21 @@ Mat dst;
  * @function on_trackbar
  * @brief Callback for trackbar
  */
-static void on_trackbar( int, void* )
+static void on_trackbar( int pos , void* userdata )
 {
-   alpha = (double) alpha_slider/alpha_slider_max ;
+   std::cout << "Trackbar position: " << pos << std::endl;
+   /**
+    * @note The trackbar value pointer is deprecated. Instead, directly
+    *       use the trackbar position in the callback function
+    *       as shown in this example. Initialize the blending manually by 
+    *       calling the callback function once after creating the trackbar.
+    */
+    if (userdata) {
+        // Example usage of userdata
+        int* data = static_cast<int*>(userdata);
+        std::cout << "User data: " << *data << std::endl;
+    }
+   alpha = (double) pos /alpha_slider_max ;
    beta = ( 1.0 - alpha );
    addWeighted( src1, alpha, src2, beta, 0.0, dst);
    imshow( "Linear Blend", dst );
