@@ -712,11 +712,10 @@ bool _InputArray::isContinuous(int i) const
         k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return true;
 
-    if( k == STD_VECTOR_MAT )
+    if( k == STD_VECTOR_MAT || k == STD_VECTOR_UMAT )
     {
-        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        CV_Assert(i >= 0 && (size_t)i < vv.size());
-        return vv[i].isContinuous();
+        CV_Assert(ops != nullptr);
+        return ops->isContinuous(*this, i);
     }
 
     if( k == STD_ARRAY_MAT )
@@ -726,17 +725,10 @@ bool _InputArray::isContinuous(int i) const
         return vv[i].isContinuous();
     }
 
-    if( k == STD_VECTOR_UMAT )
-    {
-        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        CV_Assert(i >= 0 && (size_t)i < vv.size());
-        return vv[i].isContinuous();
-    }
-
     if( k == CUDA_GPU_MAT )
       return i < 0 ? ((const cuda::GpuMat*)obj)->isContinuous() : true;
 
-        CV_Error(cv::Error::StsNotImplemented, "Unknown/unsupported array type");
+    CV_Error(cv::Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
 bool _InputArray::isSubmatrix(int i) const
