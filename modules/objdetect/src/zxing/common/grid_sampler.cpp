@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 /*
  *  GridSampler.cpp
  *  zxing
@@ -51,7 +61,7 @@ Ref<ByteMatrix> GridSampler::sampleGrid(Ref<ByteMatrix> image, int dimension, Re
         // Quick check to see if points transformed to something inside the image;
         // sufficient to check the endpoings
         outlier += checkAndNudgePoints(image->getWidth(), image->getHeight(), points, err_handler);
-        if (err_handler.ErrCode())   return Ref<ByteMatrix>();
+        if (err_handler.errCode())   return Ref<ByteMatrix>();
         
         if (outlier >= maxOutlier)
         {
@@ -72,7 +82,7 @@ Ref<ByteMatrix> GridSampler::sampleGrid(Ref<ByteMatrix> image, int dimension, Re
 Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, Ref<PerspectiveTransform> transform, ErrorHandler &err_handler) {
     Ref<BitMatrix> bits(new BitMatrix(dimension, err_handler));
     
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     
     std::vector<float> points(dimension << 1, (const float)0.0f);
     
@@ -91,7 +101,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, Ref<
         // Quick check to see if points transformed to something inside the image;
         // sufficient to check the endpoings
         outlier += checkAndNudgePoints(image->getWidth(), image->getHeight(), points, err_handler);
-        if (err_handler.ErrCode())   return Ref<BitMatrix>();
+        if (err_handler.errCode())   return Ref<BitMatrix>();
         
         if (outlier >= maxOutlier)
         {
@@ -159,7 +169,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, Ref<
 Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, cv::Mat& transform, ErrorHandler &err_handler) {
     Ref<BitMatrix> bits(new BitMatrix(dimension, err_handler));
     
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     
     std::vector<cv::Point2f> points(dimension);
     
@@ -177,7 +187,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, cv::
         // Quick check to see if points transformed to something inside the image;
         // sufficient to check the endpoings
         outlier += checkAndNudgePoints(image->getWidth(), image->getHeight(), points, err_handler);
-        if (err_handler.ErrCode())   return Ref<BitMatrix>();
+        if (err_handler.errCode())   return Ref<BitMatrix>();
         
         if (outlier >= maxOutlier)
         {
@@ -249,7 +259,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimension,
 {
     Ref<BitMatrix> bits(new BitMatrix(dimension, err_handler));
     
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     
     std::vector<cv::Point2f> points(dimension);
     
@@ -270,7 +280,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimension,
         // Quick check to see if points transformed to something inside the image;
         // sufficient to check the endpoings
         outlier += checkAndNudgePoints(image->getWidth(), image->getHeight(), points, err_handler);
-        if (err_handler.ErrCode())   return Ref<BitMatrix>();
+        if (err_handler.errCode())   return Ref<BitMatrix>();
         
         if (outlier >= maxOutlier)
         {
@@ -337,7 +347,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimension,
 Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimensionX, int dimensionY, Ref<PerspectiveTransform> transform, ErrorHandler &err_handler)
 {
     Ref<BitMatrix> bits(new BitMatrix(dimensionX, dimensionY, err_handler));
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     std::vector<float> points(dimensionX << 1, (const float)0.0f);
     for (int y = 0; y < dimensionY; y++)
     {
@@ -350,7 +360,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimensionX, int
         }
         transform->transformPoints(points);
         checkAndNudgePoints(image->getWidth(), image->getHeight(), points, err_handler);
-        if (err_handler.ErrCode())   return Ref<BitMatrix>();
+        if (err_handler.errCode())   return Ref<BitMatrix>();
         for (int x = 0; x < max; x += 2)
         {
             if (image->get(static_cast<int>(points[x]), static_cast<int>(points[x + 1])))
@@ -370,7 +380,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, floa
                                                                                            p3ToX, p3ToY, p4ToX, p4ToY, p1FromX, p1FromY, p2FromX, p2FromY, p3FromX, p3FromY, p4FromX, p4FromY));
     
     Ref<BitMatrix> rst = sampleGrid(image, dimension, transform, err_handler);
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     return rst;
 }
 
@@ -382,7 +392,7 @@ Ref<BitMatrix> GridSampler::sampleGrid(Ref<BitMatrix> image, int dimensionX, int
                                                                                            p3ToX, p3ToY, p4ToX, p4ToY, p1FromX, p1FromY, p2FromX, p2FromY, p3FromX, p3FromY, p4FromX, p4FromY));
     
     Ref<BitMatrix> rst = sampleGrid(image, dimensionX, dimensionY, transform, err_handler);
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     return rst;
     
 }

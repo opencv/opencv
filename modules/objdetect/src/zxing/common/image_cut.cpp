@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 #include "image_cut.hpp"
 
 #include <cstdio>
@@ -15,7 +25,7 @@ ImageCut::~ImageCut()
     
 }
 
-int ImageCut::Cut(uint8_t * poImageData, int iWidth, int iHeight, int iTopLeftX, int iTopLeftY, int iBottomRightX, int iBottomRightY, ImageCutResult & result)
+int ImageCut::cut(uint8_t * poImageData, int iWidth, int iHeight, int iTopLeftX, int iTopLeftY, int iBottomRightX, int iBottomRightY, ImageCutResult & result)
 {
     if (iTopLeftX < 0 || iTopLeftX > iBottomRightX || iBottomRightX >= iWidth) return -1;
     if (iTopLeftY < 0 || iTopLeftY > iBottomRightY || iBottomRightY >= iHeight) return -1;
@@ -39,7 +49,7 @@ int ImageCut::Cut(uint8_t * poImageData, int iWidth, int iHeight, int iTopLeftX,
     return 0;
 }
 
-int ImageCut::Cut( Ref<ByteMatrix> matrix, float fRatio, ImageCutResult & result)
+int ImageCut::cut( Ref<ByteMatrix> matrix, float fRatio, ImageCutResult & result)
 {
     int iWidth = matrix->getWidth();
     int iHeight = matrix->getHeight();

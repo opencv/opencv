@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 /*
  *  Version.cpp
  *  zxing
@@ -140,7 +150,7 @@ Version *Version::getProvisionalVersionForDimension(int dimension, ErrorHandler 
     }
     
     Version * version = Version::getVersionForNumber((dimension - 17) >> 2, err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         err_handler = zxing::FormatErrorHandler("err format");
         return NULL;
@@ -196,7 +206,7 @@ Version *Version::decodeVersionInformation(unsigned int versionBits) {
         // Do the version info bits match exactly? done.
         if (targetVersion == versionBits) {
             Version* version = getVersionForNumber(i + 7 , err_handler);
-            if (err_handler.ErrCode())   return 0;
+            if (err_handler.errCode())   return 0;
             return version;
         }
         // Otherwise see if this is the closest to a real version info bit
@@ -211,7 +221,7 @@ Version *Version::decodeVersionInformation(unsigned int versionBits) {
     // differ in less than 4 bits.
     if (bestDifference <= 3) {
         Version * version = getVersionForNumber(bestVersion , err_handler);
-        if (err_handler.ErrCode())   return 0;
+        if (err_handler.errCode())   return 0;
         return version;
     }
     // If we didn't find a close enough match, fail
@@ -221,10 +231,10 @@ Version *Version::decodeVersionInformation(unsigned int versionBits) {
 Ref<BitMatrix> Version::buildFixedPatternValue(ErrorHandler & err_handler)
 {
     int dimension = getDimensionForVersion(err_handler);
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     
     Ref<BitMatrix> fixedInfo(new BitMatrix(dimension, err_handler));
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     
     // first timming patterns
     for (int i = 0; i < dimension; i += 2) fixedInfo->set(i, 6);
@@ -250,7 +260,7 @@ Ref<BitMatrix> Version::buildFixedPatternValue(ErrorHandler & err_handler)
     fixedInfo->flipRegion(0, dimension - 7, 7, 7, err_handler);
     fixedInfo->flipRegion(1, dimension - 6, 5, 5, err_handler);
     fixedInfo->flipRegion(2, dimension - 5, 3, 3, err_handler);
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     
     // alignment patterns
     size_t max = alignmentPatternCenters_.size();
@@ -264,7 +274,7 @@ Ref<BitMatrix> Version::buildFixedPatternValue(ErrorHandler & err_handler)
             fixedInfo->setRegion(alignmentPatternCenters_[y] - 2, i, 5, 5, err_handler);
             fixedInfo->flipRegion(alignmentPatternCenters_[y] - 1, i + 1, 3, 3, err_handler);
             fixedInfo->flipRegion(alignmentPatternCenters_[y], i + 2, 1, 1, err_handler);
-            if (err_handler.ErrCode())   return Ref<BitMatrix>();
+            if (err_handler.errCode())   return Ref<BitMatrix>();
         }
     }
     return fixedInfo;
@@ -273,7 +283,7 @@ Ref<BitMatrix> Version::buildFixedPatternValue(ErrorHandler & err_handler)
 Ref<BitMatrix> Version::buildFixedPatternTemplate(ErrorHandler & err_handler) {
     int dimension = getDimensionForVersion(err_handler);
     Ref<BitMatrix> functionPattern(new BitMatrix(dimension, err_handler));
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     
     
     // Top left finder pattern + separator + format
@@ -282,7 +292,7 @@ Ref<BitMatrix> Version::buildFixedPatternTemplate(ErrorHandler & err_handler) {
     functionPattern->setRegion(dimension - 8, 0, 8, 8, err_handler);
     // Bottom left finder pattern + separator + format
     functionPattern->setRegion(0, dimension - 8, 8, 8, err_handler);
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     
     // alignment patterns
     size_t max = alignmentPatternCenters_.size();
@@ -301,7 +311,7 @@ Ref<BitMatrix> Version::buildFixedPatternTemplate(ErrorHandler & err_handler) {
     functionPattern->setRegion(6, 8, 1, dimension - 16, err_handler);
     // Horizontal timing pattern
     functionPattern->setRegion(8, 6, dimension - 16, 1, err_handler);
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     
     return functionPattern;
 }
@@ -309,7 +319,7 @@ Ref<BitMatrix> Version::buildFixedPatternTemplate(ErrorHandler & err_handler) {
 Ref<BitMatrix> Version::buildFunctionPattern(ErrorHandler & err_handler) {
     int dimension = getDimensionForVersion(err_handler);
     Ref<BitMatrix> functionPattern(new BitMatrix(dimension, err_handler));
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     
     // Top left finder pattern + separator + format
     functionPattern->setRegion(0, 0, 9, 9, err_handler);
@@ -336,14 +346,14 @@ Ref<BitMatrix> Version::buildFunctionPattern(ErrorHandler & err_handler) {
     functionPattern->setRegion(6, 9, 1, dimension - 17, err_handler);
     // Horizontal timing pattern
     functionPattern->setRegion(9, 6, dimension - 17, 1, err_handler);
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     
     if (versionNumber_ > 6) {
         // Version info, top right
         functionPattern->setRegion(dimension - 11, 0, 3, 6, err_handler);
         // Version info, bottom left
         functionPattern->setRegion(0, dimension - 11, 6, 3, err_handler);
-        if (err_handler.ErrCode())   return Ref<BitMatrix>();
+        if (err_handler.errCode())   return Ref<BitMatrix>();
     }
     
     return functionPattern;

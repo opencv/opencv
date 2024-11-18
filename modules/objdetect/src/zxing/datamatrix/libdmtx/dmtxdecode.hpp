@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 //
 //  dmtxdecode.hpp
 //  test_dm
@@ -5,8 +15,8 @@
 //  Created by wechatcv on 2022/5/7.
 //
 
-#ifndef dmtxdecode_hpp
-#define dmtxdecode_hpp
+#ifndef __ZXING_DATAMATRIX_LIBDMTX_DMTXDECODE_HPP__
+#define __ZXING_DATAMATRIX_LIBDMTX_DMTXDECODE_HPP__
 
 #include <stdio.h>
 #include "common.hpp"
@@ -39,47 +49,47 @@ public:
     
     int dmtxRegionFindNext();
 private:
-    int InitScanGrid();
+    int initScanGrid();
     
-    unsigned int PopulateArrayFromMatrix(DmtxMessage *msg);
-    unsigned int CacheFillQuad(DmtxPixelLoc p0, DmtxPixelLoc p1, DmtxPixelLoc p2, DmtxPixelLoc p3);
-    unsigned int TallyModuleJumps(int tally[][24], int xOrigin, int yOrigin, int mapWidth, int mapHeight, DmtxDirection dir);
-    int ReadModuleColor(int symbolRow, int symbolCol, int sizeIdx);
+    unsigned int populateArrayFromMatrix(DmtxMessage *msg);
+    unsigned int cacheFillQuad(DmtxPixelLoc p0, DmtxPixelLoc p1, DmtxPixelLoc p2, DmtxPixelLoc p3);
+    unsigned int tallyModuleJumps(int tally[][24], int xOrigin, int yOrigin, int mapWidth, int mapHeight, DmtxDirection dir);
+    int readModuleColor(int symbolRow, int symbolCol, int sizeIdx);
     
-    DmtxBresLine BresLineInit(DmtxPixelLoc loc0, DmtxPixelLoc loc1, DmtxPixelLoc locInside);
-    unsigned int BresLineStep(DmtxBresLine *line, int travel, int outward);
-    unsigned int BresLineGetStep(DmtxBresLine line, DmtxPixelLoc target, int *travel, int *outward);
+    DmtxBresLine bresLineInit(DmtxPixelLoc loc0, DmtxPixelLoc loc1, DmtxPixelLoc locInside);
+    unsigned int bresLineStep(DmtxBresLine *line, int travel, int outward);
+    unsigned int bresLineGetStep(DmtxBresLine line, DmtxPixelLoc target, int *travel, int *outward);
     
-    int PopGridLocation( DmtxPixelLoc *locPtr);
-    int GetGridCoordinates(DmtxPixelLoc *locPtr);
+    int popGridLocation( DmtxPixelLoc *locPtr);
+    int getGridCoordinates(DmtxPixelLoc *locPtr);
     int dmtxRegionScanPixel(int x, int y);
     
-    DmtxPointFlow MatrixRegionSeekEdge(DmtxPixelLoc loc);
+    DmtxPointFlow matrixRegionSeekEdge(DmtxPixelLoc loc);
     DmtxPointFlow GetPointFlow(DmtxPixelLoc loc, int arrive);
-    DmtxPointFlow FindStrongestNeighbor(DmtxPointFlow center, int sign);
-    unsigned int MatrixRegionOrientation(DmtxPointFlow begin);
+    DmtxPointFlow findStrongestNeighbor(DmtxPointFlow center, int sign);
+    unsigned int matrixRegionOrientation(DmtxPointFlow begin);
     
-    unsigned int TrailBlazeContinuous(DmtxPointFlow flowBegin, int maxDiagonal);
-    int TrailClear(int clearMask);
-    int TrailBlazeGapped(DmtxBresLine line, int streamDir);
+    unsigned int trailBlazeContinuous(DmtxPointFlow flowBegin, int maxDiagonal);
+    int trailClear(int clearMask);
+    int trailBlazeGapped(DmtxBresLine line, int streamDir);
     
-    DmtxBestLine FindBestSolidLine(int step0, int step1, int streamDir, int houghAvoid, unsigned int* passFail);
-    DmtxBestLine FindBestSolidLine2(DmtxPixelLoc loc0, int tripSteps, int sign, int houghAvoid, unsigned int* passFail);
+    DmtxBestLine findBestSolidLine(int step0, int step1, int streamDir, int houghAvoid, unsigned int* passFail);
+    DmtxBestLine findBestSolidLine2(DmtxPixelLoc loc0, int tripSteps, int sign, int houghAvoid, unsigned int* passFail);
     
-    unsigned int FindTravelLimits(DmtxBestLine *line);
+    unsigned int findTravelLimits(DmtxBestLine *line);
     unsigned int dmtxRegionUpdateXfrms();
-    unsigned int MatrixRegionAlignCalibEdge(int edgeLoc);
-    unsigned int MatrixRegionFindSize();
-    int CountJumpTally(int xStart, int yStart, DmtxDirection dir);
-    DmtxFollow FollowSeek(int seek, unsigned int* passFail);
-    DmtxFollow FollowStep(DmtxFollow followBeg, int sign, unsigned int* passFail);
-    DmtxFollow FollowSeekLoc(DmtxPixelLoc loc, unsigned int* passFail);
-    DmtxFollow FollowStep2(DmtxFollow followBeg, int sign, unsigned int* passFail);
+    unsigned int matrixRegionAlignCalibEdge(int edgeLoc);
+    unsigned int matrixRegionFindSize();
+    int countJumpTally(int xStart, int yStart, DmtxDirection dir);
+    DmtxFollow followSeek(int seek, unsigned int* passFail);
+    DmtxFollow followStep(DmtxFollow followBeg, int sign, unsigned int* passFail);
+    DmtxFollow followSeekLoc(DmtxPixelLoc loc, unsigned int* passFail);
+    DmtxFollow followStep2(DmtxFollow followBeg, int sign, unsigned int* passFail);
     
-    long DistanceSquared(DmtxPixelLoc a, DmtxPixelLoc b);
+    long distanceSquared(DmtxPixelLoc a, DmtxPixelLoc b);
     
     unsigned int dmtxRegionUpdateCorners(DmtxVector2 p00, DmtxVector2 p10, DmtxVector2 p11, DmtxVector2 p01);
-    double RightAngleTrueness(DmtxVector2 c0, DmtxVector2 c1, DmtxVector2 c2, double angle);
+    double rightAngleTrueness(DmtxVector2 c0, DmtxVector2 c1, DmtxVector2 c2, double angle);
     
     
 private:
@@ -107,4 +117,4 @@ private:
 };
 
 }  // namespace dmtx
-#endif /* dmtxdecode_hpp */
+#endif // __ZXING_DATAMATRIX_LIBDMTX_DMTXDECODE_HPP__

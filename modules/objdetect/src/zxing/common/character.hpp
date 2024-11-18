@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 //
 //  Character.hpp
 //  ZXing
@@ -5,13 +15,12 @@
 //  Created by skylook on 9/28/14.
 //  Copyright (c) 2014 Valiantliu. All rights reserved.
 //
+#ifndef __ZXING_COMMON_CHARACTER_HPP__
+#define __ZXING_COMMON_CHARACTER_HPP__
 
 #include <iostream>
 #include <stdio.h>
 #include <ctype.h>
-
-#ifndef ZXing_Character_h
-#define ZXing_Character_h
 
 namespace zxing
 {
@@ -58,4 +67,4 @@ namespace zxing
     };
 }
 
-#endif
+#endif // __ZXING_COMMON_CHARACTER_HPP__

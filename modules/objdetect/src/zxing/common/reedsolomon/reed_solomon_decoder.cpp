@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  Created by Christian Brunschen on 05/05/2008.
@@ -42,7 +52,7 @@ ReedSolomonDecoder::~ReedSolomonDecoder() {
 
 void ReedSolomonDecoder::decode(ArrayRef<int> received, int twoS, ErrorHandler & err_handler) {
     Ref<GenericGFPoly> poly(new GenericGFPoly(*field, received, err_handler));
-    if (err_handler.ErrCode())   return;
+    if (err_handler.errCode())   return;
     ArrayRef<int> syndromeCoefficients(twoS);
     bool noError = true;
     for (int i = 0; i < twoS; i++) {
@@ -59,25 +69,25 @@ void ReedSolomonDecoder::decode(ArrayRef<int> received, int twoS, ErrorHandler &
     }
     Ref<GenericGFPoly> syndrome(new GenericGFPoly(*field, syndromeCoefficients, err_handler));
     Ref<GenericGFPoly> monomial = field->buildMonomial(twoS, 1, err_handler);
-    if (!monomial || err_handler.ErrCode())
+    if (!monomial || err_handler.errCode())
     {
         err_handler = ErrorHandler("buildMonomial was zero");
         return;
     }
     vector<Ref<GenericGFPoly> > sigmaOmega =
     runEuclideanAlgorithm(monomial, syndrome, twoS, err_handler);
-    if (err_handler.ErrCode()) return;
+    if (err_handler.errCode()) return;
     
     Ref<GenericGFPoly> sigma = sigmaOmega[0];
     Ref<GenericGFPoly> omega = sigmaOmega[1];
     ArrayRef<int> errorLocations = findErrorLocations(sigma, err_handler);
-    if (err_handler.ErrCode()) return;
+    if (err_handler.errCode()) return;
     
     ArrayRef<int> errorMagitudes = findErrorMagnitudes(omega, errorLocations, err_handler);
-    if (err_handler.ErrCode()) return;
+    if (err_handler.errCode()) return;
     for (int i = 0; i < errorLocations->size(); i++) {
         int position = received->size() - 1 - field->log(errorLocations[i], err_handler);
-        if (position < 0 || err_handler.ErrCode()) {
+        if (position < 0 || err_handler.errCode()) {
             err_handler = ErrorHandler("Bad error location");
             return;
         }
@@ -121,19 +131,19 @@ vector<Ref<GenericGFPoly> > ReedSolomonDecoder::runEuclideanAlgorithm(Ref<Generi
         Ref<GenericGFPoly> q = field->getZero();
         int denominatorLeadingTerm = rLast->getCoefficient(rLast->getDegree());
         int dltInverse = field->inverse(denominatorLeadingTerm, err_handler);
-        if (err_handler.ErrCode())   return vector<Ref<GenericGFPoly> >();
+        if (err_handler.errCode())   return vector<Ref<GenericGFPoly> >();
         while (r->getDegree() >= rLast->getDegree() && !r->isZero()) {
             int degreeDiff = r->getDegree() - rLast->getDegree();
             int scale = field->multiply(r->getCoefficient(r->getDegree()), dltInverse);
             q = q->addOrSubtract(field->buildMonomial(degreeDiff, scale, err_handler), err_handler);
             r = r->addOrSubtract(rLast->multiplyByMonomial(degreeDiff, scale, err_handler), err_handler);
-            if (err_handler.ErrCode())   return vector<Ref<GenericGFPoly> >();
+            if (err_handler.errCode())   return vector<Ref<GenericGFPoly> >();
         }
         
         Ref<GenericGFPoly> tmp = q->multiply(tLast, err_handler);
-        if (err_handler.ErrCode())   return vector<Ref<GenericGFPoly> >();
+        if (err_handler.errCode())   return vector<Ref<GenericGFPoly> >();
         t = tmp->addOrSubtract(tLastLast, err_handler);
-        if (err_handler.ErrCode())   return vector<Ref<GenericGFPoly> >();
+        if (err_handler.errCode())   return vector<Ref<GenericGFPoly> >();
         
         if (r->getDegree() >= rLast->getDegree())
         {
@@ -152,7 +162,7 @@ vector<Ref<GenericGFPoly> > ReedSolomonDecoder::runEuclideanAlgorithm(Ref<Generi
     int inverse = field->inverse(sigmaTildeAtZero, err_handler);
     Ref<GenericGFPoly> sigma(t->multiply(inverse, err_handler));
     Ref<GenericGFPoly> omega(r->multiply(inverse, err_handler));
-    if (err_handler.ErrCode())   return vector<Ref<GenericGFPoly> >();
+    if (err_handler.errCode())   return vector<Ref<GenericGFPoly> >();
     
     result[0] = sigma;
     result[1] = omega;
@@ -177,7 +187,7 @@ ArrayRef<int> ReedSolomonDecoder::findErrorLocations(Ref<GenericGFPoly> errorLoc
             e++;
         }
     }
-    if (e != numErrors || err_handler.ErrCode())
+    if (e != numErrors || err_handler.errCode())
     {
         err_handler = ErrorHandler("Error locator degree does not match number of root");
         return ArrayRef<int>();
@@ -205,6 +215,6 @@ ArrayRef<int> ReedSolomonDecoder::findErrorMagnitudes(Ref<GenericGFPoly> errorEv
             result[i] = field->multiply(result[i], xiInverse);
         }
     }
-    if (err_handler.ErrCode())   return ArrayRef<int>();
+    if (err_handler.errCode())   return ArrayRef<int>();
     return result;
 }

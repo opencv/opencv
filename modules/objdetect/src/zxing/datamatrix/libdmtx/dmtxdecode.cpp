@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 //
 //  dmtxdecode.cpp
 //  test_dm
@@ -48,7 +58,7 @@ int DmtxDecode::dmtxDecodeCreate(unsigned char *pxl, int width, int height)
         return -1;
     }
     
-    if (InitScanGrid() < 0) return -1;
+    if (initScanGrid() < 0) return -1;
     
     return 0;
 }
@@ -123,7 +133,7 @@ int DmtxDecode::dmtxRegionFindNext()
     /* Continue until we find a region or run out of chances */
     int count = 0;
     for (;;) {
-        locStatus = PopGridLocation(&loc);
+        locStatus = popGridLocation(&loc);
         if (locStatus == DmtxRangeEnd)
             break;
         count += 1;
@@ -140,12 +150,12 @@ int DmtxDecode::dmtxRegionFindNext()
 
 ///
 
-int DmtxDecode::PopGridLocation( DmtxPixelLoc *locPtr)
+int DmtxDecode::popGridLocation( DmtxPixelLoc *locPtr)
 {
     int locStatus;
     
     do {
-        locStatus = GetGridCoordinates(locPtr);
+        locStatus = getGridCoordinates(locPtr);
         
         /* Always leave grid pointing at next available location */
         grid.pixelCount++;
@@ -155,7 +165,7 @@ int DmtxDecode::PopGridLocation( DmtxPixelLoc *locPtr)
     return locStatus;
 }
 
-int DmtxDecode::GetGridCoordinates(DmtxPixelLoc *locPtr)
+int DmtxDecode::getGridCoordinates(DmtxPixelLoc *locPtr)
 {
     int count, half, quarter;
     DmtxPixelLoc loc;
@@ -259,39 +269,39 @@ int DmtxDecode::dmtxRegionScanPixel(int x, int y)
         return -1;
     
     /* Test for presence of any reasonable edge at this location */
-    flowBegin = MatrixRegionSeekEdge(loc);
+    flowBegin = matrixRegionSeekEdge(loc);
     if (flowBegin.mag < static_cast<int>(this->edgeThresh * 7.65 + 0.5))
         return -1;
     
     memset(&region, 0x00, sizeof(DmtxRegion));
     
     /* Determine barcode orientation */
-    if (MatrixRegionOrientation(flowBegin) == DmtxFail)
+    if (matrixRegionOrientation(flowBegin) == DmtxFail)
         return -1;
     if (dmtxRegionUpdateXfrms() == DmtxFail)
         return -1;
     
     /* Define top edge */
-    if (MatrixRegionAlignCalibEdge(DmtxEdgeTop) == DmtxFail)
+    if (matrixRegionAlignCalibEdge(DmtxEdgeTop) == DmtxFail)
         return -1;
     if (dmtxRegionUpdateXfrms() == DmtxFail)
         return -1;
     
     /* Define right edge */
-    if (MatrixRegionAlignCalibEdge(DmtxEdgeRight) == DmtxFail)
+    if (matrixRegionAlignCalibEdge(DmtxEdgeRight) == DmtxFail)
         return -1;
     if (dmtxRegionUpdateXfrms() == DmtxFail)
         return -1;
     
     /* Calculate the best fitting symbol size */
-    if (MatrixRegionFindSize() == DmtxFail)
+    if (matrixRegionFindSize() == DmtxFail)
         return -1;
     
     /* Found a valid matrix region */
     return 0;
 }
 
-DmtxPointFlow DmtxDecode::MatrixRegionSeekEdge(DmtxPixelLoc loc)
+DmtxPointFlow DmtxDecode::matrixRegionSeekEdge(DmtxPixelLoc loc)
 {
     DmtxPointFlow flow, flowPlane;
     DmtxPointFlow flowPos, flowPosBack;
@@ -305,11 +315,11 @@ DmtxPointFlow DmtxDecode::MatrixRegionSeekEdge(DmtxPixelLoc loc)
     
     flow = flowPlane;
     
-    flowPos = FindStrongestNeighbor(flow, +1);
-    flowNeg = FindStrongestNeighbor(flow, -1);
+    flowPos = findStrongestNeighbor(flow, +1);
+    flowNeg = findStrongestNeighbor(flow, -1);
     if (flowPos.mag != 0 && flowNeg.mag != 0) {
-        flowPosBack = FindStrongestNeighbor(flowPos, -1);
-        flowNegBack = FindStrongestNeighbor(flowNeg, +1);
+        flowPosBack = findStrongestNeighbor(flowPos, -1);
+        flowNegBack = findStrongestNeighbor(flowNeg, +1);
         if (flowPos.arrive == (flowPosBack.arrive + 4) % 8 &&
            flowNeg.arrive == (flowNegBack.arrive + 4) % 8) {
             flow.arrive = dmtxNeighborNone;
@@ -382,7 +392,7 @@ DmtxPointFlow DmtxDecode::GetPointFlow(DmtxPixelLoc loc, int arrive)
     return flow;
 }
 
-unsigned int DmtxDecode:: MatrixRegionFindSize()
+unsigned int DmtxDecode:: matrixRegionFindSize()
 {
     int row, col;
     int sizeIdxBeg, sizeIdxEnd;
@@ -429,7 +439,7 @@ unsigned int DmtxDecode:: MatrixRegionFindSize()
         /* Sum module colors along horizontal calibration bar */
         row = symbolRows - 1;
         for (col = 0; col < symbolCols; col++) {
-            color = ReadModuleColor(row, col, sizeIdx);
+            color = readModuleColor(row, col, sizeIdx);
             if (color == -1) return DmtxFail;
             
             if ((col & 0x01) != 0x00)
@@ -441,7 +451,7 @@ unsigned int DmtxDecode:: MatrixRegionFindSize()
         /* Sum module colors along vertical calibration bar */
         col = symbolCols - 1;
         for (row = 0; row < symbolRows; row++) {
-            color = ReadModuleColor(row, col, sizeIdx);
+            color = readModuleColor(row, col, sizeIdx);
             if (color == -1) return DmtxFail;
             
             if ((row & 0x01) != 0x00)
@@ -480,48 +490,48 @@ unsigned int DmtxDecode:: MatrixRegionFindSize()
     region.mappingCols = dmtxGetSymbolAttribute(DmtxSymAttribMappingMatrixCols, region.sizeIdx);
     
     /* Tally jumps on horizontal calibration bar to verify sizeIdx */
-    jumpCount = CountJumpTally(0, region.symbolRows - 1, DmtxDirRight);
+    jumpCount = countJumpTally(0, region.symbolRows - 1, DmtxDirRight);
     errors = abs(1 + jumpCount - region.symbolCols);
     if (jumpCount < 0 || errors > 2)
         return DmtxFail;
     
     /* Tally jumps on vertical calibration bar to verify sizeIdx */
-    jumpCount = CountJumpTally(region.symbolCols - 1, 0, DmtxDirUp);
+    jumpCount = countJumpTally(region.symbolCols - 1, 0, DmtxDirUp);
     errors = abs(1 + jumpCount - region.symbolRows);
     if (jumpCount < 0 || errors > 2)
         return DmtxFail;
     
     /* Tally jumps on horizontal finder bar to verify sizeIdx */
-    errors = CountJumpTally(0, 0, DmtxDirRight);
+    errors = countJumpTally(0, 0, DmtxDirRight);
     if (jumpCount < 0 || errors > 2)
         return DmtxFail;
     
     /* Tally jumps on vertical finder bar to verify sizeIdx */
-    errors = CountJumpTally(0, 0, DmtxDirUp);
+    errors = countJumpTally(0, 0, DmtxDirUp);
     if (errors < 0 || errors > 2)
         return DmtxFail;
     
     /* Tally jumps on surrounding whitespace, else fail */
-    errors = CountJumpTally(0, -1, DmtxDirRight);
+    errors = countJumpTally(0, -1, DmtxDirRight);
     if (errors < 0 || errors > 2)
         return DmtxFail;
     
-    errors = CountJumpTally(-1, 0, DmtxDirUp);
+    errors = countJumpTally(-1, 0, DmtxDirUp);
     if (errors < 0 || errors > 2)
         return DmtxFail;
     
-    errors = CountJumpTally(0, region.symbolRows, DmtxDirRight);
+    errors = countJumpTally(0, region.symbolRows, DmtxDirRight);
     if (errors < 0 || errors > 2)
         return DmtxFail;
     
-    errors = CountJumpTally(region.symbolCols, 0, DmtxDirUp);
+    errors = countJumpTally(region.symbolCols, 0, DmtxDirUp);
     if (errors < 0 || errors > 2)
         return DmtxFail;
     
     return DmtxPass;
 }
 
-int DmtxDecode::CountJumpTally(int xStart, int yStart, DmtxDirection dir)
+int DmtxDecode::countJumpTally(int xStart, int yStart, DmtxDirection dir)
 {
     int x, xInc = 0;
     int y, yInc = 0;
@@ -548,7 +558,7 @@ int DmtxDecode::CountJumpTally(int xStart, int yStart, DmtxDirection dir)
     
     darkOnLight = static_cast<int>(region.offColor > region.onColor);
     jumpThreshold = abs(static_cast<int>(0.4 * (region.onColor - region.offColor) + 0.5));
-    color = ReadModuleColor(yStart, xStart, region.sizeIdx);
+    color = readModuleColor(yStart, xStart, region.sizeIdx);
     if (color == -1) return -1;
     
     tModule = (darkOnLight) ? region.offColor - color : color - region.offColor;
@@ -559,7 +569,7 @@ int DmtxDecode::CountJumpTally(int xStart, int yStart, DmtxDirection dir)
         x += xInc, y += yInc) {
         
         tPrev = tModule;
-        color = ReadModuleColor(y, x, region.sizeIdx);
+        color = readModuleColor(y, x, region.sizeIdx);
         if (color == -1) return -1;
         tModule = (darkOnLight) ? region.offColor - color : color - region.offColor;
         
@@ -584,7 +594,7 @@ int DmtxDecode::CountJumpTally(int xStart, int yStart, DmtxDirection dir)
     return jumpCount;
 }
 
-DmtxPointFlow DmtxDecode::FindStrongestNeighbor(DmtxPointFlow center, int sign)
+DmtxPointFlow DmtxDecode::findStrongestNeighbor(DmtxPointFlow center, int sign)
 {
     int strongIdx;
     int attemptDiff;
@@ -630,7 +640,7 @@ DmtxPointFlow DmtxDecode::FindStrongestNeighbor(DmtxPointFlow center, int sign)
     return (strongIdx == DmtxUndefined) ? dmtxBlankEdge : flow[strongIdx];
 }
 
-unsigned int DmtxDecode::MatrixRegionOrientation(DmtxPointFlow begin)
+unsigned int DmtxDecode::matrixRegionOrientation(DmtxPointFlow begin)
 {
     int cross;
     int minArea;
@@ -665,10 +675,10 @@ unsigned int DmtxDecode::MatrixRegionOrientation(DmtxPointFlow begin)
     }
     
     /* Follow to end in both directions */
-    err = TrailBlazeContinuous(begin, maxDiagonal);
+    err = trailBlazeContinuous(begin, maxDiagonal);
     if (err == DmtxFail || region.stepsTotal < 40)
     {
-        TrailClear(0x40);
+        trailClear(0x40);
         return DmtxFail;
     }
     
@@ -681,36 +691,36 @@ unsigned int DmtxDecode::MatrixRegionOrientation(DmtxPointFlow begin)
             minArea = (2 * this->edgeMin * this->edgeMin);
         
         if ((region.boundMax.X - region.boundMin.X) * (region.boundMax.Y - region.boundMin.Y) < minArea) {
-            TrailClear(0x40);
+            trailClear(0x40);
             return DmtxFail;
         }
     }
     
     unsigned int passFail;
-    line1x = FindBestSolidLine(0, 0, +1, DmtxUndefined, &passFail);
+    line1x = findBestSolidLine(0, 0, +1, DmtxUndefined, &passFail);
     if (passFail == DmtxFail) return DmtxFail;
     if (line1x.mag < 5)
     {
-        TrailClear(0x40);
+        trailClear(0x40);
         return DmtxFail;
     }
     
-    err = FindTravelLimits(&line1x);
+    err = findTravelLimits(&line1x);
     if (line1x.distSq < 100 || line1x.devn * 10 >= sqrt(static_cast<double>(line1x.distSq)))
     {
-        TrailClear(0x40);
+        trailClear(0x40);
         return DmtxFail;
     }
     if (line1x.stepPos < line1x.stepNeg) return DmtxFail;
     
-    fTmp = FollowSeek(line1x.stepPos + 5, &passFail);
+    fTmp = followSeek(line1x.stepPos + 5, &passFail);
     if (passFail == DmtxFail) return DmtxFail;
-    line2p = FindBestSolidLine(fTmp.step, line1x.stepNeg, +1, line1x.angle, &passFail);
+    line2p = findBestSolidLine(fTmp.step, line1x.stepNeg, +1, line1x.angle, &passFail);
     if (passFail == DmtxFail) return DmtxFail;
     
-    fTmp = FollowSeek(line1x.stepNeg - 5, &passFail);
+    fTmp = followSeek(line1x.stepNeg - 5, &passFail);
     if (passFail == DmtxFail) return DmtxFail;
-    line2n = FindBestSolidLine(fTmp.step, line1x.stepPos, -1, line1x.angle, &passFail);
+    line2n = findBestSolidLine(fTmp.step, line1x.stepPos, -1, line1x.angle, &passFail);
     if (passFail == DmtxFail) return DmtxFail;
     if (fmax(line2p.mag, line2n.mag) < 5)
         return DmtxFail;
@@ -718,7 +728,7 @@ unsigned int DmtxDecode::MatrixRegionOrientation(DmtxPointFlow begin)
     if (line2p.mag > line2n.mag)
     {
         line2x = line2p;
-        err = FindTravelLimits(&line2x);
+        err = findTravelLimits(&line2x);
         if (line2x.distSq < 100 || line2x.devn * 10 >= sqrt(static_cast<double>(line2x.distSq)))
             return DmtxFail;
         
@@ -758,7 +768,7 @@ unsigned int DmtxDecode::MatrixRegionOrientation(DmtxPointFlow begin)
     else
     {
         line2x = line2n;
-        err = FindTravelLimits(&line2x);
+        err = findTravelLimits(&line2x);
         if (line2x.distSq < 100 || line2x.devn / sqrt(static_cast<double>(line2x.distSq)) >= 0.1)
             return DmtxFail;
         
@@ -801,7 +811,7 @@ unsigned int DmtxDecode::MatrixRegionOrientation(DmtxPointFlow begin)
     return DmtxPass;
 }
 
-DmtxFollow DmtxDecode::FollowSeek(int seek, unsigned int* passFail)
+DmtxFollow DmtxDecode::followSeek(int seek, unsigned int* passFail)
 {
     int i;
     int sign;
@@ -824,7 +834,7 @@ DmtxFollow DmtxDecode::FollowSeek(int seek, unsigned int* passFail)
     
     sign = (seek > 0) ? +1 : -1;
     for (i = 0; i != seek; i += sign) {
-        follow = FollowStep(follow, sign, passFail);
+        follow = followStep(follow, sign, passFail);
         if (passFail == DmtxFail)
         {
             // *passFail = DmtxFail;
@@ -845,7 +855,7 @@ DmtxFollow DmtxDecode::FollowSeek(int seek, unsigned int* passFail)
     return follow;
 }
 
-DmtxFollow DmtxDecode::FollowStep(DmtxFollow followBeg, int sign, unsigned int *passFail)
+DmtxFollow DmtxDecode::followStep(DmtxFollow followBeg, int sign, unsigned int *passFail)
 {
     int patternIdx;
     int stepMod;
@@ -900,7 +910,7 @@ DmtxFollow DmtxDecode::FollowStep(DmtxFollow followBeg, int sign, unsigned int *
 }
 
 
-unsigned int DmtxDecode::TrailBlazeContinuous(DmtxPointFlow flowBegin, int maxDiagonal)
+unsigned int DmtxDecode::trailBlazeContinuous(DmtxPointFlow flowBegin, int maxDiagonal)
 {
     int posAssigns, negAssigns, clears;
     int sign;
@@ -930,7 +940,7 @@ unsigned int DmtxDecode::TrailBlazeContinuous(DmtxPointFlow flowBegin, int maxDi
                 break;
             
             /* Find the strongest eligible neighbor */
-            flowNext = FindStrongestNeighbor(flow, sign);
+            flowNext = findStrongestNeighbor(flow, sign);
             if (flowNext.mag < 50)
                 break;
             
@@ -983,7 +993,7 @@ unsigned int DmtxDecode::TrailBlazeContinuous(DmtxPointFlow flowBegin, int maxDi
     region.boundMax = boundMax;
     
     /* Clear "visited" bit from trail */
-    clears = TrailClear(0x80);
+    clears = trailClear(0x80);
     if (clears < 0) return DmtxFail;
     if (posAssigns + negAssigns != clears - 1) return DmtxFail;
     
@@ -995,7 +1005,7 @@ unsigned int DmtxDecode::TrailBlazeContinuous(DmtxPointFlow flowBegin, int maxDi
     return DmtxPass;
 }
 
-int DmtxDecode::TrailClear(int clearMask)
+int DmtxDecode::trailClear(int clearMask)
 {
     int clears;
     DmtxFollow follow;
@@ -1005,12 +1015,12 @@ int DmtxDecode::TrailClear(int clearMask)
     
     /* Clear "visited" bit from trail */
     clears = 0;
-    follow = FollowSeek(0, &passFail);
+    follow = followSeek(0, &passFail);
     if (passFail == DmtxFail) return -1;
     while (abs(follow.step) <= region.stepsTotal) {
         if (static_cast<int>(*follow.ptr & clearMask) == 0x00) return -1;
         *follow.ptr &= (clearMask ^ 0xff);
-        follow = FollowStep(follow, +1, &passFail);
+        follow = followStep(follow, +1, &passFail);
         if (passFail == DmtxFail) return -1;
         clears++;
     }
@@ -1018,7 +1028,7 @@ int DmtxDecode::TrailClear(int clearMask)
     return clears;
 }
 
-unsigned int DmtxDecode::MatrixRegionAlignCalibEdge(int edgeLoc)
+unsigned int DmtxDecode::matrixRegionAlignCalibEdge(int edgeLoc)
 {
     int streamDir;
     int steps;
@@ -1054,7 +1064,7 @@ unsigned int DmtxDecode::MatrixRegionAlignCalibEdge(int edgeLoc)
     if (edgeLoc == DmtxEdgeTop) {
         streamDir = region.polarity * -1;
         avoidAngle = region.leftLine.angle;
-        follow = FollowSeekLoc(region.locT, &passFail);
+        follow = followSeekLoc(region.locT, &passFail);
         if (passFail == DmtxFail) return DmtxFail;
         pTmp.X = 0.8;
         pTmp.Y = (symbolShape == DmtxSymbolRectAuto) ? 0.2 : 0.6;
@@ -1064,7 +1074,7 @@ unsigned int DmtxDecode::MatrixRegionAlignCalibEdge(int edgeLoc)
         if (edgeLoc != DmtxEdgeRight) return DmtxFail;
         streamDir = region.polarity;
         avoidAngle = region.bottomLine.angle;
-        follow = FollowSeekLoc(region.locR, &passFail);
+        follow = followSeekLoc(region.locR, &passFail);
         if (passFail == DmtxFail) return DmtxFail;
         pTmp.X = (symbolShape == DmtxSymbolSquareAuto) ? 0.7 : 0.9;
         pTmp.Y = 0.8;
@@ -1076,11 +1086,11 @@ unsigned int DmtxDecode::MatrixRegionAlignCalibEdge(int edgeLoc)
     loc1.Y = static_cast<int>(pTmp.Y + 0.5);
     
     loc0 = follow.loc;
-    line = BresLineInit(loc0, loc1, locOrigin);
-    steps = TrailBlazeGapped(line, streamDir);
+    line = bresLineInit(loc0, loc1, locOrigin);
+    steps = trailBlazeGapped(line, streamDir);
     if (steps < 0) return DmtxFail;
     
-    bestLine = FindBestSolidLine2(loc0, steps, streamDir, avoidAngle, &passFail);
+    bestLine = findBestSolidLine2(loc0, steps, streamDir, avoidAngle, &passFail);
     if (passFail == DmtxFail)
     {
         return DmtxFail;
@@ -1105,7 +1115,7 @@ unsigned int DmtxDecode::MatrixRegionAlignCalibEdge(int edgeLoc)
     return DmtxPass;
 }
 
-DmtxFollow DmtxDecode::FollowSeekLoc(DmtxPixelLoc loc, unsigned int* passFail)
+DmtxFollow DmtxDecode::followSeekLoc(DmtxPixelLoc loc, unsigned int* passFail)
 {
     DmtxFollow follow;
     
@@ -1123,7 +1133,7 @@ DmtxFollow DmtxDecode::FollowSeekLoc(DmtxPixelLoc loc, unsigned int* passFail)
     return follow;
 }
 
-int DmtxDecode::TrailBlazeGapped(DmtxBresLine line, int streamDir)
+int DmtxDecode::trailBlazeGapped(DmtxBresLine line, int streamDir)
 {
     unsigned char *beforeCache, *afterCache;
     DmtxBoolean onEdge;
@@ -1153,11 +1163,11 @@ int DmtxDecode::TrailBlazeGapped(DmtxBresLine line, int streamDir)
     
     do {
         if (onEdge == DmtxTrue) {
-            flowNext = FindStrongestNeighbor(flow, streamDir);
+            flowNext = findStrongestNeighbor(flow, streamDir);
             if (flowNext.mag == DmtxUndefined)
                 break;
             
-            err = BresLineGetStep(line, flowNext.loc, &travel, &outward);
+            err = bresLineGetStep(line, flowNext.loc, &travel, &outward);
             if (err == DmtxFail) { return DmtxFail; }
             
             if (flowNext.mag < 50 || outward < 0 || (outward == 0 && travel < 0)) {
@@ -1165,14 +1175,14 @@ int DmtxDecode::TrailBlazeGapped(DmtxBresLine line, int streamDir)
             }
             else
             {
-                BresLineStep(&line, travel, outward);
+                bresLineStep(&line, travel, outward);
                 flow = flowNext;
             }
         }
         
         if (onEdge == DmtxFalse)
         {
-            BresLineStep(&line, 1, 0);
+            bresLineStep(&line, 1, 0);
             flow = GetPointFlow(line.loc, dmtxNeighborNone);
             if (flow.mag > 50)
                 onEdge = DmtxTrue;
@@ -1215,7 +1225,7 @@ int DmtxDecode::TrailBlazeGapped(DmtxBresLine line, int streamDir)
     return steps;
 }
 
-DmtxBestLine DmtxDecode::FindBestSolidLine2(DmtxPixelLoc loc0, int tripSteps, int sign, int houghAvoid, unsigned int* passFail)
+DmtxBestLine DmtxDecode::findBestSolidLine2(DmtxPixelLoc loc0, int tripSteps, int sign, int houghAvoid, unsigned int* passFail)
 {
     int hough[3][DMTX_HOUGH_RES] = { { 0 } };
     int houghMin, houghMax;
@@ -1236,7 +1246,7 @@ DmtxBestLine DmtxDecode::FindBestSolidLine2(DmtxPixelLoc loc0, int tripSteps, in
     angleBest = 0;
     hOffset = hOffsetBest = 0;
     
-    follow = FollowSeekLoc(loc0, passFail);
+    follow = followSeekLoc(loc0, passFail);
     if (*passFail == DmtxFail) {
         return line;
     }
@@ -1292,7 +1302,7 @@ DmtxBestLine DmtxDecode::FindBestSolidLine2(DmtxPixelLoc loc0, int tripSteps, in
             }
         }
         
-        follow = FollowStep2(follow, sign, passFail);
+        follow = followStep2(follow, sign, passFail);
         if (*passFail == DmtxFail) {
             return line;
         }
@@ -1305,7 +1315,7 @@ DmtxBestLine DmtxDecode::FindBestSolidLine2(DmtxPixelLoc loc0, int tripSteps, in
     return line;
 }
 
-DmtxFollow DmtxDecode:: FollowStep2(DmtxFollow followBeg, int sign, unsigned int *passFail)
+DmtxFollow DmtxDecode:: followStep2(DmtxFollow followBeg, int sign, unsigned int *passFail)
 {
     int patternIdx;
     DmtxFollow follow;
@@ -1341,10 +1351,10 @@ int DmtxDecode::dmtxDecodeMatrixRegion(int fix, DmtxMessage& msg)
     DmtxVector2 topLeft, topRight, bottomLeft, bottomRight;
     DmtxPixelLoc pxTopLeft, pxTopRight, pxBottomLeft, pxBottomRight;
     
-    if (msg.Init(this->region.sizeIdx, DmtxFormatMatrix) < 0)
+    if (msg.init(this->region.sizeIdx, DmtxFormatMatrix) < 0)
         return -1;
     
-    if (PopulateArrayFromMatrix(&msg) != DmtxPass) {
+    if (populateArrayFromMatrix(&msg) != DmtxPass) {
         return -1;
     }
     
@@ -1371,7 +1381,7 @@ int DmtxDecode::dmtxDecodeMatrixRegion(int fix, DmtxMessage& msg)
     pxBottomRight.X = static_cast<int>(0.5 + bottomRight.X);
     pxBottomRight.Y = static_cast<int>(0.5 + bottomRight.Y);
     
-    if (CacheFillQuad(pxTopLeft, pxTopRight, pxBottomRight, pxBottomLeft) == DmtxFail)
+    if (cacheFillQuad(pxTopLeft, pxTopRight, pxBottomRight, pxBottomLeft) == DmtxFail)
         return NULL;
     
     msg.points.clear();
@@ -1383,7 +1393,7 @@ int DmtxDecode::dmtxDecodeMatrixRegion(int fix, DmtxMessage& msg)
     return dmtxDecodePopulatedArray(this->region.sizeIdx, msg, fix);
 }
 
-unsigned int DmtxDecode::CacheFillQuad(DmtxPixelLoc p0, DmtxPixelLoc p1, DmtxPixelLoc p2, DmtxPixelLoc p3)
+unsigned int DmtxDecode::cacheFillQuad(DmtxPixelLoc p0, DmtxPixelLoc p1, DmtxPixelLoc p2, DmtxPixelLoc p3)
 {
     DmtxBresLine lines[4];
     DmtxPixelLoc pEmpty = { 0, 0 };
@@ -1392,10 +1402,10 @@ unsigned int DmtxDecode::CacheFillQuad(DmtxPixelLoc p0, DmtxPixelLoc p1, DmtxPix
     int minY, maxY, sizeY, posY, posX;
     int i, idx;
     
-    lines[0] = BresLineInit(p0, p1, pEmpty);
-    lines[1] = BresLineInit(p1, p2, pEmpty);
-    lines[2] = BresLineInit(p2, p3, pEmpty);
-    lines[3] = BresLineInit(p3, p0, pEmpty);
+    lines[0] = bresLineInit(p0, p1, pEmpty);
+    lines[1] = bresLineInit(p1, p2, pEmpty);
+    lines[2] = bresLineInit(p2, p3, pEmpty);
+    lines[3] = bresLineInit(p3, p0, pEmpty);
     
     minY = this->yMax;
     maxY = 0;
@@ -1424,7 +1434,7 @@ unsigned int DmtxDecode::CacheFillQuad(DmtxPixelLoc p0, DmtxPixelLoc p1, DmtxPix
             idx = lines[i].loc.Y - minY;
             scanlineMin[idx] = fmin(scanlineMin[idx], lines[i].loc.X);
             scanlineMax[idx] = fmax(scanlineMax[idx], lines[i].loc.X);
-            BresLineStep(lines + i, 1, 0);
+            bresLineStep(lines + i, 1, 0);
         }
     }
     
@@ -1443,7 +1453,7 @@ unsigned int DmtxDecode::CacheFillQuad(DmtxPixelLoc p0, DmtxPixelLoc p1, DmtxPix
     return DmtxPass;
 }
 
-DmtxBresLine DmtxDecode::BresLineInit(DmtxPixelLoc loc0, DmtxPixelLoc loc1, DmtxPixelLoc locInside)
+DmtxBresLine DmtxDecode::bresLineInit(DmtxPixelLoc loc0, DmtxPixelLoc loc1, DmtxPixelLoc locInside)
 {
     int cp;
     DmtxBresLine line;
@@ -1509,7 +1519,7 @@ DmtxBresLine DmtxDecode::BresLineInit(DmtxPixelLoc loc0, DmtxPixelLoc loc1, Dmtx
     return line;
 }
 
-unsigned int DmtxDecode::BresLineStep(DmtxBresLine *line, int travel, int outward)
+unsigned int DmtxDecode::bresLineStep(DmtxBresLine *line, int travel, int outward)
 {
     int i;
     DmtxBresLine lineNew;
@@ -1581,7 +1591,7 @@ unsigned int DmtxDecode::BresLineStep(DmtxBresLine *line, int travel, int outwar
     return DmtxPass;
 }
 
-DmtxBestLine DmtxDecode::FindBestSolidLine(int step0, int step1, int streamDir, int houghAvoid, unsigned int* passFail)
+DmtxBestLine DmtxDecode::findBestSolidLine(int step0, int step1, int streamDir, int houghAvoid, unsigned int* passFail)
 {
     int hough[3][DMTX_HOUGH_RES] = { { 0 } };
     int houghMin, houghMax;
@@ -1638,7 +1648,7 @@ DmtxBestLine DmtxDecode::FindBestSolidLine(int step0, int step1, int streamDir, 
         return line;
     }
     
-    follow = FollowSeek(step0, passFail);
+    follow = followSeek(step0, passFail);
     if (*passFail == DmtxFail)
     {
         // *passFail = DmtxFail;
@@ -1700,7 +1710,7 @@ DmtxBestLine DmtxDecode::FindBestSolidLine(int step0, int step1, int streamDir, 
                 }
             }
         }
-        follow = FollowStep(follow, sign, passFail);
+        follow = followStep(follow, sign, passFail);
         if (*passFail == DmtxFail)
         {
             // *passFail = DmtxFail;
@@ -1715,7 +1725,7 @@ DmtxBestLine DmtxDecode::FindBestSolidLine(int step0, int step1, int streamDir, 
     return line;
 }
 
-unsigned int DmtxDecode::FindTravelLimits(DmtxBestLine *line)
+unsigned int DmtxDecode::findTravelLimits(DmtxBestLine *line)
 {
     int i;
     int distSq, distSqMax;
@@ -1730,7 +1740,7 @@ unsigned int DmtxDecode::FindTravelLimits(DmtxBestLine *line)
     unsigned int passFail;
     
     /* line->stepBeg is already known to sit on the best Hough line */
-    followPos = followNeg = FollowSeek(line->stepBeg, &passFail);
+    followPos = followNeg = followSeek(line->stepBeg, &passFail);
     if (passFail == DmtxFail) return DmtxFail;
     loc0 = followPos.loc;
     
@@ -1756,7 +1766,7 @@ unsigned int DmtxDecode::FindTravelLimits(DmtxBestLine *line)
             posWander = (cosAngle * yDiff) - (sinAngle * xDiff);
             
             if (posWander >= -3*256 && posWander <= 3*256) {
-                distSq = static_cast<int>(DistanceSquared(followPos.loc, negMax));
+                distSq = static_cast<int>(distanceSquared(followPos.loc, negMax));
                 if (distSq > distSqMax) {
                     posMax = followPos.loc;
                     distSqMax = distSq;
@@ -1786,7 +1796,7 @@ unsigned int DmtxDecode::FindTravelLimits(DmtxBestLine *line)
             
             if (negWander >= -3*256 && negWander < 3*256)
             {
-                distSq = static_cast<int>(DistanceSquared(followNeg.loc, posMax));
+                distSq = static_cast<int>(distanceSquared(followNeg.loc, posMax));
                 if (distSq > distSqMax) {
                     negMax = followNeg.loc;
                     distSqMax = distSq;
@@ -1807,9 +1817,9 @@ unsigned int DmtxDecode::FindTravelLimits(DmtxBestLine *line)
             break;
         }
         
-        followPos = FollowStep(followPos, +1, &passFail);
+        followPos = followStep(followPos, +1, &passFail);
         if (passFail == DmtxFail) return DmtxFail;
-        followNeg = FollowStep(followNeg, -1, &passFail);
+        followNeg = followStep(followNeg, -1, &passFail);
         if (passFail == DmtxFail) return DmtxFail;
     }
     line->devn = fmax(posWanderMaxLock - posWanderMinLock, negWanderMaxLock - negWanderMinLock)/256;
@@ -1818,7 +1828,7 @@ unsigned int DmtxDecode::FindTravelLimits(DmtxBestLine *line)
     return DmtxPass;
 }
 
-long DmtxDecode::DistanceSquared(DmtxPixelLoc a, DmtxPixelLoc b)
+long DmtxDecode::distanceSquared(DmtxPixelLoc a, DmtxPixelLoc b)
 {
     long xDelta, yDelta;
     
@@ -1957,9 +1967,9 @@ unsigned int DmtxDecode::dmtxRegionUpdateCorners(DmtxVector2 p00, DmtxVector2 p1
        dmtxVector2Cross(&vOT, &vTX) >= 0.0)
         return DmtxFail;
     
-    if (RightAngleTrueness(p00, p10, p11, M_PI_2) <= this->squareDevn)
+    if (rightAngleTrueness(p00, p10, p11, M_PI_2) <= this->squareDevn)
         return DmtxFail;
-    if (RightAngleTrueness(p10, p11, p01, M_PI_2) <= this->squareDevn)
+    if (rightAngleTrueness(p10, p11, p01, M_PI_2) <= this->squareDevn)
         return DmtxFail;
     
     /* Calculate values needed for transformations */
@@ -2023,7 +2033,7 @@ unsigned int DmtxDecode::dmtxRegionUpdateCorners(DmtxVector2 p00, DmtxVector2 p1
     return DmtxPass;
 }
 
-double DmtxDecode::RightAngleTrueness(DmtxVector2 c0, DmtxVector2 c1, DmtxVector2 c2, double angle)
+double DmtxDecode::rightAngleTrueness(DmtxVector2 c0, DmtxVector2 c1, DmtxVector2 c2, double angle)
 {
     DmtxVector2 vA, vB;
     DmtxMatrix3 m;
@@ -2038,19 +2048,19 @@ double DmtxDecode::RightAngleTrueness(DmtxVector2 c0, DmtxVector2 c1, DmtxVector
     return dmtxVector2Dot(&vA, &vB);
 }
 
-unsigned int DmtxDecode::BresLineGetStep(DmtxBresLine line, DmtxPixelLoc target, int *travel, int *outward)
+unsigned int DmtxDecode::bresLineGetStep(DmtxBresLine line, DmtxPixelLoc target, int *travel, int *outward)
 {
     /* Determine necessary step along and outward from Bresenham line */
     if (line.steep != 0) {
         *travel = (line.yStep > 0) ? target.Y - line.loc.Y : line.loc.Y - target.Y;
-        BresLineStep(&line, *travel, 0);
+        bresLineStep(&line, *travel, 0);
         *outward = (line.xOut > 0) ? target.X - line.loc.X : line.loc.X - target.X;
         if (line.yOut != 0) return DmtxFail;
     }
     else
     {
         *travel = (line.xStep > 0) ? target.X - line.loc.X : line.loc.X - target.X;
-        BresLineStep(&line, *travel, 0);
+        bresLineStep(&line, *travel, 0);
         *outward = (line.yOut > 0) ? target.Y - line.loc.Y : line.loc.Y - target.Y;
         if (line.xOut != 0) return DmtxFail;
     }
@@ -2060,7 +2070,7 @@ unsigned int DmtxDecode::BresLineGetStep(DmtxBresLine line, DmtxPixelLoc target,
 
 ///
 
-unsigned int DmtxDecode::PopulateArrayFromMatrix(DmtxMessage *msg)
+unsigned int DmtxDecode::populateArrayFromMatrix(DmtxMessage *msg)
 {
     int weightFactor;
     int mapWidth, mapHeight;
@@ -2094,13 +2104,13 @@ unsigned int DmtxDecode::PopulateArrayFromMatrix(DmtxMessage *msg)
             xOrigin = xRegionCount * (mapWidth + 2) + 1;
             
             memset(tally, 0x00, 24 * 24 * sizeof(int));
-            if (TallyModuleJumps(tally, xOrigin, yOrigin, mapWidth, mapHeight, DmtxDirUp) == DmtxFail)
+            if (tallyModuleJumps(tally, xOrigin, yOrigin, mapWidth, mapHeight, DmtxDirUp) == DmtxFail)
                 return DmtxFail;
-            if (TallyModuleJumps(tally, xOrigin, yOrigin, mapWidth, mapHeight, DmtxDirLeft) == DmtxFail)
+            if (tallyModuleJumps(tally, xOrigin, yOrigin, mapWidth, mapHeight, DmtxDirLeft) == DmtxFail)
                 return DmtxFail;
-            if (TallyModuleJumps(tally, xOrigin, yOrigin, mapWidth, mapHeight, DmtxDirDown) == DmtxFail)
+            if (tallyModuleJumps(tally, xOrigin, yOrigin, mapWidth, mapHeight, DmtxDirDown) == DmtxFail)
                 return DmtxFail;
-            if (TallyModuleJumps(tally, xOrigin, yOrigin, mapWidth, mapHeight, DmtxDirRight) == DmtxFail)
+            if (tallyModuleJumps(tally, xOrigin, yOrigin, mapWidth, mapHeight, DmtxDirRight) == DmtxFail)
                 return DmtxFail;
             
             /* Decide module status based on final tallies */
@@ -2129,7 +2139,7 @@ unsigned int DmtxDecode::PopulateArrayFromMatrix(DmtxMessage *msg)
     return DmtxPass;
 }
 
-unsigned int DmtxDecode::TallyModuleJumps(int tally[][24], int xOrigin, int yOrigin, int mapWidth, int mapHeight, DmtxDirection dir)
+unsigned int DmtxDecode::tallyModuleJumps(int tally[][24], int xOrigin, int yOrigin, int mapWidth, int mapHeight, DmtxDirection dir)
 {
     int extent, weight;
     int travelStep;
@@ -2187,7 +2197,7 @@ unsigned int DmtxDecode::TallyModuleJumps(int tally[][24], int xOrigin, int yOri
          decide status based on predictable barcode border pattern */
         
         *travel = travelStart;
-        color = ReadModuleColor(symbolRow, symbolCol, region.sizeIdx);
+        color = readModuleColor(symbolRow, symbolCol, region.sizeIdx);
         if (color == -1) return DmtxFail;
         
         tModule = (darkOnLight) ? region.offColor - color : color - region.offColor;
@@ -2204,7 +2214,7 @@ unsigned int DmtxDecode::TallyModuleJumps(int tally[][24], int xOrigin, int yOri
             /* For normal data-bearing modules capture color and decide
              module status based on comparison to previous "known" module */
             
-            color = ReadModuleColor(symbolRow, symbolCol, region.sizeIdx);
+            color = readModuleColor(symbolRow, symbolCol, region.sizeIdx);
             if (color == -1) return DmtxFail;
             
             tModule = (darkOnLight) ? region.offColor - color : color - region.offColor;
@@ -2251,7 +2261,7 @@ unsigned int DmtxDecode::TallyModuleJumps(int tally[][24], int xOrigin, int yOri
     return DmtxPass;
 }
 
-int DmtxDecode::ReadModuleColor(int symbolRow, int symbolCol, int sizeIdx)
+int DmtxDecode::readModuleColor(int symbolRow, int symbolCol, int sizeIdx)
 {
     int colorTmp;
     double sampleX[] = { 0.5, 0.4, 0.5, 0.6, 0.5 };
@@ -2298,14 +2308,14 @@ int DmtxDecode::dmtxDecodePopulatedArray(int sizeIdx, DmtxMessage& msg, int fix)
      *
      */
     
-    if (ModulePlacementEcc200(msg.array, msg.code, sizeIdx, DmtxModuleOnRed | DmtxModuleOnGreen | DmtxModuleOnBlue) < 0)
+    if (modulePlacementEcc200(msg.array, msg.code, sizeIdx, DmtxModuleOnRed | DmtxModuleOnGreen | DmtxModuleOnBlue) < 0)
         return -1;
     
-    if (RsDecode(msg.code, sizeIdx, fix) == DmtxFail){
+    if (rsDecode(msg.code, sizeIdx, fix) == DmtxFail){
         return -1;
     }
     
-    if (msg.DecodeDataStream(sizeIdx, NULL) == DmtxFail)
+    if (msg.decodeDataStream(sizeIdx, NULL) == DmtxFail)
     {
         return -1;
     }
@@ -2315,7 +2325,7 @@ int DmtxDecode::dmtxDecodePopulatedArray(int sizeIdx, DmtxMessage& msg, int fix)
 
 ///
 
-int DmtxDecode::InitScanGrid()
+int DmtxDecode::initScanGrid()
 {
     memset(&grid, 0x00, sizeof(DmtxScanGrid));
     

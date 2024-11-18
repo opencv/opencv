@@ -1,5 +1,15 @@
-#ifndef __BIT_MATRIX_PARSER__PDF_H__
-#define __BIT_MATRIX_PARSER__PDF_H__
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
+#ifndef __ZXING_PDF417_DECODER_BIT_MATRIX_PARSER_HPP__
+#define __ZXING_PDF417_DECODER_BIT_MATRIX_PARSER_HPP__
 
 /*
  *  BitMatrixParser.hpp / PDF417
@@ -65,7 +75,7 @@ public:
     static int getCodeword(int64_t symbol, int *pi = NULL);
     
 private:
-    bool VerifyOuterColumns(int rownumber);
+    bool verifyOuterColumns(int rownumber);
     
     static zxing::ErrorHandler trimArray(ArrayRef<int> array, int size, ArrayRef<int> & ret_array);
     static int findCodewordIndex(int64_t symbol);
@@ -76,11 +86,11 @@ private:
                                    ArrayRef<int> codewords, int next, int &ret_next);
     
 protected:
-    bool IsEqual(int &a, int &b, int rownumber);
+    bool isEqual(int &a, int &b, int rownumber);
 };
 
 }  // namespace decoder
 }  // namespace pdf417
 }  // namespace zxing
 
-#endif  // __BIT_MATRIX_PARSER__PDF_H__
+#endif  // __ZXING_PDF417_DECODER_BIT_MATRIX_PARSER_HPP__

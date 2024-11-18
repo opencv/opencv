@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  * Copyright 2010, 2012 ZXing authors All rights reserved.
@@ -131,7 +141,7 @@ m_vcVotes(vcVotes)
     }
 }
 
-int PossibleCodeWords::GetNextPossible(std::vector<std::vector<int> > &vcCodeWords)
+int PossibleCodeWords::getNextPossible(std::vector<std::vector<int> > &vcCodeWords)
 {
     int iListSize = m_vcBadPointList.size();
     vcCodeWords = m_vcCodeWords;
@@ -209,7 +219,7 @@ LinesSampler::LinesSampler(Ref<BitMatrix> linesMatrix, int dimension)
     RATIOS_TABLE = init_ratios_table();
 }
 
-void LinesSampler::SetLineMatrix(Ref<BitMatrix> linesMatrix)
+void LinesSampler::setLineMatrix(Ref<BitMatrix> linesMatrix)
 {
     linesMatrix_ = linesMatrix;
 }
@@ -232,7 +242,7 @@ ErrorHandler LinesSampler::sample(Ref<BitMatrix> & bit_matrix) {
     vector<vector<int> > codewords(linesMatrix_->getHeight());
     vector<vector<int> > clusterNumbers(linesMatrix_->getHeight());
     err_handler = linesMatrixToCodewords(clusterNumbers, symbolsPerLine, symbolWidths, linesMatrix_, codewords);
-    if (err_handler.ErrCode()) return err_handler;
+    if (err_handler.errCode()) return err_handler;
     
     vector<vector<map<int, int> > > votes =
     distributeVotes(symbolsPerLine, codewords, clusterNumbers);
@@ -267,7 +277,7 @@ ErrorHandler LinesSampler::sample(Ref<BitMatrix> & bit_matrix) {
     
     // XXX
     Ref<BitMatrix> grid(new BitMatrix(dimension_, detectedCodeWords.size(), err_handler));
-    if (err_handler.ErrCode()) return err_handler;
+    if (err_handler.errCode()) return err_handler;
     
     codewordsToBitMatrix(detectedCodeWords, grid);
     
@@ -275,13 +285,13 @@ ErrorHandler LinesSampler::sample(Ref<BitMatrix> & bit_matrix) {
     return err_handler;
 }
 
-Ref<BitMatrix> LinesSampler::GetNextPossibleGrid(ErrorHandler & err_handler)
+Ref<BitMatrix> LinesSampler::getNextPossibleGrid(ErrorHandler & err_handler)
 {
     if (m_ptPossibleCodeWords == NULL) return Ref<BitMatrix>();
     vector<vector<int> > detectedCodeWords;
-    if (m_ptPossibleCodeWords->GetNextPossible(detectedCodeWords)) return Ref<BitMatrix>();
+    if (m_ptPossibleCodeWords->getNextPossible(detectedCodeWords)) return Ref<BitMatrix>();
     Ref<BitMatrix> grid(new BitMatrix(dimension_, detectedCodeWords.size(), err_handler));
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     codewordsToBitMatrix(detectedCodeWords, grid);
     return grid;
 }
@@ -416,7 +426,7 @@ void LinesSampler::computeSymbolWidths(vector<float> &symbolWidths, const int sy
     symbolWidths.push_back(currentWidth);
 }
 
-int LinesSampler::GetBitCountSum(const vector<int> &vcModuleBitCount)
+int LinesSampler::getBitCountSum(const vector<int> &vcModuleBitCount)
 {
     int iBitCountSum = 0;
     for (size_t i = 0; i < vcModuleBitCount.size(); ++i)
@@ -426,9 +436,9 @@ int LinesSampler::GetBitCountSum(const vector<int> &vcModuleBitCount)
     return iBitCountSum;
 }
 
-vector<int> LinesSampler::SampleBitCounts(const vector<int> &vcModuleBitCount)
+vector<int> LinesSampler::sampleBitCounts(const vector<int> &vcModuleBitCount)
 {
-    float fBitCountSum = GetBitCountSum(vcModuleBitCount);
+    float fBitCountSum = getBitCountSum(vcModuleBitCount);
     vector<int> vcResult( LinesSampler::BARS_IN_SYMBOL);
     int iBitCountIndex = 0;
     int iSumPreviousBits = 0;
@@ -446,7 +456,7 @@ vector<int> LinesSampler::SampleBitCounts(const vector<int> &vcModuleBitCount)
     return vcResult;
 }
 
-int LinesSampler::GetBitValue(const vector<int> &vcModuleBitCount)
+int LinesSampler::getBitValue(const vector<int> &vcModuleBitCount)
 {
     int iResult = 0;
     for (size_t i = 0; i < vcModuleBitCount.size(); ++i)
@@ -561,9 +571,9 @@ ErrorHandler LinesSampler::linesMatrixToCodewords(vector<vector<int> >& clusterN
                 {
                     vcModuleBitCount.push_back(barWidths[cwStart + j]);
                 }
-                vcModuleBitCount = SampleBitCounts(vcModuleBitCount);
+                vcModuleBitCount = sampleBitCounts(vcModuleBitCount);
                 
-                int iSymbol = GetBitValue(vcModuleBitCount);
+                int iSymbol = getBitValue(vcModuleBitCount);
                 bool bFound  = std::binary_search(BitMatrixParser::SYMBOL_TABLE, BitMatrixParser::SYMBOL_TABLE + BitMatrixParser::SYMBOL_TABLE_LENGTH, iSymbol);
                 if (bFound)
                 {

@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 /*
  *  BitMatrixParser.cpp
  *  zxing
@@ -41,13 +51,13 @@ readBitMatrix_(NULL) {
     }
     
     parsedVersion_ = readVersion(bitMatrix, err_handler);
-    if (err_handler.ErrCode()) return;
+    if (err_handler.errCode()) return;
     
     bitMatrix_ = extractDataRegion(bitMatrix, err_handler);
-    if (err_handler.ErrCode()) return;
+    if (err_handler.errCode()) return;
     
     readBitMatrix_ = new BitMatrix(bitMatrix_->getWidth(), bitMatrix_->getHeight() , err_handler);
-    if (err_handler.ErrCode())   return;
+    if (err_handler.errCode())   return;
 }
 
 Version * BitMatrixParser::readVersion(Ref<BitMatrix> bitMatrix, ErrorHandler & err_handler) {
@@ -61,7 +71,7 @@ Version * BitMatrixParser::readVersion(Ref<BitMatrix> bitMatrix, ErrorHandler & 
     
     Version * version = parsedVersion_->getVersionForDimensions(numRows, numColumns, err_handler);
     
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         err_handler = ErrorHandler("Couldn't decode versio");
         return NULL;
@@ -415,7 +425,7 @@ Ref<BitMatrix> BitMatrixParser::extractDataRegion(Ref<BitMatrix> bitMatrix, Erro
     int sizeDataRegionColumn = numDataRegionsColumn * dataRegionSizeColumns;
     
     Ref<BitMatrix> bitMatrixWithoutAlignment(new BitMatrix(sizeDataRegionColumn, sizeDataRegionRow, err_handler));
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     for (int dataRegionRow = 0; dataRegionRow < numDataRegionsRow; ++dataRegionRow)
     {
         int dataRegionRowOffset = dataRegionRow * dataRegionSizeRows;

@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 /*
  *  FormatInformation.cpp
  *  zxing
@@ -41,7 +51,7 @@ int FormatInformation::BITS_SET_IN_HALF_BYTE[] = { 0, 1, 1, 2, 1, 2, 2, 3, 1, 2,
 FormatInformation::FormatInformation(int formatInfo, float possiableFix, ErrorHandler & err_handler) :
 errorCorrectionLevel_(ErrorCorrectionLevel::forBits((formatInfo >> 3) & 0x03, err_handler)), dataMask_(static_cast<char>(formatInfo & 0x07)) {
     possiableFix_ = possiableFix;
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
         return;
 }
 
@@ -92,7 +102,7 @@ Ref<FormatInformation> FormatInformation::doDecodeFormatInformation(int maskedFo
         if (targetInfo == maskedFormatInfo1 || targetInfo == maskedFormatInfo2) {
             // Found an exact match
             Ref<FormatInformation> result(new FormatInformation(decodeInfo[1], possiableFix_, err_handler));
-            if (err_handler.ErrCode())
+            if (err_handler.errCode())
                 return Ref<FormatInformation>();
             return result;
         }
@@ -112,7 +122,7 @@ Ref<FormatInformation> FormatInformation::doDecodeFormatInformation(int maskedFo
     }
     if (bestDifference <= 3) {
         Ref<FormatInformation> result(new FormatInformation(bestFormatInfo, possiableFix_, err_handler));
-        if (err_handler.ErrCode())
+        if (err_handler.errCode())
             return Ref<FormatInformation>();
         return result;
     }

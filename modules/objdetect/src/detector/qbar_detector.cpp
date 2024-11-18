@@ -1,9 +1,16 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+
 #include "qbar_detector.hpp"
 #include <iostream>
 #define CLIP(x, x1, x2) (std::fmax<float>)(x1, (std::fmin<float>)(x, x2))
 
 namespace cv {
-    int QBarDetector::Init(const std::string &det_path)
+    int QBarDetector::init(const std::string &det_path)
     {
         try
         {
@@ -23,7 +30,7 @@ namespace cv {
         return 0;
     }
 
-    int QBarDetector::Detect(const Mat &image,std::vector<DetectInfo> &bboxes)
+    int QBarDetector::detect(const Mat &image,std::vector<DetectInfo> &bboxes)
     {
         Mat input_blob;
         int ret = this->pre_process_det(image,input_blob);

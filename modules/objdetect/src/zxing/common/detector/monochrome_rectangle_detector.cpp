@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  MonochromeRectangleDetector.cpp
@@ -55,14 +65,14 @@ vector<Ref<ResultPoint> > MonochromeRectangleDetector::detect(ErrorHandler & err
     right = static_cast<int>(pointC->getX()) + 1;
     Ref<ResultPoint> pointD(findCornerFromCenter(halfWidth, 0, left, right,
                                                  halfHeight, deltaY, top, bottom, halfWidth >> 1, err_handler));
-    if (err_handler.ErrCode()) return vector<Ref<ResultPoint> >();
+    if (err_handler.errCode()) return vector<Ref<ResultPoint> >();
     
     bottom = static_cast<int>(pointD->getY()) + 1;
     
     // Go try to find point A again with better information -- might have been off at first.
     pointA.reset(findCornerFromCenter(halfWidth, 0, left, right,
                                       halfHeight, -deltaY, top, bottom, halfWidth >> 2, err_handler));
-    if (err_handler.ErrCode()) return vector<Ref<ResultPoint> >();
+    if (err_handler.errCode()) return vector<Ref<ResultPoint> >();
     
     vector<Ref<ResultPoint> > corners(4);
     corners[0].reset(pointA);

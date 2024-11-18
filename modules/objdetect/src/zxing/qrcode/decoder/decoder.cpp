@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  Decoder.cpp
@@ -62,17 +72,15 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, ErrorHandler & err_handl
     int width = bits->getWidth();
     int height = bits->getHeight();
 
-    std::cout << width << ' ' << height << '\n';
-    
     Ref<BitMatrix> bits2(new BitMatrix(width, height, reinterpret_cast<bool*>(bits->getPtr()), err_handler));
-    if (err_handler.ErrCode())   {
+    if (err_handler.errCode())   {
         bits2 = NULL;
     }
     
     Ref<DecoderResult> rst = decode(bits, false, err_handler);
-    if (err_handler.ErrCode() || rst == NULL)
+    if (err_handler.errCode() || rst == NULL)
     {
-        errMsg = err_handler.ErrMsg();
+        errMsg = err_handler.errMsg();
     }
     else
     {
@@ -85,28 +93,28 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, ErrorHandler & err_handl
     }
     
     // flip add by sofiawu
-    err_handler.Reset();
+    err_handler.reset();
     if (bits->copyOf2(bits2))
     {
         bits->randomFlipRegion(static_cast<int>(3.0 / 8.0 * width), static_cast<int>(3.0 / 8.0 * height), static_cast<int>(1.0 / 4.0 * width) + 1, static_cast<int>(1.0 / 4.0 * height) + 1, err_handler);
         rst = decode(bits, false, err_handler);
-        if (err_handler.ErrCode() || rst == NULL)
+        if (err_handler.errCode() || rst == NULL)
         {
-            errMsg = err_handler.ErrMsg();
+            errMsg = err_handler.errMsg();
         }
         else
         {
             return rst;
         }
     }
-    err_handler.Reset();
+    err_handler.reset();
     if (bits->copyOf2(bits2))
     {
         bits->randomFlipRegion(static_cast<int>(3.0 / 8.0 * width), static_cast<int>(3.0 / 8.0 * height), static_cast<int>(1.0 / 4.0 * width) + 1, static_cast<int>(1.0 / 4.0 * height) + 1, err_handler);
         rst = decode(bits, false, err_handler);
-        if (err_handler.ErrCode() || rst == NULL)
+        if (err_handler.errCode() || rst == NULL)
         {
-            errMsg = err_handler.ErrMsg();
+            errMsg = err_handler.errMsg();
         }
         else
         {
@@ -114,9 +122,9 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, ErrorHandler & err_handl
         }
     }
     
-    err_handler.Reset();
+    err_handler.reset();
     Ref<DecoderResult> result = decode(bits2, true, err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         return Ref<DecoderResult>();
     }
@@ -135,11 +143,11 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, bool isMirror, ErrorHand
 {
     // Construct a parser and read version, error-correction level
     BitMatrixParser parser(bits, err_handler);
-    if (err_handler.ErrCode())   return Ref<DecoderResult>();
+    if (err_handler.errCode())   return Ref<DecoderResult>();
     
     if (isMirror == true)
     {
-        // Revert the bit matrix
+        // revert the bit matrix
         parser.remask();
         
         // Will be attempting a mirrored reading of the version and format info.
@@ -147,7 +155,7 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, bool isMirror, ErrorHand
         
         // Preemptively read the version.
         parser.readVersion(err_handler);
-        if (err_handler.ErrCode())
+        if (err_handler.errCode())
         {
             err_handler = zxing::ReaderErrorHandler("Decoder::decode mirror & no mirror");
             return Ref<DecoderResult>();
@@ -155,7 +163,7 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, bool isMirror, ErrorHand
         
         // Preemptively read the format information.
         parser.readFormatInformation(err_handler);
-        if (err_handler.ErrCode())  return Ref<DecoderResult>();
+        if (err_handler.errCode())  return Ref<DecoderResult>();
         
         /*
          * Since we're here, this means we have successfully detected some kind
@@ -169,7 +177,7 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, bool isMirror, ErrorHand
     
     decoderState_ = START; possibleFix_ = 0;
     Version *version = parser.readVersion(err_handler);
-    if (err_handler.ErrCode() || version == NULL)
+    if (err_handler.errCode() || version == NULL)
     {
         err_handler = ReaderErrorHandler("Decoder::decode mirror & no mirror");
         return Ref<DecoderResult>();
@@ -177,13 +185,13 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, bool isMirror, ErrorHand
     
     decoderState_ = READVERSION;
     float fixedPatternScore = estimateFixedPattern(bits, version, err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         return Ref<DecoderResult>();
     }
     
     Ref<FormatInformation> formatInfo = parser.readFormatInformation(err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         return Ref<DecoderResult>();
     }
@@ -193,9 +201,9 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, bool isMirror, ErrorHand
     
     // Read codewords
     ArrayRef<char> codewords(parser.readCodewords(err_handler));  // add more tricks by sofiawu
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
-        err_handler.Reset();
+        err_handler.reset();
         codewords = parser.readCodewords(err_handler);
         err_handler = zxing::ReaderErrorHandler("Decoder::decode mirror & no mirror");
         return Ref<DecoderResult>();
@@ -206,7 +214,7 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, bool isMirror, ErrorHand
     
     // Separate into data blocks
     std::vector<Ref<DataBlock> > dataBlocks(DataBlock::getDataBlocks(codewords, version, ecLevel, err_handler));
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         return Ref<DecoderResult>();
     }
@@ -222,13 +230,13 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, bool isMirror, ErrorHand
     // Error-correct and copy data blocks together into a stream of bytes
     for (size_t j = 0; j < dataBlocks.size(); j++)
     {
-        err_handler.Reset();
+        err_handler.reset();
         Ref<DataBlock> dataBlock(dataBlocks[j]);
         ArrayRef<char> codewordBytes = dataBlock->getCodewords();
         int numDataCodewords = dataBlock->getNumDataCodewords();
         
         correctErrors(codewordBytes, numDataCodewords, err_handler);
-        if (err_handler.ErrCode())
+        if (err_handler.errCode())
         {
             return Ref<DecoderResult>();
         }
@@ -248,7 +256,7 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, bool isMirror, ErrorHand
                                                err_handler,
                                                version->getVersionNumber());
     
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         return Ref<DecoderResult>();
     }
@@ -272,7 +280,7 @@ void Decoder::correctErrors(ArrayRef<char> codewordBytes, int numDataCodewords, 
     int numECCodewords = numCodewords - numDataCodewords;
     
     rsDecoder_.decode(codewordInts, numECCodewords, err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         return;
     }
@@ -295,13 +303,13 @@ unsigned int Decoder::getPossibleVersion()
 float Decoder::estimateFixedPattern(Ref<BitMatrix> bits, zxing::qrcode::Version * version, ErrorHandler & err_handler)
 {
     Ref<BitMatrix> fixedPatternValue = version->buildFixedPatternValue(err_handler);
-    if (err_handler.ErrCode()){
+    if (err_handler.errCode()){
         err_handler = zxing::ReaderErrorHandler("Decoder::decode mirror & no mirror");
         return -1.0;
     }
     
     Ref<BitMatrix> fixedPatternTemplate = version->buildFixedPatternTemplate(err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         err_handler = zxing::ReaderErrorHandler("Decoder::decode mirror & no mirror");
         return -1.0;

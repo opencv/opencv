@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  * Copyright 2010 ZXing authors All rights reserved.
@@ -92,7 +102,7 @@ ErrorHandler Detector::detect(DecodeHints const& hints, Ref<DetectorResult> & de
     // Fetch the 1 bit matrix once up front.
     ErrorHandler err_handler;
     Ref<BitMatrix> matrix = image_->getBlackMatrix(err_handler);
-    if (err_handler.ErrCode()) return err_handler;
+    if (err_handler.errCode()) return err_handler;
     
     // Try to find the vertices assuming the image is upright.
     const int rowStep = 8;
@@ -103,13 +113,13 @@ ErrorHandler Detector::detect(DecodeHints const& hints, Ref<DetectorResult> & de
         vertices = findVertices180(matrix, rowStep);
         if (vertices) {
             err_handler = correctVertices(matrix, vertices, true);
-            if (err_handler.ErrCode()) return err_handler;
+            if (err_handler.errCode()) return err_handler;
         }
     }
     else
     {
         err_handler = correctVertices(matrix, vertices, false);
-        if (err_handler.ErrCode()) return err_handler;
+        if (err_handler.errCode()) return err_handler;
     }
     
     
@@ -146,7 +156,7 @@ ErrorHandler Detector::detect(DecodeHints const& hints, Ref<DetectorResult> & de
     
     // Deskew and sample lines from image.
     Ref<BitMatrix> linesMatrix = sampleLines(vertices, dimension, yDimension, err_handler);
-    if (err_handler.ErrCode()) return err_handler;
+    if (err_handler.errCode()) return err_handler;
     
     ArrayRef< Ref<ResultPoint> > points(4);
     points[0] = vertices[5];
@@ -174,7 +184,7 @@ ErrorHandler Detector::detect(DecodeHints const& hints, Ref<DetectorResult> & de
  *           vertices[6] x, y top right codeword area
  *           vertices[7] x, y bottom right codeword area
  */
-ArrayRef< Ref<ResultPoint> > Detector::FindRowsWithPattern(Ref<BitMatrix> matrix,
+ArrayRef< Ref<ResultPoint> > Detector::findRowsWithPattern(Ref<BitMatrix> matrix,
                                                            int startRow, int startColumn,
                                                            const int pattern[], const int patternSize){
     
@@ -252,14 +262,14 @@ ArrayRef< Ref<ResultPoint> > Detector::FindRowsWithPattern(Ref<BitMatrix> matrix
     return result;
 }
 
-ArrayRef< Ref<ResultPoint> > Detector::FindVerticesNew(Ref<BitMatrix> matrix)
+ArrayRef< Ref<ResultPoint> > Detector::findVerticesNew(Ref<BitMatrix> matrix)
 {
     int startRow = 0;
     int startColumn = 0;
     
     ArrayRef< Ref<ResultPoint> > result(16);
     copyToResult(result,
-                 FindRowsWithPattern(matrix, startRow, startColumn,
+                 findRowsWithPattern(matrix, startRow, startColumn,
                                      START_PATTERN, START_PATTERN_LENGTH),
                  INDEXES_START_PATTERN, INDEXES_START_PATTERN_LENGTH);
     
@@ -267,7 +277,7 @@ ArrayRef< Ref<ResultPoint> > Detector::FindVerticesNew(Ref<BitMatrix> matrix)
         startColumn = static_cast<int>(result[4]->getX());
         startRow = static_cast<int>(result[4]->getY());
     }
-    copyToResult(result, FindRowsWithPattern(matrix, startRow, startColumn,
+    copyToResult(result, findRowsWithPattern(matrix, startRow, startColumn,
                                              STOP_PATTERN, STOP_PATTERN_LENGTH),
                  INDEXES_STOP_PATTERN, INDEXES_STOP_PATTERN_LENGTH);
     if (result[0] && result[1] && result[2] && result[3]) return result;
@@ -562,13 +572,13 @@ ErrorHandler Detector::correctVertices(Ref<BitMatrix> matrix,
         findWideBarTopBottom(matrix, vertices, 2, 11, 7, 18, upsideDown ? 1 : -1);
         findWideBarTopBottom(matrix, vertices, 3, 11, 7, 18, upsideDown ? -1 : 1);
         err_handler = findCrossingPoint(vertices, 12, 4, 5, 8, 10, matrix);
-        if (err_handler.ErrCode()) return err_handler;
+        if (err_handler.errCode()) return err_handler;
         err_handler = findCrossingPoint(vertices, 13, 4, 5, 9, 11, matrix);
-        if (err_handler.ErrCode()) return err_handler;
+        if (err_handler.errCode()) return err_handler;
         err_handler = findCrossingPoint(vertices, 14, 6, 7, 8, 10, matrix);
-        if (err_handler.ErrCode()) return err_handler;
+        if (err_handler.errCode()) return err_handler;
         err_handler = findCrossingPoint(vertices, 15, 6, 7, 9, 11, matrix);
-        if (err_handler.ErrCode()) return err_handler;
+        if (err_handler.errCode()) return err_handler;
     }
     
     return err_handler;
@@ -819,7 +829,7 @@ Ref<BitMatrix> Detector::sampleLines(ArrayRef< Ref<ResultPoint> > const& vertice
     Ref<BitMatrix> bitstmp =  image_->getBlackMatrix(err_handler);
     
     Ref<BitMatrix> linesMatrix = GridSampler::getInstance().sampleGrid(bitstmp, sampleDimensionX, sampleDimensionY, transform, err_handler);
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     
     
     return linesMatrix;

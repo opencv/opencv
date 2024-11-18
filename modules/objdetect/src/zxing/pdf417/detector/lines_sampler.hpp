@@ -1,5 +1,15 @@
-#ifndef __LINESSAMPLER_H__
-#define __LINESSAMPLER_H__
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
+#ifndef __ZXING_PDF417_DETECTOR_LINES_SAMPLER_HPP__
+#define __ZXING_PDF417_DETECTOR_LINES_SAMPLER_HPP__
 
 /*
  * Copyright 2010 ZXing authors All rights reserved.
@@ -33,7 +43,7 @@ public:
     PossibleCodeWords(const std::vector<std::vector<std::map<int, int> > > &vcVotes, int iRowCount);
     ~PossibleCodeWords() {};
     
-    int GetNextPossible(std::vector<std::vector<int> > &vcCodeWords);
+    int getNextPossible(std::vector<std::vector<int> > &vcCodeWords);
     
 private:
     int m_iHeight;
@@ -86,9 +96,9 @@ private:
     
     int round(float d);
     Point intersection(Line a, Line b);
-    int GetBitCountSum(const std::vector<int> &vcModuleBitCount);
-    std::vector<int> SampleBitCounts(const std::vector<int> &vcModuleBitCount);
-    int GetBitValue(const std::vector<int> &vcModuleBitCount);
+    int getBitCountSum(const std::vector<int> &vcModuleBitCount);
+    std::vector<int> sampleBitCounts(const std::vector<int> &vcModuleBitCount);
+    int getBitValue(const std::vector<int> &vcModuleBitCount);
     
 public:
     LinesSampler(Ref<BitMatrix> linesMatrix, int dimension);
@@ -100,13 +110,13 @@ public:
             m_ptPossibleCodeWords = NULL;
         }
     }
-    void SetLineMatrix(Ref<BitMatrix> linesMatrix);
+    void setLineMatrix(Ref<BitMatrix> linesMatrix);
     ErrorHandler sample(Ref<BitMatrix> & bit_matrix);
-    Ref<BitMatrix> GetNextPossibleGrid(ErrorHandler &err_handler);
+    Ref<BitMatrix> getNextPossibleGrid(ErrorHandler &err_handler);
 };
 
 }  // namespace detector
 }  // namespace pdf417
 }  // namespace zxing
 
-#endif  // __LINESSAMPLER_H__
+#endif  // __ZXING_PDF417_DETECTOR_LINES_SAMPLER_HPP__

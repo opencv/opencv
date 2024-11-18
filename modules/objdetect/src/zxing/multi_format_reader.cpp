@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  Copyright 2010 ZXing authors All rights reserved.
@@ -23,7 +33,7 @@
 #ifndef USE_QRCODE_ONLY
 #include "datamatrix/data_matrix_reader.hpp"
 #include "pdf417/pdf417reader.hpp"
-#include "oned/multi_format_one_dreader.hpp"
+// #include "oned/multi_format_one_dreader.hpp"
 #endif
 
 #include "reader_exception.hpp"
@@ -101,23 +111,23 @@ void MultiFormatReader::setHints(DecodeHints hints) {
     if (hints.containsFormat(BarcodeFormat::QR_CODE))
         readers_.push_back(Ref<Reader>(new zxing::qrcode::QRCodeReader()));
     
-    bool addOneDReader = hints.containsFormat(BarcodeFormat::UPC_E) ||
-    hints.containsFormat(BarcodeFormat::UPC_A) ||
-    hints.containsFormat(BarcodeFormat::UPC_E) ||
-    hints.containsFormat(BarcodeFormat::EAN_13) ||
-    hints.containsFormat(BarcodeFormat::EAN_8) ||
-    hints.containsFormat(BarcodeFormat::CODABAR) ||
-    hints.containsFormat(BarcodeFormat::CODE_39) ||
-    hints.containsFormat(BarcodeFormat::CODE_93) ||
-    hints.containsFormat(BarcodeFormat::CODE_128) ||
-    hints.containsFormat(BarcodeFormat::CODE_25) ||
-    hints.containsFormat(BarcodeFormat::ITF) ||
-    hints.containsFormat(BarcodeFormat::RSS_14) ||
-    hints.containsFormat(BarcodeFormat::RSS_EXPANDED);
-    if (addOneDReader)
-    {
-        readers_.push_back(Ref<Reader>(new zxing::oned::MultiFormatOneDReader(hints)));
-    }
+    // bool addOneDReader = hints.containsFormat(BarcodeFormat::UPC_E) ||
+    // hints.containsFormat(BarcodeFormat::UPC_A) ||
+    // hints.containsFormat(BarcodeFormat::UPC_E) ||
+    // hints.containsFormat(BarcodeFormat::EAN_13) ||
+    // hints.containsFormat(BarcodeFormat::EAN_8) ||
+    // hints.containsFormat(BarcodeFormat::CODABAR) ||
+    // hints.containsFormat(BarcodeFormat::CODE_39) ||
+    // hints.containsFormat(BarcodeFormat::CODE_93) ||
+    // hints.containsFormat(BarcodeFormat::CODE_128) ||
+    // hints.containsFormat(BarcodeFormat::CODE_25) ||
+    // hints.containsFormat(BarcodeFormat::ITF) ||
+    // hints.containsFormat(BarcodeFormat::RSS_14) ||
+    // hints.containsFormat(BarcodeFormat::RSS_EXPANDED);
+    // if (addOneDReader)
+    // {
+        // readers_.push_back(Ref<Reader>(new zxing::oned::MultiFormatOneDReader(hints)));
+    // }
     
     if (hints.containsFormat(BarcodeFormat::PDF_417))
     {

@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 //
 //  BMP.cpp
 //  QQView
@@ -52,7 +62,7 @@ typedef struct tagRGBQUAD {
 
 
 
-bool SaveBMP(const char* BMPfname, int nWidth, int nHeight, unsigned char* buffer)
+bool saveBMP(const char* BMPfname, int nWidth, int nHeight, unsigned char* buffer)
 {
     BITMAPFILEHEADER	BMFH;
     BITMAPINFOHEADER	BMIH;
@@ -152,7 +162,7 @@ bool SaveBMP(const char* BMPfname, int nWidth, int nHeight, unsigned char* buffe
     return true;
 }
 
-bool LoadBMP(const char* BMPfname, int &nWidth, int &nHeight, unsigned char* buffer)
+bool loadBMP(const char* BMPfname, int &nWidth, int &nHeight, unsigned char* buffer)
 {		
     BITMAPINFOHEADER	BMIH;
     BYTE                *ptrbmp=NULL;

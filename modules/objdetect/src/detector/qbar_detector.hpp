@@ -1,3 +1,10 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+
 #pragma once
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -22,7 +29,7 @@ namespace cv {
         float prob;
         int x, y, width, height;
         
-        void PrintInfo()
+        void printInfo()
         {
             printf("class %d, prob %.2f, x %d, y %d, width %d, height %d\n", class_id, prob, x, y, width, height);
         }
@@ -78,8 +85,8 @@ namespace cv {
         public:
             QBarDetector(){};
             ~QBarDetector(){};
-            int Init(const std::string &config_path);
-            int Detect(const Mat &image,std::vector<DetectInfo> &bboxes);
+            int init(const std::string &config_path);
+            int detect(const Mat &image,std::vector<DetectInfo> &bboxes);
             void setReferenceSize(int reference_size) {this->reference_size = reference_size;}
             void setScoreThres(float score_thres) {this->score_thres = score_thres;}
             void setIouThres(float iou_thres) {this->iou_thres = iou_thres;}

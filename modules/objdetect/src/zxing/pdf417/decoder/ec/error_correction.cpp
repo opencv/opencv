@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  * Copyright 2012 ZXing authors
@@ -50,7 +60,7 @@ void ErrorCorrection::decode(ArrayRef<int> received,
                              ErrorHandler & err_handler)
 {
     Ref<ModulusPoly> poly (new ModulusPoly(field_, received, err_handler));
-    if (err_handler.ErrCode())   return;
+    if (err_handler.errCode())   return;
     
     ArrayRef<int> S(new Array<int>(numECCodewords));
     bool error = false;
@@ -71,33 +81,33 @@ void ErrorCorrection::decode(ArrayRef<int> received,
             one_minus_b_x[1]=field_.subtract(0, b);
             one_minus_b_x[0] = 1;
             Ref<ModulusPoly> term (new ModulusPoly(field_, one_minus_b_x, err_handler));
-            if (err_handler.ErrCode()) return;
+            if (err_handler.errCode()) return;
             
             knownErrors = knownErrors->multiply(term, err_handler);
-            if (err_handler.ErrCode()) return;
+            if (err_handler.errCode()) return;
         }
         
         Ref<ModulusPoly> syndrome (new ModulusPoly(field_, S, err_handler));
-        if (err_handler.ErrCode()) return;
+        if (err_handler.errCode()) return;
         
         Ref<ModulusPoly> tmp = field_.buildMonomial(numECCodewords, 1, err_handler);
-        if (err_handler.ErrCode() || tmp == NULL) return;
+        if (err_handler.errCode() || tmp == NULL) return;
         
         vector<Ref<ModulusPoly> > sigmaOmega (runEuclideanAlgorithm(tmp, syndrome, numECCodewords, err_handler));
-        if (err_handler.ErrCode())   return;
+        if (err_handler.errCode())   return;
         
         Ref<ModulusPoly> sigma = sigmaOmega[0];
         Ref<ModulusPoly> omega = sigmaOmega[1];
         
         ArrayRef<int> errorLocations = findErrorLocations(sigma, err_handler);
-        if (err_handler.ErrCode()) return;
+        if (err_handler.errCode()) return;
         
         ArrayRef<int> errorMagnitudes = findErrorMagnitudes(omega, sigma, errorLocations, err_handler);
-        if (err_handler.ErrCode()) return;
+        if (err_handler.errCode()) return;
         
         for (int i = 0; i < errorLocations->size(); i++) {
             int ret_val = field_.log(errorLocations[i], err_handler);
-            if (err_handler.ErrCode())   return;
+            if (err_handler.errCode())   return;
             
             int position = received->size() - 1 - ret_val;
             if (position < 0) {
@@ -140,33 +150,33 @@ vector<Ref<ModulusPoly> >  ErrorCorrection::runEuclideanAlgorithm(Ref<ModulusPol
         Ref<ModulusPoly> q (field_.getZero());
         int denominatorLeadingTerm = rLast->getCoefficient(rLast->getDegree());
         int dltInverse = field_.inverse(denominatorLeadingTerm, err_handler);
-        if (err_handler.ErrCode())  return vector<Ref<ModulusPoly> >();
+        if (err_handler.errCode())  return vector<Ref<ModulusPoly> >();
         
         while (r->getDegree() >= rLast->getDegree() && !r->isZero()) {
             int degreeDiff = r->getDegree() - rLast->getDegree();
             int scale = field_.multiply(r->getCoefficient(r->getDegree()), dltInverse);
             
             Ref<ModulusPoly> tmp = field_.buildMonomial(degreeDiff, scale, err_handler);
-            if (err_handler.ErrCode() || tmp == NULL)  return vector<Ref<ModulusPoly> >();
+            if (err_handler.errCode() || tmp == NULL)  return vector<Ref<ModulusPoly> >();
             
             q = q->add(tmp, err_handler);
-            if (err_handler.ErrCode())  return vector<Ref<ModulusPoly> >();
+            if (err_handler.errCode())  return vector<Ref<ModulusPoly> >();
             
             Ref<ModulusPoly> tmp1 = rLast->multiplyByMonomial(degreeDiff, scale, err_handler);
-            if (err_handler.ErrCode())  return vector<Ref<ModulusPoly> >();
+            if (err_handler.errCode())  return vector<Ref<ModulusPoly> >();
             
             r = r->subtract(tmp1, err_handler);
-            if (err_handler.ErrCode())  return vector<Ref<ModulusPoly> >();
+            if (err_handler.errCode())  return vector<Ref<ModulusPoly> >();
         }
         
         Ref<ModulusPoly> tmp1 = q->multiply(tLast, err_handler);
-        if (err_handler.ErrCode() || tmp1 == NULL)  return vector<Ref<ModulusPoly> >();
+        if (err_handler.errCode() || tmp1 == NULL)  return vector<Ref<ModulusPoly> >();
         
         tmp1 = tmp1->subtract(tLastLast, err_handler);
-        if (err_handler.ErrCode() || tmp1 == NULL)  return vector<Ref<ModulusPoly> >();
+        if (err_handler.errCode() || tmp1 == NULL)  return vector<Ref<ModulusPoly> >();
         
         t = tmp1->negative(err_handler);
-        if (err_handler.ErrCode())  return vector<Ref<ModulusPoly> >();
+        if (err_handler.errCode())  return vector<Ref<ModulusPoly> >();
     }
     
     int sigmaTildeAtZero = t->getCoefficient(0);
@@ -176,13 +186,13 @@ vector<Ref<ModulusPoly> >  ErrorCorrection::runEuclideanAlgorithm(Ref<ModulusPol
     }
     
     int inverse = field_.inverse(sigmaTildeAtZero, err_handler);
-    if (err_handler.ErrCode())  return vector<Ref<ModulusPoly> >();
+    if (err_handler.errCode())  return vector<Ref<ModulusPoly> >();
     
     Ref<ModulusPoly> sigma (t->multiply(inverse, err_handler));
-    if (err_handler.ErrCode())  return vector<Ref<ModulusPoly> >();
+    if (err_handler.errCode())  return vector<Ref<ModulusPoly> >();
     
     Ref<ModulusPoly> omega (r->multiply(inverse, err_handler));
-    if (err_handler.ErrCode())  return vector<Ref<ModulusPoly> >();
+    if (err_handler.errCode())  return vector<Ref<ModulusPoly> >();
     
     vector<Ref<ModulusPoly> > v(2);
     v[0] = sigma;
@@ -198,7 +208,7 @@ ArrayRef<int> ErrorCorrection::findErrorLocations(Ref<ModulusPoly> errorLocator,
     for (int i = 1; i < field_.getSize() && e < numErrors; i++) {
         if (errorLocator->evaluateAt(i) == 0) {
             result[e] = field_.inverse(i, err_handler);
-            if (err_handler.ErrCode())  return ArrayRef<int>();
+            if (err_handler.errCode())  return ArrayRef<int>();
             
             e++;
         }
@@ -223,18 +233,18 @@ ArrayRef<int> ErrorCorrection::findErrorMagnitudes(Ref<ModulusPoly> errorEvaluat
         field_.multiply(i, errorLocator->getCoefficient(i));
     }
     Ref<ModulusPoly> formalDerivative (new ModulusPoly(field_, formalDerivativeCoefficients, err_handler));
-    if (err_handler.ErrCode())   return ArrayRef<int>();
+    if (err_handler.errCode())   return ArrayRef<int>();
     
     // This is directly applying Forney's Formula
     int s = errorLocations->size();
     ArrayRef<int> result(new Array<int>(s));
     for (i = 0; i < s; i++) {
         int xiInverse = field_.inverse(errorLocations[i], err_handler);
-        if (err_handler.ErrCode())   return ArrayRef<int>();
+        if (err_handler.errCode())   return ArrayRef<int>();
         
         int numerator = field_.subtract(0, errorEvaluator->evaluateAt(xiInverse));
         int denominator = field_.inverse(formalDerivative->evaluateAt(xiInverse), err_handler);
-        if (err_handler.ErrCode())   return ArrayRef<int>();
+        if (err_handler.errCode())   return ArrayRef<int>();
         
         result[i] = field_.multiply(numerator, denominator);
     }

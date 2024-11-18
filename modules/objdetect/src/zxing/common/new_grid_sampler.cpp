@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 #include "new_grid_sampler.hpp"
 #include "perspective_transform.hpp"
 #include "../reader_exception.hpp"
@@ -33,7 +43,7 @@ Ref<ByteMatrix> NewGridSampler::sampleGrid(Ref<ByteMatrix> image, int dimension,
         // Quick check to see if points transformed to something inside the image;
         // sufficient to check the endpoings
         outlier += checkAndNudgePoints(image->getWidth(), image->getHeight(), points, err_handler);
-        if (err_handler.ErrCode())   return Ref<ByteMatrix>();
+        if (err_handler.errCode())   return Ref<ByteMatrix>();
         
         if (outlier >= maxOutlier)
         {
@@ -53,7 +63,7 @@ Ref<ByteMatrix> NewGridSampler::sampleGrid(Ref<ByteMatrix> image, int dimension,
 // Samples an image for a rectangular matrix of bits of the given dimension.
 Ref<BitMatrix> NewGridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, Ref<PerspectiveTransform> transform, float fInitialMS, ErrorHandler & err_handler) {
     Ref<BitMatrix> bits(new BitMatrix(dimension, err_handler));
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     
     std::vector<float> points(dimension << 1, (const float)0.0f);
     
@@ -83,20 +93,20 @@ Ref<BitMatrix> NewGridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, R
             if (vcCornerPoints[i] < 0 || vcCornerPoints[i] >= iWidth)
             {
                 float outLen = vcCornerPoints[i] < 0 ? (-vcCornerPoints[i]) : (vcCornerPoints[i] - iWidth + 1);
-                if (outLen / fInitialMS > GetIniParser()->GetReal("NEW_GRID_SAMPLER", "OUT_OF_BOUNDS", 9))
+                if (outLen / fInitialMS > GetIniParser()->getReal("NEW_GRID_SAMPLER", "OUT_OF_BOUNDS", 9))
                 {
                     err_handler = ReaderErrorHandler("width out of bounds.");
-                    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+                    if (err_handler.errCode()) return Ref<BitMatrix>();
                 }
             }
             if (vcCornerPoints[i+1] < 0 || vcCornerPoints[i+1] >= iHeight)
             {
                 float outLen = vcCornerPoints[i+1] < 0 ? (-vcCornerPoints[i+1]) : (vcCornerPoints[i+1] - iHeight + 1);
                 // printf("f\n", outLen / fInitialMS);
-                if (outLen / fInitialMS > GetIniParser()->GetReal("NEW_GRID_SAMPLER", "OUT_OF_BOUNDS", 9))
+                if (outLen / fInitialMS > GetIniParser()->getReal("NEW_GRID_SAMPLER", "OUT_OF_BOUNDS", 9))
                 {
                     err_handler = ReaderErrorHandler("height out of bounds.");
-                    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+                    if (err_handler.errCode()) return Ref<BitMatrix>();
                 }
             }
         }
@@ -129,14 +139,14 @@ Ref<BitMatrix> NewGridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, R
         float fLenAvg = (fLenAB + fLenAD + fLenCB + fLenCD) / 4;
         float fAreaSqua = fLenAvg * fLenAvg;
         if (fAreaSqua > 1e-8
-            && fAreaQua / fAreaSqua > GetIniParser()->GetReal("NEW_GRID_SAMPLER", "SHAPE_MIN_RATIO", 0.95)
-            && fAreaQua / fAreaSqua < GetIniParser()->GetReal("NEW_GRID_SAMPLER", "SHAPE_MAX_RATIO", 1.05))
+            && fAreaQua / fAreaSqua > GetIniParser()->getReal("NEW_GRID_SAMPLER", "SHAPE_MIN_RATIO", 0.95)
+            && fAreaQua / fAreaSqua < GetIniParser()->getReal("NEW_GRID_SAMPLER", "SHAPE_MAX_RATIO", 1.05))
         {
         }
         else
         {
             err_handler = ReaderErrorHandler("shape not valid");
-            if (err_handler.ErrCode()) return Ref<BitMatrix>();
+            if (err_handler.errCode()) return Ref<BitMatrix>();
         }
     }
     
@@ -151,14 +161,14 @@ Ref<BitMatrix> NewGridSampler::sampleGrid(Ref<BitMatrix> image, int dimension, R
         // Quick check to see if points transformed to something inside the image;
         // sufficient to check the endpoings
         outlier += checkAndNudgePoints(image->getWidth(), image->getHeight(), points, err_handler);
-        if (err_handler.ErrCode()) return Ref<BitMatrix>();
+        if (err_handler.errCode()) return Ref<BitMatrix>();
         
         if (outlier >= maxOutlier)
         {
             std::ostringstream s;
             s << "Over 30% points out of bounds.";
             err_handler = ReaderErrorHandler(s.str().c_str());
-            if (err_handler.ErrCode()) return Ref<BitMatrix>();
+            if (err_handler.errCode()) return Ref<BitMatrix>();
         }
         
         for (int x = 0; x < max; x += 2) {
@@ -182,7 +192,7 @@ int NewGridSampler::checkAndNudgePoints(int width, int height, std::vector<float
     else
     {
         err_handler = ReaderErrorHandler("checkAndNudgePoints:: no points!");
-        if (err_handler.ErrCode())   return -1;
+        if (err_handler.errCode())   return -1;
     }
     
     // The Java code assumes that if the start and end points are in bounds, the rest will also be.

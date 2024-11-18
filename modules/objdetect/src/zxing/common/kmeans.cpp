@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 #include "kmeans.hpp"
 #include "util/inireader.hpp"
 
@@ -12,8 +22,8 @@ namespace zxing
 
 double cal_distance(std::vector<double> a, std::vector<double> b)
 {
-    float KMEANS_COUNT_FACTOR = GetIniParser()->GetReal("FP_SELECT", "KMEANS_COUNT_FACTOR", 0.0);
-    float KMEANS_MS_FACTOR = GetIniParser()->GetReal("FP_SELECT", "KMEANS_MS_FACTOR", 1.0);
+    float KMEANS_COUNT_FACTOR = GetIniParser()->getReal("FP_SELECT", "KMEANS_COUNT_FACTOR", 0.0);
+    float KMEANS_MS_FACTOR = GetIniParser()->getReal("FP_SELECT", "KMEANS_MS_FACTOR", 1.0);
     
     uint da = a.size();
     uint db = b.size();

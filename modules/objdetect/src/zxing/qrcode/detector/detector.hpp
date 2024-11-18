@@ -1,6 +1,16 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
-#ifndef __DETECTOR_H__
-#define __DETECTOR_H__
+#ifndef __ZXING_QRCODE_DETECTOR_DETECTOR_HPP__
+#define __ZXING_QRCODE_DETECTOR_DETECTOR_HPP__
 
 /*
  *  Detector.hpp
@@ -167,4 +177,4 @@ public:
 }  // namespace qrcode
 }  // namespace zxing
 
-#endif  // __DETECTOR_H__
+#endif  // __ZXING_QRCODE_DETECTOR_DETECTOR_HPP__

@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  GlobalHistogramBinarizer.cpp
@@ -63,7 +73,7 @@ Ref<BitArray> GlobalHistogramBinarizer::getBlackRow(int y, Ref<BitArray> row, Er
     if (!matrix0_)
     {
         binarizeImage0(err_handler);
-        if (err_handler.ErrCode())   return Ref<BitArray>();
+        if (err_handler.errCode())   return Ref<BitArray>();
     }
     // Call parent getBlackMatrix to get current matrix
     return Binarizer::getBlackRow(y, row, err_handler);
@@ -72,7 +82,7 @@ Ref<BitArray> GlobalHistogramBinarizer::getBlackRow(int y, Ref<BitArray> row, Er
 // Does not sharpen the data, as this call is intended to only be used by 2D readers.
 Ref<BitMatrix> GlobalHistogramBinarizer::getBlackMatrix(ErrorHandler &err_handler) {
     binarizeImage0(err_handler);
-    if (err_handler.ErrCode())   return Ref<BitMatrix>();
+    if (err_handler.errCode())   return Ref<BitMatrix>();
     // First call binarize image in child class to get matrix0_ and binCache
     // Call parent getBlackMatrix to get current matrix
     return Binarizer::getBlackMatrix(err_handler);
@@ -320,7 +330,7 @@ int GlobalHistogramBinarizer::binarizeImage0(ErrorHandler & err_handler){
     int width = source.getWidth();
     int height = source.getHeight();
     Ref<BitMatrix> matrix(new BitMatrix(width, height, err_handler));
-    if (err_handler.ErrCode())   return -1;
+    if (err_handler.errCode())   return -1;
     
     // Quickly calculates the histogram by sampling four rows from the image.
     // This proved to be more robust on the blackbox tests than sampling a
@@ -332,7 +342,7 @@ int GlobalHistogramBinarizer::binarizeImage0(ErrorHandler & err_handler){
     for (int y = 1; y < 5; y++) {
         int row = height * y / 5;
         ArrayRef<char> localLuminances = source.getRow(row, luminances, err_handler);
-        if (err_handler.ErrCode())   return -1;
+        if (err_handler.errCode())   return -1;
         int right = (width << 2) / 5;
         for (int x = width / 5; x < right; x++) {
             int pixel = localLuminances[x] & 0xff;
@@ -348,7 +358,7 @@ int GlobalHistogramBinarizer::binarizeImage0(ErrorHandler & err_handler){
             int right = (width << 2) / 5;
             for (; row<height*3/5-1; row+=4){
                 ArrayRef<char> localLuminances = source.getRow(row, luminances, err_handler);
-                if (err_handler.ErrCode())   return -1;
+                if (err_handler.errCode())   return -1;
                 for (int x = width / 5; x < right; x+=2) {
                     int pixel = localLuminances[x] & 0xff;
                     localBuckets[pixel >> LUMINANCE_SHIFT]++;
@@ -358,7 +368,7 @@ int GlobalHistogramBinarizer::binarizeImage0(ErrorHandler & err_handler){
         else
         {
             ArrayRef<char> localLuminances = source.getRow(row, luminances, err_handler);
-            if (err_handler.ErrCode())   return -1;
+            if (err_handler.errCode())   return -1;
             int right = (width << 2) / 5;
             for (int x = width / 5; x < right; x++) {
                 int pixel = localLuminances[x] & 0xff;
@@ -369,7 +379,7 @@ int GlobalHistogramBinarizer::binarizeImage0(ErrorHandler & err_handler){
 #endif
     
     int blackPoint = estimateBlackPoint(localBuckets, err_handler);
-    if (err_handler.ErrCode())   return -1;
+    if (err_handler.errCode())   return -1;
     
     ArrayRef<char> localLuminances = source.getMatrix();
     for (int y = 0; y < height; y++) {

@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 //
 //  dmtxvector2.hpp
 //  test_dm
@@ -5,8 +15,8 @@
 //  Created by wechatcv on 2022/5/5.
 //
 
-#ifndef dmtxvector2_hpp
-#define dmtxvector2_hpp
+#ifndef __ZXING_DATAMATRIX_LIBDMTX_DMTXVECTOR2_HPP__
+#define __ZXING_DATAMATRIX_LIBDMTX_DMTXVECTOR2_HPP__
 
 #include <stdio.h>
 #include "common.hpp"
@@ -29,4 +39,4 @@ unsigned int dmtxPointAlongRay2(DmtxVector2 *point, const DmtxRay2 *r, double t)
 
 }  // namespace dmtx
 
-#endif /* dmtxvector2_hpp */
+#endif // __ZXING_DATAMATRIX_LIBDMTX_DMTXVECTOR2_HPP__

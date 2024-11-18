@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  GenericGF.cpp
@@ -53,7 +63,7 @@ GenericGF::GenericGF(int primitive_, int size_, int b, ErrorHandler & err_handle
     zero->getCoefficients()[0] = 0;
     one = Ref<GenericGFPoly>(new GenericGFPoly(*this, ArrayRef<int>(new Array<int>(1)), err_handler));
     one->getCoefficients()[0] = 1;
-    if (err_handler.ErrCode()) return;
+    if (err_handler.errCode()) return;
 }
 
 Ref<GenericGFPoly> GenericGF::getZero() {
@@ -78,7 +88,7 @@ Ref<GenericGFPoly> GenericGF::buildMonomial(int degree, int coefficient, ErrorHa
     coefficients[0] = coefficient;
     
     Ref<GenericGFPoly> gfpoly(new GenericGFPoly(*this, coefficients, err_handler));
-    if (err_handler.ErrCode()) return Ref<GenericGFPoly>();
+    if (err_handler.errCode()) return Ref<GenericGFPoly>();
     return gfpoly;
 }
 

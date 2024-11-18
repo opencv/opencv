@@ -1,5 +1,15 @@
-#ifndef __DETECTOR_H__
-#define __DETECTOR_H__
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
+#ifndef __ZXING_PDF417_DETECTOR_DETECTOR_HPP__
+#define __ZXING_PDF417_DETECTOR_DETECTOR_HPP__
 
 /*
  *  Detector.hpp
@@ -105,11 +115,11 @@ private:
     
     Ref<BitMatrix> sampleLines(ArrayRef< Ref<ResultPoint> > const& vertices, int dimensionY, int dimension, ErrorHandler & err_handler);
     
-    ArrayRef< Ref<ResultPoint> > FindRowsWithPattern(Ref<BitMatrix> matrix,
+    ArrayRef< Ref<ResultPoint> > findRowsWithPattern(Ref<BitMatrix> matrix,
                                                      int startRow, int startColumn,
                                                      const int pattern[], const int patternSize);
     
-    ArrayRef< Ref<ResultPoint> > FindVerticesNew(Ref<BitMatrix> matrix);
+    ArrayRef< Ref<ResultPoint> > findVerticesNew(Ref<BitMatrix> matrix);
     
     void copyToResult(ArrayRef< Ref<ResultPoint> > result, ArrayRef< Ref<ResultPoint> > tmpResult,
                       const int* destinationIndexes, int iLength);
@@ -126,4 +136,4 @@ public:
 }  // namespace pdf417
 }  // namespace zxing
 
-#endif  // __DETECTOR_H__
+#endif  // __ZXING_PDF417_DETECTOR_DETECTOR_HPP__

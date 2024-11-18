@@ -1,9 +1,21 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 /*
  * @Author: ArlenCai
  * @Date: 2022-02-24 17:56:31
  * @LastEditTime: 2022-02-28 11:48:22
  */
-#pragma once
+#ifndef __ZXING_COMMON_DEBUG_TOOLS_HPP__
+#define __ZXING_COMMON_DEBUG_TOOLS_HPP__
+
 #include <iostream>
  
 static const std::string base64_chars = 
@@ -98,3 +110,4 @@ inline std::string base64_decode(std::string const& encoded_string) {
  
   return ret;
 }
+#endif // __ZXING_COMMON_DEBUG_TOOLS_HPP__

@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 /*
  *  BitMatrixParser.cpp
  *  zxing
@@ -99,7 +109,7 @@ Version *BitMatrixParser::readVersion(ErrorHandler & err_handler) {
     if (provisionalVersion <= 6)
     {
         Version * version = Version::getVersionForNumber(provisionalVersion, err_handler);
-        if (err_handler.ErrCode())   return NULL;
+        if (err_handler.errCode())   return NULL;
         return version;
     }
     
@@ -133,7 +143,7 @@ Version *BitMatrixParser::readVersion(ErrorHandler & err_handler) {
     }
     
     int a = parsedVersion_->getDimensionForVersion(err_handler);
-    if (err_handler.ErrCode())   return NULL;
+    if (err_handler.errCode())   return NULL;
     // if (parsedVersion_ != 0 && parsedVersion_->getDimensionForVersion(err_handler) == dimension) {
     if (parsedVersion_ != 0 && a == dimension)
     {
@@ -155,21 +165,21 @@ Version *BitMatrixParser::readVersion(ErrorHandler & err_handler) {
 ArrayRef<char> BitMatrixParser::readCodewords(ErrorHandler & err_handler)
 {
     Ref<FormatInformation> formatInfo = readFormatInformation(err_handler);
-    if (err_handler.ErrCode())  return ArrayRef<char>();
+    if (err_handler.errCode())  return ArrayRef<char>();
     
     Version *version = readVersion(err_handler);
-    if (err_handler.ErrCode())  return ArrayRef<char>();
+    if (err_handler.errCode())  return ArrayRef<char>();
     
     // Get the data mask for the format used in this QR Code. This will exclude
     // some bits from reading as we wind through the bit matrix.
     
     DataMask &dataMask = DataMask::forReference(static_cast<int>(formatInfo->getDataMask()), err_handler);
-    if (err_handler.ErrCode())  return ArrayRef<char>();
+    if (err_handler.errCode())  return ArrayRef<char>();
     int dimension = bitMatrix_->getHeight();
     dataMask.unmaskBitMatrix(*bitMatrix_, dimension);
     
     Ref<BitMatrix> functionPattern = version->buildFunctionPattern(err_handler);
-    if (err_handler.ErrCode())  return ArrayRef<char>();
+    if (err_handler.errCode())  return ArrayRef<char>();
     
     bool readingUp = true;
     ArrayRef<char> result(version->getTotalCodewords());
@@ -221,7 +231,7 @@ ArrayRef<char> BitMatrixParser::readCodewords(ErrorHandler & err_handler)
 }
 
 /**
- * Revert the mask removal done while reading the code words. The bit matrix should revert to its original state.
+ * revert the mask removal done while reading the code words. The bit matrix should revert to its original state.
  */
 void BitMatrixParser::remask() {
     if (parsedFormatInfo_ == NULL)
@@ -230,7 +240,7 @@ void BitMatrixParser::remask() {
     }
     ErrorHandler err_handler;
     DataMask& dataMask = DataMask::forReference(parsedFormatInfo_->getDataMask(), err_handler);
-    if (err_handler.ErrCode())  return;
+    if (err_handler.errCode())  return;
     int dimension = bitMatrix_->getHeight();
     dataMask.unmaskBitMatrix(*bitMatrix_, dimension);
 }

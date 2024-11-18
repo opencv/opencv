@@ -1,5 +1,15 @@
-#ifndef __MODULUS_GF_PDF_H__
-#define __MODULUS_GF_PDF_H__
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
+#ifndef __ZXING_PDF417_DECODER_EC_MODULUS_GF_HPP__
+#define __ZXING_PDF417_DECODER_EC_MODULUS_GF_HPP__
 /*
  * Copyright 2012 ZXing authors
  *
@@ -73,4 +83,4 @@ public:
 }  // namespace pdf417
 }  // namespace zxing
 
-#endif /* __MODULUS_GF_PDF_H__ */
+#endif // __ZXING_PDF417_DECODER_EC_MODULUS_GF_HPP__

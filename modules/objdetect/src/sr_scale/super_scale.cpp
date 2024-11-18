@@ -10,7 +10,7 @@
 
 #define CLIP(x, x1, x2) max(x1, min(x, x2))
 namespace cv {
-int SuperScale::Init(const std::string &sr_path) {
+int SuperScale::init(const std::string &sr_path) {
     try
     {
         dnn::Net network = dnn::readNetFromONNX(sr_path);

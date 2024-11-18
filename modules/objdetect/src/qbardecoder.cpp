@@ -1,3 +1,10 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+
 #include "opencv2/core.hpp"
 #include "qbardecoder.hpp"
 #include <iostream>
@@ -57,12 +64,12 @@ int gettimeofday(struct timeval *tp, void *tzp)
 #endif
 
 namespace cv {
-void QBarDecoder::Detect(Mat srcImage, std::vector<DetectInfo> &bboxes) {
+void QBarDecoder::detect(Mat srcImage, std::vector<DetectInfo> &bboxes) {
     if(_init_detector_model_)
-        detector_->Detect(srcImage, bboxes);
+        detector_->detect(srcImage, bboxes);
 }
 
-QBAR_RESULT QBarDecoder::Decode(Mat& srcCvImage)
+QBAR_RESULT QBarDecoder::decode(Mat& srcCvImage)
 {
     if (srcCvImage.data == nullptr || (srcCvImage.rows < 1) || (srcCvImage.cols < 1))
     {
@@ -76,7 +83,7 @@ QBAR_RESULT QBarDecoder::Decode(Mat& srcCvImage)
     }
 
     DecodeHints decodeHints;
-    AddFormatsToDecodeHints(decodeHints);
+    addFormatsToDecodeHints(decodeHints);
     decodeHints.setTryHarder(1);
     decodeHints.setPureBarcode(true);
     decodeHints.qbar_points.resize(4);
@@ -100,40 +107,40 @@ QBAR_RESULT QBarDecoder::Decode(Mat& srcCvImage)
 
     for (int tb = 0; tb < tryBinarizeTime; tb++)
     {
-        err_handler.Reset();
+        err_handler.reset();
 
         if (source == NULL || height * width > source->getMaxSize())
         {
             source = QBarSource::create(img.data, width, height, comps, pixelStep, err_handler);
-            if (err_handler.ErrCode())
+            if (err_handler.errCode())
             {
-                std::cout << "continue by errmsg " << err_handler.ErrMsg() << std::endl;
+                std::cout << "continue by errmsg " << err_handler.errMsg() << std::endl;
                 continue;
             }
         }
         else
         {
             source->reset(img.data, width, height, comps, pixelStep, err_handler);
-            if (err_handler.ErrCode())
+            if (err_handler.errCode())
             {
-                std::cout << "continue by errmsg " << err_handler.ErrMsg() << std::endl;
+                std::cout << "continue by errmsg " << err_handler.errMsg() << std::endl;
                 continue;
             }
         }
 
-        int ret = Decode(source, result, decodeHints);
+        int ret = decode(source, result, decodeHints);
         if (ret == 0)
         {
-            return ProcessResult(result);
+            return processResult(result);
         }
 
-        binarizer_mgr_.SwitchBinarizer();
+        binarizer_mgr_.switchBinarizer();
     }
 
     return QBAR_RESULT::MakeInvalid();
 }
 
-int QBarDecoder::Decode(Ref<LuminanceSource> source, Ref<Result> &result, DecodeHints& decodeHints)
+int QBarDecoder::decode(Ref<LuminanceSource> source, Ref<Result> &result, DecodeHints& decodeHints)
 {
     int res = -1;
     std::string cell_result;
@@ -149,19 +156,19 @@ int QBarDecoder::Decode(Ref<LuminanceSource> source, Ref<Result> &result, Decode
     }
     catch (std::exception &e)
     {
-        std::cout << "Decode exception: " << e.what() << std::endl;
+        std::cout << "decode exception: " << e.what() << std::endl;
         return -1;
     }
 
     if (res == 0)
     {
-        result->setBinaryMethod(static_cast<int>(binarizer_mgr_.GetCurBinarizer()));
+        result->setBinaryMethod(static_cast<int>(binarizer_mgr_.getCurBinarizer()));
     }
 
     return res;
 }
 
-QBAR_RESULT QBarDecoder::ProcessResult(zxing::Result *zx_result)
+QBAR_RESULT QBarDecoder::processResult(zxing::Result *zx_result)
 {
     QBAR_RESULT result;
 
@@ -263,7 +270,7 @@ public:
 
     void operator()(const cv::Range& range) const CV_OVERRIDE {
         QBarDecoder local_decoder;
-        local_decoder.SetReaders(decoder->readers_);
+        local_decoder.setReaders(decoder->readers_);
 
         for (int i = range.start; i < range.end; ++i) {
             const DetectInfo& detect_info = detect_results[i];
@@ -279,7 +286,7 @@ public:
                     std::lock_guard<std::mutex> lock(decoder->sr_mutex);
                     scaled_img = decoder->sr_->ProcessImageScale(crop_image, cur_scale, decoder->_init_sr_model_);
                 }
-                result = local_decoder.Decode(scaled_img); 
+                result = local_decoder.decode(scaled_img); 
 
                 if (result.typeID != 0) {
                     std::vector<Point2f> points_qr;
@@ -311,7 +318,7 @@ private:
     std::vector<QBAR_RESULT>& results;
 };
 
-std::vector<QBAR_RESULT> QBarDecoder::Decode(Mat srcImage, std::vector<DetectInfo>& detect_results) {
+std::vector<QBAR_RESULT> QBarDecoder::decode(Mat srcImage, std::vector<DetectInfo>& detect_results) {
     std::vector<QBAR_RESULT> results(detect_results.size());
 
     ParallelDecode parallelDecode(this, srcImage, detect_results, results);
@@ -390,7 +397,7 @@ void QBarDecoder::nms(std::vector<QBAR_RESULT>& results, float NMS_THRESH) {
     results = final_results;
 }
 
-void QBarDecoder::AddFormatsToDecodeHints(zxing::DecodeHints &hints) {
+void QBarDecoder::addFormatsToDecodeHints(zxing::DecodeHints &hints) {
     if (readers_.count(QBAR_READER::ONED_BARCODE))
     {
         hints.addFormat(BarcodeFormat::CODE_25);
@@ -419,9 +426,9 @@ void QBarDecoder::AddFormatsToDecodeHints(zxing::DecodeHints &hints) {
     }
 }
 
-int QBarDecoder::InitAIModel(QBAR_ML_MODE &ml_mode){
+int QBarDecoder::initAIModel(QBAR_ML_MODE &ml_mode){
     detector_ = std::shared_ptr<QBarDetector>(new QBarDetector());
-    int ret = detector_->Init(ml_mode.detection_model_path_);
+    int ret = detector_->init(ml_mode.detection_model_path_);
     if(ret)
     {   
         return ret;
@@ -429,7 +436,7 @@ int QBarDecoder::InitAIModel(QBAR_ML_MODE &ml_mode){
     _init_detector_model_ = true;
 
     sr_ = std::shared_ptr<SuperScale>(new SuperScale());
-    ret = sr_->Init(ml_mode.super_resolution_model_path_);
+    ret = sr_->init(ml_mode.super_resolution_model_path_);
     if(ret)
     {   
         return ret;

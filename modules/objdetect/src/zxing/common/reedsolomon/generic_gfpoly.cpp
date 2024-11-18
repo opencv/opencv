@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  GenericGFPoly.cpp
@@ -144,7 +154,7 @@ Ref<GenericGFPoly> GenericGFPoly::addOrSubtract(Ref<zxing::GenericGFPoly> other,
     }
     
     Ref<GenericGFPoly> gfpoly(new GenericGFPoly(field_, sumDiff, err_handler));
-    if (err_handler.ErrCode()) return Ref<GenericGFPoly>();
+    if (err_handler.errCode()) return Ref<GenericGFPoly>();
     return gfpoly;
 }
 
@@ -176,7 +186,7 @@ Ref<GenericGFPoly> GenericGFPoly::multiply(Ref<zxing::GenericGFPoly> other, Erro
     }
     
     Ref<GenericGFPoly> gfpoly(new GenericGFPoly(field_, product, err_handler));
-    if (err_handler.ErrCode()) return Ref<GenericGFPoly>();
+    if (err_handler.errCode()) return Ref<GenericGFPoly>();
     return gfpoly;
 }
 
@@ -196,7 +206,7 @@ Ref<GenericGFPoly> GenericGFPoly::multiply(int scalar, ErrorHandler & err_handle
     }
     
     Ref<GenericGFPoly> gfpoly(new GenericGFPoly(field_, product, err_handler));
-    if (err_handler.ErrCode()) return Ref<GenericGFPoly>();
+    if (err_handler.errCode()) return Ref<GenericGFPoly>();
     return gfpoly;
 }
 
@@ -215,7 +225,7 @@ Ref<GenericGFPoly> GenericGFPoly::multiplyByMonomial(int degree, int coefficient
     }
 
     Ref<GenericGFPoly> gfpoly(new GenericGFPoly(field_, product, err_handler));
-    if (err_handler.ErrCode()) return Ref<GenericGFPoly>();
+    if (err_handler.errCode()) return Ref<GenericGFPoly>();
     return gfpoly;
 }
 
@@ -236,19 +246,19 @@ std::vector<Ref<GenericGFPoly> > GenericGFPoly::divide(Ref<GenericGFPoly> other,
     
     int denominatorLeadingTerm = other->getCoefficient(other->getDegree());
     int inverseDenominatorLeadingTerm = field_.inverse(denominatorLeadingTerm, err_handler);
-    if (err_handler.ErrCode()) return std::vector<Ref<GenericGFPoly> >();
+    if (err_handler.errCode()) return std::vector<Ref<GenericGFPoly> >();
     
     while (remainder->getDegree() >= other->getDegree() && !remainder->isZero()) {
         int degreeDifference = remainder->getDegree() - other->getDegree();
         int scale = field_.multiply(remainder->getCoefficient(remainder->getDegree()),
                                     inverseDenominatorLeadingTerm);
         Ref<GenericGFPoly> term = other->multiplyByMonomial(degreeDifference, scale, err_handler);
-        if (err_handler.ErrCode()) return std::vector<Ref<GenericGFPoly> >();
+        if (err_handler.errCode()) return std::vector<Ref<GenericGFPoly> >();
         Ref<GenericGFPoly> iterationQuotiont = field_.buildMonomial(degreeDifference, scale, err_handler);
-        if (err_handler.ErrCode()) return std::vector<Ref<GenericGFPoly> >();
+        if (err_handler.errCode()) return std::vector<Ref<GenericGFPoly> >();
         quotient = quotient->addOrSubtract(iterationQuotiont, err_handler);
         remainder = remainder->addOrSubtract(term, err_handler);
-        if (err_handler.ErrCode()) return std::vector<Ref<GenericGFPoly> >();
+        if (err_handler.errCode()) return std::vector<Ref<GenericGFPoly> >();
     }
     
     std::vector<Ref<GenericGFPoly> > returnValue(2);

@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 //
 //  dmtxreedsol.cpp
 //  test_dm
@@ -71,7 +81,7 @@ static DmtxByte antilog301[] =
 #undef CHKPASS
 #define CHKPASS { if (passFail == DmtxFail) return DmtxFail; }
 
-unsigned int RsDecode(unsigned char *code, int sizeIdx, int fix)
+unsigned int rsDecode(unsigned char *code, int sizeIdx, int fix)
 {
     (void)fix;
     int i;
@@ -124,23 +134,23 @@ unsigned int RsDecode(unsigned char *code, int sizeIdx, int fix)
         }
         
         /* Compute syndromes (syn) */
-        error = RsComputeSyndromes(&syn, &rec, blockErrorWords);
+        error = rsComputeSyndromes(&syn, &rec, blockErrorWords);
         
         /* Error(s) detected: Attempt repair */
         if (error)
         {
             /* Find error locator polynomial (elp) */
-            repairable = RsFindErrorLocatorPoly(&elp, &syn, blockErrorWords, blockMaxCorrectable);
+            repairable = rsFindErrorLocatorPoly(&elp, &syn, blockErrorWords, blockMaxCorrectable);
             if (!repairable)
                 return DmtxFail;
             
             /* Find error positions (loc) */
-            repairable = RsFindErrorLocations(&loc, &elp);
+            repairable = rsFindErrorLocations(&loc, &elp);
             if (!repairable)
                 return DmtxFail;
             
             /* Find error values and repair */
-            RsRepairErrors(&rec, &loc, &elp, &syn);
+            rsRepairErrors(&rec, &loc, &elp, &syn);
         }
         
         /*
@@ -169,7 +179,7 @@ unsigned int RsDecode(unsigned char *code, int sizeIdx, int fix)
 
 #undef CHKPASS
 #define CHKPASS { if (passFail == DmtxFail) return DmtxTrue; }
-static DmtxBoolean RsComputeSyndromes(DmtxByteList *syn, const DmtxByteList *rec, int blockErrorWords)
+static DmtxBoolean rsComputeSyndromes(DmtxByteList *syn, const DmtxByteList *rec, int blockErrorWords)
 {
     int i, j;
     unsigned int passFail;
@@ -194,7 +204,7 @@ static DmtxBoolean RsComputeSyndromes(DmtxByteList *syn, const DmtxByteList *rec
 
 #undef CHKPASS
 #define CHKPASS { if (passFail == DmtxFail) return DmtxFalse; }
-static DmtxBoolean RsFindErrorLocatorPoly(DmtxByteList *elpOut, const DmtxByteList *syn, int errorWordCount, int maxCorrectable)
+static DmtxBoolean rsFindErrorLocatorPoly(DmtxByteList *elpOut, const DmtxByteList *syn, int errorWordCount, int maxCorrectable)
 {
     int i, iNext, j;
     int m, mCmp, lambda;
@@ -267,7 +277,7 @@ static DmtxBoolean RsFindErrorLocatorPoly(DmtxByteList *elpOut, const DmtxByteLi
 
 #undef CHKPASS
 #define CHKPASS { if (passFail == DmtxFail) return DmtxFalse; }
-static DmtxBoolean RsFindErrorLocations(DmtxByteList *loc, const DmtxByteList *elp)
+static DmtxBoolean rsFindErrorLocations(DmtxByteList *loc, const DmtxByteList *elp)
 {
     int i, j;
     int lambda = elp->length - 1;
@@ -297,7 +307,7 @@ static DmtxBoolean RsFindErrorLocations(DmtxByteList *loc, const DmtxByteList *e
 
 #undef CHKPASS
 #define CHKPASS { if (passFail == DmtxFail) return DmtxFail; }
-static unsigned int RsRepairErrors(DmtxByteList *rec, const DmtxByteList *loc, const DmtxByteList *elp, const DmtxByteList *syn)
+static unsigned int rsRepairErrors(DmtxByteList *rec, const DmtxByteList *loc, const DmtxByteList *elp, const DmtxByteList *syn)
 {
     int i, j, q;
     int lambda = elp->length - 1;

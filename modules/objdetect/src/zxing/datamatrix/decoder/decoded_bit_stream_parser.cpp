@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  DecodedBitStreamParser.cpp
@@ -59,30 +69,30 @@ Ref<DecoderResult> DecodedBitStreamParser::decode(ArrayRef<char> bytes, ErrorHan
         if (mode == ASCII_ENCODE)
         {
             mode = decodeAsciiSegment(bits, result, resultTrailer, err_handler);
-            if (err_handler.ErrCode()) return Ref<DecoderResult>();
+            if (err_handler.errCode()) return Ref<DecoderResult>();
         }
         else
         {
             switch (mode) {
                 case C40_ENCODE:
                     decodeC40Segment(bits, result, err_handler);
-                    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+                    if (err_handler.errCode()) return Ref<DecoderResult>();
                     break;
                 case TEXT_ENCODE:
                     decodeTextSegment(bits, result, err_handler);
-                    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+                    if (err_handler.errCode()) return Ref<DecoderResult>();
                     break;
                 case ANSIX12_ENCODE:
                     decodeAnsiX12Segment(bits, result, err_handler);
-                    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+                    if (err_handler.errCode()) return Ref<DecoderResult>();
                     break;
                 case EDIFACT_ENCODE:
                     decodeEdifactSegment(bits, result, err_handler);
-                    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+                    if (err_handler.errCode()) return Ref<DecoderResult>();
                     break;
                 case BASE256_ENCODE:
                     decodeBase256Segment(bits, result, byteSegments, err_handler);
-                    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+                    if (err_handler.errCode()) return Ref<DecoderResult>();
                     break;
                 default:
                     err_handler = ErrorHandler("Unsupported mode indicator");
@@ -106,7 +116,7 @@ int DecodedBitStreamParser::decodeAsciiSegment(Ref<BitSource> bits, std::ostring
     bool upperShift = false;
     do {
         int oneByte = bits->readBits(8, err_handler);
-        if (err_handler.ErrCode())   return 0;
+        if (err_handler.errCode())   return 0;
         if (oneByte == 0)
         {
             err_handler = ErrorHandler("Not enough bits to decode");
@@ -210,14 +220,14 @@ void DecodedBitStreamParser::decodeC40Segment(Ref<BitSource> bits, std::ostrings
             return;
         }
         int firstByte = bits->readBits(8, err_handler);
-        if (err_handler.ErrCode())    return;
+        if (err_handler.errCode())    return;
         if (firstByte == 254)
         {  // Unlatch codeword
             return;
         }
         
         parseTwoBytes(firstByte, bits->readBits(8, err_handler), cValues);
-        if (err_handler.ErrCode()) return;
+        if (err_handler.errCode()) return;
         
         for (int i = 0; i < 3; i++) {
             int cValue = cValues[i];
@@ -315,7 +325,7 @@ void DecodedBitStreamParser::decodeTextSegment(Ref<BitSource> bits, std::ostring
             return;
         }
         int firstByte = bits->readBits(8, err_handler);
-        if (err_handler.ErrCode())    return;
+        if (err_handler.errCode())    return;
         if (firstByte == 254)
         {  // Unlatch codeword
             return;
@@ -417,14 +427,14 @@ void DecodedBitStreamParser::decodeAnsiX12Segment(Ref<BitSource> bits, std::ostr
             return;
         }
         int firstByte = bits->readBits(8, err_handler);
-        if (err_handler.ErrCode()) return;
+        if (err_handler.errCode()) return;
         if (firstByte == 254)
         {  // Unlatch codeword
             return;
         }
         
         parseTwoBytes(firstByte, bits->readBits(8, err_handler), cValues);
-        if (err_handler.ErrCode()) return;
+        if (err_handler.errCode()) return;
         
         for (int i = 0; i < 3; i++)
         {
@@ -482,7 +492,7 @@ void DecodedBitStreamParser::decodeEdifactSegment(Ref<BitSource> bits, std::ostr
         
         for (int i = 0; i < 4; i++) {
             int edifactValue = bits->readBits(6, err_handler);
-            if (err_handler.ErrCode()) return;
+            if (err_handler.errCode()) return;
             
             // Check for the unlatch character
             if (edifactValue == 0x1f)
@@ -492,7 +502,7 @@ void DecodedBitStreamParser::decodeEdifactSegment(Ref<BitSource> bits, std::ostr
                 if (bitsLeft != 8)
                 {
                     bits->readBits(bitsLeft, err_handler);
-                    if (err_handler.ErrCode()) return;
+                    if (err_handler.errCode()) return;
                 }
                 return;
             }
@@ -510,7 +520,7 @@ void DecodedBitStreamParser::decodeBase256Segment(Ref<BitSource> bits, std::ostr
     // Figure out how long the Base 256 Segment is.
     int codewordPosition = 1 + bits->getByteOffset();  // position is 1-indexed
     int d1 = unrandomize255State(bits->readBits(8, err_handler), codewordPosition++);
-    if (err_handler.ErrCode()) return;
+    if (err_handler.errCode()) return;
     int count;
     if (d1 == 0)
     {  // Read the remainder of the symbol
@@ -523,7 +533,7 @@ void DecodedBitStreamParser::decodeBase256Segment(Ref<BitSource> bits, std::ostr
     else
     {
         count = 250 * (d1 - 249) + unrandomize255State(bits->readBits(8, err_handler), codewordPosition++);
-        if (err_handler.ErrCode()) return;
+        if (err_handler.errCode()) return;
     }
     
     // We're seeing NegativeArraySizeException errors from users.
@@ -542,7 +552,7 @@ void DecodedBitStreamParser::decodeBase256Segment(Ref<BitSource> bits, std::ostr
             return;
         }
         char byte = unrandomize255State(bits->readBits(8, err_handler), codewordPosition++);
-        if (err_handler.ErrCode())    return;
+        if (err_handler.errCode())    return;
         byteSegments.push_back(byte);
         result << static_cast<char>(byte);
     }

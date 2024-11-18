@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  GenericGFPoly.hpp
@@ -19,8 +29,8 @@
  * limitations under the License.
  */
 
-#ifndef GENERICGFPOLY_H
-#define GENERICGFPOLY_H
+#ifndef __ZXING_COMMON_REEDSOLOMON_GENERIC_GFPOLY_HPP_
+#define __ZXING_COMMON_REEDSOLOMON_GENERIC_GFPOLY_HPP_
 
 #include <vector>
 #include "../array.hpp"
@@ -52,4 +62,4 @@ public:
 
 }  // namespace zxing
 
-#endif  // gENERICGFPOLY_H
+#endif  // __ZXING_COMMON_REEDSOLOMON_GENERIC_GFPOLY_HPP_

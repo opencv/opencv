@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  Detector.cpp
@@ -182,9 +192,9 @@ std::vector<Ref<ResultPoint>> Detector::shiftToModuleCenter(std::vector<Ref<Resu
 
 Ref<DetectorResult> Detector::detectV1(ErrorHandler & err_handler) {
     Ref<WhiteRectangleDetector> rectangleDetector_(new WhiteRectangleDetector(image_, err_handler));
-    if (err_handler.ErrCode())   return Ref<DetectorResult>();
+    if (err_handler.errCode())   return Ref<DetectorResult>();
     std::vector<Ref<ResultPoint> > ResultPoints = rectangleDetector_->detectNew(err_handler);
-    if (err_handler.ErrCode())   return Ref<DetectorResult>();
+    if (err_handler.errCode())   return Ref<DetectorResult>();
     Ref<ResultPoint> pointA = ResultPoints[0];
     Ref<ResultPoint> pointB = ResultPoints[1];
     Ref<ResultPoint> pointC = ResultPoints[2];
@@ -343,7 +353,7 @@ Ref<DetectorResult> Detector::detectV1(ErrorHandler & err_handler) {
         transform = createTransform(topLeft, correctedTopRight, bottomLeft, bottomRight, dimensionTop,
                                     dimensionRight);
         bits = sampleGrid(image_, dimensionTop, dimensionRight, transform, err_handler);
-        if (err_handler.ErrCode())   return Ref<DetectorResult>();
+        if (err_handler.errCode())   return Ref<DetectorResult>();
     }
     else
     {
@@ -369,7 +379,7 @@ Ref<DetectorResult> Detector::detectV1(ErrorHandler & err_handler) {
         transform = createTransform(topLeft, correctedTopRight, bottomLeft, bottomRight,
                                     dimensionCorrected, dimensionCorrected);
         bits = sampleGrid(image_, dimensionCorrected, dimensionCorrected, transform, err_handler);
-        if (err_handler.ErrCode()) return Ref<DetectorResult>();
+        if (err_handler.errCode()) return Ref<DetectorResult>();
     }
     
     ArrayRef< Ref<ResultPoint> > points(new Array< Ref<ResultPoint> >(4));
@@ -680,7 +690,7 @@ Ref<BitMatrix> Detector::sampleGrid(Ref<BitMatrix> image, int dimensionX, int di
     GridSampler &sampler = GridSampler::getInstance();
     
     Ref<BitMatrix> bits =  sampler.sampleGrid(image, dimensionX, dimensionY, transform, err_handler);
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     return bits;
 }
 
@@ -1553,7 +1563,7 @@ Ref<DetectorResult> Detector::detectV3(ErrorHandler &err_handler)
                 transform = createTransformV3(topLeft, topRight, bottomLeft, bottomRight, dimT,
                                               dimR);
                 bits = sampleGrid(image_, dimT, dimR, transform, err_handler);
-                if (err_handler.ErrCode())   return Ref<DetectorResult>();
+                if (err_handler.errCode())   return Ref<DetectorResult>();
                 Ref<DetectorResult> detectorResult(new DetectorResult(bits, final_points));
                 return detectorResult;
             }
@@ -1568,9 +1578,9 @@ Ref<DetectorResult> Detector::detectV3(ErrorHandler &err_handler)
 Ref<DetectorResult> Detector::detectV2(ErrorHandler &err_handler)
 {
     Ref<WhiteRectangleDetector> rectangleDetector_(new WhiteRectangleDetector(image_, err_handler));
-    if (err_handler.ErrCode())   return Ref<DetectorResult>();
+    if (err_handler.errCode())   return Ref<DetectorResult>();
     std::vector<Ref<ResultPoint> > ResultPoints = rectangleDetector_->detectNew(err_handler);
-    if (err_handler.ErrCode())   return Ref<DetectorResult>();
+    if (err_handler.errCode())   return Ref<DetectorResult>();
     
     // 0  2
     // 1  3
@@ -1692,7 +1702,7 @@ Ref<DetectorResult> Detector::detectV2(ErrorHandler &err_handler)
     transform = createTransform(topLeft, topRight, bottomLeft, bottomRight, dimensionTop,
                                 dimensionRight);
     bits = sampleGrid(image_, dimensionTop, dimensionRight, transform, err_handler);
-    if (err_handler.ErrCode())   return Ref<DetectorResult>();
+    if (err_handler.errCode())   return Ref<DetectorResult>();
     
     ArrayRef< Ref<ResultPoint> > final_points(new Array< Ref<ResultPoint> >(4));
     final_points[0].reset(topLeft);
@@ -1718,10 +1728,10 @@ Ref<DetectorResult> Detector::detect(bool use_v2, bool use_v3, ErrorHandler &err
             err_handler = ErrorHandler("detectV3 error!");
         }
     }
-    if (err_handler.ErrCode() || result == NULL)
+    if (err_handler.errCode() || result == NULL)
     {
         if (use_v2) {
-            err_handler.Reset();
+            err_handler.reset();
             result = detectV2(err_handler);
         }
     }

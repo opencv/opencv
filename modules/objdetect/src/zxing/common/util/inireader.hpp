@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // Read an INI file into easy-to-access name/value pairs.
 
 // inih and INIReader are released under the New BSD license (see LICENSE.txt).
@@ -5,8 +15,8 @@
 //
 // https:// github.com/benhoyt/inih
 
-#ifndef __INIREADER_H__
-#define __INIREADER_H__
+#ifndef ____ZXING_COMMON_UTIL_INIREADER_HPP__
+#define ____ZXING_COMMON_UTIL_INIREADER_HPP__
 
 #include <map>
 #include <string>
@@ -22,31 +32,31 @@ public:
     
     // Return the result of ini_parse(), i.e., 0 on success, line number of
     // first error on parse error, or -1 on file open error.
-    int ParseError() const;
+    int parseError() const;
     
     // Get a string value from INI file, returning default_value if not found.
-    std::string Get(const std::string& section, const std::string& name,
+    std::string get(const std::string& section, const std::string& name,
                     const std::string& default_value) const;
     
     // Get an integer (long) value from INI file, returning default_value if
     // not found or not a valid integer (decimal "1234", "-1234", or hex "0x4d2").
-    long GetInteger(const std::string& section, const std::string& name, long default_value) const;
+    long getInteger(const std::string& section, const std::string& name, long default_value) const;
     
     // Get a real (floating point double) value from INI file, returning
     // default_value if not found or not a valid floating point value
     // according to strtod().
-    double GetReal(const std::string& section, const std::string& name, double default_value) const;
+    double getReal(const std::string& section, const std::string& name, double default_value) const;
     
     // Get a boolean value from INI file, returning default_value if not found or if
     // not a valid true/false value. Valid true values are "true", "yes", "on", "1",
     // and valid false values are "false", "no", "off", "0" (not case sensitive).
-    bool GetBoolean(const std::string& section, const std::string& name, bool default_value) const;
+    bool getBoolean(const std::string& section, const std::string& name, bool default_value) const;
     
 private:
     int _error;
     std::map<std::string, std::string> _values;
-    static std::string MakeKey(const std::string& section, const std::string& name);
-    static int ValueHandler(void* user, const char* section, const char* name,
+    static std::string makeKey(const std::string& section, const std::string& name);
+    static int valueHandler(void* user, const char* section, const char* name,
                             const char* value);
 };
 
@@ -57,4 +67,4 @@ static inline INIReader * GetIniParser()
 }
 
 
-#endif  // __INIREADER_H__
+#endif  // ____ZXING_COMMON_UTIL_INIREADER_HPP__

@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 /*
  *  Copyright 2010-2011 ZXing authors
  *
@@ -102,7 +112,7 @@ QBarSource::QBarSource(unsigned char* pixels, int width, int height, int left_, 
     
     // Make gray luminances first
     makeGray(err_handler);
-    if (err_handler.ErrCode())   return;
+    if (err_handler.errCode())   return;
     
     if (needReverseHorizontal)
     {
@@ -288,7 +298,7 @@ void QBarSource::makeGrayRow(int y, ErrorHandler & err_handler)
     for (int x = 0; x < dataWidth; x++)
     {
         luminances[offsetGRAY + x] = convertPixel(pixelRow + (x * _pixelStep), err_handler);
-        if (err_handler.ErrCode())   return;
+        if (err_handler.errCode())   return;
     }
 }
 
@@ -307,7 +317,7 @@ void QBarSource::makeGray(ErrorHandler & err_handler)
         {
             makeGrayRow(y, err_handler);
         }
-        if (err_handler.ErrCode())   return;
+        if (err_handler.errCode())   return;
         
         arrayCopy(luminances, 0, &_matrix[0], 0, area);
     }
@@ -325,7 +335,7 @@ void QBarSource::makeGrayReset(ErrorHandler & err_handler){
         {
             makeGrayRow(y, err_handler);
         }
-        if (err_handler.ErrCode())   return;
+        if (err_handler.errCode())   return;
         
         arrayCopy(luminances, 0, &_matrix[0], 0, area);
     }

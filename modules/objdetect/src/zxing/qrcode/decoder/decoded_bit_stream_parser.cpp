@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  DecodedBitStreamParser.cpp
@@ -154,7 +164,7 @@ void DecodedBitStreamParser::decodeHanziSegment(Ref<BitSource> bits_,
     while (count > 0) {
         // Each 13 bits encodes a 2-byte character
         int twoBytes = bits.readBits(13, err_handler);
-        if (err_handler.ErrCode())   return;
+        if (err_handler.errCode())   return;
         int assembledTwoBytes = ((twoBytes / 0x060) << 8) | (twoBytes % 0x060);
         // if (assembledTwoBytes < 0x003BF) {
         // mod by sofiawu
@@ -175,7 +185,7 @@ void DecodedBitStreamParser::decodeHanziSegment(Ref<BitSource> bits_,
     }
     
     append(result, buffer, nBytes, StringUtils::GB2312, err_handler);
-    if (err_handler.ErrCode()){
+    if (err_handler.errCode()){
         delete [] buffer;
         return;
     }
@@ -193,7 +203,7 @@ void DecodedBitStreamParser::decodeKanjiSegment(Ref<BitSource> bits, std::string
     while (count > 0) {
         // Each 13 bits encodes a 2-byte character
         int twoBytes = bits->readBits(13, err_handler);
-        if (err_handler.ErrCode())   return;
+        if (err_handler.errCode())   return;
         int assembledTwoBytes = ((twoBytes / 0x0C0) << 8) | (twoBytes % 0x0C0);
         if (assembledTwoBytes < 0x01F00)
         {
@@ -212,7 +222,7 @@ void DecodedBitStreamParser::decodeKanjiSegment(Ref<BitSource> bits, std::string
     }
     
     append(result, buffer, nBytes, StringUtils::SHIFT_JIS, err_handler);
-    if (err_handler.ErrCode()){
+    if (err_handler.errCode()){
         delete [] buffer;
         return;
     }
@@ -245,7 +255,7 @@ void DecodedBitStreamParser::decodeByteSegment(Ref<BitSource> bits_,
         int readBits = available < 8 ? available : 8;
         readBytes[i] = static_cast<char>(bits.readBits(readBits, err_handler));
     }
-    if (err_handler.ErrCode()) return;
+    if (err_handler.errCode()) return;
     std::string encoding;
     
     if (currentCharacterSetECI == 0)
@@ -271,7 +281,7 @@ void DecodedBitStreamParser::decodeByteSegment(Ref<BitSource> bits_,
     }
     
     append(result, readBytes, nBytes, encoding.c_str(), err_handler);
-    if (err_handler.ErrCode())  return;
+    if (err_handler.errCode())  return;
     
     byteSegments->values().push_back(bytes_);
 }
@@ -289,7 +299,7 @@ void DecodedBitStreamParser::decodeNumericSegment(Ref<BitSource> bits, std::stri
             return;
         }
         int threeDigitsBits = bits->readBits(10, err_handler);
-        if (err_handler.ErrCode()) return;
+        if (err_handler.errCode()) return;
         if (threeDigitsBits >= 1000)
         {
             std::ostringstream s;
@@ -311,7 +321,7 @@ void DecodedBitStreamParser::decodeNumericSegment(Ref<BitSource> bits, std::stri
         }
         // Two digits left over to read, encoded in 7 bits
         int twoDigitsBits = bits->readBits(7, err_handler);
-        if (err_handler.ErrCode()) return;
+        if (err_handler.errCode()) return;
         if (twoDigitsBits >= 100)
         {
             std::ostringstream s;
@@ -331,7 +341,7 @@ void DecodedBitStreamParser::decodeNumericSegment(Ref<BitSource> bits, std::stri
         }
         // One digit left over to read
         int digitBits = bits->readBits(4, err_handler);
-        if (err_handler.ErrCode()) return;
+        if (err_handler.errCode()) return;
         if (digitBits >= 10)
         {
             std::ostringstream s;
@@ -342,7 +352,7 @@ void DecodedBitStreamParser::decodeNumericSegment(Ref<BitSource> bits, std::stri
         bytes[i++] = ALPHANUMERIC_CHARS[digitBits];
     }
     append(result, bytes->data(), nBytes, StringUtils::ASCII, err_handler);
-    if (err_handler.ErrCode()) return;
+    if (err_handler.errCode()) return;
 }
 
 char DecodedBitStreamParser::toAlphaNumericChar(size_t value, ErrorHandler & err_handler) {
@@ -371,7 +381,7 @@ void DecodedBitStreamParser::decodeAlphanumericSegment(Ref<BitSource> bits_,
         int nextTwoCharsBits = bits.readBits(11, err_handler);
         bytes << toAlphaNumericChar(nextTwoCharsBits / 45, err_handler);
         bytes << toAlphaNumericChar(nextTwoCharsBits % 45, err_handler);
-        if (err_handler.ErrCode())   return;
+        if (err_handler.errCode())   return;
         count -= 2;
     }
     if (count == 1) {
@@ -382,7 +392,7 @@ void DecodedBitStreamParser::decodeAlphanumericSegment(Ref<BitSource> bits_,
             return;
         }
         bytes << toAlphaNumericChar(bits.readBits(6, err_handler), err_handler);
-        if (err_handler.ErrCode())   return;
+        if (err_handler.errCode())   return;
     }
     // See section 6.4.8.1, 6.4.8.2
     std::string s = bytes.str();
@@ -412,13 +422,13 @@ void DecodedBitStreamParser::decodeAlphanumericSegment(Ref<BitSource> bits_,
         s = r.str();
     }
     append(result, s, StringUtils::ASCII, err_handler);
-    if (err_handler.ErrCode())   return;
+    if (err_handler.errCode())   return;
 }
 
 namespace {
 int parseECIValue(BitSource& bits, ErrorHandler &err_handler) {
     int firstByte = bits.readBits(8, err_handler);
-    if (err_handler.ErrCode())   return 0;
+    if (err_handler.errCode())   return 0;
     if ((firstByte & 0x80) == 0)
     {
         // just one byte
@@ -428,14 +438,14 @@ int parseECIValue(BitSource& bits, ErrorHandler &err_handler) {
     {
         // two bytes
         int secondByte = bits.readBits(8, err_handler);
-        if (err_handler.ErrCode())   return 0;
+        if (err_handler.errCode())   return 0;
         return ((firstByte & 0x3F) << 8) | secondByte;
     }
     if ((firstByte & 0xE0) == 0xC0)
     {
         // three bytes
         int secondThirdBytes = bits.readBits(16, err_handler);
-        if (err_handler.ErrCode())   return 0;
+        if (err_handler.errCode())   return 0;
         return ((firstByte & 0x1F) << 16) | secondThirdBytes;
     }
     
@@ -482,7 +492,7 @@ DecodedBitStreamParser::decode(ArrayRef<char> bytes,
         else
         {
             mode = &Mode::forBits(bits.readBits(4, err_handler), err_handler);  // mode is encoded by 4 bits
-            if (err_handler.ErrCode())   return Ref<DecoderResult>();
+            if (err_handler.errCode())   return Ref<DecoderResult>();
         }
         
         if (mode != &Mode::TERMINATOR)
@@ -508,16 +518,16 @@ DecodedBitStreamParser::decode(ArrayRef<char> bytes,
                 // Read next 8 bits(symbol sequence #) and 8 bits(parity data), then continue
                 
                 symbolSequence = bits.readBits(8, err_handler);
-                if (err_handler.ErrCode()) return Ref<DecoderResult>();
+                if (err_handler.errCode()) return Ref<DecoderResult>();
                 parityData = bits.readBits(8, err_handler);
     
-                if (err_handler.ErrCode()) return Ref<DecoderResult>();
+                if (err_handler.errCode()) return Ref<DecoderResult>();
             }
             else if (mode == &Mode::ECI)
             {
                 // Count doesn't apply to ECI
                 int value = parseECIValue(bits, err_handler);
-                if (err_handler.ErrCode()) Ref<DecoderResult>();
+                if (err_handler.errCode()) Ref<DecoderResult>();
                 currentCharacterSetECI = CharacterSetECI::getCharacterSetECIByValueFind(value);
                 if (currentCharacterSetECI == 0)
                 {
@@ -533,11 +543,11 @@ DecodedBitStreamParser::decode(ArrayRef<char> bytes,
                     // chinese mode contains a sub set indicator right after mode indicator
                     int subset = bits.readBits(4, err_handler);
                     int countHanzi = bits.readBits(mode->getCharacterCountBits(version), err_handler);
-                    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+                    if (err_handler.errCode()) return Ref<DecoderResult>();
                     if (subset == GB2312_SUBSET)
                     {
                         decodeHanziSegment(bits_, result, countHanzi, err_handler);
-                        if (err_handler.ErrCode())   Ref<DecoderResult>();
+                        if (err_handler.errCode())   Ref<DecoderResult>();
                         outputCharset = "GB2312";
                         modeName = mode->getName();
                     }
@@ -547,12 +557,12 @@ DecodedBitStreamParser::decode(ArrayRef<char> bytes,
                     // "Normal" QR code modes:
                     // How many characters will follow, encoded in this mode?
                     int count = bits.readBits(mode->getCharacterCountBits(version), err_handler);
-                    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+                    if (err_handler.errCode()) return Ref<DecoderResult>();
                     
                     if (mode == &Mode::NUMERIC)
                     {
                         decodeNumericSegment(bits_, result, count, err_handler);
-                        if (err_handler.ErrCode())
+                        if (err_handler.errCode())
                         {
                             err_handler = zxing::FormatErrorHandler("decode");
                             return Ref<DecoderResult>();
@@ -562,13 +572,13 @@ DecodedBitStreamParser::decode(ArrayRef<char> bytes,
                     else if (mode == &Mode::ALPHANUMERIC)
                     {
                         decodeAlphanumericSegment(bits_, result, count, fc1InEffect, err_handler);
-                        if (err_handler.ErrCode()) Ref<DecoderResult>();
+                        if (err_handler.errCode()) Ref<DecoderResult>();
                         modeName = mode->getName();
                     }
                     else if (mode == &Mode::BYTE)
                     {
                         decodeByteSegment(bits_, result, count, currentCharacterSetECI, byteSegments, hints, err_handler);
-                        if (err_handler.ErrCode())
+                        if (err_handler.errCode())
                         {
                             err_handler = zxing::FormatErrorHandler("decode");
                             return Ref<DecoderResult>();
@@ -579,7 +589,7 @@ DecodedBitStreamParser::decode(ArrayRef<char> bytes,
                     else if (mode == &Mode::KANJI)
                     {
                         decodeKanjiSegment(bits_, result, count, err_handler);
-                        if (err_handler.ErrCode()) Ref<DecoderResult>();
+                        if (err_handler.errCode()) Ref<DecoderResult>();
                         modeName = mode->getName();
                     }
                     else

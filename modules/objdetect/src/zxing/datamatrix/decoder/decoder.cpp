@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 /*
  *  Decoder.cpp
  *  zxing
@@ -48,7 +58,7 @@ void Decoder::correctErrors(ArrayRef<char> codewordBytes, int numDataCodewords, 
     int numECCodewords = numCodewords - numDataCodewords;
     
     rsDecoder_.decode(codewordInts, numECCodewords, err_handler);
-    if (err_handler.ErrCode()) return;
+    if (err_handler.errCode()) return;
     
     // Copy back into array of bytes -- only need to worry about the bytes that were data
     // We don't care about errors in the error-correction codewords
@@ -61,18 +71,18 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, ErrorHandler & err_handl
     // Construct a parser and read version, error-correction level
     
     BitMatrixParser parser(bits, err_handler);
-    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+    if (err_handler.errCode()) return Ref<DecoderResult>();
     
     Version *version = parser.readVersion(bits, err_handler);
-    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+    if (err_handler.errCode()) return Ref<DecoderResult>();
     
     // Read codewords
     ArrayRef<char> codewords(parser.readCodewords(err_handler));
-    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+    if (err_handler.errCode()) return Ref<DecoderResult>();
     
     // Separate into data blocks
     std::vector<Ref<DataBlock> > dataBlocks = DataBlock::getDataBlocks_new(codewords, version, err_handler);
-    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+    if (err_handler.errCode()) return Ref<DecoderResult>();
     
     int dataBlocksCount = dataBlocks.size();
     
@@ -97,7 +107,7 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, ErrorHandler & err_handl
     // Decode the contents of that stream of bytes
     DecodedBitStreamParser decodedBSParser;
     Ref<DecoderResult> decoderResult = decodedBSParser.decode(resultBytes, err_handler);
-    if (err_handler.ErrCode()) return Ref<DecoderResult> ();
+    if (err_handler.errCode()) return Ref<DecoderResult> ();
     
     return Ref<DecoderResult> (decoderResult);
 }

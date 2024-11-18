@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 #include "unicom_block.hpp"
 #include <stdio.h>
 
@@ -14,7 +24,7 @@ UnicomBlock::~UnicomBlock()
 {
 }
 
-void UnicomBlock::Init()
+void UnicomBlock::init()
 {
     if (m_bInit) return;
     m_vcIndex = std::vector<unsigned short>(m_iHeight * m_iWidth, 0);
@@ -25,30 +35,30 @@ void UnicomBlock::Init()
     m_bInit = true;
 }
 
-void UnicomBlock::Reset(Ref<BitMatrix> poImage)
+void UnicomBlock::reset(Ref<BitMatrix> poImage)
 {
     m_poImage = poImage;
     memset(&m_vcIndex[0], 0, m_vcIndex.size() * sizeof(short));
     m_iNowIdx = 0;
 }
 
-unsigned short UnicomBlock::GetUnicomBlockIndex(int y, int x)
+unsigned short UnicomBlock::getUnicomBlockIndex(int y, int x)
 {
     if (x < 0 || y < 0 || y >= m_iHeight || x >= m_iWidth) return 0;
     if (m_vcIndex[y * m_iWidth + x]) return m_vcIndex[y * m_iWidth + x];
-    Bfs(y, x);
+    bfs(y, x);
     return m_vcIndex[y * m_iWidth + x];
 }
 
-int UnicomBlock::GetUnicomBlockSize(int y, int x)
+int UnicomBlock::getUnicomBlockSize(int y, int x)
 {
     if (y >= m_iHeight || x >= m_iWidth) return 0;
     if (m_vcIndex[y * m_iWidth + x]) return m_vcCount[y * m_iWidth + x];
-    Bfs(y, x);
+    bfs(y, x);
     return m_vcCount[y * m_iWidth + x];
 }
 
-int UnicomBlock::GetMinPoint(int y, int x, int &iMinY, int &iMinX)
+int UnicomBlock::getMinPoint(int y, int x, int &iMinY, int &iMinX)
 {
     if (y >= m_iHeight || x >= m_iWidth) return -1;
     if (m_vcIndex[y * m_iWidth + x])
@@ -57,13 +67,13 @@ int UnicomBlock::GetMinPoint(int y, int x, int &iMinY, int &iMinX)
         iMinX = m_vcMinPnt[y * m_iWidth + x] & (0xFFFF);
         return 0;
     }
-    Bfs(y, x);
+    bfs(y, x);
     iMinY = m_vcMinPnt[y * m_iWidth + x] >> 16;
     iMinX = m_vcMinPnt[y * m_iWidth + x] & (0xFFFF);
     return 0;
 }
 
-int UnicomBlock::GetMaxPoint(int y, int x, int &iMaxY, int &iMaxX)
+int UnicomBlock::getMaxPoint(int y, int x, int &iMaxY, int &iMaxX)
 {
     if (y >= m_iHeight || x >= m_iWidth) return -1;
     if (m_vcIndex[y * m_iWidth + x])
@@ -72,13 +82,13 @@ int UnicomBlock::GetMaxPoint(int y, int x, int &iMaxY, int &iMaxX)
         iMaxX = m_vcMaxPnt[y * m_iWidth + x] & (0xFFFF);
         return 0;
     }
-    Bfs(y, x);
+    bfs(y, x);
     iMaxY = m_vcMaxPnt[y * m_iWidth + x] >> 16;
     iMaxX = m_vcMaxPnt[y * m_iWidth + x] & (0xFFFF);
     return 0;
 }
 
-void UnicomBlock::Bfs(int y, int x)
+void UnicomBlock::bfs(int y, int x)
 {
     if (static_cast<int>(m_iNowIdx) != -1) m_iNowIdx++;
     if (m_iNowIdx == 0) m_iNowIdx++;

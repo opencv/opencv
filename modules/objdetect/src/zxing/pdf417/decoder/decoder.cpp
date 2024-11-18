@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  * Copyright 2010, 2012 ZXing authors All rights reserved.
@@ -51,7 +61,7 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, DecodeHints const& hints
    
     ArrayRef<int> codewords;
     err_handler = parser.readCodewords(codewords);
-    if (err_handler.ErrCode() || codewords == NULL) {
+    if (err_handler.errCode() || codewords == NULL) {
         err_handler = FormatErrorHandler("PDF:Decoder:decode: cannot read codewords");
         return Ref<DecoderResult>();
     }
@@ -61,15 +71,15 @@ Ref<DecoderResult> Decoder::decode(Ref<BitMatrix> bits, DecodeHints const& hints
     ArrayRef<int> erasures = parser.getErasures();
     
     correctErrors(codewords, erasures, numECCodewords, err_handler);
-    if (err_handler.ErrCode())  return Ref<DecoderResult>();
+    if (err_handler.errCode())  return Ref<DecoderResult>();
     
     verifyCodewordCount(codewords, numECCodewords, err_handler);
-    if (err_handler.ErrCode()) return Ref<DecoderResult>();
+    if (err_handler.errCode()) return Ref<DecoderResult>();
     
     // Decode the codewords
     DecodedBitStreamParser dbs_parser;
     Ref<DecoderResult> rst = dbs_parser.decode(codewords, err_handler);
-    if (err_handler.ErrCode() || NULL == rst){
+    if (err_handler.errCode() || NULL == rst){
         err_handler = FormatErrorHandler("PDF:Decoder:decode: cannot read codewords");
         return Ref<DecoderResult>();
     }
@@ -100,7 +110,7 @@ void Decoder::verifyCodewordCount(ArrayRef<int> codewords, int numECCodewords, E
         return;
     }
     if (numberOfCodewords == 0) {
-        // Reset to the length of the array - 8 (Allow for at least level 3 Error Correction (8 Error Codewords)
+        // reset to the length of the array - 8 (Allow for at least level 3 Error Correction (8 Error Codewords)
         if (numECCodewords < cwsize) {
             codewords[0] = cwsize - numECCodewords;
         }
@@ -129,7 +139,7 @@ void Decoder::correctErrors(ArrayRef<int> codewords,
     
     Ref<ErrorCorrection> errorCorrection(new ErrorCorrection);
     errorCorrection->decode(codewords, numECCodewords, erasures, err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
         return;
     
     // 2012-06-27 HFN if, despite of error correction, there are still codewords with invalid

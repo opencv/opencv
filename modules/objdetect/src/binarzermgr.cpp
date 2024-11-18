@@ -1,3 +1,10 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+
 #include "binarzermgr.hpp"
 
 #include "qbarsource.hpp"
@@ -45,18 +52,18 @@ zxing::Ref<Binarizer> BinarizerMgr::Binarize(zxing::Ref<LuminanceSource> source)
     return binarizer;
 }
 
-void BinarizerMgr::SwitchBinarizer()
+void BinarizerMgr::switchBinarizer()
 {
     m_iNowRotateIndex = (m_iNowRotateIndex+1) % m_vecRotateBinarizer.size();
 }
 
-int BinarizerMgr::GetCurBinarizer()
+int BinarizerMgr::getCurBinarizer()
 {
     if (m_iNextOnceBinarizer != -1) return m_iNextOnceBinarizer;
     return m_vecRotateBinarizer[m_iNowRotateIndex];
 }
 
-void BinarizerMgr::SetNextOnceBinarizer(int iBinarizerIndex)
+void BinarizerMgr::setNextOnceBinarizer(int iBinarizerIndex)
 {
     m_iNextOnceBinarizer = iBinarizerIndex;
 }

@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 //
 //  dmtxmessage.hpp
 //  test_dm
@@ -5,8 +15,8 @@
 //  Created by wechatcv on 2022/5/5.
 //
 
-#ifndef dmtxmessage_hpp
-#define dmtxmessage_hpp
+#ifndef __ZXING_DATAMATRIX_LIBDMTX_DMTXMESSAGE_HPP__
+#define __ZXING_DATAMATRIX_LIBDMTX_DMTXMESSAGE_HPP__
 
 #include <stdio.h>
 #include <vector>
@@ -19,23 +29,23 @@ public:
     DmtxMessage() {}
     ~DmtxMessage();
     
-    int Init(int sizeIdx, int symbolFormat);
+    int init(int sizeIdx, int symbolFormat);
     
-    unsigned int DecodeDataStream(int sizeIdx, unsigned char *outputStart);
+    unsigned int decodeDataStream(int sizeIdx, unsigned char *outputStart);
     
 private:
-    int GetEncodationScheme(unsigned char cw);
-    DmtxBoolean ValidOutputWord(int value);
-    unsigned int PushOutputWord(int value);
-    unsigned int PushOutputC40TextWord(C40TextState *state, int value);
-    unsigned int PushOutputMacroHeader(int macroType);
-    void PushOutputMacroTrailer();
-    unsigned char *DecodeSchemeAscii(unsigned char *ptr, unsigned char *dataEnd);
-    unsigned char *DecodeSchemeC40Text(unsigned char *ptr, unsigned char *dataEnd, DmtxScheme encScheme);
-    unsigned char *DecodeSchemeX12(unsigned char *ptr, unsigned char *dataEnd);
-    unsigned char *DecodeSchemeEdifact(unsigned char *ptr, unsigned char *dataEnd);
-    unsigned char *DecodeSchemeBase256(unsigned char *ptr, unsigned char *dataEnd);
-    unsigned char UnRandomize255State(unsigned char value, int idx);
+    int getEncodationScheme(unsigned char cw);
+    DmtxBoolean validOutputWord(int value);
+    unsigned int pushOutputWord(int value);
+    unsigned int pushOutputC40TextWord(C40TextState *state, int value);
+    unsigned int pushOutputMacroHeader(int macroType);
+    void pushOutputMacroTrailer();
+    unsigned char *decodeSchemeAscii(unsigned char *ptr, unsigned char *dataEnd);
+    unsigned char *decodeSchemeC40Text(unsigned char *ptr, unsigned char *dataEnd, DmtxScheme encScheme);
+    unsigned char *decodeSchemeX12(unsigned char *ptr, unsigned char *dataEnd);
+    unsigned char *decodeSchemeEdifact(unsigned char *ptr, unsigned char *dataEnd);
+    unsigned char *decodeSchemeBase256(unsigned char *ptr, unsigned char *dataEnd);
+    unsigned char unRandomize255State(unsigned char value, int idx);
     
 public:
     size_t          arraySize;     /* mappingRows * mappingCols */
@@ -53,4 +63,4 @@ public:
 
 }  // namespace dmtx
 
-#endif /* dmtxmessage_hpp */
+#endif // __ZXING_DATAMATRIX_LIBDMTX_DMTXMESSAGE_HPP__

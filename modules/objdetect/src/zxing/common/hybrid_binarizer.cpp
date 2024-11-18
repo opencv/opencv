@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  HybridBinarizer.cpp
@@ -73,7 +83,7 @@ HybridBinarizer::createBinarizer(Ref<LuminanceSource> source) {
     return Ref<Binarizer> (new GlobalHistogramBinarizer(source));
 }
 
-/* Init integral
+/* init integral
  */
 int HybridBinarizer::initBlockIntegral()
 {
@@ -134,7 +144,7 @@ Ref<BitMatrix> HybridBinarizer::getBlackMatrix(ErrorHandler &err_handler)
     if (!matrix0_)
     {
         binarizeByBlock(0, err_handler);
-        if (err_handler.ErrCode())   return Ref<BitMatrix>();
+        if (err_handler.errCode())   return Ref<BitMatrix>();
     }
     
     // First call binarize image in child class to get matrix0_ and binCache
@@ -154,7 +164,7 @@ Ref<BitArray> HybridBinarizer::getBlackRow(int y, Ref<BitArray> row, ErrorHandle
     if (!matrix0_)
     {
         binarizeByBlock(0, err_handler);
-        if (err_handler.ErrCode())   return Ref<BitArray>();
+        if (err_handler.errCode())   return Ref<BitArray>();
     }
     
     // Call parent getBlackMatrix to get current matrix
@@ -247,7 +257,7 @@ void HybridBinarizer::calculateThresholdForBlock(Ref<ByteMatrix>& luminances,
             
             int average = sum / blockArea;
             thresholdBlock(luminances, xoffset, yoffset, average, width, matrix, err_handler);
-            if (err_handler.ErrCode())   return;
+            if (err_handler.errCode())   return;
         }
     }
 }
@@ -321,7 +331,7 @@ void HybridBinarizer::calculateThresholdForBlock(Ref<ByteMatrix>& luminances,
             int average = sum / 25;
 #ifndef USE_SET_INT
             thresholdBlock(luminances, xoffset, yoffset, average, width, matrix, err_handler);
-            if (err_handler.ErrCode())  return;
+            if (err_handler.errCode())  return;
 #else
             // handle 4 blacks one time
             int k = x % setIntCircle;
@@ -370,7 +380,7 @@ void HybridBinarizer::calculateThresholdForBlock(Ref<ByteMatrix>& luminances,
             }
             int average = sum / blockArea;
             thresholdBlock(luminances, xoffset, yoffset, average, width, matrix, err_handler);
-            if (err_handler.ErrCode())  return;
+            if (err_handler.errCode())  return;
         }
     }
 #endif
@@ -425,7 +435,7 @@ void HybridBinarizer::thresholdBlock(Ref<ByteMatrix>& luminances,
     int rowStep = rowSize - BLOCK_SIZE;
     
     unsigned char* pTemp = luminances->getByteRow(yoffset, err_handler);
-    if (err_handler.ErrCode())   return;
+    if (err_handler.errCode())   return;
     bool* bpTemp = matrix->getRowBoolPtr(yoffset);
     
     pTemp += xoffset;
@@ -458,7 +468,7 @@ void HybridBinarizer::thresholdIrregularBlock(Ref<ByteMatrix>& luminances,
 
     for (int y = 0; y < blockHeight; y++) {
         unsigned char* pTemp = luminances->getByteRow(yoffset+y, err_handler);
-        if (err_handler.ErrCode())   return;
+        if (err_handler.errCode())   return;
         pTemp = pTemp + xoffset;
         for (int x = 0; x < blockWidth; x++){
             // comparison needs to be <= so that black == 0 pixels are black even if the threshold is 0.
@@ -749,10 +759,10 @@ int HybridBinarizer::binarizeByBlock(int blockLevel, ErrorHandler & err_handler)
     if (width >= MINIMUM_DIMENSION && height >= MINIMUM_DIMENSION)
     {
         Ref<BitMatrix> newMatrix (new BitMatrix(width, height, err_handler));
-        if (err_handler.ErrCode())   return -1;
+        if (err_handler.errCode())   return -1;
         
         calculateThresholdForBlock(grayByte_, subWidth_, subHeight_, width, height, BLOCK_SIZE_POWER, newMatrix, err_handler);
-        if (err_handler.ErrCode())   return -1;
+        if (err_handler.errCode())   return -1;
         
         matrix0_ = newMatrix;
     }
@@ -760,7 +770,7 @@ int HybridBinarizer::binarizeByBlock(int blockLevel, ErrorHandler & err_handler)
     {
         // If the image is too small, fall back to the global histogram approach.
         matrix0_ = GlobalHistogramBinarizer::getBlackMatrix(err_handler);
-        if (err_handler.ErrCode())   return 1;
+        if (err_handler.errCode())   return 1;
     }
     
     return 1;

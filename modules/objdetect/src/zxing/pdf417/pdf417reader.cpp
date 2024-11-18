@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  * Copyright 2010 ZXing authors All rights reserved.
@@ -47,7 +57,7 @@ Ref<Result> PDF417Reader::decode(Ref<BinaryBitmap> image, DecodeHints hints) {
     Ref<DetectorResult> detectorResult;
     ErrorHandler err_handler;
     err_handler = detector.detect(hints, detectorResult);
-    if (err_handler.ErrCode() || detectorResult == NULL) {
+    if (err_handler.errCode() || detectorResult == NULL) {
         reader_call_path_ += "1";  // detect fail
         return Ref<Result>();
     }
@@ -67,7 +77,7 @@ Ref<Result> PDF417Reader::decode(Ref<BinaryBitmap> image, DecodeHints hints) {
     
     Ref<BitMatrix> linesGrid;
     err_handler = oLinesSampler.sample(linesGrid);
-    if (err_handler.ErrCode()) {
+    if (err_handler.errCode()) {
         reader_call_path_ += "2";  // sample fail
         return Ref<Result>();
     }
@@ -75,7 +85,7 @@ Ref<Result> PDF417Reader::decode(Ref<BinaryBitmap> image, DecodeHints hints) {
     if (!linesGrid)
     {
         Ref<BitMatrix> linesMatrixRotate(new BitMatrix(detectorResult->getBits()->getWidth(), detectorResult->getBits()->getHeight(), err_handler));
-        if (err_handler.ErrCode()) return Ref<Result>();
+        if (err_handler.errCode()) return Ref<Result>();
         for (int i = 0; i<detectorResult->getBits()->getHeight(); i++)
         {
             for (int j = 0; j < linesMatrixRotate->getWidth(); j++)
@@ -84,10 +94,10 @@ Ref<Result> PDF417Reader::decode(Ref<BinaryBitmap> image, DecodeHints hints) {
                     linesMatrixRotate->set(j, detectorResult->getBits()->getHeight() - i - 1);
             }
         }
-        oLinesSampler.SetLineMatrix(linesMatrixRotate);
+        oLinesSampler.setLineMatrix(linesMatrixRotate);
         
         err_handler = oLinesSampler.sample(linesGrid);
-        if (!linesGrid || err_handler.ErrCode()) {
+        if (!linesGrid || err_handler.errCode()) {
             err_handler = NotFoundErrorHandler("LinesSampler Faileds!");
             reader_call_path_ += "3";  // sample fail
             return Ref<Result>();
@@ -99,11 +109,11 @@ Ref<Result> PDF417Reader::decode(Ref<BinaryBitmap> image, DecodeHints hints) {
         // decoderResult = decoder.decode(detectorResult->getBits(), hints);
         ErrorHandler err_handler_;
         decoderResult = decoder.decode(linesGrid, hints, err_handler_);
-        if (err_handler_.ErrCode()) {
-            std::string cell_result = "zxing::ReaderException: " + err_handler_.ErrMsg();
-            err_handler_.Reset();
-            linesGrid = oLinesSampler.GetNextPossibleGrid(err_handler_);
-            if (err_handler_.ErrCode()) return Ref<Result>();
+        if (err_handler_.errCode()) {
+            std::string cell_result = "zxing::ReaderException: " + err_handler_.errMsg();
+            err_handler_.reset();
+            linesGrid = oLinesSampler.getNextPossibleGrid(err_handler_);
+            if (err_handler_.errCode()) return Ref<Result>();
             // retry logic
             if (!linesGrid || i == MAX_DECODE_FAIL_RETRY - 1){
                 err_handler_ = ReaderErrorHandler(cell_result);
@@ -129,14 +139,14 @@ Ref<BitMatrix> PDF417Reader::extractPureBits(Ref<BitMatrix> image, ErrorHandler 
     ArrayRef<int> rightBottomBlack = image->getBottomRightOnBit();
     
     int nModuleSize = moduleSize(leftTopBlack, image, err_handler);
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     
     int top = leftTopBlack[1];
     int bottom = rightBottomBlack[1];
     int left = findPatternStart(leftTopBlack[0], top, image, err_handler);
-    if (err_handler.ErrCode()) Ref<BitMatrix>();
+    if (err_handler.errCode()) Ref<BitMatrix>();
     int right = findPatternEnd(leftTopBlack[0], top, image, err_handler);
-    if (err_handler.ErrCode()) Ref<BitMatrix>();
+    if (err_handler.errCode()) Ref<BitMatrix>();
     
     int matrixWidth = (right - left + 1) / nModuleSize;
     int matrixHeight = (bottom - top + 1) / nModuleSize;
@@ -154,7 +164,7 @@ Ref<BitMatrix> PDF417Reader::extractPureBits(Ref<BitMatrix> image, ErrorHandler 
     
     // Now just read off the bits
     Ref<BitMatrix> bits(new BitMatrix(matrixWidth, matrixHeight, err_handler));
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     for (int y = 0; y < matrixHeight; y++) {
         int iOffset = top + y * nModuleSize;
         for (int x = 0; x < matrixWidth; x++) {

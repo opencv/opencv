@@ -1,43 +1,46 @@
 import os
-import re
 
-def update_include_paths(base_dir):
-    for root, dirs, files in os.walk(base_dir):
+# 要添加的内容
+header = """// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
+"""
+
+def add_header_to_file(file_path, header):
+    """在文件顶部添加指定的头部内容"""
+    try:
+        with open(file_path, 'r+', encoding='utf-8') as file:
+            content = file.read()
+            # 重置文件指针到文件开头
+            file.seek(0, 0)
+            # 写入头部和原内容
+            file.write(header + content)
+        print(f"Header added to: {file_path}")
+    except Exception as e:
+        print(f"Failed to process {file_path}: {e}")
+
+def process_directory(directory, extensions):
+    """处理指定目录中的所有文件"""
+    for root, _, files in os.walk(directory):
         for file in files:
-            if file.endswith(".hpp") or file.endswith(".cpp"):  # 只处理C++文件
+            if any(file.endswith(ext) for ext in extensions):
                 file_path = os.path.join(root, file)
-                with open(file_path, "r") as f:
-                    lines = f.readlines()
+                add_header_to_file(file_path, header)
 
-                updated_lines = []
-                modified = False
+def main():
+    directory = input("Enter the directory path to process: ").strip()
+    if os.path.exists(directory):
+        extensions = ['.cpp', '.hpp', '.h', '.c']  # 指定需要处理的文件类型
+        process_directory(directory, extensions)
+    else:
+        print("The directory does not exist.")
 
-                for line in lines:
-                    # 匹配 #include "..."
-                    match = re.match(r'#include\s+"(.+)"', line)
-                    if match:
-                        included_file = match.group(1)
-                        included_file_path = os.path.join(base_dir, included_file)
-
-                        # 检查目标文件是否存在
-                        if os.path.exists(included_file_path):
-                            # 计算相对路径
-                            relative_path = os.path.relpath(included_file_path, root)
-                            new_include = f'#include "{relative_path}"\n'
-                            updated_lines.append(new_include)
-                            modified = True
-                        else:
-                            updated_lines.append(line)
-                    else:
-                        updated_lines.append(line)
-
-                # 如果有修改，写回文件
-                if modified:
-                    with open(file_path, "w") as f:
-                        f.writelines(updated_lines)
-                    print(f"Updated includes in: {file_path}")
-
-# 使用方法
 if __name__ == "__main__":
-    base_directory = "./src"  # 修改为你的代码根目录
-    update_include_paths(base_directory)
+    main()

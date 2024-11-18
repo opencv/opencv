@@ -1,6 +1,16 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
-#ifndef __FINDER_PATTERN_FINDER_H__
-#define __FINDER_PATTERN_FINDER_H__
+#ifndef __ZXING_QRCODE_DETECTOR_FINDER_PATTERN_FINDER_HP__
+#define __ZXING_QRCODE_DETECTOR_FINDER_PATTERN_FINDER_HP__
 
 /*
  *  FinderPatternFinder.hpp
@@ -131,14 +141,14 @@ protected:
     std::vector<Ref<FinderPatternInfo> > getPatternInfos(ErrorHandler & err_handler);
     std::vector<Ref<FinderPatternInfo> > getPatternInfosFileMode(DecodeHints const& hints, ErrorHandler & err_handler);
 
-    bool IsPossibleFindPatterInfo(Ref<FinderPattern> a, Ref<FinderPattern> b, Ref<FinderPattern> c);
-    void PushToResult( Ref<FinderPattern> a, Ref<FinderPattern> b, Ref<FinderPattern> c, std::vector<Ref<FinderPatternInfo> > & patternInfos);
+    bool isPossibleFindPatterInfo(Ref<FinderPattern> a, Ref<FinderPattern> b, Ref<FinderPattern> c);
+    void pushToResult( Ref<FinderPattern> a, Ref<FinderPattern> b, Ref<FinderPattern> c, std::vector<Ref<FinderPatternInfo> > & patternInfos);
 
     Ref<BitMatrix> getImage();
     std::vector<Ref<FinderPattern> >& getPossibleCenters();
 
 public:
-    void InitConfig();
+    void initConfig();
     float distance(Ref<ResultPoint> p1, Ref<ResultPoint> p2);
     FinderPatternFinder(Ref<BitMatrix> image,  Ref<UnicomBlock> block, Ref<ResultPointCallback>const&);
     
@@ -151,4 +161,4 @@ public:
 }  // namespace qrcode
 }  // namespace zxing
 
-#endif  // __FINDER_PATTERN_FINDER_H__
+#endif  // __ZXING_QRCODE_DETECTOR_FINDER_PATTERN_FINDER_HP__

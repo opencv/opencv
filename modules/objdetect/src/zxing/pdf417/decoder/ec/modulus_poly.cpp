@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  * Copyright 2012 ZXing authors
@@ -148,7 +158,7 @@ Ref<ModulusPoly> ModulusPoly::add(Ref<ModulusPoly> other, ErrorHandler & err_han
     }
     
     Ref<ModulusPoly> tmp(new ModulusPoly(field_, sumDiff, err_handler));
-    if (err_handler.ErrCode()) return Ref<ModulusPoly>();
+    if (err_handler.errCode()) return Ref<ModulusPoly>();
     
     return tmp;
 }
@@ -163,10 +173,10 @@ Ref<ModulusPoly> ModulusPoly::subtract(Ref<ModulusPoly> other, ErrorHandler & er
     }
     
     Ref<ModulusPoly> tmp = other->negative(err_handler);
-    if (err_handler.ErrCode()) return Ref<ModulusPoly>();
+    if (err_handler.errCode()) return Ref<ModulusPoly>();
     
     tmp = add(tmp, err_handler);
-    if (err_handler.ErrCode()) return Ref<ModulusPoly>();
+    if (err_handler.errCode()) return Ref<ModulusPoly>();
     return tmp;
 }
 
@@ -192,7 +202,7 @@ Ref<ModulusPoly> ModulusPoly::multiply(Ref<ModulusPoly> other, ErrorHandler & er
     }
     
     Ref<ModulusPoly> tmp(new ModulusPoly(field_, product, err_handler));
-    if (err_handler.ErrCode()) return Ref<ModulusPoly>();
+    if (err_handler.errCode()) return Ref<ModulusPoly>();
     
     return tmp;
 }
@@ -205,7 +215,7 @@ Ref<ModulusPoly> ModulusPoly::negative(ErrorHandler & err_handler) {
     }
     
     Ref<ModulusPoly> tmp(new ModulusPoly(field_, negativeCoefficients, err_handler));
-    if (err_handler.ErrCode()) return Ref<ModulusPoly>();
+    if (err_handler.errCode()) return Ref<ModulusPoly>();
     
     return tmp;
 }
@@ -224,7 +234,7 @@ Ref<ModulusPoly> ModulusPoly::multiply(int scalar, ErrorHandler & err_handler) {
     }
     
     Ref<ModulusPoly>tmp(new ModulusPoly(field_, product, err_handler));
-    if (err_handler.ErrCode()) return Ref<ModulusPoly>();
+    if (err_handler.errCode()) return Ref<ModulusPoly>();
     
     return tmp;
 }
@@ -244,7 +254,7 @@ Ref<ModulusPoly> ModulusPoly::multiplyByMonomial(int degree, int coefficient, Er
     }
 
     Ref<ModulusPoly> tmp(new ModulusPoly(field_, product, err_handler));
-    if (err_handler.ErrCode()) return Ref<ModulusPoly>();
+    if (err_handler.errCode()) return Ref<ModulusPoly>();
     
     return tmp;
 }
@@ -264,22 +274,22 @@ std::vector<Ref<ModulusPoly> > ModulusPoly::divide(Ref<ModulusPoly> other, Error
     
     int denominatorLeadingTerm = other->getCoefficient(other->getDegree());
     int inverseDenominatorLeadingTerm = field_.inverse(denominatorLeadingTerm, err_handler);
-    if (err_handler.ErrCode()) return std::vector<Ref<ModulusPoly> >();
+    if (err_handler.errCode()) return std::vector<Ref<ModulusPoly> >();
     
     while (remainder->getDegree() >= other->getDegree() && !remainder->isZero()) {
         int degreeDifference = remainder->getDegree() - other->getDegree();
         int scale = field_.multiply(remainder->getCoefficient(remainder->getDegree()), inverseDenominatorLeadingTerm);
         Ref<ModulusPoly> term (other->multiplyByMonomial(degreeDifference, scale, err_handler));
-        if (err_handler.ErrCode()) return std::vector<Ref<ModulusPoly> >();
+        if (err_handler.errCode()) return std::vector<Ref<ModulusPoly> >();
         
         Ref<ModulusPoly> iterationQuotient (field_.buildMonomial(degreeDifference, scale, err_handler));
-        if (err_handler.ErrCode()) return std::vector<Ref<ModulusPoly> >();
+        if (err_handler.errCode()) return std::vector<Ref<ModulusPoly> >();
         
         quotient = quotient->add(iterationQuotient, err_handler);
-        if (err_handler.ErrCode()) return std::vector<Ref<ModulusPoly> >();
+        if (err_handler.errCode()) return std::vector<Ref<ModulusPoly> >();
         
         remainder = remainder->subtract(term, err_handler);
-        if (err_handler.ErrCode()) return std::vector<Ref<ModulusPoly> >();
+        if (err_handler.errCode()) return std::vector<Ref<ModulusPoly> >();
     }
     
     std::vector<Ref<ModulusPoly> > result(2);

@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  FinderPatternFinder.cpp
@@ -201,25 +211,25 @@ int FinderPatternFinder::MAX_MODULES = 177;  // support up to version 40  which 
 int FinderPatternFinder::_minModuleSize = 1;  // 1 pixel/module times MIN_SKIP modules/center
 int FinderPatternFinder::INTEGER_MATH_SHIFT = 8;
 
-void FinderPatternFinder::InitConfig()
+void FinderPatternFinder::initConfig()
 {
-    FPS_MS_VAL = GetIniParser()->GetReal("FP_SELECT", "FPS_MS_VAL", 1.0);
-    FP_IS_SELECT_BEST = GetIniParser()->GetInteger("FP_SELECT", "FP_IS_SELECT_BEST", 1);
-    FP_IS_SELECT_FILE_BEST = GetIniParser()->GetInteger("FP_SELECT", "FP_IS_SELECT_FILE_BEST", 1);
-    FP_INPUT_MAX_NUM = GetIniParser()->GetInteger("FP_SELECT", "FP_INPUT_MAX_NUM", 100);
-    FP_FILTER_SIZE = GetIniParser()->GetReal("FP_SELECT", "FP_FILTER_SIZE", 100);
-    FP_COUNT_MIN = GetIniParser()->GetReal("FP_SELECT", "FP_COUNT_MIN", 2.0);
-    FP_MS_MIN = GetIniParser()->GetReal("FP_SELECT", "FP_MS_MIN", 1.0);
-    FPS_CLUSTER_MAX = GetIniParser()->GetInteger("FP_SELECT", "FPS_CLUSTER_MAX", 4);
-    FPS_RESULT_MAX = GetIniParser()->GetInteger("FP_SELECT", "FPS_RESULT_MAX", 12);
-    K_FACTOR = GetIniParser()->GetInteger("FP_SELECT", "K_FACTOR", 2);
-    FP_RIGHT_ANGLE = GetIniParser()->GetReal("FP_SELECT", "FP_RIGHT_ANGLE", 0.342);
-    FP_SMALL_ANGLE1 = GetIniParser()->GetReal("FP_SELECT", "FP_SMALL_ANGLE1", 0.8191);
-    FP_SMALL_ANGLE2 = GetIniParser()->GetReal("FP_SELECT", "FP_SMALL_ANGLE2", 0.5736);
+    FPS_MS_VAL = GetIniParser()->getReal("FP_SELECT", "FPS_MS_VAL", 1.0);
+    FP_IS_SELECT_BEST = GetIniParser()->getInteger("FP_SELECT", "FP_IS_SELECT_BEST", 1);
+    FP_IS_SELECT_FILE_BEST = GetIniParser()->getInteger("FP_SELECT", "FP_IS_SELECT_FILE_BEST", 1);
+    FP_INPUT_MAX_NUM = GetIniParser()->getInteger("FP_SELECT", "FP_INPUT_MAX_NUM", 100);
+    FP_FILTER_SIZE = GetIniParser()->getReal("FP_SELECT", "FP_FILTER_SIZE", 100);
+    FP_COUNT_MIN = GetIniParser()->getReal("FP_SELECT", "FP_COUNT_MIN", 2.0);
+    FP_MS_MIN = GetIniParser()->getReal("FP_SELECT", "FP_MS_MIN", 1.0);
+    FPS_CLUSTER_MAX = GetIniParser()->getInteger("FP_SELECT", "FPS_CLUSTER_MAX", 4);
+    FPS_RESULT_MAX = GetIniParser()->getInteger("FP_SELECT", "FPS_RESULT_MAX", 12);
+    K_FACTOR = GetIniParser()->getInteger("FP_SELECT", "K_FACTOR", 2);
+    FP_RIGHT_ANGLE = GetIniParser()->getReal("FP_SELECT", "FP_RIGHT_ANGLE", 0.342);
+    FP_SMALL_ANGLE1 = GetIniParser()->getReal("FP_SELECT", "FP_SMALL_ANGLE1", 0.8191);
+    FP_SMALL_ANGLE2 = GetIniParser()->getReal("FP_SELECT", "FP_SMALL_ANGLE2", 0.5736);
     
-    QR_MIN_FP_AREA_ERR = GetIniParser()->GetReal("FP_SELECT", "BLOCK_AREA_ERR", 3);
-    QR_MIN_FP_MS_ERR = GetIniParser()->GetReal("FP_SELECT", "BLOCK_MS_ERR", 1);
-    QR_MIN_FP_ACCEPT = GetIniParser()->GetReal("FP_SELECT", "BLOCK_ACCEPT", 4);
+    QR_MIN_FP_AREA_ERR = GetIniParser()->getReal("FP_SELECT", "BLOCK_AREA_ERR", 3);
+    QR_MIN_FP_MS_ERR = GetIniParser()->getReal("FP_SELECT", "BLOCK_MS_ERR", 1);
+    QR_MIN_FP_ACCEPT = GetIniParser()->getReal("FP_SELECT", "BLOCK_ACCEPT", 4);
 }
 
 std::vector<Ref<FinderPatternInfo> > FinderPatternFinder::find(DecodeHints const& hints , ErrorHandler & err_handler)
@@ -358,13 +368,13 @@ std::vector<Ref<FinderPatternInfo> > FinderPatternFinder::find(DecodeHints const
             
             for (size_t rj = matrix.getRowFirstIsWhite(i) ? 1 : 0; (rj + 4) < size_t(row_counter_width); rj += 2)
             {
-                if (block_->GetUnicomBlockIndex(i, irow_offsets[rj]) == block_->GetUnicomBlockIndex(i, irow_offsets[rj + 4]) &&
-                    block_->GetUnicomBlockIndex(i, irow_offsets[rj + 1]) == block_->GetUnicomBlockIndex(i, irow_offsets[rj + 3]) &&
-                    block_->GetUnicomBlockIndex(i, irow_offsets[rj]) != block_->GetUnicomBlockIndex(i, irow_offsets[rj + 2]))
+                if (block_->getUnicomBlockIndex(i, irow_offsets[rj]) == block_->getUnicomBlockIndex(i, irow_offsets[rj + 4]) &&
+                    block_->getUnicomBlockIndex(i, irow_offsets[rj + 1]) == block_->getUnicomBlockIndex(i, irow_offsets[rj + 3]) &&
+                    block_->getUnicomBlockIndex(i, irow_offsets[rj]) != block_->getUnicomBlockIndex(i, irow_offsets[rj + 2]))
                 {
-                    const int iBlackCir = block_->GetUnicomBlockSize(i, irow_offsets[rj]);
-                    const int iWhiteCir = block_->GetUnicomBlockSize(i, irow_offsets[rj + 1]);
-                    const int iBlackPnt = block_->GetUnicomBlockSize(i, irow_offsets[rj + 2]);
+                    const int iBlackCir = block_->getUnicomBlockSize(i, irow_offsets[rj]);
+                    const int iWhiteCir = block_->getUnicomBlockSize(i, irow_offsets[rj + 1]);
+                    const int iBlackPnt = block_->getUnicomBlockSize(i, irow_offsets[rj + 2]);
                     
                     // we can pass : iBlackCir == iBlackCir
                     // so optimizing
@@ -396,8 +406,8 @@ std::vector<Ref<FinderPatternInfo> > FinderPatternFinder::find(DecodeHints const
                         else
                         {
                             int iMinX = 0, iMinY = 0, iMaxX = 0, iMaxY = 0;
-                            block_->GetMinPoint(i, irow_offsets[rj + 1], iMinY, iMinX);
-                            block_->GetMaxPoint(i, irow_offsets[rj + 3], iMaxY, iMaxX);
+                            block_->getMinPoint(i, irow_offsets[rj + 1], iMinY, iMinX);
+                            block_->getMaxPoint(i, irow_offsets[rj + 3], iMaxY, iMaxX);
                             centerI = (iMaxY + iMinY) / 2.0;  // y
                             centerJ = (iMaxX + iMinX) / 2.0;  // x
                         }
@@ -422,7 +432,7 @@ std::vector<Ref<FinderPatternInfo> > FinderPatternFinder::find(DecodeHints const
     // filter and sort
     std::vector<Ref<FinderPatternInfo> > patternInfos;
     patternInfos = getPatternInfosFileMode(hints, err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         return std::vector<Ref<FinderPatternInfo> >();
     }
@@ -531,7 +541,7 @@ vector<Ref<FinderPatternInfo> > FinderPatternFinder::getPatternInfos(ErrorHandle
     
     // Handle possible centers for both pure and normal qrcode
     finderPatterns = selectBestPatterns(err_handler);
-    if (err_handler.ErrCode() == 0)
+    if (err_handler.errCode() == 0)
     {
         finderPatterns = orderBestPatterns(finderPatterns);
         resultBest = new FinderPatternInfo(finderPatterns);
@@ -607,7 +617,7 @@ vector<Ref<FinderPatternInfo> > FinderPatternFinder::getPatternInfos(ErrorHandle
     return patternInfos;
 }
 
-bool FinderPatternFinder::IsPossibleFindPatterInfo( Ref<FinderPattern> a, Ref<FinderPattern> b, Ref<FinderPattern> c)
+bool FinderPatternFinder::isPossibleFindPatterInfo( Ref<FinderPattern> a, Ref<FinderPattern> b, Ref<FinderPattern> c)
 {
     // check fangcha
     float aMs = a->getEstimatedModuleSize();
@@ -629,7 +639,7 @@ bool FinderPatternFinder::IsPossibleFindPatterInfo( Ref<FinderPattern> a, Ref<Fi
     return true;
 }
 
-void FinderPatternFinder::PushToResult( Ref<FinderPattern> a, Ref<FinderPattern> b, Ref<FinderPattern> c, vector<Ref<FinderPatternInfo> > & patternInfos)
+void FinderPatternFinder::pushToResult( Ref<FinderPattern> a, Ref<FinderPattern> b, Ref<FinderPattern> c, vector<Ref<FinderPatternInfo> > & patternInfos)
 {
     vector< Ref<FinderPattern> > finderPatterns;
     finderPatterns.push_back(a); finderPatterns.push_back(b); finderPatterns.push_back(c);
@@ -680,7 +690,7 @@ vector<Ref<FinderPatternInfo> > FinderPatternFinder::getPatternInfosFileMode(Dec
     
     if (startSize == 3)
     {
-        PushToResult(possibleCenters_[0], possibleCenters_[1] , possibleCenters_[2], patternInfos);
+        pushToResult(possibleCenters_[0], possibleCenters_[1] , possibleCenters_[2], patternInfos);
         return patternInfos;
     }
     
@@ -718,7 +728,7 @@ vector<Ref<FinderPatternInfo> > FinderPatternFinder::getPatternInfosFileMode(Dec
         possible_idxs.erase(possible_idxs.begin() + max_idx);
         if (possible_idxs.size() == 3)
         {
-            PushToResult(possibleCenters_[possible_idxs[0]], possibleCenters_[possible_idxs[1]], possibleCenters_[possible_idxs[2]], patternInfos);
+            pushToResult(possibleCenters_[possible_idxs[0]], possibleCenters_[possible_idxs[1]], possibleCenters_[possible_idxs[2]], patternInfos);
         }
     }
     
@@ -726,14 +736,14 @@ vector<Ref<FinderPatternInfo> > FinderPatternFinder::getPatternInfosFileMode(Dec
     if (FP_IS_SELECT_BEST)
     {
         finderPatterns = selectBestPatterns(err_handler);
-        if (err_handler.ErrCode() == 0)
-            PushToResult(finderPatterns[0], finderPatterns[1], finderPatterns[2], patternInfos);
+        if (err_handler.errCode() == 0)
+            pushToResult(finderPatterns[0], finderPatterns[1], finderPatterns[2], patternInfos);
     }
     if (FP_IS_SELECT_FILE_BEST)
     {
         finderPatterns = selectFileBestPatterns(err_handler);
-        if (err_handler.ErrCode() == 0)
-            PushToResult(finderPatterns[0], finderPatterns[1], finderPatterns[2], patternInfos);
+        if (err_handler.errCode() == 0)
+            pushToResult(finderPatterns[0], finderPatterns[1], finderPatterns[2], patternInfos);
     }
     
     // kmean
@@ -770,11 +780,11 @@ vector<Ref<FinderPatternInfo> > FinderPatternFinder::getPatternInfosFileMode(Dec
      {
      for (uint z = y + 1; z < standardCenters.size(); z++)
      {
-     bool check_result = IsPossibleFindPatterInfo(
+     bool check_result = isPossibleFindPatterInfo(
      standardCenters[x], standardCenters[y], standardCenters[z]);
      if (check_result)
      {
-     PushToResult(standardCenters[x], standardCenters[y], standardCenters[z],
+     pushToResult(standardCenters[x], standardCenters[y], standardCenters[z],
      patternInfos);
      }
      }
@@ -826,10 +836,10 @@ vector<Ref<FinderPatternInfo> > FinderPatternFinder::getPatternInfosFileMode(Dec
      {
      for (uint z = y + 1; z < clusters_out[i].samples.size() && cluster_select <= FPS_CLUSTER_MAX && patternInfos.size() <= size_t(FPS_RESULT_MAX); z++)
      {
-     bool check_result = IsPossibleFindPatterInfo(clusterPatterns[x], clusterPatterns[y], clusterPatterns[z]);
+     bool check_result = isPossibleFindPatterInfo(clusterPatterns[x], clusterPatterns[y], clusterPatterns[z]);
      if (check_result)
      {
-     PushToResult(clusterPatterns[x], clusterPatterns[y], clusterPatterns[z], patternInfos);
+     pushToResult(clusterPatterns[x], clusterPatterns[y], clusterPatterns[z], patternInfos);
      cluster_select++;
      }
      }
@@ -2161,7 +2171,7 @@ FinderPatternFinder::FinderPatternFinder(Ref<BitMatrix> image,
                                          Ref<ResultPointCallback>const& callback) : image_(image), possibleCenters_(), hasSkipped_(false), block_(block) , callback_(callback),
 compared_finder_counts(0) {
     CURRENT_CHECK_STATE = FinderPatternFinder::NORMAL;
-    InitConfig();
+    initConfig();
 }
 
 Ref<BitMatrix> FinderPatternFinder::getImage() {

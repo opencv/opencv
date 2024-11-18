@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 #include "compress.hpp"
 
 #include <assert.h>
@@ -22,7 +32,7 @@ CompressTools::~CompressTools()
 {
 }
 
-bool CompressTools::CanBeCompress(const std::string &sText)
+bool CompressTools::canBeCompress(const std::string &sText)
 {
     for (size_t i = 0; i < sText.size(); ++i)
     {
@@ -32,7 +42,7 @@ bool CompressTools::CanBeCompress(const std::string &sText)
     return true;
 }
 
-bool CompressTools::CanBeRevert(const std::string &sText)
+bool CompressTools::canBeRevert(const std::string &sText)
 {
     for (size_t i = 0; i < sText.size(); ++i)
     {
@@ -65,7 +75,7 @@ int CompressTools::SetMap(int iBase, const std::string &sKey)
     return 0;
 }
 
-int CompressTools::Encode(int iBase, const std::string &sBefore, std::string &sAfter)
+int CompressTools::encode(int iBase, const std::string &sBefore, std::string &sAfter)
 {
     if (!m_bSetFlag[iBase]) return 1;
     
@@ -110,7 +120,7 @@ int CompressTools::Encode(int iBase, const std::string &sBefore, std::string &sA
     return 0;
 }
 
-int CompressTools::Decode(int iBase, const std::string &sBefore, std::string &sAfter)
+int CompressTools::decode(int iBase, const std::string &sBefore, std::string &sAfter)
 {
     if (!m_bSetFlag[iBase]) return 1;
     
@@ -160,17 +170,17 @@ int CompressTools::Decode(int iBase, const std::string &sBefore, std::string &sA
     return 0;
 }
 
-std::string CompressTools::Compress(const std::string &sText)
+std::string CompressTools::compress(const std::string &sText)
 {
     std::string sCode;
-    int iRet = Encode(BEFORE_BASE, sText, sCode);
+    int iRet = encode(BEFORE_BASE, sText, sCode);
     if (iRet)
     {
         printf("compress.encode err! ret = %d\n", iRet);
         return "";
     }
     std::string sNewText;
-    iRet = Decode(AFTER_BASE, sCode, sNewText);
+    iRet = decode(AFTER_BASE, sCode, sNewText);
     if (iRet)
     {
         printf("compress.decode err! ret = %d\n", iRet);
@@ -179,17 +189,17 @@ std::string CompressTools::Compress(const std::string &sText)
     return sNewText;
 }
 
-std::string CompressTools::Revert(const std::string &sCode)
+std::string CompressTools::revert(const std::string &sCode)
 {
     std::string sText;
-    int iRet = Encode(AFTER_BASE, sCode, sText);
+    int iRet = encode(AFTER_BASE, sCode, sText);
     if (iRet)
     {
         printf("revert.encode err! ret = %d\n", iRet);
         return "";
     }
     std::string sNewCode;
-    iRet = Decode(BEFORE_BASE, sText, sNewCode);
+    iRet = decode(BEFORE_BASE, sText, sNewCode);
     if (iRet)
     {
         printf("revert.decode err! ret = %d\n", iRet);

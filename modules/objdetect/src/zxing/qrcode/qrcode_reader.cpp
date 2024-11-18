@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  QRCodeReader.cpp
@@ -68,21 +78,21 @@ Ref<Result> QRCodeReader::decode(Ref<BinaryBitmap> image, DecodeHints hints) {
     // Binarize image using the Histogram Binarized method and be binarized
     ErrorHandler err_handler;
     Ref<BitMatrix> imageBitMatrix = image->getBlackMatrix(err_handler);
-    if (err_handler.ErrCode() || imageBitMatrix == NULL)
+    if (err_handler.errCode() || imageBitMatrix == NULL)
         return Ref<Result>();
     
     Ref<Result> rst = decodeMore(image, imageBitMatrix, hints, err_handler);
-    if (err_handler.ErrCode() || rst == NULL)
+    if (err_handler.errCode() || rst == NULL)
     {
         reader_call_path_ += "1";  // enter mirro
         
         // black white mirro!!!
         Ref<BitMatrix> invertedMatrix = image->getInvertedMatrix(err_handler);
-        if (err_handler.ErrCode() || invertedMatrix == NULL)
+        if (err_handler.errCode() || invertedMatrix == NULL)
             return Ref<Result>();
         
         Ref<Result> rst_ = decodeMore(image, invertedMatrix, hints, err_handler);
-        if (err_handler.ErrCode() || rst == NULL)
+        if (err_handler.errCode() || rst == NULL)
             return Ref<Result>();
         return rst_;
     }
@@ -101,18 +111,18 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
     nowHints_ = hints;
     std::string ept;
     
-    image->m_poUnicomBlock->Init();
-    image->m_poUnicomBlock->Reset(imageBitMatrix);
+    image->m_poUnicomBlock->init();
+    image->m_poUnicomBlock->reset(imageBitMatrix);
     
     // detect
-    err_handler.Reset();
+    err_handler.reset();
     Ref<Detector> detector(new Detector(imageBitMatrix, image->m_poUnicomBlock));
     detector->detect(hints, err_handler);
     setReaderState(detector->getState());
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         err_handler = zxing::ReaderErrorHandler("error detect");
-        ept = err_handler.ErrMsg();
+        ept = err_handler.errMsg();
         reader_call_path_ += "2";  // detect fail
         return Ref<Result>();
     }
@@ -149,14 +159,14 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
         for (int j = 0; j < possibleAlignmentCount; j++)
         {
             ArrayRef< Ref<ResultPoint> > points;
-            err_handler.Reset();
+            err_handler.reset();
             
             Ref<AlignmentPattern> alignpattern = detector->getAlignmentPattern(i, j);
             
             Ref<DetectorResult> detectorResult = detector->getResultViaAlignment(i, j, detectedDimension_, err_handler);
-            if (err_handler.ErrCode())
+            if (err_handler.errCode())
             {
-                ept = err_handler.ErrCode();
+                ept = err_handler.errCode();
                 setDecoderFix(decoder_.getPossibleFix(), points);
                 setReaderState(decoder_.getState());
                 
@@ -170,9 +180,9 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
             points = detectorResult->getPoints();
             
             Ref<DecoderResult> decoderResult(decoder_.decode(detectorResult->getBits(), err_handler));
-            if (err_handler.ErrCode())
+            if (err_handler.errCode())
             {
-                ept = err_handler.ErrCode();
+                ept = err_handler.errCode();
                 setDecoderFix(decoder_.getPossibleFix(), points);
                 setReaderState(decoder_.getState());
                 
@@ -223,20 +233,20 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
                             }
                             
                             // decode
-                            err_handler.Reset();
+                            err_handler.reset();
                             detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, true, err_handler);
-                            if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                            if (detectorResult != NULL && err_handler.errCode() == 0) {
                                 decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                if (decoderResult != NULL && err_handler.errCode() == 0) {
                                     is_decode_success = true;
                                 }
                             }
                             if (!is_decode_success) {
-                                err_handler.Reset();
+                                err_handler.reset();
                                 detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, false, err_handler);
-                                if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                if (detectorResult != NULL && err_handler.errCode() == 0) {
                                     decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                    if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                    if (decoderResult != NULL && err_handler.errCode() == 0) {
                                         is_decode_success = true;
                                     }
                                 }
@@ -266,11 +276,11 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
                             }
                             
                             {
-                                err_handler.Reset();
+                                err_handler.reset();
                                 detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, true, err_handler);
-                                if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                if (detectorResult != NULL && err_handler.errCode() == 0) {
                                     decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                    if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                    if (decoderResult != NULL && err_handler.errCode() == 0) {
                                         is_decode_success = true;
                                     }
                                 }
@@ -278,11 +288,11 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
                             
                             {
                                 if (!is_decode_success) {
-                                    err_handler.Reset();
+                                    err_handler.reset();
                                     detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, false, err_handler);
-                                    if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                    if (detectorResult != NULL && err_handler.errCode() == 0) {
                                         decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                        if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                        if (decoderResult != NULL && err_handler.errCode() == 0) {
                                             is_decode_success = true;
                                         }
                                     }
@@ -300,21 +310,21 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
                                             pts_src[kk] = corner_pts_src[segment_len + kk - begin_idx];
                                         }
                                         
-                                        err_handler.Reset();
+                                        err_handler.reset();
                                         detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, true, err_handler);
-                                        if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                        if (detectorResult != NULL && err_handler.errCode() == 0) {
                                             decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                            if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                            if (decoderResult != NULL && err_handler.errCode() == 0) {
                                                 is_decode_success = true;
                                             }
                                         }
                                     }
                                     if (!is_decode_success) {
-                                        err_handler.Reset();
+                                        err_handler.reset();
                                         detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, false, err_handler);
-                                        if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                        if (detectorResult != NULL && err_handler.errCode() == 0) {
                                             decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                            if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                            if (decoderResult != NULL && err_handler.errCode() == 0) {
                                                 is_decode_success = true;
                                             }
                                         }
@@ -329,21 +339,21 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
                                             pts_src[kk] = corner_pts_src[2 * segment_len + kk - begin_idx];
                                         }
                                         
-                                        err_handler.Reset();
+                                        err_handler.reset();
                                         detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, true, err_handler);
-                                        if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                        if (detectorResult != NULL && err_handler.errCode() == 0) {
                                             decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                            if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                            if (decoderResult != NULL && err_handler.errCode() == 0) {
                                                 is_decode_success = true;
                                             }
                                         }
                                     }
                                     if (!is_decode_success) {
-                                        err_handler.Reset();
+                                        err_handler.reset();
                                         detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, false, err_handler);
-                                        if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                        if (detectorResult != NULL && err_handler.errCode() == 0) {
                                             decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                            if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                            if (decoderResult != NULL && err_handler.errCode() == 0) {
                                                 is_decode_success = true;
                                             }
                                         }
@@ -377,11 +387,11 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
                         }
                         
                         {
-                            err_handler.Reset();
+                            err_handler.reset();
                             detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, true, err_handler);
-                            if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                            if (detectorResult != NULL && err_handler.errCode() == 0) {
                                 decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                if (decoderResult != NULL && err_handler.errCode() == 0) {
                                     is_decode_success = true;
                                 }
                             }
@@ -389,11 +399,11 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
                         
                         {
                             if (!is_decode_success) {
-                                err_handler.Reset();
+                                err_handler.reset();
                                 detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, false, err_handler);
-                                if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                if (detectorResult != NULL && err_handler.errCode() == 0) {
                                     decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                    if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                    if (decoderResult != NULL && err_handler.errCode() == 0) {
                                         is_decode_success = true;
                                     }
                                 }
@@ -411,21 +421,21 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
                                     for (size_t kk = begin_idx; kk < pts_src.size(); kk ++) {
                                         pts_src[kk] = corner_pts_src[segment_len + kk - begin_idx];
                                     }
-                                    err_handler.Reset();
+                                    err_handler.reset();
                                     detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, true, err_handler);
-                                    if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                    if (detectorResult != NULL && err_handler.errCode() == 0) {
                                         decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                        if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                        if (decoderResult != NULL && err_handler.errCode() == 0) {
                                             is_decode_success = true;
                                         }
                                     }
                                 }
                                 if (!is_decode_success) {
-                                    err_handler.Reset();
+                                    err_handler.reset();
                                     detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, false, err_handler);
-                                    if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                    if (detectorResult != NULL && err_handler.errCode() == 0) {
                                         decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                        if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                        if (decoderResult != NULL && err_handler.errCode() == 0) {
                                             is_decode_success = true;
                                         }
                                     }
@@ -441,21 +451,21 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
                                 for (size_t kk = begin_idx; kk < pts_src.size(); kk ++) {
                                     pts_src[kk] = corner_pts_src[2 * segment_len + kk - begin_idx];
                                 }
-                                err_handler.Reset();
+                                err_handler.reset();
                                 detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, true, err_handler);
-                                if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                if (detectorResult != NULL && err_handler.errCode() == 0) {
                                     decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                    if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                    if (decoderResult != NULL && err_handler.errCode() == 0) {
                                         is_decode_success = true;
                                     }
                                 }
                             }
                             if (!is_decode_success) {
-                                err_handler.Reset();
+                                err_handler.reset();
                                 detectorResult = detector->getResultViaPoints(hints, detectedDimension_, pts_src, pts_dst, false, err_handler);
-                                if (detectorResult != NULL && err_handler.ErrCode() == 0) {
+                                if (detectorResult != NULL && err_handler.errCode() == 0) {
                                     decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-                                    if (decoderResult != NULL && err_handler.ErrCode() == 0) {
+                                    if (decoderResult != NULL && err_handler.errCode() == 0) {
                                         is_decode_success = true;
                                     }
                                 }
@@ -464,7 +474,7 @@ Ref<Result> QRCodeReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix> ima
                     }
                 }
                 
-                if (err_handler.ErrCode() || detectorResult == NULL || decoderResult == NULL)
+                if (err_handler.errCode() || detectorResult == NULL || decoderResult == NULL)
                     continue;
             }
             

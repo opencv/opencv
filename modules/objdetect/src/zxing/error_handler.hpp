@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // =====================================================================================
 // 
 //       Filename:  ErrorHandler.hpp
@@ -14,8 +24,8 @@
 // 
 // =====================================================================================
 
-#ifndef __ERRORHANDLER_H__
-#define __ERRORHANDLER_H__
+#ifndef __ZXING_ERROR_HANDLER_HPP__
+#define __ZXING_ERROR_HANDLER_HPP__
 
 #include <string>
 
@@ -45,17 +55,17 @@ public:
     
     virtual ~ErrorHandler() {};
     
-    virtual inline int ErrCode() const {return err_code_;}
-    virtual inline const std::string & ErrMsg() const  {return err_msg_;}
-    virtual inline int HandlerType() const {return handler_type_;}
+    virtual inline int errCode() const {return err_code_;}
+    virtual inline const std::string & errMsg() const  {return err_msg_;}
+    virtual inline int handlerType() const {return handler_type_;}
     
     
-    virtual void Init();
+    virtual void init();
     ErrorHandler(const ErrorHandler & other);
     ErrorHandler& operator=(const ErrorHandler & other);
     
-    virtual void PrintInfo();
-    virtual void Reset();
+    virtual void printInfo();
+    virtual void reset();
     
 protected:
     int handler_type_;
@@ -69,14 +79,14 @@ private:
 #define DECLARE_ERROR_HANDLER(__HANDLER__)  \
 class __HANDLER__##ErrorHandler : public ErrorHandler{  \
 public: \
-__HANDLER__##ErrorHandler() : ErrorHandler() { Init();};    \
-__HANDLER__##ErrorHandler(std::string & err_msg) : ErrorHandler(err_msg) { Init();};    \
-__HANDLER__##ErrorHandler(const char * err_msg) : ErrorHandler(err_msg) { Init();}; \
-__HANDLER__##ErrorHandler(int err_code) : ErrorHandler(err_code) { Init();};    \
-__HANDLER__##ErrorHandler(int err_code, std::string & err_msg) : ErrorHandler(err_code, err_msg) { Init();};    \
-__HANDLER__##ErrorHandler(int err_code, const char * err_msg) : ErrorHandler(err_code, err_msg) {Init();}; \
-__HANDLER__##ErrorHandler(const ErrorHandler & other) : ErrorHandler(other) { Init();}; \
-void Init(){    \
+__HANDLER__##ErrorHandler() : ErrorHandler() { init();};    \
+__HANDLER__##ErrorHandler(std::string & err_msg) : ErrorHandler(err_msg) { init();};    \
+__HANDLER__##ErrorHandler(const char * err_msg) : ErrorHandler(err_msg) { init();}; \
+__HANDLER__##ErrorHandler(int err_code) : ErrorHandler(err_code) { init();};    \
+__HANDLER__##ErrorHandler(int err_code, std::string & err_msg) : ErrorHandler(err_code, err_msg) { init();};    \
+__HANDLER__##ErrorHandler(int err_code, const char * err_msg) : ErrorHandler(err_code, err_msg) {init();}; \
+__HANDLER__##ErrorHandler(const ErrorHandler & other) : ErrorHandler(other) { init();}; \
+void init(){    \
 handler_type_ = KErrorHandler_##__HANDLER__;    \
 }   \
 };
@@ -94,4 +104,4 @@ DECLARE_ERROR_HANDLER(IllegalState)
 }   // namespace zxing
 
 
-#endif  // __##ERRORHANDLER_H__
+#endif  // __ZXING_ERROR_HANDLER_HPP__

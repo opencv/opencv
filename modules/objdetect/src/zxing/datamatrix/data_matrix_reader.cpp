@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  DataMatrixReader.cpp
@@ -46,14 +56,14 @@ Ref<Result> DataMatrixReader::decode(Ref<BinaryBitmap> image, DecodeHints hints)
     Ref<BitMatrix> imageBitMatrix=image->getBlackMatrix(err_handler);
     
     Ref<Result> rst = decodeMore(image, imageBitMatrix, hints, err_handler);
-    if (err_handler.ErrCode() || rst == NULL)
+    if (err_handler.errCode() || rst == NULL)
     {
         // black white mirro!!!
-        err_handler.Reset();
+        err_handler.reset();
         Ref<BitMatrix> invertedMatrix = image->getInvertedMatrix(err_handler);
-        if (err_handler.ErrCode() || invertedMatrix == NULL)   return Ref<Result>();
+        if (err_handler.errCode() || invertedMatrix == NULL)   return Ref<Result>();
         Ref<Result> rst_ = decodeMore(image, invertedMatrix, hints, err_handler);
-        if (err_handler.ErrCode() || rst_ == NULL) {
+        if (err_handler.errCode() || rst_ == NULL) {
             if (!hints.getTryVideo() && hints.isUseLibdmtx()) {
                 Ref<LuminanceSource> gray_img = image->getLuminanceSource();
                 dmtx::DmtxDecode dec;
@@ -98,11 +108,11 @@ Ref<Result> DataMatrixReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix>
     (void)hints;
 
     Detector detector(imageBitMatrix);
-    if (err_handler.ErrCode()) return Ref<Result>();
+    if (err_handler.errCode()) return Ref<Result>();
     
     Ref<DetectorResult> detectorResult(detector.detect(true, true, err_handler));
     
-    if (err_handler.ErrCode() || detectorResult == NULL)
+    if (err_handler.errCode() || detectorResult == NULL)
     {
         reader_call_path_ += "1";  // detect fail
         return Ref<Result>();
@@ -111,7 +121,7 @@ Ref<Result> DataMatrixReader::decodeMore(Ref<BinaryBitmap> image, Ref<BitMatrix>
     ArrayRef< Ref<ResultPoint> > points(detectorResult->getPoints());
     
     Ref<DecoderResult> decoderResult = decoder_.decode(detectorResult->getBits(), err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
     {
         reader_call_path_ += "2";  // decode fail
         return Ref<Result>();

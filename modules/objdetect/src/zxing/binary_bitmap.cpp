@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  Copyright 2010 ZXing authors All rights reserved.
@@ -35,19 +45,19 @@ BinaryBitmap::~BinaryBitmap() {
 
 Ref<BitArray> BinaryBitmap::getBlackRow(int y, Ref<BitArray> row, ErrorHandler & err_handler) {
     Ref<BitArray> bitary = binarizer_->getBlackRow(y, row, err_handler);
-    if (err_handler.ErrCode()) return Ref<BitArray>();
+    if (err_handler.errCode()) return Ref<BitArray>();
     return bitary;
 }
 
 Ref<BitMatrix> BinaryBitmap::getBlackMatrix(ErrorHandler & err_handler) {
     Ref<BitMatrix> bitmtx = binarizer_->getBlackMatrix(err_handler);
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     return bitmtx;
 }
 
 Ref<BitMatrix> BinaryBitmap::getInvertedMatrix(ErrorHandler & err_handler) {
     Ref<BitMatrix> bitmtx = binarizer_->getInvertedMatrix(err_handler);
-    if (err_handler.ErrCode()) return Ref<BitMatrix>();
+    if (err_handler.errCode()) return Ref<BitMatrix>();
     return bitmtx;
 }
 

@@ -1,5 +1,12 @@
-#ifndef QBARDECODER_H
-#define QBARDECODER_H
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+
+#ifndef __OPENCV_QBARDECODER_HPP__
+#define __OPENCV_QBARDECODER_HPP__
 
 #include <iostream>
 #include <string>
@@ -45,7 +52,7 @@ public:
     QBarDecoder() = default;
     ~QBarDecoder() = default;
 
-    void SetReaders(const std::unordered_set<QBAR_READER> &readers) { readers_ = readers; }
+    void setReaders(const std::unordered_set<QBAR_READER> &readers) { readers_ = readers; }
     void setDetectorReferenceSize(int reference_size) {
         if (_init_detector_model_) {
             detector_->setReferenceSize(reference_size);
@@ -65,16 +72,16 @@ public:
         this->iou_thres = iou_thres;
     }   
 
-    void Detect(Mat srcImage, std::vector<DetectInfo> &bboxes);
-    QBAR_RESULT Decode(Mat& srcImage);
-    std::vector<QBAR_RESULT> Decode(Mat srcImage, std::vector<DetectInfo> &_detect_results_);
+    void detect(Mat srcImage, std::vector<DetectInfo> &bboxes);
+    QBAR_RESULT decode(Mat& srcImage);
+    std::vector<QBAR_RESULT> decode(Mat srcImage, std::vector<DetectInfo> &_detect_results_);
 
-    int InitAIModel(QBAR_ML_MODE &ml_mode);
+    int initAIModel(QBAR_ML_MODE &ml_mode);
 
 private:
-    int Decode(zxing::Ref<zxing::LuminanceSource> source, zxing::Ref<zxing::Result> &result, zxing::DecodeHints& decodeHints);
-    QBAR_RESULT ProcessResult(zxing::Result *zx_result);
-    void AddFormatsToDecodeHints(zxing::DecodeHints &hints);
+    int decode(zxing::Ref<zxing::LuminanceSource> source, zxing::Ref<zxing::Result> &result, zxing::DecodeHints& decodeHints);
+    QBAR_RESULT processResult(zxing::Result *zx_result);
+    void addFormatsToDecodeHints(zxing::DecodeHints &hints);
     void nms(std::vector<QBAR_RESULT>& results, float NMS_THRESH);
 
     Mat cropObj(const Mat& img, const DetectInfo& bbox, Align& aligner);
@@ -96,4 +103,4 @@ private:
     std::mutex sr_mutex;
 };
 }  // namespace cv
-#endif
+#endif // __OPENCV_QBARDECODER_HPP__

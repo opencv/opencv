@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  FastWindowBinarizer.cpp
@@ -84,7 +94,7 @@ Ref<BitMatrix> FastWindowBinarizer::getBlackMatrix(ErrorHandler & err_handler) {
     if (!matrix0_)
     {
         binarizeImage1(err_handler);
-        if (err_handler.ErrCode()) return Ref<BitMatrix>();
+        if (err_handler.errCode()) return Ref<BitMatrix>();
     }
     
     return Binarizer::getBlackMatrix(err_handler);
@@ -102,7 +112,7 @@ Ref<BitArray> FastWindowBinarizer::getBlackRow(int y, Ref<BitArray> row, ErrorHa
     if (!matrix0_)
     {
         binarizeImage1(err_handler);
-        if (err_handler.ErrCode())   return Ref<BitArray>();
+        if (err_handler.errCode())   return Ref<BitArray>();
     }
     // Call parent getBlackMatrix to get current matrix
     return Binarizer::getBlackRow(y, row, err_handler);
@@ -199,7 +209,7 @@ int FastWindowBinarizer::binarizeImage1(ErrorHandler &err_handler){
     int width = source.getWidth();
     int height = source.getHeight();
     Ref<BitMatrix> matrix(new BitMatrix(width, height, err_handler));
-    if (err_handler.ErrCode())   return -1;
+    if (err_handler.errCode())   return -1;
     
     ArrayRef<char> localLuminances = source.getMatrix();
     
@@ -207,7 +217,7 @@ int FastWindowBinarizer::binarizeImage1(ErrorHandler &err_handler){
     unsigned char* dst = matrix->getPtr();
     
     fastWindow(src, dst, width, height, err_handler);
-    if (err_handler.ErrCode())   return -1;
+    if (err_handler.errCode())   return -1;
     
     matrix0_ = matrix;
     return 0;
@@ -283,7 +293,7 @@ int FastWindowBinarizer::binarizeImage0(ErrorHandler &err_handler)
         cumulative(_blockTotals, _totals, aw, ah);
         
         Ref<BitMatrix> newMatrix(new BitMatrix(width, height, err_handler));
-        if (err_handler.ErrCode())   return -1;
+        if (err_handler.errCode())   return -1;
         
         unsigned char* newimg = newMatrix->getPtr();
         for (int by = 0; by < ah; by++)

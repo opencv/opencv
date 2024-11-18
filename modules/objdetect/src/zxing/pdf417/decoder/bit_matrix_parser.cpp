@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  * Copyright 2008-2012 ZXing authors All rights reserved.
@@ -87,12 +97,12 @@ ErrorHandler BitMatrixParser::readCodewords(ArrayRef<int> & ret_array)
         }
         // Process Row
         err_handler = processRow(rowNumber, codewords, next, next);
-        if (err_handler.ErrCode()) return err_handler;
+        if (err_handler.errCode()) return err_handler;
         rowNumber++;
     }
 
     err_handler = trimArray(erasures_, eraseCount_, erasures_);
-    if (err_handler.ErrCode())   return err_handler;
+    if (err_handler.errCode())   return err_handler;
     
     err_handler = trimArray(codewords, next, ret_array);
     return err_handler;
@@ -182,7 +192,7 @@ ErrorHandler BitMatrixParser::processRow(int rowNumber, ArrayRef<int> codewords,
                 }
             }
             // 2012-06-22 hfn: verify whether outer columns are still okay:
-            if (!VerifyOuterColumns(rowNumber))
+            if (!verifyOuterColumns(rowNumber))
             {
                 return FormatErrorHandler("BitMatrixParser::processRow(PDF417): outer columns corrupted!");
             }
@@ -283,18 +293,18 @@ int BitMatrixParser::findCodewordIndex(int64_t symbol)
 /*
  * 2012-06-22 hfn additional verification of outer columns
  */
-bool BitMatrixParser::VerifyOuterColumns(int rownumber)
+bool BitMatrixParser::verifyOuterColumns(int rownumber)
 {
-    return IsEqual(aLeftColumnTriple_[0], aRightColumnTriple_[1], rownumber)
-    && IsEqual(aLeftColumnTriple_[1], aRightColumnTriple_[2], rownumber)
-    && IsEqual(aLeftColumnTriple_[2], aRightColumnTriple_[0], rownumber);
+    return isEqual(aLeftColumnTriple_[0], aRightColumnTriple_[1], rownumber)
+    && isEqual(aLeftColumnTriple_[1], aRightColumnTriple_[2], rownumber)
+    && isEqual(aLeftColumnTriple_[2], aRightColumnTriple_[0], rownumber);
 }
 
 /*
  * Verifies whether two codewords are equal or at least one of the codewords has not
  * been recognized.
  */
-bool BitMatrixParser::IsEqual(int &a, int &b, int rownumber)
+bool BitMatrixParser::isEqual(int &a, int &b, int rownumber)
 {
     int ret = (a == b) || (a == -1) || (b == -1);
     if (!ret) {

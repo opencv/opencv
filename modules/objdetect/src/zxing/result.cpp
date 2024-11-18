@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  Result.cpp
@@ -98,8 +108,8 @@ ArrayRef< Ref<ResultPoint> >& Result::getResultPoints() {
 
 void Result::setResultPoints(int idx, float x, float y){
     if (idx < 0 || idx >= resultPoints_->size()) return;
-    resultPoints_[idx]->SetX(x);
-    resultPoints_[idx]->SetY(y);
+    resultPoints_[idx]->setX(x);
+    resultPoints_[idx]->setY(y);
 }
 
 void Result::enlargeResultPoints(int scale){

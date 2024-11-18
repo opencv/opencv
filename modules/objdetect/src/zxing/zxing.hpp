@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  Copyright 2013 ZXing authors All rights reserved.
@@ -14,8 +24,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef __ZXING_H_
-#define __ZXING_H_
+#ifndef __ZXING_ZXING_HPP__
+#define __ZXING_ZXING_HPP__
 
 
 //>>>>>>>> type define
@@ -177,4 +187,4 @@ private:
 #define ZXING_TIME_MARK(string) (void)0
 #endif
 
-#endif
+#endif // __ZXING_ZXING_HPP__

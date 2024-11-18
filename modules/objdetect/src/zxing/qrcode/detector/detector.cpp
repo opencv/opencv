@@ -1,3 +1,13 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Tencent is pleased to support the open source community by making WeChat QRCode available.
+// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
+//
+// Modified from ZXing. Copyright ZXing authors.
+// Licensed under the Apache License, Version 2.0 (the "License").
+
 // -*- mode:c++; tab-width:2; indent-tabs-mode:nil; c-basic-offset:2 -*-
 /*
  *  Detector.cpp
@@ -86,7 +96,7 @@ void Detector::detect(DecodeHints const& hints, ErrorHandler & err_handler)
     finder.setFinderLoose(finderConditionLoose_);
     
     std::vector<Ref<FinderPatternInfo> > finderInfos = finder.find(hints, err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
         return;
     
     // Get all possible results
@@ -293,7 +303,7 @@ int Detector::locatePatternRect(float x, float y, std::vector<cv::Point2f>& poin
 int Detector::getFixedAlignmentPoints(size_t patternIdx, int dimension, float module_size,  std::vector<cv::Point2f>& pts_src, std::vector<cv::Point2f>& pts_dst) {
     ErrorHandler err_handler;
     Version *provisionalVersion = Version::getProvisionalVersionForDimension(dimension, err_handler);
-    if (err_handler.ErrCode() != 0)
+    if (err_handler.errCode() != 0)
         return -1;
     
     if (patternIdx >= possiblePatternResults_.size()) return -1;
@@ -429,7 +439,7 @@ int Detector::getFixedAlignmentPoints(size_t patternIdx, int dimension, float mo
 int Detector::getFlexibleAlignmentPoints(size_t patternIdx, size_t alignmentIdx, int dimension, float module_size, std::vector<cv::Point2f>& pts_src, std::vector<cv::Point2f>& pts_dst) {
     ErrorHandler err_handler;
     Version *provisionalVersion = Version::getProvisionalVersionForDimension(dimension, err_handler);
-    if (err_handler.ErrCode() != 0)
+    if (err_handler.errCode() != 0)
         return -1;
     
     if (patternIdx >= possiblePatternResults_.size()) return -1;
@@ -1166,7 +1176,7 @@ int Detector::getPossibleAlignmentCount(size_t idx, DecodeHints& hints)
     if (possiblePatternResults_[idx]->possibleAlignmentPatterns.size() == 0)
     {
         Ref<PatternResult> result = processFinderPatternInfo(hints, possiblePatternResults_[idx]->finderPatternInfo, err_handler);
-        if (err_handler.ErrCode())
+        if (err_handler.errCode())
             return -1;
         
         possiblePatternResults_[idx] = result;
@@ -1200,7 +1210,7 @@ Ref<DetectorResult> Detector::getResultViaAlignmentMore(DecodeHints const& hints
     }
     
     Version *provisionalVersion = Version::getProvisionalVersionForDimension(dimension, err_handler);
-    if (err_handler.ErrCode() != 0)
+    if (err_handler.errCode() != 0)
         return Ref<DetectorResult>(NULL);
     
     Ref<FinderPattern> topLeft(possiblePatternResults_[patternIdx]->finderPatternInfo->getTopLeft());
@@ -1452,7 +1462,7 @@ Ref<DetectorResult> Detector::getResultViaAlignmentMore(DecodeHints const& hints
         cv::Mat H = cv::findHomography(pts_src, pts_dst, cv::RANSAC);
         
         Ref<BitMatrix> bits(sampleGrid(image_, dimension, H, err_handler));
-        if (err_handler.ErrCode())
+        if (err_handler.errCode())
             Ref<DetectorResult>();
         
         std::vector<cv::Point2f> corners(4);
@@ -1504,7 +1514,7 @@ Ref<DetectorResult> Detector::getResultViaAlignmentMore(DecodeHints const& hints
                                        a_x, b_x, c_x, d_x, e_x, f_x,
                                        a_y, b_y, c_y, d_y, e_y, f_y,
                                        err_handler));
-        if (err_handler.ErrCode())
+        if (err_handler.errCode())
             return Ref<DetectorResult>();
         
         std::vector<cv::Point2f> corners(4);
@@ -1561,7 +1571,7 @@ Ref<DetectorResult> Detector::getResultViaAlignment(size_t patternIdx, size_t al
         
         Ref<PerspectiveTransform> transform = createTransform(topLeft, topRight, bottomLeft, alignment, possibleDimension);
         Ref<BitMatrix> bits(sampleGrid(image_, possibleDimension, transform, err_handler));
-        if (err_handler.ErrCode())
+        if (err_handler.errCode())
             Ref<DetectorResult>();
         
         ArrayRef< Ref<ResultPoint> > corrners(new Array< Ref<ResultPoint> >(4));
@@ -1584,7 +1594,7 @@ Ref<DetectorResult> Detector::getResultViaAlignment(size_t patternIdx, size_t al
         Ref<AlignmentPattern> alignment(possiblePatternResults_[patternIdx]->possibleAlignmentPatterns[0]);
         Ref<PerspectiveTransform> transform = createTransform(topLeft, topRight, bottomLeft, alignment, possibleDimension);
         Ref<BitMatrix> bits(sampleGrid(image_, possibleDimension, transform, err_handler));
-        if (err_handler.ErrCode())
+        if (err_handler.errCode())
             Ref<DetectorResult>();
         
         ArrayRef< Ref<ResultPoint> > corrners(new Array< Ref<ResultPoint> >(4));
@@ -1616,7 +1626,7 @@ Ref<DetectorResult> Detector::getResultViaPoints(DecodeHints const& hints, int d
         cv::Mat H = cv::findHomography(pts_src, pts_dst, cv::RANSAC);
         
         Ref<BitMatrix> bits(sampleGrid(image_, dimension, H, err_handler));
-        if (err_handler.ErrCode())
+        if (err_handler.errCode())
             Ref<DetectorResult>();
         
         std::vector<cv::Point2f> corners(4);
@@ -1669,7 +1679,7 @@ Ref<DetectorResult> Detector::getResultViaPoints(DecodeHints const& hints, int d
                                        a_x, b_x, c_x, d_x, e_x, f_x,
                                        a_y, b_y, c_y, d_y, e_y, f_y,
                                        err_handler));
-        if (err_handler.ErrCode())
+        if (err_handler.errCode())
             return Ref<DetectorResult>();
         
         std::vector<cv::Point2f> corners(4);
@@ -1723,9 +1733,9 @@ Ref<AlignmentPattern> Detector::getNearestAlignmentPattern(int tryFindRange, flo
     
     ErrorHandler err_handler;
     for (int i = 2; i <= tryFindRange; i <<= 1) {
-        err_handler.Reset();
+        err_handler.reset();
         alignmentPattern = findAlignmentInRegion(moduleSize, estAlignmentX, estAlignmentY, static_cast<float>(i), err_handler);
-        if (err_handler.ErrCode() == 0)
+        if (err_handler.errCode() == 0)
             break;
     }
     
@@ -1788,11 +1798,11 @@ Ref<PatternResult> Detector::processFinderPatternInfo(::DecodeHints& hints, Ref<
     
     for (int i = 0; i < 5; i++)
     {
-        err_handler.Reset();
+        err_handler.reset();
         dimension = oriDimension + dimensionDiff[i];
         
         provisionalVersion = Version::getProvisionalVersionForDimension(dimension, err_handler);
-        if (err_handler.ErrCode() == 0)
+        if (err_handler.errCode() == 0)
         {
             // refine modulesize
             {
@@ -1824,7 +1834,7 @@ Ref<PatternResult> Detector::processFinderPatternInfo(::DecodeHints& hints, Ref<
     
     // find aligment point
     modulesBetweenFPCenters = provisionalVersion->getDimensionForVersion(err_handler) - 7;
-    if (err_handler.ErrCode())  {
+    if (err_handler.errCode())  {
         err_handler = zxing::ReaderErrorHandler("Cannot get version number");
         return Ref<PatternResult>();
     }
@@ -1846,20 +1856,20 @@ Ref<PatternResult> Detector::processFinderPatternInfo(::DecodeHints& hints, Ref<
     Ref<AlignmentPattern> fitLineCenter;
     
     fitLineCenter = findAlignmentWithFitLine(topLeft, topRight, bottomLeft, moduleSize, err_handler);
-    if (err_handler.ErrCode() == 0)
+    if (err_handler.errCode() == 0)
     {
         if (fitLineCenter != NULL && MathUtils::isInRange(fitLineCenter->getX(), fitLineCenter->getY(), image_->getWidth(), image_->getHeight())){
             foundFitLine = true;
         }
     }
-    err_handler.Reset();
+    err_handler.reset();
     
     Ref<AlignmentPattern> fitAP, estAP;
     
     // Anything above version 1 has an alignment pattern
     if (provisionalVersion->getAlignmentPatternCenters().size() > 0) {
         int tryFindRange =  provisionalVersion->getDimensionForVersion(err_handler) / 4;
-        if (err_handler.ErrCode())  return Ref<PatternResult>();
+        if (err_handler.errCode())  return Ref<PatternResult>();
         
         if (foundFitLine == true)
         {
@@ -2055,7 +2065,7 @@ Ref<BitMatrix> Detector::sampleGrid(Ref<BitMatrix> image, int dimension, Ref<Per
 {
     GridSampler &sampler = GridSampler::getInstance();
     Ref<BitMatrix> bits = sampler.sampleGrid(image, dimension, transform, err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
         return Ref<BitMatrix>();
     
     return bits;
@@ -2065,7 +2075,7 @@ Ref<BitMatrix> Detector::sampleGrid(Ref<BitMatrix> image, int dimension, cv::Mat
 {
     GridSampler &sampler = GridSampler::getInstance();
     Ref<BitMatrix> bits = sampler.sampleGrid(image, dimension, transform, err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
         return Ref<BitMatrix>();
     
     return bits;
@@ -2081,7 +2091,7 @@ Ref<BitMatrix> Detector::sampleGrid(Ref<BitMatrix> image, int dimension,
                                              ax, bx, cx, dx, ex, fx,
                                              ay, by, cy, dy, ey, fy,
                                              err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
         return Ref<BitMatrix>();
     
     return bits;
@@ -2177,7 +2187,7 @@ Ref<AlignmentPattern> Detector::findAlignmentInRegion(float overallEstModuleSize
                                            - alignmentAreaLeftX, alignmentAreaBottomY - alignmentAreaTopY, overallEstModuleSize, callback_);
     
     Ref<AlignmentPattern> ap = alignmentFinder.find(err_handler);
-    if (err_handler.ErrCode())
+    if (err_handler.errCode())
         return Ref<AlignmentPattern>();
     return ap;
 }
@@ -2859,10 +2869,10 @@ bool Detector::checkConvexQuadrilateral(Ref<ResultPoint> topLeft, Ref<ResultPoin
     v3[0] = bottomRight->getX()-bottomLeft->getX(); v3[1] = bottomRight->getY()-bottomLeft->getY();
     v4[0] = bottomLeft->getX()-topLeft->getX(); v4[1] = bottomLeft->getY()-topLeft->getY();
     
-    float c1 = MathUtils::VecCross(v1, v2);
-    float c2 = MathUtils::VecCross(v2, v3);
-    float c3 = MathUtils::VecCross(v3, v4);
-    float c4 = MathUtils::VecCross(v4, v1);
+    float c1 = MathUtils::vecCross(v1, v2);
+    float c2 = MathUtils::vecCross(v2, v3);
+    float c3 = MathUtils::vecCross(v3, v4);
+    float c4 = MathUtils::vecCross(v4, v1);
     
     // If it looks like a convex quadrilateral
     if  ((c1 < 0.0 && c2 < 0.0 && c3 < 0.0 && c4 < 0.0)||(c1 > 0.0 && c2 > 0.0 && c3 > 0.0 && c4 > 0.0))

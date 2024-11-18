@@ -863,7 +863,7 @@ public:
 };
 
 enum DECODER_READER{
-    DECODER_ONED_BARCODE = 1,// barcode, which includes UPC_A, UPC_E, EAN_8, EAN_13, CODE_39, CODE_93, CODE_128, ITF, CODABAR
+    // DECODER_ONED_BARCODE = 1,// barcode, which includes UPC_A, UPC_E, EAN_8, EAN_13, CODE_39, CODE_93, CODE_128, ITF, CODABAR
     DECODER_QRCODE = 2,// QRCODE
     DECODER_PDF417 = 3,// PDF417
     DECODER_DATAMATRIX = 4,// DATAMATRIX
@@ -871,10 +871,10 @@ enum DECODER_READER{
 
 typedef std::vector<DECODER_READER> vector_DECODER_READER;
 
-class CV_EXPORTS_W_SIMPLE CodeDetector : public GraphicalCodeDetector
+class CV_EXPORTS_W_SIMPLE CodeDetectorWeChat : public GraphicalCodeDetector
 {
 public:
-    CV_WRAP CodeDetector(const std::string& detection_model_path_ = "",
+    CV_WRAP CodeDetectorWeChat(const std::string& detection_model_path_ = "",
                             const std::string& super_resolution_model_path_ = "",
                             const std::vector<DECODER_READER>& readers = std::vector<DECODER_READER>(),
                             const float detector_iou_thres = 0.6,
