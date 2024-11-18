@@ -19,7 +19,10 @@ def add_argument(zoo, parser, name, help, required=False, default=None, type=Non
             if "sha1" in name:
                 prefix = name.replace("sha1", "")
                 value = node.getNode(prefix + "load_info")
-                value = value.getNode(name)
+                if prefix == "config_":
+                    value = value.getNode("sha1")
+                else:
+                    value = value.getNode(name)
             if "download_sha" in name:
                 prefix = name.replace("download_sha", "")
                 value = node.getNode(prefix + "load_info")
@@ -97,6 +100,8 @@ def add_preproc_args(zoo, parser, sample, alias=None, prefix=""):
                  help='An index of background class in predictions. If not negative, exclude such class from list of classes.', alias=alias)
     add_argument(zoo, parser, prefix+'sha1', type=str,
                  help='Optional path to hashsum of downloaded model to be loaded from models.yml', alias=alias)
+    add_argument(zoo, parser, prefix+'config_sha1', type=str,
+                 help='Optional path to hashsum of downloaded config to be loaded from models.yml', alias=alias)
     add_argument(zoo, parser, prefix+'download_sha', type=str,
                  help='Optional path to hashsum of downloaded model to be loaded from models.yml', alias=alias)
 

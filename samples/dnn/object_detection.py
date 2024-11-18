@@ -37,9 +37,6 @@ parser.add_argument('--out_tf_graph', default='graph.pbtxt',
                     help='For models from TensorFlow Object Detection API, you may '
                          'pass a .config file which was used for training through --config '
                          'argument. This way an additional .pbtxt file with TensorFlow graph will be created.')
-parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'darknet', 'dldt', 'onnx'],
-                    help='Optional name of an origin framework of the model. '
-                         'Detect it automatically if it does not set.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
 parser.add_argument('--nms', type=float, default=0.4, help='Non-maximum suppression threshold')
 parser.add_argument('--backend', default="default", type=str, choices=backends,
@@ -76,8 +73,9 @@ if args.alias is None or hasattr(args, 'help'):
 
 args.model = findModel(args.model, args.sha1)
 if args.config is not None:
-    args.config = findFile(args.config)
-args.labels = findFile(args.labels)
+    args.config = findModel(args.config, args.config_sha1)
+if args.labels is not None:
+    args.labels = findFile(args.labels)
 
 # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
 config = readTextMessage(args.config)
@@ -100,7 +98,8 @@ if args.labels:
         labels = f.read().rstrip('\n').split('\n')
 
 # Load a network
-net = cv.dnn.readNet(args.model, args.config, args.framework)
+engine = cv.dnn.ENGINE_CLASSIC
+net = cv.dnn.readNet(args.model, args.config, "", engine)
 net.setPreferableBackend(get_backend_id(args.backend))
 net.setPreferableTarget(get_target_id(args.target))
 outNames = net.getUnconnectedOutLayersNames()
@@ -157,7 +156,7 @@ def postprocess(frame, outs):
                     classIds.append(int(detection[1]) - 1)  # Skip background label
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
-    elif lastLayer.type == 'Region' or args.postprocessing == 'yolov8':
+    elif lastLayer.type == 'Region' or lastLayer.type == 'Identity':
         # Network produces output blob with a shape NxC where N is a number of
         # detected objects and C is a number of classes + 4 where the first 4
         # numbers are [center_x, center_y, width, height]
