@@ -26,6 +26,18 @@
 #define cv_hal_rotate90             fastcv_hal_rotate
 #undef  cv_hal_addWeighted8u
 #define cv_hal_addWeighted8u        fastcv_hal_addWeighted8u
+#undef  cv_hal_gemm32f
+#define cv_hal_gemm32f              fastcv_hal_gemm32f
+#undef  cv_hal_mul8u
+#define cv_hal_mul8u                fastcv_hal_mul8u
+#undef  cv_hal_mul16s
+#define cv_hal_mul16s               fastcv_hal_mul16s
+#undef  cv_hal_mul32f
+#define cv_hal_mul32f               fastcv_hal_mul32f
+#undef  cv_hal_merge8u
+#define cv_hal_merge8u              fastcv_hal_merge8u
+#undef  cv_hal_split8u
+#define cv_hal_split8u              fastcv_hal_split8u
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief look-up table transform of an array.
@@ -176,5 +188,72 @@ int fastcv_hal_addWeighted8u(
     int             width,
     int             height,
     const double    scalars[3]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_gemm32f(
+    const float*    src1,
+    size_t          src1_step,
+    const float*    src2,
+    size_t          src2_step,
+    float           alpha,
+    const float*    src3,
+    size_t          src3_step,
+    float           beta,
+    float*          dst,
+    size_t          dst_step,
+    int             m,
+    int             n,
+    int             k,
+    int             flags);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+int fastcv_hal_mul8u(
+    const uchar     *src1_data,
+	size_t          src1_step,
+	const uchar     *src2_data,
+	size_t          src2_step,
+	uchar           *dst_data,
+	size_t          dst_step,
+	int             width,
+	int             height,
+	double          scale);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_mul16s(
+    const short     *src1_data,
+	size_t          src1_step,
+	const short     *src2_data,
+	size_t          src2_step,
+	short           *dst_data,
+	size_t          dst_step,
+	int             width,
+	int             height,
+	double          scale); 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_mul32f(
+    const float    *src1_data,
+	size_t          src1_step,
+	const float    *src2_data,
+	size_t          src2_step,
+	float          *dst_data,
+	size_t          dst_step,
+	int             width,
+	int             height,
+	double          scale);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_merge8u(
+    const uchar     **src_data,
+	uchar           *dst_data,
+	int len,
+	int cn);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_split8u(
+    const uchar    *src_data,
+	uchar          **dst_data,
+	int             len,
+	int             cn);
 
 #endif

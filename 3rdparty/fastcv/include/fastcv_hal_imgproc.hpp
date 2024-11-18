@@ -20,6 +20,8 @@
 #define cv_hal_gaussianBlurBinomial fastcv_hal_gaussianBlurBinomial
 #undef  cv_hal_warpPerspective
 #define cv_hal_warpPerspective      fastcv_hal_warpPerspective
+#undef  cv_hal_pyrdown
+#define cv_hal_pyrdown              fastcv_hal_pyrdown
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief Calculate medianBlur filter
@@ -216,5 +218,19 @@ int fastcv_hal_warpPerspective(
     int             interpolation,
     int             border_type,
     const double    border_value[4]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_pyrdown(
+    const uchar*     src_data, 
+    size_t           src_step,
+    int              src_width,
+    int              src_height,
+    uchar*           dst_data,
+    size_t           dst_step,
+    int              dst_width,
+    int              dst_height,
+    int              depth,
+    int              cn,
+    int              border_type);
 
 #endif
