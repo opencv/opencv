@@ -199,8 +199,9 @@ int main(int argc, char** argv)
     paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
     //![preprocess_params]
     String sha1 = parser.get<String>("sha1");
+    String config_sha1 = parser.get<String>("config_sha1");
     const string modelPath = findModel(parser.get<String>("model"), sha1);
-    const string configPath = findFile(parser.get<String>("config"));
+    const string configPath = findModel(parser.get<String>("config"), config_sha1);
     framework = modelPath.substr(modelPath.rfind('.') + 1);
 
     if (parser.has("labels"))
@@ -216,7 +217,8 @@ int main(int argc, char** argv)
         }
     }
     //![read_net]
-    Net net = readNet(modelPath, configPath);
+    EngineType engine = ENGINE_CLASSIC;
+    Net net = readNet(modelPath, configPath, "", engine);
     int backend = getBackendID(parser.get<String>("backend"));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(getTargetID(parser.get<String>("target")));
@@ -230,7 +232,7 @@ int main(int argc, char** argv)
 
     // Open a video file or an image file or a camera stream.
     VideoCapture cap;
-    bool openSuccess = parser.has("input") ? cap.open(parser.get<String>("input")) : cap.open(parser.get<int>("device"));
+    bool openSuccess = parser.has("input") ? cap.open(findFile(parser.get<String>("input"))) : cap.open(parser.get<int>("device"));
     if (!openSuccess){
         cout << "Could not open input file or camera device" << endl;
         return 0;
