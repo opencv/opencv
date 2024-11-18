@@ -754,7 +754,10 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
             case IMWRITE_EXR_COMPRESSION_B44A:
                 header.compression() = B44A_COMPRESSION;
                 break;
-#if ((OPENEXR_VERSION_MAJOR * 1000 + OPENEXR_VERSION_MINOR) >= (2 * 1000 + 2)) // available since version 2.2.0
+// version macros introduced in openexr 2.0.1.
+// - https://github.com/AcademySoftwareFoundation/openexr/commit/60cdff8a6f5c4e25a374e5f366d6e9b4efd869b3#diff-c4bae0726aebe410e407db9abd406d9cf2684f82dd8a08f46d84e8b7c35cf22aR67
+#if defined(OPENEXR_VERSION_MAJOR) && defined(OPENEXR_VERSION_MINOR) && OPENEXR_VERSION_MAJOR * 1000 + OPENEXR_VERSION_MINOR >= 2 * 1000 + 2
+            // available since version 2.2.0
             case IMWRITE_EXR_COMPRESSION_DWAA:
                 header.compression() = DWAA_COMPRESSION;
                 break;
@@ -768,10 +771,12 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
         }
         if (params[i] == IMWRITE_EXR_DWA_COMPRESSION_LEVEL)
         {
-#if OPENEXR_VERSION_MAJOR >= 3
-            header.dwaCompressionLevel() = params[i + 1];
-#else
+#if !defined(OPENEXR_VERSION_MAJOR)
+            CV_LOG_ONCE_WARNING(NULL, "Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported in unknown OpenEXR version possibly prior to 2.0.1 (version 3 is required)");
+#elif OPENEXR_VERSION_MAJOR < 3
             CV_LOG_ONCE_WARNING(NULL, "Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported in OpenEXR version " + std::to_string(OPENEXR_VERSION_MAJOR) + " (version 3 is required)");
+#else
+            header.dwaCompressionLevel() = params[i + 1];
 #endif
         }
     }
