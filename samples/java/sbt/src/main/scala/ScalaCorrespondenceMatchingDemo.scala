@@ -1,10 +1,10 @@
 import org.opencv.imgcodecs.Imgcodecs
-import org.opencv.features2d.DescriptorExtractor
-import org.opencv.features2d.Features2d
+import org.opencv.features.DescriptorExtractor
+import org.opencv.features.Features
 import org.opencv.core.MatOfKeyPoint
 import org.opencv.core.Mat
-import org.opencv.features2d.FeatureDetector
-import org.opencv.features2d.DescriptorMatcher
+import org.opencv.features.FeatureDetector
+import org.opencv.features.DescriptorMatcher
 import org.opencv.core.MatOfDMatch
 import reflect._
 
@@ -61,7 +61,7 @@ object ScalaCorrespondenceMatchingDemo {
 
     // Visualize the matches and save the visualization.
     val correspondenceImage = new Mat
-    Features2d.drawMatches(leftImage, leftKeyPoints, rightImage, rightKeyPoints, dmatches, correspondenceImage)
+    Features.drawMatches(leftImage, leftKeyPoints, rightImage, rightKeyPoints, dmatches, correspondenceImage)
     val filename = "scalaCorrespondences.png"
     println(s"Writing ${filename}")
     assert(Imgcodecs.imwrite(filename, correspondenceImage))

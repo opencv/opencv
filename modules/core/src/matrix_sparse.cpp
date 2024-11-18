@@ -4,7 +4,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/mat.hpp"
-#include "opencv2/core/types_c.h"
 
 namespace cv {
 
@@ -851,41 +850,3 @@ void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
 }
 
 } // cv::
-
-//
-// C-API glue
-//
-CvSparseMat* cvCreateSparseMat(const cv::SparseMat& sm)
-{
-    if( !sm.hdr || sm.hdr->dims > (int)cv::SparseMat::MAX_DIM)
-        return 0;
-
-    CvSparseMat* m = cvCreateSparseMat(sm.hdr->dims, sm.hdr->size, sm.type());
-
-    cv::SparseMatConstIterator from = sm.begin();
-    size_t i, N = sm.nzcount(), esz = sm.elemSize();
-
-    for( i = 0; i < N; i++, ++from )
-    {
-        const cv::SparseMat::Node* n = from.node();
-        uchar* to = cvPtrND(m, n->idx, 0, -2, 0);
-        cv::copyElem(from.ptr, to, esz);
-    }
-    return m;
-}
-
-void CvSparseMat::copyToSparseMat(cv::SparseMat& m) const
-{
-    m.create( dims, &size[0], type );
-
-    CvSparseMatIterator it;
-    CvSparseNode* n = cvInitSparseMatIterator(this, &it);
-    size_t esz = m.elemSize();
-
-    for( ; n != 0; n = cvGetNextSparseNode(&it) )
-    {
-        const int* idx = CV_NODE_IDX(this, n);
-        uchar* to = m.newNode(idx, m.hash(idx));
-        cv::copyElem((const uchar*)CV_NODE_VAL(this, n), to, esz);
-    }
-}

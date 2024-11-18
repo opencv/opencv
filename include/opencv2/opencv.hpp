@@ -58,8 +58,8 @@
 #ifdef HAVE_OPENCV_CALIB
 #include "opencv2/calib.hpp"
 #endif
-#ifdef HAVE_OPENCV_FEATURES2D
-#include "opencv2/features2d.hpp"
+#ifdef HAVE_OPENCV_FEATURES
+#include "opencv2/features.hpp"
 #endif
 #ifdef HAVE_OPENCV_DNN
 #include "opencv2/dnn.hpp"

@@ -8,7 +8,7 @@ set(OPENCV_TAPI_SAMPLES_REQUIRED_DEPS
   opencv_videoio
   opencv_highgui
   opencv_objdetect
-  opencv_features2d
+  opencv_features
   opencv_3d
   opencv_stereo
   opencv_flann)

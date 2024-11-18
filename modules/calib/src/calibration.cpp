@@ -197,7 +197,6 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     {
         int cn = rvecs.channels();
         CV_Assert(rvecs.depth() == CV_32F || rvecs.depth() == CV_64F);
-        CV_Assert(rvecs.rows == nimages);
         CV_Assert((rvecs.rows == nimages && (rvecs.cols*cn == 3 || rvecs.cols*cn == 3)) ||
                   (rvecs.rows == 1 && rvecs.cols == nimages && cn == 3));
     }
@@ -206,7 +205,6 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     {
         int cn = tvecs.channels();
         CV_Assert(tvecs.depth() == CV_32F || tvecs.depth() == CV_64F);
-        CV_Assert(tvecs.rows == nimages);
         CV_Assert((tvecs.rows == nimages && tvecs.cols*cn == 3) ||
                   (tvecs.rows == 1 && tvecs.cols == nimages && cn == 3));
     }
@@ -235,7 +233,6 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     {
         int cn = newObjPoints.channels();
         CV_Assert(newObjPoints.depth() == CV_32F || newObjPoints.depth() == CV_64F);
-        CV_Assert(rvecs.rows == nimages);
         CV_Assert((newObjPoints.rows == maxPoints && newObjPoints.cols*cn == 3) ||
                   (newObjPoints.rows == 1 && newObjPoints.cols == maxPoints && cn == 3));
     }
@@ -613,7 +610,6 @@ static double calibrateCameraInternal( const Mat& objectPoints,
     {
         if( !rvecs.empty() )
         {
-            //TODO: fix it
             Mat src = Mat(3, 1, CV_64F, param.data() + NINTRINSIC + i*6);
             if( rvecs.rows == nimages && rvecs.cols*rvecs.channels() == 9 )
             {
@@ -624,16 +620,15 @@ static double calibrateCameraInternal( const Mat& objectPoints,
             else
             {
                 Mat dst(3, 1, rvecs.depth(), rvecs.rows == 1 ?
-                    rvecs.data + i*rvecs.elemSize1() : rvecs.ptr(i));
+                    rvecs.data + i*rvecs.elemSize() : rvecs.ptr(i));
                 src.convertTo(dst, dst.type());
             }
         }
         if( !tvecs.empty() )
         {
-            //TODO: fix it
             Mat src(3, 1, CV_64F, param.data() + NINTRINSIC + i*6 + 3);
             Mat dst(3, 1, tvecs.depth(), tvecs.rows == 1 ?
-                    tvecs.data + i*tvecs.elemSize1() : tvecs.ptr(i));
+                    tvecs.data + i*tvecs.elemSize() : tvecs.ptr(i));
             src.convertTo(dst, dst.type());
         }
     }

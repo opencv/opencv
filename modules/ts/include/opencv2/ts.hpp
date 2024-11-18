@@ -843,6 +843,7 @@ void smoothBorder(Mat& img, const Scalar& color, int delta = 3)
 // Utility functions
 
 void addDataSearchPath(const std::string& path);
+void addDataSearchEnv(const std::string& env_name);
 void addDataSearchSubDirectory(const std::string& subdir);
 
 /*! @brief Try to find requested data file

@@ -152,7 +152,10 @@ void read(const FileNode& node, Mat& m, const Mat& default_mat)
 
     size_t nelems = data_node.size();
     if (nelems == 0)
+    {
         m = Mat();
+        return;
+    }
     CV_Assert(nelems == m.total()*m.channels());
 
     data_node.readRaw(dt, (uchar*)m.ptr(), m.total()*m.elemSize());

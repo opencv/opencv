@@ -11,7 +11,6 @@
 
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/core/bindings_utils.hpp"
-#include "opencv2/core/core_c.h"
 
 namespace opencv_test { namespace {
 
@@ -305,9 +304,6 @@ void Core_ReduceTest::run( int )
     ts->set_failed_test_info( code );
 }
 
-
-#define CHECK_C
-
 TEST(Core_PCA, accuracy)
 {
     const Size sz(200, 500);
@@ -342,11 +338,6 @@ TEST(Core_PCA, accuracy)
 
     Mat subEval( maxComponents, 1, eval.type(), eval.ptr() ),
     subEvec( maxComponents, evec.cols, evec.type(), evec.ptr() );
-
-#ifdef CHECK_C
-    Mat prjTestPoints, backPrjTestPoints, cPoints = rPoints.t(), cTestPoints = rTestPoints.t();
-    CvMat _points, _testPoints, _avg, _eval, _evec, _prjTestPoints, _backPrjTestPoints;
-#endif
 
     // check eigen()
     double eigenEps = 1e-4;
@@ -436,45 +427,6 @@ TEST(Core_PCA, accuracy)
     err = cvtest::norm(cPCA.backProject(rvPrjTestPoints), rBackPrjTestPoints.t(), NORM_L2 | NORM_RELATIVE);
     ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of backProject() (PCA::DATA_AS_COL); retainedVariance=" << retainedVariance;
 
-#ifdef CHECK_C
-    // 4. check C PCA & ROW
-    _points = cvMat(rPoints);
-    _testPoints = cvMat(rTestPoints);
-    _avg = cvMat(avg);
-    _eval = cvMat(eval);
-    _evec = cvMat(evec);
-    prjTestPoints.create(rTestPoints.rows, maxComponents, rTestPoints.type() );
-    backPrjTestPoints.create(rPoints.size(), rPoints.type() );
-    _prjTestPoints = cvMat(prjTestPoints);
-    _backPrjTestPoints = cvMat(backPrjTestPoints);
-
-    cvCalcPCA( &_points, &_avg, &_eval, &_evec, PCA::DATA_AS_ROW );
-    cvProjectPCA( &_testPoints, &_avg, &_evec, &_prjTestPoints );
-    cvBackProjectPCA( &_prjTestPoints, &_avg, &_evec, &_backPrjTestPoints );
-
-    err = cvtest::norm(prjTestPoints, rPrjTestPoints, NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffPrjEps) << "bad accuracy of cvProjectPCA() (PCA::DATA_AS_ROW)";
-    err = cvtest::norm(backPrjTestPoints, rBackPrjTestPoints, NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (PCA::DATA_AS_ROW)";
-
-    // 5. check C PCA & COL
-    _points = cvMat(cPoints);
-    _testPoints = cvMat(cTestPoints);
-    avg = avg.t(); _avg = cvMat(avg);
-    eval = eval.t(); _eval = cvMat(eval);
-    evec = evec.t(); _evec = cvMat(evec);
-    prjTestPoints = prjTestPoints.t(); _prjTestPoints = cvMat(prjTestPoints);
-    backPrjTestPoints = backPrjTestPoints.t(); _backPrjTestPoints = cvMat(backPrjTestPoints);
-
-    cvCalcPCA( &_points, &_avg, &_eval, &_evec, PCA::DATA_AS_COL );
-    cvProjectPCA( &_testPoints, &_avg, &_evec, &_prjTestPoints );
-    cvBackProjectPCA( &_prjTestPoints, &_avg, &_evec, &_backPrjTestPoints );
-
-    err = cvtest::norm(cv::abs(prjTestPoints), cv::abs(rPrjTestPoints.t()), NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffPrjEps) << "bad accuracy of cvProjectPCA() (PCA::DATA_AS_COL)";
-    err = cvtest::norm(backPrjTestPoints, rBackPrjTestPoints.t(), NORM_L2 | NORM_RELATIVE);
-    ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (PCA::DATA_AS_COL)";
-#endif
     // Test read and write
     const std::string filename = cv::tempfile("PCA_store.yml");
     FileStorage fs( filename, FileStorage::WRITE );
@@ -550,13 +502,6 @@ static double getValue(SparseMat& M, const int* idx, RNG& rng)
     return !ptr ? 0 : M.type() == CV_32F ? *(float*)ptr : M.type() == CV_64F ? *(double*)ptr : 0;
 }
 
-static double getValue(const CvSparseMat* M, const int* idx)
-{
-    int type = 0;
-    const uchar* ptr = cvPtrND(M, idx, &type, 0);
-    return !ptr ? 0 : type == CV_32F ? *(float*)ptr : type == CV_64F ? *(double*)ptr : 0;
-}
-
 static void eraseValue(SparseMat& M, const int* idx, RNG& rng)
 {
     int d = M.dims();
@@ -574,11 +519,6 @@ static void eraseValue(SparseMat& M, const int* idx, RNG& rng)
         M.erase(idx[0], idx[1], idx[2], phv);
     else
         M.erase(idx, phv);
-}
-
-static void eraseValue(CvSparseMat* M, const int* idx)
-{
-    cvClearND(M, idx);
 }
 
 static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
@@ -646,39 +586,6 @@ void Core_ArrayOpTest::run( int /* start_from */)
 {
     int errcount = 0;
 
-    // dense matrix operations
-    {
-        int sz3[] = {5, 10, 15};
-        MatND A(3, sz3, CV_32F), B(3, sz3, CV_16SC4);
-        CvMatND matA = cvMatND(A), matB = cvMatND(B);
-        RNG rng;
-        rng.fill(A, RNG::UNIFORM, Scalar::all(-10), Scalar::all(10));
-        rng.fill(B, RNG::UNIFORM, Scalar::all(-10), Scalar::all(10));
-
-        int idx0[] = {3,4,5}, idx1[] = {0, 9, 7};
-        float val0 = 130;
-        Scalar val1(-1000, 30, 3, 8);
-        cvSetRealND(&matA, idx0, val0);
-        cvSetReal3D(&matA, idx1[0], idx1[1], idx1[2], -val0);
-        cvSetND(&matB, idx0, cvScalar(val1));
-        cvSet3D(&matB, idx1[0], idx1[1], idx1[2], cvScalar(-val1));
-        Ptr<CvMatND> matC(cvCloneMatND(&matB));
-
-        if( A.at<float>(idx0[0], idx0[1], idx0[2]) != val0 ||
-           A.at<float>(idx1[0], idx1[1], idx1[2]) != -val0 ||
-           cvGetReal3D(&matA, idx0[0], idx0[1], idx0[2]) != val0 ||
-           cvGetRealND(&matA, idx1) != -val0 ||
-
-           Scalar(B.at<Vec4s>(idx0[0], idx0[1], idx0[2])) != val1 ||
-           Scalar(B.at<Vec4s>(idx1[0], idx1[1], idx1[2])) != -val1 ||
-           Scalar(cvGet3D(matC, idx0[0], idx0[1], idx0[2])) != val1 ||
-           Scalar(cvGetND(matC, idx1)) != -val1 )
-        {
-            ts->printf(cvtest::TS::LOG, "one of cvSetReal3D, cvSetRealND, cvSet3D, cvSetND "
-                       "or the corresponding *Get* functions is not correct\n");
-            errcount++;
-        }
-    }
     // test cv::Mat::forEach
     {
         const int dims[3] = { 101, 107, 7 };
@@ -856,7 +763,6 @@ void Core_ArrayOpTest::run( int /* start_from */)
             }
         }
 
-        Ptr<CvSparseMat> M2(cvCreateSparseMat(M));
         MatND Md;
         M.copyTo(Md);
         SparseMat M3; SparseMat(Md).convertTo(M3, Md.type(), 2);
@@ -890,7 +796,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
 
         for( i = 0; i < n; i++ )
         {
-            double val1, val2, val3, val0;
+            double val1, val3, val0;
             if(i < nz0)
             {
                 sidx = all_idxs[i];
@@ -905,20 +811,19 @@ void Core_ArrayOpTest::run( int /* start_from */)
                 val0 = M0[sidx];
             }
             val1 = getValue(M, idx, rng);
-            val2 = getValue(M2, idx);
             val3 = getValue(M3, idx, rng);
 
-            if( val1 != val0 || val2 != val0 || fabs(val3 - val0*2) > fabs(val0*2)*FLT_EPSILON )
+            if( val1 != val0 || fabs(val3 - val0*2) > fabs(val0*2)*FLT_EPSILON )
             {
                 errcount++;
-                ts->printf(cvtest::TS::LOG, "SparseMat M[%s] = %g/%g/%g (while it should be %g)\n", sidx.c_str(), val1, val2, val3, val0 );
+                ts->printf(cvtest::TS::LOG, "SparseMat M[%s] = %g/%g (while it should be %g)\n", sidx.c_str(), val1, val3, val0 );
                 break;
             }
         }
 
         for( i = 0; i < n; i++ )
         {
-            double val1, val2;
+            double val1;
             if(i < nz0)
             {
                 sidx = all_idxs[i];
@@ -931,13 +836,11 @@ void Core_ArrayOpTest::run( int /* start_from */)
                 sidx = idx2string(idx, dims);
             }
             eraseValue(M, idx, rng);
-            eraseValue(M2, idx);
             val1 = getValue(M, idx, rng);
-            val2 = getValue(M2, idx);
-            if( val1 != 0 || val2 != 0 )
+            if( val1 != 0 )
             {
                 errcount++;
-                ts->printf(cvtest::TS::LOG, "SparseMat: after deleting M[%s], it is =%g/%g (while it should be 0)\n", sidx.c_str(), val1, val2 );
+                ts->printf(cvtest::TS::LOG, "SparseMat: after deleting M[%s], it is = %g (while it should be 0)\n", sidx.c_str(), val1 );
                 break;
             }
         }
@@ -2491,21 +2394,6 @@ TEST(Mat1D, basic)
         Mat m(5, 100, CV_32FC1, Scalar::all(0));
         const Mat row2D = m.row(2);
         EXPECT_NO_THROW(m1.convertTo(row2D, CV_32FC1));
-    }
-
-    {
-        SCOPED_TRACE("CvMat");
-        CvMat c_mat = cvMat(m1);
-        EXPECT_EQ(100, c_mat.cols);
-        EXPECT_EQ(1, c_mat.rows);
-    }
-
-    {
-        SCOPED_TRACE("CvMatND");
-        CvMatND c_mat = cvMatND(m1);
-        EXPECT_EQ(2, c_mat.dims);
-        EXPECT_EQ(1, c_mat.dim[0].size);
-        EXPECT_EQ(100, c_mat.dim[1].size);
     }
 
     {

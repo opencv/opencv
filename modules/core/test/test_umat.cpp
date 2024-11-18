@@ -41,7 +41,6 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp"
-#include "opencv2/core/core_c.h"
 
 using namespace opencv_test;
 using namespace testing;

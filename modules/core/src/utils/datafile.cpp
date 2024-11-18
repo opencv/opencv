@@ -60,7 +60,7 @@ static std::vector<cv::String>& _getDataSearchSubDirectory()
 
 CV_EXPORTS void addDataSearchPath(const cv::String& path)
 {
-    if (utils::fs::isDirectory(path))
+    if (!path.empty() && utils::fs::isDirectory(path))
         _getDataSearchPath().push_back(path);
 }
 CV_EXPORTS void addDataSearchSubDirectory(const cv::String& subdir)

@@ -65,7 +65,7 @@ PCA::PCA(InputArray data, InputArray _mean, int flags, double retainedVariance)
 PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComponents)
 {
     Mat data = _data.getMat(), _mean = __mean.getMat();
-    int covar_flags = CV_COVAR_SCALE;
+    int covar_flags = cv::COVAR_SCALE;
     int len, in_count;
     Size mean_sz;
 
@@ -74,14 +74,14 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     {
         len = data.rows;
         in_count = data.cols;
-        covar_flags |= CV_COVAR_COLS;
+        covar_flags |= cv::COVAR_COLS;
         mean_sz = Size(1, len);
     }
     else
     {
         len = data.cols;
         in_count = data.rows;
-        covar_flags |= CV_COVAR_ROWS;
+        covar_flags |= cv::COVAR_ROWS;
         mean_sz = Size(len, 1);
     }
 
@@ -92,7 +92,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     // "scrambled" way to compute PCA (when cols(A)>rows(A)):
     // B = A'A; B*x=b*x; C = AA'; C*y=c*y -> AA'*y=c*y -> A'A*(A'*y)=c*(A'*y) -> c = b, x=A'*y
     if( len <= in_count )
-        covar_flags |= CV_COVAR_NORMAL;
+        covar_flags |= cv::COVAR_NORMAL;
 
     int ctype = std::max(CV_32F, data.depth());
     mean.create( mean_sz, ctype );
@@ -103,13 +103,13 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     {
         CV_Assert( _mean.size() == mean_sz );
         _mean.convertTo(mean, ctype);
-        covar_flags |= CV_COVAR_USE_AVG;
+        covar_flags |= cv::COVAR_USE_AVG;
     }
 
     calcCovarMatrix( data, covar, mean, covar_flags, ctype );
     eigen( covar, eigenvalues, eigenvectors );
 
-    if( !(covar_flags & CV_COVAR_NORMAL) )
+    if( !(covar_flags & cv::COVAR_NORMAL) )
     {
         // PCA::DATA_AS_ROW: cols(A)>rows(A). x=A'*y -> x'=y'*A
         // PCA::DATA_AS_COL: rows(A)>cols(A). x=A''*y -> x'=y'*A'
@@ -127,7 +127,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
 
         Mat evects1(count, len, ctype);
         gemm( eigenvectors, tmp_data, 1, Mat(), 0, evects1,
-            (flags & PCA::DATA_AS_COL) ? CV_GEMM_B_T : 0);
+            (flags & PCA::DATA_AS_COL) ? cv::GEMM_2_T : 0);
         eigenvectors = evects1;
 
         // normalize eigenvectors
@@ -201,7 +201,7 @@ int computeCumulativeEnergy(const Mat& eigenvalues, double retainedVariance)
 PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double retainedVariance)
 {
     Mat data = _data.getMat(), _mean = __mean.getMat();
-    int covar_flags = CV_COVAR_SCALE;
+    int covar_flags = cv::COVAR_SCALE;
     int len, in_count;
     Size mean_sz;
 
@@ -210,14 +210,14 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     {
         len = data.rows;
         in_count = data.cols;
-        covar_flags |= CV_COVAR_COLS;
+        covar_flags |= cv::COVAR_COLS;
         mean_sz = Size(1, len);
     }
     else
     {
         len = data.cols;
         in_count = data.rows;
-        covar_flags |= CV_COVAR_ROWS;
+        covar_flags |= cv::COVAR_ROWS;
         mean_sz = Size(len, 1);
     }
 
@@ -228,7 +228,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     // "scrambled" way to compute PCA (when cols(A)>rows(A)):
     // B = A'A; B*x=b*x; C = AA'; C*y=c*y -> AA'*y=c*y -> A'A*(A'*y)=c*(A'*y) -> c = b, x=A'*y
     if( len <= in_count )
-        covar_flags |= CV_COVAR_NORMAL;
+        covar_flags |= cv::COVAR_NORMAL;
 
     int ctype = std::max(CV_32F, data.depth());
     mean.create( mean_sz, ctype );
@@ -239,13 +239,13 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     {
         CV_Assert( _mean.size() == mean_sz );
         _mean.convertTo(mean, ctype);
-        covar_flags |= CV_COVAR_USE_AVG;
+        covar_flags |= cv::COVAR_USE_AVG;
     }
 
     calcCovarMatrix( data, covar, mean, covar_flags, ctype );
     eigen( covar, eigenvalues, eigenvectors );
 
-    if( !(covar_flags & CV_COVAR_NORMAL) )
+    if( !(covar_flags & cv::COVAR_NORMAL) )
     {
         // PCA::DATA_AS_ROW: cols(A)>rows(A). x=A'*y -> x'=y'*A
         // PCA::DATA_AS_COL: rows(A)>cols(A). x=A''*y -> x'=y'*A'
@@ -263,7 +263,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
 
         Mat evects1(count, len, ctype);
         gemm( eigenvectors, tmp_data, 1, Mat(), 0, evects1,
-            (flags & PCA::DATA_AS_COL) ? CV_GEMM_B_T : 0);
+            (flags & PCA::DATA_AS_COL) ? cv::GEMM_2_T : 0);
         eigenvectors = evects1;
 
         // normalize all eigenvectors

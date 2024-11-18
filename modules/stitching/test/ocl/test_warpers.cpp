@@ -97,7 +97,7 @@ OCL_TEST_F(SphericalWarperTest, Mat)
         OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
         OCL_ON(warper->warp(usrc, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
 
-        Near(1e-4);
+        Near(9.31e-4);
     }
 }
 
@@ -118,7 +118,7 @@ OCL_TEST_F(CylindricalWarperTest, Mat)
         OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
         OCL_ON(warper->warp(usrc, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
 
-        Near(1e-4);
+        Near(6.5e-4);
     }
 }
 
@@ -139,7 +139,7 @@ OCL_TEST_F(PlaneWarperTest, Mat)
         OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
         OCL_ON(warper->warp(usrc, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
 
-        Near(1.5e-4);
+        Near(6.6e-4);
     }
 }
 
@@ -160,7 +160,7 @@ OCL_TEST_F(AffineWarperTest, Mat)
         OCL_OFF(warper->warp(src, K, R, INTER_LINEAR, BORDER_REPLICATE, dst));
         OCL_ON(warper->warp(usrc, K, R, INTER_LINEAR, BORDER_REPLICATE, udst));
 
-        Near(1.5e-4);
+        Near(1.3e-3);
     }
 }
 

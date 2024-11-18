@@ -6,8 +6,8 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_FEATURES2D
-#  include "opencv2/features2d.hpp"
+#ifdef HAVE_OPENCV_FEATURES
+#  include "opencv2/features.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_VIDEO

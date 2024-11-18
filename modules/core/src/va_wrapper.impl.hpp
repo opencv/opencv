@@ -7,6 +7,7 @@
 //
 
 #include "opencv2/core/utils/plugin_loader.private.hpp"  // DynamicLib
+#include "opencv2/core/utils/configuration.private.hpp"
 
 namespace cv { namespace detail {
 
@@ -47,8 +48,8 @@ static FN_vaGetImage fn_vaGetImage = NULL;
 static std::shared_ptr<cv::plugin::impl::DynamicLib> loadLibVA()
 {
     std::shared_ptr<cv::plugin::impl::DynamicLib> lib;
-    const char* envPath = getenv("OPENCV_LIBVA_RUNTIME");
-    if (envPath)
+    const std::string envPath = utils::getConfigurationParameterString("OPENCV_LIBVA_RUNTIME");
+    if (!envPath.empty())
     {
         lib = std::make_shared<cv::plugin::impl::DynamicLib>(envPath);
         return lib;

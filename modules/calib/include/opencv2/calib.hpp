@@ -7,7 +7,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/types.hpp"
-#include "opencv2/features2d.hpp"
+#include "opencv2/features.hpp"
 #include "opencv2/core/affine.hpp"
 
 /**

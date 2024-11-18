@@ -521,6 +521,8 @@ Cv64suf;
 
 #define CV_ELEM_SIZE(type) (CV_MAT_CN(type)*CV_ELEM_SIZE1(type))
 
+#define CV_AUTOSTEP  0x7fffffff
+
 #ifndef MIN
 #  define MIN(a,b)  ((a) > (b) ? (b) : (a))
 #endif

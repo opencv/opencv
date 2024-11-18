@@ -236,15 +236,4 @@ void fastFree(void* ptr)
 #endif // OPENCV_ALLOC_ENABLE_STATISTICS
 
 } // namespace
-
-CV_IMPL void* cvAlloc( size_t size )
-{
-    return cv::fastMalloc( size );
-}
-
-CV_IMPL void cvFree_( void* ptr )
-{
-    cv::fastFree( ptr );
-}
-
 /* End of file. */

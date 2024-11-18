@@ -734,7 +734,7 @@ private:
 };
 
 
-/** @example samples/cpp/tutorial_code/features2D/Homography/pose_from_homography.cpp
+/** @example samples/cpp/tutorial_code/features/Homography/pose_from_homography.cpp
 An example program about pose estimation from coplanar points
 
 Check @ref tutorial_homography "the corresponding tutorial" for more details
@@ -967,7 +967,7 @@ CV_EXPORTS_AS(projectPointsSepJ) void projectPoints(
                     OutputArray dpdc=noArray(), OutputArray dpdk=noArray(),
                     OutputArray dpdo=noArray(), double aspectRatio=0.);
 
-/** @example samples/cpp/tutorial_code/features2D/Homography/homography_from_camera_displacement.cpp
+/** @example samples/cpp/tutorial_code/features/Homography/homography_from_camera_displacement.cpp
 An example program about homography from the camera displacement
 
 Check @ref tutorial_homography "the corresponding tutorial" for more details
@@ -2077,7 +2077,7 @@ CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, Out
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
 
-/** @example samples/cpp/tutorial_code/features2D/Homography/decompose_homography.cpp
+/** @example samples/cpp/tutorial_code/features/Homography/decompose_homography.cpp
 An example program with homography decomposition.
 
 Check @ref tutorial_homography "the corresponding tutorial" for more details.

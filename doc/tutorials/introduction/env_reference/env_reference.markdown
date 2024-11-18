@@ -59,7 +59,6 @@ import cv2 # variables set after this may not have effect
 
 ## Types
 
-- _non-null_ - set to anything to enable feature, in some cases can be interpreted as other types (e.g. path)
 - _bool_ - `1`, `True`, `true`, `TRUE` / `0`, `False`, `false`, `FALSE`
 - _number_/_size_ - unsigned number, suffixes `MB`, `Mb`, `mb`, `KB`, `Kb`, `kb`
 - _string_ - plain string or can have a structure
@@ -70,7 +69,7 @@ import cv2 # variables set after this may not have effect
 ## General, core
 | name | type | default | description |
 |------|------|---------|-------------|
-| OPENCV_SKIP_CPU_BASELINE_CHECK | non-null | | do not check that current CPU supports all features used by the build (baseline) |
+| OPENCV_SKIP_CPU_BASELINE_CHECK | bool | false | do not check that current CPU supports all features used by the build (baseline) |
 | OPENCV_CPU_DISABLE | `,` or `;`-separated | | disable code branches which use CPU features (dispatched code) |
 | OPENCV_SETUP_TERMINATE_HANDLER | bool | true (Windows) | use std::set_terminate to install own termination handler |
 | OPENCV_LIBVA_RUNTIME | file path | | libva for VA interoperability utils |
@@ -78,9 +77,9 @@ import cv2 # variables set after this may not have effect
 | OPENCV_BUFFER_AREA_ALWAYS_SAFE | bool | false | enable safe mode for multi-buffer allocations (each buffer separately) |
 | OPENCV_KMEANS_PARALLEL_GRANULARITY | num | 1000 | tune algorithm parallel work distribution parameter `parallel_for_(..., ..., ..., granularity)` |
 | OPENCV_DUMP_ERRORS | bool | true (Debug or Android), false (others) | print extra information on exception (log to Android) |
-| OPENCV_DUMP_CONFIG | non-null | | print build configuration to stderr (`getBuildInformation`) |
+| OPENCV_DUMP_CONFIG | bool | false | print build configuration to stderr (`getBuildInformation`) |
 | OPENCV_PYTHON_DEBUG | bool | false | enable extra warnings in Python bindings |
-| OPENCV_TEMP_PATH | non-null / path | `/tmp/` (Linux), `/data/local/tmp/` (Android), `GetTempPathA` (Windows) | directory for temporary files |
+| OPENCV_TEMP_PATH | path | `/tmp/` (Linux), `/data/local/tmp/` (Android), `GetTempPathA` (Windows) | directory for temporary files |
 | OPENCV_DATA_PATH_HINT | paths | | paths for findDataFile |
 | OPENCV_DATA_PATH | paths | | paths for findDataFile |
 | OPENCV_SAMPLES_DATA_PATH_HINT | paths | | paths for findDataFile |
@@ -271,7 +270,7 @@ Some external dependencies can be detached into a dynamic library, which will be
 | ⭐ OPENCV_FFMPEG_CAPTURE_OPTIONS | string (see note) | | extra options for VideoCapture FFmpeg backend |
 | ⭐ OPENCV_FFMPEG_WRITER_OPTIONS | string (see note) | | extra options for VideoWriter FFmpeg backend |
 | OPENCV_FFMPEG_THREADS | num | | set FFmpeg thread count |
-| OPENCV_FFMPEG_DEBUG | non-null | | enable logging messages from FFmpeg |
+| OPENCV_FFMPEG_DEBUG | bool | false | enable logging messages from FFmpeg |
 | OPENCV_FFMPEG_LOGLEVEL | num | | set FFmpeg logging level |
 | OPENCV_FFMPEG_DLL_DIR | dir path | | directory with FFmpeg plugin (legacy) |
 | OPENCV_FFMPEG_IS_THREAD_SAFE | bool | false | enabling this option will turn off thread safety locks in the FFmpeg backend (use only if you are sure FFmpeg is built with threading support, tested on Linux) |
@@ -285,7 +284,7 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_VIDEOIO_MFX_BITRATE_DIVISOR | num | 300 | this option allows to tune encoding bitrate (video quality/size) |
 | OPENCV_VIDEOIO_MFX_WRITER_TIMEOUT | num | 1 | timeout for encoding operation (in seconds) |
 | OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS | bool | true | allow HW-accelerated transformations (DXVA) in MediaFoundation processing graph (may slow down camera probing process) |
-| OPENCV_DSHOW_DEBUG | non-null | | enable verbose logging in the DShow backend |
+| OPENCV_DSHOW_DEBUG | bool | false | enable verbose logging in the DShow backend |
 | OPENCV_DSHOW_SAVEGRAPH_FILENAME | file path | | enable processing graph tump in the DShow backend |
 | OPENCV_VIDEOIO_V4L_RANGE_NORMALIZED | bool | false | use (0, 1) range for properties (V4L) |
 | OPENCV_VIDEOIO_V4L_SELECT_TIMEOUT | num | 10 | timeout for select call (in seconds) (V4L) |
@@ -296,7 +295,7 @@ Some external dependencies can be detached into a dynamic library, which will be
 ### videoio tests
 | name | type | default | description |
 |------|------|---------|-------------|
-| OPENCV_TEST_VIDEOIO_BACKEND_REQUIRE_FFMPEG | | | test app will exit if no FFmpeg backend is available |
+| OPENCV_TEST_VIDEOIO_BACKEND_REQUIRE_FFMPEG | bool | false | test app will exit if no FFmpeg backend is available |
 | OPENCV_TEST_V4L2_VIVID_DEVICE | file path | | path to VIVID virtual camera device for V4L2 test (e.g. `/dev/video5`) |
 | OPENCV_TEST_PERF_CAMERA_LIST | paths | | cameras to use in performance test (waitAny_V4L test) |
 | OPENCV_TEST_CAMERA_%d_FPS | num | | fps to set for N-th camera (0-based index) (waitAny_V4L test) |
