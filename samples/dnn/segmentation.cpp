@@ -229,6 +229,11 @@ int main(int argc, char **argv)
         cap.open(findFile(parser.get<String>("input")));
     else
         cap.open(parser.get<int>("device"));
+
+    if (!cap.isOpened()) {
+        cerr << "Error: Video could not be opened." << endl;
+        return -1;
+    }
     //! [Open a video file or an image file or a camera stream]
     // Process frames.
     Mat frame, blob;

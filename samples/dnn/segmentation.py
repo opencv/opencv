@@ -110,6 +110,9 @@ def main(func_args=None):
     cv.namedWindow(winName, cv.WINDOW_AUTOSIZE)
 
     cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
+    if not cap.isOpened():
+        print("Failed to open the input video")
+        exit(-1)
     legend = None
     while cv.waitKey(1) < 0:
         hasFrame, frame = cap.read()
