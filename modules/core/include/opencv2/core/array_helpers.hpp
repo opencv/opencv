@@ -57,6 +57,7 @@ struct _ArrayOpsBase {
   virtual Size size(const _InputArray& self, int i) const = 0;
   virtual int sizend(const _InputArray& self, int* arraySize, int i) const = 0;
   virtual int type(const _InputArray& self, int i) const = 0;
+  virtual std::size_t total(const _InputArray& self, int i) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
 };
@@ -297,6 +298,21 @@ struct _ArrayOps final : _ArrayOpsBase {
       return v[i >= 0 ? i : 0].type();
     }
     else {
+      CV_Assert(false && "unreachable");
+    }
+  }
+
+  std::size_t total(const _InputArray& self, const int i) const final {
+    using value_type = typename T::value_type;
+    T& v = get(self.getObj());
+    if constexpr (is_Mat<value_type> || is_UMat<value_type>) {
+      if (i < 0) {
+        return v.size();
+      }
+
+      CV_Assert(i < static_cast<int>(v.size()));
+      return v[i].total();
+    } else {
       CV_Assert(false && "unreachable");
     }
   }
