@@ -6,6 +6,7 @@
 #define OPENCV_FAST_CONVOLUTION_HPP
 
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/dnn/all_layers.hpp"
 
 #ifndef CONV_PRAM
 #define CONV_PRAM
@@ -119,23 +120,28 @@ void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bo
 
 void convBlockMR1_F32(int np, const float* a, const float* b, float* c, const float bias, bool init_c,
                       const float minval, const float maxval, bool ifMinMaxAct, const int width, const int convNR);
-
-#if CV_NEON_AARCH64
-/* Accumulate */
-void winofunc_accum_F32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock,
-                    const int winoIblock, const int winoKblock, const int winoAtom, const int winoNatom);
-
-/*Input transform*/
-void winofunc_BtXB_8x8_F32(const float* inptr, int inpstep,
-                       float* outptr, int Cg, const int winoIblock, const int winoAtom);
-
-/*Output transform*/
-void winofunc_AtXA_8x8_F32(const float* inptr, int inpstep,
-                       float* bpptr, int bpstep, float* outptr, int outstep,
-                       float bias, float minval, float maxval, bool ifMinMaxAct);
-#endif // CV_NEON_AARCH64
 #endif // CV_NEON
 } // namespace opt_NEON.
+
+
+
+// === Function tables
+struct Winofunc
+{
+    void (*accum)(const uchar* inwptr, const uchar* wptr, uchar* outbuf, int Cg, int iblock, const int winoIblock, const int winoKblock, const int winoAtomF32, const int winoNatomF32);
+    void (*BtXB_8x8)(const float* inptr, int inpstep, uchar* outptr, int Cg, const int winoIblock, const int winoAtomF32);
+    void (*AtXA_8x8)(const uchar* inptr, int inpstep, float* bpptr, int bpstep, float* outptr, int outstep, float bias, float minval, float maxval, bool ifMinMaxAct);
+    int iblock;
+    int natom;
+    int esz;
+
+    bool isGood() const { return accum && BtXB_8x8 && AtXA_8x8 && iblock > 0 && natom > 0 && esz > 0; }
+    static Winofunc empty() { return {0, 0, 0, 0, 0, 0}; }
+};
+
+// === wrapper calls (implemented in .dispatch.cpp)
+Winofunc getWinofunc_F32();
+Winofunc getWinofunc_F16();
 
 
 } // namespace dnn

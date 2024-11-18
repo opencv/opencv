@@ -162,6 +162,22 @@ if(WITH_CLP)
   endif()
 endif(WITH_CLP)
 
+# --- ARM KleidiCV
+if(WITH_KLEIDICV)
+  if(KLEIDICV_SOURCE_PATH AND EXISTS "${KLEIDICV_SOURCE_PATH}/adapters/opencv/CMakeLists.txt")
+    set(HAVE_KLEIDICV ON)
+  endif()
+  if(NOT HAVE_KLEIDICV)
+    include("${OpenCV_SOURCE_DIR}/3rdparty/kleidicv/kleidicv.cmake")
+    download_kleidicv(KLEIDICV_SOURCE_PATH)
+    if(KLEIDICV_SOURCE_PATH)
+      set(HAVE_KLEIDICV ON)
+    endif()
+  else()
+    set(HAVE_KLEIDICV OFF)
+  endif()
+endif(WITH_KLEIDICV)
+
 # --- FastCV ---
 if(WITH_FASTCV)
   if((EXISTS ${FastCV_INCLUDE_PATH}) AND (EXISTS ${FastCV_LIB_PATH}))

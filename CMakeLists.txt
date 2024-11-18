@@ -52,6 +52,10 @@ if(POLICY CMP0056)
   cmake_policy(SET CMP0056 NEW)  # try_compile(): link flags
 endif()
 
+if(POLICY CMP0057)
+  cmake_policy(SET CMP0057 NEW)  # CMake 3.3: if(IN_LIST) support
+endif()
+
 if(POLICY CMP0066)
   cmake_policy(SET CMP0066 NEW)  # CMake 3.7: try_compile(): use per-config flags, like CMAKE_CXX_FLAGS_RELEASE
 endif()
@@ -216,7 +220,7 @@ OCV_OPTION(WITH_1394 "Include IEEE1394 support" OFF
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/visionOS/Mac)" ON
   VISIBLE_IF APPLE
   VERIFY HAVE_AVFOUNDATION)
-OCV_OPTION(WITH_AVIF "Enable AVIF support" OFF
+OCV_OPTION(WITH_AVIF "Enable AVIF support" ON
   VERIFY HAVE_AVIF)
 OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VISIBLE_IF IOS
@@ -534,6 +538,7 @@ OCV_OPTION(ENABLE_CONFIG_VERIFICATION "Fail build if actual configuration doesn'
 OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" ON)
 OCV_OPTION(OPENCV_DISABLE_FILESYSTEM_SUPPORT "Disable filesystem support" OFF)
 OCV_OPTION(OPENCV_DISABLE_THREAD_SUPPORT "Build the library without multi-threaded code." OFF)
+OCV_OPTION(OPENCV_DISABLE_ENV_SUPPORT "Disable environment variables access (getenv)" (CMAKE_SYSTEM_NAME MATCHES "Windows(CE|Phone|Store)"))
 OCV_OPTION(OPENCV_SEMIHOSTING         "Build the library for semihosting target (Arm). See https://developer.arm.com/documentation/100863/latest." OFF)
 OCV_OPTION(ENABLE_CUDA_FIRST_CLASS_LANGUAGE "Enable CUDA as a first class language, if enabled dependant projects will need to use CMake >= 3.18" OFF
   VISIBLE_IF (WITH_CUDA AND NOT CMAKE_VERSION VERSION_LESS 3.18)
@@ -932,7 +937,7 @@ if(HAVE_OPENVX)
   endif()
 endif()
 
-if(WITH_KLEIDICV)
+if(HAVE_KLEIDICV)
   ocv_debug_message(STATUS "Enable KleidiCV acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";kleidicv;")
     set(OpenCV_HAL "kleidicv;${OpenCV_HAL}")

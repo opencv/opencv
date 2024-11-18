@@ -98,6 +98,20 @@ inline int hal_ni_sub64f(const double *src1_data, size_t src1_step, const double
 
 inline int hal_ni_sub8u32f(const uchar *src1_data, size_t src1_step, const uchar *src2_data, size_t src2_step, float *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_sub8s32f(const schar *src1_data, size_t src1_step, const schar *src2_data, size_t src2_step, float *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+Add scalar: _dst[i] = src[i] + scalar
+
+@param src_data source image data
+@param src_step source image step
+@param dst_data destination image data
+@param dst_step destination image step
+@param width width of the images
+@param height height of the images
+@param scalar_data pointer to scalar value
+*/
+inline int hal_ni_addScalar32f32f(const float *src_data, size_t src_step, float *dst_data, size_t dst_step, int width, int height, const float* scalar_data) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_addScalar16s16s(const int16_t *src_data, size_t src_step, int16_t *dst_data, size_t dst_step, int width, int height, const int16_t* scalar_data) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
 
 /**
@@ -192,6 +206,8 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 #define cv_hal_sub64f hal_ni_sub64f
 #define cv_hal_sub8u32f hal_ni_sub8u32f
 #define cv_hal_sub8s32f hal_ni_sub8s32f
+#define cv_hal_addScalar32f32f hal_ni_addScalar32f32f
+#define cv_hal_addScalar16s16s hal_ni_addScalar16s16s
 #define cv_hal_max8u hal_ni_max8u
 #define cv_hal_max8s hal_ni_max8s
 #define cv_hal_max16u hal_ni_max16u

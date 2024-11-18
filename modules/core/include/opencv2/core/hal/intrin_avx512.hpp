@@ -458,6 +458,10 @@ OPENCV_HAL_IMPL_AVX512_LOADSTORE_FLT(v_float64x8, double, pd, __m256d)
     { return _Tpvec(_mm512_setzero_si512()); }                                     \
     inline _Tpvec v512_setall_##suffix(_Tp v)                                      \
     { return _Tpvec(_mm512_set1_##ssuffix((ctype_s)v)); }                          \
+    template <> inline _Tpvec v_setzero_()                                         \
+    { return v512_setzero_##suffix(); }                                            \
+    template <> inline _Tpvec v_setall_(_Tp v)                                     \
+    { return v512_setall_##suffix(v); }                                            \
     OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint8x64,   suffix, OPENCV_HAL_NOP)      \
     OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int8x64,    suffix, OPENCV_HAL_NOP)      \
     OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint16x32,  suffix, OPENCV_HAL_NOP)      \
@@ -483,6 +487,10 @@ OPENCV_HAL_IMPL_AVX512_INIT(v_int64x8,   int64,    s64, epi64,  int64)
     { return _Tpvec(_mm512_setzero_##zsuffix()); }                          \
     inline _Tpvec v512_setall_##suffix(_Tp v)                               \
     { return _Tpvec(_mm512_set1_##zsuffix(v)); }                            \
+    template <> inline _Tpvec v_setzero_()                                  \
+    { return v512_setzero_##suffix(); }                                     \
+    template <> inline _Tpvec v_setall_(_Tp v)                              \
+    { return v512_setall_##suffix(v); }                                     \
     OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint8x64,  suffix, cast)          \
     OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_int8x64,   suffix, cast)          \
     OPENCV_HAL_IMPL_AVX512_CAST(_Tpvec, v_uint16x32, suffix, cast)          \
@@ -3069,6 +3077,20 @@ inline int v_scan_forward(const v_uint64x8& a) { return trailingZeros32(v_signma
 inline int v_scan_forward(const v_float64x8& a) { return trailingZeros32(v_signmask(v_reinterpret_as_s16(a))) / 4; }
 
 inline void v512_cleanup() { _mm256_zeroall(); }
+
+#include "intrin_math.hpp"
+inline v_float32x16 v_exp(const v_float32x16& x) { return v_exp_default_32f<v_float32x16, v_int32x16>(x); }
+inline v_float32x16 v_log(const v_float32x16& x) { return v_log_default_32f<v_float32x16, v_int32x16>(x); }
+inline void v_sincos(const v_float32x16& x, v_float32x16& s, v_float32x16& c) { v_sincos_default_32f<v_float32x16, v_int32x16>(x, s, c); }
+inline v_float32x16 v_sin(const v_float32x16& x) { return v_sin_default_32f<v_float32x16, v_int32x16>(x); }
+inline v_float32x16 v_cos(const v_float32x16& x) { return v_cos_default_32f<v_float32x16, v_int32x16>(x); }
+inline v_float32x16 v_erf(const v_float32x16& x) { return v_erf_default_32f<v_float32x16, v_int32x16>(x); }
+
+inline v_float64x8 v_exp(const v_float64x8& x) { return v_exp_default_64f<v_float64x8, v_int64x8>(x); }
+inline v_float64x8 v_log(const v_float64x8& x) { return v_log_default_64f<v_float64x8, v_int64x8>(x); }
+inline void v_sincos(const v_float64x8& x, v_float64x8& s, v_float64x8& c) { v_sincos_default_64f<v_float64x8, v_int64x8>(x, s, c); }
+inline v_float64x8 v_sin(const v_float64x8& x) { return v_sin_default_64f<v_float64x8, v_int64x8>(x); }
+inline v_float64x8 v_cos(const v_float64x8& x) { return v_cos_default_64f<v_float64x8, v_int64x8>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

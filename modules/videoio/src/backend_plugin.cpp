@@ -332,16 +332,14 @@ std::vector<FileSystemPath_t> getPluginCandidates(const std::string& baseName)
     std::vector<FileSystemPath_t> results;
 #ifdef _WIN32
     FileSystemPath_t moduleName = toFileSystemPath(libraryPrefix() + "opencv_videoio_" + baseName_l + librarySuffix());
-#ifndef WINRT
     if (baseName_u == "FFMPEG")  // backward compatibility
     {
-        const wchar_t* ffmpeg_env_path = _wgetenv(L"OPENCV_FFMPEG_DLL_DIR");
-        if (ffmpeg_env_path)
+        const std::string ffmpeg_env_path = cv::utils::getConfigurationParameterString("OPENCV_FFMPEG_DLL_DIR");
+        if (!ffmpeg_env_path.empty())
         {
-            results.push_back(FileSystemPath_t(ffmpeg_env_path) + L"\\" + moduleName);
+            results.push_back(toFileSystemPath(ffmpeg_env_path + "\\" + toPrintablePath(moduleName)));
         }
     }
-#endif
     if (plugin_expr != default_expr)
     {
         moduleName = toFileSystemPath(plugin_expr);
