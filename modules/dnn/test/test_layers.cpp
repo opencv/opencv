@@ -41,7 +41,7 @@
 
 #include "test_precomp.hpp"
 #include <opencv2/core/ocl.hpp>
-#include "npy_blob.hpp"
+#include <opencv2/dnn/utils/npy_blob.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS

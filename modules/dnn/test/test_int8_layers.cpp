@@ -7,7 +7,7 @@
 #if 0
 
 #include "test_precomp.hpp"
-#include "npy_blob.hpp"
+#include <opencv2/dnn/utils/npy_blob.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 namespace opencv_test { namespace {
