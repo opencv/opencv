@@ -156,21 +156,12 @@ def postprocess(frame, outs):
                     classIds.append(int(detection[1]) - 1)  # Skip background label
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
-    elif lastLayer.type == 'Region' or lastLayer.type == 'Identity':
-        # Network produces output blob with a shape NxC where N is a number of
-        # detected objects and C is a number of classes + 4 where the first 4
-        # numbers are [center_x, center_y, width, height]
-        if args.postprocessing == 'yolov8':
-            box_scale_w = frameWidth / args.width
-            box_scale_h = frameHeight / args.height
-        else:
-            box_scale_w = frameWidth
-            box_scale_h = frameHeight
+
+    elif lastLayer.type == 'Region':
+        box_scale_w = frameWidth
+        box_scale_h = frameHeight
 
         for out in outs:
-            if args.postprocessing == 'yolov8':
-                out = out[0].transpose(1, 0)
-
             for detection in out:
                 scores = detection[4:]
                 if args.background_label_id >= 0:
@@ -187,13 +178,47 @@ def postprocess(frame, outs):
                     classIds.append(classId)
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
+
+    elif lastLayer.type == 'Identity':
+        # Network produces output blob with a shape NxC where N is a number of
+        # detected objects and C is a number of classes + 4 where the first 4
+        # numbers are [center_x, center_y, width, height]
+        box_scale_w = frameWidth / args.width
+        box_scale_h = frameHeight / args.height
+
+        for out in outs:
+            if args.postprocessing == 'yolov8':
+                out = out[0].transpose(1, 0)
+            else:  # YOLOv5, no transposition needed
+                out = out[0]
+
+            for detection in out:
+                if args.postprocessing == 'yolov8':
+                    scores = detection[4:]
+                    obj_conf = 1
+                else:
+                    scores = detection[5:]
+                    obj_conf = detection[4]
+
+                classId = np.argmax(scores)
+                confidence = scores[classId]*obj_conf
+                if confidence > confThreshold:
+                    center_x = int(detection[0] * box_scale_w)
+                    center_y = int(detection[1] * box_scale_h)
+                    width = int(detection[2] * box_scale_w)
+                    height = int(detection[3] * box_scale_h)
+                    left = int(center_x - width / 2)
+                    top = int(center_y - height / 2)
+                    classIds.append(classId)
+                    confidences.append(float(confidence))
+                    boxes.append([left, top, width, height])
     else:
         print('Unknown output layer type: ' + lastLayer.type)
         exit()
 
     # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     # or NMS is required if number of outputs > 1
-    if len(outNames) > 1 or (lastLayer.type == 'Region' or args.postprocessing == 'yolov8') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+    if len(outNames) > 1 or (lastLayer.type == 'Region' or lastLayer.type == 'Identity') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
         indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)

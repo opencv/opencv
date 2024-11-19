@@ -90,7 +90,6 @@ yolov5l:
   height: 640
   rgb: true
   labels: "object_detection_classes_yolo.txt"
-  background_label_id: 0
   sample: "object_detection"
 
 # YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
