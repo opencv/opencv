@@ -63,6 +63,7 @@ struct _ArrayOpsBase {
   virtual int empty(const _InputArray& self) const = 0;
   virtual int empty(const _InputArray& self, int i) const = 0;
   virtual std::size_t offset(const _InputArray& self, std::size_t i) const = 0;
+  virtual std::size_t step(const _InputArray& self, std::size_t i) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
 };
@@ -386,6 +387,20 @@ struct _ArrayOps final : _ArrayOpsBase {
     }
   }
 
+  std::size_t step(const _InputArray& self, const std::size_t i) const final
+  {
+    using value_type = typename T::value_type;
+    const auto& v = get(self.getObj());
+    CV_Assert(i < v.size());
+
+    if constexpr (is_Mat<value_type> || is_UMat<value_type>) {
+      return v[i].step;
+    }
+    else {
+      CV_Assert(false && "unreachable");
+    }
+  }
+
   static const T& get(const void* const data)
   {
     return *static_cast<const T*>(data);
@@ -408,6 +423,9 @@ int _ArrayOps<std::vector<cuda::GpuMat>>::sizend(const _InputArray& self, int* c
 
 template<>
 std::size_t _ArrayOps<std::vector<cuda::GpuMat>>::offset(const _InputArray& self, const std::size_t i) const;
+
+template<>
+std::size_t _ArrayOps<std::vector<cuda::GpuMat>>::step(const _InputArray& self, const std::size_t i) const;
 
 template<class T>
 inline constexpr _ArrayOps<T> array_ops;
