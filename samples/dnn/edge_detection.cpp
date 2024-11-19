@@ -171,6 +171,11 @@ int main(int argc, char** argv) {
     else
         cap.open(0);
 
+    if (!cap.isOpened()) {
+        cerr << "Error: Video could not be opened." << endl;
+        return -1;
+    }
+
     namedWindow("Input", WINDOW_AUTOSIZE);
     namedWindow("Output", WINDOW_AUTOSIZE);
     moveWindow("Output", 200, 0);
