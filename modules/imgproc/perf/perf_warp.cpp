@@ -111,48 +111,6 @@ PERF_TEST_P( TestWarpPerspective, WarpPerspective,
     SANITY_CHECK(dst, 1);
 }
 
-PERF_TEST_P( TestWarpPerspectiveNear_t, WarpPerspectiveNear,
-             Combine(
-                 Values( Size(640,480), Size(1920,1080), Size(2592,1944) ),
-                 InterType::all(),
-                 BorderMode::all(),
-                 Values( CV_8UC1, CV_8UC4 )
-                 )
-             )
-{
-    Size size;
-    int borderMode, interType, type;
-    size       = get<0>(GetParam());
-    interType  = get<1>(GetParam());
-    borderMode = get<2>(GetParam());
-    type       = get<3>(GetParam());
-    Scalar borderColor = Scalar::all(150);
-
-    Mat src(size, type), dst(size, type);
-    cvtest::fillGradient<uint8_t>(src);
-    if(borderMode == BORDER_CONSTANT) cvtest::smoothBorder<uint8_t>(src, borderColor, 1);
-    int shift = static_cast<int>(src.cols*0.04);
-    Mat srcVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, 0),
-                                            Vec2f(static_cast<float>(size.width-1), 0),
-                                            Vec2f(static_cast<float>(size.width-1), static_cast<float>(size.height-1)),
-                                            Vec2f(0, static_cast<float>(size.height-1)));
-    Mat dstVertices = (Mat_<Vec2f>(1, 4) << Vec2f(0, static_cast<float>(shift)),
-                                            Vec2f(static_cast<float>(size.width-shift/2), 0),
-                                            Vec2f(static_cast<float>(size.width-shift), static_cast<float>(size.height-shift)),
-                                            Vec2f(static_cast<float>(shift/2), static_cast<float>(size.height-1)));
-    Mat warpMat = getPerspectiveTransform(srcVertices, dstVertices);
-
-    declare.in(src).out(dst);
-    declare.time(100);
-
-    TEST_CYCLE()
-    {
-        warpPerspective( src, dst, warpMat, size, interType, borderMode, borderColor );
-    }
-
-    SANITY_CHECK(dst, 1);
-}
-
 PERF_TEST_P( TestRemap, map1_32fc1,
              Combine(
                  Values( szVGA, sz1080p ),

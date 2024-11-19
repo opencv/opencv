@@ -1761,6 +1761,35 @@ OPENCV_HAL_IMPL_RVV_PACK(v_int16, short, v_int32, 16, i16, i32, __riscv_vnclip, 
 OPENCV_HAL_IMPL_RVV_PACK_32(v_uint32, unsigned, v_uint64, 32, u32, u64, __riscv_vnclipu, __riscv_vnsrl)
 OPENCV_HAL_IMPL_RVV_PACK_32(v_int32, int, v_int64, 32, i32, i64, __riscv_vnclip, __riscv_vnsra)
 
+template <int N = VTraits<v_uint16>::max_nlanes>
+inline v_uint16 v_pack(const v_uint32& a, const v_uint32& b)
+{
+    ushort bufa[N];
+    ushort bufb[N];
+    v_pack_store(bufa, a);
+    v_pack_store(bufb, b);
+    ushort buf[N];
+    for (int i = 0; i < N; i++) {
+        buf[i] = bufa[i];
+        buf[i+N/2] = bufb[i];
+    }
+    return v_load(buf);
+}
+
+template <> inline v_uint16 v_pack<4>(const v_uint32& a, const v_uint32& b)
+{
+    constexpr int N = VTraits<v_uint16>::max_nlanes;
+    ushort bufa[N];
+    ushort bufb[N];
+    v_pack_store(bufa, a);
+    v_pack_store(bufb, b);
+
+    ushort buf[N];
+    buf[0] = bufa[0]; buf[1] = bufa[1]; buf[2] = bufa[2]; buf[3] = bufa[3];
+    buf[4] = bufb[0]; buf[5] = bufb[1]; buf[6] = bufb[2]; buf[7] = bufb[3];
+    return v_load(buf);
+}
+
 #define OPENCV_HAL_IMPL_RVV_PACK_U(_Tpvec, _Tp, _wTpvec, _wTp, hwidth, width, hsuffix, suffix, cast, hvl, vl) \
 inline _Tpvec v_pack_u(const _wTpvec& a, const _wTpvec& b) \
 { \
