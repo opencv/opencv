@@ -745,24 +745,16 @@ bool _InputArray::isSubmatrix(int i) const
         k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return false;
 
-    if( k == STD_VECTOR_MAT )
+    if( k == STD_VECTOR_MAT || k == STD_VECTOR_UMAT )
     {
-        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        CV_Assert(i >= 0 && (size_t)i < vv.size());
-        return vv[i].isSubmatrix();
+        CV_Assert(ops != nullptr);
+        return ops->isSubmatrix(*this, i);
     }
 
     if( k == STD_ARRAY_MAT )
     {
         const Mat* vv = (const Mat*)obj;
         CV_Assert(i >= 0 && i < sz.height);
-        return vv[i].isSubmatrix();
-    }
-
-    if( k == STD_VECTOR_UMAT )
-    {
-        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        CV_Assert(i >= 0 && (size_t)i < vv.size());
         return vv[i].isSubmatrix();
     }
 
