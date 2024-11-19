@@ -234,8 +234,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             int hidShape [] = {1 + static_cast<int>(bidirectional), batchSize, numHidden};
             int biasShape [] = {1 + static_cast<int>(bidirectional), 8 * numHidden};
 
-            blobs_.push_back(input[1]);
-            blobs_.push_back(input[2]);
+            blobs_.push_back(input[1].clone());
+            blobs_.push_back(input[2].clone());
             switch (numInputs) {
                 case 3:
                     // X, W, R are given
