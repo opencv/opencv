@@ -82,6 +82,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
     public:
         LSTM2LayerImpl(const LayerParams& params)
         {
+            setParamsFrom(params);
             numHidden = params.get<int>("hidden_size", 1);
             layout = (layout_t) params.get<int>("layout", SEQ_BATCH_HID);
 
@@ -203,11 +204,15 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                      OutputArrayOfArrays outputs_arr,
                      OutputArrayOfArrays internals_arr) CV_OVERRIDE
         {
+            const int noutputs = 3;
+            std::vector<Mat> input, input0, output(noutputs);
 
-            std::vector<Mat> input, output, internals;
             inputs_arr.getMatVector(input);
-            outputs_arr.getMatVector(output);
-            internals_arr.getMatVector(internals);
+            for (auto inp: input) {
+                input0.push_back(inp.clone());
+            }
+
+            //outputs_arr.getMatVector(output);
 
             int numInputs = input.size();
             int inpSize = input[0].size[2];
@@ -234,8 +239,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             int hidShape [] = {1 + static_cast<int>(bidirectional), batchSize, numHidden};
             int biasShape [] = {1 + static_cast<int>(bidirectional), 8 * numHidden};
 
-            blobs_.push_back(input[1]);
-            blobs_.push_back(input[2]);
+            blobs_.push_back(input[1].clone());
+            blobs_.push_back(input[2].clone());
             switch (numInputs) {
                 case 3:
                     // X, W, R are given
@@ -271,9 +276,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             }
 
             // set outputs to 0
-            for (auto& out : output)
-                out.setTo(0);
-
+            for (int i = 0; i < noutputs; i++) {
+                output[i].create(outputs_arr.shape(i), CV_32F);
+                output[i].setTo(0.);
+            }
 
             // convert weights to 2d matrices ease of use later in the forward pass
             transformBlobs(blobs_);
@@ -281,11 +287,10 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             const int numDirs = 1 + static_cast<int>(bidirectional);
             const int batchSizeTotal = seqLenth * batchSize;
 
-            Mat hInternal = internals[0],
-                cInternal = internals[1],
-                dummyOnes = internals[2],
-                gates = internals[3];
-
+            Mat hInternal,
+                cInternal,
+                dummyOnes,
+                gates;
 
             Mat cOutTs;
             Mat cOut = produceCellOutput ? output[0].clone() : Mat();
@@ -318,8 +323,8 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
 
                 h_0.copyTo(hInternal);
                 c_0.copyTo(cInternal);
-                dummyOnes.setTo(1.);
-                gates.setTo(0.);
+                dummyOnes = Mat::ones(batchSize, 1, CV_32F);
+                gates = Mat::zeros(batchSize, 4*hidSize, CV_32F);
 
                 if (produceCellOutput)
                 {
@@ -427,7 +432,35 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
             }
 
             // Make sure changes are written back to outputs_arr
-            outputs_arr.assign(output);
+            auto kind = outputs_arr.kind();
+            if (kind == _InputArray::STD_VECTOR_MAT)
+            {
+                std::vector<Mat>& outputs_ = outputs_arr.getMatVecRef();
+                outputs_.resize(noutputs);
+                for (int i = 0; i < noutputs; i++)
+                    output[i].copyTo(outputs_[i]);
+            }
+            else if (kind == _InputArray::STD_VECTOR_UMAT)
+            {
+                std::vector<UMat>& outputs_ = outputs_arr.getUMatVecRef();
+                outputs_.resize(noutputs);
+                for (int i = 0; i < noutputs; i++)
+                    output[i].copyTo(outputs_[i]);
+            }
+            else
+            {
+                CV_Error(Error::StsNotImplemented, "outputs must be std::vector<Mat> or std::vector<UMat>");
+            }
+
+            bool ok = true;
+            for (size_t i = 0; i < input.size(); i++) {
+                if (norm(input[i], input0[i], NORM_INF) != 0)
+                {
+                    printf("ERROR: input %zu is modified by forward()!\n", i);
+                    ok = false;
+                }
+            }
+            CV_Assert(ok);
         }
 
         void getCellStateYh(Mat& scr, Mat& dst, int numDirs)
