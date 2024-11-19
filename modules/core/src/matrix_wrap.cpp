@@ -743,12 +743,10 @@ size_t _InputArray::offset(int i) const
         k == NONE || k == STD_VECTOR_VECTOR || k == STD_BOOL_VECTOR )
         return 0;
 
-    if( k == STD_VECTOR_MAT )
+    if( k == STD_VECTOR_MAT || k == STD_VECTOR_UMAT || k == STD_VECTOR_CUDA_GPU_MAT )
     {
-        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        CV_Assert( i >= 0 && i < (int)vv.size() );
-
-        return (size_t)(vv[i].ptr() - vv[i].datastart);
+        CV_Assert(ops != nullptr);
+        return ops->offset(*this, i);
     }
 
     if( k == STD_ARRAY_MAT )
@@ -758,25 +756,11 @@ size_t _InputArray::offset(int i) const
         return (size_t)(vv[i].ptr() - vv[i].datastart);
     }
 
-    if( k == STD_VECTOR_UMAT )
-    {
-        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        CV_Assert(i >= 0 && (size_t)i < vv.size());
-        return vv[i].offset;
-    }
-
     if( k == CUDA_GPU_MAT )
     {
         CV_Assert( i < 0 );
         const cuda::GpuMat * const m = ((const cuda::GpuMat*)obj);
         return (size_t)(m->data - m->datastart);
-    }
-
-    if (k == STD_VECTOR_CUDA_GPU_MAT)
-    {
-        const std::vector<cuda::GpuMat>& vv = *(const std::vector<cuda::GpuMat>*)obj;
-        CV_Assert(i >= 0 && (size_t)i < vv.size());
-        return (size_t)(vv[i].data - vv[i].datastart);
     }
 
     CV_Error(Error::StsNotImplemented, "");
@@ -1951,6 +1935,14 @@ template<>
         CV_Assert(i < static_cast<int>(v.size()));
         return v[i >= 0 ? i : 0].type();
     }
+}
+
+template<>
+[[gnu::visibility("default")]] std::size_t _ArrayOps<std::vector<cuda::GpuMat>>::offset(const _InputArray& self, const std::size_t i) const
+{
+    const std::vector<cuda::GpuMat>& v = get(self.getObj());
+    CV_Assert(i < v.size());
+    return static_cast<std::size_t>(v[i].data - v[i].datastart);
 }
 
 } // cv::
