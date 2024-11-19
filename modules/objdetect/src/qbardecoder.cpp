@@ -324,94 +324,58 @@ std::vector<QBAR_RESULT> QBarDecoder::decode(Mat srcImage, std::vector<DetectInf
     ParallelDecode parallelDecode(this, srcImage, detect_results, results);
     
     parallel_for_(Range(0, int(detect_results.size())), parallelDecode);
+
+    this->nms(results, iou_thres);
     
     return results;
 }
 
 void QBarDecoder::nms(std::vector<QBAR_RESULT>& results, float NMS_THRESH) {
     if (results.size() <= 1) return;
-    std::unordered_map<int, std::vector<QBAR_RESULT>> class_map;
 
-    for (const auto& result : results) {
-        class_map[result.typeID].push_back(result);
-    }
+    std::vector<bool> skip(results.size());
+    for (size_t i = 0; i < results.size(); ++i)
+        skip[i] = false;
+    
+    // merge overlapped results
+    for (size_t i = 0; i < results.size(); ++i)
+    {
+        if (skip[i] || results[i].points.size() < 4)
+            continue;
+        skip[i] = true;
 
-    std::vector<QBAR_RESULT> final_results;
+        for (size_t j = i + 1; j < results.size(); ++j)
+        {
+            if (skip[j] || results[j].points.size() < 4)
+                continue;
+            {
+                std::vector<Point2f> pts_i, pts_j;
+                for (const auto& pt : results[i].points)
+                    pts_i.emplace_back(pt.x, pt.y);
+                for (const auto& pt : results[j].points)
+                    pts_j.emplace_back(pt.x, pt.y);
 
-    for (auto& pair : class_map) {
-        auto& class_results = pair.second;
-        
-        // leftup: p1   rightdown: p3
-        std::sort(class_results.begin(), class_results.end(), [](const QBAR_RESULT& a, const QBAR_RESULT& b) {
-            int widthA = a.points[3].x - a.points[1].x + 1;
-            int heightA = a.points[3].y - a.points[1].y + 1;
-            int widthB = b.points[3].x - b.points[1].x + 1;
-            int heightB = b.points[3].y - b.points[1].y + 1;
-            return (widthA * heightA) > (widthB * heightB); 
-        });
+                float area1 = cv::contourArea(pts_i);
+                float area2 = cv::contourArea(pts_j);
+                float intersectionArea = 0.0;
+                std::vector<cv::Point2f> intersection;
+                cv::rotatedRectangleIntersection(cv::minAreaRect(pts_i), cv::minAreaRect(pts_j), intersection);
 
-        std::vector<float> vArea(class_results.size());
-        for (size_t i = 0; i < class_results.size(); ++i) {
-            vArea[i] = (class_results[i].points[3].x - class_results[i].points[1].x + 1) * (class_results[i].points[3].y - class_results[i].points[1].y + 1);
-        }
+                if (!intersection.empty())
+                    intersectionArea = cv::contourArea(intersection);
 
-        for (size_t i = 0; i < class_results.size(); ++i) {
-            final_results.push_back(class_results[i]);
-            if (class_results[i].typeID == 0) continue; 
-            // skip oned
-            if (class_results[i].typeID != 6 && class_results[i].typeID != 11 && class_results[i].typeID != 12) continue; 
-
-            for (size_t j = i + 1; j < class_results.size();) {
-                float xx1 = std::max(class_results[i].points[1].x, class_results[j].points[1].x);
-                float yy1 = std::max(class_results[i].points[1].y, class_results[j].points[1].y);
-                float xx2 = std::min(class_results[i].points[3].x, class_results[j].points[3].x);
-                float yy2 = std::min(class_results[i].points[3].y, class_results[j].points[3].y);
-
-                float w = std::max(0.0f, xx2 - xx1 + 1);
-                float h = std::max(0.0f, yy2 - yy1 + 1);
-                float inter = w * h;
-
-                float ovr = inter / (vArea[i] + vArea[j] - inter);
-                float cover = inter / std::min(vArea[i], vArea[j]);
-
-                if (ovr >= NMS_THRESH) {
-                    class_results.erase(class_results.begin() + j);
-                    vArea.erase(vArea.begin() + j);
-                } else if (cover >= 0.96) {
-                    if (vArea[i] > vArea[j]) {
-                        class_results.erase(class_results.begin() + j);
-                        vArea.erase(vArea.begin() + j);
-                    } else {
-                        class_results[i].points[1] = class_results[j].points[1];
-                        class_results[i].points[3] = class_results[j].points[3];
-                        class_results.erase(class_results.begin() + j);
-                        vArea.erase(vArea.begin() + j);
-                    }
-                } else {
-                    j++; 
+                double iou = intersectionArea / (area1 + area2 - intersectionArea);
+                double cover = intersectionArea / min(area1, area2);
+                if (iou > NMS_THRESH || cover > 0.96) {
+                    skip[j] = true;
+                    results[j].data = "";
                 }
             }
         }
     }
-
-    results = final_results;
 }
 
 void QBarDecoder::addFormatsToDecodeHints(zxing::DecodeHints &hints) {
-    if (readers_.count(QBAR_READER::ONED_BARCODE))
-    {
-        hints.addFormat(BarcodeFormat::CODE_25);
-        hints.addFormat(BarcodeFormat::CODE_39);
-        hints.addFormat(BarcodeFormat::CODE_93);
-        hints.addFormat(BarcodeFormat::CODE_128);
-        hints.addFormat(BarcodeFormat::ITF);
-        hints.addFormat(BarcodeFormat::CODABAR);
-        hints.addFormat(BarcodeFormat::UPC_A);
-        hints.addFormat(BarcodeFormat::UPC_E);
-        hints.addFormat(BarcodeFormat::EAN_8);
-        hints.addFormat(BarcodeFormat::EAN_13);
-        hints.addFormat(BarcodeFormat::RSS_14);
-    }
     if (readers_.count(QBAR_READER::QRCODE))
     {
         hints.addFormat(BarcodeFormat::QR_CODE);

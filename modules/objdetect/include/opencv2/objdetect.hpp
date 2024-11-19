@@ -862,11 +862,10 @@ public:
     CV_WRAP void setArucoParameters(const aruco::DetectorParameters& params);
 };
 
-enum DECODER_READER{
-    // DECODER_ONED_BARCODE = 1,// barcode, which includes UPC_A, UPC_E, EAN_8, EAN_13, CODE_39, CODE_93, CODE_128, ITF, CODABAR
-    DECODER_QRCODE = 2,// QRCODE
-    DECODER_PDF417 = 3,// PDF417
-    DECODER_DATAMATRIX = 4,// DATAMATRIX
+enum DECODER_READER {
+    DECODER_QRCODE = 0,// QRCODE
+    DECODER_PDF417 = 1,// PDF417
+    DECODER_DATAMATRIX = 2,// DATAMATRIX
 };
 
 typedef std::vector<DECODER_READER> vector_DECODER_READER;
@@ -874,6 +873,17 @@ typedef std::vector<DECODER_READER> vector_DECODER_READER;
 class CV_EXPORTS_W_SIMPLE CodeDetectorWeChat : public GraphicalCodeDetector
 {
 public:
+    /** @brief Initialize the CodeDetectorWeChat.
+     *
+     * Parameters allow to load _optional_ Detection and Super Resolution DNN model for better quality.
+     * @param detection_model_path_ model file path for the detection model
+     * @param super_resolution_model_path_ model file path for the super resolution model
+     * @param readers decoder readers
+     * @param detector_iou_thres nms iou threshold for detection part
+     * @param decoder_iou_thres nms iou threshold for decoding part
+     * @param score_thres score threshold for detection part
+     * @param reference_size the length of the image to align during pre-processing before detection
+     */
     CV_WRAP CodeDetectorWeChat(const std::string& detection_model_path_ = "",
                             const std::string& super_resolution_model_path_ = "",
                             const std::vector<DECODER_READER>& readers = std::vector<DECODER_READER>(),
@@ -882,9 +892,24 @@ public:
                             const float score_thres = 0.3,
                             const int reference_size = 512);
 
+    /** @brief Set the reference size during the pre-processing before detection.
+    * @param reference_size the length of the image to align during pre-processing before detection
+    */
     CV_WRAP void setDetectorReferenceSize(int reference_size);
+
+    /** @brief Set the score threshold during the processing of detection results.
+    * @param score_thres score threshold for detection part
+    */
     CV_WRAP void setDetectorScoreThres(float score_thres);
+
+    /** @brief Set the detector iou threshold during the processing of detection results.
+    * @param detector_iou_thres nms iou threshold for detection part
+    */
     CV_WRAP void setDetectorIouThres(float iou_thres);
+
+    /** @brief Set the detector iou threshold during the processing of decoding results.
+    * @param detector_iou_thres nms iou threshold for decoding part
+    */
     CV_WRAP void setDecoderIouThres(float iou_thres);
 
 

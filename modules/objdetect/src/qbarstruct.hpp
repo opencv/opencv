@@ -107,10 +107,9 @@ struct QBAR_MODE
 
 // reader config, if not set, try all reader
 enum QBAR_READER{
-    ONED_BARCODE = 1, // barcode, which includes UPC_A, UPC_E, EAN_8, EAN_13, CODE_39, CODE_93, CODE_128, ITF, CODABAR
-    QRCODE = 2, // QRCODE
-    PDF417 = 3, // PDF417
-    DATAMATRIX = 4, // DATAMATRIX
+    QRCODE = 0, // QRCODE
+    PDF417 = 1, // PDF417
+    DATAMATRIX = 2, // DATAMATRIX
 };
 
 ///////////////////////////// result struct
@@ -254,25 +253,6 @@ enum QBAR_CODE_FORMAT{
     FMT_UPCEAN_EXTENSION = 17,
     FMT_CODE25 = 18,
 };
-
-/////////////////////////////////// debug
-// enum QBAR_BINARIZER
-// {
-//     Hybrid = 0,
-//     FastWindow = 1,
-//     SimpleAdaptive = 2,
-//     GlobalHistogram=3,
-//     OTSU=4,
-//     Niblack=5,
-//     Adaptive=6,
-//     HistogramBackground=7
-// };
-
-
-// struct QBAR_DEBUG
-// {
-//     QBAR_BINARIZER binarizer;
-// };
 
 enum QBAR_CONFIG_TYPE{
     CONFIG_RESERVED0 = 0,

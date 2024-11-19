@@ -4883,7 +4883,7 @@ CodeDetectorWeChat::CodeDetectorWeChat(const std::string& detection_model_path_,
     CV_Assert(ret == 0);
 
     if (readers.empty()) {
-        std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setReaders({ONED_BARCODE, QRCODE, PDF417, DATAMATRIX});
+        std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setReaders({QRCODE, PDF417, DATAMATRIX});
     }
     else {
         unordered_set<QBAR_READER> readers_;
