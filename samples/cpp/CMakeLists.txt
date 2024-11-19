@@ -16,7 +16,6 @@ set(OPENCV_CPP_SAMPLES_REQUIRED_DEPS
   opencv_calib
   opencv_stitching
   opencv_dnn
-  opencv_gapi
   ${OPENCV_MODULES_PUBLIC}
   ${OpenCV_LIB_COMPONENTS})
 ocv_check_dependencies(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
