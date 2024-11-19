@@ -109,9 +109,10 @@ Add scalar: _dst[i] = src[i] + scalar
 @param width width of the images
 @param height height of the images
 @param scalar_data pointer to scalar value
+@param nChannels number of channels per element
 */
-inline int hal_ni_addScalar32f32f(const float *src_data, size_t src_step, float *dst_data, size_t dst_step, int width, int height, const float* scalar_data) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
-inline int hal_ni_addScalar16s16s(const int16_t *src_data, size_t src_step, int16_t *dst_data, size_t dst_step, int width, int height, const int16_t* scalar_data) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_addScalar32f32f(const float*   src_data, size_t src_step, float*   dst_data, size_t dst_step, int width, int height, const float*   scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_addScalar16s16s(const int16_t* src_data, size_t src_step, int16_t* dst_data, size_t dst_step, int width, int height, const int16_t* scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 //! @}
 
 /**
@@ -165,6 +166,23 @@ inline int hal_ni_absdiff16s(const short *src1_data, size_t src1_step, const sho
 inline int hal_ni_absdiff32s(const int *src1_data, size_t src1_step, const int *src2_data, size_t src2_step, int *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_absdiff32f(const float *src1_data, size_t src1_step, const float *src2_data, size_t src2_step, float *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_absdiff64f(const double *src1_data, size_t src1_step, const double *src2_data, size_t src2_step, double *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/*
+Absolute difference with scalar: _dst[i] = | src[i] - scalar |_
+
+@param src_data source image data
+@param src_step source image step
+@param dst_data destination image data
+@param dst_step destination image step
+@param width width of the images
+@param height height of the images
+@param scalar_data pointer to scalar value
+@param nChannels number of channels per element
+*/
+inline int hal_ni_absDiffScalar32f32f(const float* src_data, size_t src_step, float*    dst_data, size_t dst_step, int width, int height, const float* scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_absDiffScalar32s32u(const int*   src_data, size_t src_step, uint32_t* dst_data, size_t dst_step, int width, int height, const int*   scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_absDiffScalar8u8u  (const uchar* src_data, size_t src_step, uchar*    dst_data, size_t dst_step, int width, int height, const uchar* scalar_data, int nChannels) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
 //! @}
 
 /**
@@ -229,6 +247,9 @@ inline int hal_ni_not8u(const uchar *src_data, size_t src_step, uchar *dst_data,
 #define cv_hal_absdiff32s hal_ni_absdiff32s
 #define cv_hal_absdiff32f hal_ni_absdiff32f
 #define cv_hal_absdiff64f hal_ni_absdiff64f
+#define cv_hal_absDiffScalar32f32f hal_ni_absDiffScalar32f32f
+#define cv_hal_absDiffScalar32s32u hal_ni_absDiffScalar32s32u
+#define cv_hal_absDiffScalar8u8u   hal_ni_absDiffScalar8u8u
 #define cv_hal_and8u hal_ni_and8u
 #define cv_hal_or8u hal_ni_or8u
 #define cv_hal_xor8u hal_ni_xor8u
