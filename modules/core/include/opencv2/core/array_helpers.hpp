@@ -60,6 +60,8 @@ struct _ArrayOpsBase {
   virtual std::size_t total(const _InputArray& self, int i) const = 0;
   virtual int isContinuous(const _InputArray& self, int i) const = 0;
   virtual int isSubmatrix(const _InputArray& self, int i) const = 0;
+  virtual int empty(const _InputArray& self) const = 0;
+  virtual int empty(const _InputArray& self, int i) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
 };
@@ -341,6 +343,25 @@ struct _ArrayOps final : _ArrayOpsBase {
       CV_Assert(i >= 0);
       CV_Assert(i < static_cast<int>(v.size()));
       return v[i].isSubmatrix();
+    }
+    else {
+      CV_Assert(false && "unreachable");
+    }
+  }
+
+  int empty(const _InputArray& self) const final
+  {
+    return get(self.getObj()).empty();
+  }
+
+  int empty(const _InputArray& self, const int i) const final
+  {
+    using value_type = typename T::value_type;
+    const T& v = get(self.getObj());
+    if constexpr (is_Mat<value_type> || is_UMat<value_type> || is_vector<value_type>) {
+      CV_Assert(i >= 0);
+      CV_Assert(i < static_cast<int>(v.size()));
+      return v[i].empty();
     }
     else {
       CV_Assert(false && "unreachable");

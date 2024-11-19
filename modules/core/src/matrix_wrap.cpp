@@ -405,23 +405,14 @@ int _InputArray::sizend(int* arrsz, int i) const
 
 bool _InputArray::empty(int i) const
 {
-    _InputArray::KindFlag k = kind();
     if (i >= 0) {
-        if (k == STD_VECTOR_MAT) {
-            auto mv = reinterpret_cast<const std::vector<Mat>*>(obj);
-            CV_Assert((size_t)i < mv->size());
-            return mv->at(i).empty();
-        }
-        else if (k == STD_VECTOR_MAT) {
-            auto umv = reinterpret_cast<const std::vector<UMat>*>(obj);
-            CV_Assert((size_t)i < umv->size());
-            return umv->at(i).empty();
-        }
-        else if (k == STD_VECTOR_VECTOR) {
-            auto vv = reinterpret_cast<const std::vector<std::vector<int> >*>(obj);
-            CV_Assert((size_t)i < vv->size());
-            return vv->at(i).empty();
-        } else {
+        switch (_InputArray::KindFlag k = kind(); k) {
+        case STD_VECTOR_MAT:
+        case STD_VECTOR_UMAT:
+        case STD_VECTOR_VECTOR:
+            CV_Assert(ops != nullptr);
+            return ops->empty(*this, i);
+        default:
             CV_Error(Error::StsNotImplemented, "");
         }
     }
@@ -642,42 +633,18 @@ bool _InputArray::empty() const
     if (k == MATX)
         return false;
 
-    if( k == STD_VECTOR )
-    {
-        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
-        return v.empty();
-    }
-
-    if( k == STD_BOOL_VECTOR )
-    {
-        const std::vector<bool>& v = *(const std::vector<bool>*)obj;
-        return v.empty();
+    if (k == STD_VECTOR || k == STD_BOOL_VECTOR || k == STD_VECTOR_VECTOR || k == STD_VECTOR_MAT ||
+        k == STD_VECTOR_UMAT || k == STD_VECTOR_CUDA_GPU_MAT) {
+        CV_Assert(ops != nullptr);
+        return ops->empty(*this);
     }
 
     if( k == NONE )
         return true;
 
-    if( k == STD_VECTOR_VECTOR )
-    {
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        return vv.empty();
-    }
-
-    if( k == STD_VECTOR_MAT )
-    {
-        const std::vector<Mat>& vv = *(const std::vector<Mat>*)obj;
-        return vv.empty();
-    }
-
     if( k == STD_ARRAY_MAT )
     {
         return sz.height == 0;
-    }
-
-    if( k == STD_VECTOR_UMAT )
-    {
-        const std::vector<UMat>& vv = *(const std::vector<UMat>*)obj;
-        return vv.empty();
     }
 
     if( k == OPENGL_BUFFER )
@@ -685,12 +652,6 @@ bool _InputArray::empty() const
 
     if( k == CUDA_GPU_MAT )
         return ((const cuda::GpuMat*)obj)->empty();
-
-    if (k == STD_VECTOR_CUDA_GPU_MAT)
-    {
-        const std::vector<cuda::GpuMat>& vv = *(const std::vector<cuda::GpuMat>*)obj;
-        return vv.empty();
-    }
 
     if( k == CUDA_HOST_MEM )
         return ((const cuda::HostMem*)obj)->empty();
