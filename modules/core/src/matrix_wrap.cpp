@@ -1350,9 +1350,8 @@ UMat& _OutputArray::getUMatRef(int i) const
     else
     {
         CV_Assert( k == STD_VECTOR_UMAT );
-        std::vector<UMat>& v = *(std::vector<UMat>*)obj;
-        CV_Assert( i < (int)v.size() );
-        return v[i];
+        CV_Assert(ops != nullptr);
+        return ops->getUMatRef(*this, i);
     }
 }
 

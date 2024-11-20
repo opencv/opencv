@@ -74,6 +74,7 @@ struct _ArrayOpsBase {
                       _OutputArray::DepthMask fixedDepthMask) const = 0;
   virtual void release(const _OutputArray& self) const = 0;
   virtual Mat& getMatRef(const _OutputArray& self, int i) const = 0;
+  virtual UMat& getUMatRef(const _OutputArray& self, int i) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
 };
@@ -521,6 +522,19 @@ struct _ArrayOps final : _ArrayOpsBase {
   Mat& getMatRef(const _OutputArray& self, const int i) const final
   {
     if constexpr (is_Mat<typename T::value_type>) {
+      CV_Assert(i >= 0);
+      T& v = get(self.getObj());
+      CV_Assert(i < static_cast<int>(v.size()));
+      return v[i];
+    }
+    else {
+      CV_Assert(false && "unreachable");
+    }
+  }
+
+  UMat& getUMatRef(const _OutputArray& self, const int i) const final
+  {
+    if constexpr (is_UMat<typename T::value_type>) {
       CV_Assert(i >= 0);
       T& v = get(self.getObj());
       CV_Assert(i < static_cast<int>(v.size()));
