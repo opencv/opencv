@@ -399,6 +399,9 @@ Ptr<IVideoWriter> createAndroidVideoWriter(const std::string& filename, int four
 
 Ptr<IVideoCapture> create_obsensor_capture(int index);
 
+Ptr<IVideoCapture> createLibcameracapture_cam(int index);
+Ptr<IVideoCapture> createLibcameracapture_file(const std::string &filename);
+
 bool VideoCapture_V4L_waitAny(
         const std::vector<VideoCapture>& streams,
         CV_OUT std::vector<int>& ready,
