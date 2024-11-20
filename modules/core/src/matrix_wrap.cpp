@@ -1533,33 +1533,10 @@ void _OutputArray::move(Mat& m) const
 void _OutputArray::assign(const std::vector<UMat>& v) const
 {
     _InputArray::KindFlag k = kind();
-    if (k == STD_VECTOR_UMAT)
+    if (k == STD_VECTOR_UMAT || k == STD_VECTOR_MAT)
     {
-        std::vector<UMat>& this_v = *(std::vector<UMat>*)obj;
-        CV_Assert(this_v.size() == v.size());
-
-        for (size_t i = 0; i < v.size(); i++)
-        {
-            const UMat& m = v[i];
-            UMat& this_m = this_v[i];
-            if (this_m.u != NULL && this_m.u == m.u)
-                continue; // same object (see dnn::Layer::forward_fallback)
-            m.copyTo(this_m);
-        }
-    }
-    else if (k == STD_VECTOR_MAT)
-    {
-        std::vector<Mat>& this_v = *(std::vector<Mat>*)obj;
-        CV_Assert(this_v.size() == v.size());
-
-        for (size_t i = 0; i < v.size(); i++)
-        {
-            const UMat& m = v[i];
-            Mat& this_m = this_v[i];
-            if (this_m.u != NULL && this_m.u == m.u)
-                continue; // same object (see dnn::Layer::forward_fallback)
-            m.copyTo(this_m);
-        }
+        CV_Assert(ops != nullptr);
+        ops->assign(*this, v);
     }
     else
     {
@@ -1571,33 +1548,10 @@ void _OutputArray::assign(const std::vector<UMat>& v) const
 void _OutputArray::assign(const std::vector<Mat>& v) const
 {
     _InputArray::KindFlag k = kind();
-    if (k == STD_VECTOR_UMAT)
+    if (k == STD_VECTOR_UMAT || k == STD_VECTOR_MAT)
     {
-        std::vector<UMat>& this_v = *(std::vector<UMat>*)obj;
-        CV_Assert(this_v.size() == v.size());
-
-        for (size_t i = 0; i < v.size(); i++)
-        {
-            const Mat& m = v[i];
-            UMat& this_m = this_v[i];
-            if (this_m.u != NULL && this_m.u == m.u)
-                continue; // same object (see dnn::Layer::forward_fallback)
-            m.copyTo(this_m);
-        }
-    }
-    else if (k == STD_VECTOR_MAT)
-    {
-        std::vector<Mat>& this_v = *(std::vector<Mat>*)obj;
-        CV_Assert(this_v.size() == v.size());
-
-        for (size_t i = 0; i < v.size(); i++)
-        {
-            const Mat& m = v[i];
-            Mat& this_m = this_v[i];
-            if (this_m.u != NULL && this_m.u == m.u)
-                continue; // same object (see dnn::Layer::forward_fallback)
-            m.copyTo(this_m);
-        }
+        CV_Assert(ops != nullptr);
+        ops->assign(*this, v);
     }
     else
     {

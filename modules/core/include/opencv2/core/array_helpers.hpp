@@ -75,6 +75,8 @@ struct _ArrayOpsBase {
   virtual void release(const _OutputArray& self) const = 0;
   virtual Mat& getMatRef(const _OutputArray& self, int i) const = 0;
   virtual UMat& getUMatRef(const _OutputArray& self, int i) const = 0;
+  virtual void assign(const _OutputArray& self, const std::vector<Mat>& other) const = 0;
+  virtual void assign(const _OutputArray& self, const std::vector<UMat>& other) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
 };
@@ -545,6 +547,16 @@ struct _ArrayOps final : _ArrayOpsBase {
     }
   }
 
+  void assign(const _OutputArray& self, const std::vector<Mat>& other) const final
+  {
+    return assign_impl(self, other);
+  }
+
+  void assign(const _OutputArray& self, const std::vector<UMat>& other) const final
+  {
+    return assign_impl(self, other);
+  }
+
   static const T& get(const void* const data)
   {
     return *static_cast<const T*>(data);
@@ -577,6 +589,29 @@ struct _ArrayOps final : _ArrayOpsBase {
     }
     else if constexpr (is_UMat<U>) {
       return m;
+    }
+    else {
+      CV_Assert(false && "unreachable");
+    }
+  }
+
+  template<class U>
+  static void assign_impl(const _OutputArray& self, const std::vector<U>& other)
+  {
+    using value_type = typename T::value_type;
+    if constexpr (is_Mat<value_type> || is_UMat<value_type>) {
+      auto& this_v = get(self.getObj());
+      CV_Assert(this_v.size() == other.size());
+
+      for (std::size_t i = 0; i < other.size(); ++i) {
+        const auto& m = other[i];
+        auto& this_m = this_v[i];
+        if (this_m.u != nullptr && this_m.u == m.u) {
+          continue;
+        }
+
+        m.copyTo(this_m);
+      }
     }
     else {
       CV_Assert(false && "unreachable");
