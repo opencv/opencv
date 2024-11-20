@@ -82,6 +82,7 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
     public:
         LSTM2LayerImpl(const LayerParams& params)
         {
+            setParamsFrom(params);
             numHidden = params.get<int>("hidden_size", 1);
             layout = (layout_t) params.get<int>("layout", SEQ_BATCH_HID);
 
