@@ -1113,7 +1113,32 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
 // BUG: https://github.com/opencv/opencv/issues/26308
 void ONNXImporter2::parseLSTM(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
-    rememberMissingOp(node_proto_.op_type());
+    opencv_onnx::NodeProto lstm_proto = node_proto_;
+    layerParams.type = "LSTM2";
+
+    layerParams.set("is_onnx", true);
+    layerParams.set("reverse", layerParams.get<String>("direction", "") == "reverse");
+    layerParams.set("bidirectional", layerParams.get<String>("direction", "") == "bidirectional");
+
+
+
+    bool need_yc = lstm_proto.output_size() > 2 && !lstm_proto.output(2).empty();
+    bool need_yh = lstm_proto.output_size() > 1 && !lstm_proto.output(1).empty();
+    bool need_y  = lstm_proto.output_size() > 0 && !lstm_proto.output(0).empty();
+
+    const std::string y_name = need_y ? lstm_proto.output(0) : "";
+    const std::string yh_name = need_yh ? lstm_proto.output(1) : "";
+    const std::string yc_name = need_yc ? lstm_proto.output(2) : "";
+
+    layerParams.set("produce_cell_output", need_yc);
+    layerParams.set("produce_output_yh", need_yh);
+
+
+    if (lstm_proto.input_size() == 8)
+        layerParams.set("use_peephole", true);
+
+
+    addLayer(layerParams, lstm_proto);
 }
 
  // BUG: https://github.com/opencv/opencv/issues/26309

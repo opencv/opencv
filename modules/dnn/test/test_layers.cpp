@@ -2740,4 +2740,54 @@ INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationEltwiseFusion, Com
                         TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
 ));
 
+TEST(Layer_LSTM, repeatedInference)
+{
+    std::string onnx_file_path = findDataFile("dnn/onnx/models/onnxscript_lstm.onnx", false);
+
+    // Test parameters
+    const int batch_size = 1;
+    const int seq_length = 5;
+    const int input_size = 6;
+    const int hidden_size = 4;
+    const int num_directions = 1;
+
+    // Create random input tensors
+    int x_shape [] = {seq_length, batch_size, input_size};
+    int h_0_shape [] = {num_directions, batch_size, hidden_size};
+    int c_0_shape [] = {num_directions, batch_size, hidden_size};
+
+    Mat X(3, x_shape, CV_32F);
+    Mat h_0(3, h_0_shape, CV_32F);
+    Mat c_0(3, c_0_shape, CV_32F);
+
+    randu(X, 0, 1);
+    randu(h_0, 0, 1);
+    randu(c_0, 0, 1);
+
+    // Load and run ONNX model
+    dnn::Net net = dnn::readNet(onnx_file_path);
+    std::vector<std::string> outputNames = {"Y", "Y_h", "Y_c"};
+
+    std::vector<std::vector<Mat>> all_outputs;
+    // Run the model twice
+    for (int i = 0; i < 2; i++) {
+
+        net.setInput(X, "X");
+        net.setInput(h_0, "initial_h");
+        net.setInput(c_0, "initial_c");
+
+        std::vector<Mat> outputs;
+        net.forward(outputs, outputNames);
+        // std::cout << "........pass " << (i + 1) << " done........" << std::endl;
+        all_outputs.push_back(outputs);
+    }
+    // convert to assertions
+    double diff0 = cv::norm(all_outputs[0][0], all_outputs[1][0], NORM_L1);
+    double diff1 = cv::norm(all_outputs[0][1], all_outputs[1][1], NORM_L1);
+    double diff2 = cv::norm(all_outputs[0][2], all_outputs[1][2], NORM_L1);
+    EXPECT_EQ(diff0, 0.);
+    EXPECT_EQ(diff1, 0.);
+    EXPECT_EQ(diff2, 0.);
+}
+
 }} // namespace
