@@ -64,6 +64,14 @@ struct _ArrayOpsBase {
   virtual int empty(const _InputArray& self, int i) const = 0;
   virtual std::size_t offset(const _InputArray& self, std::size_t i) const = 0;
   virtual std::size_t step(const _InputArray& self, std::size_t i) const = 0;
+
+  virtual void create(const _OutputArray& arr,
+                      int d,
+                      const int* sizes,
+                      int mtype,
+                      int i,
+                      bool allowTransposed,
+                      _OutputArray::DepthMask fixedDepthMask) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
 };
@@ -401,6 +409,108 @@ struct _ArrayOps final : _ArrayOpsBase {
     }
   }
 
+  void create(const _OutputArray& arr,
+              const int d,
+              const int* const sizes,
+              int mtype,
+              const int i,
+              const bool allowTransposed,
+              const _OutputArray::DepthMask fixedDepthMask) const final
+  {
+    using value_type = typename T::value_type;
+    auto& v = get(arr.getObj());
+
+    if constexpr (is_Mat<value_type> || is_UMat<value_type>) {
+      if (i < 0) {
+        CV_Assert(d == 2);
+        CV_Assert(sizes[0] == 1 || sizes[1] == 1 || sizes[0] * sizes[1] == 0);
+        const std::size_t len = sizes[0] * sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
+        const std::size_t len0 = v.size();
+
+        CV_Assert(!arr.fixedSize() || len == len0);
+        v.resize(len);
+        if (arr.fixedType()) {
+          const int _type = CV_MAT_TYPE(arr.getFlags());
+          for (std::size_t j = len0; j < len; ++j) {
+            if (v[j].type() == _type) {
+              continue;
+            }
+
+            CV_Assert(v[j].empty());
+            v[j].flags = (v[j].flags & ~CV_MAT_TYPE_MASK) | _type;
+          }
+        }
+
+        return;
+      }
+
+      CV_Assert(i < static_cast<int>(v.size()));
+      auto& m = mattify(v[i]);
+
+      if (allowTransposed) {
+        if (!m.isContinuous()) {
+          CV_Assert(!arr.fixedType() && !arr.fixedSize());
+          m.release();
+        }
+
+        const bool same_type = m.type() == mtype;
+        const bool same_dimensions = d == 2 && m.dims == 2 && m.rows == sizes[1] && m.cols == sizes[0];
+        if (get_data(m) != nullptr && same_type && same_dimensions) {
+          return;
+        }
+      }
+
+      if (arr.fixedType()) {
+        const bool same_channels = CV_MAT_CN(mtype) == m.channels();
+        const bool has_depth = ((1 << CV_MAT_TYPE(arr.getFlags())) & fixedDepthMask) != 0;
+        if (same_channels && has_depth) {
+          mtype = m.type();
+        }
+        else {
+          CV_Assert(CV_MAT_TYPE(mtype) == m.type());
+        }
+      }
+
+      if (arr.fixedSize()) {
+        CV_Assert(m.dims == d);
+        for (int j = 0; j < d; ++j) {
+          CV_Assert(m.size[j] == sizes[j]);
+        }
+      }
+
+      m.create(d, sizes, mtype);
+      return;
+    }
+    else if constexpr (!std::is_same_v<bool, value_type>) {
+      const int size0 = d > 0 ? sizes[0] : 1;
+      const int size1 = d > 1 ? sizes[1] : 1;
+      CV_Assert(d <= 2);
+      CV_Assert(size0 == 1 || size1 == 1 || size0 * size1 == 0);
+
+      const std::size_t len = size0 * size1 > 0 ? size0 + size1 - 1 : 0;
+
+      if constexpr (is_vector<value_type>) {
+        if (i < 0) {
+          CV_Assert(!arr.fixedSize() || len == v.size());
+          v.resize(len);
+          return;
+        }
+
+        CV_Assert(i < static_cast<int>(v.size()));
+        v[i].resize(len);
+      }
+      else {
+        CV_Assert(i < 0);
+        const int type0 = CV_MAT_TYPE(arr.getFlags());
+        CV_Assert(mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0));
+        v.resize(len);
+      }
+    }
+    else {
+      CV_Assert(false && "unreachable");
+    }
+  }
+
   static const T& get(const void* const data)
   {
     return *static_cast<const T*>(data);
@@ -409,6 +519,34 @@ struct _ArrayOps final : _ArrayOpsBase {
   static T& get(void* const data)
   {
     return *static_cast<T*>(data);
+  }
+
+  template<class U>
+  static auto get_data(U& m)
+  {
+    if constexpr (is_Mat<U>) {
+      return m.data;
+    }
+    else if constexpr (is_UMat<U>) {
+      return m.u;
+    }
+    else {
+      CV_Assert(false && "unreachable");
+    }
+  }
+
+  template<class U>
+  static auto& mattify(U& m)
+  {
+    if constexpr (is_Mat<U>) {
+      return static_cast<Mat&>(m);
+    }
+    else if constexpr (is_UMat<U>) {
+      return m;
+    }
+    else {
+      CV_Assert(false && "unreachable");
+    }
   }
 };
 
@@ -426,6 +564,15 @@ std::size_t _ArrayOps<std::vector<cuda::GpuMat>>::offset(const _InputArray& self
 
 template<>
 std::size_t _ArrayOps<std::vector<cuda::GpuMat>>::step(const _InputArray& self, const std::size_t i) const;
+
+template<>
+void _ArrayOps<std::vector<cuda::GpuMat>>::create(const _OutputArray& arr,
+                                                  int d,
+                                                  const int* sizes,
+                                                  int mtype,
+                                                  int i,
+                                                  bool allowTransposed,
+                                                  _OutputArray::DepthMask fixedDepthMask) const;
 
 template<class T>
 inline constexpr _ArrayOps<T> array_ops;
