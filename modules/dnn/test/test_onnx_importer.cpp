@@ -1327,8 +1327,8 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
 #endif
     testONNXModels("split_max");
 }
-// Disables due to output shape [?, N, OutputSize] not supported by new graph engine
-TEST_P(Test_ONNX_layers, DISABLED_LSTM_Activations)
+// Fails with the new engine. Output shape [?, N, OutputSize] not supported by new graph engine
+TEST_P(Test_ONNX_layers, LSTM_Activations)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH); // TODO: fix this test for OpenVINO
@@ -1497,14 +1497,20 @@ TEST_P(Test_ONNX_layers, LSTM_init_h0_c0)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm_init_h0_c0", npy, 0, 0, false, false, 3);
 }
+
 // epsilon is larger because onnx does not match with torch/opencv exactly
+// Test uses incorrect ONNX and test data with 3 dims instead of 4.
+// ONNNRuntime does not support layout=1 attiribute inference. See a detailed issue #26456
 TEST_P(Test_ONNX_layers, DISABLED_LSTM_layout_seq)
 {
     if(backend == DNN_BACKEND_CUDA)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("lstm_layout_0", npy, 0.005, 0.005, false, false, 3);
 }
+
 // epsilon is larger because onnx does not match with torch/opencv exactly
+// Test uses incorrect ONNX and test data with 3 dims instead of 4.
+// ONNNRuntime does not support layout=1 attiribute inference. See a detailed issue #26456
 TEST_P(Test_ONNX_layers, DISABLED_LSTM_layout_batch)
 {
     if(backend == DNN_BACKEND_CUDA)

@@ -77,7 +77,6 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
     ActivationFunction f_activation;
     ActivationFunction g_activation;
     ActivationFunction h_activation;
-    bool isDefaultActivations{true};
 
     public:
         LSTM2LayerImpl(const LayerParams& params)
@@ -106,15 +105,11 @@ class LSTM2LayerImpl CV_FINAL : public LSTM2Layer
                 f_activation = sigmoid;
                 g_activation = tanh;
                 h_activation = tanh;
-                isDefaultActivations = true;
             } else {
                 CV_Assert(activations.size() == 3);
                 f_activation = get_activation_function(activations.getStringValue(0));
                 g_activation = get_activation_function(activations.getStringValue(1));
                 h_activation = get_activation_function(activations.getStringValue(2));
-                isDefaultActivations = activations.getStringValue(0) == "Sigmoid"
-                                    && activations.getStringValue(1) == "Tanh"
-                                    && activations.getStringValue(2) == "Tanh";
             }
 
             outTailShape.clear();

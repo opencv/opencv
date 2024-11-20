@@ -2768,7 +2768,6 @@ TEST(Layer_LSTM, repeatedInference)
     dnn::Net net = dnn::readNet(onnx_file_path);
     std::vector<std::string> outputNames = {"Y", "Y_h", "Y_c"};
 
-    std::cout << "running the model twice" << std::endl;
     std::vector<std::vector<Mat>> all_outputs;
     // Run the model twice
     for (int i = 0; i < 2; i++) {
@@ -2779,7 +2778,7 @@ TEST(Layer_LSTM, repeatedInference)
 
         std::vector<Mat> outputs;
         net.forward(outputs, outputNames);
-        std::cout << "........pass " << (i + 1) << " done........" << std::endl;
+        // std::cout << "........pass " << (i + 1) << " done........" << std::endl;
         all_outputs.push_back(outputs);
     }
     // convert to assertions
