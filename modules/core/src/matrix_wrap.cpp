@@ -1328,9 +1328,8 @@ Mat& _OutputArray::getMatRef(int i) const
 
     if( k == STD_VECTOR_MAT )
     {
-        std::vector<Mat>& v = *(std::vector<Mat>*)obj;
-        CV_Assert( i < (int)v.size() );
-        return v[i];
+        CV_Assert(ops != nullptr);
+        return ops->getMatRef(*this, i);
     }
     else
     {
