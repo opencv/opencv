@@ -109,7 +109,7 @@ int fastcv_hal_mul8u16u(
 
     fcvStatus status = FASTCV_SUCCESS;
 
-    if (src1_step < width && src2_step < width)
+    if (src1_step < (size_t)width && src2_step < (size_t)width)
     {
         src1_step = width*sizeof(uchar);
         src2_step = width*sizeof(uchar);
@@ -136,7 +136,7 @@ int fastcv_hal_sub8u32f(
 
     fcvStatus status = FASTCV_SUCCESS;
 
-    if (src1_step < width && src2_step < width)
+    if (src1_step < (size_t)width && src2_step < (size_t)width)
     {
         src1_step = width*sizeof(uchar);
         src2_step = width*sizeof(uchar);
@@ -199,6 +199,8 @@ int fastcv_hal_meanStdDev(
     size_t            mask_step)
 {
     INITIALIZATION_CHECK;
+
+    CV_UNUSED(mask_step);
 
     if(src_type != CV_8UC1)
     {
