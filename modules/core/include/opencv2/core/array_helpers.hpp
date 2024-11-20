@@ -72,6 +72,7 @@ struct _ArrayOpsBase {
                       int i,
                       bool allowTransposed,
                       _OutputArray::DepthMask fixedDepthMask) const = 0;
+  virtual void release(const _OutputArray& self) const = 0;
 protected:
   ~_ArrayOpsBase() = default;
 };
@@ -511,6 +512,11 @@ struct _ArrayOps final : _ArrayOpsBase {
     }
   }
 
+  void release(const _OutputArray& self) const override
+  {
+    get(self.getObj()).clear();
+  }
+
   static const T& get(const void* const data)
   {
     return *static_cast<const T*>(data);
@@ -573,6 +579,9 @@ void _ArrayOps<std::vector<cuda::GpuMat>>::create(const _OutputArray& arr,
                                                   int i,
                                                   bool allowTransposed,
                                                   _OutputArray::DepthMask fixedDepthMask) const;
+
+template<>
+void _ArrayOps<std::vector<cuda::GpuMat>>::release(const _OutputArray& self) const;
 
 template<class T>
 inline constexpr _ArrayOps<T> array_ops;

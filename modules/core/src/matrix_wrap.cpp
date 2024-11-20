@@ -1286,38 +1286,13 @@ void _OutputArray::release() const
     if( k == NONE )
         return;
 
-    if( k == STD_VECTOR )
+    if( k == STD_VECTOR || k == STD_VECTOR_VECTOR || k == STD_VECTOR_MAT || k == STD_VECTOR_UMAT ||
+        k == STD_VECTOR_CUDA_GPU_MAT )
     {
-        create(Size(), CV_MAT_TYPE(flags));
-        return;
+        CV_Assert(ops != nullptr);
+        return ops->release(*this);
     }
 
-    if( k == STD_VECTOR_VECTOR )
-    {
-        ((std::vector<std::vector<uchar> >*)obj)->clear();
-        return;
-    }
-
-    if( k == STD_VECTOR_MAT )
-    {
-        ((std::vector<Mat>*)obj)->clear();
-        return;
-    }
-
-    if( k == STD_VECTOR_UMAT )
-    {
-        ((std::vector<UMat>*)obj)->clear();
-        return;
-    }
-    if (k == STD_VECTOR_CUDA_GPU_MAT)
-    {
-#ifdef HAVE_CUDA
-        ((std::vector<cuda::GpuMat>*)obj)->clear();
-        return;
-#else
-        CV_Error(Error::StsNotImplemented, "CUDA support is not enabled in this OpenCV build (missing HAVE_CUDA)");
-#endif
-    }
     CV_Error(Error::StsNotImplemented, "Unknown/unsupported array type");
 }
 
@@ -1739,6 +1714,16 @@ void _ArrayOps<std::vector<cuda::GpuMat>>::create(const _OutputArray& arr,
     CV_Assert(mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) &&
                                     ((1 << type0) & fixedDepthMask) != 0));
     v.resize(len);
+}
+
+template<>
+[[gnu::visibility("default")]] void _ArrayOps<std::vector<cuda::GpuMat>>::release(const _OutputArray& self) const
+{
+    if constexpr (!have_cuda) {
+        noCudaError();
+    } else {
+        get(self.getObj()).clear();
+    }
 }
 
 } // cv::
