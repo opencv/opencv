@@ -1340,7 +1340,7 @@ bool LibcameraCapture::open(const std::string & _deviceName)
     return true;
 }
 
-Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename)
+Ptr<IVideoCapture> createLibcameraCapture_file(const std::string &filename)
 {
     auto ret = makePtr<LibcameraCapture>();
     if (ret->open(filename))
