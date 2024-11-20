@@ -68,9 +68,6 @@ public:
             detector_->setIouThres(iou_thres);
         }
     }
-    void setDecoderIouThres(float iou_thres) {
-        this->iou_thres = iou_thres;
-    }   
 
     void detect(Mat srcImage, std::vector<DetectInfo> &bboxes);
     QBAR_RESULT decode(Mat& srcImage);
@@ -91,8 +88,6 @@ private:
     BinarizerMgr binarizer_mgr_;
     std::unordered_set<QBAR_READER> readers_;
     std::string output_charset_ = "UTF-8";
-
-    float iou_thres;
 
     // AI Model
     bool _init_detector_model_ = false;

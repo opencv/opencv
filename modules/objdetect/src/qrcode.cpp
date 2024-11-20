@@ -4868,7 +4868,6 @@ CodeDetectorWeChat::CodeDetectorWeChat(const std::string& detection_model_path_,
                             const std::string& super_resolution_model_path_,
                             const std::vector<DECODER_READER>& readers,
                             const float detector_iou_thres,
-                            const float decoder_iou_thres,
                             const float score_thres,
                             const int reference_size) {
     p = makePtr<PimplWeChat>();
@@ -4897,7 +4896,6 @@ CodeDetectorWeChat::CodeDetectorWeChat(const std::string& detection_model_path_,
     std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDetectorReferenceSize(reference_size);
     std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDetectorScoreThres(score_thres);
     std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDetectorIouThres(detector_iou_thres);
-    std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDecoderIouThres(decoder_iou_thres);
 }
 
 void CodeDetectorWeChat::setDetectorReferenceSize(int reference_size) {
@@ -4909,8 +4907,4 @@ void CodeDetectorWeChat::setDetectorScoreThres(float score_thres) {
 void CodeDetectorWeChat::setDetectorIouThres(float iou_thres) {
     std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDetectorIouThres(iou_thres);
 }
-void CodeDetectorWeChat::setDecoderIouThres(float iou_thres) {
-    std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDecoderIouThres(iou_thres);
-}
-
 }  // namespace

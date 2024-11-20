@@ -880,7 +880,6 @@ public:
      * @param super_resolution_model_path_ model file path for the super resolution model
      * @param readers decoder readers
      * @param detector_iou_thres nms iou threshold for detection part
-     * @param decoder_iou_thres nms iou threshold for decoding part
      * @param score_thres score threshold for detection part
      * @param reference_size the length of the image to align during pre-processing before detection
      */
@@ -888,7 +887,6 @@ public:
                             const std::string& super_resolution_model_path_ = "",
                             const std::vector<DECODER_READER>& readers = std::vector<DECODER_READER>(),
                             const float detector_iou_thres = 0.6,
-                            const float decoder_iou_thres = 0.5,
                             const float score_thres = 0.3,
                             const int reference_size = 512);
 
@@ -903,16 +901,9 @@ public:
     CV_WRAP void setDetectorScoreThres(float score_thres);
 
     /** @brief Set the detector iou threshold during the processing of detection results.
-    * @param detector_iou_thres nms iou threshold for detection part
+    * @param iou_thres nms iou threshold for detection part
     */
     CV_WRAP void setDetectorIouThres(float iou_thres);
-
-    /** @brief Set the detector iou threshold during the processing of decoding results.
-    * @param detector_iou_thres nms iou threshold for decoding part
-    */
-    CV_WRAP void setDecoderIouThres(float iou_thres);
-
-
 };
 //! @}
 }

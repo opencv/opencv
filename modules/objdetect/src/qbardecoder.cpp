@@ -325,7 +325,7 @@ std::vector<QBAR_RESULT> QBarDecoder::decode(Mat srcImage, std::vector<DetectInf
     
     parallel_for_(Range(0, int(detect_results.size())), parallelDecode);
 
-    this->nms(results, iou_thres);
+    this->nms(results, 0.6);
     
     return results;
 }
