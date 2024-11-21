@@ -468,6 +468,19 @@ Pin parsePin(const std::string &name)
     return pin;
 }
 
+// Removes zero index from name suffix, keeps other indices
+std::string formatTensorName(std::string name)
+{
+    size_t delimiter_pos = name.find_first_of(':');
+    if (delimiter_pos != std::string::npos)
+    {
+        std::string index = name.substr(delimiter_pos + 1);
+        if (index == "0")
+            name = name.substr(0, delimiter_pos);
+    }
+    return name;
+}
+
 StrIntVector getNextLayers(const tensorflow::GraphDef& net, const String& layer_name, const String& type = "")
 {
    StrIntVector layers;
@@ -559,9 +572,12 @@ protected:
     std::vector<Ptr<Layer>> curProg;
     std::vector<std::vector<std::string>> layersOutputs;
     std::vector<Arg> modelInputs;
+    std::unordered_map<std::string, MatShape> tensorsShape;
 
 private:
     void addLayer(const std::string& name, const std::string& type, LayerParams& layerParams, std::vector<std::string> inputs, int numOutputs = 1, int repeatInputs = 0);
+    // Calculates and saves layer's output shapes if input shapes are available
+    void calcLayerOutputShapes(const Layer& layer, const std::vector<std::string>& inputs, const std::vector<std::string>& outputs);
 
     void addPermuteLayer(const int* order, const std::string& permName, const std::string& inputName, int orderSize = 4);
     void setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer, std::string& inputName, float value = 0.);
@@ -631,16 +647,10 @@ void TFImporter::addLayer(const std::string& name, const std::string& type, Laye
         }
         layer_id[name] = -1;
 
-        for (std::string inputName : inputs)
+        for (size_t i = 0; i < inputs.size(); i++)
         {
-            size_t delimiter_pos = inputName.find_first_of(':');
-            if (delimiter_pos != std::string::npos)
-            {
-                std::string index = inputName.substr(delimiter_pos + 1);
-                if (index == "0")
-                    inputName = inputName.substr(0, delimiter_pos);
-            }
-            layer->inputs.push_back(dstNet.getArg(inputName));
+            inputs[i] = formatTensorName(inputs[i]);
+            layer->inputs.push_back(dstNet.getArg(inputs[i]));
         }
 
         layersOutputs.push_back({name});
@@ -648,6 +658,8 @@ void TFImporter::addLayer(const std::string& name, const std::string& type, Laye
             layersOutputs.back().push_back(name + ":" + std::to_string(i));
         layer->netimpl = dstNet.getImpl();
         curProg.push_back(layer);
+
+        calcLayerOutputShapes(*layer.get(), inputs, layersOutputs.back());
     }
     else
     {
@@ -667,6 +679,26 @@ void TFImporter::addLayer(const std::string& name, const std::string& type, Laye
             connect(layer_id, dstNet, inp, id, i);
         }
     }
+}
+
+void TFImporter::calcLayerOutputShapes(const Layer& layer, const std::vector<std::string>& inputs, const std::vector<std::string>& outputs)
+{
+    std::vector<MatShape> inputsShape;
+    for (const std::string& inputName : inputs) {
+        const auto& it = tensorsShape.find(inputName);
+        if (it == tensorsShape.end())
+            return;
+        inputsShape.push_back(it->second);
+    }
+
+    std::vector<MatShape> outputsShape;
+    std::vector<MatShape> intermediatesShape;
+
+    layer.getMemoryShapes(inputsShape, outputs.size(), outputsShape, intermediatesShape);
+
+    CV_Assert(outputsShape.size() == outputs.size());
+    for(size_t i = 0; i < outputs.size(); i++)
+        tensorsShape[outputs[i]] = outputsShape[i];
 }
 
 void TFImporter::setPadding(LayerParams &layerParams, const tensorflow::NodeDef &layer, std::string& inputName, float value)
@@ -1158,11 +1190,12 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
                 }
             }
         }
-        layerParams.set("shape", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShapeSize));
+
+        layerParams.set(newEngine ? "shape" : "dim", DictValue::arrayInt<int*>(newShape.ptr<int>(), newShapeSize));
 
         std::string setName = changedType ? name + "/realReshape" : name;
 
-        addLayer(setName, "Reshape2", layerParams, {inputName});
+        addLayer(setName, newEngine ? "Reshape2" : "Reshape", layerParams, {inputName});
         inputName = setName;
 
         if ((inpLayout == DNN_LAYOUT_NHWC || inpLayout == DNN_LAYOUT_UNKNOWN || inpLayout == DNN_LAYOUT_PLANAR) &&
@@ -1179,16 +1212,13 @@ void TFImporter::parseReshape(tensorflow::GraphDef& net, const tensorflow::NodeD
     }
     else
     {
-        addLayer(name, "Reshape2", layerParams, {layer.input(0), layer.input(1)});
+        addLayer(name, newEngine ? "Reshape2" : "Reshape", layerParams, {layer.input(0), layer.input(1)});
         data_layouts[name] = inpLayout;
     }
 }
 
 void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::NodeDef& layer, LayerParams& layerParams)
 {
-    if (newEngine)
-        throw std::runtime_error("Can't parse ExpandDims with the new dnn engine"); // https://github.com/opencv/opencv/issues/26393
-
     const std::string& name = layer.name();
     const int num_inputs = layer.input_size();
 
@@ -1199,11 +1229,21 @@ void TFImporter::parseExpandDims(tensorflow::GraphDef& net, const tensorflow::No
     DataLayout inpLayout = getDataLayout(layer.input(0), data_layouts);
 
     // Get input shape
-    std::vector<MatShape> inShape_, outShape_;
-    int inpIdindex = layer_id.find(inputName)->second;
-    std::vector<MatType> netInputTypes(netInputShapes.size(), CV_32F);
-    dstNet.getLayerShapes(netInputShapes, netInputTypes, inpIdindex, inShape_, outShape_);
-    MatShape inpShape = outShape_[0];
+    MatShape inpShape;
+    if (newEngine)
+    {
+        const auto& it = tensorsShape.find(formatTensorName(inputName));
+        CV_Assert(it != tensorsShape.end());
+        inpShape = it->second;
+    }
+    else
+    {
+        std::vector<MatShape> inShape_, outShape_;
+        int inpIdindex = layer_id.find(inputName)->second;
+        std::vector<MatType> netInputTypes(netInputShapes.size(), CV_32F);
+        dstNet.getLayerShapes(netInputShapes, netInputTypes, inpIdindex, inShape_, outShape_);
+        inpShape = outShape_[0];
+    }
     MatShape outShape = inpShape;
 
     int outShapeSize = (int)outShape.size();
@@ -1616,6 +1656,7 @@ void TFImporter::parsePlaceholder(tensorflow::GraphDef& net, const tensorflow::N
             if (newEngine)
                 dstNet.getImpl()->args.at(modelInputs.back().idx).shape = dims;
             netInputShapes.push_back(dims);
+            tensorsShape[formatTensorName(name)] = dims;
         }
     }
 }
@@ -1640,7 +1681,7 @@ void TFImporter::parseSplit(tensorflow::GraphDef& net, const tensorflow::NodeDef
     if (hasLayerAttr(layer, "num_split"))
         layerParams.set("num_split", getLayerAttr(layer, "num_split").i());
     else
-        CV_Error(Error::StsNotImplemented, "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC");
+        CV_Error(Error::StsNotImplemented, "Can't parse split layer. num_split attribut is missing");
 
     addLayer(name, "Slice", layerParams, {layer.input(1)}, getLayerAttr(layer, "num_split").i());
 }
@@ -1828,59 +1869,9 @@ void TFImporter::parseMul(tensorflow::GraphDef& net, const tensorflow::NodeDef& 
     }
     else
     {
-        // Check if all the inputs have the same shape.
-        bool equalInpShapes = true;
-        bool isShapeOnes = false;
-        if (newEngine)
-        {
-            // looks like the shape check is redundant
-            CV_LOG_WARNING(NULL, ("Skipped shape check in parseMul"));
-        }
-        else
-        {
-            MatShape outShape0;
-            for (int ii = 0; ii < num_inputs && !netInputShapes.empty(); ii++)
-            {
-                Pin pin = parsePin(layer.input(ii));
-                int inpId = layer_id.find(pin.name)->second;
-
-                // Get input shape
-                MatShape outShape;
-                std::vector<MatShape> inpShapes, outShapes;
-                std::vector<MatType> netInputTypes(netInputShapes.size(), CV_32F);
-                dstNet.getLayerShapes(netInputShapes, netInputTypes, inpId, inpShapes, outShapes);
-                CV_CheckGT(static_cast<int>(outShapes.size()), pin.blobIndex, "");
-                outShape = outShapes[pin.blobIndex];
-
-                if (ii == 0)
-                {
-                    outShape0 = outShape;
-                }
-                else if (outShape != outShape0)
-                {
-                    equalInpShapes = false;
-                    isShapeOnes = isAllOnes(outShape, 2, outShape.size()) ||
-                                isAllOnes(outShape0, 2, outShape0.size());
-                    break;
-                }
-            }
-        }
-
-        std::vector<std::string> inputs;
-        for (int ii = 0; ii < layer.input_size(); ii++)
-            inputs.push_back(layer.input(ii));
-
-        if (equalInpShapes || netInputShapes.empty() || (!equalInpShapes && isShapeOnes))
-        {
-            layerParams.set("operation", type == "RealDiv" ? "div" : "prod");
-            addLayer(name, "Eltwise", layerParams, inputs);
-        }
-        else
-        {
-            if (type == "RealDiv")
-                CV_Error(Error::StsNotImplemented, "Division of non equal tensors");
-            addLayer(name, "Scale", layerParams, inputs);
-        }
+        CV_CheckEQ(num_inputs, 2, "");
+        layerParams.set("operation", type == "RealDiv" ? "div" : "mul");
+        addLayer(name, "NaryEltwise", layerParams, {layer.input(0), layer.input(1)});
     }
 }
 
@@ -2959,36 +2950,33 @@ void TFImporter::populateNet()
         << ". Number of nodes = " << netBin.node_size()
     );
 
-    if(!newEngine)
+    if (netTxtSize)
     {
-        if (netTxtSize)
-        {
-            CV_LOG_INFO(NULL, "DNN/TF: parsing config"
-                << (netTxt.has_versions() ? cv::format(" produced by TF v%d (min_consumer=%d)", (int)netTxt.versions().producer(), (int)netTxt.versions().min_consumer()) : cv::String(" (N/A version info)"))
-                << ". Number of nodes = " << netTxt.node_size()
-            );
+        CV_LOG_INFO(NULL, "DNN/TF: parsing config"
+            << (netTxt.has_versions() ? cv::format(" produced by TF v%d (min_consumer=%d)", (int)netTxt.versions().producer(), (int)netTxt.versions().min_consumer()) : cv::String(" (N/A version info)"))
+            << ". Number of nodes = " << netTxt.node_size()
+        );
 
-            RemoveIdentityOps(netBin);
-            CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
-            RemoveIdentityOps(netTxt);
-            CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(config) => " << netTxt.node_size() << " nodes");
+        RemoveIdentityOps(netBin);
+        CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
+        RemoveIdentityOps(netTxt);
+        CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(config) => " << netTxt.node_size() << " nodes");
 
-            sortByExecutionOrder(netTxt);
-            CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(config) => " << netTxt.node_size() << " nodes");
-        }
-        else
-        {
-            removePhaseSwitches(netBin);
-            CV_LOG_DEBUG(NULL, "DNN/TF: removePhaseSwitches(model) => " << netBin.node_size() << " nodes");
+        sortByExecutionOrder(netTxt);
+        CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(config) => " << netTxt.node_size() << " nodes");
+    }
+    else
+    {
+        removePhaseSwitches(netBin);
+        CV_LOG_DEBUG(NULL, "DNN/TF: removePhaseSwitches(model) => " << netBin.node_size() << " nodes");
 
-            RemoveIdentityOps(netBin);
-            CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
+        RemoveIdentityOps(netBin);
+        CV_LOG_DEBUG(NULL, "DNN/TF: RemoveIdentityOps(model) => " << netBin.node_size() << " nodes");
 
-            simplifySubgraphs(netBin);
-            CV_LOG_DEBUG(NULL, "DNN/TF: simplifySubgraphs(model) => " << netBin.node_size() << " nodes");
-            sortByExecutionOrder(netBin);
-            CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(model) => " << netBin.node_size() << " nodes");
-        }
+        simplifySubgraphs(netBin, newEngine);
+        CV_LOG_DEBUG(NULL, "DNN/TF: simplifySubgraphs(model) => " << netBin.node_size() << " nodes");
+        sortByExecutionOrder(netBin);
+        CV_LOG_DEBUG(NULL, "DNN/TF: sortByExecutionOrder(model) => " << netBin.node_size() << " nodes");
     }
 
     tensorflow::GraphDef& net = netTxtSize != 0 ? netTxt : netBin;
@@ -3196,14 +3184,23 @@ void TFLayerHandler::handleFailed(const tensorflow::NodeDef& layer)
 {
     LayerParams lp = getNotImplementedParams(layer.name(), layer.op());
 
-    if (importer->newEngine)
-        CV_Error(Error::StsNotImplemented, "TFLayerHandler::handleFailed is not implemented for the new dnn engine");
-
     // the layer will be created or its params and type will be replaced
-    int id = importer->dstNet.addLayer(lp.name, lp.type, lp);
-    if (id != -1) // internal layer failure before the call to addLayer()
+    if (importer->newEngine)
     {
-        importer->layer_id[lp.name] = id;
+        Ptr<Layer> layer = LayerFactory::createLayerInstance(lp.type, lp);
+        if (layer) {
+            layer->inputs.push_back(importer->dstNet.getArg("NotImplementedInput"));
+            importer->layer_id[lp.name] = -1;
+            importer->curProg.push_back(layer);
+        }
+    }
+    else
+    {
+        int id = importer->dstNet.addLayer(lp.name, lp.type, lp);
+        if (id != -1) // internal layer failure before the call to addLayer()
+        {
+            importer->layer_id[lp.name] = id;
+        }
     }
 }
 

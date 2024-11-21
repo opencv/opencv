@@ -200,7 +200,6 @@ Mat& Net::Impl::argTensor(Arg arg) const
         CV_Assert(__tensors__.at(arg.idx).empty());
         int bufidx = bufidxs.at(arg.idx);
         CV_Assert(bufidx >= 0);
-        std::cout << "bufidx " << bufidx << std::endl;
         return const_cast<Mat&>(buffers.at(bufidx));
     }
     return const_cast<Mat&>(__tensors__.at(arg.idx));
@@ -371,7 +370,7 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     }
     // ************ uncomment one of the lines below for debugging **********
     //tracingMode = DNN_TRACE_OP;
-    tracingMode = DNN_TRACE_ALL;
+    //tracingMode = DNN_TRACE_ALL;
     // [TODO] initialize profile, tracer, symbolic shapes etc.
     size_t nsymdims = dimnames_vec.size();
     dimvalues.assign(nsymdims, -1);

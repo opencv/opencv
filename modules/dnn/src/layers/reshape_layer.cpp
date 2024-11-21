@@ -252,23 +252,9 @@ public:
         }
         else
         {
-            std::cout << "total(inputs[0]): " << total(inputs[0]) << std::endl;
-            std::cout << "total(inputs[1]): " << total(inputs[1]) << std::endl;
-
-            for (size_t i = 0; i < inputs.size(); i++)
-            {
-                for(size_t j = 0; j < inputs[i].size(); j++)
-                {
-                    std::cout << inputs[i][j] << ", ";
-                }
-                std::cout << std::endl;
-            }
-
-
             CV_Assert_N(inputs.size() == 2, total(inputs[0]) == total(inputs[1]));
             outputs.assign(1, inputs[1]);
         }
-
         return true;
     }
 
