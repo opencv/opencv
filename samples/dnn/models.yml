@@ -90,6 +90,7 @@ yolov5l:
   height: 640
   rgb: true
   labels: "object_detection_classes_yolo.txt"
+  postprocessing: "yolov5"
   sample: "object_detection"
 
 # YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
@@ -111,6 +112,7 @@ yolov4:
   rgb: true
   labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
+  postprocessing: "yolo_old"
   sample: "object_detection"
 
 yolov4-tiny:
@@ -129,6 +131,7 @@ yolov4-tiny:
   rgb: true
   labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
+  postprocessing: "yolo_old"
   sample: "object_detection"
 
 yolov3:
@@ -147,6 +150,7 @@ yolov3:
   rgb: true
   labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
+  postprocessing: "yolo_old"
   sample: "object_detection"
 
 tiny-yolo-voc:
@@ -165,6 +169,7 @@ tiny-yolo-voc:
   rgb: true
   labels: "object_detection_classes_pascal_voc.txt"
   background_label_id: 0
+  postprocessing: "yolo_old"
   sample: "object_detection"
 
 # Caffe implementation of SSD model from https://github.com/PINTO0309/MobileNet-SSD-RealSense
@@ -183,6 +188,7 @@ ssd_caffe:
   height: 300
   rgb: false
   labels: "object_detection_classes_pascal_voc.txt"
+  postprocessing: "non_yolo"
   sample: "object_detection"
 
 # TensorFlow implementation of SSD model from https://github.com/tensorflow/models/tree/master/research/object_detection
@@ -204,6 +210,7 @@ ssd_tf:
   height: 300
   rgb: true
   labels: "object_detection_classes_coco.txt"
+  postprocessing: "non_yolo"
   sample: "object_detection"
 
 # TensorFlow implementation of Faster-RCNN model from https://github.com/tensorflow/models/tree/master/research/object_detection
@@ -224,6 +231,7 @@ faster_rcnn_tf:
   width: 800
   height: 600
   rgb: true
+  postprocessing: "non_yolo"
   sample: "object_detection"
 
 ################################################################################

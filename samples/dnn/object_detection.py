@@ -98,7 +98,9 @@ if args.labels:
         labels = f.read().rstrip('\n').split('\n')
 
 # Load a network
-engine = cv.dnn.ENGINE_CLASSIC
+engine = cv.dnn.ENGINE_AUTO
+if args.backend != "default" or args.target != "cpu":
+    engine = cv.dnn.ENGINE_CLASSIC
 net = cv.dnn.readNet(args.model, args.config, "", engine)
 net.setPreferableBackend(get_backend_id(args.backend))
 net.setPreferableTarget(get_target_id(args.target))
@@ -125,14 +127,10 @@ def postprocess(frame, outs):
     frameHeight = frame.shape[0]
     frameWidth = frame.shape[1]
 
-    layerNames = net.getLayerNames()
-    lastLayerId = net.getLayerId(layerNames[-1])
-    lastLayer = net.getLayer(lastLayerId)
-
     classIds = []
     confidences = []
     boxes = []
-    if lastLayer.type == 'DetectionOutput':
+    if args.postprocessing == 'non_yolo':
         # Network produces output blob with a shape 1x1xNx7 where N is a number of
         # detections and an every detection is a vector of values
         # [batchId, classId, confidence, left, top, right, bottom]
@@ -157,7 +155,7 @@ def postprocess(frame, outs):
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
 
-    elif lastLayer.type == 'Region':
+    elif args.postprocessing == 'yolo_old':
         box_scale_w = frameWidth
         box_scale_h = frameHeight
 
@@ -179,7 +177,7 @@ def postprocess(frame, outs):
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
 
-    elif lastLayer.type == 'Identity':
+    elif args.postprocessing == 'yolov8' or args.postprocessing == 'yolov5':
         # Network produces output blob with a shape NxC where N is a number of
         # detected objects and C is a number of classes + 4 where the first 4
         # numbers are [center_x, center_y, width, height]
@@ -213,12 +211,12 @@ def postprocess(frame, outs):
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
     else:
-        print('Unknown output layer type: ' + lastLayer.type)
+        print('Unknown postprocessing method: ' + args.postprocessing)
         exit()
 
     # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     # or NMS is required if number of outputs > 1
-    if len(outNames) > 1 or (lastLayer.type == 'Region' or lastLayer.type == 'Identity') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+    if len(outNames) > 1 or (args.postprocessing == 'yolo_old' or args.postprocessing == 'yolov8' or args.postprocessing == 'yolov5') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
         indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)
@@ -332,14 +330,11 @@ def processingThreadBody():
             # Create a 4D blob from a frame.
             inpWidth = args.width if args.width else frameWidth
             inpHeight = args.height if args.height else frameHeight
-            blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_32F)
+            blob = cv.dnn.blobFromImage(frame, scalefactor=args.scale, mean=args.mean, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_32F)
             processedFramesQueue.put(frame)
 
             # Run a model
-            net.setInput(blob, scalefactor=args.scale, mean=args.mean)
-            if net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
-                frame = cv.resize(frame, (inpWidth, inpHeight))
-                net.setInput(np.array([[inpHeight, inpWidth, 1.6]], dtype=np.float32), 'im_info')
+            net.setInput(blob)
 
             if asyncN:
                 futureOutputs.append(net.forwardAsync())
@@ -409,9 +404,9 @@ else:
 
         inpWidth = args.width if args.width else frameWidth
         inpHeight = args.height if args.height else frameHeight
-        blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_32F)
+        blob = cv.dnn.blobFromImage(frame, scalefactor=args.scale, mean=args.mean, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_32F)
 
-        net.setInput(blob, scalefactor=args.scale, mean=args.mean)
+        net.setInput(blob)
         outs = net.forward(outNames)
 
         boxes, classIds, confidences, indices = postprocess(frame, outs)
