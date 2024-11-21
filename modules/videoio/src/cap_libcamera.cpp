@@ -30,9 +30,14 @@
 #include <libcamera/formats.h>
 #include <libcamera/framebuffer_allocator.h>
 #include <libcamera/property_ids.h>
+<<<<<<< HEAD
 #include <libcamera/stream.h>
 #include "cap_libcamera.hpp"
 #include <mutex>
+=======
+#inclued <libcamera/stream.h>
+#include <cap_libcamera.hpp>
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
 
 /**
  * @brief implementation of the LibcameraApp class and LibcameraCapture
@@ -46,6 +51,7 @@
 namespace cv 
 {
 
+<<<<<<< HEAD
 LibcameraApp::LibcameraApp(std::unique_ptr<Options> opts)
 	: options_(std::move(opts)), controls_(controls::controls)
 
@@ -749,6 +755,8 @@ struct CompletedRequest
 };
 
 
+=======
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
 LibcameraApp::LibcameraApp(std::unique_ptr<Options> opts)
 	: options_(std::move(opts)), controls_(controls::controls)
 
@@ -1371,8 +1379,61 @@ LibcameraCapture::~LibcameraCapture()
 
 
 
+<<<<<<< HEAD
 void *LibcameraCapture::videoThreadFunc(void *p)
 {
+=======
+bool LibcameraCapture::startPhoto()
+{
+    LibcameraCapture::app->OpenCamera();
+    LibcameraCapture::app->ConfigureStill(still_flags);
+    camerastarted=true;
+    return true;
+}
+
+bool LibcameraCapture::stopPhoto()
+{
+    if(camerastarted){
+        camerastarted=false;
+        LibcameraCapture::app->Teardown();
+        LibcameraCapture::app->CloseCamera();
+    }
+    return true;
+}
+
+bool LibcameraCapture::capturePhoto(cv::Mat &frame)
+{   
+    if(!camerastarted){
+        LibcameraCapture::app->OpenCamera();
+        LibcameraCapture::app->ConfigureStill(still_flags);
+    }
+    LibcameraCapture::app->StartCamera();
+    LibcameraApp::Msg msg = LibcameraCapture::app->Wait();
+    if (msg.type == LibcameraApp::MsgType::Quit)
+        return false;
+    else if (msg.type != LibcameraApp::MsgType::RequestComplete)
+        return false;
+    if (LibcameraCapture::app->StillStream())
+    {
+        LibcameraCapture::app->StopCamera();
+        getImage(frame, std::get<CompletedRequestPtr>(msg.payload));
+        LibcameraCapture::app->Teardown();
+        LibcameraCapture::app->CloseCamera();
+    } else {
+        std::cerr<<"Incorrect stream received"<<std::endl;
+        return false;
+        LibcameraCapture::app->StopCamera();
+        if(!camerastarted){
+            LibcameraCapture::app->Teardown();
+            LibcameraCapture::app->CloseCamera();
+        }
+    }
+    return true;
+}
+
+void *LibcameraCapture::videoThreadFunc(void *p) //not resolved
+{   
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
     LibcameraCapture *t = (LibcameraCapture *)p;
     t->running.store(true, std::memory_order_release);
 
@@ -1417,7 +1478,11 @@ void *LibcameraCapture::videoThreadFunc(void *p)
 
 bool LibcameraCapture::startVideo() //not resolved
 {   
+<<<<<<< HEAD
     // if(camerastarted) stopPhoto();
+=======
+    if(camerastarted) stopPhoto();
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
     if(running.load(std::memory_order_relaxed)){
         std::cerr<<"Video thread already running";
         return false;
@@ -1469,6 +1534,10 @@ void LibcameraCapture::stopVideo()
     frameready.store(false, std::memory_order_release);
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
 /**
  * @brief Attempt to start the camera and ensure a frame is pending for capture.
  *
@@ -1482,7 +1551,11 @@ void LibcameraCapture::stopVideo()
  */
 bool LibcameraCapture::grabFrame()
 {   
+<<<<<<< HEAD
     if(running.load(std::memory_order_acquire))
+=======
+    if(isFramePending)
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
     {
         // if (needsReconfigure)
         // {
@@ -1528,6 +1601,7 @@ bool LibcameraCapture::grabFrame()
 */
 bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
 {   
+<<<<<<< HEAD
     // if (needsReconfigure)
     // {
     //     // restart the camera
@@ -1538,6 +1612,10 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     // }
 
 	if(!running.load(std::memory_order_acquire)) return false;
+=======
+    
+	if(!running.load(std::memory_order_acquire))return false;
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
     auto start_time = std::chrono::high_resolution_clock::now();
     bool timeout_reached = false;
     timespec req;
@@ -1547,7 +1625,11 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     uint64_t timeout_lim = options->timeout;
     while((!frameready.load(std::memory_order_acquire))&&(!timeout_reached)){
         nanosleep(&req,NULL);
+<<<<<<< HEAD
         timeout_reached = (std::chrono::high_resolution_clock::now() - start_time > std::chrono::milliseconds(timeout_lim));
+=======
+        timeout_reached = (std::chrono::high_resolution_clock::now() - start_time > std::chrono::milliseconds(1000));
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
         //timeout=1000. Need to be modified in this class.
     }
     if(frameready.load(std::memory_order_acquire)){

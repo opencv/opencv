@@ -8,11 +8,15 @@
 #include <libcamera/control_ids.h>
 #include <libcamera/property_ids.h>
 #include <libcamera/transform.h>
+<<<<<<< HEAD
 // #include <libcamera/libcamera.hpp>
 #include <mutex>
 
 namespace cv 
 {
+=======
+
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
 
 enum Exposure_Modes {
     EXPOSURE_NORMAL = libcamera::controls::ExposureNormal,
@@ -63,7 +67,13 @@ public:
 	camera=0;
 	}
 
+<<<<<<< HEAD
 	~Options() {}
+=======
+	virtual ~Options() {}
+
+	virtual void Print() const;
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
 
     void setMetering(Metering_Modes meteringmode){metering_index=meteringmode;}
     void setWhiteBalance(WhiteBalance_Modes wb){awb_index = wb;}
@@ -198,6 +208,7 @@ protected:
 	std::unique_ptr<Options> options_;
 
 private:
+<<<<<<< HEAD
 
 	static std::shared_ptr<CameraManager> getCameraManager() {
 		static std::shared_ptr<CameraManager> camera_manager_;
@@ -213,6 +224,8 @@ private:
 		return camera_manager_;
 	}
 
+=======
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
 	template <typename T>
 	class MessageQueue
 	{
@@ -250,7 +263,11 @@ private:
 	void requestComplete(Request *request);
 	void configureDenoise(const std::string &denoise_mode);
 
+<<<<<<< HEAD
 	// std::unique_ptr<CameraManager> camera_manager_;
+=======
+	std::unique_ptr<CameraManager> camera_manager_;
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
 	std::shared_ptr<Camera> camera_;
 	bool camera_acquired_ = false;
 	std::unique_ptr<CameraConfiguration> configuration_;
@@ -271,6 +288,7 @@ private:
 	// Other:
 	uint64_t last_timestamp_;
 	uint64_t sequence_ = 0;
+<<<<<<< HEAD
 };
 
 class Metadata
@@ -384,4 +402,6 @@ struct CompletedRequest
 	Metadata post_process_metadata;
 };
 
+=======
+>>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
 };
