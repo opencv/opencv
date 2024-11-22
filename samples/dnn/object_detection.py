@@ -130,7 +130,7 @@ def postprocess(frame, outs):
     classIds = []
     confidences = []
     boxes = []
-    if args.postprocessing == 'non_yolo':
+    if args.postprocessing == 'ssd':
         # Network produces output blob with a shape 1x1xNx7 where N is a number of
         # detections and an every detection is a vector of values
         # [batchId, classId, confidence, left, top, right, bottom]
@@ -155,7 +155,7 @@ def postprocess(frame, outs):
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
 
-    elif args.postprocessing == 'yolo_old':
+    elif args.postprocessing == 'darknet':
         box_scale_w = frameWidth
         box_scale_h = frameHeight
 
@@ -216,7 +216,7 @@ def postprocess(frame, outs):
 
     # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     # or NMS is required if number of outputs > 1
-    if len(outNames) > 1 or (args.postprocessing == 'yolo_old' or args.postprocessing == 'yolov8' or args.postprocessing == 'yolov5') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+    if len(outNames) > 1 or (args.postprocessing == 'darknet' or args.postprocessing == 'yolov8' or args.postprocessing == 'yolov5') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
         indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)

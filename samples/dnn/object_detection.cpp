@@ -510,7 +510,7 @@ void yoloPostProcessing(
 void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string postprocessing)
 {
     static vector<int> outLayers = net.getUnconnectedOutLayers();
-    if (postprocessing == "non_yolo")
+    if (postprocessing == "ssd")
     {
         // Network produces output blob with a shape 1x1xNx7 where N is a number of
         // detections and an every detection is a vector of values
@@ -546,7 +546,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
             }
         }
     }
-    else if (postprocessing == "yolo_old")
+    else if (postprocessing == "darknet")
     {
         for (size_t i = 0; i < outs.size(); ++i)
         {
@@ -614,7 +614,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
 
     // NMS is used inside Region layer only on DNN_BACKEND_OPENCV for other backends we need NMS in sample
     // or NMS is required if the number of outputs > 1
-    if (outLayers.size() > 1 || (postprocessing == "yolo_old" && backend != DNN_BACKEND_OPENCV))
+    if (outLayers.size() > 1 || (postprocessing == "darknet" && backend != DNN_BACKEND_OPENCV))
     {
         map<int, vector<size_t> > class2indices;
         for (size_t i = 0; i < classIds.size(); i++)
