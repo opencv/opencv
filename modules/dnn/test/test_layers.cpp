@@ -2742,7 +2742,7 @@ INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationEltwiseFusion, Com
 
 TEST(Layer_LSTM, repeatedInference)
 {
-    std::string onnx_file_path = findDataFile("dnn/onnx/models/onnxscript_lstm.onnx", false);
+    std::string onnx_file_path = findDataFile("dnn/onnx/models/onnxscript_lstm.onnx", true);
 
     // Test parameters
     const int batch_size = 1;
