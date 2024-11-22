@@ -127,6 +127,23 @@ if(NOT ${found})
       if(NOT ${${include_dir_env}} STREQUAL "")
           set(PYTHON_INCLUDE_DIR "${${include_dir_env}}")
       endif()
+      if (APPLE AND NOT CMAKE_CROSSCOMPILING)
+          if (NOT PYTHON_LIBRARY AND NOT PYTHON_INCLUDE_DIR)
+              execute_process(COMMAND ${_executable} -c "from sysconfig import *; print(get_config_var('INCLUDEPY'))"
+                              RESULT_VARIABLE _cvpy_process
+                              OUTPUT_VARIABLE _include_dir
+                              OUTPUT_STRIP_TRAILING_WHITESPACE)
+              execute_process(COMMAND ${_executable} -c "from sysconfig import *; print('%s/%s' % (get_config_var('LIBDIR'), get_config_var('LIBRARY').replace('.a', '.dylib' if get_platform().startswith('macos') else '.so')))"
+                              RESULT_VARIABLE _cvpy_process
+                              OUTPUT_VARIABLE _library
+                              OUTPUT_STRIP_TRAILING_WHITESPACE)
+              if (_include_dir AND _library AND EXISTS "${_include_dir}/Python.h" AND EXISTS "${_library}")
+                  set(PYTHON_INCLUDE_PATH "${_include_dir}")
+                  set(PYTHON_INCLUDE_DIR "${_include_dir}")
+                  set(PYTHON_LIBRARY "${_library}")
+              endif()
+          endif()
+      endif()
 
       # not using _version_string here, because it might not conform to the CMake version format
       if(CMAKE_CROSSCOMPILING)
