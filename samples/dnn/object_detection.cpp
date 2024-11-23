@@ -359,7 +359,7 @@ int main(int argc, char** argv)
             CV_Error(Error::StsNotImplemented, "Asynchronous forward is supported only with Inference Engine backend.");
         // Threading is disabled, run synchronously
         Mat frame, blob;
-        while (waitKey(100) < 0) {
+        while (waitKey(1) < 0) {
             cap >> frame;
             if (frame.empty()) {
                 waitKey();
@@ -384,7 +384,7 @@ int main(int argc, char** argv)
             int weight = static_cast<int>((stdWeight * imgWidth) / (stdImgSize * 1.5));
             double freq = getTickFrequency() / 1000;
             double t = net.getPerfProfile(layersTimes) / freq;
-            string label = format("Inference time: %.2f ms", t);
+            string label = format("FPS: %.2f", 1000/t);
             putText(frame, label, Point(0, size), Scalar(0, 255, 0), sans, size, weight);
             imshow(kWinName, frame);
         }
