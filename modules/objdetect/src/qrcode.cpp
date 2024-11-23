@@ -4,17 +4,15 @@
 //
 // Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// Tencent is pleased to support the open source community by making WeChat QRCode available.
-// Copyright (C) 2020 THL A29 Limited, a Tencent company. All rights reserved.
 
 #include "precomp.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/calib3d.hpp"
 #include <opencv2/core/utils/logger.hpp>
+#include <opencv2/core/utils/filesystem.hpp>
 #include "graphical_code_detector_impl.hpp"
-#include "qbarstruct.hpp"
-#include "qbardecoder.hpp"
+#include "qrcode_detector/detector.hpp"
+#include "qrcode_sr_scale/super_scale.hpp"
 
 #ifdef HAVE_QUIRC
 #include "quirc.h"
@@ -970,6 +968,8 @@ public:
     mutable vector<vector<Point2f>> alignmentMarkers;
     mutable vector<Point2f> updateQrCorners;
     bool useAlignmentMarkers = true;
+    std::shared_ptr<SuperScale> sr_ = nullptr;
+    bool use_sr_model_ = false;
 
     bool detect(InputArray in, OutputArray points) const override;
     std::string decode(InputArray img, InputArray points, OutputArray straight_qrcode) const override;
@@ -4008,9 +4008,9 @@ class ParallelDecodeProcess : public ParallelLoopBody
 {
 public:
     ParallelDecodeProcess(Mat& inarr_, vector<QRDecode>& qrdec_, vector<std::string>& decoded_info_,
-            vector<Mat>& straight_barcode_, vector< vector< Point2f > >& src_points_)
+            vector<Mat>& straight_barcode_, vector< vector< Point2f > >& src_points_, std::shared_ptr<SuperScale> sr_ = nullptr)
         : inarr(inarr_), qrdec(qrdec_), decoded_info(decoded_info_)
-        , straight_barcode(straight_barcode_), src_points(src_points_)
+        , straight_barcode(straight_barcode_), src_points(src_points_), sr_(sr_)
     {
         // nothing
     }
@@ -4018,38 +4018,81 @@ public:
     {
         for (int i = range.start; i < range.end; i++)
         {
-            qrdec[i].init(inarr, src_points[i]);
-            bool ok = qrdec[i].straightDecodingProcess();
-            if (ok)
-            {
-                decoded_info[i] = qrdec[i].getDecodeInformation();
-                straight_barcode[i] = qrdec[i].getStraightBarcode();
-            }
-            else if (std::min(inarr.size().width, inarr.size().height) > 512)
-            {
-                const int min_side = std::min(inarr.size().width, inarr.size().height);
-                qrdec[i].coeff_expansion = min_side / 512.f;
-                const int width  = cvRound(inarr.size().width  / qrdec[i].coeff_expansion);
-                const int height = cvRound(inarr.size().height / qrdec[i].coeff_expansion);
-                Size new_size(width, height);
-                Mat inarr2;
-                resize(inarr, inarr2, new_size, 0, 0, INTER_AREA);
-                for (size_t j = 0ull; j < 4ull; j++)
-                {
-                    src_points[i][j] /= qrdec[i].coeff_expansion;
+            if (sr_ != nullptr) {
+                int width = inarr.size().width, height = inarr.size().height;
+
+                int min_x = src_points[i][0].x;
+                int min_y = src_points[i][0].y;
+                int max_x = src_points[i][0].x;
+                int max_y = src_points[i][0].y;
+                for (const auto& point : src_points[i]) {
+                    min_x = min_x > point.x ? point.x : min_x;
+                    min_y = min_y > point.y ? point.y : min_y;
+                    max_x = max_x > point.x ? max_x : point.x;
+                    max_y = max_y > point.y ? max_y : point.y;
                 }
-                qrdec[i].init(inarr2, src_points[i]);
-                ok = qrdec[i].straightDecodingProcess();
+                min_x = min(max(0, min_x), width);
+                max_x = min(max(0, max_x), width);
+                min_y = min(max(0, min_y), height);
+                max_y = min(max(0, max_y), height);
+
+
+                cv::Rect cropRect(min_x, min_y, max_x - min_x, max_y - min_y);
+
+                auto scale_list = sr_->getScaleList(max_y - min_y, max_x - min_x);
+                Mat crop_image = inarr(cropRect).clone();
+                for (auto cur_scale : scale_list) {
+                    std::lock_guard<std::mutex> lock(sr_mutex);
+                    Mat scaled_img = sr_->ProcessImageScale(crop_image, cur_scale, true);
+                    vector<Point2f> points;
+                    for (const auto& point : src_points[i])
+                        points.push_back(Point2f((point.x - min_x) * cur_scale, (point.y - min_y) * cur_scale));
+
+                    qrdec[i].init(scaled_img, points);
+                    bool ok = qrdec[i].straightDecodingProcess();
+                    if (ok)
+                    {
+                        decoded_info[i] = qrdec[i].getDecodeInformation();
+                        straight_barcode[i] = qrdec[i].getStraightBarcode();
+                    }
+                    if (decoded_info[i].empty())
+                        decoded_info[i] = "";
+                    }
+            }
+            else {
+                qrdec[i].init(inarr, src_points[i]);
+                bool ok = qrdec[i].straightDecodingProcess();
                 if (ok)
                 {
                     decoded_info[i] = qrdec[i].getDecodeInformation();
                     straight_barcode[i] = qrdec[i].getStraightBarcode();
-                    for (size_t j = 0ull; j < qrdec[i].alignment_coords.size(); j++)
-                        qrdec[i].alignment_coords[j] *= qrdec[i].coeff_expansion;
                 }
+                else if (std::min(inarr.size().width, inarr.size().height) > 512)
+                {
+                    const int min_side = std::min(inarr.size().width, inarr.size().height);
+                    qrdec[i].coeff_expansion = min_side / 512.f;
+                    const int width  = cvRound(inarr.size().width  / qrdec[i].coeff_expansion);
+                    const int height = cvRound(inarr.size().height / qrdec[i].coeff_expansion);
+                    Size new_size(width, height);
+                    Mat inarr2;
+                    resize(inarr, inarr2, new_size, 0, 0, INTER_AREA);
+                    for (size_t j = 0ull; j < 4ull; j++)
+                    {
+                        src_points[i][j] /= qrdec[i].coeff_expansion;
+                    }
+                    qrdec[i].init(inarr2, src_points[i]);
+                    ok = qrdec[i].straightDecodingProcess();
+                    if (ok)
+                    {
+                        decoded_info[i] = qrdec[i].getDecodeInformation();
+                        straight_barcode[i] = qrdec[i].getStraightBarcode();
+                        for (size_t j = 0ull; j < qrdec[i].alignment_coords.size(); j++)
+                            qrdec[i].alignment_coords[j] *= qrdec[i].coeff_expansion;
+                    }
+                }
+                if (decoded_info[i].empty())
+                    decoded_info[i] = "";
             }
-            if (decoded_info[i].empty())
-                decoded_info[i] = "";
         }
     }
 
@@ -4059,7 +4102,8 @@ private:
     vector<std::string>& decoded_info;
     vector<Mat>& straight_barcode;
     vector< vector< Point2f > >& src_points;
-
+    std::shared_ptr<SuperScale> sr_;
+    mutable std::mutex sr_mutex;
 };
 
 bool ImplContour::decodeMulti(
@@ -4089,7 +4133,7 @@ bool ImplContour::decodeMulti(
     vector<QRDecode> qrdec(src_points.size(), useAlignmentMarkers);
     vector<Mat> straight_barcode(src_points.size());
     vector<std::string> info(src_points.size());
-    ParallelDecodeProcess parallelDecodeProcess(inarr, qrdec, info, straight_barcode, src_points);
+    ParallelDecodeProcess parallelDecodeProcess(inarr, qrdec, info, straight_barcode, src_points, sr_);
     parallel_for_(Range(0, int(src_points.size())), parallelDecodeProcess);
     vector<Mat> for_copy;
     for (size_t i = 0; i < straight_barcode.size(); i++)
@@ -4709,202 +4753,156 @@ void QRCodeDetectorAruco::setArucoParameters(const aruco::DetectorParameters& pa
     std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoDetector.setDetectorParameters(params);
 }
 
-struct PimplWeChat : public GraphicalCodeDetector::Impl {
-    std::shared_ptr<QBarDecoder> qbarDecode_;
+struct PimplQRWeChat : public ImplContour {
+public:
+    std::shared_ptr<GraphicalCodeDetector> graphical_detector_;
+    std::shared_ptr<Detector> detector_;
+    bool use_det_model_ = false;
 
-    PimplWeChat() {
-        qbarDecode_ = make_shared<QBarDecoder>();
+    PimplQRWeChat(std::shared_ptr<GraphicalCodeDetector> graphical_detector)
+        : graphical_detector_(std::move(graphical_detector)) {
+        sr_ = std::make_shared<SuperScale>();
+        detector_ = std::make_shared<Detector>();
     }
 
-    bool detect(InputArray img, OutputArray points) const CV_OVERRIDE;
-    string decode(InputArray img, InputArray points, OutputArray straight_qrcode) const CV_OVERRIDE;
-    string detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) const CV_OVERRIDE;
-    bool detectMulti(InputArray img, OutputArray points) const CV_OVERRIDE;
-    bool decodeMulti(InputArray img, InputArray points, vector<string>& decoded_info, OutputArrayOfArrays straight_qrcode) const CV_OVERRIDE;
-    bool detectAndDecodeMulti(InputArray img, vector<string>& decoded_info, OutputArray points, OutputArrayOfArrays straight_qrcode) const CV_OVERRIDE;
+    bool detectMulti(InputArray img, OutputArray points) const override;
+    bool detectAndDecodeMulti(InputArray img, std::vector<cv::String>& decoded_info, OutputArray points,
+                              OutputArrayOfArrays straight_qrcode) const override;
 };
 
-bool PimplWeChat::detect(InputArray img, OutputArray points) const {
-    vector<Point2f> corners, result;
-    bool flag = detectMulti(img, corners);
-    CV_Assert((int)corners.size() % 4 == 0);
-
-    Point2f imageCenter(((float)img.cols())/2.f, ((float)img.rows())/2.f);
-    size_t minQrId = 0ull;
-    float minDist = std::numeric_limits<float>::max();
-    for (size_t i = 0ull; i < corners.size(); i += 4ull) {
-        Point2f qrCenter((corners[i] + corners[i+1ull] + corners[i+2ull] + corners[i+3ull]) / 4.f);
-        float dist = sqrt(normL2Sqr<float>(qrCenter - imageCenter));
-        if (dist < minDist) {
-            minQrId = i;
-            minDist = dist;
-        }
-    }
-    if (flag) {
-        result = {corners[minQrId], corners[minQrId+1ull], corners[minQrId+2ull], corners[minQrId+3ull]};
-        updatePointsResult(points, result);
-    }
-    return flag;
-}
-
-string PimplWeChat::decode(InputArray img, InputArray points, OutputArray straight_qrcode) const {
-    CV_UNUSED(straight_qrcode);
-    vector<string> decoded_info;
-    if (!decodeMulti(img, points, decoded_info, straight_qrcode))
-        return string();
-    if (decoded_info.size() < 1)
-        return string();
-
-    return decoded_info[0];
-}
-
-string PimplWeChat::detectAndDecode(InputArray img, OutputArray points, OutputArray straight_qrcode) const {
-    CV_UNUSED(straight_qrcode);
-
-    if (!detect(img, points))
-        return string();
-
-    return decode(img, points, straight_qrcode);
-}
-
-bool PimplWeChat::detectMulti(InputArray in, OutputArray points) const {
+bool PimplQRWeChat::detectMulti(InputArray img, OutputArray points) const
+{
     Mat gray;
-    if (!checkQRInputImage(in, gray)) {
+    if (!checkQRInputImage(img, gray)) {
         points.release();
         return false;
     }
     
     std::vector<DetectInfo> _detect_results;
 
-    qbarDecode_->detect(gray, _detect_results);
+    if (use_det_model_) {
+        detector_->detect(gray, _detect_results);
 
-    vector<Point2f> result;
-    for (size_t i = 0; i < _detect_results.size(); i++) {
-        result.push_back(Point2f(_detect_results[i].x                           , _detect_results[i].y));
-        result.push_back(Point2f(_detect_results[i].x + _detect_results[i].width, _detect_results[i].y));
-        result.push_back(Point2f(_detect_results[i].x                           , _detect_results[i].y + _detect_results[i].height));
-        result.push_back(Point2f(_detect_results[i].x + _detect_results[i].width, _detect_results[i].y + _detect_results[i].height));
+        vector<Point2f> results;
+        for (size_t k = 0; k < _detect_results.size(); k++) {
+            int x0 = _detect_results[k].x, y0 = _detect_results[k].y;
+            int width = _detect_results[k].width, height = _detect_results[k].height;
+            int x2 = x0 + width - 1, y2 = y0 + width -1;
+
+            int padx = max(0.5f * width, static_cast<float>(20));
+            int pady = max(0.5f * height, static_cast<float>(20));
+            int crop_x_ = max(x0 - padx, 0);
+            int crop_y_ = max(y0 - pady, 0);
+            int end_x = min(x2 + padx, gray.cols);
+            int end_y = min(y2 + pady, gray.rows);
+            cv::Rect cropRect(crop_x_, crop_y_, end_x - crop_x_, end_y - crop_y_);
+
+            vector<Point2f> corners;
+            
+            auto scale_list = sr_->getScaleList(end_y - crop_y_, end_x - crop_x_);
+            Mat crop_image = gray(cropRect).clone();
+            for (auto cur_scale : scale_list) {
+                Mat scaled_img = sr_->ProcessImageScale(crop_image, cur_scale, use_sr_model_);
+                if (graphical_detector_->detectMulti(scaled_img, corners)) {
+                    for (size_t i = 0; i < corners.size(); i += 4) {
+                        bool flag = true;
+                        std::vector<Point2f> pts_i, pts_j;
+                        for (size_t p = 0; p < 4; p++) {
+                            int x = corners[i+p].x/cur_scale + crop_x_, y = corners[i+p].y/cur_scale + crop_y_;
+                            pts_i.push_back(Point2f(min(max(x, 0), gray.cols-1), min(max(y, 0), gray.rows-1)));
+                        }
+                        float area1 = cv::contourArea(pts_i);
+
+                        for (size_t j = 0; j < results.size(); j+= 4) {
+                            pts_j.clear();
+                            for (size_t p = 0; p < 4; p++)
+                                pts_j.push_back(Point2f(results[j+p].x, results[j+p].y));
+
+                            float area2 = cv::contourArea(pts_j);
+                            float intersectionArea = 0.0;
+                            std::vector<cv::Point2f> intersection;
+                            cv::rotatedRectangleIntersection(cv::minAreaRect(pts_i), cv::minAreaRect(pts_j), intersection);
+
+                            if (!intersection.empty())
+                                intersectionArea = cv::contourArea(intersection);
+
+                            double iou = intersectionArea / (area1 + area2 - intersectionArea);
+                            double cover = intersectionArea / min(area1, area2);
+                            if (iou > 0.7 || cover > 0.96) {
+                                flag = false;
+                                break;
+                            }
+                        }
+                        if (flag) {
+                            for (auto p : pts_i)
+                                results.push_back(p);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (results.size() >= 4) {
+            updatePointsResult(points, results);
+            return true;
+        }
+
+        return false;
     }
-
-    if (result.size() >= 4) {
-        updatePointsResult(points, result);
-        return true;
+    else {
+        return graphical_detector_->detectMulti(gray, points);
     }
+}
 
+bool PimplQRWeChat::detectAndDecodeMulti(
+        InputArray img,
+        CV_OUT std::vector<cv::String>& decoded_info,
+        OutputArray points_,
+        OutputArrayOfArrays straight_qrcode
+    ) const {
+    bool ok = detectMulti(img, points_);
+
+    if (ok)
+        return decodeMulti(img, points_, decoded_info, straight_qrcode);
+    
     return false;
 }
 
-bool PimplWeChat::decodeMulti(
-    InputArray img,
-    InputArray points,
-    CV_OUT std::vector<cv::String>& decoded_info,
-    OutputArrayOfArrays straight_qrcode
-) const {
-    CV_UNUSED(straight_qrcode);
-
-    Mat gray;
-    if (!checkQRInputImage(img, gray))
-        return false;
-    
-    CV_Assert(points.size().width > 0);
-    CV_Assert((points.size().width % 4) == 0);
-
-    std::vector<DetectInfo> bboxes;
-    Mat qr_points = points.getMat();
-    qr_points = qr_points.reshape(2, 1);
-    for (int i = 0; i < qr_points.size().width; i += 4)
-    {
-        std::vector<Point2f> tempMat = qr_points.colRange(i, i + 4);
-
-        DetectInfo bbox;
-        bbox.x = tempMat[0].x;
-        bbox.y = tempMat[0].y;
-        bbox.width = tempMat[3].x - tempMat[0].x;
-        bbox.height = tempMat[3].y - tempMat[0].y;
-        bboxes.push_back(bbox);
-    }
-    if (bboxes.size() == 0) {
-        DetectInfo bbox;
-        bbox.x = 0;
-        bbox.y = 0;
-        bbox.width = gray.cols;
-        bbox.height = gray.rows;
-
-        bboxes.push_back(bbox);
-    }
-
-    std::vector<QBAR_RESULT> results;
-    results = qbarDecode_->decode(gray, bboxes);
-
-    decoded_info.clear();
-    for (size_t i = 0; i < results.size(); i++) {
-        if(results[i].typeID != 0)
-            decoded_info.push_back(results[i].data);
-        else
-            decoded_info.push_back("");
-    }
-
-    if (!decoded_info.empty())
-        return true;
-    else
-        return false;
-}
-
-bool PimplWeChat::detectAndDecodeMulti(
-    InputArray img,
-    CV_OUT std::vector<cv::String>& decoded_info,
-    OutputArray points_,
-    OutputArrayOfArrays straight_qrcode
-) const {
-    CV_UNUSED(straight_qrcode);
-
-    if(!detectMulti(img, points_))
-        return false;
-
-    return decodeMulti(img, points_, decoded_info, straight_qrcode);
-}
-
-CodeDetectorWeChat::CodeDetectorWeChat(const std::string& detection_model_path_,
+QRCodeDetectorWeChat::QRCodeDetectorWeChat(const std::string& detection_model_path_,
                             const std::string& super_resolution_model_path_,
-                            const std::vector<DECODER_READER>& readers,
+                            Ptr<GraphicalCodeDetector> graphical_detector,
                             const float detector_iou_thres,
                             const float score_thres,
                             const int reference_size) {
-    p = makePtr<PimplWeChat>();
+    Ptr<PimplQRWeChat> p_ = std::make_shared<PimplQRWeChat>(std::move(graphical_detector));
+    p = p_;
 
-    QBAR_MODE mode;
-    mode.useAI = true;
-    mode.qbar_ml_mode.detection_model_path_ = detection_model_path_;
-    mode.qbar_ml_mode.super_resolution_model_path_ = super_resolution_model_path_;
-
-    int ret = std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->initAIModel(mode.qbar_ml_mode);
-
-    CV_Assert(ret == 0);
-
-    if (readers.empty()) {
-        std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setReaders({QRCODE, PDF417, DATAMATRIX});
+    if (!super_resolution_model_path_.empty()) {
+        CV_Assert(utils::fs::exists(super_resolution_model_path_));
+        int res = p_->sr_->init(super_resolution_model_path_);
+        CV_Assert(res == 0);
+        p_->use_sr_model_ = true;
     }
-    else {
-        unordered_set<QBAR_READER> readers_;
-        for (const auto& reader : readers) {
-            readers_.insert(static_cast<QBAR_READER>(reader));
-        }
-        
-        std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setReaders(readers_);
+    if (!detection_model_path_.empty()) {
+        CV_Assert(utils::fs::exists(detection_model_path_));
+        int res = p_->detector_->init(detection_model_path_);
+        CV_Assert(res == 0);
+        p_->use_det_model_ = true;
     }
 
-    std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDetectorReferenceSize(reference_size);
-    std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDetectorScoreThres(score_thres);
-    std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDetectorIouThres(detector_iou_thres);
+    p_->detector_->setReferenceSize(reference_size);
+    p_->detector_->setScoreThres(score_thres);
+    p_->detector_->setIouThres(detector_iou_thres);
 }
 
-void CodeDetectorWeChat::setDetectorReferenceSize(int reference_size) {
-    std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDetectorReferenceSize(reference_size);
+void QRCodeDetectorWeChat::setDetectorReferenceSize(int reference_size) {
+    std::dynamic_pointer_cast<PimplQRWeChat>(p)->detector_->setReferenceSize(reference_size);
 }
-void CodeDetectorWeChat::setDetectorScoreThres(float score_thres) {
-    std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDetectorScoreThres(score_thres);
+void QRCodeDetectorWeChat::setDetectorScoreThres(float score_thres) {
+    std::dynamic_pointer_cast<PimplQRWeChat>(p)->detector_->setScoreThres(score_thres);
 }
-void CodeDetectorWeChat::setDetectorIouThres(float iou_thres) {
-    std::dynamic_pointer_cast<PimplWeChat>(p)->qbarDecode_->setDetectorIouThres(iou_thres);
+void QRCodeDetectorWeChat::setDetectorIouThres(float iou_thres) {
+    std::dynamic_pointer_cast<PimplQRWeChat>(p)->detector_->setIouThres(iou_thres);
 }
 }  // namespace
