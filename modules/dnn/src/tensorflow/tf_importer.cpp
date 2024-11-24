@@ -2661,8 +2661,7 @@ void TFImporter::parseCustomLayer(tensorflow::GraphDef& net, const tensorflow::N
 TFImporter::TFImporter(Net& net, const char *model, const char *config, bool newEngine,
                        const std::vector<String>& extraOutputs_)
     : layerHandler(DNN_DIAGNOSTICS_RUN ?  new TFLayerHandler(this) : nullptr),
-        dstNet(net), newEngine(newEngine), dispatch(buildDispatchMap()),
-        extraOutputs(extraOutputs_)
+        dstNet(net), newEngine(newEngine), dispatch(buildDispatchMap())
 {
     if (model && model[0])
     {
@@ -2675,6 +2674,7 @@ TFImporter::TFImporter(Net& net, const char *model, const char *config, bool new
         ReadTFNetParamsFromTextFileOrDie(config, &netTxt);
     }
 
+    extraOutputs = extraOutputs_;
     populateNet();
 }
 
@@ -2685,8 +2685,7 @@ TFImporter::TFImporter(
         bool newEngine, const std::vector<String>& extraOutputs_
 )
     :  layerHandler(DNN_DIAGNOSTICS_RUN ?  new TFLayerHandler(this) : nullptr),
-       dstNet(net), newEngine(newEngine), dispatch(buildDispatchMap()),
-       extraOutputs(extraOutputs_)
+       dstNet(net), newEngine(newEngine), dispatch(buildDispatchMap())
 {
     if (dataModel != NULL && lenModel > 0)
     {
@@ -2698,6 +2697,8 @@ TFImporter::TFImporter(
         CV_LOG_DEBUG(NULL, "DNN/TF: processing TensorFlow config from memory (" << lenConfig << " bytes)");
         ReadTFNetParamsFromTextBufferOrDie(dataConfig, lenConfig, &netTxt);
     }
+
+    extraOutputs = extraOutputs_;
     populateNet();
 }
 
