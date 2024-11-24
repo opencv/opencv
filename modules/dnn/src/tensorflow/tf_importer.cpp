@@ -28,6 +28,7 @@ Implementation of Tensorflow models parser
 #include <fstream>
 #include <algorithm>
 #include <map>
+#include <set>
 #include <string>
 #include <queue>
 #include "tf_graph_simplifier.hpp"
@@ -528,10 +529,13 @@ class TFImporter
 {
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 public:
-    TFImporter(Net& net, const char *model, const char *config = NULL, bool newEngine = true);
+    TFImporter(Net& net, const char *model, const char *config = NULL,
+               bool newEngine = true,
+               const std::vector<String>& extraOutputs=std::vector<String>());
     TFImporter(Net& net, const char *dataModel, size_t lenModel,
                const char *dataConfig = NULL, size_t lenConfig = 0,
-               bool newEngine = true);
+               bool newEngine = true,
+               const std::vector<String>& extraOutputs=std::vector<String>());
 protected:
     std::unique_ptr<TFLayerHandler> layerHandler;
     Net& dstNet;
@@ -558,6 +562,7 @@ protected:
 
     std::vector<String> netInputsNames;
     std::vector<MatShape> netInputShapes;
+    std::vector<String> extraOutputs;
 
     std::set<String> layers_to_ignore;
     std::map<String, DataLayout> data_layouts;
@@ -2653,9 +2658,11 @@ void TFImporter::parseCustomLayer(tensorflow::GraphDef& net, const tensorflow::N
     addLayer(name, type, layerParams, inputsNames);
 }
 
-TFImporter::TFImporter(Net& net, const char *model, const char *config, bool newEngine)
+TFImporter::TFImporter(Net& net, const char *model, const char *config, bool newEngine,
+                       const std::vector<String>& extraOutputs_)
     : layerHandler(DNN_DIAGNOSTICS_RUN ?  new TFLayerHandler(this) : nullptr),
-        dstNet(net), newEngine(newEngine), dispatch(buildDispatchMap())
+        dstNet(net), newEngine(newEngine), dispatch(buildDispatchMap()),
+        extraOutputs(extraOutputs_)
 {
     if (model && model[0])
     {
@@ -2675,10 +2682,11 @@ TFImporter::TFImporter(
         Net& net,
         const char *dataModel, size_t lenModel,
         const char *dataConfig, size_t lenConfig,
-        bool newEngine
+        bool newEngine, const std::vector<String>& extraOutputs_
 )
     :  layerHandler(DNN_DIAGNOSTICS_RUN ?  new TFLayerHandler(this) : nullptr),
-       dstNet(net), newEngine(newEngine), dispatch(buildDispatchMap())
+       dstNet(net), newEngine(newEngine), dispatch(buildDispatchMap()),
+       extraOutputs(extraOutputs_)
 {
     if (dataModel != NULL && lenModel > 0)
     {
@@ -3078,31 +3086,48 @@ void TFImporter::populateNet()
                 curProg[layerId]->outputs.push_back(dstNet.getArg(outputName));
         }
 
-        std::map<int, int> unusedOutputs;
+        std::set<int> extraOutSet;
+        for (const String& extraOutName: extraOutputs) {
+            if (!dstNet.haveArg(extraOutName)) {
+                CV_LOG_WARNING(NULL, "DNN/TF: the model extra output '" << extraOutName << "' is not found");
+            }
+            Arg arg = dstNet.getArg(extraOutName);
+            extraOutSet.insert(arg.idx);
+        }
+        std::map<int, int> modelOutputsMap;
+        std::map<int, int> extraOutputsMap;
         int layer_idx = 0;
         for (const auto& layer: curProg) {
             layer_idx++;
             const std::vector<Arg>& layer_inputs = layer->inputs;
             const std::vector<Arg>& layer_outputs = layer->outputs;
             for (Arg inp: layer_inputs) {
-                unusedOutputs.erase(inp.idx);
+                modelOutputsMap.erase(inp.idx);
             }
             size_t noutputs = layer_outputs.size();
             if (noutputs == 2 && layer->type == "Pooling")
                 noutputs = 1;
             for (size_t i = 0; i < noutputs; i++) {
                 Arg out = layer_outputs[i];
-                unusedOutputs.insert(std::make_pair(out.idx, layer_idx));
+                auto p = std::make_pair(out.idx, layer_idx);
+                modelOutputsMap.insert(p);
+                if (extraOutSet.find(out.idx) != extraOutSet.end())
+                    extraOutputsMap.insert(p);
             }
         }
 
-        std::vector<std::pair<int, int> > unusedOutputs_vec;
-        for (auto p: unusedOutputs) {
-            unusedOutputs_vec.push_back(std::make_pair(p.second, p.first));
+        for (auto p: extraOutputsMap)
+            modelOutputsMap.insert(p);
+
+        std::vector<std::pair<int, int> > modelOutputs_pairs;
+        for (auto p: modelOutputsMap) {
+            modelOutputs_pairs.push_back(p);
         }
-        std::sort(unusedOutputs_vec.begin(), unusedOutputs_vec.end());
-        for (auto p: unusedOutputs_vec) {
-            modelOutputs.push_back(Arg(p.second));
+        std::sort(modelOutputs_pairs.begin(), modelOutputs_pairs.end());
+        for (auto p: modelOutputs_pairs) {
+            ArgData& data = netimpl->args[p.first];
+            data.kind = DNN_ARG_OUTPUT;
+            modelOutputs.push_back(Arg(p.first));
         }
 
         Ptr<Graph> curr_graph = netimpl->newGraph("", modelInputs, true);
@@ -3235,7 +3260,8 @@ void TFLayerHandler::handleFailed(const tensorflow::NodeDef& layer)
 
 } // namespace
 
-Net readNetFromTensorflow(const String &model, const String &config, int engine)
+Net readNetFromTensorflow(const String &model, const String &config, int engine,
+                          const std::vector<String>& extraOutputs)
 {
     static const int engine_forced = utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
     if(engine_forced != ENGINE_AUTO)
@@ -3245,23 +3271,26 @@ Net readNetFromTensorflow(const String &model, const String &config, int engine)
     {
         try
         {
-            return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str(), true);
+            return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str(),
+                                                         true, extraOutputs);
         }
         catch(const std::exception& e)
         {
             CV_LOG_WARNING(NULL, "Can't parse model with the new dnn engine, trying to parse with the old dnn engine: " << e.what());
-            return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str(), false);
+            return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str(),
+                                                         false, extraOutputs);
         }
     }
     else
     {
-        return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str(), engine == ENGINE_NEW || engine == ENGINE_AUTO);
+        return detail::readNetDiagnostic<TFImporter>(model.c_str(), config.c_str(), engine == ENGINE_NEW || engine == ENGINE_AUTO, extraOutputs);
     }
 }
 
 Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,
                           const char* bufferConfig, size_t lenConfig,
-                          int engine)
+                          int engine,
+                          const std::vector<String>& extraOutputs)
 {
     static const int engine_forced = utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
     if(engine_forced != ENGINE_AUTO)
@@ -3271,28 +3300,29 @@ Net readNetFromTensorflow(const char* bufferModel, size_t lenModel,
     {
         try
         {
-            return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig, true);
+            return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig, true, extraOutputs);
         }
         catch(const std::exception& e)
         {
             CV_LOG_WARNING(NULL, "Can't parse model with the new dnn engine, trying to parse with the old dnn engine: " << e.what());
-            return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig, false);
+            return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig, false, extraOutputs);
         }
     }
     else
     {
-        return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig, engine == ENGINE_NEW || engine == ENGINE_AUTO);
+        return detail::readNetDiagnostic<TFImporter>(bufferModel, lenModel, bufferConfig, lenConfig, engine == ENGINE_NEW || engine == ENGINE_AUTO, extraOutputs);
     }
 }
 
-Net readNetFromTensorflow(const std::vector<uchar>& bufferModel, const std::vector<uchar>& bufferConfig, int engine)
+Net readNetFromTensorflow(const std::vector<uchar>& bufferModel, const std::vector<uchar>&                                    bufferConfig, int engine,
+                          const std::vector<String>& extraOutputs)
 {
     const char* bufferModelPtr = reinterpret_cast<const char*>(&bufferModel[0]);
     const char* bufferConfigPtr = bufferConfig.empty() ? NULL :
                                   reinterpret_cast<const char*>(&bufferConfig[0]);
     return readNetFromTensorflow(bufferModelPtr, bufferModel.size(),
                                  bufferConfigPtr, bufferConfig.size(),
-                                 engine);
+                                 engine, extraOutputs);
 }
 
 void writeTextGraph(const String& _model, const String& output)

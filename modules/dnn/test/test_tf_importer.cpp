@@ -1812,7 +1812,12 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
     std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt");
     std::string model = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pb", false);
 
-    Net net = readNetFromTensorflow(model, proto);
+    // Mask-RCNN predicts bounding boxes and segmentation masks.
+    std::vector<std::string> outNames(2);
+    outNames[0] = "detection_out_final";
+    outNames[1] = "detection_masks";
+
+    Net net = readNetFromTensorflow(model, proto, ENGINE_AUTO, outNames);
     Mat refDetections = blobFromNPY(path("mask_rcnn_inception_v2_coco_2018_01_28.detection_out.npy"));
     Mat refMasks = blobFromNPY(path("mask_rcnn_inception_v2_coco_2018_01_28.detection_masks.npy"));
     Mat blob = blobFromImage(img, 1.0f, Size(800, 800), Scalar(), true, false);
@@ -1823,11 +1828,6 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
         net.enableWinograd(false);
 
     net.setInput(blob);
-
-    // Mask-RCNN predicts bounding boxes and segmentation masks.
-    std::vector<std::string> outNames(2);
-    outNames[0] = "detection_out_final";
-    outNames[1] = "detection_masks";
 
     std::vector<Mat> outs;
     net.forward(outs, outNames);

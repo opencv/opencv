@@ -1192,6 +1192,11 @@ struct TextDetectionModel_EAST_Impl : public TextDetectionModel_Impl
         CV_CheckEQ(geometry.dims, 4, "");
         CV_CheckEQ(scoreMap.size[0], 1, "");
         CV_CheckEQ(geometry.size[0], 1, "");
+
+        if (geometry.size[1] == 1 && scoreMap.size[1] == 5) {
+            std::swap(geometry, scoreMap);
+        }
+
         CV_CheckEQ(scoreMap.size[1], 1, "");
         CV_CheckEQ(geometry.size[1], 5, "");
         CV_CheckEQ(scoreMap.size[2], geometry.size[2], "");

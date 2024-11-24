@@ -1096,7 +1096,8 @@ CV__DNN_INLINE_NS_BEGIN
       */
     CV_EXPORTS_W Net readNetFromTensorflow(CV_WRAP_FILE_PATH const String &model,
                                            CV_WRAP_FILE_PATH const String &config = String(),
-                                           int engine=ENGINE_AUTO);
+                                           int engine=ENGINE_AUTO,
+                                           const std::vector<String>& extraOutputs = std::vector<String>());
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
       * @param bufferModel buffer containing the content of the pb file
@@ -1107,7 +1108,8 @@ CV__DNN_INLINE_NS_BEGIN
       */
     CV_EXPORTS_W Net readNetFromTensorflow(const std::vector<uchar>& bufferModel,
                                            const std::vector<uchar>& bufferConfig = std::vector<uchar>(),
-                                           int engine=ENGINE_AUTO);
+                                           int engine=ENGINE_AUTO,
+                                           const std::vector<String>& extraOutputs = std::vector<String>());
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/">TensorFlow</a> framework's format.
       * @details This is an overloaded member function, provided for convenience.
@@ -1121,7 +1123,8 @@ CV__DNN_INLINE_NS_BEGIN
       */
     CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,
                                          const char *bufferConfig = NULL, size_t lenConfig = 0,
-                                         int engine=ENGINE_AUTO);
+                                         int engine=ENGINE_AUTO,
+                                         const std::vector<String>& extraOutputs = std::vector<String>());
 
     /** @brief Reads a network model stored in <a href="https://www.tensorflow.org/lite">TFLite</a> framework's format.
       * @param model  path to the .tflite file with binary flatbuffers description of the network architecture
