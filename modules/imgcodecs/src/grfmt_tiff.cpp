@@ -55,6 +55,7 @@
 
 #include "tiff.h"
 #include "tiffio.h"
+#include "tiffvers.h" // For TIFFLIB_VERSION
 
 namespace cv
 {
@@ -1338,6 +1339,16 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 return false;
             }
         }
+
+// Predictor 2 for 64-bit is supported at v4.4.0 or later.
+// See https://libtiff.gitlab.io/libtiff/releases/v4.4.0.html
+#if TIFFLIB_VERSION < 20220520 /* Magic number of libtiff v4.4.0 */
+        if ( (bitsPerChannel == 64) && (predictor == PREDICTOR_HORIZONTAL /* 2 */) )
+        {
+            CV_LOG_ONCE_WARNING(NULL, "Predictor 2(HORIZONTAL) for 64-bit is supported at v4.4.0 or later, so it is fallbacked to 0(NONE)");
+            predictor = PREDICTOR_NONE;
+        }
+#endif
 
         const int bitsPerByte = 8;
         size_t fileStep = (width * channels * bitsPerChannel) / bitsPerByte;
