@@ -119,7 +119,7 @@ PERF_TEST_P_(DNNTestNetwork, SqueezeNet_v1_1)
 PERF_TEST_P_(DNNTestNetwork, Inception_5h)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019) throw SkipTestException("");
-    processNet("dnn/tensorflow_inception_graph.pb", "", cv::Size(224, 224), "softmax2");
+    processNet("dnn/tensorflow_inception_graph.pb", "", cv::Size(224, 224));
 }
 
 PERF_TEST_P_(DNNTestNetwork, SSD)
