@@ -344,17 +344,20 @@ bool TiffDecoder::readHeader()
             }
             case 32:
             {
-                CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_IEEEFP || sample_format == SAMPLEFORMAT_INT, "");
-                int depth = sample_format == SAMPLEFORMAT_IEEEFP ? CV_32F : CV_32S;
+                CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_IEEEFP || sample_format == SAMPLEFORMAT_UINT || sample_format == SAMPLEFORMAT_INT, "");
+                int depth = sample_format == SAMPLEFORMAT_IEEEFP ? CV_32F : sample_format == SAMPLEFORMAT_INT ? CV_32S : CV_32U;
                 m_type = CV_MAKETYPE(depth, wanted_channels);
                 result = true;
                 break;
             }
             case 64:
-                CV_CheckEQ((int)sample_format, SAMPLEFORMAT_IEEEFP, "");
-                m_type = CV_MAKETYPE(CV_64F, wanted_channels);
+            {
+                CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_IEEEFP || sample_format == SAMPLEFORMAT_UINT || sample_format == SAMPLEFORMAT_INT, "");
+                int depth = sample_format == SAMPLEFORMAT_IEEEFP ? CV_64F : sample_format == SAMPLEFORMAT_INT ? CV_64S : CV_64U;
+                m_type = CV_MAKETYPE(depth, wanted_channels);
                 result = true;
                 break;
+            }
             default:
                 CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 10, 12, 14, 16, 32 or 64.");
             }
@@ -589,21 +592,24 @@ bool  TiffDecoder::readData( Mat& img )
     int type = img.type();
     int depth = CV_MAT_DEPTH(type);
 
+    CV_CheckDepth(type, ( depth == CV_8U  || depth == CV_8S ||
+                          depth == CV_16U || depth == CV_16S ||
+                          depth == CV_32U || depth == CV_32S ||
+                          depth == CV_64U || depth == CV_64S ||
+                          depth == CV_32F || depth == CV_64F), "Unsupported depth of image");
+
     CV_Assert(!m_tif.empty());
     TIFF* tif = (TIFF*)m_tif.get();
 
     uint16_t photometric = (uint16_t)-1;
     CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric));
 
-    if (m_hdr && depth >= CV_32F)
+    if (m_hdr && ((depth == CV_32F) || (depth == CV_64F)) )
     {
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT));
     }
 
     bool color = img.channels() > 1;
-
-    CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
-
     if (m_width && m_height)
     {
         int is_tiled = TIFFIsTiled(tif) != 0;
@@ -755,7 +761,7 @@ bool  TiffDecoder::readData( Mat& img )
                     }
                 }
             }
-            else if (dst_bpp == 32 || dst_bpp == 64)
+            else if (depth == CV_32F || depth == CV_64F)
             {
                 CV_Assert(ncn == img.channels());
                 CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP));
@@ -1038,7 +1044,7 @@ bool  TiffDecoder::readData( Mat& img )
                                 CV_TIFF_CHECK_CALL((int)TIFFReadEncodedTile(tif, tileidx, src_buffer, src_buffer_size) >= 0);
                             }
 
-                            Mat m_tile(Size(tile_width0, tile_height0), CV_MAKETYPE((dst_bpp == 32) ? (depth == CV_32S ? CV_32S : CV_32F) : CV_64F, ncn), src_buffer);
+                            Mat m_tile(Size(tile_width0, tile_height0), CV_MAKETYPE(depth, ncn), src_buffer);
                             Rect roi_tile(0, 0, tile_width, tile_height);
                             Rect roi_img(x, img_y, tile_width, tile_height);
                             if (!m_hdr && ncn == 3 && !m_use_rgb)
@@ -1066,7 +1072,7 @@ bool  TiffDecoder::readData( Mat& img )
                        ( ( dst_bpp != 8 ) && ( !doReadScanline ) ) );
     }
 
-    if (m_hdr && depth >= CV_32F)
+    if (m_hdr && ((depth == CV_32F) || (depth == CV_64F)) )
     {
         CV_Assert(photometric == PHOTOMETRIC_LOGLUV);
         if (m_use_rgb)
@@ -1097,7 +1103,11 @@ ImageEncoder TiffEncoder::newEncoder() const
 
 bool TiffEncoder::isFormatSupported( int depth ) const
 {
-    return depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F;
+    return depth == CV_8U  || depth == CV_8S  ||
+           depth == CV_16U || depth == CV_16S ||
+           depth == CV_32U || depth == CV_32S ||
+           depth == CV_64U || depth == CV_64S ||
+           depth == CV_32F || depth == CV_64F;
 }
 
 class TiffEncoderBufHelper
@@ -1237,7 +1247,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
         int width = img.cols, height = img.rows;
         int type = img.type();
         int depth = CV_MAT_DEPTH(type);
-        CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
+        CV_CheckDepth(type, isFormatSupported(depth), "Unsupported depth of input image");
         CV_CheckType(type, channels >= 1 && channels <= 4, "");
 
         CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width));
@@ -1281,12 +1291,34 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
                 break;
             }
 
+            case CV_32U:
+            {
+                bitsPerChannel = 32;
+                sample_format = SAMPLEFORMAT_UINT;
+                break;
+            }
+
             case CV_32S:
             {
                 bitsPerChannel = 32;
                 sample_format = SAMPLEFORMAT_INT;
                 break;
             }
+
+            case CV_64U:
+            {
+                bitsPerChannel = 64;
+                sample_format = SAMPLEFORMAT_UINT;
+                break;
+            }
+
+            case CV_64S:
+            {
+                bitsPerChannel = 64;
+                sample_format = SAMPLEFORMAT_INT;
+                break;
+            }
+
             case CV_32F:
             {
                 bitsPerChannel = 32;
@@ -1423,7 +1455,7 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
     int type = img.type();
     int depth = CV_MAT_DEPTH(type);
 
-    CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
+    CV_CheckDepth(type, isFormatSupported(depth), "Unsupported depth of input image");
 
     std::vector<Mat> img_vec;
     img_vec.push_back(img);
@@ -1434,24 +1466,16 @@ static void extend_cvtColor( InputArray _src, OutputArray _dst, int code )
 {
     CV_Assert( !_src.empty() );
     CV_Assert( _src.dims() == 2 );
+    CV_Assert( (code == COLOR_BGR2RGB) || (code == COLOR_BGRA2RGBA) );
 
     // This function extend_cvtColor reorders the src channels with only thg limited condition.
     // Otherwise, it calls cvtColor.
 
     const int stype = _src.type();
-    if(!
-        (
-            (
-                ( stype == CV_8SC3  ) || ( stype == CV_8SC4  ) ||
-                ( stype == CV_16SC3 ) || ( stype == CV_16SC4 ) ||
-                ( stype == CV_32SC3 ) || ( stype == CV_32SC4 ) ||
-                ( stype == CV_64FC3 ) || ( stype == CV_64FC4 )
-            )
-            &&
-            (
-                ( code == COLOR_BGR2RGB ) || ( code == COLOR_BGRA2RGBA )
-            )
-        )
+    if(
+        ( stype == CV_8UC3  ) || ( stype == CV_8UC4  ) ||
+        ( stype == CV_16UC3 ) || ( stype == CV_16UC4 ) ||
+        ( stype == CV_32FC3 ) || ( stype == CV_32FC4 )
     )
     {
         cvtColor( _src, _dst, code );
