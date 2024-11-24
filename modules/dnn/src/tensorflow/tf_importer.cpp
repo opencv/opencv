@@ -27,6 +27,7 @@ Implementation of Tensorflow models parser
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <map>
 #include <string>
 #include <queue>
 #include "tf_graph_simplifier.hpp"
@@ -3068,22 +3069,50 @@ void TFImporter::populateNet()
 
     if (newEngine)
     {
+        Net::Impl* netimpl = dstNet.getImpl();
         for (const std::string& outputName : layersOutputs.back())
-            modelOutputs.push_back(dstNet.getImpl()->newArg(outputName, DNN_ARG_OUTPUT));
+            netimpl->newArg(outputName, DNN_ARG_OUTPUT);
         for (size_t layerId = 0; layerId < layersOutputs.size(); layerId++)
         {
             for (const std::string& outputName : layersOutputs[layerId])
                 curProg[layerId]->outputs.push_back(dstNet.getArg(outputName));
         }
 
-        Ptr<Graph> curr_graph = dstNet.getImpl()->newGraph("", modelInputs, true);
+        std::map<int, int> unusedOutputs;
+        int layer_idx = 0;
+        for (const auto& layer: curProg) {
+            layer_idx++;
+            const std::vector<Arg>& layer_inputs = layer->inputs;
+            const std::vector<Arg>& layer_outputs = layer->outputs;
+            for (Arg inp: layer_inputs) {
+                unusedOutputs.erase(inp.idx);
+            }
+            size_t noutputs = layer_outputs.size();
+            if (noutputs == 2 && layer->type == "Pooling")
+                noutputs = 1;
+            for (size_t i = 0; i < noutputs; i++) {
+                Arg out = layer_outputs[i];
+                unusedOutputs.insert(std::make_pair(out.idx, layer_idx));
+            }
+        }
+
+        std::vector<std::pair<int, int> > unusedOutputs_vec;
+        for (auto p: unusedOutputs) {
+            unusedOutputs_vec.push_back(std::make_pair(p.second, p.first));
+        }
+        std::sort(unusedOutputs_vec.begin(), unusedOutputs_vec.end());
+        for (auto p: unusedOutputs_vec) {
+            modelOutputs.push_back(Arg(p.second));
+        }
+
+        Ptr<Graph> curr_graph = netimpl->newGraph("", modelInputs, true);
         curr_graph->setOutputs(modelOutputs);
         curr_graph->setProg(curProg);
 
-        dstNet.getImpl()->mainGraph = curr_graph;
-        dstNet.getImpl()->modelFormat = DNN_MODEL_TF;
-        dstNet.getImpl()->originalLayout = DATA_LAYOUT_NCHW; // TODO Should we set NHWC?
-        dstNet.getImpl()->prepareForInference();
+        netimpl->mainGraph = curr_graph;
+        netimpl->modelFormat = DNN_MODEL_TF;
+        netimpl->originalLayout = DATA_LAYOUT_NCHW; // TODO Should we set NHWC?
+        netimpl->prepareForInference();
     }
     else
     {
