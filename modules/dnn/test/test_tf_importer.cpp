@@ -1948,7 +1948,10 @@ TEST(Test_TF_Model, Inception_GetLayer)
 
     ASSERT_FALSE(layernames.empty());
 
-    int layer_id = 0;
+    // this is empirical initialization:
+    // * in the case of new engine the very first layer always has id == 0 for any model.
+    // * in the case of the old engine at least for this model the very first layer has id == 1
+    int layer_id = net.getLayer(0)->name != layernames[0];
     for (auto name: layernames) {
         auto layer = net.getLayer(layer_id);
         EXPECT_EQ(layer->name, name);
