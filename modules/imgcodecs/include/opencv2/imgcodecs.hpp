@@ -332,7 +332,9 @@ can be saved using this function, with these exceptions:
     8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
     should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
 - With PGM/PPM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
-- With TIFF encoder, 8-bit unsigned (CV_8U), 16-bit unsigned (CV_16U),
+- With TIFF encoder, 8-bit unsigned (CV_8U), 8-bit signed (CV_8S),
+                     16-bit unsigned (CV_16U), 16-bit signed (CV_16S),
+                     32-bit signed (CV_32S),
                      32-bit float (CV_32F) and 64-bit float (CV_64F) images can be saved.
   - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
   - 32-bit float 3-channel (CV_32FC3) TIFF images will be saved
