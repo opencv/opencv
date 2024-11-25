@@ -1091,6 +1091,7 @@ CV__DNN_INLINE_NS_BEGIN
       *               Resulting Net object is built by text graph using weights from a binary one that
       *               let us make it more flexible.
       * @param engine select DNN engine to be used. With auto selection the new engine is used.
+      * @param extraOutputs specify model outputs explicitly, in addition to the outputs the graph analyzer finds.
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
@@ -1103,6 +1104,7 @@ CV__DNN_INLINE_NS_BEGIN
       * @param bufferModel buffer containing the content of the pb file
       * @param bufferConfig buffer containing the content of the pbtxt file
       * @param engine select DNN engine to be used. With auto selection the new engine is used.
+      * @param extraOutputs specify model outputs explicitly, in addition to the outputs the graph analyzer finds.
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       * @returns Net object.
       */
@@ -1119,6 +1121,7 @@ CV__DNN_INLINE_NS_BEGIN
       * @param bufferConfig buffer containing the content of the pbtxt file
       * @param lenConfig length of bufferConfig
       * @param engine select DNN engine to be used. With auto selection the new engine is used.
+      * @param extraOutputs specify model outputs explicitly, in addition to the outputs the graph analyzer finds.
       * Please pay attention that the new DNN does not support non-CPU back-ends for now.
       */
     CV_EXPORTS Net readNetFromTensorflow(const char *bufferModel, size_t lenModel,

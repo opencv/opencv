@@ -1939,4 +1939,21 @@ TEST(Test_TensorFlow_Importer, tf_graph_simplifier_buffer_overflow_21947)
     EXPECT_ANY_THROW(readNetFromTensorflow(reinterpret_cast<const char*>(payload), sizeof(payload) / sizeof(payload[0])));
 }
 
+TEST(Test_TF_Model, Inception_GetLayer)
+{
+    const std::string model = findDataFile("dnn/tensorflow_inception_graph.pb", false);
+    auto net = readNetFromTensorflow(model);
+
+    auto layernames = net.getLayerNames();
+
+    ASSERT_FALSE(layernames.empty());
+
+    int layer_id = 0;
+    for (auto name: layernames) {
+        auto layer = net.getLayer(layer_id);
+        EXPECT_EQ(layer->name, name);
+        layer_id++;
+    }
+}
+
 }

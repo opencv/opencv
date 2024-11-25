@@ -74,20 +74,15 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
     }
 
     public void testGetLayer() {
-        List<String> layernames = net.getLayerNames();
+        List<String> layerNames = net.getLayerNames();
+        assertFalse("Test net returned no layers!", layerNames.isEmpty());
 
-        assertFalse("Test net returned no layers!", layernames.isEmpty());
-
-        String testLayerName = layernames.get(0);
-
-        DictValue layerId = new DictValue(testLayerName);
-
-        assertEquals("DictValue did not return the string, which was used in constructor!", testLayerName, layerId.getStringValue());
-
-        Layer layer = net.getLayer(layerId);
-
-        assertEquals("Layer name does not match the expected value!", testLayerName, layer.get_name());
-
+        int layerId = 0;
+        for (String layerName: layerNames) {
+            Layer layer = net.getLayer(layerId);
+            assertEquals("Layer name does not match the expected value!", layerName, layer.get_name());
+            layer_id++;
+        }
     }
 
     public void checkInceptionNet(Net net)
