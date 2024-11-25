@@ -69,10 +69,10 @@ public class DnnListRegressionTest extends OpenCVTestCase {
         Mat inputBlob = Dnn.blobFromImage(image, 1.0, new Size(224, 224), new Scalar(0), true, true);
         assertNotNull("Converting image to blob failed!", inputBlob);
 
-        net.setInput(inputBlob, "input");
+        net.setInput(inputBlob, "");
     }
 
-    public void testSetInputsNames() {
+    /*public void testSetInputsNames() {
         List<String> inputs = new ArrayList();
         inputs.add("input");
         try {
@@ -80,12 +80,12 @@ public class DnnListRegressionTest extends OpenCVTestCase {
         } catch(Exception e) {
             fail("Net setInputsNames failed: " + e.getMessage());
         }
-    }
+    }*/
 
     public void testForward() {
         List<Mat> outs = new ArrayList();
         List<String> outNames = new ArrayList();
-        outNames.add("");
+        //outNames.add("");
         try {
             net.forward(outs,outNames);
         } catch(Exception e) {

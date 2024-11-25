@@ -98,7 +98,7 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
         Mat inputBlob = Dnn.blobFromImage(image, 1.0, new Size(224, 224), new Scalar(0), true, true);
         assertNotNull("Converting image to blob failed!", inputBlob);
 
-        net.setInput(inputBlob, "input");
+        net.setInput(inputBlob, "");
 
         Mat result = new Mat();
         try {
