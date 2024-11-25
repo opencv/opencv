@@ -85,7 +85,7 @@ public class DnnListRegressionTest extends OpenCVTestCase {
     public void testForward() {
         List<Mat> outs = new ArrayList();
         List<String> outNames = new ArrayList();
-        outNames.add("softmax2");
+        outNames.add("");
         try {
             net.forward(outs,outNames);
         } catch(Exception e) {
