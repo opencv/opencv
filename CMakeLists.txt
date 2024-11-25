@@ -532,7 +532,8 @@ endif()
 
 if(WIN32)
   # Postfix of DLLs:
-  ocv_update(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}")
+  set(BUILD_LIBS_SUFFIX "" CACHE STRING "Set a library extension to avoid conflicts in your application with other libraries.")
+  ocv_update(OPENCV_DLLVERSION "${OPENCV_VERSION_MAJOR}${OPENCV_VERSION_MINOR}${OPENCV_VERSION_PATCH}${BUILD_LIBS_SUFFIX}")
   ocv_update(OPENCV_DEBUG_POSTFIX d)
 else()
   # Postfix of so's:
