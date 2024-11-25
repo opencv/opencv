@@ -103,7 +103,7 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
         Mat result = new Mat();
         try {
             net.setPreferableBackend(Dnn.DNN_BACKEND_OPENCV);
-            result = net.forward("softmax2");
+            result = net.forward("");
         }
         catch (Exception e) {
             fail("DNN forward failed: " + e.getMessage());
