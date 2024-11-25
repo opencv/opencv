@@ -1,6 +1,7 @@
 #include "precomp.hpp"
 #include <opencv2/core/utils/logger.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
+#include <opencv2/videoio.hpp>
 
 #include <sys/mman.h>
 
@@ -31,6 +32,15 @@
 #inclued <libcamera/stream.h>
 #include <cap_libcamera.hpp>
 
+
+/**
+ * @brief implementation of the LibcameraApp class and LibcameraCapture
+    * The LibcameraApp implements is from LCCV
+    * Source: https://github.com/kbarni/LCCV
+ 
+
+
+*/
 
 namespace cv 
 {
@@ -570,6 +580,83 @@ void LibcameraApp::configureDenoise(const std::string &denoise_mode)
 	controls_.set(NoiseReductionMode, denoise);
 }
 
+double LibcameraApp::GetProperty(int property_id) const {
+    switch (property_id) {
+        case cv::CAP_PROP_FRAME_WIDTH: // 获取帧宽度
+            if (configuration_) {
+                return configuration_->at(0).size.width;
+            }
+            break;
+
+        case cv::CAP_PROP_FRAME_HEIGHT: // 获取帧高度
+            if (configuration_) {
+                return configuration_->at(0).size.height;
+            }
+            break;
+
+        case cv::CAP_PROP_FPS: // 获取帧率
+            if (configuration_) {
+                auto duration = configuration_->at(0).frameDuration;
+                return 1e9 / duration.min; // 帧率 = 1 / 最小帧持续时间
+            }
+            break;
+
+        case cv::CAP_PROP_EXPOSURE: // 获取曝光时间
+            if (camera_) {
+                libcamera::ControlList controls = camera_->controls();
+                if (controls.contains(libcamera::controls::ExposureTime)) {
+                    return controls.get<libcamera::controls::ExposureTime>();
+                }
+            }
+            break;
+
+        default:
+            std::cerr << "GetProperty: Unsupported property_id " << property_id << std::endl;
+            break;
+    }
+    return 0.0; 
+}
+
+bool LibcameraApp::SetProperty(int property_id, double value) {
+    switch (property_id) {
+        case cv::CAP_PROP_FRAME_WIDTH: // 设置帧宽度
+        case cv::CAP_PROP_FRAME_HEIGHT: { // 设置帧高度
+            if (configuration_) {
+                configuration_->at(0).size.width = static_cast<int>(property_id == cv::CAP_PROP_FRAME_WIDTH ? value : configuration_->at(0).size.width);
+                configuration_->at(0).size.height = static_cast<int>(property_id == cv::CAP_PROP_FRAME_HEIGHT ? value : configuration_->at(0).size.height);
+                return camera_->configure(configuration_.get()) == 0; // 应用配置
+            }
+            break;
+        }
+
+        case cv::CAP_PROP_FPS: { // 设置帧率
+            if (configuration_) {
+                int64_t frame_duration = 1e9 / static_cast<int>(value); // 持续时间 = 1 / 帧率
+                configuration_->at(0).frameDuration = {frame_duration, frame_duration};
+                return camera_->configure(configuration_.get()) == 0;
+            }
+            break;
+        }
+
+        case cv::CAP_PROP_EXPOSURE: { // 设置曝光时间
+            if (camera_) {
+                libcamera::ControlList controls(camera_->controls());
+                controls.set(libcamera::controls::ExposureTime, static_cast<int64_t>(value));
+                return camera_->applyControls(&controls) == 0;
+            }
+            break;
+        }
+
+        default:
+            std::cerr << "SetProperty: Unsupported property_id " << property_id << std::endl;
+            break;
+    }
+
+    return false; 
+}
+
+
+
 /* ******************************************************************* */
 class LibcameraCapture CV_FINAL : public IVideoCapture
 {
@@ -598,8 +685,8 @@ public:
     virtual bool setProperty(int propId, double value) CV_OVERRIDE;
     // virtual bool isOpened() const CV_OVERRIDE { return (bool)pipeline; }
     virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; } // Need to modify videoio.hpp/enum VideoCaptureAPIs
-    bool configureHW(const cv::VideoCaptureParameters&);
-    bool configureStreamsProperty(const cv::VideoCaptureParameters&);
+    // bool configureHW(const cv::VideoCaptureParameters&);
+    // bool configureStreamsProperty(const cv::VideoCaptureParameters&);
     bool isOpened() const CV_OVERRIDE { return camerastarted; }
 
 protected:
@@ -641,6 +728,29 @@ LibcameraCapture::LibcameraCapture()
     camerastarted=false;
     isFramePending=false;
 }
+
+double LibcameraCapture::getProperty(int propId) const {
+    switch (propId) {
+        case cv::CAP_PROP_FRAME_WIDTH: // 获取帧宽度
+            return vw; 
+        case cv::CAP_PROP_FRAME_HEIGHT: // 获取帧高度
+            return vh; 
+        case cv::CAP_PROP_FPS: // 获取帧率
+            return app->GetFrameRate(); // 从 Libcamera 获取帧率
+        case cv::CAP_PROP_BRIGHTNESS: // 获取亮度
+            return app->GetBrightness(); 
+        case cv::CAP_PROP_CONTRAST: // 获取对比度
+            return app->GetContrast(); 
+        case cv::CAP_PROP_SATURATION: // 获取饱和度
+            return app->GetSaturation(); 
+        case cv::CAP_PROP_EXPOSURE: // 获取曝光值
+            return app->GetExposure(); 
+        default:
+            std::cerr << "Property ID " << propId << " not supported." << std::endl;
+            return 0; 
+    }
+}
+
 
 LibcameraCapture::~LibcameraCapture()
 {
