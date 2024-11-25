@@ -81,7 +81,7 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
         for (String layerName: layerNames) {
             Layer layer = net.getLayer(layerId);
             assertEquals("Layer name does not match the expected value!", layerName, layer.get_name());
-            layer_id++;
+            layerId++;
         }
     }
 
