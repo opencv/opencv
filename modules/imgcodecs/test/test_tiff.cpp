@@ -951,7 +951,10 @@ Imgcodes_Tiff_TypeAndComp all_types[] = {
     { CV_8SC1,  true  }, { CV_8SC3,  true  }, { CV_8SC4,  true  },
     { CV_16UC1, true  }, { CV_16UC3, true  }, { CV_16UC4, true  },
     { CV_16SC1, true  }, { CV_16SC3, true  }, { CV_16SC4, true  },
+    { CV_32UC1, true  }, { CV_32UC3, true  }, { CV_32UC4, true  },
     { CV_32SC1, true  }, { CV_32SC3, true  }, { CV_32SC4, true  },
+    { CV_64UC1, true  }, { CV_64UC3, true  }, { CV_64UC4, true  },
+    { CV_64SC1, true  }, { CV_64SC3, true  }, { CV_64SC4, true  },
     { CV_32FC1, false }, { CV_32FC3, false }, { CV_32FC4, false }, // No compression
     { CV_64FC1, false }, { CV_64FC3, false }, { CV_64FC4, false }  // No compression
 };
