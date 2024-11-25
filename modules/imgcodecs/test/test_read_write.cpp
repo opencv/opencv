@@ -612,4 +612,23 @@ TEST(Imgcodecs_Params, imencode_regression_22752)
     EXPECT_ANY_THROW(cv::imencode("test.jpg", img, buf, params));  // parameters size or missing JPEG codec
 }
 
+#if __cplusplus >= 201703L
+TEST(Imgcodecs, imwrite_imread_utf8)
+{
+    Mat src(100, 100, CV_8UC3);
+    randu(src, Scalar::all(0), Scalar::all(255));
+    String u8file = "testπ.bmp";
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imwrite(u8file, src));
+    EXPECT_TRUE(ret);
+
+    Mat dst = imread(u8file);
+    EXPECT_NO_THROW(dst = imread(u8file));
+    EXPECT_FALSE(dst.empty());
+
+    double diff = cv::norm(src, dst, NORM_INF);
+    EXPECT_EQ(diff, 0.);
+}
+#endif
+
 }} // namespace
