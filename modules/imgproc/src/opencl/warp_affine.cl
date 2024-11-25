@@ -93,27 +93,24 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
 
     if (dx < dst_cols)
     {
-        int round_delta = (AB_SCALE >> 1);
+        float X0_ = fma(M[0], (CT)dx, M[2]);
+        float Y0_ = fma(M[3], (CT)dx, M[5]);
 
-        int X0_ = rint(M[0] * dx * AB_SCALE);
-        int Y0_ = rint(M[3] * dx * AB_SCALE);
-        int dst_index = mad24(dy0, dst_step, mad24(dx, pixsize, dst_offset));
-
-        for (int dy = dy0, dy1 = min(dst_rows, dy0 + ROWS_PER_WI); dy < dy1; ++dy, dst_index += dst_step)
+        for (int dy = dy0, dy1 = min(dst_rows, dy0 + ROWS_PER_WI); dy < dy1; ++dy)
         {
-            int X0 = X0_ + rint(fma(M[1], (CT)dy, M[2]) * AB_SCALE) + round_delta;
-            int Y0 = Y0_ + rint(fma(M[4], (CT)dy, M[5]) * AB_SCALE) + round_delta;
+            float X0 = fma(M[1], (CT)dy, X0_);
+            float Y0 = fma(M[4], (CT)dy, Y0_);
+            int sx = convert_short_rtn(X0);
+            int sy = convert_short_rtn(Y0);
 
-            short sx = convert_short_sat(X0 >> AB_BITS);
-            short sy = convert_short_sat(Y0 >> AB_BITS);
-
+            WT v0 = scalar;
             if (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows)
             {
-                int src_index = mad24(sy, src_step, mad24(sx, pixsize, src_offset));
-                storepix(loadpix(srcptr + src_index), dstptr + dst_index);
+                v0 = CONVERT_TO_WT(loadpix(srcptr + mad24(sy, src_step, mad24(sx, pixsize, src_offset))));
             }
-            else
-                storepix(scalar, dstptr + dst_index);
+
+            int dst_index = mad24(dy, dst_step, mad24(dx, pixsize, dst_offset));
+            storepix(CONVERT_TO_T(v0), dstptr + dst_index);
         }
     }
 }

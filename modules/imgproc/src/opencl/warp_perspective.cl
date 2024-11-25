@@ -92,22 +92,17 @@ __kernel void warpPerspective(__global const uchar * srcptr, int src_step, int s
 
     if (dx < dst_cols && dy < dst_rows)
     {
-        CT X0 = M[0] * dx + M[1] * dy + M[2];
-        CT Y0 = M[3] * dx + M[4] * dy + M[5];
-        CT W = M[6] * dx + M[7] * dy + M[8];
-        W = W != 0.0f ? 1.f / W : 0.0f;
-        short sx = convert_short_sat_rte(X0*W);
-        short sy = convert_short_sat_rte(Y0*W);
+        float W = M[6] * dx + M[7] * dy + M[8];
+        float X0 = (M[0] * dx + M[1] * dy + M[2]) / W;
+        float Y0 = (M[3] * dx + M[4] * dy + M[5]) / W;
 
-        int dst_index = mad24(dy, dst_step, dx * pixsize + dst_offset);
+        int sx = convert_short_rtn(X0);
+        int sy = convert_short_rtn(Y0);
 
-        if (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows)
-        {
-            int src_index = mad24(sy, src_step, sx * pixsize + src_offset);
-            storepix(loadpix(srcptr + src_index), dstptr + dst_index);
-        }
-        else
-            storepix(scalar, dstptr + dst_index);
+        WT v0 = (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows) ?
+            CONVERT_TO_WT(loadpix(srcptr + mad24(sy, src_step, src_offset + sx * pixsize))) : scalar;
+        int dst_index = mad24(dy, dst_step, dst_offset + dx * pixsize);
+        storepix(CONVERT_TO_T(v0), dstptr + dst_index);
     }
 }
 

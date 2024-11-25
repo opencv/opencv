@@ -152,42 +152,36 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
     if (x < dst_cols)
     {
         T scalar = convertScalar(nVal);
-
         int map1_index = mad24(y, map1_step, mad24(x, (int)sizeof(float), map1_offset));
         int map2_index = mad24(y, map2_step, mad24(x, (int)sizeof(float), map2_offset));
-        int dst_index = mad24(y, dst_step, mad24(x, TSIZE, dst_offset));
 
-        #pragma unroll
-        for (int i = 0; i < ROWS_PER_WI; ++i, ++y,
-            map1_index += map1_step, map2_index += map2_step, dst_index += dst_step)
-            if (y < dst_rows)
-            {
-                __global const float * map1 = (__global const float *)(map1ptr + map1_index);
-                __global const float * map2 = (__global const float *)(map2ptr + map2_index);
-                __global T * dst = (__global T *)(dstptr + dst_index);
+        for (int dy = y, dy1 = min(dst_rows, y + ROWS_PER_WI); dy < dy1; ++dy, map1_index += map1_step, map2_index += map2_step)
+        {
+            __global const float * map1 = (__global const float *)(map1ptr + map1_index);
+            __global const float * map2 = (__global const float *)(map2ptr + map2_index);
 
-                int gx = convert_int_sat_rte(map1[0]);
-                int gy = convert_int_sat_rte(map2[0]);
-                #if WARP_RELATIVE
-                gx += x;
-                gy += y;
-                #endif
+            float X0 = map1[0];
+            float Y0 = map2[0];
+            #if WARP_RELATIVE
+            X0 += x;
+            Y0 += dy;
+            #endif
 
-                if (NEED_EXTRAPOLATION(gx, gy))
-                {
-#ifndef BORDER_CONSTANT
-                    int2 gxy = (int2)(gx, gy);
-#endif
-                    T v;
-                    EXTRAPOLATE(gxy, v)
-                    storepix(v, dst);
-                }
-                else
-                {
-                    int src_index = mad24(gy, src_step, mad24(gx, TSIZE, src_offset));
-                    storepix(loadpix((__global const T*)(srcptr + src_index)), dst);
-                }
+            int sx = convert_int_rtn(X0);
+            int sy = convert_int_rtn(Y0);
+
+            int2 map_data0 = (int2)(sx, sy);
+
+            T v0 = scalar;
+            if (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows) {
+                v0 = loadpix((__global const T *)(srcptr + mad24(sy, src_step, mad24(sx, TSIZE, src_offset))));
+            } else {
+                EXTRAPOLATE(map_data0, v0);
             }
+
+            int dst_index = mad24(dy, dst_step, mad24(x, TSIZE, dst_offset));
+            storepix(v0, dstptr + dst_index);
+        }
     }
 }
 
@@ -202,36 +196,34 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
     if (x < dst_cols)
     {
         T scalar = convertScalar(nVal);
-        int dst_index = mad24(y, dst_step, mad24(x, TSIZE, dst_offset));
         int map_index = mad24(y, map_step, mad24(x, (int)sizeof(float2), map_offset));
 
-        #pragma unroll
-        for (int i = 0; i < ROWS_PER_WI; ++i, ++y,
-            map_index += map_step, dst_index += dst_step)
-            if (y < dst_rows)
-            {
-                __global const float2 * map = (__global const float2 *)(mapptr + map_index);
-                __global T * dst = (__global T *)(dstptr + dst_index);
+        for (int dy = y, dy1 = min(dst_rows, y + ROWS_PER_WI); dy < dy1; ++dy, map_index += map_step)
+        {
+            __global const float2 * map = (__global const float2 *)(mapptr + map_index);
+            float2 map_data = map[0];
 
-                int2 gxy = convert_int2_sat_rte(map[0]);
-                #if WARP_RELATIVE
-                gxy.x += x;
-                gxy.y += y;
-                #endif
+            float X0 = map_data.x;
+            float Y0 = map_data.y;
+            #if WARP_RELATIVE
+            X0 += x;
+            Y0 += dy;
+            #endif
 
-                int gx = gxy.x, gy = gxy.y;
+            int sx = convert_int_rtn(X0);
+            int sy = convert_int_rtn(Y0);
 
-                if (NEED_EXTRAPOLATION(gx, gy))
-                {
-                    T v;
-                    EXTRAPOLATE(gxy, v)
-                    storepix(v, dst);
-                }
-                else
-                {
-                    int src_index = mad24(gy, src_step, mad24(gx, TSIZE, src_offset));
-                    storepix(loadpix((__global const T *)(srcptr + src_index)), dst);
-                }
+            int2 map_data0 = (int2)(sx, sy);
+
+            T v0 = scalar;
+            if (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows) {
+                v0 = loadpix((__global const T *)(srcptr + mad24(sy, src_step, mad24(sx, TSIZE, src_offset))));
+            } else {
+                EXTRAPOLATE(map_data0, v0);
+            }
+
+            int dst_index = mad24(dy, dst_step, mad24(x, TSIZE, dst_offset));
+            storepix(v0, dstptr + dst_index);
         }
     }
 }
