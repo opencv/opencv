@@ -618,35 +618,65 @@ double LibcameraApp::GetProperty(int property_id) const {
 }
 
 bool LibcameraApp::SetProperty(int property_id, double value) {
+    if (!camera_) {
+        std::cerr << "SetProperty: Camera is not initialized. Failed to set property_id " << property_id << std::endl;
+        return false;
+    }
+
     switch (property_id) {
-        case cv::CAP_PROP_FRAME_WIDTH: // 设置帧宽度
-        case cv::CAP_PROP_FRAME_HEIGHT: { // 设置帧高度
+        case cv::CAP_PROP_FRAME_WIDTH: {
             if (configuration_) {
-                configuration_->at(0).size.width = static_cast<int>(property_id == cv::CAP_PROP_FRAME_WIDTH ? value : configuration_->at(0).size.width);
-                configuration_->at(0).size.height = static_cast<int>(property_id == cv::CAP_PROP_FRAME_HEIGHT ? value : configuration_->at(0).size.height);
-                return camera_->configure(configuration_.get()) == 0; // 应用配置
+                int width = static_cast<int>(value);
+                if (width <= 0) {
+                    std::cerr << "SetProperty: Invalid frame width " << width << std::endl;
+                    return false;
+                }
+                configuration_->at(0).size.width = width;
+                return camera_->configure(configuration_.get()) == 0; 
             }
             break;
         }
-
-        case cv::CAP_PROP_FPS: { // 设置帧率
+        case cv::CAP_PROP_FRAME_HEIGHT: {
             if (configuration_) {
-                int64_t frame_duration = 1e9 / static_cast<int>(value); // 持续时间 = 1 / 帧率
+                int height = static_cast<int>(value);
+                if (height <= 0) {
+                    std::cerr << "SetProperty: Invalid frame height " << height << std::endl;
+                    return false;
+                }
+                configuration_->at(0).size.height = height;
+                return camera_->configure(configuration_.get()) == 0; 
+            }
+            break;
+        }
+        case cv::CAP_PROP_FPS: {
+            if (configuration_) {
+                if (value <= 0) {
+                    std::cerr << "SetProperty: Invalid FPS value " << value << std::endl;
+                    return false;
+                }
+                int64_t frame_duration = 1e9 / static_cast<int>(value); 
                 configuration_->at(0).frameDuration = {frame_duration, frame_duration};
-                return camera_->configure(configuration_.get()) == 0;
+                return camera_->configure(configuration_.get()) == 0; 
             }
             break;
         }
-
-        case cv::CAP_PROP_EXPOSURE: { // 设置曝光时间
+        case cv::CAP_PROP_EXPOSURE: {
             if (camera_) {
+                const auto& controlsInfo = camera_->controls();
+                if (controlsInfo.contains(libcamera::controls::ExposureTime)) {
+                    auto range = controlsInfo.at(libcamera::controls::ExposureTime).range();
+                    if (value < range.min || value > range.max) {
+                        std::cerr << "SetProperty: Exposure value " << value << " is out of range (" 
+                                  << range.min << " - " << range.max << ")" << std::endl;
+                        return false;
+                    }
+                }
                 libcamera::ControlList controls(camera_->controls());
                 controls.set(libcamera::controls::ExposureTime, static_cast<int64_t>(value));
-                return camera_->applyControls(&controls) == 0;
+                return camera_->start(&controls) == 0; // restart camera with new exposure time (To be verified)
             }
             break;
         }
-
         default:
             std::cerr << "SetProperty: Unsupported property_id " << property_id << std::endl;
             break;
@@ -729,27 +759,7 @@ LibcameraCapture::LibcameraCapture()
     isFramePending=false;
 }
 
-double LibcameraCapture::getProperty(int propId) const {
-    switch (propId) {
-        case cv::CAP_PROP_FRAME_WIDTH: // 获取帧宽度
-            return vw; 
-        case cv::CAP_PROP_FRAME_HEIGHT: // 获取帧高度
-            return vh; 
-        case cv::CAP_PROP_FPS: // 获取帧率
-            return app->GetFrameRate(); // 从 Libcamera 获取帧率
-        case cv::CAP_PROP_BRIGHTNESS: // 获取亮度
-            return app->GetBrightness(); 
-        case cv::CAP_PROP_CONTRAST: // 获取对比度
-            return app->GetContrast(); 
-        case cv::CAP_PROP_SATURATION: // 获取饱和度
-            return app->GetSaturation(); 
-        case cv::CAP_PROP_EXPOSURE: // 获取曝光值
-            return app->GetExposure(); 
-        default:
-            std::cerr << "Property ID " << propId << " not supported." << std::endl;
-            return 0; 
-    }
-}
+
 
 
 LibcameraCapture::~LibcameraCapture()
@@ -976,6 +986,50 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     else
         return false;
 }
+
+double LibcameraCapture::getProperty(int propId) const
+{ 
+    return app->GetProperty(propId);
+}
+
+bool LibcameraCapture::setProperty(int propId, double value) {
+    // Set the property by calling LibcameraApp
+    if (!app->SetProperty(propId, value)) {
+        std::cerr << "Failed to set property in LibcameraApp." << std::endl;
+        return false;
+    }
+
+    // Sync the property value with the local copy
+    switch (propId) {
+        case cv::CAP_PROP_FRAME_WIDTH:
+            vw = static_cast<unsigned int>(value);
+            delete[] framebuffer; // Reallocate the buffer
+            framebuffer = new uint8_t[vw * vh * 3];
+            frameready.store(false, std::memory_order_release);
+            break;
+
+        case cv::CAP_PROP_FRAME_HEIGHT:
+            vh = static_cast<unsigned int>(value);
+            delete[] framebuffer; // Reallocate the buffer
+            framebuffer = new uint8_t[vw * vh * 3];
+            frameready.store(false, std::memory_order_release);
+            break;
+
+        case cv::CAP_PROP_FPS:
+            isFramePending = false;
+            break;
+
+        case cv::CAP_PROP_EXPOSURE:
+            break;
+
+        default:
+            std::cerr << "Unsupported property_id " << propId << " in LibcameraCapture." << std::endl;
+            return false;
+    }
+
+    return true;
+}
+
 
 bool LibcameraCapture::open(int _index)
 {
