@@ -27,11 +27,20 @@ Mat dst;
  * @function on_trackbar
  * @brief Callback for trackbar
  */
-static void on_trackbar( int, void* )
+static void on_trackbar( int pos , void* userdata )
 {
-   alpha = (double) alpha_slider/alpha_slider_max ;
+   std::cout << "Trackbar position: " << pos << std::endl;
+
+   if (userdata) {
+      // Example usage of userdata
+      int* user_data = static_cast<int*>(userdata);
+      std::cout << "User data: " << *user_data << std::endl;
+   }
+   alpha = (double) pos /alpha_slider_max ;
    beta = ( 1.0 - alpha );
+
    addWeighted( src1, alpha, src2, beta, 0.0, dst);
+
    imshow( "Linear Blend", dst );
 }
 //![on_trackbar]
