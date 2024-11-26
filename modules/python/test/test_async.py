@@ -9,7 +9,7 @@ from tests_common import NewOpenCVTests
 class AsyncTest(NewOpenCVTests):
 
     def test_async_simple(self):
-        m = np.array([[1,2],[3,4],[5,6]])
+        m = np.array([[1,2],[3,4],[5,6]], dtype=np.intc)
         async_result = cv.utils.testAsyncArray(m)
         self.assertTrue(async_result.valid())
         ret, result = async_result.get(timeoutNs=10**6)  # 1ms

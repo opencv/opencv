@@ -13,7 +13,7 @@ class persistence_test(NewOpenCVTests):
         os.close(fd)
 
         # Writing ...
-        expected = np.array([[[0, 1, 2, 3, 4]]])
+        expected = np.array([[[0, 1, 2, 3, 4]]], dtype=np.intc)
         expected_str = ("Hello", "World", "!")
         fs = cv.FileStorage(fname, cv.FILE_STORAGE_WRITE)
         fs.write("test", expected)

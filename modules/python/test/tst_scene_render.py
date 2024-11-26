@@ -37,7 +37,7 @@ class TestSceneRender():
             self.yAmpl = self.sceneBg.shape[1] - (self.center[1] + fgImg.shape[1])
 
         self.initialRect = np.array([ (self.h/2, self.w/2), (self.h/2, self.w/2 + self.w/10),
-         (self.h/2 + self.h/10, self.w/2 + self.w/10), (self.h/2 + self.h/10, self.w/2)]).astype(int)
+         (self.h/2 + self.h/10, self.w/2 + self.w/10), (self.h/2 + self.h/10, self.w/2)]).astype(np.intc)
         self.currentRect = self.initialRect
         np.random.seed(10)
 

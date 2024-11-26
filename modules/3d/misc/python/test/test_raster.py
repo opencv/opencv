@@ -7,6 +7,7 @@ import os, numpy
 import math
 import unittest
 import cv2 as cv
+import numpy as np
 
 from tests_common import NewOpenCVTests
 
@@ -48,7 +49,7 @@ class raster_test(NewOpenCVTests):
             [ 1.0,  1.0, -5.0],
         ], dtype=numpy.float32)
 
-        self.indices = numpy.array([ [0, 1, 2], [3, 4, 5], [6, 7, 8]], dtype=int)
+        self.indices = numpy.array([ [0, 1, 2], [3, 4, 5], [6, 7, 8]], dtype=np.intc)
 
         col1 = [ 185.0,  238.0,  217.0 ]
         col2 = [ 238.0,  217.0,  185.0 ]

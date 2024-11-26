@@ -135,7 +135,10 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                typenum == NPY_SHORT ? CV_16S :
                typenum == NPY_INT ? CV_32S :
                typenum == NPY_INT32 ? CV_32S :
+               typenum == NPY_UINT ? CV_32U :
                typenum == NPY_INT64 ? CV_64S :
+               typenum == NPY_LONG ? CV_64S :
+               typenum == NPY_UINT64 ? CV_64U :
                typenum == NPY_HALF ? CV_16F :
                typenum == NPY_FLOAT ? CV_32F :
                typenum == NPY_DOUBLE ? CV_64F :
@@ -144,19 +147,10 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
 
     if( type < 0 )
     {
-        if( typenum == NPY_INT64 || typenum == NPY_UINT64 || typenum == NPY_LONG )
-        {
-            needcopy = needcast = true;
-            new_typenum = NPY_INT;
-            type = CV_32S;
-        }
-        else
-        {
-            const std::string dtype_name = getArrayTypeName(oarr);
-            failmsg("%s data type = %s is not supported", info.name,
-                    dtype_name.c_str());
-            return false;
-        }
+        const std::string dtype_name = getArrayTypeName(oarr);
+        failmsg("%s data type = %s is not supported", info.name,
+                dtype_name.c_str());
+        return false;
     }
 
 #ifndef CV_MAX_DIM
