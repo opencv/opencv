@@ -1398,7 +1398,7 @@ inline _Tpsvec v_shl(const _Tpsvec& a, int imm) \
 { \
     return _Tpsvec(wasm_##suffix##_shl(a.val, imm)); \
 } \
-inline _Tpuvec V_shr(const _Tpuvec& a, int imm) \
+inline _Tpuvec v_shr(const _Tpuvec& a, int imm) \
 { \
     return _Tpuvec(wasm_##ssuffix##_shr(a.val, imm)); \
 } \
