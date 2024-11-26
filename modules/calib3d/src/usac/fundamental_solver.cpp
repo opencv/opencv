@@ -579,7 +579,7 @@ public:
         CameraPose pose;
         pose.R = corr_idx < 2 ? R1 : R2;
         pose.t = corr_idx % 2 == 1 ? -t : t;
-        refine_relpose(calib_points, sample, sample_size, &pose, opt, &weights[0]);
+        refine_relpose(calib_points, sample, sample_size, &pose, opt, weights.empty() ? nullptr : &weights[0]);
         Matx33d model_new = Math::getSkewSymmetric(pose.t) * pose.R;
         if (is_fundamental)
             model_new = K2_inv_t * model_new * K1_inv;
