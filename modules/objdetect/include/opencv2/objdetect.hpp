@@ -868,15 +868,15 @@ public:
     /** @brief Initialize the QRCodeDetectorWeChat.
      *
      * Parameters allow to load _optional_ Detection and Super Resolution DNN model for better quality.
-     * @param detection_model_path_ model file path for the detection model
-     * @param super_resolution_model_path_ model file path for the super resolution model
+     * @param detection_model_path model file path for the detection model
+     * @param super_resolution_model_path model file path for the super resolution model
      * @param graphical_detector detector to be optimized
      * @param detector_iou_thres nms iou threshold for detection part
      * @param score_thres score threshold for detection part
      * @param reference_size the length of the image to align during pre-processing before detection
      */
-    CV_WRAP QRCodeDetectorWeChat(const std::string& detection_model_path_ = "",
-                            const std::string& super_resolution_model_path_ = "",
+    CV_WRAP QRCodeDetectorWeChat(const std::string& detection_model_path = "",
+                            const std::string& super_resolution_model_path = "",
                             Ptr<GraphicalCodeDetector> graphical_detector = cv::makePtr<QRCodeDetectorAruco>(),
                             const float detector_iou_thres = 0.6,
                             const float score_thres = 0.3,

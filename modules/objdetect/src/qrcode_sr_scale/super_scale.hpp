@@ -14,18 +14,19 @@
 using namespace std;
 
 namespace cv {
+constexpr static float MAX_SCALE = 4.0f;
+
 class SuperScale {
 public:
     SuperScale(){};
     ~SuperScale(){};
     int init(const std::string &config_path);
     std::vector<float> getScaleList(const int width, const int height);
-    Mat ProcessImageScale(const Mat &src, float scale, const bool &use_sr, int sr_max_size = 160);
+    void processImageScale(const Mat &src, Mat &dst, float scale, bool use_sr, int sr_max_size = 160);
 
 private:
     std::shared_ptr<dnn::Net> qbar_sr;
-    bool net_loaded_ = false;
-    int SuperResoutionScale(const Mat &src, Mat &dst);
+    int superResolutionScale(const Mat &src, Mat &dst);
 };
 }  // namesapce cv
 #endif  // __SCALE_SUPER_SCALE_HPP_

@@ -11,57 +11,51 @@
 #define CLIP(x, x1, x2) max(x1, min(x, x2))
 namespace cv {
 int SuperScale::init(const std::string &sr_path) {
-    try
-    {
-        dnn::Net network = dnn::readNetFromONNX(sr_path);
-        if(network.empty())
-        {
-            return -101;
-        }
-        this->qbar_sr = std::make_shared<dnn::Net>(network);
-    }
-    catch (const std::exception &e)
-    {
-        printf("%s", e.what());
-        return -3;
-    }
-    net_loaded_ = true;
+    dnn::Net network = dnn::readNetFromONNX(sr_path);
+    this->qbar_sr = std::make_shared<dnn::Net>(network);
+
     return 0;
 }
 
 std::vector<float> SuperScale::getScaleList(const int width, const int height) {
-    if (width < 320 || height < 320) return {1.0, 2.0, 0.5};
-    if (width < 640 && height < 640) return {1.0, 0.5};
-    return {0.5, 1.0};
+    float min_side = min(width, height);
+    if (min_side <= 450.f) {
+        return {1.0f, 300.0f / min_side, 2.0f};
+    }
+    else
+        return {1.0f, 450.f / min_side};
 }
 
-Mat SuperScale::ProcessImageScale(const Mat &src, float scale, const bool &use_sr,
+void SuperScale::processImageScale(const Mat &src, Mat &dst, float scale, bool use_sr,
                                   int sr_max_size) {
-    Mat dst = src;
-    if (scale == 1.0) {  // src
-        return dst;
-    }
-
-    int width = src.cols;
-    int height = src.rows;
-    if (scale == 2.0) {  // upsample
-        int SR_TH = sr_max_size;
-        if (use_sr && (int)sqrt(width * height * 1.0) < SR_TH && net_loaded_) {
-            int ret = SuperResoutionScale(src, dst);
-            if (ret == 0) return dst;
-        }
-
-        { resize(src, dst, Size(), scale, scale, INTER_CUBIC); }
-    } else if (scale < 1.0) {  // downsample
+    scale = min(scale, MAX_SCALE);
+    if (scale > .0 && scale < 1.0)
+    {  // down sample
         resize(src, dst, Size(), scale, scale, INTER_AREA);
     }
-
-    return dst;
+    else if (scale >= 1.0 && scale < 2.0)
+    {
+        resize(src, dst, Size(), scale, scale, INTER_CUBIC);
+    }
+    else if (scale >= 2.0)
+    {
+        int width = src.cols;
+        int height = src.rows;
+        if (use_sr && (int) sqrt(width * height * 1.0) < sr_max_size && !qbar_sr->empty())
+        {
+            superResolutionScale(src, dst);
+            if (scale > 2.0)
+            {
+                processImageScale(dst, dst, scale / 2.0f, use_sr);
+            }
+        }
+        else
+        { resize(src, dst, Size(), scale, scale, INTER_CUBIC); }
+    }
 }
 
-int SuperScale::SuperResoutionScale(const Mat &src, Mat &dst) {
+int SuperScale::superResolutionScale(const Mat &src, Mat &dst) {
    
-    // cv::resize(src, dst, Size(), 2, 2, INTER_CUBIC);
     Mat blob;
     dnn::blobFromImage(src, blob, 1.0, Size(src.cols, src.rows), {0.0f}, false, false);
 
@@ -70,6 +64,7 @@ int SuperScale::SuperResoutionScale(const Mat &src, Mat &dst) {
 
     dst = Mat(prob.size[2], prob.size[3], CV_32F, prob.ptr<float>());
     dst.convertTo(dst, CV_8UC1);
+    
     return 0;
 }
 }  // namesapce cv

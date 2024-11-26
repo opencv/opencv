@@ -45,14 +45,14 @@ namespace cv {
             Detector(){};
             ~Detector(){};
             int init(const std::string &config_path);
-            int detect(const Mat &image,std::vector<DetectInfo> &bboxes);
-            void setReferenceSize(int reference_size) {this->reference_size = reference_size;}
-            void setScoreThres(float score_thres) {this->score_thres = score_thres;}
-            void setIouThres(float iou_thres) {this->iou_thres = iou_thres;}
+            bool detect(const Mat &image,std::vector<DetectInfo> &bboxes);
+            void setReferenceSize(int reference_size_) {this->reference_size = reference_size_;}
+            void setScoreThres(float score_thres_) {this->score_thres = score_thres_;}
+            void setIouThres(float iou_thres_) {this->iou_thres = iou_thres_;}
     
         private:
-            int post_process_det(std::vector<Mat> outputs,float inputWidth,float inputHeight,std::vector<BoxInfo>& dets);
-            int pre_process_det(const Mat &image,Mat &out_blob);
+            bool post_process_det(std::vector<Mat> outputs,float inputWidth,float inputHeight,std::vector<BoxInfo>& dets);
+            bool pre_process_det(const Mat &image,Mat &out_blob);
             void multiclass_nms(std::vector<BoxInfo> &input_boxes, std::vector<BoxInfo> &output_boxes, float thr, int inputWidth, int inputHeight);
             void decode_infer(float *clsPred, float *disPred, int stride, std::vector<std::vector<BoxInfo>> &results, const std::vector<int> &outShapeCls, const std::vector<int> &outShapeDis, float scoreThres,float inputHeight,float inputWidth);
             void nms(std::vector<BoxInfo>& input_boxes, float NMS_THRESH);

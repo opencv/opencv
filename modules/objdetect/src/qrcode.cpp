@@ -1019,7 +1019,7 @@ class QRDecode
 {
 public:
     QRDecode(bool useAlignmentMarkers);
-    void init(const Mat &src, const vector<Point2f> &points);
+    void init(const Mat &src, const vector<Point2f> &points, float sr_scale_=1.f);
     Mat getIntermediateBarcode() { return intermediate; }
     Mat getStraightBarcode() { return straight; }
     size_t getVersion() { return version; }
@@ -1028,6 +1028,7 @@ public:
     bool curvedDecodingProcess();
     vector<Point2f> alignment_coords;
     float coeff_expansion = 1.f;
+    float sr_scale = 1.f;
     vector<Point2f> getOriginalPoints() {return original_points;}
     bool useAlignmentMarkers;
 
@@ -1137,7 +1138,7 @@ float static getMinSideLen(const vector<Point2f> &points) {
 }
 
 
-void QRDecode::init(const Mat &src, const vector<Point2f> &points)
+void QRDecode::init(const Mat &src, const vector<Point2f> &points, float sr_scale_)
 {
     CV_TRACE_FUNCTION();
     vector<Point2f> bbox = points;
@@ -1150,6 +1151,7 @@ void QRDecode::init(const Mat &src, const vector<Point2f> &points)
     version_size = 0;
     test_perspective_size = max(getMinSideLen(points)+1.f, 251.f);
     result_info = "";
+    sr_scale = sr_scale_;
 }
 
 inline double QRDecode::pointPosition(Point2f a, Point2f b , Point2f c)
@@ -3625,6 +3627,10 @@ void QRDetectMulti::findQRCodeContours(vector<Point2f>& tmp_localization_points,
     int count_contours = num_qrcodes;
     if (all_contours_points.size() < size_t(num_qrcodes))
         count_contours = (int)all_contours_points.size();
+
+    // If the contours cannot be found, return. Otherwise kmeans will get error.
+    if (all_contours_points.size() == 0)
+        return;
     kmeans(all_contours_points, count_contours, qrcode_labels,
           TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
           count_contours, KMEANS_PP_CENTERS, clustered_localization_points);
@@ -4008,9 +4014,9 @@ class ParallelDecodeProcess : public ParallelLoopBody
 {
 public:
     ParallelDecodeProcess(Mat& inarr_, vector<QRDecode>& qrdec_, vector<std::string>& decoded_info_,
-            vector<Mat>& straight_barcode_, vector< vector< Point2f > >& src_points_, std::shared_ptr<SuperScale> sr_ = nullptr)
+            vector<Mat>& straight_barcode_, vector< vector< Point2f > >& src_points_, std::shared_ptr<SuperScale> sr_ = nullptr, bool use_sr_model_ = false)
         : inarr(inarr_), qrdec(qrdec_), decoded_info(decoded_info_)
-        , straight_barcode(straight_barcode_), src_points(src_points_), sr_(sr_)
+        , straight_barcode(straight_barcode_), src_points(src_points_), sr(sr_), use_sr_model(use_sr_model_)
     {
         // nothing
     }
@@ -4018,13 +4024,13 @@ public:
     {
         for (int i = range.start; i < range.end; i++)
         {
-            if (sr_ != nullptr) {
+            // Modified the input image for decoding,
+            // by extracting the part containing the QR code and adjusting the resolution.
+            // Only QRCodeDetectorWeChat() will call this decoding attempt.
+            if (sr != nullptr) {
                 int width = inarr.size().width, height = inarr.size().height;
-
-                int min_x = src_points[i][0].x;
-                int min_y = src_points[i][0].y;
-                int max_x = src_points[i][0].x;
-                int max_y = src_points[i][0].y;
+                int min_x = src_points[i][0].x, min_y = src_points[i][0].y;
+                int max_x = src_points[i][0].x, max_y = src_points[i][0].y;
                 for (const auto& point : src_points[i]) {
                     min_x = min_x > point.x ? point.x : min_x;
                     min_y = min_y > point.y ? point.y : min_y;
@@ -4035,30 +4041,33 @@ public:
                 max_x = min(max(0, max_x), width);
                 min_y = min(max(0, min_y), height);
                 max_y = min(max(0, max_y), height);
-
-
                 cv::Rect cropRect(min_x, min_y, max_x - min_x, max_y - min_y);
 
-                auto scale_list = sr_->getScaleList(max_y - min_y, max_x - min_x);
+                auto scale_list = sr->getScaleList(max_x - min_x, max_y - min_y);
                 Mat crop_image = inarr(cropRect).clone();
                 for (auto cur_scale : scale_list) {
-                    std::lock_guard<std::mutex> lock(sr_mutex);
-                    Mat scaled_img = sr_->ProcessImageScale(crop_image, cur_scale, true);
+                    Mat scaled_img;
+                    // If a super-resolution model is loaded, parallelism cannot be performed
+                    if (use_sr_model)
+                        std::lock_guard<std::mutex> lock(sr_mutex);
+                    sr->processImageScale(crop_image, scaled_img, cur_scale, use_sr_model);
                     vector<Point2f> points;
                     for (const auto& point : src_points[i])
                         points.push_back(Point2f((point.x - min_x) * cur_scale, (point.y - min_y) * cur_scale));
 
-                    qrdec[i].init(scaled_img, points);
+                    qrdec[i].init(scaled_img, points, cur_scale);
                     bool ok = qrdec[i].straightDecodingProcess();
                     if (ok)
                     {
                         decoded_info[i] = qrdec[i].getDecodeInformation();
                         straight_barcode[i] = qrdec[i].getStraightBarcode();
+                        break;
                     }
-                    if (decoded_info[i].empty())
-                        decoded_info[i] = "";
-                    }
+                }
+                if (decoded_info[i].empty())
+                    decoded_info[i] = "";
             }
+            // The old decoding attempt.
             else {
                 qrdec[i].init(inarr, src_points[i]);
                 bool ok = qrdec[i].straightDecodingProcess();
@@ -4102,7 +4111,8 @@ private:
     vector<std::string>& decoded_info;
     vector<Mat>& straight_barcode;
     vector< vector< Point2f > >& src_points;
-    std::shared_ptr<SuperScale> sr_;
+    std::shared_ptr<SuperScale> sr;
+    bool use_sr_model;
     mutable std::mutex sr_mutex;
 };
 
@@ -4198,8 +4208,20 @@ bool ImplContour::decodeMulti(
     updateQrCorners.resize(src_points.size()*4ull);
     for (size_t i = 0ull; i < src_points.size(); i++) {
         alignmentMarkers[i] = qrdec[i].alignment_coords;
-        for (size_t j = 0ull; j < 4ull; j++)
-            updateQrCorners[i*4ull+j] = qrdec[i].getOriginalPoints()[j] * qrdec[i].coeff_expansion;
+        for (size_t j = 0ull; j < 4ull; j++) {
+            updateQrCorners[i*4ull+j] = qrdec[i].getOriginalPoints()[j] * qrdec[i].coeff_expansion / qrdec[i].sr_scale;
+            if (sr_ != nullptr) {
+                int min_x = src_points[i][0].x, min_y = src_points[i][0].y;
+                for (const auto& point : src_points[i]) {
+                    min_x = min_x > point.x ? point.x : min_x;
+                    min_y = min_y > point.y ? point.y : min_y;
+                }
+                min_x = min(max(0, min_x), inarr.size().width);
+                min_y = min(max(0, min_y), inarr.size().height);
+                updateQrCorners[i*4ull+j].x += min_x;
+                updateQrCorners[i*4ull+j].y += min_y;
+            }
+        }
     }
     if (!decoded_info.empty())
         return true;
@@ -4761,13 +4783,11 @@ public:
 
     PimplQRWeChat(std::shared_ptr<GraphicalCodeDetector> graphical_detector)
         : graphical_detector_(std::move(graphical_detector)) {
-        sr_ = std::make_shared<SuperScale>();
         detector_ = std::make_shared<Detector>();
+        sr_ = std::make_shared<SuperScale>();
     }
 
     bool detectMulti(InputArray img, OutputArray points) const override;
-    bool detectAndDecodeMulti(InputArray img, std::vector<cv::String>& decoded_info, OutputArray points,
-                              OutputArrayOfArrays straight_qrcode) const override;
 };
 
 bool PimplQRWeChat::detectMulti(InputArray img, OutputArray points) const
@@ -4778,69 +4798,106 @@ bool PimplQRWeChat::detectMulti(InputArray img, OutputArray points) const
         return false;
     }
     
-    std::vector<DetectInfo> _detect_results;
-
     if (use_det_model_) {
-        detector_->detect(gray, _detect_results);
+        std::vector<DetectInfo> detect_results;
+        std::vector<Rect> crop_rects;
+        detector_->detect(gray, detect_results);
 
-        vector<Point2f> results;
-        for (size_t k = 0; k < _detect_results.size(); k++) {
-            int x0 = _detect_results[k].x, y0 = _detect_results[k].y;
-            int width = _detect_results[k].width, height = _detect_results[k].height;
+        for (size_t k = 0; k < detect_results.size(); k++) {
+            int x0 = detect_results[k].x, y0 = detect_results[k].y;
+            int width = detect_results[k].width, height = detect_results[k].height;
             int x2 = x0 + width - 1, y2 = y0 + width -1;
 
             int padx = max(0.5f * width, static_cast<float>(20));
             int pady = max(0.5f * height, static_cast<float>(20));
-            int crop_x_ = max(x0 - padx, 0);
-            int crop_y_ = max(y0 - pady, 0);
-            int end_x = min(x2 + padx, gray.cols);
-            int end_y = min(y2 + pady, gray.rows);
-            cv::Rect cropRect(crop_x_, crop_y_, end_x - crop_x_, end_y - crop_y_);
+            int crop_x_ = max(x0 - padx, 0), crop_y_ = max(y0 - pady, 0);
+            int end_x = min(x2 + padx, gray.cols), end_y = min(y2 + pady, gray.rows);
+            crop_rects.push_back(Rect(crop_x_, crop_y_, end_x - crop_x_, end_y - crop_y_));
+        }
 
-            vector<Point2f> corners;
-            
-            auto scale_list = sr_->getScaleList(end_y - crop_y_, end_x - crop_x_);
-            Mat crop_image = gray(cropRect).clone();
-            for (auto cur_scale : scale_list) {
-                Mat scaled_img = sr_->ProcessImageScale(crop_image, cur_scale, use_sr_model_);
-                if (graphical_detector_->detectMulti(scaled_img, corners)) {
-                    for (size_t i = 0; i < corners.size(); i += 4) {
-                        bool flag = true;
-                        std::vector<Point2f> pts_i, pts_j;
-                        for (size_t p = 0; p < 4; p++) {
-                            int x = corners[i+p].x/cur_scale + crop_x_, y = corners[i+p].y/cur_scale + crop_y_;
-                            pts_i.push_back(Point2f(min(max(x, 0), gray.cols-1), min(max(y, 0), gray.rows-1)));
-                        }
-                        float area1 = cv::contourArea(pts_i);
-
-                        for (size_t j = 0; j < results.size(); j+= 4) {
-                            pts_j.clear();
-                            for (size_t p = 0; p < 4; p++)
-                                pts_j.push_back(Point2f(results[j+p].x, results[j+p].y));
-
-                            float area2 = cv::contourArea(pts_j);
-                            float intersectionArea = 0.0;
-                            std::vector<cv::Point2f> intersection;
-                            cv::rotatedRectangleIntersection(cv::minAreaRect(pts_i), cv::minAreaRect(pts_j), intersection);
-
-                            if (!intersection.empty())
-                                intersectionArea = cv::contourArea(intersection);
-
-                            double iou = intersectionArea / (area1 + area2 - intersectionArea);
-                            double cover = intersectionArea / min(area1, area2);
-                            if (iou > 0.7 || cover > 0.96) {
-                                flag = false;
-                                break;
-                            }
-                        }
-                        if (flag) {
-                            for (auto p : pts_i)
-                                results.push_back(p);
-                        }
+        vector<vector<Point2f> > crop_images_corners;
+        vector<Point2f> results;
+        for (auto& rect : crop_rects) {
+            Mat crop_image = gray(rect).clone();
+            int width = rect.width, height = rect.height;
+            auto scale_lists = sr_->getScaleList(width, height);
+            bool flag = false;
+            for (auto cur_scale : scale_lists) {
+                Mat scaled_image;
+                sr_->processImageScale(crop_image, scaled_image, cur_scale, use_sr_model_);
+                vector<Point2f> corners;
+                if (graphical_detector_->detectMulti(scaled_image, corners)) {
+                    if (corners.size() % 4 != 0)
+                        continue;
+                    for (size_t i = 0; i < corners.size(); i++) {
+                        corners[i].x = corners[i].x/cur_scale + rect.x;
+                        corners[i].x = min(max(corners[i].x, 0.0f), gray.cols * 1.0f);
+                        corners[i].y = corners[i].y/cur_scale + rect.y;
+                        corners[i].y = min(max(corners[i].y, 0.0f), gray.rows * 1.0f);
                     }
+                    crop_images_corners.push_back(corners);
+                    flag = true;
                     break;
                 }
             }
+            if (!flag) {
+                crop_images_corners.push_back(vector<Point2f>());
+            }
+        }
+
+        for (size_t j = 0; j < crop_images_corners.size(); j++) {
+            auto& corners = crop_images_corners[j];
+            if (corners.size() != 0) {
+                for (size_t p_1 = 0; p_1 < corners.size(); p_1 += 4) {
+                    if (corners[p_1].x < 0) continue;
+                    Point2f topLeft, bottomRight;
+                    topLeft.x = min(min(corners[p_1].x, corners[p_1+1].x), min(corners[p_1+2].x, corners[p_1+3].x));
+                    topLeft.y = min(min(corners[p_1].y, corners[p_1+1].y), min(corners[p_1+2].y, corners[p_1+3].y));
+                    bottomRight.x = max(max(corners[p_1].x, corners[p_1+1].x), max(corners[p_1+2].x, corners[p_1+3].x));
+                    bottomRight.y = max(max(corners[p_1].y, corners[p_1+1].y), max(corners[p_1+2].y, corners[p_1+3].y));
+                    float area1 = (bottomRight.x - topLeft.x) * (bottomRight.y - topLeft.y);
+                    for (size_t i = j+1; i < crop_images_corners.size(); i++) {
+                        vector<Point2f>& corners_i = crop_images_corners[i];
+                        for (size_t p_i = 0; p_i < corners_i.size(); p_i += 4) {
+                            if (corners_i[p_i].x < 0) continue;
+                            Point2f topLeft_i, bottomRight_i;
+                            topLeft_i.x = min(min(corners_i[p_i].x, corners_i[p_i+1].x), min(corners_i[p_i+2].x, corners_i[p_i+3].x));
+                            topLeft_i.y = min(min(corners_i[p_i].y, corners_i[p_i+1].y), min(corners_i[p_i+2].y, corners_i[p_i+3].y));
+                            bottomRight_i.x = max(max(corners_i[p_i].x, corners_i[p_i+1].x), max(corners_i[p_i+2].x, corners_i[p_i+3].x));
+                            bottomRight_i.y = max(max(corners_i[p_i].y, corners_i[p_i+1].y), max(corners_i[p_i+2].y, corners_i[p_i+3].y));
+
+                            float interLeft = std::max(topLeft.x, topLeft_i.x), interTop = std::max(topLeft.y, topLeft_i.y);
+                            float interRight = std::min(bottomRight.x, bottomRight_i.x), interBottom = std::min(bottomRight.y, bottomRight_i.y);
+                            float interWidth = max(interRight - interLeft, 0.0f), interHeight = max(interBottom - interTop, 0.0f);
+                            float interArea = interWidth * interHeight;
+                            float area2 = (bottomRight_i.x - topLeft_i.x) * (bottomRight_i.y - topLeft_i.y);
+
+                            float iou = interArea / (area1 + area2 - interArea);
+                            if (iou > 0.5) {
+                                if (area2 < area1) {
+                                    topLeft = topLeft_i;
+                                    bottomRight = bottomRight_i;
+                                    area1 = area2;
+                                    corners[p_1] = corners_i[p_i];
+                                    corners[p_1+1] = corners_i[p_i+1];
+                                    corners[p_1+2] = corners_i[p_i+2];
+                                    corners[p_1+3] = corners_i[p_i+3];
+                                }
+                                corners_i[p_i].x = -1;
+                                corners_i[p_i+1].x = -1;
+                                corners_i[p_i+2].x = -1;
+                                corners_i[p_i+3].x = -1;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            for (auto p : corners)
+                if (p.x >= 0) {
+                    results.push_back(p);
+                }
         }
 
         if (results.size() >= 4) {
@@ -4855,22 +4912,8 @@ bool PimplQRWeChat::detectMulti(InputArray img, OutputArray points) const
     }
 }
 
-bool PimplQRWeChat::detectAndDecodeMulti(
-        InputArray img,
-        CV_OUT std::vector<cv::String>& decoded_info,
-        OutputArray points_,
-        OutputArrayOfArrays straight_qrcode
-    ) const {
-    bool ok = detectMulti(img, points_);
-
-    if (ok)
-        return decodeMulti(img, points_, decoded_info, straight_qrcode);
-    
-    return false;
-}
-
-QRCodeDetectorWeChat::QRCodeDetectorWeChat(const std::string& detection_model_path_,
-                            const std::string& super_resolution_model_path_,
+QRCodeDetectorWeChat::QRCodeDetectorWeChat(const std::string& detection_model_path,
+                            const std::string& super_resolution_model_path,
                             Ptr<GraphicalCodeDetector> graphical_detector,
                             const float detector_iou_thres,
                             const float score_thres,
@@ -4878,15 +4921,15 @@ QRCodeDetectorWeChat::QRCodeDetectorWeChat(const std::string& detection_model_pa
     Ptr<PimplQRWeChat> p_ = std::make_shared<PimplQRWeChat>(std::move(graphical_detector));
     p = p_;
 
-    if (!super_resolution_model_path_.empty()) {
-        CV_Assert(utils::fs::exists(super_resolution_model_path_));
-        int res = p_->sr_->init(super_resolution_model_path_);
+    if (!super_resolution_model_path.empty()) {
+        CV_Assert(utils::fs::exists(super_resolution_model_path));
+        int res = p_->sr_->init(super_resolution_model_path);
         CV_Assert(res == 0);
         p_->use_sr_model_ = true;
     }
-    if (!detection_model_path_.empty()) {
-        CV_Assert(utils::fs::exists(detection_model_path_));
-        int res = p_->detector_->init(detection_model_path_);
+    if (!detection_model_path.empty()) {
+        CV_Assert(utils::fs::exists(detection_model_path));
+        int res = p_->detector_->init(detection_model_path);
         CV_Assert(res == 0);
         p_->use_det_model_ = true;
     }
