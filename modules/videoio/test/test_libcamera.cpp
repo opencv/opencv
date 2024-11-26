@@ -10,7 +10,10 @@ using namespace cv;
 int main()
 {
     VideoCapture cap = VideoCapture(0,CAP_LIBCAMERA);
+<<<<<<< HEAD
     
+=======
+>>>>>>> 3b961731d6 (Modify cmake files)
     if(!cap.isOpened())
         return;
  

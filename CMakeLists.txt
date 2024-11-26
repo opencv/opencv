@@ -1724,8 +1724,14 @@ if(ANDROID)
 endif()
 
 if(WITH_LIBCAMERA OR HAVE_LIBCAMERA)
+<<<<<<< HEAD
   ocv_build_features_string(libcamera_status
     IF HAVE_LIBCAMERA THEN "libcamera/libcamera/libcamera.h"
+=======
+  ocv_build_features_string(v4l_status
+    IF HAVE_LIBCAMERA THEN "libcamera/libcamera/libcamera.h"
+    IF HAVE_VIDEOIO THEN "sys/videoio.h"
+>>>>>>> 3b961731d6 (Modify cmake files)
     ELSE "NO")
   status("    libcamera:" HAVE_LIBCAMERA THEN YES ELSE NO)
 endif()
