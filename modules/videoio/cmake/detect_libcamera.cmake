@@ -1,0 +1,17 @@
+# --- Libcamera ---
+if(NOT HAVE_LIBCAMERA)
+  set(CMAKE_REQUIRED_QUIET TRUE) # for check_include_file
+  check_include_file(libcamera/libcamera/libcamera.h HAVE_LIBCAMERA)
+  check_include_file(sys/videoio.h HAVE_VIDEOIO)
+  if(HAVE_LIBCAMERA OR HAVE_VIDEOIO)
+    set(HAVE_LIBCAMERA TRUE)
+    set(defs)
+    if(HAVE_LIBCAMERA)
+      list(APPEND defs "HAVE_LIBCAMERA")
+    endif()
+    if(HAVE_VIDEOIO)
+      list(APPEND defs "HAVE_VIDEOIO")
+    endif()
+    ocv_add_external_target(libcamera "" "" "${defs}")
+  endif()
+endif()
