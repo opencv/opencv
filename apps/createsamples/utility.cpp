@@ -766,7 +766,6 @@ CvBackgroundData* icvCreateBackgroundData( const char* filename, Size winsize )
         }
         if( count > 0 )
         {
-            //rewind( input );
             fseek( input, 0, SEEK_SET );
             datasize += sizeof( *data ) + sizeof( char* ) * count;
             data = (CvBackgroundData*) fastMalloc( datasize );
@@ -872,8 +871,7 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
 
     reader->src = img;
 
-    //reader->offset.x = round % data->winsize.width;
-    //reader->offset.y = round / data->winsize.width;
+
     reader->offset = offset;
     reader->point = reader->offset;
     reader->scale = MAX(
