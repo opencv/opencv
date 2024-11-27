@@ -706,6 +706,10 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         output_path (Path): Path to typing module directory, where __init__.pyi
             will be written.
     """
+
+    def has_all_required_modules(type_node: TypeNode) -> bool:
+        return all(em in root.namespaces for em in node.required_modules)
+
     def register_alias_links_from_aggregated_type(type_node: TypeNode) -> None:
         assert isinstance(type_node, AggregatedTypeNode), \
             f"Provided type node '{type_node.ctype_name}' is not an aggregated type"
@@ -791,6 +795,10 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
     # Resolve each node and register aliases
     TypeNode.compatible_to_runtime_usage = True
     for node in PREDEFINED_TYPES.values():
+        # if node does not have at least one required module skip it
+        # e.g. GArgs requires G-API module, so if build without G-API GArgs is not included
+        if not has_all_required_modules(node):
+            continue
         node.resolve(root)
         if isinstance(node, AliasTypeNode):
             register_alias(node)
