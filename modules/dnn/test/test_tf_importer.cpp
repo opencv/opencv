@@ -46,7 +46,7 @@ TEST(Test_TensorFlow, read_inception)
     Mat inputBlob = blobFromImage(input);
 
     net.setInput(inputBlob, "input");
-    Mat out = net.forward("softmax2");
+    Mat out = net.forward();
 
     std::cout << out.dims << std::endl;
 }
@@ -66,7 +66,7 @@ TEST(Test_TensorFlow, inception_accuracy)
     Mat inputBlob = blobFromImage(sample, 1.0, Size(224, 224), Scalar(), /*swapRB*/true);
 
     net.setInput(inputBlob, "input");
-    Mat out = net.forward("softmax2");
+    Mat out = net.forward();
 
     Mat ref = blobFromNPY(_tf("tf_inception_prob.npy"));
 
@@ -1812,7 +1812,12 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
     std::string proto = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pbtxt");
     std::string model = findDataFile("dnn/mask_rcnn_inception_v2_coco_2018_01_28.pb", false);
 
-    Net net = readNetFromTensorflow(model, proto);
+    // Mask-RCNN predicts bounding boxes and segmentation masks.
+    std::vector<std::string> outNames(2);
+    outNames[0] = "detection_out_final";
+    outNames[1] = "detection_masks";
+
+    Net net = readNetFromTensorflow(model, proto, ENGINE_AUTO, outNames);
     Mat refDetections = blobFromNPY(path("mask_rcnn_inception_v2_coco_2018_01_28.detection_out.npy"));
     Mat refMasks = blobFromNPY(path("mask_rcnn_inception_v2_coco_2018_01_28.detection_masks.npy"));
     Mat blob = blobFromImage(img, 1.0f, Size(800, 800), Scalar(), true, false);
@@ -1824,14 +1829,8 @@ TEST_P(Test_TensorFlow_nets, Mask_RCNN)
 
     net.setInput(blob);
 
-    // Mask-RCNN predicts bounding boxes and segmentation masks.
-    std::vector<String> outNames(2);
-    outNames[0] = "detection_out_final";
-    outNames[1] = "detection_masks";
-
     std::vector<Mat> outs;
     net.forward(outs, outNames);
-
     Mat outDetections = outs[0];
     Mat outMasks = outs[1];
 
@@ -1938,6 +1937,26 @@ TEST(Test_TensorFlow_Importer, tf_graph_simplifier_buffer_overflow_21947)
                                 0x0a, 0x00, 0x0a, 0x00, 0x0a, 0x00, 0x2a, 0x00, 0xba, 0x0a, 0x00,
                                 0x0a, 0x00, 0x5d, 0x00, 0x0a, 0x00, 0x0a, 0x00, 0x0a, 0x00, 0x0a, 0x40};
     EXPECT_ANY_THROW(readNetFromTensorflow(reinterpret_cast<const char*>(payload), sizeof(payload) / sizeof(payload[0])));
+}
+
+TEST(Test_TF_Model, Inception_GetLayer)
+{
+    const std::string model = findDataFile("dnn/tensorflow_inception_graph.pb", false);
+    auto net = readNetFromTensorflow(model);
+
+    auto layernames = net.getLayerNames();
+
+    ASSERT_FALSE(layernames.empty());
+
+    // this is empirical initialization:
+    // * in the case of new engine the very first layer always has id == 0 for any model.
+    // * in the case of the old engine at least for this model the very first layer has id == 1
+    int layer_id = net.getLayer(0)->name != layernames[0];
+    for (auto name: layernames) {
+        auto layer = net.getLayer(layer_id);
+        EXPECT_EQ(layer->name, name);
+        layer_id++;
+    }
 }
 
 }

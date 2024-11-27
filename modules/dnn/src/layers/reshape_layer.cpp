@@ -234,7 +234,6 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-
         if (inputs.size() == 1 || inputs.size() == requiredOutputs)
         {
             outputs.clear();

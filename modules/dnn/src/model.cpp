@@ -46,9 +46,19 @@ public:
         net = network;
 
         outNames = net.getUnconnectedOutLayersNames();
+
+        Ptr<Graph> graph = net.getMainGraph();
         std::vector<MatShape> inLayerShapes;
-        std::vector<MatShape> outLayerShapes;
-        net.getLayerShapes(MatShape(), CV_32F, 0, inLayerShapes, outLayerShapes);
+
+        if (graph) {
+            const std::vector<Arg>& inputs = graph->inputs();
+            for (auto inp: inputs) {
+                inLayerShapes.push_back(net.argData(inp).shape);
+            }
+        } else {
+            std::vector<MatShape> outLayerShapes;
+            net.getLayerShapes(MatShape(), CV_32F, 0, inLayerShapes, outLayerShapes);
+        }
         if (!inLayerShapes.empty() && inLayerShapes[0].size() == 4)
             size = Size(inLayerShapes[0][3], inLayerShapes[0][2]);
         else
@@ -1182,6 +1192,11 @@ struct TextDetectionModel_EAST_Impl : public TextDetectionModel_Impl
         CV_CheckEQ(geometry.dims, 4, "");
         CV_CheckEQ(scoreMap.size[0], 1, "");
         CV_CheckEQ(geometry.size[0], 1, "");
+
+        if (geometry.size[1] == 1 && scoreMap.size[1] == 5) {
+            std::swap(geometry, scoreMap);
+        }
+
         CV_CheckEQ(scoreMap.size[1], 1, "");
         CV_CheckEQ(geometry.size[1], 5, "");
         CV_CheckEQ(scoreMap.size[2], geometry.size[2], "");

@@ -74,20 +74,15 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
     }
 
     public void testGetLayer() {
-        List<String> layernames = net.getLayerNames();
+        List<String> layerNames = net.getLayerNames();
+        assertFalse("Test net returned no layers!", layerNames.isEmpty());
 
-        assertFalse("Test net returned no layers!", layernames.isEmpty());
-
-        String testLayerName = layernames.get(0);
-
-        DictValue layerId = new DictValue(testLayerName);
-
-        assertEquals("DictValue did not return the string, which was used in constructor!", testLayerName, layerId.getStringValue());
-
-        Layer layer = net.getLayer(layerId);
-
-        assertEquals("Layer name does not match the expected value!", testLayerName, layer.get_name());
-
+        int layerId = 0;
+        for (String layerName: layerNames) {
+            Layer layer = net.getLayer(layerId);
+            assertEquals("Layer name does not match the expected value!", layerName, layer.get_name());
+            layerId++;
+        }
     }
 
     public void checkInceptionNet(Net net)
@@ -98,12 +93,12 @@ public class DnnTensorFlowTest extends OpenCVTestCase {
         Mat inputBlob = Dnn.blobFromImage(image, 1.0, new Size(224, 224), new Scalar(0), true, true);
         assertNotNull("Converting image to blob failed!", inputBlob);
 
-        net.setInput(inputBlob, "input");
+        net.setInput(inputBlob, "");
 
         Mat result = new Mat();
         try {
             net.setPreferableBackend(Dnn.DNN_BACKEND_OPENCV);
-            result = net.forward("softmax2");
+            result = net.forward("");
         }
         catch (Exception e) {
             fail("DNN forward failed: " + e.getMessage());

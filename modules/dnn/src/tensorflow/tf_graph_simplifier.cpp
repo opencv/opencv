@@ -773,7 +773,7 @@ public:
     }
 };
 
-void simplifySubgraphs(tensorflow::GraphDef& net)
+void simplifySubgraphs(tensorflow::GraphDef& net, bool newEngine)
 {
     std::vector<Ptr<Subgraph> > subgraphs;
     subgraphs.push_back(Ptr<Subgraph>(new BatchNormSubgraph()));
@@ -791,13 +791,15 @@ void simplifySubgraphs(tensorflow::GraphDef& net)
     subgraphs.push_back(Ptr<Subgraph>(new UpsamplingKerasSubgraph("ResizeBilinear")));
     subgraphs.push_back(Ptr<Subgraph>(new SoftMaxSlimSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new SoftMaxSlimV2Subgraph()));
-    subgraphs.push_back(Ptr<Subgraph>(new ReshapeAsShapeSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new KerasMVNSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new PReLUSubgraph(true)));
     subgraphs.push_back(Ptr<Subgraph>(new PReLUSubgraph(false)));
     subgraphs.push_back(Ptr<Subgraph>(new FlattenProdSubgraph()));
     subgraphs.push_back(Ptr<Subgraph>(new ResizeBilinearSubgraphDown()));
     subgraphs.push_back(Ptr<Subgraph>(new ClipByValueSubgraph()));
+
+    if (!newEngine)
+        subgraphs.push_back(Ptr<Subgraph>(new ReshapeAsShapeSubgraph()));
 
     for (int i = 0; i < net.node_size(); ++i)
     {

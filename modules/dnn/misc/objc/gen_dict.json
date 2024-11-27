@@ -7,8 +7,8 @@
             "(Net*)readNetFromDarknet:(ByteVector*)bufferCfg bufferModel:(ByteVector*)bufferModel" : { "readNetFromDarknet" : {"name" : "readNetFromDarknetBuffer"} },
             "(Net*)readNetFromONNX:(NSString*)onnxFile engine:(int)engine" : { "readNetFromONNX" : {"name" : "readNetFromONNXFile"} },
             "(Net*)readNetFromONNX:(ByteVector*)buffer engine:(int)engine" : { "readNetFromONNX" : {"name" : "readNetFromONNXBuffer"} },
-            "(Net*)readNetFromTensorflow:(NSString*)model config:(NSString*)config" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowFile"} },
-            "(Net*)readNetFromTensorflow:(ByteVector*)bufferModel bufferConfig:(ByteVector*)bufferConfig" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowBuffer"} },
+            "(Net*)readNetFromTensorflow:(NSString*)model config:(NSString*)config engine:(int)engine extraOutputs:(NSArray<NSString*>*)extraOutputs" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowFile"} },
+            "(Net*)readNetFromTensorflow:(ByteVector*)bufferModel bufferConfig:(ByteVector*)bufferConfig engine:(int)engine extraOutputs:(NSArray<NSString*>*)extraOutputs" : { "readNetFromTensorflow" : {"name" : "readNetFromTensorflowBuffer"} },
             "(Net*)readNetFromTFLite:(NSString*)model engine:(int)engine" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteFile"} },
             "(Net*)readNetFromTFLite:(ByteVector*)buffer engine:(int)engine" : { "readNetFromTFLite" : {"name" : "readNetFromTFLiteBuffer"} }
         },

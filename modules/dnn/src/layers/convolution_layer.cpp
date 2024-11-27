@@ -322,7 +322,8 @@ public:
 
         internals.clear();
 
-        CV_Assert(inputs.size() != 0);
+        CV_Assert(!inputs.empty());
+        CV_Assert(inputs[0].size() > 2);
         std::vector<int> inpShape(inputs[0].begin() + 2, inputs[0].end());
 
         int outCn = weightShape[0];
