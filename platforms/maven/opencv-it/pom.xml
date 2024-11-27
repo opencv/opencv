@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.opencv</groupId>
         <artifactId>opencv-parent</artifactId>
-        <version>5.0.0</version>
+        <version>5.0.0-alpha</version>
     </parent>
     <groupId>org.opencv</groupId>
     <artifactId>opencv-it</artifactId>
