@@ -127,10 +127,15 @@
     CV_WARP_SCALAR_FETCH_PIXEL_##CN(1, 0, p10) \
     CV_WARP_SCALAR_FETCH_PIXEL_##CN(1, 1, p11)
 
-#define CV_WARP_SCALAR_SHUFFLE(INTER, CN, DEPTH) \
+#define CV_WARP_SCALAR_NEAREST_COMPUTE_COORD() \
+    int ix = cvRound(sx), iy = cvRound(sy);
+#define CV_WARP_SCALAR_LINEAR_COMPUTE_COORD() \
     int ix = cvFloor(sx), iy = cvFloor(sy); \
-    sx -= ix; sy -= iy; \
-    CV_WARP_SCALAR_SHUFFLE_DEF_##DEPTH(INTER, CN); \
+    sx -= ix; sy -= iy;
+
+#define CV_WARP_SCALAR_SHUFFLE(INTER, CN, DEPTH) \
+    CV_WARP_SCALAR_##INTER##_COMPUTE_COORD() \
+    CV_WARP_SCALAR_SHUFFLE_DEF_##DEPTH(INTER, CN) \
     if ((((unsigned)ix < (unsigned)(srccols-1)) & \
         ((unsigned)iy < (unsigned)(srcrows-1))) != 0) { \
         CV_WARP_SCALAR_SHUFFLE_LOAD_##CN(INTER) \
@@ -143,7 +148,7 @@
             } \
             continue; \
         } \
-        CV_WARP_##INTER##_SCALAR_FETCH_PIXEL(CN); \
+        CV_WARP_##INTER##_SCALAR_FETCH_PIXEL(CN) \
     }
 
 

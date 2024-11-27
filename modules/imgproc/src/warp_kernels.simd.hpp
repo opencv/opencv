@@ -23,46 +23,50 @@
     v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32))); \
     v_float32 dst_y = vx_setall_f32(float(y));
 
-#define CV_WARP_LINEAR_VECTOR_GET_ADDR_C1() \
+#define CV_WARP_VECTOR_GET_ADDR_C1() \
     v_int32 addr_0 = v_fma(v_srcstep, src_iy0, src_ix0), \
             addr_1 = v_fma(v_srcstep, src_iy1, src_ix1);
-#define CV_WARP_LINEAR_VECTOR_GET_ADDR_C3() \
+#define CV_WARP_VECTOR_GET_ADDR_C3() \
     v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, three)), \
             addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, three));
-#define CV_WARP_LINEAR_VECTOR_GET_ADDR_C4() \
+#define CV_WARP_VECTOR_GET_ADDR_C4() \
     v_int32 addr_0 = v_fma(v_srcstep, src_iy0, v_mul(src_ix0, four)), \
             addr_1 = v_fma(v_srcstep, src_iy1, v_mul(src_ix1, four));
-#define CV_WARP_LINEAR_VECTOR_GET_ADDR(CN) \
-    CV_WARP_LINEAR_VECTOR_GET_ADDR_##CN() \
+#define CV_WARP_VECTOR_GET_ADDR(CN) \
+    CV_WARP_VECTOR_GET_ADDR_##CN() \
     vx_store(addr, addr_0); \
     vx_store(addr + vlanes_32, addr_1);
 
-#define CV_WARP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD(CN) \
-    v_int32 src_ix0 = v_floor(src_x0), \
-            src_iy0 = v_floor(src_y0), \
-            src_ix1 = v_floor(src_x1), \
-            src_iy1 = v_floor(src_y1); \
+#define CV_WARP_VECTOR_LINEAR_COMPUTE_COORD() \
+    v_int32 src_ix0 = v_floor(src_x0), src_iy0 = v_floor(src_y0); \
+    v_int32 src_ix1 = v_floor(src_x1), src_iy1 = v_floor(src_y1); \
+    src_x0 = v_sub(src_x0, v_cvt_f32(src_ix0)); \
+    src_y0 = v_sub(src_y0, v_cvt_f32(src_iy0)); \
+    src_x1 = v_sub(src_x1, v_cvt_f32(src_ix1)); \
+    src_y1 = v_sub(src_y1, v_cvt_f32(src_iy1));
+#define CV_WARP_VECTOR_NEAREST_COMPUTE_COORD() \
+    v_int32 src_ix0 = v_round(src_x0), src_iy0 = v_round(src_y0); \
+    v_int32 src_ix1 = v_round(src_x1), src_iy1 = v_round(src_y1); \
+
+#define CV_WARP_VECTOR_COMPUTE_MAPPED_COORD(INTER, CN) \
+    CV_WARP_VECTOR_##INTER##_COMPUTE_COORD() \
     v_uint32 mask_0 = v_lt(v_reinterpret_as_u32(src_ix0), inner_scols), \
              mask_1 = v_lt(v_reinterpret_as_u32(src_ix1), inner_scols); \
     mask_0 = v_and(mask_0, v_lt(v_reinterpret_as_u32(src_iy0), inner_srows)); \
     mask_1 = v_and(mask_1, v_lt(v_reinterpret_as_u32(src_iy1), inner_srows)); \
     v_uint16 inner_mask = v_pack(mask_0, mask_1); \
-    src_x0 = v_sub(src_x0, v_cvt_f32(src_ix0)); \
-    src_y0 = v_sub(src_y0, v_cvt_f32(src_iy0)); \
-    src_x1 = v_sub(src_x1, v_cvt_f32(src_ix1)); \
-    src_y1 = v_sub(src_y1, v_cvt_f32(src_iy1)); \
-    CV_WARP_LINEAR_VECTOR_GET_ADDR(CN);
+    CV_WARP_VECTOR_GET_ADDR(CN)
 
-#define CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(CN) \
+#define CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(INTER, CN) \
     v_float32 src_x0 = v_fma(M0, dst_x0, M_x), \
               src_y0 = v_fma(M3, dst_x0, M_y), \
               src_x1 = v_fma(M0, dst_x1, M_x), \
               src_y1 = v_fma(M3, dst_x1, M_y); \
     dst_x0 = v_add(dst_x0, delta); \
     dst_x1 = v_add(dst_x1, delta); \
-    CV_WARP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD(CN)
+    CV_WARP_VECTOR_COMPUTE_MAPPED_COORD(INTER, CN)
 
-#define CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(CN) \
+#define CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(INTER, CN) \
     v_float32 src_x0 = v_fma(M0, dst_x0, M_x), \
               src_y0 = v_fma(M3, dst_x0, M_y), \
               src_w0 = v_fma(M6, dst_x0, M_w), \
@@ -75,9 +79,9 @@
     src_y1 = v_div(src_y1, src_w1); \
     dst_x0 = v_add(dst_x0, delta); \
     dst_x1 = v_add(dst_x1, delta); \
-    CV_WARP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD(CN)
+    CV_WARP_VECTOR_COMPUTE_MAPPED_COORD(INTER, CN)
 
-#define CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(CN) \
+#define CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(INTER, CN) \
     v_float32 src_x0, src_y0, \
               src_x1, src_y1; \
     if (map1 == map2) { \
@@ -97,7 +101,7 @@
         dst_x0 = v_add(dst_x0, delta); \
         dst_x1 = v_add(dst_x1, delta); \
     } \
-    CV_WARP_LINEAR_VECTOR_COMPUTE_MAPPED_COORD(CN)
+    CV_WARP_VECTOR_COMPUTE_MAPPED_COORD(INTER, CN)
 
 namespace cv{
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
@@ -416,7 +420,7 @@ void warpAffineNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C1, 8U);
                 } else {
@@ -507,7 +511,7 @@ void warpAffineNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C3, 8U);
                 } else {
@@ -599,8 +603,8 @@ void warpAffineNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C4);
+                if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, NEAREST, 8U);
     #elif CV_SIMD128
@@ -694,7 +698,7 @@ void warpAffineNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, i
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C1, 16U);
                 } else {
@@ -787,7 +791,7 @@ void warpAffineNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, i
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C3, 16U);
                 } else {
@@ -880,8 +884,8 @@ void warpAffineNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, i
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C4);
+                if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, NEAREST, 16U);
     #elif CV_SIMD128
@@ -974,7 +978,7 @@ void warpAffineNearestInvoker_32FC1(const float *src_data, size_t src_step, int 
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C1, 32F);
                 } else {
@@ -1069,7 +1073,7 @@ void warpAffineNearestInvoker_32FC3(const float *src_data, size_t src_step, int 
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C3, 32F);
                 } else {
@@ -1166,8 +1170,8 @@ void warpAffineNearestInvoker_32FC4(const float *src_data, size_t src_step, int 
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C4);
+                if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, NEAREST, 32F);
     #elif CV_SIMD128
@@ -1262,7 +1266,7 @@ void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C1, 8U);
                 } else {
@@ -1353,7 +1357,7 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C3, 8U);
                 } else {
@@ -1442,11 +1446,18 @@ void warpPerspectiveNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step
             int x = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-            CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
+            // CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
+            v_float32 dst_x0 = vx_load(start_indices.data());
+            v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
+            v_float32 M0 = vx_setall_f32(M[0]), M3 = vx_setall_f32(M[3]);
+            v_float32 M_x = vx_setall_f32(static_cast<float>(y * M[1] + M[2])),
+                    M_y = vx_setall_f32(static_cast<float>(y * M[4] + M[5]));
+            v_float32 M6 = vx_setall_f32(M[6]);
+            v_float32 M_w = vx_setall_f32(static_cast<float>(y * M[7] + M[8]));
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C4);
+                if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, NEAREST, 8U);
     #elif CV_SIMD128
@@ -1539,7 +1550,7 @@ void warpPerspectiveNearestInvoker_16UC1(const uint16_t *src_data, size_t src_st
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C1, 16U);
                 } else {
@@ -1630,7 +1641,7 @@ void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_st
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C3, 16U);
                 } else {
@@ -1722,8 +1733,8 @@ void warpPerspectiveNearestInvoker_16UC4(const uint16_t *src_data, size_t src_st
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C4);
+                if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, NEAREST, 16U);
     #elif CV_SIMD128
@@ -1817,7 +1828,7 @@ void warpPerspectiveNearestInvoker_32FC1(const float *src_data, size_t src_step,
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C1, 32F);
                 } else {
@@ -1911,7 +1922,7 @@ void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step,
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C3, 32F);
                 } else {
@@ -2007,8 +2018,8 @@ void warpPerspectiveNearestInvoker_32FC4(const float *src_data, size_t src_step,
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C4);
+                if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, NEAREST, 32F);
     #elif CV_SIMD128
@@ -2109,7 +2120,7 @@ void remapNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C1, 8U);
                 } else {
@@ -2217,7 +2228,7 @@ void remapNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C3, 8U);
                 } else {
@@ -2326,7 +2337,7 @@ void remapNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C4);
                 if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, NEAREST, 8U);
@@ -2437,7 +2448,7 @@ void remapNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, int sr
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C1, 16U);
                 } else {
@@ -2545,7 +2556,7 @@ void remapNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int sr
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C3, 16U);
                 } else {
@@ -2654,8 +2665,8 @@ void remapNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, int sr
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C4);
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C4);
+                if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, NEAREST, 16U);
     #elif CV_SIMD128
@@ -2766,7 +2777,7 @@ void remapNearestInvoker_32FC1(const float *src_data, size_t src_step, int src_r
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C1, 32F);
                 } else {
@@ -2877,7 +2888,7 @@ void remapNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_r
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C3, 32F);
                 } else {
@@ -2990,8 +3001,8 @@ void remapNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_r
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C4);
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C4);
+                if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE_C4(SIMD256, NEAREST, 32F);
     #elif CV_SIMD128
@@ -3098,7 +3109,7 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00g, p01g, p10g, p11g;
     #endif
@@ -3214,7 +3225,7 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
@@ -3331,9 +3342,9 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
 
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
                     vx_store(valpha, src_x0);
                     vx_store(valpha+vlanes_32, src_x1);
@@ -3435,7 +3446,7 @@ void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, in
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C1, 16U);
                 } else {
@@ -3531,7 +3542,7 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C3, 16U);
                 } else {
@@ -3628,7 +3639,7 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
                     vx_store(valpha, src_x0);
@@ -3732,7 +3743,7 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C1, 32F);
                 } else {
@@ -3829,7 +3840,7 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C3, 32F);
                 } else {
@@ -3928,7 +3939,7 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
                     vx_store(valpha, src_x0);
@@ -4030,7 +4041,7 @@ void warpAffineLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 uint8x8_t p00g, p01g, p10g, p11g;
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_LINEAR_SHUFFLE_ALLWITHIN_NEON_U8(C1);
@@ -4133,7 +4144,7 @@ void warpAffineLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
                           p00b, p01b, p10b, p11b;
@@ -4243,14 +4254,14 @@ void warpAffineLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
 
-                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
 
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
                           p00b, p01b, p10b, p11b,
                           p00a, p01a, p10a, p11a;
 
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_LINEAR_SHUFFLE_ALLWITHIN_NEON_U8(C4);
                 } else {
                     CV_WARP_VECTOR_SHUFFLE_NOTALLWITHIN(LINEAR, C4, 8U);
@@ -4348,11 +4359,11 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00g, p01g, p10g, p11g;
     #endif
-                if (v_reduce_min(inner_mask) != 0) { // all loaded pixels are completely inside the image
+                if (v_reduce_min(inner_mask) != 0) {
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                     CV_WARP_VECTOR_LINEAR_SHUFFLE_ALLWITHIN_NEON_U8(C1);
     #else
@@ -4465,7 +4476,7 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
@@ -4580,7 +4591,7 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
                     vx_store(valpha, src_x0);
@@ -4684,7 +4695,7 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C1, 16U);
                 } else {
@@ -4780,7 +4791,7 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C3, 16U);
                 } else {
@@ -4879,7 +4890,7 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
                     vx_store(valpha, src_x0);
@@ -4984,7 +4995,7 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C1, 32F);
                 } else {
@@ -5082,7 +5093,7 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C3, 32F);
                 } else {
@@ -5184,7 +5195,7 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
                     vx_store(valpha, src_x0);
@@ -5286,7 +5297,7 @@ void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 uint8x8_t p00g, p01g, p10g, p11g;
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_LINEAR_SHUFFLE_ALLWITHIN_NEON_U8(C1);
@@ -5390,7 +5401,7 @@ void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
                           p00b, p01b, p10b, p11b;
@@ -5497,7 +5508,7 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
                           p00b, p01b, p10b, p11b,
@@ -5607,7 +5618,7 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00g, p01g, p10g, p11g;
     #endif
@@ -5741,7 +5752,7 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
@@ -5873,7 +5884,7 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
                     vx_store(valpha, src_x0);
@@ -5994,7 +6005,7 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C1, 16U);
                 } else {
@@ -6107,7 +6118,7 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C3, 16U);
                 } else {
@@ -6221,7 +6232,7 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
                     vx_store(valpha, src_x0);
@@ -6343,7 +6354,7 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C1, 32F);
                 } else {
@@ -6458,7 +6469,7 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(LINEAR, C3, 32F);
                 } else {
@@ -6575,7 +6586,7 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
                     vx_store(valpha, src_x0);
@@ -6693,7 +6704,7 @@ void remapLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src_step, int
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C1);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
                 uint8x8_t p00g, p01g, p10g, p11g;
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_LINEAR_SHUFFLE_ALLWITHIN_NEON_U8(C1);
@@ -6811,7 +6822,7 @@ void remapLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C3);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
                           p00b, p01b, p10b, p11b;
@@ -6934,7 +6945,7 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(C4);
+                CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C4);
                 uint8x8_t p00r, p01r, p10r, p11r,
                           p00g, p01g, p10g, p11g,
                           p00b, p01b, p10b, p11b,
