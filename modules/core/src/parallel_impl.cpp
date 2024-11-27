@@ -30,8 +30,7 @@
 DECLARE_CV_YIELD
 #endif
 #ifndef CV_YIELD
-# include <thread>
-# define CV_YIELD() std::this_thread::yield()
+# define CV_YIELD() __asm__ __volatile__ ("nop;nop;nop;nop;nop;nop;nop;nop;\n");
 #endif // CV_YIELD
 
 // Spin lock's CPU-level yield (required for Hyper-Threading)
