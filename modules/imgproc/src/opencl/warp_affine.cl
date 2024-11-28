@@ -100,17 +100,18 @@ __kernel void warpAffine(__global const uchar * srcptr, int src_step, int src_of
         {
             float X0 = fma(M[1], (CT)dy, X0_);
             float Y0 = fma(M[4], (CT)dy, Y0_);
-            int sx = convert_short_rtn(X0);
-            int sy = convert_short_rtn(Y0);
 
-            WT v0 = scalar;
+            int sx = convert_int_sat(rint(X0));
+            int sy = convert_int_sat(rint(Y0));
+
+            T v0 = scalar;
             if (sx >= 0 && sx < src_cols && sy >= 0 && sy < src_rows)
             {
-                v0 = CONVERT_TO_WT(loadpix(srcptr + mad24(sy, src_step, mad24(sx, pixsize, src_offset))));
+                v0 = loadpix(srcptr + mad24(sy, src_step, mad24(sx, pixsize, src_offset)));
             }
 
             int dst_index = mad24(dy, dst_step, mad24(dx, pixsize, dst_offset));
-            storepix(CONVERT_TO_T(v0), dstptr + dst_index);
+            storepix(v0, dstptr + dst_index);
         }
     }
 }

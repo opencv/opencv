@@ -167,8 +167,8 @@ __kernel void remap_2_32FC1(__global const uchar * srcptr, int src_step, int src
             Y0 += dy;
             #endif
 
-            int sx = convert_int_rtn(X0);
-            int sy = convert_int_rtn(Y0);
+            int sx = convert_int_sat(rint(X0));
+            int sy = convert_int_sat(rint(Y0));
 
             int2 map_data0 = (int2)(sx, sy);
 
@@ -210,8 +210,8 @@ __kernel void remap_32FC2(__global const uchar * srcptr, int src_step, int src_o
             Y0 += dy;
             #endif
 
-            int sx = convert_int_rtn(X0);
-            int sy = convert_int_rtn(Y0);
+            int sx = convert_int_sat(rint(X0));
+            int sy = convert_int_sat(rint(Y0));
 
             int2 map_data0 = (int2)(sx, sy);
 
