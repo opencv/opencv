@@ -2477,21 +2477,70 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
     CV_Assert(ncontours <= (size_t)std::numeric_limits<int>::max());
     if (lineType == cv::LINE_AA && _image.depth() != CV_8U)
         lineType = 8;
-    Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
+    Mat image = _image.getMat();
+    Mat_<Vec4i> hierarchy = _hierarchy.getMat();
 
-    if (thickness >= 0) // contour lines
+    int i = 0, end = (int)ncontours;
+    if (contourIdx >= 0)
     {
-        double color_buf[4] {};
-        scalarToRawData(color, color_buf, _image.type(), 0 );
-        int i = 0, end = (int)ncontours;
-        if (contourIdx >= 0)
+        i = contourIdx;
+        end = i + 1;
+    }
+    std::vector<int> indexesToFill;
+    if (hierarchy.empty() || maxLevel == 0)
+    {
+        indexesToFill.resize(end - i);
+        std::iota(indexesToFill.begin(), indexesToFill.end(), i);
+    }
+    else
+    {
+        std::stack<int> indexes;
+        for (; i != end; ++i)
         {
-            i = contourIdx;
-            end = i + 1;
+            // either all from the top level or a single contour
+            if (hierarchy(i)[3] < 0 || contourIdx >= 0)
+                indexes.push(i);
         }
-        for (; i < end; ++i)
+        while (!indexes.empty())
         {
-            Mat cnt = _contours.getMat(i);
+            // get current element
+            const int cur = indexes.top();
+            indexes.pop();
+
+            //  check current element depth
+            int curLevel = -1;
+            int par = cur;
+            while (par >= 0)
+            {
+                par = hierarchy(par)[3]; // parent
+                ++curLevel;
+            }
+            if (curLevel <= maxLevel)
+            {
+                indexesToFill.push_back(cur);
+            }
+
+            int next = hierarchy(cur)[2]; // first child
+            while (next > 0)
+            {
+                indexes.push(next);
+                next = hierarchy(next)[0]; // next sibling
+            }
+        }
+    }
+    std::vector<Mat> contoursToFill;
+    contoursToFill.reserve(indexesToFill.size());
+    for (const int& idx : indexesToFill)
+        contoursToFill.emplace_back(_contours.getMat(idx));
+
+    if (thickness < 0)
+        fillPoly(image, contoursToFill, color, lineType, 0, offset);
+    else
+    {
+        double color_buf[4]{};
+        scalarToRawData(color, color_buf, _image.type(), 0);
+        for (const Mat& cnt : contoursToFill)
+        {
             if (cnt.empty())
                 continue;
             const int npoints = cnt.checkVector(2, CV_32S);
@@ -2504,61 +2553,6 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
                 cv::ThickLine(image, pt1 + offset, pt2 + offset, color_buf, thickness, lineType, 2, 0);
             }
         }
-    }
-    else // filled polygons
-    {
-        int i = 0, end = (int)ncontours;
-        if (contourIdx >= 0)
-        {
-            i = contourIdx;
-            end = i + 1;
-        }
-        std::vector<int> indexesToFill;
-        if (hierarchy.empty() || maxLevel == 0)
-        {
-            for (; i != end; ++i)
-                indexesToFill.push_back(i);
-        }
-        else
-        {
-            std::stack<int> indexes;
-            for (; i != end; ++i)
-            {
-                // either all from the top level or a single contour
-                if (hierarchy.at<Vec4i>(i)[3] < 0 || contourIdx >= 0)
-                    indexes.push(i);
-            }
-            while (!indexes.empty())
-            {
-                // get current element
-                const int cur = indexes.top();
-                indexes.pop();
-
-                //  check current element depth
-                int curLevel = -1;
-                int par = cur;
-                while (par >= 0)
-                {
-                    par = hierarchy.at<Vec4i>(par)[3]; // parent
-                    ++curLevel;
-                }
-                if (curLevel <= maxLevel)
-                {
-                    indexesToFill.push_back(cur);
-                }
-
-                int next = hierarchy.at<Vec4i>(cur)[2]; // first child
-                while (next > 0)
-                {
-                    indexes.push(next);
-                    next = hierarchy.at<Vec4i>(next)[0]; // next sibling
-                }
-            }
-        }
-        std::vector<Mat> contoursToFill;
-        for (const int & idx : indexesToFill)
-            contoursToFill.push_back(_contours.getMat(idx));
-        fillPoly(image, contoursToFill, color, lineType, 0, offset);
     }
 }
 
