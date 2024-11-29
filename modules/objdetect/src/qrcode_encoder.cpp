@@ -711,17 +711,17 @@ void QRCodeEncoderImpl::padBitStream()
     else if (pad_num <= 4)
     {
         int payload_size = (int)payload.size();
-        writeDecNumber(0, payload_size, payload);
+        payload.insert(payload.end(), payload_size, 0);
     }
     else
     {
-        writeDecNumber(0, 4, payload);
+        payload.insert(payload.end(), 4, 0);
 
         int i = payload.size() % bits;
 
         if (i != 0)
         {
-            writeDecNumber(0, bits - i, payload);
+            payload.insert(payload.end(), bits - i, 0);
         }
         pad_num = total_data - (int)payload.size();
 
@@ -1329,11 +1329,12 @@ private:
 
             int val = 0;
             while (bits >= actualBits) {
+                CV_CheckLT(idx, data.size(), "Not enough bits in the bitstream");
                 val |= data[idx++] << (bits - actualBits);
                 bits -= actualBits;
                 actualBits = 8;
             }
-            if (bits) {
+            if (bits && idx < data.size()) {
                 val |= data[idx] >> (actualBits - bits);
                 actualBits -= bits;
                 data[idx] &= 255 >> (8 - actualBits);
