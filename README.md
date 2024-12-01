@@ -1,7 +1,7 @@
 
 # OpenCV: Open Source Computer Vision Library  
 
-[![GitHub License](https://img.shields.io/badge/license-BSD-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)  
+[![GitHub License](https://img.shields.io/badge/License-OpenCV%20license-blue)](https://opencv.org/license/)  
 [![Website](https://img.shields.io/badge/Website-Visit%20OpenCV-blue)](https://opencv.org)  
 [![Donate](https://img.shields.io/badge/Donate-Support%20OpenCV-blue)](https://opencv.org/support/)  
 
@@ -92,11 +92,14 @@ For a detailed guide, refer to our [How to Contribute](https://github.com/opencv
 Your contributions help us maintain and improve OpenCV. Consider supporting us via [donations](https://opencv.org/support/).  
 
 ---
-
 ### License  
 
-OpenCV is released under the **3-clause BSD license**. See the [LICENSE](https://github.com/opencv/opencv/blob/master/LICENSE) file for details.  
+The OpenCV library is licensed under two different licenses depending on the version:  
 
+- **OpenCV 4.5.0 and higher**: Licensed under the [Apache 2 License](https://opencv.org/license/).  
+- Earlier versions: Licensed under the **3-clause BSD license**.  
+
+For detailed information, see the [LICENSE](https://opencv.org/license/).  
 ---
 
 Feel free to suggest improvements or contact us through any of the listed channels. Together, let's push the boundaries of computer vision and AI!  
