@@ -62,7 +62,12 @@ std::string genArgument(const std::string& argName, const std::string& help,
                 FileNode value = node[argName];
                 if (argName.find("sha1") != std::string::npos) {
                     std::string prefix = argName.substr(0, argName.find("sha1"));
-                    value = node[prefix+"load_info"][argName];
+                    if (prefix == "config_"){
+                        value = node[prefix+"load_info"]["sha1"];
+                    }
+                    else{
+                        value = node[prefix+"load_info"][argName];
+                    }
                 }
                 if (argName.find("download_sha") != std::string::npos) {
                     std::string prefix = argName.substr(0, argName.find("download_sha"));
@@ -182,6 +187,8 @@ std::string genPreprocArguments(const std::string& modelName, const std::string&
            genArgument(prefix + "postprocessing", "Indicate the postprocessing type of model i.e. yolov8, yolonas, etc.",
                        modelName, zooFile)+
            genArgument(prefix + "sha1", "Optional path to hashsum of downloaded model to be loaded from models.yml",
+                       modelName, zooFile)+
+           genArgument(prefix + "config_sha1", "Optional path to hashsum of downloaded config to be loaded from models.yml",
                        modelName, zooFile)+
            genArgument(prefix + "download_sha", "Optional path to hashsum of downloaded model to be loaded from models.yml",
                        modelName, zooFile);

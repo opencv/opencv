@@ -37,9 +37,6 @@ parser.add_argument('--out_tf_graph', default='graph.pbtxt',
                     help='For models from TensorFlow Object Detection API, you may '
                          'pass a .config file which was used for training through --config '
                          'argument. This way an additional .pbtxt file with TensorFlow graph will be created.')
-parser.add_argument('--framework', choices=['caffe', 'tensorflow', 'darknet', 'dldt', 'onnx'],
-                    help='Optional name of an origin framework of the model. '
-                         'Detect it automatically if it does not set.')
 parser.add_argument('--thr', type=float, default=0.5, help='Confidence threshold')
 parser.add_argument('--nms', type=float, default=0.4, help='Non-maximum suppression threshold')
 parser.add_argument('--backend', default="default", type=str, choices=backends,
@@ -76,8 +73,9 @@ if args.alias is None or hasattr(args, 'help'):
 
 args.model = findModel(args.model, args.sha1)
 if args.config is not None:
-    args.config = findFile(args.config)
-args.labels = findFile(args.labels)
+    args.config = findModel(args.config, args.config_sha1)
+if args.labels is not None:
+    args.labels = findFile(args.labels)
 
 # If config specified, try to load it as TensorFlow Object Detection API's pipeline.
 config = readTextMessage(args.config)
@@ -100,7 +98,10 @@ if args.labels:
         labels = f.read().rstrip('\n').split('\n')
 
 # Load a network
-net = cv.dnn.readNet(args.model, args.config, args.framework)
+engine = cv.dnn.ENGINE_AUTO
+if args.backend != "default" or args.target != "cpu":
+    engine = cv.dnn.ENGINE_CLASSIC
+net = cv.dnn.readNet(args.model, args.config, "", engine)
 net.setPreferableBackend(get_backend_id(args.backend))
 net.setPreferableTarget(get_target_id(args.target))
 outNames = net.getUnconnectedOutLayersNames()
@@ -126,14 +127,10 @@ def postprocess(frame, outs):
     frameHeight = frame.shape[0]
     frameWidth = frame.shape[1]
 
-    layerNames = net.getLayerNames()
-    lastLayerId = net.getLayerId(layerNames[-1])
-    lastLayer = net.getLayer(lastLayerId)
-
     classIds = []
     confidences = []
     boxes = []
-    if lastLayer.type == 'DetectionOutput':
+    if args.postprocessing == 'ssd':
         # Network produces output blob with a shape 1x1xNx7 where N is a number of
         # detections and an every detection is a vector of values
         # [batchId, classId, confidence, left, top, right, bottom]
@@ -157,21 +154,12 @@ def postprocess(frame, outs):
                     classIds.append(int(detection[1]) - 1)  # Skip background label
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
-    elif lastLayer.type == 'Region' or args.postprocessing == 'yolov8':
-        # Network produces output blob with a shape NxC where N is a number of
-        # detected objects and C is a number of classes + 4 where the first 4
-        # numbers are [center_x, center_y, width, height]
-        if args.postprocessing == 'yolov8':
-            box_scale_w = frameWidth / args.width
-            box_scale_h = frameHeight / args.height
-        else:
-            box_scale_w = frameWidth
-            box_scale_h = frameHeight
+
+    elif args.postprocessing == 'darknet':
+        box_scale_w = frameWidth
+        box_scale_h = frameHeight
 
         for out in outs:
-            if args.postprocessing == 'yolov8':
-                out = out[0].transpose(1, 0)
-
             for detection in out:
                 scores = detection[4:]
                 if args.background_label_id >= 0:
@@ -188,13 +176,47 @@ def postprocess(frame, outs):
                     classIds.append(classId)
                     confidences.append(float(confidence))
                     boxes.append([left, top, width, height])
+
+    elif args.postprocessing == 'yolov8' or args.postprocessing == 'yolov5':
+        # Network produces output blob with a shape NxC where N is a number of
+        # detected objects and C is a number of classes + 4 where the first 4
+        # numbers are [center_x, center_y, width, height]
+        box_scale_w = frameWidth / args.width
+        box_scale_h = frameHeight / args.height
+
+        for out in outs:
+            if args.postprocessing == 'yolov8':
+                out = out[0].transpose(1, 0)
+            else:  # YOLOv5, no transposition needed
+                out = out[0]
+
+            for detection in out:
+                if args.postprocessing == 'yolov8':
+                    scores = detection[4:]
+                    obj_conf = 1
+                else:
+                    scores = detection[5:]
+                    obj_conf = detection[4]
+
+                classId = np.argmax(scores)
+                confidence = scores[classId]*obj_conf
+                if confidence > confThreshold:
+                    center_x = int(detection[0] * box_scale_w)
+                    center_y = int(detection[1] * box_scale_h)
+                    width = int(detection[2] * box_scale_w)
+                    height = int(detection[3] * box_scale_h)
+                    left = int(center_x - width / 2)
+                    top = int(center_y - height / 2)
+                    classIds.append(classId)
+                    confidences.append(float(confidence))
+                    boxes.append([left, top, width, height])
     else:
-        print('Unknown output layer type: ' + lastLayer.type)
+        print('Unknown postprocessing method: ' + args.postprocessing)
         exit()
 
     # NMS is used inside Region layer only on DNN_BACKEND_OPENCV for another backends we need NMS in sample
     # or NMS is required if number of outputs > 1
-    if len(outNames) > 1 or (lastLayer.type == 'Region' or args.postprocessing == 'yolov8') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
+    if len(outNames) > 1 or (args.postprocessing == 'darknet' or args.postprocessing == 'yolov8' or args.postprocessing == 'yolov5') and args.backend != cv.dnn.DNN_BACKEND_OPENCV:
         indices = []
         classIds = np.array(classIds)
         boxes = np.array(boxes)
@@ -308,14 +330,11 @@ def processingThreadBody():
             # Create a 4D blob from a frame.
             inpWidth = args.width if args.width else frameWidth
             inpHeight = args.height if args.height else frameHeight
-            blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_32F)
+            blob = cv.dnn.blobFromImage(frame, scalefactor=args.scale, mean=args.mean, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_32F)
             processedFramesQueue.put(frame)
 
             # Run a model
-            net.setInput(blob, scalefactor=args.scale, mean=args.mean)
-            if net.getLayer(0).outputNameToIndex('im_info') != -1:  # Faster-RCNN or R-FCN
-                frame = cv.resize(frame, (inpWidth, inpHeight))
-                net.setInput(np.array([[inpHeight, inpWidth, 1.6]], dtype=np.float32), 'im_info')
+            net.setInput(blob)
 
             if asyncN:
                 futureOutputs.append(net.forwardAsync())
@@ -385,9 +404,9 @@ else:
 
         inpWidth = args.width if args.width else frameWidth
         inpHeight = args.height if args.height else frameHeight
-        blob = cv.dnn.blobFromImage(frame, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_32F)
+        blob = cv.dnn.blobFromImage(frame, scalefactor=args.scale, mean=args.mean, size=(inpWidth, inpHeight), swapRB=args.rgb, ddepth=cv.CV_32F)
 
-        net.setInput(blob, scalefactor=args.scale, mean=args.mean)
+        net.setInput(blob)
         outs = net.forward(outNames)
 
         boxes, classIds, confidences, indices = postprocess(frame, outs)

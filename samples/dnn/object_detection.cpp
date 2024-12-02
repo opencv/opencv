@@ -76,7 +76,7 @@ string modelName, framework;
 
 static void preprocess(const Mat& frame, Net& net, Size inpSize);
 
-static void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string yolo_name);
+static void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string postprocessing);
 
 static void drawPred(vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, Mat& frame, FontFace& sans, int stdSize, int stdWeight, int stdImgSize, int stdThickness);
 
@@ -91,7 +91,7 @@ static void yoloPostProcessing(
     vector<Rect2d>& keep_boxes,
     float conf_threshold,
     float iou_threshold,
-    const string& yolo_name);
+    const string& postprocessing);
 
 static void printAliases(string& zooFile){
     vector<string> aliases = findAliases(zooFile, "object_detection");
@@ -195,12 +195,13 @@ int main(int argc, char** argv)
     inpHeight = parser.get<int>("height");
     int async = parser.get<int>("async");
     paddingValue = parser.get<float>("padvalue");
-    const string yolo_name = parser.get<String>("postprocessing");
+    const string postprocessing = parser.get<String>("postprocessing");
     paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
     //![preprocess_params]
     String sha1 = parser.get<String>("sha1");
+    String config_sha1 = parser.get<String>("config_sha1");
     const string modelPath = findModel(parser.get<String>("model"), sha1);
-    const string configPath = findFile(parser.get<String>("config"));
+    const string configPath = findModel(parser.get<String>("config"), config_sha1);
     framework = modelPath.substr(modelPath.rfind('.') + 1);
 
     if (parser.has("labels"))
@@ -216,7 +217,11 @@ int main(int argc, char** argv)
         }
     }
     //![read_net]
-    Net net = readNet(modelPath, configPath);
+    EngineType engine = ENGINE_AUTO;
+    if ((parser.get<String>("backend") != "default") || (parser.get<String>("target") != "cpu")){
+        engine = ENGINE_CLASSIC;
+    }
+    Net net = readNet(modelPath, configPath, "", engine);
     int backend = getBackendID(parser.get<String>("backend"));
     net.setPreferableBackend(backend);
     net.setPreferableTarget(getTargetID(parser.get<String>("target")));
@@ -230,7 +235,7 @@ int main(int argc, char** argv)
 
     // Open a video file or an image file or a camera stream.
     VideoCapture cap;
-    bool openSuccess = parser.has("input") ? cap.open(parser.get<String>("input")) : cap.open(parser.get<int>("device"));
+    bool openSuccess = parser.has("input") ? cap.open(findFile(parser.get<String>("input"))) : cap.open(parser.get<int>("device"));
     if (!openSuccess){
         cout << "Could not open input file or camera device" << endl;
         return 0;
@@ -324,7 +329,7 @@ int main(int argc, char** argv)
             classIds.clear();
             confidences.clear();
             boxes.clear();
-            postprocess(frame, outs, net, backend, classIds, confidences, boxes, yolo_name);
+            postprocess(frame, outs, net, backend, classIds, confidences, boxes, postprocessing);
 
             drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
 
@@ -354,7 +359,7 @@ int main(int argc, char** argv)
             CV_Error(Error::StsNotImplemented, "Asynchronous forward is supported only with Inference Engine backend.");
         // Threading is disabled, run synchronously
         Mat frame, blob;
-        while (waitKey(100) < 0) {
+        while (waitKey(1) < 0) {
             cap >> frame;
             if (frame.empty()) {
                 waitKey();
@@ -369,7 +374,7 @@ int main(int argc, char** argv)
             confidences.clear();
             boxes.clear();
 
-            postprocess(frame, outs, net, backend, classIds, confidences, boxes, yolo_name);
+            postprocess(frame, outs, net, backend, classIds, confidences, boxes, postprocessing);
 
             drawPred(classIds, confidences, boxes, frame, sans, stdSize, stdWeight, stdImgSize, stdThickness);
 
@@ -379,7 +384,7 @@ int main(int argc, char** argv)
             int weight = static_cast<int>((stdWeight * imgWidth) / (stdImgSize * 1.5));
             double freq = getTickFrequency() / 1000;
             double t = net.getPerfProfile(layersTimes) / freq;
-            string label = format("Inference time: %.2f ms", t);
+            string label = format("FPS: %.2f", 1000/t);
             putText(frame, label, Point(0, size), Scalar(0, 255, 0), sans, size, weight);
             imshow(kWinName, frame);
         }
@@ -414,15 +419,6 @@ void preprocess(const Mat& frame, Net& net, Size inpSize)
 
     // Set the blob as the network input
     net.setInput(inp);
-
-    // Check if the model is Faster-RCNN or R-FCN
-    if (net.getLayer(0)->outputNameToIndex("im_info") != -1)
-    {
-        // Resize the frame and prepare imInfo
-        resize(frame, frame, size);
-        Mat imInfo = (Mat_<float>(1, 3) << size.height, size.width, 1.6f);
-        net.setInput(imInfo, "im_info");
-    }
 }
 
 void yoloPostProcessing(
@@ -432,7 +428,7 @@ void yoloPostProcessing(
     vector<Rect2d>& keep_boxes,
     float conf_threshold,
     float iou_threshold,
-    const string& yolo_name)
+    const string& postprocessing)
 {
     // Retrieve
     vector<int> classIds;
@@ -441,12 +437,12 @@ void yoloPostProcessing(
 
     vector<Mat> outs_copy = outs;
 
-    if (yolo_name == "yolov8")
+    if (postprocessing == "yolov8")
     {
         transposeND(outs_copy[0], {0, 2, 1}, outs_copy[0]);
     }
 
-    if (yolo_name == "yolonas")
+    if (postprocessing == "yolonas")
     {
         // outs contains 2 elements of shape [1, 8400, 80] and [1, 8400, 4]. Concat them to get [1, 8400, 84]
         Mat concat_out;
@@ -467,16 +463,16 @@ void yoloPostProcessing(
         for (int i = 0; i < preds.rows; ++i)
         {
             // filter out non-object
-            float obj_conf = (yolo_name == "yolov8" || yolo_name == "yolonas") ? 1.0f : preds.at<float>(i, 4);
+            float obj_conf = (postprocessing == "yolov8" || postprocessing == "yolonas") ? 1.0f : preds.at<float>(i, 4);
             if (obj_conf < conf_threshold)
                 continue;
 
-            Mat scores = preds.row(i).colRange((yolo_name == "yolov8" || yolo_name == "yolonas") ? 4 : 5, preds.cols);
+            Mat scores = preds.row(i).colRange((postprocessing == "yolov8" || postprocessing == "yolonas") ? 4 : 5, preds.cols);
             double conf;
             Point maxLoc;
             minMaxLoc(scores, 0, &conf, 0, &maxLoc);
 
-            conf = (yolo_name == "yolov8" || yolo_name == "yolonas") ? conf : conf * obj_conf;
+            conf = (postprocessing == "yolov8" || postprocessing == "yolonas") ? conf : conf * obj_conf;
             if (conf < conf_threshold)
                 continue;
 
@@ -488,7 +484,7 @@ void yoloPostProcessing(
             double h = det[3];
 
             // [x1, y1, x2, y2]
-            if (yolo_name == "yolonas") {
+            if (postprocessing == "yolonas") {
                 boxes.push_back(Rect2d(cx, cy, w, h));
             } else {
                 boxes.push_back(Rect2d(cx - 0.5 * w, cy - 0.5 * h,
@@ -511,12 +507,10 @@ void yoloPostProcessing(
     }
 }
 
-void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string yolo_name)
+void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vector<int>& classIds, vector<float>& confidences, vector<Rect>& boxes, const string postprocessing)
 {
     static vector<int> outLayers = net.getUnconnectedOutLayers();
-    static string outLayerType = net.getLayer(outLayers[0])->type;
-
-    if (outLayerType == "DetectionOutput")
+    if (postprocessing == "ssd")
     {
         // Network produces output blob with a shape 1x1xNx7 where N is a number of
         // detections and an every detection is a vector of values
@@ -552,7 +546,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
             }
         }
     }
-    else if (outLayerType == "Region")
+    else if (postprocessing == "darknet")
     {
         for (size_t i = 0; i < outs.size(); ++i)
         {
@@ -582,7 +576,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
             }
         }
     }
-    else if (outLayerType == "Identity")
+    else if (postprocessing == "yolov8" || postprocessing == "yolov5")
     {
         //![forward_buffers]
         vector<int> keep_classIds;
@@ -591,7 +585,7 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
         //![forward_buffers]
 
         //![postprocess]
-        yoloPostProcessing(outs, keep_classIds, keep_confidences, keep_boxes, confThreshold, nmsThreshold, yolo_name);
+        yoloPostProcessing(outs, keep_classIds, keep_confidences, keep_boxes, confThreshold, nmsThreshold, postprocessing);
         //![postprocess]
 
         for (size_t i = 0; i < keep_classIds.size(); ++i)
@@ -614,12 +608,13 @@ void postprocess(Mat& frame, const vector<Mat>& outs, Net& net, int backend, vec
     }
     else
     {
-        CV_Error(Error::StsNotImplemented, "Unknown output layer type: " + outLayerType);
+        cout<< ("Unknown postprocessing method: " + postprocessing)<<endl;
+        exit(-1);
     }
 
     // NMS is used inside Region layer only on DNN_BACKEND_OPENCV for other backends we need NMS in sample
     // or NMS is required if the number of outputs > 1
-    if (outLayers.size() > 1 || (outLayerType == "Region" && backend != DNN_BACKEND_OPENCV))
+    if (outLayers.size() > 1 || (postprocessing == "darknet" && backend != DNN_BACKEND_OPENCV))
     {
         map<int, vector<size_t> > class2indices;
         for (size_t i = 0; i < classIds.size(); i++)

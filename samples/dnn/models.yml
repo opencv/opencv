@@ -89,8 +89,8 @@ yolov5l:
   width: 640
   height: 640
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
+  labels: "object_detection_classes_yolo.txt"
+  postprocessing: "yolov5"
   sample: "object_detection"
 
 # YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
@@ -112,6 +112,7 @@ yolov4:
   rgb: true
   labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
+  postprocessing: "darknet"
   sample: "object_detection"
 
 yolov4-tiny:
@@ -130,6 +131,7 @@ yolov4-tiny:
   rgb: true
   labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
+  postprocessing: "darknet"
   sample: "object_detection"
 
 yolov3:
@@ -148,6 +150,7 @@ yolov3:
   rgb: true
   labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
+  postprocessing: "darknet"
   sample: "object_detection"
 
 tiny-yolo-voc:
@@ -166,14 +169,18 @@ tiny-yolo-voc:
   rgb: true
   labels: "object_detection_classes_pascal_voc.txt"
   background_label_id: 0
+  postprocessing: "darknet"
   sample: "object_detection"
 
-# Caffe implementation of SSD model from https://github.com/chuanqi305/MobileNet-SSD
+# Caffe implementation of SSD model from https://github.com/PINTO0309/MobileNet-SSD-RealSense
 ssd_caffe:
   load_info:
-    url: "https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc"
+    url: "https://github.com/PINTO0309/MobileNet-SSD-RealSense/raw/refs/heads/master/caffemodel/MobileNetSSD/MobileNetSSD_deploy.caffemodel"
     sha1: "994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a"
   model: "MobileNetSSD_deploy.caffemodel"
+  config_load_info:
+    url: "https://github.com/PINTO0309/MobileNet-SSD-RealSense/raw/refs/heads/master/caffemodel/MobileNetSSD/MobileNetSSD_deploy.prototxt"
+    sha1: "25c8404cecdef638c2bd9ac7f3b46a8b96897deb"
   config: "MobileNetSSD_deploy.prototxt"
   mean: [127.5, 127.5, 127.5]
   scale: 0.007843
@@ -181,6 +188,7 @@ ssd_caffe:
   height: 300
   rgb: false
   labels: "object_detection_classes_pascal_voc.txt"
+  postprocessing: "ssd"
   sample: "object_detection"
 
 # TensorFlow implementation of SSD model from https://github.com/tensorflow/models/tree/master/research/object_detection
@@ -202,6 +210,7 @@ ssd_tf:
   height: 300
   rgb: true
   labels: "object_detection_classes_coco.txt"
+  postprocessing: "ssd"
   sample: "object_detection"
 
 # TensorFlow implementation of Faster-RCNN model from https://github.com/tensorflow/models/tree/master/research/object_detection
@@ -222,6 +231,7 @@ faster_rcnn_tf:
   width: 800
   height: 600
   rgb: true
+  postprocessing: "ssd"
   sample: "object_detection"
 
 ################################################################################
