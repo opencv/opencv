@@ -52,6 +52,98 @@ int fastcv_hal_medianBlur(
     CV_HAL_RETURN(status, hal_medianBlur);
 }
 
+class FcvSobelLoop_Invoker : public cv::ParallelLoopBody
+{
+    public:
+
+    FcvSobelLoop_Invoker(const uchar* _src_data, size_t _src_step, uchar* _dst_data, size_t _dst_step, int _width,
+        int _height, int _src_depth, int _dst_depth, int _dx, int _dy, int _ksize, fcvBorderType _fcvBorder, int _fcvBorderValue) :
+        cv::ParallelLoopBody(), src_data(_src_data), src_step(_src_step), dst_data(_dst_data), dst_step(_dst_step), width(_width),
+        height(_height), src_depth(_src_depth), dst_depth(_dst_depth), dx(_dx), dy(_dy), ksize(_ksize), fcvBorder(_fcvBorder),
+        fcvBorderValue(_fcvBorderValue)
+    {
+        half_ksize = ksize/2;
+        fcvFuncType = FCV_MAKETYPE(ksize,src_depth);
+    }
+
+    virtual void operator()(const cv::Range& range) const CV_OVERRIDE
+    {
+        int topLines    = 0;
+        int rangeHeight = range.end-range.start;
+
+        if(range.start > 0)
+        {
+            topLines    += half_ksize;
+            rangeHeight += half_ksize;
+        }
+
+        if(range.end < height)
+        {
+            rangeHeight += half_ksize;
+        }
+
+        const uchar* src = src_data + (range.start-topLines)*src_step;
+        uchar dst[dst_step*rangeHeight];
+        int16_t *dxBuffer, *dyBuffer;
+
+        if ((dx == 1) && (dy == 0))
+        {
+            dxBuffer = (int16_t*)dst;
+            dyBuffer = NULL;
+        }
+        else if ((dx == 0) && (dy == 1))
+        {
+            dxBuffer = NULL;
+            dyBuffer = (int16_t*)dst;
+        }
+
+        switch (fcvFuncType)
+        {
+            case FCV_MAKETYPE(3,CV_8U):
+            {
+                fcvFilterSobel3x3u8s16(src, width, rangeHeight, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                break;
+            }
+            case FCV_MAKETYPE(5,CV_8U):
+            {
+                fcvFilterSobel5x5u8s16(src, width, rangeHeight, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                break;
+            }
+            case FCV_MAKETYPE(7,CV_8U):
+            {
+                fcvFilterSobel7x7u8s16(src, width, rangeHeight, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                break;
+            }
+            default:
+                break;
+        }
+
+        uchar* dptr = dst_data+range.start*dst_step;
+        uchar* sptr = dst+topLines*dst_step;
+        memcpy(dptr,sptr, (range.end-range.start)*dst_step);
+    }
+
+    private:
+    const uchar*    src_data;
+    size_t          src_step;
+    uchar*          dst_data;
+    size_t          dst_step;
+    int             width;
+    int             height;
+    int             src_depth;
+    int             dst_depth;
+    int             dx;
+    int             dy;
+    int             ksize;
+    int             half_ksize;
+    int             fcvFuncType;
+    fcvBorderType   fcvBorder;
+    int             fcvBorderValue;
+
+    FcvSobelLoop_Invoker(const FcvSobelLoop_Invoker &);  // = delete;
+    const FcvSobelLoop_Invoker& operator= (const FcvSobelLoop_Invoker &);  // = delete;
+};
+
 int fastcv_hal_sobel(
     const uchar*    src_data,
     size_t          src_step,
@@ -74,8 +166,12 @@ int fastcv_hal_sobel(
     int             border_type)
 {
 
-    if(scale != 1.0f || delta != 0.0f)
+    if (scale != 1.0f || delta != 0.0f)
         CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Scale:%f, delta:%f is not supported", scale, delta));
+
+    // Only support one direction derivatives and the order is 1.(dx=1 && dy=0)||(dx=0 && dy=1)
+    if ((dx + dy == 0) || (dx + dy > 1))
+        CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Dx:%d Dy:%d is not supported",dx, dy));
 
     // Do not support inplace case
     if (src_data == dst_data)
@@ -89,10 +185,6 @@ int fastcv_hal_sobel(
     if (cn != 1)
         CV_HAL_RETURN_NOT_IMPLEMENTED("Multi-channels is not supported");
 
-    // Do not support for ROI case
-    if((margin_left!=0) || (margin_top != 0) || (margin_right != 0) || (margin_bottom !=0))
-        CV_HAL_RETURN_NOT_IMPLEMENTED("ROI is not supported");
-
     // 1. When ksize <= 0, OpenCV will use Scharr Derivatives
     // 2. When ksize == 1, OpenCV will use 3×1 or 1×3 kernel(no Gaussian smoothing is done)
     // FastCV doesn't support above two situation
@@ -103,26 +195,16 @@ int fastcv_hal_sobel(
     if (dst_depth != CV_16S)
         CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Dst depth:%s is not supported", cv::depthToString(dst_depth)));
 
+    // Only support following ksize and src_depth as input
+    if ((FCV_MAKETYPE(ksize,src_depth) != FCV_MAKETYPE(3, CV_8U))   &&
+        (FCV_MAKETYPE(ksize,src_depth) != FCV_MAKETYPE(5, CV_8U))   &&
+        (FCV_MAKETYPE(ksize,src_depth) != FCV_MAKETYPE(7, CV_8U)))
+        CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Ksize:%d, src_depth:%s is not supported", ksize, cv::depthToString(src_depth)));
+
     INITIALIZATION_CHECK;
 
-    // Only support one direction derivatives and the order is 1.(dx=1 && dy=0)||(dx=0 && dy=1)
-    int16_t *dxBuffer, *dyBuffer;
-
-    if ((dx == 1) && (dy == 0))
-    {
-        dxBuffer = (int16_t*)dst_data;
-        dyBuffer = NULL;
-    }
-    else if ((dx == 0) && (dy == 1))
-    {
-        dxBuffer = NULL;
-        dyBuffer = (int16_t*)dst_data;
-    }
-    else
-        CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Dx:%d Dy:%d is not supported",dx, dy));
-
-    fcvStatus       status;
-    fcvBorderType   fcvBorder;
+    fcvStatus       status    = FASTCV_SUCCESS;
+    fcvBorderType   fcvBorder = FASTCV_BORDER_CONSTANT;
 
     switch (border_type)
     {
@@ -141,28 +223,86 @@ int fastcv_hal_sobel(
             CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Border type:%s is not supported", borderToString(border_type)));
     }
 
-    int fcvFuncType = FCV_MAKETYPE(ksize,src_depth);
-
-    switch (fcvFuncType)
+    if (margin_left||margin_top||margin_top||margin_bottom)
     {
-        case FCV_MAKETYPE(3,CV_8U):
+        int src_height = height, src_width = width, start_height = 0, start_width = 0;
+
+        if(margin_left != 0)
         {
-            status = fcvFilterSobel3x3u8s16(src_data, width, height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
-            break;
+            src_data    -= ksize/2;
+            src_width   += ksize/2;
+            start_width =  ksize/2;
         }
-        case FCV_MAKETYPE(5,CV_8U):
+
+        if(margin_top != 0)
         {
-            status = fcvFilterSobel5x5u8s16(src_data, width, height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
-            break;
+            src_data     -= (ksize/2) * src_step;
+            src_height   += ksize/2;
+            start_height =  ksize/2;
         }
-        case FCV_MAKETYPE(7,CV_8U):
+
+        if(margin_right != 0)
         {
-            status = fcvFilterSobel7x7u8s16(src_data, width, height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
-            break;
+            src_width += ksize/2;
         }
-        default:
-            CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Ksize:%d, src_depth:%s, border type:%s is not supported",
-                ksize, cv::depthToString(src_depth), borderToString(border_type)));
+
+        if(margin_bottom != 0)
+        {
+            src_height += ksize/2;
+        }
+
+        uchar tmp[src_height*dst_step];
+        int16_t *dxBuffer, *dyBuffer;
+        int fcvFuncType = FCV_MAKETYPE(ksize,src_depth);
+
+        if ((dx == 1) && (dy == 0))
+        {
+            dxBuffer = (int16_t*)tmp;
+            dyBuffer = NULL;
+        }
+        else if ((dx == 0) && (dy == 1))
+        {
+            dxBuffer = NULL;
+            dyBuffer = (int16_t*)tmp;
+        }
+
+        switch (fcvFuncType)
+        {
+            case FCV_MAKETYPE(3,CV_8U):
+            {
+                fcvFilterSobel3x3u8s16(src_data, width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                break;
+            }
+            case FCV_MAKETYPE(5,CV_8U):
+            {
+                fcvFilterSobel5x5u8s16(src_data, width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                break;
+            }
+            case FCV_MAKETYPE(7,CV_8U):
+            {
+                fcvFilterSobel7x7u8s16(src_data, width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                break;
+            }
+            default:
+                break;
+        }
+
+        uchar* dptr = dst_data;
+        uchar* sptr = tmp + start_height*dst_step + start_width;
+        for (int i = 0; i < height; ++i)
+        {
+            memcpy(dptr, sptr, src_width*sizeof(int16_t));
+            dptr += dst_step;
+            sptr += dst_step;
+        }
+    }
+    else
+    {
+        int nStripes = height / 80 == 0 ? 1 : height / 80;
+
+        cv::parallel_for_(cv::Range(0, height),
+                FcvSobelLoop_Invoker(src_data, src_step, dst_data, dst_step, width, height, src_depth, dst_depth, dx, dy, ksize,
+                fcvBorder, 0), nStripes);
     }
 
     CV_HAL_RETURN(status, hal_sobel);

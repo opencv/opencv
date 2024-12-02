@@ -29,7 +29,7 @@
             status == FASTCV_EHWGPU)                                        \
     {                                                                       \
         CV_LOG_DEBUG(NULL, "FastCV status:"<<getFastCVErrorString(status)   \
-            <<"Switching to default OpenCV solution!");                     \
+            <<", Switching to default OpenCV solution!");                   \
         return CV_HAL_ERROR_NOT_IMPLEMENTED;                                \
     }                                                                       \
     else                                                                    \
@@ -38,7 +38,7 @@
         return CV_HAL_ERROR_UNKNOWN;                                        \
     }                                                                       \
 }
- 
+
 #define CV_HAL_RETURN_NOT_IMPLEMENTED(reason)                           \
 {                                                                       \
     CV_LOG_DEBUG(NULL,"Switching to default OpenCV\nInfo: "<<reason);   \
