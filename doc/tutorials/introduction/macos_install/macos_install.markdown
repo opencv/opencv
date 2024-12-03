@@ -178,4 +178,4 @@ or [pip](https://pip.pypa.io/en/stable/) to install releases of OpenCV only (Not
     pip install opencv-python
     @endcode
 
-    @note The `opencv-python` package installed via `pip` does not include non-free algorithms (like SIFT and SURF) and does not include the extra modules from `opencv_contrib`.
+    @note To access the extra modules from `opencv_contrib`, install the `opencv-contrib-python` package using `pip install opencv-contrib-python`.
