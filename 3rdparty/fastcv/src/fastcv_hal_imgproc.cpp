@@ -993,3 +993,59 @@ int fastcv_hal_cvtBGRtoYUVApprox(
     fcvStatus status = FASTCV_SUCCESS;
     CV_HAL_RETURN(status, hal_BGRtoYUVApprox);
 }
+
+int fastcv_hal_canny(
+    const uchar*    src_data,
+    size_t          src_step,
+    uchar*          dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    int             cn,
+    double          lowThreshold,
+    double          highThreshold,
+    int             ksize,
+    bool            L2gradient)
+{
+    int numThreads = cv::getNumThreads();
+
+    if(numThreads!=1)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("API performs optimally in single-threaded mode");
+
+    if (cn != 1)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Multi-channel input is not supported");
+
+    if (lowThreshold > highThreshold)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("lowThreshold is greater then highThreshold");
+
+    double	lowThresh = lowThreshold;
+    double	highThresh = highThreshold;
+
+    if (lowThresh != static_cast<int>(lowThresh) || highThresh != static_cast<int>(highThresh))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("threshold with decimal values not supported");
+
+    INITIALIZATION_CHECK;
+
+    fcvStatus               status;
+    fcvNormType             norm;
+
+    if (L2gradient == 1)
+        norm = fcvNormType::FASTCV_NORM_L2;
+    else
+        norm = fcvNormType::FASTCV_NORM_L1;
+
+    if ((ksize == 3) && (width > 2) && (height > 2) && (src_step >= (size_t)width) && (dst_step >= (size_t)width) && (lowThresh <= highThresh))
+    {
+        int16_t* gx = (int16_t*)fcvMemAlloc(width * height * sizeof(int16_t), 16);
+        int16_t* gy = (int16_t*)fcvMemAlloc(width * height * sizeof(int16_t), 16);
+        uint32_t gstride = 2 * width;
+        status = fcvFilterCannyu8(src_data, width, height, src_step, ksize, lowThresh, highThresh, norm, dst_data, dst_step, gx, gy, gstride);
+        fcvMemFree(gx);
+        fcvMemFree(gy);
+    }
+    else
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Ksize:%d is not supported", ksize));
+    }
+    CV_HAL_RETURN(status, hal_canny);
+}
