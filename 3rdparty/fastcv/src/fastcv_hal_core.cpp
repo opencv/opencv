@@ -436,14 +436,14 @@ int fastcv_hal_gemm32f(
 		dstp = dst;
 		dst_stride = dst_step;
 	}
-
+    float *dstp1 = dstp;
     if(alpha != 0.0)
         status = fcvMatrixMultiplyf32_v2(src1, n, m, src1_step, src2, k, 
                                         src2_step, dstp, dst_stride);
 
     if(alpha != 1.0 && alpha != 0.0 && status == FASTCV_SUCCESS)
     {
-        status = fcvMultiplyScalarf32(dstp, k, m, dst_stride, alpha, dstp, dst_stride);
+        status = fcvMultiplyScalarf32(dstp, k, m, dst_stride, alpha, dstp1, dst_stride);
     }
 
     if(src3 != NULL && beta != 0.0 && status == FASTCV_SUCCESS)
@@ -453,10 +453,10 @@ int fastcv_hal_gemm32f(
         {
             status = fcvMultiplyScalarf32(src3, k, m, src3_step, beta, (float32_t*)dst3.data, dst3.step);
             if(status == FASTCV_SUCCESS)
-                fcvAddf32_v2(dstp, k, m, dst_stride, (float32_t*)dst3.data, dst3.step, dstp, dst_stride);
+                fcvAddf32_v2(dstp, k, m, dst_stride, (float32_t*)dst3.data, dst3.step, dstp1, dst_stride);
         }
         else
-            fcvAddf32_v2(dstp, k, m, dst_stride, src3, src3_step, dstp, dst_stride);
+            fcvAddf32_v2(dstp, k, m, dst_stride, src3, src3_step, dstp1, dst_stride);
     }
 	
 	if(inplace == true)

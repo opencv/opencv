@@ -763,7 +763,7 @@ public:
 
 		if(range.end == nStripes)
 			height_ += (height - range.end * stripeHeight);
-		
+
 		src_ = cv::Mat(height_ + 2*n, width_ + 2*n, CV_8U);
 
         if(range.start == 0 && range.end == nStripes)
@@ -795,7 +795,7 @@ public:
 		int start_val = stripeHeight * range.start;
 		cv::Mat dst_temp1 = dst_padded(cv::Rect(n/2, n/2, origDstWidth_, origDstHeight_));
         cv::Mat dst_temp2 = dst(cv::Rect(0, start_val/2, origDstWidth_, origDstHeight_));
-        dst_temp1.copyTo(dst_temp2);	
+        dst_temp1.copyTo(dst_temp2);
     }
 
 private:
@@ -813,7 +813,7 @@ private:
 };
 
 int fastcv_hal_pyrdown(
-    const uchar*     src_data, 
+    const uchar*     src_data,
     size_t           src_step,
     int              src_width,
     int              src_height,
@@ -832,12 +832,12 @@ int fastcv_hal_pyrdown(
 
     int dstW = (src_width & 1)  == 1 ? ((src_width + 1)  >> 1) : ((src_width) >> 1);
     int dstH = (src_height & 1) == 1 ? ((src_height + 1) >> 1) : ((src_height) >> 1);
-    
+
     if((dstW > dst_width) || (dstH > dst_height))
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("dst size needs to be atleast half of the src size");
     }
-	
+
 	INITIALIZATION_CHECK;
 
     fcvBorderType bdr;
@@ -859,34 +859,134 @@ int fastcv_hal_pyrdown(
             default:
                 CV_HAL_RETURN_NOT_IMPLEMENTED("border type not supported");
         }
-            
+
         fcvPyramidLevel_v2 *frame1Pyr = new fcvPyramidLevel_v2[2];
         frame1Pyr[0].ptr = NULL;
         frame1Pyr[1].ptr = dst_data;
         frame1Pyr[1].stride = dst_step;
-        
+
         fcvStatus status = fcvPyramidCreateu8_v4(src_data, src_width, src_height,
                                      src_step, 2, FASTCV_PYRAMID_SCALE_HALF,
                                      frame1Pyr, bdr, bVal);
-        
+
         CV_HAL_RETURN(status,hal_pyrdown);
 	}
 	else
 	{
 		cv::Mat src = cv::Mat(src_height, src_width, CV_8UC1, (void*)src_data, src_step);
 	    cv::Mat dst = cv::Mat(dst_height, dst_width, CV_8UC1, (void*)dst_data, dst_step);
-	    
+
 	    int nStripes, stripeHeight = nThreads * 10;
-	    
+
 	    if(src.rows/stripeHeight == 0)
 	    	nStripes = 1;
 	    else
 	    	nStripes = (src.rows/stripeHeight);
-	    
-	    
+
 	    cv::parallel_for_(cv::Range(0, nStripes),
                   FcvPyrLoop_Invoker(src, src_width, src_height, dst, border_type, 5, stripeHeight, nStripes), nStripes);
-	    
+
         return CV_HAL_ERROR_OK;
 	}
+}
+
+int fastcv_hal_cvtBGRtoHSV(
+    const uchar    * src_data,
+    size_t          src_step,
+    uchar          * dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    int             depth,
+    int             scn,
+    bool            swapBlue,
+    bool            isFullRange,
+    bool            isHSV)
+{
+    if(width * height > 640 * 480)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("input size not supported");
+    }
+    if(scn != 3 || depth != CV_8U)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("src type not supported");
+    }
+    else if(isHSV != true || isFullRange != true)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Full range HSV supported");
+    }
+    else if(swapBlue != true)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("current color code not supported, expected swapped blue channel");
+    }
+    else if (src_data == dst_data)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("In-place not supported");
+    }
+    else if((src_step < (size_t)width*3) ||
+            (dst_step < (size_t)width*3))
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("unexpected stride values");
+    }
+
+    INITIALIZATION_CHECK;
+
+    int nStripes = cv::getNumThreads();
+
+    cv::parallel_for_(cv::Range(0, height), [&](const cv::Range &range){
+                      int sHeight = range.end - range.start;
+                      const uchar* yS = src_data + static_cast<size_t>(range.start) * src_step;
+                      uchar* yD = dst_data + static_cast<size_t>(range.start) * dst_step;
+                      fcvColorRGB888ToHSV888u8(yS, width, sHeight, src_step, yD, dst_step);
+                      }, nStripes);
+
+    return CV_HAL_ERROR_OK;
+}
+
+int fastcv_hal_cvtBGRtoYUVApprox(
+    const uchar    * src_data,
+    size_t          src_step,
+    uchar          * dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    int             depth,
+    int             scn,
+    bool            swapBlue,
+    bool            isCbCr)
+{
+    if(scn != 3 || depth != CV_8U)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("src type not supported");
+    }
+    else if(isCbCr != true)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("CbCr supported");
+    }
+    else if(swapBlue != true)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("expected swapped blue channel");
+    }
+    else if (src_data == dst_data)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("In-place not supported");
+    }
+    else if((src_step < (size_t)width*3) ||
+            (dst_step < (size_t)width*3))
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("unexpected stride values");
+    }
+
+    INITIALIZATION_CHECK;
+
+    int nStripes = cv::getNumThreads();
+
+    cv::parallel_for_(cv::Range(0, height), [&](const cv::Range &range){
+                      int sHeight = range.end - range.start;
+                      const uchar* yS = src_data + static_cast<size_t>(range.start) * src_step;
+                      uchar* yD = dst_data + static_cast<size_t>(range.start) * dst_step;
+                      fcvColorRGB888toYCrCbu8_v3(yS, width, sHeight, src_step, yD, dst_step);
+                      }, nStripes);
+
+    return CV_HAL_ERROR_OK;
 }
