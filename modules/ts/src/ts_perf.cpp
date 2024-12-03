@@ -192,22 +192,18 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
         return;
     }
 
-#ifndef WINRT
-    const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
-#else
-    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
-#endif
+    const std::string data_path_dir = utils::getConfigurationParameterString("OPENCV_TEST_DATA_PATH");
 
     cvtest::addDataSearchSubDirectory("");
     cvtest::addDataSearchSubDirectory(testSuitName);
 
     const char *path_separator = "/";
 
-    if (data_path_dir)
+    if (!data_path_dir.empty())
     {
-        int len = (int)strlen(data_path_dir)-1;
+        int len = (int)data_path_dir.size()-1;
         if (len < 0) len = 0;
-        std::string path_base = (data_path_dir[0] == 0 ? std::string(".") : std::string(data_path_dir))
+        std::string path_base = (data_path_dir[0] == 0 ? std::string(".") : data_path_dir)
                 + (data_path_dir[len] == '/' || data_path_dir[len] == '\\' ? "" : path_separator)
                 + "perf"
                 + path_separator;
@@ -1042,7 +1038,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_verify_sanity = args.get<bool>("perf_verify_sanity");
 
 #ifdef HAVE_IPP
-    test_ipp_check      = !args.get<bool>("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
+    test_ipp_check      = !args.get<bool>("perf_ipp_check") ? utils::getConfigurationParameterBool("OPENCV_IPP_CHECK") : true;
 #endif
     testThreads         = args.get<int>("perf_threads");
 #ifdef CV_COLLECT_IMPL_DATA
@@ -1125,12 +1121,11 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #endif
 
     {
-#ifndef WINRT
-        const char* path = getenv("OPENCV_PERF_VALIDATION_DIR");
-#else
-        const char* path = OPENCV_PERF_VALIDATION_DIR;
+        std::string path = utils::getConfigurationParameterString("OPENCV_PERF_VALIDATION_DIR");
+#ifdef WINRT
+        path = OPENCV_PERF_VALIDATION_DIR;
 #endif
-        if (path)
+        if (!path.empty())
             perf_validation_results_directory = path;
     }
 
@@ -1888,17 +1883,16 @@ std::string TestBase::getDataPath(const std::string& relativePath)
         throw PerfEarlyExitException();
     }
 
-#ifndef WINRT
-    const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
-#else
-    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
+    std::string data_path_dir = utils::getConfigurationParameterString("OPENCV_TEST_DATA_PATH");
+#ifdef WINRT
+    data_path_dir = OPENCV_TEST_DATA_PATH;
 #endif
     const char *path_separator = "/";
 
     std::string path;
-    if (data_path_dir)
+    if (!data_path_dir.empty())
     {
-        int len = (int)strlen(data_path_dir) - 1;
+        int len = (int)data_path_dir.size() - 1;
         if (len < 0) len = 0;
         path = (data_path_dir[0] == 0 ? std::string(".") : std::string(data_path_dir))
                 + (data_path_dir[len] == '/' || data_path_dir[len] == '\\' ? "" : path_separator);

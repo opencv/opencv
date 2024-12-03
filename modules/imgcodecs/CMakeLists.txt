@@ -190,7 +190,7 @@ endif()
 if(TARGET opencv_test_imgcodecs AND HAVE_OPENEXR AND "$ENV{OPENCV_IO_ENABLE_OPENEXR}")
   ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_ENABLE_OPENEXR_TESTS=1)
 endif()
-if(TARGET opencv_test_imgcodecs AND ((HAVE_PNG AND NOT (PNG_VERSION VERSION_LESS "1.6.31")) OR HAVE_SPNG))
+if(TARGET opencv_test_imgcodecs AND ((HAVE_PNG AND NOT (PNG_VERSION_STRING VERSION_LESS "1.6.31")) OR HAVE_SPNG))
   # details: https://github.com/glennrp/libpng/commit/68cb0aaee3de6371b81a4613476d9b33e43e95b1
   ocv_target_compile_definitions(opencv_test_imgcodecs PRIVATE OPENCV_IMGCODECS_PNG_WITH_EXIF=1)
 endif()

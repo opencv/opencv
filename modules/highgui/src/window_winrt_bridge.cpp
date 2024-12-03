@@ -64,9 +64,9 @@ HighguiBridge& HighguiBridge::getInstance()
     return instance;
 }
 
-void HighguiBridge::setContainer(Windows::UI::Xaml::Controls::Panel^ container)
+void HighguiBridge::setContainer(Windows::UI::Xaml::Controls::Panel^ container_)
 {
-    this->container = container;
+    this->container = container_;
 }
 
 CvWindow* HighguiBridge::findWindowByName(cv::String name)
@@ -190,9 +190,9 @@ void CvTrackbar::setMinPosition(double pos)
     slider->Minimum = pos;
 }
 
-void CvTrackbar::setSlider(Slider^ slider) {
-    if (slider)
-        this->slider = slider;
+void CvTrackbar::setSlider(Slider^ slider_) {
+    if (slider_)
+        this->slider = slider_;
 }
 
 double CvTrackbar::getPosition()
@@ -219,6 +219,7 @@ Slider^ CvTrackbar::getSlider()
 
 CvWindow::CvWindow(cv::String name, int flags) : name(name)
 {
+    CV_UNUSED(flags);
     this->page = (Page^)Windows::UI::Xaml::Markup::XamlReader::Load(const_cast<Platform::String^>(markupContent));
     this->sliderMap = new std::map<cv::String, CvTrackbar*>();
 
@@ -246,14 +247,15 @@ CvWindow::CvWindow(cv::String name, int flags) : name(name)
 
 CvWindow::~CvWindow() {}
 
-void CvWindow::createSlider(cv::String name, int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
+void CvWindow::createSlider(cv::String name_, int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
 {
-    CvTrackbar* trackbar = findTrackbarByName(name);
+    CV_UNUSED(userdata);
+    CvTrackbar* trackbar = findTrackbarByName(name_);
 
     // Creating slider if name is new or reusing the existing one
     Slider^ slider = !trackbar ? ref new Slider() : trackbar->getSlider();
 
-    slider->Header = HighguiBridge::getInstance().convertString(name);
+    slider->Header = HighguiBridge::getInstance().convertString(name_);
 
     // Making slider the same size as the image control or setting minimal size.
     // This is added to cover potential edge cases because:
@@ -282,26 +284,26 @@ void CvWindow::createSlider(cv::String name, int* val, int count, CvTrackbarCall
         if (!sliderPanel) return;
 
         // Adding slider to the list for current window
-        CvTrackbar* trackbar = new CvTrackbar(name, slider, this);
-        trackbar->callback = on_notify;
+        CvTrackbar* trackbar_ = new CvTrackbar(name_, slider, this);
+        trackbar_->callback = on_notify;
         slider->ValueChanged +=
             ref new Controls::Primitives::RangeBaseValueChangedEventHandler(
             [=](Platform::Object^ sender,
                 Windows::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs^ e)
             {
                 Slider^ slider = (Slider^)sender;
-                trackbar->callback(slider->Value, nullptr);
+                trackbar_->callback((int)slider->Value, nullptr);
             });
-        this->sliderMap->insert(std::pair<cv::String, CvTrackbar*>(name, trackbar));
+        this->sliderMap->insert(std::pair<cv::String, CvTrackbar*>(name_, trackbar_));
 
         // Adding slider to the window
         sliderPanel->Children->Append(slider);
     }
 }
 
-CvTrackbar* CvWindow::findTrackbarByName(cv::String name)
+CvTrackbar* CvWindow::findTrackbarByName(cv::String name_)
 {
-    auto search = sliderMap->find(name);
+    auto search = sliderMap->find(name_);
     if (search != sliderMap->end()) {
         return search->second;
     }
@@ -342,12 +344,12 @@ Page^ CvWindow::getPage()
 }
 
 //TODO: prototype, not in use yet
-void CvWindow::createButton(cv::String name)
+void CvWindow::createButton(cv::String name_)
 {
     if (!buttonPanel) return;
 
     Button^ b = ref new Button();
-    b->Content = HighguiBridge::getInstance().convertString(name);
+    b->Content = HighguiBridge::getInstance().convertString(name_);
     b->Width = 260;
     b->Height = 80;
     b->Click += ref new Windows::UI::Xaml::RoutedEventHandler(

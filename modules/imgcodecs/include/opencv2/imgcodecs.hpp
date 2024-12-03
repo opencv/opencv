@@ -332,7 +332,9 @@ can be saved using this function, with these exceptions:
     8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
     should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
 - With PGM/PPM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
-- With TIFF encoder, 8-bit unsigned (CV_8U), 16-bit unsigned (CV_16U),
+- With TIFF encoder, 8-bit unsigned (CV_8U), 8-bit signed (CV_8S),
+                     16-bit unsigned (CV_16U), 16-bit signed (CV_16S),
+                     32-bit signed (CV_32S),
                      32-bit float (CV_32F) and 64-bit float (CV_64F) images can be saved.
   - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
   - 32-bit float 3-channel (CV_32FC3) TIFF images will be saved
@@ -405,13 +407,27 @@ The function imencode compresses the image and stores it in the memory buffer th
 result. See cv::imwrite for the list of supported formats and flags description.
 
 @param ext File extension that defines the output format. Must include a leading period.
-@param img Image to be written.
+@param img Image to be compressed.
 @param buf Output buffer resized to fit the compressed image.
 @param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
 */
 CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
+
+/** @brief Encodes array of images into a memory buffer.
+
+The function is analog to cv::imencode for in-memory multi-page image compression.
+See cv::imwrite for the list of supported formats and flags description.
+
+@param ext File extension that defines the output format. Must include a leading period.
+@param imgs Vector of images to be written.
+@param buf Output buffer resized to fit the compressed data.
+@param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
+*/
+CV_EXPORTS_W bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
+                                 CV_OUT std::vector<uchar>& buf,
+                                 const std::vector<int>& params = std::vector<int>());
 
 /** @brief Checks if the specified image file can be decoded by OpenCV.
 
