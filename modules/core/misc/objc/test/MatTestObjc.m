@@ -8,14 +8,20 @@
 #import <OpenCV/OpenCV.h>
 
 #define CV_8U 0
+#define CV_8S 1
+#define CV_16U 2
 #define CV_16S 3
 #define CV_32S 4
 #define CV_32F 5
-#define CV_CN_SHIFT 3
+#define CV_64F 6
+#define CV_16F 7
+
+#define CV_CN_SHIFT 5
 #define CV_DEPTH_MAX (1 << CV_CN_SHIFT)
 #define CV_MAT_DEPTH_MASK (CV_DEPTH_MAX - 1)
 #define CV_MAT_DEPTH(flags) ((flags) & CV_MAT_DEPTH_MASK)
 #define CV_MAKETYPE(depth,cn) (CV_MAT_DEPTH(depth) + (((cn)-1) << CV_CN_SHIFT))
+
 #define CV_8UC3 CV_MAKETYPE(CV_8U,3)
 #define CV_32FC3 CV_MAKETYPE(CV_32F,3)
 #define CV_32SC3 CV_MAKETYPE(CV_32S,3)

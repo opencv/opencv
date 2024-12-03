@@ -53,7 +53,7 @@ public extension CvType {
     static let CV_16FC4: Int32 = CV_16FC(4)
 
     static let CV_CN_MAX = 512
-    static let CV_CN_SHIFT = 3
+    static let CV_CN_SHIFT = 5
     static let CV_DEPTH_MAX = 1 << CV_CN_SHIFT
 
     static func CV_8UC(_ channels:Int32) -> Int32 {
