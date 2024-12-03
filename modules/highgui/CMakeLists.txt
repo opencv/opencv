@@ -287,7 +287,7 @@ ocv_install_used_external_targets(${tgts})
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
 ocv_set_module_sources(HEADERS ${highgui_ext_hdrs} SOURCES ${highgui_srcs} ${highgui_hdrs})
-ocv_module_include_directories()
+ocv_module_include_directories(${WAYLAND_CLIENT_INCLUDE_DIRS} ${XKBCOMMON_INCLUDE_DIRS})
 
 ocv_create_module(${HIGHGUI_LIBRARIES})
 
