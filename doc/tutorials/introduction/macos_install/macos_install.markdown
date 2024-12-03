@@ -76,6 +76,7 @@ For example:
     git clone https://github.com/opencv/opencv.git
     git clone https://github.com/opencv/opencv_contrib.git
     @endcode
+
 Building OpenCV from Source Using CMake
 ---------------------------------------
 
@@ -90,7 +91,7 @@ Building OpenCV from Source Using CMake
     cd build_opencv
     @endcode
 
-    @note  It is good practice to keep your source code directories clean. Create the build directory outside of the source tree.
+    @note It is good practice to keep your source code directories clean. Create the build directory outside of the source tree.
 
 -#  Configuring. Run `cmake [<some optional parameters>] <path to the OpenCV source directory>`
 
