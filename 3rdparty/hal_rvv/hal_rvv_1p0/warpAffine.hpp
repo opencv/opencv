@@ -15,6 +15,8 @@ namespace cv { namespace cv_hal_rvv {
 #define cv_hal_warpAffineBlocklineNN cv::cv_hal_rvv::warpAffineBlocklineNN
 #undef cv_hal_warpAffineBlockline
 #define cv_hal_warpAffineBlockline cv::cv_hal_rvv::warpAffineBlockline
+#undef cv_hal_remap32f
+#define cv_hal_remap32f cv::cv_hal_rvv::remap32f
 
 static int warpAffine(int src_type,
                 const uchar * src_data, size_t src_step, int src_width, int src_height,
@@ -81,6 +83,8 @@ static int warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha
     }
     return CV_HAL_ERROR_OK;
 }
+
+static int remap32f()
 
 } // cv_hal_rvv::
 } // cv::

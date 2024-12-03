@@ -21,8 +21,11 @@
 
 #if defined(__riscv_v) && __riscv_v == 1000000
 #include "hal_rvv_1p0/merge.hpp" // core
-#include "hal_rvv_1p0/meanStdDev.hpp" // core
+#include "hal_rvv_1p0/mean.hpp" // core
 #include "hal_rvv_1p0/warpAffine.hpp" // imgproc
+#include "hal_rvv_1p0/remap32f.hpp" // remap
 #endif
+
+
 
 #endif
