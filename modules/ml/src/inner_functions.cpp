@@ -127,7 +127,8 @@ public:
         errStrip[idxErr]=err ;
 
     }
-    ParallelCalcError& operator=(const ParallelCalcError &) {
+    ParallelCalcError& operator=(const ParallelCalcError &) 
+    {
         return *this;
     }
 };
