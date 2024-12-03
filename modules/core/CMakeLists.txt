@@ -1,5 +1,13 @@
 set(the_description "The Core Functionality")
 
+OCV_OPTION(OPENCV_ENABLE_EGL "Include EGL support" ON
+  VISIBLE_IF WITH_OPENGL
+  VERIFY HAVE_OPENGL AND HAVE_EGL)
+
+OCV_OPTION(OPENCV_ENABLE_GLX "Include GLX support" ON
+  VISIBLE_IF WITH_OPENGL
+  VERIFY HAVE_OPENGL AND HAVE_GLX)
+
 ocv_add_dispatched_file(mathfuncs_core SSE2 AVX AVX2 LASX)
 ocv_add_dispatched_file(stat SSE4_2 AVX2 LASX)
 ocv_add_dispatched_file(arithm SSE2 SSE4_1 AVX2 VSX3 LASX)
@@ -121,6 +129,14 @@ endif()
 if(OPENCV_LIBVA_LINK)
   ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/va_intel.cpp" "OPENCV_LIBVA_LINK=1")
 endif()
+if(OPENCV_ENABLE_GLX)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/opengl.cpp" "OPENCV_ENABLE_GLX")
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/gl_core_3_1.cpp" "OPENCV_ENABLE_GLX")
+endif()
+if(OPENCV_ENABLE_EGL)
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/opengl.cpp" "OPENCV_ENABLE_EGL")
+  ocv_append_source_file_compile_definitions("${CMAKE_CURRENT_LIST_DIR}/src/gl_core_3_1.cpp" "OPENCV_ENABLE_EGL")
+endif()
 
 option(OPENCV_ENABLE_ALLOCATOR_STATS "Enable Allocator metrics" ON)
 
@@ -167,8 +183,7 @@ ocv_create_module(${extra_libs})
 
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
-    "${OPENGL_LIBRARIES}"
-    "${GLX_LIBRARIES}"
+    "${OPENGL_LIBRARIES}" "${OPENGL_egl_LIBRARY}"
     "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
     "${ITT_LIBRARIES}"
     "${OPENCV_HAL_LINKER_LIBS}"

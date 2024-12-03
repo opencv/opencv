@@ -174,6 +174,34 @@ static bool ocl_convertTo(InputArray src_, OutputArray dst_, int ddepth, bool no
 {
     CV_INSTRUMENT_REGION();
 
+    dst_.createSameSize(src_, CV_MAKETYPE(ddepth, src_.channels()));
+
+    cv::UMat tmpDst = dst_.getUMat();
+    cv::UMat tmpSrc = src_.getUMat();
+    ocl::OpenCLExecutionContext& currentExecCtx = ocl::OpenCLExecutionContext::getCurrent();
+    std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxSrc = std::static_pointer_cast<ocl::OpenCLExecutionContext>(tmpSrc.u && tmpSrc.u->allocatorContext ? std::static_pointer_cast<ocl::OpenCLExecutionContext>(tmpSrc.u->allocatorContext) : nullptr);
+    std::shared_ptr<ocl::OpenCLExecutionContext> pExecCtxDst = std::static_pointer_cast<ocl::OpenCLExecutionContext>(tmpDst.u && tmpDst.u->allocatorContext ? std::static_pointer_cast<ocl::OpenCLExecutionContext>(tmpDst.u->allocatorContext) : nullptr);
+
+    cv::UMat src;
+    cv::UMat dst;
+
+    CV_Assert(!currentExecCtx.empty());
+    if((!pExecCtxSrc || pExecCtxSrc->empty()) || pExecCtxSrc->getContext().ptr() != currentExecCtx.getContext().ptr()) {
+        ocl::OpenCLExecutionContextScope scope(currentExecCtx);
+        src_.copyTo(src);
+    } else {
+        src = tmpSrc;
+    }
+
+    if((!pExecCtxDst || pExecCtxDst->empty()) || pExecCtxDst->getContext().ptr() != currentExecCtx.getContext().ptr()) {
+        ocl::OpenCLExecutionContextScope scope(currentExecCtx);
+        tmpDst.copyTo(dst);
+    } else {
+        dst = tmpDst;
+    }
+
+    ocl::OpenCLExecutionContextScope scope(currentExecCtx);
+
     CV_Assert(ddepth >= 0);
 
     int stype = src_.type();
@@ -219,10 +247,6 @@ static bool ocl_convertTo(InputArray src_, OutputArray dst_, int ddepth, bool no
 
     if (k.empty())
         return false;
-
-    UMat src = src_.getUMat();
-    dst_.createSameSize(src_, dtype);
-    UMat dst = dst_.getUMat();
 
     float alphaf = (float)alpha, betaf = (float)beta;
 
@@ -270,6 +294,8 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
         copyTo(dst);
         return;
     }
+
+
 
     CV_OCL_RUN(dims <= 2 && dst.isUMat(),
                ocl_convertTo(*this, dst, ddepth, noScale, alpha, beta))

@@ -30,7 +30,7 @@ namespace cv
 //! @cond IGNORED
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
-
+/*
 #if (__EMSCRIPTEN_major__ * 1000000 + __EMSCRIPTEN_minor__ * 1000 + __EMSCRIPTEN_tiny__) < (1038046)
 // handle renames: https://github.com/emscripten-core/emscripten/pull/9440 (https://github.com/emscripten-core/emscripten/commit/755d5b46cb84d0aa120c10981b11d05646c29673)
 #define wasm_i32x4_trunc_saturate_f32x4 wasm_trunc_saturate_i32x4_f32x4
@@ -42,7 +42,7 @@ CV_CPU_OPTIMIZATION_HAL_NAMESPACE_BEGIN
 #define wasm_f64x2_convert_i64x2 wasm_convert_f64x2_i64x2
 #define wasm_f64x2_convert_u64x2 wasm_convert_f64x2_u64x2
 #endif // COMPATIBILITY: <1.38.46
-
+*/
 ///////// Types ///////////
 
 struct v_uint8x16
@@ -1271,6 +1271,7 @@ OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint8x16, v_sub_wrap, wasm_i8x16_sub)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int8x16, v_sub_wrap, wasm_i8x16_sub)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint16x8, v_sub_wrap, wasm_i16x8_sub)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int16x8, v_sub_wrap, wasm_i16x8_sub)
+/*
 #if (__EMSCRIPTEN_major__ * 1000000 + __EMSCRIPTEN_minor__ * 1000 + __EMSCRIPTEN_tiny__) >= (1039012)
 // details: https://github.com/opencv/opencv/issues/18097 ( https://github.com/emscripten-core/emscripten/issues/12018 )
 // 1.39.12: https://github.com/emscripten-core/emscripten/commit/cd801d0f110facfd694212a3c8b2ed2ffcd630e2
@@ -1293,9 +1294,10 @@ inline v_int8x16 v_mul_wrap(const v_int8x16& a, const v_int8x16& b)
     return v_int8x16(wasm_v128_load(a_));
 }
 #else
-OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint8x16, v_mul_wrap, wasm_i8x16_mul)
-OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int8x16, v_mul_wrap, wasm_i8x16_mul)
+OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint8x16, v_mul_wrap, wasm_v8x16_mul)
+OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int8x16, v_mul_wrap, wasm_v8x16_mul)
 #endif
+*/
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_uint16x8, v_mul_wrap, wasm_i16x8_mul)
 OPENCV_HAL_IMPL_WASM_BIN_FUNC(v_int16x8, v_mul_wrap, wasm_i16x8_mul)
 

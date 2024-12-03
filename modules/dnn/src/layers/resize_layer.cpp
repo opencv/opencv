@@ -106,14 +106,55 @@ public:
             scaleWidth = static_cast<float>(inputs[0].size[3]) / outWidth;
     }
 
+    void forward_ocl(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr)
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        std::vector<UMat> inputs, outputs, internals;
+        inputs_arr.getUMatVector(inputs);
+        outputs_arr.getUMatVector(outputs);
+        internals_arr.getUMatVector(internals);
+        if (outHeight == inputs[0].size[2] && outWidth == inputs[0].size[3])
+        {
+            // outputs[0] = inputs[0] doesn't work due to BlobManager optimizations
+
+            if (inputs[0].u != outputs[0].u)
+            {
+                inputs[0].copyTo(outputs[0]);
+            }
+            return;
+        }
+
+        UMat& inp = inputs[0];
+        UMat& out = outputs[0];
+        // INTER_LINEAR Resize mode does not support INT8 inputs
+        InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
+        for (size_t n = 0; n < inputs[0].size[0]; ++n)
+        {
+            for (size_t ch = 0; ch < inputs[0].size[1]; ++ch)
+            {
+                UMat src = getPlane(inp, n, ch);
+                UMat dst = getPlane(out, n, ch);
+                resize(src, dst, Size(outWidth, outHeight), 0, 0, mode);
+            }
+        }
+    }
+
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-
-        if (inputs_arr.depth() == CV_16F)
+	int depth = inputs_arr.depth();
+        if (depth == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
+        if ((interpolation == "nearest" && !alignCorners && !halfPixelCenters) || (interpolation == "opencv_linear" && depth != CV_8S) ||
+            (interpolation == "bilinear" && halfPixelCenters && depth != CV_8S))
+        {
+            forward_ocl(inputs_arr, outputs_arr, internals_arr);
             return;
         }
 
@@ -134,22 +175,8 @@ public:
 
         Mat& inp = inputs[0];
         Mat& out = outputs[0];
-        int depth = inp.depth();
-        if ((interpolation == "nearest" && !alignCorners && !halfPixelCenters) || (interpolation == "opencv_linear" && depth != CV_8S) ||
-            (interpolation == "bilinear" && halfPixelCenters && depth != CV_8S))
-        {
-            // INTER_LINEAR Resize mode does not support INT8 inputs
-            InterpolationFlags mode = interpolation == "nearest" ? INTER_NEAREST : INTER_LINEAR;
-            for (size_t n = 0; n < inputs[0].size[0]; ++n)
-            {
-                for (size_t ch = 0; ch < inputs[0].size[1]; ++ch)
-                {
-                    resize(getPlane(inp, n, ch), getPlane(out, n, ch),
-                           Size(outWidth, outHeight), 0, 0, mode);
-                }
-            }
-        }
-        else if (interpolation == "nearest")
+
+        if (interpolation == "nearest")
         {
             const int inpHeight = inp.size[2];
             const int inpWidth = inp.size[3];

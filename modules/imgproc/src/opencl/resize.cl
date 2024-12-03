@@ -220,6 +220,49 @@ __kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offs
     }
 }
 
+#elif defined INTER_LINEAR_EXACT
+
+#define FIXED_POINT_BITS 16
+#define FIXED_POINT_SCALE (1 << FIXED_POINT_BITS)
+
+// Fixed-point multiply
+#define FIXED_MUL(a, b) (((a) * (b)) >> FIXED_POINT_BITS)
+
+__kernel void resizeLN(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,
+                       __global uchar * dstptr, int dst_step, int dst_offset, int dst_rows, int dst_cols,
+                       __global const uchar * buffer)
+{
+    int dx = get_global_id(0);
+    int dy = get_global_id(1);
+
+    if (dx < dst_cols && dy < dst_rows)
+    {
+        __global const int * xofs = (__global const int *)(buffer), * yofs = xofs + dst_cols;
+        __global const short * ialpha = (__global const short *)(yofs + dst_rows);
+        __global const short * ibeta = ialpha + ((dst_cols + dy) << 1);
+        ialpha += dx << 1;
+
+        int sx0 = xofs[dx], sy0 = clamp(yofs[dy], 0, src_rows - 1),
+        sy1 = clamp(yofs[dy] + 1, 0, src_rows - 1);
+        short a0 = ialpha[0], a1 = ialpha[1];
+        short b0 = ibeta[0], b1 = ibeta[1];
+
+        int src_index0 = mad24(sy0, src_step, mad24(sx0, TSIZE, src_offset)),
+        src_index1 = mad24(sy1, src_step, mad24(sx0, TSIZE, src_offset));
+        WT data0 = convertToWT(loadpix(srcptr + src_index0));
+        WT data1 = convertToWT(loadpix(srcptr + src_index0 + TSIZE));
+        WT data2 = convertToWT(loadpix(srcptr + src_index1));
+        WT data3 = convertToWT(loadpix(srcptr + src_index1 + TSIZE));
+
+        WT val = ( (((data0 * a0 + data1 * a1) >> 4) * b0) >> 16) +
+                 ( (((data2 * a0 + data3 * a1) >> 4) * b1) >> 16);
+
+        storepix(convertToDT((val + 2) >> 2),
+                 dstptr + mad24(dy, dst_step, mad24(dx, TSIZE, dst_offset)));
+    }
+}
+
+
 #elif defined INTER_NEAREST
 
 __kernel void resizeNN(__global const uchar * srcptr, int src_step, int src_offset, int src_rows, int src_cols,

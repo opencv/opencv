@@ -1,54 +1,448 @@
-/* The standard CSS for doxygen 1.8.6 */
-
-body, table, div, p, dl {
-    font: 400 14px/22px Helvetica, 'Segoe UI', Arial, freesans, sans-serif;
-    word-wrap: break-word;
+h1, .h1, h2, .h2, h3, .h3{
+    font-weight: 200 !important;
 }
 
-code {
-    font-size: 85%;
-    font-family: "SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace;
-    white-space: pre-wrap;
-    padding: 1px 5px;
-    background-color: rgb(223, 229, 241);
-    vertical-align: baseline;
+#navrow1, #navrow2, #navrow3, #navrow4, #navrow5{
+    border-bottom: 1px solid #EEEEEE;
 }
 
+* {
+  max-width: 90vw;
+}
+
+.adjust-right {
+margin-left: 30px !important;
+font-size: 1.725em !important;
+}
+
+table.markdownTable {
+    width: 100%;
+    max-width: 350px;
+}
+
+.markdownTableBodyRight {
+    white-space: nowrap;
+}
+
+#MSearchBox {
+display: none;
+}
+#nav-path {
+display: none;
+}
+
+#main-nav {
+display: none;
+}
+
+#main-menu-state {
+display: none;
+}
+
+.main-menu-btn {
+display: none;
+}
+
+.navbar{
+ border: 0px solid #222 !important;
+}
+table{
+    white-space:pre-wrap !important;
+}
+/*
+ ===========================
+ */
+
+
+/* Sticky footer styles
+-------------------------------------------------- */
+html,
 body {
-    background-image: url(bodybg.png);
-    margin: 0 auto;
+    height: 100%;
+    /* The html and body elements cannot have any padding or margin. */
+}
+
+/* Wrapper for page content to push down footer */
+#wrap {
+    min-height: 100%;
+    height: auto;
+    /* Negative indent footer by its height */
+    margin: 0 auto -60px;
+    /* Pad bottom by footer height */
+    padding: 0 0 60px;
+}
+
+/* Set the fixed height of the footer here */
+#footer {
+    font-size: 1.35em;
+    padding: 8px 0px;
+    background-color: #f5f5f5;
+}
+
+.footer-row {
+    line-height: 44px;
+}
+
+#footer > .container {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.footer-follow-icon {
+    margin-left: 3px;
+    text-decoration: none !important;
+}
+
+.footer-follow-icon img {
+    width: 20px;
+}
+
+.footer-link {
+    padding-top: 5px;
+    display: inline-block;
+    color: #999999;
+    text-decoration: none;
+}
+
+.footer-copyright {
+    text-align: center;
+}
+
+
+@media (any-pointer: fine) {
+    .footer-row {
+        text-align: left;
+    }
+
+    .footer-icons {
+        text-align: right;
+    }
+
+    div.toc {
+        width: 300px;
+    }
+
+    div.toc li {
+        font-size: 14px;
+    }
+
+    div.line {
+        font-size: 14px;
+    }
+    body, table, div, p, dl {
+        font-weight: 400;
+        font-size: 16px;
+        line-height: 24px;
+        width: 90vw;
+    }
+
+    canvas {
+        max-width: 90vw;
+    }
+}
+@media (any-pointer: coarse) {
+    .footer-row {
+        text-align: center;
+    }
+
+    .footer-icons {
+        text-align: center;
+    }
+
+    div.toc {
+        width: 90vw;
+    }
+
+    div.line {
+        font-size: 18px;
+    }
+
+    div.toc li {
+        font-size: 16px;
+    }
+
+    body, table, div, p, dl {
+        font-weight: 400;
+        font-size: 18px;
+        line-height: 26px;
+        width: 95vw;
+    }
+
+    canvas {
+        max-width: 90vw;
+    }
+}
+
+
+/* DOXYGEN Code Styles
+----------------------------------- */
+
+
+a.qindex {
+    font-weight: bold;
+}
+
+a.qindexHL {
+    font-weight: bold;
+    background-color: #9CAFD4;
+    color: #ffffff;
+    border: 1px double #869DCA;
+}
+
+.contents a.qindexHL:visited {
+    color: #ffffff;
+}
+
+a.code, a.code:visited, a.line, a.line:visited {
+    color: #4665A2;
+}
+
+a.codeRef, a.codeRef:visited, a.lineRef, a.lineRef:visited {
+    color: #4665A2;
+}
+
+/* @end */
+
+dl.el {
+    margin-left: -1cm;
+}
+
+pre.fragment {
+    border: 1px solid #C4CFE5;
+    background-color: #FBFCFD;
+    padding: 4px 6px;
+    margin: 4px 8px 4px 2px;
+    overflow: auto;
+    word-wrap: break-word;
+    font-size:  15pt;
+    line-height: 125%;
+    font-family: monospace, fixed;
+    font-size: 105%;
 }
 
 div.fragment {
-    padding: 3px;
-    padding-bottom: 0px;
+    padding: 4px 6px;
+    margin: 4px 8px 4px 2px;
+    border: 1px solid #C4CFE5;
 }
 
 div.line {
-    padding-bottom: 3px;
-    font-family: "SFMono-Regular",Consolas,"Liberation Mono",Menlo,Courier,monospace;
+    font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    min-height: 13px;
+    line-height: 1.0;
+    text-wrap: unrestricted;
+    white-space: -moz-pre-wrap; /* Moz */
+    white-space: -pre-wrap;     /* Opera 4-6 */
+    white-space: -o-pre-wrap;   /* Opera 7 */
+    white-space: pre-wrap;      /* CSS3  */
+    word-wrap: normal;      /* IE 5.5+ */
+    text-indent: -53px;
+    padding-left: 53px;
+    padding-bottom: 0px;
+    margin: 0px;
+    -webkit-transition-property: background-color, box-shadow;
+    -webkit-transition-duration: 0.5s;
+    -moz-transition-property: background-color, box-shadow;
+    -moz-transition-duration: 0.5s;
+    -ms-transition-property: background-color, box-shadow;
+    -ms-transition-duration: 0.5s;
+    -o-transition-property: background-color, box-shadow;
+    -o-transition-duration: 0.5s;
+    transition-property: background-color, box-shadow;
+    transition-duration: 0.5s;
+}
+div.line:hover{
+    background-color: #FBFF00;
 }
 
-div.contents {
-    width: 980px;
-    margin: 0 auto;
-    padding: 15px 15px;
-    border: 1px solid rgb(10, 80, 122);
-    background-color: #fff;
+div.line.glow {
+    background-color: cyan;
+    box-shadow: 0 0 10px cyan;
 }
 
-span.arrow {
-    height: 13px;
+
+span.lineno {
+    padding-right: 4px;
+    text-align: right;
+    color:rgba(0,0,0,0.3);
+    border-right: 1px solid #EEE;
+    border-left: 1px solid #EEE;
+    background-color: #FFF;
+    white-space: pre;
+    font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace ;
+}
+span.lineno a {
+    background-color: #FAFAFA;
+    cursor:pointer;
 }
 
-div.image img{
-    max-width: 900px;
+span.lineno a:hover {
+    background-color: #EFE200;
+    color: #1e1e1e;
 }
 
-#projectlogo
-{
-    text-align: center;
-    vertical-align: middle;
-    border-collapse: separate;
-    padding-left: 0.5em;
+div.groupHeader {
+    margin-left: 16px;
+    margin-top: 12px;
+    font-weight: bold;
+}
+
+div.groupText {
+    margin-left: 16px;
+    font-style: italic;
+}
+
+/* @group Code Colorization */
+
+span.keyword {
+    color: #008000
+}
+
+span.keywordtype {
+    color: #604020
+}
+
+span.keywordflow {
+    color: #e08000
+}
+
+span.comment {
+    color: #800000
+}
+
+span.preprocessor {
+    color: #806020
+}
+
+span.stringliteral {
+    color: #002080
+}
+
+span.charliteral {
+    color: #008080
+}
+
+span.vhdldigit {
+    color: #ff00ff
+}
+
+span.vhdlchar {
+    color: #000000
+}
+
+span.vhdlkeyword {
+    color: #700070
+}
+
+span.vhdllogic {
+    color: #ff0000
+}
+
+blockquote {
+    background-color: #F7F8FB;
+    border-left: 2px solid #9CAFD4;
+    margin: 0 24px 0 4px;
+    padding: 0 12px 0 16px;
+}
+
+/*---------------- Search Box */
+
+#search-box {
+  margin: 10px 0px;
+}
+#search-box .close {
+  display: none;
+  position: absolute;
+  right: 0px;
+  padding: 6px 12px;
+  z-index: 5;
+}
+
+/*---------------- Search results window */
+
+#search-results-window {
+  display: none;
+}
+
+iframe#MSearchResults {
+  width: 100%;
+  height: 15em;
+}
+
+.SRChildren {
+  padding-left: 3ex; padding-bottom: .5em
+}
+.SRPage .SRChildren {
+  display: none;
+}
+a.SRScope {
+  display: block;
+}
+a.SRSymbol:focus, a.SRSymbol:active,
+a.SRScope:focus, a.SRScope:active {
+  text-decoration: underline;
+}
+span.SRScope {
+  padding-left: 4px;
+}
+.SRResult {
+  display: none;
+}
+
+/* class and file list */
+.directory .icona,
+.directory .arrow {
+  height: auto;
+}
+.directory .icona .icon {
+  height: 16px;
+}
+.directory .icondoc {
+  background-position: 0px 0px;
+  height: 20px;
+}
+.directory .iconfopen {
+  background-position: 0px 0px;
+}
+.directory td.entry {
+  padding: 7px 8px 6px 8px;
+}
+
+.table > tbody > tr > td.memSeparator {
+  line-height: 0;
+  .table-hover;
+
+}
+
+.memItemLeft, .memTemplItemLeft {
+  white-space: normal;
+}
+
+/* enumerations */
+.panel-body thead > tr {
+  background-color: #e0e0e0;
+}
+
+/* todo lists */
+.todoname,
+.todoname a {
+  font-weight: bold;
+}
+
+/* Class title */
+.summary {
+  margin-top: 25px;
+}
+.page-header {
+  margin: 20px 0px !important;
+}
+.page-header .title {
+  display: inline-block;
+}
+.page-header .pull-right {
+  margin-top: 0.3em;
+  margin-left: 0.5em;
+}
+.page-header .label {
+  font-size: 50%;
 }
