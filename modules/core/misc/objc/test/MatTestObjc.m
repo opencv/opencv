@@ -7,6 +7,8 @@
 #import <XCTest/XCTest.h>
 #import <OpenCV/OpenCV.h>
 
+//NOTE: Type constants and related functions are ported from modules/core/include/opencv2/core/hal/interface.h
+
 #define CV_8U 0
 #define CV_8S 1
 #define CV_16U 2

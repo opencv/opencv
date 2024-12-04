@@ -568,10 +568,22 @@ template<typename T> void putData(uchar* dataDest, int count, T (^readData)(int)
         putData(dest, count, ^short (int index) { return cv::saturate_cast<short>(data[offset + index].doubleValue);} );
     } else if (depth == CV_32S) {
         putData(dest, count, ^int32_t (int index) { return cv::saturate_cast<int32_t>(data[offset + index].doubleValue);} );
+    } else if (depth == CV_32U) {
+        putData(dest, count, ^uint32_t (int index) { return cv::saturate_cast<uint32_t>(data[offset + index].doubleValue);} );
+    } else if (depth == CV_64U) {
+        putData(dest, count, ^uint64_t (int index) { return cv::saturate_cast<uint64_t>(data[offset + index].doubleValue);} );
+    } else if (depth == CV_64S) {
+        putData(dest, count, ^int64_t (int index) { return cv::saturate_cast<int64_t>(data[offset + index].doubleValue);} );
     } else if (depth == CV_32F) {
         putData(dest, count, ^float (int index) { return cv::saturate_cast<float>(data[offset + index].doubleValue);} );
     } else if (depth == CV_64F) {
         putData(dest, count, ^double (int index) { return data[offset + index].doubleValue;} );
+    } else if (depth == CV_Bool) {
+        putData(dest, count, ^double (int index) { return data[offset + index].boolValue;} );
+    } else if (depth == CV_16F || depth == CV_16BF) {
+        @throw [NSException exceptionWithName:@"NotImplementedError"
+                                    reason:@"Can not put data to Mat with CV_16F or CV_16BF underlying type."
+                                    userInfo:nil];
     }
 }
 
