@@ -121,7 +121,7 @@ TEST(Imgcodecs_WebP, load_save_animation)
 
     // Set the path to the test image directory and filename for loading.
     const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "readwrite/opencv-logo-white.png";
+    const string filename = root + "pngsuite/tp1n3p08.png";
 
     // Create an Animation object using the default constructor.
     // This initializes the loop count to 0 (infinite looping), background color to 0 (transparent)
@@ -140,10 +140,10 @@ TEST(Imgcodecs_WebP, load_save_animation)
     int timestamp = 100;
     s_animation.timestamps.push_back(timestamp * 5);
     s_animation.frames.push_back(image.clone());  // Store the first frame.
-    putText(s_animation.frames[0], "Frame 0", Point(30, 185), FONT_HERSHEY_SIMPLEX, .6, Scalar(255, 100, 0, 255), 2);
+    putText(s_animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
 
     // Define a region of interest (ROI) in the loaded image for manipulation.
-    Mat roi = image(Rect(0, 185, 178, 53));  // Select a subregion of the image.
+    Mat roi = image(Rect(0, 16, 32, 16));  // Select a subregion of the image.
 
     // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
     for (int i = 1; i < 14; i++)
@@ -153,16 +153,16 @@ TEST(Imgcodecs_WebP, load_save_animation)
             {
                 // Apply random changes to pixel values to create animation variations.
                 Vec4b& pixel = roi.at<Vec4b>(x, y);
-                if (pixel[0] > 220) pixel[0] -= (uchar)rng.uniform(2, 10);  // Reduce blue channel.
-                if (pixel[1] > 220) pixel[1] -= (uchar)rng.uniform(2, 10);  // Reduce green channel.
-                if (pixel[2] > 220) pixel[2] -= (uchar)rng.uniform(2, 10);  // Reduce red channel.
+                if (pixel[0] > 50) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
+                if (pixel[1] > 50) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
+                if (pixel[2] > 50) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
                 if (pixel[3] > 150) pixel[3] -= (uchar)rng.uniform(2, 10);  // Reduce alpha channel.
             }
 
         // Update the timestamp and add the modified frame to the animation.
         timestamp += rng.uniform(2, 10);  // Increment timestamp with random value.
         s_animation.frames.push_back(image.clone());
-        putText(s_animation.frames[i], format("Frame %d", i), Point(30, 185), FONT_HERSHEY_SIMPLEX, .6, Scalar(255, 100, 0, 255), 2);
+        putText(s_animation.frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
         s_animation.timestamps.push_back(timestamp);
     }
 
