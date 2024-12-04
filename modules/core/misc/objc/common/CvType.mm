@@ -43,14 +43,19 @@
     switch (depth) {
         case CV_8U:
         case CV_8S:
+        case CV_Bool:
             return 8;
         case CV_16U:
         case CV_16S:
         case CV_16F:
+        case CV_16BF:
             return 16;
         case CV_32S:
+        case CV_32U:
         case CV_32F:
             return 32;
+        case CV_64U:
+        case CV_64S:
         case CV_64F:
             return 64;
         default:
@@ -71,12 +76,16 @@
     switch (depth) {
         case CV_8U:
         case CV_16U:
+        case CV_32U:
+        case CV_64U:
             return 'U';
         case CV_8S:
         case CV_16S:
         case CV_32S:
+        case CV_64S:
             return 'S';
         case CV_16F:
+        case CV_16BF:
         case CV_32F:
         case CV_64F:
             return 'F';
