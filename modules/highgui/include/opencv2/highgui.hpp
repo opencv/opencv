@@ -125,10 +125,12 @@ It provides easy interface to:
         cv::createTrackbar("Twin brother", windowName, &state, 100, callbackTwin);
     }
     @endcode
-
-    @note In modern usage, it is recommended to pass `nullptr` for the value pointer if you do not need
-    to update it directly. Instead, handle the trackbar position manually in the callback function.
-    See the updated trackbar tutorial for more details    
+    @note In modern usage, it is recommended to pass nullptr as the value pointer 
+    if you do not need OpenCV to automatically update a variable when the trackbar 
+    position changes. Instead, you can "handle manually" by writing code within the
+    callback function to retrieve and act on the trackbar's current position using 
+    the cv::getTrackbarPos() function.
+    See the updated trackbar tutorial for detailed examples.    
 @}
 */
 
@@ -540,7 +542,11 @@ Clicking the label of each trackbar enables editing the trackbar values manually
              Pass `nullptr` if the value pointer is not used. In this case, manually handle
              the trackbar position in the callback function.
 @param count Maximum position of the trackbar.
-@param onChange Pointer to the function to be called when the value changes.
+@param onChange Pointer to the function to be called every time the slider changes position.
+This function should have the prototype void Foo(int, void\*);, where the first parameter is
+the trackbar position, and the second parameter is the user data (see the next parameter).
+If the callback is a nullptr, no callbacks are called, but the trackbar's value will still be
+updated automatically.
 @param userdata Optional user data that is passed to the callback.
 
 @note If the value pointer is `nullptr`, the trackbar position must be manually managed.
