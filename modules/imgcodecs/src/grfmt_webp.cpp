@@ -446,12 +446,20 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
     pic.argb_stride = width;
     WebPEncode(&config, &pic);
 
+    bool is_input_rgba = animation.frames[0].channels() == 4;
     Size canvas_size = Size(animation.frames[0].cols,animation.frames[0].rows);
 
     for (size_t i = 0; i < animation.frames.size(); i++)
     {
+        Mat argb;
         CV_Assert(canvas_size == Size(animation.frames[i].cols,animation.frames[i].rows));
-        pic.argb = (uint32_t*)animation.frames[i].data;
+        if (is_input_rgba)
+            pic.argb = (uint32_t*)animation.frames[i].data;
+        else
+        {
+            cvtColor(animation.frames[i], argb, COLOR_BGR2BGRA);
+            pic.argb = (uint32_t*)argb.data;
+        }
         ok = WebPAnimEncoderAdd(anim_encoder.get(), &pic, timestamp, &config);
         timestamp += animation.timestamps[i];
     }
