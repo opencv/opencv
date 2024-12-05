@@ -390,6 +390,7 @@ reid:
     sha1: "d4316b100db40f8840aa82626e1cf3f519a7f1ae"
   model: "person_reid_youtu_2021nov.onnx"
   yolo_load_info:
+    yolo_url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
     yolo_sha1: "68f864475d06e2ec4037181052739f268eeac38d"
   yolo_model: "yolov8n.onnx"
   mean: [0.485, 0.456, 0.406]
@@ -403,3 +404,40 @@ reid:
   rgb: false
   yolo_rgb: true
   sample: "person_reid"
+
+################################################################################
+# Tracker models.
+################################################################################
+
+vit:
+  load_info:
+    url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_vittrack/object_tracking_vittrack_2023sep.onnx"
+    sha1: "50008bb4f6a27b1aa940ad886b1bd1936ac4ed3e"
+  model: "object_tracking_vittrack_2023sep.onnx"
+  sample: "object_tracker"
+
+nanotrack:
+  nanotrack_head_load_info:
+    nanotrack_head_url: "https://github.com/HonglinChu/SiamTrackers/raw/refs/heads/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx"
+    nanotrack_head_sha1: "39f168489671700cf739e402dfc67d41ce648aef"
+  nanotrack_head_model: "nanotrack_head_sim.onnx"
+  nanotrack_back_load_info:
+    nanotrack_back_url: "https://github.com/HonglinChu/SiamTrackers/raw/refs/heads/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx"
+    nanotrack_back_sha1: "6e773a364457b78574f9f63a23b0659ee8646f8f"
+  nanotrack_back_model: "nanotrack_backbone_sim.onnx"
+  sample: "object_tracker"
+
+dasiamrpn:
+  dasiamrpn_load_info:
+    dasiamrpn_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_model_2021nov.onnx?download="
+    dasiamrpn_sha1: "91b774fce7df4c0e4918469f0f482d9a27d0e2d4"
+  dasiamrpn_model: "object_tracking_dasiamrpn_model_2021nov.onnx"
+  dasiamrpn_kernel_r1_load_info:
+    dasiamrpn_kernel_r1_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_kernel_r1_2021nov.onnx?download="
+    dasiamrpn_kernel_r1_sha1: "bb64620a54348657133eb28be2d3a2a8c76b84b3"
+  dasiamrpn_kernel_r1_model: "object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx"
+  dasiamrpn_kernel_cls_load_info:
+    dasiamrpn_kernel_cls_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx?download="
+    dasiamrpn_kernel_cls_sha1: "e9ccd270ce8059bdf7ed0d1845c03ef4a951ee0f"
+  dasiamrpn_kernel_cls_model: "object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx"
+  sample: "object_tracker"
