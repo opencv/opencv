@@ -38,6 +38,7 @@ import numpy as np
 import tiktoken
 import argparse
 import cv2 as cv
+from tqdm import tqdm
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Use this script to run GPT-2 inference in OpenCV',
@@ -58,13 +59,17 @@ def gpt2_inference(net, tokens, max_length, num_return_sequences=5):
 
     print("Inferencing GPT-2 model...")
     x = np.array(tokens)
-    x = np.tile(x, (num_return_sequences, 1))
+    x = np.tile(x, (num_return_sequences, 1)).astype(np.int32)
+    pos = np.arange(0, len(x), dtype=np.int32)
 
-    output_buffer = deepcopy(x)
     counter = x.shape[1]
+    pbar = tqdm(total=max_length - counter, desc="Generating tokens")
     while counter < max_length:
 
-        net.setInput(x)
+        net.setInputsNames(['input_ids', 'position_ids'])
+        net.setInput(x, 'input_ids')
+        net.setInput(pos, 'position_ids')
+
         logits = net.forward()
 
         # logits is assumed to be (B, seq_length, vocab_size) and needs to be the last token's logits
@@ -86,12 +91,14 @@ def gpt2_inference(net, tokens, max_length, num_return_sequences=5):
 
         # Append to the sequence
         x = np.concatenate((x, sampled_indices), axis=1)
-        x = x[:, 1:] ## issue due to fixes size window in opencv
+        pos = np.arange(0, x.shape[1], dtype=np.int32) # shape (T)
 
-        output_buffer = np.concatenate((output_buffer, sampled_indices), axis=1)
         counter += 1
+        pbar.update(1)
+
+    pbar.close()
     print("Inference done!")
-    return output_buffer
+    return x
 
 if __name__ == '__main__':
 
@@ -102,24 +109,13 @@ if __name__ == '__main__':
     prompt = args.prompt
 
     net = cv.dnn.readNet(args.model)
-    input_token_size = net.getLayerShapes([], 0, 0)[0][0][1]
 
     enc = tiktoken.get_encoding('gpt2')
     tokens = enc.encode(prompt)
 
-    # Check if the prompt is of the same length as the input tokens
-    # if not, pad the tokens else truncate the tokens
-    if len(tokens) > input_token_size:
-        tokens = tokens[:input_token_size]
-    elif len(tokens) < input_token_size:
-        tokens2pad = input_token_size - len(tokens)
-        # append <space> token to the prompt
-        tokens += [220] * tokens2pad
-
-
-    output_buffer = gpt2_inference(net, tokens, max_length, num_return_sequences)
+    output = gpt2_inference(net, tokens, max_length, num_return_sequences)
 
     for i in range(num_return_sequences):
-        tokens = output_buffer[i, :max_length].tolist()
+        tokens = output[i].tolist()
         decoded = enc.decode(tokens)
         print(">>>>", decoded)
