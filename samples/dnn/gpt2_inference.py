@@ -10,7 +10,7 @@ To export GPT-2 model to ONNX, you can use the following procedure:
 
 1. Clone fork of Andrej Karpathy's GPT-2 repository:
 
-    git clone https://github.com/Abdurrahheem/build-nanogpt/tree/ash/export-gpt2-onnx
+    git clone https://github.com/Abdurrahheem/build-nanogpt/tree/ash/export-gpt2-onnx-dynamic
 
 2. Install the required dependencies:
 
@@ -18,22 +18,20 @@ To export GPT-2 model to ONNX, you can use the following procedure:
 
 3  Export the model to ONNX:
 
-    python export2onnx.py --promt=<Any-promt-you-want> --batch_size=<batch-size>
+    python export2onnx.py --promt=<Any-promt-you-want>
 
 
 Run the script:
 1. Install the required dependencies:
 
-    pip install tiktoken==0.7.0
+    pip install tiktoken==0.7.0, numpy, tqdm
 
 2. Run the script:
-
-    python gpt2_inference.py --model=<path-to-onnx-model> --max_seq_len=<max-output-lenght> --batch_size=<use-one-used-while-exportinh> --prompt=<use-promt-of-the-same-length-used-while-exporting>
+    python gpt2_inference.py --model=<path-to-onnx-model>  --prompt=<use-promt-of-the-same-length-used-while-exporting>
 '''
 
 
 
-from copy import deepcopy
 import numpy as np
 import tiktoken
 import argparse
@@ -44,9 +42,9 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Use this script to run GPT-2 inference in OpenCV',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, required=True, help='Path to GPT-2 model ONNX model file.')
-    parser.add_argument("--max_seq_len", type=int, default=30, help="Number of tokens to continue.")
-    parser.add_argument("--batch_size", type=int, default=5, help="Number of batches.")
     parser.add_argument("--prompt", type=str, default="Hello, I'm a language model,", help="Prompt to start with.")
+    parser.add_argument("--max_seq_len", type=int, default=40, help="Number of tokens to continue.")
+    parser.add_argument("--batch_size", type=int, default=1, help="Number of batches.")
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     return parser.parse_args()
 
@@ -55,7 +53,7 @@ def stable_softmax(logits):
     return exp_logits / np.sum(exp_logits, axis=-1, keepdims=True)
 
 
-def gpt2_inference(net, tokens, max_length, num_return_sequences=5):
+def gpt2_inference(net, tokens, max_length, num_return_sequences=1):
 
     print("Inferencing GPT-2 model...")
     x = np.array(tokens)
