@@ -895,7 +895,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
 
     size_t esz = CV_ELEM_SIZE(_type), esz1 = CV_ELEM_SIZE1(_type);
     size_t minstep = cols*esz;
-    if( _step == AUTO_STEP )
+    if( _step == AUTO_STEP || (_step < minstep && rows == 1))
     {
         _step = minstep;
     }
