@@ -962,7 +962,11 @@ static ushort LabCbrtTab_b[LAB_CBRT_TAB_SIZE_B];
 
 static const bool enableBitExactness = true;
 static const bool enableRGB2LabInterpolation = true;
+
+#if CV_SIMD
 static const bool enablePackedLab = true;
+#endif
+
 enum
 {
     lab_lut_shift = 5,
@@ -979,8 +983,12 @@ static const int minABvalue = -8145;
 static const int *abToXZ_b;
 // Luv constants
 static const bool enableRGB2LuvInterpolation = true;
+
+#if CV_SIMD
 static const bool enablePackedRGB2Luv = true;
 static const bool enablePackedLuv2RGB = true;
+#endif
+
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
 
@@ -1381,7 +1389,7 @@ static inline void trilinearInterpolate(int cx, int cy, int cz, const int16_t* L
     c = CV_DESCALE(c, trilinear_shift*3);
 }
 
-#if CV_SIMD_WIDTH == 16
+#if (CV_SIMD && CV_SIMD_WIDTH == 16)
 
 // 8 inValues are in [0; LAB_BASE]
 static inline void trilinearPackedInterpolate(const v_uint16x8& inX, const v_uint16x8& inY, const v_uint16x8& inZ,
