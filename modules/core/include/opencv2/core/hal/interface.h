@@ -13,9 +13,11 @@
 
 #ifdef __cplusplus
 #include <cstddef>
+#include <cstdint>
 #else
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdint.h>
 #endif
 
 //! @name Data types
@@ -29,43 +31,19 @@
 //! - int64  - signed 8 byte integer
 //! - uint64 - unsigned 8 byte integer
 //! @{
-#if !defined _MSC_VER && !defined __BORLANDC__
-#  if defined __cplusplus && __cplusplus >= 201103L && !defined __APPLE__
-#    include <cstdint>
-#    ifdef __NEWLIB__
-        typedef unsigned int uint;
-#    else
-        typedef std::uint32_t uint;
-#    endif
-#  else
-#    include <stdint.h>
-     typedef uint32_t uint;
-#  endif
-#else
-   typedef unsigned uint;
-#endif
+typedef int8_t schar;
+typedef uint8_t uchar;
+typedef uint16_t ushort;
+typedef uint32_t uint;
+typedef int64_t int64;
+typedef uint64_t uint64;
 
-typedef signed char schar;
+#define CV_BIG_INT(n)   n##LL
+#define CV_BIG_UINT(n)  n##ULL
 
-#ifndef __IPL_H__
-   typedef unsigned char uchar;
-   typedef unsigned short ushort;
-#endif
-
-#if defined _MSC_VER || defined __BORLANDC__
-   typedef __int64 int64;
-   typedef unsigned __int64 uint64;
-#  define CV_BIG_INT(n)   n##I64
-#  define CV_BIG_UINT(n)  n##UI64
-#else
-   typedef int64_t int64;
-   typedef uint64_t uint64;
-#  define CV_BIG_INT(n)   n##LL
-#  define CV_BIG_UINT(n)  n##ULL
-#endif
-
-typedef short cv_hal_f16;
-typedef short cv_hal_bf16;
+typedef int16_t cv_hal_f16;
+typedef int16_t cv_hal_bf16;
+//! @}
 
 #define CV_USRTYPE1 (void)"CV_USRTYPE1 support has been dropped in OpenCV 4.0"
 
@@ -173,8 +151,6 @@ typedef short cv_hal_bf16;
 #define CV_16BFC3 CV_MAKETYPE(CV_16BF,3)
 #define CV_16BFC4 CV_MAKETYPE(CV_16BF,4)
 #define CV_16BFC(n) CV_MAKETYPE(CV_16BF,(n))
-
-//! @}
 
 //! @name Comparison operation
 //! @sa cv::CmpTypes
