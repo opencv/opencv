@@ -49,15 +49,15 @@ protected:
     int                 top, left, width, height;
 
     bool                hasRead;
-    AutoBuffer<uchar>   globalColorTable;
-    AutoBuffer<uchar>   localColorTable;
+    std::vector<uchar>  globalColorTable;
+    std::vector<uchar>  localColorTable;
 
     int                 lzwMinCodeSize;
     int                 globalColorTableSize;
     int                 localColorTableSize;
 
     Mat                 lastImage;
-    AutoBuffer<uchar>   imgCodeStream;
+    std::vector<uchar>  imgCodeStream;
 
     struct lzwNodeD
     {
@@ -151,11 +151,11 @@ private:
     OctreeColorQuant quantG;
     OctreeColorQuant quantL;
 
-    AutoBuffer<int16_t>   lzwTable;
-    AutoBuffer<uchar> imgCodeStream;
+    std::vector<int16_t> lzwTable;
+    std::vector<uchar> imgCodeStream;
 
-    AutoBuffer<uchar> globalColorTable;
-    AutoBuffer<uchar> localColorTable;
+    std::vector<uchar> globalColorTable;
+    std::vector<uchar> localColorTable;
 
     // params
     int             loopCount;

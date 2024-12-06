@@ -4,6 +4,7 @@
 #include "test_precomp.hpp"
 
 namespace opencv_test { namespace {
+
 const string gifsuite_files_multi[]={
         "basi3p01",
         "basi3p02",
@@ -26,6 +27,7 @@ const string gifsuite_files_multi[]={
         "s32n3p04",
         "tp0n3p08",
 };
+
 const string gifsuite_files_read_single[] = {
     "basi3p01",
     "basi3p02",
@@ -56,6 +58,7 @@ const string gifsuite_files_read_single[] = {
     "g10n2c08",
     "g10n3p04"
 };
+
 const string gifsuite_files_read_write_suite[]={
     "g25n2c08",
     "g25n3p04",
@@ -97,6 +100,7 @@ const string gifsuite_files_read_write_suite[]={
     "s40n3p04",
     "tp0n3p08",
 };
+
 const std::pair<string,int> gifsuite_files_bgra[]={
         make_pair("gif_bgra1",53287),
         make_pair("gif_bgra2",52651),
@@ -105,6 +109,7 @@ const std::pair<string,int> gifsuite_files_bgra[]={
         make_pair("gif_bgra5",56733),
         make_pair("gif_bgra6",52110),
 };
+
 TEST(Imgcodecs_Gif, read_gif_multi)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -129,26 +134,31 @@ TEST(Imgcodecs_Gif, read_gif_multi)
         EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_png);
     }
 }
+
 typedef testing::TestWithParam<string> Imgcodecs_Gif_GifSuite_SingleFrame;
-TEST_P(Imgcodecs_Gif_GifSuite_SingleFrame,read_gif_single)
+
+TEST_P(Imgcodecs_Gif_GifSuite_SingleFrame, read_gif_single)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "gifsuite/" + GetParam() + ".gif";
     const string png_filename=root + "pngsuite/" + GetParam() + ".png";
     const long unsigned int expected_size = 1;
+
     EXPECT_EQ(expected_size, imcount(filename));
     cv::Mat img_8UC4;
-    ASSERT_NO_THROW(img_8UC4 = cv::imread(filename,IMREAD_UNCHANGED));
+    ASSERT_NO_THROW(img_8UC4 = cv::imread(filename, IMREAD_UNCHANGED));
     ASSERT_FALSE(img_8UC4.empty());
     cv::Mat img_8UC3;
-    ASSERT_NO_THROW(cvtColor(img_8UC4,img_8UC3,COLOR_BGRA2BGR));
+    ASSERT_NO_THROW(cvtColor(img_8UC4, img_8UC3, COLOR_BGRA2BGR));
     cv::Mat img_png;
-    ASSERT_NO_THROW(img_png = cv::imread(png_filename,IMREAD_UNCHANGED));
+    ASSERT_NO_THROW(img_png = cv::imread(png_filename, IMREAD_UNCHANGED));
     ASSERT_FALSE(img_png.empty());
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img_8UC3, img_png);
 }
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Gif_GifSuite_SingleFrame,
                         testing::ValuesIn(gifsuite_files_read_single));
+
 TEST(Imgcodecs_Gif, read_gif_big){
     const string root = cvtest::TS::ptr()->get_data_path();
     const string gif_filename = root + "gifsuite/gif_big.gif";
@@ -161,32 +171,34 @@ TEST(Imgcodecs_Gif, read_gif_big){
     const int expected_row=1391;
     EXPECT_EQ(expected_col, img_8UC4.cols);
     EXPECT_EQ(expected_row, img_8UC4.rows);
-    ASSERT_NO_THROW(cvtColor(img_8UC4,img_8UC3,COLOR_BGRA2BGR));
+    ASSERT_NO_THROW(cvtColor(img_8UC4, img_8UC3,COLOR_BGRA2BGR));
     EXPECT_EQ(expected_col, img_8UC3.cols);
     EXPECT_EQ(expected_row, img_8UC3.rows);
     cv::Mat img_png;
-    ASSERT_NO_THROW(img_png=imread(png_filename,IMREAD_UNCHANGED));
+    ASSERT_NO_THROW(img_png=imread(png_filename, IMREAD_UNCHANGED));
     ASSERT_FALSE(img_png.empty());
     cv::Mat img_png_8UC3;
-    ASSERT_NO_THROW(cvtColor(img_png,img_png_8UC3,COLOR_BGRA2BGR));
-    EXPECT_EQ(img_8UC3.size,img_png_8UC3.size);
+    ASSERT_NO_THROW(cvtColor(img_png,img_png_8UC3, COLOR_BGRA2BGR));
+    EXPECT_EQ(img_8UC3.size, img_png_8UC3.size);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img_8UC3, img_png_8UC3);
 }
+
 typedef testing::TestWithParam<std::pair<string,int>> Imgcodecs_Gif_GifSuite_SingleFrame_BGRA;
-TEST_P(Imgcodecs_Gif_GifSuite_SingleFrame_BGRA , read_gif_single_bgra){
+
+TEST_P(Imgcodecs_Gif_GifSuite_SingleFrame_BGRA, read_gif_single_bgra){
     const string root = cvtest::TS::ptr()->get_data_path();
     const string gif_filename = root + "gifsuite/" + GetParam().first + ".gif";
     const string png_filename = root + "gifsuite/" + GetParam().first + ".png";
     cv::Mat gif_img;
     cv::Mat png_img;
-    ASSERT_NO_THROW(gif_img = cv::imread(gif_filename,IMREAD_UNCHANGED));
+    ASSERT_NO_THROW(gif_img = cv::imread(gif_filename, IMREAD_UNCHANGED));
     ASSERT_FALSE(gif_img.empty());
-    ASSERT_NO_THROW(png_img = cv::imread(png_filename,IMREAD_UNCHANGED));
+    ASSERT_NO_THROW(png_img = cv::imread(png_filename, IMREAD_UNCHANGED));
     ASSERT_FALSE(png_img.empty());
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), gif_img, png_img);
     int transparent_count = 0;
-    for(int i=0;i<gif_img.rows;i++){
-        for(int j=0;j<gif_img.cols;j++){
+    for(int i=0; i<gif_img.rows; i++){
+        for(int j=0; j<gif_img.cols; j++){
             cv::Vec4b pixel1 = gif_img.at<cv::Vec4b>(i,j);
             if((int)(pixel1[3]) == 0){
                 transparent_count++;
@@ -195,19 +207,21 @@ TEST_P(Imgcodecs_Gif_GifSuite_SingleFrame_BGRA , read_gif_single_bgra){
     }
     EXPECT_EQ(transparent_count,GetParam().second);
 }
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Gif_GifSuite_SingleFrame_BGRA ,
                                      testing::ValuesIn(gifsuite_files_bgra));
+
 TEST(Imgcodecs_Gif,read_gif_multi_bgra){
     const string root = cvtest::TS::ptr()->get_data_path();
     const string gif_filename = root + "gifsuite/gif_multi_bgra.gif";
     vector<cv::Mat> img_vec;
-    ASSERT_NO_THROW(cv::imreadmulti(gif_filename,img_vec,IMREAD_UNCHANGED));
-    EXPECT_EQ(imcount(gif_filename),img_vec.size());
+    ASSERT_NO_THROW(cv::imreadmulti(gif_filename, img_vec, IMREAD_UNCHANGED));
+    EXPECT_EQ(imcount(gif_filename), img_vec.size());
     const int fixed_transparent_count = 53211;
     for(auto & frame_count : img_vec){
         int transparent_count=0;
-        for(int i=0;i<frame_count.rows;i++){
-            for(int j=0;j<frame_count.cols;j++){
+        for(int i=0; i<frame_count.rows; i++){
+            for(int j=0; j<frame_count.cols; j++){
                 cv::Vec4b pixel1 = frame_count.at<cv::Vec4b>(i,j);
                 if((int)(pixel1[3]) == 0){
                     transparent_count++;
@@ -217,6 +231,7 @@ TEST(Imgcodecs_Gif,read_gif_multi_bgra){
         EXPECT_EQ(fixed_transparent_count,transparent_count);
     }
 }
+
 TEST(Imgcodecs_Gif, read_gif_special){
     const string root = cvtest::TS::ptr()->get_data_path();
     const string gif_filename1 = root + "gifsuite/special1.gif";
@@ -238,14 +253,14 @@ TEST(Imgcodecs_Gif, read_gif_special){
     ASSERT_FALSE(png_img2.empty());
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), gif_img2, png_img2);
 }
+
 TEST(Imgcodecs_Gif,write_gif_flags){
     const string root = cvtest::TS::ptr()->get_data_path();
     const string png_filename = root + "gifsuite/special1.png";
-    const string gif_filename = "/home/asus/Desktop/special1.gif";
     vector<uchar> buff;
     const int expected_rows=611;
     const int expected_cols=293;
-    Mat img_gt = Mat::ones(expected_rows, expected_cols, CV_8U);
+    Mat img_gt = Mat::ones(expected_rows, expected_cols, CV_8UC1);
     vector<int> param;
     param.push_back(IMWRITE_GIF_QUALITY);
     param.push_back(7);
@@ -255,11 +270,12 @@ TEST(Imgcodecs_Gif,write_gif_flags){
     Mat img;
     EXPECT_NO_THROW(img = imdecode(buff, IMREAD_ANYDEPTH)); // hang
     EXPECT_FALSE(img.empty());
-    EXPECT_EQ(img.cols,expected_cols);
-    EXPECT_EQ(img.rows,expected_rows);
+    EXPECT_EQ(img.cols, expected_cols);
+    EXPECT_EQ(img.rows, expected_rows);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
 }
-TEST(Imgcodecs_Gif,write_gif_big) {
+
+TEST(Imgcodecs_Gif, write_gif_big) {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string png_filename = root + "gifsuite/gif_big.png";
     const string gif_filename = cv::tempfile(".png");
@@ -276,7 +292,9 @@ TEST(Imgcodecs_Gif,write_gif_big) {
     EXPECT_EQ(1391, img_gif.rows);
     EXPECT_EQ(0, remove(gif_filename.c_str()));
 }
+
 typedef testing::TestWithParam<string> Imgcodecs_Gif_GifSuite_Read_Write_Suite;
+
 TEST_P(Imgcodecs_Gif_GifSuite_Read_Write_Suite ,read_gif_single)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -299,9 +317,11 @@ TEST_P(Imgcodecs_Gif_GifSuite_Read_Write_Suite ,read_gif_single)
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(29, 0), img, img_8UC3);
     EXPECT_EQ(0, remove(gif_filename.c_str()));
 }
+
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Gif_GifSuite_Read_Write_Suite ,
                                      testing::ValuesIn(gifsuite_files_read_write_suite));
-TEST(Imgcodecs_Gif,write_gif_multi) {
+
+TEST(Imgcodecs_Gif, write_gif_multi) {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string gif_filename = cv::tempfile(".gif");
     vector<cv::Mat> img_vec;
@@ -317,7 +337,7 @@ TEST(Imgcodecs_Gif,write_gif_multi) {
     param.push_back(8);
     param.push_back(IMWRITE_GIF_DITHER);
     param.push_back(3);
-    ASSERT_NO_THROW(cv::imwritemulti(gif_filename, img_vec,param));
+    ASSERT_NO_THROW(cv::imwritemulti(gif_filename, img_vec, param));
     vector<cv::Mat> img_vec_gif;
     ASSERT_NO_THROW(cv::imreadmulti(gif_filename, img_vec_gif));
     EXPECT_EQ(img_vec.size(), img_vec_gif.size());
@@ -328,5 +348,6 @@ TEST(Imgcodecs_Gif,write_gif_multi) {
     }
     EXPECT_EQ(0, remove(gif_filename.c_str()));
 }
+
 }//opencv_test
 }//namespace

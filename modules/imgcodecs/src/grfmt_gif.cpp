@@ -18,7 +18,7 @@ GifDecoder::GifDecoder() {
     m_buf_supported = true;
     globalColorTableSize = 0;
     localColorTableSize = 0;
-    localColorTable.allocate(3 * 256); // maximum size of a color table
+    localColorTable.resize(3 * 256); // maximum size of a color table
     lzwMinCodeSize = 0;
     hasRead = false;
     hasTransparentColor = false;
@@ -61,7 +61,7 @@ bool GifDecoder::readHeader() {
     depth = ((flags & 0x70) >> 4) + 1;
     if (flags & 0x80) {
         globalColorTableSize = 1 << ((flags & 0x07) + 1);
-        globalColorTable.allocate(3 * globalColorTableSize);
+        globalColorTable.resize(3 * globalColorTableSize);
         for (int i = 0; i < 3 * globalColorTableSize; i++) {
             globalColorTable[i] = (uchar)m_strm.getByte();
         }
@@ -89,7 +89,7 @@ bool GifDecoder::readData(Mat &img) {
     height = m_strm.getWord();
     CV_Assert(width > 0 && height > 0 && left + width <= m_width && top + height <= m_height);
 
-    imgCodeStream.allocate(width * height);
+    imgCodeStream.resize(width * height);
     Mat img_;
 
     switch (opMode) {
@@ -646,7 +646,7 @@ bool GifEncoder::writeFrame(const Mat &img) {
         strm.putBytes(localColorTable.data(), localColorTableSize * 3);
     }
 
-    imgCodeStream.allocate(width * height);
+    imgCodeStream.resize(width * height);
     bool result = pixel2code(img);
     if (result) result = lzwEncode();
 
@@ -660,7 +660,7 @@ bool GifEncoder::lzwEncode() {
     int bitLeft = lzwCodeSize;
     size_t output = (size_t)1 << lzwMinCodeSize;
 
-    lzwTable.allocate((1 << 12) * 256);
+    lzwTable.resize((1 << 12) * 256);
     // clear lzwTable
     memset(lzwTable.data(), 0, (1 << 20) * sizeof(int16_t)); // 20 = 12 + 8 = 2^12(max lzw table size) * 256
 
@@ -858,7 +858,7 @@ void GifEncoder::getColorTable(const std::vector<Mat> &img_vec, bool isGlobal) {
     if (img_vec.empty()) return;
     CV_Assert(isGlobal || img_vec.size() == 1);
     if (fast) {
-        globalColorTable.allocate(colorNum * 3);
+        globalColorTable.resize(colorNum * 3);
         for (int i = 0; i < 256; i++) {
             globalColorTable[i * 3]     = ((i >> 5) & 7) * 36;
             globalColorTable[i * 3 + 1] = ((i >> 2) & 7) * 36;
@@ -872,12 +872,12 @@ void GifEncoder::getColorTable(const std::vector<Mat> &img_vec, bool isGlobal) {
     if (isGlobal) {
         quantG = OctreeColorQuant(colorNum, bitDepth, criticalTransparency);
         quantG.addMats(img_vec);
-        globalColorTable.allocate(colorNum * 3);
+        globalColorTable.resize(colorNum * 3);
         quantG.getPalette(globalColorTable.data());
     } else {
         quantL = OctreeColorQuant(colorNum, bitDepth, criticalTransparency);
         quantL.addMats(img_vec);
-        localColorTable.allocate(colorNum * 3);
+        localColorTable.resize(colorNum * 3);
         quantL.getPalette(localColorTable.data());
     }
 }
