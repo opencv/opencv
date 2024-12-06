@@ -1026,10 +1026,11 @@ INSTANTIATE_TEST_CASE_P(videoio, videowriter_acceleration, testing::Combine(
 ));
 
 
-typedef testing::TestWithParam<VideoCaptureAPIs> buffer_capture;
+typedef testing::TestWithParam<tuple<std::string, VideoCaptureAPIs>> buffer_capture;
 TEST_P(buffer_capture, read)
 {
-    VideoCaptureAPIs apiPref = GetParam();
+    std::string ext = get<0>(GetParam());
+    VideoCaptureAPIs apiPref = get<1>(GetParam());
     std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getBufferBackends();
     if (!videoio_registry::hasBackend(apiPref))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
@@ -1046,7 +1047,7 @@ TEST_P(buffer_capture, read)
     }
 
     VideoCapture cap;
-    String video_file = BunnyParameters::getFilename(String(".avi"));
+    String video_file = BunnyParameters::getFilename(String(".") + ext);
     ASSERT_TRUE(utils::fs::exists(video_file));
     std::ifstream ifs(video_file.c_str(), std::ios::in | std::ios::binary);
     ASSERT_TRUE(ifs.is_open());
@@ -1067,6 +1068,9 @@ TEST_P(buffer_capture, read)
     for(int i = 0; i < numFrames; i++)
         EXPECT_EQ(0, cv::norm(frames[i], hardCopies[i], NORM_INF)) << i;
 }
-INSTANTIATE_TEST_CASE_P(videoio, buffer_capture, testing::ValuesIn(backend_params));
+INSTANTIATE_TEST_CASE_P(videoio, buffer_capture,
+                          testing::Combine(
+                              testing::ValuesIn(bunny_params),
+                              testing::ValuesIn(backend_params)));
 
 } // namespace

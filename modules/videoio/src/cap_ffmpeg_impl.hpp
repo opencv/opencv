@@ -1164,7 +1164,13 @@ bool CvCapture_FFMPEG::open(const char* _filename, std::streambuf& source, const
                 auto is = reinterpret_cast<std::streambuf*>(opaque);
                 return is->sgetn(reinterpret_cast<char*>(buf), buf_size);
             },
-            NULL, NULL);
+            NULL,
+            [](void *opaque, int64_t offset, int whence) -> int64_t {
+                if (whence != 0)
+                    return -1;
+                auto is = reinterpret_cast<std::streambuf*>(opaque);
+                return is->pubseekoff(offset, std::ios_base::beg);
+            });
         CV_Assert(avio_context);
         ic->pb = avio_context;
     }
