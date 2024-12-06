@@ -125,12 +125,12 @@ It provides easy interface to:
         cv::createTrackbar("Twin brother", windowName, &state, 100, callbackTwin);
     }
     @endcode
-@note In modern usage, it is recommended to pass nullptr as the value pointer 
+@note In modern usage, it is recommended to pass nullptr as the value pointer
 if you do not need OpenCV to automatically update a variable when the trackbar
 position changes. Instead, you can "handle manually" by writing code within the
-callback function to retrieve and act on the trackbar's current position using 
+callback function to retrieve and act on the trackbar's current position using
 the cv::getTrackbarPos() function.
-See the updated trackbar tutorial for detailed examples.    
+See the updated trackbar tutorial for detailed examples.
 @}
 */
 

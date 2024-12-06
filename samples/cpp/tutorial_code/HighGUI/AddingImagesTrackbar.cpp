@@ -47,7 +47,7 @@ static void on_trackbar(int pos, void* userdata) {
  * @function main
  * @brief Main function
  */
-int main(void) 
+int main(void)
 {
     //![load]
     /// Read images (both must be of the same size and type)
