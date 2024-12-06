@@ -6,6 +6,7 @@
                     "createMergeDebevec", "createMergeMertens", "createMergeRobertson",
                     "createTonemapDrago", "createTonemapMantiuk", "createTonemapReinhard", "inpaint"],
             "CalibrateCRF": ["process"],
+            "AlignExposures": ["process"],
             "AlignMTB" : ["calculateShift", "shiftMat", "computeBitmaps", "getMaxBits", "setMaxBits",
                             "getExcludeRange", "setExcludeRange", "getCut", "setCut"],
             "CalibrateDebevec" : ["getLambda", "setLambda", "getSamples", "setSamples", "getRandom", "setRandom"],
@@ -20,6 +21,6 @@
                                 "getSigmaColor", "setSigmaColor", "getSigmaSpace","setSigmaSpace"],
             "TonemapMantiuk" : ["getScale", "setScale", "getSaturation", "setSaturation"],
             "TonemapReinhard" : ["getIntensity", "setIntensity", "getLightAdaptation", "setLightAdaptation",
-                                    "getColorAdaptation", "setColorAdaptation"]
+                                    "getColorAdaptation", "setColorAdaptation"],
     }
 }
