@@ -133,7 +133,9 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
     @note API-CALL 9, API-Version == 2
      */
     CvResult (CV_API_CALL *Capture_open_buffer)(
-        std::streambuf& buffer,
+        void* opaque,
+        int(*read)(void* opaque, char* buffer, int size),
+        int(*seek)(void* opaque, int offset, int way),
         int* params, unsigned n_params,
         CV_OUT CvPluginCapture* handle);
 }; // OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries

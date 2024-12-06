@@ -466,7 +466,15 @@ public:
             unsigned n_params = (unsigned)(vint_params.size() / 2);
 
             if (CV_ERROR_OK == plugin_api->v2.Capture_open_buffer(
-                    source, c_params, n_params, &capture))
+                &source,
+                [](void* opaque, char* buffer, int size) -> int {
+                    auto is = reinterpret_cast<std::streambuf*>(opaque);
+                    return is->sgetn(buffer, size);
+                },
+                [](void* opaque, int offset, int way) -> int {
+                    auto is = reinterpret_cast<std::streambuf*>(opaque);
+                    return is->pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
+                }, c_params, n_params, &capture))
             {
                 CV_Assert(capture);
                 return makePtr<PluginCapture>(plugin_api, capture);

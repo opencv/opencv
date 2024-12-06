@@ -332,13 +332,57 @@ CvResult CV_API_CALL cv_capture_open_with_params(
     return CV_ERROR_FAIL;
 }
 
+class BufferStream : public std::streambuf
+{
+public:
+    BufferStream(void* _opaque,
+                 int(*_read)(void* opaque, char* buffer, int size),
+                 int(*_seek)(void* opaque, int offset, int way))
+    {
+        opaque = _opaque;
+        read = _read;
+        seek = _seek;
+    }
+
+    std::streamsize xsgetn(char* s, std::streamsize n) override
+    {
+        return read(opaque, s, (int)n);
+    }
+
+    std::streampos seekoff(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode = std::ios_base::in | std::ios_base::out) override
+    {
+        return seek(opaque, off, way == std::ios_base::beg ? SEEK_SET : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
+    }
+
+    // Required for sgetc (check for end-of-stream)
+    int underflow() override
+    {
+        char s;
+        if (xsgetn(&s, 1) == 1)
+        {
+            seekoff(-1, std::ios_base::cur);
+            return static_cast<int>(s);
+        }
+        else
+            return EOF;
+    }
+private:
+    void* opaque;
+    int(*read)(void* opaque, char* buffer, int size);
+    int(*seek)(void* opaque, int offset, int way);
+};
+
 static
 CvResult CV_API_CALL cv_capture_open_buffer(
-        std::streambuf& buffer,
+        void* opaque,
+        int(*read)(void* opaque, char* buffer, int size),
+        int(*seek)(void* opaque, int offset, int way),
         int* params, unsigned n_params,
         CV_OUT CvPluginCapture* handle
 )
 {
+    BufferStream buffer(opaque, read, seek);
+
     if (!handle)
         return CV_ERROR_FAIL;
     *handle = NULL;
