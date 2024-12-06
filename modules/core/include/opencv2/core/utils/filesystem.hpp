@@ -11,6 +11,9 @@ namespace cv { namespace utils { namespace fs {
 CV_EXPORTS bool exists(const cv::String& path);
 CV_EXPORTS bool isDirectory(const cv::String& path);
 
+CV_EXPORTS cv::String resolvePath(const cv::String& path);
+CV_EXPORTS FILE* open(const cv::String& filename, const char* mode);
+
 CV_EXPORTS void remove_all(const cv::String& path);
 
 

@@ -54,6 +54,7 @@
 #include <cerrno>
 #include <opencv2/core/utils/logger.hpp>
 #include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/filesystem.hpp>
 #include <opencv2/imgcodecs.hpp>
 
 
@@ -151,17 +152,12 @@ struct ImageCodecInitializer
     */
     ImageCodecInitializer()
     {
-#ifdef HAVE_AVIF
-        decoders.push_back(makePtr<AvifDecoder>());
-        encoders.push_back(makePtr<AvifEncoder>());
-#endif
-        /// BMP Support
-        decoders.push_back( makePtr<BmpDecoder>() );
-        encoders.push_back( makePtr<BmpEncoder>() );
-
-    #ifdef HAVE_IMGCODEC_HDR
-        decoders.push_back( makePtr<HdrDecoder>() );
-        encoders.push_back( makePtr<HdrEncoder>() );
+    #ifdef HAVE_SPNG
+        decoders.push_back( makePtr<SPngDecoder>() );
+        encoders.push_back( makePtr<SPngEncoder>() );
+    #elif defined(HAVE_PNG)
+        decoders.push_back( makePtr<PngDecoder>() );
+        encoders.push_back( makePtr<PngEncoder>() );
     #endif
     #ifdef HAVE_JPEG
         decoders.push_back( makePtr<JpegDecoder>() );
@@ -170,6 +166,22 @@ struct ImageCodecInitializer
     #ifdef HAVE_WEBP
         decoders.push_back( makePtr<WebPDecoder>() );
         encoders.push_back( makePtr<WebPEncoder>() );
+    #endif
+    #ifdef HAVE_TIFF
+        decoders.push_back( makePtr<TiffDecoder>() );
+        encoders.push_back( makePtr<TiffEncoder>() );
+    #endif
+    #ifdef HAVE_AVIF
+        decoders.push_back(makePtr<AvifDecoder>());
+        encoders.push_back(makePtr<AvifEncoder>());
+    #endif
+        /// BMP Support
+        decoders.push_back( makePtr<BmpDecoder>() );
+        encoders.push_back( makePtr<BmpEncoder>() );
+
+    #ifdef HAVE_IMGCODEC_HDR
+        decoders.push_back( makePtr<HdrDecoder>() );
+        encoders.push_back( makePtr<HdrEncoder>() );
     #endif
     #ifdef HAVE_IMGCODEC_SUNRASTER
         decoders.push_back( makePtr<SunRasterDecoder>() );
@@ -187,17 +199,6 @@ struct ImageCodecInitializer
     #ifdef HAVE_IMGCODEC_PFM
         decoders.push_back( makePtr<PFMDecoder>() );
         encoders.push_back( makePtr<PFMEncoder>() );
-    #endif
-    #ifdef HAVE_TIFF
-        decoders.push_back( makePtr<TiffDecoder>() );
-        encoders.push_back( makePtr<TiffEncoder>() );
-    #endif
-    #ifdef HAVE_SPNG
-        decoders.push_back( makePtr<SPngDecoder>() );
-        encoders.push_back( makePtr<SPngEncoder>() );
-    #elif defined(HAVE_PNG)
-        decoders.push_back( makePtr<PngDecoder>() );
-        encoders.push_back( makePtr<PngEncoder>() );
     #endif
     #ifdef HAVE_GDCM
         decoders.push_back( makePtr<DICOMDecoder>() );
@@ -220,10 +221,14 @@ struct ImageCodecInitializer
         /// Attach the GDAL Decoder
         decoders.push_back( makePtr<GdalDecoder>() );
     #endif/*HAVE_GDAL*/
+
+        for( size_t i = 0; i < decoders.size(); i++ )
+            maxSignatureLength = std::max(maxSignatureLength, decoders[i]->signatureLength());
     }
 
     std::vector<ImageDecoder> decoders;
     std::vector<ImageEncoder> encoders;
+    size_t maxSignatureLength = 0;
 };
 
 static
@@ -242,33 +247,26 @@ ImageCodecInitializer& getCodecs()
 */
 static ImageDecoder findDecoder( const String& filename ) {
 
-    size_t i, maxlen = 0;
-
-    /// iterate through list of registered codecs
     ImageCodecInitializer& codecs = getCodecs();
-    for( i = 0; i < codecs.decoders.size(); i++ )
-    {
-        size_t len = codecs.decoders[i]->signatureLength();
-        maxlen = std::max(maxlen, len);
-    }
 
     /// Open the file
     FILE* f= fopen( filename.c_str(), "rb" );
 
     /// in the event of a failure, return an empty image decoder
     if( !f ) {
-        CV_LOG_WARNING(NULL, "imread_('" << filename << "'): can't open/read file: check file path/integrity");
+        CV_LOG_WARNING(NULL, "findDecoder('" << filename << "'): can't open/read file: check file path/integrity");
         return ImageDecoder();
     }
 
     // read the file signature
+    size_t maxlen = codecs.maxSignatureLength;
     String signature(maxlen, ' ');
     maxlen = fread( (void*)signature.c_str(), 1, maxlen, f );
     fclose(f);
     signature = signature.substr(0, maxlen);
 
     /// compare signature against all decoders
-    for( i = 0; i < codecs.decoders.size(); i++ )
+    for( size_t i = 0; i < codecs.decoders.size(); i++ )
     {
         if( codecs.decoders[i]->checkSignature(signature) )
             return codecs.decoders[i]->newDecoder();
@@ -280,24 +278,18 @@ static ImageDecoder findDecoder( const String& filename ) {
 
 static ImageDecoder findDecoder( const Mat& buf )
 {
-    size_t i, maxlen = 0;
-
     if( buf.rows*buf.cols < 1 || !buf.isContinuous() )
         return ImageDecoder();
 
     ImageCodecInitializer& codecs = getCodecs();
-    for( i = 0; i < codecs.decoders.size(); i++ )
-    {
-        size_t len = codecs.decoders[i]->signatureLength();
-        maxlen = std::max(maxlen, len);
-    }
 
+    size_t maxlen = codecs.maxSignatureLength;
     String signature(maxlen, ' ');
     size_t bufSize = buf.rows*buf.cols*buf.elemSize();
     maxlen = std::min(maxlen, bufSize);
     memcpy( (void*)signature.c_str(), buf.data, maxlen );
 
-    for( i = 0; i < codecs.decoders.size(); i++ )
+    for( size_t i = 0; i < codecs.decoders.size(); i++ )
     {
         if( codecs.decoders[i]->checkSignature(signature) )
             return codecs.decoders[i]->newDecoder();
@@ -646,7 +638,7 @@ Mat imread( const String& filename, int flags )
     Mat img;
 
     /// load the data
-    imread_( filename, flags, img );
+    imread_( utils::fs::resolvePath(filename), flags, img );
 
     /// return a reference to the data
     return img;
@@ -657,7 +649,7 @@ void imread( const String& filename, OutputArray dst, int flags )
     CV_TRACE_FUNCTION();
 
     /// load the data
-    imread_(filename, flags, dst);
+    imread_(utils::fs::resolvePath(filename), flags, dst);
 }
 
 /**
@@ -674,7 +666,7 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int flags)
 {
     CV_TRACE_FUNCTION();
 
-    return imreadmulti_(filename, flags, mats, 0, -1);
+    return imreadmulti_(utils::fs::resolvePath(filename), flags, mats, 0, -1);
 }
 
 
@@ -682,7 +674,7 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int 
 {
     CV_TRACE_FUNCTION();
 
-    return imreadmulti_(filename, flags, mats, start, count);
+    return imreadmulti_(utils::fs::resolvePath(filename), flags, mats, start, count);
 }
 
 static
@@ -702,7 +694,7 @@ size_t imcount(const String& filename, int flags)
 {
     CV_TRACE_FUNCTION();
 
-    return imcount_(filename, flags);
+    return imcount_(utils::fs::resolvePath(filename), flags);
 }
 
 
@@ -816,7 +808,7 @@ bool imwrite( const String& filename, InputArray _img,
         img_vec.push_back(_img.getMat());
 
     CV_Assert(!img_vec.empty());
-    return imwrite_(filename, img_vec, params, false);
+    return imwrite_(utils::fs::resolvePath(filename), img_vec, params, false);
 }
 
 static bool
@@ -1241,13 +1233,13 @@ bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
 
 bool haveImageReader( const String& filename )
 {
-    ImageDecoder decoder = cv::findDecoder(filename);
+    ImageDecoder decoder = cv::findDecoder(utils::fs::resolvePath(filename));
     return !decoder.empty();
 }
 
 bool haveImageWriter( const String& filename )
 {
-    cv::ImageEncoder encoder = cv::findEncoder(filename);
+    cv::ImageEncoder encoder = cv::findEncoder(utils::fs::resolvePath(filename));
     return !encoder.empty();
 }
 
@@ -1287,7 +1279,7 @@ ImageCollection::Impl::Impl(std::string const& filename, int flags) {
 }
 
 void ImageCollection::Impl::init(String const& filename, int flags) {
-    m_filename = filename;
+    m_filename = utils::fs::resolvePath(filename);
     m_flags = flags;
 
 #ifdef HAVE_GDAL
@@ -1296,14 +1288,14 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
     else {
 #endif
-    m_decoder = findDecoder(filename);
+    m_decoder = findDecoder(m_filename);
 #ifdef HAVE_GDAL
     }
 #endif
 
 
     CV_Assert(m_decoder);
-    m_decoder->setSource(filename);
+    m_decoder->setSource(m_filename);
     CV_Assert(m_decoder->readHeader());
 
     m_size = m_decoder->getFrameCount();

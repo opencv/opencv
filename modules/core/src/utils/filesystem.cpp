@@ -2,6 +2,10 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
+#if __cplusplus >= 201703L
+#include <filesystem>
+#endif
+
 #include "../precomp.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
@@ -141,6 +145,20 @@ bool exists(const cv::String& path)
     struct stat stat_buf;
     return (0 == stat(path.c_str(), &stat_buf));
 #endif
+}
+
+CV_EXPORTS cv::String resolvePath(const cv::String& path)
+{
+#if __cplusplus >= 201703L
+    return std::filesystem::u8path(path).string();
+#else
+    return path;
+#endif
+}
+
+CV_EXPORTS FILE* open(const cv::String& filename, const char* mode)
+{
+    return fopen(resolvePath(filename).c_str(), mode);
 }
 
 CV_EXPORTS void remove_all(const cv::String& path)
