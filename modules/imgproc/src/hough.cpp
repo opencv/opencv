@@ -120,7 +120,7 @@ static void
 HoughLinesStandard( InputArray src, OutputArray lines, int type,
                     float rho, float theta,
                     int threshold, int linesMax,
-                    double min_theta, double max_theta )
+                    double min_theta, double max_theta, bool use_edgeval = false )
 {
     CV_CheckType(type, type == CV_32FC2 || type == CV_32FC3, "Internal error");
 
@@ -184,17 +184,31 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
                      irho, tabSin, tabCos);
 
     // stage 1. fill accumulator
-    for( i = 0; i < height; i++ )
-        for( j = 0; j < width; j++ )
-        {
-            if( image[i * step + j] != 0 )
-                for(int n = 0; n < numangle; n++ )
-                {
-                    int r = cvRound( j * tabCos[n] + i * tabSin[n] );
-                    r += (numrho - 1) / 2;
-                    accum[(n+1) * (numrho+2) + r+1]++;
-                }
-        }
+    if (use_edgeval) {
+        for( i = 0; i < height; i++ )
+            for( j = 0; j < width; j++ )
+            {
+                if( image[i * step + j] != 0 )
+                    for(int n = 0; n < numangle; n++ )
+                    {
+                        int r = cvRound( j * tabCos[n] + i * tabSin[n] );
+                        r += (numrho - 1) / 2;
+                        accum[(n + 1) * (numrho + 2) + r + 1] += image[i * step + j];
+                     }
+             }
+    } else {
+        for( i = 0; i < height; i++ )
+            for( j = 0; j < width; j++ )
+            {
+                if( image[i * step + j] != 0 )
+                    for(int n = 0; n < numangle; n++ )
+                    {
+                        int r = cvRound( j * tabCos[n] + i * tabSin[n] );
+                        r += (numrho - 1) / 2;
+                        accum[(n + 1) * (numrho + 2) + r + 1]++;
+                    }
+            }
+     }
 
     // stage 2. find local maximums
     findLocalMaximums( numrho, numangle, threshold, accum, _sort_buf );
@@ -907,7 +921,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
 
 void HoughLines( InputArray _image, OutputArray lines,
                  double rho, double theta, int threshold,
-                 double srn, double stn, double min_theta, double max_theta )
+                 double srn, double stn, double min_theta, double max_theta, bool use_edgeval )
 {
     CV_INSTRUMENT_REGION();
 
@@ -922,7 +936,7 @@ void HoughLines( InputArray _image, OutputArray lines,
                ocl_HoughLines(_image, lines, rho, theta, threshold, min_theta, max_theta));
 
     if( srn == 0 && stn == 0 )
-        HoughLinesStandard(_image, lines, type, (float)rho, (float)theta, threshold, INT_MAX, min_theta, max_theta );
+        HoughLinesStandard(_image, lines, type, (float)rho, (float)theta, threshold, INT_MAX, min_theta, max_theta, use_edgeval );
     else
         HoughLinesSDiv(_image, lines, type, (float)rho, (float)theta, threshold, cvRound(srn), cvRound(stn), INT_MAX, min_theta, max_theta);
 }
