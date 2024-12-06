@@ -871,7 +871,6 @@ void icvGetNextFromBackgroundData( CvBackgroundData* data,
 
     reader->src = img;
 
-
     reader->offset = offset;
     reader->point = reader->offset;
     reader->scale = MAX(

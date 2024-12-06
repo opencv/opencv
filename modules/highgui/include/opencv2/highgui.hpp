@@ -548,10 +548,8 @@ the trackbar position, and the second parameter is the user data (see the next p
 If the callback is a nullptr, no callbacks are called, but the trackbar's value will still be
 updated automatically.
 @param userdata Optional user data that is passed to the callback.
-
 @note If the value pointer is `nullptr`, the trackbar position must be manually managed.
       Call the callback function manually with the desired initial value to avoid runtime warnings.
-
 @see [Trackbar Tutorial](https://docs.opencv.org/4.x/d7/dfc/tutorial_trackbar.html)
  */
 CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,

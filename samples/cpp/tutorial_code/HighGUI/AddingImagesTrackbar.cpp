@@ -30,21 +30,15 @@ Mat dst;
 static void on_trackbar(int pos, void* userdata) {
     // Print trackbar position
     std::cout << "Trackbar position: " << pos << std::endl;
-
     // If userdata is provided, use it
     if (userdata) {
         int* user_data = static_cast<int*>(userdata);
         std::cout << "User data: " << *user_data << std::endl;
     }
-
     // Calculate alpha and beta values
     alpha = (double)pos / alpha_slider_max;
     beta = (1.0 - alpha);
-
-    // Perform linear blending
     addWeighted(src1, alpha, src2, beta, 0.0, dst);
-
-    // Display the result
     imshow("Linear Blend", dst);
 }
 //![on_trackbar]
@@ -53,39 +47,36 @@ static void on_trackbar(int pos, void* userdata) {
  * @function main
  * @brief Main function
  */
-int main(void) {
-      // Read images (both must be of the same size and type)
+int main(void) 
+{
+    //![load]
+    /// Read images (both must be of the same size and type)
     src1 = imread(samples::findFile("LinuxLogo.jpg"));
     src2 = imread(samples::findFile("WindowsLogo.jpg"));
+    //![load]
 
-    if (src1.empty()) {
-        cout << "Error loading src1 \n";
-        return -1;
-    }
-    if (src2.empty()) {
-        cout << "Error loading src2 \n";
-        return -1;
-    }
+    if (src1.empty()) { cout << "Error loading src1 \n";return -1;}
+    if (src2.empty()) { cout << "Error loading src2 \n";return -1;}
 
     // Initialize trackbar value
     alpha_slider = 0;
 
-    // Create a window
-    namedWindow("Linear Blend", WINDOW_AUTOSIZE);
+    //![window]
+    namedWindow("Linear Blend", WINDOW_AUTOSIZE);//Create Window
+    //![window]
 
-    // Create a trackbar
+    //![Create a trackbar]
     char TrackbarName[50];
     snprintf(TrackbarName, sizeof(TrackbarName), "Alpha x %d", alpha_slider_max);
-
     // Example userdata: Pass a pointer to an integer as userdata
     int user_value = 42; // Arbitrary value for demonstration
-
     createTrackbar(TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar, &user_value);
+    //![Create a trackbar]
 
-    // Show initial result
+    /// Show initial result
     on_trackbar(alpha_slider, nullptr);
 
-    // Wait for user input
+    /// Wait for user input
     waitKey(0);
     return 0;
 }
