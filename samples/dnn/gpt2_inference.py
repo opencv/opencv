@@ -10,7 +10,7 @@ To export GPT-2 model to ONNX, you can use the following procedure:
 
 1. Clone fork of Andrej Karpathy's GPT-2 repository:
 
-    git clone https://github.com/Abdurrahheem/build-nanogpt/tree/ash/export-gpt2-onnx-dynamic
+    git clone -b ash/export-gpt2-onnx-dynamic https://github.com/Abdurrahheem/build-nanogpt.git
 
 2. Install the required dependencies:
 
@@ -24,7 +24,7 @@ To export GPT-2 model to ONNX, you can use the following procedure:
 Run the script:
 1. Install the required dependencies:
 
-    pip install tiktoken==0.7.0, numpy, tqdm
+    pip install tiktoken==0.7.0 numpy tqdm
 
 2. Run the script:
     python gpt2_inference.py --model=<path-to-onnx-model>  --prompt=<use-promt-of-the-same-length-used-while-exporting>
