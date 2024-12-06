@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
 
+#ifdef HAVE_IMGCODEC_GIF
+
 namespace opencv_test { namespace {
 
 const string gifsuite_files_multi[]={
@@ -351,3 +353,5 @@ TEST(Imgcodecs_Gif, write_gif_multi) {
 
 }//opencv_test
 }//namespace
+
+#endif
