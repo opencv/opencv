@@ -143,18 +143,22 @@ CV__DEBUG_NS_BEGIN
 
 //////////////////////// Input/Output Arrays ////////////////////////
 
-inline void _InputArray::init(int _flags, const void* _obj)
+template <typename _Tp>
+inline void _InputArray::init(int _flags, const _Tp* _obj)
 { flags = _flags; obj = (void*)_obj; }
 
-inline void _InputArray::init(int _flags, const void* _obj, Size _sz)
+template <typename _Tp>
+inline void _InputArray::init(int _flags, const _Tp* _obj, Size _sz)
 { flags = _flags; obj = (void*)_obj; sz = _sz; }
 
-inline void* _InputArray::getObj() const { return obj; }
+template <typename _Tp>
+inline _Tp* _InputArray::getObj() const { return reinterpret_cast<_Tp*>(obj); }
 inline int _InputArray::getFlags() const { return flags; }
 inline Size _InputArray::getSz() const { return sz; }
 
-inline _InputArray::_InputArray() { init(0 + NONE, 0); }
-inline _InputArray::_InputArray(int _flags, void* _obj) { init(_flags, _obj); }
+inline _InputArray::_InputArray() { init<void>(0 + NONE, nullptr); }
+template <typename _Tp>
+inline _InputArray::_InputArray(int _flags, _Tp* _obj) { init(_flags, _obj); }
 inline _InputArray::_InputArray(const Mat& m) { init(+MAT+ACCESS_READ, &m); }
 inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(+STD_VECTOR_MAT+ACCESS_READ, &vec); }
 inline _InputArray::_InputArray(const UMat& m) { init(+UMAT+ACCESS_READ, &m); }
@@ -232,6 +236,8 @@ _InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
 
 inline _InputArray::~_InputArray() {}
 
+inline bool _InputArray::pointsTo(const _InputArray& arr) const { return obj == arr.obj; }
+
 inline Mat _InputArray::getMat(int i) const
 {
     if( kind() == MAT && i < 0 )
@@ -250,11 +256,13 @@ inline bool _InputArray::isVector() const { return kind() == _InputArray::STD_VE
                                                    (kind() == _InputArray::MATX && (sz.width <= 1 || sz.height <= 1)); }
 inline bool _InputArray::isGpuMat() const { return kind() == _InputArray::CUDA_GPU_MAT; }
 inline bool _InputArray::isGpuMatVector() const { return kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT; }
+inline bool _InputArray::isNull() const { return kind() == _InputArray::NONE; }
 
 ////////////////////////////////////////////////////////////////////////////////////////
 
-inline _OutputArray::_OutputArray() { init(+NONE + ACCESS_WRITE, 0); }
-inline _OutputArray::_OutputArray(int _flags, void* _obj) { init(_flags + ACCESS_WRITE, _obj); }
+inline _OutputArray::_OutputArray() { init<void>(+NONE + ACCESS_WRITE, nullptr); }
+template <typename _Tp>
+inline _OutputArray::_OutputArray(int _flags, _Tp* _obj) { init(_flags + ACCESS_WRITE, _obj); }
 inline _OutputArray::_OutputArray(Mat& m) { init(+MAT+ACCESS_WRITE, &m); }
 inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(+STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
 inline _OutputArray::_OutputArray(UMat& m) { init(+UMAT + ACCESS_WRITE, &m); }
@@ -401,8 +409,9 @@ std::vector<std::vector<_Tp> >& _OutputArray::getVecVecRef() const
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-inline _InputOutputArray::_InputOutputArray() { init(0+ACCESS_RW, 0); }
-inline _InputOutputArray::_InputOutputArray(int _flags, void* _obj) { init(_flags+ACCESS_RW, _obj); }
+inline _InputOutputArray::_InputOutputArray() { init<void>(0+ACCESS_RW, nullptr); }
+template <typename _Tp>
+inline _InputOutputArray::_InputOutputArray(int _flags, _Tp* _obj) { init(_flags+ACCESS_RW, _obj); }
 inline _InputOutputArray::_InputOutputArray(Mat& m) { init(+MAT+ACCESS_RW, &m); }
 inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(+STD_VECTOR_MAT+ACCESS_RW, &vec); }
 inline _InputOutputArray::_InputOutputArray(UMat& m) { init(+UMAT+ACCESS_RW, &m); }

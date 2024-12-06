@@ -1093,7 +1093,7 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
         }
         if (ld.outputBlobs[0].depth() == CV_16F)
         {
-            std::vector<Mat>& outputvec = *(std::vector<Mat>*)outputBlobs.getObj();
+            std::vector<Mat>& outputvec = *outputBlobs.getObj<std::vector<Mat>>();
             outputvec.resize(ld.outputBlobs.size());
             for (int i = 0; i < outputvec.size(); i++)
             {
@@ -1106,13 +1106,13 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs, const String& outputNam
         else
         {
             // Output depth can be CV_32F or CV_8S
-            std::vector<Mat>& outputvec = *(std::vector<Mat>*)outputBlobs.getObj();
+            std::vector<Mat>& outputvec = *outputBlobs.getObj<std::vector<Mat>>();
             outputvec = ld.outputBlobs;
         }
     }
     else if (outputBlobs.isUMatVector())
     {
-        std::vector<UMat>& outputvec = *(std::vector<UMat>*)outputBlobs.getObj();
+        std::vector<UMat>& outputvec = *outputBlobs.getObj<std::vector<UMat>>();
 
 #ifdef HAVE_OPENCL
         if (preferableBackend == DNN_BACKEND_OPENCV && IS_DNN_OPENCL_TARGET(preferableTarget))

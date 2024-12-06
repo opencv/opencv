@@ -140,7 +140,7 @@ void Feature2D::compute( InputArrayOfArrays images,
     // resize descriptors to appropriate size and compute
     if (descriptors.isMatVector())
     {
-        vector<Mat>& vec = *(vector<Mat>*)descriptors.getObj();
+        vector<Mat>& vec = *descriptors.getObj<vector<Mat>>();
         vec.resize(nimages);
         for (int i = 0; i < nimages; i++)
         {
@@ -149,7 +149,7 @@ void Feature2D::compute( InputArrayOfArrays images,
     }
     else if (descriptors.isUMatVector())
     {
-        vector<UMat>& vec = *(vector<UMat>*)descriptors.getObj();
+        vector<UMat>& vec = *descriptors.getObj<vector<UMat>>();
         vec.resize(nimages);
         for (int i = 0; i < nimages; i++)
         {

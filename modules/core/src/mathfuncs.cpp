@@ -233,10 +233,10 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
 
-    const bool _src1IsDstMag = (_src1.getObj() == _dst1.getObj());
-    const bool _src1IsDstAngle = (_src1.getObj() == _dst2.getObj());
-    const bool _src2IsDstMag = (_src2.getObj() == _dst1.getObj());
-    const bool _src2IsDstAngle = (_src2.getObj() == _dst2.getObj());
+    const bool _src1IsDstMag = _src1.pointsTo(_dst1);
+    const bool _src1IsDstAngle = _src1.pointsTo(_dst2);
+    const bool _src2IsDstMag = _src2.pointsTo(_dst1);
+    const bool _src2IsDstAngle = _src2.pointsTo(_dst2);
 
     if ( !(_src1.dims() <= 2 && _src2.dims() <= 2 &&
            (depth == CV_32F || depth == CV_64F) && type == _src2.type()) ||
@@ -280,7 +280,7 @@ void cartToPolar( InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(dst1.getObj() != dst2.getObj());
+    CV_Assert(!dst1.pointsTo(dst2));
 
     CV_OCL_RUN(dst1.isUMat() && dst2.isUMat(),
             ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees))
@@ -481,10 +481,10 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
 
-    const bool _src1IsDstX = (_mag.getObj() == _dst1.getObj());
-    const bool _src1IsDstY = (_mag.getObj() == _dst2.getObj());
-    const bool _src2IsDstX = (_angle.getObj() == _dst1.getObj());
-    const bool _src2IsDstY = (_angle.getObj() == _dst2.getObj());
+    const bool _src1IsDstX = _mag.pointsTo(_dst1);
+    const bool _src1IsDstY = _mag.pointsTo(_dst2);
+    const bool _src2IsDstX = _angle.pointsTo(_dst1);
+    const bool _src2IsDstY = _angle.pointsTo(_dst2);
 
     if ( !doubleSupport && depth == CV_64F )
         return false;
@@ -585,13 +585,10 @@ void polarToCart( InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(dst1.getObj() != dst2.getObj());
+    CV_Assert(!dst1.pointsTo(dst2));
 
     const bool isInPlace =
-        (src1.getObj() == dst1.getObj()) ||
-        (src1.getObj() == dst2.getObj()) ||
-        (src2.getObj() == dst1.getObj()) ||
-        (src2.getObj() == dst2.getObj());
+        src1.pointsTo(dst1) || src1.pointsTo(dst2) || src2.pointsTo(dst1) || src2.pointsTo(dst2);
 
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));

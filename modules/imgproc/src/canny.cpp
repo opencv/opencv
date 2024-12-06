@@ -770,7 +770,7 @@ void Canny( InputArray _src, OutputArray _dst,
     const Size size = _src.size();
 
     // we don't support inplace parameters in case with RGB/BGR src
-    CV_Assert((_dst.getObj() != _src.getObj() || _src.type() == CV_8UC1) && "Inplace parameters are not supported");
+    CV_Assert((!_dst.pointsTo(_src) || _src.type() == CV_8UC1) && "Inplace parameters are not supported");
 
     _dst.create(size, CV_8U);
 

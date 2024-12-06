@@ -312,7 +312,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn, AlgorithmHi
         case COLOR_BayerBG2BGRA: case COLOR_BayerGB2BGRA: case COLOR_BayerRG2BGRA: case COLOR_BayerGR2BGRA:
             {
                 Mat src;
-                if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
+                if (_src.pointsTo(_dst)) // inplace processing (#6653)
                     _src.copyTo(src);
                 else
                     src = _src.getMat();
