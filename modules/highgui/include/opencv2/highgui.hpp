@@ -539,8 +539,8 @@ Clicking the label of each trackbar enables editing the trackbar values manually
 @param trackbarname Name of the created trackbar.
 @param winname Name of the window that will contain the trackbar.
 @param value Pointer to the integer value that will be changed by the trackbar.
-             Pass `nullptr` if the value pointer is not used. In this case, manually handle
-             the trackbar position in the callback function.
+Pass `nullptr` if the value pointer is not used. In this case, manually handle
+the trackbar position in the callback function.
 @param count Maximum position of the trackbar.
 @param onChange Pointer to the function to be called every time the slider changes position.
 This function should have the prototype void Foo(int, void\*);, where the first parameter is
@@ -549,7 +549,7 @@ If the callback is a nullptr, no callbacks are called, but the trackbar's value 
 updated automatically.
 @param userdata Optional user data that is passed to the callback.
 @note If the value pointer is `nullptr`, the trackbar position must be manually managed.
-      Call the callback function manually with the desired initial value to avoid runtime warnings.
+Call the callback function manually with the desired initial value to avoid runtime warnings.
 @see [Trackbar Tutorial](https://docs.opencv.org/4.x/d7/dfc/tutorial_trackbar.html)
  */
 CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,

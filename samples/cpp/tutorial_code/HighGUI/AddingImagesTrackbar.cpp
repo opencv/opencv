@@ -65,13 +65,13 @@ int main(void)
     namedWindow("Linear Blend", WINDOW_AUTOSIZE);//Create Window
     //![window]
 
-    //![Create a trackbar]
+    //![Create_trackbar]
     char TrackbarName[50];
     snprintf(TrackbarName, sizeof(TrackbarName), "Alpha x %d", alpha_slider_max);
     // Example userdata: Pass a pointer to an integer as userdata
     int user_value = 42; // Arbitrary value for demonstration
     createTrackbar(TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar, &user_value);
-    //![Create a trackbar]
+    //![Create_trackbar]
 
     /// Show initial result
     on_trackbar(alpha_slider, nullptr);
