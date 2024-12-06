@@ -42,7 +42,7 @@ def parse_args():
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, required=True, help='Path to GPT-2 model ONNX model file.')
     parser.add_argument("--prompt", type=str, default="Hello, I'm a language model,", help="Prompt to start with.")
-    parser.add_argument("--max_seq_len", type=int, default=40, help="Number of tokens to continue.")
+    parser.add_argument("--max_seq_len", type=int, default=100, help="Number of tokens to continue.")
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     return parser.parse_args()
 
