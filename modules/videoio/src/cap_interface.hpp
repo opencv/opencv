@@ -421,6 +421,46 @@ std::ostream& operator<<(std::ostream& out, const VideoAccelerationType& va_type
     return out;
 }
 
+class CvStream : public std::streambuf
+{
+public:
+    CvStream(void* _opaque = nullptr,
+             long long(*_read)(void* opaque, char* buffer, long long size) = nullptr,
+             long long(*_seek)(void* opaque, long long offset, int way) = nullptr)
+    {
+        opaque = _opaque;
+        read = _read;
+        seek = _seek;
+    }
+
+    std::streamsize xsgetn(char* s, std::streamsize n) override
+    {
+        return read(opaque, s, (int)n);
+    }
+
+    std::streampos seekoff(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode = std::ios_base::in | std::ios_base::out) override
+    {
+        return seek(opaque, off, way == std::ios_base::beg ? SEEK_SET : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
+    }
+
+    // Required for sgetc (check for end-of-stream)
+    int underflow() override
+    {
+        char s;
+        if (xsgetn(&s, 1) == 1)
+        {
+            seekoff(-1, std::ios_base::cur);
+            return static_cast<int>(s);
+        }
+        else
+            return EOF;
+    }
+private:
+    void* opaque;
+    long long(*read)(void* opaque, char* buffer, long long size);
+    long long(*seek)(void* opaque, long long offset, int way);
+};
+
 } // cv::
 
 #endif // CAP_INTERFACE_HPP

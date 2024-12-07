@@ -134,8 +134,8 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
      */
     CvResult (CV_API_CALL *Capture_open_buffer)(
         void* opaque,
-        int(*read)(void* opaque, char* buffer, int size),
-        int(*seek)(void* opaque, int offset, int way),
+        long long(*read)(void* opaque, char* buffer, long long size),
+        long long(*seek)(void* opaque, long long offset, int way),
         int* params, unsigned n_params,
         CV_OUT CvPluginCapture* handle);
 }; // OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries

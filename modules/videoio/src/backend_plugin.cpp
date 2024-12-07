@@ -467,11 +467,11 @@ public:
 
             if (CV_ERROR_OK == plugin_api->v2.Capture_open_buffer(
                 &source,
-                [](void* opaque, char* buffer, int size) -> int {
+                [](void* opaque, char* buffer, long long size) -> long long {
                     auto is = reinterpret_cast<std::streambuf*>(opaque);
                     return is->sgetn(buffer, size);
                 },
-                [](void* opaque, int offset, int way) -> int {
+                [](void* opaque, long long offset, int way) -> long long {
                     auto is = reinterpret_cast<std::streambuf*>(opaque);
                     return is->pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
                 }, c_params, n_params, &capture))

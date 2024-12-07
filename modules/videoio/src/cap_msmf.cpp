@@ -2803,13 +2803,17 @@ CvResult CV_API_CALL cv_capture_open_with_params(
 
 static
 CvResult CV_API_CALL cv_capture_open_buffer(
-    std::streambuf& buffer,
+    void* opaque,
+    long long(*read)(void* opaque, char* buffer, long long size),
+    long long(*seek)(void* opaque, long long offset, int way),
     int* params, unsigned n_params,
     CV_OUT CvPluginCapture* handle
 )
 {
     if (!handle)
         return CV_ERROR_FAIL;
+
+    CvStream buffer(opaque, read, seek);
     if (buffer.sgetc() == EOF)
         return CV_ERROR_FAIL;
     *handle = NULL;

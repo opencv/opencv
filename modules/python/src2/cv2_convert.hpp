@@ -620,25 +620,4 @@ PyObject* pyopencv_from(const std::tuple<Ts...>& cpp_tuple)
     return py_tuple;
 }
 
-// --- std::streambuf
-
-class IOBaseWrapper : public std::streambuf
-{
-public:
-    IOBaseWrapper(PyObject* obj = nullptr);
-
-    std::streamsize xsgetn(char* s, std::streamsize n) override;
-
-    int underflow() override;  // Required for sgetc (check for end-of-stream)
-
-    std::streampos seekoff(std::streamoff off, std::ios_base::seekdir way,
-                           std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override;
-
-private:
-    PyObject* ioBase;
-    std::istringstream buf;
-};
-
-bool pyopencv_to(PyObject* obj, IOBaseWrapper& p, const ArgInfo& info);
-
 #endif // CV2_CONVERT_HPP
