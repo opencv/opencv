@@ -40,7 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "npy_blob.hpp"
+#include <opencv2/dnn/utils/npy_blob.hpp>
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/ts/ocl_test.hpp>
 
