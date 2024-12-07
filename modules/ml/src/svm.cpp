@@ -41,9 +41,11 @@
 //M*/
 
 #include "precomp.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 #include <stdarg.h>
 #include <ctype.h>
+
 
 /****************************************************************************************\
                                 COPYRIGHT NOTICE
@@ -1458,9 +1460,10 @@ public:
                     for( j = i+1; j< class_count; j++ )
                     {
                         int cj = class_ranges[j+1] - class_ranges[j];
-                        if( nu*(ci + cj)*0.5 > std::min( ci, cj ) )
-                            CV_Error(cv::Error::StsBadArg, "Training cases incompatible with nu parameter—try a lower value.");
+                        if( nu*(ci + cj)*0.5 > std::min( ci, cj ) ) {
+                            CV_LOG_ERROR(NULL, "Training cases incompatible with nu parameter—try a lower value.");
                             return false;
+                        }
                     }
                 }
             }
