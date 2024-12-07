@@ -23,7 +23,7 @@ def circleApproximation(circle):
         contour.append(([circle[0] + circle[2]*cos(i*dPhi),
             circle[1] + circle[2]*sin(i*dPhi)]))
 
-    return np.array(contour).astype(int)
+    return np.array(contour).astype(np.intc)
 
 def convContoursIntersectiponRate(c1, c2):
 

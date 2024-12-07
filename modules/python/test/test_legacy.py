@@ -9,7 +9,7 @@ from tests_common import NewOpenCVTests
 class Hackathon244Tests(NewOpenCVTests):
 
     def test_int_array(self):
-        a = np.array([-1, 2, -3, 4, -5])
+        a = np.array([-1, 2, -3, 4, -5], dtype=np.intc)
         absa0 = np.abs(a)
         self.assertTrue(cv.norm(a, cv.NORM_L1) == 15)
         absa1 = cv.absdiff(a, 0)
