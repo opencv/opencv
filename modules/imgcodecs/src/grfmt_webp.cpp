@@ -224,6 +224,11 @@ bool WebPDecoder::readData(Mat &img)
             cvtColor(tmp, img, COLOR_BGR2GRAY);
         }
         else
+        if (img.type() == CV_8UC3)
+        {
+            cvtColor(tmp, img, COLOR_BGRA2BGR);
+        }
+        else
             tmp.copyTo(img);
 
         m_animation.timestamps.push_back(timestamp - m_previous_timestamp);
