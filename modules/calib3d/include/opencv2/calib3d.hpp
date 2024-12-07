@@ -3311,9 +3311,8 @@ CV_EXPORTS_W void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays ro
 class CV_EXPORTS_W StereoMatcher : public Algorithm
 {
 public:
-    enum { DISP_SHIFT = 4,
-           DISP_SCALE = (1 << DISP_SHIFT)
-         };
+    static constexpr auto DISP_SHIFT = 4;
+    static constexpr auto DISP_SCALE = 1 << DISP_SHIFT;
 
     /** @brief Computes disparity map for the specified stereo pair
 

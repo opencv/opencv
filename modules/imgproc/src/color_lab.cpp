@@ -967,16 +967,14 @@ static const bool enableRGB2LabInterpolation = true;
 static const bool enablePackedLab = true;
 #endif
 
-enum
-{
-    lab_lut_shift = 5,
-    LAB_LUT_DIM = (1 << lab_lut_shift)+1,
-    lab_base_shift = 14,
-    LAB_BASE = (1 << lab_base_shift),
-    LUT_BASE = (1 << 14),
-    trilinear_shift = 8 - lab_lut_shift + 1,
-    TRILINEAR_BASE = (1 << trilinear_shift)
-};
+constexpr auto lab_lut_shift = 5;
+constexpr auto LAB_LUT_DIM = (1 << lab_lut_shift)+1;
+constexpr auto lab_base_shift = 14;
+constexpr auto LAB_BASE = (1 << lab_base_shift);
+constexpr auto LUT_BASE = (1 << 14);
+constexpr auto trilinear_shift = 8 - lab_lut_shift + 1;
+constexpr auto TRILINEAR_BASE = (1 << trilinear_shift);
+
 static int16_t trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
 static ushort LabToYF_b[256*2];
 static const int minABvalue = -8145;

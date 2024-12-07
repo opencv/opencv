@@ -1198,10 +1198,7 @@ static void calcHist( const Mat* images, int nimages, const int* channels,
 
 #ifdef HAVE_OPENCL
 
-enum
-{
-    BINS = 256
-};
+constexpr auto BINS = 256;
 
 static bool ocl_calcHist1(InputArray _src, OutputArray _hist, int ddepth = CV_32S)
 {

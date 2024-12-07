@@ -44,9 +44,10 @@ using namespace cv;
 namespace cv
 {
 
-enum { XY_SHIFT = 16, XY_ONE = 1 << XY_SHIFT, DRAWING_STORAGE_BLOCK = (1<<12) - 256 };
+constexpr auto XY_SHIFT = 16;
+constexpr auto XY_ONE = 1 << XY_SHIFT;
 
-static const int MAX_THICKNESS = 32767;
+constexpr int MAX_THICKNESS = 32767;
 
 struct PolyEdge
 {

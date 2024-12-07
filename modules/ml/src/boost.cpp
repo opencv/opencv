@@ -210,7 +210,7 @@ public:
         double* result = buf.data();
         float* sbuf = (float*)(result + n);
         Mat sample(1, nvars, CV_32F, sbuf);
-        int predictFlags = bparams.boostType == Boost::DISCRETE ? (PREDICT_MAX_VOTE | RAW_OUTPUT) : PREDICT_SUM;
+        int predictFlags = bparams.boostType == Boost::DISCRETE ? (static_cast<int>(PREDICT_MAX_VOTE) | static_cast<int>(RAW_OUTPUT)) : PREDICT_SUM;
         predictFlags |= COMPRESSED_INPUT;
 
         for( i = 0; i < n; i++ )
