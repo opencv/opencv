@@ -1459,7 +1459,7 @@ public:
                     {
                         int cj = class_ranges[j+1] - class_ranges[j];
                         if( nu*(ci + cj)*0.5 > std::min( ci, cj ) )
-                            // TODO: add some diagnostic
+                            CV_Error(cv::Error::StsBadArg, "Training cases incompatible with nu parameter—try a lower value.");
                             return false;
                     }
                 }
