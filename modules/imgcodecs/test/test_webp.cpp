@@ -207,6 +207,10 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
     EXPECT_TRUE(cvtest::norm(l_animation.frames[6], l_animation.frames[15], NORM_INF) == 0);
     EXPECT_TRUE(cvtest::norm(l_animation.frames[7], l_animation.frames[16], NORM_INF) == 0);
 
+    // Verify whether the imread function successfully loads the first frame
+    Mat frame = imread(output, IMREAD_UNCHANGED);
+    EXPECT_TRUE(cvtest::norm(l_animation.frames[0], frame, NORM_INF) == 0);
+
     std::vector<uchar> buf;
     vector<Mat> webp_frames;
     FILE* wfile = fopen(output.c_str(), "rb");
@@ -341,6 +345,10 @@ TEST(Imgcodecs_WebP, load_save_animation_rgb)
     EXPECT_TRUE(cvtest::norm(l_animation.frames[5], l_animation.frames[14], NORM_INF) == 0);
     EXPECT_TRUE(cvtest::norm(l_animation.frames[6], l_animation.frames[15], NORM_INF) == 0);
     EXPECT_TRUE(cvtest::norm(l_animation.frames[7], l_animation.frames[16], NORM_INF) == 0);
+
+    // Verify whether the imread function successfully loads the first frame
+    Mat frame = imread(output, IMREAD_COLOR);
+    EXPECT_TRUE(cvtest::norm(l_animation.frames[0], frame, NORM_INF) == 0);
 
     std::vector<uchar> buf;
     vector<Mat> webp_frames;
