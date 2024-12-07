@@ -1,5 +1,5 @@
 #ifdef HAVE_OPENCV_VIDEOIO
-#include "../../src/cap_interface.hpp"
+#include "opencv2/videoio/utils.private.hpp"
 typedef std::vector<VideoCaptureAPIs> vector_VideoCaptureAPIs;
 typedef std::vector<VideoCapture> vector_VideoCapture;
 typedef CvStream streambuf;
