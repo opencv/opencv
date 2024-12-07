@@ -28,10 +28,6 @@ if(POLICY CMP0146)
   cmake_policy(SET CMP0146 OLD)  # CMake 3.27+: use CMake FindCUDA if available.
 endif()
 
-if(POLICY CMP0148)
-  cmake_policy(SET CMP0148 OLD)  # CMake 3.27+: use CMake FindPythonInterp and FindPythonLib if available.
-endif()
-
 #
 # Configure OpenCV CMake hooks
 #
