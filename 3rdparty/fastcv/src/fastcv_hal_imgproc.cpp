@@ -34,7 +34,7 @@ int fastcv_hal_medianBlur(
 
     INITIALIZATION_CHECK;
 
-    fcvStatus status;
+    fcvStatus status = FASTCV_SUCCESS;
     int fcvFuncType = FCV_MAKETYPE(ksize,depth);
 
     switch (fcvFuncType)
@@ -62,7 +62,7 @@ class FcvSobelLoop_Invoker : public cv::ParallelLoopBody
         height(_height), src_depth(_src_depth), dst_depth(_dst_depth), dx(_dx), dy(_dy), ksize(_ksize), fcvBorder(_fcvBorder),
         fcvBorderValue(_fcvBorderValue)
     {
-        half_ksize = ksize/2;
+        half_ksize  = ksize/2;
         fcvFuncType = FCV_MAKETYPE(ksize,src_depth);
     }
 
@@ -83,18 +83,17 @@ class FcvSobelLoop_Invoker : public cv::ParallelLoopBody
         }
 
         const uchar* src = src_data + (range.start-topLines)*src_step;
-        uchar dst[dst_step*rangeHeight];
-        int16_t *dxBuffer, *dyBuffer;
+
+        std::vector<uchar> dst(dst_step * rangeHeight);
+        int16_t *dxBuffer = nullptr, *dyBuffer = nullptr;
 
         if ((dx == 1) && (dy == 0))
         {
-            dxBuffer = (int16_t*)dst;
-            dyBuffer = NULL;
+            dxBuffer = (int16_t*)dst.data();
         }
         else if ((dx == 0) && (dy == 1))
         {
-            dxBuffer = NULL;
-            dyBuffer = (int16_t*)dst;
+            dyBuffer = (int16_t*)dst.data();
         }
 
         switch (fcvFuncType)
@@ -118,9 +117,9 @@ class FcvSobelLoop_Invoker : public cv::ParallelLoopBody
                 break;
         }
 
-        uchar* dptr = dst_data+range.start*dst_step;
-        uchar* sptr = dst+topLines*dst_step;
-        memcpy(dptr,sptr, (range.end-range.start)*dst_step);
+        uchar *dptr = dst_data + range.start * dst_step;
+        uchar *sptr = dst.data() + topLines * dst_step;
+        memcpy(dptr, sptr, (range.end - range.start) * dst_step);
     }
 
     private:
@@ -165,7 +164,6 @@ int fastcv_hal_sobel(
     double          delta,
     int             border_type)
 {
-
     if (scale != 1.0f || delta != 0.0f)
         CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Scale:%f, delta:%f is not supported", scale, delta));
 
@@ -251,36 +249,37 @@ int fastcv_hal_sobel(
             src_height += ksize/2;
         }
 
-        uchar tmp[src_height*dst_step];
-        int16_t *dxBuffer, *dyBuffer;
-        int fcvFuncType = FCV_MAKETYPE(ksize,src_depth);
+        std::vector<uchar> tmp(src_height * dst_step);
+        int16_t *dxBuffer = nullptr, *dyBuffer = nullptr;
 
         if ((dx == 1) && (dy == 0))
         {
-            dxBuffer = (int16_t*)tmp;
+            dxBuffer = (int16_t*)tmp.data();
             dyBuffer = NULL;
         }
         else if ((dx == 0) && (dy == 1))
         {
             dxBuffer = NULL;
-            dyBuffer = (int16_t*)tmp;
+            dyBuffer = (int16_t*)tmp.data();
         }
+
+        int fcvFuncType = FCV_MAKETYPE(ksize, src_depth);
 
         switch (fcvFuncType)
         {
             case FCV_MAKETYPE(3,CV_8U):
             {
-                fcvFilterSobel3x3u8s16(src_data, width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                status = fcvFilterSobel3x3u8s16(src_data, src_width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
                 break;
             }
             case FCV_MAKETYPE(5,CV_8U):
             {
-                fcvFilterSobel5x5u8s16(src_data, width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                status = fcvFilterSobel5x5u8s16(src_data, src_width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
                 break;
             }
             case FCV_MAKETYPE(7,CV_8U):
             {
-                fcvFilterSobel7x7u8s16(src_data, width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                status = fcvFilterSobel7x7u8s16(src_data, src_width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
                 break;
             }
             default:
@@ -288,17 +287,18 @@ int fastcv_hal_sobel(
         }
 
         uchar* dptr = dst_data;
-        uchar* sptr = tmp + start_height*dst_step + start_width;
+        uchar* sptr = tmp.data() + start_height*dst_step + start_width;
         for (int i = 0; i < height; ++i)
         {
-            memcpy(dptr, sptr, src_width*sizeof(int16_t));
+            memcpy(dptr, sptr, width*sizeof(int16_t));
             dptr += dst_step;
             sptr += dst_step;
         }
     }
     else
     {
-        int nStripes = height / 80 == 0 ? 1 : height / 80;
+        int nThreads = cv::getNumThreads();
+        int nStripes = nThreads > 1 ? 3*nThreads : 1;
 
         cv::parallel_for_(cv::Range(0, height),
                 FcvSobelLoop_Invoker(src_data, src_step, dst_data, dst_step, width, height, src_depth, dst_depth, dx, dy, ksize,
@@ -466,7 +466,7 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
         cv::ParallelLoopBody(), src_data(_src_data), src_step(_src_step), dst_data(_dst_data), dst_step(_dst_step), width(_width),
         height(_height), ksize(_ksize), depth(_depth), fcvBorder(_fcvBorder), fcvBorderValue(_fcvBorderValue)
     {
-        half_ksize = ksize/2;
+        half_ksize  = ksize/2;
         fcvFuncType = FCV_MAKETYPE(ksize,depth);
     }
 
@@ -477,7 +477,7 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
 
         if(range.start != 0)
         {
-            topLines  += half_ksize;
+            topLines    += half_ksize;
             rangeHeight += half_ksize;
         }
 
@@ -487,16 +487,16 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
         }
 
         const uchar* src = src_data + (range.start-topLines)*src_step;
-        uchar dst[dst_step*rangeHeight];
+        std::vector<uchar> dst(dst_step * rangeHeight);
 
         if (fcvFuncType == FCV_MAKETYPE(3,CV_8U))
-            fcvFilterGaussian3x3u8_v4(src, width, rangeHeight, src_step, dst, dst_step, fcvBorder, 0);
+            fcvFilterGaussian3x3u8_v4(src, width, rangeHeight, src_step, dst.data(), dst_step, fcvBorder, 0);
         else if (fcvFuncType == FCV_MAKETYPE(5,CV_8U))
-            fcvFilterGaussian5x5u8_v3(src, width, rangeHeight, src_step, dst, dst_step, fcvBorder, 0);
+            fcvFilterGaussian5x5u8_v3(src, width, rangeHeight, src_step, dst.data(), dst_step, fcvBorder, 0);
 
-        uchar* dptr = dst_data+range.start*dst_step;
-        uchar* sptr = dst+topLines*dst_step;
-        memcpy(dptr,sptr, (range.end-range.start)*dst_step);
+        uchar *dptr = dst_data + range.start * dst_step;
+        uchar *sptr = dst.data() + topLines * dst_step;
+        memcpy(dptr, sptr, (range.end - range.start) * dst_step);
     }
 
     private:
@@ -582,7 +582,8 @@ int fastcv_hal_gaussianBlurBinomial(
             CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Border type:%s is not supported", borderToString(border_type)));
     }
 
-    int nStripes = height / 80 == 0 ? 1 : height / 80;
+    int nThreads = cv::getNumThreads();
+    int nStripes = (nThreads > 1) ? ((height > 60) ? 3 * nThreads : 1) : 1;
 
     switch (fcvFuncType)
     {
@@ -593,7 +594,7 @@ int fastcv_hal_gaussianBlurBinomial(
                 nStripes);
             break;
         default:
-            CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Ksize:%d, depth:%s is not supported", ksize, cv::depthToString(depth)));
+            CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Ksize:%d, depth:%s is not supported", (int)ksize, cv::depthToString(depth)));
     }
 
     CV_HAL_RETURN(status, hal_gaussianBlurBinomial);
@@ -672,7 +673,7 @@ int fastcv_hal_warpPerspective(
 
     fcvStatus               status = FASTCV_SUCCESS;
     fcvBorderType           fcvBorder;
-    uint8_t                 fcvBorderValue;
+    uint8_t                 fcvBorderValue = 0;
     fcvInterpolationType    fcvInterpolation;
 
     switch (border_type)
@@ -716,11 +717,14 @@ int fastcv_hal_warpPerspective(
                                           interpolationToString(interpolation)));
     }
 
+    int nThreads = cv::getNumThreads();
+    int nStripes = nThreads > 1 ? 3*nThreads : 1;
+
     if(CV_MAT_DEPTH(src_type) == CV_8U)
     {
         cv::parallel_for_(cv::Range(0, dst_height),
             FcvWarpPerspectiveLoop_Invoker(src_data, src_width, src_height, src_step, dst_data, dst_width, dst_height,
-            dst_step, src_type, M, fcvInterpolation, fcvBorder, fcvBorderValue), 16);
+            dst_step, src_type, M, fcvInterpolation, fcvBorder, fcvBorderValue), nStripes);
     }
     else
         CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Src type:%s is not supported", cv::typeToString(src_type).c_str()));
