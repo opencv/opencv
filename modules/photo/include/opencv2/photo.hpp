@@ -709,46 +709,52 @@ CV_EXPORTS_W void decolor( InputArray src, OutputArray grayscale, OutputArray co
 
 
 //! Flags for the seamlessClone algorithm
-enum
+enum SeamlessCloneFlags 
 {
     /**
-     * @brief Normal seamless cloning.
-     * This method is ideal for inserting objects with complex outlines into a new background.
-     * It preserves the original appearance and lighting of the inserted object, ensuring a natural blend.
+    @brief Normal seamless cloning.
+    This method is ideal for inserting objects with complex outlines into a new background.
+    It preserves the original appearance and lighting of the inserted object, ensuring a natural blend.
      */
     NORMAL_CLONE = 1,
 
     /**
-     * @brief Mixed seamless cloning.
-     * This method addresses cases where simple color-based selection or alpha masking is time-consuming
-     * and may result in undesirable halos. By combining structure from the source and texture from the
-     * destination, mixed seamless cloning is highly effective, even with loosely defined selections.
+    @brief Mixed seamless cloning.
+    This method addresses cases where simple color-based selection or alpha masking is time-consuming
+    and may result in undesirable halos. By combining structure from the source and texture from the
+    destination, mixed seamless cloning is highly effective, even with loosely defined selections.
      */
     MIXED_CLONE = 2,
 
     /**
-     * @brief Monochrome transfer cloning.
-     * This method allows users to replace specific features of an object, such as grayscale textures
-     * or patterns, with alternative features. It is particularly useful for artistic effects or
-     * targeted object modifications.
+    @brief Monochrome transfer cloning.
+    This method allows users to replace specific features of an object, such as grayscale textures
+    or patterns, with alternative features. It is particularly useful for artistic effects or
+    targeted object modifications.
      */
     MONOCHROME_TRANSFER = 3,
 
     /**
-     * @brief Enhanced normal seamless cloning.
-     * Similar to NORMAL_CLONE but introduces advanced option ?
+    @brief Enhanced normal seamless cloning.
+    Similar to `NORMAL_CLONE`, but with an advanced approach to ROI (Region of Interest) calculation. 
+    This mode processes a larger source region by considering the entire mask area instead of only 
+    the bounding rectangle of non-zero pixels.
      */
     NORMAL_CLONE_ALT = 9,
 
     /**
-     * @brief Enhanced normal seamless cloning.
-     * Similar to MIXED_CLONE but introduces advanced option ?
+    @brief Enhanced mixed seamless cloning.
+    Similar to `MIXED_CLONE`, but with an advanced approach to ROI (Region of Interest) calculation.
+    This mode processes a larger source region by considering the entire mask area instead of only 
+    the bounding rectangle of non-zero pixels.
      */
     MIXED_CLONE_ALT = 10,
 
     /**
-     * @brief Enhanced normal seamless cloning.
-     * Similar to MONOCHROME_TRANSFER but introduces advanced option ?
+    @brief Enhanced monochrome transfer cloning.
+    Similar to `MONOCHROME_TRANSFER`, but with an advanced approach to ROI (Region of Interest) calculation.
+    This mode processes a larger source region by considering the entire mask area instead of only 
+    the bounding rectangle of non-zero pixels.
      */
     MONOCHROME_TRANSFER_ALT = 11
 };
@@ -769,10 +775,7 @@ Non-zero pixels indicate the region to be blended. If an empty Mat is provided, 
 all non-zero pixels is created internally.
 @param p The point where the center of the src image is placed in the dst image.
 @param blend The output image that stores the result of the seamless cloning. It has the same size and type as `dst`.
-@param flags Flags that control the type of cloning method:
- - **cv::NORMAL_CLONE**: Preserves illumination and shading details from the destination.
- - **cv::MIXED_CLONE**: Combines structure from the source and texture from the destination.
- - **cv::MONOCHROME_TRANSFER**: Transfers grayscale tonal values from the source to the destination.
+@param flags Flags that control the type of cloning method, can take values of `cv::SeamlessCloneFlags`.
  */
 CV_EXPORTS_W void seamlessClone( InputArray src, InputArray dst, InputArray mask, Point p,
         OutputArray blend, int flags);
