@@ -736,8 +736,8 @@ enum SeamlessCloneFlags
 
     /**
     @brief Enhanced normal seamless cloning.
-    Similar to `NORMAL_CLONE`, but with an advanced approach to ROI (Region of Interest) calculation. 
-    This mode processes a larger source region by considering the entire mask area instead of only 
+    Similar to `NORMAL_CLONE`, but with an advanced approach to ROI (Region of Interest) calculation.
+    This mode processes a larger source region by considering the entire mask area instead of only
     the bounding rectangle of non-zero pixels.
      */
     NORMAL_CLONE_ALT = 9,
@@ -745,7 +745,7 @@ enum SeamlessCloneFlags
     /**
     @brief Enhanced mixed seamless cloning.
     Similar to `MIXED_CLONE`, but with an advanced approach to ROI (Region of Interest) calculation.
-    This mode processes a larger source region by considering the entire mask area instead of only 
+    This mode processes a larger source region by considering the entire mask area instead of only
     the bounding rectangle of non-zero pixels.
      */
     MIXED_CLONE_ALT = 10,
@@ -753,7 +753,7 @@ enum SeamlessCloneFlags
     /**
     @brief Enhanced monochrome transfer cloning.
     Similar to `MONOCHROME_TRANSFER`, but with an advanced approach to ROI (Region of Interest) calculation.
-    This mode processes a larger source region by considering the entire mask area instead of only 
+    This mode processes a larger source region by considering the entire mask area instead of only
     the bounding rectangle of non-zero pixels.
      */
     MONOCHROME_TRANSFER_ALT = 11
