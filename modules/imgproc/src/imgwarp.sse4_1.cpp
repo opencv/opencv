@@ -88,7 +88,7 @@ void convertMaps_nninterpolate32f1c16s_SSE41(const float* src1f, const float* sr
 void convertMaps_32f1c16s_SSE41(const float* src1f, const float* src2f, short* dst1, ushort* dst2, int width)
 {
     int x = 0;
-    __m128 v_its = _mm_set1_ps(INTER_TAB_SIZE);
+    __m128 v_its = _mm_set1_ps(static_cast<float>(INTER_TAB_SIZE));
     __m128i v_its1 = _mm_set1_epi32(INTER_TAB_SIZE - 1);
 
     for (; x <= width - 16; x += 16)
@@ -143,7 +143,7 @@ void convertMaps_32f1c16s_SSE41(const float* src1f, const float* src2f, short* d
 void convertMaps_32f2c16s_SSE41(const float* src1f, short* dst1, ushort* dst2, int width)
 {
     int x = 0;
-    __m128 v_its = _mm_set1_ps(INTER_TAB_SIZE);
+    __m128 v_its = _mm_set1_ps(static_cast<float>(INTER_TAB_SIZE));
     __m128i v_its1 = _mm_set1_epi32(INTER_TAB_SIZE - 1);
     __m128i v_y_mask = _mm_set1_epi32((INTER_TAB_SIZE - 1) << 16);
 

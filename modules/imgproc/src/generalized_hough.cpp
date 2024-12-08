@@ -692,7 +692,15 @@ namespace
         getContourPoints(edges, dx, dy, points);
 
         features.resize(levels_ + 1);
+
+#if __cplusplus >= 202002L
+        // C++20 requests "Deprecate implicit capture of this via [=]".
+        // See https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0806r2.html
         std::for_each(features.begin(), features.end(), [=,this](std::vector<Feature>& e) { e.clear(); e.reserve(maxBufferSize_); });
+#else
+        // gcc 7.5.0 with C++11 requests previous capture to avoid "warning: explicit by-copy capture of 'this' redundant with by-copy capture default"
+        std::for_each(features.begin(), features.end(), [=](std::vector<Feature>& e) { e.clear(); e.reserve(maxBufferSize_); });
+#endif
 
         for (size_t i = 0; i < points.size(); ++i)
         {

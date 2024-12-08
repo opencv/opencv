@@ -1980,7 +1980,7 @@ struct RGB2Lab_f
                     clipv(bvec0); clipv(bvec1);
                     #undef clipv
                     /* int iR = R*LAB_BASE, iG = G*LAB_BASE, iB = B*LAB_BASE, iL, ia, ib; */
-                    v_float32 basef = vx_setall_f32(LAB_BASE);
+                    v_float32 basef = vx_setall_f32(static_cast<float>(LAB_BASE));
                     rvec0 = v_mul(rvec0, basef), gvec0 = v_mul(gvec0, basef), bvec0 = v_mul(bvec0, basef);
                     rvec1 = v_mul(rvec1, basef), gvec1 = v_mul(gvec1, basef), bvec1 = v_mul(bvec1, basef);
 
