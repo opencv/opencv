@@ -26,14 +26,14 @@ red line. All the expected straight lines are bulged out. Visit [Distortion
 
 Radial distortion can be represented as follows:
 
-\f[x_{distorted} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
+\f[x_{distorted} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \
 y_{distorted} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)\f]
 
 Similarly, tangential distortion occurs because the image-taking lense
 is not aligned perfectly parallel to the imaging plane. So, some areas in the image may look nearer than
 expected. The amount of tangential distortion can be represented as below:
 
-\f[x_{distorted} = x + [ 2p_1xy + p_2(r^2+2x^2)] \\
+\f[x_{distorted} = x + [ 2p_1xy + p_2(r^2+2x^2)] \
 y_{distorted} = y + [ p_1(r^2+ 2y^2)+ 2p_2xy]\f]
 
 In short, we need to find five parameters, known as distortion coefficients given by:
