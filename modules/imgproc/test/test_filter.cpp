@@ -1923,25 +1923,25 @@ protected:
                 // non-separable filtering with a small kernel
                 fidx = 0;
                 cv::filter2D(src, dst, ddepth, small_kernel);
-                fidx++;
+                fidx = 1;
                 cv::filter2D(src, dst, ddepth, big_kernel);
-                fidx++;
+                fidx = 2;
                 cv::sepFilter2D(src, dst, ddepth, kernelX, kernelY);
-                fidx++;
+                fidx = 3;
                 cv::sepFilter2D(src, dst, ddepth, symkernelX, symkernelY);
-                fidx++;
+                fidx = 4;
                 cv::Sobel(src, dst, ddepth, 2, 0, 5);
-                fidx++;
+                fidx = 5;
                 cv::Scharr(src, dst, ddepth, 0, 1);
                 if( sdepth != ddepth )
                     continue;
-                fidx++;
+                fidx = 6;
                 cv::GaussianBlur(src, dst, Size(5, 5), 1.2, 1.2);
-                fidx++;
+                fidx = 7;
                 cv::blur(src, dst, Size(11, 11));
-                fidx++;
+                fidx = 8;
                 cv::morphologyEx(src, dst, MORPH_GRADIENT, elem_ellipse);
-                fidx++;
+                fidx = 9;
                 cv::morphologyEx(src, dst, MORPH_GRADIENT, elem_rect);
             }
         }
