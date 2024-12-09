@@ -528,7 +528,8 @@ int fastcv_hal_mul8u(
                       }, nStripes);
     }
 
-    return CV_HAL_ERROR_OK;
+    fcvStatus status = FASTCV_SUCCESS;
+    CV_HAL_RETURN(status, hal_mul8u);
 }
 
 int fastcv_hal_mul16s(
@@ -599,7 +600,8 @@ int fastcv_hal_mul16s(
                       }, nStripes);
     }
 
-    return CV_HAL_ERROR_OK;
+    fcvStatus status = FASTCV_SUCCESS;
+    CV_HAL_RETURN(status, hal_mul16s);
 }
 
 int fastcv_hal_mul32f(
@@ -642,7 +644,8 @@ int fastcv_hal_mul32f(
                       }, nStripes);
     }
 
-    return CV_HAL_ERROR_OK;
+    fcvStatus status = FASTCV_SUCCESS;
+    CV_HAL_RETURN(status, hal_mul32f);
 }
 
 int fastcv_hal_split8u(
@@ -652,7 +655,13 @@ int fastcv_hal_split8u(
     int             cn)
 {
     if(cn != 2)
+    {
         CV_HAL_RETURN_NOT_IMPLEMENTED("no of channels not supported");
+    }
+    else if(len < 640 * 480)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("input size not supported");
+    }
 
     INITIALIZATION_CHECK;
 
@@ -666,7 +675,8 @@ int fastcv_hal_split8u(
                       fcvDeinterleaveu8(yS, width_, 1, 0, y1D, 0, y2D, 0);
                       }, nStripes);
 
-    return CV_HAL_ERROR_OK;
+    fcvStatus status = FASTCV_SUCCESS;
+    CV_HAL_RETURN(status, hal_split8u);
 }
 
 int fastcv_hal_merge8u(
@@ -676,7 +686,13 @@ int fastcv_hal_merge8u(
     int              cn)
 {
     if(cn != 2 && cn != 3 && cn != 4)
+    {
         CV_HAL_RETURN_NOT_IMPLEMENTED("no of channels not supported");
+    }
+    else if(len < 640 * 480)
+    {
+        CV_HAL_RETURN_NOT_IMPLEMENTED("input size not supported");
+    }
 
     INITIALIZATION_CHECK;
 
@@ -716,5 +732,6 @@ int fastcv_hal_merge8u(
                           }, nStripes);
     }
 
-    return CV_HAL_ERROR_OK;
+    fcvStatus status = FASTCV_SUCCESS;
+    CV_HAL_RETURN(status, hal_merge8u);
 }
