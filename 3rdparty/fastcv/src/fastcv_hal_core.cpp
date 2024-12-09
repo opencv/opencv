@@ -404,38 +404,38 @@ int fastcv_hal_gemm32f(
 // dst = alpha*src1*src2 + beta*src3;
 
     cv::Mat dst_temp1, dst_temp2;
-	float *dstp = NULL;
-	bool inplace = false;
-	size_t dst_stride;
+    float *dstp = NULL;
+    bool inplace = false;
+    size_t dst_stride;
     fcvStatus status = FASTCV_SUCCESS;
 
     if(flags != 0)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("gemm flags not supported");
     }
-	else if(((src1_step & 3) != 0) ||   // check for stride multiple of 4
-	        ((src2_step & 3) != 0) || 
-	        ((src3_step & 3) != 0) || 
-			((dst_step & 3) != 0)
-		   )  
-	{
-		CV_HAL_RETURN_NOT_IMPLEMENTED("stride multiple of 4 supported");
-	}
-	
-	INITIALIZATION_CHECK;
-
-	if(src1 == dst || src2 == dst || src3 == dst)
+    else if(((src1_step & 3) != 0) ||   // check for stride multiple of 4
+            ((src2_step & 3) != 0) || 
+            ((src3_step & 3) != 0) || 
+            ((dst_step & 3) != 0)
+           )  
     {
-		dst_temp1 = cv::Mat(m, k, CV_32FC1);
-		dstp = dst_temp1.ptr<float>();
-		inplace = true;
-		dst_stride = dst_temp1.step[0];
+        CV_HAL_RETURN_NOT_IMPLEMENTED("stride multiple of 4 supported");
     }
-	else
-	{
-		dstp = dst;
-		dst_stride = dst_step;
-	}
+
+    INITIALIZATION_CHECK;
+
+    if(src1 == dst || src2 == dst || src3 == dst)
+    {
+        dst_temp1 = cv::Mat(m, k, CV_32FC1);
+        dstp = dst_temp1.ptr<float>();
+        inplace = true;
+        dst_stride = dst_temp1.step[0];
+    }
+    else
+    {
+        dstp = dst;
+        dst_stride = dst_step;
+    }
     float *dstp1 = dstp;
     if(alpha != 0.0)
         status = fcvMatrixMultiplyf32_v2(src1, n, m, src1_step, src2, k, 
@@ -458,252 +458,220 @@ int fastcv_hal_gemm32f(
         else
             fcvAddf32_v2(dstp, k, m, dst_stride, src3, src3_step, dstp1, dst_stride);
     }
-	
-	if(inplace == true)
-	{
-		cv::Mat dst_mat = cv::Mat(m, k , CV_32FC1, (void*)dst, dst_step);
-		dst_temp1(cv::Rect(0, 0, k, m)).copyTo(dst_mat(cv::Rect(0, 0, k, m)));		
-	}
+
+    if(inplace == true)
+    {
+        cv::Mat dst_mat = cv::Mat(m, k , CV_32FC1, (void*)dst, dst_step);
+        dst_temp1(cv::Rect(0, 0, k, m)).copyTo(dst_mat(cv::Rect(0, 0, k, m)));
+    }
 
     CV_HAL_RETURN(status,hal_gemm32f);
 }
 
 int fastcv_hal_mul8u(
     const uchar     *src1_data,
-	size_t          src1_step,
-	const uchar     *src2_data,
-	size_t          src2_step,
-	uchar           *dst_data,
-	size_t          dst_step,
-	int             width,
-	int             height,
-	double          scale)
+    size_t          src1_step,
+    const uchar     *src2_data,
+    size_t          src2_step,
+    uchar           *dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    double          scale)
 {
-	int8_t sF;
+    int8_t sF;
 
-    if((height != 1) || ((height == 1 ) && ((src1_step != src2_step) || (src1_step != dst_step))))
-	{
-		if(src1_step < (size_t)width || src2_step < (size_t)width || dst_step < (size_t)width)
-		    CV_HAL_RETURN_NOT_IMPLEMENTED("unexpected stride values");
-	}
+    if(scale >= 1.0)
+    {
+        if(scale == 1.0)        { sF =  0; }
+        else if(scale == 2.0)   { sF = -1; }
+        else if(scale == 4.0)   { sF = -2; }
+        else if(scale == 8.0)   { sF = -3; }
+        else if(scale == 16.0)  { sF = -4; }
+        else if(scale == 32.0)  { sF = -5; }
+        else if(scale == 64.0)  { sF = -6; }
+        else if(scale == 128.0) { sF = -7; }
+        else if(scale == 256.0) { sF = -8; }
+        else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
+    }
+    else if(scale > 0 && scale < 1.0)
+    {
+        if(scale == 1/2.0)        { sF = 1; }
+        else if(scale == 1/4.0)   { sF = 2; }
+        else if(scale == 1/8.0)   { sF = 3; }
+        else if(scale == 1/16.0)  { sF = 4; }
+        else if(scale == 1/32.0)  { sF = 5; }
+        else if(scale == 1/64.0)  { sF = 6; }
+        else if(scale == 1/128.0) { sF = 7; }
+        else if(scale == 1/256.0) { sF = 8; }
+        else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
+    }
+    else
+        CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
 
-	if(scale >= 1.0)
-	{
-		if(scale == 1.0)        { sF =  0; }
-		else if(scale == 2.0)   { sF = -1; }
-		else if(scale == 4.0)   { sF = -2; }
-		else if(scale == 8.0)   { sF = -3; }
-		else if(scale == 16.0)  { sF = -4; }
-		else if(scale == 32.0)  { sF = -5; }
-		else if(scale == 64.0)  { sF = -6; }
-		else if(scale == 128.0) { sF = -7; }
-		else if(scale == 256.0) { sF = -8; }
-		else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
-	}
-	else if(scale > 0 && scale < 1.0)
-	{
-		if(scale == 1/2.0)        { sF = 1; }
-		else if(scale == 1/4.0)   { sF = 2; }
-		else if(scale == 1/8.0)   { sF = 3; }
-		else if(scale == 1/16.0)  { sF = 4; }
-		else if(scale == 1/32.0)  { sF = 5; }
-		else if(scale == 1/64.0)  { sF = 6; }
-		else if(scale == 1/128.0) { sF = 7; }
-		else if(scale == 1/256.0) { sF = 8; }
-		else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
-	}
-	else
-	    CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
-	
-	INITIALIZATION_CHECK;
+    INITIALIZATION_CHECK;
 
     int nStripes = cv::getNumThreads();
-	
-	if((height == 1) && (src1_step == src2_step) && (src1_step == dst_step)) //flattened continuous arrays
-	{
-		cv::parallel_for_(cv::Range(0, width), [&](const cv::Range &range){
+
+    if(height == 1)
+    {
+        cv::parallel_for_(cv::Range(0, width), [&](const cv::Range &range){
                       int rangeWidth = range.end - range.start;
-			          const uchar* yS1 =  src1_data + static_cast<size_t>(range.start);
+                      const uchar* yS1 =  src1_data + static_cast<size_t>(range.start);
                       const uchar* yS2 =  src2_data + static_cast<size_t>(range.start);
                       uchar* yD = dst_data + static_cast<size_t>(range.start);
-		              fcvElementMultiplyu8(yS1, rangeWidth, 1, 0, yS2, 0, sF, 
-					                        FASTCV_CONVERT_POLICY_SATURATE, yD, 0);
+                      fcvElementMultiplyu8(yS1, rangeWidth, 1, 0, yS2, 0, sF, 
+                                            FASTCV_CONVERT_POLICY_SATURATE, yD, 0);
                       }, nStripes);
-	}
-	else
-	{
-		cv::parallel_for_(cv::Range(0, height), [&](const cv::Range &range){
+    }
+    else
+    {
+        cv::parallel_for_(cv::Range(0, height), [&](const cv::Range &range){
                       int rangeHeight = range.end - range.start;
-			          const uchar* yS1 =  src1_data + static_cast<size_t>(range.start)*src1_step;
+                      const uchar* yS1 =  src1_data + static_cast<size_t>(range.start)*src1_step;
                       const uchar* yS2 =  src2_data + static_cast<size_t>(range.start)*src2_step;
                       uchar* yD = dst_data + static_cast<size_t>(range.start)*dst_step;
-		              fcvElementMultiplyu8(yS1, width, rangeHeight, src1_step, yS2, src2_step,
-			                                sF, FASTCV_CONVERT_POLICY_SATURATE, yD, dst_step);
+                      fcvElementMultiplyu8(yS1, width, rangeHeight, src1_step, yS2, src2_step,
+                                            sF, FASTCV_CONVERT_POLICY_SATURATE, yD, dst_step);
                       }, nStripes);
-	}
+    }
 
-	return CV_HAL_ERROR_OK;
+    return CV_HAL_ERROR_OK;
 }
 
 int fastcv_hal_mul16s(
     const short     *src1_data,
-	size_t          src1_step,
-	const short     *src2_data,
-	size_t          src2_step,
-	short           *dst_data,
-	size_t          dst_step,
-	int             width,
-	int             height,
-	double          scale)
+    size_t          src1_step,
+    const short     *src2_data,
+    size_t          src2_step,
+    short           *dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    double          scale)
 {
     int8_t sF;
 
-	if(((src1_step & 1) != 0) || 
-	   ((src2_step & 1) != 0) || 
-	   ((dst_step & 1) != 0))
-	{
-		CV_HAL_RETURN_NOT_IMPLEMENTED("unexpected stride values");
-	}
+    if(scale >= 1.0)
+    {
+        if(scale == 1.0)        { sF =  0; }
+        else if(scale == 2.0)   { sF = -1; }
+        else if(scale == 4.0)   { sF = -2; }
+        else if(scale == 8.0)   { sF = -3; }
+        else if(scale == 16.0)  { sF = -4; }
+        else if(scale == 32.0)  { sF = -5; }
+        else if(scale == 64.0)  { sF = -6; }
+        else if(scale == 128.0) { sF = -7; }
+        else if(scale == 256.0) { sF = -8; }
+        else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
+    }
+    else if(scale > 0 && scale < 1.0)
+    {
+        if(scale == 1/2.0)        { sF = 1; }
+        else if(scale == 1/4.0)   { sF = 2; }
+        else if(scale == 1/8.0)   { sF = 3; }
+        else if(scale == 1/16.0)  { sF = 4; }
+        else if(scale == 1/32.0)  { sF = 5; }
+        else if(scale == 1/64.0)  { sF = 6; }
+        else if(scale == 1/128.0) { sF = 7; }
+        else if(scale == 1/256.0) { sF = 8; }
+        else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
+    }
+    else
+        CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
 
-    if((height != 1) || ((height == 1 ) && ((src1_step != src2_step) || (src1_step != dst_step))))
-	{
-		if(src1_step < (size_t)width*2 || src2_step < (size_t)width*2 || dst_step < (size_t)width*2)
-		    CV_HAL_RETURN_NOT_IMPLEMENTED("unexpected stride values");
-	}
-
-	if(scale >= 1.0)
-	{
-		if(scale == 1.0)        { sF =  0; }
-		else if(scale == 2.0)   { sF = -1; }
-		else if(scale == 4.0)   { sF = -2; }
-		else if(scale == 8.0)   { sF = -3; }
-		else if(scale == 16.0)  { sF = -4; }
-		else if(scale == 32.0)  { sF = -5; }
-		else if(scale == 64.0)  { sF = -6; }
-		else if(scale == 128.0) { sF = -7; }
-		else if(scale == 256.0) { sF = -8; }
-		else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
-	}
-	else if(scale > 0 && scale < 1.0)
-	{
-		if(scale == 1/2.0)        { sF = 1; }
-		else if(scale == 1/4.0)   { sF = 2; }
-		else if(scale == 1/8.0)   { sF = 3; }
-		else if(scale == 1/16.0)  { sF = 4; }
-		else if(scale == 1/32.0)  { sF = 5; }
-		else if(scale == 1/64.0)  { sF = 6; }
-		else if(scale == 1/128.0) { sF = 7; }
-		else if(scale == 1/256.0) { sF = 8; }
-		else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
-	}
-	else
-	    CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
-	
-	INITIALIZATION_CHECK;
+    INITIALIZATION_CHECK;
 
     int nStripes = cv::getNumThreads();
-	
-	if((height == 1) && (src1_step == src2_step) && (src1_step == dst_step)) //flattened continuous arrays
-	{
-		cv::parallel_for_(cv::Range(0, width), [&](const cv::Range &range){
+
+    if(height == 1)
+    {
+        cv::parallel_for_(cv::Range(0, width), [&](const cv::Range &range){
                       int rangeWidth = range.end - range.start;
-			          const short* yS1 =  src1_data + static_cast<size_t>(range.start);
+                      const short* yS1 =  src1_data + static_cast<size_t>(range.start);
                       const short* yS2 =  src2_data + static_cast<size_t>(range.start);
                       short* yD = dst_data + static_cast<size_t>(range.start);
-		              fcvElementMultiplys16(yS1, rangeWidth, 1, 0, yS2, 0, sF, 
-					                         FASTCV_CONVERT_POLICY_SATURATE, yD, 0);
+                      fcvElementMultiplys16(yS1, rangeWidth, 1, 0, yS2, 0, sF, 
+                                             FASTCV_CONVERT_POLICY_SATURATE, yD, 0);
                       }, nStripes);
-	}
-	else
-	{
-		cv::parallel_for_(cv::Range(0, height), [&](const cv::Range &range){
+    }
+    else
+    {
+        cv::parallel_for_(cv::Range(0, height), [&](const cv::Range &range){
                       int rangeHeight = range.end - range.start;
-			          const short* yS1 =  src1_data + static_cast<size_t>(range.start) * (src1_step/sizeof(short));
+                      const short* yS1 =  src1_data + static_cast<size_t>(range.start) * (src1_step/sizeof(short));
                       const short* yS2 =  src2_data + static_cast<size_t>(range.start) * (src2_step/sizeof(short));
                       short* yD = dst_data + static_cast<size_t>(range.start) * (dst_step/sizeof(short));
-		              fcvElementMultiplys16(yS1, width, rangeHeight, src1_step, yS2, src2_step, 
-					                            sF, FASTCV_CONVERT_POLICY_SATURATE, yD, dst_step);
+                      fcvElementMultiplys16(yS1, width, rangeHeight, src1_step, yS2, src2_step, 
+                                                sF, FASTCV_CONVERT_POLICY_SATURATE, yD, dst_step);
                       }, nStripes);
-	}
+    }
 
-	return CV_HAL_ERROR_OK;
+    return CV_HAL_ERROR_OK;
 }
 
 int fastcv_hal_mul32f(
     const float    *src1_data,
-	size_t          src1_step,
-	const float    *src2_data,
-	size_t          src2_step,
-	float          *dst_data,
-	size_t          dst_step,
-	int             width,
-	int             height,
-	double          scale)
+    size_t          src1_step,
+    const float    *src2_data,
+    size_t          src2_step,
+    float          *dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    double          scale)
 {
-	if(scale != 1.0)
-	    CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
+    if(scale != 1.0)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
 
-	if(((src1_step & 3) != 0) || 
-	   ((src2_step & 3) != 0) || 
-	   ((dst_step & 3) != 0))
-	{
-		CV_HAL_RETURN_NOT_IMPLEMENTED("unexpected stride values");
-	}
+    INITIALIZATION_CHECK;
 
-    if((height != 1) || ((height == 1 ) && ((src1_step != src2_step) || (src1_step != dst_step))))
-	{
-		if(src1_step < (size_t)width*4 || src2_step < (size_t)width*4 || dst_step < (size_t)width*4)
-		    CV_HAL_RETURN_NOT_IMPLEMENTED("unexpected stride values");
-	}
-	
-	INITIALIZATION_CHECK;
+    int nStripes = cv::getNumThreads();
 
-	int nStripes = cv::getNumThreads();
-	
-	if((height == 1) && (src1_step == src2_step) && (src1_step == dst_step)) //flattened continuous arrays
-	{
-		cv::parallel_for_(cv::Range(0, width), [&](const cv::Range &range){
+    if(height == 1)
+    {
+        cv::parallel_for_(cv::Range(0, width), [&](const cv::Range &range){
                       int rangeWidth = range.end - range.start;
-			          const float* yS1 =  src1_data + static_cast<size_t>(range.start);
+                      const float* yS1 =  src1_data + static_cast<size_t>(range.start);
                       const float* yS2 =  src2_data + static_cast<size_t>(range.start);
                       float* yD = dst_data + static_cast<size_t>(range.start);
-		              fcvElementMultiplyf32(yS1, rangeWidth, 1, 0, yS2, 0, yD, 0);
+                      fcvElementMultiplyf32(yS1, rangeWidth, 1, 0, yS2, 0, yD, 0);
                       }, nStripes);
-	}
-	else
-	{
-		cv::parallel_for_(cv::Range(0, height), [&](const cv::Range &range){
+    }
+    else
+    {
+        cv::parallel_for_(cv::Range(0, height), [&](const cv::Range &range){
                       int rangeHeight = range.end - range.start;
-			          const float* yS1 =  src1_data + static_cast<size_t>(range.start) * (src1_step/sizeof(float));
+                      const float* yS1 =  src1_data + static_cast<size_t>(range.start) * (src1_step/sizeof(float));
                       const float* yS2 =  src2_data + static_cast<size_t>(range.start) * (src2_step/sizeof(float));
                       float* yD = dst_data + static_cast<size_t>(range.start) * (dst_step/sizeof(float));
-		              fcvElementMultiplyf32(yS1, width, rangeHeight, src1_step, 
-					                              yS2, src2_step, yD, dst_step);
+                      fcvElementMultiplyf32(yS1, width, rangeHeight, src1_step, 
+                                                  yS2, src2_step, yD, dst_step);
                       }, nStripes);
-	}
+    }
 
     return CV_HAL_ERROR_OK;
 }
 
 int fastcv_hal_split8u(
     const uchar    *src_data,
-	uchar          **dst_data,
-	int             len,
-	int             cn)
+    uchar          **dst_data,
+    int             len,
+    int             cn)
 {
-	if(cn != 2)
-		CV_HAL_RETURN_NOT_IMPLEMENTED("no of channels not supported");
-	
-	INITIALIZATION_CHECK;
+    if(cn != 2)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("no of channels not supported");
 
-	int nStripes = cv::getNumThreads();
-				  
-	cv::parallel_for_(cv::Range(0, len), [&](const cv::Range &range){
-		              const uchar* yS =  src_data + static_cast<size_t>(range.start)*2;
+    INITIALIZATION_CHECK;
+
+    int nStripes = cv::getNumThreads();
+                  
+    cv::parallel_for_(cv::Range(0, len), [&](const cv::Range &range){
+                      const uchar* yS =  src_data + static_cast<size_t>(range.start)*2;
                       uchar* y1D = dst_data[0] + static_cast<size_t>(range.start);
                       uchar* y2D = dst_data[1] + static_cast<size_t>(range.start);
-		              int width_ = range.end - range.start;
-		              fcvDeinterleaveu8(yS, width_, 1, 0, y1D, 0, y2D, 0);
+                      int width_ = range.end - range.start;
+                      fcvDeinterleaveu8(yS, width_, 1, 0, y1D, 0, y2D, 0);
                       }, nStripes);
 
     return CV_HAL_ERROR_OK;
@@ -711,50 +679,50 @@ int fastcv_hal_split8u(
 
 int fastcv_hal_merge8u(
     const uchar     **src_data,
-	uchar           *dst_data,
-	int              len,
-	int              cn)
-{	
-	if(cn != 2 && cn != 3 && cn != 4)
-		CV_HAL_RETURN_NOT_IMPLEMENTED("no of channels not supported");
-	
-	INITIALIZATION_CHECK;
-	
-	int nStripes = cv::getNumThreads();
+    uchar           *dst_data,
+    int              len,
+    int              cn)
+{    
+    if(cn != 2 && cn != 3 && cn != 4)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("no of channels not supported");
 
-	if(cn == 2)
-	{
-		cv::parallel_for_(cv::Range(0, len), [&](const cv::Range &range){
-		                  const uchar* yS1 =  src_data[0] + static_cast<size_t>(range.start);
-		                  const uchar* yS2 =  src_data[1] + static_cast<size_t>(range.start);
+    INITIALIZATION_CHECK;
+
+    int nStripes = cv::getNumThreads();
+
+    if(cn == 2)
+    {
+        cv::parallel_for_(cv::Range(0, len), [&](const cv::Range &range){
+                          const uchar* yS1 =  src_data[0] + static_cast<size_t>(range.start);
+                          const uchar* yS2 =  src_data[1] + static_cast<size_t>(range.start);
                           uchar* yD = dst_data + static_cast<size_t>(range.start)*2;
-		                  int width_ = range.end - range.start;
-			              fcvChannelCombine2Planesu8(yS1, width_, 1, 0, yS2, 0, yD, 0);
+                          int width_ = range.end - range.start;
+                          fcvChannelCombine2Planesu8(yS1, width_, 1, 0, yS2, 0, yD, 0);
                           }, nStripes);
-	}    
-	else if(cn == 3)
-	{
-		cv::parallel_for_(cv::Range(0, len), [&](const cv::Range &range){
-		                  const uchar* yS1 =  src_data[0] + static_cast<size_t>(range.start);
-		                  const uchar* yS2 =  src_data[1] + static_cast<size_t>(range.start);
-		                  const uchar* yS3 =  src_data[2] + static_cast<size_t>(range.start);
+    }    
+    else if(cn == 3)
+    {
+        cv::parallel_for_(cv::Range(0, len), [&](const cv::Range &range){
+                          const uchar* yS1 =  src_data[0] + static_cast<size_t>(range.start);
+                          const uchar* yS2 =  src_data[1] + static_cast<size_t>(range.start);
+                          const uchar* yS3 =  src_data[2] + static_cast<size_t>(range.start);
                           uchar* yD = dst_data + static_cast<size_t>(range.start)*3;
-		                  int width_ = range.end - range.start;
-			              fcvChannelCombine3Planesu8(yS1, width_, 1, 0, yS2, 0, yS3, 0, yD, 0);
+                          int width_ = range.end - range.start;
+                          fcvChannelCombine3Planesu8(yS1, width_, 1, 0, yS2, 0, yS3, 0, yD, 0);
                           }, nStripes);
-	}
-	else //if(cn == 4)
-	{
-		cv::parallel_for_(cv::Range(0, len), [&](const cv::Range &range){
-		                  const uchar* yS1 =  src_data[0] + static_cast<size_t>(range.start);
-		                  const uchar* yS2 =  src_data[1] + static_cast<size_t>(range.start);
-		                  const uchar* yS3 =  src_data[2] + static_cast<size_t>(range.start);
-		                  const uchar* yS4 =  src_data[3] + static_cast<size_t>(range.start);
+    }
+    else //if(cn == 4)
+    {
+        cv::parallel_for_(cv::Range(0, len), [&](const cv::Range &range){
+                          const uchar* yS1 =  src_data[0] + static_cast<size_t>(range.start);
+                          const uchar* yS2 =  src_data[1] + static_cast<size_t>(range.start);
+                          const uchar* yS3 =  src_data[2] + static_cast<size_t>(range.start);
+                          const uchar* yS4 =  src_data[3] + static_cast<size_t>(range.start);
                           uchar* yD = dst_data + static_cast<size_t>(range.start)*4;
-		                  int width_ = range.end - range.start;
-			              fcvChannelCombine4Planesu8(yS1, width_, 1, 0, yS2, 0, yS3, 0, yS4, 0, yD, 0);
+                          int width_ = range.end - range.start;
+                          fcvChannelCombine4Planesu8(yS1, width_, 1, 0, yS2, 0, yS3, 0, yS4, 0, yD, 0);
                           }, nStripes);
-	}
+    }
 
-	return CV_HAL_ERROR_OK;
+    return CV_HAL_ERROR_OK;
 }
