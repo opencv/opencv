@@ -24,7 +24,7 @@ red line. All the expected straight lines are bulged out. Visit [Distortion
 
 ![image](images/calib_radial.jpg)
 
-In the following sections several new parameters are introduced, i.e. \f$x_{distorted}\f$ and \f$y_{distorted}\f$. Visit [Camera Calibration and 3D Reconstruction](https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html) for detailed descriptions.
+In the following sections several new parameters are introduced. Visit [Camera Calibration and 3D Reconstruction](https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html) for more details.
 
 Radial distortion can be represented as follows:
 
