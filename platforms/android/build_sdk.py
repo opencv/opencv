@@ -285,7 +285,10 @@ class Builder:
         cmd.append(self.opencvdir)
         execute(cmd)
         # full parallelism for C++ compilation tasks
-        execute([self.ninja_path, "opencv_modules"])
+        build_targets = ["opencv_modules"]
+        if do_install:
+            build_targets.append("opencv_tests")
+        execute([self.ninja_path, *build_targets])
         # limit parallelism for building samples (avoid huge memory consumption)
         if self.no_samples_build:
             execute([self.ninja_path, "install" if (self.debug_info or self.debug) else "install/strip"])
