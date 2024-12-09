@@ -206,54 +206,54 @@ int fastcv_hal_gemm32f(
     int             k,
     int             flags);
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int fastcv_hal_mul8u(
     const uchar     *src1_data,
-	size_t          src1_step,
-	const uchar     *src2_data,
-	size_t          src2_step,
-	uchar           *dst_data,
-	size_t          dst_step,
-	int             width,
-	int             height,
-	double          scale);
+    size_t          src1_step,
+    const uchar     *src2_data,
+    size_t          src2_step,
+    uchar           *dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    double          scale);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int fastcv_hal_mul16s(
     const short     *src1_data,
-	size_t          src1_step,
-	const short     *src2_data,
-	size_t          src2_step,
-	short           *dst_data,
-	size_t          dst_step,
-	int             width,
-	int             height,
-	double          scale); 
+    size_t          src1_step,
+    const short     *src2_data,
+    size_t          src2_step,
+    short           *dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    double          scale);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int fastcv_hal_mul32f(
     const float    *src1_data,
-	size_t          src1_step,
-	const float    *src2_data,
-	size_t          src2_step,
-	float          *dst_data,
-	size_t          dst_step,
-	int             width,
-	int             height,
-	double          scale);
+    size_t          src1_step,
+    const float    *src2_data,
+    size_t          src2_step,
+    float          *dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    double          scale);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int fastcv_hal_merge8u(
     const uchar     **src_data,
-	uchar           *dst_data,
-	int len,
-	int cn);
+    uchar           *dst_data,
+    int len,
+    int cn);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int fastcv_hal_split8u(
     const uchar    *src_data,
-	uchar          **dst_data,
-	int             len,
-	int             cn);
+    uchar          **dst_data,
+    int             len,
+    int             cn);
 
 #endif

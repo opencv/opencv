@@ -761,25 +761,25 @@ public:
         cv::Mat src_;
         int n = knl/2;
 
-		if(range.end == nStripes)
-			height_ += (height - range.end * stripeHeight);
+        if(range.end == nStripes)
+            height_ += (height - range.end * stripeHeight);
 
-		src_ = cv::Mat(height_ + 2*n, width_ + 2*n, CV_8U);
+        src_ = cv::Mat(height_ + 2*n, width_ + 2*n, CV_8U);
 
         if(range.start == 0 && range.end == nStripes)
-			cv::copyMakeBorder(src(cv::Rect(0, 0, width, height)), src_, n, n, n, n, bdr);
+            cv::copyMakeBorder(src(cv::Rect(0, 0, width, height)), src_, n, n, n, n, bdr);
         else if(range.start == 0)
-			cv::copyMakeBorder(src(cv::Rect(0, 0, width_, height_ + n)), src_, n, 0, n, n, bdr);
+            cv::copyMakeBorder(src(cv::Rect(0, 0, width_, height_ + n)), src_, n, 0, n, n, bdr);
         else if(range.end == nStripes)
-			cv::copyMakeBorder(src(cv::Rect(0, range.start * stripeHeight - n, width_, height_ + n)), src_, 0, n, n, n, bdr);
+            cv::copyMakeBorder(src(cv::Rect(0, range.start * stripeHeight - n, width_, height_ + n)), src_, 0, n, n, n, bdr);
         else
-			cv::copyMakeBorder(src(cv::Rect(0, range.start * stripeHeight - n, width_, height_ + 2*n)), src_, 0, 0, n, n, bdr);
+            cv::copyMakeBorder(src(cv::Rect(0, range.start * stripeHeight - n, width_, height_ + 2*n)), src_, 0, 0, n, n, bdr);
 
         int dstHeight_, dstWidth_, origDstHeight_, origDstWidth_;
-		dstHeight_ = (height_ + 2*n + 1)/2;
-		dstWidth_ = (width_ + 2*n + 1)/2;
-		origDstHeight_ = (height_ + 1)/2;
-		origDstWidth_ = (width_ + 1)/2;
+        dstHeight_ = (height_ + 2*n + 1)/2;
+        dstWidth_ = (width_ + 2*n + 1)/2;
+        origDstHeight_ = (height_ + 1)/2;
+        origDstWidth_ = (width_ + 1)/2;
 
         cv::Mat dst_padded = cv::Mat(dstHeight_, dstWidth_, CV_8U);
 
@@ -792,8 +792,8 @@ public:
                                  width_ + 2*n, 2, FASTCV_PYRAMID_SCALE_HALF,
                                  framePyr, FASTCV_BORDER_UNDEFINED, 0);
 
-		int start_val = stripeHeight * range.start;
-		cv::Mat dst_temp1 = dst_padded(cv::Rect(n/2, n/2, origDstWidth_, origDstHeight_));
+        int start_val = stripeHeight * range.start;
+        cv::Mat dst_temp1 = dst_padded(cv::Rect(n/2, n/2, origDstWidth_, origDstHeight_));
         cv::Mat dst_temp2 = dst(cv::Rect(0, start_val/2, origDstWidth_, origDstHeight_));
         dst_temp1.copyTo(dst_temp2);
     }
@@ -802,7 +802,7 @@ private:
     cv::Mat src;
     const int width;
     const int height;
-	cv::Mat dst;
+    cv::Mat dst;
     const int bdr;
     const int knl;
     const int stripeHeight;
@@ -838,14 +838,14 @@ int fastcv_hal_pyrdown(
         CV_HAL_RETURN_NOT_IMPLEMENTED("dst size needs to be atleast half of the src size");
     }
 
-	INITIALIZATION_CHECK;
+    INITIALIZATION_CHECK;
 
     fcvBorderType bdr;
     uint8_t bVal = 0;
-	int nThreads = cv::getNumThreads();
-	if(nThreads <= 1)
-	{
-		switch(border_type)
+    int nThreads = cv::getNumThreads();
+    if(nThreads <= 1)
+    {
+        switch(border_type)
         {
             case cv::BORDER_REPLICATE:
                 bdr = FASTCV_BORDER_REPLICATE;
@@ -870,24 +870,24 @@ int fastcv_hal_pyrdown(
                                      frame1Pyr, bdr, bVal);
 
         CV_HAL_RETURN(status,hal_pyrdown);
-	}
-	else
-	{
-		cv::Mat src = cv::Mat(src_height, src_width, CV_8UC1, (void*)src_data, src_step);
-	    cv::Mat dst = cv::Mat(dst_height, dst_width, CV_8UC1, (void*)dst_data, dst_step);
+    }
+    else
+    {
+        cv::Mat src = cv::Mat(src_height, src_width, CV_8UC1, (void*)src_data, src_step);
+        cv::Mat dst = cv::Mat(dst_height, dst_width, CV_8UC1, (void*)dst_data, dst_step);
 
-	    int nStripes, stripeHeight = nThreads * 10;
+        int nStripes, stripeHeight = nThreads * 10;
 
-	    if(src.rows/stripeHeight == 0)
-	    	nStripes = 1;
-	    else
-	    	nStripes = (src.rows/stripeHeight);
+        if(src.rows/stripeHeight == 0)
+            nStripes = 1;
+        else
+            nStripes = (src.rows/stripeHeight);
 
-	    cv::parallel_for_(cv::Range(0, nStripes),
+        cv::parallel_for_(cv::Range(0, nStripes),
                   FcvPyrLoop_Invoker(src, src_width, src_height, dst, border_type, 5, stripeHeight, nStripes), nStripes);
 
         return CV_HAL_ERROR_OK;
-	}
+    }
 }
 
 int fastcv_hal_cvtBGRtoHSV(

@@ -413,14 +413,6 @@ int fastcv_hal_gemm32f(
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("gemm flags not supported");
     }
-    else if(((src1_step & 3) != 0) ||   // check for stride multiple of 4
-            ((src2_step & 3) != 0) || 
-            ((src3_step & 3) != 0) || 
-            ((dst_step & 3) != 0)
-           )  
-    {
-        CV_HAL_RETURN_NOT_IMPLEMENTED("stride multiple of 4 supported");
-    }
 
     INITIALIZATION_CHECK;
 
@@ -438,7 +430,7 @@ int fastcv_hal_gemm32f(
     }
     float *dstp1 = dstp;
     if(alpha != 0.0)
-        status = fcvMatrixMultiplyf32_v2(src1, n, m, src1_step, src2, k, 
+        status = fcvMatrixMultiplyf32_v2(src1, n, m, src1_step, src2, k,
                                         src2_step, dstp, dst_stride);
 
     if(alpha != 1.0 && alpha != 0.0 && status == FASTCV_SUCCESS)
@@ -520,7 +512,7 @@ int fastcv_hal_mul8u(
                       const uchar* yS1 =  src1_data + static_cast<size_t>(range.start);
                       const uchar* yS2 =  src2_data + static_cast<size_t>(range.start);
                       uchar* yD = dst_data + static_cast<size_t>(range.start);
-                      fcvElementMultiplyu8(yS1, rangeWidth, 1, 0, yS2, 0, sF, 
+                      fcvElementMultiplyu8(yS1, rangeWidth, 1, 0, yS2, 0, sF,
                                             FASTCV_CONVERT_POLICY_SATURATE, yD, 0);
                       }, nStripes);
     }
@@ -591,7 +583,7 @@ int fastcv_hal_mul16s(
                       const short* yS1 =  src1_data + static_cast<size_t>(range.start);
                       const short* yS2 =  src2_data + static_cast<size_t>(range.start);
                       short* yD = dst_data + static_cast<size_t>(range.start);
-                      fcvElementMultiplys16(yS1, rangeWidth, 1, 0, yS2, 0, sF, 
+                      fcvElementMultiplys16(yS1, rangeWidth, 1, 0, yS2, 0, sF,
                                              FASTCV_CONVERT_POLICY_SATURATE, yD, 0);
                       }, nStripes);
     }
@@ -602,7 +594,7 @@ int fastcv_hal_mul16s(
                       const short* yS1 =  src1_data + static_cast<size_t>(range.start) * (src1_step/sizeof(short));
                       const short* yS2 =  src2_data + static_cast<size_t>(range.start) * (src2_step/sizeof(short));
                       short* yD = dst_data + static_cast<size_t>(range.start) * (dst_step/sizeof(short));
-                      fcvElementMultiplys16(yS1, width, rangeHeight, src1_step, yS2, src2_step, 
+                      fcvElementMultiplys16(yS1, width, rangeHeight, src1_step, yS2, src2_step,
                                                 sF, FASTCV_CONVERT_POLICY_SATURATE, yD, dst_step);
                       }, nStripes);
     }
@@ -645,7 +637,7 @@ int fastcv_hal_mul32f(
                       const float* yS1 =  src1_data + static_cast<size_t>(range.start) * (src1_step/sizeof(float));
                       const float* yS2 =  src2_data + static_cast<size_t>(range.start) * (src2_step/sizeof(float));
                       float* yD = dst_data + static_cast<size_t>(range.start) * (dst_step/sizeof(float));
-                      fcvElementMultiplyf32(yS1, width, rangeHeight, src1_step, 
+                      fcvElementMultiplyf32(yS1, width, rangeHeight, src1_step,
                                                   yS2, src2_step, yD, dst_step);
                       }, nStripes);
     }
@@ -665,7 +657,7 @@ int fastcv_hal_split8u(
     INITIALIZATION_CHECK;
 
     int nStripes = cv::getNumThreads();
-                  
+
     cv::parallel_for_(cv::Range(0, len), [&](const cv::Range &range){
                       const uchar* yS =  src_data + static_cast<size_t>(range.start)*2;
                       uchar* y1D = dst_data[0] + static_cast<size_t>(range.start);
@@ -682,7 +674,7 @@ int fastcv_hal_merge8u(
     uchar           *dst_data,
     int              len,
     int              cn)
-{    
+{
     if(cn != 2 && cn != 3 && cn != 4)
         CV_HAL_RETURN_NOT_IMPLEMENTED("no of channels not supported");
 
@@ -699,7 +691,7 @@ int fastcv_hal_merge8u(
                           int width_ = range.end - range.start;
                           fcvChannelCombine2Planesu8(yS1, width_, 1, 0, yS2, 0, yD, 0);
                           }, nStripes);
-    }    
+    }
     else if(cn == 3)
     {
         cv::parallel_for_(cv::Range(0, len), [&](const cv::Range &range){
