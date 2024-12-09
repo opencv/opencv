@@ -4,6 +4,11 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include "hal_replacement.hpp"
+#include "opencv2/core/detail/dispatch_helper.impl.hpp"
+
+#include <algorithm> // std::swap_ranges
+#include <numeric> // std::accumulate
 
 namespace cv {
 
@@ -264,6 +269,8 @@ void transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
+    CALL_HAL(transpose2d, cv_hal_transpose2d, src.data, src.step, dst.data, dst.step, src.cols, src.rows, esz);
+
     CV_IPP_RUN_FAST(ipp_transpose(src, dst))
 
     if( dst.data == src.data )
@@ -282,13 +289,79 @@ void transpose( InputArray _src, OutputArray _dst )
 }
 
 
+void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst_)
+{
+    Mat inp = src_.getMat();
+    CV_Assert(inp.isContinuous());
+    CV_CheckEQ(inp.channels(), 1, "Input array should be single-channel");
+    CV_CheckEQ(order.size(), static_cast<size_t>(inp.dims), "Number of dimensions shouldn't change");
+
+    auto order_ = order;
+    std::sort(order_.begin(), order_.end());
+    for (size_t i = 0; i < order_.size(); ++i)
+    {
+        CV_CheckEQ(static_cast<size_t>(order_[i]), i, "New order should be a valid permutation of the old one");
+    }
+
+    std::vector<int> newShape(order.size());
+    for (size_t i = 0; i < order.size(); ++i)
+    {
+        newShape[i] = inp.size[order[i]];
+    }
+
+    dst_.create(static_cast<int>(newShape.size()), newShape.data(), inp.type());
+    Mat out = dst_.getMat();
+    CV_Assert(out.isContinuous());
+    CV_Assert(inp.data != out.data);
+
+    int continuous_idx = 0;
+    for (int i = static_cast<int>(order.size()) - 1; i >= 0; --i)
+    {
+        if (order[i] != i)
+        {
+            continuous_idx = i + 1;
+            break;
+        }
+    }
+
+    size_t continuous_size = continuous_idx == 0 ? out.total() : out.step1(continuous_idx - 1);
+    size_t outer_size = out.total() / continuous_size;
+
+    std::vector<size_t> steps(order.size());
+    for (int i = 0; i < static_cast<int>(steps.size()); ++i)
+    {
+        steps[i] = inp.step1(order[i]);
+    }
+
+    auto* src = inp.ptr<const unsigned char>();
+    auto* dst = out.ptr<unsigned char>();
+
+    size_t src_offset = 0;
+    size_t es = out.elemSize();
+    for (size_t i = 0; i < outer_size; ++i)
+    {
+        std::memcpy(dst, src + es * src_offset, es * continuous_size);
+        dst += es * continuous_size;
+        for (int j = continuous_idx - 1; j >= 0; --j)
+        {
+            src_offset += steps[j];
+            if ((src_offset / steps[j]) % out.size[j] != 0)
+            {
+                break;
+            }
+            src_offset -= steps[j] * out.size[j];
+        }
+    }
+}
+
+
 #if CV_SIMD128
 template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
-    typedef typename V::lane_type T;
+    typedef typename VTraits<V>::lane_type T;
     int end = (int)(size.width*esz);
     int width = (end + 1)/2;
-    int width_1 = width & -v_uint8x16::nlanes;
+    int width_1 = width & -VTraits<v_uint8x16>::vlanes();
     int i, j;
 
 #if CV_STRONG_ALIGNMENT
@@ -297,15 +370,15 @@ template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, s
 
     for( ; size.height--; src += sstep, dst += dstep )
     {
-        for( i = 0, j = end; i < width_1; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+        for( i = 0, j = end; i < width_1; i += VTraits<v_uint8x16>::vlanes(), j -= VTraits<v_uint8x16>::vlanes() )
         {
             V t0, t1;
 
             t0 = v_load((T*)((uchar*)src + i));
-            t1 = v_load((T*)((uchar*)src + j - v_uint8x16::nlanes));
+            t1 = v_load((T*)((uchar*)src + j - VTraits<v_uint8x16>::vlanes()));
             t0 = v_reverse(t0);
             t1 = v_reverse(t1);
-            v_store((T*)(dst + j - v_uint8x16::nlanes), t0);
+            v_store((T*)(dst + j - VTraits<v_uint8x16>::vlanes()), t0);
             v_store((T*)(dst + i), t1);
         }
         if (isAligned<sizeof(T)>(src, dst))
@@ -371,18 +444,18 @@ template<typename T1, typename T2> CV_ALWAYS_INLINE void flipHoriz_double( const
 static void
 flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
-#if CV_SIMD
+#if CV_SIMD128
 #if CV_STRONG_ALIGNMENT
     size_t alignmentMark = ((size_t)src)|((size_t)dst)|sstep|dstep;
 #endif
-    if (esz == 2 * v_uint8x16::nlanes)
+    if (esz == 2 * (size_t)VTraits<v_uint8x16>::vlanes())
     {
         int end = (int)(size.width*esz);
         int width = end/2;
 
         for( ; size.height--; src += sstep, dst += dstep )
         {
-            for( int i = 0, j = end - 2 * v_uint8x16::nlanes; i < width; i += 2 * v_uint8x16::nlanes, j -= 2 * v_uint8x16::nlanes )
+            for( int i = 0, j = end - 2 * VTraits<v_uint8x16>::vlanes(); i < width; i += 2 * VTraits<v_uint8x16>::vlanes(), j -= 2 * VTraits<v_uint8x16>::vlanes() )
             {
 #if CV_SIMD256
                 v_uint8x32 t0, t1;
@@ -395,25 +468,25 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
                 v_uint8x16 t0, t1, t2, t3;
 
                 t0 = v_load((uchar*)src + i);
-                t1 = v_load((uchar*)src + i + v_uint8x16::nlanes);
+                t1 = v_load((uchar*)src + i + VTraits<v_uint8x16>::vlanes());
                 t2 = v_load((uchar*)src + j);
-                t3 = v_load((uchar*)src + j + v_uint8x16::nlanes);
+                t3 = v_load((uchar*)src + j + VTraits<v_uint8x16>::vlanes());
                 v_store(dst + j, t0);
-                v_store(dst + j + v_uint8x16::nlanes, t1);
+                v_store(dst + j + VTraits<v_uint8x16>::vlanes(), t1);
                 v_store(dst + i, t2);
-                v_store(dst + i + v_uint8x16::nlanes, t3);
+                v_store(dst + i + VTraits<v_uint8x16>::vlanes(), t3);
 #endif
             }
         }
     }
-    else if (esz == v_uint8x16::nlanes)
+    else if (esz == (size_t)VTraits<v_uint8x16>::vlanes())
     {
         int end = (int)(size.width*esz);
         int width = end/2;
 
         for( ; size.height--; src += sstep, dst += dstep )
         {
-            for( int i = 0, j = end - v_uint8x16::nlanes; i < width; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+            for( int i = 0, j = end - VTraits<v_uint8x16>::vlanes(); i < width; i += VTraits<v_uint8x16>::vlanes(), j -= VTraits<v_uint8x16>::vlanes() )
             {
                 v_uint8x16 t0, t1;
 
@@ -463,19 +536,19 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
 
         for( ; size.height--; src += sstep, dst += dstep )
         {
-            for ( int i = 0, j = end; i < width; i += v_uint8x16::nlanes + sizeof(uint64_t), j -= v_uint8x16::nlanes + sizeof(uint64_t) )
+            for ( int i = 0, j = end; i < width; i += VTraits<v_uint8x16>::vlanes() + sizeof(uint64_t), j -= VTraits<v_uint8x16>::vlanes() + sizeof(uint64_t) )
             {
                 v_uint8x16 t0, t1;
                 uint64_t t2, t3;
 
                 t0 = v_load((uchar*)src + i);
-                t2 = *((uint64_t*)((uchar*)src + i + v_uint8x16::nlanes));
-                t1 = v_load((uchar*)src + j - v_uint8x16::nlanes - sizeof(uint64_t));
+                t2 = *((uint64_t*)((uchar*)src + i + VTraits<v_uint8x16>::vlanes()));
+                t1 = v_load((uchar*)src + j - VTraits<v_uint8x16>::vlanes() - sizeof(uint64_t));
                 t3 = *((uint64_t*)((uchar*)src + j - sizeof(uint64_t)));
-                v_store(dst + j - v_uint8x16::nlanes - sizeof(uint64_t), t0);
+                v_store(dst + j - VTraits<v_uint8x16>::vlanes() - sizeof(uint64_t), t0);
                 *((uint64_t*)(dst + j - sizeof(uint64_t))) = t2;
                 v_store(dst + i, t1);
-                *((uint64_t*)(dst + i + v_uint8x16::nlanes)) = t3;
+                *((uint64_t*)(dst + i + VTraits<v_uint8x16>::vlanes())) = t3;
             }
         }
     }
@@ -494,7 +567,7 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
     }
 #endif
     else
-#endif // CV_SIMD
+#endif // CV_SIMD128
     {
         int i, j, limit = (int)(((size.width + 1)/2)*esz);
         AutoBuffer<int> _tab(size.width*esz);
@@ -527,23 +600,23 @@ flipVert( const uchar* src0, size_t sstep, uchar* dst0, size_t dstep, Size size,
                                                   dst0 += dstep, dst1 -= dstep )
     {
         int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 #if CV_STRONG_ALIGNMENT
         if (isAligned<sizeof(int)>(src0, src1, dst0, dst1))
 #endif
         {
-            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+            for (; i <= size.width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
             {
-                v_int32 t0 = vx_load((int*)(src0 + i));
-                v_int32 t1 = vx_load((int*)(src1 + i));
-                v_store((int*)(dst0 + i), t1);
-                v_store((int*)(dst1 + i), t0);
+                v_int32 t0 = v_reinterpret_as_s32(vx_load(src0 + i));
+                v_int32 t1 = v_reinterpret_as_s32(vx_load(src1 + i));
+                v_store(dst0 + i, v_reinterpret_as_u8(t1));
+                v_store(dst1 + i, v_reinterpret_as_u8(t0));
             }
         }
 #if CV_STRONG_ALIGNMENT
         else
         {
-            for (; i <= size.width - CV_SIMD_WIDTH; i += CV_SIMD_WIDTH)
+            for (; i <= size.width - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
             {
                 v_uint8 t0 = vx_load(src0 + i);
                 v_uint8 t1 = vx_load(src1 + i);
@@ -732,6 +805,9 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     _dst.create( size, type );
     Mat dst = _dst.getMat();
 
+    CALL_HAL(flip, cv_hal_flip, type, src.ptr(), src.step, src.cols, src.rows,
+             dst.ptr(), dst.step, flip_mode);
+
     CV_IPP_RUN_FAST(ipp_flip(src, dst, flip_mode));
 
     size_t esz = CV_ELEM_SIZE(type);
@@ -745,10 +821,268 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
         flipHoriz( dst.ptr(), dst.step, dst.ptr(), dst.step, dst.size(), esz );
 }
 
-void rotate(InputArray _src, OutputArray _dst, int rotateMode)
+static void
+flipNDImpl(uchar* data, const int* shape, const size_t* step, int axis)
 {
-    CV_Assert(_src.dims() <= 2);
+    int total = 1;
+    for (int i = 0; i < axis; ++i)
+        total *= shape[i];
 
+    int shape_at_axis = shape[axis];
+    size_t step_at_axis = step[axis];
+    size_t offset = 0;
+    size_t offset_increment = axis == 0 ? 0 : step[axis - 1];
+    for (int i = 0; i < total; ++i, offset += offset_increment)
+        for (int j = 0, k = shape_at_axis - 1; j < shape_at_axis / 2; ++j, --k)
+            std::swap_ranges(data + offset + j * step_at_axis,
+                             data + offset + j * step_at_axis + step_at_axis,
+                             data + offset + k * step_at_axis);
+}
+
+void flipND(InputArray _src, OutputArray _dst, int _axis)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat src = _src.getMat();
+
+    // verify axis
+    int ndim = src.dims;
+    CV_CheckLT(_axis, ndim, "flipND: given axis is out of range");
+    CV_CheckGE(_axis, -ndim, "flipND: given axis is out of range");
+    int axis = (_axis + ndim) % ndim;
+
+    // in-place flip
+    _src.copyTo(_dst);
+
+    // return the src if it has only one element on the flip axis
+    const auto shape = src.size.p;
+    if (shape[axis] == 1)
+        return ;
+
+    // call impl
+    Mat dst = _dst.getMat();
+    flipNDImpl(dst.ptr(), dst.size.p, dst.step.p, axis);
+}
+
+/*
+    This function first prepends 1 to each tensor shape to have a common max_ndims dimension, then flatten non-broadcast dimensions.
+*/
+static bool _flatten_for_broadcast(int narrays, int max_ndims, const int* ndims, const int** orig_shape,
+                                   int** flatten_shape, size_t** flatten_step) {
+    int i, j, k;
+
+    // step 1.
+    // * make all inputs and the output max_ndims-dimensional.
+    // * compute proper step's
+    for (i = max_ndims - 1; i >= 0; i-- ) {
+        for (k = 0; k < narrays; k++) {
+            j = ndims[k] - (max_ndims - i);
+            int sz_i = j >= 0 ? orig_shape[k][j] : 1;
+            size_t st_i = i == max_ndims - 1 ? 1 : flatten_step[k][i+1] * flatten_shape[k][i+1];
+            flatten_shape[k][i] = sz_i;
+            flatten_step[k][i] = st_i;
+            if (flatten_shape[k][i] == 0)
+                return false;
+        }
+    }
+
+    // step 2. Let's do the flattening first,
+    // since we'd need proper values of steps to check continuity.
+    // this loop is probably the most tricky part
+    // in the whole implementation of broadcasting.
+    j = max_ndims-1;
+    for (i = j - 1; i >= 0; i--) {
+        bool all_contiguous = true, all_scalars = true, all_consistent = true;
+        for(k = 0; k < narrays; k++) {
+            size_t st = flatten_step[k][j] * flatten_shape[k][j];
+            bool prev_scalar = flatten_shape[k][j] == 1;
+            bool scalar = flatten_shape[k][i] == 1;
+            all_contiguous = all_contiguous && (st == flatten_step[k][i]);
+            all_scalars = all_scalars && scalar;
+            all_consistent = all_consistent && (scalar == prev_scalar);
+        }
+        if (all_contiguous && (all_consistent || all_scalars)) {
+            for(k = 0; k < narrays; k++)
+                flatten_shape[k][j] *= flatten_shape[k][i];
+        } else {
+            j--;
+            if (i < j) {
+                for(k = 0; k < narrays; k++) {
+                    flatten_shape[k][j] = flatten_shape[k][i];
+                    flatten_step[k][j] = flatten_step[k][i];
+                }
+            }
+        }
+    }
+
+    // step 3. Set some step's to 0's.
+    for (i = max_ndims-1; i >= j; i--) {
+        for (k = 0; k < narrays; k++)
+            flatten_step[k][i] = flatten_shape[k][i] == 1 ? 0 : flatten_step[k][i];
+    }
+    for (; i >= 0; i--) {
+        for (k = 0; k < narrays; k++) {
+            flatten_step[k][i] = 0;
+            flatten_shape[k][i] = 1;
+        }
+    }
+    return true;
+}
+
+void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
+    CV_INSTRUMENT_REGION();
+
+    Mat src = _src.getMat();
+    CV_CheckTrue(src.isContinuous(), "broadcast: input array must be contiguous");
+    CV_CheckChannelsEQ(src.channels(), 1, "broadcast: input array must be single channel");
+
+    Mat shape = _shape.getMat();
+    CV_CheckTypeEQ(shape.type(), CV_32S, "broadcast: target shape must be of type int32");
+    const auto dims_shape = static_cast<int>(shape.total());
+    const auto *ptr_shape = shape.ptr<int>();
+
+    // check valid shape, 1D/0D Mat would fail in the following checks
+    const auto dims_src = src.dims;
+    CV_CheckLE(dims_src, dims_shape,
+               "broadcast: dimension of input array must be less than or equal to dimension of target shape");
+    std::vector<int> shape_src{src.size.p, src.size.p + dims_src};
+    if (shape_src.size() < static_cast<size_t>(dims_shape)) {
+        shape_src.insert(shape_src.begin(), dims_shape - shape_src.size(), 1);
+    }
+    for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
+        const auto *shape_target = ptr_shape;
+        if (shape_src[i] != 1) {
+            CV_CheckEQ(shape_src[i], shape_target[i], "target shape must be equal to input shape or 1");
+        }
+    }
+
+    // impl
+    _dst.create(dims_shape, shape.ptr<int>(), src.type());
+    Mat dst = _dst.getMat();
+    std::vector<int> is_same_shape(dims_shape, 0);
+    for (int i = 0; i < static_cast<int>(shape_src.size()); ++i) {
+        if (shape_src[i] == ptr_shape[i]) {
+            is_same_shape[i] = 1;
+        }
+    }
+    // copy if same shape
+    if (std::accumulate(is_same_shape.begin(), is_same_shape.end(), 1, std::multiplies<int>()) != 0) {
+        const auto *p_src = src.ptr<const char>();
+        auto *p_dst = dst.ptr<char>();
+        std::memcpy(p_dst, p_src, dst.total() * dst.elemSize());
+        return;
+    }
+    // other cases
+    int max_ndims = std::max(dims_src, dims_shape);
+    const int all_ndims[2] = {src.dims, dst.dims};
+    const int* orig_shapes[2] = {src.size.p, dst.size.p};
+    cv::AutoBuffer<size_t> buff(max_ndims * 4);
+    int* flatten_shapes[2] = {(int*)buff.data(), (int*)(buff.data() + max_ndims)};
+    size_t* flatten_steps[2] = {(size_t*)(buff.data() + 2 * max_ndims), (size_t*)(buff.data() + 3 * max_ndims)};
+    if (_flatten_for_broadcast(2, max_ndims, all_ndims, orig_shapes, flatten_shapes, flatten_steps)) {
+        size_t src_dp = flatten_steps[0][max_ndims - 1];
+        size_t dst_dp = flatten_steps[1][max_ndims - 1];
+        CV_Assert(dst_dp == 1);
+        CV_Assert(max_ndims >= 2); // >= 3?
+        size_t rowstep_src = flatten_steps[0][max_ndims - 2];
+        size_t rowstep_dst = flatten_steps[1][max_ndims - 2];
+        const char* ptr_src = src.ptr<const char>();
+        char* ptr_dst = dst.ptr<char>();
+        size_t esz = src.elemSize();
+        int nrows = flatten_shapes[1][max_ndims - 2];
+        int ncols = flatten_shapes[1][max_ndims - 1];
+        int nplanes = 1;
+        CV_Check(esz, esz == 1 || esz == 2 || esz == 4 || esz == 8, "broadcast: not supported data type");
+
+        for (int k = 0; k < max_ndims - 2; k++) {
+            nplanes *= flatten_shapes[1][k];
+        }
+        for (int plane_idx = 0; plane_idx < nplanes; plane_idx++) {
+            size_t offset_src = 0, offset_dst = 0;
+            size_t idx = (size_t)plane_idx;
+            for (int k = max_ndims - 3; k >= 0; k--) {
+                size_t prev_idx = idx / flatten_shapes[1][k];
+                size_t i_k = (int)(idx - prev_idx * flatten_shapes[1][k]);
+                offset_src += i_k * flatten_steps[0][k];
+                offset_dst += i_k * flatten_steps[1][k];
+                idx = prev_idx;
+            }
+
+            #define OPENCV_CORE_BROADCAST_LOOP(_Tp) \
+                for (int i = 0; i < nrows; i++) {   \
+                    const _Tp *ptr_src_ = (const _Tp*)ptr_src + offset_src + rowstep_src * i; \
+                    _Tp *ptr_dst_ = (_Tp*)ptr_dst + offset_dst + rowstep_dst * i; \
+                    if (src_dp == 1) { \
+                        for (int j = 0; j < ncols; j++) { \
+                            ptr_dst_[j] = ptr_src_[j]; \
+                        } \
+                    } else { \
+                        _Tp x = *ptr_src_; \
+                        for (int j = 0; j < ncols; j++) { \
+                            ptr_dst_[j] = x; \
+                        } \
+                    } \
+                }
+
+            if (esz == 1) {
+                OPENCV_CORE_BROADCAST_LOOP(int8_t);
+            } else if (esz == 2) {
+                OPENCV_CORE_BROADCAST_LOOP(int16_t);
+            } else if (esz == 4) {
+                OPENCV_CORE_BROADCAST_LOOP(int32_t);
+            } else if (esz == 8) {
+                OPENCV_CORE_BROADCAST_LOOP(int64_t);
+            } else {
+                CV_Error(cv::Error::StsNotImplemented, "");
+            }
+            #undef OPENCV_CORE_BROADCAST_LOOP
+        }
+    } else {
+        // initial copy (src to dst)
+        std::vector<size_t> step_src{src.step.p, src.step.p + dims_src};
+        if (step_src.size() < static_cast<size_t>(dims_shape)) {
+            step_src.insert(step_src.begin(), dims_shape - step_src.size(), step_src[0]);
+        }
+        for (size_t i = 0; i < src.total(); ++i) {
+            size_t t = i;
+            size_t src_offset = 0, dst_offset = 0;
+            for (int j = static_cast<int>(shape_src.size() - 1); j >= 0; --j) {
+                size_t idx = t / shape_src[j];
+                size_t offset = static_cast<size_t>(t - idx * shape_src[j]);
+                src_offset += offset * step_src[j];
+                dst_offset += offset * dst.step[j];
+                t = idx;
+            }
+            const auto *p_src = src.ptr<const char>();
+            auto *p_dst = dst.ptr<char>();
+            std::memcpy(p_dst + dst_offset, p_src + src_offset, dst.elemSize());
+        }
+        // broadcast copy (dst inplace)
+        std::vector<int> cumulative_shape(dims_shape, 1);
+        int total = static_cast<int>(dst.total());
+        for (int i = dims_shape - 1; i >= 0; --i) {
+            cumulative_shape[i] = static_cast<int>(total / ptr_shape[i]);
+            total = cumulative_shape[i];
+        }
+        for (int i = dims_shape - 1; i >= 0; --i) {
+            if (is_same_shape[i] == 1) {
+                continue;
+            }
+            auto step = dst.step[i];
+            auto *p_dst = dst.ptr<char>();
+            for (int j = 0; j < cumulative_shape[i]; j++) {
+                for (int k = 0; k < ptr_shape[i] - 1; k++) {
+                    std::memcpy(p_dst + step, p_dst, step);
+                    p_dst += step;
+                }
+                p_dst += step;
+            }
+        }
+    }
+}
+
+static void rotateImpl(InputArray _src, OutputArray _dst, int rotateMode)
+{
     switch (rotateMode)
     {
     case ROTATE_90_CLOCKWISE:
@@ -765,6 +1099,53 @@ void rotate(InputArray _src, OutputArray _dst, int rotateMode)
     default:
         break;
     }
+}
+
+void rotate(InputArray _src, OutputArray _dst, int rotateMode)
+{
+    CV_Assert(_src.dims() <= 2);
+    int angle;
+
+    if (_dst.isUMat())
+    {
+        rotateImpl(_src, _dst, rotateMode);
+        return;
+    }
+
+    Mat src = _src.getMat();
+    int type = src.type();
+    if( src.empty() )
+    {
+        _dst.release();
+        return;
+    }
+
+    switch (rotateMode)
+    {
+    case ROTATE_90_CLOCKWISE:
+        _dst.create(src.cols, src.rows, type);
+        angle = 90;
+        break;
+    case ROTATE_180:
+        _dst.create(src.rows, src.cols, type);
+        angle = 180;
+        break;
+    case ROTATE_90_COUNTERCLOCKWISE:
+        _dst.create(src.cols, src.rows, type);
+        angle = 270;
+        break;
+    default:
+        _dst.create(src.rows, src.cols, type);
+        angle = 0;
+        break;
+    }
+
+    Mat dst = _dst.getMat();
+    CALL_HAL(rotate90, cv_hal_rotate90, type, src.ptr(), src.step, src.cols, src.rows,
+             dst.ptr(), dst.step, angle);
+
+    // use src (Mat) since _src (InputArray) is updated by _dst.create() when in-place
+    rotateImpl(src, _dst, rotateMode);
 }
 
 }  // namespace

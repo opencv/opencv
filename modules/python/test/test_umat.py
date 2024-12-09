@@ -26,7 +26,7 @@ class UMat(NewOpenCVTests):
         data = np.random.random([512, 512])
         # UMat constructors
         data_um = cv.UMat(data)  # from ndarray
-        data_sub_um = cv.UMat(data_um, [128, 256], [128, 256])  # from UMat
+        data_sub_um = cv.UMat(data_um, (128, 256), (128, 256))  # from UMat
         data_dst_um = cv.UMat(128, 128, cv.CV_64F)  # from size/type
         # test continuous and submatrix flags
         assert data_um.isContinuous() and not data_um.isSubmatrix()
@@ -87,14 +87,17 @@ class UMat(NewOpenCVTests):
 
         _p1_mask_err = cv.calcOpticalFlowPyrLK(img1, img2, p0, None)
 
-        _p1_mask_err_umat0 = map(cv.UMat.get, cv.calcOpticalFlowPyrLK(img1, img2, p0_umat, None))
-        _p1_mask_err_umat1 = map(cv.UMat.get, cv.calcOpticalFlowPyrLK(cv.UMat(img1), img2, p0_umat, None))
-        _p1_mask_err_umat2 = map(cv.UMat.get, cv.calcOpticalFlowPyrLK(img1, cv.UMat(img2), p0_umat, None))
+        _p1_mask_err_umat0 = list(map(lambda umat: umat.get(), cv.calcOpticalFlowPyrLK(img1, img2, p0_umat, None)))
+        _p1_mask_err_umat1 = list(map(lambda umat: umat.get(), cv.calcOpticalFlowPyrLK(cv.UMat(img1), img2, p0_umat, None)))
+        _p1_mask_err_umat2 = list(map(lambda umat: umat.get(), cv.calcOpticalFlowPyrLK(img1, cv.UMat(img2), p0_umat, None)))
 
-        # # results of OCL optical flow differs from CPU implementation, so result can not be easily compared
-        # for p1_mask_err_umat in [p1_mask_err_umat0, p1_mask_err_umat1, p1_mask_err_umat2]:
-        #     for data, data_umat in zip(p1_mask_err, p1_mask_err_umat):
-        #         self.assertTrue(np.allclose(data, data_umat))
+        for _p1_mask_err_umat in [_p1_mask_err_umat0, _p1_mask_err_umat1, _p1_mask_err_umat2]:
+            for data, data_umat in zip(_p1_mask_err, _p1_mask_err_umat):
+                self.assertEqual(data.shape, data_umat.shape)
+                self.assertEqual(data.dtype, data_umat.dtype)
+        for _p1_mask_err_umat in [_p1_mask_err_umat1, _p1_mask_err_umat2]:
+            for data_umat0, data_umat in zip(_p1_mask_err_umat0[:2], _p1_mask_err_umat[:2]):
+                self.assertTrue(np.allclose(data_umat0, data_umat))
 
     def test_umat_merge_mertens(self):
         if self.extraTestDataPath is None:
@@ -104,11 +107,18 @@ class UMat(NewOpenCVTests):
 
         images, _ = load_exposure_seq(os.path.join(test_data_path, 'exposures'))
 
+        # As we want to test mat vs. umat here, we temporarily set only one worker-thread to achieve
+        # deterministic summations inside mertens' parallelized process.
+        num_threads = cv.getNumThreads()
+        cv.setNumThreads(1)
+
         merge = cv.createMergeMertens()
         mat_result = merge.process(images)
 
         umat_images = [cv.UMat(img) for img in images]
         umat_result = merge.process(umat_images)
+
+        cv.setNumThreads(num_threads)
 
         self.assertTrue(np.allclose(umat_result.get(), mat_result))
 

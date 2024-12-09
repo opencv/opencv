@@ -3,12 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.opencv</groupId>
     <artifactId>opencv-parent</artifactId>
-    <version>3.4.20</version>
+    <version>4.10.0</version>
     <packaging>pom</packaging>
     <name>OpenCV Parent POM</name>
     <licenses>
         <license>
-            <name>License Agreement For Open Source Computer Vision Library (3-clause BSD License)</name>
+            <name>License Agreement For Open Source Computer Vision Library (Apache 2.0 License)</name>
             <url>http://opencv.org/license.html</url>
         </license>
     </licenses>

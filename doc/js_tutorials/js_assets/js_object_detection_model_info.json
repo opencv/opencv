@@ -7,7 +7,7 @@
             "std": "0.007843",
             "swapRB": "false",
             "outType": "SSD",
-            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/dnn/object_detection_classes_pascal_voc.txt",
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/dnn/object_detection_classes_pascal_voc.txt",
             "modelUrl": "https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/master/mobilenet_iter_73000.caffemodel",
             "configUrl": "https://raw.githubusercontent.com/chuanqi305/MobileNet-SSD/master/deploy.prototxt"
         },
@@ -18,7 +18,7 @@
             "std": "1",
             "swapRB": "false",
             "outType": "SSD",
-            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/dnn/object_detection_classes_pascal_voc.txt",
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/dnn/object_detection_classes_pascal_voc.txt",
             "modelUrl": "https://drive.google.com/uc?id=0BzKzrI_SkD1_WVVTSmQxU0dVRzA&export=download",
             "configUrl": "https://drive.google.com/uc?id=0BzKzrI_SkD1_WVVTSmQxU0dVRzA&export=download"
         }
@@ -31,7 +31,7 @@
             "std": "0.00392",
             "swapRB": "false",
             "outType": "YOLO",
-            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/dnn/object_detection_classes_yolov3.txt",
+            "labelsUrl": "https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/dnn/object_detection_classes_yolov3.txt",
             "modelUrl": "https://pjreddie.com/media/files/yolov2-tiny.weights",
             "configUrl": "https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolov2-tiny.cfg"
         }

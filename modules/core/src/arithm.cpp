@@ -92,7 +92,7 @@ static bool ocl_binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     const int dstType1 = CV_MAKETYPE(dstDepth, 1);
     const int scalarType = CV_MAKETYPE(srcdepth, scalarcn);
 
-    sprintf(opts, "-D %s%s -D %s%s -D dstT=%s -D DEPTH_dst=%d -D dstT_C1=%s -D workST=%s -D cn=%d -D rowsPerWI=%d",
+    snprintf(opts, sizeof(opts), "-D %s%s -D %s%s -D dstT=%s -D DEPTH_dst=%d -D dstT_C1=%s -D workST=%s -D cn=%d -D rowsPerWI=%d",
             haveMask ? "MASK_" : "", haveScalar ? "UNARY_OP" : "BINARY_OP", oclop2str[oclop],
             doubleSupport ? " -D DOUBLE_SUPPORT" : "",
             bitwise ? ocl::memopTypeToStr(dstType) : ocl::typeToStr(dstType),
@@ -153,7 +153,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
                        bool bitwise, int oclop )
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
-    int kind1 = psrc1->kind(), kind2 = psrc2->kind();
+    _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
     int type1 = psrc1->type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
     int type2 = psrc2->type(), depth2 = CV_MAT_DEPTH(type2), cn2 = CV_MAT_CN(type2);
     int dims1 = psrc1->dims(), dims2 = psrc2->dims();
@@ -168,7 +168,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
 
     if( dims1 <= 2 && dims2 <= 2 && kind1 == kind2 && sz1 == sz2 && type1 == type2 && !haveMask )
     {
-        _dst.create(sz1, type1);
+        _dst.createSameSize(*psrc1, type1);
         CV_OCL_RUN(use_opencl,
                    ocl_binary_op(*psrc1, *psrc2, _dst, _mask, bitwise, oclop, false))
 
@@ -178,7 +178,10 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
             cn = (int)CV_ELEM_SIZE(type1);
         }
         else
+        {
             func = tab[depth1];
+        }
+        CV_Assert(func);
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst);
@@ -206,7 +209,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
             swap(sz1, sz2);
         }
         else if( !checkScalar(*psrc2, type1, kind2, kind1) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                       "The operation is neither 'array op array' (where arrays have the same size and type), "
                       "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
@@ -252,6 +255,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
     }
     else
         func = tab[depth1];
+    CV_Assert(func);
 
     if( !haveScalar )
     {
@@ -325,7 +329,7 @@ static void binary_op( InputArray _src1, InputArray _src2, OutputArray _dst,
 
 static BinaryFuncC* getMaxTab()
 {
-    static BinaryFuncC maxTab[] =
+    static BinaryFuncC maxTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::max8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::max16s),
@@ -339,7 +343,7 @@ static BinaryFuncC* getMaxTab()
 
 static BinaryFuncC* getMinTab()
 {
-    static BinaryFuncC minTab[] =
+    static BinaryFuncC minTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::min8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::min16s),
@@ -485,8 +489,8 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     int kercn = haveMask || haveScalar ? cn : ocl::predictOptimalVectorWidth(_src1, _src2, _dst);
     int scalarcn = kercn == 3 ? 4 : kercn, rowsPerWI = d.isIntel() ? 4 : 1;
 
-    char cvtstr[4][32], opts[1024];
-    sprintf(opts, "-D %s%s -D %s -D srcT1=%s -D srcT1_C1=%s -D srcT2=%s -D srcT2_C1=%s "
+    char cvtstr[4][50], opts[1024];
+    snprintf(opts, sizeof(opts), "-D %s%s -D %s -D srcT1=%s -D srcT1_C1=%s -D srcT2=%s -D srcT2_C1=%s "
             "-D dstT=%s -D DEPTH_dst=%d -D dstT_C1=%s -D workT=%s -D workST=%s -D scaleT=%s -D wdepth=%d -D convertToWT1=%s "
             "-D convertToWT2=%s -D convertToDT=%s%s -D cn=%d -D rowsPerWI=%d -D convertFromU=%s",
             (haveMask ? "MASK_" : ""), (haveScalar ? "UNARY_OP" : "BINARY_OP"),
@@ -496,12 +500,12 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             ocl::typeToStr(ddepth), ocl::typeToStr(CV_MAKETYPE(wdepth, kercn)),
             ocl::typeToStr(CV_MAKETYPE(wdepth, scalarcn)),
             ocl::typeToStr(wdepth), wdepth,
-            ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0]),
-            ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1]),
-            ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2]),
+            ocl::convertTypeStr(depth1, wdepth, kercn, cvtstr[0], sizeof(cvtstr[0])),
+            ocl::convertTypeStr(depth2, wdepth, kercn, cvtstr[1], sizeof(cvtstr[1])),
+            ocl::convertTypeStr(wdepth, ddepth, kercn, cvtstr[2], sizeof(cvtstr[2])),
             doubleSupport ? " -D DOUBLE_SUPPORT" : "", kercn, rowsPerWI,
             oclop == OCL_OP_ABSDIFF && wdepth == CV_32S && ddepth == wdepth ?
-            ocl::convertTypeStr(CV_8U, ddepth, kercn, cvtstr[3]) : "noconvert");
+            ocl::convertTypeStr(CV_8U, ddepth, kercn, cvtstr[3], sizeof(cvtstr[3])) : "noconvert");
 
     size_t usrdata_esz = CV_ELEM_SIZE(wdepth);
     const uchar* usrdata_p = (const uchar*)usrdata;
@@ -581,12 +585,22 @@ static bool ocl_arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 #endif
 
+typedef int (*ScalarFunc)(const uchar* src, size_t step_src,
+                          uchar* dst, size_t step_dst, int width, int height,
+                          void* scalar, bool scalarIsFirst, int nChannels);
+
+typedef int (*ExtendedTypeFunc)(const uchar* src1, size_t step1,
+                                const uchar* src2, size_t step2,
+                                uchar* dst, size_t step, int width, int height,
+                                void*);
+
 static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                       InputArray _mask, int dtype, BinaryFuncC* tab, bool muldiv=false,
-                      void* usrdata=0, int oclop=-1 )
+                      void* usrdata=0, int oclop=-1, ExtendedTypeFunc extendedFunc = nullptr,
+                      ScalarFunc scalarFunc = nullptr)
 {
     const _InputArray *psrc1 = &_src1, *psrc2 = &_src2;
-    int kind1 = psrc1->kind(), kind2 = psrc2->kind();
+    _InputArray::KindFlag kind1 = psrc1->kind(), kind2 = psrc2->kind();
     bool haveMask = !_mask.empty();
     bool reallocate = false;
     int type1 = psrc1->type(), depth1 = CV_MAT_DEPTH(type1), cn = CV_MAT_CN(type1);
@@ -613,7 +627,13 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
         Mat src1 = psrc1->getMat(), src2 = psrc2->getMat(), dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
-        tab[depth1](src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, usrdata);
+        if (!extendedFunc || extendedFunc(src1.ptr(), src1.step, src2.ptr(), src2.step,
+                                          dst.ptr(), dst.step, sz.width, sz.height, usrdata) != 0)
+        {
+            BinaryFuncC func = tab[depth1];
+            CV_Assert(func);
+            func(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, usrdata);
+        }
         return;
     }
 
@@ -623,8 +643,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         (kind1 == _InputArray::MATX && (sz1 == Size(1,4) || sz1 == Size(1,1))) ||
         (kind2 == _InputArray::MATX && (sz2 == Size(1,4) || sz2 == Size(1,1))) )
     {
-        if ((type1 == CV_64F && (sz1.height == 1 || sz1.height == 4)) &&
-            checkScalar(*psrc1, type2, kind1, kind2))
+        if ((type1 == CV_64F && (sz1.height == 1 || sz1.height == 4)) && src1Scalar)
         {
             // src1 is a scalar; swap it with src2
             swap(psrc1, psrc2);
@@ -639,8 +658,8 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             if ( oclop == OCL_OP_DIV_SCALE )
                 oclop = OCL_OP_RDIV_SCALE;
         }
-        else if( !checkScalar(*psrc2, type1, kind2, kind1) )
-            CV_Error( CV_StsUnmatchedSizes,
+        else if( !src2Scalar )
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The operation is neither 'array op array' "
                      "(where arrays have the same size and the same number of channels), "
                      "nor 'array op scalar', nor 'scalar op array'" );
@@ -665,7 +684,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         else
         {
             if( !haveScalar && type1 != type2 )
-                CV_Error(CV_StsBadArg,
+                CV_Error(cv::Error::StsBadArg,
                      "When the input arrays in add/subtract/multiply/divide functions have different types, "
                      "the output array type must be explicitly specified");
             dtype = type1;
@@ -728,6 +747,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                     (cvtdst ? wsz : 0) +
                     (haveMask ? dsz : 0);
     BinaryFuncC func = tab[CV_MAT_DEPTH(wtype)];
+    CV_Assert(func);
 
     if( !haveScalar )
     {
@@ -743,14 +763,22 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         _buf.allocate(bufesz*blocksize + 64);
         buf = _buf.data();
         if( cvtsrc1 )
+        {
             buf1 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
+        }
         if( cvtsrc2 )
+        {
             buf2 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
+        }
         wbuf = maskbuf = buf;
         if( cvtdst )
+        {
             buf = alignPtr(buf + blocksize*wsz, 16);
+        }
         if( haveMask )
+        {
             maskbuf = buf;
+        }
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
         {
@@ -760,38 +788,44 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
                 Size bszn(bsz*cn, 1);
                 const uchar *sptr1 = ptrs[0], *sptr2 = ptrs[1];
                 uchar* dptr = ptrs[2];
-                if( cvtsrc1 )
+                // try to perform operation with conversion in one call
+                // if fail, use converter functions
+                uchar* opconverted = haveMask ? maskbuf : dptr;
+                if (!extendedFunc || extendedFunc(sptr1, 1, sptr2, 1, opconverted, (!haveMask),
+                                                  bszn.width, bszn.height, usrdata) != 0)
                 {
-                    cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
-                    sptr1 = buf1;
-                }
-                if( ptrs[0] == ptrs[1] )
-                    sptr2 = sptr1;
-                else if( cvtsrc2 )
-                {
-                    cvtsrc2( sptr2, 1, 0, 1, buf2, 1, bszn, 0 );
-                    sptr2 = buf2;
+                    if( cvtsrc1 )
+                    {
+                        cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
+                        sptr1 = buf1;
+                    }
+                    if( ptrs[0] == ptrs[1] )
+                    {
+                        sptr2 = sptr1;
+                    }
+                    else if( cvtsrc2 )
+                    {
+                        cvtsrc2( sptr2, 1, 0, 1, buf2, 1, bszn, 0 );
+                        sptr2 = buf2;
+                    }
+
+                    uchar* fdst = (haveMask || cvtdst) ? wbuf : dptr;
+                    func(sptr1, 1, sptr2, 1, fdst, (!haveMask && !cvtdst), bszn.width, bszn.height, usrdata);
+
+                    if (cvtdst)
+                    {
+                        uchar* cdst = haveMask ? maskbuf : dptr;
+                        cvtdst(wbuf, 1, 0, 1, cdst, 1, bszn, 0);
+                    }
+                    opconverted = cvtdst ? maskbuf : wbuf;
                 }
 
-                if( !haveMask && !cvtdst )
-                    func( sptr1, 1, sptr2, 1, dptr, 1, bszn.width, bszn.height, usrdata );
-                else
+                if (haveMask)
                 {
-                    func( sptr1, 1, sptr2, 1, wbuf, 0, bszn.width, bszn.height, usrdata );
-                    if( !haveMask )
-                        cvtdst( wbuf, 1, 0, 1, dptr, 1, bszn, 0 );
-                    else if( !cvtdst )
-                    {
-                        copymask( wbuf, 1, ptrs[3], 1, dptr, 1, Size(bsz, 1), &dsz );
-                        ptrs[3] += bsz;
-                    }
-                    else
-                    {
-                        cvtdst( wbuf, 1, 0, 1, maskbuf, 1, bszn, 0 );
-                        copymask( maskbuf, 1, ptrs[3], 1, dptr, 1, Size(bsz, 1), &dsz );
-                        ptrs[3] += bsz;
-                    }
+                    copymask(opconverted, 1, ptrs[3], 1, dptr, 1, Size(bsz, 1), &dsz);
+                    ptrs[3] += bsz;
                 }
+
                 ptrs[0] += bsz*esz1; ptrs[1] += bsz*esz2; ptrs[2] += bsz*dsz;
             }
         }
@@ -807,13 +841,19 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
         _buf.allocate(bufesz*blocksize + 64);
         buf = _buf.data();
         if( cvtsrc1 )
-            buf1 = buf, buf = alignPtr(buf + blocksize*wsz, 16);
+        {
+            buf1 = buf, buf = alignPtr(buf + blocksize * wsz, 16);
+        }
         buf2 = buf; buf = alignPtr(buf + blocksize*wsz, 16);
         wbuf = maskbuf = buf;
         if( cvtdst )
-            buf = alignPtr(buf + blocksize*wsz, 16);
+        {
+            buf = alignPtr(buf + blocksize * wsz, 16);
+        }
         if( haveMask )
+        {
             maskbuf = buf;
+        }
 
         convertAndUnrollScalar( src2, wtype, buf2, blocksize);
 
@@ -822,39 +862,53 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             for( size_t j = 0; j < total; j += blocksize )
             {
                 int bsz = (int)MIN(total - j, blocksize);
-                Size bszn(bsz*cn, 1);
                 const uchar *sptr1 = ptrs[0];
                 const uchar* sptr2 = buf2;
                 uchar* dptr = ptrs[1];
 
-                if( cvtsrc1 )
-                {
-                    cvtsrc1( sptr1, 1, 0, 1, buf1, 1, bszn, 0 );
-                    sptr1 = buf1;
-                }
-
+                const uchar* extSptr1 = sptr1;
+                const uchar* extSptr2 = sptr2;
                 if( swapped12 )
-                    std::swap(sptr1, sptr2);
+                    std::swap(extSptr1, extSptr2);
 
-                if( !haveMask && !cvtdst )
-                    func( sptr1, 1, sptr2, 1, dptr, 1, bszn.width, bszn.height, usrdata );
-                else
+                // try to perform operation in 1 call, fallback to classic way if fail
+                uchar* opconverted = haveMask ? maskbuf : dptr;
+                if (!scalarFunc || src2.total() != 1 ||
+                    scalarFunc(extSptr1, 1, opconverted, 1, bsz, 1, (void*)extSptr2, swapped12, cn) != 0)
                 {
-                    func( sptr1, 1, sptr2, 1, wbuf, 1, bszn.width, bszn.height, usrdata );
-                    if( !haveMask )
-                        cvtdst( wbuf, 1, 0, 1, dptr, 1, bszn, 0 );
-                    else if( !cvtdst )
+                    // try to perform operation with conversion in one call
+                    // if fail, use converter functions
+
+                    if (!extendedFunc || extendedFunc(extSptr1, 1, extSptr2, 1, opconverted, 1,
+                                                      bsz*cn, 1, usrdata) != 0)
                     {
-                        copymask( wbuf, 1, ptrs[2], 1, dptr, 1, Size(bsz, 1), &dsz );
-                        ptrs[2] += bsz;
-                    }
-                    else
-                    {
-                        cvtdst( wbuf, 1, 0, 1, maskbuf, 1, bszn, 0 );
-                        copymask( maskbuf, 1, ptrs[2], 1, dptr, 1, Size(bsz, 1), &dsz );
-                        ptrs[2] += bsz;
+                        if( cvtsrc1 )
+                        {
+                            cvtsrc1( sptr1, 1, 0, 1, buf1, 1, Size(bsz*cn, 1), 0 );
+                            sptr1 = buf1;
+                        }
+
+                        if( swapped12 )
+                            std::swap(sptr1, sptr2);
+
+                        uchar* fdst = ( haveMask || cvtdst ) ? wbuf : dptr;
+                        func( sptr1, 1, sptr2, 1, fdst, 1, bsz*cn, 1, usrdata );
+
+                        if (cvtdst)
+                        {
+                            uchar* cdst = haveMask ? maskbuf : dptr;
+                            cvtdst(wbuf, 1, 0, 1, cdst, 1, Size(bsz*cn, 1), 0);
+                        }
+                        opconverted = cvtdst ? maskbuf : wbuf;
                     }
                 }
+
+                if (haveMask)
+                {
+                    copymask(opconverted, 1, ptrs[2], 1, dptr, 1, Size(bsz, 1), &dsz);
+                    ptrs[2] += bsz;
+                }
+
                 ptrs[0] += bsz*esz1; ptrs[1] += bsz*dsz;
             }
         }
@@ -863,7 +917,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 static BinaryFuncC* getAddTab()
 {
-    static BinaryFuncC addTab[] =
+    static BinaryFuncC addTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::add8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::add16s),
@@ -875,9 +929,77 @@ static BinaryFuncC* getAddTab()
     return addTab;
 }
 
+static int addScalar32f32fWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                  void* scalar, bool /*scalarIsFirst*/, int nChannels)
+{
+    int res = cv_hal_addScalar32f32f((const float*)src, step_src, (float *)dst, step_dst, width, height, (const float*)scalar, nChannels);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static int addScalar16s16sWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                  void* scalar, bool /*scalarIsFirst*/, int nChannels)
+{
+    int res = cv_hal_addScalar16s16s((const int16_t*)src, step_src, (int16_t *)dst, step_dst, width, height, (const int16_t*)scalar, nChannels);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar16s16s ==> " CVAUX_STR(cv_hal_addScalar16s16s)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static ScalarFunc getAddScalarFunc(int srcType, int dstType)
+{
+    if (srcType == CV_32F && dstType == CV_32F)
+    {
+        return addScalar32f32fWrapper;
+    }
+    else if (srcType == CV_16S && dstType == CV_16S)
+    {
+        return addScalar16s16sWrapper;
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
+static int sub8u32fWrapper(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                           uchar* dst, size_t step, int width, int height, void* )
+{
+    int res = cv_hal_sub8u32f(src1, step1, src2, step2, (float *)dst, step, width, height);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation sub8u32f ==> " CVAUX_STR(cv_hal_sub8u32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static int sub8s32fWrapper(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
+                           uchar* dst, size_t step, int width, int height, void* )
+{
+    int res = cv_hal_sub8s32f((schar*)src1, step1, (schar*)src2, step2, (float *)dst, step, width, height);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation sub8s32f ==> " CVAUX_STR(cv_hal_sub8s32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
 static BinaryFuncC* getSubTab()
 {
-    static BinaryFuncC subTab[] =
+    static BinaryFuncC subTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::sub16s),
@@ -889,9 +1011,25 @@ static BinaryFuncC* getSubTab()
     return subTab;
 }
 
+static ExtendedTypeFunc getSubExtFunc(int src1Type, int src2Type, int dstType)
+{
+    if (src1Type == CV_8U && src2Type == CV_8U && dstType == CV_32F)
+    {
+        return sub8u32fWrapper;
+    }
+    else if (src1Type == CV_8S && src2Type == CV_8S && dstType == CV_32F)
+    {
+        return sub8s32fWrapper;
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
 static BinaryFuncC* getAbsDiffTab()
 {
-    static BinaryFuncC absDiffTab[] =
+    static BinaryFuncC absDiffTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::absdiff16s),
@@ -903,6 +1041,67 @@ static BinaryFuncC* getAbsDiffTab()
     return absDiffTab;
 }
 
+
+static int absDiffScalar32f32fWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                      void* scalar, bool /*scalarIsFirst*/, int nChannels)
+{
+    int res = cv_hal_absDiffScalar32f32f((const float*)src, step_src, (float *)dst, step_dst, width, height, (const float*)scalar, nChannels);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static int absDiffScalar32s32uWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                      void* scalar, bool /*scalarIsFirst*/, int nChannels)
+{
+    int res = cv_hal_absDiffScalar32s32u((const int*)src, step_src, (uint32_t*)dst, step_dst, width, height, (const int*)scalar, nChannels);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static int absDiffScalar8u8uWrapper(const uchar* src, size_t step_src, uchar* dst, size_t step_dst, int width, int height,
+                                      void* scalar, bool /*scalarIsFirst*/, int nChannels)
+{
+    int res = cv_hal_absDiffScalar8u8u((const uchar*)src, step_src, (uchar*)dst, step_dst, width, height, (const uchar*)scalar, nChannels);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation addScalar32f32f ==> " CVAUX_STR(cv_hal_addScalar32f32f)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static ScalarFunc getAbsDiffScalarFunc(int srcType, int dstType)
+{
+    if (srcType == CV_32F && dstType == CV_32F)
+    {
+        return absDiffScalar32f32fWrapper;
+    }
+    // resulting type is 32U in fact
+    else if (srcType == CV_32S && dstType == CV_32S)
+    {
+        return absDiffScalar32s32uWrapper;
+    }
+    else if (srcType == CV_8U && dstType == CV_8U)
+    {
+        return absDiffScalar8u8uWrapper;
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
 }
 
 void cv::add( InputArray src1, InputArray src2, OutputArray dst,
@@ -910,75 +1109,75 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(src1, src2, dst, mask, dtype, getAddTab(), false, 0, OCL_OP_ADD );
+    CV_Assert(src1.empty() == src2.empty());
+    if (src1.empty() && src2.empty())
+    {
+        dst.release();
+        return;
+    }
+
+    int sdepth = src1.depth();
+    if (checkScalar(src1, src1.type(), src1.kind(), _InputArray::MATX))
+    {
+        sdepth = src2.depth();
+    }
+    if (checkScalar(src2, src2.type(), src2.kind(), _InputArray::MATX))
+    {
+        sdepth = src1.depth();
+    }
+
+    ScalarFunc scalarFunc = getAddScalarFunc(sdepth, dtype < 0 ? dst.depth() : dtype);
+    arithm_op(src1, src2, dst, mask, dtype, getAddTab(), false, 0, OCL_OP_ADD, nullptr,
+              /* scalarFunc */ scalarFunc );
 }
 
 void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
-               InputArray mask, int dtype )
+                   InputArray mask, int dtype )
 {
     CV_INSTRUMENT_REGION();
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra())
+    CV_Assert(_src1.empty() == _src2.empty());
+    if (_src1.empty() && _src2.empty())
     {
-        int kind1 = _src1.kind(), kind2 = _src2.kind();
-        Mat src1 = _src1.getMat(), src2 = _src2.getMat();
-        bool src1Scalar = checkScalar(src1, _src2.type(), kind1, kind2);
-        bool src2Scalar = checkScalar(src2, _src1.type(), kind2, kind1);
-
-        if (!src1Scalar && !src2Scalar &&
-            src1.depth() == CV_8U && src2.type() == src1.type() &&
-            src1.dims == 2 && src2.size() == src1.size() &&
-            mask.empty())
-        {
-            if (dtype < 0)
-            {
-                if (_dst.fixedType())
-                {
-                    dtype = _dst.depth();
-                }
-                else
-                {
-                    dtype = src1.depth();
-                }
-            }
-
-            dtype = CV_MAT_DEPTH(dtype);
-
-            if (!_dst.fixedType() || dtype == _dst.depth())
-            {
-                _dst.create(src1.size(), CV_MAKE_TYPE(dtype, src1.channels()));
-
-                if (dtype == CV_16S)
-                {
-                    Mat dst = _dst.getMat();
-                    if(tegra::subtract_8u8u16s(src1, src2, dst))
-                        return;
-                }
-                else if (dtype == CV_32F)
-                {
-                    Mat dst = _dst.getMat();
-                    if(tegra::subtract_8u8u32f(src1, src2, dst))
-                        return;
-                }
-                else if (dtype == CV_8S)
-                {
-                    Mat dst = _dst.getMat();
-                    if(tegra::subtract_8u8u8s(src1, src2, dst))
-                        return;
-                }
-            }
-        }
+        _dst.release();
+        return;
     }
-#endif
-    arithm_op(_src1, _src2, _dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB );
+
+    ExtendedTypeFunc subExtFunc = getSubExtFunc(_src1.depth(), _src2.depth(), dtype < 0 ? _dst.depth() : dtype);
+    arithm_op(_src1, _src2, _dst, mask, dtype, getSubTab(), false, 0, OCL_OP_SUB,
+              /* extendedFunc */ subExtFunc);
 }
 
 void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 {
     CV_INSTRUMENT_REGION();
 
-    arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF);
+    CV_Assert(src1.empty() == src2.empty());
+    if (src1.empty() && src2.empty())
+    {
+        dst.release();
+        return;
+    }
+
+    int sdepth = src1.depth();
+    if (checkScalar(src1, src1.type(), src1.kind(), _InputArray::MATX))
+    {
+        sdepth = src2.depth();
+    }
+    if (checkScalar(src2, src2.type(), src2.kind(), _InputArray::MATX))
+    {
+        sdepth = src1.depth();
+    }
+    ScalarFunc scalarFunc = getAbsDiffScalarFunc(sdepth, dst.depth());
+    arithm_op(src1, src2, dst, noArray(), -1, getAbsDiffTab(), false, 0, OCL_OP_ABSDIFF,
+              /* extendedFunc */ nullptr, scalarFunc);
+}
+
+void cv::copyTo(InputArray _src, OutputArray _dst, InputArray _mask)
+{
+    CV_INSTRUMENT_REGION();
+
+    _src.copyTo(_dst, _mask);
 }
 
 /****************************************************************************************\
@@ -988,9 +1187,41 @@ void cv::absdiff( InputArray src1, InputArray src2, OutputArray dst )
 namespace cv
 {
 
+static int mul8u16uWrapper(const uchar* src1, size_t step1,
+                           const uchar* src2, size_t step2,
+                           uchar* dst, size_t step, int width, int height,
+                           void* usrdata)
+{
+    double scale = *((double*)usrdata);
+    int res = cv_hal_mul8u16u(src1, step1, src2, step2, (ushort *)dst, step, width, height, scale);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8u16u ==> " CVAUX_STR(cv_hal_mul8u16u)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
+static int mul8s16sWrapper(const uchar* src1, size_t step1,
+                           const uchar* src2, size_t step2,
+                           uchar* dst, size_t step, int width, int height,
+                           void* usrdata)
+{
+    double scale = *((double*)usrdata);
+    int res = cv_hal_mul8s16s((schar *)src1, step1, (schar *)src2, step2, (short *)dst, step, width, height, scale);
+    if (res == CV_HAL_ERROR_OK || res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return res;
+    else
+    {
+        CV_Error_(cv::Error::StsInternal, ("HAL implementation mul8s16s ==> " CVAUX_STR(cv_hal_mul8s16s)
+                                           " returned %d (0x%08x)", res, res));
+    }
+}
+
 static BinaryFuncC* getMulTab()
 {
-    static BinaryFuncC mulTab[] =
+    static BinaryFuncC mulTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)cv::hal::mul8u, (BinaryFuncC)cv::hal::mul8s, (BinaryFuncC)cv::hal::mul16u,
         (BinaryFuncC)cv::hal::mul16s, (BinaryFuncC)cv::hal::mul32s, (BinaryFuncC)cv::hal::mul32f,
@@ -1000,9 +1231,25 @@ static BinaryFuncC* getMulTab()
     return mulTab;
 }
 
+static ExtendedTypeFunc getMulExtFunc(int src1Type, int src2Type, int dstType)
+{
+    if (src1Type == CV_8U && src2Type == CV_8U && dstType == CV_16U)
+    {
+        return mul8u16uWrapper;
+    }
+    else if (src1Type == CV_8S && src2Type == CV_8S && dstType == CV_16S)
+    {
+        return mul8s16sWrapper;
+    }
+    else
+    {
+        return nullptr;
+    }
+}
+
 static BinaryFuncC* getDivTab()
 {
-    static BinaryFuncC divTab[] =
+    static BinaryFuncC divTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)cv::hal::div8u, (BinaryFuncC)cv::hal::div8s, (BinaryFuncC)cv::hal::div16u,
         (BinaryFuncC)cv::hal::div16s, (BinaryFuncC)cv::hal::div32s, (BinaryFuncC)cv::hal::div32f,
@@ -1014,7 +1261,7 @@ static BinaryFuncC* getDivTab()
 
 static BinaryFuncC* getRecipTab()
 {
-    static BinaryFuncC recipTab[] =
+    static BinaryFuncC recipTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)cv::hal::recip8u, (BinaryFuncC)cv::hal::recip8s, (BinaryFuncC)cv::hal::recip16u,
         (BinaryFuncC)cv::hal::recip16s, (BinaryFuncC)cv::hal::recip32s, (BinaryFuncC)cv::hal::recip32f,
@@ -1025,18 +1272,27 @@ static BinaryFuncC* getRecipTab()
 }
 
 void multiply(InputArray src1, InputArray src2,
-                  OutputArray dst, double scale, int dtype)
+              OutputArray dst, double scale, int dtype)
 {
     CV_INSTRUMENT_REGION();
 
+    ExtendedTypeFunc mulExtFunc = getMulExtFunc(src1.depth(), src2.depth(), dtype < 0 ? dst.depth() : dtype);
     arithm_op(src1, src2, dst, noArray(), dtype, getMulTab(),
-              true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE);
+              /* muldiv */ true, &scale, std::abs(scale - 1.0) < DBL_EPSILON ? OCL_OP_MUL : OCL_OP_MUL_SCALE,
+              /* extendedFunc */ mulExtFunc );
 }
 
 void divide(InputArray src1, InputArray src2,
                 OutputArray dst, double scale, int dtype)
 {
     CV_INSTRUMENT_REGION();
+
+    CV_Assert(src1.empty() == src2.empty());
+    if (src1.empty() && src2.empty())
+    {
+        dst.release();
+        return;
+    }
 
     arithm_op(src1, src2, dst, noArray(), dtype, getDivTab(), true, &scale, OCL_OP_DIV_SCALE);
 }
@@ -1045,6 +1301,12 @@ void divide(double scale, InputArray src2,
                 OutputArray dst, int dtype)
 {
     CV_INSTRUMENT_REGION();
+
+    if (src2.empty())
+    {
+        dst.release();
+        return;
+    }
 
     arithm_op(src2, src2, dst, noArray(), dtype, getRecipTab(), true, &scale, OCL_OP_RECIP_SCALE);
 }
@@ -1062,7 +1324,7 @@ UMat UMat::mul(InputArray m, double scale) const
 
 static BinaryFuncC* getAddWeightedTab()
 {
-    static BinaryFuncC addWeightedTab[] =
+    static BinaryFuncC addWeightedTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted8s), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16u),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted16s), (BinaryFuncC)GET_OPTIMIZED(cv::hal::addWeighted32s), (BinaryFuncC)cv::hal::addWeighted32f,
@@ -1079,6 +1341,13 @@ void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
+    CV_Assert(src1.empty() == src2.empty());
+    if (src1.empty() && src2.empty())
+    {
+        dst.release();
+        return;
+    }
+
     double scalars[] = {alpha, beta, gamma};
     arithm_op(src1, src2, dst, noArray(), dtype, getAddWeightedTab(), true, scalars, OCL_OP_ADDW);
 }
@@ -1093,7 +1362,7 @@ namespace cv
 
 static BinaryFuncC getCmpFunc(int depth)
 {
-    static BinaryFuncC cmpTab[] =
+    static BinaryFuncC cmpTab[CV_DEPTH_MAX] =
     {
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp8s),
         (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16u), (BinaryFuncC)GET_OPTIMIZED(cv::hal::cmp16s),
@@ -1139,7 +1408,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
 
     int scalarcn = kercn == 3 ? 4 : kercn;
     const char * const operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
-    char cvt[40];
+    char cvt[50];
 
     String opts = format("-D %s -D srcT1=%s -D dstT=%s -D DEPTH_dst=%d -D workT=srcT1 -D cn=%d"
                          " -D convertToDT=%s -D OP_CMP -D CMP_OPERATOR=%s -D srcT1_C1=%s"
@@ -1147,7 +1416,7 @@ static bool ocl_compare(InputArray _src1, InputArray _src2, OutputArray _dst, in
                          haveScalar ? "UNARY_OP" : "BINARY_OP",
                          ocl::typeToStr(CV_MAKE_TYPE(depth1, kercn)),
                          ocl::typeToStr(CV_8UC(kercn)), CV_8U, kercn,
-                         ocl::convertTypeStr(depth1, CV_8U, kercn, cvt),
+                         ocl::convertTypeStr(depth1, CV_8U, kercn, cvt, sizeof(cvt)),
                          operationMap[op], ocl::typeToStr(depth1),
                          ocl::typeToStr(depth1), ocl::typeToStr(CV_8U),
                          ocl::typeToStr(CV_MAKE_TYPE(depth1, scalarcn)), rowsPerWI,
@@ -1247,7 +1516,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
             return;
         }
         else if(is_src1_scalar == is_src2_scalar)
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The operation is neither 'array op array' (where arrays have the same size and the same type), "
                      "nor 'array op scalar', nor 'scalar op array'" );
         haveScalar = true;
@@ -1256,20 +1525,26 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     CV_OCL_RUN(_src1.dims() <= 2 && _src2.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_compare(_src1, _src2, _dst, op, haveScalar))
 
-    int kind1 = _src1.kind(), kind2 = _src2.kind();
+    _InputArray::KindFlag kind1 = _src1.kind(), kind2 = _src2.kind();
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+
+    int depth1 = src1.depth(), depth2 = src2.depth();
+    if (depth1 == CV_16F || depth2 == CV_16F)
+        CV_Error(Error::StsNotImplemented, "Unsupported depth value CV_16F");
 
     if( kind1 == kind2 && src1.dims <= 2 && src2.dims <= 2 && src1.size() == src2.size() && src1.type() == src2.type() )
     {
         int cn = src1.channels();
-        _dst.create(src1.size(), CV_8UC(cn));
+        _dst.createSameSize(src1, CV_8UC(cn));
         Mat dst = _dst.getMat();
         Size sz = getContinuousSize2D(src1, src2, dst, src1.channels());
-        getCmpFunc(src1.depth())(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, &op);
+        BinaryFuncC cmpFn = getCmpFunc(depth1);
+        CV_Assert(cmpFn);
+        cmpFn(src1.ptr(), src1.step, src2.ptr(), src2.step, dst.ptr(), dst.step, sz.width, sz.height, &op);
         return;
     }
 
-    int cn = src1.channels(), depth1 = src1.depth(), depth2 = src2.depth();
+    int cn = src1.channels();
 
     _dst.create(src1.dims, src1.size, CV_8UC(cn));
     src1 = src1.reshape(1); src2 = src2.reshape(1);
@@ -1278,6 +1553,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
     size_t esz = std::max(src1.elemSize(), (size_t)1);
     size_t blocksize0 = (size_t)(BLOCK_SIZE + esz-1)/esz;
     BinaryFuncC func = getCmpFunc(depth1);
+    CV_Assert(func);
 
     if( !haveScalar )
     {
@@ -1306,7 +1582,9 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         else
         {
             double fval=0;
-            getConvertFunc(depth2, CV_64F)(src2.ptr(), 1, 0, 1, (uchar*)&fval, 1, Size(1,1), 0);
+            BinaryFunc cvtFn = getConvertFunc(depth2, CV_64F);
+            CV_Assert(cvtFn);
+            cvtFn(src2.ptr(), 1, 0, 1, (uchar*)&fval, 1, Size(1,1), 0);
             if( fval < getMinVal(depth1) )
             {
                 dst = Scalar::all(op == CMP_GT || op == CMP_GE || op == CMP_NE ? 255 : 0);
@@ -1364,7 +1642,7 @@ struct InRange_SIMD
     }
 };
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 template <>
 struct InRange_SIMD<uchar>
@@ -1373,7 +1651,7 @@ struct InRange_SIMD<uchar>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = v_uint8::nlanes;
+        const int width = VTraits<v_uint8>::vlanes();
 
         for (; x <= len - width; x += width)
         {
@@ -1381,7 +1659,7 @@ struct InRange_SIMD<uchar>
             v_uint8 low = vx_load(src2 + x);
             v_uint8 high = vx_load(src3 + x);
 
-            v_store(dst + x, (values >= low) & (high >= values));
+            v_store(dst + x, v_and(v_ge(values, low), v_ge(high, values)));
         }
         vx_cleanup();
         return x;
@@ -1395,7 +1673,7 @@ struct InRange_SIMD<schar>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = v_int8::nlanes;
+        const int width = VTraits<v_int8>::vlanes();
 
         for (; x <= len - width; x += width)
         {
@@ -1403,7 +1681,7 @@ struct InRange_SIMD<schar>
             v_int8 low = vx_load(src2 + x);
             v_int8 high = vx_load(src3 + x);
 
-            v_store((schar*)(dst + x), (values >= low) & (high >= values));
+            v_store((schar*)(dst + x), v_and(v_ge(values, low), v_ge(high, values)));
         }
         vx_cleanup();
         return x;
@@ -1417,7 +1695,7 @@ struct InRange_SIMD<ushort>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = v_uint16::nlanes * 2;
+        const int width = VTraits<v_uint16>::vlanes() * 2;
 
         for (; x <= len - width; x += width)
         {
@@ -1425,11 +1703,11 @@ struct InRange_SIMD<ushort>
             v_uint16 low1 = vx_load(src2 + x);
             v_uint16 high1 = vx_load(src3 + x);
 
-            v_uint16 values2 = vx_load(src1 + x + v_uint16::nlanes);
-            v_uint16 low2 = vx_load(src2 + x + v_uint16::nlanes);
-            v_uint16 high2 = vx_load(src3 + x + v_uint16::nlanes);
+            v_uint16 values2 = vx_load(src1 + x + VTraits<v_uint16>::vlanes());
+            v_uint16 low2 = vx_load(src2 + x + VTraits<v_uint16>::vlanes());
+            v_uint16 high2 = vx_load(src3 + x + VTraits<v_uint16>::vlanes());
 
-            v_store(dst + x, v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
+            v_store(dst + x, v_pack(v_and(v_ge(values1, low1), v_ge(high1, values1)), v_and(v_ge(values2, low2), v_ge(high2, values2))));
         }
         vx_cleanup();
         return x;
@@ -1443,7 +1721,7 @@ struct InRange_SIMD<short>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = (int)v_int16::nlanes * 2;
+        const int width = (int)VTraits<v_int16>::vlanes() * 2;
 
         for (; x <= len - width; x += width)
         {
@@ -1451,11 +1729,11 @@ struct InRange_SIMD<short>
             v_int16 low1 = vx_load(src2 + x);
             v_int16 high1 = vx_load(src3 + x);
 
-            v_int16 values2 = vx_load(src1 + x + v_int16::nlanes);
-            v_int16 low2 = vx_load(src2 + x + v_int16::nlanes);
-            v_int16 high2 = vx_load(src3 + x + v_int16::nlanes);
+            v_int16 values2 = vx_load(src1 + x + VTraits<v_int16>::vlanes());
+            v_int16 low2 = vx_load(src2 + x + VTraits<v_int16>::vlanes());
+            v_int16 high2 = vx_load(src3 + x + VTraits<v_int16>::vlanes());
 
-            v_store((schar*)(dst + x), v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2)));
+            v_store((schar*)(dst + x), v_pack(v_and(v_ge(values1, low1), v_ge(high1, values1)), v_and(v_ge(values2, low2), v_ge(high2, values2))));
         }
         vx_cleanup();
         return x;
@@ -1469,7 +1747,7 @@ struct InRange_SIMD<int>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = (int)v_int32::nlanes * 2;
+        const int width = (int)VTraits<v_int32>::vlanes() * 2;
 
         for (; x <= len - width; x += width)
         {
@@ -1477,11 +1755,11 @@ struct InRange_SIMD<int>
             v_int32 low1 = vx_load(src2 + x);
             v_int32 high1 = vx_load(src3 + x);
 
-            v_int32 values2 = vx_load(src1 + x + v_int32::nlanes);
-            v_int32 low2 = vx_load(src2 + x + v_int32::nlanes);
-            v_int32 high2 = vx_load(src3 + x + v_int32::nlanes);
+            v_int32 values2 = vx_load(src1 + x + VTraits<v_int32>::vlanes());
+            v_int32 low2 = vx_load(src2 + x + VTraits<v_int32>::vlanes());
+            v_int32 high2 = vx_load(src3 + x + VTraits<v_int32>::vlanes());
 
-            v_pack_store(dst + x, v_reinterpret_as_u16(v_pack((values1 >= low1) & (high1 >= values1), (values2 >= low2) & (high2 >= values2))));
+            v_pack_store(dst + x, v_reinterpret_as_u16(v_pack(v_and(v_ge(values1, low1), v_ge(high1, values1)), v_and(v_ge(values2, low2), v_ge(high2, values2)))));
         }
         vx_cleanup();
         return x;
@@ -1495,7 +1773,7 @@ struct InRange_SIMD<float>
         uchar * dst, int len) const
     {
         int x = 0;
-        const int width = (int)v_float32::nlanes * 2;
+        const int width = (int)VTraits<v_float32>::vlanes() * 2;
 
         for (; x <= len - width; x += width)
         {
@@ -1503,12 +1781,12 @@ struct InRange_SIMD<float>
             v_float32 low1 = vx_load(src2 + x);
             v_float32 high1 = vx_load(src3 + x);
 
-            v_float32 values2 = vx_load(src1 + x + v_float32::nlanes);
-            v_float32 low2 = vx_load(src2 + x + v_float32::nlanes);
-            v_float32 high2 = vx_load(src3 + x + v_float32::nlanes);
+            v_float32 values2 = vx_load(src1 + x + VTraits<v_float32>::vlanes());
+            v_float32 low2 = vx_load(src2 + x + VTraits<v_float32>::vlanes());
+            v_float32 high2 = vx_load(src3 + x + VTraits<v_float32>::vlanes());
 
-            v_pack_store(dst + x, v_pack(v_reinterpret_as_u32(values1 >= low1) & v_reinterpret_as_u32(high1 >= values1),
-                                         v_reinterpret_as_u32(values2 >= low2) & v_reinterpret_as_u32(high2 >= values2)));
+            v_pack_store(dst + x, v_pack(v_and(v_reinterpret_as_u32(v_ge(values1, low1)), v_reinterpret_as_u32(v_ge(high1, values1))),
+                                         v_and(v_reinterpret_as_u32(v_ge(values2, low2)), v_reinterpret_as_u32(v_ge(high2, values2)))));
         }
         vx_cleanup();
         return x;
@@ -1620,7 +1898,7 @@ typedef void (*InRangeFunc)( const uchar* src1, size_t step1, const uchar* src2,
 
 static InRangeFunc getInRangeFunc(int depth)
 {
-    static InRangeFunc inRangeTab[] =
+    static InRangeFunc inRangeTab[CV_DEPTH_MAX] =
     {
         (InRangeFunc)GET_OPTIMIZED(inRange8u), (InRangeFunc)GET_OPTIMIZED(inRange8s), (InRangeFunc)GET_OPTIMIZED(inRange16u),
         (InRangeFunc)GET_OPTIMIZED(inRange16s), (InRangeFunc)GET_OPTIMIZED(inRange32s), (InRangeFunc)GET_OPTIMIZED(inRange32f),
@@ -1636,7 +1914,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
                          InputArray _upperb, OutputArray _dst )
 {
     const ocl::Device & d = ocl::Device::getDefault();
-    int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
+    _InputArray::KindFlag skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Size ssize = _src.size(), lsize = _lowerb.size(), usize = _upperb.size();
     int stype = _src.type(), ltype = _lowerb.type(), utype = _upperb.type();
     int sdepth = CV_MAT_DEPTH(stype), ldepth = CV_MAT_DEPTH(ltype), udepth = CV_MAT_DEPTH(utype);
@@ -1647,7 +1925,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         ssize != lsize || stype != ltype )
     {
         if( !checkScalar(_lowerb, stype, lkind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The lower boundary is neither an array of the same size and same type as src, nor a scalar");
         lbScalar = true;
     }
@@ -1656,7 +1934,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
         ssize != usize || stype != utype )
     {
         if( !checkScalar(_upperb, stype, ukind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The upper boundary is neither an array of the same size and same type as src, nor a scalar");
         ubScalar = true;
     }
@@ -1675,7 +1953,7 @@ static bool ocl_inRange( InputArray _src, InputArray _lowerb,
     if (kercn % cn != 0)
         kercn = cn;
     int colsPerWI = kercn / cn;
-    String opts = format("%s-D cn=%d -D srcT=%s -D srcT1=%s -D dstT=%s -D kercn=%d -D depth=%d%s -D colsPerWI=%d",
+    String opts = format("%s-D CN=%d -D SRC_T=%s -D SRC_T1=%s -D DST_T=%s -D KERCN=%d -D DEPTH=%d%s -D COLS_PER_WI=%d",
                            haveScalar ? "-D HAVE_SCALAR " : "", cn, ocl::typeToStr(CV_MAKE_TYPE(sdepth, kercn)),
                            ocl::typeToStr(sdepth), ocl::typeToStr(CV_8UC(colsPerWI)), kercn, sdepth,
                            doubleSupport ? " -D DOUBLE_SUPPORT" : "", colsPerWI);
@@ -1761,7 +2039,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
                _upperb.dims() <= 2 && OCL_PERFORMANCE_CHECK(_dst.isUMat()),
                ocl_inRange(_src, _lowerb, _upperb, _dst))
 
-    int skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
+    _InputArray::KindFlag skind = _src.kind(), lkind = _lowerb.kind(), ukind = _upperb.kind();
     Mat src = _src.getMat(), lb = _lowerb.getMat(), ub = _upperb.getMat();
 
     bool lbScalar = false, ubScalar = false;
@@ -1770,7 +2048,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
         src.size != lb.size || src.type() != lb.type() )
     {
         if( !checkScalar(lb, src.type(), lkind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The lower boundary is neither an array of the same size and same type as src, nor a scalar");
         lbScalar = true;
     }
@@ -1779,7 +2057,7 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
         src.size != ub.size || src.type() != ub.type() )
     {
         if( !checkScalar(ub, src.type(), ukind, skind) )
-            CV_Error( CV_StsUnmatchedSizes,
+            CV_Error( cv::Error::StsUnmatchedSizes,
                      "The upper boundary is neither an array of the same size and same type as src, nor a scalar");
         ubScalar = true;
     }

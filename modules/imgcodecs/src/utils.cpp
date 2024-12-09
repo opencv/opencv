@@ -352,6 +352,25 @@ void icvCvt_CMYK2BGR_8u_C4C3R( const uchar* cmyk, int cmyk_step,
     }
 }
 
+void icvCvt_CMYK2RGB_8u_C4C3R( const uchar* cmyk, int cmyk_step,
+                               uchar* rgb, int rgb_step, Size size )
+{
+    int i;
+    for( ; size.height--; )
+    {
+        for( i = 0; i < size.width; i++, rgb += 3, cmyk += 4 )
+        {
+            int c = cmyk[0], m = cmyk[1], y = cmyk[2], k = cmyk[3];
+            c = k - ((255 - c)*k>>8);
+            m = k - ((255 - m)*k>>8);
+            y = k - ((255 - y)*k>>8);
+            rgb[0] = (uchar)c; rgb[1] = (uchar)m; rgb[2] = (uchar)y;
+        }
+        rgb += rgb_step - size.width*3;
+        cmyk += cmyk_step - size.width*4;
+    }
+}
+
 
 void icvCvt_CMYK2Gray_8u_C4C1R( const uchar* cmyk, int cmyk_step,
                                 uchar* gray, int gray_step, Size size )
@@ -607,105 +626,3 @@ uchar* FillGrayRow1( uchar* data, uchar* indices, int len, uchar* palette )
 }
 
 }  // namespace
-
-using namespace cv;
-
-CV_IMPL void
-cvConvertImage( const CvArr* srcarr, CvArr* dstarr, int flags )
-{
-    CvMat* temp = 0;
-
-    CV_FUNCNAME( "cvConvertImage" );
-
-    __BEGIN__;
-
-    CvMat srcstub, *src;
-    CvMat dststub, *dst;
-    int src_cn, dst_cn, swap_rb = flags & CV_CVTIMG_SWAP_RB;
-
-    CV_CALL( src = cvGetMat( srcarr, &srcstub ));
-    CV_CALL( dst = cvGetMat( dstarr, &dststub ));
-
-    src_cn = CV_MAT_CN( src->type );
-    dst_cn = CV_MAT_CN( dst->type );
-
-    if( src_cn != 1 && src_cn != 3 && src_cn != 4 )
-        CV_ERROR( CV_BadNumChannels, "Source image must have 1, 3 or 4 channels" );
-
-    if( CV_MAT_DEPTH( dst->type ) != CV_8U )
-        CV_ERROR( CV_BadDepth, "Destination image must be 8u" );
-
-    if( CV_MAT_CN(dst->type) != 1 && CV_MAT_CN(dst->type) != 3 )
-        CV_ERROR( CV_BadNumChannels, "Destination image must have 1 or 3 channels" );
-
-    if( !CV_ARE_DEPTHS_EQ( src, dst ))
-    {
-        int src_depth = CV_MAT_DEPTH(src->type);
-        double scale = src_depth <= CV_8S ? 1 : src_depth <= CV_32S ? 1./256 : 255;
-        double shift = src_depth == CV_8S || src_depth == CV_16S ? 128 : 0;
-
-        if( !CV_ARE_CNS_EQ( src, dst ))
-        {
-            temp = cvCreateMat( src->height, src->width,
-                (src->type & CV_MAT_CN_MASK)|(dst->type & CV_MAT_DEPTH_MASK));
-            cvConvertScale( src, temp, scale, shift );
-            src = temp;
-        }
-        else
-        {
-            cvConvertScale( src, dst, scale, shift );
-            src = dst;
-        }
-    }
-
-    if( src_cn != dst_cn || (src_cn == 3 && swap_rb) )
-    {
-        uchar *s = src->data.ptr, *d = dst->data.ptr;
-        int s_step = src->step, d_step = dst->step;
-        int code = src_cn*10 + dst_cn;
-        Size size(src->cols, src->rows);
-
-        if( CV_IS_MAT_CONT(src->type & dst->type) )
-        {
-            size.width *= size.height;
-            size.height = 1;
-            s_step = d_step = /*CV_STUB_STEP*/ (1 << 30);
-        }
-
-        switch( code )
-        {
-        case 13:
-            icvCvt_Gray2BGR_8u_C1C3R( s, s_step, d, d_step, size );
-            break;
-        case 31:
-            icvCvt_BGR2Gray_8u_C3C1R( s, s_step, d, d_step, size, swap_rb );
-            break;
-        case 33:
-            CV_Assert(swap_rb);
-            icvCvt_RGB2BGR_8u_C3R( s, s_step, d, d_step, size );
-            break;
-        case 41:
-            icvCvt_BGRA2Gray_8u_C4C1R( s, s_step, d, d_step, size, swap_rb );
-            break;
-        case 43:
-            icvCvt_BGRA2BGR_8u_C4C3R( s, s_step, d, d_step, size, swap_rb );
-            break;
-        default:
-            CV_ERROR( CV_StsUnsupportedFormat, "Unsupported combination of input/output formats" );
-        }
-        src = dst;
-    }
-
-    if( flags & CV_CVTIMG_FLIP )
-    {
-        CV_CALL( cvFlip( src, dst, 0 ));
-    }
-    else if( src != dst )
-    {
-        CV_CALL( cvCopy( src, dst ));
-    }
-
-    __END__;
-
-    cvReleaseMat( &temp );
-}

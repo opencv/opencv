@@ -364,6 +364,8 @@ class Builder:
             INSTALL_PDB='ON',
             INSTALL_PDB_COMPONENT_EXCLUDE_FROM_ALL='OFF',
 
+            VIDEOIO_PLUGIN_LIST='all',
+
             OPENCV_SKIP_CMAKE_ROOT_CONFIG='ON',
             OPENCV_BIN_INSTALL_PATH='bin',
             OPENCV_INCLUDE_INSTALL_PATH='include',

@@ -55,7 +55,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 namespace
 {
@@ -254,5 +254,5 @@ Net readNetFromDarknet(const std::vector<uchar>& bufferCfg, const std::vector<uc
                               bufferModelPtr, bufferModel.size());
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace

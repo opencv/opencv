@@ -27,12 +27,6 @@
 
 #include "winapp.hpp"
 
-#if defined(_WIN32)
-# pragma comment(lib, "opengl32.lib")
-# pragma comment(lib, "glu32.lib")
-#endif
-
-
 class GLWinApp : public WinApp
 {
 public:

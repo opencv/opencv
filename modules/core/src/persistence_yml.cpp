@@ -2,938 +2,874 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 
-
 #include "precomp.hpp"
 #include "persistence.hpp"
 
-#define CV_YML_INDENT  3
-#define CV_YML_INDENT_FLOW  1
-
-/****************************************************************************************\
-*                                       YAML Parser                                      *
-\****************************************************************************************/
-
-static char* icvYMLSkipSpaces( CvFileStorage* fs, char* ptr, int min_indent, int max_comment_indent )
+enum
 {
-    for(;;)
+    CV_YML_INDENT = 3,
+    CV_YML_INDENT_FLOW = 1
+};
+
+namespace cv
+{
+
+class YAMLEmitter : public FileStorageEmitter
+{
+public:
+    YAMLEmitter(FileStorage_API* _fs) : fs(_fs)
     {
-        while( *ptr == ' ' )
-            ptr++;
-        if( *ptr == '#' )
+    }
+    virtual ~YAMLEmitter() {}
+
+    FStructData startWriteStruct(const FStructData& parent, const char* key,
+                                 int struct_flags, const char* type_name=0)
+    {
+        char buf[CV_FS_MAX_LEN + 1024];
+        const char* data = 0;
+
+        if ( type_name && *type_name == '\0' )
+            type_name = 0;
+
+        struct_flags = (struct_flags & (FileNode::TYPE_MASK|FileNode::FLOW)) | FileNode::EMPTY;
+        if( !FileNode::isCollection(struct_flags))
+            CV_Error( cv::Error::StsBadArg,
+                     "Some collection type - FileNode::SEQ or FileNode::MAP, must be specified" );
+
+        if (type_name && memcmp(type_name, "binary", 6) == 0)
         {
-            if( ptr - fs->buffer_start > max_comment_indent )
-                return ptr;
-            *ptr = '\0';
+            /* reset struct flag. in order not to print ']' */
+            struct_flags = FileNode::SEQ;
+            snprintf(buf, sizeof(buf), "!!binary |");
+            data = buf;
         }
-        else if( cv_isprint(*ptr) )
+        else if( FileNode::isFlow(struct_flags))
         {
-            if( ptr - fs->buffer_start < min_indent )
-                CV_PARSE_ERROR( "Incorrect indentation" );
-            break;
-        }
-        else if( *ptr == '\0' || *ptr == '\n' || *ptr == '\r' )
-        {
-            int max_size = (int)(fs->buffer_end - fs->buffer_start);
-            ptr = icvGets( fs, fs->buffer_start, max_size );
-            if( !ptr )
-            {
-                // emulate end of stream
-                ptr = fs->buffer_start;
-                ptr[0] = ptr[1] = ptr[2] = '.';
-                ptr[3] = '\0';
-                fs->dummy_eof = 1;
-                break;
-            }
+            char c = FileNode::isMap(struct_flags) ? '{' : '[';
+            struct_flags |= FileNode::FLOW;
+
+            if( type_name )
+                snprintf( buf, sizeof(buf), "!!%s %c", type_name, c );
             else
             {
-                int l = (int)strlen(ptr);
-                if( ptr[l-1] != '\n' && ptr[l-1] != '\r' && !icvEof(fs) )
-                    CV_PARSE_ERROR( "Too long string or a last string w/o newline" );
+                buf[0] = c;
+                buf[1] = '\0';
             }
-
-            fs->lineno++;  // FIXIT doesn't really work with long lines. It must be counted via '\n' or '\r' symbols, not the number of icvGets() calls.
+            data = buf;
         }
-        else
-            CV_PARSE_ERROR( *ptr == '\t' ? "Tabs are prohibited in YAML!" : "Invalid character" );
-    }
-
-    return ptr;
-}
-
-
-static void icvYMLGetMultilineStringContent(CvFileStorage* fs, char* ptr, int indent, char* &beg, char* &end)
-{
-    ptr = icvYMLSkipSpaces(fs, ptr, 0, INT_MAX);
-    beg = ptr;
-    end = ptr;
-    if (fs->dummy_eof)
-        return ; /* end of file */
-
-    if (ptr - fs->buffer_start != indent)
-        return ; /* end of string */
-
-    /* find end */
-    while(cv_isprint(*ptr)) /* no check for base64 string */
-        ++ ptr;
-    if (*ptr == '\0')
-        CV_PARSE_ERROR("Unexpected end of line");
-
-    end = ptr;
-}
-
-static char* icvYMLParseBase64(CvFileStorage* fs, char* ptr, int indent, CvFileNode * node)
-{
-    char * beg = 0;
-    char * end = 0;
-
-    icvYMLGetMultilineStringContent(fs, ptr, indent, beg, end);
-    if (beg >= end)
-        return end; // CV_PARSE_ERROR("Empty Binary Data");
-
-    /* calc (decoded) total_byte_size from header */
-    std::string dt;
-    {
-        if (end - beg < static_cast<int>(base64::ENCODED_HEADER_SIZE))
-            CV_PARSE_ERROR("Unrecognized Base64 header");
-
-        std::vector<char> header(base64::HEADER_SIZE + 1, ' ');
-        base64::base64_decode(beg, header.data(), 0U, base64::ENCODED_HEADER_SIZE);
-        if ( !base64::read_base64_header(header, dt) || dt.empty() )
-            CV_PARSE_ERROR("Invalid `dt` in Base64 header");
-
-        beg += base64::ENCODED_HEADER_SIZE;
-    }
-
-    /* get all Base64 data */
-    std::string base64_buffer;
-    base64_buffer.reserve( PARSER_BASE64_BUFFER_SIZE );
-    while( beg < end )
-    {
-        base64_buffer.append( beg, end );
-        beg = end;
-        icvYMLGetMultilineStringContent( fs, beg, indent, beg, end );
-    }
-    if ( base64_buffer.empty() ||
-         !base64::base64_valid(base64_buffer.data(), 0U, base64_buffer.size()) )
-        CV_PARSE_ERROR( "Invalid Base64 data." );
-
-    /* buffer for decoded data(exclude header) */
-    std::vector<uchar> binary_buffer( base64::base64_decode_buffer_size(base64_buffer.size()) );
-    int total_byte_size = static_cast<int>(
-        base64::base64_decode_buffer_size( base64_buffer.size(), base64_buffer.data(), false )
-        );
-    {
-        base64::Base64ContextParser parser(binary_buffer.data(), binary_buffer.size() );
-        const uchar * buffer_beg = reinterpret_cast<const uchar *>( base64_buffer.data() );
-        const uchar * buffer_end = buffer_beg + base64_buffer.size();
-        parser.read( buffer_beg, buffer_end );
-        parser.flush();
-    }
-
-    node->tag = CV_NODE_NONE;
-    int struct_flags = CV_NODE_FLOW | CV_NODE_SEQ;
-    /* after icvFSCreateCollection, node->tag == struct_flags */
-    icvFSCreateCollection(fs, struct_flags, node);
-    base64::make_seq(fs, binary_buffer.data(), total_byte_size, dt.c_str(), *node->data.seq);
-
-    if (fs->dummy_eof) {
-        /* end of file */
-        return fs->buffer_start;
-    } else {
-        /* end of line */
-        return end;
-    }
-}
-
-
-static char* icvYMLParseKey( CvFileStorage* fs, char* ptr, CvFileNode* map_node, CvFileNode** value_placeholder )
-{
-    char c;
-    char *endptr = ptr - 1, *saveptr;
-    CvStringHashNode* str_hash_node;
-
-    if( *ptr == '-' )
-        CV_PARSE_ERROR( "Key may not start with \'-\'" );
-
-    do c = *++endptr;
-    while( cv_isprint(c) && c != ':' );
-
-    if( c != ':' )
-        CV_PARSE_ERROR( "Missing \':\'" );
-
-    saveptr = endptr + 1;
-    do c = *--endptr;
-    while( c == ' ' );
-
-    ++endptr;
-    if( endptr == ptr )
-        CV_PARSE_ERROR( "An empty key" );
-
-    str_hash_node = cvGetHashedKey( fs, ptr, (int)(endptr - ptr), 1 );
-    *value_placeholder = cvGetFileNode( fs, map_node, str_hash_node, 1 );
-    ptr = saveptr;
-
-    return ptr;
-}
-
-
-static char*
-icvYMLParseValue( CvFileStorage* fs, char* ptr, CvFileNode* node,
-                  int parent_flags, int min_indent )
-{
-    char buf[CV_FS_MAX_LEN + 1024] = {0};
-    char* endptr = 0;
-    char c = ptr[0], d = ptr[1];
-    int is_parent_flow = CV_NODE_IS_FLOW(parent_flags);
-    int value_type = CV_NODE_NONE;
-    int len;
-    bool is_binary_string = false;
-
-    memset( node, 0, sizeof(*node) );
-
-    if( c == '!' ) // handle explicit type specification
-    {
-        if( d == '!' || d == '^' )
+        else if( type_name )
         {
-            ptr++;
-            value_type |= CV_NODE_USER;
+            snprintf( buf, sizeof(buf), "!!%s", type_name );
+            data = buf;
         }
-        if ( d == '<') //support of full type heading from YAML 1.2
+
+        writeScalar( key, data );
+
+        FStructData fsd;
+        fsd.indent = parent.indent;
+        fsd.flags = struct_flags;
+
+        if( !FileNode::isFlow(parent.flags) )
+            fsd.indent += CV_YML_INDENT + FileNode::isFlow(struct_flags);
+
+        return fsd;
+    }
+
+    void endWriteStruct(const FStructData& current_struct)
+    {
+        char* ptr;
+
+        int struct_flags = current_struct.flags;
+
+        if( FileNode::isFlow(struct_flags) )
         {
-            const char* yamlTypeHeading = "<tag:yaml.org,2002:";
-            const size_t headingLength = strlen(yamlTypeHeading);
+            ptr = fs->bufferPtr();
+            if( ptr > fs->bufferStart() + current_struct.indent && !FileNode::isEmptyCollection(struct_flags) )
+                *ptr++ = ' ';
+            *ptr++ = FileNode::isMap(struct_flags) ? '}' : ']';
+            fs->setBufferPtr(ptr);
+        }
+        else if( FileNode::isEmptyCollection(struct_flags) )
+        {
+            ptr = fs->flush();
+            memcpy( ptr, FileNode::isMap(struct_flags) ? "{}" : "[]", 2 );
+            fs->setBufferPtr(ptr + 2);
+        }
+        /*
+        if( !FileNode::isFlow(parent_flags) )
+            fs->struct_indent -= CV_YML_INDENT + FileNode::isFlow(struct_flags);
+        CV_Assert( fs->struct_indent >= 0 );*/
+    }
 
-            char* typeEndPtr = ++ptr;
+    void write(const char* key, int value)
+    {
+        char buf[128];
+        writeScalar( key, fs::itoa( value, buf, 10 ));
+    }
 
-            do d = *++typeEndPtr;
-            while( cv_isprint(d) && d != ' ' && d != '>' );
+    void write(const char* key, int64_t value)
+    {
+        char buf[128];
+        writeScalar( key, fs::itoa( value, buf, 10, true ));
+    }
 
-            if ( d == '>' && (size_t)(typeEndPtr - ptr) > headingLength )
+    void write( const char* key, double value )
+    {
+        char buf[128];
+        writeScalar( key, fs::doubleToString( buf, sizeof(buf), value, false ));
+    }
+
+    void write(const char* key, const char* str, bool quote)
+    {
+        char buf[CV_FS_MAX_LEN*4+16];
+        char* data = (char*)str;
+        int i, len;
+
+        if( !str )
+            CV_Error( cv::Error::StsNullPtr, "Null string pointer" );
+
+        len = (int)strlen(str);
+        if( len > CV_FS_MAX_LEN )
+            CV_Error( cv::Error::StsBadArg, "The written string is too long" );
+
+        if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
+        {
+            int need_quote = quote || len == 0 || str[0] == ' ';
+            data = buf;
+            *data++ = '\"';
+            for( i = 0; i < len; i++ )
             {
-                if ( memcmp(ptr, yamlTypeHeading, headingLength) == 0 )
+                char c = str[i];
+
+                if( !need_quote && !cv_isalnum(c) && c != '_' && c != ' ' && c != '-' &&
+                   c != '(' && c != ')' && c != '/' && c != '+' && c != ';' )
+                    need_quote = 1;
+
+                if( !cv_isalnum(c) && (!cv_isprint(c) || c == '\\' || c == '\'' || c == '\"') )
                 {
-                    value_type |= CV_NODE_USER;
-                    *typeEndPtr = ' ';
-                    ptr += headingLength - 1;
-                }
-            }
-        }
-
-        endptr = ptr++;
-        do d = *++endptr;
-        while( cv_isprint(d) && d != ' ' );
-        len = (int)(endptr - ptr);
-        if( len == 0 )
-            CV_PARSE_ERROR( "Empty type name" );
-        d = *endptr;
-        *endptr = '\0';
-
-        if( len == 3 && !CV_NODE_IS_USER(value_type) )
-        {
-            if( memcmp( ptr, "str", 3 ) == 0 )
-                value_type = CV_NODE_STRING;
-            else if( memcmp( ptr, "int", 3 ) == 0 )
-                value_type = CV_NODE_INT;
-            else if( memcmp( ptr, "seq", 3 ) == 0 )
-                value_type = CV_NODE_SEQ;
-            else if( memcmp( ptr, "map", 3 ) == 0 )
-                value_type = CV_NODE_MAP;
-        }
-        else if( len == 5 && !CV_NODE_IS_USER(value_type) )
-        {
-            if( memcmp( ptr, "float", 5 ) == 0 )
-                value_type = CV_NODE_REAL;
-        }
-        else if (len == 6 && CV_NODE_IS_USER(value_type))
-        {
-            if( memcmp( ptr, "binary", 6 ) == 0 ) {
-                value_type = CV_NODE_SEQ;
-                is_binary_string = true;
-
-                /* for ignore '|' */
-
-                /**** operation with endptr ****/
-                *endptr = d;
-
-                do {
-                    d = *++endptr;
-                    if (d == '|')
-                        break;
-                } while (d == ' ');
-
-                d = *++endptr;
-                *endptr = '\0';
-            }
-        }
-        else if( CV_NODE_IS_USER(value_type) )
-        {
-            node->info = cvFindType( ptr );
-            if( !node->info )
-                node->tag &= ~CV_NODE_USER;
-        }
-
-        *endptr = d;
-        ptr = icvYMLSkipSpaces( fs, endptr, min_indent, INT_MAX );
-
-        c = *ptr;
-
-        if( !CV_NODE_IS_USER(value_type) )
-        {
-            if (value_type == CV_NODE_STRING && c != '\'' && c != '\"')
-                goto force_string;
-            if( value_type == CV_NODE_INT )
-                goto force_int;
-            if( value_type == CV_NODE_REAL )
-                goto force_real;
-        }
-    }
-
-    if (is_binary_string)
-    {
-        /* for base64 string */
-        int indent = static_cast<int>(ptr - fs->buffer_start);
-        ptr = icvYMLParseBase64(fs, ptr, indent, node);
-    }
-    else if( cv_isdigit(c) ||
-        ((c == '-' || c == '+') && (cv_isdigit(d) || d == '.')) ||
-        (c == '.' && cv_isalnum(d))) // a number
-    {
-        double fval;
-        int ival;
-        endptr = ptr + (c == '-' || c == '+');
-        while( cv_isdigit(*endptr) )
-            endptr++;
-        if( *endptr == '.' || *endptr == 'e' )
-        {
-force_real:
-            fval = icv_strtod( fs, ptr, &endptr );
-            /*if( endptr == ptr || cv_isalpha(*endptr) )
-                icvProcessSpecialDouble( fs, endptr, &fval, &endptr ));*/
-
-            node->tag = CV_NODE_REAL;
-            node->data.f = fval;
-        }
-        else
-        {
-force_int:
-            ival = (int)strtol( ptr, &endptr, 0 );
-            node->tag = CV_NODE_INT;
-            node->data.i = ival;
-        }
-
-        if( !endptr || endptr == ptr )
-            CV_PARSE_ERROR( "Invalid numeric value (inconsistent explicit type specification?)" );
-
-        ptr = endptr;
-        CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG();
-    }
-    else if( c == '\'' || c == '\"' ) // an explicit string
-    {
-        node->tag = CV_NODE_STRING;
-        if( c == '\'' )
-            for( len = 0; len < CV_FS_MAX_LEN; )
-            {
-                c = *++ptr;
-                if( cv_isalnum(c) || (c != '\'' && cv_isprint(c)))
-                    buf[len++] = c;
-                else if( c == '\'' )
-                {
-                    c = *++ptr;
-                    if( c != '\'' )
-                        break;
-                    buf[len++] = c;
-                }
-                else
-                    CV_PARSE_ERROR( "Invalid character" );
-            }
-        else
-            for( len = 0; len < CV_FS_MAX_LEN; )
-            {
-                c = *++ptr;
-                if( cv_isalnum(c) || (c != '\\' && c != '\"' && cv_isprint(c)))
-                    buf[len++] = c;
-                else if( c == '\"' )
-                {
-                    ++ptr;
-                    break;
-                }
-                else if( c == '\\' )
-                {
-                    d = *++ptr;
-                    if( d == '\'' )
-                        buf[len++] = d;
-                    else if( d == '\"' || d == '\\' || d == '\'' )
-                        buf[len++] = d;
-                    else if( d == 'n' )
-                        buf[len++] = '\n';
-                    else if( d == 'r' )
-                        buf[len++] = '\r';
-                    else if( d == 't' )
-                        buf[len++] = '\t';
-                    else if( d == 'x' || (cv_isdigit(d) && d < '8') )
+                    *data++ = '\\';
+                    if( cv_isprint(c) )
+                        *data++ = c;
+                    else if( c == '\n' )
+                        *data++ = 'n';
+                    else if( c == '\r' )
+                        *data++ = 'r';
+                    else if( c == '\t' )
+                        *data++ = 't';
+                    else
                     {
-                        int val, is_hex = d == 'x';
-                        c = ptr[3];
-                        ptr[3] = '\0';
-                        val = (int)strtol( ptr + is_hex, &endptr, is_hex ? 8 : 16 );
-                        ptr[3] = c;
-                        if( endptr == ptr + is_hex )
-                            buf[len++] = 'x';
-                        else
-                        {
-                            buf[len++] = (char)val;
-                            ptr = endptr;
-                        }
+                        snprintf( data, sizeof(buf) - (data - buf), "x%02x", c );
+                        data += 3;
                     }
                 }
                 else
-                    CV_PARSE_ERROR( "Invalid character" );
+                    *data++ = c;
             }
-
-        if( len >= CV_FS_MAX_LEN )
-            CV_PARSE_ERROR( "Too long string literal" );
-
-        node->data.str = cvMemStorageAllocString( fs->memstorage, buf, len );
-    }
-    else if( c == '[' || c == '{' ) // collection as a flow
-    {
-        int new_min_indent = min_indent + !is_parent_flow;
-        int struct_flags = CV_NODE_FLOW + (c == '{' ? CV_NODE_MAP : CV_NODE_SEQ);
-        bool is_simple = true;
-
-        icvFSCreateCollection( fs, CV_NODE_TYPE(struct_flags) +
-                                        (node->info ? CV_NODE_USER : 0), node );
-
-        d = c == '[' ? ']' : '}';
-
-        for( ++ptr ;;)
-        {
-            CvFileNode* elem = 0;
-
-            ptr = icvYMLSkipSpaces( fs, ptr, new_min_indent, INT_MAX );
-            if( *ptr == '}' || *ptr == ']' )
-            {
-                if( *ptr != d )
-                    CV_PARSE_ERROR( "The wrong closing bracket" );
-                ptr++;
-                break;
-            }
-
-            if( node->data.seq->total != 0 )
-            {
-                if( *ptr != ',' )
-                    CV_PARSE_ERROR( "Missing , between the elements" );
-                ptr = icvYMLSkipSpaces( fs, ptr + 1, new_min_indent, INT_MAX );
-            }
-
-            if( CV_NODE_IS_MAP(struct_flags) )
-            {
-                ptr = icvYMLParseKey( fs, ptr, node, &elem );
-                ptr = icvYMLSkipSpaces( fs, ptr, new_min_indent, INT_MAX );
-            }
-            else
-            {
-                if( *ptr == ']' )
-                    break;
-                elem = (CvFileNode*)cvSeqPush( node->data.seq, 0 );
-            }
-            CV_Assert(elem);
-            ptr = icvYMLParseValue( fs, ptr, elem, struct_flags, new_min_indent );
-            if( CV_NODE_IS_MAP(struct_flags) )
-                elem->tag |= CV_NODE_NAMED;
-            is_simple = is_simple && !CV_NODE_IS_COLLECTION(elem->tag);
-        }
-        node->data.seq->flags |= is_simple ? CV_NODE_SEQ_SIMPLE : 0;
-    }
-    else
-    {
-        int indent, struct_flags;
-        bool is_simple;
-
-        if( is_parent_flow || c != '-' )
-        {
-            // implicit (one-line) string or nested block-style collection
-            if( !is_parent_flow )
-            {
-                if( c == '?' )
-                    CV_PARSE_ERROR( "Complex keys are not supported" );
-                if( c == '|' || c == '>' )
-                    CV_PARSE_ERROR( "Multi-line text literals are not supported" );
-            }
-
-force_string:
-            endptr = ptr - 1;
-
-            do c = *++endptr;
-            while( cv_isprint(c) &&
-                   (!is_parent_flow || (c != ',' && c != '}' && c != ']')) &&
-                   (is_parent_flow || c != ':' || value_type == CV_NODE_STRING));
-
-            if( endptr == ptr )
-                CV_PARSE_ERROR( "Invalid character" );
-
-            if( is_parent_flow || c != ':' )
-            {
-                char* str_end = endptr;
-                node->tag = CV_NODE_STRING;
-                // strip spaces in the end of string
-                do c = *--str_end;
-                while( str_end > ptr && c == ' ' );
-                str_end++;
-                node->data.str = cvMemStorageAllocString( fs->memstorage, ptr, (int)(str_end - ptr) );
-                ptr = endptr;
-                return ptr;
-            }
-            struct_flags = CV_NODE_MAP;
-        }
-        else
-            struct_flags = CV_NODE_SEQ;
-
-        icvFSCreateCollection( fs, struct_flags +
-                    (node->info ? CV_NODE_USER : 0), node );
-
-        indent = (int)(ptr - fs->buffer_start);
-        is_simple = true;
-
-        for(;;)
-        {
-            CvFileNode* elem = 0;
-
-            if( CV_NODE_IS_MAP(struct_flags) )
-            {
-                ptr = icvYMLParseKey( fs, ptr, node, &elem );
-            }
-            else
-            {
-                c = *ptr++;
-                if( c != '-' )
-                    CV_PARSE_ERROR( "Block sequence elements must be preceded with \'-\'" );
-
-                elem = (CvFileNode*)cvSeqPush( node->data.seq, 0 );
-            }
-            CV_Assert(elem);
-            ptr = icvYMLSkipSpaces( fs, ptr, indent + 1, INT_MAX );
-            ptr = icvYMLParseValue( fs, ptr, elem, struct_flags, indent + 1 );
-            if( CV_NODE_IS_MAP(struct_flags) )
-                elem->tag |= CV_NODE_NAMED;
-            is_simple = is_simple && !CV_NODE_IS_COLLECTION(elem->tag);
-
-            ptr = icvYMLSkipSpaces( fs, ptr, 0, INT_MAX );
-            if( ptr - fs->buffer_start != indent )
-            {
-                if( ptr - fs->buffer_start < indent )
-                    break;
-                else
-                    CV_PARSE_ERROR( "Incorrect indentation" );
-            }
-            if( memcmp( ptr, "...", 3 ) == 0 )
-                break;
-        }
-
-        node->data.seq->flags |= is_simple ? CV_NODE_SEQ_SIMPLE : 0;
-    }
-
-    return ptr;
-}
-
-
-void icvYMLParse( CvFileStorage* fs )
-{
-    char* ptr = fs->buffer_start;
-    int is_first = 1;
-
-    for(;;)
-    {
-        // 0. skip leading comments and directives  and ...
-        // 1. reach the first item
-        for(;;)
-        {
-            ptr = icvYMLSkipSpaces( fs, ptr, 0, INT_MAX );
-            if( !ptr )
-                return;
-
-            if( *ptr == '%' )
-            {
-                if( memcmp( ptr, "%YAML", 5 ) == 0 &&
-                    memcmp( ptr, "%YAML:1.", 8 ) != 0 &&
-                    memcmp( ptr, "%YAML 1.", 8 ) != 0)
-                    CV_PARSE_ERROR( "Unsupported YAML version (it must be 1.x)" );
-                *ptr = '\0';
-            }
-            else if( *ptr == '-' )
-            {
-                if( memcmp(ptr, "---", 3) == 0 )
-                {
-                    ptr += 3;
-                    break;
-                }
-                else if( is_first )
-                    break;
-            }
-            else if( cv_isalnum(*ptr) || *ptr=='_')
-            {
-                if( !is_first )
-                    CV_PARSE_ERROR( "The YAML streams must start with '---', except the first one" );
-                break;
-            }
-            else if( fs->dummy_eof )
-                break;
-            else
-                CV_PARSE_ERROR( "Invalid or unsupported syntax" );
-        }
-
-        ptr = icvYMLSkipSpaces( fs, ptr, 0, INT_MAX );
-        if( memcmp( ptr, "...", 3 ) != 0 )
-        {
-            // 2. parse the collection
-            CvFileNode* root_node = (CvFileNode*)cvSeqPush( fs->roots, 0 );
-
-            ptr = icvYMLParseValue( fs, ptr, root_node, CV_NODE_NONE, 0 );
-            if( !CV_NODE_IS_COLLECTION(root_node->tag) )
-                CV_PARSE_ERROR( "Only collections as YAML streams are supported by this parser" );
-
-            // 3. parse until the end of file or next collection
-            ptr = icvYMLSkipSpaces( fs, ptr, 0, INT_MAX );
-            if( !ptr )
-                return;
-        }
-
-        if( fs->dummy_eof )
-            break;
-        ptr += 3;
-        is_first = 0;
-    }
-}
-
-
-/****************************************************************************************\
-*                                       YAML Emitter                                     *
-\****************************************************************************************/
-
-void icvYMLWrite( CvFileStorage* fs, const char* key, const char* data )
-{
-    check_if_write_struct_is_delayed( fs );
-    if ( fs->state_of_writing_base64 == base64::fs::Uncertain )
-    {
-        switch_to_Base64_state( fs, base64::fs::NotUse );
-    }
-    else if ( fs->state_of_writing_base64 == base64::fs::InUse )
-    {
-        CV_Error( CV_StsError, "At present, output Base64 data only." );
-    }
-
-    int i, keylen = 0;
-    int datalen = 0;
-    int struct_flags;
-    char* ptr;
-
-    struct_flags = fs->struct_flags;
-
-    if( key && key[0] == '\0' )
-        key = 0;
-
-    if( CV_NODE_IS_COLLECTION(struct_flags) )
-    {
-        if( (CV_NODE_IS_MAP(struct_flags) ^ (key != 0)) )
-            CV_Error( CV_StsBadArg, "An attempt to add element without a key to a map, "
-                                    "or add element with key to sequence" );
-    }
-    else
-    {
-        fs->is_first = 0;
-        struct_flags = CV_NODE_EMPTY | (key ? CV_NODE_MAP : CV_NODE_SEQ);
-    }
-
-    if( key )
-    {
-        keylen = (int)strlen(key);
-        if( keylen == 0 )
-            CV_Error( CV_StsBadArg, "The key is an empty" );
-
-        if( keylen > CV_FS_MAX_LEN )
-            CV_Error( CV_StsBadArg, "The key is too long" );
-    }
-
-    if( data )
-        datalen = (int)strlen(data);
-
-    if( CV_NODE_IS_FLOW(struct_flags) )
-    {
-        int new_offset;
-        ptr = fs->buffer;
-        if( !CV_NODE_IS_EMPTY(struct_flags) )
-            *ptr++ = ',';
-        new_offset = (int)(ptr - fs->buffer_start) + keylen + datalen;
-        if( new_offset > fs->wrap_margin && new_offset - fs->struct_indent > 10 )
-        {
-            fs->buffer = ptr;
-            ptr = icvFSFlush(fs);
-        }
-        else
-            *ptr++ = ' ';
-    }
-    else
-    {
-        ptr = icvFSFlush(fs);
-        if( !CV_NODE_IS_MAP(struct_flags) )
-        {
-            *ptr++ = '-';
-            if( data )
-                *ptr++ = ' ';
-        }
-    }
-
-    if( key )
-    {
-        if( !cv_isalpha(key[0]) && key[0] != '_' )
-            CV_Error( CV_StsBadArg, "Key must start with a letter or _" );
-
-        ptr = icvFSResizeWriteBuffer( fs, ptr, keylen );
-
-        for( i = 0; i < keylen; i++ )
-        {
-            char c = key[i];
-
-            ptr[i] = c;
-            if( !cv_isalnum(c) && c != '-' && c != '_' && c != ' ' )
-                CV_Error( CV_StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
-        }
-
-        ptr += keylen;
-        *ptr++ = ':';
-        if( !CV_NODE_IS_FLOW(struct_flags) && data )
-            *ptr++ = ' ';
-    }
-
-    if( data )
-    {
-        ptr = icvFSResizeWriteBuffer( fs, ptr, datalen );
-        memcpy( ptr, data, datalen );
-        ptr += datalen;
-    }
-
-    fs->buffer = ptr;
-    fs->struct_flags = struct_flags & ~CV_NODE_EMPTY;
-}
-
-
-void icvYMLStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags, const char* type_name)
-{
-    int parent_flags;
-    char buf[CV_FS_MAX_LEN + 1024];
-    const char* data = 0;
-
-    if ( type_name && *type_name == '\0' )
-        type_name = 0;
-
-    struct_flags = (struct_flags & (CV_NODE_TYPE_MASK|CV_NODE_FLOW)) | CV_NODE_EMPTY;
-    if( !CV_NODE_IS_COLLECTION(struct_flags))
-        CV_Error( CV_StsBadArg,
-        "Some collection type - CV_NODE_SEQ or CV_NODE_MAP, must be specified" );
-
-    if (type_name && memcmp(type_name, "binary", 6) == 0)
-    {
-        /* reset struct flag. in order not to print ']' */
-        struct_flags = CV_NODE_SEQ;
-        sprintf(buf, "!!binary |");
-        data = buf;
-    }
-    else if( CV_NODE_IS_FLOW(struct_flags))
-    {
-        char c = CV_NODE_IS_MAP(struct_flags) ? '{' : '[';
-        struct_flags |= CV_NODE_FLOW;
-
-        if( type_name )
-            sprintf( buf, "!!%s %c", type_name, c );
-        else
-        {
-            buf[0] = c;
-            buf[1] = '\0';
-        }
-        data = buf;
-    }
-    else if( type_name )
-    {
-        sprintf( buf, "!!%s", type_name );
-        data = buf;
-    }
-
-    icvYMLWrite( fs, key, data );
-
-    parent_flags = fs->struct_flags;
-    cvSeqPush( fs->write_stack, &parent_flags );
-    fs->struct_flags = struct_flags;
-
-    if( !CV_NODE_IS_FLOW(parent_flags) )
-        fs->struct_indent += CV_YML_INDENT + CV_NODE_IS_FLOW(struct_flags);
-}
-
-
-void icvYMLEndWriteStruct( CvFileStorage* fs )
-{
-    int parent_flags = 0, struct_flags;
-    char* ptr;
-
-    struct_flags = fs->struct_flags;
-    if( fs->write_stack->total == 0 )
-        CV_Error( CV_StsError, "EndWriteStruct w/o matching StartWriteStruct" );
-
-    cvSeqPop( fs->write_stack, &parent_flags );
-
-    if( CV_NODE_IS_FLOW(struct_flags) )
-    {
-        ptr = fs->buffer;
-        if( ptr > fs->buffer_start + fs->struct_indent && !CV_NODE_IS_EMPTY(struct_flags) )
-            *ptr++ = ' ';
-        *ptr++ = CV_NODE_IS_MAP(struct_flags) ? '}' : ']';
-        fs->buffer = ptr;
-    }
-    else if( CV_NODE_IS_EMPTY(struct_flags) )
-    {
-        ptr = icvFSFlush(fs);
-        memcpy( ptr, CV_NODE_IS_MAP(struct_flags) ? "{}" : "[]", 2 );
-        fs->buffer = ptr + 2;
-    }
-
-    if( !CV_NODE_IS_FLOW(parent_flags) )
-        fs->struct_indent -= CV_YML_INDENT + CV_NODE_IS_FLOW(struct_flags);
-    CV_Assert( fs->struct_indent >= 0 );
-
-    fs->struct_flags = parent_flags;
-}
-
-
-void icvYMLStartNextStream( CvFileStorage* fs )
-{
-    if( !fs->is_first )
-    {
-        while( fs->write_stack->total > 0 )
-            icvYMLEndWriteStruct(fs);
-
-        fs->struct_indent = 0;
-        icvFSFlush(fs);
-        icvPuts( fs, "...\n" );
-        icvPuts( fs, "---\n" );
-        fs->buffer = fs->buffer_start;
-    }
-}
-
-
-void icvYMLWriteInt( CvFileStorage* fs, const char* key, int value )
-{
-    char buf[128];
-    icvYMLWrite( fs, key, icv_itoa( value, buf, 10 ));
-}
-
-
-void icvYMLWriteReal( CvFileStorage* fs, const char* key, double value )
-{
-    char buf[128];
-    icvYMLWrite( fs, key, icvDoubleToString( buf, value ));
-}
-
-
-void icvYMLWriteString( CvFileStorage* fs, const char* key, const char* str, int quote)
-{
-    char buf[CV_FS_MAX_LEN*4+16];
-    char* data = (char*)str;
-    int i, len;
-
-    if( !str )
-        CV_Error( CV_StsNullPtr, "Null string pointer" );
-
-    len = (int)strlen(str);
-    if( len > CV_FS_MAX_LEN )
-        CV_Error( CV_StsBadArg, "The written string is too long" );
-
-    if( quote || len == 0 || str[0] != str[len-1] || (str[0] != '\"' && str[0] != '\'') )
-    {
-        int need_quote = quote || len == 0 || str[0] == ' ';
-        data = buf;
-        *data++ = '\"';
-        for( i = 0; i < len; i++ )
-        {
-            char c = str[i];
-
-            if( !need_quote && !cv_isalnum(c) && c != '_' && c != ' ' && c != '-' &&
-                c != '(' && c != ')' && c != '/' && c != '+' && c != ';' )
+            if( !need_quote && (cv_isdigit(str[0]) ||
+                                str[0] == '+' || str[0] == '-' || str[0] == '.' ))
                 need_quote = 1;
 
-            if( !cv_isalnum(c) && (!cv_isprint(c) || c == '\\' || c == '\'' || c == '\"') )
-            {
-                *data++ = '\\';
-                if( cv_isprint(c) )
-                    *data++ = c;
-                else if( c == '\n' )
-                    *data++ = 'n';
-                else if( c == '\r' )
-                    *data++ = 'r';
-                else if( c == '\t' )
-                    *data++ = 't';
-                else
-                {
-                    sprintf( data, "x%02x", c );
-                    data += 3;
-                }
-            }
-            else
-                *data++ = c;
+            if( need_quote )
+                *data++ = '\"';
+            *data++ = '\0';
+            data = buf + !need_quote;
         }
-        if( !need_quote && (cv_isdigit(str[0]) ||
-            str[0] == '+' || str[0] == '-' || str[0] == '.' ))
-            need_quote = 1;
 
-        if( need_quote )
-            *data++ = '\"';
-        *data++ = '\0';
-        data = buf + !need_quote;
+        writeScalar( key, data);
     }
 
-    icvYMLWrite( fs, key, data );
-}
-
-
-void icvYMLWriteComment( CvFileStorage* fs, const char* comment, int eol_comment )
-{
-    int len; //, indent;
-    int multiline;
-    const char* eol;
-    char* ptr;
-
-    if( !comment )
-        CV_Error( CV_StsNullPtr, "Null comment" );
-
-    len = (int)strlen(comment);
-    eol = strchr(comment, '\n');
-    multiline = eol != 0;
-    ptr = fs->buffer;
-
-    if( !eol_comment || multiline ||
-        fs->buffer_end - ptr < len || ptr == fs->buffer_start )
-        ptr = icvFSFlush( fs );
-    else
-        *ptr++ = ' ';
-
-    while( comment )
+    void writeScalar(const char* key, const char* data)
     {
-        *ptr++ = '#';
-        *ptr++ = ' ';
-        if( eol )
+        fs->check_if_write_struct_is_delayed(false);
+        if ( fs->get_state_of_writing_base64() == FileStorage_API::Uncertain )
         {
-            ptr = icvFSResizeWriteBuffer( fs, ptr, (int)(eol - comment) + 1 );
-            memcpy( ptr, comment, eol - comment + 1 );
-            fs->buffer = ptr + (eol - comment);
-            comment = eol + 1;
-            eol = strchr( comment, '\n' );
+            fs->switch_to_Base64_state( FileStorage_API::NotUse );
+        }
+        else if ( fs->get_state_of_writing_base64() == FileStorage_API::InUse )
+        {
+            CV_Error( cv::Error::StsError, "At present, output Base64 data only." );
+        }
+
+        int i, keylen = 0;
+        int datalen = 0;
+        char* ptr;
+
+        FStructData& current_struct = fs->getCurrentStruct();
+
+        int struct_flags = current_struct.flags;
+
+        if( key && key[0] == '\0' )
+            key = 0;
+
+        if( FileNode::isCollection(struct_flags) )
+        {
+            if( (FileNode::isMap(struct_flags) ^ (key != 0)) )
+                CV_Error( cv::Error::StsBadArg, "An attempt to add element without a key to a map, "
+                         "or add element with key to sequence" );
         }
         else
         {
-            len = (int)strlen(comment);
-            ptr = icvFSResizeWriteBuffer( fs, ptr, len );
-            memcpy( ptr, comment, len );
-            fs->buffer = ptr + len;
-            comment = 0;
+            fs->setNonEmpty();
+            struct_flags = FileNode::EMPTY | (key ? FileNode::MAP : FileNode::SEQ);
         }
-        ptr = icvFSFlush( fs );
+
+        if( key )
+        {
+            keylen = (int)strlen(key);
+            if( keylen == 0 )
+                CV_Error( cv::Error::StsBadArg, "The key is an empty" );
+
+            if( keylen > CV_FS_MAX_LEN )
+                CV_Error( cv::Error::StsBadArg, "The key is too long" );
+        }
+
+        if( data )
+            datalen = (int)strlen(data);
+
+        if( FileNode::isFlow(struct_flags) )
+        {
+            ptr = fs->bufferPtr();
+            if( !FileNode::isEmptyCollection(struct_flags) )
+                *ptr++ = ',';
+            int new_offset = (int)(ptr - fs->bufferStart()) + keylen + datalen;
+            if( new_offset > fs->wrapMargin() && new_offset - current_struct.indent > 10 )
+            {
+                fs->setBufferPtr(ptr);
+                ptr = fs->flush();
+            }
+            else
+                *ptr++ = ' ';
+        }
+        else
+        {
+            ptr = fs->flush();
+            if( !FileNode::isMap(struct_flags) )
+            {
+                *ptr++ = '-';
+                if( data )
+                    *ptr++ = ' ';
+            }
+        }
+
+        if( key )
+        {
+            if( !cv_isalpha(key[0]) && key[0] != '_' )
+                CV_Error( cv::Error::StsBadArg, "Key must start with a letter or _" );
+
+            ptr = fs->resizeWriteBuffer( ptr, keylen );
+
+            for( i = 0; i < keylen; i++ )
+            {
+                char c = key[i];
+
+                ptr[i] = c;
+                if( !cv_isalnum(c) && c != '-' && c != '_' && c != ' ' )
+                    CV_Error( cv::Error::StsBadArg, "Key names may only contain alphanumeric characters [a-zA-Z0-9], '-', '_' and ' '" );
+            }
+
+            ptr += keylen;
+            *ptr++ = ':';
+            if( !FileNode::isFlow(struct_flags) && data )
+                *ptr++ = ' ';
+        }
+
+        if( data )
+        {
+            ptr = fs->resizeWriteBuffer( ptr, datalen );
+            memcpy( ptr, data, datalen );
+            ptr += datalen;
+        }
+
+        fs->setBufferPtr(ptr);
+        current_struct.flags &= ~FileNode::EMPTY;
     }
+
+    void writeComment(const char* comment, bool eol_comment)
+    {
+        if( !comment )
+            CV_Error( cv::Error::StsNullPtr, "Null comment" );
+
+        int len = (int)strlen(comment);
+        const char* eol = strchr(comment, '\n');
+        bool multiline = eol != 0;
+        char* ptr = fs->bufferPtr();
+
+        if( !eol_comment || multiline ||
+            fs->bufferEnd() - ptr < len || ptr == fs->bufferStart() )
+            ptr = fs->flush();
+        else
+            *ptr++ = ' ';
+
+        while( comment )
+        {
+            *ptr++ = '#';
+            *ptr++ = ' ';
+            if( eol )
+            {
+                ptr = fs->resizeWriteBuffer( ptr, (int)(eol - comment) + 1 );
+                memcpy( ptr, comment, eol - comment + 1 );
+                fs->setBufferPtr(ptr + (eol - comment));
+                comment = eol + 1;
+                eol = strchr( comment, '\n' );
+            }
+            else
+            {
+                len = (int)strlen(comment);
+                ptr = fs->resizeWriteBuffer( ptr, len );
+                memcpy( ptr, comment, len );
+                fs->setBufferPtr(ptr + len);
+                comment = 0;
+            }
+            ptr = fs->flush();
+        }
+    }
+
+    void startNextStream()
+    {
+        fs->puts( "...\n" );
+        fs->puts( "---\n" );
+    }
+
+protected:
+    FileStorage_API* fs;
+};
+
+
+class YAMLParser : public FileStorageParser
+{
+public:
+    YAMLParser(FileStorage_API* _fs) : fs(_fs)
+    {
+    }
+
+    virtual ~YAMLParser() {}
+
+    char* skipSpaces( char* ptr, int min_indent, int max_comment_indent )
+    {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
+        for(;;)
+        {
+            while( *ptr == ' ' )
+                ptr++;
+            if( *ptr == '#' )
+            {
+                if( ptr - fs->bufferStart() > max_comment_indent )
+                    return ptr;
+                *ptr = '\0';
+            }
+            else if( cv_isprint(*ptr) )
+            {
+                if( ptr - fs->bufferStart() < min_indent )
+                    CV_PARSE_ERROR_CPP( "Incorrect indentation" );
+                break;
+            }
+            else if( *ptr == '\0' || *ptr == '\n' || *ptr == '\r' )
+            {
+                ptr = fs->gets();
+                if( !ptr )
+                {
+                    // emulate end of stream
+                    ptr = fs->bufferStart();
+                    ptr[0] = ptr[1] = ptr[2] = '.';
+                    ptr[3] = '\0';
+                    fs->setEof();
+                    break;
+                }
+                else
+                {
+                    int l = (int)strlen(ptr);
+                    if( ptr[l-1] != '\n' && ptr[l-1] != '\r' && !fs->eof() )
+                        CV_PARSE_ERROR_CPP( "Too long string or a last string w/o newline" );
+                }
+            }
+            else
+                CV_PARSE_ERROR_CPP( *ptr == '\t' ? "Tabs are prohibited in YAML!" : "Invalid character" );
+        }
+
+        return ptr;
+    }
+
+    bool getBase64Row(char* ptr, int indent, char* &beg, char* &end)
+    {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
+        beg = end = ptr = skipSpaces(ptr, 0, INT_MAX);
+        if (!ptr || !*ptr)
+            return false; // end of file
+
+        if (ptr - fs->bufferStart() != indent)
+            return false; // end of base64 data
+
+        /* find end */
+        while(cv_isprint(*ptr)) /* no check for base64 string */
+            ++ptr;
+        if (*ptr == '\0')
+            CV_PARSE_ERROR_CPP("Unexpected end of line");
+
+        end = ptr;
+        return true;
+    }
+
+
+    char* parseKey( char* ptr, FileNode& map_node, FileNode& value_placeholder )
+    {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
+        char c;
+        char *endptr = ptr - 1, *saveptr;
+
+        if( *ptr == '-' )
+            CV_PARSE_ERROR_CPP( "Key may not start with \'-\'" );
+
+        do c = *++endptr;
+        while( cv_isprint(c) && c != ':' );
+
+        if( c != ':' )
+            CV_PARSE_ERROR_CPP( "Missing \':\'" );
+
+        saveptr = endptr + 1;
+        do c = *--endptr;
+        while( c == ' ' );
+
+        ++endptr;
+        if( endptr == ptr )
+            CV_PARSE_ERROR_CPP( "An empty key" );
+
+        value_placeholder = fs->addNode(map_node, std::string(ptr, endptr - ptr), FileNode::NONE);
+        ptr = saveptr;
+
+        return ptr;
+    }
+
+    char* parseValue( char* ptr, FileNode& node, int min_indent, bool is_parent_flow )
+    {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
+        char* endptr = 0;
+        char c = ptr[0], d = ptr[1];
+        int value_type = FileNode::NONE;
+        int len;
+        bool is_binary_string = false;
+        bool is_user = false;
+
+        if( c == '!' ) // handle explicit type specification
+        {
+            if( d == '!' || d == '^' )
+            {
+                ptr++;
+                is_user = true;
+                //value_type |= FileNode::USER;
+            }
+            if ( d == '<') //support of full type heading from YAML 1.2
+            {
+                const char* yamlTypeHeading = "<tag:yaml.org,2002:";
+                const size_t headingLength = strlen(yamlTypeHeading);
+
+                char* typeEndPtr = ++ptr;
+
+                do d = *++typeEndPtr;
+                while( cv_isprint(d) && d != ' ' && d != '>' );
+
+                if ( d == '>' && (size_t)(typeEndPtr - ptr) > headingLength )
+                {
+                    if ( memcmp(ptr, yamlTypeHeading, headingLength) == 0 )
+                    {
+                        *typeEndPtr = ' ';
+                        ptr += headingLength - 1;
+                        is_user = true;
+                        //value_type |= FileNode::USER;
+                    }
+                }
+            }
+
+            endptr = ptr++;
+            do d = *++endptr;
+            while( cv_isprint(d) && d != ' ' );
+            len = (int)(endptr - ptr);
+            if( len == 0 )
+                CV_PARSE_ERROR_CPP( "Empty type name" );
+            d = *endptr;
+            *endptr = '\0';
+
+            if( len == 3 && !is_user )
+            {
+                if( memcmp( ptr, "str", 3 ) == 0 )
+                    value_type = FileNode::STRING;
+                else if( memcmp( ptr, "int", 3 ) == 0 )
+                    value_type = FileNode::INT;
+                else if( memcmp( ptr, "seq", 3 ) == 0 )
+                    value_type = FileNode::SEQ;
+                else if( memcmp( ptr, "map", 3 ) == 0 )
+                    value_type = FileNode::MAP;
+            }
+            else if( len == 5 && !is_user )
+            {
+                if( memcmp( ptr, "float", 5 ) == 0 )
+                    value_type = FileNode::REAL;
+            }
+            else if (len == 6 && is_user)
+            {
+                if( memcmp( ptr, "binary", 6 ) == 0 ) {
+                    value_type = FileNode::SEQ;
+                    is_binary_string = true;
+
+                    /* for ignore '|' */
+
+                    /**** operation with endptr ****/
+                    *endptr = d;
+
+                    do {
+                        d = *++endptr;
+                        if (d == '|')
+                            break;
+                    } while (d == ' ');
+
+                    d = *++endptr;
+                    *endptr = '\0';
+                }
+            }
+
+            *endptr = d;
+            ptr = skipSpaces( endptr, min_indent, INT_MAX );
+            if (!ptr)
+                CV_PARSE_ERROR_CPP("Invalid input");
+
+            c = *ptr;
+
+            if( !is_user )
+            {
+                if (value_type == FileNode::STRING && c != '\'' && c != '\"')
+                    goto force_string;
+                if( value_type == FileNode::INT )
+                    goto force_int;
+                if( value_type == FileNode::REAL )
+                    goto force_real;
+            }
+        }
+
+        if (is_binary_string)
+        {
+            int indent = static_cast<int>(ptr - fs->bufferStart());
+            ptr = fs->parseBase64(ptr, indent, node);
+        }
+        else if( cv_isdigit(c) ||
+                ((c == '-' || c == '+') && (cv_isdigit(d) || d == '.')) ||
+                (c == '.' && cv_isalnum(d))) // a number
+        {
+            endptr = ptr + (c == '-' || c == '+');
+            while( cv_isdigit(*endptr) )
+                endptr++;
+            if( *endptr == '.' || *endptr == 'e' )
+            {
+            force_real:
+                double fval = fs->strtod( ptr, &endptr );
+                node.setValue(FileNode::REAL, &fval);
+            }
+            else
+            {
+            force_int:
+                int64_t ival = strtoll( ptr, &endptr, 0 );
+                node.setValue(FileNode::INT, &ival);
+            }
+
+            if( !endptr || endptr == ptr )
+                CV_PARSE_ERROR_CPP( "Invalid numeric value (inconsistent explicit type specification?)" );
+
+            ptr = endptr;
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+        }
+        else if( c == '\'' || c == '\"' ) // an explicit string
+        {
+            if( c == '\'' )
+                for( len = 0; len < CV_FS_MAX_LEN; )
+                {
+                    c = *++ptr;
+                    if( cv_isalnum(c) || (c != '\'' && cv_isprint(c)))
+                        buf[len++] = c;
+                    else if( c == '\'' )
+                    {
+                        c = *++ptr;
+                        if( c != '\'' )
+                            break;
+                        buf[len++] = c;
+                    }
+                    else
+                        CV_PARSE_ERROR_CPP( "Invalid character" );
+                }
+            else
+                for( len = 0; len < CV_FS_MAX_LEN; )
+                {
+                    c = *++ptr;
+                    if( cv_isalnum(c) || (c != '\\' && c != '\"' && cv_isprint(c)))
+                        buf[len++] = c;
+                    else if( c == '\"' )
+                    {
+                        ++ptr;
+                        break;
+                    }
+                    else if( c == '\\' )
+                    {
+                        d = *++ptr;
+                        if( d == '\'' )
+                            buf[len++] = d;
+                        else if( d == '\"' || d == '\\' || d == '\'' )
+                            buf[len++] = d;
+                        else if( d == 'n' )
+                            buf[len++] = '\n';
+                        else if( d == 'r' )
+                            buf[len++] = '\r';
+                        else if( d == 't' )
+                            buf[len++] = '\t';
+                        else if( d == 'x' || (cv_isdigit(d) && d < '8') )
+                        {
+                            int val, is_hex = d == 'x';
+                            c = ptr[3];
+                            ptr[3] = '\0';
+                            val = (int)strtol( ptr + is_hex, &endptr, is_hex ? 8 : 16 );
+                            ptr[3] = c;
+                            if( endptr == ptr + is_hex )
+                                buf[len++] = 'x';
+                            else
+                            {
+                                buf[len++] = (char)val;
+                                ptr = endptr;
+                            }
+                        }
+                    }
+                    else
+                        CV_PARSE_ERROR_CPP( "Invalid character" );
+                }
+
+            if( len >= CV_FS_MAX_LEN )
+                CV_PARSE_ERROR_CPP( "Too long string literal" );
+
+            node.setValue(FileNode::STRING, buf, len);
+        }
+        else if( c == '[' || c == '{' ) // collection as a flow
+        {
+            int new_min_indent = min_indent + !is_parent_flow;
+            int struct_type = c == '{' ? FileNode::MAP : FileNode::SEQ;
+            int nelems = 0;
+
+            fs->convertToCollection(struct_type, node);
+            d = c == '[' ? ']' : '}';
+
+            for( ++ptr ;; nelems++ )
+            {
+                FileNode elem;
+
+                ptr = skipSpaces( ptr, new_min_indent, INT_MAX );
+                if (!ptr)
+                    CV_PARSE_ERROR_CPP("Invalid input");
+                if( *ptr == '}' || *ptr == ']' )
+                {
+                    if( *ptr != d )
+                        CV_PARSE_ERROR_CPP( "The wrong closing bracket" );
+                    ptr++;
+                    break;
+                }
+
+                if( nelems != 0 )
+                {
+                    if( *ptr != ',' )
+                        CV_PARSE_ERROR_CPP( "Missing , between the elements" );
+                    ptr = skipSpaces( ptr + 1, new_min_indent, INT_MAX );
+                    if (!ptr)
+                        CV_PARSE_ERROR_CPP("Invalid input");
+                }
+
+                if( struct_type == FileNode::MAP )
+                {
+                    ptr = parseKey( ptr, node, elem );
+                    ptr = skipSpaces( ptr, new_min_indent, INT_MAX );
+                }
+                else
+                {
+                    if( *ptr == ']' )
+                        break;
+                    elem = fs->addNode(node, std::string(), FileNode::NONE);
+                }
+                ptr = parseValue( ptr, elem, new_min_indent, true );
+            }
+            fs->finalizeCollection(node);
+        }
+        else
+        {
+            int indent, struct_type;
+
+            if( is_parent_flow || c != '-' )
+            {
+                // implicit (one-line) string or nested block-style collection
+                if( !is_parent_flow )
+                {
+                    if( c == '?' )
+                        CV_PARSE_ERROR_CPP( "Complex keys are not supported" );
+                    if( c == '|' || c == '>' )
+                        CV_PARSE_ERROR_CPP( "Multi-line text literals are not supported" );
+                }
+
+            force_string:
+                endptr = ptr - 1;
+
+                do c = *++endptr;
+                while( cv_isprint(c) &&
+                      (!is_parent_flow || (c != ',' && c != '}' && c != ']')) &&
+                      (is_parent_flow || c != ':' || value_type == FileNode::STRING));
+
+                if( endptr == ptr )
+                    CV_PARSE_ERROR_CPP( "Invalid character" );
+
+                if( is_parent_flow || c != ':' )
+                {
+                    char* str_end = endptr;
+                    // strip spaces in the end of string
+                    do c = *--str_end;
+                    while( str_end > ptr && c == ' ' );
+                    str_end++;
+                    node.setValue(FileNode::STRING, ptr, (int)(str_end - ptr));
+                    ptr = endptr;
+                    return ptr;
+                }
+                struct_type = FileNode::MAP;
+            }
+            else
+                struct_type = FileNode::SEQ;
+
+            fs->convertToCollection( struct_type, node );
+            indent = (int)(ptr - fs->bufferStart());
+
+            for(;;)
+            {
+                FileNode elem;
+
+                if( struct_type == FileNode::MAP )
+                {
+                    ptr = parseKey( ptr, node, elem );
+                }
+                else
+                {
+                    c = *ptr++;
+                    if( c != '-' )
+                        CV_PARSE_ERROR_CPP( "Block sequence elements must be preceded with \'-\'" );
+
+                    elem = fs->addNode(node, std::string(), FileNode::NONE);
+                }
+                ptr = skipSpaces( ptr, indent + 1, INT_MAX );
+                ptr = parseValue( ptr, elem, indent + 1, false );
+                ptr = skipSpaces( ptr, 0, INT_MAX );
+                if( ptr - fs->bufferStart() != indent )
+                {
+                    if( ptr - fs->bufferStart() < indent )
+                        break;
+                    else
+                        CV_PARSE_ERROR_CPP( "Incorrect indentation" );
+                }
+                if( memcmp( ptr, "...", 3 ) == 0 )
+                    break;
+            }
+            fs->finalizeCollection(node);
+        }
+
+        return ptr;
+    }
+
+    bool parse( char* ptr )
+    {
+        if (!ptr)
+            CV_PARSE_ERROR_CPP("Invalid input");
+
+        bool first = true;
+        bool ok = true;
+        FileNode root_collection(fs->getFS(), 0, 0);
+
+        for(;;)
+        {
+            // 0. skip leading comments and directives  and ...
+            // 1. reach the first item
+            for(;;)
+            {
+                ptr = skipSpaces( ptr, 0, INT_MAX );
+                if( !ptr || *ptr == '\0' )
+                {
+                    ok = !first;
+                    break;
+                }
+
+                if( *ptr == '%' )
+                {
+                    if( memcmp( ptr, "%YAML", 5 ) == 0 &&
+                        memcmp( ptr, "%YAML:1.", 8 ) != 0 &&
+                        memcmp( ptr, "%YAML 1.", 8 ) != 0)
+                        CV_PARSE_ERROR_CPP( "Unsupported YAML version (it must be 1.x)" );
+                    *ptr = '\0';
+                }
+                else if( *ptr == '-' )
+                {
+                    if( memcmp(ptr, "---", 3) == 0 )
+                    {
+                        ptr += 3;
+                        break;
+                    }
+                    else if( first )
+                        break;
+                }
+                else if( cv_isalnum(*ptr) || *ptr=='_')
+                {
+                    if( !first )
+                        CV_PARSE_ERROR_CPP( "The YAML streams must start with '---', except the first one" );
+                    break;
+                }
+                else if( fs->eof() )
+                    break;
+                else
+                    CV_PARSE_ERROR_CPP( "Invalid or unsupported syntax" );
+            }
+
+            if( ptr )
+                ptr = skipSpaces( ptr, 0, INT_MAX );
+            if( !ptr || !ptr[0] )
+                break;
+            if( memcmp( ptr, "...", 3 ) != 0 )
+            {
+                // 2. parse the collection
+                FileNode root_node = fs->addNode(root_collection, std::string(), FileNode::NONE);
+
+                ptr = parseValue( ptr, root_node, 0, false );
+                if( !root_node.isMap() && !root_node.isSeq() )
+                    CV_PARSE_ERROR_CPP( "Only collections as YAML streams are supported by this parser" );
+
+                // 3. parse until the end of file or next collection
+                ptr = skipSpaces( ptr, 0, INT_MAX );
+                if( !ptr )
+                    break;
+            }
+
+            if( fs->eof() )
+                break;
+            ptr += 3;
+            first = false;
+        }
+
+        return ok;
+    }
+
+    FileStorage_API* fs;
+    char buf[CV_FS_MAX_LEN+1024];
+};
+
+Ptr<FileStorageEmitter> createYAMLEmitter(FileStorage_API* fs)
+{
+    return makePtr<YAMLEmitter>(fs);
+}
+
+Ptr<FileStorageParser> createYAMLParser(FileStorage_API* fs)
+{
+    return makePtr<YAMLParser>(fs);
+}
+
 }

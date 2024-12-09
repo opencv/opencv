@@ -30,11 +30,38 @@
 #ifndef GOOGLE_PROTOBUF_STUBS_MUTEX_H_
 #define GOOGLE_PROTOBUF_STUBS_MUTEX_H_
 
-#ifdef GOOGLE_PROTOBUF_NO_THREADLOCAL
-#include <pthread.h>
+#include <mutex>
+
+#ifdef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+
+#include <windows.h>
+
+// GetMessage conflicts with GeneratedMessageReflection::GetMessage().
+#ifdef GetMessage
+#undef GetMessage
+#endif
+
 #endif
 
 #include <google/protobuf/stubs/macros.h>
+
+// Define thread-safety annotations for use below, if we are building with
+// Clang.
+#if defined(__clang__) && !defined(SWIG)
+#define GOOGLE_PROTOBUF_ACQUIRE(...) \
+  __attribute__((acquire_capability(__VA_ARGS__)))
+#define GOOGLE_PROTOBUF_RELEASE(...) \
+  __attribute__((release_capability(__VA_ARGS__)))
+#define GOOGLE_PROTOBUF_SCOPED_CAPABILITY __attribute__((scoped_lockable))
+#define GOOGLE_PROTOBUF_CAPABILITY(x) __attribute__((capability(x)))
+#else
+#define GOOGLE_PROTOBUF_ACQUIRE(...)
+#define GOOGLE_PROTOBUF_RELEASE(...)
+#define GOOGLE_PROTOBUF_SCOPED_CAPABILITY
+#define GOOGLE_PROTOBUF_CAPABILITY(x)
+#endif
+
+#include <google/protobuf/port_def.inc>
 
 // ===================================================================
 // emulates google3/base/mutex.h
@@ -42,39 +69,86 @@ namespace google {
 namespace protobuf {
 namespace internal {
 
-// A Mutex is a non-reentrant (aka non-recursive) mutex.  At most one thread T
-// may hold a mutex at a given time.  If T attempts to Lock() the same Mutex
-// while holding it, T will deadlock.
-class LIBPROTOBUF_EXPORT Mutex {
+#define GOOGLE_PROTOBUF_LINKER_INITIALIZED
+
+#ifdef GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP
+
+// This class is a lightweight replacement for std::mutex on Windows platforms.
+// std::mutex does not work on Windows XP SP2 with the latest VC++ libraries,
+// because it utilizes the Concurrency Runtime that is only supported on Windows
+// XP SP3 and above.
+class PROTOBUF_EXPORT CriticalSectionLock {
  public:
-  // Create a Mutex that is not held by anybody.
-  Mutex();
-
-  // Destructor
-  ~Mutex();
-
-  // Block if necessary until this Mutex is free, then acquire it exclusively.
-  void Lock();
-
-  // Release this Mutex.  Caller must hold it exclusively.
-  void Unlock();
-
-  // Crash if this Mutex is not held exclusively by this thread.
-  // May fail to crash when it should; will never crash when it should not.
-  void AssertHeld();
+  CriticalSectionLock() { InitializeCriticalSection(&critical_section_); }
+  ~CriticalSectionLock() { DeleteCriticalSection(&critical_section_); }
+  void lock() { EnterCriticalSection(&critical_section_); }
+  void unlock() { LeaveCriticalSection(&critical_section_); }
 
  private:
-  struct Internal;
-  Internal* mInternal;
+  CRITICAL_SECTION critical_section_;
 
-  GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(Mutex);
+  GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(CriticalSectionLock);
 };
 
-// MutexLock(mu) acquires mu when constructed and releases it when destroyed.
-class LIBPROTOBUF_EXPORT MutexLock {
+#endif
+
+// In MSVC std::mutex does not have a constexpr constructor.
+// This wrapper makes the constructor constexpr.
+template <typename T>
+class CallOnceInitializedMutex {
  public:
-  explicit MutexLock(Mutex *mu) : mu_(mu) { this->mu_->Lock(); }
-  ~MutexLock() { this->mu_->Unlock(); }
+  constexpr CallOnceInitializedMutex() : flag_{}, buf_{} {}
+  ~CallOnceInitializedMutex() { get().~T(); }
+
+  void lock() { get().lock(); }
+  void unlock() { get().unlock(); }
+
+ private:
+  T& get() {
+    std::call_once(flag_, [&] { ::new (static_cast<void*>(&buf_)) T(); });
+    return reinterpret_cast<T&>(buf_);
+  }
+
+  std::once_flag flag_;
+  alignas(T) char buf_[sizeof(T)];
+};
+
+// Mutex is a natural type to wrap. As both google and other organization have
+// specialized mutexes. gRPC also provides an injection mechanism for custom
+// mutexes.
+class GOOGLE_PROTOBUF_CAPABILITY("mutex") PROTOBUF_EXPORT WrappedMutex {
+ public:
+#if defined(__QNX__)
+  constexpr WrappedMutex() = default;
+#else
+  constexpr WrappedMutex() {}
+#endif
+  void Lock() GOOGLE_PROTOBUF_ACQUIRE() { mu_.lock(); }
+  void Unlock() GOOGLE_PROTOBUF_RELEASE() { mu_.unlock(); }
+  // Crash if this Mutex is not held exclusively by this thread.
+  // May fail to crash when it should; will never crash when it should not.
+  void AssertHeld() const {}
+
+ private:
+#if defined(GOOGLE_PROTOBUF_SUPPORT_WINDOWS_XP)
+  CallOnceInitializedMutex<CriticalSectionLock> mu_{};
+#elif defined(_WIN32)
+  CallOnceInitializedMutex<std::mutex> mu_{};
+#else
+  std::mutex mu_{};
+#endif
+};
+
+using Mutex = WrappedMutex;
+
+// MutexLock(mu) acquires mu when constructed and releases it when destroyed.
+class GOOGLE_PROTOBUF_SCOPED_CAPABILITY PROTOBUF_EXPORT MutexLock {
+ public:
+  explicit MutexLock(Mutex* mu) GOOGLE_PROTOBUF_ACQUIRE(mu) : mu_(mu) {
+    this->mu_->Lock();
+  }
+  ~MutexLock() GOOGLE_PROTOBUF_RELEASE() { this->mu_->Unlock(); }
+
  private:
   Mutex *const mu_;
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(MutexLock);
@@ -84,12 +158,12 @@ class LIBPROTOBUF_EXPORT MutexLock {
 typedef MutexLock ReaderMutexLock;
 typedef MutexLock WriterMutexLock;
 
-// MutexLockMaybe is like MutexLock, but is a no-op when mu is NULL.
-class LIBPROTOBUF_EXPORT MutexLockMaybe {
+// MutexLockMaybe is like MutexLock, but is a no-op when mu is nullptr.
+class PROTOBUF_EXPORT MutexLockMaybe {
  public:
   explicit MutexLockMaybe(Mutex *mu) :
-    mu_(mu) { if (this->mu_ != NULL) { this->mu_->Lock(); } }
-  ~MutexLockMaybe() { if (this->mu_ != NULL) { this->mu_->Unlock(); } }
+    mu_(mu) { if (this->mu_ != nullptr) { this->mu_->Lock(); } }
+  ~MutexLockMaybe() { if (this->mu_ != nullptr) { this->mu_->Unlock(); } }
  private:
   Mutex *const mu_;
   GOOGLE_DISALLOW_EVIL_CONSTRUCTORS(MutexLockMaybe);
@@ -107,7 +181,7 @@ class ThreadLocalStorage {
   }
   T* Get() {
     T* result = static_cast<T*>(pthread_getspecific(key_));
-    if (result == NULL) {
+    if (result == nullptr) {
       result = new T();
       pthread_setspecific(key_, result);
     }
@@ -133,8 +207,12 @@ using internal::ReaderMutexLock;
 using internal::WriterMutexLock;
 using internal::MutexLockMaybe;
 
-
 }  // namespace protobuf
 }  // namespace google
+
+#undef GOOGLE_PROTOBUF_ACQUIRE
+#undef GOOGLE_PROTOBUF_RELEASE
+
+#include <google/protobuf/port_undef.inc>
 
 #endif  // GOOGLE_PROTOBUF_STUBS_MUTEX_H_

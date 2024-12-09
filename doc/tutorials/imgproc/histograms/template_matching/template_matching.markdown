@@ -1,8 +1,15 @@
 Template Matching {#tutorial_template_matching}
 =================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_back_projection}
 @next_tutorial{tutorial_find_contours}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -130,7 +137,7 @@ Code
 @add_toggle_cpp
 
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp)
 -   **Code at glance:**
     @include samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
 
@@ -139,7 +146,7 @@ Code
 @add_toggle_java
 
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java)
 -   **Code at glance:**
     @include samples/java/tutorial_code/ImgProc/tutorial_template_matching/MatchTemplateDemo.java
 
@@ -148,7 +155,7 @@ Code
 @add_toggle_python
 
 -   **Downloadable code**: Click
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/imgProc/match_template/match_template.py)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/imgProc/match_template/match_template.py)
 -   **Code at glance:**
     @include samples/python/tutorial_code/imgProc/match_template/match_template.py
 

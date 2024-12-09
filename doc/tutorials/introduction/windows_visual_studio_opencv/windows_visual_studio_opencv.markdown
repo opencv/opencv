@@ -1,9 +1,15 @@
 How to build applications with OpenCV inside the "Microsoft Visual Studio" {#tutorial_windows_visual_studio_opencv}
 ==========================================================================
-
 @prev_tutorial{tutorial_windows_install}
 @next_tutorial{tutorial_windows_visual_studio_image_watch}
 
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 3.0 |
+
+@warning
+This tutorial can contain obsolete information.
 
 Everything I describe here will apply to the `C\C++` interface of OpenCV. I start out from the
 assumption that you have read and completed with success the @ref tutorial_windows_install tutorial.
@@ -198,7 +204,7 @@ Test it!
 --------
 
 Now to try this out download our little test [source code
-](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/introduction/windows_visual_studio_opencv/introduction_windows_vs.cpp)
+](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/introduction/windows_visual_studio_opencv/introduction_windows_vs.cpp)
 or get it from the sample code folder of the OpenCV sources. Add this to your project and build it.
 Here's its content:
 
@@ -214,7 +220,7 @@ the *IDE* the console window will not close once finished. It will wait for a ke
 This is important to remember when you code inside the code open and save commands. Your resources
 will be saved ( and queried for at opening!!!) relatively to your working directory. This is unless
 you give a full, explicit path as a parameter for the I/O functions. In the code above we open [this
-OpenCV logo](https://github.com/opencv/opencv/tree/3.4/samples/data/opencv-logo.png). Before starting up the application,
+OpenCV logo](https://github.com/opencv/opencv/tree/4.x/samples/data/opencv-logo.png). Before starting up the application,
 make sure you place
 the image file in your current working directory. Modify the image file name inside the code to try
 it out on other images too. Run it and voil á:

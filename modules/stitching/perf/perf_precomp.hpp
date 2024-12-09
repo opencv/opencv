@@ -4,21 +4,25 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/stitching.hpp"
 
+#ifdef HAVE_OPENCV_XFEATURES2D
+#include "opencv2/xfeatures2d/nonfree.hpp"
+#endif
+
 namespace cv
 {
 
-static inline Ptr<detail::FeaturesFinder> getFeatureFinder(const std::string& name)
+static inline Ptr<Feature2D> getFeatureFinder(const std::string& name)
 {
     if (name == "orb")
-        return makePtr<detail::OrbFeaturesFinder>();
+        return ORB::create();
 #if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
     else if (name == "surf")
-        return makePtr<detail::SurfFeaturesFinder>();
+        return xfeatures2d::SURF::create();
 #endif
     else if (name == "akaze")
-        return makePtr<detail::AKAZEFeaturesFinder>();
+        return AKAZE::create();
     else
-        return Ptr<detail::FeaturesFinder>();
+        return Ptr<Feature2D>();
 }
 
 } // namespace cv

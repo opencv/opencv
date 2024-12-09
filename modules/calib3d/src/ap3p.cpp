@@ -1,5 +1,6 @@
 #include "precomp.hpp"
 #include "ap3p.h"
+#include "polynom_solver.h"
 
 #include <cmath>
 #include <complex>
@@ -7,66 +8,11 @@
 static inline double cbrt(double x) { return (double)cv::cubeRoot((float)x); };
 #endif
 
-using namespace std;
-
 namespace {
-void solveQuartic(const double *factors, double *realRoots) {
-    const double &a4 = factors[0];
-    const double &a3 = factors[1];
-    const double &a2 = factors[2];
-    const double &a1 = factors[3];
-    const double &a0 = factors[4];
-
-    double a4_2 = a4 * a4;
-    double a3_2 = a3 * a3;
-    double a4_3 = a4_2 * a4;
-    double a2a4 = a2 * a4;
-
-    double p4 = (8 * a2a4 - 3 * a3_2) / (8 * a4_2);
-    double q4 = (a3_2 * a3 - 4 * a2a4 * a3 + 8 * a1 * a4_2) / (8 * a4_3);
-    double r4 = (256 * a0 * a4_3 - 3 * (a3_2 * a3_2) - 64 * a1 * a3 * a4_2 + 16 * a2a4 * a3_2) / (256 * (a4_3 * a4));
-
-    double p3 = ((p4 * p4) / 12 + r4) / 3; // /=-3
-    double q3 = (72 * r4 * p4 - 2 * p4 * p4 * p4 - 27 * q4 * q4) / 432; // /=2
-
-    double t; // *=2
-    complex<double> w;
-    if (q3 >= 0)
-        w = -sqrt(static_cast<complex<double> >(q3 * q3 - p3 * p3 * p3)) - q3;
-    else
-        w = sqrt(static_cast<complex<double> >(q3 * q3 - p3 * p3 * p3)) - q3;
-    if (w.imag() == 0.0) {
-        w.real(cbrt(w.real()));
-        t = 2.0 * (w.real() + p3 / w.real());
-    } else {
-        w = pow(w, 1.0 / 3);
-        t = 4.0 * w.real();
-    }
-
-    complex<double> sqrt_2m = sqrt(static_cast<complex<double> >(-2 * p4 / 3 + t));
-    double B_4A = -a3 / (4 * a4);
-    double complex1 = 4 * p4 / 3 + t;
-#if defined(__clang__) && defined(__arm__) && (__clang_major__ == 3 || __clang_major__ == 4) && !defined(__ANDROID__)
-    // details: https://github.com/opencv/opencv/issues/11135
-    // details: https://github.com/opencv/opencv/issues/11056
-    complex<double> complex2 = 2 * q4;
-    complex2 = complex<double>(complex2.real() / sqrt_2m.real(), 0);
-#else
-    complex<double> complex2 = 2 * q4 / sqrt_2m;
-#endif
-    double sqrt_2m_rh = sqrt_2m.real() / 2;
-    double sqrt1 = sqrt(-(complex1 + complex2)).real() / 2;
-    realRoots[0] = B_4A + sqrt_2m_rh + sqrt1;
-    realRoots[1] = B_4A + sqrt_2m_rh - sqrt1;
-    double sqrt2 = sqrt(-(complex1 - complex2)).real() / 2;
-    realRoots[2] = B_4A - sqrt_2m_rh + sqrt2;
-    realRoots[3] = B_4A - sqrt_2m_rh - sqrt2;
-}
-
-void polishQuarticRoots(const double *coeffs, double *roots) {
+void polishQuarticRoots(const double *coeffs, double *roots, int nb_roots) {
     const int iterations = 2;
     for (int i = 0; i < iterations; ++i) {
-        for (int j = 0; j < 4; ++j) {
+        for (int j = 0; j < nb_roots; ++j) {
             double error =
                     (((coeffs[0] * roots[j] + coeffs[1]) * roots[j] + coeffs[2]) * roots[j] + coeffs[3]) * roots[j] +
                     coeffs[4];
@@ -229,8 +175,9 @@ int ap3p::computePoses(const double featureVectors[3][4],
                         2 * (g6 * g7 - g1 * g2 - g3 * g4),
                         g7 * g7 - g2 * g2 - g4 * g4};
     double s[4];
-    solveQuartic(coeffs, s);
-    polishQuarticRoots(coeffs, s);
+    int nb_roots = solve_deg4(coeffs[0], coeffs[1], coeffs[2], coeffs[3], coeffs[4],
+                              s[0], s[1], s[2], s[3]);
+    polishQuarticRoots(coeffs, s, nb_roots);
 
     double temp[3];
     vect_cross(k1, nl, temp);
@@ -256,7 +203,7 @@ int ap3p::computePoses(const double featureVectors[3][4],
     double reproj_errors[4];
 
     int nb_solutions = 0;
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < nb_roots; ++i) {
         double ctheta1p = s[i];
         if (abs(ctheta1p) > 1)
             continue;

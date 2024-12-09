@@ -366,6 +366,84 @@ TEST(Imgproc_RotatedRectangleIntersection, regression_12221_2)
     EXPECT_LE(intersections.size(), (size_t)8);
 }
 
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_21659)
+{
+    float scaleFactor = 1000;//to challenge the normalizationScale in the algorithm
+    cv::RectanglesIntersectTypes intersectionResult = cv::RectanglesIntersectTypes::INTERSECT_NONE;
+    std::vector<cv::Point2f> intersection;
+    double intersectionArea = 0;
+    cv::RotatedRect r1 = cv::RotatedRect(cv::Point2f(.5f, .5f)*scaleFactor, cv::Size2f(1.f, 1.f)*scaleFactor, 0);
+    cv::RotatedRect r2;
+
+    r2 = cv::RotatedRect(cv::Point2f(-2.f, -2.f)*scaleFactor, cv::Size2f(1.f, 1.f)*scaleFactor, 0);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_EQ(cv::RectanglesIntersectTypes::INTERSECT_NONE, intersectionResult);
+    ASSERT_LE(std::abs(intersectionArea-0), 1e-1);
+
+    r2 = cv::RotatedRect(cv::Point2f(1.5f, .5f)*scaleFactor, cv::Size2f(1.f, 2.f)*scaleFactor, 0);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_EQ(cv::RectanglesIntersectTypes::INTERSECT_PARTIAL, intersectionResult);
+    ASSERT_LE(std::abs(intersectionArea-0), 1e-1);
+
+    r2 = cv::RotatedRect(cv::Point2f(1.5f, 1.5f)*scaleFactor, cv::Size2f(1.f, 1.f)*scaleFactor, 0);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_EQ(cv::RectanglesIntersectTypes::INTERSECT_PARTIAL, intersectionResult);
+    ASSERT_LE(std::abs(intersectionArea-0), 1e-1);
+
+    r2 = cv::RotatedRect(cv::Point2f(.5f, .5f)*scaleFactor, cv::Size2f(1.f, 1.f)*scaleFactor, 0);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_EQ(cv::RectanglesIntersectTypes::INTERSECT_FULL, intersectionResult);
+    ASSERT_LE(std::abs(intersectionArea-r2.size.area()), 1e-1);
+
+    r2 = cv::RotatedRect(cv::Point2f(.5f, .5f)*scaleFactor, cv::Size2f(.5f, .5f)*scaleFactor, 0);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_EQ(cv::RectanglesIntersectTypes::INTERSECT_FULL, intersectionResult);
+    ASSERT_LE(std::abs(intersectionArea-r2.size.area()), 1e-1);
+
+    r2 = cv::RotatedRect(cv::Point2f(.5f, .5f)*scaleFactor, cv::Size2f(2.f, .5f)*scaleFactor, 0);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_EQ(cv::RectanglesIntersectTypes::INTERSECT_PARTIAL, intersectionResult);
+    ASSERT_LE(std::abs(intersectionArea-500000), 1e-1);
+
+    r2 = cv::RotatedRect(cv::Point2f(.5f, .5f)*scaleFactor, cv::Size2f(1.f, 1.f)*scaleFactor, 45);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_EQ(cv::RectanglesIntersectTypes::INTERSECT_PARTIAL, intersectionResult);
+    ASSERT_LE(std::abs(intersectionArea-828427), 1e-1);
+
+    r2 = cv::RotatedRect(cv::Point2f(1.f, 1.f)*scaleFactor, cv::Size2f(1.f, 1.f)*scaleFactor, 45);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_EQ(cv::RectanglesIntersectTypes::INTERSECT_PARTIAL, intersectionResult);
+    ASSERT_LE(std::abs(intersectionArea-250000), 1e-1);
+
+    //see #21659
+    r1 = cv::RotatedRect(cv::Point2f(4.48589373f, 12.5545063f), cv::Size2f(4.0f, 4.0f), 0.0347290039f);
+    r2 = cv::RotatedRect(cv::Point2f(4.48589373f, 12.5545235f), cv::Size2f(4.0f, 4.0f), 0.0347290039f);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_EQ(cv::RectanglesIntersectTypes::INTERSECT_PARTIAL, intersectionResult);
+    ASSERT_LE(std::abs(intersectionArea-r1.size.area()), 1e-3);
+
+    r1 = cv::RotatedRect(cv::Point2f(4.48589373f, 12.5545063f + 0.01f), cv::Size2f(4.0f, 4.0f), 0.0347290039f);
+    r2 = cv::RotatedRect(cv::Point2f(4.48589373f, 12.5545235f), cv::Size2f(4.0f, 4.0f), 0.0347290039f);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_LE(std::abs(intersectionArea-r1.size.area()), 1e-1);
+
+    r1 = cv::RotatedRect(cv::Point2f(45.0715866f, 39.8825722f), cv::Size2f(3.0f, 3.0f), 0.10067749f);
+    r2 = cv::RotatedRect(cv::Point2f(45.0715866f, 39.8825874f), cv::Size2f(3.0f, 3.0f), 0.10067749f);
+    intersectionResult = (cv::RectanglesIntersectTypes) cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    ASSERT_LE(std::abs(intersectionArea-r1.size.area()), 1e-3);
+}
+
 TEST(Imgproc_RotatedRectangleIntersection, regression_18520)
 {
     RotatedRect rr_empty(
@@ -408,4 +486,23 @@ TEST(Imgproc_RotatedRectangleIntersection, regression_19824)
     EXPECT_LE(intersections.size(), (size_t)7);
 }
 
+TEST(Imgproc_RotatedRectangleIntersection, accuracy_23546)
+{
+    RotatedRect r1(
+        Point2f(824.6421183672817f, 280.28737007069833f),
+        Size2f(565.0f, 140.0f),
+        -177.80506896972656f);
+    RotatedRect r2(
+        Point2f(567.3310438828003f, 270.42527355719545f),
+        Size2f(275.0f, 50.0f),
+        92.19493103027344f);
+
+    std::vector<Point2f> intersection;
+    double intersectionArea = 0;
+    int interType = cv::rotatedRectangleIntersection(r1, r2, intersection);
+    intersectionArea = (intersection.size() <= 2) ? 0. : cv::contourArea(intersection);
+    EXPECT_EQ(INTERSECT_PARTIAL, interType);
+    EXPECT_EQ(intersection.size(), (size_t)4);
+    ASSERT_LE(std::abs(intersectionArea-7000), 1e-1);
+}
 }} // namespace

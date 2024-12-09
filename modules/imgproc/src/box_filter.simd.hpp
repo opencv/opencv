@@ -309,15 +309,15 @@ struct ColumnSum<int, uchar> :
             {
                 const int* Sp = (const int*)src[0];
                 int i = 0;
-#if CV_SIMD
-                for (; i <= width - v_int32::nlanes; i += v_int32::nlanes)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for (; i <= width - VTraits<v_int32>::vlanes(); i += VTraits<v_int32>::vlanes())
                 {
-                    v_store(SUM + i, vx_load(SUM + i) + vx_load(Sp + i));
+                    v_store(SUM + i, v_add(vx_load(SUM + i), vx_load(Sp + i)));
                 }
-#if CV_SIMD_WIDTH > 16
-                for (; i <= width - v_int32x4::nlanes; i += v_int32x4::nlanes)
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for (; i <= width - VTraits<v_int32x4>::vlanes(); i += VTraits<v_int32x4>::vlanes())
                 {
-                    v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
+                    v_store(SUM + i, v_add(v_load(SUM + i), v_load(Sp + i)));
                 }
 #endif
 #endif
@@ -339,37 +339,37 @@ struct ColumnSum<int, uchar> :
             if( haveScale )
             {
                 int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_float32 _v_scale = vx_setall_f32((float)_scale);
-                for( ; i <= width - v_uint16::nlanes; i += v_uint16::nlanes )
+                for( ; i <= width - VTraits<v_uint16>::vlanes(); i += VTraits<v_uint16>::vlanes() )
                 {
-                    v_int32 v_s0 = vx_load(SUM + i) + vx_load(Sp + i);
-                    v_int32 v_s01 = vx_load(SUM + i + v_int32::nlanes) + vx_load(Sp + i + v_int32::nlanes);
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                    v_int32 v_s01 = v_add(vx_load(SUM + i + VTraits<v_int32>::vlanes()), vx_load(Sp + i + VTraits<v_int32>::vlanes()));
 
-                    v_uint32 v_s0d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s0) * _v_scale));
-                    v_uint32 v_s01d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s01) * _v_scale));
+                    v_uint32 v_s0d = v_reinterpret_as_u32(v_round(v_mul(v_cvt_f32(v_s0), _v_scale)));
+                    v_uint32 v_s01d = v_reinterpret_as_u32(v_round(v_mul(v_cvt_f32(v_s01), _v_scale)));
 
                     v_uint16 v_dst = v_pack(v_s0d, v_s01d);
                     v_pack_store(D + i, v_dst);
 
-                    v_store(SUM + i, v_s0 - vx_load(Sm + i));
-                    v_store(SUM + i + v_int32::nlanes, v_s01 - vx_load(Sm + i + v_int32::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32>::vlanes(), v_sub(v_s01, vx_load(Sm + i + VTraits<v_int32>::vlanes())));
                 }
-#if CV_SIMD_WIDTH > 16
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
                 v_float32x4 v_scale = v_setall_f32((float)_scale);
-                for( ; i <= width-v_uint16x8::nlanes; i+=v_uint16x8::nlanes )
+                for( ; i <= width-VTraits<v_uint16x8>::vlanes(); i+=VTraits<v_uint16x8>::vlanes() )
                 {
-                    v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
-                    v_int32x4 v_s01 = v_load(SUM + i + v_int32x4::nlanes) + v_load(Sp + i + v_int32x4::nlanes);
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                    v_int32x4 v_s01 = v_add(v_load(SUM + i + VTraits<v_int32x4>::vlanes()), v_load(Sp + i + VTraits<v_int32x4>::vlanes()));
 
-                    v_uint32x4 v_s0d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s0) * v_scale));
-                    v_uint32x4 v_s01d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s01) * v_scale));
+                    v_uint32x4 v_s0d = v_reinterpret_as_u32(v_round(v_mul(v_cvt_f32(v_s0), v_scale)));
+                    v_uint32x4 v_s01d = v_reinterpret_as_u32(v_round(v_mul(v_cvt_f32(v_s01), v_scale)));
 
                     v_uint16x8 v_dst = v_pack(v_s0d, v_s01d);
                     v_pack_store(D + i, v_dst);
 
-                    v_store(SUM + i, v_s0 - v_load(Sm + i));
-                    v_store(SUM + i + v_int32x4::nlanes, v_s01 - v_load(Sm + i + v_int32x4::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32x4>::vlanes(), v_sub(v_s01, v_load(Sm + i + VTraits<v_int32x4>::vlanes())));
             }
 #endif
 #endif
@@ -383,29 +383,29 @@ struct ColumnSum<int, uchar> :
             else
             {
                 int i = 0;
-#if CV_SIMD
-                for( ; i <= width-v_uint16::nlanes; i+=v_uint16::nlanes )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width-VTraits<v_uint16>::vlanes(); i+=VTraits<v_uint16>::vlanes() )
                 {
-                    v_int32 v_s0 = vx_load(SUM + i) + vx_load(Sp + i);
-                    v_int32 v_s01 = vx_load(SUM + i + v_int32::nlanes) + vx_load(Sp + i + v_int32::nlanes);
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                    v_int32 v_s01 = v_add(vx_load(SUM + i + VTraits<v_int32>::vlanes()), vx_load(Sp + i + VTraits<v_int32>::vlanes()));
 
                     v_uint16 v_dst = v_pack(v_reinterpret_as_u32(v_s0), v_reinterpret_as_u32(v_s01));
                     v_pack_store(D + i, v_dst);
 
-                    v_store(SUM + i, v_s0 - vx_load(Sm + i));
-                    v_store(SUM + i + v_int32::nlanes, v_s01 - vx_load(Sm + i + v_int32::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32>::vlanes(), v_sub(v_s01, vx_load(Sm + i + VTraits<v_int32>::vlanes())));
                 }
-#if CV_SIMD_WIDTH > 16
-                for( ; i <= width-v_uint16x8::nlanes; i+=v_uint16x8::nlanes )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width-VTraits<v_uint16x8>::vlanes(); i+=VTraits<v_uint16x8>::vlanes() )
                 {
-                    v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
-                    v_int32x4 v_s01 = v_load(SUM + i + v_int32x4::nlanes) + v_load(Sp + i + v_int32x4::nlanes);
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                    v_int32x4 v_s01 = v_add(v_load(SUM + i + VTraits<v_int32x4>::vlanes()), v_load(Sp + i + VTraits<v_int32x4>::vlanes()));
 
                     v_uint16x8 v_dst = v_pack(v_reinterpret_as_u32(v_s0), v_reinterpret_as_u32(v_s01));
                     v_pack_store(D + i, v_dst);
 
-                    v_store(SUM + i, v_s0 - v_load(Sm + i));
-                    v_store(SUM + i + v_int32x4::nlanes, v_s01 - v_load(Sm + i + v_int32x4::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32x4>::vlanes(), v_sub(v_s01, v_load(Sm + i + VTraits<v_int32x4>::vlanes())));
                 }
 #endif
 #endif
@@ -480,15 +480,15 @@ public BaseColumnFilter
             {
                 const ushort* Sp = (const ushort*)src[0];
                 int i = 0;
-#if CV_SIMD
-                for( ; i <= width - v_uint16::nlanes; i += v_uint16::nlanes )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width - VTraits<v_uint16>::vlanes(); i += VTraits<v_uint16>::vlanes() )
                 {
-                    v_store(SUM + i, vx_load(SUM + i) + vx_load(Sp + i));
+                    v_store(SUM + i, v_add(vx_load(SUM + i), vx_load(Sp + i)));
                 }
-#if CV_SIMD_WIDTH > 16
-                for( ; i <= width - v_uint16x8::nlanes; i += v_uint16x8::nlanes )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width - VTraits<v_uint16x8>::vlanes(); i += VTraits<v_uint16x8>::vlanes() )
                 {
-                    v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
+                    v_store(SUM + i, v_add(v_load(SUM + i), v_load(Sp + i)));
                 }
 #endif
 #endif
@@ -510,27 +510,27 @@ public BaseColumnFilter
             if( haveScale )
             {
                 int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_uint32 _ds4 = vx_setall_u32((unsigned)ds);
                 v_uint16 _dd8 = vx_setall_u16((ushort)dd);
 
-                for( ; i <= width-v_uint8::nlanes; i+=v_uint8::nlanes )
+                for( ; i <= width-VTraits<v_uint8>::vlanes(); i+=VTraits<v_uint8>::vlanes() )
                 {
                     v_uint16 _sm0 = vx_load(Sm + i);
-                    v_uint16 _sm1 = vx_load(Sm + i + v_uint16::nlanes);
+                    v_uint16 _sm1 = vx_load(Sm + i + VTraits<v_uint16>::vlanes());
 
                     v_uint16 _s0 = v_add_wrap(vx_load(SUM + i), vx_load(Sp + i));
-                    v_uint16 _s1 = v_add_wrap(vx_load(SUM + i + v_uint16::nlanes), vx_load(Sp + i + v_uint16::nlanes));
+                    v_uint16 _s1 = v_add_wrap(vx_load(SUM + i + VTraits<v_uint16>::vlanes()), vx_load(Sp + i + VTraits<v_uint16>::vlanes()));
 
                     v_uint32 _s00, _s01, _s10, _s11;
 
-                    v_expand(_s0 + _dd8, _s00, _s01);
-                    v_expand(_s1 + _dd8, _s10, _s11);
+                    v_expand(v_add(_s0, _dd8), _s00, _s01);
+                    v_expand(v_add(_s1, _dd8), _s10, _s11);
 
-                    _s00 = v_shr<SHIFT>(_s00*_ds4);
-                    _s01 = v_shr<SHIFT>(_s01*_ds4);
-                    _s10 = v_shr<SHIFT>(_s10*_ds4);
-                    _s11 = v_shr<SHIFT>(_s11*_ds4);
+                    _s00 = v_shr<SHIFT>(v_mul(_s00, _ds4));
+                    _s01 = v_shr<SHIFT>(v_mul(_s01, _ds4));
+                    _s10 = v_shr<SHIFT>(v_mul(_s10, _ds4));
+                    _s11 = v_shr<SHIFT>(v_mul(_s11, _ds4));
 
                     v_int16 r0 = v_pack(v_reinterpret_as_s32(_s00), v_reinterpret_as_s32(_s01));
                     v_int16 r1 = v_pack(v_reinterpret_as_s32(_s10), v_reinterpret_as_s32(_s11));
@@ -540,29 +540,29 @@ public BaseColumnFilter
 
                     v_store(D + i, v_pack_u(r0, r1));
                     v_store(SUM + i, _s0);
-                    v_store(SUM + i + v_uint16::nlanes, _s1);
+                    v_store(SUM + i + VTraits<v_uint16>::vlanes(), _s1);
                 }
-#if CV_SIMD_WIDTH > 16
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
                 v_uint32x4 ds4 = v_setall_u32((unsigned)ds);
                 v_uint16x8 dd8 = v_setall_u16((ushort)dd);
 
-                for( ; i <= width-v_uint8x16::nlanes; i+=v_uint8x16::nlanes )
+                for( ; i <= width-VTraits<v_uint8x16>::vlanes(); i+=VTraits<v_uint8x16>::vlanes() )
                 {
                     v_uint16x8 _sm0 = v_load(Sm + i);
-                    v_uint16x8 _sm1 = v_load(Sm + i + v_uint16x8::nlanes);
+                    v_uint16x8 _sm1 = v_load(Sm + i + VTraits<v_uint16x8>::vlanes());
 
                     v_uint16x8 _s0 = v_add_wrap(v_load(SUM + i), v_load(Sp + i));
-                    v_uint16x8 _s1 = v_add_wrap(v_load(SUM + i + v_uint16x8::nlanes), v_load(Sp + i + v_uint16x8::nlanes));
+                    v_uint16x8 _s1 = v_add_wrap(v_load(SUM + i + VTraits<v_uint16x8>::vlanes()), v_load(Sp + i + VTraits<v_uint16x8>::vlanes()));
 
                     v_uint32x4 _s00, _s01, _s10, _s11;
 
-                    v_expand(_s0 + dd8, _s00, _s01);
-                    v_expand(_s1 + dd8, _s10, _s11);
+                    v_expand(v_add(_s0, dd8), _s00, _s01);
+                    v_expand(v_add(_s1, dd8), _s10, _s11);
 
-                    _s00 = v_shr<SHIFT>(_s00*ds4);
-                    _s01 = v_shr<SHIFT>(_s01*ds4);
-                    _s10 = v_shr<SHIFT>(_s10*ds4);
-                    _s11 = v_shr<SHIFT>(_s11*ds4);
+                    _s00 = v_shr<SHIFT>(v_mul(_s00, ds4));
+                    _s01 = v_shr<SHIFT>(v_mul(_s01, ds4));
+                    _s10 = v_shr<SHIFT>(v_mul(_s10, ds4));
+                    _s11 = v_shr<SHIFT>(v_mul(_s11, ds4));
 
                     v_int16x8 r0 = v_pack(v_reinterpret_as_s32(_s00), v_reinterpret_as_s32(_s01));
                     v_int16x8 r1 = v_pack(v_reinterpret_as_s32(_s10), v_reinterpret_as_s32(_s11));
@@ -572,7 +572,7 @@ public BaseColumnFilter
 
                     v_store(D + i, v_pack_u(r0, r1));
                     v_store(SUM + i, _s0);
-                    v_store(SUM + i + v_uint16x8::nlanes, _s1);
+                    v_store(SUM + i + VTraits<v_uint16x8>::vlanes(), _s1);
                 }
 #endif
 #endif
@@ -643,15 +643,15 @@ struct ColumnSum<int, short> :
             {
                 const int* Sp = (const int*)src[0];
                 i = 0;
-#if CV_SIMD
-                for( ; i <= width - v_int32::nlanes; i+=v_int32::nlanes )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width - VTraits<v_int32>::vlanes(); i+=VTraits<v_int32>::vlanes() )
                 {
-                    v_store(SUM + i, vx_load(SUM + i) + vx_load(Sp + i));
+                    v_store(SUM + i, v_add(vx_load(SUM + i), vx_load(Sp + i)));
                 }
-#if CV_SIMD_WIDTH > 16
-                for( ; i <= width - v_int32x4::nlanes; i+=v_int32x4::nlanes )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width - VTraits<v_int32x4>::vlanes(); i+=VTraits<v_int32x4>::vlanes() )
                 {
-                    v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
+                    v_store(SUM + i, v_add(v_load(SUM + i), v_load(Sp + i)));
                 }
 #endif
 #endif
@@ -673,33 +673,33 @@ struct ColumnSum<int, short> :
             if( haveScale )
             {
                 i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_float32 _v_scale = vx_setall_f32((float)_scale);
-                for( ; i <= width-v_int16::nlanes; i+=v_int16::nlanes )
+                for( ; i <= width-VTraits<v_int16>::vlanes(); i+=VTraits<v_int16>::vlanes() )
                 {
-                    v_int32 v_s0 = vx_load(SUM + i) + vx_load(Sp + i);
-                    v_int32 v_s01 = vx_load(SUM + i + v_int32::nlanes) + vx_load(Sp + i + v_int32::nlanes);
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                    v_int32 v_s01 = v_add(vx_load(SUM + i + VTraits<v_int32>::vlanes()), vx_load(Sp + i + VTraits<v_int32>::vlanes()));
 
-                    v_int32 v_s0d =  v_round(v_cvt_f32(v_s0) * _v_scale);
-                    v_int32 v_s01d = v_round(v_cvt_f32(v_s01) * _v_scale);
+                    v_int32 v_s0d =  v_round(v_mul(v_cvt_f32(v_s0), _v_scale));
+                    v_int32 v_s01d = v_round(v_mul(v_cvt_f32(v_s01), _v_scale));
                     v_store(D + i, v_pack(v_s0d, v_s01d));
 
-                    v_store(SUM + i, v_s0 - vx_load(Sm + i));
-                    v_store(SUM + i + v_int32::nlanes, v_s01 - vx_load(Sm + i + v_int32::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32>::vlanes(), v_sub(v_s01, vx_load(Sm + i + VTraits<v_int32>::vlanes())));
                 }
-#if CV_SIMD_WIDTH > 16
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
                 v_float32x4 v_scale = v_setall_f32((float)_scale);
-                for( ; i <= width-v_int16x8::nlanes; i+=v_int16x8::nlanes )
+                for( ; i <= width-VTraits<v_int16x8>::vlanes(); i+=VTraits<v_int16x8>::vlanes() )
                 {
-                    v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
-                    v_int32x4 v_s01 = v_load(SUM + i + v_int32x4::nlanes) + v_load(Sp + i + v_int32x4::nlanes);
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                    v_int32x4 v_s01 = v_add(v_load(SUM + i + VTraits<v_int32x4>::vlanes()), v_load(Sp + i + VTraits<v_int32x4>::vlanes()));
 
-                    v_int32x4 v_s0d =  v_round(v_cvt_f32(v_s0) * v_scale);
-                    v_int32x4 v_s01d = v_round(v_cvt_f32(v_s01) * v_scale);
+                    v_int32x4 v_s0d =  v_round(v_mul(v_cvt_f32(v_s0), v_scale));
+                    v_int32x4 v_s01d = v_round(v_mul(v_cvt_f32(v_s01), v_scale));
                     v_store(D + i, v_pack(v_s0d, v_s01d));
 
-                    v_store(SUM + i, v_s0 - v_load(Sm + i));
-                    v_store(SUM + i + v_int32x4::nlanes, v_s01 - v_load(Sm + i + v_int32x4::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32x4>::vlanes(), v_sub(v_s01, v_load(Sm + i + VTraits<v_int32x4>::vlanes())));
                 }
 #endif
 #endif
@@ -713,27 +713,27 @@ struct ColumnSum<int, short> :
             else
             {
                 i = 0;
-#if CV_SIMD
-                for( ; i <= width-v_int16::nlanes; i+=v_int16::nlanes )
+#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, GCC 13 related
+                for( ; i <= width-VTraits<v_int16>::vlanes(); i+=VTraits<v_int16>::vlanes() )
                 {
-                    v_int32 v_s0 = vx_load(SUM + i) + vx_load(Sp + i);
-                    v_int32 v_s01 = vx_load(SUM + i + v_int32::nlanes) + vx_load(Sp + i + v_int32::nlanes);
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                    v_int32 v_s01 = v_add(vx_load(SUM + i + VTraits<v_int32>::vlanes()), vx_load(Sp + i + VTraits<v_int32>::vlanes()));
 
                     v_store(D + i, v_pack(v_s0, v_s01));
 
-                    v_store(SUM + i, v_s0 - vx_load(Sm + i));
-                    v_store(SUM + i + v_int32::nlanes, v_s01 - vx_load(Sm + i + v_int32::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32>::vlanes(), v_sub(v_s01, vx_load(Sm + i + VTraits<v_int32>::vlanes())));
                 }
-#if CV_SIMD_WIDTH > 16
-                for( ; i <= width-v_int16x8::nlanes; i+=v_int16x8::nlanes )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width-VTraits<v_int16x8>::vlanes(); i+=VTraits<v_int16x8>::vlanes() )
                 {
-                    v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
-                    v_int32x4 v_s01 = v_load(SUM + i + v_int32x4::nlanes) + v_load(Sp + i + v_int32x4::nlanes);
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                    v_int32x4 v_s01 = v_add(v_load(SUM + i + VTraits<v_int32x4>::vlanes()), v_load(Sp + i + VTraits<v_int32x4>::vlanes()));
 
                     v_store(D + i, v_pack(v_s0, v_s01));
 
-                    v_store(SUM + i, v_s0 - v_load(Sm + i));
-                    v_store(SUM + i + v_int32x4::nlanes, v_s01 - v_load(Sm + i + v_int32x4::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32x4>::vlanes(), v_sub(v_s01, v_load(Sm + i + VTraits<v_int32x4>::vlanes())));
                 }
 #endif
 #endif
@@ -792,15 +792,15 @@ struct ColumnSum<int, ushort> :
             {
                 const int* Sp = (const int*)src[0];
                 int i = 0;
-#if CV_SIMD
-                for (; i <= width - v_int32::nlanes; i += v_int32::nlanes)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for (; i <= width - VTraits<v_int32>::vlanes(); i += VTraits<v_int32>::vlanes())
                 {
-                    v_store(SUM + i, vx_load(SUM + i) + vx_load(Sp + i));
+                    v_store(SUM + i, v_add(vx_load(SUM + i), vx_load(Sp + i)));
                 }
-#if CV_SIMD_WIDTH > 16
-                for (; i <= width - v_int32x4::nlanes; i += v_int32x4::nlanes)
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for (; i <= width - VTraits<v_int32x4>::vlanes(); i += VTraits<v_int32x4>::vlanes())
                 {
-                    v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
+                    v_store(SUM + i, v_add(v_load(SUM + i), v_load(Sp + i)));
                 }
 #endif
 #endif
@@ -822,33 +822,33 @@ struct ColumnSum<int, ushort> :
             if( haveScale )
             {
                 int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_float32 _v_scale = vx_setall_f32((float)_scale);
-                for( ; i <= width-v_uint16::nlanes; i+=v_uint16::nlanes )
+                for( ; i <= width-VTraits<v_uint16>::vlanes(); i+=VTraits<v_uint16>::vlanes() )
                 {
-                    v_int32 v_s0 = vx_load(SUM + i) + vx_load(Sp + i);
-                    v_int32 v_s01 = vx_load(SUM + i + v_int32::nlanes) + vx_load(Sp + i + v_int32::nlanes);
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                    v_int32 v_s01 = v_add(vx_load(SUM + i + VTraits<v_int32>::vlanes()), vx_load(Sp + i + VTraits<v_int32>::vlanes()));
 
-                    v_uint32 v_s0d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s0) * _v_scale));
-                    v_uint32 v_s01d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s01) * _v_scale));
+                    v_uint32 v_s0d = v_reinterpret_as_u32(v_round(v_mul(v_cvt_f32(v_s0), _v_scale)));
+                    v_uint32 v_s01d = v_reinterpret_as_u32(v_round(v_mul(v_cvt_f32(v_s01), _v_scale)));
                     v_store(D + i, v_pack(v_s0d, v_s01d));
 
-                    v_store(SUM + i, v_s0 - vx_load(Sm + i));
-                    v_store(SUM + i + v_int32::nlanes, v_s01 - vx_load(Sm + i + v_int32::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32>::vlanes(), v_sub(v_s01, vx_load(Sm + i + VTraits<v_int32>::vlanes())));
                 }
-#if CV_SIMD_WIDTH > 16
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
                 v_float32x4 v_scale = v_setall_f32((float)_scale);
-                for( ; i <= width-v_uint16x8::nlanes; i+=v_uint16x8::nlanes )
+                for( ; i <= width-VTraits<v_uint16x8>::vlanes(); i+=VTraits<v_uint16x8>::vlanes() )
                 {
-                    v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
-                    v_int32x4 v_s01 = v_load(SUM + i + v_int32x4::nlanes) + v_load(Sp + i + v_int32x4::nlanes);
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                    v_int32x4 v_s01 = v_add(v_load(SUM + i + VTraits<v_int32x4>::vlanes()), v_load(Sp + i + VTraits<v_int32x4>::vlanes()));
 
-                    v_uint32x4 v_s0d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s0) * v_scale));
-                    v_uint32x4 v_s01d = v_reinterpret_as_u32(v_round(v_cvt_f32(v_s01) * v_scale));
+                    v_uint32x4 v_s0d = v_reinterpret_as_u32(v_round(v_mul(v_cvt_f32(v_s0), v_scale)));
+                    v_uint32x4 v_s01d = v_reinterpret_as_u32(v_round(v_mul(v_cvt_f32(v_s01), v_scale)));
                     v_store(D + i, v_pack(v_s0d, v_s01d));
 
-                    v_store(SUM + i, v_s0 - v_load(Sm + i));
-                    v_store(SUM + i + v_int32x4::nlanes, v_s01 - v_load(Sm + i + v_int32x4::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32x4>::vlanes(), v_sub(v_s01, v_load(Sm + i + VTraits<v_int32x4>::vlanes())));
                 }
 #endif
 #endif
@@ -862,27 +862,27 @@ struct ColumnSum<int, ushort> :
             else
             {
                 int i = 0;
-#if CV_SIMD
-                for( ; i <= width-v_uint16::nlanes; i+=v_uint16::nlanes )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width-VTraits<v_uint16>::vlanes(); i+=VTraits<v_uint16>::vlanes() )
                 {
-                    v_int32 v_s0 = vx_load(SUM + i) + vx_load(Sp + i);
-                    v_int32 v_s01 = vx_load(SUM + i + v_int32::nlanes) + vx_load(Sp + i + v_int32::nlanes);
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                    v_int32 v_s01 = v_add(vx_load(SUM + i + VTraits<v_int32>::vlanes()), vx_load(Sp + i + VTraits<v_int32>::vlanes()));
 
                     v_store(D + i, v_pack(v_reinterpret_as_u32(v_s0), v_reinterpret_as_u32(v_s01)));
 
-                    v_store(SUM + i, v_s0 - vx_load(Sm + i));
-                    v_store(SUM + i + v_int32::nlanes, v_s01 - vx_load(Sm + i + v_int32::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32>::vlanes(), v_sub(v_s01, vx_load(Sm + i + VTraits<v_int32>::vlanes())));
                 }
-#if CV_SIMD_WIDTH > 16
-                for( ; i <= width-v_uint16x8::nlanes; i+=v_uint16x8::nlanes )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width-VTraits<v_uint16x8>::vlanes(); i+=VTraits<v_uint16x8>::vlanes() )
                 {
-                    v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
-                    v_int32x4 v_s01 = v_load(SUM + i + v_int32x4::nlanes) + v_load(Sp + i + v_int32x4::nlanes);
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                    v_int32x4 v_s01 = v_add(v_load(SUM + i + VTraits<v_int32x4>::vlanes()), v_load(Sp + i + VTraits<v_int32x4>::vlanes()));
 
                     v_store(D + i, v_pack(v_reinterpret_as_u32(v_s0), v_reinterpret_as_u32(v_s01)));
 
-                    v_store(SUM + i, v_s0 - v_load(Sm + i));
-                    v_store(SUM + i + v_int32x4::nlanes, v_s01 - v_load(Sm + i + v_int32x4::nlanes));
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
+                    v_store(SUM + i + VTraits<v_int32x4>::vlanes(), v_sub(v_s01, v_load(Sm + i + VTraits<v_int32x4>::vlanes())));
                 }
 #endif
 #endif
@@ -939,15 +939,15 @@ struct ColumnSum<int, int> :
             {
                 const int* Sp = (const int*)src[0];
                 int i = 0;
-#if CV_SIMD
-                for( ; i <= width - v_int32::nlanes; i+=v_int32::nlanes )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width - VTraits<v_int32>::vlanes(); i+=VTraits<v_int32>::vlanes() )
                 {
-                    v_store(SUM + i, vx_load(SUM + i) + vx_load(Sp + i));
+                    v_store(SUM + i, v_add(vx_load(SUM + i), vx_load(Sp + i)));
                 }
-#if CV_SIMD_WIDTH > 16
-                for( ; i <= width - v_int32x4::nlanes; i+=v_int32x4::nlanes )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width - VTraits<v_int32x4>::vlanes(); i+=VTraits<v_int32x4>::vlanes() )
                 {
-                    v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
+                    v_store(SUM + i, v_add(v_load(SUM + i), v_load(Sp + i)));
                 }
 #endif
 #endif
@@ -969,25 +969,25 @@ struct ColumnSum<int, int> :
             if( haveScale )
             {
                 int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_float32 _v_scale = vx_setall_f32((float)_scale);
-                for( ; i <= width-v_int32::nlanes; i+=v_int32::nlanes )
+                for( ; i <= width-VTraits<v_int32>::vlanes(); i+=VTraits<v_int32>::vlanes() )
                 {
-                    v_int32 v_s0 = vx_load(SUM + i) + vx_load(Sp + i);
-                    v_int32 v_s0d = v_round(v_cvt_f32(v_s0) * _v_scale);
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                    v_int32 v_s0d = v_round(v_mul(v_cvt_f32(v_s0), _v_scale));
 
                     v_store(D + i, v_s0d);
-                    v_store(SUM + i, v_s0 - vx_load(Sm + i));
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
                 }
-#if CV_SIMD_WIDTH > 16
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
                 v_float32x4 v_scale = v_setall_f32((float)_scale);
-                for( ; i <= width-v_int32x4::nlanes; i+=v_int32x4::nlanes )
+                for( ; i <= width-VTraits<v_int32x4>::vlanes(); i+=VTraits<v_int32x4>::vlanes() )
                 {
-                    v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
-                    v_int32x4 v_s0d = v_round(v_cvt_f32(v_s0) * v_scale);
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                    v_int32x4 v_s0d = v_round(v_mul(v_cvt_f32(v_s0), v_scale));
 
                     v_store(D + i, v_s0d);
-                    v_store(SUM + i, v_s0 - v_load(Sm + i));
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
                 }
 #endif
 #endif
@@ -1001,21 +1001,21 @@ struct ColumnSum<int, int> :
             else
             {
                 int i = 0;
-#if CV_SIMD
-                for( ; i <= width-v_int32::nlanes; i+=v_int32::nlanes )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width-VTraits<v_int32>::vlanes(); i+=VTraits<v_int32>::vlanes() )
                 {
-                    v_int32 v_s0 = vx_load(SUM + i) + vx_load(Sp + i);
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
 
                     v_store(D + i, v_s0);
-                    v_store(SUM + i, v_s0 - vx_load(Sm + i));
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
                 }
-#if CV_SIMD_WIDTH > 16
-                for( ; i <= width-v_int32x4::nlanes; i+=v_int32x4::nlanes )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width-VTraits<v_int32x4>::vlanes(); i+=VTraits<v_int32x4>::vlanes() )
                 {
-                    v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
 
                     v_store(D + i, v_s0);
-                    v_store(SUM + i, v_s0 - v_load(Sm + i));
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
                 }
 #endif
 #endif
@@ -1073,15 +1073,15 @@ struct ColumnSum<int, float> :
             {
                 const int* Sp = (const int*)src[0];
                 int i = 0;
-#if CV_SIMD
-                for( ; i <= width - v_int32::nlanes; i+=v_int32::nlanes )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width - VTraits<v_int32>::vlanes(); i+=VTraits<v_int32>::vlanes() )
                 {
-                    v_store(SUM + i, vx_load(SUM + i) + vx_load(Sp + i));
+                    v_store(SUM + i, v_add(vx_load(SUM + i), vx_load(Sp + i)));
                 }
-#if CV_SIMD_WIDTH > 16
-                for( ; i <= width - v_int32x4::nlanes; i+=v_int32x4::nlanes )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width - VTraits<v_int32x4>::vlanes(); i+=VTraits<v_int32x4>::vlanes() )
                 {
-                    v_store(SUM + i, v_load(SUM + i) + v_load(Sp + i));
+                    v_store(SUM + i, v_add(v_load(SUM + i), v_load(Sp + i)));
                 }
 #endif
 #endif
@@ -1105,21 +1105,21 @@ struct ColumnSum<int, float> :
             {
                 int i = 0;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_float32 _v_scale = vx_setall_f32((float)_scale);
-                for (; i <= width - v_int32::nlanes; i += v_int32::nlanes)
+                for (; i <= width - VTraits<v_int32>::vlanes(); i += VTraits<v_int32>::vlanes())
                 {
-                    v_int32 v_s0 = vx_load(SUM + i) + vx_load(Sp + i);
-                    v_store(D + i, v_cvt_f32(v_s0) * _v_scale);
-                    v_store(SUM + i, v_s0 - vx_load(Sm + i));
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
+                    v_store(D + i, v_mul(v_cvt_f32(v_s0), _v_scale));
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
                 }
-#if CV_SIMD_WIDTH > 16
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
                 v_float32x4 v_scale = v_setall_f32((float)_scale);
-                for (; i <= width - v_int32x4::nlanes; i += v_int32x4::nlanes)
+                for (; i <= width - VTraits<v_int32x4>::vlanes(); i += VTraits<v_int32x4>::vlanes())
                 {
-                    v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
-                    v_store(D + i, v_cvt_f32(v_s0) * v_scale);
-                    v_store(SUM + i, v_s0 - v_load(Sm + i));
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
+                    v_store(D + i, v_mul(v_cvt_f32(v_s0), v_scale));
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
                 }
 #endif
 #endif
@@ -1134,19 +1134,19 @@ struct ColumnSum<int, float> :
             {
                 int i = 0;
 
-#if CV_SIMD
-                for( ; i <= width-v_int32::nlanes; i+=v_int32::nlanes )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( ; i <= width-VTraits<v_int32>::vlanes(); i+=VTraits<v_int32>::vlanes() )
                 {
-                    v_int32 v_s0 = vx_load(SUM + i) + vx_load(Sp + i);
+                    v_int32 v_s0 = v_add(vx_load(SUM + i), vx_load(Sp + i));
                     v_store(D + i, v_cvt_f32(v_s0));
-                    v_store(SUM + i, v_s0 - vx_load(Sm + i));
+                    v_store(SUM + i, v_sub(v_s0, vx_load(Sm + i)));
                 }
-#if CV_SIMD_WIDTH > 16
-                for( ; i <= width-v_int32x4::nlanes; i+=v_int32x4::nlanes )
+#if !CV_SIMD_SCALABLE && CV_SIMD_WIDTH > 16
+                for( ; i <= width-VTraits<v_int32x4>::vlanes(); i+=VTraits<v_int32x4>::vlanes() )
                 {
-                    v_int32x4 v_s0 = v_load(SUM + i) + v_load(Sp + i);
+                    v_int32x4 v_s0 = v_add(v_load(SUM + i), v_load(Sp + i));
                     v_store(D + i, v_cvt_f32(v_s0));
-                    v_store(SUM + i, v_s0 - v_load(Sm + i));
+                    v_store(SUM + i, v_sub(v_s0, v_load(Sm + i)));
                 }
 #endif
 #endif
@@ -1200,7 +1200,7 @@ Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType, int ksize, int anch
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<RowSum<double, double> >(ksize, anchor);
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
         srcType, sumType));
 }
@@ -1241,7 +1241,7 @@ Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, in
     if( ddepth == CV_64F && sdepth == CV_64F )
         return makePtr<ColumnSum<double, double> >(ksize, anchor, scale);
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of sum format (=%d), and destination format (=%d)",
         sumType, dstType));
 }
@@ -1270,7 +1270,6 @@ Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
     return makePtr<FilterEngine>(Ptr<BaseFilter>(), rowFilter, columnFilter,
            srcType, dstType, sumType, borderType );
 }
-
 
 
 /****************************************************************************************\
@@ -1340,7 +1339,7 @@ Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize, int a
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<SqrRowSum<double, double> >(ksize, anchor);
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
               ("Unsupported combination of source format (=%d), and buffer format (=%d)",
                srcType, sumType));
 }

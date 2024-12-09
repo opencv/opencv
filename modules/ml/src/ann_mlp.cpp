@@ -141,79 +141,7 @@ protected:
 
 };
 
-double ANN_MLP::getAnnealInitialT() const
-{
-    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealInitialT();
-}
-
-void ANN_MLP::setAnnealInitialT(double val)
-{
-    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealInitialT(val);
-}
-
-double ANN_MLP::getAnnealFinalT() const
-{
-    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealFinalT();
-}
-
-void ANN_MLP::setAnnealFinalT(double val)
-{
-    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealFinalT(val);
-}
-
-double ANN_MLP::getAnnealCoolingRatio() const
-{
-    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealCoolingRatio();
-}
-
-void ANN_MLP::setAnnealCoolingRatio(double val)
-{
-    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealCoolingRatio(val);
-}
-
-int ANN_MLP::getAnnealItePerStep() const
-{
-    const ANN_MLP_ANNEAL* this_ = dynamic_cast<const ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    return this_->getAnnealItePerStep();
-}
-
-void ANN_MLP::setAnnealItePerStep(int val)
-{
-    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealItePerStep(val);
-}
-
-void ANN_MLP::setAnnealEnergyRNG(const RNG& rng)
-{
-    ANN_MLP_ANNEAL* this_ = dynamic_cast<ANN_MLP_ANNEAL*>(this);
-    if (!this_)
-        CV_Error(Error::StsNotImplemented, "the class is not ANN_MLP_ANNEAL");
-    this_->setAnnealEnergyRNG(rng);
-}
-
-class ANN_MLPImpl CV_FINAL : public ANN_MLP_ANNEAL
+class ANN_MLPImpl CV_FINAL : public ANN_MLP
 {
 public:
     ANN_MLPImpl()
@@ -224,7 +152,7 @@ public:
         setTrainMethod(ANN_MLP::RPROP, 0.1, FLT_EPSILON);
     }
 
-    virtual ~ANN_MLPImpl() {}
+    virtual ~ANN_MLPImpl() CV_OVERRIDE {}
 
     inline TermCriteria getTermCriteria() const CV_OVERRIDE { return params.termCrit; }
     inline void setTermCriteria(TermCriteria val) CV_OVERRIDE { params.termCrit = val; }
@@ -295,7 +223,7 @@ public:
     void setActivationFunction(int _activ_func, double _f_param1, double _f_param2) CV_OVERRIDE
     {
         if( _activ_func < 0 || _activ_func > LEAKYRELU)
-            CV_Error( CV_StsOutOfRange, "Unknown activation function" );
+            CV_Error( cv::Error::StsOutOfRange, "Unknown activation function" );
 
         activ_func = _activ_func;
 
@@ -394,7 +322,7 @@ public:
             {
                 int n = layer_sizes[i];
                 if( n < 1 + (0 < i && i < l_count-1))
-                    CV_Error( CV_StsOutOfRange,
+                    CV_Error( cv::Error::StsOutOfRange,
                              "there should be at least one input and one output "
                              "and every hidden layer must have more than 1 neuron" );
                 max_lsize = std::max( max_lsize, n );
@@ -413,7 +341,7 @@ public:
     float predict( InputArray _inputs, OutputArray _outputs, int ) const CV_OVERRIDE
     {
         if( !trained )
-            CV_Error( CV_StsError, "The network has not been trained or loaded" );
+            CV_Error( cv::Error::StsError, "The network has not been trained or loaded" );
 
         Mat inputs = _inputs.getMat();
         int type = inputs.type(), l_count = layer_count();
@@ -862,7 +790,7 @@ public:
                 {
                     t = t*inv_scale[j*2] + inv_scale[2*j+1];
                     if( t < m1 || t > M1 )
-                        CV_Error( CV_StsOutOfRange,
+                        CV_Error( cv::Error::StsOutOfRange,
                                  "Some of new output training vector components run exceed the original range too much" );
                 }
             }
@@ -889,25 +817,25 @@ public:
                            Mat& sample_weights, int flags )
     {
         if( layer_sizes.empty() )
-            CV_Error( CV_StsError,
+            CV_Error( cv::Error::StsError,
                      "The network has not been created. Use method create or the appropriate constructor" );
 
         if( (inputs.type() != CV_32F && inputs.type() != CV_64F) ||
             inputs.cols != layer_sizes[0] )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                      "input training data should be a floating-point matrix with "
                      "the number of rows equal to the number of training samples and "
                      "the number of columns equal to the size of 0-th (input) layer" );
 
         if( (outputs.type() != CV_32F && outputs.type() != CV_64F) ||
             outputs.cols != layer_sizes.back() )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                      "output training data should be a floating-point matrix with "
                      "the number of rows equal to the number of training samples and "
                      "the number of columns equal to the size of last (output) layer" );
 
         if( inputs.rows != outputs.rows )
-            CV_Error( CV_StsUnmatchedSizes, "The numbers of input and output samples do not match" );
+            CV_Error( cv::Error::StsUnmatchedSizes, "The numbers of input and output samples do not match" );
 
         Mat temp;
         double s = sum(sample_weights)[0];
@@ -1395,7 +1323,7 @@ public:
             fs << "itePerStep" << params.itePerStep;
         }
         else
-            CV_Error(CV_StsError, "Unknown training method");
+            CV_Error(cv::Error::StsError, "Unknown training method");
 
         fs << "term_criteria" << "{";
         if( params.termCrit.type & TermCriteria::EPS )
@@ -1493,7 +1421,7 @@ public:
                 params.itePerStep = tpn["itePerStep"];
             }
             else
-                CV_Error(CV_StsParseError, "Unknown training method (should be BACKPROP or RPROP)");
+                CV_Error(cv::Error::StsParseError, "Unknown training method (should be BACKPROP or RPROP)");
 
             FileNode tcn = tpn["term_criteria"];
             if( !tcn.empty() )

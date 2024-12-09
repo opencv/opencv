@@ -41,9 +41,11 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/all_layers.hpp>
 #include "../nms.inl.hpp"
+#include "cpu_kernels/softmax.hpp"
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -53,6 +55,10 @@
 #include "../ie_ngraph.hpp"
 #endif
 
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/region.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -63,7 +69,7 @@ class RegionLayerImpl CV_FINAL : public RegionLayer
 {
 public:
     int coords, classes, anchors, classfix;
-    float thresh, nmsThreshold, scale_x_y;
+    float thresh, scale_x_y;
     int new_coords;
     bool useSoftmax, useLogistic;
 #ifdef HAVE_OPENCL
@@ -115,7 +121,11 @@ public:
     {
 #ifdef HAVE_DNN_NGRAPH
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-        return INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2020_2) && preferableTarget != DNN_TARGET_MYRIAD && new_coords == 0;
+        return preferableTarget != DNN_TARGET_MYRIAD && new_coords == 0;
+#endif
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA)
+            return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV;
     }
@@ -150,7 +160,7 @@ public:
         std::vector<UMat> outputs;
 
         // TODO: implement a logistic activation to classification scores.
-        if (useLogistic || inps.depth() == CV_16S)
+        if (useLogistic || inps.depth() == CV_16F)
             return false;
 
         inps.getUMatVector(inputs);
@@ -221,7 +231,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -270,10 +280,8 @@ public:
                 }
 
                 if (useSoftmax) {  // Yolo v2
-                    for (int i = 0; i < batch_size*rows*cols*anchors; ++i) {
-                        int index = cell_size*i;
-                        softmax_activate(srcData + index + 5, classes, 1, dstData + index + 5);
-                    }
+                    Mat _inpBlob = inpBlob.reshape(0, outBlob.dims, outBlob.size);
+                    softmax(outBlob, _inpBlob, -1, 5, classes);
                 }
                 else if (useLogistic) {  // Yolo v3
                     for (int i = 0; i < batch_size*rows*cols*anchors; ++i){
@@ -307,6 +315,7 @@ public:
                                 dstData[box_index + 1] = (y + y_tmp) / rows;
                                 dstData[box_index + 2] = (srcData[box_index + 2]) * (srcData[box_index + 2]) * 4 * biasData[2 * a] / wNorm;
                                 dstData[box_index + 3] = (srcData[box_index + 3]) * (srcData[box_index + 3]) * 4 * biasData[2 * a + 1] / hNorm;
+                                dstData[box_index + 4] = srcData[p_index];
 
                                 scale = srcData[p_index];
                                 if (classfix == -1 && scale < thresh)
@@ -379,6 +388,64 @@ public:
         }
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        if (coords != 4)
+            CV_Error(Error::StsNotImplemented, "Only upright rectangular boxes are supported in RegionLayer.");
+
+        std::size_t height_norm, width_norm;
+        if (inputs.size() == 1)
+        {
+            auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+            auto input_shape = input_wrapper->getShape();
+            height_norm = input_shape[1];
+            width_norm = input_shape[2];
+        }
+        else
+        {
+            auto input_wrapper = inputs[1].dynamicCast<CUDABackendWrapper>();
+            auto input_shape = input_wrapper->getShape();
+            CV_Assert(input_shape.size() == 4);
+            height_norm = input_shape[2];
+            width_norm = input_shape[3];
+        }
+
+        cuda4dnn::SquashMethod squash_method;
+        if(useLogistic)
+            squash_method = cuda4dnn::SquashMethod::SIGMOID;
+        else if (useSoftmax)
+            squash_method = cuda4dnn::SquashMethod::SOFTMAX;
+
+        /* exactly one must be true */
+        CV_Assert((useLogistic || useSoftmax) && !(useLogistic && useSoftmax));
+
+        cuda4dnn::RegionConfiguration<float> config;
+        config.squash_method = squash_method;
+        config.classes = classes;
+        config.boxes_per_cell = anchors;
+
+        config.height_norm = height_norm;
+        config.width_norm = width_norm;
+
+        config.scale_x_y = scale_x_y;
+
+        config.object_prob_cutoff = (classfix == -1) ? thresh : 0.f;
+        config.class_prob_cutoff = thresh;
+
+        config.nms_iou_threshold = nmsThreshold;
+
+        config.new_coords = (new_coords == 1);
+        return make_cuda_node<cuda4dnn::RegionOp>(preferableTarget, std::move(context->stream), blobs[0], config);
+    }
+#endif
+
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE
     {
@@ -397,7 +464,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        auto parent_shape = input->get_shape();
+        auto parent_shape = input.get_shape();
         int64_t b = parent_shape[0];
         int64_t h = parent_shape[1];
         int64_t w = parent_shape[2];
@@ -405,81 +472,81 @@ public:
 
         int64_t cols = b * h * w * anchors;
         int64_t rows = c / anchors;
-        auto shape_node = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2},  std::vector<int64_t>{cols, rows});
-        auto tr_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{1, 0});
+        auto shape_node = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2},  std::vector<int64_t>{cols, rows});
+        auto tr_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, std::vector<int64_t>{1, 0});
 
-        std::shared_ptr<ngraph::Node> input2d;
+        std::shared_ptr<ov::Node> input2d;
         {
-            input2d = std::make_shared<ngraph::op::v1::Reshape>(input, shape_node, true);
-            input2d = std::make_shared<ngraph::op::Transpose>(input2d, tr_axes);
+            input2d = std::make_shared<ov::op::v1::Reshape>(input, shape_node, true);
+            input2d = std::make_shared<ov::op::v1::Transpose>(input2d, tr_axes);
         }
 
-        std::shared_ptr<ngraph::Node> region;
+        std::shared_ptr<ov::Node> region;
         {
-            auto new_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{4}, std::vector<int64_t>{0, 3, 1, 2});
-            auto tr_input = std::make_shared<ngraph::op::Transpose>(input, new_axes);
+            auto new_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{4}, std::vector<int64_t>{0, 3, 1, 2});
+            auto tr_input = std::make_shared<ov::op::v1::Transpose>(input, new_axes);
 
             std::vector<float> anchors_vec(blobs[0].ptr<float>(), blobs[0].ptr<float>() + blobs[0].total());
             std::vector<int64_t> mask(anchors, 1);
-            region = std::make_shared<ngraph::op::RegionYolo>(tr_input, coords, classes, anchors, useSoftmax, mask, 1, 3, anchors_vec);
+            region = std::make_shared<ov::op::v0::RegionYolo>(tr_input, coords, classes, anchors, useSoftmax, mask, 1, 3, anchors_vec);
 
             auto tr_shape = tr_input->get_shape();
-            auto shape_as_inp = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                                                       ngraph::Shape{tr_shape.size()},
+            auto shape_as_inp = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                                                                       ov::Shape{tr_shape.size()},
                                                                        std::vector<int64_t>(tr_shape.begin(), tr_shape.end()));
 
-            region = std::make_shared<ngraph::op::v1::Reshape>(region, shape_as_inp, true);
-            new_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{4}, std::vector<int64_t>{0, 2, 3, 1});
-            region = std::make_shared<ngraph::op::Transpose>(region, new_axes);
+            region = std::make_shared<ov::op::v1::Reshape>(region, shape_as_inp, true);
+            new_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{4}, std::vector<int64_t>{0, 2, 3, 1});
+            region = std::make_shared<ov::op::v1::Transpose>(region, new_axes);
 
-            region = std::make_shared<ngraph::op::v1::Reshape>(region, shape_node, true);
-            region = std::make_shared<ngraph::op::Transpose>(region, tr_axes);
+            region = std::make_shared<ov::op::v1::Reshape>(region, shape_node, true);
+            region = std::make_shared<ov::op::v1::Transpose>(region, tr_axes);
         }
 
-        auto strides = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{1, 1});
+        auto strides = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, std::vector<int64_t>{1, 1});
         std::vector<int64_t> boxes_shape{b, anchors, h, w};
-        auto shape_3d = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{boxes_shape.size()}, boxes_shape.data());
+        auto shape_3d = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{boxes_shape.size()}, boxes_shape.data());
 
-        ngraph::Shape box_broad_shape{1, (size_t)anchors, (size_t)h, (size_t)w};
-        auto scale_x_y_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &scale_x_y);
-        auto shift_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{0.5});
+        ov::Shape box_broad_shape{1, (size_t)anchors, (size_t)h, (size_t)w};
+        auto scale_x_y_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &scale_x_y);
+        auto shift_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, std::vector<float>{0.5});
 
-        auto axis = ngraph::op::Constant::create<int64_t>(ngraph::element::i64, ngraph::Shape{}, {0});
-        auto splits = ngraph::op::Constant::create<int64_t>(ngraph::element::i64, ngraph::Shape{5}, {1, 1, 1, 1, rows - 4});
-        auto split = std::make_shared<ngraph::op::v1::VariadicSplit>(input2d, axis, splits);
-        std::shared_ptr<ngraph::Node> box_x;
+        auto axis = ov::op::v0::Constant::create<int64_t>(ov::element::i64, ov::Shape{}, {0});
+        auto splits = ov::op::v0::Constant::create<int64_t>(ov::element::i64, ov::Shape{5}, {1, 1, 1, 1, rows - 4});
+        auto split = std::make_shared<ov::op::v1::VariadicSplit>(input2d, axis, splits);
+        std::shared_ptr<ov::Node> box_x;
         {
-            box_x = std::make_shared<ngraph::op::Sigmoid>(split->output(0));
-            box_x = std::make_shared<ngraph::op::v1::Subtract>(box_x, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
-            box_x = std::make_shared<ngraph::op::v1::Multiply>(box_x, scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
-            box_x = std::make_shared<ngraph::op::v1::Add>(box_x, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
-            box_x = std::make_shared<ngraph::op::v1::Reshape>(box_x, shape_3d, true);
+            box_x = std::make_shared<ov::op::v0::Sigmoid>(split->output(0));
+            box_x = std::make_shared<ov::op::v1::Subtract>(box_x, shift_node, ov::op::AutoBroadcastType::NUMPY);
+            box_x = std::make_shared<ov::op::v1::Multiply>(box_x, scale_x_y_node, ov::op::AutoBroadcastType::NUMPY);
+            box_x = std::make_shared<ov::op::v1::Add>(box_x, shift_node, ov::op::AutoBroadcastType::NUMPY);
+            box_x = std::make_shared<ov::op::v1::Reshape>(box_x, shape_3d, true);
 
             std::vector<float> x_indices(w * h * anchors);
             auto begin = x_indices.begin();
-            for (int i = 0; i < h; i++)
+            for (int i = 0; i < w; i++)
             {
                 std::fill(begin + i * anchors, begin + (i + 1) * anchors, i);
             }
 
-            for (int j = 1; j < w; j++)
+            for (int j = 1; j < h; j++)
             {
-                std::copy(begin, begin + h * anchors, begin + j * h * anchors);
+                std::copy(begin, begin + w * anchors, begin + j * w * anchors);
             }
-            auto horiz = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, box_broad_shape, x_indices.data());
-            box_x = std::make_shared<ngraph::op::v1::Add>(box_x, horiz, ngraph::op::AutoBroadcastType::NUMPY);
+            auto horiz = std::make_shared<ov::op::v0::Constant>(ov::element::f32, box_broad_shape, x_indices.data());
+            box_x = std::make_shared<ov::op::v1::Add>(box_x, horiz, ov::op::AutoBroadcastType::NUMPY);
 
-            auto cols_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{float(w)});
-            box_x = std::make_shared<ngraph::op::v1::Divide>(box_x, cols_node, ngraph::op::AutoBroadcastType::NUMPY);
+            auto cols_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, std::vector<float>{float(w)});
+            box_x = std::make_shared<ov::op::v1::Divide>(box_x, cols_node, ov::op::AutoBroadcastType::NUMPY);
         }
 
-        std::shared_ptr<ngraph::Node> box_y;
+        std::shared_ptr<ov::Node> box_y;
         {
-            box_y = std::make_shared<ngraph::op::Sigmoid>(split->output(1));
-            box_y = std::make_shared<ngraph::op::v1::Subtract>(box_y, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
-            box_y = std::make_shared<ngraph::op::v1::Multiply>(box_y, scale_x_y_node, ngraph::op::AutoBroadcastType::NUMPY);
-            box_y = std::make_shared<ngraph::op::v1::Add>(box_y, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
-            box_y = std::make_shared<ngraph::op::v1::Reshape>(box_y, shape_3d, true);
+            box_y = std::make_shared<ov::op::v0::Sigmoid>(split->output(1));
+            box_y = std::make_shared<ov::op::v1::Subtract>(box_y, shift_node, ov::op::AutoBroadcastType::NUMPY);
+            box_y = std::make_shared<ov::op::v1::Multiply>(box_y, scale_x_y_node, ov::op::AutoBroadcastType::NUMPY);
+            box_y = std::make_shared<ov::op::v1::Add>(box_y, shift_node, ov::op::AutoBroadcastType::NUMPY);
+            box_y = std::make_shared<ov::op::v1::Reshape>(box_y, shape_3d, true);
 
             std::vector<float> y_indices(h * anchors);
             for (int i = 0; i < h; i++)
@@ -487,18 +554,18 @@ public:
                 std::fill(y_indices.begin() + i * anchors, y_indices.begin() + (i + 1) * anchors, i);
             }
 
-            auto vert = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1, (size_t)anchors, (size_t)h, 1}, y_indices.data());
-            box_y = std::make_shared<ngraph::op::v1::Add>(box_y, vert, ngraph::op::AutoBroadcastType::NUMPY);
-            auto rows_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{float(h)});
-            box_y = std::make_shared<ngraph::op::v1::Divide>(box_y, rows_node, ngraph::op::AutoBroadcastType::NUMPY);
+            auto vert = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1, (size_t)anchors, (size_t)h, 1}, y_indices.data());
+            box_y = std::make_shared<ov::op::v1::Add>(box_y, vert, ov::op::AutoBroadcastType::NUMPY);
+            auto rows_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, std::vector<float>{float(h)});
+            box_y = std::make_shared<ov::op::v1::Divide>(box_y, rows_node, ov::op::AutoBroadcastType::NUMPY);
         }
 
-        std::shared_ptr<ngraph::Node> box_w, box_h;
+        std::shared_ptr<ov::Node> box_w, box_h;
         {
             int hNorm, wNorm;
             if (nodes.size() > 1)
             {
-                auto node_1_shape = nodes[1].dynamicCast<InfEngineNgraphNode>()->node->get_shape();
+                auto node_1_shape = nodes[1].dynamicCast<InfEngineNgraphNode>()->node.get_shape();
                 hNorm = node_1_shape[2];
                 wNorm = node_1_shape[3];
             }
@@ -528,53 +595,53 @@ public:
                 std::copy(bias_h.begin(), bias_h.begin() + h * anchors, bias_h.begin() + i * h * anchors);
             }
 
-            box_w = std::make_shared<ngraph::op::v0::Exp>(split->output(2));
-            box_w = std::make_shared<ngraph::op::v1::Reshape>(box_w, shape_3d, true);
-            auto anchor_w_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, box_broad_shape, bias_w.data());
-            box_w = std::make_shared<ngraph::op::v1::Multiply>(box_w, anchor_w_node, ngraph::op::AutoBroadcastType::NUMPY);
+            box_w = std::make_shared<ov::op::v0::Exp>(split->output(2));
+            box_w = std::make_shared<ov::op::v1::Reshape>(box_w, shape_3d, true);
+            auto anchor_w_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, box_broad_shape, bias_w.data());
+            box_w = std::make_shared<ov::op::v1::Multiply>(box_w, anchor_w_node, ov::op::AutoBroadcastType::NUMPY);
 
-            box_h = std::make_shared<ngraph::op::v0::Exp>(split->output(3));
-            box_h = std::make_shared<ngraph::op::v1::Reshape>(box_h, shape_3d, true);
-            auto anchor_h_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, box_broad_shape, bias_h.data());
-            box_h = std::make_shared<ngraph::op::v1::Multiply>(box_h, anchor_h_node, ngraph::op::AutoBroadcastType::NUMPY);
+            box_h = std::make_shared<ov::op::v0::Exp>(split->output(3));
+            box_h = std::make_shared<ov::op::v1::Reshape>(box_h, shape_3d, true);
+            auto anchor_h_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, box_broad_shape, bias_h.data());
+            box_h = std::make_shared<ov::op::v1::Multiply>(box_h, anchor_h_node, ov::op::AutoBroadcastType::NUMPY);
         }
 
-        auto region_splits = ngraph::op::Constant::create<int64_t>(ngraph::element::i64, ngraph::Shape{3}, {4, 1, rows - 5});
-        auto region_split = std::make_shared<ngraph::op::v1::VariadicSplit>(region, axis, region_splits);
+        auto region_splits = ov::op::v0::Constant::create<int64_t>(ov::element::i64, ov::Shape{3}, {4, 1, rows - 5});
+        auto region_split = std::make_shared<ov::op::v1::VariadicSplit>(region, axis, region_splits);
 
-        std::shared_ptr<ngraph::Node> scale;
+        std::shared_ptr<ov::Node> scale;
         {
             float thr = classfix == -1 ? 0.5 : 0;
-            auto thresh_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, std::vector<float>{thr});
-            auto mask = std::make_shared<ngraph::op::v1::Less>(region_split->output(1), thresh_node);
-            auto zero_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, mask->get_shape(), std::vector<float>(cols, 0));
-            scale = std::make_shared<ngraph::op::v1::Select>(mask, zero_node, region_split->output(1));
+            auto thresh_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, std::vector<float>{thr});
+            auto mask = std::make_shared<ov::op::v1::Less>(region_split->output(1), thresh_node);
+            auto zero_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, mask->get_shape(), std::vector<float>(cols, 0));
+            scale = std::make_shared<ov::op::v1::Select>(mask, zero_node, region_split->output(1));
         }
 
-        std::shared_ptr<ngraph::Node> probs;
+        std::shared_ptr<ov::Node> probs;
         {
-            probs = std::make_shared<ngraph::op::v1::Multiply>(region_split->output(2), scale, ngraph::op::AutoBroadcastType::NUMPY);
-            auto thresh_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &thresh);
-            auto mask = std::make_shared<ngraph::op::v1::Greater>(probs, thresh_node);
-            auto zero_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, mask->get_shape(), std::vector<float>((rows - 5) * cols, 0));
-            probs = std::make_shared<ngraph::op::v1::Select>(mask, probs, zero_node);
+            probs = std::make_shared<ov::op::v1::Multiply>(region_split->output(2), scale, ov::op::AutoBroadcastType::NUMPY);
+            auto thresh_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &thresh);
+            auto mask = std::make_shared<ov::op::v1::Greater>(probs, thresh_node);
+            auto zero_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32, mask->get_shape(), std::vector<float>((rows - 5) * cols, 0));
+            probs = std::make_shared<ov::op::v1::Select>(mask, probs, zero_node);
         }
 
 
-        auto concat_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{1, cols});
-        box_x = std::make_shared<ngraph::op::v1::Reshape>(box_x, concat_shape, true);
-        box_y = std::make_shared<ngraph::op::v1::Reshape>(box_y, concat_shape, true);
-        box_w = std::make_shared<ngraph::op::v1::Reshape>(box_w, concat_shape, true);
-        box_h = std::make_shared<ngraph::op::v1::Reshape>(box_h, concat_shape, true);
+        auto concat_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, std::vector<int64_t>{1, cols});
+        box_x = std::make_shared<ov::op::v1::Reshape>(box_x, concat_shape, true);
+        box_y = std::make_shared<ov::op::v1::Reshape>(box_y, concat_shape, true);
+        box_w = std::make_shared<ov::op::v1::Reshape>(box_w, concat_shape, true);
+        box_h = std::make_shared<ov::op::v1::Reshape>(box_h, concat_shape, true);
 
-        ngraph::NodeVector inp_nodes{box_x, box_y, box_w, box_h, scale, probs};
-        std::shared_ptr<ngraph::Node> result = std::make_shared<ngraph::op::Concat>(inp_nodes, 0);
-        result = std::make_shared<ngraph::op::Transpose>(result, tr_axes);
+        ov::NodeVector inp_nodes{box_x, box_y, box_w, box_h, scale, probs};
+        std::shared_ptr<ov::Node> result = std::make_shared<ov::op::v0::Concat>(inp_nodes, 0);
+        result = std::make_shared<ov::op::v1::Transpose>(result, tr_axes);
         if (b > 1)
         {
             std::vector<int64_t> sizes{b, static_cast<int64_t>(result->get_shape()[0]) / b, static_cast<int64_t>(result->get_shape()[1])};
-            auto shape_node = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{sizes.size()}, sizes.data());
-            result = std::make_shared<ngraph::op::v1::Reshape>(result, shape_node, true);
+            auto shape_node = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{sizes.size()}, sizes.data());
+            result = std::make_shared<ov::op::v1::Reshape>(result, shape_node, true);
         }
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(result));

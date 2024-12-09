@@ -686,6 +686,16 @@ public class MatTest extends OpenCVTestCase {
         assertMatEqual(truth, dst, EPS);
     }
 
+    public void testMatMulMat() {
+        Mat m1 = new Mat(2, 2, CvType.CV_32F, new Scalar(2));
+        Mat m2 = new Mat(2, 2, CvType.CV_32F, new Scalar(3));
+
+        dst = m1.matMul(m2);
+
+        truth = new Mat(2, 2, CvType.CV_32F, new Scalar(12));
+        assertMatEqual(truth, dst, EPS);
+    }
+
     public void testOnesIntIntInt() {
         dst = Mat.ones(matSize, matSize, CvType.CV_32F);
 
@@ -1285,4 +1295,31 @@ public class MatTest extends OpenCVTestCase {
         assertEquals(5, bbuf.get(63*80 + 63));
     }
 
+    public void testMatAt() {
+        Mat uc1 = new Mat(2, 3, CvType.CV_8S) {
+            {
+                put(0, 0, 1, 2, 3);
+                put(1, 0, 4, 5, 6);
+            }
+        };
+        assertEquals((byte)1, uc1.at(Byte.class, 0, 0).getV().byteValue());
+        assertEquals((byte)2, uc1.at(Byte.class, 0, 1).getV().byteValue());
+        assertEquals((byte)3, uc1.at(Byte.class, 0, 2).getV().byteValue());
+        assertEquals((byte)4, uc1.at(Byte.class, 1, 0).getV().byteValue());
+        assertEquals((byte)5, uc1.at(Byte.class, 1, 1).getV().byteValue());
+        assertEquals((byte)6, uc1.at(Byte.class, 1, 2).getV().byteValue());
+        uc1.at(Byte.class, 0, 0).setV((byte)7);
+        uc1.at(Byte.class, 0, 1).setV((byte)8);
+        uc1.at(Byte.class, 0, 2).setV((byte)9);
+        uc1.at(Byte.class, 1, 0).setV((byte)10);
+        uc1.at(Byte.class, 1, 1).setV((byte)11);
+        uc1.at(Byte.class, 1, 2).setV((byte)12);
+        byte[] data = new byte[6];
+        uc1.get(0, 0, data);
+        assertArrayEquals(data, new byte[] {7, 8, 9, 10, 11, 12});
+        Mat.Tuple3<Byte> bgr = rgbLena.at(Byte.class, 0, 0).getV3c();
+        assertEquals(bgr.get_0().byteValue(), (byte)128);
+        assertEquals(bgr.get_1().byteValue(), (byte)138);
+        assertEquals(bgr.get_2().byteValue(), (byte)225);
+    }
 }

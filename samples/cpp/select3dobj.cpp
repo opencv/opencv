@@ -469,7 +469,7 @@ int main(int argc, char** argv)
         outbarename = strrchr(outprefix.c_str(), '/');
         const char* tmp = strrchr(outprefix.c_str(), '\\');
         char cmd[1000];
-        sprintf(cmd, "mkdir %s", outprefix.c_str());
+        snprintf(cmd, sizeof(cmd), "mkdir %s", outprefix.c_str());
         if( tmp && tmp > outbarename )
             outbarename = tmp;
         if( outbarename )
@@ -490,7 +490,7 @@ int main(int argc, char** argv)
     setMouseCallback("View", onMouse, 0);
     bool boardFound = false;
 
-    string indexFilename = format("%s_index.yml", outprefix.c_str());
+    string indexFilename = cv::format("%s_index.yml", outprefix.c_str());
 
     vector<string> capturedImgList;
     vector<Rect> roiList;
@@ -568,7 +568,7 @@ int main(int argc, char** argv)
                     char path[1000];
                     for(;frameIdx < maxFrameIdx;frameIdx++)
                     {
-                        sprintf(path, "%s%04d.jpg", outprefix.c_str(), frameIdx);
+                        snprintf(path, sizeof(path), "%s%04d.jpg", outprefix.c_str(), frameIdx);
                         FILE* f = fopen(path, "rb");
                         if( !f )
                             break;

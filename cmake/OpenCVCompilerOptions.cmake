@@ -1,13 +1,6 @@
 if("${CMAKE_CXX_COMPILER};${CMAKE_C_COMPILER};${CMAKE_CXX_COMPILER_LAUNCHER}" MATCHES "ccache")
-  set(CMAKE_COMPILER_IS_CCACHE 1)  # TODO: FIXIT Avoid setting of CMAKE_ variables
   set(OPENCV_COMPILER_IS_CCACHE 1)
 endif()
-function(access_CMAKE_COMPILER_IS_CCACHE)
-  if(NOT OPENCV_SUPPRESS_DEPRECATIONS)
-    message(WARNING "DEPRECATED: CMAKE_COMPILER_IS_CCACHE is replaced to OPENCV_COMPILER_IS_CCACHE.")
-  endif()
-endfunction()
-variable_watch(CMAKE_COMPILER_IS_CCACHE access_CMAKE_COMPILER_IS_CCACHE)
 if(ENABLE_CCACHE AND NOT OPENCV_COMPILER_IS_CCACHE)
   # This works fine with Unix Makefiles and Ninja generators
   find_host_program(CCACHE_PROGRAM ccache)
@@ -84,6 +77,17 @@ macro(add_env_definitions option)
   add_definitions("-D${option}=\"${value}\"")
 endmacro()
 
+# Use same flags for native AArch64 and RISC-V compilation as for cross-compile (Linux)
+if(NOT CMAKE_CROSSCOMPILING AND NOT CMAKE_TOOLCHAIN_FILE AND COMMAND ocv_set_platform_flags)
+  unset(platform_flags)
+  ocv_set_platform_flags(platform_flags)
+  # externally-provided flags should have higher priority - prepend our flags
+  if(platform_flags)
+    set(CMAKE_CXX_FLAGS "${platform_flags} ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_C_FLAGS "${platform_flags} ${CMAKE_C_FLAGS}")
+  endif()
+endif()
+
 if(NOT MSVC)
   # OpenCV fails some tests when 'char' is 'unsigned' by default
   add_extra_compiler_option(-fsigned-char)
@@ -105,13 +109,27 @@ elseif(CV_ICC)
       add_extra_compiler_option("-fp-model precise")
     endif()
   endif()
+elseif(CV_ICX)
+  # ICX uses -ffast-math by default.
+  # use own flags, if no one of the flags provided by user: -fp-model, -ffast-math -fno-fast-math
+  if(NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " /fp:"
+      AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fp-model"
+      AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -ffast-math"
+      AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fno-fast-math"
+  )
+    if(NOT ENABLE_FAST_MATH)
+      add_extra_compiler_option(-fno-fast-math)
+      add_extra_compiler_option(-fp-model=precise)
+    endif()
+  endif()
 elseif(CV_GCC OR CV_CLANG)
   if(ENABLE_FAST_MATH)
     add_extra_compiler_option(-ffast-math)
+    add_extra_compiler_option(-fno-finite-math-only)
   endif()
 endif()
 
-if(CV_GCC OR CV_CLANG)
+if(CV_GCC OR CV_CLANG OR CV_ICX)
   # High level of warnings.
   add_extra_compiler_option(-W)
   if (NOT MSVC)
@@ -131,7 +149,9 @@ if(CV_GCC OR CV_CLANG)
   add_extra_compiler_option(-Wundef)
   add_extra_compiler_option(-Winit-self)
   add_extra_compiler_option(-Wpointer-arith)
-  add_extra_compiler_option(-Wshadow)
+  if(NOT (CV_GCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0"))
+    add_extra_compiler_option(-Wshadow)  # old GCC emits warnings for variables + methods combination
+  endif()
   add_extra_compiler_option(-Wsign-promo)
   add_extra_compiler_option(-Wuninitialized)
   if(CV_GCC AND (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.0) AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0 OR ARM))
@@ -176,14 +196,17 @@ if(CV_GCC OR CV_CLANG)
     add_extra_compiler_option(-Wno-long-long)
   endif()
 
-  # We need pthread's
-  if((UNIX
+  # We need pthread's, unless we have explicitly disabled multi-thread execution.
+  if(NOT OPENCV_DISABLE_THREAD_SUPPORT
+      AND (
+        (UNIX
           AND NOT ANDROID
           AND NOT (APPLE AND CV_CLANG)
           AND NOT EMSCRIPTEN
+        )
+        OR (EMSCRIPTEN AND WITH_PTHREADS_PF)  # https://github.com/opencv/opencv/issues/20285
       )
-      OR (EMSCRIPTEN AND WITH_PTHREADS_PF)  # https://github.com/opencv/opencv/issues/20285
-  )
+  ) # TODO
     add_extra_compiler_option(-pthread)
   endif()
 
@@ -255,7 +278,11 @@ if(CV_GCC OR CV_CLANG)
   endif()
 
   if(ENABLE_LTO)
-    add_extra_compiler_option(-flto)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12)
+      add_extra_compiler_option(-flto=auto)
+    else()
+      add_extra_compiler_option(-flto)
+    endif()
   endif()
   if(ENABLE_THIN_LTO)
     add_extra_compiler_option(-flto=thin)
@@ -309,9 +336,15 @@ if(MSVC)
     set(OPENCV_EXTRA_C_FLAGS "${OPENCV_EXTRA_C_FLAGS} /FS")
     set(OPENCV_EXTRA_CXX_FLAGS "${OPENCV_EXTRA_CXX_FLAGS} /FS")
   endif()
+
+  if(AARCH64 AND NOT MSVC_VERSION LESS 1930)
+    set(OPENCV_EXTRA_FLAGS "${OPENCV_EXTRA_FLAGS} /D _ARM64_DISTINCT_NEON_TYPES")
+  endif()
 endif()
 
-include(cmake/OpenCVCompilerOptimizations.cmake)
+if(PROJECT_NAME STREQUAL "OpenCV")
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVCompilerOptimizations.cmake")
+endif()
 if(COMMAND ocv_compiler_optimization_options)
   ocv_compiler_optimization_options()
 endif()
@@ -320,7 +353,7 @@ if(COMMAND ocv_compiler_optimization_options_finalize)
 endif()
 
 # set default visibility to hidden
-if((CV_GCC OR CV_CLANG)
+if((CV_GCC OR CV_CLANG OR CV_ICX)
     AND NOT MSVC
     AND NOT OPENCV_SKIP_VISIBILITY_HIDDEN
     AND NOT " ${CMAKE_CXX_FLAGS} ${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}" MATCHES " -fvisibility")
@@ -362,7 +395,7 @@ endif()
 
 # Apply "-Wl,--no-undefined" linker flags: https://github.com/opencv/opencv/pull/21347
 if(NOT OPENCV_SKIP_LINK_NO_UNDEFINED)
-  if(UNIX AND (NOT APPLE OR NOT CMAKE_VERSION VERSION_LESS "3.2"))
+  if(UNIX AND ((NOT APPLE OR NOT CMAKE_VERSION VERSION_LESS "3.2") AND NOT CMAKE_SYSTEM_NAME MATCHES "OpenBSD"))
     set(_option "-Wl,--no-undefined")
     set(_saved_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_option}")  # requires CMake 3.2+ and CMP0056
@@ -442,11 +475,11 @@ if(APPLE AND NOT CMAKE_CROSSCOMPILING AND NOT DEFINED ENV{LDFLAGS} AND EXISTS "/
 endif()
 
 if(ENABLE_BUILD_HARDENING)
-  include(${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake)
+  include("${CMAKE_CURRENT_LIST_DIR}/OpenCVCompilerDefenses.cmake")
 endif()
 
 if(MSVC)
-  include(cmake/OpenCVCRTLinkage.cmake)
+  include("${CMAKE_CURRENT_LIST_DIR}/OpenCVCRTLinkage.cmake")
   add_definitions(-D_VARIADIC_MAX=10)
 endif()
 

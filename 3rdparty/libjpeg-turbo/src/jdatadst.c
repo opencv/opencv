@@ -5,7 +5,7 @@
  * Copyright (C) 1994-1996, Thomas G. Lane.
  * Modified 2009-2012 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2013, 2016, D. R. Commander.
+ * Copyright (C) 2013, 2016, 2022, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -23,11 +23,6 @@
 #include "jpeglib.h"
 #include "jerror.h"
 
-#ifndef HAVE_STDLIB_H           /* <stdlib.h> should declare malloc(),free() */
-extern void *malloc(size_t size);
-extern void free(void *ptr);
-#endif
-
 
 /* Expanded data destination object for stdio output */
 
@@ -43,7 +38,6 @@ typedef my_destination_mgr *my_dest_ptr;
 #define OUTPUT_BUF_SIZE  4096   /* choose an efficiently fwrite'able size */
 
 
-#if JPEG_LIB_VERSION >= 80 || defined(MEM_SRCDST_SUPPORTED)
 /* Expanded data destination object for memory output */
 
 typedef struct {
@@ -57,7 +51,6 @@ typedef struct {
 } my_mem_destination_mgr;
 
 typedef my_mem_destination_mgr *my_mem_dest_ptr;
-#endif
 
 
 /*
@@ -79,13 +72,11 @@ init_destination(j_compress_ptr cinfo)
   dest->pub.free_in_buffer = OUTPUT_BUF_SIZE;
 }
 
-#if JPEG_LIB_VERSION >= 80 || defined(MEM_SRCDST_SUPPORTED)
 METHODDEF(void)
 init_mem_destination(j_compress_ptr cinfo)
 {
   /* no work necessary here */
 }
-#endif
 
 
 /*
@@ -116,7 +107,7 @@ empty_output_buffer(j_compress_ptr cinfo)
 {
   my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
 
-  if (JFWRITE(dest->outfile, dest->buffer, OUTPUT_BUF_SIZE) !=
+  if (fwrite(dest->buffer, 1, OUTPUT_BUF_SIZE, dest->outfile) !=
       (size_t)OUTPUT_BUF_SIZE)
     ERREXIT(cinfo, JERR_FILE_WRITE);
 
@@ -126,7 +117,6 @@ empty_output_buffer(j_compress_ptr cinfo)
   return TRUE;
 }
 
-#if JPEG_LIB_VERSION >= 80 || defined(MEM_SRCDST_SUPPORTED)
 METHODDEF(boolean)
 empty_mem_output_buffer(j_compress_ptr cinfo)
 {
@@ -141,7 +131,7 @@ empty_mem_output_buffer(j_compress_ptr cinfo)
   if (nextbuffer == NULL)
     ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, 10);
 
-  MEMCOPY(nextbuffer, dest->buffer, dest->bufsize);
+  memcpy(nextbuffer, dest->buffer, dest->bufsize);
 
   free(dest->newbuffer);
 
@@ -155,7 +145,6 @@ empty_mem_output_buffer(j_compress_ptr cinfo)
 
   return TRUE;
 }
-#endif
 
 
 /*
@@ -175,7 +164,7 @@ term_destination(j_compress_ptr cinfo)
 
   /* Write any data remaining in the buffer */
   if (datacount > 0) {
-    if (JFWRITE(dest->outfile, dest->buffer, datacount) != datacount)
+    if (fwrite(dest->buffer, 1, datacount, dest->outfile) != datacount)
       ERREXIT(cinfo, JERR_FILE_WRITE);
   }
   fflush(dest->outfile);
@@ -184,7 +173,6 @@ term_destination(j_compress_ptr cinfo)
     ERREXIT(cinfo, JERR_FILE_WRITE);
 }
 
-#if JPEG_LIB_VERSION >= 80 || defined(MEM_SRCDST_SUPPORTED)
 METHODDEF(void)
 term_mem_destination(j_compress_ptr cinfo)
 {
@@ -193,7 +181,6 @@ term_mem_destination(j_compress_ptr cinfo)
   *dest->outbuffer = dest->buffer;
   *dest->outsize = (unsigned long)(dest->bufsize - dest->pub.free_in_buffer);
 }
-#endif
 
 
 /*
@@ -232,7 +219,6 @@ jpeg_stdio_dest(j_compress_ptr cinfo, FILE *outfile)
 }
 
 
-#if JPEG_LIB_VERSION >= 80 || defined(MEM_SRCDST_SUPPORTED)
 /*
  * Prepare for output to a memory buffer.
  * The caller may supply an own initial buffer with appropriate size.
@@ -289,4 +275,3 @@ jpeg_mem_dest(j_compress_ptr cinfo, unsigned char **outbuffer,
   dest->pub.next_output_byte = dest->buffer = *outbuffer;
   dest->pub.free_in_buffer = dest->bufsize = *outsize;
 }
-#endif

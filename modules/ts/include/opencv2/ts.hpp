@@ -37,6 +37,7 @@
 #include <iterator>
 #include <limits>
 #include <algorithm>
+#include <set>
 
 
 #ifndef OPENCV_32BIT_CONFIGURATION
@@ -115,19 +116,21 @@
 # endif
 #endif
 
-#if defined(__OPENCV_BUILD) && defined(__clang__)
-#pragma clang diagnostic ignored "-Winconsistent-missing-override"
-#endif
 #if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
-#if defined(__OPENCV_BUILD) && defined(__APPLE__) && defined(__clang__) && ((__clang_major__*100 + __clang_minor__) >= 1301)
+#if defined(__OPENCV_BUILD) && defined(__clang__) && ((__clang_major__*100 + __clang_minor__) >= 1301)
+#pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-copy"
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
 #endif
 #include "opencv2/ts/ts_gtest.h"
 #if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic pop
+#endif
+#if defined(__OPENCV_BUILD) && defined(__clang__) && ((__clang_major__*100 + __clang_minor__) >= 1301)
+#pragma clang diagnostic pop
 #endif
 #include "opencv2/ts/ts_ext.hpp"
 
@@ -292,13 +295,13 @@ double getMaxVal(int depth);
 
 Size randomSize(RNG& rng, double maxSizeLog);
 void randomSize(RNG& rng, int minDims, int maxDims, double maxSizeLog, vector<int>& sz);
-int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels);
+int randomType(RNG& rng, cv::_OutputArray::DepthMask typeMask, int minChannels, int maxChannels);
 Mat randomMat(RNG& rng, Size size, int type, double minVal, double maxVal, bool useRoi);
 Mat randomMat(RNG& rng, const vector<int>& size, int type, double minVal, double maxVal, bool useRoi);
 void add(const Mat& a, double alpha, const Mat& b, double beta,
                       Scalar gamma, Mat& c, int ctype, bool calcAbs=false);
-void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1);
-void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1);
+void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1, int ctype=-1);
+void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1, int ctype=-1);
 
 void convert(const Mat& src, cv::OutputArray dst, int dtype, double alpha=1, double beta=0);
 void copy(const Mat& src, Mat& dst, const Mat& mask=Mat(), bool invertMask=false);
@@ -328,7 +331,8 @@ void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int
 Mat calcSobelKernel2D( int dx, int dy, int apertureSize, int origin=0 );
 Mat calcLaplaceKernel2D( int aperture_size );
 
-void initUndistortMap( const Mat& a, const Mat& k, Size sz, Mat& mapx, Mat& mapy );
+void initUndistortMap( const Mat& a, const Mat& k, const Mat& R, const Mat& new_a, Size sz, Mat& mapx, Mat& mapy, int map_type );
+void initInverseRectificationMap( const Mat& a, const Mat& k, const Mat& R, const Mat& new_a, Size sz, Mat& mapx, Mat& mapy, int map_type );
 
 void minMaxLoc(const Mat& src, double* minval, double* maxval,
                           vector<int>* minloc, vector<int>* maxloc, const Mat& mask=Mat());
@@ -425,7 +429,7 @@ protected:
     int test_case_count; // the total number of test cases
 
     // read test params
-    virtual int read_params( CvFileStorage* fs );
+    virtual int read_params( const cv::FileStorage& fs );
 
     // returns the number of tests or -1 if it is unknown a-priori
     virtual int get_test_case_count();
@@ -446,7 +450,7 @@ protected:
     virtual void dump_test_case(int test_case_idx, std::ostream* out);
 
     // finds test parameter
-    const CvFileNode* find_param( CvFileStorage* fs, const char* param_name );
+    cv::FileNode find_param( const cv::FileStorage& fs, const char* param_name );
 
     // name of the test (it is possible to locate a test by its name)
     string name;
@@ -607,7 +611,7 @@ public:
     };
 
     // get RNG to generate random input data for a test
-    RNG& get_rng() { return rng; }
+    RNG& get_rng() { return cv::theRNG(); }
 
     // returns the current error code
     TS::FailureCode get_err_code() { return TS::FailureCode(current_test_info.code); }
@@ -625,7 +629,6 @@ public:
 protected:
 
     // these are allocated within a test to try to keep them valid in case of stack corruption
-    RNG rng;
 
     // information about the current test
     TestInfo current_test_info;
@@ -653,7 +656,7 @@ public:
 
 protected:
 
-    virtual int read_params( CvFileStorage* fs ) CV_OVERRIDE;
+    virtual int read_params( const cv::FileStorage& fs ) CV_OVERRIDE;
     virtual int prepare_test_case( int test_case_idx ) CV_OVERRIDE;
     virtual int validate_test_results( int test_case_idx ) CV_OVERRIDE;
 
@@ -705,7 +708,7 @@ protected:
         catch(const cv::Exception& e)
         {
             thrown = true;
-            if( e.code != expected_code )
+            if( e.code != expected_code && e.code != cv::Error::StsAssert && e.code != cv::Error::StsError )
             {
                 ts->printf(TS::LOG, "%s (test case #%d): the error code %d is different from the expected %d\n",
                     descr, test_case_idx, e.code, expected_code);
@@ -751,6 +754,7 @@ void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
 // Utility functions
 
 void addDataSearchPath(const std::string& path);
+void addDataSearchEnv(const std::string& env_name);
 void addDataSearchSubDirectory(const std::string& subdir);
 
 /*! @brief Try to find requested data file
@@ -937,13 +941,9 @@ namespace opencv_test {
 using namespace cvtest;
 using namespace cv;
 
-#ifdef CV_CXX11
 #define CVTEST_GUARD_SYMBOL(name) \
     class required_namespace_specificatin_here_for_symbol_ ## name {}; \
     using name = required_namespace_specificatin_here_for_symbol_ ## name;
-#else
-#define CVTEST_GUARD_SYMBOL(name) /* nothing */
-#endif
 
 CVTEST_GUARD_SYMBOL(norm)
 CVTEST_GUARD_SYMBOL(add)

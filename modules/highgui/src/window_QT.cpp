@@ -63,6 +63,7 @@
     #endif
 #endif
 
+using namespace cv;
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
 #define Qt_MiddleButton Qt::MiddleButton
@@ -146,7 +147,7 @@ CV_IMPL CvFont cvFontQt(const char* nameFont, int pointSize,CvScalar color,int w
 CV_IMPL void cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont* font)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "putText",
@@ -161,7 +162,7 @@ CV_IMPL void cvAddText(const CvArr* img, const char* text, CvPoint org, CvFont* 
 double cvGetRatioWindow_QT(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     double result = -1;
     QMetaObject::invokeMethod(guiMainThread,
@@ -175,7 +176,7 @@ double cvGetRatioWindow_QT(const char* name)
 
 double cvGetPropVisible_QT(const char* name) {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     double result = 0;
 
@@ -192,7 +193,7 @@ void cvSetRatioWindow_QT(const char* name,double prop_value)
 {
 
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "setRatioWindow",
@@ -204,7 +205,7 @@ void cvSetRatioWindow_QT(const char* name,double prop_value)
 double cvGetPropWindow_QT(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     double result = -1;
     QMetaObject::invokeMethod(guiMainThread,
@@ -220,7 +221,7 @@ double cvGetPropWindow_QT(const char* name)
 void cvSetPropWindow_QT(const char* name,double prop_value)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "setPropWindow",
@@ -229,7 +230,7 @@ void cvSetPropWindow_QT(const char* name,double prop_value)
         Q_ARG(double, prop_value));
 }
 
-void cv::setWindowTitle(const String& winname, const String& title)
+void setWindowTitle_QT(const String& winname, const String& title)
 {
     if (!guiMainThread)
         CV_Error(Error::StsNullPtr, "NULL guiReceiver (please create a window)");
@@ -245,7 +246,7 @@ void cv::setWindowTitle(const String& winname, const String& title)
 void cvSetModeWindow_QT(const char* name, double prop_value)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "toggleFullScreen",
@@ -257,7 +258,7 @@ void cvSetModeWindow_QT(const char* name, double prop_value)
 CvRect cvGetWindowRect_QT(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     CvRect result = cvRect(-1, -1, -1, -1);
 
@@ -273,7 +274,7 @@ CvRect cvGetWindowRect_QT(const char* name)
 double cvGetModeWindow_QT(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     double result = -1;
 
@@ -290,7 +291,7 @@ double cvGetModeWindow_QT(const char* name)
 CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "displayInfo",
@@ -304,7 +305,7 @@ CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
 CV_IMPL void cvSaveWindowParameters(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "saveWindowParameters",
@@ -316,7 +317,7 @@ CV_IMPL void cvSaveWindowParameters(const char* name)
 CV_IMPL void cvLoadWindowParameters(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "loadWindowParameters",
@@ -328,7 +329,7 @@ CV_IMPL void cvLoadWindowParameters(const char* name)
 CV_IMPL void cvDisplayStatusBar(const char* name, const char* text, int delayms)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "displayStatusBar",
@@ -491,7 +492,7 @@ static CvTrackbar* icvFindTrackBarByName(const char* name_trackbar, const char* 
         QPointer<CvWindow> w = icvFindWindowByName(nameWinQt);
 
         if (!w)
-            CV_Error(CV_StsNullPtr, "NULL window handler");
+            CV_Error(cv::Error::StsNullPtr, "NULL window handler");
 
         if (w->param_gui_mode == CV_GUI_NORMAL)
             return (CvTrackbar*) icvFindBarByName(w->myBarLayout, nameQt, type_CvTrackbar);
@@ -528,6 +529,9 @@ static int icvInitSystem(int* c, char** v)
     //"For any GUI application using Qt, there is precisely one QApplication object"
     if (!QApplication::instance())
     {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+#endif
         new QApplication(*c, v);
         setlocale(LC_NUMERIC,"C");
 
@@ -571,7 +575,7 @@ CV_IMPL int cvNamedWindow(const char* name, int flags)
 CV_IMPL void cvDestroyWindow(const char* name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "destroyWindow",
@@ -594,7 +598,7 @@ CV_IMPL void cvDestroyAllWindows()
 CV_IMPL void* cvGetWindowHandle(const char* name)
 {
     if (!name)
-        CV_Error( CV_StsNullPtr, "NULL name string" );
+        CV_Error( cv::Error::StsNullPtr, "NULL name string" );
 
     return (void*) icvFindWindowByName(QLatin1String(name));
 }
@@ -603,7 +607,7 @@ CV_IMPL void* cvGetWindowHandle(const char* name)
 CV_IMPL const char* cvGetWindowName(void* window_handle)
 {
     if( !window_handle )
-        CV_Error( CV_StsNullPtr, "NULL window handler" );
+        CV_Error( cv::Error::StsNullPtr, "NULL window handler" );
 
     return ((CvWindow*)window_handle)->objectName().toLatin1().data();
 }
@@ -612,7 +616,7 @@ CV_IMPL const char* cvGetWindowName(void* window_handle)
 CV_IMPL void cvMoveWindow(const char* name, int x, int y)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
     QMetaObject::invokeMethod(guiMainThread,
         "moveWindow",
         autoBlockingConnection(),
@@ -624,7 +628,7 @@ CV_IMPL void cvMoveWindow(const char* name, int x, int y)
 CV_IMPL void cvResizeWindow(const char* name, int width, int height)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
     QMetaObject::invokeMethod(guiMainThread,
         "resizeWindow",
         autoBlockingConnection(),
@@ -637,7 +641,7 @@ CV_IMPL void cvResizeWindow(const char* name, int width, int height)
 CV_IMPL int cvCreateTrackbar2(const char* name_bar, const char* window_name, int* val, int count, CvTrackbarCallback2 on_notify, void* userdata)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "addSlider2",
@@ -662,7 +666,7 @@ CV_IMPL int cvStartWindowThread()
 CV_IMPL int cvCreateTrackbar(const char* name_bar, const char* window_name, int* value, int count, CvTrackbarCallback on_change)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "addSlider",
@@ -680,7 +684,7 @@ CV_IMPL int cvCreateTrackbar(const char* name_bar, const char* window_name, int*
 CV_IMPL int cvCreateButton(const char* button_name, CvButtonCallback on_change, void* userdata, int button_type, int initial_button_state)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     if (initial_button_state < 0 || initial_button_state > 1)
         return 0;
@@ -746,7 +750,7 @@ CV_IMPL void cvSetMouseCallback(const char* window_name, CvMouseCallback on_mous
     QPointer<CvWindow> w = icvFindWindowByName(QLatin1String(window_name));
 
     if (!w)
-        CV_Error(CV_StsNullPtr, "NULL window handler");
+        CV_Error(cv::Error::StsNullPtr, "NULL window handler");
 
     w->setMouseCallBack(on_mouse, param);
 
@@ -776,7 +780,7 @@ CV_IMPL void cvShowImage(const char* name, const CvArr* arr)
 CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallback callback, void* userdata)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "setOpenGlDrawCallback",
@@ -790,7 +794,7 @@ CV_IMPL void cvSetOpenGlDrawCallback(const char* window_name, CvOpenGlDrawCallba
 CV_IMPL void cvSetOpenGlContext(const char* window_name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "setOpenGlContext",
@@ -802,7 +806,7 @@ CV_IMPL void cvSetOpenGlContext(const char* window_name)
 CV_IMPL void cvUpdateWindow(const char* window_name)
 {
     if (!guiMainThread)
-        CV_Error( CV_StsNullPtr, "NULL guiReceiver (please create a window)" );
+        CV_Error( cv::Error::StsNullPtr, "NULL guiReceiver (please create a window)" );
 
     QMetaObject::invokeMethod(guiMainThread,
         "updateWindow",
@@ -1012,7 +1016,7 @@ double GuiReceiver::isFullScreen(QString name)
     if (!w)
         return -1;
 
-    return w->isFullScreen() ? CV_WINDOW_FULLSCREEN : CV_WINDOW_NORMAL;
+    return w->isFullScreen() ? cv::WINDOW_FULLSCREEN : cv::WINDOW_NORMAL;
 }
 
 
@@ -1032,7 +1036,7 @@ void GuiReceiver::toggleFullScreen(QString name, double arg2)
 void GuiReceiver::createWindow(QString name, int flags)
 {
     if (!qApp)
-        CV_Error(CV_StsNullPtr, "NULL session handler" );
+        CV_Error(cv::Error::StsNullPtr, "NULL session handler" );
 
     // Check the name in the storage
     if (icvFindWindowByName(name.toLatin1().data()))
@@ -1074,7 +1078,7 @@ void GuiReceiver::showImage(QString name, void* arr)
 {
     QPointer<CvWindow> w = icvFindWindowByName(name);
 
-    if (!w) //as observed in the previous implementation (W32, GTK or Carbon), create a new window is the pointer returned is null
+    if (!w) //as observed in the previous implementation (W32, GTK), create a new window is the pointer returned is null
     {
         cvNamedWindow(name.toLatin1().data());
         w = icvFindWindowByName(name);
@@ -1123,7 +1127,7 @@ void GuiReceiver::destroyWindow(QString name)
 void GuiReceiver::destroyAllWindow()
 {
     if (!qApp)
-        CV_Error(CV_StsNullPtr, "NULL session handler" );
+        CV_Error(cv::Error::StsNullPtr, "NULL session handler" );
 
     if (multiThreads)
     {
@@ -1252,7 +1256,7 @@ void GuiReceiver::addSlider2(QString bar_name, QString window_name, void* value,
         return;
 
     if (count <= 0) //count is the max value of the slider, so must be bigger than 0
-        CV_Error(CV_StsNullPtr, "Max value of the slider must be bigger than 0" );
+        CV_Error(cv::Error::StsNullPtr, "Max value of the slider must be bigger than 0" );
 
     CvWindow::addSlider2(w, bar_name, (int*)value, count, (CvTrackbarCallback2) on_change, userdata);
 }
@@ -1282,10 +1286,10 @@ void GuiReceiver::addSlider(QString bar_name, QString window_name, void* value, 
         return;
 
     if (!value)
-        CV_Error(CV_StsNullPtr, "NULL value pointer" );
+        CV_Error(cv::Error::StsNullPtr, "NULL value pointer" );
 
     if (count <= 0) //count is the max value of the slider, so must be bigger than 0
-        CV_Error(CV_StsNullPtr, "Max value of the slider must be bigger than 0" );
+        CV_Error(cv::Error::StsNullPtr, "Max value of the slider must be bigger than 0" );
 
     CvWindow::addSlider(w, bar_name, (int*)value, count, (CvTrackbarCallback) on_change);
 }
@@ -1671,6 +1675,7 @@ CvWinProperties::~CvWinProperties()
 
 CvWindow::CvWindow(QString name, int arg2)
 {
+    Q_INIT_RESOURCE(window_QT);
     type = type_CvWindow;
 
     param_flags = arg2 & 0x0000000F;
@@ -1697,11 +1702,11 @@ CvWindow::CvWindow(QString name, int arg2)
 
     //3: my view
 #ifndef HAVE_QT_OPENGL
-    if (arg2 & CV_WINDOW_OPENGL)
-        CV_Error( CV_OpenGlNotSupported, "Library was built without OpenGL support" );
+    if (arg2 & cv::WINDOW_OPENGL)
+        CV_Error( cv::Error::OpenGlNotSupported, "Library was built without OpenGL support" );
     mode_display = CV_MODE_NORMAL;
 #else
-    mode_display = arg2 & CV_WINDOW_OPENGL ? CV_MODE_OPENGL : CV_MODE_NORMAL;
+    mode_display = arg2 & cv::WINDOW_OPENGL ? CV_MODE_OPENGL : CV_MODE_NORMAL;
     if (mode_display == CV_MODE_OPENGL)
         param_gui_mode = CV_GUI_NORMAL;
 #endif
@@ -1720,14 +1725,14 @@ CvWindow::CvWindow(QString name, int arg2)
 
     //Now attach everything
     if (myToolBar)
-        myGlobalLayout->addWidget(myToolBar, Qt::AlignCenter);
+        myGlobalLayout->addWidget(myToolBar, 0, Qt::AlignLeft);
 
-    myGlobalLayout->addWidget(myView->getWidget(), Qt::AlignCenter);
+    myGlobalLayout->addWidget(myView->getWidget(), 0, Qt::AlignCenter);
 
-    myGlobalLayout->addLayout(myBarLayout, Qt::AlignCenter);
+    myGlobalLayout->addLayout(myBarLayout);
 
     if (myStatusBar)
-        myGlobalLayout->addWidget(myStatusBar, Qt::AlignCenter);
+        myGlobalLayout->addWidget(myStatusBar, 0, Qt::AlignLeft);
 
     setLayout(myGlobalLayout);
     show();
@@ -1832,13 +1837,13 @@ void CvWindow::setPropWindow(int flags)
 
     switch(flags)
     {
-    case CV_WINDOW_NORMAL:
+    case cv::WINDOW_NORMAL:
         myGlobalLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
         param_flags = flags;
 
         break;
 
-    case CV_WINDOW_AUTOSIZE:
+    case cv::WINDOW_AUTOSIZE:
         myGlobalLayout->setSizeConstraint(QLayout::SetFixedSize);
         param_flags = flags;
 
@@ -1851,14 +1856,14 @@ void CvWindow::setPropWindow(int flags)
 
 void CvWindow::toggleFullScreen(int flags)
 {
-    if (isFullScreen() && flags == CV_WINDOW_NORMAL)
+    if (isFullScreen() && flags == cv::WINDOW_NORMAL)
     {
         showTools();
         showNormal();
         return;
     }
 
-    if (!isFullScreen() && flags == CV_WINDOW_FULLSCREEN)
+    if (!isFullScreen() && flags == cv::WINDOW_FULLSCREEN)
     {
         hideTools();
         showFullScreen();
@@ -2008,9 +2013,9 @@ void CvWindow::createGlobalLayout()
 #endif
     setMinimumSize(1, 1);
 
-    if (param_flags == CV_WINDOW_AUTOSIZE)
+    if (param_flags == cv::WINDOW_AUTOSIZE)
         myGlobalLayout->setSizeConstraint(QLayout::SetFixedSize);
-    else if (param_flags == CV_WINDOW_NORMAL)
+    else if (param_flags == cv::WINDOW_NORMAL)
         myGlobalLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
 }
 
@@ -2127,8 +2132,6 @@ void CvWindow::createToolBar()
 {
     myToolBar = new QToolBar(this);
     myToolBar->setFloatable(false); //is not a window
-    myToolBar->setFixedHeight(28);
-    myToolBar->setMinimumWidth(1);
 
     foreach (QAction *a, vect_QActions)
         myToolBar->addAction(a);
@@ -2139,7 +2142,6 @@ void CvWindow::createStatusBar()
 {
     myStatusBar = new QStatusBar(this);
     myStatusBar->setSizeGripEnabled(false);
-    myStatusBar->setFixedHeight(20);
     myStatusBar->setMinimumWidth(1);
     myStatusBar_msg = new QLabel;
 
@@ -2541,6 +2543,10 @@ DefaultViewPort::DefaultViewPort(CvWindow* arg, int arg2) : QGraphicsView(arg), 
 
     setInteractive(false);
     setMouseTracking(true); //receive mouse event everytime
+
+    // #13657 Tab key disables arrow keys
+    // #20215 QT backend: cv::waitKey() and cv::waitKeyEx() do not capture arrow keys once you click on the image or press TAB
+    setFocusPolicy(Qt::NoFocus);
 }
 
 
@@ -2599,7 +2605,7 @@ void DefaultViewPort::setRatio(int flags)
         return;
 
     //if valid flags
-    if (flags == CV_WINDOW_FREERATIO || flags == CV_WINDOW_KEEPRATIO)
+    if (flags == cv::WINDOW_FREERATIO || flags == cv::WINDOW_KEEPRATIO)
     {
         centralWidget->param_ratio_mode = flags;
         param_keepRatio = flags;
@@ -2637,9 +2643,8 @@ void DefaultViewPort::updateImage(const CvArr* arr)
     }
 
     nbChannelOriginImage = cvGetElemType(mat);
-
-    cvConvertImage(mat, image2Draw_mat, (origin != 0 ? CV_CVTIMG_FLIP : 0) + CV_CVTIMG_SWAP_RB);
-
+    CV_Assert(origin == 0);
+    convertToShow(cv::cvarrToMat(mat), image2Draw_mat);
     viewport()->update();
 }
 
@@ -2657,19 +2662,19 @@ void DefaultViewPort::startDisplayInfo(QString text, int delayms)
 
 void DefaultViewPort::setOpenGlDrawCallback(CvOpenGlDrawCallback /*callback*/, void* /*userdata*/)
 {
-    CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
+    CV_Error(cv::Error::OpenGlNotSupported, "Window doesn't support OpenGL");
 }
 
 
 void DefaultViewPort::makeCurrentOpenGlContext()
 {
-    CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
+    CV_Error(cv::Error::OpenGlNotSupported, "Window doesn't support OpenGL");
 }
 
 
 void DefaultViewPort::updateGl()
 {
-    CV_Error(CV_OpenGlNotSupported, "Window doesn't support OpenGL");
+    CV_Error(cv::Error::OpenGlNotSupported, "Window doesn't support OpenGL");
 }
 
 
@@ -2772,7 +2777,7 @@ void DefaultViewPort::saveView()
             return;
         }
 
-        CV_Error(CV_StsNullPtr, "file extension not recognized, please choose between JPG, JPEG, BMP or PNG");
+        CV_Error(cv::Error::StsNullPtr, "file extension not recognized, please choose between JPG, JPEG, BMP or PNG");
     }
 }
 
@@ -2811,7 +2816,7 @@ void DefaultViewPort::resizeEvent(QResizeEvent* evnt)
     ratioX = width() / float(image2Draw_mat->cols);
     ratioY = height() / float(image2Draw_mat->rows);
 
-    if (param_keepRatio == CV_WINDOW_KEEPRATIO)//to keep the same aspect ratio
+    if (param_keepRatio == cv::WINDOW_KEEPRATIO)//to keep the same aspect ratio
     {
         QSize newSize = QSize(image2Draw_mat->cols, image2Draw_mat->rows);
         newSize.scale(evnt->size(), Qt::KeepAspectRatio);
@@ -3083,25 +3088,38 @@ void DefaultViewPort::drawStatusBar()
 //  if (mouseCoordinate.x()>=0 && mouseCoordinate.y()>=0)
     {
         QRgb rgbValue = image2Draw_qt.pixel(mouseCoordinate);
+        const QPalette colorPalette{ QApplication::palette(this) };
 
-        if (nbChannelOriginImage==CV_8UC3 )
+        const QColor normalTextColor = colorPalette.brush(QPalette::WindowText).color();
+        const QString textColorName = normalTextColor.name();
+
+
+        if (nbChannelOriginImage==CV_8UC3)
         {
-            centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
+            const int r_half = normalTextColor.red() >> 1;
+            const int g_half = normalTextColor.green() >> 1;
+            const int b_half = normalTextColor.blue() >> 1;
+            const QColor red = QColor(255, g_half, b_half);
+            const QColor green = QColor(r_half, 255, b_half);
+            const QColor blue = QColor(r_half, g_half, 255);
+            centralWidget->myStatusBar_msg->setText(tr("<font color=%1>(x=%2, y=%3) ~ </font>")
+                .arg(textColorName)
                 .arg(mouseCoordinate.x())
                 .arg(mouseCoordinate.y())+
-                tr("<font color='red'>R:%3 </font>").arg(qRed(rgbValue))+//.arg(value.val[0])+
-                tr("<font color='green'>G:%4 </font>").arg(qGreen(rgbValue))+//.arg(value.val[1])+
-                tr("<font color='blue'>B:%5</font>").arg(qBlue(rgbValue))//.arg(value.val[2])
+                tr("<font color=%4>R:%5 </font>").arg(red.name()).arg(qRed(rgbValue))+
+                tr("<font color=%6>G:%7 </font>").arg(green.name()).arg(qGreen(rgbValue))+
+                tr("<font color=%8>B:%9</font>").arg(blue.name()).arg(qBlue(rgbValue))
                 );
         }
 
         if (nbChannelOriginImage==CV_8UC1)
         {
-            //all the channel have the same value (because of cvconvertimage), so only the r channel is dsplayed
-            centralWidget->myStatusBar_msg->setText(tr("<font color='black'>(x=%1, y=%2) ~ </font>")
+            //all the channel have the same value (because of cv::cvtColor(GRAY=>RGB)), so only the r channel is dsplayed
+            centralWidget->myStatusBar_msg->setText(tr("<font color=%1>(x=%2, y=%3) ~ </font>")
+                .arg(textColorName)
                 .arg(mouseCoordinate.x())
                 .arg(mouseCoordinate.y())+
-                tr("<font color='grey'>L:%3 </font>").arg(qRed(rgbValue))
+                tr("<font color='grey'>L:%4 </font>").arg(qRed(rgbValue))
                 );
         }
     }
@@ -3262,7 +3280,9 @@ void DefaultViewPort::setSize(QSize /*size_*/)
 
 #ifdef HAVE_QT_OPENGL
 
-OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : QGLWidget(_parent), OCVViewPort(), size(-1, -1)
+
+// QOpenGLWidget vs QGLWidget info: https://www.qt.io/blog/2014/09/10/qt-weekly-19-qopenglwidget
+OpenGlViewPort::OpenGlViewPort(QWidget* _parent) : OpenCVQtWidgetBase(_parent), OCVViewPort(), size(-1, -1)
 {
     glDrawCallback = 0;
     glDrawData = 0;
@@ -3316,7 +3336,11 @@ void OpenGlViewPort::makeCurrentOpenGlContext()
 
 void OpenGlViewPort::updateGl()
 {
+    #ifdef HAVE_QT6
+    QOpenGLWidget::update();
+    #else
     QGLWidget::updateGL();
+    #endif
 }
 
 void OpenGlViewPort::initializeGL()
@@ -3343,31 +3367,31 @@ void OpenGlViewPort::paintGL()
 void OpenGlViewPort::wheelEvent(QWheelEvent* evnt)
 {
     icvmouseEvent((QMouseEvent *)evnt, mouse_wheel);
-    QGLWidget::wheelEvent(evnt);
+    OpenCVQtWidgetBase::wheelEvent(evnt);
 }
 
 void OpenGlViewPort::mousePressEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_down);
-    QGLWidget::mousePressEvent(evnt);
+    OpenCVQtWidgetBase::mousePressEvent(evnt);
 }
 
 void OpenGlViewPort::mouseReleaseEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_up);
-    QGLWidget::mouseReleaseEvent(evnt);
+    OpenCVQtWidgetBase::mouseReleaseEvent(evnt);
 }
 
 void OpenGlViewPort::mouseDoubleClickEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_dbclick);
-    QGLWidget::mouseDoubleClickEvent(evnt);
+    OpenCVQtWidgetBase::mouseDoubleClickEvent(evnt);
 }
 
 void OpenGlViewPort::mouseMoveEvent(QMouseEvent* evnt)
 {
     icvmouseEvent(evnt, mouse_move);
-    QGLWidget::mouseMoveEvent(evnt);
+    OpenCVQtWidgetBase::mouseMoveEvent(evnt);
 }
 
 
@@ -3375,8 +3399,7 @@ QSize OpenGlViewPort::sizeHint() const
 {
     if (size.width() > 0 && size.height() > 0)
         return size;
-
-    return QGLWidget::sizeHint();
+    return OpenCVQtWidgetBase::sizeHint();
 }
 
 void OpenGlViewPort::setSize(QSize size_)
@@ -3385,6 +3408,6 @@ void OpenGlViewPort::setSize(QSize size_)
     updateGeometry();
 }
 
-#endif
+#endif //HAVE_QT_OPENGL
 
 #endif // HAVE_QT

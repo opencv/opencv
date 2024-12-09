@@ -1,8 +1,15 @@
 Hit-or-Miss {#tutorial_hitOrMiss}
 =================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_opening_closing_hats}
 @next_tutorial{tutorial_morph_lines_detection}
+
+|    |    |
+| -: | :- |
+| Original author | Lorena García |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -48,19 +55,19 @@ The code corresponding to the previous example is shown below.
 
 @add_toggle_cpp
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/HitMiss/HitMiss.cpp)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgProc/HitMiss/HitMiss.cpp)
 @include samples/cpp/tutorial_code/ImgProc/HitMiss/HitMiss.cpp
 @end_toggle
 
 @add_toggle_java
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgProc/HitMiss/HitMiss.java)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/ImgProc/HitMiss/HitMiss.java)
 @include samples/java/tutorial_code/ImgProc/HitMiss/HitMiss.java
 @end_toggle
 
 @add_toggle_python
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/imgProc/HitMiss/hit_miss.py)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/imgProc/HitMiss/hit_miss.py)
 @include samples/python/tutorial_code/imgProc/HitMiss/hit_miss.py
 @end_toggle
 

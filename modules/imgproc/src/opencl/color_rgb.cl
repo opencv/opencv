@@ -46,21 +46,21 @@
 
 /**************************************PUBLICFUNC*************************************/
 
-#if depth == 0
+#if SRC_DEPTH == 0
     #define DATA_TYPE uchar
     #define MAX_NUM  255
     #define HALF_MAX_NUM 128
     #define COEFF_TYPE int
     #define SAT_CAST(num) convert_uchar_sat(num)
     #define DEPTH_0
-#elif depth == 2
+#elif SRC_DEPTH == 2
     #define DATA_TYPE ushort
     #define MAX_NUM  65535
     #define HALF_MAX_NUM 32768
     #define COEFF_TYPE int
     #define SAT_CAST(num) convert_ushort_sat(num)
     #define DEPTH_2
-#elif depth == 5
+#elif SRC_DEPTH == 5
     #define DATA_TYPE float
     #define MAX_NUM  1.0f
     #define HALF_MAX_NUM 0.5f
@@ -75,10 +75,10 @@
 
 enum
 {
-    yuv_shift  = 14,
-    R2Y        = 4899,
-    G2Y        = 9617,
-    B2Y        = 1868
+    gray_shift = 15,
+    RY15 = 9798,  // == R2YF*32768 + 0.5
+    GY15 = 19235, // == G2YF*32768 + 0.5
+    BY15 = 3735   // == B2YF*32768 + 0.5
 };
 
 //constants for conversion from/to RGB and Gray, YUV, YCrCb according to BT.601
@@ -86,10 +86,10 @@ enum
 #define G2YF 0.587f
 #define R2YF 0.299f
 
-#define scnbytes ((int)sizeof(DATA_TYPE)*scn)
-#define dcnbytes ((int)sizeof(DATA_TYPE)*dcn)
+#define scnbytes ((int)sizeof(DATA_TYPE)*SCN)
+#define dcnbytes ((int)sizeof(DATA_TYPE)*DCN)
 
-#if bidx == 0
+#if BIDX == 0
 #define R_COMP z
 #define G_COMP y
 #define B_COMP x
@@ -130,7 +130,7 @@ __kernel void RGB2Gray(__global const uchar * srcptr, int src_step, int src_offs
 #ifdef DEPTH_5
                 dst[0] = fma(src_pix.B_COMP, B2YF, fma(src_pix.G_COMP, G2YF, src_pix.R_COMP * R2YF));
 #else
-                dst[0] = (DATA_TYPE)CV_DESCALE(mad24(src_pix.B_COMP, B2Y, mad24(src_pix.G_COMP, G2Y, mul24(src_pix.R_COMP, R2Y))), yuv_shift);
+                dst[0] = (DATA_TYPE)CV_DESCALE(mad24(src_pix.B_COMP, BY15, mad24(src_pix.G_COMP, GY15, mul24(src_pix.R_COMP, RY15))), gray_shift);
 #endif
                 ++y;
                 src_index += src_step;
@@ -160,9 +160,9 @@ __kernel void Gray2RGB(__global const uchar * srcptr, int src_step, int src_offs
                 __global const DATA_TYPE* src = (__global const DATA_TYPE*)(srcptr + src_index);
                 __global DATA_TYPE* dst = (__global DATA_TYPE*)(dstptr + dst_index);
                 DATA_TYPE val = src[0];
-#if dcn == 3 || defined DEPTH_5
+#if DCN == 3 || defined DEPTH_5
                 dst[0] = dst[1] = dst[2] = val;
-#if dcn == 4
+#if DCN == 4
                 dst[3] = MAX_NUM;
 #endif
 #else
@@ -197,7 +197,7 @@ __kernel void RGB(__global const uchar* srcptr, int src_step, int src_offset,
             {
                 __global const DATA_TYPE * src = (__global const DATA_TYPE *)(srcptr + src_index);
                 __global DATA_TYPE * dst = (__global DATA_TYPE *)(dstptr + dst_index);
-#if scn == 3
+#if SCN == 3
                 DATA_TYPE_3 src_pix = vload3(0, src);
 #else
                 DATA_TYPE_4 src_pix = vload4(0, src);
@@ -213,8 +213,8 @@ __kernel void RGB(__global const uchar* srcptr, int src_step, int src_offset,
                 dst[2] = src_pix.z;
 #endif
 
-#if dcn == 4
-#if scn == 3
+#if DCN == 4
+#if SCN == 3
                 dst[3] = MAX_NUM;
 #else
                 dst[3] = src[3];
@@ -250,18 +250,18 @@ __kernel void RGB5x52RGB(__global const uchar* src, int src_step, int src_offset
             {
                 ushort t = *((__global const ushort*)(src + src_index));
 
-#if greenbits == 6
-                dst[dst_index + bidx] = (uchar)(t << 3);
+#if GREENBITS == 6
+                dst[dst_index + BIDX] = (uchar)(t << 3);
                 dst[dst_index + 1] = (uchar)((t >> 3) & ~3);
-                dst[dst_index + (bidx^2)] = (uchar)((t >> 8) & ~7);
+                dst[dst_index + (BIDX^2)] = (uchar)((t >> 8) & ~7);
 #else
-                dst[dst_index + bidx] = (uchar)(t << 3);
+                dst[dst_index + BIDX] = (uchar)(t << 3);
                 dst[dst_index + 1] = (uchar)((t >> 2) & ~7);
-                dst[dst_index + (bidx^2)] = (uchar)((t >> 7) & ~7);
+                dst[dst_index + (BIDX^2)] = (uchar)((t >> 7) & ~7);
 #endif
 
-#if dcn == 4
-#if greenbits == 6
+#if DCN == 4
+#if GREENBITS == 6
                 dst[dst_index + 3] = 255;
 #else
                 dst[dst_index + 3] = t & 0x8000 ? 255 : 0;
@@ -295,9 +295,9 @@ __kernel void RGB2RGB5x5(__global const uchar* src, int src_step, int src_offset
             {
                 uchar4 src_pix = vload4(0, src + src_index);
 
-#if greenbits == 6
+#if GREENBITS == 6
                     *((__global ushort*)(dst + dst_index)) = (ushort)((src_pix.B_COMP >> 3)|((src_pix.G_COMP&~3) << 3)|((src_pix.R_COMP&~7) << 8));
-#elif scn == 3
+#elif SCN == 3
                     *((__global ushort*)(dst + dst_index)) = (ushort)((src_pix.B_COMP >> 3)|((src_pix.G_COMP&~7) << 2)|((src_pix.R_COMP&~7) << 7));
 #else
                     *((__global ushort*)(dst + dst_index)) = (ushort)((src_pix.B_COMP >> 3)|((src_pix.G_COMP&~7) << 2)|
@@ -333,10 +333,10 @@ __kernel void BGR5x52Gray(__global const uchar* src, int src_step, int src_offse
             {
                 int t = *((__global const ushort*)(src + src_index));
 
-#if greenbits == 6
-                dst[dst_index] = (uchar)CV_DESCALE(mad24((t << 3) & 0xf8, B2Y, mad24((t >> 3) & 0xfc, G2Y, ((t >> 8) & 0xf8) * R2Y)), yuv_shift);
+#if GREENBITS == 6
+                dst[dst_index] = (uchar)CV_DESCALE(mad24((t << 3) & 0xf8, BY15, mad24((t >> 3) & 0xfc, GY15, ((t >> 8) & 0xf8) * RY15)), gray_shift);
 #else
-                dst[dst_index] = (uchar)CV_DESCALE(mad24((t << 3) & 0xf8, B2Y, mad24((t >> 2) & 0xf8, G2Y, ((t >> 7) & 0xf8) * R2Y)), yuv_shift);
+                dst[dst_index] = (uchar)CV_DESCALE(mad24((t << 3) & 0xf8, BY15, mad24((t >> 2) & 0xf8, GY15, ((t >> 7) & 0xf8) * RY15)), gray_shift);
 #endif
                 ++y;
                 dst_index += dst_step;
@@ -365,7 +365,7 @@ __kernel void Gray2BGR5x5(__global const uchar* src, int src_step, int src_offse
             {
                 int t = src[src_index];
 
-#if greenbits == 6
+#if GREENBITS == 6
                 *((__global ushort*)(dst + dst_index)) = (ushort)((t >> 3) | ((t & ~3) << 3) | ((t & ~7) << 8));
 #else
                 t >>= 3;

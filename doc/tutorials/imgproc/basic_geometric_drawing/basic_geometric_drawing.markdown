@@ -1,7 +1,14 @@
 Basic Drawing {#tutorial_basic_geometric_drawing}
 =============
 
+@tableofcontents
+
 @next_tutorial{tutorial_random_generator_and_text}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goals
 -----
@@ -14,15 +21,22 @@ In this tutorial you will learn how to:
 -   Draw a **circle** by using the OpenCV function **circle()**
 -   Draw a **filled polygon** by using the OpenCV function **fillPoly()**
 
-@add_toggle_cpp
 OpenCV Theory
 -------------
 
+@add_toggle_cpp
 For this tutorial, we will heavily use two structures: @ref cv::Point and @ref cv::Scalar :
+@end_toggle
+@add_toggle_java
+For this tutorial, we will heavily use two structures: @ref cv::Point and @ref cv::Scalar :
+@end_toggle
+@add_toggle_python
+For this tutorial, we will heavily use tuples in Python instead of @ref cv::Point and @ref cv::Scalar :
+@end_toggle
 
 ### Point
-
 It represents a 2D point, specified by its image coordinates \f$x\f$ and \f$y\f$. We can define it as:
+@add_toggle_cpp
 @code{.cpp}
 Point pt;
 pt.x = 10;
@@ -32,28 +46,8 @@ or
 @code{.cpp}
 Point pt =  Point(10, 8);
 @endcode
-### Scalar
-
--   Represents a 4-element vector. The type Scalar is widely used in OpenCV for passing pixel
-    values.
--   In this tutorial, we will use it extensively to represent BGR color values (3 parameters). It is
-    not necessary to define the last argument if it is not going to be used.
--   Let's see an example, if we are asked for a color argument and we give:
-    @code{.cpp}
-    Scalar( a, b, c )
-    @endcode
-    We would be defining a BGR color such as: *Blue = a*, *Green = b* and *Red = c*
 @end_toggle
-
 @add_toggle_java
-OpenCV Theory
--------------
-
-For this tutorial, we will heavily use two structures: @ref cv::Point and @ref cv::Scalar :
-
-### Point
-
-It represents a 2D point, specified by its image coordinates \f$x\f$ and \f$y\f$. We can define it as:
 @code{.java}
 Point pt = new Point();
 pt.x = 10;
@@ -63,6 +57,12 @@ or
 @code{.java}
 Point pt = new Point(10, 8);
 @endcode
+@end_toggle
+@add_toggle_python
+@code{.python}
+pt = (10, 0) # x = 10, y = 0
+@endcode
+@end_toggle
 ### Scalar
 
 -   Represents a 4-element vector. The type Scalar is widely used in OpenCV for passing pixel
@@ -70,30 +70,41 @@ Point pt = new Point(10, 8);
 -   In this tutorial, we will use it extensively to represent BGR color values (3 parameters). It is
     not necessary to define the last argument if it is not going to be used.
 -   Let's see an example, if we are asked for a color argument and we give:
+@add_toggle_cpp
+    @code{.cpp}
+    Scalar( a, b, c )
+    @endcode
+@end_toggle
+@add_toggle_java
     @code{.java}
     Scalar( a, b, c )
     @endcode
-    We would be defining a BGR color such as: *Blue = a*, *Green = b* and *Red = c*
 @end_toggle
+@add_toggle_python
+    @code{.python}
+    ( a, b, c )
+    @endcode
+@end_toggle
+    We would be defining a BGR color such as: *Blue = a*, *Green = b* and *Red = c*
 
 Code
 ----
 
 @add_toggle_cpp
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp)
     @include samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp
 @end_toggle
 
 @add_toggle_java
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java)
     @include samples/java/tutorial_code/ImgProc/BasicGeometricDrawing/BasicGeometricDrawing.java
 @end_toggle
 
 @add_toggle_python
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py)
     @include samples/python/tutorial_code/imgProc/BasicGeometricDrawing/basic_geometric_drawing.py
 @end_toggle
 

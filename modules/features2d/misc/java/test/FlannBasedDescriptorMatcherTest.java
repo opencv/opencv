@@ -27,7 +27,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "<indexParams>\n"
             + "  <_>\n"
             + "    <name>algorithm</name>\n"
-            + "    <type>23</type>\n"
+            + "    <type>9</type>\n"  // FLANN_INDEX_TYPE_ALGORITHM
             + "    <value>1</value></_>\n"
             + "  <_>\n"
             + "    <name>trees</name>\n"
@@ -43,8 +43,12 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "    <type>5</type>\n"
             + "    <value>0.</value></_>\n"
             + "  <_>\n"
+            + "    <name>explore_all_trees</name>\n"
+            + "    <type>8</type>\n"
+            + "    <value>0</value></_>\n"
+            + "  <_>\n"
             + "    <name>sorted</name>\n"
-            + "    <type>15</type>\n"
+            + "    <type>8</type>\n"  // FLANN_INDEX_TYPE_BOOL
             + "    <value>1</value></_></searchParams>\n"
             + "</opencv_storage>\n";
     static final String ymlParamsDefault = "%YAML:1.0\n---\n"
@@ -52,7 +56,7 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "indexParams:\n"
             + "   -\n"
             + "      name: algorithm\n"
-            + "      type: 23\n"
+            + "      type: 9\n"  // FLANN_INDEX_TYPE_ALGORITHM
             + "      value: 1\n"
             + "   -\n"
             + "      name: trees\n"
@@ -68,15 +72,19 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "      type: 5\n"
             + "      value: 0.\n"
             + "   -\n"
+            + "      name: explore_all_trees\n"
+            + "      type: 8\n"
+            + "      value: 0\n"
+            + "   -\n"
             + "      name: sorted\n"
-            + "      type: 15\n"
+            + "      type: 8\n"  // FLANN_INDEX_TYPE_BOOL
             + "      value: 1\n";
     static final String ymlParamsModified = "%YAML:1.0\n---\n"
             + "format: 3\n"
             + "indexParams:\n"
             + "   -\n"
             + "      name: algorithm\n"
-            + "      type: 23\n"
+            + "      type: 9\n"  // FLANN_INDEX_TYPE_ALGORITHM
             + "      value: 6\n"// this line is changed!
             + "   -\n"
             + "      name: trees\n"
@@ -92,8 +100,12 @@ public class FlannBasedDescriptorMatcherTest extends OpenCVTestCase {
             + "      type: 5\n"
             + "      value: 4.\n"// this line is changed!
             + "   -\n"
+            + "      name: explore_all_trees\n"
+            + "      type: 8\n"
+            + "      value: 1\n"// this line is changed!
+            + "   -\n"
             + "      name: sorted\n"
-            + "      type: 15\n"
+            + "      type: 8\n"    // FLANN_INDEX_TYPE_BOOL
             + "      value: 1\n";
 
     DescriptorMatcher matcher;

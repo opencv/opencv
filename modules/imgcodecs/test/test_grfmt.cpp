@@ -71,24 +71,33 @@ TEST_P(Imgcodecs_FileMode, regression)
 
 const string all_images[] =
 {
-#if defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)
+#if (defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)) \
+    || defined(HAVE_OPENJPEG)
     "readwrite/Rome.jp2",
     "readwrite/Bretagne2.jp2",
     "readwrite/Bretagne2.jp2",
     "readwrite/Grey.jp2",
     "readwrite/Grey.jp2",
+    "readwrite/balloon.j2c",
 #endif
+
 #ifdef HAVE_GDCM
     "readwrite/int16-mono1.dcm",
     "readwrite/uint8-mono2.dcm",
     "readwrite/uint16-mono2.dcm",
     "readwrite/uint8-rgb.dcm",
 #endif
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
     "readwrite/color_palette_alpha.png",
+#endif
+#ifdef HAVE_TIFF
     "readwrite/multipage.tif",
+#endif
     "readwrite/ordinary.bmp",
     "readwrite/rle8.bmp",
+#ifdef HAVE_JPEG
     "readwrite/test_1_c1.jpg",
+#endif
 #ifdef HAVE_IMGCODEC_HDR
     "readwrite/rle.hdr"
 #endif
@@ -99,6 +108,7 @@ const int basic_modes[] =
     IMREAD_UNCHANGED,
     IMREAD_GRAYSCALE,
     IMREAD_COLOR,
+    IMREAD_COLOR_RGB,
     IMREAD_ANYDEPTH,
     IMREAD_ANYCOLOR
 };
@@ -108,11 +118,11 @@ INSTANTIATE_TEST_CASE_P(All, Imgcodecs_FileMode,
                             testing::ValuesIn(all_images),
                             testing::ValuesIn(basic_modes)));
 
-// GDAL does not support "hdr", "dcm" and have problems with "jp2"
+// GDAL does not support "hdr", "dcm" and has problems with JPEG2000 files (jp2, j2c)
 struct notForGDAL {
     bool operator()(const string &name) const {
         const string &ext = name.substr(name.size() - 3, 3);
-        return ext == "hdr" || ext == "dcm" || ext == "jp2" ||
+        return ext == "hdr" || ext == "dcm" || ext == "jp2" || ext == "j2c" ||
                 name.find("rle8.bmp") != std::string::npos;
     }
 };
@@ -158,6 +168,7 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
 
         Mat img_gt(size, CV_MAKETYPE(CV_8U, cn), Scalar::all(0));
         circle(img_gt, center, radius, Scalar::all(255));
+
 #if 1
         if (ext == ".pbm" || ext == ".pgm" || ext == ".ppm")
         {
@@ -172,6 +183,7 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
         EXPECT_EQ(img.type(), img.type());
         EXPECT_EQ(cn, img.channels());
 
+
         if (ext == ".jpg")
         {
             // JPEG format does not provide 100% accuracy
@@ -181,14 +193,21 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             EXPECT_LT(n, expected);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(10, 0), img, img_gt);
         }
+        else if (ext == ".pfm")
+        {
+            img_gt.convertTo(img_gt, CV_MAKETYPE(CV_32F, img.channels()));
+            double n = cvtest::norm(img, img_gt, NORM_L2);
+            EXPECT_LT(n, 1.);
+            EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
+        }
         else
         {
             double n = cvtest::norm(img, img_gt, NORM_L2);
             EXPECT_LT(n, 1.);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
         }
+
 #if 0
-        std::cout << filename << std::endl;
         imshow("loaded", img);
         waitKey(0);
 #else
@@ -199,7 +218,7 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
 
 const string all_exts[] =
 {
-#ifdef HAVE_PNG
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
     ".png",
 #endif
 #ifdef HAVE_TIFF
@@ -214,7 +233,10 @@ const string all_exts[] =
     ".ppm",
     ".pgm",
     ".pbm",
-    ".pnm"
+    ".pnm",
+#endif
+#ifdef HAVE_IMGCODEC_PFM
+    ".pfm",
 #endif
 };
 
@@ -288,6 +310,68 @@ TEST(Imgcodecs_Bmp, read_32bit_rgb)
     const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
+}
+
+TEST(Imgcodecs_Bmp, rgba_bit_mask)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_rgba_mask.bmp";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC4, img.type());
+
+    const uchar* data = img.ptr();
+    ASSERT_EQ(data[3], 255);
+}
+
+TEST(Imgcodecs_Bmp, read_32bit_xrgb)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_32bit_xrgb.bmp";
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC4, img.type());
+
+    const uchar* data = img.ptr();
+    ASSERT_EQ(data[3], 255);
+}
+
+TEST(Imgcodecs_Bmp, rgba_scale)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_rgba_scale.bmp";
+
+    Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC4, img.type());
+
+    uchar* data = img.ptr();
+    ASSERT_EQ(data[0], 255);
+    ASSERT_EQ(data[1], 255);
+    ASSERT_EQ(data[2], 255);
+    ASSERT_EQ(data[3], 255);
+
+    img = cv::imread(filenameInput, IMREAD_COLOR);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    img = cv::imread(filenameInput, IMREAD_COLOR_RGB);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    data = img.ptr();
+    ASSERT_EQ(data[0], 255);
+    ASSERT_EQ(data[1], 255);
+    ASSERT_EQ(data[2], 255);
+
+    img = cv::imread(filenameInput, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC1, img.type());
+
+    data = img.ptr();
+    ASSERT_EQ(data[0], 255);
 }
 
 #ifdef HAVE_IMGCODEC_HDR
@@ -371,6 +455,30 @@ TEST(Imgcodecs_Pam, read_write)
 }
 #endif
 
+#ifdef HAVE_IMGCODEC_PFM
+TEST(Imgcodecs_Pfm, read_write)
+{
+  Mat img = imread(findDataFile("readwrite/lena.pam"));
+  ASSERT_FALSE(img.empty());
+  img.convertTo(img, CV_32F, 1/255.0f);
+
+  std::vector<int> params;
+  string writefile = cv::tempfile(".pfm");
+  EXPECT_NO_THROW(cv::imwrite(writefile, img, params));
+  cv::Mat reread = cv::imread(writefile, IMREAD_UNCHANGED);
+
+  string writefile_no_param = cv::tempfile(".pfm");
+  EXPECT_NO_THROW(cv::imwrite(writefile_no_param, img));
+  cv::Mat reread_no_param = cv::imread(writefile_no_param, IMREAD_UNCHANGED);
+
+  EXPECT_EQ(0, cvtest::norm(reread, reread_no_param, NORM_INF));
+  EXPECT_EQ(0, cvtest::norm(img, reread, NORM_INF));
+
+  EXPECT_EQ(0, remove(writefile.c_str()));
+  EXPECT_EQ(0, remove(writefile_no_param.c_str()));
+}
+#endif
+
 TEST(Imgcodecs, write_parameter_type)
 {
     cv::Mat m(10, 10, CV_8UC1, cv::Scalar::all(0));
@@ -383,6 +491,19 @@ TEST(Imgcodecs, write_parameter_type)
     cv::Matx<uchar, 10, 10> matx;
     EXPECT_NO_THROW(cv::imwrite(tmp_file, matx)) << "* Failed with cv::Matx";
     EXPECT_EQ(0, remove(tmp_file.c_str()));
+}
+
+TEST(Imgcodecs, imdecode_user_buffer)
+{
+    cv::Mat encoded = cv::Mat::zeros(1, 1024, CV_8UC1);
+    cv::Mat user_buffer(1, 1024, CV_8UC1);
+    cv::Mat result = cv::imdecode(encoded, IMREAD_ANYCOLOR, &user_buffer);
+    EXPECT_TRUE(result.empty());
+    // the function does not release user-provided buffer
+    EXPECT_FALSE(user_buffer.empty());
+
+    result = cv::imdecode(encoded, IMREAD_ANYCOLOR);
+    EXPECT_TRUE(result.empty());
 }
 
 }} // namespace

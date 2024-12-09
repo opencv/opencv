@@ -2,15 +2,18 @@ if(WIN32)
   try_compile(__VALID_DIRECTX
     "${OpenCV_BINARY_DIR}"
     "${OpenCV_SOURCE_DIR}/cmake/checks/directx.cpp"
+    LINK_LIBRARIES d3d11
     OUTPUT_VARIABLE TRY_OUT
   )
   if(NOT __VALID_DIRECTX)
+    message(STATUS "No support for DirectX (install Windows 8 SDK)")
     return()
   endif()
   try_compile(__VALID_DIRECTX_NV12
     "${OpenCV_BINARY_DIR}"
     "${OpenCV_SOURCE_DIR}/cmake/checks/directx.cpp"
     COMPILE_DEFINITIONS "-DCHECK_NV12"
+    LINK_LIBRARIES d3d11
     OUTPUT_VARIABLE TRY_OUT
   )
   if(__VALID_DIRECTX_NV12)

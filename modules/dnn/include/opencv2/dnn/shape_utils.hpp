@@ -43,14 +43,14 @@
 #define OPENCV_DNN_DNN_SHAPE_UTILS_HPP
 
 #include <opencv2/dnn/dnn.hpp>
-#include <opencv2/core/types_c.h>  // CV_MAX_DIM
+#include <opencv2/core/cvdef.h>  // CV_MAX_DIM
 #include <iostream>
 #include <ostream>
 #include <sstream>
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 //Slicing
 
@@ -283,7 +283,8 @@ bool isAllOnes(const MatShape &inputShape, int startPos, int endPos)
     }
     return true;
 }
-CV__DNN_EXPERIMENTAL_NS_END
+
+CV__DNN_INLINE_NS_END
 }
 }
 #endif

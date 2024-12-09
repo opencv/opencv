@@ -41,7 +41,13 @@
 //M*/
 
 #include "../precomp.hpp"
+#include "../op_cuda.hpp"
 #include "layers_common.hpp"
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/split.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 namespace cv
 {
@@ -64,6 +70,12 @@ public:
         {
             outputsCount = -1;
         }
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -91,6 +103,30 @@ public:
             CV_Assert(inputs[0].total() == outputs[i].total());
             inputs[0].copyTo(outputs[i]);
         }
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::SplitOp>(preferableTarget, std::move(context->stream));
+    }
+#endif
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        const int numOutputs = scales[1].size();
+        for (int i = 0; i < numOutputs; i++)
+        {
+            if (scales[1][i] != scales[0][0])
+             return false;
+        }
+        return true;
     }
 };
 

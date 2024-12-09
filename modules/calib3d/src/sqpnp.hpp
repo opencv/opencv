@@ -1,3 +1,10 @@
+// Implementation of SQPnP as described in the paper:
+//
+// "A Consistently Fast and Globally Optimal Solution to the Perspective-n-Point Problem" by G. Terzakis and M. Lourakis
+//     a) Paper:         https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123460460.pdf
+//     b) Supplementary: https://www.ecva.net/papers/eccv_2020/papers_ECCV/papers/123460460-supp.pdf
+
+
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
@@ -85,13 +92,14 @@ private:
 
     /*
     * @brief                Computes the 9x9 PSD Omega matrix and supporting matrices.
+    * @param objectPoints   The 3D points in object coordinates.
     */
-    void solveInternal();
+    void solveInternal(InputArray objectPoints);
 
     /*
     * @brief                Produces the distance from being orthogonal for a given 3x3 matrix
-    *                       in row-major form.
-    * @param e              The vector to test representing a 3x3 matrix in row major form.
+    *                       in row-major order.
+    * @param e              The vector to test representing a 3x3 matrix in row-major order.
     * @return               The distance the matrix is from being orthogonal.
     */
     static double orthogonalityError(const cv::Matx<double, 9, 1>& e);
@@ -99,31 +107,49 @@ private:
     /*
     * @brief                Processes a solution and sorts it by error.
     * @param solution       The solution to evaluate.
-    * @param min_error          The current minimum error.
+    * @param objectPoints   The 3D points in object coordinates.
+    * @param min_error      The current minimum error.
     */
-    void checkSolution(SQPSolution& solution, double& min_error);
+    void checkSolution(SQPSolution& solution, InputArray objectPoints, double& min_error);
 
     /*
-    * @brief                Computes the determinant of a matrix stored in row-major format.
-    * @param e              Vector representing a 3x3 matrix stored in row-major format.
+    * @brief                Computes the determinant of a matrix stored in row-major order.
+    * @param e              Vector representing a 3x3 matrix stored in row-major order.
     * @return               The determinant of the matrix.
     */
     static double det3x3(const cv::Matx<double, 9, 1>& e);
 
     /*
-    * @brief                Tests the chirality for a given solution.
+    * @brief                Tests the cheirality on the mean object point for a given solution.
     * @param solution       The solution to evaluate.
     */
     inline bool positiveDepth(const SQPSolution& solution) const;
 
     /*
-    * @brief                Determines the nearest rotation matrix to a given rotaiton matrix.
-    *                       Input and output are 9x1 vector representing a vector stored in row-major
-    *                       form.
-    * @param e              The input 3x3 matrix stored in a vector in row-major form.
-    * @param r              The nearest rotation matrix to the input e (again in row-major form).
+    * @brief                Tests the cheirality on all object points for a given solution.
+    * @param solution       The solution to evaluate.
+    * @param objectPoints   The 3D points in object coordinates.
     */
-    static void nearestRotationMatrix(const cv::Matx<double, 9, 1>& e,
+    inline bool positiveMajorityDepths(const SQPSolution& solution, InputArray objectPoints) const;
+
+    /*
+    * @brief                Determines the nearest rotation matrix to a given rotation matrix using SVD.
+    *                       Input and output are 9x1 vector representing a matrix stored in row-major
+    *                       order.
+    * @param e              The input 3x3 matrix stored in a vector in row-major order.
+    * @param r              The nearest rotation matrix to the input e (again in row-major order).
+    */
+    static void nearestRotationMatrixSVD(const cv::Matx<double, 9, 1>& e,
+        cv::Matx<double, 9, 1>& r);
+
+    /*
+    * @brief                Determines the nearest rotation matrix to a given rotation matrix using the FOAM algorithm.
+    *                       Input and output are 9x1 vector representing a matrix stored in row-major
+    *                       order.
+    * @param e              The input 3x3 matrix stored in a vector in row-major order.
+    * @param r              The nearest rotation matrix to the input e (again in row-major order).
+    */
+    static void nearestRotationMatrixFOAM(const cv::Matx<double, 9, 1>& e,
         cv::Matx<double, 9, 1>& r);
 
     /*
@@ -138,6 +164,13 @@ private:
     * @param delta          The next step down the gradient.
     */
     void solveSQPSystem(const cv::Matx<double, 9, 1>& r, cv::Matx<double, 9, 1>& delta);
+
+    /*
+    * @brief                Inverse of SPD 3x3 A via lower triangular sqrt-free Cholesky: A = L*D*L'
+    * @param A              The input matrix
+    * @param A1             The inverse
+    */
+    static bool invertSPD3x3(const cv::Matx<double, 3, 3>& A, cv::Matx<double, 3, 3>& A1);
 
     /*
     * @brief                Analytically computes the inverse of a symmetric 3x3 matrix using the

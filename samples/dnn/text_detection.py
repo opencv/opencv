@@ -1,11 +1,18 @@
 '''
     Text detection model: https://github.com/argman/EAST
     Download link: https://www.dropbox.com/s/r2ingd0l3zt8hxs/frozen_east_text_detection.tar.gz?dl=1
-    Text recognition model taken from here: https://github.com/meijieru/crnn.pytorch
+
+    CRNN Text recognition model taken from here: https://github.com/meijieru/crnn.pytorch
     How to convert from pb to onnx:
     Using classes from here: https://github.com/meijieru/crnn.pytorch/blob/master/models/crnn.py
+
+    More converted onnx text recognition models can be downloaded directly here:
+    Download link: https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing
+    And these models taken from here:https://github.com/clovaai/deep-text-recognition-benchmark
+
     import torch
-    import models.crnn as CRNN
+    from models.crnn import CRNN
+
     model = CRNN(32, 1, 37, 256)
     model.load_state_dict(torch.load('crnn.pth'))
     dummy_input = torch.randn(1, 1, 32, 100)
@@ -23,7 +30,8 @@ import argparse
 parser = argparse.ArgumentParser(
     description="Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of "
                 "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)"
-                "The OCR model can be obtained from converting the pretrained CRNN model to .onnx format from the github repository https://github.com/meijieru/crnn.pytorch")
+                "The OCR model can be obtained from converting the pretrained CRNN model to .onnx format from the github repository https://github.com/meijieru/crnn.pytorch"
+                "Or you can download trained OCR model directly from https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing")
 parser.add_argument('--input',
                     help='Path to input image or video file. Skip this argument to capture frames from a camera.')
 parser.add_argument('--model', '-m', required=True,

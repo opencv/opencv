@@ -1,0 +1,22 @@
+name: Feature request
+description: Submit a request for a new OpenCV feature
+labels: ["feature"]
+
+body:
+- type: markdown
+  attributes:
+    value: >
+      #### Thank you for contributing! Before submitting a feature request, please make sure the request has no duplicate by searching through [the existing and past issues](https://github.com/opencv/opencv/issues?page=1&q=is%3Aissue+sort%3Acreated-desc)
+
+- type: textarea
+  attributes:
+    label: Describe the feature and motivation
+    description: |
+      Please provide a clear and concise proposal of the feature and outline the motivation.
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Additional context
+    description: |
+      Add any other context, such as pseudo code, links, diagram, screenshots, to help the community better understand the feature request.

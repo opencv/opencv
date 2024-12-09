@@ -52,13 +52,6 @@ static const int VAR_MISSED = VAR_ORDERED;
 
 TrainData::~TrainData() {}
 
-Mat TrainData::getTestSamples() const
-{
-    Mat idx = getTestSampleIdx();
-    Mat samples = getSamples();
-    return idx.empty() ? Mat() : getSubMatrix(samples, idx, getLayout());
-}
-
 Mat TrainData::getSubVector(const Mat& vec, const Mat& idx)
 {
     if (!(vec.cols == 1 || vec.rows == 1))
@@ -117,6 +110,7 @@ Mat TrainData::getSubMatrix(const Mat& m, const Mat& idx, int layout)
     CV_Error(Error::StsInternal, "");
 }
 
+
 class TrainDataImpl CV_FINAL : public TrainData
 {
 public:
@@ -151,6 +145,12 @@ public:
     int getNAllVars() const CV_OVERRIDE
     {
         return layout == ROW_SAMPLE ? samples.cols : samples.rows;
+    }
+
+    Mat getTestSamples() const CV_OVERRIDE
+    {
+        Mat idx = getTestSampleIdx();
+        return idx.empty() ? Mat() : getSubMatrix(samples, idx, getLayout());
     }
 
     Mat getSamples() const CV_OVERRIDE { return samples; }
@@ -574,7 +574,7 @@ public:
             if( nvars == 0 )
             {
                 if( rowvals.empty() )
-                    CV_Error(CV_StsBadArg, "invalid CSV format; no data found");
+                    CV_Error(cv::Error::StsBadArg, "invalid CSV format; no data found");
                 nvars = (int)rowvals.size();
                 if( !varTypeSpec.empty() && varTypeSpec.size() > 0 )
                 {
@@ -637,7 +637,7 @@ public:
             {
                 for( i = ninputvars; i < nvars; i++ )
                     if( vtypes[i] == VAR_CATEGORICAL )
-                        CV_Error(CV_StsBadArg,
+                        CV_Error(cv::Error::StsBadArg,
                                  "If responses are vector values, not scalars, they must be marked as ordered responses");
             }
         }
@@ -724,14 +724,14 @@ public:
                 }
 
                 if ( ptr[3] != '[')
-                    CV_Error( CV_StsBadArg, errmsg );
+                    CV_Error( cv::Error::StsBadArg, errmsg );
 
                 ptr += 4; // pass "ord["
                 do
                 {
                     int b1 = (int)strtod( ptr, &stopstring );
                     if( *stopstring == 0 || (*stopstring != ',' && *stopstring != ']' && *stopstring != '-') )
-                        CV_Error( CV_StsBadArg, errmsg );
+                        CV_Error( cv::Error::StsBadArg, errmsg );
                     ptr = stopstring + 1;
                     if( (stopstring[0] == ',') || (stopstring[0] == ']'))
                     {
@@ -745,7 +745,7 @@ public:
                         {
                             int b2 = (int)strtod( ptr, &stopstring);
                             if ( (*stopstring == 0) || (*stopstring != ',' && *stopstring != ']') )
-                                CV_Error( CV_StsBadArg, errmsg );
+                                CV_Error( cv::Error::StsBadArg, errmsg );
                             ptr = stopstring + 1;
                             CV_Assert( 0 <= b1 && b1 <= b2 && b2 < nvars );
                             for (int i = b1; i <= b2; i++)
@@ -753,7 +753,7 @@ public:
                             specCounter += b2 - b1 + 1;
                         }
                         else
-                            CV_Error( CV_StsBadArg, errmsg );
+                            CV_Error( cv::Error::StsBadArg, errmsg );
 
                     }
                 }
@@ -762,7 +762,7 @@ public:
         }
 
         if( specCounter != nvars )
-            CV_Error( CV_StsBadArg, "type of some variables is not specified" );
+            CV_Error( cv::Error::StsBadArg, "type of some variables is not specified" );
     }
 
     void setTrainTestSplitRatio(double ratio, bool shuffle) CV_OVERRIDE
@@ -985,6 +985,27 @@ public:
         }
     }
 
+    void getNames(std::vector<String>& names) const CV_OVERRIDE
+    {
+        size_t n = nameMap.size();
+        TrainDataImpl::MapType::const_iterator it = nameMap.begin(),
+                                               it_end = nameMap.end();
+        names.resize(n+1);
+        names[0] = "?";
+        for( ; it != it_end; ++it )
+        {
+            String s = it->first;
+            int label = it->second;
+            CV_Assert( label > 0 && label <= (int)n );
+            names[label] = s;
+        }
+    }
+
+    Mat getVarSymbolFlags() const CV_OVERRIDE
+    {
+        return varSymbolFlags;
+    }
+
     FILE* file;
     int layout;
     Mat samples, missing, varType, varIdx, varSymbolFlags, responses, missingSubst;
@@ -994,30 +1015,6 @@ public:
     MapType nameMap;
 };
 
-void TrainData::getNames(std::vector<String>& names) const
-{
-    const TrainDataImpl* impl = dynamic_cast<const TrainDataImpl*>(this);
-    CV_Assert(impl != 0);
-    size_t n = impl->nameMap.size();
-    TrainDataImpl::MapType::const_iterator it = impl->nameMap.begin(),
-                                           it_end = impl->nameMap.end();
-    names.resize(n+1);
-    names[0] = "?";
-    for( ; it != it_end; ++it )
-    {
-        String s = it->first;
-        int label = it->second;
-        CV_Assert( label > 0 && label <= (int)n );
-        names[label] = s;
-    }
-}
-
-Mat TrainData::getVarSymbolFlags() const
-{
-    const TrainDataImpl* impl = dynamic_cast<const TrainDataImpl*>(this);
-    CV_Assert(impl != 0);
-    return impl->varSymbolFlags;
-}
 
 Ptr<TrainData> TrainData::loadFromCSV(const String& filename,
                                       int headerLines,

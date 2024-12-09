@@ -3,8 +3,10 @@ if(OPENCV_INITIAL_PASS)
   add_subdirectory(generator)
 endif()
 
-if(APPLE_FRAMEWORK OR WINRT OR NOT PYTHON_DEFAULT_AVAILABLE OR NOT ANT_EXECUTABLE
-    OR NOT (JNI_FOUND OR (ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7))
+if(APPLE_FRAMEWORK OR WINRT
+    OR NOT PYTHON_DEFAULT_AVAILABLE
+    OR NOT (ANT_EXECUTABLE OR Java_FOUND OR ANDROID_PROJECTS_BUILD_TYPE STREQUAL "GRADLE")
+    OR NOT (JNI_FOUND OR (ANDROID AND (NOT DEFINED ANDROID_NATIVE_API_LEVEL OR ANDROID_NATIVE_API_LEVEL GREATER 7)))
     OR BUILD_opencv_world
     )
   ocv_module_disable(java)
@@ -15,7 +17,7 @@ ocv_add_module(java BINDINGS opencv_core opencv_imgproc PRIVATE_REQUIRED opencv_
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/common.cmake)
 
-# UTILITY: glob specific sources and append them to list (type is in H, CPP, JAVA, AIDL)
+# UTILITY: glob specific sources and append them to list (type is in H, CPP, JAVA)
 macro(glob_more_specific_sources _type _root _output)
   unset(_masks)
   if(${_type} STREQUAL "H")
@@ -24,8 +26,6 @@ macro(glob_more_specific_sources _type _root _output)
     set(_masks "${_root}/cpp/*.cpp")
   elseif(${_type} STREQUAL "JAVA")
     set(_masks "${_root}/java/*.java" "${_root}/java/*.java.in")
-  elseif(${_type} STREQUAL "AIDL")
-    set(_masks "${_root}/java/*.aidl")
   endif()
   if (_masks)
     file(GLOB _result ${_masks})
@@ -55,7 +55,7 @@ macro(copy_common_tests _src_location _dst_location _deps)
 endmacro()
 
 
-add_subdirectory(jni)  # generates ${the_module} target (${the_module}_jni doesn't work properly with Android samples)
+add_subdirectory(jni)  # generates ${the_module} target (${the_module}_jni doesn't work properly with Android non-gradle samples)
 if(ANDROID)
   add_subdirectory(android_sdk)  # generates ${the_module}_android target
 else()

@@ -72,7 +72,9 @@
 #if defined _WIN32 || defined WINCE
 # include <windows.h>
 #else
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
 # include <dirent.h>
+#endif
 # include <sys/stat.h>
 #endif
 
@@ -263,14 +265,14 @@ void BaseTest::clear()
 }
 
 
-const CvFileNode* BaseTest::find_param( CvFileStorage* fs, const char* param_name )
+cv::FileNode BaseTest::find_param( const cv::FileStorage& fs, const char* param_name )
 {
-    CvFileNode* node = cvGetFileNodeByName(fs, 0, get_name().c_str());
-    return node ? cvGetFileNodeByName( fs, node, param_name ) : 0;
+    cv::FileNode node = fs[get_name()];
+    return node[param_name];
 }
 
 
-int BaseTest::read_params( CvFileStorage* )
+int BaseTest::read_params( const cv::FileStorage& )
 {
     return 0;
 }
@@ -310,7 +312,7 @@ void BaseTest::safe_run( int start_from )
             char buf[1 << 16];
 
             const char* delim = exc.err.find('\n') == cv::String::npos ? "" : "\n";
-            sprintf( buf, "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d",
+            snprintf( buf, sizeof(buf), "OpenCV Error:\n\t%s (%s%s) in %s, file %s, line %d",
                     errorStr, delim, exc.err.c_str(), exc.func.size() > 0 ?
                     exc.func.c_str() : "unknown function", exc.file.c_str(), exc.line );
             ts->printf(TS::LOG, "%s\n", buf);
@@ -551,13 +553,9 @@ static int tsErrorCallback( int status, const char* func_name, const char* err_m
 void TS::init( const string& modulename )
 {
     data_search_subdir.push_back(modulename);
-#ifndef WINRT
-    char* datapath_dir = getenv("OPENCV_TEST_DATA_PATH");
-#else
-    char* datapath_dir = OPENCV_TEST_DATA_PATH;
-#endif
+    std::string datapath_dir = cv::utils::getConfigurationParameterString("OPENCV_TEST_DATA_PATH");
 
-    if( datapath_dir )
+    if( !datapath_dir.empty() )
     {
         data_path = path_join(path_join(datapath_dir, modulename), "");
     }
@@ -589,8 +587,6 @@ void TS::init( const string& modulename )
 
     if( params.use_optimized == 0 )
         cv::setUseOptimized(false);
-
-    rng = RNG(params.rng_seed);
 }
 
 
@@ -601,7 +597,7 @@ void TS::set_gtest_status()
         return SUCCEED();
 
     char seedstr[32];
-    sprintf(seedstr, "%08x%08x", (unsigned)(current_test_info.rng_seed>>32),
+    snprintf(seedstr, sizeof(seedstr), "%08x%08x", (unsigned)(current_test_info.rng_seed>>32),
                                 (unsigned)(current_test_info.rng_seed));
 
     string logs = "";
@@ -633,15 +629,12 @@ void TS::update_context( BaseTest* test, int test_case_idx, bool update_ts_conte
     {
         current_test_info.rng_seed = param_seed + test_case_idx;
         current_test_info.rng_seed0 = current_test_info.rng_seed;
-
-        rng = RNG(current_test_info.rng_seed);
-        cv::theRNG() = rng;
     }
 
     current_test_info.test = test;
     current_test_info.test_case_idx = test_case_idx;
     current_test_info.code = 0;
-    cvSetErrStatus( CV_StsOk );
+    cvSetErrStatus( cv::Error::StsOk );
 }
 
 
@@ -906,11 +899,7 @@ void parseCustomOptions(int argc, char **argv)
 
     test_ipp_check = parser.get<bool>("test_ipp_check");
     if (!test_ipp_check)
-#ifndef WINRT
-        test_ipp_check = getenv("OPENCV_IPP_CHECK") != NULL;
-#else
-        test_ipp_check = false;
-#endif
+        test_ipp_check = cv::utils::getConfigurationParameterBool("OPENCV_IPP_CHECK");
 
     param_seed = parser.get<unsigned int>("test_seed");
 
@@ -956,8 +945,13 @@ static bool isDirectory(const std::string& path)
 
 void addDataSearchPath(const std::string& path)
 {
-    if (isDirectory(path))
+    if (!path.empty() && isDirectory(path))
         TS::ptr()->data_search_path.push_back(path);
+}
+void addDataSearchEnv(const std::string& env_name)
+{
+    const std::string val = cv::utils::getConfigurationParameterString(env_name.c_str());
+    cvtest::addDataSearchPath(val);
 }
 void addDataSearchSubDirectory(const std::string& subdir)
 {
@@ -1004,14 +998,10 @@ static std::string findData(const std::string& relative_path, bool required, boo
 
     const std::vector<std::string>& search_subdir = TS::ptr()->data_search_subdir;
 
-#ifndef WINRT
-    char* datapath_dir = getenv("OPENCV_TEST_DATA_PATH");
-#else
-    char* datapath_dir = OPENCV_TEST_DATA_PATH;
-#endif
+    std::string datapath_dir = cv::utils::getConfigurationParameterString("OPENCV_TEST_DATA_PATH");
 
     std::string datapath;
-    if (datapath_dir)
+    if (!datapath_dir.empty())
     {
         datapath = datapath_dir;
         //CV_Assert(isDirectory(datapath) && "OPENCV_TEST_DATA_PATH is specified but it doesn't exist");
@@ -1038,7 +1028,8 @@ static std::string findData(const std::string& relative_path, bool required, boo
         }
     }
 #ifdef OPENCV_TEST_DATA_INSTALL_PATH
-    datapath = path_join("./", OPENCV_TEST_DATA_INSTALL_PATH);
+    datapath = OPENCV_TEST_DATA_INSTALL_PATH;
+
     if (isDirectory(datapath))
     {
         for(size_t i = search_subdir.size(); i > 0; i--)
@@ -1129,6 +1120,8 @@ void SystemInfoCollector::OnTestProgramStart(const testing::UnitTest&)
     recordPropertyVerbose("cv_vcs_version", "OpenCV VCS version", getSnippetFromConfig("Version control:", "\n"));
     recordPropertyVerbose("cv_build_type", "Build type", getSnippetFromConfig("Configuration:", "\n"), CV_TEST_BUILD_CONFIG);
     recordPropertyVerbose("cv_compiler", "Compiler", getSnippetFromConfig("C++ Compiler:", "\n"));
+    recordPropertyVerbose("implementation_hint", "Algorithm hint", getSnippetFromConfig("Algorithm Hint:", "\n"));
+    recordPropertyVerbose("hal", "HAL", getSnippetFromConfig("Custom HAL:", "\n"));
     const char* parallelFramework = cv::currentParallelFramework();
     if (parallelFramework)
     {

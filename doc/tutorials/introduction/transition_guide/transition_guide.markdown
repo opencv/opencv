@@ -4,6 +4,10 @@ Transition guide {#tutorial_transition_guide}
 @prev_tutorial{tutorial_documentation}
 @next_tutorial{tutorial_cross_referencing}
 
+|    |    |
+| -: | :- |
+| Original author | Maksim Shabunin |
+| Compatibility | OpenCV >= 3.0 |
 
 @tableofcontents
 
@@ -65,8 +69,6 @@ Changes intended to ease the migration have been made in OpenCV 3.0, thus the fo
 // new header
 #include "opencv2/<module>.hpp"
 @endcode
-
-2. If your code is using C API (`cv*` functions, `Cv*` structures or `CV_*` enumerations), include corresponding `*_c.h` headers. Although it is recommended to use C++ API, most of C-functions are still accessible in separate header files (opencv2/core/core_c.h, opencv2/core/types_c.h, opencv2/imgproc/imgproc_c.h, etc.).
 
 Modern way to use algorithm {#tutorial_transition_algorithm}
 ---------------------------
@@ -199,7 +201,7 @@ All specialized `ocl` implementations has been hidden behind general C++ algorit
 
 New class cv::UMat is intended to hide data exchange with OpenCL device in a convenient way.
 
-Following example illustrate API modifications (from [OpenCV site](http://opencv.org/platforms/opencl.html)):
+Following example illustrate API modifications (from [OpenCV site](https://opencv.org/opencl)):
 
 -   OpenCL-aware code OpenCV-2.x
 @code{.cpp}
@@ -240,7 +242,10 @@ for(;;){
 
 CUDA {#tutorial_transition_hints_cuda}
 ----
-_cuda_ module has been split into several smaller pieces:
+
+CUDA modules has been moved into opencv_contrib repository.
+
+@cond CUDA_MODULES
 - _cuda_ - @ref cuda
 - _cudaarithm_ - @ref cudaarithm
 - _cudabgsegm_ - @ref cudabgsegm
@@ -253,10 +258,7 @@ _cuda_ module has been split into several smaller pieces:
 - _cudastereo_ - @ref cudastereo
 - _cudawarping_ - @ref cudawarping
 - _cudev_ - @ref cudev
-
-`gpu` namespace has been removed, use cv::cuda namespace instead. Many classes has also been renamed, for example:
-- `gpu::FAST_GPU` -> cv::cuda::FastFeatureDetector
-- `gpu::createBoxFilter_GPU` -> cv::cuda::createBoxFilter
+@endcond
 
 Documentation format {#tutorial_transition_docs}
 --------------------

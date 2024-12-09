@@ -1,25 +1,32 @@
-File Input and Output using XML and YAML files {#tutorial_file_input_output_with_xml_yml}
+File Input and Output using XML / YAML / JSON files {#tutorial_file_input_output_with_xml_yml}
 ==============================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_discrete_fourier_transform}
-@next_tutorial{tutorial_interoperability_with_OpenCV_1}
+@next_tutorial{tutorial_how_to_use_OpenCV_parallel_for_new}
+
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
 
-You'll find answers for the following questions:
+You'll find answers to the following questions:
 
--   How to print and read text entries to a file and OpenCV using YAML or XML files?
--   How to do the same for OpenCV data structures?
--   How to do this for your data structures?
--   Usage of OpenCV data structures such as @ref cv::FileStorage , @ref cv::FileNode or @ref
+-   How do you print and read text entries to a file in OpenCV using YAML, XML, or JSON files?
+-   How can you perform the same operations for OpenCV data structures?
+-   How can this be done for your custom data structures?
+-   How do you use OpenCV data structures, such as @ref cv::FileStorage , @ref cv::FileNode or @ref
     cv::FileNodeIterator .
 
 Source code
 -----------
 @add_toggle_cpp
 You can [download this from here
-](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
+](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp) or find it in the
 `samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp` of the OpenCV source code
 library.
 
@@ -30,7 +37,7 @@ Here's a sample code of how to achieve all the stuff enumerated at the goal list
 
 @add_toggle_python
 You can [download this from here
-](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/core/file_input_output/file_input_output.py) or find it in the
+](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/core/file_input_output/file_input_output.py) or find it in the
 `samples/python/tutorial_code/core/file_input_output/file_input_output.py` of the OpenCV source code
 library.
 
@@ -42,14 +49,14 @@ Here's a sample code of how to achieve all the stuff enumerated at the goal list
 Explanation
 -----------
 
-Here we talk only about XML and YAML file inputs. Your output (and its respective input) file may
+Here we talk only about XML, YAML and JSON file inputs. Your output (and its respective input) file may
 have only one of these extensions and the structure coming from this. They are two kinds of data
 structures you may serialize: *mappings* (like the STL map and the Python dictionary) and *element sequence* (like the STL
 vector). The difference between these is that in a map every element has a unique name through what
 you may access it. For sequences you need to go through them to query a specific item.
 
--#  **XML/YAML File Open and Close.** Before you write any content to such file you need to open it
-    and at the end to close it. The XML/YAML data structure in OpenCV is @ref cv::FileStorage . To
+-#  **XML/YAML/JSON File Open and Close.** Before you write any content to such file you need to open it
+    and at the end to close it. The XML/YAML/JSON data structure in OpenCV is @ref cv::FileStorage . To
     specify that this structure to which file binds on your hard drive you can use either its
     constructor or the *open()* function of this:
     @add_toggle_cpp

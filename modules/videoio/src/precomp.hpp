@@ -42,10 +42,24 @@
 #ifndef __VIDEOIO_H_
 #define __VIDEOIO_H_
 
+#if defined(__OPENCV_BUILD) && defined(BUILD_PLUGIN)
+#undef __OPENCV_BUILD  // allow public API only
+#define OPENCV_HAVE_CVCONFIG_H 1  // but we still have access to cvconfig.h (TODO remove this)
+#include <opencv2/core.hpp>
+#include <opencv2/core/utils/trace.hpp>
+#endif
+
+#if defined __linux__ || defined __APPLE__ || defined __HAIKU__
+#include <unistd.h>  // -D_FORTIFY_SOURCE=2 workaround: https://github.com/opencv/opencv/issues/15020
+#endif
+
+#include "opencv2/core/cvdef.h"
 #include "opencv2/videoio.hpp"
 
 #include "opencv2/core/utility.hpp"
+#ifdef __OPENCV_BUILD
 #include "opencv2/core/private.hpp"
+#endif
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.defines.hpp>
@@ -60,8 +74,6 @@
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/imgcodecs/imgcodecs_c.h"
-#include "opencv2/videoio/videoio_c.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -85,132 +97,6 @@
     #undef abs
 #endif
 
-#define __BEGIN__ __CV_BEGIN__
-#define __END__  __CV_END__
-#define EXIT __CV_EXIT__
-
-/***************************** CvCapture structure ******************************/
-
-struct CvCapture
-{
-    virtual ~CvCapture() {}
-    virtual double getProperty(int) const { return 0; }
-    virtual bool setProperty(int, double) { return 0; }
-    virtual bool grabFrame() { return true; }
-    virtual IplImage* retrieveFrame(int) { return 0; }
-    virtual int getCaptureDomain() { return cv::CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
-};
-
-/*************************** CvVideoWriter structure ****************************/
-
-struct CvVideoWriter
-{
-    virtual ~CvVideoWriter() {}
-    virtual bool writeFrame(const IplImage*) { return false; }
-    virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
-};
-
-CvCapture * cvCreateCameraCapture_V4L( int index );
-CvCapture * cvCreateCameraCapture_V4L( const char* deviceName );
-CvCapture * cvCreateCameraCapture_DC1394( int index );
-CvCapture * cvCreateCameraCapture_DC1394_2( int index );
-CvCapture* cvCreateCameraCapture_MIL( int index );
-CvCapture* cvCreateCameraCapture_Giganetix( int index );
-CvCapture * cvCreateCameraCapture_CMU( int index );
-CvCapture* cvCreateFileCapture_Win32( const char* filename );
-CvCapture* cvCreateCameraCapture_VFW( int index );
-CvCapture* cvCreateFileCapture_VFW( const char* filename );
-CvVideoWriter* cvCreateVideoWriter_Win32( const char* filename, int fourcc,
-                                          double fps, CvSize frameSize, int is_color );
-CvVideoWriter* cvCreateVideoWriter_VFW( const char* filename, int fourcc,
-                                        double fps, CvSize frameSize, int is_color );
-CvCapture* cvCreateCameraCapture_DShow( int index );
-CvCapture* cvCreateCameraCapture_OpenNI( int index );
-CvCapture* cvCreateCameraCapture_OpenNI2( int index );
-CvCapture* cvCreateFileCapture_OpenNI( const char* filename );
-CvCapture* cvCreateFileCapture_OpenNI2( const char* filename );
-CvCapture* cvCreateCameraCapture_Android( int index );
-CvCapture* cvCreateCameraCapture_XIMEA( int index );
-CvCapture* cvCreateCameraCapture_XIMEA( const char* serialNumber );
-CvCapture* cvCreateCameraCapture_AVFoundation(int index);
-CvCapture* cvCreateCameraCapture_Aravis( int index );
-
-namespace cv {
-CvCapture* cvCreateFileCapture_Images(const char* filename);
-CvVideoWriter* cvCreateVideoWriter_Images(const char* filename);
-}
-
-
-#define CV_CAP_GSTREAMER_1394		0
-#define CV_CAP_GSTREAMER_V4L		1
-#define CV_CAP_GSTREAMER_V4L2		2
-#define CV_CAP_GSTREAMER_FILE		3
-
-CvCapture * cvCreateFileCapture_QT (const char  * filename);
-CvCapture * cvCreateCameraCapture_QT  (const int     index);
-
-CvVideoWriter* cvCreateVideoWriter_QT ( const char* filename, int fourcc,
-                                        double fps, CvSize frameSize, int is_color );
-
-CvCapture* cvCreateFileCapture_AVFoundation (const char * filename);
-CvVideoWriter* cvCreateVideoWriter_AVFoundation( const char* filename, int fourcc,
-                                                double fps, CvSize frameSize, int is_color );
-
-
-CvCapture * cvCreateCameraCapture_Unicap  (const int     index);
-CvCapture * cvCreateCameraCapture_PvAPI  (const int     index);
-
-namespace cv {
-CvVideoWriter* cvCreateVideoWriter_GStreamer( const char* filename, int fourcc,
-                                            double fps, CvSize frameSize, int is_color );
-}
-
-
-namespace cv
-{
-    class IVideoCapture
-    {
-    public:
-        virtual ~IVideoCapture() {}
-        virtual double getProperty(int) const { return 0; }
-        virtual bool setProperty(int, double) { return false; }
-        virtual bool grabFrame() = 0;
-        virtual bool retrieveFrame(int, OutputArray) = 0;
-        virtual bool isOpened() const = 0;
-        virtual int getCaptureDomain() { return CAP_ANY; } // Return the type of the capture object: CAP_VFW, etc...
-    };
-
-    class IVideoWriter
-    {
-    public:
-        virtual ~IVideoWriter() {}
-        virtual double getProperty(int) const { return 0; }
-        virtual bool setProperty(int, double) { return false; }
-
-        virtual bool isOpened() const = 0;
-        virtual void write(InputArray) = 0;
-
-        virtual int getCaptureDomain() const { return cv::CAP_ANY; } // Return the type of the capture object: CAP_FFMPEG, etc...
-    };
-
-    Ptr<IVideoCapture> createMotionJpegCapture(const String& filename);
-    Ptr<IVideoWriter> createMotionJpegWriter(const String& filename, int fourcc, double fps, Size frameSize, bool iscolor);
-
-    Ptr<IVideoCapture> createGPhoto2Capture(int index);
-    Ptr<IVideoCapture> createGPhoto2Capture(const String& deviceName);
-
-
-    Ptr<IVideoCapture> createXINECapture(const char* filename);
-
-    Ptr<IVideoCapture> createGStreamerCapture(const String& filename);
-    Ptr<IVideoCapture> createGStreamerCapture(int index);
-
-    Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const String& filename);
-    Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const String& filename, int fourcc, double fps, Size frameSize, int isColor);
-
-    Ptr<IVideoCapture> cvCreateCapture_MSMF(int index);
-    Ptr<IVideoCapture> cvCreateCapture_MSMF(const String& filename);
-    Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const String& filename, int fourcc, double fps, Size frameSize, int is_color);
-}
+#include "cap_interface.hpp"
 
 #endif /* __VIDEOIO_H_ */

@@ -11,7 +11,7 @@
 
 ## Quick start sample
 
-The following short sample gives basic knowledges on the wrappers usage:
+The following short sample gives basic knowledge on the wrappers usage:
 
 ```cpp
 #include "ivx.hpp"
@@ -77,12 +77,12 @@ E.g. external ref-counting is implemented for 1.0 version and native OpenVX one 
 
 Also there are some **C++ 11** features are used (e.g. rvalue ref-s) when their availability is detected at ***compile time***.
 
-C++ exceptions are used for errors indication instead of return codes. There are two types of exceptions are defined:  `RuntimeError` is thrown when OpenVX C call returned unsuccessful result and `WrapperError` is thrown when a problem is occurred in the wrappers code. Both exception calsses are derived from `std::exception` (actually from its inheritants).
+C++ exceptions are used for errors indication instead of return codes. There are two types of exceptions are defined:  `RuntimeError` is thrown when OpenVX C call returned unsuccessful result and `WrapperError` is thrown when a problem is occurred in the wrappers code. Both exception classes are derived from `std::exception` (actually from its inheritance).
 
 The so called **OpenVX objects** (e.g. `vx_image`) are represented as C++ classes in wrappers.
 All these classes use automatic ref-counting that allows development of exception-safe code.
 All these classes have `create()` or `createXYZ()` `static` methods for instances creation. (E.g. `Image::create()`, `Image::createVirtual()` and  `Image::createFromHandle()`)
-Most of the wrapped OpenVX functions are represented as methods of the corresponding C++ classes, but in most cases they still accept C "object" types (e.g. `vx_image` or `vx_context`) that allows mixing of C and C++ OpenVX API use. 
+Most of the wrapped OpenVX functions are represented as methods of the corresponding C++ classes, but in most cases they still accept C "object" types (e.g. `vx_image` or `vx_context`) that allows mixing of C and C++ OpenVX API use.
 E.g.:
 ```cpp
 class Image

@@ -1,8 +1,15 @@
 Image Pyramids {#tutorial_pyramids}
 ==============
 
+@tableofcontents
+
 @prev_tutorial{tutorial_morph_lines_detection}
 @next_tutorial{tutorial_threshold}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -36,7 +43,7 @@ Theory
         pyramid (with less resolution)
 -   In this tutorial we'll use the *Gaussian pyramid*.
 
-#### Gaussian Pyramid
+### Gaussian Pyramid
 
 -   Imagine the pyramid as a set of layers in which the higher the layer, the smaller the size.
 
@@ -72,19 +79,19 @@ This tutorial code's is shown lines below.
 
 @add_toggle_cpp
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp)
 @include samples/cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp
 @end_toggle
 
 @add_toggle_java
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgProc/Pyramids/Pyramids.java)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/ImgProc/Pyramids/Pyramids.java)
 @include samples/java/tutorial_code/ImgProc/Pyramids/Pyramids.java
 @end_toggle
 
 @add_toggle_python
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/imgProc/Pyramids/pyramids.py)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/imgProc/Pyramids/pyramids.py)
 @include samples/python/tutorial_code/imgProc/Pyramids/pyramids.py
 @end_toggle
 
@@ -93,7 +100,7 @@ Explanation
 
 Let's check the general structure of the program:
 
-#### Load an image
+### Load an image
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp load
@@ -107,7 +114,7 @@ Let's check the general structure of the program:
 @snippet python/tutorial_code/imgProc/Pyramids/pyramids.py load
 @end_toggle
 
-#### Create window
+### Create window
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp show_image
@@ -121,7 +128,7 @@ Let's check the general structure of the program:
 @snippet python/tutorial_code/imgProc/Pyramids/pyramids.py show_image
 @end_toggle
 
-#### Loop
+### Loop
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgProc/Pyramids/Pyramids.cpp loop
@@ -184,7 +191,7 @@ Otherwise, an error will be shown.
 Results
 -------
 
--   The program calls by default an image [chicky_512.png](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/chicky_512.png)
+-   The program calls by default an image [chicky_512.png](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/chicky_512.png)
     that comes in the `samples/data` folder. Notice that this image is \f$512 \times 512\f$,
     hence a downsample won't generate any error (\f$512 = 2^{9}\f$). The original image is shown below:
 

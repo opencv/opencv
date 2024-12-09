@@ -1,3 +1,7 @@
+// This file is a part of OpenCV project.
+// See opencv/LICENSE and http://opencv.org/license.html for the actual licensing terms.
+// See also opencv/doc/LICENSE_CHANGE_NOTICE.txt. Below is the original license:
+
 /*********************************************************************
  * Software License Agreement (BSD License)
  *
@@ -248,18 +252,18 @@ void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int fla
             if( !conjB )
                 for( j = j0; j < j1; j += 2 )
                 {
-                    double denom = (double)(dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps);
-                    double re = (double)(dataA[j]*dataB[j] + dataA[j+1]*dataB[j+1]);
-                    double im = (double)(dataA[j+1]*dataB[j] - dataA[j]*dataB[j+1]);
+                    double denom = (double)dataB[j]*dataB[j] + (double)dataB[j+1]*dataB[j+1] + (double)eps;
+                    double re = (double)dataA[j]*dataB[j] + (double)dataA[j+1]*dataB[j+1];
+                    double im = (double)dataA[j+1]*dataB[j] - (double)dataA[j]*dataB[j+1];
                     dataC[j] = (float)(re / denom);
                     dataC[j+1] = (float)(im / denom);
                 }
             else
                 for( j = j0; j < j1; j += 2 )
                 {
-                    double denom = (double)(dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps);
-                    double re = (double)(dataA[j]*dataB[j] - dataA[j+1]*dataB[j+1]);
-                    double im = (double)(dataA[j+1]*dataB[j] + dataA[j]*dataB[j+1]);
+                    double denom = (double)dataB[j]*dataB[j] + (double)dataB[j+1]*dataB[j+1] + (double)eps;
+                    double re = (double)dataA[j]*dataB[j] - (double)dataA[j+1]*dataB[j+1];
+                    double im = (double)dataA[j+1]*dataB[j] + (double)dataA[j]*dataB[j+1];
                     dataC[j] = (float)(re / denom);
                     dataC[j+1] = (float)(im / denom);
                 }
@@ -609,7 +613,7 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
     AutoBuffer<double> _wc(cols);
     double* const wc = _wc.data();
 
-    double coeff0 = 2.0 * CV_PI / (double)(cols - 1), coeff1 = 2.0f * CV_PI / (double)(rows - 1);
+    double coeff0 = 2.0 * CV_PI / (double)(cols - 1), coeff1 = 2.0 * CV_PI / (double)(rows - 1);
     for(int j = 0; j < cols; j++)
         wc[j] = 0.5 * (1.0 - cos(coeff0 * j));
 

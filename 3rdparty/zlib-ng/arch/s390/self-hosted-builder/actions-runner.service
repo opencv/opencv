@@ -1,0 +1,18 @@
+[Unit]
+Description=Podman container: Gaplib Github Actions Runner
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=1
+RequiresMountsFor=/run/user/1001/containers
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+Restart=always
+TimeoutStopSec=61
+ExecStart=/usr/bin/podman start gaplib-actions-runner
+ExecStop=/usr/bin/podman stop -t 1 gaplib-actions-runner
+ExecStopPost=/usr/bin/podman stop -t 1 gaplib-actions-runner
+Type=forking
+
+[Install]
+WantedBy=default.target

@@ -37,6 +37,7 @@ protected:
 
     int m_index, m_width, m_height, m_fourcc;
     int m_widthSet, m_heightSet;
+    bool m_convertRGBSet;
     static videoInput g_VI;
 };
 

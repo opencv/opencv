@@ -46,92 +46,201 @@
 
 namespace cv {
 
-template<> void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const
-{ cvReleaseCapture(&obj); }
+static bool param_VIDEOIO_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOIO_DEBUG", false);
+static bool param_VIDEOCAPTURE_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOCAPTURE_DEBUG", false);
+static bool param_VIDEOWRITER_DEBUG = utils::getConfigurationParameterBool("OPENCV_VIDEOWRITER_DEBUG", false);
 
-template<> void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const
-{ cvReleaseVideoWriter(&obj); }
+#define CV_CAPTURE_LOG_DEBUG(tag, ...)                   \
+    if (param_VIDEOIO_DEBUG || param_VIDEOCAPTURE_DEBUG) \
+    {                                                    \
+        CV_LOG_WARNING(nullptr, __VA_ARGS__);            \
+    }
+
+#define CV_WRITER_LOG_DEBUG(tag, ...)                   \
+    if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG) \
+    {                                                   \
+        CV_LOG_WARNING(nullptr, __VA_ARGS__)            \
+    }
+
+void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const { cvReleaseCapture(&obj); }
+void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const { cvReleaseVideoWriter(&obj); }
 
 
-
-VideoCapture::VideoCapture()
+VideoCapture::VideoCapture() : throwOnFail(false)
 {}
 
-VideoCapture::VideoCapture(const String& filename, int apiPreference)
+VideoCapture::VideoCapture(const String& filename, int apiPreference) : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
     open(filename, apiPreference);
 }
 
-VideoCapture::VideoCapture(const String& filename)
+VideoCapture::VideoCapture(const String& filename, int apiPreference, const std::vector<int>& params)
+    : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
-    open(filename, CAP_ANY);
+    open(filename, apiPreference, params);
 }
 
-VideoCapture::VideoCapture(int index)
-{
-    CV_TRACE_FUNCTION();
-    open(index);
-}
-
-VideoCapture::VideoCapture(int index, int apiPreference)
+VideoCapture::VideoCapture(int index, int apiPreference) : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
     open(index, apiPreference);
 }
 
+VideoCapture::VideoCapture(int index, int apiPreference, const std::vector<int>& params)
+    : throwOnFail(false)
+{
+    CV_TRACE_FUNCTION();
+    open(index, apiPreference, params);
+}
+
 VideoCapture::~VideoCapture()
 {
     CV_TRACE_FUNCTION();
-
     icap.release();
-    cap.release();
 }
 
 bool VideoCapture::open(const String& filename, int apiPreference)
 {
-    CV_TRACE_FUNCTION();
+    return open(filename, apiPreference, std::vector<int>());
+}
 
-    if (isOpened()) release();
+bool VideoCapture::open(const String& filename, int apiPreference, const std::vector<int>& params)
+{
+    CV_INSTRUMENT_REGION();
 
+    if (isOpened())
+    {
+        release();
+    }
+
+    const VideoCaptureParameters parameters(params);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByFilename();
     for (size_t i = 0; i < backends.size(); i++)
     {
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
-            CvCapture* capture = NULL;
-            VideoCapture_create(capture, icap, info.id, filename);
-            if (!icap.empty())
+            if (!info.backendFactory)
             {
-                if (icap->isOpened())
-                    return true;
-                icap.release();
+                CV_LOG_DEBUG(NULL, "VIDEOIO(" << info.name << "): factory is not available (plugins require filesystem support)");
+                continue;
             }
-            if (capture)
+            CV_CAPTURE_LOG_DEBUG(NULL,
+                                 cv::format("VIDEOIO(%s): trying capture filename='%s' ...",
+                                            info.name, filename.c_str()));
+            CV_Assert(!info.backendFactory.empty());
+            const Ptr<IBackend> backend = info.backendFactory->getBackend();
+            if (!backend.empty())
             {
-                cap.reset(capture);
-                // assume it is opened
-                return true;
+                try
+                {
+                    icap = backend->createCapture(filename, parameters);
+                    if (!icap.empty())
+                    {
+                        CV_CAPTURE_LOG_DEBUG(NULL,
+                                             cv::format("VIDEOIO(%s): created, isOpened=%d",
+                                                        info.name, icap->isOpened()));
+                        if (icap->isOpened())
+                        {
+                            return true;
+                        }
+                        icap.release();
+                    }
+                    else
+                    {
+                        CV_CAPTURE_LOG_DEBUG(NULL,
+                                             cv::format("VIDEOIO(%s): can't create capture",
+                                                        info.name));
+                    }
+                }
+                catch (const cv::Exception& e)
+                {
+                    if (throwOnFail && apiPreference != CAP_ANY)
+                    {
+                        throw;
+                    }
+                    CV_LOG_WARNING(NULL,
+                                   cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n",
+                                              info.name, e.what()));
+                }
+                catch (const std::exception& e)
+                {
+                    if (throwOnFail && apiPreference != CAP_ANY)
+                    {
+                        throw;
+                    }
+                    CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n",
+                                                    info.name, e.what()));
+                }
+                catch (...)
+                {
+                    if (throwOnFail && apiPreference != CAP_ANY)
+                    {
+                        throw;
+                    }
+                    CV_LOG_WARNING(NULL,
+                                   cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n",
+                                              info.name));
+                }
+            }
+            else
+            {
+                CV_CAPTURE_LOG_DEBUG(NULL,
+                                    cv::format("VIDEOIO(%s): backend is not available "
+                                                "(plugin is missing, or can't be loaded due "
+                                                "dependencies or it is not compatible)",
+                                                info.name));
             }
         }
     }
+
+    if(apiPreference != CAP_ANY)
+    {
+        bool found = cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
+        if (found)
+        {
+            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
+                                            "but can't be used to capture by name",
+                                            cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(apiPreference)).c_str()));
+        }
+    }
+
+    if (throwOnFail)
+    {
+        CV_Error_(Error::StsError, ("could not open '%s'", filename.c_str()));
+    }
+
+    if (cv::videoio_registry::checkDeprecatedBackend(apiPreference))
+    {
+        CV_LOG_DEBUG(NULL,
+            cv::format("VIDEOIO(%s): backend is removed from OpenCV",
+                cv::videoio_registry::getBackendName((VideoCaptureAPIs) apiPreference).c_str()));
+    }
+    else
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong. "
+            "Please make sure that your computer support chosen backend and OpenCV built "
+            "with right flags.");
+    }
+
     return false;
 }
 
-bool VideoCapture::open(const String& filename)
+bool VideoCapture::open(int cameraNum, int apiPreference)
 {
-    CV_TRACE_FUNCTION();
-
-    return open(filename, CAP_ANY);
+    return open(cameraNum, apiPreference, std::vector<int>());
 }
 
-bool  VideoCapture::open(int cameraNum, int apiPreference)
+bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>& params)
 {
     CV_TRACE_FUNCTION();
 
-    if (isOpened()) release();
+    if (isOpened())
+    {
+        release();
+    }
 
     if (apiPreference == CAP_ANY)
     {
@@ -144,103 +253,178 @@ bool  VideoCapture::open(int cameraNum, int apiPreference)
         }
     }
 
+    const VideoCaptureParameters parameters(params);
     const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByIndex();
     for (size_t i = 0; i < backends.size(); i++)
     {
         const VideoBackendInfo& info = backends[i];
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
-            CvCapture* capture = NULL;
-            VideoCapture_create(capture, icap, info.id, cameraNum);
-            if (!icap.empty())
+            if (!info.backendFactory)
             {
-                if (icap->isOpened())
-                    return true;
-                icap.release();
+                CV_LOG_DEBUG(NULL, "VIDEOIO(" << info.name << "): factory is not available (plugins require filesystem support)");
+                continue;
             }
-            if (capture)
+            CV_CAPTURE_LOG_DEBUG(NULL,
+                                 cv::format("VIDEOIO(%s): trying capture cameraNum=%d ...",
+                                            info.name, cameraNum));
+            CV_Assert(!info.backendFactory.empty());
+            const Ptr<IBackend> backend = info.backendFactory->getBackend();
+            if (!backend.empty())
             {
-                cap.reset(capture);
-                // assume it is opened
-                return true;
+                try
+                {
+                    icap = backend->createCapture(cameraNum, parameters);
+                    if (!icap.empty())
+                    {
+                        CV_CAPTURE_LOG_DEBUG(NULL,
+                                             cv::format("VIDEOIO(%s): created, isOpened=%d",
+                                                        info.name, icap->isOpened()));
+                        if (icap->isOpened())
+                        {
+                            return true;
+                        }
+                        icap.release();
+                    }
+                    else
+                    {
+                        CV_CAPTURE_LOG_DEBUG(NULL,
+                                             cv::format("VIDEOIO(%s): can't create capture",
+                                                        info.name));
+                    }
+                }
+                catch (const cv::Exception& e)
+                {
+                    if (throwOnFail && apiPreference != CAP_ANY)
+                    {
+                        throw;
+                    }
+                    CV_LOG_WARNING(NULL,
+                                   cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n",
+                                              info.name, e.what()));
+                }
+                catch (const std::exception& e)
+                {
+                    if (throwOnFail && apiPreference != CAP_ANY)
+                    {
+                        throw;
+                    }
+                    CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n",
+                                                    info.name, e.what()));
+                }
+                catch (...)
+                {
+                    if (throwOnFail && apiPreference != CAP_ANY)
+                    {
+                        throw;
+                    }
+                    CV_LOG_WARNING(NULL,
+                                   cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n",
+                                              info.name));
+                }
+            }
+            else
+            {
+                CV_CAPTURE_LOG_DEBUG(NULL,
+                                    cv::format("VIDEOIO(%s): backend is not available "
+                                                "(plugin is missing, or can't be loaded due "
+                                                "dependencies or it is not compatible)",
+                                                info.name));
             }
         }
     }
+
+    if(apiPreference != CAP_ANY)
+    {
+        bool found = cv::videoio_registry::isBackendBuiltIn(static_cast<VideoCaptureAPIs>(apiPreference));
+        if (found)
+        {
+            CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
+                                            "but can't be used to capture by index",
+                                            cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(apiPreference)).c_str()));
+        }
+    }
+
+    if (throwOnFail)
+    {
+        CV_Error_(Error::StsError, ("could not open camera %d", cameraNum));
+    }
+
+    if (cv::videoio_registry::checkDeprecatedBackend(apiPreference))
+    {
+        CV_LOG_DEBUG(NULL,
+            cv::format("VIDEOIO(%s): backend is removed from OpenCV",
+                cv::videoio_registry::getBackendName((VideoCaptureAPIs) apiPreference).c_str()));
+    }
+    else
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong."
+            "Please make sure that your computer support chosen backend and OpenCV built "
+            "with right flags.");
+    }
+
     return false;
-}
-
-bool VideoCapture::open(int index)
-{
-    CV_TRACE_FUNCTION();
-
-    return open(index, CAP_ANY);
 }
 
 bool VideoCapture::isOpened() const
 {
-    if (!icap.empty())
-        return icap->isOpened();
-    return !cap.empty();  // legacy interface doesn't support closed files
+    return !icap.empty() ? icap->isOpened() : false;
 }
 
 String VideoCapture::getBackendName() const
 {
     int api = 0;
     if (icap)
+    {
         api = icap->isOpened() ? icap->getCaptureDomain() : 0;
-    else if (cap)
-        api = cap->getCaptureDomain();
+    }
     CV_Assert(api != 0);
-    return cv::videoio_registry::getBackendName((VideoCaptureAPIs)api);
+    return cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(api));
 }
 
 void VideoCapture::release()
 {
     CV_TRACE_FUNCTION();
     icap.release();
-    cap.release();
 }
 
 bool VideoCapture::grab()
 {
     CV_INSTRUMENT_REGION();
-
-    if (!icap.empty())
-        return icap->grabFrame();
-    return cvGrabFrame(cap) != 0;
+    bool ret = !icap.empty() ? icap->grabFrame() : false;
+    if (!ret && throwOnFail)
+    {
+        CV_Error(Error::StsError, "");
+    }
+    return ret;
 }
 
 bool VideoCapture::retrieve(OutputArray image, int channel)
 {
     CV_INSTRUMENT_REGION();
 
+    bool ret = false;
     if (!icap.empty())
-        return icap->retrieveFrame(channel, image);
-
-    IplImage* _img = cvRetrieveFrame(cap, channel);
-    if( !_img )
     {
-        image.release();
-        return false;
+        ret = icap->retrieveFrame(channel, image);
     }
-    if(_img->origin == IPL_ORIGIN_TL)
-        cv::cvarrToMat(_img).copyTo(image);
-    else
+    if (!ret && throwOnFail)
     {
-        Mat temp = cv::cvarrToMat(_img);
-        flip(temp, image, 0);
+        CV_Error_(Error::StsError, ("could not retrieve channel %d", channel));
     }
-    return true;
+    return ret;
 }
 
 bool VideoCapture::read(OutputArray image)
 {
     CV_INSTRUMENT_REGION();
 
-    if(grab())
+    if (grab())
+    {
         retrieve(image);
-    else
+    } else {
         image.release();
+    }
     return !image.empty();
 }
 
@@ -282,11 +466,13 @@ VideoCapture& VideoCapture::operator >> (UMat& image)
 
 bool VideoCapture::set(int propId, double value)
 {
-    CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can set read-only property");
-
-    if (!icap.empty())
-        return icap->setProperty(propId, value);
-    return cvSetCaptureProperty(cap, propId, value) != 0;
+    CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");
+    bool ret = !icap.empty() ? icap->setProperty(propId, value) : false;
+    if (!ret && throwOnFail)
+    {
+        CV_Error_(Error::StsError, ("could not set prop %d = %f", propId, value));
+    }
+    return ret;
 }
 
 double VideoCapture::get(int propId) const
@@ -294,17 +480,43 @@ double VideoCapture::get(int propId) const
     if (propId == CAP_PROP_BACKEND)
     {
         int api = 0;
-        if (icap)
-            api = icap->isOpened() ? icap->getCaptureDomain() : 0;
-        else if (cap)
-            api = cap->getCaptureDomain();
+        if (icap && icap->isOpened())
+        {
+            api = icap->getCaptureDomain();
+        }
         if (api <= 0)
+        {
             return -1.0;
-        return (double)api;
+        }
+        return static_cast<double>(api);
     }
-    if (!icap.empty())
-        return icap->getProperty(propId);
-    return cap ? cap->getProperty(propId) : 0;
+    return !icap.empty() ? icap->getProperty(propId) : 0;
+}
+
+
+bool VideoCapture::waitAny(const std::vector<VideoCapture>& streams,
+                           CV_OUT std::vector<int>& readyIndex, int64 timeoutNs)
+{
+    CV_Assert(!streams.empty());
+
+    VideoCaptureAPIs backend = (VideoCaptureAPIs)streams[0].icap->getCaptureDomain();
+
+    for (size_t i = 1; i < streams.size(); ++i)
+    {
+        VideoCaptureAPIs backend_i = (VideoCaptureAPIs)streams[i].icap->getCaptureDomain();
+        CV_CheckEQ((int)backend, (int)backend_i, "All captures must have the same backend");
+    }
+
+#if (defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO) // see cap_v4l.cpp guard
+    if (backend == CAP_V4L2)
+    {
+        return VideoCapture_V4L_waitAny(streams, readyIndex, timeoutNs);
+    }
+#else
+    CV_UNUSED(readyIndex);
+    CV_UNUSED(timeoutNs);
+#endif
+    CV_Error(Error::StsNotImplemented, "VideoCapture::waitAny() is supported by V4L backend only");
 }
 
 
@@ -315,21 +527,34 @@ double VideoCapture::get(int propId) const
 VideoWriter::VideoWriter()
 {}
 
-VideoWriter::VideoWriter(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
+VideoWriter::VideoWriter(const String& filename, int _fourcc, double fps, Size frameSize,
+                         bool isColor)
 {
     open(filename, _fourcc, fps, frameSize, isColor);
 }
 
 
-VideoWriter::VideoWriter(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor)
+VideoWriter::VideoWriter(const String& filename, int apiPreference, int _fourcc, double fps,
+                         Size frameSize, bool isColor)
 {
     open(filename, apiPreference, _fourcc, fps, frameSize, isColor);
+}
+
+VideoWriter::VideoWriter(const cv::String& filename, int fourcc, double fps,
+                         const cv::Size& frameSize, const std::vector<int>& params)
+{
+    open(filename, fourcc, fps, frameSize, params);
+}
+
+VideoWriter::VideoWriter(const cv::String& filename, int apiPreference, int fourcc, double fps,
+                         const cv::Size& frameSize, const std::vector<int>& params)
+{
+    open(filename, apiPreference, fourcc, fps, frameSize, params);
 }
 
 void VideoWriter::release()
 {
     iwriter.release();
-    writer.release();
 }
 
 VideoWriter::~VideoWriter()
@@ -337,54 +562,141 @@ VideoWriter::~VideoWriter()
     release();
 }
 
-bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
+bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize,
+                       bool isColor)
 {
-    return open(filename, CAP_ANY, _fourcc, fps, frameSize, isColor);
+    return open(filename, CAP_ANY, _fourcc, fps, frameSize,
+                std::vector<int> { VIDEOWRITER_PROP_IS_COLOR, static_cast<int>(isColor) });
 }
 
-bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, double fps, Size frameSize, bool isColor)
+bool VideoWriter::open(const String& filename, int apiPreference, int _fourcc, double fps,
+                       Size frameSize, bool isColor)
+{
+    return open(filename, apiPreference, _fourcc, fps, frameSize,
+                std::vector<int> { VIDEOWRITER_PROP_IS_COLOR, static_cast<int>(isColor) });
+}
+
+
+bool VideoWriter::open(const String& filename, int fourcc, double fps, const Size& frameSize,
+                       const std::vector<int>& params)
+{
+    return open(filename, CAP_ANY, fourcc, fps, frameSize, params);
+}
+
+bool VideoWriter::open(const String& filename, int apiPreference, int fourcc, double fps,
+                       const Size& frameSize, const std::vector<int>& params)
 {
     CV_INSTRUMENT_REGION();
 
-    if (isOpened()) release();
-
-    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_Writer();
-    for (size_t i = 0; i < backends.size(); i++)
+    if (isOpened())
     {
-        const VideoBackendInfo& info = backends[i];
+        release();
+    }
+
+    const VideoWriterParameters parameters(params);
+    for (const auto& info : videoio_registry::getAvailableBackends_Writer())
+    {
         if (apiPreference == CAP_ANY || apiPreference == info.id)
         {
-            CvVideoWriter* writer_ = NULL;
-            VideoWriter_create(writer_, iwriter, info.id, filename, _fourcc, fps, frameSize, isColor);
-            if (!iwriter.empty())
+            CV_WRITER_LOG_DEBUG(NULL,
+                                cv::format("VIDEOIO(%s): trying writer with filename='%s' "
+                                           "fourcc=0x%08x fps=%g sz=%dx%d isColor=%d...",
+                                           info.name, filename.c_str(), (unsigned)fourcc, fps,
+                                           frameSize.width, frameSize.height,
+                                           parameters.get(VIDEOWRITER_PROP_IS_COLOR, true)));
+            CV_Assert(!info.backendFactory.empty());
+            const Ptr<IBackend> backend = info.backendFactory->getBackend();
+            if (!backend.empty())
             {
-                if (iwriter->isOpened())
-                    return true;
-                iwriter.release();
+                try
+                {
+                    iwriter = backend->createWriter(filename, fourcc, fps, frameSize, parameters);
+                    if (!iwriter.empty())
+                    {
+
+                        CV_WRITER_LOG_DEBUG(NULL,
+                                            cv::format("VIDEOIO(%s): created, isOpened=%d",
+                                                       info.name, iwriter->isOpened()));
+                        if (param_VIDEOIO_DEBUG || param_VIDEOWRITER_DEBUG)
+                        {
+                            for (int key: parameters.getUnused())
+                            {
+                                CV_LOG_WARNING(NULL,
+                                               cv::format("VIDEOIO(%s): parameter with key '%d' was unused",
+                                                          info.name, key));
+                            }
+                        }
+                        if (iwriter->isOpened())
+                        {
+                            return true;
+                        }
+                        iwriter.release();
+                    }
+                    else
+                    {
+                        CV_WRITER_LOG_DEBUG(NULL, cv::format("VIDEOIO(%s): can't create writer",
+                                                             info.name));
+                    }
+                }
+                catch (const cv::Exception& e)
+                {
+                    CV_LOG_WARNING(NULL,
+                                   cv::format("VIDEOIO(%s): raised OpenCV exception:\n\n%s\n",
+                                              info.name, e.what()));
+                }
+                catch (const std::exception& e)
+                {
+                    CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): raised C++ exception:\n\n%s\n",
+                                                    info.name, e.what()));
+                }
+                catch (...)
+                {
+                    CV_LOG_WARNING(NULL,
+                                   cv::format("VIDEOIO(%s): raised unknown C++ exception!\n\n",
+                                              info.name));
+                }
             }
-            if (writer_)
+            else
             {
-                // assume it is opened
-                writer.reset(writer_);
-                return true;
+                CV_WRITER_LOG_DEBUG(NULL,
+                                    cv::format("VIDEOIO(%s): backend is not available "
+                                               "(plugin is missing, or can't be loaded due "
+                                               "dependencies or it is not compatible)",
+                                               info.name));
             }
         }
     }
+
+    if (cv::videoio_registry::checkDeprecatedBackend(apiPreference))
+    {
+        CV_LOG_DEBUG(NULL,
+            cv::format("VIDEOIO(%s): backend is removed from OpenCV",
+                cv::videoio_registry::getBackendName((VideoCaptureAPIs) apiPreference).c_str()));
+    }
+    else
+    {
+        CV_LOG_DEBUG(NULL, "VIDEOIO: choosen backend does not work or wrong."
+            "Please make sure that your computer support chosen backend and OpenCV built "
+            "with right flags.");
+    }
+
     return false;
 }
 
 bool VideoWriter::isOpened() const
 {
-    return !iwriter.empty() || !writer.empty();
+    return !iwriter.empty();
 }
 
 
 bool VideoWriter::set(int propId, double value)
 {
-    CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can set read-only property");
+    CV_CheckNE(propId, (int)CAP_PROP_BACKEND, "Can't set read-only property");
 
     if (!iwriter.empty())
+    {
         return iwriter->setProperty(propId, value);
+    }
     return false;
 }
 
@@ -394,15 +706,15 @@ double VideoWriter::get(int propId) const
     {
         int api = 0;
         if (iwriter)
+        {
             api = iwriter->getCaptureDomain();
-        else if (writer)
-            api = writer->getCaptureDomain();
-        if (api <= 0)
-            return -1.0;
-        return (double)api;
+        }
+        return (api <= 0) ?  -1. : static_cast<double>(api);
     }
     if (!iwriter.empty())
+    {
         return iwriter->getProperty(propId);
+    }
     return 0.;
 }
 
@@ -410,23 +722,20 @@ String VideoWriter::getBackendName() const
 {
     int api = 0;
     if (iwriter)
+    {
         api = iwriter->getCaptureDomain();
-    else if (writer)
-        api = writer->getCaptureDomain();
+    }
     CV_Assert(api != 0);
-    return cv::videoio_registry::getBackendName((VideoCaptureAPIs)api);
+    return cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(api));
 }
 
-void VideoWriter::write(const Mat& image)
+void VideoWriter::write(InputArray image)
 {
     CV_INSTRUMENT_REGION();
 
-    if( iwriter )
-        iwriter->write(image);
-    else
+    if (iwriter)
     {
-        IplImage _img = cvIplImage(image);
-        cvWriteFrame(writer, &_img);
+        iwriter->write(image);
     }
 }
 
@@ -438,10 +747,17 @@ VideoWriter& VideoWriter::operator << (const Mat& image)
     return *this;
 }
 
+VideoWriter& VideoWriter::operator << (const UMat& image)
+{
+    CV_INSTRUMENT_REGION();
+    write(image);
+    return *this;
+}
+
 // FIXIT OpenCV 4.0: make inline
 int VideoWriter::fourcc(char c1, char c2, char c3, char c4)
 {
     return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
 }
 
-} // namespace
+} // namespace cv

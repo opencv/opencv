@@ -37,6 +37,53 @@ file(WRITE "${OPENCV_DOWNLOAD_LOG}" "#use_cache \"${OPENCV_DOWNLOAD_PATH}\"\n")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_CURL}")
 file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 
+ocv_check_environment_variables(OPENCV_DOWNLOAD_MIRROR_ID)
+
+function(ocv_init_download_mirror)
+  if(NOT GIT_FOUND)
+    return()
+  endif()
+  if(NOT DEFINED OPENCV_DOWNLOAD_MIRROR_ID)
+    # Run `git remote get-url origin` to get remote source
+    execute_process(
+      COMMAND
+        ${GIT_EXECUTABLE} remote get-url origin
+      WORKING_DIRECTORY
+        ${CMAKE_SOURCE_DIR}
+      RESULT_VARIABLE
+        RESULT_STATUS
+      OUTPUT_VARIABLE
+        OCV_GIT_ORIGIN_URL_OUTPUT
+      ERROR_QUIET
+    )
+    # if non-git, OCV_GIT_ORIGIN_URL_OUTPUT is empty
+    if(NOT OCV_GIT_ORIGIN_URL_OUTPUT)
+      message(STATUS "ocv_init_download: OpenCV source tree is not fetched as git repository. 3rdparty resources will be downloaded from github.com by default.")
+      return()
+    else()
+      # Check if git origin is github.com
+      string(FIND "${OCV_GIT_ORIGIN_URL_OUTPUT}" "github.com" _found_github)
+      if(NOT ${_found_github} EQUAL -1)
+        set(OPENCV_DOWNLOAD_MIRROR_ID "github" CACHE STRING "")
+      endif()
+      # Check if git origin is gitcode.net
+      string(FIND "${OCV_GIT_ORIGIN_URL_OUTPUT}" "gitcode.net" _found_gitcode)
+      if(NOT ${_found_gitcode} EQUAL -1)
+        set(OPENCV_DOWNLOAD_MIRROR_ID "gitcode" CACHE STRING "")
+      endif()
+    endif()
+  endif()
+
+  if(OPENCV_DOWNLOAD_MIRROR_ID STREQUAL "gitcode" OR OPENCV_DOWNLOAD_MIRROR_ID STREQUAL "custom")
+    message(STATUS "ocv_init_download: Using ${OPENCV_DOWNLOAD_MIRROR_ID}-hosted mirror to download 3rdparty components.")
+    ocv_cmake_hook_append(OPENCV_DOWNLOAD_PRE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/mirrors/${OPENCV_DOWNLOAD_MIRROR_ID}.cmake")
+  elseif(OPENCV_DOWNLOAD_MIRROR_ID STREQUAL "github")
+    return()
+  else()
+    message(STATUS "ocv_init_download: Unable to recognize git server of OpenCV source code. Using github.com to download 3rdparty components.")
+  endif()
+endfunction()
+
 function(ocv_download)
   cmake_parse_arguments(DL "UNPACK;RELATIVE_URL" "FILENAME;HASH;DESTINATION_DIR;ID;STATUS" "URL" ${ARGN})
 
@@ -66,6 +113,8 @@ function(ocv_download)
   if(DEFINED DL_STATUS)
     set(${DL_STATUS} TRUE PARENT_SCOPE)
   endif()
+
+  ocv_cmake_hook(OPENCV_DOWNLOAD_PRE)
 
   # Check CMake cache for already processed tasks
   string(FIND "${DL_DESTINATION_DIR}" "${CMAKE_BINARY_DIR}" DL_BINARY_PATH_POS)
@@ -115,7 +164,7 @@ function(ocv_download)
   if(DL_ID)
     set(__msg_prefix "${DL_ID}: ")
   endif()
-  message(STATUS "${__msg_prefix}Download: ${DL_FILENAME}")
+  message(STATUS "${__msg_prefix}Downloading ${DL_FILENAME} from ${DL_URL}")
 
   # Copy mode: check if copy destination exists and is correct
   if(NOT DL_UNPACK)
@@ -252,3 +301,8 @@ ${OPENCV_DOWNLOAD_LOG}
     set(${OCV_DOWNLOAD_HASH_NAME} "${DL_HASH}" CACHE INTERNAL "")
   endif()
 endfunction()
+
+# ----------------------------------------------------------------------------
+#  Initialize download in case mirror is used
+# ----------------------------------------------------------------------------
+ocv_init_download_mirror()

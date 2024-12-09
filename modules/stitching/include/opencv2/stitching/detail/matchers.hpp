@@ -48,10 +48,6 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_XFEATURES2D
-#  include "opencv2/xfeatures2d/cuda.hpp"
-#endif
-
 namespace cv {
 namespace detail {
 
@@ -59,157 +55,39 @@ namespace detail {
 //! @{
 
 /** @brief Structure containing image keypoints and descriptors. */
-struct CV_EXPORTS ImageFeatures
+struct CV_EXPORTS_W_SIMPLE ImageFeatures
 {
-    int img_idx;
-    Size img_size;
-    std::vector<KeyPoint> keypoints;
-    UMat descriptors;
+    CV_PROP_RW int img_idx;
+    CV_PROP_RW Size img_size;
+    CV_PROP_RW std::vector<KeyPoint> keypoints;
+    CV_PROP_RW UMat descriptors;
+    CV_WRAP std::vector<KeyPoint> getKeypoints() { return keypoints; }
 };
+/** @brief
 
-/** @brief Feature finders base class */
-class CV_EXPORTS FeaturesFinder
-{
-public:
-    virtual ~FeaturesFinder() {}
-    /** @overload */
-    void operator ()(InputArray image, ImageFeatures &features);
-    /** @brief Finds features in the given image.
-
-    @param image Source image
-    @param features Found features
-    @param rois Regions of interest
-
-    @sa detail::ImageFeatures, Rect_
-    */
-    void operator ()(InputArray image, ImageFeatures &features, const std::vector<cv::Rect> &rois);
-    /** @brief Finds features in the given images in parallel.
-
-    @param images Source images
-    @param features Found features for each image
-    @param rois Regions of interest for each image
-
-    @sa detail::ImageFeatures, Rect_
-    */
-    void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features,
-                     const std::vector<std::vector<cv::Rect> > &rois);
-    /** @overload */
-    void operator ()(InputArrayOfArrays images, std::vector<ImageFeatures> &features);
-    /** @brief Frees unused memory allocated before if there is any. */
-    virtual void collectGarbage() {}
-
-    /* TODO OpenCV ABI 4.x
-    reimplement this as public method similar to FeaturesMatcher and remove private function hack
-    @return True, if it's possible to use the same finder instance in parallel, false otherwise
-    bool isThreadSafe() const { return is_thread_safe_; }
-    */
-
-protected:
-    /** @brief This method must implement features finding logic in order to make the wrappers
-    detail::FeaturesFinder::operator()_ work.
-
-    @param image Source image
-    @param features Found features
-
-    @sa detail::ImageFeatures */
-    virtual void find(InputArray image, ImageFeatures &features) = 0;
-    /** @brief uses dynamic_cast to determine thread-safety
-    @return True, if it's possible to use the same finder instance in parallel, false otherwise
-    */
-    bool isThreadSafe() const;
-};
-
-/** @brief SURF features finder.
-
-@sa detail::FeaturesFinder, SURF
+@param featuresFinder
+@param images
+@param features
+@param masks
 */
-class CV_EXPORTS SurfFeaturesFinder : public FeaturesFinder
-{
-public:
-    SurfFeaturesFinder(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
-                       int num_octaves_descr = /*4*/3, int num_layers_descr = /*2*/4);
+CV_EXPORTS_W void computeImageFeatures(
+    const Ptr<Feature2D> &featuresFinder,
+    InputArrayOfArrays  images,
+    CV_OUT std::vector<ImageFeatures> &features,
+    InputArrayOfArrays masks = noArray());
 
-private:
-    void find(InputArray image, ImageFeatures &features) CV_OVERRIDE;
+/** @brief
 
-    Ptr<FeatureDetector> detector_;
-    Ptr<DescriptorExtractor> extractor_;
-    Ptr<Feature2D> surf;
-};
-
-
-/** @brief SIFT features finder.
-
-@sa detail::FeaturesFinder, SIFT
+@param featuresFinder
+@param image
+@param features
+@param mask
 */
-class CV_EXPORTS SiftFeaturesFinder : public FeaturesFinder
-{
-public:
-    SiftFeaturesFinder();
-
-private:
-    void find(InputArray image, ImageFeatures &features) CV_OVERRIDE;
-    Ptr<Feature2D> sift;
-};
-
-/** @brief ORB features finder. :
-
-@sa detail::FeaturesFinder, ORB
-*/
-class CV_EXPORTS OrbFeaturesFinder : public FeaturesFinder
-{
-public:
-    OrbFeaturesFinder(Size _grid_size = Size(3,1), int nfeatures=1500, float scaleFactor=1.3f, int nlevels=5);
-
-private:
-    void find(InputArray image, ImageFeatures &features) CV_OVERRIDE;
-
-    Ptr<ORB> orb;
-    Size grid_size;
-};
-
-/** @brief AKAZE features finder. :
-
-@sa detail::FeaturesFinder, AKAZE
-*/
-class CV_EXPORTS AKAZEFeaturesFinder : public detail::FeaturesFinder
-{
-public:
-    AKAZEFeaturesFinder(int descriptor_type = AKAZE::DESCRIPTOR_MLDB,
-                        int descriptor_size = 0,
-                        int descriptor_channels = 3,
-                        float threshold = 0.001f,
-                        int nOctaves = 4,
-                        int nOctaveLayers = 4,
-                        int diffusivity = KAZE::DIFF_PM_G2);
-
-private:
-    void find(InputArray image, ImageFeatures &features) CV_OVERRIDE;
-
-    Ptr<AKAZE> akaze;
-};
-
-#ifdef HAVE_OPENCV_XFEATURES2D
-class CV_EXPORTS SurfFeaturesFinderGpu : public FeaturesFinder
-{
-public:
-    SurfFeaturesFinderGpu(double hess_thresh = 300., int num_octaves = 3, int num_layers = 4,
-                          int num_octaves_descr = 4, int num_layers_descr = 2);
-
-    void collectGarbage() CV_OVERRIDE;
-
-private:
-    void find(InputArray image, ImageFeatures &features) CV_OVERRIDE;
-
-    cuda::GpuMat image_;
-    cuda::GpuMat gray_image_;
-    cuda::SURF_CUDA surf_;
-    cuda::GpuMat keypoints_;
-    cuda::GpuMat descriptors_;
-    int num_octaves_, num_layers_;
-    int num_octaves_descr_, num_layers_descr_;
-};
-#endif
+CV_EXPORTS_AS(computeImageFeatures2) void computeImageFeatures(
+    const Ptr<Feature2D> &featuresFinder,
+    InputArray image,
+    CV_OUT ImageFeatures &features,
+    InputArray mask = noArray());
 
 /** @brief Structure containing information about matches between two images.
 
@@ -218,33 +96,36 @@ homography or affine transformation based on selected matcher.
 
 @sa detail::FeaturesMatcher
 */
-struct CV_EXPORTS MatchesInfo
+struct CV_EXPORTS_W_SIMPLE MatchesInfo
 {
     MatchesInfo();
     MatchesInfo(const MatchesInfo &other);
     MatchesInfo& operator =(const MatchesInfo &other);
 
-    int src_img_idx, dst_img_idx;       //!< Images indices (optional)
-    std::vector<DMatch> matches;
-    std::vector<uchar> inliers_mask;    //!< Geometrically consistent matches mask
-    int num_inliers;                    //!< Number of geometrically consistent matches
-    Mat H;                              //!< Estimated transformation
-    double confidence;                  //!< Confidence two images are from the same panorama
+    CV_PROP_RW int src_img_idx;
+    CV_PROP_RW int dst_img_idx;       //!< Images indices (optional)
+    CV_PROP_RW std::vector<DMatch> matches;
+    CV_PROP_RW std::vector<uchar> inliers_mask;    //!< Geometrically consistent matches mask
+    CV_PROP_RW int num_inliers;                    //!< Number of geometrically consistent matches
+    CV_PROP_RW Mat H;                              //!< Estimated transformation
+    CV_PROP_RW double confidence;                  //!< Confidence two images are from the same panorama
+    CV_WRAP std::vector<DMatch> getMatches() { return matches; }
+    CV_WRAP std::vector<uchar> getInliers() { return inliers_mask; }
 };
 
 /** @brief Feature matchers base class. */
-class CV_EXPORTS FeaturesMatcher
+class CV_EXPORTS_W FeaturesMatcher
 {
 public:
-    virtual ~FeaturesMatcher() {}
+    CV_WRAP virtual ~FeaturesMatcher() {}
 
     /** @overload
     @param features1 First image features
     @param features2 Second image features
     @param matches_info Found matches
     */
-    void operator ()(const ImageFeatures &features1, const ImageFeatures &features2,
-                     MatchesInfo& matches_info) { match(features1, features2, matches_info); }
+    CV_WRAP_AS(apply) void operator ()(const ImageFeatures &features1, const ImageFeatures &features2,
+                     CV_OUT MatchesInfo& matches_info) { match(features1, features2, matches_info); }
 
     /** @brief Performs images matching.
 
@@ -256,16 +137,16 @@ public:
 
     @sa detail::MatchesInfo
     */
-    void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
-                     const cv::UMat &mask = cv::UMat());
+    CV_WRAP_AS(apply2) void operator ()(const std::vector<ImageFeatures> &features, CV_OUT std::vector<MatchesInfo> &pairwise_matches,
+                                        const cv::UMat &mask = cv::UMat()) { match(features, pairwise_matches, mask); }
 
     /** @return True, if it's possible to use the same matcher instance in parallel, false otherwise
     */
-    bool isThreadSafe() const { return is_thread_safe_; }
+   CV_WRAP bool isThreadSafe() const { return is_thread_safe_; }
 
     /** @brief Frees unused memory allocated before if there is any.
     */
-    virtual void collectGarbage() {}
+   CV_WRAP virtual void collectGarbage() {}
 
 protected:
     FeaturesMatcher(bool is_thread_safe = false) : is_thread_safe_(is_thread_safe) {}
@@ -280,6 +161,16 @@ protected:
     virtual void match(const ImageFeatures &features1, const ImageFeatures &features2,
                        MatchesInfo& matches_info) = 0;
 
+    /** @brief This method implements logic to match features between arbitrary number of features.
+    By default this checks every pair of inputs in the input, but the behaviour can be changed by subclasses.
+
+    @param features vector of image features
+    @param pairwise_matches found matches
+    @param mask (optional) mask indicating which image pairs should be matched
+     */
+    virtual void match(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+                       const cv::UMat &mask = cv::UMat());
+
     bool is_thread_safe_;
 };
 
@@ -288,7 +179,7 @@ ratio between descriptor distances is greater than the threshold match_conf
 
 @sa detail::FeaturesMatcher
  */
-class CV_EXPORTS BestOf2NearestMatcher : public FeaturesMatcher
+class CV_EXPORTS_W BestOf2NearestMatcher : public FeaturesMatcher
 {
 public:
     /** @brief Constructs a "best of 2 nearest" matcher.
@@ -299,31 +190,37 @@ public:
     estimation used in the inliers classification step
     @param num_matches_thresh2 Minimum number of matches required for the 2D projective transform
     re-estimation on inliers
+    @param matches_confindece_thresh Matching confidence threshold to take the match into account.
+    The threshold was determined experimentally and set to 3 by default.
      */
-    BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
-                          int num_matches_thresh2 = 6);
+    CV_WRAP BestOf2NearestMatcher(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
+                          int num_matches_thresh2 = 6, double matches_confindece_thresh = 3.);
 
-    void collectGarbage() CV_OVERRIDE;
+    CV_WRAP void collectGarbage() CV_OVERRIDE;
+    CV_WRAP static Ptr<BestOf2NearestMatcher> create(bool try_use_gpu = false, float match_conf = 0.3f, int num_matches_thresh1 = 6,
+        int num_matches_thresh2 = 6, double matches_confindece_thresh = 3.);
 
 protected:
-    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info) CV_OVERRIDE;
 
+    void match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo &matches_info) CV_OVERRIDE;
     int num_matches_thresh1_;
     int num_matches_thresh2_;
+    double matches_confindece_thresh_;
     Ptr<FeaturesMatcher> impl_;
 };
 
-class CV_EXPORTS BestOf2NearestRangeMatcher : public BestOf2NearestMatcher
+class CV_EXPORTS_W BestOf2NearestRangeMatcher : public BestOf2NearestMatcher
 {
 public:
-    BestOf2NearestRangeMatcher(int range_width = 5, bool try_use_gpu = false, float match_conf = 0.3f,
+    CV_WRAP BestOf2NearestRangeMatcher(int range_width = 5, bool try_use_gpu = false, float match_conf = 0.3f,
                             int num_matches_thresh1 = 6, int num_matches_thresh2 = 6);
 
-    void operator ()(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
-                     const cv::UMat &mask = cv::UMat());
-
-
 protected:
+    // indicate that we do not want to hide the base class match method with a different signature
+    using BestOf2NearestMatcher::match;
+    void match(const std::vector<ImageFeatures> &features, std::vector<MatchesInfo> &pairwise_matches,
+               const cv::UMat &mask = cv::UMat()) CV_OVERRIDE;
+
     int range_width_;
 };
 
@@ -336,7 +233,7 @@ transformation (affine transformation estimate will be placed in matches_info).
 
 @sa cv::detail::FeaturesMatcher cv::detail::BestOf2NearestMatcher
  */
-class CV_EXPORTS AffineBestOf2NearestMatcher : public BestOf2NearestMatcher
+class CV_EXPORTS_W AffineBestOf2NearestMatcher : public BestOf2NearestMatcher
 {
 public:
     /** @brief Constructs a "best of 2 nearest" matcher that expects affine transformation
@@ -351,7 +248,7 @@ public:
 
     @sa cv::estimateAffine2D cv::estimateAffinePartial2D
      */
-    AffineBestOf2NearestMatcher(bool full_affine = false, bool try_use_gpu = false,
+    CV_WRAP AffineBestOf2NearestMatcher(bool full_affine = false, bool try_use_gpu = false,
                                 float match_conf = 0.3f, int num_matches_thresh1 = 6) :
         BestOf2NearestMatcher(try_use_gpu, match_conf, num_matches_thresh1, num_matches_thresh1),
         full_affine_(full_affine) {}

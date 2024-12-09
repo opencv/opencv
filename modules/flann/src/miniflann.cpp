@@ -89,7 +89,7 @@ void IndexParams::setAlgorithm(int value)
 }
 
 void IndexParams::getAll(std::vector<String>& names,
-            std::vector<int>& types,
+            std::vector<FlannIndexType>& types,
             std::vector<String>& strValues,
             std::vector<double>& numValues) const
 {
@@ -107,7 +107,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             String val = it->second.cast<String>();
-            types.push_back(CV_USRTYPE1);
+            types.push_back(FLANN_INDEX_TYPE_STRING);
             strValues.push_back(val);
             numValues.push_back(-1);
         continue;
@@ -119,7 +119,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             double val = it->second.cast<double>();
-            types.push_back( CV_64F );
+            types.push_back(FLANN_INDEX_TYPE_64F);
             numValues.push_back(val);
         continue;
         }
@@ -127,7 +127,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             float val = it->second.cast<float>();
-            types.push_back( CV_32F );
+            types.push_back(FLANN_INDEX_TYPE_32F);
             numValues.push_back(val);
         continue;
         }
@@ -135,7 +135,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             int val = it->second.cast<int>();
-            types.push_back( CV_32S );
+            types.push_back(FLANN_INDEX_TYPE_32S);
             numValues.push_back(val);
         continue;
         }
@@ -143,7 +143,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             short val = it->second.cast<short>();
-            types.push_back( CV_16S );
+            types.push_back(FLANN_INDEX_TYPE_16S);
             numValues.push_back(val);
         continue;
         }
@@ -151,7 +151,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             ushort val = it->second.cast<ushort>();
-            types.push_back( CV_16U );
+            types.push_back(FLANN_INDEX_TYPE_16U);
             numValues.push_back(val);
         continue;
         }
@@ -159,7 +159,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             char val = it->second.cast<char>();
-            types.push_back( CV_8S );
+            types.push_back(FLANN_INDEX_TYPE_8S);
             numValues.push_back(val);
         continue;
         }
@@ -167,7 +167,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             uchar val = it->second.cast<uchar>();
-            types.push_back( CV_8U );
+            types.push_back(FLANN_INDEX_TYPE_8U);
             numValues.push_back(val);
         continue;
         }
@@ -175,7 +175,7 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             bool val = it->second.cast<bool>();
-            types.push_back( CV_MAKETYPE(CV_USRTYPE1,2) );
+            types.push_back(FLANN_INDEX_TYPE_BOOL);
             numValues.push_back(val);
         continue;
         }
@@ -183,14 +183,14 @@ void IndexParams::getAll(std::vector<String>& names,
         try
         {
             cvflann::flann_algorithm_t val = it->second.cast<cvflann::flann_algorithm_t>();
-            types.push_back( CV_MAKETYPE(CV_USRTYPE1,3) );
+            types.push_back(FLANN_INDEX_TYPE_ALGORITHM);
             numValues.push_back(val);
         continue;
         }
         catch (...) {}
 
 
-        types.push_back(-1); // unknown type
+        types.push_back((FlannIndexType)-1); // unknown type
         numValues.push_back(-1);
     }
 }
@@ -294,6 +294,23 @@ SavedIndexParams::SavedIndexParams(const String& _filename)
     p["filename"] = filename;
 }
 
+SearchParams::SearchParams( int checks, float eps, bool sorted, bool explore_all_trees )
+{
+    ::cvflann::IndexParams& p = get_params(*this);
+
+    // how many leafs to visit when searching for neighbours (-1 for unlimited)
+    p["checks"] = checks;
+    // search for eps-approximate neighbours (default: 0)
+    p["eps"] = eps;
+    // only for radius search, require neighbours sorted by distance (default: true)
+    p["sorted"] = sorted;
+    // if false, search stops at the tree reaching the number of  max checks (original behavior).
+    // When true, we do a descent in each tree and. Like before the alternative paths
+    // stored in the heap are not be processed further when max checks is reached.
+    p["explore_all_trees"] = explore_all_trees;
+}
+
+
 SearchParams::SearchParams( int checks, float eps, bool sorted )
 {
     ::cvflann::IndexParams& p = get_params(*this);
@@ -304,6 +321,10 @@ SearchParams::SearchParams( int checks, float eps, bool sorted )
     p["eps"] = eps;
     // only for radius search, require neighbours sorted by distance (default: true)
     p["sorted"] = sorted;
+    // if false, search stops at the tree reaching the number of  max checks (original behavior).
+    // When true, we do a descent in each tree and. Like before the alternative paths
+    // stored in the heap are not be processed further when max checks is reached.
+    p["explore_all_trees"] = false;
 }
 
 
@@ -369,14 +390,18 @@ void Index::build(InputArray _data, const IndexParams& params, flann_distance_t 
     CV_INSTRUMENT_REGION();
 
     release();
+
+    // Index may reuse 'data' during search, need to keep it alive
+    features_clone = _data.getMat().clone();
+    Mat data = features_clone;
+
     algo = getParam<flann_algorithm_t>(params, "algorithm", FLANN_INDEX_LINEAR);
     if( algo == FLANN_INDEX_SAVED )
     {
-        load(_data, getParam<String>(params, "filename", String()));
+        load_(getParam<String>(params, "filename", String()));
         return;
     }
 
-    Mat data = _data.getMat();
     index = 0;
     featureType = data.type();
     distType = _distType;
@@ -440,6 +465,8 @@ Index::~Index()
 void Index::release()
 {
     CV_INSTRUMENT_REGION();
+
+    features_clone.release();
 
     if( !index )
         return;
@@ -764,9 +791,19 @@ bool loadIndex(Index* index0, void*& index, const Mat& data, FILE* fin, const Di
 
 bool Index::load(InputArray _data, const String& filename)
 {
-    Mat data = _data.getMat();
-    bool ok = true;
     release();
+
+    // Index may reuse 'data' during search, need to keep it alive
+    features_clone = _data.getMat().clone();
+    Mat data = features_clone;
+
+    return load_(filename);
+}
+
+bool Index::load_(const String& filename)
+{
+    Mat data = features_clone;
+    bool ok = true;
 
     FILE* fin = fopen(filename.c_str(), "rb");
     if (fin == NULL) {

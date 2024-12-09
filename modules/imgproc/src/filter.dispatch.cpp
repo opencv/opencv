@@ -163,8 +163,6 @@ void FilterEngine::init( const Ptr<BaseFilter>& _filter2D,
     wholeSize = Size(-1,-1);
 }
 
-#define VEC_ALIGN CV_MALLOC_ALIGN
-
 int FilterEngine::start(const Size& _wholeSize, const Size& sz, const Point& ofs)
 {
     CV_INSTRUMENT_REGION();
@@ -590,7 +588,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
     size_t tryWorkItems = device.maxWorkGroupSize();
     if (device.isIntel() && 128 < tryWorkItems)
         tryWorkItems = 128;
-    char cvt[2][40];
+    char cvt[2][50];
 
     // For smaller filter kernels, there is a special kernel that is more
     // efficient than the general one.
@@ -637,7 +635,7 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
         globalsize[0] = ROUNDUP(globalsize[0], wgRound);
 
         char build_options[1024];
-        sprintf(build_options, "-D cn=%d "
+        snprintf(build_options, sizeof(build_options), "-D cn=%d "
                 "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
                 "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "
                 "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
@@ -651,8 +649,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                 privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
                 ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
-                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), kerStr.c_str());
+                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])), kerStr.c_str());
 
         if (!k.create("filter2DSmall", cv::ocl::imgproc::filter2DSmall_oclsrc, build_options))
             return false;
@@ -696,8 +694,8 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
                                  doubleSupport ? " -D DOUBLE_SUPPORT" : "", kerStr.c_str(),
                                  ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                                  ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
-                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]));
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])));
 
             localsize[0] = BLOCK_SIZE;
             globalsize[0] = DIVUP(sz.width, BLOCK_SIZE - (ksize.width - 1)) * BLOCK_SIZE;
@@ -764,14 +762,14 @@ static bool ocl_sepRowFilter2D(const UMat & src, UMat & buf, const Mat & kernelX
     extra_extrapolation |= src.cols < (int)((-radiusX + globalsize[0] + 8 * localsize[0] + 3) >> 1) + 1;
     extra_extrapolation |= src.cols < radiusX;
 
-    char cvt[40];
+    char cvt[50];
     cv::String build_options = cv::format("-D RADIUSX=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d -D %s -D %s -D %s"
                                           " -D srcT=%s -D dstT=%s -D convertToDstT=%s -D srcT1=%s -D dstT1=%s%s%s",
                                           radiusX, (int)localsize[0], (int)localsize[1], cn, btype,
                                           extra_extrapolation ? "EXTRA_EXTRAPOLATION" : "NO_EXTRA_EXTRAPOLATION",
                                           isolated ? "BORDER_ISOLATED" : "NO_BORDER_ISOLATED",
                                           ocl::typeToStr(type), ocl::typeToStr(buf_type),
-                                          ocl::convertTypeStr(sdepth, bdepth, cn, cvt),
+                                          ocl::convertTypeStr(sdepth, bdepth, cn, cvt, sizeof(cvt)),
                                           ocl::typeToStr(sdepth), ocl::typeToStr(bdepth),
                                           doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                                           int_arithm ? " -D INTEGER_ARITHMETIC" : "");
@@ -825,16 +823,16 @@ static bool ocl_sepColFilter2D(const UMat & buf, UMat & dst, const Mat & kernelY
     globalsize[1] = DIVUP(sz.height, localsize[1]) * localsize[1];
     globalsize[0] = DIVUP(sz.width, localsize[0]) * localsize[0];
 
-    char cvt[2][40];
+    char cvt[2][50];
     int floatT = std::max(CV_32F, bdepth);
     cv::String build_options = cv::format("-D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D CN=%d"
                                           " -D srcT=%s -D dstT=%s -D convertToFloatT=%s -D floatT=%s -D convertToDstT=%s"
                                           " -D srcT1=%s -D dstT1=%s -D SHIFT_BITS=%d%s%s",
                                           anchor, (int)localsize[0], (int)localsize[1], cn,
                                           ocl::typeToStr(buf_type), ocl::typeToStr(dtype),
-                                          ocl::convertTypeStr(bdepth, floatT, cn, cvt[0]),
+                                          ocl::convertTypeStr(bdepth, floatT, cn, cvt[0], sizeof(cvt[0])),
                                           ocl::typeToStr(CV_MAKETYPE(floatT, cn)),
-                                          ocl::convertTypeStr(shift_bits ? floatT : bdepth, ddepth, cn, cvt[1]),
+                                          ocl::convertTypeStr(shift_bits ? floatT : bdepth, ddepth, cn, cvt[1], sizeof(cvt[1])),
                                           ocl::typeToStr(bdepth), ocl::typeToStr(ddepth),
                                           2*shift_bits, doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                                           int_arithm ? " -D INTEGER_ARITHMETIC" : "");
@@ -891,7 +889,7 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
     size_t lt2[2] = { optimizedSepFilterLocalWidth, optimizedSepFilterLocalHeight };
     size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1]};
 
-    char cvt[2][40];
+    char cvt[2][50];
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                                        "BORDER_REFLECT_101" };
 
@@ -901,9 +899,9 @@ static bool ocl_sepFilter2D_SinglePass(InputArray _src, OutputArray _dst,
                              (int)lt2[0], (int)lt2[1], kernelX.cols / 2, kernelY.cols / 2,
                              ocl::kernelToStr(kernelX, wdepth, "KERNEL_MATRIX_X").c_str(),
                              ocl::kernelToStr(kernelY, wdepth, "KERNEL_MATRIX_Y").c_str(),
-                             ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
+                             ocl::typeToStr(stype), ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)), ocl::typeToStr(dtype),
-                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]), borderMap[borderType],
+                             ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])), borderMap[borderType],
                              ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), ocl::typeToStr(wdepth),
                              cn, 2*shift_bits, int_arithm ? " -D INTEGER_ARITHMETIC" : "");
 
@@ -1401,7 +1399,7 @@ static void ocvSepFilter(int stype, int dtype, int ktype,
     Mat src(Size(width, height), stype, src_data, src_step);
     Mat dst(Size(width, height), dtype, dst_data, dst_step);
     f->apply(src, dst, Size(full_width, full_height), Point(offset_x, offset_y));
-};
+}
 
 //===================================================================
 //       HAL functions

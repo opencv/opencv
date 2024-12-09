@@ -22,6 +22,24 @@ if(NOT OPENCV_INITIAL_PASS)
   set(ENABLE_PRECOMPILED_HEADERS OFF CACHE INTERNAL "" FORCE)
   project(opencv_world)
 
+  # MSVS 2014 (vc14): LINK : fatal error LNK1210: exceeded internal ILK size limit; link with /INCREMENTAL:NO
+  if(MSVC AND MSVC_VERSION EQUAL 1900)
+    foreach(flag_var
+            CMAKE_EXE_LINKER_FLAGS_DEBUG
+            CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO
+            CMAKE_MODULE_LINKER_FLAGS_DEBUG
+            CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO
+            CMAKE_SHARED_LINKER_FLAGS_DEBUG
+            CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO
+    )
+      if(${flag_var} MATCHES "/INCREMENTAL")
+        string(REGEX REPLACE "/INCREMENTAL[^ ]*" "/INCREMENTAL:NO" ${flag_var} "${${flag_var}}")
+      else()
+        set(${flag_var} "${${flag_var}} /INCREMENTAL:NO*")
+      endif()
+    endforeach(flag_var)
+  endif()
+
   message(STATUS "Processing WORLD modules...")
   foreach(m ${OPENCV_MODULES_BUILD})
     set(the_module ${m})
@@ -59,13 +77,14 @@ ocv_module_include_directories()
 #message(STATUS "${OPENCV_MODULE_${the_module}_SOURCES}")
 ocv_create_module(${link_deps})
 
+if(";${OPENCV_MODULES_BUILD};" MATCHES ";opencv_viz;" AND OPENCV_MODULE_opencv_viz_IS_PART_OF_WORLD AND NOT (VTK_VERSION VERSION_LESS "8.90.0"))
+  vtk_module_autoinit(TARGETS opencv_world MODULES ${VTK_LIBRARIES})
+endif()
+
 ocv_target_compile_definitions(${the_module} PRIVATE OPENCV_MODULE_IS_PART_OF_WORLD=1)
 
 if(BUILD_opencv_imgcodecs AND OPENCV_MODULE_opencv_imgcodecs_IS_PART_OF_WORLD)
   ocv_imgcodecs_configure_target()
-endif()
-if(BUILD_opencv_videoio AND OPENCV_MODULE_opencv_videoio_IS_PART_OF_WORLD)
-  ocv_videoio_configure_target()
 endif()
 if(BUILD_opencv_highgui AND OPENCV_MODULE_opencv_highgui_IS_PART_OF_WORLD)
   ocv_highgui_configure_target()

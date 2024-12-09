@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">opencv_mobilenet</string>
+    <string name="app_name">OCV Mobilenet Objdetect</string>
 </resources>

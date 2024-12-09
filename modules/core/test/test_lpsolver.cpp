@@ -145,10 +145,10 @@ TEST(Core_LPSolver, issue_12337)
 {
     Mat A=(cv::Mat_<double>(3,1)<<3,1,2);
     Mat B=(cv::Mat_<double>(3,4)<<1,1,3,30,2,2,5,24,4,1,2,36);
-    EXPECT_ANY_THROW(Mat1f z_float; cv::solveLP(A, B, z_float));
-    EXPECT_NO_THROW(Mat1d z_double; cv::solveLP(A, B, z_double));
-    EXPECT_ANY_THROW(Mat1i z_int; cv::solveLP(A, B, z_int));
-    //need to update interface: EXPECT_ANY_THROW(Mat1b z_8u; cv::solveLP(A, B, z_8u));
+    Mat1f z_float; cv::solveLP(A, B, z_float);
+    Mat1d z_double; cv::solveLP(A, B, z_double);
+    Mat1i z_int; cv::solveLP(A, B, z_int);
+    EXPECT_ANY_THROW(Mat1b z_8u; cv::solveLP(A, B, z_8u));
 }
 
 // NOTE: Test parameters found experimentally to get numerically inaccurate result.

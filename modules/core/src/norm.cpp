@@ -52,6 +52,9 @@ static const uchar popCountTable4[] =
 
 int normHamming(const uchar* a, int n, int cellSize)
 {
+    int output;
+    CALL_HAL_RET(normHamming8u, cv_hal_normHamming8u, output, a, n, cellSize);
+
     if( cellSize == 1 )
         return normHamming(a, n);
     const uchar* tab = 0;
@@ -63,25 +66,25 @@ int normHamming(const uchar* a, int n, int cellSize)
         return -1;
     int i = 0;
     int result = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_uint64 t = vx_setzero_u64();
     if ( cellSize == 2)
     {
         v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x55));
-        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        for(; i <= n - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
         {
             v_uint16 a0 = v_reinterpret_as_u16(vx_load(a + i));
-            t += v_popcount(v_reinterpret_as_u64((a0 | (a0 >> 1)) & mask));
+            t = v_add(t, v_popcount(v_reinterpret_as_u64(v_and(v_or(a0, v_shr<1>(a0)), mask))));
         }
     }
     else    // cellSize == 4
     {
         v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x11));
-        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        for(; i <= n - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
         {
             v_uint16 a0 = v_reinterpret_as_u16(vx_load(a + i));
-            v_uint16 a1 = a0 | (a0 >> 2);
-            t += v_popcount(v_reinterpret_as_u64((a1 | (a1 >> 1)) & mask));
+            v_uint16 a1 = v_or(a0, v_shr<2>(a0));
+            t = v_add(t, v_popcount(v_reinterpret_as_u64(v_and(v_or(a1, v_shr<1>(a1)), mask))));
 
         }
     }
@@ -98,6 +101,9 @@ int normHamming(const uchar* a, int n, int cellSize)
 
 int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
 {
+    int output;
+    CALL_HAL_RET(normHammingDiff8u, cv_hal_normHammingDiff8u, output, a, b, n, cellSize);
+
     if( cellSize == 1 )
         return normHamming(a, b, n);
     const uchar* tab = 0;
@@ -109,25 +115,25 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
         return -1;
     int i = 0;
     int result = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_uint64 t = vx_setzero_u64();
     if ( cellSize == 2)
     {
         v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x55));
-        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        for(; i <= n - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
         {
-            v_uint16 ab0 = v_reinterpret_as_u16(vx_load(a + i) ^ vx_load(b + i));
-            t += v_popcount(v_reinterpret_as_u64((ab0 | (ab0 >> 1)) & mask));
+            v_uint16 ab0 = v_reinterpret_as_u16(v_xor(vx_load(a + i), vx_load(b + i)));
+            t = v_add(t, v_popcount(v_reinterpret_as_u64(v_and(v_or(ab0, v_shr<1>(ab0)), mask))));
         }
     }
     else    // cellSize == 4
     {
         v_uint16 mask = v_reinterpret_as_u16(vx_setall_u8(0x11));
-        for(; i <= n - v_uint8::nlanes; i += v_uint8::nlanes)
+        for(; i <= n - VTraits<v_uint8>::vlanes(); i += VTraits<v_uint8>::vlanes())
         {
-            v_uint16 ab0 = v_reinterpret_as_u16(vx_load(a + i) ^ vx_load(b + i));
-            v_uint16 ab1 = ab0 | (ab0 >> 2);
-            t += v_popcount(v_reinterpret_as_u64((ab1 | (ab1 >> 1)) & mask));
+            v_uint16 ab0 = v_reinterpret_as_u16(v_xor(vx_load(a + i), vx_load(b + i)));
+            v_uint16 ab1 = v_or(ab0, v_shr<2>(ab0));
+            t = v_add(t, v_popcount(v_reinterpret_as_u64(v_and(v_or(ab1, v_shr<1>(ab1)), mask))));
         }
     }
     result += (int)v_reduce_sum(t);
@@ -145,21 +151,21 @@ int normHamming(const uchar* a, const uchar* b, int n, int cellSize)
 float normL2Sqr_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_float32 v_d0 = vx_setzero_f32(), v_d1 = vx_setzero_f32();
     v_float32 v_d2 = vx_setzero_f32(), v_d3 = vx_setzero_f32();
-    for (; j <= n - 4 * v_float32::nlanes; j += 4 * v_float32::nlanes)
+    for (; j <= n - 4 * VTraits<v_float32>::vlanes(); j += 4 * VTraits<v_float32>::vlanes())
     {
-        v_float32 t0 = vx_load(a + j) - vx_load(b + j);
-        v_float32 t1 = vx_load(a + j + v_float32::nlanes) - vx_load(b + j + v_float32::nlanes);
+        v_float32 t0 = v_sub(vx_load(a + j), vx_load(b + j));
+        v_float32 t1 = v_sub(vx_load(a + j + VTraits<v_float32>::vlanes()), vx_load(b + j + VTraits<v_float32>::vlanes()));
         v_d0 = v_muladd(t0, t0, v_d0);
-        v_float32 t2 = vx_load(a + j + 2 * v_float32::nlanes) - vx_load(b + j + 2 * v_float32::nlanes);
+        v_float32 t2 = v_sub(vx_load(a + j + 2 * VTraits<v_float32>::vlanes()), vx_load(b + j + 2 * VTraits<v_float32>::vlanes()));
         v_d1 = v_muladd(t1, t1, v_d1);
-        v_float32 t3 = vx_load(a + j + 3 * v_float32::nlanes) - vx_load(b + j + 3 * v_float32::nlanes);
+        v_float32 t3 = v_sub(vx_load(a + j + 3 * VTraits<v_float32>::vlanes()), vx_load(b + j + 3 * VTraits<v_float32>::vlanes()));
         v_d2 = v_muladd(t2, t2, v_d2);
         v_d3 = v_muladd(t3, t3, v_d3);
     }
-    d = v_reduce_sum(v_d0 + v_d1 + v_d2 + v_d3);
+    d = v_reduce_sum(v_add(v_add(v_add(v_d0, v_d1), v_d2), v_d3));
 #endif
     for( ; j < n; j++ )
     {
@@ -173,17 +179,17 @@ float normL2Sqr_(const float* a, const float* b, int n)
 float normL1_(const float* a, const float* b, int n)
 {
     int j = 0; float d = 0.f;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_float32 v_d0 = vx_setzero_f32(), v_d1 = vx_setzero_f32();
     v_float32 v_d2 = vx_setzero_f32(), v_d3 = vx_setzero_f32();
-    for (; j <= n - 4 * v_float32::nlanes; j += 4 * v_float32::nlanes)
+    for (; j <= n - 4 * VTraits<v_float32>::vlanes(); j += 4 * VTraits<v_float32>::vlanes())
     {
-        v_d0 += v_absdiff(vx_load(a + j), vx_load(b + j));
-        v_d1 += v_absdiff(vx_load(a + j + v_float32::nlanes), vx_load(b + j + v_float32::nlanes));
-        v_d2 += v_absdiff(vx_load(a + j + 2 * v_float32::nlanes), vx_load(b + j + 2 * v_float32::nlanes));
-        v_d3 += v_absdiff(vx_load(a + j + 3 * v_float32::nlanes), vx_load(b + j + 3 * v_float32::nlanes));
+        v_d0 = v_add(v_d0, v_absdiff(vx_load(a + j), vx_load(b + j)));
+        v_d1 = v_add(v_d1, v_absdiff(vx_load(a + j + VTraits<v_float32>::vlanes()), vx_load(b + j + VTraits<v_float32>::vlanes())));
+        v_d2 = v_add(v_d2, v_absdiff(vx_load(a + j + 2 * VTraits<v_float32>::vlanes()), vx_load(b + j + 2 * VTraits<v_float32>::vlanes())));
+        v_d3 = v_add(v_d3, v_absdiff(vx_load(a + j + 3 * VTraits<v_float32>::vlanes()), vx_load(b + j + 3 * VTraits<v_float32>::vlanes())));
     }
-    d = v_reduce_sum(v_d0 + v_d1 + v_d2 + v_d3);
+    d = v_reduce_sum(v_add(v_add(v_add(v_d0, v_d1), v_d2), v_d3));
 #endif
     for( ; j < n; j++ )
         d += std::abs(a[j] - b[j]);
@@ -193,12 +199,12 @@ float normL1_(const float* a, const float* b, int n)
 int normL1_(const uchar* a, const uchar* b, int n)
 {
     int j = 0, d = 0;
-#if CV_SIMD
-    for (; j <= n - 4 * v_uint8::nlanes; j += 4 * v_uint8::nlanes)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    for (; j <= n - 4 * VTraits<v_uint8>::vlanes(); j += 4 * VTraits<v_uint8>::vlanes())
         d += v_reduce_sad(vx_load(a + j), vx_load(b + j)) +
-             v_reduce_sad(vx_load(a + j + v_uint8::nlanes), vx_load(b + j + v_uint8::nlanes)) +
-             v_reduce_sad(vx_load(a + j + 2 * v_uint8::nlanes), vx_load(b + j + 2 * v_uint8::nlanes)) +
-             v_reduce_sad(vx_load(a + j + 3 * v_uint8::nlanes), vx_load(b + j + 3 * v_uint8::nlanes));
+             v_reduce_sad(vx_load(a + j + VTraits<v_uint8>::vlanes()), vx_load(b + j + VTraits<v_uint8>::vlanes())) +
+             v_reduce_sad(vx_load(a + j + 2 * VTraits<v_uint8>::vlanes()), vx_load(b + j + 2 * VTraits<v_uint8>::vlanes())) +
+             v_reduce_sad(vx_load(a + j + 3 * VTraits<v_uint8>::vlanes()), vx_load(b + j + 3 * VTraits<v_uint8>::vlanes()));
 #endif
     for( ; j < n; j++ )
         d += std::abs(a[j] - b[j]);
@@ -429,6 +435,9 @@ static bool ocl_norm( InputArray _src, int normType, InputArray _mask, double & 
     int type = _src.type(), depth = CV_MAT_DEPTH(type);
     bool doubleSupport = d.doubleFPConfig() > 0,
             haveMask = _mask.kind() != _InputArray::NONE;
+
+    if (depth >= CV_16F)
+        return false;  // TODO: support FP16
 
     if ( !(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) ||
          (!doubleSupport && depth == CV_64F))
@@ -691,7 +700,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
         return result;
     }
 
-    NormFunc func = getNormFunc(normType >> 1, depth);
+    NormFunc func = getNormFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
@@ -737,6 +746,26 @@ double norm( InputArray _src, int normType, InputArray _mask )
             }
         }
     }
+    else if (depth == CV_16F)
+    {
+        const size_t esz = src.elemSize();
+        const int total = (int)it.size;
+        const int blockSize = std::min(total, divUp(1024, cn));
+        AutoBuffer<float, 1026/*divUp(1024,3)*3*/> fltbuf(blockSize * cn);
+        float* data0 = fltbuf.data();
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            for (int j = 0; j < total; j += blockSize)
+            {
+                int bsz = std::min(total - j, blockSize);
+                hal::cvt16f32f((const hfloat*)ptrs[0], data0, bsz * cn);
+                func((uchar*)data0, ptrs[1], (uchar*)&result.f, bsz, cn);
+                ptrs[0] += bsz*esz;
+                if (ptrs[1])
+                    ptrs[1] += bsz;
+            }
+        }
+    }
     else
     {
         // generic implementation
@@ -748,9 +777,9 @@ double norm( InputArray _src, int normType, InputArray _mask )
 
     if( normType == NORM_INF )
     {
-        if( depth == CV_64F )
+        if(depth == CV_64F)
             return result.d;
-        else if( depth == CV_32F )
+        else if (depth == CV_32F || depth == CV_16F)
             return result.f;
         else
             return result.i;
@@ -1138,7 +1167,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         return result;
     }
 
-    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth);
+    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src1, &src2, &mask, 0};
@@ -1186,6 +1215,29 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
             }
         }
     }
+    else if (depth == CV_16F)
+    {
+        const size_t esz = src1.elemSize();
+        const int total = (int)it.size;
+        const int blockSize = std::min(total, divUp(512, cn));
+        AutoBuffer<float, 1026/*divUp(512,3)*3*2*/> fltbuf(blockSize * cn * 2);
+        float* data0 = fltbuf.data();
+        float* data1 = fltbuf.data() + blockSize * cn;
+        for (size_t i = 0; i < it.nplanes; i++, ++it)
+        {
+            for (int j = 0; j < total; j += blockSize)
+            {
+                int bsz = std::min(total - j, blockSize);
+                hal::cvt16f32f((const hfloat*)ptrs[0], data0, bsz * cn);
+                hal::cvt16f32f((const hfloat*)ptrs[1], data1, bsz * cn);
+                func((uchar*)data0, (uchar*)data1, ptrs[2], (uchar*)&result.f, bsz, cn);
+                ptrs[0] += bsz*esz;
+                ptrs[1] += bsz*esz;
+                if (ptrs[2])
+                    ptrs[2] += bsz;
+            }
+        }
+    }
     else
     {
         // generic implementation
@@ -1197,9 +1249,9 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
 
     if( normType == NORM_INF )
     {
-        if( depth == CV_64F )
+        if (depth == CV_64F)
             return result.d;
-        else if( depth == CV_32F )
+        else if (depth == CV_32F || depth == CV_16F)
             return result.f;
         else
             return result.u;
@@ -1215,15 +1267,15 @@ cv::Hamming::ResultType Hamming::operator()( const unsigned char* a, const unsig
     return cv::hal::normHamming(a, b, size);
 }
 
-double PSNR(InputArray _src1, InputArray _src2)
+double PSNR(InputArray _src1, InputArray _src2, double R)
 {
     CV_INSTRUMENT_REGION();
 
     //Input arrays must have depth CV_8U
-    CV_Assert( _src1.depth() == CV_8U && _src2.depth() == CV_8U );
+    CV_Assert( _src1.type() == _src2.type() );
 
     double diff = std::sqrt(norm(_src1, _src2, NORM_L2SQR)/(_src1.total()*_src1.channels()));
-    return 20*log10(255./(diff+DBL_EPSILON));
+    return 20*log10(R/(diff+DBL_EPSILON));
 }
 
 
@@ -1263,12 +1315,12 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
         if ((sdepth == CV_64F || ddepth == CV_64F) && !doubleSupport)
             return false;
 
-        char cvt[2][40];
+        char cvt[2][50];
         String opts = format("-D srcT=%s -D dstT=%s -D convertToWT=%s -D cn=%d -D rowsPerWI=%d"
                              " -D convertToDT=%s -D workT=%s%s%s%s -D srcT1=%s -D dstT1=%s",
                              ocl::typeToStr(stype), ocl::typeToStr(dtype),
-                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]), cn,
-                             rowsPerWI, ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                             ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])), cn,
+                             rowsPerWI, ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])),
                              ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
                              doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                              haveScale ? " -D HAVE_SCALE" : "",
@@ -1346,7 +1398,7 @@ void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
         shift = 0;
     }
     else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported norm type" );
+        CV_Error( cv::Error::StsBadArg, "Unknown/unsupported norm type" );
 
     CV_OCL_RUN(_dst.isUMat(),
                ocl_normalize(_src, _dst, _mask, rtype, scale, shift))

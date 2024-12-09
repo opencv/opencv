@@ -27,7 +27,7 @@ int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t
 int ovx_hal_merge8u(const uchar **src_data, uchar *dst_data, int len, int cn);
 int ovx_hal_resize(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, double inv_scale_x, double inv_scale_y, int interpolation);
 int ovx_hal_warpAffine(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[6], int interpolation, int borderType, const double borderValue[4]);
-int ovx_hal_warpPerspectve(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[9], int interpolation, int borderType, const double borderValue[4]);
+int ovx_hal_warpPerspective(int atype, const uchar *a, size_t astep, int aw, int ah, uchar *b, size_t bstep, int bw, int bh, const double M[9], int interpolation, int borderType, const double borderValue[4]);
 
 struct cvhalFilter2D;
 int ovx_hal_filterInit(cvhalFilter2D **filter_context, uchar *kernel_data, size_t kernel_step, int kernel_type, int kernel_width, int kernel_height,
@@ -98,7 +98,7 @@ int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, 
 //#undef cv_hal_warpAffine
 //#define cv_hal_warpAffine ovx_hal_warpAffine
 //#undef cv_hal_warpPerspective
-//#define cv_hal_warpPerspective ovx_hal_warpPerspectve
+//#define cv_hal_warpPerspective ovx_hal_warpPerspective
 
 #undef cv_hal_filterInit
 #define cv_hal_filterInit ovx_hal_filterInit

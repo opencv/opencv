@@ -289,13 +289,12 @@ static void calibrateHandEyeTsai(const std::vector<Mat>& Hg, const std::vector<M
     int idx = 0;
     for (size_t i = 0; i < Hg.size(); i++)
     {
-        for (size_t j = i+1; j < Hg.size(); j++, idx++)
+        for (size_t j = i+1; j < Hg.size(); j++)
         {
             //Defines coordinate transformation from Gi to Gj
             //Hgi is from Gi (gripper) to RW (robot base)
             //Hgj is from Gj (gripper) to RW (robot base)
             Mat Hgij = homogeneousInverse(Hg[j]) * Hg[i]; //eq 6
-            vec_Hgij.push_back(Hgij);
             //Rotation axis for Rgij which is the 3D rotation from gripper coordinate frame Gi to Gj
             Mat Pgij = 2*rot2quatMinimal(Hgij);
 
@@ -303,17 +302,41 @@ static void calibrateHandEyeTsai(const std::vector<Mat>& Hg, const std::vector<M
             //Hci is from CW (calibration target) to Ci (camera)
             //Hcj is from CW (calibration target) to Cj (camera)
             Mat Hcij = Hc[j] * homogeneousInverse(Hc[i]); //eq 7
-            vec_Hcij.push_back(Hcij);
             //Rotation axis for Rcij
             Mat Pcij = 2*rot2quatMinimal(Hcij);
+
+            // Discard motions with rotation too small or too close to pi radians
+            //   The limits 1.7 and 0.3 correspond to angles less than 17 degrees or greater than 120 degrees. They are
+            //   based on verifying equation 12 from the source paper using data generated with a known hand-eye
+            //   calibration. The data contained 25 poses, so 300 motions were considered. Of these, 188 satisfied
+            //   equation 12, and the remaining 112 all had Pcij or Pgij with norms greater than 1.7. Although errors
+            //   from small rotations were not observed, it is known that these motions are less informative (see
+            //   section II.B.3, and figure 6).
+            double Pgij_norm = cv::norm(Pgij);
+            double Pcij_norm = cv::norm(Pcij);
+            if (Pgij_norm < 0.3 || Pcij_norm < 0.3 || Pgij_norm > 1.7 || Pcij_norm > 1.7) {
+                continue;
+            }
+
+            vec_Hgij.push_back(Hgij);
+            vec_Hcij.push_back(Hcij);
 
             //Left-hand side: skew(Pgij+Pcij)
             skew(Pgij+Pcij).copyTo(A(Rect(0, idx*3, 3, 3)));
             //Right-hand side: Pcij - Pgij
             Mat diff = Pcij - Pgij;
             diff.copyTo(B(Rect(0, idx*3, 1, 3)));
+            idx++;
         }
     }
+
+    // insufficient data
+    if (idx < 2) {
+        CV_LOG_ERROR(NULL, "Hand-eye calibration failed! Not enough informative motions--include larger rotations.");
+        return;
+    }
+    A.resize(3*idx);
+    B.resize(3*idx);
 
     Mat Pcg_;
     //Rotation from camera to gripper is obtained from the set of equations:
@@ -327,28 +350,24 @@ static void calibrateHandEyeTsai(const std::vector<Mat>& Hg, const std::vector<M
 
     Mat Rcg = quatMinimal2rot(Pcg/2.0);
 
-    idx = 0;
-    for (size_t i = 0; i < Hg.size(); i++)
+    for (size_t i = 0; i < vec_Hgij.size(); i++)
     {
-        for (size_t j = i+1; j < Hg.size(); j++, idx++)
-        {
-            //Defines coordinate transformation from Gi to Gj
-            //Hgi is from Gi (gripper) to RW (robot base)
-            //Hgj is from Gj (gripper) to RW (robot base)
-            Mat Hgij = vec_Hgij[static_cast<size_t>(idx)];
-            //Defines coordinate transformation from Ci to Cj
-            //Hci is from CW (calibration target) to Ci (camera)
-            //Hcj is from CW (calibration target) to Cj (camera)
-            Mat Hcij = vec_Hcij[static_cast<size_t>(idx)];
+        //Defines coordinate transformation from Gi to Gj
+        //Hgi is from Gi (gripper) to RW (robot base)
+        //Hgj is from Gj (gripper) to RW (robot base)
+        Mat Hgij = vec_Hgij[i];
+        //Defines coordinate transformation from Ci to Cj
+        //Hci is from CW (calibration target) to Ci (camera)
+        //Hcj is from CW (calibration target) to Cj (camera)
+        Mat Hcij = vec_Hcij[i];
 
-            //Left-hand side: (Rgij - I)
-            Mat diff = Hgij(Rect(0,0,3,3)) - Mat::eye(3,3,CV_64FC1);
-            diff.copyTo(A(Rect(0, idx*3, 3, 3)));
+        //Left-hand side: (Rgij - I)
+        Mat diff = Hgij(Rect(0,0,3,3)) - Mat::eye(3,3,CV_64FC1);
+        diff.copyTo(A(Rect(0, static_cast<int>(i)*3, 3, 3)));
 
-            //Right-hand side: Rcg*Tcij - Tgij
-            diff = Rcg*Hcij(Rect(3, 0, 1, 3)) - Hgij(Rect(3, 0, 1, 3));
-            diff.copyTo(B(Rect(0, idx*3, 1, 3)));
-        }
+        //Right-hand side: Rcg*Tcij - Tgij
+        diff = Rcg*Hcij(Rect(3, 0, 1, 3)) - Hgij(Rect(3, 0, 1, 3));
+        diff.copyTo(B(Rect(0, static_cast<int>(i)*3, 1, 3)));
     }
 
     Mat Tcg;
@@ -449,6 +468,9 @@ static void calibrateHandEyeHoraud(const std::vector<Mat>& Hg, const std::vector
             Mat Rcij = Hcij(Rect(0, 0, 3, 3));
 
             Mat qgij = rot2quat(Rgij);
+            if (qgij.at<double>(0, 0) < 0) {
+                qgij *= -1;
+            }
             double r0 = qgij.at<double>(0,0);
             double rx = qgij.at<double>(1,0);
             double ry = qgij.at<double>(2,0);
@@ -461,6 +483,9 @@ static void calibrateHandEyeHoraud(const std::vector<Mat>& Hg, const std::vector
                         rz, -ry,  rx,  r0);
 
             Mat qcij = rot2quat(Rcij);
+            if (qcij.at<double>(0, 0) < 0) {
+                qcij *= -1;
+            }
             r0 = qcij.at<double>(0,0);
             rx = qcij.at<double>(1,0);
             ry = qcij.at<double>(2,0);
@@ -514,10 +539,32 @@ static void calibrateHandEyeHoraud(const std::vector<Mat>& Hg, const std::vector
     t_cam2gripper = t;
 }
 
-// sign function, return -1 if negative values, +1 otherwise
-static int sign_double(double val)
+static Mat_<double> normalizeRotation(const Mat_<double>& R_)
 {
-    return (0 < val) - (val < 0);
+    // Make R unit determinant
+    Mat_<double> R = R_.clone();
+    double det = determinant(R);
+    if (std::fabs(det) < FLT_EPSILON)
+    {
+        CV_Error(Error::StsNoConv, "Rotation normalization issue: determinant(R) is null");
+    }
+    R = std::cbrt(std::copysign(1, det) / std::fabs(det)) * R;
+
+    // Make R orthogonal
+    Mat w, u, vt;
+    SVDecomp(R, w, u, vt);
+    R = u*vt;
+
+    // Handle reflection case
+    if (determinant(R) < 0)
+    {
+        Matx33d diag(1.0, 0.0, 0.0,
+                     0.0, 1.0, 0.0,
+                     0.0, 0.0, -1.0);
+        R = u*diag*vt;
+    }
+
+    return R;
 }
 
 //Reference:
@@ -573,29 +620,8 @@ static void calibrateHandEyeAndreff(const std::vector<Mat>& Hg, const std::vecto
     int newSize[] = {3, 3};
     R = R.reshape(1, 2, newSize);
     //Eq 15
-    double det = determinant(R);
-    if (std::fabs(det) < FLT_EPSILON)
-    {
-        CV_Error(Error::StsNoConv, "calibrateHandEye() with CALIB_HAND_EYE_ANDREFF method: determinant(R) is null");
-    }
-    R = cubeRoot(static_cast<float>(sign_double(det) / abs(det))) * R;
-
-    Mat w, u, vt;
-    SVDecomp(R, w, u, vt);
-    R = u*vt;
-
-    if (determinant(R) < 0)
-    {
-        Mat diag = (Mat_<double>(3,3) << 1.0, 0.0, 0.0,
-                                         0.0, 1.0, 0.0,
-                                         0.0, 0.0, -1.0);
-        R = u*diag*vt;
-    }
-
-    R_cam2gripper = R;
-
-    Mat t = X(Rect(0, 9, 1, 3));
-    t_cam2gripper = t;
+    R_cam2gripper = normalizeRotation(R);
+    t_cam2gripper = X(Rect(0, 9, 1, 3));
 }
 
 //Reference:
@@ -617,7 +643,13 @@ static void calibrateHandEyeDaniilidis(const std::vector<Mat>& Hg, const std::ve
             Mat Hcij = Hc[j] * homogeneousInverse(Hc[i]);
 
             Mat dualqa = homogeneous2dualQuaternion(Hgij);
+            if (dualqa.at<double>(0, 0) < 0) {
+                dualqa *= -1;
+            }
             Mat dualqb = homogeneous2dualQuaternion(Hcij);
+            if (dualqb.at<double>(0, 0) < 0) {
+                dualqb *= -1;
+            }
 
             Mat a = dualqa(Rect(0, 1, 1, 3));
             Mat b = dualqb(Rect(0, 1, 1, 3));
@@ -708,7 +740,7 @@ void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gr
     CV_Assert(R_gripper2base_.size() == t_gripper2base_.size() &&
               R_target2cam_.size() == t_target2cam_.size() &&
               R_gripper2base_.size() == R_target2cam_.size());
-    CV_Assert(R_gripper2base_.size() >= 3);
+    CV_Check(R_gripper2base_.size(), R_gripper2base_.size() >= 3, "At least 3 measurements are needed");
 
     //Notation used in Tsai paper
     //Defines coordinate transformation from G (gripper) to RW (robot base)
@@ -721,7 +753,11 @@ void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gr
         if(R_gripper2base_[i].size() == Size(3, 3))
             R_gripper2base_[i].convertTo(R, CV_64F);
         else
-            Rodrigues(R_gripper2base_[i], R);
+        {
+            cv::Mat R_temp;
+            Rodrigues(R_gripper2base_[i], R_temp);
+            R_temp.convertTo(R, CV_64F);
+        }
 
         Mat t = m(Rect(3, 0, 1, 3));
         t_gripper2base_[i].convertTo(t, CV_64F);
@@ -739,7 +775,11 @@ void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gr
         if(R_target2cam_[i].size() == Size(3, 3))
             R_target2cam_[i].convertTo(R, CV_64F);
         else
-            Rodrigues(R_target2cam_[i], R);
+        {
+            cv::Mat R_temp;
+            Rodrigues(R_target2cam_[i], R_temp);
+            R_temp.convertTo(R, CV_64F);
+        }
 
         Mat t = m(Rect(3, 0, 1, 3));
         t_target2cam_[i].convertTo(t, CV_64F);
@@ -778,5 +818,200 @@ void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gr
 
     Rcg.copyTo(R_cam2gripper);
     Tcg.copyTo(t_cam2gripper);
+}
+
+//Reference:
+//M. Shah, "Solving the robot-world/hand-eye calibration problem using the kronecker product"
+//Journal of Mechanisms and Robotics, vol. 5, p. 031007, 2013.
+//Matlab code: http://math.loyola.edu/~mili/Calibration/
+static void calibrateRobotWorldHandEyeShah(const std::vector<Mat_<double>>& cRw, const std::vector<Mat_<double>>& ctw,
+                                           const std::vector<Mat_<double>>& gRb, const std::vector<Mat_<double>>& gtb,
+                                           Matx33d& wRb, Matx31d& wtb, Matx33d& cRg, Matx31d& ctg)
+{
+    Mat_<double> T = Mat_<double>::zeros(9, 9);
+    for (size_t i = 0; i < cRw.size(); i++)
+    {
+        T += kron(gRb[i], cRw[i]);
+    }
+
+    Mat_<double> w, u, vt;
+    SVDecomp(T, w, u, vt);
+
+    Mat_<double> RX(3,3), RZ(3,3);
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            RX(j,i) = vt(0, i*3+j);
+            RZ(j,i) = u(i*3+j, 0);
+        }
+    }
+
+    wRb = normalizeRotation(RX);
+    cRg = normalizeRotation(RZ);
+    Mat_<double> Z = Mat(cRg.t()).reshape(1, 9);
+
+    const int n = static_cast<int>(cRw.size());
+    Mat_<double> A = Mat_<double>::zeros(3*n, 6);
+    Mat_<double> b = Mat_<double>::zeros(3*n, 1);
+    Mat_<double> I3 = Mat_<double>::eye(3,3);
+
+    for (int i = 0; i < n; i++)
+    {
+        Mat cRw_ = -cRw[i];
+        cRw_.copyTo(A(Range(i*3, (i+1)*3), Range(0,3)));
+        I3.copyTo(A(Range(i*3, (i+1)*3), Range(3,6)));
+
+        Mat ctw_ = ctw[i] - kron(gtb[i].t(), I3) * Z;
+        ctw_.copyTo(b(Range(i*3, (i+1)*3), Range::all()));
+    }
+
+    Mat_<double> t;
+    solve(A, b, t, DECOMP_SVD);
+
+    for (int i = 0; i < 3; i++)
+    {
+        wtb(i) = t(i);
+        ctg(i) = t(i+3);
+    }
+}
+
+//Reference:
+//A. Li, L. Wang, and D. Wu, "Simultaneous robot-world and hand-eye calibration using dual-quaternions and kronecker product"
+//International Journal of Physical Sciences, vol. 5, pp. 1530-1536, 2010.
+//Matlab code: http://math.loyola.edu/~mili/Calibration/
+static void calibrateRobotWorldHandEyeLi(const std::vector<Mat_<double>>& cRw, const std::vector<Mat_<double>>& ctw,
+                                         const std::vector<Mat_<double>>& gRb, const std::vector<Mat_<double>>& gtb,
+                                         Matx33d& wRb, Matx31d& wtb, Matx33d& cRg, Matx31d& ctg)
+{
+    const int n = static_cast<int>(cRw.size());
+    Mat_<double> A = Mat_<double>::zeros(12*n, 24);
+    Mat_<double> b = Mat_<double>::zeros(12*n, 1);
+    Mat_<double> I3 = Mat_<double>::eye(3,3);
+
+    for (int i = 0; i < n; i++)
+    {
+        //Eq 19
+        kron(cRw[i], I3).copyTo(A(Range(i*12, i*12 + 9), Range(0, 9)));
+        kron(-I3, gRb[i].t()).copyTo(A(Range(i*12, i*12 + 9), Range(9, 18)));
+
+        kron(I3, gtb[i].t()).copyTo(A(Range(i*12 + 9, (i+1)*12), Range(9, 18)));
+        Mat cRw_ = -cRw[i];
+        cRw_.copyTo(A(Range(i*12 + 9, (i+1)*12), Range(18, 21)));
+        I3.copyTo(A(Range(i*12 + 9, (i+1)*12), Range(21, 24)));
+
+        ctw[i].copyTo(b(Range(i*12 + 9, i*12+12), Range::all()));
+    }
+
+    Mat_<double> x;
+    solve(A, b, x, DECOMP_SVD);
+
+    Mat_<double> RX = x(Range(0,9), Range::all()).reshape(3, 3);
+    wRb = normalizeRotation(RX);
+    x(Range(18,21), Range::all()).copyTo(wtb);
+
+    Mat_<double> RZ = x(Range(9,18), Range::all()).reshape(3, 3);
+    cRg = normalizeRotation(RZ);
+    x(Range(21,24), Range::all()).copyTo(ctg);
+}
+
+void calibrateRobotWorldHandEye(InputArrayOfArrays R_world2cam, InputArrayOfArrays t_world2cam,
+                                InputArrayOfArrays R_base2gripper, InputArrayOfArrays t_base2gripper,
+                                OutputArray R_base2world, OutputArray t_base2world,
+                                OutputArray R_gripper2cam, OutputArray t_gripper2cam,
+                                RobotWorldHandEyeCalibrationMethod method)
+{
+    CV_Assert(R_base2gripper.isMatVector() && t_base2gripper.isMatVector() &&
+              R_world2cam.isMatVector() && t_world2cam.isMatVector());
+
+    std::vector<Mat> R_base2gripper_tmp, t_base2gripper_tmp;
+    R_base2gripper.getMatVector(R_base2gripper_tmp);
+    t_base2gripper.getMatVector(t_base2gripper_tmp);
+
+    std::vector<Mat> R_world2cam_tmp, t_world2cam_tmp;
+    R_world2cam.getMatVector(R_world2cam_tmp);
+    t_world2cam.getMatVector(t_world2cam_tmp);
+
+    CV_Assert(R_base2gripper_tmp.size() == t_base2gripper_tmp.size() &&
+              R_world2cam_tmp.size() == t_world2cam_tmp.size() &&
+              R_base2gripper_tmp.size() == R_world2cam_tmp.size());
+    CV_Check(R_base2gripper_tmp.size(), R_base2gripper_tmp.size() >= 3, "At least 3 measurements are needed");
+
+    // Convert to double
+    std::vector<Mat_<double>> R_base2gripper_, t_base2gripper_;
+    std::vector<Mat_<double>> R_world2cam_, t_world2cam_;
+
+    R_base2gripper_.reserve(R_base2gripper_tmp.size());
+    t_base2gripper_.reserve(R_base2gripper_tmp.size());
+    R_world2cam_.reserve(R_world2cam_tmp.size());
+    t_world2cam_.reserve(R_base2gripper_tmp.size());
+
+    // Convert to rotation matrix if needed
+    for (size_t i = 0; i < R_base2gripper_tmp.size(); i++)
+    {
+        {
+            Mat rot = R_base2gripper_tmp[i];
+            Mat R(3, 3, CV_64FC1);
+            if (rot.size() == Size(3,3))
+            {
+                rot.convertTo(R, CV_64F);
+                R_base2gripper_.push_back(R);
+            }
+            else
+            {
+                cv::Mat R_temp;
+                Rodrigues(rot, R_temp);
+                R_temp.convertTo(R, CV_64F);
+                R_base2gripper_.push_back(R);
+            }
+            Mat tvec = t_base2gripper_tmp[i];
+            Mat t;
+            tvec.convertTo(t, CV_64F);
+            t_base2gripper_.push_back(t);
+        }
+        {
+            Mat rot  = R_world2cam_tmp[i];
+            Mat R(3, 3, CV_64FC1);
+            if (rot.size() == Size(3,3))
+            {
+                rot.convertTo(R, CV_64F);
+                R_world2cam_.push_back(R);
+            }
+            else
+            {
+                cv::Mat R_temp;
+                Rodrigues(rot, R_temp);
+                R_temp.convertTo(R, CV_64F);
+                R_world2cam_.push_back(R);
+            }
+            Mat tvec = t_world2cam_tmp[i];
+            Mat t;
+            tvec.convertTo(t, CV_64F);
+            t_world2cam_.push_back(t);
+        }
+    }
+
+    CV_Assert(R_world2cam_.size() == t_world2cam_.size() &&
+              R_base2gripper_.size() == t_base2gripper_.size() &&
+              R_world2cam_.size() == R_base2gripper_.size());
+
+    Matx33d wRb, cRg;
+    Matx31d wtb, ctg;
+    switch (method)
+    {
+    case CALIB_ROBOT_WORLD_HAND_EYE_SHAH:
+        calibrateRobotWorldHandEyeShah(R_world2cam_, t_world2cam_, R_base2gripper_, t_base2gripper_, wRb, wtb, cRg, ctg);
+        break;
+
+    case CALIB_ROBOT_WORLD_HAND_EYE_LI:
+        calibrateRobotWorldHandEyeLi(R_world2cam_, t_world2cam_, R_base2gripper_, t_base2gripper_, wRb, wtb, cRg, ctg);
+        break;
+    }
+
+    Mat(wRb).copyTo(R_base2world);
+    Mat(wtb).copyTo(t_base2world);
+
+    Mat(cRg).copyTo(R_gripper2cam);
+    Mat(ctg).copyTo(t_gripper2cam);
 }
 }

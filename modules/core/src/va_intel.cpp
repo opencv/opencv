@@ -7,6 +7,8 @@
 
 #include "precomp.hpp"
 
+#include <opencv2/core/utils/logger.hpp>
+
 #ifdef HAVE_VA
 #  include <va/va.h>
 #else  // HAVE_VA
@@ -25,22 +27,53 @@ using namespace cv;
 #  include "opencl_kernels_core.hpp"
 #endif // HAVE_OPENCL
 
-#if defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL)
+#ifdef HAVE_VA_INTEL
+#ifdef HAVE_VA_INTEL_OLD_HEADER
 #  include <CL/va_ext.h>
-#endif // HAVE_VA_INTEL && HAVE_OPENCL
+#else
+#  include <CL/cl_va_api_media_sharing_intel.h>
+#endif
+#endif
+
+#ifdef HAVE_VA
+#ifndef OPENCV_LIBVA_LINK
+#include "va_wrapper.impl.hpp"
+#else
+namespace cv { namespace detail {
+static void init_libva() { /* nothing */ }
+}}  // namespace
+#endif
+using namespace cv::detail;
+#endif
 
 namespace cv { namespace va_intel {
 
-#if defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL)
+#ifdef HAVE_VA_INTEL
 
-static clGetDeviceIDsFromVA_APIMediaAdapterINTEL_fn clGetDeviceIDsFromVA_APIMediaAdapterINTEL = NULL;
-static clCreateFromVA_APIMediaSurfaceINTEL_fn       clCreateFromVA_APIMediaSurfaceINTEL       = NULL;
-static clEnqueueAcquireVA_APIMediaSurfacesINTEL_fn  clEnqueueAcquireVA_APIMediaSurfacesINTEL  = NULL;
-static clEnqueueReleaseVA_APIMediaSurfacesINTEL_fn  clEnqueueReleaseVA_APIMediaSurfacesINTEL  = NULL;
+class VAAPIInterop : public ocl::Context::UserContext
+{
+public:
+    VAAPIInterop(cl_platform_id platform) {
+        clCreateFromVA_APIMediaSurfaceINTEL       = (clCreateFromVA_APIMediaSurfaceINTEL_fn)
+                clGetExtensionFunctionAddressForPlatform(platform, "clCreateFromVA_APIMediaSurfaceINTEL");
+        clEnqueueAcquireVA_APIMediaSurfacesINTEL  = (clEnqueueAcquireVA_APIMediaSurfacesINTEL_fn)
+                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueAcquireVA_APIMediaSurfacesINTEL");
+        clEnqueueReleaseVA_APIMediaSurfacesINTEL  = (clEnqueueReleaseVA_APIMediaSurfacesINTEL_fn)
+                clGetExtensionFunctionAddressForPlatform(platform, "clEnqueueReleaseVA_APIMediaSurfacesINTEL");
+        if (!clCreateFromVA_APIMediaSurfaceINTEL ||
+            !clEnqueueAcquireVA_APIMediaSurfacesINTEL ||
+            !clEnqueueReleaseVA_APIMediaSurfacesINTEL) {
+            CV_Error(cv::Error::OpenCLInitError, "OpenCL: Can't get extension function for VA-API interop");
+        }
+    }
+    virtual ~VAAPIInterop() {
+    }
+    clCreateFromVA_APIMediaSurfaceINTEL_fn       clCreateFromVA_APIMediaSurfaceINTEL;
+    clEnqueueAcquireVA_APIMediaSurfacesINTEL_fn  clEnqueueAcquireVA_APIMediaSurfacesINTEL;
+    clEnqueueReleaseVA_APIMediaSurfacesINTEL_fn  clEnqueueReleaseVA_APIMediaSurfacesINTEL;
+};
 
-static bool contextInitialized = false;
-
-#endif // HAVE_VA_INTEL && HAVE_OPENCL
+#endif // HAVE_VA_INTEL
 
 namespace ocl {
 
@@ -50,8 +83,8 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
-# if (defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL))
-    contextInitialized = false;
+
+#   ifdef HAVE_VA_INTEL
     if (tryInterop)
     {
         cl_uint numPlatforms;
@@ -80,20 +113,10 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
         for (int i = 0; i < (int)numPlatforms; ++i)
         {
             // Get extension function pointers
-
+            clGetDeviceIDsFromVA_APIMediaAdapterINTEL_fn clGetDeviceIDsFromVA_APIMediaAdapterINTEL;
             clGetDeviceIDsFromVA_APIMediaAdapterINTEL = (clGetDeviceIDsFromVA_APIMediaAdapterINTEL_fn)
                 clGetExtensionFunctionAddressForPlatform(platforms[i], "clGetDeviceIDsFromVA_APIMediaAdapterINTEL");
-            clCreateFromVA_APIMediaSurfaceINTEL       = (clCreateFromVA_APIMediaSurfaceINTEL_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clCreateFromVA_APIMediaSurfaceINTEL");
-            clEnqueueAcquireVA_APIMediaSurfacesINTEL  = (clEnqueueAcquireVA_APIMediaSurfacesINTEL_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clEnqueueAcquireVA_APIMediaSurfacesINTEL");
-            clEnqueueReleaseVA_APIMediaSurfacesINTEL  = (clEnqueueReleaseVA_APIMediaSurfacesINTEL_fn)
-                clGetExtensionFunctionAddressForPlatform(platforms[i], "clEnqueueReleaseVA_APIMediaSurfacesINTEL");
-
-            if (((void*)clGetDeviceIDsFromVA_APIMediaAdapterINTEL == NULL) ||
-                ((void*)clCreateFromVA_APIMediaSurfaceINTEL == NULL) ||
-                ((void*)clEnqueueAcquireVA_APIMediaSurfacesINTEL == NULL) ||
-                ((void*)clEnqueueReleaseVA_APIMediaSurfacesINTEL == NULL))
+            if ((void*)clGetDeviceIDsFromVA_APIMediaAdapterINTEL == NULL)
             {
                 continue;
             }
@@ -106,7 +129,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
                                                                CL_PREFERRED_DEVICES_FOR_VA_API_INTEL, 0, NULL, &numDevices);
             if ((status != CL_SUCCESS) || !(numDevices > 0))
                 continue;
-            numDevices = 1; // initializeContextFromHandle() expects only 1 device
+            numDevices = 1; // OpenCV expects only 1 device
             status = clGetDeviceIDsFromVA_APIMediaAdapterINTEL(platforms[i], CL_VA_API_DISPLAY_INTEL, display,
                                                                CL_PREFERRED_DEVICES_FOR_VA_API_INTEL, numDevices, &device, NULL);
             if (status != CL_SUCCESS)
@@ -134,13 +157,26 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
 
         if (found >= 0)
         {
-            contextInitialized = true;
-            Context& ctx = Context::getDefault(false);
-            initializeContextFromHandle(ctx, platforms[found], context, device);
-            return ctx;
+            cl_platform_id platform = platforms[found];
+            std::string platformName = PlatformInfo(&platform).name();
+
+            OpenCLExecutionContext clExecCtx;
+            try
+            {
+                clExecCtx = OpenCLExecutionContext::create(platformName, platform, context, device);
+                clExecCtx.getContext().setUserContext(std::make_shared<VAAPIInterop>(platform));
+            }
+            catch (...)
+            {
+                clReleaseDevice(device);
+                clReleaseContext(context);
+                throw;
+            }
+            clExecCtx.bind();
+            return const_cast<Context&>(clExecCtx.getContext());
         }
     }
-# endif // HAVE_VA_INTEL && HAVE_OPENCL
+# endif // HAVE_VA_INTEL
     {
         Context& ctx = Context::getDefault(true);
         return ctx;
@@ -148,7 +184,7 @@ Context& initializeContextFromVA(VADisplay display, bool tryInterop)
 #endif  // !HAVE_VA
 }
 
-#if defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL)
+#ifdef HAVE_VA_INTEL
 static bool ocl_convert_nv12_to_bgr(cl_mem clImageY, cl_mem clImageUV, cl_mem clBuffer, int step, int cols, int rows)
 {
     ocl::Kernel k;
@@ -174,7 +210,7 @@ static bool ocl_convert_bgr_to_nv12(cl_mem clBuffer, int step, int cols, int row
     size_t globalsize[] = { (size_t)cols/2, (size_t)rows/2 };
     return k.run(2, globalsize, 0, false);
 }
-#endif // HAVE_VA_INTEL && HAVE_OPENCL
+#endif // HAVE_VA_INTEL
 
 } // namespace cv::va_intel::ocl
 
@@ -489,6 +525,7 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
+
     const int stype = CV_8UC3;
 
     int srcType = src.type();
@@ -497,8 +534,19 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
     Size srcSize = src.size();
     CV_Assert(srcSize.width == size.width && srcSize.height == size.height);
 
-# if (defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL))
-    if (contextInitialized)
+#ifdef HAVE_VA_INTEL
+    ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
+    VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
+    CV_LOG_IF_DEBUG(NULL, !interop,
+        "OpenCL/VA_INTEL: Can't interop with current OpenCL context - missing VAAPIInterop API. "
+        "OpenCL context should be created through initializeContextFromVA()");
+    void* context_display = ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL);
+    CV_LOG_IF_INFO(NULL, interop && !context_display,
+        "OpenCL/VA_INTEL: Can't interop with current OpenCL context - missing VA display, context re-creation is required");
+    bool isValidContextDisplay = (display == context_display);
+    CV_LOG_IF_INFO(NULL, interop && context_display && !isValidContextDisplay,
+        "OpenCL/VA_INTEL: Can't interop with current OpenCL context - VA display mismatch: " << context_display << "(context) vs " << (void*)display << "(surface)");
+    if (isValidContextDisplay && interop)
     {
         UMat u = src.getUMat();
 
@@ -508,28 +556,26 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
 
         cl_mem clBuffer = (cl_mem)u.handle(ACCESS_READ);
 
-        using namespace cv::ocl;
-        Context& ctx = Context::getDefault();
-        cl_context context = (cl_context)ctx.ptr();
+        cl_context context = (cl_context)ocl_context.getContext().ptr();
 
         cl_int status = 0;
 
-        cl_mem clImageY = clCreateFromVA_APIMediaSurfaceINTEL(context, CL_MEM_WRITE_ONLY, &surface, 0, &status);
+        cl_mem clImageY = interop->clCreateFromVA_APIMediaSurfaceINTEL(context, CL_MEM_WRITE_ONLY, &surface, 0, &status);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromVA_APIMediaSurfaceINTEL failed (Y plane)");
-        cl_mem clImageUV = clCreateFromVA_APIMediaSurfaceINTEL(context, CL_MEM_WRITE_ONLY, &surface, 1, &status);
+        cl_mem clImageUV = interop->clCreateFromVA_APIMediaSurfaceINTEL(context, CL_MEM_WRITE_ONLY, &surface, 1, &status);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromVA_APIMediaSurfaceINTEL failed (UV plane)");
 
-        cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+        cl_command_queue q = (cl_command_queue)ocl_context.getQueue().ptr();
 
         cl_mem images[2] = { clImageY, clImageUV };
-        status = clEnqueueAcquireVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
+        status = interop->clEnqueueAcquireVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireVA_APIMediaSurfacesINTEL failed");
         if (!ocl::ocl_convert_bgr_to_nv12(clBuffer, (int)u.step[0], u.cols, u.rows, clImageY, clImageUV))
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_bgr_to_nv12 failed");
-        clEnqueueReleaseVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
+        interop->clEnqueueReleaseVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseVA_APIMediaSurfacesINTEL failed");
 
@@ -545,8 +591,9 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed (UV plane)");
     }
     else
-# endif // HAVE_VA_INTEL && HAVE_OPENCL
+# endif // HAVE_VA_INTEL
     {
+        init_libva();
         Mat m = src.getMat();
 
         // TODO Add support for roi
@@ -559,10 +606,36 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
         if (status != VA_STATUS_SUCCESS)
             CV_Error(cv::Error::StsError, "VA-API: vaSyncSurface failed");
 
+        bool indirect_buffer = false;
         VAImage image;
         status = vaDeriveImage(display, surface, &image);
-        if (status != VA_STATUS_SUCCESS)
-            CV_Error(cv::Error::StsError, "VA-API: vaDeriveImage failed");
+        if (status != VA_STATUS_SUCCESS){
+            //try vaCreateImage + vaPutImage
+            //pick a format
+            indirect_buffer = true;
+            int num_formats = vaMaxNumImageFormats(display);
+            if (num_formats <= 0)
+                CV_Error(cv::Error::StsError, "VA-API: vaMaxNumImageFormats failed");
+            std::vector<VAImageFormat> fmt_list(num_formats);
+
+            status = vaQueryImageFormats(display, fmt_list.data(), &num_formats);
+            if (status != VA_STATUS_SUCCESS)
+                CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats failed");
+            VAImageFormat *selected_format = nullptr;
+            for (auto &fmt : fmt_list){
+                if (fmt.fourcc == VA_FOURCC_NV12 || fmt.fourcc == VA_FOURCC_YV12){
+                    selected_format = &fmt;
+                    break;
+                }
+            }
+            if (selected_format == nullptr)
+                CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats did not return a supported format");
+
+            status = vaCreateImage(display, selected_format, size.width, size.height, &image);
+            if (status != VA_STATUS_SUCCESS)
+                CV_Error(cv::Error::StsError, "VA-API: vaCreateImage failed");
+
+        }
 
         unsigned char* buffer = 0;
         status = vaMapBuffer(display, image.buf, (void **)&buffer);
@@ -580,6 +653,14 @@ void convertToVASurface(VADisplay display, InputArray src, VASurfaceID surface, 
         if (status != VA_STATUS_SUCCESS)
             CV_Error(cv::Error::StsError, "VA-API: vaUnmapBuffer failed");
 
+        if (indirect_buffer){
+            status = vaPutImage(display, surface, image.image_id, 0, 0, size.width, size.height, 0, 0, size.width, size.height);
+            if (status != VA_STATUS_SUCCESS){
+                vaDestroyImage(display, image.image_id);
+                CV_Error(cv::Error::StsError, "VA-API: vaPutImage failed");
+            }
+        }
+
         status = vaDestroyImage(display, image.image_id);
         if (status != VA_STATUS_SUCCESS)
             CV_Error(cv::Error::StsError, "VA-API: vaDestroyImage failed");
@@ -593,13 +674,16 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 #if !defined(HAVE_VA)
     NO_VA_SUPPORT_ERROR;
 #else  // !HAVE_VA
+
     const int dtype = CV_8UC3;
 
     // TODO Need to specify ACCESS_WRITE here somehow to prevent useless data copying!
     dst.create(size, dtype);
 
-# if (defined(HAVE_VA_INTEL) && defined(HAVE_OPENCL))
-    if (contextInitialized)
+#ifdef HAVE_VA_INTEL
+    ocl::OpenCLExecutionContext& ocl_context = ocl::OpenCLExecutionContext::getCurrent();
+    VAAPIInterop* interop = ocl_context.getContext().getUserContext<VAAPIInterop>().get();
+    if (display == ocl_context.getContext().getOpenCLContextProperty(CL_CONTEXT_VA_API_DISPLAY_INTEL) && interop)
     {
         UMat u = dst.getUMat();
 
@@ -609,28 +693,26 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 
         cl_mem clBuffer = (cl_mem)u.handle(ACCESS_WRITE);
 
-        using namespace cv::ocl;
-        Context& ctx = Context::getDefault();
-        cl_context context = (cl_context)ctx.ptr();
+        cl_context context = (cl_context)ocl_context.getContext().ptr();
 
         cl_int status = 0;
 
-        cl_mem clImageY = clCreateFromVA_APIMediaSurfaceINTEL(context, CL_MEM_READ_ONLY, &surface, 0, &status);
+        cl_mem clImageY = interop->clCreateFromVA_APIMediaSurfaceINTEL(context, CL_MEM_READ_ONLY, &surface, 0, &status);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromVA_APIMediaSurfaceINTEL failed (Y plane)");
-        cl_mem clImageUV = clCreateFromVA_APIMediaSurfaceINTEL(context, CL_MEM_READ_ONLY, &surface, 1, &status);
+        cl_mem clImageUV = interop->clCreateFromVA_APIMediaSurfaceINTEL(context, CL_MEM_READ_ONLY, &surface, 1, &status);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clCreateFromVA_APIMediaSurfaceINTEL failed (UV plane)");
 
-        cl_command_queue q = (cl_command_queue)Queue::getDefault().ptr();
+        cl_command_queue q = (cl_command_queue)ocl_context.getQueue().ptr();
 
         cl_mem images[2] = { clImageY, clImageUV };
-        status = clEnqueueAcquireVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
+        status = interop->clEnqueueAcquireVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueAcquireVA_APIMediaSurfacesINTEL failed");
         if (!ocl::ocl_convert_nv12_to_bgr(clImageY, clImageUV, clBuffer, (int)u.step[0], u.cols, u.rows))
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: ocl_convert_nv12_to_bgr failed");
-        status = clEnqueueReleaseVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
+        status = interop->clEnqueueReleaseVA_APIMediaSurfacesINTEL(q, 2, images, 0, NULL, NULL);
         if (status != CL_SUCCESS)
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clEnqueueReleaseVA_APIMediaSurfacesINTEL failed");
 
@@ -646,8 +728,9 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
             CV_Error(cv::Error::OpenCLApiCallError, "OpenCL: clReleaseMem failed (UV plane)");
     }
     else
-# endif // HAVE_VA_INTEL && HAVE_OPENCL
+# endif // HAVE_VA_INTEL
     {
+        init_libva();
         Mat m = dst.getMat();
 
         // TODO Add support for roi
@@ -662,8 +745,37 @@ void convertFromVASurface(VADisplay display, VASurfaceID surface, Size size, Out
 
         VAImage image;
         status = vaDeriveImage(display, surface, &image);
-        if (status != VA_STATUS_SUCCESS)
-            CV_Error(cv::Error::StsError, "VA-API: vaDeriveImage failed");
+        if (status != VA_STATUS_SUCCESS){
+            //try vaCreateImage + vaGetImage
+            //pick a format
+            int num_formats = vaMaxNumImageFormats(display);
+            if (num_formats <= 0)
+                CV_Error(cv::Error::StsError, "VA-API: vaMaxNumImageFormats failed");
+            std::vector<VAImageFormat> fmt_list(num_formats);
+
+            status = vaQueryImageFormats(display, fmt_list.data(), &num_formats);
+            if (status != VA_STATUS_SUCCESS)
+                CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats failed");
+            VAImageFormat *selected_format = nullptr;
+            for (auto &fmt : fmt_list){
+                if (fmt.fourcc == VA_FOURCC_NV12 || fmt.fourcc == VA_FOURCC_YV12){
+                    selected_format = &fmt;
+                    break;
+                }
+            }
+            if (selected_format == nullptr)
+                CV_Error(cv::Error::StsError, "VA-API: vaQueryImageFormats did not return a supported format");
+
+            status = vaCreateImage(display, selected_format, size.width, size.height, &image);
+            if (status != VA_STATUS_SUCCESS)
+                CV_Error(cv::Error::StsError, "VA-API: vaCreateImage failed");
+
+            status = vaGetImage(display, surface, 0, 0, size.width, size.height, image.image_id);
+            if (status != VA_STATUS_SUCCESS){
+                vaDestroyImage(display, image.image_id);
+                CV_Error(cv::Error::StsError, "VA-API: vaPutImage failed");
+            }
+        }
 
         unsigned char* buffer = 0;
         status = vaMapBuffer(display, image.buf, (void **)&buffer);

@@ -54,7 +54,7 @@ class FAST_t_patternSize16_AVX2
 public:
     static Ptr<FAST_t_patternSize16_AVX2> getImpl(int _cols, int _threshold, bool _nonmax_suppression, const int* _pixel);
     virtual void process(int &j, const uchar* &ptr, uchar* curr, int* cornerpos, int &ncorners) = 0;
-    virtual ~FAST_t_patternSize16_AVX2() {};
+    virtual ~FAST_t_patternSize16_AVX2() {}
 };
 #endif
 }

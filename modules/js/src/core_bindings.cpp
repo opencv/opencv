@@ -86,12 +86,38 @@ namespace hal {
 
 using namespace emscripten;
 using namespace cv;
+
+using namespace cv::segmentation;  // FIXIT
+
+#ifdef HAVE_OPENCV_OBJDETECT
+using namespace cv::aruco;
+typedef aruco::DetectorParameters aruco_DetectorParameters;
+typedef QRCodeDetectorAruco::Params QRCodeDetectorAruco_Params;
+#endif
+
 #ifdef HAVE_OPENCV_DNN
 using namespace cv::dnn;
 #endif
 
+#ifdef HAVE_OPENCV_FEATURES2D
+typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
+#endif
+
+#ifdef HAVE_OPENCV_VIDEO
+typedef TrackerMIL::Params TrackerMIL_Params;
+#endif
+
+// HACK: JS generator ommits namespace for parameter types for some reason. Added typedef to handle std::string correctly
+typedef std::string string;
+
 namespace binding_utils
 {
+    template<typename classT, typename enumT>
+    static inline typename std::underlying_type<enumT>::type classT::* underlying_ptr(enumT classT::* enum_ptr)
+    {
+        return reinterpret_cast<typename std::underlying_type<enumT>::type classT::*>(enum_ptr);
+    }
+
     template<typename T>
     emscripten::val matData(const cv::Mat& mat)
     {
@@ -351,6 +377,23 @@ namespace binding_utils
         result.call<void>("push", arg2);
         return result;
     }
+
+
+    void Tracker_init_wrapper(cv::Tracker& arg0, const cv::Mat& arg1, const Rect& arg2)
+    {
+        return arg0.init(arg1, arg2);
+    }
+
+    emscripten::val Tracker_update_wrapper(cv::Tracker& arg0, const cv::Mat& arg1)
+    {
+        Rect rect;
+        bool update = arg0.update(arg1, rect);
+
+        emscripten::val result = emscripten::val::array();
+        result.call<void>("push", update);
+        result.call<void>("push", rect);
+        return result;
+    }
 #endif  // HAVE_OPENCV_VIDEO
 
     std::string getExceptionMsg(const cv::Exception& e) {
@@ -422,6 +465,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<char>("CharVector");
     register_vector<float>("FloatVector");
     register_vector<double>("DoubleVector");
+    register_vector<std::string>("StringVector");
     register_vector<cv::Point>("PointVector");
     register_vector<cv::Mat>("MatVector");
     register_vector<cv::Rect>("RectVector");
@@ -664,6 +708,11 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     function("CamShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::CamShiftWrapper));
 
     function("meanShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::meanShiftWrapper));
+
+    emscripten::class_<cv::Tracker >("Tracker")
+        .function("init", select_overload<void(cv::Tracker&,const cv::Mat&,const Rect&)>(&binding_utils::Tracker_init_wrapper), pure_virtual())
+        .function("update", select_overload<emscripten::val(cv::Tracker&,const cv::Mat&)>(&binding_utils::Tracker_update_wrapper), pure_virtual());
+
 #endif
 
     function("getBuildInformation", &binding_utils::getBuildInformation);

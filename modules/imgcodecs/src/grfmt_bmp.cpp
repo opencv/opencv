@@ -55,9 +55,10 @@ BmpDecoder::BmpDecoder()
     m_signature = fmtSignBmp;
     m_offset = -1;
     m_buf_supported = true;
-    m_origin = 0;
+    m_origin = ORIGIN_TL;
     m_bpp = 0;
     m_rle_code = BMP_RGB;
+    initMask();
 }
 
 
@@ -97,6 +98,7 @@ bool  BmpDecoder::readHeader()
         int  size = m_strm.getDWord();
         CV_Assert(size > 0); // overflow, 2Gb limit
 
+        initMask();
         if( size >= 36 )
         {
             m_width  = m_strm.getDWord();
@@ -107,7 +109,31 @@ bool  BmpDecoder::readHeader()
             m_rle_code = (BmpCompression)m_rle_code_;
             m_strm.skip(12);
             int clrused = m_strm.getDWord();
-            m_strm.skip( size - 36 );
+
+            if( m_bpp == 32 && m_rle_code == BMP_BITFIELDS && size >= 56 )
+            {
+                m_strm.skip(4); //important colors
+                //0 is Red channel bit mask, 1 is Green channel bit mask, 2 is Blue channel bit mask, 3 is Alpha channel bit mask
+                for( int index_rgba = 0; index_rgba < 4; ++index_rgba )
+                {
+                    uint mask = m_strm.getDWord();
+                    m_rgba_mask[index_rgba] = mask;
+                    if(mask != 0)
+                    {
+                        int bit_count = 0;
+                        while(!(mask & 1))
+                        {
+                            mask >>= 1;
+                            ++bit_count;
+                        }
+                        m_rgba_bit_offset[index_rgba] = bit_count;
+                        m_rgba_scale_factor[index_rgba] = 255.0f / mask;
+                    }
+                }
+                m_strm.skip( size - 56 );
+            }
+            else
+                m_strm.skip( size - 36 );
 
             if( m_width > 0 && m_height != 0 &&
              (((m_bpp == 1 || m_bpp == 4 || m_bpp == 8 ||
@@ -181,7 +207,7 @@ bool  BmpDecoder::readHeader()
     }
     // in 32 bit case alpha channel is used - so require CV_8UC4 type
     m_type = iscolor ? ((m_bpp == 32 && m_rle_code != BMP_RGB) ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
-    m_origin = m_height > 0 ? IPL_ORIGIN_BL : IPL_ORIGIN_TL;
+    m_origin = m_height > 0 ? ORIGIN_BL : ORIGIN_TL;
     m_height = std::abs(m_height);
 
     if( !result )
@@ -211,7 +237,7 @@ bool  BmpDecoder::readData( Mat& img )
     if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
-    if( m_origin == IPL_ORIGIN_BL )
+    if( m_origin == ORIGIN_BL )
     {
         data += (m_height - 1)*(size_t)step;
         step = -step;
@@ -243,7 +269,7 @@ bool  BmpDecoder::readData( Mat& img )
                 m_strm.getBytes( src, src_pitch );
                 FillColorRow1( color ? data : bgr, src, m_width, m_palette );
                 if( !color )
-                    icvCvt_BGR2Gray_8u_C3C1R( bgr, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR2Gray_8u_C3C1R( bgr, 0, data, 0, Size(m_width,1) );
             }
             result = true;
             break;
@@ -446,9 +472,9 @@ decode_rle8_bad: ;
             {
                 m_strm.getBytes( src, src_pitch );
                 if( !color )
-                    icvCvt_BGR5552Gray_8u_C2C1R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR5552Gray_8u_C2C1R( src, 0, data, 0, Size(m_width,1) );
                 else
-                    icvCvt_BGR5552BGR_8u_C2C3R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR5552BGR_8u_C2C3R( src, 0, data, 0, Size(m_width,1) );
             }
             result = true;
             break;
@@ -458,9 +484,9 @@ decode_rle8_bad: ;
             {
                 m_strm.getBytes( src, src_pitch );
                 if( !color )
-                    icvCvt_BGR5652Gray_8u_C2C1R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR5652Gray_8u_C2C1R( src, 0, data, 0, Size(m_width,1) );
                 else
-                    icvCvt_BGR5652BGR_8u_C2C3R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR5652BGR_8u_C2C3R( src, 0, data, 0, Size(m_width,1) );
             }
             result = true;
             break;
@@ -470,7 +496,7 @@ decode_rle8_bad: ;
             {
                 m_strm.getBytes( src, src_pitch );
                 if(!color)
-                    icvCvt_BGR2Gray_8u_C3C1R( src, 0, data, 0, cvSize(m_width,1) );
+                    icvCvt_BGR2Gray_8u_C3C1R( src, 0, data, 0, Size(m_width,1) );
                 else
                     memcpy( data, src, m_width*3 );
             }
@@ -478,16 +504,34 @@ decode_rle8_bad: ;
             break;
         /************************* 32 BPP ************************/
         case 32:
-            for( y = 0; y < m_height; y++, data += step )
             {
-                m_strm.getBytes( src, src_pitch );
+                bool has_bit_mask = (m_rgba_bit_offset[0] >= 0) && (m_rgba_bit_offset[1] >= 0) && (m_rgba_bit_offset[2] >= 0);
+                for( y = 0; y < m_height; y++, data += step )
+                {
+                    m_strm.getBytes( src, src_pitch );
 
-                if( !color )
-                    icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, cvSize(m_width,1) );
-                else if( img.channels() == 3 )
-                    icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, cvSize(m_width, 1));
-                else if( img.channels() == 4 )
-                    memcpy(data, src, m_width * 4);
+                    if( !color )
+                    {
+                        if ( has_bit_mask )
+                            maskBGRAtoGray(data, src, m_width);
+                        else
+                            icvCvt_BGRA2Gray_8u_C4C1R( src, 0, data, 0, Size(m_width,1) );
+                    }
+                    else if( img.channels() == 3 )
+                    {
+                        if ( has_bit_mask )
+                            maskBGRA(data, src, m_width, false);
+                        else
+                            icvCvt_BGRA2BGR_8u_C4C3R(src, 0, data, 0, Size(m_width, 1));
+                    }
+                    else if ( img.channels() == 4 )
+                    {
+                        if ( has_bit_mask )
+                            maskBGRA(data, src, m_width, true);
+                        else
+                            memcpy(data, src, m_width * 4);
+                    }
+                }
             }
             result = true;
             break;
@@ -500,10 +544,54 @@ decode_rle8_bad: ;
         throw;
     }
 
+    if (m_use_rgb && color && img.channels() == 3)
+    {
+        cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+    }
+
     return result;
 }
 
+void  BmpDecoder::initMask()
+{
+    memset(m_rgba_mask, 0, sizeof(m_rgba_mask));
+    memset(m_rgba_bit_offset, -1, sizeof(m_rgba_bit_offset));
+    for (size_t i = 0; i < 4; i++) {
+        m_rgba_scale_factor[i] = 1.0f;
+    }
+}
 
+void  BmpDecoder::maskBGRA(uchar* des, const uchar* src, int num, bool alpha_required)
+{
+    int dest_stride = alpha_required ? 4 : 3;
+    for( int i = 0; i < num; i++, des += dest_stride, src += 4 )
+    {
+        uint data = *((uint*)src);
+        des[0] = (uchar)(((m_rgba_mask[2] & data) >> m_rgba_bit_offset[2]) * m_rgba_scale_factor[2]);
+        des[1] = (uchar)(((m_rgba_mask[1] & data) >> m_rgba_bit_offset[1]) * m_rgba_scale_factor[1]);
+        des[2] = (uchar)(((m_rgba_mask[0] & data) >> m_rgba_bit_offset[0]) * m_rgba_scale_factor[0]);
+        if (alpha_required)
+        {
+            if (m_rgba_bit_offset[3] >= 0)
+                des[3] = (uchar)(((m_rgba_mask[3] & data) >> m_rgba_bit_offset[3]) * m_rgba_scale_factor[3]);
+            else
+                des[3] = 255;
+        }
+    }
+}
+
+void  BmpDecoder::maskBGRAtoGray(uchar* des, const uchar* src, int num)
+{
+    for( int i = 0; i < num; i++, des++, src += 4 )
+    {
+        uint data = *((uint*)src);
+        int red = (uchar)(((m_rgba_mask[0] & data) >> m_rgba_bit_offset[0]) * m_rgba_scale_factor[0]);
+        int green = (uchar)(((m_rgba_mask[1] & data) >> m_rgba_bit_offset[1]) * m_rgba_scale_factor[1]);
+        int blue = (uchar)(((m_rgba_mask[2] & data) >> m_rgba_bit_offset[2]) * m_rgba_scale_factor[2]);
+
+        *des = (uchar)(0.299f * red + 0.587f * green + 0.114f * blue);
+    }
+}
 //////////////////////////////////////////////////////////////////////////////////////////
 
 BmpEncoder::BmpEncoder()
@@ -547,38 +635,40 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
         m_buf->reserve( alignSize(fileSize + 16, 256) );
 
     // write signature 'BM'
-    strm.putBytes( fmtSignBmp, (int)strlen(fmtSignBmp) );
+    CHECK_WRITE(strm.putBytes( fmtSignBmp, (int)strlen(fmtSignBmp) ));
 
     // write file header
-    strm.putDWord( validateToInt(fileSize) ); // file size
-    strm.putDWord( 0 );
-    strm.putDWord( headerSize );
+    CHECK_WRITE(strm.putDWord( validateToInt(fileSize) )); // file size
+    CHECK_WRITE(strm.putDWord( 0 ));
+    CHECK_WRITE(strm.putDWord( headerSize ));
 
     // write bitmap header
-    strm.putDWord( bitmapHeaderSize );
-    strm.putDWord( width );
-    strm.putDWord( height );
-    strm.putWord( 1 );
-    strm.putWord( channels << 3 );
-    strm.putDWord( BMP_RGB );
-    strm.putDWord( 0 );
-    strm.putDWord( 0 );
-    strm.putDWord( 0 );
-    strm.putDWord( 0 );
-    strm.putDWord( 0 );
+    CHECK_WRITE(strm.putDWord( bitmapHeaderSize ));
+    CHECK_WRITE(strm.putDWord( width ));
+    CHECK_WRITE(strm.putDWord( height ));
+    CHECK_WRITE(strm.putWord( 1 ));
+    CHECK_WRITE(strm.putWord( channels << 3 ));
+    CHECK_WRITE(strm.putDWord( BMP_RGB ));
+    CHECK_WRITE(strm.putDWord( 0 ));
+    CHECK_WRITE(strm.putDWord( 0 ));
+    CHECK_WRITE(strm.putDWord( 0 ));
+    CHECK_WRITE(strm.putDWord( 0 ));
+    CHECK_WRITE(strm.putDWord( 0 ));
 
     if( channels == 1 )
     {
         FillGrayPalette( palette, 8 );
-        strm.putBytes( palette, sizeof(palette));
+        CHECK_WRITE(strm.putBytes( palette, sizeof(palette)));
     }
 
     width *= channels;
     for( int y = height - 1; y >= 0; y-- )
     {
-        strm.putBytes( img.ptr(y), width );
+        CHECK_WRITE(strm.putBytes( img.ptr(y), width ));
         if( fileStep > width )
-            strm.putBytes( zeropad, fileStep - width );
+        {
+            CHECK_WRITE(strm.putBytes( zeropad, fileStep - width ));
+        }
     }
 
     strm.close();

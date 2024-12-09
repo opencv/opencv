@@ -86,7 +86,7 @@ namespace cv { namespace debug_build_guard { } using namespace debug_build_guard
 #endif
 
 #define __CV_VA_NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
-#define __CV_VA_NUM_ARGS(...) __CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#define __CV_VA_NUM_ARGS(...) __CV_EXPAND(__CV_VA_NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0))
 
 #ifdef CV_Func
 // keep current value (through OpenCV port file)
@@ -172,20 +172,6 @@ namespace cv {
 
 #define CV_UNUSED(name) (void)name
 
-#if defined __GNUC__ && !defined __EXCEPTIONS
-#define CV_TRY
-#define CV_CATCH(A, B) for (A B; false; )
-#define CV_CATCH_ALL if (false)
-#define CV_THROW(A) abort()
-#define CV_RETHROW() abort()
-#else
-#define CV_TRY try
-#define CV_CATCH(A, B) catch(const A & B)
-#define CV_CATCH_ALL catch(...)
-#define CV_THROW(A) throw A
-#define CV_RETHROW() throw
-#endif
-
 //! @endcond
 
 // undef problematic defines sometimes defined by system headers (windows.h in particular)
@@ -213,6 +199,14 @@ namespace cv {
 #  define CV_ICC   __ECC
 #elif defined __INTEL_COMPILER
 #  define CV_ICC   __INTEL_COMPILER
+#endif
+
+#if defined _WIN32
+#  define CV_CDECL __cdecl
+#  define CV_STDCALL __stdcall
+#else
+#  define CV_CDECL
+#  define CV_STDCALL
 #endif
 
 #ifndef CV_INLINE
@@ -283,11 +277,20 @@ namespace cv {
 
 #define CV_CPU_NEON             100
 #define CV_CPU_NEON_DOTPROD     101
+#define CV_CPU_NEON_FP16        102
+#define CV_CPU_NEON_BF16        103
 
 #define CV_CPU_MSA              150
 
+#define CV_CPU_RISCVV           170
+
 #define CV_CPU_VSX              200
 #define CV_CPU_VSX3             201
+
+#define CV_CPU_RVV              210
+
+#define CV_CPU_LSX              230
+#define CV_CPU_LASX             231
 
 // CPU features groups
 #define CV_CPU_AVX512_SKX       256
@@ -336,11 +339,20 @@ enum CpuFeatures {
 
     CPU_NEON            = 100,
     CPU_NEON_DOTPROD    = 101,
+    CPU_NEON_FP16       = 102,
+    CPU_NEON_BF16       = 103,
 
     CPU_MSA             = 150,
 
+    CPU_RISCVV          = 170,
+
     CPU_VSX             = 200,
     CPU_VSX3            = 201,
+
+    CPU_RVV             = 210,
+
+    CPU_LSX             = 230,
+    CPU_LASX            = 231,
 
     CPU_AVX512_SKX      = 256, //!< Skylake-X with AVX-512F/CD/BW/DQ/VL
     CPU_AVX512_COMMON   = 257, //!< Common instructions AVX-512F/CD for all CPUs that support AVX-512
@@ -403,11 +415,11 @@ typedef union Cv64suf
 Cv64suf;
 
 #ifndef OPENCV_ABI_COMPATIBILITY
-#define OPENCV_ABI_COMPATIBILITY 300
+#define OPENCV_ABI_COMPATIBILITY 400
 #endif
 
 #ifdef __OPENCV_BUILD
-#  define DISABLE_OPENCV_24_COMPATIBILITY
+#  define DISABLE_OPENCV_3_COMPATIBILITY
 #  define OPENCV_DISABLE_DEPRECATED_COMPATIBILITY
 #endif
 
@@ -461,17 +473,25 @@ Cv64suf;
 #define CV_EXPORTS_W_SIMPLE CV_EXPORTS
 #define CV_EXPORTS_AS(synonym) CV_EXPORTS
 #define CV_EXPORTS_W_MAP CV_EXPORTS
+#define CV_EXPORTS_W_PARAMS CV_EXPORTS
 #define CV_IN_OUT
 #define CV_OUT
 #define CV_PROP
 #define CV_PROP_RW
+#define CV_ND // Indicates that input data should be parsed into Mat without channels
 #define CV_WRAP
 #define CV_WRAP_AS(synonym)
+#define CV_WRAP_MAPPABLE(mappable)
+#define CV_WRAP_PHANTOM(phantom_header)
+#define CV_WRAP_DEFAULT(val)
+/* Indicates that the function parameter has filesystem path semantic */
+#define CV_WRAP_FILE_PATH
 
 /****************************************************************************************\
 *                                  Matrix type (Mat)                                     *
 \****************************************************************************************/
 
+#define CV_MAX_DIM              32
 #define CV_MAT_CN_MASK          ((CV_CN_MAX - 1) << CV_CN_SHIFT)
 #define CV_MAT_CN(flags)        ((((flags) & CV_MAT_CN_MASK) >> CV_CN_SHIFT) + 1)
 #define CV_MAT_TYPE_MASK        (CV_DEPTH_MAX*CV_CN_MAX - 1)
@@ -485,13 +505,10 @@ Cv64suf;
 #define CV_IS_SUBMAT(flags)     ((flags) & CV_MAT_SUBMAT_FLAG)
 
 /** Size of each channel item,
-   0x8442211 = 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
-#define CV_ELEM_SIZE1(type) \
-    ((((sizeof(size_t)<<28)|0x8442211) >> CV_MAT_DEPTH(type)*4) & 15)
+   0x28442211 = 0010 1000 0100 0100 0010 0010 0001 0001 ~ array of sizeof(arr_type_elem) */
+#define CV_ELEM_SIZE1(type) ((0x28442211 >> CV_MAT_DEPTH(type)*4) & 15)
 
-/** 0x3a50 = 11 10 10 01 01 00 00 ~ array of log2(sizeof(arr_type_elem)) */
-#define CV_ELEM_SIZE(type) \
-    (CV_MAT_CN(type) << ((((sizeof(size_t)/4+1)*16384|0x3a50) >> CV_MAT_DEPTH(type)*2) & 3))
+#define CV_ELEM_SIZE(type) (CV_MAT_CN(type)*CV_ELEM_SIZE1(type))
 
 #ifndef MIN
 #  define MIN(a,b)  ((a) > (b) ? (b) : (a))
@@ -500,6 +517,149 @@ Cv64suf;
 #ifndef MAX
 #  define MAX(a,b)  ((a) < (b) ? (b) : (a))
 #endif
+
+/** min & max without jumps */
+#define CV_IMIN(a, b)  ((a) ^ (((a)^(b)) & (((a) < (b)) - 1)))
+#define CV_IMAX(a, b)  ((a) ^ (((a)^(b)) & (((a) > (b)) - 1)))
+#define CV_SWAP(a,b,t) ((t) = (a), (a) = (b), (b) = (t))
+#define CV_CMP(a,b)    (((a) > (b)) - ((a) < (b)))
+#define CV_SIGN(a)     CV_CMP((a),0)
+
+///////////////////////////////////////// Enum operators ///////////////////////////////////////
+
+/**
+
+Provides compatibility operators for both classical and C++11 enum classes,
+as well as exposing the C++11 enum class members for backwards compatibility
+
+@code
+    // Provides operators required for flag enums
+    CV_ENUM_FLAGS(AccessFlag)
+
+    // Exposes the listed members of the enum class AccessFlag to the current namespace
+    CV_ENUM_CLASS_EXPOSE(AccessFlag, ACCESS_READ [, ACCESS_WRITE [, ...] ]);
+@endcode
+*/
+
+#define __CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST)                                              \
+static const EnumType MEMBER_CONST = EnumType::MEMBER_CONST;                                          \
+
+#define __CV_ENUM_CLASS_EXPOSE_2(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_1(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_3(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_2(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_4(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_3(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_5(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_4(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_6(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_5(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_7(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_6(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_8(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_7(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_CLASS_EXPOSE_9(EnumType, MEMBER_CONST, ...)                                         \
+__CV_ENUM_CLASS_EXPOSE_1(EnumType, MEMBER_CONST);                                                     \
+__CV_EXPAND(__CV_ENUM_CLASS_EXPOSE_8(EnumType, __VA_ARGS__));                                         \
+
+#define __CV_ENUM_FLAGS_LOGICAL_NOT(EnumType)                                                         \
+static inline bool operator!(const EnumType& val)                                                     \
+{                                                                                                     \
+    typedef std::underlying_type<EnumType>::type UnderlyingType;                                      \
+    return !static_cast<UnderlyingType>(val);                                                         \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_LOGICAL_NOT_EQ(Arg1Type, Arg2Type)                                            \
+static inline bool operator!=(const Arg1Type& a, const Arg2Type& b)                                   \
+{                                                                                                     \
+    return static_cast<int>(a) != static_cast<int>(b);                                                \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_LOGICAL_EQ(Arg1Type, Arg2Type)                                                \
+static inline bool operator==(const Arg1Type& a, const Arg2Type& b)                                   \
+{                                                                                                     \
+    return static_cast<int>(a) == static_cast<int>(b);                                                \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_NOT(EnumType)                                                         \
+static inline EnumType operator~(const EnumType& val)                                                 \
+{                                                                                                     \
+    typedef std::underlying_type<EnumType>::type UnderlyingType;                                      \
+    return static_cast<EnumType>(~static_cast<UnderlyingType>(val));                                  \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_OR(EnumType, Arg1Type, Arg2Type)                                      \
+static inline EnumType operator|(const Arg1Type& a, const Arg2Type& b)                                \
+{                                                                                                     \
+    typedef std::underlying_type<EnumType>::type UnderlyingType;                                      \
+    return static_cast<EnumType>(static_cast<UnderlyingType>(a) | static_cast<UnderlyingType>(b));    \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_AND(EnumType, Arg1Type, Arg2Type)                                     \
+static inline EnumType operator&(const Arg1Type& a, const Arg2Type& b)                                \
+{                                                                                                     \
+    typedef std::underlying_type<EnumType>::type UnderlyingType;                                      \
+    return static_cast<EnumType>(static_cast<UnderlyingType>(a) & static_cast<UnderlyingType>(b));    \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_XOR(EnumType, Arg1Type, Arg2Type)                                     \
+static inline EnumType operator^(const Arg1Type& a, const Arg2Type& b)                                \
+{                                                                                                     \
+    typedef std::underlying_type<EnumType>::type UnderlyingType;                                      \
+    return static_cast<EnumType>(static_cast<UnderlyingType>(a) ^ static_cast<UnderlyingType>(b));    \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_OR_EQ(EnumType, Arg1Type)                                             \
+static inline EnumType& operator|=(EnumType& _this, const Arg1Type& val)                              \
+{                                                                                                     \
+    _this = static_cast<EnumType>(static_cast<int>(_this) | static_cast<int>(val));                   \
+    return _this;                                                                                     \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_AND_EQ(EnumType, Arg1Type)                                            \
+static inline EnumType& operator&=(EnumType& _this, const Arg1Type& val)                              \
+{                                                                                                     \
+    _this = static_cast<EnumType>(static_cast<int>(_this) & static_cast<int>(val));                   \
+    return _this;                                                                                     \
+}                                                                                                     \
+
+#define __CV_ENUM_FLAGS_BITWISE_XOR_EQ(EnumType, Arg1Type)                                            \
+static inline EnumType& operator^=(EnumType& _this, const Arg1Type& val)                              \
+{                                                                                                     \
+    _this = static_cast<EnumType>(static_cast<int>(_this) ^ static_cast<int>(val));                   \
+    return _this;                                                                                     \
+}                                                                                                     \
+
+#define CV_ENUM_CLASS_EXPOSE(EnumType, ...)                                                           \
+__CV_EXPAND(__CV_CAT(__CV_ENUM_CLASS_EXPOSE_, __CV_VA_NUM_ARGS(__VA_ARGS__))(EnumType, __VA_ARGS__)); \
+
+#define CV_ENUM_FLAGS(EnumType)                                                                       \
+__CV_ENUM_FLAGS_LOGICAL_NOT      (EnumType)                                                           \
+__CV_ENUM_FLAGS_LOGICAL_EQ       (EnumType, int)                                                      \
+__CV_ENUM_FLAGS_LOGICAL_NOT_EQ   (EnumType, int)                                                      \
+                                                                                                      \
+__CV_ENUM_FLAGS_BITWISE_NOT      (EnumType)                                                           \
+__CV_ENUM_FLAGS_BITWISE_OR       (EnumType, EnumType, EnumType)                                       \
+__CV_ENUM_FLAGS_BITWISE_AND      (EnumType, EnumType, EnumType)                                       \
+__CV_ENUM_FLAGS_BITWISE_XOR      (EnumType, EnumType, EnumType)                                       \
+                                                                                                      \
+__CV_ENUM_FLAGS_BITWISE_OR_EQ    (EnumType, EnumType)                                                 \
+__CV_ENUM_FLAGS_BITWISE_AND_EQ   (EnumType, EnumType)                                                 \
+__CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                                                 \
 
 /****************************************************************************************\
 *                                    static analysys                                     *
@@ -587,7 +747,11 @@ Cv64suf;
 #    define __has_cpp_attribute(__x) 0
 #  endif
 #  if __has_cpp_attribute(nodiscard)
-#    define CV_NODISCARD_STD [[nodiscard]]
+#    if defined(__NVCC__) && __CUDACC_VER_MAJOR__ < 12
+#       define CV_NODISCARD_STD
+#    else
+#       define CV_NODISCARD_STD [[nodiscard]]
+#    endif
 #  elif __cplusplus >= 201703L
 //   available when compiler is C++17 compliant
 #    define CV_NODISCARD_STD [[nodiscard]]
@@ -610,135 +774,43 @@ Cv64suf;
 
 
 /****************************************************************************************\
-*                      CV_NODISCARD attribute (deprecated, GCC only)                     *
-* DONT USE: use instead the standard CV_NODISCARD_STD macro above                        *
-*           this legacy method silently fails to issue warning until some version        *
-*           after gcc 6.3.0. Yet with gcc 7+ you can use the above standard method       *
-*           which makes this method useless. Don't use it.                               *
-* @deprecated use instead CV_NODISCARD_STD                                               *
-\****************************************************************************************/
-#ifndef CV_NODISCARD
-#  if defined(__GNUC__)
-#    define CV_NODISCARD __attribute__((__warn_unused_result__))
-#  elif defined(__clang__) && defined(__has_attribute)
-#    if __has_attribute(__warn_unused_result__)
-#      define CV_NODISCARD __attribute__((__warn_unused_result__))
-#    endif
-#  endif
-#endif
-#ifndef CV_NODISCARD
-#  define CV_NODISCARD /* nothing by default */
-#endif
-
-
-/****************************************************************************************\
 *                                    C++ 11                                              *
 \****************************************************************************************/
-#ifndef CV_CXX11
-#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1800)
-#    define CV_CXX11 1
-#  endif
-#else
-#  if CV_CXX11 == 0
-#    undef CV_CXX11
-#  endif
-#endif
-
-
-/****************************************************************************************\
-*                                    C++ Move semantics                                  *
-\****************************************************************************************/
-
-#ifndef CV_CXX_MOVE_SEMANTICS
-#  if __cplusplus >= 201103L || defined(__GXX_EXPERIMENTAL_CXX0X__) || (defined(_MSC_VER) && _MSC_VER >= 1600)
-#    define CV_CXX_MOVE_SEMANTICS 1
-#  elif defined(__clang)
-#    if __has_feature(cxx_rvalue_references)
-#      define CV_CXX_MOVE_SEMANTICS 1
+#ifdef __cplusplus
+// MSVC was stuck at __cplusplus == 199711L for a long time, even where it supports C++11,
+// so check _MSC_VER instead. See:
+// <https://devblogs.microsoft.com/cppblog/msvc-now-correctly-reports-__cplusplus>
+#  if defined(_MSC_VER)
+#    if _MSC_VER < 1800
+#      error "OpenCV 4.x+ requires enabled C++11 support"
 #    endif
-#  endif
-#else
-#  if CV_CXX_MOVE_SEMANTICS == 0
-#    undef CV_CXX_MOVE_SEMANTICS
+#  elif __cplusplus < 201103L
+#    error "OpenCV 4.x+ requires enabled C++11 support"
 #  endif
 #endif
 
-#ifdef CV_CXX_MOVE_SEMANTICS
-#define CV_CXX_MOVE(x) std::move(x)
-#else
-#define CV_CXX_MOVE(x) (x)
+#ifndef CV_CXX11
+#  define CV_CXX11 1
 #endif
-
-
-/****************************************************************************************\
-*                                    C++11 std::array                                    *
-\****************************************************************************************/
-
-#ifndef CV_CXX_STD_ARRAY
-#  if __cplusplus >= 201103L || (defined(__cplusplus) && defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
-#    define CV_CXX_STD_ARRAY 1
-#    include <array>
-#  endif
-#else
-#  if CV_CXX_STD_ARRAY == 0
-#    undef CV_CXX_STD_ARRAY
-#  endif
-#endif
-
-
-/****************************************************************************************\
-*                                 C++11 override / final                                 *
-\****************************************************************************************/
 
 #ifndef CV_OVERRIDE
-#  ifdef CV_CXX11
-#    define CV_OVERRIDE override
-#  endif
-#endif
-#ifndef CV_OVERRIDE
-#  define CV_OVERRIDE
+#  define CV_OVERRIDE override
 #endif
 
 #ifndef CV_FINAL
-#  ifdef CV_CXX11
-#    define CV_FINAL final
-#  endif
+#  define CV_FINAL final
 #endif
-#ifndef CV_FINAL
-#  define CV_FINAL
-#endif
-
-/****************************************************************************************\
-*                                     C++11 noexcept                                     *
-\****************************************************************************************/
 
 #ifndef CV_NOEXCEPT
-#  if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
-#    define CV_NOEXCEPT noexcept
-#  endif
-#endif
-#ifndef CV_NOEXCEPT
-#  define CV_NOEXCEPT
+#  define CV_NOEXCEPT noexcept
 #endif
 
-
+#ifndef CV_CONSTEXPR
+#  define CV_CONSTEXPR constexpr
+#endif
 
 // Integer types portability
-#ifdef OPENCV_STDINT_HEADER
-#include OPENCV_STDINT_HEADER
-#elif defined(__cplusplus)
-#if defined(_MSC_VER) && _MSC_VER < 1600 /* MSVS 2010 */
-namespace cv {
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef signed short int16_t;
-typedef unsigned short uint16_t;
-typedef signed int int32_t;
-typedef unsigned int uint32_t;
-typedef signed __int64 int64_t;
-typedef unsigned __int64 uint64_t;
-}
-#elif defined(_MSC_VER) || __cplusplus >= 201103L
+#ifdef __cplusplus
 #include <cstdint>
 namespace cv {
 using std::int8_t;
@@ -750,19 +822,6 @@ using std::uint32_t;
 using std::int64_t;
 using std::uint64_t;
 }
-#else
-#include <stdint.h>
-namespace cv {
-typedef ::int8_t int8_t;
-typedef ::uint8_t uint8_t;
-typedef ::int16_t int16_t;
-typedef ::uint16_t uint16_t;
-typedef ::int32_t int32_t;
-typedef ::uint32_t uint32_t;
-typedef ::int64_t int64_t;
-typedef ::uint64_t uint64_t;
-}
-#endif
 #else // pure C
 #include <stdint.h>
 #endif
@@ -771,42 +830,22 @@ typedef ::uint64_t uint64_t;
 namespace cv
 {
 
-class float16_t
+class hfloat
 {
 public:
 #if CV_FP16_TYPE
 
-    float16_t() {}
-    explicit float16_t(float x) { h = (__fp16)x; }
+    hfloat() : h(0) {}
+    explicit hfloat(float x) { h = (__fp16)x; }
     operator float() const { return (float)h; }
-    static float16_t fromBits(ushort w)
-    {
-        Cv16suf u;
-        u.u = w;
-        float16_t result;
-        result.h = u.h;
-        return result;
-    }
-    static float16_t zero()
-    {
-        float16_t result;
-        result.h = (__fp16)0;
-        return result;
-    }
-    ushort bits() const
-    {
-        Cv16suf u;
-        u.h = h;
-        return u.u;
-    }
 protected:
     __fp16 h;
 
 #else
-    float16_t() {}
-    explicit float16_t(float x)
+    hfloat() : w(0) {}
+    explicit hfloat(float x)
     {
-    #if CV_FP16
+    #if CV_FP16 && CV_AVX2
         __m128 v = _mm_load_ss(&x);
         w = (ushort)_mm_cvtsi128_si32(_mm_cvtps_ph(v, 0));
     #else
@@ -837,7 +876,7 @@ protected:
 
     operator float() const
     {
-    #if CV_FP16
+    #if CV_FP16 && CV_AVX2
         float f;
         _mm_store_ss(&f, _mm_cvtph_ps(_mm_cvtsi32_si128(w)));
         return f;
@@ -850,32 +889,55 @@ protected:
 
         out.u = t + (1 << 23);
         out.u = (e >= 0x7c00 ? t + 0x38000000 :
-                 e == 0 ? (out.f -= 6.103515625e-05f, out.u) : t) | sign;
+                 e == 0 ? (static_cast<void>(out.f -= 6.103515625e-05f), out.u) : t) | sign;
         return out.f;
     #endif
     }
 
-    static float16_t fromBits(ushort b)
-    {
-        float16_t result;
-        result.w = b;
-        return result;
-    }
-    static float16_t zero()
-    {
-        float16_t result;
-        result.w = (ushort)0;
-        return result;
-    }
-    ushort bits() const { return w; }
 protected:
     ushort w;
 
 #endif
 };
 
+inline hfloat hfloatFromBits(ushort w) {
+#if CV_FP16_TYPE
+    Cv16suf u;
+    u.u = w;
+    hfloat res(float(u.h));
+    return res;
+#else
+    Cv32suf out;
+
+    unsigned t = ((w & 0x7fff) << 13) + 0x38000000;
+    unsigned sign = (w & 0x8000) << 16;
+    unsigned e = w & 0x7c00;
+
+    out.u = t + (1 << 23);
+    out.u = (e >= 0x7c00 ? t + 0x38000000 :
+            e == 0 ? (static_cast<void>(out.f -= 6.103515625e-05f), out.u) : t) | sign;
+    hfloat res(out.f);
+    return res;
+#endif
+}
+
+#if !defined(__OPENCV_BUILD) && !(defined __STDCPP_FLOAT16_T__) && !(defined __ARM_NEON)
+typedef hfloat float16_t;
+#endif
+
 }
 #endif
+
+/** @brief Constructs the 'fourcc' code, used in video codecs and many other places.
+    Simply call it with 4 chars like `CV_FOURCC('I', 'Y', 'U', 'V')`
+*/
+CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
+{
+    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
+}
+
+//! Macro to construct the fourcc code of the codec. Same as CV_FOURCC()
+#define CV_FOURCC_MACRO(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
 
 //! @}
 

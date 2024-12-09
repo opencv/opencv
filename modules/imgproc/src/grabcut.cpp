@@ -40,10 +40,11 @@
 //M*/
 
 #include "precomp.hpp"
-#include "gcgraph.hpp"
+#include "opencv2/imgproc/detail/gcgraph.hpp"
 #include <limits>
 
 using namespace cv;
+using namespace detail;
 
 namespace {
 
@@ -95,7 +96,7 @@ GMM::GMM( Mat& _model )
         _model.setTo(Scalar(0));
     }
     else if( (_model.type() != CV_64FC1) || (_model.rows != 1) || (_model.cols != modelSize*componentsCount) )
-        CV_Error( CV_StsBadArg, "_model must have CV_64FC1 type, rows == 1 and cols == 13*componentsCount" );
+        CV_Error( cv::Error::StsBadArg, "_model must have CV_64FC1 type, rows == 1 and cols == 13*componentsCount" );
 
     model = _model;
 
@@ -328,18 +329,18 @@ static void calcNWeights( const Mat& img, Mat& leftW, Mat& upleftW, Mat& upW, Ma
 static void checkMask( const Mat& img, const Mat& mask )
 {
     if( mask.empty() )
-        CV_Error( CV_StsBadArg, "mask is empty" );
+        CV_Error( cv::Error::StsBadArg, "mask is empty" );
     if( mask.type() != CV_8UC1 )
-        CV_Error( CV_StsBadArg, "mask must have CV_8UC1 type" );
+        CV_Error( cv::Error::StsBadArg, "mask must have CV_8UC1 type" );
     if( mask.cols != img.cols || mask.rows != img.rows )
-        CV_Error( CV_StsBadArg, "mask must have as many rows and cols as img" );
+        CV_Error( cv::Error::StsBadArg, "mask must have as many rows and cols as img" );
     for( int y = 0; y < mask.rows; y++ )
     {
         for( int x = 0; x < mask.cols; x++ )
         {
             uchar val = mask.at<uchar>(y,x);
             if( val!=GC_BGD && val!=GC_FGD && val!=GC_PR_BGD && val!=GC_PR_FGD )
-                CV_Error( CV_StsBadArg, "mask element value must be equal "
+                CV_Error( cv::Error::StsBadArg, "mask element value must be equal "
                     "GC_BGD or GC_FGD or GC_PR_BGD or GC_PR_FGD" );
         }
     }
@@ -388,14 +389,14 @@ static void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM 
         int num_clusters = GMM::componentsCount;
         num_clusters = std::min(num_clusters, (int)bgdSamples.size());
         kmeans( _bgdSamples, num_clusters, bgdLabels,
-                TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+                TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
     }
     {
         Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_32FC1, &fgdSamples[0][0] );
         int num_clusters = GMM::componentsCount;
         num_clusters = std::min(num_clusters, (int)fgdSamples.size());
         kmeans( _fgdSamples, num_clusters, fgdLabels,
-                TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+                TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
     }
 
     bgdGMM.initLearning();
@@ -551,9 +552,9 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
     Mat& fgdModel = _fgdModel.getMatRef();
 
     if( img.empty() )
-        CV_Error( CV_StsBadArg, "image is empty" );
+        CV_Error( cv::Error::StsBadArg, "image is empty" );
     if( img.type() != CV_8UC3 )
-        CV_Error( CV_StsBadArg, "image must have CV_8UC3 type" );
+        CV_Error( cv::Error::StsBadArg, "image must have CV_8UC3 type" );
 
     GMM bgdGMM( bgdModel ), fgdGMM( fgdModel );
     Mat compIdxs( img.size(), CV_32SC1 );

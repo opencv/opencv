@@ -40,8 +40,6 @@
  //M*/
 
 #include "precomp.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/calib3d/calib3d_c.h"
 
 #include <vector>
 #include <algorithm>
@@ -55,15 +53,12 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
     const float max_aspect_ratio = 3.0f;
     const float min_box_size = 10.0f;
 
-    typedef std::vector< std::vector< cv::Point > >::const_iterator iter_t;
-    iter_t i;
-    for (i = contours.begin(); i != contours.end(); ++i)
+    for (size_t i = 0; i < contours.size(); ++i)
     {
-        const iter_t::difference_type idx = i - contours.begin();
-        if (hierarchy.at(idx)[3] != -1)
+        if (hierarchy.at(i)[3] != -1)
             continue; // skip holes
 
-        const std::vector< cv::Point > & c = *i;
+        const std::vector< cv::Point > & c = contours[i];
         cv::RotatedRect box = cv::minAreaRect(c);
 
         float box_size = MAX(box.size.width, box.size.height);
@@ -78,7 +73,7 @@ static void icvGetQuadrangleHypotheses(const std::vector<std::vector< cv::Point 
             continue;
         }
 
-        quads.push_back(std::pair<float, int>(box_size, class_id));
+        quads.emplace_back(box_size, class_id);
     }
 }
 
@@ -154,20 +149,9 @@ static bool checkQuads(vector<pair<float, int> > & quads, const cv::Size & size)
     return false;
 }
 
-// does a fast check if a chessboard is in the input image. This is a workaround to
-// a problem of cvFindChessboardCorners being slow on images with no chessboard
-// - src: input image
-// - size: chessboard size
-// Returns 1 if a chessboard can be in this image and findChessboardCorners should be called,
-// 0 if there is no chessboard, -1 in case of error
-int cvCheckChessboard(IplImage* src, CvSize size)
+bool cv::checkChessboard(InputArray _img, Size size)
 {
-    cv::Mat img = cv::cvarrToMat(src);
-    return checkChessboard(img, size);
-}
-
-int checkChessboard(const cv::Mat & img, const cv::Size & size)
-{
+    Mat img = _img.getMat();
     CV_Assert(img.channels() == 1 && img.depth() == CV_8U);
 
     const int erosion_count = 1;
@@ -180,13 +164,13 @@ int checkChessboard(const cv::Mat & img, const cv::Size & size)
     erode(img, white, Mat(), Point(-1, -1), erosion_count);
     dilate(img, black, Mat(), Point(-1, -1), erosion_count);
 
-    int result = 0;
+    bool result = false;
     for(float thresh_level = black_level; thresh_level < white_level && !result; thresh_level += 20.0f)
     {
         vector<pair<float, int> > quads;
         fillQuads(white, black, thresh_level + black_white_gap, thresh_level, quads);
         if (checkQuads(quads, size))
-            result = 1;
+            result = true;
     }
     return result;
 }

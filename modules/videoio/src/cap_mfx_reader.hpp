@@ -8,7 +8,7 @@
 #include "precomp.hpp"
 
 
-class MFXVideoSession;
+class MFXVideoSession_WRAP;
 class Plugin;
 class DeviceHandler;
 class ReadBitstream;
@@ -19,15 +19,15 @@ class VideoCapture_IntelMFX : public cv::IVideoCapture
 {
 public:
     VideoCapture_IntelMFX(const cv::String &filename);
-    virtual ~VideoCapture_IntelMFX();
-    virtual double getProperty(int) const CV_OVERRIDE;
-    virtual bool setProperty(int, double) CV_OVERRIDE;
-    virtual bool grabFrame() CV_OVERRIDE;
-    virtual bool retrieveFrame(int, cv::OutputArray out) CV_OVERRIDE;
-    virtual bool isOpened() const CV_OVERRIDE;
-    virtual int getCaptureDomain() CV_OVERRIDE;
+    ~VideoCapture_IntelMFX();
+    double getProperty(int) const CV_OVERRIDE;
+    bool setProperty(int, double) CV_OVERRIDE;
+    bool grabFrame() CV_OVERRIDE;
+    bool retrieveFrame(int, cv::OutputArray out) CV_OVERRIDE;
+    bool isOpened() const CV_OVERRIDE;
+    int getCaptureDomain() CV_OVERRIDE;
 private:
-    MFXVideoSession *session;
+    MFXVideoSession_WRAP *session;
     Plugin *plugin;
     DeviceHandler *deviceHandler;
     ReadBitstream *bs;

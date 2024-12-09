@@ -41,3 +41,13 @@ endif()
 if(NOT OPENCV_TESTS_CONFIG_STR STREQUAL "${__content}")
   file(WRITE "${OPENCV_TESTS_CONFIG_FILE}" "${OPENCV_TESTS_CONFIG_STR}")
 endif()
+
+if(OPENCV_DISABLE_THREAD_SUPPORT)
+  # This is required to disable threads in the ts module, as
+  # described in `ts_gtest.h`.
+  ocv_target_compile_definitions(${the_module} PUBLIC GTEST_HAS_PTHREAD=0)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "QNX")
+  ocv_target_link_libraries(${the_module} PUBLIC regex)
+endif()

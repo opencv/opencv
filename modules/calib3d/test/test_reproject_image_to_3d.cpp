@@ -41,7 +41,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/calib3d/calib3d_c.h"
 
 namespace opencv_test { namespace {
 
@@ -121,14 +120,9 @@ protected:
 
         Mat_<double> Q(4, 4);
         randu(Q, Scalar(-5), Scalar(5));
-
         Mat_<out3d_t> _3dImg(disp.size());
 
-        CvMat cvdisp = cvMat(disp); CvMat cv_3dImg = cvMat(_3dImg); CvMat cvQ = cvMat(Q);
-        cvReprojectImageTo3D( &cvdisp, &cv_3dImg, &cvQ, handleMissingValues );
-
-        if (std::numeric_limits<OutT>::max() == std::numeric_limits<float>::max())
-            reprojectImageTo3D(disp, _3dImg, Q, handleMissingValues);
+        reprojectImageTo3D(disp, _3dImg, Q, handleMissingValues);
 
         for(int y = 0; y < disp.rows; ++y)
             for(int x = 0; x < disp.cols; ++x)

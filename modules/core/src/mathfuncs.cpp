@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include <atomic>
 #include <limits>
 #include <iostream>
 #include "mathfuncs.hpp"
@@ -232,16 +233,26 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
 
+    const bool _src1IsDstMag = (_src1.getObj() == _dst1.getObj());
+    const bool _src1IsDstAngle = (_src1.getObj() == _dst2.getObj());
+    const bool _src2IsDstMag = (_src2.getObj() == _dst1.getObj());
+    const bool _src2IsDstAngle = (_src2.getObj() == _dst2.getObj());
+
     if ( !(_src1.dims() <= 2 && _src2.dims() <= 2 &&
            (depth == CV_32F || depth == CV_64F) && type == _src2.type()) ||
          (depth == CV_64F && !doubleSupport) )
         return false;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D BINARY_OP -D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D OP_CTP_%s%s",
+                  format("-D BINARY_OP -D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D OP_CTP_%s%s%s%s%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), depth,
                          rowsPerWI, angleInDegrees ? "AD" : "AR",
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src1IsDstMag   ? " -D SRC1_IS_DST_MAG" : "",
+                         _src1IsDstAngle ? " -D SRC1_IS_DST_ANGLE" : "",
+                         _src2IsDstMag   ? " -D SRC2_IS_DST_MAG" : "",
+                         _src2IsDstAngle ? " -D SRC2_IS_DST_ANGLE" : ""
+                         ));
     if (k.empty())
         return false;
 
@@ -253,8 +264,8 @@ static bool ocl_cartToPolar( InputArray _src1, InputArray _src2,
     _dst2.create(size, type);
     UMat dst1 = _dst1.getUMat(), dst2 = _dst2.getUMat();
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src1),
-           ocl::KernelArg::ReadOnlyNoSize(src2),
+    k.args(_src1IsDstMag || _src1IsDstAngle ? ocl::KernelArg::ReadWriteNoSize(src1) : ocl::KernelArg::ReadOnlyNoSize(src1),
+           _src2IsDstMag || _src2IsDstAngle ? ocl::KernelArg::ReadWriteNoSize(src2) : ocl::KernelArg::ReadOnlyNoSize(src2),
            ocl::KernelArg::WriteOnly(dst1, cn),
            ocl::KernelArg::WriteOnlyNoSize(dst2));
 
@@ -269,8 +280,7 @@ void cartToPolar( InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(src1.getObj() != dst1.getObj() && src1.getObj() != dst2.getObj() &&
-              src2.getObj() != dst1.getObj() && src2.getObj() != dst2.getObj());
+    CV_Assert(dst1.getObj() != dst2.getObj());
 
     CV_OCL_RUN(dst1.isUMat() && dst2.isUMat(),
             ocl_cartToPolar(src1, src2, dst1, dst2, angleInDegrees))
@@ -297,15 +307,13 @@ void cartToPolar( InputArray src1, InputArray src2,
             {
                 const float *x = (const float*)ptrs[0], *y = (const float*)ptrs[1];
                 float *mag = (float*)ptrs[2], *angle = (float*)ptrs[3];
-                hal::magnitude32f( x, y, mag, len );
-                hal::fastAtan32f( y, x, angle, len, angleInDegrees );
+                hal::cartToPolar32f( x, y, mag, angle, len, angleInDegrees );
             }
             else
             {
                 const double *x = (const double*)ptrs[0], *y = (const double*)ptrs[1];
-                double *angle = (double*)ptrs[3];
-                hal::magnitude64f(x, y, (double*)ptrs[2], len);
-                hal::fastAtan64f(y, x, angle, len, angleInDegrees);
+                double *mag = (double*)ptrs[2], *angle = (double*)ptrs[3];
+                hal::cartToPolar64f(x, y, mag, angle, len, angleInDegrees);
             }
             ptrs[0] += len*esz1;
             ptrs[1] += len*esz1;
@@ -473,15 +481,24 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
             rowsPerWI = d.isIntel() ? 4 : 1;
     bool doubleSupport = d.doubleFPConfig() > 0;
 
+    const bool _src1IsDstX = (_mag.getObj() == _dst1.getObj());
+    const bool _src1IsDstY = (_mag.getObj() == _dst2.getObj());
+    const bool _src2IsDstX = (_angle.getObj() == _dst1.getObj());
+    const bool _src2IsDstY = (_angle.getObj() == _dst2.getObj());
+
     if ( !doubleSupport && depth == CV_64F )
         return false;
 
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D BINARY_OP -D OP_PTC_%s%s",
+                  format("-D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D BINARY_OP -D OP_PTC_%s%s%s%s%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, 1)), depth,
                          rowsPerWI,
                          angleInDegrees ? "AD" : "AR",
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+                         doubleSupport ? " -D DOUBLE_SUPPORT" : "",
+                         _src1IsDstX   ? " -D SRC1_IS_DST_X" : "",
+                         _src1IsDstY ? " -D SRC1_IS_DST_Y" : "",
+                         _src2IsDstX   ? " -D SRC2_IS_DST_X" : "",
+                         _src2IsDstY ? " -D SRC2_IS_DST_Y" : ""));
     if (k.empty())
         return false;
 
@@ -493,8 +510,10 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
     _dst2.create(size, type);
     UMat dst1 = _dst1.getUMat(), dst2 = _dst2.getUMat();
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(mag), ocl::KernelArg::ReadOnlyNoSize(angle),
-           ocl::KernelArg::WriteOnly(dst1, cn), ocl::KernelArg::WriteOnlyNoSize(dst2));
+    k.args(_src1IsDstX || _src1IsDstY ? ocl::KernelArg::ReadWriteNoSize(mag) : ocl::KernelArg::ReadOnlyNoSize(mag),
+           _src2IsDstX || _src2IsDstY  ? ocl::KernelArg::ReadWriteNoSize(angle) : ocl::KernelArg::ReadOnlyNoSize(angle),
+           ocl::KernelArg::WriteOnly(dst1, cn),
+           ocl::KernelArg::WriteOnlyNoSize(dst2));
 
     size_t globalsize[2] = { (size_t)dst1.cols * cn, ((size_t)dst1.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalsize, NULL, false);
@@ -566,8 +585,13 @@ void polarToCart( InputArray src1, InputArray src2,
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(src1.getObj() != dst1.getObj() && src1.getObj() != dst2.getObj() &&
-              src2.getObj() != dst1.getObj() && src2.getObj() != dst2.getObj());
+    CV_Assert(dst1.getObj() != dst2.getObj());
+
+    const bool isInPlace =
+        (src1.getObj() == dst1.getObj()) ||
+        (src1.getObj() == dst2.getObj()) ||
+        (src2.getObj() == dst1.getObj()) ||
+        (src2.getObj() == dst2.getObj());
 
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
@@ -581,7 +605,7 @@ void polarToCart( InputArray src1, InputArray src2,
     dst2.create( Angle.dims, Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();
 
-    CV_IPP_RUN(!angleInDegrees, ipp_polarToCart(Mag, Angle, X, Y));
+    CV_IPP_RUN(!angleInDegrees && !isInPlace, ipp_polarToCart(Mag, Angle, X, Y));
 
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
     uchar* ptrs[4] = {};
@@ -591,7 +615,7 @@ void polarToCart( InputArray src1, InputArray src2,
     int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
     size_t esz1 = Angle.elemSize1();
 
-    if( depth == CV_64F )
+    if (( depth == CV_64F ) || isInPlace)
     {
         _buf.allocate(blockSize*2);
         buf[0] = _buf.data();
@@ -603,7 +627,7 @@ void polarToCart( InputArray src1, InputArray src2,
         for( j = 0; j < total; j += blockSize )
         {
             int len = std::min(total - j, blockSize);
-            if( depth == CV_32F )
+            if (( depth == CV_32F ) && !isInPlace)
             {
                 const float *mag = (const float*)ptrs[0], *angle = (const float*)ptrs[1];
                 float *x = (float*)ptrs[2], *y = (float*)ptrs[3];
@@ -613,13 +637,13 @@ void polarToCart( InputArray src1, InputArray src2,
                 {
                     k = 0;
 
-#if CV_SIMD
-                    int cWidth = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                    int cWidth = VTraits<v_float32>::vlanes();
                     for( ; k <= len - cWidth; k += cWidth )
                     {
                         v_float32 v_m = vx_load(mag + k);
-                        v_store(x + k, vx_load(x + k) * v_m);
-                        v_store(y + k, vx_load(y + k) * v_m);
+                        v_store(x + k, v_mul(vx_load(x + k), v_m));
+                        v_store(y + k, v_mul(vx_load(y + k), v_m));
                     }
                     vx_cleanup();
 #endif
@@ -629,6 +653,27 @@ void polarToCart( InputArray src1, InputArray src2,
                         float m = mag[k];
                         x[k] *= m; y[k] *= m;
                     }
+                }
+            }
+            else if (( depth == CV_32F ) && isInPlace)
+            {
+                const float *mag = (const float*)ptrs[0], *angle = (const float*)ptrs[1];
+                float *x = (float*)ptrs[2], *y = (float*)ptrs[3];
+
+                for( k = 0; k < len; k++ )
+                    buf[0][k] = (float)angle[k];
+
+                SinCos_32f( buf[0], buf[1], buf[0], len, angleInDegrees );
+                if( mag )
+                    for( k = 0; k < len; k++ )
+                    {
+                        float m = mag[k];
+                        x[k] = buf[0][k]*m; y[k] = buf[1][k]*m;
+                    }
+                else
+                {
+                    std::memcpy(x, buf[0], sizeof(float) * len);
+                    std::memcpy(y, buf[1], sizeof(float) * len);
                 }
             }
             else
@@ -648,8 +693,11 @@ void polarToCart( InputArray src1, InputArray src2,
                     }
                 else
                 {
-                    std::memcpy(x, buf[0], sizeof(float) * len);
-                    std::memcpy(y, buf[1], sizeof(float) * len);
+                    for( k = 0; k < len; k++ )
+                    {
+                        x[k] = buf[0][k];
+                        y[k] = buf[1][k];
+                    }
                 }
             }
 
@@ -740,17 +788,17 @@ struct iPow_SIMD
     }
 };
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 template <>
-struct iPow_SIMD<uchar, int>
+struct iPow_SIMD<uchar, unsigned>
 {
     int operator() ( const uchar * src, uchar * dst, int len, int power )
     {
         int i = 0;
         v_uint32 v_1 = vx_setall_u32(1u);
 
-        for ( ; i <= len - v_uint16::nlanes; i += v_uint16::nlanes)
+        for ( ; i <= len - VTraits<v_uint16>::vlanes(); i += VTraits<v_uint16>::vlanes())
         {
             v_uint32 v_a1 = v_1, v_a2 = v_1;
             v_uint16 v = vx_load_expand(src + i);
@@ -762,16 +810,16 @@ struct iPow_SIMD<uchar, int>
             {
                 if (p & 1)
                 {
-                    v_a1 *= v_b1;
-                    v_a2 *= v_b2;
+                    v_a1 = v_mul(v_a1, v_b1);
+                    v_a2 = v_mul(v_a2, v_b2);
                 }
-                v_b1 *= v_b1;
-                v_b2 *= v_b2;
+                v_b1 = v_mul(v_b1, v_b1);
+                v_b2 = v_mul(v_b2, v_b2);
                 p >>= 1;
             }
 
-            v_a1 *= v_b1;
-            v_a2 *= v_b2;
+            v_a1 = v_mul(v_a1, v_b1);
+            v_a2 = v_mul(v_a2, v_b2);
 
             v = v_pack(v_a1, v_a2);
             v_pack_store(dst + i, v);
@@ -790,7 +838,7 @@ struct iPow_SIMD<schar, int>
         int i = 0;
         v_int32 v_1 = vx_setall_s32(1);
 
-        for ( ; i <= len - v_int16::nlanes; i += v_int16::nlanes)
+        for ( ; i <= len - VTraits<v_int16>::vlanes(); i += VTraits<v_int16>::vlanes())
         {
             v_int32 v_a1 = v_1, v_a2 = v_1;
             v_int16 v = vx_load_expand(src + i);
@@ -802,16 +850,16 @@ struct iPow_SIMD<schar, int>
             {
                 if (p & 1)
                 {
-                    v_a1 *= v_b1;
-                    v_a2 *= v_b2;
+                    v_a1 = v_mul(v_a1, v_b1);
+                    v_a2 = v_mul(v_a2, v_b2);
                 }
-                v_b1 *= v_b1;
-                v_b2 *= v_b2;
+                v_b1 = v_mul(v_b1, v_b1);
+                v_b2 = v_mul(v_b2, v_b2);
                 p >>= 1;
             }
 
-            v_a1 *= v_b1;
-            v_a2 *= v_b2;
+            v_a1 = v_mul(v_a1, v_b1);
+            v_a2 = v_mul(v_a2, v_b2);
 
             v = v_pack(v_a1, v_a2);
             v_pack_store(dst + i, v);
@@ -823,14 +871,14 @@ struct iPow_SIMD<schar, int>
 };
 
 template <>
-struct iPow_SIMD<ushort, int>
+struct iPow_SIMD<ushort, unsigned>
 {
     int operator() ( const ushort * src, ushort * dst, int len, int power)
     {
         int i = 0;
         v_uint32 v_1 = vx_setall_u32(1u);
 
-        for ( ; i <= len - v_uint16::nlanes; i += v_uint16::nlanes)
+        for ( ; i <= len - VTraits<v_uint16>::vlanes(); i += VTraits<v_uint16>::vlanes())
         {
             v_uint32 v_a1 = v_1, v_a2 = v_1;
             v_uint16 v = vx_load(src + i);
@@ -842,16 +890,16 @@ struct iPow_SIMD<ushort, int>
             {
                 if (p & 1)
                 {
-                    v_a1 *= v_b1;
-                    v_a2 *= v_b2;
+                    v_a1 = v_mul(v_a1, v_b1);
+                    v_a2 = v_mul(v_a2, v_b2);
                 }
-                v_b1 *= v_b1;
-                v_b2 *= v_b2;
+                v_b1 = v_mul(v_b1, v_b1);
+                v_b2 = v_mul(v_b2, v_b2);
                 p >>= 1;
             }
 
-            v_a1 *= v_b1;
-            v_a2 *= v_b2;
+            v_a1 = v_mul(v_a1, v_b1);
+            v_a2 = v_mul(v_a2, v_b2);
 
             v = v_pack(v_a1, v_a2);
             v_store(dst + i, v);
@@ -870,7 +918,7 @@ struct iPow_SIMD<short, int>
         int i = 0;
         v_int32 v_1 = vx_setall_s32(1);
 
-        for ( ; i <= len - v_int16::nlanes; i += v_int16::nlanes)
+        for ( ; i <= len - VTraits<v_int16>::vlanes(); i += VTraits<v_int16>::vlanes())
         {
             v_int32 v_a1 = v_1, v_a2 = v_1;
             v_int16 v = vx_load(src + i);
@@ -882,16 +930,16 @@ struct iPow_SIMD<short, int>
             {
                 if (p & 1)
                 {
-                    v_a1 *= v_b1;
-                    v_a2 *= v_b2;
+                    v_a1 = v_mul(v_a1, v_b1);
+                    v_a2 = v_mul(v_a2, v_b2);
                 }
-                v_b1 *= v_b1;
-                v_b2 *= v_b2;
+                v_b1 = v_mul(v_b1, v_b1);
+                v_b2 = v_mul(v_b2, v_b2);
                 p >>= 1;
             }
 
-            v_a1 *= v_b1;
-            v_a2 *= v_b2;
+            v_a1 = v_mul(v_a1, v_b1);
+            v_a2 = v_mul(v_a2, v_b2);
 
             v = v_pack(v_a1, v_a2);
             v_store(dst + i, v);
@@ -910,29 +958,29 @@ struct iPow_SIMD<int, int>
         int i = 0;
         v_int32 v_1 = vx_setall_s32(1);
 
-        for ( ; i <= len - v_int32::nlanes*2; i += v_int32::nlanes*2)
+        for ( ; i <= len - VTraits<v_int32>::vlanes()*2; i += VTraits<v_int32>::vlanes()*2)
         {
             v_int32 v_a1 = v_1, v_a2 = v_1;
-            v_int32 v_b1 = vx_load(src + i), v_b2 = vx_load(src + i + v_int32::nlanes);
+            v_int32 v_b1 = vx_load(src + i), v_b2 = vx_load(src + i + VTraits<v_int32>::vlanes());
             int p = power;
 
             while( p > 1 )
             {
                 if (p & 1)
                 {
-                    v_a1 *= v_b1;
-                    v_a2 *= v_b2;
+                    v_a1 = v_mul(v_a1, v_b1);
+                    v_a2 = v_mul(v_a2, v_b2);
                 }
-                v_b1 *= v_b1;
-                v_b2 *= v_b2;
+                v_b1 = v_mul(v_b1, v_b1);
+                v_b2 = v_mul(v_b2, v_b2);
                 p >>= 1;
             }
 
-            v_a1 *= v_b1;
-            v_a2 *= v_b2;
+            v_a1 = v_mul(v_a1, v_b1);
+            v_a2 = v_mul(v_a2, v_b2);
 
             v_store(dst + i, v_a1);
-            v_store(dst + i + v_int32::nlanes, v_a2);
+            v_store(dst + i + VTraits<v_int32>::vlanes(), v_a2);
         }
         vx_cleanup();
 
@@ -948,34 +996,34 @@ struct iPow_SIMD<float, float>
         int i = 0;
         v_float32 v_1 = vx_setall_f32(1.f);
 
-        for ( ; i <= len - v_float32::nlanes*2; i += v_float32::nlanes*2)
+        for ( ; i <= len - VTraits<v_float32>::vlanes()*2; i += VTraits<v_float32>::vlanes()*2)
         {
             v_float32 v_a1 = v_1, v_a2 = v_1;
-            v_float32 v_b1 = vx_load(src + i), v_b2 = vx_load(src + i + v_float32::nlanes);
+            v_float32 v_b1 = vx_load(src + i), v_b2 = vx_load(src + i + VTraits<v_float32>::vlanes());
             int p = std::abs(power);
             if( power < 0 )
             {
-                v_b1 = v_1 / v_b1;
-                v_b2 = v_1 / v_b2;
+                v_b1 = v_div(v_1, v_b1);
+                v_b2 = v_div(v_1, v_b2);
             }
 
             while( p > 1 )
             {
                 if (p & 1)
                 {
-                    v_a1 *= v_b1;
-                    v_a2 *= v_b2;
+                    v_a1 = v_mul(v_a1, v_b1);
+                    v_a2 = v_mul(v_a2, v_b2);
                 }
-                v_b1 *= v_b1;
-                v_b2 *= v_b2;
+                v_b1 = v_mul(v_b1, v_b1);
+                v_b2 = v_mul(v_b2, v_b2);
                 p >>= 1;
             }
 
-            v_a1 *= v_b1;
-            v_a2 *= v_b2;
+            v_a1 = v_mul(v_a1, v_b1);
+            v_a2 = v_mul(v_a2, v_b2);
 
             v_store(dst + i, v_a1);
-            v_store(dst + i + v_float32::nlanes, v_a2);
+            v_store(dst + i + VTraits<v_float32>::vlanes(), v_a2);
         }
         vx_cleanup();
 
@@ -983,7 +1031,7 @@ struct iPow_SIMD<float, float>
     }
 };
 
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template <>
 struct iPow_SIMD<double, double>
 {
@@ -992,34 +1040,34 @@ struct iPow_SIMD<double, double>
         int i = 0;
         v_float64 v_1 = vx_setall_f64(1.);
 
-        for ( ; i <= len - v_float64::nlanes*2; i += v_float64::nlanes*2)
+        for ( ; i <= len - VTraits<v_float64>::vlanes()*2; i += VTraits<v_float64>::vlanes()*2)
         {
             v_float64 v_a1 = v_1, v_a2 = v_1;
-            v_float64 v_b1 = vx_load(src + i), v_b2 = vx_load(src + i + v_float64::nlanes);
+            v_float64 v_b1 = vx_load(src + i), v_b2 = vx_load(src + i + VTraits<v_float64>::vlanes());
             int p = std::abs(power);
             if( power < 0 )
             {
-                v_b1 = v_1 / v_b1;
-                v_b2 = v_1 / v_b2;
+                v_b1 = v_div(v_1, v_b1);
+                v_b2 = v_div(v_1, v_b2);
             }
 
             while( p > 1 )
             {
                 if (p & 1)
                 {
-                    v_a1 *= v_b1;
-                    v_a2 *= v_b2;
+                    v_a1 = v_mul(v_a1, v_b1);
+                    v_a2 = v_mul(v_a2, v_b2);
                 }
-                v_b1 *= v_b1;
-                v_b2 *= v_b2;
+                v_b1 = v_mul(v_b1, v_b1);
+                v_b2 = v_mul(v_b2, v_b2);
                 p >>= 1;
             }
 
-            v_a1 *= v_b1;
-            v_a2 *= v_b2;
+            v_a1 = v_mul(v_a1, v_b1);
+            v_a2 = v_mul(v_a2, v_b2);
 
             v_store(dst + i, v_a1);
-            v_store(dst + i + v_float64::nlanes, v_a2);
+            v_store(dst + i + VTraits<v_float64>::vlanes(), v_a2);
         }
         vx_cleanup();
 
@@ -1136,7 +1184,7 @@ static void iPow64f(const double* src, double* dst, int len, int power)
 
 typedef void (*IPowFunc)( const uchar* src, uchar* dst, int len, int power );
 
-static IPowFunc ipowTab[] =
+static IPowFunc ipowTab[CV_DEPTH_MAX] =
 {
     (IPowFunc)iPow8u, (IPowFunc)iPow8s, (IPowFunc)iPow16u, (IPowFunc)iPow16s,
     (IPowFunc)iPow32s, (IPowFunc)iPow32f, (IPowFunc)iPow64f, 0
@@ -1155,16 +1203,6 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     _dst.createSameSize(_src, type);
     if (is_ipower)
     {
-        if (ipower == 0)
-        {
-            _dst.setTo(Scalar::all(1));
-            return true;
-        }
-        if (ipower == 1)
-        {
-            _src.copyTo(_dst);
-            return true;
-        }
         if( ipower < 0 )
         {
             if( depth == CV_32F || depth == CV_64F )
@@ -1223,11 +1261,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     bool useOpenCL = _dst.isUMat() && _src.dims() <= 2;
 #endif
 
-    if( is_ipower
-#ifdef HAVE_OPENCL
-            && !(useOpenCL && ocl::Device::getDefault().isIntel() && depth != CV_64F)
-#endif
-      )
+    if (is_ipower)
     {
         switch( ipower )
         {
@@ -1243,8 +1277,6 @@ void pow( InputArray _src, double power, OutputArray _dst )
             return;
         }
     }
-    else
-        CV_Assert( depth == CV_32F || depth == CV_64F );
 
     CV_OCL_RUN(useOpenCL, ocl_pow(_src, power, _dst, is_ipower, ipower))
 
@@ -1565,7 +1597,7 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
         {
             cv::String value_str;
             value_str << src(cv::Range(badPt.y, badPt.y + 1), cv::Range(badPt.x, badPt.x + 1));
-            CV_Error_( CV_StsOutOfRange,
+            CV_Error_( cv::Error::StsOutOfRange,
             ("the value at (%d, %d)=%s is out of range [%f, %f)", badPt.x, badPt.y, value_str.c_str(), minVal, maxVal));
         }
         return false;
@@ -1609,30 +1641,37 @@ void patchNaNs( InputOutputArray _a, double _val )
     const Mat* arrays[] = {&a, 0};
     int* ptrs[1] = {};
     NAryMatIterator it(arrays, (uchar**)ptrs);
-    size_t len = it.size*a.channels();
+    int len = (int)(it.size*a.channels());
     Cv32suf val;
     val.f = (float)_val;
-
-#if CV_SIMD
-    v_int32 v_mask1 = vx_setall_s32(0x7fffffff), v_mask2 = vx_setall_s32(0x7f800000);
-    v_int32 v_val = vx_setall_s32(val.i);
-#endif
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         int* tptr = ptrs[0];
-        size_t j = 0;
+        int j = 0;
 
-#if CV_SIMD
-        size_t cWidth = (size_t)v_int32::nlanes;
-        for ( ; j + cWidth <= len; j += cWidth)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        v_int32 v_pos_mask = vx_setall_s32(0x7fffffff), v_exp_mask = vx_setall_s32(0x7f800000);
+        v_int32 v_val = vx_setall_s32(val.i);
+
+        int cWidth = VTraits<v_int32>::vlanes();
+        for (; j < len - cWidth * 2 + 1; j += cWidth * 2)
         {
-            v_int32 v_src = vx_load(tptr + j);
-            v_int32 v_cmp_mask = v_mask2 < (v_src & v_mask1);
-            v_int32 v_dst = v_select(v_cmp_mask, v_val, v_src);
-            v_store(tptr + j, v_dst);
+            v_int32 v_src0 = vx_load(tptr + j);
+            v_int32 v_src1 = vx_load(tptr + j + cWidth);
+
+            v_int32 v_cmp_mask0 = v_lt(v_exp_mask, v_and(v_src0, v_pos_mask));
+            v_int32 v_cmp_mask1 = v_lt(v_exp_mask, v_and(v_src1, v_pos_mask));
+
+            if (v_check_any(v_or(v_cmp_mask0, v_cmp_mask1)))
+            {
+                v_int32 v_dst0 = v_select(v_cmp_mask0, v_val, v_src0);
+                v_int32 v_dst1 = v_select(v_cmp_mask1, v_val, v_src1);
+
+                v_store(tptr + j, v_dst0);
+                v_store(tptr + j + cWidth, v_dst1);
+            }
         }
-        vx_cleanup();
 #endif
 
         for( ; j < len; j++ )
@@ -2132,8 +2171,8 @@ const double* getExpTab64f()
 const float* getExpTab32f()
 {
     static float CV_DECL_ALIGNED(64) expTab_f[EXPTAB_MASK+1];
-    static volatile bool expTab_f_initialized = false;
-    if (!expTab_f_initialized)
+    static std::atomic<bool> expTab_f_initialized(false);
+    if (!expTab_f_initialized.load())
     {
         for( int j = 0; j <= EXPTAB_MASK; j++ )
             expTab_f[j] = (float)expTab[j];
@@ -2414,8 +2453,8 @@ const double* getLogTab64f()
 const float* getLogTab32f()
 {
     static float CV_DECL_ALIGNED(64) logTab_f[(LOGTAB_MASK+1)*2];
-    static volatile bool logTab_f_initialized = false;
-    if (!logTab_f_initialized)
+    static std::atomic<bool> logTab_f_initialized(false);
+    if (!logTab_f_initialized.load())
     {
         for (int j = 0; j < (LOGTAB_MASK+1)*2; j++)
             logTab_f[j] = (float)logTab[j];

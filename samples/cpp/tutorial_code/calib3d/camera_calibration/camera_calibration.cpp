@@ -11,22 +11,16 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
+#include "opencv2/objdetect/charuco_detector.hpp"
 
 using namespace cv;
 using namespace std;
 
-static void help()
-{
-    cout <<  "This is a camera calibration sample." << endl
-         <<  "Usage: camera_calibration [configuration_file -- default ./default.xml]"  << endl
-         <<  "Near the sample file you'll find the configuration file, which has detailed help of "
-             "how to edit it.  It may be any OpenCV supported file format XML/YAML." << endl;
-}
 class Settings
 {
 public:
     Settings() : goodInput(false) {}
-    enum Pattern { NOT_EXISTING, CHESSBOARD, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID };
+    enum Pattern { NOT_EXISTING, CHESSBOARD, CHARUCOBOARD, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID };
     enum InputType { INVALID, CAMERA, VIDEO_FILE, IMAGE_LIST };
 
     void write(FileStorage& fs) const                        //Write serialization for this class
@@ -35,7 +29,10 @@ public:
                   << "BoardSize_Width"  << boardSize.width
                   << "BoardSize_Height" << boardSize.height
                   << "Square_Size"         << squareSize
+                  << "Marker_Size"      << markerSize
                   << "Calibrate_Pattern" << patternToUse
+                  << "ArUco_Dict_Name"   << arucoDictName
+                  << "ArUco_Dict_File_Name" << arucoDictFileName
                   << "Calibrate_NrOfFrameToUse" << nrFrames
                   << "Calibrate_FixAspectRatio" << aspectRatio
                   << "Calibrate_AssumeZeroTangentialDistortion" << calibZeroTangentDist
@@ -43,6 +40,7 @@ public:
 
                   << "Write_DetectedFeaturePoints" << writePoints
                   << "Write_extrinsicParameters"   << writeExtrinsics
+                  << "Write_gridPoints" << writeGrid
                   << "Write_outputFileName"  << outputFileName
 
                   << "Show_UndistortedImage" << showUndistorted
@@ -54,14 +52,18 @@ public:
     }
     void read(const FileNode& node)                          //Read serialization for this class
     {
-        node["BoardSize_Width" ] >> boardSize.width;
+        node["BoardSize_Width"] >> boardSize.width;
         node["BoardSize_Height"] >> boardSize.height;
         node["Calibrate_Pattern"] >> patternToUse;
-        node["Square_Size"]  >> squareSize;
+        node["ArUco_Dict_Name"] >> arucoDictName;
+        node["ArUco_Dict_File_Name"] >> arucoDictFileName;
+        node["Square_Size"] >> squareSize;
+        node["Marker_Size"] >> markerSize;
         node["Calibrate_NrOfFrameToUse"] >> nrFrames;
         node["Calibrate_FixAspectRatio"] >> aspectRatio;
         node["Write_DetectedFeaturePoints"] >> writePoints;
         node["Write_extrinsicParameters"] >> writeExtrinsics;
+        node["Write_gridPoints"] >> writeGrid;
         node["Write_outputFileName"] >> outputFileName;
         node["Calibrate_AssumeZeroTangentialDistortion"] >> calibZeroTangentDist;
         node["Calibrate_FixPrincipalPointAtTheCenter"] >> calibFixPrincipalPoint;
@@ -152,6 +154,7 @@ public:
 
         calibrationPattern = NOT_EXISTING;
         if (!patternToUse.compare("CHESSBOARD")) calibrationPattern = CHESSBOARD;
+        if (!patternToUse.compare("CHARUCOBOARD")) calibrationPattern = CHARUCOBOARD;
         if (!patternToUse.compare("CIRCLES_GRID")) calibrationPattern = CIRCLES_GRID;
         if (!patternToUse.compare("ASYMMETRIC_CIRCLES_GRID")) calibrationPattern = ASYMMETRIC_CIRCLES_GRID;
         if (calibrationPattern == NOT_EXISTING)
@@ -203,13 +206,17 @@ public:
     }
 public:
     Size boardSize;              // The size of the board -> Number of items by width and height
-    Pattern calibrationPattern;  // One of the Chessboard, circles, or asymmetric circle pattern
+    Pattern calibrationPattern;  // One of the Chessboard, ChArUco board, circles, or asymmetric circle pattern
     float squareSize;            // The size of a square in your defined unit (point, millimeter,etc).
+    float markerSize;            // The size of a marker in your defined unit (point, millimeter,etc).
+    string arucoDictName;        // The Name of ArUco dictionary which you use in ChArUco pattern
+    string arucoDictFileName;    // The Name of file which contains ArUco dictionary for ChArUco pattern
     int nrFrames;                // The number of frames to use from the input for calibration
     float aspectRatio;           // The aspect ratio
     int delay;                   // In case of a video input
     bool writePoints;            // Write detected feature points
     bool writeExtrinsics;        // Write extrinsic parameters
+    bool writeGrid;              // Write refined 3D target grid points
     bool calibZeroTangentDist;   // Assume zero tangential distortion
     bool calibFixPrincipalPoint; // Fix the principal point at the center
     bool flipVertical;           // Flip the captured images around the horizontal axis
@@ -248,33 +255,110 @@ static inline void read(const FileNode& node, Settings& x, const Settings& defau
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
 
 bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat& distCoeffs,
-                           vector<vector<Point2f> > imagePoints );
+                           vector<vector<Point2f> > imagePoints, float grid_width, bool release_object);
 
 int main(int argc, char* argv[])
 {
-    help();
+    const String keys
+        = "{help h usage ? |           | print this message            }"
+          "{@settings      |default.xml| input setting file            }"
+          "{d              |           | actual distance between top-left and top-right corners of "
+          "the calibration grid }"
+          "{winSize        | 11        | Half of search window for cornerSubPix }";
+    CommandLineParser parser(argc, argv, keys);
+    parser.about("This is a camera calibration sample.\n"
+                 "Usage: camera_calibration [configuration_file -- default ./default.xml]\n"
+                 "Near the sample file you'll find the configuration file, which has detailed help of "
+                 "how to edit it. It may be any OpenCV supported file format XML/YAML.");
+    if (!parser.check()) {
+        parser.printErrors();
+        return 0;
+    }
+
+    if (parser.has("help")) {
+        parser.printMessage();
+        return 0;
+    }
 
     //! [file_read]
     Settings s;
-    const string inputSettingsFile = argc > 1 ? argv[1] : "default.xml";
+    const string inputSettingsFile = parser.get<string>(0);
     FileStorage fs(inputSettingsFile, FileStorage::READ); // Read the settings
     if (!fs.isOpened())
     {
         cout << "Could not open the configuration file: \"" << inputSettingsFile << "\"" << endl;
+        parser.printMessage();
         return -1;
     }
     fs["Settings"] >> s;
     fs.release();                                         // close Settings file
     //! [file_read]
 
-    //FileStorage fout("settings.yml", FileStorage::WRITE); // write config as YAML
-    //fout << "Settings" << s;
-
     if (!s.goodInput)
     {
         cout << "Invalid input detected. Application stopping. " << endl;
         return -1;
     }
+
+    int winSize = parser.get<int>("winSize");
+
+    float grid_width = s.squareSize * (s.boardSize.width - 1);
+    if (s.calibrationPattern == Settings::Pattern::CHARUCOBOARD) {
+        grid_width = s.squareSize * (s.boardSize.width - 2);
+    }
+
+    bool release_object = false;
+    if (parser.has("d")) {
+        grid_width = parser.get<float>("d");
+        release_object = true;
+    }
+
+    //create CharucoBoard
+    cv::aruco::Dictionary dictionary;
+    if (s.calibrationPattern == Settings::CHARUCOBOARD) {
+        if (s.arucoDictFileName == "") {
+            cv::aruco::PredefinedDictionaryType arucoDict;
+            if (s.arucoDictName == "DICT_4X4_50") { arucoDict = cv::aruco::DICT_4X4_50; }
+            else if (s.arucoDictName == "DICT_4X4_100") { arucoDict = cv::aruco::DICT_4X4_100; }
+            else if (s.arucoDictName == "DICT_4X4_250") { arucoDict = cv::aruco::DICT_4X4_250; }
+            else if (s.arucoDictName == "DICT_4X4_1000") { arucoDict = cv::aruco::DICT_4X4_1000; }
+            else if (s.arucoDictName == "DICT_5X5_50") { arucoDict = cv::aruco::DICT_5X5_50; }
+            else if (s.arucoDictName == "DICT_5X5_100") { arucoDict = cv::aruco::DICT_5X5_100; }
+            else if (s.arucoDictName == "DICT_5X5_250") { arucoDict = cv::aruco::DICT_5X5_250; }
+            else if (s.arucoDictName == "DICT_5X5_1000") { arucoDict = cv::aruco::DICT_5X5_1000; }
+            else if (s.arucoDictName == "DICT_6X6_50") { arucoDict = cv::aruco::DICT_6X6_50; }
+            else if (s.arucoDictName == "DICT_6X6_100") { arucoDict = cv::aruco::DICT_6X6_100; }
+            else if (s.arucoDictName == "DICT_6X6_250") { arucoDict = cv::aruco::DICT_6X6_250; }
+            else if (s.arucoDictName == "DICT_6X6_1000") { arucoDict = cv::aruco::DICT_6X6_1000; }
+            else if (s.arucoDictName == "DICT_7X7_50") { arucoDict = cv::aruco::DICT_7X7_50; }
+            else if (s.arucoDictName == "DICT_7X7_100") { arucoDict = cv::aruco::DICT_7X7_100; }
+            else if (s.arucoDictName == "DICT_7X7_250") { arucoDict = cv::aruco::DICT_7X7_250; }
+            else if (s.arucoDictName == "DICT_7X7_1000") { arucoDict = cv::aruco::DICT_7X7_1000; }
+            else if (s.arucoDictName == "DICT_ARUCO_ORIGINAL") { arucoDict = cv::aruco::DICT_ARUCO_ORIGINAL; }
+            else if (s.arucoDictName == "DICT_APRILTAG_16h5") { arucoDict = cv::aruco::DICT_APRILTAG_16h5; }
+            else if (s.arucoDictName == "DICT_APRILTAG_25h9") { arucoDict = cv::aruco::DICT_APRILTAG_25h9; }
+            else if (s.arucoDictName == "DICT_APRILTAG_36h10") { arucoDict = cv::aruco::DICT_APRILTAG_36h10; }
+            else if (s.arucoDictName == "DICT_APRILTAG_36h11") { arucoDict = cv::aruco::DICT_APRILTAG_36h11; }
+            else {
+                cout << "incorrect name of aruco dictionary \n";
+                return 1;
+            }
+
+            dictionary = cv::aruco::getPredefinedDictionary(arucoDict);
+        }
+        else {
+            cv::FileStorage dict_file(s.arucoDictFileName, cv::FileStorage::Mode::READ);
+            cv::FileNode fn(dict_file.root());
+            dictionary.readDictionary(fn);
+        }
+    }
+    else {
+        // default dictionary
+        dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
+    }
+    cv::aruco::CharucoBoard ch_board({s.boardSize.width, s.boardSize.height}, s.squareSize, s.markerSize, dictionary);
+    cv::aruco::CharucoDetector ch_detector(ch_board);
+    std::vector<int> markerIds;
 
     vector<vector<Point2f> > imagePoints;
     Mat cameraMatrix, distCoeffs;
@@ -283,8 +367,8 @@ int main(int argc, char* argv[])
     clock_t prevTimestamp = 0;
     const Scalar RED(0,0,255), GREEN(0,255,0);
     const char ESC_KEY = 27;
-
     //! [get_input]
+
     for(;;)
     {
         Mat view;
@@ -295,7 +379,8 @@ int main(int argc, char* argv[])
         //-----  If no more image, or got enough, then stop calibration and show result -------------
         if( mode == CAPTURING && imagePoints.size() >= (size_t)s.nrFrames )
         {
-          if( runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints))
+          if(runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints, grid_width,
+                                   release_object))
               mode = CALIBRATED;
           else
               mode = DETECTION;
@@ -304,7 +389,8 @@ int main(int argc, char* argv[])
         {
             // if calibration threshold was not reached yet, calibrate now
             if( mode != CALIBRATED && !imagePoints.empty() )
-                runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints);
+                runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints, grid_width,
+                                      release_object);
             break;
         }
         //! [get_input]
@@ -329,6 +415,10 @@ int main(int argc, char* argv[])
         case Settings::CHESSBOARD:
             found = findChessboardCorners( view, s.boardSize, pointBuf, chessBoardFlags);
             break;
+        case Settings::CHARUCOBOARD:
+            ch_detector.detectBoard( view, pointBuf, markerIds);
+            found = pointBuf.size() == (size_t)((s.boardSize.height - 1)*(s.boardSize.width - 1));
+            break;
         case Settings::CIRCLES_GRID:
             found = findCirclesGrid( view, s.boardSize, pointBuf );
             break;
@@ -340,16 +430,17 @@ int main(int argc, char* argv[])
             break;
         }
         //! [find_pattern]
+
         //! [pattern_found]
-        if ( found)                // If done with success,
+        if (found)                // If done with success,
         {
               // improve the found corners' coordinate accuracy for chessboard
                 if( s.calibrationPattern == Settings::CHESSBOARD)
                 {
                     Mat viewGray;
                     cvtColor(view, viewGray, COLOR_BGR2GRAY);
-                    cornerSubPix( viewGray, pointBuf, Size(11,11),
-                        Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 30, 0.1 ));
+                    cornerSubPix( viewGray, pointBuf, Size(winSize,winSize),
+                        Size(-1,-1), TermCriteria( TermCriteria::EPS+TermCriteria::COUNT, 30, 0.0001 ));
                 }
 
                 if( mode == CAPTURING &&  // For camera only take new samples after delay time
@@ -361,7 +452,10 @@ int main(int argc, char* argv[])
                 }
 
                 // Draw the corners.
-                drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
+                if(s.calibrationPattern == Settings::CHARUCOBOARD)
+                    drawChessboardCorners( view, cv::Size(s.boardSize.width-1, s.boardSize.height-1), Mat(pointBuf), found );
+                else
+                    drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
         }
         //! [pattern_found]
         //----------------------------- Output Text ------------------------------------------------
@@ -377,7 +471,7 @@ int main(int argc, char* argv[])
             if(s.showUndistorted)
                 msg = cv::format( "%d/%d Undist", (int)imagePoints.size(), s.nrFrames );
             else
-                msg = format( "%d/%d", (int)imagePoints.size(), s.nrFrames );
+                msg = cv::format( "%d/%d", (int)imagePoints.size(), s.nrFrames );
         }
 
         putText( view, msg, textOrigin, 1, 1, mode == CALIBRATED ?  GREEN : RED);
@@ -503,15 +597,25 @@ static void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Po
     {
     case Settings::CHESSBOARD:
     case Settings::CIRCLES_GRID:
-        for( int i = 0; i < boardSize.height; ++i )
-            for( int j = 0; j < boardSize.width; ++j )
+        for (int i = 0; i < boardSize.height; ++i) {
+            for (int j = 0; j < boardSize.width; ++j) {
                 corners.push_back(Point3f(j*squareSize, i*squareSize, 0));
+            }
+        }
         break;
-
+    case Settings::CHARUCOBOARD:
+        for (int i = 0; i < boardSize.height - 1; ++i) {
+            for (int j = 0; j < boardSize.width - 1; ++j) {
+                corners.push_back(Point3f(j*squareSize, i*squareSize, 0));
+            }
+        }
+        break;
     case Settings::ASYMMETRIC_CIRCLES_GRID:
-        for( int i = 0; i < boardSize.height; i++ )
-            for( int j = 0; j < boardSize.width; j++ )
-                corners.push_back(Point3f((2*j + i % 2)*squareSize, i*squareSize, 0));
+        for (int i = 0; i < boardSize.height; i++) {
+            for (int j = 0; j < boardSize.width; j++) {
+                corners.push_back(Point3f((2 * j + i % 2)*squareSize, i*squareSize, 0));
+            }
+        }
         break;
     default:
         break;
@@ -520,7 +624,8 @@ static void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Po
 //! [board_corners]
 static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
                             vector<vector<Point2f> > imagePoints, vector<Mat>& rvecs, vector<Mat>& tvecs,
-                            vector<float>& reprojErrs,  double& totalAvgErr)
+                            vector<float>& reprojErrs,  double& totalAvgErr, vector<Point3f>& newObjPoints,
+                            float grid_width, bool release_object)
 {
     //! [fixed_aspect]
     cameraMatrix = Mat::eye(3, 3, CV_64F);
@@ -535,6 +640,13 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
 
     vector<vector<Point3f> > objectPoints(1);
     calcBoardCornerPositions(s.boardSize, s.squareSize, objectPoints[0], s.calibrationPattern);
+    if (s.calibrationPattern == Settings::Pattern::CHARUCOBOARD) {
+        objectPoints[0][s.boardSize.width - 2].x = objectPoints[0][0].x + grid_width;
+    }
+    else {
+        objectPoints[0][s.boardSize.width - 1].x = objectPoints[0][0].x + grid_width;
+    }
+    newObjPoints = objectPoints[0];
 
     objectPoints.resize(imagePoints.size(),objectPoints[0]);
 
@@ -553,14 +665,28 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
             tvecs.push_back(_tvecs.row(i));
         }
     } else {
-        rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs,
-                              s.flag);
+        int iFixedPoint = -1;
+        if (release_object)
+            iFixedPoint = s.boardSize.width - 1;
+        rms = calibrateCameraRO(objectPoints, imagePoints, imageSize, iFixedPoint,
+                                cameraMatrix, distCoeffs, rvecs, tvecs, newObjPoints,
+                                s.flag | CALIB_USE_LU);
+    }
+
+    if (release_object) {
+        cout << "New board corners: " << endl;
+        cout << newObjPoints[0] << endl;
+        cout << newObjPoints[s.boardSize.width - 1] << endl;
+        cout << newObjPoints[s.boardSize.width * (s.boardSize.height - 1)] << endl;
+        cout << newObjPoints.back() << endl;
     }
 
     cout << "Re-projection error reported by calibrateCamera: "<< rms << endl;
 
     bool ok = checkRange(cameraMatrix) && checkRange(distCoeffs);
 
+    objectPoints.clear();
+    objectPoints.resize(imagePoints.size(), newObjPoints);
     totalAvgErr = computeReprojectionErrors(objectPoints, imagePoints, rvecs, tvecs, cameraMatrix,
                                             distCoeffs, reprojErrs, s.useFisheye);
 
@@ -571,7 +697,7 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
 static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
                               const vector<Mat>& rvecs, const vector<Mat>& tvecs,
                               const vector<float>& reprojErrs, const vector<vector<Point2f> >& imagePoints,
-                              double totalAvgErr )
+                              double totalAvgErr, const vector<Point3f>& newObjPoints )
 {
     FileStorage fs( s.outputFileName, FileStorage::WRITE );
 
@@ -590,6 +716,7 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
     fs << "board_width" << s.boardSize.width;
     fs << "board_height" << s.boardSize.height;
     fs << "square_size" << s.squareSize;
+    fs << "marker_size" << s.markerSize;
 
     if( !s.useFisheye && s.flag & CALIB_FIX_ASPECT_RATIO )
         fs << "fix_aspect_ratio" << s.aspectRatio;
@@ -678,24 +805,30 @@ static void saveCameraParams( Settings& s, Size& imageSize, Mat& cameraMatrix, M
         }
         fs << "image_points" << imagePtMat;
     }
+
+    if( s.writeGrid && !newObjPoints.empty() )
+    {
+        fs << "grid_points" << newObjPoints;
+    }
 }
 
 //! [run_and_save]
 bool runCalibrationAndSave(Settings& s, Size imageSize, Mat& cameraMatrix, Mat& distCoeffs,
-                           vector<vector<Point2f> > imagePoints)
+                           vector<vector<Point2f> > imagePoints, float grid_width, bool release_object)
 {
     vector<Mat> rvecs, tvecs;
     vector<float> reprojErrs;
     double totalAvgErr = 0;
+    vector<Point3f> newObjPoints;
 
     bool ok = runCalibration(s, imageSize, cameraMatrix, distCoeffs, imagePoints, rvecs, tvecs, reprojErrs,
-                             totalAvgErr);
+                             totalAvgErr, newObjPoints, grid_width, release_object);
     cout << (ok ? "Calibration succeeded" : "Calibration failed")
          << ". avg re projection error = " << totalAvgErr << endl;
 
     if (ok)
         saveCameraParams(s, imageSize, cameraMatrix, distCoeffs, rvecs, tvecs, reprojErrs, imagePoints,
-                         totalAvgErr);
+                         totalAvgErr, newObjPoints);
     return ok;
 }
 //! [run_and_save]

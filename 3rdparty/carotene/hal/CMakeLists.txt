@@ -12,6 +12,8 @@ elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64.*|AARCH64.*")
   set(AARCH64 TRUE)
 endif()
 
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wunused-function)
+
 set(TEGRA_COMPILER_FLAGS "")
 
 if(CV_GCC OR CV_CLANG)

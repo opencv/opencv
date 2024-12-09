@@ -5,6 +5,12 @@ import sys
 import ctypes
 from functools import partial
 from collections import namedtuple
+import sys
+
+if sys.version_info[0] < 3:
+    from collections import Sequence
+else:
+    from collections.abc import Sequence
 
 import numpy as np
 import cv2 as cv
@@ -35,6 +41,93 @@ def get_conversion_error_msg(value, expected, actual):
 
 def get_no_exception_msg(value):
     return 'Exception is not risen for {} of type {}'.format(value, type(value).__name__)
+
+
+def rpad(src, dst_size, pad_value=0):
+    """Extend `src` up to `dst_size` with given value.
+
+    Args:
+        src (np.ndarray | tuple | list): 1d array like object to pad.
+        dst_size (_type_): Desired `src` size after padding.
+        pad_value (int, optional): Padding value. Defaults to 0.
+
+    Returns:
+        np.ndarray: 1d array with len == `dst_size`.
+    """
+    src = np.asarray(src)
+    if len(src.shape) != 1:
+        raise ValueError("Only 1d arrays are supported")
+
+    # Considering the meaning, it is desirable to use np.pad().
+    # However, the old numpy doesn't include the following fixes and cannot work as expected.
+    # So an alternative fix that combines np.append() and np.fill() is used.
+    # https://docs.scipy.org/doc/numpy-1.13.0/release.html#support-for-returning-arrays-of-arbitrary-dimensions-in-apply-along-axis
+
+    return np.append(src, np.full( dst_size - len(src), pad_value, dtype=src.dtype) )
+
+def get_ocv_arithm_op_table(apply_saturation=False):
+    def saturate(func):
+        def wrapped_func(x, y):
+            dst_dtype = x.dtype
+            if apply_saturation:
+                if np.issubdtype(x.dtype, np.integer):
+                    x = x.astype(np.int64)
+            # Apply padding or truncation for array-like `y` inputs
+            if not isinstance(y, (float, int)):
+                if len(y) > x.shape[-1]:
+                    y = y[:x.shape[-1]]
+                else:
+                    y = rpad(y, x.shape[-1], pad_value=0)
+
+            dst = func(x, y)
+            if apply_saturation:
+                min_val, max_val = get_limits(dst_dtype)
+                dst = np.clip(dst, min_val, max_val)
+            return dst.astype(dst_dtype)
+        return wrapped_func
+
+    @saturate
+    def subtract(x, y):
+        return x - y
+
+    @saturate
+    def add(x, y):
+        return x + y
+
+    @saturate
+    def divide(x, y):
+        if not isinstance(y, (int, float)):
+            dst_dtype = np.result_type(x, y)
+            y = np.array(y).astype(dst_dtype)
+            _, max_value = get_limits(dst_dtype)
+            y[y == 0] = max_value
+
+        # to compatible between python2 and python3, it calicurates with float.
+        # python2: int / int = int
+        # python3: int / int = float
+        dst = 1.0 * x / y
+
+        if np.issubdtype(x.dtype, np.integer):
+            dst = np.rint(dst)
+        return dst
+
+    @saturate
+    def multiply(x, y):
+        return x * y
+
+    @saturate
+    def absdiff(x, y):
+        res = np.abs(x - y)
+        return res
+
+    return {
+        cv.subtract: subtract,
+        cv.add: add,
+        cv.multiply: multiply,
+        cv.divide: divide,
+        cv.absdiff: absdiff
+    }
+
 
 class Bindings(NewOpenCVTests):
 
@@ -106,7 +199,8 @@ class Bindings(NewOpenCVTests):
             no_exception_msg = 'Overload resolution failed without any exception for: "{}"'.format(msg)
             wrong_exception_msg = 'Overload resolution failed with wrong exception type for: "{}"'.format(msg)
             with self.assertRaises((cv.error, Exception), msg=no_exception_msg) as cm:
-                cv.utils.testOverloadResolution(*args, **kwargs)
+                res = cv.utils.testOverloadResolution(*args, **kwargs)
+                self.fail("Unexpected result for {}: '{}'".format(msg, res))
             self.assertEqual(type(cm.exception), cv.error, wrong_exception_msg)
 
         test_overload_resolution('wrong second arg type (keyword arg)', 5, point=(1, 2, 3))
@@ -135,6 +229,20 @@ class Bindings(NewOpenCVTests):
         with self.assertRaises(AttributeError):
             obj.except_ = 32
 
+    def test_maketype(self):
+        data = {
+            cv.CV_8UC3: [cv.CV_8U, 3, cv.CV_8UC],
+            cv.CV_16SC1: [cv.CV_16S, 1, cv.CV_16SC],
+            cv.CV_32FC4: [cv.CV_32F, 4, cv.CV_32FC],
+            cv.CV_64FC2: [cv.CV_64F, 2, cv.CV_64FC],
+            cv.CV_8SC4: [cv.CV_8S, 4, cv.CV_8SC],
+            cv.CV_16UC2: [cv.CV_16U, 2, cv.CV_16UC],
+            cv.CV_32SC1: [cv.CV_32S, 1, cv.CV_32SC],
+            cv.CV_16FC3: [cv.CV_16F, 3, cv.CV_16FC],
+        }
+        for ref, (depth, channels, func) in data.items():
+            self.assertEqual(ref, cv.CV_MAKETYPE(depth, channels))
+            self.assertEqual(ref, func(channels))
 
 
 class Arguments(NewOpenCVTests):
@@ -198,10 +306,33 @@ class Arguments(NewOpenCVTests):
         #res6 = cv.utils.dumpInputArray([a, b])
         #self.assertEqual(res6, "InputArrayOfArrays: empty()=false kind=0x00050000 flags=0x01050000 total(-1)=2 dims(-1)=1 size(-1)=2x1 type(0)=CV_32FC1 dims(0)=4 size(0)=[2 3 4 5]")
 
+    def test_unsupported_numpy_data_types_string_description(self):
+        for dtype in (object, str, np.complex128):
+            test_array = np.zeros((4, 4, 3), dtype=dtype)
+            msg = ".*type = {} is not supported".format(test_array.dtype)
+            if sys.version_info[0] < 3:
+                self.assertRaisesRegexp(
+                    Exception, msg, cv.utils.dumpInputArray, test_array
+                )
+            else:
+                self.assertRaisesRegex(
+                    Exception, msg, cv.utils.dumpInputArray, test_array
+                )
+
+    def test_numpy_writeable_flag_is_preserved(self):
+        array = np.zeros((10, 10, 1), dtype=np.uint8)
+        array.setflags(write=False)
+        with self.assertRaises(Exception):
+            cv.rectangle(array, (0, 0), (5, 5), (255), 2)
+
+    def test_20968(self):
+        pixel = np.uint8([[[40, 50, 200]]])
+        _ = cv.cvtColor(pixel, cv.COLOR_RGB2BGR)  # should not raise exception
+
     def test_parse_to_bool_convertible(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpBool)
-        for convertible_true in (True, 1, 64, np.bool(1), np.int8(123), np.int16(11), np.int32(2),
-                                 np.int64(1), np.bool_(3), np.bool8(12)):
+        for convertible_true in (True, 1, 64, np.int8(123), np.int16(11), np.int32(2),
+                                 np.int64(1), np.bool_(12)):
             actual = try_to_convert(convertible_true)
             self.assertEqual('bool: true', actual,
                              msg=get_conversion_error_msg(convertible_true, 'bool: true', actual))
@@ -212,8 +343,8 @@ class Arguments(NewOpenCVTests):
                              msg=get_conversion_error_msg(convertible_false, 'bool: false', actual))
 
     def test_parse_to_bool_not_convertible(self):
-        for not_convertible in (1.2, np.float(2.3), 's', 'str', (1, 2), [1, 2], complex(1, 1),
-                                complex(imag=2), complex(1.1), np.array([1, 0], dtype=np.bool)):
+        for not_convertible in (1.2, np.float32(2.3), 's', 'str', (1, 2), [1, 2], complex(1, 1),
+                                complex(imag=2), complex(1.1), np.array([1, 0], dtype=bool)):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpBool(not_convertible)
@@ -227,7 +358,7 @@ class Arguments(NewOpenCVTests):
                              msg=get_conversion_error_msg(convertible_true, 'bool: true', actual))
 
     def test_parse_to_bool_not_convertible_extra(self):
-        for not_convertible in (np.array([False]), np.array([True], dtype=np.bool)):
+        for not_convertible in (np.array([False]), np.array([True])):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpBool(not_convertible)
@@ -244,7 +375,7 @@ class Arguments(NewOpenCVTests):
 
     def test_parse_to_int_not_convertible(self):
         min_int, max_int = get_limits(ctypes.c_int)
-        for not_convertible in (1.2, np.float(4), float(3), np.double(45), 's', 'str',
+        for not_convertible in (1.2, float(3), np.float32(4), np.double(45), 's', 'str',
                                 np.array([1, 2]), (1,), [1, 2], min_int - 1, max_int + 1,
                                 complex(1, 1), complex(imag=2), complex(1.1)):
             with self.assertRaises((TypeError, OverflowError, ValueError),
@@ -254,10 +385,31 @@ class Arguments(NewOpenCVTests):
     def test_parse_to_int_not_convertible_extra(self):
         for not_convertible in (np.bool_(True), True, False, np.float32(2.3),
                                 np.array([3, ], dtype=int), np.array([-2, ], dtype=np.int32),
-                                np.array([1, ], dtype=np.int), np.array([11, ], dtype=np.uint8)):
+                                np.array([11, ], dtype=np.uint8)):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpInt(not_convertible)
+
+    def test_parse_to_int64_convertible(self):
+        try_to_convert = partial(self._try_to_convert, cv.utils.dumpInt64)
+        min_int64, max_int64 = get_limits(ctypes.c_longlong)
+        for convertible in (-10, -1, 2, int(43.2), np.uint8(15), np.int8(33), np.int16(-13),
+                            np.int32(4), np.int64(345), (23), min_int64, max_int64, np.int_(33)):
+            expected = 'int64: {0:d}'.format(convertible)
+            actual = try_to_convert(convertible)
+            self.assertEqual(expected, actual,
+                             msg=get_conversion_error_msg(convertible, expected, actual))
+
+    def test_parse_to_int64_not_convertible(self):
+        min_int64, max_int64 = get_limits(ctypes.c_longlong)
+        for not_convertible in (1.2, np.float32(4), float(3), np.double(45), 's', 'str',
+                                np.array([1, 2]), (1,), [1, 2], min_int64 - 1, max_int64 + 1,
+                                complex(1, 1), complex(imag=2), complex(1.1), np.bool_(True),
+                                True, False, np.float32(2.3), np.array([3, ], dtype=int),
+                                np.array([-2, ], dtype=np.int32), np.array([11, ], dtype=np.uint8)):
+            with self.assertRaises((TypeError, OverflowError, ValueError),
+                                   msg=get_no_exception_msg(not_convertible)):
+                _ = cv.utils.dumpInt64(not_convertible)
 
     def test_parse_to_size_t_convertible(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpSizeT)
@@ -272,7 +424,7 @@ class Arguments(NewOpenCVTests):
 
     def test_parse_to_size_t_not_convertible(self):
         min_long, _ = get_limits(ctypes.c_long)
-        for not_convertible in (1.2, True, False, np.bool_(True), np.float(4), float(3),
+        for not_convertible in (1.2, True, False, np.bool_(True), np.float32(4), float(3),
                                 np.double(45), 's', 'str', np.array([1, 2]), (1,), [1, 2],
                                 np.float64(6), complex(1, 1), complex(imag=2), complex(1.1),
                                 -1, min_long, np.int8(-35)):
@@ -298,8 +450,8 @@ class Arguments(NewOpenCVTests):
     def test_parse_to_float_convertible(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpFloat)
         min_float, max_float = get_limits(ctypes.c_float)
-        for convertible in (2, -13, 1.24, float(32), np.float(32.45), np.double(12.23),
-                            np.float32(-12.3), np.float64(3.22), np.float_(-1.5), min_float,
+        for convertible in (2, -13, 1.24, np.float32(32.45), float(32), np.double(12.23),
+                            np.float32(-12.3), np.float64(3.22), min_float,
                             max_float, np.inf, -np.inf, float('Inf'), -float('Inf'),
                             np.double(np.inf), np.double(-np.inf), np.double(float('Inf')),
                             np.double(-float('Inf'))):
@@ -324,7 +476,7 @@ class Arguments(NewOpenCVTests):
                              msg=get_conversion_error_msg(inf, expected, actual))
 
     def test_parse_to_float_not_convertible(self):
-        for not_convertible in ('s', 'str', (12,), [1, 2], np.array([1, 2], dtype=np.float),
+        for not_convertible in ('s', 'str', (12,), [1, 2], np.array([1, 2], dtype=float),
                                 np.array([1, 2], dtype=np.double), complex(1, 1), complex(imag=2),
                                 complex(1.1)):
             with self.assertRaises((TypeError), msg=get_no_exception_msg(not_convertible)):
@@ -333,7 +485,7 @@ class Arguments(NewOpenCVTests):
     def test_parse_to_float_not_convertible_extra(self):
         for not_convertible in (np.bool_(False), True, False, np.array([123, ], dtype=int),
                                 np.array([1., ]), np.array([False]),
-                                np.array([True], dtype=np.bool)):
+                                np.array([True])):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpFloat(not_convertible)
@@ -342,8 +494,8 @@ class Arguments(NewOpenCVTests):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpDouble)
         min_float, max_float = get_limits(ctypes.c_float)
         min_double, max_double = get_limits(ctypes.c_double)
-        for convertible in (2, -13, 1.24, np.float(32.45), float(2), np.double(12.23),
-                            np.float32(-12.3), np.float64(3.22), np.float_(-1.5), min_float,
+        for convertible in (2, -13, 1.24, np.float32(32.45), float(2), np.double(12.23),
+                            np.float32(-12.3), np.float64(3.22), min_float,
                             max_float, min_double, max_double, np.inf, -np.inf, float('Inf'),
                             -float('Inf'), np.double(np.inf), np.double(-np.inf),
                             np.double(float('Inf')), np.double(-float('Inf'))):
@@ -361,7 +513,7 @@ class Arguments(NewOpenCVTests):
                           "Actual: {}".format(type(nan).__name__, actual))
 
     def test_parse_to_double_not_convertible(self):
-        for not_convertible in ('s', 'str', (12,), [1, 2], np.array([1, 2], dtype=np.float),
+        for not_convertible in ('s', 'str', (12,), [1, 2], np.array([1, 2], dtype=np.float32),
                                 np.array([1, 2], dtype=np.double), complex(1, 1), complex(imag=2),
                                 complex(1.1)):
             with self.assertRaises((TypeError), msg=get_no_exception_msg(not_convertible)):
@@ -370,14 +522,14 @@ class Arguments(NewOpenCVTests):
     def test_parse_to_double_not_convertible_extra(self):
         for not_convertible in (np.bool_(False), True, False, np.array([123, ], dtype=int),
                                 np.array([1., ]), np.array([False]),
-                                np.array([12.4], dtype=np.double), np.array([True], dtype=np.bool)):
+                                np.array([12.4], dtype=np.double), np.array([True])):
             with self.assertRaises((TypeError, OverflowError),
                                    msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpDouble(not_convertible)
 
     def test_parse_to_cstring_convertible(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpCString)
-        for convertible in ('', 's', 'str', str(123), ('char'), np.str('test1'), np.str_('test2')):
+        for convertible in ('', 's', 'str', str(123), ('char'), np.str_('test2')):
             expected = 'string: ' + convertible
             actual = try_to_convert(convertible)
             self.assertEqual(expected, actual,
@@ -391,7 +543,7 @@ class Arguments(NewOpenCVTests):
 
     def test_parse_to_string_convertible(self):
         try_to_convert = partial(self._try_to_convert, cv.utils.dumpString)
-        for convertible in (None, '', 's', 'str', str(123), np.str('test1'), np.str_('test2')):
+        for convertible in (None, '', 's', 'str', str(123), np.str_('test2')):
             expected = 'string: ' + (convertible if convertible else '')
             actual = try_to_convert(convertible)
             self.assertEqual(expected, actual,
@@ -435,6 +587,35 @@ class Arguments(NewOpenCVTests):
             actual = try_to_convert(convertible)
             self.assertEqual(expected, actual,
                              msg=get_conversion_error_msg(convertible, expected, actual))
+
+
+    def test_wrap_rotated_rect(self):
+        center = (34.5, 52.)
+        size = (565.0, 140.0)
+        angle = -177.5
+        rect1 = cv.RotatedRect(center, size, angle)
+        self.assertEqual(rect1.center, center)
+        self.assertEqual(rect1.size, size)
+        self.assertEqual(rect1.angle, angle)
+
+        pts = [[ 319.7845, -5.6109037],
+               [ 313.6778, 134.25586],
+               [-250.78448, 109.6109],
+               [-244.6778, -30.25586]]
+        self.assertLess(np.max(np.abs(rect1.points() - pts)), 1e-4)
+
+        rect2 = cv.RotatedRect(pts[0], pts[1], pts[2])
+        _, inter_pts = cv.rotatedRectangleIntersection(rect1, rect2)
+        self.assertLess(np.max(np.abs(inter_pts.reshape(-1, 2) - pts)), 1e-4)
+
+    def test_result_rotated_rect_boundingRect2f(self):
+        center = (0, 0)
+        size = (10, 10)
+        angle = 0
+        gold_box = (-5.0, -5.0, 10.0, 10.0)
+        rect1 = cv.RotatedRect(center, size, angle)
+        bbox = rect1.boundingRect2f()
+        self.assertEqual(gold_box, bbox)
 
     def test_parse_to_rotated_rect_not_convertible(self):
         for not_convertible in ([], (), np.array([]), (123, (45, 34), 1), {1: 2, 3: 4}, 123,
@@ -513,12 +694,12 @@ class Arguments(NewOpenCVTests):
 
     def test_parse_vector_int_not_convertible(self):
         np.random.seed(123098765)
-        arr = np.random.randint(-20, 20, 40).astype(np.float).reshape(10, 2, 2)
+        arr = np.random.randint(-20, 20, 40).astype(np.float32).reshape(10, 2, 2)
         int_min, int_max = get_limits(ctypes.c_int)
         test_dict = {1: 2, 3: 10, 10: 20}
         for not_convertible in ((int_min, 1, 2.5, 3, int_max), [True, 50], 'test', test_dict,
                                 reversed([1, 2, 3]),
-                                np.array([int_min, -10, 24, [1, 2]], dtype=np.object),
+                                np.array([int_min, -10, 24, [1, 2]], dtype=object),
                                 np.array([[1, 2], [3, 4]]), arr[:, 0, 1],):
             with self.assertRaises(TypeError, msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpVectorOfInt(not_convertible)
@@ -530,7 +711,7 @@ class Arguments(NewOpenCVTests):
         for convertible in ((1, 2.12, 3.5), [40, 50], tuple(),
                             np.array([-10, 24], dtype=np.int32),
                             np.array([-12.5, 1.4], dtype=np.double),
-                            np.array([10, 230, 12], dtype=np.float), arr[:, 0, 1], ):
+                            np.array([10, 230, 12], dtype=np.float32), arr[:, 0, 1], ):
             expected = "[" + ", ".join(map(lambda v: "{:.2f}".format(v), convertible)) + "]"
             actual = try_to_convert(convertible)
             self.assertEqual(expected, actual,
@@ -539,7 +720,7 @@ class Arguments(NewOpenCVTests):
     def test_parse_vector_double_not_convertible(self):
         test_dict = {1: 2, 3: 10, 10: 20}
         for not_convertible in (('t', 'e', 's', 't'), [True, 50.55], 'test', test_dict,
-                                np.array([-10.1, 24.5, [1, 2]], dtype=np.object),
+                                np.array([-10.1, 24.5, [1, 2]], dtype=object),
                                 np.array([[1, 2], [3, 4]]),):
             with self.assertRaises(TypeError, msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpVectorOfDouble(not_convertible)
@@ -551,7 +732,7 @@ class Arguments(NewOpenCVTests):
         arr_of_rect_cast = np.random.randint(10, 40, 4 * 5).astype(np.uint8).reshape(5, 4)
         for convertible in (((1, 2, 3, 4), (10, -20, 30, 10)), arr_of_rect_int32, arr_of_rect_cast,
                             arr_of_rect_int32.astype(np.int8), [[5, 3, 1, 4]],
-                            ((np.int8(4), np.uint8(10), np.int(32), np.int16(55)),)):
+                            ((np.int8(4), np.uint8(10), int(32), np.int16(55)),)):
             expected = "[" + ", ".join(map(lambda v: "[x={}, y={}, w={}, h={}]".format(*v), convertible)) + "]"
             actual = try_to_convert(convertible)
             self.assertEqual(expected, actual,
@@ -559,10 +740,10 @@ class Arguments(NewOpenCVTests):
 
     def test_parse_vector_rect_not_convertible(self):
         np.random.seed(1238765)
-        arr = np.random.randint(5, 20, 4 * 3).astype(np.float).reshape(3, 4)
+        arr = np.random.randint(5, 20, 4 * 3).astype(np.float32).reshape(3, 4)
         for not_convertible in (((1, 2, 3, 4), (10.5, -20, 30.1, 10)), arr,
                                 [[5, 3, 1, 4], []],
-                                ((np.float(4), np.uint8(10), np.int(32), np.int16(55)),)):
+                                ((float(4), np.uint8(10), int(32), np.int16(55)),)):
             with self.assertRaises(TypeError, msg=get_no_exception_msg(not_convertible)):
                 _ = cv.utils.dumpVectorOfRect(not_convertible)
 
@@ -620,9 +801,14 @@ class Arguments(NewOpenCVTests):
         self.assertTrue(hasattr(cv.utils.nested, "testEchoBooleanFunction"),
                         msg="Function in nested module is not available")
 
-        # Nested submodule is managed by the global submodules dictionary
-        # and parent native module
-        expected_ref_count = 2
+        if sys.version_info[0] < 3:
+            # Nested submodule is managed only by the global submodules dictionary
+            # and parent native module
+            expected_ref_count = 2
+        else:
+            # Nested submodule is managed by the global submodules dictionary,
+            # parent native module and Python part of the submodule
+            expected_ref_count = 3
 
         # `getrefcount` temporary increases reference counter by 1
         actual_ref_count = sys.getrefcount(cv.utils.nested) - 1
@@ -630,7 +816,6 @@ class Arguments(NewOpenCVTests):
         self.assertEqual(actual_ref_count, expected_ref_count,
                          msg="Nested submodule reference counter has wrong value\n"
                          "Expected: {}. Actual: {}".format(expected_ref_count, actual_ref_count))
-
         for flag in (True, False):
             self.assertEqual(flag, cv.utils.nested.testEchoBooleanFunction(flag),
                              msg="Function in nested module returns wrong result")
@@ -702,11 +887,93 @@ class Arguments(NewOpenCVTests):
             )
         )
 
+    def test_named_arguments_without_parameters(self):
+        src = np.ones((5, 5, 3), dtype=np.uint8)
+        arguments_dump, src_copy = cv.utils.copyMatAndDumpNamedArguments(src)
+        np.testing.assert_equal(src, src_copy)
+        self.assertEqual(arguments_dump, 'lambda=-1, sigma=0.0')
+
+    def test_named_arguments_without_output_argument(self):
+        src = np.zeros((2, 2, 3), dtype=np.uint8)
+        arguments_dump, src_copy = cv.utils.copyMatAndDumpNamedArguments(
+            src, lambda_=15, sigma=3.5
+        )
+        np.testing.assert_equal(src, src_copy)
+        self.assertEqual(arguments_dump, 'lambda=15, sigma=3.5')
+
+    def test_named_arguments_with_output_argument(self):
+        src = np.zeros((3, 3, 3), dtype=np.uint8)
+        dst = np.ones_like(src)
+        arguments_dump, src_copy = cv.utils.copyMatAndDumpNamedArguments(
+            src, dst, lambda_=25, sigma=5.5
+        )
+        np.testing.assert_equal(src, src_copy)
+        np.testing.assert_equal(dst, src_copy)
+        self.assertEqual(arguments_dump, 'lambda=25, sigma=5.5')
+
+    def test_arithm_op_without_saturation(self):
+        np.random.seed(4231568)
+        src = np.random.randint(20, 40, 8 * 4 * 3).astype(np.uint8).reshape(8, 4, 3)
+        operations = get_ocv_arithm_op_table(apply_saturation=False)
+        for ocv_op, numpy_op in operations.items():
+            for val in (2, 4, (5, ), (6, 4), (2., 4., 1.),
+                        np.uint8([1, 2, 2]), np.float64([5, 2, 6, 3]),):
+                dst = ocv_op(src, val)
+                expected = numpy_op(src, val)
+                # Temporarily allows a difference of 1 for arm64 workaround.
+                self.assertLess(np.max(np.abs(dst - expected)), 2,
+                  msg="Operation '{}' is failed for {}".format(ocv_op.__name__, val ) )
+
+    def test_arithm_op_with_saturation(self):
+        np.random.seed(4231568)
+        src = np.random.randint(20, 40, 4 * 8 * 4).astype(np.uint8).reshape(4, 8, 4)
+        operations = get_ocv_arithm_op_table(apply_saturation=True)
+
+        for ocv_op, numpy_op in operations.items():
+            for val in (10, 4, (40, ), (15, 12), (25., 41., 15.),
+                        np.uint8([1, 2, 20]), np.float64([50, 21, 64, 30]),):
+                dst = ocv_op(src, val)
+                expected = numpy_op(src, val)
+                # Temporarily allows a difference of 1 for arm64 workaround.
+                self.assertLess(np.max(np.abs(dst - expected)), 2,
+                  msg="Saturated Operation '{}' is failed for {}".format(ocv_op.__name__, val ) )
+
+class CanUsePurePythonModuleFunction(NewOpenCVTests):
+    def test_can_get_ocv_version(self):
+        import sys
+        if sys.version_info[0] < 3:
+            raise unittest.SkipTest('Python 2.x is not supported')
+
+        self.assertEqual(cv.misc.get_ocv_version(), cv.__version__,
+                         "Can't get package version using Python misc module")
+
+    def test_native_method_can_be_patched(self):
+        import sys
+
+        if sys.version_info[0] < 3:
+            raise unittest.SkipTest('Python 2.x is not supported')
+
+        res = cv.utils.testOverwriteNativeMethod(10)
+        self.assertTrue(isinstance(res, Sequence),
+                        msg="Overwritten method should return sequence. "
+                            "Got: {} of type {}".format(res, type(res)))
+        self.assertSequenceEqual(res, (11, 10),
+                                 msg="Failed to overwrite native method")
+        res = cv.utils._native.testOverwriteNativeMethod(123)
+        self.assertEqual(res, 123, msg="Failed to call native method implementation")
+
+    def test_default_matx_argument(self):
+        res = cv.utils.dumpVec2i()
+        self.assertEqual(res, "Vec2i(42, 24)",
+                         msg="Default argument is not properly handled")
+        res = cv.utils.dumpVec2i((12, 21))
+        self.assertEqual(res, "Vec2i(12, 21)")
+
 
 class SamplesFindFile(NewOpenCVTests):
 
     def test_ExistedFile(self):
-        res = cv.samples.findFile('lena.jpg', False)
+        res = cv.samples.findFile('HappyFish.jpg', False)
         self.assertNotEqual(res, '')
 
     def test_MissingFile(self):
@@ -720,6 +987,10 @@ class SamplesFindFile(NewOpenCVTests):
         except cv.error as _e:
             pass
 
+class AlgorithmImplHit(NewOpenCVTests):
+    def test_callable(self):
+        res = cv.getDefaultAlgorithmHint()
+        self.assertTrue(res is not None)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

@@ -59,6 +59,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include <ImfFrameBuffer.h>
 #include <ImfHeader.h>
 #include <ImfInputFile.h>
 #include <ImfOutputFile.h>
@@ -66,6 +67,7 @@
 #include <ImfStandardAttributes.h>
 #include <half.h>
 #include "grfmt_exr.hpp"
+#include "OpenEXRConfig.h"
 
 #if defined _WIN32
 
@@ -371,18 +373,35 @@ bool  ExrDecoder::readData( Mat& img )
 
         if( m_iscolor )
         {
-            if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
-                UpSample( data, channelstoread, step / xstep, m_blue->xSampling, m_blue->ySampling );
-            if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
-                UpSample( data + xstep, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
-            if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
-                UpSample( data + 2 * xstep, channelstoread, step / xstep, m_red->xSampling, m_red->ySampling );
+            if (m_use_rgb)
+            {
+                if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                    UpSample( data, channelstoread, step / xstep, m_red->xSampling, m_red->ySampling );
+                if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                    UpSample( data + xstep, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
+                if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                    UpSample( data + 2 * xstep, channelstoread, step / xstep, m_blue->xSampling, m_blue->ySampling );
+            }
+            else
+            {
+                if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                    UpSample( data, channelstoread, step / xstep, m_blue->xSampling, m_blue->ySampling );
+                if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                    UpSample( data + xstep, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
+                if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                    UpSample( data + 2 * xstep, channelstoread, step / xstep, m_red->xSampling, m_red->ySampling );
+            }
         }
         else if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
             UpSample( data, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
 
         if( chromatorgb )
-            ChromaToBGR( (float *)data, m_height, channelstoread, step / xstep );
+        {
+            if (m_use_rgb)
+                ChromaToRGB( (float *)data, m_height, channelstoread, step / xstep );
+            else
+                ChromaToBGR( (float *)data, m_height, channelstoread, step / xstep );
+        }
     }
     else
     {
@@ -404,7 +423,12 @@ bool  ExrDecoder::readData( Mat& img )
             else
             {
                 if( chromatorgb )
-                    ChromaToBGR( (float *)buffer, 1, defaultchannels, step );
+                {
+                    if (m_use_rgb)
+                        ChromaToRGB( (float *)buffer, 1, defaultchannels, step );
+                    else
+                        ChromaToBGR( (float *)buffer, 1, defaultchannels, step );
+                }
 
                 if( m_type == FLOAT )
                 {
@@ -428,12 +452,24 @@ bool  ExrDecoder::readData( Mat& img )
         }
         if( color )
         {
-            if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
-                UpSampleY( data, defaultchannels, step / xstep, m_blue->ySampling );
-            if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
-                UpSampleY( data + xstep, defaultchannels, step / xstep, m_green->ySampling );
-            if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
-                UpSampleY( data + 2 * xstep, defaultchannels, step / xstep, m_red->ySampling );
+            if (m_use_rgb)
+            {
+                if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                    UpSampleY( data, defaultchannels, step / xstep, m_red->ySampling );
+                if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                    UpSampleY( data + xstep, defaultchannels, step / xstep, m_green->ySampling );
+                if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                    UpSampleY( data + 2 * xstep, defaultchannels, step / xstep, m_blue->ySampling );
+            }
+            else
+            {
+                if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                    UpSampleY( data, defaultchannels, step / xstep, m_blue->ySampling );
+                if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                    UpSampleY( data + xstep, defaultchannels, step / xstep, m_green->ySampling );
+                if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                    UpSampleY( data + 2 * xstep, defaultchannels, step / xstep, m_red->ySampling );
+            }
         }
         else if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
             UpSampleY( data, 1, step / xstep, m_green->ySampling );
@@ -556,6 +592,47 @@ void  ExrDecoder::ChromaToBGR( float *data, int numlines, int xstep, int ystep )
     }
 }
 
+void  ExrDecoder::ChromaToRGB(float *data, int numlines, int xstep, int ystep)
+{
+    for( int y = 0; y < numlines; y++ )
+    {
+        for( int x = 0; x < m_width; x++ )
+        {
+            double b, Y, r;
+            if( m_type == FLOAT )
+            {
+                b = data[y * ystep + x * xstep];
+                Y = data[y * ystep + x * xstep + 1];
+                r = data[y * ystep + x * xstep + 2];
+            }
+            else
+            {
+                b = ((unsigned *)data)[y * ystep + x * xstep];
+                Y = ((unsigned *)data)[y * ystep + x * xstep + 1];
+                r = ((unsigned *)data)[y * ystep + x * xstep + 2];
+            }
+            r = (r + 1) * Y;
+            b = (b + 1) * Y;
+            Y = (Y - b * m_chroma.blue[1] - r * m_chroma.red[1]) / m_chroma.green[1];
+
+            if( m_type == FLOAT )
+            {
+                data[y * ystep + x * xstep] = (float)r;
+                data[y * ystep + x * xstep + 1] = (float)Y;
+                data[y * ystep + x * xstep + 2] = (float)b;
+            }
+            else
+            {
+                int t = cvRound(r);
+                ((unsigned *)data)[y * ystep + x * xstep + 0] = (unsigned)MAX(t, 0);
+                t = cvRound(Y);
+                ((unsigned *)data)[y * ystep + x * xstep + 1] = (unsigned)MAX(t, 0);
+                t = cvRound(b);
+                ((unsigned *)data)[y * ystep + x * xstep + 2] = (unsigned)MAX(t, 0);
+            }
+        }
+    }
+}
 
 /**
 // convert one row to gray
@@ -635,7 +712,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
 
     for( size_t i = 0; i < params.size(); i += 2 )
     {
-        if( params[i] == CV_IMWRITE_EXR_TYPE )
+        if( params[i] == IMWRITE_EXR_TYPE )
         {
             switch( params[i+1] )
             {
@@ -646,8 +723,61 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
                 type = FLOAT;
                 break;
             default:
-                throw std::runtime_error( "IMWRITE_EXR_TYPE is invalid or not supported" );
+                CV_Error(Error::StsBadArg, "IMWRITE_EXR_TYPE is invalid or not supported");
             }
+        }
+        if ( params[i] == IMWRITE_EXR_COMPRESSION )
+        {
+            switch ( params[i + 1] )
+            {
+            case IMWRITE_EXR_COMPRESSION_NO:
+                header.compression() = NO_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_RLE:
+                header.compression() = RLE_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_ZIPS:
+                header.compression() = ZIPS_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_ZIP:
+                header.compression() = ZIP_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_PIZ:
+                header.compression() = PIZ_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_PXR24:
+                header.compression() = PXR24_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_B44:
+                header.compression() = B44_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_B44A:
+                header.compression() = B44A_COMPRESSION;
+                break;
+// version macros introduced in openexr 2.0.1.
+// - https://github.com/AcademySoftwareFoundation/openexr/commit/60cdff8a6f5c4e25a374e5f366d6e9b4efd869b3#diff-c4bae0726aebe410e407db9abd406d9cf2684f82dd8a08f46d84e8b7c35cf22aR67
+#if defined(OPENEXR_VERSION_MAJOR) && defined(OPENEXR_VERSION_MINOR) && OPENEXR_VERSION_MAJOR * 1000 + OPENEXR_VERSION_MINOR >= 2 * 1000 + 2
+            // available since version 2.2.0
+            case IMWRITE_EXR_COMPRESSION_DWAA:
+                header.compression() = DWAA_COMPRESSION;
+                break;
+            case IMWRITE_EXR_COMPRESSION_DWAB:
+                header.compression() = DWAB_COMPRESSION;
+                break;
+#endif
+            default:
+                CV_Error(Error::StsBadArg, "IMWRITE_EXR_COMPRESSION is invalid or not supported");
+            }
+        }
+        if (params[i] == IMWRITE_EXR_DWA_COMPRESSION_LEVEL)
+        {
+#if !defined(OPENEXR_VERSION_MAJOR)
+            CV_LOG_ONCE_WARNING(NULL, "Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported in unknown OpenEXR version possibly prior to 2.0.1 (version 3 is required)");
+#elif OPENEXR_VERSION_MAJOR < 3
+            CV_LOG_ONCE_WARNING(NULL, "Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported in OpenEXR version " + std::to_string(OPENEXR_VERSION_MAJOR) + " (version 3 is required)");
+#else
+            header.dwaCompressionLevel() = params[i + 1];
+#endif
         }
     }
 
@@ -679,7 +809,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
     Mat exrMat;
     if( type == HALF )
     {
-        convertFp16(img, exrMat);
+        img.convertTo(exrMat, CV_16F);
         buffer = (char *)const_cast<uchar *>( exrMat.ptr() );
         bufferstep = exrMat.step;
         size = 2;

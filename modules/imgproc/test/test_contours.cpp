@@ -54,7 +54,7 @@ public:
     void clear();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     int prepare_test_case( int test_case_idx );
     int validate_test_results( int test_case_idx );
     void run_func();
@@ -125,7 +125,7 @@ void CV_FindContourTest::clear()
 }
 
 
-int CV_FindContourTest::read_params( CvFileStorage* fs )
+int CV_FindContourTest::read_params( const cv::FileStorage& fs )
 {
     int t;
     int code = cvtest::BaseTest::read_params( fs );
@@ -133,13 +133,13 @@ int CV_FindContourTest::read_params( CvFileStorage* fs )
     if( code < 0 )
         return code;
 
-    min_blob_size      = cvReadInt( find_param( fs, "min_blob_size" ), min_blob_size );
-    max_blob_size      = cvReadInt( find_param( fs, "max_blob_size" ), max_blob_size );
-    max_log_blob_count = cvReadInt( find_param( fs, "max_log_blob_count" ), max_log_blob_count );
-    min_log_img_width  = cvReadInt( find_param( fs, "min_log_img_width" ), min_log_img_width );
-    max_log_img_width  = cvReadInt( find_param( fs, "max_log_img_width" ), max_log_img_width );
-    min_log_img_height = cvReadInt( find_param( fs, "min_log_img_height"), min_log_img_height );
-    max_log_img_height = cvReadInt( find_param( fs, "max_log_img_height"), max_log_img_height );
+    read( find_param( fs, "min_blob_size" ), min_blob_size, min_blob_size );
+    read( find_param( fs, "max_blob_size" ), max_blob_size, max_blob_size );
+    read( find_param( fs, "max_log_blob_count" ), max_log_blob_count, max_log_blob_count );
+    read( find_param( fs, "min_log_img_width" ), min_log_img_width, min_log_img_width );
+    read( find_param( fs, "max_log_img_width" ), max_log_img_width, max_log_img_width );
+    read( find_param( fs, "min_log_img_height"), min_log_img_height, min_log_img_height );
+    read( find_param( fs, "max_log_img_height"), max_log_img_height, max_log_img_height );
 
     min_blob_size = cvtest::clipInt( min_blob_size, 1, 100 );
     max_blob_size = cvtest::clipInt( max_blob_size, 1, 100 );
@@ -289,7 +289,7 @@ int CV_FindContourTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
 
-    cvCmpS( img[0], 0, img[0], CV_CMP_GT );
+    cvCmpS( img[0], 0, img[0], cv::CMP_GT );
 
     if( count != count2 )
     {
@@ -408,7 +408,12 @@ _exit_:
     return code;
 }
 
-TEST(Imgproc_FindContours, accuracy) { CV_FindContourTest test; test.safe_run(); }
+TEST(Imgproc_FindContours, accuracy)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    CV_FindContourTest test;
+    test.safe_run();
+}
 
 //rotate/flip a quadrant appropriately
 static void rot(int n, int *x, int *y, int rx, int ry)
@@ -459,7 +464,6 @@ TEST(Imgproc_FindContours, hilbert)
     dilate(img, img, Mat());
     vector<vector<Point> > contours;
     findContours(img, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
-    printf("ncontours = %d, contour[0].npoints=%d\n", (int)contours.size(), (int)contours[0].size());
     img.setTo(Scalar::all(0));
 
     drawContours(img, contours, 0, Scalar::all(255), 1);
@@ -530,9 +534,11 @@ TEST(Imgproc_FindContours, regression_4363_shared_nbd)
 
     if (found)
     {
+        ASSERT_EQ(contours.size(), hierarchy.size());
         EXPECT_LT(hierarchy[index][3], 0) << "Desired result: (7,9) has no parent - Actual result: parent of (7,9) is another contour. index = " << index;
     }
 }
+
 
 TEST(Imgproc_PointPolygonTest, regression_10222)
 {

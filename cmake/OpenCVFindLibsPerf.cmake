@@ -40,7 +40,11 @@ endif()
 
 # --- CUDA ---
 if(WITH_CUDA)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+    include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDALanguage.cmake")
+  else()
+    include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
+  endif()
   if(NOT HAVE_CUDA)
     message(WARNING "OpenCV is not able to find/configure CUDA SDK (required by WITH_CUDA).
 CUDA support will be disabled in OpenCV build.
@@ -157,3 +161,18 @@ if(WITH_CLP)
     endif()
   endif()
 endif(WITH_CLP)
+
+# --- ARM KleidiCV
+if(WITH_KLEIDICV)
+  if(KLEIDICV_SOURCE_PATH AND EXISTS "${KLEIDICV_SOURCE_PATH}/adapters/opencv/CMakeLists.txt")
+    message(STATUS "Use external KleidiCV ${KLEIDICV_SOURCE_PATH}")
+    set(HAVE_KLEIDICV ON)
+  endif()
+  if(NOT HAVE_KLEIDICV)
+    include("${OpenCV_SOURCE_DIR}/3rdparty/kleidicv/kleidicv.cmake")
+    download_kleidicv(KLEIDICV_SOURCE_PATH)
+    if(KLEIDICV_SOURCE_PATH)
+      set(HAVE_KLEIDICV ON)
+    endif()
+  endif()
+endif(WITH_KLEIDICV)

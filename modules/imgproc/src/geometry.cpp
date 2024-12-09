@@ -39,7 +39,9 @@
 //
 //M*/
 #include "precomp.hpp"
+#include "opencv2/core/hal/intrin.hpp"
 
+using namespace cv;
 
 CV_IMPL CvRect
 cvMaxRect( const CvRect* rect1, const CvRect* rect2 )
@@ -87,7 +89,7 @@ CV_IMPL void
 cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
 {
     if( !pt )
-        CV_Error( CV_StsNullPtr, "NULL vertex array pointer" );
+        CV_Error( cv::Error::StsNullPtr, "NULL vertex array pointer" );
     cv::RotatedRect(box).points((cv::Point2f*)pt);
 }
 
@@ -146,7 +148,6 @@ double cv::pointPolygonTest( InputArray _contour, Point2f pt, bool measureDist )
     else
     {
         Point2f v0, v;
-        Point iv;
 
         if( is_float )
         {
@@ -295,11 +296,19 @@ static bool between( Point2f a, Point2f b, Point2f c )
         ((a.y >= c.y) && (c.y >= b.y));
 }
 
-static char parallelInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, Point2f& q )
+enum LineSegmentIntersection
 {
-    char code = 'e';
+    LS_NO_INTERSECTION = 0,
+    LS_SINGLE_INTERSECTION = 1,
+    LS_OVERLAP = 2,
+    LS_ENDPOINT_INTERSECTION = 3
+};
+
+static LineSegmentIntersection parallelInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, Point2f& q )
+{
+    LineSegmentIntersection code = LS_OVERLAP;
     if( areaSign(a, b, c) != 0 )
-        code = '0';
+        code = LS_NO_INTERSECTION;
     else if( between(a, b, c) && between(a, b, d))
         p = c, q = d;
     else if( between(c, d, a) && between(c, d, b))
@@ -313,60 +322,32 @@ static char parallelInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p,
     else if( between(a, b, d) && between(c, d, a))
         p = d, q = a;
     else
-        code = '0';
+        code = LS_NO_INTERSECTION;
     return code;
 }
 
-//---------------------------------------------------------------------
-// segSegInt: Finds the point of intersection p between two closed
-// segments ab and cd.  Returns p and a char with the following meaning:
-// 'e': The segments collinearly overlap, sharing a point.
-// 'v': An endpoint (vertex) of one segment is on the other segment,
-// but 'e' doesn't hold.
-// '1': The segments intersect properly (i.e., they share a point and
-// neither 'v' nor 'e' holds).
-// '0': The segments do not intersect (i.e., they share no points).
-// Note that two collinear segments that share just one point, an endpoint
-// of each, returns 'e' rather than 'v' as one might expect.
-//---------------------------------------------------------------------
-static char segSegInt( Point2f a, Point2f b, Point2f c, Point2f d, Point2f& p, Point2f& q )
+// Finds intersection of two line segments: (a, b) and (c, d).
+static LineSegmentIntersection intersectLineSegments( Point2f a, Point2f b, Point2f c,
+                                                      Point2f d, Point2f& p, Point2f& q )
 {
-    double  s, t;       // The two parameters of the parametric eqns.
-    double num, denom;  // Numerator and denoninator of equations.
-    char code = '?';    // Return char characterizing intersection.
-
-    denom = a.x * (double)( d.y - c.y ) +
-    b.x * (double)( c.y - d.y ) +
-    d.x * (double)( b.y - a.y ) +
-    c.x * (double)( a.y - b.y );
+    double denom = (a.x - b.x) * (double)(d.y - c.y) - (a.y - b.y) * (double)(d.x - c.x);
 
     // If denom is zero, then segments are parallel: handle separately.
-    if (denom == 0.0)
+    if( denom == 0. )
         return parallelInt(a, b, c, d, p, q);
 
-    num =    a.x * (double)( d.y - c.y ) +
-    c.x * (double)( a.y - d.y ) +
-    d.x * (double)( c.y - a.y );
-    if ( (num == 0.0) || (num == denom) ) code = 'v';
-    s = num / denom;
+    double num = (d.y - a.y) * (double)(a.x - c.x) + (a.x - d.x) * (double)(a.y - c.y);
+    double s = num / denom;
 
-    num = -( a.x * (double)( c.y - b.y ) +
-            b.x * (double)( a.y - c.y ) +
-            c.x * (double)( b.y - a.y ) );
-    if ( (num == 0.0) || (num == denom) ) code = 'v';
-    t = num / denom;
-
-    if      ( (0.0 < s) && (s < 1.0) &&
-             (0.0 < t) && (t < 1.0) )
-        code = '1';
-    else if ( (0.0 > s) || (s > 1.0) ||
-             (0.0 > t) || (t > 1.0) )
-        code = '0';
+    num = (b.y - a.y) * (double)(a.x - c.x) + (c.y - a.y) * (double)(b.x - a.x);
+    double t = num / denom;
 
     p.x = (float)(a.x + s*(b.x - a.x));
     p.y = (float)(a.y + s*(b.y - a.y));
+    q = p;
 
-    return code;
+    return s < 0. || s > 1. || t < 0. || t > 1. ? LS_NO_INTERSECTION :
+           s == 0. || s == 1. || t == 0. || t == 1. ? LS_ENDPOINT_INTERSECTION : LS_SINGLE_INTERSECTION;
 }
 
 static tInFlag inOut( Point2f p, tInFlag inflag, int aHB, int bHA, Point2f*& result )
@@ -396,9 +377,12 @@ static void addSharedSeg( Point2f p, Point2f q, Point2f*& result )
         *result++ = q;
 }
 
-
+// Note: The function and subroutings use direct pointer arithmetics instead of arrays indexing.
+// Each loop iteration may push to result array up to 3 times.
+// It means that we need +3 spare result elements against result_size
+// to catch agorithmic overflow and prevent actual result array overflow.
 static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, int m,
-                                   Point2f* result, float* _area )
+                                   Point2f* result, int result_size, float* _area )
 {
     Point2f* result0 = result;
     // P has n vertices, Q has m vertices.
@@ -424,8 +408,8 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
 
         // If A & B intersect, update inflag.
         Point2f p, q;
-        int code = segSegInt( P[a1], P[a], Q[b1], Q[b], p, q );
-        if( code == '1' || code == 'v' )
+        LineSegmentIntersection code = intersectLineSegments( P[a1], P[a], Q[b1], Q[b], p, q );
+        if( code == LS_SINGLE_INTERSECTION || code == LS_ENDPOINT_INTERSECTION )
         {
             if( inflag == Unknown && FirstPoint )
             {
@@ -440,7 +424,7 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         //-----Advance rules-----
 
         // Special case: A & B overlap and oppositely oriented.
-        if( code == 'e' && A.ddot(B) < 0 )
+        if( code == LS_OVERLAP && A.ddot(B) < 0 )
         {
             addSharedSeg( p, q, result );
             return (int)(result - result0);
@@ -476,7 +460,7 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         }
         // Quit when both adv. indices have cycled, or one has cycled twice.
     }
-    while ( ((aa < n) || (ba < m)) && (aa < 2*n) && (ba < 2*m) );
+    while ( ((aa < n) || (ba < m)) && (aa < 2*n) && (ba < 2*m) && ((int)(result - result0) <= result_size) );
 
     // Deal with special cases: not implemented.
     if( inflag == Unknown )
@@ -485,10 +469,16 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         // ...
     }
 
-    int i, nr = (int)(result - result0);
+    int nr = (int)(result - result0);
+    if (nr > result_size)
+    {
+        *_area = -1.f;
+        return -1;
+    }
+
     double area = 0;
     Point2f prev = result0[nr-1];
-    for( i = 1; i < nr; i++ )
+    for(int i = 1; i < nr; i++ )
     {
         result0[i-1] = result0[i];
         area += (double)prev.x*result0[i].y - (double)prev.y*result0[i].x;
@@ -523,9 +513,11 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
         return 0.f;
     }
 
-    AutoBuffer<Point2f> _result(n*2 + m*2 + 1);
-    Point2f *fp1 = _result.data(), *fp2 = fp1 + n;
+    AutoBuffer<Point2f> _result(n + m + n+m+1+3);
+    Point2f* fp1 = _result.data();
+    Point2f* fp2 = fp1 + n;
     Point2f* result = fp2 + m;
+
     int orientation = 0;
 
     for( int k = 1; k <= 2; k++ )
@@ -554,7 +546,15 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
     }
 
     float area = 0.f;
-    int nr = intersectConvexConvex_(fp1, n, fp2, m, result, &area);
+    int nr = intersectConvexConvex_(fp1, n, fp2, m, result, n+m+1, &area);
+
+    if (nr < 0)
+    {
+        // The algorithm did not converge, e.g. some of inputs is not convex
+        _p12.release();
+        return -1.f;
+    }
+
     if( nr == 0 )
     {
         if( !handleNested )
@@ -612,4 +612,337 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
         temp.copyTo(_p12);
     }
     return (float)fabs(area);
+}
+
+static Rect maskBoundingRect( const Mat& img )
+{
+    CV_Assert( img.depth() <= CV_8S && img.channels() == 1 );
+
+    Size size = img.size();
+    int xmin = size.width, ymin = -1, xmax = -1, ymax = -1, i, j, k;
+
+    for( i = 0; i < size.height; i++ )
+    {
+        const uchar* _ptr = img.ptr(i);
+        const uchar* ptr = (const uchar*)alignPtr(_ptr, 4);
+        int have_nz = 0, k_min, offset = (int)(ptr - _ptr);
+        j = 0;
+        offset = MIN(offset, size.width);
+        for( ; j < offset; j++ )
+            if( _ptr[j] )
+            {
+                if( j < xmin )
+                    xmin = j;
+                if( j > xmax )
+                    xmax = j;
+                have_nz = 1;
+            }
+        if( offset < size.width )
+        {
+            xmin -= offset;
+            xmax -= offset;
+            size.width -= offset;
+            j = 0;
+            for( ; j <= xmin - 4; j += 4 )
+                if( *((int*)(ptr+j)) )
+                    break;
+            for( ; j < xmin; j++ )
+                if( ptr[j] )
+                {
+                    xmin = j;
+                    if( j > xmax )
+                        xmax = j;
+                    have_nz = 1;
+                    break;
+                }
+            k_min = MAX(j-1, xmax);
+            k = size.width - 1;
+            for( ; k > k_min && (k&3) != 3; k-- )
+                if( ptr[k] )
+                    break;
+            if( k > k_min && (k&3) == 3 )
+            {
+                for( ; k > k_min+3; k -= 4 )
+                    if( *((int*)(ptr+k-3)) )
+                        break;
+            }
+            for( ; k > k_min; k-- )
+                if( ptr[k] )
+                {
+                    xmax = k;
+                    have_nz = 1;
+                    break;
+                }
+            if( !have_nz )
+            {
+                j &= ~3;
+                for( ; j <= k - 3; j += 4 )
+                    if( *((int*)(ptr+j)) )
+                        break;
+                for( ; j <= k; j++ )
+                    if( ptr[j] )
+                    {
+                        have_nz = 1;
+                        break;
+                    }
+            }
+            xmin += offset;
+            xmax += offset;
+            size.width += offset;
+        }
+        if( have_nz )
+        {
+            if( ymin < 0 )
+                ymin = i;
+            ymax = i;
+        }
+    }
+
+    if( xmin >= size.width )
+        xmin = ymin = 0;
+    return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
+}
+
+// Calculates bounding rectangle of a point set or retrieves already calculated
+static Rect pointSetBoundingRect( const Mat& points )
+{
+    int npoints = points.checkVector(2);
+    int depth = points.depth();
+    CV_Assert(npoints >= 0 && (depth == CV_32F || depth == CV_32S));
+
+    int  xmin = 0, ymin = 0, xmax = -1, ymax = -1, i;
+    bool is_float = depth == CV_32F;
+
+    if( npoints == 0 )
+        return Rect();
+
+#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, loop tail related.
+    if( !is_float )
+    {
+        const int32_t* pts = points.ptr<int32_t>();
+        int64_t firstval = 0;
+        std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
+        v_int32 minval, maxval;
+        minval = maxval = v_reinterpret_as_s32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        for( i = 1; i <= npoints - VTraits<v_int32>::vlanes()/2; i+= VTraits<v_int32>::vlanes()/2 )
+        {
+            v_int32 ptXY2 = vx_load(pts + 2 * i);
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        minval = v_min(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
+        maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        if( i <= npoints - VTraits<v_int32>::vlanes()/4 )
+        {
+            v_int32 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + 2 * i))));
+            minval = v_min(ptXY, minval);
+            maxval = v_max(ptXY, maxval);
+            i += VTraits<v_int64>::vlanes()/2;
+        }
+        for(int j = 16; j < VTraits<v_uint8>::vlanes(); j*=2)
+        {
+            minval = v_min(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
+            maxval = v_max(v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        }
+        xmin = v_get0(minval);
+        xmax = v_get0(maxval);
+        ymin = v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval))));
+        ymax = v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval))));
+#if CV_SIMD_WIDTH > 16
+        if( i < npoints )
+        {
+            v_int32x4 minval2, maxval2;
+            minval2 = maxval2 = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + 2 * i))));
+            for( i++; i < npoints; i++ )
+            {
+                v_int32x4 ptXY = v_reinterpret_as_s32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + 2 * i))));
+                minval2 = v_min(ptXY, minval2);
+                maxval2 = v_max(ptXY, maxval2);
+            }
+            xmin = min(xmin, v_get0(minval2));
+            xmax = max(xmax, v_get0(maxval2));
+            ymin = min(ymin, v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(minval2)))));
+            ymax = max(ymax, v_get0(v_reinterpret_as_s32(v_expand_high(v_reinterpret_as_u32(maxval2)))));
+        }
+#endif // CV_SIMD
+    }
+    else
+    {
+        const float* pts = points.ptr<float>();
+        int64_t firstval = 0;
+        std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
+        v_float32 minval, maxval;
+        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        for( i = 1; i <= npoints - VTraits<v_float32>::vlanes()/2; i+= VTraits<v_float32>::vlanes()/2 )
+        {
+            v_float32 ptXY2 = vx_load(pts + 2 * i);
+            minval = v_min(ptXY2, minval);
+            maxval = v_max(ptXY2, maxval);
+        }
+        minval = v_min(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))));
+        maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        if( i <= npoints - VTraits<v_float32>::vlanes()/4 )
+        {
+            v_float32 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(vx_load_low(pts + 2 * i))));
+            minval = v_min(ptXY, minval);
+            maxval = v_max(ptXY, maxval);
+            i += VTraits<v_float32>::vlanes()/4;
+        }
+        for(int j = 16; j < VTraits<v_uint8>::vlanes(); j*=2)
+        {
+            minval = v_min(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(minval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval))));
+            maxval = v_max(v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(maxval))), v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval))));
+        }
+        xmin = cvFloor(v_get0(minval));
+        xmax = cvFloor(v_get0(maxval));
+        ymin = cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval)))));
+        ymax = cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval)))));
+#if CV_SIMD_WIDTH > 16
+        if( i < npoints )
+        {
+            v_float32x4 minval2, maxval2;
+            minval2 = maxval2 = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + 2 * i))));
+            for( i++; i < npoints; i++ )
+            {
+                v_float32x4 ptXY = v_reinterpret_as_f32(v_expand_low(v_reinterpret_as_u32(v_load_low(pts + 2 * i))));
+                minval2 = v_min(ptXY, minval2);
+                maxval2 = v_max(ptXY, maxval2);
+            }
+            xmin = min(xmin, cvFloor(v_get0(minval2)));
+            xmax = max(xmax, cvFloor(v_get0(maxval2)));
+            ymin = min(ymin, cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(minval2))))));
+            ymax = max(ymax, cvFloor(v_get0(v_reinterpret_as_f32(v_expand_high(v_reinterpret_as_u32(maxval2))))));
+        }
+#endif
+    }
+#else
+    const Point* pts = points.ptr<Point>();
+    Point pt = pts[0];
+
+    if( !is_float )
+    {
+        xmin = xmax = pt.x;
+        ymin = ymax = pt.y;
+
+        for( i = 1; i < npoints; i++ )
+        {
+            pt = pts[i];
+
+            if( xmin > pt.x )
+                xmin = pt.x;
+
+            if( xmax < pt.x )
+                xmax = pt.x;
+
+            if( ymin > pt.y )
+                ymin = pt.y;
+
+            if( ymax < pt.y )
+                ymax = pt.y;
+        }
+    }
+    else
+    {
+        Cv32suf v;
+        // init values
+        xmin = xmax = CV_TOGGLE_FLT(pt.x);
+        ymin = ymax = CV_TOGGLE_FLT(pt.y);
+
+        for( i = 1; i < npoints; i++ )
+        {
+            pt = pts[i];
+            pt.x = CV_TOGGLE_FLT(pt.x);
+            pt.y = CV_TOGGLE_FLT(pt.y);
+
+            if( xmin > pt.x )
+                xmin = pt.x;
+
+            if( xmax < pt.x )
+                xmax = pt.x;
+
+            if( ymin > pt.y )
+                ymin = pt.y;
+
+            if( ymax < pt.y )
+                ymax = pt.y;
+        }
+
+        v.i = CV_TOGGLE_FLT(xmin); xmin = cvFloor(v.f);
+        v.i = CV_TOGGLE_FLT(ymin); ymin = cvFloor(v.f);
+        // because right and bottom sides of the bounding rectangle are not inclusive
+        // (note +1 in width and height calculation below), cvFloor is used here instead of cvCeil
+        v.i = CV_TOGGLE_FLT(xmax); xmax = cvFloor(v.f);
+        v.i = CV_TOGGLE_FLT(ymax); ymax = cvFloor(v.f);
+    }
+#endif
+
+    return Rect(xmin, ymin, xmax - xmin + 1, ymax - ymin + 1);
+}
+
+
+cv::Rect cv::boundingRect(InputArray array)
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat m = array.getMat();
+    return m.depth() <= CV_8U ? maskBoundingRect(m) : pointSetBoundingRect(m);
+}
+
+
+/* Calculates bounding rectangle of a point set or retrieves already calculated */
+CV_IMPL  CvRect
+cvBoundingRect( CvArr* array, int update )
+{
+    cv::Rect rect;
+    CvContour contour_header;
+    CvSeq* ptseq = 0;
+    CvSeqBlock block;
+
+    CvMat stub, *mat = 0;
+    int calculate = update;
+
+    if( CV_IS_SEQ( array ))
+    {
+        ptseq = (CvSeq*)array;
+        if( !CV_IS_SEQ_POINT_SET( ptseq ))
+            CV_Error( cv::Error::StsBadArg, "Unsupported sequence type" );
+
+        if( ptseq->header_size < (int)sizeof(CvContour))
+        {
+            update = 0;
+            calculate = 1;
+        }
+    }
+    else
+    {
+        mat = cvGetMat( array, &stub );
+        if( CV_MAT_TYPE(mat->type) == CV_32SC2 ||
+            CV_MAT_TYPE(mat->type) == CV_32FC2 )
+        {
+            ptseq = cvPointSeqFromMat(CV_SEQ_KIND_GENERIC, mat, &contour_header, &block);
+            mat = 0;
+        }
+        else if( CV_MAT_TYPE(mat->type) != CV_8UC1 &&
+                CV_MAT_TYPE(mat->type) != CV_8SC1 )
+            CV_Error( cv::Error::StsUnsupportedFormat,
+                "The image/matrix format is not supported by the function" );
+        update = 0;
+        calculate = 1;
+    }
+
+    if( !calculate )
+        return ((CvContour*)ptseq)->rect;
+
+    if( mat )
+    {
+        rect = cvRect(maskBoundingRect(cv::cvarrToMat(mat)));
+    }
+    else if( ptseq->total )
+    {
+        cv::AutoBuffer<double> abuf;
+        rect = cvRect(pointSetBoundingRect(cv::cvarrToMat(ptseq, false, false, 0, &abuf)));
+    }
+    if( update )
+        ((CvContour*)ptseq)->rect = cvRect(rect);
+    return cvRect(rect);
 }

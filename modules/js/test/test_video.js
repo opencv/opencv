@@ -67,11 +67,6 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-if (typeof module !== 'undefined' && module.exports) {
-    // The environment is Node.js
-    var cv = require('./opencv.js'); // eslint-disable-line no-var
-}
-
 QUnit.module('Video', {});
 QUnit.test('Background Segmentation', function(assert) {
     // BackgroundSubtractorMOG2
@@ -103,5 +98,30 @@ QUnit.test('Background Segmentation', function(assert) {
         assert.equal(mog2 instanceof cv.BackgroundSubtractorMOG2, true);
 
         mog2.delete();
+    }
+});
+
+QUnit.test('TrackerMIL', function(assert) {
+    {
+        let src1 = cv.Mat.zeros(100, 100, cv.CV_8UC1);
+        let src2 = cv.Mat.zeros(100, 100, cv.CV_8UC1);
+
+        let tracker = new cv.TrackerMIL();
+
+        assert.equal(tracker instanceof cv.TrackerMIL, true);
+        assert.equal(tracker instanceof cv.Tracker, true);
+
+        let rect = new cv.Rect(10, 10, 50, 60);
+        tracker.init(src1, rect);
+
+        let [updated, rect2] = tracker.update(src2);
+
+        assert.equal(updated, true);
+        assert.equal(rect2.width, 50);
+        assert.equal(rect2.height, 60);
+
+        tracker.delete();
+        src1.delete();
+        src2.delete();
     }
 });

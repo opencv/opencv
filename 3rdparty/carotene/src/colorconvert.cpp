@@ -40,6 +40,7 @@
 #include "common.hpp"
 
 #include "saturate_cast.hpp"
+#include "vround_helper.hpp"
 
 namespace CAROTENE_NS {
 
@@ -49,12 +50,12 @@ namespace {
 
 enum
 {
-    SHIFT = 14,
+    SHIFT = 15,
     SHIFT_DELTA = 1 << (SHIFT - 1),
 
-    R2Y_BT601   = 4899,
-    G2Y_BT601   = 9617,
-    B2Y_BT601   = 1868,
+    R2Y_BT601   = 9798,
+    G2Y_BT601   = 19235,
+    B2Y_BT601   = 3735,
 
     R2Y_BT709   = 3483,
     G2Y_BT709   = 11718,
@@ -1166,17 +1167,10 @@ inline uint8x8x3_t convertToHSV(const uint8x8_t vR, const uint8x8_t vG, const ui
     vSt3 = vmulq_f32(vHF1, vDivTab);
     vSt4 = vmulq_f32(vHF2, vDivTab);
 
-    float32x4_t bias = vdupq_n_f32(0.5f);
-
-    vSt1 = vaddq_f32(vSt1, bias);
-    vSt2 = vaddq_f32(vSt2, bias);
-    vSt3 = vaddq_f32(vSt3, bias);
-    vSt4 = vaddq_f32(vSt4, bias);
-
-    uint32x4_t vRes1 = vcvtq_u32_f32(vSt1);
-    uint32x4_t vRes2 = vcvtq_u32_f32(vSt2);
-    uint32x4_t vRes3 = vcvtq_u32_f32(vSt3);
-    uint32x4_t vRes4 = vcvtq_u32_f32(vSt4);
+    uint32x4_t vRes1 = internal::vroundq_u32_f32(vSt1);
+    uint32x4_t vRes2 = internal::vroundq_u32_f32(vSt2);
+    uint32x4_t vRes3 = internal::vroundq_u32_f32(vSt3);
+    uint32x4_t vRes4 = internal::vroundq_u32_f32(vSt4);
 
     int32x4_t vH_L = vmovl_s16(vget_low_s16(vDiff4));
     int32x4_t vH_H = vmovl_s16(vget_high_s16(vDiff4));

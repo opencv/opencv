@@ -1,9 +1,24 @@
 set(the_description "High-level GUI")
+
 if(ANDROID)
-  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python)
+  ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_imgcodecs opencv_videoio WRAP python)
 else()
-  ocv_add_module(highgui opencv_imgproc opencv_imgcodecs OPTIONAL opencv_videoio WRAP python java)
+  ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_imgcodecs opencv_videoio WRAP python java)
 endif()
+
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
+
+set(tgts "PRIVATE")
+
+set(highgui_hdrs
+    ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
+    )
+
+set(highgui_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/backend.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/src/roiSelector.cpp
+    )
 
 # ----------------------------------------------------------------------------
 #  CMake file for highgui. See root CMakeLists.txt
@@ -24,15 +39,6 @@ if(HAVE_WEBP)
   add_definitions(-DHAVE_WEBP)
 endif()
 
-set(highgui_hdrs
-    ${CMAKE_CURRENT_LIST_DIR}/src/precomp.hpp
-    )
-
-set(highgui_srcs
-    ${CMAKE_CURRENT_LIST_DIR}/src/window.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/src/roiSelector.cpp
-    )
-
 file(GLOB highgui_ext_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/*.hpp"
@@ -41,7 +47,46 @@ file(GLOB highgui_ext_hdrs
 # Removing WinRT API headers by default
 list(REMOVE_ITEM highgui_ext_hdrs "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/highgui_winrt.hpp")
 
-if(HAVE_QT)
+set(OPENCV_HIGHGUI_BUILTIN_BACKEND "")
+
+if(WITH_FRAMEBUFFER AND HAVE_FRAMEBUFFER)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "FB")
+  add_definitions(-DHAVE_FRAMEBUFFER)
+  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.cpp)
+  list(APPEND highgui_hdrs ${CMAKE_CURRENT_LIST_DIR}/src/window_framebuffer.hpp)
+  if(HAVE_FRAMEBUFFER_XVFB)
+    add_definitions(-DHAVE_FRAMEBUFFER_XVFB)
+  endif()
+endif()
+
+if(WITH_WAYLAND AND HAVE_WAYLAND)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "Wayland")
+  add_definitions(-DHAVE_WAYLAND)
+
+  set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+  if (HAVE_WAYLAND_PROTOCOLS)
+      ocv_wayland_generate(
+            ${WAYLAND_PROTOCOLS_BASE}/stable/xdg-shell/xdg-shell.xml
+            xdg-shell-client-protocol)
+  endif()
+
+  list(APPEND highgui_srcs
+    ${CMAKE_CURRENT_LIST_DIR}/src/window_wayland.cpp
+    ${WAYLAND_PROTOCOL_SOURCES}
+  )
+  list(APPEND HIGHGUI_LIBRARIES "${WAYLAND_CLIENT_LINK_LIBRARIES};${WAYLAND_CURSOR_LINK_LIBRARIES};${XKBCOMMON_LINK_LIBRARIES}")
+
+  if(HAVE_WAYLAND_EGL)
+    if(WAYLAND_EGL_LIBRARIES)
+      list(APPEND HIGHGUI_LIBRARIES "${WAYLAND_EGL_LIBRARIES}")
+    endif()
+  endif()
+
+elseif(HAVE_QT)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "QT${QT_VERSION_MAJOR}")
+  add_definitions(-DHAVE_QT)
+
   if(QT_VERSION_MAJOR GREATER 4)
     # "Automoc" doesn't work properly with opencv_world build, use QT<ver>_WRAP_CPP() directly
     #set(CMAKE_AUTOMOC ON)
@@ -49,6 +94,7 @@ if(HAVE_QT)
     set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
     if(QT_VERSION_MAJOR EQUAL 6)
+      add_definitions(-DHAVE_QT6) # QGLWidget deprecated for QT6, use this preprocessor to adjust window_QT.[h,cpp]
       QT6_ADD_RESOURCES(_RCC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.qrc)
       QT6_WRAP_CPP(_MOC_OUTFILES ${CMAKE_CURRENT_LIST_DIR}/src/window_QT.h)
     elseif(QT_VERSION_MAJOR EQUAL 5)
@@ -66,6 +112,11 @@ if(HAVE_QT)
 
     set(qt_deps Core Gui Widgets Test Concurrent)
     if(HAVE_QT_OPENGL)
+      add_definitions(-DHAVE_QT_OPENGL)
+      # QOpenGLWidget requires Qt6 package component OpenGLWidgets
+      if(QT_VERSION_MAJOR GREATER 5)
+        list(APPEND qt_deps OpenGLWidgets)
+      endif()
       list(APPEND qt_deps OpenGL)
       if(OPENGL_LIBRARIES)
         list(APPEND HIGHGUI_LIBRARIES "${OPENGL_LIBRARIES}")
@@ -98,6 +149,7 @@ if(HAVE_QT)
     endif()
   endif()
 elseif(WINRT)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "WINRT")
   if(NOT WINRT_8_0)
     # Dependencies used by the implementation referenced
     # below are not available on WinRT 8.0.
@@ -131,23 +183,89 @@ elseif(WINRT)
     message(STATUS "  ${name}:   Removing 'comctl32.lib, gdi32.lib, ole32.lib, setupapi.lib'")
     message(STATUS "  ${name}:   Leaving '${HIGHGUI_LIBRARIES}'")
   endif()
-elseif(HAVE_WIN32UI)
-  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_w32.cpp)
-  if(OpenCV_ARCH STREQUAL "ARM64")
-    list(APPEND HIGHGUI_LIBRARIES "comdlg32" "advapi32")
-  endif()
-  if(HAVE_OPENGL AND OPENGL_LIBRARIES)
-    list(APPEND HIGHGUI_LIBRARIES "${OPENGL_LIBRARIES}")
-  endif()
-elseif(HAVE_GTK OR HAVE_GTK3)
-  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk.cpp)
-elseif(HAVE_CARBON)
-  list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_carbon.cpp)
-  list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime")
 elseif(HAVE_COCOA)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "COCOA")
+  add_definitions(-DHAVE_COCOA)
   list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_cocoa.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
 endif()
+
+if(TARGET ocv.3rdparty.win32ui)
+  if("win32ui" IN_LIST HIGHGUI_PLUGIN_LIST OR HIGHGUI_PLUGIN_LIST STREQUAL "all")
+    ocv_create_builtin_highgui_plugin(opencv_highgui_win32 ocv.3rdparty.win32ui "window_w32.cpp")
+  elseif(NOT OPENCV_HIGHGUI_BUILTIN_BACKEND)
+    set(OPENCV_HIGHGUI_BUILTIN_BACKEND "WIN32UI")
+    list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_w32.cpp)
+    list(APPEND tgts ocv.3rdparty.win32ui)
+    if(HAVE_OPENGL AND OPENGL_LIBRARIES)
+      list(APPEND tgts "${OPENGL_LIBRARIES}")
+    endif()
+  endif()
+endif()
+
+if(TARGET ocv.3rdparty.gtk3 OR TARGET ocv.3rdparty.gtk2)
+  if(TARGET ocv.3rdparty.gtk3 AND NOT WITH_GTK_2_X)
+    set(__gtk_dependency "ocv.3rdparty.gtk3")
+  else()
+    set(__gtk_dependency "ocv.3rdparty.gtk2")
+  endif()
+  if(
+    NOT HIGHGUI_PLUGIN_LIST STREQUAL "all"
+    AND NOT "gtk" IN_LIST HIGHGUI_PLUGIN_LIST
+    AND NOT "gtk2" IN_LIST HIGHGUI_PLUGIN_LIST
+    AND NOT "gtk3" IN_LIST HIGHGUI_PLUGIN_LIST
+    AND NOT OPENCV_HIGHGUI_BUILTIN_BACKEND
+  )
+    if(__gtk_dependency STREQUAL "ocv.3rdparty.gtk3")
+      set(OPENCV_HIGHGUI_BUILTIN_BACKEND "GTK3")
+      if(OPENGL_LIBRARIES)
+        list(APPEND HIGHGUI_LIBRARIES "${OPENGL_LIBRARIES}")
+      endif()
+    elseif(__gtk_dependency STREQUAL "ocv.3rdparty.gtk2")
+      set(OPENCV_HIGHGUI_BUILTIN_BACKEND "GTK2")
+    else()
+      set(OPENCV_HIGHGUI_BUILTIN_BACKEND "GTK")
+    endif()
+    list(APPEND highgui_srcs ${CMAKE_CURRENT_LIST_DIR}/src/window_gtk.cpp)
+    list(APPEND tgts ${__gtk_dependency})
+    if(TARGET ocv.3rdparty.gtkglext
+        AND __gtk_dependency STREQUAL "ocv.3rdparty.gtk2"
+        AND NOT OPENCV_GTK_DISABLE_GTKGLEXT
+    )
+      list(APPEND tgts ocv.3rdparty.gtkglext)
+      if(TARGET ocv.3rdparty.gtk_opengl
+          AND __gtk_dependency STREQUAL "ocv.3rdparty.gtk2"
+          AND NOT OPENCV_GTK_DISABLE_OPENGL
+      )
+        list(APPEND tgts ocv.3rdparty.gtk_opengl)
+      endif()
+    endif()
+  elseif("gtk" IN_LIST HIGHGUI_PLUGIN_LIST)
+    ocv_create_builtin_highgui_plugin(opencv_highgui_gtk ${__gtk_dependency} "window_gtk.cpp")
+    if(TARGET ocv.3rdparty.gtkglext)
+      ocv_target_link_libraries(opencv_highgui_gtk ocv.3rdparty.gtkglext)
+    endif()
+  else()
+    if(TARGET ocv.3rdparty.gtk3 AND ("gtk3" IN_LIST HIGHGUI_PLUGIN_LIST OR HIGHGUI_PLUGIN_LIST STREQUAL "all"))
+      ocv_create_builtin_highgui_plugin(opencv_highgui_gtk3 ocv.3rdparty.gtk3 "window_gtk.cpp")
+      if(TARGET ocv.3rdparty.gtkglext)
+        ocv_target_link_libraries(opencv_highgui_gtk3 ocv.3rdparty.gtkglext)
+      endif()
+    endif()
+    if(TARGET ocv.3rdparty.gtk2 AND ("gtk2" IN_LIST HIGHGUI_PLUGIN_LIST OR HIGHGUI_PLUGIN_LIST STREQUAL "all"))
+      ocv_create_builtin_highgui_plugin(opencv_highgui_gtk2 ocv.3rdparty.gtk2 "window_gtk.cpp")
+      if(TARGET ocv.3rdparty.gtkglext)
+        ocv_target_link_libraries(opencv_highgui_gtk2 ocv.3rdparty.gtkglext)
+      endif()
+    endif()
+  endif()
+endif()
+
+if(NOT OPENCV_HIGHGUI_BUILTIN_BACKEND)
+  set(OPENCV_HIGHGUI_BUILTIN_BACKEND "NONE")
+endif()
+message(STATUS "highgui: using builtin backend: ${OPENCV_HIGHGUI_BUILTIN_BACKEND}")
+set(OPENCV_HIGHGUI_BUILTIN_BACKEND "${OPENCV_HIGHGUI_BUILTIN_BACKEND}" PARENT_SCOPE)  # informational
 
 if(TRUE)
   # these variables are set by 'ocv_append_build_options(HIGHGUI ...)'
@@ -159,6 +277,12 @@ if(TRUE)
     link_directories(${P})
   endforeach()
 endif()
+
+if(tgts STREQUAL "PRIVATE")
+  set(tgts "")
+endif()
+
+ocv_install_used_external_targets(${tgts})
 
 source_group("Src" FILES ${highgui_srcs} ${highgui_hdrs})
 source_group("Include" FILES ${highgui_ext_hdrs})
@@ -183,5 +307,26 @@ if(NOT BUILD_opencv_world)
   ocv_highgui_configure_target()
 endif()
 
-ocv_add_accuracy_tests()
-ocv_add_perf_tests()
+ocv_add_accuracy_tests(${tgts})
+#ocv_add_perf_tests(${tgts})
+
+if(HIGHGUI_ENABLE_PLUGINS)
+  ocv_target_compile_definitions(${the_module} PRIVATE ENABLE_PLUGINS)
+  if(TARGET opencv_test_highgui)
+    ocv_target_compile_definitions(opencv_test_highgui PRIVATE ENABLE_PLUGINS)
+  endif()
+endif()
+
+ocv_target_link_libraries(${the_module} LINK_PRIVATE ${tgts})
+
+# generate module configuration
+set(CONFIG_STR "// Auto-generated file
+#define OPENCV_HIGHGUI_BUILTIN_BACKEND_STR \"${OPENCV_HIGHGUI_BUILTIN_BACKEND}\"
+")
+if(OPENCV_HIGHGUI_BUILTIN_BACKEND STREQUAL "NONE")
+set(CONFIG_STR "${CONFIG_STR}
+#define OPENCV_HIGHGUI_WITHOUT_BUILTIN_BACKEND 1
+")
+endif()
+
+ocv_update_file("${CMAKE_CURRENT_BINARY_DIR}/opencv_highgui_config.hpp" "${CONFIG_STR}")

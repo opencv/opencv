@@ -53,6 +53,8 @@ BaseImageDecoder::BaseImageDecoder()
     m_type = -1;
     m_buf_supported = false;
     m_scale_denom = 1;
+    m_use_rgb = false;
+    m_frame_count = 1;
 }
 
 
@@ -92,6 +94,11 @@ int BaseImageDecoder::setScale( const int& scale_denom )
     int temp = m_scale_denom;
     m_scale_denom = scale_denom;
     return temp;
+}
+
+void BaseImageDecoder::setRGB(bool useRGB)
+{
+    m_use_rgb = useRGB;
 }
 
 ImageDecoder BaseImageDecoder::newDecoder() const
@@ -147,7 +154,7 @@ void BaseImageEncoder::throwOnEror() const
     if(!m_last_error.empty())
     {
         String msg = "Raw image encoder error: " + m_last_error;
-        CV_Error( CV_BadImageSize, msg.c_str() );
+        CV_Error( Error::BadImageSize, msg.c_str() );
     }
 }
 

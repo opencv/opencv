@@ -1,8 +1,15 @@
 Random generator and text with OpenCV {#tutorial_random_generator_and_text}
 =====================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_basic_geometric_drawing}
 @next_tutorial{tutorial_gausian_median_blur_bilateral_filter}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goals
 -----
@@ -23,7 +30,7 @@ Code
     to populate our image with a big number of geometric figures. Since we will be initializing them
     in a random fashion, this process will be automatic and made by using *loops* .
 -   This code is in your OpenCV sample folder. Otherwise you can grab it from
-    [here](https://github.com/opencv/opencv/blob/3.4/samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_2.cpp)
+    [here](https://github.com/opencv/opencv/blob/4.x/samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_2.cpp)
 
 Explanation
 -----------

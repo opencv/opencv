@@ -53,7 +53,6 @@
 #undef CV__ALLOCATOR_STATS_LOG
 
 //#define OPENCV_ALLOC_ENABLE_STATISTICS
-#define OPENCV_ALLOC_STATISTICS_LIMIT 4096  // don't track buffers less than N bytes
 
 
 #ifdef HAVE_POSIX_MEMALIGN
@@ -63,6 +62,7 @@
 #endif
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS
+#define OPENCV_ALLOC_STATISTICS_LIMIT 4096  // don't track buffers less than N bytes
 #include <map>
 #endif
 
@@ -70,7 +70,7 @@ namespace cv {
 
 static void* OutOfMemoryError(size_t size)
 {
-    CV_Error_(CV_StsNoMem, ("Failed to allocate %llu bytes", (unsigned long long)size));
+    CV_Error_(cv::Error::StsNoMem, ("Failed to allocate %llu bytes", (unsigned long long)size));
 }
 
 CV_EXPORTS cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics();
@@ -82,7 +82,7 @@ cv::utils::AllocatorStatisticsInterface& getAllocatorStatistics()
     return allocator_stats;
 }
 
-#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
+#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN || defined HAVE_WIN32_ALIGNED_MALLOC
 static bool readMemoryAlignmentParameter()
 {
     bool value = true;
@@ -100,25 +100,27 @@ static bool readMemoryAlignmentParameter()
     // TODO add checks for valgrind, ASAN if value == false
     return value;
 }
+
+#if defined _MSC_VER
+#pragma warning(suppress:4714)  // preventive: const marked as __forceinline not inlined
+static __forceinline
+#else
 static inline
+#endif
 bool isAlignedAllocationEnabled()
 {
-    static bool initialized = false;
-    static bool useMemalign = true;
-    if (!initialized)
-    {
-        initialized = true;  // trick to avoid stuck in acquire (works only if allocations are scope based)
-        useMemalign = readMemoryAlignmentParameter();
-    }
+    // use construct on first use idiom https://isocpp.org/wiki/faq/ctors#static-init-order-on-first-use
+    // details: https://github.com/opencv/opencv/issues/15691
+    static bool useMemalign = readMemoryAlignmentParameter();
     return useMemalign;
 }
-// do not use variable directly, details: https://github.com/opencv/opencv/issues/15691
+
+// need for this static const is disputed; retaining as it doesn't cause harm
 static const bool g_force_initialization_memalign_flag
 #if defined __GNUC__
     __attribute__((unused))
 #endif
     = isAlignedAllocationEnabled();
-
 #endif
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS
@@ -146,6 +148,14 @@ void* fastMalloc(size_t size)
             return OutOfMemoryError(size);
         return ptr;
     }
+#elif defined HAVE_WIN32_ALIGNED_MALLOC
+    if (isAlignedAllocationEnabled())
+    {
+        void* ptr = _aligned_malloc(size, CV_MALLOC_ALIGN);
+        if(!ptr)
+            return OutOfMemoryError(size);
+        return ptr;
+    }
 #endif
     uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
     if(!udata)
@@ -166,6 +176,12 @@ void fastFree(void* ptr)
     if (isAlignedAllocationEnabled())
     {
         free(ptr);
+        return;
+    }
+#elif defined HAVE_WIN32_ALIGNED_MALLOC
+    if (isAlignedAllocationEnabled())
+    {
+        _aligned_free(ptr);
         return;
     }
 #endif

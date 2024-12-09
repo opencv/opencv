@@ -1,8 +1,15 @@
 Affine Transformations {#tutorial_warp_affine}
 ======================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_remap}
 @next_tutorial{tutorial_histogram_equalization}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -65,7 +72,7 @@ Theory
 
 -#  We mentioned that an Affine Transformation is basically a **relation**
     between two images. The information about this relation can come, roughly, in two ways:
-    -#  We know both \f$X\f$ and T and we also know that they are related. Then our task is to find \f$M\f$
+    -#  We know both \f$X\f$ and \f$T\f$ and we also know that they are related. Then our task is to find \f$M\f$
     -#  We know \f$M\f$ and \f$X\f$. To obtain \f$T\f$ we only need to apply \f$T = M \cdot X\f$. Our information
         for \f$M\f$ may be explicit (i.e. have the 2-by-3 matrix) or it can come as a geometric relation
         between points.
@@ -93,19 +100,19 @@ Code
 
 @add_toggle_cpp
 -   The tutorial's code is shown below. You can also download it
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/Geometric_Transforms_Demo.cpp
 @end_toggle
 
 @add_toggle_java
 -   The tutorial's code is shown below. You can also download it
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgProc/Smoothing/Smoothing.cpp)
     @include samples/java/tutorial_code/ImgTrans/warp_affine/GeometricTransformsDemo.java
 @end_toggle
 
 @add_toggle_python
 -   The tutorial's code is shown below. You can also download it
-    [here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py)
+    [here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py)
     @include samples/python/tutorial_code/ImgTrans/warp_affine/Geometric_Transforms_Demo.py
 @end_toggle
 

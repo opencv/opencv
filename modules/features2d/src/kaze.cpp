@@ -57,7 +57,7 @@ namespace cv
     {
     public:
         KAZE_Impl(bool _extended, bool _upright, float _threshold, int _octaves,
-                   int _sublevels, int _diffusivity)
+                   int _sublevels, KAZE::DiffusivityType _diffusivity)
         : extended(_extended)
         , upright(_upright)
         , threshold(_threshold)
@@ -84,8 +84,8 @@ namespace cv
         void setNOctaveLayers(int octaveLayers_) CV_OVERRIDE { sublevels = octaveLayers_; }
         int getNOctaveLayers() const CV_OVERRIDE { return sublevels; }
 
-        void setDiffusivity(int diff_) CV_OVERRIDE { diffusivity = diff_; }
-        int getDiffusivity() const CV_OVERRIDE { return diffusivity; }
+        void setDiffusivity(KAZE::DiffusivityType diff_) CV_OVERRIDE{ diffusivity = diff_; }
+        KAZE::DiffusivityType getDiffusivity() const CV_OVERRIDE{ return diffusivity; }
 
         // returns the descriptor size in bytes
         int descriptorSize() const CV_OVERRIDE
@@ -163,6 +163,7 @@ namespace cv
         void write(FileStorage& fs) const CV_OVERRIDE
         {
             writeFormat(fs);
+            fs << "name" << getDefaultName();
             fs << "extended" << (int)extended;
             fs << "upright" << (int)upright;
             fs << "threshold" << threshold;
@@ -173,12 +174,19 @@ namespace cv
 
         void read(const FileNode& fn) CV_OVERRIDE
         {
-            extended = (int)fn["extended"] != 0;
-            upright = (int)fn["upright"] != 0;
-            threshold = (float)fn["threshold"];
-            octaves = (int)fn["octaves"];
-            sublevels = (int)fn["sublevels"];
-            diffusivity = (int)fn["diffusivity"];
+            // if node is empty, keep previous value
+            if (!fn["extended"].empty())
+                extended = (int)fn["extended"] != 0;
+            if (!fn["upright"].empty())
+                upright = (int)fn["upright"] != 0;
+            if (!fn["threshold"].empty())
+                threshold = (float)fn["threshold"];
+            if (!fn["octaves"].empty())
+                octaves = (int)fn["octaves"];
+            if (!fn["sublevels"].empty())
+                sublevels = (int)fn["sublevels"];
+            if (!fn["diffusivity"].empty())
+                diffusivity = static_cast<KAZE::DiffusivityType>((int)fn["diffusivity"]);
         }
 
         bool extended;
@@ -186,13 +194,13 @@ namespace cv
         float threshold;
         int octaves;
         int sublevels;
-        int diffusivity;
+        KAZE::DiffusivityType diffusivity;
     };
 
     Ptr<KAZE> KAZE::create(bool extended, bool upright,
                             float threshold,
                             int octaves, int sublevels,
-                            int diffusivity)
+                            KAZE::DiffusivityType diffusivity)
     {
         return makePtr<KAZE_Impl>(extended, upright, threshold, octaves, sublevels, diffusivity);
     }

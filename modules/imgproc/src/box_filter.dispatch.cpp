@@ -89,7 +89,7 @@ static bool ocl_boxFilter3x3_8UC1( InputArray _src, OutputArray _dst, int ddepth
     globalsize[1] = size.height / 2;
 
     char build_opts[1024];
-    sprintf(build_opts, "-D %s %s", borderMap[borderType], normalize ? "-D NORMALIZE" : "");
+    snprintf(build_opts, sizeof(build_opts), "-D %s %s", borderMap[borderType], normalize ? "-D NORMALIZE" : "");
 
     ocl::Kernel kernel("boxFilter3x3_8UC1_cols16_rows2", cv::ocl::imgproc::boxFilter3x3_oclsrc, build_opts);
     if (kernel.empty())
@@ -195,8 +195,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
         const int wgRound = 256;
         globalsize[0] = roundUp(globalsize[0], wgRound);
 
-        char build_options[1024], cvt[2][40];
-        sprintf(build_options, "-D cn=%d "
+        char build_options[1024], cvt[2][50];
+        snprintf(build_options, sizeof(build_options), "-D cn=%d "
                 "-D ANCHOR_X=%d -D ANCHOR_Y=%d -D KERNEL_SIZE_X=%d -D KERNEL_SIZE_Y=%d "
                 "-D PX_LOAD_VEC_SIZE=%d -D PX_LOAD_NUM_PX=%d "
                 "-D PX_PER_WI_X=%d -D PX_PER_WI_Y=%d -D PRIV_DATA_WIDTH=%d -D %s -D %s "
@@ -210,8 +210,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                 privDataWidth / pxLoadNumPixels, pxPerWorkItemY + ksize.height - 1,
                 ocl::typeToStr(type), ocl::typeToStr(sdepth), ocl::typeToStr(dtype),
                 ocl::typeToStr(ddepth), ocl::typeToStr(wtype), ocl::typeToStr(wdepth),
-                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])),
                 normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",
                 ocl::typeToStr(CV_MAKE_TYPE(wdepth, pxLoadVecSize)) //PX_LOAD_FLOAT_VEC_CONV
                 );
@@ -241,8 +241,8 @@ static bool ocl_boxFilter( InputArray _src, OutputArray _dst, int ddepth,
                                  " -D ST1=%s -D DT1=%s -D cn=%d",
                                  BLOCK_SIZE_X, BLOCK_SIZE_Y, ocl::typeToStr(type), ocl::typeToStr(CV_MAKE_TYPE(ddepth, cn)),
                                  ocl::typeToStr(CV_MAKE_TYPE(wdepth, cn)),
-                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0]),
-                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1]),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[0], sizeof(cvt[0])),
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[1], sizeof(cvt[1])),
                                  anchor.x, anchor.y, ksize.width, ksize.height, borderMap[borderType],
                                  isolated ? " -D BORDER_ISOLATED" : "", doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                                  normalize ? " -D NORMALIZE" : "", sqr ? " -D SQR" : "",

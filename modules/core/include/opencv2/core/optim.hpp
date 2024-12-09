@@ -295,10 +295,10 @@ formulation above. It will contain 64-bit floating point numbers.
 @param constr_eps allowed numeric disparity for constraints
 @return One of cv::SolveLPResult
  */
-CV_EXPORTS_W int solveLP(const Mat& Func, const Mat& Constr, Mat& z, double constr_eps);
+CV_EXPORTS_W int solveLP(InputArray Func, InputArray Constr, OutputArray z, double constr_eps);
 
 /** @overload */
-CV_EXPORTS int solveLP(const Mat& Func, const Mat& Constr, Mat& z);
+CV_EXPORTS_W int solveLP(InputArray Func, InputArray Constr, OutputArray z);
 
 //! @}
 

@@ -7,7 +7,7 @@
 
 #include "precomp.hpp"
 
-class MFXVideoSession;
+class MFXVideoSession_WRAP;
 class Plugin;
 class DeviceHandler;
 class WriteBitstream;
@@ -19,14 +19,12 @@ class VideoWriter_IntelMFX : public cv::IVideoWriter
 {
 public:
     VideoWriter_IntelMFX(const cv::String &filename, int _fourcc, double fps, cv::Size frameSize, bool isColor);
-    virtual ~VideoWriter_IntelMFX();
-    virtual double getProperty(int) const;
-    virtual bool setProperty(int, double);
-    virtual bool isOpened() const;
-    virtual void write(cv::InputArray input);
-    static cv::Ptr<VideoWriter_IntelMFX> create(const cv::String& filename, int _fourcc, double fps, cv::Size frameSize, bool isColor);
-
-    virtual int getCaptureDomain() const { return cv::CAP_INTEL_MFX; }
+    ~VideoWriter_IntelMFX() CV_OVERRIDE;
+    double getProperty(int) const CV_OVERRIDE;
+    bool setProperty(int, double) CV_OVERRIDE;
+    bool isOpened() const CV_OVERRIDE;
+    void write(cv::InputArray input) CV_OVERRIDE;
+    int getCaptureDomain() const CV_OVERRIDE { return cv::CAP_INTEL_MFX; }
 protected:
     bool write_one(cv::InputArray bgr);
 
@@ -35,7 +33,7 @@ private:
     VideoWriter_IntelMFX & operator=(const VideoWriter_IntelMFX &);
 
 private:
-    MFXVideoSession *session;
+    MFXVideoSession_WRAP *session;
     Plugin *plugin;
     DeviceHandler *deviceHandler;
     WriteBitstream *bs;

@@ -31,73 +31,10 @@ static const size_t PARSER_BASE64_BUFFER_SIZE = 1024U * 1024U / 8U;
 
 namespace base64 {
 
-namespace fs {
-enum State
+enum
 {
-    Uncertain,
-    NotUse,
-    InUse,
-};
-} // fs::
-
-static const size_t HEADER_SIZE         = 24U;
-static const size_t ENCODED_HEADER_SIZE = 32U;
-
-size_t base64_encode(uint8_t const * src, uint8_t * dst, size_t off,      size_t cnt);
-size_t base64_encode(   char const * src,    char * dst, size_t off = 0U, size_t cnt = 0U);
-size_t base64_decode(uint8_t const * src, uint8_t * dst, size_t off,      size_t cnt);
-size_t base64_decode(   char const * src,    char * dst, size_t off = 0U, size_t cnt = 0U);
-bool   base64_valid (uint8_t const * src, size_t off,      size_t cnt);
-bool   base64_valid (   char const * src, size_t off = 0U, size_t cnt = 0U);
-size_t base64_encode_buffer_size(size_t cnt, bool is_end_with_zero = true);
-size_t base64_decode_buffer_size(size_t cnt, bool is_end_with_zero = true);
-size_t base64_decode_buffer_size(size_t cnt, char  const * src, bool is_end_with_zero = true);
-size_t base64_decode_buffer_size(size_t cnt, uchar const * src, bool is_end_with_zero = true);
-std::string make_base64_header(const char * dt);
-bool read_base64_header(std::vector<char> const & header, std::string & dt);
-void make_seq(::CvFileStorage* fs, const uchar* binary_data, size_t elem_cnt, const char * dt, CvSeq & seq);
-void cvWriteRawDataBase64(::CvFileStorage* fs, const void* _data, int len, const char* dt);
-
-class Base64ContextEmitter;
-
-class Base64Writer
-{
-public:
-    Base64Writer(::CvFileStorage * fs);
-    ~Base64Writer();
-    void write(const void* _data, size_t len, const char* dt);
-    template<typename _to_binary_convertor_t> void write(_to_binary_convertor_t & convertor, const char* dt);
-
-private:
-    void check_dt(const char* dt);
-
-private:
-    // disable copy and assignment
-    Base64Writer(const Base64Writer &);
-    Base64Writer & operator=(const Base64Writer &);
-
-private:
-
-    Base64ContextEmitter * emitter;
-    std::string data_type_string;
-};
-
-class Base64ContextParser
-{
-public:
-    explicit Base64ContextParser(uchar * buffer, size_t size);
-    ~Base64ContextParser();
-    Base64ContextParser & read(const uchar * beg, const uchar * end);
-    bool flush();
-private:
-    static const size_t BUFFER_LEN = 120U;
-    uchar * dst_cur;
-    uchar * dst_end;
-    std::vector<uchar> base64_buffer;
-    uchar * src_beg;
-    uchar * src_cur;
-    uchar * src_end;
-    std::vector<uchar> binary_buffer;
+    HEADER_SIZE         = 24,
+    ENCODED_HEADER_SIZE = 32
 };
 
 } // base64::
@@ -106,108 +43,6 @@ private:
 
 #define CV_FS_MAX_LEN 4096
 #define CV_FS_MAX_FMT_PAIRS  128
-
-#define CV_FILE_STORAGE ('Y' + ('A' << 8) + ('M' << 16) + ('L' << 24))
-
-#define CV_IS_FILE_STORAGE(fs) ((fs) != 0 && (fs)->flags == CV_FILE_STORAGE)
-
-#define CV_CHECK_FILE_STORAGE(fs)                       \
-{                                                       \
-    if( !CV_IS_FILE_STORAGE(fs) )                       \
-        CV_Error( (fs) ? CV_StsBadArg : CV_StsNullPtr,  \
-                  "Invalid pointer to file storage" );  \
-}
-
-#define CV_CHECK_OUTPUT_FILE_STORAGE(fs)                \
-{                                                       \
-    CV_CHECK_FILE_STORAGE(fs);                          \
-    if( !fs->write_mode )                               \
-        CV_Error( CV_StsError, "The file storage is opened for reading" ); \
-}
-
-#define CV_PARSE_ERROR( errmsg )                                    \
-    icvParseError( fs, CV_Func, (errmsg), __FILE__, __LINE__ )
-
-typedef struct CvGenericHash
-{
-    CV_SET_FIELDS()
-    int tab_size;
-    void** table;
-}
-CvGenericHash;
-typedef CvGenericHash CvStringHash;
-
-//typedef void (*CvParse)( struct CvFileStorage* fs );
-typedef void (*CvStartWriteStruct)( struct CvFileStorage* fs, const char* key,
-                                    int struct_flags, const char* type_name );
-typedef void (*CvEndWriteStruct)( struct CvFileStorage* fs );
-typedef void (*CvWriteInt)( struct CvFileStorage* fs, const char* key, int value );
-typedef void (*CvWriteReal)( struct CvFileStorage* fs, const char* key, double value );
-typedef void (*CvWriteString)( struct CvFileStorage* fs, const char* key,
-                               const char* value, int quote );
-typedef void (*CvWriteComment)( struct CvFileStorage* fs, const char* comment, int eol_comment );
-typedef void (*CvStartNextStream)( struct CvFileStorage* fs );
-
-typedef struct CvFileStorage
-{
-    int flags;
-    int fmt;
-    int write_mode;
-    int is_first;
-    CvMemStorage* memstorage;
-    CvMemStorage* dststorage;
-    CvMemStorage* strstorage;
-    CvStringHash* str_hash;
-    CvSeq* roots;
-    CvSeq* write_stack;
-    int struct_indent;
-    int struct_flags;
-    CvString struct_tag;
-    int space;
-    char* filename;
-    FILE* file;
-    gzFile gzfile;
-    char* buffer;
-    char* buffer_start;
-    char* buffer_end;
-    int wrap_margin;
-    int lineno;
-    int dummy_eof;
-    const char* errmsg;
-    char errmsgbuf[128];
-
-    CvStartWriteStruct start_write_struct;
-    CvEndWriteStruct end_write_struct;
-    CvWriteInt write_int;
-    CvWriteReal write_real;
-    CvWriteString write_string;
-    CvWriteComment write_comment;
-    CvStartNextStream start_next_stream;
-
-    const char* strbuf;
-    size_t strbufsize, strbufpos;
-    std::deque<char>* outbuf;
-
-    base64::Base64Writer * base64_writer;
-    bool is_default_using_base64;
-    base64::fs::State state_of_writing_base64;  /**< used in WriteRawData only */
-
-    bool is_write_struct_delayed;
-    char* delayed_struct_key;
-    int   delayed_struct_flags;
-    char* delayed_type_name;
-
-    bool is_opened;
-}
-CvFileStorage;
-
-typedef struct CvFileMapNode
-{
-    CvFileNode value;
-    const CvStringHashNode* key;
-    struct CvFileMapNode* next;
-}
-CvFileMapNode;
 
 /****************************************************************************************\
 *                            Common macros and type definitions                          *
@@ -245,84 +80,144 @@ inline char* cv_skip_BOM(char* ptr)
     return ptr;
 }
 
-char* icv_itoa( int _val, char* buffer, int /*radix*/ );
-double icv_strtod( CvFileStorage* fs, char* ptr, char** endptr );
-char* icvFloatToString( char* buf, float value );
-char* icvDoubleToString( char* buf, double value );
-
-char icvTypeSymbol(int depth);
-void icvClose( CvFileStorage* fs, cv::String* out );
-void icvCloseFile( CvFileStorage* fs );
-void icvPuts( CvFileStorage* fs, const char* str );
-char* icvGets( CvFileStorage* fs, char* str, int maxCount );
-int icvEof( CvFileStorage* fs );
-void icvRewind( CvFileStorage* fs );
-char* icvFSFlush( CvFileStorage* fs );
-void icvFSCreateCollection( CvFileStorage* fs, int tag, CvFileNode* collection );
-char* icvFSResizeWriteBuffer( CvFileStorage* fs, char* ptr, int len );
-int icvCalcStructSize( const char* dt, int initial_size );
-int icvCalcElemSize( const char* dt, int initial_size );
-void CV_NORETURN icvParseError(const CvFileStorage* fs, const char* func_name, const char* err_msg, const char* source_file, int source_line);
-char* icvEncodeFormat( int elem_type, char* dt );
-int icvDecodeFormat( const char* dt, int* fmt_pairs, int max_len );
-int icvDecodeSimpleFormat( const char* dt );
-void icvWriteFileNode( CvFileStorage* fs, const char* name, const CvFileNode* node );
-void icvWriteCollection( CvFileStorage* fs, const CvFileNode* node );
-void switch_to_Base64_state( CvFileStorage* fs, base64::fs::State state );
-void make_write_struct_delayed( CvFileStorage* fs, const char* key, int struct_flags, const char* type_name );
-void check_if_write_struct_is_delayed( CvFileStorage* fs, bool change_type_to_base64 = false );
-CvGenericHash* cvCreateMap( int flags, int header_size, int elem_size, CvMemStorage* storage, int start_tab_size );
-
-//
-// XML
-//
-void icvXMLParse( CvFileStorage* fs );
-void icvXMLStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags, const char* type_name CV_DEFAULT(0));
-void icvXMLEndWriteStruct( CvFileStorage* fs );
-void icvXMLStartNextStream( CvFileStorage* fs );
-void icvXMLWriteScalar( CvFileStorage* fs, const char* key, const char* data, int len );
-void icvXMLWriteInt( CvFileStorage* fs, const char* key, int value );
-void icvXMLWriteReal( CvFileStorage* fs, const char* key, double value );
-void icvXMLWriteString( CvFileStorage* fs, const char* key, const char* str, int quote );
-void icvXMLWriteComment( CvFileStorage* fs, const char* comment, int eol_comment );
-
-typedef struct CvXMLStackRecord
+namespace cv
 {
-    CvMemStoragePos pos;
-    CvString struct_tag;
-    int struct_indent;
-    int struct_flags;
+namespace fs
+{
+int strcasecmp(const char* str1, const char* str2);
+char* itoa( int _val, char* buffer, int /*radix*/ );
+char* itoa( int64_t _val, char* buffer, int /*radix*/, bool _signed );
+char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision, bool explicitZero );
+char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero );
+
+int calcStructSize( const char* dt, int initial_size );
+int calcElemSize( const char* dt, int initial_size );
+CV_DEPRECATED char* encodeFormat( int elem_type, char* dt );
+char* encodeFormat( int elem_type, char* dt, size_t dt_len );
+int decodeFormat( const char* dt, int* fmt_pairs, int max_len );
+int decodeSimpleFormat( const char* dt );
 }
-CvXMLStackRecord;
 
-//
-// YML
-//
-void icvYMLParse( CvFileStorage* fs );
-void icvYMLWrite( CvFileStorage* fs, const char* key, const char* data );
-void icvYMLStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags, const char* type_name CV_DEFAULT(0));
-void icvYMLEndWriteStruct( CvFileStorage* fs );
-void icvYMLStartNextStream( CvFileStorage* fs );
-void icvYMLWriteInt( CvFileStorage* fs, const char* key, int value );
-void icvYMLWriteReal( CvFileStorage* fs, const char* key, double value );
-void icvYMLWriteString( CvFileStorage* fs, const char* key, const char* str, int quote CV_DEFAULT(0));
-void icvYMLWriteComment( CvFileStorage* fs, const char* comment, int eol_comment );
 
-//
-// JSON
-//
-void icvJSONParse( CvFileStorage* fs );
-void icvJSONWrite( CvFileStorage* fs, const char* key, const char* data );
-void icvJSONStartWriteStruct( CvFileStorage* fs, const char* key, int struct_flags, const char* type_name CV_DEFAULT(0));
-void icvJSONEndWriteStruct( CvFileStorage* fs );
-void icvJSONStartNextStream( CvFileStorage* fs );
-void icvJSONWriteInt( CvFileStorage* fs, const char* key, int value );
-void icvJSONWriteReal( CvFileStorage* fs, const char* key, double value );
-void icvJSONWriteString( CvFileStorage* fs, const char* key, const char* str, int quote CV_DEFAULT(0));
-void icvJSONWriteComment( CvFileStorage* fs, const char* comment, int eol_comment );
+#ifdef CV_STATIC_ANALYSIS
+#define CV_PARSE_ERROR_CPP(errmsg) do { (void)fs; abort(); } while (0)
+#else
+#define CV_PARSE_ERROR_CPP( errmsg ) \
+    fs->parseError( CV_Func, (errmsg), __FILE__, __LINE__ )
+#endif
 
-// Adding icvGets is not enough - we need to merge buffer contents (see #11061)
-#define CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG() \
-    CV_Assert((ptr[0] != 0 || ptr != fs->buffer_end - 1) && "OpenCV persistence doesn't support very long lines")
+
+#define CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP() do { \
+    CV_DbgAssert(ptr); \
+    if((ptr)[0] == 0 && (ptr) == fs->bufferEnd() - 1) CV_PARSE_ERROR_CPP("OpenCV persistence doesn't support very long lines"); \
+} while (0)
+
+
+class FileStorageParser;
+class FileStorageEmitter;
+
+struct FStructData
+{
+    FStructData() { indent = flags = 0; }
+    FStructData( const std::string& _struct_tag,
+                 int _struct_flags, int _struct_indent )
+    {
+        tag = _struct_tag;
+        flags = _struct_flags;
+        indent = _struct_indent;
+    }
+
+    std::string tag;
+    int flags;
+    int indent;
+};
+
+class FileStorage_API
+{
+public:
+    virtual ~FileStorage_API();
+    virtual FileStorage* getFS() = 0;
+
+    virtual void puts( const char* str ) = 0;
+    virtual char* gets() = 0;
+    virtual bool eof() = 0;
+    virtual void setEof() = 0;
+    virtual void closeFile() = 0;
+    virtual void rewind() = 0;
+    virtual char* resizeWriteBuffer( char* ptr, int len ) = 0;
+    virtual char* bufferPtr() const = 0;
+    virtual char* bufferStart() const = 0;
+    virtual char* bufferEnd() const = 0;
+    virtual void setBufferPtr(char* ptr) = 0;
+    virtual char* flush() = 0;
+    virtual void setNonEmpty() = 0;
+    virtual int wrapMargin() const = 0;
+
+    virtual FStructData& getCurrentStruct() = 0;
+
+    virtual void convertToCollection( int type, FileNode& node ) = 0;
+    virtual FileNode addNode( FileNode& collection, const std::string& key,
+                               int type, const void* value=0, int len=-1 ) = 0;
+    virtual void finalizeCollection( FileNode& collection ) = 0;
+    virtual double strtod(char* ptr, char** endptr) = 0;
+
+    virtual char* parseBase64(char* ptr, int indent, FileNode& collection) = 0;
+    CV_NORETURN
+    virtual void parseError(const char* funcname, const std::string& msg,
+                            const char* filename, int lineno) = 0;
+
+private:
+    enum Base64State{
+        Uncertain,
+        NotUse,
+        InUse,
+    };
+
+    friend class cv::FileStorage::Impl;
+    friend class cv::FileStorage;
+    friend class JSONEmitter;
+    friend class XMLEmitter;
+    friend class YAMLEmitter;
+
+    virtual void check_if_write_struct_is_delayed(bool change_type_to_base64 = false) = 0;
+    virtual void switch_to_Base64_state(Base64State state) = 0;
+    virtual Base64State get_state_of_writing_base64() = 0;
+    virtual int get_space() = 0;
+};
+
+class FileStorageEmitter
+{
+public:
+    virtual ~FileStorageEmitter() {}
+
+    virtual FStructData startWriteStruct( const FStructData& parent, const char* key,
+                                          int struct_flags, const char* type_name=0 ) = 0;
+    virtual void endWriteStruct(const FStructData& current_struct) = 0;
+    virtual void write(const char* key, int value) = 0;
+    virtual void write(const char* key, int64_t value) = 0;
+    virtual void write(const char* key, double value) = 0;
+    virtual void write(const char* key, const char* value, bool quote) = 0;
+    virtual void writeScalar(const char* key, const char* value) = 0;
+    virtual void writeComment(const char* comment, bool eol_comment) = 0;
+    virtual void startNextStream() = 0;
+};
+
+class FileStorageParser
+{
+public:
+    virtual ~FileStorageParser() {}
+    virtual bool parse(char* ptr) = 0;
+    virtual bool getBase64Row(char* ptr, int indent, char* &beg, char* &end) = 0;
+};
+
+Ptr<FileStorageEmitter> createXMLEmitter(FileStorage_API* fs);
+Ptr<FileStorageEmitter> createYAMLEmitter(FileStorage_API* fs);
+Ptr<FileStorageEmitter> createJSONEmitter(FileStorage_API* fs);
+
+Ptr<FileStorageParser> createXMLParser(FileStorage_API* fs);
+Ptr<FileStorageParser> createYAMLParser(FileStorage_API* fs);
+Ptr<FileStorageParser> createJSONParser(FileStorage_API* fs);
+
+}
 
 #endif // SRC_PERSISTENCE_HPP

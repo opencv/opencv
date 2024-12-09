@@ -19,7 +19,7 @@ detection and recognition.
 
 -   For better accuracy, use binary images. So before finding contours, apply threshold or canny
     edge detection.
--   Since OpenCV 3.2, findContours() no longer modifies the source image but returns a modified image as the first of three return parameters.
+-   Since OpenCV 3.2, findContours() no longer modifies the source image.
 -   In OpenCV, finding contours is like finding white object from black background. So remember,
     object to be found should be white and background should be black.
 
@@ -32,11 +32,11 @@ im = cv.imread('test.jpg')
 assert im is not None, "file could not be read, check with os.path.exists()"
 imgray = cv.cvtColor(im, cv.COLOR_BGR2GRAY)
 ret, thresh = cv.threshold(imgray, 127, 255, 0)
-im2, contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 @endcode
 See, there are three arguments in **cv.findContours()** function, first one is source image, second
-is contour retrieval mode, third is contour approximation method. And it outputs a modified image, the contours and
-hierarchy. contours is a Python list of all the contours in the image. Each individual contour is a
+is contour retrieval mode, third is contour approximation method. And it outputs the contours and hierarchy.
+Contours is a Python list of all the contours in the image. Each individual contour is a
 Numpy array of (x,y) coordinates of boundary points of the object.
 
 @note We will discuss second and third arguments and about hierarchy in details later. Until then,
@@ -88,9 +88,3 @@ the contour array (drawn in blue color). First image shows points I got with cv.
 much memory it saves!!!
 
 ![image](images/none.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

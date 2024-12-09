@@ -57,7 +57,7 @@
 
 namespace cv {
 namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 #ifdef HAVE_PROTOBUF
 using ::google::protobuf::RepeatedFieldRef;
@@ -97,11 +97,11 @@ class CaffeImporter
 
 public:
 
-    CaffeImporter(const char *pototxt, const char *caffeModel)
+    CaffeImporter(const char *prototxt, const char *caffeModel)
     {
         CV_TRACE_FUNCTION();
 
-        ReadNetParamsFromTextFileOrDie(pototxt, &net);
+        ReadNetParamsFromTextFileOrDie(prototxt, &net);
 
         if (caffeModel && caffeModel[0])
             ReadNetParamsFromBinaryFileOrDie(caffeModel, &netBinary);
@@ -125,6 +125,7 @@ public:
         {
             const google::protobuf::UnknownField& field = unknownFields.field(i);
             CV_Assert(field.type() == google::protobuf::UnknownField::TYPE_GROUP);
+            CV_CheckGE(field.group().field_count(), 2, "UnknownField should have at least 2 items: name and value");
             std::string fieldName = field.group().field(0).length_delimited();
             std::string fieldValue = field.group().field(1).length_delimited();
             params.set(fieldName, fieldValue);
@@ -193,7 +194,6 @@ public:
             break;
         default:
             CV_Error(Error::StsError, "Unknown type \"" + String(field->type_name()) + "\" in prototxt");
-            break;
         }
     }
 
@@ -279,8 +279,8 @@ public:
                 // Half precision floats.
                 CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
 
-                Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
-                convertFp16(halfs, dstBlob);
+                Mat halfs((int)shape.size(), &shape[0], CV_16FC1, (void*)raw_data.c_str());
+                halfs.convertTo(dstBlob, CV_32F);
             }
             else if (pbBlob.raw_data_type() == caffe::FLOAT)
             {
@@ -470,7 +470,7 @@ public:
             {
                 CV_Assert(layer.bottom_size() == 1 || layer.bottom_size() == 2);
                 type = "Resize";
-                String interp = layerParams.get<String>("type").toLowerCase();
+                String interp = toLowerCase(layerParams.get<String>("type"));
                 layerParams.set("interpolation", interp == "linear" ? "bilinear" : interp);
 
                 if (layerParams.has("factor"))
@@ -498,6 +498,11 @@ public:
             else if ("ConvolutionDepthwise" == type)
             {
                 type = "Convolution";
+            }
+            else if (type == "Softmax"){
+                // set default axis to 1
+                if(!layerParams.has("axis"))
+                    layerParams.set("axis", 1);
             }
 
             int id = dstNet.addLayer(name, type, layerParams);
@@ -556,7 +561,6 @@ public:
         if (idx < 0)
         {
             CV_Error(Error::StsObjectNotFound, "Can't find output blob \"" + name + "\"");
-            return;
         }
 
         dstNet.connect(addedBlobs[idx].layerId, addedBlobs[idx].outNum, layerId, inNum);
@@ -591,7 +595,23 @@ Net readNetFromCaffe(const std::vector<uchar>& bufferProto, const std::vector<uc
                             bufferModelPtr, bufferModel.size());
 }
 
-#endif //HAVE_PROTOBUF
+#else  // HAVE_PROTOBUF
 
-CV__DNN_EXPERIMENTAL_NS_END
+#define DNN_PROTOBUF_UNSUPPORTED() CV_Error(Error::StsError, "DNN/Caffe: Build OpenCV with Protobuf to import Caffe models")
+
+Net readNetFromCaffe(const String &, const String &) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromCaffe(const char *, size_t, const char *, size_t) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+Net readNetFromCaffe(const std::vector<uchar>&, const std::vector<uchar>&) {
+    DNN_PROTOBUF_UNSUPPORTED();
+}
+
+#endif  // HAVE_PROTOBUF
+
+CV__DNN_INLINE_NS_END
 }} // namespace

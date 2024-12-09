@@ -12,7 +12,11 @@ else()
 endif()
 
 if(HAVE_CUDA)
-  ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-CUDA.cmake.in" CUDA_CONFIGCMAKE @ONLY)
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+    ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-CUDALanguage.cmake.in" CUDA_CONFIGCMAKE @ONLY)
+  else()
+    ocv_cmake_configure("${CMAKE_CURRENT_LIST_DIR}/templates/OpenCVConfig-CUDA.cmake.in" CUDA_CONFIGCMAKE @ONLY)
+  endif()
 endif()
 
 if(ANDROID)
@@ -30,10 +34,15 @@ if(BUILD_FAT_JAVA_LIB AND HAVE_opencv_java)
   list(APPEND OPENCV_MODULES_CONFIGCMAKE opencv_java)
 endif()
 
+if(BUILD_OBJC AND HAVE_opencv_objc)
+  list(APPEND OPENCV_MODULES_CONFIGCMAKE opencv_objc)
+endif()
+
+
 # -------------------------------------------------------------------------------------------
 #  Part 1/3: ${BIN_DIR}/OpenCVConfig.cmake              -> For use *without* "make install"
 # -------------------------------------------------------------------------------------------
-set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"${OpenCV_SOURCE_DIR}/include\" \"${OpenCV_SOURCE_DIR}/include/opencv\"")
+set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_CONFIG_FILE_INCLUDE_DIR}\" \"${OpenCV_SOURCE_DIR}/include\"")
 
 foreach(m ${OPENCV_MODULES_BUILD})
   if(EXISTS "${OPENCV_MODULE_${m}_LOCATION}/include")
@@ -41,7 +50,7 @@ foreach(m ${OPENCV_MODULES_BUILD})
   endif()
 endforeach()
 
-export(TARGETS ${OpenCVModules_TARGETS} FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake")
+export(EXPORT OpenCVModules FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake")
 
 if(TARGET ippicv AND NOT BUILD_SHARED_LIBS)
   set(USE_IPPICV TRUE)
@@ -69,9 +78,9 @@ configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.
 # -------------------------------------------------------------------------------------------
 file(RELATIVE_PATH OpenCV_INSTALL_PATH_RELATIVE_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/${OPENCV_CONFIG_INSTALL_PATH}/" ${CMAKE_INSTALL_PREFIX})
 if (IS_ABSOLUTE ${OPENCV_INCLUDE_INSTALL_PATH})
-  set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_INCLUDE_INSTALL_PATH}\" \"${OPENCV_INCLUDE_INSTALL_PATH}/opencv\"")
+  set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"${OPENCV_INCLUDE_INSTALL_PATH}\"")
 else()
-  set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_INSTALL_PATH}\" \"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_INSTALL_PATH}/opencv\"")
+  set(OpenCV_INCLUDE_DIRS_CONFIGCMAKE "\"\${OpenCV_INSTALL_PATH}/${OPENCV_INCLUDE_INSTALL_PATH}\"")
 endif()
 
 if(USE_IPPICV)
@@ -115,7 +124,6 @@ endif()
 
 if(ANDROID)
   ocv_gen_config("${CMAKE_BINARY_DIR}/unix-install" "abi-${ANDROID_NDK_ABI_NAME}" "OpenCVConfig.root-ANDROID.cmake.in")
-  install(FILES "${OpenCV_SOURCE_DIR}/platforms/android/android.toolchain.cmake" DESTINATION "${OPENCV_CONFIG_INSTALL_PATH}" COMPONENT dev)
 endif()
 
 # --------------------------------------------------------------------------------------------

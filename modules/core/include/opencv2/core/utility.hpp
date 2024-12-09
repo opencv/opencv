@@ -56,8 +56,10 @@
 #include "opencv2/core.hpp"
 #include <ostream>
 
-#ifdef CV_CXX11
 #include <functional>
+
+#if !defined(_M_CEE)
+#include <mutex>  // std::mutex, std::lock_guard
 #endif
 
 namespace cv
@@ -174,14 +176,45 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
 */
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
+/** @brief Generates a unique temporary file name.
+
+This function generates a full, unique file path for a temporary file,
+which can be used to create temporary files for various purposes.
+
+@param suffix (optional) The desired file extension or suffix for the temporary file (e.g., ".png", ".txt").
+If no suffix is provided (suffix = 0), the file will not have a specific extension.
+
+@return cv::String A full unique path for the temporary file.
+
+@note
+- The function does not create the file, it only generates the name.
+- The file name is unique for the system session.
+- Works cross-platform (Windows, Linux, macOS).
+ */
 CV_EXPORTS String tempfile( const char* suffix = 0);
+
+/** @brief Searches for files matching the specified pattern in a directory.
+
+This function searches for files that match a given pattern (e.g., `*.jpg`)
+in the specified directory. The search can be limited to the directory itself
+or be recursive, including subdirectories.
+
+@param pattern The file search pattern, which can include wildcards like `*`
+(for matching multiple characters) or `?` (for matching a single character).
+
+@param result  Output vector where the file paths matching the search
+pattern will be stored.
+@param recursive (optional) Boolean flag indicating whether to search
+subdirectories recursively. If true, the search will include all subdirectories.
+The default value is `false`.
+ */
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 
-/** @brief OpenCV will try to set the number of threads for the next parallel region.
+/** @brief OpenCV will try to set the number of threads for subsequent parallel regions.
 
-If threads == 0, OpenCV will disable threading optimizations and run all it's functions
-sequentially. Passing threads \< 0 will reset threads number to system default. This function must
-be called outside of parallel region.
+If threads == 1, OpenCV will disable threading optimizations and run all it's functions
+sequentially. Passing threads \< 0 will reset threads number to system default.
+The function is not thread-safe. It must not be called in parallel region or concurrent threads.
 
 OpenCV will try to run its functions with specified threads number, but some behaviour differs from
 framework:
@@ -307,11 +340,12 @@ public:
     //! stops counting ticks.
     CV_WRAP void stop()
     {
-        int64 time = cv::getTickCount();
+        const int64 time = cv::getTickCount();
         if (startTime == 0)
             return;
         ++counter;
-        sumTime += (time - startTime);
+        lastTime = time - startTime;
+        sumTime += lastTime;
         startTime = 0;
     }
 
@@ -334,9 +368,33 @@ public:
     }
 
     //! returns passed time in seconds.
-    CV_WRAP double getTimeSec()   const
+    CV_WRAP double getTimeSec() const
     {
         return (double)getTimeTicks() / getTickFrequency();
+    }
+
+    //! returns counted ticks of the last iteration.
+    CV_WRAP int64 getLastTimeTicks() const
+    {
+        return lastTime;
+    }
+
+    //! returns passed time of the last iteration in microseconds.
+    CV_WRAP double getLastTimeMicro() const
+    {
+        return getLastTimeMilli()*1e3;
+    }
+
+    //! returns passed time of the last iteration in milliseconds.
+    CV_WRAP double getLastTimeMilli() const
+    {
+        return getLastTimeSec()*1e3;
+    }
+
+    //! returns passed time of the last iteration in seconds.
+    CV_WRAP double getLastTimeSec() const
+    {
+        return (double)getLastTimeTicks() / getTickFrequency();
     }
 
     //! returns internal counter value.
@@ -371,15 +429,17 @@ public:
     //! resets internal values.
     CV_WRAP void reset()
     {
-        startTime = 0;
-        sumTime = 0;
         counter = 0;
+        sumTime = 0;
+        startTime = 0;
+        lastTime = 0;
     }
 
 private:
     int64 counter;
     int64 sumTime;
     int64 startTime;
+    int64 lastTime;
 };
 
 /** @brief output operator
@@ -542,6 +602,18 @@ bool isAligned(const void* p1, const void* p2, const void* p3, const void* p4)
     return isAligned<N>(((size_t)p1)|((size_t)p2)|((size_t)p3)|((size_t)p4));
 }
 
+/*! @brief Flags that allow to midify some functions behavior. Used as set of flags.
+*/
+enum AlgorithmHint {
+    ALGO_HINT_DEFAULT = 0, //!< Default algorithm behaviour defined during OpenCV build
+    ALGO_HINT_ACCURATE = 1, //!< Use generic portable implementation
+    ALGO_HINT_APPROX = 2, //!< Allow alternative approximations to get faster implementation. Behaviour and result depends on a platform
+};
+
+/*! @brief Returns AlgorithmHint defined during OpenCV compilation. Defines #ALGO_HINT_DEFAULT behavior.
+ */
+CV_EXPORTS_W AlgorithmHint getDefaultAlgorithmHint();
+
 /** @brief Enables or disables the optimized code.
 
 The function can be used to dynamically turn on and off optimized dispatched code (code that uses SSE4.2, AVX/AVX2,
@@ -568,6 +640,8 @@ static inline size_t getElemSize(int type) { return (size_t)CV_ELEM_SIZE(type); 
 /////////////////////////////// Parallel Primitives //////////////////////////////////
 
 /** @brief Base class for parallel data processors
+
+@ingroup core_parallel
 */
 class CV_EXPORTS ParallelLoopBody
 {
@@ -577,18 +651,23 @@ public:
 };
 
 /** @brief Parallel data processor
+
+@ingroup core_parallel
 */
 CV_EXPORTS void parallel_for_(const Range& range, const ParallelLoopBody& body, double nstripes=-1.);
 
-#ifdef CV_CXX11
+//! @ingroup core_parallel
 class ParallelLoopBodyLambdaWrapper : public ParallelLoopBody
 {
 private:
     std::function<void(const Range&)> m_functor;
 public:
-    ParallelLoopBodyLambdaWrapper(std::function<void(const Range&)> functor) :
-        m_functor(functor)
-    { }
+    inline
+    ParallelLoopBodyLambdaWrapper(std::function<void(const Range&)> functor)
+        : m_functor(functor)
+    {
+        // nothing
+    }
 
     virtual void operator() (const cv::Range& range) const CV_OVERRIDE
     {
@@ -596,11 +675,13 @@ public:
     }
 };
 
-inline void parallel_for_(const Range& range, std::function<void(const Range&)> functor, double nstripes=-1.)
+//! @ingroup core_parallel
+static inline
+void parallel_for_(const Range& range, std::function<void(const Range&)> functor, double nstripes=-1.)
 {
     parallel_for_(range, ParallelLoopBodyLambdaWrapper(functor), nstripes);
 }
-#endif
+
 
 /////////////////////////////// forEach method of cv::Mat ////////////////////////////
 template<typename _Tp, typename Functor> inline
@@ -702,34 +783,28 @@ void Mat::forEach_impl(const Functor& operation) {
 
 /////////////////////////// Synchronization Primitives ///////////////////////////////
 
-class CV_EXPORTS Mutex
-{
-public:
-    Mutex();
-    ~Mutex();
-    Mutex(const Mutex& m);
-    Mutex& operator = (const Mutex& m);
-
-    void lock();
-    bool trylock();
-    void unlock();
-
-    struct Impl;
-protected:
-    Impl* impl;
+#if !defined(_M_CEE)
+#ifndef OPENCV_DISABLE_THREAD_SUPPORT
+typedef std::recursive_mutex Mutex;
+typedef std::lock_guard<cv::Mutex> AutoLock;
+#else // OPENCV_DISABLE_THREAD_SUPPORT
+// Custom (failing) implementation of `std::recursive_mutex`.
+struct Mutex {
+    void lock(){
+        CV_Error(cv::Error::StsNotImplemented,
+                 "cv::Mutex is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+    }
+    void unlock(){
+        CV_Error(cv::Error::StsNotImplemented,
+                 "cv::Mutex is disabled by OPENCV_DISABLE_THREAD_SUPPORT=ON");
+    }
 };
-
-class CV_EXPORTS AutoLock
-{
-public:
-    AutoLock(Mutex& m) : mutex(&m) { mutex->lock(); }
-    ~AutoLock() { mutex->unlock(); }
-protected:
-    Mutex* mutex;
-private:
-    AutoLock(const AutoLock&);
-    AutoLock& operator = (const AutoLock&);
+// Stub for cv::AutoLock when threads are disabled.
+struct AutoLock {
+    AutoLock(Mutex &) { }
 };
+#endif // OPENCV_DISABLE_THREAD_SUPPORT
+#endif // !defined(_M_CEE)
 
 
 /** @brief Designed for command line parsing
@@ -768,7 +843,7 @@ The sample below demonstrates how to use CommandLineParser:
 The keys parameter is a string containing several blocks, each one is enclosed in curly braces and
 describes one argument. Each argument contains three parts separated by the `|` symbol:
 
--# argument names is a space-separated list of option synonyms (to mark argument as positional, prefix it with the `@` symbol)
+-# argument names is a list of option synonyms separated by standard space characters ' ' (to mark argument as positional, prefix it with the `@` symbol)
 -# default value will be used if the argument was not provided (can be empty)
 -# help message (can be empty)
 
@@ -791,6 +866,8 @@ For example:
 Note that there are no default values for `help` and `timestamp` so we can check their presence using the `has()` method.
 Arguments with default values are considered to be always present. Use the `get()` method in these cases to check their
 actual value instead.
+Note that whitespace characters other than standard spaces are considered part of the string.
+Additionally, leading and trailing standard spaces around the help messages are ignored.
 
 String keys like `get<String>("@image1")` return the empty string `""` by default - even with an empty default value.
 Use the special `<none>` default value to enforce that the returned string must not be empty. (like in `get<String>("@image2")`)
@@ -949,8 +1026,8 @@ public:
     void printErrors() const;
 
 protected:
-    void getByName(const String& name, bool space_delete, int type, void* dst) const;
-    void getByIndex(int index, bool space_delete, int type, void* dst) const;
+    void getByName(const String& name, bool space_delete, Param type, void* dst) const;
+    void getByIndex(int index, bool space_delete, Param type, void* dst) const;
 
     struct Impl;
     Impl* impl;
@@ -1058,15 +1135,6 @@ AutoBuffer<_Tp, fixed_size>::resize(size_t _size)
 template<typename _Tp, size_t fixed_size> inline size_t
 AutoBuffer<_Tp, fixed_size>::size() const
 { return sz; }
-
-template<> inline std::string CommandLineParser::get<std::string>(int index, bool space_delete) const
-{
-    return get<String>(index, space_delete);
-}
-template<> inline std::string CommandLineParser::get<std::string>(const String& name, bool space_delete) const
-{
-    return get<String>(name, space_delete);
-}
 
 //! @endcond
 
@@ -1228,10 +1296,6 @@ CV_EXPORTS int getThreadID();
 #else
 /// Collect implementation data on OpenCV function call. Requires ENABLE_IMPL_COLLECTION build option.
 #define CV_IMPL_ADD(impl)
-#endif
-
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/core/core_c.h"
 #endif
 
 #endif //OPENCV_CORE_UTILITY_H

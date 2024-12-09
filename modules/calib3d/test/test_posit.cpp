@@ -40,7 +40,9 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/calib3d/calib3d_c.h"
+
+// POSIT is not exposed to C++ API yet, so the test is disabled
+#if 0
 
 namespace opencv_test { namespace {
 
@@ -219,4 +221,7 @@ void CV_POSITTest::run( int start_from )
 TEST(Calib3d_POSIT, accuracy) { CV_POSITTest test; test.safe_run(); }
 
 }} // namespace
+
+#endif
+
 /* End of file. */

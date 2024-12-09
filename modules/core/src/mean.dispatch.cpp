@@ -8,14 +8,24 @@
 #include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
 
-#include "mean.simd.hpp"
-#include "mean.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
-
+#ifndef OPENCV_IPP_MEAN
 #undef HAVE_IPP
 #undef CV_IPP_RUN_FAST
 #define CV_IPP_RUN_FAST(f, ...)
 #undef CV_IPP_RUN
 #define CV_IPP_RUN(c, f, ...)
+#endif // OPENCV_IPP_MEAN
+
+#include "mean.simd.hpp"
+#include "mean.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
+
+#ifndef OPENCV_IPP_MEAN
+#undef HAVE_IPP
+#undef CV_IPP_RUN_FAST
+#define CV_IPP_RUN_FAST(f, ...)
+#undef CV_IPP_RUN
+#define CV_IPP_RUN(c, f, ...)
+#endif // OPENCV_IPP_MEAN
 
 namespace cv {
 
@@ -221,17 +231,17 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
         if ( (!doubleSupport && depth == CV_64F) )
             return false;
 
-        char cvt[2][40];
+        char cvt[2][50];
         String opts = format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstT1=%s -D sqddepth=%d"
                              " -D sqdstT=%s -D sqdstT1=%s -D convertToSDT=%s -D cn=%d%s%s"
                              " -D convertToDT=%s -D WGS=%d -D WGS2_ALIGNED=%d%s%s",
                              ocl::typeToStr(type), ocl::typeToStr(depth),
                              ocl::typeToStr(dtype), ocl::typeToStr(ddepth), sqddepth,
                              ocl::typeToStr(sqdtype), ocl::typeToStr(sqddepth),
-                             ocl::convertTypeStr(depth, sqddepth, cn, cvt[0]),
+                             ocl::convertTypeStr(depth, sqddepth, cn, cvt[0], sizeof(cvt[0])),
                              cn, isContinuous ? " -D HAVE_SRC_CONT" : "",
                              isMaskContinuous ? " -D HAVE_MASK_CONT" : "",
-                             ocl::convertTypeStr(depth, ddepth, cn, cvt[1]),
+                             ocl::convertTypeStr(depth, ddepth, cn, cvt[1], sizeof(cvt[1])),
                              (int)wgs, wgs2_aligned, haveMask ? " -D HAVE_MASK" : "",
                              doubleSupport ? " -D DOUBLE_SUPPORT" : "");
 
@@ -515,12 +525,64 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
 
     Mat src = _src.getMat(), mask = _mask.getMat();
 
+    CV_Assert(mask.empty() || src.size == mask.size);
+
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MEAN_STDDEV>(src.cols, src.rows),
                openvx_meanStdDev(src, _mean, _sdv, mask))
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
     int k, cn = src.channels(), depth = src.depth();
+    Mat mean_mat, stddev_mat;
+
+    if(_mean.needed())
+    {
+        if( !_mean.fixedSize() )
+            _mean.create(cn, 1, CV_64F, -1, true);
+
+        mean_mat = _mean.getMat();
+        int dcn = (int)mean_mat.total();
+        CV_Assert( mean_mat.type() == CV_64F && mean_mat.isContinuous() &&
+                   (mean_mat.cols == 1 || mean_mat.rows == 1) && dcn >= cn );
+
+        double* dptr = mean_mat.ptr<double>();
+        for(k = cn ; k < dcn; k++ )
+            dptr[k] = 0;
+    }
+
+    if (_sdv.needed())
+    {
+        if( !_sdv.fixedSize() )
+            _sdv.create(cn, 1, CV_64F, -1, true);
+
+        stddev_mat = _sdv.getMat();
+        int dcn = (int)stddev_mat.total();
+        CV_Assert( stddev_mat.type() == CV_64F && stddev_mat.isContinuous() &&
+                   (stddev_mat.cols == 1 || stddev_mat.rows == 1) && dcn >= cn );
+
+        double* dptr = stddev_mat.ptr<double>();
+        for(k = cn ; k < dcn; k++ )
+            dptr[k] = 0;
+
+    }
+
+    if (src.isContinuous() && mask.isContinuous())
+    {
+        CALL_HAL(meanStdDev, cv_hal_meanStdDev, src.data, 0, (int)src.total(), 1, src.type(),
+                 _mean.needed() ? mean_mat.ptr<double>() : nullptr,
+                 _sdv.needed() ? stddev_mat.ptr<double>() : nullptr,
+                 mask.data, 0);
+    }
+    else
+    {
+        if (src.dims <= 2)
+        {
+            CALL_HAL(meanStdDev, cv_hal_meanStdDev, src.data, src.step, src.cols, src.rows, src.type(),
+                     _mean.needed() ? mean_mat.ptr<double>() : nullptr,
+                     _sdv.needed() ? stddev_mat.ptr<double>() : nullptr,
+                     mask.data, mask.step);
+        }
+    }
 
     SumSqrFunc func = getSumSqrFunc(depth);
 
@@ -590,24 +652,20 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
         sq[k] = std::sqrt(std::max(sq[k]*scale - s[k]*s[k], 0.));
     }
 
-    for( j = 0; j < 2; j++ )
+    if (_mean.needed())
     {
-        const double* sptr = j == 0 ? s : sq;
-        _OutputArray _dst = j == 0 ? _mean : _sdv;
-        if( !_dst.needed() )
-            continue;
-
-        if( !_dst.fixedSize() )
-            _dst.create(cn, 1, CV_64F, -1, true);
-        Mat dst = _dst.getMat();
-        int dcn = (int)dst.total();
-        CV_Assert( dst.type() == CV_64F && dst.isContinuous() &&
-                   (dst.cols == 1 || dst.rows == 1) && dcn >= cn );
-        double* dptr = dst.ptr<double>();
+        const double* sptr = s;
+        double* dptr = mean_mat.ptr<double>();
         for( k = 0; k < cn; k++ )
             dptr[k] = sptr[k];
-        for( ; k < dcn; k++ )
-            dptr[k] = 0;
+    }
+
+    if (_sdv.needed())
+    {
+        const double* sptr = sq;
+        double* dptr = stddev_mat.ptr<double>();
+        for( k = 0; k < cn; k++ )
+            dptr[k] = sptr[k];
     }
 }
 

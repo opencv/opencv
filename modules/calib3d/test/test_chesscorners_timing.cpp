@@ -40,8 +40,8 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/calib3d/calib3d_c.h"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/calib3d.hpp"
 
 namespace opencv_test { namespace {
 
@@ -67,116 +67,89 @@ void CV_ChessboardDetectorTimingTest::run( int start_from )
     std::string   filepath;
     std::string   filename;
 
-    CvMat*  _v = 0;
-    CvPoint2D32f* v;
-
-    IplImage img;
-    IplImage* gray = 0;
-    IplImage* thresh = 0;
+    std::vector<Point2f> v;
+    Mat img, gray, thresh;
 
     int  idx, max_idx;
     int  progress = 0;
 
     filepath = cv::format("%scv/cameracalibration/", ts->get_data_path().c_str() );
     filename = cv::format("%schessboard_timing_list.dat", filepath.c_str() );
-    CvFileStorage* fs = cvOpenFileStorage( filename.c_str(), 0, CV_STORAGE_READ );
-    CvFileNode* board_list = fs ? cvGetFileNodeByName( fs, 0, "boards" ) : 0;
+    cv::FileStorage fs( filename, FileStorage::READ );
+    cv::FileNode board_list = fs["boards"];
+    cv::FileNodeIterator bl_it = board_list.begin();
 
-    if( !fs || !board_list || !CV_NODE_IS_SEQ(board_list->tag) ||
-        board_list->data.seq->total % 4 != 0 )
+    if( !fs.isOpened() || !board_list.isSeq() || board_list.size() % 4 != 0 )
     {
         ts->printf( cvtest::TS::LOG, "chessboard_timing_list.dat can not be read or is not valid" );
         code = cvtest::TS::FAIL_MISSING_TEST_DATA;
         goto _exit_;
     }
 
-    max_idx = board_list->data.seq->total/4;
+    max_idx = (int)(board_list.size()/4);
+    for( idx = 0; idx < start_from; idx++ )
+    {
+        bl_it += 4;
+    }
 
     for( idx = start_from; idx < max_idx; idx++ )
     {
-        int count0 = -1;
-        int count = 0;
         Size pattern_size;
-        int result, result1 = 0;
 
-        const char* imgname = cvReadString((CvFileNode*)cvGetSeqElem(board_list->data.seq,idx*4), "dummy.txt");
-        int is_chessboard = cvReadInt((CvFileNode*)cvGetSeqElem(board_list->data.seq,idx*4+1), 0);
-        pattern_size.width = cvReadInt((CvFileNode*)cvGetSeqElem(board_list->data.seq,idx*4 + 2), -1);
-        pattern_size.height = cvReadInt((CvFileNode*)cvGetSeqElem(board_list->data.seq,idx*4 + 3), -1);
+        std::string imgname; read(*bl_it++, imgname, "dummy.txt");
+        int is_chessboard = 0;
+        read(*bl_it++, is_chessboard, 0);
+        read(*bl_it++, pattern_size.width, -1);
+        read(*bl_it++, pattern_size.height, -1);
 
         ts->update_context( this, idx-1, true );
 
         /* read the image */
-        filename = cv::format("%s%s", filepath.c_str(), imgname );
+        filename = cv::format("%s%s", filepath.c_str(), imgname.c_str() );
 
-        cv::Mat img2 = cv::imread( filename );
-        img = cvIplImage(img2);
-
-        if( img2.empty() )
+        img = cv::imread( filename );
+        if( img.empty() )
         {
             ts->printf( cvtest::TS::LOG, "one of chessboard images can't be read: %s\n", filename.c_str() );
             code = cvtest::TS::FAIL_MISSING_TEST_DATA;
             continue;
         }
 
-        ts->printf(cvtest::TS::LOG, "%s: chessboard %d:\n", imgname, is_chessboard);
+        ts->printf(cvtest::TS::LOG, "%s: chessboard %d:\n", imgname.c_str(), is_chessboard);
 
-        gray = cvCreateImage( cvSize( img.width, img.height ), IPL_DEPTH_8U, 1 );
-        thresh = cvCreateImage( cvSize( img.width, img.height ), IPL_DEPTH_8U, 1 );
-        cvCvtColor( &img, gray, CV_BGR2GRAY );
+        cvtColor(img, gray, COLOR_BGR2GRAY);
 
+        int64 _time0 = cv::getTickCount();
+        bool result = cv::checkChessboard(gray, pattern_size);
+        int64 _time01 = cv::getTickCount();
+        bool result1 = findChessboardCorners(gray, pattern_size, v, 15);
+        int64 _time1 = cv::getTickCount();
 
-        count0 = pattern_size.width*pattern_size.height;
-
-        /* allocate additional buffers */
-        _v = cvCreateMat(1, count0, CV_32FC2);
-        count = count0;
-
-        v = (CvPoint2D32f*)_v->data.fl;
-
-        int64 _time0 = cvGetTickCount();
-        result = cvCheckChessboard(gray, cvSize(pattern_size));
-        int64 _time01 = cvGetTickCount();
-
-        OPENCV_CALL( result1 = cvFindChessboardCorners(
-                 gray, cvSize(pattern_size), v, &count, 15 ));
-        int64 _time1 = cvGetTickCount();
-
-        if( result != is_chessboard )
+        if( result != (is_chessboard != 0))
         {
             ts->printf( cvtest::TS::LOG, "Error: chessboard was %sdetected in the image %s\n",
-                       result ? "" : "not ", imgname );
+                       result ? "" : "not ", imgname.c_str() );
             code = cvtest::TS::FAIL_INVALID_OUTPUT;
             goto _exit_;
         }
         if(result != result1)
         {
             ts->printf( cvtest::TS::LOG, "Warning: results differ cvCheckChessboard %d, cvFindChessboardCorners %d\n",
-                       result, result1);
+                       (int)result, (int)result1);
         }
 
-        int num_pixels = gray->width*gray->height;
-        float check_chessboard_time = float(_time01 - _time0)/(float)cvGetTickFrequency(); // in us
+        int num_pixels = gray.cols*gray.rows;
+        float check_chessboard_time = float(_time01 - _time0)/(float)cv::getTickFrequency(); // in s
         ts->printf(cvtest::TS::LOG, "    cvCheckChessboard time s: %f, us per pixel: %f\n",
-                   check_chessboard_time*1e-6, check_chessboard_time/num_pixels);
+                   check_chessboard_time, check_chessboard_time*1e6/num_pixels);
 
-        float find_chessboard_time = float(_time1 - _time01)/(float)cvGetTickFrequency();
+        float find_chessboard_time = float(_time1 - _time01)/(float)cv::getTickFrequency();
         ts->printf(cvtest::TS::LOG, "    cvFindChessboard time s: %f, us per pixel: %f\n",
-                   find_chessboard_time*1e-6, find_chessboard_time/num_pixels);
-
-        cvReleaseMat( &_v );
-        cvReleaseImage( &gray );
-        cvReleaseImage( &thresh );
+                   find_chessboard_time, find_chessboard_time*1e6/num_pixels);
         progress = update_progress( progress, idx-1, max_idx, 0 );
     }
 
 _exit_:
-
-    /* release occupied memory */
-    cvReleaseMat( &_v );
-    cvReleaseFileStorage( &fs );
-    cvReleaseImage( &gray );
-    cvReleaseImage( &thresh );
 
     if( code < 0 )
         ts->set_failed_test_info( code );

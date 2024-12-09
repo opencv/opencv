@@ -165,6 +165,8 @@ void quirc_extract(const struct quirc *q, int index,
 /* Decode a QR-code, returning the payload data. */
 quirc_decode_error_t quirc_decode(const struct quirc_code *code,
 				  struct quirc_data *data);
+/* flip the QR code horizontaly (mirror flip) */
+void quirc_flip(struct quirc_code *code);
 
 #ifdef __cplusplus
 }

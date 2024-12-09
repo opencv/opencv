@@ -1,8 +1,15 @@
 Remapping {#tutorial_remap}
 =========
 
+@tableofcontents
+
 @prev_tutorial{tutorial_generalized_hough_ballard_guil}
 @next_tutorial{tutorial_warp_affine}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -38,7 +45,7 @@ Theory
 
     ![](images/Remap_Tutorial_Theory_0.jpg)
 
-    observe how the red circle changes positions with respect to x (considering \f$x\f$ the horizontal
+    observe how the red circle changes positions with respect to \f$x\f$ (considering \f$x\f$ the horizontal
     direction):
 
     ![](images/Remap_Tutorial_Theory_1.jpg)
@@ -55,20 +62,20 @@ Code
     -   Wait for the user to exit the program
 
 @add_toggle_cpp
--   The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp)
+-   The tutorial code is shown lines below. You can also download it from
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/Remap_Demo.cpp
 @end_toggle
 
 @add_toggle_java
--   The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java)
+-   The tutorial code is shown lines below. You can also download it from
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java)
     @include samples/java/tutorial_code/ImgTrans/remap/RemapDemo.java
 @end_toggle
 
 @add_toggle_python
--   The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py)
+-   The tutorial code is shown lines below. You can also download it from
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py)
     @include samples/python/tutorial_code/ImgTrans/remap/Remap_Demo.py
 @end_toggle
 

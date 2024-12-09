@@ -72,6 +72,7 @@
 #include "precomp.hpp"
 #include <opencv2/core/hal/hal.hpp>
 #include <opencv2/core/utils/tls.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 #include "sift.simd.hpp"
 #include "sift.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
@@ -88,7 +89,8 @@ class SIFT_Impl : public SIFT
 public:
     explicit SIFT_Impl( int nfeatures = 0, int nOctaveLayers = 3,
                           double contrastThreshold = 0.04, double edgeThreshold = 10,
-                          double sigma = 1.6, int descriptorType = CV_32F );
+                          double sigma = 1.6, int descriptorType = CV_32F,
+                          bool enable_precise_upscale = true );
 
     //! returns the descriptor size in floats (128)
     int descriptorSize() const CV_OVERRIDE;
@@ -111,6 +113,24 @@ public:
     void findScaleSpaceExtrema( const std::vector<Mat>& gauss_pyr, const std::vector<Mat>& dog_pyr,
                                std::vector<KeyPoint>& keypoints ) const;
 
+    void read( const FileNode& fn) CV_OVERRIDE;
+    void write( FileStorage& fs) const CV_OVERRIDE;
+
+    void setNFeatures(int maxFeatures) CV_OVERRIDE { nfeatures = maxFeatures; }
+    int getNFeatures() const CV_OVERRIDE { return nfeatures; }
+
+    void setNOctaveLayers(int nOctaveLayers_) CV_OVERRIDE { nOctaveLayers = nOctaveLayers_; }
+    int getNOctaveLayers() const CV_OVERRIDE { return nOctaveLayers; }
+
+    void setContrastThreshold(double contrastThreshold_) CV_OVERRIDE  { contrastThreshold = contrastThreshold_; }
+    double getContrastThreshold() const CV_OVERRIDE { return contrastThreshold; }
+
+    void setEdgeThreshold(double edgeThreshold_) CV_OVERRIDE  { edgeThreshold = edgeThreshold_; }
+    double getEdgeThreshold() const CV_OVERRIDE { return edgeThreshold; }
+
+    void setSigma(double sigma_) CV_OVERRIDE  { sigma = sigma_; }
+    double getSigma() const CV_OVERRIDE { return sigma; }
+
 protected:
     CV_PROP_RW int nfeatures;
     CV_PROP_RW int nOctaveLayers;
@@ -118,24 +138,25 @@ protected:
     CV_PROP_RW double edgeThreshold;
     CV_PROP_RW double sigma;
     CV_PROP_RW int descriptor_type;
+    CV_PROP_RW bool enable_precise_upscale;
 };
 
 Ptr<SIFT> SIFT::create( int _nfeatures, int _nOctaveLayers,
-                     double _contrastThreshold, double _edgeThreshold, double _sigma )
+                     double _contrastThreshold, double _edgeThreshold, double _sigma, bool enable_precise_upscale )
 {
     CV_TRACE_FUNCTION();
 
-    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, CV_32F);
+    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, CV_32F, enable_precise_upscale);
 }
 
 Ptr<SIFT> SIFT::create( int _nfeatures, int _nOctaveLayers,
-                     double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType )
+                     double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType, bool enable_precise_upscale )
 {
     CV_TRACE_FUNCTION();
 
     // SIFT descriptor supports 32bit floating point and 8bit unsigned int.
     CV_Assert(_descriptorType == CV_32F || _descriptorType == CV_8U);
-    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, _descriptorType);
+    return makePtr<SIFT_Impl>(_nfeatures, _nOctaveLayers, _contrastThreshold, _edgeThreshold, _sigma, _descriptorType, enable_precise_upscale);
 }
 
 String SIFT::getDefaultName() const
@@ -152,7 +173,7 @@ unpackOctave(const KeyPoint& kpt, int& octave, int& layer, float& scale)
     scale = octave >= 0 ? 1.f/(1 << octave) : (float)(1 << -octave);
 }
 
-static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma )
+static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma, bool enable_precise_upscale )
 {
     CV_TRACE_FUNCTION();
 
@@ -170,12 +191,22 @@ static Mat createInitialImage( const Mat& img, bool doubleImageSize, float sigma
     if( doubleImageSize )
     {
         sig_diff = sqrtf( std::max(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4, 0.01f) );
+
         Mat dbl;
+        if (enable_precise_upscale) {
+            dbl.create(Size(gray_fpt.cols*2, gray_fpt.rows*2), gray_fpt.type());
+            Mat H = Mat::zeros(2, 3, CV_32F);
+            H.at<float>(0, 0) = 0.5f;
+            H.at<float>(1, 1) = 0.5f;
+
+            cv::warpAffine(gray_fpt, dbl, H, dbl.size(), INTER_LINEAR | WARP_INVERSE_MAP, BORDER_REFLECT);
+        } else {
 #if DoG_TYPE_SHORT
-        resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR_EXACT);
+            resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR_EXACT);
 #else
-        resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR);
+            resize(gray_fpt, dbl, Size(gray_fpt.cols*2, gray_fpt.rows*2), 0, 0, INTER_LINEAR);
 #endif
+        }
         Mat result;
         GaussianBlur(dbl, result, Size(), sig_diff, sig_diff);
         return result;
@@ -441,10 +472,14 @@ static void calcDescriptors(const std::vector<Mat>& gpyr, const std::vector<KeyP
 //////////////////////////////////////////////////////////////////////////////////////////
 
 SIFT_Impl::SIFT_Impl( int _nfeatures, int _nOctaveLayers,
-           double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType )
+           double _contrastThreshold, double _edgeThreshold, double _sigma, int _descriptorType, bool _enable_precise_upscale)
     : nfeatures(_nfeatures), nOctaveLayers(_nOctaveLayers),
-    contrastThreshold(_contrastThreshold), edgeThreshold(_edgeThreshold), sigma(_sigma), descriptor_type(_descriptorType)
+    contrastThreshold(_contrastThreshold), edgeThreshold(_edgeThreshold), sigma(_sigma), descriptor_type(_descriptorType),
+    enable_precise_upscale(_enable_precise_upscale)
 {
+    if (!enable_precise_upscale) {
+        CV_LOG_ONCE_INFO(NULL, "precise upscale disabled, this is now deprecated as it was found to induce a location bias");
+    }
 }
 
 int SIFT_Impl::descriptorSize() const
@@ -498,7 +533,7 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
         actualNOctaves = maxOctave - firstOctave + 1;
     }
 
-    Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
+    Mat base = createInitialImage(image, firstOctave < 0, (float)sigma, enable_precise_upscale);
     std::vector<Mat> gpyr;
     int nOctaves = actualNOctaves > 0 ? actualNOctaves : cvRound(std::log( (double)std::min( base.cols, base.rows ) ) / std::log(2.) - 2) - firstOctave;
 
@@ -552,6 +587,36 @@ void SIFT_Impl::detectAndCompute(InputArray _image, InputArray _mask,
         //t = (double)getTickCount() - t;
         //printf("descriptor extraction time: %g\n", t*1000./tf);
     }
+}
+
+void SIFT_Impl::read( const FileNode& fn)
+{
+  // if node is empty, keep previous value
+  if (!fn["nfeatures"].empty())
+    fn["nfeatures"] >> nfeatures;
+  if (!fn["nOctaveLayers"].empty())
+    fn["nOctaveLayers"] >> nOctaveLayers;
+  if (!fn["contrastThreshold"].empty())
+    fn["contrastThreshold"] >> contrastThreshold;
+  if (!fn["edgeThreshold"].empty())
+    fn["edgeThreshold"] >> edgeThreshold;
+  if (!fn["sigma"].empty())
+    fn["sigma"] >> sigma;
+  if (!fn["descriptorType"].empty())
+    fn["descriptorType"] >> descriptor_type;
+}
+void SIFT_Impl::write( FileStorage& fs) const
+{
+  if(fs.isOpened())
+  {
+    fs << "name" << getDefaultName();
+    fs << "nfeatures" << nfeatures;
+    fs << "nOctaveLayers" << nOctaveLayers;
+    fs << "contrastThreshold" << contrastThreshold;
+    fs << "edgeThreshold" << edgeThreshold;
+    fs << "sigma" << sigma;
+    fs << "descriptorType" << descriptor_type;
+  }
 }
 
 }

@@ -42,13 +42,22 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
+#include "../op_cann.hpp"
+
 #include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/eltwise.hpp"
+#include "../cuda4dnn/primitives/shortcut.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -64,7 +73,8 @@ public:
         PROD = 0,
         SUM = 1,
         MAX = 2,
-        DIV = 3
+        DIV = 3,
+        MIN = 4,
     } op;
     std::vector<float> coeffs;
 
@@ -95,13 +105,15 @@ public:
         op = SUM;
         if (params.has("operation"))
         {
-            String operation = params.get<String>("operation").toLowerCase();
+            String operation = toLowerCase(params.get<String>("operation"));
             if (operation == "prod")
                 op = PROD;
             else if (operation == "sum")
                 op = SUM;
             else if (operation == "max")
                 op = MAX;
+            else if (operation == "min")
+                op = MIN;
             else if (operation == "div")
                 op = DIV;
             else
@@ -159,8 +171,21 @@ public:
             return channelsMode == ELTWISE_CHANNNELS_SAME;
 #endif
 
+#ifdef HAVE_CANN
+        if (backendId == DNN_BACKEND_CANN)
+            return channelsMode == ELTWISE_CHANNNELS_SAME && coeffs.empty();
+#endif
+
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            if(channelsModeInput == ELTWISE_CHANNNELS_INPUT_0 || channelsModeInput == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE)
+                return op == SUM && coeffs.empty();
+            return channelsModeInput == ELTWISE_CHANNNELS_SAME;
+        }
+
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_HALIDE;
+               (backendId == DNN_BACKEND_HALIDE && op != DIV)  // TODO: not implemented, see PR #15811
+               ;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -459,6 +484,13 @@ public:
                                     dstptr[j] = std::max(srcptr0[j], srcptrI[j]);
                                 }
                             }
+                            else if (op == MIN)
+                            {
+                                for (int j = 0; j < blockSize; j++)
+                                {
+                                    dstptr[j] = std::min(srcptr0[j], srcptrI[j]);
+                                }
+                            }
                             else if (op == SUM)
                             {
                                 if (!coeffsptr || (coeffsptr[0] == 1.0f && coeffsptr[1] == 1.0f))
@@ -513,6 +545,13 @@ public:
                                 dstptr[j] = std::max(dstptr[j], srcptrI[j]);
                             }
                         }
+                        else if (op == MIN)
+                        {
+                            for (int j = 0; j < blockSize; j++)
+                            {
+                                dstptr[j] = std::min(dstptr[j], srcptrI[j]);
+                            }
+                        }
                         else if (op == SUM)
                         {
                             if (!coeffsptr || coeffsptr[inputIdx] == 1.0f)
@@ -551,7 +590,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        if ((inputs_.depth() == CV_16S && op != SUM) || (channelsMode != ELTWISE_CHANNNELS_SAME))
+        if ((inputs_.depth() == CV_16F && op != SUM) || (channelsMode != ELTWISE_CHANNNELS_SAME))
             return false;
 
         if (hasVecInput)
@@ -571,7 +610,7 @@ public:
                         size_t localsize[] = { 128 };
                         size_t globalsize[] = { (size_t)channels / 4 * localsize[0] };
                         String opts;
-                        if (inputs_.depth() == CV_16S)
+                        if (inputs_.depth() == CV_16F)
                             opts = " -DDtype=half -DDtype4=half4 -DDtype8=half8";
                         else
                             opts = " -DDtype=float -DDtype4=float4 -DDtype8=float8";
@@ -597,7 +636,7 @@ public:
                     }
                     else
                     {
-                        if (inputs_.depth() == CV_16S)
+                        if (inputs_.depth() == CV_16F)
                             return false;
 
                         float coeff1 = coeffs.empty() ? 1.f : coeffs[0];
@@ -630,6 +669,11 @@ public:
                 for (int i = 2; i < inputs.size(); ++i)
                     max(inputs[i], outputs[0], outputs[0]);
                 break;
+            case MIN:
+                min(inputs[0], inputs[1], outputs[0]);
+                for (int i = 2; i < inputs.size(); ++i)
+                    min(inputs[i], outputs[0], outputs[0]);
+                break;
             default:
                 return false;
         }
@@ -645,7 +689,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -703,6 +747,49 @@ public:
                             nstripes);
     }
 
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        CV_Assert(channelsModeInput == ELTWISE_CHANNNELS_INPUT_0 ||
+                  channelsModeInput == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE ||
+                  channelsModeInput == ELTWISE_CHANNNELS_SAME);
+
+        if(channelsModeInput == ELTWISE_CHANNNELS_INPUT_0 || channelsModeInput == ELTWISE_CHANNNELS_INPUT_0_TRUNCATE)
+        {
+            auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+            for (int i = 1; i < inputs.size(); i++)
+            {
+                auto from_wrapper = inputs[i].dynamicCast<CUDABackendWrapper>();
+                if (input_wrapper->getShape()[1] != from_wrapper->getShape()[1])
+                {
+                    CV_Assert(op == SUM);
+                    CV_Assert(coeffs.empty());
+                    return make_cuda_node<cuda4dnn::ShortcutOp>(preferableTarget, std::move(context->stream));
+                }
+            }
+        }
+
+        auto op_ = [this] {
+            switch (op) {
+            case MAX: return cuda4dnn::EltwiseOpType::MAX;
+            case MIN: return cuda4dnn::EltwiseOpType::MIN;
+            case SUM: return cuda4dnn::EltwiseOpType::SUM;
+            case PROD: return cuda4dnn::EltwiseOpType::PRODUCT;
+            case DIV: return cuda4dnn::EltwiseOpType::DIV;
+            }
+            return cuda4dnn::EltwiseOpType::SUM;
+        }();
+
+        return make_cuda_node<cuda4dnn::EltwiseOp>(preferableTarget, std::move(context->stream), op_, coeffs);
+    }
+#endif
+
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
@@ -746,6 +833,12 @@ public:
                 for (int i = 2; i < inputBuffers.size(); ++i)
                     topExpr = max(topExpr, inputBuffers[i](x, y, c, n));
                 break;
+            case MIN:
+                topExpr = min(inputBuffers[0](x, y, c, n),
+                              inputBuffers[1](x, y, c, n));
+                for (int i = 2; i < inputBuffers.size(); ++i)
+                    topExpr = min(topExpr, inputBuffers[i](x, y, c, n));
+                break;
             default:
                 return Ptr<BackendNode>();
         }
@@ -755,35 +848,114 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() == 2);
+        CV_Assert(nodes.size() == 2);
+
+        auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto x1 = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto x1_desc = x1->getTensorDesc();
+        auto op_x2 = nodes[1].dynamicCast<CannBackendNode>()->getOp();
+        auto x2 = inputs[1].dynamicCast<CannBackendWrapper>();
+        auto x2_desc = x2->getTensorDesc();
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        std::shared_ptr<ge::Operator> eltwise_operator = nullptr;
+        // add, mul, div, max, min
+        switch (op)
+        {
+#define BUILD_CANN_ELTWISE_OP(op_type, class_name, op_name)                 \
+            case op_type: {                                                 \
+                auto eltwise_op =                                           \
+                  std::make_shared<ge::op::class_name>(op_name);            \
+                eltwise_op->set_input_x1_by_name(*op_x1, x1->name.c_str()); \
+                eltwise_op->set_input_x2_by_name(*op_x2, x2->name.c_str()); \
+                eltwise_op->update_input_desc_x1(*x1_desc);                 \
+                eltwise_op->update_input_desc_x2(*x2_desc);                 \
+                eltwise_op->update_output_desc_y(*output_desc);             \
+                eltwise_operator = eltwise_op;                              \
+            } break;
+            BUILD_CANN_ELTWISE_OP(SUM, Add, name);
+            BUILD_CANN_ELTWISE_OP(PROD, Mul, name);
+            BUILD_CANN_ELTWISE_OP(DIV, Xdivy, name);
+            BUILD_CANN_ELTWISE_OP(MAX, Maximum, name);
+            BUILD_CANN_ELTWISE_OP(MIN, Minimum, name);
+#undef BUILD_CANN_ELTWISE_OP
+            default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
+        }
+
+        return Ptr<BackendNode>(new CannBackendNode(eltwise_operator));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
+        CV_Assert(nodes.size() >= 2);
         auto curr_node = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         if (!coeffs.empty()) {
-            auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[0]);
-            curr_node = std::make_shared<ngraph::op::v1::Multiply>(curr_node, coeff, ngraph::op::AutoBroadcastType::NUMPY);
+            auto coeff = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &coeffs[0]);
+            curr_node = std::make_shared<ov::op::v1::Multiply>(curr_node, coeff, ov::op::AutoBroadcastType::NUMPY);
         }
 
+        std::shared_ptr<ov::Node> res;
         for (size_t i = 1; i < nodes.size(); i++)
         {
             auto next_node = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
             if (!coeffs.empty()) {
-                auto coeff = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeffs[i]);
-                next_node = std::make_shared<ngraph::op::v1::Multiply>(next_node, coeff, ngraph::op::AutoBroadcastType::NUMPY);
+                auto coeff = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &coeffs[i]);
+                next_node = std::make_shared<ov::op::v1::Multiply>(next_node, coeff, ov::op::AutoBroadcastType::NUMPY);
             }
             switch (op) {
-                case SUM:  curr_node = std::make_shared<ngraph::op::v1::Add>(curr_node, next_node); break;
-                case PROD: curr_node = std::make_shared<ngraph::op::v1::Multiply>(curr_node, next_node); break;
-                case DIV:  curr_node = std::make_shared<ngraph::op::v1::Divide>(curr_node, next_node); break;
-                case MAX:  curr_node = std::make_shared<ngraph::op::v1::Maximum>(curr_node, next_node); break;
+                case SUM:  res = std::make_shared<ov::op::v1::Add>(curr_node, next_node); break;
+                case PROD: res = std::make_shared<ov::op::v1::Multiply>(curr_node, next_node); break;
+                case DIV:  res = std::make_shared<ov::op::v1::Divide>(curr_node, next_node); break;
+                case MAX:  res = std::make_shared<ov::op::v1::Maximum>(curr_node, next_node); break;
+                case MIN:  res = std::make_shared<ov::op::v1::Minimum>(curr_node, next_node); break;
                 default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
             }
+            curr_node = res;
         }
-        return Ptr<BackendNode>(new InfEngineNgraphNode(curr_node));
+        return Ptr<BackendNode>(new InfEngineNgraphNode(res));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+    virtual bool tryQuantize(const std::vector<std::vector<float> > &scales,
+                             const std::vector<std::vector<int> > &zeropoints, LayerParams& params) CV_OVERRIDE
+    {
+        params.set("input_scales", DictValue::arrayReal(scales[0].data(), scales[0].size()));
+        params.set("input_zeropoints", DictValue::arrayInt(zeropoints[0].data(), zeropoints[0].size()));
+        if (op == SUM)
+        {
+            std::vector<float> newCoeffs;
+            float offset = zeropoints[1][0];
+            float out_sc = scales[1][0];
+            for (int i = 0; i < scales[0].size(); i++)
+            {
+                float coeff = coeffs.empty() ? 1.f : coeffs[i];
+                float newcoeff = (scales[0][i] * coeff) / out_sc;
+                newCoeffs.push_back(newcoeff);
+                offset -= (newcoeff * zeropoints[0][i]);
+            }
+            params.set("coeff", DictValue::arrayReal(newCoeffs.data(), newCoeffs.size()));
+            params.set("offset", offset);
+            return true;
+        }
+        else if (op == PROD)
+        {
+            std::vector<float> newCoeffs = scales[0];
+            newCoeffs[0] /= scales[1][0];
+            params.set("coeff", DictValue::arrayReal(newCoeffs.data(), newCoeffs.size()));
+            params.set("offset", zeropoints[1][0]);
+            return true;
+        }
+        return op == MAX;
+    }
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

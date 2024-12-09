@@ -7,11 +7,13 @@ import java.util.List;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Range;
+import org.opencv.core.Scalar;
 import org.opencv.core.DMatch;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.Features2d;
@@ -77,8 +79,8 @@ public class Features2dTest extends OpenCVTestCase {
 
     public void testPTOD()
     {
-        String detectorCfg = "%YAML:1.0\n---\nhessianThreshold: 4000.\noctaves: 3\noctaveLayers: 4\nupright: 0\n";
-        String extractorCfg = "%YAML:1.0\n---\nnOctaves: 4\nnOctaveLayers: 2\nextended: 0\nupright: 0\n";
+        String detectorCfg = "%YAML:1.0\n---\nhessianThreshold: 4000.\nextended: 0\nupright: 0\nOctaves: 4\nOctaveLayers: 3\n";
+        String extractorCfg = "%YAML:1.0\n---\nhessianThreshold: 4000.\nextended: 0\nupright: 0\nOctaves: 4\nOctaveLayers: 3\n";
 
         Feature2D detector = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
         Feature2D extractor = createClassInstance(XFEATURES2D+"SURF", DEFAULT_FACTORY, null, null);
@@ -92,7 +94,7 @@ public class Features2dTest extends OpenCVTestCase {
         writeFile(extractorCfgFile, extractorCfg);
         extractor.read(extractorCfgFile);
 
-        Mat imgTrain = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.CV_LOAD_IMAGE_GRAYSCALE);
+        Mat imgTrain = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.IMREAD_GRAYSCALE);
         Mat imgQuery = imgTrain.submat(new Range(0, imgTrain.rows() - 100), Range.all());
 
         MatOfKeyPoint trainKeypoints = new MatOfKeyPoint();
@@ -140,5 +142,31 @@ public class Features2dTest extends OpenCVTestCase {
         String outputPath = OpenCVTestRunner.getOutputFileName("PTODresult.png");
         Imgcodecs.imwrite(outputPath, outimg);
         // OpenCVTestRunner.Log("Output image is saved to: " + outputPath);
+    }
+
+    public void testDrawKeypoints()
+    {
+        Mat outImg = Mat.ones(11, 11, CvType.CV_8U);
+
+        MatOfKeyPoint kps = new MatOfKeyPoint(new KeyPoint(5, 5, 1));  // x, y, size
+        Features2d.drawKeypoints(new Mat(), kps, outImg, new Scalar(255),
+                                 Features2d.DrawMatchesFlags_DRAW_OVER_OUTIMG);
+
+        Mat ref = new MatOfInt(new int[] {
+            1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1,
+            1,   1,   1,   1,  15,  54,  15,   1,   1,   1,   1,
+            1,   1,   1,  76, 217, 217, 221,  81,   1,   1,   1,
+            1,   1, 100, 224, 111,  57, 115, 225, 101,   1,   1,
+            1,  44, 215, 100,   1,   1,   1, 101, 214,  44,   1,
+            1,  54, 212,  57,   1,   1,   1,  55, 212,  55,   1,
+            1,  40, 215, 104,   1,   1,   1, 105, 215,  40,   1,
+            1,   1, 102, 221, 111,  55, 115, 222, 103,   1,   1,
+            1,   1,   1,  76, 218, 217, 220,  81,   1,   1,   1,
+            1,   1,   1,   1,  15,  55,  15,   1,   1,   1,   1,
+            1,   1,   1,   1,   1,   1,   1,   1,   1,   1,   1
+        }).reshape(1, 11);
+        ref.convertTo(ref, CvType.CV_8U);
+
+        assertMatEqual(ref, outImg);
     }
 }

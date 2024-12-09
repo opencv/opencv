@@ -26,6 +26,10 @@ CV_EXPORTS cv::String canonical(const cv::String& path);
 /** Join path components */
 CV_EXPORTS cv::String join(const cv::String& base, const cv::String& path);
 
+/** Get parent directory */
+CV_EXPORTS cv::String getParent(const cv::String &path);
+CV_EXPORTS std::wstring getParent(const std::wstring& path);
+
 /**
  * Generate a list of all files that match the globbing pattern.
  *
@@ -58,7 +62,7 @@ CV_EXPORTS void glob_relative(const cv::String& directory, const cv::String& pat
 CV_EXPORTS bool createDirectory(const cv::String& path);
 CV_EXPORTS bool createDirectories(const cv::String& path);
 
-#ifdef __OPENCV_BUILD
+#if defined(__OPENCV_BUILD) || defined(BUILD_PLUGIN)
 // TODO
 //CV_EXPORTS cv::String getTempDirectory();
 

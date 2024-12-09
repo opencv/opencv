@@ -1,8 +1,15 @@
 Creating Bounding rotated boxes and ellipses for contours {#tutorial_bounding_rotated_ellipses}
 =========================================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_bounding_rects_circles}
 @next_tutorial{tutorial_moments}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -20,19 +27,19 @@ Code
 
 @add_toggle_cpp
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo2.cpp)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo2.cpp)
 @include samples/cpp/tutorial_code/ShapeDescriptors/generalContours_demo2.cpp
 @end_toggle
 
 @add_toggle_java
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ShapeDescriptors/bounding_rotated_ellipses/GeneralContoursDemo2.java)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/ShapeDescriptors/bounding_rotated_ellipses/GeneralContoursDemo2.java)
 @include samples/java/tutorial_code/ShapeDescriptors/bounding_rotated_ellipses/GeneralContoursDemo2.java
 @end_toggle
 
 @add_toggle_python
 This tutorial code's is shown lines below. You can also download it from
-[here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/ShapeDescriptors/bounding_rotated_ellipses/generalContours_demo2.py)
+[here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/ShapeDescriptors/bounding_rotated_ellipses/generalContours_demo2.py)
 @include samples/python/tutorial_code/ShapeDescriptors/bounding_rotated_ellipses/generalContours_demo2.py
 @end_toggle
 

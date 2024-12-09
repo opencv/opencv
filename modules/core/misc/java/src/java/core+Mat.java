@@ -466,14 +466,33 @@ public class Mat {
     // C++: Mat Mat::mul(Mat m, double scale = 1)
     //
 
-    // javadoc: Mat::mul(m, scale)
+    /**
+     * Element-wise multiplication with scale factor
+     * @param m operand with with which to perform element-wise multiplication
+     * @param scale scale factor
+     * @return reference to a new Mat object
+     */
     public Mat mul(Mat m, double scale) {
         return new Mat(n_mul(nativeObj, m.nativeObj, scale));
     }
 
-    // javadoc: Mat::mul(m)
+    /**
+    * Element-wise multiplication
+    * @param m operand with with which to perform element-wise multiplication
+    * @return reference to a new Mat object
+    */
     public Mat mul(Mat m) {
         return new Mat(n_mul(nativeObj, m.nativeObj));
+    }
+
+    /**
+    * Matrix multiplication
+    * @param m operand with with which to perform matrix multiplication
+    * @see Core#gemm(Mat, Mat, double, Mat, double, Mat, int)
+    * @return reference to a new Mat object
+    */
+    public Mat matMul(Mat m) {
+        return new Mat(n_matMul(nativeObj, m.nativeObj));
     }
 
     //
@@ -1128,6 +1147,458 @@ public class Mat {
         return cols();
     }
 
+    // javadoc:Mat::at(clazz, row, col)
+    @SuppressWarnings("unchecked")
+    public <T> Atable<T> at(Class<T> clazz, int row, int col) {
+        if (clazz == Byte.class || clazz == byte.class) {
+            return (Atable<T>)new AtableByte(this, row, col);
+        } else if (clazz == Double.class || clazz == double.class) {
+            return (Atable<T>)new AtableDouble(this, row, col);
+        } else if (clazz == Float.class || clazz == float.class) {
+            return (Atable<T>)new AtableFloat(this, row, col);
+        } else if (clazz == Integer.class || clazz == int.class) {
+            return (Atable<T>)new AtableInteger(this, row, col);
+        } else if (clazz == Short.class || clazz == short.class) {
+            return (Atable<T>)new AtableShort(this, row, col);
+        } else {
+            throw new RuntimeException("Unsupported class type");
+        }
+    }
+
+    // javadoc:Mat::at(clazz, idx)
+    @SuppressWarnings("unchecked")
+    public <T> Atable<T> at(Class<T> clazz, int[] idx) {
+        if (clazz == Byte.class || clazz == byte.class) {
+            return (Atable<T>)new AtableByte(this, idx);
+        } else if (clazz == Double.class || clazz == double.class) {
+            return (Atable<T>)new AtableDouble(this, idx);
+        } else if (clazz == Float.class || clazz == float.class) {
+            return (Atable<T>)new AtableFloat(this, idx);
+        } else if (clazz == Integer.class || clazz == int.class) {
+            return (Atable<T>)new AtableInteger(this, idx);
+        } else if (clazz == Short.class || clazz == short.class) {
+            return (Atable<T>)new AtableShort(this, idx);
+        } else {
+            throw new RuntimeException("Unsupported class parameter");
+        }
+    }
+
+    public static class Tuple2<T> {
+        public Tuple2(T _0, T _1) {
+            this._0 = _0;
+            this._1 = _1;
+        }
+
+        public T get_0() {
+            return _0;
+        }
+
+        public T get_1() {
+            return _1;
+        }
+
+        private final T _0;
+        private final T _1;
+    }
+
+    public static class Tuple3<T> {
+        public Tuple3(T _0, T _1, T _2) {
+            this._0 = _0;
+            this._1 = _1;
+            this._2 = _2;
+        }
+
+        public T get_0() {
+            return _0;
+        }
+
+        public T get_1() {
+            return _1;
+        }
+
+        public T get_2() {
+            return _2;
+        }
+
+        private final T _0;
+        private final T _1;
+        private final T _2;
+    }
+
+    public static class Tuple4<T> {
+        public Tuple4(T _0, T _1, T _2, T _3) {
+            this._0 = _0;
+            this._1 = _1;
+            this._2 = _2;
+            this._3 = _3;
+        }
+
+        public T get_0() {
+            return _0;
+        }
+
+        public T get_1() {
+            return _1;
+        }
+
+        public T get_2() {
+            return _2;
+        }
+
+        public T get_3() {
+            return _3;
+        }
+
+        private final T _0;
+        private final T _1;
+        private final T _2;
+        private final T _3;
+    }
+
+    public interface Atable<T> {
+        T getV();
+        void setV(T v);
+        Tuple2<T> getV2c();
+        void setV2c(Tuple2<T> v);
+        Tuple3<T> getV3c();
+        void setV3c(Tuple3<T> v);
+        Tuple4<T> getV4c();
+        void setV4c(Tuple4<T> v);
+    }
+
+    private static class AtableBase {
+
+        protected AtableBase(Mat mat, int row, int col) {
+            this.mat = mat;
+            indices = new int[2];
+            indices[0] = row;
+            indices[1] = col;
+        }
+
+        protected AtableBase(Mat mat, int[] indices) {
+            this.mat = mat;
+            this.indices = indices;
+        }
+
+        protected final Mat mat;
+        protected final int[] indices;
+    }
+
+    private static class AtableByte extends AtableBase implements Atable<Byte> {
+
+        public AtableByte(Mat mat, int row, int col) {
+            super(mat, row, col);
+        }
+
+        public AtableByte(Mat mat, int[] indices) {
+            super(mat, indices);
+        }
+
+        @Override
+        public Byte getV() {
+            byte[] data = new byte[1];
+            mat.get(indices, data);
+            return data[0];
+        }
+
+        @Override
+        public void setV(Byte v) {
+            byte[] data = new byte[] { v };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple2<Byte> getV2c() {
+            byte[] data = new byte[2];
+            mat.get(indices, data);
+            return new Tuple2<Byte>(data[0], data[1]);
+        }
+
+        @Override
+        public void setV2c(Tuple2<Byte> v) {
+            byte[] data = new byte[] { v._0, v._1 };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple3<Byte> getV3c() {
+            byte[] data = new byte[3];
+            mat.get(indices, data);
+            return new Tuple3<Byte>(data[0], data[1], data[2]);
+        }
+
+        @Override
+        public void setV3c(Tuple3<Byte> v) {
+            byte[] data = new byte[] { v._0, v._1, v._2 };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple4<Byte> getV4c() {
+            byte[] data = new byte[4];
+            mat.get(indices, data);
+            return new Tuple4<Byte>(data[0], data[1], data[2], data[3]);
+        }
+
+        @Override
+        public void setV4c(Tuple4<Byte> v) {
+            byte[] data = new byte[] { v._0, v._1, v._2, v._3 };
+            mat.put(indices, data);
+        }
+    }
+
+    private static class AtableDouble extends AtableBase implements Atable<Double> {
+
+        public AtableDouble(Mat mat, int row, int col) {
+            super(mat, row, col);
+        }
+
+        public AtableDouble(Mat mat, int[] indices) {
+            super(mat, indices);
+        }
+
+        @Override
+        public Double getV() {
+            double[] data = new double[1];
+            mat.get(indices, data);
+            return data[0];
+        }
+
+        @Override
+        public void setV(Double v) {
+            double[] data = new double[] { v };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple2<Double> getV2c() {
+            double[] data = new double[2];
+            mat.get(indices, data);
+            return new Tuple2<Double>(data[0], data[1]);
+        }
+
+        @Override
+        public void setV2c(Tuple2<Double> v) {
+            double[] data = new double[] { v._0, v._1 };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple3<Double> getV3c() {
+            double[] data = new double[3];
+            mat.get(indices, data);
+            return new Tuple3<Double>(data[0], data[1], data[2]);
+        }
+
+        @Override
+        public void setV3c(Tuple3<Double> v) {
+            double[] data = new double[] { v._0, v._1, v._2 };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple4<Double> getV4c() {
+            double[] data = new double[4];
+            mat.get(indices, data);
+            return new Tuple4<Double>(data[0], data[1], data[2], data[3]);
+        }
+
+        @Override
+        public void setV4c(Tuple4<Double> v) {
+            double[] data = new double[] { v._0, v._1, v._2, v._3 };
+            mat.put(indices, data);
+        }
+    }
+
+    private static class AtableFloat extends AtableBase implements Atable<Float> {
+
+        public AtableFloat(Mat mat, int row, int col) {
+            super(mat, row, col);
+        }
+
+        public AtableFloat(Mat mat, int[] indices) {
+            super(mat, indices);
+        }
+
+        @Override
+        public Float getV() {
+            float[] data = new float[1];
+            mat.get(indices, data);
+            return data[0];
+        }
+
+        @Override
+        public void setV(Float v) {
+            float[] data = new float[] { v };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple2<Float> getV2c() {
+            float[] data = new float[2];
+            mat.get(indices, data);
+            return new Tuple2<Float>(data[0], data[1]);
+        }
+
+        @Override
+        public void setV2c(Tuple2<Float> v) {
+            float[] data = new float[] { v._0, v._1 };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple3<Float> getV3c() {
+            float[] data = new float[3];
+            mat.get(indices, data);
+            return new Tuple3<Float>(data[0], data[1], data[2]);
+        }
+
+        @Override
+        public void setV3c(Tuple3<Float> v) {
+            float[] data = new float[] { v._0, v._1, v._2 };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple4<Float> getV4c() {
+            float[] data = new float[4];
+            mat.get(indices, data);
+            return new Tuple4<Float>(data[0], data[1], data[2], data[3]);
+        }
+
+        @Override
+        public void setV4c(Tuple4<Float> v) {
+            double[] data = new double[] { v._0, v._1, v._2, v._3 };
+            mat.put(indices, data);
+        }
+    }
+
+    private static class AtableInteger extends AtableBase implements Atable<Integer> {
+
+        public AtableInteger(Mat mat, int row, int col) {
+            super(mat, row, col);
+        }
+
+        public AtableInteger(Mat mat, int[] indices) {
+            super(mat, indices);
+        }
+
+        @Override
+        public Integer getV() {
+            int[] data = new int[1];
+            mat.get(indices, data);
+            return data[0];
+        }
+
+        @Override
+        public void setV(Integer v) {
+            int[] data = new int[] { v };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple2<Integer> getV2c() {
+            int[] data = new int[2];
+            mat.get(indices, data);
+            return new Tuple2<Integer>(data[0], data[1]);
+        }
+
+        @Override
+        public void setV2c(Tuple2<Integer> v) {
+            int[] data = new int[] { v._0, v._1 };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple3<Integer> getV3c() {
+            int[] data = new int[3];
+            mat.get(indices, data);
+            return new Tuple3<Integer>(data[0], data[1], data[2]);
+        }
+
+        @Override
+        public void setV3c(Tuple3<Integer> v) {
+            int[] data = new int[] { v._0, v._1, v._2 };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple4<Integer> getV4c() {
+            int[] data = new int[4];
+            mat.get(indices, data);
+            return new Tuple4<Integer>(data[0], data[1], data[2], data[3]);
+        }
+
+        @Override
+        public void setV4c(Tuple4<Integer> v) {
+            int[] data = new int[] { v._0, v._1, v._2, v._3 };
+            mat.put(indices, data);
+        }
+    }
+
+    private static class AtableShort extends AtableBase implements Atable<Short> {
+
+        public AtableShort(Mat mat, int row, int col) {
+            super(mat, row, col);
+        }
+
+        public AtableShort(Mat mat, int[] indices) {
+            super(mat, indices);
+        }
+
+        @Override
+        public Short getV() {
+            short[] data = new short[1];
+            mat.get(indices, data);
+            return data[0];
+        }
+
+        @Override
+        public void setV(Short v) {
+            short[] data = new short[] { v };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple2<Short> getV2c() {
+            short[] data = new short[2];
+            mat.get(indices, data);
+            return new Tuple2<Short>(data[0], data[1]);
+        }
+
+        @Override
+        public void setV2c(Tuple2<Short> v) {
+            short[] data = new short[] { v._0, v._1 };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple3<Short> getV3c() {
+            short[] data = new short[3];
+            mat.get(indices, data);
+            return new Tuple3<Short>(data[0], data[1], data[2]);
+        }
+
+        @Override
+        public void setV3c(Tuple3<Short> v) {
+            short[] data = new short[] { v._0, v._1, v._2 };
+            mat.put(indices, data);
+        }
+
+        @Override
+        public Tuple4<Short> getV4c() {
+            short[] data = new short[4];
+            mat.get(indices, data);
+            return new Tuple4<Short>(data[0], data[1], data[2], data[3]);
+        }
+
+        @Override
+        public void setV4c(Tuple4<Short> v) {
+            short[] data = new short[] { v._0, v._1, v._2, v._3 };
+            mat.put(indices, data);
+        }
+    }
+
     // javadoc:Mat::getNativeObjAddr()
     public long getNativeObjAddr() {
         return nativeObj;
@@ -1279,6 +1750,8 @@ public class Mat {
     private static native long n_mul(long nativeObj, long m_nativeObj, double scale);
 
     private static native long n_mul(long nativeObj, long m_nativeObj);
+
+    private static native long n_matMul(long nativeObj, long m_nativeObj);
 
     // C++: static Mat Mat::ones(int rows, int cols, int type)
     private static native long n_ones(int rows, int cols, int type);

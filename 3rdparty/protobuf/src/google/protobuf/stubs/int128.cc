@@ -34,13 +34,15 @@
 #include <ostream>  // NOLINT(readability/streams)
 #include <sstream>
 
+#include <google/protobuf/stubs/logging.h>
+
+#include <google/protobuf/port_def.inc>
+
 namespace google {
 namespace protobuf {
 
-const uint128_pod kuint128max = {
-    static_cast<uint64>(GOOGLE_LONGLONG(0xFFFFFFFFFFFFFFFF)),
-    static_cast<uint64>(GOOGLE_LONGLONG(0xFFFFFFFFFFFFFFFF))
-};
+const uint128_pod kuint128max = {uint64_t{0xFFFFFFFFFFFFFFFFu},
+                                 uint64_t{0xFFFFFFFFFFFFFFFFu}};
 
 // Returns the 0-based position of the last set bit (i.e., most significant bit)
 // in the given uint64. The argument may not be 0.
@@ -63,7 +65,7 @@ static inline int Fls64(uint64 n) {
   STEP(uint32, n32, pos, 0x10);
   STEP(uint32, n32, pos, 0x08);
   STEP(uint32, n32, pos, 0x04);
-  return pos + ((GOOGLE_ULONGLONG(0x3333333322221100) >> (n32 << 2)) & 0x3);
+  return pos + ((uint64_t{0x3333333322221100u} >> (n32 << 2)) & 0x3);
 }
 #undef STEP
 
@@ -76,51 +78,35 @@ static inline int Fls128(uint128 n) {
   return Fls64(Uint128Low64(n));
 }
 
-// Long division/modulo for uint128 implemented using the shift-subtract
-// division algorithm adapted from:
-// http://stackoverflow.com/questions/5386377/division-without-using
 void uint128::DivModImpl(uint128 dividend, uint128 divisor,
                          uint128* quotient_ret, uint128* remainder_ret) {
   if (divisor == 0) {
     GOOGLE_LOG(FATAL) << "Division or mod by zero: dividend.hi=" << dividend.hi_
                       << ", lo=" << dividend.lo_;
-  }
-
-  if (divisor > dividend) {
+  } else if (dividend < divisor) {
     *quotient_ret = 0;
     *remainder_ret = dividend;
     return;
-  }
-
-  if (divisor == dividend) {
-    *quotient_ret = 1;
-    *remainder_ret = 0;
-    return;
-  }
-
-  uint128 denominator = divisor;
-  uint128 position = 1;
-  uint128 quotient = 0;
-
-  // Left aligns the MSB of the denominator and the dividend.
-  int shift = Fls128(dividend) - Fls128(denominator);
-  denominator <<= shift;
-  position <<= shift;
-
-  // Uses shift-subtract algorithm to divide dividend by denominator. The
-  // remainder will be left in dividend.
-  while (position > 0) {
-    if (dividend >= denominator) {
-      dividend -= denominator;
-      quotient |= position;
+  } else {
+    int dividend_bit_length = Fls128(dividend);
+    int divisor_bit_length = Fls128(divisor);
+    int difference = dividend_bit_length - divisor_bit_length;
+    uint128 quotient = 0;
+    while (difference >= 0) {
+      quotient <<= 1;
+      uint128 shifted_divisor = divisor << difference;
+      if (shifted_divisor <= dividend) {
+        dividend -= shifted_divisor;
+        quotient += 1;
+      }
+      difference -= 1;
     }
-    position >>= 1;
-    denominator >>= 1;
+    //record the final quotient and remainder
+    *quotient_ret = quotient;
+    *remainder_ret = dividend;
   }
-
-  *quotient_ret = quotient;
-  *remainder_ret = dividend;
 }
+
 
 uint128& uint128::operator/=(const uint128& divisor) {
   uint128 quotient = 0;
@@ -145,15 +131,18 @@ std::ostream& operator<<(std::ostream& o, const uint128& b) {
   std::streamsize div_base_log;
   switch (flags & std::ios::basefield) {
     case std::ios::hex:
-      div = static_cast<uint64>(GOOGLE_ULONGLONG(0x1000000000000000));  // 16^15
+      div =
+          static_cast<uint64>(uint64_t{0x1000000000000000u});  // 16^15
       div_base_log = 15;
       break;
     case std::ios::oct:
-      div = static_cast<uint64>(GOOGLE_ULONGLONG(01000000000000000000000));  // 8^21
+      div = static_cast<uint64>(
+          uint64_t{01000000000000000000000u});  // 8^21
       div_base_log = 21;
       break;
     default:  // std::ios::dec
-      div = static_cast<uint64>(GOOGLE_ULONGLONG(10000000000000000000));  // 10^19
+      div = static_cast<uint64>(
+          uint64_t{10000000000000000000u});  // 10^19
       div_base_log = 19;
       break;
   }
@@ -199,3 +188,5 @@ std::ostream& operator<<(std::ostream& o, const uint128& b) {
 
 }  // namespace protobuf
 }  // namespace google
+
+#include <google/protobuf/port_undef.inc>  // NOLINT

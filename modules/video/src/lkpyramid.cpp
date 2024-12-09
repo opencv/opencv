@@ -45,8 +45,12 @@
 #include "lkpyramid.hpp"
 #include "opencl_kernels_video.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#ifdef HAVE_OPENCV_CALIB3D
+#include "opencv2/calib3d.hpp"
+#endif
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
+#include "hal_replacement.hpp"
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -59,6 +63,9 @@ static void calcScharrDeriv(const cv::Mat& src, cv::Mat& dst)
     int rows = src.rows, cols = src.cols, cn = src.channels(), depth = src.depth();
     CV_Assert(depth == CV_8U);
     dst.create(rows, cols, CV_MAKETYPE(DataType<deriv_type>::depth, cn*2));
+
+    CALL_HAL(ScharrDeriv, cv_hal_ScharrDeriv, src.data, src.step, (short*)dst.data, dst.step, cols, rows, cn);
+
     parallel_for_(Range(0, rows), cv::detail::ScharrDerivInvoker(src, dst), cv::getNumThreads());
 }
 
@@ -68,11 +75,6 @@ void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
 {
     using cv::detail::deriv_type;
     int rows = src.rows, cols = src.cols, cn = src.channels(), colsn = cols*cn;
-
-#ifdef HAVE_TEGRA_OPTIMIZATION
-    if (tegra::useTegra() && tegra::calcSharrDeriv(src, dst))
-        return;
-#endif
 
     int x, y, delta = (int)alignSize((cols + 2)*cn, 16);
     AutoBuffer<deriv_type> _tempBuf(delta*2 + 64);
@@ -99,8 +101,8 @@ void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
                 v_int16x8 s1 = v_reinterpret_as_s16(v_load_expand(srow1 + x));
                 v_int16x8 s2 = v_reinterpret_as_s16(v_load_expand(srow2 + x));
 
-                v_int16x8 t1 = s2 - s0;
-                v_int16x8 t0 = v_mul_wrap(s0 + s2, c3) + v_mul_wrap(s1, c10);
+                v_int16x8 t1 = v_sub(s2, s0);
+                v_int16x8 t0 = v_add(v_mul_wrap(v_add(s0, s2), c3), v_mul_wrap(s1, c10));
 
                 v_store(trow0 + x, t0);
                 v_store(trow1 + x, t1);
@@ -136,8 +138,8 @@ void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
                 v_int16x8 s3 = v_load(trow1 + x);
                 v_int16x8 s4 = v_load(trow1 + x + cn);
 
-                v_int16x8 t0 = s1 - s0;
-                v_int16x8 t1 = v_mul_wrap(s2 + s4, c3) + v_mul_wrap(s3, c10);
+                v_int16x8 t0 = v_sub(s1, s0);
+                v_int16x8 t1 = v_add(v_mul_wrap(v_add(s2, s4), c3), v_mul_wrap(s3, c10));
 
                 v_store_interleave((drow + x*2), t0, t1);
             }
@@ -186,10 +188,16 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 {
     CV_INSTRUMENT_REGION();
 
+    const int W_BITS = 14, W_BITS1 = 14;
+    const float FLT_SCALE = 1.f/(1 << 20);
+
     Point2f halfWin((winSize.width-1)*0.5f, (winSize.height-1)*0.5f);
     const Mat& I = *prevImg;
     const Mat& J = *nextImg;
     const Mat& derivI = *prevDeriv;
+
+    cv::AutoBuffer<Point2f> prevPtsScaledData(range.end - range.start);
+    Point2f* prevPtsScaled = prevPtsScaledData.data();
 
     int j, cn = I.channels(), cn2 = cn*2;
     cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2));
@@ -212,7 +220,23 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         else
             nextPt = nextPts[ptidx]*2.f;
         nextPts[ptidx] = nextPt;
+        prevPtsScaled[ptidx-range.start] = prevPt;
+    }
 
+    CALL_HAL(LKOpticalFlowLevel, cv_hal_LKOpticalFlowLevel,
+        I.data, I.step, (const short*)derivI.data, derivI.step, J.data, J.step,
+        I.cols, I.rows, I.channels(),
+        (float*)prevPtsScaled, (float*)(nextPts+range.start), range.end-range.start,
+        (level == 0) ? status+range.start: nullptr,
+        err != nullptr ? err+range.start: nullptr,
+        winSize.width, winSize.height, criteria.maxCount, criteria.epsilon,
+        (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) != 0,
+        (float)minEigThreshold
+    );
+
+    for( int ptidx = range.start; ptidx < range.end; ptidx++ )
+    {
+        Point2f prevPt = prevPtsScaled[ptidx-range.start];
         Point2i iprevPt, inextPt;
         prevPt -= halfWin;
         iprevPt.x = cvFloor(prevPt.x);
@@ -223,8 +247,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         {
             if( level == 0 )
             {
-                if( status )
-                    status[ptidx] = false;
+                status[ptidx] = false;
                 if( err )
                     err[ptidx] = 0;
             }
@@ -233,8 +256,6 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
         float a = prevPt.x - iprevPt.x;
         float b = prevPt.y - iprevPt.y;
-        const int W_BITS = 14, W_BITS1 = 14;
-        const float FLT_SCALE = 1.f/(1 << 20);
         int iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
         int iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
         int iw10 = cvRound((1.f - a)*b*(1 << W_BITS));
@@ -295,10 +316,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, qw0, qdelta) + v_dotprod(t10, qw1);
-                t1 = v_dotprod(t01, qw0, qdelta) + v_dotprod(t11, qw1);
-                t0 = t0 >> (W_BITS1-5);
-                t1 = t1 >> (W_BITS1-5);
+                t0 = v_add(v_dotprod(t00, qw0, qdelta), v_dotprod(t10, qw1));
+                t1 = v_add(v_dotprod(t01, qw0, qdelta), v_dotprod(t11, qw1));
+                t0 = v_shr<W_BITS1 - 5>(t0);
+                t1 = v_shr<W_BITS1 - 5>(t1);
                 v_store(Iptr + x, v_pack(t0, t1));
 
                 v00 = v_reinterpret_as_s16(v_load(dsrc));
@@ -309,10 +330,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, qw0, qdelta_d) + v_dotprod(t10, qw1);
-                t1 = v_dotprod(t01, qw0, qdelta_d) + v_dotprod(t11, qw1);
-                t0 = t0 >> W_BITS1;
-                t1 = t1 >> W_BITS1;
+                t0 = v_add(v_dotprod(t00, qw0, qdelta_d), v_dotprod(t10, qw1));
+                t1 = v_add(v_dotprod(t01, qw0, qdelta_d), v_dotprod(t11, qw1));
+                t0 = v_shr<W_BITS1>(t0);
+                t1 = v_shr<W_BITS1>(t1);
                 v00 = v_pack(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
                 v_store(dIptr, v00);
 
@@ -334,10 +355,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, qw0, qdelta_d) + v_dotprod(t10, qw1);
-                t1 = v_dotprod(t01, qw0, qdelta_d) + v_dotprod(t11, qw1);
-                t0 = t0 >> W_BITS1;
-                t1 = t1 >> W_BITS1;
+                t0 = v_add(v_dotprod(t00, qw0, qdelta_d), v_dotprod(t10, qw1));
+                t1 = v_add(v_dotprod(t01, qw0, qdelta_d), v_dotprod(t11, qw1));
+                t0 = v_shr<W_BITS1>(t0);
+                t1 = v_shr<W_BITS1>(t1);
                 v00 = v_pack(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
                 v_store(dIptr + 4*2, v00);
 
@@ -481,14 +502,14 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
         if( minEig < minEigThreshold || D < FLT_EPSILON )
         {
-            if( level == 0 && status )
+            if(level == 0)
                 status[ptidx] = false;
             continue;
         }
 
         D = 1.f/D;
 
-        nextPt -= halfWin;
+        Point2f nextPt = nextPts[ptidx] - halfWin;
         Point2f prevDelta;
 
         for( j = 0; j < criteria.maxCount; j++ )
@@ -499,7 +520,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             if( inextPt.x < -winSize.width || inextPt.x >= J.cols ||
                inextPt.y < -winSize.height || inextPt.y >= J.rows )
             {
-                if( level == 0 && status )
+                if( level == 0 )
                     status[ptidx] = false;
                 break;
             }
@@ -550,18 +571,18 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     v_zip(v00, v01, t00, t01);
                     v_zip(v10, v11, t10, t11);
 
-                    t0 = v_dotprod(t00, qw0, qdelta) + v_dotprod(t10, qw1);
-                    t1 = v_dotprod(t01, qw0, qdelta) + v_dotprod(t11, qw1);
-                    t0 = t0 >> (W_BITS1-5);
-                    t1 = t1 >> (W_BITS1-5);
-                    diff0 = v_pack(t0, t1) - diff0;
+                    t0 = v_add(v_dotprod(t00, qw0, qdelta), v_dotprod(t10, qw1));
+                    t1 = v_add(v_dotprod(t01, qw0, qdelta), v_dotprod(t11, qw1));
+                    t0 = v_shr<W_BITS1 - 5>(t0);
+                    t1 = v_shr<W_BITS1 - 5>(t1);
+                    diff0 = v_sub(v_pack(t0, t1), diff0);
                     v_zip(diff0, diff0, diff2, diff1); // It0 It0 It1 It1 ...
                     v00 = v_reinterpret_as_s16(v_load(dIptr)); // Ix0 Iy0 Ix1 Iy1 ...
                     v01 = v_reinterpret_as_s16(v_load(dIptr + 8));
                     v_zip(v00, v01, v10, v11);
                     v_zip(diff2, diff1, v00, v01);
-                    qb0 += v_cvt_f32(v_dotprod(v00, v10));
-                    qb1 += v_cvt_f32(v_dotprod(v01, v11));
+                    qb0 = v_add(qb0, v_cvt_f32(v_dotprod(v00, v10)));
+                    qb1 = v_add(qb1, v_cvt_f32(v_dotprod(v01, v11)));
                 }
 #endif
 
@@ -649,7 +670,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
 #if CV_SIMD128 && !CV_NEON
             v_float32x4 qf0, qf1;
-            v_recombine(v_interleave_pairs(qb0 + qb1), v_setzero_f32(), qf0, qf1);
+            v_recombine(v_interleave_pairs(v_add(qb0, qb1)), v_setzero_f32(), qf0, qf1);
             ib1 += v_reduce_sum(qf0);
             ib2 += v_reduce_sum(qf1);
 #endif
@@ -682,7 +703,6 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             prevDelta = delta;
         }
 
-        CV_Assert(status != NULL);
         if( status[ptidx] && err && level == 0 && (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) == 0 )
         {
             Point2f nextPoint = nextPts[ptidx] - halfWin;
@@ -694,8 +714,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             if( inextPoint.x < -winSize.width || inextPoint.x >= J.cols ||
                 inextPoint.y < -winSize.height || inextPoint.y >= J.rows )
             {
-                if( status )
-                    status[ptidx] = false;
+                status[ptidx] = false;
                 continue;
             }
 
@@ -734,7 +753,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
     CV_Assert(img.depth() == CV_8U && winSize.width > 2 && winSize.height > 2 );
     int pyrstep = withDerivatives ? 2 : 1;
 
-    pyramid.create(1, (maxLevel + 1) * pyrstep, 0 /*type*/, -1, true, 0);
+    pyramid.create(1, (maxLevel + 1) * pyrstep, 0 /*type*/, -1, true);
 
     int derivType = CV_MAKETYPE(DataType<cv::detail::deriv_type>::depth, img.channels() * 2);
 
@@ -813,7 +832,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
         sz = Size((sz.width+1)/2, (sz.height+1)/2);
         if( sz.width <= winSize.width || sz.height <= winSize.height )
         {
-            pyramid.create(1, (level + 1) * pyrstep, 0 /*type*/, -1, true, 0);//check this
+            pyramid.create(1, (level + 1) * pyrstep, 0 /*type*/, -1, true);//check this
             return level;
         }
 
@@ -1282,7 +1301,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
     Mat statusMat = _status.getMat(), errMat;
     CV_Assert( statusMat.isContinuous() );
     uchar* status = statusMat.ptr();
-    float* err = 0;
+    float* err = nullptr;
 
     for( i = 0; i < npoints; i++ )
         status[i] = true;
@@ -1396,12 +1415,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
         CV_Assert(prevPyr[level * lvlStep1].size() == nextPyr[level * lvlStep2].size());
         CV_Assert(prevPyr[level * lvlStep1].type() == nextPyr[level * lvlStep2].type());
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-        typedef tegra::LKTrackerInvoker<cv::detail::LKTrackerInvoker> LKTrackerInvoker;
-#else
         typedef cv::detail::LKTrackerInvoker LKTrackerInvoker;
-#endif
-
         parallel_for_(Range(0, npoints), LKTrackerInvoker(prevPyr[level * lvlStep1], derivI,
                                                           nextPyr[level * lvlStep2], prevPts, nextPts,
                                                           status, err,
@@ -1426,115 +1440,23 @@ void cv::calcOpticalFlowPyrLK( InputArray _prevImg, InputArray _nextImg,
     optflow->calc(_prevImg,_nextImg,_prevPts,_nextPts,_status,_err);
 }
 
-namespace cv
-{
-
-static void
-getRTMatrix( const std::vector<Point2f> a, const std::vector<Point2f> b,
-             int count, Mat& M, bool fullAffine )
-{
-    CV_Assert( M.isContinuous() );
-
-    if( fullAffine )
-    {
-        double sa[6][6]={{0.}}, sb[6]={0.};
-        Mat A( 6, 6, CV_64F, &sa[0][0] ), B( 6, 1, CV_64F, sb );
-        Mat MM = M.reshape(1, 6);
-
-        for( int i = 0; i < count; i++ )
-        {
-            sa[0][0] += a[i].x*a[i].x;
-            sa[0][1] += a[i].y*a[i].x;
-            sa[0][2] += a[i].x;
-
-            sa[1][1] += a[i].y*a[i].y;
-            sa[1][2] += a[i].y;
-
-            sb[0] += a[i].x*b[i].x;
-            sb[1] += a[i].y*b[i].x;
-            sb[2] += b[i].x;
-            sb[3] += a[i].x*b[i].y;
-            sb[4] += a[i].y*b[i].y;
-            sb[5] += b[i].y;
-        }
-
-        sa[3][4] = sa[4][3] = sa[1][0] = sa[0][1];
-        sa[3][5] = sa[5][3] = sa[2][0] = sa[0][2];
-        sa[4][5] = sa[5][4] = sa[2][1] = sa[1][2];
-
-        sa[3][3] = sa[0][0];
-        sa[4][4] = sa[1][1];
-        sa[5][5] = sa[2][2] = count;
-
-        solve( A, B, MM, DECOMP_EIG );
-    }
-    else
-    {
-        double sa[4][4]={{0.}}, sb[4]={0.}, m[4] = {0};
-        Mat A( 4, 4, CV_64F, sa ), B( 4, 1, CV_64F, sb );
-        Mat MM( 4, 1, CV_64F, m );
-
-        for( int i = 0; i < count; i++ )
-        {
-            sa[0][0] += a[i].x*a[i].x + a[i].y*a[i].y;
-            sa[0][2] += a[i].x;
-            sa[0][3] += a[i].y;
-
-            sb[0] += a[i].x*b[i].x + a[i].y*b[i].y;
-            sb[1] += a[i].x*b[i].y - a[i].y*b[i].x;
-            sb[2] += b[i].x;
-            sb[3] += b[i].y;
-        }
-
-        sa[1][1] = sa[0][0];
-        sa[2][1] = sa[1][2] = -sa[0][3];
-        sa[3][1] = sa[1][3] = sa[2][0] = sa[0][2];
-        sa[2][2] = sa[3][3] = count;
-        sa[3][0] = sa[0][3];
-
-        solve( A, B, MM, DECOMP_EIG );
-
-        double* om = M.ptr<double>();
-        om[0] = om[4] = m[0];
-        om[1] = -m[1];
-        om[3] = m[1];
-        om[2] = m[2];
-        om[5] = m[3];
-    }
-}
-
-}
-
 cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine )
 {
-    return estimateRigidTransform(src1, src2, fullAffine, 500, 0.5, 3);
-}
-
-cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullAffine, int ransacMaxIters, double ransacGoodRatio,
-                                    const int ransacSize0)
-{
     CV_INSTRUMENT_REGION();
-
-    Mat M(2, 3, CV_64F), A = src1.getMat(), B = src2.getMat();
+#ifndef HAVE_OPENCV_CALIB3D
+    CV_UNUSED(src1); CV_UNUSED(src2); CV_UNUSED(fullAffine);
+    CV_Error(Error::StsError, "estimateRigidTransform requires calib3d module");
+#else
+    Mat A = src1.getMat(), B = src2.getMat();
 
     const int COUNT = 15;
     const int WIDTH = 160, HEIGHT = 120;
 
     std::vector<Point2f> pA, pB;
-    std::vector<int> good_idx;
     std::vector<uchar> status;
 
     double scale = 1.;
-    int i, j, k, k1;
-
-    RNG rng((uint64)-1);
-    int good_count = 0;
-
-    if( ransacSize0 < 3 )
-        CV_Error( Error::StsBadArg, "ransacSize0 should have value bigger than 2.");
-
-    if( ransacGoodRatio > 1 || ransacGoodRatio < 0)
-        CV_Error( Error::StsBadArg, "ransacGoodRatio should have value between 0 and 1");
+    int i, j, k;
 
     if( A.size() != B.size() )
         CV_Error( Error::StsUnmatchedSizes, "Both input images must have the same size" );
@@ -1546,11 +1468,13 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
 
     if( count > 0 )
     {
+        // inputs are points
         A.reshape(2, count).convertTo(pA, CV_32F);
         B.reshape(2, count).convertTo(pB, CV_32F);
     }
     else if( A.depth() == CV_8U )
     {
+        // inputs are images
         int cn = A.channels();
         CV_Assert( cn == 1 || cn == 3 || cn == 4 );
         Size sz0 = A.size();
@@ -1622,108 +1546,13 @@ cv::Mat cv::estimateRigidTransform( InputArray src1, InputArray src2, bool fullA
     else
         CV_Error( Error::StsUnsupportedFormat, "Both input images must have either 8uC1 or 8uC3 type" );
 
-    good_idx.resize(count);
-
-    if( count < ransacSize0 )
-        return Mat();
-
-    Rect brect = boundingRect(pB);
-
-    std::vector<Point2f> a(ransacSize0);
-    std::vector<Point2f> b(ransacSize0);
-
-    // RANSAC stuff:
-    // 1. find the consensus
-    for( k = 0; k < ransacMaxIters; k++ )
+    if (fullAffine)
     {
-        std::vector<int> idx(ransacSize0);
-        // choose random 3 non-complanar points from A & B
-        for( i = 0; i < ransacSize0; i++ )
-        {
-            for( k1 = 0; k1 < ransacMaxIters; k1++ )
-            {
-                idx[i] = rng.uniform(0, count);
-
-                for( j = 0; j < i; j++ )
-                {
-                    if( idx[j] == idx[i] )
-                        break;
-                    // check that the points are not very close one each other
-                    if( fabs(pA[idx[i]].x - pA[idx[j]].x) +
-                        fabs(pA[idx[i]].y - pA[idx[j]].y) < FLT_EPSILON )
-                        break;
-                    if( fabs(pB[idx[i]].x - pB[idx[j]].x) +
-                        fabs(pB[idx[i]].y - pB[idx[j]].y) < FLT_EPSILON )
-                        break;
-                }
-
-                if( j < i )
-                    continue;
-
-                if( i+1 == ransacSize0 )
-                {
-                    // additional check for non-complanar vectors
-                    a[0] = pA[idx[0]];
-                    a[1] = pA[idx[1]];
-                    a[2] = pA[idx[2]];
-
-                    b[0] = pB[idx[0]];
-                    b[1] = pB[idx[1]];
-                    b[2] = pB[idx[2]];
-
-                    double dax1 = a[1].x - a[0].x, day1 = a[1].y - a[0].y;
-                    double dax2 = a[2].x - a[0].x, day2 = a[2].y - a[0].y;
-                    double dbx1 = b[1].x - b[0].x, dby1 = b[1].y - b[0].y;
-                    double dbx2 = b[2].x - b[0].x, dby2 = b[2].y - b[0].y;
-                    const double eps = 0.01;
-
-                    if( fabs(dax1*day2 - day1*dax2) < eps*std::sqrt(dax1*dax1+day1*day1)*std::sqrt(dax2*dax2+day2*day2) ||
-                        fabs(dbx1*dby2 - dby1*dbx2) < eps*std::sqrt(dbx1*dbx1+dby1*dby1)*std::sqrt(dbx2*dbx2+dby2*dby2) )
-                        continue;
-                }
-                break;
-            }
-
-            if( k1 >= ransacMaxIters )
-                break;
-        }
-
-        if( i < ransacSize0 )
-            continue;
-
-        // estimate the transformation using 3 points
-        getRTMatrix( a, b, 3, M, fullAffine );
-
-        const double* m = M.ptr<double>();
-        for( i = 0, good_count = 0; i < count; i++ )
-        {
-            if( std::abs( m[0]*pA[i].x + m[1]*pA[i].y + m[2] - pB[i].x ) +
-                std::abs( m[3]*pA[i].x + m[4]*pA[i].y + m[5] - pB[i].y ) < std::max(brect.width,brect.height)*0.05 )
-                good_idx[good_count++] = i;
-        }
-
-        if( good_count >= count*ransacGoodRatio )
-            break;
+        return estimateAffine2D(pA, pB);
     }
-
-    if( k >= ransacMaxIters )
-        return Mat();
-
-    if( good_count < count )
+    else
     {
-        for( i = 0; i < good_count; i++ )
-        {
-            j = good_idx[i];
-            pA[i] = pA[j];
-            pB[i] = pB[j];
-        }
+        return estimateAffinePartial2D(pA, pB);
     }
-
-    getRTMatrix( pA, pB, good_count, M, fullAffine );
-    M.at<double>(0, 2) /= scale;
-    M.at<double>(1, 2) /= scale;
-
-    return M;
+#endif
 }
-
-/* End of file. */

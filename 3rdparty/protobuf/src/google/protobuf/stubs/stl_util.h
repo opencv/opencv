@@ -35,28 +35,10 @@
 
 #include <google/protobuf/stubs/common.h>
 
+#include <algorithm>
+
 namespace google {
 namespace protobuf {
-
-// STLDeleteContainerPointers()
-//  For a range within a container of pointers, calls delete
-//  (non-array version) on these pointers.
-// NOTE: for these three functions, we could just implement a DeleteObject
-// functor and then call for_each() on the range and functor, but this
-// requires us to pull in all of algorithm.h, which seems expensive.
-// For hash_[multi]set, it is important that this deletes behind the iterator
-// because the hash_set may call the hash function on the iterator when it is
-// advanced, which could result in the hash function trying to deference a
-// stale pointer.
-template <class ForwardIterator>
-void STLDeleteContainerPointers(ForwardIterator begin,
-                                ForwardIterator end) {
-  while (begin != end) {
-    ForwardIterator temp = begin;
-    ++begin;
-    delete *temp;
-  }
-}
 
 // Inside Google, this function implements a horrible, disgusting hack in which
 // we reach into the string's private implementation and resize it without
@@ -64,8 +46,20 @@ void STLDeleteContainerPointers(ForwardIterator begin,
 // improve performance.  However, since it's totally non-portable it has no
 // place in open source code.  Feel free to fill this function in with your
 // own disgusting hack if you want the perf boost.
-inline void STLStringResizeUninitialized(string* s, size_t new_size) {
+inline void STLStringResizeUninitialized(std::string* s, size_t new_size) {
   s->resize(new_size);
+}
+
+// As above, but we make sure to follow amortized growth in which we always
+// increase the capacity by at least a constant factor >1.
+inline void STLStringResizeUninitializedAmortized(std::string* s,
+                                                  size_t new_size) {
+  const size_t cap = s->capacity();
+  if (new_size > cap) {
+    // Make sure to always grow by at least a factor of 2x.
+    s->reserve(std::max(new_size, 2 * cap));
+  }
+  STLStringResizeUninitialized(s, new_size);
 }
 
 // Return a mutable char* pointing to a string's internal buffer,
@@ -80,39 +74,9 @@ inline void STLStringResizeUninitialized(string* s, size_t new_size) {
 // (http://www.open-std.org/JTC1/SC22/WG21/docs/lwg-active.html#530)
 // proposes this as the method. According to Matt Austern, this should
 // already work on all current implementations.
-inline char* string_as_array(string* str) {
+inline char* string_as_array(std::string* str) {
   // DO NOT USE const_cast<char*>(str->data())! See the unittest for why.
-  return str->empty() ? NULL : &*str->begin();
-}
-
-// STLDeleteElements() deletes all the elements in an STL container and clears
-// the container.  This function is suitable for use with a vector, set,
-// hash_set, or any other STL container which defines sensible begin(), end(),
-// and clear() methods.
-//
-// If container is NULL, this function is a no-op.
-//
-// As an alternative to calling STLDeleteElements() directly, consider
-// ElementDeleter (defined below), which ensures that your container's elements
-// are deleted when the ElementDeleter goes out of scope.
-template <class T>
-void STLDeleteElements(T *container) {
-  if (!container) return;
-  STLDeleteContainerPointers(container->begin(), container->end());
-  container->clear();
-}
-
-// Given an STL container consisting of (key, value) pairs, STLDeleteValues
-// deletes all the "value" components and clears the container.  Does nothing
-// in the case it's given a NULL pointer.
-
-template <class T>
-void STLDeleteValues(T *v) {
-  if (!v) return;
-  for (typename T::iterator i = v->begin(); i != v->end(); ++i) {
-    delete i->second;
-  }
-  v->clear();
+  return str->empty() ? nullptr : &*str->begin();
 }
 
 }  // namespace protobuf

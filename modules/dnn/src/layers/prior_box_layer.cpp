@@ -42,18 +42,16 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-#include <ngraph/op/prior_box.hpp>
-#include <ngraph/op/prior_box_clustered.hpp>
-#else
-#include <ngraph/op/experimental/layers/prior_box.hpp>
-#include <ngraph/op/experimental/layers/prior_box_clustered.hpp>
+#include <openvino/op/prior_box.hpp>
+#include <openvino/op/prior_box_clustered.hpp>
 #endif
-#endif
+
+#include "../op_vkcom.hpp"
 
 #include <float.h>
 #include <algorithm>
@@ -61,6 +59,11 @@
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/prior_box.hpp"
+using namespace cv::dnn::cuda4dnn;
 #endif
 
 namespace cv
@@ -288,7 +291,8 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return _explicitSizes || _stepX == _stepY;
 #endif
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -337,7 +341,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -422,7 +426,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -504,23 +508,23 @@ public:
         CV_Assert(nodes.size() == 2);
         auto layer = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto image = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-        auto layer_shape = std::make_shared<ngraph::op::ShapeOf>(layer);
-        auto image_shape = std::make_shared<ngraph::op::ShapeOf>(image);
+        auto layer_shape = std::make_shared<ov::op::v3::ShapeOf>(layer);
+        auto image_shape = std::make_shared<ov::op::v3::ShapeOf>(image);
 
-        auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{2});
-        auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{4});
-        auto strides      = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{1});
+        auto lower_bounds = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{2});
+        auto upper_bounds = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{4});
+        auto strides      = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{1});
 
-        auto slice_layer = std::make_shared<ngraph::op::v1::StridedSlice>(layer_shape,
+        auto slice_layer = std::make_shared<ov::op::v1::StridedSlice>(layer_shape,
                                             lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
-        auto slice_image = std::make_shared<ngraph::op::v1::StridedSlice>(image_shape,
+        auto slice_image = std::make_shared<ov::op::v1::StridedSlice>(image_shape,
                                             lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
 
         if (_explicitSizes)
         {
             CV_Assert_N(!_boxWidths.empty(), !_boxHeights.empty(), !_variance.empty());
             CV_Assert(_boxWidths.size() == _boxHeights.size());
-            ngraph::op::PriorBoxClusteredAttrs attrs;
+            ov::op::v0::PriorBoxClustered::Attributes attrs;
             attrs.widths = _boxWidths;
             attrs.heights = _boxHeights;
             attrs.clip = _clip;
@@ -530,14 +534,14 @@ public:
             attrs.step_widths = _stepX;
             attrs.variances = _variance;
 
-            auto priorBox = std::make_shared<ngraph::op::PriorBoxClustered>(slice_layer, slice_image, attrs);
-            auto axis = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{0});
-            auto unsqueeze = std::make_shared<ngraph::op::v0::Unsqueeze>(priorBox, axis);
+            auto priorBox = std::make_shared<ov::op::v0::PriorBoxClustered>(slice_layer, slice_image, attrs);
+            auto axis = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{0});
+            auto unsqueeze = std::make_shared<ov::op::v0::Unsqueeze>(priorBox, axis);
             return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
         }
         else
         {
-            ngraph::op::PriorBoxAttrs attrs;
+            ov::op::v0::PriorBox::Attributes attrs;
             attrs.min_size = _minSize;
             attrs.max_size = _maxSize;
             // doesn't work with empty aspectRatio
@@ -551,14 +555,52 @@ public:
             attrs.step = _stepX;
             attrs.scale_all_sizes = !_aspectRatios.empty();
 
-            auto priorBox = std::make_shared<ngraph::op::PriorBox>(slice_layer, slice_image, attrs);
-            auto axis = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{1}, std::vector<int64_t>{0});
-            auto unsqueeze = std::make_shared<ngraph::op::v0::Unsqueeze>(priorBox, axis);
+            auto priorBox = std::make_shared<ov::op::v0::PriorBox>(slice_layer, slice_image, attrs);
+            auto axis = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{1}, std::vector<int64_t>{0});
+            auto unsqueeze = std::make_shared<ov::op::v0::Unsqueeze>(priorBox, axis);
             return Ptr<BackendNode>(new InfEngineNgraphNode(unsqueeze));
         }
     }
 #endif  // HAVE_DNN_NGRAPH
 
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+
+        auto feature_map_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto feature_map_shape = feature_map_wrapper->getShape();
+
+        auto image_wrapper = inputs[1].dynamicCast<CUDABackendWrapper>();
+        auto image_shape = image_wrapper->getShape();
+
+        PriorBoxConfiguration config;
+        config.feature_map_width = feature_map_shape.rbegin()[0];
+        config.feature_map_height = feature_map_shape.rbegin()[1];
+        config.image_width = image_shape.rbegin()[0];
+        config.image_height = image_shape.rbegin()[1];
+
+        config.num_priors = _numPriors;
+        config.box_widths = _boxWidths;
+        config.box_heights = _boxHeights;
+        config.offsets_x = _offsetsX;
+        config.offsets_y = _offsetsY;
+        config.stepX = _stepX;
+        config.stepY = _stepY;
+
+        config.variance = _variance;
+
+        config.clip = _clip;
+        config.normalize = _bboxesNormalized;
+
+        return make_cuda_node<cuda4dnn::PriorBoxOp>(preferableTarget, std::move(context->stream), config);
+    }
+#endif
 
     virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                            const std::vector<MatShape> &outputs) const CV_OVERRIDE

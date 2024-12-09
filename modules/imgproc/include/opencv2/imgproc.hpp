@@ -46,150 +46,150 @@
 #include "opencv2/core.hpp"
 
 /**
-  @defgroup imgproc Image Processing
+@defgroup imgproc Image Processing
 
-This module includes image-processing functions.
+This module offers a comprehensive suite of image processing functions, enabling tasks such as those listed above.
 
-  @{
+@{
     @defgroup imgproc_filter Image Filtering
 
-Functions and classes described in this section are used to perform various linear or non-linear
-filtering operations on 2D images (represented as Mat's). It means that for each pixel location
-\f$(x,y)\f$ in the source image (normally, rectangular), its neighborhood is considered and used to
-compute the response. In case of a linear filter, it is a weighted sum of pixel values. In case of
-morphological operations, it is the minimum or maximum values, and so on. The computed response is
-stored in the destination image at the same location \f$(x,y)\f$. It means that the output image
-will be of the same size as the input image. Normally, the functions support multi-channel arrays,
-in which case every channel is processed independently. Therefore, the output image will also have
-the same number of channels as the input one.
+    Functions and classes described in this section are used to perform various linear or non-linear
+    filtering operations on 2D images (represented as Mat's). It means that for each pixel location
+    \f$(x,y)\f$ in the source image (normally, rectangular), its neighborhood is considered and used to
+    compute the response. In case of a linear filter, it is a weighted sum of pixel values. In case of
+    morphological operations, it is the minimum or maximum values, and so on. The computed response is
+    stored in the destination image at the same location \f$(x,y)\f$. It means that the output image
+    will be of the same size as the input image. Normally, the functions support multi-channel arrays,
+    in which case every channel is processed independently. Therefore, the output image will also have
+    the same number of channels as the input one.
 
-Another common feature of the functions and classes described in this section is that, unlike
-simple arithmetic functions, they need to extrapolate values of some non-existing pixels. For
-example, if you want to smooth an image using a Gaussian \f$3 \times 3\f$ filter, then, when
-processing the left-most pixels in each row, you need pixels to the left of them, that is, outside
-of the image. You can let these pixels be the same as the left-most image pixels ("replicated
-border" extrapolation method), or assume that all the non-existing pixels are zeros ("constant
-border" extrapolation method), and so on. OpenCV enables you to specify the extrapolation method.
-For details, see #BorderTypes
+    Another common feature of the functions and classes described in this section is that, unlike
+    simple arithmetic functions, they need to extrapolate values of some non-existing pixels. For
+    example, if you want to smooth an image using a Gaussian \f$3 \times 3\f$ filter, then, when
+    processing the left-most pixels in each row, you need pixels to the left of them, that is, outside
+    of the image. You can let these pixels be the same as the left-most image pixels ("replicated
+    border" extrapolation method), or assume that all the non-existing pixels are zeros ("constant
+    border" extrapolation method), and so on. OpenCV enables you to specify the extrapolation method.
+    For details, see #BorderTypes
 
-@anchor filter_depths
-### Depth combinations
-Input depth (src.depth()) | Output depth (ddepth)
---------------------------|----------------------
-CV_8U                     | -1/CV_16S/CV_32F/CV_64F
-CV_16U/CV_16S             | -1/CV_32F/CV_64F
-CV_32F                    | -1/CV_32F
-CV_64F                    | -1/CV_64F
+    @anchor filter_depths
+    ### Depth combinations
+    Input depth (src.depth()) | Output depth (ddepth)
+    --------------------------|----------------------
+    CV_8U                     | -1/CV_16S/CV_32F/CV_64F
+    CV_16U/CV_16S             | -1/CV_32F/CV_64F
+    CV_32F                    | -1/CV_32F
+    CV_64F                    | -1/CV_64F
 
-@note when ddepth=-1, the output image will have the same depth as the source.
+    @note when ddepth=-1, the output image will have the same depth as the source.
 
-@note if you need double floating-point accuracy and using single floating-point input data
-(CV_32F input and CV_64F output depth combination), you can use @ref Mat.convertTo to convert
-the input data to the desired precision.
+    @note if you need double floating-point accuracy and using single floating-point input data
+    (CV_32F input and CV_64F output depth combination), you can use @ref Mat.convertTo to convert
+    the input data to the desired precision.
 
     @defgroup imgproc_transform Geometric Image Transformations
 
-The functions in this section perform various geometrical transformations of 2D images. They do not
-change the image content but deform the pixel grid and map this deformed grid to the destination
-image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from
-destination to the source. That is, for each pixel \f$(x, y)\f$ of the destination image, the
-functions compute coordinates of the corresponding "donor" pixel in the source image and copy the
-pixel value:
+    The functions in this section perform various geometrical transformations of 2D images. They do not
+    change the image content but deform the pixel grid and map this deformed grid to the destination
+    image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from
+    destination to the source. That is, for each pixel \f$(x, y)\f$ of the destination image, the
+    functions compute coordinates of the corresponding "donor" pixel in the source image and copy the
+    pixel value:
 
-\f[\texttt{dst} (x,y)= \texttt{src} (f_x(x,y), f_y(x,y))\f]
+    \f[\texttt{dst} (x,y)= \texttt{src} (f_x(x,y), f_y(x,y))\f]
 
-In case when you specify the forward mapping \f$\left<g_x, g_y\right>: \texttt{src} \rightarrow
-\texttt{dst}\f$, the OpenCV functions first compute the corresponding inverse mapping
-\f$\left<f_x, f_y\right>: \texttt{dst} \rightarrow \texttt{src}\f$ and then use the above formula.
+    In case when you specify the forward mapping \f$\left<g_x, g_y\right>: \texttt{src} \rightarrow
+    \texttt{dst}\f$, the OpenCV functions first compute the corresponding inverse mapping
+    \f$\left<f_x, f_y\right>: \texttt{dst} \rightarrow \texttt{src}\f$ and then use the above formula.
 
-The actual implementations of the geometrical transformations, from the most generic remap and to
-the simplest and the fastest resize, need to solve two main problems with the above formula:
+    The actual implementations of the geometrical transformations, from the most generic remap and to
+    the simplest and the fastest resize, need to solve two main problems with the above formula:
 
-- Extrapolation of non-existing pixels. Similarly to the filtering functions described in the
-previous section, for some \f$(x,y)\f$, either one of \f$f_x(x,y)\f$, or \f$f_y(x,y)\f$, or both
-of them may fall outside of the image. In this case, an extrapolation method needs to be used.
-OpenCV provides the same selection of extrapolation methods as in the filtering functions. In
-addition, it provides the method #BORDER_TRANSPARENT. This means that the corresponding pixels in
-the destination image will not be modified at all.
+    - Extrapolation of non-existing pixels. Similarly to the filtering functions described in the
+    previous section, for some \f$(x,y)\f$, either one of \f$f_x(x,y)\f$, or \f$f_y(x,y)\f$, or both
+    of them may fall outside of the image. In this case, an extrapolation method needs to be used.
+    OpenCV provides the same selection of extrapolation methods as in the filtering functions. In
+    addition, it provides the method #BORDER_TRANSPARENT. This means that the corresponding pixels in
+    the destination image will not be modified at all.
 
-- Interpolation of pixel values. Usually \f$f_x(x,y)\f$ and \f$f_y(x,y)\f$ are floating-point
-numbers. This means that \f$\left<f_x, f_y\right>\f$ can be either an affine or perspective
-transformation, or radial lens distortion correction, and so on. So, a pixel value at fractional
-coordinates needs to be retrieved. In the simplest case, the coordinates can be just rounded to the
-nearest integer coordinates and the corresponding pixel can be used. This is called a
-nearest-neighbor interpolation. However, a better result can be achieved by using more
-sophisticated [interpolation methods](http://en.wikipedia.org/wiki/Multivariate_interpolation) ,
-where a polynomial function is fit into some neighborhood of the computed pixel \f$(f_x(x,y),
-f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$ is taken as the
-interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
-#resize for details.
+    - Interpolation of pixel values. Usually \f$f_x(x,y)\f$ and \f$f_y(x,y)\f$ are floating-point
+    numbers. This means that \f$\left<f_x, f_y\right>\f$ can be either an affine or perspective
+    transformation, or radial lens distortion correction, and so on. So, a pixel value at fractional
+    coordinates needs to be retrieved. In the simplest case, the coordinates can be just rounded to the
+    nearest integer coordinates and the corresponding pixel can be used. This is called a
+    nearest-neighbor interpolation. However, a better result can be achieved by using more
+    sophisticated [interpolation methods](http://en.wikipedia.org/wiki/Multivariate_interpolation) ,
+    where a polynomial function is fit into some neighborhood of the computed pixel \f$(f_x(x,y),
+    f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$ is taken as the
+    interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
+    #resize for details.
 
-@note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
+    @note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
 
     @defgroup imgproc_misc Miscellaneous Image Transformations
     @defgroup imgproc_draw Drawing Functions
 
-Drawing functions work with matrices/images of arbitrary depth. The boundaries of the shapes can be
-rendered with antialiasing (implemented only for 8-bit images for now). All the functions include
-the parameter color that uses an RGB value (that may be constructed with the Scalar constructor )
-for color images and brightness for grayscale images. For color images, the channel ordering is
-normally *Blue, Green, Red*. This is what imshow, imread, and imwrite expect. So, if you form a
-color using the Scalar constructor, it should look like:
+    Drawing functions work with matrices/images of arbitrary depth. The boundaries of the shapes can be
+    rendered with antialiasing (implemented only for 8-bit images for now). All the functions include
+    the parameter color that uses an RGB value (that may be constructed with the Scalar constructor )
+    for color images and brightness for grayscale images. For color images, the channel ordering is
+    normally *Blue, Green, Red*. This is what imshow, imread, and imwrite expect. So, if you form a
+    color using the Scalar constructor, it should look like:
 
-\f[\texttt{Scalar} (blue \_ component, green \_ component, red \_ component[, alpha \_ component])\f]
+    \f[\texttt{Scalar} (blue \_ component, green \_ component, red \_ component[, alpha \_ component])\f]
 
-If you are using your own image rendering and I/O functions, you can use any channel ordering. The
-drawing functions process each channel independently and do not depend on the channel order or even
-on the used color space. The whole image can be converted from BGR to RGB or to a different color
-space using cvtColor .
+    If you are using your own image rendering and I/O functions, you can use any channel ordering. The
+    drawing functions process each channel independently and do not depend on the channel order or even
+    on the used color space. The whole image can be converted from BGR to RGB or to a different color
+    space using cvtColor .
 
-If a drawn figure is partially or completely outside the image, the drawing functions clip it. Also,
-many drawing functions can handle pixel coordinates specified with sub-pixel accuracy. This means
-that the coordinates can be passed as fixed-point numbers encoded as integers. The number of
-fractional bits is specified by the shift parameter and the real point coordinates are calculated as
-\f$\texttt{Point}(x,y)\rightarrow\texttt{Point2f}(x*2^{-shift},y*2^{-shift})\f$ . This feature is
-especially effective when rendering antialiased shapes.
+    If a drawn figure is partially or completely outside the image, the drawing functions clip it. Also,
+    many drawing functions can handle pixel coordinates specified with sub-pixel accuracy. This means
+    that the coordinates can be passed as fixed-point numbers encoded as integers. The number of
+    fractional bits is specified by the shift parameter and the real point coordinates are calculated as
+    \f$\texttt{Point}(x,y)\rightarrow\texttt{Point2f}(x*2^{-shift},y*2^{-shift})\f$ . This feature is
+    especially effective when rendering antialiased shapes.
 
-@note The functions do not support alpha-transparency when the target image is 4-channel. In this
-case, the color[3] is simply copied to the repainted pixels. Thus, if you want to paint
-semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main
-image.
+    @note The functions do not support alpha-transparency when the target image is 4-channel. In this
+    case, the color[3] is simply copied to the repainted pixels. Thus, if you want to paint
+    semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main
+    image.
 
     @defgroup imgproc_color_conversions Color Space Conversions
     @defgroup imgproc_colormap ColorMaps in OpenCV
 
-The human perception isn't built for observing fine changes in grayscale images. Human eyes are more
-sensitive to observing changes between colors, so you often need to recolor your grayscale images to
-get a clue about them. OpenCV now comes with various colormaps to enhance the visualization in your
-computer vision application.
+    The human perception isn't built for observing fine changes in grayscale images. Human eyes are more
+    sensitive to observing changes between colors, so you often need to recolor your grayscale images to
+    get a clue about them. OpenCV now comes with various colormaps to enhance the visualization in your
+    computer vision application.
 
-In OpenCV you only need applyColorMap to apply a colormap on a given image. The following sample
-code reads the path to an image from command line, applies a Jet colormap on it and shows the
-result:
+    In OpenCV you only need applyColorMap to apply a colormap on a given image. The following sample
+    code reads the path to an image from command line, applies a Jet colormap on it and shows the
+    result:
 
-@include snippets/imgproc_applyColorMap.cpp
+    @include snippets/imgproc_applyColorMap.cpp
 
-@see #ColormapTypes
+    @see #ColormapTypes
 
     @defgroup imgproc_subdiv2d Planar Subdivision
 
-The Subdiv2D class described in this section is used to perform various planar subdivision on
-a set of 2D points (represented as vector of Point2f). OpenCV subdivides a plane into triangles
-using the Delaunay's algorithm, which corresponds to the dual graph of the Voronoi diagram.
-In the figure below, the Delaunay's triangulation is marked with black lines and the Voronoi
-diagram with red lines.
+    The Subdiv2D class described in this section is used to perform various planar subdivision on
+    a set of 2D points (represented as vector of Point2f). OpenCV subdivides a plane into triangles
+    using the Delaunay's algorithm, which corresponds to the dual graph of the Voronoi diagram.
+    In the figure below, the Delaunay's triangulation is marked with black lines and the Voronoi
+    diagram with red lines.
 
-![Delaunay triangulation (black) and Voronoi (red)](pics/delaunay_voronoi.png)
+    ![Delaunay triangulation (black) and Voronoi (red)](pics/delaunay_voronoi.png)
 
-The subdivisions can be used for the 3D piece-wise transformation of a plane, morphing, fast
-location of points on the plane, building special graphs (such as NNG,RNG), and so forth.
+    The subdivisions can be used for the 3D piece-wise transformation of a plane, morphing, fast
+    location of points on the plane, building special graphs (such as NNG,RNG), and so forth.
 
     @defgroup imgproc_hist Histograms
     @defgroup imgproc_shape Structural Analysis and Shape Descriptors
     @defgroup imgproc_motion Motion Analysis and Object Tracking
     @defgroup imgproc_feature Feature Detection
     @defgroup imgproc_object Object Detection
-    @defgroup imgproc_c C API
+    @defgroup imgproc_segmentation Image Segmentation
     @defgroup imgproc_hal Hardware Acceleration Layer
     @{
         @defgroup imgproc_hal_functions Functions
@@ -207,6 +207,10 @@ namespace cv
 
 //! @addtogroup imgproc_filter
 //! @{
+
+enum SpecialFilter {
+    FILTER_SCHARR = -1
+};
 
 //! type of morphological operation
 enum MorphTypes{
@@ -232,7 +236,7 @@ enum MorphShapes {
     MORPH_CROSS   = 1, //!< a cross-shaped structuring element:
                        //!< \f[E_{ij} = \begin{cases} 1 & \texttt{if } {i=\texttt{anchor.y } {or } {j=\texttt{anchor.x}}} \\0 & \texttt{otherwise} \end{cases}\f]
     MORPH_ELLIPSE = 2 //!< an elliptic structuring element, that is, a filled ellipse inscribed
-                      //!< into the rectangle Rect(0, 0, esize.width, 0.esize.height)
+                      //!< into the rectangle Rect(0, 0, esize.width, esize.height)
 };
 
 //! @} imgproc_filter
@@ -270,7 +274,8 @@ enum InterpolationFlags{
     - flag is __not__ set: \f$dst( \rho , \phi ) = src(x,y)\f$
     - flag is set: \f$dst(x,y) = src( \rho , \phi )\f$
     */
-    WARP_INVERSE_MAP     = 16
+    WARP_INVERSE_MAP     = 16,
+    WARP_RELATIVE_MAP    = 32
 };
 
 /** \brief Specify the polar mapping mode
@@ -339,12 +344,6 @@ enum AdaptiveThresholdTypes {
     #getGaussianKernel*/
     ADAPTIVE_THRESH_GAUSSIAN_C = 1
 };
-
-//! cv::undistort mode
-enum UndistortTypes {
-       PROJ_SPHERICAL_ORTHO  = 0,
-       PROJ_SPHERICAL_EQRECT = 1
-     };
 
 //! class of the pixel in GrabCut algorithm
 enum GrabCutClasses {
@@ -486,7 +485,8 @@ enum HoughModes {
     /** multi-scale variant of the classical Hough transform. The lines are encoded the same way as
     HOUGH_STANDARD. */
     HOUGH_MULTI_SCALE   = 2,
-    HOUGH_GRADIENT      = 3 //!< basically *21HT*, described in @cite Yuen90
+    HOUGH_GRADIENT      = 3, //!< basically *21HT*, described in @cite Yuen90
+    HOUGH_GRADIENT_ALT  = 4, //!< variation of HOUGH_GRADIENT to get better accuracy
 };
 
 //! Variants of Line Segment %Detector
@@ -641,112 +641,109 @@ enum ColorConversionCodes {
     COLOR_YUV2BGR      = 84,
     COLOR_YUV2RGB      = 85,
 
-    //! YUV 4:2:0 family to RGB
-    COLOR_YUV2RGB_NV12  = 90,
-    COLOR_YUV2BGR_NV12  = 91,
-    COLOR_YUV2RGB_NV21  = 92,
-    COLOR_YUV2BGR_NV21  = 93,
-    COLOR_YUV420sp2RGB  = COLOR_YUV2RGB_NV21,
-    COLOR_YUV420sp2BGR  = COLOR_YUV2BGR_NV21,
+    COLOR_YUV2RGB_NV12  = 90, //!< convert between 4:2:0-subsampled YUV NV12 and RGB, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_NV12  = 91, //!< convert between 4:2:0-subsampled YUV NV12 and BGR, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_NV21  = 92, //!< convert between 4:2:0-subsampled YUV NV21 and RGB, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_NV21  = 93, //!< convert between 4:2:0-subsampled YUV NV21 and BGR, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV420sp2RGB  = COLOR_YUV2RGB_NV21, //!< synonym to NV21
+    COLOR_YUV420sp2BGR  = COLOR_YUV2BGR_NV21, //!< synonym to NV21
 
-    COLOR_YUV2RGBA_NV12 = 94,
-    COLOR_YUV2BGRA_NV12 = 95,
-    COLOR_YUV2RGBA_NV21 = 96,
-    COLOR_YUV2BGRA_NV21 = 97,
-    COLOR_YUV420sp2RGBA = COLOR_YUV2RGBA_NV21,
-    COLOR_YUV420sp2BGRA = COLOR_YUV2BGRA_NV21,
+    COLOR_YUV2RGBA_NV12 = 94, //!< convert between 4:2:0-subsampled YUV NV12 and RGBA, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_NV12 = 95, //!< convert between 4:2:0-subsampled YUV NV12 and BGRA, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_NV21 = 96, //!< convert between 4:2:0-subsampled YUV NV21 and RGBA, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_NV21 = 97, //!< convert between 4:2:0-subsampled YUV NV21 and BGRA, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV420sp2RGBA = COLOR_YUV2RGBA_NV21, //!< synonym to NV21
+    COLOR_YUV420sp2BGRA = COLOR_YUV2BGRA_NV21, //!< synonym to NV21
 
-    COLOR_YUV2RGB_YV12  = 98,
-    COLOR_YUV2BGR_YV12  = 99,
-    COLOR_YUV2RGB_IYUV  = 100,
-    COLOR_YUV2BGR_IYUV  = 101,
-    COLOR_YUV2RGB_I420  = COLOR_YUV2RGB_IYUV,
-    COLOR_YUV2BGR_I420  = COLOR_YUV2BGR_IYUV,
-    COLOR_YUV420p2RGB   = COLOR_YUV2RGB_YV12,
-    COLOR_YUV420p2BGR   = COLOR_YUV2BGR_YV12,
+    COLOR_YUV2RGB_YV12  =  98, //!< convert between 4:2:0-subsampled YUV YV12 and RGB, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_YV12  =  99, //!< convert between 4:2:0-subsampled YUV YV12 and BGR, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_IYUV  = 100, //!< convert between 4:2:0-subsampled YUV IYUV and RGB, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_IYUV  = 101, //!< convert between 4:2:0-subsampled YUV IYUV and BGR, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_I420  = COLOR_YUV2RGB_IYUV, //!< synonym to IYUV
+    COLOR_YUV2BGR_I420  = COLOR_YUV2BGR_IYUV, //!< synonym to IYUV
+    COLOR_YUV420p2RGB   = COLOR_YUV2RGB_YV12, //!< synonym to YV12
+    COLOR_YUV420p2BGR   = COLOR_YUV2BGR_YV12, //!< synonym to YV12
 
-    COLOR_YUV2RGBA_YV12 = 102,
-    COLOR_YUV2BGRA_YV12 = 103,
-    COLOR_YUV2RGBA_IYUV = 104,
-    COLOR_YUV2BGRA_IYUV = 105,
-    COLOR_YUV2RGBA_I420 = COLOR_YUV2RGBA_IYUV,
-    COLOR_YUV2BGRA_I420 = COLOR_YUV2BGRA_IYUV,
-    COLOR_YUV420p2RGBA  = COLOR_YUV2RGBA_YV12,
-    COLOR_YUV420p2BGRA  = COLOR_YUV2BGRA_YV12,
+    COLOR_YUV2RGBA_YV12 = 102, //!< convert between 4:2:0-subsampled YUV YV12 and RGBA, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_YV12 = 103, //!< convert between 4:2:0-subsampled YUV YV12 and BGRA, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_IYUV = 104, //!< convert between 4:2:0-subsampled YUV YV12 and RGBA, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_IYUV = 105, //!< convert between 4:2:0-subsampled YUV YV12 and BGRA, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_I420 = COLOR_YUV2RGBA_IYUV, //!< synonym to IYUV
+    COLOR_YUV2BGRA_I420 = COLOR_YUV2BGRA_IYUV, //!< synonym to IYUV
+    COLOR_YUV420p2RGBA  = COLOR_YUV2RGBA_YV12, //!< synonym to YV12
+    COLOR_YUV420p2BGRA  = COLOR_YUV2BGRA_YV12, //!< synonym to YV12
 
-    COLOR_YUV2GRAY_420  = 106,
-    COLOR_YUV2GRAY_NV21 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_NV12 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_YV12 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_IYUV = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_I420 = COLOR_YUV2GRAY_420,
-    COLOR_YUV420sp2GRAY = COLOR_YUV2GRAY_420,
-    COLOR_YUV420p2GRAY  = COLOR_YUV2GRAY_420,
+    COLOR_YUV2GRAY_420  = 106, //!< extract Y channel from YUV 4:2:0 image
+    COLOR_YUV2GRAY_NV21 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_NV12 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_YV12 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_IYUV = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_I420 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV420sp2GRAY = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV420p2GRAY  = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
 
-    //! YUV 4:2:2 family to RGB
-    COLOR_YUV2RGB_UYVY = 107,
-    COLOR_YUV2BGR_UYVY = 108,
-    //COLOR_YUV2RGB_VYUY = 109,
-    //COLOR_YUV2BGR_VYUY = 110,
-    COLOR_YUV2RGB_Y422 = COLOR_YUV2RGB_UYVY,
-    COLOR_YUV2BGR_Y422 = COLOR_YUV2BGR_UYVY,
-    COLOR_YUV2RGB_UYNV = COLOR_YUV2RGB_UYVY,
-    COLOR_YUV2BGR_UYNV = COLOR_YUV2BGR_UYVY,
+    COLOR_YUV2RGB_UYVY = 107, //!< convert between YUV UYVY and RGB, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_UYVY = 108, //!< convert between YUV UYVY and BGR, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2RGB_VYUY = 109, //!< convert between YUV VYUY and RGB, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2BGR_VYUY = 110, //!< convert between YUV VYUY and BGR, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_Y422 = COLOR_YUV2RGB_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGR_Y422 = COLOR_YUV2BGR_UYVY, //!< synonym to UYVY
+    COLOR_YUV2RGB_UYNV = COLOR_YUV2RGB_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGR_UYNV = COLOR_YUV2BGR_UYVY, //!< synonym to UYVY
 
-    COLOR_YUV2RGBA_UYVY = 111,
-    COLOR_YUV2BGRA_UYVY = 112,
-    //COLOR_YUV2RGBA_VYUY = 113,
-    //COLOR_YUV2BGRA_VYUY = 114,
-    COLOR_YUV2RGBA_Y422 = COLOR_YUV2RGBA_UYVY,
-    COLOR_YUV2BGRA_Y422 = COLOR_YUV2BGRA_UYVY,
-    COLOR_YUV2RGBA_UYNV = COLOR_YUV2RGBA_UYVY,
-    COLOR_YUV2BGRA_UYNV = COLOR_YUV2BGRA_UYVY,
+    COLOR_YUV2RGBA_UYVY = 111, //!< convert between YUV UYVY and RGBA, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_UYVY = 112, //!< convert between YUV UYVY and BGRA, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2RGBA_VYUY = 113, //!< convert between YUV VYUY and RGBA, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2BGRA_VYUY = 114, //!< convert between YUV VYUY and BGRA, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_Y422 = COLOR_YUV2RGBA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGRA_Y422 = COLOR_YUV2BGRA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2RGBA_UYNV = COLOR_YUV2RGBA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGRA_UYNV = COLOR_YUV2BGRA_UYVY, //!< synonym to UYVY
 
-    COLOR_YUV2RGB_YUY2 = 115,
-    COLOR_YUV2BGR_YUY2 = 116,
-    COLOR_YUV2RGB_YVYU = 117,
-    COLOR_YUV2BGR_YVYU = 118,
-    COLOR_YUV2RGB_YUYV = COLOR_YUV2RGB_YUY2,
-    COLOR_YUV2BGR_YUYV = COLOR_YUV2BGR_YUY2,
-    COLOR_YUV2RGB_YUNV = COLOR_YUV2RGB_YUY2,
-    COLOR_YUV2BGR_YUNV = COLOR_YUV2BGR_YUY2,
+    COLOR_YUV2RGB_YUY2 = 115, //!< convert between YUV YUY2 and RGB, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_YUY2 = 116, //!< convert between YUV YUY2 and BGR, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_YVYU = 117, //!< convert between YUV YVYU and RGB, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_YVYU = 118, //!< convert between YUV YVYU and BGR, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_YUYV = COLOR_YUV2RGB_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGR_YUYV = COLOR_YUV2BGR_YUY2, //!< synonym to YUY2
+    COLOR_YUV2RGB_YUNV = COLOR_YUV2RGB_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGR_YUNV = COLOR_YUV2BGR_YUY2, //!< synonym to YUY2
 
-    COLOR_YUV2RGBA_YUY2 = 119,
-    COLOR_YUV2BGRA_YUY2 = 120,
-    COLOR_YUV2RGBA_YVYU = 121,
-    COLOR_YUV2BGRA_YVYU = 122,
-    COLOR_YUV2RGBA_YUYV = COLOR_YUV2RGBA_YUY2,
-    COLOR_YUV2BGRA_YUYV = COLOR_YUV2BGRA_YUY2,
-    COLOR_YUV2RGBA_YUNV = COLOR_YUV2RGBA_YUY2,
-    COLOR_YUV2BGRA_YUNV = COLOR_YUV2BGRA_YUY2,
+    COLOR_YUV2RGBA_YUY2 = 119, //!< convert between YUV YUY2 and RGBA, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_YUY2 = 120, //!< convert between YUV YUY2 and BGRA, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_YVYU = 121, //!< convert between YUV YVYU and RGBA, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_YVYU = 122, //!< convert between YUV YVYU and BGRA, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_YUYV = COLOR_YUV2RGBA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGRA_YUYV = COLOR_YUV2BGRA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2RGBA_YUNV = COLOR_YUV2RGBA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGRA_YUNV = COLOR_YUV2BGRA_YUY2, //!< synonym to YUY2
 
-    COLOR_YUV2GRAY_UYVY = 123,
-    COLOR_YUV2GRAY_YUY2 = 124,
-    //CV_YUV2GRAY_VYUY    = CV_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_Y422 = COLOR_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_UYNV = COLOR_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_YVYU = COLOR_YUV2GRAY_YUY2,
-    COLOR_YUV2GRAY_YUYV = COLOR_YUV2GRAY_YUY2,
-    COLOR_YUV2GRAY_YUNV = COLOR_YUV2GRAY_YUY2,
+    COLOR_YUV2GRAY_UYVY = 123, //!< extract Y channel from YUV 4:2:2 image
+    COLOR_YUV2GRAY_YUY2 = 124, //!< extract Y channel from YUV 4:2:2 image
+    //CV_YUV2GRAY_VYUY  = CV_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    COLOR_YUV2GRAY_Y422 = COLOR_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    COLOR_YUV2GRAY_UYNV = COLOR_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    COLOR_YUV2GRAY_YVYU = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
+    COLOR_YUV2GRAY_YUYV = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
+    COLOR_YUV2GRAY_YUNV = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
 
     //! alpha premultiplication
     COLOR_RGBA2mRGBA    = 125,
     COLOR_mRGBA2RGBA    = 126,
 
-    //! RGB to YUV 4:2:0 family
-    COLOR_RGB2YUV_I420  = 127,
-    COLOR_BGR2YUV_I420  = 128,
-    COLOR_RGB2YUV_IYUV  = COLOR_RGB2YUV_I420,
-    COLOR_BGR2YUV_IYUV  = COLOR_BGR2YUV_I420,
+    COLOR_RGB2YUV_I420  = 127, //!< convert between RGB and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_I420  = 128, //!< convert between BGR and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_IYUV  = COLOR_RGB2YUV_I420, //!< synonym to I420
+    COLOR_BGR2YUV_IYUV  = COLOR_BGR2YUV_I420, //!< synonym to I420
 
-    COLOR_RGBA2YUV_I420 = 129,
-    COLOR_BGRA2YUV_I420 = 130,
-    COLOR_RGBA2YUV_IYUV = COLOR_RGBA2YUV_I420,
-    COLOR_BGRA2YUV_IYUV = COLOR_BGRA2YUV_I420,
-    COLOR_RGB2YUV_YV12  = 131,
-    COLOR_BGR2YUV_YV12  = 132,
-    COLOR_RGBA2YUV_YV12 = 133,
-    COLOR_BGRA2YUV_YV12 = 134,
+    COLOR_RGBA2YUV_I420 = 129, //!< convert between RGBA and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_I420 = 130, //!< convert between BGRA and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_IYUV = COLOR_RGBA2YUV_I420, //!< synonym to I420
+    COLOR_BGRA2YUV_IYUV = COLOR_BGRA2YUV_I420, //!< synonym to I420
+    COLOR_RGB2YUV_YV12  = 131, //!< convert between RGB and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_YV12  = 132, //!< convert between BGR and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_YV12 = 133, //!< convert between RGBA and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_YV12 = 134, //!< convert between BGRA and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
 
     //! Demosaicing, see @ref color_convert_bayer "color conversions" for additional information
     COLOR_BayerBG2BGR = 46, //!< equivalent to RGGB Bayer pattern
@@ -842,7 +839,39 @@ enum ColorConversionCodes {
     COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA, //!< equivalent to BGGR Bayer pattern
     COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_COLORCVT_MAX  = 143
+    COLOR_RGB2YUV_UYVY = 143, //!< convert between RGB and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_UYVY = 144, //!< convert between BGR and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_Y422 = COLOR_RGB2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGR2YUV_Y422 = COLOR_BGR2YUV_UYVY, //!< synonym to UYVY
+    COLOR_RGB2YUV_UYNV = COLOR_RGB2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGR2YUV_UYNV = COLOR_BGR2YUV_UYVY, //!< synonym to UYVY
+
+    COLOR_RGBA2YUV_UYVY = 145, //!< convert between RGBA and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_UYVY = 146, //!< convert between BGRA and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_Y422 = COLOR_RGBA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGRA2YUV_Y422 = COLOR_BGRA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_RGBA2YUV_UYNV = COLOR_RGBA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGRA2YUV_UYNV = COLOR_BGRA2YUV_UYVY, //!< synonym to UYVY
+
+    COLOR_RGB2YUV_YUY2 = 147, //!< convert between RGB and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_YUY2 = 148, //!< convert between BGR and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_YVYU = 149, //!< convert between RGB and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_YVYU = 150, //!< convert between BGR and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_YUYV = COLOR_RGB2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGR2YUV_YUYV = COLOR_BGR2YUV_YUY2, //!< synonym to YUY2
+    COLOR_RGB2YUV_YUNV = COLOR_RGB2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGR2YUV_YUNV = COLOR_BGR2YUV_YUY2, //!< synonym to YUY2
+
+    COLOR_RGBA2YUV_YUY2 = 151, //!< convert between RGBA and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_YUY2 = 152, //!< convert between BGRA and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_YVYU = 153, //!< convert between RGBA and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_YVYU = 154, //!< convert between BGRA and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_YUYV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGRA2YUV_YUYV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
+
+    COLOR_COLORCVT_MAX  = 155
 };
 
 //! @addtogroup imgproc_shape
@@ -853,6 +882,45 @@ enum RectanglesIntersectTypes {
     INTERSECT_NONE = 0, //!< No intersection
     INTERSECT_PARTIAL  = 1, //!< There is a partial intersection
     INTERSECT_FULL  = 2 //!< One of the rectangle is fully enclosed in the other
+};
+
+/** types of line
+@ingroup imgproc_draw
+*/
+enum LineTypes {
+    FILLED  = -1,
+    LINE_4  = 4, //!< 4-connected line
+    LINE_8  = 8, //!< 8-connected line
+    LINE_AA = 16 //!< antialiased line
+};
+
+/** Only a subset of Hershey fonts <https://en.wikipedia.org/wiki/Hershey_fonts> are supported
+@ingroup imgproc_draw
+*/
+enum HersheyFonts {
+    FONT_HERSHEY_SIMPLEX        = 0, //!< normal size sans-serif font
+    FONT_HERSHEY_PLAIN          = 1, //!< small size sans-serif font
+    FONT_HERSHEY_DUPLEX         = 2, //!< normal size sans-serif font (more complex than FONT_HERSHEY_SIMPLEX)
+    FONT_HERSHEY_COMPLEX        = 3, //!< normal size serif font
+    FONT_HERSHEY_TRIPLEX        = 4, //!< normal size serif font (more complex than FONT_HERSHEY_COMPLEX)
+    FONT_HERSHEY_COMPLEX_SMALL  = 5, //!< smaller version of FONT_HERSHEY_COMPLEX
+    FONT_HERSHEY_SCRIPT_SIMPLEX = 6, //!< hand-writing style font
+    FONT_HERSHEY_SCRIPT_COMPLEX = 7, //!< more complex variant of FONT_HERSHEY_SCRIPT_SIMPLEX
+    FONT_ITALIC                 = 16 //!< flag for italic font
+};
+
+/** Possible set of marker types used for the cv::drawMarker function
+@ingroup imgproc_draw
+*/
+enum MarkerTypes
+{
+    MARKER_CROSS = 0,           //!< A crosshair marker shape
+    MARKER_TILTED_CROSS = 1,    //!< A 45 degree tilted crosshair marker shape
+    MARKER_STAR = 2,            //!< A star marker shape, combination of cross and tilted cross
+    MARKER_DIAMOND = 3,         //!< A diamond marker shape
+    MARKER_SQUARE = 4,          //!< A square marker shape
+    MARKER_TRIANGLE_UP = 5,     //!< An upwards pointing triangle marker shape
+    MARKER_TRIANGLE_DOWN = 6    //!< A downwards pointing triangle marker shape
 };
 
 /** @brief finds arbitrary template in the grayscale image using Generalized Hough Transform
@@ -1376,14 +1444,14 @@ CV_EXPORTS_W Mat getGaussianKernel( int ksize, double sigma, int ktype = CV_64F 
 /** @brief Returns filter coefficients for computing spatial image derivatives.
 
 The function computes and returns the filter coefficients for spatial image derivatives. When
-`ksize=CV_SCHARR`, the Scharr \f$3 \times 3\f$ kernels are generated (see #Scharr). Otherwise, Sobel
+`ksize=FILTER_SCHARR`, the Scharr \f$3 \times 3\f$ kernels are generated (see #Scharr). Otherwise, Sobel
 kernels are generated (see #Sobel). The filters are normally passed to #sepFilter2D or to
 
 @param kx Output matrix of row filter coefficients. It has the type ktype .
 @param ky Output matrix of column filter coefficients. It has the type ktype .
 @param dx Derivative order in respect of x.
 @param dy Derivative order in respect of y.
-@param ksize Aperture size. It can be CV_SCHARR, 1, 3, 5, or 7.
+@param ksize Aperture size. It can be FILTER_SCHARR, 1, 3, 5, or 7.
 @param normalize Flag indicating whether to normalize (scale down) the filter coefficients or not.
 Theoretically, the coefficients should have the denominator \f$=2^{ksize*2-dx-dy-2}\f$. If you are
 going to filter floating-point images, you are likely to use the normalized kernels. But if you
@@ -1468,12 +1536,14 @@ respectively (see #getGaussianKernel for details); to fully control the result r
 possible future modifications of all this semantics, it is recommended to specify all of ksize,
 sigmaX, and sigmaY.
 @param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @sa  sepFilter2D, filter2D, blur, boxFilter, bilateralFilter, medianBlur
  */
 CV_EXPORTS_W void GaussianBlur( InputArray src, OutputArray dst, Size ksize,
                                 double sigmaX, double sigmaY = 0,
-                                int borderType = BORDER_DEFAULT );
+                                int borderType = BORDER_DEFAULT,
+                                AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief Applies the bilateral filter to an image.
 
@@ -1581,6 +1651,23 @@ CV_EXPORTS_W void blur( InputArray src, OutputArray dst,
                         Size ksize, Point anchor = Point(-1,-1),
                         int borderType = BORDER_DEFAULT );
 
+/** @brief Blurs an image using the stackBlur.
+
+The function applies and stackBlur to an image.
+stackBlur can generate similar results as Gaussian blur, and the time consumption does not increase with the increase of kernel size.
+It creates a kind of moving stack of colors whilst scanning through the image. Thereby it just has to add one new block of color to the right side
+of the stack and remove the leftmost color. The remaining colors on the topmost layer of the stack are either added on or reduced by one,
+depending on if they are on the right or on the left side of the stack. The only supported borderType is BORDER_REPLICATE.
+Original paper was proposed by Mario Klingemann, which can be found http://underdestruction.com/2004/02/25/stackblur-2004.
+
+@param src input image. The number of channels can be arbitrary, but the depth should be one of
+CV_8U, CV_16U, CV_16S or CV_32F.
+@param dst output image of the same size and type as src.
+@param ksize stack-blurring kernel size. The ksize.width and ksize.height can differ but they both must be
+positive and odd.
+*/
+CV_EXPORTS_W void stackBlur(InputArray src, OutputArray dst, Size ksize);
+
 /** @brief Convolves an image with the kernel.
 
 The function applies an arbitrary linear filter to an image. In-place operation is supported. When
@@ -1650,7 +1737,7 @@ calculate the derivative. When \f$\texttt{ksize = 1}\f$, the \f$3 \times 1\f$ or
 kernel is used (that is, no Gaussian smoothing is done). `ksize = 1` can only be used for the first
 or the second x- or y- derivatives.
 
-There is also the special value `ksize = #CV_SCHARR (-1)` that corresponds to the \f$3\times3\f$ Scharr
+There is also the special value `ksize = #FILTER_SCHARR (-1)` that corresponds to the \f$3\times3\f$ Scharr
 filter that may give more accurate results than the \f$3\times3\f$ Sobel. The Scharr aperture is
 
 \f[\vecthreethree{-3}{0}{3}{-10}{0}{10}{-3}{0}{3}\f]
@@ -1722,7 +1809,7 @@ call
 
 is equivalent to
 
-\f[\texttt{Sobel(src, dst, ddepth, dx, dy, CV_SCHARR, scale, delta, borderType)} .\f]
+\f[\texttt{Sobel(src, dst, ddepth, dx, dy, FILTER_SCHARR, scale, delta, borderType)} .\f]
 
 @param src input image.
 @param dst output image of the same size and the same number of channels as src.
@@ -2015,6 +2102,38 @@ CV_EXPORTS_W void goodFeaturesToTrack( InputArray image, OutputArray corners,
                                      InputArray mask, int blockSize,
                                      int gradientSize, bool useHarrisDetector = false,
                                      double k = 0.04 );
+
+/** @brief Same as above, but returns also quality measure of the detected corners.
+
+@param image Input 8-bit or floating-point 32-bit, single-channel image.
+@param corners Output vector of detected corners.
+@param maxCorners Maximum number of corners to return. If there are more corners than are found,
+the strongest of them is returned. `maxCorners <= 0` implies that no limit on the maximum is set
+and all detected corners are returned.
+@param qualityLevel Parameter characterizing the minimal accepted quality of image corners. The
+parameter value is multiplied by the best corner quality measure, which is the minimal eigenvalue
+(see #cornerMinEigenVal ) or the Harris function response (see #cornerHarris ). The corners with the
+quality measure less than the product are rejected. For example, if the best corner has the
+quality measure = 1500, and the qualityLevel=0.01 , then all the corners with the quality measure
+less than 15 are rejected.
+@param minDistance Minimum possible Euclidean distance between the returned corners.
+@param mask Region of interest. If the image is not empty (it needs to have the type
+CV_8UC1 and the same size as image ), it specifies the region in which the corners are detected.
+@param cornersQuality Output vector of quality measure of the detected corners.
+@param blockSize Size of an average block for computing a derivative covariation matrix over each
+pixel neighborhood. See cornerEigenValsAndVecs .
+@param gradientSize Aperture parameter for the Sobel operator used for derivatives computation.
+See cornerEigenValsAndVecs .
+@param useHarrisDetector Parameter indicating whether to use a Harris detector (see #cornerHarris)
+or #cornerMinEigenVal.
+@param k Free parameter of the Harris detector.
+ */
+CV_EXPORTS CV_WRAP_AS(goodFeaturesToTrackWithQuality) void goodFeaturesToTrack(
+        InputArray image, OutputArray corners,
+        int maxCorners, double qualityLevel, double minDistance,
+        InputArray mask, OutputArray cornersQuality, int blockSize = 3,
+        int gradientSize = 3, bool useHarrisDetector = false, double k = 0.04);
+
 /** @example samples/cpp/tutorial_code/ImgTrans/houghlines.cpp
 An example using the Hough line detector
 ![Sample input image](Hough_Lines_Tutorial_Original_Image.jpg) ![Output image](Hough_Lines_Tutorial_Result.jpg)
@@ -2119,28 +2238,37 @@ Example: :
 
 @note Usually the function detects the centers of circles well. However, it may fail to find correct
 radii. You can assist to the function by specifying the radius range ( minRadius and maxRadius ) if
-you know it. Or, you may set maxRadius to a negative number to return centers only without radius
-search, and find the correct radius using an additional procedure.
+you know it. Or, in the case of #HOUGH_GRADIENT method you may set maxRadius to a negative number
+to return centers only without radius search, and find the correct radius using an additional procedure.
+
+It also helps to smooth image a bit unless it's already soft. For example,
+GaussianBlur() with 7x7 kernel and 1.5x1.5 sigma or similar blurring may help.
 
 @param image 8-bit, single-channel, grayscale input image.
 @param circles Output vector of found circles. Each vector is encoded as  3 or 4 element
 floating-point vector \f$(x, y, radius)\f$ or \f$(x, y, radius, votes)\f$ .
-@param method Detection method, see #HoughModes. Currently, the only implemented method is #HOUGH_GRADIENT
+@param method Detection method, see #HoughModes. The available methods are #HOUGH_GRADIENT and #HOUGH_GRADIENT_ALT.
 @param dp Inverse ratio of the accumulator resolution to the image resolution. For example, if
 dp=1 , the accumulator has the same resolution as the input image. If dp=2 , the accumulator has
-half as big width and height.
+half as big width and height. For #HOUGH_GRADIENT_ALT the recommended value is dp=1.5,
+unless some small very circles need to be detected.
 @param minDist Minimum distance between the centers of the detected circles. If the parameter is
 too small, multiple neighbor circles may be falsely detected in addition to a true one. If it is
 too large, some circles may be missed.
-@param param1 First method-specific parameter. In case of #HOUGH_GRADIENT , it is the higher
-threshold of the two passed to the Canny edge detector (the lower one is twice smaller).
-@param param2 Second method-specific parameter. In case of #HOUGH_GRADIENT , it is the
+@param param1 First method-specific parameter. In case of #HOUGH_GRADIENT and #HOUGH_GRADIENT_ALT,
+it is the higher threshold of the two passed to the Canny edge detector (the lower one is twice smaller).
+Note that #HOUGH_GRADIENT_ALT uses #Scharr algorithm to compute image derivatives, so the threshold value
+should normally be higher, such as 300 or normally exposed and contrasty images.
+@param param2 Second method-specific parameter. In case of #HOUGH_GRADIENT, it is the
 accumulator threshold for the circle centers at the detection stage. The smaller it is, the more
 false circles may be detected. Circles, corresponding to the larger accumulator values, will be
-returned first.
+returned first. In the case of #HOUGH_GRADIENT_ALT algorithm, this is the circle "perfectness" measure.
+The closer it to 1, the better shaped circles algorithm selects. In most cases 0.9 should be fine.
+If you want get better detection of small circles, you may decrease it to 0.85, 0.8 or even less.
+But then also try to limit the search range [minRadius, maxRadius] to avoid many false circles.
 @param minRadius Minimum circle radius.
-@param maxRadius Maximum circle radius. If <= 0, uses the maximum image dimension. If < 0, returns
-centers without finding the radius.
+@param maxRadius Maximum circle radius. If <= 0, uses the maximum image dimension. If < 0, #HOUGH_GRADIENT returns
+centers without finding the radius. #HOUGH_GRADIENT_ALT always computes circle radiuses.
 
 @sa fitEllipse, minEnclosingCircle
  */
@@ -2360,6 +2488,10 @@ The function remap transforms the source image using the specified map:
 
 \f[\texttt{dst} (x,y) =  \texttt{src} (map_x(x,y),map_y(x,y))\f]
 
+with the WARP_RELATIVE_MAP flag :
+
+\f[\texttt{dst} (x,y) =  \texttt{src} (x+map_x(x,y),y+map_y(x,y))\f]
+
 where values of pixels with non-integer coordinates are computed using one of available
 interpolation methods. \f$map_x\f$ and \f$map_y\f$ can be encoded as separate floating-point maps
 in \f$map_1\f$ and \f$map_2\f$ respectively, or interleaved floating-point maps of \f$(x,y)\f$ in
@@ -2378,7 +2510,9 @@ representation to fixed-point for speed.
 @param map2 The second map of y values having the type CV_16UC1, CV_32FC1, or none (empty map
 if map1 is (x,y) points), respectively.
 @param interpolation Interpolation method (see #InterpolationFlags). The methods #INTER_AREA
-and #INTER_LINEAR_EXACT are not supported by this function.
+#INTER_LINEAR_EXACT and #INTER_NEAREST_EXACT are not supported by this function.
+The extra flag WARP_RELATIVE_MAP can be ORed to the interpolation method
+(e.g. INTER_LINEAR | WARP_RELATIVE_MAP)
 @param borderMode Pixel extrapolation method (see #BorderTypes). When
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
@@ -2444,10 +2578,16 @@ coordinate origin is assumed to be the top-left corner).
 
 @sa  getAffineTransform, warpAffine, transform
  */
-CV_EXPORTS_W Mat getRotationMatrix2D( Point2f center, double angle, double scale );
+CV_EXPORTS_W Mat getRotationMatrix2D(Point2f center, double angle, double scale);
 
-//! returns 3x3 perspective transformation for the corresponding 4 point pairs.
-CV_EXPORTS Mat getPerspectiveTransform( const Point2f src[], const Point2f dst[] );
+/** @sa getRotationMatrix2D */
+CV_EXPORTS Matx23d getRotationMatrix2D_(Point2f center, double angle, double scale);
+
+inline
+Mat getRotationMatrix2D(Point2f center, double angle, double scale)
+{
+    return Mat(getRotationMatrix2D_(center, angle, scale), true);
+}
 
 /** @brief Calculates an affine transform from three pairs of the corresponding points.
 
@@ -2491,10 +2631,15 @@ where
 
 @param src Coordinates of quadrangle vertices in the source image.
 @param dst Coordinates of the corresponding quadrangle vertices in the destination image.
+@param solveMethod method passed to cv::solve (#DecompTypes)
 
 @sa  findHomography, warpPerspective, perspectiveTransform
  */
-CV_EXPORTS_W Mat getPerspectiveTransform( InputArray src, InputArray dst );
+CV_EXPORTS_W Mat getPerspectiveTransform(InputArray src, InputArray dst, int solveMethod = DECOMP_LU);
+
+/** @overload */
+CV_EXPORTS Mat getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod = DECOMP_LU);
+
 
 CV_EXPORTS_W Mat getAffineTransform( InputArray src, InputArray dst );
 
@@ -2705,13 +2850,6 @@ CV_EXPORTS_W void warpPolar(InputArray src, OutputArray dst, Size dsize,
 //! @addtogroup imgproc_misc
 //! @{
 
-/** @overload */
-CV_EXPORTS_W void integral( InputArray src, OutputArray sum, int sdepth = -1 );
-
-/** @overload */
-CV_EXPORTS_AS(integral2) void integral( InputArray src, OutputArray sum,
-                                        OutputArray sqsum, int sdepth = -1, int sqdepth = -1 );
-
 /** @brief Calculates the integral of an image.
 
 The function calculates one or more integral images for the source image as follows:
@@ -2749,6 +2887,13 @@ CV_64F.
 CV_EXPORTS_AS(integral3) void integral( InputArray src, OutputArray sum,
                                         OutputArray sqsum, OutputArray tilted,
                                         int sdepth = -1, int sqdepth = -1 );
+
+/** @overload */
+CV_EXPORTS_W void integral( InputArray src, OutputArray sum, int sdepth = -1 );
+
+/** @overload */
+CV_EXPORTS_AS(integral2) void integral( InputArray src, OutputArray sum,
+                                        OutputArray sqsum, int sdepth = -1, int sqdepth = -1 );
 
 //! @} imgproc_misc
 
@@ -3034,193 +3179,6 @@ CV_EXPORTS void buildPyramid( InputArray src, OutputArrayOfArrays dst,
 
 //! @} imgproc_filter
 
-//! @addtogroup imgproc_transform
-//! @{
-
-/** @brief Transforms an image to compensate for lens distortion.
-
-The function transforms an image to compensate radial and tangential lens distortion.
-
-The function is simply a combination of #initUndistortRectifyMap (with unity R ) and #remap
-(with bilinear interpolation). See the former function for details of the transformation being
-performed.
-
-Those pixels in the destination image, for which there is no correspondent pixels in the source
-image, are filled with zeros (black color).
-
-A particular subset of the source image that will be visible in the corrected image can be regulated
-by newCameraMatrix. You can use #getOptimalNewCameraMatrix to compute the appropriate
-newCameraMatrix depending on your requirements.
-
-The camera matrix and the distortion parameters can be determined using #calibrateCamera. If
-the resolution of images is different from the resolution used at the calibration stage, \f$f_x,
-f_y, c_x\f$ and \f$c_y\f$ need to be scaled accordingly, while the distortion coefficients remain
-the same.
-
-@param src Input (distorted) image.
-@param dst Output (corrected) image that has the same size and type as src .
-@param cameraMatrix Input camera matrix \f$A = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-@param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param newCameraMatrix Camera matrix of the distorted image. By default, it is the same as
-cameraMatrix but you may additionally scale and shift the result by using a different matrix.
- */
-CV_EXPORTS_W void undistort( InputArray src, OutputArray dst,
-                             InputArray cameraMatrix,
-                             InputArray distCoeffs,
-                             InputArray newCameraMatrix = noArray() );
-
-/** @brief Computes the undistortion and rectification transformation map.
-
-The function computes the joint undistortion and rectification transformation and represents the
-result in the form of maps for remap. The undistorted image looks like original, as if it is
-captured with a camera using the camera matrix =newCameraMatrix and zero distortion. In case of a
-monocular camera, newCameraMatrix is usually equal to cameraMatrix, or it can be computed by
-#getOptimalNewCameraMatrix for a better control over scaling. In case of a stereo camera,
-newCameraMatrix is normally set to P1 or P2 computed by #stereoRectify .
-
-Also, this new camera is oriented differently in the coordinate space, according to R. That, for
-example, helps to align two heads of a stereo camera so that the epipolar lines on both images
-become horizontal and have the same y- coordinate (in case of a horizontally aligned stereo camera).
-
-The function actually builds the maps for the inverse mapping algorithm that is used by remap. That
-is, for each pixel \f$(u, v)\f$ in the destination (corrected and rectified) image, the function
-computes the corresponding coordinates in the source image (that is, in the original image from
-camera). The following process is applied:
-\f[
-\begin{array}{l}
-x  \leftarrow (u - {c'}_x)/{f'}_x  \\
-y  \leftarrow (v - {c'}_y)/{f'}_y  \\
-{[X\,Y\,W]} ^T  \leftarrow R^{-1}*[x \, y \, 1]^T  \\
-x'  \leftarrow X/W  \\
-y'  \leftarrow Y/W  \\
-r^2  \leftarrow x'^2 + y'^2 \\
-x''  \leftarrow x' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}
-+ 2p_1 x' y' + p_2(r^2 + 2 x'^2)  + s_1 r^2 + s_2 r^4\\
-y''  \leftarrow y' \frac{1 + k_1 r^2 + k_2 r^4 + k_3 r^6}{1 + k_4 r^2 + k_5 r^4 + k_6 r^6}
-+ p_1 (r^2 + 2 y'^2) + 2 p_2 x' y' + s_3 r^2 + s_4 r^4 \\
-s\vecthree{x'''}{y'''}{1} =
-\vecthreethree{R_{33}(\tau_x, \tau_y)}{0}{-R_{13}((\tau_x, \tau_y)}
-{0}{R_{33}(\tau_x, \tau_y)}{-R_{23}(\tau_x, \tau_y)}
-{0}{0}{1} R(\tau_x, \tau_y) \vecthree{x''}{y''}{1}\\
-map_x(u,v)  \leftarrow x''' f_x + c_x  \\
-map_y(u,v)  \leftarrow y''' f_y + c_y
-\end{array}
-\f]
-where \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-are the distortion coefficients.
-
-In case of a stereo camera, this function is called twice: once for each camera head, after
-stereoRectify, which in its turn is called after #stereoCalibrate. But if the stereo camera
-was not calibrated, it is still possible to compute the rectification transformations directly from
-the fundamental matrix using #stereoRectifyUncalibrated. For each camera, the function computes
-homography H as the rectification transformation in a pixel domain, not a rotation matrix R in 3D
-space. R can be computed from H as
-\f[\texttt{R} = \texttt{cameraMatrix} ^{-1} \cdot \texttt{H} \cdot \texttt{cameraMatrix}\f]
-where cameraMatrix can be chosen arbitrarily.
-
-@param cameraMatrix Input camera matrix \f$A=\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-@param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param R Optional rectification transformation in the object space (3x3 matrix). R1 or R2 ,
-computed by #stereoRectify can be passed here. If the matrix is empty, the identity transformation
-is assumed. In #initUndistortRectifyMap R is assumed to be an identity matrix.
-@param newCameraMatrix New camera matrix \f$A'=\vecthreethree{f_x'}{0}{c_x'}{0}{f_y'}{c_y'}{0}{0}{1}\f$.
-@param size Undistorted image size.
-@param m1type Type of the first output map that can be CV_32FC1, CV_32FC2 or CV_16SC2, see #convertMaps
-@param map1 The first output map.
-@param map2 The second output map.
- */
-CV_EXPORTS_W void initUndistortRectifyMap( InputArray cameraMatrix, InputArray distCoeffs,
-                           InputArray R, InputArray newCameraMatrix,
-                           Size size, int m1type, OutputArray map1, OutputArray map2 );
-
-//! initializes maps for #remap for wide-angle
-CV_EXPORTS_W float initWideAngleProjMap( InputArray cameraMatrix, InputArray distCoeffs,
-                                         Size imageSize, int destImageWidth,
-                                         int m1type, OutputArray map1, OutputArray map2,
-                                         int projType = PROJ_SPHERICAL_EQRECT, double alpha = 0);
-
-/** @brief Returns the default new camera matrix.
-
-The function returns the camera matrix that is either an exact copy of the input cameraMatrix (when
-centerPrinicipalPoint=false ), or the modified one (when centerPrincipalPoint=true).
-
-In the latter case, the new camera matrix will be:
-
-\f[\begin{bmatrix} f_x && 0 && ( \texttt{imgSize.width} -1)*0.5  \\ 0 && f_y && ( \texttt{imgSize.height} -1)*0.5  \\ 0 && 0 && 1 \end{bmatrix} ,\f]
-
-where \f$f_x\f$ and \f$f_y\f$ are \f$(0,0)\f$ and \f$(1,1)\f$ elements of cameraMatrix, respectively.
-
-By default, the undistortion functions in OpenCV (see #initUndistortRectifyMap, #undistort) do not
-move the principal point. However, when you work with stereo, it is important to move the principal
-points in both views to the same y-coordinate (which is required by most of stereo correspondence
-algorithms), and may be to the same x-coordinate too. So, you can form the new camera matrix for
-each view where the principal points are located at the center.
-
-@param cameraMatrix Input camera matrix.
-@param imgsize Camera view image size in pixels.
-@param centerPrincipalPoint Location of the principal point in the new camera matrix. The
-parameter indicates whether this location should be at the image center or not.
- */
-CV_EXPORTS_W Mat getDefaultNewCameraMatrix( InputArray cameraMatrix, Size imgsize = Size(),
-                                            bool centerPrincipalPoint = false );
-
-/** @brief Computes the ideal point coordinates from the observed point coordinates.
-
-The function is similar to #undistort and #initUndistortRectifyMap but it operates on a
-sparse set of points instead of a raster image. Also the function performs a reverse transformation
-to projectPoints. In case of a 3D object, it does not reconstruct its 3D coordinates, but for a
-planar object, it does, up to a translation vector, if the proper R is specified.
-
-For each observed point coordinate \f$(u, v)\f$ the function computes:
-\f[
-\begin{array}{l}
-x^{"}  \leftarrow (u - c_x)/f_x  \\
-y^{"}  \leftarrow (v - c_y)/f_y  \\
-(x',y') = undistort(x^{"},y^{"}, \texttt{distCoeffs}) \\
-{[X\,Y\,W]} ^T  \leftarrow R*[x' \, y' \, 1]^T  \\
-x  \leftarrow X/W  \\
-y  \leftarrow Y/W  \\
-\text{only performed if P is specified:} \\
-u'  \leftarrow x {f'}_x + {c'}_x  \\
-v'  \leftarrow y {f'}_y + {c'}_y
-\end{array}
-\f]
-
-where *undistort* is an approximate iterative algorithm that estimates the normalized original
-point coordinates out of the normalized distorted point coordinates ("normalized" means that the
-coordinates do not depend on the camera matrix).
-
-The function can be used for both a stereo camera head or a monocular camera (when R is empty).
-@param src Observed point coordinates, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel (CV_32FC2 or CV_64FC2) (or
-vector\<Point2f\> ).
-@param dst Output ideal point coordinates (1xN/Nx1 2-channel or vector\<Point2f\> ) after undistortion and reverse perspective
-transformation. If matrix P is identity or omitted, dst will contain normalized point coordinates.
-@param cameraMatrix Camera matrix \f$\vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-@param distCoeffs Input vector of distortion coefficients
-\f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
-of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param R Rectification transformation in the object space (3x3 matrix). R1 or R2 computed by
-#stereoRectify can be passed here. If the matrix is empty, the identity transformation is used.
-@param P New camera matrix (3x3) or new projection matrix (3x4) \f$\begin{bmatrix} {f'}_x & 0 & {c'}_x & t_x \\ 0 & {f'}_y & {c'}_y & t_y \\ 0 & 0 & 1 & t_z \end{bmatrix}\f$. P1 or P2 computed by
-#stereoRectify can be passed here. If the matrix is empty, the identity new camera matrix is used.
- */
-CV_EXPORTS_W void undistortPoints( InputArray src, OutputArray dst,
-                                   InputArray cameraMatrix, InputArray distCoeffs,
-                                   InputArray R = noArray(), InputArray P = noArray() );
-/** @overload
-    @note Default version of #undistortPoints does 5 iterations to compute undistorted points.
-
- */
-CV_EXPORTS_AS(undistortPointsIter) void undistortPoints( InputArray src, OutputArray dst,
-                                                         InputArray cameraMatrix, InputArray distCoeffs,
-                                                         InputArray R, InputArray P, TermCriteria criteria );
-
-//! @} imgproc_transform
-
 //! @addtogroup imgproc_hist
 //! @{
 
@@ -3326,7 +3284,7 @@ images[0].channels() + images[1].channels()-1, and so on.
 size and depth as images[0] .
 @param ranges Array of arrays of the histogram bin boundaries in each dimension. See #calcHist .
 @param scale Optional scale factor for the output back projection.
-@param uniform Flag indicating whether the histogram is uniform or not (see above).
+@param uniform Flag indicating whether the histogram is uniform or not (see #calcHist).
 
 @sa calcHist, compareHist
  */
@@ -3436,6 +3394,9 @@ CV_EXPORTS_AS(EMD) float wrapperEMD( InputArray signature1, InputArray signature
 
 //! @} imgproc_hist
 
+//! @addtogroup imgproc_segmentation
+//! @{
+
 /** @example samples/cpp/watershed.cpp
 An example using the watershed algorithm
 */
@@ -3463,10 +3424,10 @@ function.
 size as image .
 
 @sa findContours
-
-@ingroup imgproc_misc
  */
 CV_EXPORTS_W void watershed( InputArray image, InputOutputArray markers );
+
+//! @} imgproc_segmentation
 
 //! @addtogroup imgproc_filter
 //! @{
@@ -3513,7 +3474,7 @@ CV_EXPORTS_W void pyrMeanShiftFiltering( InputArray src, OutputArray dst,
 
 //! @}
 
-//! @addtogroup imgproc_misc
+//! @addtogroup imgproc_segmentation
 //! @{
 
 /** @example samples/cpp/grabcut.cpp
@@ -3542,6 +3503,11 @@ mode==GC_EVAL .
 CV_EXPORTS_W void grabCut( InputArray img, InputOutputArray mask, Rect rect,
                            InputOutputArray bgdModel, InputOutputArray fgdModel,
                            int iterCount, int mode = GC_EVAL );
+
+//! @} imgproc_segmentation
+
+//! @addtogroup imgproc_misc
+//! @{
 
 /** @example samples/cpp/distrans.cpp
 An example on using the distance transform
@@ -3617,19 +3583,6 @@ the first variant of the function and distanceType == #DIST_L1.
 */
 CV_EXPORTS_W void distanceTransform( InputArray src, OutputArray dst,
                                      int distanceType, int maskSize, int dstType=CV_32F);
-
-/** @example samples/cpp/ffilldemo.cpp
-An example using the FloodFill technique
-*/
-
-/** @overload
-
-variant without `mask` parameter
-*/
-CV_EXPORTS int floodFill( InputOutputArray image,
-                          Point seedPoint, Scalar newVal, CV_OUT Rect* rect = 0,
-                          Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
-                          int flags = 4 );
 
 /** @brief Fills a connected component with the given color.
 
@@ -3708,6 +3661,19 @@ CV_EXPORTS_W int floodFill( InputOutputArray image, InputOutputArray mask,
                             Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
                             int flags = 4 );
 
+/** @example samples/cpp/ffilldemo.cpp
+An example using the FloodFill technique
+*/
+
+/** @overload
+
+variant without `mask` parameter
+*/
+CV_EXPORTS int floodFill( InputOutputArray image,
+                          Point seedPoint, Scalar newVal, CV_OUT Rect* rect = 0,
+                          Scalar loDiff = Scalar(), Scalar upDiff = Scalar(),
+                          int flags = 4 );
+
 //! Performs linear blending of two images:
 //! \f[ \texttt{dst}(i,j) = \texttt{weights1}(i,j)*\texttt{src1}(i,j) + \texttt{weights2}(i,j)*\texttt{src2}(i,j) \f]
 //! @param src1 It has a type of CV_8UC(n) or CV_32FC(n), where n is a positive integer.
@@ -3760,20 +3726,21 @@ floating-point.
 @param code color space conversion code (see #ColorConversionCodes).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
 channels is derived automatically from src and code.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @see @ref imgproc_color_conversions
  */
-CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0 );
+CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief Converts an image from one color space to another where the source image is
 stored in two planes.
 
 This function only supports YUV420 to RGB conversion as of now.
 
-@param src1: 8-bit image (#CV_8U) of the Y plane.
-@param src2: image containing interleaved U/V plane.
-@param dst: output image.
-@param code: Specifies the type of conversion. It can take any of the following values:
+@param src1 8-bit image (#CV_8U) of the Y plane.
+@param src2 image containing interleaved U/V plane.
+@param dst output image.
+@param code Specifies the type of conversion. It can take any of the following values:
 - #COLOR_YUV2BGR_NV12
 - #COLOR_YUV2RGB_NV12
 - #COLOR_YUV2BGRA_NV12
@@ -3782,8 +3749,9 @@ This function only supports YUV420 to RGB conversion as of now.
 - #COLOR_YUV2RGB_NV21
 - #COLOR_YUV2BGRA_NV21
 - #COLOR_YUV2RGBA_NV21
+@param hint Implementation modfication flags. See #AlgorithmHint
 */
-CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code );
+CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief main function for all demosaicing processes
 
@@ -3827,8 +3795,8 @@ CV_EXPORTS_W void demosaicing(InputArray src, OutputArray dst, int code, int dst
 The function computes moments, up to the 3rd order, of a vector shape or a rasterized shape. The
 results are returned in the structure cv::Moments.
 
-@param array Raster image (single-channel, 8-bit or floating-point 2D array) or an array (
-\f$1 \times N\f$ or \f$N \times 1\f$ ) of 2D points (Point or Point2f ).
+@param array Single chanel raster image (CV_8U, CV_16U, CV_16S, CV_32F, CV_64F) or an array (
+\f$1 \times N\f$ or \f$N \times 1\f$ ) of 2D points (Point or Point2f).
 @param binaryImage If it is true, all non-zero image pixels are treated as 1's. The parameter is
 used for images only.
 @returns moments.
@@ -3871,14 +3839,43 @@ CV_EXPORTS_W void HuMoments( const Moments& m, OutputArray hu );
 
 //! type of the template matching operation
 enum TemplateMatchModes {
-    TM_SQDIFF        = 0, //!< \f[R(x,y)= \sum _{x',y'} (T(x',y')-I(x+x',y+y'))^2\f]
-    TM_SQDIFF_NORMED = 1, //!< \f[R(x,y)= \frac{\sum_{x',y'} (T(x',y')-I(x+x',y+y'))^2}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}\f]
-    TM_CCORR         = 2, //!< \f[R(x,y)= \sum _{x',y'} (T(x',y')  \cdot I(x+x',y+y'))\f]
-    TM_CCORR_NORMED  = 3, //!< \f[R(x,y)= \frac{\sum_{x',y'} (T(x',y') \cdot I(x+x',y+y'))}{\sqrt{\sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}\f]
-    TM_CCOEFF        = 4, //!< \f[R(x,y)= \sum _{x',y'} (T'(x',y')  \cdot I'(x+x',y+y'))\f]
-                          //!< where
-                          //!< \f[\begin{array}{l} T'(x',y')=T(x',y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} T(x'',y'') \\ I'(x+x',y+y')=I(x+x',y+y') - 1/(w  \cdot h)  \cdot \sum _{x'',y''} I(x+x'',y+y'') \end{array}\f]
-    TM_CCOEFF_NORMED = 5  //!< \f[R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{ \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2} }\f]
+    TM_SQDIFF        = 0, /*!< \f[R(x,y)= \sum _{x',y'} (T(x',y')-I(x+x',y+y'))^2\f]
+                               with mask:
+                               \f[R(x,y)= \sum _{x',y'} \left( (T(x',y')-I(x+x',y+y')) \cdot
+                                  M(x',y') \right)^2\f] */
+    TM_SQDIFF_NORMED = 1, /*!< \f[R(x,y)= \frac{\sum_{x',y'} (T(x',y')-I(x+x',y+y'))^2}{\sqrt{\sum_{
+                                  x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}\f]
+                               with mask:
+                               \f[R(x,y)= \frac{\sum _{x',y'} \left( (T(x',y')-I(x+x',y+y')) \cdot
+                                  M(x',y') \right)^2}{\sqrt{\sum_{x',y'} \left( T(x',y') \cdot
+                                  M(x',y') \right)^2 \cdot \sum_{x',y'} \left( I(x+x',y+y') \cdot
+                                  M(x',y') \right)^2}}\f] */
+    TM_CCORR         = 2, /*!< \f[R(x,y)= \sum _{x',y'} (T(x',y') \cdot I(x+x',y+y'))\f]
+                               with mask:
+                               \f[R(x,y)= \sum _{x',y'} (T(x',y') \cdot I(x+x',y+y') \cdot M(x',y')
+                                  ^2)\f] */
+    TM_CCORR_NORMED  = 3, /*!< \f[R(x,y)= \frac{\sum_{x',y'} (T(x',y') \cdot I(x+x',y+y'))}{\sqrt{
+                                  \sum_{x',y'}T(x',y')^2 \cdot \sum_{x',y'} I(x+x',y+y')^2}}\f]
+                               with mask:
+                               \f[R(x,y)= \frac{\sum_{x',y'} (T(x',y') \cdot I(x+x',y+y') \cdot
+                                  M(x',y')^2)}{\sqrt{\sum_{x',y'} \left( T(x',y') \cdot M(x',y')
+                                  \right)^2 \cdot \sum_{x',y'} \left( I(x+x',y+y') \cdot M(x',y')
+                                  \right)^2}}\f] */
+    TM_CCOEFF        = 4, /*!< \f[R(x,y)= \sum _{x',y'} (T'(x',y') \cdot I'(x+x',y+y'))\f]
+                               where
+                               \f[\begin{array}{l} T'(x',y')=T(x',y') - 1/(w \cdot h) \cdot \sum _{
+                                  x'',y''} T(x'',y'') \\ I'(x+x',y+y')=I(x+x',y+y') - 1/(w \cdot h)
+                                  \cdot \sum _{x'',y''} I(x+x'',y+y'') \end{array}\f]
+                               with mask:
+                               \f[\begin{array}{l} T'(x',y')=M(x',y') \cdot \left( T(x',y') -
+                                  \frac{1}{\sum _{x'',y''} M(x'',y'')} \cdot \sum _{x'',y''}
+                                  (T(x'',y'') \cdot M(x'',y'')) \right) \\ I'(x+x',y+y')=M(x',y')
+                                  \cdot \left( I(x+x',y+y') - \frac{1}{\sum _{x'',y''} M(x'',y'')}
+                                  \cdot \sum _{x'',y''} (I(x+x'',y+y'') \cdot M(x'',y'')) \right)
+                                  \end{array} \f] */
+    TM_CCOEFF_NORMED = 5  /*!< \f[R(x,y)= \frac{ \sum_{x',y'} (T'(x',y') \cdot I'(x+x',y+y')) }{
+                                  \sqrt{\sum_{x',y'}T'(x',y')^2 \cdot \sum_{x',y'} I'(x+x',y+y')^2}
+                                  }\f] */
 };
 
 /** @example samples/cpp/tutorial_code/Histograms_Matching/MatchTemplate_Demo.cpp
@@ -3888,9 +3885,10 @@ An example using Template Matching algorithm
 /** @brief Compares a template against overlapped image regions.
 
 The function slides through image , compares the overlapped patches of size \f$w \times h\f$ against
-templ using the specified method and stores the comparison results in result . Here are the formulae
-for the available comparison methods ( \f$I\f$ denotes image, \f$T\f$ template, \f$R\f$ result ). The summation
-is done over template and/or the image patch: \f$x' = 0...w-1, y' = 0...h-1\f$
+templ using the specified method and stores the comparison results in result . #TemplateMatchModes
+describes the formulae for the available comparison methods ( \f$I\f$ denotes image, \f$T\f$
+template, \f$R\f$ result, \f$M\f$ the optional mask ). The summation is done over template and/or
+the image patch: \f$x' = 0...w-1, y' = 0...h-1\f$
 
 After the function finishes the comparison, the best matches can be found as global minimums (when
 #TM_SQDIFF was used) or maximums (when #TM_CCORR or #TM_CCOEFF was used) using the
@@ -3905,8 +3903,12 @@ data type.
 @param result Map of comparison results. It must be single-channel 32-bit floating-point. If image
 is \f$W \times H\f$ and templ is \f$w \times h\f$ , then result is \f$(W-w+1) \times (H-h+1)\f$ .
 @param method Parameter specifying the comparison method, see #TemplateMatchModes
-@param mask Mask of searched template. It must have the same datatype and size with templ. It is
-not set by default. Currently, only the #TM_SQDIFF and #TM_CCORR_NORMED methods are supported.
+@param mask Optional mask. It must have the same size as templ. It must either have the same number
+            of channels as template or only one channel, which is then used for all template and
+            image channels. If the data type is #CV_8U, the mask is interpreted as a binary mask,
+            meaning only elements where mask is nonzero are used and are kept unchanged independent
+            of the actual mask value (weight equals 1). For data tpye #CV_32F, the mask values are
+            used as weights. The exact formulas are documented in #TemplateMatchModes.
  */
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
                                  OutputArray result, int method, InputArray mask = noArray() );
@@ -4022,23 +4024,26 @@ parent, or nested contours, the corresponding elements of hierarchy[i] will be n
 contours are extracted from the image ROI and then they should be analyzed in the whole image
 context.
  */
-CV_EXPORTS_W void findContours( InputOutputArray image, OutputArrayOfArrays contours,
+CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
                               OutputArray hierarchy, int mode,
                               int method, Point offset = Point());
 
 /** @overload */
-CV_EXPORTS void findContours( InputOutputArray image, OutputArrayOfArrays contours,
+CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
-/** @example samples/cpp/squares.cpp
-A program using pyramid scaling, Canny, contours and contour simplification to find
-squares in a list of images (pic1-6.png). Returns sequence of squares detected on the image.
-*/
+//! @brief Find contours using link runs algorithm
+//!
+//! This function implements an algorithm different from cv::findContours:
+//! - doesn't allocate temporary image internally, thus it has reduced memory consumption
+//! - supports CV_8UC1 images only
+//! - outputs 2-level hierarhy only (RETR_CCOMP mode)
+//! - doesn't support approximation change other than CHAIN_APPROX_SIMPLE
+//! In all other aspects this function is compatible with cv::findContours.
+CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours, OutputArray hierarchy);
 
-/** @example samples/tapi/squares.cpp
-A program using pyramid scaling, Canny, contours and contour simplification to find
-squares in the input image.
-*/
+//! @overload
+CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
 
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
@@ -4056,6 +4061,28 @@ connected). Otherwise, it is not closed.
 CV_EXPORTS_W void approxPolyDP( InputArray curve,
                                 OutputArray approxCurve,
                                 double epsilon, bool closed );
+
+/** @brief Approximates a polygon with a convex hull with a specified accuracy and number of sides.
+
+The cv::approxPolyN function approximates a polygon with a convex hull
+so that the difference between the contour area of the original contour and the new polygon is minimal.
+It uses a greedy algorithm for contracting two vertices into one in such a way that the additional area is minimal.
+Straight lines formed by each edge of the convex contour are drawn and the areas of the resulting triangles are considered.
+Each vertex will lie either on the original contour or outside it.
+
+The algorithm based on the paper @cite LowIlie2003 .
+
+@param curve Input vector of a 2D points stored in std::vector or Mat, points must be float or integer.
+@param approxCurve Result of the approximation. The type is vector of a 2D point (Point2f or Point) in std::vector or Mat.
+@param nsides The parameter defines the number of sides of the result polygon.
+@param epsilon_percentage defines the percentage of the maximum of additional area.
+If it equals -1, it is not used. Otherwise algorighm stops if additional area is greater than contourArea(_curve) * percentage.
+If additional area exceeds the limit, algorithm returns as many vertices as there were at the moment the limit was exceeded.
+@param ensure_convex If it is true, algorithm creates a convex hull of input contour. Otherwise input vector should be convex.
+ */
+CV_EXPORTS_W void approxPolyN(InputArray curve, OutputArray approxCurve,
+                              int nsides, float epsilon_percentage = -1.0,
+                              bool ensure_convex = true);
 
 /** @brief Calculates a contour perimeter or a curve length.
 
@@ -4123,7 +4150,7 @@ The function finds the four vertices of a rotated rectangle. This function is us
 rectangle. In C++, instead of using this function, you can directly use RotatedRect::points method. Please
 visit the @ref tutorial_bounding_rotated_ellipses "tutorial on Creating Bounding rotated boxes and ellipses for contours" for more information.
 
-@param box The input rotated rectangle. It may be the output of
+@param box The input rotated rectangle. It may be the output of @ref minAreaRect.
 @param points The output array of four vertices of rectangles.
  */
 CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);
@@ -4250,7 +4277,7 @@ Examples of how intersectConvexConvex works
 When false, no intersection is found. If the polygons share a side or the vertex of one polygon lies on an edge
 of the other, they are not considered nested and an intersection will be found regardless of the value of handleNested.
 
-@returns Absolute value of area of intersecting polygon
+@returns Area of intersecting polygon. May be negative, if algorithm has not converged, e.g. non-convex input.
 
 @note intersectConvexConvex doesn't confirm that both polygons are convex and will return invalid results if they aren't.
  */
@@ -4473,7 +4500,7 @@ An example using applyColorMap function
 
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
-@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3. If CV_8UC3, then the CV_8UC1 image is generated internally using cv::COLOR_BGR2GRAY.
 @param dst The result is the colormapped source image. Note: Mat::create is called on dst.
 @param colormap The colormap to apply, see #ColormapTypes
 */
@@ -4481,8 +4508,8 @@ CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
 
 /** @brief Applies a user colormap on a given image.
 
-@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
-@param dst The result is the colormapped source image. Note: Mat::create is called on dst.
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3. If CV_8UC3, then the CV_8UC1 image is generated internally using cv::COLOR_BGR2GRAY.
+@param dst The result is the colormapped source image of the same number of channels as userColor. Note: Mat::create is called on dst.
 @param userColor The colormap to apply of type CV_8UC1 or CV_8UC3 and size 256
 */
 CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, InputArray userColor);
@@ -4514,7 +4541,7 @@ lines are drawn using Gaussian filtering.
 CV_EXPORTS_W void line(InputOutputArray img, Point pt1, Point pt2, const Scalar& color,
                      int thickness = 1, int lineType = LINE_8, int shift = 0);
 
-/** @brief Draws a arrow segment pointing from the first point to the second one.
+/** @brief Draws an arrow segment pointing from the first point to the second one.
 
 The function cv::arrowedLine draws an arrow between pt1 and pt2 points in the image. See also #line.
 
@@ -4553,7 +4580,7 @@ CV_EXPORTS_W void rectangle(InputOutputArray img, Point pt1, Point pt2,
 use `rec` parameter as alternative specification of the drawn rectangle: `r.tl() and
 r.br()-Point(1,1)` are opposite corners
 */
-CV_EXPORTS void rectangle(CV_IN_OUT Mat& img, Rect rec,
+CV_EXPORTS_W void rectangle(InputOutputArray img, Rect rec,
                           const Scalar& color, int thickness = 1,
                           int lineType = LINE_8, int shift = 0);
 
@@ -4623,18 +4650,6 @@ CV_EXPORTS_W void ellipse(InputOutputArray img, const RotatedRect& box, const Sc
 /* ADDING A SET OF PREDEFINED MARKERS WHICH COULD BE USED TO HIGHLIGHT POSITIONS IN AN IMAGE */
 /* ----------------------------------------------------------------------------------------- */
 
-//! Possible set of marker types used for the cv::drawMarker function
-enum MarkerTypes
-{
-    MARKER_CROSS = 0,           //!< A crosshair marker shape
-    MARKER_TILTED_CROSS = 1,    //!< A 45 degree tilted crosshair marker shape
-    MARKER_STAR = 2,            //!< A star marker shape, combination of cross and tilted cross
-    MARKER_DIAMOND = 3,         //!< A diamond marker shape
-    MARKER_SQUARE = 4,          //!< A square marker shape
-    MARKER_TRIANGLE_UP = 5,     //!< An upwards pointing triangle marker shape
-    MARKER_TRIANGLE_DOWN = 6    //!< A downwards pointing triangle marker shape
-};
-
 /** @brief Draws a marker on a predefined position in an image.
 
 The function cv::drawMarker draws a marker on a given position in the image. For the moment several
@@ -4648,18 +4663,13 @@ marker types are supported, see #MarkerTypes for more information.
 @param line_type Type of the line, See #LineTypes
 @param markerSize The length of the marker axis [default = 20 pixels]
  */
-CV_EXPORTS_W void drawMarker(CV_IN_OUT Mat& img, Point position, const Scalar& color,
+CV_EXPORTS_W void drawMarker(InputOutputArray img, Point position, const Scalar& color,
                              int markerType = MARKER_CROSS, int markerSize=20, int thickness=1,
                              int line_type=8);
 
 /* ----------------------------------------------------------------------------------------- */
 /* END OF MARKER SECTION */
 /* ----------------------------------------------------------------------------------------- */
-
-/** @overload */
-CV_EXPORTS void fillConvexPoly(Mat& img, const Point* pts, int npts,
-                               const Scalar& color, int lineType = LINE_8,
-                               int shift = 0);
 
 /** @brief Fills a convex polygon.
 
@@ -4679,10 +4689,9 @@ CV_EXPORTS_W void fillConvexPoly(InputOutputArray img, InputArray points,
                                  int shift = 0);
 
 /** @overload */
-CV_EXPORTS void fillPoly(Mat& img, const Point** pts,
-                         const int* npts, int ncontours,
-                         const Scalar& color, int lineType = LINE_8, int shift = 0,
-                         Point offset = Point() );
+CV_EXPORTS void fillConvexPoly(InputOutputArray img, const Point* pts, int npts,
+                               const Scalar& color, int lineType = LINE_8,
+                               int shift = 0);
 
 /** @example samples/cpp/tutorial_code/ImgProc/basic_drawing/Drawing_1.cpp
 An example using drawing functions
@@ -4707,9 +4716,10 @@ CV_EXPORTS_W void fillPoly(InputOutputArray img, InputArrayOfArrays pts,
                            Point offset = Point() );
 
 /** @overload */
-CV_EXPORTS void polylines(Mat& img, const Point* const* pts, const int* npts,
-                          int ncontours, bool isClosed, const Scalar& color,
-                          int thickness = 1, int lineType = LINE_8, int shift = 0 );
+CV_EXPORTS void fillPoly(InputOutputArray img, const Point** pts,
+                         const int* npts, int ncontours,
+                         const Scalar& color, int lineType = LINE_8, int shift = 0,
+                         Point offset = Point() );
 
 /** @brief Draws several polygonal curves.
 
@@ -4727,6 +4737,11 @@ The function cv::polylines draws one or more polygonal curves.
 CV_EXPORTS_W void polylines(InputOutputArray img, InputArrayOfArrays pts,
                             bool isClosed, const Scalar& color,
                             int thickness = 1, int lineType = LINE_8, int shift = 0 );
+
+/** @overload */
+CV_EXPORTS void polylines(InputOutputArray img, const Point* const* pts, const int* npts,
+                          int ncontours, bool isClosed, const Scalar& color,
+                          int thickness = 1, int lineType = LINE_8, int shift = 0 );
 
 /** @example samples/cpp/contours2.cpp
 An example program illustrates the use of cv::findContours and cv::drawContours
@@ -4760,7 +4775,7 @@ parameter is only taken into account when there is hierarchy available.
 @param offset Optional contour shift parameter. Shift all the drawn contours by the specified
 \f$\texttt{offset}=(dx,dy)\f$ .
 @note When thickness=#FILLED, the function is designed to handle connected components with holes correctly
-even when no hierarchy date is provided. This is done by analyzing all the outlines together
+even when no hierarchy data is provided. This is done by analyzing all the outlines together
 using even-odd rule. This may give incorrect results if you have a joint collection of separately retrieved
 contours. In order to solve this problem, you need to call #drawContours separately for each sub-group
 of contours, or iterate over the collection using contourIdx parameter.
@@ -4774,7 +4789,7 @@ CV_EXPORTS_W void drawContours( InputOutputArray image, InputArrayOfArrays conto
 /** @brief Clips the line against the image rectangle.
 
 The function cv::clipLine calculates a part of the line segment that is entirely within the specified
-rectangle. it returns false if the line segment is completely outside the rectangle. Otherwise,
+rectangle. It returns false if the line segment is completely outside the rectangle. Otherwise,
 it returns true .
 @param imgSize Image size. The image rectangle is Rect(0, 0, imgSize.width, imgSize.height) .
 @param pt1 First line point.
@@ -4960,7 +4975,35 @@ public:
     endpoint. Otherwise, the line is traversed from \p pt1 to \p pt2.
     */
     LineIterator( const Mat& img, Point pt1, Point pt2,
-                  int connectivity = 8, bool leftToRight = false );
+                  int connectivity = 8, bool leftToRight = false )
+    {
+        init(&img, Rect(0, 0, img.cols, img.rows), pt1, pt2, connectivity, leftToRight);
+        ptmode = false;
+    }
+    LineIterator( Point pt1, Point pt2,
+                  int connectivity = 8, bool leftToRight = false )
+    {
+        init(0, Rect(std::min(pt1.x, pt2.x),
+                     std::min(pt1.y, pt2.y),
+                     std::max(pt1.x, pt2.x) - std::min(pt1.x, pt2.x) + 1,
+                     std::max(pt1.y, pt2.y) - std::min(pt1.y, pt2.y) + 1),
+             pt1, pt2, connectivity, leftToRight);
+        ptmode = true;
+    }
+    LineIterator( Size boundingAreaSize, Point pt1, Point pt2,
+                  int connectivity = 8, bool leftToRight = false )
+    {
+        init(0, Rect(0, 0, boundingAreaSize.width, boundingAreaSize.height),
+             pt1, pt2, connectivity, leftToRight);
+        ptmode = true;
+    }
+    LineIterator( Rect boundingAreaRect, Point pt1, Point pt2,
+                  int connectivity = 8, bool leftToRight = false )
+    {
+        init(0, boundingAreaRect, pt1, pt2, connectivity, leftToRight);
+        ptmode = true;
+    }
+    void init(const Mat* img, Rect boundingAreaRect, Point pt1, Point pt2, int connectivity, bool leftToRight);
 
     /** @brief Returns pointer to the current pixel.
     */
@@ -4988,6 +5031,9 @@ public:
     int err, count;
     int minusDelta, plusDelta;
     int minusStep, plusStep;
+    int minusShift, plusShift;
+    Point p;
+    bool ptmode;
 };
 
 //! @cond IGNORED
@@ -4997,7 +5043,7 @@ public:
 inline
 uchar* LineIterator::operator *()
 {
-    return ptr;
+    return ptmode ? 0 : ptr;
 }
 
 inline
@@ -5005,7 +5051,15 @@ LineIterator& LineIterator::operator ++()
 {
     int mask = err < 0 ? -1 : 0;
     err += minusDelta + (plusDelta & mask);
-    ptr += minusStep + (plusStep & mask);
+    if(!ptmode)
+    {
+        ptr += minusStep + (plusStep & mask);
+    }
+    else
+    {
+        p.x += minusShift + (plusShift & mask);
+        p.y += minusStep + (plusStep & mask);
+    }
     return *this;
 }
 
@@ -5020,9 +5074,13 @@ LineIterator LineIterator::operator ++(int)
 inline
 Point LineIterator::pos() const
 {
-    Point p;
-    p.y = (int)((ptr - ptr0)/step);
-    p.x = (int)(((ptr - ptr0) - p.y*step)/elemSize);
+    if(!ptmode)
+    {
+        size_t offset = (size_t)(ptr - ptr0);
+        int y = (int)(offset/step);
+        int x = (int)((offset - (size_t)y*step)/elemSize);
+        return Point(x, y);
+    }
     return p;
 }
 
@@ -5034,8 +5092,8 @@ Point LineIterator::pos() const
 
 } // cv
 
-#ifndef DISABLE_OPENCV_24_COMPATIBILITY
-#include "opencv2/imgproc/imgproc_c.h"
-#endif
+
+#include "./imgproc/segmentation.hpp"
+
 
 #endif

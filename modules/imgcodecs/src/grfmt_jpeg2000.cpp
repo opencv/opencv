@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 
 #ifdef HAVE_JASPER
+#include <sstream>
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -285,11 +286,12 @@ bool  Jpeg2KDecoder::readData( Mat& img )
         {
             int ncmpts;
             int cmptlut[3];
+            int swap_rb = m_use_rgb ? 0 : 2;
             if( color )
             {
-                cmptlut[0] = jas_image_getcmptbytype( image, JAS_IMAGE_CT_RGB_B );
-                cmptlut[1] = jas_image_getcmptbytype( image, JAS_IMAGE_CT_RGB_G );
-                cmptlut[2] = jas_image_getcmptbytype( image, JAS_IMAGE_CT_RGB_R );
+                cmptlut[0] = jas_image_getcmptbytype( image, swap_rb );
+                cmptlut[1] = jas_image_getcmptbytype( image, 1 );
+                cmptlut[2] = jas_image_getcmptbytype( image, swap_rb^2 );
                 if( cmptlut[0] < 0 || cmptlut[1] < 0 || cmptlut[2] < 0 )
                     result = false;
                 ncmpts = 3;
@@ -510,7 +512,7 @@ bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
 }
 
 
-bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
+bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& params )
 {
     CV_Assert(isJasperEnabled());
     int width = _img.cols, height = _img.rows;
@@ -519,6 +521,18 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
 
     if( channels > 3 || channels < 1 )
         return false;
+
+    CV_Assert(params.size() % 2 == 0);
+    double target_compression_rate = 1.0;
+    for( size_t i = 0; i < params.size(); i += 2 )
+    {
+        switch(params[i])
+        {
+        case cv::IMWRITE_JPEG2000_COMPRESSION_X1000:
+            target_compression_rate = std::min(std::max(params[i+1], 0), 1000) / 1000.0;
+            break;
+        }
+    }
 
     jas_image_cmptparm_t component_info[3];
     for( int i = 0; i < channels; i++ )
@@ -555,7 +569,10 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& )
         jas_stream_t *stream = jas_stream_fopen( m_filename.c_str(), "wb" );
         if( stream )
         {
-            result = !jas_image_encode( img, stream, jas_image_strtofmt( (char*)"jp2" ), (char*)"" );
+            std::stringstream options;
+            options << "rate=" << target_compression_rate;
+
+            result = !jas_image_encode( img, stream, jas_image_strtofmt( (char*)"jp2" ), (char*)options.str().c_str() );
 
             jas_stream_close( stream );
         }

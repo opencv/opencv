@@ -53,7 +53,7 @@ struct CommandLineParser::Impl
 };
 
 
-static const char* get_type_name(int type)
+static const char* get_type_name(Param type)
 {
     if( type == Param::INT )
         return "int";
@@ -72,21 +72,16 @@ static const char* get_type_name(int type)
     return "unknown";
 }
 
-// std::tolower is int->int
-static char char_tolower(char ch)
-{
-    return (char)std::tolower((int)ch);
-}
 static bool parse_bool(std::string str)
 {
-    std::transform(str.begin(), str.end(), str.begin(), char_tolower);
+    std::transform(str.begin(), str.end(), str.begin(), details::char_tolower);
     std::istringstream is(str);
     bool b;
     is >> (str.size() > 1 ? std::boolalpha : std::noboolalpha) >> b;
     return b;
 }
 
-static void from_str(const String& str, int type, void* dst)
+static void from_str(const String& str, Param type, void* dst)
 {
     std::stringstream ss(str.c_str());
     if( type == Param::INT )
@@ -122,7 +117,7 @@ static void from_str(const String& str, int type, void* dst)
     }
 }
 
-void CommandLineParser::getByName(const String& name, bool space_delete, int type, void* dst) const
+void CommandLineParser::getByName(const String& name, bool space_delete, Param type, void* dst) const
 {
     try
     {
@@ -160,7 +155,7 @@ void CommandLineParser::getByName(const String& name, bool space_delete, int typ
 }
 
 
-void CommandLineParser::getByIndex(int index, bool space_delete, int type, void* dst) const
+void CommandLineParser::getByIndex(int index, bool space_delete, Param type, void* dst) const
 {
     try
     {
@@ -469,7 +464,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
         {
             if (begin == true)
             {
-                throw cv::Exception(CV_StsParseError,
+                throw cv::Exception(cv::Error::StsParseError,
                          String("error in split_range_string(")
                          + str
                          + String(", ")
@@ -489,7 +484,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
         {
             if (begin == false)
             {
-                throw cv::Exception(CV_StsParseError,
+                throw cv::Exception(cv::Error::StsParseError,
                          String("error in split_range_string(")
                          + str
                          + String(", ")
@@ -513,7 +508,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
 
     if (begin == true)
     {
-        throw cv::Exception(CV_StsParseError,
+        throw cv::Exception(cv::Error::StsParseError,
                  String("error in split_range_string(")
                  + str
                  + String(", ")

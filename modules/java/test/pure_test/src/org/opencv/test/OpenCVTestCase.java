@@ -312,6 +312,13 @@ public class OpenCVTestCase extends TestCase {
             //assertTrue(Math.abs(ar1[i].doubleValue() - ar2[i].doubleValue()) <= epsilon);
     }
 
+    public static void assertArrayEquals(byte[] ar1, byte[] ar2) {
+        assertEquals(ar1.length, ar2.length);
+
+        for (int i = 0; i < ar1.length; i++)
+            assertEquals(ar1[i], ar2[i]);
+    }
+
     public static void assertArrayEquals(short[] ar1, short[] ar2) {
         assertEquals(ar1.length, ar2.length);
 

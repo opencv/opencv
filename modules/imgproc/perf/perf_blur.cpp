@@ -253,4 +253,52 @@ PERF_TEST_P(Size_MatType, BlendLinear,
     SANITY_CHECK_NOTHING();
 }
 
+///////////// Stackblur ////////////////////////
+PERF_TEST_P(Size_MatType, stackblur3x3,
+            testing::Combine(
+                    testing::Values(sz720p, sz1080p, sz2160p),
+                    testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1)
+            )
+)
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    double eps = 1e-3;
+
+    eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : eps;
+
+    Mat src(size, type);
+    Mat dst(size, type);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() stackBlur(src, dst, Size(3,3));
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(Size_MatType, stackblur101x101,
+            testing::Combine(
+                    testing::Values(sz720p, sz1080p, sz2160p),
+                    testing::Values(CV_8UC1, CV_8UC4, CV_16UC1, CV_16SC1, CV_32FC1)
+            )
+)
+{
+    Size size = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    double eps = 1e-3;
+
+    eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : eps;
+
+    Mat src(size, type);
+    Mat dst(size, type);
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    TEST_CYCLE() stackBlur(src, dst, Size(101,101));
+
+    SANITY_CHECK_NOTHING();
+}
+
+
 } // namespace

@@ -1,9 +1,15 @@
 Detection of planar objects {#tutorial_detection_of_planar_objects}
 ===========================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_feature_homography}
 @next_tutorial{tutorial_akaze_matching}
 
+|    |    |
+| -: | :- |
+| Original author | Victor Eruhimov |
+| Compatibility | OpenCV >= 3.0 |
 
 The goal of this tutorial is to learn how to use *features2d* and *calib3d* modules for detecting
 known planar objects in scenes.

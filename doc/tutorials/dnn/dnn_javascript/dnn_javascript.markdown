@@ -1,7 +1,14 @@
 # How to run deep networks in browser {#tutorial_dnn_javascript}
 
+@tableofcontents
+
 @prev_tutorial{tutorial_dnn_yolo}
 @next_tutorial{tutorial_dnn_custom_layers}
+
+|    |    |
+| -: | :- |
+| Original author | Dmitry Kurtaev |
+| Compatibility | OpenCV >= 3.3.1 |
 
 ## Introduction
 This tutorial will show us how to run deep learning models using OpenCV.js right

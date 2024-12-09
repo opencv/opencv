@@ -141,13 +141,28 @@
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
-#elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
+#elif defined(__ARM_NEON)
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #endif
 
-#if defined(__ARM_NEON__) || defined(__aarch64__)
-#  include <arm_neon.h>
+/* RVV-related macro states with different compiler
+// +--------------------+----------+----------+
+// | Macro              | Upstream | XuanTie  |
+// +--------------------+----------+----------+
+// | CV_CPU_COMPILE_RVV | defined  | defined  |
+// | CV_RVV             | 1        | 0        |
+// | CV_RVV071          | 0        | 1        |
+// | CV_TRY_RVV         | 1        | 1        |
+// +--------------------+----------+----------+
+*/
+#ifdef CV_CPU_COMPILE_RVV
+#  ifdef __riscv_vector_071
+#    define CV_RVV071 1
+#  else
+#    define CV_RVV 1
+#  endif
+#include <riscv_vector.h>
 #endif
 
 #ifdef CV_CPU_COMPILE_VSX
@@ -165,6 +180,16 @@
 #ifdef CV_CPU_COMPILE_MSA
 #  include "hal/msa_macros.h"
 #  define CV_MSA 1
+#endif
+
+#ifdef CV_CPU_COMPILE_LSX
+#  include <lsxintrin.h>
+#  define CV_LSX 1
+#endif
+
+#ifdef CV_CPU_COMPILE_LASX
+#  include <lasxintrin.h>
+#  define CV_LASX 1
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -209,7 +234,7 @@ struct VZeroUpperGuard {
 # include <Intrin.h>
 # include <arm_neon.h>
 # define CV_NEON 1
-#elif defined(__ARM_NEON__) || (defined (__ARM_NEON) && defined(__aarch64__))
+#elif defined(__ARM_NEON)
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #elif defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
@@ -337,6 +362,10 @@ struct VZeroUpperGuard {
 #  define CV_NEON 0
 #endif
 
+#ifndef CV_RVV071
+#  define CV_RVV071 0
+#endif
+
 #ifndef CV_VSX
 #  define CV_VSX 0
 #endif
@@ -351,4 +380,16 @@ struct VZeroUpperGuard {
 
 #ifndef CV_WASM_SIMD
 #  define CV_WASM_SIMD 0
+#endif
+
+#ifndef CV_RVV
+#  define CV_RVV 0
+#endif
+
+#ifndef CV_LSX
+#  define CV_LSX 0
+#endif
+
+#ifndef CV_LASX
+#  define CV_LASX 0
 #endif

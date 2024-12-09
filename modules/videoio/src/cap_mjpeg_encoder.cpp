@@ -95,7 +95,7 @@ static bool createEncodeHuffmanTable( const int* src, unsigned* table, int max_s
 
     if( size > max_size )
     {
-        CV_Error(CV_StsOutOfRange, "too big maximum Huffman code size");
+        CV_Error(cv::Error::StsOutOfRange, "too big maximum Huffman code size");
     }
 
     memset( table, 0, size*sizeof(table[0]));
@@ -268,7 +268,7 @@ public:
             m_buffer_list[0].finish();
 
             m_data_len = m_buffer_list[0].get_len();
-            m_last_bit_len = m_buffer_list[0].get_bits_free() ? 32 - m_buffer_list[0].get_bits_free() : 0;
+            m_last_bit_len = 32 - m_buffer_list[0].get_bits_free();
 
             return m_buffer_list[0].get_data();
         }
@@ -331,9 +331,14 @@ public:
         }
 
         //bits == 0 means that last element shouldn't be used.
-        m_output_buffer[m_data_len++] = currval;
-
-        m_last_bit_len = -bits;
+        if (bits != 0) {
+            m_output_buffer[m_data_len++] = currval;
+            m_last_bit_len = -bits;
+        }
+        else
+        {
+            m_last_bit_len = 32;
+        }
 
         return &m_output_buffer[0];
     }
@@ -482,7 +487,7 @@ public:
             colorspace = COLORSPACE_YUV444P;
         }
         else
-            CV_Error(CV_StsBadArg, "Invalid combination of specified video colorspace and the input image colorspace");
+            CV_Error(cv::Error::StsBadArg, "Invalid combination of specified video colorspace and the input image colorspace");
 
         if( !rawstream ) {
             int avi_index = container.getAVIIndex(0, dc);
@@ -1167,8 +1172,6 @@ public:
         fdct_qtab(_fdct_qtab),
         cat_table(_cat_table)
     {
-#if 0  // disable parallel processing due to buffer overrun bug: https://github.com/opencv/opencv/issues/19634
-
         //empirically found value. if number of pixels is less than that value there is no sense to parallelize it.
         const int min_pixels_count = 96*96;
 
@@ -1193,12 +1196,6 @@ public:
         int max_stripes = (height - 1)/y_step + 1;
 
         stripes_count = std::min(stripes_count, max_stripes);
-
-#else
-        if (nstripes > 1)
-            CV_LOG_ONCE_WARNING(NULL, "VIDEOIO/MJPEG: parallel processing is disabled: https://github.com/opencv/opencv/issues/19634");
-        stripes_count = 1;
-#endif
 
         m_buffer_list.allocate_buffers(stripes_count, (height*width*2)/stripes_count);
     }
@@ -1538,12 +1535,15 @@ void MotionJpegWriter::writeFrameData( const uchar* data, int step, int colorspa
 
 }
 
-Ptr<IVideoWriter> createMotionJpegWriter(const String& filename, int fourcc, double fps, Size frameSize, bool iscolor)
+Ptr<IVideoWriter> createMotionJpegWriter(const std::string& filename, int fourcc,
+                                         double fps, const Size& frameSize,
+                                         const VideoWriterParameters& params)
 {
     if (fourcc != CV_FOURCC('M', 'J', 'P', 'G'))
         return Ptr<IVideoWriter>();
 
-    Ptr<IVideoWriter> iwriter = makePtr<mjpeg::MotionJpegWriter>(filename, fps, frameSize, iscolor);
+    const bool isColor = params.get(VIDEOWRITER_PROP_IS_COLOR, true);
+    Ptr<IVideoWriter> iwriter = makePtr<mjpeg::MotionJpegWriter>(filename, fps, frameSize, isColor);
     if( !iwriter->isOpened() )
         iwriter.release();
     return iwriter;

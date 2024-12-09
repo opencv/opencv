@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 
     // These descriptors are going to be detecting and computing BLOBS with 6 different params
     // Param for first BLOB detector we want all
-    typeDesc.push_back("BLOB");    // see http://docs.opencv.org/3.4/d0/d7a/classcv_1_1SimpleBlobDetector.html
+    typeDesc.push_back("BLOB");    // see http://docs.opencv.org/4.x/d0/d7a/classcv_1_1SimpleBlobDetector.html
     pBLOB.push_back(pDefaultBLOB);
     pBLOB.back().filterByArea = true;
     pBLOB.back().minArea = 1;
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
             vector<Rect>  zone;
             vector<vector <Point> >  region;
             Mat     desc, result(img.rows, img.cols, CV_8UC3);
-            if (b.dynamicCast<SimpleBlobDetector>() != NULL)
+            if (b.dynamicCast<SimpleBlobDetector>().get())
             {
                 Ptr<SimpleBlobDetector> sbd = b.dynamicCast<SimpleBlobDetector>();
                 sbd->detect(img, keyImg, Mat());

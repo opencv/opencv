@@ -136,7 +136,11 @@ TEST_P(HAL, mat_decomp)
         int size = (hcase / 2) % 4;
         size = size == 0 ? 3 : size == 1 ? 4  : size == 2 ? 6 : 15;
         int nfunc = (hcase / 8);
+    #if CV_LASX
+        double eps = depth == CV_32F ? 1e-5 : 2e-10;
+    #else
         double eps = depth == CV_32F ? 1e-5 : 1e-10;
+    #endif
 
         if( size == 3 )
             return; // TODO ???

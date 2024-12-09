@@ -5,7 +5,7 @@ import sys
 import argparse
 import time
 
-from imagenet_cls_test_alexnet import CaffeModel, DnnCaffeModel
+from imagenet_cls_test_alexnet import CaffeModel, DNNOnnxModel
 try:
     import cv2 as cv
 except ImportError:
@@ -32,7 +32,7 @@ def eval_segm_result(net_out):
     channels_dim = 1
     y_dim = channels_dim + 1
     x_dim = y_dim + 1
-    res = np.zeros(net_out.shape).astype(np.int)
+    res = np.zeros(net_out.shape).astype(int)
     for i in range(net_out.shape[y_dim]):
         for j in range(net_out.shape[x_dim]):
             max_ch = np.argmax(net_out[..., i, j])
@@ -58,14 +58,14 @@ class MeanChannelsPreproc:
         pass
 
     @staticmethod
-    def process(img):
-        image_data = np.array(img).transpose(2, 0, 1).astype(np.float32)
-        mean = np.ones(image_data.shape)
-        mean[0] *= 104
-        mean[1] *= 117
-        mean[2] *= 123
-        image_data -= mean
-        image_data = np.expand_dims(image_data, 0)
+    def process(img, framework):
+        image_data = None
+        if framework == "Caffe":
+            image_data = cv.dnn.blobFromImage(img, scalefactor=1.0, mean=(123.0, 117.0, 104.0), swapRB=True)
+        elif framework == "DNN (ONNX)":
+            image_data = cv.dnn.blobFromImage(img, scalefactor=0.019, mean=(123.675, 116.28, 103.53), swapRB=True)
+        else:
+            raise ValueError("Unknown framework")
         return image_data
 
 
@@ -88,7 +88,7 @@ class DatasetImageFetch(object):
     @staticmethod
     def color_to_gt(color_img, colors):
         num_classes = len(colors)
-        gt = np.zeros((num_classes, color_img.shape[0], color_img.shape[1])).astype(np.int)
+        gt = np.zeros((num_classes, color_img.shape[0], color_img.shape[1])).astype(int)
         for img_y in range(color_img.shape[0]):
             for img_x in range(color_img.shape[1]):
                 c = DatasetImageFetch.pix_to_c(color_img[img_y][img_x])
@@ -105,10 +105,10 @@ class PASCALDataFetch(DatasetImageFetch):
     colors = []
     i = 0
 
-    def __init__(self, img_dir, segm_dir, names_file, segm_cls_colors_file, preproc):
+    def __init__(self, img_dir, segm_dir, names_file, segm_cls_colors, preproc):
         self.img_dir = img_dir
         self.segm_dir = segm_dir
-        self.colors = self.read_colors(segm_cls_colors_file)
+        self.colors = self.read_colors(segm_cls_colors)
         self.data_prepoc = preproc
         self.i = 0
 
@@ -117,26 +117,30 @@ class PASCALDataFetch(DatasetImageFetch):
                 self.names.append(l.rstrip())
 
     @staticmethod
-    def read_colors(img_classes_file):
+    def read_colors(colors):
         result = []
-        with open(img_classes_file) as f:
-            for l in f.readlines():
-                color = np.array(map(int, l.split()[1:]))
-                result.append(DatasetImageFetch.pix_to_c(color))
+        for color in colors:
+            result.append(DatasetImageFetch.pix_to_c(color))
         return result
 
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         if self.i < len(self.names):
             name = self.names[self.i]
             self.i += 1
             segm_file = self.segm_dir + name + ".png"
             img_file = self.img_dir + name + ".jpg"
             gt = self.color_to_gt(cv.imread(segm_file, cv.IMREAD_COLOR)[:, :, ::-1], self.colors)
-            img = self.data_prepoc.process(cv.imread(img_file, cv.IMREAD_COLOR)[:, :, ::-1])
-            return img, gt
+            img = cv.imread(img_file, cv.IMREAD_COLOR)
+            img_caffe = self.data_prepoc.process(img[:, :, ::-1], "Caffe")
+            img_dnn = self.data_prepoc.process(img[:, :, ::-1], "DNN (ONNX)")
+            img_dict = {
+                "Caffe": img_caffe,
+                "DNN (ONNX)": img_dnn
+            }
+            return img_dict, gt
         else:
             self.i = 0
             raise StopIteration
@@ -160,12 +164,13 @@ class SemSegmEvaluation:
         blobs_l_inf_diff = [sys.float_info.min] * len(frameworks)
         inference_time = [0.0] * len(frameworks)
 
-        for in_blob, gt in data_fetcher:
+        for in_blob_dict, gt in data_fetcher:
             frameworks_out = []
             samples_handled += 1
             for i in range(len(frameworks)):
                 start = time.time()
-                out = frameworks[i].get_output(in_blob)
+                framework_name = frameworks[i].get_name()
+                out = frameworks[i].get_output(in_blob_dict[framework_name])
                 end = time.time()
                 segm = eval_segm_result(out)
                 conf_mats[i] += get_conf_mat(gt, segm[0])
@@ -198,28 +203,53 @@ class SemSegmEvaluation:
             log_str = frameworks[0].get_name() + " vs " + frameworks[i].get_name() + ':'
             print('Final l1 diff', log_str, blobs_l1_diff[i] / blobs_l1_diff_count[i], file=self.log)
 
+# PASCAL VOC 2012 classes colors
+colors_pascal_voc_2012 = [
+    [0, 0, 0],
+    [128, 0, 0],
+    [0, 128, 0],
+    [128, 128, 0],
+    [0, 0, 128],
+    [128, 0, 128],
+    [0, 128, 128],
+    [128, 128, 128],
+    [64, 0, 0],
+    [192, 0, 0],
+    [64, 128, 0],
+    [192, 128, 0],
+    [64, 0, 128],
+    [192, 0, 128],
+    [64, 128, 128],
+    [192, 128, 128],
+    [0, 64, 0],
+    [128, 64, 0],
+    [0, 192, 0],
+    [128, 192, 0],
+    [0, 64, 128],
+]
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--imgs_dir", help="path to PASCAL VOC 2012 images dir, data/VOC2012/JPEGImages")
     parser.add_argument("--segm_dir", help="path to PASCAL VOC 2012 segmentation dir, data/VOC2012/SegmentationClass/")
     parser.add_argument("--val_names", help="path to file with validation set image names, download it here: "
                         "https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/data/pascal/seg11valid.txt")
-    parser.add_argument("--cls_file", help="path to file with colors for classes, download it here: "
-                        "https://github.com/opencv/opencv/blob/3.4/samples/data/dnn/pascal-classes.txt")
     parser.add_argument("--prototxt", help="path to caffe prototxt, download it here: "
-                        "https://github.com/opencv/opencv/blob/3.4/samples/data/dnn/fcn8s-heavy-pascal.prototxt")
+                        "https://github.com/opencv/opencv/blob/4.x/samples/data/dnn/fcn8s-heavy-pascal.prototxt")
     parser.add_argument("--caffemodel", help="path to caffemodel file, download it here: "
                                              "http://dl.caffe.berkeleyvision.org/fcn8s-heavy-pascal.caffemodel")
-    parser.add_argument("--log", help="path to logging file")
+    parser.add_argument("--onnxmodel", help="path to onnx model file, download it here: "
+                                             "https://github.com/onnx/models/raw/491ce05590abb7551d7fae43c067c060eeb575a6/validated/vision/object_detection_segmentation/fcn/model/fcn-resnet50-12.onnx")
+    parser.add_argument("--log", help="path to logging file", default='log.txt')
     parser.add_argument("--in_blob", help="name for input blob", default='data')
     parser.add_argument("--out_blob", help="name for output blob", default='score')
     args = parser.parse_args()
 
     prep = MeanChannelsPreproc()
-    df = PASCALDataFetch(args.imgs_dir, args.segm_dir, args.val_names, args.cls_file, prep)
+    df = PASCALDataFetch(args.imgs_dir, args.segm_dir, args.val_names, colors_pascal_voc_2012, prep)
 
     fw = [CaffeModel(args.prototxt, args.caffemodel, args.in_blob, args.out_blob, True),
-          DnnCaffeModel(args.prototxt, args.caffemodel, '', args.out_blob)]
+        DNNOnnxModel(args.onnxmodel, args.in_blob, args.out_blob)]
 
     segm_eval = SemSegmEvaluation(args.log)
     segm_eval.process(fw, df)

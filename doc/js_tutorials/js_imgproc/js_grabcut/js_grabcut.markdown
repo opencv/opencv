@@ -59,7 +59,7 @@ Demo
 We use the function: **cv.grabCut (image, mask, rect, bgdModel, fgdModel, iterCount, mode = cv.GC_EVAL)**
 
 @param image      input 8-bit 3-channel image.
-@param mask       input/output 8-bit single-channel mask. The mask is initialized by the function when mode is set to GC_INIT_WITH_RECT. Its elements may have one of the cv.rabCutClasses.
+@param mask       input/output 8-bit single-channel mask. The mask is initialized by the function when mode is set to GC_INIT_WITH_RECT. Its elements may have one of the cv.grabCutClasses.
 @param rect       ROI containing a segmented object. The pixels outside of the ROI are marked as "obvious background". The parameter is only used when mode==GC_INIT_WITH_RECT.
 @param bgdModel   temporary array for the background model. Do not modify it while you are processing the same image.
 @param fgdModel   temporary arrays for the foreground model. Do not modify it while you are processing the same image.

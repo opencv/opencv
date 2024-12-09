@@ -2,7 +2,7 @@
  * jutils.c
  *
  * Copyright (C) 1991-1996, Thomas G. Lane.
- * Modified 2009-2019 by Guido Vollbeding.
+ * Modified 2009-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -52,67 +52,67 @@ const int jpeg_zigzag_order[DCTSIZE2] = {
  */
 
 const int jpeg_natural_order[DCTSIZE2+16] = {
-  0,  1,  8, 16,  9,  2,  3, 10,
- 17, 24, 32, 25, 18, 11,  4,  5,
- 12, 19, 26, 33, 40, 48, 41, 34,
- 27, 20, 13,  6,  7, 14, 21, 28,
- 35, 42, 49, 56, 57, 50, 43, 36,
- 29, 22, 15, 23, 30, 37, 44, 51,
- 58, 59, 52, 45, 38, 31, 39, 46,
- 53, 60, 61, 54, 47, 55, 62, 63,
- 63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
- 63, 63, 63, 63, 63, 63, 63, 63
+   0,  1,  8, 16,  9,  2,  3, 10,
+  17, 24, 32, 25, 18, 11,  4,  5,
+  12, 19, 26, 33, 40, 48, 41, 34,
+  27, 20, 13,  6,  7, 14, 21, 28,
+  35, 42, 49, 56, 57, 50, 43, 36,
+  29, 22, 15, 23, 30, 37, 44, 51,
+  58, 59, 52, 45, 38, 31, 39, 46,
+  53, 60, 61, 54, 47, 55, 62, 63,
+  63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
+  63, 63, 63, 63, 63, 63, 63, 63
 };
 
 const int jpeg_natural_order7[7*7+16] = {
-  0,  1,  8, 16,  9,  2,  3, 10,
- 17, 24, 32, 25, 18, 11,  4,  5,
- 12, 19, 26, 33, 40, 48, 41, 34,
- 27, 20, 13,  6, 14, 21, 28, 35,
- 42, 49, 50, 43, 36, 29, 22, 30,
- 37, 44, 51, 52, 45, 38, 46, 53,
- 54,
- 63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
- 63, 63, 63, 63, 63, 63, 63, 63
+   0,  1,  8, 16,  9,  2,  3, 10,
+  17, 24, 32, 25, 18, 11,  4,  5,
+  12, 19, 26, 33, 40, 48, 41, 34,
+  27, 20, 13,  6, 14, 21, 28, 35,
+  42, 49, 50, 43, 36, 29, 22, 30,
+  37, 44, 51, 52, 45, 38, 46, 53,
+  54,
+  63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
+  63, 63, 63, 63, 63, 63, 63, 63
 };
 
 const int jpeg_natural_order6[6*6+16] = {
-  0,  1,  8, 16,  9,  2,  3, 10,
- 17, 24, 32, 25, 18, 11,  4,  5,
- 12, 19, 26, 33, 40, 41, 34, 27,
- 20, 13, 21, 28, 35, 42, 43, 36,
- 29, 37, 44, 45,
- 63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
- 63, 63, 63, 63, 63, 63, 63, 63
+   0,  1,  8, 16,  9,  2,  3, 10,
+  17, 24, 32, 25, 18, 11,  4,  5,
+  12, 19, 26, 33, 40, 41, 34, 27,
+  20, 13, 21, 28, 35, 42, 43, 36,
+  29, 37, 44, 45,
+  63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
+  63, 63, 63, 63, 63, 63, 63, 63
 };
 
 const int jpeg_natural_order5[5*5+16] = {
-  0,  1,  8, 16,  9,  2,  3, 10,
- 17, 24, 32, 25, 18, 11,  4, 12,
- 19, 26, 33, 34, 27, 20, 28, 35,
- 36,
- 63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
- 63, 63, 63, 63, 63, 63, 63, 63
+   0,  1,  8, 16,  9,  2,  3, 10,
+  17, 24, 32, 25, 18, 11,  4, 12,
+  19, 26, 33, 34, 27, 20, 28, 35,
+  36,
+  63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
+  63, 63, 63, 63, 63, 63, 63, 63
 };
 
 const int jpeg_natural_order4[4*4+16] = {
-  0,  1,  8, 16,  9,  2,  3, 10,
- 17, 24, 25, 18, 11, 19, 26, 27,
- 63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
- 63, 63, 63, 63, 63, 63, 63, 63
+   0,  1,  8, 16,  9,  2,  3, 10,
+  17, 24, 25, 18, 11, 19, 26, 27,
+  63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
+  63, 63, 63, 63, 63, 63, 63, 63
 };
 
 const int jpeg_natural_order3[3*3+16] = {
-  0,  1,  8, 16,  9,  2, 10, 17,
- 18,
- 63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
- 63, 63, 63, 63, 63, 63, 63, 63
+   0,  1,  8, 16,  9,  2, 10, 17,
+  18,
+  63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
+  63, 63, 63, 63, 63, 63, 63, 63
 };
 
 const int jpeg_natural_order2[2*2+16] = {
-  0,  1,  8,  9,
- 63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
- 63, 63, 63, 63, 63, 63, 63, 63
+   0,  1,  8,  9,
+  63, 63, 63, 63, 63, 63, 63, 63, /* extra entries for safety in decoder */
+  63, 63, 63, 63, 63, 63, 63, 63
 };
 
 
@@ -174,12 +174,12 @@ jzero_far (void FAR * target, size_t bytestozero)
 
 
 GLOBAL(void)
-jcopy_sample_rows (JSAMPARRAY input_array, int source_row,
-		   JSAMPARRAY output_array, int dest_row,
+jcopy_sample_rows (JSAMPARRAY input_array,
+		   JSAMPARRAY output_array,
 		   int num_rows, JDIMENSION num_cols)
 /* Copy some rows of samples from one place to another.
- * num_rows rows are copied from input_array[source_row++]
- * to output_array[dest_row++]; these areas may overlap for duplication.
+ * num_rows rows are copied from *input_array++ to *output_array++;
+ * these areas may overlap for duplication.
  * The source and destination arrays must be at least as wide as num_cols.
  */
 {
@@ -190,9 +190,6 @@ jcopy_sample_rows (JSAMPARRAY input_array, int source_row,
   register JDIMENSION count;
 #endif
   register int row;
-
-  input_array += source_row;
-  output_array += dest_row;
 
   for (row = num_rows; row > 0; row--) {
     inptr = *input_array++;

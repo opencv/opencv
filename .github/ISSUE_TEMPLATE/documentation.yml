@@ -1,0 +1,26 @@
+name: Documentation
+description: Report an issue related to https://docs.opencv.org/
+labels: ["category: documentation"]
+
+body:
+- type: markdown
+  attributes:
+    value: >
+      #### Thank you for contributing! Before submitting a doc issue, please make sure it has no duplicate by searching through [the existing and past issues](https://github.com/opencv/opencv/issues?page=1&q=is%3Aissue+sort%3Acreated-desc)
+
+- type: textarea
+  attributes:
+    label: Describe the doc issue
+    description: >
+      Please provide a clear and concise description of what content in https://docs.opencv.org/ is an issue. Note that there are multiple active branches, such as 4.x and 5.x, so please specify the branch with the problem.
+    placeholder: |
+      A clear and concise description of what content in https://docs.opencv.org/ is an issue.
+
+      Link to the doc: https://docs.opencv.org/4.x/d3/d63/classcv_1_1Mat.html
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Fix suggestion
+    description: >
+      Tell us how we could improve the documentation in this regard.

@@ -209,6 +209,10 @@ CVAPI(void)  cvCvtColor( const CvArr* src, CvArr* dst, int code );
 CVAPI(void)  cvResize( const CvArr* src, CvArr* dst,
                        int interpolation CV_DEFAULT( CV_INTER_LINEAR ));
 
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable: 5054 )
+#endif
 /** @brief Warps image with affine transform
 @note ::cvGetQuadrangleSubPix is similar to ::cvWarpAffine, but the outliers are extrapolated using
 replication border mode.
@@ -273,38 +277,9 @@ CVAPI(void)  cvLinearPolar( const CvArr* src, CvArr* dst,
                          CvPoint2D32f center, double maxRadius,
                          int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
 
-/** @brief Transforms the input image to compensate lens distortion
-@see cv::undistort
-*/
-CVAPI(void) cvUndistort2( const CvArr* src, CvArr* dst,
-                          const CvMat* camera_matrix,
-                          const CvMat* distortion_coeffs,
-                          const CvMat* new_camera_matrix CV_DEFAULT(0) );
-
-/** @brief Computes transformation map from intrinsic camera parameters
-   that can used by cvRemap
-*/
-CVAPI(void) cvInitUndistortMap( const CvMat* camera_matrix,
-                                const CvMat* distortion_coeffs,
-                                CvArr* mapx, CvArr* mapy );
-
-/** @brief Computes undistortion+rectification map for a head of stereo camera
-@see cv::initUndistortRectifyMap
-*/
-CVAPI(void) cvInitUndistortRectifyMap( const CvMat* camera_matrix,
-                                       const CvMat* dist_coeffs,
-                                       const CvMat *R, const CvMat* new_camera_matrix,
-                                       CvArr* mapx, CvArr* mapy );
-
-/** @brief Computes the original (undistorted) feature coordinates
-   from the observed (distorted) coordinates
-@see cv::undistortPoints
-*/
-CVAPI(void) cvUndistortPoints( const CvMat* src, CvMat* dst,
-                               const CvMat* camera_matrix,
-                               const CvMat* dist_coeffs,
-                               const CvMat* R CV_DEFAULT(0),
-                               const CvMat* P CV_DEFAULT(0));
+#ifdef _MSC_VER
+#pragma warning( pop )
+#endif
 
 /** @brief Returns a structuring element of the specified size and shape for morphological operations.
 

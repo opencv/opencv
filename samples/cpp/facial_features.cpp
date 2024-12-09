@@ -89,10 +89,10 @@ static void help(char** argv)
         "\tThis will detect only the face in image.jpg.\n";
 
     cout << " \n\nThe classifiers for face and eyes can be downloaded from : "
-        " \nhttps://github.com/opencv/opencv/tree/3.4/data/haarcascades";
+        " \nhttps://github.com/opencv/opencv/tree/4.x/data/haarcascades";
 
     cout << "\n\nThe classifiers for nose and mouth can be downloaded from : "
-        " \nhttps://github.com/opencv/opencv_contrib/tree/3.4/modules/face/data/cascades\n";
+        " \nhttps://github.com/opencv/opencv_contrib/tree/4.x/modules/face/data/cascades\n";
 }
 
 static void detectFaces(Mat& img, vector<Rect_<int> >& faces, string cascade_path)

@@ -8,6 +8,10 @@ set(OPENCV_PYTHON_BINDINGS_DIR "${CMAKE_CURRENT_BINARY_DIR}" CACHE INTERNAL "")
 # This file is included from a subdirectory
 set(PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../")
 
+if(NOT OPENCV_SKIP_PYTHON_LOADER)
+  include("${PYTHON_SOURCE_DIR}/python_loader.cmake")
+endif()
+
 # get list of modules to wrap
 set(OPENCV_PYTHON_MODULES)
 foreach(m ${OPENCV_MODULES_BUILD})
@@ -72,17 +76,24 @@ set(cv2_generated_files
 
 string(REPLACE ";" "\n" opencv_hdrs_ "${opencv_hdrs}")
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs_}")
+file(GLOB_RECURSE typing_stubs_generation_files "${PYTHON_SOURCE_DIR}/src2/typing_stubs_generation/*.py")
 add_custom_command(
     OUTPUT ${cv2_generated_files}
     COMMAND "${PYTHON_DEFAULT_EXECUTABLE}" "${PYTHON_SOURCE_DIR}/src2/gen2.py" "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/headers.txt"
     DEPENDS "${PYTHON_SOURCE_DIR}/src2/gen2.py"
             "${PYTHON_SOURCE_DIR}/src2/hdr_parser.py"
+            "${typing_stubs_generation_files}"
+            "${PYTHON_SOURCE_DIR}/src2/typing_stubs_generator.py"
             # not a real build dependency (file(WRITE) result): ${CMAKE_CURRENT_BINARY_DIR}/headers.txt
             ${opencv_hdrs}
     COMMENT "Generate files for Python bindings and documentation"
 )
 
 add_custom_target(gen_opencv_python_source DEPENDS ${cv2_generated_files})
+
+if(TARGET copy_opencv_typing_stubs)
+  add_dependencies(copy_opencv_typing_stubs gen_opencv_python_source)
+endif()
 
 set(cv2_custom_hdr "${CMAKE_CURRENT_BINARY_DIR}/pyopencv_custom_headers.h")
 set(cv2_custom_hdr_str "//user-defined headers\n")

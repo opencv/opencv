@@ -77,3 +77,7 @@ Image Processing {#tutorial_js_table_of_contents_imgproc}
 -   @subpage tutorial_js_imgproc_camera
 
     Learn image processing for video capture.
+
+-   @subpage tutorial_js_intelligent_scissors
+
+    Learn how to use IntelligentScissors tool for image segmentation task.

@@ -42,9 +42,13 @@
 
 #include "../precomp.hpp"
 #include <iostream>
-#include <iterator>
 #include <cmath>
 #include <opencv2/dnn/shape_utils.hpp>
+
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/recurrent_cells.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
 
 #include "layers_common.hpp"
 
@@ -109,16 +113,24 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     MatShape outTailShape;  //shape of single output sample
     MatShape outTsShape;    //shape of N output samples
 
+    enum layout_t : int {
+        SEQ_BATCH_HID = 0,
+        BATCH_SEQ_HID = 1
+    };
+
     bool useTimestampDim;
     bool produceCellOutput;
     float forgetBias, cellClip;
     bool useCellClip, usePeephole;
     bool reverse;   // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
+    layout_t layout;  // If layout == BATCH_SEQ_HID, uses batch_size x seq_length x num_hidden for input and output
+                      // else uses seq_length x batch_size x num_hidden
 
     ActivationFunction f_activation;
     ActivationFunction g_activation;
     ActivationFunction h_activation;
+    bool isDefaultActivations{true};
 
 #if CV_TRY_AVX
     bool useAVX;
@@ -168,9 +180,17 @@ public:
             CV_CheckEQ(Wh.rows, Wx.rows, "");
             CV_CheckEQ(Wh.rows, (1 + static_cast<int>(bidirectional))*4*Wh.cols, "");
             CV_CheckEQ(Wh.rows, (int)bias.total(), "");
-            CV_CheckEQ(hInternal.cols, Wh.cols, "");
-            CV_CheckEQ(hInternal.cols, cInternal.cols, "");
-            CV_CheckEQ(hInternal.rows, cInternal.rows, "");
+            // Only perform these checks if hInternal and cInternal are not empty matrices
+            // e.g. inputs are not given by a user
+            if(!hInternal.empty()){
+                CV_CheckEQ(hInternal.cols, Wh.cols, "");
+            }
+            if(!cInternal.empty()){
+                CV_CheckEQ(cInternal.cols, Wh.cols, "");
+            }
+            if (!hInternal.empty() && !cInternal.empty()){ //otherwise check in forward
+                CV_CheckEQ(hInternal.rows, cInternal.rows, "");
+            }
             CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
 
             // Peephole weights.
@@ -185,6 +205,7 @@ public:
                 }
             }
         }
+        layout = (layout_t) params.get<int>("layout", SEQ_BATCH_HID);
         useTimestampDim = params.get<bool>("use_timestamp_dim", true);
         produceCellOutput = params.get<bool>("produce_cell_output", false);
         forgetBias = params.get<float>("forget_bias", 0.0f);
@@ -202,11 +223,15 @@ public:
             f_activation = sigmoid;
             g_activation = tanh;
             h_activation = tanh;
+            isDefaultActivations = true;
         } else {
             CV_Assert(activations.size() == 3);
             f_activation = get_activation_function(activations.getStringValue(0));
             g_activation = get_activation_function(activations.getStringValue(1));
             h_activation = get_activation_function(activations.getStringValue(2));
+            isDefaultActivations = activations.getStringValue(0) == "Sigmoid"
+                                   && activations.getStringValue(1) == "Tanh"
+                                   && activations.getStringValue(2) == "Tanh";
         }
 
         allocated = false;
@@ -245,13 +270,19 @@ public:
         blobs[2] = Mat(bias.clone()).reshape(1, 1);
     }
 
+    bool supportBackend(int backendId) CV_OVERRIDE
+    {
+        return backendId == DNN_BACKEND_OPENCV
+               || (backendId == DNN_BACKEND_CUDA && isDefaultActivations && !reverse && !usePeephole);
+    }
+
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert((!usePeephole && blobs.size() == 5) || (usePeephole && blobs.size() == 8));
-        CV_Assert(inputs.size() == 1);
+        CV_Assert((inputs.size() == 1 || inputs.size() == 3));
         const MatShape& inp0 = inputs[0];
 
         const Mat &Wh = blobs[0], &Wx = blobs[1];
@@ -268,8 +299,13 @@ public:
         if (useTimestampDim)
         {
             CV_Assert(inp0.size() >= 2 && total(inp0, 2) == _numInp);
-            _numSamples = inp0[1];
-            outResShape.push_back(inp0[0]);
+            if (layout == SEQ_BATCH_HID) {
+                _numSamples = inp0[1];
+                outResShape.push_back(inp0[0]);
+            } else {
+                _numSamples = inp0[0];
+                outResShape.push_back(inp0[1]);
+            }
         }
         else
         {
@@ -311,7 +347,7 @@ public:
         inputs_arr.getMatVector(input);
 
         CV_Assert((!usePeephole && blobs.size() == 5) || (usePeephole && blobs.size() == 8));
-        CV_Assert(input.size() == 1);
+        CV_Assert((input.size() == 1 || input.size() == 3));
         const Mat& inp0 = input[0];
 
         Mat &Wh = blobs[0], &Wx = blobs[1];
@@ -326,8 +362,13 @@ public:
         if (useTimestampDim)
         {
             CV_Assert(inp0.dims >= 2 && (int)inp0.total(2) == numInp);
-            numTimeStamps = inp0.size[0];
-            numSamples = inp0.size[1];
+            if (layout == SEQ_BATCH_HID){
+                numTimeStamps = inp0.size[0];
+                numSamples = inp0.size[1];
+            }else{
+                numTimeStamps = inp0.size[1];
+                numSamples = inp0.size[0];
+            }
         }
         else
         {
@@ -349,7 +390,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -360,6 +401,21 @@ public:
         outputs_arr.getMatVector(output);
         internals_arr.getMatVector(internals);
 
+        if (layout == BATCH_SEQ_HID){
+            //swap axis 0 and 1 input x
+            cv::Mat tmp;
+            // Since python input is 4 dimentional and C++ input 3 dimentinal
+            // we need to proccess each differently
+            if (input[0].dims == 4){
+                // here !!!
+                CV_Assert(input[0].size[3] == 1);
+                cv::transposeND(input[0], {1, 0, 2, 3}, tmp); //back to seq_len, batch_size, hidden_size format
+            }else{
+                cv::transposeND(input[0], {1, 0, 2}, tmp); //back to seq_len, batch_size, hidden_size format
+            }
+            input[0] = tmp;
+        }
+
         Mat cOut = produceCellOutput ? output[0].clone() : Mat();
         const bool needYcTransform = !originalBlobs.empty(); // if the producer is onnx
         const int numDirs = 1 + static_cast<int>(bidirectional);
@@ -368,8 +424,20 @@ public:
             Mat Wh = blobs[0];
             Mat Wx = blobs[1];
             Mat bias = blobs[2];
-            Mat h_0 = blobs[3];
-            Mat c_0 = blobs[4];
+
+            Mat h_0, c_0;
+            // Handle h_0 and c_0 based on input size
+            h_0 = (input.size() >= 2) ? input[1].reshape(1, input[1].size[0] * input[1].size[1]) : blobs[3];
+            c_0 = (input.size() == 3) ? input[2].reshape(1, input[2].size[0] * input[2].size[1]) : blobs[4];
+
+            // Perform checks if input size is 2 or 3
+            if (input.size() >= 2) {
+                CV_CheckEQ(h_0.cols, Wh.cols, "");
+                CV_CheckEQ(h_0.cols, c_0.cols, "");
+                CV_CheckEQ(h_0.rows, c_0.rows, "");
+            }
+
+
             Mat pI, pF, pO;
 
             Wh = Wh.rowRange(i * Wh.rows / numDirs, (i + 1) * Wh.rows / numDirs);
@@ -564,7 +632,12 @@ public:
                     cInternal.copyTo(cOutTs.rowRange(curRowRange));
             }
         }
-
+        // transpose to match batch first output
+        if (layout == BATCH_SEQ_HID){
+            cv::Mat tmp;
+            cv::transposeND(output[0], {1, 0, 2}, tmp);
+            output[0] = tmp;
+        }
         if (needYcTransform && produceCellOutput)
         {
             fixCellState(cOut, numDirs);
@@ -582,29 +655,14 @@ public:
         cOut = cOut.reshape(1, sizeof(shp)/sizeof(shp[0]), shp);
 
         // permute to {0, 2, 1, 3};
-        std::vector<int> newShape = shape(cOut);
-        std::swap(newShape[1], newShape[2]);
-        cv::Mat newCellState(newShape, CV_32FC1);
-        const float* src = cOut.ptr<const float>();
-        float* dst = newCellState.ptr<float>();
-        size_t sj = newCellState.size[3];
-        size_t sk = newCellState.size[2] * sj;
-        size_t si = newCellState.size[1] * sk;
-        for (size_t i = 0; i < newCellState.size[0]; i++)
-        {
-            for (size_t j = 0; j < newCellState.size[2]; j++)
-            {
-                for (size_t k = 0; k < newCellState.size[1]; k++)
-                {
-                    std::memcpy(dst, src, sizeof(float) * newCellState.size[3]);
-                    src += cOut.size[3];
-                    dst += sk;
-                }
-                dst = dst + sj - si;
-            }
-            dst = dst + si - sk;
+        cv::Mat newCellState;
+        // transpose to match batch first output
+        if (layout == BATCH_SEQ_HID){
+            cv::transposeND(cOut, {2, 0, 1, 3}, newCellState);
         }
-
+        else{
+            cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
+        }
         cOut = newCellState;
 
         if (numDirs == 1)
@@ -637,6 +695,77 @@ public:
             cOut = cOut.reshape(1, sizeof(finalShape)/sizeof(finalShape[0]), finalShape);
         }
     }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(void *context_, const std::vector<Ptr<BackendWrapper>> &inputs,
+                              const std::vector<Ptr<BackendWrapper>> &outputs) override
+    {
+        const int numDirs = 1 + static_cast<int>(bidirectional);
+        auto toIFCO = [numDirs] (Mat& in) {
+            int first = in.size[0];
+            int rest = in.total() / first / 4;
+            // every weight blob contains weights for Input, Output, Forget and Cell gates
+            Mat m = in.reshape(1, {first, 4, rest});
+            Mat outputGate = m.col(1);
+            Mat forgetGate = m.col(2);
+            Mat cellGate = m.col(3);
+            // IOFC -> IFOC
+            std::swap_ranges(outputGate.begin<float>(), outputGate.end<float>(), forgetGate.begin<float>());
+            std::swap(outputGate, forgetGate);
+            // IFOC -> IFCO
+            std::swap_ranges(outputGate.begin<float>(), outputGate.end<float>(), cellGate.begin<float>());
+            in = in.reshape(1, numDirs);
+        };
+
+        Mat& b = originalBlobs[2];
+        // B is a concatenation of biases for Wh and Wx
+        b = b.reshape(1, originalBlobs[2].size[0]*2);
+
+        for (auto& m : originalBlobs)
+        {
+            toIFCO(m);
+        }
+
+        b = b.reshape(1, static_cast<int>(b.total()));
+
+        Mat ordered_weights;
+        // Wx_f, Wh_f, [Wx_b, Wh_b,] b
+        for (int i = 0; i < numDirs; ++i)
+        {
+            for (size_t j = 0; j < 2; ++j) // Wx, Wh
+            {
+                Mat oneDirection = originalBlobs[j].row(i);
+                ordered_weights.push_back(oneDirection.reshape(1, static_cast<int>(oneDirection.total())));
+            }
+        }
+        ordered_weights.push_back(b);
+
+        // Pass hidden states as is
+        Mat h0 = blobs[3];
+        Mat c0 = blobs[4];
+
+        CV_Assert(!inputs.empty());
+        auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
+        auto input_shape = input_wrapper->getShape();
+
+        RNNConfiguration config
+        {
+            input_shape[0],      // seqLength;
+            1,                   // numLayers;
+            numHidden,           // hiddenSize;
+            input_shape[2],      // inputSize;
+            input_shape[1],      // miniBatch;
+            bidirectional
+        };
+
+
+        auto *context = reinterpret_cast<cuda4dnn::csl::CSLContext *>(context_);
+        return make_cuda_node<cuda4dnn::LSTMOp>(preferableTarget, std::move(context->stream),
+                                                std::move(context->cudnn_handle),
+                                                ordered_weights, h0, c0,
+                                                config);
+    }
+#endif
 };
 
 Ptr<LSTMLayer> LSTMLayer::create(const LayerParams& params)
@@ -646,16 +775,16 @@ Ptr<LSTMLayer> LSTMLayer::create(const LayerParams& params)
 
 int LSTMLayer::inputNameToIndex(String inputName)
 {
-    if (inputName.toLowerCase() == "x")
+    if (toLowerCase(inputName) == "x")
         return 0;
     return -1;
 }
 
 int LSTMLayer::outputNameToIndex(const String& outputName)
 {
-    if (outputName.toLowerCase() == "h")
+    if (toLowerCase(outputName) == "h")
         return 0;
-    else if (outputName.toLowerCase() == "c")
+    else if (toLowerCase(outputName) == "c")
         return 1;
     return -1;
 }
@@ -777,7 +906,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -822,6 +951,215 @@ public:
 CV_EXPORTS_W Ptr<RNNLayer> RNNLayer::create(const LayerParams& params)
 {
     return Ptr<RNNLayer>(new RNNLayerImpl(params));
+}
+
+class GRULayerImpl CV_FINAL : public GRULayer
+{
+    int numTimeStamps, numSamples;
+    bool allocated;
+
+    MatShape outTailShape;  //shape of single output sample
+    MatShape outTsShape;    //shape of N output samples
+    bool bidirectional;     // If true, produces both forward and reversed directions along time axis
+
+public:
+
+    GRULayerImpl(const LayerParams& params) : numTimeStamps(0), numSamples(0)
+    {
+        setParamsFrom(params);
+
+        bidirectional = params.get<bool>("bidirectional", false);
+        if (!blobs.empty())
+        {
+            CV_Assert(blobs.size() >= 3);
+
+            blobs[2] = blobs[2].reshape(1, 1);
+
+            const Mat& Wh = blobs[0];
+            const Mat& Wx = blobs[1];
+            const Mat& bias = blobs[2];
+            const Mat& hInternal = blobs[3];
+            CV_CheckEQ(Wh.dims, 2, "");
+            CV_CheckEQ(Wx.dims, 2, "");
+            CV_CheckEQ(Wh.rows, Wx.rows, "");
+            CV_CheckEQ(Wh.rows, (1 + static_cast<int>(bidirectional)) * 3 * Wh.cols, "");
+            CV_CheckEQ(Wh.rows * 2, (int)bias.total(), "");
+            CV_CheckEQ(hInternal.cols, Wh.cols, "");
+            CV_CheckTypeEQ(Wh.type(), Wx.type(), "");
+            CV_CheckTypeEQ(Wx.type(), bias.type(), "");
+        }
+
+        allocated = false;
+        outTailShape.clear();
+    }
+
+    bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                         const int requiredOutputs,
+                         std::vector<MatShape> &outputs,
+                         std::vector<MatShape> &internals) const CV_OVERRIDE
+    {
+        CV_Assert(inputs.size() == 1);
+        const MatShape& inp0 = inputs[0];
+
+        const Mat &Wh = blobs[0], &Wx = blobs[1];
+        int _numOut = Wh.size[1];
+        int _numInp = Wx.size[1];
+        MatShape outTailShape_(outTailShape), outResShape;
+
+        if (!outTailShape_.empty())
+            CV_Assert(total(outTailShape_) == _numOut);
+        else
+            outTailShape_.assign(1, _numOut);
+
+        int _numSamples;
+        CV_Assert(inp0.size() >= 2 && total(inp0, 2) == _numInp);
+        _numSamples = inp0[1];
+        outResShape.push_back(inp0[0]);
+
+        outResShape.push_back(_numSamples);
+        outResShape.insert(outResShape.end(), outTailShape_.begin(), outTailShape_.end());
+        outResShape.back() *= (1 + static_cast<int>(bidirectional));
+
+        outputs.assign(1, outResShape);
+
+        internals.assign(1, shape(_numSamples, _numOut));     // hInternal
+        internals.push_back(shape(_numSamples, 1));           // dummyOnes
+        internals.push_back(shape(_numSamples, 2 * _numOut)); // gates
+        internals.push_back(shape(_numSamples, 2 * _numOut)); // gates_b
+        internals.push_back(shape(_numSamples, 1 * _numOut)); // h_linear
+        internals.push_back(shape(_numSamples, _numOut));     // ones
+
+        return false;
+    }
+
+    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays) CV_OVERRIDE
+    {
+        std::vector<Mat> input;
+        inputs_arr.getMatVector(input);
+
+        CV_Assert(input.size() == 1);
+        const Mat& inp0 = input[0];
+
+        Mat &Wh = blobs[0], &Wx = blobs[1];
+        int numOut = Wh.size[1];
+        int numInp = Wx.size[1];
+
+        if (!outTailShape.empty())
+            CV_Assert(total(outTailShape) == numOut);
+        else
+            outTailShape.assign(1, numOut);
+
+        CV_Assert(inp0.dims >= 2 && (int)inp0.total(2) == numInp);
+        numTimeStamps = inp0.size[0];
+        numSamples = inp0.size[1];
+
+        outTsShape.clear();
+        outTsShape.push_back(numSamples);
+        outTsShape.insert(outTsShape.end(), outTailShape.begin(), outTailShape.end());
+        outTsShape.back() *= (1 + static_cast<int>(bidirectional));
+
+        allocated = true;
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    {
+        CV_TRACE_FUNCTION();
+        CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        if (inputs_arr.depth() == CV_16F)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
+        std::vector<Mat> input, output, internals;
+        inputs_arr.getMatVector(input);
+        outputs_arr.getMatVector(output);
+        internals_arr.getMatVector(internals);
+
+        const int numDirs = 1 + static_cast<int>(bidirectional);
+        for (int i = 0; i < numDirs; ++i)
+        {
+            const Mat &Wh = blobs[0].rowRange(i * blobs[0].rows / numDirs, (i + 1) * blobs[0].rows / numDirs);
+            const Mat &Wx = blobs[1].rowRange(i * blobs[1].rows / numDirs, (i + 1) * blobs[1].rows / numDirs);
+            const Mat &bias = blobs[2].colRange(i * blobs[2].cols / numDirs, (i + 1) * blobs[2].cols / numDirs);
+            const Mat &h_0 = blobs[3].rowRange(i * blobs[3].rows / numDirs, (i + 1) * blobs[3].rows / numDirs);
+
+            const Mat &bx = bias.colRange(0, bias.cols / 2);
+            const Mat &bh = bias.colRange(bias.cols / 2, bias.cols);
+
+            Mat hInternal = internals[0], dummyOnes = internals[1], gates = internals[2],
+                b_rz = internals[3], n_t = internals[4], ones = internals[5];
+            h_0.copyTo(hInternal);
+            dummyOnes.setTo(1.);
+            ones.setTo(1.);
+
+            int numOut = Wh.size[1];
+            const Mat& wx_rz = Wx.rowRange(0, 2 * numOut);
+            const Mat& wh_rz = Wh.rowRange(0, 2 * numOut);
+            b_rz = bx.colRange(0, 2 * numOut) + bh.colRange(0, 2 * numOut);
+            const Mat& wx_n = Wx.rowRange(2 * numOut, 3 * numOut);
+            const Mat& wh_n = Wh.rowRange(2 * numOut, 3 * numOut);
+            const Mat& b_in = bx.colRange(2 * numOut, 3 * numOut);
+            const Mat& b_hn = bh.colRange(2 * numOut, 3 * numOut);
+
+            int numSamplesTotal = numTimeStamps * numSamples;
+            Mat xTs = input[0].reshape(1, numSamplesTotal);
+
+            Mat hOutTs = output[0].reshape(1, numSamplesTotal);
+            hOutTs = hOutTs.colRange(i * hOutTs.cols / numDirs, (i + 1) * hOutTs.cols / numDirs);
+            Mat cOutTs = Mat();
+
+            int tsStart, tsEnd, tsInc;
+            if (i == 1) {
+                tsStart = numTimeStamps - 1;
+                tsEnd = -1;
+                tsInc = -1;
+            }
+            else {
+                tsStart = 0;
+                tsEnd = numTimeStamps;
+                tsInc = 1;
+            }
+            for (int ts = tsStart; ts != tsEnd; ts += tsInc)
+            {
+                Range curRowRange(ts * numSamples, (ts + 1) * numSamples);
+                Mat xCurr = xTs.rowRange(curRowRange);
+
+                // calculate r_t = sigmoid(x * Wx_r + h_(t-1) * Wh_r + b_r)
+                // calculate z_t = sigmoid(x * Wx_z + h_(t-1) * Wh_z + b_z)
+                gemm(xCurr, wx_rz, 1, gates, 0, gates, GEMM_2_T);      // x * Wx_rz
+                gemm(hInternal, wh_rz, 1, gates, 1, gates, GEMM_2_T);  // + h_(t-1) * Wh_rz
+                gemm(dummyOnes, b_rz, 1, gates, 1, gates);             // + b_rz
+                sigmoid(gates, gates);                                 // sigmoid()
+
+                Mat z = gates.colRange(0, gates.cols / 2);
+                Mat r = gates.colRange(gates.cols / 2, gates.cols);
+
+                // calculate n_t = tanh(r (*) (h_(t-1) * Wh_n + b_hn) + x * Wx_n + b_in)
+                gemm(hInternal, wh_n, 1, n_t, 0, n_t, GEMM_2_T);       // h_(t-1) * Wh_n
+                gemm(dummyOnes, b_hn, 1, n_t, 1, n_t);                 // + b_hn
+                multiply(r, n_t, n_t);                                 // r (*) (h_(t-1) * Wh_n + b_hn)
+
+                gemm(xCurr, wx_n, 1, n_t, 1, n_t, GEMM_2_T);          // + x * Wx_n
+                gemm(dummyOnes, b_in, 1, n_t, 1, n_t);                // + b_in
+                tanh(n_t, n_t);                                       // tanh()
+
+                //compute next h_t = z (*) h_(t-1) + (1 - z) (*) n_t
+                multiply(z, hInternal, hInternal);                    // z (*) h_{t-1}
+                subtract(ones, z, z);                                 // 1 - z
+                multiply(z, n_t, z);                                  // (1 - z) * n
+                add(z, hInternal, hInternal);                         // z (*) h_(t-1) + (1 - z) (*) n_t
+
+                //save results in output blobs
+                hInternal.copyTo(hOutTs.rowRange(curRowRange));
+            }
+        }
+    }
+};
+
+Ptr<GRULayer> GRULayer::create(const LayerParams &params) {
+    return Ptr<GRULayer>(new GRULayerImpl(params));
 }
 
 }

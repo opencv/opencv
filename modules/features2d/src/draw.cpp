@@ -50,12 +50,12 @@ namespace cv
 /*
  * Functions to draw keypoints and matches.
  */
-static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const Scalar& color, int flags )
+static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const Scalar& color, DrawMatchesFlags flags )
 {
     CV_Assert( !img.empty() );
     Point center( cvRound(p.pt.x * draw_multiplier), cvRound(p.pt.y * draw_multiplier) );
 
-    if( flags & DrawMatchesFlags::DRAW_RICH_KEYPOINTS )
+    if( !!(flags & DrawMatchesFlags::DRAW_RICH_KEYPOINTS) )
     {
         int radius = cvRound(p.size/2 * draw_multiplier); // KeyPoint::size is a diameter
 
@@ -89,7 +89,7 @@ static inline void _drawKeypoint( InputOutputArray img, const KeyPoint& p, const
 }
 
 void drawKeypoints( InputArray image, const std::vector<KeyPoint>& keypoints, InputOutputArray outImage,
-                    const Scalar& _color, int flags )
+                    const Scalar& _color, DrawMatchesFlags flags )
 {
     CV_INSTRUMENT_REGION();
 
@@ -144,12 +144,12 @@ static void _prepareImage(InputArray src, const Mat& dst)
 static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                                          InputArray img2, const std::vector<KeyPoint>& keypoints2,
                                          InputOutputArray _outImg, Mat& outImg1, Mat& outImg2,
-                                         const Scalar& singlePointColor, int flags )
+                                         const Scalar& singlePointColor, DrawMatchesFlags flags )
 {
     Mat outImg;
     Size img1size = img1.size(), img2size = img2.size();
     Size size( img1size.width + img2size.width, MAX(img1size.height, img2size.height) );
-    if( flags & DrawMatchesFlags::DRAW_OVER_OUTIMG )
+    if( !!(flags & DrawMatchesFlags::DRAW_OVER_OUTIMG) )
     {
         outImg = _outImg.getMat();
         if( size.width > outImg.cols || size.height > outImg.rows )
@@ -183,7 +183,7 @@ static void _prepareImgAndDrawKeypoints( InputArray img1, const std::vector<KeyP
 }
 
 static inline void _drawMatch( InputOutputArray outImg, InputOutputArray outImg1, InputOutputArray outImg2 ,
-                          const KeyPoint& kp1, const KeyPoint& kp2, const Scalar& matchColor, int flags,
+                          const KeyPoint& kp1, const KeyPoint& kp2, const Scalar& matchColor, DrawMatchesFlags flags,
                           const int matchesThickness )
 {
     RNG& rng = theRNG();
@@ -207,7 +207,7 @@ void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                   InputArray img2, const std::vector<KeyPoint>& keypoints2,
                   const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
-                  const std::vector<char>& matchesMask, int flags )
+                  const std::vector<char>& matchesMask, DrawMatchesFlags flags )
 {
     drawMatches( img1, keypoints1,
                  img2, keypoints2,
@@ -222,7 +222,7 @@ void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                   const std::vector<DMatch>& matches1to2, InputOutputArray outImg,
                   const int matchesThickness, const Scalar& matchColor,
                   const Scalar& singlePointColor, const std::vector<char>& matchesMask,
-                  int flags )
+                  DrawMatchesFlags flags )
 {
     if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
         CV_Error( Error::StsBadSize, "matchesMask must have the same size as matches1to2" );
@@ -252,7 +252,7 @@ void drawMatches( InputArray img1, const std::vector<KeyPoint>& keypoints1,
                   InputArray img2, const std::vector<KeyPoint>& keypoints2,
                   const std::vector<std::vector<DMatch> >& matches1to2, InputOutputArray outImg,
                   const Scalar& matchColor, const Scalar& singlePointColor,
-                  const std::vector<std::vector<char> >& matchesMask, int flags )
+                  const std::vector<std::vector<char> >& matchesMask, DrawMatchesFlags flags )
 {
     if( !matchesMask.empty() && matchesMask.size() != matches1to2.size() )
         CV_Error( Error::StsBadSize, "matchesMask must have the same size as matches1to2" );

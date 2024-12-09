@@ -4,7 +4,6 @@
 
 #include "perf_precomp.hpp"
 
-#ifdef HAVE_VIDEO_INPUT
 #include "perf_bgfg_utils.hpp"
 
 namespace opencv_test { namespace {
@@ -27,7 +26,8 @@ PERF_TEST_P(MOG2_Apply, Mog2, Combine(Values("cv/video/768x576.avi", "cv/video/1
     vector<Mat> frame_buffer(nFrame);
 
     cv::VideoCapture cap(inputFile);
-    ASSERT_TRUE(cap.isOpened());
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
     prepareData(cap, cn, frame_buffer);
 
     Mat foreground;
@@ -60,7 +60,8 @@ PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Values(
     vector<Mat> frame_buffer(nFrame);
 
     cv::VideoCapture cap(inputFile);
-    ASSERT_TRUE(cap.isOpened());
+    if (!cap.isOpened())
+        throw SkipTestException("Video file can not be opened");
     prepareData(cap, cn, frame_buffer, skipFrames);
 
     Mat foreground, background;
@@ -85,5 +86,3 @@ PERF_TEST_P(MOG2_GetBackgroundImage, Mog2, Values(
 }
 
 }}// namespace
-
-#endif

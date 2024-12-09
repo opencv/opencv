@@ -96,7 +96,9 @@ struct RoiPredicate
 
     bool operator()( const KeyPoint& keyPt ) const
     {
-        return !r.contains( keyPt.pt );
+        // workaround for https://github.com/opencv/opencv/issues/26016
+        // To keep its behaviour, keyPt.pt casts to Point_<int>.
+        return !r.contains( Point_<int>(keyPt.pt) );
     }
 
     Rect r;
@@ -148,10 +150,12 @@ public:
     {
         return mask.at<uchar>( (int)(key_pt.pt.y + 0.5f), (int)(key_pt.pt.x + 0.5f) ) == 0;
     }
+    MaskPredicate& operator=(const MaskPredicate&) = delete;
+    // To avoid -Wdeprecated-copy warning, copy constructor is needed.
+    MaskPredicate(const MaskPredicate&) = default;
 
 private:
     const Mat mask;
-    MaskPredicate& operator=(const MaskPredicate&);
 };
 
 void KeyPointsFilter::runByPixelsMask( std::vector<KeyPoint>& keypoints, const Mat& mask )
@@ -162,6 +166,29 @@ void KeyPointsFilter::runByPixelsMask( std::vector<KeyPoint>& keypoints, const M
         return;
 
     keypoints.erase(std::remove_if(keypoints.begin(), keypoints.end(), MaskPredicate(mask)), keypoints.end());
+}
+/*
+ * Remove objects from some image and a vector by mask for pixels of this image
+ */
+template <typename T>
+void runByPixelsMask2(std::vector<KeyPoint> &keypoints, std::vector<T> &removeFrom, const Mat &mask)
+{
+    if (mask.empty())
+        return;
+
+    MaskPredicate maskPredicate(mask);
+    removeFrom.erase(std::remove_if(removeFrom.begin(), removeFrom.end(),
+                                    [&](const T &x)
+                                    {
+                                        auto index = &x - &removeFrom.front();
+                                        return maskPredicate(keypoints[index]);
+                                    }),
+                    removeFrom.end());
+    keypoints.erase(std::remove_if(keypoints.begin(), keypoints.end(), maskPredicate), keypoints.end());
+}
+void KeyPointsFilter::runByPixelsMask2VectorPoint(std::vector<KeyPoint> &keypoints, std::vector<std::vector<Point> > &removeFrom, const Mat &mask)
+{
+    runByPixelsMask2(keypoints, removeFrom, mask);
 }
 
 struct KeyPoint_LessThan

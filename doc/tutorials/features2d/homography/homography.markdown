@@ -1,7 +1,13 @@
 Basic concepts of the homography explained with code {#tutorial_homography}
 ====================================================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_akaze_tracking}
+
+|    |    |
+| -: | :- |
+| Compatibility | OpenCV >= 3.0 |
 
 @tableofcontents
 
@@ -16,10 +22,10 @@ For detailed explanations about the theory, please refer to a computer vision co
 *   Deeper understanding of the homography decomposition for vision-based control, Ezio Malis, Manuel Vargas, @cite Malis2007 (open access [here](https://hal.inria.fr/inria-00174036))
 *   Pose Estimation for Augmented Reality: A Hands-On Survey, Eric Marchand, Hideaki Uchiyama, Fabien Spindler, @cite Marchand16 (open access [here](https://hal.inria.fr/hal-01246370))
 
-The tutorial code can be found here [C++](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/features2D/Homography),
-[Python](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/features2D/Homography),
-[Java](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/features2D/Homography).
-The images used in this tutorial can be found [here](https://github.com/opencv/opencv/tree/3.4/samples/data) (`left*.jpg`).
+The tutorial code can be found here [C++](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/features2D/Homography),
+[Python](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/features2D/Homography),
+[Java](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/features2D/Homography).
+The images used in this tutorial can be found [here](https://github.com/opencv/opencv/tree/4.x/samples/data) (`left*.jpg`).
 
 Basic theory {#tutorial_homography_Basic_theory}
 ------------

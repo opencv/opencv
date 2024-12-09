@@ -54,6 +54,7 @@ protected:
     void run( int );
     virtual void draw( Mat& img ) = 0;
     virtual int checkLineIterator( Mat& img) = 0;
+    virtual int checkLineVirtualIterator() = 0;
 };
 
 void CV_DrawingTest::run( int )
@@ -70,7 +71,7 @@ void CV_DrawingTest::run( int )
     {
         //imwrite( filename, testImg );
         ts->printf( ts->LOG, "test image can not be read");
-#ifdef HAVE_PNG
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
         ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
 #else
         ts->printf( ts->LOG, "PNG image support is not available");
@@ -93,6 +94,7 @@ void CV_DrawingTest::run( int )
             ts->set_failed_test_info(checkLineIterator( testImg ));
         }
     }
+    ts->set_failed_test_info(checkLineVirtualIterator());
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
@@ -103,6 +105,7 @@ public:
 protected:
     virtual void draw( Mat& img );
     virtual int checkLineIterator( Mat& img);
+    virtual int checkLineVirtualIterator();
 };
 
 void CV_DrawingTest_CPP::draw( Mat& img )
@@ -125,7 +128,7 @@ void CV_DrawingTest_CPP::draw( Mat& img )
 
     p2 = Point(3,imgSize.height+1000);
     if( clipLine(Rect(0,0,imgSize.width,imgSize.height), p1, p2) && clipLine(imgSize, p1, p2) )
-        circle( img, Point(500,300), 50, cvColorToScalar(255,CV_8UC3), 5, 8, 1 ); // draw
+        circle( img, Point(500,300), 50, Scalar(255, 0, 0), 5, 8, 1 ); // draw
 
     p1 = Point(imgSize.width,1), p2 = Point(imgSize.width,3);
     if( clipLine(Rect(0,0,imgSize.width,imgSize.height), p1, p2) && clipLine(imgSize, p1, p2) )
@@ -141,7 +144,7 @@ void CV_DrawingTest_CPP::draw( Mat& img )
     ellipse2Poly( Point(430,180), Size(100,150), 30, 0, 150, 20, polyline );
     pts = &polyline[0];
     n = (int)polyline.size();
-    polylines( img, &pts, &n, 1, false, Scalar(0,0,150), 4, CV_AA );
+    polylines( img, &pts, &n, 1, false, Scalar(0,0,150), 4, cv::LINE_AA );
     n = 0;
     for( vector<Point>::const_iterator it = polyline.begin(); n < (int)polyline.size()-1; ++it, n++ )
     {
@@ -189,43 +192,43 @@ void CV_DrawingTest_CPP::draw( Mat& img )
 
     textSize = getTextSize( text2, FONT_HERSHEY_SIMPLEX, fontScale, thickness, &baseline);
     textOrg = Point(5,5)+Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SIMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SIMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 1;
     textSize = getTextSize( text2, FONT_HERSHEY_PLAIN, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_PLAIN, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_PLAIN, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 0.5;
     textSize = getTextSize( text2, FONT_HERSHEY_DUPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_DUPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_DUPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize( text2, FONT_HERSHEY_COMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize( text2, FONT_HERSHEY_TRIPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_TRIPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_TRIPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 1;
     textSize = getTextSize( text2, FONT_HERSHEY_COMPLEX_SMALL, fontScale, thickness, &baseline);
     textOrg += Point(0,180) + Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX_SMALL, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX_SMALL, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize( text2, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize( text2, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     dist = 15, fontScale = 0.5;
     textSize = getTextSize( text2, FONT_ITALIC, fontScale, thickness, &baseline);
     textOrg += Point(0,textSize.height+dist);
-    putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, cv::LINE_AA);
 }
 
 int CV_DrawingTest_CPP::checkLineIterator( Mat& img )
@@ -239,6 +242,51 @@ int CV_DrawingTest_CPP::checkLineIterator( Mat& img )
         {
             ts->printf( ts->LOG, "LineIterator works incorrect" );
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        }
+    }
+    ts->set_failed_test_info(cvtest::TS::OK);
+    return 0;
+}
+
+int CV_DrawingTest_CPP::checkLineVirtualIterator(  )
+{
+    RNG randomGenerator(1);
+    for (size_t test = 0; test < 10000; ++test)
+    {
+        int width = randomGenerator.uniform(0, 512+1);
+        int height = randomGenerator.uniform(0, 512+1);
+        int x1 = randomGenerator.uniform(-512, 1024+1);
+        int y1 = randomGenerator.uniform(-512, 1024+1);
+        int x2 = randomGenerator.uniform(-512, 1024+1);
+        int y2 = randomGenerator.uniform(-512, 1024+1);
+        int x3 = randomGenerator.uniform(-512, 1024+1);
+        int y3 = randomGenerator.uniform(-512, 1024+1);
+        int channels = randomGenerator.uniform(1, 3+1);
+        Mat m(cv::Size(width, height), CV_MAKETYPE(CV_8U, channels));
+        Point p1(x1, y1);
+        Point p2(x2, y2);
+        Point offset(x3, y3);
+        LineIterator it( m, p1, p2 );
+        LineIterator vit(Rect(offset.x, offset.y, width, height), p1 + offset, p2 + offset);
+        if (it.count != vit.count)
+        {
+           ts->printf( ts->LOG, "virtual LineIterator works incorrectly" );
+           ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+           break;
+        }
+        else
+        {
+            for(int i = 0; i < it.count; ++it, ++vit, i++ )
+            {
+                Point pIt = it.pos();
+                Point pVit = vit.pos() - offset;
+                if (pIt != pVit)
+                {
+                    ts->printf( ts->LOG, "virtual LineIterator works incorrectly" );
+                    ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+                    break;
+                }
+            }
         }
     }
     ts->set_failed_test_info(cvtest::TS::OK);
@@ -273,7 +321,7 @@ void CV_DrawingTest_Far::draw(Mat& img)
 
     p2 = Point(32768 + 3, imgSize.height + 1000);
     if (clipLine(Rect(32768 + 0, 0, imgSize.width, imgSize.height), p1, p2) && clipLine(imgSize, p1, p2))
-        circle(img, Point(65536 + 500, 300), 50, cvColorToScalar(255, CV_8UC3), 5, 8, 1); // draw
+        circle(img, Point(65536 + 500, 300), 50, Scalar(255, 0, 0), 5, 8, 1); // draw
 
     p1 = Point(imgSize.width, 1), p2 = Point(imgSize.width, 3);
     if (clipLine(Rect(32768 + 0, 0, imgSize.width, imgSize.height), p1, p2) && clipLine(imgSize, p1, p2))
@@ -289,7 +337,7 @@ void CV_DrawingTest_Far::draw(Mat& img)
     ellipse2Poly(Point(32768 + 430, 180), Size(100, 150), 30, 0, 150, 20, polyline);
     pts = &polyline[0];
     n = (int)polyline.size();
-    polylines(img, &pts, &n, 1, false, Scalar(0, 0, 150), 4, CV_AA);
+    polylines(img, &pts, &n, 1, false, Scalar(0, 0, 150), 4, cv::LINE_AA);
     n = 0;
     for (vector<Point>::const_iterator it = polyline.begin(); n < (int)polyline.size() - 1; ++it, n++)
     {
@@ -337,43 +385,43 @@ void CV_DrawingTest_Far::draw(Mat& img)
 
     textSize = getTextSize(text2, FONT_HERSHEY_SIMPLEX, fontScale, thickness, &baseline);
     textOrg = Point(32768 + 5, 5) + Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SIMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SIMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 1;
     textSize = getTextSize(text2, FONT_HERSHEY_PLAIN, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_PLAIN, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_PLAIN, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 0.5;
     textSize = getTextSize(text2, FONT_HERSHEY_DUPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_DUPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_DUPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize(text2, FONT_HERSHEY_COMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize(text2, FONT_HERSHEY_TRIPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_TRIPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_TRIPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     fontScale = 1;
     textSize = getTextSize(text2, FONT_HERSHEY_COMPLEX_SMALL, fontScale, thickness, &baseline);
     textOrg += Point(0, 180) + Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX_SMALL, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_COMPLEX_SMALL, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize(text2, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_SIMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     textSize = getTextSize(text2, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_HERSHEY_SCRIPT_COMPLEX, fontScale, color, thickness, cv::LINE_AA);
 
     dist = 15, fontScale = 0.5;
     textSize = getTextSize(text2, FONT_ITALIC, fontScale, thickness, &baseline);
     textOrg += Point(0, textSize.height + dist);
-    putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, CV_AA);
+    putText(img, text2, textOrg, FONT_ITALIC, fontScale, color, thickness, cv::LINE_AA);
 
     img = img(Rect(32768, 0, 600, 400)).clone();
 }
@@ -469,7 +517,7 @@ protected:
                     Size textSize = getTextSize(*line, *font | italic, fontScale, thickness, &baseline);
                     Point textOrg(0, textSize.height + 2);
                     Mat img(textSize + Size(0, baseline), CV_8UC3, Scalar(255, 255, 255));
-                    putText(img, *line, textOrg, *font | italic, fontScale, color, thickness, CV_AA);
+                    putText(img, *line, textOrg, *font | italic, fontScale, color, thickness, cv::LINE_AA);
 
                     results.push_back(img);
                     bigSize.width = max(bigSize.width, img.size().width);
@@ -632,6 +680,75 @@ TEST(Drawing, fillpoly_circle)
     EXPECT_LT(diff_fp3, 1.);
 }
 
+TEST(Drawing, fillpoly_contours)
+{
+    const int imgSize = 50;
+    const int type = CV_8UC1;
+    const int shift = 0;
+    const Scalar cl = Scalar::all(255);
+    const cv::LineTypes lineType = LINE_8;
+
+    // check that contours of fillPoly and polylines match
+    {
+        cv::Mat img(imgSize, imgSize, type);
+        img = 0;
+        std::vector<std::vector<cv::Point>> polygonPoints{
+            { {44, 27}, {7, 37}, {7, 19}, {38, 19} }
+        };
+        cv::fillPoly(img, polygonPoints, cl, lineType, shift);
+        cv::polylines(img, polygonPoints, true, 0, 1, lineType, shift);
+
+        {
+            cv::Mat labelImage(img.size(), CV_32S);
+            int labels = cv::connectedComponents(img, labelImage, 4);
+            EXPECT_EQ(2, labels) << "filling went over the border";
+        }
+    }
+
+    // check that line generated with fillPoly and polylines match
+    {
+        cv::Mat img1(imgSize, imgSize, type), img2(imgSize, imgSize, type);
+        img1 = 0;
+        img2 = 0;
+        std::vector<std::vector<cv::Point>> polygonPoints{
+            { {44, 27}, {38, 19} }
+        };
+        cv::fillPoly(img1, polygonPoints, cl, lineType, shift);
+        cv::polylines(img2, polygonPoints, true, cl, 1, lineType, shift);
+        EXPECT_MAT_N_DIFF(img1, img2, 0);
+    }
+}
+
+TEST(Drawing, fillpoly_match_lines)
+{
+    const int imgSize = 49;
+    const int type = CV_8UC1;
+    const int shift = 0;
+    const Scalar cl = Scalar::all(255);
+    const cv::LineTypes lineType = LINE_8;
+    cv::Mat img1(imgSize, imgSize, type), img2(imgSize, imgSize, type);
+    for (int x1 = 0; x1 < imgSize; x1 += imgSize / 2)
+    {
+        for (int y1 = 0; y1 < imgSize; y1 += imgSize / 2)
+        {
+            for (int x2 = 0; x2 < imgSize; x2++)
+            {
+                for (int y2 = 0; y2 < imgSize; y2++)
+                {
+                    img1 = 0;
+                    img2 = 0;
+                    std::vector<std::vector<cv::Point>> polygonPoints{
+                        { {x1, y1}, {x2, y2} }
+                    };
+                    cv::fillPoly(img1, polygonPoints, cl, lineType, shift);
+                    cv::polylines(img2, polygonPoints, true, cl, 1, lineType, shift);
+                    EXPECT_MAT_N_DIFF(img1, img2, 0);
+                }
+            }
+        }
+    }
+}
+
 TEST(Drawing, fillpoly_fully)
 {
     unsigned imageWidth = 256;
@@ -694,7 +811,7 @@ TEST(Drawing, fillpoly_fully)
             t1.x = (t1.x + offset.x) << (xy_shift - shift);
             t1.y = (t1.y + delta) >> shift;
 
-            if (lineType < CV_AA)
+            if (lineType < cv::LINE_AA)
             {
                 t0.x = (t0.x + (xy_one >> 1)) >> xy_shift;
                 t1.x = (t1.x + (xy_one >> 1)) >> xy_shift;
@@ -783,7 +900,7 @@ PARAM_TEST_CASE(FillPolyFully, unsigned, unsigned, int, int, Point, cv::LineType
             t1.x = (t1.x + offset.x) << (xy_shift - shift);
             t1.y = (t1.y + delta) >> shift;
 
-            if (lineType < CV_AA)
+            if (lineType < cv::LINE_AA)
             {
                 t0.x = (t0.x + (xy_one >> 1)) >> xy_shift;
                 t1.x = (t1.x + (xy_one >> 1)) >> xy_shift;
@@ -864,5 +981,127 @@ INSTANTIATE_TEST_CASE_P(
         testing::Values(LINE_4, LINE_8, LINE_AA)
     )
 );
+
+TEST(Drawing, circle_overflow)
+{
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+    cv::Mat1b matrix = cv::Mat1b::zeros(600, 600);
+    cv::Scalar kBlue = cv::Scalar(0, 0, 255);
+    cv::circle(matrix, cv::Point(275, -2147483318), 2147483647, kBlue, 1, 8, 0);
+}
+
+TEST(Drawing, circle_memory_access)
+{
+    cv::Mat1b matrix = cv::Mat1b::zeros(10, 10);
+    cv::Scalar kBlue = cv::Scalar(0, 0, 255);
+    cv::circle(matrix, cv::Point(-1, -1), 0, kBlue, 2, 8, 16);
+}
+
+inline static Mat mosaic2x2(Mat &img)
+{
+    const Size sz = img.size();
+    Mat res(sz * 2, img.type(), Scalar::all(0));
+    img.copyTo(res(Rect(Point(0, 0), sz)));
+    img.copyTo(res(Rect(Point(0, sz.height), sz)));
+    img.copyTo(res(Rect(Point(sz.width, 0), sz)));
+    img.copyTo(res(Rect(Point(sz.width, sz.height), sz)));
+    return res;
+}
+
+TEST(Drawing, contours_filled)
+{
+    const Scalar white(255);
+    const Scalar black(0);
+    const Size sz(100, 100);
+
+    Mat img(sz, CV_8UC1, black);
+    rectangle(img, Point(20, 20), Point(80, 80), white, -1);
+    rectangle(img, Point(30, 30), Point(70, 70), black, -1);
+    rectangle(img, Point(40, 40), Point(60, 60), white, -1);
+    img = mosaic2x2(img);
+
+    Mat img1(sz, CV_8UC1, black);
+    rectangle(img1, Point(20, 20), Point(80, 80), white, -1);
+    img1 = mosaic2x2(img1);
+
+    Mat img2(sz, CV_8UC1, black);
+    rectangle(img2, Point(20, 20), Point(80, 80), white, -1);
+    rectangle(img2, Point(30, 30), Point(70, 70), black, -1);
+    img2 = mosaic2x2(img2);
+
+    Mat img3(sz, CV_8UC1, black);
+    rectangle(img3, Point(40, 40), Point(60, 60), white, -1);
+    img3 = mosaic2x2(img3);
+
+    // inverted contours - corners and left edge adjusted
+    Mat imgi(sz, CV_8UC1, black);
+    rectangle(imgi, Point(29, 29), Point(71, 71), white, -1);
+    rectangle(imgi, Point(41, 41), Point(59, 59), black, -1);
+    imgi.at<uchar>(Point(29, 29)) = 0;
+    imgi.at<uchar>(Point(29, 71)) = 0;
+    imgi = mosaic2x2(imgi);
+
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    findContours(img, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE);
+    ASSERT_EQ(12u, contours.size());
+
+    // NOTE:
+    // assuming contour tree has following structure (idx = 0, 1, ...):
+    //   idx (top level)
+    //     - idx + 1
+    //         - idx + 2
+    //   idx + 3 (top level)
+    //     - idx + 4
+    //         - idx + 5
+    //   ...
+    const vector<int> top_contours {0, 3, 6, 9};
+    {
+        // all contours
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        drawContours(res, contours, -1, white, -1, cv::LINE_8, hierarchy);
+        EXPECT_LT(cvtest::norm(img, res, NORM_INF), 1);
+    }
+    {
+        // all contours
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        drawContours(res, contours, -1, white, -1, cv::LINE_8, hierarchy, 3);
+        EXPECT_LT(cvtest::norm(img, res, NORM_INF), 1);
+    }
+    {
+        // all contours
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        drawContours(res, contours, -1, white, -1, cv::LINE_8, hierarchy, 0);
+        EXPECT_LT(cvtest::norm(img, res, NORM_INF), 1);
+    }
+    {
+        // all external contours one by one
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        for (int idx : top_contours)
+            drawContours(res, contours, idx, white, -1, cv::LINE_8, hierarchy, 0);
+        EXPECT_LT(cvtest::norm(img1, res, NORM_INF), 1);
+    }
+    {
+        // all external contours + 1-level deep hole (one by one)
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        for (int idx : top_contours)
+            drawContours(res, contours, idx, white, -1, cv::LINE_8, hierarchy, 1);
+        EXPECT_LT(cvtest::norm(img2, res, NORM_INF), 1);
+    }
+    {
+        // 2-level deep contours
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        for (int idx : top_contours)
+            drawContours(res, contours, idx + 2, white, -1, cv::LINE_8, hierarchy);
+        EXPECT_LT(cvtest::norm(img3, res, NORM_INF), 1);
+    }
+    {
+        // holes become inverted here, LINE_8 -> LINE_4
+        Mat res(img.size(), CV_8UC1, Scalar::all(0));
+        for (int idx : top_contours)
+            drawContours(res, contours, idx + 1, white, -1, cv::LINE_4, hierarchy);
+        EXPECT_LT(cvtest::norm(imgi, res, NORM_INF), 1);
+    }
+}
 
 }} // namespace

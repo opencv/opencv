@@ -25,7 +25,7 @@ class TestSceneRender():
         if bgImg is not None:
             self.sceneBg = bgImg.copy()
         else:
-            self.sceneBg = np.zeros(defaultSize, defaultSize, np.uint8)
+            self.sceneBg = np.zeros((defaultSize, defaultSize,3), np.uint8)
 
         self.w = self.sceneBg.shape[0]
         self.h = self.sceneBg.shape[1]
@@ -85,7 +85,7 @@ class TestSceneRender():
             img[self.currentCenter[0]:self.currentCenter[0]+self.foreground.shape[0],
              self.currentCenter[1]:self.currentCenter[1]+self.foreground.shape[1]] = self.foreground
         else:
-            self.currentRect = self.initialRect + np.int( 30*cos(self.time*self.speed) + 50*sin(self.time*self.speed))
+            self.currentRect = self.initialRect + int( 30*cos(self.time*self.speed) + 50*sin(self.time*self.speed))
             if self.deformation:
                 self.currentRect[1:3] += int(self.h/20*cos(self.time))
             cv.fillConvexPoly(img, self.currentRect, (0, 0, 255))

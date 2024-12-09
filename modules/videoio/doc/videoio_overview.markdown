@@ -1,12 +1,14 @@
 Video I/O with OpenCV Overview {#videoio_overview}
-===================================
+==============================
 
-### See also:
+@tableofcontents
+
+@sa
   - @ref videoio "Video I/O Code Reference"
-  - Tutorials: @ref tutorial_table_of_content_videoio
+  - Tutorials: @ref tutorial_table_of_content_app
 
 General Information
-===================
+-------------------
 
 The OpenCV @ref videoio module is a set of classes and functions to read and write video or images sequence.
 
@@ -15,7 +17,7 @@ I/O APIs used as backend.
 
 ![Video I/O with OpenCV](pics/videoio_overview.svg)
 
-Some backends such as Direct Show (DSHOW), Video For Windows (VFW), Microsoft Media Foundation (MSMF),
+Some backends such as Direct Show (DSHOW), Microsoft Media Foundation (MSMF),
 Video 4 Linux (V4L), etc... are interfaces to the video I/O library provided by the operating system.
 
 Some others backends like OpenNI2 for Kinect, Intel Perceptual Computing SDK, GStreamer,
@@ -53,22 +55,28 @@ cv::VideoCapture cap(filename, cv::CAP_MSMF);
 //or specify the apiPreference with open
 cap.open(filename, cv::CAP_MSMF);
 ```
-
 @sa cv::VideoCapture::open() , cv::VideoCapture::VideoCapture()
 
-#### Enable backends
 
-Backends are available only if they have been built with your OpenCV binaries.
+How to enable backends
+----------------------
 
-Check in `opencv2/cvconfig.h` to know which APIs are currently available
-(e.g. `HAVE_MSMF, HAVE_VFW, HAVE_LIBV4L`, etc...).
+There are two kinds of videoio backends: built-in backends and plugins which will be loaded at runtime (since OpenCV 4.1.0). Use functions cv::videoio_registry::getBackends, cv::videoio_registry::hasBackend and cv::videoio_registry::getBackendName to check actual presence of backend during runtime.
 
-To enable/disable APIs, you have to:
-  1. re-configure OpenCV using appropriates CMake switches
-     (e.g. `-DWITH_MSMF=ON -DWITH_VFW=ON ... `) or checking related switch in cmake-gui
-  2. rebuild OpenCV itself
+To enable built-in videoio backends:
+  1. Enable corresponding CMake option, e.g. `-DWITH_GSTREAMER=ON`
+  2. Rebuild OpenCV
 
-#### Use 3rd party drivers or cameras
+To enable dynamically-loaded videoio backend (currently supported: GStreamer and FFmpeg on Linux, MediaSDK on Linux and Windows):
+  1. Enable backend and add it to the list of plugins: `-DWITH_GSTREAMER=ON -DVIDEOIO_PLUGIN_LIST=gstreamer` CMake options
+  2. Rebuild OpenCV
+  3. Check that `libopencv_videoio_gstreamer.so` library exists in the `lib` directory
+
+@note Don't forget to clean CMake cache when switching between these two modes
+
+
+Use 3rd party drivers or cameras
+--------------------------------
 
 Many industrial cameras or some video I/O devices don't provide standard driver interfaces
 for the operating system. Thus you can't use  VideoCapture or VideoWriter with these devices.
@@ -79,6 +87,7 @@ include and link with your OpenCV application.
 It is a common case that these libraries read/write images from/to a memory buffer. If it so, it is
 possible to make a `Mat` header for memory buffer (user-allocated data) and process it
 in-place using OpenCV functions. See cv::Mat::Mat() for more details.
+
 
 The FFmpeg library
 ------------------

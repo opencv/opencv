@@ -57,7 +57,7 @@ This section describes OpenGL interoperability.
 
 To enable OpenGL support, configure OpenCV using CMake with WITH_OPENGL=ON . Currently OpenGL is
 supported only with WIN32, GTK and Qt backends on Windows and Linux (MacOS and Android are not
-supported). For GTK backend gtkglext-1.0 library is required.
+supported). For GTK-2.0 backend gtkglext-1.0 library is required.
 
 To use OpenGL functionality you should first create OpenGL context (window or frame buffer). You can
 do this with namedWindow function or with other OpenGL toolkit (GLUT, for example).
@@ -548,7 +548,7 @@ calling unmapGLBuffer() function.
 @param accessFlags - data access flags (ACCESS_READ|ACCESS_WRITE).
 @return Returns UMat object
  */
-CV_EXPORTS UMat mapGLBuffer(const Buffer& buffer, int accessFlags = ACCESS_READ|ACCESS_WRITE);
+CV_EXPORTS UMat mapGLBuffer(const Buffer& buffer, AccessFlag accessFlags = ACCESS_READ | ACCESS_WRITE);
 
 /** @brief Unmaps Buffer object (releases UMat, previously mapped from Buffer).
 

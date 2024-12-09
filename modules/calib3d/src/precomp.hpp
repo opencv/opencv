@@ -53,11 +53,9 @@
 
 #include "opencv2/core/ocl.hpp"
 
-#ifdef HAVE_TEGRA_OPTIMIZATION
-#include "opencv2/calib3d/calib3d_tegra.hpp"
-#else
+#include <set>
+
 #define GET_OPTIMIZED(func) (func)
-#endif
 
 
 namespace cv
@@ -71,7 +69,7 @@ namespace cv
  * @param ep outlier ratio
  * @param modelPoints number of model points required for estimation
  * @param maxIters maximum number of iterations
- * @return
+ * @return The number of iterations according to the formula
  * \f[
  * \frac{\ln(1-p)}{\ln\left(1-(1-ep)^\mathrm{modelPoints}\right)}
  * \f]
@@ -79,23 +77,6 @@ namespace cv
  * If the computed number of iterations is larger than maxIters, then maxIters is returned.
  */
 int RANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters );
-
-class CV_EXPORTS LMSolver : public Algorithm
-{
-public:
-    class CV_EXPORTS Callback
-    {
-    public:
-        virtual ~Callback() {}
-        virtual bool compute(InputArray param, OutputArray err, OutputArray J) const = 0;
-    };
-
-    virtual void setCallback(const Ptr<LMSolver::Callback>& cb) = 0;
-    virtual int run(InputOutputArray _param0) const = 0;
-};
-
-CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters);
-CV_EXPORTS Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters, double eps);
 
 class CV_EXPORTS PointSetRegistrator : public Algorithm
 {
@@ -156,9 +137,25 @@ static inline bool haveCollinearPoints( const Mat& m, int count )
     return false;
 }
 
+void findExtrinsicCameraParams2( const Mat& objectPoints,
+                  const Mat& imagePoints, const Mat& A,
+                  const Mat& distCoeffs, Mat& rvec, Mat& tvec,
+                  int useExtrinsicGuess );
+
+void projectPoints( InputArray objectPoints,
+                    InputArray rvec, InputArray tvec,
+                    InputArray cameraMatrix, InputArray distCoeffs,
+                    OutputArray imagePoints, OutputArray dpdr,
+                    OutputArray dpdt, OutputArray dpdf=noArray(),
+                    OutputArray dpdc=noArray(), OutputArray dpdk=noArray(),
+                    OutputArray dpdo=noArray(), double aspectRatio=0.);
+
+void getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
+              InputArray R, InputArray newCameraMatrix, Size imgSize,
+              Rect_<double>& inner, Rect_<double>& outer );
+
 } // namespace cv
 
-int checkChessboard(const cv::Mat & img, const cv::Size & size);
 int checkChessboardBinary(const cv::Mat & img, const cv::Size & size);
 
 #endif

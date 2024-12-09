@@ -53,7 +53,7 @@ public:
     void clear();
 
 protected:
-    int read_params( CvFileStorage* fs );
+    int read_params( const cv::FileStorage& fs );
     void run_func(void);
     int prepare_test_case( int test_case_idx );
     int validate_test_results( int test_case_idx );
@@ -115,19 +115,19 @@ void CV_BaseHistTest::clear()
 }
 
 
-int CV_BaseHistTest::read_params( CvFileStorage* fs )
+int CV_BaseHistTest::read_params( const cv::FileStorage& fs )
 {
     int code = cvtest::BaseTest::read_params( fs );
     if( code < 0 )
         return code;
 
-    test_case_count = cvReadInt( find_param( fs, "struct_count" ), test_case_count );
-    max_log_size = cvReadInt( find_param( fs, "max_log_size" ), max_log_size );
+    read( find_param( fs, "struct_count" ), test_case_count, test_case_count );
+    read( find_param( fs, "max_log_size" ), max_log_size, max_log_size );
     max_log_size = cvtest::clipInt( max_log_size, 1, 20 );
-    img_max_log_size = cvReadInt( find_param( fs, "max_log_array_size" ), img_max_log_size );
+    read( find_param( fs, "max_log_array_size" ), img_max_log_size, img_max_log_size );
     img_max_log_size = cvtest::clipInt( img_max_log_size, 1, 9 );
 
-    max_cdims = cvReadInt( find_param( fs, "max_cdims" ), max_cdims );
+    read( find_param( fs, "max_cdims" ), max_cdims, max_cdims );
     max_cdims = cvtest::clipInt( max_cdims, 1, 6 );
 
     return 0;
@@ -1198,7 +1198,7 @@ void CV_CalcHistTest::run_func(void)
     }
 
     std::vector<cv::Mat> imagesv(cdims);
-    copy(images.begin(), images.begin() + cdims, imagesv.begin());
+    std::copy(images.begin(), images.begin() + cdims, imagesv.begin());
 
     Mat mask = images[CV_MAX_DIM];
     if( !CV_IS_SPARSE_HIST(hist[0]) )
@@ -1493,7 +1493,7 @@ void CV_CalcBackProjectTest::run_func(void)
     }
 
     std::vector<cv::Mat> imagesv(hdims);
-    copy(images.begin(), images.begin() + hdims, imagesv.begin());
+    std::copy(images.begin(), images.begin() + hdims, imagesv.begin());
 
     cv::Mat dst = images[CV_MAX_DIM+1];
 
@@ -2025,6 +2025,75 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
     ASSERT_EQ(histogram_u.at<float>(1), 2.f) << "0 not counts correctly, res: " << histogram_u.at<float>(1);
     ASSERT_EQ(histogram_u.at<float>(2), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(2);
 }
+
+////////////////////////////////////////// equalizeHist() /////////////////////////////////////////
+
+void equalizeHistReference(const Mat& src, Mat& dst)
+{
+    std::vector<int> hist(256, 0);
+    for (int y = 0; y < src.rows; y++)
+    {
+        const uchar* srow = src.ptr(y);
+        for (int x = 0; x < src.cols; x++)
+        {
+            hist[srow[x]]++;
+        }
+    }
+
+    int first = 0;
+    while (!hist[first]) ++first;
+
+    int total = (int)src.total();
+    if (hist[first] == total)
+    {
+        dst.setTo(first);
+        return;
+    }
+
+    std::vector<uchar> lut(256);
+    lut[first] = 0;
+    float scale = (255.f)/(total - hist[first]);
+
+    int sum = 0;
+    for (int i = first + 1; i < 256; ++i)
+    {
+        sum += hist[i];
+        lut[i] = saturate_cast<uchar>(sum * scale);
+    }
+
+    cv::LUT(src, lut, dst);
+}
+
+typedef ::testing::TestWithParam<std::tuple<cv::Size, int>> Imgproc_Equalize_Hist;
+
+TEST_P(Imgproc_Equalize_Hist, accuracy)
+{
+    auto p = GetParam();
+    cv::Size size = std::get<0>(p);
+    int idx = std::get<1>(p);
+
+    RNG &rng = cvtest::TS::ptr()->get_rng();
+    rng.state += idx;
+
+    cv::Mat src(size, CV_8U);
+    cvtest::randUni(rng, src, Scalar::all(0), Scalar::all(255));
+
+    cv::Mat dst, gold;
+
+    equalizeHistReference(src, gold);
+
+    cv::equalizeHist(src, dst);
+
+    ASSERT_EQ(CV_8UC1, dst.type());
+    ASSERT_EQ(gold.size(), dst.size());
+
+    EXPECT_MAT_NEAR(dst, gold, 1);
+    EXPECT_MAT_N_DIFF(dst, gold, 0.05 * size.area()); // The 5% range could be accomodated to HAL
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc_Hist, Imgproc_Equalize_Hist, ::testing::Combine(
+                        ::testing::Values(cv::Size(123, 321), cv::Size(256, 256), cv::Size(1024, 768)),
+                        ::testing::Range(0, 10)));
 
 }} // namespace
 /* End Of File */

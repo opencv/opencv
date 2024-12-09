@@ -19,9 +19,24 @@ if(NOT WIN32 AND NOT APPLE AND NOT OPENCV_PYTHON_SKIP_LINKER_EXCLUDE_LIBS)
   set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,--exclude-libs=ALL")
 endif()
 
-ocv_add_library(${the_module} MODULE ${PYTHON_SOURCE_DIR}/src2/cv2.cpp ${cv2_generated_hdrs} ${opencv_userdef_hdrs} ${cv2_custom_hdr})
+ocv_add_library(${the_module} MODULE
+  ${PYTHON_SOURCE_DIR}/src2/cv2.cpp
+  ${PYTHON_SOURCE_DIR}/src2/cv2_util.cpp
+  ${PYTHON_SOURCE_DIR}/src2/cv2_numpy.cpp
+  ${PYTHON_SOURCE_DIR}/src2/cv2_convert.cpp
+  ${PYTHON_SOURCE_DIR}/src2/cv2_highgui.cpp
+  ${cv2_generated_hdrs}
+  ${opencv_userdef_hdrs}
+  ${cv2_custom_hdr}
+)
+
 if(TARGET gen_opencv_python_source)
   add_dependencies(${the_module} gen_opencv_python_source)
+endif()
+
+if(TARGET copy_opencv_typing_stubs)
+  # Python 3.6+
+  add_dependencies(${the_module} copy_opencv_typing_stubs)
 endif()
 
 ocv_assert(${PYTHON}_VERSION_MAJOR)
@@ -31,6 +46,7 @@ if(${PYTHON}_LIMITED_API)
   # support only python3.3+
   ocv_assert(${PYTHON}_VERSION_MAJOR EQUAL 3 AND ${PYTHON}_VERSION_MINOR GREATER 2)
   target_compile_definitions(${the_module} PRIVATE CVPY_DYNAMIC_INIT)
+  target_compile_definitions(${the_module} PRIVATE PYTHON3_LIMITED_API_VERSION=${PYTHON3_LIMITED_API_VERSION})
   if(WIN32)
     string(REPLACE
       "python${${PYTHON}_VERSION_MAJOR}${${PYTHON}_VERSION_MINOR}.lib"

@@ -48,7 +48,7 @@ void __wrap_printf_func(const char* fmt, ...)
     va_list args;
     va_start(args, fmt);
     char buffer[256];
-    vsprintf (buffer, fmt, args);
+    vsnprintf (buffer, sizeof(buffer), fmt, args);
     cvtest::TS::ptr()->printf(cvtest::TS::SUMMARY, buffer);
     va_end(args);
 }
@@ -161,7 +161,7 @@ void CV_ImageWarpBaseTest::generate_test_data()
         for (y = 0; y < ssize.height; y += cell_size)
             for (x = 0; x < ssize.width; x += cell_size)
                 rectangle(src, Point(x, y), Point(x + std::min<int>(cell_size, ssize.width - x), y +
-                        std::min<int>(cell_size, ssize.height - y)), Scalar::all((x + y) % 2 ? 255: 0), CV_FILLED);
+                        std::min<int>(cell_size, ssize.height - y)), Scalar::all((x + y) % 2 ? 255: 0), cv::FILLED);
     }
     else
     {
@@ -173,7 +173,7 @@ void CV_ImageWarpBaseTest::generate_test_data()
     }
 
     // generating an interpolation type
-    interpolation = rng.uniform(0, CV_INTER_LANCZOS4 + 1);
+    interpolation = rng.uniform(0, cv::INTER_LANCZOS4 + 1);
 
     // generating the dst matrix structure
     double scale_x, scale_y;
@@ -286,10 +286,10 @@ void CV_ImageWarpBaseTest::validate_results() const
 
 #ifdef SHOW_IMAGE
                 const std::string w1("OpenCV impl (run func)"), w2("Reference func"), w3("Src image"), w4("Diff");
-                namedWindow(w1, CV_WINDOW_KEEPRATIO);
-                namedWindow(w2, CV_WINDOW_KEEPRATIO);
-                namedWindow(w3, CV_WINDOW_KEEPRATIO);
-                namedWindow(w4, CV_WINDOW_KEEPRATIO);
+                namedWindow(w1, cv::WINDOW_KEEPRATIO);
+                namedWindow(w2, cv::WINDOW_KEEPRATIO);
+                namedWindow(w3, cv::WINDOW_KEEPRATIO);
+                namedWindow(w4, cv::WINDOW_KEEPRATIO);
 
                 Mat diff;
                 absdiff(reference_dst, _dst, diff);
@@ -438,7 +438,7 @@ void CV_Resize_Test::generate_test_data()
         for (y = 0; y < ssize.height; y += cell_size)
             for (x = 0; x < ssize.width; x += cell_size)
                 rectangle(src, Point(x, y), Point(x + std::min<int>(cell_size, ssize.width - x), y +
-                        std::min<int>(cell_size, ssize.height - y)), Scalar::all((x + y) % 2 ? 255: 0), CV_FILLED);
+                        std::min<int>(cell_size, ssize.height - y)), Scalar::all((x + y) % 2 ? 255: 0), cv::FILLED);
     }
     else
     {
@@ -1078,7 +1078,7 @@ void CV_WarpAffine_Test::generate_test_data()
 
     // warp_matrix is inverse
     if (rng.uniform(0., 1.) > 0)
-        interpolation |= CV_WARP_INVERSE_MAP;
+        interpolation |= cv::WARP_INVERSE_MAP;
 }
 
 void CV_WarpAffine_Test::run_func()
@@ -1119,7 +1119,7 @@ void CV_WarpAffine_Test::warpAffine(const Mat& _src, Mat& _dst)
     else
         mapy = Mat();
 
-    if (!(interpolation & CV_WARP_INVERSE_MAP))
+    if (!(interpolation & cv::WARP_INVERSE_MAP))
         invertAffineTransform(tM.clone(), tM);
 
     const int AB_BITS = MAX(10, (int)INTER_BITS);
@@ -1235,7 +1235,7 @@ void CV_WarpPerspective_Test::warpPerspective(const Mat& _src, Mat& _dst)
         M = tmp;
     }
 
-    if (!(interpolation & CV_WARP_INVERSE_MAP))
+    if (!(interpolation & cv::WARP_INVERSE_MAP))
     {
         Mat tmp;
         invert(M, tmp);

@@ -192,22 +192,18 @@ void Regression::init(const std::string& testSuitName, const std::string& ext)
         return;
     }
 
-#ifndef WINRT
-    const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
-#else
-    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
-#endif
+    const std::string data_path_dir = utils::getConfigurationParameterString("OPENCV_TEST_DATA_PATH");
 
     cvtest::addDataSearchSubDirectory("");
     cvtest::addDataSearchSubDirectory(testSuitName);
 
     const char *path_separator = "/";
 
-    if (data_path_dir)
+    if (!data_path_dir.empty())
     {
-        int len = (int)strlen(data_path_dir)-1;
+        int len = (int)data_path_dir.size()-1;
         if (len < 0) len = 0;
-        std::string path_base = (data_path_dir[0] == 0 ? std::string(".") : std::string(data_path_dir))
+        std::string path_base = (data_path_dir[0] == 0 ? std::string(".") : data_path_dir)
                 + (data_path_dir[len] == '/' || data_path_dir[len] == '\\' ? "" : path_separator)
                 + "perf"
                 + path_separator;
@@ -595,11 +591,11 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
     // exit if current test is already failed
     if(::testing::UnitTest::GetInstance()->current_test_info()->result()->Failed()) return *this;
 
-    if(!array.empty() && array.depth() == CV_USRTYPE1)
+    /*if(!array.empty() && array.depth() == CV_USRTYPE1)
     {
         ADD_FAILURE() << "  Can not check regression for CV_USRTYPE1 data type for " << name;
         return *this;
-    }
+    }*/
 
     std::string nodename = getCurrentTestNodeName();
 
@@ -1042,7 +1038,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_verify_sanity = args.get<bool>("perf_verify_sanity");
 
 #ifdef HAVE_IPP
-    test_ipp_check      = !args.get<bool>("perf_ipp_check") ? getenv("OPENCV_IPP_CHECK") != NULL : true;
+    test_ipp_check      = !args.get<bool>("perf_ipp_check") ? utils::getConfigurationParameterBool("OPENCV_IPP_CHECK") : true;
 #endif
     testThreads         = args.get<int>("perf_threads");
 #ifdef CV_COLLECT_IMPL_DATA
@@ -1125,12 +1121,11 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 #endif
 
     {
-#ifndef WINRT
-        const char* path = getenv("OPENCV_PERF_VALIDATION_DIR");
-#else
-        const char* path = OPENCV_PERF_VALIDATION_DIR;
+        std::string path = utils::getConfigurationParameterString("OPENCV_PERF_VALIDATION_DIR");
+#ifdef WINRT
+        path = OPENCV_PERF_VALIDATION_DIR;
 #endif
-        if (path)
+        if (!path.empty())
             perf_validation_results_directory = path;
     }
 
@@ -1235,7 +1230,7 @@ void TestBase::warmup(cv::InputOutputArray a, WarmUpType wtype)
                 cv::randu(a, -128, 128);
             else if (depth == CV_16U)
                 cv::randu(a, 0, 1024);
-            else if (depth == CV_32F || depth == CV_64F)
+            else if (depth == CV_32F || depth == CV_64F || depth == CV_16F)
                 cv::randu(a, -1.0, 1.0);
             else if (depth == CV_16S || depth == CV_32S)
                 cv::randu(a, -4096, 4096);
@@ -1888,17 +1883,16 @@ std::string TestBase::getDataPath(const std::string& relativePath)
         throw PerfEarlyExitException();
     }
 
-#ifndef WINRT
-    const char *data_path_dir = getenv("OPENCV_TEST_DATA_PATH");
-#else
-    const char *data_path_dir = OPENCV_TEST_DATA_PATH;
+    std::string data_path_dir = utils::getConfigurationParameterString("OPENCV_TEST_DATA_PATH");
+#ifdef WINRT
+    data_path_dir = OPENCV_TEST_DATA_PATH;
 #endif
     const char *path_separator = "/";
 
     std::string path;
-    if (data_path_dir)
+    if (!data_path_dir.empty())
     {
-        int len = (int)strlen(data_path_dir) - 1;
+        int len = (int)data_path_dir.size() - 1;
         if (len < 0) len = 0;
         path = (data_path_dir[0] == 0 ? std::string(".") : std::string(data_path_dir))
                 + (data_path_dir[len] == '/' || data_path_dir[len] == '\\' ? "" : path_separator);
@@ -2104,8 +2098,6 @@ struct KeypointComparator
     {
         return cmp(pts_[idx1], pts_[idx2]);
     }
-private:
-    const KeypointComparator& operator=(const KeypointComparator&); // quiet MSVC
 };
 }//namespace
 
@@ -2119,7 +2111,8 @@ void perf::sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors
     for (int i = 0; i < desc.rows; ++i)
         idxs[i] = i;
 
-    std::sort(idxs.data(), idxs.data() + desc.rows, KeypointComparator(pts));
+    comparators::KeypointGreater cmp;
+    std::sort(idxs.data(), idxs.data() + desc.rows, [&](int lhs, int rhs){ return cmp(pts[lhs], pts[rhs]); });
 
     std::vector<cv::KeyPoint> spts(pts.size());
     cv::Mat sdesc(desc.size(), desc.type());
@@ -2151,19 +2144,11 @@ namespace perf
 
 void PrintTo(const MatType& t, ::std::ostream* os)
 {
-    switch( CV_MAT_DEPTH((int)t) )
-    {
-        case CV_8U:  *os << "8U";  break;
-        case CV_8S:  *os << "8S";  break;
-        case CV_16U: *os << "16U"; break;
-        case CV_16S: *os << "16S"; break;
-        case CV_32S: *os << "32S"; break;
-        case CV_32F: *os << "32F"; break;
-        case CV_64F: *os << "64F"; break;
-        case CV_USRTYPE1: *os << "USRTYPE1"; break;
-        default: *os << "INVALID_TYPE"; break;
-    }
-    *os << 'C' << CV_MAT_CN((int)t);
+    String name = typeToString(t);
+    if (name.size() > 3 && name[0] == 'C' && name[1] == 'V' && name[2] == '_')
+        *os << name.substr(3);
+    else
+        *os << name;
 }
 
 } //namespace perf

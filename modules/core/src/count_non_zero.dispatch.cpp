@@ -152,30 +152,63 @@ int countNonZero(InputArray _src)
 
 void findNonZero(InputArray _src, OutputArray _idx)
 {
-    CV_INSTRUMENT_REGION();
-
     Mat src = _src.getMat();
-    CV_Assert( src.type() == CV_8UC1 );
-    int n = countNonZero(src);
-    if( n == 0 )
-    {
-        _idx.release();
-        return;
-    }
-    if( _idx.kind() == _InputArray::MAT && !_idx.getMatRef().isContinuous() )
-        _idx.release();
-    _idx.create(n, 1, CV_32SC2);
-    Mat idx = _idx.getMat();
-    CV_Assert(idx.isContinuous());
-    Point* idx_ptr = idx.ptr<Point>();
+    CV_Assert( src.channels() == 1 && src.dims == 2 );
 
-    for( int i = 0; i < src.rows; i++ )
+    int depth = src.depth();
+    std::vector<Point> idxvec;
+    int rows = src.rows, cols = src.cols;
+    AutoBuffer<int> buf_(cols + 1);
+    int* buf = buf_.data();
+
+    for( int i = 0; i < rows; i++ )
     {
-        const uchar* bin_ptr = src.ptr(i);
-        for( int j = 0; j < src.cols; j++ )
-            if( bin_ptr[j] )
-                *idx_ptr++ = Point(j, i);
+        int j, k = 0;
+        const uchar* ptr8 = src.ptr(i);
+        if( depth == CV_8U || depth == CV_8S )
+        {
+            for( j = 0; j < cols; j++ )
+                if( ptr8[j] != 0 ) buf[k++] = j;
+        }
+        else if( depth == CV_16U || depth == CV_16S )
+        {
+            const ushort* ptr16 = (const ushort*)ptr8;
+            for( j = 0; j < cols; j++ )
+                if( ptr16[j] != 0 ) buf[k++] = j;
+        }
+        else if( depth == CV_32S )
+        {
+            const int* ptr32s = (const int*)ptr8;
+            for( j = 0; j < cols; j++ )
+                if( ptr32s[j] != 0 ) buf[k++] = j;
+        }
+        else if( depth == CV_32F )
+        {
+            const float* ptr32f = (const float*)ptr8;
+            for( j = 0; j < cols; j++ )
+                if( ptr32f[j] != 0 ) buf[k++] = j;
+        }
+        else
+        {
+            const double* ptr64f = (const double*)ptr8;
+            for( j = 0; j < cols; j++ )
+                if( ptr64f[j] != 0 ) buf[k++] = j;
+        }
+
+        if( k > 0 )
+        {
+            size_t sz = idxvec.size();
+            idxvec.resize(sz + k);
+            for( j = 0; j < k; j++ )
+                idxvec[sz + j] = Point(buf[j], i);
+        }
     }
+
+    if( idxvec.empty() || (_idx.kind() == _InputArray::MAT && !_idx.getMatRef().isContinuous()) )
+        _idx.release();
+
+    if( !idxvec.empty() )
+        Mat(idxvec).copyTo(_idx);
 }
 
 } // namespace

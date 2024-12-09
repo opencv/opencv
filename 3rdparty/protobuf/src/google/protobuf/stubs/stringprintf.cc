@@ -36,23 +36,22 @@
 #include <stdarg.h> // For va_list and related operations
 #include <stdio.h> // MSVC requires this for _vsnprintf
 #include <vector>
+
 #include <google/protobuf/stubs/common.h>
+#include <google/protobuf/stubs/logging.h>
 
 namespace google {
 namespace protobuf {
 
 #ifdef _MSC_VER
-enum { IS_COMPILER_MSVC = 1 };
 #ifndef va_copy
 // Define va_copy for MSVC. This is a hack, assuming va_list is simply a
 // pointer into the stack and is safe to copy.
 #define va_copy(dest, src) ((dest) = (src))
 #endif
-#else
-enum { IS_COMPILER_MSVC = 0 };
 #endif
 
-void StringAppendV(string* dst, const char* format, va_list ap) {
+void StringAppendV(std::string* dst, const char* format, va_list ap) {
   // First try with a small fixed size buffer
   static const int kSpaceLength = 1024;
   char space[kSpaceLength];
@@ -72,13 +71,15 @@ void StringAppendV(string* dst, const char* format, va_list ap) {
       return;
     }
 
-    if (IS_COMPILER_MSVC) {
+#ifdef _MSC_VER
+    {
       // Error or MSVC running out of space.  MSVC 8.0 and higher
       // can be asked about space needed with the special idiom below:
       va_copy(backup_ap, ap);
-      result = vsnprintf(NULL, 0, format, backup_ap);
+      result = vsnprintf(nullptr, 0, format, backup_ap);
       va_end(backup_ap);
     }
+#endif
 
     if (result < 0) {
       // Just an error.
@@ -103,17 +104,16 @@ void StringAppendV(string* dst, const char* format, va_list ap) {
   delete[] buf;
 }
 
-
-string StringPrintf(const char* format, ...) {
+std::string StringPrintf(const char* format, ...) {
   va_list ap;
   va_start(ap, format);
-  string result;
+  std::string result;
   StringAppendV(&result, format, ap);
   va_end(ap);
   return result;
 }
 
-const string& SStringPrintf(string* dst, const char* format, ...) {
+const std::string& SStringPrintf(std::string* dst, const char* format, ...) {
   va_list ap;
   va_start(ap, format);
   dst->clear();
@@ -122,7 +122,7 @@ const string& SStringPrintf(string* dst, const char* format, ...) {
   return *dst;
 }
 
-void StringAppendF(string* dst, const char* format, ...) {
+void StringAppendF(std::string* dst, const char* format, ...) {
   va_list ap;
   va_start(ap, format);
   StringAppendV(dst, format, ap);
@@ -137,7 +137,8 @@ const int kStringPrintfVectorMaxArgs = 32;
 // and we can fix the problem or protect against an attack.
 static const char string_printf_empty_block[256] = { '\0' };
 
-string StringPrintfVector(const char* format, const vector<string>& v) {
+std::string StringPrintfVector(const char* format,
+                               const std::vector<std::string>& v) {
   GOOGLE_CHECK_LE(v.size(), kStringPrintfVectorMaxArgs)
       << "StringPrintfVector currently only supports up to "
       << kStringPrintfVectorMaxArgs << " arguments. "
@@ -160,7 +161,7 @@ string StringPrintfVector(const char* format, const vector<string>& v) {
   // that accepts an array of arguments.  The best I can do is stick
   // this COMPILE_ASSERT right next to the actual statement.
 
-  GOOGLE_COMPILE_ASSERT(kStringPrintfVectorMaxArgs == 32, arg_count_mismatch);
+  static_assert(kStringPrintfVectorMaxArgs == 32, "arg_count_mismatch");
   return StringPrintf(format,
                       cstr[0], cstr[1], cstr[2], cstr[3], cstr[4],
                       cstr[5], cstr[6], cstr[7], cstr[8], cstr[9],

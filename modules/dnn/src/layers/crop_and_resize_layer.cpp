@@ -8,6 +8,11 @@
 #include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 
+#ifdef HAVE_CUDA
+#include "../cuda4dnn/primitives/crop_and_resize.hpp"
+using namespace cv::dnn::cuda4dnn;
+#endif
+
 namespace cv { namespace dnn {
 
 class CropAndResizeLayerImpl CV_FINAL : public CropAndResizeLayer
@@ -23,7 +28,10 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+        return backendId == DNN_BACKEND_OPENCV
+               || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH
+               || backendId == DNN_BACKEND_CUDA
+        ;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -47,7 +55,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -125,33 +133,45 @@ public:
         auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         auto rois = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
-        auto rois_shape = rois->get_shape();
+        auto rois_shape = rois.get_shape();
         std::vector<int64_t> dims(rois_shape.begin(), rois_shape.end()), offsets(4, 0);
         offsets[3] = 2;
         dims[3] = 7;
 
-        auto lower_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                             ngraph::Shape{offsets.size()}, offsets.data());
-        auto upper_bounds = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                             ngraph::Shape{dims.size()}, dims.data());
-        auto strides = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                                        ngraph::Shape{dims.size()}, std::vector<int64_t>((int64_t)dims.size(), 1));
-        auto slice = std::make_shared<ngraph::op::v1::StridedSlice>(rois,
+        auto lower_bounds = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                                             ov::Shape{offsets.size()}, offsets.data());
+        auto upper_bounds = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                                             ov::Shape{dims.size()}, dims.data());
+        auto strides = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                                        ov::Shape{dims.size()}, std::vector<int64_t>((int64_t)dims.size(), 1));
+        auto slice = std::make_shared<ov::op::v1::StridedSlice>(rois,
                                       lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});
 
         // Reshape rois from 4D to 2D
         std::vector<int64_t> shapeData = {dims[2], 5};
-        auto shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shapeData.data());
-        auto reshape = std::make_shared<ngraph::op::v1::Reshape>(slice, shape, true);
+        auto shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, shapeData.data());
+        auto reshape = std::make_shared<ov::op::v1::Reshape>(slice, shape, true);
 
         auto roiPooling =
-            std::make_shared<ngraph::op::v0::ROIPooling>(input, reshape,
-                                                         ngraph::Shape{(size_t)outHeight, (size_t)outWidth},
+            std::make_shared<ov::op::v0::ROIPooling>(input, reshape,
+                                                         ov::Shape{(size_t)outHeight, (size_t)outWidth},
                                                          1.0f, "bilinear");
 
         return Ptr<BackendNode>(new InfEngineNgraphNode(roiPooling));
     }
 #endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(
+        void *context_,
+        const std::vector<Ptr<BackendWrapper>>& inputs,
+        const std::vector<Ptr<BackendWrapper>>& outputs
+    ) override
+    {
+        auto context = reinterpret_cast<csl::CSLContext*>(context_);
+        return make_cuda_node<cuda4dnn::CropAndResizeOp>(preferableTarget, std::move(context->stream));
+    }
+#endif
 
 private:
     int outWidth, outHeight;

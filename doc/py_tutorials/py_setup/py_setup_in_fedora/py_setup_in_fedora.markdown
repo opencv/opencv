@@ -62,12 +62,11 @@ yum install cmake
 yum install python-devel numpy
 yum install gcc gcc-c++
 @endcode
-Next we need **GTK** support for GUI features, Camera support (libdc1394, libv4l), Media Support
+Next we need **GTK** support for GUI features, Camera support (libdc1394, v4l), Media Support
 (ffmpeg, gstreamer) etc.
 @code{.sh}
 yum install gtk2-devel
 yum install libdc1394-devel
-yum install libv4l-devel
 yum install ffmpeg-devel
 yum install gstreamer-plugins-base-devel
 @endcode
@@ -237,9 +236,6 @@ To build the documentation, just enter following commands:
 make doxygen
 @endcode
 Then open opencv/build/doc/doxygen/html/index.html and bookmark it in the browser.
-
-Additional Resources
---------------------
 
 Exercises
 ---------

@@ -1,8 +1,15 @@
 Sobel Derivatives {#tutorial_sobel_derivatives}
 =================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_copyMakeBorder}
 @next_tutorial{tutorial_laplace_operator}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -51,7 +58,7 @@ Theory
     gradient of an image intensity function.
 -#  The Sobel Operator combines Gaussian smoothing and differentiation.
 
-#### Formulation
+### Formulation
 
 Assuming that the image to be operated is \f$I\f$:
 
@@ -114,42 +121,42 @@ Code
 
 @add_toggle_cpp
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp)
 @include samples/cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp
 @end_toggle
 
 @add_toggle_java
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgTrans/SobelDemo/SobelDemo.java)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/ImgTrans/SobelDemo/SobelDemo.java)
 @include samples/java/tutorial_code/ImgTrans/SobelDemo/SobelDemo.java
 @end_toggle
 
 @add_toggle_python
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/ImgTrans/SobelDemo/sobel_demo.py)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/ImgTrans/SobelDemo/sobel_demo.py)
 @include samples/python/tutorial_code/ImgTrans/SobelDemo/sobel_demo.py
 @end_toggle
 
 Explanation
 -----------
 
-#### Declare variables
+### Declare variables
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp variables
 
-#### Load source image
+### Load source image
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp load
 
-#### Reduce noise
+### Reduce noise
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp reduce_noise
 
-#### Grayscale
+### Grayscale
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp convert_to_gray
 
-#### Sobel Operator
+### Sobel Operator
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp sobel
 
@@ -167,18 +174,18 @@ Explanation
     Notice that to calculate the gradient in *x* direction we use: \f$x_{order}= 1\f$ and
     \f$y_{order} = 0\f$. We do analogously for the *y* direction.
 
-#### Convert output to a CV_8U image
+### Convert output to a CV_8U image
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp convert
 
-#### Gradient
+### Gradient
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp blend
 
 We try to approximate the *gradient* by adding both directional gradients (note that
 this is not an exact calculation at all! but it is good for our purposes).
 
-#### Show results
+### Show results
 
 @snippet cpp/tutorial_code/ImgTrans/Sobel_Demo.cpp display
 

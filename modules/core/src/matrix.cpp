@@ -7,7 +7,7 @@
 
 namespace cv {
 
-void MatAllocator::map(UMatData*, int) const
+void MatAllocator::map(UMatData*, AccessFlag) const
 {
 }
 
@@ -127,7 +127,7 @@ class StdMatAllocator CV_FINAL : public MatAllocator
 {
 public:
     UMatData* allocate(int dims, const int* sizes, int type,
-                       void* data0, size_t* step, int /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
+                       void* data0, size_t* step, AccessFlag /*flags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         size_t total = CV_ELEM_SIZE(type);
         for( int i = dims-1; i >= 0; i-- )
@@ -154,7 +154,7 @@ public:
         return u;
     }
 
-    bool allocate(UMatData* u, int /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
+    bool allocate(UMatData* u, AccessFlag /*accessFlags*/, UMatUsageFlags /*usageFlags*/) const CV_OVERRIDE
     {
         if(!u) return false;
         return true;
@@ -176,27 +176,23 @@ public:
     }
 };
 
-namespace
+static
+MatAllocator*& getDefaultAllocatorMatRef()
 {
-    MatAllocator* volatile g_matAllocator = NULL;
+    static MatAllocator* g_matAllocator = Mat::getStdAllocator();
+    return g_matAllocator;
 }
 
 MatAllocator* Mat::getDefaultAllocator()
 {
-    if (g_matAllocator == NULL)
-    {
-        cv::AutoLock lock(cv::getInitializationMutex());
-        if (g_matAllocator == NULL)
-        {
-            g_matAllocator = getStdAllocator();
-        }
-    }
-    return g_matAllocator;
+    return getDefaultAllocatorMatRef();
 }
+
 void Mat::setDefaultAllocator(MatAllocator* allocator)
 {
-    g_matAllocator = allocator;
+    getDefaultAllocatorMatRef() = allocator;
 }
+
 MatAllocator* Mat::getStdAllocator()
 {
     CV_SINGLETON_LAZY_INIT(MatAllocator, new StdMatAllocator())
@@ -271,7 +267,7 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
             m.step.p[i] = total;
             uint64 total1 = (uint64)total*s;
             if( (uint64)total1 != (size_t)total1 )
-                CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
+                CV_Error( cv::Error::StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
             total = (size_t)total1;
         }
     }
@@ -463,7 +459,7 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     }
     else
     {
-        CV_Assert(_step >= minstep);
+        CV_CheckGE(_step, minstep, "");
 
         if (_step % esz1 != 0)
         {
@@ -599,6 +595,66 @@ size_t Mat::total(int startDim, int endDim) const
 }
 
 
+Mat::Mat(Mat&& m) CV_NOEXCEPT
+    : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
+      datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
+      u(m.u), size(&rows)
+{
+    if (m.dims <= 2)  // move new step/size info
+    {
+        step[0] = m.step[0];
+        step[1] = m.step[1];
+    }
+    else
+    {
+        CV_Assert(m.step.p != m.step.buf);
+        step.p = m.step.p;
+        size.p = m.size.p;
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
+    }
+    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
+    m.allocator = NULL;
+    m.u = NULL;
+}
+
+
+Mat& Mat::operator=(Mat&& m)
+{
+    if (this == &m)
+      return *this;
+
+    release();
+    flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols; data = m.data;
+    datastart = m.datastart; dataend = m.dataend; datalimit = m.datalimit; allocator = m.allocator;
+    u = m.u;
+    if (step.p != step.buf) // release self step/size
+    {
+        fastFree(step.p);
+        step.p = step.buf;
+        size.p = &rows;
+    }
+    if (m.dims <= 2) // move new step/size info
+    {
+        step[0] = m.step[0];
+        step[1] = m.step[1];
+    }
+    else
+    {
+        CV_Assert(m.step.p != m.step.buf);
+        step.p = m.step.p;
+        size.p = m.size.p;
+        m.step.p = m.step.buf;
+        m.size.p = &m.rows;
+    }
+    m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
+    m.allocator = NULL;
+    m.u = NULL;
+    return *this;
+}
+
 
 void Mat::create(int d, const int* _sizes, int _type)
 {
@@ -608,6 +664,8 @@ void Mat::create(int d, const int* _sizes, int _type)
 
     if( data && (d == dims || (d == 1 && dims <= 2)) && _type == type() )
     {
+        if ( dims == 1 && (d == 1 && _sizes[0] == size[0]) )
+            return;
         if( d == 2 && rows == _sizes[0] && cols == _sizes[1] )
             return;
         for( i = 0; i < d; i++ )
@@ -634,23 +692,21 @@ void Mat::create(int d, const int* _sizes, int _type)
     if( total() > 0 )
     {
         MatAllocator *a = allocator, *a0 = getDefaultAllocator();
-#ifdef HAVE_TGPU
-        if( !a || a == tegra::getAllocator() )
-            a = tegra::getAllocator(d, _sizes, _type);
-#endif
         if(!a)
             a = a0;
         try
         {
-            u = a->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
+            u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
+            allocator = a;
         }
         catch (...)
         {
             if (a == a0)
                 throw;
-            u = a0->allocate(dims, size, _type, 0, step.p, 0, USAGE_DEFAULT);
+            u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
+            allocator = a0;
         }
         CV_Assert( step[dims-1] == (size_t)CV_ELEM_SIZE(flags) );
     }
@@ -1014,9 +1070,9 @@ void Mat::push_back(const Mat& elems)
     bool eq = size == elems.size;
     size.p[0] = int(r);
     if( !eq )
-        CV_Error(CV_StsUnmatchedSizes, "Pushed vector length is not equal to matrix row length");
+        CV_Error(cv::Error::StsUnmatchedSizes, "Pushed vector length is not equal to matrix row length");
     if( type() != elems.type() )
-        CV_Error(CV_StsUnmatchedFormats, "Pushed vector type is not the same as matrix type");
+        CV_Error(cv::Error::StsUnmatchedFormats, "Pushed vector type is not the same as matrix type");
 
     if( isSubmatrix() || dataend + step.p[0]*delta > datalimit )
         reserve( std::max(r + delta, (r*3+1)/2) );
@@ -1070,7 +1126,7 @@ Mat& Mat::adjustROI( int dtop, int dbottom, int dleft, int dright )
     if(col1 > col2)
         std::swap(col1, col2);
 
-    data += (row1 - ofs.y)*step + (col1 - ofs.x)*esz;
+    data += (row1 - ofs.y)*(std::ptrdiff_t)step + (col1 - ofs.x)*(std::ptrdiff_t)esz;
     rows = row2 - row1; cols = col2 - col1;
     size.p[0] = rows; size.p[1] = cols;
     updateContinuityFlag();
@@ -1112,16 +1168,16 @@ Mat Mat::reshape(int new_cn, int new_rows) const
     {
         int total_size = total_width * rows;
         if( !isContinuous() )
-            CV_Error( CV_BadStep,
+            CV_Error( cv::Error::BadStep,
             "The matrix is not continuous, thus its number of rows can not be changed" );
 
         if( (unsigned)new_rows > (unsigned)total_size )
-            CV_Error( CV_StsOutOfRange, "Bad new number of rows" );
+            CV_Error( cv::Error::StsOutOfRange, "Bad new number of rows" );
 
         total_width = total_size / new_rows;
 
         if( total_width * new_rows != total_size )
-            CV_Error( CV_StsBadArg, "The total number of matrix elements "
+            CV_Error( cv::Error::StsBadArg, "The total number of matrix elements "
                                     "is not divisible by the new number of rows" );
 
         hdr.rows = new_rows;
@@ -1131,7 +1187,7 @@ Mat Mat::reshape(int new_cn, int new_rows) const
     int new_width = total_width / new_cn;
 
     if( new_width * new_cn != total_width )
-        CV_Error( CV_BadNumChannels,
+        CV_Error( cv::Error::BadNumChannels,
         "The total width is not divisible by the new number of channels" );
 
     hdr.cols = new_width;
@@ -1173,13 +1229,13 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
             else if (i < dims)
                 newsz_buf[i] = this->size[i];
             else
-                CV_Error(CV_StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
+                CV_Error(cv::Error::StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
 
             total_elem1 *= (size_t)newsz_buf[i];
         }
 
         if (total_elem1 != total_elem1_ref)
-            CV_Error(CV_StsUnmatchedSizes, "Requested and source matrices have different count of elements");
+            CV_Error(cv::Error::StsUnmatchedSizes, "Requested and source matrices have different count of elements");
 
         Mat hdr = *this;
         hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
@@ -1188,7 +1244,7 @@ Mat Mat::reshape(int _cn, int _newndims, const int* _newsz) const
         return hdr;
     }
 
-    CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
+    CV_Error(cv::Error::StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
     // TBD
 }
 

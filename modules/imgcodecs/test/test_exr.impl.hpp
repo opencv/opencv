@@ -6,6 +6,17 @@
 
 namespace opencv_test { namespace {
 
+size_t getFileSize(const string& filename)
+{
+    std::ifstream ifs(filename.c_str(), std::ios::in | std::ios::binary);
+    if (ifs.is_open())
+    {
+        ifs.seekg(0, std::ios::end);
+        return (size_t)ifs.tellg();
+    }
+    return 0;
+}
+
 TEST(Imgcodecs_EXR, readWrite_32FC1)
 { // Y channels
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -23,6 +34,8 @@ TEST(Imgcodecs_EXR, readWrite_32FC1)
     ASSERT_EQ(CV_32FC1,img.type());
 
     ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    // Check generated file size to ensure that it's compressed with proper options
+    ASSERT_EQ(396u, getFileSize(filenameOutput));
     const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
@@ -113,6 +126,30 @@ TEST(Imgcodecs_EXR, readWrite_32FC3_half)
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
 
+TEST(Imgcodecs_EXR, readWrite_32FC1_PIZ)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test32FC1.exr";
+    const string filenameOutput = cv::tempfile(".exr");
+
+
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_32FC1, img.type());
+
+    std::vector<int> params;
+    params.push_back(IMWRITE_EXR_COMPRESSION);
+    params.push_back(IMWRITE_EXR_COMPRESSION_PIZ);
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
+    // Check generated file size to ensure that it's compressed with proper options
+    ASSERT_EQ(849u, getFileSize(filenameOutput));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
 // Note: YC to GRAYSCALE (IMREAD_GRAYSCALE | IMREAD_ANYDEPTH)
 // outputs a black image,
 // as does Y to RGB (IMREAD_COLOR | IMREAD_ANYDEPTH).
@@ -154,6 +191,15 @@ TEST(Imgcodecs_EXR, read_YC_changeDepth)
 
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
+
+    const Mat img_rgb = cv::imread(filenameInput, IMREAD_COLOR_RGB);
+
+    ASSERT_FALSE(img_rgb.empty());
+    ASSERT_EQ(CV_8UC3, img_rgb.type());
+
+    cvtColor(img_rgb, img_rgb, COLOR_RGB2BGR);
+
+    EXPECT_TRUE(cvtest::norm(img, img_rgb, NORM_INF) == 0);
 
     // Cannot test writing, EXR encoder doesn't support 8U depth
 }
@@ -267,5 +313,28 @@ TEST(Imgcodecs_EXR, read_RGBA_unchanged)
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
+
+// See https://github.com/opencv/opencv/pull/26211
+// ( related with https://github.com/opencv/opencv/issues/26207 )
+TEST(Imgcodecs_EXR, imencode_regression_26207_extra)
+{
+    // CV_8U is not supported depth for EXR Encoder.
+    const cv::Mat src(100, 100, CV_8UC1, cv::Scalar::all(0));
+    std::vector<uchar> buf;
+    bool ret = false;
+    EXPECT_ANY_THROW(ret = imencode(".exr", src, buf));
+    EXPECT_FALSE(ret);
+}
+TEST(Imgcodecs_EXR, imwrite_regression_26207_extra)
+{
+    // CV_8U is not supported depth for EXR Encoder.
+    const cv::Mat src(100, 100, CV_8UC1, cv::Scalar::all(0));
+    const string filename = cv::tempfile(".exr");
+    bool ret = false;
+    EXPECT_ANY_THROW(ret = imwrite(filename, src));
+    EXPECT_FALSE(ret);
+    remove(filename.c_str());
+}
+
 
 }} // namespace

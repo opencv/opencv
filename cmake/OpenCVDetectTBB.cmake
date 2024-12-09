@@ -1,4 +1,4 @@
-# Search TBB library (4.1 - 4.4, 2017)
+# Search TBB library: 4.1 - 4.4, 2017-2020, 2021+ (oneTBB)
 #
 # Own TBB (3rdparty/tbb):
 # - set cmake option BUILD_TBB to ON
@@ -82,6 +82,15 @@ function(ocv_tbb_env_guess _found)
       set_target_properties(tbb PROPERTIES INTERFACE_LINK_LIBRARIES "-L${_dir}")
     endif()
     ocv_tbb_read_version("${TBB_ENV_INCLUDE}" tbb)
+    if(NOT (TBB_INTERFACE_VERSION LESS 12000))  # >= 12000, oneTBB 2021+
+      # avoid "defaultlib" requirement of tbb12.lib (we are using absolute path to 'tbb.lib' only)
+      # https://github.com/oneapi-src/oneTBB/blame/2dba2072869a189b9fdab3ffa431d3ea49059a19/include/oneapi/tbb/detail/_config.h#L334
+      if(NOT (CMAKE_VERSION VERSION_LESS "3.16.0"))  # https://gitlab.kitware.com/cmake/cmake/-/issues/19434
+        target_compile_definitions(tbb INTERFACE "__TBB_NO_IMPLICIT_LINKAGE=1")
+      else()
+        set_target_properties(tbb PROPERTIES INTERFACE_COMPILE_DEFINITIONS "__TBB_NO_IMPLICIT_LINKAGE=1")
+      endif()
+    endif()
     message(STATUS "Found TBB (env): ${TBB_ENV_LIB}")
     set(${_found} TRUE PARENT_SCOPE)
   endif()

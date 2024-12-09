@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.opencv.BuildConfig;
 import org.opencv.R;
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 
@@ -17,8 +18,10 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.WindowManager;
 
 /**
  * This is a basic class, implementing the interaction with Camera and OpenCV library.
@@ -48,6 +51,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     protected int mPreviewFormat = RGBA;
     protected int mCameraIndex = CAMERA_ID_ANY;
     protected boolean mEnabled;
+    protected boolean mCameraPermissionGranted = false;
     protected FpsMeter mFpsMeter = null;
 
     public static final int CAMERA_ID_ANY   = -1;
@@ -188,7 +192,92 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
          * This method returns single channel gray scale Mat with frame
          */
         public Mat gray();
+
+        public void release();
     };
+
+    public class RotatedCameraFrame implements CvCameraViewFrame {
+        @Override
+        public Mat gray() {
+            if (mRotation != 0) {
+                Core.rotate(mFrame.gray(), mGrayRotated, getCvRotationCode(mRotation));
+                return mGrayRotated;
+            } else {
+                return mFrame.gray();
+            }
+        }
+
+        @Override
+        public Mat rgba() {
+            if (mRotation != 0) {
+                Core.rotate(mFrame.rgba(), mRgbaRotated, getCvRotationCode(mRotation));
+                return mRgbaRotated;
+            } else {
+                return mFrame.rgba();
+            }
+        }
+
+        private int getCvRotationCode(int degrees) {
+            if  (degrees == 90) {
+                return Core.ROTATE_90_CLOCKWISE;
+            } else if (degrees == 180) {
+                return Core.ROTATE_180;
+            } else {
+                return Core.ROTATE_90_COUNTERCLOCKWISE;
+            }
+        }
+
+        public RotatedCameraFrame(CvCameraViewFrame frame, int rotation) {
+            super();
+            mFrame = frame;
+            mRgbaRotated = new Mat();
+            mGrayRotated = new Mat();
+            mRotation = rotation;
+        }
+
+        @Override
+        public void release() {
+            mRgbaRotated.release();
+            mGrayRotated.release();
+        }
+
+        public CvCameraViewFrame mFrame;
+        private Mat mRgbaRotated;
+        private Mat mGrayRotated;
+        private int mRotation;
+    };
+
+    /**
+     * Calculates how to rotate camera frame to match current screen orientation
+     */
+    protected int getFrameRotation(boolean cameraFacingFront, int cameraSensorOrientation) {
+        WindowManager windowManager = (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
+        int screenOrientation = windowManager.getDefaultDisplay().getRotation();
+        int screenRotation = 0;
+        switch (screenOrientation) {
+            case Surface.ROTATION_0:
+                screenRotation = 0;
+                break;
+            case Surface.ROTATION_90:
+                screenRotation = 90;
+                break;
+            case Surface.ROTATION_180:
+                screenRotation = 180;
+                break;
+            case Surface.ROTATION_270:
+                screenRotation = 270;
+                break;
+        }
+
+        int frameRotation;
+        if (cameraFacingFront) {
+            frameRotation = (cameraSensorOrientation + screenRotation) % 360;
+        } else {
+            frameRotation = (cameraSensorOrientation - screenRotation + 360) % 360;
+        }
+
+        return frameRotation;
+    }
 
     public void surfaceChanged(SurfaceHolder arg0, int arg1, int arg2, int arg3) {
         Log.d(TAG, "call surfaceChanged event");
@@ -219,9 +308,24 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         }
     }
 
+
+    /**
+     * This method is provided for clients, so they can signal camera permission has been granted.
+     * The actual onCameraViewStarted callback will be delivered only after setCameraPermissionGranted
+     * and enableView have been called and surface is available
+     */
+    public void setCameraPermissionGranted() {
+        synchronized(mSyncObject) {
+            mCameraPermissionGranted = true;
+            checkCurrentState();
+        }
+    }
+
+
     /**
      * This method is provided for clients, so they can enable the camera connection.
-     * The actual onCameraViewStarted callback will be delivered only after both this method is called and surface is available
+     * The actual onCameraViewStarted callback will be delivered only after setCameraPermissionGranted
+     * and enableView have been called and surface is available
      */
     public void enableView() {
         synchronized(mSyncObject) {
@@ -300,7 +404,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         Log.d(TAG, "call checkCurrentState");
         int targetState;
 
-        if (mEnabled && mSurfaceExist && getVisibility() == VISIBLE) {
+        if (mEnabled && mCameraPermissionGranted && mSurfaceExist && getVisibility() == VISIBLE) {
             targetState = STARTED;
         } else {
             targetState = STOPPED;
@@ -360,7 +464,7 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         if (!connectCamera(getWidth(), getHeight())) {
             AlertDialog ad = new AlertDialog.Builder(getContext()).create();
             ad.setCancelable(false); // This blocks the 'BACK' button
-            ad.setMessage("It seems that you device does not support camera (or it is locked). Application will be closed.");
+            ad.setMessage("It seems that your device does not support camera (or it is locked). Application will be closed.");
             ad.setButton(DialogInterface.BUTTON_NEUTRAL,  "OK", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int which) {
                     dialog.dismiss();

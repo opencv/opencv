@@ -82,6 +82,35 @@ OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
     SANITY_CHECK(dst);
 }
 
+OCL_PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrackWithQuality,
+                ::testing::Combine(OCL_PERF_ENUM(String("gpu/opticalflow/rubberwhale1.png")),
+                                   OCL_PERF_ENUM(3.0), Bool()))
+{
+    GoodFeaturesToTrackParams params = GetParam();
+    const String fileName = get<0>(params);
+    const double minDistance = get<1>(params), qualityLevel = 0.01;
+    const bool harrisDetector = get<2>(params);
+    const int maxCorners = 1000;
+
+    Mat img = imread(getDataPath(fileName), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty()) << "could not load " << fileName;
+
+    checkDeviceMaxMemoryAllocSize(img.size(), img.type());
+
+    UMat src(img.size(), img.type()), dst(1, maxCorners, CV_32FC2);
+    img.copyTo(src);
+
+    std::vector<float> cornersQuality;
+
+    declare.in(src, WARMUP_READ).out(dst);
+
+    OCL_TEST_CYCLE() cv::goodFeaturesToTrack(src, dst, maxCorners, qualityLevel, minDistance,
+                                             noArray(), cornersQuality, 3, 3, harrisDetector, 0.04);
+
+    SANITY_CHECK(dst);
+    SANITY_CHECK(cornersQuality, 1e-6);
+}
+
 } } // namespace opencv_test::ocl
 
 #endif

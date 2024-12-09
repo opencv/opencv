@@ -10,11 +10,13 @@
 #include "sum.simd.hpp"
 #include "sum.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
+#ifndef OPENCV_IPP_SUM
 #undef HAVE_IPP
 #undef CV_IPP_RUN_FAST
 #define CV_IPP_RUN_FAST(f, ...)
 #undef CV_IPP_RUN
 #define CV_IPP_RUN(c, f, ...)
+#endif // OPENCV_IPP_SUM
 
 namespace cv
 {
@@ -46,6 +48,9 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     if ( (!doubleSupport && depth == CV_64F) || cn > 4 )
         return false;
 
+    if (depth >= CV_16F)
+        return false;
+
     int ngroups = dev.maxComputeUnits(), dbsize = ngroups * (calc2 ? 2 : 1);
     size_t wgs = dev.maxWorkGroupSize();
 
@@ -59,13 +64,13 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     wgs2_aligned >>= 1;
 
     static const char * const opMap[3] = { "OP_SUM", "OP_SUM_ABS", "OP_SUM_SQR" };
-    char cvt[2][40];
+    char cvt[2][50];
     String opts = format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstTK=%s -D dstT1=%s -D ddepth=%d -D cn=%d"
                          " -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s%s%s -D kercn=%d%s%s%s -D convertFromU=%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, mcn)), ocl::typeToStr(depth),
                          ocl::typeToStr(dtype), ocl::typeToStr(CV_MAKE_TYPE(ddepth, mcn)),
                          ocl::typeToStr(ddepth), ddepth, cn,
-                         ocl::convertTypeStr(depth, ddepth, mcn, cvt[0]),
+                         ocl::convertTypeStr(depth, ddepth, mcn, cvt[0], sizeof(cvt[0])),
                          opMap[sum_op], (int)wgs, wgs2_aligned,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                          haveMask ? " -D HAVE_MASK" : "",
@@ -73,7 +78,7 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
                          haveMask && _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn,
                          haveSrc2 ? " -D HAVE_SRC2" : "", calc2 ? " -D OP_CALC2" : "",
                          haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "",
-                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, convert_cn, cvt[1]) : "noconvert");
+                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, convert_cn, cvt[1], sizeof(cvt[1])) : "noconvert");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
@@ -103,7 +108,7 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     }
 
     size_t globalsize = ngroups * wgs;
-    if (k.run(1, &globalsize, &wgs, false))
+    if (k.run(1, &globalsize, &wgs, true))
     {
         typedef Scalar (*part_sum)(Mat m);
         part_sum funcs[3] = { ocl_part_sum<int>, ocl_part_sum<float>, ocl_part_sum<double> },

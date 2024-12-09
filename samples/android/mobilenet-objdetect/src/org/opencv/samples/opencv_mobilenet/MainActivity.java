@@ -1,19 +1,25 @@
 package org.opencv.samples.opencv_mobilenet;
-
+/*
+// snippet was added for Android tutorial
+//! [mobilenet_tutorial_package]
+package com.example.myapplication;
+//! [mobilenet_tutorial_package]
+*/
+//! [mobilenet_tutorial]
 import android.content.Context;
 import android.content.res.AssetManager;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.widget.Toast;
 
-import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraActivity;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
-import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
@@ -21,40 +27,44 @@ import org.opencv.dnn.Net;
 import org.opencv.dnn.Dnn;
 import org.opencv.imgproc.Imgproc;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements CvCameraViewListener2 {
-
-    // Initialize OpenCV manager.
-    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS: {
-                    Log.i(TAG, "OpenCV loaded successfully");
-                    mOpenCvCameraView.enableView();
-                    break;
-                }
-                default: {
-                    super.onManagerConnected(status);
-                    break;
-                }
-            }
-        }
-    };
+public class MainActivity extends CameraActivity implements CvCameraViewListener2 {
 
     @Override
     public void onResume() {
         super.onResume();
-        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.enableView();
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (OpenCVLoader.initLocal()) {
+            Log.i(TAG, "OpenCV loaded successfully");
+        } else {
+            Log.e(TAG, "OpenCV initialization failed!");
+            (Toast.makeText(this, "OpenCV initialization failed!", Toast.LENGTH_LONG)).show();
+            return;
+        }
+
+        //! [init_model_from_memory]
+        mModelBuffer = loadFileFromResource(R.raw.mobilenet_iter_73000);
+        mConfigBuffer = loadFileFromResource(R.raw.deploy);
+        if (mModelBuffer == null || mConfigBuffer == null) {
+            Log.e(TAG, "Failed to load model from resources");
+        } else
+            Log.i(TAG, "Model files loaded successfully");
+
+        net = Dnn.readNet("caffe", mModelBuffer, mConfigBuffer);
+        Log.i(TAG, "Network loaded successfully");
+        //! [init_model_from_memory]
+
         setContentView(R.layout.activity_main);
 
         // Set up camera listener.
@@ -63,12 +73,30 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
 
+    @Override
+    public void onPause()
+    {
+        super.onPause();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
+    }
+
+    @Override
+    protected List<? extends CameraBridgeViewBase> getCameraViewList() {
+        return Collections.singletonList(mOpenCvCameraView);
+    }
+
+    public void onDestroy() {
+        super.onDestroy();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
+
+        mModelBuffer.release();
+        mConfigBuffer.release();
+    }
+
     // Load a network.
     public void onCameraViewStarted(int width, int height) {
-        String proto = getPath("MobileNetSSD_deploy.prototxt", this);
-        String weights = getPath("MobileNetSSD_deploy.caffemodel", this);
-        net = Dnn.readNetFromCaffe(proto, weights);
-        Log.i(TAG, "Network loaded successfully");
     }
 
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
@@ -80,10 +108,12 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         final double THRESHOLD = 0.2;
 
         // Get a new frame
+        Log.d(TAG, "handle new frame!");
         Mat frame = inputFrame.rgba();
         Imgproc.cvtColor(frame, frame, Imgproc.COLOR_RGBA2RGB);
 
         // Forward image through network.
+        //! [mobilenet_handle_frame]
         Mat blob = Dnn.blobFromImage(frame, IN_SCALE_FACTOR,
                 new Size(IN_WIDTH, IN_HEIGHT),
                 new Scalar(MEAN_VAL, MEAN_VAL, MEAN_VAL), /*swapRB*/false, /*crop*/false);
@@ -110,7 +140,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
                                   new Scalar(0, 255, 0));
                 String label = classNames[classId] + ": " + confidence;
                 int[] baseLine = new int[1];
-                Size labelSize = Imgproc.getTextSize(label, Core.FONT_HERSHEY_SIMPLEX, 0.5, 1, baseLine);
+                Size labelSize = Imgproc.getTextSize(label, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, 1, baseLine);
 
                 // Draw background for label.
                 Imgproc.rectangle(frame, new Point(left, top - labelSize.height),
@@ -118,40 +148,39 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
                                   new Scalar(255, 255, 255), Imgproc.FILLED);
                 // Write class name and confidence.
                 Imgproc.putText(frame, label, new Point(left, top),
-                        Core.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
+                        Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
             }
         }
+        //! [mobilenet_handle_frame]
+
         return frame;
     }
 
     public void onCameraViewStopped() {}
 
-    // Upload file to storage and return a path.
-    private static String getPath(String file, Context context) {
-        AssetManager assetManager = context.getAssets();
-
-        BufferedInputStream inputStream = null;
+    //! [mobilenet_tutorial_resource]
+    private MatOfByte loadFileFromResource(int id) {
+       byte[] buffer;
         try {
-            // Read data from assets.
-            inputStream = new BufferedInputStream(assetManager.open(file));
-            byte[] data = new byte[inputStream.available()];
-            inputStream.read(data);
-            inputStream.close();
+            // load cascade file from application resources
+            InputStream is = getResources().openRawResource(id);
 
-            // Create copy file in storage.
-            File outFile = new File(context.getFilesDir(), file);
-            FileOutputStream os = new FileOutputStream(outFile);
-            os.write(data);
-            os.close();
-            // Return a path to file which may be read in common way.
-            return outFile.getAbsolutePath();
-        } catch (IOException ex) {
-            Log.i(TAG, "Failed to upload a file");
+            int size = is.available();
+            buffer = new byte[size];
+            int bytesRead = is.read(buffer);
+            is.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.e(TAG, "Failed to ONNX model from resources! Exception thrown: " + e);
+            (Toast.makeText(this, "Failed to ONNX model from resources!", Toast.LENGTH_LONG)).show();
+            return null;
         }
-        return "";
-    }
 
-    private static final String TAG = "OpenCV/Sample/MobileNet";
+        return new MatOfByte(buffer);
+    }
+    //! [mobilenet_tutorial_resource]
+
+    private static final String TAG = "OpenCV-MobileNet";
     private static final String[] classNames = {"background",
             "aeroplane", "bicycle", "bird", "boat",
             "bottle", "bus", "car", "cat", "chair",
@@ -159,6 +188,9 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
             "motorbike", "person", "pottedplant",
             "sheep", "sofa", "train", "tvmonitor"};
 
-    private Net net;
+    private MatOfByte            mConfigBuffer;
+    private MatOfByte            mModelBuffer;
+    private Net                  net;
     private CameraBridgeViewBase mOpenCvCameraView;
 }
+//! [mobilenet_tutorial]

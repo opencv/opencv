@@ -43,13 +43,9 @@
 #define __IMGCODECS_H_
 
 #include "opencv2/imgcodecs.hpp"
-
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
-
 #include "opencv2/imgproc.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "opencv2/imgcodecs/imgcodecs_c.h"
 
 #include <stdlib.h>
 #include <stdio.h>

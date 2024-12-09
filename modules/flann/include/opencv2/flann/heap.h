@@ -36,8 +36,20 @@
 #include <algorithm>
 #include <vector>
 
+#include <unordered_map>
+
 namespace cvflann
 {
+
+// TODO: Define x > y operator and use std::greater<T> instead
+template <typename T>
+struct greater
+{
+    bool operator()(const T& x, const T& y) const
+    {
+        return y < x;
+    }
+};
 
 /**
  * Priority Queue Implementation
@@ -49,116 +61,179 @@ namespace cvflann
 template <typename T>
 class Heap
 {
-
     /**
      * Storage array for the heap.
      * Type T must be comparable.
      */
     std::vector<T> heap;
-    int length;
-
-    /**
-     * Number of element in the heap
-     */
-    int count;
-
-
-
 public:
     /**
-     * Constructor.
+     * \brief Constructs a heap with a pre-allocated capacity
      *
-     * Params:
-     *     sz = heap size
+     * \param capacity heap maximum capacity
      */
-
-    Heap(int sz)
+    Heap(const int capacity)
     {
-        length = sz;
-        heap.reserve(length);
-        count = 0;
+        reserve(capacity);
+    }
+
+    /**
+     * \brief Move-constructs a heap from an external vector
+     *
+     * \param vec external vector
+     */
+    Heap(std::vector<T>&& vec)
+        : heap(std::move(vec))
+    {
+        std::make_heap(heap.begin(), heap.end(), greater<T>());
     }
 
     /**
      *
-     * Returns: heap size
+     * \returns heap size
      */
-    int size()
+    int size() const
     {
-        return count;
+        return (int)heap.size();
     }
 
     /**
-     * Tests if the heap is empty
      *
-     * Returns: true is heap empty, false otherwise
+     * \returns heap capacity
+     */
+    int capacity() const
+    {
+        return (int)heap.capacity();
+    }
+
+    /**
+     * \brief Tests if the heap is empty
+     *
+     * \returns true is heap empty, false otherwise
      */
     bool empty()
     {
-        return size()==0;
+        return heap.empty();
     }
 
     /**
-     * Clears the heap.
+     * \brief Clears the heap.
      */
     void clear()
     {
         heap.clear();
-        count = 0;
     }
 
-    struct CompareT
+    /**
+     * \brief Sets the heap maximum capacity.
+     *
+     * \param capacity heap maximum capacity
+     */
+    void reserve(const int capacity)
     {
-        bool operator()(const T& t_1, const T& t_2) const
-        {
-            return t_2 < t_1;
-        }
-    };
+        heap.reserve(capacity);
+    }
 
     /**
-     * Insert a new element in the heap.
+     * \brief Inserts a new element in the heap.
      *
      * We select the next empty leaf node, and then keep moving any larger
      * parents down until the right location is found to store this element.
      *
-     * Params:
-     *     value = the new element to be inserted in the heap
+     * \param value the new element to be inserted in the heap
      */
     void insert(T value)
     {
         /* If heap is full, then return without adding this element. */
-        if (count == length) {
+        if (size() == capacity()) {
             return;
         }
 
         heap.push_back(value);
-        static CompareT compareT;
-        std::push_heap(heap.begin(), heap.end(), compareT);
-        ++count;
+        std::push_heap(heap.begin(), heap.end(), greater<T>());
     }
 
-
-
     /**
-     * Returns the node of minimum value from the heap (top of the heap).
+     * \brief Returns the node of minimum value from the heap (top of the heap).
      *
-     * Params:
-     *     value = out parameter used to return the min element
-     * Returns: false if heap empty
+     * \param[out] value parameter used to return the min element
+     * \returns false if heap empty
      */
     bool popMin(T& value)
     {
-        if (count == 0) {
+        if (empty()) {
             return false;
         }
 
         value = heap[0];
-        static CompareT compareT;
-        std::pop_heap(heap.begin(), heap.end(), compareT);
+        std::pop_heap(heap.begin(), heap.end(), greater<T>());
         heap.pop_back();
-        --count;
 
         return true;  /* Return old last node. */
+    }
+
+    /**
+     * \brief Returns a shared heap for the given memory pool ID.
+     *
+     * It constructs the heap if it does not already exists.
+     *
+     * \param poolId a user-chosen hashable ID for identifying the heap.
+     *     For thread-safe operations, using current thread ID is a good choice.
+     * \param capacity heap maximum capacity
+     * \param iterThreshold remove heaps that were not reused for more than specified iterations count
+     *        if iterThreshold value is less 2, it will be internally adjusted to twice the number of CPU threads
+     * \returns pointer to the heap
+     */
+    template <typename HashableT>
+    static cv::Ptr<Heap<T>> getPooledInstance(
+        const HashableT& poolId, const int capacity, int iterThreshold = 0)
+    {
+        static cv::Mutex mutex;
+        const cv::AutoLock lock(mutex);
+
+        struct HeapMapValueType {
+            cv::Ptr<Heap<T>> heapPtr;
+            int iterCounter;
+        };
+        typedef std::unordered_map<HashableT, HeapMapValueType> HeapMapType;
+
+        static HeapMapType heapsPool;
+        typename HeapMapType::iterator heapIt = heapsPool.find(poolId);
+
+        if (heapIt == heapsPool.end())
+        {
+            // Construct the heap as it does not already exists
+            HeapMapValueType heapAndTimePair = {cv::makePtr<Heap<T>>(capacity), 0};
+            const std::pair<typename HeapMapType::iterator, bool>& emplaceResult = heapsPool.emplace(poolId, std::move(heapAndTimePair));
+            CV_CheckEQ(static_cast<int>(emplaceResult.second), 1, "Failed to insert the heap into its memory pool");
+            heapIt = emplaceResult.first;
+        }
+        else
+        {
+            CV_CheckEQ(heapIt->second.heapPtr.use_count(), 1, "Cannot modify a heap that is currently accessed by another caller");
+            heapIt->second.heapPtr->clear();
+            heapIt->second.heapPtr->reserve(capacity);
+            heapIt->second.iterCounter = 0;
+        }
+
+        if (iterThreshold <= 1) {
+            iterThreshold = 2 * cv::getNumThreads();
+        }
+
+        // Remove heaps that were not reused for more than given iterThreshold
+        typename HeapMapType::iterator cleanupIt = heapsPool.begin();
+        while (cleanupIt != heapsPool.end())
+        {
+            if (cleanupIt->second.iterCounter++ > iterThreshold)
+            {
+                CV_Assert(cleanupIt != heapIt);
+                cleanupIt = heapsPool.erase(cleanupIt);
+                continue;
+            }
+            ++cleanupIt;
+        }
+
+        return heapIt->second.heapPtr;
     }
 };
 

@@ -227,9 +227,15 @@
 #define PROCESS_ELEM storedst(convertToDT(srcelem1 * scale * srcelem2))
 
 #elif defined OP_DIV
+#ifdef CV_DST_TYPE_IS_INTEGER
 #define PROCESS_ELEM \
         workT e2 = srcelem2, zero = (workT)(0); \
         storedst(convertToDT(e2 != zero ? srcelem1 / e2 : zero))
+#else
+#define PROCESS_ELEM \
+        workT e2 = srcelem2; \
+        storedst(convertToDT(srcelem1 / e2))
+#endif
 
 #elif defined OP_DIV_SCALE
 #undef EXTRA_PARAMS
@@ -240,9 +246,15 @@
 #else
 #define EXTRA_PARAMS , scaleT scale
 #endif
+#ifdef CV_DST_TYPE_IS_INTEGER
 #define PROCESS_ELEM \
         workT e2 = srcelem2, zero = (workT)(0); \
         storedst(convertToDT(e2 == zero ? zero : (srcelem1 * (workT)(scale) / e2)))
+#else
+#define PROCESS_ELEM \
+        workT e2 = srcelem2; \
+        storedst(convertToDT(srcelem1 * (workT)(scale) / e2))
+#endif
 
 #elif defined OP_RDIV_SCALE
 #undef EXTRA_PARAMS
@@ -253,16 +265,28 @@
 #else
 #define EXTRA_PARAMS , scaleT scale
 #endif
+#ifdef CV_DST_TYPE_IS_INTEGER
 #define PROCESS_ELEM \
         workT e1 = srcelem1, zero = (workT)(0); \
         storedst(convertToDT(e1 == zero ? zero : (srcelem2 * (workT)(scale) / e1)))
+#else
+#define PROCESS_ELEM \
+        workT e1 = srcelem1; \
+        storedst(convertToDT(srcelem2 * (workT)(scale) / e1))
+#endif
 
 #elif defined OP_RECIP_SCALE
 #undef EXTRA_PARAMS
 #define EXTRA_PARAMS , scaleT scale
+#ifdef CV_DST_TYPE_IS_INTEGER
 #define PROCESS_ELEM \
         workT e1 = srcelem1, zero = (workT)(0); \
         storedst(convertToDT(e1 != zero ? scale / e1 : zero))
+#else
+#define PROCESS_ELEM \
+        workT e1 = srcelem1; \
+        storedst(convertToDT(scale / e1))
+#endif
 
 #elif defined OP_ADDW
 #undef EXTRA_PARAMS
@@ -357,6 +381,20 @@
 #elif defined OP_CTP_AR
 #define TO_DEGREE
 #endif
+#ifdef SRC1_IS_DST_MAG
+#define ADAPT_SRC1 dstptr = srcptr1;
+#elif SRC1_IS_DST_ANGLE
+#define ADAPT_SRC1 dstptr2 = srcptr1;
+#else
+#define ADAPT_SRC1
+#endif
+#ifdef SRC2_IS_DST_MAG
+#define ADAPT_SRC2 dstptr = srcptr2;
+#elif SRC2_IS_DST_ANGLE
+#define ADAPT_SRC2 dstptr2 = srcptr2;
+#else
+#define ADAPT_SRC2
+#endif
 #define PROCESS_ELEM \
     dstT x = srcelem1, y = srcelem2; \
     dstT x2 = x * x, y2 = y * y; \
@@ -366,6 +404,8 @@
     dstT tmp1 = y >= 0 ? CV_PI * 0.5f : CV_PI * 1.5f; \
     dstT cartToPolar = y2 <= x2 ? x * y / mad((dstT)(0.28f), y2, x2 + CV_EPSILON) + tmp : (tmp1 - x * y / mad((dstT)(0.28f), x2, y2 + CV_EPSILON)); \
     TO_DEGREE \
+    ADAPT_SRC1 \
+    ADAPT_SRC2 \
     storedst(magnitude); \
     storedst2(cartToPolar)
 
@@ -375,9 +415,25 @@
 #else
 #define FROM_DEGREE
 #endif
+#ifdef SRC1_IS_DST_X
+#define ADAPT_SRC1 dstptr = srcptr1;
+#elif SRC1_IS_DST_Y
+#define ADAPT_SRC1 dstptr2 = srcptr1;
+#else
+#define ADAPT_SRC1
+#endif
+#ifdef SRC2_IS_DST_X
+#define ADAPT_SRC2 dstptr = srcptr2;
+#elif SRC2_IS_DST_Y
+#define ADAPT_SRC2 dstptr2 = srcptr2;
+#else
+#define ADAPT_SRC2
+#endif
 #define PROCESS_ELEM \
     dstT x = srcelem1, y = srcelem2, cosval; \
     FROM_DEGREE; \
+    ADAPT_SRC1; \
+    ADAPT_SRC2; \
     storedst2(sincos(y, &cosval) * x); \
     storedst(cosval * x);
 

@@ -82,4 +82,4 @@ Block Matching algorithm has been successfully parallelized using the following 
 3.  Merge the results into a single disparity map.
 
 With this algorithm, a dual GPU gave a 180% performance increase comparing to the single Fermi GPU.
-For a source code example, see <https://github.com/opencv/opencv/tree/3.4/samples/gpu/>.
+For a source code example, see <https://github.com/opencv/opencv/tree/4.x/samples/gpu/>.

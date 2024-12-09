@@ -50,10 +50,12 @@ typedef void (*MergeFunc)(const uchar** src, uchar* dst, int len, int cn);
 
 static MergeFunc getMergeFunc(int depth)
 {
-    static MergeFunc mergeTab[] =
+    static MergeFunc mergeTab[CV_DEPTH_MAX] =
     {
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u),
-        (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), 0
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge8u),
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u),
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge32s),
+        (MergeFunc)GET_OPTIMIZED(cv::hal::merge64s), (MergeFunc)GET_OPTIMIZED(cv::hal::merge16u)
     };
 
     return mergeTab[depth];
@@ -116,6 +118,7 @@ void merge(const Mat* mv, size_t n, OutputArray _dst)
     CV_INSTRUMENT_REGION();
 
     CV_Assert( mv && n > 0 );
+    CV_Assert(!mv[0].empty());
 
     int depth = mv[0].depth();
     bool allch1 = true;

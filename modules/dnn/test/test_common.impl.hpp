@@ -15,19 +15,31 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <psapi.h>
+#endif  // _WIN32
+
 namespace cv { namespace dnn {
-CV__DNN_EXPERIMENTAL_NS_BEGIN
+CV__DNN_INLINE_NS_BEGIN
 
 void PrintTo(const cv::dnn::Backend& v, std::ostream* os)
 {
     switch (v) {
-        case DNN_BACKEND_DEFAULT: *os << "DEFAULT"; return;
-        case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
-        case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE*"; return;
-        case DNN_BACKEND_OPENCV: *os << "OCV"; return;
-        case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019: *os << "DLIE"; return;
-        case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
-        default: /* do nothing */;
+    case DNN_BACKEND_DEFAULT: *os << "DEFAULT"; return;
+    case DNN_BACKEND_HALIDE: *os << "HALIDE"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE: *os << "DLIE*"; return;
+    case DNN_BACKEND_VKCOM: *os << "VKCOM"; return;
+    case DNN_BACKEND_OPENCV: *os << "OCV"; return;
+    case DNN_BACKEND_CUDA: *os << "CUDA"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019: *os << "DLIE"; return;
+    case DNN_BACKEND_INFERENCE_ENGINE_NGRAPH: *os << "NGRAPH"; return;
+    case DNN_BACKEND_WEBNN: *os << "WEBNN"; return;
+    case DNN_BACKEND_TIMVX: *os << "TIMVX"; return;
+    case DNN_BACKEND_CANN: *os << "CANN"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_BACKEND_UNKNOWN(" << (int)v << ")";
 }
@@ -39,7 +51,13 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_OPENCL: *os << "OCL"; return;
     case DNN_TARGET_OPENCL_FP16: *os << "OCL_FP16"; return;
     case DNN_TARGET_MYRIAD: *os << "MYRIAD"; return;
+    case DNN_TARGET_HDDL: *os << "HDDL"; return;
+    case DNN_TARGET_VULKAN: *os << "VULKAN"; return;
     case DNN_TARGET_FPGA: *os << "FPGA"; return;
+    case DNN_TARGET_CUDA: *os << "CUDA"; return;
+    case DNN_TARGET_CUDA_FP16: *os << "CUDA_FP16"; return;
+    case DNN_TARGET_NPU: *os << "NPU"; return;
+    case DNN_TARGET_CPU_FP16: *os << "CPU_FP16"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
 }
@@ -51,7 +69,7 @@ void PrintTo(const tuple<cv::dnn::Backend, cv::dnn::Target> v, std::ostream* os)
     PrintTo(get<1>(v), os);
 }
 
-CV__DNN_EXPERIMENTAL_NS_END
+CV__DNN_INLINE_NS_END
 }} // namespace
 
 
@@ -172,6 +190,52 @@ void normAssertDetections(
                          testBoxes, comment, confThreshold, scores_diff, boxes_iou_diff);
 }
 
+// For text detection networks
+// Curved text polygon is not supported in the current version.
+// (concave polygon is invalid input to intersectConvexConvex)
+void normAssertTextDetections(
+        const std::vector<std::vector<Point>>& gtPolys,
+        const std::vector<std::vector<Point>>& testPolys,
+        const char *comment /*= ""*/, double boxes_iou_diff /*= 1e-4*/)
+{
+    std::vector<bool> matchedRefBoxes(gtPolys.size(), false);
+    for (uint i = 0; i < testPolys.size(); ++i)
+    {
+        const std::vector<Point>& testPoly = testPolys[i];
+        bool matched = false;
+        double topIoU = 0;
+        for (uint j = 0; j < gtPolys.size() && !matched; ++j)
+        {
+            if (!matchedRefBoxes[j])
+            {
+                std::vector<Point> intersectionPolygon;
+                float intersectArea = intersectConvexConvex(testPoly, gtPolys[j], intersectionPolygon, true);
+                double iou = intersectArea / (contourArea(testPoly) + contourArea(gtPolys[j]) - intersectArea);
+                topIoU = std::max(topIoU, iou);
+                if (1.0 - iou < boxes_iou_diff)
+                {
+                    matched = true;
+                    matchedRefBoxes[j] = true;
+                }
+            }
+        }
+        if (!matched) {
+            std::cout << cv::format("Unmatched-det:") << testPoly << std::endl;
+            std::cout << "Highest IoU: " << topIoU << std::endl;
+        }
+        EXPECT_TRUE(matched) << comment;
+    }
+
+    // Check unmatched groundtruth.
+    for (uint i = 0; i < gtPolys.size(); ++i)
+    {
+        if (!matchedRefBoxes[i]) {
+            std::cout << cv::format("Unmatched-gt:") << gtPolys[i] << std::endl;
+        }
+        EXPECT_TRUE(matchedRefBoxes[i]);
+    }
+}
+
 void readFileContent(const std::string& filename, CV_OUT std::vector<char>& content)
 {
     const std::ios::openmode mode = std::ios::in | std::ios::binary;
@@ -194,12 +258,14 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         bool withInferenceEngine /*= true*/,
         bool withHalide /*= false*/,
         bool withCpuOCV /*= true*/,
-        bool withNgraph /*= true*/
+        bool withVkCom /*= true*/,
+        bool withCUDA /*= true*/,
+        bool withNgraph /*= true*/,
+        bool withWebnn /*= false*/,
+        bool withCann /*= true*/
 )
 {
-#ifdef HAVE_INF_ENGINE
     bool withVPU = validateVPUType();
-#endif
 
     std::vector< tuple<Backend, Target> > targets;
     std::vector< Target > available;
@@ -209,13 +275,12 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
             targets.push_back(make_tuple(DNN_BACKEND_HALIDE, *i));
     }
-#ifdef HAVE_INF_ENGINE
     if (withInferenceEngine)
     {
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019, *i));
         }
@@ -225,15 +290,48 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
         }
 
     }
-#else
-    CV_UNUSED(withInferenceEngine);
+    if (withVkCom)
+    {
+        available = getAvailableTargets(DNN_BACKEND_VKCOM);
+        for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
+            targets.push_back(make_tuple(DNN_BACKEND_VKCOM, *i));
+    }
+
+#ifdef HAVE_CUDA
+    if(withCUDA)
+    {
+        for (auto target : getAvailableTargets(DNN_BACKEND_CUDA))
+            targets.push_back(make_tuple(DNN_BACKEND_CUDA, target));
+    }
 #endif
+
+#ifdef HAVE_WEBNN
+    if (withWebnn)
+    {
+        for (auto target : getAvailableTargets(DNN_BACKEND_WEBNN)) {
+            targets.push_back(make_tuple(DNN_BACKEND_WEBNN, target));
+        }
+    }
+#else
+    CV_UNUSED(withWebnn);
+#endif
+
+#ifdef HAVE_CANN
+    if (withCann)
+    {
+        for (auto target : getAvailableTargets(DNN_BACKEND_CANN))
+            targets.push_back(make_tuple(DNN_BACKEND_CANN, target));
+    }
+#else
+    CV_UNUSED(withCann);
+#endif // HAVE_CANN
+
     {
         available = getAvailableTargets(DNN_BACKEND_OPENCV);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
@@ -260,10 +358,11 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
         available = getAvailableTargets(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH);
         for (std::vector< Target >::const_iterator i = available.begin(); i != available.end(); ++i)
         {
-            if (*i == DNN_TARGET_MYRIAD && !withVPU)
+            if ((*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL) && !withVPU)
                 continue;
             targets.push_back(make_tuple(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, *i));
         }
+
     }
 
     return testing::ValuesIn(targets);
@@ -272,7 +371,6 @@ testing::internal::ParamGenerator< tuple<Backend, Target> > dnnBackendsAndTarget
 #endif
 }
 
-#ifdef HAVE_INF_ENGINE
 static std::string getTestInferenceEngineVPUType()
 {
     static std::string param_vpu_type = utils::getConfigurationParameterString("OPENCV_TEST_DNN_IE_VPU_TYPE", "");
@@ -291,7 +389,7 @@ static bool validateVPUType_()
     bool have_vpu_target = false;
     for (std::vector<Target>::const_iterator i = available.begin(); i != available.end(); ++i)
     {
-        if (*i == DNN_TARGET_MYRIAD)
+        if (*i == DNN_TARGET_MYRIAD || *i == DNN_TARGET_HDDL)
         {
             have_vpu_target = true;
             break;
@@ -335,23 +433,15 @@ bool validateVPUType()
     static bool result = validateVPUType_();
     return result;
 }
-#endif // HAVE_INF_ENGINE
 
 
 void initDNNTests()
 {
-    const char* extraTestDataPath =
-#ifdef WINRT
-        NULL;
-#else
-        getenv("OPENCV_DNN_TEST_DATA_PATH");
-#endif
-    if (extraTestDataPath)
-        cvtest::addDataSearchPath(extraTestDataPath);
+    cvtest::addDataSearchEnv("OPENCV_DNN_TEST_DATA_PATH");
 
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND,
-        CV_TEST_TAG_DNN_SKIP_CPU,
+        CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_CPU_FP16,
         CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16
     );
 #if defined(HAVE_HALIDE)
@@ -387,10 +477,54 @@ void initDNNTests()
         CV_TEST_TAG_DNN_SKIP_IE_OPENCL, CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16
     );
 #endif
+#ifdef HAVE_VULKAN
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_VULKAN
+    );
+#endif
+#ifdef HAVE_CUDA
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_CUDA_FP32, CV_TEST_TAG_DNN_SKIP_CUDA_FP16
+    );
+#endif
+#ifdef HAVE_TIMVX
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_TIMVX
+    );
+#endif
+#ifdef HAVE_CANN
+    registerGlobalSkipTag(
+        CV_TEST_TAG_DNN_SKIP_CANN
+    );
+#endif
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE,
         CV_TEST_TAG_DNN_SKIP_PARSER
     );
+}
+
+size_t DNNTestLayer::getTopMemoryUsageMB()
+{
+#ifdef _WIN32
+    PROCESS_MEMORY_COUNTERS proc;
+    GetProcessMemoryInfo(GetCurrentProcess(), &proc, sizeof(proc));
+    return proc.PeakWorkingSetSize / pow(1024, 2);  // bytes to megabytes
+#else
+    std::ifstream status("/proc/self/status");
+    std::string line, title;
+    while (std::getline(status, line))
+    {
+        std::istringstream iss(line);
+        iss >> title;
+        if (title == "VmHWM:")
+        {
+            size_t mem;
+            iss >> mem;
+            return mem / 1024;
+        }
+    }
+    return 0l;
+#endif
 }
 
 } // namespace

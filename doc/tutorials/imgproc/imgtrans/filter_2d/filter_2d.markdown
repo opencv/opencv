@@ -1,8 +1,15 @@
 Making your own linear filters! {#tutorial_filter_2d}
 ===============================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_threshold_inRange}
 @next_tutorial{tutorial_copyMakeBorder}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -68,26 +75,26 @@ The tutorial code's is shown in the lines below.
 
 @add_toggle_cpp
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/ImgTrans/filter2D_demo.cpp)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/ImgTrans/filter2D_demo.cpp)
 @include cpp/tutorial_code/ImgTrans/filter2D_demo.cpp
 @end_toggle
 
 @add_toggle_java
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/ImgTrans/Filter2D/Filter2D_Demo.java)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/ImgTrans/Filter2D/Filter2D_Demo.java)
 @include java/tutorial_code/ImgTrans/Filter2D/Filter2D_Demo.java
 @end_toggle
 
 @add_toggle_python
 You can also download it from
-[here](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/ImgTrans/Filter2D/filter2D.py)
+[here](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/ImgTrans/Filter2D/filter2D.py)
 @include python/tutorial_code/ImgTrans/Filter2D/filter2D.py
 @end_toggle
 
 Explanation
 -----------
 
-####  Load an image
+###  Load an image
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/filter2D_demo.cpp load
@@ -101,7 +108,7 @@ Explanation
 @snippet python/tutorial_code/ImgTrans/Filter2D/filter2D.py load
 @end_toggle
 
-####  Initialize the arguments
+###  Initialize the arguments
 
 @add_toggle_cpp
 @snippet cpp/tutorial_code/ImgTrans/filter2D_demo.cpp init_arguments
@@ -115,7 +122,7 @@ Explanation
 @snippet python/tutorial_code/ImgTrans/Filter2D/filter2D.py init_arguments
 @end_toggle
 
-##### Loop
+### Loop
 
 Perform an infinite loop updating the kernel size and applying our linear filter to the input
 image. Let's analyze that more in detail:

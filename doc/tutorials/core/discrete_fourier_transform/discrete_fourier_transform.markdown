@@ -1,8 +1,15 @@
 Discrete Fourier Transform {#tutorial_discrete_fourier_transform}
 ==========================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_basic_linear_transform}
 @next_tutorial{tutorial_file_input_output_with_xml_yml}
+
+|    |    |
+| -: | :- |
+| Original author | Bernát Gábor |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -19,7 +26,7 @@ Source code
 
 @add_toggle_cpp
 You can [download this from here
-](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp) or
+](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp) or
 find it in the
 `samples/cpp/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.cpp` of the
 OpenCV source code library.
@@ -27,7 +34,7 @@ OpenCV source code library.
 
 @add_toggle_java
 You can [download this from here
-](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/java/tutorial_code/core/discrete_fourier_transform/DiscreteFourierTransform.java) or
+](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/java/tutorial_code/core/discrete_fourier_transform/DiscreteFourierTransform.java) or
 find it in the
 `samples/java/tutorial_code/core/discrete_fourier_transform/DiscreteFourierTransform.java` of the
 OpenCV source code library.
@@ -35,7 +42,7 @@ OpenCV source code library.
 
 @add_toggle_python
 You can [download this from here
-](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py) or
+](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py) or
 find it in the
 `samples/python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py` of the
 OpenCV source code library.
@@ -80,7 +87,7 @@ Fourier Transform too needs to be of a discrete type resulting in a Discrete Fou
 (*DFT*). You'll want to use this whenever you need to determine the structure of an image from a
 geometrical point of view. Here are the steps to follow (in case of a gray scale input image *I*):
 
-#### Expand the image to an optimal size
+### Expand the image to an optimal size
 
 The performance of a DFT is dependent of the image
 size. It tends to be the fastest for image sizes that are multiple of the numbers two, three and
@@ -101,7 +108,7 @@ image (the appended pixels are initialized with zero):
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py expand
 @end_toggle
 
-#### Make place for both the complex and the real values
+### Make place for both the complex and the real values
 
 The result of a Fourier Transform is
 complex. This implies that for each image value the result is two image values (one per
@@ -121,7 +128,7 @@ input image to this type and expand it with another channel to hold the complex 
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py complex_and_real
 @end_toggle
 
-#### Make the Discrete Fourier Transform
+### Make the Discrete Fourier Transform
 It's possible an in-place calculation (same input as
 output):
 
@@ -137,7 +144,7 @@ output):
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py dft
 @end_toggle
 
-#### Transform the real and complex values to magnitude
+### Transform the real and complex values to magnitude
 A complex number has a real (*Re*) and a
 complex (imaginary - *Im*) part. The results of a DFT are complex numbers. The magnitude of a
 DFT is:
@@ -158,7 +165,7 @@ Translated to OpenCV code:
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py magnitude
 @end_toggle
 
-#### Switch to a logarithmic scale
+### Switch to a logarithmic scale
 It turns out that the dynamic range of the Fourier
 coefficients is too large to be displayed on the screen. We have some small and some high
 changing values that we can't observe like this. Therefore the high values will all turn out as
@@ -181,7 +188,7 @@ Translated to OpenCV code:
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py log
 @end_toggle
 
-#### Crop and rearrange
+### Crop and rearrange
 Remember, that at the first step, we expanded the image? Well, it's time
 to throw away the newly introduced values. For visualization purposes we may also rearrange the
 quadrants of the result, so that the origin (zero, zero) corresponds with the image center.
@@ -198,7 +205,7 @@ quadrants of the result, so that the origin (zero, zero) corresponds with the im
 @snippet python/tutorial_code/core/discrete_fourier_transform/discrete_fourier_transform.py crop_rearrange
 @end_toggle
 
-#### Normalize
+### Normalize
 This is done again for visualization purposes. We now have the magnitudes,
 however this are still out of our image display range of zero to one. We normalize our values to
 this range using the @ref cv::normalize() function.
@@ -222,7 +229,7 @@ An application idea would be to determine the geometrical orientation present in
 example, let us find out if a text is horizontal or not? Looking at some text you'll notice that the
 text lines sort of form also horizontal lines and the letters form sort of vertical lines. These two
 main components of a text snippet may be also seen in case of the Fourier transform. Let us use
-[this horizontal ](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/imageTextN.png) and [this rotated](https://raw.githubusercontent.com/opencv/opencv/3.4/samples/data/imageTextR.png)
+[this horizontal ](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/imageTextN.png) and [this rotated](https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/imageTextR.png)
 image about a text.
 
 In case of the horizontal text:

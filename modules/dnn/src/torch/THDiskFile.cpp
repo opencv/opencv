@@ -69,7 +69,7 @@ static size_t fread__(void *ptr, size_t size, size_t nitems, FILE *stream)
     {                                                                   \
       dfself->file.hasError = 1; /* shouldn't we put hasError to 0 all the time ? */ \
       if(!dfself->file.isQuiet)                                         \
-        THError("read error: read %d blocks instead of %d", nread, n);  \
+        THError("read error: read %ld blocks instead of %ld", nread, n);\
     }                                                                   \
                                                                         \
     return nread;                                                       \
@@ -120,7 +120,7 @@ static void THDiskFile_seek(THFile *self, long position)
   {
     dfself->file.hasError = 1;
     if(!dfself->file.isQuiet)
-      THError("unable to seek at position %d", position);
+      THError("unable to seek at position %ld", position);
   }
 }
 
@@ -351,7 +351,7 @@ static long THDiskFile_readLong(THFile *self, int64 *data, long n)
   {
     dfself->file.hasError = 1; /* shouldn't we put hasError to 0 all the time ? */
     if(!dfself->file.isQuiet)
-      THError("read error: read %d blocks instead of %d", nread, n);
+      THError("read error: read %ld blocks instead of %ld", nread, n);
   }
 
   return nread;
@@ -375,15 +375,21 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
     long total = TBRS_BSZ;
     long pos = 0L;
 
+    if (p == NULL)
+        THError("read error: failed to allocate buffer");
     for (;;)
     {
       if(total-pos == 0) /* we need more space! */
       {
         total += TBRS_BSZ;
-        p = (char*)THRealloc(p, total);
+        char *new_p = (char*)THRealloc(p, total);
+        if (new_p == NULL)
+        {
+          THFree(p);
+          THError("read error: failed to reallocate buffer");
+        }
+        p = new_p;
       }
-      if (p == NULL)
-        THError("read error: failed to allocate buffer");
       pos += fread(p+pos, 1, total-pos, dfself->handle);
       if (pos < total) /* eof? */
       {
@@ -409,15 +415,21 @@ static long THDiskFile_readString(THFile *self, const char *format, char **str_)
     long pos = 0L;
     long size;
 
+    if (p == NULL)
+        THError("read error: failed to allocate buffer");
     for (;;)
     {
       if(total-pos <= 1) /* we can only write '\0' in there! */
       {
         total += TBRS_BSZ;
-        p = (char*)THRealloc(p, total);
+        char *new_p = (char*)THRealloc(p, total);
+        if (new_p == NULL)
+        {
+          THFree(p);
+          THError("read error: failed to reallocate buffer");
+        }
+        p = new_p;
       }
-      if (p == NULL)
-        THError("read error: failed to allocate buffer");
       if (fgets(p+pos, total-pos, dfself->handle) == NULL) /* eof? */
       {
         if(pos == 0L)

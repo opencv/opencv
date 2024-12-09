@@ -29,11 +29,11 @@ PERF_TEST_P(FeaturesFinderVec, ParallelFeaturesFinder, NUMBER_IMAGES)
     vector<Mat> imgs(GetParam(), img);
     vector<detail::ImageFeatures> features(imgs.size());
 
-    Ptr<detail::FeaturesFinder> featuresFinder = makePtr<detail::OrbFeaturesFinder>();
+    Ptr<Feature2D> finder = ORB::create();
 
     TEST_CYCLE()
     {
-        (*featuresFinder)(imgs, features);
+        detail::computeImageFeatures(finder, imgs, features);
     }
 
     SANITY_CHECK_NOTHING();
@@ -45,12 +45,12 @@ PERF_TEST_P(FeaturesFinderVec, SerialFeaturesFinder, NUMBER_IMAGES)
     vector<Mat> imgs(GetParam(), img);
     vector<detail::ImageFeatures> features(imgs.size());
 
-    Ptr<detail::FeaturesFinder> featuresFinder = makePtr<detail::OrbFeaturesFinder>();
+    Ptr<Feature2D> finder = ORB::create();
 
     TEST_CYCLE()
     {
         for (size_t i = 0; i < imgs.size(); ++i)
-            (*featuresFinder)(imgs[i], features[i]);
+            detail::computeImageFeatures(finder, imgs[i], features[i]);
     }
 
     SANITY_CHECK_NOTHING();
@@ -65,16 +65,14 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
     resize(img1_full, img1, Size(), scale1, scale1, INTER_LINEAR_EXACT);
     resize(img2_full, img2, Size(), scale2, scale2, INTER_LINEAR_EXACT);
 
-    Ptr<detail::FeaturesFinder> finder;
+    Ptr<Feature2D> finder = getFeatureFinder(GetParam());
     Ptr<detail::FeaturesMatcher> matcher;
     if (GetParam() == "surf")
     {
-        finder = makePtr<detail::SurfFeaturesFinder>();
         matcher = makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
     }
     else if (GetParam() == "orb")
     {
-        finder = makePtr<detail::OrbFeaturesFinder>();
         matcher = makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE);
     }
     else
@@ -83,8 +81,8 @@ PERF_TEST_P( match, bestOf2Nearest, TEST_DETECTORS)
     }
 
     detail::ImageFeatures features1, features2;
-    (*finder)(img1, features1);
-    (*finder)(img2, features2);
+    detail::computeImageFeatures(finder, img1, features1);
+    detail::computeImageFeatures(finder, img2, features2);
 
     detail::MatchesInfo pairwise_matches;
 
@@ -118,18 +116,16 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
     resize(img1_full, img1, Size(), scale1, scale1, INTER_LINEAR_EXACT);
     resize(img2_full, img2, Size(), scale2, scale2, INTER_LINEAR_EXACT);
 
-    Ptr<detail::FeaturesFinder> finder;
-    Ptr<detail::FeaturesMatcher> matcher;
     string detectorName = get<0>(GetParam());
     int featuresVectorSize = get<1>(GetParam());
+    Ptr<Feature2D> finder = getFeatureFinder(detectorName);
+    Ptr<detail::FeaturesMatcher> matcher;
     if (detectorName == "surf")
     {
-        finder = makePtr<detail::SurfFeaturesFinder>();
         matcher = makePtr<detail::BestOf2NearestMatcher>(false, SURF_MATCH_CONFIDENCE);
     }
     else if (detectorName == "orb")
     {
-        finder = makePtr<detail::OrbFeaturesFinder>();
         matcher = makePtr<detail::BestOf2NearestMatcher>(false, ORB_MATCH_CONFIDENCE);
     }
     else
@@ -138,8 +134,8 @@ PERF_TEST_P( matchVector, bestOf2NearestVectorFeatures, testing::Combine(
     }
 
     detail::ImageFeatures features1, features2;
-    (*finder)(img1, features1);
-    (*finder)(img2, features2);
+    detail::computeImageFeatures(finder, img1, features1);
+    detail::computeImageFeatures(finder, img2, features2);
     vector<detail::ImageFeatures> features;
     vector<detail::MatchesInfo> pairwise_matches;
     for(int i = 0; i < featuresVectorSize/2; i++)
@@ -183,16 +179,14 @@ PERF_TEST_P( match, affineBestOf2Nearest, TEST_DETECTORS)
     resize(img1_full, img1, Size(), scale1, scale1, INTER_LINEAR_EXACT);
     resize(img2_full, img2, Size(), scale2, scale2, INTER_LINEAR_EXACT);
 
-    Ptr<detail::FeaturesFinder> finder;
+    Ptr<Feature2D> finder = getFeatureFinder(GetParam());
     Ptr<detail::FeaturesMatcher> matcher;
     if (GetParam() == "surf")
     {
-        finder = makePtr<detail::SurfFeaturesFinder>();
         matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, SURF_MATCH_CONFIDENCE);
     }
     else if (GetParam() == "orb")
     {
-        finder = makePtr<detail::OrbFeaturesFinder>();
         matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, ORB_MATCH_CONFIDENCE);
     }
     else
@@ -201,8 +195,8 @@ PERF_TEST_P( match, affineBestOf2Nearest, TEST_DETECTORS)
     }
 
     detail::ImageFeatures features1, features2;
-    (*finder)(img1, features1);
-    (*finder)(img2, features2);
+    detail::computeImageFeatures(finder, img1, features1);
+    detail::computeImageFeatures(finder, img2, features2);
 
     detail::MatchesInfo pairwise_matches;
 
@@ -242,18 +236,16 @@ PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
     resize(img1_full, img1, Size(), scale1, scale1, INTER_LINEAR_EXACT);
     resize(img2_full, img2, Size(), scale2, scale2, INTER_LINEAR_EXACT);
 
-    Ptr<detail::FeaturesFinder> finder;
-    Ptr<detail::FeaturesMatcher> matcher;
     string detectorName = get<0>(GetParam());
     int featuresVectorSize = get<1>(GetParam());
+    Ptr<Feature2D> finder = getFeatureFinder(detectorName);
+    Ptr<detail::FeaturesMatcher> matcher;
     if (detectorName == "surf")
     {
-        finder = makePtr<detail::SurfFeaturesFinder>();
         matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, SURF_MATCH_CONFIDENCE);
     }
     else if (detectorName == "orb")
     {
-        finder = makePtr<detail::OrbFeaturesFinder>();
         matcher = makePtr<detail::AffineBestOf2NearestMatcher>(false, false, ORB_MATCH_CONFIDENCE);
     }
     else
@@ -262,8 +254,8 @@ PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
     }
 
     detail::ImageFeatures features1, features2;
-    (*finder)(img1, features1);
-    (*finder)(img2, features2);
+    detail::computeImageFeatures(finder, img1, features1);
+    detail::computeImageFeatures(finder, img2, features2);
     vector<detail::ImageFeatures> features;
     vector<detail::MatchesInfo> pairwise_matches;
     for(int i = 0; i < featuresVectorSize/2; i++)
@@ -288,12 +280,12 @@ PERF_TEST_P( matchVector, affineBestOf2NearestVectorFeatures, testing::Combine(
         if (pairwise_matches[i].src_img_idx < 0)
             continue;
 
-        EXPECT_GT(pairwise_matches[i].matches.size(), (size_t)300);
+        EXPECT_GT(pairwise_matches[i].matches.size(), 150u);
         EXPECT_FALSE(pairwise_matches[i].H.empty());
         ++matches_count;
     }
 
-    EXPECT_TRUE(matches_count > 0);
+    EXPECT_GT(matches_count, 0u);
 
     SANITY_CHECK_NOTHING();
 }

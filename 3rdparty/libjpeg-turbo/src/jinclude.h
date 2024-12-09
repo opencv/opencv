@@ -3,8 +3,8 @@
  *
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1994, Thomas G. Lane.
- * It was modified by The libjpeg-turbo Project to include only code relevant
- * to libjpeg-turbo.
+ * libjpeg-turbo Modifications:
+ * Copyright (C) 2022-2023, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -17,72 +17,131 @@
  * JPEG library.  Most applications need only include jpeglib.h.
  */
 
+#ifndef __JINCLUDE_H__
+#define __JINCLUDE_H__
 
 /* Include auto-config file to find out which system include files we need. */
 
 #include "jconfig.h"            /* auto configuration options */
+#include "jconfigint.h"
 #define JCONFIG_INCLUDED        /* so that jpeglib.h doesn't do it again */
 
 /*
- * We need the NULL macro and size_t typedef.
- * On an ANSI-conforming system it is sufficient to include <stddef.h>.
- * Otherwise, we get them from <stdlib.h> or <stdio.h>; we may have to
- * pull in <sys/types.h> as well.
  * Note that the core JPEG library does not require <stdio.h>;
  * only the default error handler and data source/destination modules do.
  * But we must pull it in because of the references to FILE in jpeglib.h.
  * You can remove those references if you want to compile without <stdio.h>.
  */
 
-#ifdef HAVE_STDDEF_H
 #include <stddef.h>
-#endif
-
-#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
-#endif
-
-#ifdef NEED_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-
 #include <stdio.h>
+#include <string.h>
 
 /*
- * We need memory copying and zeroing functions, plus strncpy().
- * ANSI and System V implementations declare these in <string.h>.
- * BSD doesn't have the mem() functions, but it does have bcopy()/bzero().
- * Some systems may declare memset and memcpy in <memory.h>.
- *
- * NOTE: we assume the size parameters to these functions are of type size_t.
- * Change the casts in these macros if not!
+ * These macros/inline functions facilitate using Microsoft's "safe string"
+ * functions with Visual Studio builds without the need to scatter #ifdefs
+ * throughout the code base.
  */
 
-#ifdef NEED_BSD_STRINGS
 
-#include <strings.h>
-#define MEMZERO(target, size) \
-  bzero((void *)(target), (size_t)(size))
-#define MEMCOPY(dest, src, size) \
-  bcopy((const void *)(src), (void *)(dest), (size_t)(size))
+#ifdef _MSC_VER
 
-#else /* not BSD, assume ANSI/SysV string lib */
+#define SNPRINTF(str, n, format, ...) \
+  _snprintf_s(str, n, _TRUNCATE, format, ##__VA_ARGS__)
 
-#include <string.h>
-#define MEMZERO(target, size) \
-  memset((void *)(target), 0, (size_t)(size))
-#define MEMCOPY(dest, src, size) \
-  memcpy((void *)(dest), (const void *)(src), (size_t)(size))
+#else
+
+#define SNPRINTF  snprintf
 
 #endif
 
-/*
- * The modules that use fread() and fwrite() always invoke them through
- * these macros.  On some systems you may need to twiddle the argument casts.
- * CAUTION: argument order is different from underlying functions!
+
+#ifndef NO_GETENV
+
+#ifdef _MSC_VER
+
+static INLINE int GETENV_S(char *buffer, size_t buffer_size, const char *name)
+{
+  size_t required_size;
+
+  return (int)getenv_s(&required_size, buffer, buffer_size, name);
+}
+
+#else /* _MSC_VER */
+
+#include <errno.h>
+
+/* This provides a similar interface to the Microsoft/C11 getenv_s() function,
+ * but other than parameter validation, it has no advantages over getenv().
  */
 
-#define JFREAD(file, buf, sizeofbuf) \
-  ((size_t)fread((void *)(buf), (size_t)1, (size_t)(sizeofbuf), (file)))
-#define JFWRITE(file, buf, sizeofbuf) \
-  ((size_t)fwrite((const void *)(buf), (size_t)1, (size_t)(sizeofbuf), (file)))
+static INLINE int GETENV_S(char *buffer, size_t buffer_size, const char *name)
+{
+  char *env;
+
+  if (!buffer) {
+    if (buffer_size == 0)
+      return 0;
+    else
+      return (errno = EINVAL);
+  }
+  if (buffer_size == 0)
+    return (errno = EINVAL);
+  if (!name) {
+    *buffer = 0;
+    return 0;
+  }
+
+  env = getenv(name);
+  if (!env)
+  {
+    *buffer = 0;
+    return 0;
+  }
+
+  if (strlen(env) + 1 > buffer_size) {
+    *buffer = 0;
+    return ERANGE;
+  }
+
+  strncpy(buffer, env, buffer_size);
+
+  return 0;
+}
+
+#endif /* _MSC_VER */
+
+#endif /* NO_GETENV */
+
+
+#ifndef NO_PUTENV
+
+#ifdef _WIN32
+
+#define PUTENV_S(name, value)  _putenv_s(name, value)
+
+#else
+
+#include <errno.h>
+
+/* This provides a similar interface to the Microsoft _putenv_s() function, but
+ * other than parameter validation, it has no advantages over setenv().
+ */
+
+static INLINE int PUTENV_S(const char *name, const char *value)
+{
+  if (!name || !value)
+    return (errno = EINVAL);
+
+  setenv(name, value, 1);
+
+  return errno;
+}
+
+#endif /* _WIN32 */
+
+#endif /* NO_PUTENV */
+
+
+#endif /* JINCLUDE_H */

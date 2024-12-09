@@ -2,15 +2,14 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 #include "test_precomp.hpp"
+#include <cmath>
 
 #include "opencv2/core/utils/logger.hpp"
 
 #include <opencv2/core/utils/fp_control_utils.hpp>
 
-#ifdef CV_CXX11
 #include <chrono>
 #include <thread>
-#endif
 
 namespace opencv_test { namespace {
 
@@ -281,9 +280,7 @@ public:
             // FP state is not supported
             // no checks
         }
-#ifdef CV_CXX11
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-#endif
     }
 
     cv::details::FPDenormalsModeState base_state;
@@ -848,6 +845,42 @@ TEST(Core_Check, testSize_1)
     }
 }
 
+TEST(Core_Allocation, alignedAllocation)
+{
+    // iterate from size=1 to approximate byte size of 8K 32bpp image buffer
+    for (int i = 0; i < 200; i++) {
+        const size_t size = static_cast<size_t>(std::pow(1.091, (double)i));
+        void * const buf = cv::fastMalloc(size);
+        ASSERT_NE((uintptr_t)0, (uintptr_t)buf)
+            << "failed to allocate memory";
+        ASSERT_EQ((uintptr_t)0, (uintptr_t)buf % CV_MALLOC_ALIGN)
+            << "memory not aligned to " << CV_MALLOC_ALIGN;
+        cv::fastFree(buf);
+    }
+}
+
+
+#if !(defined(__GNUC__) && __GNUC__ < 5)  // GCC 4.8 emits: 'is_trivially_copyable' is not a member of 'std'
+TEST(Core_Types, trivially_copyable)
+{
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Complexd>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Point>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Point3f>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Size>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Range>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Rect>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::RotatedRect>::value);
+    //EXPECT_TRUE(std::is_trivially_copyable<cv::Scalar>::value);  // derived from Vec (Matx)
+}
+
+TEST(Core_Types, trivially_copyable_extra)
+{
+    EXPECT_TRUE(std::is_trivially_copyable<cv::KeyPoint>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::DMatch>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::TermCriteria>::value);
+    EXPECT_TRUE(std::is_trivially_copyable<cv::Moments>::value);
+}
+#endif
 
 template <typename T> class Rect_Test : public testing::Test {};
 
@@ -875,10 +908,48 @@ TYPED_TEST_P(Rect_Test, Overflows) {
   EXPECT_EQ(R(), R(20, 0, 10, 10) & R(0, num_lowest, 10, 10));
   EXPECT_EQ(R(), R(num_lowest, 0, 10, 10) & R(0, num_lowest, 10, 10));
 }
-REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows);
+
+// See https://github.com/opencv/opencv/issues/26016
+// Rect_<int>.contains(Point_<float/double>) needs template specialization.
+// This is test for a point on the edge and its nearest points.
+template<typename T> T cv_nexttoward(T v, T v2);
+template<> int cv_nexttoward<int>(int v, int v2) { CV_UNUSED(v); return v2; }
+template<> float cv_nexttoward<float>(float v, float v2) { return std::nextafter(v,v2); }
+template<> double cv_nexttoward<double>(double v, double v2) { return std::nexttoward(v,v2); }
+TYPED_TEST_P(Rect_Test, OnTheEdge) {
+  Rect_<int> rect(0,0,500,500);
+  TypeParam h = static_cast<TypeParam>(rect.height);
+  ASSERT_TRUE ( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h - 1))));
+  ASSERT_FALSE( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h    ))));
+  ASSERT_FALSE( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h + 1))));
+}
+REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows, OnTheEdge);
 
 typedef ::testing::Types<int, float, double> RectTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);
 
+// Expected that SkipTestException thrown in the constructor should skip test but not fail
+struct TestFixtureSkip: public ::testing::Test {
+    TestFixtureSkip(bool throwEx = true) {
+        if (throwEx) {
+            throw SkipTestException("Skip test at constructor");
+        }
+    }
+};
+
+TEST_F(TestFixtureSkip, NoBodyRun) {
+    FAIL() << "Unreachable code called";
+}
+
+// Expected that SkipTestException thrown in SetUp method should skip test but not fail
+struct TestSetUpSkip: public ::testing::Test {
+    virtual void SetUp() CV_OVERRIDE {
+        throw SkipTestException("Skip test at SetUp");
+    }
+};
+
+TEST_F(TestSetUpSkip, NoBodyRun) {
+    FAIL() << "Unreachable code called";
+}
 
 }} // namespace

@@ -46,44 +46,44 @@ mixChannels_( const T** src, const int* sdelta,
 }
 
 
-static void mixChannels8u( const uchar** src, const int* sdelta,
-                           uchar** dst, const int* ddelta,
+static void mixChannels8u( const void** src, const int* sdelta,
+                           void** dst, const int* ddelta,
                            int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const uchar**)src, sdelta, (uchar**)dst, ddelta, len, npairs);
 }
 
-static void mixChannels16u( const ushort** src, const int* sdelta,
-                            ushort** dst, const int* ddelta,
+static void mixChannels16u( const void** src, const int* sdelta,
+                            void** dst, const int* ddelta,
                             int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const ushort**)src, sdelta, (ushort**)dst, ddelta, len, npairs);
 }
 
-static void mixChannels32s( const int** src, const int* sdelta,
-                            int** dst, const int* ddelta,
+static void mixChannels32s( const void** src, const int* sdelta,
+                            void** dst, const int* ddelta,
                             int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const int**)src, sdelta, (int**)dst, ddelta, len, npairs);
 }
 
-static void mixChannels64s( const int64** src, const int* sdelta,
-                            int64** dst, const int* ddelta,
+static void mixChannels64s( const void** src, const int* sdelta,
+                            void** dst, const int* ddelta,
                             int len, int npairs )
 {
-    mixChannels_(src, sdelta, dst, ddelta, len, npairs);
+    mixChannels_((const int64**)src, sdelta, (int64**)dst, ddelta, len, npairs);
 }
 
-typedef void (*MixChannelsFunc)( const uchar** src, const int* sdelta,
-        uchar** dst, const int* ddelta, int len, int npairs );
+typedef void (*MixChannelsFunc)( const void** src, const int* sdelta,
+        void** dst, const int* ddelta, int len, int npairs );
 
 static MixChannelsFunc getMixchFunc(int depth)
 {
-    static MixChannelsFunc mixchTab[] =
+    static MixChannelsFunc mixchTab[CV_DEPTH_MAX] =
     {
-        (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels8u, (MixChannelsFunc)mixChannels16u,
-        (MixChannelsFunc)mixChannels16u, (MixChannelsFunc)mixChannels32s, (MixChannelsFunc)mixChannels32s,
-        (MixChannelsFunc)mixChannels64s, 0
+        mixChannels8u, mixChannels8u, mixChannels16u,
+        mixChannels16u, mixChannels32s, mixChannels32s,
+        mixChannels64s, 0
     };
 
     return mixchTab[depth];
@@ -146,6 +146,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
     NAryMatIterator it(arrays, ptrs, (int)(nsrcs + ndsts));
     int total = (int)it.size, blocksize = std::min(total, (int)((BLOCK_SIZE + esz1-1)/esz1));
     MixChannelsFunc func = getMixchFunc(depth);
+    CV_Assert(func);
 
     for( i = 0; i < it.nplanes; i++, ++it )
     {
@@ -158,7 +159,7 @@ void cv::mixChannels( const Mat* src, size_t nsrcs, Mat* dst, size_t ndsts, cons
         for( int t = 0; t < total; t += blocksize )
         {
             int bsz = std::min(total - t, blocksize);
-            func( srcs, sdelta, dsts, ddelta, bsz, (int)npairs );
+            func( (const void**)srcs, sdelta, (void **)dsts, ddelta, bsz, (int)npairs );
 
             if( t + blocksize < total )
                 for( k = 0; k < npairs; k++ )
@@ -237,11 +238,11 @@ static bool ocl_mixChannels(InputArrayOfArrays _src, InputOutputArrayOfArrays _d
         dstargs[i] = dst[dst_idx];
         dstargs[i].offset += dst_cnidx * esz;
 
-        declsrc += format("DECLARE_INPUT_MAT(%d)", i);
-        decldst += format("DECLARE_OUTPUT_MAT(%d)", i);
-        indexdecl += format("DECLARE_INDEX(%d)", i);
-        declproc += format("PROCESS_ELEM(%d)", i);
-        declcn += format(" -D scn%d=%d -D dcn%d=%d", i, src[src_idx].channels(), i, dst[dst_idx].channels());
+        declsrc += format("DECLARE_INPUT_MAT(%zu)", i);
+        decldst += format("DECLARE_OUTPUT_MAT(%zu)", i);
+        indexdecl += format("DECLARE_INDEX(%zu)", i);
+        declproc += format("PROCESS_ELEM(%zu)", i);
+        declcn += format(" -D scn%zu=%d -D dcn%zu=%d", i, src[src_idx].channels(), i, dst[dst_idx].channels());
     }
 
     ocl::Kernel k("mixChannels", ocl::core::mixchannels_oclsrc,

@@ -1,8 +1,15 @@
 Canny Edge Detector {#tutorial_canny_detector}
 ===================
 
+@tableofcontents
+
 @prev_tutorial{tutorial_laplace_operator}
 @next_tutorial{tutorial_hough_lines}
+
+|    |    |
+| -: | :- |
+| Original author | Ana Huamán |
+| Compatibility | OpenCV >= 3.0 |
 
 Goal
 ----
@@ -71,19 +78,19 @@ Code
 
 @add_toggle_cpp
 -   The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp)
     @include samples/cpp/tutorial_code/ImgTrans/CannyDetector_Demo.cpp
 @end_toggle
 
 @add_toggle_java
 -   The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/java/tutorial_code/ImgTrans/canny_detector/CannyDetectorDemo.java)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/java/tutorial_code/ImgTrans/canny_detector/CannyDetectorDemo.java)
     @include samples/java/tutorial_code/ImgTrans/canny_detector/CannyDetectorDemo.java
 @end_toggle
 
 @add_toggle_python
 -   The tutorial code's is shown lines below. You can also download it from
-    [here](https://github.com/opencv/opencv/tree/3.4/samples/python/tutorial_code/ImgTrans/canny_detector/CannyDetector_Demo.py)
+    [here](https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/ImgTrans/canny_detector/CannyDetector_Demo.py)
     @include samples/python/tutorial_code/ImgTrans/canny_detector/CannyDetector_Demo.py
 @end_toggle
 

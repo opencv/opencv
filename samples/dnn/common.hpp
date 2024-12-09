@@ -71,7 +71,6 @@ std::string findFile(const std::string& filename)
     CV_Error(Error::StsObjectNotFound, "File " + filename + " not found! "
              "Please specify a path to /opencv_extra/testdata in OPENCV_DNN_TEST_DATA_PATH "
              "environment variable or pass a full path to model.");
-    return "";
 }
 
 std::string genPreprocArguments(const std::string& modelName, const std::string& zooFile)

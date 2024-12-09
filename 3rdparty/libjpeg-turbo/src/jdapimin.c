@@ -3,8 +3,10 @@
  *
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1994-1998, Thomas G. Lane.
+ * Lossless JPEG Modifications:
+ * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2016, D. R. Commander.
+ * Copyright (C) 2016, 2022, 2024, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -23,7 +25,6 @@
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jdmaster.h"
-#include "jconfigint.h"
 
 
 /*
@@ -53,7 +54,7 @@ jpeg_CreateDecompress(j_decompress_ptr cinfo, int version, size_t structsize)
   {
     struct jpeg_error_mgr *err = cinfo->err;
     void *client_data = cinfo->client_data; /* ignore Purify complaint here */
-    MEMZERO(cinfo, sizeof(struct jpeg_decompress_struct));
+    memset(cinfo, 0, sizeof(struct jpeg_decompress_struct));
     cinfo->err = err;
     cinfo->client_data = client_data;
   }
@@ -83,6 +84,8 @@ jpeg_CreateDecompress(j_decompress_ptr cinfo, int version, size_t structsize)
   /* And initialize the overall input controller. */
   jinit_input_controller(cinfo);
 
+  cinfo->data_precision = BITS_IN_JSAMPLE;
+
   /* OK, I'm ready */
   cinfo->global_state = DSTATE_START;
 
@@ -92,7 +95,7 @@ jpeg_CreateDecompress(j_decompress_ptr cinfo, int version, size_t structsize)
   cinfo->master = (struct jpeg_decomp_master *)
     (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_PERMANENT,
                                 sizeof(my_decomp_master));
-  MEMZERO(cinfo->master, sizeof(my_decomp_master));
+  memset(cinfo->master, 0, sizeof(my_decomp_master));
 }
 
 
@@ -157,13 +160,19 @@ default_decompress_parms(j_decompress_ptr cinfo)
       int cid1 = cinfo->comp_info[1].component_id;
       int cid2 = cinfo->comp_info[2].component_id;
 
-      if (cid0 == 1 && cid1 == 2 && cid2 == 3)
-        cinfo->jpeg_color_space = JCS_YCbCr; /* assume JFIF w/out marker */
-      else if (cid0 == 82 && cid1 == 71 && cid2 == 66)
+      if (cid0 == 1 && cid1 == 2 && cid2 == 3) {
+        if (cinfo->master->lossless)
+          cinfo->jpeg_color_space = JCS_RGB; /* assume RGB w/out marker */
+        else
+          cinfo->jpeg_color_space = JCS_YCbCr; /* assume JFIF w/out marker */
+      } else if (cid0 == 82 && cid1 == 71 && cid2 == 66)
         cinfo->jpeg_color_space = JCS_RGB; /* ASCII 'R', 'G', 'B' */
       else {
         TRACEMS3(cinfo, 1, JTRC_UNKNOWN_IDS, cid0, cid1, cid2);
-        cinfo->jpeg_color_space = JCS_YCbCr; /* assume it's YCbCr */
+        if (cinfo->master->lossless)
+          cinfo->jpeg_color_space = JCS_RGB; /* assume it's RGB */
+        else
+          cinfo->jpeg_color_space = JCS_YCbCr; /* assume it's YCbCr */
       }
     }
     /* Always guess RGB is proper output colorspace. */

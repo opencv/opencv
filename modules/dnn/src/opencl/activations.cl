@@ -48,6 +48,10 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
+#if !defined(M_SQRT1_2)
+#define M_SQRT1_2   0.707106781186547524400844362104849039  /* 1/sqrt(2)      */
+#endif
+
 __kernel void ReLUForward(const int count, __global const T* in, __global T* out
 #ifndef RELU_NO_SLOPE
 , KERNEL_ARG_DTYPE negative_slope
@@ -73,14 +77,23 @@ __kernel void ReLU6Forward(const int count, __global const T* in, __global T* ou
   }
 }
 
+__kernel void ChannelsPReLUForward(const int count, const int channels, const int plane_size,
+                                   __global const T* in, __global T* out,
+                                   __global const KERNEL_ARG_DTYPE* slope_data)
+{
+  int index = get_global_id(0);
+  int c = (index / plane_size) % channels;
+  if(index < count)
+    out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[c];
+}
+
 __kernel void PReLUForward(const int count, const int channels, const int plane_size,
                            __global const T* in, __global T* out,
                            __global const KERNEL_ARG_DTYPE* slope_data)
 {
   int index = get_global_id(0);
-  int c = (index / plane_size) % channels;
   if(index < count)
-  out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[c];
+    out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[index];
 }
 
 __kernel void TanHForward(const int count, __global T* in, __global T* out) {
@@ -151,4 +164,205 @@ __kernel void ExpForward(const int n, __global const T* in, __global T* out,
   {
     out[index] = exp(normShift + normScale * in[index]);
   }
+}
+
+__kernel void CeilForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = ceil(in[index]);
+}
+
+__kernel void FloorForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = floor(in[index]);
+}
+
+__kernel void LogForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = log(in[index]);
+}
+
+__kernel void RoundForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = rint(in[index]);
+}
+
+__kernel void SqrtForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = sqrt(in[index]);
+}
+
+__kernel void NotForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = floor(1.0f - in[index]);
+}
+
+__kernel void AcosForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = acos(in[index]);
+}
+
+__kernel void AcoshForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = acosh(in[index]);
+}
+
+__kernel void AsinForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = asin(in[index]);
+}
+
+__kernel void AsinhForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = asinh(in[index]);
+}
+
+__kernel void AtanForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = atan(in[index]);
+}
+
+__kernel void AtanhForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = atanh(in[index]);
+}
+
+__kernel void CosForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = cos(in[index]);
+}
+
+__kernel void CoshForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = cosh(in[index]);
+}
+
+__kernel void HardSwishForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = in[index] * max(0.f, min(1.f, in[index] / 6.f + 0.5f));
+}
+
+__kernel void SinForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = sin(in[index]);
+}
+
+__kernel void SinhForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = sinh(in[index]);
+}
+
+__kernel void SoftplusForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = log1p(exp(in[index]));
+}
+
+__kernel void SoftsignForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = in[index] / (1.f + fabs(in[index]));
+}
+
+__kernel void TanForward(const int n, __global T* in, __global T* out) {
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = tan(in[index]);
+}
+
+__kernel void CeluForward(const int n, __global T* in, __global T* out,
+                          const KERNEL_ARG_DTYPE alpha)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = max((T)0.f, in[index]) + (T)min(0.f, alpha * expm1(in[index] / alpha));
+}
+
+__kernel void HardSigmoidForward(const int n, __global T* in, __global T* out,
+                                 const KERNEL_ARG_DTYPE alpha,
+                                 const KERNEL_ARG_DTYPE beta)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = max((T)0.f, (T)min(1.f, alpha * in[index] + beta));
+}
+
+__kernel void SeluForward(const int n, __global T* in, __global T* out,
+                          const KERNEL_ARG_DTYPE alpha,
+                          const KERNEL_ARG_DTYPE gamma)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = gamma * (in[index] > 0.f ? in[index] : alpha * expm1(in[index]));
+}
+
+__kernel void ThresholdedReluForward(const int n, __global T* in, __global T* out,
+                                     const KERNEL_ARG_DTYPE alpha)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = (in[index] > alpha ? in[index] : 0.f);
+}
+
+__kernel void GeluForward(const int n, __global T* in, __global T* out)
+{
+    int index = get_global_id(0);
+    if (index < n)
+    {
+        T x = in[index];
+        out[index] = (T)0.5f * x * ( (T)1.f + erf(x * M_SQRT1_2) );
+    }
+}
+
+__kernel void GeluApproximationForward(const int n, __global T* in, __global T* out)
+{
+    // see GeluApproximationConstants from modules/dnn/src/layers/elementwise_layers.cpp
+    const T sqrt_2_pi = 0.7978845834732056f;
+    const T coef_sqrt_2_pi = 0.044714998453855515f * sqrt_2_pi;
+
+    int index = get_global_id(0);
+    if(index < n)
+    {
+        T x = in[index];
+        out[index] = (T)0.5f * x * ( (T)1.f + tanh(x * (sqrt_2_pi + coef_sqrt_2_pi * x * x)) );
+    }
+}
+
+__kernel void ShrinkForward(const int n, __global T* in, __global T* out,
+                            const KERNEL_ARG_DTYPE bias,
+                            const KERNEL_ARG_DTYPE lambd)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = in[index] < -lambd ? in[index] + bias : (in[index] > lambd ? in[index] - bias : 0.f);
+}
+
+__kernel void SignForward(const int n, __global T* in, __global T* out)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = in[index] > 0.f ? 1.0f : ((in[index] < 0.f) ? -1.0f : 0.0f);
+}
+
+__kernel void ReciprocalForward(const int n, __global T* in, __global T* out)
+{
+    int index = get_global_id(0);
+    if(index < n)
+        out[index] = 1.0f/in[index];
 }

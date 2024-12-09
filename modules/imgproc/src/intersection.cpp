@@ -47,18 +47,26 @@
 namespace cv
 {
 
+static inline bool _isOnPositiveSide(const Point2f& line_vec, const Point2f& line_pt, const Point2f& pt)
+{
+    //we are interested by the cross product between the line vector (line_vec) and the line-to-pt vector (pt-line_pt)
+    //the sign of the only non-null component of the result determining which side of the line 'pt' is on
+    //the "positive" side meaning depends on the context usage of the current function and how line_vec and line_pt were filled
+    return (line_vec.y*(line_pt.x-pt.x) >= line_vec.x*(line_pt.y-pt.y));
+}
+
 static int _rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, std::vector<Point2f> &intersection )
 {
     CV_INSTRUMENT_REGION();
-
-    // L2 metric
-    const float samePointEps = std::max(1e-16f, 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area()));
 
     Point2f vec1[4], vec2[4];
     Point2f pts1[4], pts2[4];
 
     rect1.points(pts1);
     rect2.points(pts2);
+
+    // L2 metric
+    float samePointEps = 1e-6f * (float)std::max(rect1.size.area(), rect2.size.area());
 
     int ret = INTERSECT_FULL;
 
@@ -99,14 +107,22 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         vec2[i].y = pts2[(i+1)%4].y - pts2[i].y;
     }
 
+    //we adapt the epsilon to the smallest dimension of the rects
+    for( int i = 0; i < 4; i++ )
+    {
+        samePointEps = std::min(samePointEps, std::sqrt(vec1[i].x*vec1[i].x+vec1[i].y*vec1[i].y));
+        samePointEps = std::min(samePointEps, std::sqrt(vec2[i].x*vec2[i].x+vec2[i].y*vec2[i].y));
+    }
+    samePointEps = std::max(1e-16f, samePointEps);
+
     // Line test - test all line combos for intersection
     for( int i = 0; i < 4; i++ )
     {
         for( int j = 0; j < 4; j++ )
         {
             // Solve for 2x2 Ax=b
-            float x21 = pts2[j].x - pts1[i].x;
-            float y21 = pts2[j].y - pts1[i].y;
+            const float x21 = pts2[j].x - pts1[i].x;
+            const float y21 = pts2[j].y - pts1[i].y;
 
             float vx1 = vec1[i].x;
             float vy1 = vec1[i].y;
@@ -114,10 +130,13 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
             float vx2 = vec2[j].x;
             float vy2 = vec2[j].y;
 
-            float det = vx2*vy1 - vx1*vy2;
+            const float det = vx2*vy1 - vx1*vy2;
+            if (std::abs(det) < 1e-12)//we consider accuracy around 1e-6, i.e. 1e-12 when squared
+              continue;
+            const float detInvScaled = 1.f/det;
 
-            float t1 = (vx2*y21 - vy2*x21) / det;
-            float t2 = (vx1*y21 - vy1*x21) / det;
+            const float t1 = (vx2*y21 - vy2*x21)*detInvScaled;
+            const float t2 = (vx1*y21 - vy1*x21)*detInvScaled;
 
             // This takes care of parallel lines
             if( cvIsInf(t1) || cvIsInf(t2) || cvIsNaN(t1) || cvIsNaN(t2) )
@@ -127,8 +146,8 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
 
             if( t1 >= 0.0f && t1 <= 1.0f && t2 >= 0.0f && t2 <= 1.0f )
             {
-                float xi = pts1[i].x + vec1[i].x*t1;
-                float yi = pts1[i].y + vec1[i].y*t1;
+                const float xi = pts1[i].x + vec1[i].x*t1;
+                const float yi = pts1[i].y + vec1[i].y*t1;
 
                 intersection.push_back(Point2f(xi,yi));
             }
@@ -149,20 +168,19 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         int posSign = 0;
         int negSign = 0;
 
-        float x = pts1[i].x;
-        float y = pts1[i].y;
+        const Point2f& pt = pts1[i];
 
         for( int j = 0; j < 4; j++ )
         {
-            // line equation: Ax + By + C = 0
-            // see which side of the line this point is at
-            float A = -vec2[j].y;
-            float B = vec2[j].x;
-            float C = -(A*pts2[j].x + B*pts2[j].y);
+            // line equation: Ax + By + C = 0 where
+            // A = -vec2[j].y ; B = vec2[j].x ; C = -(A * pts2[j].x + B * pts2[j].y)
+            // check which side of the line this point is at
+            // A*x + B*y + C <> 0
+            // + computation reordered for better numerical stability
 
-            float s = A*x+ B*y+ C;
+            const bool isPositive = _isOnPositiveSide(vec2[j], pts2[j], pt);
 
-            if( s >= 0 )
+            if( isPositive )
             {
                 posSign++;
             }
@@ -187,20 +205,19 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         int posSign = 0;
         int negSign = 0;
 
-        float x = pts2[i].x;
-        float y = pts2[i].y;
+        const Point2f& pt = pts2[i];
 
         for( int j = 0; j < 4; j++ )
         {
-            // line equation: Ax + By + C = 0
-            // see which side of the line this point is at
-            float A = -vec1[j].y;
-            float B = vec1[j].x;
-            float C = -(A*pts1[j].x + B*pts1[j].y);
+            // line equation: Ax + By + C = 0 where
+            // A = -vec1[j].y ; B = vec1[j].x ; C = -(A * pts1[j].x + B * pts1[j].y)
+            // check which side of the line this point is at
+            // A*x + B*y + C <> 0
+            // + computation reordered for better numerical stability
 
-            float s = A*x + B*y + C;
+            const bool isPositive = _isOnPositiveSide(vec1[j], pts1[j], pt);
 
-            if( s >= 0 )
+            if( isPositive )
             {
                 posSign++;
             }
@@ -223,7 +240,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
     }
 
     // Get rid of duplicated points
-    int Nstride = N;
+    const int Nstride = N;
     cv::AutoBuffer<float, 100> distPt(N * N);
     cv::AutoBuffer<int> ptDistRemap(N);
     for (int i = 0; i < N; ++i)
@@ -233,7 +250,7 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         for (int j = i + 1; j < N; )
         {
             const Point2f pt1 = intersection[j];
-            float d2 = normL2Sqr<float>(pt1 - pt0);
+            const float d2 = normL2Sqr<float>(pt1 - pt0);
             if(d2 <= samePointEps)
             {
                 if (j < N - 1)
@@ -252,10 +269,10 @@ static int _rotatedRectangleIntersection( const RotatedRect& rect1, const Rotate
         float minD = distPt[1];
         for (int i = 0; i < N - 1; ++i)
         {
-            float* pDist = distPt.data() + Nstride * ptDistRemap[i];
+            const float* pDist = distPt.data() + Nstride * ptDistRemap[i];
             for (int j = i + 1; j < N; ++j)
             {
-                float d = pDist[ptDistRemap[j]];
+                const float d = pDist[ptDistRemap[j]];
                 if (d < minD)
                 {
                     minD = d;

@@ -2,71 +2,24 @@ Deep Neural Networks (dnn module) {#tutorial_table_of_content_dnn}
 =====================================
 
 -   @subpage tutorial_dnn_googlenet
-
-    *Languages:* C++
-
-    *Compatibility:* \> OpenCV 3.3
-
-    *Author:* Vitaliy Lyudvichenko
-
-    In this tutorial you will learn how to use opencv_dnn module for image classification by using GoogLeNet trained network from Caffe model zoo.
-
 -   @subpage tutorial_dnn_halide
-
-    *Languages:* Halide
-
-    *Compatibility:* \> OpenCV 3.3
-
-    *Author:* Dmitry Kurtaev
-
-    This tutorial guidelines how to run your models in OpenCV deep learning module using Halide language backend.
-
 -   @subpage tutorial_dnn_halide_scheduling
-
-    *Languages:* Halide
-
-    *Compatibility:* \> OpenCV 3.3
-
-    *Author:* Dmitry Kurtaev
-
-    In this tutorial we describe the ways to schedule your networks using Halide backend in OpenCV deep learning module.
-
--   @subpage tutorial_dnn_android
-
-    *Languages:* Java
-
-    *Compatibility:* \> OpenCV 3.3
-
-    *Author:* Dmitry Kurtaev
-
-    This tutorial will show you how to run deep learning model using OpenCV on Android device.
-
+-   @subpage tutorial_dnn_openvino
 -   @subpage tutorial_dnn_yolo
-
-    *Languages:* C++, Python
-
-    *Compatibility:* \> OpenCV 3.3.1
-
-    *Author:* Alessandro de Oliveira Faria
-
-    In this tutorial you will learn how to use opencv_dnn module using yolo_object_detection with device capture, video file or image.
-
 -   @subpage tutorial_dnn_javascript
-
-    *Languages:* JavaScript
-
-    *Compatibility:* \> OpenCV 3.3.1
-
-    *Author:* Dmitry Kurtaev
-
-    In this tutorial we'll run deep learning models in browser using OpenCV.js.
-
 -   @subpage tutorial_dnn_custom_layers
+-   @subpage tutorial_dnn_OCR
+-   @subpage tutorial_dnn_text_spotting
+-   @subpage tutorial_dnn_face
 
-    *Languages:* C++, Python
+#### PyTorch models with OpenCV
+In this section you will find the guides, which describe how to run classification, segmentation and detection PyTorch DNN models with OpenCV.
+-   @subpage pytorch_cls_tutorial_dnn_conversion
+-   @subpage pytorch_cls_c_tutorial_dnn_conversion
+-   @subpage pytorch_segm_tutorial_dnn_conversion
 
-    *Compatibility:* \> OpenCV 3.4.1
-
-    *Author:* Dmitry Kurtaev
-
-    How to define custom layers to import networks.
+#### TensorFlow models with OpenCV
+In this section you will find the guides, which describe how to run classification, segmentation and detection TensorFlow DNN models with OpenCV.
+-   @subpage tf_cls_tutorial_dnn_conversion
+-   @subpage tf_det_tutorial_dnn_conversion
+-   @subpage tf_segm_tutorial_dnn_conversion

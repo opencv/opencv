@@ -34,7 +34,7 @@
 #include <errno.h>
 #include <io.h>
 #include <stdio.h>
-#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__ || defined __GNU__ || defined __EMSCRIPTEN__ || defined __QNX__
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -81,6 +81,22 @@ cv::String join(const cv::String& base, const cv::String& path)
         result = base + path;
     }
     return result;
+}
+
+CV_EXPORTS cv::String getParent(const cv::String &path)
+{
+    std::string::size_type loc = path.find_last_of("/\\");
+    if (loc == std::string::npos)
+        return std::string();
+    return std::string(path, 0, loc);
+}
+
+CV_EXPORTS std::wstring getParent(const std::wstring& path)
+{
+    std::wstring::size_type loc = path.find_last_of(L"/\\");
+    if (loc == std::wstring::npos)
+        return std::wstring();
+    return std::wstring(path, 0, loc);
 }
 
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
@@ -178,7 +194,7 @@ cv::String getcwd()
     sz = GetCurrentDirectoryA((DWORD)buf.size(), buf.data());
     return cv::String(buf.data(), (size_t)sz);
 #endif
-#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__ || defined __EMSCRIPTEN__ || defined __QNX__
     for(;;)
     {
         char* p = ::getcwd(buf.data(), buf.size());
@@ -212,7 +228,7 @@ bool createDirectory(const cv::String& path)
 #else
     int result = _mkdir(path.c_str());
 #endif
-#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__ || defined __EMSCRIPTEN__ || defined __QNX__
     int result = mkdir(path.c_str(), 0777);
 #else
     int result = -1;
@@ -327,7 +343,7 @@ private:
     Impl& operator=(const Impl&); // disabled
 };
 
-#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__
+#elif defined __linux__ || defined __APPLE__ || defined __HAIKU__ || defined __FreeBSD__ || defined __GNU__ || defined __EMSCRIPTEN__ || defined __QNX__
 
 struct FileLock::Impl
 {
@@ -431,8 +447,8 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
 #elif defined __ANDROID__
         // no defaults
 #elif defined __APPLE__
-        const char* tmpdir_env = getenv("TMPDIR");
-        if (tmpdir_env && utils::fs::isDirectory(tmpdir_env))
+        const std::string tmpdir_env = utils::getConfigurationParameterString("TMPDIR");
+        if (!tmpdir_env.empty() && utils::fs::isDirectory(tmpdir_env))
         {
             default_cache_path = tmpdir_env;
         }
@@ -441,20 +457,20 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             default_cache_path = "/tmp/";
             CV_LOG_WARNING(NULL, "Using world accessible cache directory. This may be not secure: " << default_cache_path);
         }
-#elif defined __linux__ || defined __HAIKU__ || defined __FreeBSD__
+#elif defined __linux__ || defined __HAIKU__ || defined __FreeBSD__ || defined __GNU__
         // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
         if (default_cache_path.empty())
         {
-            const char* xdg_cache_env = getenv("XDG_CACHE_HOME");
-            if (xdg_cache_env && xdg_cache_env[0] && utils::fs::isDirectory(xdg_cache_env))
+            const std::string xdg_cache_env = utils::getConfigurationParameterString("XDG_CACHE_HOME");
+            if (!xdg_cache_env.empty() && utils::fs::isDirectory(xdg_cache_env))
             {
                 default_cache_path = xdg_cache_env;
             }
         }
         if (default_cache_path.empty())
         {
-            const char* home_env = getenv("HOME");
-            if (home_env && home_env[0] && utils::fs::isDirectory(home_env))
+            const std::string home_env = utils::getConfigurationParameterString("HOME");
+            if (!home_env.empty() && utils::fs::isDirectory(home_env))
             {
                 cv::String home_path = home_env;
                 cv::String home_cache_path = utils::fs::join(home_path, ".cache/");
@@ -487,7 +503,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
             if (utils::fs::isDirectory(default_cache_path))
             {
                 cv::String default_cache_path_base = utils::fs::join(default_cache_path, "opencv");
-                default_cache_path = utils::fs::join(default_cache_path_base, "3.4.x" CV_VERSION_STATUS);
+                default_cache_path = utils::fs::join(default_cache_path_base, "4.x" CV_VERSION_STATUS);
                 if (utils::getConfigurationParameterBool("OPENCV_CACHE_SHOW_CLEANUP_MESSAGE", true)
                     && !utils::fs::isDirectory(default_cache_path))
                 {
@@ -571,3 +587,8 @@ cv::String getCacheDirectory(const char* /*sub_directory_name*/, const char* /*c
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT
 
 }}} // namespace
+
+
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
+#include "plugin_loader.impl.hpp"
+#endif
