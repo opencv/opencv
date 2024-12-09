@@ -2139,14 +2139,8 @@ public:
     Mat(Mat&& m) CV_NOEXCEPT;
     Mat& operator = (Mat&& m);
 
-    static constexpr auto MAGIC_VAL       = 0x42FF0000;
-    static constexpr auto AUTO_STEP       = 0;
-    static constexpr auto CONTINUOUS_FLAG = CV_MAT_CONT_FLAG;
-    static constexpr auto SUBMATRIX_FLAG  = CV_SUBMAT_FLAG;
-
-    static constexpr auto MAGIC_MASK = 0xFFFF0000;
-    static constexpr auto TYPE_MASK  = 0x00000FFF;
-    static constexpr auto DEPTH_MASK = 7;
+    enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
+    enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
 
     /*! includes several bit-fields:
          - the magic signature
@@ -2625,14 +2619,8 @@ public:
     void* handle(AccessFlag accessFlags) const;
     void ndoffset(size_t* ofs) const;
 
-    static constexpr auto MAGIC_VAL       = 0x42FF0000;
-    static constexpr auto AUTO_STEP       = 0;
-    static constexpr auto CONTINUOUS_FLAG = CV_MAT_CONT_FLAG;
-    static constexpr auto SUBMATRIX_FLAG  = CV_SUBMAT_FLAG;
-
-    static constexpr auto MAGIC_MASK = 0xFFFF0000;
-    static constexpr auto TYPE_MASK  = 0x00000FFF;
-    static constexpr auto DEPTH_MASK = 7;
+    enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
+    enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
 
     /*! includes several bit-fields:
          - the magic signature
@@ -2766,10 +2754,7 @@ public:
     typedef SparseMatIterator iterator;
     typedef SparseMatConstIterator const_iterator;
 
-    static constexpr auto MAGIC_VAL  = 0x42FD0000;
-    static constexpr auto MAX_DIM    = 32;
-    static constexpr auto HASH_SCALE = 0x5bd1e995;
-    static constexpr auto HASH_BIT   = 0x80000000;
+    enum { MAGIC_VAL=0x42FD0000, MAX_DIM=32, HASH_SCALE=0x5bd1e995, HASH_BIT=0x80000000 };
 
     //! the sparse matrix header
     struct CV_EXPORTS Hdr
