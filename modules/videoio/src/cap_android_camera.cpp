@@ -198,6 +198,7 @@ class AndroidCameraCapture : public IVideoCapture
     bool settingHeight = false;
     int desiredWidth = 640;
     int desiredHeight = 480;
+    uint8_t flashMode = ACAMERA_FLASH_MODE_OFF;
     bool autoExposure = true;
     int64_t exposureTime = 0L;
     RangeValue<int64_t> exposureRange;
@@ -415,6 +416,8 @@ public:
                 return sensitivity;
             case CAP_PROP_FOURCC:
                 return fourCC;
+            case CAP_PROP_ANDROID_DEVICE_TORCH:
+                return (flashMode == ACAMERA_FLASH_MODE_TORCH) ? 1 : 0;
             default:
                 break;
         }
@@ -501,6 +504,14 @@ public:
                     return status == ACAMERA_OK;
                 }
                 return false;
+            case CAP_PROP_ANDROID_DEVICE_TORCH:
+                flashMode = (value != 0) ? ACAMERA_FLASH_MODE_TORCH : ACAMERA_FLASH_MODE_OFF;
+                if (isOpened()) {
+                    ACaptureRequest *request = captureRequest.get();
+                    return ACaptureRequest_setEntry_u8(request, ACAMERA_FLASH_MODE, 1, &flashMode) == ACAMERA_OK &&
+                           ACameraCaptureSession_setRepeatingRequest(captureSession.get(), GetCaptureCallback(), 1, &request, nullptr) == ACAMERA_OK;
+                }
+                return true;
             default:
                 break;
         }
@@ -699,6 +710,7 @@ public:
         if (!autoExposure) {
             ACaptureRequest_setEntry_i64(captureRequest.get(), ACAMERA_SENSOR_EXPOSURE_TIME, 1, &exposureTime);
         }
+        ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_FLASH_MODE, 1, &flashMode);
 
         cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(), GetCaptureCallback(), 1, &request, nullptr);
         if (cStatus != ACAMERA_OK) {
