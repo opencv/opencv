@@ -170,9 +170,9 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Builds AAR with Java and shared C++ libs from OpenCV SDK")
     parser.add_argument('opencv_sdk_path')
-    parser.add_argument('--android_compile_sdk', default="31")
+    parser.add_argument('--android_compile_sdk', default="34")
     parser.add_argument('--android_min_sdk', default="21")
-    parser.add_argument('--android_target_sdk', default="31")
+    parser.add_argument('--android_target_sdk', default="34")
     parser.add_argument('--java_version', default="1_8")
     parser.add_argument('--ndk_location', default="")
     parser.add_argument('--cmake_location', default="")
