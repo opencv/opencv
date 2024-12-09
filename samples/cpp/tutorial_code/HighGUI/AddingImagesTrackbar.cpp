@@ -28,6 +28,7 @@ Mat dst;
  * @brief Callback for trackbar
  */
 static void on_trackbar(int pos, void* userdata) {
+    (void) userdata;
     alpha = (double)pos / alpha_slider_max;
     beta = (1.0 - alpha);
     addWeighted(src1, alpha, src2, beta, 0.0, dst);
