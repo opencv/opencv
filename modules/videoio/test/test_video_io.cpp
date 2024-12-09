@@ -1036,6 +1036,8 @@ TEST_P(buffer_capture, read)
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
     if (std::find(supportedAPIs.begin(), supportedAPIs.end(), apiPref) == supportedAPIs.end())
         throw SkipTestException(cv::String("Backend is not supported: ") + cv::videoio_registry::getBackendName(apiPref));
+    if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
+        throw SkipTestException("Unstable MSMF test");
 
     if (!videoio_registry::isBackendBuiltIn(apiPref))
     {
