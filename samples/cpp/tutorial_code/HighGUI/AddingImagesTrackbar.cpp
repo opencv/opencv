@@ -28,14 +28,6 @@ Mat dst;
  * @brief Callback for trackbar
  */
 static void on_trackbar(int pos, void* userdata) {
-    // Print trackbar position
-    std::cout << "Trackbar position: " << pos << std::endl;
-    // If userdata is provided, use it
-    if (userdata) {
-        int* user_data = static_cast<int*>(userdata);
-        std::cout << "User data: " << *user_data << std::endl;
-    }
-    // Calculate alpha and beta values
     alpha = (double)pos / alpha_slider_max;
     beta = (1.0 - alpha);
     addWeighted(src1, alpha, src2, beta, 0.0, dst);
@@ -69,8 +61,7 @@ int main(void)
     char TrackbarName[50];
     snprintf(TrackbarName, sizeof(TrackbarName), "Alpha x %d", alpha_slider_max);
     // Example userdata: Pass a pointer to an integer as userdata
-    int user_value = 42; // Arbitrary value for demonstration
-    createTrackbar(TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar, &user_value);
+    createTrackbar(TrackbarName, "Linear Blend", &alpha_slider, alpha_slider_max, on_trackbar);
     //![create_trackbar]
 
     /// Show initial result
