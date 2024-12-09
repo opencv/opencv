@@ -544,7 +544,7 @@ updated automatically.
 @param userdata Optional user data that is passed to the callback.
 @note If the `value` pointer is `nullptr`, the trackbar position must be manually managed.
 Call the callback function manually with the desired initial value to avoid runtime warnings.
-@see #tutorial_trackbar
+@see \ref tutorial_trackbar
  */
 CV_EXPORTS int createTrackbar(const String& trackbarname, const String& winname,
                               int* value, int count,
