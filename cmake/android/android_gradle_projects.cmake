@@ -35,11 +35,11 @@ include '${ANDROID_ABI}'
 ")
 
 set(ANDROID_INSTALL_ABI_FILTER "
-//reset()
-//include 'armeabi-v7a'
-//include 'arm64-v8a'
-//include 'x86'
-//include 'x86_64'
+  reset()
+  include 'armeabi-v7a'
+  include 'arm64-v8a'
+  include 'x86'
+  include 'x86_64'
 ")
 if(NOT INSTALL_CREATE_DISTRIB)
   set(ANDROID_INSTALL_ABI_FILTER "${ANDROID_BUILD_ABI_FILTER}")
@@ -54,7 +54,9 @@ set(ANDROID_STRICT_BUILD_CONFIGURATION "true")
 configure_file("${OpenCV_SOURCE_DIR}/samples/android/build.gradle.in" "${ANDROID_BUILD_BASE_DIR}/build.gradle" @ONLY)
 
 set(ANDROID_ABI_FILTER "${ANDROID_INSTALL_ABI_FILTER}")
-set(ANDROID_STRICT_BUILD_CONFIGURATION "false")
+# CI uses NDK 26d to overcome https://github.com/opencv/opencv/issues/26072
+# It's ahead of default configuration and we have to force version to get non-controversial parts of the package
+#set(ANDROID_STRICT_BUILD_CONFIGURATION "false")
 configure_file("${OpenCV_SOURCE_DIR}/samples/android/build.gradle.in" "${ANDROID_TMP_INSTALL_BASE_DIR}/${ANDROID_INSTALL_SAMPLES_DIR}/build.gradle" @ONLY)
 install(FILES "${ANDROID_TMP_INSTALL_BASE_DIR}/${ANDROID_INSTALL_SAMPLES_DIR}/build.gradle" DESTINATION "${ANDROID_INSTALL_SAMPLES_DIR}" COMPONENT samples)
 
