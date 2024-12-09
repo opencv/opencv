@@ -55,14 +55,14 @@ int main(void)
     src2 = imread(samples::findFile("WindowsLogo.jpg"));
     //![load]
 
-    if (src1.empty()) { cout << "Error loading src1 \n";return -1;}
-    if (src2.empty()) { cout << "Error loading src2 \n";return -1;}
+    if (src1.empty()) { cout << "Error loading src1 \n"; return -1; }
+    if (src2.empty()) { cout << "Error loading src2 \n"; return -1; }
 
     // Initialize trackbar value
     alpha_slider = 0;
 
     //![window]
-    namedWindow("Linear Blend", WINDOW_AUTOSIZE);//Create Window
+    namedWindow("Linear Blend", WINDOW_AUTOSIZE); //Create Window
     //![window]
 
     //![create_trackbar]
