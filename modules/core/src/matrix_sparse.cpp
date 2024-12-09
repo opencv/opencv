@@ -171,7 +171,7 @@ void SparseMat::Hdr::clear()
     hashtab.clear();
     hashtab.resize(HASH_SIZE0);
     pool.clear();
-    pool.resize(nodeSize);
+    pool.reserve(nodeSize);
     nodeCount = freeList = 0;
 }
 
