@@ -189,7 +189,7 @@ class AndroidCameraCapture : public IVideoCapture
     int32_t frameWidth = 0;
     int32_t frameStride = 0;
     int32_t frameHeight = 0;
-    int32_t colorFormat;
+    int32_t colorFormat = COLOR_FormatUnknown;
     std::vector<uint8_t> buffer;
     bool sessionOutputAdded = false;
     bool targetAdded = false;
@@ -214,7 +214,24 @@ public:
     std::condition_variable condition;
 
 public:
-    AndroidCameraCapture() {}
+    AndroidCameraCapture(const VideoCaptureParameters& params)
+    {
+        desiredWidth = params.get<int>(CAP_PROP_FRAME_WIDTH, desiredWidth);
+        desiredHeight = params.get<int>(CAP_PROP_FRAME_HEIGHT, desiredHeight);
+
+        static const struct {
+            int propId;
+            uint32_t defaultValue;
+        } items[] = {
+            { CAP_PROP_AUTO_EXPOSURE, 1 },
+            { CAP_PROP_FOURCC, FOURCC_UNKNOWN },
+            { CAP_PROP_ANDROID_DEVICE_TORCH, 0 }
+        };
+
+        for (auto it = std::begin(items); it != std::end(items); ++it) {
+            setProperty(it->propId, params.get<double>(it->propId, it->defaultValue));
+        }
+    }
 
     ~AndroidCameraCapture() { cleanUp(); }
 
@@ -801,8 +818,8 @@ void OnCaptureFailed(void* context,
 
 /****************** Implementation of interface functions ********************/
 
-Ptr<IVideoCapture> cv::createAndroidCapture_cam( int index ) {
-    Ptr<AndroidCameraCapture> res = makePtr<AndroidCameraCapture>();
+Ptr<IVideoCapture> cv::createAndroidCapture_cam(int index, const VideoCaptureParameters& params) {
+    Ptr<AndroidCameraCapture> res = makePtr<AndroidCameraCapture>(params);
     if (res && res->initCapture(index))
         return res;
     return Ptr<IVideoCapture>();
