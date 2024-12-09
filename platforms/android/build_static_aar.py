@@ -7,7 +7,7 @@ import os
 import shutil
 import subprocess
 
-from build_java_shared_aar import cleanup, fill_template, get_compiled_aar_path, get_opencv_version
+from build_java_shared_aar import cleanup, fill_template, get_compiled_aar_path, get_opencv_version, get_ndk_version
 
 
 ANDROID_PROJECT_TEMPLATE_DIR = path.join(path.dirname(__file__), "aar-template")
@@ -103,6 +103,8 @@ def convert_deps_list_to_prefab(linked_libs, opencv_libs, external_libs):
 
 def main(args):
     opencv_version = get_opencv_version(args.opencv_sdk_path)
+    ndk_version = get_ndk_version(args.ndk_location)
+    print("Detected ndk_version:", ndk_version)
     abis = os.listdir(path.join(args.opencv_sdk_path, "sdk/native/libs"))
     final_aar_path = FINAL_AAR_PATH_TEMPLATE.replace("<OPENCV_VERSION>", opencv_version)
     sdk_dir = args.opencv_sdk_path
@@ -121,6 +123,7 @@ def main(args):
                    "LIB_TYPE": "c++_static",
                    "PACKAGE_NAME": MAVEN_PACKAGE_NAME,
                    "OPENCV_VERSION": opencv_version,
+                   "NDK_VERSION": ndk_version,
                    "COMPILE_SDK": args.android_compile_sdk,
                    "MIN_SDK": args.android_min_sdk,
                    "TARGET_SDK": args.android_target_sdk,
