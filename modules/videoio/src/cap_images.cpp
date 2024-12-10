@@ -259,49 +259,48 @@ namespace cv
             if (pos == std::string::npos)
                 pos = filename.rfind('\\');
 #endif
+            if (pos != std::string::npos)
+                pos++;
+            if (filename.empty())
+                return "";
+            else
+                pos = 0;
 
-        if (pos != std::string::npos)
-            pos++;
-        if (filename.empty())
-            return "";
-        else
-            pos = 0;
+            while (pos < len && !isdigit(filename[pos])) pos++;
 
-        while (pos < len && !isdigit(filename[pos])) pos++;
+            if (pos == len)
+                return filename;
 
-        if (pos == len)
-            return filename;
+            std::string::size_type pos0 = pos;
 
-        std::string::size_type pos0 = pos;
+            const int64_t max_number = 1000000000;
+            CV_Assert(max_number < INT_MAX); // offset is 'int'
 
-        const int64_t max_number = 1000000000;
-        CV_Assert(max_number < INT_MAX); // offset is 'int'
+            int number_str_size = 0;
+            uint64_t number = 0;
+            while (pos < len && isdigit(filename[pos]))
+            {
+                char ch = filename[pos];
+                number = (number * 10) + (uint64_t)((int)ch - (int)'0');
+                CV_Assert(number < max_number);
+                number_str_size++;
+                CV_Assert(number_str_size <= 64);  // don't allow huge zero prefixes
+                pos++;
+            }
+            CV_Assert(number_str_size > 0);
 
-        int number_str_size = 0;
-        uint64_t number = 0;
-        while (pos < len && isdigit(filename[pos]))
-        {
-            char ch = filename[pos];
-            number = (number * 10) + (uint64_t)((int)ch - (int)'0');
-            CV_Assert(number < max_number);
-            number_str_size++;
-            CV_Assert(number_str_size <= 64);  // don't allow huge zero prefixes
-            pos++;
+            *offset = (int)number;
+
+            std::string result;
+            if (pos0 > 0)
+                result += filename.substr(0, pos0);
+            result += cv::format("%%0%dd", number_str_size);
+            if (pos < len)
+                result += filename.substr(pos);
+            CV_LOG_INFO(NULL, "Pattern: " << result << " @ " << number);
+            return result;
         }
-        CV_Assert(number_str_size > 0);
-
-        *offset = (int)number;
-
-        std::string result;
-        if (pos0 > 0)
-            result += filename.substr(0, pos0);
-        result += cv::format("%%0%dd", number_str_size);
-        if (pos < len)
-            result += filename.substr(pos);
-        CV_LOG_INFO(NULL, "Pattern: " << result << " @ " << number);
-        return result;
     }
-}
 
     bool CvCapture_Images::open(const std::string &_filename)
     {
