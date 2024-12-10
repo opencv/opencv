@@ -16,8 +16,8 @@ endif()
 
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
-  if (DOXYGEN_VERSION VERSION_LESS 1.9.8)
-    message(WARNING "Found doxygen ${DOXYGEN_VERSION}, version 1.9.8 is used for testing, there is "
+  if (DOXYGEN_VERSION VERSION_LESS 1.12)
+    message(WARNING "Found doxygen ${DOXYGEN_VERSION}, version 1.12 is used for testing, there is "
                     "a chance your documentation will look different or have some limitations.")
   endif()
   add_custom_target(doxygen)
