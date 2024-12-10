@@ -18,7 +18,7 @@ namespace utils {
 
 String dumpInputArray(InputArray argument)
 {
-    if (argument.empty())
+    if (&argument == &noArray())
         return "InputArray: noArray()";
     std::ostringstream ss;
     ss << "InputArray:";
@@ -69,7 +69,7 @@ String dumpInputArray(InputArray argument)
 
 CV_EXPORTS_W String dumpInputArrayOfArrays(InputArrayOfArrays argument)
 {
-    if (argument.empty())
+    if (&argument == &noArray())
         return "InputArrayOfArrays: noArray()";
     std::ostringstream ss;
     ss << "InputArrayOfArrays:";
@@ -126,7 +126,7 @@ CV_EXPORTS_W String dumpInputArrayOfArrays(InputArrayOfArrays argument)
 
 CV_EXPORTS_W String dumpInputOutputArray(InputOutputArray argument)
 {
-    if (argument.empty())
+    if (&argument == &noArray())
         return "InputOutputArray: noArray()";
     std::ostringstream ss;
     ss << "InputOutputArray:";
@@ -177,7 +177,7 @@ CV_EXPORTS_W String dumpInputOutputArray(InputOutputArray argument)
 
 CV_EXPORTS_W String dumpInputOutputArrayOfArrays(InputOutputArrayOfArrays argument)
 {
-    if (argument.empty())
+    if (&argument == &noArray())
         return "InputOutputArrayOfArrays: noArray()";
     std::ostringstream ss;
     ss << "InputOutputArrayOfArrays:";
