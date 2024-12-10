@@ -259,10 +259,12 @@ namespace cv
             if (pos == std::string::npos)
                 pos = filename.rfind('\\');
 #endif
-            if (pos != std::string::npos)
-                pos++;
             if (filename.empty())
                 return "";
+            
+            if (pos != std::string::npos)
+                pos++;
+            
             else
                 pos = 0;
 
