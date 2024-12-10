@@ -255,10 +255,10 @@ namespace cv
         else // no pattern filename was given - extract the pattern
         {
             pos = filename.rfind('/');
-#ifdef _WIN32
+        #ifdef _WIN32
             if (pos == std::string::npos)
                 pos = filename.rfind('\\');
-#endif
+        #endif
             if (filename.empty())
                 return "";
             
