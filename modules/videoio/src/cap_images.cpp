@@ -252,7 +252,6 @@ std::string icvExtractPattern(const std::string& filename, unsigned *offset)
 #endif 
         if (filename.empty())
             return "";
-
         if (pos != std::string::npos)
             pos++;
         else
