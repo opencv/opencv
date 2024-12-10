@@ -967,16 +967,14 @@ static const bool enableRGB2LabInterpolation = true;
 static const bool enablePackedLab = true;
 #endif
 
-enum
-{
-    lab_lut_shift = 5,
-    LAB_LUT_DIM = (1 << lab_lut_shift)+1,
-    lab_base_shift = 14,
-    LAB_BASE = (1 << lab_base_shift),
-    LUT_BASE = (1 << 14),
-    trilinear_shift = 8 - lab_lut_shift + 1,
-    TRILINEAR_BASE = (1 << trilinear_shift)
-};
+constexpr auto lab_lut_shift = 5;
+constexpr auto LAB_LUT_DIM = (1 << lab_lut_shift)+1;
+constexpr auto lab_base_shift = 14;
+constexpr auto LAB_BASE = (1 << lab_base_shift);
+constexpr auto LUT_BASE = (1 << 14);
+constexpr auto trilinear_shift = 8 - lab_lut_shift + 1;
+constexpr auto TRILINEAR_BASE = (1 << trilinear_shift);
+
 static int16_t trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
 static ushort LabToYF_b[256*2];
 static const int minABvalue = -8145;
@@ -1982,7 +1980,7 @@ struct RGB2Lab_f
                     clipv(bvec0); clipv(bvec1);
                     #undef clipv
                     /* int iR = R*LAB_BASE, iG = G*LAB_BASE, iB = B*LAB_BASE, iL, ia, ib; */
-                    v_float32 basef = vx_setall_f32(LAB_BASE);
+                    v_float32 basef = vx_setall_f32(static_cast<float>(LAB_BASE));
                     rvec0 = v_mul(rvec0, basef), gvec0 = v_mul(gvec0, basef), bvec0 = v_mul(bvec0, basef);
                     rvec1 = v_mul(rvec1, basef), gvec1 = v_mul(gvec1, basef), bvec1 = v_mul(bvec1, basef);
 
