@@ -252,22 +252,16 @@ std::string icvExtractPattern(const std::string& filename, unsigned *offset)
 #endif 
         if (filename.empty())
             return "";
-            
         if (pos != std::string::npos)
             pos++;
         else
             pos = 0;
-
         while (pos < len && !isdigit(filename[pos])) pos++;
-
         if (pos == len)
             return filename;
-
         std::string::size_type pos0 = pos;
-
         const int64_t max_number = 1000000000;
         CV_Assert(max_number < INT_MAX); // offset is 'int'
-
         int number_str_size = 0;
         uint64_t number = 0;
         while (pos < len && isdigit(filename[pos]))
