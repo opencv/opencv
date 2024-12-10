@@ -678,8 +678,8 @@ void TFImporter::addLayer(const std::string& name, const std::string& type, Laye
         {
             Pin inp = parsePin(inputs[i]);
             if (layer_id.find(inp.name) == layer_id.end()) {
-                for (const auto& [key, value] : layer_id)
-                    std::cout << '[' << key << "] = " << value << "; ";
+                for (const auto& l : layer_id)
+                    std::cout << '[' << l.first << "] = " << l.second << "; ";
                 CV_Error(Error::StsError, "Input layer not found: " + inp.name);
             }
             connect(layer_id, dstNet, inp, id, i);
