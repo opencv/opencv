@@ -261,10 +261,8 @@ namespace cv
         #endif
             if (filename.empty())
                 return "";
-            
             if (pos != std::string::npos)
                 pos++;
-            
             else
                 pos = 0;
 
