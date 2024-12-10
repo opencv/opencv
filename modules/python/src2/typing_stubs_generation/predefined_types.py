@@ -232,6 +232,7 @@ _PREDEFINED_TYPES = (
                         SequenceTypeNode("map_string_and_vector_float::value", PrimitiveTypeNode.float_())),
     AliasTypeNode.dict_("map_int_and_double", PrimitiveTypeNode.int_("map_int_and_double::key"),
                         PrimitiveTypeNode.float_("map_int_and_double::value")),
+    AliasTypeNode.ref_("streambuf", "io.BufferedIOBase"),
 )
 
 PREDEFINED_TYPES = dict(
