@@ -249,7 +249,10 @@ std::string icvExtractPattern(const std::string& filename, unsigned *offset)
 #ifdef _WIN32
         if (pos == std::string::npos)
             pos = filename.rfind('\\');
-#endif
+#endif 
+        if (filename.empty())
+            return "";
+
         if (pos != std::string::npos)
             pos++;
         else
