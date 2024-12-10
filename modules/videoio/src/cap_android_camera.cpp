@@ -56,53 +56,8 @@ template <typename T> struct RangeValue {
     }
 };
 
-static inline void deleter_ACameraManager(ACameraManager *cameraManager) {
-    ACameraManager_delete(cameraManager);
-}
-
-static inline void deleter_ACameraIdList(ACameraIdList *cameraIdList) {
-    ACameraManager_deleteCameraIdList(cameraIdList);
-}
-
-static inline void deleter_ACameraDevice(ACameraDevice *cameraDevice) {
-    ACameraDevice_close(cameraDevice);
-}
-
-static inline void deleter_ACameraMetadata(ACameraMetadata *cameraMetadata) {
-    ACameraMetadata_free(cameraMetadata);
-}
-
-static inline void deleter_AImageReader(AImageReader *imageReader) {
-    AImageReader_delete(imageReader);
-}
-
-static inline void deleter_ACaptureSessionOutputContainer(ACaptureSessionOutputContainer *outputContainer) {
-    ACaptureSessionOutputContainer_free(outputContainer);
-}
-
-static inline void deleter_ACameraCaptureSession(ACameraCaptureSession *captureSession) {
-    ACameraCaptureSession_close(captureSession);
-}
-
-static inline void deleter_AImage(AImage *image) {
-    AImage_delete(image);
-}
-
-static inline void deleter_ANativeWindow(ANativeWindow *nativeWindow) {
-    ANativeWindow_release(nativeWindow);
-}
-
-static inline void deleter_ACaptureSessionOutput(ACaptureSessionOutput *sessionOutput) {
-    ACaptureSessionOutput_free(sessionOutput);
-}
-
-static inline void deleter_ACameraOutputTarget(ACameraOutputTarget *outputTarget) {
-    ACameraOutputTarget_free(outputTarget);
-}
-
-static inline void deleter_ACaptureRequest(ACaptureRequest *captureRequest) {
-    ACaptureRequest_free(captureRequest);
-}
+template <typename T>
+using AObjPtr = std::unique_ptr<T, std::function<void(T *)>>;
 
 /*
  * CameraDevice callbacks
@@ -178,15 +133,15 @@ static double elapsedTimeFrom(std::chrono::time_point<std::chrono::system_clock>
 class AndroidCameraCapture : public IVideoCapture
 {
     int cachedIndex;
-    std::shared_ptr<ACameraManager> cameraManager;
-    std::shared_ptr<ACameraDevice> cameraDevice;
-    std::shared_ptr<AImageReader> imageReader;
-    std::shared_ptr<ACaptureSessionOutputContainer> outputContainer;
-    std::shared_ptr<ACaptureSessionOutput> sessionOutput;
-    std::shared_ptr<ANativeWindow> nativeWindow;
-    std::shared_ptr<ACameraOutputTarget> outputTarget;
-    std::shared_ptr<ACaptureRequest> captureRequest;
-    std::shared_ptr<ACameraCaptureSession> captureSession;
+    AObjPtr<ACameraManager> cameraManager { nullptr, ACameraManager_delete };
+    AObjPtr<ACameraDevice> cameraDevice { nullptr, ACameraDevice_close };
+    AObjPtr<AImageReader> imageReader { nullptr, AImageReader_delete };
+    AObjPtr<ACaptureSessionOutputContainer> outputContainer { nullptr, ACaptureSessionOutputContainer_free };
+    AObjPtr<ACaptureSessionOutput> sessionOutput { nullptr, ACaptureSessionOutput_free };
+    AObjPtr<ANativeWindow> nativeWindow { nullptr, ANativeWindow_release };
+    AObjPtr<ACameraOutputTarget> outputTarget { nullptr, ACameraOutputTarget_free };
+    AObjPtr<ACaptureRequest> captureRequest { nullptr, ACaptureRequest_free };
+    AObjPtr<ACameraCaptureSession> captureSession { nullptr, ACameraCaptureSession_close };
     CaptureSessionState sessionState = CaptureSessionState::INITIALIZING;
     int32_t frameWidth = 0;
     int32_t frameStride = 0;
@@ -277,7 +232,7 @@ public:
         this->sessionState = newSessionState;
     }
 
-    bool isOpened() const CV_OVERRIDE { return imageReader.get() != nullptr && captureSession.get() != nullptr; }
+    bool isOpened() const CV_OVERRIDE { return imageReader && captureSession; }
 
     int getCaptureDomain() CV_OVERRIDE { return CAP_ANDROID; }
 
@@ -320,7 +275,7 @@ public:
                 }
             }
         }
-        std::shared_ptr<AImage> image = std::shared_ptr<AImage>(img, deleter_AImage);
+        AObjPtr<AImage> image(img, AImage_delete);
         int32_t srcFormat = -1;
         AImage_getFormat(image.get(), &srcFormat);
         if (srcFormat != AIMAGE_FORMAT_YUV_420_888) {
@@ -570,7 +525,7 @@ public:
     bool initCapture(int index)
     {
         cachedIndex = index;
-        cameraManager = std::shared_ptr<ACameraManager>(ACameraManager_create(), deleter_ACameraManager);
+        cameraManager.reset(ACameraManager_create());
         if (!cameraManager) {
             LOGE("Cannot create camera manager!");
             return false;
@@ -581,7 +536,7 @@ public:
             LOGE("Get camera list failed with error code: %d", cStatus);
             return false;
         }
-        std::shared_ptr<ACameraIdList> cameraIdList = std::shared_ptr<ACameraIdList>(cameraIds, deleter_ACameraIdList);
+        AObjPtr<ACameraIdList> cameraIdList(cameraIds, ACameraManager_deleteCameraIdList);
         if (index < 0 || index >= cameraIds->numCameras) {
             LOGE("Camera index out of range %d (Number of cameras: %d)", index, cameraIds->numCameras);
             return false;
@@ -592,14 +547,15 @@ public:
             LOGE("Open camera failed with error code: %d", cStatus);
             return false;
         }
-        cameraDevice = std::shared_ptr<ACameraDevice>(camera, deleter_ACameraDevice);
+        cameraDevice.reset(camera);
         ACameraMetadata* metadata;
         cStatus = ACameraManager_getCameraCharacteristics(cameraManager.get(), cameraIdList.get()->cameraIds[index], &metadata);
         if (cStatus != ACAMERA_OK) {
             LOGE("Get camera characteristics failed with error code: %d", cStatus);
             return false;
         }
-        std::shared_ptr<ACameraMetadata> cameraMetadata = std::shared_ptr<ACameraMetadata>(metadata, deleter_ACameraMetadata);
+        AObjPtr<ACameraMetadata> cameraMetadata(metadata, ACameraMetadata_free);
+
         ACameraMetadata_const_entry entry = {};
         ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
 
@@ -663,7 +619,7 @@ public:
         }
         frameWidth = bestMatchWidth;
         frameHeight = bestMatchHeight;
-        imageReader = std::shared_ptr<AImageReader>(reader, deleter_AImageReader);
+        imageReader.reset(reader);
 
         ANativeWindow *window;
         mStatus = AImageReader_getWindow(imageReader.get(), &window);
@@ -671,7 +627,7 @@ public:
             LOGE("Could not get ANativeWindow: %d", mStatus);
             return false;
         }
-        nativeWindow = std::shared_ptr<ANativeWindow>(window, deleter_ANativeWindow);
+        nativeWindow.reset(window);
 
         ACaptureSessionOutputContainer* container;
         cStatus = ACaptureSessionOutputContainer_create(&container);
@@ -679,7 +635,7 @@ public:
             LOGE("CaptureSessionOutputContainer creation failed with error code: %d", cStatus);
             return false;
         }
-        outputContainer = std::shared_ptr<ACaptureSessionOutputContainer>(container, deleter_ACaptureSessionOutputContainer);
+        outputContainer.reset(container);
 
         ANativeWindow_acquire(nativeWindow.get());
         ACaptureSessionOutput* output;
@@ -688,7 +644,7 @@ public:
             LOGE("CaptureSessionOutput creation failed with error code: %d", cStatus);
             return false;
         }
-        sessionOutput = std::shared_ptr<ACaptureSessionOutput>(output, deleter_ACaptureSessionOutput);
+        sessionOutput.reset(output);
         cStatus = ACaptureSessionOutputContainer_add(outputContainer.get(), sessionOutput.get());
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureSessionOutput Container add failed with error code: %d", cStatus);
@@ -702,7 +658,7 @@ public:
             LOGE("CameraOutputTarget creation failed with error code: %d", cStatus);
             return false;
         }
-        outputTarget = std::shared_ptr<ACameraOutputTarget>(target, deleter_ACameraOutputTarget);
+        outputTarget.reset(target);
 
         ACaptureRequest * request;
         cStatus = ACameraDevice_createCaptureRequest(cameraDevice.get(), TEMPLATE_PREVIEW, &request);
@@ -710,7 +666,7 @@ public:
             LOGE("CaptureRequest creation failed with error code: %d", cStatus);
             return false;
         }
-        captureRequest = std::shared_ptr<ACaptureRequest>(request, deleter_ACaptureRequest);
+        captureRequest.reset(request);
 
         cStatus = ACaptureRequest_addTarget(captureRequest.get(), outputTarget.get());
         if (cStatus != ACAMERA_OK) {
@@ -725,7 +681,7 @@ public:
             LOGE("CaptureSession creation failed with error code: %d", cStatus);
             return false;
         }
-        captureSession = std::shared_ptr<ACameraCaptureSession>(session, deleter_ACameraCaptureSession);
+        captureSession.reset(session);
 
         ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_CONTROL_AE_MODE, 1, &aeMode);
         ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
@@ -748,23 +704,23 @@ public:
         if (sessionState == CaptureSessionState::ACTIVE) {
             ACameraCaptureSession_stopRepeating(captureSession.get());
         }
-        captureSession = nullptr;
+        captureSession.reset();
         if (targetAdded) {
             ACaptureRequest_removeTarget(captureRequest.get(), outputTarget.get());
             targetAdded = false;
         }
-        captureRequest = nullptr;
-        outputTarget = nullptr;
+        captureRequest.reset();
+        outputTarget.reset();
         if (sessionOutputAdded) {
             ACaptureSessionOutputContainer_remove(outputContainer.get(), sessionOutput.get());
             sessionOutputAdded = false;
         }
-        sessionOutput = nullptr;
-        nativeWindow = nullptr;
-        outputContainer = nullptr;
-        cameraDevice = nullptr;
-        cameraManager = nullptr;
-        imageReader = nullptr;
+        sessionOutput.reset();
+        nativeWindow.reset();
+        outputContainer.reset();
+        cameraDevice.reset();
+        cameraManager.reset();
+        imageReader.reset();
     }
 
     template<typename FuncT, typename T>
