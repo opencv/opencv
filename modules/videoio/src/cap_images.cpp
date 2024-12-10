@@ -258,7 +258,7 @@ std::string icvExtractPattern(const std::string& filename, unsigned *offset)
         while (pos < len && !isdigit(filename[pos])) pos++;
 
         if (pos == len)
-            return "";
+            return filename;
 
         std::string::size_type pos0 = pos;
 
