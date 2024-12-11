@@ -11,6 +11,8 @@ ocv_define_module(video
       js
 )
 
+ocv_target_link_libraries(${the_module} PRIVATE lapjv)
+
 if(HAVE_OPENMP AND DEFINED OpenMP_CXX_LIBRARIES AND OpenMP_CXX_LIBRARIES)
   ocv_target_link_libraries(${the_module} LINK_PRIVATE "${OpenMP_CXX_LIBRARIES}")
 endif()

@@ -47,6 +47,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
 
+
 namespace cv
 {
 
@@ -894,9 +895,113 @@ public:
     /** @brief Return tracking score
     */
     CV_WRAP virtual float getTrackingScore() = 0;
+};
 
-    //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
-    //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
+/** @brief class for single track in a multiple object tracker
+ */
+
+class CV_EXPORTS Track
+{
+protected:
+    Track();
+public:
+    virtual ~Track();
+    /**
+    * \brief Constructor
+    * \param rect Top-Left-Width-Height of the track's bbox
+    * \param classScore Confidence score of the track
+    * \param classLabel Classification of the track (dog, car, person, etc.)
+    * \param trackingId Track's ID number
+    */
+    Track(const Rect2f& rect, int trackingId, int classLabel, float classScore);
+    Rect2f rect;
+    float classScore;
+    int classLabel; // static_cast<> ()
+    int trackingId; // abs(tracking_id) <= (1 << 24) or tracking_id % (1 << 24)
+};
+
+/** @brief class for single detection in a multiple object tracker
+ */
+class CV_EXPORTS Detection
+{
+protected:
+    Detection();
+public:
+    virtual ~Detection();
+    /**
+    * \brief Constructor
+    * \param rect Top-Left-Width-Height of the detection's bbox
+    * \param classLabel Classification of the detection (dog, car, person, etc.)
+    * \param classScore Confidence score of the detection
+    */
+    Detection(Rect2f rect, int classLabel, float classScore);
+    Rect2f rect;
+    int classLabel;
+    float classScore;
+};
+
+/** @brief Base abstract class for multiple object tracker (MOT)
+ */
+class CV_EXPORTS_W MultipleTracker
+{
+protected:
+    MultipleTracker();
+public:
+    virtual ~MultipleTracker();
+
+    /** @brief Update the tracker, find the new most likely bounding boxes for each target
+    @param inputDetections current frame detections. Input array layout is [x y w h classId score] where x y w h corresponds to the bounding box's tlwh
+    @param outputTracks The bounding boxes that represent the new target locations. Output array layout is [x y w h classLabel classScore trackingId]
+
+    @return True means that some target was located and false means that tracker cannot locate any target in current frame. Note, that latter *does not* imply that tracker has failed, maybe targets are indeed missing from the frame (say, out of sight)
+    */
+    CV_WRAP virtual
+    bool update(InputArray inputDetections, CV_OUT cv::OutputArray& outputTracks) = 0; // Wrapper for python
+
+    /** @brief Update the tracker, find the new most likely bounding boxes for each target
+    @param detections current frame detections. Input is a vector of Detections(class).
+    @param tracks The bounding boxes that represent the new target locations. Output is a vector of Tracks(class).
+    */
+    virtual
+    void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) = 0;
+
+};
+
+/** @brief ByteTrack is a simple, fast and strong multi-object tracker.
+ *
+ * [ECCV 2022] ByteTrack: Multi-Object Tracking by Associating Every Detection Box. ByteTracker needs one model for object detection.
+ * "Most methods obtain identities by associating detection boxes whose scores are higher than a threshold. The objects with low detection scores, e.g. occluded objects, are simply thrown away, which brings non-negligible true object missing and fragmented trajectories. To solve this problem, we present a simple, effective and generic association method, tracking by associating almost every detection box instead of only the high score ones. For the low score detection boxes, we utilize their similarities with tracklets to recover true objects and filter out the background detections."
+ * The implementation is based on @cite DBLP:journals/corr/abs-2110-06864
+ *
+ * Original repo is here: https://github.com/ifzhang/ByteTrack
+ * Author: Yifu Zhang, https://github.com/ifzhang
+ */
+
+class CV_EXPORTS_W ByteTracker : public MultipleTracker {
+protected:
+    ByteTracker();
+public:
+    virtual ~ByteTracker();
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW double frameRate;
+        CV_PROP_RW int frameBuffer;
+    };
+
+    /** @brief Constructor
+    @param parameters ByteTrack parameters ByteTracker::Params
+    */
+    static CV_WRAP
+    Ptr<ByteTracker> create(const ByteTracker::Params& parameters = ByteTracker::Params());
+
+    bool update(InputArray inputDetections, CV_OUT OutputArray& outputTracks) CV_OVERRIDE = 0;
+
+    virtual void update(const std::vector<Detection>& detections, CV_OUT std::vector<Track>& tracks) CV_OVERRIDE = 0;
+
+    CV_WRAP virtual Mat getCostMatrix(const cv::Mat, const cv::Mat) = 0;
+
 };
 
 /** @brief the VIT tracker is a super lightweight dnn-based general object tracking.
@@ -911,7 +1016,6 @@ protected:
     TrackerVit();  // use ::create()
 public:
     virtual ~TrackerVit() CV_OVERRIDE;
-
     struct CV_EXPORTS_W_SIMPLE Params
     {
         CV_WRAP Params();
@@ -936,7 +1040,6 @@ public:
     // void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     // bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
-
 //! @} video_track
 
 } // cv
