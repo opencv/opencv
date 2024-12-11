@@ -26,8 +26,6 @@
 #define cv_hal_rotate90             fastcv_hal_rotate
 #undef  cv_hal_addWeighted8u
 #define cv_hal_addWeighted8u        fastcv_hal_addWeighted8u
-#undef  cv_hal_gemm32f
-#define cv_hal_gemm32f              fastcv_hal_gemm32f
 #undef  cv_hal_mul8u
 #define cv_hal_mul8u                fastcv_hal_mul8u
 #undef  cv_hal_mul16s
@@ -184,23 +182,6 @@ int fastcv_hal_addWeighted8u(
     int             width,
     int             height,
     const double    scalars[3]);
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int fastcv_hal_gemm32f(
-    const float*    src1,
-    size_t          src1_step,
-    const float*    src2,
-    size_t          src2_step,
-    float           alpha,
-    const float*    src3,
-    size_t          src3_step,
-    float           beta,
-    float*          dst,
-    size_t          dst_step,
-    int             m,
-    int             n,
-    int             k,
-    int             flags);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int fastcv_hal_mul8u(
