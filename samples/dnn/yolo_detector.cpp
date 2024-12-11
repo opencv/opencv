@@ -44,8 +44,8 @@ std::string keys =
     "{ nc          | 80 | Number of classes. Default is 80 (coming from COCO dataset). }"
     "{ thr         | .5 | Confidence threshold. }"
     "{ nms         | .4 | Non-maximum suppression threshold. }"
-    "{ mean        | 0.0 | Normalization constant. }"
-    "{ scale       | 1.0 | Preprocess input image by multiplying on a scale factor. }"
+    "{ mean        | 0.0 0.0 0.0 | Normalization constant. }"
+    "{ scale       | 1.0 1.0 1.0 | Preprocess input image by multiplying on a scale factor. }"
     "{ width       | 640 | Preprocess input image by resizing to a specific width. }"
     "{ height      | 640 | Preprocess input image by resizing to a specific height. }"
     "{ rgb         | 1 | Indicate that model works with RGB input images instead BGR ones. }"
@@ -221,7 +221,7 @@ int main(int argc, char** argv)
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
-    Scalar scale = parser.get<float>("scale");
+    Scalar scale = parser.get<Scalar>("scale");
     Scalar mean = parser.get<Scalar>("mean");
     ImagePaddingMode paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
     //![preprocess_params]
