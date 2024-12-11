@@ -906,7 +906,7 @@ inline v_uint16x16 v_mul_hi(const v_uint16x16& a, const v_uint16x16& b) { return
     { return _Tpuvec(__lasx_xvsll_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
     inline _Tpsvec v_shl(const _Tpsvec& a, int imm)                                               \
     { return _Tpsvec(__lasx_xvsll_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
-    inline _Tpuvec V_shr(const _Tpuvec& a, int imm)                                               \
+    inline _Tpuvec v_shr(const _Tpuvec& a, int imm)                                               \
     { return _Tpuvec(__lasx_xvsrl_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
     inline _Tpsvec v_shr(const _Tpsvec& a, int imm)                                               \
     { return _Tpsvec(srai(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }                            \

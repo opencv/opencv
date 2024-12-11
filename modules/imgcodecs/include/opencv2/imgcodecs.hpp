@@ -111,7 +111,13 @@ enum ImwriteFlags {
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272,//!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
        IMWRITE_AVIF_QUALITY        = 512,//!< For AVIF, it can be a quality between 0 and 100 (the higher the better). Default is 95.
        IMWRITE_AVIF_DEPTH          = 513,//!< For AVIF, it can be 8, 10 or 12. If >8, it is stored/read as CV_32F. Default is 8.
-       IMWRITE_AVIF_SPEED          = 514 //!< For AVIF, it is between 0 (slowest) and (fastest). Default is 9.
+       IMWRITE_AVIF_SPEED          = 514,//!< For AVIF, it is between 0 (slowest) and (fastest). Default is 9.
+       IMWRITE_GIF_LOOP            = 1024,//!< For GIF, it can be a loop flag from 0 to 65535. Default is 0 - loop forever.
+       IMWRITE_GIF_SPEED           = 1025,//!< For GIF, it is between 1 (slowest) and 100 (fastest). Default is 96.
+       IMWRITE_GIF_QUALITY         = 1026, //!< For GIF, it can be a quality from 1 to 8. Default is 2. See cv::ImwriteGifCompressionFlags.
+       IMWRITE_GIF_DITHER          = 1027, //!< For GIF, it can be a quality from -1(most dither) to 3(no dither). Default is 0.
+       IMWRITE_GIF_TRANSPARENCY    = 1028, //!< For GIF, the alpha channel lower than this will be set to transparent. Default is 1.
+       IMWRITE_GIF_COLORTABLE      = 1029  //!< For GIF, 0 means global color table is used, 1 means local color table is used. Default is 0.
      };
 
 enum ImwriteJPEGSamplingFactorParams {
@@ -216,6 +222,18 @@ enum ImwriteHDRCompressionFlags {
     IMWRITE_HDR_COMPRESSION_RLE = 1
 };
 
+//! Imwrite GIF specific values for IMWRITE_GIF_QUALITY parameter key, if larger than 3, then its related to the size of the color table.
+enum ImwriteGIFCompressionFlags {
+    IMWRITE_GIF_FAST_NO_DITHER       = 1,
+    IMWRITE_GIF_FAST_FLOYD_DITHER    = 2,
+    IMWRITE_GIF_COLORTABLE_SIZE_8    = 3,
+    IMWRITE_GIF_COLORTABLE_SIZE_16   = 4,
+    IMWRITE_GIF_COLORTABLE_SIZE_32   = 5,
+    IMWRITE_GIF_COLORTABLE_SIZE_64   = 6,
+    IMWRITE_GIF_COLORTABLE_SIZE_128  = 7,
+    IMWRITE_GIF_COLORTABLE_SIZE_256  = 8
+};
+
 //! @} imgcodecs_flags
 
 /** @brief Loads an image from a file.
@@ -229,6 +247,7 @@ returns an empty matrix.
 Currently, the following file formats are supported:
 
 -   Windows bitmaps - \*.bmp, \*.dib (always supported)
+-   GIF files - \*.gif (always supported)
 -   JPEG files - \*.jpeg, \*.jpg, \*.jpe (see the *Note* section)
 -   JPEG 2000 files - \*.jp2 (see the *Note* section)
 -   Portable Network Graphics - \*.png (see the *Note* section)
@@ -332,7 +351,9 @@ can be saved using this function, with these exceptions:
     8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
     should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
 - With PGM/PPM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
-- With TIFF encoder, 8-bit unsigned (CV_8U), 16-bit unsigned (CV_16U),
+- With TIFF encoder, 8-bit unsigned (CV_8U), 8-bit signed (CV_8S),
+                     16-bit unsigned (CV_16U), 16-bit signed (CV_16S),
+                     32-bit signed (CV_32S),
                      32-bit float (CV_32F) and 64-bit float (CV_64F) images can be saved.
   - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
   - 32-bit float 3-channel (CV_32FC3) TIFF images will be saved
