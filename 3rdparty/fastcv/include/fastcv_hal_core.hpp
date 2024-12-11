@@ -34,10 +34,6 @@
 #define cv_hal_mul16s               fastcv_hal_mul16s
 #undef  cv_hal_mul32f
 #define cv_hal_mul32f               fastcv_hal_mul32f
-#undef  cv_hal_merge8u
-#define cv_hal_merge8u              fastcv_hal_merge8u
-#undef  cv_hal_split8u
-#define cv_hal_split8u              fastcv_hal_split8u
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief look-up table transform of an array.
@@ -241,19 +237,5 @@ int fastcv_hal_mul32f(
     int             width,
     int             height,
     double          scale);
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int fastcv_hal_merge8u(
-    const uchar     **src_data,
-    uchar           *dst_data,
-    int len,
-    int cn);
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int fastcv_hal_split8u(
-    const uchar    *src_data,
-    uchar          **dst_data,
-    int             len,
-    int             cn);
 
 #endif
