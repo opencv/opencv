@@ -30,23 +30,9 @@
 #include <libcamera/formats.h>
 #include <libcamera/framebuffer_allocator.h>
 #include <libcamera/property_ids.h>
-<<<<<<< HEAD
-#include <libcamera/stream.h>
-#include "cap_libcamera.hpp"
-#include <mutex>
-=======
 #inclued <libcamera/stream.h>
 #include <cap_libcamera.hpp>
->>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
 
-/**
- * @brief implementation of the LibcameraApp class and LibcameraCapture
-    * The LibcameraApp implements is from LCCV
-    * Source: https://github.com/kbarni/LCCV
- 
-
-
-*/
 
 /**
  * @brief implementation of the LibcameraApp class and LibcameraCapture
@@ -1301,110 +1287,6 @@ void LibcameraApp::configureDenoise(const std::string &denoise_mode)
 	controls_.set(NoiseReductionMode, denoise);
 }
 
-double LibcameraApp::GetProperty(int property_id) const {
-    switch (property_id) {
-        case cv::CAP_PROP_FRAME_WIDTH: // 获取帧宽度
-            if (configuration_) {
-                return configuration_->at(0).size.width;
-            }
-            break;
-
-        case cv::CAP_PROP_FRAME_HEIGHT: // 获取帧高度
-            if (configuration_) {
-                return configuration_->at(0).size.height;
-            }
-            break;
-
-        case cv::CAP_PROP_FPS: // 获取帧率
-            if (configuration_) {
-                auto duration = configuration_->at(0).frameDuration;
-                return 1e9 / duration.min; // 帧率 = 1 / 最小帧持续时间
-            }
-            break;
-
-        case cv::CAP_PROP_EXPOSURE: // 获取曝光时间
-            if (camera_) {
-                libcamera::ControlList controls = camera_->controls();
-                if (controls.contains(libcamera::controls::ExposureTime)) {
-                    return controls.get<libcamera::controls::ExposureTime>();
-                }
-            }
-            break;
-
-        default:
-            std::cerr << "GetProperty: Unsupported property_id " << property_id << std::endl;
-            break;
-    }
-    return 0.0; 
-}
-
-bool LibcameraApp::SetProperty(int property_id, double value) {
-    if (!camera_) {
-        std::cerr << "SetProperty: Camera is not initialized. Failed to set property_id " << property_id << std::endl;
-        return false;
-    }
-
-    switch (property_id) {
-        case cv::CAP_PROP_FRAME_WIDTH: {
-            if (configuration_) {
-                int width = static_cast<int>(value);
-                if (width <= 0) {
-                    std::cerr << "SetProperty: Invalid frame width " << width << std::endl;
-                    return false;
-                }
-                configuration_->at(0).size.width = width;
-                return camera_->configure(configuration_.get()) == 0; 
-            }
-            break;
-        }
-        case cv::CAP_PROP_FRAME_HEIGHT: {
-            if (configuration_) {
-                int height = static_cast<int>(value);
-                if (height <= 0) {
-                    std::cerr << "SetProperty: Invalid frame height " << height << std::endl;
-                    return false;
-                }
-                configuration_->at(0).size.height = height;
-                return camera_->configure(configuration_.get()) == 0; 
-            }
-            break;
-        }
-        case cv::CAP_PROP_FPS: {
-            if (configuration_) {
-                if (value <= 0) {
-                    std::cerr << "SetProperty: Invalid FPS value " << value << std::endl;
-                    return false;
-                }
-                int64_t frame_duration = 1e9 / static_cast<int>(value); 
-                configuration_->at(0).frameDuration = {frame_duration, frame_duration};
-                return camera_->configure(configuration_.get()) == 0; 
-            }
-            break;
-        }
-        case cv::CAP_PROP_EXPOSURE: {
-            if (camera_) {
-                const auto& controlsInfo = camera_->controls();
-                if (controlsInfo.contains(libcamera::controls::ExposureTime)) {
-                    auto range = controlsInfo.at(libcamera::controls::ExposureTime).range();
-                    if (value < range.min || value > range.max) {
-                        std::cerr << "SetProperty: Exposure value " << value << " is out of range (" 
-                                  << range.min << " - " << range.max << ")" << std::endl;
-                        return false;
-                    }
-                }
-                libcamera::ControlList controls(camera_->controls());
-                controls.set(libcamera::controls::ExposureTime, static_cast<int64_t>(value));
-                return camera_->start(&controls) == 0; // restart camera with new exposure time (To be verified)
-            }
-            break;
-        }
-        default:
-            std::cerr << "SetProperty: Unsupported property_id " << property_id << std::endl;
-            break;
-    }
-
-    return false; 
-}
 
 
 
@@ -1435,13 +1317,7 @@ public:
     virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; } // Need to modify videoio.hpp/enum VideoCaptureAPIs
     // bool configureHW(const cv::VideoCaptureParameters&);
     // bool configureStreamsProperty(const cv::VideoCaptureParameters&);
-<<<<<<< HEAD
-    bool isOpened() const CV_OVERRIDE { 
-        return true; 
-    } //camerastarted
-=======
     bool isOpened() const CV_OVERRIDE { return camerastarted; }
->>>>>>> 7a241ef86a (Add set and get Property func (not tested and compiled yet))
 
 protected:
 
@@ -1594,9 +1470,11 @@ void *LibcameraCapture::videoThreadFunc(void *p) //not resolved
 
     while (t->running.load(std::memory_order_acquire)) {
         LibcameraApp::Msg msg = t->app->Wait();
-        if (msg.type == LibcameraApp::MsgType::Quit) {
-            t->running.store(false, std::memory_order_release);
-        } else if (msg.type != LibcameraApp::MsgType::RequestComplete) {
+        if (msg.type == LibcameraApp::MsgType::Quit){
+            std::cerr<<"Quit message received"<<std::endl;
+            t->running.store(false,std::memory_order_release);
+        }
+        else if (msg.type != LibcameraApp::MsgType::RequestComplete)
             throw std::runtime_error("unrecognised message!");
         }
 
@@ -1610,15 +1488,7 @@ void *LibcameraCapture::videoThreadFunc(void *p) //not resolved
 
         t->frameready.store(true, std::memory_order_release);
     }
-
-    // 通知主线程子线程即将退出
-    {
-        std::lock_guard<std::mutex> lock(t->cv_mtx);
-        t->thread_exit = true;
-    }
-    t->cv.notify_one();
-
-    if (t->framebuffer) {
+    if(t->framebuffer){
         delete[] t->framebuffer;
         t->framebuffer = nullptr;
     }
@@ -1797,125 +1667,30 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
         return false;
 }
 
-<<<<<<< HEAD
-
 double LibcameraCapture::getProperty(int propId) const
-{
-    switch (propId)
-    {
-    case cv::CAP_PROP_BRIGHTNESS:
-        return options->brightness;
-
-    case cv::CAP_PROP_CONTRAST:
-        return options->contrast;
-
-    case cv::CAP_PROP_SATURATION:
-        return options->saturation;
-
-    case cv::CAP_PROP_SHARPNESS:
-        return options->sharpness;
-
-    case cv::CAP_PROP_AUTO_EXPOSURE:
-        return options->getExposureMode() == Exposure_Modes::EXPOSURE_NORMAL;
-
-    case cv::CAP_PROP_EXPOSURE:
-        return options->shutter;
-
-    case cv::CAP_PROP_AUTO_WB:
-        return options->getWhiteBalance() == WhiteBalance_Modes::WB_AUTO;
-
-    case cv::CAP_PROP_WB_TEMPERATURE:
-        // Since we don't have a direct WB temperature, return an approximation based on the current setting
-        switch (options->getWhiteBalance()) {
-            case WhiteBalance_Modes::WB_TUNGSTEN:
-                return 3000.0; // Approximate value for tungsten
-            case WhiteBalance_Modes::WB_INDOOR:
-                return 4500.0; // Approximate value for indoor
-            case WhiteBalance_Modes::WB_DAYLIGHT:
-                return 5500.0; // Approximate value for daylight
-            case WhiteBalance_Modes::WB_CLOUDY:
-                return 7000.0; // Approximate value for cloudy
-            default:
-                return 5000.0; // Default approximation if none of the above
-        }
-
-    case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_X:
-        return options->roi_x;
-
-    case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_Y:
-        return options->roi_y;
-
-    case cv::CAP_PROP_XI_AEAG_ROI_WIDTH:
-        return options->roi_width;
-
-    case cv::CAP_PROP_XI_AEAG_ROI_HEIGHT:
-        return options->roi_height;
-
-    case cv::CAP_PROP_FOURCC:
-    {
-        // Return the FOURCC code of the current video format.
-        // This is a placeholder. You should replace it with the actual FOURCC code.
-        // return cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
-        // return options->getFourCC();
-        std::cerr<<"Warning: Not implemented yet"<<std::endl;
-        return 0;
-    }
-
-    case cv::CAP_PROP_FRAME_WIDTH:
-        if (options->video_width != 0) {
-            return options->video_width;
-        } else {
-            return options->photo_width;
-        }
-
-    case cv::CAP_PROP_FRAME_HEIGHT:
-        if (options->video_height != 0) {
-            return options->video_height;
-        } else {
-            return options->photo_height;
-        }
-
-    case cv::CAP_PROP_FPS:
-        return options->framerate;
-
-    case cv::CAP_PROP_AUTOFOCUS:
-    case cv::CAP_PROP_BUFFERSIZE:
-    case cv::CAP_PROP_PAN:
-    case cv::CAP_PROP_TILT:
-    case cv::CAP_PROP_ROLL:
-    case cv::CAP_PROP_IRIS:
-        // Not implemented, return a default value or an error code
-        std::cerr << "Warning: Property " << propId << " is not supported." << std::endl;
-        return 0; // Or some other value indicating an error or not supported
-
-    default:
-        std::cerr << "Warning: Unsupported property: " << propId << std::endl;
-        return 0;
-    }
+{ 
+    return app->GetProperty(propId);
 }
 
 bool LibcameraCapture::setProperty(int propId, double value)
 {
+    // bool needsReconfigure = false;
     switch (propId)
     {
     case cv::CAP_PROP_BRIGHTNESS:
         options->brightness = value;
-        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_CONTRAST:
         options->contrast = value;
-        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_SATURATION:
         options->saturation = value;
-        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_SHARPNESS:
         options->sharpness = value;
-        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_AUTO_EXPOSURE:
@@ -1925,17 +1700,14 @@ bool LibcameraCapture::setProperty(int propId, double value)
         else{
             options->setExposureMode(Exposure_Modes::EXPOSURE_SHORT);
         }
-        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_EXPOSURE:
         options->shutter = value; // Assumes value is in milliseconds, libcamera uses seconds
-        needsReconfigure.store(true, std::memory_order_release);        
         break;
 
     case cv::CAP_PROP_AUTO_WB:
         options->setWhiteBalance(value ? WhiteBalance_Modes::WB_AUTO : WhiteBalance_Modes::WB_INDOOR);
-        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_WB_TEMPERATURE:
@@ -1951,7 +1723,6 @@ bool LibcameraCapture::setProperty(int propId, double value)
         } else {
             options->setWhiteBalance(WhiteBalance_Modes::WB_CLOUDY);
         }
-        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     // case cv::CAP_PROP_ZOOM: // This is a custom property for ROI
@@ -2001,29 +1772,29 @@ bool LibcameraCapture::setProperty(int propId, double value)
         //     std::cerr << "Warning: FourCC code " << fourcc << " not supported." << std::endl;
         //     return false;
         // }
-        // // needsReconfigure.store(true, std::memory_order_release);
+        // // needsReconfigure = true;
         break;
     }
 
     case cv::CAP_PROP_FRAME_WIDTH:
         options->video_width = options->photo_width = (int)value;
-        needsReconfigure.store(true, std::memory_order_release);
+        // needsReconfigure = true;
         break;
 
     case cv::CAP_PROP_FRAME_HEIGHT:
         options->video_height = options->photo_height = (int)value;
-        needsReconfigure.store(true, std::memory_order_release);
+        // needsReconfigure = true;
         break;
 
     case cv::CAP_PROP_FPS:
         options->framerate = (float)value;
-        needsReconfigure.store(true, std::memory_order_release);
+        // needsReconfigure = true;
         break;
     case cv::CAP_PROP_AUTOFOCUS: // Not implemented
     case cv::CAP_PROP_BUFFERSIZE: // Not implemented
     case cv::CAP_PROP_PAN: // Not implemented
     case cv::CAP_PROP_TILT: // Not implemented
-    case cv::CAP_PROP_ROLL: // Not implemen ted
+    case cv::CAP_PROP_ROLL: // Not implemented
     case cv::CAP_PROP_IRIS: // Not implemented
         // These properties might need to trigger a re-configuration of the camera.
         // You can handle them here if you want to support changing resolution or framerate on-the-fly.
@@ -2036,61 +1807,8 @@ bool LibcameraCapture::setProperty(int propId, double value)
         return false;
     }
 
-    // if (needsReconfigure)
-    // {
-    //     if (isFramePending)
-    //     {
-    //         stopVideo();
-    //         startVideo();
-    //     }
-    // }
     return true;
 }
-
-=======
-double LibcameraCapture::getProperty(int propId) const
-{ 
-    return app->GetProperty(propId);
-}
-
-bool LibcameraCapture::setProperty(int propId, double value) {
-    // Set the property by calling LibcameraApp
-    if (!app->SetProperty(propId, value)) {
-        std::cerr << "Failed to set property in LibcameraApp." << std::endl;
-        return false;
-    }
-
-    // Sync the property value with the local copy
-    switch (propId) {
-        case cv::CAP_PROP_FRAME_WIDTH:
-            vw = static_cast<unsigned int>(value);
-            delete[] framebuffer; // Reallocate the buffer
-            framebuffer = new uint8_t[vw * vh * 3];
-            frameready.store(false, std::memory_order_release);
-            break;
-
-        case cv::CAP_PROP_FRAME_HEIGHT:
-            vh = static_cast<unsigned int>(value);
-            delete[] framebuffer; // Reallocate the buffer
-            framebuffer = new uint8_t[vw * vh * 3];
-            frameready.store(false, std::memory_order_release);
-            break;
-
-        case cv::CAP_PROP_FPS:
-            isFramePending = false;
-            break;
-
-        case cv::CAP_PROP_EXPOSURE:
-            break;
-
-        default:
-            std::cerr << "Unsupported property_id " << propId << " in LibcameraCapture." << std::endl;
-            return false;
-    }
-
-    return true;
-}
-
 
 >>>>>>> 701d70b176 (Fix setProperty() and getProperty() for libcamera backend)
 bool LibcameraCapture::open(int _index)

@@ -9,14 +9,20 @@
 #include <libcamera/property_ids.h>
 #include <libcamera/transform.h>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> b6a05291bb (Implied setProperty)
 // #include <libcamera/libcamera.hpp>
 #include <mutex>
 
 namespace cv 
 {
+<<<<<<< HEAD
 =======
 
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
+=======
+>>>>>>> b6a05291bb (Implied setProperty)
 
 enum Exposure_Modes {
     EXPOSURE_NORMAL = libcamera::controls::ExposureNormal,
@@ -68,12 +74,16 @@ public:
 	}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 	~Options() {}
 =======
 	virtual ~Options() {}
 
 	virtual void Print() const;
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
+=======
+	~Options() {}
+>>>>>>> b6a05291bb (Implied setProperty)
 
     void setMetering(Metering_Modes meteringmode){metering_index=meteringmode;}
     void setWhiteBalance(WhiteBalance_Modes wb){awb_index = wb;}
@@ -289,6 +299,9 @@ private:
 	uint64_t last_timestamp_;
 	uint64_t sequence_ = 0;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> b6a05291bb (Implied setProperty)
 };
 
 class Metadata
@@ -402,6 +415,9 @@ struct CompletedRequest
 	Metadata post_process_metadata;
 };
 
+<<<<<<< HEAD
 =======
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
+=======
+>>>>>>> b6a05291bb (Implied setProperty)
 };

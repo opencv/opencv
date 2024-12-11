@@ -403,12 +403,17 @@ Ptr<IVideoWriter> createAndroidVideoWriter(const std::string& filename, int four
 Ptr<IVideoCapture> create_obsensor_capture(int index);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 Ptr<IVideoCapture> createLibcameraCapture_cam(int index);
 Ptr<IVideoCapture> createLibcameraCapture_file(const std::string &filename);
 =======
 Ptr<IVideoCapture> createLibcameracapture_cam(int index);
 Ptr<IVideoCapture> createLibcameracapture_file(const std::string &filename);
 >>>>>>> 92cb3b26b3 (A complete version of basic functionality test.)
+=======
+Ptr<IVideoCapture> createLibcameraCapture_cam(int index);
+Ptr<IVideoCapture> createLibcameraCapture_file(const std::string &filename);
+>>>>>>> b6a05291bb (Implied setProperty)
 
 bool VideoCapture_V4L_waitAny(
         const std::vector<VideoCapture>& streams,

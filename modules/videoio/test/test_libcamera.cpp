@@ -11,9 +11,13 @@ int main()
 {
     VideoCapture cap = VideoCapture(0,CAP_LIBCAMERA);
 <<<<<<< HEAD
+<<<<<<< HEAD
     
 =======
 >>>>>>> 3b961731d6 (Modify cmake files)
+=======
+    
+>>>>>>> b6a05291bb (Implied setProperty)
     if(!cap.isOpened())
         return;
  

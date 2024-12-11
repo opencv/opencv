@@ -1725,6 +1725,7 @@ endif()
 
 if(WITH_LIBCAMERA OR HAVE_LIBCAMERA)
 <<<<<<< HEAD
+<<<<<<< HEAD
   ocv_build_features_string(libcamera_status
     IF HAVE_LIBCAMERA THEN "libcamera/libcamera/libcamera.h"
 =======
@@ -1732,6 +1733,10 @@ if(WITH_LIBCAMERA OR HAVE_LIBCAMERA)
     IF HAVE_LIBCAMERA THEN "libcamera/libcamera/libcamera.h"
     IF HAVE_VIDEOIO THEN "sys/videoio.h"
 >>>>>>> 3b961731d6 (Modify cmake files)
+=======
+  ocv_build_features_string(libcamera_status
+    IF HAVE_LIBCAMERA THEN "libcamera/libcamera/libcamera.h"
+>>>>>>> b6a05291bb (Implied setProperty)
     ELSE "NO")
   status("    libcamera:" HAVE_LIBCAMERA THEN YES ELSE NO)
 endif()
