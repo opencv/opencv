@@ -10,6 +10,7 @@ using namespace cv;
 int main()
 {
     VideoCapture cap = VideoCapture(0,CAP_LIBCAMERA);
+    
     if(!cap.isOpened())
         return;
  
