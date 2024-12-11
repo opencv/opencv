@@ -33,6 +33,8 @@ using namespace cv;
 
 #define FOURCC_BGR CV_FOURCC_MACRO('B','G','R','3')
 #define FOURCC_RGB CV_FOURCC_MACRO('R','G','B','3')
+#define FOURCC_BGRA CV_FOURCC_MACRO('B','G','R','4')
+#define FOURCC_RGBA CV_FOURCC_MACRO('R','G','B','4')
 #define FOURCC_GRAY CV_FOURCC_MACRO('G','R','E','Y')
 #define FOURCC_NV21 CV_FOURCC_MACRO('N','V','2','1')
 #define FOURCC_YV12 CV_FOURCC_MACRO('Y','V','1','2')
@@ -376,14 +378,20 @@ public:
         if (colorFormat == COLOR_FormatYUV420Planar) {
             Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
             switch (fourCC) {
+                case FOURCC_BGRA:
+                    cvtColor(yuv, out, COLOR_YUV2BGRA_YV12);
+                    break;
+                case FOURCC_RGBA:
+                    cvtColor(yuv, out, COLOR_YUV2RGBA_YV12);
+                    break;
                 case FOURCC_BGR:
-                    cv::cvtColor(yuv, out, cv::COLOR_YUV2BGR_YV12);
+                    cvtColor(yuv, out, COLOR_YUV2BGR_YV12);
                     break;
                 case FOURCC_RGB:
-                    cv::cvtColor(yuv, out, cv::COLOR_YUV2RGB_YV12);
+                    cvtColor(yuv, out, COLOR_YUV2RGB_YV12);
                     break;
                 case FOURCC_GRAY:
-                    cv::cvtColor(yuv, out, cv::COLOR_YUV2GRAY_YV12);
+                    cvtColor(yuv, out, COLOR_YUV2GRAY_YV12);
                     break;
                 case FOURCC_YV12:
                     yuv.copyTo(out);
@@ -396,14 +404,20 @@ public:
             Mat yuv(frameHeight + frameHeight/2, frameStride, CV_8UC1, buffer.data());
             Mat tmp = (frameWidth == frameStride) ? yuv : yuv(Rect(0, 0, frameWidth, frameHeight + frameHeight / 2));
             switch (fourCC) {
+                case FOURCC_BGRA:
+                    cvtColor(tmp, out, COLOR_YUV2BGRA_NV21);
+                    break;
+                case FOURCC_RGBA:
+                    cvtColor(tmp, out, COLOR_YUV2RGBA_NV21);
+                    break;
                 case FOURCC_BGR:
-                    cv::cvtColor(tmp, out, cv::COLOR_YUV2BGR_NV21);
+                    cvtColor(tmp, out, COLOR_YUV2BGR_NV21);
                     break;
                 case FOURCC_RGB:
-                    cv::cvtColor(tmp, out, cv::COLOR_YUV2RGB_NV21);
+                    cvtColor(tmp, out, COLOR_YUV2RGB_NV21);
                     break;
                 case FOURCC_GRAY:
-                    cv::cvtColor(tmp, out, cv::COLOR_YUV2GRAY_NV21);
+                    cvtColor(tmp, out, COLOR_YUV2GRAY_NV21);
                     break;
                 case FOURCC_NV21:
                     tmp.copyTo(out);
@@ -473,6 +487,8 @@ public:
                         switch (newFourCC) {
                             case FOURCC_BGR:
                             case FOURCC_RGB:
+                            case FOURCC_BGRA:
+                            case FOURCC_RGBA:
                             case FOURCC_GRAY:
                                 fourCC = newFourCC;
                                 return true;
