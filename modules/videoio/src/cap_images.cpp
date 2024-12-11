@@ -210,89 +210,91 @@ bool CvCapture_Images::setProperty(int id, double value)
 }
 
 // static
-std::string icvExtractPattern(const std::string& filename, unsigned *offset)
-{
-    size_t len = filename.size();
-    CV_Assert(!filename.empty());
-    CV_Assert(offset);
-
-    *offset = 0;
-
-    // check whether this is a valid image sequence filename
-    std::string::size_type pos = filename.find('%');
-    if (pos != std::string::npos)
+    std::string icvExtractPattern(const std::string &filename, unsigned *offset)
     {
-        pos++; CV_Assert(pos < len);
-        if (filename[pos] == '0') // optional zero prefix
-        {
-            pos++; CV_Assert(pos < len);
-        }
-        if (filename[pos] >= '1' && filename[pos] <= '9') // optional numeric size (1..9) (one symbol only)
-        {
-            pos++; CV_Assert(pos < len);
-        }
-        if (filename[pos] == 'd' || filename[pos] == 'u')
-        {
-            pos++;
-            if (pos == len)
-                return filename;  // end of string '...%5d'
-            CV_Assert(pos < len);
-            if (filename.find('%', pos) == std::string::npos)
-                return filename;  // no more patterns
-            CV_Error_(Error::StsBadArg, ("CAP_IMAGES: invalid multiple patterns: %s", filename.c_str()));
-        }
-        CV_Error_(Error::StsBadArg, ("CAP_IMAGES: error, expected '0?[1-9][du]' pattern, got: %s", filename.c_str()));
-    }
-    else // no pattern filename was given - extract the pattern
-    {
-        pos = filename.rfind('/');
-#ifdef _WIN32
-        if (pos == std::string::npos)
-            pos = filename.rfind('\\');
-#endif  
-        if (filename.empty())
-            return "";
+        size_t len = filename.size();
+        CV_Assert(!filename.empty());
+        CV_Assert(offset);
 
+        *offset = 0;
+
+        // check whether this is a valid image sequence filename
+        std::string::size_type pos = filename.find('%');
         if (pos != std::string::npos)
-            pos++;
-        else
-            pos = 0;
-
-        while (pos < len && !isdigit(filename[pos])) pos++;
-
-        if (pos == len)
-            return filename;
-
-        std::string::size_type pos0 = pos;
-
-        const int64_t max_number = 1000000000;
-        CV_Assert(max_number < INT_MAX); // offset is 'int'
-
-        int number_str_size = 0;
-        uint64_t number = 0;
-        while (pos < len && isdigit(filename[pos]))
         {
-            char ch = filename[pos];
-            number = (number * 10) + (uint64_t)((int)ch - (int)'0');
-            CV_Assert(number < max_number);
-            number_str_size++;
-            CV_Assert(number_str_size <= 64);  // don't allow huge zero prefixes
             pos++;
+            CV_Assert(pos < len);
+            if (filename[pos] == '0') // optional zero prefix
+            {
+                pos++;
+                CV_Assert(pos < len);
+            }
+            if (filename[pos] >= '1' && filename[pos] <= '9') // optional numeric size (1..9) (one symbol only)
+            {
+                pos++;
+                CV_Assert(pos < len);
+            }
+            if (filename[pos] == 'd' || filename[pos] == 'u')
+            {
+                pos++;
+                if (pos == len)
+                    return filename; // end of string '...%5d'
+                CV_Assert(pos < len);
+                if (filename.find('%', pos) == std::string::npos)
+                    return filename; // no more patterns
+                CV_Error_(Error::StsBadArg, ("CAP_IMAGES: invalid multiple patterns: %s", filename.c_str()));
+            }
+            CV_Error_(Error::StsBadArg, ("CAP_IMAGES: error, expected '0?[1-9][du]' pattern, got: %s", filename.c_str()));
         }
-        CV_Assert(number_str_size > 0);
+        else // no pattern filename was given - extract the pattern
+        {
+            pos = filename.rfind('/');
+        #ifdef _WIN32
+            if (pos == std::string::npos)
+                pos = filename.rfind('\\');
+        #endif
+            if (filename.empty())
+                return "";
+            if (pos != std::string::npos)
+                pos++;
+            else
+                pos = 0;
 
-        *offset = (int)number;
+            while (pos < len && !isdigit(filename[pos])) pos++;
 
-        std::string result;
-        if (pos0 > 0)
-            result += filename.substr(0, pos0);
-        result += cv::format("%%0%dd", number_str_size);
-        if (pos < len)
-            result += filename.substr(pos);
-        CV_LOG_INFO(NULL, "Pattern: " << result << " @ " << number);
-        return result;
+            if (pos == len)
+                return filename;
+
+            std::string::size_type pos0 = pos;
+
+            const int64_t max_number = 1000000000;
+            CV_Assert(max_number < INT_MAX); // offset is 'int'
+
+            int number_str_size = 0;
+            uint64_t number = 0;
+            while (pos < len && isdigit(filename[pos]))
+            {
+                char ch = filename[pos];
+                number = (number * 10) + (uint64_t)((int)ch - (int)'0');
+                CV_Assert(number < max_number);
+                number_str_size++;
+                CV_Assert(number_str_size <= 64);  // don't allow huge zero prefixes
+                pos++;
+            }
+            CV_Assert(number_str_size > 0);
+
+            *offset = (int)number;
+
+            std::string result;
+            if (pos0 > 0)
+                result += filename.substr(0, pos0);
+            result += cv::format("%%0%dd", number_str_size);
+            if (pos < len)
+                result += filename.substr(pos);
+            CV_LOG_INFO(NULL, "Pattern: " << result << " @ " << number);
+            return result;
+        }
     }
-}
 
 
 bool CvCapture_Images::open(const std::string& _filename)
