@@ -355,14 +355,14 @@ TEST(WeightedHoughLines, horizontal)
     HoughLines(img, lines, 1, CV_PI/180, threshold, 0, 0, 0.0, CV_PI, use_edgeval);
     
     // check results
-    ASSERT_EQ(lines.size(), 3U);
+    ASSERT_EQ(3U, lines.size());
     // detected lines is assumed sorted from stronger to weaker. 
-    EXPECT_EQ(lines[0][0], 6);
-    EXPECT_EQ(lines[1][0], 12);
-    EXPECT_EQ(lines[2][0], 18);
-    EXPECT_NEAR(lines[0][1], CV_PI/2, CV_PI/180 + 1e-6);
-    EXPECT_NEAR(lines[1][1], CV_PI/2, CV_PI/180 + 1e-6);
-    EXPECT_NEAR(lines[2][1], CV_PI/2, CV_PI/180 + 1e-6);
+    EXPECT_EQ(6, lines[0][0]);
+    EXPECT_EQ(12, lines[1][0]);
+    EXPECT_EQ(18, lines[2][0]);
+    EXPECT_NEAR(CV_PI/2, lines[0][1], CV_PI/180 + 1e-6);
+    EXPECT_NEAR(CV_PI/2, lines[1][1], CV_PI/180 + 1e-6);
+    EXPECT_NEAR(CV_PI/2, lines[2][1], CV_PI/180 + 1e-6);
 }
 
 TEST(WeightedHoughLines, diagonal)
