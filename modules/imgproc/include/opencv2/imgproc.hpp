@@ -287,11 +287,12 @@ enum WarpPolarMode
     WARP_POLAR_LOG = 256   ///< Remaps an image to/from semilog-polar space.
 };
 
-// InterpolationMasks
-constexpr auto INTER_BITS      = 5;
-constexpr auto INTER_BITS2     = INTER_BITS * 2;
-constexpr auto INTER_TAB_SIZE  = 1 << INTER_BITS;
-constexpr auto INTER_TAB_SIZE2 = INTER_TAB_SIZE * INTER_TAB_SIZE;
+enum InterpolationMasks {
+       INTER_BITS      = 5,
+       INTER_BITS2     = INTER_BITS * 2,
+       INTER_TAB_SIZE  = 1 << INTER_BITS,
+       INTER_TAB_SIZE2 = INTER_TAB_SIZE * INTER_TAB_SIZE
+     };
 
 //! @} imgproc_transform
 
