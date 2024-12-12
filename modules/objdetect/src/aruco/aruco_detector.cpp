@@ -35,6 +35,8 @@ static inline bool readWrite(DetectorParameters &params, const FileNode* readNod
     check |= readWriteParameter("minMarkerDistanceRate", params.minMarkerDistanceRate, readNode, writeStorage);
     check |= readWriteParameter("cornerRefinementMethod", params.cornerRefinementMethod, readNode, writeStorage);
     check |= readWriteParameter("cornerRefinementWinSize", params.cornerRefinementWinSize, readNode, writeStorage);
+    check |= readWriteParameter("relativeCornerRefinmentWinSize", params.relativeCornerRefinmentWinSize, readNode,
+                                writeStorage);
     check |= readWriteParameter("cornerRefinementMaxIterations", params.cornerRefinementMaxIterations,
                                 readNode, writeStorage);
     check |= readWriteParameter("cornerRefinementMinAccuracy", params.cornerRefinementMinAccuracy,
@@ -48,6 +50,7 @@ static inline bool readWrite(DetectorParameters &params, const FileNode* readNod
                                 readNode, writeStorage);
     check |= readWriteParameter("minOtsuStdDev", params.minOtsuStdDev, readNode, writeStorage);
     check |= readWriteParameter("errorCorrectionRate", params.errorCorrectionRate, readNode, writeStorage);
+    check |= readWriteParameter("minGroupDistance", params.minGroupDistance, readNode, writeStorage);
     // new aruco 3 functionality
     check |= readWriteParameter("useAruco3Detection", params.useAruco3Detection, readNode, writeStorage);
     check |= readWriteParameter("minSideLengthCanonicalImg", params.minSideLengthCanonicalImg, readNode, writeStorage);
@@ -142,10 +145,8 @@ static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candida
         minPerimeterPixels = 4*minSize;
     }
 
-    Mat contoursImg;
-    in.copyTo(contoursImg);
     vector<vector<Point> > contours;
-    findContours(contoursImg, contours, RETR_LIST, CHAIN_APPROX_NONE);
+    findContours(in, contours, RETR_LIST, CHAIN_APPROX_NONE);
     // now filter list of contours
     for(unsigned int i = 0; i < contours.size(); i++) {
         // check perimeter
@@ -158,8 +159,7 @@ static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candida
         if(approxCurve.size() != 4 || !isContourConvex(approxCurve)) continue;
 
         // check min distance between corners
-        double minDistSq =
-            max(contoursImg.cols, contoursImg.rows) * max(contoursImg.cols, contoursImg.rows);
+        double minDistSq = max(in.cols, in.rows) * max(in.cols, in.rows);
         for(int j = 0; j < 4; j++) {
             double d = (double)(approxCurve[j].x - approxCurve[(j + 1) % 4].x) *
                            (double)(approxCurve[j].x - approxCurve[(j + 1) % 4].x) +
@@ -174,9 +174,9 @@ static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candida
         bool tooNearBorder = false;
         for(int j = 0; j < 4; j++) {
             if(approxCurve[j].x < minDistanceToBorder || approxCurve[j].y < minDistanceToBorder ||
-               approxCurve[j].x > contoursImg.cols - 1 - minDistanceToBorder ||
-               approxCurve[j].y > contoursImg.rows - 1 - minDistanceToBorder)
-                tooNearBorder = true;
+               approxCurve[j].x > in.cols - 1 - minDistanceToBorder ||
+               approxCurve[j].y > in.rows - 1 - minDistanceToBorder)
+               tooNearBorder = true;
         }
         if(tooNearBorder) continue;
 
@@ -210,149 +210,65 @@ static void _reorderCandidatesCorners(vector<vector<Point2f> > &candidates) {
     }
 }
 
-/**
-  * @brief to make sure that the corner's order of both candidates (default/white) is the same
-  */
-static vector<Point2f> alignContourOrder(Point2f corner, vector<Point2f> candidate) {
-    uint8_t r=0;
-    double min = norm( Vec2f( corner - candidate[0] ), NORM_L2SQR);
-    for(uint8_t pos=1; pos < 4; pos++) {
-        double nDiff = norm( Vec2f( corner - candidate[pos] ), NORM_L2SQR);
-        if(nDiff < min){
-            r = pos;
-            min =nDiff;
-        }
+static float getAverageModuleSize(const vector<Point2f>& markerCorners, int markerSize, int markerBorderBits) {
+    float averageArucoModuleSize = 0.f;
+    for (size_t i = 0ull; i < 4ull; i++) {
+        averageArucoModuleSize += sqrt(normL2Sqr<float>(Point2f(markerCorners[i] - markerCorners[(i+1ull) % 4ull])));
     }
-    std::rotate(candidate.begin(), candidate.begin() + r, candidate.end());
-    return candidate;
+    int numModules = markerSize + markerBorderBits * 2;
+    averageArucoModuleSize /= ((float)markerCorners.size()*numModules);
+    return averageArucoModuleSize;
 }
 
-/**
-  * @brief Check candidates that are too close to each other, save the potential candidates
-  *        (i.e. biggest/smallest contour) and remove the rest
-  */
-static void _filterTooCloseCandidates(const vector<vector<Point2f> > &candidatesIn,
-                                      vector<vector<vector<Point2f> > > &candidatesSetOut,
-                                      const vector<vector<Point> > &contoursIn,
-                                      vector<vector<vector<Point> > > &contoursSetOut,
-                                      double minMarkerDistanceRate, bool detectInvertedMarker) {
+static bool checkMarker1InMarker2(const vector<Point2f>& marker1, const vector<Point2f>& marker2) {
+    return pointPolygonTest(marker2, marker1[0], false) >= 0 && pointPolygonTest(marker2, marker1[1], false) >= 0 &&
+           pointPolygonTest(marker2, marker1[2], false) >= 0 && pointPolygonTest(marker2, marker1[3], false) >= 0;
+}
 
-    CV_Assert(minMarkerDistanceRate >= 0);
-    vector<int> candGroup;
-    candGroup.resize(candidatesIn.size(), -1);
-    vector<vector<unsigned int> > groupedCandidates;
-    for(unsigned int i = 0; i < candidatesIn.size(); i++) {
-        bool isSingleContour = true;
-        for(unsigned int j = i + 1; j < candidatesIn.size(); j++) {
+struct MarkerCandidate {
+    vector<Point2f> corners;
+    vector<Point> contour;
+    float perimeter = 0.f;
+};
 
-            int minimumPerimeter = min((int)contoursIn[i].size(), (int)contoursIn[j].size() );
+struct MarkerCandidateTree : MarkerCandidate{
+    int parent = -1;
+    int depth = 0;
+    vector<MarkerCandidate> closeContours;
 
-            // fc is the first corner considered on one of the markers, 4 combinations are possible
-            for(int fc = 0; fc < 4; fc++) {
-                double distSq = 0;
-                for(int c = 0; c < 4; c++) {
-                    // modC is the corner considering first corner is fc
-                    int modC = (c + fc) % 4;
-                    distSq += (candidatesIn[i][modC].x - candidatesIn[j][c].x) *
-                                  (candidatesIn[i][modC].x - candidatesIn[j][c].x) +
-                              (candidatesIn[i][modC].y - candidatesIn[j][c].y) *
-                                  (candidatesIn[i][modC].y - candidatesIn[j][c].y);
-                }
-                distSq /= 4.;
+    MarkerCandidateTree() {}
 
-                // if mean square distance is too low, remove the smaller one of the two markers
-                double minMarkerDistancePixels = double(minimumPerimeter) * minMarkerDistanceRate;
-                if(distSq < minMarkerDistancePixels * minMarkerDistancePixels) {
-                    isSingleContour = false;
-                    // i and j are not related to a group
-                    if(candGroup[i]<0 && candGroup[j]<0){
-                        // mark candidates with their corresponding group number
-                        candGroup[i] = candGroup[j] = (int)groupedCandidates.size();
-
-                        // create group
-                        vector<unsigned int> grouped;
-                        grouped.push_back(i);
-                        grouped.push_back(j);
-                        groupedCandidates.push_back( grouped );
-                    }
-                    // i is related to a group
-                    else if(candGroup[i] > -1 && candGroup[j] == -1){
-                        int group = candGroup[i];
-                        candGroup[j] = group;
-
-                        // add to group
-                        groupedCandidates[group].push_back( j );
-                    }
-                    // j is related to a group
-                    else if(candGroup[j] > -1 && candGroup[i] == -1){
-                        int group = candGroup[j];
-                        candGroup[i] = group;
-
-                        // add to group
-                        groupedCandidates[group].push_back( i );
-                    }
-                }
-            }
-        }
-        if (isSingleContour && candGroup[i] < 0)
-        {
-            candGroup[i] = (int)groupedCandidates.size();
-            vector<unsigned int> grouped;
-            grouped.push_back(i);
-            grouped.push_back(i); // step "save possible candidates" require minimum 2 elements
-            groupedCandidates.push_back(grouped);
+    MarkerCandidateTree(vector<Point2f>&& corners_, vector<Point>&& contour_) {
+        corners = std::move(corners_);
+        contour = std::move(contour_);
+        perimeter = 0.f;
+        for (size_t i = 0ull; i < 4ull; i++) {
+            perimeter += sqrt(normL2Sqr<float>(Point2f(corners[i] - corners[(i+1ull) % 4ull])));
         }
     }
 
-    // save possible candidates
-    candidatesSetOut.clear();
-    contoursSetOut.clear();
-
-    vector<vector<Point2f> > biggerCandidates;
-    vector<vector<Point> > biggerContours;
-    vector<vector<Point2f> > smallerCandidates;
-    vector<vector<Point> > smallerContours;
-
-    // save possible candidates
-    for(unsigned int i = 0; i < groupedCandidates.size(); i++) {
-        unsigned int smallerIdx = groupedCandidates[i][0];
-        unsigned int biggerIdx = smallerIdx;
-        double smallerArea = contourArea(candidatesIn[smallerIdx]);
-        double biggerArea = smallerArea;
-
-        // evaluate group elements
-        for(unsigned int j = 1; j < groupedCandidates[i].size(); j++) {
-            unsigned int currIdx = groupedCandidates[i][j];
-            double currArea = contourArea(candidatesIn[currIdx]);
-
-            // check if current contour is bigger
-            if(currArea >= biggerArea) {
-                biggerIdx = currIdx;
-                biggerArea = currArea;
-            }
-
-            // check if current contour is smaller
-            if(currArea < smallerArea && detectInvertedMarker) {
-                smallerIdx = currIdx;
-                smallerArea = currArea;
-            }
-        }
-
-        // add contours and candidates
-        biggerCandidates.push_back(candidatesIn[biggerIdx]);
-        biggerContours.push_back(contoursIn[biggerIdx]);
-        if(detectInvertedMarker) {
-            smallerCandidates.push_back(alignContourOrder(candidatesIn[biggerIdx][0], candidatesIn[smallerIdx]));
-            smallerContours.push_back(contoursIn[smallerIdx]);
-        }
+    bool operator<(const MarkerCandidateTree& m) const {
+        // sorting the contors in descending order
+        return perimeter > m.perimeter;
     }
-    // to preserve the structure :: candidateSet< defaultCandidates, whiteCandidates >
-    // default candidates
-    candidatesSetOut.push_back(biggerCandidates);
-    contoursSetOut.push_back(biggerContours);
-    // white candidates
-    candidatesSetOut.push_back(smallerCandidates);
-    contoursSetOut.push_back(smallerContours);
+};
+
+
+// returns the average distance between the marker points
+float static inline getAverageDistance(const std::vector<Point2f>& marker1, const std::vector<Point2f>& marker2) {
+    float minDistSq = std::numeric_limits<float>::max();
+    // fc is the first corner considered on one of the markers, 4 combinations are possible
+    for(int fc = 0; fc < 4; fc++) {
+        float distSq = 0;
+        for(int c = 0; c < 4; c++) {
+            // modC is the corner considering first corner is fc
+            int modC = (c + fc) % 4;
+            distSq += normL2Sqr<float>(marker1[modC] - marker2[c]);
+        }
+        distSq /= 4.f;
+        minDistSq = min(minDistSq, distSq);
+    }
+    return sqrt(minDistSq);
 }
 
 /**
@@ -398,29 +314,6 @@ static void _detectInitialCandidates(const Mat &grey, vector<vector<Point2f> > &
             contours.push_back(contoursArrays[i][j]);
         }
     }
-}
-
-
-/**
- * @brief Detect square candidates in the input image
- */
-static void _detectCandidates(InputArray _grayImage, vector<vector<vector<Point2f> > >& candidatesSetOut,
-                              vector<vector<vector<Point> > >& contoursSetOut, const DetectorParameters &_params) {
-    Mat grey = _grayImage.getMat();
-    CV_DbgAssert(grey.total() != 0);
-    CV_DbgAssert(grey.type() == CV_8UC1);
-
-    /// 1. DETECT FIRST SET OF CANDIDATES
-    vector<vector<Point2f> > candidates;
-    vector<vector<Point> > contours;
-    _detectInitialCandidates(grey, candidates, contours, _params);
-    /// 2. SORT CORNERS
-    _reorderCandidatesCorners(candidates);
-
-    /// 3. FILTER OUT NEAR CANDIDATE PAIRS
-    // save the outter/inner border (i.e. potential candidates)
-    _filterTooCloseCandidates(candidates, candidatesSetOut, contours, contoursSetOut,
-                              _params.minMarkerDistanceRate, _params.detectInvertedMarker);
 }
 
 
@@ -525,12 +418,10 @@ static int _getBorderErrors(const Mat &bits, int markerSize, int borderSize) {
  *                           1 if the candidate is a black candidate (default candidate)
  *                           2 if the candidate is a white candidate
  */
-static uint8_t _identifyOneCandidate(const Dictionary& dictionary, InputArray _image,
+static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _image,
                                      const vector<Point2f>& _corners, int& idx,
                                      const DetectorParameters& params, int& rotation,
                                      const float scale = 1.f) {
-    CV_DbgAssert(_corners.size() == 4);
-    CV_DbgAssert(_image.getMat().total() != 0);
     CV_DbgAssert(params.markerBorderBits > 0);
     uint8_t typ=1;
     // get bits
@@ -608,87 +499,6 @@ static size_t _findOptPyrImageForCanonicalImg(
     return optLevel;
 }
 
-/**
- * @brief Identify square candidates according to a marker dictionary
- */
-
-static void _identifyCandidates(InputArray grey,
-                                const vector<Mat>& image_pyr,
-                                vector<vector<vector<Point2f> > >& _candidatesSet,
-                                vector<vector<vector<Point> > >& _contoursSet, const Dictionary &_dictionary,
-                                vector<vector<Point2f> >& _accepted, vector<vector<Point> >& _contours, vector<int>& ids,
-                                const DetectorParameters &params,
-                                OutputArrayOfArrays _rejected = noArray()) {
-    CV_DbgAssert(grey.getMat().total() != 0);
-    CV_DbgAssert(grey.getMat().type() == CV_8UC1);
-    int ncandidates = (int)_candidatesSet[0].size();
-    vector<vector<Point2f> > accepted;
-    vector<vector<Point2f> > rejected;
-    vector<vector<Point> > contours;
-
-    vector<int> idsTmp(ncandidates, -1);
-    vector<int> rotated(ncandidates, 0);
-    vector<uint8_t> validCandidates(ncandidates, 0);
-
-    //// Analyze each of the candidates
-    parallel_for_(Range(0, ncandidates), [&](const Range &range) {
-        const int begin = range.start;
-        const int end = range.end;
-
-        vector<vector<Point2f> >& candidates = params.detectInvertedMarker ? _candidatesSet[1] : _candidatesSet[0];
-        vector<vector<Point> >& contourS = params.detectInvertedMarker ? _contoursSet[1] : _contoursSet[0];
-
-        for(int i = begin; i < end; i++) {
-            int currId = -1;
-            // implements equation (4)
-            if (params.useAruco3Detection) {
-                const int perimeterOfContour = static_cast<int>(contourS[i].size());
-                const int min_perimeter = params.minSideLengthCanonicalImg * 4;
-                const size_t nearestImgId = _findOptPyrImageForCanonicalImg(image_pyr, grey.cols(), perimeterOfContour, min_perimeter);
-                const float scale = image_pyr[nearestImgId].cols / static_cast<float>(grey.cols());
-
-                validCandidates[i] = _identifyOneCandidate(_dictionary, image_pyr[nearestImgId], candidates[i], currId, params, rotated[i], scale);
-            }
-            else {
-                validCandidates[i] = _identifyOneCandidate(_dictionary, grey, candidates[i], currId, params, rotated[i]);
-            }
-
-            if(validCandidates[i] > 0)
-                idsTmp[i] = currId;
-        }
-    });
-
-    for(int i = 0; i < ncandidates; i++) {
-        if(validCandidates[i] > 0) {
-            // to choose the right set of candidates :: 0 for default, 1 for white markers
-            uint8_t set = validCandidates[i]-1;
-
-            // shift corner positions to the correct rotation
-            correctCornerPosition(_candidatesSet[set][i], rotated[i]);
-
-            if( !params.detectInvertedMarker && validCandidates[i] == 2 )
-                continue;
-
-            // add valid candidate
-            accepted.push_back(_candidatesSet[set][i]);
-            ids.push_back(idsTmp[i]);
-
-            contours.push_back(_contoursSet[set][i]);
-
-        } else {
-            rejected.push_back(_candidatesSet[0][i]);
-        }
-    }
-
-    // parse output
-    _accepted = accepted;
-
-    _contours= contours;
-
-    if(_rejected.needed()) {
-        _copyVector2Output(rejected, _rejected);
-    }
-}
 
 /**
  * Line fitting  A * B = C :: Called from function refineCandidateLines
@@ -844,6 +654,210 @@ struct ArucoDetector::ArucoDetectorImpl {
     ArucoDetectorImpl(const Dictionary &_dictionary, const DetectorParameters &_detectorParams,
                       const RefineParameters& _refineParams): dictionary(_dictionary),
                       detectorParams(_detectorParams), refineParams(_refineParams) {}
+    /**
+     * @brief Detect square candidates in the input image
+     */
+    void detectCandidates(const Mat& grey, vector<vector<Point2f> >& candidates, vector<vector<Point> >& contours) {
+        /// 1. DETECT FIRST SET OF CANDIDATES
+        _detectInitialCandidates(grey, candidates, contours, detectorParams);
+        /// 2. SORT CORNERS
+        _reorderCandidatesCorners(candidates);
+    }
+
+    /**
+     * @brief  FILTER OUT NEAR CANDIDATE PAIRS
+     *
+     * save the outter/inner border (i.e. potential candidates) to vector<MarkerCandidateTree>,
+     * clear candidates and contours
+     */
+    vector<MarkerCandidateTree>
+    filterTooCloseCandidates(vector<vector<Point2f> > &candidates, vector<vector<Point> > &contours) {
+        CV_Assert(detectorParams.minMarkerDistanceRate >= 0.);
+        vector<MarkerCandidateTree> candidateTree(candidates.size());
+        for(size_t i = 0ull; i < candidates.size(); i++) {
+            candidateTree[i] = MarkerCandidateTree(std::move(candidates[i]), std::move(contours[i]));
+        }
+        candidates.clear();
+        contours.clear();
+
+        // sort candidates from big to small
+        std::stable_sort(candidateTree.begin(), candidateTree.end());
+        // group index for each candidate
+        vector<int> groupId(candidateTree.size(), -1);
+        vector<vector<size_t> > groupedCandidates;
+        vector<bool> isSelectedContours(candidateTree.size(), true);
+
+        size_t countSelectedContours = 0ull;
+        for (size_t i = 0ull; i < candidateTree.size(); i++) {
+            for (size_t j = i + 1ull; j < candidateTree.size(); j++) {
+                float minDist = getAverageDistance(candidateTree[i].corners, candidateTree[j].corners);
+                // if mean distance is too low, group markers
+                // the distance between the points of two independent markers should be more than half the side of the marker
+                // half the side of the marker = (perimeter / 4) * 0.5 = perimeter * 0.125
+                if(minDist < candidateTree[j].perimeter*(float)detectorParams.minMarkerDistanceRate) {
+                    isSelectedContours[i] = false;
+                    isSelectedContours[j] = false;
+                    // i and j are not related to a group
+                    if(groupId[i] < 0 && groupId[j] < 0){
+                        // mark candidates with their corresponding group number
+                        groupId[i] = groupId[j] = (int)groupedCandidates.size();
+                        // create group
+                        groupedCandidates.push_back({i, j});
+                    }
+                    // i is related to a group
+                    else if(groupId[i] > -1 && groupId[j] == -1) {
+                        int group = groupId[i];
+                        groupId[j] = group;
+                        // add to group
+                        groupedCandidates[group].push_back(j);
+                    }
+                    // j is related to a group
+                    else if(groupId[j] > -1 && groupId[i] == -1) {
+                        int group = groupId[j];
+                        groupId[i] = group;
+                        // add to group
+                        groupedCandidates[group].push_back(i);
+                    }
+                }
+            }
+            countSelectedContours += isSelectedContours[i];
+        }
+
+        for (vector<size_t>& grouped : groupedCandidates) {
+            if (detectorParams.detectInvertedMarker) // if detectInvertedMarker choose smallest contours
+                std::stable_sort(grouped.begin(), grouped.end(), [](const size_t &a, const size_t &b) {
+                    return a > b;
+                });
+            else // if detectInvertedMarker==false choose largest contours
+                std::stable_sort(grouped.begin(), grouped.end());
+            size_t currId = grouped[0];
+            isSelectedContours[currId] = true;
+            for (size_t i = 1ull; i < grouped.size(); i++) {
+                size_t id = grouped[i];
+                float dist = getAverageDistance(candidateTree[id].corners, candidateTree[currId].corners);
+                float moduleSize = getAverageModuleSize(candidateTree[id].corners, dictionary.markerSize, detectorParams.markerBorderBits);
+                if (dist > detectorParams.minGroupDistance*moduleSize) {
+                    currId = id;
+                    candidateTree[grouped[0]].closeContours.push_back(candidateTree[id]);
+                }
+            }
+        }
+
+        vector<MarkerCandidateTree> selectedCandidates(countSelectedContours + groupedCandidates.size());
+        countSelectedContours = 0ull;
+        for (size_t i = 0ull; i < candidateTree.size(); i++) {
+            if (isSelectedContours[i]) {
+                selectedCandidates[countSelectedContours] = std::move(candidateTree[i]);
+                countSelectedContours++;
+            }
+        }
+
+        // find hierarchy in the candidate tree
+        for (int i = (int)selectedCandidates.size()-1; i >= 0; i--) {
+            for (int j = i - 1; j >= 0; j--) {
+                if (checkMarker1InMarker2(selectedCandidates[i].corners, selectedCandidates[j].corners)) {
+                    selectedCandidates[i].parent = j;
+                    selectedCandidates[j].depth = max(selectedCandidates[j].depth, selectedCandidates[i].depth + 1);
+                    break;
+                }
+            }
+        }
+        return selectedCandidates;
+    }
+
+    /**
+     * @brief Identify square candidates according to a marker dictionary
+     */
+    void identifyCandidates(const Mat& grey, const vector<Mat>& image_pyr, vector<MarkerCandidateTree>& selectedContours,
+                            vector<vector<Point2f> >& accepted, vector<vector<Point> >& contours,
+                            vector<int>& ids, OutputArrayOfArrays _rejected = noArray()) {
+        size_t ncandidates = selectedContours.size();
+        vector<vector<Point2f> > rejected;
+
+        vector<int> idsTmp(ncandidates, -1);
+        vector<int> rotated(ncandidates, 0);
+        vector<uint8_t> validCandidates(ncandidates, 0);
+        vector<uint8_t> was(ncandidates, false);
+        bool checkCloseContours = true;
+
+        int maxDepth = 0;
+        for (size_t i = 0ull; i < selectedContours.size(); i++)
+            maxDepth = max(selectedContours[i].depth, maxDepth);
+        vector<vector<size_t>> depths(maxDepth+1);
+        for (size_t i = 0ull; i < selectedContours.size(); i++) {
+            depths[selectedContours[i].depth].push_back(i);
+        }
+
+        //// Analyze each of the candidates
+        int depth = 0;
+        size_t counter = 0;
+        while (counter < ncandidates) {
+            parallel_for_(Range(0, (int)depths[depth].size()), [&](const Range& range) {
+                const int begin = range.start;
+                const int end = range.end;
+                for (int i = begin; i < end; i++) {
+                    size_t v = depths[depth][i];
+                    was[v] = true;
+                    Mat img = grey;
+                    // implements equation (4)
+                    if (detectorParams.useAruco3Detection) {
+                        const int minPerimeter = detectorParams.minSideLengthCanonicalImg * 4;
+                        const size_t nearestImgId = _findOptPyrImageForCanonicalImg(image_pyr, grey.cols, static_cast<int>(selectedContours[v].contour.size()), minPerimeter);
+                        img = image_pyr[nearestImgId];
+                    }
+                    const float scale = detectorParams.useAruco3Detection ? img.cols / static_cast<float>(grey.cols) : 1.f;
+
+                    validCandidates[v] = _identifyOneCandidate(dictionary, img, selectedContours[v].corners, idsTmp[v], detectorParams, rotated[v], scale);
+
+                    if (validCandidates[v] == 0 && checkCloseContours) {
+                        for (const MarkerCandidate& closeMarkerCandidate: selectedContours[v].closeContours) {
+                            validCandidates[v] = _identifyOneCandidate(dictionary, img, closeMarkerCandidate.corners, idsTmp[v], detectorParams, rotated[v], scale);
+                            if (validCandidates[v] > 0) {
+                                selectedContours[v].corners = closeMarkerCandidate.corners;
+                                selectedContours[v].contour = closeMarkerCandidate.contour;
+                                break;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // visit the parent vertices of the detected markers to skip identify parent contours
+            for(size_t v : depths[depth]) {
+                if(validCandidates[v] > 0) {
+                    int parent = selectedContours[v].parent;
+                    while (parent != -1) {
+                        if (!was[parent]) {
+                            was[parent] = true;
+                            counter++;
+                        }
+                        parent = selectedContours[parent].parent;
+                    }
+                }
+                counter++;
+            }
+            depth++;
+        }
+
+        for (size_t i = 0ull; i < selectedContours.size(); i++) {
+            if (validCandidates[i] > 0) {
+                    // shift corner positions to the correct rotation
+                    correctCornerPosition(selectedContours[i].corners, rotated[i]);
+
+                    accepted.push_back(selectedContours[i].corners);
+                    contours.push_back(selectedContours[i].contour);
+                    ids.push_back(idsTmp[i]);
+            }
+            else {
+                rejected.push_back(selectedContours[i].corners);
+            }
+        }
+
+        // parse output
+        if(_rejected.needed()) {
+            _copyVector2Output(rejected, _rejected);
+        }
+    }
 
 };
 
@@ -866,7 +880,7 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
                 detectorParams.minMarkerLengthRatioOriginalImg == 0.0));
 
     Mat grey;
-    _convertToGrey(_image.getMat(), grey);
+    _convertToGrey(_image, grey);
 
     // Aruco3 functionality is the extension of Aruco.
     // The description can be found in:
@@ -917,23 +931,21 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
     vector<vector<Point> > contours;
     vector<int> ids;
 
-    vector<vector<vector<Point2f> > > candidatesSet;
-    vector<vector<vector<Point> > > contoursSet;
-
     /// STEP 2.a Detect marker candidates :: using AprilTag
     if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG){
         _apriltag(grey, detectorParams, candidates, contours);
-
-        candidatesSet.push_back(candidates);
-        contoursSet.push_back(contours);
     }
     /// STEP 2.b Detect marker candidates :: traditional way
-    else
-        _detectCandidates(grey, candidatesSet, contoursSet, detectorParams);
+    else {
+        arucoDetectorImpl->detectCandidates(grey, candidates, contours);
+    }
+
+     /// STEP 2.c FILTER OUT NEAR CANDIDATE PAIRS
+    auto selectedCandidates = arucoDetectorImpl->filterTooCloseCandidates(candidates, contours);
 
     /// STEP 2: Check candidate codification (identify markers)
-    _identifyCandidates(grey, grey_pyramid, candidatesSet, contoursSet, dictionary,
-                        candidates, contours, ids, detectorParams, _rejectedImgPoints);
+    arucoDetectorImpl->identifyCandidates(grey, grey_pyramid, selectedCandidates, candidates, contours,
+                                          ids, _rejectedImgPoints);
 
     /// STEP 3: Corner refinement :: use corner subpix
     if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
@@ -949,13 +961,15 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
                     const float scale_init = (float) grey_pyramid[closest_pyr_image_idx].cols / grey.cols;
                     findCornerInPyrImage(scale_init, closest_pyr_image_idx, grey_pyramid, Mat(candidates[i]), detectorParams);
                 }
-                else
-                cornerSubPix(grey, Mat(candidates[i]),
-                             Size(detectorParams.cornerRefinementWinSize, detectorParams.cornerRefinementWinSize),
-                             Size(-1, -1),
-                             TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
-                                          detectorParams.cornerRefinementMaxIterations,
-                                          detectorParams.cornerRefinementMinAccuracy));
+                else {
+                    int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
+                                                  getAverageModuleSize(candidates[i], dictionary.markerSize, detectorParams.markerBorderBits)));
+                    cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
+                    cornerSubPix(grey, Mat(candidates[i]), Size(cornerRefinementWinSize, cornerRefinementWinSize), Size(-1, -1),
+                                 TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
+                                              detectorParams.cornerRefinementMaxIterations,
+                                              detectorParams.cornerRefinementMinAccuracy));
+                }
             }
         });
     }
@@ -1221,8 +1235,13 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
                 CV_Assert(detectorParams.cornerRefinementWinSize > 0 &&
                           detectorParams.cornerRefinementMaxIterations > 0 &&
                           detectorParams.cornerRefinementMinAccuracy > 0);
+
+                std::vector<Point2f> marker(closestRotatedMarker.begin<Point2f>(), closestRotatedMarker.end<Point2f>());
+                int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
+                                              getAverageModuleSize(marker, dictionary.markerSize, detectorParams.markerBorderBits)));
+                cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
                 cornerSubPix(grey, closestRotatedMarker,
-                             Size(detectorParams.cornerRefinementWinSize, detectorParams.cornerRefinementWinSize),
+                             Size(cornerRefinementWinSize, cornerRefinementWinSize),
                              Size(-1, -1), TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
                                                         detectorParams.cornerRefinementMaxIterations,
                                                         detectorParams.cornerRefinementMinAccuracy));

@@ -3,6 +3,8 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../op_inf_engine.hpp"
+#include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 
 #include <algorithm> // for std::max & std::min
@@ -43,7 +45,8 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && reduction == REDUCTION::NONE);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -68,6 +71,11 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        if (inputs_arr.depth() == CV_16F) {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
@@ -81,59 +89,62 @@ public:
     }
 
     template<typename T, typename Functor>
-    void forward_impl(const Functor& rd, const Mat& data, const Mat& indices, const Mat& updates, Mat& out)
-    {
-        data.copyTo(out);
+    void forward_impl(const Functor &reduce_operation, const Mat &input_mat, const Mat &indices_mat, const Mat &updates_mat, Mat &output_mat) {
+        input_mat.copyTo(output_mat);
 
-        const int ndims = data.dims;
-        const int* shape = data.size.p;
-        const size_t* step = data.step.p;
+        const int ndims = input_mat.dims;
 
-        const int* ind_shape = indices.size.p;
-        const size_t* ind_step = indices.step.p;
+        const auto &input_mat_shape = shape(input_mat);
+        std::vector<size_t> input_mat_step(ndims);
 
-        size_t inp_offset = 0;
-        size_t ind_offset = 0;
-        const T* p_index = indices.ptr<const T>();
-        const T* p_update = updates.ptr<const T>();
-        T* p_out = out.ptr<T>();
+        const auto &indices_mat_shape = shape(indices_mat);
+        std::vector<size_t> indices_mat_step(ndims);
 
-        size_t total = indices.total();
-
-        int j, offset_at_idx, index;
-        size_t t, idx;
-        for (size_t i = 0; i < total; i++)
-        {
-            t = i;
-            inp_offset = 0;
-            ind_offset = 0;
-            int offset_at_axis = 0;
-            for (j = ndims - 1; j >= 0; j--)
-            {
-                idx = t / ind_shape[j];
-                offset_at_idx = (int)(t - idx * ind_shape[j]);
-                ind_offset += offset_at_idx * ind_step[j];
-                inp_offset += offset_at_idx * step[j];
-                t = idx;
-                if (j == axis)
-                {
-                    offset_at_axis = offset_at_idx * step[j];
-                }
-            }
-            ind_offset /= sizeof(T);
-
-            // get index and overwrite current indices
-            const T* tmp_p_index = p_index + ind_offset;
-            index = (int)(*tmp_p_index);
-            CV_Assert(index < shape[axis] && index > -shape[axis]);
-
-            inp_offset = inp_offset - offset_at_axis + ((index + shape[axis]) % shape[axis]) * step[axis];
-            inp_offset /= sizeof(T);
-
-            const T* tmp_p_update = p_update + ind_offset;
-            T* tmp_p_out = p_out + inp_offset;
-            *tmp_p_out = rd(*tmp_p_out, *tmp_p_update);
+        for (int i = 0; i < ndims; i++) {
+            input_mat_step[i] = static_cast<size_t>(input_mat.step.p[i] / sizeof(T));
+            indices_mat_step[i] = static_cast<size_t>(indices_mat.step.p[i] / sizeof(T));
         }
+
+        auto fn = [&](const Range &r) {
+            size_t input_offset = 0, indices_offset = 0;
+
+            int indices_index, index;
+            size_t axis_offset, tmp_index, j_index;
+            for (int i = r.start; i < r.end; i++) {
+                const T* indices = indices_mat.ptr<const T>();
+                const T* updates = updates_mat.ptr<const T>();
+                T* output = output_mat.ptr<T>();
+
+                input_offset = 0;
+                indices_offset = 0;
+                indices_index = i;
+                axis_offset = 0;
+                for (int j = ndims - 1; j >= 0; j--) {
+                    tmp_index = indices_index / indices_mat_shape[j];
+                    j_index = (size_t)(indices_index - tmp_index * indices_mat_shape[j]);
+                    input_offset += j_index * input_mat_step[j];
+                    indices_offset += j_index * indices_mat_step[j];
+                    indices_index = tmp_index;
+                    if (j == axis) {
+                        axis_offset = j_index * input_mat_step[j];
+                    }
+                }
+
+                // get index and overwrite current indices
+                index = static_cast<int>(*(indices + indices_offset));
+                index = (index + input_mat_shape[axis]) % input_mat_shape[axis];
+                CV_Assert(index < input_mat_shape[axis] && index >= 0);
+                input_offset = input_offset - axis_offset + index * input_mat_step[axis];
+
+                updates += indices_offset;
+                output += input_offset;
+                *output = reduce_operation(*output, *updates);
+            }
+        };
+
+        size_t total = indices_mat.total();
+        double nstripes = (size_t)total * ndims * (1 / 1024.0);
+        parallel_for_(Range(0, total), fn, nstripes);
     }
 
     template<typename... Args>
@@ -194,6 +205,27 @@ public:
                 CV_Error(Error::StsBadArg, "Unsupported reduction.");
         };
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        int32_t indicesBoundValue = nodes[0].dynamicCast<InfEngineNgraphNode>()->node.get_shape()[axis];
+        auto indicesBound = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &indicesBoundValue);
+        auto indices = std::make_shared<ov::op::v0::Convert>(nodes[1].dynamicCast<InfEngineNgraphNode>()->node, ov::element::i32);
+        auto indicesNonNegative = std::make_shared<ov::op::v1::Mod>(
+            std::make_shared<ov::op::v1::Add>(indices, indicesBound),
+            indicesBound);
+
+        auto axis_node = std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{}, &axis);
+        auto scatterElements = std::make_shared<ov::op::v3::ScatterElementsUpdate>(
+            nodes[0].dynamicCast<InfEngineNgraphNode>()->node,
+            indicesNonNegative,
+            nodes[2].dynamicCast<InfEngineNgraphNode>()->node,
+            axis_node);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(scatterElements));
+    }
+#endif  // HAVE_DNN_NGRAPH
 
 private:
     // Attributes

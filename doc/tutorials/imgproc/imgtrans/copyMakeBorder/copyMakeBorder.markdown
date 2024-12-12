@@ -78,7 +78,7 @@ You can also download it from
 Explanation
 -----------
 
-#### Declare the variables
+### Declare the variables
 
 First we declare the variables we are going to use:
 
@@ -97,7 +97,7 @@ First we declare the variables we are going to use:
 Especial attention deserves the variable *rng* which is a random number generator. We use it to
 generate the random border color, as we will see soon.
 
-#### Load an image
+### Load an image
 
 As usual we load our source image *src*:
 
@@ -113,7 +113,7 @@ As usual we load our source image *src*:
 @snippet python/tutorial_code/ImgTrans/MakeBorder/copy_make_border.py load
 @end_toggle
 
-#### Create a window
+### Create a window
 
 After giving a short intro of how to use the program, we create a window:
 
@@ -129,7 +129,7 @@ After giving a short intro of how to use the program, we create a window:
 @snippet python/tutorial_code/ImgTrans/MakeBorder/copy_make_border.py create_window
 @end_toggle
 
-#### Initialize arguments
+### Initialize arguments
 
 Now we initialize the argument that defines the size of the borders (*top*, *bottom*, *left* and
 *right*). We give them a value of 5% the size of *src*.
@@ -146,7 +146,7 @@ Now we initialize the argument that defines the size of the borders (*top*, *bot
 @snippet python/tutorial_code/ImgTrans/MakeBorder/copy_make_border.py init_arguments
 @end_toggle
 
-#### Loop
+### Loop
 
 The program runs in an infinite loop while the key **ESC** isn't pressed.
 If the user presses '**c**' or '**r**', the *borderType* variable
@@ -164,7 +164,7 @@ takes the value of *BORDER_CONSTANT* or *BORDER_REPLICATE* respectively:
 @snippet python/tutorial_code/ImgTrans/MakeBorder/copy_make_border.py check_keypress
 @end_toggle
 
-#### Random color
+### Random color
 
 In each iteration (after 0.5 seconds), the random border color (*value*) is updated...
 
@@ -182,7 +182,7 @@ In each iteration (after 0.5 seconds), the random border color (*value*) is upda
 
 This value is a set of three numbers picked randomly in the range \f$[0,255]\f$.
 
-#### Form a border around the image
+### Form a border around the image
 
 Finally, we call the function **copyMakeBorder()** to apply the respective padding:
 
@@ -209,7 +209,7 @@ Finally, we call the function **copyMakeBorder()** to apply the respective paddi
     -#  *value*: If *borderType* is *BORDER_CONSTANT*, this is the value used to fill the border
         pixels.
 
-#### Display the results
+### Display the results
 
 We display our output image in the image created previously
 

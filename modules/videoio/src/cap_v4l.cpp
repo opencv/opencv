@@ -613,6 +613,7 @@ bool CvCaptureCAM_V4L::autosetup_capture_mode_v4l2()
             V4L2_PIX_FMT_NV21,
             V4L2_PIX_FMT_SBGGR8,
             V4L2_PIX_FMT_SGBRG8,
+            V4L2_PIX_FMT_SGRBG8,
             V4L2_PIX_FMT_XBGR32,
             V4L2_PIX_FMT_ABGR32,
             V4L2_PIX_FMT_SN9C10X,
@@ -679,6 +680,7 @@ bool CvCaptureCAM_V4L::convertableToRgb() const
     case V4L2_PIX_FMT_SBGGR8:
     case V4L2_PIX_FMT_SN9C10X:
     case V4L2_PIX_FMT_SGBRG8:
+    case V4L2_PIX_FMT_SGRBG8:
     case V4L2_PIX_FMT_RGB24:
     case V4L2_PIX_FMT_Y16:
     case V4L2_PIX_FMT_Y16_BE:
@@ -1319,174 +1321,6 @@ yuv411p_to_rgb24(int width, int height,
     }
 }
 
-/*
- * BAYER2RGB24 ROUTINE TAKEN FROM:
- *
- * Sonix SN9C10x based webcam basic I/F routines
- * Takafumi Mizuno <taka-qce@ls-a.jp>
- *
- */
-static void bayer2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, unsigned char *dst)
-{
-    long int i;
-    unsigned char *rawpt, *scanpt;
-    long int size;
-
-    rawpt = src;
-    scanpt = dst;
-    size = WIDTH*HEIGHT;
-
-    for ( i = 0; i < size; i++ ) {
-        if ( (i/WIDTH) % 2 == 0 ) {
-            if ( (i % 2) == 0 ) {
-                /* B */
-                if ( (i > WIDTH) && ((i % WIDTH) > 0) ) {
-                    *scanpt++ = (*(rawpt-WIDTH-1)+*(rawpt-WIDTH+1)+
-                            *(rawpt+WIDTH-1)+*(rawpt+WIDTH+1))/4;  /* R */
-                    *scanpt++ = (*(rawpt-1)+*(rawpt+1)+
-                            *(rawpt+WIDTH)+*(rawpt-WIDTH))/4;      /* G */
-                    *scanpt++ = *rawpt;                                     /* B */
-                } else {
-                    /* first line or left column */
-                    *scanpt++ = *(rawpt+WIDTH+1);           /* R */
-                    *scanpt++ = (*(rawpt+1)+*(rawpt+WIDTH))/2;      /* G */
-                    *scanpt++ = *rawpt;                             /* B */
-                }
-            } else {
-                /* (B)G */
-                if ( (i > WIDTH) && ((i % WIDTH) < (WIDTH-1)) ) {
-                    *scanpt++ = (*(rawpt+WIDTH)+*(rawpt-WIDTH))/2;  /* R */
-                    *scanpt++ = *rawpt;                                     /* G */
-                    *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;          /* B */
-                } else {
-                    /* first line or right column */
-                    *scanpt++ = *(rawpt+WIDTH);     /* R */
-                    *scanpt++ = *rawpt;             /* G */
-                    *scanpt++ = *(rawpt-1); /* B */
-                }
-            }
-        } else {
-            if ( (i % 2) == 0 ) {
-                /* G(R) */
-                if ( (i < (WIDTH*(HEIGHT-1))) && ((i % WIDTH) > 0) ) {
-                    *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;          /* R */
-                    *scanpt++ = *rawpt;                                     /* G */
-                    *scanpt++ = (*(rawpt+WIDTH)+*(rawpt-WIDTH))/2;  /* B */
-                } else {
-                    /* bottom line or left column */
-                    *scanpt++ = *(rawpt+1);         /* R */
-                    *scanpt++ = *rawpt;                     /* G */
-                    *scanpt++ = *(rawpt-WIDTH);             /* B */
-                }
-            } else {
-                /* R */
-                if ( i < (WIDTH*(HEIGHT-1)) && ((i % WIDTH) < (WIDTH-1)) ) {
-                    *scanpt++ = *rawpt;                                     /* R */
-                    *scanpt++ = (*(rawpt-1)+*(rawpt+1)+
-                            *(rawpt-WIDTH)+*(rawpt+WIDTH))/4;      /* G */
-                    *scanpt++ = (*(rawpt-WIDTH-1)+*(rawpt-WIDTH+1)+
-                            *(rawpt+WIDTH-1)+*(rawpt+WIDTH+1))/4;  /* B */
-                } else {
-                    /* bottom line or right column */
-                    *scanpt++ = *rawpt;                             /* R */
-                    *scanpt++ = (*(rawpt-1)+*(rawpt-WIDTH))/2;      /* G */
-                    *scanpt++ = *(rawpt-WIDTH-1);           /* B */
-                }
-            }
-        }
-        rawpt++;
-    }
-
-}
-
-// SGBRG to RGB24
-// for some reason, red and blue needs to be swapped
-// at least for  046d:092f Logitech, Inc. QuickCam Express Plus to work
-//see: http://www.siliconimaging.com/RGB%20Bayer.htm
-//and 4.6 at http://tldp.org/HOWTO/html_single/libdc1394-HOWTO/
-static void sgbrg2rgb24(long int WIDTH, long int HEIGHT, unsigned char *src, unsigned char *dst)
-{
-    long int i;
-    unsigned char *rawpt, *scanpt;
-    long int size;
-
-    rawpt = src;
-    scanpt = dst;
-    size = WIDTH*HEIGHT;
-
-    for ( i = 0; i < size; i++ )
-    {
-        if ( (i/WIDTH) % 2 == 0 ) //even row
-        {
-            if ( (i % 2) == 0 ) //even pixel
-            {
-                if ( (i > WIDTH) && ((i % WIDTH) > 0) )
-                {
-                    *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2;       /* R */
-                    *scanpt++ = *(rawpt);                        /* G */
-                    *scanpt++ = (*(rawpt-WIDTH) + *(rawpt+WIDTH))/2;      /* B */
-                } else
-                {
-                    /* first line or left column */
-
-                    *scanpt++ = *(rawpt+1);           /* R */
-                    *scanpt++ = *(rawpt);             /* G */
-                    *scanpt++ =  *(rawpt+WIDTH);      /* B */
-                }
-            } else //odd pixel
-            {
-                if ( (i > WIDTH) && ((i % WIDTH) < (WIDTH-1)) )
-                {
-                    *scanpt++ = *(rawpt);       /* R */
-                    *scanpt++ = (*(rawpt-1)+*(rawpt+1)+*(rawpt-WIDTH)+*(rawpt+WIDTH))/4; /* G */
-                    *scanpt++ = (*(rawpt-WIDTH-1) + *(rawpt-WIDTH+1) + *(rawpt+WIDTH-1) + *(rawpt+WIDTH+1))/4;      /* B */
-                } else
-                {
-                    /* first line or right column */
-
-                    *scanpt++ = *(rawpt);       /* R */
-                    *scanpt++ = (*(rawpt-1)+*(rawpt+WIDTH))/2; /* G */
-                    *scanpt++ = *(rawpt+WIDTH-1);      /* B */
-                }
-            }
-        } else
-        { //odd row
-            if ( (i % 2) == 0 ) //even pixel
-            {
-                if ( (i < (WIDTH*(HEIGHT-1))) && ((i % WIDTH) > 0) )
-                {
-                    *scanpt++ =  (*(rawpt-WIDTH-1)+*(rawpt-WIDTH+1)+*(rawpt+WIDTH-1)+*(rawpt+WIDTH+1))/4;          /* R */
-                    *scanpt++ =  (*(rawpt-1)+*(rawpt+1)+*(rawpt-WIDTH)+*(rawpt+WIDTH))/4;      /* G */
-                    *scanpt++ =  *(rawpt); /* B */
-                } else
-                {
-                    /* bottom line or left column */
-
-                    *scanpt++ =  *(rawpt-WIDTH+1);          /* R */
-                    *scanpt++ =  (*(rawpt+1)+*(rawpt-WIDTH))/2;      /* G */
-                    *scanpt++ =  *(rawpt); /* B */
-                }
-            } else
-            { //odd pixel
-                if ( i < (WIDTH*(HEIGHT-1)) && ((i % WIDTH) < (WIDTH-1)) )
-                {
-                    *scanpt++ = (*(rawpt-WIDTH)+*(rawpt+WIDTH))/2;  /* R */
-                    *scanpt++ = *(rawpt);      /* G */
-                    *scanpt++ = (*(rawpt-1)+*(rawpt+1))/2; /* B */
-                } else
-                {
-                    /* bottom line or right column */
-
-                    *scanpt++ = (*(rawpt-WIDTH));  /* R */
-                    *scanpt++ = *(rawpt);      /* G */
-                    *scanpt++ = (*(rawpt-1)); /* B */
-                }
-            }
-        }
-        rawpt++;
-    }
-}
-
 #define CLAMP(x)        ((x)<0?0:((x)>255)?255:(x))
 
 typedef struct {
@@ -1688,24 +1522,6 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         yuv411p_to_rgb24(imageSize.width, imageSize.height,
                 start, (unsigned char*)frame.imageData);
         return;
-    case V4L2_PIX_FMT_SBGGR8:
-        bayer2rgb24(imageSize.width, imageSize.height,
-                start, (unsigned char*)frame.imageData);
-        return;
-
-    case V4L2_PIX_FMT_SN9C10X:
-        sonix_decompress_init();
-        sonix_decompress(imageSize.width, imageSize.height,
-                start, (unsigned char*)buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
-
-        bayer2rgb24(imageSize.width, imageSize.height,
-                (unsigned char*)buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start,
-                (unsigned char*)frame.imageData);
-        return;
-    case V4L2_PIX_FMT_SGBRG8:
-        sgbrg2rgb24(imageSize.width, imageSize.height,
-                start, (unsigned char*)frame.imageData);
-        return;
     default:
         break;
     }
@@ -1722,11 +1538,11 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         return;
     case V4L2_PIX_FMT_NV12:
         cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), destination,
-                     COLOR_YUV2RGB_NV12);
+                     COLOR_YUV2BGR_NV12);
         return;
     case V4L2_PIX_FMT_NV21:
         cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), destination,
-                     COLOR_YUV2RGB_NV21);
+                     COLOR_YUV2BGR_NV21);
         return;
 #ifdef HAVE_JPEG
     case V4L2_PIX_FMT_MJPEG:
@@ -1776,6 +1592,36 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
         cv::Mat(imageSize, CV_16UC1, start).convertTo(temp, CV_8U, 1.0 / 4);
         cv::cvtColor(temp, destination, COLOR_GRAY2BGR);
+        return;
+    }
+    case V4L2_PIX_FMT_SN9C10X:
+    {
+        sonix_decompress_init();
+        sonix_decompress(imageSize.width, imageSize.height,
+                start, (unsigned char*)buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
+
+        cv::Mat cv_buf(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
+        cv::cvtColor(cv_buf, destination, COLOR_BayerRG2BGR);
+        return;
+    }
+    case V4L2_PIX_FMT_SRGGB8:
+    {
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), destination, COLOR_BayerBG2BGR);
+        return;
+    }
+    case V4L2_PIX_FMT_SBGGR8:
+    {
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), destination, COLOR_BayerRG2BGR);
+        return;
+    }
+    case V4L2_PIX_FMT_SGBRG8:
+    {
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), destination, COLOR_BayerGR2BGR);
+        return;
+    }
+    case V4L2_PIX_FMT_SGRBG8:
+    {
+        cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), destination, COLOR_BayerGB2BGR);
         return;
     }
     case V4L2_PIX_FMT_GREY:

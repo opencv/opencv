@@ -56,15 +56,15 @@
     @defgroup features2d_main Feature Detection and Description
     @defgroup features2d_match Descriptor Matchers
 
-Matchers of keypoint descriptors in OpenCV have wrappers with a common interface that enables you to
-easily switch between different algorithms solving the same problem. This section is devoted to
-matching descriptors that are represented as vectors in a multidimensional space. All objects that
-implement vector descriptor matchers inherit the DescriptorMatcher interface.
+    Matchers of keypoint descriptors in OpenCV have wrappers with a common interface that enables
+    you to easily switch between different algorithms solving the same problem. This section is
+    devoted to matching descriptors that are represented as vectors in a multidimensional space.
+    All objects that implement vector descriptor matchers inherit the DescriptorMatcher interface.
 
     @defgroup features2d_draw Drawing Function of Keypoints and Matches
     @defgroup features2d_category Object Categorization
 
-This section describes approaches based on local 2D features and used to categorize objects.
+    This section describes approaches based on local 2D features and used to categorize objects.
 
     @defgroup feature2d_hal Hardware Acceleration Layer
     @{
@@ -567,10 +567,6 @@ public:
     CV_WRAP virtual String getDefaultName() const CV_OVERRIDE;
 };
 
-//! @} features2d_main
-
-//! @addtogroup features2d_main
-//! @{
 
 /** @brief Wrapping class for feature detection using the FAST method. :
  */
@@ -627,10 +623,6 @@ detection, use cv.FAST.detect() method.
 CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
                       int threshold, bool nonmaxSuppression, FastFeatureDetector::DetectorType type );
 
-//! @} features2d_main
-
-//! @addtogroup features2d_main
-//! @{
 
 /** @brief Wrapping class for feature detection using the AGAST method. :
  */
@@ -793,10 +785,6 @@ public:
   CV_WRAP virtual const std::vector<std::vector<cv::Point> >& getBlobContours() const;
 };
 
-//! @} features2d_main
-
-//! @addtogroup features2d_main
-//! @{
 
 /** @brief Class implementing the KAZE keypoint detector and descriptor extractor, described in @cite ABD12 .
 
@@ -925,7 +913,6 @@ public:
     CV_WRAP virtual int getMaxPoints() const = 0;
 };
 
-//! @} features2d_main
 
 /****************************************************************************************\
 *                                      Distance                                          *
@@ -989,6 +976,8 @@ struct L1
         return normL1<ValueType, ResultType>(a, b, size);
     }
 };
+
+//! @} features2d_main
 
 /****************************************************************************************\
 *                                  DescriptorMatcher                                     *
@@ -1431,6 +1420,9 @@ CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( InputArray img1, const std::vect
 *   Functions to evaluate the feature detectors and [generic] descriptor extractors      *
 \****************************************************************************************/
 
+//! @addtogroup features2d_main
+//! @{
+
 CV_EXPORTS void evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H1to2,
                                          std::vector<KeyPoint>* keypoints1, std::vector<KeyPoint>* keypoints2,
                                          float& repeatability, int& correspCount,
@@ -1442,6 +1434,8 @@ CV_EXPORTS void computeRecallPrecisionCurve( const std::vector<std::vector<DMatc
 
 CV_EXPORTS float getRecall( const std::vector<Point2f>& recallPrecisionCurve, float l_precision );
 CV_EXPORTS int getNearestPoint( const std::vector<Point2f>& recallPrecisionCurve, float l_precision );
+
+//! @}
 
 /****************************************************************************************\
 *                                     Bag of visual words                                *
@@ -1544,8 +1538,8 @@ public:
     @param dmatcher Descriptor matcher that is used to find the nearest word of the trained vocabulary
     for each keypoint descriptor of the image.
      */
-    CV_WRAP BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
-                               const Ptr<DescriptorMatcher>& dmatcher );
+    CV_WRAP BOWImgDescriptorExtractor( const Ptr<Feature2D>& dextractor,
+                                       const Ptr<DescriptorMatcher>& dmatcher );
     /** @overload */
     BOWImgDescriptorExtractor( const Ptr<DescriptorMatcher>& dmatcher );
     virtual ~BOWImgDescriptorExtractor();
@@ -1602,8 +1596,6 @@ protected:
 };
 
 //! @} features2d_category
-
-//! @} features2d
 
 } /* namespace cv */
 

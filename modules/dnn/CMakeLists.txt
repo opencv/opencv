@@ -5,10 +5,10 @@ endif()
 set(the_description "Deep neural network module. It allows to load models from different frameworks and to make forward pass")
 
 ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX)
-ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX LASX)
-ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2)
+ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX RVV LASX)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_depthwise" AVX AVX2 RVV LASX)
-ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2)
+ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2 NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX2 NEON LASX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
@@ -164,6 +164,12 @@ if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
     endif()
   endforeach()
   unset(CC_LIST)
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+    list(APPEND libs ${CUDNN_LIBRARIES} CUDA::cublas${CUDA_LIB_EXT})
+    if(NOT CUDA_VERSION VERSION_LESS 10.1)
+      list(APPEND libs CUDA::cublasLt${CUDA_LIB_EXT})
+    endif()
+  endif()
 else()
   set(sources_options ${sources_options} EXCLUDE_CUDA)
 endif()
@@ -207,7 +213,7 @@ file(GLOB_RECURSE dnn_int_hdrs
 )
 set(dnn_plugin_srcs ${dnn_srcs} ${dnn_int_hdrs})
 ocv_list_filterout_ex(dnn_plugin_srcs
-    "/src/dnn.cpp$|/src/dnn_utils.cpp$|/src/dnn_utils.cpp$|/src/dnn_read.cpp$|/src/registry.cpp$|/src/backend.cpp$"
+    "/src/dnn.cpp$|/src/dnn_utils.cpp$|/src/dnn_read.cpp$|/src/registry.cpp$|/src/backend.cpp$"
     # importers
     "/src/(caffe|darknet|onnx|tensorflow|torch)/"
     # executors
@@ -239,6 +245,12 @@ ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs})
 ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
+
+if(NOT BUILD_PROTOBUF)
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "OPENCV_DNN_EXTERNAL_PROTOBUF=1")
+  endif()
+endif()
 
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
@@ -292,6 +304,13 @@ ocv_option(OPENCV_TEST_DNN_CANN "Build test with CANN" (TARGET ocv.3rdparty.cann
 if(TARGET ocv.3rdparty.cann AND OPENCV_TEST_DNN_CANN)
   if(TARGET opencv_test_dnn)
     ocv_target_link_libraries(opencv_test_dnn ocv.3rdparty.cann)
+  endif()
+endif()
+
+ocv_option(OPENCV_TEST_DNN_TIMVX "Build test with TIM-VX" (HAVE_TIMVX))
+if(OPENCV_TEST_DNN_TIMVX)
+  if(TARGET opencv_test_dnn)
+    ocv_target_compile_definitions(opencv_test_dnn PRIVATE "HAVE_TIMVX=1")
   endif()
 endif()
 

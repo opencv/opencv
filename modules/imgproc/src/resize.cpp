@@ -95,6 +95,10 @@ static void hlineResize(ET* src, int cn, int *ofst, FT* m, FT* dst, int dst_min,
             }
         }
     }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
+    }
     ET* src_last = src + cn*ofst[dst_width - 1];
     for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
     {
@@ -126,6 +130,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 2, true, 1>
             ET* px = src + ofst[i];
             *(dst++) = m[0] * px[0] + m[1] * px[1];
         }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
+        }
         src0 = (src + ofst[dst_width - 1])[0];
         for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
         {
@@ -149,6 +157,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 2, true, 2>
             ET* px = src + 2*ofst[i];
             *(dst++) = m[0] * px[0] + m[1] * px[2];
             *(dst++) = m[0] * px[1] + m[1] * px[3];
+        }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
         }
         src0 = (src + 2*ofst[dst_width - 1])[0];
         src1 = (src + 2*ofst[dst_width - 1])[1];
@@ -177,6 +189,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 2, true, 3>
             *(dst++) = m[0] * px[0] + m[1] * px[3];
             *(dst++) = m[0] * px[1] + m[1] * px[4];
             *(dst++) = m[0] * px[2] + m[1] * px[5];
+        }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
         }
         src0 = (src + 3*ofst[dst_width - 1])[0];
         src1 = (src + 3*ofst[dst_width - 1])[1];
@@ -210,6 +226,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 2, true, 4>
             *(dst++) = m[0] * px[2] + m[1] * px[6];
             *(dst++) = m[0] * px[3] + m[1] * px[7];
         }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
+        }
         src0 = (src + 4*ofst[dst_width - 1])[0];
         src1 = (src + 4*ofst[dst_width - 1])[1];
         src2 = (src + 4*ofst[dst_width - 1])[2];
@@ -238,6 +258,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 4, true, 1>
             ET* px = src + ofst[i];
             *(dst++) = m[0] * src[0] + m[1] * src[1] + m[2] * src[2] + m[3] * src[3];
         }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
+        }
         src0 = (src + ofst[dst_width - 1])[0];
         for (; i < dst_width; i++) // Points that fall right from src image so became equal to rightmost src point
         {
@@ -261,6 +285,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 4, true, 2>
             ET* px = src + 2*ofst[i];
             *(dst++) = m[0] * src[0] + m[1] * src[2] + m[2] * src[4] + m[3] * src[6];
             *(dst++) = m[0] * src[1] + m[1] * src[3] + m[2] * src[5] + m[3] * src[7];
+        }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
         }
         src0 = (src + 2*ofst[dst_width - 1])[0];
         src1 = (src + 2*ofst[dst_width - 1])[1];
@@ -289,6 +317,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 4, true, 3>
             *(dst++) = m[0] * src[0] + m[1] * src[3] + m[2] * src[6] + m[3] * src[ 9];
             *(dst++) = m[0] * src[1] + m[1] * src[4] + m[2] * src[7] + m[3] * src[10];
             *(dst++) = m[0] * src[2] + m[1] * src[5] + m[2] * src[8] + m[3] * src[11];
+        }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
         }
         src0 = (src + 3*ofst[dst_width - 1])[0];
         src1 = (src + 3*ofst[dst_width - 1])[1];
@@ -321,6 +353,10 @@ template <typename ET, typename FT> struct hline<ET, FT, 4, true, 4>
             *(dst++) = m[0] * src[1] + m[1] * src[5] + m[2] * src[ 9] + m[3] * src[13];
             *(dst++) = m[0] * src[2] + m[1] * src[6] + m[2] * src[10] + m[3] * src[14];
             *(dst++) = m[0] * src[3] + m[1] * src[7] + m[2] * src[11] + m[3] * src[15];
+        }
+        // Avoid reading a potentially unset ofst, leading to a random memory read.
+        if (i >= dst_width) {
+            return;
         }
         src0 = (src + 4*ofst[dst_width - 1])[0];
         src1 = (src + 4*ofst[dst_width - 1])[1];
@@ -383,6 +419,10 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 1>(uint8_t* src, int, int *o
         uint8_t* px = src + ofst[i];
         *(dst++) = m[0] * px[0] + m[1] * px[1];
     }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
+    }
     src_0 = (src + ofst[dst_width - 1])[0];
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     v_src_0 = vx_setall_u16(*((uint16_t*)&src_0));
@@ -438,6 +478,10 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 2>(uint8_t* src, int, int *o
         uint8_t* px = src + 2 * ofst[i];
         *(dst++) = m[0] * px[0] + m[1] * px[2];
         *(dst++) = m[0] * px[1] + m[1] * px[3];
+    }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
     }
     ((ufixedpoint16*)(srccn.w))[0] = (src + 2 * ofst[dst_width - 1])[0]; ((ufixedpoint16*)(srccn.w))[1] = (src + 2 * ofst[dst_width - 1])[1];
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -510,6 +554,10 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 3>(uint8_t* src, int, int *o
         *(dst++) = m[0] * px[0] + m[1] * px[3];
         *(dst++) = m[0] * px[1] + m[1] * px[4];
         *(dst++) = m[0] * px[2] + m[1] * px[5];
+    }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
     }
     ((ufixedpoint16*)(srccn.w))[0] = (src + 3*ofst[dst_width - 1])[0];
     ((ufixedpoint16*)(srccn.w))[1] = (src + 3*ofst[dst_width - 1])[1];
@@ -584,6 +632,10 @@ void hlineResizeCn<uint8_t, ufixedpoint16, 2, true, 4>(uint8_t* src, int, int *o
         *(dst++) = m[0] * px[2] + m[1] * px[6];
         *(dst++) = m[0] * px[3] + m[1] * px[7];
     }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
+    }
     ((ufixedpoint16*)(srccn.w))[0] = (src + 4 * ofst[dst_width - 1])[0]; ((ufixedpoint16*)(srccn.w))[1] = (src + 4 * ofst[dst_width - 1])[1];
     ((ufixedpoint16*)(srccn.w))[2] = (src + 4 * ofst[dst_width - 1])[2]; ((ufixedpoint16*)(srccn.w))[3] = (src + 4 * ofst[dst_width - 1])[3];
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -634,6 +686,10 @@ void hlineResizeCn<uint16_t, ufixedpoint32, 2, true, 1>(uint16_t* src, int, int 
     {
         uint16_t* px = src + ofst[i];
         *(dst++) = m[0] * px[0] + m[1] * px[1];
+    }
+    // Avoid reading a potentially unset ofst, leading to a random memory read.
+    if (i >= dst_width) {
+        return;
     }
     src_0 = (src + ofst[dst_width - 1])[0];
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -2473,7 +2529,7 @@ public:
                 v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
                 v_uint16 bl, gl, rl;
 #if CV_SIMD_WIDTH == 16
-                bl = t0 + t3; gl = t1 + t4; rl = t2 + t5;
+                bl = v_add(t0, t3); gl = v_add(t1, t4); rl = v_add(t2, t5);
 #elif CV_SIMD_WIDTH == 32
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
                 bl = v_add(s0, s3); gl = v_add(s1, s4); rl = v_add(s2, s5);
@@ -2493,7 +2549,7 @@ public:
                 v_zip(s0, s3, t0, t1); v_zip(s1, s4, t2, t3); v_zip(s2, s5, t4, t5);
                 v_uint16 bh, gh, rh;
 #if CV_SIMD_WIDTH == 16
-                bh = t0 + t3; gh = t1 + t4; rh = t2 + t5;
+                bh = v_add(t0, t3); gh = v_add(t1, t4); rh = v_add(t2, t5);
 #elif CV_SIMD_WIDTH == 32
                 v_zip(t0, t3, s0, s1); v_zip(t1, t4, s2, s3); v_zip(t2, t5, s4, s5);
                 bh = v_add(s0, s3); gh = v_add(s1, s4); rh = v_add(s2, s5);
@@ -2566,7 +2622,7 @@ public:
                 v_rshr_pack_store<2>(D, r0 + v_rotate_left<1>(r1, r0));
             }
 #else
-                v_rshr_pack_store<2>(D, v_load_expand(S0) + v_load_expand(S0 + 3) + v_load_expand(S1) + v_load_expand(S1 + 3));
+                v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_load_expand(S0), v_load_expand(S0 + 3)), v_load_expand(S1)), v_load_expand(S1 + 3)));
 #endif
 #elif CV_SIMD_WIDTH == 32 || CV_SIMD_WIDTH == 64
             for ( ; dx <= w - 3*VTraits<v_uint16>::vlanes(); dx += 3*VTraits<v_uint16>::vlanes(), S0 += 6*VTraits<v_uint16>::vlanes(), S1 += 6*VTraits<v_uint16>::vlanes(), D += 3*VTraits<v_uint16>::vlanes())
@@ -2609,7 +2665,7 @@ public:
             }
 #elif CV_SIMD_WIDTH >= 64
             v_uint32 masklow = vx_setall_u32(0x0000ffff);
-            for ( ; dx <= w - 3*v_uint16::nlanes; dx += 3*v_uint16::nlanes, S0 += 6*v_uint16::nlanes, S1 += 6*v_uint16::nlanes, D += 3*v_uint16::nlanes)
+            for ( ; dx <= w - 3*VTraits<v_uint16>::vlanes(); dx += 3*VTraits<v_uint16>::vlanes(), S0 += 6*VTraits<v_uint16>::vlanes(), S1 += 6*VTraits<v_uint16>::vlanes(), D += 3*VTraits<v_uint16>::vlanes())
             {
                 v_uint16 b0, g0, r0, b1, g1, r1;
                 v_load_deinterleave(S0, b0, g0, r0);
@@ -2617,8 +2673,8 @@ public:
                 v_uint32 bl = (v_reinterpret_as_u32(b0) >> 16) + (v_reinterpret_as_u32(b0) & masklow) + (v_reinterpret_as_u32(b1) >> 16) + (v_reinterpret_as_u32(b1) & masklow);
                 v_uint32 gl = (v_reinterpret_as_u32(g0) >> 16) + (v_reinterpret_as_u32(g0) & masklow) + (v_reinterpret_as_u32(g1) >> 16) + (v_reinterpret_as_u32(g1) & masklow);
                 v_uint32 rl = (v_reinterpret_as_u32(r0) >> 16) + (v_reinterpret_as_u32(r0) & masklow) + (v_reinterpret_as_u32(r1) >> 16) + (v_reinterpret_as_u32(r1) & masklow);
-                v_load_deinterleave(S0 + 3*v_uint16::nlanes, b0, g0, r0);
-                v_load_deinterleave(S1 + 3*v_uint16::nlanes, b1, g1, r1);
+                v_load_deinterleave(S0 + 3*VTraits<v_uint16>::vlanes(), b0, g0, r0);
+                v_load_deinterleave(S1 + 3*VTraits<v_uint16>::vlanes(), b1, g1, r1);
                 v_uint32 bh = (v_reinterpret_as_u32(b0) >> 16) + (v_reinterpret_as_u32(b0) & masklow) + (v_reinterpret_as_u32(b1) >> 16) + (v_reinterpret_as_u32(b1) & masklow);
                 v_uint32 gh = (v_reinterpret_as_u32(g0) >> 16) + (v_reinterpret_as_u32(g0) & masklow) + (v_reinterpret_as_u32(g1) >> 16) + (v_reinterpret_as_u32(g1) & masklow);
                 v_uint32 rh = (v_reinterpret_as_u32(r0) >> 16) + (v_reinterpret_as_u32(r0) & masklow) + (v_reinterpret_as_u32(r1) >> 16) + (v_reinterpret_as_u32(r1) & masklow);
@@ -2630,7 +2686,7 @@ public:
         {
             CV_Assert(cn == 4);
 #if CV_SIMD_WIDTH >= 64
-            for ( ; dx <= w - v_uint16::nlanes; dx += v_uint16::nlanes, S0 += 2*v_uint16::nlanes, S1 += 2*v_uint16::nlanes, D += v_uint16::nlanes)
+            for ( ; dx <= w - VTraits<v_uint16>::vlanes(); dx += VTraits<v_uint16>::vlanes(), S0 += 2*VTraits<v_uint16>::vlanes(), S1 += 2*VTraits<v_uint16>::vlanes(), D += VTraits<v_uint16>::vlanes())
             {
                 v_uint64 r00, r01, r10, r11;
                 v_load_deinterleave((uint64_t*)S0, r00, r01);
@@ -2652,7 +2708,7 @@ public:
                 r0 = v_add(r0, r2); r1 = v_add(r1, r3);
                 v_uint32 v_d;
 #if CV_SIMD_WIDTH == 16
-                v_d = r0 + r1;
+                v_d = v_add(r0, r1);
 #elif CV_SIMD_WIDTH == 32
                 v_uint32 t0, t1;
                 v_recombine(r0, r1, t0, t1);
@@ -2697,7 +2753,7 @@ public:
         {
 #if CV_SIMD_WIDTH == 16
             for ( ; dx <= w - 4; dx += 3, S0 += 6, S1 += 6, D += 3)
-                v_rshr_pack_store<2>(D, v_load_expand(S0) + v_load_expand(S0 + 3) + v_load_expand(S1) + v_load_expand(S1 + 3));
+                v_rshr_pack_store<2>(D, v_add(v_add(v_add(v_load_expand(S0), v_load_expand(S0 + 3)), v_load_expand(S1)), v_load_expand(S1 + 3)));
 #elif CV_SIMD_WIDTH == 32 || CV_SIMD_WIDTH == 64
             for ( ; dx <= w - 3*VTraits<v_int16>::vlanes(); dx += 3*VTraits<v_int16>::vlanes(), S0 += 6*VTraits<v_int16>::vlanes(), S1 += 6*VTraits<v_int16>::vlanes(), D += 3*VTraits<v_int16>::vlanes())
             {
@@ -2738,7 +2794,7 @@ public:
                 v_store_interleave(D, v_rshr_pack<2>(bl, bh), v_rshr_pack<2>(gl, gh), v_rshr_pack<2>(rl, rh));
             }
 #elif CV_SIMD_WIDTH >= 64
-            for ( ; dx <= w - 3*v_int16::nlanes; dx += 3*v_int16::nlanes, S0 += 6*v_int16::nlanes, S1 += 6*v_int16::nlanes, D += 3*v_int16::nlanes)
+            for ( ; dx <= w - 3*VTraits<v_int16>::vlanes(); dx += 3*VTraits<v_int16>::vlanes(), S0 += 6*VTraits<v_int16>::vlanes(), S1 += 6*VTraits<v_int16>::vlanes(), D += 3*VTraits<v_int16>::vlanes())
             {
                 v_int16 b0, g0, r0, b1, g1, r1;
                 v_load_deinterleave(S0, b0, g0, r0);
@@ -2746,8 +2802,8 @@ public:
                 v_int32 bl = (v_reinterpret_as_s32(b0) >> 16) + ((v_reinterpret_as_s32(b0) << 16) >> 16) + (v_reinterpret_as_s32(b1) >> 16) + ((v_reinterpret_as_s32(b1) << 16) >> 16);
                 v_int32 gl = (v_reinterpret_as_s32(g0) >> 16) + ((v_reinterpret_as_s32(g0) << 16) >> 16) + (v_reinterpret_as_s32(g1) >> 16) + ((v_reinterpret_as_s32(g1) << 16) >> 16);
                 v_int32 rl = (v_reinterpret_as_s32(r0) >> 16) + ((v_reinterpret_as_s32(r0) << 16) >> 16) + (v_reinterpret_as_s32(r1) >> 16) + ((v_reinterpret_as_s32(r1) << 16) >> 16);
-                v_load_deinterleave(S0 + 3*v_int16::nlanes, b0, g0, r0);
-                v_load_deinterleave(S1 + 3*v_int16::nlanes, b1, g1, r1);
+                v_load_deinterleave(S0 + 3*VTraits<v_int16>::vlanes(), b0, g0, r0);
+                v_load_deinterleave(S1 + 3*VTraits<v_int16>::vlanes(), b1, g1, r1);
                 v_int32 bh = (v_reinterpret_as_s32(b0) >> 16) + ((v_reinterpret_as_s32(b0) << 16) >> 16) + (v_reinterpret_as_s32(b1) >> 16) + ((v_reinterpret_as_s32(b1) << 16) >> 16);
                 v_int32 gh = (v_reinterpret_as_s32(g0) >> 16) + ((v_reinterpret_as_s32(g0) << 16) >> 16) + (v_reinterpret_as_s32(g1) >> 16) + ((v_reinterpret_as_s32(g1) << 16) >> 16);
                 v_int32 rh = (v_reinterpret_as_s32(r0) >> 16) + ((v_reinterpret_as_s32(r0) << 16) >> 16) + (v_reinterpret_as_s32(r1) >> 16) + ((v_reinterpret_as_s32(r1) << 16) >> 16);
@@ -2779,7 +2835,7 @@ public:
                 r3 = v_add(vx_load_expand(S0 + 3 * VTraits<v_int32>::vlanes()), vx_load_expand(S1 + 3 * VTraits<v_int32>::vlanes()));
                 v_int32 dl, dh;
 #if CV_SIMD_WIDTH == 16
-                dl = r0 + r1; dh = r2 + r3;
+                dl = v_add(r0, r1); dh = v_add(r2, r3);
 #elif CV_SIMD_WIDTH == 32
                 v_int32 t0, t1, t2, t3;
                 v_recombine(r0, r1, t0, t1); v_recombine(r2, r3, t2, t3);
@@ -2829,14 +2885,14 @@ struct ResizeAreaFastVec_SIMD_32f
         {
 #if CV_SIMD_WIDTH == 16
             v_float32 v_025 = vx_setall_f32(0.25f);
-            for (; dx <= w - v_float32::nlanes; dx += v_float32::nlanes, S0 += 2*v_float32::nlanes, S1 += 2*v_float32::nlanes, D += v_float32::nlanes)
-                v_store(D, ((vx_load(S0) + vx_load(S0 + v_float32::nlanes)) + (vx_load(S1) + vx_load(S1 + v_float32::nlanes))) * v_025);
+            for (; dx <= w - VTraits<v_float32>::vlanes(); dx += VTraits<v_float32>::vlanes(), S0 += 2*VTraits<v_float32>::vlanes(), S1 += 2*VTraits<v_float32>::vlanes(), D += VTraits<v_float32>::vlanes())
+                v_store(D, v_mul(v_add(v_add(vx_load(S0), vx_load(S0 + VTraits<v_float32>::vlanes())), v_add(vx_load(S1), vx_load(S1 + VTraits<v_float32>::vlanes()))), v_025));
 #elif CV_SIMD256
             v_float32x8 v_025 = v256_setall_f32(0.25f);
-            for (; dx <= w - v_float32x8::nlanes; dx += v_float32x8::nlanes, S0 += 2*v_float32x8::nlanes, S1 += 2*v_float32x8::nlanes, D += v_float32x8::nlanes)
+            for (; dx <= w - VTraits<v_float32x8>::vlanes(); dx += VTraits<v_float32x8>::vlanes(), S0 += 2*VTraits<v_float32x8>::vlanes(), S1 += 2*VTraits<v_float32x8>::vlanes(), D += VTraits<v_float32x8>::vlanes())
             {
                 v_float32x8 dst0, dst1;
-                v_recombine(v_add(v256_load(S0), v256_load(S1)), v_add(v256_load(S0 + v_float32x8::nlanes), v256_load(S1 + v_float32x8::nlanes)), dst0, dst1);
+                v_recombine(v_add(v256_load(S0), v256_load(S1)), v_add(v256_load(S0 + VTraits<v_float32x8>::vlanes()), v256_load(S1 + VTraits<v_float32x8>::vlanes())), dst0, dst1);
                 v_store(D, v_mul(v_add(dst0, dst1), v_025));
             }
 #endif
@@ -3019,6 +3075,111 @@ struct DecimateAlpha
 };
 
 
+namespace inter_area {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+inline void saturate_store(const float* src, uchar* dst) {
+    const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp2 = v_round(vx_load(src + 2 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp3 = v_round(vx_load(src + 3 * VTraits<v_float32>::vlanes()));
+    v_store(dst, v_pack(v_pack_u(tmp0, tmp1), v_pack_u(tmp2, tmp3)));
+}
+
+inline void saturate_store(const float* src, ushort* dst) {
+    const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
+    v_store(dst, v_pack_u(tmp0, tmp1));
+}
+
+inline void saturate_store(const float* src, short* dst) {
+    const v_int32 tmp0 = v_round(vx_load(src + 0 * VTraits<v_float32>::vlanes()));
+    const v_int32 tmp1 = v_round(vx_load(src + 1 * VTraits<v_float32>::vlanes()));
+    v_store(dst, v_pack(tmp0, tmp1));
+}
+
+static inline v_float32 vx_setall(float coeff) { return vx_setall_f32(coeff); }
+
+template <typename T>
+struct VArea {};
+
+template <>
+struct VArea<float> {
+    typedef v_float32 vWT;
+};
+#endif
+
+#if (CV_SIMD128_64F || CV_SIMD_SCALABLE_64F)
+static inline v_float64 vx_setall(double coeff) { return vx_setall_f64(coeff); }
+
+template <>
+struct VArea<double> {
+    typedef v_float64 vWT;
+};
+
+#else
+inline void mul(const double* buf, int width, double beta, double* sum) {
+    for (int dx = 0; dx < width; ++dx) {
+        sum[dx] = beta * buf[dx];
+    }
+}
+
+inline void muladd(const double* buf, int width, double beta, double* sum) {
+    for (int dx = 0; dx < width; ++dx) {
+        sum[dx] += beta * buf[dx];
+    }
+}
+#endif
+
+template <typename T, typename WT>
+inline void saturate_store(const WT* sum, int width, T* D) {
+    int dx = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int step = VTraits<typename VArea<WT>::vWT>::vlanes() * sizeof(WT) / sizeof(T);
+    for (; dx + step < width; dx += step) {
+        saturate_store(sum + dx, D + dx);
+    }
+#endif
+    for (; dx < width; ++dx) {
+        D[dx] = saturate_cast<T>(sum[dx]);
+    }
+}
+
+// Optimization when T == WT.
+template <typename WT>
+inline void saturate_store(const WT* sum, int width, WT* D) {
+    std::copy(sum, sum + width, D);
+}
+
+template <typename WT>
+inline void mul(const WT* buf, int width, WT beta, WT* sum) {
+    int dx = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int step = VTraits<typename VArea<WT>::vWT>::vlanes();
+    for (; dx + step < width; dx += step) {
+        vx_store(sum + dx, v_mul(vx_setall(beta), vx_load(buf + dx)));
+    }
+#endif
+    for (; dx < width; ++dx) {
+        sum[dx] = beta * buf[dx];
+    }
+}
+
+template <typename WT>
+inline void muladd(const WT* buf, int width, WT beta, WT* sum) {
+    int dx = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int step = VTraits<typename VArea<WT>::vWT>::vlanes();
+    for (; dx + step < width; dx += step) {
+        vx_store(sum + dx, v_add(vx_load(sum + dx), v_mul(vx_setall(beta), vx_load(buf + dx))));
+    }
+#endif
+    for (; dx < width; ++dx) {
+        sum[dx] += beta * buf[dx];
+    }
+}
+
+}  // namespace inter_area
+
 template<typename T, typename WT> class ResizeArea_Invoker :
     public ParallelLoopBody
 {
@@ -3120,27 +3281,17 @@ public:
 
             if( dy != prev_dy )
             {
-                T* D = dst->template ptr<T>(prev_dy);
-
-                for( dx = 0; dx < dsize.width; dx++ )
-                {
-                    D[dx] = saturate_cast<T>(sum[dx]);
-                    sum[dx] = beta*buf[dx];
-                }
+                inter_area::saturate_store(sum, dsize.width, dst->template ptr<T>(prev_dy));
+                inter_area::mul(buf, dsize.width, beta, sum);
                 prev_dy = dy;
             }
             else
             {
-                for( dx = 0; dx < dsize.width; dx++ )
-                    sum[dx] += beta*buf[dx];
+                inter_area::muladd(buf, dsize.width, beta, sum);
             }
         }
 
-        {
-        T* D = dst->template ptr<T>(prev_dy);
-        for( dx = 0; dx < dsize.width; dx++ )
-            D[dx] = saturate_cast<T>(sum[dx]);
-        }
+        inter_area::saturate_store(sum, dsize.width, dst->template ptr<T>(prev_dy));
     }
 
 private:
@@ -3301,8 +3452,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     {
         int wdepth = std::max(depth, CV_32S);
         char buf[2][50];
-        cv::String compileOpts = format("-D USE_SAMPLER -D depth=%d -D T=%s -D T1=%s "
-                        "-D convertToDT=%s -D cn=%d",
+        cv::String compileOpts = format("-D USE_SAMPLER -D SRC_DEPTH=%d -D T=%s -D T1=%s "
+                        "-D CONVERT_TO_DT=%s -D CN=%d",
                         depth, ocl::typeToStr(type), ocl::typeToStr(depth),
                         ocl::convertTypeStr(wdepth, depth, cn, buf[1], sizeof(buf[1])),
                         cn);
@@ -3366,8 +3517,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
             Mat(1, static_cast<int>(_buffer.size()), CV_8UC1, _buffer.data()).copyTo(coeffs);
 
             k.create("resizeLN", ocl::imgproc::resize_oclsrc,
-                     format("-D INTER_LINEAR_INTEGER -D depth=%d -D T=%s -D T1=%s "
-                            "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
+                     format("-D INTER_LINEAR_INTEGER -D SRC_DEPTH=%d -D T=%s -D T1=%s "
+                            "-D WT=%s -D CONVERT_TO_WT=%s -D CONVERT_TO_DT=%s -D CN=%d "
                             "-D INTER_RESIZE_COEF_BITS=%d",
                             depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                             ocl::convertTypeStr(depth, wdepth, cn, buf[0], sizeof(buf[0])),
@@ -3384,8 +3535,8 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
             int wdepth = depth <= CV_8S ? CV_32S : std::max(depth, CV_32F);
             int wtype = CV_MAKETYPE(wdepth, cn);
             k.create("resizeLN", ocl::imgproc::resize_oclsrc,
-                     format("-D INTER_LINEAR -D depth=%d -D T=%s -D T1=%s "
-                            "-D WT=%s -D convertToWT=%s -D convertToDT=%s -D cn=%d "
+                     format("-D INTER_LINEAR -D SRC_DEPTH=%d -D T=%s -D T1=%s "
+                            "-D WT=%s -D CONVERT_TO_WT=%s -D CONVERT_TO_DT=%s -D CN=%d "
                             "-D INTER_RESIZE_COEF_BITS=%d",
                             depth, ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                             ocl::convertTypeStr(depth, wdepth, cn, buf[0], sizeof(buf[0])),
@@ -3401,7 +3552,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
     else if (interpolation == INTER_NEAREST)
     {
         k.create("resizeNN", ocl::imgproc::resize_oclsrc,
-                 format("-D INTER_NEAREST -D T=%s -D T1=%s -D cn=%d",
+                 format("-D INTER_NEAREST -D T=%s -D T1=%s -D CN=%d",
                         ocl::vecopTypeToStr(type), ocl::vecopTypeToStr(depth), cn));
         if (k.empty())
             return false;
@@ -3415,7 +3566,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         int wtype = CV_MAKE_TYPE(wdepth, cn);
 
         char cvt[2][50];
-        String buildOption = format("-D INTER_AREA -D T=%s -D T1=%s -D WTV=%s -D convertToWTV=%s -D cn=%d",
+        String buildOption = format("-D INTER_AREA -D T=%s -D T1=%s -D WTV=%s -D CONVERT_TO_WTV=%s -D CN=%d",
                                     ocl::typeToStr(type), ocl::typeToStr(depth), ocl::typeToStr(wtype),
                                     ocl::convertTypeStr(depth, wdepth, cn, cvt[0], sizeof(cvt[0])), cn);
 
@@ -3425,7 +3576,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         if (is_area_fast)
         {
             int wdepth2 = std::max(CV_32F, depth), wtype2 = CV_MAKE_TYPE(wdepth2, cn);
-            buildOption = buildOption + format(" -D convertToT=%s -D WT2V=%s -D convertToWT2V=%s -D INTER_AREA_FAST"
+            buildOption = buildOption + format(" -D CONVERT_TO_T=%s -D WT2V=%s -D CONVERT_TO_WT2V=%s -D INTER_AREA_FAST"
                                                 " -D XSCALE=%d -D YSCALE=%d -D SCALE=%ff",
                                                 ocl::convertTypeStr(wdepth2, depth, cn, cvt[0], sizeof(cvt[0])),
                                                 ocl::typeToStr(wtype2), ocl::convertTypeStr(wdepth, wdepth2, cn, cvt[1], sizeof(cvt[1])),
@@ -3437,7 +3588,7 @@ static bool ocl_resize( InputArray _src, OutputArray _dst, Size dsize,
         }
         else
         {
-            buildOption = buildOption + format(" -D convertToT=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0], sizeof(cvt[0])));
+            buildOption = buildOption + format(" -D CONVERT_TO_T=%s", ocl::convertTypeStr(wdepth, depth, cn, cvt[0], sizeof(cvt[0])));
             k.create("resizeAREA", ocl::imgproc::resize_oclsrc, buildOption);
             if (k.empty())
                 return false;
@@ -3929,7 +4080,7 @@ void resize(int src_type,
     else if( interpolation == INTER_LINEAR || interpolation == INTER_AREA )
         ksize = 2, func = linear_tab[depth];
     else
-        CV_Error( CV_StsBadArg, "Unknown interpolation method" );
+        CV_Error( cv::Error::StsBadArg, "Unknown interpolation method" );
     ksize2 = ksize/2;
 
     CV_Assert( func != 0 );

@@ -7,8 +7,6 @@
 #include "../op_timvx.hpp"
 #include "../ie_ngraph.hpp"
 
-#include <opencv2/dnn/shape_utils.hpp>
-
 namespace cv
 {
 namespace dnn
@@ -250,11 +248,11 @@ public:
         std::vector<size_t> shape(input.get_shape().size(), 1);
         shape[1] = origin_weights.total();
 
-        ngraph::Output<ngraph::Node> res;
-        auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, origin_weights.data);
-        auto ieBias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, shape, origin_bias.data);
-        res = std::make_shared<ngraph::op::v1::Multiply>(input, ieWeights);
-        res = std::make_shared<ngraph::op::v1::Add>(res, ieBias);
+        ov::Output<ov::Node> res;
+        auto ieWeights = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape, origin_weights.data);
+        auto ieBias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape, origin_bias.data);
+        res = std::make_shared<ov::op::v1::Multiply>(input, ieWeights);
+        res = std::make_shared<ov::op::v1::Add>(res, ieBias);
 
         res = ngraphQuantize(res, output_sc, output_zp);
         return new InfEngineNgraphNode(res);

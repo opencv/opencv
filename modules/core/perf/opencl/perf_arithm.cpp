@@ -357,7 +357,8 @@ typedef TestBaseWithParam<FlipParams> FlipFixture;
 
 OCL_PERF_TEST_P(FlipFixture, Flip,
             ::testing::Combine(OCL_TEST_SIZES,
-                               OCL_TEST_TYPES, FlipType::all()))
+                               ::testing::Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_16UC1, CV_32FC1, CV_32FC4),
+                               FlipType::all()))
 {
     const FlipParams params = GetParam();
     const Size srcSize = get<0>(params);
@@ -372,6 +373,38 @@ OCL_PERF_TEST_P(FlipFixture, Flip,
     OCL_TEST_CYCLE() cv::flip(src, dst, flipType - 1);
 
     SANITY_CHECK(dst);
+}
+
+///////////// Rotate ////////////////////////
+
+enum
+{
+    ROTATE_90_CLOCKWISE = 0, ROTATE_180, ROTATE_90_COUNTERCLOCKWISE
+};
+
+CV_ENUM(RotateType, ROTATE_90_CLOCKWISE, ROTATE_180, ROTATE_90_COUNTERCLOCKWISE)
+
+typedef tuple<Size, MatType, RotateType> RotateParams;
+typedef TestBaseWithParam<RotateParams> RotateFixture;
+
+OCL_PERF_TEST_P(RotateFixture, rotate,
+                ::testing::Combine(OCL_TEST_SIZES,
+                                   ::testing::Values(CV_8UC1, CV_8UC2, CV_8UC4, CV_32FC1, CV_32FC4),
+                                   RotateType::all()))
+{
+    const RotateParams params = GetParam();
+    const Size srcSize   = get<0>(params);
+    const int type       = get<1>(params);
+    const int rotateCode = get<2>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    OCL_TEST_CYCLE() cv::rotate(src, dst, rotateCode);
+
+    SANITY_CHECK_NOTHING();
 }
 
 ///////////// minMaxLoc ////////////////////////
@@ -658,6 +691,24 @@ OCL_PERF_TEST_P(PowFixture, Pow, ::testing::Combine(
     SANITY_CHECK(dst, 1.5e-6, ERROR_RELATIVE);
 }
 
+///////////// iPow ////////////////////////
+OCL_PERF_TEST_P(PowFixture, iPow, ::testing::Combine(
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8UC1, CV_8SC1,CV_16UC1,CV_16SC1,CV_32SC1)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+
+    checkDeviceMaxMemoryAllocSize(srcSize, type);
+
+    UMat src(srcSize, type), dst(srcSize, type);
+    randu(src, 0, 100);
+    declare.in(src).out(dst);
+
+    OCL_TEST_CYCLE() cv::pow(src, 7.0, dst);
+
+    SANITY_CHECK_NOTHING();
+}
 ///////////// AddWeighted////////////////////////
 
 typedef Size_MatType AddWeightedFixture;

@@ -51,10 +51,6 @@
 extern "C" {
 #endif
 
-/** @addtogroup calib3d_c
-  @{
-  */
-
 /****************************************************************************************\
 *                      Camera Calibration, Pose Estimation and Stereo                    *
 \****************************************************************************************/
@@ -415,8 +411,6 @@ void cvUndistortPoints( const CvMat* src, CvMat* dst,
                         const CvMat* dist_coeffs,
                         const CvMat* R CV_DEFAULT(0),
                         const CvMat* P CV_DEFAULT(0));
-
-/** @} calib3d_c */
 
 #ifdef __cplusplus
 } // extern "C"

@@ -417,7 +417,7 @@ enum
 
 Simply call it with 4 chars fourcc code like `CV_FOURCC('I', 'Y', 'U', 'V')`
 
-List of codes can be obtained at [Video Codecs by FOURCC](http://www.fourcc.org/codecs.php) page.
+List of codes can be obtained at [Video Codecs by FOURCC](https://fourcc.org/codecs.php) page.
 FFMPEG backend with MP4 container natively uses other values as fourcc code:
 see [ObjectType](http://mp4ra.org/#/codecs).
 */

@@ -86,7 +86,6 @@ Ptr<BaseFilter> getLinearFilter(
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-typedef int CV_DECL_ALIGNED(1) unaligned_int;
 #define VEC_ALIGN CV_MALLOC_ALIGN
 
 int FilterEngine__start(FilterEngine& this_, const Size &_wholeSize, const Size &sz, const Point &ofs)
@@ -1083,21 +1082,6 @@ struct SymmColumnVec_32s8u
                 v_pack_u_store(dst + i, v_pack(v_round(s0), v_round(s1)));
                 i += VTraits<v_uint16>::vlanes();
             }
-#if CV_SIMD_WIDTH > 16
-            while( i <= width - 4 /*v_int32x4::nlanes*/ )
-#else
-            if( i <= width - v_int32::nlanes )
-#endif
-            {
-                v_float32 s0 = v_muladd(v_cvt_f32(vx_load(src[0] + i)), vx_setall_f32(ky[0]), vx_setall_f32(delta));
-                s0 = v_muladd(v_cvt_f32(v_add(vx_load(src[1] + i), vx_load(src[-1] + i))), vx_setall_f32(ky[1]), s0);
-                for( k = 2; k <= ksize2; k++ )
-                    s0 = v_muladd(v_cvt_f32(v_add(vx_load(src[k] + i), vx_load(src[-k] + i))), vx_setall_f32(ky[k]), s0);
-                v_int32 s32 = v_round(s0);
-                v_int16 s16 = v_pack(s32, s32);
-                *(unaligned_int*)(dst + i) = v_get0(v_reinterpret_as_s32(v_pack_u(s16, s16)));
-                i += 4 /*v_int32x4::nlanes*/ ;
-            }
         }
         else
         {
@@ -1138,20 +1122,6 @@ struct SymmColumnVec_32s8u
                 }
                 v_pack_u_store(dst + i, v_pack(v_round(s0), v_round(s1)));
                 i += VTraits<v_uint16>::vlanes();
-            }
-#if CV_SIMD_WIDTH > 16
-            while( i <= width - 4 /*v_int32x4::nlanes*/ )
-#else
-            if( i <= width - v_int32::nlanes )
-#endif
-            {
-                v_float32 s0 = v_muladd(v_cvt_f32(v_sub(vx_load(src[1] + i), vx_load(src[-1] + i))), vx_setall_f32(ky[1]), vx_setall_f32(delta));
-                for (k = 2; k <= ksize2; k++)
-                    s0 = v_muladd(v_cvt_f32(v_sub(vx_load(src[k] + i), vx_load(src[-k] + i))), vx_setall_f32(ky[k]), s0);
-                v_int32 s32 = v_round(s0);
-                v_int16 s16 = v_pack(s32, s32);
-                *(unaligned_int*)(dst + i) = v_get0(v_reinterpret_as_s32(v_pack_u(s16, s16)));
-                i += 4 /*v_int32x4::nlanes*/ ;
             }
         }
         return i;
@@ -1321,23 +1291,23 @@ struct SymmColumnSmallVec_32s16s
             {
                 v_int32 k0 = vx_setall_s32((int)ky[0]), k1 = vx_setall_s32((int)ky[1]);
                 v_int32 d4 = vx_setall_s32(d);
-                for( ; i <= width - 2*v_int16::nlanes; i += 2*v_int16::nlanes )
+                for( ; i <= width - 2*VTraits<v_int16>::vlanes(); i += 2*VTraits<v_int16>::vlanes() )
                 {
-                    v_store(dst + i, v_pack(v_muladd(vx_load(S0 + i) + vx_load(S2 + i), k1, v_muladd(vx_load(S1 + i), k0, d4)),
-                                            v_muladd(vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + v_int32::nlanes), k0, d4))));
-                    v_store(dst + i + v_int16::nlanes, v_pack(v_muladd(vx_load(S0 + i + 2*v_int32::nlanes) + vx_load(S2 + i + 2*v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + 2*v_int32::nlanes), k0, d4)),
-                                                              v_muladd(vx_load(S0 + i + 3*v_int32::nlanes) + vx_load(S2 + i + 3*v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + 3*v_int32::nlanes), k0, d4))));
+                    v_store(dst + i, v_pack(v_muladd(v_add(vx_load(S0 + i), vx_load(S2 + i)), k1, v_muladd(vx_load(S1 + i), k0, d4)),
+                                            v_muladd(v_add(vx_load(S0 + i + VTraits<v_int32>::vlanes()), vx_load(S2 + i + VTraits<v_int32>::vlanes())), k1, v_muladd(vx_load(S1 + i + VTraits<v_int32>::vlanes()), k0, d4))));
+                    v_store(dst + i + VTraits<v_int16>::vlanes(), v_pack(v_muladd(v_add(vx_load(S0 + i + 2 * VTraits<v_int32>::vlanes()), vx_load(S2 + i + 2 * VTraits<v_int32>::vlanes())), k1, v_muladd(vx_load(S1 + i + 2*VTraits<v_int32>::vlanes()), k0, d4)),
+                                                              v_muladd(v_add(vx_load(S0 + i + 3 * VTraits<v_int32>::vlanes()), vx_load(S2 + i + 3 * VTraits<v_int32>::vlanes())), k1, v_muladd(vx_load(S1 + i + 3*VTraits<v_int32>::vlanes()), k0, d4))));
                 }
-                if( i <= width - v_int16::nlanes )
+                if( i <= width - VTraits<v_int16>::vlanes() )
                 {
-                    v_store(dst + i, v_pack(v_muladd(vx_load(S0 + i) + vx_load(S2 + i), k1, v_muladd(vx_load(S1 + i), k0, d4)),
-                                            v_muladd(vx_load(S0 + i + v_int32::nlanes) + vx_load(S2 + i + v_int32::nlanes), k1, v_muladd(vx_load(S1 + i + v_int32::nlanes), k0, d4))));
-                    i += v_int16::nlanes;
+                    v_store(dst + i, v_pack(v_muladd(v_add(vx_load(S0 + i), vx_load(S2 + i)), k1, v_muladd(vx_load(S1 + i), k0, d4)),
+                                            v_muladd(v_add(vx_load(S0 + i + VTraits<v_int32>::vlanes()), vx_load(S2 + i + VTraits<v_int32>::vlanes())), k1, v_muladd(vx_load(S1 + i + VTraits<v_int32>::vlanes()), k0, d4))));
+                    i += VTraits<v_int16>::vlanes();
                 }
-                if( i <= width - v_int32::nlanes )
+                if( i <= width - VTraits<v_int32>::vlanes() )
                 {
-                    v_pack_store(dst + i, v_muladd(vx_load(S0 + i) + vx_load(S2 + i), k1, v_muladd(vx_load(S1 + i), k0, d4)));
-                    i += v_int32::nlanes;
+                    v_pack_store(dst + i, v_muladd(v_add(vx_load(S0 + i), vx_load(S2 + i)), k1, v_muladd(vx_load(S1 + i), k0, d4)));
+                    i += VTraits<v_int32>::vlanes();
                 }
             }
 #endif
@@ -2236,20 +2206,6 @@ struct FilterVec_8u
             v_pack_u_store(dst + i, v_pack(v_round(s0), v_round(s1)));
             i += VTraits<v_uint16>::vlanes();
         }
-#if CV_SIMD_WIDTH > 16
-        while( i <= width - 4 /*v_int32x4::nlanes*/ )
-#else
-        if( i <= width - v_int32::nlanes )
-#endif
-        {
-            v_float32 s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src[0] + i))), vx_setall_f32(kf[0]), vx_setall_f32(delta));
-            for( k = 1; k < nz; k++ )
-                s0 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(vx_load_expand_q(src[k] + i))), vx_setall_f32(kf[k]), s0);
-            v_int32 s32 = v_round(s0);
-            v_int16 s16 = v_pack(s32, s32);
-            *(unaligned_int*)(dst + i) = v_get0(v_reinterpret_as_s32(v_pack_u(s16, s16)));
-            i += 4 /*v_int32x4::nlanes*/ ;
-        }
         return i;
     }
 
@@ -3039,7 +2995,7 @@ Ptr<BaseRowFilter> getLinearRowFilter(
     if( sdepth == CV_64F && ddepth == CV_64F )
         return makePtr<RowFilter<double, double, RowNoVec> >(kernel, anchor);
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
         srcType, bufType));
 }
@@ -3137,7 +3093,7 @@ Ptr<BaseColumnFilter> getLinearColumnFilter(
                 (kernel, anchor, delta, symmetryType);
     }
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of buffer format (=%d), and destination format (=%d)",
         bufType, dstType));
 }
@@ -3291,7 +3247,7 @@ Ptr<BaseFilter> getLinearFilter(
         return makePtr<Filter2D<double,
             Cast<double, double>, FilterNoVec> >(kernel, anchor, delta);
 
-    CV_Error_( CV_StsNotImplemented,
+    CV_Error_( cv::Error::StsNotImplemented,
         ("Unsupported combination of source format (=%d), and destination format (=%d)",
         srcType, dstType));
 }

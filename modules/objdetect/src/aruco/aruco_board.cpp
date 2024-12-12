@@ -99,21 +99,6 @@ void Board::Impl::generateImage(Size outSize, OutputArray img, int marginSize, i
     float sizeX = maxX - minX;
     float sizeY = maxY - minY;
 
-    // proportion transformations
-    float xReduction = sizeX / float(out.cols);
-    float yReduction = sizeY / float(out.rows);
-
-    // determine the zone where the markers are placed
-    if(xReduction > yReduction) {
-        int nRows = int(sizeY / xReduction);
-        int rowsMargins = (out.rows - nRows) / 2;
-        out.adjustROI(-rowsMargins, -rowsMargins, 0, 0);
-    } else {
-        int nCols = int(sizeX / yReduction);
-        int colsMargins = (out.cols - nCols) / 2;
-        out.adjustROI(0, 0, -colsMargins, -colsMargins);
-    }
-
     // now paint each marker
     Mat marker;
     Point2f outCorners[3];
@@ -483,39 +468,44 @@ void CharucoBoardImpl::generateImage(Size outSize, OutputArray img, int marginSi
     Mat noMarginsImg =
         out.colRange(marginSize, out.cols - marginSize).rowRange(marginSize, out.rows - marginSize);
 
-    double totalLengthX, totalLengthY;
-    totalLengthX = squareLength * size.width;
-    totalLengthY = squareLength * size.height;
-
-    // proportional transformation
-    double xReduction = totalLengthX / double(noMarginsImg.cols);
-    double yReduction = totalLengthY / double(noMarginsImg.rows);
+    // the size of the chessboard square depends on the location of the chessboard
+    float pixInSquare = 0.f;
+    // the size of the chessboard in pixels
+    Size pixInChessboard(noMarginsImg.cols, noMarginsImg.rows);
 
     // determine the zone where the chessboard is placed
-    Mat chessboardZoneImg;
-    if(xReduction > yReduction) {
-        int nRows = int(totalLengthY / xReduction);
-        int rowsMargins = (noMarginsImg.rows - nRows) / 2;
-        chessboardZoneImg = noMarginsImg.rowRange(rowsMargins, noMarginsImg.rows - rowsMargins);
-    } else {
-        int nCols = int(totalLengthX / yReduction);
-        int colsMargins = (noMarginsImg.cols - nCols) / 2;
-        chessboardZoneImg = noMarginsImg.colRange(colsMargins, noMarginsImg.cols - colsMargins);
+    float pixInSquareX = (float)noMarginsImg.cols / (float)size.width;
+    float pixInSquareY = (float)noMarginsImg.rows / (float)size.height;
+    Point startChessboard(0, 0);
+    if (pixInSquareX <= pixInSquareY) {
+        // the width of "noMarginsImg" image determines the dimensions of the chessboard
+        pixInSquare = pixInSquareX;
+        pixInChessboard.height = cvRound(pixInSquare*size.height);
+        int rowsMargin = (noMarginsImg.rows - pixInChessboard.height) / 2;
+        startChessboard.y = rowsMargin;
     }
+    else {
+        // the height of "noMarginsImg" image determines the dimensions of the chessboard
+        pixInSquare = pixInSquareY;
+        pixInChessboard.width = cvRound(pixInSquare*size.width);
+        int colsMargin = (noMarginsImg.cols - pixInChessboard.width) / 2;
+        startChessboard.x = colsMargin;
+    }
+    // determine the zone where the chessboard is located
+    Mat chessboardZoneImg = noMarginsImg(Rect(startChessboard, pixInChessboard));
 
-    // determine the margins to draw only the markers
-    // take the minimum just to be sure
-    double squareSizePixels = min(double(chessboardZoneImg.cols) / double(size.width),
-                                  double(chessboardZoneImg.rows) / double(size.height));
+    // marker size in pixels
+    const float pixInMarker = markerLength/squareLength*pixInSquare;
+    // the size of the marker margin in pixels
+    const float pixInMarginMarker = 0.5f*(pixInSquare - pixInMarker);
 
-    double diffSquareMarkerLength = (squareLength - markerLength) / 2;
-    int diffSquareMarkerLengthPixels =
-        int(diffSquareMarkerLength * squareSizePixels / squareLength);
+    // determine the zone where the aruco markers are located
+    int endArucoX = cvRound(pixInSquare*(size.width-1)+pixInMarginMarker+pixInMarker);
+    int endArucoY = cvRound(pixInSquare*(size.height-1)+pixInMarginMarker+pixInMarker);
+    Mat arucoZone = chessboardZoneImg(Range(cvRound(pixInMarginMarker), endArucoY), Range(cvRound(pixInMarginMarker), endArucoX));
 
     // draw markers
-    Mat markersImg;
-    Board::Impl::generateImage(chessboardZoneImg.size(), markersImg, diffSquareMarkerLengthPixels, borderBits);
-    markersImg.copyTo(chessboardZoneImg);
+    Board::Impl::generateImage(arucoZone.size(), arucoZone, 0, borderBits);
 
     // now draw black squares
     for(int y = 0; y < size.height; y++) {
@@ -527,12 +517,11 @@ void CharucoBoardImpl::generateImage(Size outSize, OutputArray img, int marginSi
                 if(y % 2 != x % 2) continue; // white corner, dont do anything
             }
 
-            double startX, startY;
-            startX = squareSizePixels * double(x);
-            startY = squareSizePixels * double(y);
+            float startX = pixInSquare * float(x);
+            float startY = pixInSquare * float(y);
 
-            Mat squareZone = chessboardZoneImg.rowRange(int(startY), int(startY + squareSizePixels))
-                                 .colRange(int(startX), int(startX + squareSizePixels));
+            Mat squareZone = chessboardZoneImg(Range(cvRound(startY), cvRound(startY + pixInSquare)),
+                                               Range(cvRound(startX), cvRound(startX + pixInSquare)));
 
             squareZone.setTo(0);
         }

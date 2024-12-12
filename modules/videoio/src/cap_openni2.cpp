@@ -90,7 +90,7 @@ private:
         openni::Status status = openni::OpenNI::initialize();
         if (status != openni::STATUS_OK)
         {
-            CV_Error(CV_StsError, std::string("Failed to initialize:") + openni::OpenNI::getExtendedError());
+            CV_Error(cv::Error::StsError, std::string("Failed to initialize:") + openni::OpenNI::getExtendedError());
         }
     }
 
@@ -150,7 +150,7 @@ protected:
     IplImage* retrieveIrImage();
 
     void toggleStream(int stream, bool toggle);
-    void readCamerasParams();
+    bool readCamerasParams();
 
     double getDepthGeneratorProperty(int propIdx) const;
     bool setDepthGeneratorProperty(int propIdx, double propVal);
@@ -274,7 +274,7 @@ CvCapture_OpenNI2::CvCapture_OpenNI2(int index, const char * filename) :
                 deviceURI = ldevs[index].getUri();
             else
             {
-                CV_Error(CV_StsError, "OpenCVKinect2: Device index exceeds the number of available OpenNI devices");
+                CV_Error(cv::Error::StsError, "OpenCVKinect2: Device index exceeds the number of available OpenNI devices");
             }
         }
     }
@@ -287,7 +287,7 @@ CvCapture_OpenNI2::CvCapture_OpenNI2(int index, const char * filename) :
     status = device.open(deviceURI);
     if (status != openni::STATUS_OK)
     {
-        CV_Error(CV_StsError, std::string("OpenCVKinect2: Failed to open device: ") + openni::OpenNI::getExtendedError());
+        CV_Error(cv::Error::StsError, std::string("OpenCVKinect2: Failed to open device: ") + openni::OpenNI::getExtendedError());
     }
 
     toggleStream(CV_DEPTH_STREAM, true);
@@ -361,7 +361,7 @@ void CvCapture_OpenNI2::toggleStream(int stream, bool toggle)
                     if (status != openni::STATUS_OK)
                     {
                         streams[stream].destroy();
-                        CV_Error(CV_StsError, std::string("OpenCVKinect2 : Couldn't set ") +
+                        CV_Error(cv::Error::StsError, std::string("OpenCVKinect2 : Couldn't set ") +
                                  stream_names[stream] + std::string(" stream output mode: ") +
                                  std::string(openni::OpenNI::getExtendedError()));
                     }
@@ -373,14 +373,14 @@ void CvCapture_OpenNI2::toggleStream(int stream, bool toggle)
             if (status != openni::STATUS_OK)
             {
                 streams[stream].destroy();
-                CV_Error(CV_StsError, std::string("CvCapture_OpenNI2::CvCapture_OpenNI2 : Couldn't start ") +
+                CV_Error(cv::Error::StsError, std::string("CvCapture_OpenNI2::CvCapture_OpenNI2 : Couldn't start ") +
                          stream_names[stream] + std::string(" stream: ") +
                          std::string(openni::OpenNI::getExtendedError()));
             }
         }
         else
         {
-            CV_Error(CV_StsError, std::string("CvCapture_OpenNI2::CvCapture_OpenNI2 : Couldn't find ") +
+            CV_Error(cv::Error::StsError, std::string("CvCapture_OpenNI2::CvCapture_OpenNI2 : Couldn't find ") +
                      stream_names[stream] + " stream: " +
                      std::string(openni::OpenNI::getExtendedError()));
         }
@@ -396,13 +396,14 @@ void CvCapture_OpenNI2::toggleStream(int stream, bool toggle)
 }
 
 
-void CvCapture_OpenNI2::readCamerasParams()
+bool CvCapture_OpenNI2::readCamerasParams()
 {
     double pixelSize = 0;
     if (streams[CV_DEPTH_STREAM].getProperty<double>(XN_STREAM_PROPERTY_ZERO_PLANE_PIXEL_SIZE, &pixelSize) != openni::STATUS_OK)
     {
-        CV_Error(CV_StsError, "CvCapture_OpenNI2::readCamerasParams : Could not read pixel size!" +
-                              std::string(openni::OpenNI::getExtendedError()));
+        CV_LOG_ERROR(NULL, "CvCapture_OpenNI2::readCamerasParams : Could not read pixel size!" +
+                           std::string(openni::OpenNI::getExtendedError()));
+        return false;
     }
 
     // pixel size @ VGA = pixel size @ SXGA x 2
@@ -412,14 +413,16 @@ void CvCapture_OpenNI2::readCamerasParams()
     unsigned long long zeroPlaneDistance; // in mm
     if (streams[CV_DEPTH_STREAM].getProperty(XN_STREAM_PROPERTY_ZERO_PLANE_DISTANCE, &zeroPlaneDistance) != openni::STATUS_OK)
     {
-        CV_Error(CV_StsError, "CvCapture_OpenNI2::readCamerasParams : Could not read virtual plane distance!" +
-                              std::string(openni::OpenNI::getExtendedError()));
+        CV_LOG_ERROR(NULL, "CvCapture_OpenNI2::readCamerasParams : Could not read virtual plane distance!" +
+                           std::string(openni::OpenNI::getExtendedError()));
+        return false;
     }
 
     if (streams[CV_DEPTH_STREAM].getProperty<double>(XN_STREAM_PROPERTY_EMITTER_DCMOS_DISTANCE, &baseline) != openni::STATUS_OK)
     {
-        CV_Error(CV_StsError, "CvCapture_OpenNI2::readCamerasParams : Could not read base line!" +
-                              std::string(openni::OpenNI::getExtendedError()));
+        CV_LOG_ERROR(NULL, "CvCapture_OpenNI2::readCamerasParams : Could not read base line!" +
+                           std::string(openni::OpenNI::getExtendedError()));
+        return false;
     }
 
     // baseline from cm -> mm
@@ -427,6 +430,8 @@ void CvCapture_OpenNI2::readCamerasParams()
 
     // focal length from mm -> pixels (valid for 640x480)
     depthFocalLength_VGA = (int)((double)zeroPlaneDistance / (double)pixelSize);
+
+    return true;
 }
 
 double CvCapture_OpenNI2::getProperty( int propIdx ) const
@@ -513,7 +518,7 @@ double CvCapture_OpenNI2::getCommonProperty( int propIdx ) const
         break;
     }
     default :
-        CV_Error( CV_StsBadArg, cv::format("Such parameter (propIdx=%d) isn't supported for getting.", propIdx) );
+        CV_LOG_WARNING( NULL, cv::format("Such parameter (propIdx=%d) isn't supported for getting.", propIdx) );
     }
 
     return propValue;
@@ -551,7 +556,7 @@ bool CvCapture_OpenNI2::setCommonProperty( int propIdx, double propValue )
         break;
 
     default:
-        CV_Error(CV_StsBadArg, cv::format("Such parameter (propIdx=%d) isn't supported for setting.", propIdx));
+        CV_LOG_WARNING(NULL, cv::format("Such parameter (propIdx=%d) isn't supported for setting.", propIdx));
     }
 
     return isSet;
@@ -585,12 +590,14 @@ double CvCapture_OpenNI2::getDepthGeneratorProperty( int propIdx ) const
         break;
     case CV_CAP_PROP_OPENNI_BASELINE :
         if(baseline <= 0)
-            const_cast<CvCapture_OpenNI2*>(this)->readCamerasParams();
+            if (!const_cast<CvCapture_OpenNI2*>(this)->readCamerasParams())
+                return 0;
         propValue = baseline;
         break;
     case CV_CAP_PROP_OPENNI_FOCAL_LENGTH :
         if(depthFocalLength_VGA <= 0)
-            const_cast<CvCapture_OpenNI2*>(this)->readCamerasParams();
+            if (!const_cast<CvCapture_OpenNI2*>(this)->readCamerasParams())
+                return 0;
         propValue = (double)depthFocalLength_VGA;
         break;
     case CV_CAP_PROP_OPENNI_REGISTRATION :
@@ -603,7 +610,7 @@ double CvCapture_OpenNI2::getDepthGeneratorProperty( int propIdx ) const
         propValue = streamFrames[CV_DEPTH_STREAM].getFrameIndex();
         break;
     default :
-        CV_Error( CV_StsBadArg, cv::format("Depth generator does not support such parameter (propIdx=%d) for getting.", propIdx) );
+        CV_LOG_WARNING( NULL, cv::format("Depth generator does not support such parameter (propIdx=%d) for getting.", propIdx) );
     }
 
     return propValue;
@@ -638,13 +645,17 @@ bool CvCapture_OpenNI2::setDepthGeneratorProperty( int propIdx, double propValue
                         {
                             openni::Status status = device.setImageRegistrationMode(mode);
                             if( status != openni::STATUS_OK )
-                                CV_Error(CV_StsError, std::string("CvCapture_OpenNI2::setDepthGeneratorProperty: ") +
-                                         std::string(openni::OpenNI::getExtendedError()));
+                            {
+                                CV_LOG_ERROR(NULL, std::string("CvCapture_OpenNI2::setDepthGeneratorProperty: ") +
+                                                   std::string(openni::OpenNI::getExtendedError()));
+                            }
                             else
                                 isSet = true;
                         }
                         else
-                            CV_Error(CV_StsError, "CvCapture_OpenNI2::setDepthGeneratorProperty: Unsupported viewpoint.");
+                        {
+                            CV_LOG_ERROR(NULL, "CvCapture_OpenNI2::setDepthGeneratorProperty: Unsupported viewpoint.");
+                        }
                     }
                     else
                         isSet = true;
@@ -654,15 +665,17 @@ bool CvCapture_OpenNI2::setDepthGeneratorProperty( int propIdx, double propValue
             {
                 openni::Status status = device.setImageRegistrationMode(openni::IMAGE_REGISTRATION_OFF);
                 if( status != openni::STATUS_OK )
-                    CV_Error(CV_StsError, std::string("CvCapture_OpenNI2::setDepthGeneratorProperty: ") +
-                             std::string(openni::OpenNI::getExtendedError()));
+                {
+                    CV_LOG_ERROR(NULL, std::string("CvCapture_OpenNI2::setDepthGeneratorProperty: ") +
+                                       std::string(openni::OpenNI::getExtendedError()));
+                }
                 else
                     isSet = true;
             }
         }
         break;
     default:
-        CV_Error( CV_StsBadArg, cv::format("Depth generator does not support such parameter (propIdx=%d) for setting.", propIdx) );
+        CV_LOG_WARNING( NULL, cv::format("OpenNI2: Depth generator does not support such parameter (propIdx=%d) for setting.", propIdx) );
     }
 
     return isSet;
@@ -696,7 +709,7 @@ double CvCapture_OpenNI2::getImageGeneratorProperty( int propIdx ) const
         propValue = (double)streamFrames[CV_COLOR_STREAM].getFrameIndex();
         break;
     default :
-        CV_Error( CV_StsBadArg, cv::format("Image generator does not support such parameter (propIdx=%d) for getting.", propIdx) );
+        CV_LOG_WARNING( NULL, cv::format("OpenNI2: Image generator does not support such parameter (propIdx=%d) for getting.", propIdx) );
     }
 
     return propValue;
@@ -744,19 +757,22 @@ bool CvCapture_OpenNI2::setImageGeneratorProperty(int propIdx, double propValue)
                 mode.setFps(60);
                  break;
             default :
-                CV_Error( CV_StsBadArg, "Unsupported image generator output mode.");
+                CV_LOG_WARNING( NULL, "Unsupported image generator output mode.");
+                return false;
             }
 
             openni::Status status = streams[CV_COLOR_STREAM].setVideoMode( mode );
             if( status != openni::STATUS_OK )
-                CV_Error(CV_StsError, std::string("CvCapture_OpenNI2::setImageGeneratorProperty: ") +
-                         std::string(openni::OpenNI::getExtendedError()));
+            {
+                CV_LOG_ERROR(NULL, std::string("CvCapture_OpenNI2::setImageGeneratorProperty: ") +
+                                     std::string(openni::OpenNI::getExtendedError()));
+            }
             else
                 isSet = true;
             break;
         }
         default:
-            CV_Error( CV_StsBadArg, cv::format("Image generator does not support such parameter (propIdx=%d) for setting.", propIdx) );
+            CV_LOG_WARNING( NULL, cv::format("Image generator does not support such parameter (propIdx=%d) for setting.", propIdx) );
         }
 
     return isSet;
@@ -790,7 +806,7 @@ double CvCapture_OpenNI2::getIrGeneratorProperty(int propIdx) const
         propValue = (double)streamFrames[CV_IR_STREAM].getFrameIndex();
         break;
     default:
-        CV_Error(CV_StsBadArg, cv::format("Image generator does not support such parameter (propIdx=%d) for getting.", propIdx));
+        CV_LOG_WARNING(NULL, cv::format("Image generator does not support such parameter (propIdx=%d) for getting.", propIdx));
     }
 
     return propValue;
@@ -838,19 +854,21 @@ bool CvCapture_OpenNI2::setIrGeneratorProperty(int propIdx, double propValue)
             mode.setFps(60);
             break;
         default:
-            CV_Error(CV_StsBadArg, "Unsupported image generator output mode.");
+            CV_LOG_WARNING(NULL, "Unsupported image generator output mode.");
         }
 
         openni::Status status = streams[CV_IR_STREAM].setVideoMode(mode);
         if (status != openni::STATUS_OK)
-            CV_Error(CV_StsError, std::string("CvCapture_OpenNI2::setImageGeneratorProperty: ") +
-                     std::string(openni::OpenNI::getExtendedError()));
+        {
+            CV_LOG_ERROR(NULL, std::string("CvCapture_OpenNI2::setImageGeneratorProperty: ") +
+                               std::string(openni::OpenNI::getExtendedError()));
+        }
         else
             isSet = true;
         break;
     }
     default:
-        CV_Error(CV_StsBadArg, cv::format("Image generator does not support such parameter (propIdx=%d) for setting.", propIdx));
+        CV_LOG_WARNING(NULL, cv::format("Image generator does not support such parameter (propIdx=%d) for setting.", propIdx));
     }
 
     return isSet;
@@ -965,9 +983,10 @@ static void computeDisparity_32F( const openni::VideoFrameRef& depthMetaData, cv
 IplImage* CvCapture_OpenNI2::retrieveDisparityMap()
 {
     if (!streamFrames[CV_DEPTH_STREAM].isValid())
-        return 0;
+        return nullptr;
 
-    readCamerasParams();
+    if (!readCamerasParams())
+        return nullptr;
 
     cv::Mat disp32;
     computeDisparity_32F(streamFrames[CV_DEPTH_STREAM], disp32, baseline, depthFocalLength_VGA, noSampleValue, shadowValue);
@@ -980,9 +999,10 @@ IplImage* CvCapture_OpenNI2::retrieveDisparityMap()
 IplImage* CvCapture_OpenNI2::retrieveDisparityMap_32F()
 {
     if (!streamFrames[CV_DEPTH_STREAM].isValid())
-        return 0;
+        return nullptr;
 
-    readCamerasParams();
+    if (!readCamerasParams())
+        return nullptr;
 
     computeDisparity_32F(streamFrames[CV_DEPTH_STREAM], outputMaps[CV_CAP_OPENNI_DISPARITY_MAP_32F].mat, baseline, depthFocalLength_VGA, noSampleValue, shadowValue);
 
@@ -992,7 +1012,7 @@ IplImage* CvCapture_OpenNI2::retrieveDisparityMap_32F()
 IplImage* CvCapture_OpenNI2::retrieveValidDepthMask()
 {
     if (!streamFrames[CV_DEPTH_STREAM].isValid())
-        return 0;
+        return nullptr;
 
     cv::Mat d;
     getDepthMapFromMetaData(streamFrames[CV_DEPTH_STREAM], d, noSampleValue, shadowValue);
@@ -1006,7 +1026,7 @@ inline void getBGRImageFromMetaData( const openni::VideoFrameRef& imageMetaData,
 {
    cv::Mat bufferImage;
    if( imageMetaData.getVideoMode().getPixelFormat() != openni::PIXEL_FORMAT_RGB888 )
-        CV_Error( CV_StsUnsupportedFormat, "Unsupported format of grabbed image." );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Unsupported format of grabbed image." );
 
    bgrImage.create(imageMetaData.getHeight(), imageMetaData.getWidth(), CV_8UC3);
    bufferImage.create(imageMetaData.getHeight(), imageMetaData.getWidth(), CV_8UC3);
@@ -1029,7 +1049,7 @@ inline void getGrayImageFromMetaData(const openni::VideoFrameRef& imageMetaData,
     }
     else
     {
-        CV_Error(CV_StsUnsupportedFormat, "Unsupported format of grabbed image.");
+        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported format of grabbed image.");
     }
 }
 

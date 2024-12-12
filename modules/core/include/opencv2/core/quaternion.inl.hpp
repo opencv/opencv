@@ -28,7 +28,7 @@
 #define OPENCV_CORE_QUATERNION_INL_HPP
 
 #ifndef OPENCV_CORE_QUATERNION_HPP
-#erorr This is not a standalone header. Include quaternion.hpp instead.
+#error This is not a standalone header. Include quaternion.hpp instead.
 #endif
 
 //@cond IGNORE

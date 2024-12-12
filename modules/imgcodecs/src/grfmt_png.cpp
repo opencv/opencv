@@ -58,11 +58,7 @@
 #  define _FILE_OFFSET_BITS 0
 #endif
 
-#ifdef HAVE_LIBPNG_PNG_H
-#include <libpng/png.h>
-#else
 #include <png.h>
-#endif
 #include <zlib.h>
 
 #include "grfmt_png.hpp"
@@ -265,7 +261,7 @@ bool  PngDecoder::readData( Mat& img )
                 png_set_gray_1_2_4_to_8( png_ptr );
 #endif
 
-            if( (m_color_type & PNG_COLOR_MASK_COLOR) && color )
+            if( (m_color_type & PNG_COLOR_MASK_COLOR) && color && !m_use_rgb)
                 png_set_bgr( png_ptr ); // convert RGB to BGR
             else if( color )
                 png_set_gray_to_rgb( png_ptr ); // Gray->RGB

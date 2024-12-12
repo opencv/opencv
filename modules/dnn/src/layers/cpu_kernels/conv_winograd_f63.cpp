@@ -20,15 +20,15 @@ namespace cv { namespace dnn {
 #if CV_NEON || CV_SIMD128 || CV_TRY_AVX2
 enum { VEC_ALIGN = 32, DFT_TYPE = CV_32F }; // Memory alignment.
 
-void winofunc_accum_f32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock,
+void winofunc_accum_F32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock,
                             const int winoIblock, const int winoKblock, const int winoAtomF32, const int winoNatomF32);
 
 /*Input transform*/
-void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
+void winofunc_BtXB_8x8_F32(const float* inptr, int inpstep,
                           float* outptr, int Cg, const int winoIblock, const int winoAtomF32);
 
 /*Output transform*/
-void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep, float* bpptr, int bpstep, float* outptr, int outstep,
+void winofunc_AtXA_8x8_F32(const float* inptr, int inpstep, float* bpptr, int bpstep, float* outptr, int outstep,
                           float bias, float minval, float maxval, bool ifMinMaxAct);
 
 int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _output, const Ptr<FastConv>& conv,
@@ -67,6 +67,28 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 #endif
     const int CONV_WINO_NATOMS_F32 = CONV_WINO_AREA / CONV_WINO_ATOM_F32; // for AVX2, it is 8, otherwise, it's 16.
 
+    int CONV_WINO_ATOM = CONV_WINO_ATOM_F32;
+    int CONV_WINO_NATOMS = CONV_WINO_NATOMS_F32;
+
+#ifdef CONV_ARM_FP16
+    // FP 16
+    const int CONV_WINO_ATOM_F16 = CONV_WINO_ATOM_F32 * 2;
+    const int CONV_WINO_NATOMS_F16 = CONV_WINO_AREA / CONV_WINO_ATOM_F16;
+#endif
+
+    int esz = sizeof(float );
+
+#ifdef CONV_ARM_FP16
+    const bool useFP16 = conv->useFP16;
+    if (useFP16)
+    {
+        // works at FP 16.
+        CONV_WINO_ATOM = CONV_WINO_ATOM_F16;
+        CONV_WINO_NATOMS = CONV_WINO_NATOMS_F16;
+        esz = sizeof(__fp16);
+    }
+#endif
+
     int Kg_nblocks = (Kg + CONV_WINO_KBLOCK - 1)/CONV_WINO_KBLOCK;
     const size_t inp_planesize = (size_t)Hi*Wi;
     const size_t out_planesize = (size_t)H0*W0;
@@ -78,9 +100,9 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 
     size_t totalbufsize = (size_t)N*C*blocks_per_plane_aligned*CONV_WINO_AREA;
 
-    AutoBuffer<float> _buf;
-    _buf.allocate(totalbufsize + VEC_ALIGN);
-    float* wbuf_all = alignPtr(_buf.data(), VEC_ALIGN);
+    AutoBuffer<char> _buf;
+    _buf.allocate((totalbufsize + VEC_ALIGN) * esz);
+    char* wbuf_all = alignPtr(_buf.data(), VEC_ALIGN * esz);
 
     float* inp = input.ptr<float>();
     float* out = output.ptr<float>();
@@ -104,14 +126,15 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
             int c = nc0 - n*C;
             int g = c / Cg;
             c -= g*Cg;
+
             for (int block_id = 0; block_id < blocks_per_plane; block_id += CONV_WINO_IBLOCK)
             {
                 for (int db = 0; db < CONV_WINO_IBLOCK; db++)
                 {
                     size_t inwofs = ((n*ngroups + g)*blocks_per_plane_aligned +
                                      block_id)*Cg*CONV_WINO_AREA +
-                                    (c*CONV_WINO_IBLOCK + db)*CONV_WINO_ATOM_F32;
-                    float* inwptr = (float*)wbuf_all + inwofs;
+                                    (c*CONV_WINO_IBLOCK + db) * CONV_WINO_ATOM;
+                    char* inwptr = wbuf_all + inwofs * esz;
 
                     if (block_id + db < blocks_per_plane)
                     {
@@ -152,27 +175,40 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
                             inptr = inpbuf;
                             inpstep = CONV_WINO_SIZE;
                         }
+
 #if CV_TRY_AVX2
                         if (conv->useAVX2)
-                            opt_AVX2::winofunc_BtXB_8x8_f32(inptr, inpstep, inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM_F32);
+                            opt_AVX2::winofunc_BtXB_8x8_F32(inptr, inpstep, (float *)inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM);
                         else
 #endif
 #if CV_TRY_AVX
                         if (conv->useAVX)
-                            opt_AVX::winofunc_BtXB_8x8_f32(inptr, inpstep, inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM_F32);
+                            opt_AVX::winofunc_BtXB_8x8_F32(inptr, inpstep, (float *)inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM);
                         else
 #endif
 #if CV_NEON && CV_NEON_AARCH64
                         if (conv->useNEON)
-                            opt_NEON::winofunc_BtXB_8x8_f32(inptr, inpstep, inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM_F32);
+                        {
+#ifdef CONV_ARM_FP16
+                            if (useFP16)
+                            {
+                                opt_NEON_FP16::winofunc_BtXB_8x8_F16(inptr, inpstep, inwptr, Cg, CONV_WINO_IBLOCK,
+                                                                CONV_WINO_ATOM);
+                            }
+                            else
+#endif
+                            opt_NEON::winofunc_BtXB_8x8_F32(inptr, inpstep, (float *)inwptr, Cg, CONV_WINO_IBLOCK,
+                                                            CONV_WINO_ATOM);
+                        }
                         else
 #endif
-                        winofunc_BtXB_8x8_f32(inptr, inpstep, inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM_F32);
+                        winofunc_BtXB_8x8_F32(inptr, inpstep, (float *)inwptr, Cg, CONV_WINO_IBLOCK, CONV_WINO_ATOM);
+
                     }
                     else
                     {
-                        for (int i = 0; i < CONV_WINO_NATOMS_F32; i++, inwptr += CONV_WINO_IBLOCK*CONV_WINO_ATOM_F32)
-                            memset(inwptr, 0, CONV_WINO_ATOM_F32*sizeof(inwptr[0]));
+                        for (int i = 0; i < CONV_WINO_NATOMS; i++, inwptr += CONV_WINO_IBLOCK * CONV_WINO_ATOM * esz)
+                            memset(inwptr, 0, CONV_WINO_ATOM * esz);
                     }
                 }
             }
@@ -182,19 +218,37 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
     // Phase 2. compute elemwise-weighted sums of transformed blocks,
     // apply inverse Winograd transforms to the sums,
     // add bias, apply activation function if any and store the results.
+    char* wptr0 = nullptr;
+#ifdef CONV_ARM_FP16
+    if (useFP16)
+    {
+        CV_Assert(!conv->weightsWinoBuf_FP16.empty());
+        wptr0 = (char *)conv->getWeightsWinoFP16();
+    }
+    else
+#endif
+    {
+        CV_Assert(!conv->weightsWinoBuf.empty());
+        wptr0 = (char *)conv->getWeightsWino();
+    }
+
     parallel_for_(Range(0, ntasks), [&](const Range& r0) {
     for (int task_id = r0.start; task_id < r0.end; task_id++)
     {
-        size_t out_wbuf_size = CONV_WINO_AREA*CONV_WINO_KBLOCK*CONV_WINO_IBLOCK;
+        size_t out_wbuf_size = CONV_WINO_AREA * CONV_WINO_KBLOCK * CONV_WINO_IBLOCK;
         size_t outbuf_size = CONV_WINO_AREA;
-        AutoBuffer<float> out_wbuf_, outbuf_;
-        out_wbuf_.allocate(out_wbuf_size + VEC_ALIGN);
-        float* out_wbuf = alignPtr(out_wbuf_.data(), VEC_ALIGN);
+
+        // For saving the accumulation output.
+        AutoBuffer<char> out_wbuf_;
+        out_wbuf_.allocate((out_wbuf_size + VEC_ALIGN) * esz);
+        char* out_wbuf = alignPtr(out_wbuf_.data(), VEC_ALIGN * esz);
+        memset(out_wbuf, 0, out_wbuf_size * esz);
+
+        // For saving the fuse_Add data.
+        AutoBuffer<float> outbuf_;
         outbuf_.allocate(outbuf_size + VEC_ALIGN);
         float* outbuf = alignPtr(outbuf_.data(), VEC_ALIGN);
-
-        memset(out_wbuf, 0, out_wbuf_size * sizeof(float));
-        memset(outbuf, 0, outbuf_size * sizeof(float));
+        memset(outbuf, 0, outbuf_size * sizeof(outbuf[0]));
 
         int ngk0 = (int)(((int64_t)N*Kg_nblocks*ngroups)*task_id/ntasks);
         int ngk1 = (int)(((int64_t)N*Kg_nblocks*ngroups)*(task_id+1)/ntasks);
@@ -214,30 +268,40 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
                 size_t inwofs = ((n*ngroups + g)*blocks_per_plane_aligned + block_id0)*Cg*CONV_WINO_AREA;
                 size_t wofs = (g*Kg_nblocks*CONV_WINO_KBLOCK + k0)*Cg*CONV_WINO_AREA;
 
-                float* inwptr = wbuf_all + inwofs;
-                const float* wptr = conv->weightsWinoBufPtr + wofs;
+                char* inwptr = wbuf_all + inwofs * esz;
+                char* wptr = wptr0 + wofs * esz;
 
 #if CV_TRY_AVX2
                 if (conv->useAVX2)
-                    opt_AVX2::winofunc_accum_f32(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
-                                       CONV_WINO_KBLOCK, CONV_WINO_ATOM_F32, CONV_WINO_NATOMS_F32);
+                    opt_AVX2::winofunc_accum_F32((float *)inwptr, (float *)wptr, (float *)out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
+                                       CONV_WINO_KBLOCK, CONV_WINO_ATOM, CONV_WINO_NATOMS);
                 else
 #endif
 #if CV_TRY_AVX
                 if (conv->useAVX)
-                    opt_AVX::winofunc_accum_f32(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
-                                       CONV_WINO_KBLOCK, CONV_WINO_ATOM_F32, CONV_WINO_NATOMS_F32);
+                    opt_AVX::winofunc_accum_F32((float *)inwptr, (float *)wptr, (float *)out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
+                                       CONV_WINO_KBLOCK, CONV_WINO_ATOM, CONV_WINO_NATOMS);
                 else
 #endif
 #if CV_NEON && CV_NEON_AARCH64
                 if (conv->useNEON)
-                    opt_NEON::winofunc_accum_f32(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
-                                       CONV_WINO_KBLOCK, CONV_WINO_ATOM_F32, CONV_WINO_NATOMS_F32);
+                {
+#ifdef CONV_ARM_FP16
+                    if (useFP16)
+                    {
+                        opt_NEON_FP16::winofunc_accum_F16(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
+                                                     CONV_WINO_KBLOCK, CONV_WINO_ATOM, CONV_WINO_NATOMS);
+                    }
+                    else
+#endif
+                    opt_NEON::winofunc_accum_F32((float *)inwptr, (float *)wptr, (float *)out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
+                                                 CONV_WINO_KBLOCK, CONV_WINO_ATOM, CONV_WINO_NATOMS);
+                }
                 else
 #endif
+                winofunc_accum_F32((float *)inwptr, (float *)wptr, (float *)out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
+                                       CONV_WINO_KBLOCK, CONV_WINO_ATOM, CONV_WINO_NATOMS);
 
-                winofunc_accum_f32(inwptr, wptr, out_wbuf, Cg, block_id1 - block_id0, CONV_WINO_IBLOCK,
-                                       CONV_WINO_KBLOCK, CONV_WINO_ATOM_F32, CONV_WINO_NATOMS_F32);
                 for (int k = k0; k < k1; k++)
                 {
                     float biasv = conv->biasBuf[g*Kg + k];
@@ -274,31 +338,42 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
                         }
 #if CV_TRY_AVX2
                         if (conv->useAVX2)
-                            opt_AVX::winofunc_AtXA_8x8_f32(out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
+                            opt_AVX2::winofunc_AtXA_8x8_F32((float *)out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
                                                                 bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
                         else
 #endif
 #if CV_TRY_AVX
                         if (conv->useAVX)
-                            opt_AVX::winofunc_AtXA_8x8_f32(out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
+                            opt_AVX::winofunc_AtXA_8x8_F32((float *)out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
                                                                 bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
                         else
 #endif
 #if CV_NEON && CV_NEON_AARCH64
+                        // NEON optimization is only for ARMv8 device, and for ARMv7 device, we use the Universal intrinsics.
                         if (conv->useNEON)
-                            // NEON optimization is only for ARMv8 device, and for ARMv7 device, we use the Universal intrinsics.
-                            opt_NEON::winofunc_AtXA_8x8_f32(out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
+                        {
+#ifdef CONV_ARM_FP16
+                            if (useFP16)
+                            {
+                                opt_NEON_FP16::winofunc_AtXA_8x8_F16(out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA * esz, CONV_WINO_SIZE,
                                                                 bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
+                            }
+                            else
+#endif
+                            opt_NEON::winofunc_AtXA_8x8_F32((float *)out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
+                                                            bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
+                        }
                         else
 #endif
-                        winofunc_AtXA_8x8_f32(out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
+                        winofunc_AtXA_8x8_F32((float *)out_wbuf + ((k - k0)*CONV_WINO_IBLOCK + (block_id - block_id0))*CONV_WINO_AREA, CONV_WINO_SIZE,
                                                   bpptr, outstep, outptr, outstep, biasv, minval, maxval, ifMinMaxAct);
+
                         if (partial)
                         {
                             if (activ)
                                 activ->forwardSlice(outptr, outptr, CONV_WINO_SIZE*CONV_WINO_STEP, 0, g*Kg + k, g*Kg + k + 1);
                             for (int y = 0; y < dy1; y++)
-                                memcpy(outptr0 + y*W0, outptr + y*CONV_WINO_SIZE,dx1*sizeof(outptr0[0]));
+                                memcpy(outptr0 + y*W0, outptr + y*CONV_WINO_SIZE, dx1*sizeof(outptr0[0]));
                         }
                     }
                 }
@@ -314,7 +389,7 @@ int runWinograd63(InputArray _input, InputArray _fusedAddMat, OutputArray _outpu
 
 #if CV_SIMD128
 
-void winofunc_accum_f32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock,
+void winofunc_accum_F32(const float* inwptr, const float* wptr, float* outbuf, int Cg, int iblock,
                             const int winoIblock, const int winoKblock, const int winoAtomF32, const int winoNatomF32)
 {
 #if 1
@@ -411,7 +486,7 @@ void winofunc_accum_f32(const float* inwptr, const float* wptr, float* outbuf, i
 }
 
 /*Input transform*/
-void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
+void winofunc_BtXB_8x8_F32(const float* inptr, int inpstep,
                           float* outptr, int Cg, const int winoIblock, const int winoAtomF32)
 {
     CV_Assert(winoIblock == 3 && winoAtomF32 == 4);
@@ -430,32 +505,32 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
         /* Y[0] = [1.f, 0.f, -5.25f, 0.f, 5.25f, 0.f, -1.f, 0.f]*X */
         /* Y[7] = [0.f, -1.f, 0.f, 5.25f, 0.f, -5.25f, 0.f, 1.f]*X */
         v_float32x4 q5_25 = v_setall_f32(5.25f), t00, t01, t10, t11;
-        t00 = x40 - x20;
-        t01 = x41 - x21;
-        t10 = x30 - x50;
-        t11 = x31 - x51;
-        v_float32x4 y00 = v_fma(t00, q5_25, x00 - x60);
-        v_float32x4 y01 = v_fma(t01, q5_25, x01 - x61);
-        v_float32x4 y70 = v_fma(t10, q5_25, x70 - x10);
-        v_float32x4 y71 = v_fma(t11, q5_25, x71 - x11);
+        t00 = v_sub(x40, x20);
+        t01 = v_sub(x41, x21);
+        t10 = v_sub(x30, x50);
+        t11 = v_sub(x31, x51);
+        v_float32x4 y00 = v_fma(t00, q5_25, v_sub(x00, x60));
+        v_float32x4 y01 = v_fma(t01, q5_25, v_sub(x01, x61));
+        v_float32x4 y70 = v_fma(t10, q5_25, v_sub(x70, x10));
+        v_float32x4 y71 = v_fma(t11, q5_25, v_sub(x71, x11));
 
         /* Y[1] = [0.f, 1.f, 1.f, -4.25f, -4.25f, 1.f, 1.f, 0.f]*X */
         /* Y[2] = [0.f, -1.f, 1.f, 4.25f, -4.25f, -1.f, 1.f, 0.f]*X */
         v_float32x4 qm4_25 = v_setall_f32(-4.25f);
-        t00 = v_fma(x30, qm4_25, x10 + x50);
-        t01 = v_fma(x31, qm4_25, x11 + x51);
-        t10 = v_fma(x40, qm4_25, x20 + x60);
-        t11 = v_fma(x41, qm4_25, x21 + x61);
+        t00 = v_fma(x30, qm4_25, v_add(x10, x50));
+        t01 = v_fma(x31, qm4_25, v_add(x11, x51));
+        t10 = v_fma(x40, qm4_25, v_add(x20, x60));
+        t11 = v_fma(x41, qm4_25, v_add(x21, x61));
 
-        v_float32x4 y10 = t00 + t10, y11 = t01 + t11;
-        v_float32x4 y20 = t10 - t00, y21 = t11 - t01;
+        v_float32x4 y10 = v_add(t00, t10), y11 = v_add(t01, t11);
+        v_float32x4 y20 = v_sub(t10, t00), y21 = v_sub(t11, t01);
 
         /* Y[3] = [0.f, 0.5f, 0.25f, -2.5f, -1.25f, 2.f, 1.f, 0.f]*X */
         /* Y[4] = [0.f, -0.5f, 0.25f, 2.5f, -1.25f, -2.f, 1.f, 0.f]*X */
         v_float32x4 q0_5 = v_setall_f32(0.5f), q0_25 = v_setall_f32(0.25f);
         v_float32x4 qm2_5 = v_setall_f32(-2.5f), qm1_25 = v_setall_f32(-1.25f);
-        t00 = v_fma(x10, q0_5, x50 + x50);
-        t01 = v_fma(x11, q0_5, x51 + x51);
+        t00 = v_fma(x10, q0_5, v_add(x50, x50));
+        t01 = v_fma(x11, q0_5, v_add(x51, x51));
         t10 = v_fma(x20, q0_25, x60);
         t11 = v_fma(x21, q0_25, x61);
         t00 = v_fma(x30, qm2_5, t00);
@@ -463,14 +538,14 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
         t10 = v_fma(x40, qm1_25, t10);
         t11 = v_fma(x41, qm1_25, t11);
 
-        v_float32x4 y30 = t00 + t10, y31 = t01 + t11;
-        v_float32x4 y40 = t10 - t00, y41 = t11 - t01;
+        v_float32x4 y30 = v_add(t00, t10), y31 = v_add(t01, t11);
+        v_float32x4 y40 = v_sub(t10, t00), y41 = v_sub(t11, t01);
 
         /* Y[5] = [0.f, 2.f, 4.f, -2.5f, -5.f, 0.5f, 1.f, 0.f]*X */
         /* Y[6] = [0.f, -2.f, 4.f, 2.5f, -5.f, -0.5f, 1.f, 0.f]*X */
         v_float32x4 q4 = v_setall_f32(4.f), qm5 = v_setall_f32(-5.f);
-        t00 = v_fma(x50, q0_5, x10 + x10);
-        t01 = v_fma(x51, q0_5, x11 + x11);
+        t00 = v_fma(x50, q0_5, v_add(x10, x10));
+        t01 = v_fma(x51, q0_5, v_add(x11, x11));
         t10 = v_fma(x20, q4   , x60);
         t11 = v_fma(x21, q4   , x61);
         t00 = v_fma(x30, qm2_5, t00);
@@ -478,8 +553,8 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
         t10 = v_fma(x40, qm5  , t10);
         t11 = v_fma(x41, qm5  , t11);
 
-        v_float32x4 y50 = t00 + t10, y51 = t01 + t11;
-        v_float32x4 y60 = t10 - t00, y61 = t11 - t01;
+        v_float32x4 y50 = v_add(t00, t10), y51 = v_add(t01, t11);
+        v_float32x4 y60 = v_sub(t10, t00), y61 = v_sub(t11, t01);
 
         /* transpose 8x8 matrix with v_transpose4x4 */
 
@@ -491,29 +566,29 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
 
         /* Z[0] = [1.f, 0.f, -5.25f, 0.f, 5.25f, 0.f, -1.f, 0.f]*Y */
         /* Z[7] = [0.f, -1.f, 0.f, 5.25f, 0.f, -5.25f, 0.f, 1.f]*Y */
-        t00 = y010 - y200;
-        t01 = y410 - y600;
-        t10 = y300 - y110;
-        t11 = y700 - y510;
-        z00 = v_fma(t00, q5_25, y000 - y210);
-        z01 = v_fma(t01, q5_25, y400 - y610);
-        z70 = v_fma(t10, q5_25, y310 - y100);
-        z71 = v_fma(t11, q5_25, y710 - y500);
+        t00 = v_sub(y010, y200);
+        t01 = v_sub(y410, y600);
+        t10 = v_sub(y300, y110);
+        t11 = v_sub(y700, y510);
+        z00 = v_fma(t00, q5_25, v_sub(y000, y210));
+        z01 = v_fma(t01, q5_25, v_sub(y400, y610));
+        z70 = v_fma(t10, q5_25, v_sub(y310, y100));
+        z71 = v_fma(t11, q5_25, v_sub(y710, y500));
 
         /* Z[1] = [0.f, 1.f, 1.f, -4.25f, -4.25f, 1.f, 1.f, 0.f]*Y */
         /* Z[2] = [0.f, -1.f, 1.f, 4.25f, -4.25f, -1.f, 1.f, 0.f]*Y */
-        t00 = v_fma(y300, qm4_25, y100 + y110);
-        t01 = v_fma(y700, qm4_25, y500 + y510);
-        t10 = v_fma(y010, qm4_25, y200 + y210);
-        t11 = v_fma(y410, qm4_25, y600 + y610);
+        t00 = v_fma(y300, qm4_25, v_add(y100, y110));
+        t01 = v_fma(y700, qm4_25, v_add(y500, y510));
+        t10 = v_fma(y010, qm4_25, v_add(y200, y210));
+        t11 = v_fma(y410, qm4_25, v_add(y600, y610));
 
-        z10 = t00 + t10; z11 = t01 + t11;
-        z20 = t10 - t00; z21 = t11 - t01;
+        z10 = v_add(t00, t10); z11 = v_add(t01, t11);
+        z20 = v_sub(t10, t00); z21 = v_sub(t11, t01);
 
         /* Z[3] = [0.f, 0.5f, 0.25f, -2.5f, -1.25f, 2.f, 1.f, 0.f]*Y */
         /* Z[4] = [0.f, -0.5f, 0.25f, 2.5f, -1.25f, -2.f, 1.f, 0.f]*Y */
-        t00 = v_fma(y100, q0_5, y110 + y110);
-        t01 = v_fma(y500, q0_5, y510 + y510);
+        t00 = v_fma(y100, q0_5, v_add(y110, y110));
+        t01 = v_fma(y500, q0_5, v_add(y510, y510));
         t10 = v_fma(y200, q0_25, y210);
         t11 = v_fma(y600, q0_25, y610);
         t00 = v_fma(y300, qm2_5, t00);
@@ -521,13 +596,13 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
         t10 = v_fma(y010, qm1_25, t10);
         t11 = v_fma(y410, qm1_25, t11);
 
-        z30 = t00 + t10; z31 = t01 + t11;
-        z40 = t10 - t00; z41 = t11 - t01;
+        z30 = v_add(t00, t10); z31 = v_add(t01, t11);
+        z40 = v_sub(t10, t00); z41 = v_sub(t11, t01);
 
         /* Z[5] = [0.f, 2.f, 4.f, -2.5f, -5.f, 0.5f, 1.f, 0.f]*Y */
         /* Z[6] = [0.f, -2.f, 4.f, 2.5f, -5.f, -0.5f, 1.f, 0.f]*Y */
-        t00 = v_fma(y110, q0_5, y100 + y100);
-        t01 = v_fma(y510, q0_5, y500 + y500);
+        t00 = v_fma(y110, q0_5, v_add(y100, y100));
+        t01 = v_fma(y510, q0_5, v_add(y500, y500));
         t10 = v_fma(y200, q4, y210);
         t11 = v_fma(y600, q4, y610);
         t00 = v_fma(y300, qm2_5, t00);
@@ -535,8 +610,8 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
         t10 = v_fma(y010, qm5, t10);
         t11 = v_fma(y410, qm5, t11);
 
-        z50 = t00 + t10; z51 = t01 + t11;
-        z60 = t10 - t00; z61 = t11 - t01;
+        z50 = v_add(t00, t10); z51 = v_add(t01, t11);
+        z60 = v_sub(t10, t00); z61 = v_sub(t11, t01);
     }
 
     const int outstep = winoIblock*winoAtomF32*Cg;
@@ -585,7 +660,7 @@ void winofunc_BtXB_8x8_f32(const float* inptr, int inpstep,
     the Winograd-transformed weights should also be transposed.
     init_conv() (see OpConv.fx) takes care of that.
 */
-void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
+void winofunc_AtXA_8x8_F32(const float* inptr, int inpstep,
                           float* bpptr, int bpstep, float* outptr, int outstep,
                           float bias, float minval, float maxval, bool ifMinMaxAct)
 {
@@ -601,12 +676,12 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
 
     {
         v_float32x4 s12_0, s12_1, s34_0, s34_1, s56_0, s56_1;
-        s12_0 = x10 + x20; s12_1 = x11 + x21;
-        s34_0 = x30 + x40; s34_1 = x31 + x41;
-        s56_0 = x50 + x60; s56_1 = x51 + x61;
+        s12_0 = v_add(x10, x20); s12_1 = v_add(x11, x21);
+        s34_0 = v_add(x30, x40); s34_1 = v_add(x31, x41);
+        s56_0 = v_add(x50, x60); s56_1 = v_add(x51, x61);
 
-        v_float32x4 y00 = x00 + s12_0 + s34_0 + s56_0;
-        v_float32x4 y01 = x01 + s12_1 + s34_1 + s56_1;
+        v_float32x4 y00 = v_add(v_add(v_add(x00, s12_0), s34_0), s56_0);
+        v_float32x4 y01 = v_add(v_add(v_add(x01, s12_1), s34_1), s56_1);
 
         v_float32x4 a0 = v_setall_f32(0.25f), a1 = v_setall_f32(4.0f);
         v_float32x4 y20 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
@@ -616,13 +691,13 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
         v_float32x4 y40 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
         v_float32x4 y41 = v_fma(s56_1, a0, v_fma(s34_1, a1, s12_1));
 
-        s12_0 = x10 - x20; s12_1 = x11 - x21;
-        s34_0 = x30 - x40; s34_1 = x31 - x41;
-        s56_0 = x50 - x60; s56_1 = x51 - x61;
+        s12_0 = v_sub(x10, x20); s12_1 = v_sub(x11, x21);
+        s34_0 = v_sub(x30, x40); s34_1 = v_sub(x31, x41);
+        s56_0 = v_sub(x50, x60); s56_1 = v_sub(x51, x61);
 
         a0 = v_setall_f32(1.f/32), a1 = v_setall_f32(32.f);
-        v_float32x4 y50 = v_fma(s56_0, a0, v_fma(s34_0, a1, x70 + s12_0));
-        v_float32x4 y51 = v_fma(s56_1, a0, v_fma(s34_1, a1, x71 + s12_1));
+        v_float32x4 y50 = v_fma(s56_0, a0, v_fma(s34_0, a1, v_add(x70, s12_0)));
+        v_float32x4 y51 = v_fma(s56_1, a0, v_fma(s34_1, a1, v_add(x71, s12_1)));
 
         a0 = v_setall_f32(0.5f), a1 = v_setall_f32(2.f);
         v_float32x4 y10 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
@@ -642,12 +717,12 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
         v_transpose4x4(y40, y50, y60, y70, y400, y500, y600, y700);
         v_transpose4x4(y41, y51, y61, y71, y410, y510, y610, y710);
 
-        s12_0 = y100 + y200; s12_1 = y500 + y600;
-        s34_0 = y300 + y010; s34_1 = y700 + y410;
-        s56_0 = y110 + y210; s56_1 = y510 + y610;
+        s12_0 = v_add(y100, y200); s12_1 = v_add(y500, y600);
+        s34_0 = v_add(y300, y010); s34_1 = v_add(y700, y410);
+        s56_0 = v_add(y110, y210); s56_1 = v_add(y510, y610);
 
-        z00 = y000 + s12_0 + s34_0 + s56_0;
-        z01 = y400 + s12_1 + s34_1 + s56_1;
+        z00 = v_add(v_add(v_add(y000, s12_0), s34_0), s56_0);
+        z01 = v_add(v_add(v_add(y400, s12_1), s34_1), s56_1);
 
         a0 = v_setall_f32(0.25f), a1 = v_setall_f32(4.0f);
         z20 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
@@ -657,13 +732,13 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
         z40 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
         z41 = v_fma(s56_1, a0, v_fma(s34_1, a1, s12_1));
 
-        s12_0 = y100 - y200; s12_1 = y500 - y600;
-        s34_0 = y300 - y010; s34_1 = y700 - y410;
-        s56_0 = y110 - y210; s56_1 = y510 - y610;
+        s12_0 = v_sub(y100, y200); s12_1 = v_sub(y500, y600);
+        s34_0 = v_sub(y300, y010); s34_1 = v_sub(y700, y410);
+        s56_0 = v_sub(y110, y210); s56_1 = v_sub(y510, y610);
 
         a0 = v_setall_f32(1.f/32), a1 = v_setall_f32(32.0f);
-        z50 = v_fma(s56_0, a0, v_fma(s34_0, a1, y310 + s12_0));
-        z51 = v_fma(s56_1, a0, v_fma(s34_1, a1, y710 + s12_1));
+        z50 = v_fma(s56_0, a0, v_fma(s34_0, a1, v_add(y310, s12_0)));
+        z51 = v_fma(s56_1, a0, v_fma(s34_1, a1, v_add(y710, s12_1)));
         a0 = v_setall_f32(0.5f), a1 = v_setall_f32(2.0f);
         z10 = v_fma(s56_0, a0, v_fma(s34_0, a1, s12_0));
         z11 = v_fma(s56_1, a0, v_fma(s34_1, a1, s12_1));
@@ -673,34 +748,34 @@ void winofunc_AtXA_8x8_f32(const float* inptr, int inpstep,
         z31 = v_fma(s56_1, a0, v_fma(s34_1, a1, s12_1));
 
         v_float32x4 vbias = v_setall_f32(bias);
-        z00 += vbias;
-        z01 += vbias;
-        z10 += vbias;
-        z11 += vbias;
-        z20 += vbias;
-        z21 += vbias;
-        z30 += vbias;
-        z31 += vbias;
-        z40 += vbias;
-        z41 += vbias;
-        z50 += vbias;
-        z51 += vbias;
+        z00 = v_add(z00, vbias);
+        z01 = v_add(z01, vbias);
+        z10 = v_add(z10, vbias);
+        z11 = v_add(z11, vbias);
+        z20 = v_add(z20, vbias);
+        z21 = v_add(z21, vbias);
+        z30 = v_add(z30, vbias);
+        z31 = v_add(z31, vbias);
+        z40 = v_add(z40, vbias);
+        z41 = v_add(z41, vbias);
+        z50 = v_add(z50, vbias);
+        z51 = v_add(z51, vbias);
     }
 
     if (bpptr)
     {
-        z00 += v_load(bpptr);
-        z01 += v_load_low(bpptr + 4);
-        z10 += v_load(bpptr + bpstep);
-        z11 += v_load_low(bpptr + bpstep + 4);
-        z20 += v_load(bpptr + bpstep*2);
-        z21 += v_load_low(bpptr + bpstep*2 + 4);
-        z30 += v_load(bpptr + bpstep*3);
-        z31 += v_load_low(bpptr + bpstep*3 + 4);
-        z40 += v_load(bpptr + bpstep*4);
-        z41 += v_load_low(bpptr + bpstep*4 + 4);
-        z50 += v_load(bpptr + bpstep*5);
-        z51 += v_load_low(bpptr + bpstep*5 + 4);
+        z00 = v_add(z00, v_load(bpptr));
+        z01 = v_add(z01, v_load_low(bpptr + 4));
+        z10 = v_add(z10, v_load(bpptr + bpstep));
+        z11 = v_add(z11, v_load_low(bpptr + bpstep + 4));
+        z20 = v_add(z20, v_load(bpptr + bpstep * 2));
+        z21 = v_add(z21, v_load_low(bpptr + bpstep * 2 + 4));
+        z30 = v_add(z30, v_load(bpptr + bpstep * 3));
+        z31 = v_add(z31, v_load_low(bpptr + bpstep * 3 + 4));
+        z40 = v_add(z40, v_load(bpptr + bpstep * 4));
+        z41 = v_add(z41, v_load_low(bpptr + bpstep * 4 + 4));
+        z50 = v_add(z50, v_load(bpptr + bpstep * 5));
+        z51 = v_add(z51, v_load_low(bpptr + bpstep * 5 + 4));
     }
 
     if (ifMinMaxAct)

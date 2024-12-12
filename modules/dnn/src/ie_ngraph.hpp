@@ -17,7 +17,8 @@
 #pragma warning(disable : 4245)
 #pragma warning(disable : 4268)
 #endif
-#include <ngraph/ngraph.hpp>
+#include <openvino/openvino.hpp>
+#include <openvino/op/ops.hpp>
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -30,12 +31,11 @@ namespace cv { namespace dnn {
 
 class InfEngineNgraphNode;
 
-
 class InfEngineNgraphNet
 {
 public:
     InfEngineNgraphNet(detail::NetImplBase& netImpl);
-    InfEngineNgraphNet(detail::NetImplBase& netImpl, InferenceEngine::CNNNetwork& net);
+    InfEngineNgraphNet(detail::NetImplBase& netImpl, std::shared_ptr<ov::Model>& net);
 
     void addOutput(const Ptr<InfEngineNgraphNode>& node);
 
@@ -44,8 +44,8 @@ public:
 
     void forward(const std::vector<Ptr<BackendWrapper> >& outBlobsWrappers, bool isAsync);
 
-    void initPlugin(InferenceEngine::CNNNetwork& net);
-    ngraph::ParameterVector setInputs(const std::vector<cv::Mat>& inputs, const std::vector<std::string>& names);
+    void initPlugin(std::shared_ptr<ov::Model>& net);
+    ov::ParameterVector setInputs(const std::vector<cv::Mat>& inputs, const std::vector<std::string>& names);
 
     void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
@@ -56,15 +56,11 @@ public:
 //private:
     detail::NetImplBase& netImpl_;
 
-    ngraph::ParameterVector inputs_vec;
-    std::shared_ptr<ngraph::Function> ngraph_function;
+    ov::ParameterVector inputs_vec;
+    std::shared_ptr<ov::Model> ngraph_function;
 
-    InferenceEngine::ExecutableNetwork netExec;
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
+    ov::CompiledModel netExec;
     std::map<std::string, ov::Tensor> allBlobs;
-#else
-    InferenceEngine::BlobMap allBlobs;
-#endif
     std::string device_name;
     bool isInit = false;
 
@@ -74,14 +70,14 @@ public:
 
         void makePromises(const std::vector<Ptr<BackendWrapper> >& outs);
 
-        InferenceEngine::InferRequest req;
+        ov::InferRequest req;
         std::vector<cv::AsyncPromise> outProms;
         std::vector<std::string> outsNames;
         bool isReady;
     };
     std::vector<Ptr<NgraphReqWrapper> > infRequests;
 
-    InferenceEngine::CNNNetwork cnn;
+    std::shared_ptr<ov::Model> cnn;
     bool hasNetOwner;
     std::unordered_map<std::string, InfEngineNgraphNode*> requestedOutputs;
 };
@@ -93,13 +89,13 @@ public:
                         std::vector<Mat*>& inputs, std::vector<Mat>& outputs,
                         std::vector<Mat>& internals);
 
-    InfEngineNgraphNode(ngraph::Output<ngraph::Node>&& _node);
-    InfEngineNgraphNode(const ngraph::Output<ngraph::Node>& _node);
+    InfEngineNgraphNode(ov::Output<ov::Node>&& _node);
+    InfEngineNgraphNode(const ov::Output<ov::Node>& _node);
 
     void setName(const std::string& name);
 
     // Inference Engine network object that allows to obtain the outputs of this layer.
-    ngraph::Output<ngraph::Node> node;
+    ov::Output<ov::Node> node;
     Ptr<InfEngineNgraphNet> net;
     Ptr<dnn::Layer> cvLayer;
 };
@@ -118,11 +114,7 @@ public:
 
     Mat* host;
     std::string name;
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
     ov::Tensor blob;
-#else
-    InferenceEngine::Blob::Ptr blob;
-#endif
     AsyncArray futureMat;
 };
 
@@ -132,7 +124,7 @@ public:
 class NgraphBackendLayer : public Layer
 {
 public:
-    NgraphBackendLayer(const InferenceEngine::CNNNetwork &t_net_) : t_net(t_net_) {};
+    NgraphBackendLayer(const std::shared_ptr<ov::Model> &t_net_) : t_net(t_net_) {};
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
@@ -145,11 +137,11 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE;
 
 private:
-    InferenceEngine::CNNNetwork t_net;
+    std::shared_ptr<ov::Model> t_net;
 };
 
-ngraph::Output<ngraph::Node> ngraphQuantize(ngraph::Output<ngraph::Node> input, float output_sc, float output_zp);
-ngraph::Output<ngraph::Node> ngraphDequantize(ngraph::Output<ngraph::Node> input, float input_sc, float input_zp);
+ov::Output<ov::Node> ngraphQuantize(ov::Output<ov::Node> input, float output_sc, float output_zp);
+ov::Output<ov::Node> ngraphDequantize(ov::Output<ov::Node> input, float input_sc, float input_zp);
 
 #endif  // HAVE_DNN_NGRAPH
 

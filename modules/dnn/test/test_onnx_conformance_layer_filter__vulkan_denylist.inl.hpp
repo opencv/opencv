@@ -48,6 +48,9 @@
 "test_cumsum_2d_axis_1",
 "test_cumsum_2d_negative_axis",
 "test_concat_1d_axis_negative_1",
+"test_dequantizelinear",
+"test_dequantizelinear_axis",
+"test_dequantizelinear_blocked",
 "test_div_uint8",
 "test_flatten_axis0",
 "test_flatten_axis2",
@@ -55,6 +58,9 @@
 "test_flatten_negative_axis1",
 "test_flatten_negative_axis2",
 "test_flatten_negative_axis4",
+"test_gather_elements_0",
+"test_gather_elements_1",
+"test_gather_elements_negative_indices",
 "test_logsoftmax_default_axis",
 "test_maxpool_2d_dilations",
 "test_maxpool_2d_same_lower",
@@ -65,6 +71,12 @@
 "test_maxunpool_export_with_output_shape",
 "test_maxunpool_export_without_output_shape",
 "test_mul_uint8",
+"test_pow_types_float32_int32", // vulkan backend does not take tensor other than float32 data type
+"test_pow_types_float32_int64", // vulkan backend does not take tensor other than float32 data type
+"test_pow_types_int", // vulkan backend does not take tensor other than float32 data type
+"test_quantizelinear",
+"test_quantizelinear_axis",
+"test_quantizelinear_blocked",
 "test_softmax_default_axis",
 "test_sub_bcast",
 "test_sub_uint8",

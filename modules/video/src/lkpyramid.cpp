@@ -97,8 +97,8 @@ void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
                 v_int16x8 s1 = v_reinterpret_as_s16(v_load_expand(srow1 + x));
                 v_int16x8 s2 = v_reinterpret_as_s16(v_load_expand(srow2 + x));
 
-                v_int16x8 t1 = s2 - s0;
-                v_int16x8 t0 = v_mul_wrap(s0 + s2, c3) + v_mul_wrap(s1, c10);
+                v_int16x8 t1 = v_sub(s2, s0);
+                v_int16x8 t0 = v_add(v_mul_wrap(v_add(s0, s2), c3), v_mul_wrap(s1, c10));
 
                 v_store(trow0 + x, t0);
                 v_store(trow1 + x, t1);
@@ -134,8 +134,8 @@ void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
                 v_int16x8 s3 = v_load(trow1 + x);
                 v_int16x8 s4 = v_load(trow1 + x + cn);
 
-                v_int16x8 t0 = s1 - s0;
-                v_int16x8 t1 = v_mul_wrap(s2 + s4, c3) + v_mul_wrap(s3, c10);
+                v_int16x8 t0 = v_sub(s1, s0);
+                v_int16x8 t1 = v_add(v_mul_wrap(v_add(s2, s4), c3), v_mul_wrap(s3, c10));
 
                 v_store_interleave((drow + x*2), t0, t1);
             }
@@ -293,10 +293,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, qw0, qdelta) + v_dotprod(t10, qw1);
-                t1 = v_dotprod(t01, qw0, qdelta) + v_dotprod(t11, qw1);
-                t0 = t0 >> (W_BITS1-5);
-                t1 = t1 >> (W_BITS1-5);
+                t0 = v_add(v_dotprod(t00, qw0, qdelta), v_dotprod(t10, qw1));
+                t1 = v_add(v_dotprod(t01, qw0, qdelta), v_dotprod(t11, qw1));
+                t0 = v_shr<W_BITS1 - 5>(t0);
+                t1 = v_shr<W_BITS1 - 5>(t1);
                 v_store(Iptr + x, v_pack(t0, t1));
 
                 v00 = v_reinterpret_as_s16(v_load(dsrc));
@@ -307,10 +307,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, qw0, qdelta_d) + v_dotprod(t10, qw1);
-                t1 = v_dotprod(t01, qw0, qdelta_d) + v_dotprod(t11, qw1);
-                t0 = t0 >> W_BITS1;
-                t1 = t1 >> W_BITS1;
+                t0 = v_add(v_dotprod(t00, qw0, qdelta_d), v_dotprod(t10, qw1));
+                t1 = v_add(v_dotprod(t01, qw0, qdelta_d), v_dotprod(t11, qw1));
+                t0 = v_shr<W_BITS1>(t0);
+                t1 = v_shr<W_BITS1>(t1);
                 v00 = v_pack(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
                 v_store(dIptr, v00);
 
@@ -332,10 +332,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, qw0, qdelta_d) + v_dotprod(t10, qw1);
-                t1 = v_dotprod(t01, qw0, qdelta_d) + v_dotprod(t11, qw1);
-                t0 = t0 >> W_BITS1;
-                t1 = t1 >> W_BITS1;
+                t0 = v_add(v_dotprod(t00, qw0, qdelta_d), v_dotprod(t10, qw1));
+                t1 = v_add(v_dotprod(t01, qw0, qdelta_d), v_dotprod(t11, qw1));
+                t0 = v_shr<W_BITS1>(t0);
+                t1 = v_shr<W_BITS1>(t1);
                 v00 = v_pack(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
                 v_store(dIptr + 4*2, v00);
 
@@ -548,18 +548,18 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     v_zip(v00, v01, t00, t01);
                     v_zip(v10, v11, t10, t11);
 
-                    t0 = v_dotprod(t00, qw0, qdelta) + v_dotprod(t10, qw1);
-                    t1 = v_dotprod(t01, qw0, qdelta) + v_dotprod(t11, qw1);
-                    t0 = t0 >> (W_BITS1-5);
-                    t1 = t1 >> (W_BITS1-5);
-                    diff0 = v_pack(t0, t1) - diff0;
+                    t0 = v_add(v_dotprod(t00, qw0, qdelta), v_dotprod(t10, qw1));
+                    t1 = v_add(v_dotprod(t01, qw0, qdelta), v_dotprod(t11, qw1));
+                    t0 = v_shr<W_BITS1 - 5>(t0);
+                    t1 = v_shr<W_BITS1 - 5>(t1);
+                    diff0 = v_sub(v_pack(t0, t1), diff0);
                     v_zip(diff0, diff0, diff2, diff1); // It0 It0 It1 It1 ...
                     v00 = v_reinterpret_as_s16(v_load(dIptr)); // Ix0 Iy0 Ix1 Iy1 ...
                     v01 = v_reinterpret_as_s16(v_load(dIptr + 8));
                     v_zip(v00, v01, v10, v11);
                     v_zip(diff2, diff1, v00, v01);
-                    qb0 += v_cvt_f32(v_dotprod(v00, v10));
-                    qb1 += v_cvt_f32(v_dotprod(v01, v11));
+                    qb0 = v_add(qb0, v_cvt_f32(v_dotprod(v00, v10)));
+                    qb1 = v_add(qb1, v_cvt_f32(v_dotprod(v01, v11)));
                 }
 #endif
 
@@ -647,7 +647,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
 #if CV_SIMD128 && !CV_NEON
             v_float32x4 qf0, qf1;
-            v_recombine(v_interleave_pairs(qb0 + qb1), v_setzero_f32(), qf0, qf1);
+            v_recombine(v_interleave_pairs(v_add(qb0, qb1)), v_setzero_f32(), qf0, qf1);
             ib1 += v_reduce_sum(qf0);
             ib2 += v_reduce_sum(qf1);
 #endif

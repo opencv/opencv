@@ -5,7 +5,9 @@
 #include <inttypes.h>
 #include <opencv2/dnn/shape_utils.hpp>
 #include "../precomp.hpp"
+#include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
+#include "cpu_kernels/fast_gemm.hpp"
 
 namespace cv
 {
@@ -32,135 +34,20 @@ static bool IsTransposeReshapeForEinsum(const std::vector<size_t>& perm,
     return true;
 }
 
-Mat batchwiseMatMul(
-    const Mat& input1,
-    const MatShape& input1ShapeOverride,
-    const Mat& input2,
-    const MatShape& input2ShapeOverride)
-{
-    // Sanity checks before the actual MatMul
-    //input_1.DataType() == input_2.DataType(), "Data types of the inputs must match for MatMul");
 
-    CV_CheckEQ(input1ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
-    CV_CheckEQ(input2ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
-    CV_CheckEQ((size_t) input1ShapeOverride[0], (size_t) input2ShapeOverride[0], "Batch dimension should match for MatMul;");
-    CV_CheckEQ((size_t) input1ShapeOverride[2], (size_t) input2ShapeOverride[1], "Incompatible matrix dimensions for matMul");
-
-    size_t batches = input1ShapeOverride[0];
-    size_t M = input1ShapeOverride[1];
-    size_t K = input1ShapeOverride[2];
-    size_t N = input2ShapeOverride[2];
-
-    //TODO: deal with dynamic shapes
-    //TODO: deal with reshaping operation (it might not always be needed)
-    std::vector<Mat> output;
-    if (batches > 1)
-    {
-        Mat reshapedInput1 = input1;
-        Mat reshapedInput2 = input2;
-
-        // input1 should of size MxK
-        // check if input1 needs reshape, if need reshape
-        if (input1.size[0] != M || input1.size[1] != K)
-        {
-            int shape[] = {static_cast<int>(batches), static_cast<int>(M), static_cast<int>(K)};
-            reshapedInput1 = input1.reshape(1, 3, shape);
-        }
-
-        // input2 should be of size KxN
-        // check if input2 needs reshape, if needs reshape
-        if (input2.size[0] != K || input2.size[1] != N)
-        {
-            int shape[] = {static_cast<int>(batches), static_cast<int>(K), static_cast<int>(N)};
-            reshapedInput2 = input2.reshape(1, 3, shape);
-        }
-
-        for (size_t i=0; i < batches; i++)
-        {
-            std::vector<Range> ranges1 = {cv::Range(i, i+1)};
-            for (int j = 1; j < reshapedInput1.dims; j++)
-                ranges1.emplace_back(cv::Range::all());
-
-            Mat part1 = reshapedInput1(ranges1);
-            int shape[] = {static_cast<int>(M), static_cast<int>(K)};
-            part1 = part1.reshape(1, sizeof(shape)/sizeof(shape[0]), shape);
-
-            std::vector<Range> ranges2 = {cv::Range(i, i+1)};
-            for (int j = 1; j < reshapedInput2.dims; j++)
-                ranges2.emplace_back(cv::Range::all());
-
-            Mat part2 = reshapedInput2(ranges2);
-            int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
-            part2 = part2.reshape(1, sizeof(shape2)/sizeof(shape2[0]), shape2);
-
-            Mat tmp_output;
-            cv::gemm(part1, part2, 1.0, cv::Mat(), 1.0, tmp_output);
-            int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
-            tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
-
-            output.emplace_back(tmp_output);
-        }
-
-    } else {
-
-        Mat reshapedInput1 = input1;
-        Mat reshapedInput2 = input2;
-
-        // input1 should of size MxK
-        // check if input1 needs reshape, if need reshape
-        if (input1.dims > 2 || input1.size[0] != M || input1.size[1] != K)
-        {
-            int shape[] = {static_cast<int>(M), static_cast<int>(K)};
-            reshapedInput1 = input1.reshape(1, 2, shape);
-        }
-
-        // input2 should be of size KxN
-        // check if input2 needs reshape, if needs reshape
-        if (input2.dims > 2 || input2.size[0] != K || input2.size[1] != N)
-        {
-            int shape2[] = {static_cast<int>(K), static_cast<int>(N)};
-            reshapedInput2 = input2.reshape(1, 2, shape2);
-        }
-
-        Mat tmp_output;
-        cv::gemm(reshapedInput1, reshapedInput2, 1.0, cv::Mat(), 1.0, tmp_output);
-
-        int newShape[] = {1, static_cast<int>(M), static_cast<int>(N)};
-        tmp_output = tmp_output.reshape(1, sizeof(newShape)/sizeof(newShape[0]), newShape);
-        output.emplace_back(tmp_output);
-
-    }
-
-    int outputDim[] = {static_cast<int>(output.size()), static_cast<int>(M), static_cast<int>(N)};
-    Mat output_buffer = Mat::zeros(3, outputDim, CV_32F);
-
-    for (size_t i = 0; i < output.size(); i++) {
-        Mat output_slice = output_buffer.row(i);
-        output[i].copyTo(output_slice);
-    }
-    return output_buffer;
-};
-
-Mat Transpose(
-    const cv::Mat& input,
+static Mat Transpose(
+    const Mat& input,
     const MatShape& input_shape_override,
     const std::vector<size_t> permutation)
 {
 
     int input_rank = input_shape_override.size();
-
     CV_Assert(input_rank == permutation.size());
 
-    // TODO: ouptimize
-    bool reshape = false;
-    if (input.dims != input_shape_override.size())
-    {
-        reshape = true;
-    }
+    bool reshape = input.dims != input_rank;
 
     Mat input_reshaped;
-    if(reshape)
-    {
+    if(reshape){
         input_reshaped = input.reshape(1, input_shape_override.size(), input_shape_override.data());
     }
 
@@ -170,13 +57,9 @@ Mat Transpose(
         outputDims.emplace_back(input_shape_override[dim]);
 
     Mat output;
-    // TODO: ouptimize
-    MatShape tmp_perm;
-    tmp_perm.reserve(permutation.size());
-    for (int i = 0; i < permutation.size(); i++)
-        tmp_perm.emplace_back(static_cast<int>(permutation[i]));
+    MatShape order(permutation.begin(), permutation.end());
 
-    cv::transposeND((reshape ? input_reshaped : input), tmp_perm, output);
+    cv::transposeND((reshape ? input_reshaped : input), order, output);
     return output;
 }
 
@@ -201,12 +84,183 @@ bool IsTransposeRequired(size_t input_rank, const std::vector<size_t>& permutati
   return transpose_required;
 }
 
-Mat Diagonal(
-    const cv::Mat& input,
-    int subscriptIndicesToInputIndex,
-    int dimIndexInIreprocessedInput)
+
+bool IsTransposeRequiredForDiagonal(int dim1, int dim2, int rank) {
+    // If the input is 2D, we don't need a transpose
+    if (rank == 2)
+        return false;
+
+    // If the two dims are the innermost dims, no transpose is required
+    if ((dim1 == rank - 1 && dim2 == rank - 2) ||
+        (dim1 == rank - 2 && dim2 == rank - 1))
+        return false;
+
+    // Transpose is required
+    return true;
+}
+
+template <typename T>
+Mat DiagonalDataAssignment(Mat input) {
+
+    int rank = input.dims;
+    CV_Assert(rank >= 2);
+    CV_Assert(input.size[rank - 1] == input.size[rank - 2]);
+    MatShape original_dims = shape(input);
+
+    if (rank > 3){
+        //reshape to 3D mat
+        int collapsed_size = 1;
+        for (int i = 0; i < rank - 2; ++i) {
+            collapsed_size *= input.size[i];
+        }
+        std::vector<int> reshaped_dims = {collapsed_size, input.size[rank - 2], input.size[rank - 1]};
+        input = input.reshape(1, reshaped_dims);
+    }
+
+    // Compute total number of higher-dimensional slices
+    int total_slices = input.size[0];
+
+    original_dims[rank - 1] = 1;  // Set the last dimension to 1, as we have extracted the diagonal
+    Mat output = Mat(original_dims, input.type());
+
+    int inner_stride = input.size[input.dims - 1];
+    auto inputPtr = input.ptr<T>();
+    auto outputPtr = output.ptr<T>();
+    for (int slice = 0; slice < total_slices; ++slice) {
+        for (int j = 0; j < inner_stride; ++j) {
+            // Direct memory access using raw pointers
+            outputPtr[slice * inner_stride + j] = inputPtr[slice * inner_stride * inner_stride + j * inner_stride + j];
+        }
+    }
+    return output;
+}
+
+/* Extract the diagonal elements from the last two dimensions of the tensor.
+For instance, given an input_shape of [1, 2, 3, 3]:
+
+The flexibility in this implementation allows one to choose which of the two
+last dimensions retains its value, determined by the `preserve_innermost_dim_val` parameter.
+
+When preserve_innermost_dim_val == true:
+    The resulting shape is [1, 2, 1, 3], indicating the diagonal has 3 elements,
+    and it keeps the dimension value of the innermost dimension.
+
+When preserve_innermost_dim_val == false:
+    The resulting shape is [1, 2, 3, 1], indicating the diagonal also has 3 elements,
+    but it retains the dimension value of the penultimate dimension. */
+Mat DiagonalInnermostDims(const Mat& input, bool preserve_innermost_dim_val) {
+    const MatShape input_dims = shape(input);
+    int rank = input_dims.size();
+
+    // This is an internal method and we already have finished all validations in the calling method.
+    // We proceed without duplicating all validations again here.
+
+    // We have a minimalistic check here to make sure the innermost dims have the same dim value
+    // as the calling method may have done a transpose before calling this method
+    CV_CheckEQ(input.size[rank - 1], input.size[rank - 2],
+        "innermost dims should have the same dim value to parse the diagonal elements");
+
+    MatShape output_dims = input_dims;  // Copy the original dims
+    if (preserve_innermost_dim_val) {
+        output_dims[rank - 2] = 1;
+    } else {
+        output_dims[rank - 1] = 1;
+    }
+
+    // TODO: hande different types
+    Mat output = DiagonalDataAssignment<float>(input);
+
+    if (output_dims != shape(output)){
+        CV_Error(Error::StsError, "Output shape does not match with calculated shape");
+    }
+    return output;
+}
+
+Mat Diagonal(const Mat& input, int dim1, int dim2)
 {
-    CV_Error(Error::StsNotImplemented, "Diagonal Not Implemented Yet");
+    const MatShape input_dims = shape(input);
+    int rank = input_dims.size();
+
+    if (!(rank >= 2 && dim1 != dim2 && input_dims[dim1] == input_dims[dim2])){
+        std::string input_dims_str = std::accumulate(std::next(input_dims.begin()), input_dims.end(), std::to_string(input_dims[0]),
+                                                    [](const std::string& a, int b) {
+                                                        return a + ' ' + std::to_string(b);
+                                                    });
+        CV_Error(Error::StsError, cv::format("Cannot parse the diagonal elements along dims %d and %d for input shape %s",dim1, dim2, input_dims_str.c_str()));
+    }
+
+    int first_dim = std::min(dim1, dim2);
+    int second_dim = std::max(dim1, dim2);
+
+    Mat output;
+    bool preserve_innermost_dim_val = false;
+
+    bool is_transpose_required = IsTransposeRequiredForDiagonal(dim1, dim2, rank);
+    if (is_transpose_required)
+    {
+        std::vector<size_t> permutation(rank, 0);
+        int first_dim_axis = -1;  // This is the axis eventually occupied by the first_dim
+
+        // If one of the diagonal dimensions is one of the 2 innermost dims, then leave it as such
+        // so as to avoid transpose overhead
+        if (first_dim == rank - 2) {  // If rank - 2 is occupied by first_dim, keep it there
+            permutation[rank - 2] = first_dim;
+            first_dim_axis = rank - 2;
+        } else {
+            if (second_dim != rank - 2) {  // If rank - 2 is not occupied by second_dim, then put first_dim there
+                permutation[rank - 2] = first_dim;
+                first_dim_axis = rank - 2;
+            } else {  // If rank - 2 is occupied by second_dim, then put first_dim in rank - 1
+                permutation[rank - 1] = first_dim;
+                first_dim_axis = rank - 1;
+                preserve_innermost_dim_val = true;  // We always want to preserve the dim value of the first_dim
+            }
+        }
+
+        // Put the second_dim in the dim not occupied by the first_dim
+        if (first_dim_axis != rank - 1) {
+            permutation[rank - 1] = second_dim;
+        } else {
+            permutation[rank - 2] = second_dim;
+        }
+
+        size_t iter = 0;
+        for (int i = 0; i < rank; ++i) {
+            if (i != first_dim && i != second_dim) {
+                permutation[iter++] = i;
+            }
+        }
+
+        // Permutate the input so that the dims from which we need the diagonal forms the innermost dims
+        Mat transposed = Transpose(input, input_dims, permutation);
+
+        // Parse the diagonal from the innermost dims
+        output = DiagonalInnermostDims(transposed, preserve_innermost_dim_val);
+
+        // Swap back the dimensions to the original axes ordering using a "reverse permutation"
+        // Find the "reverse" permutation
+        iter = 0;
+        std::vector<size_t> reverse_permutation(rank, 0);
+        for (const auto& perm : permutation) {
+            reverse_permutation[perm] = iter++;
+        }
+
+        // Permutate using the reverse permutation to get back the original axes ordering
+        // (Pass in CPU Transpose function here as this Diagonal method will only be used for CPU based diagonal parsing)
+        output = Transpose(output, shape(output), reverse_permutation);
+    } else {
+        // No transposing required
+        output = DiagonalInnermostDims(input, preserve_innermost_dim_val);
+    }
+
+    // Make copy of the output dims
+    MatShape output_dims = shape(output);
+
+    // Unsqueeze the reduced dim
+    auto iter = output_dims.begin() + second_dim;
+    output_dims.erase(iter);
+    output = output.reshape(1, output_dims);
+    return output;
 }
 
 /**
@@ -251,7 +305,7 @@ public:
     MatShape einsumOutDims; // vector to store output dimentions
 
     // These hold equation subring, left hand side and right it of
-    String lhs_eq, rhs_eq;
+    String lhs_eq, rhs_eq, equation;
 
     // Holds token from left hand side of the equation
     std::vector<String> lhs_eq_tokens;
@@ -295,11 +349,13 @@ public:
     // The number of dimensions that are encompassed by an "ellipsis" - "...".
     size_t numOfEllipsisDims = 0;
 
+    // Backend for fastgemm
+    FastGemmOpt opt;
 
     void parseEquation(String equation);
     void processEquation(const std::vector<MatShape>& inputs);
     void processBroadcastedDims();
-    void createOutputSubsctipt();
+    void validateOutputSubscript();
     void calculateOutputShape();
     void preProcessInputs(InputArrayOfArrays& inputs);
     Mat reduceSum(Mat& src, MatShape& reduceAxis);
@@ -312,13 +368,18 @@ public:
         const MatShape& reduceDims,
         bool isFinalPair
     );
-
+    Mat batchwiseMatMul(
+        const Mat& input1,
+        const MatShape& input1ShapeOverride,
+        const Mat& input2,
+        const MatShape& input2ShapeOverride
+    );
 
     // constructor
     LayerEinsumImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        String equation = params.get<String>("equation");
+        equation = params.get<String>("equation");
         int outputSize = params.get<int>("outputSize");
         numInputs  = params.get<int>("inputSize");
 
@@ -334,6 +395,7 @@ public:
             einsumInpShapes.emplace_back(shape);
         }
 
+        opt.init();
 
         // Maintains a mapping between input indices and their corresponding subscript labels for each input
         inputSubscriptIndices.reserve(numInputs);
@@ -358,8 +420,13 @@ public:
         processBroadcastedDims();
 
         // calculate output shape
-        createOutputSubsctipt();
+        validateOutputSubscript();
         calculateOutputShape();
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     // getMeoryShapes
@@ -392,8 +459,9 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+        CV_CheckEQ((size_t)inputs_arr.total(), (size_t)numInputs, "Number of inputs in forward and inputs during graph constructions do not match");
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -474,7 +542,7 @@ public:
                 // Use either the preprocessed inputs (if it is available) or the corresponding raw inputs
                 result = pairwiseOperandProcess(!result.empty() ? result : rawInputs[0],
                                                 !result.empty() ? tmpResult : homogenizedInputDims[0],
-                                                !preProcessedInputs[input].empty() ? preProcessedInputs[input] : rawInputs[input],
+                                                (!preProcessedInputs[input].empty()) ? preProcessedInputs[input] : rawInputs[input],
                                                 homogenizedInputDims[input],
                                                 reducedDims,
                                                 isFinalPair);
@@ -486,12 +554,25 @@ public:
         MatShape realOutputDims = shape(result);
         size_t realProd = std::accumulate(realOutputDims.begin(), realOutputDims.end(), 1, std::multiplies<int>());
 
-        CV_CheckEQ(reqProd, realProd, "Real output can not be shaped in to requred output");
+        CV_CheckEQ(reqProd, realProd, "Real output can not be shaped in to required output");
 
         // reduce dimentions
         result = result.reshape(1, einsumOutDims.size(), einsumOutDims.data());
         result.copyTo(outputs[0]);
     } // forward
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >&,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
+        ov::OutputVector inputs(nodes.size());
+        for (size_t i = 0; i < nodes.size(); ++i) {
+            inputs[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+        }
+        auto einsum = std::make_shared<ov::op::v7::Einsum>(inputs, equation);
+        return new InfEngineNgraphNode(einsum);
+    }
+#endif // HAVE_DNN_NGRAPH
+
 }; // EinsumClass
 
 Mat LayerEinsumImpl::reduceSum(Mat& src, MatShape& reduceAxis)
@@ -525,8 +606,8 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
     std::vector<cv::Mat> inputs;
     inputs_arr.getMatVector(inputs);
 
-    preProcessedInputs.reserve(inputs.size());
-    homogenizedInputDims.reserve(inputs.size());
+    preProcessedInputs.resize(inputs.size());
+    homogenizedInputDims.resize(inputs.size());
 
     int inputIter = 0;
     for(const Mat& input : inputs)
@@ -535,6 +616,11 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
 
         // variable to hold processed version of the original input
         MatShape input_dims = shape(input);
+        if (input_dims.empty()){
+            homogenizedInputDims[inputIter] = MatShape(numLetterIndices, 1);
+            ++inputIter;
+            continue;
+        }
 
         const auto& currSubscriptIndices = inputSubscriptIndices[inputIter];
 
@@ -587,9 +673,9 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         {
             preprocessed = preprocessed.reshape(1, homogenizedInputDims_.size(), homogenizedInputDims_.data());
         }
+        preProcessedInputs[inputIter] = preprocessed;
+        homogenizedInputDims[inputIter] = homogenizedInputDims_;
 
-        preProcessedInputs.emplace_back(preprocessed);
-        homogenizedInputDims.emplace_back(homogenizedInputDims_);
         ++inputIter;
     }
 }
@@ -624,7 +710,7 @@ void LayerEinsumImpl::calculateOutputShape()
 {
     // Traverse through each of the subscript labels within the output subscript.
     bool middleOfEllipsis = false;
-    // int64_t ellipsisCharCount = 0;
+    int ellipsisCharCount = 0;
 
     subscriptIndicesToOutputIndices.resize(numLetterIndices, -1);
 
@@ -636,7 +722,21 @@ void LayerEinsumImpl::calculateOutputShape()
     {
         if(letter == '.')
         {
-            CV_Error(Error::StsNotImplemented, "Ellipsis are not supported yet");
+            middleOfEllipsis = true;
+            // Make sure there aren't more than 3 '.'s in the current subscript
+            if (++ellipsisCharCount > 3) {
+                CV_Error(Error::StsError, "Found a '.' not part of an ellipsis in the output subscript provided");
+            }
+
+            if (ellipsisCharCount == 3) {  // Ellipsis is complete. Process it.
+                middleOfEllipsis = false;
+                for (size_t i = 0; i < numOfEllipsisDims; ++i) {
+                    einsumOutDims.emplace_back(subscriptIndicesToDimValue[i]);
+                    // The ellipsis is seen in the output and hence the corresponding dims are to not be reduced
+                    subscriptIndicesToLastInput[i] = -1;
+                    subscriptIndicesToOutputIndices[i] = outputDimCounter++;
+                }
+            }
         } else {
             CV_CheckEQ(middleOfEllipsis, false,
                 "Encountered '.' character that is not part of output subscript");
@@ -666,7 +766,7 @@ void LayerEinsumImpl::calculateOutputShape()
     }
 }
 
-void LayerEinsumImpl::createOutputSubsctipt()
+void LayerEinsumImpl::validateOutputSubscript()
 {
     // The explicit form requires no operation, as the output
     // would have already been parsed during the input parsing process.
@@ -679,8 +779,6 @@ void LayerEinsumImpl::createOutputSubsctipt()
             {
                 CV_Error(Error::StsError,
                 "Provided output subscript does not include ellipsis while Inputs subscrits constain ellipsis");
-            } else {
-                CV_Error(Error::StsNotImplemented, "Ellipsis are not yet supported");
             }
         }
     }
@@ -689,9 +787,84 @@ void LayerEinsumImpl::createOutputSubsctipt()
 void LayerEinsumImpl::processBroadcastedDims()
 {
     // Only compute this function if ellipsis "..." was found in the equation
-    if (numOfEllipsisDims > 0){
-        // add assert inplace of return bool
-        CV_Error(Error::StsError, "Ellipsis are not supperted currenly");
+    if (numOfEllipsisDims > 0)
+    {
+        // extend the number of subscript labels to include each ellipsis dim as
+        // theoretically each ellipsis dim does correspond to a "virtual" subscript label
+        numLetterIndices += numOfEllipsisDims;
+
+        // We are going to assign the broadcasted dims outermost subscript indices (i.e.) 0 -> numOfEllipsisDims - 1
+        // as most likely bradcasted dims will be batch dimensions (i.e.) outermost dimensions and hence we don't have to pay
+        // transposing while "homogenizing" the input
+
+        // Hence offset all subscript indices by numOfEllipsisDims
+        for (size_t i = 0; i < numOfLetters; ++i){
+            if (letter2count[i] != -1){
+                letter2index[i] += numOfEllipsisDims;
+            }
+        }
+
+        std::vector<int> tempIndex2LastInput(numLetterIndices, -1);
+        for (int i = 0; i < subscriptIndicesToLastInput.size(); ++i){
+            tempIndex2LastInput[i + numOfEllipsisDims] = subscriptIndicesToLastInput[i];
+        }
+        subscriptIndicesToLastInput = std::move(tempIndex2LastInput);
+
+        std::vector<int> tempIndexToDimValue(numLetterIndices, -1);
+        for (int i = 0; i < subscriptIndicesToDimValue.size(); ++i){
+            tempIndexToDimValue[i + numOfEllipsisDims] = subscriptIndicesToDimValue[i];
+        }
+        subscriptIndicesToDimValue = std::move(tempIndexToDimValue);
+
+        for (size_t i = 0; i < inputSubscriptIndices.size(); ++i)
+        {
+            auto& currentInputDimIndicesToSubscriptIndices = inputSubscriptIndices[i];
+            std::vector<int> tempCurrentInputDimIndicesToSubscriptIndices;
+            tempCurrentInputDimIndicesToSubscriptIndices.reserve(currentInputDimIndicesToSubscriptIndices.size());
+
+            // make sure it is correct
+            const auto& dims = einsumInpShapes[i];
+            auto rank = dims.size();
+
+            size_t dimIter = 0;
+            size_t numBroadcastedIndices = 0;
+            while (dimIter < currentInputDimIndicesToSubscriptIndices.size())
+            {
+                auto value = currentInputDimIndicesToSubscriptIndices[dimIter];
+                if (value == numOfLetters)
+                {  // This is a broadcasted dim
+                    // Shouldn't hit this error - just a sanity check
+                    CV_Assert(numBroadcastedIndices < numOfEllipsisDims);
+                    tempCurrentInputDimIndicesToSubscriptIndices.push_back(static_cast<int>(numBroadcastedIndices));
+                    subscriptIndicesToLastInput[numBroadcastedIndices] = i;
+
+                    // This is the first time we are seeing this broadcasted dim
+                    if (subscriptIndicesToDimValue[numBroadcastedIndices] == -1)
+                    {
+                        subscriptIndicesToDimValue[numBroadcastedIndices] = dims[dimIter];
+                    } else {  // We have seen this broadcasted dim before
+                        // Check if the previous value is equal to the current value
+                        if (subscriptIndicesToDimValue[numBroadcastedIndices] != dims[dimIter])
+                        {
+                            // If they are not equal, one of them needs to be 1
+                            if (subscriptIndicesToDimValue[numBroadcastedIndices] == 1)
+                            {
+                                subscriptIndicesToDimValue[numBroadcastedIndices] = dims[dimIter];
+                            } else {
+                                CV_CheckEQ(dims[dimIter], 1, "The broadcasted dimensions of the inputs are incompatible");
+                            }
+                        }
+                    }
+                    ++numBroadcastedIndices;
+                } else {  // This is a regular dim - offset it by number of broadcasted dims
+                    tempCurrentInputDimIndicesToSubscriptIndices.push_back(value + static_cast<int>(numOfEllipsisDims));
+                }
+                ++dimIter;
+            }
+            // Shouldn't hit this error - just a sanity check
+            CV_Assert(dimIter == rank);
+            currentInputDimIndicesToSubscriptIndices = std::move(tempCurrentInputDimIndicesToSubscriptIndices);
+        }
     }
 }
 
@@ -718,18 +891,58 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
 
         // Variable to deal with "ellipsis" - '...' in the input
         bool middleOfellipsis = false;
+        int ellipsisCharCount = 0;
         for (auto letter : token)
         {
-            // Broadcasting based tokens are not implemented yet
             if (letter == '.')
             {
-                CV_Error(Error::StsNotImplemented,
-                 "Broad casting based indices are not supported currently");
-            } else
-            {
+                middleOfellipsis = true;
 
-                if (middleOfellipsis)
+                // there should not be more than 3 '.'s in the current subscript
+                if (++ellipsisCharCount > 3)
                 {
+                    CV_Error(Error::StsError, cv::format("Found a '.' not part of an ellipsis in input: %d", inputIdx));
+                }
+
+                // We have seen all 3 '.'s. We can safely process the ellipsis now.
+                if (ellipsisCharCount == 3)
+                {
+                    middleOfellipsis = false;
+
+                    // Example for the following line of code
+                    // Subscript "...ij" for an input of rank 6
+                    // numOfEllipsisDims = 6 - 5 + 3 = 4
+                    int currentNumOfEllipsisDims = static_cast<int>(rank) - token.length() + 3;
+                    CV_CheckGE(currentNumOfEllipsisDims, 0,
+                        "Einsum subscripts string contains too many subscript labels when compared to the rank of the input");
+
+                    // Theoretically, currentNumOfEllipsisDims could be 0
+                    // Example: For an input of rank 2 paired with a subscript "...ij"
+                    if (currentNumOfEllipsisDims != 0)
+                    {
+                        // We have seen a ellipsis before - make sure ranks align as per the ONNX spec -
+                        // "Ellipsis must indicate a fixed number of dimensions."
+                        if (numOfEllipsisDims != 0){
+                            CV_CheckEQ(numOfEllipsisDims, static_cast<size_t>(currentNumOfEllipsisDims),
+                                "Ellipsis must indicate a fixed number of dimensions across all inputs");
+                        } else {
+                            numOfEllipsisDims = static_cast<size_t>(currentNumOfEllipsisDims);
+                        }
+
+                        // We reserve 'numOfLetters' for broadcasted dims as we only allow 'a' - 'z'
+                        // and 'A' - 'Z' (0 - 51) for non-broadcasted dims.
+                        // We will assign appropriate indices (based on number of dimensions the ellipsis corresponds to)
+                        // during broadcasting related post-processing.
+                        for (size_t i = 0; i < numOfEllipsisDims; ++i){
+                            currTokenIndices.push_back(numOfLetters);
+                        }
+
+                        // Offset 'dim_count' by number of dimensions the ellipsis corresponds to
+                        dim_count += numOfEllipsisDims;
+                    }
+                }
+            } else {
+                if (middleOfellipsis){
                     CV_Error(Error::StsAssert,
                     cv::format(
                         "Encountered '.' character that is not part of an ellipsis in the input: [%d]",
@@ -744,8 +957,7 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
 
                 // The subscript label was not found in the global subscript label array
                 // Therefore, it is added to both the local and global subscript arrays
-                if(letter2count[letterIdx] == 0)
-                {
+                if(letter2count[letterIdx] == 0){
                     letter2index[letterIdx] = numLetterIndices++;
                     subscriptIndicesToDimValue.push_back(dimValue);
                     subscriptIndicesToLastInput.push_back(inputIdx);
@@ -756,20 +968,12 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
                     auto mappedIndx = letter2index[letterIdx];
                     subscriptIndicesToLastInput[mappedIndx] = inputIdx;
 
-                    if (subscriptIndicesToDimValue[mappedIndx] != dimValue)
-                    {
-                        if(subscriptIndicesToDimValue[mappedIndx] == 1){
-                            //TODO: uncomment later on
-                            // subscriptIndicesToDimValue[mappedIndx] == dimValue;
-                        } else
-                        {
-                            if (dimValue != 1)
-                            {
-                                CV_Error(Error::StsError, cv::format("Einsum operands can not be broadcasted."
-                                                                     "Check input shapes/equation passed."
-                                                                     "Input shape of operand [%d]", inputIdx) +
-                                                          cv::format(" is incompatible in the dimention [%zu].", static_cast<size_t>(dim_count)));
-                            }
+                    if (subscriptIndicesToDimValue[mappedIndx] != dimValue) {
+                        if (dimValue != 1) {
+                            CV_Error(Error::StsError, cv::format("Einsum operands can not be broadcasted."
+                                                                "Check input shapes/equation passed."
+                                                                "Input shape of operand [%d]", inputIdx) +
+                                                    cv::format(" is incompatible in the dimention [%zu].", static_cast<size_t>(dim_count)));
                         }
                     }
                 }
@@ -1101,11 +1305,12 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
                 // Covered by ExplicitEinsumAsTensorContractionReshapeFinal.
                 output = output.reshape(1, reshaped_dims.size(), reshaped_dims.data());
             }
-        } else {
-            output = Transpose(
-                output,
-                outputDims,
-                outputPermutation);
+            else {
+                output = Transpose(
+                    output,
+                    outputDims,
+                    outputPermutation);
+            }
         }
     } else {  // This is the final pair - Transpose directly to the output ordering required and copy the contents to the op's output
         // not sure if this finalize shape is needed at all
@@ -1114,6 +1319,60 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     return output;
 };
 
+Mat LayerEinsumImpl::batchwiseMatMul(
+    const Mat& input1,
+    const MatShape& input1ShapeOverride,
+    const Mat& input2,
+    const MatShape& input2ShapeOverride)
+{
+    // Sanity checks before the actual MatMul
+    CV_CheckType(input1.type(), input2.type(), "Data types of the inputs must match for MatMul");
+    CV_CheckEQ(input1ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
+    CV_CheckEQ(input2ShapeOverride.size(), (size_t) 3, "Only 1 batch dimension is allowed for MatMul");
+    CV_CheckEQ((size_t) input1ShapeOverride[0], (size_t) input2ShapeOverride[0], "Batch dimension should match for MatMul;");
+    CV_CheckEQ((size_t) input1ShapeOverride[2], (size_t) input2ShapeOverride[1], "Incompatible matrix dimensions for matMul");
+
+    int batches = input1ShapeOverride[0];
+    int M = input1ShapeOverride[1];
+    int K = input1ShapeOverride[2];
+    int N = input2ShapeOverride[2];
+
+    Mat reshapedInput1 = input1;
+    Mat reshapedInput2 = input2;
+
+    Mat output;
+    if (batches > 1)
+    {
+        // create tmpout with type like input1
+        output = Mat({batches, M, N}, input1.type());
+
+        reshapedInput2 = reshapedInput2.reshape(1, input2ShapeOverride);
+        reshapedInput1 = reshapedInput1.reshape(1, input1ShapeOverride);
+
+        fastGemmBatch(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, output, opt);
+    } else {
+
+        // input1 should of size MxK
+        if (input1.dims > 2 || input1.size[0] != M || input1.size[1] != K)
+        {
+            int shape[] = {M, K};
+            reshapedInput1 = input1.reshape(1, 2, shape);
+        }
+
+        // input2 should be of size KxN
+        if (input2.dims > 2 || input2.size[0] != K || input2.size[1] != N)
+        {
+            int shape2[] = {K, N};
+            reshapedInput2 = input2.reshape(1, 2, shape2);
+        }
+
+        output = Mat(M, N, reshapedInput1.type());
+        fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, output, opt);
+
+        output = output.reshape(1, {1, M, N});
+    }
+    return output;
+};
 Ptr<EinsumLayer> EinsumLayer::create(const LayerParams& params)
 {
     return makePtr<LayerEinsumImpl>(params);

@@ -2,7 +2,7 @@
 ; jfdctint.asm - accurate integer FDCT (AVX2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2009, 2016, 2018, 2020, D. R. Commander.
+; Copyright (C) 2009, 2016, 2018, 2020, 2024, D. R. Commander.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -65,7 +65,7 @@ F_3_072 equ DESCALE(3299298341, 30 - CONST_BITS)  ; FIX(3.072711026)
 ; %1-%4: Input/output registers
 ; %5-%8: Temp registers
 
-%macro dotranspose 8
+%macro DOTRANSPOSE 8
     ; %1=(00 01 02 03 04 05 06 07  40 41 42 43 44 45 46 47)
     ; %2=(10 11 12 13 14 15 16 17  50 51 52 53 54 55 56 57)
     ; %3=(20 21 22 23 24 25 26 27  60 61 62 63 64 65 66 67)
@@ -108,7 +108,7 @@ F_3_072 equ DESCALE(3299298341, 30 - CONST_BITS)  ; FIX(3.072711026)
 ; %5-%8: Temp registers
 ; %9:    Pass (1 or 2)
 
-%macro dodct 9
+%macro DODCT 9
     vpsubw      %5, %1, %4              ; %5=data1_0-data6_7=tmp6_7
     vpaddw      %6, %1, %4              ; %6=data1_0+data6_7=tmp1_0
     vpaddw      %7, %2, %3              ; %7=data3_2+data4_5=tmp3_2
@@ -223,7 +223,7 @@ F_3_072 equ DESCALE(3299298341, 30 - CONST_BITS)  ; FIX(3.072711026)
 ; --------------------------------------------------------------------------
     SECTION     SEG_CONST
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_fdct_islow_avx2)
 
 EXTN(jconst_fdct_islow_avx2):
@@ -242,7 +242,7 @@ PW_DESCALE_P2X             times 16 dw  1 << (PASS1_BITS - 1)
 PW_1_NEG1                  times 8  dw  1
                            times 8  dw -1
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -262,13 +262,13 @@ PW_1_NEG1                  times 8  dw  1
 EXTN(jsimd_fdct_islow_avx2):
     push        ebp
     mov         ebp, esp
-    pushpic     ebx
+    PUSHPIC     ebx
 ;   push        ecx                     ; unused
 ;   push        edx                     ; need not be preserved
 ;   push        esi                     ; unused
 ;   push        edi                     ; unused
 
-    get_GOT     ebx                     ; get GOT address
+    GET_GOT     ebx                     ; get GOT address
 
     ; ---- Pass 1: process rows.
 
@@ -292,9 +292,9 @@ EXTN(jsimd_fdct_islow_avx2):
     ; ymm2=(20 21 22 23 24 25 26 27  60 61 62 63 64 65 66 67)
     ; ymm3=(30 31 32 33 34 35 36 37  70 71 72 73 74 75 76 77)
 
-    dotranspose ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
+    DOTRANSPOSE ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7
 
-    dodct       ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, 1
+    DODCT       ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, 1
     ; ymm0=data0_4, ymm1=data3_1, ymm2=data2_6, ymm3=data7_5
 
     ; ---- Pass 2: process columns.
@@ -302,9 +302,9 @@ EXTN(jsimd_fdct_islow_avx2):
     vperm2i128  ymm4, ymm1, ymm3, 0x20  ; ymm4=data3_7
     vperm2i128  ymm1, ymm1, ymm3, 0x31  ; ymm1=data1_5
 
-    dotranspose ymm0, ymm1, ymm2, ymm4, ymm3, ymm5, ymm6, ymm7
+    DOTRANSPOSE ymm0, ymm1, ymm2, ymm4, ymm3, ymm5, ymm6, ymm7
 
-    dodct       ymm0, ymm1, ymm2, ymm4, ymm3, ymm5, ymm6, ymm7, 2
+    DODCT       ymm0, ymm1, ymm2, ymm4, ymm3, ymm5, ymm6, ymm7, 2
     ; ymm0=data0_4, ymm1=data3_1, ymm2=data2_6, ymm4=data7_5
 
     vperm2i128 ymm3, ymm0, ymm1, 0x30   ; ymm3=data0_1
@@ -322,7 +322,7 @@ EXTN(jsimd_fdct_islow_avx2):
 ;   pop         esi                     ; unused
 ;   pop         edx                     ; need not be preserved
 ;   pop         ecx                     ; unused
-    poppic      ebx
+    POPPIC      ebx
     pop         ebp
     ret
 

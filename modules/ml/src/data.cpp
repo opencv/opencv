@@ -574,7 +574,7 @@ public:
             if( nvars == 0 )
             {
                 if( rowvals.empty() )
-                    CV_Error(CV_StsBadArg, "invalid CSV format; no data found");
+                    CV_Error(cv::Error::StsBadArg, "invalid CSV format; no data found");
                 nvars = (int)rowvals.size();
                 if( !varTypeSpec.empty() && varTypeSpec.size() > 0 )
                 {
@@ -637,7 +637,7 @@ public:
             {
                 for( i = ninputvars; i < nvars; i++ )
                     if( vtypes[i] == VAR_CATEGORICAL )
-                        CV_Error(CV_StsBadArg,
+                        CV_Error(cv::Error::StsBadArg,
                                  "If responses are vector values, not scalars, they must be marked as ordered responses");
             }
         }
@@ -724,14 +724,14 @@ public:
                 }
 
                 if ( ptr[3] != '[')
-                    CV_Error( CV_StsBadArg, errmsg );
+                    CV_Error( cv::Error::StsBadArg, errmsg );
 
                 ptr += 4; // pass "ord["
                 do
                 {
                     int b1 = (int)strtod( ptr, &stopstring );
                     if( *stopstring == 0 || (*stopstring != ',' && *stopstring != ']' && *stopstring != '-') )
-                        CV_Error( CV_StsBadArg, errmsg );
+                        CV_Error( cv::Error::StsBadArg, errmsg );
                     ptr = stopstring + 1;
                     if( (stopstring[0] == ',') || (stopstring[0] == ']'))
                     {
@@ -745,7 +745,7 @@ public:
                         {
                             int b2 = (int)strtod( ptr, &stopstring);
                             if ( (*stopstring == 0) || (*stopstring != ',' && *stopstring != ']') )
-                                CV_Error( CV_StsBadArg, errmsg );
+                                CV_Error( cv::Error::StsBadArg, errmsg );
                             ptr = stopstring + 1;
                             CV_Assert( 0 <= b1 && b1 <= b2 && b2 < nvars );
                             for (int i = b1; i <= b2; i++)
@@ -753,7 +753,7 @@ public:
                             specCounter += b2 - b1 + 1;
                         }
                         else
-                            CV_Error( CV_StsBadArg, errmsg );
+                            CV_Error( cv::Error::StsBadArg, errmsg );
 
                     }
                 }
@@ -762,7 +762,7 @@ public:
         }
 
         if( specCounter != nvars )
-            CV_Error( CV_StsBadArg, "type of some variables is not specified" );
+            CV_Error( cv::Error::StsBadArg, "type of some variables is not specified" );
     }
 
     void setTrainTestSplitRatio(double ratio, bool shuffle) CV_OVERRIDE

@@ -882,7 +882,7 @@ struct RGBA2mRGBA<uchar>
 
         int i = 0;
 #if CV_SIMD
-        const int vsize = v_uint8::nlanes;
+        const int vsize = VTraits<v_uint8>::vlanes();
         v_uint8 amask = v_reinterpret_as_u8(vx_setall_u32(0xFF000000));
         v_uint16 vh = vx_setall_u16(half_val+1);
 
@@ -901,27 +901,27 @@ struct RGBA2mRGBA<uchar>
 
             v_uint16 a16[4];
             for(int j = 0; j < 4; j++)
-                a16[j] = v_reinterpret_as_u16(v[j] & amask);
+                a16[j] = v_reinterpret_as_u16(v_and(v[j], amask));
 
             v_uint32 a32[4];
             for(int j = 0; j < 4; j++)
-                a32[j] = v_reinterpret_as_u32(a16[j] | (a16[j] >> 8));
+                a32[j] = v_reinterpret_as_u32(v_or(a16[j], (v_shr(a16[j], 8))));
 
             v_uint8 a[4];
             for(int j = 0; j < 4; j++)
-                a[j] = v_reinterpret_as_u8(a32[j] | (a32[j] >> 16));
+                a[j] = v_reinterpret_as_u8(v_or(a32[j], (v_shr(a32[j], 16))));
 
             v_uint16 m[8];
             for(int j = 0; j < 4; j++)
                 v_mul_expand(v[j], a[j], m[j], m[j+4]);
 
             for(int j = 0; j < 8; j++)
-                m[j] += vh;
+                m[j] = v_add(m[j], vh);
 
             // div 255: (v+1+(v>>8))>8
             // +1 is in vh, has no effect on (v>>8)
             for(int j = 0; j < 8; j++)
-                m[j] = (m[j] + (m[j] >> 8)) >> 8;
+                m[j] = v_shr((v_add(m[j], (v_shr(m[j], 8)))), 8);
 
             v_uint8 d[4];
             for(int j = 0; j < 4; j++)
@@ -1087,11 +1087,6 @@ struct mRGBA2RGBA<uchar>
             uchar v3 = src[3];
 
             uchar v3_half = v3 / 2;
-
-            dst[0] = (v3==0)? 0 : (v0 * max_val + v3_half) / v3;
-            dst[1] = (v3==0)? 0 : (v1 * max_val + v3_half) / v3;
-            dst[2] = (v3==0)? 0 : (v2 * max_val + v3_half) / v3;
-            dst[3] = v3;
 
             dst[0] = (v3==0)? 0 : saturate_cast<uchar>((v0 * max_val + v3_half) / v3);
             dst[1] = (v3==0)? 0 : saturate_cast<uchar>((v1 * max_val + v3_half) / v3);

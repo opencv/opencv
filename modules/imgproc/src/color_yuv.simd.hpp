@@ -37,6 +37,10 @@ void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int width, int height,
                          int dcn, bool swapBlue, int uIdx, int ycn);
+void cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step,
+                         uchar * dst_data, size_t dst_step,
+                         int width, int height,
+                         int scn, bool swapBlue, int uIdx, int ycn);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
@@ -1011,7 +1015,7 @@ struct YCrCb2RGB_i<ushort>
 
 ///////////////////////////////////// YUV420 -> RGB /////////////////////////////////////
 
-static const int ITUR_BT_601_CY = 1220542;
+static const int ITUR_BT_601_CY  = 1220542;
 static const int ITUR_BT_601_CUB = 2116026;
 static const int ITUR_BT_601_CUG = -409993;
 static const int ITUR_BT_601_CVG = -852492;
@@ -1019,14 +1023,14 @@ static const int ITUR_BT_601_CVR = 1673527;
 static const int ITUR_BT_601_SHIFT = 20;
 
 // Coefficients for RGB to YUV420p conversion
-static const int ITUR_BT_601_CRY =  269484;
-static const int ITUR_BT_601_CGY =  528482;
-static const int ITUR_BT_601_CBY =  102760;
-static const int ITUR_BT_601_CRU = -155188;
-static const int ITUR_BT_601_CGU = -305135;
-static const int ITUR_BT_601_CBU =  460324;
-static const int ITUR_BT_601_CGV = -385875;
-static const int ITUR_BT_601_CBV = -74448;
+static const int ITUR_BT_601_CRY =  269484; // 0.299055 * (236-16)/256 * (1 << ITUR_BT_601_SHIFT)
+static const int ITUR_BT_601_CGY =  528482; // 0.586472 * (236-16)/256 * (1 << ITUR_BT_601_SHIFT)
+static const int ITUR_BT_601_CBY =  102760; // 0.114035 * (236-16)/256 * (1 << ITUR_BT_601_SHIFT)
+static const int ITUR_BT_601_CRU = -155188; // -0.148 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CGU = -305135; // -0.291 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CBU =  460324; //  0.439 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CGV = -385875; // -0.368 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CBV =  -74448; // -0.071 * (1 << (ITUR_BT_601_SHIFT-1))
 
 //R = 1.164(Y - 16) + 1.596(V - 128)
 //G = 1.164(Y - 16) - 0.813(V - 128) - 0.391(U - 128)
@@ -1852,6 +1856,119 @@ inline void cvtYUV422toRGB(uchar * dst_data, size_t dst_step, const uchar * src_
         converter(Range(0, height));
 }
 
+
+///////////////////////////////////// RGB -> YUV422 /////////////////////////////////////
+
+static const int RGB2YUV422_SHIFT = 14;
+
+// Coefficients based on ITU.BT-601, ISBN 1-878707-09-4 (https://fourcc.org/fccyvrgb.php)
+// The conversion coefficients for RGB to YUV422 are based on the ones for RGB to YUV.
+// For both Y components, the coefficients are applied as given in the link to each input RGB pixel
+// separately. For U and V, they are reduced by half to account for two RGB pixels contributing
+// to the same U and V values. In other words, the U and V contributions from the two RGB pixels
+// are averaged. The integer versions are obtained by multiplying the float versions by 16384
+// and rounding to the nearest integer so that resulting values are in these bounds:
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+
+static const int R2Y422 =  4211; // 0.299077 * (236 - 16) / 256 * 16384
+static const int G2Y422 =  8258; // 0.586506 * (236 - 16) / 256 * 16384
+static const int B2Y422 =  1606; // 0.114062 * (236 - 16) / 256 * 16384
+
+static const int R2U422 = -1212; // -0.148 * 8192
+static const int G2U422 = -2384; // -0.291 * 8192
+static const int B2U422 =  3596; //  0.439 * 8192
+static const int G2V422 = -3015; // -0.368 * 8192
+static const int B2V422 =  -582; // -0.071 * 8192
+
+static inline void RGB2Y(const uchar r, const uchar g, const uchar b, uchar& y)
+{
+    int y_ = r * R2Y422 + g * G2Y422 + b * B2Y422 + (1 << RGB2YUV422_SHIFT) * 16;
+    y = saturate_cast<uchar>(((1 << (RGB2YUV422_SHIFT-1)) + y_) >> RGB2YUV422_SHIFT);
+}
+
+static inline void RGB2UV(const uchar r1, const uchar g1, const uchar b1,
+                          const uchar r2, const uchar g2, const uchar b2,
+                          uchar& u, uchar& v)
+{
+    int sr = r1 + r2, sg = g1 + g2, sb = b1 + b2;
+
+    int u_ = sr * R2U422 + sg * G2U422 + sb * B2U422 + (1 << (RGB2YUV422_SHIFT-1)) * 256;
+    u = saturate_cast<uchar>(((1 << (RGB2YUV422_SHIFT-1)) + u_) >> RGB2YUV422_SHIFT);
+
+    int v_ = sr * B2U422 + sg * G2V422 + sb * B2V422 + (1 << (RGB2YUV422_SHIFT-1)) * 256;
+    v = saturate_cast<uchar>(((1 << (RGB2YUV422_SHIFT-1)) + v_) >> RGB2YUV422_SHIFT);
+}
+
+template<int yidx, int uidx, int vidx>
+static inline void cvtRGB82Yuv422(const uchar r1, const uchar g1, const uchar b1,
+                                    const uchar r2, const uchar g2, const uchar b2,
+                                    uchar* row)
+{
+    uchar &u = row[uidx], &v = row[vidx], &y1 = row[yidx], &y2 = row[yidx+2];
+
+    RGB2Y(r1, g1, b1, y1);
+    RGB2Y(r2, g2, b2, y2);
+
+    RGB2UV(r1, g1, b1, r2, g2, b2, u, v);
+}
+
+// bIdx is 0 or 2; [uIdx, yIdx] is [0, 0], [0, 1], [1, 0]; scn is 3 or 4
+template<int bIdx, int uIdx, int yIdx, int scn>
+struct RGB8toYUV422Invoker : ParallelLoopBody
+{
+    uchar * dst_data;
+    size_t dst_step;
+    const uchar * src_data;
+    size_t src_step;
+    int width;
+
+    RGB8toYUV422Invoker(uchar * _dst_data, size_t _dst_step,
+                        const uchar * _src_data, size_t _src_step,
+                        int _width)
+        : dst_data(_dst_data), dst_step(_dst_step), src_data(_src_data), src_step(_src_step), width(_width) {}
+
+    void operator()(const Range& range) const CV_OVERRIDE
+    {
+        int rangeBegin = range.start;
+        int rangeEnd = range.end;
+
+        // [yIdx, uIdx] | [uidx, vidx]:
+        //     0, 0     |     1, 3
+        //     0, 1     |     3, 1
+        //     1, 0     |     0, 2
+        const int uidx = 1 - yIdx + uIdx * 2;
+        const int vidx = (2 + uidx) % 4;
+        const int ridx = (2-bIdx);
+        const uchar* rgb_src = src_data + rangeBegin * (src_step);
+        const uchar* rgb_src2 = rgb_src+scn;
+
+        for (int j = rangeBegin; j < rangeEnd; j++, rgb_src += src_step, rgb_src2 = rgb_src+scn)
+        {
+            uchar* row = dst_data + (dst_step) * j;
+            int i = 0;
+            for (; i < scn * width; i += (scn << 1), row += 4)
+            {
+                const uchar r1 = rgb_src[i+ridx], g1 = rgb_src[i+1], b1 = rgb_src[i+bIdx];
+                const uchar r2 = rgb_src2[i+ridx], g2 = rgb_src2[i+1], b2 = rgb_src2[i+bIdx];
+
+                cvtRGB82Yuv422<yIdx, uidx, vidx>(r1, g1, b1, r2, g2, b2, row);
+            }
+        }
+    }
+};
+
+template<int bIdx, int uIdx, int yIdx, int scn>
+inline void cvtRGBtoYUV422(uchar * dst_data, size_t dst_step, const uchar * src_data, size_t src_step,
+                           int width, int height)
+{
+    RGB8toYUV422Invoker<bIdx, uIdx, yIdx, scn> converter(dst_data, dst_step, src_data, src_step, width);
+    if (width * height >= MIN_SIZE_FOR_PARALLEL_YUV422_CONVERSION)
+        parallel_for_(Range(0, height), converter);
+    else
+        converter(Range(0, height));
+}
+
+
 } // namespace anon
 
 
@@ -1888,14 +2005,17 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
         CvtColorLoop(src_data, src_step, dst_data, dst_step, width, height, YCrCb2RGB_f<float>(dcn, blueIdx, isCbCr));
 }
 
-typedef void (*cvt_2plane_yuv_ptr_t)(uchar * /* dst_data*/,
-                       size_t /* dst_step */,
-                       int /* dst_width */,
-                       int /* dst_height */,
-                       const uchar* /* _y1 */,
-                       size_t /* _y1_step */,
-                       const uchar* /* _uv */,
-                       size_t /* _uv_step */);
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+typedef void (*cvt_2plane_yuv_ptr_t)(uchar *      /* dst_data   */,
+                                     size_t       /* dst_step   */,
+                                     int          /* dst_width  */,
+                                     int          /* dst_height */,
+                                     const uchar* /* _y1        */,
+                                     size_t       /* _y1_step   */,
+                                     const uchar* /* _uv        */,
+                                     size_t       /* _uv_step   */);
 
 void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
                          uchar * dst_data, size_t dst_step,
@@ -1917,27 +2037,30 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_d
     case 401: cvtPtr = cvtYUV420sp2RGB<0, 1, 4>; break;
     case 420: cvtPtr = cvtYUV420sp2RGB<2, 0, 4>; break;
     case 421: cvtPtr = cvtYUV420sp2RGB<2, 1, 4>; break;
-    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 
     cvtPtr(dst_data, dst_step, dst_width, dst_height, y_data, y_step, uv_data, uv_step);
 }
 
-typedef void (*cvt_3plane_yuv_ptr_t)(uchar * /* dst_data */,
-                                     size_t /* dst_step */,
-                                     int /* dst_width */,
-                                     int /* dst_height */,
-                                     size_t /* _stride */,
-                                     const uchar* /* _y1 */,
-                                     const uchar* /* _u */,
-                                     const uchar* /* _v */,
-                                     int /* ustepIdx */,
-                                     int /* vstepIdx */);
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+typedef void (*cvt_3plane_yuv_ptr_t)(uchar *      /* dst_data   */,
+                                     size_t       /* dst_step   */,
+                                     int          /* dst_width  */,
+                                     int          /* dst_height */,
+                                     size_t       /* _stride    */,
+                                     const uchar* /* _y1        */,
+                                     const uchar* /* _u         */,
+                                     const uchar* /* _v         */,
+                                     int          /* ustepIdx   */,
+                                     int          /* vstepIdx   */);
 
 void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
-                                  uchar * dst_data, size_t dst_step,
-                                  int dst_width, int dst_height,
-                                  int dcn, bool swapBlue, int uIdx)
+                                 uchar * dst_data, size_t dst_step,
+                                 int dst_width, int dst_height,
+                                 int dcn, bool swapBlue, int uIdx)
 {
     CV_INSTRUMENT_REGION();
 
@@ -1957,12 +2080,15 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
     case 32: cvtPtr = cvtYUV420p2RGB<2, 3>; break;
     case 40: cvtPtr = cvtYUV420p2RGB<0, 4>; break;
     case 42: cvtPtr = cvtYUV420p2RGB<2, 4>; break;
-    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 
     cvtPtr(dst_data, dst_step, dst_width, dst_height, src_step, src_data, u, v, ustepIdx, vstepIdx);
 }
 
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
                            uchar * dst_data, size_t dst_step,
                            int width, int height,
@@ -1981,6 +2107,9 @@ void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
         cvt(Range(0, height/2));
 }
 
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
                          uchar * y_data, uchar * uv_data, size_t dst_step,
                          int width, int height,
@@ -1997,12 +2126,15 @@ void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
         cvt(Range(0, height/2));
 }
 
-typedef void (*cvt_1plane_yuv_ptr_t)(uchar * /* dst_data */,
-                                     size_t /* dst_step */,
+// 4:2:2 interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+typedef void (*cvt_1plane_yuv_ptr_t)(uchar *       /* dst_data */,
+                                     size_t        /* dst_step */,
                                      const uchar * /* src_data */,
-                                     size_t /* src_step */,
-                                     int /* width */,
-                                     int /* height */);
+                                     size_t        /* src_step */,
+                                     int           /* width    */,
+                                     int           /* height   */);
 
 void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
@@ -2027,7 +2159,39 @@ void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
     case 4200: cvtPtr = cvtYUV422toRGB<2,0,0,4>; break;
     case 4201: cvtPtr = cvtYUV422toRGB<2,0,1,4>; break;
     case 4210: cvtPtr = cvtYUV422toRGB<2,1,0,4>; break;
-    default: CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    };
+
+    cvtPtr(dst_data, dst_step, src_data, src_step, width, height);
+}
+
+// 4:2:2 interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 14-bit fixed-point arithmetics is used
+void cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step,
+                         uchar * dst_data, size_t dst_step,
+                         int width, int height,
+                         int scn, bool swapBlue, int uIdx, int ycn)
+{
+    CV_INSTRUMENT_REGION();
+
+    cvt_1plane_yuv_ptr_t cvtPtr;
+    int blueIdx = swapBlue ? 2 : 0;
+    switch(scn*1000 + blueIdx*100 + uIdx*10 + ycn)
+    {
+    case 3000: cvtPtr = cvtRGBtoYUV422<0,0,0,3>; break;
+    case 3001: cvtPtr = cvtRGBtoYUV422<0,0,1,3>; break;
+    case 3010: cvtPtr = cvtRGBtoYUV422<0,1,0,3>; break;
+    case 3200: cvtPtr = cvtRGBtoYUV422<2,0,0,3>; break;
+    case 3201: cvtPtr = cvtRGBtoYUV422<2,0,1,3>; break;
+    case 3210: cvtPtr = cvtRGBtoYUV422<2,1,0,3>; break;
+    case 4000: cvtPtr = cvtRGBtoYUV422<0,0,0,4>; break;
+    case 4001: cvtPtr = cvtRGBtoYUV422<0,0,1,4>; break;
+    case 4010: cvtPtr = cvtRGBtoYUV422<0,1,0,4>; break;
+    case 4200: cvtPtr = cvtRGBtoYUV422<2,0,0,4>; break;
+    case 4201: cvtPtr = cvtRGBtoYUV422<2,0,1,4>; break;
+    case 4210: cvtPtr = cvtRGBtoYUV422<2,1,0,4>; break;
+    default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 
     cvtPtr(dst_data, dst_step, src_data, src_step, width, height);

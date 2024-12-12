@@ -289,7 +289,7 @@ int CV_FindContourTest::validate_test_results( int /*test_case_idx*/ )
 {
     int code = cvtest::TS::OK;
 
-    cvCmpS( img[0], 0, img[0], CV_CMP_GT );
+    cvCmpS( img[0], 0, img[0], cv::CMP_GT );
 
     if( count != count2 )
     {
@@ -408,7 +408,12 @@ _exit_:
     return code;
 }
 
-TEST(Imgproc_FindContours, accuracy) { CV_FindContourTest test; test.safe_run(); }
+TEST(Imgproc_FindContours, accuracy)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_512MB);
+    CV_FindContourTest test;
+    test.safe_run();
+}
 
 //rotate/flip a quadrant appropriately
 static void rot(int n, int *x, int *y, int rx, int ry)
@@ -459,7 +464,6 @@ TEST(Imgproc_FindContours, hilbert)
     dilate(img, img, Mat());
     vector<vector<Point> > contours;
     findContours(img, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
-    printf("ncontours = %d, contour[0].npoints=%d\n", (int)contours.size(), (int)contours[0].size());
     img.setTo(Scalar::all(0));
 
     drawContours(img, contours, 0, Scalar::all(255), 1);
@@ -530,9 +534,11 @@ TEST(Imgproc_FindContours, regression_4363_shared_nbd)
 
     if (found)
     {
+        ASSERT_EQ(contours.size(), hierarchy.size());
         EXPECT_LT(hierarchy[index][3], 0) << "Desired result: (7,9) has no parent - Actual result: parent of (7,9) is another contour. index = " << index;
     }
 }
+
 
 TEST(Imgproc_PointPolygonTest, regression_10222)
 {

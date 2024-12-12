@@ -394,19 +394,6 @@ GEMMSingleMul( const T* a_data, size_t a_step,
             {
                 WT al(a_data[k]);
                 j=0;
-                 #if CV_ENABLE_UNROLLED
-                for(; j <= m - 4; j += 4 )
-                {
-                    WT t0 = d_buf[j] + WT(b_data[j])*al;
-                    WT t1 = d_buf[j+1] + WT(b_data[j+1])*al;
-                    d_buf[j] = t0;
-                    d_buf[j+1] = t1;
-                    t0 = d_buf[j+2] + WT(b_data[j+2])*al;
-                    t1 = d_buf[j+3] + WT(b_data[j+3])*al;
-                    d_buf[j+2] = t0;
-                    d_buf[j+3] = t1;
-                }
-                #endif
                 for( ; j < m; j++ )
                     d_buf[j] += WT(b_data[j])*al;
             }
@@ -1584,7 +1571,7 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
         v_float32x4 _m2h = v_rotate_left<1>(_m2l);
         v_float32x4 _m3h = v_rotate_left<1>(_m3l);
         v_int16x8 _delta(0, -32768, -32768, -32768, -32768, -32768, -32768, 0);
-        for( ; x <= len*3 - v_uint16x8::nlanes; x += 3*v_uint16x8::nlanes/4 )
+        for( ; x <= len*3 - VTraits<v_uint16x8>::vlanes(); x += 3*VTraits<v_uint16x8>::vlanes()/4 )
             v_store(dst + x, v_rotate_right<1>(v_reinterpret_as_u16(v_add_wrap(v_pack(
                              v_round(v_matmuladd(v_cvt_f32(v_reinterpret_as_s32(v_load_expand(src + x    ))), _m0h, _m1h, _m2h, _m3h)),
                              v_round(v_matmuladd(v_cvt_f32(v_reinterpret_as_s32(v_load_expand(src + x + 3))), _m0l, _m1l, _m2l, _m3l))), _delta))));
@@ -1664,10 +1651,10 @@ transform_32f( const float* src, float* dst, const float* m, int len, int scn, i
         v_float32x4 _m2 = v_load(m + 10);
         v_float32x4 _m3 = v_load(m + 15);
         v_float32x4 _m4(m[4], m[9], m[14], m[19]);
-        for( ; x < len*4; x += v_float32x4::nlanes )
+        for( ; x < len*4; x += VTraits<v_float32x4>::vlanes() )
         {
             v_float32x4 v_src = v_load(src + x);
-            v_store(dst + x, v_reduce_sum4(v_src * _m0, v_src * _m1, v_src * _m2, v_src * _m3) + _m4);
+            v_store(dst + x, v_add(v_reduce_sum4(v_mul(v_src, _m0), v_mul(v_src, _m1), v_mul(v_src, _m2), v_mul(v_src, _m3)), _m4));
         }
 #else // CV_SIMD_WIDTH >= 16 && !CV_SIMD128
         for( ; x < len*4; x += 4 )
@@ -1805,7 +1792,7 @@ diagtransform_64f(const double* src, double* dst, const double* m, int len, int 
 
 TransformFunc getTransformFunc(int depth)
 {
-    static TransformFunc transformTab[] =
+    static TransformFunc transformTab[CV_DEPTH_MAX] =
     {
         (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
         (TransformFunc)transform_16s, (TransformFunc)transform_32s, (TransformFunc)transform_32f,
@@ -1817,7 +1804,7 @@ TransformFunc getTransformFunc(int depth)
 
 TransformFunc getDiagTransformFunc(int depth)
 {
-    static TransformFunc diagTransformTab[] =
+    static TransformFunc diagTransformTab[CV_DEPTH_MAX] =
     {
         (TransformFunc)diagtransform_8u, (TransformFunc)diagtransform_8s, (TransformFunc)diagtransform_16u,
         (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,
@@ -2113,12 +2100,12 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
                     for( k = 0; k < size.height; k++, tsrc += srcstep )
                     {
                         v_float64x2 a = v_setall_f64((double)col_buf[k]);
-                        s0 += a * v_load(tsrc+0);
-                        s1 += a * v_load(tsrc+2);
+                        s0 = v_add(s0, v_mul(a, v_load(tsrc + 0)));
+                        s1 = v_add(s1, v_mul(a, v_load(tsrc + 2)));
                     }
 
-                    v_store((double*)(tdst+j), s0*v_scale);
-                    v_store((double*)(tdst+j+2), s1*v_scale);
+                    v_store((double*)(tdst+j), v_mul(s0, v_scale));
+                    v_store((double*)(tdst+j+2), v_mul(s1, v_scale));
                 } else
 #endif
                 {
@@ -2174,12 +2161,12 @@ MulTransposedR(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
                     for( k = 0; k < size.height; k++, tsrc+=srcstep, d+=deltastep )
                     {
                         v_float64x2 a = v_setall_f64((double)col_buf[k]);
-                        s0 += a * (v_load(tsrc+0) - v_load(d+0));
-                        s1 += a * (v_load(tsrc+2) - v_load(d+2));
+                        s0 = v_add(s0, v_mul(a, v_sub(v_load(tsrc + 0), v_load(d + 0))));
+                        s1 = v_add(s1, v_mul(a, v_sub(v_load(tsrc + 2), v_load(d + 2))));
                     }
 
-                    v_store((double*)(tdst+j), s0*v_scale);
-                    v_store((double*)(tdst+j+2), s1*v_scale);
+                    v_store((double*)(tdst+j), v_mul(s0, v_scale));
+                    v_store((double*)(tdst+j+2), v_mul(s1, v_scale));
                 }
                 else
 #endif
@@ -2249,8 +2236,7 @@ MulTransposedL(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
                     v_float64x2 v_s = v_setzero_f64();
 
                     for( k = 0; k <= size.width - 4; k += 4 )
-                        v_s += (v_load(v_tsrc1+k) * v_load(v_tsrc2+k)) +
-                               (v_load(v_tsrc1+k+2) * v_load(v_tsrc2+k+2));
+                        v_s = v_add(v_s, v_add(v_mul(v_load(v_tsrc1 + k), v_load(v_tsrc2 + k)), v_mul(v_load(v_tsrc1 + k + 2), v_load(v_tsrc2 + k + 2))));
                     s += v_reduce_sum(v_s);
                 }
                 else
@@ -2303,8 +2289,7 @@ MulTransposedL(const Mat& srcmat, const Mat& dstmat, const Mat& deltamat, double
                     v_float64x2 v_s = v_setzero_f64();
 
                     for( k = 0; k <= size.width - 4; k += 4, v_tdelta2 += delta_shift )
-                        v_s += ((v_load(v_tsrc2+k) - v_load(v_tdelta2)) * v_load(v_row_buf+k)) +
-                               ((v_load(v_tsrc2+k+2) - v_load(v_tdelta2+2)) * v_load(v_row_buf+k+2));
+                        v_s = v_add(v_s, v_add(v_mul(v_sub(v_load(v_tsrc2 + k), v_load(v_tdelta2)), v_load(v_row_buf + k)), v_mul(v_sub(v_load(v_tsrc2 + k + 2), v_load(v_tdelta2 + 2)), v_load(v_row_buf + k + 2))));
                     s += v_reduce_sum(v_s);
 
                     tdelta2 = (const dT *)(v_tdelta2);
@@ -2566,7 +2551,7 @@ double dotProd_32s(const int* src1, const int* src2, int len)
         v_sum0 = v_dotprod_expand_fast(v_src10, v_src20, v_sum0);
         v_sum1 = v_dotprod_expand_fast(v_src11, v_src21, v_sum1);
     }
-    v_sum0 += v_sum1;
+    v_sum0 = v_add(v_sum0, v_sum1);
 #endif
     for (; i < len - step; i += step, src1 += step, src2 += step)
     {

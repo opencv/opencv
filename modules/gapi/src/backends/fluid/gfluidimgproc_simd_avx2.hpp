@@ -64,7 +64,7 @@ CV_ALWAYS_INLINE void calcRowLinear32FC1Impl(float *dst[],
     bool xRatioEq1 = inSz.width == outSz.width;
     bool yRatioEq1 = inSz.height == outSz.height;
 
-    constexpr int nlanes = v_float32x8::nlanes;
+    const int nlanes = VTraits<v_float32x8>::vlanes();
 
     if (!xRatioEq1 && !yRatioEq1)
     {

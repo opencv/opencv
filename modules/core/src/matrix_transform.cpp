@@ -269,6 +269,8 @@ void transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
+    CALL_HAL(transpose2d, cv_hal_transpose2d, src.data, src.step, dst.data, dst.step, src.cols, src.rows, esz);
+
     CV_IPP_RUN_FAST(ipp_transpose(src, dst))
 
     if( dst.data == src.data )
@@ -356,10 +358,10 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
 #if CV_SIMD128
 template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
-    typedef typename V::lane_type T;
+    typedef typename VTraits<V>::lane_type T;
     int end = (int)(size.width*esz);
     int width = (end + 1)/2;
-    int width_1 = width & -v_uint8x16::nlanes;
+    int width_1 = width & -VTraits<v_uint8x16>::vlanes();
     int i, j;
 
 #if CV_STRONG_ALIGNMENT
@@ -368,15 +370,15 @@ template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, s
 
     for( ; size.height--; src += sstep, dst += dstep )
     {
-        for( i = 0, j = end; i < width_1; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+        for( i = 0, j = end; i < width_1; i += VTraits<v_uint8x16>::vlanes(), j -= VTraits<v_uint8x16>::vlanes() )
         {
             V t0, t1;
 
             t0 = v_load((T*)((uchar*)src + i));
-            t1 = v_load((T*)((uchar*)src + j - v_uint8x16::nlanes));
+            t1 = v_load((T*)((uchar*)src + j - VTraits<v_uint8x16>::vlanes()));
             t0 = v_reverse(t0);
             t1 = v_reverse(t1);
-            v_store((T*)(dst + j - v_uint8x16::nlanes), t0);
+            v_store((T*)(dst + j - VTraits<v_uint8x16>::vlanes()), t0);
             v_store((T*)(dst + i), t1);
         }
         if (isAligned<sizeof(T)>(src, dst))
@@ -446,14 +448,14 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
 #if CV_STRONG_ALIGNMENT
     size_t alignmentMark = ((size_t)src)|((size_t)dst)|sstep|dstep;
 #endif
-    if (esz == 2 * v_uint8x16::nlanes)
+    if (esz == 2 * (size_t)VTraits<v_uint8x16>::vlanes())
     {
         int end = (int)(size.width*esz);
         int width = end/2;
 
         for( ; size.height--; src += sstep, dst += dstep )
         {
-            for( int i = 0, j = end - 2 * v_uint8x16::nlanes; i < width; i += 2 * v_uint8x16::nlanes, j -= 2 * v_uint8x16::nlanes )
+            for( int i = 0, j = end - 2 * VTraits<v_uint8x16>::vlanes(); i < width; i += 2 * VTraits<v_uint8x16>::vlanes(), j -= 2 * VTraits<v_uint8x16>::vlanes() )
             {
 #if CV_SIMD256
                 v_uint8x32 t0, t1;
@@ -466,25 +468,25 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
                 v_uint8x16 t0, t1, t2, t3;
 
                 t0 = v_load((uchar*)src + i);
-                t1 = v_load((uchar*)src + i + v_uint8x16::nlanes);
+                t1 = v_load((uchar*)src + i + VTraits<v_uint8x16>::vlanes());
                 t2 = v_load((uchar*)src + j);
-                t3 = v_load((uchar*)src + j + v_uint8x16::nlanes);
+                t3 = v_load((uchar*)src + j + VTraits<v_uint8x16>::vlanes());
                 v_store(dst + j, t0);
-                v_store(dst + j + v_uint8x16::nlanes, t1);
+                v_store(dst + j + VTraits<v_uint8x16>::vlanes(), t1);
                 v_store(dst + i, t2);
-                v_store(dst + i + v_uint8x16::nlanes, t3);
+                v_store(dst + i + VTraits<v_uint8x16>::vlanes(), t3);
 #endif
             }
         }
     }
-    else if (esz == v_uint8x16::nlanes)
+    else if (esz == (size_t)VTraits<v_uint8x16>::vlanes())
     {
         int end = (int)(size.width*esz);
         int width = end/2;
 
         for( ; size.height--; src += sstep, dst += dstep )
         {
-            for( int i = 0, j = end - v_uint8x16::nlanes; i < width; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+            for( int i = 0, j = end - VTraits<v_uint8x16>::vlanes(); i < width; i += VTraits<v_uint8x16>::vlanes(), j -= VTraits<v_uint8x16>::vlanes() )
             {
                 v_uint8x16 t0, t1;
 
@@ -534,19 +536,19 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
 
         for( ; size.height--; src += sstep, dst += dstep )
         {
-            for ( int i = 0, j = end; i < width; i += v_uint8x16::nlanes + sizeof(uint64_t), j -= v_uint8x16::nlanes + sizeof(uint64_t) )
+            for ( int i = 0, j = end; i < width; i += VTraits<v_uint8x16>::vlanes() + sizeof(uint64_t), j -= VTraits<v_uint8x16>::vlanes() + sizeof(uint64_t) )
             {
                 v_uint8x16 t0, t1;
                 uint64_t t2, t3;
 
                 t0 = v_load((uchar*)src + i);
-                t2 = *((uint64_t*)((uchar*)src + i + v_uint8x16::nlanes));
-                t1 = v_load((uchar*)src + j - v_uint8x16::nlanes - sizeof(uint64_t));
+                t2 = *((uint64_t*)((uchar*)src + i + VTraits<v_uint8x16>::vlanes()));
+                t1 = v_load((uchar*)src + j - VTraits<v_uint8x16>::vlanes() - sizeof(uint64_t));
                 t3 = *((uint64_t*)((uchar*)src + j - sizeof(uint64_t)));
-                v_store(dst + j - v_uint8x16::nlanes - sizeof(uint64_t), t0);
+                v_store(dst + j - VTraits<v_uint8x16>::vlanes() - sizeof(uint64_t), t0);
                 *((uint64_t*)(dst + j - sizeof(uint64_t))) = t2;
                 v_store(dst + i, t1);
-                *((uint64_t*)(dst + i + v_uint8x16::nlanes)) = t3;
+                *((uint64_t*)(dst + i + VTraits<v_uint8x16>::vlanes())) = t3;
             }
         }
     }

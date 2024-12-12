@@ -53,6 +53,7 @@
 
 #include "opencv2/core/bufferpool.hpp"
 
+#include <array>
 #include <type_traits>
 
 namespace cv
@@ -2118,7 +2119,7 @@ public:
     /** @overload */
     template<typename _Tp, typename Functor> void forEach(const Functor& operation) const;
 
-    Mat(Mat&& m);
+    Mat(Mat&& m) CV_NOEXCEPT;
     Mat& operator = (Mat&& m);
 
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };

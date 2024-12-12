@@ -15,6 +15,14 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <psapi.h>
+#endif  // _WIN32
+
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
@@ -500,6 +508,30 @@ void initDNNTests()
         CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE,
         CV_TEST_TAG_DNN_SKIP_PARSER
     );
+}
+
+size_t DNNTestLayer::getTopMemoryUsageMB()
+{
+#ifdef _WIN32
+    PROCESS_MEMORY_COUNTERS proc;
+    GetProcessMemoryInfo(GetCurrentProcess(), &proc, sizeof(proc));
+    return proc.PeakWorkingSetSize / pow(1024, 2);  // bytes to megabytes
+#else
+    std::ifstream status("/proc/self/status");
+    std::string line, title;
+    while (std::getline(status, line))
+    {
+        std::istringstream iss(line);
+        iss >> title;
+        if (title == "VmHWM:")
+        {
+            size_t mem;
+            iss >> mem;
+            return mem / 1024;
+        }
+    }
+    return 0l;
+#endif
 }
 
 } // namespace
