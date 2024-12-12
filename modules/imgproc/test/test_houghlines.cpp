@@ -379,12 +379,12 @@ TEST(WeightedHoughLines, diagonal)
     HoughLines(img, lines, 1, CV_PI/180, threshold, 0, 0, 0.0, CV_PI, use_edgeval);
     
     // check results
-    ASSERT_EQ(lines.size(), 2U);
+    ASSERT_EQ(2U, lines.size());
     // detected lines is assumed sorted from stronger to weaker. 
-    EXPECT_EQ(lines[0][0], 0);
-    EXPECT_EQ(lines[1][0], 18);
-    EXPECT_NEAR(lines[0][1], CV_PI*3/4, CV_PI/180 + 1e-6);
-    EXPECT_NEAR(lines[1][1], CV_PI/4, CV_PI/180 + 1e-6);
+    EXPECT_EQ(0, lines[0][0]);
+    EXPECT_EQ(18, lines[1][0]);
+    EXPECT_NEAR(CV_PI*3/4, lines[0][1], CV_PI/180 + 1e-6);
+    EXPECT_NEAR(CV_PI/4, lines[1][1], CV_PI/180 + 1e-6);
 }
 
 INSTANTIATE_TEST_CASE_P( ImgProc, StandartHoughLinesTest, testing::Combine(testing::Values( "shared/pic5.png", "../stitching/a1.png" ),
