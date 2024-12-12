@@ -125,7 +125,11 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
 {
     /** @brief Open video capture from buffer with parameters
 
-    @param buffer Memory buffer
+    @param opaque A pointer to user data
+    @param read A pointer to a function that is called to reads @p size bytes to allocated @p buffer. Returns a number of bytes that were actually read
+    @param seek A pointer to a function that is called to move starting position inside the stream buffer.
+                @p offset is a number of bytes and @p way is one of the markers SEEK_SET, SEEK_CUR, SEEK_END.
+                Function returns an absolute current position in bytes.
     @param params pointer on 2*n_params array of 'key,value' pairs
     @param n_params number of passed parameters
     @param[out] handle pointer on Capture handle

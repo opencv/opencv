@@ -30,7 +30,7 @@ public:
 
     std::streampos seekoff(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode = std::ios_base::in | std::ios_base::out) override
     {
-        return seek(opaque, off, way == std::ios_base::beg ? SEEK_SET : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
+        return seek(opaque, off, way == std::ios_base::beg ? SEEK_SET : (way == std::ios_base::end ? SEEK_END : SEEK_CUR));
     }
 
     // Required for sgetc (check for end-of-stream)

@@ -1026,8 +1026,8 @@ INSTANTIATE_TEST_CASE_P(videoio, videowriter_acceleration, testing::Combine(
 ));
 
 
-typedef testing::TestWithParam<tuple<std::string, VideoCaptureAPIs>> buffer_capture;
-TEST_P(buffer_capture, read)
+typedef testing::TestWithParam<tuple<std::string, VideoCaptureAPIs>> stream_capture;
+TEST_P(stream_capture, read)
 {
     std::string ext = get<0>(GetParam());
     VideoCaptureAPIs apiPref = get<1>(GetParam());
@@ -1070,9 +1070,64 @@ TEST_P(buffer_capture, read)
     for(int i = 0; i < numFrames; i++)
         EXPECT_EQ(0, cv::norm(frames[i], hardCopies[i], NORM_INF)) << i;
 }
-INSTANTIATE_TEST_CASE_P(videoio, buffer_capture,
+INSTANTIATE_TEST_CASE_P(videoio, stream_capture,
                           testing::Combine(
                               testing::ValuesIn(bunny_params),
                               testing::ValuesIn(backend_params)));
+
+// This test for stream input for container format (See test_ffmpeg/videoio_container.read test)
+typedef testing::TestWithParam<std::string> stream_capture_ffmpeg;
+TEST_P(stream_capture_ffmpeg, raw)
+{
+    std::string ext = GetParam();
+    VideoCaptureAPIs apiPref = CAP_FFMPEG;
+    std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getBufferBackends();
+    if (!videoio_registry::hasBackend(apiPref))
+        throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
+    if (std::find(supportedAPIs.begin(), supportedAPIs.end(), apiPref) == supportedAPIs.end())
+        throw SkipTestException(cv::String("Backend is not supported: ") + cv::videoio_registry::getBackendName(apiPref));
+
+    if (!videoio_registry::isBackendBuiltIn(apiPref))
+    {
+        int pluginABI, pluginAPI;
+        videoio_registry::getBufferBackendPluginVersion(apiPref, pluginABI, pluginAPI);
+        if (pluginABI < 1 || (pluginABI == 1 && pluginAPI < 2))
+            throw SkipTestException(format("Buffer capture supported since ABI/API = 1/2. %s plugin is %d/%d",
+                                           cv::videoio_registry::getBackendName(apiPref).c_str(), pluginABI, pluginAPI));
+    }
+
+    VideoCapture container;
+    String video_file = BunnyParameters::getFilename(String(".") + ext);
+    ASSERT_TRUE(utils::fs::exists(video_file));
+    EXPECT_NO_THROW(container.open(video_file, apiPref, {CAP_PROP_FORMAT, -1}));
+    ASSERT_TRUE(container.isOpened());
+    ASSERT_EQ(-1.f, container.get(CAP_PROP_FORMAT));
+
+    std::stringbuf stream;
+    Mat keyFrame;
+    while (true)
+    {
+        container >> keyFrame;
+        if (keyFrame.empty())
+            break;
+        stream.sputn(keyFrame.ptr<char>(), keyFrame.total());
+    }
+
+    VideoCapture capRef(video_file);
+    VideoCapture capStream;
+    EXPECT_NO_THROW(capStream.open(stream, apiPref, {}));
+    ASSERT_TRUE(capStream.isOpened());
+
+    const int numFrames = 10;
+    Mat frameRef, frame;
+    for (int i = 0; i < numFrames; ++i)
+    {
+        capRef >> frameRef;
+        ASSERT_NO_THROW(capStream >> frame);
+        EXPECT_FALSE(frame.empty());
+        EXPECT_EQ(0, cv::norm(frame, frameRef, NORM_INF)) << i;
+    }
+}
+INSTANTIATE_TEST_CASE_P(videoio, stream_capture_ffmpeg, testing::Values("h264", "h265", "mjpg.avi"));
 
 } // namespace
