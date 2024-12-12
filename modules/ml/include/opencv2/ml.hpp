@@ -1359,7 +1359,7 @@ public:
     enum Types {
         DISCRETE=0, //!< Discrete AdaBoost.
         REAL=1, //!< Real AdaBoost. It is a technique that utilizes confidence-rated predictions
-                                       //!< and works well with categorical data.
+                //!< and works well with categorical data.
         LOGIT=2, //!< LogitBoost. It can produce good regression fits.
         GENTLE=3 //!< Gentle AdaBoost. It puts less weight on outlier data points and for that
                  //!<reason is often good with regression data.
