@@ -328,7 +328,7 @@ CV_EXPORTS_W void denoise_TVL1(const std::vector<Mat>& observations,Mat& result,
 //! @addtogroup photo_hdr
 //! @{
 
-constexpr auto LDR_SIZE = 256;
+enum { LDR_SIZE = 256 };
 
 /** @brief Base class for tonemapping algorithms - tools that are used to map HDR image to 8-bit range.
  */
