@@ -166,7 +166,6 @@ SparseMat::Hdr::Hdr( int _dims, const int* _sizes, int _type )
     clear();
 }
 
-
 void SparseMat::Hdr::clear()
 {
     hashtab.clear();
@@ -182,7 +181,6 @@ void SparseMat::Hdr::clear()
 #endif
     nodeCount = freeList = 0;
 }
-
 
 ///////////////////////////// SparseMat /////////////////////////////
 
