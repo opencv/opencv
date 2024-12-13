@@ -2013,14 +2013,14 @@ struct RGB2Lab_f
                     b_vec0 = v_cvt_f32(i_bvec0); b_vec1 = v_cvt_f32(i_bvec1);
 
                     /* dst[i] = L*100.0f */
-                    v_float32 v100dBase = vx_setall_f32(100.0f / +LAB_BASE);
+                    v_float32 v100dBase = vx_setall_f32(100.0f / static_cast<float>(LAB_BASE));
                     l_vec0 = v_mul(l_vec0, v100dBase);
                     l_vec1 = v_mul(l_vec1, v100dBase);
                     /*
                     dst[i + 1] = a*256.0f - 128.0f;
                     dst[i + 2] = b*256.0f - 128.0f;
                     */
-                    v_float32 v256dBase = vx_setall_f32(256.0f / +LAB_BASE), vm128 = vx_setall_f32(-128.f);
+                    v_float32 v256dBase = vx_setall_f32(256.0f / static_cast<float>(LAB_BASE)), vm128 = vx_setall_f32(-128.f);
                     a_vec0 = v_fma(a_vec0, v256dBase, vm128);
                     a_vec1 = v_fma(a_vec1, v256dBase, vm128);
                     b_vec0 = v_fma(b_vec0, v256dBase, vm128);
@@ -2038,10 +2038,10 @@ struct RGB2Lab_f
                 float G = clip(src[1]);
                 float B = clip(src[bIdx^2]);
 
-                int iR = cvRound(R * +LAB_BASE), iG = cvRound(G * +LAB_BASE), iB = cvRound(B * +LAB_BASE);
+                int iR = cvRound(R*static_cast<float>(LAB_BASE)), iG = cvRound(G*static_cast<float>(LAB_BASE)), iB = cvRound(B*static_cast<float>(LAB_BASE));
                 int iL, ia, ib;
                 trilinearInterpolate(iR, iG, iB, LABLUVLUTs16.RGB2LabLUT_s16, iL, ia, ib);
-                float L = iL*1.0f/+LAB_BASE, a = ia*1.0f/+LAB_BASE, b = ib*1.0f/+LAB_BASE;
+                float L = iL*1.0f/static_cast<float>(LAB_BASE), a = ia*1.0f/static_cast<float>(LAB_BASE), b = ib*1.0f/static_cast<float>(LAB_BASE);
 
                 dst[i] = L*100.0f;
                 dst[i + 1] = a*256.0f - 128.0f;
@@ -3358,7 +3358,7 @@ struct RGB2Luvinterpolate
             int R = src[bIdx], G = src[1], B = src[bIdx^2];
 
             // (LAB_BASE/255) gives more accuracy but not very much
-            static const int baseDiv = +LAB_BASE/256;
+            static const int baseDiv = LAB_BASE/256;
             R = R*baseDiv, G = G*baseDiv, B = B*baseDiv;
 
             int L, u, v;
