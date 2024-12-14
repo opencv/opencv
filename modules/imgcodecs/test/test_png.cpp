@@ -447,14 +447,10 @@ TEST(Imgcodecs_Png, load_save_multiframes_rgb)
             for (int y = 0; y < roi.cols; y++)
             {
                 // Apply random changes to pixel values to create animation variations.
-                Vec4b& pixel = roi.at<Vec4b>(x, y);
-                if (pixel[3] > 0)
-                {
-                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
-                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
-                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
-                    pixel[3] -= (uchar)rng.uniform(2, 5);  // Reduce alpha channel.
-                }
+                Vec3b& pixel = roi.at<Vec3b>(x, y);
+                if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
+                if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
+                if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
             }
 
         png_frames.push_back(image.clone());
@@ -487,7 +483,7 @@ TEST(Imgcodecs_Png, load_save_multiframes_gray)
 
     for (size_t i = 0; i < 15; i++)
     {
-        roi = roi - Scalar(10, 10, 10, 20);
+        roi = roi - Scalar(10);
         png_frames.push_back(image.clone());
     }
 
