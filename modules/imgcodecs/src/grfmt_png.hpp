@@ -68,7 +68,6 @@ protected:
     uint32_t bop;
     bool m_is_fcTL_loaded;
     bool m_is_IDAT_loaded;
-    int m_timestamp;
 };
 
 
