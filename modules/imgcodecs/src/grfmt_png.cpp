@@ -426,8 +426,6 @@ bool PngDecoder::readAnimation(Mat& img)
                 m_is_fcTL_loaded = true;
                 w0 = m_width;
                 h0 = m_height;
-                delay_num = 1;
-                delay_den = 0;
             }
 
             if (processing_finish())
