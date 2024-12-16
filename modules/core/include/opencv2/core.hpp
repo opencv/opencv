@@ -417,10 +417,6 @@ The function can also be emulated with a matrix expression, for example:
 */
 CV_EXPORTS_W void scaleAdd(InputArray src1, double alpha, InputArray src2, OutputArray dst);
 
-/** @example samples/cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp
-Check @ref tutorial_trackbar "the corresponding tutorial" for more details
-*/
-
 /** @brief Calculates the weighted sum of two arrays.
 
 The function addWeighted calculates the weighted sum of two arrays as follows:
