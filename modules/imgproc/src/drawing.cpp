@@ -64,7 +64,7 @@ CollectPolyEdges( Mat& img, const Point2l* v, int npts,
                   int shift, Point offset=Point() );
 
 static void
-FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color, int line_type);
+FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color );
 
 static void
 PolyLine( Mat& img, const Point2l* v, int npts, bool closed,
@@ -1051,7 +1051,7 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
         v.push_back(center);
         std::vector<PolyEdge> edges;
         CollectPolyEdges( img,  &v[0], (int)v.size(), edges, color, line_type, XY_SHIFT );
-        FillEdgeCollection( img, edges, color, line_type );
+        FillEdgeCollection( img, edges, color );
     }
 }
 
@@ -1299,15 +1299,11 @@ CollectPolyEdges( Mat& img, const Point2l* v, int count, std::vector<PolyEdge>& 
                 if (t0.y != t1.y)
                 {
                     pt0c.y = t0.y; pt1c.y = t1.y;
-                    pt0c.x = (int64)(t0.x) << XY_SHIFT;
-                    pt1c.x = (int64)(t1.x) << XY_SHIFT;
                 }
             }
-            else
-            {
-                pt0c.x += XY_ONE >> 1;
-                pt1c.x += XY_ONE >> 1;
-            }
+
+            pt0c.x = (int64)(t0.x) << XY_SHIFT;
+            pt1c.x = (int64)(t1.x) << XY_SHIFT;
         }
         else
         {
@@ -1349,7 +1345,7 @@ struct CmpEdges
 /**************** helper macros and functions for sequence/contour processing ***********/
 
 static void
-FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color, int line_type)
+FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color )
 {
     PolyEdge tmp;
     int i, y, total = (int)edges.size();
@@ -1358,12 +1354,7 @@ FillEdgeCollection( Mat& img, std::vector<PolyEdge>& edges, const void* color, i
     int y_max = INT_MIN, y_min = INT_MAX;
     int64 x_max = 0xFFFFFFFFFFFFFFFF, x_min = 0x7FFFFFFFFFFFFFFF;
     int pix_size = (int)img.elemSize();
-    int delta;
-
-    if (line_type < cv::LINE_AA)
-        delta = 0;
-    else
-        delta = XY_ONE - 1;
+    int delta = XY_ONE - 1;
 
     if( total < 2 )
         return;
@@ -2051,7 +2042,7 @@ void fillPoly( InputOutputArray _img, const Point** pts, const int* npts, int nc
         }
     }
 
-    FillEdgeCollection(img, edges, buf, line_type);
+    FillEdgeCollection(img, edges, buf);
 }
 
 void polylines( InputOutputArray _img, const Point* const* pts, const int* npts, int ncontours, bool isClosed,
@@ -2486,21 +2477,70 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
     CV_Assert(ncontours <= (size_t)std::numeric_limits<int>::max());
     if (lineType == cv::LINE_AA && _image.depth() != CV_8U)
         lineType = 8;
-    Mat image = _image.getMat(), hierarchy = _hierarchy.getMat();
+    Mat image = _image.getMat();
+    Mat_<Vec4i> hierarchy = _hierarchy.getMat();
 
-    if (thickness >= 0) // contour lines
+    int i = 0, end = (int)ncontours;
+    if (contourIdx >= 0)
     {
-        double color_buf[4] {};
-        scalarToRawData(color, color_buf, _image.type(), 0 );
-        int i = 0, end = (int)ncontours;
-        if (contourIdx >= 0)
+        i = contourIdx;
+        end = i + 1;
+    }
+    std::vector<int> indexesToFill;
+    if (hierarchy.empty() || maxLevel == 0)
+    {
+        indexesToFill.resize(end - i);
+        std::iota(indexesToFill.begin(), indexesToFill.end(), i);
+    }
+    else
+    {
+        std::stack<int> indexes;
+        for (; i != end; ++i)
         {
-            i = contourIdx;
-            end = i + 1;
+            // either all from the top level or a single contour
+            if (hierarchy(i)[3] < 0 || contourIdx >= 0)
+                indexes.push(i);
         }
-        for (; i < end; ++i)
+        while (!indexes.empty())
         {
-            Mat cnt = _contours.getMat(i);
+            // get current element
+            const int cur = indexes.top();
+            indexes.pop();
+
+            //  check current element depth
+            int curLevel = -1;
+            int par = cur;
+            while (par >= 0)
+            {
+                par = hierarchy(par)[3]; // parent
+                ++curLevel;
+            }
+            if (curLevel <= maxLevel)
+            {
+                indexesToFill.push_back(cur);
+            }
+
+            int next = hierarchy(cur)[2]; // first child
+            while (next > 0)
+            {
+                indexes.push(next);
+                next = hierarchy(next)[0]; // next sibling
+            }
+        }
+    }
+    std::vector<Mat> contoursToFill;
+    contoursToFill.reserve(indexesToFill.size());
+    for (const int& idx : indexesToFill)
+        contoursToFill.emplace_back(_contours.getMat(idx));
+
+    if (thickness < 0)
+        fillPoly(image, contoursToFill, color, lineType, 0, offset);
+    else
+    {
+        double color_buf[4]{};
+        scalarToRawData(color, color_buf, _image.type(), 0);
+        for (const Mat& cnt : contoursToFill)
+        {
             if (cnt.empty())
                 continue;
             const int npoints = cnt.checkVector(2, CV_32S);
@@ -2513,61 +2553,6 @@ void cv::drawContours( InputOutputArray _image, InputArrayOfArrays _contours,
                 cv::ThickLine(image, pt1 + offset, pt2 + offset, color_buf, thickness, lineType, 2, 0);
             }
         }
-    }
-    else // filled polygons
-    {
-        int i = 0, end = (int)ncontours;
-        if (contourIdx >= 0)
-        {
-            i = contourIdx;
-            end = i + 1;
-        }
-        std::vector<int> indexesToFill;
-        if (hierarchy.empty() || maxLevel == 0)
-        {
-            for (; i != end; ++i)
-                indexesToFill.push_back(i);
-        }
-        else
-        {
-            std::stack<int> indexes;
-            for (; i != end; ++i)
-            {
-                // either all from the top level or a single contour
-                if (hierarchy.at<Vec4i>(i)[3] < 0 || contourIdx >= 0)
-                    indexes.push(i);
-            }
-            while (!indexes.empty())
-            {
-                // get current element
-                const int cur = indexes.top();
-                indexes.pop();
-
-                //  check current element depth
-                int curLevel = -1;
-                int par = cur;
-                while (par >= 0)
-                {
-                    par = hierarchy.at<Vec4i>(par)[3]; // parent
-                    ++curLevel;
-                }
-                if (curLevel <= maxLevel)
-                {
-                    indexesToFill.push_back(cur);
-                }
-
-                int next = hierarchy.at<Vec4i>(cur)[2]; // first child
-                while (next > 0)
-                {
-                    indexes.push(next);
-                    next = hierarchy.at<Vec4i>(next)[0]; // next sibling
-                }
-            }
-        }
-        std::vector<Mat> contoursToFill;
-        for (const int & idx : indexesToFill)
-            contoursToFill.push_back(_contours.getMat(idx));
-        fillPoly(image, contoursToFill, color, lineType, 0, offset);
     }
 }
 
@@ -2690,7 +2675,7 @@ cvDrawContours( void* _img, CvSeq* contour,
     }
 
     if( thickness < 0 )
-        cv::FillEdgeCollection( img, edges, ext_buf, line_type);
+        cv::FillEdgeCollection( img, edges, ext_buf );
 
     if( h_next && contour0 )
         contour0->h_next = h_next;

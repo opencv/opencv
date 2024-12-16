@@ -60,11 +60,16 @@
 
 /**
 @defgroup core Core functionality
+
+The Core module is the backbone of OpenCV, offering fundamental data structures, matrix operations,
+and utility functions that other modules depend on. It’s essential for handling image data,
+performing mathematical computations, and managing memory efficiently within the OpenCV ecosystem.
+
 @{
     @defgroup core_basic Basic structures
     @defgroup core_array Operations on arrays
     @defgroup core_async Asynchronous API
-    @defgroup core_xml XML/YAML Persistence
+    @defgroup core_xml XML/YAML/JSON Persistence
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
@@ -76,7 +81,6 @@
         @defgroup core_utils_samples Utility functions for OpenCV samples
     @}
     @defgroup core_opengl OpenGL interoperability
-    @defgroup core_ipp Intel IPP Asynchronous C/C++ Converters
     @defgroup core_optim Optimization Algorithms
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
@@ -96,6 +100,7 @@
     @{
         @defgroup core_parallel_backend Parallel backends API
     @}
+    @defgroup core_quaternion Quaternion
 @}
  */
 
@@ -163,7 +168,7 @@ enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independe
 
 //! @} core_utils
 
-//! @addtogroup core
+//! @addtogroup core_array
 //! @{
 
 //! Covariation flags
@@ -202,27 +207,6 @@ enum CovarFlags {
     COVAR_COLS      = 16
 };
 
-//! @addtogroup core_cluster
-//!  @{
-
-//! k-Means flags
-enum KmeansFlags {
-    /** Select random initial centers in each attempt.*/
-    KMEANS_RANDOM_CENTERS     = 0,
-    /** Use kmeans++ center initialization by Arthur and Vassilvitskii [Arthur2007].*/
-    KMEANS_PP_CENTERS         = 2,
-    /** During the first (and possibly the only) attempt, use the
-        user-supplied labels instead of computing them from the initial centers. For the second and
-        further attempts, use the random or semi-random centers. Use one of KMEANS_\*_CENTERS flag
-        to specify the exact method.*/
-    KMEANS_USE_INITIAL_LABELS = 1
-};
-
-//! @} core_cluster
-
-//! @addtogroup core_array
-//! @{
-
 enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/columns of the matrix.
                    REDUCE_AVG = 1, //!< the output is the mean vector of all rows/columns of the matrix.
                    REDUCE_MAX = 2, //!< the output is the maximum (column/row-wise) of all rows/columns of the matrix.
@@ -230,18 +214,11 @@ enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/column
                    REDUCE_SUM2 = 4  //!< the output is the sum of all squared rows/columns of the matrix.
                  };
 
-//! @} core_array
-
 /** @brief Swaps two matrices
 */
 CV_EXPORTS void swap(Mat& a, Mat& b);
 /** @overload */
 CV_EXPORTS void swap( UMat& a, UMat& b );
-
-//! @} core
-
-//! @addtogroup core_array
-//! @{
 
 /** @brief Computes the source location of an extrapolated pixel.
 
@@ -486,10 +463,6 @@ The function can also be emulated with a matrix expression, for example:
 */
 CV_EXPORTS_W void scaleAdd(InputArray src1, double alpha, InputArray src2, OutputArray dst);
 
-/** @example samples/cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp
-Check @ref tutorial_trackbar "the corresponding tutorial" for more details
-*/
-
 /** @brief Calculates the weighted sum of two arrays.
 
 The function addWeighted calculates the weighted sum of two arrays as follows:
@@ -556,6 +529,10 @@ The format of half precision floating point is defined in IEEE 754-2008.
 @deprecated Use Mat::convertTo with CV_16F instead.
 */
 CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst);
+
+/** @example samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
+Check @ref tutorial_how_to_scan_images "the corresponding tutorial" for more details
+*/
 
 /** @brief Performs a look-up table transform of an array.
 
@@ -855,13 +832,21 @@ CV_EXPORTS void normalize( const SparseMat& src, SparseMat& dst, double alpha, i
 /** @brief Finds the global minimum and maximum in an array.
 
 The function cv::minMaxLoc finds the minimum and maximum element values and their positions. The
-extremums are searched across the whole array or, if mask is not an empty array, in the specified
+extrema are searched across the whole array or, if mask is not an empty array, in the specified
 array region.
 
-The function do not work with multi-channel arrays. If you need to find minimum or maximum
-elements across all the channels, use Mat::reshape first to reinterpret the array as
-single-channel. Or you may extract the particular channel using either extractImageCOI, or
-mixChannels, or split.
+In C++, if the input is multi-channel, you should omit the minLoc, maxLoc, and mask arguments
+(i.e. leave them as NULL, NULL, and noArray() respectively). These arguments are not
+supported for multi-channel input arrays. If working with multi-channel input and you
+need the minLoc, maxLoc, or mask arguments, then use Mat::reshape first to reinterpret
+the array as single-channel. Alternatively, you can extract the particular channel using either
+extractImageCOI, mixChannels, or split.
+
+In Python, multi-channel input is not supported at all due to a limitation in the
+binding generation process (there is no way to set minLoc and maxLoc to NULL). A
+workaround is to operate on each channel individually or to use NumPy to achieve the same
+functionality.
+
 @param src input single-channel array.
 @param minVal pointer to the returned minimum value; NULL is used if not required.
 @param maxVal pointer to the returned maximum value; NULL is used if not required.
@@ -3077,8 +3062,21 @@ private:
 //! @addtogroup core_cluster
 //!  @{
 
+//! k-means flags
+enum KmeansFlags {
+    /** Select random initial centers in each attempt.*/
+    KMEANS_RANDOM_CENTERS     = 0,
+    /** Use kmeans++ center initialization by Arthur and Vassilvitskii [Arthur2007].*/
+    KMEANS_PP_CENTERS         = 2,
+    /** During the first (and possibly the only) attempt, use the
+        user-supplied labels instead of computing them from the initial centers. For the second and
+        further attempts, use the random or semi-random centers. Use one of KMEANS_\*_CENTERS flag
+        to specify the exact method.*/
+    KMEANS_USE_INITIAL_LABELS = 1
+};
+
 /** @example samples/cpp/kmeans.cpp
-An example on K-means clustering
+An example on k-means clustering
 */
 
 /** @brief Finds centers of clusters and groups input samples around the clusters.
@@ -3088,7 +3086,7 @@ and groups the input samples around the clusters. As an output, \f$\texttt{bestL
 0-based cluster index for the sample stored in the \f$i^{th}\f$ row of the samples matrix.
 
 @note
--   (Python) An example on K-means clustering can be found at
+-   (Python) An example on k-means clustering can be found at
     opencv_source_code/samples/python/kmeans.py
 @param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
 Examples of this array can be:

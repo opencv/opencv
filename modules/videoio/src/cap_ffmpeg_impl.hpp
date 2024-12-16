@@ -569,7 +569,6 @@ struct CvCapture_FFMPEG
 
     int64_t frame_number, first_frame_number;
 
-    bool   rotation_auto;
     int    rotation_angle; // valid 0, 90, 180, 270
     double eps_zero;
 /*
@@ -634,11 +633,6 @@ void CvCapture_FFMPEG::init()
 
     rotation_angle = 0;
 
-#if (LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 92, 100))
-    rotation_auto = true;
-#else
-    rotation_auto = false;
-#endif
     dict = NULL;
 
 #if USE_AV_INTERRUPT_CALLBACK
@@ -934,21 +928,19 @@ public:
     }
     static void initLogger_()
     {
-#ifndef NO_GETENV
-        char* debug_option = getenv("OPENCV_FFMPEG_DEBUG");
-        char* level_option = getenv("OPENCV_FFMPEG_LOGLEVEL");
+        const bool debug_option = utils::getConfigurationParameterBool("OPENCV_FFMPEG_DEBUG");
+        std::string level_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_LOGLEVEL");
         int level = AV_LOG_VERBOSE;
-        if (level_option != NULL)
+        if (!level_option.empty())
         {
-            level = atoi(level_option);
+            level = atoi(level_option.c_str());
         }
-        if ( (debug_option != NULL) || (level_option != NULL) )
+        if ( debug_option || (!level_option.empty()) )
         {
             av_log_set_level(level);
             av_log_set_callback(ffmpeg_log_callback);
         }
         else
-#endif
         {
             av_log_set_level(AV_LOG_ERROR);
         }
@@ -985,10 +977,10 @@ inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
     {
         int nCpus = cv::getNumberOfCPUs();
         int requestedThreads = std::min(nCpus, 16);  // [OPENCV:FFMPEG:24] Application has requested XX threads. Using a thread count greater than 16 is not recommended.
-        char* threads_option = getenv("OPENCV_FFMPEG_THREADS");
-        if (threads_option != NULL)
+        std::string threads_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_THREADS");
+        if (!threads_option.empty())
         {
-            requestedThreads = atoi(threads_option);
+            requestedThreads = atoi(threads_option.c_str());
         }
         enc->thread_count = requestedThreads;
     }
@@ -1128,9 +1120,8 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     ic->interrupt_callback.opaque = &interrupt_metadata;
 #endif
 
-#ifndef NO_GETENV
-    char* options = getenv("OPENCV_FFMPEG_CAPTURE_OPTIONS");
-    if(options == NULL)
+    std::string options = utils::getConfigurationParameterString("OPENCV_FFMPEG_CAPTURE_OPTIONS");
+    if(!options.empty())
     {
 #if LIBAVFORMAT_VERSION_MICRO >= 100  && LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(55, 48, 100)
         av_dict_set(&dict, "rtsp_flags", "prefer_tcp", 0);
@@ -1142,14 +1133,11 @@ bool CvCapture_FFMPEG::open(const char* _filename, const VideoCaptureParameters&
     {
         CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: using capture options from environment: " << options);
 #if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 ? CALC_FFMPEG_VERSION(52, 17, 100) : CALC_FFMPEG_VERSION(52, 7, 0))
-        av_dict_parse_string(&dict, options, ";", "|", 0);
+        av_dict_parse_string(&dict, options.c_str(), ";", "|", 0);
 #else
         av_dict_set(&dict, "rtsp_transport", "tcp", 0);
 #endif
     }
-#else
-    av_dict_set(&dict, "rtsp_transport", "tcp", 0);
-#endif
     CV_FFMPEG_FMT_CONST AVInputFormat* input_format = NULL;
     AVDictionaryEntry* entry = av_dict_get(dict, "input_format", NULL, 0);
     if (entry != 0)
@@ -1808,9 +1796,9 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
     case CAP_PROP_FRAME_COUNT:
         return (double)get_total_frames();
     case CAP_PROP_FRAME_WIDTH:
-        return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.height : frame.width);
+        return frame.width;
     case CAP_PROP_FRAME_HEIGHT:
-        return (double)((rotation_auto && ((rotation_angle%180) != 0)) ? frame.width : frame.height);
+        return frame.height;
     case CAP_PROP_FRAME_TYPE:
         return (double)av_get_picture_type_char(picture->pict_type);
     case CAP_PROP_FPS:
@@ -1852,12 +1840,6 @@ double CvCapture_FFMPEG::getProperty( int property_id ) const
         return static_cast<double>(get_bitrate());
     case CAP_PROP_ORIENTATION_META:
         return static_cast<double>(rotation_angle);
-    case CAP_PROP_ORIENTATION_AUTO:
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
-        return static_cast<double>(rotation_auto);
-#else
-        return 0;
-#endif
 #if USE_AV_HW_CODECS
     case CAP_PROP_HW_ACCELERATION:
         return static_cast<double>(va_type);
@@ -2077,14 +2059,6 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
     case CAP_PROP_CONVERT_RGB:
         convertRGB = (value != 0);
         return true;
-    case CAP_PROP_ORIENTATION_AUTO:
-#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(52, 94, 100)
-        rotation_auto = value != 0 ? true : false;
-        return true;
-#else
-        rotation_auto = false;
-        return false;
-#endif
     default:
         return false;
     }
@@ -3115,12 +3089,12 @@ bool CvVideoWriter_FFMPEG::open( const char * filename, int fourcc,
     }
 
     AVDictionary *dict = NULL;
-#if !defined(NO_GETENV) && (LIBAVUTIL_VERSION_MAJOR >= 53)
-    char* options = getenv("OPENCV_FFMPEG_WRITER_OPTIONS");
-    if (options)
+#if (LIBAVUTIL_VERSION_MAJOR >= 53)
+    std::string options = utils::getConfigurationParameterString("OPENCV_FFMPEG_WRITER_OPTIONS");
+    if (!options.empty())
     {
         CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: using writer options from environment: " << options);
-        av_dict_parse_string(&dict, options, ";", "|", 0);
+        av_dict_parse_string(&dict, options.c_str(), ";", "|", 0);
     }
 #endif
 
