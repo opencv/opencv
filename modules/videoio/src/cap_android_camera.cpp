@@ -277,7 +277,7 @@ public:
             return false;
         }
         if (colorFormat == COLOR_FormatYUV420Planar) {
-            Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
+            const Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
             switch (fourCC) {
                 case FOURCC_BGRA:
                     cvtColor(yuv, out, COLOR_YUV2BGRA_YV12);
@@ -299,33 +299,32 @@ public:
                     break;
                 default:
                     LOGE("Unexpected FOURCC value: %d", fourCC);
-                    break;
+                    return false;
             }
         } else if (colorFormat == COLOR_FormatYUV420SemiPlanar) {
-            Mat yuv(frameHeight + frameHeight/2, frameStride, CV_8UC1, buffer.data());
-            Mat tmp = (frameWidth == frameStride) ? yuv : yuv(Rect(0, 0, frameWidth, frameHeight + frameHeight / 2));
+            const Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data(), frameStride);
             switch (fourCC) {
                 case FOURCC_BGRA:
-                    cvtColor(tmp, out, COLOR_YUV2BGRA_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2BGRA_NV21);
                     break;
                 case FOURCC_RGBA:
-                    cvtColor(tmp, out, COLOR_YUV2RGBA_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2RGBA_NV21);
                     break;
                 case FOURCC_BGR:
-                    cvtColor(tmp, out, COLOR_YUV2BGR_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2BGR_NV21);
                     break;
                 case FOURCC_RGB:
-                    cvtColor(tmp, out, COLOR_YUV2RGB_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2RGB_NV21);
                     break;
                 case FOURCC_GRAY:
-                    cvtColor(tmp, out, COLOR_YUV2GRAY_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2GRAY_NV21);
                     break;
                 case FOURCC_NV21:
-                    tmp.copyTo(out);
+                    yuv.copyTo(out);
                     break;
                 default:
                     LOGE("Unexpected FOURCC value: %d", fourCC);
-                    break;
+                    return false;
             }
         } else {
             LOGE("Unsupported video format: %d", colorFormat);
