@@ -47,6 +47,7 @@
 
 #define FCV_KernelSize_SHIFT 3
 #define FCV_MAKETYPE(ksize,depth) ((ksize<<FCV_KernelSize_SHIFT) + depth)
+#define FCV_CMP_EQ(val1,val2) (fabs(val1 - val2) < FLT_EPSILON)
 
 const char* getFastCVErrorString(int status);
 const char* borderToString(int border);

@@ -56,85 +56,89 @@ class FcvSobelLoop_Invoker : public cv::ParallelLoopBody
 {
     public:
 
-    FcvSobelLoop_Invoker(const uchar* _src_data, size_t _src_step, uchar* _dst_data, size_t _dst_step, int _width,
-        int _height, int _src_depth, int _dst_depth, int _dx, int _dy, int _ksize, fcvBorderType _fcvBorder, int _fcvBorderValue) :
-        cv::ParallelLoopBody(), src_data(_src_data), src_step(_src_step), dst_data(_dst_data), dst_step(_dst_step), width(_width),
-        height(_height), src_depth(_src_depth), dst_depth(_dst_depth), dx(_dx), dy(_dy), ksize(_ksize), fcvBorder(_fcvBorder),
-        fcvBorderValue(_fcvBorderValue)
+    FcvSobelLoop_Invoker(const cv::Mat& _src, cv::Mat& _dst, int _dx, int _dy, int _ksize, fcvBorderType _fcvBorder,
+        int _fcvBorderValue) : cv::ParallelLoopBody(), src(_src), dst(_dst), dx(_dx), dy(_dy), ksize(_ksize),
+        fcvBorder(_fcvBorder), fcvBorderValue(_fcvBorderValue)
     {
-        half_ksize  = ksize/2;
-        fcvFuncType = FCV_MAKETYPE(ksize,src_depth);
+        width       = src.cols;
+        height      = src.rows;
+        halfKernelSize  = ksize/2;
+        fcvFuncType = FCV_MAKETYPE(ksize,src.depth());
     }
 
     virtual void operator()(const cv::Range& range) const CV_OVERRIDE
     {
-        int topLines    = 0;
-        int rangeHeight = range.end-range.start;
+        int topLines     = 0;
+        int rangeHeight  = range.end-range.start;
+        int paddedHeight = rangeHeight;
 
+        // Need additional lines to be border.
         if(range.start > 0)
         {
-            topLines    += half_ksize;
-            rangeHeight += half_ksize;
+            topLines     += halfKernelSize;
+            paddedHeight += halfKernelSize;
         }
 
         if(range.end < height)
         {
-            rangeHeight += half_ksize;
+            paddedHeight += halfKernelSize;
         }
 
-        const uchar* src = src_data + (range.start-topLines)*src_step;
+        cv::Mat srcPadded = src(cv::Rect(0, range.start-topLines, width, paddedHeight));
+        cv::Mat dstPadded = cv::Mat(paddedHeight, width, dst.depth());
 
-        std::vector<uchar> dst(dst_step * rangeHeight);
         int16_t *dxBuffer = nullptr, *dyBuffer = nullptr;
 
         if ((dx == 1) && (dy == 0))
         {
-            dxBuffer = (int16_t*)dst.data();
+            dxBuffer = (int16_t*)dstPadded.data;
         }
         else if ((dx == 0) && (dy == 1))
         {
-            dyBuffer = (int16_t*)dst.data();
+            dyBuffer = (int16_t*)dstPadded.data;
         }
 
         switch (fcvFuncType)
         {
             case FCV_MAKETYPE(3,CV_8U):
             {
-                fcvFilterSobel3x3u8s16(src, width, rangeHeight, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                fcvFilterSobel3x3u8s16(srcPadded.data, width, paddedHeight, srcPadded.step, dxBuffer, dyBuffer, dstPadded.step,
+                    fcvBorder, 0);
                 break;
             }
             case FCV_MAKETYPE(5,CV_8U):
             {
-                fcvFilterSobel5x5u8s16(src, width, rangeHeight, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                fcvFilterSobel5x5u8s16(srcPadded.data, width, paddedHeight, srcPadded.step, dxBuffer, dyBuffer, dstPadded.step,
+                    fcvBorder, 0);
                 break;
             }
             case FCV_MAKETYPE(7,CV_8U):
             {
-                fcvFilterSobel7x7u8s16(src, width, rangeHeight, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                fcvFilterSobel7x7u8s16(srcPadded.data, width, paddedHeight, srcPadded.step, dxBuffer, dyBuffer, dstPadded.step,
+                    fcvBorder, 0);
                 break;
             }
             default:
+                CV_Error(cv::Error::StsBadArg, cv::format("Ksize:%d, src_depth:%s is not supported",
+                    ksize, cv::depthToString(src.depth())));
                 break;
         }
 
-        uchar *dptr = dst_data + range.start * dst_step;
-        uchar *sptr = dst.data() + topLines * dst_step;
-        memcpy(dptr, sptr, (range.end - range.start) * dst_step);
+        // Only copy center part back to output image and ignore the padded lines
+        cv::Mat temp1 = dstPadded(cv::Rect(0, topLines, width, rangeHeight));
+        cv::Mat temp2 = dst(cv::Rect(0, range.start, width, rangeHeight));
+        temp1.copyTo(temp2);
     }
 
     private:
-    const uchar*    src_data;
-    size_t          src_step;
-    uchar*          dst_data;
-    size_t          dst_step;
+    const cv::Mat&  src;
+    cv::Mat&        dst;
     int             width;
     int             height;
-    int             src_depth;
-    int             dst_depth;
     int             dx;
     int             dy;
     int             ksize;
-    int             half_ksize;
+    int             halfKernelSize;
     int             fcvFuncType;
     fcvBorderType   fcvBorder;
     int             fcvBorderValue;
@@ -164,7 +168,7 @@ int fastcv_hal_sobel(
     double          delta,
     int             border_type)
 {
-    if (scale != 1.0f || delta != 0.0f)
+    if (!(FCV_CMP_EQ(scale, 1.0f) && FCV_CMP_EQ(delta, 0.0f)))
         CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Scale:%f, delta:%f is not supported", scale, delta));
 
     // Only support one direction derivatives and the order is 1.(dx=1 && dy=0)||(dx=0 && dy=1)
@@ -221,46 +225,50 @@ int fastcv_hal_sobel(
             CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Border type:%s is not supported", borderToString(border_type)));
     }
 
+    cv::Mat src = cv::Mat(height, width, CV_MAKE_TYPE(src_depth, 1), (void*)src_data, src_step);
+    cv::Mat dst = cv::Mat(height, width, CV_MAKE_TYPE(dst_depth, 1), (void*)dst_data, dst_step);
+
     if (margin_left||margin_top||margin_top||margin_bottom)
     {
-        int src_height = height, src_width = width, start_height = 0, start_width = 0;
+        // Need additional lines to be border.
+        int paddedHeight = height, paddedWidth = width, startX = 0, startY = 0;
 
         if(margin_left != 0)
         {
             src_data    -= ksize/2;
-            src_width   += ksize/2;
-            start_width =  ksize/2;
+            paddedWidth += ksize/2;
+            startX      =  ksize/2;
         }
 
         if(margin_top != 0)
         {
             src_data     -= (ksize/2) * src_step;
-            src_height   += ksize/2;
-            start_height =  ksize/2;
+            paddedHeight += ksize/2;
+            startY       =  ksize/2;
         }
 
         if(margin_right != 0)
         {
-            src_width += ksize/2;
+            paddedWidth += ksize/2;
         }
 
         if(margin_bottom != 0)
         {
-            src_height += ksize/2;
+            paddedHeight += ksize/2;
         }
 
-        std::vector<uchar> tmp(src_height * dst_step);
+        cv::Mat padded(paddedHeight, paddedWidth, src_depth);
         int16_t *dxBuffer = nullptr, *dyBuffer = nullptr;
 
         if ((dx == 1) && (dy == 0))
         {
-            dxBuffer = (int16_t*)tmp.data();
+            dxBuffer = (int16_t*)padded.data;
             dyBuffer = NULL;
         }
         else if ((dx == 0) && (dy == 1))
         {
             dxBuffer = NULL;
-            dyBuffer = (int16_t*)tmp.data();
+            dyBuffer = (int16_t*)padded.data;
         }
 
         int fcvFuncType = FCV_MAKETYPE(ksize, src_depth);
@@ -269,40 +277,37 @@ int fastcv_hal_sobel(
         {
             case FCV_MAKETYPE(3,CV_8U):
             {
-                status = fcvFilterSobel3x3u8s16(src_data, src_width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                status = fcvFilterSobel3x3u8s16(src_data, paddedWidth, paddedHeight, src_step, dxBuffer, dyBuffer, padded.step,
+                    fcvBorder, 0);
                 break;
             }
             case FCV_MAKETYPE(5,CV_8U):
             {
-                status = fcvFilterSobel5x5u8s16(src_data, src_width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                status = fcvFilterSobel5x5u8s16(src_data, paddedWidth, paddedHeight, src_step, dxBuffer, dyBuffer, padded.step,
+                    fcvBorder, 0);
                 break;
             }
             case FCV_MAKETYPE(7,CV_8U):
             {
-                status = fcvFilterSobel7x7u8s16(src_data, src_width, src_height, src_step, dxBuffer, dyBuffer, dst_step, fcvBorder, 0);
+                status = fcvFilterSobel7x7u8s16(src_data, paddedWidth, paddedHeight, src_step, dxBuffer, dyBuffer, padded.step,
+                    fcvBorder, 0);
                 break;
             }
             default:
+                CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Ksize:%d, src_depth:%s is not supported",
+                    ksize, cv::depthToString(src_depth)));
                 break;
         }
 
-        uchar* dptr = dst_data;
-        uchar* sptr = tmp.data() + start_height*dst_step + start_width;
-        for (int i = 0; i < height; ++i)
-        {
-            memcpy(dptr, sptr, width*sizeof(int16_t));
-            dptr += dst_step;
-            sptr += dst_step;
-        }
+        cv::Mat temp1 = padded(cv::Rect(startX, startY, width, height));
+        temp1.copyTo(dst);
     }
     else
     {
         int nThreads = cv::getNumThreads();
         int nStripes = nThreads > 1 ? 3*nThreads : 1;
 
-        cv::parallel_for_(cv::Range(0, height),
-                FcvSobelLoop_Invoker(src_data, src_step, dst_data, dst_step, width, height, src_depth, dst_depth, dx, dy, ksize,
-                fcvBorder, 0), nStripes);
+        cv::parallel_for_(cv::Range(0, height), FcvSobelLoop_Invoker(src, dst, dx, dy, ksize, fcvBorder, 0), nStripes);
     }
 
     CV_HAL_RETURN(status, hal_sobel);
@@ -461,54 +466,56 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
 {
     public:
 
-    FcvGaussianBlurLoop_Invoker(const uchar* _src_data, size_t _src_step, uchar* _dst_data, size_t _dst_step, int _width,
-        int _height, int _ksize, int _depth, fcvBorderType _fcvBorder, int _fcvBorderValue) :
-        cv::ParallelLoopBody(), src_data(_src_data), src_step(_src_step), dst_data(_dst_data), dst_step(_dst_step), width(_width),
-        height(_height), ksize(_ksize), depth(_depth), fcvBorder(_fcvBorder), fcvBorderValue(_fcvBorderValue)
+    FcvGaussianBlurLoop_Invoker(const cv::Mat& _src, cv::Mat& _dst, int _ksize, fcvBorderType _fcvBorder, int _fcvBorderValue) :
+        cv::ParallelLoopBody(), src(_src),dst(_dst), ksize(_ksize), fcvBorder(_fcvBorder), fcvBorderValue(_fcvBorderValue)
     {
-        half_ksize  = ksize/2;
-        fcvFuncType = FCV_MAKETYPE(ksize,depth);
+        width       = src.cols;
+        height      = src.rows;
+        halfKernelSize   = ksize / 2;
+        fcvFuncType = FCV_MAKETYPE(ksize, src.depth());
     }
 
     virtual void operator()(const cv::Range& range) const CV_OVERRIDE
     {
-        int topLines    = 0;
-        int rangeHeight = range.end-range.start;
+        int topLines     = 0;
+        int rangeHeight  = range.end-range.start;
+        int paddedHeight = rangeHeight;
 
+        // Need additional lines to be border.
         if(range.start != 0)
         {
-            topLines    += half_ksize;
-            rangeHeight += half_ksize;
+            topLines     += halfKernelSize;
+            paddedHeight += halfKernelSize;
         }
 
         if(range.end != height)
         {
-            rangeHeight += half_ksize;
+            paddedHeight += halfKernelSize;
         }
 
-        const uchar* src = src_data + (range.start-topLines)*src_step;
-        std::vector<uchar> dst(dst_step * rangeHeight);
+        const cv::Mat srcPadded = src(cv::Rect(0, range.start - topLines, width, paddedHeight));
+        cv::Mat dstPadded       = cv::Mat(paddedHeight, width, CV_8U);
 
         if (fcvFuncType == FCV_MAKETYPE(3,CV_8U))
-            fcvFilterGaussian3x3u8_v4(src, width, rangeHeight, src_step, dst.data(), dst_step, fcvBorder, 0);
+            fcvFilterGaussian3x3u8_v4(srcPadded.data, width, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
+                fcvBorder, 0);
         else if (fcvFuncType == FCV_MAKETYPE(5,CV_8U))
-            fcvFilterGaussian5x5u8_v3(src, width, rangeHeight, src_step, dst.data(), dst_step, fcvBorder, 0);
+            fcvFilterGaussian5x5u8_v3(srcPadded.data, width, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
+                fcvBorder, 0);
 
-        uchar *dptr = dst_data + range.start * dst_step;
-        uchar *sptr = dst.data() + topLines * dst_step;
-        memcpy(dptr, sptr, (range.end - range.start) * dst_step);
+        // Only copy center part back to output image and ignore the padded lines
+        cv::Mat temp1 = dstPadded(cv::Rect(0, topLines, width, rangeHeight));
+        cv::Mat temp2 = dst(cv::Rect(0, range.start, width, rangeHeight));
+        temp1.copyTo(temp2);
     }
 
     private:
-    const uchar*    src_data;
-    const size_t    src_step;
-    uchar*          dst_data;
-    const size_t    dst_step;
-    const int       width;
-    const int       height;
+    const cv::Mat&  src;
+    cv::Mat&        dst;
+    int             width;
+    int             height;
     const int       ksize;
-    const int       depth;
-    int             half_ksize;
+    int             halfKernelSize;
     int             fcvFuncType;
     fcvBorderType   fcvBorder;
     int             fcvBorderValue;
@@ -589,10 +596,12 @@ int fastcv_hal_gaussianBlurBinomial(
     {
         case FCV_MAKETYPE(3,CV_8U):
         case FCV_MAKETYPE(5,CV_8U):
-            cv::parallel_for_(cv::Range(0, height),
-                FcvGaussianBlurLoop_Invoker(src_data, src_step, dst_data, dst_step, width, height, ksize, depth, fcvBorder, 0),
-                nStripes);
+        {
+            cv::Mat src = cv::Mat(height, width, CV_8UC1, (void*)src_data, src_step);
+            cv::Mat dst = cv::Mat(height, width, CV_8UC1, (void*)dst_data, dst_step);
+            cv::parallel_for_(cv::Range(0, height), FcvGaussianBlurLoop_Invoker(src, dst, ksize, fcvBorder, 0), nStripes);
             break;
+        }
         default:
             CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Ksize:%d, depth:%s is not supported", (int)ksize, cv::depthToString(depth)));
     }
@@ -668,6 +677,10 @@ int fastcv_hal_warpPerspective(
     // Do not support inplace case
     if (src_data == dst_data)
         CV_HAL_RETURN_NOT_IMPLEMENTED("Inplace is not supported");
+
+    // The input channel should be 1
+    if (CV_MAT_CN(src_type) != 1)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Multi-channels is not supported");
 
     INITIALIZATION_CHECK;
 
