@@ -450,7 +450,7 @@ public:
             LOGE("Cannot create camera manager!");
             return false;
         }
-        ACameraIdList* cameraIds = nullptr;
+        ACameraIdList* cameraIds;
         camera_status_t cStatus = ACameraManager_getCameraIdList(cameraManager.get(), &cameraIds);
         if (cStatus != ACAMERA_OK) {
             LOGE("Get camera list failed with error code: %d", cStatus);
@@ -461,47 +461,28 @@ public:
             LOGE("Camera index out of range %d (Number of cameras: %d)", index, cameraIds->numCameras);
             return false;
         }
-        ACameraDevice* camera = nullptr;
-        cStatus = ACameraManager_openCamera(cameraManager.get(), cameraIdList.get()->cameraIds[index], &deviceCallbacks, &camera);
+        const char *cameraId = cameraIdList.get()->cameraIds[index];
+
+        ACameraDevice* camera;
+        cStatus = ACameraManager_openCamera(cameraManager.get(), cameraId, &deviceCallbacks, &camera);
         if (cStatus != ACAMERA_OK) {
             LOGE("Open camera failed with error code: %d", cStatus);
             return false;
         }
         cameraDevice.reset(camera);
+
         ACameraMetadata* metadata;
-        cStatus = ACameraManager_getCameraCharacteristics(cameraManager.get(), cameraIdList.get()->cameraIds[index], &metadata);
+        cStatus = ACameraManager_getCameraCharacteristics(cameraManager.get(), cameraId, &metadata);
         if (cStatus != ACAMERA_OK) {
             LOGE("Get camera characteristics failed with error code: %d", cStatus);
             return false;
         }
         AObjPtr<ACameraMetadata> cameraMetadata(metadata, ACameraMetadata_free);
 
-        ACameraMetadata_const_entry val;
-        cStatus = ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE, &val);
-        if (cStatus == ACAMERA_OK) {
-            exposureRange.min = exposureTimeLimits.clamp(val.data.i64[0]);
-            exposureRange.max = exposureTimeLimits.clamp(val.data.i64[1]);
-            exposureTime = exposureRange.value(2);
-        } else {
-            LOGW("Unsupported ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE");
-            exposureRange.min = exposureRange.max = 0;
-            exposureTime = 0;
-        }
-        cStatus = ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE, &val);
-        if (cStatus == ACAMERA_OK){
-            sensitivityRange.min = val.data.i32[0];
-            sensitivityRange.max = val.data.i32[1];
-            sensitivity = sensitivityRange.value(2);
-        } else {
-            LOGW("Unsupported ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE");
-            sensitivityRange.min = sensitivityRange.max = 0;
-            sensitivity = 0;
-        }
+        getPropertyRanges(cameraMetadata.get());
 
-        ACameraMetadata_const_entry entry = {};
-        ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
         int32_t bestMatchWidth = 0, bestMatchHeight = 0;
-        findResolutionMatch(entry, bestMatchWidth, bestMatchHeight);
+        findResolutionMatch(cameraMetadata.get(), bestMatchWidth, bestMatchHeight);
         LOGI("Best resolution match: %dx%d", bestMatchWidth, bestMatchHeight);
 
         AImageReader* reader;
@@ -593,6 +574,34 @@ public:
     }
 
 private:
+    void getPropertyRanges(const ACameraMetadata* metadata)
+    {
+        camera_status_t cStatus;
+        ACameraMetadata_const_entry val;
+
+        cStatus = ACameraMetadata_getConstEntry(metadata, ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE, &val);
+        if (cStatus == ACAMERA_OK) {
+            exposureRange.min = exposureTimeLimits.clamp(val.data.i64[0]);
+            exposureRange.max = exposureTimeLimits.clamp(val.data.i64[1]);
+            exposureTime = exposureRange.value(2);
+        } else {
+            LOGW("Unsupported ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE");
+            exposureRange.min = exposureRange.max = 0;
+            exposureTime = 0;
+        }
+
+        cStatus = ACameraMetadata_getConstEntry(metadata, ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE, &val);
+        if (cStatus == ACAMERA_OK){
+            sensitivityRange.min = val.data.i32[0];
+            sensitivityRange.max = val.data.i32[1];
+            sensitivity = sensitivityRange.value(2);
+        } else {
+            LOGW("Unsupported ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE");
+            sensitivityRange.min = sensitivityRange.max = 0;
+            sensitivity = 0;
+        }
+    }
+
     // calculate a score based on how well the width and height match the desired width and height
     // basically draw the 2 rectangle on top of each other and take the ratio of the non-overlapping
     // area to the overlapping area
@@ -609,10 +618,12 @@ private:
         }
     }
 
-    void findResolutionMatch(const ACameraMetadata_const_entry &entry,
+    void findResolutionMatch(const ACameraMetadata* metadata,
                              int32_t &bestMatchWidth, int32_t &bestMatchHeight) const {
-        double bestScore = std::numeric_limits<double>::max();
+        ACameraMetadata_const_entry entry = {};
+        ACameraMetadata_getConstEntry(metadata, ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
 
+        double bestScore = std::numeric_limits<double>::max();
         for (uint32_t i = 0; i < entry.count; i += 4) {
             int32_t input = entry.data.i32[i + 3];
             int32_t format = entry.data.i32[i + 0];
