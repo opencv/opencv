@@ -158,7 +158,7 @@ public:
         float* psamples = samples.ptr<float>();
         size_t sstep0 = samples.step1(), sstep1 = 1;
         Mat sample0, sample(nallvars, 1, CV_32F, &samplebuf[0]);
-        int predictFlags = _isClassifier ? (PREDICT_MAX_VOTE + RAW_OUTPUT) : PREDICT_SUM;
+        int predictFlags = _isClassifier ? (+PREDICT_MAX_VOTE + RAW_OUTPUT) : PREDICT_SUM;
 
         bool calcOOBError = eps > 0 || rparams.calcVarImportance;
         double max_response = 0.;
