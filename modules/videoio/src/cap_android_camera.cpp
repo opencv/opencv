@@ -59,61 +59,12 @@ template <typename T> struct RangeValue {
 template <typename T>
 using AObjPtr = std::unique_ptr<T, std::function<void(T *)>>;
 
-/*
- * CameraDevice callbacks
- */
-static void OnDeviceDisconnect(void* /* ctx */, ACameraDevice* dev) {
-    std::string id(ACameraDevice_getId(dev));
-    LOGW("Device %s disconnected", id.c_str());
-}
-
-static void OnDeviceError(void* /* ctx */, ACameraDevice* dev, int err) {
-    std::string id(ACameraDevice_getId(dev));
-    LOGI("Camera Device Error: %#x, Device %s", err, id.c_str());
-
-    switch (err) {
-        case ERROR_CAMERA_IN_USE:
-            LOGI("Camera in use");
-            break;
-        case ERROR_CAMERA_SERVICE:
-            LOGI("Fatal Error occurred in Camera Service");
-            break;
-        case ERROR_CAMERA_DEVICE:
-            LOGI("Fatal Error occurred in Camera Device");
-            break;
-        case ERROR_CAMERA_DISABLED:
-            LOGI("Camera disabled");
-            break;
-        case ERROR_MAX_CAMERAS_IN_USE:
-            LOGI("System limit for maximum concurrent cameras used was exceeded");
-            break;
-        default:
-            LOGI("Unknown Camera Device Error: %#x", err);
-    }
-}
-
 enum class CaptureSessionState {
     INITIALIZING,  // session is ready
     READY,         // session is ready
     ACTIVE,        // session is busy
     CLOSED         // session was closed
 };
-
-void OnSessionClosed(void* context, ACameraCaptureSession* session);
-
-void OnSessionReady(void* context, ACameraCaptureSession* session);
-
-void OnSessionActive(void* context, ACameraCaptureSession* session);
-
-void OnCaptureCompleted(void* context,
-                        ACameraCaptureSession* session,
-                        ACaptureRequest* request,
-                        const ACameraMetadata* result);
-
-void OnCaptureFailed(void* context,
-                     ACameraCaptureSession* session,
-                     ACaptureRequest* request,
-                     ACameraCaptureFailure* failure);
 
 #define CAPTURE_TIMEOUT_SECONDS 2
 #define CAPTURE_POLL_INTERVAL_MS 5
@@ -163,7 +114,24 @@ class AndroidCameraCapture : public IVideoCapture
     int32_t sensitivity = 0;
     RangeValue<int32_t> sensitivityRange;
 
-public:
+    ACameraDevice_stateCallbacks deviceCallbacks = {};
+    ACameraCaptureSession_stateCallbacks sessionCallbacks = {};
+    ACameraCaptureSession_captureCallbacks captureCallbacks = {};
+
+    static void OnDeviceDisconnect(void* ctx, ACameraDevice* dev);
+    static void OnDeviceError(void* ctx, ACameraDevice* dev, int err);
+    static void OnSessionClosed(void* context, ACameraCaptureSession* session);
+    static void OnSessionReady(void* context, ACameraCaptureSession* session);
+    static void OnSessionActive(void* context, ACameraCaptureSession* session);
+    static void OnCaptureCompleted(void* context,
+                                   ACameraCaptureSession* session,
+                                   ACaptureRequest* request,
+                                   const ACameraMetadata* result);
+    static void OnCaptureFailed(void* context,
+                                ACameraCaptureSession* session,
+                                ACaptureRequest* request,
+                                ACameraCaptureFailure* failure);
+
     // for synchronization with NDK capture callback
     bool waitingCapture = false;
     bool captureSuccess = false;
@@ -173,6 +141,19 @@ public:
 public:
     AndroidCameraCapture(const VideoCaptureParameters& params)
     {
+        deviceCallbacks.context = this;
+        deviceCallbacks.onError = OnDeviceError;
+        deviceCallbacks.onDisconnected = OnDeviceDisconnect,
+
+        sessionCallbacks.context = this;
+        sessionCallbacks.onReady = OnSessionReady;
+        sessionCallbacks.onActive = OnSessionActive;
+        sessionCallbacks.onClosed = OnSessionClosed;
+
+        captureCallbacks.context = this;
+        captureCallbacks.onCaptureCompleted = OnCaptureCompleted;
+        captureCallbacks.onCaptureFailed = OnCaptureFailed;
+
         desiredWidth = params.get<int>(CAP_PROP_FRAME_WIDTH, desiredWidth);
         desiredHeight = params.get<int>(CAP_PROP_FRAME_HEIGHT, desiredHeight);
 
@@ -191,46 +172,6 @@ public:
     }
 
     ~AndroidCameraCapture() { cleanUp(); }
-
-    ACameraDevice_stateCallbacks* GetDeviceListener() {
-        static ACameraDevice_stateCallbacks cameraDeviceListener = {
-            .onDisconnected = ::OnDeviceDisconnect,
-            .onError = ::OnDeviceError,
-        };
-        return &cameraDeviceListener;
-    }
-
-    ACameraCaptureSession_stateCallbacks sessionListener;
-
-    ACameraCaptureSession_stateCallbacks* GetSessionListener() {
-        sessionListener = {
-            .context = this,
-            .onClosed = ::OnSessionClosed,
-            .onReady = ::OnSessionReady,
-            .onActive = ::OnSessionActive,
-        };
-        return &sessionListener;
-    }
-
-    ACameraCaptureSession_captureCallbacks captureListener;
-
-    ACameraCaptureSession_captureCallbacks* GetCaptureCallback() {
-        captureListener = {
-            .context = this,
-            .onCaptureStarted = nullptr,
-            .onCaptureProgressed = nullptr,
-            .onCaptureCompleted = ::OnCaptureCompleted,
-            .onCaptureFailed = ::OnCaptureFailed,
-            .onCaptureSequenceCompleted = nullptr,
-            .onCaptureSequenceAborted = nullptr,
-            .onCaptureBufferLost = nullptr,
-        };
-        return &captureListener;
-    }
-
-    void setSessionState(CaptureSessionState newSessionState) {
-        this->sessionState = newSessionState;
-    }
 
     bool isOpened() const CV_OVERRIDE { return imageReader && captureSession; }
 
@@ -542,7 +483,7 @@ public:
             return false;
         }
         ACameraDevice* camera = nullptr;
-        cStatus = ACameraManager_openCamera(cameraManager.get(), cameraIdList.get()->cameraIds[index], GetDeviceListener(), &camera);
+        cStatus = ACameraManager_openCamera(cameraManager.get(), cameraIdList.get()->cameraIds[index], &deviceCallbacks, &camera);
         if (cStatus != ACAMERA_OK) {
             LOGE("Open camera failed with error code: %d", cStatus);
             return false;
@@ -676,7 +617,7 @@ public:
         targetAdded = true;
 
         ACameraCaptureSession *session;
-        cStatus = ACameraDevice_createCaptureSession(cameraDevice.get(), outputContainer.get(), GetSessionListener(), &session);
+        cStatus = ACameraDevice_createCaptureSession(cameraDevice.get(), outputContainer.get(), &sessionCallbacks, &session);
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureSession creation failed with error code: %d", cStatus);
             return false;
@@ -690,7 +631,7 @@ public:
         }
         ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_FLASH_MODE, 1, &flashMode);
 
-        cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(), GetCaptureCallback(), 1, &request, nullptr);
+        cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(), &captureCallbacks, 1, &request, nullptr);
         if (cStatus != ACAMERA_OK) {
             LOGE("CameraCaptureSession set repeating request failed with error code: %d", cStatus);
             return false;
@@ -699,8 +640,6 @@ public:
     }
 
     void cleanUp() {
-        captureListener.context = nullptr;
-        sessionListener.context = nullptr;
         if (sessionState == CaptureSessionState::ACTIVE) {
             ACameraCaptureSession_stopRepeating(captureSession.get());
         }
@@ -731,38 +670,70 @@ public:
         return request &&
                setFn(request, tag, 1, &data) == ACAMERA_OK &&
                ACameraCaptureSession_setRepeatingRequest(captureSession.get(),
-                                                         GetCaptureCallback(),
+                                                         &captureCallbacks,
                                                          1, &request, nullptr) == ACAMERA_OK;
     }
 };
 
+/********************************  Device management  *******************************/
+
+void AndroidCameraCapture::OnDeviceDisconnect(void* /* ctx */, ACameraDevice* dev) {
+    const char *id = ACameraDevice_getId(dev);
+    LOGW("Device %s disconnected", id ? id : "<null>");
+}
+
+void AndroidCameraCapture::OnDeviceError(void* /* ctx */, ACameraDevice* dev, int err) {
+    const char *id = ACameraDevice_getId(dev);
+    LOGI("Camera Device Error: %#x, Device %s", err, id ? id : "<null>");
+
+    switch (err) {
+        case ERROR_CAMERA_IN_USE:
+            LOGI("Camera in use");
+            break;
+        case ERROR_CAMERA_SERVICE:
+            LOGI("Fatal Error occurred in Camera Service");
+            break;
+        case ERROR_CAMERA_DEVICE:
+            LOGI("Fatal Error occurred in Camera Device");
+            break;
+        case ERROR_CAMERA_DISABLED:
+            LOGI("Camera disabled");
+            break;
+        case ERROR_MAX_CAMERAS_IN_USE:
+            LOGI("System limit for maximum concurrent cameras used was exceeded");
+            break;
+        default:
+            LOGI("Unknown Camera Device Error: %#x", err);
+    }
+}
+
 /********************************  Session management  *******************************/
 
-void OnSessionClosed(void* context, ACameraCaptureSession* session) {
+void AndroidCameraCapture::OnSessionClosed(void* context, ACameraCaptureSession* session) {
     if (context == nullptr) return;
     LOGW("session %p closed", session);
-    reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::CLOSED);
+    static_cast<AndroidCameraCapture*>(context)->sessionState = CaptureSessionState::CLOSED;
 }
 
-void OnSessionReady(void* context, ACameraCaptureSession* session) {
+void AndroidCameraCapture::OnSessionReady(void* context, ACameraCaptureSession* session) {
     if (context == nullptr) return;
     LOGW("session %p ready", session);
-    reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::READY);
+    static_cast<AndroidCameraCapture*>(context)->sessionState = CaptureSessionState::READY;
 }
 
-void OnSessionActive(void* context, ACameraCaptureSession* session) {
+void AndroidCameraCapture::OnSessionActive(void* context, ACameraCaptureSession* session) {
     if (context == nullptr) return;
     LOGW("session %p active", session);
-    reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::ACTIVE);
+    static_cast<AndroidCameraCapture*>(context)->sessionState = CaptureSessionState::ACTIVE;
 }
 
-void OnCaptureCompleted(void* context,
-                        ACameraCaptureSession* session,
-                        ACaptureRequest* /* request */,
-                        const ACameraMetadata* /* result */) {
+void AndroidCameraCapture::OnCaptureCompleted(void* context,
+                                              ACameraCaptureSession* session,
+                                              ACaptureRequest* /* request */,
+                                              const ACameraMetadata* /* result */) {
     if (context == nullptr) return;
     LOGV("session %p capture completed", session);
-    AndroidCameraCapture* cameraCapture = reinterpret_cast<AndroidCameraCapture*>(context);
+    AndroidCameraCapture* cameraCapture = static_cast<AndroidCameraCapture*>(context);
     std::unique_lock<std::mutex> lock(cameraCapture->mtx);
 
     if (cameraCapture->waitingCapture) {
@@ -772,13 +743,13 @@ void OnCaptureCompleted(void* context,
     }
 }
 
-void OnCaptureFailed(void* context,
-                     ACameraCaptureSession* session,
-                     ACaptureRequest* /* request */,
-                     ACameraCaptureFailure* /* failure */) {
+void AndroidCameraCapture::OnCaptureFailed(void* context,
+                                           ACameraCaptureSession* session,
+                                           ACaptureRequest* /* request */,
+                                           ACameraCaptureFailure* /* failure */) {
     if (context == nullptr) return;
     LOGV("session %p capture failed", session);
-    AndroidCameraCapture* cameraCapture = reinterpret_cast<AndroidCameraCapture*>(context);
+    AndroidCameraCapture* cameraCapture = static_cast<AndroidCameraCapture*>(context);
     std::unique_lock<std::mutex> lock(cameraCapture->mtx);
 
     if (cameraCapture->waitingCapture) {
