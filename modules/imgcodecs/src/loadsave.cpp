@@ -699,6 +699,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
 
     /// if no decoder was found, return false.
     if (!decoder) {
+        CV_LOG_WARNING(NULL, "Decoder for " << filename << " not found!\n");
         return false;
     }
 
@@ -945,7 +946,7 @@ static bool imwriteanimation_(const String& filename, const Animation& animation
             {
                 if (errno == EACCES)
                 {
-                    CV_LOG_WARNING(NULL, "imwriteanimation_('" << filename << "'): can't open file for writing: permission denied");
+                    CV_LOG_ERROR(NULL, "imwriteanimation_('" << filename << "'): can't open file for writing: permission denied");
                 }
             }
             else

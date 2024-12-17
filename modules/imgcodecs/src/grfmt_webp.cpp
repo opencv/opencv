@@ -411,7 +411,7 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
     if (!WebPAnimEncoderOptionsInit(&anim_config) ||
         !WebPConfigInit(&config) ||
         !WebPPictureInit(&pic)) {
-        fprintf(stderr, "Library version mismatch!\n");
+        CV_LOG_ERROR(NULL, "Library version mismatch!\n");
         WebPDataClear(&webp_data);
         return false;
     }

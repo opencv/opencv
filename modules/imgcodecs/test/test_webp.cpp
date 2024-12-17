@@ -179,10 +179,10 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
     string output = cv::tempfile(".webp");
 
     // Write the animation to a .webp file and verify success.
-    EXPECT_EQ(true, imwriteanimation(output, s_animation));
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
 
     // Read the animation back and compare with the original.
-    EXPECT_EQ(true, imreadanimation(output, l_animation));
+    EXPECT_TRUE(imreadanimation(output, l_animation));
 
     // Since the last frames are identical, WebP optimizes by storing only one of them,
     // and the duration for the last frame is handled by libwebp.
@@ -200,16 +200,16 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
     for (size_t i = 1; i < l_animation.frames.size() - 1; i++)
         EXPECT_EQ(s_animation.timestamps[i], l_animation.timestamps[i]);
 
-    EXPECT_EQ(true, imreadanimation(output, l_animation, 5, 3));
+    EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count + 3);
     EXPECT_EQ(l_animation.frames.size(), l_animation.timestamps.size());
-    EXPECT_TRUE(cvtest::norm(l_animation.frames[5], l_animation.frames[14], NORM_INF) == 0);
-    EXPECT_TRUE(cvtest::norm(l_animation.frames[6], l_animation.frames[15], NORM_INF) == 0);
-    EXPECT_TRUE(cvtest::norm(l_animation.frames[7], l_animation.frames[16], NORM_INF) == 0);
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[5], l_animation.frames[14], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[6], l_animation.frames[15], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[7], l_animation.frames[16], NORM_INF));
 
     // Verify whether the imread function successfully loads the first frame
     Mat frame = imread(output, IMREAD_UNCHANGED);
-    EXPECT_TRUE(cvtest::norm(l_animation.frames[0], frame, NORM_INF) == 0);
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[0], frame, NORM_INF));
 
     std::vector<uchar> buf;
     vector<Mat> webp_frames;
@@ -229,30 +229,27 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
             fclose(wfile);
         }
 
-        if (data_size != wfile_size)
-        {
-            EXPECT_TRUE(false);
-        }
+        EXPECT_EQ(data_size, wfile_size);
     }
-    EXPECT_EQ(true, imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
-    EXPECT_EQ(webp_frames.size(), expected_frame_count);
+    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
+    EXPECT_EQ(expected_frame_count, webp_frames.size());
 
     webp_frames.clear();
     // Test saving the animation frames as individual still images.
-    EXPECT_EQ(true, imwrite(output, s_animation.frames));
+    EXPECT_TRUE(imwrite(output, s_animation.frames));
 
     // Read back the still images into a vector of Mats.
-    EXPECT_EQ(true, imreadmulti(output, webp_frames));
+    EXPECT_TRUE(imreadmulti(output, webp_frames));
 
     // Expect only one frame since it's saved as a still image.
     expected_frame_count = 1;
-    EXPECT_EQ(webp_frames.size(), expected_frame_count);
+    EXPECT_EQ(expected_frame_count, webp_frames.size());
 
     // Test encoding and decoding the images in memory (without saving to disk).
     webp_frames.clear();
-    EXPECT_EQ(true, imencode(".webp", s_animation.frames, buf));
-    EXPECT_EQ(true, imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
-    EXPECT_EQ(webp_frames.size(), expected_frame_count);
+    EXPECT_TRUE(imencode(".webp", s_animation.frames, buf));
+    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
+    EXPECT_EQ(expected_frame_count, webp_frames.size());
 
     // Clean up by removing the temporary file.
     EXPECT_EQ(0, remove(output.c_str()));
