@@ -398,29 +398,29 @@ int fastcv_hal_mul8u(
 {
     int8_t sF;
 
-    if(scale >= 1.0)
+    if(FCV_CMP_EQ(scale,1.0))              { sF =  0; }
+    else if(scale > 1.0)                    
     {
-        if(scale == 1.0)        { sF =  0; }
-        else if(scale == 2.0)   { sF = -1; }
-        else if(scale == 4.0)   { sF = -2; }
-        else if(scale == 8.0)   { sF = -3; }
-        else if(scale == 16.0)  { sF = -4; }
-        else if(scale == 32.0)  { sF = -5; }
-        else if(scale == 64.0)  { sF = -6; }
-        else if(scale == 128.0) { sF = -7; }
-        else if(scale == 256.0) { sF = -8; }
+        if(FCV_CMP_EQ(scale,2.0))          { sF = -1; }
+        else if(FCV_CMP_EQ(scale,4.0))     { sF = -2; }
+        else if(FCV_CMP_EQ(scale,8.0))     { sF = -3; }
+        else if(FCV_CMP_EQ(scale,16.0))    { sF = -4; }
+        else if(FCV_CMP_EQ(scale,32.0))    { sF = -5; }
+        else if(FCV_CMP_EQ(scale,64.0))    { sF = -6; }
+        else if(FCV_CMP_EQ(scale,128.0))   { sF = -7; }
+        else if(FCV_CMP_EQ(scale,256.0))   { sF = -8; }
         else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
     }
     else if(scale > 0 && scale < 1.0)
     {
-        if(scale == 1/2.0)        { sF = 1; }
-        else if(scale == 1/4.0)   { sF = 2; }
-        else if(scale == 1/8.0)   { sF = 3; }
-        else if(scale == 1/16.0)  { sF = 4; }
-        else if(scale == 1/32.0)  { sF = 5; }
-        else if(scale == 1/64.0)  { sF = 6; }
-        else if(scale == 1/128.0) { sF = 7; }
-        else if(scale == 1/256.0) { sF = 8; }
+        if(FCV_CMP_EQ(scale,1/2.0))        { sF = 1;  }
+        else if(FCV_CMP_EQ(scale,1/4.0))   { sF = 2;  }
+        else if(FCV_CMP_EQ(scale,1/8.0))   { sF = 3;  }
+        else if(FCV_CMP_EQ(scale,1/16.0))  { sF = 4;  }
+        else if(FCV_CMP_EQ(scale,1/32.0))  { sF = 5;  }
+        else if(FCV_CMP_EQ(scale,1/64.0))  { sF = 6;  }
+        else if(FCV_CMP_EQ(scale,1/128.0)) { sF = 7;  }
+        else if(FCV_CMP_EQ(scale,1/256.0)) { sF = 8;  }
         else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
     }
     else
@@ -470,29 +470,29 @@ int fastcv_hal_mul16s(
 {
     int8_t sF;
 
-    if(scale >= 1.0)
+    if(FCV_CMP_EQ(scale,1.0))              { sF =  0; }
+    else if(scale > 1.0)                    
     {
-        if(scale == 1.0)        { sF =  0; }
-        else if(scale == 2.0)   { sF = -1; }
-        else if(scale == 4.0)   { sF = -2; }
-        else if(scale == 8.0)   { sF = -3; }
-        else if(scale == 16.0)  { sF = -4; }
-        else if(scale == 32.0)  { sF = -5; }
-        else if(scale == 64.0)  { sF = -6; }
-        else if(scale == 128.0) { sF = -7; }
-        else if(scale == 256.0) { sF = -8; }
+        if(FCV_CMP_EQ(scale,2.0))          { sF = -1; }
+        else if(FCV_CMP_EQ(scale,4.0))     { sF = -2; }
+        else if(FCV_CMP_EQ(scale,8.0))     { sF = -3; }
+        else if(FCV_CMP_EQ(scale,16.0))    { sF = -4; }
+        else if(FCV_CMP_EQ(scale,32.0))    { sF = -5; }
+        else if(FCV_CMP_EQ(scale,64.0))    { sF = -6; }
+        else if(FCV_CMP_EQ(scale,128.0))   { sF = -7; }
+        else if(FCV_CMP_EQ(scale,256.0))   { sF = -8; }
         else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
     }
     else if(scale > 0 && scale < 1.0)
     {
-        if(scale == 1/2.0)        { sF = 1; }
-        else if(scale == 1/4.0)   { sF = 2; }
-        else if(scale == 1/8.0)   { sF = 3; }
-        else if(scale == 1/16.0)  { sF = 4; }
-        else if(scale == 1/32.0)  { sF = 5; }
-        else if(scale == 1/64.0)  { sF = 6; }
-        else if(scale == 1/128.0) { sF = 7; }
-        else if(scale == 1/256.0) { sF = 8; }
+        if(FCV_CMP_EQ(scale,1/2.0))        { sF = 1;  }
+        else if(FCV_CMP_EQ(scale,1/4.0))   { sF = 2;  }
+        else if(FCV_CMP_EQ(scale,1/8.0))   { sF = 3;  }
+        else if(FCV_CMP_EQ(scale,1/16.0))  { sF = 4;  }
+        else if(FCV_CMP_EQ(scale,1/32.0))  { sF = 5;  }
+        else if(FCV_CMP_EQ(scale,1/64.0))  { sF = 6;  }
+        else if(FCV_CMP_EQ(scale,1/128.0)) { sF = 7;  }
+        else if(FCV_CMP_EQ(scale,1/256.0)) { sF = 8;  }
         else CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
     }
     else
@@ -540,7 +540,7 @@ int fastcv_hal_mul32f(
     int             height,
     double          scale)
 {
-    if(scale != 1.0)
+    if(!FCV_CMP_EQ(scale,1.0))
         CV_HAL_RETURN_NOT_IMPLEMENTED("scale factor not supported");
 
     INITIALIZATION_CHECK;
