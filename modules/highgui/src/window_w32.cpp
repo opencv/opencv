@@ -2805,7 +2805,7 @@ public:
         switch ((WindowPropertyFlags)prop)
         {
         case WND_PROP_FULLSCREEN:
-            if (value != WINDOW_NORMAL && value != WINDOW_FULLSCREEN)  // bad arg
+            if ((int)value != WINDOW_NORMAL && (int)value != WINDOW_FULLSCREEN)  // bad arg
                 break;
             setModeWindow_(window, (int)value);
             return true;

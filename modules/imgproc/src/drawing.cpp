@@ -43,7 +43,6 @@ using namespace cv;
 
 namespace cv
 {
-
 enum { XY_SHIFT = 16, XY_ONE = 1 << XY_SHIFT, DRAWING_STORAGE_BLOCK = (1<<12) - 256 };
 
 static const int MAX_THICKNESS = 32767;
@@ -1027,8 +1026,8 @@ EllipseEx( Mat& img, Point2l center, Size2l axes,
     for (unsigned int i = 0; i < _v.size(); ++i)
     {
         Point2l pt;
-        pt.x = (int64)cvRound(_v[i].x / XY_ONE) << XY_SHIFT;
-        pt.y = (int64)cvRound(_v[i].y / XY_ONE) << XY_SHIFT;
+        pt.x = (int64)cvRound(_v[i].x / static_cast<double>(XY_ONE)) << XY_SHIFT;
+        pt.y = (int64)cvRound(_v[i].y / static_cast<double>(XY_ONE)) << XY_SHIFT;
         pt.x += cvRound(_v[i].x - pt.x);
         pt.y += cvRound(_v[i].y - pt.y);
         if (pt != prevPt) {
@@ -1645,7 +1644,7 @@ static void
 ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
            int thickness, int line_type, int flags, int shift )
 {
-    static const double INV_XY_ONE = 1./XY_ONE;
+    static const double INV_XY_ONE = 1./static_cast<double>(XY_ONE);
 
     p0.x <<= XY_SHIFT - shift;
     p0.y <<= XY_SHIFT - shift;
@@ -1981,8 +1980,8 @@ void ellipse(InputOutputArray _img, const RotatedRect& box, const Scalar& color,
     int _angle = cvRound(box.angle);
     Point2l center(cvRound(box.center.x),
                  cvRound(box.center.y));
-    center.x = (center.x << XY_SHIFT) + cvRound((box.center.x - center.x)*XY_ONE);
-    center.y = (center.y << XY_SHIFT) + cvRound((box.center.y - center.y)*XY_ONE);
+    center.x = (center.x << XY_SHIFT) + cvRound((box.center.x - center.x)*static_cast<float>(XY_ONE));
+    center.y = (center.y << XY_SHIFT) + cvRound((box.center.y - center.y)*static_cast<float>(XY_ONE));
     Size2l axes(cvRound(box.size.width),
               cvRound(box.size.height));
     axes.width  = (axes.width  << (XY_SHIFT - 1)) + cvRound((box.size.width - axes.width)*(XY_ONE>>1));
@@ -2303,7 +2302,7 @@ void putText( InputOutputArray _img, const String& text, Point org,
     scalarToRawData(color, buf, img.type(), 0);
 
     int base_line = -(ascii[0] & 15);
-    int hscale = cvRound(fontScale*XY_ONE), vscale = hscale;
+    int hscale = cvRound(fontScale * static_cast<double>(XY_ONE)), vscale = hscale;
 
     if( line_type == cv::LINE_AA && img.depth() != CV_8U )
         line_type = 8;
