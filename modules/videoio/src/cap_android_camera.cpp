@@ -109,6 +109,8 @@ class AndroidCameraCapture : public IVideoCapture
     RangeValue<int64_t> exposureRange;
     int32_t sensitivity = 0;
     RangeValue<int32_t> sensitivityRange;
+    float zoomRatio = 1.0f;
+    RangeValue<float> zoomRange;
 
     ACameraDevice_stateCallbacks deviceCallbacks = {};
     ACameraCaptureSession_stateCallbacks sessionCallbacks = {};
@@ -350,6 +352,8 @@ public:
                 return fourCC;
             case CAP_PROP_ANDROID_DEVICE_TORCH:
                 return (flashMode == ACAMERA_FLASH_MODE_TORCH) ? 1 : 0;
+            case CAP_PROP_ZOOM:
+                return zoomRange.isValid() ? zoomRatio : -1;
             default:
                 break;
         }
@@ -426,6 +430,12 @@ public:
                     return submitRequest(ACaptureRequest_setEntry_i32, ACAMERA_SENSOR_SENSITIVITY, sensitivity);
                 }
                 return false;
+            case CAP_PROP_ZOOM:
+                if (isOpened() && zoomRange.isValid()) {
+                    zoomRatio = zoomRange.clamp(static_cast<float>(value));
+                    return submitRequest(ACaptureRequest_setEntry_float, ACAMERA_CONTROL_ZOOM_RATIO, zoomRatio);
+                }
+                return true;
             case CAP_PROP_ANDROID_DEVICE_TORCH:
                 flashMode = (value != 0) ? ACAMERA_FLASH_MODE_TORCH : ACAMERA_FLASH_MODE_OFF;
                 if (isOpened()) {
@@ -560,6 +570,9 @@ public:
             ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
             ACaptureRequest_setEntry_i64(captureRequest.get(), ACAMERA_SENSOR_EXPOSURE_TIME, 1, &exposureTime);
         }
+        if (zoomRange.isValid()) {
+            ACaptureRequest_setEntry_float(captureRequest.get(), ACAMERA_CONTROL_ZOOM_RATIO, 1, &zoomRatio);
+        }
         ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_FLASH_MODE, 1, &flashMode);
 
         cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(),
@@ -597,6 +610,17 @@ private:
             LOGW("Unsupported ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE");
             sensitivityRange.min = sensitivityRange.max = 0;
             sensitivity = 0;
+        }
+
+        cStatus = ACameraMetadata_getConstEntry(metadata, ACAMERA_CONTROL_ZOOM_RATIO_RANGE, &val);
+        if (cStatus == ACAMERA_OK){
+            zoomRange.min = val.data.f[0];
+            zoomRange.max = val.data.f[1];
+            zoomRatio = zoomRange.clamp(zoomRatio);
+        } else {
+            LOGW("Unsupported ACAMERA_CONTROL_ZOOM_RATIO_RANGE");
+            zoomRange.min = zoomRange.max = 0;
+            zoomRatio = 1.0f;
         }
     }
 
