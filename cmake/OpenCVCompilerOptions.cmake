@@ -191,11 +191,6 @@ if(CV_GCC OR CV_CLANG OR CV_ICX)
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
 
-  # The -Wno-long-long is required in 64bit systems when including system headers.
-  if(X86_64)
-    add_extra_compiler_option(-Wno-long-long)
-  endif()
-
   # We need pthread's, unless we have explicitly disabled multi-thread execution.
   if(NOT OPENCV_DISABLE_THREAD_SUPPORT
       AND (
