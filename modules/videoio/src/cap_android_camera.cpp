@@ -100,10 +100,9 @@ class AndroidCameraCapture : public IVideoCapture
     bool targetAdded = false;
     // properties
     uint32_t fourCC = FOURCC_UNKNOWN;
-    bool settingWidth = false;
-    bool settingHeight = false;
-    int desiredWidth = 640;
-    int desiredHeight = 480;
+    int32_t desiredWidth = 640;
+    int32_t desiredHeight = 480;
+    enum SetupState { setupDone = 0, setupWidth = 0x01, setupHeight = 0x02 } widthHeightState = setupDone;
     uint8_t flashMode = ACAMERA_FLASH_MODE_OFF;
     uint8_t aeMode = ACAMERA_CONTROL_AE_MODE_ON;
     int64_t exposureTime = 0;
@@ -151,8 +150,8 @@ public:
         captureCallbacks.onCaptureCompleted = OnCaptureCompleted;
         captureCallbacks.onCaptureFailed = OnCaptureFailed;
 
-        desiredWidth = params.get<int>(CAP_PROP_FRAME_WIDTH, desiredWidth);
-        desiredHeight = params.get<int>(CAP_PROP_FRAME_HEIGHT, desiredHeight);
+        desiredWidth = params.get<int32_t>(CAP_PROP_FRAME_WIDTH, desiredWidth);
+        desiredHeight = params.get<int32_t>(CAP_PROP_FRAME_HEIGHT, desiredHeight);
 
         static const struct {
             int propId;
@@ -361,22 +360,12 @@ public:
     {
         switch (property_id) {
             case CAP_PROP_FRAME_WIDTH:
-                desiredWidth = value;
-                settingWidth = true;
-                if (settingWidth && settingHeight) {
-                    setWidthHeight();
-                    settingWidth = false;
-                    settingHeight = false;
-                }
+                desiredWidth = static_cast<int32_t>(value);
+                setWidthHeight(setupWidth);
                 return true;
             case CAP_PROP_FRAME_HEIGHT:
-                desiredHeight = value;
-                settingHeight = true;
-                if (settingWidth && settingHeight) {
-                    setWidthHeight();
-                    settingWidth = false;
-                    settingHeight = false;
-                }
+                desiredHeight = static_cast<int32_t>(value);
+                setWidthHeight(setupHeight);
                 return true;
             case CAP_PROP_FOURCC:
                 {
@@ -657,9 +646,13 @@ private:
         }
     }
 
-    void setWidthHeight() {
-        cleanUp();
-        initCapture(cachedIndex);
+    void setWidthHeight(SetupState newState) {
+        if ((widthHeightState | newState) == (setupWidth | setupHeight)) {
+            cleanUp();
+            initCapture(cachedIndex);
+            newState = setupDone;
+        }
+        widthHeightState = newState;
     }
 
     void cleanUp() {
