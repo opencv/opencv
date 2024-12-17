@@ -442,27 +442,6 @@ public:
         return false;
     }
 
-    void setWidthHeight() {
-        cleanUp();
-        initCapture(cachedIndex);
-    }
-
-    // calculate a score based on how well the width and height match the desired width and height
-    // basically draw the 2 rectangle on top of each other and take the ratio of the non-overlapping
-    // area to the overlapping area
-    double getScore(int32_t width, int32_t height) {
-        double area1 = width * height;
-        double area2 = desiredWidth * desiredHeight;
-        if ((width < desiredWidth) == (height < desiredHeight)) {
-            return (width < desiredWidth) ? (area2 - area1)/area1 : (area1 - area2)/area2;
-        } else {
-            int32_t overlappedWidth = std::min(width, desiredWidth);
-            int32_t overlappedHeight = std::min(height, desiredHeight);
-            double overlappedArea = overlappedWidth * overlappedHeight;
-            return (area1 + area2 - overlappedArea)/overlappedArea;
-        }
-    }
-
     bool initCapture(int index)
     {
         cachedIndex = index;
@@ -497,39 +476,6 @@ public:
         }
         AObjPtr<ACameraMetadata> cameraMetadata(metadata, ACameraMetadata_free);
 
-        ACameraMetadata_const_entry entry = {};
-        ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
-
-        double bestScore = std::numeric_limits<double>::max();
-        int32_t bestMatchWidth = 0;
-        int32_t bestMatchHeight = 0;
-
-        for (uint32_t i = 0; i < entry.count; i += 4) {
-            int32_t input = entry.data.i32[i + 3];
-            int32_t format = entry.data.i32[i + 0];
-            if (input) {
-                continue;
-            }
-            if (format == AIMAGE_FORMAT_YUV_420_888) {
-                int32_t width = entry.data.i32[i + 1];
-                int32_t height = entry.data.i32[i + 2];
-                if (width == desiredWidth && height == desiredHeight) {
-                    bestMatchWidth = width;
-                    bestMatchHeight = height;
-                    bestScore = 0;
-                    break;
-                } else {
-                    double score = getScore(width, height);
-                    if (score < bestScore) {
-                        bestMatchWidth = width;
-                        bestMatchHeight = height;
-                        bestScore = score;
-                    }
-                }
-            }
-        }
-        LOGI("Best resolution match: %dx%d", bestMatchWidth, bestMatchHeight);
-
         ACameraMetadata_const_entry val;
         cStatus = ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE, &val);
         if (cStatus == ACAMERA_OK) {
@@ -552,6 +498,12 @@ public:
             sensitivity = 0;
         }
 
+        ACameraMetadata_const_entry entry = {};
+        ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
+        int32_t bestMatchWidth = 0, bestMatchHeight = 0;
+        findResolutionMatch(entry, bestMatchWidth, bestMatchHeight);
+        LOGI("Best resolution match: %dx%d", bestMatchWidth, bestMatchHeight);
+
         AImageReader* reader;
         media_status_t mStatus = AImageReader_new(bestMatchWidth, bestMatchHeight, AIMAGE_FORMAT_YUV_420_888, MAX_BUF_COUNT, &reader);
         if (mStatus != AMEDIA_OK) {
@@ -562,13 +514,14 @@ public:
         frameHeight = bestMatchHeight;
         imageReader.reset(reader);
 
-        ANativeWindow *window;
+        ANativeWindow* window;
         mStatus = AImageReader_getWindow(imageReader.get(), &window);
         if (mStatus != AMEDIA_OK) {
             LOGE("Could not get ANativeWindow: %d", mStatus);
             return false;
         }
         nativeWindow.reset(window);
+        ANativeWindow_acquire(nativeWindow.get());
 
         ACaptureSessionOutputContainer* container;
         cStatus = ACaptureSessionOutputContainer_create(&container);
@@ -578,7 +531,6 @@ public:
         }
         outputContainer.reset(container);
 
-        ANativeWindow_acquire(nativeWindow.get());
         ACaptureSessionOutput* output;
         cStatus = ACaptureSessionOutput_create(nativeWindow.get(), &output);
         if (cStatus != ACAMERA_OK) {
@@ -586,6 +538,7 @@ public:
             return false;
         }
         sessionOutput.reset(output);
+
         cStatus = ACaptureSessionOutputContainer_add(outputContainer.get(), sessionOutput.get());
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureSessionOutput Container add failed with error code: %d", cStatus);
@@ -601,7 +554,7 @@ public:
         }
         outputTarget.reset(target);
 
-        ACaptureRequest * request;
+        ACaptureRequest* request;
         cStatus = ACameraDevice_createCaptureRequest(cameraDevice.get(), TEMPLATE_PREVIEW, &request);
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureRequest creation failed with error code: %d", cStatus);
@@ -616,7 +569,7 @@ public:
         }
         targetAdded = true;
 
-        ACameraCaptureSession *session;
+        ACameraCaptureSession* session;
         cStatus = ACameraDevice_createCaptureSession(cameraDevice.get(), outputContainer.get(), &sessionCallbacks, &session);
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureSession creation failed with error code: %d", cStatus);
@@ -637,6 +590,56 @@ public:
             return false;
         }
         return true;
+    }
+
+private:
+    // calculate a score based on how well the width and height match the desired width and height
+    // basically draw the 2 rectangle on top of each other and take the ratio of the non-overlapping
+    // area to the overlapping area
+    double getScore(int32_t width, int32_t height) const {
+        double area1 = width * height;
+        double area2 = desiredWidth * desiredHeight;
+        if ((width < desiredWidth) == (height < desiredHeight)) {
+            return (width < desiredWidth) ? (area2 - area1)/area1 : (area1 - area2)/area2;
+        } else {
+            int32_t overlappedWidth = std::min(width, desiredWidth);
+            int32_t overlappedHeight = std::min(height, desiredHeight);
+            double overlappedArea = overlappedWidth * overlappedHeight;
+            return (area1 + area2 - overlappedArea)/overlappedArea;
+        }
+    }
+
+    void findResolutionMatch(const ACameraMetadata_const_entry &entry,
+                             int32_t &bestMatchWidth, int32_t &bestMatchHeight) const {
+        double bestScore = std::numeric_limits<double>::max();
+
+        for (uint32_t i = 0; i < entry.count; i += 4) {
+            int32_t input = entry.data.i32[i + 3];
+            int32_t format = entry.data.i32[i + 0];
+
+            if (!input && format == AIMAGE_FORMAT_YUV_420_888) {
+                int32_t width = entry.data.i32[i + 1];
+                int32_t height = entry.data.i32[i + 2];
+
+                if (width == desiredWidth && height == desiredHeight) {
+                    bestMatchWidth = width;
+                    bestMatchHeight = height;
+                    return;
+                }
+
+                double score = getScore(width, height);
+                if (score < bestScore) {
+                    bestMatchWidth = width;
+                    bestMatchHeight = height;
+                    bestScore = score;
+                }
+            }
+        }
+    }
+
+    void setWidthHeight() {
+        cleanUp();
+        initCapture(cachedIndex);
     }
 
     void cleanUp() {
