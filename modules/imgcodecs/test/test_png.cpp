@@ -378,7 +378,7 @@ TEST(Imgcodecs_Png, load_save_animation)
     EXPECT_EQ(0, image.empty());
     EXPECT_EQ(0, remove(output.c_str()));
 
-    for (size_t i = 1; i < l_animation.frames.size(); i++)
+    for (size_t i = 0; i < l_animation.frames.size(); i++)
     {
         EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), s_animation.frames[i], l_animation.frames[i]);
         EXPECT_EQ(s_animation.timestamps[i], l_animation.timestamps[i]);
