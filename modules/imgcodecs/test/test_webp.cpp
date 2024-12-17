@@ -7,23 +7,9 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_WEBP
 
-TEST(Imgcodecs_WebP, encode_decode_lossless_webp)
+static void readFileBytes(const std::string& fname, std::vector<unsigned char>& buf)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
-    string filename = root + "../cv/shared/lena.png";
-    cv::Mat img = cv::imread(filename);
-    ASSERT_FALSE(img.empty());
-
-    string output = cv::tempfile(".webp");
-    EXPECT_NO_THROW(cv::imwrite(output, img)); // lossless
-
-    cv::Mat img_webp = cv::imread(output);
-
-    std::vector<unsigned char> buf;
-
-    FILE * wfile = NULL;
-
-    wfile = fopen(output.c_str(), "rb");
+    FILE * wfile = fopen(fname.c_str(), "rb");
     if (wfile != NULL)
     {
         fseek(wfile, 0, SEEK_END);
@@ -39,12 +25,24 @@ TEST(Imgcodecs_WebP, encode_decode_lossless_webp)
             fclose(wfile);
         }
 
-        if (data_size != wfile_size)
-        {
-            EXPECT_TRUE(false);
-        }
+        EXPECT_EQ(data_size, wfile_size);
     }
+}
 
+TEST(Imgcodecs_WebP, encode_decode_lossless_webp)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    string filename = root + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(filename);
+    ASSERT_FALSE(img.empty());
+
+    string output = cv::tempfile(".webp");
+    EXPECT_NO_THROW(cv::imwrite(output, img)); // lossless
+
+    cv::Mat img_webp = cv::imread(output);
+
+    std::vector<unsigned char> buf;
+    readFileBytes(output, buf);
     EXPECT_EQ(0, remove(output.c_str()));
 
     cv::Mat decode = cv::imdecode(buf, IMREAD_COLOR);
@@ -212,25 +210,9 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
     EXPECT_EQ(0, cvtest::norm(l_animation.frames[0], frame, NORM_INF));
 
     std::vector<uchar> buf;
+    readFileBytes(output, buf);
     vector<Mat> webp_frames;
-    FILE* wfile = fopen(output.c_str(), "rb");
-    if (wfile != NULL)
-    {
-        fseek(wfile, 0, SEEK_END);
-        size_t wfile_size = ftell(wfile);
-        fseek(wfile, 0, SEEK_SET);
 
-        buf.resize(wfile_size);
-
-        size_t data_size = fread(&buf[0], 1, wfile_size, wfile);
-
-        if(wfile)
-        {
-            fclose(wfile);
-        }
-
-        EXPECT_EQ(data_size, wfile_size);
-    }
     EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
     EXPECT_EQ(expected_frame_count, webp_frames.size());
 
@@ -348,29 +330,10 @@ TEST(Imgcodecs_WebP, load_save_animation_rgb)
     EXPECT_TRUE(cvtest::norm(l_animation.frames[0], frame, NORM_INF) == 0);
 
     std::vector<uchar> buf;
+    readFileBytes(output, buf);
+
     vector<Mat> webp_frames;
-    FILE* wfile = fopen(output.c_str(), "rb");
-    if (wfile != NULL)
-    {
-        fseek(wfile, 0, SEEK_END);
-        size_t wfile_size = ftell(wfile);
-        fseek(wfile, 0, SEEK_SET);
-
-        buf.resize(wfile_size);
-
-        size_t data_size = fread(&buf[0], 1, wfile_size, wfile);
-
-        if(wfile)
-        {
-            fclose(wfile);
-        }
-
-        if (data_size != wfile_size)
-        {
-            EXPECT_TRUE(false);
-        }
-    }
-    EXPECT_EQ(true, imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
+    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
     EXPECT_EQ(webp_frames.size(), expected_frame_count);
 
     // Clean up by removing the temporary file.

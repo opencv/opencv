@@ -38,7 +38,7 @@ Source Code
 
 ### Function Overview:
 
-The cv::imreadanimation function is used to load multiple frames from animated files (such as AVIF, PNG, or WebP) into an cv::Animation structure.
+The cv::imreadanimation function is used to load multiple frames from animated files (such as AVIF, APNG, or WebP) into an cv::Animation structure.
 This function is especially useful for handling animated images, where each frame is a separate image that can be processed individually.
 
 #### Function Signature
@@ -49,7 +49,7 @@ CV_EXPORTS_W bool imreadanimation(const String& filename, CV_OUT Animation& anim
 
 ### Parameters
 
-- filename: The path to the animated file, which must be in a supported animated format (e.g., AVIF, PNG, WebP).
+- filename: The path to the animated file, which must be in a supported animated format (e.g., AVIF, APNG, WebP).
 - animation: A reference to an cv::Animation structure where the frames will be stored.
 - start: The index of the first frame to load (optional, defaults to 0).
 - count: The number of frames to load (optional, defaults to 32767).
@@ -102,4 +102,4 @@ Explanation
 ## Summary
 
 The cv::imreadanimation and cv::imwriteanimation functions make it easy to work with animated images by loading frames into an cv::Animation structure, allowing frame-by-frame processing.
-With these functions, you can load, process, and save frames from animated formats like AVIF, PNG, and WebP.
+With these functions, you can load, process, and save frames from animated formats like AVIF, APNG, and WebP.
