@@ -368,23 +368,28 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 #endif
 
     CV_Assert(size > 0);
-
+    size_t bytes_written = 0;
     if (m_buf)
     {
         m_buf->resize(size);
         memcpy(&(*m_buf)[0], out, size);
+        bytes_written = size;
     }
     else
     {
         FILE *fd = fopen(m_filename.c_str(), "wb");
         if (fd != NULL)
         {
-            fwrite(out, size, sizeof(uint8_t), fd);
+            bytes_written = fwrite(out, sizeof(uint8_t), size, fd);
+            if (size != bytes_written)
+            {
+                CV_LOG_ERROR(NULL, cv::format("Only %zu or %zu bytes are written\n",bytes_written, size));
+            }
             fclose(fd); fd = NULL;
         }
     }
 
-    return size > 0;
+    return (size > 0) && (bytes_written == size);
 }
 
 bool WebPEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
@@ -473,27 +478,36 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
     ok = ok & WebPAnimEncoderAdd(anim_encoder.get(), NULL, timestamp, NULL);
     ok = ok & WebPAnimEncoderAssemble(anim_encoder.get(), &webp_data);
 
+    size_t bytes_written = 0;
     if (ok)
     {
         if (m_buf)
         {
             m_buf->resize(webp_data.size);
             memcpy(&(*m_buf)[0], webp_data.bytes, webp_data.size);
+            bytes_written = webp_data.size;
         }
         else
         {
             FILE* fd = fopen(m_filename.c_str(), "wb");
             if (fd != NULL)
             {
-                fwrite(webp_data.bytes, webp_data.size, sizeof(uint8_t), fd);
+                bytes_written = fwrite(webp_data.bytes, sizeof(uint8_t), webp_data.size, fd);
+                if (webp_data.size != bytes_written)
+                {
+                    CV_LOG_ERROR(NULL, cv::format("Only %zu or %zu bytes are written\n",bytes_written, webp_data.size));
+                }
                 fclose(fd); fd = NULL;
             }
         }
     }
 
+    bool status = (ok > 0) && (webp_data.size == bytes_written);
+
     // free resources
     WebPDataClear(&webp_data);
-    return ok > 0;
+
+    return status;
 }
 
 }
