@@ -740,7 +740,7 @@ enum SeamlessCloneFlags
     This mode processes a larger source region by considering the entire mask area instead of only
     the bounding rectangle of non-zero pixels.
      */
-    NORMAL_CLONE_ALT = 9,
+    NORMAL_CLONE_WIDE = 9,
 
     /**
     @brief Enhanced mixed seamless cloning.
@@ -748,7 +748,7 @@ enum SeamlessCloneFlags
     This mode processes a larger source region by considering the entire mask area instead of only
     the bounding rectangle of non-zero pixels.
      */
-    MIXED_CLONE_ALT = 10,
+    MIXED_CLONE_WIDE = 10,
 
     /**
     @brief Enhanced monochrome transfer cloning.
@@ -756,7 +756,7 @@ enum SeamlessCloneFlags
     This mode processes a larger source region by considering the entire mask area instead of only
     the bounding rectangle of non-zero pixels.
      */
-    MONOCHROME_TRANSFER_ALT = 11
+    MONOCHROME_TRANSFER_WIDE = 11
 };
 
 
