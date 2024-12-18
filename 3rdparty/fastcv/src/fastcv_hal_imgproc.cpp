@@ -783,7 +783,7 @@ public:
 
         cv::Mat dst_padded = cv::Mat(dstHeight_, dstWidth_, CV_8U);
 
-        fcvPyramidLevel_v2 *framePyr = new fcvPyramidLevel_v2[2];
+        fcvPyramidLevel_v2 framePyr[2];
         framePyr[0].ptr = NULL;
         framePyr[1].ptr = dst_padded.data;
         framePyr[1].stride = dstWidth_;
@@ -860,7 +860,7 @@ int fastcv_hal_pyrdown(
                 CV_HAL_RETURN_NOT_IMPLEMENTED("border type not supported");
         }
 
-        fcvPyramidLevel_v2 *frame1Pyr = new fcvPyramidLevel_v2[2];
+        fcvPyramidLevel_v2 frame1Pyr[2];
         frame1Pyr[0].ptr = NULL;
         frame1Pyr[1].ptr = dst_data;
         frame1Pyr[1].stride = dst_step;
@@ -912,11 +912,11 @@ int fastcv_hal_cvtBGRtoHSV(
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("src type not supported");
     }
-    else if(isHSV != true || isFullRange != true)
+    else if(!isHSV || !isFullRange)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("Full range HSV supported");
     }
-    else if(swapBlue != true)
+    else if(!swapBlue)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("current color code not supported, expected swapped blue channel");
     }
@@ -961,11 +961,11 @@ int fastcv_hal_cvtBGRtoYUVApprox(
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("src type not supported");
     }
-    else if(isCbCr != true)
+    else if(!isCbCr)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("CbCr supported");
     }
-    else if(swapBlue != true)
+    else if(!swapBlue)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("expected swapped blue channel");
     }
