@@ -556,8 +556,8 @@ public:
         captureSession.reset(session);
 
         ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_CONTROL_AE_MODE, 1, &aeMode);
-        ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
         if (aeMode != ACAMERA_CONTROL_AE_MODE_ON) {
+            ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
             ACaptureRequest_setEntry_i64(captureRequest.get(), ACAMERA_SENSOR_EXPOSURE_TIME, 1, &exposureTime);
         }
         ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_FLASH_MODE, 1, &flashMode);
