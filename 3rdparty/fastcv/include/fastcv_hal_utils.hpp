@@ -29,7 +29,7 @@
             status == FASTCV_EHWGPU)                                        \
     {                                                                       \
         CV_LOG_DEBUG(NULL, "FastCV status:"<<getFastCVErrorString(status)   \
-            <<"Switching to default OpenCV solution!");                     \
+            <<", Switching to default OpenCV solution!");                   \
         return CV_HAL_ERROR_NOT_IMPLEMENTED;                                \
     }                                                                       \
     else                                                                    \
@@ -38,7 +38,7 @@
         return CV_HAL_ERROR_UNKNOWN;                                        \
     }                                                                       \
 }
- 
+
 #define CV_HAL_RETURN_NOT_IMPLEMENTED(reason)                           \
 {                                                                       \
     CV_LOG_DEBUG(NULL,"Switching to default OpenCV\nInfo: "<<reason);   \
@@ -47,6 +47,7 @@
 
 #define FCV_KernelSize_SHIFT 3
 #define FCV_MAKETYPE(ksize,depth) ((ksize<<FCV_KernelSize_SHIFT) + depth)
+#define FCV_CMP_EQ(val1,val2) (fabs(val1 - val2) < FLT_EPSILON)
 
 const char* getFastCVErrorString(int status);
 const char* borderToString(int border);
