@@ -52,6 +52,16 @@
   @}
 */
 
+#include "opencv2/core.hpp"
+
+// Temporay exposed lapjv as it's needed for tests
+#include <map>
+namespace cv
+{
+CV_EXPORTS std::map<int, int> lapjv(const Mat& cost, float matchThreshold = 0.8f);
+CV_EXPORTS void lapjv(InputArray costMatrix, OutputArray assignedPairs, float matchThreshold);
+}
+
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/video/background_segm.hpp"
 
