@@ -85,7 +85,7 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
     int l_from_center = p.x - roi_s.width / 2;
     int t_from_center = p.y - roi_s.height / 2;
 
-    if (flags >= NORMAL_CLONE_ALT)
+    if (flags >= NORMAL_CLONE_WIDE)
     {
         l_from_center = p.x - (mask.cols / 2 - roi_s.x);
         t_from_center = p.y - (mask.rows / 2 - roi_s.y);
