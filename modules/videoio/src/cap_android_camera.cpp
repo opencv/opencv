@@ -190,12 +190,15 @@ public:
                     waitingCapture = true;
                     captureSuccess = false;
                     auto start = std::chrono::system_clock::now();
-                    bool captured = condition.wait_for(lock, std::chrono::seconds(CAPTURE_TIMEOUT_SECONDS), [this]{ return captureSuccess; });
+                    bool captured = condition.wait_for(lock, std::chrono::seconds(
+                                        CAPTURE_TIMEOUT_SECONDS), [this]{ return captureSuccess; });
                     waitingCapture = false;
                     if (captured) {
                         mStatus = AImageReader_acquireLatestImage(imageReader.get(), &img);
-                        // even though an image has been captured we may not be able to acquire it straight away so we poll every 10ms
-                        while (mStatus == AMEDIA_IMGREADER_NO_BUFFER_AVAILABLE && elapsedTimeFrom(start) < CAPTURE_TIMEOUT_SECONDS) {
+                        // even though an image has been captured we may not be able to acquire it
+                        // straight away so we poll every 10ms
+                        while (mStatus == AMEDIA_IMGREADER_NO_BUFFER_AVAILABLE &&
+                               elapsedTimeFrom(start) < CAPTURE_TIMEOUT_SECONDS) {
                             std::this_thread::sleep_for(std::chrono::milliseconds(CAPTURE_POLL_INTERVAL_MS));
                             mStatus = AImageReader_acquireLatestImage(imageReader.get(), &img);
                         }
@@ -241,14 +244,19 @@ public:
         AImage_getPlanePixelStride(image.get(), 1, &uvPixelStride);
         int32_t yBufferLen = yLen;
 
-        if ( (uvPixelStride == 2) && (uPixel == vPixel + 1) && (yLen == (yStride * (frameHeight - 1)) + frameWidth) && (uLen == (uvStride * ((frameHeight / 2) - 1)) + frameWidth - 1) && (uvStride == yStride)  && (vLen == uLen) ) {
+        if ( (uvPixelStride == 2) && (uPixel == vPixel + 1) &&
+             (yLen == (yStride * (frameHeight - 1)) + frameWidth) &&
+             (uLen == (uvStride * ((frameHeight / 2) - 1)) + frameWidth - 1) &&
+             (uvStride == yStride)  && (vLen == uLen) ) {
             frameStride = yStride;
             yBufferLen = frameStride * frameHeight;
             colorFormat = COLOR_FormatYUV420SemiPlanar;
             if (fourCC == FOURCC_UNKNOWN) {
                 fourCC = FOURCC_NV21;
             }
-        } else if ( (uvPixelStride == 1) && (uPixel == vPixel + vLen) && (yLen == frameWidth * frameHeight) && (uLen == yLen / 4) && (vLen == uLen) ) {
+        } else if ( (uvPixelStride == 1) && (uPixel == vPixel + vLen) &&
+                    (yLen == frameWidth * frameHeight) &&
+                    (uLen == yLen / 4) && (vLen == uLen) ) {
             colorFormat = COLOR_FormatYUV420Planar;
             if (fourCC == FOURCC_UNKNOWN) {
                 fourCC = FOURCC_YV12;
@@ -393,7 +401,8 @@ public:
                                     fourCC = newFourCC;
                                     return true;
                                 } else {
-                                    LOGE("Unsupported FOURCC conversion COLOR_FormatYUV420SemiPlanar -> COLOR_FormatYUV420Planar");
+                                    LOGE("Unsupported FOURCC conversion COLOR_FormatYUV420SemiPlanar"
+                                         " -> COLOR_FormatYUV420Planar");
                                     return false;
                                 }
                             case FOURCC_NV21:
@@ -401,7 +410,8 @@ public:
                                     fourCC = newFourCC;
                                     return true;
                                 } else {
-                                    LOGE("Unsupported FOURCC conversion COLOR_FormatYUV420Planar -> COLOR_FormatYUV420SemiPlanar");
+                                    LOGE("Unsupported FOURCC conversion COLOR_FormatYUV420Planar"
+                                         " -> COLOR_FormatYUV420SemiPlanar");
                                     return false;
                                 }
                             default:
@@ -486,7 +496,8 @@ public:
         LOGI("Best resolution match: %dx%d", bestMatchWidth, bestMatchHeight);
 
         AImageReader* reader;
-        media_status_t mStatus = AImageReader_new(bestMatchWidth, bestMatchHeight, AIMAGE_FORMAT_YUV_420_888, MAX_BUF_COUNT, &reader);
+        media_status_t mStatus = AImageReader_new(bestMatchWidth, bestMatchHeight,
+                                                  AIMAGE_FORMAT_YUV_420_888, MAX_BUF_COUNT, &reader);
         if (mStatus != AMEDIA_OK) {
             LOGE("ImageReader creation failed with error code: %d", mStatus);
             return false;
@@ -551,7 +562,8 @@ public:
         targetAdded = true;
 
         ACameraCaptureSession* session;
-        cStatus = ACameraDevice_createCaptureSession(cameraDevice.get(), outputContainer.get(), &sessionCallbacks, &session);
+        cStatus = ACameraDevice_createCaptureSession(cameraDevice.get(),
+                                                     outputContainer.get(), &sessionCallbacks, &session);
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureSession creation failed with error code: %d", cStatus);
             return false;
@@ -565,7 +577,8 @@ public:
         }
         ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_FLASH_MODE, 1, &flashMode);
 
-        cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(), &captureCallbacks, 1, &request, nullptr);
+        cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(),
+                                                            &captureCallbacks, 1, &request, nullptr);
         if (cStatus != ACAMERA_OK) {
             LOGE("CameraCaptureSession set repeating request failed with error code: %d", cStatus);
             return false;
