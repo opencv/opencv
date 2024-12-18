@@ -42,15 +42,12 @@ using namespace cv;
 
 template <typename T> struct RangeValue {
     T min, max;
-    /**
-     * return absolute value from relative value
-     * * value: in percent (50 for 50%)
-     * */
-    T value(int percent) {
+
+    RangeValue(T minv = 0, T maxv = 0) : min(minv), max(maxv) {}
+    bool isValid() const { return (min != max); }
+    T percentage(int percent) const {
         return static_cast<T>(min + ((max - min) * percent) / 100);
     }
-    RangeValue(T minv = 0, T maxv = 0) : min(minv), max(maxv) {}
-    bool Supported() const { return (min != max); }
     T clamp( T value ) const {
         return (value > max) ? max : ((value < min) ? min : value);
     }
@@ -427,14 +424,14 @@ public:
                 }
                 return true;
             case CAP_PROP_EXPOSURE:
-                if (isOpened() && exposureRange.Supported()) {
+                if (isOpened() && exposureRange.isValid()) {
                     exposureTime = exposureRange.clamp(static_cast<int64_t>(value));
                     LOGI("Setting CAP_PROP_EXPOSURE will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
                     return submitRequest(ACaptureRequest_setEntry_i64, ACAMERA_SENSOR_EXPOSURE_TIME, exposureTime);
                 }
                 return false;
             case CAP_PROP_ISO_SPEED:
-                if (isOpened() && sensitivityRange.Supported()) {
+                if (isOpened() && sensitivityRange.isValid()) {
                     sensitivity = sensitivityRange.clamp(static_cast<int32_t>(value));
                     LOGI("Setting CAP_PROP_ISO_SPEED will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
                     return submitRequest(ACaptureRequest_setEntry_i32, ACAMERA_SENSOR_SENSITIVITY, sensitivity);
@@ -596,7 +593,7 @@ private:
         if (cStatus == ACAMERA_OK) {
             exposureRange.min = exposureTimeLimits.clamp(val.data.i64[0]);
             exposureRange.max = exposureTimeLimits.clamp(val.data.i64[1]);
-            exposureTime = exposureRange.value(2);
+            exposureTime = exposureRange.percentage(2);
         } else {
             LOGW("Unsupported ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE");
             exposureRange.min = exposureRange.max = 0;
@@ -607,7 +604,7 @@ private:
         if (cStatus == ACAMERA_OK){
             sensitivityRange.min = val.data.i32[0];
             sensitivityRange.max = val.data.i32[1];
-            sensitivity = sensitivityRange.value(2);
+            sensitivity = sensitivityRange.percentage(2);
         } else {
             LOGW("Unsupported ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE");
             sensitivityRange.min = sensitivityRange.max = 0;
