@@ -668,7 +668,7 @@ const AndroidMediaNdkVideoWriter::FourCCInfo AndroidMediaNdkVideoWriter::FOURCC_
 
 /****************** Implementation of interface functions ********************/
 
-Ptr<IVideoCapture> cv::createAndroidCapture_file(const std::string &filename) {
+Ptr<IVideoCapture> cv::createAndroidCapture_file(const std::string &filename, const VideoCaptureParameters& ) {
     Ptr<AndroidMediaNdkCapture> res = makePtr<AndroidMediaNdkCapture>();
     if (res && res->initCapture(filename.c_str()))
         return res;
