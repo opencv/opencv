@@ -179,8 +179,7 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
     // Write the animation to a .webp file and verify success.
     EXPECT_TRUE(imwriteanimation(output, s_animation));
     imwriteanimation("output.webp", s_animation);
-    imwriteanimation("output_imwriteanimation.webp", s_animation);
-        imwrite("output_imwrite.avif", s_animation.frames);
+
     // Read the animation back and compare with the original.
     EXPECT_TRUE(imreadanimation(output, l_animation));
 
