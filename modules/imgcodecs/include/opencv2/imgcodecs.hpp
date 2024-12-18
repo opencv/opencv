@@ -219,14 +219,14 @@ enum ImwriteHDRCompressionFlags {
 //! @} imgcodecs_flags
 
 /** @brief Represents an animation with multiple frames.
-The `Animation` struct is designed to store and manage data for animated sequences such as those from animated formats (e.g., GIF, APNG, WebP).
+The `Animation` struct is designed to store and manage data for animated sequences such as those from animated formats (e.g., GIF, AVIF, APNG, WebP).
 It provides support for looping, background color settings, frame timing, and frame storage.
 */
 struct CV_EXPORTS_W_SIMPLE Animation
 {
     //! Number of times the animation should loop. 0 means infinite looping.
     CV_PROP_RW int loop_count;
-    //! Background color of the animation in RGBA format.
+    //! Background color of the animation in BGRA format.
     CV_PROP_RW Scalar bgcolor;
     //! Duration for each frame in milliseconds.
     CV_PROP_RW std::vector<int> durations;
@@ -241,7 +241,7 @@ struct CV_EXPORTS_W_SIMPLE Animation
     - If a negative value or a value beyond the maximum of `0xffff` (65535) is provided, it is reset to `0`
     (infinite looping) to maintain valid bounds.
 
-    @param bgColor A `Scalar` object representing the background color in RGBA format:
+    @param bgColor A `Scalar` object representing the background color in BGRA format:
     - Defaults to `Scalar()`, indicating an empty color (usually transparent if supported).
     - This background color provides a solid fill behind frames that have transparency, ensuring a consistent display appearance.
     */
