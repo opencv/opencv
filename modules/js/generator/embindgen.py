@@ -250,14 +250,14 @@ class ArgInfo(object):
                 self.reference = True
         if self.tp == "Mat" and (self.inputarg or self.outputarg):
             self.tp = "cv::Mat&"
-            if self.inputarg:
+            if self.inputarg and not self.outputarg:
                 self.const = True
         if self.tp == "vector_Mat" and (self.inputarg or self.outputarg):
             self.tp = "std::vector<cv::Mat>&"
             if self.reference and not self.const:
                 self.inputarg = False
                 self.outputarg = True
-            elif self.inputarg:
+            elif self.inputarg and not self.outputarg:
                 self.const = True
         self.tp = handle_vector(self.tp).strip()
         if self.const:
