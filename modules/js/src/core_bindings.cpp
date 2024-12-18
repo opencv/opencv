@@ -467,11 +467,15 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<double>("DoubleVector");
     register_vector<std::string>("StringVector");
     register_vector<cv::Point>("PointVector");
+    register_vector<cv::Point3f>("Point3fVector");
     register_vector<cv::Mat>("MatVector");
     register_vector<cv::Rect>("RectVector");
     register_vector<cv::KeyPoint>("KeyPointVector");
     register_vector<cv::DMatch>("DMatchVector");
+    register_vector<std::vector<char>>("CharVectorVector");
     register_vector<std::vector<cv::DMatch>>("DMatchVectorVector");
+    register_vector<std::vector<cv::KeyPoint>>("KeyPointVectorVector");
+    register_vector<std::vector<cv::Point>>("PointVectorVector");
 
 
     emscripten::class_<cv::Mat>("Mat")
@@ -598,6 +602,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
 
     EMSCRIPTEN_CV_POINT(Point)
     EMSCRIPTEN_CV_POINT(Point2f)
+    EMSCRIPTEN_CV_POINT(Point3f)
 
 #define EMSCRIPTEN_CV_RECT(type, name) \
     emscripten::value_object<cv::Rect_<type>> (name) \
