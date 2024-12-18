@@ -242,7 +242,7 @@ bool AvifDecoder::readData(Mat &img) {
     return false;
   }
 
-  m_animation.timestamps.push_back(decoder_->duration);
+  m_animation.durations.push_back(decoder_->duration);
 
   if (decoder_->image->exif.size > 0) {
     m_exif.parseExif(decoder_->image->exif.data, decoder_->image->exif.size);
@@ -306,11 +306,10 @@ bool AvifEncoder::writemulti(const std::vector<Mat> &img_vec,
                              const std::vector<int> &params) {
     Animation animation;
     animation.frames = img_vec;
-    int timestamp = 0;
+    int timestamp = 100;
     for (size_t i = 0; i < animation.frames.size(); i++)
     {
-        animation.timestamps.push_back(timestamp);
-        timestamp += 10;
+        animation.durations.push_back(timestamp);
     }
     return writeanimation(animation, params);
 }
@@ -369,12 +368,13 @@ bool AvifEncoder::writeanimation(const Animation& animation,
     images.emplace_back(ConvertToAvif(img, do_lossless, bit_depth));
   }
 
+  int timestamp = 0;
   for (size_t i = 0; i < images.size(); i++)
   {
-    int timestamp = i == 0 ? 0 : animation.timestamps[i] - animation.timestamps[i-1];
     OPENCV_AVIF_CHECK_STATUS(
         avifEncoderAddImage(encoder_, images[i].get(), timestamp, flag),
         encoder_);
+    timestamp += animation.durations[i];
   }
 
   encoder_->timescale = 1000;

@@ -134,9 +134,9 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
     Mat image = imread(filename, IMREAD_UNCHANGED);
     ASSERT_FALSE(image.empty()) << "Failed to load image: " << filename;
 
-    // Add the first frame with a timestamp of 500 milliseconds.
-    int timestamp = 100;
-    s_animation.timestamps.push_back(timestamp * 5);
+    // Add the first frame with a duration value of 500 milliseconds.
+    int duration = 100;
+    s_animation.durations.push_back(duration * 5);
     s_animation.frames.push_back(image.clone());  // Store the first frame.
     putText(s_animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
 
@@ -160,17 +160,17 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
                 }
             }
 
-        // Update the timestamp and add the modified frame to the animation.
-        timestamp += rng.uniform(2, 10);  // Increment timestamp with random value.
+        // Update the duration and add the modified frame to the animation.
+        duration += rng.uniform(2, 10);  // Increase duration with random value (to be sure different duration values saved correctly).
         s_animation.frames.push_back(image.clone());
         putText(s_animation.frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
-        s_animation.timestamps.push_back(timestamp);
+        s_animation.durations.push_back(duration);
     }
 
-    // Add two identical frames with the same timestamp.
-    s_animation.timestamps.push_back(timestamp);
+    // Add two identical frames with the same duration.
+    s_animation.durations.push_back(duration);
     s_animation.frames.push_back(s_animation.frames[13].clone());
-    s_animation.timestamps.push_back(timestamp);
+    s_animation.durations.push_back(duration);
     s_animation.frames.push_back(s_animation.frames[13].clone());
 
     // Create a temporary output filename for saving the animation.
@@ -178,12 +178,14 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
 
     // Write the animation to a .webp file and verify success.
     EXPECT_TRUE(imwriteanimation(output, s_animation));
-
+    imwriteanimation("output.webp", s_animation);
+    imwriteanimation("output_imwriteanimation.webp", s_animation);
+        imwrite("output_imwrite.avif", s_animation.frames);
     // Read the animation back and compare with the original.
     EXPECT_TRUE(imreadanimation(output, l_animation));
 
     // Since the last frames are identical, WebP optimizes by storing only one of them,
-    // and the duration for the last frame is handled by libwebp.
+    // and the duration value for the last frame is handled by libwebp.
     size_t expected_frame_count = s_animation.frames.size() - 2;
 
     // Verify that the number of frames matches the expected count.
@@ -191,16 +193,16 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count);
 
     // Check that the background color and loop count match between saved and loaded animations.
-    EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor);
+    EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor); // written as BGRA order
     EXPECT_EQ(l_animation.loop_count, s_animation.loop_count);
 
-    // Verify that the timestamps of frames (except the first and last) match.
-    for (size_t i = 1; i < l_animation.frames.size() - 1; i++)
-        EXPECT_EQ(s_animation.timestamps[i], l_animation.timestamps[i]);
+    // Verify that the durations of frames match.
+    for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
+        EXPECT_EQ(s_animation.durations[i], l_animation.durations[i]);
 
     EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count + 3);
-    EXPECT_EQ(l_animation.frames.size(), l_animation.timestamps.size());
+    EXPECT_EQ(l_animation.frames.size(), l_animation.durations.size());
     EXPECT_EQ(0, cvtest::norm(l_animation.frames[5], l_animation.frames[14], NORM_INF));
     EXPECT_EQ(0, cvtest::norm(l_animation.frames[6], l_animation.frames[15], NORM_INF));
     EXPECT_EQ(0, cvtest::norm(l_animation.frames[7], l_animation.frames[16], NORM_INF));
@@ -258,9 +260,9 @@ TEST(Imgcodecs_WebP, load_save_animation_rgb)
     Mat image = imread(filename);
     ASSERT_FALSE(image.empty()) << "Failed to load image: " << filename;
 
-    // Add the first frame with a timestamp of 500 milliseconds.
-    int timestamp = 100;
-    s_animation.timestamps.push_back(timestamp * 5);
+    // Add the first frame with a duration value of 500 milliseconds.
+    int duration = 100;
+    s_animation.durations.push_back(duration * 5);
     s_animation.frames.push_back(image.clone());  // Store the first frame.
     putText(s_animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
 
@@ -280,17 +282,17 @@ TEST(Imgcodecs_WebP, load_save_animation_rgb)
                 if (pixel[2] > 50) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
             }
 
-        // Update the timestamp and add the modified frame to the animation.
-        timestamp += rng.uniform(2, 10);  // Increment timestamp with random value.
+        // Update the duration and add the modified frame to the animation.
+        duration += rng.uniform(2, 10);  // Increase duration with random value (to be sure different duration values saved correctly).
         s_animation.frames.push_back(image.clone());
         putText(s_animation.frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
-        s_animation.timestamps.push_back(timestamp);
+        s_animation.durations.push_back(duration);
     }
 
-    // Add two identical frames with the same timestamp.
-    s_animation.timestamps.push_back(timestamp);
+    // Add two identical frames with the same duration.
+    s_animation.durations.push_back(duration);
     s_animation.frames.push_back(s_animation.frames[13].clone());
-    s_animation.timestamps.push_back(timestamp);
+    s_animation.durations.push_back(duration);
     s_animation.frames.push_back(s_animation.frames[13].clone());
 
     // Create a temporary output filename for saving the animation.
@@ -303,7 +305,7 @@ TEST(Imgcodecs_WebP, load_save_animation_rgb)
     EXPECT_EQ(true, imreadanimation(output, l_animation));
 
     // Since the last frames are identical, WebP optimizes by storing only one of them,
-    // and the duration for the last frame is handled by libwebp.
+    // and the duration value for the last frame is handled by libwebp.
     size_t expected_frame_count = s_animation.frames.size() - 2;
 
     // Verify that the number of frames matches the expected count.
@@ -311,16 +313,16 @@ TEST(Imgcodecs_WebP, load_save_animation_rgb)
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count);
 
     // Check that the background color and loop count match between saved and loaded animations.
-    EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor);
+    EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor); // written as BGRA order
     EXPECT_EQ(l_animation.loop_count, s_animation.loop_count);
 
-    // Verify that the timestamps of frames (except the first and last) match.
-    for (size_t i = 1; i < l_animation.frames.size() - 1; i++)
-        EXPECT_EQ(s_animation.timestamps[i], l_animation.timestamps[i]);
+    // Verify that the durations of frames match.
+    for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
+        EXPECT_EQ(s_animation.durations[i], l_animation.durations[i]);
 
     EXPECT_EQ(true, imreadanimation(output, l_animation, 5, 3));
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count + 3);
-    EXPECT_EQ(l_animation.frames.size(), l_animation.timestamps.size());
+    EXPECT_EQ(l_animation.frames.size(), l_animation.durations.size());
     EXPECT_TRUE(cvtest::norm(l_animation.frames[5], l_animation.frames[14], NORM_INF) == 0);
     EXPECT_TRUE(cvtest::norm(l_animation.frames[6], l_animation.frames[15], NORM_INF) == 0);
     EXPECT_TRUE(cvtest::norm(l_animation.frames[7], l_animation.frames[16], NORM_INF) == 0);

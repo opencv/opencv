@@ -228,8 +228,8 @@ struct CV_EXPORTS_W_SIMPLE Animation
     CV_PROP_RW int loop_count;
     //! Background color of the animation in RGBA format.
     CV_PROP_RW Scalar bgcolor;
-    //! Timestamps for each frame in milliseconds.
-    CV_PROP_RW std::vector<int> timestamps;
+    //! Duration for each frame in milliseconds.
+    CV_PROP_RW std::vector<int> durations;
     //! Vector of frames, where each Mat represents a single frame.
     CV_PROP_RW std::vector<Mat> frames;
 

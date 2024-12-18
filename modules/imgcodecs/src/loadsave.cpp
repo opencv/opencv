@@ -769,7 +769,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
 
         if (current >= start)
         {
-            animation.timestamps.push_back(decoder->animation().timestamps[decoder->animation().timestamps.size() - 1]);
+            animation.durations.push_back(decoder->animation().durations[decoder->animation().durations.size() - 1]);
             animation.frames.push_back(mat);
         }
 
@@ -971,7 +971,7 @@ static bool imwriteanimation_(const String& filename, const Animation& animation
 bool imwriteanimation(const String& filename, const Animation& animation, const std::vector<int>& params)
 {
     CV_Assert(!animation.frames.empty());
-    CV_Assert(animation.frames.size() == animation.timestamps.size());
+    CV_Assert(animation.frames.size() == animation.durations.size());
     return imwriteanimation_(filename, animation, params);
 }
 

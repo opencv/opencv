@@ -231,7 +231,7 @@ bool WebPDecoder::readData(Mat &img)
         else
             tmp.copyTo(img);
 
-        m_animation.timestamps.push_back(timestamp - m_previous_timestamp);
+        m_animation.durations.push_back(timestamp - m_previous_timestamp);
         m_previous_timestamp = timestamp;
         return true;
     }
@@ -471,7 +471,7 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
             pic.argb = (uint32_t*)argb.data;
         }
         ok = WebPAnimEncoderAdd(anim_encoder.get(), &pic, timestamp, &config);
-        timestamp += animation.timestamps[i];
+        timestamp += animation.durations[i];
     }
 
     // add a last fake frame to signal the last duration
