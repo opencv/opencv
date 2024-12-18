@@ -580,6 +580,18 @@ enum { CAP_PROP_ARAVIS_AUTOTRIGGER                              = 600 //!< Autom
 
 //! @} ARAVIS
 
+
+/** @name Android
+    @{
+*/
+
+//! Properties of cameras available through NDK Camera API backend
+enum { CAP_PROP_ANDROID_DEVICE_TORCH = 8001,
+     };
+
+//! @} Android
+
+
 /** @name AVFoundation framework for iOS
     @{
 */
