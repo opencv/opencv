@@ -24,6 +24,8 @@
 #define cv_hal_flip                 fastcv_hal_flip
 #undef  cv_hal_rotate90
 #define cv_hal_rotate90             fastcv_hal_rotate
+#undef  cv_hal_addWeighted8u
+#define cv_hal_addWeighted8u        fastcv_hal_addWeighted8u
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief look-up table transform of an array.
@@ -151,5 +153,28 @@ int fastcv_hal_rotate(
     uchar*          dst_data,
     size_t          dst_step,
     int             angle);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// @brief weighted sum of two arrays using formula: dst[i] = a * src1[i] + b * src2[i]
+/// @param src1_data first source image data
+/// @param src1_step first source image step
+/// @param src2_data second source image data
+/// @param src2_step second source image step
+/// @param dst_data  destination image data
+/// @param dst_step  destination image step
+/// @param width     width of the images
+/// @param height    height of the images
+/// @param scalars   numbers a, b, and c
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_addWeighted8u(
+    const uchar*    src1_data,
+    size_t          src1_step,
+    const uchar*    src2_data,
+    size_t          src2_step,
+    uchar*          dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    const double    scalars[3]);
 
 #endif
