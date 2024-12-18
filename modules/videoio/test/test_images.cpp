@@ -288,14 +288,16 @@ TEST(videoio_images, extract_pattern)
 TEST(videoio_images, bug_26457)
 {
     ImageCollection col;
-    col.generate(1);
+    col.generate(1u);
+    ASSERT_EQ(col.getCount(), 1u);
+
     VideoCapture cap(col.getFirstFilename(), CAP_IMAGES);
     ASSERT_TRUE(cap.isOpened());
+
     Mat img;
     const bool read_res = cap.read(img);
     EXPECT_TRUE(read_res);
     EXPECT_MAT_N_DIFF(img, col.getFirstFrame(), 0);
-    EXPECT_EQ(col.getCount(), 1);
 }
 
 // TODO: should writer overwrite files?
