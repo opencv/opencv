@@ -9,19 +9,19 @@ def main(filename):
 
         # Generate a base image with a specific color
         image = np.full((128, 256, 4), (150, 150, 150, 255), dtype=np.uint8)
-        timestamp = 200
+        duration = 200
         frames = []
-        timestamps = []
+        durations = []
 
         # Populate frames and timestamps in the Animation object
         for i in range(10):
             frame = image.copy()
             cv.putText(frame, f"Frame {i}", (30, 80), cv.FONT_HERSHEY_SIMPLEX, 1.5, (255, 100, 0, 255), 2)
             frames.append(frame)
-            timestamps.append(timestamp)
+            durations.append(duration)
 
         animation_to_save.frames =frames
-        animation_to_save.timestamps = timestamps
+        animation_to_save.durations = durations
 
         # Write the animation to file
         cv.imwriteanimation("animated_image.webp", animation_to_save, [cv.IMWRITE_WEBP_QUALITY, 100])
@@ -39,7 +39,7 @@ def main(filename):
     while True:
         for i, frame in enumerate(animation.frames):
             cv.imshow("Animation", frame)
-            key_code = cv.waitKey(animation.timestamps[i])
+            key_code = cv.waitKey(animation.durations[i])
             if key_code == 27:  # Exit if 'Esc' key is pressed
                 return
     ## [show_animation]
