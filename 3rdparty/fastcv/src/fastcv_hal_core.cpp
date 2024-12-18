@@ -38,15 +38,15 @@ private:
 };
 
 int fastcv_hal_lut(
-    const uchar*    src_data, 
-    size_t          src_step, 
-    size_t          src_type, 
-    const uchar*    lut_data, 
-    size_t          lut_channel_size, 
-    size_t          lut_channels, 
-    uchar*          dst_data, 
-    size_t          dst_step, 
-    int             width, 
+    const uchar*    src_data,
+    size_t          src_step,
+    size_t          src_type,
+    const uchar*    lut_data,
+    size_t          lut_channel_size,
+    size_t          lut_channels,
+    uchar*          dst_data,
+    size_t          dst_step,
+    int             width,
     int             height)
 {
     if((width*height)<=(320*240))
@@ -69,10 +69,10 @@ int fastcv_hal_lut(
 }
 
 int fastcv_hal_normHammingDiff8u(
-    const uchar*    a, 
-    const uchar*    b, 
-    int             n, 
-    int             cellSize, 
+    const uchar*    a,
+    const uchar*    b,
+    int             n,
+    int             cellSize,
     int*            result)
 {
     fcvStatus           status;
@@ -169,15 +169,15 @@ int fastcv_hal_transpose2d(
     switch (element_size)
     {
         case 1:
-            status = fcvTransposeu8_v2(src_data, src_width, src_height, src_step, 
+            status = fcvTransposeu8_v2(src_data, src_width, src_height, src_step,
                                        dst_data, dst_step);
             break;
         case 2:
-            status = fcvTransposeu16_v2((const uint16_t*)src_data, src_width, src_height, 
+            status = fcvTransposeu16_v2((const uint16_t*)src_data, src_width, src_height,
                                        src_step, (uint16_t*)dst_data, dst_step);
             break;
         case 4:
-            status = fcvTransposef32_v2((const float32_t*)src_data, src_width, src_height, 
+            status = fcvTransposef32_v2((const float32_t*)src_data, src_width, src_height,
                                        src_step, (float32_t*)dst_data, dst_step);
             break;
         default:
@@ -205,18 +205,18 @@ int fastcv_hal_meanStdDev(
     if(src_type != CV_8UC1)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("src type not supported");
-    }  
+    }
     else if(mask != nullptr)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("mask not supported");
-    }  
+    }
     else if(mean_val == nullptr && stddev_val == nullptr)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("null ptr for mean and stddev");
     }
-       
+
     float32_t mean, variance;
-        
+
     fcvStatus status = fcvImageIntensityStats_v2(src_data, src_step, 0, 0, width, height,
                                    &mean, &variance, FASTCV_BIASED_VARIANCE_ESTIMATOR);
 
@@ -278,7 +278,7 @@ int fastcv_hal_flip(
         status = fcvFlipRGB888u8((uint8_t*)src_data, src_width, src_height, src_step, (uint8_t*)dst_data, dst_step, dir);
     else
         CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Data type:%d is not supported, Switching to default OpenCV solution!", src_type));
-    
+
     CV_HAL_RETURN(status, hal_flip);
 }
 
@@ -294,7 +294,7 @@ int fastcv_hal_rotate(
 {
     if((src_width*src_height)<(120*80))
         CV_HAL_RETURN_NOT_IMPLEMENTED("Switching to default OpenCV solution for lower resolution!");
-    
+
     fcvStatus           status;
     fcvRotateDegree     degree;
 
@@ -324,11 +324,63 @@ int fastcv_hal_rotate(
             status = fcvRotateImageu8(src_data, src_width, src_height, src_step, dst_data, dst_step, degree);
             break;
         case CV_8UC2:
-            status = fcvRotateImageInterleavedu8((uint8_t*)src_data, src_width, src_height, src_step, (uint8_t*)dst_data, 
+            status = fcvRotateImageInterleavedu8((uint8_t*)src_data, src_width, src_height, src_step, (uint8_t*)dst_data,
                                                     dst_step, degree);
             break;
         default:
             CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("src_type:%d is not supported", src_type));
     }
     CV_HAL_RETURN(status, hal_rotate);
+}
+
+int fastcv_hal_addWeighted8u(
+    const uchar*    src1_data,
+    size_t          src1_step,
+    const uchar*    src2_data,
+    size_t          src2_step,
+    uchar*          dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    const double    scalars[3])
+{
+    if( (scalars[0] < -128.0f) || (scalars[0] >= 128.0f) ||
+        (scalars[1] < -128.0f) || (scalars[1] >= 128.0f) ||
+        (scalars[2] < -(1<<23))|| (scalars[2] >= 1<<23))
+        CV_HAL_RETURN_NOT_IMPLEMENTED(
+            cv::format("Alpha:%f,Beta:%f,Gamma:%f is not supported because it's too large or too small\n",
+            scalars[0],scalars[1],scalars[2]));
+
+    INITIALIZATION_CHECK;
+
+    fcvStatus status = FASTCV_SUCCESS;
+
+    if (height == 1)
+    {
+        src1_step = width*sizeof(uchar);
+        src2_step = width*sizeof(uchar);
+        dst_step  = width*sizeof(uchar);
+
+        cv::parallel_for_(cv::Range(0, width), [&](const cv::Range &range){
+            int rangeWidth = range.end - range.start;
+            const uint8_t *src1 = src1_data + range.start;
+            const uint8_t *src2 = src2_data + range.start;
+            uint8_t *dst = dst_data + range.start;
+            fcvAddWeightedu8_v2(src1, rangeWidth, height, src1_step, src2, src2_step,
+                scalars[0], scalars[1], scalars[2], dst, dst_step);
+            });
+    }
+    else
+    {
+        cv::parallel_for_(cv::Range(0, height), [&](const cv::Range &range){
+            int rangeHeight = range.end - range.start;
+            const uint8_t *src1 = src1_data + range.start * src1_step;
+            const uint8_t *src2 = src2_data + range.start * src2_step;
+            uint8_t *dst = dst_data + range.start * dst_step;
+            fcvAddWeightedu8_v2(src1, width, rangeHeight, src1_step, src2, src2_step,
+                scalars[0], scalars[1], scalars[2], dst, dst_step);
+            });
+    }
+
+    CV_HAL_RETURN(status, hal_addWeighted8u_v2);
 }
