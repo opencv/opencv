@@ -1017,11 +1017,10 @@ int fastcv_hal_canny(
 
     if (lowThreshold > highThreshold)
         CV_HAL_RETURN_NOT_IMPLEMENTED("lowThreshold is greater then highThreshold");
-
-    double	lowThresh = lowThreshold;
-    double	highThresh = highThreshold;
-
-    if (lowThresh != static_cast<int>(lowThresh) || highThresh != static_cast<int>(highThresh))
+	
+	const double epsilon = 1e-9;
+	
+	if (std::abs(lowThreshold - std::round(lowThreshold)) > epsilon || std::abs(highThreshold - std::round(highThreshold)) > epsilon)
         CV_HAL_RETURN_NOT_IMPLEMENTED("threshold with decimal values not supported");
 
     INITIALIZATION_CHECK;
@@ -1034,12 +1033,12 @@ int fastcv_hal_canny(
     else
         norm = fcvNormType::FASTCV_NORM_L1;
 
-    if ((ksize == 3) && (width > 2) && (height > 2) && (src_step >= (size_t)width) && (dst_step >= (size_t)width) && (lowThresh <= highThresh))
+    if ((ksize == 3) && (width > 2) && (height > 2) && (src_step >= (size_t)width) && (dst_step >= (size_t)width))
     {
         int16_t* gx = (int16_t*)fcvMemAlloc(width * height * sizeof(int16_t), 16);
         int16_t* gy = (int16_t*)fcvMemAlloc(width * height * sizeof(int16_t), 16);
         uint32_t gstride = 2 * width;
-        status = fcvFilterCannyu8(src_data, width, height, src_step, ksize, lowThresh, highThresh, norm, dst_data, dst_step, gx, gy, gstride);
+        status = fcvFilterCannyu8(src_data, width, height, src_step, ksize, static_cast<int>(std::round(lowThreshold)), static_cast<int>(std::round(highThreshold)), norm, dst_data, dst_step, gx, gy, gstride);
         fcvMemFree(gx);
         fcvMemFree(gy);
     }
