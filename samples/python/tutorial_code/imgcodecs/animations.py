@@ -20,11 +20,11 @@ def main(filename):
             frames.append(frame)
             durations.append(duration)
 
-        animation_to_save.frames =frames
+        animation_to_save.frames = frames
         animation_to_save.durations = durations
 
         # Write the animation to file
-        cv.imwriteanimation("animated_image.webp", animation_to_save, [cv.IMWRITE_WEBP_QUALITY, 100])
+        cv.imwriteanimation(filename, animation_to_save, [cv.IMWRITE_WEBP_QUALITY, 100])
         ## [write_animation]
 
     ## [read_animation]
