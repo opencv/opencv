@@ -26,6 +26,12 @@
 #define cv_hal_rotate90             fastcv_hal_rotate
 #undef  cv_hal_addWeighted8u
 #define cv_hal_addWeighted8u        fastcv_hal_addWeighted8u
+#undef  cv_hal_mul8u
+#define cv_hal_mul8u                fastcv_hal_mul8u
+#undef  cv_hal_mul16s
+#define cv_hal_mul16s               fastcv_hal_mul16s
+#undef  cv_hal_mul32f
+#define cv_hal_mul32f               fastcv_hal_mul32f
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief look-up table transform of an array.
@@ -176,5 +182,41 @@ int fastcv_hal_addWeighted8u(
     int             width,
     int             height,
     const double    scalars[3]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_mul8u(
+    const uchar     *src1_data,
+    size_t          src1_step,
+    const uchar     *src2_data,
+    size_t          src2_step,
+    uchar           *dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    double          scale);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_mul16s(
+    const short     *src1_data,
+    size_t          src1_step,
+    const short     *src2_data,
+    size_t          src2_step,
+    short           *dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    double          scale);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_mul32f(
+    const float    *src1_data,
+    size_t          src1_step,
+    const float    *src2_data,
+    size_t          src2_step,
+    float          *dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    double          scale);
 
 #endif
