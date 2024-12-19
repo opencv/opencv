@@ -587,7 +587,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("epsilon", &cv::TermCriteria::epsilon);
 
 #define EMSCRIPTEN_CV_SIZE(type) \
-    emscripten::value_object<type>("#type") \
+    emscripten::value_object<type>(#type) \
         .field("width", &type::width) \
         .field("height", &type::height);
 
@@ -595,7 +595,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     EMSCRIPTEN_CV_SIZE(Size2f)
 
 #define EMSCRIPTEN_CV_POINT(type) \
-    emscripten::value_object<type>("#type") \
+    emscripten::value_object<type>(#type) \
         .field("x", &type::x) \
         .field("y", &type::y); \
 
