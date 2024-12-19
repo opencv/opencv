@@ -13,7 +13,7 @@ def main(filename):
         frames = []
         durations = []
 
-        # Populate frames and timestamps in the Animation object
+        # Populate frames and durations in the Animation object
         for i in range(10):
             frame = image.copy()
             cv.putText(frame, f"Frame {i}", (30, 80), cv.FONT_HERSHEY_SIMPLEX, 1.5, (255, 100, 0, 255), 2)
@@ -27,8 +27,11 @@ def main(filename):
         cv.imwriteanimation(filename, animation_to_save, [cv.IMWRITE_WEBP_QUALITY, 100])
         ## [write_animation]
 
-    ## [read_animation]
+    ## [init_animation]
     animation = cv.Animation()
+    ## [init_animation]
+
+    ## [read_animation]
     success, animation = cv.imreadanimation(filename)
     if not success:
         print("Failed to load animation frames")

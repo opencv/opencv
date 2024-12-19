@@ -340,15 +340,15 @@ The function imreadmulti loads a specified range from a multi-page image from th
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
 
 /** @example samples/cpp/tutorial_code/imgcodecs/animations.cpp
-An example to show usage of imreadanimation and imwriteanimation functions.
+An example to show usage of cv::imreadanimation and cv::imwriteanimation functions.
 Check @ref tutorial_animations "the corresponding tutorial" for more details
 */
 
-/** @brief Loads images from an animated file into an Animation structure.
+/** @brief Loads frames from an animated image file into an Animation structure.
 
-The function imreadanimation loads frames from an animated file (e.g., AVIF, PNG, WEBP) into the provided Animation struct.
+The function imreadanimation loads frames from an animated image file (e.g., GIF, AVIF, APNG, WEBP) into the provided Animation struct.
 
-@param filename A string containing the path to the file. The file must be in a supported animated format (such as AVIF, PNG, or WebP).
+@param filename A string containing the path to the file.
 @param animation A reference to an Animation structure where the loaded frames will be stored. It should be initialized before the function is called.
 @param start The index of the first frame to load. This is optional and defaults to 0.
 @param count The number of frames to load. This is optional and defaults to 32767.
@@ -357,10 +357,10 @@ The function imreadanimation loads frames from an animated file (e.g., AVIF, PNG
 */
 CV_EXPORTS_W bool imreadanimation(const String& filename, CV_OUT Animation& animation, int start = 0, int count = INT16_MAX);
 
-/** @brief Saves an animation to a specified file.
+/** @brief Saves an Animation to a specified file.
 
 The function imwriteanimation saves the provided Animation data to the specified file in an animated format.
-Supported formats depend on the implementation and may include formats like AVIF, PNG, or WEBP.
+Supported formats depend on the implementation and may include formats like GIF, AVIF, APNG, or WEBP.
 
 @param filename The name of the file where the animation will be saved. The file extension determines the format.
 @param animation A constant reference to an Animation struct containing the frames and metadata to be saved.

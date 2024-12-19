@@ -25,8 +25,11 @@ int main( int argc, const char** argv )
     }
     //! [write_animation]
 
-    //! [read_animation]
+    //! [init_animation]
     Animation animation;
+    //! [init_animation]
+
+    //! [read_animation]
     bool success = imreadanimation(filename, animation);
     if (!success) {
         std::cerr << "Failed to load animation frames\n";
