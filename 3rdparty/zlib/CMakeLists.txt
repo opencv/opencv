@@ -41,8 +41,6 @@ endif()
 configure_file(	${CMAKE_CURRENT_SOURCE_DIR}/zconf.h.cmakein
                 ${CMAKE_CURRENT_BINARY_DIR}/zconf.h @ONLY)
 
-ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
-
 set(ZLIB_PUBLIC_HDRS
     ${CMAKE_CURRENT_BINARY_DIR}/zconf.h
     zlib.h
@@ -77,6 +75,9 @@ set(ZLIB_SRCS
 )
 
 add_library(${ZLIB_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${ZLIB_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
+target_include_directories(${ZLIB_LIBRARY} PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR};${CMAKE_CURRENT_SOURCE_DIR}>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wshorten-64-to-32 -Wattributes -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wshift-negative-value
@@ -87,9 +88,9 @@ ocv_warnings_disable(CMAKE_C_FLAGS -Wshorten-64-to-32 -Wattributes -Wstrict-prot
 )
 
 set_target_properties(${ZLIB_LIBRARY} PROPERTIES
-    OUTPUT_NAME ${ZLIB_LIBRARY}
+    OUTPUT_NAME "${ZLIB_LIBRARY}"
     DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
-    COMPILE_PDB_NAME ${ZLIB_LIBRARY}
+    COMPILE_PDB_NAME "${ZLIB_LIBRARY}"
     COMPILE_PDB_NAME_DEBUG "${ZLIB_LIBRARY}${OPENCV_DEBUG_POSTFIX}"
     ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
 )
@@ -98,8 +99,4 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${ZLIB_LIBRARY} PROPERTIES FOLDER "3rdparty")
 endif()
 
-if(NOT BUILD_SHARED_LIBS)
-  ocv_install_target(${ZLIB_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
-endif()
-
-ocv_install_3rdparty_licenses(zlib LICENSE)
+ocv_install_3rdparty_licenses(${ZLIB_LIBRARY} LICENSE)
