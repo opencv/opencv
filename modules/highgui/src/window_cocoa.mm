@@ -662,14 +662,16 @@ CvRect cvGetWindowRect_COCOA( const char* name )
     {
         CV_ERROR( CV_StsNullPtr, "NULL window" );
     } else {
-        NSRect rect = [window frame];
+        @autoreleasepool {
+            NSRect rect = [window frame];
 #if MAC_OS_X_VERSION_MAX_ALLOWED > MAC_OS_X_VERSION_10_6
-        NSPoint pt = [window convertRectToScreen:rect].origin;
+            NSPoint pt = [window convertRectToScreen:rect].origin;
 #else
-        NSPoint pt = [window convertBaseToScreen:rect.origin];
+            NSPoint pt = [window convertBaseToScreen:rect.origin];
 #endif
-        NSSize sz = [[[window contentView] image] size];
-        result = cvRect(pt.x, pt.y, sz.width, sz.height);
+            NSSize sz = [[[window contentView] image] size];
+            result = cvRect(pt.x, pt.y, sz.width, sz.height);
+        }
     }
 
     __END__;
