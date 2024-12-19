@@ -439,7 +439,7 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
             {
                 config.quality = 1.0f;
             }
-            if (config.quality > 100.0f)
+            if (config.quality >= 100.0f)
             {
                 config.lossless = 1;
             }
