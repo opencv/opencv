@@ -515,8 +515,19 @@ CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter handle, int prop, CV_OUT 
 }
 
 static
-CvResult CV_API_CALL cv_writer_set_prop(CvPluginWriter /*handle*/, int /*prop*/, double /*val*/)
+CvResult CV_API_CALL cv_writer_set_prop(CvPluginWriter handle, int prop, double val)
 {
+    if (!handle)
+        return CV_ERROR_FAIL;
+    try
+    {
+        CvVideoWriter_FFMPEG_proxy* instance = (CvVideoWriter_FFMPEG_proxy*)handle;
+        return (instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL);
+    }
+    catch (...)
+    {
+        return CV_ERROR_FAIL;
+    }
     return CV_ERROR_FAIL;
 }
 
