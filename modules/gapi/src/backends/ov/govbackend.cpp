@@ -105,10 +105,10 @@ static ov::preprocess::ResizeAlgorithm toOVInterp(int interpolation) {
     GAPI_Assert(false);
 }
 
-static std::vector<int> toCV(const ov::Shape &shape) {
+static std::vector<int> toCV(const ov::PartialShape &shape) {
     std::vector<int> result;
     result.reserve(shape.size());
-    for (auto dim : shape) {
+    for (auto dim : shape.get_max_shape()) {
         result.push_back(ade::util::checked_cast<int>(dim));
     }
     return result;
@@ -127,20 +127,17 @@ static int toCV(const ov::element::Type &type) {
 }
 
 static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
-    const auto total = mat.total() * mat.channels();
-    if (toCV(tensor.get_element_type()) != mat.depth() ||
-        tensor.get_size()               != total) {
+    if (toCV(tensor.get_element_type()) != mat.depth()) {
         std::stringstream ss;
         ss << "Failed to copy data from ov::Tensor to cv::Mat."
-           << " Data type or number of elements mismatch."
+           << " Data type mismatch."
            << " cv::Mat: " << cv::descr_of(mat) << " and"
-           << " ov::Tensor: " << tensor.get_element_type() << " "
-           << tensor.get_shape();
+           << " ov::Tensor: " << tensor.get_element_type();
         cv::util::throw_error(std::logic_error(ss.str()));
     }
 
+    const auto total = mat.total() * mat.channels();
     if (tensor.get_element_type() == ov::element::i64) {
-        GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
         cv::gimpl::convertInt64ToInt32(tensor.data<int64_t>(),
                                        mat.ptr<int>(),
                                        total);
@@ -152,7 +149,7 @@ static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
 }
 
 static cv::Mat wrapOV(const cv::MediaFrame::View& view,
-               const cv::GFrameDesc& desc) {
+                      const cv::GFrameDesc& desc) {
     cv::Mat out;
     switch (desc.fmt) {
         case cv::MediaFormat::BGR: {
@@ -242,7 +239,6 @@ struct OVUnit {
             if (params.num_out == 1u && params.output_names.empty()) {
                 params.output_names = { model->outputs().begin()->get_any_name() };
             }
-
         } else {
             GAPI_Assert(cv::util::holds_alternative<ParamDesc::CompiledModel>(params.kind));
             std::ifstream file(cv::util::get<ParamDesc::CompiledModel>(params.kind).blob_path,
@@ -813,7 +809,7 @@ static void preprocess_and_copy(std::shared_ptr<OVCallContext> ctx,
 }
 
 static bool isImage(const cv::GMatDesc &desc,
-                    const ::ov::Shape  &model_shape) {
+                    const ::ov::PartialShape &model_shape) {
     return (model_shape.size() == 4u)                      &&
            (!desc.isND())  /* dims == 2 */                 &&
            (desc.chan == 1 || desc.chan == 3)              &&
@@ -822,7 +818,7 @@ static bool isImage(const cv::GMatDesc &desc,
 }
 
 static bool isImage(const cv::GMetaArg &meta,
-                    const ::ov::Shape  &shape) {
+                    const ::ov::PartialShape &shape) {
     if (cv::util::holds_alternative<GFrameDesc>(meta)) {
         return true;
     }
@@ -865,7 +861,7 @@ public:
         const auto explicit_in_model_layout = lookUp(m_input_model_layout, input_name);
         if (explicit_in_model_layout) {
             input_info.model().set_layout(::ov::Layout(*explicit_in_model_layout));
-        } else if (m_model->input(input_name).get_shape().size() == 4u) {
+        } else if (m_model->input(input_name).get_partial_shape().size() == 4u) {
             const auto& input_layout = ::ov::layout::get_layout(m_model->input(input_name));
             if (!input_layout.empty()) {
                 GAPI_LOG_INFO(NULL, "Model input layout " << input_name << " found: " << input_layout.to_string() << ".");
@@ -926,7 +922,7 @@ public:
                 " on host via OpenCV so explicitly configured resize is prohibited."));
         }
 
-        const auto &input_shape = m_model->input(input_name).get_shape();
+        const auto &input_shape = m_model->input(input_name).get_partial_shape();
         auto &input_info = m_ppp.input(input_name);
 
         auto isMat = cv::util::holds_alternative<cv::GMatDesc>(input_meta);
@@ -1097,12 +1093,12 @@ struct Infer: public cv::detail::KernelTag {
             if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
                 const auto &out = uu.model->output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
-                                    toCV(out.get_shape()));
+                                    toCV(out.get_partial_shape()));
             } else {
                 GAPI_Assert(cv::util::holds_alternative<ParamDesc::CompiledModel>(uu.params.kind));
                 const auto &out = uu.compiled_model.output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
-                                    toCV(out.get_shape()));
+                                    toCV(out.get_partial_shape()));
             }
             result.emplace_back(std::move(outm));
         }
@@ -1158,8 +1154,8 @@ struct InferROI: public cv::detail::KernelTag {
         GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(mm) ||
                     cv::util::holds_alternative<cv::GFrameDesc>(mm));
         const bool is_model = cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind);
-        const auto &input_shape = is_model ? uu.model->input(input_name).get_shape()
-                                           : uu.compiled_model.input(input_name).get_shape();
+        const auto &input_shape = is_model ? uu.model->input(input_name).get_partial_shape()
+                                           : uu.compiled_model.input(input_name).get_partial_shape();
 
         if (!isImage(mm, input_shape)) {
             util::throw_error(std::runtime_error(
@@ -1184,12 +1180,12 @@ struct InferROI: public cv::detail::KernelTag {
             if (cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind)) {
                 const auto &out = uu.model->output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
-                                    toCV(out.get_shape()));
+                                    toCV(out.get_partial_shape()));
             } else {
                 GAPI_Assert(cv::util::holds_alternative<ParamDesc::CompiledModel>(uu.params.kind));
                 const auto &out = uu.compiled_model.output(out_name);
                 outm = cv::GMatDesc(toCV(out.get_element_type()),
-                                    toCV(out.get_shape()));
+                                    toCV(out.get_partial_shape()));
             }
             result.emplace_back(std::move(outm));
         }
@@ -1249,7 +1245,7 @@ struct InferList: public cv::detail::KernelTag {
                 const auto &mm = in_metas[idx++];
                 GAPI_Assert(cv::util::holds_alternative<cv::GMatDesc>(mm) ||
                             cv::util::holds_alternative<cv::GFrameDesc>(mm));
-                const auto &input_shape = uu.model->input(input_name).get_shape();
+                const auto &input_shape = uu.model->input(input_name).get_partial_shape();
 
                 if (!isImage(mm, input_shape)) {
                     util::throw_error(std::runtime_error(
@@ -1355,8 +1351,8 @@ struct InferList2: public cv::detail::KernelTag {
         }
 
         const bool is_model = cv::util::holds_alternative<ParamDesc::Model>(uu.params.kind);
-        const auto &input_shape = is_model ? uu.model->input(input_name_0).get_shape()
-                                           : uu.compiled_model.input(input_name_0).get_shape();
+        const auto &input_shape = is_model ? uu.model->input(input_name_0).get_partial_shape()
+                                           : uu.compiled_model.input(input_name_0).get_partial_shape();
         if (!isImage(mm_0, input_shape)) {
             util::throw_error(std::runtime_error(
                 "OV Backend: InferList2 supports only image as the 0th argument"));
@@ -1439,8 +1435,7 @@ struct InferList2: public cv::detail::KernelTag {
                             const auto &shape = input_tensor.get_shape();
                             if (this_vec.getKind() == cv::detail::OpaqueKind::CV_RECT) {
                                 const auto &vec = this_vec.rref<cv::Rect>();
-                                const auto roi_mat = preprocess(ctx->inMat(0), vec[list_idx], shape);
-                                copyToOV(roi_mat, input_tensor);
+                                preprocess_and_copy(ctx, 0, vec[list_idx], shape, input_tensor);
                             } else if (this_vec.getKind() == cv::detail::OpaqueKind::CV_MAT) {
                                 const auto &vec = this_vec.rref<cv::Mat>();
                                 const auto &mat = vec[list_idx];
