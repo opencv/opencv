@@ -26,6 +26,8 @@
 #define cv_hal_cvtBGRtoHSV          fastcv_hal_cvtBGRtoHSV
 #undef  cv_hal_cvtBGRtoYUVApprox
 #define cv_hal_cvtBGRtoYUVApprox    fastcv_hal_cvtBGRtoYUVApprox
+#undef  cv_hal_canny
+#define cv_hal_canny                fastcv_hal_canny
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief Calculate medianBlur filter
 /// @param src_data Source image data
@@ -235,4 +237,32 @@ int fastcv_hal_cvtBGRtoYUVApprox(
     int             scn,
     bool            swapBlue,
     bool            isCbCr);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// @brief Canny edge detector
+/// @param src_data Source image data
+/// @param src_step Source image step
+/// @param dst_data Destination image data
+/// @param dst_step Destination image step
+/// @param width Source image width
+/// @param height Source image height
+/// @param cn Number of channels
+/// @param lowThreshold low hresholds value
+/// @param highThreshold high thresholds value
+/// @param ksize Kernel size for Sobel operator.
+/// @param L2gradient Flag, indicating use of L2 or L1 norma.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_canny(
+    const uchar* 	src_data,
+    size_t          src_step,
+    uchar* 			dst_data,
+    size_t          dst_step,
+    int             width,
+    int             height,
+    int             cn,
+    double          lowThreshold,
+    double          highThreshold,
+    int             ksize,
+    bool            L2gradient);
+
 #endif
