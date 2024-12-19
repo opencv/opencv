@@ -80,7 +80,7 @@ static double elapsedTimeFrom(std::chrono::time_point<std::chrono::system_clock>
 
 class AndroidCameraCapture : public IVideoCapture
 {
-    int cachedIndex;
+    int deviceIndex;
     AObjPtr<ACameraManager> cameraManager { nullptr, ACameraManager_delete };
     AObjPtr<ACameraDevice> cameraDevice { nullptr, ACameraDevice_close };
     AObjPtr<AImageReader> imageReader { nullptr, AImageReader_delete };
@@ -135,7 +135,8 @@ class AndroidCameraCapture : public IVideoCapture
     std::condition_variable condition;
 
 public:
-    AndroidCameraCapture(const VideoCaptureParameters& params)
+    AndroidCameraCapture(int index, const VideoCaptureParameters& params)
+        : deviceIndex(index)
     {
         deviceCallbacks.context = this;
         deviceCallbacks.onError = OnDeviceError;
@@ -437,9 +438,8 @@ public:
         return false;
     }
 
-    bool initCapture(int index)
+    bool initCapture()
     {
-        cachedIndex = index;
         cameraManager.reset(ACameraManager_create());
         if (!cameraManager) {
             LOGE("Cannot create camera manager!");
@@ -452,11 +452,11 @@ public:
             return false;
         }
         AObjPtr<ACameraIdList> cameraIdList(cameraIds, ACameraManager_deleteCameraIdList);
-        if (index < 0 || index >= cameraIds->numCameras) {
-            LOGE("Camera index out of range %d (Number of cameras: %d)", index, cameraIds->numCameras);
+        if (deviceIndex < 0 || deviceIndex >= cameraIds->numCameras) {
+            LOGE("Camera index out of range %d (Number of cameras: %d)", deviceIndex, cameraIds->numCameras);
             return false;
         }
-        const char *cameraId = cameraIdList.get()->cameraIds[index];
+        const char *cameraId = cameraIdList.get()->cameraIds[deviceIndex];
 
         ACameraDevice* camera;
         cStatus = ACameraManager_openCamera(cameraManager.get(), cameraId, &deviceCallbacks, &camera);
@@ -649,7 +649,7 @@ private:
     void setWidthHeight(SetupState newState) {
         if ((widthHeightState | newState) == (setupWidth | setupHeight)) {
             cleanUp();
-            initCapture(cachedIndex);
+            initCapture();
             newState = setupDone;
         }
         widthHeightState = newState;
@@ -778,8 +778,8 @@ void AndroidCameraCapture::OnCaptureFailed(void* context,
 /****************** Implementation of interface functions ********************/
 
 Ptr<IVideoCapture> cv::createAndroidCapture_cam(int index, const VideoCaptureParameters& params) {
-    Ptr<AndroidCameraCapture> res = makePtr<AndroidCameraCapture>(params);
-    if (res && res->initCapture(index))
+    Ptr<AndroidCameraCapture> res = makePtr<AndroidCameraCapture>(index, params);
+    if (res && res->initCapture())
         return res;
     return Ptr<IVideoCapture>();
 }
