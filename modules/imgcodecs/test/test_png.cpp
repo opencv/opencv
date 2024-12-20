@@ -327,6 +327,189 @@ const string pngsuite_files_corrupted[] = {
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_PngSuite_Corrupted,
                         testing::ValuesIn(pngsuite_files_corrupted));
 
+TEST(Imgcodecs_Png, load_save_animation)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/tp1n3p08.png";
+    Animation l_animation, s_animation;
+    RNG rng = theRNG();
+
+    Mat image = imread(filename, IMREAD_UNCHANGED);
+    s_animation.frames.push_back(image.clone());
+    Mat roi = image(Rect(0, 16, 32, 16));
+    int duration = 100;
+    s_animation.durations.push_back(duration);
+
+    // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
+    for (int i = 1; i < 14; i++)
+    {
+        for (int x = 0; x < roi.rows; x++)
+            for (int y = 0; y < roi.cols; y++)
+            {
+                // Apply random changes to pixel values to create animation variations.
+                Vec4b& pixel = roi.at<Vec4b>(x, y);
+                if (pixel[3] > 0)
+                {
+                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
+                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
+                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
+                    pixel[3] -= (uchar)rng.uniform(2, 5);  // Reduce alpha channel.
+                }
+            }
+
+        // Update the timestamp and add the modified frame to the animation.
+        duration += rng.uniform(2, 10);  // Increment timestamp with random value.
+        s_animation.frames.push_back(image.clone());
+        putText(s_animation.frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
+        s_animation.durations.push_back(duration);
+    }
+
+    string output = cv::tempfile(".png");
+
+    EXPECT_EQ(true, imwriteanimation(output, s_animation));
+    EXPECT_EQ(s_animation.frames.size(), imcount(output));
+    EXPECT_EQ(true, imreadanimation(output, l_animation));
+    EXPECT_EQ(l_animation.frames.size(), s_animation.frames.size());
+    image = imread(output, IMREAD_UNCHANGED);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), s_animation.frames[0], image);
+    image = imread(output, IMREAD_COLOR);
+    EXPECT_EQ(0, image.empty());
+    image = imread(output, IMREAD_GRAYSCALE);
+    EXPECT_EQ(0, image.empty());
+    EXPECT_EQ(0, remove(output.c_str()));
+
+    for (size_t i = 0; i < l_animation.frames.size(); i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), s_animation.frames[i], l_animation.frames[i]);
+        EXPECT_EQ(s_animation.durations[i], l_animation.durations[i]);
+    }
+}
+
+TEST(Imgcodecs_Png, load_save_multiframes_rgba)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/tp1n3p08.png";
+    vector<Mat> png_frames;
+    RNG rng = theRNG();
+
+    Mat image = imread(filename, IMREAD_UNCHANGED);
+    png_frames.push_back(image.clone());
+    Mat roi = image(Rect(0, 16, 32, 16));
+
+    // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
+    for (int i = 1; i < 14; i++)
+    {
+        for (int x = 0; x < roi.rows; x++)
+            for (int y = 0; y < roi.cols; y++)
+            {
+                // Apply random changes to pixel values to create animation variations.
+                Vec4b& pixel = roi.at<Vec4b>(x, y);
+                if (pixel[3] > 0)
+                {
+                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
+                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
+                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
+                    pixel[3] -= (uchar)rng.uniform(2, 5);  // Reduce alpha channel.
+                }
+            }
+
+        png_frames.push_back(image.clone());
+        putText(png_frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
+    }
+
+    string output = cv::tempfile(".png");
+    EXPECT_EQ(true, imwrite(output, png_frames));
+    vector<Mat> read_frames;
+    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_UNCHANGED));
+    EXPECT_EQ(png_frames.size(), read_frames.size());
+    EXPECT_EQ(read_frames.size(), imcount(output));
+    EXPECT_EQ(0, remove(output.c_str()));
+    std::vector<uchar> buf;
+    EXPECT_EQ(true, imencode(".png", png_frames, buf));
+    EXPECT_EQ(true, imdecodemulti(buf, IMREAD_COLOR_RGB, read_frames));
+}
+
+TEST(Imgcodecs_Png, load_save_multiframes_rgb)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/tp1n3p08.png";
+    vector<Mat> png_frames;
+    RNG rng = theRNG();
+
+    Mat image = imread(filename);
+    png_frames.push_back(image.clone());
+    Mat roi = image(Rect(0, 16, 32, 16));
+
+    // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
+    for (int i = 1; i < 14; i++)
+    {
+        for (int x = 0; x < roi.rows; x++)
+            for (int y = 0; y < roi.cols; y++)
+            {
+                // Apply random changes to pixel values to create animation variations.
+                Vec3b& pixel = roi.at<Vec3b>(x, y);
+                if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
+                if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
+                if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
+            }
+
+        png_frames.push_back(image.clone());
+        putText(png_frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
+    }
+
+    string output = cv::tempfile(".png");
+    ASSERT_TRUE(imwrite(output, png_frames));
+    vector<Mat> read_frames;
+    ASSERT_TRUE(imreadmulti(output, read_frames));
+    EXPECT_EQ(png_frames.size(), read_frames.size());
+    EXPECT_EQ(read_frames.size(), imcount(output));
+    EXPECT_EQ(0, remove(output.c_str()));
+
+    for (size_t i = 0; i < png_frames.size(); i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), png_frames[i], read_frames[i]);
+    }
+}
+
+TEST(Imgcodecs_Png, load_save_multiframes_gray)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/tp1n3p08.png";
+    vector<Mat> png_frames;
+
+    Mat image = imread(filename, IMREAD_GRAYSCALE);
+    png_frames.push_back(image.clone());
+    Mat roi = image(Rect(0, 16, 32, 16));
+
+    for (size_t i = 0; i < 15; i++)
+    {
+        roi = roi - Scalar(10);
+        png_frames.push_back(image.clone());
+    }
+
+    string output = cv::tempfile(".png");
+    EXPECT_EQ(true, imwrite(output, png_frames));
+    vector<Mat> read_frames;
+    EXPECT_EQ(true, imreadmulti(output, read_frames));
+    EXPECT_EQ(1, read_frames[0].channels());
+    read_frames.clear();
+    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_UNCHANGED));
+    EXPECT_EQ(1, read_frames[0].channels());
+    read_frames.clear();
+    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_COLOR));
+    EXPECT_EQ(3, read_frames[0].channels());
+    read_frames.clear();
+    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_GRAYSCALE));
+    EXPECT_EQ(png_frames.size(), read_frames.size());
+    EXPECT_EQ(read_frames.size(), imcount(output));
+    EXPECT_EQ(0, remove(output.c_str()));
+
+    for (size_t i = 0; i < png_frames.size(); i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), png_frames[i], read_frames[i]);
+    }
+}
+
 #endif // HAVE_PNG
 
 }} // namespace
