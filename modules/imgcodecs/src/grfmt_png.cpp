@@ -223,6 +223,8 @@ bool  PngDecoder::readHeader()
                 else
                 {
                     m_f = fopen( m_filename.c_str(), "rb" );
+                    if (!m_f)
+                        return false;
                     png_init_io(png_ptr, m_f);
                     unsigned char sig[8];
                     uint32_t id = 0;
