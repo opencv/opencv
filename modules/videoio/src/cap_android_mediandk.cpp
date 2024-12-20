@@ -235,7 +235,9 @@ public:
             case CAP_PROP_ORIENTATION_AUTO: return videoOrientationAuto ? 1 : 0;
             case CAP_PROP_FOURCC: return fourCC;
         }
-        return 0;
+
+        // unknown parameter or value not available
+        return -1;
     }
 
     bool setProperty(int property_id, double value) CV_OVERRIDE
