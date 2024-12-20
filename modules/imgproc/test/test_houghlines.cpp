@@ -355,7 +355,7 @@ TEST(WeightedHoughLines, horizontal)
     HoughLines(img, lines, 1, CV_PI/180, threshold, 0, 0, 0.0, CV_PI, use_edgeval);
     
     // check results
-    ASSERT_EQ(3, lines.size());
+    ASSERT_EQ(3U, lines.size());
     // detected lines is assumed sorted from stronger to weaker. 
     EXPECT_EQ(12, lines[0][0]);
     EXPECT_EQ(6, lines[1][0]);
@@ -379,7 +379,7 @@ TEST(WeightedHoughLines, diagonal)
     HoughLines(img, lines, 1, CV_PI/180, threshold, 0, 0, 0.0, CV_PI, use_edgeval);
     
     // check results
-    ASSERT_EQ(2, lines.size());
+    ASSERT_EQ(2U, lines.size());
     // detected lines is assumed sorted from stronger to weaker. 
     EXPECT_EQ(18, lines[0][0]); // 25*sqrt(2)/2 = 17.67 ~ 18
     EXPECT_EQ(0, lines[1][0]);
