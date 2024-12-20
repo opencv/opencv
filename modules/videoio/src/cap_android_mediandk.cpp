@@ -84,7 +84,6 @@ public:
     int32_t videoRotationCode;
     bool videoOrientationAuto;
     std::vector<uint8_t> buffer;
-    Mat frame;
 
     ~AndroidMediaNdkCapture() { cleanUp(); }
 
