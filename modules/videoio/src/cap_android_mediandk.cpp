@@ -62,7 +62,7 @@ public:
     AndroidMediaNdkCapture():
         sawInputEOS(false), sawOutputEOS(false),
         frameStride(0), frameWidth(0), frameHeight(0),
-        colorFormat(COLOR_FormatUnknown), fourCC(FOURCC_RGB),
+        colorFormat(COLOR_FormatUnknown), fourCC(FOURCC_BGR),
         videoWidth(0), videoHeight(0), videoFrameCount(0),
         videoRotation(0), videoRotationCode(-1),
         videoOrientationAuto(false) {}
