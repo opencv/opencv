@@ -224,8 +224,8 @@ TEST(Imgcodecs_WebP, load_save_animation_rgba)
     // Read back the still images into a vector of Mats.
     EXPECT_TRUE(imreadmulti(output, webp_frames));
 
-    // Expect only one frame since it's saved as a still image.
-    expected_frame_count = 1;
+    // Expect all frames written as multi-page image
+    expected_frame_count = 14;
     EXPECT_EQ(expected_frame_count, webp_frames.size());
 
     // Test encoding and decoding the images in memory (without saving to disk).

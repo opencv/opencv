@@ -394,10 +394,16 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 
 bool WebPEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
 {
-    if (img_vec.size() > 1)
-        CV_LOG_WARNING(NULL, "\nyou are trying to write " << img_vec.size() <<
-            " images.\nonly the first image will be written.\nuse imwriteanimation() function to write more images.\n");
-    return write(img_vec[0], params);
+    CV_LOG_INFO(NULL, "Multi page image will be written as animation with 1 second frame duration.");
+
+    Animation animation;
+    animation.frames = img_vec;
+
+    for (size_t i = 0; i < animation.frames.size(); i++)
+    {
+        animation.durations.push_back(1000);
+    }
+    return writeanimation(animation, params);
 }
 
 bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<int>& params)

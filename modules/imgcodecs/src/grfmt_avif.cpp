@@ -11,6 +11,7 @@
 #include <memory>
 
 #include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/logger.hpp>
 #include "opencv2/imgproc.hpp"
 #include "grfmt_avif.hpp"
 
@@ -304,6 +305,9 @@ bool AvifEncoder::write(const Mat &img, const std::vector<int> &params) {
 
 bool AvifEncoder::writemulti(const std::vector<Mat> &img_vec,
                              const std::vector<int> &params) {
+
+    CV_LOG_INFO(NULL, "Multi page image will be written as animation with 1 second frame duration.");
+
     Animation animation;
     animation.frames = img_vec;
 

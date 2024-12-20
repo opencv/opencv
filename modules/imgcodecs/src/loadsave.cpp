@@ -1620,6 +1620,13 @@ ImageCollection::iterator ImageCollection::iterator::operator++(int) {
     return tmp;
 }
 
+Animation::Animation(int loopCount, Scalar bgColor)
+    : loop_count(loopCount), bgcolor(bgColor)
+{
+    if (loopCount < 0 || loopCount > 0xffff)
+        this->loop_count = 0; // loop_count should be non-negative
+}
+
 }
 
 /* End of file. */
