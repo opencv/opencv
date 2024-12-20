@@ -19,7 +19,6 @@
 #include <limits>
 #include <cmath>
 #include <queue>
-#include <limits>
 #include <map>
 
 namespace cv
@@ -3709,9 +3708,15 @@ bool QRDetectMulti::checkSets(vector<vector<Point2f> >& true_points_group, vecto
     vector<int> set_size(true_points_group.size());
     for (size_t i = 0; i < true_points_group.size(); i++)
     {
-        set_size[i] =
-            static_cast<int>((true_points_group[i].size() - 2) * (true_points_group[i].size() - 1) *
-                             true_points_group[i].size() / 6);
+        const std::uint64_t true_points_group_size = true_points_group[i].size();
+        CV_Assert(true_points_group_size - 2 <=
+                  std::numeric_limits<std::uint64_t>::max() / (true_points_group_size - 1));
+        CV_Assert((true_points_group_size - 2) * (true_points_group_size - 1) <=
+                  std::numeric_limits<std::uint64_t>::max() / true_points_group_size);
+        const std::uint64_t combination = (true_points_group_size - 2) *
+                                          (true_points_group_size - 1) * true_points_group_size / 6;
+        CV_Assert(combination <= std::numeric_limits<int>::max());
+        set_size[i] = static_cast<int>(combination);
     }
 
     vector< vector< Vec3i > > all_points(true_points_group.size());
