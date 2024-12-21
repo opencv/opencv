@@ -1,6 +1,6 @@
 ## OpenCV: Open Source Computer Vision Library
 
-## Quick Start Tutorial for Beginners
+### Quick Start Tutorial for Beginners
 
 This tutorial helps newcomers get started with OpenCV:
 
