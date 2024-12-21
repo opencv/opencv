@@ -1,13 +1,12 @@
 // This file is part of OpenCV project.
-// It is subject to the license terms in the LICENSE file found in the top-level
-// directory of this distribution and at http://opencv.org/license.html
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 /****************************************************************************\
  *
  *  this file includes some modified part of apngasm
  *
  ****************************************************************************/
-
 
  /*  apngasm
  *
@@ -64,8 +63,8 @@ namespace cv {
         _colorType = 0;
         _paletteSize = 0;
         _transparencySize = 0;
-        _delayNum = DEFAULT_FRAME_NUMERATOR;
-        _delayDen = DEFAULT_FRAME_DENOMINATOR;
+        _delayNum = 1;
+        _delayDen = 1000;
         _rows = NULL;
     }
 
@@ -135,58 +134,6 @@ namespace cv {
 
     void APNGFrame::setRows(unsigned char** setRows) {
         _rows = setRows;
-    }
-
-    // Save frame to a PNG image file.
-    // Return true if save succeeded.
-    bool APNGFrame::save(const std::string& outPath) const
-    {
-        FILE* f;
-        if ((f = fopen(outPath.c_str(), "wb")) != 0) {
-            png_structp png_ptr =
-                png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-            png_infop info_ptr = png_create_info_struct(png_ptr);
-            if (png_ptr && info_ptr) {
-                if (setjmp(png_jmpbuf(png_ptr))) {
-                    png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-                    fclose(f);
-                    return false;
-                }
-                png_init_io(png_ptr, f);
-                png_set_compression_level(png_ptr, 9);
-                png_set_IHDR(png_ptr, info_ptr, _width, _height, 8, _colorType, 0, 0, 0);
-                if (_paletteSize > 0) {
-                    png_color palette[PNG_MAX_PALETTE_LENGTH];
-                    memcpy(palette, _palette, _paletteSize * 3);
-                    png_set_PLTE(png_ptr, info_ptr, palette, _paletteSize);
-                }
-                if (_transparencySize > 0) {
-                    png_color_16 trans_color;
-                    if (_colorType == PNG_COLOR_TYPE_GRAY) {
-                        trans_color.gray = _transparency[1];
-                        png_set_tRNS(png_ptr, info_ptr, NULL, 0, &trans_color);
-                    }
-                    else if (_colorType == PNG_COLOR_TYPE_RGB) {
-                        trans_color.red = _transparency[1];
-                        trans_color.green = _transparency[3];
-                        trans_color.blue = _transparency[5];
-                        png_set_tRNS(png_ptr, info_ptr, NULL, 0, &trans_color);
-                    }
-                    else if (_colorType == PNG_COLOR_TYPE_PALETTE)
-                        png_set_tRNS(png_ptr, info_ptr,
-                            const_cast<unsigned char*>(_transparency),
-                            _transparencySize, NULL);
-                }
-                png_write_info(png_ptr, info_ptr);
-                png_write_image(png_ptr, _rows);
-                png_write_end(png_ptr, info_ptr);
-                return true;
-            }
-            else
-                png_destroy_write_struct(&png_ptr, &info_ptr);
-            fclose(f);
-        }
-        return false;
     }
 
 } // namespace cv
