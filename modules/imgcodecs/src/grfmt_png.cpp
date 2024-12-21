@@ -475,7 +475,7 @@ bool PngDecoder::readAnimation(Mat& img)
 
                 compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, img.channels());
                 m_animation.frames.push_back(img.clone());
-                m_animation.durations.push_back(delay_den);
+                m_animation.durations.push_back(delay_num);
 
                 if (dop != 2)
                 {
@@ -526,10 +526,8 @@ bool PngDecoder::readAnimation(Mat& img)
             if (processing_finish())
             {
                 compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, img.channels());
-                frameCur.setDelayNum(delay_num);
-                frameCur.setDelayDen(delay_den);
                 m_animation.frames.push_back(img.clone());
-                m_animation.durations.push_back(delay_den);
+                m_animation.durations.push_back(delay_num);
             }
             else
                 return false;
@@ -1426,8 +1424,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             cvtColor(animation.frames[i], tmpframes[i], COLOR_BGRA2RGBA);
         if (animation.frames[i].channels() == 3)
             cvtColor(animation.frames[i], tmpframes[i], COLOR_BGR2RGB);
-        apngFrame.setMat(tmpframes[i]);
-        apngFrame.setDelayDen(animation.durations[i]);
+        apngFrame.setMat(tmpframes[i], animation.durations[i]);
         frames.push_back(apngFrame);
     }
 
