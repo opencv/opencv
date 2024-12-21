@@ -499,9 +499,7 @@ bool PngDecoder::readAnimation(Mat& img)
             delay_den = png_get_uint_16(chunk.p + 30);
             dop = chunk.p[32];
             bop = chunk.p[33];
-#if 0
-printf("%d %d\n", delay_num, delay_den);
-#endif
+
             if (w0 > cMaxPNGSize || h0 > cMaxPNGSize || x0 > cMaxPNGSize || y0 > cMaxPNGSize || int(x0 + w0) > img.cols || int(y0 + h0) > img.rows || dop > 2 || bop > 1)
             {
                 delete[] chunk.p;
