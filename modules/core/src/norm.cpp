@@ -1385,7 +1385,6 @@ void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
         scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
         if( rtype == CV_32F )
         {
-            scale = (float)scale;
             shift = (float)dmin - (float)(smin*scale);
         }
         else
@@ -1404,9 +1403,10 @@ void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
                ocl_normalize(_src, _dst, _mask, rtype, scale, shift))
 
     Mat src = _src.getMat();
-    if( _mask.empty() )
-        src.convertTo( _dst, rtype, scale, shift );
-    else
+    if (_mask.empty()) {
+        src.convertTo(_dst, rtype, scale, shift);
+    }
+     else
     {
         Mat temp;
         src.convertTo( temp, rtype, scale, shift );
