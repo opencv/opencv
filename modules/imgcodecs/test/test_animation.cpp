@@ -86,9 +86,9 @@ static bool fillFrames(Animation& animation, bool hasAlpha)
     }
 
     // Add two identical frames with the same duration.
-    animation.durations.push_back(duration);
+    animation.durations.push_back(++duration);
     animation.frames.push_back(animation.frames.back());
-    animation.durations.push_back(duration);
+    animation.durations.push_back(++duration);
     animation.frames.push_back(animation.frames.back());
 
     return true;
@@ -103,7 +103,7 @@ TEST(Imgcodecs_WebP, imwriteanimation_rgba)
 
     // Create a temporary output filename for saving the animation.
     string output = cv::tempfile(".webp");
-    imwriteanimation("output.png", s_animation);
+
     // Write the animation to a .webp file and verify success.
     EXPECT_TRUE(imwriteanimation(output, s_animation));
 
