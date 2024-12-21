@@ -222,13 +222,13 @@ void blobFromImagesNCHW(const std::vector<Mat>& images, Mat& blob_, const Image2
     else if (images[0].depth() == CV_64F)
         blobFromImagesNCHWImpl<double, Tout>(images, blob_, param);
     else
-        CV_Error(CV_BadDepth, "Unsupported input image depth for blobFromImagesNCHW");
+        CV_Error(Error::BadDepth, "Unsupported input image depth for blobFromImagesNCHW");
 }
 
 template<typename Tout>
 void blobFromImagesNCHW(const std::vector<UMat>& images, UMat& blob_, const Image2BlobParams& param)
 {
-    CV_Error(CV_StsNotImplemented, "");
+    CV_Error(Error::StsNotImplemented, "");
 }
 
 template<class Tmat>
