@@ -1,13 +1,12 @@
 // This file is part of OpenCV project.
-// It is subject to the license terms in the LICENSE file found in the top-level
-// directory of this distribution and at http://opencv.org/license.html
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 /****************************************************************************\
  *
  *  this file includes some modified part of apngasm
  *
  ****************************************************************************/
-
 
  /*  apngasm
  *
@@ -52,10 +51,6 @@ typedef struct {
   unsigned char r, g, b, a;
 } rgba;
 
-// Default values for delay numerator and denominator
-constexpr unsigned DEFAULT_FRAME_NUMERATOR = 1;
-constexpr unsigned DEFAULT_FRAME_DENOMINATOR = 100;
-
 class APNGFrame {
 public:
 
@@ -64,23 +59,7 @@ public:
     // Destructor
     ~APNGFrame();
 
-    /** Constructor from cv::Mat data with transparency
-     * @brief Creates an APNGFrame from a cv::Mat data.
-     * @param src The RGB pixel data.
-     * @param trns_color An array of transparency data.
-     * @param delayNum The delay numerator for this frame (defaults to
-     * DEFAULT_FRAME_NUMERATOR).
-     * @param delayDen The delay denominator for this frame (defaults to
-     * DEFAULT_FRAME_DENOMINATOR).
-     */
-    bool setMat(const cv::Mat& src, unsigned delayNum = DEFAULT_FRAME_NUMERATOR, unsigned delayDen = DEFAULT_FRAME_DENOMINATOR);
-
-    /**
-    * @brief Saves this frame as a single PNG file.
-    * @param outPath The relative or absolute path to save the image file to.
-    * @return Returns true if save was successful.
-    */
-    bool save(const std::string& outPath) const;
+    bool setMat(const cv::Mat& src, unsigned delayNum = 1, unsigned delayDen = 1000);
 
     // Getters and Setters
     unsigned char* getPixels() const { return _pixels; }
@@ -128,7 +107,6 @@ private:
     unsigned int _delayNum;
     unsigned int _delayDen;
     unsigned char** _rows;
-
 };
 
 } // namespace apngasm
