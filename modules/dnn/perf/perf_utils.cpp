@@ -16,9 +16,6 @@ PERF_TEST_P_(Utils_blobFromImage, HWC_TO_NCHW) {
     Mat input(input_shape, CV_32FC3);
     randu(input, -10.0f, 10.f);
 
-    // Mat blob0 = blobFromImage(input);
-    // std::cout << input.size << ", " << blob0.size << std::endl;
-
     TEST_CYCLE() {
         Mat blob = blobFromImage(input);
     }
@@ -26,7 +23,7 @@ PERF_TEST_P_(Utils_blobFromImage, HWC_TO_NCHW) {
     SANITY_CHECK_NOTHING();
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Utils_blobFromImage, 
+INSTANTIATE_TEST_CASE_P(/**/, Utils_blobFromImage,
     Values(std::vector<int>{  32,   32},
            std::vector<int>{  64,   64},
            std::vector<int>{ 128,  128},
@@ -49,9 +46,6 @@ PERF_TEST_P_(Utils_blobFromImages, HWC_TO_NCHW) {
         inputs.push_back(input);
     }
 
-    // Mat blob0 = blobFromImages(inputs);
-    // std::cout << blob0.size << std::endl;
-
     TEST_CYCLE() {
         Mat blobs = blobFromImages(inputs);
     }
@@ -59,7 +53,7 @@ PERF_TEST_P_(Utils_blobFromImages, HWC_TO_NCHW) {
     SANITY_CHECK_NOTHING();
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Utils_blobFromImages, 
+INSTANTIATE_TEST_CASE_P(/**/, Utils_blobFromImages,
     Values(std::vector<int>{16,   32,   32},
            std::vector<int>{16,   64,   64},
            std::vector<int>{16,  128,  128},
