@@ -341,7 +341,7 @@ TEST(Imgcodecs_Animation, apng_load_save_rgba)
     EXPECT_EQ(l_animation.loop_count, s_animation.loop_count);
 
     // Verify that the durations of frames match.
-    for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
+    for (size_t i = 0; i < l_animation.frames.size(); i++)
         EXPECT_EQ(s_animation.durations[i], l_animation.durations[i]);
 
     EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
@@ -360,7 +360,7 @@ TEST(Imgcodecs_Animation, apng_load_save_rgba)
     vector<Mat> apng_frames;
 
     EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, apng_frames));
-    EXPECT_EQ(1/*expected_frame_count*/, apng_frames.size()); // TO DO not implemented yet
+    EXPECT_EQ((size_t)1/*expected_frame_count*/, apng_frames.size()); // TO DO not implemented yet
 
     apng_frames.clear();
     // Test saving the animation frames as individual still images.
@@ -377,7 +377,7 @@ TEST(Imgcodecs_Animation, apng_load_save_rgba)
     apng_frames.clear();
     EXPECT_TRUE(imencode(".png", s_animation.frames, buf));
     EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, apng_frames));
-    EXPECT_EQ(1/*expected_frame_count*/, apng_frames.size());  // TO DO not implemented yet
+    EXPECT_EQ((size_t)1/*expected_frame_count*/, apng_frames.size());  // TO DO not implemented yet
 
     // Clean up by removing the temporary file.
     EXPECT_EQ(0, remove(output.c_str()));
