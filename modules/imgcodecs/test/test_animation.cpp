@@ -1,6 +1,7 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html
+// of this distribution and at http://opencv.org/license.html.
+
 #include "test_precomp.hpp"
 
 namespace opencv_test { namespace {
@@ -94,7 +95,6 @@ TEST(Imgcodecs_Animation, webp_load_save_rgba)
 
     // Write the animation to a .webp file and verify success.
     EXPECT_TRUE(imwriteanimation(output, s_animation));
-    imwriteanimation("output.webp", s_animation);
 
     // Read the animation back and compare with the original.
     EXPECT_TRUE(imreadanimation(output, l_animation));
