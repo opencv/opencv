@@ -58,21 +58,23 @@ TEST(Imgcodecs_Animation, webp_load_save_rgba)
     putText(s_animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
 
     // Define a region of interest (ROI) in the loaded image for manipulation.
-    Mat roi = image(Rect(0, 16, 32, 16));  // Select a subregion of the image.
+    Rect roi(2, 16, 26, 16);
 
     // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
     for (int i = 1; i < 14; i++)
     {
-        for (int x = 0; x < roi.rows; x++)
-            for (int y = 0; y < roi.cols; y++)
+        roi.x++;
+        roi.width -= 2;
+        for (int x = roi.x; x < roi.x + roi.width; x++)
+            for (int y = roi.y; y < roi.y + roi.height; y++)
             {
                 // Apply random changes to pixel values to create animation variations.
-                Vec4b& pixel = roi.at<Vec4b>(x, y);
+                Vec4b& pixel = image.at<Vec4b>(y, x);
                 if (pixel[3] > 0)
                 {
-                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
-                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
-                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
+                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(2, 5);  // Reduce blue channel.
+                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(2, 5);  // Reduce green channel.
+                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(2, 5);  // Reduce red channel.
                     pixel[3] -= (uchar)rng.uniform(2, 5);  // Reduce alpha channel.
                 }
             }
@@ -182,19 +184,21 @@ TEST(Imgcodecs_Animation, webp_load_save_rgb)
     putText(s_animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
 
     // Define a region of interest (ROI) in the loaded image for manipulation.
-    Mat roi = image(Rect(0, 16, 32, 16));  // Select a subregion of the image.
+    Rect roi(2, 16, 26, 16);
 
     // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
     for (int i = 1; i < 14; i++)
     {
-        for (int x = 0; x < roi.rows; x++)
-            for (int y = 0; y < roi.cols; y++)
+        roi.x++;
+        roi.width -= 2;
+        for (int x = roi.x; x < roi.x + roi.width; x++)
+            for (int y = roi.y; y < roi.y + roi.height; y++)
             {
                 // Apply random changes to pixel values to create animation variations.
-                Vec3b& pixel = roi.at<Vec3b>(x, y);
-                if (pixel[0] > 50) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
-                if (pixel[1] > 50) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
-                if (pixel[2] > 50) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
+                Vec3b& pixel = image.at<Vec3b>(y, x);
+                if (pixel[0] > 50) pixel[0] -= (uchar)rng.uniform(2, 5);  // Reduce blue channel.
+                if (pixel[1] > 50) pixel[1] -= (uchar)rng.uniform(2, 5);  // Reduce green channel.
+                if (pixel[2] > 50) pixel[2] -= (uchar)rng.uniform(2, 5);  // Reduce red channel.
             }
 
         // Update the duration and add the modified frame to the animation.
@@ -289,21 +293,23 @@ TEST(Imgcodecs_Animation, apng_load_save_rgba)
     putText(s_animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
 
     // Define a region of interest (ROI) in the loaded image for manipulation.
-    Mat roi = image(Rect(0, 16, 32, 16));  // Select a subregion of the image.
+    Rect roi(2, 16, 26, 16);
 
     // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
     for (int i = 1; i < 14; i++)
     {
-        for (int x = 0; x < roi.rows; x++)
-            for (int y = 0; y < roi.cols; y++)
+        roi.x++;
+        roi.width -= 2;
+        for (int x = roi.x; x < roi.x + roi.width; x++)
+            for (int y = roi.y; y < roi.y + roi.height; y++)
             {
                 // Apply random changes to pixel values to create animation variations.
-                Vec4b& pixel = roi.at<Vec4b>(x, y);
+                Vec4b& pixel = image.at<Vec4b>(y, x);
                 if (pixel[3] > 0)
                 {
-                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
-                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
-                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
+                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(2, 5);  // Reduce blue channel.
+                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(2, 5);  // Reduce green channel.
+                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(2, 5);  // Reduce red channel.
                     pixel[3] -= (uchar)rng.uniform(2, 5);  // Reduce alpha channel.
                 }
             }
@@ -392,21 +398,25 @@ TEST(Imgcodecs_Animation, apng_load_save_multiframes_rgba)
 
     Mat image = imread(filename, IMREAD_UNCHANGED);
     png_frames.push_back(image.clone());
-    Mat roi = image(Rect(0, 16, 32, 16));
+
+    // Define a region of interest (ROI) in the loaded image for manipulation.
+    Rect roi(2, 16, 26, 16);
 
     // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
     for (int i = 1; i < 14; i++)
     {
-        for (int x = 0; x < roi.rows; x++)
-            for (int y = 0; y < roi.cols; y++)
+        roi.x++;
+        roi.width -= 2;
+        for (int x = roi.x; x < roi.x + roi.width; x++)
+            for (int y = roi.y; y < roi.y + roi.height; y++)
             {
                 // Apply random changes to pixel values to create animation variations.
-                Vec4b& pixel = roi.at<Vec4b>(x, y);
+                Vec4b& pixel = image.at<Vec4b>(y, x);
                 if (pixel[3] > 0)
                 {
-                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
-                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
-                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
+                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(2, 5);  // Reduce blue channel.
+                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(2, 5);  // Reduce green channel.
+                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(2, 5);  // Reduce red channel.
                     pixel[3] -= (uchar)rng.uniform(2, 5);  // Reduce alpha channel.
                 }
             }
@@ -436,19 +446,23 @@ TEST(Imgcodecs_Animation, apng_load_save_multiframes_rgb)
 
     Mat image = imread(filename);
     png_frames.push_back(image.clone());
-    Mat roi = image(Rect(0, 16, 32, 16));
+
+    // Define a region of interest (ROI) in the loaded image for manipulation.
+    Rect roi(2, 16, 26, 16);
 
     // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
     for (int i = 1; i < 14; i++)
     {
-        for (int x = 0; x < roi.rows; x++)
-            for (int y = 0; y < roi.cols; y++)
+        roi.x++;
+        roi.width -= 2;
+        for (int x = roi.x; x < roi.x + roi.width; x++)
+            for (int y = roi.y; y < roi.y + roi.height; y++)
             {
                 // Apply random changes to pixel values to create animation variations.
-                Vec3b& pixel = roi.at<Vec3b>(x, y);
-                if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(3, 10);  // Reduce blue channel.
-                if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(3, 10);  // Reduce green channel.
-                if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(3, 10);  // Reduce red channel.
+                Vec3b& pixel = image.at<Vec3b>(y, x);
+                if (pixel[0] > 50) pixel[0] -= (uchar)rng.uniform(2, 5);  // Reduce blue channel.
+                if (pixel[1] > 50) pixel[1] -= (uchar)rng.uniform(2, 5);  // Reduce green channel.
+                if (pixel[2] > 50) pixel[2] -= (uchar)rng.uniform(2, 5);  // Reduce red channel.
             }
 
         png_frames.push_back(image.clone());
