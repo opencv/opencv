@@ -214,10 +214,10 @@ TEST(Imgcodecs_Animation, webp_load_save_rgb)
     string output = cv::tempfile(".webp");
 
     // Write the animation to a .webp file and verify success.
-    EXPECT_EQ(true, imwriteanimation(output, s_animation));
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
 
     // Read the animation back and compare with the original.
-    EXPECT_EQ(true, imreadanimation(output, l_animation));
+    EXPECT_TRUE(imreadanimation(output, l_animation));
 
     // Since the last frames are identical, WebP optimizes by storing only one of them,
     // and the duration value for the last frame is handled by libwebp.
@@ -235,7 +235,7 @@ TEST(Imgcodecs_Animation, webp_load_save_rgb)
     for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
         EXPECT_EQ(s_animation.durations[i], l_animation.durations[i]);
 
-    EXPECT_EQ(true, imreadanimation(output, l_animation, 5, 3));
+    EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count + 3);
     EXPECT_EQ(l_animation.frames.size(), l_animation.durations.size());
     EXPECT_TRUE(cvtest::norm(l_animation.frames[5], l_animation.frames[14], NORM_INF) == 0);
@@ -486,18 +486,18 @@ TEST(Imgcodecs_Animation, apng_load_save_multiframes_gray)
     }
 
     string output = cv::tempfile(".png");
-    EXPECT_EQ(true, imwrite(output, png_frames));
+    EXPECT_TRUE(imwrite(output, png_frames));
     vector<Mat> read_frames;
-    EXPECT_EQ(true, imreadmulti(output, read_frames));
+    EXPECT_TRUE(imreadmulti(output, read_frames));
     EXPECT_EQ(1, read_frames[0].channels());
     read_frames.clear();
-    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_UNCHANGED));
+    EXPECT_TRUE(imreadmulti(output, read_frames, IMREAD_UNCHANGED));
     EXPECT_EQ(1, read_frames[0].channels());
     read_frames.clear();
-    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_COLOR));
+    EXPECT_TRUE(imreadmulti(output, read_frames, IMREAD_COLOR));
     EXPECT_EQ(3, read_frames[0].channels());
     read_frames.clear();
-    EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_GRAYSCALE));
+    EXPECT_TRUE(imreadmulti(output, read_frames, IMREAD_GRAYSCALE));
     EXPECT_EQ(png_frames.size(), read_frames.size());
     EXPECT_EQ(read_frames.size(), imcount(output));
     EXPECT_EQ(0, remove(output.c_str()));
