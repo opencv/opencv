@@ -82,7 +82,7 @@ protected:
     bool processing_finish();
     void compose_frame(unsigned char** rows_dst, unsigned char** rows_src, unsigned char bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, int channels);
     size_t read_from_io(void* _Buffer, size_t _ElementSize, size_t _ElementCount);
-    uint32_t  read_chunk(CHUNK* pChunk);
+    uint32_t  read_chunk(CHUNK& pChunk);
 
     int   m_bit_depth;
     void* m_png_ptr;  // pointer to decompression structure

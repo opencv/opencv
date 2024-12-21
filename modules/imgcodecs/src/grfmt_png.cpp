@@ -231,7 +231,7 @@ bool  PngDecoder::readHeader()
                     CHUNK chunk;
 
                     if(fread(sig, 1, 8, m_f))
-                        id = read_chunk(&m_chunkIHDR);
+                        id = read_chunk(m_chunkIHDR);
 
                     if (!(id == id_IHDR && m_chunkIHDR.size == 25))
                         return false;
@@ -239,7 +239,7 @@ bool  PngDecoder::readHeader()
                     while (!feof(m_f))
                     {
                         m_is_fcTL_loaded = false;
-                        id = read_chunk(&chunk);
+                        id = read_chunk(chunk);
 
                         if ((m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
                             return false;
@@ -455,7 +455,7 @@ bool PngDecoder::readAnimation(Mat& img)
     while (!feof(m_f))
     {
         CHUNK chunk;
-        id = read_chunk(&chunk);
+        id = read_chunk(chunk);
         if (!id)
             return false;
 
@@ -596,20 +596,20 @@ size_t PngDecoder::read_from_io(void* _Buffer, size_t _ElementSize, size_t _Elem
     return _ElementSize;
 }
 
-uint32_t PngDecoder::read_chunk(CHUNK* pChunk)
+uint32_t PngDecoder::read_chunk(CHUNK& pChunk)
 {
     unsigned char len[4];
     if (read_from_io(&len, 4, 1) == 1)
     {
-        pChunk->size = png_get_uint_32(len) + 12;
-        if (pChunk->size > PNG_USER_CHUNK_MALLOC_MAX)
+        pChunk.size = png_get_uint_32(len) + 12;
+        if (pChunk.size > PNG_USER_CHUNK_MALLOC_MAX)
         {
             CV_LOG_WARNING(NULL, "chunk data is too large");
         }
-        pChunk->p = new unsigned char[pChunk->size];
-        memcpy(pChunk->p, len, 4);
-        if (read_from_io(pChunk->p + 4, pChunk->size - 4, 1) == 1)
-            return *(uint32_t*)(pChunk->p + 4);
+        pChunk.p = new unsigned char[pChunk.size];
+        memcpy(pChunk.p, len, 4);
+        if (read_from_io(pChunk.p + 4, pChunk.size - 4, 1) == 1)
+            return *(uint32_t*)(pChunk.p + 4);
     }
     return 0;
 }
