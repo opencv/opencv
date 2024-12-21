@@ -28,36 +28,25 @@ static void readFileBytes(const std::string& fname, std::vector<unsigned char>& 
     }
 }
 
-#ifdef HAVE_WEBP
-
-TEST(Imgcodecs_Animation, webp_load_save_rgba)
+static bool fillFrames(Animation& animation, bool hasAlpha)
 {
-    RNG rng = theRNG();
-
     // Set the path to the test image directory and filename for loading.
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "pngsuite/tp1n3p08.png";
+    Mat image = imread(filename, hasAlpha ? IMREAD_UNCHANGED : IMREAD_COLOR);
+    if (image.empty())
+        return false;
 
-    // Create an Animation object using the default constructor.
-    // This initializes the loop count to 0 (infinite looping), background color to 0 (transparent)
-    Animation l_animation;
-
-    // Create an Animation object with custom parameters.
-    int loop_count = 0xffff; // 0xffff is the maximum value to set.
-    Scalar bgcolor(125, 126, 127, 128); // different values for test purpose.
-    Animation s_animation(loop_count, bgcolor);
-
-    // Load the image file with alpha channel (IMREAD_UNCHANGED).
-    Mat image = imread(filename, IMREAD_UNCHANGED);
-    ASSERT_FALSE(image.empty()) << "Failed to load image: " << filename;
+    animation.loop_count = 0xffff; // 0xffff is the maximum value to set.
+    animation.bgcolor = Scalar(50, 100, 150, 128); // different values for test purpose.
 
     // Add the first frame with a duration value of 500 milliseconds.
     int duration = 100;
-    s_animation.durations.push_back(duration * 5);
-    s_animation.frames.push_back(image.clone());  // Store the first frame.
-    putText(s_animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
+    animation.durations.push_back(duration * 5);
+    animation.frames.push_back(image.clone());
+    putText(animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
 
-    // Define a region of interest (ROI) in the loaded image for manipulation.
+    // Define a region of interest (ROI)
     Rect roi(2, 16, 26, 16);
 
     // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
@@ -65,36 +54,56 @@ TEST(Imgcodecs_Animation, webp_load_save_rgba)
     {
         roi.x++;
         roi.width -= 2;
+        RNG rng = theRNG();
         for (int x = roi.x; x < roi.x + roi.width; x++)
             for (int y = roi.y; y < roi.y + roi.height; y++)
             {
-                // Apply random changes to pixel values to create animation variations.
-                Vec4b& pixel = image.at<Vec4b>(y, x);
-                if (pixel[3] > 0)
+                if (hasAlpha)
                 {
-                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(2, 5);  // Reduce blue channel.
-                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(2, 5);  // Reduce green channel.
-                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(2, 5);  // Reduce red channel.
-                    pixel[3] -= (uchar)rng.uniform(2, 5);  // Reduce alpha channel.
+                    Vec4b& pixel = image.at<Vec4b>(y, x);
+                    if (pixel[3] > 0)
+                    {
+                        if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(2, 5);
+                        if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(2, 5);
+                        if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(2, 5);
+                        pixel[3] -= (uchar)rng.uniform(2, 5);
+                    }
+                }
+                else
+                {
+                    Vec3b& pixel = image.at<Vec3b>(y, x);
+                    if (pixel[0] > 50) pixel[0] -= (uchar)rng.uniform(2, 5);
+                    if (pixel[1] > 50) pixel[1] -= (uchar)rng.uniform(2, 5);
+                    if (pixel[2] > 50) pixel[2] -= (uchar)rng.uniform(2, 5);
                 }
             }
 
         // Update the duration and add the modified frame to the animation.
         duration += rng.uniform(2, 10);  // Increase duration with random value (to be sure different duration values saved correctly).
-        s_animation.frames.push_back(image.clone());
-        putText(s_animation.frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
-        s_animation.durations.push_back(duration);
+        animation.frames.push_back(image.clone());
+        putText(animation.frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
+        animation.durations.push_back(duration);
     }
 
     // Add two identical frames with the same duration.
-    s_animation.durations.push_back(duration);
-    s_animation.frames.push_back(s_animation.frames[13].clone());
-    s_animation.durations.push_back(duration);
-    s_animation.frames.push_back(s_animation.frames[13].clone());
+    animation.durations.push_back(duration);
+    animation.frames.push_back(animation.frames.back());
+    animation.durations.push_back(duration);
+    animation.frames.push_back(animation.frames.back());
+
+    return true;
+}
+
+#ifdef HAVE_WEBP
+
+TEST(Imgcodecs_WebP, imwriteanimation_rgba)
+{
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true));
 
     // Create a temporary output filename for saving the animation.
     string output = cv::tempfile(".webp");
-
+    imwriteanimation("output.png", s_animation);
     // Write the animation to a .webp file and verify success.
     EXPECT_TRUE(imwriteanimation(output, s_animation));
 
@@ -135,17 +144,6 @@ TEST(Imgcodecs_Animation, webp_load_save_rgba)
     EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
     EXPECT_EQ(expected_frame_count, webp_frames.size());
 
-    webp_frames.clear();
-    // Test saving the animation frames as individual still images.
-    EXPECT_TRUE(imwrite(output, s_animation.frames));
-
-    // Read back the still images into a vector of Mats.
-    EXPECT_TRUE(imreadmulti(output, webp_frames));
-
-    // Expect all frames written as multi-page image
-    expected_frame_count = 14;
-    EXPECT_EQ(expected_frame_count, webp_frames.size());
-
     // Test encoding and decoding the images in memory (without saving to disk).
     webp_frames.clear();
     EXPECT_TRUE(imencode(".webp", s_animation.frames, buf));
@@ -156,63 +154,10 @@ TEST(Imgcodecs_Animation, webp_load_save_rgba)
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
-TEST(Imgcodecs_Animation, webp_load_save_rgb)
+TEST(Imgcodecs_WebP, imwriteanimation_rgb)
 {
-    RNG rng = theRNG();
-
-    // Set the path to the test image directory and filename for loading.
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "pngsuite/tp1n3p08.png";
-
-    // Create an Animation object using the default constructor.
-    // This initializes the loop count to 0 (infinite looping), background color to 0 (transparent)
-    Animation l_animation;
-
-    // Create an Animation object with custom parameters.
-    int loop_count = 0xffff; // 0xffff is the maximum value to set.
-    Scalar bgcolor(125, 126, 127, 128); // different values for test purpose.
-    Animation s_animation(loop_count, bgcolor);
-
-    // Load the image file without alpha channel
-    Mat image = imread(filename);
-    ASSERT_FALSE(image.empty()) << "Failed to load image: " << filename;
-
-    // Add the first frame with a duration value of 500 milliseconds.
-    int duration = 100;
-    s_animation.durations.push_back(duration * 5);
-    s_animation.frames.push_back(image.clone());  // Store the first frame.
-    putText(s_animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
-
-    // Define a region of interest (ROI) in the loaded image for manipulation.
-    Rect roi(2, 16, 26, 16);
-
-    // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
-    for (int i = 1; i < 14; i++)
-    {
-        roi.x++;
-        roi.width -= 2;
-        for (int x = roi.x; x < roi.x + roi.width; x++)
-            for (int y = roi.y; y < roi.y + roi.height; y++)
-            {
-                // Apply random changes to pixel values to create animation variations.
-                Vec3b& pixel = image.at<Vec3b>(y, x);
-                if (pixel[0] > 50) pixel[0] -= (uchar)rng.uniform(2, 5);  // Reduce blue channel.
-                if (pixel[1] > 50) pixel[1] -= (uchar)rng.uniform(2, 5);  // Reduce green channel.
-                if (pixel[2] > 50) pixel[2] -= (uchar)rng.uniform(2, 5);  // Reduce red channel.
-            }
-
-        // Update the duration and add the modified frame to the animation.
-        duration += rng.uniform(2, 10);  // Increase duration with random value (to be sure different duration values saved correctly).
-        s_animation.frames.push_back(image.clone());
-        putText(s_animation.frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
-        s_animation.durations.push_back(duration);
-    }
-
-    // Add two identical frames with the same duration.
-    s_animation.durations.push_back(duration);
-    s_animation.frames.push_back(s_animation.frames[13].clone());
-    s_animation.durations.push_back(duration);
-    s_animation.frames.push_back(s_animation.frames[13].clone());
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, false));
 
     // Create a temporary output filename for saving the animation.
     string output = cv::tempfile(".webp");
@@ -261,76 +206,32 @@ TEST(Imgcodecs_Animation, webp_load_save_rgb)
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
+TEST(Imgcodecs_WebP, imwritemulti_rgb)
+{
+    Animation s_animation;
+    EXPECT_TRUE(fillFrames(s_animation, false));
+
+    string output = cv::tempfile(".webp");
+    ASSERT_TRUE(imwrite(output, s_animation.frames));
+    vector<Mat> read_frames;
+    ASSERT_TRUE(imreadmulti(output, read_frames));
+    EXPECT_EQ(s_animation.frames.size() - 2, read_frames.size());
+    EXPECT_EQ(0, remove(output.c_str()));
+}
+
 #endif // HAVE_WEBP
 
 #ifdef HAVE_PNG
 
-TEST(Imgcodecs_Animation, apng_load_save_rgba)
+TEST(Imgcodecs_APNG, imwriteanimation_rgba)
 {
-    RNG rng = theRNG();
-
-    // Set the path to the test image directory and filename for loading.
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "pngsuite/tp1n3p08.png";
-
-    // Create an Animation object using the default constructor.
-    // This initializes the loop count to 0 (infinite looping), background color to 0 (transparent)
-    Animation l_animation;
-
-    // Create an Animation object with custom parameters.
-    int loop_count = 0xffff; // 0xffff is the maximum value to set.
-    Scalar bgcolor(125, 126, 127, 128); // different values for test purpose.
-    Animation s_animation(loop_count, bgcolor);
-
-    // Load the image file with alpha channel (IMREAD_UNCHANGED).
-    Mat image = imread(filename, IMREAD_UNCHANGED);
-    ASSERT_FALSE(image.empty()) << "Failed to load image: " << filename;
-
-    // Add the first frame with a duration value of 500 milliseconds.
-    int duration = 100;
-    s_animation.durations.push_back(duration * 5);
-    s_animation.frames.push_back(image.clone());  // Store the first frame.
-    putText(s_animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
-
-    // Define a region of interest (ROI) in the loaded image for manipulation.
-    Rect roi(2, 16, 26, 16);
-
-    // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
-    for (int i = 1; i < 14; i++)
-    {
-        roi.x++;
-        roi.width -= 2;
-        for (int x = roi.x; x < roi.x + roi.width; x++)
-            for (int y = roi.y; y < roi.y + roi.height; y++)
-            {
-                // Apply random changes to pixel values to create animation variations.
-                Vec4b& pixel = image.at<Vec4b>(y, x);
-                if (pixel[3] > 0)
-                {
-                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(2, 5);  // Reduce blue channel.
-                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(2, 5);  // Reduce green channel.
-                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(2, 5);  // Reduce red channel.
-                    pixel[3] -= (uchar)rng.uniform(2, 5);  // Reduce alpha channel.
-                }
-            }
-
-        // Update the duration and add the modified frame to the animation.
-        duration += rng.uniform(2, 10);  // Increase duration with random value (to be sure different duration values saved correctly).
-        s_animation.frames.push_back(image.clone());
-        putText(s_animation.frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
-        s_animation.durations.push_back(duration);
-    }
-
-    // Add two identical frames with the same duration.
-    s_animation.durations.push_back(duration);
-    s_animation.frames.push_back(s_animation.frames[13].clone());
-    s_animation.durations.push_back(duration);
-    s_animation.frames.push_back(s_animation.frames[13].clone());
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true));
 
     // Create a temporary output filename for saving the animation.
     string output = cv::tempfile(".png");
 
-    // Write the animation to a .webp file and verify success.
+    // Write the animation to a .png file and verify success.
     EXPECT_TRUE(imwriteanimation(output, s_animation));
 
     // Read the animation back and compare with the original.
@@ -346,9 +247,11 @@ TEST(Imgcodecs_Animation, apng_load_save_rgba)
     EXPECT_EQ(l_animation.bgcolor, Scalar()/*s_animation.bgcolor*/); // TO DO not implemented yet
     EXPECT_EQ(l_animation.loop_count, s_animation.loop_count);
 
-    // Verify that the durations of frames match.
     for (size_t i = 0; i < l_animation.frames.size(); i++)
+    {
         EXPECT_EQ(s_animation.durations[i], l_animation.durations[i]);
+        EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], l_animation.frames[i], NORM_INF));
+    }
 
     EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count + 3);
@@ -389,118 +292,70 @@ TEST(Imgcodecs_Animation, apng_load_save_rgba)
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
-TEST(Imgcodecs_Animation, apng_load_save_multiframes_rgba)
+TEST(Imgcodecs_APNG, imwriteanimation_rgb)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "pngsuite/tp1n3p08.png";
-    vector<Mat> png_frames;
-    RNG rng = theRNG();
-
-    Mat image = imread(filename, IMREAD_UNCHANGED);
-    png_frames.push_back(image.clone());
-
-    // Define a region of interest (ROI) in the loaded image for manipulation.
-    Rect roi(2, 16, 26, 16);
-
-    // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
-    for (int i = 1; i < 14; i++)
-    {
-        roi.x++;
-        roi.width -= 2;
-        for (int x = roi.x; x < roi.x + roi.width; x++)
-            for (int y = roi.y; y < roi.y + roi.height; y++)
-            {
-                // Apply random changes to pixel values to create animation variations.
-                Vec4b& pixel = image.at<Vec4b>(y, x);
-                if (pixel[3] > 0)
-                {
-                    if (pixel[0] > 10) pixel[0] -= (uchar)rng.uniform(2, 5);  // Reduce blue channel.
-                    if (pixel[1] > 10) pixel[1] -= (uchar)rng.uniform(2, 5);  // Reduce green channel.
-                    if (pixel[2] > 10) pixel[2] -= (uchar)rng.uniform(2, 5);  // Reduce red channel.
-                    pixel[3] -= (uchar)rng.uniform(2, 5);  // Reduce alpha channel.
-                }
-            }
-
-        png_frames.push_back(image.clone());
-        putText(png_frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
-    }
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, false));
 
     string output = cv::tempfile(".png");
-    EXPECT_EQ(true, imwrite(output, png_frames));
+
+    // Write the animation to a .png file and verify success.
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
+
+    // Read the animation back and compare with the original.
+    EXPECT_TRUE(imreadanimation(output, l_animation));
+    EXPECT_EQ(s_animation.frames.size(), l_animation.frames.size());
+    for (size_t i = 0; i < l_animation.frames.size(); i++)
+    {
+        EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], l_animation.frames[i], NORM_INF));
+    }
+    EXPECT_EQ(0, remove(output.c_str()));
+}
+
+TEST(Imgcodecs_APNG, imwritemulti_rgba)
+{
+    Animation s_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true));
+
+    string output = cv::tempfile(".png");
+    EXPECT_EQ(true, imwrite(output, s_animation.frames));
     vector<Mat> read_frames;
     EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_UNCHANGED));
-    EXPECT_EQ(png_frames.size(), read_frames.size());
+    EXPECT_EQ(s_animation.frames.size(), read_frames.size());
     EXPECT_EQ(read_frames.size(), imcount(output));
     EXPECT_EQ(0, remove(output.c_str()));
-    std::vector<uchar> buf;
-    EXPECT_EQ(true, imencode(".png", png_frames, buf));
-    EXPECT_EQ(true, imdecodemulti(buf, IMREAD_COLOR_RGB, read_frames));
 }
 
-TEST(Imgcodecs_Animation, apng_load_save_multiframes_rgb)
+TEST(Imgcodecs_APNG, imwritemulti_rgb)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "pngsuite/tp1n3p08.png";
-    vector<Mat> png_frames;
-    RNG rng = theRNG();
-
-    Mat image = imread(filename);
-    png_frames.push_back(image.clone());
-
-    // Define a region of interest (ROI) in the loaded image for manipulation.
-    Rect roi(2, 16, 26, 16);
-
-    // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
-    for (int i = 1; i < 14; i++)
-    {
-        roi.x++;
-        roi.width -= 2;
-        for (int x = roi.x; x < roi.x + roi.width; x++)
-            for (int y = roi.y; y < roi.y + roi.height; y++)
-            {
-                // Apply random changes to pixel values to create animation variations.
-                Vec3b& pixel = image.at<Vec3b>(y, x);
-                if (pixel[0] > 50) pixel[0] -= (uchar)rng.uniform(2, 5);  // Reduce blue channel.
-                if (pixel[1] > 50) pixel[1] -= (uchar)rng.uniform(2, 5);  // Reduce green channel.
-                if (pixel[2] > 50) pixel[2] -= (uchar)rng.uniform(2, 5);  // Reduce red channel.
-            }
-
-        png_frames.push_back(image.clone());
-        putText(png_frames[i], format("%d", i), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
-    }
+    Animation s_animation;
+    EXPECT_TRUE(fillFrames(s_animation, false));
 
     string output = cv::tempfile(".png");
-    ASSERT_TRUE(imwrite(output, png_frames));
+    ASSERT_TRUE(imwrite(output, s_animation.frames));
     vector<Mat> read_frames;
     ASSERT_TRUE(imreadmulti(output, read_frames));
-    EXPECT_EQ(png_frames.size(), read_frames.size());
-    EXPECT_EQ(read_frames.size(), imcount(output));
+    EXPECT_EQ(s_animation.frames.size(), read_frames.size());
     EXPECT_EQ(0, remove(output.c_str()));
 
-    for (size_t i = 0; i < png_frames.size(); i++)
+    for (size_t i = 0; i < read_frames.size(); i++)
     {
-        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), png_frames[i], read_frames[i]);
+        EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], read_frames[i], NORM_INF));
     }
 }
 
-TEST(Imgcodecs_Animation, apng_load_save_multiframes_gray)
+TEST(Imgcodecs_APNG, imwritemulti_gray)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "pngsuite/tp1n3p08.png";
-    vector<Mat> png_frames;
+    Animation s_animation;
+    EXPECT_TRUE(fillFrames(s_animation, false));
 
-    Mat image = imread(filename, IMREAD_GRAYSCALE);
-    png_frames.push_back(image.clone());
-    Mat roi = image(Rect(0, 16, 32, 16));
-
-    for (size_t i = 0; i < 15; i++)
+    for (size_t i = 0; i < s_animation.frames.size(); i++)
     {
-        roi = roi - Scalar(10);
-        png_frames.push_back(image.clone());
+        cvtColor(s_animation.frames[i], s_animation.frames[i], COLOR_BGR2GRAY);
     }
 
     string output = cv::tempfile(".png");
-    EXPECT_TRUE(imwrite(output, png_frames));
+    EXPECT_TRUE(imwrite(output, s_animation.frames));
     vector<Mat> read_frames;
     EXPECT_TRUE(imreadmulti(output, read_frames));
     EXPECT_EQ(1, read_frames[0].channels());
@@ -512,13 +367,11 @@ TEST(Imgcodecs_Animation, apng_load_save_multiframes_gray)
     EXPECT_EQ(3, read_frames[0].channels());
     read_frames.clear();
     EXPECT_TRUE(imreadmulti(output, read_frames, IMREAD_GRAYSCALE));
-    EXPECT_EQ(png_frames.size(), read_frames.size());
-    EXPECT_EQ(read_frames.size(), imcount(output));
     EXPECT_EQ(0, remove(output.c_str()));
 
-    for (size_t i = 0; i < png_frames.size(); i++)
+    for (size_t i = 0; i < s_animation.frames.size(); i++)
     {
-        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), png_frames[i], read_frames[i]);
+        EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], read_frames[i], NORM_INF));
     }
 }
 
