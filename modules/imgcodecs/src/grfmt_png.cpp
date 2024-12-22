@@ -475,6 +475,8 @@ bool PngDecoder::readAnimation(Mat& img)
 
                 compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, img.channels());
                 m_animation.frames.push_back(img.clone());
+                if (delay_den < 100)
+                    delay_den = cvRound(1000.0 / delay_den);
                 m_animation.durations.push_back(delay_den);
 
                 if (dop != 2)
@@ -527,6 +529,8 @@ bool PngDecoder::readAnimation(Mat& img)
             {
                 compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, img.channels());
                 m_animation.frames.push_back(img.clone());
+                if (delay_den < 100)
+                    delay_den = cvRound(1000.0 / delay_den);
                 m_animation.durations.push_back(delay_den);
             }
             else
@@ -1609,8 +1613,11 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             png_save_uint_32(buf_fcTL + 8, h0);
             png_save_uint_32(buf_fcTL + 12, x0);
             png_save_uint_32(buf_fcTL + 16, y0);
+            int delay_den = frames[i].getDelayDen();
+            if (delay_den < 100)
+                delay_den = cvRound(1000.0 / delay_den);
             png_save_uint_16(buf_fcTL + 20, frames[i].getDelayNum());
-            png_save_uint_16(buf_fcTL + 22, frames[i].getDelayDen());
+            png_save_uint_16(buf_fcTL + 22, delay_den);
             buf_fcTL[24] = dop;
             buf_fcTL[25] = bop;
             write_chunk(m_f, "fcTL", buf_fcTL, 26);
@@ -1649,8 +1656,11 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             png_save_uint_32(buf_fcTL + 8, h0);
             png_save_uint_32(buf_fcTL + 12, x0);
             png_save_uint_32(buf_fcTL + 16, y0);
-            png_save_uint_16(buf_fcTL + 20, frames[num_frames - 1].getDelayNum());
-            png_save_uint_16(buf_fcTL + 22, frames[num_frames - 1].getDelayDen());
+            int delay_den = frames[i].getDelayDen();
+            if (delay_den < 100)
+                delay_den = cvRound(1000.0 / delay_den);
+            png_save_uint_16(buf_fcTL + 20, frames[i].getDelayNum());
+            png_save_uint_16(buf_fcTL + 22, delay_den);
             buf_fcTL[24] = 0;
             buf_fcTL[25] = bop;
             write_chunk(m_f, "fcTL", buf_fcTL, 26);
