@@ -702,15 +702,8 @@ PngEncoder::PngEncoder()
 {
     m_description = "Portable Network Graphics files (*.png)";
     m_buf_supported = true;
-    op_zbuf1 = NULL;
-    op_zbuf2 = NULL;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
-    row_buf = NULL;
-    sub_row = NULL;
-    up_row = NULL;
-    avg_row = NULL;
-    paeth_row = NULL;
     next_seq_num = 0;
     trnssize = 0;
     palsize = 0;
@@ -996,10 +989,10 @@ void PngEncoder::process_rect(unsigned char* row, int rowbytes, int bpp, int str
     for (j = 0; j < h; j++)
     {
         uint32_t sum = 0;
-        unsigned char* best_row = row_buf;
+        unsigned char* best_row = row_buf.data();
         uint32_t mins = ((uint32_t)(-1)) >> 1;
 
-        out = row_buf + 1;
+        out = row_buf.data() + 1;
         for (i = 0; i < rowbytes; i++)
         {
             v = out[i] = row[i];
@@ -1008,7 +1001,7 @@ void PngEncoder::process_rect(unsigned char* row, int rowbytes, int bpp, int str
         mins = sum;
 
         sum = 0;
-        out = sub_row + 1;
+        out = sub_row.data() + 1;
         for (i = 0; i < bpp; i++)
         {
             v = out[i] = row[i];
@@ -1024,13 +1017,13 @@ void PngEncoder::process_rect(unsigned char* row, int rowbytes, int bpp, int str
         if (sum < mins)
         {
             mins = sum;
-            best_row = sub_row;
+            best_row = sub_row.data();
         }
 
         if (prev)
         {
             sum = 0;
-            out = up_row + 1;
+            out = up_row.data() + 1;
             for (i = 0; i < rowbytes; i++)
             {
                 v = out[i] = row[i] - prev[i];
@@ -1041,11 +1034,11 @@ void PngEncoder::process_rect(unsigned char* row, int rowbytes, int bpp, int str
             if (sum < mins)
             {
                 mins = sum;
-                best_row = up_row;
+                best_row = up_row.data();
             }
 
             sum = 0;
-            out = avg_row + 1;
+            out = avg_row.data() + 1;
             for (i = 0; i < bpp; i++)
             {
                 v = out[i] = row[i] - prev[i] / 2;
@@ -1061,11 +1054,11 @@ void PngEncoder::process_rect(unsigned char* row, int rowbytes, int bpp, int str
             if (sum < mins)
             {
                 mins = sum;
-                best_row = avg_row;
+                best_row = avg_row.data();
             }
 
             sum = 0;
-            out = paeth_row + 1;
+            out = paeth_row.data() + 1;
             for (i = 0; i < bpp; i++)
             {
                 v = out[i] = row[i] - prev[i];
@@ -1090,14 +1083,14 @@ void PngEncoder::process_rect(unsigned char* row, int rowbytes, int bpp, int str
             }
             if (sum < mins)
             {
-                best_row = paeth_row;
+                best_row = paeth_row.data();
             }
         }
 
         if (rows == NULL)
         {
             // deflate_rect_op()
-            op_zstream1.next_in = row_buf;
+            op_zstream1.next_in = row_buf.data();
             op_zstream1.avail_in = rowbytes + 1;
             deflate(&op_zstream1, Z_NO_FLUSH);
 
@@ -1123,11 +1116,11 @@ void PngEncoder::deflate_rect_op(unsigned char* pdata, int x, int y, int w, int 
     int rowbytes = w * bpp;
 
     op_zstream1.data_type = Z_BINARY;
-    op_zstream1.next_out = op_zbuf1;
+    op_zstream1.next_out = op_zbuf1.data();
     op_zstream1.avail_out = zbuf_size;
 
     op_zstream2.data_type = Z_BINARY;
-    op_zstream2.next_out = op_zbuf2;
+    op_zstream2.next_out = op_zbuf2.data();
     op_zstream2.avail_out = zbuf_size;
 
     process_rect(row, rowbytes, bpp, stride, h, NULL);
@@ -1443,7 +1436,6 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
     uint32_t i, j, k;
     uint32_t x0, y0, w0, h0, dop, bop;
     uint32_t idat_size, zbuf_size, zsize;
-    unsigned char* zbuf;
     unsigned char header[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
     uint32_t num_frames = (int)frames.size();
     uint32_t width = frames[0].getWidth();
@@ -1528,14 +1520,14 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         idat_size = (rowbytes + 1) * height;
         zbuf_size = idat_size + ((idat_size + 7) >> 3) + ((idat_size + 63) >> 6) + 11;
 
-        zbuf = new unsigned char[zbuf_size];
-        op_zbuf1 = new unsigned char[zbuf_size];
-        op_zbuf2 = new unsigned char[zbuf_size];
-        row_buf = new unsigned char[rowbytes + 1];
-        sub_row = new unsigned char[rowbytes + 1];
-        up_row = new unsigned char[rowbytes + 1];
-        avg_row = new unsigned char[rowbytes + 1];
-        paeth_row = new unsigned char[rowbytes + 1];
+        AutoBuffer<unsigned char> zbuf(zbuf_size);
+        op_zbuf1.allocate(zbuf_size);
+        op_zbuf2.allocate(zbuf_size);
+        row_buf.allocate(rowbytes + 1);
+        sub_row.allocate(rowbytes + 1);
+        up_row.allocate(rowbytes + 1);
+        avg_row.allocate(rowbytes + 1);
+        paeth_row.allocate(rowbytes + 1);
 
         row_buf[0] = 0;
         sub_row[0] = 1;
@@ -1553,15 +1545,15 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         for (j = 0; j < 6; j++)
             op[j].valid = 0;
         deflate_rect_op(frames[0].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
-        deflate_rect_fin(deflate_method, iter, zbuf, &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
+        deflate_rect_fin(deflate_method, iter, zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
 
         if (first)
         {
-            write_IDATs(m_f, 0, zbuf, zsize, idat_size);
+            write_IDATs(m_f, 0, zbuf.data(), zsize, idat_size);
             for (j = 0; j < 6; j++)
                 op[j].valid = 0;
             deflate_rect_op(frames[1].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
-            deflate_rect_fin(deflate_method, iter, zbuf, &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
+            deflate_rect_fin(deflate_method, iter, zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
         }
 
         for (i = first; i < num_frames - 1; i++)
@@ -1622,7 +1614,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             buf_fcTL[25] = bop;
             write_chunk(m_f, "fcTL", buf_fcTL, 26);
 
-            write_IDATs(m_f, i, zbuf, zsize, idat_size);
+            write_IDATs(m_f, i, zbuf.data(), zsize, idat_size);
 
             /* process apng dispose - begin */
             if (dop != 2)
@@ -1646,7 +1638,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             h0 = op[op_best].h;
             bop = op_best & 1;
 
-            deflate_rect_fin(deflate_method, iter, zbuf, &zsize, bpp, rowbytes, rows.data(), zbuf_size, op_best);
+            deflate_rect_fin(deflate_method, iter, zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, op_best);
         }
 
         if (num_frames > 1)
@@ -1666,21 +1658,12 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             write_chunk(m_f, "fcTL", buf_fcTL, 26);
         }
 
-        write_IDATs(m_f, num_frames - 1, zbuf, zsize, idat_size);
+        write_IDATs(m_f, num_frames - 1, zbuf.data(), zsize, idat_size);
 
         write_chunk(m_f, "IEND", 0, 0);
 
         if (m_f)
             fclose(m_f);
-
-        delete[] zbuf;
-        delete[] op_zbuf1;
-        delete[] op_zbuf2;
-        delete[] row_buf;
-        delete[] sub_row;
-        delete[] up_row;
-        delete[] avg_row;
-        delete[] paeth_row;
 
         deflateEnd(&op_zstream1);
         deflateEnd(&op_zstream2);

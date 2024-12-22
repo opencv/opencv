@@ -140,15 +140,15 @@ private:
     void deflate_rect_op(unsigned char* pdata, int x, int y, int w, int h, int bpp, int stride, int zbuf_size, int n);
     void get_rect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigned char* pimage2, unsigned char* ptemp, uint32_t bpp, uint32_t stride, int zbuf_size, uint32_t has_tcolor, uint32_t tcolor, int n);
 
-    unsigned char* op_zbuf1;
-    unsigned char* op_zbuf2;
+    AutoBuffer<unsigned char> op_zbuf1;
+    AutoBuffer<unsigned char> op_zbuf2;
+    AutoBuffer<unsigned char> row_buf;
+    AutoBuffer<unsigned char> sub_row;
+    AutoBuffer<unsigned char> up_row;
+    AutoBuffer<unsigned char> avg_row;
+    AutoBuffer<unsigned char> paeth_row;
     z_stream       op_zstream1;
     z_stream       op_zstream2;
-    unsigned char* row_buf;
-    unsigned char* sub_row;
-    unsigned char* up_row;
-    unsigned char* avg_row;
-    unsigned char* paeth_row;
     OP             op[6];
     rgb            palette[256];
     unsigned char  trns[256];
