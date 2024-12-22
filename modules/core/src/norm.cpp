@@ -1366,13 +1366,6 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
 }  // ocl_normalize
 #endif  // HAVE_OPENCL
 
-template <typename T>
-T clamp(T value, T min, T max) {
-    if (value < min) return min;
-    if (value > max) return max;
-    return value;
-}
-
 void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
                int norm_type, int rtype, InputArray _mask)
 {
