@@ -1456,12 +1456,12 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
     uint32_t rowbytes = width * bpp;
     uint32_t imagesize = rowbytes * height;
 
-    unsigned char* temp = new unsigned char[imagesize];
-    unsigned char* over1 = new unsigned char[imagesize];
-    unsigned char* over2 = new unsigned char[imagesize];
-    unsigned char* over3 = new unsigned char[imagesize];
-    unsigned char* rest = new unsigned char[imagesize];
-    unsigned char* rows = new unsigned char[(rowbytes + 1) * height];
+    AutoBuffer<unsigned char> temp(imagesize);
+    AutoBuffer<unsigned char> over1(imagesize);
+    AutoBuffer<unsigned char> over2(imagesize);
+    AutoBuffer<unsigned char> over3(imagesize);
+    AutoBuffer<unsigned char> rest(imagesize);
+    AutoBuffer<unsigned char> rows((rowbytes + 1) * height);
 
     if (trnssize)
     {
@@ -1553,7 +1553,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         for (j = 0; j < 6; j++)
             op[j].valid = 0;
         deflate_rect_op(frames[0].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
-        deflate_rect_fin(deflate_method, iter, zbuf, &zsize, bpp, rowbytes, rows, zbuf_size, 0);
+        deflate_rect_fin(deflate_method, iter, zbuf, &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
 
         if (first)
         {
@@ -1561,7 +1561,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             for (j = 0; j < 6; j++)
                 op[j].valid = 0;
             deflate_rect_op(frames[1].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
-            deflate_rect_fin(deflate_method, iter, zbuf, &zsize, bpp, rowbytes, rows, zbuf_size, 0);
+            deflate_rect_fin(deflate_method, iter, zbuf, &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
         }
 
         for (i = first; i < num_frames - 1; i++)
@@ -1573,26 +1573,26 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
                 op[j].valid = 0;
 
             /* dispose = none */
-            get_rect(width, height, frames[i].getPixels(), frames[i + 1].getPixels(), over1, bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 0);
+            get_rect(width, height, frames[i].getPixels(), frames[i + 1].getPixels(), over1.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 0);
 
             /* dispose = background */
             if (has_tcolor)
             {
-                memcpy(temp, frames[i].getPixels(), imagesize);
+                memcpy(temp.data(), frames[i].getPixels(), imagesize);
                 if (coltype == 2)
                     for (j = 0; j < h0; j++)
                         for (k = 0; k < w0; k++)
-                            memcpy(temp + ((j + y0) * width + (k + x0)) * 3, &tcolor, 3);
+                            memcpy(temp.data() + ((j + y0) * width + (k + x0)) * 3, &tcolor, 3);
                 else
                     for (j = 0; j < h0; j++)
-                        memset(temp + ((j + y0) * width + x0) * bpp, tcolor, w0 * bpp);
+                        memset(temp.data() + ((j + y0) * width + x0) * bpp, tcolor, w0 * bpp);
 
-                get_rect(width, height, temp, frames[i + 1].getPixels(), over2, bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 1);
+                get_rect(width, height, temp.data(), frames[i + 1].getPixels(), over2.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 1);
             }
 
             /* dispose = previous */
             if (i > first)
-                get_rect(width, height, rest, frames[i + 1].getPixels(), over3, bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 2);
+                get_rect(width, height, rest.data(), frames[i + 1].getPixels(), over3.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 2);
 
             op_min = op[0].size;
             op_best = 0;
@@ -1626,17 +1626,17 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
             /* process apng dispose - begin */
             if (dop != 2)
-                memcpy(rest, frames[i].getPixels(), imagesize);
+                memcpy(rest.data(), frames[i].getPixels(), imagesize);
 
             if (dop == 1)
             {
                 if (coltype == 2)
                     for (j = 0; j < h0; j++)
                         for (k = 0; k < w0; k++)
-                            memcpy(rest + ((j + y0) * width + (k + x0)) * 3, &tcolor, 3);
+                            memcpy(rest.data() + ((j + y0) * width + (k + x0)) * 3, &tcolor, 3);
                 else
                     for (j = 0; j < h0; j++)
-                        memset(rest + ((j + y0) * width + x0) * bpp, tcolor, w0 * bpp);
+                        memset(rest.data() + ((j + y0) * width + x0) * bpp, tcolor, w0 * bpp);
             }
             /* process apng dispose - end */
 
@@ -1646,7 +1646,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             h0 = op[op_best].h;
             bop = op_best & 1;
 
-            deflate_rect_fin(deflate_method, iter, zbuf, &zsize, bpp, rowbytes, rows, zbuf_size, op_best);
+            deflate_rect_fin(deflate_method, iter, zbuf, &zsize, bpp, rowbytes, rows.data(), zbuf_size, op_best);
         }
 
         if (num_frames > 1)
@@ -1685,13 +1685,6 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         deflateEnd(&op_zstream1);
         deflateEnd(&op_zstream2);
     }
-
-    delete[] temp;
-    delete[] over1;
-    delete[] over2;
-    delete[] over3;
-    delete[] rest;
-    delete[] rows;
 
     return true;
 }
