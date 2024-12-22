@@ -1402,15 +1402,9 @@ void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
                     scale_float = nextafterf(scale_float, -INFINITY);
                     shift_float = (float)dmin - (float)(smin * scale_float);
                 }
-                scale = scale_float;
-                shift = shift_float;
             }            
-            else
-            {
-                scale = scale_float;
-                shift = shift_float;
-            }
-
+            scale = scale_float;
+            shift = shift_float;
         }
         else
             shift = dmin - smin*scale;
