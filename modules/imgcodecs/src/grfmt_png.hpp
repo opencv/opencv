@@ -122,8 +122,6 @@ public:
     bool write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
     bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params) CV_OVERRIDE;
     bool writeanimation(const Animation& animinfo, const std::vector<int>& params) CV_OVERRIDE;
-    void optim_dirty(std::vector<APNGFrame>& frames);
-    void optim_duplicates(std::vector<APNGFrame>& frames, uint32_t first);
 
     ImageEncoder newEncoder() const CV_OVERRIDE;
 
@@ -136,7 +134,7 @@ private:
     void write_chunk(FILE* f, const char* name, unsigned char* data, uint32_t length);
     void write_IDATs(FILE* f, int frame, unsigned char* data, uint32_t length, uint32_t idat_size);
     void process_rect(unsigned char* row, int rowbytes, int bpp, int stride, int h, unsigned char* rows);
-    void deflate_rect_fin(int deflate_method, int iter, unsigned char* zbuf, uint32_t* zsize, int bpp, int stride, unsigned char* rows, int zbuf_size, int n);
+    void deflate_rect_fin(unsigned char* zbuf, uint32_t* zsize, int bpp, int stride, unsigned char* rows, int zbuf_size, int n);
     void deflate_rect_op(unsigned char* pdata, int x, int y, int w, int h, int bpp, int stride, int zbuf_size, int n);
     void get_rect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigned char* pimage2, unsigned char* ptemp, uint32_t bpp, uint32_t stride, int zbuf_size, uint32_t has_tcolor, uint32_t tcolor, int n);
 
