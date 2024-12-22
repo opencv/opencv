@@ -235,7 +235,7 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
     return false;
 }
 
-bool VideoCapture::open(std::streambuf& source, int apiPreference, const std::vector<int>& params)
+bool VideoCapture::open(std::streambuf& stream, int apiPreference, const std::vector<int>& params)
 {
     CV_INSTRUMENT_REGION();
 
@@ -265,7 +265,7 @@ bool VideoCapture::open(std::streambuf& source, int apiPreference, const std::ve
             {
                 try
                 {
-                    icap = backend->createCapture(source, parameters);
+                    icap = backend->createCapture(StreambufReadStream::create(stream), parameters);
                     if (!icap.empty())
                     {
                         CV_CAPTURE_LOG_DEBUG(NULL,

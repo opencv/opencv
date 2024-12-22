@@ -1,8 +1,6 @@
 #ifdef HAVE_OPENCV_VIDEOIO
-#include "opencv2/videoio/utils.private.hpp"
 typedef std::vector<VideoCaptureAPIs> vector_VideoCaptureAPIs;
 typedef std::vector<VideoCapture> vector_VideoCapture;
-typedef CvStream streambuf;
 
 template<> struct pyopencvVecConverter<cv::VideoCaptureAPIs>
 {
@@ -33,50 +31,59 @@ template<> bool pyopencv_to(PyObject* obj, cv::VideoCapture& stream, const ArgIn
     return true;
 }
 
-static long long readIO(void* opaque, char* buffer, long long n)
+class IOBaseWrapper : public std::streambuf
 {
-    PyObject* ioBase = reinterpret_cast<PyObject*>(opaque);
+public:
+    IOBaseWrapper(PyObject* _obj = nullptr) : obj(_obj) {}
 
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
+    std::streamsize xsgetn(char* buf, std::streamsize n) override
+    {
+        PyObject* ioBase = reinterpret_cast<PyObject*>(obj);
 
-    PyObject* size = pyopencv_from(static_cast<int>(n));
+        PyGILState_STATE gstate;
+        gstate = PyGILState_Ensure();
 
-    PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), size, NULL);
-    char* src = PyBytes_AsString(res);
-    size_t len = static_cast<size_t>(PyBytes_Size(res));
-    std::memcpy(buffer, src, len);
-    Py_DECREF(res);
-    Py_DECREF(size);
+        PyObject* size = pyopencv_from(static_cast<int>(n));
 
-    PyGILState_Release(gstate);
+        PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), size, NULL);
+        char* src = PyBytes_AsString(res);
+        size_t len = static_cast<size_t>(PyBytes_Size(res));
+        std::memcpy(buf, src, len);
+        Py_DECREF(res);
+        Py_DECREF(size);
 
-    return len;
-}
+        PyGILState_Release(gstate);
 
-static long long seekIO(void* opaque, long long offset, int way)
-{
-    PyObject* ioBase = reinterpret_cast<PyObject*>(opaque);
+        return len;
+    }
 
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
+    std::streampos seekoff(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode = std::ios_base::in | std::ios_base::out) override
+    {
+        PyObject* ioBase = reinterpret_cast<PyObject*>(obj);
 
-    PyObject* size = pyopencv_from(static_cast<int>(offset));
-    PyObject* whence = pyopencv_from(way);
+        PyGILState_STATE gstate;
+        gstate = PyGILState_Ensure();
 
-    PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("seek"), size, whence, NULL);
-    int pos = PyLong_AsLong(res);
-    Py_DECREF(res);
-    Py_DECREF(size);
-    Py_DECREF(whence);
+        PyObject* size = pyopencv_from(static_cast<int>(off));
+        PyObject* whence = pyopencv_from(way == std::ios_base::beg ? SEEK_SET : (way == std::ios_base::end ? SEEK_END : SEEK_CUR));
 
-    PyGILState_Release(gstate);
+        PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("seek"), size, whence, NULL);
+        int pos = PyLong_AsLong(res);
+        Py_DECREF(res);
+        Py_DECREF(size);
+        Py_DECREF(whence);
 
-    return pos;
-}
+        PyGILState_Release(gstate);
+
+        return pos;
+    }
+
+private:
+    PyObject* obj;
+};
 
 template<>
-bool pyopencv_to(PyObject* obj, CvStream& p, const ArgInfo&)
+bool pyopencv_to(PyObject* obj, IOBaseWrapper& p, const ArgInfo&)
 {
     if (!obj)
         return false;
@@ -92,7 +99,7 @@ bool pyopencv_to(PyObject* obj, CvStream& p, const ArgInfo&)
     Py_DECREF(type);
     PyGILState_Release(gstate);
 
-    p = CvStream(obj, readIO, seekIO);
+    p = IOBaseWrapper(obj);
     return true;
 }
 

@@ -14,7 +14,7 @@ namespace cv
 enum BackendMode {
     MODE_CAPTURE_BY_INDEX    = 1 << 0,           //!< device index
     MODE_CAPTURE_BY_FILENAME = 1 << 1,           //!< filename or device path (v4l2)
-    MODE_CAPTURE_BY_BUFFER   = 1 << 2,           //!< capture from memory buffer
+    MODE_CAPTURE_BY_STREAM   = 1 << 2,           //!< capture from memory buffer
     MODE_WRITER              = 1 << 4,            //!< writer
 
     MODE_CAPTURE_ALL = MODE_CAPTURE_BY_INDEX + MODE_CAPTURE_BY_FILENAME,

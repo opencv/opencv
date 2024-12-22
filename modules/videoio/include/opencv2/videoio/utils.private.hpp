@@ -11,45 +11,82 @@
 namespace cv {
 CV_EXPORTS std::string icvExtractPattern(const std::string& filename, unsigned *offset);
 
-class CvStream : public std::streambuf
+class IReadStream
 {
 public:
-    CvStream(void* _opaque = nullptr,
-             long long(*_read)(void* opaque, char* buffer, long long size) = nullptr,
-             long long(*_seek)(void* opaque, long long offset, int way) = nullptr)
+    virtual ~IReadStream() {};
+    virtual long long read(char* buffer, long long size) = 0;
+    virtual long long seek(long long offset, int way) = 0;
+    virtual IReadStream* clone() = 0;
+};
+
+class StreambufReadStream : public IReadStream
+{
+public:
+    StreambufReadStream(std::streambuf& _stream) : stream(_stream) {}
+
+    virtual ~StreambufReadStream() {}
+
+    long long read(char* buffer, long long size) override
+    {
+        return stream.sgetn(buffer, size);
+    }
+
+    long long seek(long long offset, int way) override
+    {
+        return stream.pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
+    }
+
+    IReadStream* clone() override
+    {
+        return new StreambufReadStream(stream);
+    }
+
+    static Ptr<IReadStream> create(std::streambuf& stream)
+    {
+        return Ptr<IReadStream>(new StreambufReadStream(stream));
+    }
+
+private:
+    std::streambuf& stream;
+};
+
+
+class ReadStreamCallback : public IReadStream
+{
+public:
+    ReadStreamCallback(void* _opaque,
+                       long long (*_read)(void* opaque, char* buffer, long long size),
+                       long long (*_seek)(void* opaque, long long offset, int way))
     {
         opaque = _opaque;
-        read = _read;
-        seek = _seek;
+        readCallback = _read;
+        seekCallback = _seek;
     }
 
-    std::streamsize xsgetn(char* s, std::streamsize n) override
+    virtual ~ReadStreamCallback() {}
+
+    long long read(char* buffer, long long size) override
     {
-        return read(opaque, s, (int)n);
+        return readCallback(opaque, buffer, size);
     }
 
-    std::streampos seekoff(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode = std::ios_base::in | std::ios_base::out) override
+    long long seek(long long offset, int way) override
     {
-        return seek(opaque, off, way == std::ios_base::beg ? SEEK_SET : (way == std::ios_base::end ? SEEK_END : SEEK_CUR));
+        return seekCallback(opaque, offset, way);
     }
 
-    // Required for sgetc (check for end-of-stream)
-    int underflow() override
+    IReadStream* clone() override
     {
-        char s;
-        if (xsgetn(&s, 1) == 1)
-        {
-            seekoff(-1, std::ios_base::cur);
-            return static_cast<int>(s);
-        }
-        else
-            return EOF;
+        return new ReadStreamCallback(opaque, readCallback, seekCallback);
     }
+
 private:
     void* opaque;
-    long long(*read)(void* opaque, char* buffer, long long size);
-    long long(*seek)(void* opaque, long long offset, int way);
+    long long (*readCallback)(void* opaque, char* buffer, long long size);
+    long long (*seekCallback)(void* opaque, long long offset, int way);
 };
+
 }
 
 #endif // OPENCV_VIDEOIO_UTILS_PRIVATE_HPP

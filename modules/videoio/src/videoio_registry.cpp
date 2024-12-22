@@ -61,9 +61,9 @@ namespace {
 static const struct VideoBackendInfo builtin_backends[] =
 {
 #ifdef HAVE_FFMPEG
-    DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_CAPTURE_BY_BUFFER | MODE_WRITER, cvCreateFileCapture_FFMPEG_proxy, 0, cvCreateBufferCapture_FFMPEG_proxy, cvCreateVideoWriter_FFMPEG_proxy)
+    DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_CAPTURE_BY_STREAM | MODE_WRITER, cvCreateFileCapture_FFMPEG_proxy, 0, cvCreateBufferCapture_FFMPEG_proxy, cvCreateVideoWriter_FFMPEG_proxy)
 #elif defined(ENABLE_PLUGINS) || defined(HAVE_FFMPEG_WRAPPER)
-    DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_CAPTURE_BY_BUFFER | MODE_WRITER)
+    DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_CAPTURE_BY_STREAM | MODE_WRITER)
 #endif
 
 #ifdef HAVE_GSTREAMER
@@ -89,9 +89,9 @@ static const struct VideoBackendInfo builtin_backends[] =
 #endif
 
 #ifdef HAVE_MSMF
-    DECLARE_STATIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_CAPTURE_BY_BUFFER | MODE_WRITER, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateVideoWriter_MSMF)
+    DECLARE_STATIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_CAPTURE_BY_STREAM | MODE_WRITER, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateCapture_MSMF, cvCreateVideoWriter_MSMF)
 #elif defined(ENABLE_PLUGINS) && defined(_WIN32)
-    DECLARE_DYNAMIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_CAPTURE_BY_BUFFER | MODE_WRITER)
+    DECLARE_DYNAMIC_BACKEND(CAP_MSMF, "MSMF", MODE_CAPTURE_ALL | MODE_CAPTURE_BY_STREAM | MODE_WRITER)
 #endif
 
 #ifdef HAVE_DSHOW
@@ -337,7 +337,7 @@ public:
         for (size_t i = 0; i < enabledBackends.size(); i++)
         {
             const VideoBackendInfo& info = enabledBackends[i];
-            if (info.mode & MODE_CAPTURE_BY_BUFFER)
+            if (info.mode & MODE_CAPTURE_BY_STREAM)
                 result.push_back(info);
         }
         return result;

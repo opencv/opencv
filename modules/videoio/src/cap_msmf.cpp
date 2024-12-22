@@ -746,7 +746,7 @@ public:
     virtual ~CvCapture_MSMF();
     bool configureHW(const cv::VideoCaptureParameters& params);
     virtual bool open(int, const cv::VideoCaptureParameters* params);
-    virtual bool open(const cv::String&, std::streambuf&, const cv::VideoCaptureParameters* params);
+    virtual bool open(const cv::String&, Ptr<IReadStream>, const cv::VideoCaptureParameters* params);
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
@@ -1252,10 +1252,10 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
     return isOpen;
 }
 
-bool CvCapture_MSMF::open(const cv::String& _filename, std::streambuf& buffer, const cv::VideoCaptureParameters* params)
+bool CvCapture_MSMF::open(const cv::String& _filename, Ptr<IReadStream> stream, const cv::VideoCaptureParameters* params)
 {
     close();
-    if (_filename.empty() && buffer.sgetc() == EOF)
+    if (_filename.empty() && !stream)
         return false;
 
     if (params)
@@ -1277,9 +1277,9 @@ bool CvCapture_MSMF::open(const cv::String& _filename, std::streambuf& buffer, c
     {
         // TODO: implement read by chunks
         std::vector<char> data;
-        data.resize(buffer.pubseekoff(0, std::ios_base::end));
-        buffer.pubseekoff(0, std::ios_base::beg);
-        buffer.sgetn(data.data(), data.size());
+        data.resize(stream->seek(0, SEEK_END));
+        stream->seek(0, SEEK_SET);
+        stream->read(data.data(), data.size());
         IStream* s = SHCreateMemStream(reinterpret_cast<const BYTE*>(data.data()), static_cast<UINT32>(data.size()));
         if (!s)
             return false;
@@ -2415,12 +2415,12 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename,
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (std::streambuf& source, const cv::VideoCaptureParameters& params)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (Ptr<IReadStream> stream, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
-        capture->open(std::string(), source, &params);
+        capture->open(std::string(), stream, &params);
         if (capture->isOpened())
             return capture;
     }
@@ -2813,16 +2813,13 @@ CvResult CV_API_CALL cv_capture_open_buffer(
     if (!handle)
         return CV_ERROR_FAIL;
 
-    CvStream buffer(opaque, read, seek);
-    if (buffer.sgetc() == EOF)
-        return CV_ERROR_FAIL;
     *handle = NULL;
     CaptureT* cap = 0;
     try
     {
         cv::VideoCaptureParameters parameters(params, n_params);
         cap = new CaptureT();
-        bool res = cap->open(std::string(), buffer, &parameters);
+        bool res = cap->open(std::string(), Ptr<IReadStream>(new ReadStreamCallback(opaque, read, seek)), &parameters);
         if (res)
         {
             *handle = (CvPluginCapture)cap;

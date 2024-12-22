@@ -73,11 +73,11 @@ public:
         }
         return Ptr<IVideoCapture>();
     }
-    Ptr<IVideoCapture> createCapture(std::streambuf& source, const VideoCaptureParameters& params) const CV_OVERRIDE
+    Ptr<IVideoCapture> createCapture(Ptr<IReadStream> stream, const VideoCaptureParameters& params) const CV_OVERRIDE
     {
         if (fn_createCaptureBuffer_)
         {
-            Ptr<IVideoCapture> cap = fn_createCaptureBuffer_(source);
+            Ptr<IVideoCapture> cap = fn_createCaptureBuffer_(stream);
             if (cap && !params.empty())
             {
                 applyParametersFallback(cap, params);
@@ -156,10 +156,10 @@ public:
             return fn_createCaptureFile_(filename, params);
         return Ptr<IVideoCapture>();
     }
-    Ptr<IVideoCapture> createCapture(std::streambuf& source, const VideoCaptureParameters& params) const CV_OVERRIDE
+    Ptr<IVideoCapture> createCapture(Ptr<IReadStream> stream, const VideoCaptureParameters& params) const CV_OVERRIDE
     {
         if (fn_createCaptureBuffer_)
-            return fn_createCaptureBuffer_(source, params);
+            return fn_createCaptureBuffer_(stream, params);
         return Ptr<IVideoCapture>();
     }
     Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps,
