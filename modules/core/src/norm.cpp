@@ -1366,6 +1366,13 @@ static bool ocl_normalize( InputArray _src, InputOutputArray _dst, InputArray _m
 }  // ocl_normalize
 #endif  // HAVE_OPENCL
 
+template <typename T>
+T clamp(T value, T min, T max) {
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
+
 void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
                int norm_type, int rtype, InputArray _mask)
 {
@@ -1385,7 +1392,26 @@ void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
         scale = (dmax - dmin)*(smax - smin > DBL_EPSILON ? 1./(smax - smin) : 0);
         if( rtype == CV_32F )
         {
-            shift = (float)dmin - (float)(smin*scale);
+            // Cast to float and enforce conditions
+            float scale_float = static_cast<float>(scale);
+            float shift_float = (float)dmin - (float)(smin * scale);
+
+            // check if a rounding error will occur, we want the values to be in [dmin, dmax]
+            if (smin * scale_float + shift_float < dmin || smax * scale_float + shift_float > dmax) {
+                while (smin * scale_float + shift_float < dmin || smax * scale_float + shift_float > dmax)
+                {
+                    scale_float = nextafterf(scale_float, -INFINITY);
+                    shift_float = (float)dmin - (float)(smin * scale_float);
+                }
+                scale = scale_float;
+                shift = shift_float;
+            }            
+            else
+            {
+                scale = scale_float;
+                shift = shift_float;
+            }
+
         }
         else
             shift = dmin - smin*scale;
