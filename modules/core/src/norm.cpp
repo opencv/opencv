@@ -1423,7 +1423,7 @@ void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
 
     Mat src = _src.getMat();
     if ( _mask.empty() )
-        src.convertTo(_dst, rtype, scale, shift);
+        src.convertTo( _dst, rtype, scale, shift );
     else
     {
         Mat temp;
@@ -1431,7 +1431,5 @@ void normalize(InputArray _src, InputOutputArray _dst, double a, double b,
         temp.copyTo( _dst, _mask );
     }
 }
-
-
 
 }  // namespace
