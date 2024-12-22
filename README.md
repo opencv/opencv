@@ -1,12 +1,47 @@
 ## OpenCV: Open Source Computer Vision Library
 
-### Quick Start Tutorial for Beginners
+
+
+## Quick Start Tutorial for Beginners
 
 This tutorial helps newcomers get started with OpenCV:
 
 1. Installation
+
 ```python
+
 pip install opencv-python
+
+```
+
+2. Basic Image Reading
+
+```python
+
+import cv2
+
+# Read an image
+img = cv2.imread('image.jpg')
+
+# Display the image
+cv2.imshow('Image', img)
+cv2.waitKey(0)
+
+```
+
+3. Simple Operations
+
+```python
+
+# Convert to grayscale
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+# Apply Gaussian blur
+blur = cv2.GaussianBlur(gray, (5,5), 0)
+
+```
+
+
 
 ### Resources
 
