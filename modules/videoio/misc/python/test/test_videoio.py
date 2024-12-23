@@ -27,11 +27,17 @@ class Bindings(NewOpenCVTests):
         if sys.version_info[0] < 3:
             raise self.skipTest('Python 3.x required')
 
-        if not cv.videoio_registry.getBufferBackends():
+        api_pref = None
+        for backend in cv.videoio_registry.getBufferBackends():
+            if cv.videoio_registry.hasBackend(backend):
+                api_pref = backend
+                break
+
+        if not api_pref:
             raise self.skipTest("No available backends")
 
         with open(self.find_file("cv/video/768x576.avi"), "rb") as f:
-            cap = cv.VideoCapture(f, cv.CAP_ANY, [])
+            cap = cv.VideoCapture(f, api_pref, [])
             self.assertTrue(cap.isOpened())
             hasFrame, frame = cap.read()
             self.assertTrue(hasFrame)
@@ -41,7 +47,13 @@ class Bindings(NewOpenCVTests):
         if sys.version_info[0] < 3:
             raise self.skipTest('Python 3.x required')
 
-        if not cv.videoio_registry.getBufferBackends():
+        api_pref = None
+        for backend in cv.videoio_registry.getBufferBackends():
+            if cv.videoio_registry.hasBackend(backend):
+                api_pref = backend
+                break
+
+        if not api_pref:
             raise self.skipTest("No available backends")
 
         class BufferStream(io.BufferedIOBase):
@@ -59,7 +71,7 @@ class Bindings(NewOpenCVTests):
 
         stream = BufferStream(self.find_file("cv/video/768x576.avi"))
 
-        cap = cv.VideoCapture(stream, cv.CAP_ANY, [])
+        cap = cv.VideoCapture(stream, api_pref, [])
         self.assertTrue(cap.isOpened())
         hasFrame, frame = cap.read()
         self.assertTrue(hasFrame)
