@@ -34,7 +34,17 @@ template<> bool pyopencv_to(PyObject* obj, cv::VideoCapture& stream, const ArgIn
 class IOBaseWrapper : public std::streambuf
 {
 public:
-    IOBaseWrapper(PyObject* _obj = nullptr) : obj(_obj) {}
+    IOBaseWrapper(PyObject* _obj = nullptr) : obj(_obj)
+    {
+        if (obj)
+            Py_INCREF(obj);
+    }
+
+    ~IOBaseWrapper()
+    {
+        if (obj)
+            Py_DECREF(obj);
+    }
 
     std::streamsize xsgetn(char* buf, std::streamsize n) override
     {
@@ -48,6 +58,7 @@ public:
         PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), size, NULL);
         char* src = PyBytes_AsString(res);
         size_t len = static_cast<size_t>(PyBytes_Size(res));
+        CV_CheckLE(len, static_cast<size_t>(n), "Stream chunk size should be less or equal than requested size");
         std::memcpy(buf, src, len);
         Py_DECREF(res);
         Py_DECREF(size);

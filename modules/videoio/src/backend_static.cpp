@@ -36,11 +36,11 @@ class StaticBackend: public IBackend
 public:
     FN_createCaptureFile fn_createCaptureFile_;
     FN_createCaptureCamera fn_createCaptureCamera_;
-    FN_createCaptureBuffer fn_createCaptureBuffer_;
+    FN_createCaptureStream fn_createCaptureStream_;
     FN_createWriter fn_createWriter_;
 
-    StaticBackend(FN_createCaptureFile fn_createCaptureFile, FN_createCaptureCamera fn_createCaptureCamera, FN_createCaptureBuffer fn_createCaptureBuffer, FN_createWriter fn_createWriter)
-        : fn_createCaptureFile_(fn_createCaptureFile), fn_createCaptureCamera_(fn_createCaptureCamera), fn_createCaptureBuffer_(fn_createCaptureBuffer), fn_createWriter_(fn_createWriter)
+    StaticBackend(FN_createCaptureFile fn_createCaptureFile, FN_createCaptureCamera fn_createCaptureCamera, FN_createCaptureStream fn_createCaptureStream, FN_createWriter fn_createWriter)
+        : fn_createCaptureFile_(fn_createCaptureFile), fn_createCaptureCamera_(fn_createCaptureCamera), fn_createCaptureStream_(fn_createCaptureStream), fn_createWriter_(fn_createWriter)
     {
         // nothing
     }
@@ -75,9 +75,9 @@ public:
     }
     Ptr<IVideoCapture> createCapture(Ptr<IReadStream> stream, const VideoCaptureParameters& params) const CV_OVERRIDE
     {
-        if (fn_createCaptureBuffer_)
+        if (fn_createCaptureStream_)
         {
-            Ptr<IVideoCapture> cap = fn_createCaptureBuffer_(stream);
+            Ptr<IVideoCapture> cap = fn_createCaptureStream_(stream);
             if (cap && !params.empty())
             {
                 applyParametersFallback(cap, params);
@@ -101,8 +101,8 @@ protected:
     Ptr<StaticBackend> backend;
 
 public:
-    StaticBackendFactory(FN_createCaptureFile createCaptureFile, FN_createCaptureCamera createCaptureCamera, FN_createCaptureBuffer createCaptureBuffer, FN_createWriter createWriter)
-        : backend(makePtr<StaticBackend>(createCaptureFile, createCaptureCamera, createCaptureBuffer, createWriter))
+    StaticBackendFactory(FN_createCaptureFile createCaptureFile, FN_createCaptureCamera createCaptureCamera, FN_createCaptureStream createCaptureStream, FN_createWriter createWriter)
+        : backend(makePtr<StaticBackend>(createCaptureFile, createCaptureCamera, createCaptureStream, createWriter))
     {
         // nothing
     }
@@ -120,10 +120,10 @@ public:
 
 Ptr<IBackendFactory> createBackendFactory(FN_createCaptureFile createCaptureFile,
                                           FN_createCaptureCamera createCaptureCamera,
-                                          FN_createCaptureBuffer createCaptureBuffer,
+                                          FN_createCaptureStream createCaptureStream,
                                           FN_createWriter createWriter)
 {
-    return makePtr<StaticBackendFactory>(createCaptureFile, createCaptureCamera, createCaptureBuffer, createWriter).staticCast<IBackendFactory>();
+    return makePtr<StaticBackendFactory>(createCaptureFile, createCaptureCamera, createCaptureStream, createWriter).staticCast<IBackendFactory>();
 }
 
 
@@ -133,11 +133,11 @@ class StaticBackendWithParams: public IBackend
 public:
     FN_createCaptureFileWithParams fn_createCaptureFile_;
     FN_createCaptureCameraWithParams fn_createCaptureCamera_;
-    FN_createCaptureBufferWithParams fn_createCaptureBuffer_;
+    FN_createCaptureStreamWithParams fn_createCaptureStream_;
     FN_createWriter fn_createWriter_;
 
-    StaticBackendWithParams(FN_createCaptureFileWithParams fn_createCaptureFile, FN_createCaptureCameraWithParams fn_createCaptureCamera, FN_createCaptureBufferWithParams fn_createCaptureBuffer, FN_createWriter fn_createWriter)
-        : fn_createCaptureFile_(fn_createCaptureFile), fn_createCaptureCamera_(fn_createCaptureCamera), fn_createCaptureBuffer_(fn_createCaptureBuffer), fn_createWriter_(fn_createWriter)
+    StaticBackendWithParams(FN_createCaptureFileWithParams fn_createCaptureFile, FN_createCaptureCameraWithParams fn_createCaptureCamera, FN_createCaptureStreamWithParams fn_createCaptureStream, FN_createWriter fn_createWriter)
+        : fn_createCaptureFile_(fn_createCaptureFile), fn_createCaptureCamera_(fn_createCaptureCamera), fn_createCaptureStream_(fn_createCaptureStream), fn_createWriter_(fn_createWriter)
     {
         // nothing
     }
@@ -158,8 +158,8 @@ public:
     }
     Ptr<IVideoCapture> createCapture(Ptr<IReadStream> stream, const VideoCaptureParameters& params) const CV_OVERRIDE
     {
-        if (fn_createCaptureBuffer_)
-            return fn_createCaptureBuffer_(stream, params);
+        if (fn_createCaptureStream_)
+            return fn_createCaptureStream_(stream, params);
         return Ptr<IVideoCapture>();
     }
     Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps,
@@ -177,8 +177,8 @@ protected:
     Ptr<StaticBackendWithParams> backend;
 
 public:
-    StaticBackendWithParamsFactory(FN_createCaptureFileWithParams createCaptureFile, FN_createCaptureCameraWithParams createCaptureCamera, FN_createCaptureBufferWithParams createCaptureBuffer, FN_createWriter createWriter)
-        : backend(makePtr<StaticBackendWithParams>(createCaptureFile, createCaptureCamera, createCaptureBuffer, createWriter))
+    StaticBackendWithParamsFactory(FN_createCaptureFileWithParams createCaptureFile, FN_createCaptureCameraWithParams createCaptureCamera, FN_createCaptureStreamWithParams createCaptureStream, FN_createWriter createWriter)
+        : backend(makePtr<StaticBackendWithParams>(createCaptureFile, createCaptureCamera, createCaptureStream, createWriter))
     {
         // nothing
     }
@@ -196,10 +196,10 @@ public:
 
 Ptr<IBackendFactory> createBackendFactory(FN_createCaptureFileWithParams createCaptureFile,
                                           FN_createCaptureCameraWithParams createCaptureCamera,
-                                          FN_createCaptureBufferWithParams createCaptureBuffer,
+                                          FN_createCaptureStreamWithParams createCaptureStream,
                                           FN_createWriter createWriter)
 {
-    return makePtr<StaticBackendWithParamsFactory>(createCaptureFile, createCaptureCamera, createCaptureBuffer, createWriter).staticCast<IBackendFactory>();
+    return makePtr<StaticBackendWithParamsFactory>(createCaptureFile, createCaptureCamera, createCaptureStream, createWriter).staticCast<IBackendFactory>();
 }
 
 

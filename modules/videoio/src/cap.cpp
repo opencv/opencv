@@ -245,7 +245,7 @@ bool VideoCapture::open(std::streambuf& stream, int apiPreference, const std::ve
     }
 
     const VideoCaptureParameters parameters(params);
-    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByBuffer();
+    const std::vector<VideoBackendInfo> backends = cv::videoio_registry::getAvailableBackends_CaptureByStream();
     for (size_t i = 0; i < backends.size(); i++)
     {
         const VideoBackendInfo& info = backends[i];

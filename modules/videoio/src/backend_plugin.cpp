@@ -459,13 +459,13 @@ public:
         CV_Assert(plugin_api->v0.Capture_release);
 
         CvPluginCapture capture = NULL;
-        if (stream && plugin_api->api_header.api_version >= 2 && plugin_api->v2.Capture_open_buffer)
+        if (stream && plugin_api->api_header.api_version >= 2 && plugin_api->v2.Capture_open_stream)
         {
             std::vector<int> vint_params = params.getIntVector();
             int* c_params = vint_params.data();
             unsigned n_params = (unsigned)(vint_params.size() / 2);
 
-            if (CV_ERROR_OK == plugin_api->v2.Capture_open_buffer(
+            if (CV_ERROR_OK == plugin_api->v2.Capture_open_stream(
                 stream.get(),
                 [](void* opaque, char* buffer, long long size) -> long long {
                     auto is = reinterpret_cast<IReadStream*>(opaque);
@@ -737,12 +737,12 @@ Ptr<IVideoCapture> PluginBackend::createCapture(Ptr<IReadStream> stream, const V
             return PluginCapture::create(capture_api_, std::string(), stream, 0, params); //.staticCast<IVideoCapture>();
         if (plugin_api_)
         {
-            CV_Error(Error::StsNotImplemented, "Legacy plugin API for buffer capture");
+            CV_Error(Error::StsNotImplemented, "Legacy plugin API for stream capture");
         }
     }
     catch (...)
     {
-        CV_LOG_DEBUG(NULL, "Video I/O: can't open buffer capture");
+        CV_LOG_DEBUG(NULL, "Video I/O: can't open stream capture");
         throw;
     }
     return Ptr<IVideoCapture>();

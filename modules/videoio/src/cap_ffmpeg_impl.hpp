@@ -564,7 +564,6 @@ struct CvCapture_FFMPEG
     int64_t           dts_delay_in_fps_time_base;
 
     AVIOContext     * avio_context;
-    IReadStream     * readStream;
 
     AVPacket          packet;
     Image_FFMPEG      frame;
@@ -632,7 +631,6 @@ void CvCapture_FFMPEG::init()
     avcodec = 0;
     context = 0;
     avio_context = 0;
-    readStream = 0;
     frame_number = 0;
     eps_zero = 0.000025;
 
@@ -740,7 +738,6 @@ void CvCapture_FFMPEG::close()
         av_free(avio_context->buffer);
         av_freep(&avio_context);
     }
-    delete readStream;
 
     init();
 }
@@ -1162,8 +1159,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, Ptr<IReadStream> stream, cons
         size_t avio_ctx_buffer_size = 4096;
         uint8_t* avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
         CV_Assert(avio_ctx_buffer);
-        readStream = stream->clone();
-        avio_context = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, readStream,
+        avio_context = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, stream.get(),
             [](void *opaque, uint8_t *buf, int buf_size) -> int {
                 auto is = reinterpret_cast<IReadStream*>(opaque);
                 return is->read(reinterpret_cast<char*>(buf), buf_size);
@@ -3339,7 +3335,7 @@ CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, con
 }
 
 static
-CvCapture_FFMPEG* cvCreateBufferCaptureWithParams_FFMPEG(Ptr<IReadStream> stream, const VideoCaptureParameters& params)
+CvCapture_FFMPEG* cvCreateStreamCaptureWithParams_FFMPEG(Ptr<IReadStream> stream, const VideoCaptureParameters& params)
 {
     // FIXIT: remove unsafe malloc() approach
     CvCapture_FFMPEG* capture = (CvCapture_FFMPEG*)malloc(sizeof(*capture));

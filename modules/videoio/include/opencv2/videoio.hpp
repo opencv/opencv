@@ -799,7 +799,7 @@ public:
     CV_WRAP explicit VideoCapture(int index, int apiPreference, const std::vector<int>& params);
 
     /** @overload
-    @brief Opens a video file stored in memory buffer.
+    @brief Opens a video using data stream.
 
     The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
     See cv::VideoCaptureProperties
@@ -860,7 +860,7 @@ public:
     */
     CV_WRAP virtual bool open(int index, int apiPreference, const std::vector<int>& params);
 
-    /** @brief  Opens a video file stored in memory buffer.
+    /** @brief  Opens a video using data stream.
 
     @overload
 

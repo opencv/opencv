@@ -17,7 +17,6 @@ public:
     virtual ~IReadStream() {};
     virtual long long read(char* buffer, long long size) = 0;
     virtual long long seek(long long offset, int way) = 0;
-    virtual IReadStream* clone() = 0;
 };
 
 class StreambufReadStream : public IReadStream
@@ -37,11 +36,6 @@ public:
         return stream.pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
     }
 
-    IReadStream* clone() override
-    {
-        return new StreambufReadStream(stream);
-    }
-
     static Ptr<IReadStream> create(std::streambuf& stream)
     {
         return Ptr<IReadStream>(new StreambufReadStream(stream));
@@ -52,19 +46,19 @@ private:
 };
 
 
-class ReadStreamCallback : public IReadStream
+class ReadStreamPluginProvider : public IReadStream
 {
 public:
-    ReadStreamCallback(void* _opaque,
-                       long long (*_read)(void* opaque, char* buffer, long long size),
-                       long long (*_seek)(void* opaque, long long offset, int way))
+    ReadStreamPluginProvider(void* _opaque,
+                             long long (*_read)(void* opaque, char* buffer, long long size),
+                             long long (*_seek)(void* opaque, long long offset, int way))
     {
         opaque = _opaque;
         readCallback = _read;
         seekCallback = _seek;
     }
 
-    virtual ~ReadStreamCallback() {}
+    virtual ~ReadStreamPluginProvider() {}
 
     long long read(char* buffer, long long size) override
     {
@@ -74,11 +68,6 @@ public:
     long long seek(long long offset, int way) override
     {
         return seekCallback(opaque, offset, way);
-    }
-
-    IReadStream* clone() override
-    {
-        return new ReadStreamCallback(opaque, readCallback, seekCallback);
     }
 
 private:

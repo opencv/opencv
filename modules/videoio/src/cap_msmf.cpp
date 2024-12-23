@@ -2815,7 +2815,7 @@ CvResult CV_API_CALL cv_capture_open_buffer(
     {
         cv::VideoCaptureParameters parameters(params, n_params);
         cap = new CaptureT();
-        bool res = cap->open(std::string(), Ptr<IReadStream>(new ReadStreamCallback(opaque, read, seek)), &parameters);
+        bool res = cap->open(std::string(), makePtr<ReadStreamPluginProvider>(opaque, read, seek), &parameters);
         if (res)
         {
             *handle = (CvPluginCapture)cap;

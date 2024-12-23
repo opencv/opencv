@@ -136,7 +136,7 @@ struct OpenCV_VideoIO_Capture_Plugin_API_v1_2_api_entries
 
     @note API-CALL 9, API-Version == 2
      */
-    CvResult (CV_API_CALL *Capture_open_buffer)(
+    CvResult (CV_API_CALL *Capture_open_stream)(
         void* opaque,
         long long(*read)(void* opaque, char* buffer, long long size),
         long long(*seek)(void* opaque, long long offset, int way),
