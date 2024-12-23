@@ -94,7 +94,7 @@ private:
 };
 
 template<>
-bool pyopencv_to(PyObject* obj, IOBaseWrapper& p, const ArgInfo&)
+bool pyopencv_to(PyObject* obj, Ptr<std::streambuf>& p, const ArgInfo&)
 {
     if (!obj)
         return false;
@@ -110,7 +110,7 @@ bool pyopencv_to(PyObject* obj, IOBaseWrapper& p, const ArgInfo&)
     Py_DECREF(type);
     PyGILState_Release(gstate);
 
-    p = IOBaseWrapper(obj);
+    p = makePtr<IOBaseWrapper>(obj);
     return true;
 }
 

@@ -1051,10 +1051,11 @@ TEST_P(stream_capture, read)
     VideoCapture cap;
     String video_file = BunnyParameters::getFilename(String(".") + ext);
     ASSERT_TRUE(utils::fs::exists(video_file));
-    std::ifstream ifs(video_file.c_str(), std::ios::in | std::ios::binary);
-    ASSERT_TRUE(ifs.is_open());
+    auto stream = std::make_shared<std::filebuf>();
+    stream->open(video_file.c_str(), std::ios::in | std::ios::binary);
+    ASSERT_TRUE(stream->is_open());
 
-    EXPECT_NO_THROW(cap.open(*ifs.rdbuf(), apiPref, {}));
+    EXPECT_NO_THROW(cap.open(std::dynamic_pointer_cast<std::streambuf>(stream), apiPref, {}));
     ASSERT_TRUE(cap.isOpened());
 
     const int numFrames = 10;
@@ -1103,19 +1104,19 @@ TEST_P(stream_capture_ffmpeg, raw)
     ASSERT_TRUE(container.isOpened());
     ASSERT_EQ(-1.f, container.get(CAP_PROP_FORMAT));
 
-    std::stringbuf stream;
+    auto stream = std::make_shared<std::stringbuf>();
     Mat keyFrame;
     while (true)
     {
         container >> keyFrame;
         if (keyFrame.empty())
             break;
-        stream.sputn(keyFrame.ptr<char>(), keyFrame.total());
+        stream->sputn(keyFrame.ptr<char>(), keyFrame.total());
     }
 
     VideoCapture capRef(video_file);
     VideoCapture capStream;
-    EXPECT_NO_THROW(capStream.open(stream, apiPref, {}));
+    EXPECT_NO_THROW(capStream.open(std::dynamic_pointer_cast<std::streambuf>(stream), apiPref, {}));
     ASSERT_TRUE(capStream.isOpened());
 
     const int numFrames = 10;

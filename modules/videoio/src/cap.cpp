@@ -82,7 +82,7 @@ VideoCapture::VideoCapture(const String& filename, int apiPreference, const std:
     open(filename, apiPreference, params);
 }
 
-VideoCapture::VideoCapture(std::streambuf& source, int apiPreference, const std::vector<int>& params)
+VideoCapture::VideoCapture(Ptr<std::streambuf> source, int apiPreference, const std::vector<int>& params)
     : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
@@ -235,7 +235,7 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
     return false;
 }
 
-bool VideoCapture::open(std::streambuf& stream, int apiPreference, const std::vector<int>& params)
+bool VideoCapture::open(Ptr<std::streambuf> stream, int apiPreference, const std::vector<int>& params)
 {
     CV_INSTRUMENT_REGION();
 

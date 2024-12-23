@@ -22,27 +22,27 @@ public:
 class StreambufReadStream : public IReadStream
 {
 public:
-    StreambufReadStream(std::streambuf& _stream) : stream(_stream) {}
+    StreambufReadStream(Ptr<std::streambuf> _stream) : stream(_stream) {}
 
     virtual ~StreambufReadStream() {}
 
     long long read(char* buffer, long long size) override
     {
-        return stream.sgetn(buffer, size);
+        return stream->sgetn(buffer, size);
     }
 
     long long seek(long long offset, int way) override
     {
-        return stream.pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
+        return stream->pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
     }
 
-    static Ptr<IReadStream> create(std::streambuf& stream)
+    static Ptr<IReadStream> create(Ptr<std::streambuf> stream)
     {
         return Ptr<IReadStream>(new StreambufReadStream(stream));
     }
 
 private:
-    std::streambuf& stream;
+    Ptr<std::streambuf> stream;
 };
 
 
