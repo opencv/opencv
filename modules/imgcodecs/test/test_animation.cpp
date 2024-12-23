@@ -41,7 +41,7 @@ static bool fillFrames(Animation& animation, bool hasAlpha)
     animation.bgcolor = Scalar(50, 100, 150, 128); // different values for test purpose.
 
     // Add the first frame with a duration value of 500 milliseconds.
-    int duration = 100;
+    int duration = 80;
     animation.durations.push_back(duration * 5);
     animation.frames.push_back(image.clone());
     putText(animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
