@@ -28,7 +28,7 @@ static void readFileBytes(const std::string& fname, std::vector<unsigned char>& 
     }
 }
 
-static bool fillFrames(Animation& animation, bool hasAlpha)
+static bool fillFrames(Animation& animation, bool hasAlpha, int n = 14)
 {
     // Set the path to the test image directory and filename for loading.
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -38,7 +38,6 @@ static bool fillFrames(Animation& animation, bool hasAlpha)
         return false;
 
     animation.loop_count = 0xffff; // 0xffff is the maximum value to set.
-    animation.bgcolor = Scalar(50, 100, 150, 128); // different values for test purpose.
 
     // Add the first frame with a duration value of 500 milliseconds.
     int duration = 80;
@@ -49,8 +48,8 @@ static bool fillFrames(Animation& animation, bool hasAlpha)
     // Define a region of interest (ROI)
     Rect roi(2, 16, 26, 16);
 
-    // Modify the ROI in 13 iterations to simulate slight changes in animation frames.
-    for (int i = 1; i < 14; i++)
+    // Modify the ROI in n iterations to simulate slight changes in animation frames.
+    for (int i = 1; i < n; i++)
     {
         roi.x++;
         roi.width -= 2;
@@ -86,10 +85,13 @@ static bool fillFrames(Animation& animation, bool hasAlpha)
     }
 
     // Add two identical frames with the same duration.
-    animation.durations.push_back(++duration);
-    animation.frames.push_back(animation.frames.back());
-    animation.durations.push_back(++duration);
-    animation.frames.push_back(animation.frames.back());
+    if (animation.frames.size() > 1)
+    {
+        animation.durations.push_back(++duration);
+        animation.frames.push_back(animation.frames.back());
+        animation.durations.push_back(++duration);
+        animation.frames.push_back(animation.frames.back());
+    }
 
     return true;
 }
@@ -243,10 +245,6 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgba)
     EXPECT_EQ(imcount(output), expected_frame_count);
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count);
 
-    // Check that the background color and loop count match between saved and loaded animations.
-    EXPECT_EQ(l_animation.bgcolor, Scalar()/*s_animation.bgcolor*/); // TO DO not implemented yet
-    EXPECT_EQ(l_animation.loop_count, s_animation.loop_count);
-
     for (size_t i = 0; i < l_animation.frames.size(); i++)
     {
         EXPECT_EQ(s_animation.durations[i], l_animation.durations[i]);
@@ -373,6 +371,34 @@ TEST(Imgcodecs_APNG, imwritemulti_gray)
     {
         EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], read_frames[i], NORM_INF));
     }
+}
+
+TEST(Imgcodecs_APNG, imwriteanimation_bgcolor)
+{
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true, 2));
+    s_animation.bgcolor = Scalar(50, 100, 150, 128); // different values for test purpose.
+
+    // Create a temporary output filename for saving the animation.
+    string output = cv::tempfile(".png");
+
+    // Write the animation to a .png file and verify success.
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
+
+    // Read the animation back and compare with the original.
+    EXPECT_TRUE(imreadanimation(output, l_animation));
+
+    // Check that the background color match between saved and loaded animations.
+    EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor);
+
+    EXPECT_TRUE(fillFrames(s_animation, true, 2));
+    s_animation.bgcolor = Scalar();
+
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
+    EXPECT_TRUE(imreadanimation(output, l_animation));
+    EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor);
+
+    EXPECT_EQ(0, remove(output.c_str()));
 }
 
 #endif // HAVE_PNG

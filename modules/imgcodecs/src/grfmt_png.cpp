@@ -127,6 +127,7 @@ const uint32_t id_fcTL = 0x4C546366; // Frame control chunk
 const uint32_t id_IDAT = 0x54414449; // first frame and/or default image
 const uint32_t id_fdAT = 0x54416466; // Frame data chunk
 const uint32_t id_PLTE = 0x45544C50;
+const uint32_t id_bKGD = 0x44474B62;
 const uint32_t id_tRNS = 0x534E5274;
 const uint32_t id_IEND = 0x444E4549; // end/footer chunk
 
@@ -230,7 +231,7 @@ bool  PngDecoder::readHeader()
                     uint32_t id = 0;
                     CHUNK chunk;
 
-                    if(fread(sig, 1, 8, m_f))
+                    if (fread(sig, 1, 8, m_f))
                         id = read_chunk(m_chunkIHDR);
 
                     if (!(id == id_IHDR && m_chunkIHDR.size == 25))
@@ -276,6 +277,15 @@ bool  PngDecoder::readHeader()
                             delay_den = png_get_uint_16(chunk.p + 30);
                             dop = chunk.p[32];
                             bop = chunk.p[33];
+                        }
+
+                        if (id == id_bKGD)
+                        {
+                            int bgcolor = png_get_uint_32(chunk.p + 8);
+                            m_animation.bgcolor[3] = (bgcolor >> 24) & 0xFF;
+                            m_animation.bgcolor[2] = (bgcolor >> 16) & 0xFF;
+                            m_animation.bgcolor[1] = (bgcolor >> 8) & 0xFF;
+                            m_animation.bgcolor[0] = bgcolor & 0xFF;
                         }
 
                         if (id == id_PLTE || id == id_tRNS)
@@ -1096,7 +1106,7 @@ void PngEncoder::deflate_rect_op(unsigned char* pdata, int x, int y, int w, int 
     deflateReset(&op_zstream2);
 }
 
-void PngEncoder::get_rect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigned char* pimage2, unsigned char* ptemp, uint32_t bpp, uint32_t stride, int zbuf_size, uint32_t has_tcolor, uint32_t tcolor, int n)
+bool PngEncoder::get_rect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigned char* pimage2, unsigned char* ptemp, uint32_t bpp, uint32_t stride, int zbuf_size, uint32_t has_tcolor, uint32_t tcolor, int n)
 {
     uint32_t i, j, x0, y0, w0, h0;
     uint32_t x_min = w - 1;
@@ -1253,6 +1263,7 @@ void PngEncoder::get_rect(uint32_t w, uint32_t h, unsigned char* pimage1, unsign
 
     if (over_is_possible)
         deflate_rect_op(ptemp, x0, y0, w0, h0, bpp, stride, zbuf_size, n * 2 + 1);
+    return true;
 }
 
 void PngEncoder::deflate_rect_fin(unsigned char* zbuf, uint32_t* zsize, int bpp, int stride, unsigned char* rows, int zbuf_size, int n)
@@ -1417,6 +1428,15 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
         if (palsize > 0)
             write_chunk(m_f, "PLTE", (unsigned char*)(&palette), palsize * 3);
+
+        if ((animation.bgcolor != Scalar()) && (animation.frames.size() > 1))
+        {
+            uint64_t bgvalue = (static_cast<int>(animation.bgcolor[0]) & 0xFF) << 24 |
+                (static_cast<int>(animation.bgcolor[1]) & 0xFF) << 16 |
+                (static_cast<int>(animation.bgcolor[2]) & 0xFF) << 8 |
+                (static_cast<int>(animation.bgcolor[3]) & 0xFF);
+            write_chunk(m_f, "bKGD", (unsigned char*)(&bgvalue), 6); //the bKGD chunk must precede the first IDAT chunk, and must follow the PLTE chunk.
+        }
 
         if (trnssize > 0)
             write_chunk(m_f, "tRNS", trns, trnssize);
