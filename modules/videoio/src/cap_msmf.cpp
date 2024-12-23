@@ -1035,8 +1035,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
                             }
                         }
                         // Reopen if needed
-                        std::stringbuf noBuf;
-                        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), noBuf, NULL)) : true;
+                        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), nullptr, NULL)) : true;
                     }
                     D3DMgr.Release();
                 }
@@ -1052,8 +1051,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
         if (D3DDev)
             D3DDev.Release();
         captureMode = MODE_SW;
-        std::stringbuf noBuf;
-        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), noBuf, NULL)) : true;
+        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), nullptr, NULL)) : true;
     }
 #else
     return !enable;
@@ -2407,8 +2405,7 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename,
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
-        std::stringbuf noBuf;
-        capture->open(filename, noBuf, &params);
+        capture->open(filename, nullptr, &params);
         if (capture->isOpened())
             return capture;
     }
@@ -2777,8 +2774,7 @@ CvResult CV_API_CALL cv_capture_open_with_params(
         bool res;
         if (filename)
         {
-            std::stringbuf noBuf;
-            res = cap->open(std::string(filename), noBuf, &parameters);
+            res = cap->open(std::string(filename), nullptr, &parameters);
         }
         else
             res = cap->open(camera_index, &parameters);
