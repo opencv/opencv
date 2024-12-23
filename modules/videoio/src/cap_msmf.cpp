@@ -1273,7 +1273,7 @@ bool CvCapture_MSMF::open(const cv::String& _filename, Ptr<IReadStream> stream, 
         MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName.data(), (int)_filename.length() + 1);
         succeeded = SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName.data(), attr.Get(), &videoFileSource));
     }
-    else if (buffer.sgetc() != EOF)
+    else if (stream)
     {
         // TODO: implement read by chunks
         std::vector<char> data;
