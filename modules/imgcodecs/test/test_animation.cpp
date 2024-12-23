@@ -267,7 +267,7 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgba)
     vector<Mat> apng_frames;
 
     EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, apng_frames));
-    EXPECT_EQ((size_t)1/*expected_frame_count*/, apng_frames.size()); // TO DO not implemented yet
+    EXPECT_EQ(expected_frame_count, apng_frames.size());
 
     apng_frames.clear();
     // Test saving the animation frames as individual still images.
@@ -279,12 +279,6 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgba)
     // Expect all frames written as multi-page image
     expected_frame_count = 16;
     EXPECT_EQ(expected_frame_count, apng_frames.size());
-
-    // Test encoding and decoding the images in memory (without saving to disk).
-    apng_frames.clear();
-    EXPECT_TRUE(imencode(".png", s_animation.frames, buf));
-    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, apng_frames));
-    EXPECT_EQ((size_t)1/*expected_frame_count*/, apng_frames.size());  // TO DO not implemented yet
 
     // Clean up by removing the temporary file.
     EXPECT_EQ(0, remove(output.c_str()));
@@ -399,6 +393,20 @@ TEST(Imgcodecs_APNG, imwriteanimation_bgcolor)
     EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor);
 
     EXPECT_EQ(0, remove(output.c_str()));
+}
+
+TEST(Imgcodecs_APNG, imdecode_rgba)
+{
+    Animation s_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true));
+
+    std::vector<uchar> buf;
+    vector<Mat> apng_frames;
+
+    // Test encoding and decoding the images in memory (without saving to disk).
+    EXPECT_TRUE(imencode(".png", s_animation.frames, buf));
+    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, apng_frames));
+    EXPECT_EQ(s_animation.frames.size(), apng_frames.size());
 }
 
 #endif // HAVE_PNG

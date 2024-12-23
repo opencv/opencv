@@ -201,7 +201,9 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, unsigned char* dst, size_t si
 bool  PngDecoder::readHeader()
 {
     volatile bool result = false;
-    close();
+    unsigned char sig[8];
+    uint32_t id = 0;
+    CHUNK chunk;
 
     png_structp png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
 
@@ -223,115 +225,119 @@ bool  PngDecoder::readHeader()
                     png_set_read_fn(png_ptr, this, (png_rw_ptr)readDataFromBuf );
                 else
                 {
-                    m_f = fopen( m_filename.c_str(), "rb" );
+                    m_f = fopen(m_filename.c_str(), "rb");
                     if (!m_f)
                         return false;
                     png_init_io(png_ptr, m_f);
-                    unsigned char sig[8];
-                    uint32_t id = 0;
-                    CHUNK chunk;
 
                     if (fread(sig, 1, 8, m_f))
                         id = read_chunk(m_chunkIHDR);
-
-                    if (!(id == id_IHDR && m_chunkIHDR.size == 25))
-                        return false;
-
-                    while (!feof(m_f))
-                    {
-                        m_is_fcTL_loaded = false;
-                        id = read_chunk(chunk);
-
-                        if ((m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
-                            return false;
-
-                        if (id == id_IDAT)
-                        {
-                            fseek(m_f, 0, SEEK_SET);
-                            break;
-                        }
-
-                        if (id == id_acTL && chunk.size == 20)
-                        {
-                            m_is_animated = true;
-                            if (chunk.p[8] > 0)
-                            {
-                                chunk.p[8] = 0;
-                                chunk.p[9] = 0;
-                                m_frame_count = png_get_uint_32(chunk.p + 8);
-                                m_frame_count++;
-                            }
-                            else
-                                m_frame_count = png_get_uint_32(chunk.p + 8);
-                            m_animation.loop_count = png_get_uint_32(chunk.p + 12);
-                        }
-
-                        if (id == id_fcTL)
-                        {
-                            m_is_fcTL_loaded = true;
-                            w0 = png_get_uint_32(chunk.p + 12);
-                            h0 = png_get_uint_32(chunk.p + 16);
-                            x0 = png_get_uint_32(chunk.p + 20);
-                            y0 = png_get_uint_32(chunk.p + 24);
-                            delay_num = png_get_uint_16(chunk.p + 28);
-                            delay_den = png_get_uint_16(chunk.p + 30);
-                            dop = chunk.p[32];
-                            bop = chunk.p[33];
-                        }
-
-                        if (id == id_bKGD)
-                        {
-                            int bgcolor = png_get_uint_32(chunk.p + 8);
-                            m_animation.bgcolor[3] = (bgcolor >> 24) & 0xFF;
-                            m_animation.bgcolor[2] = (bgcolor >> 16) & 0xFF;
-                            m_animation.bgcolor[1] = (bgcolor >> 8) & 0xFF;
-                            m_animation.bgcolor[0] = bgcolor & 0xFF;
-                        }
-
-                        if (id == id_PLTE || id == id_tRNS)
-                            m_chunksInfo.push_back(chunk);
-                    }
                 }
 
-                if (!m_buf.empty() || m_f)
+                if (id != id_IHDR)
                 {
-                    png_uint_32 wdth, hght;
-                    int bit_depth, color_type, num_trans=0;
-                    png_bytep trans;
-                    png_color_16p trans_values;
+                    read_from_io(&sig, 8, 1);
+                    id = read_chunk(m_chunkIHDR);
+                }
 
-                    png_read_info( png_ptr, info_ptr );
-                    png_get_IHDR( png_ptr, info_ptr, &wdth, &hght,
-                                  &bit_depth, &color_type, 0, 0, 0 );
+                if (!(id == id_IHDR && m_chunkIHDR.size == 25))
+                    return false;
 
-                    m_width = (int)wdth;
-                    m_height = (int)hght;
-                    m_color_type = color_type;
-                    m_bit_depth = bit_depth;
+                while (true)
+                {
+                    m_is_fcTL_loaded = false;
+                    id = read_chunk(chunk);
 
-                    if( bit_depth <= 8 || bit_depth == 16 )
+                    if ((m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
+                        return false;
+
+                    if (id == id_IDAT)
                     {
-                        switch(color_type)
-                        {
-                            case PNG_COLOR_TYPE_RGB:
-                            case PNG_COLOR_TYPE_PALETTE:
-                                png_get_tRNS(png_ptr, info_ptr, &trans, &num_trans, &trans_values);
-                                if( num_trans > 0 )
-                                    m_type = CV_8UC4;
-                                else
-                                    m_type = CV_8UC3;
-                                break;
-                            case PNG_COLOR_TYPE_GRAY_ALPHA:
-                            case PNG_COLOR_TYPE_RGB_ALPHA:
-                                m_type = CV_8UC4;
-                                break;
-                            default:
-                                m_type = CV_8UC1;
-                        }
-                        if( bit_depth == 16 )
-                            m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
-                        result = true;
+                        if (m_f)
+                            fseek(m_f, 0, SEEK_SET);
+                        else
+                            m_buf_pos = 0;
+                        break;
                     }
+
+                    if (id == id_acTL && chunk.size == 20)
+                    {
+                        m_is_animated = true;
+                        m_animation.loop_count = png_get_uint_32(chunk.p + 12);
+
+                        if (chunk.p[8] > 0)
+                        {
+                            chunk.p[8] = 0;
+                            chunk.p[9] = 0;
+                            m_frame_count = png_get_uint_32(chunk.p + 8);
+                            m_frame_count++;
+                        }
+                        else
+                            m_frame_count = png_get_uint_32(chunk.p + 8);
+                    }
+
+                    if (id == id_fcTL)
+                    {
+                        m_is_fcTL_loaded = true;
+                        w0 = png_get_uint_32(chunk.p + 12);
+                        h0 = png_get_uint_32(chunk.p + 16);
+                        x0 = png_get_uint_32(chunk.p + 20);
+                        y0 = png_get_uint_32(chunk.p + 24);
+                        delay_num = png_get_uint_16(chunk.p + 28);
+                        delay_den = png_get_uint_16(chunk.p + 30);
+                        dop = chunk.p[32];
+                        bop = chunk.p[33];
+                    }
+
+                    if (id == id_bKGD)
+                    {
+                        int bgcolor = png_get_uint_32(chunk.p + 8);
+                        m_animation.bgcolor[3] = (bgcolor >> 24) & 0xFF;
+                        m_animation.bgcolor[2] = (bgcolor >> 16) & 0xFF;
+                        m_animation.bgcolor[1] = (bgcolor >> 8) & 0xFF;
+                        m_animation.bgcolor[0] = bgcolor & 0xFF;
+                    }
+
+                    if (id == id_PLTE || id == id_tRNS)
+                        m_chunksInfo.push_back(chunk);
+                }
+
+                png_uint_32 wdth, hght;
+                int bit_depth, color_type, num_trans=0;
+                png_bytep trans;
+                png_color_16p trans_values;
+
+                png_read_info( png_ptr, info_ptr );
+                png_get_IHDR(png_ptr, info_ptr, &wdth, &hght,
+                    &bit_depth, &color_type, 0, 0, 0);
+
+                m_width = (int)wdth;
+                m_height = (int)hght;
+                m_color_type = color_type;
+                m_bit_depth = bit_depth;
+
+                if (bit_depth <= 8 || bit_depth == 16)
+                {
+                    switch (color_type)
+                    {
+                    case PNG_COLOR_TYPE_RGB:
+                    case PNG_COLOR_TYPE_PALETTE:
+                        png_get_tRNS(png_ptr, info_ptr, &trans, &num_trans, &trans_values);
+                        if (num_trans > 0)
+                            m_type = CV_8UC4;
+                        else
+                            m_type = CV_8UC3;
+                        break;
+                    case PNG_COLOR_TYPE_GRAY_ALPHA:
+                    case PNG_COLOR_TYPE_RGB_ALPHA:
+                        m_type = CV_8UC4;
+                        break;
+                    default:
+                        m_type = CV_8UC1;
+                    }
+                    if (bit_depth == 16)
+                        m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
+                    result = true;
                 }
             }
         }
@@ -431,11 +437,7 @@ bool  PngDecoder::readData( Mat& img )
 }
 
 bool PngDecoder::nextPage() {
-    if (m_f)
-    {
-        return m_frame_no++ < (int)m_frame_count;
-    }
-    return false;
+    return ++m_frame_no < (int)m_frame_count;
 }
 
 bool PngDecoder::readAnimation(Mat& img)
@@ -451,7 +453,11 @@ bool PngDecoder::readAnimation(Mat& img)
         m_mat_next = Mat(img.rows, img.cols, img.type());
         frameRaw.setMat(m_mat_raw);
         frameNext.setMat(m_mat_next);
-        fseek(m_f, -8, SEEK_CUR);
+        if (m_f)
+            fseek(m_f, -8, SEEK_CUR);
+        else
+            m_buf_pos -= 8;
+
     }
     else
         m_mat_next.copyTo(img);
@@ -462,7 +468,7 @@ bool PngDecoder::readAnimation(Mat& img)
     png_structp png_ptr = (png_structp)m_png_ptr;
     png_infop info_ptr = (png_infop)m_info_ptr;
 
-    while (!feof(m_f))
+    while (true)
     {
         CHUNK chunk;
         id = read_chunk(chunk);
@@ -599,13 +605,12 @@ size_t PngDecoder::read_from_io(void* _Buffer, size_t _ElementSize, size_t _Elem
     if (m_f)
         return fread(_Buffer, _ElementSize, _ElementCount, m_f);
 
-    if (m_buf_pos + _ElementSize > m_buf.cols * m_buf.rows * m_buf.elemSize())
+    if (m_buf_pos > m_buf.cols * m_buf.rows * m_buf.elemSize())
         CV_Error(Error::StsInternal, "PNG input buffer is incomplete");
 
     memcpy( _Buffer, m_buf.ptr() + m_buf_pos, _ElementSize );
     m_buf_pos += _ElementSize;
-
-    return _ElementSize;
+    return 1;
 }
 
 uint32_t PngDecoder::read_chunk(CHUNK& pChunk)
