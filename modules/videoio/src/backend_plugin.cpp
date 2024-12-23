@@ -448,7 +448,7 @@ class PluginCapture : public cv::IVideoCapture
 {
     const OpenCV_VideoIO_Capture_Plugin_API* plugin_api_;
     CvPluginCapture capture_;
-    IReadStream* readStream_;
+    Ptr<IReadStream> readStream_;
 
 public:
     static
