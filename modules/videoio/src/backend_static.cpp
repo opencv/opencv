@@ -73,7 +73,7 @@ public:
         }
         return Ptr<IVideoCapture>();
     }
-    Ptr<IVideoCapture> createCapture(Ptr<IReadStream> stream, const VideoCaptureParameters& params) const CV_OVERRIDE
+    Ptr<IVideoCapture> createCapture(const Ptr<IReadStream>& stream, const VideoCaptureParameters& params) const CV_OVERRIDE
     {
         if (fn_createCaptureStream_)
         {
@@ -156,7 +156,7 @@ public:
             return fn_createCaptureFile_(filename, params);
         return Ptr<IVideoCapture>();
     }
-    Ptr<IVideoCapture> createCapture(Ptr<IReadStream> stream, const VideoCaptureParameters& params) const CV_OVERRIDE
+    Ptr<IVideoCapture> createCapture(const Ptr<IReadStream>& stream, const VideoCaptureParameters& params) const CV_OVERRIDE
     {
         if (fn_createCaptureStream_)
             return fn_createCaptureStream_(stream, params);

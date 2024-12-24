@@ -136,7 +136,6 @@ _PREDEFINED_TYPES = (
                              dtype="numpy.float64"),
     NDArrayTypeNode("vector<uchar>", dtype="numpy.uint8"),
     NDArrayTypeNode("vector_uchar", dtype="numpy.uint8"),
-    AliasTypeNode.ref_("streambuf", "io.BufferedIOBase"),
 
     # DNN, optional
     AliasTypeNode.class_("LayerId", "DictValue", required_modules=("dnn",)),

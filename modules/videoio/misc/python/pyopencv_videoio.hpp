@@ -31,61 +31,84 @@ template<> bool pyopencv_to(PyObject* obj, cv::VideoCapture& stream, const ArgIn
     return true;
 }
 
-class IOBaseWrapper : public std::streambuf
+class PythonReadStream : public cv::IReadStream
 {
 public:
-    IOBaseWrapper(PyObject* _obj = nullptr) : obj(_obj)
+    PythonReadStream(PyObject* _obj = nullptr) : obj(_obj)
     {
         if (obj)
             Py_INCREF(obj);
     }
 
-    ~IOBaseWrapper()
+    ~PythonReadStream()
     {
         if (obj)
             Py_DECREF(obj);
     }
 
-    std::streamsize xsgetn(char* buf, std::streamsize n) override
+    long long read(char* buffer, long long size) CV_OVERRIDE
     {
+        if (!obj)
+            return 0;
+
         PyObject* ioBase = reinterpret_cast<PyObject*>(obj);
 
         PyGILState_STATE gstate;
         gstate = PyGILState_Ensure();
 
-        PyObject* size = pyopencv_from(static_cast<int>(n));
+        PyObject* py_size = pyopencv_from(static_cast<int>(size));
 
-        PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), size, NULL);
+        PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("read"), py_size, NULL);
+        bool hasPyReadError = PyErr_Occurred() != nullptr;
         char* src = PyBytes_AsString(res);
         size_t len = static_cast<size_t>(PyBytes_Size(res));
-        CV_CheckLE(len, static_cast<size_t>(n), "Stream chunk size should be less or equal than requested size");
-        std::memcpy(buf, src, len);
+        bool hasPyBytesError = PyErr_Occurred() != nullptr;
+        if (src && len <= static_cast<size_t>(size))
+        {
+            std::memcpy(buffer, src, len);
+        }
         Py_DECREF(res);
-        Py_DECREF(size);
+        Py_DECREF(py_size);
 
         PyGILState_Release(gstate);
+
+        if (hasPyReadError)
+            CV_Error(cv::Error::StsError, "Python .read() call error");
+        if (hasPyBytesError)
+            CV_Error(cv::Error::StsError, "Python buffer access error");
+
+        CV_CheckLE(len, static_cast<size_t>(size), "Stream chunk size should be less or equal than requested size");
 
         return len;
     }
 
-    std::streampos seekoff(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode = std::ios_base::in | std::ios_base::out) override
+    long long seek(long long offset, int way) CV_OVERRIDE
     {
+        if (!obj)
+            return 0;
+
         PyObject* ioBase = reinterpret_cast<PyObject*>(obj);
 
         PyGILState_STATE gstate;
         gstate = PyGILState_Ensure();
 
-        PyObject* size = pyopencv_from(static_cast<int>(off));
-        PyObject* whence = pyopencv_from(way == std::ios_base::beg ? SEEK_SET : (way == std::ios_base::end ? SEEK_END : SEEK_CUR));
+        PyObject* py_offset = pyopencv_from(static_cast<int>(offset));
+        PyObject* py_whence = pyopencv_from(way);
 
-        PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("seek"), size, whence, NULL);
-        int pos = PyLong_AsLong(res);
+        PyObject* res = PyObject_CallMethodObjArgs(ioBase, PyString_FromString("seek"), py_offset, py_whence, NULL);
+        bool hasPySeekError = PyErr_Occurred() != nullptr;
+        long long pos = PyLong_AsLongLong(res);
+        bool hasPyConvertError = PyErr_Occurred() != nullptr;
         Py_DECREF(res);
-        Py_DECREF(size);
-        Py_DECREF(whence);
+        Py_DECREF(py_offset);
+        Py_DECREF(py_whence);
 
         PyGILState_Release(gstate);
 
+        if (hasPySeekError)
+            CV_Error(cv::Error::StsError, "Python .seek() call error");
+        if (hasPyConvertError)
+            CV_Error(cv::Error::StsError, "Python .seek() result => long long conversion error");
         return pos;
     }
 
@@ -94,24 +117,28 @@ private:
 };
 
 template<>
-bool pyopencv_to(PyObject* obj, Ptr<std::streambuf>& p, const ArgInfo&)
+bool pyopencv_to(PyObject* obj, Ptr<cv::IReadStream>& p, const ArgInfo&)
 {
     if (!obj)
         return false;
 
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
-
     PyObject* ioModule = PyImport_ImportModule("io");
     PyObject* type = PyObject_GetAttrString(ioModule, "BufferedIOBase");
     Py_DECREF(ioModule);
-    if (!PyObject_IsInstance(obj, type))
-        CV_Error(cv::Error::StsBadArg, "Input stream should be derived from io.BufferedIOBase");
+    bool isValidPyType = PyObject_IsInstance(obj, type) == 1;
     Py_DECREF(type);
-    PyGILState_Release(gstate);
 
-    p = makePtr<IOBaseWrapper>(obj);
-    return true;
+    if (!isValidPyType)
+    {
+        PyErr_SetString(PyExc_TypeError, "Input stream should be derived from io.BufferedIOBase");
+        return false;
+    }
+
+    if (!PyErr_Occurred()) {
+        p = makePtr<PythonReadStream>(obj);
+        return true;
+    }
+    return false;
 }
 
 #endif // HAVE_OPENCV_VIDEOIO

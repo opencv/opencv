@@ -11,41 +11,6 @@
 namespace cv {
 CV_EXPORTS std::string icvExtractPattern(const std::string& filename, unsigned *offset);
 
-class IReadStream
-{
-public:
-    virtual ~IReadStream() {};
-    virtual long long read(char* buffer, long long size) = 0;
-    virtual long long seek(long long offset, int way) = 0;
-};
-
-class StreambufReadStream : public IReadStream
-{
-public:
-    StreambufReadStream(Ptr<std::streambuf> _stream) : stream(_stream) {}
-
-    virtual ~StreambufReadStream() {}
-
-    long long read(char* buffer, long long size) override
-    {
-        return stream->sgetn(buffer, size);
-    }
-
-    long long seek(long long offset, int way) override
-    {
-        return stream->pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
-    }
-
-    static Ptr<IReadStream> create(Ptr<std::streambuf> stream)
-    {
-        return Ptr<IReadStream>(new StreambufReadStream(stream));
-    }
-
-private:
-    Ptr<std::streambuf> stream;
-};
-
-
 class ReadStreamPluginProvider : public IReadStream
 {
 public:

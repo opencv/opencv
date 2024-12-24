@@ -208,7 +208,7 @@ public:
     Ptr<IVideoCapture> createCapture(int camera, const VideoCaptureParameters& params) const CV_OVERRIDE;
     Ptr<IVideoCapture> createCapture(const std::string &filename) const;
     Ptr<IVideoCapture> createCapture(const std::string &filename, const VideoCaptureParameters& params) const CV_OVERRIDE;
-    Ptr<IVideoCapture> createCapture(Ptr<IReadStream> stream, const VideoCaptureParameters& params) const CV_OVERRIDE;
+    Ptr<IVideoCapture> createCapture(const Ptr<IReadStream>& stream, const VideoCaptureParameters& params) const CV_OVERRIDE;
     Ptr<IVideoWriter> createWriter(const std::string& filename, int fourcc, double fps,
                                    const cv::Size& sz, const VideoWriterParameters& params) const CV_OVERRIDE;
 
@@ -453,7 +453,7 @@ class PluginCapture : public cv::IVideoCapture
 public:
     static
     Ptr<PluginCapture> create(const OpenCV_VideoIO_Capture_Plugin_API* plugin_api,
-            const std::string &filename, Ptr<IReadStream> stream, int camera, const VideoCaptureParameters& params)
+            const std::string &filename, const Ptr<IReadStream>& stream, int camera, const VideoCaptureParameters& params)
     {
         CV_Assert(plugin_api);
         CV_Assert(plugin_api->v0.Capture_release);
@@ -468,12 +468,24 @@ public:
             if (CV_ERROR_OK == plugin_api->v2.Capture_open_stream(
                 stream.get(),
                 [](void* opaque, char* buffer, long long size) -> long long {
+                    CV_LOG_VERBOSE(NULL, 0, "IReadStream::read(" << size << ")...");
                     auto is = reinterpret_cast<IReadStream*>(opaque);
-                    return is->read(buffer, size);
+                    try {
+                        return is->read(buffer, size);
+                    } catch (...) {
+                        CV_LOG_WARNING(NULL, "IReadStream::read(" << size << ") failed");
+                        return 0;
+                    }
                 },
                 [](void* opaque, long long offset, int way) -> long long {
+                    CV_LOG_VERBOSE(NULL, 0, "IReadStream::seek(" << offset << ", way=" << way << ")...");
                     auto is = reinterpret_cast<IReadStream*>(opaque);
-                    return is->seek(offset, way);
+                    try {
+                        return is->seek(offset, way);
+                    } catch (...) {
+                        CV_LOG_WARNING(NULL, "IReadStream::seek(" << offset << ", way=" << way << ") failed");
+                        return -1;
+                    }
                 }, c_params, n_params, &capture))
             {
                 CV_Assert(capture);
@@ -513,7 +525,7 @@ public:
         return Ptr<PluginCapture>();
     }
 
-    PluginCapture(const OpenCV_VideoIO_Capture_Plugin_API* plugin_api, CvPluginCapture capture, Ptr<IReadStream> readStream = nullptr)
+    PluginCapture(const OpenCV_VideoIO_Capture_Plugin_API* plugin_api, CvPluginCapture capture, const Ptr<IReadStream>& readStream = Ptr<IReadStream>())
         : plugin_api_(plugin_api), capture_(capture), readStream_(readStream)
     {
         CV_Assert(plugin_api_); CV_Assert(capture_);
@@ -729,7 +741,7 @@ Ptr<IVideoCapture> PluginBackend::createCapture(const std::string &filename, con
     return Ptr<IVideoCapture>();
 }
 
-Ptr<IVideoCapture> PluginBackend::createCapture(Ptr<IReadStream> stream, const VideoCaptureParameters& params) const
+Ptr<IVideoCapture> PluginBackend::createCapture(const Ptr<IReadStream>& stream, const VideoCaptureParameters& params) const
 {
     try
     {

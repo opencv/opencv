@@ -65,6 +65,10 @@ static bool param_VIDEOWRITER_DEBUG = utils::getConfigurationParameterBool("OPEN
 void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const { cvReleaseCapture(&obj); }
 void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const { cvReleaseVideoWriter(&obj); }
 
+IReadStream::~IReadStream()
+{
+    // nothing
+}
 
 VideoCapture::VideoCapture() : throwOnFail(false)
 {}
@@ -82,7 +86,14 @@ VideoCapture::VideoCapture(const String& filename, int apiPreference, const std:
     open(filename, apiPreference, params);
 }
 
-VideoCapture::VideoCapture(Ptr<std::streambuf> source, int apiPreference, const std::vector<int>& params)
+VideoCapture::VideoCapture(const Ptr<IReadStream>& source, int apiPreference, const std::vector<int>& params)
+    : throwOnFail(false)
+{
+    CV_TRACE_FUNCTION();
+    open(source, apiPreference, params);
+}
+
+VideoCapture::VideoCapture(const Ptr<std::streambuf>& source, int apiPreference, const std::vector<int>& params)
     : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
@@ -195,7 +206,7 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
             else
             {
                 CV_CAPTURE_LOG_DEBUG(NULL,
-                                    cv::format("VIDEOIO(%s): backend is not available "
+                                     cv::format("VIDEOIO(%s): backend is not available "
                                                 "(plugin is missing, or can't be loaded due "
                                                 "dependencies or it is not compatible)",
                                                 info.name));
@@ -235,13 +246,55 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
     return false;
 }
 
-bool VideoCapture::open(Ptr<std::streambuf> stream, int apiPreference, const std::vector<int>& params)
+
+class StreambufReadStream : public IReadStream
+{
+public:
+    StreambufReadStream(const Ptr<std::streambuf>& _stream)
+        : stream(_stream)
+    {
+        // nothing
+    }
+
+    virtual ~StreambufReadStream() CV_OVERRIDE
+    {
+        CV_LOG_VERBOSE(NULL, 0, "StreambufReadStream::~StreambufReadStream(" << (void*)this << ")");
+    }
+
+    long long read(char* buffer, long long size) CV_OVERRIDE
+    {
+        auto result = stream->sgetn(buffer, size);
+        return result;
+    }
+
+    long long seek(long long offset, int way) CV_OVERRIDE
+    {
+        auto result = stream->pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
+        return result;
+    }
+
+    static Ptr<IReadStream> create(const Ptr<std::streambuf>& stream)
+    {
+        return makePtr<StreambufReadStream>(stream).dynamicCast<IReadStream>();
+    }
+
+private:
+    Ptr<std::streambuf> stream;
+};
+
+bool VideoCapture::open(const Ptr<std::streambuf>& stream, int apiPreference, const std::vector<int>& params)
+{
+    return open(StreambufReadStream::create(stream), apiPreference, params);
+}
+
+bool VideoCapture::open(const Ptr<IReadStream>& stream, int apiPreference, const std::vector<int>& params)
+
 {
     CV_INSTRUMENT_REGION();
 
     if (apiPreference == CAP_ANY)
     {
-        CV_Error_(Error::StsBadArg, ("explicit backend expected to avoid stream reset"));
+        CV_Error_(Error::StsBadArg, ("Avoid CAP_ANY - explicit backend expected to avoid read data stream reset"));
     }
 
     if (isOpened())
@@ -271,7 +324,7 @@ bool VideoCapture::open(Ptr<std::streambuf> stream, int apiPreference, const std
         {
             try
             {
-                icap = backend->createCapture(StreambufReadStream::create(stream), parameters);
+                icap = backend->createCapture(stream, parameters);
                 if (!icap.empty())
                 {
                     CV_CAPTURE_LOG_DEBUG(NULL,
@@ -292,7 +345,7 @@ bool VideoCapture::open(Ptr<std::streambuf> stream, int apiPreference, const std
             }
             catch (const cv::Exception& e)
             {
-                if (throwOnFail && apiPreference != CAP_ANY)
+                if (throwOnFail)
                 {
                     throw;
                 }
@@ -302,7 +355,7 @@ bool VideoCapture::open(Ptr<std::streambuf> stream, int apiPreference, const std
             }
             catch (const std::exception& e)
             {
-                if (throwOnFail && apiPreference != CAP_ANY)
+                if (throwOnFail)
                 {
                     throw;
                 }
@@ -311,7 +364,7 @@ bool VideoCapture::open(Ptr<std::streambuf> stream, int apiPreference, const std
             }
             catch (...)
             {
-                if (throwOnFail && apiPreference != CAP_ANY)
+                if (throwOnFail)
                 {
                     throw;
                 }
@@ -323,7 +376,7 @@ bool VideoCapture::open(Ptr<std::streambuf> stream, int apiPreference, const std
         else
         {
             CV_CAPTURE_LOG_DEBUG(NULL,
-                                cv::format("VIDEOIO(%s): backend is not available "
+                                 cv::format("VIDEOIO(%s): backend is not available "
                                             "(plugin is missing, or can't be loaded due "
                                             "dependencies or it is not compatible)",
                                             info.name));
@@ -334,13 +387,13 @@ bool VideoCapture::open(Ptr<std::streambuf> stream, int apiPreference, const std
     if (found)
     {
         CV_LOG_WARNING(NULL, cv::format("VIDEOIO(%s): backend is generally available "
-                                        "but can't be used to capture by buffer",
+                                        "but can't be used to capture by read data stream",
                                         cv::videoio_registry::getBackendName(static_cast<VideoCaptureAPIs>(apiPreference)).c_str()));
     }
 
     if (throwOnFail)
     {
-        CV_Error_(Error::StsError, ("could not open buffer"));
+        CV_Error_(Error::StsError, ("could not open read data stream"));
     }
 
     if (cv::videoio_registry::checkDeprecatedBackend(apiPreference))
@@ -457,7 +510,7 @@ bool VideoCapture::open(int cameraNum, int apiPreference, const std::vector<int>
             else
             {
                 CV_CAPTURE_LOG_DEBUG(NULL,
-                                    cv::format("VIDEOIO(%s): backend is not available "
+                                     cv::format("VIDEOIO(%s): backend is not available "
                                                 "(plugin is missing, or can't be loaded due "
                                                 "dependencies or it is not compatible)",
                                                 info.name));

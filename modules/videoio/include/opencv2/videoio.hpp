@@ -719,6 +719,25 @@ enum VideoCaptureOBSensorProperties{
 
 //! @} videoio_flags_others
 
+/** @brief Read data stream interface
+ */
+class CV_EXPORTS_W IReadStream
+{
+public:
+    virtual ~IReadStream();
+
+    /** @brief Read bytes from stream */
+    virtual long long read(char* buffer, long long size) = 0;
+
+    /** @brief Sets the stream position
+     *
+     * @param offset Seek offset
+     * @param origin SEEK_SET / SEEK_END / SEEK_CUR
+     *
+     * @see fseek
+     */
+    virtual long long seek(long long offset, int origin) = 0;
+};
 
 class IVideoCapture;
 //! @cond IGNORED
@@ -804,7 +823,15 @@ public:
     The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
     See cv::VideoCaptureProperties
     */
-    CV_WRAP explicit VideoCapture(Ptr<std::streambuf> source, int apiPreference, const std::vector<int>& params);
+    CV_WRAP VideoCapture(const Ptr<IReadStream>& source, int apiPreference, const std::vector<int>& params);
+
+    /** @overload
+    @brief Opens a video using data stream.
+
+    The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
+    See cv::VideoCaptureProperties
+    */
+    VideoCapture(const Ptr<std::streambuf>& source, int apiPreference, const std::vector<int>& params);
 
     /** @brief Default destructor
 
@@ -860,7 +887,7 @@ public:
     */
     CV_WRAP virtual bool open(int index, int apiPreference, const std::vector<int>& params);
 
-    /** @brief  Opens a video using data stream.
+    /** @brief Opens a video using data stream.
 
     @overload
 
@@ -871,7 +898,20 @@ public:
 
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
-    CV_WRAP virtual bool open(Ptr<std::streambuf> source, int apiPreference, const std::vector<int>& params);
+    CV_WRAP virtual bool open(const Ptr<IReadStream>& source, int apiPreference, const std::vector<int>& params);
+
+    /** @brief Opens a video using data stream.
+
+    @overload
+
+    The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
+    See cv::VideoCaptureProperties
+
+    @return `true` if the file has been successfully opened
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+     */
+    virtual bool open(const Ptr<std::streambuf>& source, int apiPreference, const std::vector<int>& params);
 
     /** @brief Returns true if video capturing has been initialized already.
 

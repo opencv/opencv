@@ -746,7 +746,7 @@ public:
     virtual ~CvCapture_MSMF();
     bool configureHW(const cv::VideoCaptureParameters& params);
     virtual bool open(int, const cv::VideoCaptureParameters* params);
-    virtual bool open(const cv::String&, Ptr<IReadStream>, const cv::VideoCaptureParameters* params);
+    virtual bool open(const cv::String&, const Ptr<IReadStream>&, const cv::VideoCaptureParameters* params);
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
@@ -1250,7 +1250,7 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
     return isOpen;
 }
 
-bool CvCapture_MSMF::open(const cv::String& _filename, Ptr<IReadStream> stream, const cv::VideoCaptureParameters* params)
+bool CvCapture_MSMF::open(const cv::String& _filename, const Ptr<IReadStream>& stream, const cv::VideoCaptureParameters* params)
 {
     close();
     if (_filename.empty() && !stream)
@@ -1274,6 +1274,7 @@ bool CvCapture_MSMF::open(const cv::String& _filename, Ptr<IReadStream> stream, 
     else if (stream)
     {
         // TODO: implement read by chunks
+        // FIXIT: save stream in field
         std::vector<char> data;
         data.resize(stream->seek(0, SEEK_END));
         stream->seek(0, SEEK_SET);
@@ -2400,7 +2401,7 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index, const cv::VideoC
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename, const cv::VideoCaptureParameters& params)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF(const cv::String& filename, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
@@ -2412,7 +2413,7 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename,
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (Ptr<IReadStream> stream, const cv::VideoCaptureParameters& params)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF(const Ptr<IReadStream>& stream, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)

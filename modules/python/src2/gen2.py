@@ -234,7 +234,6 @@ simple_argtype_mapping = {
     "cuda_Stream": ArgTypeInfo("cuda::Stream", FormatStrings.object, "cuda::Stream::Null()", True),
     "cuda_GpuMat": ArgTypeInfo("cuda::GpuMat", FormatStrings.object, "cuda::GpuMat()", True),
     "UMat": ArgTypeInfo("UMat", FormatStrings.object, 'UMat()', True),  # FIXIT: switch to CV_EXPORTS_W_SIMPLE as UMat is already a some kind of smart pointer
-    "Ptr<streambuf>": ArgTypeInfo("Ptr<std::streambuf>", FormatStrings.object, None, True),
 }
 
 # Set of reserved keywords for Python. Can be acquired via the following call
