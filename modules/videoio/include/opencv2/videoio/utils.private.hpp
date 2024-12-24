@@ -11,19 +11,19 @@
 namespace cv {
 CV_EXPORTS std::string icvExtractPattern(const std::string& filename, unsigned *offset);
 
-class ReadStreamPluginProvider : public IReadStream
+class PluginStreamReader : public IStreamReader
 {
 public:
-    ReadStreamPluginProvider(void* _opaque,
-                             long long (*_read)(void* opaque, char* buffer, long long size),
-                             long long (*_seek)(void* opaque, long long offset, int way))
+    PluginStreamReader(void* _opaque,
+                       long long (*_read)(void* opaque, char* buffer, long long size),
+                       long long (*_seek)(void* opaque, long long offset, int way))
     {
         opaque = _opaque;
         readCallback = _read;
         seekCallback = _seek;
     }
 
-    virtual ~ReadStreamPluginProvider() {}
+    virtual ~PluginStreamReader() {}
 
     long long read(char* buffer, long long size) override
     {

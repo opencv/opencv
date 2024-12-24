@@ -28,11 +28,11 @@ class Bindings(NewOpenCVTests):
             raise self.skipTest('Python 3.x required')
 
         api_pref = None
-        for backend in cv.videoio_registry.getBufferBackends():
+        for backend in cv.videoio_registry.getStreamBufferedBackends():
             if not cv.videoio_registry.hasBackend(backend):
                 continue
             if not cv.videoio_registry.isBackendBuiltIn(backend):
-                _, abi, api = cv.videoio_registry.getBufferBackendPluginVersion(backend)
+                _, abi, api = cv.videoio_registry.getStreamBufferedBackendPluginVersion(backend)
                 if (abi < 1 or (abi == 1 and api < 2)):
                     continue
             api_pref = backend
@@ -53,11 +53,11 @@ class Bindings(NewOpenCVTests):
             raise self.skipTest('Python 3.x required')
 
         api_pref = None
-        for backend in cv.videoio_registry.getBufferBackends():
+        for backend in cv.videoio_registry.getStreamBufferedBackends():
             if not cv.videoio_registry.hasBackend(backend):
                 continue
             if not cv.videoio_registry.isBackendBuiltIn(backend):
-                _, abi, api = cv.videoio_registry.getBufferBackendPluginVersion(backend)
+                _, abi, api = cv.videoio_registry.getStreamBufferedBackendPluginVersion(backend)
                 if (abi < 1 or (abi == 1 and api < 2)):
                     continue
             api_pref = backend

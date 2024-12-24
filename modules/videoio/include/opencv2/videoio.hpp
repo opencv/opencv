@@ -721,10 +721,10 @@ enum VideoCaptureOBSensorProperties{
 
 /** @brief Read data stream interface
  */
-class CV_EXPORTS_W IReadStream
+class CV_EXPORTS_W IStreamReader
 {
 public:
-    virtual ~IReadStream();
+    virtual ~IStreamReader();
 
     /** @brief Read bytes from stream */
     virtual long long read(char* buffer, long long size) = 0;
@@ -823,7 +823,7 @@ public:
     The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
     See cv::VideoCaptureProperties
     */
-    CV_WRAP VideoCapture(const Ptr<IReadStream>& source, int apiPreference, const std::vector<int>& params);
+    CV_WRAP VideoCapture(const Ptr<IStreamReader>& source, int apiPreference, const std::vector<int>& params);
 
     /** @overload
     @brief Opens a video using data stream.
@@ -898,7 +898,7 @@ public:
 
     The method first calls VideoCapture::release to close the already opened file or camera.
      */
-    CV_WRAP virtual bool open(const Ptr<IReadStream>& source, int apiPreference, const std::vector<int>& params);
+    CV_WRAP virtual bool open(const Ptr<IStreamReader>& source, int apiPreference, const std::vector<int>& params);
 
     /** @brief Opens a video using data stream.
 

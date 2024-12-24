@@ -526,7 +526,7 @@ inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
 
 struct CvCapture_FFMPEG
 {
-    bool open(const char* filename, const Ptr<IReadStream>& stream, const VideoCaptureParameters& params);
+    bool open(const char* filename, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
     void close();
 
     double getProperty(int) const;
@@ -582,7 +582,7 @@ struct CvCapture_FFMPEG
 */
     char              * filename;
 
-    Ptr<IReadStream> readStream;
+    Ptr<IStreamReader> readStream;
 
     AVDictionary *dict;
 #if USE_AV_INTERRUPT_CALLBACK
@@ -742,6 +742,7 @@ void CvCapture_FFMPEG::close()
         av_free(avio_context->buffer);
         av_freep(&avio_context);
     }
+    readStream.reset();
 
     init();
 }
@@ -1032,7 +1033,7 @@ static bool isThreadSafe() {
     return threadSafe;
 }
 
-bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IReadStream>& stream, const VideoCaptureParameters& params)
+bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params)
 {
     const bool threadSafe = isThreadSafe();
     InternalFFMpegRegister::init(threadSafe);
@@ -1182,10 +1183,10 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IReadStream>& strea
                     }
 #endif
 
-                    CV_LOG_VERBOSE(NULL, 0, "FFMPEG: IReadStream::read(" << buf_size << ") = " << result);
+                    CV_LOG_VERBOSE(NULL, 0, "FFMPEG: IStreamReader::read(" << buf_size << ") = " << result);
                     return result;
                 } catch (...) {
-                    CV_LOG_WARNING(NULL, "FFMPEG: IReadStream::read(" << buf_size << ") failed");
+                    CV_LOG_WARNING(NULL, "FFMPEG: IStreamReader::read(" << buf_size << ") failed");
                     return 0;
                 }
             },
@@ -1200,10 +1201,10 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IReadStream>& strea
                     {
                         result = is->seek(offset, origin);
                     }
-                    CV_LOG_VERBOSE(NULL, 0, "FFMPEG: IReadStream::seek(" << offset << ", whence=" << whence << ") = " << result);
+                    CV_LOG_VERBOSE(NULL, 0, "FFMPEG: IStreamReader::seek(" << offset << ", whence=" << whence << ") = " << result);
                     return result;
                 } catch (...) {
-                    CV_LOG_WARNING(NULL, "FFMPEG: IReadStream::seek(" << offset << ", whence=" << whence << ") failed");
+                    CV_LOG_WARNING(NULL, "FFMPEG: IStreamReader::seek(" << offset << ", whence=" << whence << ") failed");
                     return -1;
                 }
             });
@@ -3370,7 +3371,7 @@ CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, con
 }
 
 static
-CvCapture_FFMPEG* cvCreateStreamCaptureWithParams_FFMPEG(const Ptr<IReadStream>& stream, const VideoCaptureParameters& params)
+CvCapture_FFMPEG* cvCreateStreamCaptureWithParams_FFMPEG(const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params)
 {
     CvCapture_FFMPEG* capture = new CvCapture_FFMPEG();
     if (!capture)

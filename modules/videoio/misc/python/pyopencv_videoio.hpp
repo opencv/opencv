@@ -31,16 +31,16 @@ template<> bool pyopencv_to(PyObject* obj, cv::VideoCapture& stream, const ArgIn
     return true;
 }
 
-class PythonReadStream : public cv::IReadStream
+class PythonStreamReader : public cv::IStreamReader
 {
 public:
-    PythonReadStream(PyObject* _obj = nullptr) : obj(_obj)
+    PythonStreamReader(PyObject* _obj = nullptr) : obj(_obj)
     {
         if (obj)
             Py_INCREF(obj);
     }
 
-    ~PythonReadStream()
+    ~PythonStreamReader()
     {
         if (obj)
             Py_DECREF(obj);
@@ -117,7 +117,7 @@ private:
 };
 
 template<>
-bool pyopencv_to(PyObject* obj, Ptr<cv::IReadStream>& p, const ArgInfo&)
+bool pyopencv_to(PyObject* obj, Ptr<cv::IStreamReader>& p, const ArgInfo&)
 {
     if (!obj)
         return false;
@@ -135,7 +135,7 @@ bool pyopencv_to(PyObject* obj, Ptr<cv::IReadStream>& p, const ArgInfo&)
     }
 
     if (!PyErr_Occurred()) {
-        p = makePtr<PythonReadStream>(obj);
+        p = makePtr<PythonStreamReader>(obj);
         return true;
     }
     return false;

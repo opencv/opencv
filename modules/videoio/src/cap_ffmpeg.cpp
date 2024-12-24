@@ -74,7 +74,7 @@ public:
     {
         open(filename, params);
     }
-    CvCapture_FFMPEG_proxy(const Ptr<IReadStream>& stream, const cv::VideoCaptureParameters& params)
+    CvCapture_FFMPEG_proxy(const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters& params)
         : ffmpegCapture(NULL)
     {
         open(stream, params);
@@ -127,7 +127,7 @@ public:
         ffmpegCapture = cvCreateFileCaptureWithParams_FFMPEG(filename.c_str(), params);
         return ffmpegCapture != 0;
     }
-    bool open(const Ptr<IReadStream>& stream, const cv::VideoCaptureParameters& params)
+    bool open(const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters& params)
     {
         close();
 
@@ -148,7 +148,7 @@ public:
 
 protected:
     CvCapture_FFMPEG* ffmpegCapture;
-    Ptr<IReadStream> readStream;
+    Ptr<IStreamReader> readStream;
 };
 
 } // namespace
@@ -161,7 +161,7 @@ cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &f
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cvCreateStreamCapture_FFMPEG_proxy(const Ptr<IReadStream>& stream, const cv::VideoCaptureParameters& params)
+cv::Ptr<cv::IVideoCapture> cvCreateStreamCapture_FFMPEG_proxy(const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_FFMPEG_proxy> capture = std::make_shared<CvCapture_FFMPEG_proxy>(stream, params);
     if (capture && capture->isOpened())
@@ -350,7 +350,7 @@ CvResult CV_API_CALL cv_capture_open_buffer(
     try
     {
         cv::VideoCaptureParameters parameters(params, n_params);
-        cap = new CvCapture_FFMPEG_proxy(makePtr<ReadStreamPluginProvider>(opaque, read, seek), parameters);
+        cap = new CvCapture_FFMPEG_proxy(makePtr<PluginStreamReader>(opaque, read, seek), parameters);
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;

@@ -447,7 +447,7 @@ std::vector<VideoCaptureAPIs> getStreamBackends()
 
 }
 
-std::vector<VideoCaptureAPIs> getBufferBackends()
+std::vector<VideoCaptureAPIs> getStreamBufferedBackends()
 {
     const std::vector<VideoBackendInfo> backends = VideoBackendRegistry::getInstance().getAvailableBackends_CaptureByStream();
     std::vector<VideoCaptureAPIs> result;
@@ -533,7 +533,7 @@ std::string getStreamBackendPluginVersion(VideoCaptureAPIs api,
     CV_Error(Error::StsError, "Unknown or wrong backend ID");
 }
 
-std::string getBufferBackendPluginVersion(VideoCaptureAPIs api,
+std::string getStreamBufferedBackendPluginVersion(VideoCaptureAPIs api,
     CV_OUT int& version_ABI,
     CV_OUT int& version_API
 )

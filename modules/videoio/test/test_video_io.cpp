@@ -1031,7 +1031,7 @@ TEST_P(stream_capture, read)
 {
     std::string ext = get<0>(GetParam());
     VideoCaptureAPIs apiPref = get<1>(GetParam());
-    std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getBufferBackends();
+    std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getStreamBufferedBackends();
     if (!videoio_registry::hasBackend(apiPref))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
     if (std::find(supportedAPIs.begin(), supportedAPIs.end(), apiPref) == supportedAPIs.end())
@@ -1042,7 +1042,7 @@ TEST_P(stream_capture, read)
     if (!videoio_registry::isBackendBuiltIn(apiPref))
     {
         int pluginABI, pluginAPI;
-        videoio_registry::getBufferBackendPluginVersion(apiPref, pluginABI, pluginAPI);
+        videoio_registry::getStreamBufferedBackendPluginVersion(apiPref, pluginABI, pluginAPI);
         if (pluginABI < 1 || (pluginABI == 1 && pluginAPI < 2))
             throw SkipTestException(format("Buffer capture supported since ABI/API = 1/2. %s plugin is %d/%d",
                                            cv::videoio_registry::getBackendName(apiPref).c_str(), pluginABI, pluginAPI));
@@ -1082,7 +1082,7 @@ TEST_P(stream_capture_ffmpeg, raw)
 {
     std::string ext = GetParam();
     VideoCaptureAPIs apiPref = CAP_FFMPEG;
-    std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getBufferBackends();
+    std::vector<VideoCaptureAPIs> supportedAPIs = videoio_registry::getStreamBufferedBackends();
     if (!videoio_registry::hasBackend(apiPref))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
     if (std::find(supportedAPIs.begin(), supportedAPIs.end(), apiPref) == supportedAPIs.end())
@@ -1091,7 +1091,7 @@ TEST_P(stream_capture_ffmpeg, raw)
     if (!videoio_registry::isBackendBuiltIn(apiPref))
     {
         int pluginABI, pluginAPI;
-        videoio_registry::getBufferBackendPluginVersion(apiPref, pluginABI, pluginAPI);
+        videoio_registry::getStreamBufferedBackendPluginVersion(apiPref, pluginABI, pluginAPI);
         if (pluginABI < 1 || (pluginABI == 1 && pluginAPI < 2))
             throw SkipTestException(format("Buffer capture supported since ABI/API = 1/2. %s plugin is %d/%d",
                                            cv::videoio_registry::getBackendName(apiPref).c_str(), pluginABI, pluginAPI));

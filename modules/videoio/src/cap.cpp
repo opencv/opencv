@@ -65,7 +65,7 @@ static bool param_VIDEOWRITER_DEBUG = utils::getConfigurationParameterBool("OPEN
 void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const { cvReleaseCapture(&obj); }
 void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const { cvReleaseVideoWriter(&obj); }
 
-IReadStream::~IReadStream()
+IStreamReader::~IStreamReader()
 {
     // nothing
 }
@@ -86,7 +86,7 @@ VideoCapture::VideoCapture(const String& filename, int apiPreference, const std:
     open(filename, apiPreference, params);
 }
 
-VideoCapture::VideoCapture(const Ptr<IReadStream>& source, int apiPreference, const std::vector<int>& params)
+VideoCapture::VideoCapture(const Ptr<IStreamReader>& source, int apiPreference, const std::vector<int>& params)
     : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
@@ -247,7 +247,7 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
 }
 
 
-class StreambufReadStream : public IReadStream
+class StreambufReadStream : public IStreamReader
 {
 public:
     StreambufReadStream(const Ptr<std::streambuf>& _stream)
@@ -273,9 +273,9 @@ public:
         return result;
     }
 
-    static Ptr<IReadStream> create(const Ptr<std::streambuf>& stream)
+    static Ptr<IStreamReader> create(const Ptr<std::streambuf>& stream)
     {
-        return makePtr<StreambufReadStream>(stream).dynamicCast<IReadStream>();
+        return makePtr<StreambufReadStream>(stream).dynamicCast<IStreamReader>();
     }
 
 private:
@@ -287,7 +287,7 @@ bool VideoCapture::open(const Ptr<std::streambuf>& stream, int apiPreference, co
     return open(StreambufReadStream::create(stream), apiPreference, params);
 }
 
-bool VideoCapture::open(const Ptr<IReadStream>& stream, int apiPreference, const std::vector<int>& params)
+bool VideoCapture::open(const Ptr<IStreamReader>& stream, int apiPreference, const std::vector<int>& params)
 
 {
     CV_INSTRUMENT_REGION();
