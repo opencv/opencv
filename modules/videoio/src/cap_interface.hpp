@@ -9,6 +9,7 @@
 #include "opencv2/core/core_c.h"
 #include "opencv2/videoio.hpp"
 #include "opencv2/videoio/videoio_c.h"
+#include "opencv2/videoio/utils.private.hpp"
 
 //===================================================
 
@@ -326,6 +327,7 @@ protected:
 //==================================================================================================
 
 Ptr<IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> cvCreateStreamCapture_FFMPEG_proxy(const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc,
                                                    double fps, const Size& frameSize,
                                                    const VideoWriterParameters& params);
@@ -351,6 +353,7 @@ Ptr<IVideoCapture> create_WRT_capture(int device);
 
 Ptr<IVideoCapture> cvCreateCapture_MSMF(int index, const VideoCaptureParameters& params);
 Ptr<IVideoCapture> cvCreateCapture_MSMF(const std::string& filename, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> cvCreateCapture_MSMF(const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const std::string& filename, int fourcc,
                                            double fps, const Size& frameSize,
                                            const VideoWriterParameters& params);
