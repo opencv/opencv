@@ -29,9 +29,14 @@ class Bindings(NewOpenCVTests):
 
         api_pref = None
         for backend in cv.videoio_registry.getBufferBackends():
-            if cv.videoio_registry.hasBackend(backend):
-                api_pref = backend
-                break
+            if not cv.videoio_registry.hasBackend(backend):
+                continue
+            if not cv.videoio_registry.isBackendBuiltIn(backend):
+                _, abi, api = cv.videoio_registry.getBufferBackendPluginVersion(backend)
+                if (abi < 1 or (abi == 1 and api < 2)):
+                    continue
+            api_pref = backend
+            break
 
         if not api_pref:
             raise self.skipTest("No available backends")
@@ -49,9 +54,14 @@ class Bindings(NewOpenCVTests):
 
         api_pref = None
         for backend in cv.videoio_registry.getBufferBackends():
-            if cv.videoio_registry.hasBackend(backend):
-                api_pref = backend
-                break
+            if not cv.videoio_registry.hasBackend(backend):
+                continue
+            if not cv.videoio_registry.isBackendBuiltIn(backend):
+                _, abi, api = cv.videoio_registry.getBufferBackendPluginVersion(backend)
+                if (abi < 1 or (abi == 1 and api < 2)):
+                    continue
+            api_pref = backend
+            break
 
         if not api_pref:
             raise self.skipTest("No available backends")
