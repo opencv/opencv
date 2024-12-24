@@ -277,7 +277,7 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     CvCapture_FFMPEG_proxy *cap = 0;
     try
     {
-        cap = new CvCapture_FFMPEG_proxy(filename, cv::VideoCaptureParameters());
+        cap = new CvCapture_FFMPEG_proxy(String(filename), cv::VideoCaptureParameters());
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;
@@ -314,7 +314,7 @@ CvResult CV_API_CALL cv_capture_open_with_params(
     try
     {
         cv::VideoCaptureParameters parameters(params, n_params);
-        cap = new CvCapture_FFMPEG_proxy(filename, parameters);
+        cap = new CvCapture_FFMPEG_proxy(String(filename), parameters);
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;
