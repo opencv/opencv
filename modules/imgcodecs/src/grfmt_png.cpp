@@ -201,9 +201,6 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, unsigned char* dst, size_t si
 bool  PngDecoder::readHeader()
 {
     volatile bool result = false;
-    unsigned char sig[8];
-    uint32_t id = 0;
-    CHUNK chunk;
 
     png_structp png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
 
@@ -221,6 +218,10 @@ bool  PngDecoder::readHeader()
         {
             if( setjmp( png_jmpbuf( png_ptr ) ) == 0 )
             {
+                unsigned char sig[8];
+                uint32_t id = 0;
+                CHUNK chunk;
+
                 if( !m_buf.empty() )
                     png_set_read_fn(png_ptr, this, (png_rw_ptr)readDataFromBuf );
                 else
