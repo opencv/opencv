@@ -85,7 +85,7 @@ static bool fillFrames(Animation& animation, bool hasAlpha, int n = 14)
     }
 
     // Add two identical frames with the same duration.
-    if (animation.frames.size() > 1)
+    if (animation.frames.size() > 1 && animation.frames.size() < 20)
     {
         animation.durations.push_back(++duration);
         animation.frames.push_back(animation.frames.back());
@@ -219,6 +219,20 @@ TEST(Imgcodecs_WebP, imwritemulti_rgb)
     ASSERT_TRUE(imreadmulti(output, read_frames));
     EXPECT_EQ(s_animation.frames.size() - 2, read_frames.size());
     EXPECT_EQ(0, remove(output.c_str()));
+}
+
+TEST(Imgcodecs_WebP, imdecode_rgba)
+{
+    Animation s_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true, 1000));
+
+    std::vector<uchar> buf;
+    vector<Mat> apng_frames;
+
+    // Test encoding and decoding the images in memory (without saving to disk).
+    EXPECT_TRUE(imencode(".webp", s_animation.frames, buf));
+    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, apng_frames));
+    EXPECT_EQ(s_animation.frames.size(), apng_frames.size());
 }
 
 #endif // HAVE_WEBP
@@ -398,7 +412,7 @@ TEST(Imgcodecs_APNG, imwriteanimation_bgcolor)
 TEST(Imgcodecs_APNG, imdecode_rgba)
 {
     Animation s_animation;
-    EXPECT_TRUE(fillFrames(s_animation, true));
+    EXPECT_TRUE(fillFrames(s_animation, true, 100000));
 
     std::vector<uchar> buf;
     vector<Mat> apng_frames;
