@@ -93,13 +93,6 @@ VideoCapture::VideoCapture(const Ptr<IStreamReader>& source, int apiPreference, 
     open(source, apiPreference, params);
 }
 
-VideoCapture::VideoCapture(const Ptr<std::streambuf>& source, int apiPreference, const std::vector<int>& params)
-    : throwOnFail(false)
-{
-    CV_TRACE_FUNCTION();
-    open(source, apiPreference, params);
-}
-
 VideoCapture::VideoCapture(int index, int apiPreference) : throwOnFail(false)
 {
     CV_TRACE_FUNCTION();
@@ -244,47 +237,6 @@ bool VideoCapture::open(const String& filename, int apiPreference, const std::ve
     }
 
     return false;
-}
-
-
-class StreambufReadStream : public IStreamReader
-{
-public:
-    StreambufReadStream(const Ptr<std::streambuf>& _stream)
-        : stream(_stream)
-    {
-        // nothing
-    }
-
-    virtual ~StreambufReadStream() CV_OVERRIDE
-    {
-        CV_LOG_VERBOSE(NULL, 0, "StreambufReadStream::~StreambufReadStream(" << (void*)this << ")");
-    }
-
-    long long read(char* buffer, long long size) CV_OVERRIDE
-    {
-        auto result = stream->sgetn(buffer, size);
-        return result;
-    }
-
-    long long seek(long long offset, int way) CV_OVERRIDE
-    {
-        auto result = stream->pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
-        return result;
-    }
-
-    static Ptr<IStreamReader> create(const Ptr<std::streambuf>& stream)
-    {
-        return makePtr<StreambufReadStream>(stream).dynamicCast<IStreamReader>();
-    }
-
-private:
-    Ptr<std::streambuf> stream;
-};
-
-bool VideoCapture::open(const Ptr<std::streambuf>& stream, int apiPreference, const std::vector<int>& params)
-{
-    return open(StreambufReadStream::create(stream), apiPreference, params);
 }
 
 bool VideoCapture::open(const Ptr<IStreamReader>& stream, int apiPreference, const std::vector<int>& params)

@@ -1025,6 +1025,33 @@ INSTANTIATE_TEST_CASE_P(videoio, videowriter_acceleration, testing::Combine(
         testing::ValuesIn(hw_use_umat)
 ));
 
+class BufferStream : public cv::IStreamReader
+{
+public:
+    BufferStream(const std::string& filename)
+    {
+        Ptr<std::filebuf> file = makePtr<std::filebuf>();
+        file->open(filename.c_str(), std::ios::in | std::ios::binary);
+        stream = file;
+    }
+
+    BufferStream(const Ptr<std::stringbuf>& _stream) : stream(_stream) {}
+
+    long long read(char* buffer, long long size) CV_OVERRIDE
+    {
+        auto result = stream->sgetn(buffer, size);
+        return result;
+    }
+
+    long long seek(long long offset, int way) CV_OVERRIDE
+    {
+        auto result = stream->pubseekoff(offset, way == SEEK_SET ? std::ios_base::beg : (way == SEEK_END ? std::ios_base::end : std::ios_base::cur));
+        return result;
+    }
+
+private:
+    Ptr<std::streambuf> stream;
+};
 
 typedef testing::TestWithParam<tuple<std::string, VideoCaptureAPIs>> stream_capture;
 TEST_P(stream_capture, read)
@@ -1051,11 +1078,7 @@ TEST_P(stream_capture, read)
     VideoCapture cap;
     String video_file = BunnyParameters::getFilename(String(".") + ext);
     ASSERT_TRUE(utils::fs::exists(video_file));
-    auto stream = std::make_shared<std::filebuf>();
-    stream->open(video_file.c_str(), std::ios::in | std::ios::binary);
-    ASSERT_TRUE(stream->is_open());
-
-    EXPECT_NO_THROW(cap.open(std::dynamic_pointer_cast<std::streambuf>(stream), apiPref, {}));
+    EXPECT_NO_THROW(cap.open(makePtr<BufferStream>(video_file), apiPref, {}));
     ASSERT_TRUE(cap.isOpened());
 
     const int numFrames = 10;
@@ -1116,7 +1139,7 @@ TEST_P(stream_capture_ffmpeg, raw)
 
     VideoCapture capRef(video_file);
     VideoCapture capStream;
-    EXPECT_NO_THROW(capStream.open(std::dynamic_pointer_cast<std::streambuf>(stream), apiPref, {}));
+    EXPECT_NO_THROW(capStream.open(makePtr<BufferStream>(stream), apiPref, {}));
     ASSERT_TRUE(capStream.isOpened());
 
     const int numFrames = 10;
