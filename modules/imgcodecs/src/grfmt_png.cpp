@@ -1254,8 +1254,7 @@ bool PngEncoder::get_rect(uint32_t w, uint32_t h, unsigned char* pimage1, unsign
 
     if (diffnum == 0)
     {
-        x0 = y0 = 0;
-        w0 = h0 = 1;
+        return false;
     }
     else
     {
@@ -1265,10 +1264,14 @@ bool PngEncoder::get_rect(uint32_t w, uint32_t h, unsigned char* pimage1, unsign
         h0 = y_max - y_min + 1;
     }
 
-    deflate_rect_op(pimage2, x0, y0, w0, h0, bpp, stride, zbuf_size, n * 2);
+    if (n < 3)
+    {
+        deflate_rect_op(pimage2, x0, y0, w0, h0, bpp, stride, zbuf_size, n * 2);
 
-    if (over_is_possible)
-        deflate_rect_op(ptemp, x0, y0, w0, h0, bpp, stride, zbuf_size, n * 2 + 1);
+        if (over_is_possible)
+            deflate_rect_op(ptemp, x0, y0, w0, h0, bpp, stride, zbuf_size, n * 2 + 1);
+    }
+
     return true;
 }
 
@@ -1345,21 +1348,6 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         }
     }
 
-    std::vector<APNGFrame> frames;
-    std::vector<Mat> tmpframes;
-
-    for (size_t i = 0; i < animation.frames.size(); i++)
-    {
-        APNGFrame apngFrame;
-        tmpframes.push_back(animation.frames[i].clone());
-        if (animation.frames[i].channels() == 4)
-            cvtColor(animation.frames[i], tmpframes[i], COLOR_BGRA2RGBA);
-        if (animation.frames[i].channels() == 3)
-            cvtColor(animation.frames[i], tmpframes[i], COLOR_BGR2RGB);
-        apngFrame.setMat(tmpframes[i], animation.durations[i]);
-        frames.push_back(apngFrame);
-    }
-
     CV_UNUSED(isBilevel);
     uint32_t first =0;
     uint32_t loops= animation.loop_count;
@@ -1370,9 +1358,9 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
     uint32_t x0, y0, w0, h0, dop, bop;
     uint32_t idat_size, zbuf_size, zsize;
     unsigned char header[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
-    uint32_t num_frames = (int)frames.size();
-    uint32_t width = frames[0].getWidth();
-    uint32_t height = frames[0].getHeight();
+    uint32_t num_frames = (int)animation.frames.size();
+    uint32_t width = animation.frames[0].cols;
+    uint32_t height = animation.frames[0].rows;
     uint32_t bpp = (coltype == 6) ? 4 : (coltype == 2) ? 3
         : (coltype == 4) ? 2
         : 1;
@@ -1387,6 +1375,30 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
     AutoBuffer<unsigned char> over3(imagesize);
     AutoBuffer<unsigned char> rest(imagesize);
     AutoBuffer<unsigned char> rows((rowbytes + 1) * height);
+
+    std::vector<APNGFrame> frames;
+    std::vector<Mat> tmpframes;
+
+    for (size_t i = 0; i < animation.frames.size(); i++)
+    {
+        APNGFrame apngFrame;
+        tmpframes.push_back(animation.frames[i].clone());
+        // TO DO optimize BGR RGB conversations
+        if (animation.frames[i].channels() == 4)
+            cvtColor(animation.frames[i], tmpframes[i], COLOR_BGRA2RGBA);
+        if (animation.frames[i].channels() == 3)
+            cvtColor(animation.frames[i], tmpframes[i], COLOR_BGR2RGB);
+
+        apngFrame.setMat(tmpframes[i], animation.durations[i]);
+
+        if (i > 0 && !get_rect(width, height, frames.back().getPixels(), apngFrame.getPixels(), over1.data(), bpp, rowbytes, 0, 0, 0, 3))
+        {
+            frames[i - 1].setDelayNum(frames.back().getDelayNum() + apngFrame.getDelayNum());
+            num_frames--;
+        }
+        else
+            frames.push_back(apngFrame);
+    }
 
     if (trnssize)
     {

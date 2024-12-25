@@ -243,7 +243,7 @@ bool AvifDecoder::readData(Mat &img) {
     return false;
   }
 
-  m_animation.durations.push_back(decoder_->imageTiming.durationInTimescales);
+  m_animation.durations.push_back(decoder_->imageTiming.duration * 1000);
 
   if (decoder_->image->exif.size > 0) {
     m_exif.parseExif(decoder_->image->exif.data, decoder_->image->exif.size);

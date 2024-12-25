@@ -258,13 +258,13 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgba)
     // Read the animation back and compare with the original.
     EXPECT_TRUE(imreadanimation(output, l_animation));
 
-    size_t expected_frame_count = s_animation.frames.size();
+    size_t expected_frame_count = s_animation.frames.size() - 2;
 
     // Verify that the number of frames matches the expected count.
     EXPECT_EQ(imcount(output), expected_frame_count);
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count);
 
-    for (size_t i = 0; i < l_animation.frames.size(); i++)
+    for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
     {
         EXPECT_EQ(s_animation.durations[i], l_animation.durations[i]);
         EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], l_animation.frames[i], NORM_INF));
@@ -273,9 +273,9 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgba)
     EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count + 3);
     EXPECT_EQ(l_animation.frames.size(), l_animation.durations.size());
-    EXPECT_EQ(0, cvtest::norm(l_animation.frames[5], l_animation.frames[16], NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(l_animation.frames[6], l_animation.frames[17], NORM_INF));
-    EXPECT_EQ(0, cvtest::norm(l_animation.frames[7], l_animation.frames[18], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[5], l_animation.frames[14], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[6], l_animation.frames[15], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[7], l_animation.frames[16], NORM_INF));
 
     // Verify whether the imread function successfully loads the first frame
     Mat frame = imread(output, IMREAD_UNCHANGED);
@@ -296,7 +296,6 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgba)
     EXPECT_TRUE(imreadmulti(output, apng_frames));
 
     // Expect all frames written as multi-page image
-    expected_frame_count = 16;
     EXPECT_EQ(expected_frame_count, apng_frames.size());
 
     // Clean up by removing the temporary file.
@@ -315,8 +314,8 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgb)
 
     // Read the animation back and compare with the original.
     EXPECT_TRUE(imreadanimation(output, l_animation));
-    EXPECT_EQ(s_animation.frames.size(), l_animation.frames.size());
-    for (size_t i = 0; i < l_animation.frames.size(); i++)
+    EXPECT_EQ(l_animation.frames.size(), s_animation.frames.size() - 2);
+    for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
     {
         EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], l_animation.frames[i], NORM_INF));
     }
@@ -332,8 +331,8 @@ TEST(Imgcodecs_APNG, imwritemulti_rgba)
     EXPECT_EQ(true, imwrite(output, s_animation.frames));
     vector<Mat> read_frames;
     EXPECT_EQ(true, imreadmulti(output, read_frames, IMREAD_UNCHANGED));
-    EXPECT_EQ(s_animation.frames.size(), read_frames.size());
-    EXPECT_EQ(read_frames.size(), imcount(output));
+    EXPECT_EQ(read_frames.size(), s_animation.frames.size() - 2);
+    EXPECT_EQ(imcount(output), read_frames.size());
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
@@ -346,7 +345,7 @@ TEST(Imgcodecs_APNG, imwritemulti_rgb)
     ASSERT_TRUE(imwrite(output, s_animation.frames));
     vector<Mat> read_frames;
     ASSERT_TRUE(imreadmulti(output, read_frames));
-    EXPECT_EQ(s_animation.frames.size(), read_frames.size());
+    EXPECT_EQ(read_frames.size(), s_animation.frames.size() - 2);
     EXPECT_EQ(0, remove(output.c_str()));
 
     for (size_t i = 0; i < read_frames.size(); i++)
@@ -380,7 +379,7 @@ TEST(Imgcodecs_APNG, imwritemulti_gray)
     EXPECT_TRUE(imreadmulti(output, read_frames, IMREAD_GRAYSCALE));
     EXPECT_EQ(0, remove(output.c_str()));
 
-    for (size_t i = 0; i < s_animation.frames.size(); i++)
+    for (size_t i = 0; i < read_frames.size(); i++)
     {
         EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], read_frames[i], NORM_INF));
     }
@@ -420,12 +419,12 @@ TEST(Imgcodecs_APNG, imencode_rgba)
     EXPECT_TRUE(fillFrames(s_animation, true, 3));
 
     std::vector<uchar> buf;
-    vector<Mat> apng_frames;
+    vector<Mat> read_frames;
 
     // Test encoding and decoding the images in memory (without saving to disk).
     EXPECT_TRUE(imencode(".png", s_animation.frames, buf));
-    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, apng_frames));
-    EXPECT_EQ(s_animation.frames.size(), apng_frames.size());
+    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, read_frames));
+    EXPECT_EQ(read_frames.size(), s_animation.frames.size() - 2);
 }
 
 #endif // HAVE_PNG
