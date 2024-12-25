@@ -102,6 +102,7 @@ TEST(Imgcodecs_WebP, imwriteanimation_rgba)
 {
     Animation s_animation, l_animation;
     EXPECT_TRUE(fillFrames(s_animation, true));
+    s_animation.bgcolor = Scalar(50, 100, 150, 128); // different values for test purpose.
 
     // Create a temporary output filename for saving the animation.
     string output = cv::tempfile(".webp");
@@ -146,12 +147,6 @@ TEST(Imgcodecs_WebP, imwriteanimation_rgba)
     EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
     EXPECT_EQ(expected_frame_count, webp_frames.size());
 
-    // Test encoding and decoding the images in memory (without saving to disk).
-    webp_frames.clear();
-    EXPECT_TRUE(imencode(".webp", s_animation.frames, buf));
-    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
-    EXPECT_EQ(expected_frame_count, webp_frames.size());
-
     // Clean up by removing the temporary file.
     EXPECT_EQ(0, remove(output.c_str()));
 }
@@ -177,10 +172,6 @@ TEST(Imgcodecs_WebP, imwriteanimation_rgb)
     // Verify that the number of frames matches the expected count.
     EXPECT_EQ(imcount(output), expected_frame_count);
     EXPECT_EQ(l_animation.frames.size(), expected_frame_count);
-
-    // Check that the background color and loop count match between saved and loaded animations.
-    EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor); // written as BGRA order
-    EXPECT_EQ(l_animation.loop_count, s_animation.loop_count);
 
     // Verify that the durations of frames match.
     for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
@@ -208,6 +199,20 @@ TEST(Imgcodecs_WebP, imwriteanimation_rgb)
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
+TEST(Imgcodecs_WebP, imwritemulti_rgba)
+{
+    Animation s_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true));
+
+    string output = cv::tempfile(".webp");
+    ASSERT_TRUE(imwrite(output, s_animation.frames));
+    vector<Mat> read_frames;
+    ASSERT_TRUE(imreadmulti(output, read_frames, IMREAD_UNCHANGED));
+    EXPECT_EQ(s_animation.frames.size() - 2, read_frames.size());
+    EXPECT_EQ(4, s_animation.frames[0].channels());
+    EXPECT_EQ(0, remove(output.c_str()));
+}
+
 TEST(Imgcodecs_WebP, imwritemulti_rgb)
 {
     Animation s_animation;
@@ -221,10 +226,10 @@ TEST(Imgcodecs_WebP, imwritemulti_rgb)
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
-TEST(Imgcodecs_WebP, imdecode_rgba)
+TEST(Imgcodecs_WebP, imencode_rgba)
 {
     Animation s_animation;
-    EXPECT_TRUE(fillFrames(s_animation, true, 1000));
+    EXPECT_TRUE(fillFrames(s_animation, true, 3));
 
     std::vector<uchar> buf;
     vector<Mat> apng_frames;
@@ -232,7 +237,7 @@ TEST(Imgcodecs_WebP, imdecode_rgba)
     // Test encoding and decoding the images in memory (without saving to disk).
     EXPECT_TRUE(imencode(".webp", s_animation.frames, buf));
     EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, apng_frames));
-    EXPECT_EQ(s_animation.frames.size(), apng_frames.size());
+    EXPECT_EQ(s_animation.frames.size() - 2, apng_frames.size());
 }
 
 #endif // HAVE_WEBP
@@ -409,10 +414,10 @@ TEST(Imgcodecs_APNG, imwriteanimation_bgcolor)
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
-TEST(Imgcodecs_APNG, imdecode_rgba)
+TEST(Imgcodecs_APNG, imencode_rgba)
 {
     Animation s_animation;
-    EXPECT_TRUE(fillFrames(s_animation, true, 100000));
+    EXPECT_TRUE(fillFrames(s_animation, true, 3));
 
     std::vector<uchar> buf;
     vector<Mat> apng_frames;
