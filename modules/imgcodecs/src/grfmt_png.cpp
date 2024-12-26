@@ -131,7 +131,54 @@ const uint32_t id_bKGD = 0x44474B62;
 const uint32_t id_tRNS = 0x534E5274;
 const uint32_t id_IEND = 0x444E4549; // end/footer chunk
 
-const unsigned long cMaxPNGSize = 1000000UL;
+APNGFrame::APNGFrame()
+{
+    _pixels = NULL;
+    _width = 0;
+    _height = 0;
+    _colorType = 0;
+    _paletteSize = 0;
+    _transparencySize = 0;
+    _delayNum = 1;
+    _delayDen = 1000;
+    _rows = NULL;
+}
+
+APNGFrame::~APNGFrame() {}
+
+bool APNGFrame::setMat(const cv::Mat& src, unsigned delayNum, unsigned delayDen)
+{
+    _delayNum = delayNum;
+    _delayDen = delayDen;
+
+    if (!src.empty())
+    {
+        png_uint_32 rowbytes = src.cols * src.channels();
+
+        _width = src.cols;
+        _height = src.rows;
+        _colorType = src.channels() == 1 ? PNG_COLOR_TYPE_GRAY : src.channels() == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA;
+        _pixels = src.data;
+        _rows = new png_bytep[_height * sizeof(png_bytep)];
+
+        for (unsigned int i = 0; i < _height; ++i)
+            _rows[i] = _pixels + i * rowbytes;
+        return true;
+    }
+    return false;
+}
+
+void APNGFrame::setWidth(unsigned int width) { _width = width; }
+void APNGFrame::setHeight(unsigned int height) { _height = height;}
+void APNGFrame::setColorType(unsigned char colorType) { _colorType = colorType; }
+void APNGFrame::setPalette(const rgb* palette) { std::copy(palette, palette + 256, _palette); }
+void APNGFrame::setTransparency(const unsigned char* transparency) { std::copy(transparency, transparency + 256, _transparency); }
+void APNGFrame::setPaletteSize(int paletteSize) { _paletteSize = paletteSize; }
+void APNGFrame::setTransparencySize(int transparencySize) { _transparencySize = transparencySize; }
+void APNGFrame::setDelayNum(unsigned int delayNum) { _delayNum = delayNum; }
+void APNGFrame::setDelayDen(unsigned int delayDen) { _delayDen = delayDen; }
+void APNGFrame::setPixels(unsigned char* pixels) { _pixels = pixels; }
+void APNGFrame::setRows(unsigned char** rows) { _rows = rows; }
 
 PngDecoder::PngDecoder()
 {
@@ -143,7 +190,6 @@ PngDecoder::PngDecoder()
     m_buf_supported = true;
     m_buf_pos = 0;
     m_bit_depth = 0;
-    m_is_animated = false;
     m_frame_no = 0;
     w0 = 0;
     h0 = 0;
@@ -156,16 +202,6 @@ PngDecoder::PngDecoder()
 }
 
 PngDecoder::~PngDecoder()
-{
-    close();
-}
-
-ImageDecoder PngDecoder::newDecoder() const
-{
-    return makePtr<PngDecoder>();
-}
-
-void  PngDecoder::close()
 {
     if( m_f )
     {
@@ -181,6 +217,11 @@ void  PngDecoder::close()
         png_destroy_read_struct( &png_ptr, &info_ptr, &end_info );
         m_png_ptr = m_info_ptr = m_end_info = 0;
     }
+}
+
+ImageDecoder PngDecoder::newDecoder() const
+{
+    return makePtr<PngDecoder>();
 }
 
 void  PngDecoder::readDataFromBuf( void* _png_ptr, unsigned char* dst, size_t size )
@@ -220,7 +261,7 @@ bool  PngDecoder::readHeader()
             {
                 unsigned char sig[8];
                 uint32_t id = 0;
-                CHUNK chunk;
+                Chunk chunk;
 
                 if( !m_buf.empty() )
                     png_set_read_fn(png_ptr, this, (png_rw_ptr)readDataFromBuf );
@@ -263,7 +304,6 @@ bool  PngDecoder::readHeader()
 
                     if (id == id_acTL && chunk.size == 20)
                     {
-                        m_is_animated = true;
                         m_animation.loop_count = png_get_uint_32(chunk.p + 12);
 
                         if (chunk.p[8] > 0)
@@ -349,8 +389,140 @@ bool  PngDecoder::readHeader()
 
 bool  PngDecoder::readData( Mat& img )
 {
-    if (m_is_animated ) {
-        return readAnimation(img);
+    if (m_frame_count > 1)
+    {
+        Mat mat_cur = Mat(img.rows, img.cols, m_type);
+        uint32_t id = 0;
+        uint32_t j = 0;
+        uint32_t imagesize = m_width * m_height * mat_cur.channels();
+        m_is_IDAT_loaded = false;
+
+        if (m_frame_no == 0)
+        {
+            m_mat_raw = Mat(img.rows, img.cols, m_type);
+            m_mat_next = Mat(img.rows, img.cols, m_type);
+            frameRaw.setMat(m_mat_raw);
+            frameNext.setMat(m_mat_next);
+            if (m_f)
+                fseek(m_f, -8, SEEK_CUR);
+            else
+                m_buf_pos -= 8;
+
+        }
+        else
+            m_mat_next.copyTo(mat_cur);
+
+        frameCur.setMat(mat_cur);
+
+        processing_start((void*)&frameRaw, mat_cur);
+        png_structp png_ptr = (png_structp)m_png_ptr;
+        png_infop info_ptr = (png_infop)m_info_ptr;
+
+        while (true)
+        {
+            Chunk chunk;
+            id = read_chunk(chunk);
+            if (!id)
+                return false;
+
+            if (id == id_fcTL && m_is_IDAT_loaded)
+            {
+                if (!m_is_fcTL_loaded)
+                {
+                    m_is_fcTL_loaded = true;
+                    w0 = m_width;
+                    h0 = m_height;
+                }
+
+                if (processing_finish())
+                {
+                    if (dop == 2)
+                        memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
+
+                    compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur.channels());
+                    if (delay_den < 1000)
+                        delay_num = cvRound(1000.0 / delay_den);
+                    m_animation.durations.push_back(delay_num);
+
+                    if (mat_cur.channels() == img.channels())
+                        mat_cur.copyTo(img);
+                    else if (img.channels() == 1)
+                        cvtColor(mat_cur, img, COLOR_BGRA2GRAY);
+                    else if (img.channels() == 3)
+                        cvtColor(mat_cur, img, COLOR_BGRA2BGR);
+
+                    if (dop != 2)
+                    {
+                        memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
+                        if (dop == 1)
+                            for (j = 0; j < h0; j++)
+                                memset(frameNext.getRows()[y0 + j] + x0 * img.channels(), 0, w0 * img.channels());
+                    }
+                }
+                else
+                {
+                    delete[] chunk.p;
+                    return false;
+                }
+
+                w0 = png_get_uint_32(chunk.p + 12);
+                h0 = png_get_uint_32(chunk.p + 16);
+                x0 = png_get_uint_32(chunk.p + 20);
+                y0 = png_get_uint_32(chunk.p + 24);
+                delay_num = png_get_uint_16(chunk.p + 28);
+                delay_den = png_get_uint_16(chunk.p + 30);
+                dop = chunk.p[32];
+                bop = chunk.p[33];
+
+                if (int(x0 + w0) > img.cols || int(y0 + h0) > img.rows || dop > 2 || bop > 1)
+                {
+                    delete[] chunk.p;
+                    return false;
+                }
+
+                memcpy(m_chunkIHDR.p + 8, chunk.p + 12, 8);
+                return true;
+            }
+            else if (id == id_IDAT)
+            {
+                m_is_IDAT_loaded = true;
+                png_process_data(png_ptr, info_ptr, chunk.p, chunk.size);
+            }
+            else if (id == id_fdAT && m_is_fcTL_loaded)
+            {
+                m_is_IDAT_loaded = true;
+                png_save_uint_32(chunk.p + 4, chunk.size - 16);
+                memcpy(chunk.p + 8, "IDAT", 4);
+                png_process_data(png_ptr, info_ptr, chunk.p + 4, chunk.size - 4);
+            }
+            else if (id == id_IEND)
+            {
+                if (processing_finish())
+                {
+                    compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur.channels());
+                    if (delay_den < 1000)
+                        delay_num = cvRound(1000.0 / delay_den);
+                    m_animation.durations.push_back(delay_num);
+
+                    if (mat_cur.channels() == img.channels())
+                        mat_cur.copyTo(img);
+                    else if (img.channels() == 1)
+                        cvtColor(mat_cur, img, COLOR_BGRA2GRAY);
+                    else if (img.channels() == 3)
+                        cvtColor(mat_cur, img, COLOR_BGRA2BGR);
+                }
+                else
+                    return false;
+
+                delete[] chunk.p;
+                return true;
+            }
+            else
+                png_process_data(png_ptr, info_ptr, chunk.p, chunk.size);
+
+            delete[] chunk.p;
+        }
+        return false;
     }
 
     volatile bool result = false;
@@ -441,129 +613,6 @@ bool PngDecoder::nextPage() {
     return ++m_frame_no < (int)m_frame_count;
 }
 
-bool PngDecoder::readAnimation(Mat& img)
-{
-    uint32_t id = 0;
-    uint32_t j = 0;
-    uint32_t imagesize = m_width * m_height * img.channels();
-    m_is_IDAT_loaded = false;
-
-    if (m_frame_no == 0)
-    {
-        m_mat_raw = Mat(img.rows, img.cols, img.type());
-        m_mat_next = Mat(img.rows, img.cols, img.type());
-        frameRaw.setMat(m_mat_raw);
-        frameNext.setMat(m_mat_next);
-        if (m_f)
-            fseek(m_f, -8, SEEK_CUR);
-        else
-            m_buf_pos -= 8;
-
-    }
-    else
-        m_mat_next.copyTo(img);
-
-    frameCur.setMat(img);
-
-    processing_start((void*)&frameRaw, img);
-    png_structp png_ptr = (png_structp)m_png_ptr;
-    png_infop info_ptr = (png_infop)m_info_ptr;
-
-    while (true)
-    {
-        CHUNK chunk;
-        id = read_chunk(chunk);
-        if (!id)
-            return false;
-
-        if (id == id_fcTL && m_is_IDAT_loaded)
-        {
-            if (!m_is_fcTL_loaded)
-            {
-                m_is_fcTL_loaded = true;
-                w0 = m_width;
-                h0 = m_height;
-            }
-
-            if (processing_finish())
-            {
-                if (dop == 2)
-                    memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
-
-                compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, img.channels());
-                m_animation.frames.push_back(img.clone());
-                if (delay_den < 1000)
-                    delay_num = cvRound(1000.0 / delay_den);
-                m_animation.durations.push_back(delay_num);
-
-                if (dop != 2)
-                {
-                    memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
-                    if (dop == 1)
-                        for (j = 0; j < h0; j++)
-                            memset(frameNext.getRows()[y0 + j] + x0 * img.channels(), 0, w0 * img.channels());
-                }
-            }
-            else
-            {
-                delete[] chunk.p;
-                return false;
-            }
-
-            w0 = png_get_uint_32(chunk.p + 12);
-            h0 = png_get_uint_32(chunk.p + 16);
-            x0 = png_get_uint_32(chunk.p + 20);
-            y0 = png_get_uint_32(chunk.p + 24);
-            delay_num = png_get_uint_16(chunk.p + 28);
-            delay_den = png_get_uint_16(chunk.p + 30);
-            dop = chunk.p[32];
-            bop = chunk.p[33];
-
-            if (w0 > cMaxPNGSize || h0 > cMaxPNGSize || x0 > cMaxPNGSize || y0 > cMaxPNGSize || int(x0 + w0) > img.cols || int(y0 + h0) > img.rows || dop > 2 || bop > 1)
-            {
-                delete[] chunk.p;
-                return false;
-            }
-
-            memcpy(m_chunkIHDR.p + 8, chunk.p + 12, 8);
-            return true;
-        }
-        else if (id == id_IDAT)
-        {
-            m_is_IDAT_loaded = true;
-            png_process_data(png_ptr, info_ptr, chunk.p, chunk.size);
-        }
-        else if (id == id_fdAT && m_is_fcTL_loaded)
-        {
-            m_is_IDAT_loaded = true;
-            png_save_uint_32(chunk.p + 4, chunk.size - 16);
-            memcpy(chunk.p + 8, "IDAT", 4);
-            png_process_data(png_ptr, info_ptr, chunk.p + 4, chunk.size - 4);
-        }
-        else if (id == id_IEND)
-        {
-            if (processing_finish())
-            {
-                compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, img.channels());
-                m_animation.frames.push_back(img.clone());
-                if (delay_den < 1000)
-                    delay_num = cvRound(1000.0 / delay_den);
-                m_animation.durations.push_back(delay_num);
-            }
-            else
-                return false;
-
-            delete[] chunk.p;
-            return true;
-        }
-        else
-            png_process_data(png_ptr, info_ptr, chunk.p, chunk.size);
-
-        delete[] chunk.p;
-    }
-    return false;
-}
-
 void PngDecoder::compose_frame(unsigned char** rows_dst, unsigned char** rows_src, unsigned char _bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, int channels)
 {
     uint32_t  i, j;
@@ -614,20 +663,20 @@ size_t PngDecoder::read_from_io(void* _Buffer, size_t _ElementSize, size_t _Elem
     return 1;
 }
 
-uint32_t PngDecoder::read_chunk(CHUNK& pChunk)
+uint32_t PngDecoder::read_chunk(Chunk& chunk)
 {
     unsigned char len[4];
     if (read_from_io(&len, 4, 1) == 1)
     {
-        pChunk.size = png_get_uint_32(len) + 12;
-        if (pChunk.size > PNG_USER_CHUNK_MALLOC_MAX)
+        chunk.size = png_get_uint_32(len) + 12;
+        if (chunk.size > PNG_USER_CHUNK_MALLOC_MAX)
         {
             CV_LOG_WARNING(NULL, "chunk data is too large");
         }
-        pChunk.p = new unsigned char[pChunk.size];
-        memcpy(pChunk.p, len, 4);
-        if (read_from_io(pChunk.p + 4, pChunk.size - 4, 1) == 1)
-            return *(uint32_t*)(pChunk.p + 4);
+        chunk.p = new unsigned char[chunk.size];
+        memcpy(chunk.p, len, 4);
+        if (read_from_io(chunk.p + 4, chunk.size - 4, 1) == 1)
+            return *(uint32_t*)(chunk.p + 4);
     }
     return 0;
 }
@@ -766,7 +815,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     int y, width = img.cols, height = img.rows;
     int depth = img.depth(), channels = img.channels();
     volatile bool result = false;
-    AutoBuffer<unsigned char*> buffer;
+    AutoBuffer<uchar*> buffer;
 
     if( depth != CV_8U && depth != CV_16U )
         return false;
@@ -874,7 +923,7 @@ size_t PngEncoder::write_to_io(void const* _Buffer, size_t  _ElementSize, size_t
     return _ElementCount;
 }
 
-void PngEncoder::write_chunk(FILE* f, const char* name, unsigned char* data, uint32_t length)
+void PngEncoder::writeChunk(FILE* f, const char* name, unsigned char* data, uint32_t length)
 {
     unsigned char buf[4];
     uint32_t crc = crc32(0, Z_NULL, 0);
@@ -902,7 +951,7 @@ void PngEncoder::write_chunk(FILE* f, const char* name, unsigned char* data, uin
     write_to_io(buf, 1, 4, f);
 }
 
-void PngEncoder::write_IDATs(FILE* f, int frame, unsigned char* data, uint32_t length, uint32_t idat_size)
+void PngEncoder::writeIDATs(FILE* f, int frame, unsigned char* data, uint32_t length, uint32_t idat_size)
 {
     uint32_t z_cmf = data[0];
     if ((z_cmf & 0x0f) == 8 && (z_cmf & 0xf0) <= 0x70)
@@ -933,16 +982,16 @@ void PngEncoder::write_IDATs(FILE* f, int frame, unsigned char* data, uint32_t l
             ds = 32768;
 
         if (frame == 0)
-            write_chunk(f, "IDAT", data, ds);
+            writeChunk(f, "IDAT", data, ds);
         else
-            write_chunk(f, "fdAT", data, ds + 4);
+            writeChunk(f, "fdAT", data, ds + 4);
 
         data += ds;
         length -= ds;
     }
 }
 
-void PngEncoder::process_rect(unsigned char* row, int rowbytes, int bpp, int stride, int h, unsigned char* rows)
+void PngEncoder::processRect(unsigned char* row, int rowbytes, int bpp, int stride, int h, unsigned char* rows)
 {
     int i, j, v;
     int a, b, c, pa, pb, pc, p;
@@ -1074,7 +1123,7 @@ void PngEncoder::process_rect(unsigned char* row, int rowbytes, int bpp, int str
     }
 }
 
-void PngEncoder::deflate_rect_op(unsigned char* pdata, int x, int y, int w, int h, int bpp, int stride, int zbuf_size, int n)
+void PngEncoder::deflateRectOp(unsigned char* pdata, int x, int y, int w, int h, int bpp, int stride, int zbuf_size, int n)
 {
     unsigned char* row = pdata + y * stride + x * bpp;
     int rowbytes = w * bpp;
@@ -1087,7 +1136,7 @@ void PngEncoder::deflate_rect_op(unsigned char* pdata, int x, int y, int w, int 
     op_zstream2.next_out = op_zbuf2.data();
     op_zstream2.avail_out = zbuf_size;
 
-    process_rect(row, rowbytes, bpp, stride, h, NULL);
+    processRect(row, rowbytes, bpp, stride, h, NULL);
 
     deflate(&op_zstream1, Z_FINISH);
     deflate(&op_zstream2, Z_FINISH);
@@ -1112,7 +1161,7 @@ void PngEncoder::deflate_rect_op(unsigned char* pdata, int x, int y, int w, int 
     deflateReset(&op_zstream2);
 }
 
-bool PngEncoder::get_rect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigned char* pimage2, unsigned char* ptemp, uint32_t bpp, uint32_t stride, int zbuf_size, uint32_t has_tcolor, uint32_t tcolor, int n)
+bool PngEncoder::getRect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigned char* pimage2, unsigned char* ptemp, uint32_t bpp, uint32_t stride, int zbuf_size, uint32_t has_tcolor, uint32_t tcolor, int n)
 {
     uint32_t i, j, x0, y0, w0, h0;
     uint32_t x_min = w - 1;
@@ -1266,16 +1315,16 @@ bool PngEncoder::get_rect(uint32_t w, uint32_t h, unsigned char* pimage1, unsign
 
     if (n < 3)
     {
-        deflate_rect_op(pimage2, x0, y0, w0, h0, bpp, stride, zbuf_size, n * 2);
+        deflateRectOp(pimage2, x0, y0, w0, h0, bpp, stride, zbuf_size, n * 2);
 
         if (over_is_possible)
-            deflate_rect_op(ptemp, x0, y0, w0, h0, bpp, stride, zbuf_size, n * 2 + 1);
+            deflateRectOp(ptemp, x0, y0, w0, h0, bpp, stride, zbuf_size, n * 2 + 1);
     }
 
     return true;
 }
 
-void PngEncoder::deflate_rect_fin(unsigned char* zbuf, uint32_t* zsize, int bpp, int stride, unsigned char* rows, int zbuf_size, int n)
+void PngEncoder::deflateRectFin(unsigned char* zbuf, uint32_t* zsize, int bpp, int stride, unsigned char* rows, int zbuf_size, int n)
 {
     unsigned char* row = op[n].p + op[n].y * stride + op[n].x * bpp;
     int rowbytes = op[n].w * bpp;
@@ -1292,7 +1341,7 @@ void PngEncoder::deflate_rect_fin(unsigned char* zbuf, uint32_t* zsize, int bpp,
         }
     }
     else
-        process_rect(row, rowbytes, bpp, stride, op[n].h, rows);
+        processRect(row, rowbytes, bpp, stride, op[n].h, rows);
 
     z_stream fin_zstream;
     fin_zstream.data_type = Z_BINARY;
@@ -1313,6 +1362,8 @@ void PngEncoder::deflate_rect_fin(unsigned char* zbuf, uint32_t* zsize, int bpp,
 bool PngEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
 {
     CV_Assert(img_vec[0].depth() == CV_8U);
+    CV_LOG_INFO(NULL, "Multi page image will be written as animation with 1 second frame duration.");
+
     Animation animation;
     animation.frames = img_vec;
 
@@ -1379,7 +1430,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
     std::vector<APNGFrame> frames;
     std::vector<Mat> tmpframes;
 
-    for (size_t i = 0; i < animation.frames.size(); i++)
+    for (i = 0; i < (uint32_t)animation.frames.size(); i++)
     {
         APNGFrame apngFrame;
         tmpframes.push_back(animation.frames[i].clone());
@@ -1391,7 +1442,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
         apngFrame.setMat(tmpframes[i], animation.durations[i]);
 
-        if (i > 0 && !get_rect(width, height, frames.back().getPixels(), apngFrame.getPixels(), over1.data(), bpp, rowbytes, 0, 0, 0, 3))
+        if (i > 0 && !getRect(width, height, frames.back().getPixels(), apngFrame.getPixels(), over1.data(), bpp, rowbytes, 0, 0, 0, 3))
         {
             frames[i - 1].setDelayNum(frames.back().getDelayNum() + apngFrame.getDelayNum());
             num_frames--;
@@ -1437,15 +1488,15 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
         write_to_io(header, 1, 8, m_f);
 
-        write_chunk(m_f, "IHDR", buf_IHDR, 13);
+        writeChunk(m_f, "IHDR", buf_IHDR, 13);
 
         if (num_frames > 1)
-            write_chunk(m_f, "acTL", buf_acTL, 8);
+            writeChunk(m_f, "acTL", buf_acTL, 8);
         else
             first = 0;
 
         if (palsize > 0)
-            write_chunk(m_f, "PLTE", (unsigned char*)(&palette), palsize * 3);
+            writeChunk(m_f, "PLTE", (unsigned char*)(&palette), palsize * 3);
 
         if ((animation.bgcolor != Scalar()) && (animation.frames.size() > 1))
         {
@@ -1453,11 +1504,11 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
                 (static_cast<int>(animation.bgcolor[1]) & 0xFF) << 16 |
                 (static_cast<int>(animation.bgcolor[2]) & 0xFF) << 8 |
                 (static_cast<int>(animation.bgcolor[3]) & 0xFF);
-            write_chunk(m_f, "bKGD", (unsigned char*)(&bgvalue), 6); //the bKGD chunk must precede the first IDAT chunk, and must follow the PLTE chunk.
+            writeChunk(m_f, "bKGD", (unsigned char*)(&bgvalue), 6); //the bKGD chunk must precede the first IDAT chunk, and must follow the PLTE chunk.
         }
 
         if (trnssize > 0)
-            write_chunk(m_f, "tRNS", trns, trnssize);
+            writeChunk(m_f, "tRNS", trns, trnssize);
 
         op_zstream1.data_type = Z_BINARY;
         op_zstream1.zalloc = Z_NULL;
@@ -1498,16 +1549,16 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
         for (j = 0; j < 6; j++)
             op[j].valid = 0;
-        deflate_rect_op(frames[0].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
-        deflate_rect_fin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
+        deflateRectOp(frames[0].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
+        deflateRectFin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
 
         if (first)
         {
-            write_IDATs(m_f, 0, zbuf.data(), zsize, idat_size);
+            writeIDATs(m_f, 0, zbuf.data(), zsize, idat_size);
             for (j = 0; j < 6; j++)
                 op[j].valid = 0;
-            deflate_rect_op(frames[1].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
-            deflate_rect_fin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
+            deflateRectOp(frames[1].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
+            deflateRectFin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
         }
 
         for (i = first; i < num_frames - 1; i++)
@@ -1519,7 +1570,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
                 op[j].valid = 0;
 
             /* dispose = none */
-            get_rect(width, height, frames[i].getPixels(), frames[i + 1].getPixels(), over1.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 0);
+            getRect(width, height, frames[i].getPixels(), frames[i + 1].getPixels(), over1.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 0);
 
             /* dispose = background */
             if (has_tcolor)
@@ -1533,12 +1584,12 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
                     for (j = 0; j < h0; j++)
                         memset(temp.data() + ((j + y0) * width + x0) * bpp, tcolor, w0 * bpp);
 
-                get_rect(width, height, temp.data(), frames[i + 1].getPixels(), over2.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 1);
+                getRect(width, height, temp.data(), frames[i + 1].getPixels(), over2.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 1);
             }
 
             /* dispose = previous */
             if (i > first)
-                get_rect(width, height, rest.data(), frames[i + 1].getPixels(), over3.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 2);
+                getRect(width, height, rest.data(), frames[i + 1].getPixels(), over3.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 2);
 
             op_min = op[0].size;
             op_best = 0;
@@ -1563,9 +1614,9 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             png_save_uint_16(buf_fcTL + 22, frames[i].getDelayDen());
             buf_fcTL[24] = dop;
             buf_fcTL[25] = bop;
-            write_chunk(m_f, "fcTL", buf_fcTL, 26);
+            writeChunk(m_f, "fcTL", buf_fcTL, 26);
 
-            write_IDATs(m_f, i, zbuf.data(), zsize, idat_size);
+            writeIDATs(m_f, i, zbuf.data(), zsize, idat_size);
 
             /* process apng dispose - begin */
             if (dop != 2)
@@ -1589,7 +1640,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             h0 = op[op_best].h;
             bop = op_best & 1;
 
-            deflate_rect_fin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, op_best);
+            deflateRectFin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, op_best);
         }
 
         if (num_frames > 1)
@@ -1603,12 +1654,12 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             png_save_uint_16(buf_fcTL + 22, frames[i].getDelayDen());
             buf_fcTL[24] = 0;
             buf_fcTL[25] = bop;
-            write_chunk(m_f, "fcTL", buf_fcTL, 26);
+            writeChunk(m_f, "fcTL", buf_fcTL, 26);
         }
 
-        write_IDATs(m_f, num_frames - 1, zbuf.data(), zsize, idat_size);
+        writeIDATs(m_f, num_frames - 1, zbuf.data(), zsize, idat_size);
 
-        write_chunk(m_f, "IEND", 0, 0);
+        writeChunk(m_f, "IEND", 0, 0);
 
         if (m_f)
             fclose(m_f);

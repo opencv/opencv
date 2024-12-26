@@ -33,16 +33,19 @@ static bool fillFrames(Animation& animation, bool hasAlpha, int n = 14)
     // Set the path to the test image directory and filename for loading.
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "pngsuite/tp1n3p08.png";
-    Mat image = imread(filename, hasAlpha ? IMREAD_UNCHANGED : IMREAD_COLOR);
-    if (image.empty())
-        return false;
+
+    EXPECT_TRUE(imreadanimation(filename, animation));
+    EXPECT_EQ(1000, animation.durations.back());
+
+    if (!hasAlpha)
+        cvtColor(animation.frames[0], animation.frames[0], COLOR_BGRA2BGR);
 
     animation.loop_count = 0xffff; // 0xffff is the maximum value to set.
 
-    // Add the first frame with a duration value of 500 milliseconds.
+    // Add the first frame with a duration value of 400 milliseconds.
     int duration = 80;
-    animation.durations.push_back(duration * 5);
-    animation.frames.push_back(image.clone());
+    animation.durations[0] = duration * 5;
+    Mat image = animation.frames[0].clone();
     putText(animation.frames[0], "0", Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
 
     // Define a region of interest (ROI)
@@ -118,8 +121,8 @@ TEST(Imgcodecs_WebP, imwriteanimation_rgba)
     size_t expected_frame_count = s_animation.frames.size() - 2;
 
     // Verify that the number of frames matches the expected count.
-    EXPECT_EQ(imcount(output), expected_frame_count);
-    EXPECT_EQ(l_animation.frames.size(), expected_frame_count);
+    EXPECT_EQ(expected_frame_count, imcount(output));
+    EXPECT_EQ(expected_frame_count, l_animation.frames.size());
 
     // Check that the background color and loop count match between saved and loaded animations.
     EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor); // written as BGRA order
@@ -130,7 +133,7 @@ TEST(Imgcodecs_WebP, imwriteanimation_rgba)
         EXPECT_EQ(s_animation.durations[i], l_animation.durations[i]);
 
     EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
-    EXPECT_EQ(l_animation.frames.size(), expected_frame_count + 3);
+    EXPECT_EQ(expected_frame_count + 3, l_animation.frames.size());
     EXPECT_EQ(l_animation.frames.size(), l_animation.durations.size());
     EXPECT_EQ(0, cvtest::norm(l_animation.frames[5], l_animation.frames[14], NORM_INF));
     EXPECT_EQ(0, cvtest::norm(l_animation.frames[6], l_animation.frames[15], NORM_INF));
@@ -170,15 +173,15 @@ TEST(Imgcodecs_WebP, imwriteanimation_rgb)
     size_t expected_frame_count = s_animation.frames.size() - 2;
 
     // Verify that the number of frames matches the expected count.
-    EXPECT_EQ(imcount(output), expected_frame_count);
-    EXPECT_EQ(l_animation.frames.size(), expected_frame_count);
+    EXPECT_EQ(expected_frame_count, imcount(output));
+    EXPECT_EQ(expected_frame_count, l_animation.frames.size());
 
     // Verify that the durations of frames match.
     for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
         EXPECT_EQ(s_animation.durations[i], l_animation.durations[i]);
 
     EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
-    EXPECT_EQ(l_animation.frames.size(), expected_frame_count + 3);
+    EXPECT_EQ(expected_frame_count + 3, l_animation.frames.size());
     EXPECT_EQ(l_animation.frames.size(), l_animation.durations.size());
     EXPECT_TRUE(cvtest::norm(l_animation.frames[5], l_animation.frames[14], NORM_INF) == 0);
     EXPECT_TRUE(cvtest::norm(l_animation.frames[6], l_animation.frames[15], NORM_INF) == 0);
@@ -193,7 +196,7 @@ TEST(Imgcodecs_WebP, imwriteanimation_rgb)
 
     vector<Mat> webp_frames;
     EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
-    EXPECT_EQ(webp_frames.size(), expected_frame_count);
+    EXPECT_EQ(expected_frame_count,webp_frames.size());
 
     // Clean up by removing the temporary file.
     EXPECT_EQ(0, remove(output.c_str()));
@@ -261,8 +264,8 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgba)
     size_t expected_frame_count = s_animation.frames.size() - 2;
 
     // Verify that the number of frames matches the expected count.
-    EXPECT_EQ(imcount(output), expected_frame_count);
-    EXPECT_EQ(l_animation.frames.size(), expected_frame_count);
+    EXPECT_EQ(expected_frame_count, imcount(output));
+    EXPECT_EQ(expected_frame_count, l_animation.frames.size());
 
     for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
     {
@@ -271,7 +274,7 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgba)
     }
 
     EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
-    EXPECT_EQ(l_animation.frames.size(), expected_frame_count + 3);
+    EXPECT_EQ(expected_frame_count + 3, l_animation.frames.size());
     EXPECT_EQ(l_animation.frames.size(), l_animation.durations.size());
     EXPECT_EQ(0, cvtest::norm(l_animation.frames[5], l_animation.frames[14], NORM_INF));
     EXPECT_EQ(0, cvtest::norm(l_animation.frames[6], l_animation.frames[15], NORM_INF));
@@ -402,10 +405,12 @@ TEST(Imgcodecs_APNG, imwriteanimation_bgcolor)
 
     // Check that the background color match between saved and loaded animations.
     EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor);
+    EXPECT_EQ(0, remove(output.c_str()));
 
     EXPECT_TRUE(fillFrames(s_animation, true, 2));
     s_animation.bgcolor = Scalar();
 
+    output = cv::tempfile(".png");
     EXPECT_TRUE(imwriteanimation(output, s_animation));
     EXPECT_TRUE(imreadanimation(output, l_animation));
     EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor);
@@ -420,7 +425,6 @@ TEST(Imgcodecs_APNG, imencode_rgba)
 
     std::vector<uchar> buf;
     vector<Mat> read_frames;
-
     // Test encoding and decoding the images in memory (without saving to disk).
     EXPECT_TRUE(imencode(".png", s_animation.frames, buf));
     EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, read_frames));

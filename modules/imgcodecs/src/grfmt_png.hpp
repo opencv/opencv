@@ -46,7 +46,6 @@
 #ifdef HAVE_PNG
 
 #include "grfmt_base.hpp"
-#include "apngframe.hpp"
 #include "bitstrm.hpp"
 #include <png.h>
 #include <zlib.h>
@@ -54,35 +53,92 @@
 namespace cv
 {
 
-struct CHUNK { unsigned char* p; uint32_t size; };
+struct Chunk { unsigned char* p; uint32_t size; };
 struct OP { unsigned char* p; uint32_t size; int x, y, w, h, valid, filters; };
+
+typedef struct {
+  unsigned char r, g, b;
+} rgb;
+
+class APNGFrame {
+public:
+
+    APNGFrame();
+
+    // Destructor
+    ~APNGFrame();
+
+    bool setMat(const cv::Mat& src, unsigned delayNum = 1, unsigned delayDen = 1000);
+
+    // Getters and Setters
+    unsigned char* getPixels() const { return _pixels; }
+    void setPixels(unsigned char* pixels);
+
+    unsigned int getWidth() const { return _width; }
+    void setWidth(unsigned int width);
+
+    unsigned int getHeight() const { return _height; }
+    void setHeight(unsigned int height);
+
+    unsigned char getColorType() const { return _colorType; }
+    void setColorType(unsigned char colorType);
+
+    rgb* getPalette() { return _palette; }
+    void setPalette(const rgb* palette);
+
+    unsigned char* getTransparency() { return _transparency; }
+    void setTransparency(const unsigned char* transparency);
+
+    int getPaletteSize() const { return _paletteSize; }
+    void setPaletteSize(int paletteSize);
+
+    int getTransparencySize() const { return _transparencySize; }
+    void setTransparencySize(int transparencySize);
+
+    unsigned int getDelayNum() const { return _delayNum; }
+    void setDelayNum(unsigned int delayNum);
+
+    unsigned int getDelayDen() const { return _delayDen; }
+    void setDelayDen(unsigned int delayDen);
+
+    unsigned char** getRows() const { return _rows; }
+    void setRows(unsigned char** rows);
+
+private:
+    unsigned char* _pixels;
+    unsigned int _width;
+    unsigned int _height;
+    unsigned char _colorType;
+    rgb _palette[256];
+    unsigned char _transparency[256];
+    int _paletteSize;
+    int _transparencySize;
+    unsigned int _delayNum;
+    unsigned int _delayDen;
+    unsigned char** _rows;
+};
 
 class PngDecoder CV_FINAL : public BaseImageDecoder
 {
 public:
-
     PngDecoder();
     virtual ~PngDecoder();
 
     bool  readData( Mat& img ) CV_OVERRIDE;
     bool  readHeader() CV_OVERRIDE;
-    void  close();
     bool  nextPage() CV_OVERRIDE;
 
     ImageDecoder newDecoder() const CV_OVERRIDE;
-    APNGFrame frameCur;
 
 protected:
-
     static void readDataFromBuf(void* png_ptr, uchar* dst, size_t size);
     static void info_fn(png_structp png_ptr, png_infop info_ptr);
     static void row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass);
-    bool readAnimation(Mat& img);
     bool processing_start(void* frame_ptr, const Mat& img);
     bool processing_finish();
     void compose_frame(unsigned char** rows_dst, unsigned char** rows_src, unsigned char bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, int channels);
     size_t read_from_io(void* _Buffer, size_t _ElementSize, size_t _ElementCount);
-    uint32_t  read_chunk(CHUNK& pChunk);
+    uint32_t  read_chunk(Chunk& chunk);
 
     int   m_bit_depth;
     void* m_png_ptr;  // pointer to decompression structure
@@ -90,13 +146,13 @@ protected:
     void* m_end_info; // pointer to one more image information structure
     FILE* m_f;
     int   m_color_type;
-    bool  m_is_animated;
-    CHUNK m_chunkIHDR;
+    Chunk m_chunkIHDR;
     int   m_frame_no;
     size_t m_buf_pos;
-    std::vector<CHUNK> m_chunksInfo;
+    std::vector<Chunk> m_chunksInfo;
     APNGFrame frameRaw;
     APNGFrame frameNext;
+    APNGFrame frameCur;
     Mat m_mat_raw;
     Mat m_mat_next;
     uint32_t w0;
@@ -131,12 +187,12 @@ protected:
     size_t write_to_io(void const* _Buffer, size_t  _ElementSize, size_t _ElementCount, FILE* _Stream);
 
 private:
-    void write_chunk(FILE* f, const char* name, unsigned char* data, uint32_t length);
-    void write_IDATs(FILE* f, int frame, unsigned char* data, uint32_t length, uint32_t idat_size);
-    void process_rect(unsigned char* row, int rowbytes, int bpp, int stride, int h, unsigned char* rows);
-    void deflate_rect_fin(unsigned char* zbuf, uint32_t* zsize, int bpp, int stride, unsigned char* rows, int zbuf_size, int n);
-    void deflate_rect_op(unsigned char* pdata, int x, int y, int w, int h, int bpp, int stride, int zbuf_size, int n);
-    bool get_rect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigned char* pimage2, unsigned char* ptemp, uint32_t bpp, uint32_t stride, int zbuf_size, uint32_t has_tcolor, uint32_t tcolor, int n);
+    void writeChunk(FILE* f, const char* name, unsigned char* data, uint32_t length);
+    void writeIDATs(FILE* f, int frame, unsigned char* data, uint32_t length, uint32_t idat_size);
+    void processRect(unsigned char* row, int rowbytes, int bpp, int stride, int h, unsigned char* rows);
+    void deflateRectFin(unsigned char* zbuf, uint32_t* zsize, int bpp, int stride, unsigned char* rows, int zbuf_size, int n);
+    void deflateRectOp(unsigned char* pdata, int x, int y, int w, int h, int bpp, int stride, int zbuf_size, int n);
+    bool getRect(uint32_t w, uint32_t h, unsigned char* pimage1, unsigned char* pimage2, unsigned char* ptemp, uint32_t bpp, uint32_t stride, int zbuf_size, uint32_t has_tcolor, uint32_t tcolor, int n);
 
     AutoBuffer<unsigned char> op_zbuf1;
     AutoBuffer<unsigned char> op_zbuf2;
