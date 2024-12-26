@@ -473,8 +473,10 @@ void warpAffineNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+        int vlanes_16 = VTraits<v_uint16>::vlanes();
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -759,8 +761,10 @@ void warpAffineNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, i
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+        int vlanes_16 = VTraits<v_uint16>::vlanes();
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -1086,6 +1090,7 @@ void warpAffineNearestInvoker_32FC3(const float *src_data, size_t src_step, int 
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
+                bool rightmost = x + uf >= dstcols;
                 CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
@@ -1337,8 +1342,10 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+        int vlanes_16 = VTraits<v_uint16>::vlanes();
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -1379,7 +1386,7 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
-                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE(SIMD128, NEAREST, 8U, C3);
+                    CV_WARP_VECTOR_SHUFFLE_INTER_STORE(SIMD256, NEAREST, 8U, C3);
     #elif CV_SIMD128
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE(SIMD128, NEAREST, 8U, C3);
     #elif CV_SIMD_SCALABLE
@@ -1620,8 +1627,10 @@ void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_st
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+        int vlanes_16 = VTraits<v_uint16>::vlanes();
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -1946,6 +1955,7 @@ void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step,
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
+                bool rightmost = x + uf >= dstcols;
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
@@ -2217,8 +2227,10 @@ void remapNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+        int vlanes_16 = VTraits<v_uint16>::vlanes();
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -2551,8 +2563,10 @@ void remapNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int sr
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+        int vlanes_16 = VTraits<v_uint16>::vlanes();
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -2930,6 +2944,7 @@ void remapNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_r
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
+                bool rightmost = x + uf >= dstcols;
                 CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
@@ -3538,8 +3553,10 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+        int vlanes_16 = VTraits<v_uint16>::vlanes();
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -3886,6 +3903,7 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
+                bool rightmost = x + uf >= dstcols;
                 CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
@@ -4798,8 +4816,10 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+        int vlanes_16 = VTraits<v_uint16>::vlanes();
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -5148,6 +5168,7 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
+                bool rightmost = x + uf >= dstcols;
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
@@ -6131,8 +6152,10 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+        constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+        int vlanes_16 = VTraits<v_uint16>::vlanes();
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -6534,6 +6557,7 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
+                bool rightmost = x + uf >= dstcols;
                 CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
