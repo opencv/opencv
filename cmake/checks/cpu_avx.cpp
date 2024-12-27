@@ -1,4 +1,4 @@
-#if !defined __AVX__ // MSVC supports this flag since MSVS 2013
+#if !defined __AVX__
 #error "__AVX__ define is missing"
 #endif
 #include <immintrin.h>
