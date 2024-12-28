@@ -57,7 +57,6 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
     private VideoWriter mVideoWriter = null;
     private VideoCapture mVideoCapture = null;
     private Mat mVideoFrame;
-    private Mat mRenderFrame;
 
     public RecorderActivity() {
         Log.i(TAG, "Instantiated new " + this.getClass());
@@ -122,7 +121,6 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         mTriggerButton.setText("Start Camera");
 
         mVideoFrame.release();
-        mRenderFrame.release();
     }
 
     @Override
@@ -132,7 +130,6 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
         super.onResume();
 
         mVideoFrame = new Mat();
-        mRenderFrame = new Mat();
 
         changeStatus();
     }
@@ -300,6 +297,10 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
             return false;
         }
 
+        if (!mUseBuiltInMJPG){
+            mVideoCapture.set(Videoio.CAP_PROP_FOURCC, VideoWriter.fourcc('R','G','B','4'));
+        }
+
         Toast.makeText(this, "Starting playback from file " + mVideoFilename, Toast.LENGTH_SHORT).show();
 
         mPlayerThread = new Runnable() {
@@ -315,9 +316,14 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
                     }
                     return;
                 }
-                Imgproc.cvtColor(mVideoFrame, mRenderFrame, Imgproc.COLOR_BGR2RGBA);
-                Bitmap bmp = Bitmap.createBitmap(mRenderFrame.cols(), mRenderFrame.rows(), Bitmap.Config.ARGB_8888);
-                Utils.matToBitmap(mRenderFrame, bmp);
+
+                // MJPEG codec will output BGR only. So we need to convert to RGBA.
+                if (mUseBuiltInMJPG) {
+                    Imgproc.cvtColor(mVideoFrame, mVideoFrame, Imgproc.COLOR_BGR2RGBA);
+                }
+
+                Bitmap bmp = Bitmap.createBitmap(mVideoFrame.cols(), mVideoFrame.rows(), Bitmap.Config.ARGB_8888);
+                Utils.matToBitmap(mVideoFrame, bmp);
                 mImageView.setImageBitmap(bmp);
                 Handler h = new Handler();
                 h.postDelayed(this, 33);
