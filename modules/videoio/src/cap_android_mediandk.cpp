@@ -551,10 +551,12 @@ public:
         }
 
         Mat image = image_.getMat();
-        if (CV_8UC3 != image.type() || image.cols > width || image.rows > height) {
+        if (image.cols > width || image.rows > height ||
+            (CV_8UC1 != image.type() && CV_8UC3 != image.type() && CV_8UC4 != image.type())) {
             LOGE(
-                "Expected input to be a mat of maximum %d x %d of type CV_8UC3 (%d), but received %d x %d of type: %d",
-                width, height, CV_8UC3,
+                "Expected input to be a mat of maximum %d x %d of type CV_8UC1, CV_8UC3 or CV_8UC4"
+                " (%d, %d, %d), but received %d x %d of type %d",
+                width, height, CV_8UC1, CV_8UC3, CV_8UC4,
                 image.cols, image.rows, image.type()
             );
             return;
@@ -564,33 +566,45 @@ public:
         ANativeWindow_Buffer buffer;
         if (0 != ANativeWindow_lock(surface, &buffer, NULL)) {
             LOGE("Failed to lock the surface");
-        } else {
-            if (AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM == buffer.format) {
-                Mat bufferMat(image.rows, image.cols, CV_8UC4, buffer.bits, buffer.stride * 4);
-                cvtColor(image, bufferMat, CV_BGR2RGBA);
-            } else {
-                LOGE("Unknow surface buffer format: %u", buffer.format);
-            }
-
-            ANativeWindow_unlockAndPost(surface);
+            return;
         }
-        #else
-        LOGV("[write] image: %d  x %d", image.cols, image.rows);
 
-        //OpenCV don't support RGB to NV12 so we need to connvert to YV12 and then manually changed it to NV12
+        if (AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM == buffer.format) {
+            Mat bufferMat(image.rows, image.cols, CV_8UC4, buffer.bits, buffer.stride * 4);
+            switch (image.type()) {
+                case CV_8UC4: image.copyTo(bufferMat);                  break;
+                case CV_8UC3: cvtColor(image, bufferMat, CV_BGR2RGBA);  break;
+                case CV_8UC1: cvtColor(image, bufferMat, CV_GRAY2RGBA); break;
+            }
+        } else {
+            LOGE("Unknown surface buffer format: 0x%x", buffer.format);
+        }
+
+        ANativeWindow_unlockAndPost(surface);
+        #else
+        //OpenCV doesn't support RGB to NV12 so we need to convert to YV12 and then manually changed it to NV12
         Mat imageYV12;
-        cvtColor(image, imageYV12, CV_BGR2YUV_YV12);
+        switch (image.type()) {
+            case CV_8UC4: cvtColor(image, imageYV12, CV_RGBA2YUV_YV12); break;
+            case CV_8UC3: cvtColor(image, imageYV12, CV_BGR2YUV_YV12);  break;
+            case CV_8UC1: imageYV12.create(image.rows + image.rows/2, image.cols, CV_8UC1);
+                          image.copyTo(imageYV12.rowRange(0, image.rows));
+                          imageYV12.rowRange(image.rows, imageYV12.rows) = 128;
+                          break;
+        }
 
         //convert from YV12 to NV12
-        size_t yPlaneSize = width * height;
-        size_t vPlaneSize = yPlaneSize / 4;
+        if (image.type() != CV_8UC1) {
+            size_t yPlaneSize = width * height;
+            size_t vPlaneSize = yPlaneSize / 4;
 
-        Mat channels[2] = {
-            Mat( vPlaneSize, 1, CV_8UC1, imageYV12.ptr() + yPlaneSize + vPlaneSize ).clone(),
-            Mat( vPlaneSize, 1, CV_8UC1, imageYV12.ptr() + yPlaneSize ).clone()
-        };
-        Mat vuMat( vPlaneSize, 1, CV_8UC2, imageYV12.ptr() + yPlaneSize );
-        merge(channels, 2, vuMat);
+            Mat channels[2] = {
+                Mat( vPlaneSize, 1, CV_8UC1, imageYV12.ptr() + yPlaneSize + vPlaneSize ).clone(),
+                Mat( vPlaneSize, 1, CV_8UC1, imageYV12.ptr() + yPlaneSize ).clone()
+            };
+            Mat vuMat( vPlaneSize, 1, CV_8UC2, imageYV12.ptr() + yPlaneSize );
+            merge(channels, 2, vuMat);
+        }
 
         writeBytes( imageYV12.ptr(), imageYV12.rows * imageYV12.cols );
         #endif
