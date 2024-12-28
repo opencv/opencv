@@ -294,7 +294,7 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
             mVideoCapture = new VideoCapture(mVideoFilename, Videoio.CAP_OPENCV_MJPEG);
         }
 
-        if (!mVideoCapture.isOpened()) {
+        if (mVideoCapture == null || !mVideoCapture.isOpened()) {
             Log.e(TAG, "Can't open video");
             Toast.makeText(this, "Can't open file " + mVideoFilename, Toast.LENGTH_SHORT).show();
             return false;
@@ -315,9 +315,7 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
                     }
                     return;
                 }
-                // VideoCapture with CAP_ANDROID generates RGB frames instead of BGR
-                // https://github.com/opencv/opencv/issues/24687
-                Imgproc.cvtColor(mVideoFrame, mRenderFrame, mUseBuiltInMJPG ? Imgproc.COLOR_BGR2RGBA: Imgproc.COLOR_RGB2RGBA);
+                Imgproc.cvtColor(mVideoFrame, mRenderFrame, Imgproc.COLOR_BGR2RGBA);
                 Bitmap bmp = Bitmap.createBitmap(mRenderFrame.cols(), mRenderFrame.rows(), Bitmap.Config.ARGB_8888);
                 Utils.matToBitmap(mRenderFrame, bmp);
                 mImageView.setImageBitmap(bmp);
