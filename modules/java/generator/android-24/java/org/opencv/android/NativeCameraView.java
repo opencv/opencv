@@ -2,6 +2,7 @@ package org.opencv.android;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
+import org.opencv.core.MatOfInt;
 
 import org.opencv.imgproc.Imgproc;
 
@@ -123,8 +124,11 @@ public class NativeCameraView extends CameraBridgeViewBase {
                 return false;
             }
 
+            MatOfInt params = new MatOfInt(Videoio.CAP_PROP_FRAME_WIDTH, width,
+                                           Videoio.CAP_PROP_FRAME_HEIGHT, height);
+
             Log.d(TAG, "Try to open camera with index " + localCameraIndex);
-            mCamera = new VideoCapture(localCameraIndex, Videoio.CAP_ANDROID);
+            mCamera = new VideoCapture(localCameraIndex, Videoio.CAP_ANDROID, params);
 
             if (mCamera == null)
                 return false;
@@ -138,9 +142,6 @@ public class NativeCameraView extends CameraBridgeViewBase {
                     cameraInfo.orientation);
 
             mFrame = new RotatedCameraFrame(new NativeCameraFrame(mCamera), frameRotation);
-
-            mCamera.set(Videoio.CAP_PROP_FRAME_WIDTH, width);
-            mCamera.set(Videoio.CAP_PROP_FRAME_HEIGHT, height);
 
             if (frameRotation % 180 == 0) {
                 mFrameWidth = (int) mCamera.get(Videoio.CAP_PROP_FRAME_WIDTH);
