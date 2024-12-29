@@ -296,10 +296,6 @@ INSTANTIATE_TEST_CASE_P(/**/, videoio_container_get, testing::ValuesIn(videoio_c
 typedef tuple<string, string, int, int, bool, bool> videoio_encapsulate_params_t;
 typedef testing::TestWithParam< videoio_encapsulate_params_t > videoio_encapsulate;
 
-#if defined(WIN32)  // remove when FFmpeg wrapper includes PR25874
-#define WIN32_WAIT_FOR_FFMPEG_WRAPPER_UPDATE
-#endif
-
 TEST_P(videoio_encapsulate, write)
 {
     const VideoCaptureAPIs api = CAP_FFMPEG;
@@ -331,11 +327,10 @@ TEST_P(videoio_encapsulate, write)
         Mat rawFrame;
         for (int i = 0; i < nFrames; i++) {
             ASSERT_TRUE(capRaw.read(rawFrame));
-#if !defined(WIN32_WAIT_FOR_FFMPEG_WRAPPER_UPDATE)
             if (setPts && i == 0) {
-                ASSERT_TRUE(container.set(VIDEOWRITER_PROP_DTS_DELAY, capRaw.get(CAP_PROP_DTS_DELAY)));
+                double dts = capRaw.get(CAP_PROP_DTS_DELAY);
+                ASSERT_TRUE(container.set(VIDEOWRITER_PROP_DTS_DELAY, dts)) << "dts=" << dts;
             }
-#endif
             ASSERT_FALSE(rawFrame.empty());
             if (i == 0 && mpeg4) {
                 Mat tmp = rawFrame.clone();
@@ -346,11 +341,10 @@ TEST_P(videoio_encapsulate, write)
                 memcpy(rawFrame.data, extraData.data, extraData.total());
                 memcpy(rawFrame.data + extraData.total(), tmp.data, tmp.total());
             }
-#if !defined(WIN32_WAIT_FOR_FFMPEG_WRAPPER_UPDATE)
             if (setPts) {
-                ASSERT_TRUE(container.set(VIDEOWRITER_PROP_PTS, capRaw.get(CAP_PROP_PTS)));
+                double pts = capRaw.get(CAP_PROP_PTS);
+                ASSERT_TRUE(container.set(VIDEOWRITER_PROP_PTS, pts)) << "pts=" << pts;
             }
-#endif
             container.write(rawFrame);
         }
         container.release();
@@ -381,11 +375,9 @@ TEST_P(videoio_encapsulate, write)
             const bool keyFrameActual = capActualRaw.get(CAP_PROP_LRF_HAS_KEY_FRAME) == 1.;
             const bool keyFrameReference = idrPeriod ? i % idrPeriod == 0 : 1;
             ASSERT_EQ(keyFrameReference, keyFrameActual);
-#if !defined(WIN32_WAIT_FOR_FFMPEG_WRAPPER_UPDATE)
             if (tsWorking) {
                 ASSERT_EQ(round(capReference.get(CAP_PROP_POS_MSEC)), round(capActual.get(CAP_PROP_POS_MSEC)));
             }
-#endif
         }
     }
 
