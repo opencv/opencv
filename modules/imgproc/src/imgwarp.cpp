@@ -3735,9 +3735,9 @@ Enhancements and updates by Shuaikai Shi, 2024:
 - Added the following macro definitions:
   - WARP_POLAR_EXP: Enables exponential sampling along the radial direction.
   - WARP_POLAR_SQRT: Supports radial square root sampling (similar to WARP_POLAR_LOG).
-  - WARP_POLAR_SQUARE: Performs radial square sampling, compensating for shrinking 
+  - WARP_POLAR_SQUARE: Performs radial square sampling, compensating for shrinking
     sectors to preserve edge details.
-These updates extend the functionality of polar transformations, 
+These updates extend the functionality of polar transformations,
 making them more robust and versatile for diverse image processing tasks.
 ****************************************************************************************/
 void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
@@ -3785,13 +3785,13 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                 bufRhos[rho] = (float)(std::log(rho * Kmag+1.0)/std::log( Kmag*dsize.width+1)*maxRadius);
         }
         else if (semiSqrt)
-        {   
+        {
             double Kmag = std::sqrt(maxRadius)/ dsize.width;
             for (rho = 0; rho < dsize.width; rho++)
                 bufRhos[rho] = (float)(std::pow(rho * Kmag,2));
         }
         else if (semiSquare)
-        {   
+        {
             double Kmag =std::pow(maxRadius,2) / dsize.width;
             for (rho = 0; rho < dsize.width; rho++)
                 bufRhos[rho] = (float)(std::sqrt(rho * Kmag));
@@ -3870,19 +3870,19 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                 log(bufp, bufp);
             }
             if (semiExp)
-            { 
+            {
                 bufp=bufp/maxRadius;
                 bufp=bufp*std::log( Kmag*dsize.width+1);
                 exp(bufp,bufp);
                 bufp -= 1.f;
             }
             if (semiSqrt)
-            {   
+            {
                 sqrt(bufp, bufp);
             }
             if (semiSquare)
-            {   
-                cv::pow(bufp,2,bufp); 
+            {
+                cv::pow(bufp,2,bufp);
             }
             for (x = 0; x < dsize.width; x++)
             {
