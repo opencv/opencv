@@ -119,8 +119,8 @@ inline int meanStdDev_8UC4(const uchar* src_data, size_t src_step, int width, in
                 vec_sqsum = __riscv_vwmaccu_vv_u64m8_tumu(vmask, vec_sqsum, vec_pixel, vec_pixel, vl);
                 nz += __riscv_vcpop_m_b8(vmask, vl);
             }
-            nz /= 4;
         }
+        nz /= 4;
     } else {
         for (int i = 0; i < height; i++) {
             const uchar*  src_row = src_data + i * src_step;
