@@ -3727,6 +3727,19 @@ cvConvertMaps( const CvArr* arr1, const CvArr* arr2, CvArr* dstarr1, CvArr* dsta
 
 /****************************************************************************************
 PkLab.net 2018 based on cv::linearPolar from OpenCV by J.L. Blanco, Apr 2009
+
+Enhancements and updates by Shuaikai Shi, 2024:
+- Introduced new radial non-uniform sampling methods.
+- Resolved edge information loss and omissions in cart2pol transformations,
+  improving accuracy for image boundaries.
+- Added the following macro definitions:
+  - WARP_POLAR_EXP: Enables exponential sampling along the radial direction.
+  - WARP_POLAR_SQRT: Supports radial square root sampling (similar to WARP_POLAR_LOG).
+  - WARP_POLAR_SQUARE: Performs radial square sampling, compensating for shrinking 
+    sectors to preserve edge details.
+
+These updates extend the functionality of polar transformations, 
+making them more robust and versatile for diverse image processing tasks.
 ****************************************************************************************/
 void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                    Point2f center, double maxRadius, int flags)
