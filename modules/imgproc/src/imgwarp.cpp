@@ -3747,6 +3747,9 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
     mapx.create(dsize, CV_32F);
     mapy.create(dsize, CV_32F);
     bool semiLog = (flags & WARP_POLAR_LOG) != 0;
+    bool semiExp = (flags & WARP_POLAR_EXP) != 0;
+    bool semiSqrt = (flags & WARP_POLAR_SQRT) != 0;
+    bool semiSquare = (flags & WARP_POLAR_SQUARE) != 0;
 
     if (!(flags & cv::WARP_INVERSE_MAP))
     {
@@ -3762,7 +3765,24 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
             double Kmag = std::log(maxRadius) / dsize.width;
             for (rho = 0; rho < dsize.width; rho++)
                 bufRhos[rho] = (float)(std::exp(rho * Kmag) - 1.0);
-
+        }
+        else if (semiExp)
+        {
+            double Kmag = std::pow(1.01,maxRadius) / dsize.width;
+            for (rho = 0; rho < dsize.width; rho++)
+                bufRhos[rho] = (float)(std::log(rho * Kmag+1.0)/std::log( Kmag*dsize.width+1)*maxRadius);
+        }
+        else if (semiSqrt)
+        {   
+            double Kmag = std::sqrt(maxRadius)/ dsize.width;
+            for (rho = 0; rho < dsize.width; rho++)
+                bufRhos[rho] = (float)(std::pow(rho * Kmag,2));
+        }
+        else if (semiSquare)
+        {   
+            double Kmag =std::pow(maxRadius,2) / dsize.width;
+            for (rho = 0; rho < dsize.width; rho++)
+                bufRhos[rho] = (float)(std::sqrt(rho * Kmag));
         }
         else
         {
@@ -3802,6 +3822,12 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         double Kmag;
         if (semiLog)
             Kmag = std::log(maxRadius) / ssize.width;
+        else if (semiExp)
+            Kmag = std::pow(1.01,maxRadius) / dsize.width;
+        else if (semiSqrt)
+            Kmag = std::sqrt(maxRadius)/ dsize.width;
+        else if (semiSquare)
+            Kmag = std::pow(maxRadius,2) / dsize.width;
         else
             Kmag = maxRadius / ssize.width;
 
@@ -3830,6 +3856,21 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
             {
                 bufp += 1.f;
                 log(bufp, bufp);
+            }
+            if (semiExp)
+            { 
+                bufp=bufp/maxRadius;
+                bufp=bufp*std::log( Kmag*dsize.width+1);
+                exp(bufp,bufp);
+                bufp -= 1.f;
+            }
+            if (semiSqrt)
+            {   
+                sqrt(bufp, bufp);
+            }
+            if (semiSquare)
+            {   
+                cv::pow(bufp,2,bufp); 
             }
 
             for (x = 0; x < dsize.width; x++)
