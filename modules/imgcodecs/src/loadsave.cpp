@@ -776,7 +776,8 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
 
         if (current >= start)
         {
-            animation.durations.push_back(decoder->animation().durations[decoder->animation().durations.size() - 1]);
+            int duration = decoder->animation().durations.size() > 0 ? decoder->animation().durations.back() : 1000;
+            animation.durations.push_back(duration);
             animation.frames.push_back(mat);
         }
 
