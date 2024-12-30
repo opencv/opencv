@@ -34,3 +34,13 @@ Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/
 * [Follow OpenCV on Mastodon](http://mastodon.social/@opencv) in the Fediverse
 * [Follow OpenCV on Twitter](https://twitter.com/opencvlive)
 * [OpenCV.ai](https://opencv.ai): Computer Vision and AI development services from the OpenCV team.
+
+## 如何運行 OpenCV 範例程式碼
+1. 安裝必要的Library：
+pip install opencv-python
+2. 運行以下 Python 範例：
+```python
+import cv2
+img = cv2.imread('example.jpg')
+cv2.imshow('Example Image', img)
+cv2.waitKey(0)
