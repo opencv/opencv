@@ -51,7 +51,7 @@ def get_ndk_version(ndk_path):
     props_path = path.join(ndk_path, "source.properties")
     with open(props_path, "rt") as f:
         data = f.read()
-        version = re.search(r'Pkg\.BaseRevision\W+=\W+(\d+\.\d+\.\d+)', data).group(1)
+        version = re.search(r'Pkg\.Revision\W+=\W+(\d+\.\d+\.\d+)', data).group(1)
         return version.strip()
 
 
