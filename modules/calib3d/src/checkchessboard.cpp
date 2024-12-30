@@ -40,8 +40,6 @@
  //M*/
 
 #include "precomp.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
-#include "calib3d_c_api.h"
 
 #include <vector>
 #include <algorithm>
@@ -149,18 +147,6 @@ static bool checkQuads(vector<pair<float, int> > & quads, const cv::Size & size)
         }
     }
     return false;
-}
-
-// does a fast check if a chessboard is in the input image. This is a workaround to
-// a problem of cvFindChessboardCorners being slow on images with no chessboard
-// - src: input image
-// - size: chessboard size
-// Returns 1 if a chessboard can be in this image and findChessboardCorners should be called,
-// 0 if there is no chessboard, -1 in case of error
-int cvCheckChessboard(IplImage* src, CvSize size)
-{
-    cv::Mat img = cv::cvarrToMat(src);
-    return (int)cv::checkChessboard(img, size);
 }
 
 bool cv::checkChessboard(InputArray _img, Size size)

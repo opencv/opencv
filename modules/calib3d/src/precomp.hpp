@@ -137,6 +137,23 @@ static inline bool haveCollinearPoints( const Mat& m, int count )
     return false;
 }
 
+void findExtrinsicCameraParams2( const Mat& objectPoints,
+                  const Mat& imagePoints, const Mat& A,
+                  const Mat& distCoeffs, Mat& rvec, Mat& tvec,
+                  int useExtrinsicGuess );
+
+void projectPoints( InputArray objectPoints,
+                    InputArray rvec, InputArray tvec,
+                    InputArray cameraMatrix, InputArray distCoeffs,
+                    OutputArray imagePoints, OutputArray dpdr,
+                    OutputArray dpdt, OutputArray dpdf=noArray(),
+                    OutputArray dpdc=noArray(), OutputArray dpdk=noArray(),
+                    OutputArray dpdo=noArray(), double aspectRatio=0.);
+
+void getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs,
+              InputArray R, InputArray newCameraMatrix, Size imgSize,
+              Rect_<double>& inner, Rect_<double>& outer );
+
 } // namespace cv
 
 int checkChessboardBinary(const cv::Mat & img, const cv::Size & size);

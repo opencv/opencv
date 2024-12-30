@@ -1274,8 +1274,8 @@ public:
                         #endif
                         for( ; x1 < bcols; x1++ )
                         {
-                            int sx = cvRound(sX[x1]*INTER_TAB_SIZE);
-                            int sy = cvRound(sY[x1]*INTER_TAB_SIZE);
+                            int sx = cvRound(sX[x1]*static_cast<float>(INTER_TAB_SIZE));
+                            int sy = cvRound(sY[x1]*static_cast<float>(INTER_TAB_SIZE));
                             int v = (sy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (sx & (INTER_TAB_SIZE-1));
                             XY[x1*2] = saturate_cast<short>(sx >> INTER_BITS);
                             XY[x1*2+1] = saturate_cast<short>(sy >> INTER_BITS);
@@ -1314,8 +1314,8 @@ public:
 
                         for( ; x1 < bcols; x1++ )
                         {
-                            int sx = cvRound(sXY[x1*2]*INTER_TAB_SIZE);
-                            int sy = cvRound(sXY[x1*2+1]*INTER_TAB_SIZE);
+                            int sx = cvRound(sXY[x1*2]*static_cast<float>(INTER_TAB_SIZE));
+                            int sy = cvRound(sXY[x1*2+1]*static_cast<float>(INTER_TAB_SIZE));
                             int v = (sy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (sx & (INTER_TAB_SIZE-1));
                             XY[x1*2] = saturate_cast<short>(sx >> INTER_BITS);
                             XY[x1*2+1] = saturate_cast<short>(sy >> INTER_BITS);
@@ -1991,7 +1991,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
 #endif
 
-    const float scale = 1.f/INTER_TAB_SIZE;
+    const float scale = 1.f/static_cast<float>(INTER_TAB_SIZE);
     int x, y;
     for( y = 0; y < size.height; y++ )
     {
@@ -2071,8 +2071,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                     #endif
                     for( ; x < size.width; x++ )
                     {
-                        int ix = saturate_cast<int>(src1f[x]*INTER_TAB_SIZE);
-                        int iy = saturate_cast<int>(src2f[x]*INTER_TAB_SIZE);
+                        int ix = saturate_cast<int>(src1f[x]*static_cast<float>(INTER_TAB_SIZE));
+                        int iy = saturate_cast<int>(src2f[x]*static_cast<float>(INTER_TAB_SIZE));
                         dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
                         dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
                         dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
@@ -2117,8 +2117,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 #endif
                 for( ; x < size.width; x++ )
                 {
-                    int ix = saturate_cast<int>(src1f[x*2]*INTER_TAB_SIZE);
-                    int iy = saturate_cast<int>(src1f[x*2+1]*INTER_TAB_SIZE);
+                    int ix = saturate_cast<int>(src1f[x*2]*static_cast<float>(INTER_TAB_SIZE));
+                    int iy = saturate_cast<int>(src1f[x*2+1]*static_cast<float>(INTER_TAB_SIZE));
                     dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
                     dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
                     dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
@@ -2703,38 +2703,29 @@ void warpAffineBlocklineNN(int *adelta, int *bdelta, short* xy, int X0, int Y0, 
 {
     CALL_HAL(warpAffineBlocklineNN, cv_hal_warpAffineBlocklineNN, adelta, bdelta, xy, X0, Y0, bw);
 
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
+    constexpr int AB_BITS = MAX(10, static_cast<int>(INTER_BITS));
     int x1 = 0;
-    #if CV_TRY_SSE4_1
-    bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
-    if( useSSE4_1 )
-        opt_SSE4_1::WarpAffineInvoker_Blockline_SSE41(adelta, bdelta, xy, X0, Y0, bw);
-    else
-    #endif
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     {
-        #if CV_SIMD128
+        const v_int32 v_X0 = vx_setall_s32(X0);
+        const v_int32 v_Y0 = vx_setall_s32(Y0);
+        const int step = VTraits<v_int16>::vlanes();
+        for (; x1 <= bw - step; x1 += step)
         {
-            v_int32x4 v_X0 = v_setall_s32(X0), v_Y0 = v_setall_s32(Y0);
-            int span = VTraits<v_uint16x8>::vlanes();
-            for( ; x1 <= bw - span; x1 += span )
-            {
-                v_int16x8 v_dst[2];
-                #define CV_CONVERT_MAP(ptr,offset,shift) v_pack(v_shr<AB_BITS>(v_add(shift,v_load(ptr + offset))),\
-                                                                v_shr<AB_BITS>(v_add(shift,v_load(ptr + offset + 4))))
-                v_dst[0] = CV_CONVERT_MAP(adelta, x1, v_X0);
-                v_dst[1] = CV_CONVERT_MAP(bdelta, x1, v_Y0);
-                #undef CV_CONVERT_MAP
-                v_store_interleave(xy + (x1 << 1), v_dst[0], v_dst[1]);
-            }
+            v_int16 v_X = v_pack(v_shr<AB_BITS>(v_add(v_X0, vx_load(adelta + x1))),
+                                 v_shr<AB_BITS>(v_add(v_X0, vx_load(adelta + x1 + step / 2))));
+            v_int16 v_Y = v_pack(v_shr<AB_BITS>(v_add(v_Y0, vx_load(bdelta + x1))),
+                                 v_shr<AB_BITS>(v_add(v_Y0, vx_load(bdelta + x1 + step / 2))));
+            v_store_interleave(xy + 2 * x1, v_X, v_Y);
         }
-        #endif
-        for( ; x1 < bw; x1++ )
-        {
-            int X = (X0 + adelta[x1]) >> AB_BITS;
-            int Y = (Y0 + bdelta[x1]) >> AB_BITS;
-            xy[x1*2] = saturate_cast<short>(X);
-            xy[x1*2+1] = saturate_cast<short>(Y);
-        }
+    }
+#endif
+    for (; x1 < bw; x1++)
+    {
+        const int X = (X0 + adelta[x1]) >> AB_BITS;
+        const int Y = (Y0 + bdelta[x1]) >> AB_BITS;
+        xy[x1 * 2] = saturate_cast<short>(X);
+        xy[x1 * 2 + 1] = saturate_cast<short>(Y);
     }
 }
 
@@ -3152,7 +3143,7 @@ void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alph
     for( ; x1 < bw; x1++ )
     {
         double W = W0 + M[6]*x1;
-        W = W ? INTER_TAB_SIZE/W : 0;
+        W = W ? static_cast<double>(INTER_TAB_SIZE)/W : 0;
         double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
         double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
         int X = saturate_cast<int>(fX);
