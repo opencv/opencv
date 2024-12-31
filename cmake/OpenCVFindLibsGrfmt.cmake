@@ -226,6 +226,17 @@ if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)
 set(WEBP_VERSION "decoder: ${WEBP_DECODER_ABI_VERSION}, encoder: ${WEBP_ENCODER_ABI_VERSION}, demux: ${WEBP_DEMUX_ABI_VERSION}")
 endif()
 
+# --- libjxl (optional) ---
+if(WITH_JPEGXL)
+  ocv_clear_vars(HAVE_JPEGXL)
+  ocv_clear_internal_cache_vars(JPEGXL_INCLUDE_PATHS JPEGXL_LIBRARIES JPEGXL_VERSION)
+  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVFindJPEGXL.cmake")
+  if(JPEGXL_FOUND)
+    set(HAVE_JPEGXL YES)
+    message(STATUS "Found system JPEG-XL: ver ${JPEGXL_VERSION}")
+  endif()
+endif()
+
 # --- libopenjp2 (optional, check before libjasper) ---
 if(WITH_OPENJPEG)
   if(BUILD_OPENJPEG)
