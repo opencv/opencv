@@ -310,11 +310,12 @@ Following formats can be read by OpenCV without help of any third-party library:
 | [JPEG2000 with OpenJPEG](https://en.wikipedia.org/wiki/OpenJPEG) | `WITH_OPENJPEG` | _ON_ | `BUILD_OPENJPEG` |
 | [JPEG2000 with JasPer](https://en.wikipedia.org/wiki/JasPer) | `WITH_JASPER` | _ON_ (see note) | `BUILD_JASPER` |
 | [EXR](https://en.wikipedia.org/wiki/OpenEXR) | `WITH_OPENEXR` | _ON_ | `BUILD_OPENEXR` |
+| [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL) | `WITH_JPEGXL` | _ON_ | Not supported. (see note) |
 
 All libraries required to read images in these formats are included into OpenCV and will be built automatically if not found at the configuration stage. Corresponding `BUILD_*` options will force building and using own libraries, they are enabled by default on some platforms, e.g. Windows.
 
 @note OpenJPEG have higher priority than JasPer which is deprecated. In order to use JasPer, OpenJPEG must be disabled.
-
+@note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported.
 
 ### GDAL integration
 
