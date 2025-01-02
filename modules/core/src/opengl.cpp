@@ -1790,12 +1790,6 @@ Context& initializeContextFromGL()
                 context = clCreateContext(props, 1, &devices[devUsed], NULL, NULL, &status);
 #endif
 
-          // query device
-        device = NULL;
-        status = clGetGLContextInfoKHR(properties, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, sizeof(cl_device_id), (void*)&device, NULL);
-        if (status != CL_SUCCESS)
-            continue;
-
         if (status != CL_SUCCESS)
             CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't create context for OpenGL interop: %d", status));
         else
