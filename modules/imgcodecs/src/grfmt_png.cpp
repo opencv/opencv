@@ -487,7 +487,7 @@ bool  PngDecoder::readData( Mat& img )
             else if (id == id_fdAT && m_is_fcTL_loaded)
             {
                 m_is_IDAT_loaded = true;
-                png_save_uint_32(&chunk.p[4], chunk.p.size() - 16);
+                png_save_uint_32(&chunk.p[4], static_cast<uint32_t>(chunk.p.size() - 16));
                 memcpy(&chunk.p[8], "IDAT", 4);
                 png_process_data(png_ptr, info_ptr, &chunk.p[4], chunk.p.size() - 4);
             }
