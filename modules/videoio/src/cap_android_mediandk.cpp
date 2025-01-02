@@ -21,9 +21,19 @@
 
 #define INPUT_TIMEOUT_MS 2000
 
+#define COLOR_FormatUnknown -1
 #define COLOR_FormatYUV420Planar 19
 #define COLOR_FormatYUV420SemiPlanar 21
 #define COLOR_FormatSurface 0x7f000789 //See https://developer.android.com/reference/android/media/MediaCodecInfo.CodecCapabilities for codes
+
+#define FOURCC_BGR CV_FOURCC_MACRO('B','G','R','3')
+#define FOURCC_RGB CV_FOURCC_MACRO('R','G','B','3')
+#define FOURCC_BGRA CV_FOURCC_MACRO('B','G','R','4')
+#define FOURCC_RGBA CV_FOURCC_MACRO('R','G','B','4')
+#define FOURCC_GRAY CV_FOURCC_MACRO('G','R','E','Y')
+#define FOURCC_NV12 CV_FOURCC_MACRO('N','V','1','2')
+#define FOURCC_YV12 CV_FOURCC_MACRO('Y','V','1','2')
+#define FOURCC_UNKNOWN  0xFFFFFFFF
 
 using namespace cv;
 
@@ -51,9 +61,9 @@ class AndroidMediaNdkCapture : public IVideoCapture
 public:
     AndroidMediaNdkCapture():
         sawInputEOS(false), sawOutputEOS(false),
-        frameStride(0), frameWidth(0), frameHeight(0), colorFormat(0),
-        videoWidth(0), videoHeight(0),
-        videoFrameCount(0),
+        frameStride(0), frameWidth(0), frameHeight(0),
+        colorFormat(COLOR_FormatUnknown), fourCC(FOURCC_BGR),
+        videoWidth(0), videoHeight(0), videoFrameCount(0),
         videoRotation(0), videoRotationCode(-1),
         videoOrientationAuto(false) {}
 
@@ -65,6 +75,7 @@ public:
     int32_t frameWidth;
     int32_t frameHeight;
     int32_t colorFormat;
+    uint32_t fourCC;
     int32_t videoWidth;
     int32_t videoHeight;
     float videoFrameRate;
@@ -73,7 +84,6 @@ public:
     int32_t videoRotationCode;
     bool videoOrientationAuto;
     std::vector<uint8_t> buffer;
-    Mat frame;
 
     ~AndroidMediaNdkCapture() { cleanUp(); }
 
@@ -157,23 +167,51 @@ public:
             return false;
         }
 
-        Mat yuv(frameHeight + frameHeight/2, frameStride, CV_8UC1, buffer.data());
+        ColorConversionCodes ccCode;
+        const Mat yuv(frameHeight + frameHeight/2,
+                      frameWidth, CV_8UC1, buffer.data(), frameStride);
 
         if (colorFormat == COLOR_FormatYUV420Planar) {
-            cv::cvtColor(yuv, frame, cv::COLOR_YUV2BGR_YV12);
+            switch(fourCC)
+            {
+                case     FOURCC_BGR: ccCode = COLOR_YUV2BGR_YV12;   break;
+                case     FOURCC_RGB: ccCode = COLOR_YUV2RGB_YV12;   break;
+                case    FOURCC_BGRA: ccCode = COLOR_YUV2BGRA_YV12;  break;
+                case    FOURCC_RGBA: ccCode = COLOR_YUV2RGBA_YV12;  break;
+                case    FOURCC_GRAY: ccCode = COLOR_YUV2GRAY_YV12;  break;
+                case    FOURCC_YV12: break;
+                case FOURCC_UNKNOWN: fourCC = FOURCC_YV12;          break;
+                            default: LOGE("Unexpected FOURCC value: %d", fourCC);
+                                     return false;
+            }
         } else if (colorFormat == COLOR_FormatYUV420SemiPlanar) {
-            cv::cvtColor(yuv, frame, cv::COLOR_YUV2BGR_NV21);
+            // Attention: COLOR_FormatYUV420SemiPlanar seems to correspond to NV12.
+            //            This is different from the Camera2 interface, where NV21
+            //            is used in this situation.
+            switch(fourCC)
+            {
+                case     FOURCC_BGR: ccCode = COLOR_YUV2BGR_NV12;   break;
+                case     FOURCC_RGB: ccCode = COLOR_YUV2RGB_NV12;   break;
+                case    FOURCC_BGRA: ccCode = COLOR_YUV2BGRA_NV12;  break;
+                case    FOURCC_RGBA: ccCode = COLOR_YUV2RGBA_NV12;  break;
+                case    FOURCC_GRAY: ccCode = COLOR_YUV2GRAY_NV12;  break;
+                case    FOURCC_NV12: break;
+                case FOURCC_UNKNOWN: fourCC = FOURCC_NV12;          break;
+                            default: LOGE("Unexpected FOURCC value: %d", fourCC);
+                                     return false;
+            }
         } else {
             LOGE("Unsupported video format: %d", colorFormat);
             return false;
         }
 
-        Mat croppedFrame = frame(Rect(0, 0, videoWidth, videoHeight));
-        out.assign(croppedFrame);
+        if (fourCC == FOURCC_YV12 || fourCC == FOURCC_NV12)
+            yuv.copyTo(out);
+        else
+            cvtColor(yuv, out, ccCode);
 
-        if (videoOrientationAuto && -1 != videoRotationCode) {
-            cv::rotate(out, out, videoRotationCode);
-        }
+        if (videoOrientationAuto && -1 != videoRotationCode)
+            rotate(out, out, videoRotationCode);
 
         return true;
     }
@@ -194,8 +232,11 @@ public:
             case CAP_PROP_FRAME_COUNT: return videoFrameCount;
             case CAP_PROP_ORIENTATION_META: return videoRotation;
             case CAP_PROP_ORIENTATION_AUTO: return videoOrientationAuto ? 1 : 0;
+            case CAP_PROP_FOURCC: return fourCC;
         }
-        return 0;
+
+        // unknown parameter or value not available
+        return -1;
     }
 
     bool setProperty(int property_id, double value) CV_OVERRIDE
@@ -205,6 +246,31 @@ public:
             case CAP_PROP_ORIENTATION_AUTO: {
                 videoOrientationAuto = value != 0 ? true : false;
                 return true;
+            }
+            case CAP_PROP_FOURCC: {
+                uint32_t newFourCC = cvRound(value);
+                switch (newFourCC)
+                {
+                    case FOURCC_BGR:
+                    case FOURCC_RGB:
+                    case FOURCC_BGRA:
+                    case FOURCC_RGBA:
+                    case FOURCC_GRAY:
+                        fourCC = newFourCC;
+                        return true;
+                    case FOURCC_YV12:
+                        if (colorFormat != COLOR_FormatYUV420SemiPlanar) {
+                            fourCC = (colorFormat == COLOR_FormatUnknown) ? FOURCC_UNKNOWN : FOURCC_YV12;
+                            return true;
+                        }
+                        break;
+                    case FOURCC_NV12:
+                        if (colorFormat != COLOR_FormatYUV420Planar) {
+                            fourCC = (colorFormat == COLOR_FormatUnknown) ? FOURCC_UNKNOWN : FOURCC_NV12;
+                            return true;
+                        }
+                        break;
+                }
             }
         }
 
@@ -668,7 +734,7 @@ const AndroidMediaNdkVideoWriter::FourCCInfo AndroidMediaNdkVideoWriter::FOURCC_
 
 /****************** Implementation of interface functions ********************/
 
-Ptr<IVideoCapture> cv::createAndroidCapture_file(const std::string &filename) {
+Ptr<IVideoCapture> cv::createAndroidCapture_file(const std::string &filename, const VideoCaptureParameters& ) {
     Ptr<AndroidMediaNdkCapture> res = makePtr<AndroidMediaNdkCapture>();
     if (res && res->initCapture(filename.c_str()))
         return res;

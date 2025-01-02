@@ -52,6 +52,10 @@ if(POLICY CMP0056)
   cmake_policy(SET CMP0056 NEW)  # try_compile(): link flags
 endif()
 
+if(POLICY CMP0057)
+  cmake_policy(SET CMP0057 NEW)  # CMake 3.3: if(IN_LIST) support
+endif()
+
 if(POLICY CMP0066)
   cmake_policy(SET CMP0066 NEW)  # CMake 3.7: try_compile(): use per-config flags, like CMAKE_CXX_FLAGS_RELEASE
 endif()
@@ -216,7 +220,7 @@ OCV_OPTION(WITH_1394 "Include IEEE1394 support" OFF
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/visionOS/Mac)" ON
   VISIBLE_IF APPLE
   VERIFY HAVE_AVFOUNDATION)
-OCV_OPTION(WITH_AVIF "Enable AVIF support" OFF
+OCV_OPTION(WITH_AVIF "Enable AVIF support" ON
   VERIFY HAVE_AVIF)
 OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VISIBLE_IF IOS
@@ -229,6 +233,8 @@ OCV_OPTION(WITH_NDSRVP "Use Andes RVP extension" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF RISCV)
 OCV_OPTION(WITH_HAL_RVV "Use HAL RVV optimizations" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF RISCV)
+OCV_OPTION(WITH_FASTCV "Use Qualcomm FastCV acceleration library for ARM platform" OFF
+  VISIBLE_IF ((ARM OR AARCH64) AND (ANDROID OR (UNIX AND NOT APPLE AND NOT IOS AND NOT XROS))))
 OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
   VISIBLE_IF ANDROID
   VERIFY HAVE_CPUFEATURES)
@@ -300,6 +306,9 @@ OCV_OPTION(WITH_OPENJPEG "Include JPEG2K support (OpenJPEG)" ON
 OCV_OPTION(WITH_JPEG "Include JPEG support" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_JPEG)
+OCV_OPTION(WITH_JPEGXL "Include JPEG XL support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_JPEGXL)
 OCV_OPTION(WITH_WEBP "Include WebP support" ON
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_WEBP)
@@ -428,6 +437,9 @@ OCV_OPTION(WITH_ITT "Include Intel ITT support" ON
 OCV_OPTION(WITH_PROTOBUF "Enable libprotobuf" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_PROTOBUF)
+OCV_OPTION(WITH_IMGCODEC_GIF "Include GIF support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_IMGCODEC_GIF)
 OCV_OPTION(WITH_IMGCODEC_HDR "Include HDR support" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_IMGCODEC_HDR)
@@ -534,6 +546,7 @@ OCV_OPTION(ENABLE_CONFIG_VERIFICATION "Fail build if actual configuration doesn'
 OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" ON)
 OCV_OPTION(OPENCV_DISABLE_FILESYSTEM_SUPPORT "Disable filesystem support" OFF)
 OCV_OPTION(OPENCV_DISABLE_THREAD_SUPPORT "Build the library without multi-threaded code." OFF)
+OCV_OPTION(OPENCV_DISABLE_ENV_SUPPORT "Disable environment variables access (getenv)" (CMAKE_SYSTEM_NAME MATCHES "Windows(CE|Phone|Store)"))
 OCV_OPTION(OPENCV_SEMIHOSTING         "Build the library for semihosting target (Arm). See https://developer.arm.com/documentation/100863/latest." OFF)
 OCV_OPTION(ENABLE_CUDA_FIRST_CLASS_LANGUAGE "Enable CUDA as a first class language, if enabled dependant projects will need to use CMake >= 3.18" OFF
   VISIBLE_IF (WITH_CUDA AND NOT CMAKE_VERSION VERSION_LESS 3.18)
@@ -932,7 +945,14 @@ if(HAVE_OPENVX)
   endif()
 endif()
 
-if(WITH_KLEIDICV)
+if(HAVE_FASTCV)
+  ocv_debug_message(STATUS "Enable FastCV acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";fastcv;")
+    set(OpenCV_HAL "fastcv;${OpenCV_HAL}")
+  endif()
+endif()
+
+if(HAVE_KLEIDICV)
   ocv_debug_message(STATUS "Enable KleidiCV acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";kleidicv;")
     set(OpenCV_HAL "kleidicv;${OpenCV_HAL}")
@@ -968,6 +988,14 @@ foreach(hal ${OpenCV_HAL})
       list(APPEND OpenCV_USED_HAL "carotene (ver ${CAROTENE_HAL_VERSION})")
     else()
       message(STATUS "Carotene: NEON is not available, disabling carotene...")
+    endif()
+  elseif(hal STREQUAL "fastcv")
+    if((ARM OR AARCH64) AND (ANDROID OR (UNIX AND NOT APPLE AND NOT IOS AND NOT XROS)))
+      add_subdirectory(3rdparty/fastcv)
+      ocv_hal_register(FASTCV_HAL_LIBRARIES FASTCV_HAL_HEADERS FASTCV_HAL_INCLUDE_DIRS)
+      list(APPEND OpenCV_USED_HAL "fastcv (ver ${FASTCV_HAL_VERSION})")
+    else()
+      message(STATUS "FastCV: fastcv is not available, disabling fastcv...")
     endif()
   elseif(hal STREQUAL "kleidicv")
     add_subdirectory(3rdparty/kleidicv)
@@ -1518,6 +1546,10 @@ if(WITH_TIFF OR HAVE_TIFF)
   status("    TIFF:" TIFF_FOUND THEN "${TIFF_LIBRARY} (ver ${TIFF_VERSION} / ${TIFF_VERSION_STRING})" ELSE "build (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
 endif()
 
+if(WITH_JPEGXL OR HAVE_JPEGXL)
+  status("    JPEG XL:" JPEGXL_FOUND THEN "${JPEGXL_LIBRARY} (ver ${JPEGXL_VERSION})" ELSE "NO")
+endif()
+
 if(HAVE_OPENJPEG)
   status("    JPEG 2000:" OpenJPEG_FOUND
       THEN "OpenJPEG (ver ${OPENJPEG_VERSION})"
@@ -1543,6 +1575,10 @@ endif()
 
 if(WITH_GDCM OR HAVE_GDCM)
   status("    GDCM:" HAVE_GDCM THEN "YES (${GDCM_VERSION})" ELSE "NO")
+endif()
+
+if(WITH_IMGCODEC_GIF OR DEFINED HAVE_IMGCODEC_GIF)
+  status("    GIF:" HAVE_IMGCODEC_GIF THEN "YES" ELSE "NO")
 endif()
 
 if(WITH_IMGCODEC_HDR OR DEFINED HAVE_IMGCODEC_HDR)
@@ -1797,6 +1833,9 @@ endif()
 
 if(WITH_OPENVX OR HAVE_OPENVX)
   status("    OpenVX:"     HAVE_OPENVX      THEN "YES (${OPENVX_LIBRARIES})" ELSE "NO")
+endif()
+if(WITH_FASTCV OR HAVE_FASTCV)
+  status("    FastCV:"     HAVE_FASTCV      THEN "YES (${FASTCV_LIBRARY})" ELSE "NO")
 endif()
 
 status("    Custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")

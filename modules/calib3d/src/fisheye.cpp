@@ -589,8 +589,8 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
 
             if( m1type == CV_16SC2 )
             {
-                int iu = cv::saturate_cast<int>(u*cv::INTER_TAB_SIZE);
-                int iv = cv::saturate_cast<int>(v*cv::INTER_TAB_SIZE);
+                int iu = cv::saturate_cast<int>(u*static_cast<double>(cv::INTER_TAB_SIZE));
+                int iv = cv::saturate_cast<int>(v*static_cast<double>(cv::INTER_TAB_SIZE));
                 m1[j*2+0] = (short)(iu >> cv::INTER_BITS);
                 m1[j*2+1] = (short)(iv >> cv::INTER_BITS);
                 m2[j] = (ushort)((iv & (cv::INTER_TAB_SIZE-1))*cv::INTER_TAB_SIZE + (iu & (cv::INTER_TAB_SIZE-1)));
@@ -697,90 +697,6 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
                 0,        0,       1)).convertTo(P, P.empty() ? K.type() : P.type());
 }
 
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::fisheye::stereoRectify
-
-void cv::fisheye::stereoRectify( InputArray K1, InputArray D1, InputArray K2, InputArray D2, const Size& imageSize,
-        InputArray _R, InputArray _tvec, OutputArray R1, OutputArray R2, OutputArray P1, OutputArray P2,
-        OutputArray Q, int flags, const Size& newImageSize, double balance, double fov_scale)
-{
-    CV_INSTRUMENT_REGION();
-
-    CV_Assert((_R.size() == Size(3, 3) || _R.total() * _R.channels() == 3) && (_R.depth() == CV_32F || _R.depth() == CV_64F));
-    CV_Assert(_tvec.total() * _tvec.channels() == 3 && (_tvec.depth() == CV_32F || _tvec.depth() == CV_64F));
-
-
-    cv::Mat aaa = _tvec.getMat().reshape(3, 1);
-
-    Vec3d rvec; // Rodrigues vector
-    if (_R.size() == Size(3, 3))
-    {
-        cv::Matx33d rmat;
-        _R.getMat().convertTo(rmat, CV_64F);
-        rvec = Affine3d(rmat).rvec();
-    }
-    else if (_R.total() * _R.channels() == 3)
-        _R.getMat().convertTo(rvec, CV_64F);
-
-    Vec3d tvec;
-    _tvec.getMat().convertTo(tvec, CV_64F);
-
-    // rectification algorithm
-    rvec *= -0.5;              // get average rotation
-
-    Matx33d r_r;
-    Rodrigues(rvec, r_r);  // rotate cameras to same orientation by averaging
-
-    Vec3d t = r_r * tvec;
-    Vec3d uu(t[0] > 0 ? 1 : -1, 0, 0);
-
-    // calculate global Z rotation
-    Vec3d ww = t.cross(uu);
-    double nw = norm(ww);
-    if (nw > 0.0)
-        ww *= acos(fabs(t[0])/cv::norm(t))/nw;
-
-    Matx33d wr;
-    Rodrigues(ww, wr);
-
-    // apply to both views
-    Matx33d ri1 = wr * r_r.t();
-    Mat(ri1, false).convertTo(R1, R1.empty() ? CV_64F : R1.type());
-    Matx33d ri2 = wr * r_r;
-    Mat(ri2, false).convertTo(R2, R2.empty() ? CV_64F : R2.type());
-    Vec3d tnew = ri2 * tvec;
-
-    // calculate projection/camera matrices. these contain the relevant rectified image internal params (fx, fy=fx, cx, cy)
-    Matx33d newK1, newK2;
-    estimateNewCameraMatrixForUndistortRectify(K1, D1, imageSize, R1, newK1, balance, newImageSize, fov_scale);
-    estimateNewCameraMatrixForUndistortRectify(K2, D2, imageSize, R2, newK2, balance, newImageSize, fov_scale);
-
-    double fc_new = std::min(newK1(1,1), newK2(1,1));
-    Point2d cc_new[2] = { Vec2d(newK1(0, 2), newK1(1, 2)), Vec2d(newK2(0, 2), newK2(1, 2)) };
-
-    // Vertical focal length must be the same for both images to keep the epipolar constraint use fy for fx also.
-    // For simplicity, set the principal points for both cameras to be the average
-    // of the two principal points (either one of or both x- and y- coordinates)
-    if( flags & cv::CALIB_ZERO_DISPARITY )
-        cc_new[0] = cc_new[1] = (cc_new[0] + cc_new[1]) * 0.5;
-    else
-        cc_new[0].y = cc_new[1].y = (cc_new[0].y + cc_new[1].y)*0.5;
-
-    Mat(Matx34d(fc_new, 0, cc_new[0].x, 0,
-                0, fc_new, cc_new[0].y, 0,
-                0,      0,           1, 0), false).convertTo(P1, P1.empty() ? CV_64F : P1.type());
-
-    Mat(Matx34d(fc_new, 0, cc_new[1].x, tnew[0]*fc_new, // baseline * focal length;,
-                0, fc_new, cc_new[1].y,              0,
-                0,      0,           1,              0), false).convertTo(P2, P2.empty() ? CV_64F : P2.type());
-
-    if (Q.needed())
-        Mat(Matx44d(1, 0, 0,           -cc_new[0].x,
-                    0, 1, 0,           -cc_new[0].y,
-                    0, 0, 0,            fc_new,
-                    0, 0, -1./tnew[0], (cc_new[0].x - cc_new[1].x)/tnew[0]), false).convertTo(Q, Q.empty() ? CV_64F : Q.depth());
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::fisheye::calibrate

@@ -7,6 +7,7 @@
 
 #include "test_precomp.hpp"
 
+#include <chrono>
 #include <stdexcept>
 #include <ade/util/iota_range.hpp>
 #include "logger.hpp"
