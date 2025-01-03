@@ -767,6 +767,13 @@ elseif(WIN32)
   endif()
 endif()
 
+if(DEFINED OPENCV_ALGO_HINT_DEFAULT)
+  if(NOT OPENCV_ALGO_HINT_DEFAULT STREQUAL "ALGO_HINT_ACCURATE" AND
+     NOT OPENCV_ALGO_HINT_DEFAULT STREQUAL "ALGO_HINT_APPROX")
+    message(FATAL_ERROR "OPENCV_ALGO_HINT_DEFAULT should be one of ALGO_HINT_ACCURATE or ALGO_HINT_APPROX.")
+  endif()
+endif()
+
 include(cmake/OpenCVPCHSupport.cmake)
 include(cmake/OpenCVModule.cmake)
 
