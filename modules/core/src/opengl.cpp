@@ -1776,10 +1776,8 @@ Context& initializeContextFromGL()
                   CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
                   CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
 #  endif
-#endif
                   0
                 };
-
 #  if defined(OPENCV_ENABLE_EGL) && defined(OPENCV_ENABLE_GLX) //GLX fallback
                 if(properties[4] == CL_EGL_DISPLAY_KHR && properties[3] == (cl_context_properties)EGL_NO_CONTEXT) {
                     properties[3] = (cl_context_properties)glXGetCurrentContext();
@@ -1794,6 +1792,7 @@ Context& initializeContextFromGL()
             CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't create context for OpenGL interop: %d", status));
         else
             break;
+        }
     }
 
 
