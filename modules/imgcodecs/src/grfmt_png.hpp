@@ -49,11 +49,12 @@
 #include "bitstrm.hpp"
 #include <png.h>
 #include <zlib.h>
+#include <vector>
 
 namespace cv
 {
 
-struct Chunk { unsigned char* p; uint32_t size; };
+struct Chunk { std::vector<unsigned char> p; };
 struct OP { unsigned char* p; uint32_t size; int x, y, w, h, valid, filters; };
 
 typedef struct {
@@ -101,8 +102,7 @@ public:
     unsigned int getDelayDen() const { return _delayDen; }
     void setDelayDen(unsigned int delayDen);
 
-    unsigned char** getRows() const { return _rows; }
-    void setRows(unsigned char** rows);
+    std::vector<png_bytep>& getRows() { return _rows; }
 
 private:
     unsigned char* _pixels;
@@ -115,7 +115,7 @@ private:
     int _transparencySize;
     unsigned int _delayNum;
     unsigned int _delayDen;
-    unsigned char** _rows;
+    std::vector<png_bytep> _rows;
 };
 
 class PngDecoder CV_FINAL : public BaseImageDecoder
@@ -136,7 +136,7 @@ protected:
     static void row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass);
     bool processing_start(void* frame_ptr, const Mat& img);
     bool processing_finish();
-    void compose_frame(unsigned char** rows_dst, unsigned char** rows_src, unsigned char bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, int channels);
+    void compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, int channels);
     size_t read_from_io(void* _Buffer, size_t _ElementSize, size_t _ElementCount);
     uint32_t  read_chunk(Chunk& chunk);
 
