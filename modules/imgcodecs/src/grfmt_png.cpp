@@ -152,8 +152,7 @@ bool APNGFrame::setMat(const cv::Mat& src, unsigned delayNum, unsigned delayDen)
 
     if (!src.empty())
     {
-        png_uint_32 rowbytes = src.cols * src.channels();
-
+        png_uint_32 rowbytes = src.depth() == CV_16U ? src.cols * src.channels() * 2 : src.cols * src.channels();
         _width = src.cols;
         _height = src.rows;
         _colorType = src.channels() == 1 ? PNG_COLOR_TYPE_GRAY : src.channels() == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA;
@@ -389,7 +388,7 @@ bool  PngDecoder::readData( Mat& img )
 {
     if (m_frame_count > 1)
     {
-        Mat mat_cur = Mat(img.rows, img.cols, m_type);
+        Mat mat_cur = Mat::zeros(img.rows, img.cols, m_type);
         uint32_t id = 0;
         uint32_t j = 0;
         uint32_t imagesize = m_width * m_height * mat_cur.channels();
@@ -437,7 +436,7 @@ bool  PngDecoder::readData( Mat& img )
                     if (dop == 2)
                         memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
 
-                    compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur.channels());
+                    compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
                     if (delay_den < 1000)
                         delay_num = cvRound(1000.0 / delay_den);
                     m_animation.durations.push_back(delay_num);
@@ -495,7 +494,7 @@ bool  PngDecoder::readData( Mat& img )
             {
                 if (processing_finish())
                 {
-                    compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur.channels());
+                    compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
                     if (delay_den < 1000)
                         delay_num = cvRound(1000.0 / delay_den);
                     m_animation.durations.push_back(delay_num);
@@ -606,41 +605,81 @@ bool PngDecoder::nextPage() {
     return ++m_frame_no < (int)m_frame_count;
 }
 
-void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char _bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, int channels)
+void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char _bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, Mat& img)
 {
-    uint32_t  i, j;
-    int u, v, al;
+    int channels = img.channels();
+    if (img.depth() == CV_16U)
+        cv::parallel_for_(cv::Range(0, h), [&](const cv::Range& range) {
+        for (int j = range.start; j < range.end; j++) {
+            uint16_t* sp = reinterpret_cast<uint16_t*>(rows_src[j]);
+            uint16_t* dp = reinterpret_cast<uint16_t*>(rows_dst[j + y]) + x * channels;
 
-    for (j = 0; j < h; j++)
-    {
-        unsigned char* sp = rows_src[j];
-        unsigned char* dp = rows_dst[j + y] + x * channels;
-
-        if (_bop == 0)
-            memcpy(dp, sp, w * channels);
-        else
-            for (i = 0; i < w; i++, sp += 4, dp += 4)
-            {
-                if (sp[3] == 255)
-                    memcpy(dp, sp, 4);
-                else
-                    if (sp[3] != 0)
-                    {
-                        if (dp[3] != 0)
-                        {
-                            u = sp[3] * 255;
-                            v = (255 - sp[3]) * dp[3];
-                            al = u + v;
-                            dp[0] = (sp[0] * u + dp[0] * v) / al;
-                            dp[1] = (sp[1] * u + dp[1] * v) / al;
-                            dp[2] = (sp[2] * u + dp[2] * v) / al;
-                            dp[3] = al / 255;
-                        }
-                        else
-                            memcpy(dp, sp, 4);
-                    }
+            if (_bop == 0) {
+                // Overwrite mode: copy source row directly to destination
+                memcpy(dp, sp, w * channels * sizeof(uint16_t));
             }
-    }
+            else {
+                // Blending mode
+                for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
+                    if (sp[3] == 65535) { // Fully opaque in 16-bit (max value)
+                        memcpy(dp, sp, channels * sizeof(uint16_t));
+                    }
+                    else if (sp[3] != 0) { // Partially transparent
+                        if (dp[3] != 0) { // Both source and destination have alpha
+                            uint32_t u = sp[3] * 65535; // 16-bit max
+                            uint32_t v = (65535 - sp[3]) * dp[3];
+                            uint32_t al = u + v;
+                            dp[0] = static_cast<uint16_t>((sp[0] * u + dp[0] * v) / al); // Red
+                            dp[1] = static_cast<uint16_t>((sp[1] * u + dp[1] * v) / al); // Green
+                            dp[2] = static_cast<uint16_t>((sp[2] * u + dp[2] * v) / al); // Blue
+                            dp[3] = static_cast<uint16_t>(al / 65535);                  // Alpha
+                        }
+                        else {
+                            // If destination alpha is 0, copy source pixel
+                            memcpy(dp, sp, channels * sizeof(uint16_t));
+                        }
+                    }
+                }
+            }
+        }
+            });
+    else
+        cv::parallel_for_(cv::Range(0, h), [&](const cv::Range& range) {
+        for (int j = range.start; j < range.end; j++) {
+            unsigned char* sp = rows_src[j];
+            unsigned char* dp = rows_dst[j + y] + x * channels;
+
+            if (_bop == 0) {
+                // Overwrite mode: copy source row directly to destination
+                memcpy(dp, sp, w * channels);
+            }
+            else {
+                // Blending mode
+                for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
+                    if (sp[3] == 255) {
+                        // Fully opaque: copy source pixel directly
+                        memcpy(dp, sp, channels);
+                    }
+                    else if (sp[3] != 0) {
+                        // Alpha blending
+                        if (dp[3] != 0) {
+                            int u = sp[3] * 255;
+                            int v = (255 - sp[3]) * dp[3];
+                            int al = u + v;
+                            dp[0] = (sp[0] * u + dp[0] * v) / al; // Red
+                            dp[1] = (sp[1] * u + dp[1] * v) / al; // Green
+                            dp[2] = (sp[2] * u + dp[2] * v) / al; // Blue
+                            dp[3] = al / 255;                     // Alpha
+                        }
+                        else {
+                            // If destination alpha is 0, copy source pixel
+                            memcpy(dp, sp, channels);
+                        }
+                    }
+                }
+            }
+        }
+            });
 }
 
 size_t PngDecoder::read_from_io(void* _Buffer, size_t _ElementSize, size_t _ElementCount)
@@ -742,7 +781,6 @@ bool PngDecoder::processing_finish()
 void PngDecoder::info_fn(png_structp png_ptr, png_infop info_ptr)
 {
     png_set_expand(png_ptr);
-    png_set_strip_16(png_ptr);
     (void)png_set_interlace_handling(png_ptr);
     png_read_update_info(png_ptr, info_ptr);
 }
@@ -1352,21 +1390,6 @@ void PngEncoder::deflateRectFin(unsigned char* zbuf, uint32_t* zsize, int bpp, i
     deflateEnd(&fin_zstream);
 }
 
-bool PngEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
-{
-    CV_Assert(img_vec[0].depth() == CV_8U);
-    CV_LOG_INFO(NULL, "Multi page image will be written as animation with 1 second frame duration.");
-
-    Animation animation;
-    animation.frames = img_vec;
-
-    for (size_t i = 0; i < animation.frames.size(); i++)
-    {
-        animation.durations.push_back(1000);
-    }
-    return writeanimation(animation, params);
-}
-
 bool PngEncoder::writeanimation(const Animation& animation, const std::vector<int>& params)
 {
     int compression_level = 6;
@@ -1433,6 +1456,8 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         if (animation.frames[i].channels() == 3)
             cvtColor(animation.frames[i], tmpframes[i], COLOR_BGR2RGB);
 
+        if (tmpframes[i].depth() != CV_8U)
+            tmpframes[i].convertTo(tmpframes[i], CV_8U, 1.0 / 255);
         apngFrame.setMat(tmpframes[i], animation.durations[i]);
 
         if (i > 0 && !getRect(width, height, frames.back().getPixels(), apngFrame.getPixels(), over1.data(), bpp, rowbytes, 0, 0, 0, 3))
