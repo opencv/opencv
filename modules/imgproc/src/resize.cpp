@@ -88,11 +88,12 @@ static void hlineResize(ET* src, int cn, int *ofst, FT* m, FT* dst, int dst_min,
         ET* src_ofst = src + cn*ofst[i];
         for (int j = 0; j < cn; j++, dst++)
         {
-            *dst = (mulall || !m[0].isZero()) ? m[0] * src_ofst[j] : FT::zero();
-            for (int k = 1; k < n; k++)
+            FT result = FT::zero();  // Use a high precision type (FT) for the result
+            for (int k = 0; k < n; k++)
             {
-                *dst = *dst + ((mulall || !m[k].isZero()) ? m[k] * src_ofst[j+k*cn] : FT::zero());
+                result = result + ((mulall || !m[k].isZero()) ? m[k] * src_ofst[j+k*cn] : FT::zero());
             }
+            *dst = (ET) std::min(std::max((int)(static_cast<float>(result) + 0.5f), 0), 255);
         }
     }
     // Avoid reading a potentially unset ofst, leading to a random memory read.
@@ -1977,14 +1978,14 @@ struct VResizeLinear<uchar, int, short, FixedPtCast<int, uchar, INTER_RESIZE_COE
         #if CV_ENABLE_UNROLLED
         for( ; x <= width - 4; x += 4 )
         {
-            dst[x+0] = uchar(( ((b0 * (S0[x+0] >> 4)) >> 16) + ((b1 * (S1[x+0] >> 4)) >> 16) + 2)>>2);
-            dst[x+1] = uchar(( ((b0 * (S0[x+1] >> 4)) >> 16) + ((b1 * (S1[x+1] >> 4)) >> 16) + 2)>>2);
-            dst[x+2] = uchar(( ((b0 * (S0[x+2] >> 4)) >> 16) + ((b1 * (S1[x+2] >> 4)) >> 16) + 2)>>2);
-            dst[x+3] = uchar(( ((b0 * (S0[x+3] >> 4)) >> 16) + ((b1 * (S1[x+3] >> 4)) >> 16) + 2)>>2);
+            dst[x+0] = uchar((( ((b0 * (S0[x+0] >> 4)) + (b1 * (S1[x+0] >> 4))) >> 16) + 2)>>2);
+            dst[x+1] = uchar((( ((b0 * (S0[x+1] >> 4)) + (b1 * (S1[x+1] >> 4))) >> 16) + 2)>>2);
+            dst[x+2] = uchar((( ((b0 * (S0[x+2] >> 4)) + (b1 * (S1[x+2] >> 4))) >> 16) + 2)>>2);
+            dst[x+3] = uchar((( ((b0 * (S0[x+3] >> 4)) + (b1 * (S1[x+3] >> 4))) >> 16) + 2)>>2);
         }
         #endif
         for( ; x < width; x++ )
-            dst[x] = uchar(( ((b0 * (S0[x] >> 4)) >> 16) + ((b1 * (S1[x] >> 4)) >> 16) + 2)>>2);
+            dst[x] = uchar((( ((b0 * (S0[x] >> 4)) + (b1 * (S1[x] >> 4))) >> 16) + 2)>>2);
     }
 };
 
