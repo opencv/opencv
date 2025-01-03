@@ -151,4 +151,74 @@ TEST(videoio_gstreamer, gray16_writing)
     EXPECT_EQ(0, remove(temp_file.c_str()));
 }
 
+TEST(videoio_gstreamer, timeout_property)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+
+    VideoCapture cap;
+    cap.open("videotestsrc ! appsink", CAP_GSTREAMER);
+    ASSERT_TRUE(cap.isOpened());
+    const double default_timeout = 30000; // 30 seconds
+    const double open_timeout = 5678; // 3 seconds
+    const double read_timeout = 1234; // 1 second
+    EXPECT_NEAR(default_timeout, cap.get(CAP_PROP_OPEN_TIMEOUT_MSEC), 1e-3);
+    const double current_read_timeout = cap.get(CAP_PROP_READ_TIMEOUT_MSEC);
+    const bool read_timeout_supported = current_read_timeout > 0.0;
+    if (read_timeout_supported)
+    {
+        EXPECT_NEAR(default_timeout, current_read_timeout, 1e-3);
+    }
+    cap.set(CAP_PROP_OPEN_TIMEOUT_MSEC, open_timeout);
+    EXPECT_NEAR(open_timeout, cap.get(CAP_PROP_OPEN_TIMEOUT_MSEC), 1e-3);
+    if (read_timeout_supported)
+    {
+        cap.set(CAP_PROP_READ_TIMEOUT_MSEC, read_timeout);
+        EXPECT_NEAR(read_timeout, cap.get(CAP_PROP_READ_TIMEOUT_MSEC), 1e-3);
+    }
+}
+
+//==============================================================================
+// Seeking test with manual GStreamer pipeline
+typedef testing::TestWithParam<string> gstreamer_bunny;
+
+TEST_P(gstreamer_bunny, manual_seek)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+
+    const string video_file = BunnyParameters::getFilename("." + GetParam());
+    const string pipeline = "filesrc location=" + video_file + " ! decodebin ! videoconvert ! video/x-raw, format=BGR ! appsink drop=1";
+    const double target_pos = 3000.0;
+    const double ms_per_frame = 1000.0 / BunnyParameters::getFps();
+    VideoCapture cap;
+    cap.open(pipeline, CAP_GSTREAMER);
+    ASSERT_TRUE(cap.isOpened());
+    Mat img;
+    for (int i = 0; i < 10; i++)
+    {
+        cap >> img;
+    }
+    EXPECT_FALSE(img.empty());
+    cap.set(CAP_PROP_POS_MSEC, target_pos);
+    cap >> img;
+    EXPECT_FALSE(img.empty());
+    double actual_pos = cap.get(CAP_PROP_POS_MSEC);
+    EXPECT_NEAR(actual_pos, target_pos, ms_per_frame);
+}
+
+static const string bunny_params[] = {
+    // string("wmv"),
+    string("mov"),
+    string("mp4"),
+    // string("mpg"),
+    string("avi"),
+    // string("h264"),
+    // string("h265"),
+    string("mjpg.avi")
+};
+
+INSTANTIATE_TEST_CASE_P(videoio, gstreamer_bunny, testing::ValuesIn(bunny_params));
+
+
 }} // namespace

@@ -41,9 +41,11 @@
 //M*/
 
 #include "precomp.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 #include <stdarg.h>
 #include <ctype.h>
+
 
 /****************************************************************************************\
                                 COPYRIGHT NOTICE
@@ -95,11 +97,11 @@ const int QFLOAT_TYPE = DataDepth<Qfloat>::value;
 static void checkParamGrid(const ParamGrid& pg)
 {
     if( pg.minVal > pg.maxVal )
-        CV_Error( CV_StsBadArg, "Lower bound of the grid must be less then the upper one" );
+        CV_Error( cv::Error::StsBadArg, "Lower bound of the grid must be less then the upper one" );
     if( pg.minVal < DBL_EPSILON )
-        CV_Error( CV_StsBadArg, "Lower bound of the grid must be positive" );
+        CV_Error( cv::Error::StsBadArg, "Lower bound of the grid must be positive" );
     if( pg.logStep < 1. + FLT_EPSILON )
-        CV_Error( CV_StsBadArg, "Grid step must greater than 1" );
+        CV_Error( cv::Error::StsBadArg, "Grid step must greater than 1" );
 }
 
 // SVM training parameters
@@ -325,7 +327,7 @@ public:
             calc_intersec(vcount, var_count, vecs, another, results);
             break;
         default:
-            CV_Error(CV_StsBadArg, "Unknown kernel type");
+            CV_Error(cv::Error::StsBadArg, "Unknown kernel type");
         }
         const Qfloat max_val = (Qfloat)(FLT_MAX*1e-3);
         for( int j = 0; j < vcount; j++ )
@@ -410,7 +412,7 @@ ParamGrid SVM::getDefaultGrid( int param_id )
         grid.logStep = 7; // total iterations = 3
     }
     else
-        cvError( CV_StsBadArg, "SVM::getDefaultGrid", "Invalid type of parameter "
+        cvError( cv::Error::StsBadArg, "SVM::getDefaultGrid", "Invalid type of parameter "
                 "(use one of SVM::C, SVM::GAMMA et al.)", __FILE__, __LINE__ );
     return grid;
 }
@@ -638,18 +640,12 @@ public:
         #undef is_lower_bound
         #define is_lower_bound(i) (alpha_status[i] < 0)
 
-        #undef is_free
-        #define is_free(i) (alpha_status[i] == 0)
-
         #undef get_C
         #define get_C(i) (C[y[i]>0])
 
         #undef update_alpha_status
         #define update_alpha_status(i) \
             alpha_status[i] = (schar)(alpha[i] >= get_C(i) ? 1 : alpha[i] <= 0 ? -1 : 0)
-
-        #undef reconstruct_gradient
-        #define reconstruct_gradient() /* empty for now */
 
         bool solve_generic( SolutionInfo& si )
         {
@@ -1303,12 +1299,12 @@ public:
             if( kernelType != LINEAR && kernelType != POLY &&
                 kernelType != SIGMOID && kernelType != RBF &&
                 kernelType != INTER && kernelType != CHI2)
-                CV_Error( CV_StsBadArg, "Unknown/unsupported kernel type" );
+                CV_Error( cv::Error::StsBadArg, "Unknown/unsupported kernel type" );
 
             if( kernelType == LINEAR )
                 params.gamma = 1;
             else if( params.gamma <= 0 )
-                CV_Error( CV_StsOutOfRange, "gamma parameter of the kernel must be positive" );
+                CV_Error( cv::Error::StsOutOfRange, "gamma parameter of the kernel must be positive" );
 
             if( kernelType != SIGMOID && kernelType != POLY )
                 params.coef0 = 0;
@@ -1316,14 +1312,14 @@ public:
             if( kernelType != POLY )
                 params.degree = 0;
             else if( params.degree <= 0 )
-                CV_Error( CV_StsOutOfRange, "The kernel parameter <degree> must be positive" );
+                CV_Error( cv::Error::StsOutOfRange, "The kernel parameter <degree> must be positive" );
 
             kernel = makePtr<SVMKernelImpl>(params);
         }
         else
         {
             if (!kernel)
-                CV_Error( CV_StsBadArg, "Custom kernel is not set" );
+                CV_Error( cv::Error::StsBadArg, "Custom kernel is not set" );
         }
 
         int svmType = params.svmType;
@@ -1331,22 +1327,22 @@ public:
         if( svmType != C_SVC && svmType != NU_SVC &&
             svmType != ONE_CLASS && svmType != EPS_SVR &&
             svmType != NU_SVR )
-            CV_Error( CV_StsBadArg, "Unknown/unsupported SVM type" );
+            CV_Error( cv::Error::StsBadArg, "Unknown/unsupported SVM type" );
 
         if( svmType == ONE_CLASS || svmType == NU_SVC )
             params.C = 0;
         else if( params.C <= 0 )
-            CV_Error( CV_StsOutOfRange, "The parameter C must be positive" );
+            CV_Error( cv::Error::StsOutOfRange, "The parameter C must be positive" );
 
         if( svmType == C_SVC || svmType == EPS_SVR )
             params.nu = 0;
         else if( params.nu <= 0 || params.nu >= 1 )
-            CV_Error( CV_StsOutOfRange, "The parameter nu must be between 0 and 1" );
+            CV_Error( cv::Error::StsOutOfRange, "The parameter nu must be between 0 and 1" );
 
         if( svmType != EPS_SVR )
             params.p = 0;
         else if( params.p <= 0 )
-            CV_Error( CV_StsOutOfRange, "The parameter p must be positive" );
+            CV_Error( cv::Error::StsOutOfRange, "The parameter p must be positive" );
 
         if( svmType != C_SVC )
             params.classWeights.release();
@@ -1437,7 +1433,7 @@ public:
                 if( (cw.cols != 1 && cw.rows != 1) ||
                     (int)cw.total() != class_count ||
                     (cw.type() != CV_32F && cw.type() != CV_64F) )
-                    CV_Error( CV_StsBadArg, "params.class_weights must be 1d floating-point vector "
+                    CV_Error( cv::Error::StsBadArg, "params.class_weights must be 1d floating-point vector "
                         "containing as many elements as the number of classes" );
 
                 cw.convertTo(class_weights, CV_64F, params.C);
@@ -1452,7 +1448,7 @@ public:
 
             //check that while cross-validation there were the samples from all the classes
             if ((int)class_ranges.size() < class_count + 1)
-                CV_Error( CV_StsBadArg, "While cross-validation one or more of the classes have "
+                CV_Error( cv::Error::StsBadArg, "While cross-validation one or more of the classes have "
                 "been fell out of the sample. Try to reduce <Params::k_fold>" );
 
             if( svmType == NU_SVC )
@@ -1464,9 +1460,10 @@ public:
                     for( j = i+1; j< class_count; j++ )
                     {
                         int cj = class_ranges[j+1] - class_ranges[j];
-                        if( nu*(ci + cj)*0.5 > std::min( ci, cj ) )
-                            // TODO: add some diagnostic
+                        if( nu*(ci + cj)*0.5 > std::min( ci, cj ) ) {
+                            CV_LOG_ERROR(NULL, "Training cases incompatible with nu parameter—try a lower value.");
                             return false;
+                        }
                     }
                 }
             }
@@ -1626,7 +1623,7 @@ public:
         {
             responses = data->getTrainNormCatResponses();
             if( responses.empty() )
-                CV_Error(CV_StsBadArg, "in the case of classification problem the responses must be categorical; "
+                CV_Error(cv::Error::StsBadArg, "in the case of classification problem the responses must be categorical; "
                                        "either specify varType when creating TrainData, or pass integer responses");
             class_labels = data->getClassLabels();
         }
@@ -1975,7 +1972,7 @@ public:
                 }
             }
             else
-                CV_Error( CV_StsBadArg, "INTERNAL ERROR: Unknown SVM type, "
+                CV_Error( cv::Error::StsBadArg, "INTERNAL ERROR: Unknown SVM type, "
                          "the SVM structure is probably corrupted" );
         }
 
@@ -2118,7 +2115,7 @@ public:
         int class_count = !class_labels.empty() ? (int)class_labels.total() :
                           params.svmType == ONE_CLASS ? 1 : 0;
         if( !isTrained() )
-            CV_Error( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
+            CV_Error( cv::Error::StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
         writeFormat(fs);
         write_params( fs );
@@ -2203,11 +2200,11 @@ public:
             svm_type_str == "NU_SVR" ? NU_SVR : -1;
 
         if( svmType < 0 )
-            CV_Error( CV_StsParseError, "Missing or invalid SVM type" );
+            CV_Error( cv::Error::StsParseError, "Missing or invalid SVM type" );
 
         FileNode kernel_node = fn["kernel"];
         if( kernel_node.empty() )
-            CV_Error( CV_StsParseError, "SVM kernel tag is not found" );
+            CV_Error( cv::Error::StsParseError, "SVM kernel tag is not found" );
 
         String kernel_type_str = (String)kernel_node["type"];
         int kernelType =
@@ -2219,7 +2216,7 @@ public:
             kernel_type_str == "INTER" ? INTER : CUSTOM;
 
         if( kernelType == CUSTOM )
-            CV_Error( CV_StsParseError, "Invalid SVM kernel type (or custom kernel)" );
+            CV_Error( cv::Error::StsParseError, "Invalid SVM kernel type (or custom kernel)" );
 
         _params.svmType = svmType;
         _params.kernelType = kernelType;
@@ -2259,7 +2256,7 @@ public:
         int class_count = (int)fn["class_count"];
 
         if( sv_total <= 0 || var_count <= 0 )
-            CV_Error( CV_StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
+            CV_Error( cv::Error::StsParseError, "SVM model data is invalid, check sv_count, var_* and class_count tags" );
 
         FileNode m = fn["class_labels"];
         if( !m.empty() )
@@ -2269,7 +2266,7 @@ public:
             m >> params.classWeights;
 
         if( class_count > 1 && (class_labels.empty() || (int)class_labels.total() != class_count))
-            CV_Error( CV_StsParseError, "Array of class labels is missing or invalid" );
+            CV_Error( cv::Error::StsParseError, "Array of class labels is missing or invalid" );
 
         // read support vectors
         FileNode sv_node = fn["support_vectors"];

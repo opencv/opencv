@@ -31,7 +31,7 @@
 #include <iostream>
 namespace cv
 {
-//! @addtogroup core
+//! @addtogroup core_quaternion
 //! @{
 
 //! Unit quaternion flag
@@ -77,9 +77,9 @@ public:
      * For intrinsic rotations in the order of X-Y-Z, the rotation matrix R can be calculated by:\f[R =X(\theta_1) Y(\theta_2) Z(\theta_3) \f]
      * For extrinsic rotations in the order of X-Y-Z, the rotation matrix R can be calculated by:\f[R =Z({\theta_3}) Y({\theta_2}) X({\theta_1})\f]
      * where
-     * \f[X({\theta})={\begin{bmatrix}1&0&0\\0&\cos {\theta_1} &-\sin {\theta_1} \\0&\sin {\theta_1} &\cos {\theta_1} \\\end{bmatrix}},
-     * Y({\theta})={\begin{bmatrix}\cos \theta_{2}&0&\sin \theta_{2}\\0&1 &0 \\\ -sin \theta_2& 0&\cos \theta_{2} \\\end{bmatrix}},
-     * Z({\theta})={\begin{bmatrix}\cos\theta_{3} &-\sin \theta_3&0\\\sin \theta_3 &\cos \theta_3 &0\\0&0&1\\\end{bmatrix}}.
+     * \f[X({\theta_1})={\begin{bmatrix}1&0&0\\0&\cos {\theta_1} &-\sin {\theta_1} \\0&\sin {\theta_1} &\cos {\theta_1} \\\end{bmatrix}},
+     * Y({\theta_2})={\begin{bmatrix}\cos \theta_{2}&0&\sin \theta_{2}\\0&1 &0 \\\ -sin \theta_2& 0&\cos \theta_{2} \\\end{bmatrix}},
+     * Z({\theta_3})={\begin{bmatrix}\cos\theta_{3} &-\sin \theta_3&0\\\sin \theta_3 &\cos \theta_3 &0\\0&0&1\\\end{bmatrix}}.
      * \f]
      *
      * The function is designed according to this set of conventions:

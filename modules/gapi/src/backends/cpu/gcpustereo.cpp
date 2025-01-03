@@ -63,9 +63,9 @@ GAPI_OCV_KERNEL_ST(GCPUStereo, cv::gapi::calib3d::GStereo, StereoSetup)
                 stereoSetup.stereoBM->compute(left, right, out_mat);
                 break;
             case cv::gapi::StereoOutputFormat::DISPARITY_FIXED16_11_5:
-                GAPI_Assert(false && "This case may be supported in future.");
+                GAPI_Error("This case may be supported in future.");
             default:
-                GAPI_Assert(false && "Unknown output format!");
+                GAPI_Error("Unknown output format!");
         }
     }
 };

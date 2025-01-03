@@ -1286,7 +1286,6 @@ inline int TEGRA_SEPFILTERFREE(cvhalFilter2D *context)
 #undef cv_hal_sepFilterFree
 #define cv_hal_sepFilterFree TEGRA_SEPFILTERFREE
 
-
 struct MorphCtx
 {
     int operation;
@@ -1296,13 +1295,13 @@ struct MorphCtx
     CAROTENE_NS::BORDER_MODE border;
     uchar borderValues[4];
 };
-inline int TEGRA_MORPHINIT(cvhalFilter2D **context, int operation, int src_type, int dst_type, int, int,
+inline int TEGRA_MORPHINIT(cvhalFilter2D **context, int operation, int src_type, int dst_type, int width, int height,
                            int kernel_type, uchar *kernel_data, size_t kernel_step, int kernel_width, int kernel_height, int anchor_x, int anchor_y,
                            int borderType, const double borderValue[4], int iterations, bool allowSubmatrix, bool allowInplace)
 {
     if(!context || !kernel_data || src_type != dst_type ||
        CV_MAT_DEPTH(src_type) != CV_8U || src_type < 0 || (src_type >> CV_CN_SHIFT) > 3 ||
-
+       width < kernel_width || height < kernel_height ||
        allowSubmatrix || allowInplace || iterations != 1 ||
        !CAROTENE_NS::isSupportedConfiguration())
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -1857,6 +1856,126 @@ TegraCvtColor_Invoker(bgrx2hsvf, bgrx2hsv, src_data + static_cast<size_t>(range.
 #define cv_hal_cvtTwoPlaneYUVtoBGREx TEGRA_CVT2PYUVTOBGR_EX
 #endif
 
+// The optimized branch was developed for old armv7 processors and leads to perf degradation on armv8
+#if defined(__ARM_ARCH) && (__ARM_ARCH == 7)
+inline CAROTENE_NS::BORDER_MODE borderCV2Carotene(int borderType)
+{
+    switch(borderType)
+    {
+    case CV_HAL_BORDER_CONSTANT:
+        return CAROTENE_NS::BORDER_MODE_CONSTANT;
+    case CV_HAL_BORDER_REPLICATE:
+        return CAROTENE_NS::BORDER_MODE_REPLICATE;
+    case CV_HAL_BORDER_REFLECT:
+        return CAROTENE_NS::BORDER_MODE_REFLECT;
+    case CV_HAL_BORDER_WRAP:
+        return CAROTENE_NS::BORDER_MODE_WRAP;
+    case CV_HAL_BORDER_REFLECT_101:
+        return CAROTENE_NS::BORDER_MODE_REFLECT101;
+    }
+
+    return CAROTENE_NS::BORDER_MODE_UNDEFINED;
+}
+
+inline int TEGRA_GaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                         int width, int height, int depth, int cn, size_t margin_left, size_t margin_top,
+                         size_t margin_right, size_t margin_bottom, size_t ksize, int border_type)
+{
+    CAROTENE_NS::Size2D sz(width, height);
+    CAROTENE_NS::BORDER_MODE border = borderCV2Carotene(border_type);
+    CAROTENE_NS::Margin mg(margin_left, margin_right, margin_top, margin_bottom);
+
+    if (ksize == 3)
+    {
+        if ((depth != CV_8U) || (cn != 1))
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        if (CAROTENE_NS::isGaussianBlur3x3MarginSupported(sz, border, mg))
+        {
+            CAROTENE_NS::gaussianBlur3x3Margin(sz, src_data, src_step, dst_data, dst_step,
+                                  border, 0, mg);
+            return CV_HAL_ERROR_OK;
+        }
+    }
+    else if (ksize == 5)
+    {
+        if (!CAROTENE_NS::isGaussianBlur5x5Supported(sz, cn, border))
+            return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+        if (depth == CV_8U)
+        {
+            CAROTENE_NS::gaussianBlur5x5(sz, cn, (uint8_t*)src_data, src_step,
+                                         (uint8_t*)dst_data, dst_step, border, 0, mg);
+            return CV_HAL_ERROR_OK;
+        }
+        else if (depth == CV_16U)
+        {
+            CAROTENE_NS::gaussianBlur5x5(sz, cn, (uint16_t*)src_data, src_step,
+                                         (uint16_t*)dst_data, dst_step, border, 0, mg);
+            return CV_HAL_ERROR_OK;
+        }
+        else if (depth == CV_16S)
+        {
+            CAROTENE_NS::gaussianBlur5x5(sz, cn, (int16_t*)src_data, src_step,
+                                         (int16_t*)dst_data, dst_step, border, 0, mg);
+           return CV_HAL_ERROR_OK;
+        }
+    }
+
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+
+#undef cv_hal_gaussianBlurBinomial
+#define cv_hal_gaussianBlurBinomial TEGRA_GaussianBlurBinomial
+
+#endif // __ARM_ARCH=7
+
 #endif // OPENCV_IMGPROC_HAL_INTERFACE_H
+
+// The optimized branch was developed for old armv7 processors
+#if defined(__ARM_ARCH) && (__ARM_ARCH == 7)
+inline int TEGRA_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_step,
+                       const short* prev_deriv_data, size_t prev_deriv_step,
+                       const uchar* next_data, size_t next_step,
+                       int width, int height, int cn,
+                       const float *prev_points, float *next_points, size_t point_count,
+                       uchar *status, float *err,
+                       const int win_width, const int win_height,
+                       int termination_count, double termination_epsilon,
+                       bool get_min_eigen_vals,
+                       float min_eigen_vals_threshold)
+{
+    if (!CAROTENE_NS::isSupportedConfiguration())
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    CAROTENE_NS::pyrLKOptFlowLevel(CAROTENE_NS::Size2D(width, height), cn,
+        prev_data, prev_data_step, prev_deriv_data, prev_deriv_step,
+        next_data, next_step,
+        point_count, prev_points, next_points,
+        status, err, CAROTENE_NS::Size2D(win_width, win_height),
+        termination_count, termination_epsilon,
+        get_min_eigen_vals, min_eigen_vals_threshold);
+    return CV_HAL_ERROR_OK;
+}
+
+#undef cv_hal_LKOpticalFlowLevel
+#define cv_hal_LKOpticalFlowLevel TEGRA_LKOpticalFlowLevel
+#endif // __ARM_ARCH=7
+
+#if 0 // OpenCV provides fater parallel implementation
+inline int TEGRA_ScharrDeriv(const uchar* src_data, size_t src_step,
+                      short* dst_data, size_t dst_step,
+                      int width, int height, int cn)
+{
+    if (!CAROTENE_NS::isSupportedConfiguration())
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    CAROTENE_NS::ScharrDeriv(CAROTENE_NS::Size2D(width, height), cn, src_data, src_step, dst_data, dst_step);
+    return CV_HAL_ERROR_OK;
+}
+
+#undef cv_hal_ScharrDeriv
+#define cv_hal_ScharrDeriv TEGRA_ScharrDeriv
+#endif
 
 #endif

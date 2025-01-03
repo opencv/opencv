@@ -73,7 +73,7 @@ Here's a function that will do this:
 @snippet samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp basic_method
 
 At first we make sure that the input images data is in unsigned char format. For this we use the
-@ref cv::CV_Assert function that throws an error when the expression inside it is false.
+@ref CV_Assert function (macro) that throws an error when the expression inside it is false.
 @snippet samples/cpp/tutorial_code/core/mat_mask_operations/mat_mask_operations.cpp 8_bit
 @end_toggle
 

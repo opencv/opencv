@@ -123,7 +123,7 @@ struct StereoSGBMParams
     int mode;
 };
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 #if CV_SIMD_WIDTH == 16
 static inline v_int16 vx_setseq_s16()
 { return v_int16(0, 1, 2, 3, 4, 5, 6, 7); }
@@ -136,10 +136,10 @@ static inline v_int16 vx_setseq_s16()
 #else
 struct vseq_s16
 {
-    short data[v_int16::nlanes];
+    short data[VTraits<v_int16>::max_nlanes];
     vseq_s16()
     {
-        for (int i = 0; i < v_int16::nlanes; i++)
+        for (int i = 0; i < VTraits<v_int16>::vlanes(); i++)
             data[i] = i;
     }
 };
@@ -153,8 +153,8 @@ static inline v_int16 vx_setseq_s16()
 static inline void min_pos(const v_int16& val, const v_int16& pos, short &min_val, short &min_pos)
 {
     min_val = v_reduce_min(val);
-    v_int16 v_mask = (vx_setall_s16(min_val) == val);
-    min_pos = v_reduce_min(((pos+vx_setseq_s16()) & v_mask) | (vx_setall_s16(SHRT_MAX) & ~v_mask));
+    v_int16 v_mask = (v_eq(vx_setall_s16(min_val), val));
+    min_pos = v_reduce_min(v_or(v_and(v_add(pos, vx_setseq_s16()), v_mask), v_and(vx_setall_s16(SHRT_MAX), v_not(v_mask))));
 }
 #endif
 
@@ -270,26 +270,26 @@ static void calcPixelCostBT( const Mat& img1, const Mat& img2, int y,
             int u1 = std::max(ul, ur); u1 = std::max(u1, u);
 
             int d = minD;
-        #if CV_SIMD
+        #if (CV_SIMD || CV_SIMD_SCALABLE)
             v_uint8 _u  = vx_setall_u8((uchar)u), _u0 = vx_setall_u8((uchar)u0);
             v_uint8 _u1 = vx_setall_u8((uchar)u1);
 
-            for( ; d <= maxD - 2*v_int16::nlanes; d += 2*v_int16::nlanes )
+            for( ; d <= maxD - 2*VTraits<v_int16>::vlanes(); d += 2*VTraits<v_int16>::vlanes() )
             {
                 v_uint8 _v  = vx_load(prow2  + width-x-1 + d);
                 v_uint8 _v0 = vx_load(buffer + width-x-1 + d);
                 v_uint8 _v1 = vx_load(buffer + width-x-1 + d + width2);
-                v_uint8 c0 = v_max(_u - _v1, _v0 - _u);
-                v_uint8 c1 = v_max(_v - _u1, _u0 - _v);
+                v_uint8 c0 = v_max(v_sub(_u, _v1), v_sub(_v0, _u));
+                v_uint8 c1 = v_max(v_sub(_v, _u1), v_sub(_u0, _v));
                 v_uint8 diff = v_min(c0, c1);
 
                 v_int16 _c0 = vx_load_aligned(cost + x*D + d);
-                v_int16 _c1 = vx_load_aligned(cost + x*D + d + v_int16::nlanes);
+                v_int16 _c1 = vx_load_aligned(cost + x*D + d + VTraits<v_int16>::vlanes());
 
                 v_uint16 diff1,diff2;
                 v_expand(diff,diff1,diff2);
-                v_store_aligned(cost + x*D + d,                   _c0 + v_reinterpret_as_s16(diff1 >> diff_scale));
-                v_store_aligned(cost + x*D + d + v_int16::nlanes, _c1 + v_reinterpret_as_s16(diff2 >> diff_scale));
+                v_store_aligned(cost + x*D + d,                   v_add(_c0, v_reinterpret_as_s16(v_shr(diff1, diff_scale))));
+                v_store_aligned(cost + x*D + d + VTraits<v_int16>::vlanes(), v_add(_c1, v_reinterpret_as_s16(v_shr(diff2, diff_scale))));
             }
         #endif
             for( ; d < maxD; d++ )
@@ -555,13 +555,13 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         calcPixelCostBT( img1, img2, k, minD, maxD, mem.pixDiff, mem.tempBuf, mem.getClipTab() );
 
                         memset(hsumAdd, 0, Da*sizeof(CostType));
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                         v_int16 h_scale = vx_setall_s16((short)SW2 + 1);
-                        for( d = 0; d < Da; d += v_int16::nlanes )
+                        for( d = 0; d < Da; d += VTraits<v_int16>::vlanes() )
                         {
-                            v_int16 v_hsumAdd = vx_load_aligned(mem.pixDiff + d) * h_scale;
+                            v_int16 v_hsumAdd = v_mul(vx_load_aligned(mem.pixDiff + d), h_scale);
                             for( x = Da; x <= SW2*Da; x += Da )
-                                v_hsumAdd += vx_load_aligned(mem.pixDiff + x + d);
+                                v_hsumAdd = v_add(v_hsumAdd, vx_load_aligned(mem.pixDiff + x + d));
                             v_store_aligned(hsumAdd + d, v_hsumAdd);
                         }
 #else
@@ -578,9 +578,9 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                             const CostType* hsumSub = mem.getHSumBuf(std::max(y - SH2 - 1, 0));
                             const CostType* Cprev =  mem.getCBuf(y - 1);
 
-#if CV_SIMD
-                            for (d = 0; d < Da; d += v_int16::nlanes)
-                                v_store_aligned(C + d, vx_load_aligned(Cprev + d) + vx_load_aligned(hsumAdd + d) - vx_load_aligned(hsumSub + d));
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                            for (d = 0; d < Da; d += VTraits<v_int16>::vlanes())
+                                v_store_aligned(C + d, v_sub(v_add(vx_load_aligned(Cprev + d), vx_load_aligned(hsumAdd + d)), vx_load_aligned(hsumSub + d)));
 #else
                             for (d = 0; d < D; d++)
                                 C[d] = (CostType)(Cprev[d] + hsumAdd[d] - hsumSub[d]);
@@ -590,12 +590,12 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                             {
                                 const CostType* pixAdd = mem.pixDiff + std::min(x + SW2*Da, (width1-1)*Da);
                                 const CostType* pixSub = mem.pixDiff + std::max(x - (SW2+1)*Da, 0);
-#if CV_SIMD
-                                for( d = 0; d < Da; d += v_int16::nlanes )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                                for( d = 0; d < Da; d += VTraits<v_int16>::vlanes() )
                                 {
-                                    v_int16 hv = vx_load_aligned(hsumAdd + x - Da + d) - vx_load_aligned(pixSub + d) + vx_load_aligned(pixAdd + d);
+                                    v_int16 hv = v_add(v_sub(vx_load_aligned(hsumAdd + x - Da + d), vx_load_aligned(pixSub + d)), vx_load_aligned(pixAdd + d));
                                     v_store_aligned(hsumAdd + x + d, hv);
-                                    v_store_aligned(C + x + d, vx_load_aligned(Cprev + x + d) - vx_load_aligned(hsumSub + x + d) + hv);
+                                    v_store_aligned(C + x + d, v_add(v_sub(vx_load_aligned(Cprev + x + d), vx_load_aligned(hsumSub + x + d)), hv));
                                 }
 #else
                                 for( d = 0; d < D; d++ )
@@ -608,10 +608,10 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         }
                         else
                         {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                             v_int16 v_scale = vx_setall_s16(k == 0 ? (short)SH2 + 1 : 1);
-                            for (d = 0; d < Da; d += v_int16::nlanes)
-                                v_store_aligned(C + d, vx_load_aligned(C + d) + vx_load_aligned(hsumAdd + d) * v_scale);
+                            for (d = 0; d < Da; d += VTraits<v_int16>::vlanes())
+                                v_store_aligned(C + d, v_add(vx_load_aligned(C + d), v_mul(vx_load_aligned(hsumAdd + d), v_scale)));
 #else
                             int scale = k == 0 ? SH2 + 1 : 1;
                             for (d = 0; d < D; d++)
@@ -622,12 +622,12 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                                 const CostType* pixAdd = mem.pixDiff + std::min(x + SW2*Da, (width1-1)*Da);
                                 const CostType* pixSub = mem.pixDiff + std::max(x - (SW2+1)*Da, 0);
 
-#if CV_SIMD
-                                for (d = 0; d < Da; d += v_int16::nlanes)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                                for (d = 0; d < Da; d += VTraits<v_int16>::vlanes())
                                 {
-                                    v_int16 hv = vx_load_aligned(hsumAdd + x - Da + d) + vx_load_aligned(pixAdd + d) - vx_load_aligned(pixSub + d);
+                                    v_int16 hv = v_sub(v_add(vx_load_aligned(hsumAdd + x - Da + d), vx_load_aligned(pixAdd + d)), vx_load_aligned(pixSub + d));
                                     v_store_aligned(hsumAdd + x + d, hv);
-                                    v_store_aligned(C + x + d, vx_load_aligned(C + x + d) + hv * v_scale);
+                                    v_store_aligned(C + x + d, v_add(vx_load_aligned(C + x + d), v_mul(hv, v_scale)));
                                 }
 #else
                                 for( d = 0; d < D; d++ )
@@ -646,9 +646,9 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         {
                             const CostType* hsumSub = mem.getHSumBuf(std::max(y - SH2 - 1, 0));
                             const CostType* Cprev = mem.getCBuf(y - 1);
-#if CV_SIMD
-                            for (x = 0; x < width1*Da; x += v_int16::nlanes)
-                                v_store_aligned(C + x, vx_load_aligned(Cprev + x) - vx_load_aligned(hsumSub + x) + vx_load_aligned(hsumAdd + x));
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                            for (x = 0; x < width1*Da; x += VTraits<v_int16>::vlanes())
+                                v_store_aligned(C + x, v_add(v_sub(vx_load_aligned(Cprev + x), vx_load_aligned(hsumSub + x)), vx_load_aligned(hsumAdd + x)));
 #else
                             for (x = 0; x < width1*Da; x++)
                                 C[x] = (CostType)(Cprev[x] + hsumAdd[x] - hsumSub[x]);
@@ -656,9 +656,9 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         }
                         else
                         {
-#if CV_SIMD
-                            for (x = 0; x < width1*Da; x += v_int16::nlanes)
-                                v_store_aligned(C + x, vx_load_aligned(C + x) + vx_load_aligned(hsumAdd + x));
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                            for (x = 0; x < width1*Da; x += VTraits<v_int16>::vlanes())
+                                v_store_aligned(C + x, v_add(vx_load_aligned(C + x), vx_load_aligned(hsumAdd + x)));
 #else
                             for (x = 0; x < width1*Da; x++)
                                 C[x] = (CostType)(C[x] + hsumAdd[x]);
@@ -714,7 +714,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
 
                 CostType* minL = mem.getMinLr(lrID, x);
                 d = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_int16 _P1 = vx_setall_s16((short)P1);
 
                 v_int16 _delta0 = vx_setall_s16((short)delta0);
@@ -726,31 +726,31 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                 v_int16 _minL2 = vx_setall_s16((short)MAX_COST);
                 v_int16 _minL3 = vx_setall_s16((short)MAX_COST);
 
-                for( ; d <= D - v_int16::nlanes; d += v_int16::nlanes )
+                for( ; d <= D - VTraits<v_int16>::vlanes(); d += VTraits<v_int16>::vlanes() )
                 {
                     v_int16 Cpd = vx_load_aligned(Cp + d);
                     v_int16 Spd = vx_load_aligned(Sp + d);
                     v_int16 L;
 
-                    L = v_min(v_min(v_min(vx_load_aligned(Lr_p0 + d), vx_load(Lr_p0 + d - 1) + _P1), vx_load(Lr_p0 + d + 1) + _P1), _delta0) - _delta0 + Cpd;
+                    L = v_add(v_sub(v_min(v_min(v_min(vx_load_aligned(Lr_p0 + d), v_add(vx_load(Lr_p0 + d - 1), _P1)), v_add(vx_load(Lr_p0 + d + 1), _P1)), _delta0), _delta0), Cpd);
                     v_store_aligned(Lr_p + d, L);
                     _minL0 = v_min(_minL0, L);
-                    Spd += L;
+                    Spd = v_add(Spd, L);
 
-                    L = v_min(v_min(v_min(vx_load_aligned(Lr_p1 + d), vx_load(Lr_p1 + d - 1) + _P1), vx_load(Lr_p1 + d + 1) + _P1), _delta1) - _delta1 + Cpd;
+                    L = v_add(v_sub(v_min(v_min(v_min(vx_load_aligned(Lr_p1 + d), v_add(vx_load(Lr_p1 + d - 1), _P1)), v_add(vx_load(Lr_p1 + d + 1), _P1)), _delta1), _delta1), Cpd);
                     v_store_aligned(Lr_p + d + Dlra, L);
                     _minL1 = v_min(_minL1, L);
-                    Spd += L;
+                    Spd = v_add(Spd, L);
 
-                    L = v_min(v_min(v_min(vx_load_aligned(Lr_p2 + d), vx_load(Lr_p2 + d - 1) + _P1), vx_load(Lr_p2 + d + 1) + _P1), _delta2) - _delta2 + Cpd;
+                    L = v_add(v_sub(v_min(v_min(v_min(vx_load_aligned(Lr_p2 + d), v_add(vx_load(Lr_p2 + d - 1), _P1)), v_add(vx_load(Lr_p2 + d + 1), _P1)), _delta2), _delta2), Cpd);
                     v_store_aligned(Lr_p + d + Dlra*2, L);
                     _minL2 = v_min(_minL2, L);
-                    Spd += L;
+                    Spd = v_add(Spd, L);
 
-                    L = v_min(v_min(v_min(vx_load_aligned(Lr_p3 + d), vx_load(Lr_p3 + d - 1) + _P1), vx_load(Lr_p3 + d + 1) + _P1), _delta3) - _delta3 + Cpd;
+                    L = v_add(v_sub(v_min(v_min(v_min(vx_load_aligned(Lr_p3 + d), v_add(vx_load(Lr_p3 + d - 1), _P1)), v_add(vx_load(Lr_p3 + d + 1), _P1)), _delta3), _delta3), Cpd);
                     v_store_aligned(Lr_p + d + Dlra*3, L);
                     _minL3 = v_min(_minL3, L);
-                    Spd += L;
+                    Spd = v_add(Spd, L);
 
                     v_store_aligned(Sp + d, Spd);
                 }
@@ -769,7 +769,7 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                 t0 = v_min(t0, t1);
                 t0 = v_min(t0, v_rotate_right<4>(t0));
 #if CV_SIMD_WIDTH == 32
-                CostType buf[v_int16::nlanes];
+                CostType buf[VTraits<v_int16>::max_nlanes];
                 v_store_low(buf, v_min(t0, v_rotate_right<8>(t0)));
                 minL[0] = buf[0];
                 minL[1] = buf[1];
@@ -817,10 +817,10 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
             if( pass == npasses )
             {
                 x = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_int16 v_inv_dist = vx_setall_s16((DispType)INVALID_DISP_SCALED);
                 v_int16 v_max_cost = vx_setall_s16(MAX_COST);
-                for( ; x <= width - v_int16::nlanes; x += v_int16::nlanes )
+                for( ; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes() )
                 {
                     v_store(disp1ptr + x, v_inv_dist);
                     v_store(mem.disp2ptr + x, v_inv_dist);
@@ -850,23 +850,23 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                         d = 0;
                         int delta0 = P2 + *mem.getMinLr(lrID, x + 1);
                         int minL0 = MAX_COST;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                         v_int16 _P1 = vx_setall_s16((short)P1);
                         v_int16 _delta0 = vx_setall_s16((short)delta0);
 
                         v_int16 _minL0 = vx_setall_s16((short)MAX_COST);
                         v_int16 _minS = vx_setall_s16(MAX_COST), _bestDisp = vx_setall_s16(-1);
-                        for( ; d <= D - v_int16::nlanes; d += v_int16::nlanes )
+                        for( ; d <= D - VTraits<v_int16>::vlanes(); d += VTraits<v_int16>::vlanes() )
                         {
                             v_int16 Cpd = vx_load_aligned(Cp + d);
-                            v_int16 L0 = v_min(v_min(v_min(vx_load_aligned(Lr_p0 + d), vx_load(Lr_p0 + d - 1) + _P1), vx_load(Lr_p0 + d + 1) + _P1), _delta0) - _delta0 + Cpd;
+                            v_int16 L0 = v_add(v_sub(v_min(v_min(v_min(vx_load_aligned(Lr_p0 + d), v_add(vx_load(Lr_p0 + d - 1), _P1)), v_add(vx_load(Lr_p0 + d + 1), _P1)), _delta0), _delta0), Cpd);
 
                             v_store_aligned(Lr_p + d, L0);
                             _minL0 = v_min(_minL0, L0);
-                            L0 += vx_load_aligned(Sp + d);
+                            L0 = v_add(L0, vx_load_aligned(Sp + d));
                             v_store_aligned(Sp + d, L0);
 
-                            _bestDisp = v_select(_minS > L0, vx_setall_s16((short)d), _bestDisp);
+                            _bestDisp = v_select(v_gt(_minS, L0), vx_setall_s16((short)d), _bestDisp);
                             _minS = v_min(_minS, L0);
                         }
                         minL0 = (CostType)v_reduce_min(_minL0);
@@ -891,12 +891,12 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
                     else
                     {
                         d = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                         v_int16 _minS = vx_setall_s16(MAX_COST), _bestDisp = vx_setall_s16(-1);
-                        for( ; d <= D - v_int16::nlanes; d+= v_int16::nlanes )
+                        for( ; d <= D - VTraits<v_int16>::vlanes(); d+= VTraits<v_int16>::vlanes() )
                         {
                             v_int16 L0 = vx_load_aligned(Sp + d);
-                            _bestDisp = v_select(_minS > L0, vx_setall_s16((short)d), _bestDisp);
+                            _bestDisp = v_select(v_gt(_minS, L0), vx_setall_s16((short)d), _bestDisp);
                             _minS = v_min( L0, _minS );
                         }
                         min_pos(_minS, _bestDisp, minS, bestDisp);
@@ -1039,9 +1039,9 @@ struct CalcVerticalSums: public ParallelLoopBody
                             for( x = (x1 - SW2)*Da; x <= (x1 + SW2)*Da; x += Da )
                             {
                                 int xbord = x <= 0 ? 0 : (x > (width1 - 1)*Da ? (width1 - 1)*Da : x);
-#if CV_SIMD
-                                for( d = 0; d < Da; d += v_int16::nlanes )
-                                    v_store_aligned(hsumAdd + x1*Da + d, vx_load_aligned(hsumAdd + x1*Da + d) + vx_load_aligned(pixDiff + xbord + d));
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                                for( d = 0; d < Da; d += VTraits<v_int16>::vlanes() )
+                                    v_store_aligned(hsumAdd + x1*Da + d, v_add(vx_load_aligned(hsumAdd + x1 * this->Da + d), vx_load_aligned(pixDiff + xbord + d)));
 #else
                                 for( d = 0; d < D; d++ )
                                     hsumAdd[x1*Da + d] = (CostType)(hsumAdd[x1*Da + d] + pixDiff[xbord + d]);
@@ -1052,9 +1052,9 @@ struct CalcVerticalSums: public ParallelLoopBody
                             {
                                 const CostType* hsumSub =  mem.getHSumBuf(std::max(y - SH2 - 1, 0));
                                 const CostType* Cprev = mem.getCBuf(y - 1);
-#if CV_SIMD
-                                for( d = 0; d < Da; d += v_int16::nlanes )
-                                    v_store_aligned(C + x1*Da + d, vx_load_aligned(Cprev + x1*Da + d) + vx_load_aligned(hsumAdd + x1*Da + d) - vx_load_aligned(hsumSub + x1*Da + d));
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                                for( d = 0; d < Da; d += VTraits<v_int16>::vlanes() )
+                                    v_store_aligned(C + x1*Da + d, v_sub(v_add(vx_load_aligned(Cprev + x1 * this->Da + d), vx_load_aligned(hsumAdd + x1 * this->Da + d)), vx_load_aligned(hsumSub + x1 * this->Da + d)));
 #else
                                 for( d = 0; d < D; d++ )
                                     C[x1*Da + d] = (CostType)(Cprev[x1*Da + d] + hsumAdd[x1*Da + d] - hsumSub[x1*Da + d]);
@@ -1064,12 +1064,12 @@ struct CalcVerticalSums: public ParallelLoopBody
                                     const CostType* pixAdd = pixDiff + std::min(x + SW2*Da, (width1-1)*Da);
                                     const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*Da, 0);
 
-#if CV_SIMD
-                                    for( d = 0; d < Da; d += v_int16::nlanes )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                                    for( d = 0; d < Da; d += VTraits<v_int16>::vlanes() )
                                     {
-                                        v_int16 hv = vx_load_aligned(hsumAdd + x - Da + d) - vx_load_aligned(pixSub + d) + vx_load_aligned(pixAdd + d);
+                                        v_int16 hv = v_add(v_sub(vx_load_aligned(hsumAdd + x - this->Da + d), vx_load_aligned(pixSub + d)), vx_load_aligned(pixAdd + d));
                                         v_store_aligned(hsumAdd + x + d, hv);
-                                        v_store_aligned(C + x + d, vx_load_aligned(Cprev + x + d) - vx_load_aligned(hsumSub + x + d) + hv);
+                                        v_store_aligned(C + x + d, v_add(v_sub(vx_load_aligned(Cprev + x + d), vx_load_aligned(hsumSub + x + d)), hv));
                                     }
 #else
                                     for( d = 0; d < D; d++ )
@@ -1082,10 +1082,10 @@ struct CalcVerticalSums: public ParallelLoopBody
                             }
                             else
                             {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                                 v_int16 v_scale = vx_setall_s16(k == 0 ? (short)SH2 + 1 : 1);
-                                for (d = 0; d < Da; d += v_int16::nlanes)
-                                    v_store_aligned(C + x1*Da + d, vx_load_aligned(C + x1*Da + d) + vx_load_aligned(hsumAdd + x1*Da + d) * v_scale);
+                                for (d = 0; d < Da; d += VTraits<v_int16>::vlanes())
+                                    v_store_aligned(C + x1*Da + d, v_add(vx_load_aligned(C + x1 * this->Da + d), v_mul(vx_load_aligned(hsumAdd + x1 * this->Da + d), v_scale)));
 #else
                                 int scale = k == 0 ? SH2 + 1 : 1;
                                 for (d = 0; d < D; d++)
@@ -1095,12 +1095,12 @@ struct CalcVerticalSums: public ParallelLoopBody
                                 {
                                     const CostType* pixAdd = pixDiff + std::min(x + SW2*Da, (width1-1)*Da);
                                     const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*Da, 0);
-#if CV_SIMD
-                                    for (d = 0; d < Da; d += v_int16::nlanes)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                                    for (d = 0; d < Da; d += VTraits<v_int16>::vlanes())
                                     {
-                                        v_int16 hv = vx_load_aligned(hsumAdd + x - Da + d) + vx_load_aligned(pixAdd + d) - vx_load_aligned(pixSub + d);
+                                        v_int16 hv = v_sub(v_add(vx_load_aligned(hsumAdd + x - this->Da + d), vx_load_aligned(pixAdd + d)), vx_load_aligned(pixSub + d));
                                         v_store_aligned(hsumAdd + x + d, hv);
-                                        v_store_aligned(C + x + d, vx_load_aligned(C + x + d) + hv * v_scale);
+                                        v_store_aligned(C + x + d, v_add(vx_load_aligned(C + x + d), v_mul(hv, v_scale)));
                                     }
 #else
                                     for( d = 0; d < D; d++ )
@@ -1120,9 +1120,9 @@ struct CalcVerticalSums: public ParallelLoopBody
                                 const CostType* hsumSub = mem.getHSumBuf(std::max(y - SH2 - 1, 0));
                                 const CostType* Cprev = mem.getCBuf(y - 1);
 
-#if CV_SIMD
-                                for( x = x1*Da; x < x2*Da; x += v_int16::nlanes )
-                                    v_store_aligned(C + x, vx_load_aligned(Cprev + x) - vx_load_aligned(hsumSub + x) + vx_load_aligned(hsumAdd + x));
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                                for( x = x1*Da; x < x2*Da; x += VTraits<v_int16>::vlanes() )
+                                    v_store_aligned(C + x, v_add(v_sub(vx_load_aligned(Cprev + x), vx_load_aligned(hsumSub + x)), vx_load_aligned(hsumAdd + x)));
 #else
                                 for( x = x1*Da; x < x2*Da; x++ )
                                     C[x] = (CostType)(Cprev[x] + hsumAdd[x] - hsumSub[x]);
@@ -1131,9 +1131,9 @@ struct CalcVerticalSums: public ParallelLoopBody
                             else*/
                             if(y == 0)
                             {
-#if CV_SIMD
-                                for( x = x1*Da; x < x2*Da; x += v_int16::nlanes )
-                                    v_store_aligned(C + x, vx_load_aligned(C + x) + vx_load_aligned(hsumAdd + x));
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                                for( x = x1*Da; x < x2*Da; x += VTraits<v_int16>::vlanes() )
+                                    v_store_aligned(C + x, v_add(vx_load_aligned(C + x), vx_load_aligned(hsumAdd + x)));
 #else
                                 for( x = x1*Da; x < x2*Da; x++ )
                                     C[x] = (CostType)(C[x] + hsumAdd[x]);
@@ -1167,19 +1167,19 @@ struct CalcVerticalSums: public ParallelLoopBody
 
                     CostType& minL = *(mem.getMinLr(lrID, x));
                     d = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                     v_int16 _P1 = vx_setall_s16((short)P1);
 
                     v_int16 _delta = vx_setall_s16((short)delta);
                     v_int16 _minL = vx_setall_s16((short)MAX_COST);
 
-                    for( ; d <= D - v_int16::nlanes; d += v_int16::nlanes )
+                    for( ; d <= D - VTraits<v_int16>::vlanes(); d += VTraits<v_int16>::vlanes() )
                     {
                         v_int16 Cpd = vx_load_aligned(Cp + d);
-                        v_int16 L = v_min(v_min(v_min(vx_load_aligned(Lr_ppr + d), vx_load(Lr_ppr + d - 1) + _P1), vx_load(Lr_ppr + d + 1) + _P1), _delta) - _delta + Cpd;
+                        v_int16 L = v_add(v_sub(v_min(v_min(v_min(vx_load_aligned(Lr_ppr + d), v_add(vx_load(Lr_ppr + d - 1), _P1)), v_add(vx_load(Lr_ppr + d + 1), _P1)), _delta), _delta), Cpd);
                         v_store_aligned(Lr_p + d, L);
                         _minL = v_min(_minL, L);
-                        v_store_aligned(Sp + d, vx_load_aligned(Sp + d) + L);
+                        v_store_aligned(Sp + d, v_add(vx_load_aligned(Sp + d), L));
                     }
                     minL = v_reduce_min(_minL);
 #else
@@ -1264,10 +1264,10 @@ struct CalcHorizontalSums: public ParallelLoopBody
             CostType* S = mem.getSBuf(y);
 
             x = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             v_int16 v_inv_dist = vx_setall_s16((DispType)INVALID_DISP_SCALED);
             v_int16 v_max_cost = vx_setall_s16(MAX_COST);
-            for (; x <= width - v_int16::nlanes; x += v_int16::nlanes)
+            for (; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
             {
                 v_store(disp1ptr + x, v_inv_dist);
                 v_store(disp2ptr + x, v_inv_dist);
@@ -1304,19 +1304,19 @@ struct CalcHorizontalSums: public ParallelLoopBody
                 CostType* Sp = S + x*Da;
 
                 d = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_int16 _P1 = vx_setall_s16((short)P1);
 
                 v_int16 _delta = vx_setall_s16((short)delta);
                 v_int16 _minL = vx_setall_s16((short)MAX_COST);
 
-                for( ; d <= D - v_int16::nlanes; d += v_int16::nlanes)
+                for( ; d <= D - VTraits<v_int16>::vlanes(); d += VTraits<v_int16>::vlanes())
                 {
                     v_int16 Cpd = vx_load_aligned(Cp + d);
-                    v_int16 L = v_min(v_min(v_min(vx_load(Lr_ppr + d), vx_load(Lr_ppr + d - 1) + _P1), vx_load(Lr_ppr + d + 1) + _P1), _delta) - _delta + Cpd;
+                    v_int16 L = v_add(v_sub(v_min(v_min(v_min(vx_load(Lr_ppr + d), v_add(vx_load(Lr_ppr + d - 1), _P1)), v_add(vx_load(Lr_ppr + d + 1), _P1)), _delta), _delta), Cpd);
                     v_store(Lr_p + d, L);
                     _minL = v_min(_minL, L);
-                    v_store_aligned(Sp + d, vx_load_aligned(Sp + d) + L);
+                    v_store_aligned(Sp + d, v_add(vx_load_aligned(Sp + d), L));
                 }
                 minLr = v_reduce_min(_minL);
 #else
@@ -1349,22 +1349,22 @@ struct CalcHorizontalSums: public ParallelLoopBody
                 minLr = MAX_COST;
 
                 d = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_int16 _P1 = vx_setall_s16((short)P1);
                 v_int16 _delta = vx_setall_s16((short)delta);
 
                 v_int16 _minL = vx_setall_s16((short)MAX_COST);
                 v_int16 _minS = vx_setall_s16(MAX_COST), _bestDisp = vx_setall_s16(-1);
-                for( ; d <= D - v_int16::nlanes; d += v_int16::nlanes )
+                for( ; d <= D - VTraits<v_int16>::vlanes(); d += VTraits<v_int16>::vlanes() )
                 {
                     v_int16 Cpd = vx_load_aligned(Cp + d);
-                    v_int16 L = v_min(v_min(v_min(vx_load(Lr_ppr + d), vx_load(Lr_ppr + d - 1) + _P1), vx_load(Lr_ppr + d + 1) + _P1), _delta) - _delta + Cpd;
+                    v_int16 L = v_add(v_sub(v_min(v_min(v_min(vx_load(Lr_ppr + d), v_add(vx_load(Lr_ppr + d - 1), _P1)), v_add(vx_load(Lr_ppr + d + 1), _P1)), _delta), _delta), Cpd);
                     v_store(Lr_p + d, L);
                     _minL = v_min(_minL, L);
-                    L += vx_load_aligned(Sp + d);
+                    L = v_add(L, vx_load_aligned(Sp + d));
                     v_store_aligned(Sp + d, L);
 
-                    _bestDisp = v_select(_minS > L, vx_setall_s16((short)d), _bestDisp);
+                    _bestDisp = v_select(v_gt(_minS, L), vx_setall_s16((short)d), _bestDisp);
                     _minS = v_min( L, _minS );
                 }
                 minLr = v_reduce_min(_minL);
@@ -1581,8 +1581,8 @@ struct SGBM3WayMainLoop : public ParallelLoopBody
 
     utils::BufferArea aux_area;
     PixType* clipTab;
-#if CV_SIMD
-    short idx_row[v_int16::nlanes];
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    short idx_row[VTraits<v_int16>::max_nlanes];
 #endif
     SGBM3WayMainLoop(const Mat& _img1, const Mat& _img2, Mat* _dst_disp, const StereoSGBMParams& params, int stripe_size, int _stripe_overlap);
     void operator () (const Range& range) const CV_OVERRIDE;
@@ -1637,8 +1637,8 @@ SGBM3WayMainLoop::SGBM3WayMainLoop(const Mat& _img1,
     uniquenessRatio = params.uniquenessRatio >= 0 ? params.uniquenessRatio : 10;
     disp12MaxDiff = params.disp12MaxDiff > 0 ? params.disp12MaxDiff : 1;
 
-#if CV_SIMD
-    for(short i = 0; i < v_int16::nlanes; ++i)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    for(short i = 0; i < VTraits<v_int16>::vlanes(); ++i)
         idx_row[i] = i;
 #endif
 }
@@ -1659,13 +1659,13 @@ void SGBM3WayMainLoop::getRawMatchingCost(const BufferSGBM3Way &mem, int y, int 
         {
             calcPixelCostBT( *img1, *img2, k, minD, maxD, pixDiff, tmpBuf, clipTab + TAB_OFS );
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             v_int16 sw2_1 = vx_setall_s16((short)SW2 + 1);
-            for (d = 0; d < Da; d += v_int16::nlanes)
+            for (d = 0; d < Da; d += VTraits<v_int16>::vlanes())
             {
-                v_int16 hsA = vx_load_aligned(pixDiff + d) * sw2_1;
+                v_int16 hsA = v_mul(vx_load_aligned(pixDiff + d), sw2_1);
                 for (x = Da; x <= SW2 * Da; x += Da)
-                    hsA += vx_load_aligned(pixDiff + x + d);
+                    hsA = v_add(hsA, vx_load_aligned(pixDiff + x + d));
                 v_store_aligned(hsumAdd + d, hsA);
             }
 #else
@@ -1681,9 +1681,9 @@ void SGBM3WayMainLoop::getRawMatchingCost(const BufferSGBM3Way &mem, int y, int 
             {
                 const CostType* hsumSub = mem.getHSumBuf(std::max(y - SH2 - 1, src_start_idx));
 
-#if CV_SIMD
-                for (d = 0; d < Da; d += v_int16::nlanes)
-                    v_store_aligned(C + d, vx_load_aligned(C + d) + vx_load_aligned(hsumAdd + d) - vx_load_aligned(hsumSub + d));
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for (d = 0; d < Da; d += VTraits<v_int16>::vlanes())
+                    v_store_aligned(C + d, v_sub(v_add(vx_load_aligned(C + d), vx_load_aligned(hsumAdd + d)), vx_load_aligned(hsumSub + d)));
 #else
                 for (d = 0; d < D; d++)
                     C[d] = (CostType)(C[d] + hsumAdd[d] - hsumSub[d]);
@@ -1693,13 +1693,13 @@ void SGBM3WayMainLoop::getRawMatchingCost(const BufferSGBM3Way &mem, int y, int 
                 {
                     const CostType* pixAdd = pixDiff + std::min(x + SW2*Da, (width1-1)*Da);
                     const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*Da, 0);
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                     v_int16 hv_reg;
-                    for( d = 0; d < Da; d+=v_int16::nlanes )
+                    for( d = 0; d < Da; d+=VTraits<v_int16>::vlanes() )
                     {
-                        hv_reg = vx_load_aligned(hsumAdd+x-Da+d) + vx_load_aligned(pixAdd+d) - vx_load_aligned(pixSub+d);
+                        hv_reg = v_sub(v_add(vx_load_aligned(hsumAdd + x - this->Da + d), vx_load_aligned(pixAdd + d)), vx_load_aligned(pixSub + d));
                         v_store_aligned(hsumAdd+x+d,hv_reg);
-                        v_store_aligned(C+x+d,vx_load_aligned(C+x+d)+hv_reg-vx_load_aligned(hsumSub+x+d));
+                        v_store_aligned(C+x+d,v_sub(v_add(vx_load_aligned(C + x + d), hv_reg), vx_load_aligned(hsumSub + x + d)));
                     }
 #else
                     for( d = 0; d < D; d++ )
@@ -1712,10 +1712,10 @@ void SGBM3WayMainLoop::getRawMatchingCost(const BufferSGBM3Way &mem, int y, int 
             }
             else
             {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_int16 v_scale = vx_setall_s16(k == src_start_idx ? (short)SH2 + 1 : 1);
-                for (d = 0; d < Da; d += v_int16::nlanes)
-                    v_store_aligned(C + d, vx_load_aligned(C + d) + vx_load_aligned(hsumAdd + d) * v_scale);
+                for (d = 0; d < Da; d += VTraits<v_int16>::vlanes())
+                    v_store_aligned(C + d, v_add(vx_load_aligned(C + d), v_mul(vx_load_aligned(hsumAdd + d), v_scale)));
 #else
                 int scale = k == src_start_idx ? SH2 + 1 : 1;
                 for (d = 0; d < D; d++)
@@ -1725,12 +1725,12 @@ void SGBM3WayMainLoop::getRawMatchingCost(const BufferSGBM3Way &mem, int y, int 
                 {
                     const CostType* pixAdd = pixDiff + std::min(x + SW2*Da, (width1-1)*Da);
                     const CostType* pixSub = pixDiff + std::max(x - (SW2+1)*Da, 0);
-#if CV_SIMD
-                    for (d = 0; d < Da; d += v_int16::nlanes)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                    for (d = 0; d < Da; d += VTraits<v_int16>::vlanes())
                     {
-                        v_int16 hv = vx_load_aligned(hsumAdd + x - Da + d) + vx_load_aligned(pixAdd + d) - vx_load_aligned(pixSub + d);
+                        v_int16 hv = v_sub(v_add(vx_load_aligned(hsumAdd + x - this->Da + d), vx_load_aligned(pixAdd + d)), vx_load_aligned(pixSub + d));
                         v_store_aligned(hsumAdd + x + d, hv);
-                        v_store_aligned(C + x + d, vx_load_aligned(C + x + d) + hv * v_scale);
+                        v_store_aligned(C + x + d, v_add(vx_load_aligned(C + x + d), v_mul(hv, v_scale)));
                     }
 #else
                     for (d = 0; d < D; d++)
@@ -1748,9 +1748,9 @@ void SGBM3WayMainLoop::getRawMatchingCost(const BufferSGBM3Way &mem, int y, int 
             if( y > src_start_idx )
             {
                 const CostType* hsumSub = mem.getHSumBuf(std::max(y - SH2 - 1, src_start_idx));
-#if CV_SIMD
-                for( x = 0; x < width1*Da; x += v_int16::nlanes)
-                    v_store_aligned(C + x, vx_load_aligned(C + x) + vx_load_aligned(hsumAdd + x) - vx_load_aligned(hsumSub + x));
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( x = 0; x < width1*Da; x += VTraits<v_int16>::vlanes())
+                    v_store_aligned(C + x, v_sub(v_add(vx_load_aligned(C + x), vx_load_aligned(hsumAdd + x)), vx_load_aligned(hsumSub + x)));
 #else
                 for( x = 0; x < width1*Da; x++ )
                     C[x] = (CostType)(C[x] + hsumAdd[x] - hsumSub[x]);
@@ -1758,9 +1758,9 @@ void SGBM3WayMainLoop::getRawMatchingCost(const BufferSGBM3Way &mem, int y, int 
             }
             else
             {
-#if CV_SIMD
-                for( x = 0; x < width1*Da; x += v_int16::nlanes)
-                    v_store_aligned(C + x, vx_load_aligned(C + x) + vx_load_aligned(hsumAdd + x));
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                for( x = 0; x < width1*Da; x += VTraits<v_int16>::vlanes())
+                    v_store_aligned(C + x, v_add(vx_load_aligned(C + x), vx_load_aligned(hsumAdd + x)));
 #else
                 for( x = 0; x < width1*Da; x++ )
                     C[x] = (CostType)(C[x] + hsumAdd[x]);
@@ -1781,7 +1781,7 @@ void SGBM3WayMainLoop::accumulateCostsLeftTop(const BufferSGBM3Way &mem, int x, 
     CostType *costs = mem.curCostVolumeLine - Da + x;
     CostType& topMinCost = mem.vertPassMin[x/Da];
     int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_int16 P1_reg = vx_setall_s16(cv::saturate_cast<CostType>(P1));
 
     v_int16 leftMinCostP2_reg   = vx_setall_s16(cv::saturate_cast<CostType>(leftMinCost+P2));
@@ -1798,18 +1798,18 @@ void SGBM3WayMainLoop::accumulateCostsLeftTop(const BufferSGBM3Way &mem, int x, 
     v_int16 src_shifted_left,src_shifted_right;
     v_int16 res;
 
-    for(;i<Da-v_int16::nlanes;i+= v_int16::nlanes)
+    for(;i<Da-VTraits<v_int16>::vlanes();i+= VTraits<v_int16>::vlanes())
     {
         //process leftBuf:
         //lookahead load:
-        src2 = vx_load_aligned(leftBuf_prev+i+v_int16::nlanes);
+        src2 = vx_load_aligned(leftBuf_prev+i+VTraits<v_int16>::vlanes());
 
         //get shifted versions of the current block and add P1:
         src_shifted_left  = v_rotate_left<1>  (src1_leftBuf,src0_leftBuf);
         src_shifted_right = v_rotate_right<1> (src1_leftBuf,src2        );
 
         // process and save current block:
-        res = vx_load_aligned(costs+i) + (v_min(v_min(src_shifted_left,src_shifted_right) + P1_reg,v_min(src1_leftBuf,leftMinCostP2_reg))-leftMinCostP2_reg);
+        res = v_add(vx_load_aligned(costs + i), v_sub(v_min(v_add(v_min(src_shifted_left, src_shifted_right), P1_reg), v_min(src1_leftBuf, leftMinCostP2_reg)), leftMinCostP2_reg));
         leftMinCost_new_reg = v_min(leftMinCost_new_reg,res);
         v_store_aligned(leftBuf+i, res);
 
@@ -1819,14 +1819,14 @@ void SGBM3WayMainLoop::accumulateCostsLeftTop(const BufferSGBM3Way &mem, int x, 
 
         //process topBuf:
         //lookahead load:
-        src2 = vx_load_aligned(topBuf+i+v_int16::nlanes);
+        src2 = vx_load_aligned(topBuf+i+VTraits<v_int16>::vlanes());
 
         //get shifted versions of the current block and add P1:
         src_shifted_left  = v_rotate_left<1>  (src1_topBuf,src0_topBuf);
         src_shifted_right = v_rotate_right<1> (src1_topBuf,src2       );
 
         // process and save current block:
-        res = vx_load_aligned(costs+i) + (v_min(v_min(src_shifted_left,src_shifted_right) + P1_reg,v_min(src1_topBuf,topMinCostP2_reg))-topMinCostP2_reg);
+        res = v_add(vx_load_aligned(costs + i), v_sub(v_min(v_add(v_min(src_shifted_left, src_shifted_right), P1_reg), v_min(src1_topBuf, topMinCostP2_reg)), topMinCostP2_reg));
         topMinCost_new_reg = v_min(topMinCost_new_reg,res);
         v_store_aligned(topBuf+i, res);
 
@@ -1843,17 +1843,17 @@ void SGBM3WayMainLoop::accumulateCostsLeftTop(const BufferSGBM3Way &mem, int x, 
         src_shifted_left  = v_rotate_left<1>  (src1_leftBuf,src0_leftBuf);
         src_shifted_right = v_rotate_right<1> (src1_leftBuf,src2        );
 
-        res = vx_load_aligned(costs+Da-v_int16::nlanes) + (v_min(v_min(src_shifted_left,src_shifted_right) + P1_reg,v_min(src1_leftBuf,leftMinCostP2_reg))-leftMinCostP2_reg);
+        res = v_add(vx_load_aligned(costs + this->Da - VTraits<v_int16>::vlanes()), v_sub(v_min(v_add(v_min(src_shifted_left, src_shifted_right), P1_reg), v_min(src1_leftBuf, leftMinCostP2_reg)), leftMinCostP2_reg));
         leftMinCost = v_reduce_min(v_min(leftMinCost_new_reg,res));
-        v_store_aligned(leftBuf+Da-v_int16::nlanes, res);
+        v_store_aligned(leftBuf+Da-VTraits<v_int16>::vlanes(), res);
 
         //process topBuf:
         src_shifted_left  = v_rotate_left<1>  (src1_topBuf,src0_topBuf);
         src_shifted_right = v_rotate_right<1> (src1_topBuf,src2       );
 
-        res = vx_load_aligned(costs+Da-v_int16::nlanes) + (v_min(v_min(src_shifted_left,src_shifted_right) + P1_reg,v_min(src1_topBuf,topMinCostP2_reg))-topMinCostP2_reg);
+        res = v_add(vx_load_aligned(costs + this->Da - VTraits<v_int16>::vlanes()), v_sub(v_min(v_add(v_min(src_shifted_left, src_shifted_right), P1_reg), v_min(src1_topBuf, topMinCostP2_reg)), topMinCostP2_reg));
         topMinCost = v_reduce_min(v_min(topMinCost_new_reg,res));
-        v_store_aligned(topBuf+Da-v_int16::nlanes, res);
+        v_store_aligned(topBuf+Da-VTraits<v_int16>::vlanes(), res);
     }
     else
     {
@@ -1904,7 +1904,7 @@ void SGBM3WayMainLoop::accumulateCostsRight(const BufferSGBM3Way &mem, int x,
     CostType* leftBuf = mem.horPassCostVolume + x;
 
     int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     v_int16 P1_reg = vx_setall_s16(cv::saturate_cast<CostType>(P1));
 
     v_int16 rightMinCostP2_reg   = vx_setall_s16(cv::saturate_cast<CostType>(rightMinCost+P2));
@@ -1919,27 +1919,27 @@ void SGBM3WayMainLoop::accumulateCostsRight(const BufferSGBM3Way &mem, int x,
     v_int16 min_sum_cost_reg = vx_setall_s16(SHRT_MAX);
     v_int16 min_sum_pos_reg  = vx_setall_s16(0);
 
-    for(;i<Da-v_int16::nlanes;i+=v_int16::nlanes)
+    for(;i<Da-VTraits<v_int16>::vlanes();i+=VTraits<v_int16>::vlanes())
     {
         //lookahead load:
-        src2 = vx_load_aligned(rightBuf+i+v_int16::nlanes);
+        src2 = vx_load_aligned(rightBuf+i+VTraits<v_int16>::vlanes());
 
         //get shifted versions of the current block and add P1:
         src_shifted_left  = v_rotate_left<1>  (src1_rightBuf,src0_rightBuf);
         src_shifted_right = v_rotate_right<1> (src1_rightBuf,src2         );
 
         // process and save current block:
-        res = vx_load_aligned(costs+i) + (v_min(v_min(src_shifted_left,src_shifted_right) + P1_reg,v_min(src1_rightBuf,rightMinCostP2_reg))-rightMinCostP2_reg);
+        res = v_add(vx_load_aligned(costs + i), v_sub(v_min(v_add(v_min(src_shifted_left, src_shifted_right), P1_reg), v_min(src1_rightBuf, rightMinCostP2_reg)), rightMinCostP2_reg));
         rightMinCost_new_reg = v_min(rightMinCost_new_reg,res);
         v_store_aligned(rightBuf+i, res);
 
         // compute and save total cost:
-        res = res + vx_load_aligned(leftBuf+i) + vx_load_aligned(topBuf+i);
+        res = v_add(v_add(res, vx_load_aligned(leftBuf + i)), vx_load_aligned(topBuf + i));
         v_store_aligned(leftBuf+i, res);
 
         // track disparity value with the minimum cost:
         min_sum_cost_reg = v_min(min_sum_cost_reg,res);
-        min_sum_pos_reg = min_sum_pos_reg + ((min_sum_cost_reg == res) & (vx_setall_s16((short)i) - min_sum_pos_reg));
+        min_sum_pos_reg = v_add(min_sum_pos_reg, v_and(v_eq(min_sum_cost_reg, res), v_sub(vx_setall_s16((short)i), min_sum_pos_reg)));
 
         //update src:
         src0_rightBuf    = src1_rightBuf;
@@ -1953,15 +1953,15 @@ void SGBM3WayMainLoop::accumulateCostsRight(const BufferSGBM3Way &mem, int x,
         src_shifted_left  = v_rotate_left<1>  (src1_rightBuf,src0_rightBuf);
         src_shifted_right = v_rotate_right<1> (src1_rightBuf,src2         );
 
-        res = vx_load_aligned(costs+D-v_int16::nlanes) + (v_min(v_min(src_shifted_left,src_shifted_right) + P1_reg,v_min(src1_rightBuf,rightMinCostP2_reg))-rightMinCostP2_reg);
+        res = v_add(vx_load_aligned(costs + this->D - VTraits<v_int16>::vlanes()), v_sub(v_min(v_add(v_min(src_shifted_left, src_shifted_right), P1_reg), v_min(src1_rightBuf, rightMinCostP2_reg)), rightMinCostP2_reg));
         rightMinCost = v_reduce_min(v_min(rightMinCost_new_reg,res));
-        v_store_aligned(rightBuf+D-v_int16::nlanes, res);
+        v_store_aligned(rightBuf+D-VTraits<v_int16>::vlanes(), res);
 
-        res = res + vx_load_aligned(leftBuf+D-v_int16::nlanes) + vx_load_aligned(topBuf+D-v_int16::nlanes);
-        v_store_aligned(leftBuf+D-v_int16::nlanes, res);
+        res = v_add(v_add(res, vx_load_aligned(leftBuf + this->D - VTraits<v_int16>::vlanes())), vx_load_aligned(topBuf + this->D - VTraits<v_int16>::vlanes()));
+        v_store_aligned(leftBuf+D-VTraits<v_int16>::vlanes(), res);
 
         min_sum_cost_reg = v_min(min_sum_cost_reg,res);
-        min_sum_pos_reg = min_sum_pos_reg + ((min_sum_cost_reg == res) & (vx_setall_s16((short)D-v_int16::nlanes) - min_sum_pos_reg));
+        min_sum_pos_reg = v_add(min_sum_pos_reg, v_and(v_eq(min_sum_cost_reg, res), v_sub(vx_setall_s16((short)(this->D - VTraits<v_int16>::vlanes())), min_sum_pos_reg)));
         min_pos(min_sum_cost_reg,min_sum_pos_reg, min_cost, optimal_disp);
     }
     else
@@ -2070,40 +2070,40 @@ void SGBM3WayMainLoop::impl(const Range& range) const
             if(uniquenessRatio>0)
             {
                 d = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 horPassCostVolume+=x;
                 int thresh = (100*min_cost)/(100-uniquenessRatio);
                 v_int16 thresh_reg = vx_setall_s16((short)(thresh+1));
                 v_int16 d1 = vx_setall_s16((short)(best_d-1));
                 v_int16 d2 = vx_setall_s16((short)(best_d+1));
-                v_int16 eight_reg = vx_setall_s16(v_int16::nlanes);
+                v_int16 eight_reg = vx_setall_s16((short)VTraits<v_int16>::vlanes());
                 v_int16 cur_d = vx_load(idx_row);
                 v_int16 mask;
 
-                for( ; d <= D - 2*v_int16::nlanes; d+=2*v_int16::nlanes )
+                for( ; d <= D - 2*VTraits<v_int16>::vlanes(); d+=2*VTraits<v_int16>::vlanes() )
                 {
-                    mask = (vx_load_aligned(horPassCostVolume + d) < thresh_reg) & ( (cur_d<d1) | (cur_d>d2) );
-                    cur_d = cur_d+eight_reg;
+                    mask = v_and(v_lt(vx_load_aligned(horPassCostVolume + d), thresh_reg), v_or(v_lt(cur_d, d1), v_gt(cur_d, d2)));
+                    cur_d = v_add(cur_d, eight_reg);
                     if( v_check_any(mask) )
                         break;
-                    mask = (vx_load_aligned(horPassCostVolume + d + v_int16::nlanes) < thresh_reg) & ( (cur_d<d1) | (cur_d>d2) );
-                    cur_d = cur_d+eight_reg;
+                    mask = v_and(v_lt(vx_load_aligned(horPassCostVolume + d + VTraits<v_int16>::vlanes()), thresh_reg), v_or(v_lt(cur_d, d1), v_gt(cur_d, d2)));
+                    cur_d = v_add(cur_d, eight_reg);
                     if( v_check_any(mask) )
                         break;
                 }
-                if( d <= D - 2*v_int16::nlanes )
+                if( d <= D - 2*VTraits<v_int16>::vlanes() )
                 {
                     horPassCostVolume-=x;
                     continue;
                 }
-                if( d <= D - v_int16::nlanes )
+                if( d <= D - VTraits<v_int16>::vlanes() )
                 {
-                    if( v_check_any((vx_load_aligned(horPassCostVolume + d) < thresh_reg) & ((cur_d < d1) | (cur_d > d2))) )
+                    if( v_check_any(v_and(v_lt(vx_load_aligned(horPassCostVolume + d), thresh_reg), v_or(v_lt(cur_d, d1), v_gt(cur_d, d2)))) )
                     {
                         horPassCostVolume-=x;
                         continue;
                     }
-                    d+=v_int16::nlanes;
+                    d+=VTraits<v_int16>::vlanes();
                 }
                 horPassCostVolume-=x;
 #endif

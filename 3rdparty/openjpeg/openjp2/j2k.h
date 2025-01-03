@@ -61,6 +61,8 @@ The functions in J2K.C have for goal to read/write the several parts of the code
 #define J2K_CCP_CBLKSTY_VSC 0x08      /**< Vertically stripe causal context */
 #define J2K_CCP_CBLKSTY_PTERM 0x10    /**< Predictable termination */
 #define J2K_CCP_CBLKSTY_SEGSYM 0x20   /**< Segmentation symbols are used */
+#define J2K_CCP_CBLKSTY_HT 0x40       /**< (high throughput) HT codeblocks */
+#define J2K_CCP_CBLKSTY_HTMIXED 0x80  /**< MIXED mode HT codeblocks */
 #define J2K_CCP_QNTSTY_NOQNT 0
 #define J2K_CCP_QNTSTY_SIQNT 1
 #define J2K_CCP_QNTSTY_SEQNT 2
@@ -71,9 +73,11 @@ The functions in J2K.C have for goal to read/write the several parts of the code
 #define J2K_MS_SOT 0xff90   /**< SOT marker value */
 #define J2K_MS_SOD 0xff93   /**< SOD marker value */
 #define J2K_MS_EOC 0xffd9   /**< EOC marker value */
+#define J2K_MS_CAP 0xff50   /**< CAP marker value */
 #define J2K_MS_SIZ 0xff51   /**< SIZ marker value */
 #define J2K_MS_COD 0xff52   /**< COD marker value */
 #define J2K_MS_COC 0xff53   /**< COC marker value */
+#define J2K_MS_CPF 0xff59   /**< CPF marker value */
 #define J2K_MS_RGN 0xff5e   /**< RGN marker value */
 #define J2K_MS_QCD 0xff5c   /**< QCD marker value */
 #define J2K_MS_QCC 0xff5d   /**< QCC marker value */
@@ -108,6 +112,9 @@ The functions in J2K.C have for goal to read/write the several parts of the code
 /* <<UniPG */
 
 #define J2K_MAX_POCS    32      /**< Maximum number of POCs */
+
+#define J2K_TCD_MATRIX_MAX_LAYER_COUNT 10
+#define J2K_TCD_MATRIX_MAX_RESOLUTION_COUNT 10
 
 /* ----------------------------------------------------------------------- */
 
@@ -268,7 +275,7 @@ typedef struct opj_tcp {
     OPJ_UINT32 ppt_data_size;
     /** size of ppt_data*/
     OPJ_UINT32 ppt_len;
-    /** add fixed_quality */
+    /** PSNR values */
     OPJ_FLOAT32 distoratio[100];
     /** tile-component coding parameters */
     opj_tccp_t *tccps;
@@ -310,6 +317,14 @@ typedef struct opj_tcp {
 } opj_tcp_t;
 
 
+/**
+Rate allocation strategy
+*/
+typedef enum {
+    RATE_DISTORTION_RATIO = 0,    /** allocation by rate/distortion */
+    FIXED_DISTORTION_RATIO = 1,   /** allocation by fixed distortion ratio (PSNR) (fixed quality) */
+    FIXED_LAYER = 2,              /** allocation by fixed layer (number of passes per layer / resolution / subband) */
+} J2K_QUALITY_LAYER_ALLOCATION_STRATEGY;
 
 
 typedef struct opj_encoding_param {
@@ -321,12 +336,8 @@ typedef struct opj_encoding_param {
     OPJ_INT32 *m_matrice;
     /** Flag determining tile part generation*/
     OPJ_BYTE m_tp_flag;
-    /** allocation by rate/distortion */
-    OPJ_BITFIELD m_disto_alloc : 1;
-    /** allocation by fixed layer */
-    OPJ_BITFIELD m_fixed_alloc : 1;
-    /** add fixed_quality */
-    OPJ_BITFIELD m_fixed_quality : 1;
+    /** Quality layer allocation strategy */
+    J2K_QUALITY_LAYER_ALLOCATION_STRATEGY m_quality_layer_alloc_strategy;
     /** Enabling Tile part generation*/
     OPJ_BITFIELD m_tp_on : 1;
 }
@@ -398,6 +409,8 @@ typedef struct opj_cp {
     }
     m_specific_param;
 
+    /** OPJ_TRUE if entire bit stream must be decoded, OPJ_FALSE if partial bitstream decoding allowed */
+    OPJ_BOOL strict;
 
     /* UniPG>> */
 #ifdef USE_JPWL
@@ -503,6 +516,12 @@ typedef struct opj_j2k_enc {
     /** Tile part number currently coding, taking into account POC. m_current_tile_part_number holds the total number of tile parts while encoding the last tile part.*/
     OPJ_UINT32 m_current_tile_part_number; /*cur_tp_num */
 
+    /* whether to generate TLM markers */
+    OPJ_BOOL   m_TLM;
+
+    /* whether the Ttlmi field in a TLM marker is a byte (otherwise a uint16) */
+    OPJ_BOOL   m_Ttlmi_is_byte;
+
     /**
     locate the start position of the TLM marker
     after encoding the tilepart, a jump (in j2k_write_sod) is done to the TLM marker to store the value of its length.
@@ -539,6 +558,9 @@ typedef struct opj_j2k_enc {
 
     /* reserved bytes in m_encoded_tile_size for PLT markers */
     OPJ_UINT32 m_reserved_bytes_for_PLT;
+
+    /** Number of components */
+    OPJ_UINT32 m_nb_comps;
 
 } opj_j2k_enc_t;
 
@@ -611,6 +633,8 @@ Decoding parameters are returned in j2k->cp.
 @param parameters decompression parameters
 */
 void opj_j2k_setup_decoder(opj_j2k_t *j2k, opj_dparameters_t *parameters);
+
+void opj_j2k_decoder_set_strict_mode(opj_j2k_t *j2k, OPJ_BOOL strict);
 
 OPJ_BOOL opj_j2k_set_threads(opj_j2k_t *j2k, OPJ_UINT32 num_threads);
 

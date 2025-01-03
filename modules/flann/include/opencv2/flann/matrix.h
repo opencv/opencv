@@ -35,6 +35,9 @@
 
 #include <stdio.h>
 
+#include "opencv2/core/cvdef.h"
+#include "opencv2/flann/defines.h"
+
 namespace cvflann
 {
 

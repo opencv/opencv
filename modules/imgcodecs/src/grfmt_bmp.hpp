@@ -74,7 +74,8 @@ public:
 protected:
 
     void  initMask();
-    void  maskBGRA(uchar* des, uchar* src, int num);
+    void  maskBGRA(uchar* des, const uchar* src, int num, bool alpha_required);
+    void  maskBGRAtoGray(uchar* des, const uchar* src, int num);
 
     enum Origin
     {
@@ -90,6 +91,7 @@ protected:
     BmpCompression  m_rle_code;
     uint            m_rgba_mask[4];
     int             m_rgba_bit_offset[4];
+    float           m_rgba_scale_factor[4];
 };
 
 

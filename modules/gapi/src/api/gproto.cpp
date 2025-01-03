@@ -80,6 +80,7 @@ cv::GRunArg cv::value_of(const cv::GOrigin &origin)
     {
     case GShape::GSCALAR: return GRunArg(util::get<cv::Scalar>(origin.value));
     case GShape::GARRAY:  return GRunArg(util::get<cv::detail::VectorRef>(origin.value));
+    case GShape::GMAT:    return GRunArg(util::get<cv::Mat>(origin.value));
     default: util::throw_error(std::logic_error("Unsupported shape for constant"));
     }
 }
@@ -313,7 +314,7 @@ std::ostream& operator<<(std::ostream& os, const cv::GMetaArg &arg)
         break;
 
     default:
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
 
     return os;

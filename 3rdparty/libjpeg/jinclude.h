@@ -2,7 +2,7 @@
  * jinclude.h
  *
  * Copyright (C) 1991-1994, Thomas G. Lane.
- * Modified 2017 by Guido Vollbeding.
+ * Modified 2017-2022 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -11,8 +11,8 @@
  * care of by the standard jconfig symbols, but on really weird systems
  * you may have to edit this file.)
  *
- * NOTE: this file is NOT intended to be included by applications using the
- * JPEG library.  Most applications need only include jpeglib.h.
+ * NOTE: this file is NOT intended to be included by applications using
+ * the JPEG library.  Most applications need only include jpeglib.h.
  */
 
 
@@ -87,11 +87,71 @@
  *
  * Furthermore, macros are provided for fflush() and ferror() in order
  * to facilitate adaption by applications using an own FILE class.
+ *
+ * You can define your own custom file I/O functions in jconfig.h and
+ * #define JPEG_HAVE_FILE_IO_CUSTOM there to prevent redefinition here.
+ *
+ * You can #define JPEG_USE_FILE_IO_CUSTOM in jconfig.h to use custom file
+ * I/O functions implemented in Delphi VCL (Visual Component Library)
+ * in Vcl.Imaging.jpeg.pas for the TJPEGImage component utilizing
+ * the Delphi RTL (Run-Time Library) TMemoryStream component:
+ *
+ *   procedure jpeg_stdio_src(var cinfo: jpeg_decompress_struct;
+ *     input_file: TStream); external;
+ *
+ *   procedure jpeg_stdio_dest(var cinfo: jpeg_compress_struct;
+ *     output_file: TStream); external;
+ *
+ *   function jfread(var buf; recsize, reccount: Integer; S: TStream): Integer;
+ *   begin
+ *     Result := S.Read(buf, recsize * reccount);
+ *   end;
+ *
+ *   function jfwrite(const buf; recsize, reccount: Integer; S: TStream): Integer;
+ *   begin
+ *     Result := S.Write(buf, recsize * reccount);
+ *   end;
+ *
+ *   function jfflush(S: TStream): Integer;
+ *   begin
+ *     Result := 0;
+ *   end;
+ *
+ *   function jferror(S: TStream): Integer;
+ *   begin
+ *     Result := 0;
+ *   end;
+ *
+ * TMemoryStream of Delphi RTL has the distinctive feature to provide dynamic
+ * memory buffer management with a file/stream-based interface, particularly for
+ * the write (output) operation, which is easier to apply compared with direct
+ * implementations as given in jdatadst.c for memory destination.  Those direct
+ * implementations of dynamic memory write tend to be more difficult to use,
+ * so providing an option like TMemoryStream may be a useful alternative.
+ *
+ * The CFile/CMemFile classes of the Microsoft Foundation Class (MFC) Library
+ * may be used in a similar fashion.
  */
 
+#ifndef JPEG_HAVE_FILE_IO_CUSTOM
+#ifdef JPEG_USE_FILE_IO_CUSTOM
+extern size_t jfread(void * __ptr, size_t __size, size_t __n, FILE * __stream);
+extern size_t jfwrite(const void * __ptr, size_t __size, size_t __n, FILE * __stream);
+extern int    jfflush(FILE * __stream);
+extern int    jferror(FILE * __fp);
+
+#define JFREAD(file,buf,sizeofbuf)  \
+  ((size_t) jfread((void *) (buf), (size_t) 1, (size_t) (sizeofbuf), (file)))
+#define JFWRITE(file,buf,sizeofbuf)  \
+  ((size_t) jfwrite((const void *) (buf), (size_t) 1, (size_t) (sizeofbuf), (file)))
+#define JFFLUSH(file)	jfflush(file)
+#define JFERROR(file)	jferror(file)
+#else
 #define JFREAD(file,buf,sizeofbuf)  \
   ((size_t) fread((void *) (buf), (size_t) 1, (size_t) (sizeofbuf), (file)))
 #define JFWRITE(file,buf,sizeofbuf)  \
   ((size_t) fwrite((const void *) (buf), (size_t) 1, (size_t) (sizeofbuf), (file)))
 #define JFFLUSH(file)	fflush(file)
 #define JFERROR(file)	ferror(file)
+#endif
+#endif

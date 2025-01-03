@@ -101,7 +101,7 @@ static void getSobelKernels( OutputArray _kx, OutputArray _ky,
     Mat ky = _ky.getMat();
 
     if( _ksize % 2 == 0 || _ksize > 31 )
-        CV_Error( CV_StsOutOfRange, "The kernel size must be odd and not larger than 31" );
+        CV_Error( cv::Error::StsOutOfRange, "The kernel size must be odd and not larger than 31" );
     std::vector<int> kerI(std::max(ksizeX, ksizeY) + 1);
 
     CV_Assert( dx >= 0 && dy >= 0 && dx+dy > 0 );
@@ -578,20 +578,20 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
         size_t lt2[2] = { tileSizeX, tileSizeY};
         size_t gt2[2] = { lt2[0] * (1 + (size.width - 1) / lt2[0]), lt2[1] };
 
-        char cvt[2][40];
+        char cvt[2][50];
         const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP",
                                            "BORDER_REFLECT_101" };
 
         String opts = cv::format("-D BLK_X=%d -D BLK_Y=%d -D RADIUS=%d%s%s"
-                                 " -D convertToWT=%s -D convertToDT=%s"
-                                 " -D %s -D srcT1=%s -D dstT1=%s -D WT1=%s"
-                                 " -D srcT=%s -D dstT=%s -D WT=%s"
+                                 " -D CONVERT_TO_WT=%s -D CONVERT_TO_DT=%s"
+                                 " -D %s -D SRC_T1=%s -D DST_T1=%s -D WT1=%s"
+                                 " -D SRC_T=%s -D DST_T=%s -D WT=%s"
                                  " -D CN=%d ",
                                  (int)lt2[0], (int)lt2[1], kernelX.cols / 2,
                                  ocl::kernelToStr(kernelX, wdepth, "KERNEL_MATRIX_X").c_str(),
                                  ocl::kernelToStr(kernelY, wdepth, "KERNEL_MATRIX_Y").c_str(),
-                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0]),
-                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1]),
+                                 ocl::convertTypeStr(sdepth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                                 ocl::convertTypeStr(wdepth, ddepth, cn, cvt[1], sizeof(cvt[1])),
                                  borderMap[borderType],
                                  ocl::typeToStr(sdepth), ocl::typeToStr(ddepth), ocl::typeToStr(wdepth),
                                  ocl::typeToStr(CV_MAKETYPE(sdepth, cn)),
@@ -624,17 +624,17 @@ static bool ocl_Laplacian5(InputArray _src, OutputArray _dst,
     if (!doubleSupport && wdepth == CV_64F)
         return false;
 
-    char cvt[2][40];
+    char cvt[2][50];
     ocl::Kernel k("sumConvert", ocl::imgproc::laplacian5_oclsrc,
                   format("-D ONLY_SUM_CONVERT "
-                         "-D srcT=%s -D WT=%s -D dstT=%s -D coeffT=%s -D wdepth=%d "
-                         "-D convertToWT=%s -D convertToDT=%s%s",
+                         "-D SRC_T=%s -D WT=%s -D DST_T=%s -D COEFF_T=%s -D WDEPTH=%d "
+                         "-D CONVERT_TO_WT=%s -D CONVERT_TO_DT=%s%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(wdepth, kercn)),
                          ocl::typeToStr(CV_MAKE_TYPE(ddepth, kercn)),
                          ocl::typeToStr(wdepth), wdepth,
-                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[0]),
-                         ocl::convertTypeStr(wdepth, ddepth, kercn, cvt[1]),
+                         ocl::convertTypeStr(depth, wdepth, kercn, cvt[0], sizeof(cvt[0])),
+                         ocl::convertTypeStr(wdepth, ddepth, kercn, cvt[1], sizeof(cvt[1])),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;

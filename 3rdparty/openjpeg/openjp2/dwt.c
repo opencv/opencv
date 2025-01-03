@@ -385,7 +385,8 @@ static void  opj_idwt53_h_cas0(OPJ_INT32* tmp,
         s0n = s1n - ((d1c + d1n + 2) >> 2);
 
         tmp[i  ] = s0c;
-        tmp[i + 1] = d1c + ((s0c + s0n) >> 1);
+        tmp[i + 1] = opj_int_add_no_overflow(d1c, opj_int_add_no_overflow(s0c,
+                                             s0n) >> 1);
     }
 
     tmp[i] = s0n;
@@ -450,7 +451,7 @@ static void  opj_idwt53_h_cas1(OPJ_INT32* tmp,
 
         dn = in_odd[j] - ((s1 + s2 + 2) >> 2);
         tmp[i  ] = dc;
-        tmp[i + 1] = s1 + ((dn + dc) >> 1);
+        tmp[i + 1] = opj_int_add_no_overflow(s1, opj_int_add_no_overflow(dn, dc) >> 1);
 
         dc = dn;
         s1 = s2;
@@ -512,7 +513,7 @@ static void opj_idwt53_h(const opj_dwt_t *dwt,
 
 #if (defined(__SSE2__) || defined(__AVX2__)) && !defined(STANDARD_SLOW_VERSION)
 
-/* Conveniency macros to improve the readabilty of the formulas */
+/* Conveniency macros to improve the readability of the formulas */
 #if __AVX2__
 #define VREG        __m256i
 #define LOAD_CST(x) _mm256_set1_epi32(x)
@@ -796,10 +797,12 @@ static void opj_idwt3_v_cas0(OPJ_INT32* tmp,
         s1n = tiledp_col[(OPJ_SIZE_T)(j + 1) * stride];
         d1n = tiledp_col[(OPJ_SIZE_T)(sn + j + 1) * stride];
 
-        s0n = s1n - ((d1c + d1n + 2) >> 2);
+        s0n = opj_int_sub_no_overflow(s1n,
+                                      opj_int_add_no_overflow(opj_int_add_no_overflow(d1c, d1n), 2) >> 2);
 
         tmp[i  ] = s0c;
-        tmp[i + 1] = d1c + ((s0c + s0n) >> 1);
+        tmp[i + 1] = opj_int_add_no_overflow(d1c, opj_int_add_no_overflow(s0c,
+                                             s0n) >> 1);
     }
 
     tmp[i] = s0n;
@@ -2080,7 +2083,9 @@ static OPJ_BOOL opj_dwt_decode_tile(opj_thread_pool_t* tp,
     OPJ_SIZE_T h_mem_size;
     int num_threads;
 
-    if (numres == 1U) {
+    /* Not entirely sure for the return code of w == 0 which is triggered per */
+    /* https://github.com/uclouvain/openjpeg/issues/1505 */
+    if (numres == 1U || w == 0) {
         return OPJ_TRUE;
     }
     num_threads = opj_thread_pool_get_thread_count(tp);
@@ -2343,10 +2348,13 @@ static void opj_dwt_decode_partial_1(OPJ_INT32 *a, OPJ_INT32 dn, OPJ_INT32 sn,
             OPJ_S(0) /= 2;
         } else {
             for (i = win_l_x0; i < win_l_x1; i++) {
-                OPJ_D(i) -= (OPJ_SS_(i) + OPJ_SS_(i + 1) + 2) >> 2;
+                OPJ_D(i) = opj_int_sub_no_overflow(OPJ_D(i),
+                                                   opj_int_add_no_overflow(opj_int_add_no_overflow(OPJ_SS_(i), OPJ_SS_(i + 1)),
+                                                           2) >> 2);
             }
             for (i = win_h_x0; i < win_h_x1; i++) {
-                OPJ_S(i) += (OPJ_DD_(i) + OPJ_DD_(i - 1)) >> 1;
+                OPJ_S(i) = opj_int_add_no_overflow(OPJ_S(i),
+                                                   opj_int_add_no_overflow(OPJ_DD_(i), OPJ_DD_(i - 1)) >> 1);
             }
         }
     }
@@ -2484,12 +2492,17 @@ static void opj_dwt_decode_partial_1_parallel(OPJ_INT32 *a,
         } else {
             for (i = win_l_x0; i < win_l_x1; i++) {
                 for (off = 0; off < 4; off++) {
-                    OPJ_D_off(i, off) -= (OPJ_SS__off(i, off) + OPJ_SS__off(i + 1, off) + 2) >> 2;
+                    OPJ_D_off(i, off) = opj_int_sub_no_overflow(
+                                            OPJ_D_off(i, off),
+                                            opj_int_add_no_overflow(
+                                                opj_int_add_no_overflow(OPJ_SS__off(i, off), OPJ_SS__off(i + 1, off)), 2) >> 2);
                 }
             }
             for (i = win_h_x0; i < win_h_x1; i++) {
                 for (off = 0; off < 4; off++) {
-                    OPJ_S_off(i, off) += (OPJ_DD__off(i, off) + OPJ_DD__off(i - 1, off)) >> 1;
+                    OPJ_S_off(i, off) = opj_int_add_no_overflow(
+                                            OPJ_S_off(i, off),
+                                            opj_int_add_no_overflow(OPJ_DD__off(i, off), OPJ_DD__off(i - 1, off)) >> 1);
                 }
             }
         }

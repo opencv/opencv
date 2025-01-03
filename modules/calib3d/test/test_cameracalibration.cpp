@@ -1388,8 +1388,8 @@ void CV_StereoCalibrationTest::run( int )
 
         for( int i = 0; i < nframes; i++ )
         {
-            Mat left = imread(imglist[i*2]);
-            Mat right = imread(imglist[i*2+1]);
+            Mat left = imread(imglist[i*2], IMREAD_GRAYSCALE);
+            Mat right = imread(imglist[i*2+1], IMREAD_GRAYSCALE);
             if(left.empty() || right.empty())
             {
                 ts->printf( cvtest::TS::LOG, "Can not load images %s and %s, testcase %d\n",
@@ -1400,6 +1400,8 @@ void CV_StereoCalibrationTest::run( int )
             imgsize = left.size();
             bool found1 = findChessboardCorners(left, patternSize, imgpt1[i]);
             bool found2 = findChessboardCorners(right, patternSize, imgpt2[i]);
+            cornerSubPix(left, imgpt1[i], Size(5, 5), Size(-1, -1), TermCriteria(TermCriteria::EPS | TermCriteria::MAX_ITER, 30, 0.1));
+            cornerSubPix(right, imgpt2[i], Size(5, 5), Size(-1, -1), TermCriteria(TermCriteria::EPS | TermCriteria::MAX_ITER, 30, 0.1));
             if(!found1 || !found2)
             {
                 ts->printf( cvtest::TS::LOG, "The function could not detect boards (%d x %d) on the images %s and %s, testcase %d\n",
@@ -1791,10 +1793,10 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
         perViewErrors2.resize(numImgs);
     }
 
-    for (size_t i = 0; i<numImgs; i++)
+    for (size_t i = 0; i < numImgs; i++)
     {
-        perViewErrors1[i] = perViewErrorsMat.at<double>(i, 0);
-        perViewErrors2[i] = perViewErrorsMat.at<double>(i, 1);
+        perViewErrors1[i] = perViewErrorsMat.at<double>((int)i, 0);
+        perViewErrors2[i] = perViewErrorsMat.at<double>((int)i, 1);
     }
 
     if (rotationMatrices.size() != numImgs)
@@ -1806,7 +1808,7 @@ double CV_StereoCalibrationTest_CPP::calibrateStereoCamera( const vector<vector<
         translationVectors.resize(numImgs);
     }
 
-    for( size_t i = 0; i < numImgs; i++ )
+    for (size_t i = 0; i < numImgs; i++)
     {
         Mat r9;
         cv::Rodrigues( rvecs[i], r9 );
@@ -2148,6 +2150,54 @@ TEST(Calib3d_StereoCalibrate, regression_11131)
     EXPECT_GT(R2.at<double>(0, 0), 0);
     EXPECT_GE(roi1.area(), 400*300) << roi1;
     EXPECT_GE(roi2.area(), 400*300) << roi2;
+}
+
+TEST(Calib3d_StereoCalibrate, regression_23305)
+{
+    const Matx33d M1(
+        850, 0, 640,
+        0, 850, 640,
+        0, 0, 1
+    );
+
+    const Matx34d P1_gold(
+        850, 0, 640, 0,
+        0, 850, 640, 0,
+        0, 0, 1, 0
+    );
+
+    const Matx33d M2(
+        850, 0, 640,
+        0, 850, 640,
+        0, 0, 1
+    );
+
+    const Matx34d P2_gold(
+        850, 0, 640, -2*850, // correcponds to T(-2., 0., 0.)
+        0, 850, 640, 0,
+        0, 0, 1, 0
+    );
+
+    const Matx<double, 5, 1> D1(0, 0, 0, 0, 0);
+    const Matx<double, 5, 1> D2(0, 0, 0, 0, 0);
+
+    const Matx33d R(
+        1., 0., 0.,
+        0., 1., 0.,
+        0., 0., 1.
+    );
+    const Matx31d T(-2., 0., 0.);
+
+    const Size imageSize(1280, 1280);
+
+    Mat R1, R2, P1, P2, Q;
+    Rect roi1, roi2;
+    stereoRectify(M1, D1, M2, D2, imageSize, R, T,
+                  R1, R2, P1, P2, Q,
+                  CALIB_ZERO_DISPARITY, 0, imageSize, &roi1, &roi2);
+
+    EXPECT_EQ(cv::norm(P1, P1_gold), 0.);
+    EXPECT_EQ(cv::norm(P2, P2_gold), 0.);
 }
 
 TEST(Calib3d_Triangulate, accuracy)

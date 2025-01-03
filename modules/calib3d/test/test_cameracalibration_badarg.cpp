@@ -149,49 +149,49 @@ void CV_CameraCalibrationBadArgTest::run( int /* start_from */ )
 
     caller.initArgs();
     caller.objPts_arg = noArray();
-    errors += run_test_case( CV_StsBadArg, "None passed in objPts", caller);
+    errors += run_test_case( cv::Error::StsBadArg, "None passed in objPts", caller);
 
     caller.initArgs();
     caller.imgPts_arg = noArray();
-    errors += run_test_case( CV_StsBadArg, "None passed in imgPts", caller );
+    errors += run_test_case( cv::Error::StsBadArg, "None passed in imgPts", caller );
 
     caller.initArgs();
     caller.cameraMatrix_arg = noArray();
-    errors += run_test_case( CV_StsBadArg, "Zero passed in cameraMatrix", caller );
+    errors += run_test_case( cv::Error::StsBadArg, "Zero passed in cameraMatrix", caller );
 
     caller.initArgs();
     caller.distCoeffs_arg = noArray();
-    errors += run_test_case( CV_StsBadArg, "Zero passed in distCoeffs", caller );
+    errors += run_test_case( cv::Error::StsBadArg, "Zero passed in distCoeffs", caller );
 
     caller.initArgs();
     caller.imageSize.width = -1;
-    errors += run_test_case( CV_StsOutOfRange, "Bad image width", caller );
+    errors += run_test_case( cv::Error::StsOutOfRange, "Bad image width", caller );
 
     caller.initArgs();
     caller.imageSize.height = -1;
-    errors += run_test_case( CV_StsOutOfRange, "Bad image height", caller );
+    errors += run_test_case( cv::Error::StsOutOfRange, "Bad image height", caller );
 
     caller.initArgs();
     caller.imgPts[0].clear();
-    errors += run_test_case( CV_StsBadSize, "Bad imgpts[0]", caller );
+    errors += run_test_case( cv::Error::StsBadSize, "Bad imgpts[0]", caller );
     caller.imgPts[0] = caller.imgPts[1];
 
     caller.initArgs();
     caller.objPts[1].clear();
-    errors += run_test_case( CV_StsBadSize, "Bad objpts[1]", caller );
+    errors += run_test_case( cv::Error::StsBadSize, "Bad objpts[1]", caller );
     caller.objPts[1] = caller.objPts[0];
 
     caller.initArgs();
     Mat badCM = Mat::zeros(4, 4, CV_64F);
     caller.cameraMatrix_arg = badCM;
     caller.flags = CALIB_USE_INTRINSIC_GUESS;
-    errors += run_test_case( CV_StsBadArg, "Bad camearaMatrix header", caller );
+    errors += run_test_case( cv::Error::StsBadArg, "Bad camearaMatrix header", caller );
 
     caller.initArgs();
     Mat badDC = Mat::zeros(10, 10, CV_64F);
     caller.distCoeffs_arg = badDC;
     caller.flags = CALIB_USE_INTRINSIC_GUESS;
-    errors += run_test_case( CV_StsBadArg, "Bad camearaMatrix header", caller );
+    errors += run_test_case( cv::Error::StsBadArg, "Bad camearaMatrix header", caller );
 
     if (errors)
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
@@ -244,15 +244,15 @@ protected:
 
         caller.initArgs();
         caller.src_arg = noArray();
-        errors += run_test_case( CV_StsBadArg, "Src is empty matrix", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Src is empty matrix", caller );
 
         caller.initArgs();
         caller.src = Mat::zeros(3, 1, CV_8U);
-        errors += run_test_case( CV_StsUnsupportedFormat, "Bad src formart", caller );
+        errors += run_test_case( cv::Error::StsUnsupportedFormat, "Bad src formart", caller );
 
         caller.initArgs();
         caller.src = Mat::zeros(1, 1, CV_32F);
-        errors += run_test_case( CV_StsBadSize, "Bad src size", caller );
+        errors += run_test_case( cv::Error::StsBadSize, "Bad src size", caller );
 
         if (errors)
             ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
@@ -331,57 +331,57 @@ protected:
 
         caller.initArgs();
         caller.objectPoints_arg = noArray();
-        errors += run_test_case( CV_StsBadArg, "Zero objectPoints", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Zero objectPoints", caller );
 
         caller.initArgs();
         caller.rvec_arg = noArray();
-        errors += run_test_case( CV_StsBadArg, "Zero r_vec", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Zero r_vec", caller );
 
         caller.initArgs();
         caller.tvec_arg = noArray();
-        errors += run_test_case( CV_StsBadArg, "Zero t_vec", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Zero t_vec", caller );
 
         caller.initArgs();
         caller.A_arg = noArray();
-        errors += run_test_case( CV_StsBadArg, "Zero camMat", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Zero camMat", caller );
 
         caller.initArgs();
         caller.imagePoints_arg = noArray();
-        errors += run_test_case( CV_StsBadArg, "Zero imagePoints", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Zero imagePoints", caller );
 
         Mat save_rvec = caller.r_vec;
         caller.initArgs();
         caller.r_vec.create(2, 2, CV_32F);
-        errors += run_test_case( CV_StsBadArg, "Bad rvec format", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Bad rvec format", caller );
 
         caller.initArgs();
         caller.r_vec.create(1, 3, CV_8U);
-        errors += run_test_case( CV_StsBadArg, "Bad rvec format", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Bad rvec format", caller );
         caller.r_vec = save_rvec;
 
         /****************************/
         Mat save_tvec = caller.t_vec;
         caller.initArgs();
         caller.t_vec.create(3, 3, CV_32F);
-        errors += run_test_case( CV_StsBadArg, "Bad tvec format", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Bad tvec format", caller );
 
         caller.initArgs();
         caller.t_vec.create(1, 3, CV_8U);
-        errors += run_test_case( CV_StsBadArg, "Bad tvec format", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Bad tvec format", caller );
         caller.t_vec = save_tvec;
 
         /****************************/
         Mat save_A = caller.A;
         caller.initArgs();
         caller.A.create(2, 2, CV_32F);
-        errors += run_test_case( CV_StsBadArg, "Bad A format", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Bad A format", caller );
         caller.A = save_A;
 
         /****************************/
         Mat save_DC = caller.distCoeffs;
         caller.initArgs();
         caller.distCoeffs.create(3, 3, CV_32F);
-        errors += run_test_case( CV_StsBadArg, "Bad distCoeffs format", caller );
+        errors += run_test_case( cv::Error::StsBadArg, "Bad distCoeffs format", caller );
         caller.distCoeffs = save_DC;
 
         if (errors)

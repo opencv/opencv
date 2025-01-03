@@ -33,6 +33,8 @@ Installing OpenCV from prebuilt binaries
 
 -#  Copy **cv2.pyd** to **C:/Python27/lib/site-packages**.
 
+-#  Copy the **opencv_world.dll** file to **C:/Python27/lib/site-packages**
+
 -#  Open Python IDLE and type following codes in Python terminal.
     @code
         >>> import cv2 as cv
@@ -77,69 +79,42 @@ Building OpenCV from source
 -#  Extract it to a folder, opencv and create a new folder build in it.
 -#  Open CMake-gui (*Start \> All Programs \> CMake-gui*)
 -#  Fill the fields as follows (see the image below):
-
     -#  Click on **Browse Source...** and locate the opencv folder.
-
     -#  Click on **Browse Build...** and locate the build folder we created.
-
     -#  Click on **Configure**.
-
         ![image](images/Capture1.jpg)
-
     -#  It will open a new window to select the compiler. Choose appropriate compiler (here,
         Visual Studio 11) and click **Finish**.
-
         ![image](images/Capture2.png)
-
     -#  Wait until analysis is finished.
-
 -#  You will see all the fields are marked in red. Click on the **WITH** field to expand it. It
     decides what extra features you need. So mark appropriate fields. See the below image:
-
     ![image](images/Capture3.png)
-
 -#  Now click on **BUILD** field to expand it. First few fields configure the build method. See the
     below image:
-
     ![image](images/Capture5.png)
-
 -#  Remaining fields specify what modules are to be built. Since GPU modules are not yet supported
     by OpenCV-Python, you can completely avoid it to save time (But if you work with them, keep it
     there). See the image below:
-
     ![image](images/Capture6.png)
-
 -#  Now click on **ENABLE** field to expand it. Make sure **ENABLE_SOLUTION_FOLDERS** is unchecked
     (Solution folders are not supported by Visual Studio Express edition). See the image below:
-
     ![image](images/Capture7.png)
-
 -#  Also make sure that in the **PYTHON** field, everything is filled. (Ignore
     PYTHON_DEBUG_LIBRARY). See image below:
-
     ![image](images/Capture80.png)
-
 -#  Finally click the **Generate** button.
-
 -#  Now go to our **opencv/build** folder. There you will find **OpenCV.sln** file. Open it with
     Visual Studio.
-
 -#  Check build mode as **Release** instead of **Debug**.
-
 -#  In the solution explorer, right-click on the **Solution** (or **ALL_BUILD**) and build it. It
     will take some time to finish.
-
 -#  Again, right-click on **INSTALL** and build it. Now OpenCV-Python will be installed.
-
     ![image](images/Capture8.png)
-
 -#  Open Python IDLE and enter 'import cv2 as cv'. If no error, it is installed correctly.
 
 @note We have installed with no other support like TBB, Eigen, Qt, Documentation etc. It would be
 difficult to explain it here. A more detailed video will be added soon or you can just hack around.
-
-Additional Resources
---------------------
 
 Exercises
 ---------

@@ -1,13 +1,9 @@
 macro(simd_fail message)
-    message(WARNING "${message}.  Performance will suffer.")
-    set(WITH_SIMD 0 PARENT_SCOPE)
-endmacro()
-
-macro(boolean_number var)
-  if(${var})
-    set(${var} 1 ${ARGN})
+  if(REQUIRE_SIMD)
+    message(FATAL_ERROR "${message}.")
   else()
-    set(${var} 0 ${ARGN})
+    message(STATUS "${message}.  Performance will suffer.")
+    set(WITH_SIMD 0 PARENT_SCOPE)
   endif()
 endmacro()
 
@@ -45,14 +41,14 @@ elseif(CPU_TYPE STREQUAL "i386")
   endif()
 endif()
 
-
-include(CheckLanguage)
-check_language(ASM_NASM)
-if(NOT CMAKE_ASM_NASM_COMPILER)
-  simd_fail("SIMD extensions disabled: could not find NASM compiler")
-  return()
+if(NOT REQUIRE_SIMD)
+  include(CheckLanguage)
+  check_language(ASM_NASM)
+  if(NOT CMAKE_ASM_NASM_COMPILER)
+    simd_fail("SIMD extensions disabled: could not find NASM compiler")
+    return()
+  endif()
 endif()
-
 enable_language(ASM_NASM)
 message(STATUS "CMAKE_ASM_NASM_COMPILER = ${CMAKE_ASM_NASM_COMPILER}")
 
@@ -74,6 +70,8 @@ elseif(CPU_TYPE STREQUAL "i386")
     set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -DWIN32")
   endif()
 endif()
+
+message(STATUS "CMAKE_ASM_NASM_OBJECT_FORMAT = ${CMAKE_ASM_NASM_OBJECT_FORMAT}")
 
 if(NOT CMAKE_ASM_NASM_OBJECT_FORMAT)
   simd_fail("SIMD extensions disabled: could not determine NASM object format")
@@ -98,8 +96,21 @@ if(NOT WIN32 AND (CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED))
   set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -DPIC")
 endif()
 
+if(CPU_TYPE STREQUAL "x86_64" AND CMAKE_ASM_NASM_OBJECT_FORMAT MATCHES "^elf")
+  check_c_source_compiles("
+    #if (__CET__ & 3) == 0
+    #error \"CET not enabled\"
+    #endif
+    int main(void) { return 0; }" HAVE_CET)
+
+  if(HAVE_CET)
+    set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -D__CET__")
+  endif()
+endif()
+
 string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_UC)
 set(EFFECTIVE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} ${CMAKE_ASM_NASM_FLAGS_${CMAKE_BUILD_TYPE_UC}}")
+message(STATUS "CMAKE_ASM_NASM_FLAGS = ${EFFECTIVE_ASM_NASM_FLAGS}")
 
 set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -I\"${CMAKE_CURRENT_SOURCE_DIR}/nasm/\" -I\"${CMAKE_CURRENT_SOURCE_DIR}/${CPU_TYPE}/\"")
 
@@ -113,7 +124,6 @@ add_custom_target(jsimdcfg COMMAND
     ${CMAKE_CURRENT_SOURCE_DIR}/nasm/jsimdcfg.inc.h |
   ${GREP} -E '^[\;%]|^\ %' | sed 's%_cpp_protection_%%' |
   sed 's@% define@%define@g' >${CMAKE_CURRENT_SOURCE_DIR}/nasm/jsimdcfg.inc)
-set_target_properties(jsimdcfg PROPERTIES FOLDER "3rdparty")
 
 if(CPU_TYPE STREQUAL "x86_64")
   set(SIMD_SOURCES x86_64/jsimdcpu.asm x86_64/jfdctflt-sse.asm
@@ -198,16 +208,17 @@ endforeach()
 
 if(MSVC_IDE OR XCODE)
   set(SIMD_OBJS ${SIMD_OBJS} PARENT_SCOPE)
-  add_library(jsimd OBJECT ${CPU_TYPE}/jsimd.c)
-  add_custom_target(jsimd-objs DEPENDS ${SIMD_OBJS})
-  add_dependencies(jsimd jsimd-objs)
-  set_target_properties(jsimd PROPERTIES FOLDER "3rdparty")
-  set_target_properties(jsimd-objs PROPERTIES FOLDER "3rdparty")
+  add_library(simd OBJECT ${CPU_TYPE}/jsimd.c)
+  add_custom_target(simd-objs DEPENDS ${SIMD_OBJS})
+  add_dependencies(simd simd-objs)
+  set_target_properties(simd PROPERTIES FOLDER "3rdparty/jpeg")
+  set_target_properties(simd-objs PROPERTIES FOLDER "3rdparty/jpeg")
+  set_target_properties(jsimdcfg PROPERTIES FOLDER "3rdparty/jpeg")
 else()
-  add_library(jsimd OBJECT ${SIMD_SOURCES} ${CPU_TYPE}/jsimd.c)
+  add_library(simd OBJECT ${SIMD_SOURCES} ${CPU_TYPE}/jsimd.c)
 endif()
 if(NOT WIN32 AND (CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED))
-  set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
 
 
@@ -228,7 +239,6 @@ elseif(CPU_TYPE STREQUAL "arm64" OR CPU_TYPE STREQUAL "arm")
 # following test determines whether -mfloat-abi=softfp should be explicitly
 # added to the compile flags for the intrinsics implementation of the Neon SIMD
 # extensions.
-
 if(BITS EQUAL 32)
   check_c_source_compiles("
     #if defined(__ARM_NEON__) || (!defined(__linux__) && !defined(ANDROID) && !defined(__ANDROID__))
@@ -397,10 +407,10 @@ if(NOT NEON_INTRINSICS)
   set(SIMD_SOURCES ${SIMD_SOURCES} arm/aarch${BITS}/jsimd_neon.S)
 endif()
 
-add_library(jsimd OBJECT ${SIMD_SOURCES} arm/aarch${BITS}/jsimd.c)
+add_library(simd OBJECT ${SIMD_SOURCES} arm/aarch${BITS}/jsimd.c)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
-  set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
 
 
@@ -439,10 +449,10 @@ if(NOT HAVE_DSPR2)
   return()
 endif()
 
-add_library(jsimd OBJECT mips/jsimd_dspr2.S mips/jsimd.c)
+add_library(simd OBJECT mips/jsimd_dspr2.S mips/jsimd.c)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
-  set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
 
 ###############################################################################
@@ -454,6 +464,9 @@ elseif(CPU_TYPE STREQUAL "loongson" OR CPU_TYPE MATCHES "^mips64")
 set(CMAKE_REQUIRED_FLAGS -Wa,-mloongson-mmi,-mloongson-ext)
 
 check_c_source_compiles("
+  #if !(defined(__mips__) && __mips_isa_rev < 6)
+  #error Loongson MMI can't work with MIPS Release 6+
+  #endif
   int main(void) {
     int c = 0, a = 0, b = 0;
     asm (
@@ -487,10 +500,10 @@ foreach(file ${SIMD_SOURCES})
     " -Wa,-mloongson-mmi,-mloongson-ext")
 endforeach()
 
-add_library(jsimd OBJECT ${SIMD_SOURCES} mips64/jsimd.c)
+add_library(simd OBJECT ${SIMD_SOURCES} mips64/jsimd.c)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
-  set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
 
 ###############################################################################
@@ -527,10 +540,10 @@ set(SIMD_SOURCES powerpc/jccolor-altivec.c powerpc/jcgray-altivec.c
 set_source_files_properties(${SIMD_SOURCES} PROPERTIES
   COMPILE_FLAGS -maltivec)
 
-add_library(jsimd OBJECT ${SIMD_SOURCES} powerpc/jsimd.c)
+add_library(simd OBJECT ${SIMD_SOURCES} powerpc/jsimd.c)
 
 if(CMAKE_POSITION_INDEPENDENT_CODE OR ENABLE_SHARED)
-  set_target_properties(jsimd PROPERTIES POSITION_INDEPENDENT_CODE 1)
+  set_target_properties(simd PROPERTIES POSITION_INDEPENDENT_CODE 1)
 endif()
 
 

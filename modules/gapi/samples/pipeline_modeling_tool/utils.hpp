@@ -17,6 +17,8 @@ struct OutputDescr {
 
 namespace utils {
 
+using double_ms_t = std::chrono::duration<double, std::milli>;
+
 inline void createNDMat(cv::Mat& mat, const std::vector<int>& dims, int depth) {
     GAPI_Assert(!dims.empty());
     mat.create(dims, depth);
@@ -50,10 +52,8 @@ inline void generateRandom(cv::Mat& out) {
     }
 }
 
-inline void sleep(double ms) {
+inline void sleep(std::chrono::microseconds delay) {
 #if defined(_WIN32)
-    // NB: It takes portions of 100 nanoseconds.
-    int64_t ns_units = static_cast<int64_t>(ms * 1e4);
     // FIXME: Wrap it to RAII and instance only once.
     HANDLE timer = CreateWaitableTimer(NULL, true, NULL);
     if (!timer) {
@@ -61,7 +61,12 @@ inline void sleep(double ms) {
     }
 
     LARGE_INTEGER li;
-    li.QuadPart = -ns_units;
+    using ns_t = std::chrono::nanoseconds;
+    using ns_100_t = std::chrono::duration<ns_t::rep,
+                                           std::ratio_multiply<std::ratio<100>, ns_t::period>>;
+    // NB: QuadPart takes portions of 100 nanoseconds.
+    li.QuadPart = -std::chrono::duration_cast<ns_100_t>(delay).count();
+
     if(!SetWaitableTimer(timer, &li, 0, NULL, NULL, false)){
         CloseHandle(timer);
         throw std::logic_error("Failed to set timer");
@@ -72,8 +77,7 @@ inline void sleep(double ms) {
     }
     CloseHandle(timer);
 #else
-    using namespace std::chrono;
-    std::this_thread::sleep_for(duration<double, std::milli>(ms));
+    std::this_thread::sleep_for(delay);
 #endif
 }
 
@@ -91,6 +95,16 @@ typename duration_t::rep timestamp() {
     using namespace std::chrono;
     auto now = high_resolution_clock::now();
     return duration_cast<duration_t>(now.time_since_epoch()).count();
+}
+
+inline void busyWait(std::chrono::microseconds delay) {
+    auto start_ts     = timestamp<std::chrono::microseconds>();
+    auto end_ts       = start_ts;
+    auto time_to_wait = delay.count();
+
+    while (end_ts - start_ts < time_to_wait) {
+        end_ts = timestamp<std::chrono::microseconds>();
+    }
 }
 
 template <typename K, typename V>

@@ -456,8 +456,8 @@ void CV_StereoMatchingTest::run(int)
         string datasetFullDirName = dataPath + DATASETS_DIR + datasetName + "/";
         Mat leftImg = imread(datasetFullDirName + LEFT_IMG_NAME);
         Mat rightImg = imread(datasetFullDirName + RIGHT_IMG_NAME);
-        Mat trueLeftDisp = imread(datasetFullDirName + TRUE_LEFT_DISP_NAME, 0);
-        Mat trueRightDisp = imread(datasetFullDirName + TRUE_RIGHT_DISP_NAME, 0);
+        Mat trueLeftDisp = imread(datasetFullDirName + TRUE_LEFT_DISP_NAME, IMREAD_GRAYSCALE);
+        Mat trueRightDisp = imread(datasetFullDirName + TRUE_RIGHT_DISP_NAME, IMREAD_GRAYSCALE);
         Rect calcROI;
 
         if( leftImg.empty() || rightImg.empty() || trueLeftDisp.empty() )
@@ -740,8 +740,8 @@ public:
     CV_StereoBMTest()
     {
         name = "stereobm";
-        fill(rmsEps.begin(), rmsEps.end(), 0.4f);
-        fill(fracEps.begin(), fracEps.end(), 0.022f);
+        std::fill(rmsEps.begin(), rmsEps.end(), 0.4f);
+        std::fill(fracEps.begin(), fracEps.end(), 0.022f);
     }
 
 protected:
@@ -789,7 +789,7 @@ protected:
         calcROI = getValidDisparityROI(cROI, cROI, params.mindisp, params.ndisp, params.winSize);
 
         bm->compute( leftImg, rightImg, tempDisp );
-        tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
+        tempDisp.convertTo(leftDisp, CV_32F, 1./static_cast<double>(StereoMatcher::DISP_SCALE));
 
         //check for fixed-type disparity data type
         Mat_<float> fixedFloatDisp;
@@ -802,7 +802,7 @@ protected:
                 for (int x = 0; x < leftDisp.cols; x++)
                 {
                     if (leftDisp.at<float>(y, x) < params.mindisp)
-                        leftDisp.at<float>(y, x) = -1./StereoMatcher::DISP_SCALE; // treat disparity < mindisp as no disparity
+                        leftDisp.at<float>(y, x) = -1./static_cast<double>(StereoMatcher::DISP_SCALE); // treat disparity < mindisp as no disparity
                 }
 
         return params.winSize/2;
@@ -835,9 +835,9 @@ TEST_P(Calib3d_StereoBM_BufferBM, memAllocsTest)
     const int SADWindowSize = get<1>(get<1>(GetParam()));
 
     String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
-    Mat leftImg = imread(path + "im2.png", 0);
+    Mat leftImg = imread(path + "im2.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(leftImg.empty());
-    Mat rightImg = imread(path + "im6.png", 0);
+    Mat rightImg = imread(path + "im6.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(rightImg.empty());
     Mat leftDisp;
     {
@@ -866,8 +866,8 @@ public:
     CV_StereoSGBMTest()
     {
         name = "stereosgbm";
-        fill(rmsEps.begin(), rmsEps.end(), 0.25f);
-        fill(fracEps.begin(), fracEps.end(), 0.01f);
+        std::fill(rmsEps.begin(), rmsEps.end(), 0.25f);
+        std::fill(fracEps.begin(), fracEps.end(), 0.01f);
     }
 
 protected:
@@ -923,9 +923,9 @@ TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); 
 TEST(Calib3d_StereoSGBM_HH4, regression)
 {
     String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";
-    Mat leftImg = imread(path + "im2.png", 0);
+    Mat leftImg = imread(path + "im2.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(leftImg.empty());
-    Mat rightImg = imread(path + "im6.png", 0);
+    Mat rightImg = imread(path + "im6.png", IMREAD_GRAYSCALE);
     ASSERT_FALSE(rightImg.empty());
     Mat testData = imread(path + "disp2_hh4.png",-1);
     ASSERT_FALSE(testData.empty());

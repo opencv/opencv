@@ -123,7 +123,7 @@ public:
 
         vector<CircleType> circles;
         const double dp = 1.0;
-        HoughCircles(src, circles, CV_HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
+        HoughCircles(src, circles, cv::HOUGH_GRADIENT, dp, minDist, edgeThreshold, accumThreshold, minRadius, maxRadius);
 
         string imgProc = string(cvtest::TS::ptr()->get_data_path()) + "imgproc/";
 #if DEBUG_IMAGES

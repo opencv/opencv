@@ -83,6 +83,14 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(0, 0, 255));
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(0, 0, 255));
 
+    img = imread(root + "readwrite/color_palette_alpha.png", IMREAD_COLOR_RGB);
+    ASSERT_FALSE(img.empty());
+    ASSERT_TRUE(img.channels() == 3);
+
+    // pixel is red in RGB
+    EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(255, 0, 0));
+    EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(255, 0, 0));
+
     // Fourth Test : Read PNG without alpha, imread flag 1
     img = imread(root + "readwrite/color_palette_no_alpha.png", IMREAD_COLOR);
     ASSERT_FALSE(img.empty());
@@ -91,101 +99,15 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     // pixel is red in BGR
     EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(0, 0, 255));
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(0, 0, 255));
+
+    img = imread(root + "readwrite/color_palette_no_alpha.png", IMREAD_COLOR_RGB);
+    ASSERT_FALSE(img.empty());
+    ASSERT_TRUE(img.channels() == 3);
+
+    // pixel is red in RGB
+    EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(255, 0, 0));
+    EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(255, 0, 0));
 }
-
-/**
- * Test for check whether reading exif orientation tag was processed successfully or not
- * The test info is the set of 8 images named testExifRotate_{1 to 8}.png
- * The test image is the square 10x10 points divided by four sub-squares:
- * (R corresponds to Red, G to Green, B to Blue, W to white)
- * ---------             ---------
- * | R | G |             | G | R |
- * |-------| - (tag 1)   |-------| - (tag 2)
- * | B | W |             | W | B |
- * ---------             ---------
- *
- * ---------             ---------
- * | W | B |             | B | W |
- * |-------| - (tag 3)   |-------| - (tag 4)
- * | G | R |             | R | G |
- * ---------             ---------
- *
- * ---------             ---------
- * | R | B |             | G | W |
- * |-------| - (tag 5)   |-------| - (tag 6)
- * | G | W |             | R | B |
- * ---------             ---------
- *
- * ---------             ---------
- * | W | G |             | B | R |
- * |-------| - (tag 7)   |-------| - (tag 8)
- * | B | R |             | W | G |
- * ---------             ---------
- *
- *
- * Every image contains exif field with orientation tag (0x112)
- * After reading each image and applying the orientation tag,
- * the resulting image should be:
- * ---------
- * | R | G |
- * |-------|
- * | B | W |
- * ---------
- *
- */
-
-typedef testing::TestWithParam<string> Imgcodecs_PNG_Exif;
-
-// Solution to issue 16579: PNG read doesn't support Exif orientation data
-#ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
-TEST_P(Imgcodecs_PNG_Exif, exif_orientation)
-#else
-TEST_P(Imgcodecs_PNG_Exif, DISABLED_exif_orientation)
-#endif
-{
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + GetParam();
-    const int colorThresholdHigh = 250;
-    const int colorThresholdLow = 5;
-
-    Mat m_img = imread(filename);
-    ASSERT_FALSE(m_img.empty());
-    Vec3b vec;
-
-    //Checking the first quadrant (with supposed red)
-    vec = m_img.at<Vec3b>(2, 2); //some point inside the square
-    EXPECT_LE(vec.val[0], colorThresholdLow);
-    EXPECT_LE(vec.val[1], colorThresholdLow);
-    EXPECT_GE(vec.val[2], colorThresholdHigh);
-
-    //Checking the second quadrant (with supposed green)
-    vec = m_img.at<Vec3b>(2, 7);  //some point inside the square
-    EXPECT_LE(vec.val[0], colorThresholdLow);
-    EXPECT_GE(vec.val[1], colorThresholdHigh);
-    EXPECT_LE(vec.val[2], colorThresholdLow);
-
-    //Checking the third quadrant (with supposed blue)
-    vec = m_img.at<Vec3b>(7, 2);  //some point inside the square
-    EXPECT_GE(vec.val[0], colorThresholdHigh);
-    EXPECT_LE(vec.val[1], colorThresholdLow);
-    EXPECT_LE(vec.val[2], colorThresholdLow);
-}
-
-const string exif_files[] =
-{
-    "readwrite/testExifOrientation_1.png",
-    "readwrite/testExifOrientation_2.png",
-    "readwrite/testExifOrientation_3.png",
-    "readwrite/testExifOrientation_4.png",
-    "readwrite/testExifOrientation_5.png",
-    "readwrite/testExifOrientation_6.png",
-    "readwrite/testExifOrientation_7.png",
-    "readwrite/testExifOrientation_8.png"
-};
-
-INSTANTIATE_TEST_CASE_P(ExifFiles, Imgcodecs_PNG_Exif,
-    testing::ValuesIn(exif_files));
-
 
 typedef testing::TestWithParam<string> Imgcodecs_Png_PngSuite;
 

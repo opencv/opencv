@@ -10,9 +10,9 @@ body:
 
 - type: textarea
   attributes:
-    label: Descripe the doc issue
+    label: Describe the doc issue
     description: >
-      Please provide a clear and concise description of what content in https://docs.opencv.org/ is an issue. Note that there are multiple active branches, such as 3.4, 4.x and 5.x, so please specify the branch with the problem.
+      Please provide a clear and concise description of what content in https://docs.opencv.org/ is an issue. Note that there are multiple active branches, such as 4.x and 5.x, so please specify the branch with the problem.
     placeholder: |
       A clear and concise description of what content in https://docs.opencv.org/ is an issue.
 

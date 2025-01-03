@@ -54,7 +54,7 @@ repository](https://github.com/opencv/opencv.git).
 
 ### Obtaining the Latest Stable OpenCV Version
 
--   Go to our [releases page](http://opencv.org/releases.html).
+-   Go to our [releases page](https://opencv.org/releases).
 -   Download the source archive and unpack it.
 
 ### Obtaining the Cutting-edge OpenCV from the Git Repository
@@ -83,6 +83,9 @@ Building OpenCV.js from Source
     It requires `python` and `cmake` installed in your development environment.
 
 -#  The build script builds asm.js version by default. To build WebAssembly version, append `--build_wasm` switch.
+    By default everything is bundled into one JavaScript file by `base64` encoding the WebAssembly code. For production
+    builds you can add `--disable_single_file` which will reduce total size by writing the WebAssembly code
+    to a dedicated `.wasm` file which the generated JavaScript file will automatically load.
 
     For example, to build wasm version in `build_wasm` directory:
     @code{.bash}

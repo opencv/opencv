@@ -43,6 +43,17 @@ public:
     float y = 0.f;
 };
 
+class Point3f
+{
+public:
+    Point3f() = default;
+    Point3f(float _x, float _y, float _z) : x(_x),  y(_y), z(_z) {}
+
+    float x = 0.f;
+    float y = 0.f;
+    float z = 0.f;
+};
+
 class Rect
 {
 public:

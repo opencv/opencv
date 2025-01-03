@@ -122,6 +122,11 @@ typedef struct opj_tcd_cblk_dec {
     opj_tcd_seg_data_chunk_t* chunks; /* Array of chunks */
     /* position of the code-blocks : left upper corner (x0, y0) right low corner (x1,y1) */
     OPJ_INT32 x0, y0, x1, y1;
+    /* Mb is The maximum number of bit-planes available for the representation of
+       coefficients in any sub-band, b, as defined in Equation (E-2). See
+       Section B.10.5 of the standard */
+    OPJ_UINT32 Mb;  /* currently used only to check if HT decoding is correct */
+    /* numbps is Mb - P as defined in Section B.10.5 of the standard */
     OPJ_UINT32 numbps;
     /* number of bits for len, for the current packet. Transitory value */
     OPJ_UINT32 numlenbits;
@@ -217,8 +222,8 @@ typedef struct opj_tcd_tilecomp {
     OPJ_UINT32 win_x1;
     OPJ_UINT32 win_y1;
 
-    /* add fixed_quality */
-    OPJ_INT32 numpix;
+    /* number of pixels */
+    OPJ_SIZE_T numpix;
 } opj_tcd_tilecomp_t;
 
 
@@ -230,9 +235,9 @@ typedef struct opj_tcd_tile {
     OPJ_INT32 x0, y0, x1, y1;
     OPJ_UINT32 numcomps;            /* number of components in tile */
     opj_tcd_tilecomp_t *comps;  /* Components information */
-    OPJ_INT32 numpix;               /* add fixed_quality */
-    OPJ_FLOAT64 distotile;          /* add fixed_quality */
-    OPJ_FLOAT64 distolayer[100];    /* add fixed_quality */
+    OPJ_SIZE_T numpix;               /* number of pixels */
+    OPJ_FLOAT64 distotile;          /* distortion of the tile */
+    OPJ_FLOAT64 distolayer[100];    /* distortion per layer */
     OPJ_UINT32 packno;              /* packet number */
 } opj_tcd_tile_t;
 
@@ -363,23 +368,6 @@ OPJ_BOOL opj_tcd_init(opj_tcd_t *p_tcd,
  */
 OPJ_BOOL opj_tcd_init_decode_tile(opj_tcd_t *p_tcd, OPJ_UINT32 p_tile_no,
                                   opj_event_mgr_t* p_manager);
-
-void opj_tcd_makelayer_fixed(opj_tcd_t *tcd, OPJ_UINT32 layno,
-                             OPJ_UINT32 final);
-
-void opj_tcd_rateallocate_fixed(opj_tcd_t *tcd);
-
-void opj_tcd_makelayer(opj_tcd_t *tcd,
-                       OPJ_UINT32 layno,
-                       OPJ_FLOAT64 thresh,
-                       OPJ_UINT32 final);
-
-OPJ_BOOL opj_tcd_rateallocate(opj_tcd_t *tcd,
-                              OPJ_BYTE *dest,
-                              OPJ_UINT32 * p_data_written,
-                              OPJ_UINT32 len,
-                              opj_codestream_info_t *cstr_info,
-                              opj_event_mgr_t *p_manager);
 
 /**
  * Gets the maximum tile size that will be taken by the tile once decoded.

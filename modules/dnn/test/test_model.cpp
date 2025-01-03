@@ -40,6 +40,8 @@ public:
         model.setPreferableTarget(target);
 
         model.setNmsAcrossClasses(nmsAcrossClasses);
+        if (target == DNN_TARGET_CPU_FP16)
+            model.enableWinograd(false);
 
         std::vector<int> classIds;
         std::vector<float> confidences;
@@ -98,7 +100,7 @@ public:
     void testSegmentationModel(const std::string& weights_file, const std::string& config_file,
                                const std::string& inImgPath, const std::string& outImgPath,
                                float norm, const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                               double scale = 1.0, bool swapRB = false, bool crop = false)
+                               double scale = 1.0, bool swapRB = false, bool crop = false, const std::string outname = "")
     {
         checkBackend();
 
@@ -112,6 +114,9 @@ public:
 
         model.setPreferableBackend(backend);
         model.setPreferableTarget(target);
+
+        if(!outname.empty())
+            model.setOutputNames({outname});
 
         model.segment(frame, mask);
         normAssert(mask, exp, "", norm, norm);
@@ -153,8 +158,8 @@ public:
                                     const std::string& imgPath, const std::vector<std::vector<Point>>& gt,
                                     float binThresh, float polyThresh,
                                     uint maxCandidates, double unclipRatio,
-                                    const Size& size = {-1, -1}, Scalar mean = Scalar(),
-                                    double scale = 1.0, bool swapRB = false, bool crop = false)
+                                    const Size& size = {-1, -1}, Scalar mean = Scalar(), Scalar scale = Scalar::all(1.0),
+                                    double boxes_iou_diff = 0.05, bool swapRB = false, bool crop = false)
     {
         checkBackend();
 
@@ -197,7 +202,7 @@ public:
         imshow("result", result); // imwrite("result.png", result);
         waitKey(0);
 #endif
-        normAssertTextDetections(gt, contours, "", 0.05f);
+        normAssertTextDetections(gt, contours, "", boxes_iou_diff);
 
         // 2. Check quadrangle-based API
         // std::vector< std::vector<Point> > contours;
@@ -209,7 +214,7 @@ public:
         imshow("result_contours", result); // imwrite("result_contours.png", result);
         waitKey(0);
 #endif
-        normAssertTextDetections(gt, contours, "", 0.05f);
+        normAssertTextDetections(gt, contours, "", boxes_iou_diff);
     }
 
     void testTextDetectionModelByEAST(
@@ -286,8 +291,9 @@ TEST_P(Test_Model, Classify)
 TEST_P(Test_Model, DetectRegion)
 {
     applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
         CV_TEST_TAG_LONG,
-        CV_TEST_TAG_MEMORY_2GB
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -332,7 +338,7 @@ TEST_P(Test_Model, DetectRegion)
     double confThreshold = 0.24;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
     double scoreDiff = 8e-5, iouDiff = 1e-5;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 1e-2;
         iouDiff = 1.6e-2;
@@ -346,8 +352,9 @@ TEST_P(Test_Model, DetectRegion)
 TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
 {
     applyTestTag(
+        CV_TEST_TAG_MEMORY_2GB,
         CV_TEST_TAG_LONG,
-        CV_TEST_TAG_MEMORY_2GB
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -392,7 +399,7 @@ TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
     double confThreshold = 0.24;
     double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.15: 0.15;
     double scoreDiff = 8e-5, iouDiff = 1e-5;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 1e-2;
         iouDiff = 1.6e-2;
@@ -406,20 +413,14 @@ TEST_P(Test_Model, DetectRegionWithNmsAcrossClasses)
 
 TEST_P(Test_Model, DetectionOutput)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // Check 'backward_compatible_check || in_out_elements_equal' failed at core/src/op/reshape.cpp:427:
     // While validating node 'v1::Reshape bbox_pred_reshape (ave_bbox_pred_rois[0]:f32{1,8,1,1}, Constant_388[0]:i64{4}) -> (f32{?,?,?,?})' with friendly_name 'bbox_pred_reshape':
     // Requested output shape {1,300,8,1} is incompatible with input shape {1, 8, 1, 1}
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
-        applyTestTag(target == DNN_TARGET_OPENCL ? CV_TEST_TAG_DNN_SKIP_IE_OPENCL : CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16,
-            CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION
-        );
 #elif defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // Exception: Function contains several inputs and outputs with one friendly name! (HETERO bug?)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target != DNN_TARGET_CPU)
@@ -451,7 +452,7 @@ TEST_P(Test_Model, DetectionOutput)
     double scoreDiff = default_l1, iouDiff = 1e-5;
     float confThreshold = 0.8;
     double nmsThreshold = 0.0;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         if (backend == DNN_BACKEND_OPENCV)
             scoreDiff = 4e-3;
@@ -459,6 +460,13 @@ TEST_P(Test_Model, DetectionOutput)
             scoreDiff = 2e-2;
         iouDiff = 1.8e-1;
     }
+#if defined(INF_ENGINE_RELEASE)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+        {
+            scoreDiff = 0.05;
+            iouDiff = 0.08;
+        }
+#endif
 
     testDetectModel(weights_file, config_file, img_path, refClassIds, refConfidences, refBoxes,
                     scoreDiff, iouDiff, confThreshold, nmsThreshold, size, mean);
@@ -491,15 +499,15 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
         refBoxes.emplace_back(left, top, width, height);
     }
 
-    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel", false);
-    std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
+    std::string weights_file = _tf("MobileNetSSD_deploy_19e3ec3.caffemodel", false);
+    std::string config_file = _tf("MobileNetSSD_deploy_19e3ec3.prototxt");
 
     Scalar mean = Scalar(127.5, 127.5, 127.5);
     double scale = 1.0 / 127.5;
     Size size{300, 300};
 
     double scoreDiff = 1e-5, iouDiff = 1e-5;
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 1.7e-2;
         iouDiff = 6.91e-2;
@@ -512,7 +520,7 @@ TEST_P(Test_Model, DetectionMobilenetSSD)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        scoreDiff = 0.0021;
+        scoreDiff = 0.0028;
         iouDiff = 1e-2;
     }
     float confThreshold = FLT_MIN;
@@ -526,6 +534,8 @@ TEST_P(Test_Model, Keypoints_pose)
 {
     if (target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 #ifdef HAVE_INF_ENGINE
     if (target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -573,7 +583,7 @@ TEST_P(Test_Model, Keypoints_face)
 
     // Ref. Range: [-1.1784188, 1.7758257]
     float norm = 1e-4;
-    if (target == DNN_TARGET_OPENCL_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16)
         norm = 5e-3;
     if (target == DNN_TARGET_MYRIAD)
     {
@@ -594,8 +604,8 @@ TEST_P(Test_Model, Detection_normalized)
     std::vector<float> refConfidences = {0.999222f};
     std::vector<Rect2d> refBoxes = {Rect2d(0, 4, 227, 222)};
 
-    std::string weights_file = _tf("MobileNetSSD_deploy.caffemodel", false);
-    std::string config_file = _tf("MobileNetSSD_deploy.prototxt");
+    std::string weights_file = _tf("MobileNetSSD_deploy_19e3ec3.caffemodel", false);
+    std::string config_file = _tf("MobileNetSSD_deploy_19e3ec3.prototxt");
 
     Scalar mean = Scalar(127.5, 127.5, 127.5);
     double scale = 1.0 / 127.5;
@@ -609,7 +619,7 @@ TEST_P(Test_Model, Detection_normalized)
         scoreDiff = 3e-4;
         iouDiff = 0.018;
     }
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 5e-3;
         iouDiff = 0.09;
@@ -628,15 +638,13 @@ TEST_P(Test_Model, Detection_normalized)
 TEST_P(Test_Model, Segmentation)
 {
     applyTestTag(
-        CV_TEST_TAG_MEMORY_2GB
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
     float norm = 0;
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
     // Failed to allocate graph: NC_ERROR
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_MYRIAD)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
@@ -661,23 +669,22 @@ TEST_P(Test_Model, Segmentation)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_MYRIAD, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-    if ((backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
+    if ((backend == DNN_BACKEND_OPENCV && (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CPU_FP16))
         || (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA_FP16))
     {
-        norm = 2.0f;  // l1 = 0.01 lInf = 2
+        norm = 7.0f;  // l1 = 0.01 lInf = 7
     }
 
     std::string inp = _tf("dog416.png");
-    std::string weights_file = _tf("fcn8s-heavy-pascal.prototxt");
-    std::string config_file = _tf("fcn8s-heavy-pascal.caffemodel", false);
+    std::string weights_file = _tf("onnx/models/fcn-resnet50-12.onnx", false);
     std::string exp = _tf("segmentation_exp.png");
 
     Size size{128, 128};
-    double scale = 1.0;
-    Scalar mean = Scalar();
-    bool swapRB = false;
+    double scale = 0.019;
+    Scalar mean = Scalar(0.485*255, 0.456*255, 0.406*255);
+    bool swapRB = true;
 
-    testSegmentationModel(weights_file, config_file, inp, exp, norm, size, mean, scale, swapRB);
+    testSegmentationModel(weights_file, "", inp, exp, norm, size, mean, scale, swapRB, false, "out");
 }
 
 TEST_P(Test_Model, TextRecognition)
@@ -746,11 +753,16 @@ TEST_P(Test_Model, TextRecognitionWithCTCPrefixBeamSearch)
 
 TEST_P(Test_Model, TextDetectionByDB)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     if (target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
+    if (target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
 
     std::string imgPath = _tf("text_det_test1.png");
-    std::string weightPath = _tf("onnx/models/DB_TD500_resnet50.onnx", false);
+    std::string weightPathDB = _tf("onnx/models/DB_TD500_resnet50.onnx", false);
+    std::string weightPathPPDB = _tf("onnx/models/PP_OCRv3_DB_text_det.onnx", false);
 
     // GroundTruth
     std::vector<std::vector<Point>> gt = {
@@ -759,19 +771,34 @@ TEST_P(Test_Model, TextDetectionByDB)
     };
 
     Size size{736, 736};
-    double scale = 1.0 / 255.0;
-    Scalar mean = Scalar(122.67891434, 116.66876762, 104.00698793);
+    Scalar scaleDB = Scalar::all(1.0 / 255.0);
+    Scalar meanDB = Scalar(122.67891434, 116.66876762, 104.00698793);
+
+    // new mean and stddev
+    Scalar meanPPDB = Scalar(123.675, 116.28, 103.53);
+    Scalar stddevPPDB = Scalar(0.229, 0.224, 0.225);
+    Scalar scalePPDB = scaleDB / stddevPPDB;
 
     float binThresh = 0.3;
     float polyThresh = 0.5;
     uint maxCandidates = 200;
     double unclipRatio = 2.0;
 
-    testTextDetectionModelByDB(weightPath, "", imgPath, gt, binThresh, polyThresh, maxCandidates, unclipRatio, size, mean, scale);
+    {
+    SCOPED_TRACE("Original DB");
+    testTextDetectionModelByDB(weightPathDB, "", imgPath, gt, binThresh, polyThresh, maxCandidates, unclipRatio, size, meanDB, scaleDB, 0.05f);
+    }
+
+    {
+    SCOPED_TRACE("PP-OCRDBv3");
+    testTextDetectionModelByDB(weightPathPPDB, "", imgPath, gt, binThresh, polyThresh, maxCandidates, unclipRatio, size, meanPPDB, scalePPDB, 0.21f);
+    }
 }
 
 TEST_P(Test_Model, TextDetectionByEAST)
 {
+    applyTestTag(CV_TEST_TAG_DEBUG_VERYLONG);
+
     std::string imgPath = _tf("text_det_test2.jpg");
     std::string weightPath = _tf("frozen_east_text_detection.pb", false);
 
@@ -794,7 +821,7 @@ TEST_P(Test_Model, TextDetectionByEAST)
     double eps_size = 5/*pixels*/;
     double eps_angle = 1;
 
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         eps_center = 10;
         eps_size = 25;

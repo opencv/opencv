@@ -3,12 +3,16 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "test_invariance_utils.hpp"
+#include <functional>
 
 namespace opencv_test { namespace {
 
 #define SHOW_DEBUG_LOG 1
 
-typedef tuple<std::string, Ptr<FeatureDetector>, float, float> String_FeatureDetector_Float_Float_t;
+// NOTE: using factory function (function<Ptr<Type>()>) instead of object instance (Ptr<Type>) as a
+// test parameter, because parameters exist during whole test program run and consume a lot of memory
+typedef std::function<cv::Ptr<cv::FeatureDetector>()> DetectorFactory;
+typedef tuple<std::string, DetectorFactory, float, float> String_FeatureDetector_Float_Float_t;
 
 
 static
@@ -25,7 +29,6 @@ void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
         perspectiveTransform(Mat(points0), points0t, H);
 
     matches.clear();
-    vector<uchar> usedMask(keypoints1.size(), 0);
     for(int i0 = 0; i0 < static_cast<int>(keypoints0.size()); i0++)
     {
         int nearestPointIndex = -1;
@@ -33,8 +36,6 @@ void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
         const float r0 =  0.5f * keypoints0[i0].size;
         for(size_t i1 = 0; i1 < keypoints1.size(); i1++)
         {
-            if(nearestPointIndex >= 0 && usedMask[i1])
-                continue;
 
             float r1 = 0.5f * keypoints1[i1].size;
             float intersectRatio = calcIntersectRatio(points0t.at<Point2f>(i0), r0,
@@ -47,8 +48,6 @@ void matchKeyPoints(const vector<KeyPoint>& keypoints0, const Mat& H,
         }
 
         matches.push_back(DMatch(i0, nearestPointIndex, maxIntersectRatio));
-        if(nearestPointIndex >= 0)
-            usedMask[nearestPointIndex] = 1;
     }
 }
 
@@ -61,7 +60,7 @@ protected:
         image0 = imread(filename);
         ASSERT_FALSE(image0.empty()) << "couldn't read input image";
 
-        featureDetector = get<1>(GetParam());
+        featureDetector = get<1>(GetParam())();
         minKeyPointMatchesRatio = get<2>(GetParam());
         minInliersRatio = get<3>(GetParam());
     }

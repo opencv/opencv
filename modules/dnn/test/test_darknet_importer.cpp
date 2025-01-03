@@ -81,6 +81,7 @@ TEST(Test_Darknet, read_yolo_voc_stream)
         Net net = readNetFromDarknet(cfgFile, weightsFile);
         net.setInput(inp);
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.enableWinograd(false);
         ref = net.forward();
     }
     // Import from bytes array.
@@ -92,6 +93,7 @@ TEST(Test_Darknet, read_yolo_voc_stream)
         Net net = readNetFromDarknet(cfg.data(), cfg.size(), weights.data(), weights.size());
         net.setInput(inp);
         net.setPreferableBackend(DNN_BACKEND_OPENCV);
+        net.enableWinograd(false);
         Mat out = net.forward();
         normAssert(ref, out);
     }
@@ -100,11 +102,14 @@ TEST(Test_Darknet, read_yolo_voc_stream)
 class Test_Darknet_layers : public DNNTestLayer
 {
 public:
-    void testDarknetLayer(const std::string& name, bool hasWeights = false, bool testBatchProcessing = true)
+    void testDarknetLayer(const std::string& name, bool hasWeights = false, bool testBatchProcessing = true,
+                          double l1 = 0.0, double lInf = 0.0)
     {
         SCOPED_TRACE(name);
         Mat inp = blobFromNPY(findDataFile("dnn/darknet/" + name + "_in.npy"));
         Mat ref = blobFromNPY(findDataFile("dnn/darknet/" + name + "_out.npy"));
+        l1 = l1 ? l1 : default_l1;
+        lInf = lInf ? lInf : default_lInf;
 
         std::string cfg = findDataFile("dnn/darknet/" + name + ".cfg");
         std::string model = "";
@@ -118,7 +123,7 @@ public:
         net.setPreferableTarget(target);
         net.setInput(inp);
         Mat out = net.forward();
-        normAssert(out, ref, "", default_l1, default_lInf);
+        normAssert(out, ref, "", l1, lInf);
 
         if (inp.size[0] == 1 && testBatchProcessing)  // test handling of batch size
         {
@@ -164,8 +169,8 @@ public:
             }*/
             ASSERT_EQ(out2.dims, ref2.dims) << ref.dims;
 
-            normAssert(out2(ranges0), ref2, "", default_l1, default_lInf);
-            normAssert(out2(ranges1), ref2, "", default_l1, default_lInf);
+            normAssert(out2(ranges0), ref2, "", l1, lInf);
+            normAssert(out2(ranges1), ref2, "", l1, lInf);
         }
     }
 };
@@ -178,12 +183,22 @@ public:
                           const std::vector<std::vector<int> >& refClassIds,
                           const std::vector<std::vector<float> >& refConfidences,
                           const std::vector<std::vector<Rect2d> >& refBoxes,
-                          double scoreDiff, double iouDiff, float confThreshold = 0.24, float nmsThreshold = 0.4)
+                          double scoreDiff, double iouDiff, float confThreshold = 0.24,
+                          float nmsThreshold = 0.4, bool useWinograd = true,
+                          int zeroPadW = 0)
     {
         checkBackend();
 
         Mat img1 = imread(_tf("dog416.png"));
         Mat img2 = imread(_tf("street.png"));
+        cv::resize(img2, img2, Size(416, 416));
+
+        // Pad images by black pixel at the right to test not equal width and height sizes
+        if (zeroPadW) {
+            cv::copyMakeBorder(img1, img1, 0, 0, 0, zeroPadW, BORDER_CONSTANT);
+            cv::copyMakeBorder(img2, img2, 0, 0, 0, zeroPadW, BORDER_CONSTANT);
+        }
+
         std::vector<Mat> samples(2);
         samples[0] = img1; samples[1] = img2;
 
@@ -192,12 +207,13 @@ public:
         CV_Assert(batch_size == 1 || batch_size == 2);
         samples.resize(batch_size);
 
-        Mat inp = blobFromImages(samples, 1.0/255, Size(416, 416), Scalar(), true, false);
+        Mat inp = blobFromImages(samples, 1.0/255, Size(), Scalar(), true, false);
 
         Net net = readNet(findDataFile("dnn/" + cfg),
                           findDataFile("dnn/" + weights, false));
         net.setPreferableBackend(backend);
         net.setPreferableTarget(target);
+        net.enableWinograd(useWinograd);
         net.setInput(inp);
         std::vector<Mat> outs;
         net.forward(outs, net.getUnconnectedOutLayersNames());
@@ -271,6 +287,14 @@ public:
                 continue;
             }
 
+            // Return predictions from padded image to the origin
+            if (zeroPadW) {
+                float scale = static_cast<float>(inp.size[3]) / (inp.size[3] - zeroPadW);
+                for (auto& box : nms_boxes) {
+                    box.x *= scale;
+                    box.width *= scale;
+                }
+            }
             normAssertDetections(refClassIds[b], refConfidences[b], refBoxes[b], nms_classIds,
                              nms_confidences, nms_boxes, format("batch size %d, sample %d\n", batch_size, b).c_str(), confThreshold, scoreDiff, iouDiff);
         }
@@ -280,18 +304,21 @@ public:
                           const std::vector<int>& refClassIds,
                           const std::vector<float>& refConfidences,
                           const std::vector<Rect2d>& refBoxes,
-                          double scoreDiff, double iouDiff, float confThreshold = 0.24, float nmsThreshold = 0.4)
+                          double scoreDiff, double iouDiff, float confThreshold = 0.24,
+                          float nmsThreshold = 0.4, bool useWinograd = true,
+                          int zeroPadW = 0)
     {
         testDarknetModel(cfg, weights,
                          std::vector<std::vector<int> >(1, refClassIds),
                          std::vector<std::vector<float> >(1, refConfidences),
                          std::vector<std::vector<Rect2d> >(1, refBoxes),
-                         scoreDiff, iouDiff, confThreshold, nmsThreshold);
+                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd, zeroPadW);
     }
 
     void testDarknetModel(const std::string& cfg, const std::string& weights,
                           const cv::Mat& ref, double scoreDiff, double iouDiff,
-                          float confThreshold = 0.24, float nmsThreshold = 0.4)
+                          float confThreshold = 0.24, float nmsThreshold = 0.4, bool useWinograd = true,
+                          int zeroPadW = 0)
     {
         CV_Assert(ref.cols == 7);
         std::vector<std::vector<int> > refClassIds;
@@ -318,7 +345,7 @@ public:
             refBoxes[batchId].push_back(box);
         }
         testDarknetModel(cfg, weights, refClassIds, refScores, refBoxes,
-                         scoreDiff, iouDiff, confThreshold, nmsThreshold);
+                         scoreDiff, iouDiff, confThreshold, nmsThreshold, useWinograd, zeroPadW);
     }
 };
 
@@ -330,7 +357,8 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 #else
         CV_TEST_TAG_MEMORY_1GB,
 #endif
-        CV_TEST_TAG_LONG
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
@@ -355,9 +383,9 @@ TEST_P(Test_Darknet_nets, YoloVoc)
                                     1, 6,  0.667770f, 0.446555f, 0.453578f, 0.499986f, 0.519167f,  // a car
                                     1, 6,  0.844947f, 0.637058f, 0.460398f, 0.828508f, 0.66427f);  // a car
 
-    double nmsThreshold = (target == DNN_TARGET_MYRIAD) ? 0.397 : 0.4;
+    double nmsThreshold = (target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.397 : 0.4;
     double scoreDiff = 8e-5, iouDiff = 3e-4;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 1e-2;
         iouDiff = 0.018;
@@ -396,7 +424,7 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 
     {
     SCOPED_TRACE("batch size 1");
-    testDarknetModel(config_file, weights_file, ref.rowRange(0, 3), scoreDiff, iouDiff);
+    testDarknetModel(config_file, weights_file, ref.rowRange(0, 3), scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -410,7 +438,7 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 #endif
     {
     SCOPED_TRACE("batch size 2");
-    testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, nmsThreshold);
+    testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, nmsThreshold, false);
     }
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -446,6 +474,7 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
                                     1, 6,  0.928758f, 0.651024f, 0.463539f, 0.823784f, 0.654998f); // a car
 
     double scoreDiff = 8e-5, iouDiff = 3e-4;
+    bool useWinograd = true;
     if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
     {
         scoreDiff = 8e-3;
@@ -456,18 +485,24 @@ TEST_P(Test_Darknet_nets, TinyYoloVoc)
         scoreDiff = 0.008;
         iouDiff = 0.02;
     }
+    else if (target == DNN_TARGET_CPU_FP16)
+    {
+        useWinograd = false;
+        scoreDiff = 8e-3;
+        iouDiff = 0.018;
+    }
 
     std::string config_file = "tiny-yolo-voc.cfg";
     std::string weights_file = "tiny-yolo-voc.weights";
 
     {
     SCOPED_TRACE("batch size 1");
-    testDarknetModel(config_file, weights_file, ref.rowRange(0, 2), scoreDiff, iouDiff);
+    testDarknetModel(config_file, weights_file, ref.rowRange(0, 2), scoreDiff, iouDiff, 0.24, 0.4, useWinograd);
     }
 
     {
     SCOPED_TRACE("batch size 2");
-    testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
+    testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, 0.4, useWinograd);
     }
 }
 
@@ -557,12 +592,12 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
             l1 = 0.001;
             lInf = 0.005;
         }
-        if (INF_ENGINE_VER_MAJOR_EQ(2021040000) && targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolov4-tiny")  // FIXIT: 4.x only, 3.4 branch works well
+        if (INF_ENGINE_VER_MAJOR_EQ(2021040000) && targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolov4-tiny-2020-12")  // FIXIT: 4.x only, 3.4 branch works well
         {
             l1 = 0.001;
             lInf = 0.005;
         }
-        if (INF_ENGINE_VER_MAJOR_EQ(2022010000) && targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolov4-tiny")  // FIXIT: 4.x only, 3.4 branch works well
+        if (INF_ENGINE_VER_MAJOR_EQ(2022010000) && targetId == DNN_TARGET_OPENCL_FP16 && prefix == "yolov4-tiny-2020-12")  // FIXIT: 4.x only, 3.4 branch works well
         {
             l1 = 0.001;
             lInf = 0.005;
@@ -589,7 +624,7 @@ TEST_P(Test_Darknet_nets_async, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_nets_async, Combine(
-    Values("yolo-voc", "tiny-yolo-voc", "yolov3", "yolov4", "yolov4-tiny"),
+    Values("yolo-voc", "tiny-yolo-voc", "yolov3", "yolov4", "yolov4-tiny-2020-12"),
     dnnBackendsAndTargets()
 ));
 
@@ -599,7 +634,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 {
     applyTestTag(
             CV_TEST_TAG_LONG,
-            (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+            CV_TEST_TAG_MEMORY_2GB,
             CV_TEST_TAG_DEBUG_VERYLONG
     );
 
@@ -631,8 +666,13 @@ TEST_P(Test_Darknet_nets, YOLOv3)
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
     double scoreDiff = 8e-5, iouDiff = 3e-4;
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
     {
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2022010000)
+        if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
+            scoreDiff = 0.009;
+        else
+#endif
         scoreDiff = 0.006;
         iouDiff = 0.042;
     }
@@ -656,7 +696,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 
     {
         SCOPED_TRACE("batch size 1");
-        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 
 #if defined(INF_ENGINE_RELEASE)
@@ -674,7 +714,7 @@ TEST_P(Test_Darknet_nets, YOLOv3)
 
     {
         SCOPED_TRACE("batch size 2");
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 }
 
@@ -682,7 +722,7 @@ TEST_P(Test_Darknet_nets, YOLOv4)
 {
     applyTestTag(
             CV_TEST_TAG_LONG,
-            (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
+            CV_TEST_TAG_MEMORY_2GB,
             CV_TEST_TAG_DEBUG_VERYLONG
             );
 
@@ -715,8 +755,8 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.006 : 8e-5;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.042 : 3e-4;
+    double scoreDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.006 : 8e-5;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.042 : 3e-4;
     if (target == DNN_TARGET_CUDA_FP16)
     {
         scoreDiff = 0.008;
@@ -756,7 +796,9 @@ TEST_P(Test_Darknet_nets, YOLOv4)
 
     {
         SCOPED_TRACE("batch size 1");
-        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, 0.24, 0.4, false);
+        // Test not equal width and height applying zero padding
+        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), 0.006, 0.008, 0.24, 0.4, false, /*zeroPadW*/ 32);
     }
 
     {
@@ -766,6 +808,7 @@ TEST_P(Test_Darknet_nets, YOLOv4)
     // accuracy (batch 2)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
     {
+        scoreDiff = 0.008f;
         iouDiff = 0.05f;
     }
     // accuracy
@@ -792,7 +835,7 @@ TEST_P(Test_Darknet_nets, YOLOv4)
         }
 #endif
 
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -822,25 +865,26 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
 
     const double confThreshold = 0.5;
     // batchId, classId, confidence, left, top, right, bottom
-    const int N0 = 2;
+    const int N0 = 3;
     const int N1 = 3;
     static const float ref_[/* (N0 + N1) * 7 */] = {
-0, 7, 0.85935f, 0.593484f, 0.141211f, 0.920356f, 0.291593f,
-0, 16, 0.795188f, 0.169207f, 0.386886f, 0.423753f, 0.933004f,
+0, 16, 0.889883f, 0.177204f, 0.356279f, 0.417204f, 0.937517f,
+0, 7, 0.816615f, 0.604293f, 0.137345f, 0.918016f, 0.295708f,
+0, 1, 0.595912f, 0.0940107f, 0.178122f, 0.750619f, 0.829336f,
 
-1, 2, 0.996832f, 0.653802f, 0.464573f, 0.815193f, 0.653292f,
-1, 2, 0.963325f, 0.451151f, 0.458915f, 0.496255f, 0.52241f,
-1, 0, 0.926244f, 0.194851f, 0.361743f, 0.260277f, 0.632364f,
+1, 2, 0.998224f, 0.652883f, 0.463477f, 0.813952f, 0.657163f,
+1, 2, 0.967396f, 0.4539f, 0.466368f, 0.497716f, 0.520299f,
+1, 0, 0.807866f, 0.205039f, 0.361842f, 0.260984f, 0.643621f,
     };
     Mat ref(N0 + N1, 7, CV_32FC1, (void*)ref_);
 
-    double scoreDiff = 0.01f;
-    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD) ? 0.15 : 0.01f;
+    double scoreDiff = 0.012f;
+    double iouDiff = (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16) ? 0.15 : 0.01f;
     if (target == DNN_TARGET_CUDA_FP16)
         iouDiff = 0.02;
 
-    std::string config_file = "yolov4-tiny.cfg";
-    std::string weights_file = "yolov4-tiny.weights";
+    std::string config_file = "yolov4-tiny-2020-12.cfg";
+    std::string weights_file = "yolov4-tiny-2020-12.weights";
 
 #if defined(INF_ENGINE_RELEASE)
     if (target == DNN_TARGET_MYRIAD)  // bad accuracy
@@ -854,12 +898,12 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
 
     {
         SCOPED_TRACE("batch size 1");
-        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, confThreshold);
+        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, confThreshold, 0.4, false);
     }
 
     {
         SCOPED_TRACE("batch size 2");
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, confThreshold);
+        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, confThreshold, 0.4, false);
     }
 
 #if defined(INF_ENGINE_RELEASE)
@@ -876,10 +920,10 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
 TEST_P(Test_Darknet_nets, YOLOv4x_mish)
 {
     applyTestTag(
-            CV_TEST_TAG_LONG,
-            (target == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_1GB : CV_TEST_TAG_MEMORY_2GB),
-            CV_TEST_TAG_DEBUG_VERYLONG
-            );
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // IE exception: Ngraph operation Transpose with name permute_168 has dynamic output shape on 0 port, but CPU plug-in supports only static shape
@@ -918,7 +962,7 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
     double scoreDiff = 8e-5;
     double iouDiff = 3e-4;
 
-    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16)
+    if (target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_CPU_FP16)
     {
         scoreDiff = 0.006;
         iouDiff = 0.042;
@@ -939,7 +983,7 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
 
     {
         SCOPED_TRACE("batch size 1");
-        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref.rowRange(0, N0), scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 
     {
@@ -958,7 +1002,7 @@ TEST_P(Test_Darknet_nets, YOLOv4x_mish)
         }
 #endif
 
-        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff);
+        testDarknetModel(config_file, weights_file, ref, scoreDiff, iouDiff, 0.24, 0.4, false);
     }
 }
 
@@ -975,20 +1019,10 @@ TEST_P(Test_Darknet_layers, shortcut_leaky)
 }
 TEST_P(Test_Darknet_layers, shortcut_unequal)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // IE exception: Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
     testDarknetLayer("shortcut_unequal");
 }
 TEST_P(Test_Darknet_layers, shortcut_unequal_2)
 {
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
-    // IE exception: Cannot get memory!
-    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_CPU)
-        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_CPU, CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
-#endif
     testDarknetLayer("shortcut_unequal_2");
 }
 
@@ -1016,6 +1050,11 @@ TEST_P(Test_Darknet_layers, avgpool_softmax)
     testDarknetLayer("avgpool_softmax");
 }
 
+TEST_P(Test_Darknet_layers, crop)
+{
+    testDarknetLayer("crop");
+}
+
 TEST_P(Test_Darknet_layers, region)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2021040000)
@@ -1023,7 +1062,7 @@ TEST_P(Test_Darknet_layers, region)
        applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
 
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2022010000)
     // accuracy on CPU, OpenCL
     // Expected: (normL1) <= (l1), actual: 0.000358148 vs 1e-05
     //   |ref| = 1.207319974899292
@@ -1091,7 +1130,14 @@ TEST_P(Test_Darknet_layers, connected)
 {
     if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCL_FP16);
-    testDarknetLayer("connected", true);
+    if (backend == DNN_BACKEND_OPENCV && target == DNN_TARGET_CPU_FP16)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU_FP16);
+    double l1 = 0.0;
+    if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL)
+    {
+        l1 = 3e-5;
+    }
+    testDarknetLayer("connected", true, true, l1);
 }
 
 TEST_P(Test_Darknet_layers, relu)

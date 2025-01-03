@@ -404,7 +404,7 @@ int DTreesImpl::addNodeAndTrySplit( int parent, const vector<int>& sidx )
     {
         node.defaultDir = calcDir( node.split, sidx, sleft, sright );
         if( params.useSurrogates )
-            CV_Error( CV_StsNotImplemented, "surrogate splits are not implemented yet");
+            CV_Error( cv::Error::StsNotImplemented, "surrogate splits are not implemented yet");
 
         int left = addNodeAndTrySplit( nidx, sleft );
         int right = addNodeAndTrySplit( nidx, sright );
@@ -1445,7 +1445,7 @@ float DTreesImpl::predictTrees( const Range& range, const Mat& sample, int flags
 
                         int ival = cvRound(val);
                         if( ival != val )
-                            CV_Error( CV_StsBadArg,
+                            CV_Error( cv::Error::StsBadArg,
                                      "one of input categorical variable is not an integer" );
 
                         CV_Assert(cmap != NULL);

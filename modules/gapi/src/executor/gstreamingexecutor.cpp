@@ -41,6 +41,10 @@ using namespace cv::gimpl::stream;
 class VideoEmitter final: public cv::gimpl::GIslandEmitter {
     cv::gapi::wip::IStreamSource::Ptr src;
 
+    virtual void halt() override {
+        src->halt();
+    }
+
     virtual bool pull(cv::GRunArg &arg) override {
         // FIXME: probably we can maintain a pool of (then) pre-allocated
         // buffers to avoid runtime allocations.
@@ -61,6 +65,10 @@ public:
 
 class ConstEmitter final: public cv::gimpl::GIslandEmitter {
     cv::GRunArg m_arg;
+
+    virtual void halt() override {
+        // Not used here, but in fact can be used.
+    }
 
     virtual bool pull(cv::GRunArg &arg) override {
         arg = const_cast<const cv::GRunArg&>(m_arg); // FIXME: variant workaround
@@ -157,7 +165,7 @@ void sync_data(cv::GRunArgs &results, cv::GRunArgsP &outputs)
             *cv::util::get<cv::MediaFrame*>(out_obj) = std::move(cv::util::get<cv::MediaFrame>(res_obj));
             break;
         default:
-            GAPI_Assert(false && "This value type is not supported!"); // ...maybe because of STANDALONE mode.
+            GAPI_Error("This value type is not supported!"); // ...maybe because of STANDALONE mode.
             break;
         }
     }
@@ -227,7 +235,7 @@ void sync_data(cv::gimpl::stream::Result &r, cv::GOptRunArgsP &outputs)
         } break;
         default:
             // ...maybe because of STANDALONE mode.
-            GAPI_Assert(false && "This value type is not supported!");
+            GAPI_Error("This value type is not supported!");
             break;
         }
     }
@@ -446,7 +454,7 @@ cv::gimpl::StreamMsg QueueReader::getInputVector(std::vector<Q*> &in_queues,
               break;
           }
           default:
-              GAPI_Assert(false && "Unsupported cmd type in getInputVector()");
+              GAPI_Error("Unsupported cmd type in getInputVector()");
        }
     } // for(in_queues)
 
@@ -920,7 +928,7 @@ class StreamingOutput final: public cv::gimpl::GIslandExecutable::IOutput
                     m_stops_sent++;
                     break;
                 default:
-                    GAPI_Assert(false && "Unreachable code");
+                    GAPI_Error("Unreachable code");
             }
 
             for (auto &&q : m_out_queues[out_idx])
@@ -1115,7 +1123,7 @@ void collectorThread(std::vector<Q*>   in_queues,
                 out_queue.push(Cmd{cv::util::get<cv::gimpl::Exception>(result)});
                 break;
             default:
-                GAPI_Assert(false && "Unreachable code");
+                GAPI_Error("Unreachable code");
         }
     }
 }
@@ -1479,7 +1487,7 @@ cv::gimpl::GStreamingExecutor::GStreamingExecutor(std::unique_ptr<ade::Graph> &&
             }
             break;
         default:
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
             break;
         } // switch(kind)
     } // for(gim nodes)
@@ -1820,9 +1828,9 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
             return true;
         }
         default:
-            GAPI_Assert(false && "Unsupported cmd type in pull");
+            GAPI_Error("Unsupported cmd type in pull");
     }
-    GAPI_Assert(false && "Unreachable code");
+    GAPI_Error("Unreachable code");
 }
 
 bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
@@ -1853,7 +1861,7 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
             return true;
         }
     }
-    GAPI_Assert(false && "Unreachable code");
+    GAPI_Error("Unreachable code");
 }
 
 cv::gimpl::GAbstractStreamingExecutor::PyPullResult cv::gimpl::GStreamingExecutor::pull()
@@ -1917,6 +1925,11 @@ void cv::gimpl::GStreamingExecutor::stop()
     // need to read the output queues until Stop!
     for (auto &q : m_emitter_queues) {
         q.push(stream::Cmd{stream::Stop{}});
+    }
+    // Also kindly ask emitter object to halt to break the blocking src->pull()
+    // loop
+    for (auto &nh : m_emitters) {
+        m_gim.metadata(nh).get<Emitter>().object->halt();
     }
 
     // Pull messages from the final queue to ensure completion

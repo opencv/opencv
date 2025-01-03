@@ -22,7 +22,7 @@ struct Sum_SIMD
     }
 };
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 template <>
 struct Sum_SIMD<uchar, int>
@@ -36,41 +36,41 @@ struct Sum_SIMD<uchar, int>
         int x = 0;
         v_uint32 v_sum = vx_setzero_u32();
 
-        int len0 = len & -v_uint8::nlanes;
+        int len0 = len & -VTraits<v_uint8>::vlanes();
         while (x < len0)
         {
-            const int len_tmp = min(x + 256*v_uint16::nlanes, len0);
+            const int len_tmp = min(x + 256*VTraits<v_uint16>::vlanes(), len0);
             v_uint16 v_sum16 = vx_setzero_u16();
-            for (; x < len_tmp; x += v_uint8::nlanes)
+            for (; x < len_tmp; x += VTraits<v_uint8>::vlanes())
             {
                 v_uint16 v_src0, v_src1;
                 v_expand(vx_load(src0 + x), v_src0, v_src1);
-                v_sum16 += v_src0 + v_src1;
+                v_sum16 = v_add(v_sum16, v_add(v_src0, v_src1));
             }
             v_uint32 v_half0, v_half1;
             v_expand(v_sum16, v_half0, v_half1);
-            v_sum += v_half0 + v_half1;
+            v_sum = v_add(v_sum, v_add(v_half0, v_half1));
         }
-        if (x <= len - v_uint16::nlanes)
+        if (x <= len - VTraits<v_uint16>::vlanes())
         {
             v_uint32 v_half0, v_half1;
             v_expand(vx_load_expand(src0 + x), v_half0, v_half1);
-            v_sum += v_half0 + v_half1;
-            x += v_uint16::nlanes;
+            v_sum = v_add(v_sum, v_add(v_half0, v_half1));
+            x += VTraits<v_uint16>::vlanes();
         }
-        if (x <= len - v_uint32::nlanes)
+        if (x <= len - VTraits<v_uint32>::vlanes())
         {
-            v_sum += vx_load_expand_q(src0 + x);
-            x += v_uint32::nlanes;
+            v_sum = v_add(v_sum, vx_load_expand_q(src0 + x));
+            x += VTraits<v_uint32>::vlanes();
         }
 
         if (cn == 1)
             *dst += v_reduce_sum(v_sum);
         else
         {
-            uint32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_uint32::nlanes];
+            uint32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[VTraits<v_uint32>::max_nlanes];
             v_store_aligned(ar, v_sum);
-            for (int i = 0; i < v_uint32::nlanes; ++i)
+            for (int i = 0; i < VTraits<v_uint32>::vlanes(); ++i)
                 dst[i % cn] += ar[i];
         }
         v_cleanup();
@@ -91,41 +91,41 @@ struct Sum_SIMD<schar, int>
         int x = 0;
         v_int32 v_sum = vx_setzero_s32();
 
-        int len0 = len & -v_int8::nlanes;
+        int len0 = len & -VTraits<v_int8>::vlanes();
         while (x < len0)
         {
-            const int len_tmp = min(x + 256*v_int16::nlanes, len0);
+            const int len_tmp = min(x + 256*VTraits<v_int16>::vlanes(), len0);
             v_int16 v_sum16 = vx_setzero_s16();
-            for (; x < len_tmp; x += v_int8::nlanes)
+            for (; x < len_tmp; x += VTraits<v_int8>::vlanes())
             {
                 v_int16 v_src0, v_src1;
                 v_expand(vx_load(src0 + x), v_src0, v_src1);
-                v_sum16 += v_src0 + v_src1;
+                v_sum16 = v_add(v_sum16, v_add(v_src0, v_src1));
             }
             v_int32 v_half0, v_half1;
             v_expand(v_sum16, v_half0, v_half1);
-            v_sum += v_half0 + v_half1;
+            v_sum = v_add(v_sum, v_add(v_half0, v_half1));
         }
-        if (x <= len - v_int16::nlanes)
+        if (x <= len - VTraits<v_int16>::vlanes())
         {
             v_int32 v_half0, v_half1;
             v_expand(vx_load_expand(src0 + x), v_half0, v_half1);
-            v_sum += v_half0 + v_half1;
-            x += v_int16::nlanes;
+            v_sum = v_add(v_sum, v_add(v_half0, v_half1));
+            x += VTraits<v_int16>::vlanes();
         }
-        if (x <= len - v_int32::nlanes)
+        if (x <= len - VTraits<v_int32>::vlanes())
         {
-            v_sum += vx_load_expand_q(src0 + x);
-            x += v_int32::nlanes;
+            v_sum = v_add(v_sum, vx_load_expand_q(src0 + x));
+            x += VTraits<v_int32>::vlanes();
         }
 
         if (cn == 1)
             *dst += v_reduce_sum(v_sum);
         else
         {
-            int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_int32::nlanes];
+            int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[VTraits<v_int32>::max_nlanes];
             v_store_aligned(ar, v_sum);
-            for (int i = 0; i < v_int32::nlanes; ++i)
+            for (int i = 0; i < VTraits<v_int32>::vlanes(); ++i)
                 dst[i % cn] += ar[i];
         }
         v_cleanup();
@@ -146,25 +146,25 @@ struct Sum_SIMD<ushort, int>
         int x = 0;
         v_uint32 v_sum = vx_setzero_u32();
 
-        for (; x <= len - v_uint16::nlanes; x += v_uint16::nlanes)
+        for (; x <= len - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
         {
             v_uint32 v_src0, v_src1;
             v_expand(vx_load(src0 + x), v_src0, v_src1);
-            v_sum += v_src0 + v_src1;
+            v_sum = v_add(v_sum, v_add(v_src0, v_src1));
         }
-        if (x <= len - v_uint32::nlanes)
+        if (x <= len - VTraits<v_uint32>::vlanes())
         {
-            v_sum += vx_load_expand(src0 + x);
-            x += v_uint32::nlanes;
+            v_sum = v_add(v_sum, vx_load_expand(src0 + x));
+            x += VTraits<v_uint32>::vlanes();
         }
 
         if (cn == 1)
             *dst += v_reduce_sum(v_sum);
         else
         {
-            uint32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_uint32::nlanes];
+            uint32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[VTraits<v_uint32>::max_nlanes];
             v_store_aligned(ar, v_sum);
-            for (int i = 0; i < v_uint32::nlanes; ++i)
+            for (int i = 0; i < VTraits<v_uint32>::vlanes(); ++i)
                 dst[i % cn] += ar[i];
         }
         v_cleanup();
@@ -185,25 +185,25 @@ struct Sum_SIMD<short, int>
         int x = 0;
         v_int32 v_sum = vx_setzero_s32();
 
-        for (; x <= len - v_int16::nlanes; x += v_int16::nlanes)
+        for (; x <= len - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
         {
             v_int32 v_src0, v_src1;
             v_expand(vx_load(src0 + x), v_src0, v_src1);
-            v_sum += v_src0 + v_src1;
+            v_sum = v_add(v_sum, v_add(v_src0, v_src1));
         }
-        if (x <= len - v_int32::nlanes)
+        if (x <= len - VTraits<v_int32>::vlanes())
         {
-            v_sum += vx_load_expand(src0 + x);
-            x += v_int32::nlanes;
+            v_sum = v_add(v_sum, vx_load_expand(src0 + x));
+            x += VTraits<v_int32>::vlanes();
         }
 
         if (cn == 1)
             *dst += v_reduce_sum(v_sum);
         else
         {
-            int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_int32::nlanes];
+            int32_t CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[VTraits<v_int32>::max_nlanes];
             v_store_aligned(ar, v_sum);
-            for (int i = 0; i < v_int32::nlanes; ++i)
+            for (int i = 0; i < VTraits<v_int32>::vlanes(); ++i)
                 dst[i % cn] += ar[i];
         }
         v_cleanup();
@@ -212,7 +212,7 @@ struct Sum_SIMD<short, int>
     }
 };
 
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template <>
 struct Sum_SIMD<int, double>
 {
@@ -226,24 +226,24 @@ struct Sum_SIMD<int, double>
         v_float64 v_sum0 = vx_setzero_f64();
         v_float64 v_sum1 = vx_setzero_f64();
 
-        for (; x <= len - 2 * v_int32::nlanes; x += 2 * v_int32::nlanes)
+        for (; x <= len - 2 * VTraits<v_int32>::vlanes(); x += 2 * VTraits<v_int32>::vlanes())
         {
             v_int32 v_src0 = vx_load(src0 + x);
-            v_int32 v_src1 = vx_load(src0 + x + v_int32::nlanes);
-            v_sum0 += v_cvt_f64(v_src0) + v_cvt_f64(v_src1);
-            v_sum1 += v_cvt_f64_high(v_src0) + v_cvt_f64_high(v_src1);
+            v_int32 v_src1 = vx_load(src0 + x + VTraits<v_int32>::vlanes());
+            v_sum0 = v_add(v_sum0, v_add(v_cvt_f64(v_src0), v_cvt_f64(v_src1)));
+            v_sum1 = v_add(v_sum1, v_add(v_cvt_f64_high(v_src0), v_cvt_f64_high(v_src1)));
         }
 
 #if CV_SIMD256 || CV_SIMD512
-        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_float64::nlanes];
-        v_store_aligned(ar, v_sum0 + v_sum1);
-        for (int i = 0; i < v_float64::nlanes; ++i)
+        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[VTraits<v_float64>::max_nlanes];
+        v_store_aligned(ar, v_add(v_sum0, v_sum1));
+        for (int i = 0; i < VTraits<v_float64>::vlanes(); ++i)
             dst[i % cn] += ar[i];
 #else
-        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[2 * v_float64::nlanes];
+        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[2 * VTraits<v_float64>::max_nlanes];
         v_store_aligned(ar, v_sum0);
-        v_store_aligned(ar + v_float64::nlanes, v_sum1);
-        for (int i = 0; i < 2 * v_float64::nlanes; ++i)
+        v_store_aligned(ar + VTraits<v_float64>::vlanes(), v_sum1);
+        for (int i = 0; i < 2 * VTraits<v_float64>::vlanes(); ++i)
             dst[i % cn] += ar[i];
 #endif
         v_cleanup();
@@ -265,24 +265,24 @@ struct Sum_SIMD<float, double>
         v_float64 v_sum0 = vx_setzero_f64();
         v_float64 v_sum1 = vx_setzero_f64();
 
-        for (; x <= len - 2 * v_float32::nlanes; x += 2 * v_float32::nlanes)
+        for (; x <= len - 2 * VTraits<v_float32>::vlanes(); x += 2 * VTraits<v_float32>::vlanes())
         {
             v_float32 v_src0 = vx_load(src0 + x);
-            v_float32 v_src1 = vx_load(src0 + x + v_float32::nlanes);
-            v_sum0 += v_cvt_f64(v_src0) + v_cvt_f64(v_src1);
-            v_sum1 += v_cvt_f64_high(v_src0) + v_cvt_f64_high(v_src1);
+            v_float32 v_src1 = vx_load(src0 + x + VTraits<v_float32>::vlanes());
+            v_sum0 = v_add(v_sum0, v_add(v_cvt_f64(v_src0), v_cvt_f64(v_src1)));
+            v_sum1 = v_add(v_sum1, v_add(v_cvt_f64_high(v_src0), v_cvt_f64_high(v_src1)));
         }
 
 #if CV_SIMD256 || CV_SIMD512
-        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[v_float64::nlanes];
-        v_store_aligned(ar, v_sum0 + v_sum1);
-        for (int i = 0; i < v_float64::nlanes; ++i)
+        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[VTraits<v_float64>::max_nlanes];
+        v_store_aligned(ar, v_add(v_sum0, v_sum1));
+        for (int i = 0; i < VTraits<v_float64>::vlanes(); ++i)
             dst[i % cn] += ar[i];
 #else
-        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[2 * v_float64::nlanes];
+        double CV_DECL_ALIGNED(CV_SIMD_WIDTH) ar[2 * VTraits<v_float64>::max_nlanes];
         v_store_aligned(ar, v_sum0);
-        v_store_aligned(ar + v_float64::nlanes, v_sum1);
-        for (int i = 0; i < 2 * v_float64::nlanes; ++i)
+        v_store_aligned(ar + VTraits<v_float64>::vlanes(), v_sum1);
+        for (int i = 0; i < 2 * VTraits<v_float64>::vlanes(); ++i)
             dst[i % cn] += ar[i];
 #endif
         v_cleanup();
@@ -434,7 +434,7 @@ static int sum64f( const double* src, const uchar* mask, double* dst, int len, i
 
 SumFunc getSumFunc(int depth)
 {
-    static SumFunc sumTab[] =
+    static SumFunc sumTab[CV_DEPTH_MAX] =
     {
         (SumFunc)GET_OPTIMIZED(sum8u), (SumFunc)sum8s,
         (SumFunc)sum16u, (SumFunc)sum16s,

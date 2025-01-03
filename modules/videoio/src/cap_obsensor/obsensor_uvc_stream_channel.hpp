@@ -26,8 +26,6 @@
 #ifdef HAVE_OBSENSOR
 namespace cv {
 namespace obsensor {
-
-#define OBSENSOR_CAM_VID 0x2bc5 // usb vid
 #define XU_MAX_DATA_LENGTH 1024
 #define XU_UNIT_ID 4
 
@@ -60,16 +58,33 @@ struct OBExtensionParam {
     float ps;
 };
 
-class DepthFrameProcessor {
+class IFrameProcessor{
+public:
+    virtual void process(Frame* frame) = 0;
+    virtual ~IFrameProcessor() = default;
+};
+
+class DepthFrameProcessor: public IFrameProcessor {
 public:
     DepthFrameProcessor(const OBExtensionParam& parma);
-    ~DepthFrameProcessor() noexcept;
-    void process(Frame* frame);
+    virtual ~DepthFrameProcessor();
+    virtual void process(Frame* frame) override;
 
 private:
     const OBExtensionParam param_;
     uint16_t* lookUpTable_;
 };
+
+class DepthFrameUnpacker: public IFrameProcessor {
+public:
+    DepthFrameUnpacker();
+    virtual ~DepthFrameUnpacker();
+    virtual void process(Frame* frame) override;
+private:
+    const uint32_t OUT_DATA_SIZE = 1280*800*2;
+    uint8_t *outputDataBuf_;
+};
+
 
 class IUvcStreamChannel : public IStreamChannel {
 public:
@@ -79,6 +94,7 @@ public:
     virtual bool setProperty(int propId, const uint8_t* data, uint32_t dataSize) override;
     virtual bool getProperty(int propId, uint8_t* recvData, uint32_t* recvDataSize) override;
     virtual StreamType streamType() const override;
+    virtual uint16_t getPid() const override;
 
 protected:
     virtual bool setXu(uint8_t ctrl, const uint8_t* data, uint32_t len) = 0;
@@ -89,7 +105,7 @@ protected:
 protected:
     const UvcDeviceInfo devInfo_;
     StreamType streamType_;
-    Ptr<DepthFrameProcessor> depthFrameProcessor_;
+    Ptr<IFrameProcessor> depthFrameProcessor_;
 };
 }} // namespace cv::obsensor::
 #endif // HAVE_OBSENSOR

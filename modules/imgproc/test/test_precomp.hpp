@@ -5,8 +5,11 @@
 #define __OPENCV_TEST_PRECOMP_HPP__
 
 #include "opencv2/ts.hpp"
+#include "opencv2/ts/ts_gtest.h"
+#include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/core.hpp"
 
 #include "opencv2/core/private.hpp"
 

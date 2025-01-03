@@ -160,7 +160,7 @@ int cornerScore<16>(const uchar* ptr, const int pixel[], int threshold)
             q0 = v_max(q0, v_min(a, v0));
             q1 = v_min(q1, v_max(b, v0));
         }
-        q0 = v_max(q0, v_setzero_s16() - q1);
+        q0 = v_max(q0, v_sub(v_setzero_s16(), q1));
         threshold = v_reduce_max(q0) - 1;
     }
     else
@@ -251,7 +251,7 @@ int cornerScore<12>(const uchar* ptr, const int pixel[], int threshold)
             q0 = v_max(q0, v_min(a, v0));
             q1 = v_min(q1, v_max(b, v0));
         }
-        q0 = v_max(q0, v_setzero_s16() - q1);
+        q0 = v_max(q0, v_sub(v_setzero_s16(), q1));
         threshold = v_reduce_max(q0) - 1;
     }
     else
@@ -323,7 +323,7 @@ int cornerScore<8>(const uchar* ptr, const int pixel[], int threshold)
         v0 = v_load(d + 5);
         q0 = v_max(q0, v_min(a, v0));
         q1 = v_min(q1, v_max(b, v0));
-        q0 = v_max(q0, v_setzero_s16() - q1);
+        q0 = v_max(q0, v_sub(v_setzero_s16(), q1));
         threshold = v_reduce_max(q0) - 1;
     }
     else

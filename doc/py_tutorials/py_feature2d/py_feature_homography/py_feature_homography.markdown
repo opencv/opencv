@@ -40,8 +40,8 @@ from matplotlib import pyplot as plt
 
 MIN_MATCH_COUNT = 10
 
-img1 = cv.imread('box.png',0)          # queryImage
-img2 = cv.imread('box_in_scene.png',0) # trainImage
+img1 = cv.imread('box.png', cv.IMREAD_GRAYSCALE)          # queryImage
+img2 = cv.imread('box_in_scene.png', cv.IMREAD_GRAYSCALE) # trainImage
 
 # Initiate SIFT detector
 sift = cv.SIFT_create()
@@ -102,9 +102,3 @@ plt.imshow(img3, 'gray'),plt.show()
 See the result below. Object is marked in white color in cluttered image:
 
 ![image](images/homography_findobj.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

@@ -6,34 +6,39 @@
 struct PerfReport {
     std::string name;
     double  avg_latency        = 0.0;
-    int64_t min_latency        = 0;
-    int64_t max_latency        = 0;
-    int64_t first_latency      = 0;
+    double  min_latency        = 0.0;
+    double  max_latency        = 0.0;
+    double  first_latency      = 0.0;
     double  throughput         = 0.0;
-    int64_t elapsed            = 0;
-    int64_t warmup_time        = 0;
+    double  elapsed            = 0.0;
+    double  warmup_time        = 0.0;
     int64_t num_late_frames    = 0;
-    std::vector<int64_t> latencies;
+    std::vector<double>  latencies;
+    std::vector<int64_t> seq_ids;
 
     std::string toStr(bool expanded = false) const;
 };
 
 std::string PerfReport::toStr(bool expand) const {
+    const auto to_double_str = [](double val) {
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(3) << val;
+        return ss.str();
+    };
+
     std::stringstream ss;
-    ss << name << ": \n"
-       << "  Warm up time:   " << warmup_time << " ms\n"
-       << "  Execution time: " << elapsed << " ms\n"
-       << "  Frames:         " << num_late_frames << "/" << latencies.size() << " (late/all)\n"
-       << "  Latency:\n"
-       << "    first: " << first_latency << " ms\n"
-       << "    min:   " << min_latency   << " ms\n"
-       << "    max:   " << max_latency   << " ms\n"
-       << "    avg:   " << std::fixed << std::setprecision(3) << avg_latency << " ms\n"
-       << "  Throughput: " << std::fixed << std::setprecision(3) << throughput << " FPS";
+    ss << name << ": warm-up: " << to_double_str(warmup_time)
+       << " ms, execution time: " << to_double_str(elapsed)
+       << " ms, throughput: " << to_double_str(throughput)
+       << " FPS, latency: first: " << to_double_str(first_latency)
+       << " ms, min: " << to_double_str(min_latency)
+       << " ms, avg: " << to_double_str(avg_latency)
+       << " ms, max: " << to_double_str(max_latency)
+       << " ms, frames: " << num_late_frames << "/" << seq_ids.back()+1 << " (dropped/all)";
     if (expand) {
         for (size_t i = 0; i < latencies.size(); ++i) {
             ss << "\nFrame:" << i << "\nLatency: "
-               << latencies[i] << " ms";
+               << to_double_str(latencies[i]) << " ms";
         }
     }
 
@@ -70,10 +75,12 @@ public:
     virtual ~Pipeline() = default;
 
 protected:
-    virtual void    _compile() = 0;
-    virtual int64_t run_iter() = 0;
-    virtual void    init() {};
-    virtual void    deinit() {};
+    virtual void  _compile() = 0;
+    virtual void  run_iter() = 0;
+    virtual void  init() {};
+    virtual void  deinit() {};
+
+    void prepareOutputs();
 
     std::string                  m_name;
     cv::GComputation             m_comp;
@@ -82,6 +89,11 @@ protected:
     cv::GCompileArgs             m_args;
     size_t                       m_num_outputs;
     PerfReport                   m_perf;
+
+    cv::GRunArgsP                m_pipeline_outputs;
+    std::vector<cv::Mat>         m_out_mats;
+    int64_t                      m_start_ts;
+    int64_t                      m_seq_id;
 };
 
 Pipeline::Pipeline(std::string&&                  name,
@@ -101,42 +113,82 @@ Pipeline::Pipeline(std::string&&                  name,
 
 void Pipeline::compile() {
     m_perf.warmup_time =
-        utils::measure<std::chrono::milliseconds>([this]() {
+        utils::measure<utils::double_ms_t>([this]() {
         _compile();
     });
+}
+
+void Pipeline::prepareOutputs() {
+    // NB: N-2 buffers + timestamp + seq_id.
+    m_out_mats.resize(m_num_outputs - 2);
+    for (auto& m : m_out_mats) {
+        m_pipeline_outputs += cv::gout(m);
+    }
+    m_pipeline_outputs += cv::gout(m_start_ts);
+    m_pipeline_outputs += cv::gout(m_seq_id);
 }
 
 void Pipeline::run() {
     using namespace std::chrono;
 
+    // NB: Allocate outputs for execution
+    prepareOutputs();
+
+    // NB: Warm-up iteration invalidates source state
+    // so need to copy it
+    auto orig_src = m_src;
+    auto copy_src = std::make_shared<DummySource>(*m_src);
+
+    // NB: Use copy for warm-up iteration
+    m_src = copy_src;
+
+    // NB: Warm-up iteration
+    init();
+    run_iter();
+    deinit();
+
+    // NB: Calculate first latency
+    m_perf.first_latency = utils::double_ms_t{
+        microseconds{utils::timestamp<microseconds>() - m_start_ts}}.count();
+
+    // NB: Now use original source
+    m_src = orig_src;
+
+    // NB: Start measuring execution
     init();
     auto start = high_resolution_clock::now();
     m_stop_criterion->start();
+
     while (true) {
-        m_perf.latencies.push_back(run_iter());
-        m_perf.elapsed = duration_cast<milliseconds>(high_resolution_clock::now() - start).count();
+        run_iter();
+        const auto latency = utils::double_ms_t{
+            microseconds{utils::timestamp<microseconds>() - m_start_ts}}.count();
+
+        m_perf.latencies.push_back(latency);
+        m_perf.seq_ids.push_back(m_seq_id);
+
         m_stop_criterion->iter();
 
         if (m_stop_criterion->done()) {
+            m_perf.elapsed = duration_cast<utils::double_ms_t>(
+                    high_resolution_clock::now() - start).count();
             deinit();
             break;
         }
     }
 
-    m_perf.avg_latency   = utils::avg(m_perf.latencies);
-    m_perf.min_latency   = utils::min(m_perf.latencies);
-    m_perf.max_latency   = utils::max(m_perf.latencies);
-    m_perf.first_latency = m_perf.latencies[0];
+    m_perf.avg_latency = utils::avg(m_perf.latencies);
+    m_perf.min_latency = utils::min(m_perf.latencies);
+    m_perf.max_latency = utils::max(m_perf.latencies);
 
-    // NB: Count how many executions don't fit into camera latency interval.
-    m_perf.num_late_frames =
-        std::count_if(m_perf.latencies.begin(), m_perf.latencies.end(),
-                [this](int64_t latency) {
-                    return static_cast<double>(latency) > m_src->latency();
-                });
+    // NB: Count the number of dropped frames
+    int64_t prev_seq_id = m_perf.seq_ids[0];
+    for (size_t i = 1; i < m_perf.seq_ids.size(); ++i) {
+        m_perf.num_late_frames += m_perf.seq_ids[i] - prev_seq_id - 1;
+        prev_seq_id = m_perf.seq_ids[i];
+    }
 
-    m_perf.throughput =
-        (m_perf.latencies.size() / static_cast<double>(m_perf.elapsed)) * 1000;
+    m_perf.throughput = (m_perf.latencies.size() / m_perf.elapsed) * 1000;
 }
 
 const PerfReport& Pipeline::report() const {
@@ -155,13 +207,6 @@ private:
     }
 
     virtual void init() override {
-        using namespace std::chrono;
-        // NB: N-1 buffers + timestamp.
-        m_out_mats.resize(m_num_outputs - 1);
-        for (auto& m : m_out_mats) {
-            m_pipeline_outputs += cv::gout(m);
-        }
-        m_pipeline_outputs += cv::gout(m_start_ts);
         m_compiled.setSource(m_src);
         m_compiled.start();
     }
@@ -170,15 +215,11 @@ private:
         m_compiled.stop();
     }
 
-    virtual int64_t run_iter() override {
+    virtual void run_iter() override {
         m_compiled.pull(cv::GRunArgsP{m_pipeline_outputs});
-        return utils::timestamp<std::chrono::milliseconds>() - m_start_ts;
     }
 
     cv::GStreamingCompiled m_compiled;
-    cv::GRunArgsP        m_pipeline_outputs;
-    std::vector<cv::Mat> m_out_mats;
-    int64_t              m_start_ts;
 };
 
 class RegularPipeline : public Pipeline {
@@ -192,26 +233,13 @@ private:
                             cv::GCompileArgs(m_args));
     }
 
-    virtual void init() override {
-        m_out_mats.resize(m_num_outputs);
-        for (auto& m : m_out_mats) {
-            m_pipeline_outputs += cv::gout(m);
-        }
+    virtual void run_iter() override {
+        cv::gapi::wip::Data data;
+        m_src->pull(data);
+        m_compiled({data}, cv::GRunArgsP{m_pipeline_outputs});
     }
 
-    virtual int64_t run_iter() override {
-        using namespace std::chrono;
-        cv::gapi::wip::Data d;
-        m_src->pull(d);
-        auto in_mat = cv::util::get<cv::Mat>(d);
-        return utils::measure<milliseconds>([&]{
-            m_compiled(cv::gin(in_mat), cv::GRunArgsP{m_pipeline_outputs});
-        });
-    }
-
-    cv::GCompiled        m_compiled;
-    cv::GRunArgsP        m_pipeline_outputs;
-    std::vector<cv::Mat> m_out_mats;
+    cv::GCompiled m_compiled;
 };
 
 enum class PLMode {

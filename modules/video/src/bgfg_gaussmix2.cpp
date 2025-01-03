@@ -47,7 +47,7 @@
 //International Conference Pattern Recognition, UK, August, 2004
 //http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
 //The code is very fast and performs also shadow detection.
-//Number of Gausssian components is adapted per pixel.
+//Number of Gaussian components is adapted per pixel.
 //
 // and
 //
@@ -97,7 +97,7 @@ namespace cv
  http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
 
  Advantages:
- -fast - number of Gausssian components is constantly adapted per pixel.
+ -fast - number of Gaussian components is constantly adapted per pixel.
  -performs also shadow detection (see bgfg_segm_test.cpp example)
 
 */

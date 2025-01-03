@@ -73,7 +73,7 @@ void show_points( const Mat& gray, const Mat& expected, const vector<Point2f>& a
 #define show_points(...)
 #endif
 
-enum Pattern { CHESSBOARD,CHESSBOARD_SB,CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID};
+enum Pattern { CHESSBOARD, CHESSBOARD_SB, CHESSBOARD_PLAIN, CIRCLES_GRID, ASYMMETRIC_CIRCLES_GRID};
 
 class CV_ChessboardDetectorTest : public cvtest::BaseTest
 {
@@ -149,6 +149,25 @@ void CV_ChessboardDetectorTest::run( int /*start_from */)
         case CHESSBOARD_SB:
             checkByGeneratorHighAccuracy();      // not supported by CHESSBOARD
             /* fallthrough */
+        case CHESSBOARD_PLAIN:
+            checkByGenerator();
+            if (ts->get_err_code() != cvtest::TS::OK)
+            {
+                break;
+            }
+
+            run_batch("negative_list.dat");
+            if (ts->get_err_code() != cvtest::TS::OK)
+            {
+                break;
+            }
+
+            run_batch("chessboard_list.dat");
+            if (ts->get_err_code() != cvtest::TS::OK)
+            {
+                break;
+            }
+            break;
         case CHESSBOARD:
             checkByGenerator();
             if (ts->get_err_code() != cvtest::TS::OK)
@@ -191,6 +210,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
     {
         case CHESSBOARD:
         case CHESSBOARD_SB:
+        case CHESSBOARD_PLAIN:
             folder = string(ts->get_data_path()) + "cv/cameracalibration/";
             break;
         case CIRCLES_GRID:
@@ -215,6 +235,9 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 
     int progress = 0;
     int max_idx = (int)board_list.size()/2;
+    if(filename.compare("chessboard_list.dat") == 0 && pattern == CHESSBOARD_PLAIN)
+         max_idx = 7;
+
     double sum_error = 0.0;
     int count = 0;
 
@@ -224,7 +247,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
 
         /* read the image */
         String img_file = board_list[idx * 2];
-        Mat gray = imread( folder + img_file, 0);
+        Mat gray = imread( folder + img_file, IMREAD_GRAYSCALE);
 
         if( gray.empty() )
         {
@@ -247,6 +270,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
         size_t count_exp = static_cast<size_t>(expected.cols * expected.rows);
         Size pattern_size = expected.size();
 
+        Mat ori;
         vector<Point2f> v;
         int flags = 0;
         switch( pattern )
@@ -254,14 +278,30 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
             case CHESSBOARD:
                 flags = CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_NORMALIZE_IMAGE;
                 break;
+            case CHESSBOARD_PLAIN: {
+                flags = CALIB_CB_PLAIN;
+                ori = gray.clone();
+                int min_size = cvRound((gray.cols * gray.rows * 0.05) / ((pattern_size.width+1) * (pattern_size.height+1)));
+                if(min_size%2==0) min_size += 1;
+                adaptiveThreshold(gray, gray, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, min_size, 0);
+                dilate(gray, gray, Mat(), Point(-1, -1), 1);
+                break;
+            }
             case CIRCLES_GRID:
             case CHESSBOARD_SB:
             case ASYMMETRIC_CIRCLES_GRID:
             default:
                 flags = 0;
         }
+
         bool result = findChessboardCornersWrapper(gray, pattern_size,v,flags);
-        if(result && sharpness && (pattern == CHESSBOARD_SB || pattern == CHESSBOARD))
+
+        if(result && pattern == CHESSBOARD_PLAIN) {
+            gray = ori;
+            cornerSubPix(gray, v, Size(6,6), Size(-1,-1), TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30, 0.1));
+        }
+
+        if(result && sharpness && (pattern == CHESSBOARD_SB || pattern == CHESSBOARD || pattern == CHESSBOARD_PLAIN))
         {
             Scalar s= estimateChessboardSharpness(gray,pattern_size,v);
             if(fabs(s[0] - sharpness) > 0.1)
@@ -287,7 +327,7 @@ void CV_ChessboardDetectorTest::run_batch( const string& filename )
             double err = calcError(v, expected);
             max_rough_error = MAX( max_rough_error, err );
 #endif
-            if( pattern == CHESSBOARD )
+            if( pattern == CHESSBOARD || pattern == CHESSBOARD_PLAIN )
                 cornerSubPix( gray, v, Size(5, 5), Size(-1,-1), TermCriteria(TermCriteria::EPS|TermCriteria::MAX_ITER, 30, 0.1));
             //find4QuadCornerSubpix(gray, v, Size(5, 5));
             show_points( gray, expected, v, result  );
@@ -381,6 +421,7 @@ bool CV_ChessboardDetectorTest::findChessboardCornersWrapper(InputArray image, S
     switch(pattern)
     {
     case CHESSBOARD:
+    case CHESSBOARD_PLAIN:
         return findChessboardCorners(image,patternSize,corners,flags);
     case CHESSBOARD_SB:
         // check default settings until flags have been specified
@@ -631,11 +672,32 @@ bool CV_ChessboardDetectorTest::checkByGeneratorHighAccuracy()
 
 TEST(Calib3d_ChessboardDetector, accuracy) {  CV_ChessboardDetectorTest test( CHESSBOARD ); test.safe_run(); }
 TEST(Calib3d_ChessboardDetector2, accuracy) {  CV_ChessboardDetectorTest test( CHESSBOARD_SB ); test.safe_run(); }
+TEST(Calib3d_ChessboardDetector3, accuracy) {  CV_ChessboardDetectorTest test( CHESSBOARD_PLAIN ); test.safe_run(); }
 TEST(Calib3d_CirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( CIRCLES_GRID ); test.safe_run(); }
 TEST(Calib3d_AsymmetricCirclesPatternDetector, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID ); test.safe_run(); }
 #ifdef HAVE_OPENCV_FLANN
 TEST(Calib3d_AsymmetricCirclesPatternDetectorWithClustering, accuracy) { CV_ChessboardDetectorTest test( ASYMMETRIC_CIRCLES_GRID, CALIB_CB_CLUSTERING ); test.safe_run(); }
 #endif
+
+TEST(Calib3d_ChessboardWithMarkers, regression_25806_white)
+{
+    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/";
+    const cv::Mat image = cv::imread(dataDir + "checkerboard_marker_white.png");
+
+    std::vector<Point2f> corners;
+    const bool success = cv::findChessboardCornersSB(image, Size(9, 14), corners, CALIB_CB_MARKER);
+    ASSERT_TRUE(success);
+}
+
+TEST(Calib3d_ChessboardWithMarkers, regression_25806_black)
+{
+    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/";
+    const cv::Mat image = cv::imread(dataDir + "checkerboard_marker_black.png");
+
+    std::vector<Point2f> corners;
+    const bool success = cv::findChessboardCornersSB(image, Size(9, 14), corners, CALIB_CB_MARKER);
+    ASSERT_TRUE(success);
+}
 
 TEST(Calib3d_CirclesPatternDetectorWithClustering, accuracy)
 {
@@ -748,6 +810,43 @@ TEST(Calib3d_AsymmetricCirclesPatternDetector, regression_19498)
 
     EXPECT_NO_THROW(res = findCirclesGrid(candidates, patternSize, result, CALIB_CB_SYMMETRIC_GRID, Ptr<FeatureDetector>()/*blobDetector=NULL*/));
     EXPECT_FALSE(res);
+}
+
+TEST(Calib3d_RotatedCirclesPatternDetector, issue_24964)
+{
+    string path = cvtest::findDataFile("cv/cameracalibration/circles/circles_24964.png");
+    Mat image = cv::imread(path);
+    ASSERT_FALSE(image.empty()) << "Can't read image: " << path;
+
+    vector<Point2f> centers;
+    Size parrernSize(7, 6);
+    Mat goldCenters(parrernSize.height, parrernSize.width, CV_32FC2);
+    Point2f firstGoldCenter(380.f, 430.f);
+    for (int i = 0; i < parrernSize.height; i++)
+    {
+        for (int j = 0; j < parrernSize.width; j++)
+        {
+            goldCenters.at<Point2f>(i, j) = Point2f(firstGoldCenter.x + j * 100.f, firstGoldCenter.y + i * 100.f);
+        }
+    }
+
+    bool found = false;
+    found = findCirclesGrid(image, parrernSize, centers, CALIB_CB_SYMMETRIC_GRID);
+
+    EXPECT_TRUE(found);
+    ASSERT_EQ(centers.size(), (size_t)parrernSize.area());
+    double error = calcError(centers, goldCenters);
+    EXPECT_LE(error, precise_success_error_level);
+
+    // "rotate" the circle grid by 90 degrees
+    swap(parrernSize.height, parrernSize.width);
+
+    found = findCirclesGrid(image, parrernSize, centers, CALIB_CB_SYMMETRIC_GRID);
+    error = calcError(centers, goldCenters.t());
+
+    EXPECT_TRUE(found);
+    ASSERT_EQ(centers.size(), (size_t)parrernSize.area());
+    EXPECT_LE(error, precise_success_error_level);
 }
 
 }} // namespace

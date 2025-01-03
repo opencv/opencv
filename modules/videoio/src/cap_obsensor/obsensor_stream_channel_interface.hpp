@@ -32,6 +32,14 @@
 
 namespace cv {
 namespace obsensor {
+
+#define OBSENSOR_CAM_VID 0x2bc5 // usb vid
+#define OBSENSOR_ASTRA2_PID 0x0660 // pid of Orbbec Astra 2 Camera
+#define OBSENSOR_GEMINI2_PID 0x0670 // pid of Orbbec Gemini 2 Camera
+#define OBSENSOR_FEMTO_MEGA_PID 0x0669 // pid of Orbbec Femto Mega Camera
+#define OBSENSOR_GEMINI2L_PID 0x0673 // pid of Orbbec Gemini 2 L Camera
+#define OBSENSOR_GEMINI2XL_PID 0x0671 // pid of Orbbec Gemini 2 XL Camera
+
 enum StreamType
 {
     OBSENSOR_STREAM_IR = 1,
@@ -45,6 +53,7 @@ enum FrameFormat
     FRAME_FORMAT_YUYV = 0,
     FRAME_FORMAT_MJPG = 5,
     FRAME_FORMAT_Y16 = 8,
+    FRAME_FORMAT_Y14 = 9,
 };
 
 enum PropertyId
@@ -93,6 +102,7 @@ public:
     virtual bool getProperty(int propId, uint8_t* recvData, uint32_t* recvDataSize) = 0;
 
     virtual StreamType streamType() const = 0;
+    virtual uint16_t getPid() const =0;
 };
 
 // "StreamChannelGroup" mean a group of stream channels from same one physical device

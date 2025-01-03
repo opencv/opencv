@@ -17,7 +17,7 @@ namespace cv { namespace dnn {
 class ImportNodeWrapper
 {
 public:
-    virtual ~ImportNodeWrapper() {};
+    virtual ~ImportNodeWrapper() {}
 
     virtual int getNumInputs() const = 0;
 
@@ -33,7 +33,7 @@ public:
 class ImportGraphWrapper
 {
 public:
-    virtual ~ImportGraphWrapper() {};
+    virtual ~ImportGraphWrapper() {}
 
     virtual Ptr<ImportNodeWrapper> getNode(int idx) const = 0;
 
@@ -44,6 +44,8 @@ public:
     virtual std::string getOutputName(int nodeId, int outId) const = 0;
 
     virtual void removeNode(int idx) = 0;
+
+    virtual bool isCommutativeOp(const std::string& type) const = 0;
 };
 
 class Subgraph  // Interface to match and replace subgraphs.
@@ -75,12 +77,10 @@ public:
     // Match TensorFlow subgraph starting from <nodeId> with a set of nodes to be fused.
     // Const nodes are skipped during matching. Returns true if nodes are matched and can be fused.
     virtual bool match(const Ptr<ImportGraphWrapper>& net, int nodeId,
-                       std::vector<int>& matchedNodesIds,
-                       std::vector<int>& targetNodesIds);
+                       std::vector<int>& matchedNodesIds);
 
     // Fuse matched subgraph.
-    void replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int>& matchedNodesIds,
-                 const std::vector<int>& targetNodesIds);
+    void replace(const Ptr<ImportGraphWrapper>& net, const std::vector<int>& matchedNodesIds);
 
     virtual void finalize(const Ptr<ImportGraphWrapper>& net,
                           const Ptr<ImportNodeWrapper>& fusedNode,

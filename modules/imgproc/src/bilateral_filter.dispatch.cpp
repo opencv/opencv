@@ -111,7 +111,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             space_ofs[maxk++] = (int)(i * temp.step + j * cn);
         }
 
-    char cvt[3][40];
+    char cvt[3][50];
     String cnstr = cn > 1 ? format("%d", cn) : "";
     String kernelName("bilateral");
     size_t sizeDiv = 1;
@@ -129,10 +129,10 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
             " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=(float)%f",
             radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
-            ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
+            ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0], sizeof(cvt[0])),
             ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
-            ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1]),
-            ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2]), gauss_color_coeff));
+            ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1], sizeof(cvt[1])),
+            ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2], sizeof(cvt[2])), gauss_color_coeff));
     if (k.empty())
         return false;
 
@@ -415,6 +415,9 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
+    CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.depth(),
+             src.channels(), d, sigmaColor, sigmaSpace, borderType);
+
     CV_IPP_RUN_FAST(ipp_bilateralFilter(src, dst, d, sigmaColor, sigmaSpace, borderType));
 
     if( src.depth() == CV_8U )
@@ -422,7 +425,7 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
     else if( src.depth() == CV_32F )
         bilateralFilter_32f( src, dst, d, sigmaColor, sigmaSpace, borderType );
     else
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
         "Bilateral filtering is only implemented for 8u and 32f images" );
 }
 

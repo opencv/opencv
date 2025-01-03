@@ -36,6 +36,8 @@ class NewOpenCVTests(unittest.TestCase):
                     return candidate
         if required:
             self.fail('File ' + filename + ' not found')
+        else:
+            self.skipTest('File ' + filename + ' not found')
         return None
 
 

@@ -474,13 +474,13 @@ STDMETHODIMP MSMFStreamChannel::OnReadSample(HRESULT hrStatus, DWORD dwStreamInd
         if (sample)
         {
             ComPtr<IMFMediaBuffer> buffer = nullptr;
-            DWORD max_length, current_length;
+            DWORD maxLength, currentLength;
             byte* byte_buffer = nullptr;
 
             HR_FAILED_EXEC(sample->GetBufferByIndex(0, &buffer), { return S_OK; });
 
-            buffer->Lock(&byte_buffer, &max_length, &current_length);
-            Frame fo = { currentProfile_.format, currentProfile_.width, currentProfile_.height, current_length, (uint8_t*)byte_buffer };
+            buffer->Lock(&byte_buffer, &maxLength, &currentLength);
+            Frame fo = { currentProfile_.format, currentProfile_.width, currentProfile_.height, currentLength, (uint8_t*)byte_buffer };
             if (depthFrameProcessor_)
             {
                 depthFrameProcessor_->process(&fo);
@@ -499,7 +499,7 @@ STDMETHODIMP MSMFStreamChannel::OnEvent(DWORD /*sidx*/, IMFMediaEvent* /*event*/
 
 STDMETHODIMP MSMFStreamChannel::OnFlush(DWORD)
 {
-    if (streamState_ == STREAM_STARTING)
+    if (streamState_ != STREAM_STOPED)
     {
         std::unique_lock<std::mutex> lock(streamStateMutex_);
         streamState_ = STREAM_STOPED;

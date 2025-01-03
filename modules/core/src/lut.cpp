@@ -56,6 +56,11 @@ static void LUT8u_32s( const uchar* src, const int* lut, int* dst, int len, int 
     LUT8u_( src, lut, dst, len, cn, lutcn );
 }
 
+static void LUT8u_16f( const uchar* src, const hfloat* lut, hfloat* dst, int len, int cn, int lutcn )
+{
+    LUT8u_( src, lut, dst, len, cn, lutcn );
+}
+
 static void LUT8u_32f( const uchar* src, const float* lut, float* dst, int len, int cn, int lutcn )
 {
     LUT8u_( src, lut, dst, len, cn, lutcn );
@@ -68,10 +73,10 @@ static void LUT8u_64f( const uchar* src, const double* lut, double* dst, int len
 
 typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn );
 
-static LUTFunc lutTab[] =
+static LUTFunc lutTab[CV_DEPTH_MAX] =
 {
     (LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_8s, (LUTFunc)LUT8u_16u, (LUTFunc)LUT8u_16s,
-    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, 0
+    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, (LUTFunc)LUT8u_16f
 };
 
 #ifdef HAVE_OPENCL
@@ -330,7 +335,7 @@ public:
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
-        CV_DbgAssert(*ok);
+        CV_Assert(*ok);
 
         const int row0 = range.start;
         const int row1 = range.end;
@@ -376,6 +381,9 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(src.cols, src.rows),
                openvx_LUT(src, dst, lut))
+
+    CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,
+             lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
 
 #if !IPP_DISABLE_PERF_LUT
     CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));

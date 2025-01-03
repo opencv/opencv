@@ -235,6 +235,10 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #include "ipp.h"
 #endif
 #ifdef HAVE_IPP_IW
+#  if defined(__OPENCV_BUILD) && defined(__clang__)
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wstrict-prototypes"
+#  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wsuggest-override"
@@ -245,6 +249,9 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic pop
+#  endif
+#  if defined(__OPENCV_BUILD) && defined(__clang__)
+#  pragma clang diagnostic pop
 #  endif
 #endif
 

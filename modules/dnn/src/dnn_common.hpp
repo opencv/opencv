@@ -13,7 +13,8 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 #define IS_DNN_OPENCL_TARGET(id) (id == DNN_TARGET_OPENCL || id == DNN_TARGET_OPENCL_FP16)
-#define IS_DNN_CPU_TARGET(id) (id == DNN_TARGET_CPU) // TODO: add DNN_TARGET_CPU_FP16
+#define IS_DNN_CPU_TARGET(id) (id == DNN_TARGET_CPU || id == DNN_TARGET_CPU_FP16)
+#define IS_DNN_VULKAN_TARGET(id) (id == DNN_TARGET_VULKAN)
 Mutex& getInitializationMutex();
 void initializeLayerFactory();
 
@@ -152,6 +153,21 @@ static inline std::string toString(const Mat& blob, const std::string& name = st
         ss << blob.reshape(1, 1);
     }
     return ss.str();
+}
+
+// Scalefactor is a common parameter used for data scaling. In OpenCV, we often use Scalar to represent it.
+// Because 0 is meaningless in scalefactor.
+// If the scalefactor is (x, 0, 0, 0), we convert it to (x, x, x, x). The following func will do this hack.
+static inline Scalar_<double> broadcastRealScalar(const Scalar_<double>& _scale)
+{
+    Scalar_<double> scale = _scale;
+    if (scale[1] == 0 && scale[2] == 0 && scale[3] == 0)
+    {
+        CV_Assert(scale[0] != 0 && "Scalefactor of 0 is meaningless.");
+        scale = Scalar_<double>::all(scale[0]);
+    }
+
+    return scale;
 }
 
 

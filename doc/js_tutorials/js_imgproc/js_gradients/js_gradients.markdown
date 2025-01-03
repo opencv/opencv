@@ -15,7 +15,7 @@ We will see each one of them.
 
 ### 1. Sobel and Scharr Derivatives
 
-Sobel operators is a joint Gausssian smoothing plus differentiation operation, so it is more
+Sobel operators is a joint Gaussian smoothing plus differentiation operation, so it is more
 resistant to noise. You can specify the direction of derivatives to be taken, vertical or horizontal
 (by the arguments, yorder and xorder respectively). You can also specify the size of kernel by the
 argument ksize. If ksize = -1, a 3x3 Scharr filter is used which gives better results than 3x3 Sobel

@@ -48,12 +48,12 @@
 #include "opencv2/core/hal/intrin.hpp"
 
 namespace cv {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 static inline v_float32 blend(const v_float32& v_src1, const v_float32& v_src2, const v_float32& v_w1, const v_float32& v_w2)
 {
     const v_float32 v_eps = vx_setall_f32(1e-5f);
-    v_float32 v_denom = v_w1 + v_w2 + v_eps;
-    return (v_src1 * v_w1 + v_src2 * v_w2) / v_denom;
+    v_float32 v_denom = v_add(v_add(v_w1, v_w2), v_eps);
+    return v_div(v_add(v_mul(v_src1, v_w1), v_mul(v_src2, v_w2)), v_denom);
 }
 static inline v_float32 blend(const v_float32& v_src1, const v_float32& v_src2, const float* w_ptr1, const float* w_ptr2, int offset)
 {
@@ -105,7 +105,7 @@ int blendLinearSimd(const uchar* src1, const uchar* src2, const float* weights1,
     switch(cn)
     {
     case 1:
-        for(int weight_offset = 0 ; x <= width - v_uint8::nlanes; x += v_uint8::nlanes, weight_offset += v_uint8::nlanes)
+        for(int weight_offset = 0 ; x <= width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes(), weight_offset += VTraits<v_uint8>::vlanes())
         {
             v_float32 v_src10, v_src11, v_src12, v_src13;
             v_float32 v_src20, v_src21, v_src22, v_src23;
@@ -113,15 +113,15 @@ int blendLinearSimd(const uchar* src1, const uchar* src2, const float* weights1,
             load_expand_u8tof32(src2 + x, v_src20, v_src21, v_src22, v_src23);
 
             v_float32 v_dst0 = blend(v_src10, v_src20, weights1, weights2, weight_offset);
-            v_float32 v_dst1 = blend(v_src11, v_src21, weights1, weights2, weight_offset + v_float32::nlanes);
-            v_float32 v_dst2 = blend(v_src12, v_src22, weights1, weights2, weight_offset + 2*v_float32::nlanes);
-            v_float32 v_dst3 = blend(v_src13, v_src23, weights1, weights2, weight_offset + 3*v_float32::nlanes);
+            v_float32 v_dst1 = blend(v_src11, v_src21, weights1, weights2, weight_offset + VTraits<v_float32>::vlanes());
+            v_float32 v_dst2 = blend(v_src12, v_src22, weights1, weights2, weight_offset + 2*VTraits<v_float32>::vlanes());
+            v_float32 v_dst3 = blend(v_src13, v_src23, weights1, weights2, weight_offset + 3*VTraits<v_float32>::vlanes());
 
             store_pack_f32tou8(dst + x, v_dst0, v_dst1, v_dst2, v_dst3);
         }
         break;
     case 2:
-        for(int weight_offset = 0 ; x <= width - 2*v_uint8::nlanes; x += 2*v_uint8::nlanes, weight_offset += v_uint8::nlanes)
+        for(int weight_offset = 0 ; x <= width - 2*VTraits<v_uint8>::vlanes(); x += 2*VTraits<v_uint8>::vlanes(), weight_offset += VTraits<v_uint8>::vlanes())
         {
             v_uint8 v_src10, v_src11, v_src20, v_src21;
             v_load_deinterleave(src1 + x, v_src10, v_src11);
@@ -135,12 +135,12 @@ int blendLinearSimd(const uchar* src1, const uchar* src2, const float* weights1,
 
             v_float32 v_dst0 = blend(v_src100, v_src200, weights1, weights2, weight_offset);
             v_float32 v_dst1 = blend(v_src110, v_src210, weights1, weights2, weight_offset);
-            v_float32 v_dst2 = blend(v_src101, v_src201, weights1, weights2, weight_offset + v_float32::nlanes);
-            v_float32 v_dst3 = blend(v_src111, v_src211, weights1, weights2, weight_offset + v_float32::nlanes);
-            v_float32 v_dst4 = blend(v_src102, v_src202, weights1, weights2, weight_offset + 2*v_float32::nlanes);
-            v_float32 v_dst5 = blend(v_src112, v_src212, weights1, weights2, weight_offset + 2*v_float32::nlanes);
-            v_float32 v_dst6 = blend(v_src103, v_src203, weights1, weights2, weight_offset + 3*v_float32::nlanes);
-            v_float32 v_dst7 = blend(v_src113, v_src213, weights1, weights2, weight_offset + 3*v_float32::nlanes);
+            v_float32 v_dst2 = blend(v_src101, v_src201, weights1, weights2, weight_offset + VTraits<v_float32>::vlanes());
+            v_float32 v_dst3 = blend(v_src111, v_src211, weights1, weights2, weight_offset + VTraits<v_float32>::vlanes());
+            v_float32 v_dst4 = blend(v_src102, v_src202, weights1, weights2, weight_offset + 2*VTraits<v_float32>::vlanes());
+            v_float32 v_dst5 = blend(v_src112, v_src212, weights1, weights2, weight_offset + 2*VTraits<v_float32>::vlanes());
+            v_float32 v_dst6 = blend(v_src103, v_src203, weights1, weights2, weight_offset + 3*VTraits<v_float32>::vlanes());
+            v_float32 v_dst7 = blend(v_src113, v_src213, weights1, weights2, weight_offset + 3*VTraits<v_float32>::vlanes());
 
             v_uint8 v_dsta = pack_f32tou8(v_dst0, v_dst2, v_dst4, v_dst6);
             v_uint8 v_dstb = pack_f32tou8(v_dst1, v_dst3, v_dst5, v_dst7);
@@ -148,7 +148,7 @@ int blendLinearSimd(const uchar* src1, const uchar* src2, const float* weights1,
         }
         break;
     case 3:
-        for(int weight_offset = 0 ; x <= width - 3*v_uint8::nlanes; x += 3*v_uint8::nlanes, weight_offset += v_uint8::nlanes)
+        for(int weight_offset = 0 ; x <= width - 3*VTraits<v_uint8>::vlanes(); x += 3*VTraits<v_uint8>::vlanes(), weight_offset += VTraits<v_uint8>::vlanes())
         {
             v_uint8 v_src10, v_src11, v_src12, v_src20, v_src21, v_src22;
             v_load_deinterleave(src1 + x, v_src10, v_src11, v_src12);
@@ -164,13 +164,13 @@ int blendLinearSimd(const uchar* src1, const uchar* src2, const float* weights1,
             expand_u8tof32(v_src22, v_src220, v_src221, v_src222, v_src223);
 
             v_float32 v_w10 = vx_load(weights1 + weight_offset);
-            v_float32 v_w11 = vx_load(weights1 + weight_offset + v_float32::nlanes);
-            v_float32 v_w12 = vx_load(weights1 + weight_offset + 2*v_float32::nlanes);
-            v_float32 v_w13 = vx_load(weights1 + weight_offset + 3*v_float32::nlanes);
+            v_float32 v_w11 = vx_load(weights1 + weight_offset + VTraits<v_float32>::vlanes());
+            v_float32 v_w12 = vx_load(weights1 + weight_offset + 2*VTraits<v_float32>::vlanes());
+            v_float32 v_w13 = vx_load(weights1 + weight_offset + 3*VTraits<v_float32>::vlanes());
             v_float32 v_w20 = vx_load(weights2 + weight_offset);
-            v_float32 v_w21 = vx_load(weights2 + weight_offset + v_float32::nlanes);
-            v_float32 v_w22 = vx_load(weights2 + weight_offset + 2*v_float32::nlanes);
-            v_float32 v_w23 = vx_load(weights2 + weight_offset + 3*v_float32::nlanes);
+            v_float32 v_w21 = vx_load(weights2 + weight_offset + VTraits<v_float32>::vlanes());
+            v_float32 v_w22 = vx_load(weights2 + weight_offset + 2*VTraits<v_float32>::vlanes());
+            v_float32 v_w23 = vx_load(weights2 + weight_offset + 3*VTraits<v_float32>::vlanes());
             v_src100 = blend(v_src100, v_src200, v_w10, v_w20);
             v_src110 = blend(v_src110, v_src210, v_w10, v_w20);
             v_src120 = blend(v_src120, v_src220, v_w10, v_w20);
@@ -192,7 +192,7 @@ int blendLinearSimd(const uchar* src1, const uchar* src2, const float* weights1,
         }
         break;
     case 4:
-        for(int weight_offset = 0 ; x <= width - v_uint8::nlanes; x += v_uint8::nlanes, weight_offset += v_float32::nlanes)
+        for(int weight_offset = 0 ; x <= width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes(), weight_offset += VTraits<v_float32>::vlanes())
         {
             v_float32 v_src10, v_src11, v_src12, v_src13;
             v_float32 v_src20, v_src21, v_src22, v_src23;
@@ -229,7 +229,7 @@ int blendLinearSimd(const float* src1, const float* src2, const float* weights1,
     switch(cn)
     {
     case 1:
-        for(int weight_offset = 0 ; x <= width - v_float32::nlanes; x += v_float32::nlanes, weight_offset += v_float32::nlanes)
+        for(int weight_offset = 0 ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes(), weight_offset += VTraits<v_float32>::vlanes())
         {
             v_float32 v_src1 = vx_load(src1 + x);
             v_float32 v_src2 = vx_load(src2 + x);
@@ -242,7 +242,7 @@ int blendLinearSimd(const float* src1, const float* src2, const float* weights1,
         }
         break;
     case 2:
-        for(int weight_offset = 0 ; x <= width - 2*v_float32::nlanes; x += 2*v_float32::nlanes, weight_offset += v_float32::nlanes)
+        for(int weight_offset = 0 ; x <= width - 2*VTraits<v_float32>::vlanes(); x += 2*VTraits<v_float32>::vlanes(), weight_offset += VTraits<v_float32>::vlanes())
         {
             v_float32 v_src10, v_src11, v_src20, v_src21;
             v_load_deinterleave(src1 + x, v_src10, v_src11);
@@ -257,7 +257,7 @@ int blendLinearSimd(const float* src1, const float* src2, const float* weights1,
         }
         break;
     case 3:
-        for(int weight_offset = 0 ; x <= width - 3*v_float32::nlanes; x += 3*v_float32::nlanes, weight_offset += v_float32::nlanes)
+        for(int weight_offset = 0 ; x <= width - 3*VTraits<v_float32>::vlanes(); x += 3*VTraits<v_float32>::vlanes(), weight_offset += VTraits<v_float32>::vlanes())
         {
             v_float32 v_src10, v_src11, v_src12, v_src20, v_src21, v_src22;
             v_load_deinterleave(src1 + x, v_src10, v_src11, v_src12);
@@ -273,7 +273,7 @@ int blendLinearSimd(const float* src1, const float* src2, const float* weights1,
         }
         break;
     case 4:
-        for(int weight_offset = 0 ; x <= width - 4*v_float32::nlanes; x += 4*v_float32::nlanes, weight_offset += v_float32::nlanes)
+        for(int weight_offset = 0 ; x <= width - 4*VTraits<v_float32>::vlanes(); x += 4*VTraits<v_float32>::vlanes(), weight_offset += VTraits<v_float32>::vlanes())
         {
             v_float32 v_src10, v_src11, v_src12, v_src13, v_src20, v_src21, v_src22, v_src23;
             v_load_deinterleave(src1 + x, v_src10, v_src11, v_src12, v_src13);
@@ -320,7 +320,7 @@ public:
             T * const dst_row = dst->ptr<T>(y);
 
             int x = 0;
-            #if CV_SIMD
+            #if (CV_SIMD || CV_SIMD_SCALABLE)
             x = blendLinearSimd(src1_row, src2_row, weights1_row, weights2_row, dst_row, x, width, cn);
             #endif
 
@@ -350,10 +350,10 @@ static bool ocl_blendLinear( InputArray _src1, InputArray _src2, InputArray _wei
 {
     int type = _src1.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
-    char cvt[30];
+    char cvt[50];
     ocl::Kernel k("blendLinear", ocl::imgproc::blend_linear_oclsrc,
                   format("-D T=%s -D cn=%d -D convertToT=%s", ocl::typeToStr(depth),
-                         cn, ocl::convertTypeStr(CV_32F, depth, 1, cvt)));
+                         cn, ocl::convertTypeStr(CV_32F, depth, 1, cvt, sizeof(cvt))));
     if (k.empty())
         return false;
 

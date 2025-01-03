@@ -5,11 +5,15 @@
 #define __OPENCV_TEST_PRECOMP_HPP__
 
 #include <sstream>
+#include <algorithm>
+#include <numeric>
 
 #include "opencv2/ts.hpp"
+#include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/videoio/registry.hpp"
 #include "opencv2/core/private.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
 
 namespace cv {
 
@@ -55,6 +59,14 @@ inline std::string fourccToString(int fourcc)
     return cv::format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
 }
 
+inline std::string fourccToStringSafe(int fourcc)
+{
+    std::string res = fourccToString(fourcc);
+    // TODO: return hex values for invalid characters
+    std::transform(res.begin(), res.end(), res.begin(), [](char c) -> char { return (c >= '0' && c <= 'z') ? c : (c == ' ' ? '_' : 'x'); });
+    return res;
+}
+
 inline int fourccFromString(const std::string &fourcc)
 {
     if (fourcc.size() != 4) return 0;
@@ -84,11 +96,11 @@ inline void generateFrame(int i, int FRAME_COUNT, cv::Mat & frame)
 class BunnyParameters
 {
 public:
-    inline static int    getWidth()  { return 672; };
-    inline static int    getHeight() { return 384; };
-    inline static int    getFps()    { return 24; };
-    inline static double getTime()   { return 5.21; };
-    inline static int    getCount()  { return cvRound(getFps() * getTime()); };
+    inline static int    getWidth()  { return 672; }
+    inline static int    getHeight() { return 384; }
+    inline static int    getFps()    { return 24; }
+    inline static double getTime()   { return 5.21; }
+    inline static int    getCount()  { return cvRound(getFps() * getTime()); }
     inline static std::string getFilename(const std::string &ext)
     {
         return cvtest::TS::ptr()->get_data_path() + "video/big_buck_bunny" + ext;

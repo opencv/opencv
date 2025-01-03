@@ -150,7 +150,7 @@ static void writeBack(cv::GRunArg& arg, cv::GRunArgP& out)
             break;
         }
         default:
-            GAPI_Assert(false && "Unsupported output type");
+            GAPI_Error("Unsupported output type");
     }
 }
 

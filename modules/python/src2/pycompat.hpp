@@ -53,6 +53,7 @@
 #define PyInt_CheckExact PyLong_CheckExact
 #define PyInt_AsLong PyLong_AsLong
 #define PyInt_AS_LONG PyLong_AS_LONG
+#define PyInt_AsUnsignedLongLongMask PyLong_AsUnsignedLongLongMask
 #define PyInt_FromLong PyLong_FromLong
 #define PyNumber_Int PyNumber_Long
 
@@ -98,10 +99,10 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
 }
 
 static inline
-std::string getPyObjectNameAttr(PyObject* obj)
+std::string getPyObjectAttr(PyObject* obj, const char* attrName)
 {
     std::string obj_name;
-    PyObject* cls_name_obj = PyObject_GetAttrString(obj, "__name__");
+    PyObject* cls_name_obj = PyObject_GetAttrString(obj, attrName);
     if (cls_name_obj && !getUnicodeString(cls_name_obj, obj_name)) {
         obj_name.clear();
     }
@@ -115,6 +116,12 @@ std::string getPyObjectNameAttr(PyObject* obj)
         obj_name = "<UNAVAILABLE>";
     }
     return obj_name;
+}
+
+static inline
+std::string getPyObjectNameAttr(PyObject* obj)
+{
+    return getPyObjectAttr(obj, "__name__");
 }
 
 //==================================================================================================
@@ -338,8 +345,10 @@ PyObject* pyopencv_from(const TYPE& src)                                        
         if (!registerNewType(m, #EXPORT_NAME, (PyObject*)pyopencv_##CLASS_ID##_TypePtr, SCOPE)) \
         { \
             printf("Failed to register a new type: " #EXPORT_NAME  ", base (" #BASE ") in " SCOPE " \n"); \
+            Py_DECREF(pyopencv_##CLASS_ID##_TypePtr); \
             ERROR_HANDLER; \
         } \
+        Py_DECREF(pyopencv_##CLASS_ID##_TypePtr); \
     }
 
 // Debug module load:

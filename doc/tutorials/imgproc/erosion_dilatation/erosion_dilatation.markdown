@@ -111,7 +111,7 @@ called and it will update the output image based on the current trackbar values.
 
 Let's analyze these two functions:
 
-#### The erosion function
+### The erosion function (CPP)
 
 @snippet cpp/tutorial_code/ImgProc/Morphology_1.cpp erosion
 
@@ -135,7 +135,7 @@ receives three arguments:
 
 That is all. We are ready to perform the erosion of our image.
 
-#### The dilation function
+### The dilation function (CPP)
 
 The code is below. As you can see, it is completely similar to the snippet of code for **erosion**.
 Here we also have the option of defining our kernel, its anchor point and the size of the operator
@@ -175,7 +175,7 @@ In short we
 The action and state changed listeners added call at the end the `update` method which updates
 the image based on the current slider values. So every time we move any slider, the `update` method is triggered.
 
-#### Updating the image
+### Updating the image (Java)
 
 To update the image we used the following implementation:
 
@@ -190,7 +190,7 @@ In other words we
 
 Let's analyze the `erode` and `dilate` methods:
 
-#### The erosion method
+### The erosion method (Java)
 
 @snippet java/tutorial_code/ImgProc/erosion_dilatation/MorphologyDemo1.java erosion
 
@@ -204,16 +204,16 @@ receives three arguments:
 
     We can choose any of three shapes for our kernel:
 
-    -   Rectangular box: CV_SHAPE_RECT
-    -   Cross: CV_SHAPE_CROSS
-    -   Ellipse: CV_SHAPE_ELLIPSE
+    -   Rectangular box: Imgproc.SHAPE_RECT
+    -   Cross: Imgproc.SHAPE_CROSS
+    -   Ellipse: Imgproc.SHAPE_ELLIPSE
 
     Together with the shape we specify the size of our kernel and the *anchor point*. If the anchor point is not
     specified, it is assumed to be in the center.
 
 That is all. We are ready to perform the erosion of our image.
 
-#### The dilation function
+### The dilation function (Java)
 
 The code is below. As you can see, it is completely similar to the snippet of code for **erosion**.
 Here we also have the option of defining our kernel, its anchor point and the size of the operator
@@ -240,7 +240,7 @@ called and it will update the output image based on the current trackbar values.
 
 Let's analyze these two functions:
 
-#### The erosion function
+### The erosion function (Python)
 
 @snippet python/tutorial_code/imgProc/erosion_dilatation/morphology_1.py erosion
 
@@ -262,7 +262,7 @@ specified, it is assumed to be in the center.
 
 That is all. We are ready to perform the erosion of our image.
 
-#### The dilation function
+### The dilation function (Python)
 
 The code is below. As you can see, it is completely similar to the snippet of code for **erosion**.
 Here we also have the option of defining our kernel, its anchor point and the size of the operator

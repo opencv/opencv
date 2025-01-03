@@ -2,7 +2,7 @@
  * jdhuff.c
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 2006-2019 by Guido Vollbeding.
+ * Modified 2006-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -704,7 +704,7 @@ process_restart (j_decompress_ptr cinfo)
  */
 
 METHODDEF(boolean)
-decode_mcu_DC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu_DC_first (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   int Al = cinfo->Al;
@@ -776,7 +776,7 @@ decode_mcu_DC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   register int s, k, r;
@@ -864,7 +864,7 @@ decode_mcu_AC_first (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-decode_mcu_DC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu_DC_refine (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   JCOEF p1;
@@ -913,7 +913,7 @@ decode_mcu_DC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-decode_mcu_AC_refine (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu_AC_refine (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   register int s, k, r;
@@ -1072,7 +1072,7 @@ undoit:
  */
 
 METHODDEF(boolean)
-decode_mcu_sub (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu_sub (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   const int * natural_order;
@@ -1201,7 +1201,7 @@ decode_mcu_sub (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
  */
 
 METHODDEF(boolean)
-decode_mcu (j_decompress_ptr cinfo, JBLOCKROW *MCU_data)
+decode_mcu (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data)
 {
   huff_entropy_ptr entropy = (huff_entropy_ptr) cinfo->entropy;
   int blkn;

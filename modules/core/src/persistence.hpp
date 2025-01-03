@@ -86,12 +86,14 @@ namespace fs
 {
 int strcasecmp(const char* str1, const char* str2);
 char* itoa( int _val, char* buffer, int /*radix*/ );
+char* itoa( int64_t _val, char* buffer, int /*radix*/, bool _signed );
 char* floatToString( char* buf, size_t bufSize, float value, bool halfprecision, bool explicitZero );
 char* doubleToString( char* buf, size_t bufSize, double value, bool explicitZero );
 
 int calcStructSize( const char* dt, int initial_size );
 int calcElemSize( const char* dt, int initial_size );
-char* encodeFormat( int elem_type, char* dt );
+CV_DEPRECATED char* encodeFormat( int elem_type, char* dt );
+char* encodeFormat( int elem_type, char* dt, size_t dt_len );
 int decodeFormat( const char* dt, int* fmt_pairs, int max_len );
 int decodeSimpleFormat( const char* dt );
 }
@@ -192,6 +194,7 @@ public:
                                           int struct_flags, const char* type_name=0 ) = 0;
     virtual void endWriteStruct(const FStructData& current_struct) = 0;
     virtual void write(const char* key, int value) = 0;
+    virtual void write(const char* key, int64_t value) = 0;
     virtual void write(const char* key, double value) = 0;
     virtual void write(const char* key, const char* value, bool quote) = 0;
     virtual void writeScalar(const char* key, const char* value) = 0;

@@ -30,7 +30,7 @@
 #include <opencv2/core/affine.hpp>
 
 namespace cv{
-//! @addtogroup core
+//! @addtogroup core_quaternion
 //! @{
 
 template <typename _Tp> class DualQuat;

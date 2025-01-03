@@ -185,6 +185,26 @@ OCL_TEST_P(WarpAffine, Mat)
     }
 }
 
+OCL_TEST_P(WarpAffine, inplace_25853) // when src and dst are the same variable, ocl on/off should produce consistent and correct results
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        double eps = depth < CV_32F ? 0.04 : 0.06;
+        random_roi();
+
+        Mat M = getRotationMatrix2D(Point2f(src_roi.cols / 2.0f, src_roi.rows / 2.0f),
+            rng.uniform(-180.f, 180.f), rng.uniform(0.4f, 2.0f));
+
+        OCL_OFF(cv::warpAffine(src_roi, src_roi, M, dsize, interpolation));
+        OCL_ON(cv::warpAffine(usrc_roi, usrc_roi, M, dsize, interpolation));
+
+        dst_roi = src_roi.clone();
+        udst_roi = usrc_roi.clone();
+
+        Near(eps);
+    }
+}
+
 typedef WarpTest_cols4_Base WarpAffine_cols4;
 
 OCL_TEST_P(WarpAffine_cols4, Mat)
@@ -438,6 +458,101 @@ OCL_TEST_P(Remap_INTER_LINEAR, Mat)
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// remap relative
+
+PARAM_TEST_CASE(RemapRelative, MatDepth, Channels, Interpolation, BorderType, bool)
+{
+    int srcType;
+    int interpolation;
+    int borderType;
+    bool useFixedPoint;
+
+    Scalar val;
+
+    TEST_DECLARE_INPUT_PARAMETER(map1);
+    TEST_DECLARE_INPUT_PARAMETER(map2);
+    TEST_DECLARE_OUTPUT_PARAMETER(dst);
+
+    UMat uSrc;
+    UMat uMapRelativeX32F;
+    UMat uMapRelativeY32F;
+    UMat uMapAbsoluteX32F;
+    UMat uMapAbsoluteY32F;
+    UMat uMapRelativeX16S;
+    UMat uMapRelativeY16S;
+    UMat uMapAbsoluteX16S;
+    UMat uMapAbsoluteY16S;
+
+    virtual void SetUp()
+    {
+        srcType = CV_MAKE_TYPE(GET_PARAM(0), GET_PARAM(1));
+        interpolation = GET_PARAM(2);
+        borderType = GET_PARAM(3);
+        useFixedPoint = GET_PARAM(4);
+
+        const int nChannels = CV_MAT_CN(srcType);
+        const cv::Size size(127, 61);
+        cv::Mat data64FC1(1, size.area()*nChannels, CV_64FC1);
+        data64FC1.forEach<double>([&](double& pixel, const int* position) {pixel = static_cast<double>(position[1]);});
+
+        cv::Mat src;
+        data64FC1.reshape(nChannels, size.height).convertTo(src, srcType);
+
+        cv::Mat mapRelativeX32F(size, CV_32FC1);
+        mapRelativeX32F.setTo(cv::Scalar::all(-0.33));
+
+        cv::Mat mapRelativeY32F(size, CV_32FC1);
+        mapRelativeY32F.setTo(cv::Scalar::all(-0.33));
+
+        cv::Mat mapAbsoluteX32F = mapRelativeX32F.clone();
+        mapAbsoluteX32F.forEach<float>([&](float& pixel, const int* position) {
+            pixel += static_cast<float>(position[1]);
+            });
+
+        cv::Mat mapAbsoluteY32F = mapRelativeY32F.clone();
+        mapAbsoluteY32F.forEach<float>([&](float& pixel, const int* position) {
+            pixel += static_cast<float>(position[0]);
+            });
+
+        OCL_ON(src.copyTo(uSrc));
+        OCL_ON(mapRelativeX32F.copyTo(uMapRelativeX32F));
+        OCL_ON(mapRelativeY32F.copyTo(uMapRelativeY32F));
+        OCL_ON(mapAbsoluteX32F.copyTo(uMapAbsoluteX32F));
+        OCL_ON(mapAbsoluteY32F.copyTo(uMapAbsoluteY32F));
+
+        if (useFixedPoint)
+        {
+            const bool nninterpolation = (interpolation == cv::INTER_NEAREST) || (interpolation == cv::INTER_NEAREST_EXACT);
+            OCL_ON(cv::convertMaps(uMapAbsoluteX32F, uMapAbsoluteY32F, uMapAbsoluteX16S, uMapAbsoluteY16S, CV_16SC2, nninterpolation));
+            OCL_ON(cv::convertMaps(uMapRelativeX32F, uMapRelativeY32F, uMapRelativeX16S, uMapRelativeY16S, CV_16SC2, nninterpolation));
+        }
+    }
+};
+
+OCL_TEST_P(RemapRelative, Mat)
+{
+    cv::UMat uDstAbsolute;
+    cv::UMat uDstRelative;
+    if (useFixedPoint)
+    {
+        OCL_ON(cv::remap(uSrc, uDstAbsolute, uMapAbsoluteX16S, uMapAbsoluteY16S, interpolation, borderType));
+        OCL_ON(cv::remap(uSrc, uDstRelative, uMapRelativeX16S, uMapRelativeY16S, interpolation | WARP_RELATIVE_MAP, borderType));
+    }
+    else
+    {
+        OCL_ON(cv::remap(uSrc, uDstAbsolute, uMapAbsoluteX32F, uMapAbsoluteY32F, interpolation, borderType));
+        OCL_ON(cv::remap(uSrc, uDstRelative, uMapRelativeX32F, uMapRelativeY32F, interpolation | WARP_RELATIVE_MAP, borderType));
+    }
+
+    cv::Mat dstAbsolute;
+    OCL_ON(uDstAbsolute.copyTo(dstAbsolute));
+    cv::Mat dstRelative;
+    OCL_ON(uDstRelative.copyTo(dstRelative));
+
+    EXPECT_MAT_NEAR(dstAbsolute, dstRelative, dstAbsolute.depth() == CV_32F ? 1e-3 : 1.0);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////
 
 OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, WarpAffine, Combine(
@@ -508,6 +623,20 @@ OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, Remap_INTER_NEAREST, Combine(
                                    std::pair<MatType, MatType>((MatType)CV_32FC2, noType),
                                    std::pair<MatType, MatType>((MatType)CV_16SC2, (MatType)CV_16UC1),
                                    std::pair<MatType, MatType>((MatType)CV_16SC2, noType)),
+                            Values((BorderType)BORDER_CONSTANT,
+                                   (BorderType)BORDER_REPLICATE,
+                                   (BorderType)BORDER_WRAP,
+                                   (BorderType)BORDER_REFLECT,
+                                   (BorderType)BORDER_REFLECT_101),
+                            Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(ImgprocWarp, RemapRelative, Combine(
+                            Values(CV_8U, CV_16U, CV_32F, CV_64F),
+                            Values(1, 3, 4),
+                            Values((Interpolation)INTER_NEAREST,
+                                   (Interpolation)INTER_LINEAR,
+                                   (Interpolation)INTER_CUBIC,
+                                   (Interpolation)INTER_LANCZOS4),
                             Values((BorderType)BORDER_CONSTANT,
                                    (BorderType)BORDER_REPLICATE,
                                    (BorderType)BORDER_WRAP,

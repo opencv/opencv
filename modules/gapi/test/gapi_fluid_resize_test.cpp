@@ -829,7 +829,11 @@ TEST_P(Preproc4lpiTest, Test)
     cv::cvtColor(in_mat, rgb_mat, cv::COLOR_YUV2RGB_NV12);
     cv::resize(rgb_mat, out_mat_ocv, out_sz, 0, 0, interp);
 
+#if defined(__arm__) || defined(__aarch64__)
+    EXPECT_GE(2, cvtest::norm(out_mat(roi), out_mat_ocv(roi), NORM_INF));
+#else
     EXPECT_EQ(0, cvtest::norm(out_mat(roi), out_mat_ocv(roi), NORM_INF));
+#endif
 }
 
 INSTANTIATE_TEST_CASE_P(Fluid, Preproc4lpiTest,

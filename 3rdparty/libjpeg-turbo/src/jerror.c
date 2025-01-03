@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1998, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2022, D. R. Commander.
+ * Copyright (C) 2022, 2024, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -46,7 +46,7 @@
 
 #define JMESSAGE(code, string)  string,
 
-const char * const jpeg_std_message_table[] = {
+static const char * const jpeg_std_message_table[] = {
 #include "jerror.h"
   NULL
 };
@@ -189,9 +189,9 @@ format_message(j_common_ptr cinfo, char *buffer)
 
   /* Format the message into the passed buffer */
   if (isstring)
-    snprintf(buffer, JMSG_LENGTH_MAX, msgtext, err->msg_parm.s);
+    SNPRINTF(buffer, JMSG_LENGTH_MAX, msgtext, err->msg_parm.s);
   else
-    snprintf(buffer, JMSG_LENGTH_MAX, msgtext,
+    SNPRINTF(buffer, JMSG_LENGTH_MAX, msgtext,
              err->msg_parm.i[0], err->msg_parm.i[1],
              err->msg_parm.i[2], err->msg_parm.i[3],
              err->msg_parm.i[4], err->msg_parm.i[5],
@@ -229,23 +229,17 @@ reset_error_mgr(j_common_ptr cinfo)
 GLOBAL(struct jpeg_error_mgr *)
 jpeg_std_error(struct jpeg_error_mgr *err)
 {
+  memset(err, 0, sizeof(struct jpeg_error_mgr));
+
   err->error_exit = error_exit;
   err->emit_message = emit_message;
   err->output_message = output_message;
   err->format_message = format_message;
   err->reset_error_mgr = reset_error_mgr;
 
-  err->trace_level = 0;         /* default = no tracing */
-  err->num_warnings = 0;        /* no warnings emitted yet */
-  err->msg_code = 0;            /* may be useful as a flag for "no error" */
-
   /* Initialize message table pointers */
   err->jpeg_message_table = jpeg_std_message_table;
   err->last_jpeg_message = (int)JMSG_LASTMSGCODE - 1;
-
-  err->addon_message_table = NULL;
-  err->first_addon_message = 0; /* for safety */
-  err->last_addon_message = 0;
 
   return err;
 }

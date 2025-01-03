@@ -9,8 +9,8 @@ if(ANDROID)
   ocv_include_directories(${CPUFEATURES_INCLUDE_DIRS})
 endif()
 
-file(GLOB lib_srcs src/dec/*.c src/demux/*.c src/dsp/*.c src/enc/*.c src/mux/*.c src/utils/*.c src/webp/*.c)
-file(GLOB lib_hdrs src/dec/*.h src/demux/*.h src/dsp/*.h src/enc/*.h src/mux/*.h src/utils/*.h src/webp/*.h)
+file(GLOB lib_srcs sharpyuv/*.c src/dec/*.c src/demux/*.c src/dsp/*.c src/enc/*.c src/mux/*.c src/utils/*.c src/webp/*.c)
+file(GLOB lib_hdrs sharpyuv/*.h src/dec/*.h src/demux/*.h src/dsp/*.h src/enc/*.h src/mux/*.h src/utils/*.h src/webp/*.h)
 
 # FIXIT
 if(ANDROID AND ARMEABI_V7A AND NOT NEON)
@@ -19,12 +19,6 @@ if(ANDROID AND ARMEABI_V7A AND NOT NEON)
       set_source_files_properties("${file}" COMPILE_FLAGS "-mfpu=neon")
     endif()
   endforeach()
-endif()
-
-# FIX for quant.h - requires C99 for() loops
-ocv_check_flag_support(C "-std=c99" _varname "${CMAKE_C_FLAGS}")
-if(${_varname})
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 endif()
 
 
