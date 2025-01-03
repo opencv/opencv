@@ -6,6 +6,9 @@
 
 namespace opencv_test
 {
+
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
+
 using namespace perf;
 
 typedef perf::TestBaseWithParam<std::string> PNG;
@@ -27,6 +30,23 @@ PERF_TEST(PNG, decode)
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST(PNG, decode_rgb)
+{
+    String filename = getDataPath("perf/2560x1600.png");
+
+    FILE *f = fopen(filename.c_str(), "rb");
+    fseek(f, 0, SEEK_END);
+    long len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    vector<uchar> file_buf((size_t)len);
+    EXPECT_EQ(len, (long)fread(&file_buf[0], 1, (size_t)len, f));
+    fclose(f); f = NULL;
+
+    TEST_CYCLE() imdecode(file_buf, IMREAD_COLOR_RGB);
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST(PNG, encode)
 {
     String filename = getDataPath("perf/2560x1600.png");
@@ -37,5 +57,7 @@ PERF_TEST(PNG, encode)
 
     SANITY_CHECK_NOTHING();
 }
+
+#endif // HAVE_PNG
 
 } // namespace

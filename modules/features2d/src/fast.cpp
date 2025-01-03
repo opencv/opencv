@@ -120,8 +120,8 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                         for (; j < img.cols - 16 - 3; j += 16, ptr += 16)
                         {
                             v_uint8x16 v = v_load(ptr);
-                            v_int8x16 v0 = v_reinterpret_as_s8((v + t) ^ delta);
-                            v_int8x16 v1 = v_reinterpret_as_s8((v - t) ^ delta);
+                            v_int8x16 v0 = v_reinterpret_as_s8(v_xor(v_add(v, t), delta));
+                            v_int8x16 v1 = v_reinterpret_as_s8(v_xor(v_sub(v, t), delta));
 
                             v_int8x16 x0 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[0]), delta));
                             v_int8x16 x1 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[quarterPatternSize]), delta));
@@ -129,15 +129,15 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                             v_int8x16 x3 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[3*quarterPatternSize]), delta));
 
                             v_int8x16 m0, m1;
-                            m0 = (v0 < x0) & (v0 < x1);
-                            m1 = (x0 < v1) & (x1 < v1);
-                            m0 = m0 | ((v0 < x1) & (v0 < x2));
-                            m1 = m1 | ((x1 < v1) & (x2 < v1));
-                            m0 = m0 | ((v0 < x2) & (v0 < x3));
-                            m1 = m1 | ((x2 < v1) & (x3 < v1));
-                            m0 = m0 | ((v0 < x3) & (v0 < x0));
-                            m1 = m1 | ((x3 < v1) & (x0 < v1));
-                            m0 = m0 | m1;
+                            m0 = v_and(v_lt(v0, x0), v_lt(v0, x1));
+                            m1 = v_and(v_lt(x0, v1), v_lt(x1, v1));
+                            m0 = v_or(m0, v_and(v_lt(v0, x1), v_lt(v0, x2)));
+                            m1 = v_or(m1, v_and(v_lt(x1, v1), v_lt(x2, v1)));
+                            m0 = v_or(m0, v_and(v_lt(v0, x2), v_lt(v0, x3)));
+                            m1 = v_or(m1, v_and(v_lt(x2, v1), v_lt(x3, v1)));
+                            m0 = v_or(m0, v_and(v_lt(v0, x3), v_lt(v0, x0)));
+                            m1 = v_or(m1, v_and(v_lt(x3, v1), v_lt(x0, v1)));
+                            m0 = v_or(m0, m1);
 
                             if( !v_check_any(m0) )
                                 continue;
@@ -154,18 +154,18 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                             v_uint8x16 max1 = v_setzero_u8();
                             for( k = 0; k < N; k++ )
                             {
-                                v_int8x16 x = v_reinterpret_as_s8(v_load((ptr + pixel[k])) ^ delta);
-                                m0 = v0 < x;
-                                m1 = x < v1;
+                                v_int8x16 x = v_reinterpret_as_s8(v_xor(v_load((ptr + pixel[k])), delta));
+                                m0 = v_lt(v0, x);
+                                m1 = v_lt(x, v1);
 
-                                c0 = v_sub_wrap(c0, m0) & m0;
-                                c1 = v_sub_wrap(c1, m1) & m1;
+                                c0 = v_and(v_sub_wrap(c0, m0), m0);
+                                c1 = v_and(v_sub_wrap(c1, m1), m1);
 
                                 max0 = v_max(max0, v_reinterpret_as_u8(c0));
                                 max1 = v_max(max1, v_reinterpret_as_u8(c1));
                             }
 
-                            max0 = K16 < v_max(max0, max1);
+                            max0 = v_lt(K16, v_max(max0, max1));
                             unsigned int m = v_signmask(v_reinterpret_as_s8(max0));
 
                             for( k = 0; m > 0 && k < 16; k++, m >>= 1 )
@@ -190,7 +190,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                                             a1 = v_min(a1, v_nms);
                                             b1 = v_max(b1, v_nms);
                                         }
-                                        curr[j + k] = (uchar)(v_reduce_max(v_max(v_max(a0, a1), v_setzero_s16() - v_min(b0, b1))) - 1);
+                                        curr[j + k] = (uchar)(v_reduce_max(v_max(v_max(a0, a1), v_sub(v_setzero_s16(), v_min(b0, b1)))) - 1);
                                     }
                                 }
                             }

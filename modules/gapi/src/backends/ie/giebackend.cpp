@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2018-2023 Intel Corporation
+// Copyright (C) 2018-2024 Intel Corporation
 
 #include "precomp.hpp"
 
@@ -10,7 +10,7 @@
 // (cv::gapi::ie::backend() is still there and is defined always)
 #include "backends/ie/giebackend.hpp"
 
-#ifdef HAVE_INF_ENGINE
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE < 2023010000
 
 #if INF_ENGINE_RELEASE <= 2019010000
 #   error G-API IE module supports only OpenVINO IE >= 2019 R1
@@ -381,7 +381,7 @@ inline void copyFromIE(const IE::Blob::Ptr &blob, MatType &mat) {
         HANDLE(U8, uint8_t);
         HANDLE(FP32, float);
         HANDLE(I32, int);
-        HANDLE(FP16, cv::float16_t);
+        HANDLE(FP16, cv::hfloat);
 #undef HANDLE
         case IE::Precision::I64: {
             GAPI_LOG_WARNING(NULL, "INT64 isn't supported for cv::Mat. Conversion to INT32 is used.");
@@ -1232,8 +1232,8 @@ void cv::gimpl::ie::GIEExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     // General algorithm:
     //     1. Collect island inputs/outputs.
     //     2. Create kernel context. (Every kernel has his own context).
-    //     3. If the EndOfStream message is recieved, wait until all passed task are done.
-    //     4. If the Exception message is revieved, propagate it further.
+    //     3. If the EndOfStream message is received, wait until all passed task are done.
+    //     4. If the Exception message is received, propagate it further.
     //     5.
     //        5.1 Run the kernel.
     //        5.2 Kernel wait for all nececcary infer requests and start asynchronous execution.
@@ -2082,15 +2082,8 @@ struct InferList2: public cv::detail::KernelTag {
              ? uu.net.getInputsInfo().at(input_name_0)->getTensorDesc()
              : uu.this_network.GetInputsInfo().at(input_name_0)->getTensorDesc();
 
-        if (cv::util::holds_alternative<cv::GMatDesc>(mm_0) ||
-            cv::util::holds_alternative<cv::GFrameDesc>(mm_0)) {
-            const auto trait = clarifyTrait(mm_0, tensor_desc_0.getDims());
-            if (trait != cv::gapi::ie::TraitAs::IMAGE) {
-                util::throw_error(std::runtime_error(
-                            "IE Backend: Only images is"
-                            " supported as the 0th argument"));
-            }
-        } else {
+        if (!(cv::util::holds_alternative<cv::GMatDesc>(mm_0) ||
+              cv::util::holds_alternative<cv::GFrameDesc>(mm_0))) {
             util::throw_error(std::runtime_error(
                         "IE Backend: Unsupported input meta"
                         " for 0th argument in IE backend"));
@@ -2107,7 +2100,10 @@ struct InferList2: public cv::detail::KernelTag {
                         && "Non-array inputs are not supported");
 
             if (op.k.inKinds[idx] == cv::detail::OpaqueKind::CV_RECT) {
-                const auto input_trait = cv::gapi::ie::TraitAs::IMAGE;
+                const auto input_trait = clarifyTrait(mm_0, tensor_desc_0.getDims());
+                GAPI_Assert(input_trait == cv::gapi::ie::TraitAs::IMAGE
+                            && "IE Backend: Only image is supported as the 0th argument for an input array of cv::Rect");
+
                 // NB: Configuring input precision and network reshape must be done
                 // only in the loadNetwork case.
                 if (uu.params.kind == cv::gapi::ie::detail::ParamDesc::Kind::Load) {

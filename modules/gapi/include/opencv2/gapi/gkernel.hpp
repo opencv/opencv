@@ -430,7 +430,7 @@ namespace gapi {
 
         virtual ~GFunctor() = default;
     protected:
-        GFunctor(const char* id) : m_id(id) { };
+        GFunctor(const char* id) : m_id(id) { }
     private:
         const char* m_id;
     };
@@ -692,7 +692,7 @@ namespace gapi {
         int unused[] = { 0, (pkg.include<KK>(), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
-    };
+    }
 
     template<typename... FF>
     GKernelPackage kernels(FF&... functors)
@@ -701,7 +701,7 @@ namespace gapi {
         int unused[] = { 0, (pkg.include(functors), 0)... };
         cv::util::suppress_unused_warning(unused);
         return pkg;
-    };
+    }
 
     /** @} */
 

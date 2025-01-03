@@ -1,6 +1,6 @@
 set(WINRT TRUE)
 
-add_definitions(-DWINRT -DNO_GETENV)
+add_definitions(-DWINRT)
 
 # Making definitions available to other configurations and
 # to filter dependency restrictions at compile time.

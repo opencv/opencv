@@ -13,18 +13,20 @@
 
 #include <stdlib.h>
 #include "src/dec/alphai_dec.h"
+#include "src/dec/vp8_dec.h"
 #include "src/dec/vp8i_dec.h"
 #include "src/dec/vp8li_dec.h"
 #include "src/dsp/dsp.h"
 #include "src/utils/quant_levels_dec_utils.h"
 #include "src/utils/utils.h"
 #include "src/webp/format_constants.h"
+#include "src/webp/types.h"
 
 //------------------------------------------------------------------------------
 // ALPHDecoder object.
 
 // Allocates a new alpha decoder instance.
-static ALPHDecoder* ALPHNew(void) {
+WEBP_NODISCARD static ALPHDecoder* ALPHNew(void) {
   ALPHDecoder* const dec = (ALPHDecoder*)WebPSafeCalloc(1ULL, sizeof(*dec));
   return dec;
 }
@@ -45,9 +47,9 @@ static void ALPHDelete(ALPHDecoder* const dec) {
 // header for alpha data stored using lossless compression.
 // Returns false in case of error in alpha header (data too short, invalid
 // compression method or filter, error in lossless header data etc).
-static int ALPHInit(ALPHDecoder* const dec, const uint8_t* data,
-                    size_t data_size, const VP8Io* const src_io,
-                    uint8_t* output) {
+WEBP_NODISCARD static int ALPHInit(ALPHDecoder* const dec, const uint8_t* data,
+                                   size_t data_size, const VP8Io* const src_io,
+                                   uint8_t* output) {
   int ok = 0;
   const uint8_t* const alpha_data = data + ALPHA_HEADER_LEN;
   const size_t alpha_data_size = data_size - ALPHA_HEADER_LEN;
@@ -79,7 +81,9 @@ static int ALPHInit(ALPHDecoder* const dec, const uint8_t* data,
   }
 
   // Copy the necessary parameters from src_io to io
-  VP8InitIo(io);
+  if (!VP8InitIo(io)) {
+    return 0;
+  }
   WebPInitCustomIo(NULL, io);
   io->opaque = dec;
   io->width = src_io->width;
@@ -107,7 +111,8 @@ static int ALPHInit(ALPHDecoder* const dec, const uint8_t* data,
 // starting from row number 'row'. It assumes that rows up to (row - 1) have
 // already been decoded.
 // Returns false in case of bitstream error.
-static int ALPHDecode(VP8Decoder* const dec, int row, int num_rows) {
+WEBP_NODISCARD static int ALPHDecode(VP8Decoder* const dec, int row,
+                                     int num_rows) {
   ALPHDecoder* const alph_dec = dec->alph_dec_;
   const int width = alph_dec->width_;
   const int height = alph_dec->io_.crop_bottom;
@@ -138,7 +143,8 @@ static int ALPHDecode(VP8Decoder* const dec, int row, int num_rows) {
   return 1;
 }
 
-static int AllocateAlphaPlane(VP8Decoder* const dec, const VP8Io* const io) {
+WEBP_NODISCARD static int AllocateAlphaPlane(VP8Decoder* const dec,
+                                             const VP8Io* const io) {
   const int stride = io->width;
   const int height = io->crop_bottom;
   const uint64_t alpha_size = (uint64_t)stride * height;
@@ -166,9 +172,9 @@ void WebPDeallocateAlphaMemory(VP8Decoder* const dec) {
 //------------------------------------------------------------------------------
 // Main entry point.
 
-const uint8_t* VP8DecompressAlphaRows(VP8Decoder* const dec,
-                                      const VP8Io* const io,
-                                      int row, int num_rows) {
+WEBP_NODISCARD const uint8_t* VP8DecompressAlphaRows(VP8Decoder* const dec,
+                                                     const VP8Io* const io,
+                                                     int row, int num_rows) {
   const int width = io->width;
   const int height = io->crop_bottom;
 

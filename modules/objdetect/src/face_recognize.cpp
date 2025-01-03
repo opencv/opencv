@@ -25,7 +25,20 @@ public:
 
         net.setPreferableBackend(backend_id);
         net.setPreferableTarget(target_id);
-    };
+    }
+
+    FaceRecognizerSFImpl(const String& framework,
+                         const std::vector<uchar>& bufferModel,
+                         const std::vector<uchar>& bufferConfig,
+                         int backend_id, int target_id)
+    {
+        net = dnn::readNet(framework, bufferModel, bufferConfig);
+        CV_Assert(!net.empty());
+
+        net.setPreferableBackend(backend_id);
+        net.setPreferableTarget(target_id);
+    }
+
     void alignCrop(InputArray _src_img, InputArray _face_mat, OutputArray _aligned_img) const override
     {
         Mat face_mat = _face_mat.getMat();
@@ -39,13 +52,13 @@ public:
         }
         Mat warp_mat = getSimilarityTransformMatrix(src_point);
         warpAffine(_src_img, _aligned_img, warp_mat, Size(112, 112), INTER_LINEAR);
-    };
+    }
     void feature(InputArray _aligned_img, OutputArray _face_feature) override
     {
         Mat inputBolb = dnn::blobFromImage(_aligned_img, 1, Size(112, 112), Scalar(0, 0, 0), true, false);
         net.setInput(inputBolb);
         net.forward(_face_feature);
-    };
+    }
     double match(InputArray _face_feature1, InputArray _face_feature2, int dis_type) const override
     {
         Mat face_feature1 = _face_feature1.getMat(), face_feature2 = _face_feature2.getMat();
@@ -60,7 +73,7 @@ public:
             throw std::invalid_argument("invalid parameter " + std::to_string(dis_type));
         }
 
-    };
+    }
 
 private:
     Mat getSimilarityTransformMatrix(float src[5][2]) const {
@@ -185,6 +198,19 @@ Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& model, const String
     return makePtr<FaceRecognizerSFImpl>(model, config, backend_id, target_id);
 #else
     CV_UNUSED(model); CV_UNUSED(config); CV_UNUSED(backend_id); CV_UNUSED(target_id);
+    CV_Error(cv::Error::StsNotImplemented, "cv::FaceRecognizerSF requires enabled 'dnn' module");
+#endif
+}
+
+Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& framework,
+                                               const std::vector<uchar>& bufferModel,
+                                               const std::vector<uchar>& bufferConfig,
+                                               int backend_id, int target_id)
+{
+#ifdef HAVE_OPENCV_DNN
+    return makePtr<FaceRecognizerSFImpl>(framework, bufferModel, bufferConfig, backend_id, target_id);
+#else
+    CV_UNUSED(framework);  CV_UNUSED(bufferModel); CV_UNUSED(bufferConfig); CV_UNUSED(backend_id); CV_UNUSED(target_id);
     CV_Error(cv::Error::StsNotImplemented, "cv::FaceRecognizerSF requires enabled 'dnn' module");
 #endif
 }

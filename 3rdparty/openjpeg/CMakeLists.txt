@@ -16,6 +16,7 @@ ocv_warnings_disable(CMAKE_C_FLAGS
     -Wunused-but-set-variable # clang15
     -Wmissing-prototypes # clang, function opj_t1_ht_decode_cblk
     -Wmissing-declarations # gcc, function opj_t1_ht_decode_cblk
+    -Wdocumentation # clang
 )
 
 #-----------------------------------------------------------------------------

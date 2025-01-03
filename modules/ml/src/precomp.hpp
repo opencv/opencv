@@ -131,13 +131,13 @@ namespace ml
         inline void setMaxCategories(int val)
         {
             if( val < 2 )
-                CV_Error( CV_StsOutOfRange, "max_categories should be >= 2" );
+                CV_Error( cv::Error::StsOutOfRange, "max_categories should be >= 2" );
             maxCategories = std::min(val, 15 );
         }
         inline void setMaxDepth(int val)
         {
             if( val < 0 )
-                CV_Error( CV_StsOutOfRange, "max_depth should be >= 0" );
+                CV_Error( cv::Error::StsOutOfRange, "max_depth should be >= 0" );
             maxDepth = std::min( val, 25 );
         }
         inline void setMinSampleCount(int val)
@@ -147,11 +147,11 @@ namespace ml
         inline void setCVFolds(int val)
         {
             if( val < 0 )
-                CV_Error( CV_StsOutOfRange,
+                CV_Error( cv::Error::StsOutOfRange,
                           "params.CVFolds should be =0 (the tree is not pruned) "
                           "or n>0 (tree is pruned using n-fold cross-validation)" );
             if(val > 1)
-                CV_Error( CV_StsNotImplemented,
+                CV_Error( cv::Error::StsNotImplemented,
                           "tree pruning using cross-validation is not implemented."
                           "Set CVFolds to 1");
 
@@ -162,7 +162,7 @@ namespace ml
         inline void setRegressionAccuracy(float val)
         {
             if( val < 0 )
-                CV_Error( CV_StsOutOfRange, "params.regression_accuracy should be >= 0" );
+                CV_Error( cv::Error::StsOutOfRange, "params.regression_accuracy should be >= 0" );
             regressionAccuracy = val;
         }
 

@@ -249,6 +249,8 @@ template<typename T> struct wrap_serialize
 } // namespace s11n
 } // namespace gapi
 
+/** @} gapi_compile_args */
+
 /**
  * @brief Ask G-API to dump compiled graph in Graphviz format under
  * the given file name.
@@ -261,13 +263,31 @@ struct graph_dump_path
 {
     std::string m_dump_path;
 };
-/** @} */
+
+/**
+ * @brief Ask G-API to use threaded executor when cv::GComputation
+ * is compiled via cv::GComputation::compile method.
+ *
+ * Specifies a number of threads that should be used by executor.
+ */
+struct GAPI_EXPORTS use_threaded_executor
+{
+    use_threaded_executor();
+    explicit use_threaded_executor(const uint32_t nthreads);
+
+    uint32_t num_threads;
+};
 
 namespace detail
 {
     template<> struct CompileArgTag<cv::graph_dump_path>
     {
         static const char* tag() { return "gapi.graph_dump_path"; }
+    };
+
+    template<> struct CompileArgTag<cv::use_threaded_executor>
+    {
+        static const char* tag() { return "gapi.threaded_executor"; }
     };
 }
 

@@ -28,21 +28,7 @@ if(NOT DEFINED CV_GCC AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 endif()
 if(NOT DEFINED CV_CLANG AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")  # Clang or AppleClang (see CMP0025)
   set(CV_CLANG 1)
-  set(CMAKE_COMPILER_IS_CLANGCXX 1)  # TODO next release: remove this
-  set(CMAKE_COMPILER_IS_CLANGCC 1)   # TODO next release: remove this
 endif()
-
-function(access_CMAKE_COMPILER_IS_CLANGCXX)
-  if(NOT OPENCV_SUPPRESS_DEPRECATIONS)
-    message(WARNING "DEPRECATED: CMAKE_COMPILER_IS_CLANGCXX support is deprecated in OpenCV.
-    Consider using:
-    - CV_GCC    # GCC
-    - CV_CLANG  # Clang or AppleClang (see CMP0025)
-")
-  endif()
-endfunction()
-variable_watch(CMAKE_COMPILER_IS_CLANGCXX access_CMAKE_COMPILER_IS_CLANGCXX)
-variable_watch(CMAKE_COMPILER_IS_CLANGCC access_CMAKE_COMPILER_IS_CLANGCXX)
 
 
 # ----------------------------------------------------------------------------
@@ -96,6 +82,10 @@ endif()
 if(NOT DEFINED CMAKE_SIZEOF_VOID_P
     AND NOT OPENCV_SUPPRESS_MESSAGE_MISSING_CMAKE_SIZEOF_VOID_P)
   message(WARNING "OpenCV: CMAKE_SIZEOF_VOID_P is not defined. Perhaps CMake toolchain is broken")
+endif()
+if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
+  message(FATAL_ERROR "CMake fails to determine the bitness of the target platform.
+  Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
 endif()
 
 message(STATUS "Detected processor: ${CMAKE_SYSTEM_PROCESSOR}")
@@ -170,8 +160,10 @@ elseif(MSVC)
     set(OpenCV_ARCH "ARM")
   elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
     set(OpenCV_ARCH "x64")
+  elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+    set(OpenCV_ARCH "x86")
   else()
-    set(OpenCV_ARCH x86)
+    message(FATAL_ERROR "Failed to determine system architecture")
   endif()
 
   if(MSVC_VERSION EQUAL 1400)
@@ -190,7 +182,7 @@ elseif(MSVC)
     set(OpenCV_RUNTIME vc15)
   elseif(MSVC_VERSION MATCHES "^192[0-9]$")
     set(OpenCV_RUNTIME vc16)
-  elseif(MSVC_VERSION MATCHES "^193[0-9]$")
+  elseif(MSVC_VERSION MATCHES "^19[34][0-9]$")
     set(OpenCV_RUNTIME vc17)
   else()
     message(WARNING "OpenCV does not recognize MSVC_VERSION \"${MSVC_VERSION}\". Cannot set OpenCV_RUNTIME")

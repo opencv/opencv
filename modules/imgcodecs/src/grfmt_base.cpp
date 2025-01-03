@@ -53,6 +53,8 @@ BaseImageDecoder::BaseImageDecoder()
     m_type = -1;
     m_buf_supported = false;
     m_scale_denom = 1;
+    m_use_rgb = false;
+    m_frame_count = 1;
 }
 
 
@@ -94,6 +96,11 @@ int BaseImageDecoder::setScale( const int& scale_denom )
     return temp;
 }
 
+void BaseImageDecoder::setRGB(bool useRGB)
+{
+    m_use_rgb = useRGB;
+}
+
 ImageDecoder BaseImageDecoder::newDecoder() const
 {
     return ImageDecoder();
@@ -133,6 +140,11 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
 }
 
 bool BaseImageEncoder::writemulti(const std::vector<Mat>&, const std::vector<int>& )
+{
+    return false;
+}
+
+bool BaseImageEncoder::writeanimation(const Animation&, const std::vector<int>& )
 {
     return false;
 }

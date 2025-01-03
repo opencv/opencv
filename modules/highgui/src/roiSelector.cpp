@@ -118,7 +118,7 @@ class ROISelector
         bool drawFromCenter;
 
         // initializer list
-        handlerT() : isDrawing(false), drawFromCenter(true){};
+        handlerT() : isDrawing(false), drawFromCenter(true){}
     } selectorParams;
 
   private:

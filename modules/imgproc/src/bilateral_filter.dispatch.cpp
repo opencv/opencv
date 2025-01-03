@@ -415,6 +415,9 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
+    CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.depth(),
+             src.channels(), d, sigmaColor, sigmaSpace, borderType);
+
     CV_IPP_RUN_FAST(ipp_bilateralFilter(src, dst, d, sigmaColor, sigmaSpace, borderType));
 
     if( src.depth() == CV_8U )
@@ -422,7 +425,7 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
     else if( src.depth() == CV_32F )
         bilateralFilter_32f( src, dst, d, sigmaColor, sigmaSpace, borderType );
     else
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
         "Bilateral filtering is only implemented for 8u and 32f images" );
 }
 

@@ -5,7 +5,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 
-#if defined(CV_CXX11) && defined(HAVE_THREADS)
+#if defined(HAVE_THREADS)
 #define USE_THREADS 1
 #endif
 

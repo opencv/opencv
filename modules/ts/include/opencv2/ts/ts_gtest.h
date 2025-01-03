@@ -8458,7 +8458,7 @@ class TestFactoryBase {
 template <class TestClass>
 class TestFactoryImpl : public TestFactoryBase {
  public:
-  virtual Test* CreateTest() { return new TestClass; }
+  virtual Test* CreateTest() override { return new TestClass; }
 };
 
 #if GTEST_OS_WINDOWS
@@ -11927,7 +11927,7 @@ class ParameterizedTestFactory : public internal::TestFactoryBase {
   typedef typename TestClass::ParamType ParamType;
   explicit ParameterizedTestFactory(ParamType parameter) :
       parameter_(parameter) {}
-  virtual Test* CreateTest() {
+  virtual Test* CreateTest() override {
     TestClass::SetParam(&parameter_);
     return new TestClass();
   }
@@ -11968,7 +11968,7 @@ class TestMetaFactory
 
   TestMetaFactory() {}
 
-  virtual TestFactoryBase* CreateTestFactory(ParamType parameter) {
+  virtual TestFactoryBase* CreateTestFactory(ParamType parameter) override {
     return new ParameterizedTestFactory<TestCase>(parameter);
   }
 
@@ -12030,9 +12030,9 @@ class ParameterizedTestCaseInfo : public ParameterizedTestCaseInfoBase {
       : test_case_name_(name), code_location_(code_location) {}
 
   // Test case base name for display purposes.
-  virtual const std::string& GetTestCaseName() const { return test_case_name_; }
+  virtual const std::string& GetTestCaseName() const override { return test_case_name_; }
   // Test case id to verify identity.
-  virtual TypeId GetTestCaseTypeId() const { return GetTypeId<TestCase>(); }
+  virtual TypeId GetTestCaseTypeId() const override { return GetTypeId<TestCase>(); }
   // TEST_P macro uses AddTestPattern() to record information
   // about a single test in a LocalTestInfo structure.
   // test_case_name is the base name of the test case (without invocation
@@ -12061,7 +12061,7 @@ class ParameterizedTestCaseInfo : public ParameterizedTestCaseInfoBase {
   // This method should not be called more then once on any single
   // instance of a ParameterizedTestCaseInfoBase derived class.
   // UnitTest has a guard to prevent from calling this method more then once.
-  virtual void RegisterTests() {
+  virtual void RegisterTests() override {
     for (typename TestInfoContainer::iterator test_it = tests_.begin();
          test_it != tests_.end(); ++test_it) {
       linked_ptr<TestInfo> test_info = *test_it;
@@ -21317,6 +21317,13 @@ AssertionResult CmpHelperEQFailure(const char* lhs_expression,
                    false);
 }
 
+// See https://github.com/opencv/opencv/issues/25674
+// Disable optimization for workaround to mis-branch for GCC14.
+#if defined(__GNUC__) && (__GNUC__ == 14)
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+#endif
+
 // The helper function for {ASSERT|EXPECT}_EQ.
 template <typename T1, typename T2>
 AssertionResult CmpHelperEQ(const char* lhs_expression,
@@ -21329,6 +21336,10 @@ AssertionResult CmpHelperEQ(const char* lhs_expression,
 
   return CmpHelperEQFailure(lhs_expression, rhs_expression, lhs, rhs);
 }
+
+#if defined(__GNUC__) && (__GNUC__ == 14)
+#pragma GCC pop_options
+#endif
 
 // With this overloaded version, we allow anonymous enums to be used
 // in {ASSERT|EXPECT}_EQ when compiled with gcc 4, as anonymous enums

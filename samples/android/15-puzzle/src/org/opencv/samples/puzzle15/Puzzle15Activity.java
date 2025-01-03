@@ -1,8 +1,6 @@
 package org.opencv.samples.puzzle15;
 
-import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraActivity;
-import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 import org.opencv.android.CameraBridgeViewBase;
@@ -16,6 +14,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import java.util.Collections;
 import java.util.List;
@@ -29,35 +28,21 @@ public class Puzzle15Activity extends CameraActivity implements CvCameraViewList
     private MenuItem             mItemHideNumbers;
     private MenuItem             mItemStartNewGame;
 
-
     private int                  mGameWidth;
     private int                  mGameHeight;
-
-    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
-
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                {
-                    Log.i(TAG, "OpenCV loaded successfully");
-
-                    /* Now enable camera view to start receiving frames */
-                    mOpenCvCameraView.setOnTouchListener(Puzzle15Activity.this);
-                    mOpenCvCameraView.enableView();
-                } break;
-                default:
-                {
-                    super.onManagerConnected(status);
-                } break;
-            }
-        }
-    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        if (OpenCVLoader.initLocal()) {
+            Log.i(TAG, "OpenCV loaded successfully");
+        } else {
+            Log.e(TAG, "OpenCV initialization failed!");
+            (Toast.makeText(this, "OpenCV initialization failed!", Toast.LENGTH_LONG)).show();
+            return;
+        }
 
         Log.d(TAG, "Creating and setting view");
         mOpenCvCameraView = (CameraBridgeViewBase) new JavaCameraView(this, -1);
@@ -80,12 +65,9 @@ public class Puzzle15Activity extends CameraActivity implements CvCameraViewList
     public void onResume()
     {
         super.onResume();
-        if (!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
-        } else {
-            Log.d(TAG, "OpenCV library found inside package. Using it!");
-            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        if (mOpenCvCameraView != null) {
+            mOpenCvCameraView.setOnTouchListener(Puzzle15Activity.this);
+            mOpenCvCameraView.enableView();
         }
     }
 

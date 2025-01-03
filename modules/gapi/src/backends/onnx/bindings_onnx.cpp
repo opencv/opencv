@@ -34,6 +34,12 @@ cv::gapi::onnx::PyParams::cfgAddExecutionProvider(cv::gapi::onnx::ep::DirectML e
 }
 
 cv::gapi::onnx::PyParams&
+cv::gapi::onnx::PyParams::cfgAddExecutionProvider(cv::gapi::onnx::ep::CoreML ep) {
+    m_priv->cfgAddExecutionProvider(std::move(ep));
+    return *this;
+}
+
+cv::gapi::onnx::PyParams&
 cv::gapi::onnx::PyParams::cfgAddExecutionProvider(cv::gapi::onnx::ep::CUDA ep) {
     m_priv->cfgAddExecutionProvider(std::move(ep));
     return *this;
@@ -48,6 +54,18 @@ cv::gapi::onnx::PyParams::cfgAddExecutionProvider(cv::gapi::onnx::ep::TensorRT e
 cv::gapi::onnx::PyParams&
 cv::gapi::onnx::PyParams::cfgDisableMemPattern() {
     m_priv->cfgDisableMemPattern();
+    return *this;
+}
+
+cv::gapi::onnx::PyParams&
+cv::gapi::onnx::PyParams::cfgSessionOptions(const std::map<std::string, std::string>& options) {
+    m_priv->cfgSessionOptions(options);
+    return *this;
+}
+
+cv::gapi::onnx::PyParams&
+cv::gapi::onnx::PyParams::cfgOptLevel(const int opt_level) {
+    m_priv->cfgOptLevel(opt_level);
     return *this;
 }
 

@@ -90,9 +90,9 @@ struct IntelligentScissorsMB::Impl
     int laplacianKernelSize = 3;  // 1 or 3
 
     // image features
-    Mat_<Point2f> gradient_direction;  //< I: normalized laplacian x/y components
-    Mat_<float> gradient_magnitude;  //< Fg: gradient cost function
-    Mat_<uchar> non_edge_feature;  //< Fz: zero-crossing function
+    Mat_<Point2f> gradient_direction;  ///< I: normalized laplacian x/y components
+    Mat_<float> gradient_magnitude;  ///< Fg: gradient cost function
+    Mat_<uchar> non_edge_feature;  ///< Fz: zero-crossing function
 
     float weight_non_edge_compute = 0.0f;
 

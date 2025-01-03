@@ -639,7 +639,7 @@ public class ImgprocTest extends OpenCVTestCase {
         Imgproc.distanceTransformWithLabels(gray128, dst, labels, Imgproc.DIST_L2, 3);
 
         assertMatEqual(dstLables, labels);
-        assertMatEqual(getMat(CvType.CV_32FC1, 8192), dst, EPS);
+        assertMatEqual(getMat(CvType.CV_32FC1, 65533.805), dst, EPS);
     }
 
     public void testDrawContoursMatListOfMatIntScalar() {

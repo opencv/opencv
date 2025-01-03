@@ -9,43 +9,6 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_TIFF
 
-// these defines are used to resolve conflict between tiff.h and opencv2/core/types_c.h
-#define uint64 uint64_hack_
-#define int64 int64_hack_
-#include "tiff.h"
-
-// Re-define Mat type as enum for showing on Google Test.
-enum CV_ddtCn{
-  _CV_8UC1  = CV_8UC1,  _CV_8UC3  = CV_8UC3,  _CV_8UC4  = CV_8UC4,
-  _CV_8SC1  = CV_8SC1,  _CV_8SC3  = CV_8SC3,  _CV_8SC4  = CV_8SC4,
-  _CV_16UC1 = CV_16UC1, _CV_16UC3 = CV_16UC3, _CV_16UC4 = CV_16UC4,
-  _CV_16SC1 = CV_16SC1, _CV_16SC3 = CV_16SC3, _CV_16SC4 = CV_16SC4,
-  _CV_32SC1 = CV_32SC1, _CV_32SC3 = CV_32SC3, _CV_32SC4 = CV_32SC4,
-  _CV_16FC1 = CV_16FC1, _CV_16FC3 = CV_16FC3, _CV_16FC4 = CV_16FC4,
-  _CV_32FC1 = CV_32FC1, _CV_32FC3 = CV_32FC3, _CV_32FC4 = CV_32FC4,
-  _CV_64FC1 = CV_64FC1, _CV_64FC3 = CV_64FC3, _CV_64FC4 = CV_64FC4,
-};
-
-static inline
-void PrintTo(const CV_ddtCn& val, std::ostream* os)
-{
-    const int val_type = static_cast<int>(val);
-
-    switch ( CV_MAT_DEPTH(val_type) )
-    {
-    case CV_8U  : *os << "CV_8U" ; break;
-    case CV_16U : *os << "CV_16U" ; break;
-    case CV_8S  : *os << "CV_8S" ; break;
-    case CV_16S : *os << "CV_16S" ; break;
-    case CV_32S : *os << "CV_32S" ; break;
-    case CV_16F : *os << "CV_16F" ; break;
-    case CV_32F : *os << "CV_32F" ; break;
-    case CV_64F : *os << "CV_64F" ; break;
-    default     : *os << "CV_???" ; break;
-    }
-    *os << "C" << CV_MAT_CN(val_type);
-}
-
 #ifdef __ANDROID__
 // Test disabled as it uses a lot of memory.
 // It is killed with SIGKILL by out of memory killer.
@@ -60,7 +23,7 @@ TEST(Imgcodecs_Tiff, decode_tile16384x16384)
     string file4 = cv::tempfile(".tiff");
 
     std::vector<int> params;
-    params.push_back(TIFFTAG_ROWSPERSTRIP);
+    params.push_back(IMWRITE_TIFF_ROWSPERSTRIP);
     params.push_back(big.rows);
     EXPECT_NO_THROW(cv::imwrite(file4, big, params));
     EXPECT_NO_THROW(cv::imwrite(file3, big.colRange(0, big.cols - 1), params));
@@ -90,7 +53,7 @@ enum ImreadMixModes
 {
     IMREAD_MIX_UNCHANGED                   = IMREAD_UNCHANGED                                     ,
     IMREAD_MIX_GRAYSCALE                   = IMREAD_GRAYSCALE                                     ,
-    IMREAD_MIX_COLOR                       = IMREAD_COLOR                                         ,
+    IMREAD_MIX_COLOR                       = IMREAD_COLOR     | IMREAD_COLOR_RGB                  ,
     IMREAD_MIX_GRAYSCALE_ANYDEPTH          = IMREAD_GRAYSCALE | IMREAD_ANYDEPTH                   ,
     IMREAD_MIX_GRAYSCALE_ANYCOLOR          = IMREAD_GRAYSCALE                    | IMREAD_ANYCOLOR,
     IMREAD_MIX_GRAYSCALE_ANYDEPTH_ANYCOLOR = IMREAD_GRAYSCALE | IMREAD_ANYDEPTH  | IMREAD_ANYCOLOR,
@@ -162,7 +125,7 @@ TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
             case IMREAD_GRAYSCALE | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH:
                 ncn = (ncn == 1)?1:3;
                 break;
-            case IMREAD_COLOR:
+            case IMREAD_COLOR | IMREAD_COLOR_RGB:
                 ncn = 3;
                 depth = 1;
                 break;
@@ -722,15 +685,22 @@ TEST(Imgcodecs_Tiff, readWrite_unsigned)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/gray_8u.tif";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC1, img.type());
 
     Mat matS8;
     img.convertTo(matS8, CV_8SC1);
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, matS8));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, matS8));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), matS8.type());
     ASSERT_EQ(img2.size(), matS8.size());
     EXPECT_LE(cvtest::norm(matS8, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -742,12 +712,19 @@ TEST(Imgcodecs_Tiff, readWrite_32FC1)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC1.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC1,img.type());
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -759,12 +736,19 @@ TEST(Imgcodecs_Tiff, readWrite_64FC1)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test64FC1.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_64FC1, img.type());
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -776,12 +760,19 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_SGILOG)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC3_sgilog.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC3, img.type());
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 0.01);
@@ -793,16 +784,23 @@ TEST(Imgcodecs_Tiff, readWrite_32FC3_RAW)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC3_raw.tiff";
     const string filenameOutput = cv::tempfile(".tiff");
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_32FC3, img.type());
 
     std::vector<int> params;
     params.push_back(IMWRITE_TIFF_COMPRESSION);
-    params.push_back(1/*COMPRESSION_NONE*/);
+    params.push_back(IMWRITE_TIFF_COMPRESSION_NONE);
 
-    ASSERT_TRUE(cv::imwrite(filenameOutput, img, params));
-    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    bool ret_imwrite = false;
+    ASSERT_NO_THROW(ret_imwrite = cv::imwrite(filenameOutput, img, params));
+    ASSERT_TRUE(ret_imwrite);
+
+    Mat img2;
+    ASSERT_NO_THROW(img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img2.empty());
     ASSERT_EQ(img2.type(), img.type());
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
@@ -814,9 +812,28 @@ TEST(Imgcodecs_Tiff, read_palette_color_image)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test_palette_color_image.tif";
 
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
+}
+
+TEST(Imgcodecs_Tiff, read_palette_color_image_rgb_and_bgr)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test_palette_color_image.tif";
+
+    Mat img_rgb, img_bgr;
+    ASSERT_NO_THROW(img_rgb = cv::imread(filenameInput, IMREAD_COLOR_RGB));
+    ASSERT_NO_THROW(img_bgr = cv::imread(filenameInput, IMREAD_COLOR_BGR));
+    ASSERT_FALSE(img_rgb.empty());
+    ASSERT_EQ(CV_8UC3, img_rgb.type());
+
+    ASSERT_FALSE(img_bgr.empty());
+    ASSERT_EQ(CV_8UC3, img_bgr.type());
+
+    EXPECT_EQ(img_rgb.at<Vec3b>(32, 24), Vec3b(255, 0, 0));
+    EXPECT_EQ(img_bgr.at<Vec3b>(32, 24), Vec3b(0, 0, 255));
 }
 
 TEST(Imgcodecs_Tiff, read_4_bit_palette_color_image)
@@ -824,7 +841,8 @@ TEST(Imgcodecs_Tiff, read_4_bit_palette_color_image)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/4-bit_palette_color.tif";
 
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
 }
@@ -848,22 +866,26 @@ TEST(Imgcodecs_Tiff, readWrite_predictor)
 
     cv::Mat mat(10, 16, CV_8UC1, (void*)sample_data);
     int methods[] = {
-        COMPRESSION_NONE,     COMPRESSION_LZW,
-        COMPRESSION_PACKBITS, COMPRESSION_DEFLATE,  COMPRESSION_ADOBE_DEFLATE
+        IMWRITE_TIFF_COMPRESSION_NONE,     IMWRITE_TIFF_COMPRESSION_LZW,
+        IMWRITE_TIFF_COMPRESSION_PACKBITS, IMWRITE_TIFF_COMPRESSION_DEFLATE,
+        IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE
     };
     for (size_t i = 0; i < sizeof(methods) / sizeof(int); i++)
     {
         string out = cv::tempfile(".tif");
 
         std::vector<int> params;
-        params.push_back(TIFFTAG_COMPRESSION);
+        params.push_back(IMWRITE_TIFF_COMPRESSION);
         params.push_back(methods[i]);
-        params.push_back(TIFFTAG_PREDICTOR);
-        params.push_back(PREDICTOR_HORIZONTAL);
+        params.push_back(IMWRITE_TIFF_PREDICTOR);
+        params.push_back(IMWRITE_TIFF_PREDICTOR_HORIZONTAL);
 
-        EXPECT_NO_THROW(cv::imwrite(out, mat, params));
+        bool ret_imwrite = false;
+        ASSERT_NO_THROW(ret_imwrite = cv::imwrite(out, mat, params));
+        ASSERT_TRUE(ret_imwrite);
 
-        const Mat img = cv::imread(out, IMREAD_UNCHANGED);
+        Mat img;
+        ASSERT_NO_THROW(img = cv::imread(out, IMREAD_UNCHANGED));
         ASSERT_FALSE(img.empty());
 
         ASSERT_EQ(0, cv::norm(mat, img, cv::NORM_INF));
@@ -874,7 +896,7 @@ TEST(Imgcodecs_Tiff, readWrite_predictor)
 
 // See https://github.com/opencv/opencv/issues/23416
 
-typedef std::pair<CV_ddtCn,bool> Imgcodes_Tiff_TypeAndComp;
+typedef std::pair<perf::MatType,bool> Imgcodes_Tiff_TypeAndComp;
 typedef testing::TestWithParam< Imgcodes_Tiff_TypeAndComp > Imgcodecs_Tiff_Types;
 
 TEST_P(Imgcodecs_Tiff_Types, readWrite_alltypes)
@@ -895,7 +917,7 @@ TEST_P(Imgcodecs_Tiff_Types, readWrite_alltypes)
     {
         std::vector<int> params;
         params.push_back(IMWRITE_TIFF_COMPRESSION);
-        params.push_back(COMPRESSION_LZW);
+        params.push_back(IMWRITE_TIFF_COMPRESSION_LZW);
         ASSERT_NO_THROW(cv::imencode(".tiff", src, bufLZW, params));
 
         Mat dstLZW;
@@ -910,7 +932,7 @@ TEST_P(Imgcodecs_Tiff_Types, readWrite_alltypes)
     {
         std::vector<int> params;
         params.push_back(IMWRITE_TIFF_COMPRESSION);
-        params.push_back(COMPRESSION_NONE);
+        params.push_back(IMWRITE_TIFF_COMPRESSION_NONE);
         ASSERT_NO_THROW(cv::imencode(".tiff", src, bufRAW, params));
 
         Mat dstRAW;
@@ -925,13 +947,13 @@ TEST_P(Imgcodecs_Tiff_Types, readWrite_alltypes)
 }
 
 Imgcodes_Tiff_TypeAndComp all_types[] = {
-    { _CV_8UC1,  true  }, { _CV_8UC3,  true  }, { _CV_8UC4,  true  },
-    { _CV_8SC1,  true  }, { _CV_8SC3,  true  }, { _CV_8SC4,  true  },
-    { _CV_16UC1, true  }, { _CV_16UC3, true  }, { _CV_16UC4, true  },
-    { _CV_16SC1, true  }, { _CV_16SC3, true  }, { _CV_16SC4, true  },
-    { _CV_32SC1, true  }, { _CV_32SC3, true  }, { _CV_32SC4, true  },
-    { _CV_32FC1, false }, { _CV_32FC3, false }, { _CV_32FC4, false }, // No compression
-    { _CV_64FC1, false }, { _CV_64FC3, false }, { _CV_64FC4, false }  // No compression
+    { CV_8UC1,  true  }, { CV_8UC3,  true  }, { CV_8UC4,  true  },
+    { CV_8SC1,  true  }, { CV_8SC3,  true  }, { CV_8SC4,  true  },
+    { CV_16UC1, true  }, { CV_16UC3, true  }, { CV_16UC4, true  },
+    { CV_16SC1, true  }, { CV_16SC3, true  }, { CV_16SC4, true  },
+    { CV_32SC1, true  }, { CV_32SC3, true  }, { CV_32SC4, true  },
+    { CV_32FC1, false }, { CV_32FC3, false }, { CV_32FC4, false }, // No compression
+    { CV_64FC1, false }, { CV_64FC3, false }, { CV_64FC4, false }  // No compression
 };
 
 INSTANTIATE_TEST_CASE_P(AllTypes, Imgcodecs_Tiff_Types, testing::ValuesIn(all_types));
@@ -965,7 +987,7 @@ TEST_P(Imgcodecs_Tiff_Modes, decode_multipage)
     }
 }
 
-TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer)
+TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer_all_pages)
 {
     const int mode = GetParam();
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -984,13 +1006,14 @@ TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer)
     FILE* fp = fopen(filename.c_str(), "rb");
     ASSERT_TRUE(fp != NULL);
     fseek(fp, 0, SEEK_END);
-    long pos = ftell(fp);
-
-    std::vector<uchar> buf;
-    buf.resize((size_t)pos);
+    const size_t file_size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    buf.resize(fread(&buf[0], 1, buf.size(), fp));
+
+    std::vector<uchar> buf(file_size);
+    const size_t actual_read = fread(&buf[0], 1, file_size, fp);
     fclose(fp);
+    ASSERT_EQ(file_size, actual_read);
+    ASSERT_EQ(file_size, static_cast<size_t>(buf.size()));
 
     bool res = imdecodemulti(buf, mode, pages);
     ASSERT_TRUE(res == true);
@@ -1002,11 +1025,66 @@ TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer)
     }
 }
 
+TEST_P(Imgcodecs_Tiff_Modes, decode_multipage_use_memory_buffer_selected_pages)
+{
+    const int mode = GetParam();
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/multipage.tif";
+    const string page_files[] = {
+        "readwrite/multipage_p1.tif",
+        "readwrite/multipage_p2.tif",
+        "readwrite/multipage_p3.tif",
+        "readwrite/multipage_p4.tif",
+        "readwrite/multipage_p5.tif",
+        "readwrite/multipage_p6.tif"
+    };
+    const size_t page_count = sizeof(page_files) / sizeof(page_files[0]);
+
+    FILE* fp = fopen(filename.c_str(), "rb");
+    ASSERT_TRUE(fp != NULL);
+    fseek(fp, 0, SEEK_END);
+    const size_t file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    std::vector<uchar> buf(file_size);
+    const size_t actual_read = fread(&buf[0], 1, file_size, fp);
+    fclose(fp);
+    ASSERT_EQ(file_size, actual_read);
+    ASSERT_EQ(file_size, static_cast<size_t>(buf.size()));
+
+    const Range range(1, page_count - 1);
+    ASSERT_GE(range.size(), 1);
+
+    vector<Mat> middle_pages_from_imread;
+    for (int page_i = range.start; page_i < range.end; page_i++)
+    {
+        const Mat page = imread(root + page_files[page_i], mode);
+        middle_pages_from_imread.push_back(page);
+    }
+    ASSERT_EQ(
+        static_cast<size_t>(range.size()),
+        static_cast<size_t>(middle_pages_from_imread.size())
+    );
+
+    vector<Mat> middle_pages_from_imdecodemulti;
+    const bool res = imdecodemulti(buf, mode, middle_pages_from_imdecodemulti, range);
+    ASSERT_TRUE(res == true);
+    EXPECT_EQ(middle_pages_from_imread.size(), middle_pages_from_imdecodemulti.size());
+
+    for (int i = 0, e = range.size(); i < e; i++)
+    {
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0),
+            middle_pages_from_imread[i],
+            middle_pages_from_imdecodemulti[i]);
+    }
+}
+
 const int all_modes[] =
 {
     IMREAD_UNCHANGED,
     IMREAD_GRAYSCALE,
     IMREAD_COLOR,
+    IMREAD_COLOR_RGB,
     IMREAD_ANYDEPTH,
     IMREAD_ANYCOLOR
 };
@@ -1018,7 +1096,6 @@ INSTANTIATE_TEST_CASE_P(AllModes, Imgcodecs_Tiff_Modes, testing::ValuesIn(all_mo
 TEST(Imgcodecs_Tiff_Modes, write_multipage)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "readwrite/multipage.tif";
     const string page_files[] = {
         "readwrite/multipage_p1.tif",
         "readwrite/multipage_p2.tif",
@@ -1031,7 +1108,7 @@ TEST(Imgcodecs_Tiff_Modes, write_multipage)
     vector<Mat> pages;
     for (size_t i = 0; i < page_count; i++)
     {
-        const Mat page = imread(root + page_files[i]);
+        const Mat page = imread(root + page_files[i], IMREAD_REDUCED_GRAYSCALE_8 + (int)i);
         pages.push_back(page);
     }
 
@@ -1045,6 +1122,7 @@ TEST(Imgcodecs_Tiff_Modes, write_multipage)
     {
         EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), read_pages[i], pages[i]);
     }
+    EXPECT_EQ(0, remove(tmp_filename.c_str()));
 }
 
 //==================================================================================================

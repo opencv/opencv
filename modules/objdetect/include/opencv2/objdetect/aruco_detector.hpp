@@ -33,9 +33,10 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         polygonalApproxAccuracyRate = 0.03;
         minCornerDistanceRate = 0.05;
         minDistanceToBorder = 3;
-        minMarkerDistanceRate = 0.05;
+        minMarkerDistanceRate = 0.125;
         cornerRefinementMethod = (int)CORNER_REFINE_NONE;
         cornerRefinementWinSize = 5;
+        relativeCornerRefinmentWinSize = 0.3f;
         cornerRefinementMaxIterations = 30;
         cornerRefinementMinAccuracy = 0.1;
         markerBorderBits = 1;
@@ -56,7 +57,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         useAruco3Detection = false;
         minSideLengthCanonicalImg = 32;
         minMarkerLengthRatioOriginalImg = 0.0;
-    };
+    }
 
     /** @brief Read a new set of DetectorParameters from FileNode (use FileStorage.root()).
      */
@@ -99,17 +100,49 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
     /// minimum distance of any corner to the image border for detected markers (in pixels) (default 3)
     CV_PROP_RW int minDistanceToBorder;
 
-    /** @brief minimum mean distance beetween two marker corners to be considered imilar, so that the smaller one is removed.
+    /** @brief minimum average distance between the corners of the two markers to be grouped (default 0.125).
      *
-     * The rate is relative to the smaller perimeter of the two markers (default 0.05).
+     * The rate is relative to the smaller perimeter of the two markers.
+     * Two markers are grouped if average distance between the corners of the two markers is less than
+     * min(MarkerPerimeter1, MarkerPerimeter2)*minMarkerDistanceRate.
+     *
+     * default value is 0.125 because 0.125*MarkerPerimeter = (MarkerPerimeter / 4) * 0.5 = half the side of the marker.
+     *
+     * @note default value was changed from 0.05 after 4.8.1 release, because the filtering algorithm has been changed.
+     * Now a few candidates from the same group can be added to the list of candidates if they are far from each other.
+     * @sa minGroupDistance.
      */
     CV_PROP_RW double minMarkerDistanceRate;
+
+    /** @brief minimum average distance between the corners of the two markers in group to add them to the list of candidates
+     *
+     * The average distance between the corners of the two markers is calculated relative to its module size (default 0.21).
+     */
+    CV_PROP_RW float minGroupDistance = 0.21f;
 
     /** @brief default value CORNER_REFINE_NONE */
     CV_PROP_RW int cornerRefinementMethod;
 
-    /// window size for the corner refinement process (in pixels) (default 5).
+    /** @brief maximum window size for the corner refinement process (in pixels) (default 5).
+     *
+     * The window size may decrease if the ArUco marker is too small, check relativeCornerRefinmentWinSize.
+     * The final window size is calculated as:
+     * min(cornerRefinementWinSize, averageArucoModuleSize*relativeCornerRefinmentWinSize),
+     * where averageArucoModuleSize is average module size of ArUco marker in pixels.
+     * (ArUco marker is composed of black and white modules)
+     */
     CV_PROP_RW int cornerRefinementWinSize;
+
+    /** @brief Dynamic window size for corner refinement relative to Aruco module size (default 0.3).
+     *
+     * The final window size is calculated as:
+     * min(cornerRefinementWinSize, averageArucoModuleSize*relativeCornerRefinmentWinSize),
+     * where averageArucoModuleSize is average module size of ArUco marker in pixels.
+     * (ArUco marker is composed of black and white modules)
+     * In the case of markers located far from each other, it may be useful to increase the value of the parameter to 0.4-0.5.
+     * In the case of markers located close to each other, it may be useful to decrease the parameter value to 0.1-0.2.
+     */
+    CV_PROP_RW float relativeCornerRefinmentWinSize;
 
     /// maximum number of iterations for stop criteria of the corner refinement process (default 30).
     CV_PROP_RW int cornerRefinementMaxIterations;
@@ -219,7 +252,7 @@ struct CV_EXPORTS_W_SIMPLE RefineParameters {
      */
     CV_PROP_RW float minRepDistance;
 
-    /** @brief minRepDistance rate of allowed erroneous bits respect to the error correction capability of the used dictionary.
+    /** @brief errorCorrectionRate rate of allowed erroneous bits respect to the error correction capability of the used dictionary.
      *
      * -1 ignores the error correction step.
      */

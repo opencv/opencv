@@ -172,7 +172,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -191,7 +191,6 @@ public:
         size_t dims_Y = shape_Y.size();
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
-        int batches = std::accumulate(shape_A.begin(), shape_A.end() - 2, 1, std::multiplies<int>());
 
         // broadcast C and copy C to output
         if (have_bias) {
@@ -201,9 +200,7 @@ public:
             int step = M * N;
             CV_CheckEQ(broadcast_C.size(), static_cast<size_t>(step), "DNN/Gemm: C is not broadcast properly");
             float *ptr_y = Y.ptr<float>();
-            for (int i = 0; i < batches; i++) {
-                std::memcpy(ptr_y + i * step, broadcast_C.data(), step * sizeof(float));
-            }
+            std::memcpy(ptr_y, broadcast_C.data(), step * sizeof(float));
         } else { // initialization
             float *ptr_y = Y.ptr<float>();
             size_t total = Y.total();
@@ -212,10 +209,9 @@ public:
 
         if (const_B) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
-            M *= batches;
             fastGemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
         } else {
-            fastGemmBatched(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
+            fastGemmBatch(trans_a, trans_b, alpha, A, inputs[1], 1.f, Y, opt);
         }
     }
 
@@ -273,11 +269,17 @@ public:
         }
         // set inputs : bias
         auto mat_C = have_bias && const_C ? blobs.back() : Mat::zeros(1, 1, CV_32F);
-        auto op_const_C = std::make_shared<CannConstOp>(mat_C.data, mat_C.type(), shape(mat_C), cv::format("%s_b", name.c_str()));
+        auto shape_C = shape(mat_C);
+        if (real_ndims_C == 1) {
+            int dim = static_cast<int>(mat_C.total());
+            shape_C = std::vector<int>{dim};
+        }
+        auto op_const_C = std::make_shared<CannConstOp>(mat_C.data, mat_C.type(), shape_C, cv::format("%s_b", name.c_str()));
         op->set_input_bias(*(op_const_C->getOp()));
         op->update_input_desc_bias(*(op_const_C->getTensorDesc()));
 
         // set outputs
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
         op->update_output_desc_y(*output_desc);
         return Ptr<BackendNode>(new CannBackendNode(op));
     }
@@ -287,36 +289,54 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::shared_ptr<ngraph::Node> matmul;
-        int axis = -2;
+        ov::Output<ov::Node> nodeA = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+        ov::Output<ov::Node> nodeB;
+        if (const_B)
+            nodeB = std::make_shared<ov::op::v0::Constant>(ov::element::f32, getShape(blobs[0]), blobs[0].data);
+        else
+            nodeB = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
 
-        if (nodes.size() == 2)
+        int flatten_axis = nodeA.get_shape().size() - nodeB.get_shape().size();
+        if (flatten_axis > 0) {
+            std::vector<int> shape(1 + flatten_axis, 0);
+            shape[shape.size() - 1] = -1;
+            nodeA = std::make_shared<ov::op::v1::Reshape>(
+                nodeA,
+                std::make_shared<ov::op::v0::Constant>(ov::element::i32, ov::Shape{shape.size()}, shape.data()),
+                true);
+        }
+
+        std::shared_ptr<ov::Node> nodeAB = std::make_shared<ov::op::v0::MatMul>(nodeA, nodeB, trans_a, trans_b);
+        if (alpha != 1.0f)
         {
-            auto& inp2 = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            matmul = std::make_shared<ngraph::op::MatMul>(ieInpNode, inp2, transA, transB);
+            nodeAB = std::make_shared<ov::op::v1::Multiply>(
+                nodeAB,
+                std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &alpha));
+        }
+
+        if (!have_bias)
+            return Ptr<BackendNode>(new InfEngineNgraphNode(nodeAB));
+
+        ov::Output<ov::Node> nodeC;
+        if (const_C)
+        {
+            auto shape_C = blobs.back().total() == blobs.back().size[0] ? ov::Shape{blobs.back().total()} : getShape(blobs.back());
+            nodeC = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape_C, blobs.back().data);
         }
         else
         {
-            std::vector<int> shape(1 + normalize_axis(axis, ieInpNode->get_shape().size()), 0);
-            shape[shape.size() - 1] = -1;
-            auto inp = std::make_shared<ngraph::op::v1::Reshape>(
-                ieInpNode,
-                std::make_shared<ngraph::op::Constant>(ngraph::element::i32, ngraph::Shape{shape.size()}, shape.data()),
-                true
-            );
-
-            std::vector<size_t> weight_shape{(size_t)blobs[0].size[0], (size_t)blobs[0].size[1]};
-            auto ieWeights = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, weight_shape, blobs[0].data);
-            matmul = std::make_shared<ngraph::op::MatMul>(inp, ieWeights, transA, transB);
+            nodeC = nodes.back().dynamicCast<InfEngineNgraphNode>()->node;
         }
 
-        if (have_bias && const_C) {
-            auto bias_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                              ngraph::Shape{(size_t)blobs.back().size[1]}, blobs.back().data);
-            matmul = std::make_shared<ngraph::op::v1::Add>(matmul, bias_node, ngraph::op::AutoBroadcastType::NUMPY);
+        if (beta != 1.0f)
+        {
+            nodeC = std::make_shared<ov::op::v1::Multiply>(
+                nodeC,
+                std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &beta));
         }
-        return Ptr<BackendNode>(new InfEngineNgraphNode(matmul));
+
+        auto nodeGemm = std::make_shared<ov::op::v1::Add>(nodeAB, nodeC, ov::op::AutoBroadcastType::NUMPY);
+        return Ptr<BackendNode>(new InfEngineNgraphNode(nodeGemm));
     }
 #endif // HAVE_DNN_NGRAPH
 

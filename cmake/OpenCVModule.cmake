@@ -916,16 +916,6 @@ macro(ocv_create_module)
                          POST_BUILD
                          COMMAND link.exe /edit /APPCONTAINER:NO $(TargetPath))
     endif()
-
-    if("${the_module}" STREQUAL "opencv_ts")
-      # copy required dll files; WinRT apps need these dlls that are usually substituted by Visual Studio
-      # however they are not on path and need to be placed with executables to run from console w/o APPCONTAINER
-      add_custom_command(TARGET ${the_module}
-        POST_BUILD
-        COMMAND copy /y "\"$(VCInstallDir)redist\\$(PlatformTarget)\\Microsoft.VC$(PlatformToolsetVersion).CRT\\msvcp$(PlatformToolsetVersion).dll\"" "\"${CMAKE_BINARY_DIR}\\bin\\$(Configuration)\\msvcp$(PlatformToolsetVersion)_app.dll\""
-        COMMAND copy /y "\"$(VCInstallDir)redist\\$(PlatformTarget)\\Microsoft.VC$(PlatformToolsetVersion).CRT\\msvcr$(PlatformToolsetVersion).dll\"" "\"${CMAKE_BINARY_DIR}\\bin\\$(Configuration)\\msvcr$(PlatformToolsetVersion)_app.dll\""
-        COMMAND copy /y "\"$(VCInstallDir)redist\\$(PlatformTarget)\\Microsoft.VC$(PlatformToolsetVersion).CRT\\vccorlib$(PlatformToolsetVersion).dll\"" "\"${CMAKE_BINARY_DIR}\\bin\\$(Configuration)\\vccorlib$(PlatformToolsetVersion)_app.dll\"")
-    endif()
   endif()
 endmacro()
 
@@ -1003,7 +993,7 @@ macro(_ocv_create_module)
                                           INTERFACE ${OPENCV_MODULE_${the_module}_DEPS_EXT}
   )
   ocv_target_link_libraries(${the_module} PRIVATE ${OPENCV_LINKER_LIBS} ${OPENCV_HAL_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
-  if (HAVE_CUDA)
+  if (NOT ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_CUDA)
     ocv_target_link_libraries(${the_module} PRIVATE ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
   endif()
 

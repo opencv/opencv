@@ -64,7 +64,7 @@ using namespace perf;
     public: \
         OCL##_##fixture##_##name() { } \
     protected: \
-        virtual void PerfTestBody(); \
+        virtual void PerfTestBody() CV_OVERRIDE; \
     }; \
     TEST_F(OCL##_##fixture##_##name, name) { CV_TRACE_REGION("PERF_TEST: " #fixture "_" #name); declare.strategy(OCL_PERF_STRATEGY); RunPerfTestBody(); } \
     void OCL##_##fixture##_##name::PerfTestBody()
@@ -76,7 +76,7 @@ using namespace perf;
     public: \
         OCL##_##fixture##_##name() { } \
     protected: \
-        virtual void PerfTestBody(); \
+        virtual void PerfTestBody() CV_OVERRIDE; \
     }; \
     TEST_P(OCL##_##fixture##_##name, name) { CV_TRACE_REGION("PERF_TEST_P: " #fixture "_" #name); declare.strategy(OCL_PERF_STRATEGY); RunPerfTestBody(); } \
     INSTANTIATE_TEST_CASE_P(/*none*/, OCL##_##fixture##_##name, params); \

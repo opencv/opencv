@@ -102,17 +102,17 @@ namespace detail
         GAPI_Assert(m_hint != nullptr);
         using U = typename std::decay<T>::type;
         return dynamic_cast<TypeHint<U>*>(m_hint.get()) != nullptr;
-    };
+    }
 
     template <typename T>
     void GArrayU::specifyType(){
         m_hint.reset(new TypeHint<typename std::decay<T>::type>);
-    };
+    }
 
     template <typename T>
     void GArrayU::storeKind(){
         setKind(cv::detail::GOpaqueTraits<T>::kind);
-    };
+    }
 
     // This class represents a typed STL vector reference.
     // Depending on origins, this reference may be either "just a" reference to

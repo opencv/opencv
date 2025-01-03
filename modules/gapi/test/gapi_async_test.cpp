@@ -207,7 +207,7 @@ struct CallBack: crtp_cast<crtp_final_t> {
             mtx.unlock();
             cv.notify_one();
         };
-    };
+    }
 
     template<typename... Args >
     void start_async(Args&&... args){

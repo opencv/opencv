@@ -208,7 +208,12 @@ bool  BmpDecoder::readHeader()
     // in 32 bit case alpha channel is used - so require CV_8UC4 type
     m_type = iscolor ? ((m_bpp == 32 && m_rle_code != BMP_RGB) ? CV_8UC4 : CV_8UC3 ) : CV_8UC1;
     m_origin = m_height > 0 ? ORIGIN_BL : ORIGIN_TL;
-    m_height = std::abs(m_height);
+    if ( m_height == std::numeric_limits<int>::min() ) {
+        // abs(std::numeric_limits<int>::min()) is undefined behavior.
+        result = false;
+    } else {
+        m_height = std::abs(m_height);
+    }
 
     if( !result )
     {
@@ -544,6 +549,11 @@ decode_rle8_bad: ;
         throw;
     }
 
+    if (m_use_rgb && color && img.channels() == 3)
+    {
+        cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+    }
+
     return result;
 }
 
@@ -630,38 +640,40 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
         m_buf->reserve( alignSize(fileSize + 16, 256) );
 
     // write signature 'BM'
-    strm.putBytes( fmtSignBmp, (int)strlen(fmtSignBmp) );
+    CHECK_WRITE(strm.putBytes( fmtSignBmp, (int)strlen(fmtSignBmp) ));
 
     // write file header
-    strm.putDWord( validateToInt(fileSize) ); // file size
-    strm.putDWord( 0 );
-    strm.putDWord( headerSize );
+    CHECK_WRITE(strm.putDWord( validateToInt(fileSize) )); // file size
+    CHECK_WRITE(strm.putDWord( 0 ));
+    CHECK_WRITE(strm.putDWord( headerSize ));
 
     // write bitmap header
-    strm.putDWord( bitmapHeaderSize );
-    strm.putDWord( width );
-    strm.putDWord( height );
-    strm.putWord( 1 );
-    strm.putWord( channels << 3 );
-    strm.putDWord( BMP_RGB );
-    strm.putDWord( 0 );
-    strm.putDWord( 0 );
-    strm.putDWord( 0 );
-    strm.putDWord( 0 );
-    strm.putDWord( 0 );
+    CHECK_WRITE(strm.putDWord( bitmapHeaderSize ));
+    CHECK_WRITE(strm.putDWord( width ));
+    CHECK_WRITE(strm.putDWord( height ));
+    CHECK_WRITE(strm.putWord( 1 ));
+    CHECK_WRITE(strm.putWord( channels << 3 ));
+    CHECK_WRITE(strm.putDWord( BMP_RGB ));
+    CHECK_WRITE(strm.putDWord( 0 ));
+    CHECK_WRITE(strm.putDWord( 0 ));
+    CHECK_WRITE(strm.putDWord( 0 ));
+    CHECK_WRITE(strm.putDWord( 0 ));
+    CHECK_WRITE(strm.putDWord( 0 ));
 
     if( channels == 1 )
     {
         FillGrayPalette( palette, 8 );
-        strm.putBytes( palette, sizeof(palette));
+        CHECK_WRITE(strm.putBytes( palette, sizeof(palette)));
     }
 
     width *= channels;
     for( int y = height - 1; y >= 0; y-- )
     {
-        strm.putBytes( img.ptr(y), width );
+        CHECK_WRITE(strm.putBytes( img.ptr(y), width ));
         if( fileStep > width )
-            strm.putBytes( zeropad, fileStep - width );
+        {
+            CHECK_WRITE(strm.putBytes( zeropad, fileStep - width ));
+        }
     }
 
     strm.close();

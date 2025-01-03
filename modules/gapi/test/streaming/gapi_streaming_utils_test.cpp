@@ -245,6 +245,7 @@ TEST(OneVPL_ElasticBarrier, single_thread_visit)
 
 TEST(OneVPL_ElasticBarrier, multi_thread_visit)
 {
+    applyTestTag(CV_TEST_TAG_VERYLONG);
     TestBarrier tested_barrier;
 
     static const size_t max_visit_count = 10000000;

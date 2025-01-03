@@ -169,6 +169,9 @@ public:
     int getRealRoots (const std::vector<double> &coeffs, std::vector<double> &real_roots) override {
         if (coeffs.empty())
             return 0;
+        for (auto c : coeffs)
+            if (cvIsNaN(c) || cvIsInf(c))
+                return 0;
         Poly input(coeffs);
         if (input.degree() < 1)
             return 0;

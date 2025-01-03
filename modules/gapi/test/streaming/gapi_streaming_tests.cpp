@@ -316,7 +316,7 @@ public:
 
     static std::string exception_msg()
     {
-        return "InvalidSource sucessfuly failed!";
+        return "InvalidSource successfully failed!";
     }
 
     bool pull(cv::gapi::wip::Data& d) override {
@@ -355,7 +355,7 @@ GAPI_OCV_KERNEL(GThrowExceptionKernel, GThrowExceptionOp)
 {
     static std::string exception_msg()
     {
-        return "GThrowExceptionKernel sucessfuly failed";
+        return "GThrowExceptionKernel successfully failed";
     }
 
     static void run(const cv::Mat&, cv::Mat&)
@@ -716,14 +716,16 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoScalar)
     EXPECT_EQ(165u, test_frames);
 }
 
+// Instantiate tests with different backends, but default queue capacity
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
-                        Combine(Values(  KernelPackage::OCV
-                                    //, KernelPackage::OCL // FIXME: Fails bit-exactness check, maybe relax it?
-                                      , KernelPackage::OCV_FLUID
-                                    //, KernelPackage::OCL // FIXME: Fails bit-exactness check, maybe relax it?
-                                ),
-                                Values(cv::optional<size_t>{}, 1u, 4u))
-                        );
+                        Combine(Values( KernelPackage::OCV
+                                      , KernelPackage::OCV_FLUID),
+                                Values(cv::optional<size_t>{})));
+
+// Instantiate tests with the same backend but various queue capacity
+INSTANTIATE_TEST_CASE_P(TestStreaming_QC, GAPI_Streaming,
+                        Combine(Values(KernelPackage::OCV_FLUID),
+                                Values(1u, 4u)));
 
 namespace TypesTest
 {

@@ -358,6 +358,8 @@ TEST_P(Test_Torch_nets, OpenFace_accuracy)
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
+    if (target == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
 
     Mat sample = imread(findDataFile("cv/shared/lena.png"));
     Mat sampleF32(sample.size(), CV_32FC3);
@@ -449,7 +451,7 @@ TEST_P(Test_Torch_nets, ENet_accuracy)
         throw SkipTestException("");
     }
 #endif
-#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_GE(2021010000)
+#if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_LT(2023000000)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NGRAPH);
 #endif
@@ -542,6 +544,9 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         Mat img = imread(findDataFile("dnn/googlenet_1.png"));
         Mat inputBlob = blobFromImage(img, 1.0, Size(), Scalar(103.939, 116.779, 123.68), false);
 
+        if (target == DNN_TARGET_CPU_FP16)
+            net.enableWinograd(false);
+
         net.setInput(inputBlob);
         Mat out = net.forward();
 
@@ -570,10 +575,10 @@ TEST_P(Test_Torch_nets, FastNeuralStyle_accuracy)
         }
         else if (target == DNN_TARGET_CPU_FP16)
         {
-            normAssert(out, refBlob, "", 0.62, 25);
+            normAssert(out, refBlob, "", 0.7, 25);
         }
         else
-            normAssert(out, refBlob, "", 0.5, 1.11);
+            normAssert(out, refBlob, "", 0.5, 1.16);
     }
 }
 

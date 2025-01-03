@@ -1,4 +1,4 @@
-﻿/***********************************************************************
+/***********************************************************************
  * Software License Agreement (BSD License)
  *
  * Copyright 2008-2009  Marius Muja (mariusm@cs.ubc.ca). All rights reserved.
@@ -49,7 +49,7 @@ typedef unsigned __int64 uint64_t;
 # include <Intrin.h>
 #endif
 
-#if defined(__ARM_NEON__) && !defined(__CUDACC__)
+#if defined(__ARM_NEON) && !defined(__CUDACC__)
 # include "arm_neon.h"
 #endif
 
@@ -559,7 +559,7 @@ struct Hamming
     ResultType operator()(const Iterator1 a, const Iterator2 b, size_t size, ResultType /*worst_dist*/ = -1) const
     {
         ResultType result = 0;
-#if defined(__ARM_NEON__) && !defined(__CUDACC__)
+#if defined(__ARM_NEON) && !defined(__CUDACC__)
         {
             const unsigned char* a2 = reinterpret_cast<const unsigned char*> (a);
             const unsigned char* b2 = reinterpret_cast<const unsigned char*> (b);
@@ -611,7 +611,7 @@ struct Hamming
     {
         (void)b;
         ResultType result = 0;
-#if defined(__ARM_NEON__) && !defined(__CUDACC__)
+#if defined(__ARM_NEON) && !defined(__CUDACC__)
         {
             const unsigned char* a2 = reinterpret_cast<const unsigned char*> (a);
             uint32x4_t bits = vmovq_n_u32(0);

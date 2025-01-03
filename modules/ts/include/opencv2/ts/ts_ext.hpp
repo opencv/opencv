@@ -13,7 +13,7 @@ void checkIppStatus();
 extern bool skipUnstableTests;
 extern bool runBigDataTests;
 extern int testThreads;
-extern int debugLevel;  //< 0 - no debug, 1 - basic test debug information, >1 - extra debug information
+extern int debugLevel;  ///< 0 - no debug, 1 - basic test debug information, >1 - extra debug information
 
 void testSetUp();
 void testTearDown();
@@ -85,7 +85,7 @@ struct SkipThisTest : public ::testing::Test {
     };\
     class test_case_name##test_name##_factory : public ::testing::internal::TestFactoryBase { \
      public:\
-      virtual ::testing::Test* CreateTest() { \
+      virtual ::testing::Test* CreateTest() CV_OVERRIDE { \
         try { \
           return new GTEST_TEST_CLASS_NAME_(test_case_name, test_name); \
         } catch (const cvtest::details::SkipTestExceptionBase& e) { \
@@ -150,7 +150,7 @@ struct SkipThisTest : public ::testing::Test {
     };\
     class test_fixture##test_name##_factory : public ::testing::internal::TestFactoryBase { \
      public:\
-      virtual ::testing::Test* CreateTest() { \
+      virtual ::testing::Test* CreateTest() CV_OVERRIDE { \
         try { \
           return new GTEST_TEST_CLASS_NAME_(test_fixture, test_name); \
         } catch (const cvtest::details::SkipTestExceptionBase& e) { \

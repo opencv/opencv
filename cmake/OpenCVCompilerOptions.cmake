@@ -1,13 +1,6 @@
 if("${CMAKE_CXX_COMPILER};${CMAKE_C_COMPILER};${CMAKE_CXX_COMPILER_LAUNCHER}" MATCHES "ccache")
-  set(CMAKE_COMPILER_IS_CCACHE 1)  # TODO: FIXIT Avoid setting of CMAKE_ variables
   set(OPENCV_COMPILER_IS_CCACHE 1)
 endif()
-function(access_CMAKE_COMPILER_IS_CCACHE)
-  if(NOT OPENCV_SUPPRESS_DEPRECATIONS)
-    message(WARNING "DEPRECATED: CMAKE_COMPILER_IS_CCACHE is replaced to OPENCV_COMPILER_IS_CCACHE.")
-  endif()
-endfunction()
-variable_watch(CMAKE_COMPILER_IS_CCACHE access_CMAKE_COMPILER_IS_CCACHE)
 if(ENABLE_CCACHE AND NOT OPENCV_COMPILER_IS_CCACHE)
   # This works fine with Unix Makefiles and Ninja generators
   find_host_program(CCACHE_PROGRAM ccache)
@@ -83,6 +76,17 @@ macro(add_env_definitions option)
   endif()
   add_definitions("-D${option}=\"${value}\"")
 endmacro()
+
+# Use same flags for native AArch64 and RISC-V compilation as for cross-compile (Linux)
+if(NOT CMAKE_CROSSCOMPILING AND NOT CMAKE_TOOLCHAIN_FILE AND COMMAND ocv_set_platform_flags)
+  unset(platform_flags)
+  ocv_set_platform_flags(platform_flags)
+  # externally-provided flags should have higher priority - prepend our flags
+  if(platform_flags)
+    set(CMAKE_CXX_FLAGS "${platform_flags} ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_C_FLAGS "${platform_flags} ${CMAKE_C_FLAGS}")
+  endif()
+endif()
 
 if(NOT MSVC)
   # OpenCV fails some tests when 'char' is 'unsigned' by default
@@ -186,11 +190,6 @@ if(CV_GCC OR CV_CLANG OR CV_ICX)
     endif()
   endif()
   add_extra_compiler_option(-fdiagnostics-show-option)
-
-  # The -Wno-long-long is required in 64bit systems when including system headers.
-  if(X86_64)
-    add_extra_compiler_option(-Wno-long-long)
-  endif()
 
   # We need pthread's, unless we have explicitly disabled multi-thread execution.
   if(NOT OPENCV_DISABLE_THREAD_SUPPORT
@@ -391,7 +390,7 @@ endif()
 
 # Apply "-Wl,--no-undefined" linker flags: https://github.com/opencv/opencv/pull/21347
 if(NOT OPENCV_SKIP_LINK_NO_UNDEFINED)
-  if(UNIX AND (NOT APPLE OR NOT CMAKE_VERSION VERSION_LESS "3.2"))
+  if(UNIX AND ((NOT APPLE OR NOT CMAKE_VERSION VERSION_LESS "3.2") AND NOT CMAKE_SYSTEM_NAME MATCHES "OpenBSD"))
     set(_option "-Wl,--no-undefined")
     set(_saved_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_option}")  # requires CMake 3.2+ and CMP0056
@@ -403,6 +402,14 @@ if(NOT OPENCV_SKIP_LINK_NO_UNDEFINED)
       set(OPENCV_EXTRA_MODULE_LINKER_FLAGS "${OPENCV_EXTRA_MODULE_LINKER_FLAGS} ${_option}")
     endif()
   endif()
+endif()
+
+# For 16k pages support with NDK prior 27
+# Details: https://developer.android.com/guide/practices/page-sizes?hl=en
+if(ANDROID AND ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES AND (ANDROID_ABI STREQUAL arm64-v8a OR ANDROID_ABI STREQUAL x86_64))
+ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
+ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
+ set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
 endif()
 
 # combine all "extra" options

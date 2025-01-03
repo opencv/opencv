@@ -69,7 +69,7 @@
 #define DEFINE_SIMD_F32(fun, ...) \
     DEFINE_SIMD(__CV_CAT(fun, 32f), float, v_float32, __VA_ARGS__)
 
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     #define DEFINE_SIMD_F64(fun, ...) \
         DEFINE_SIMD(__CV_CAT(fun, 64f), double, v_float64, __VA_ARGS__)
 #else
@@ -104,7 +104,7 @@ namespace cv { namespace hal {
 
 #ifdef ARITHM_DEFINITIONS_ONLY
 
-#if !CV_SIMD_64F
+#if !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 typedef int v_float64; // dummy
 #endif
 
@@ -266,7 +266,7 @@ struct op_absdiff
 template<>
 struct op_absdiff<schar, v_int8>
 {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static inline v_int8 r(const v_int8& a, const v_int8& b)
     { return v_absdiffs(a, b); }
 #endif
@@ -276,7 +276,7 @@ struct op_absdiff<schar, v_int8>
 template<>
 struct op_absdiff<short, v_int16>
 {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static inline v_int16 r(const v_int16& a, const v_int16& b)
     { return v_absdiffs(a, b); }
 #endif
@@ -286,7 +286,7 @@ struct op_absdiff<short, v_int16>
 template<>
 struct op_absdiff<int, v_int32>
 {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static inline v_int32 r(const v_int32& a, const v_int32& b)
     { return v_reinterpret_as_s32(v_absdiff(a, b)); }
 #endif
@@ -331,7 +331,7 @@ struct op_not
 
 //////////////////////////// Loaders /////////////////////////////////
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 template< template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
 struct bin_loader
@@ -396,7 +396,7 @@ template<template<typename T1, typename Tvec> class OP, typename T1, typename Tv
 static void bin_loop(const T1* src1, size_t step1, const T1* src2, size_t step2, T1* dst, size_t step, int width, int height)
 {
     typedef OP<T1, Tvec> op;
-#if CV_SIMD  || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef bin_loader<OP, T1, Tvec> ldr;
     const int wide_step = VTraits<Tvec>::vlanes();
     #if !CV_NEON && CV_SIMD_WIDTH == 16
@@ -414,7 +414,7 @@ static void bin_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
     {
         int x = 0;
 
-    #if CV_SIMD || CV_SIMD_SCALABLE
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
         #if !CV_NEON && !CV_MSA
         if (is_aligned(src1, src2, dst))
         {
@@ -464,7 +464,7 @@ static void bin_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
     vx_cleanup();
 }
 
-#if !CV_SIMD_64F
+#if !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template<template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
 static void bin_loop_nosimd(const T1* src1, size_t step1, const T1* src2, size_t step2, T1* dst, size_t step, int width, int height)
 {
@@ -496,7 +496,7 @@ static void bin_loop_nosimd(const T1* src1, size_t step1, const T1* src2, size_t
 #define BIN_LOOP64F bin_loop_nosimd
 #else
 #define BIN_LOOP64F bin_loop
-#endif //!CV_SIMD_64F
+#endif //!(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
 #endif // ARITHM_DEFINITIONS_ONLY
 
@@ -621,7 +621,7 @@ struct op_cmpne
 
 //////////////////////////// Loaders /////////////////////////////////
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 // todo: add support for RW alignment & stream
 template<int nload, template<typename T1, typename Tvec> class OP, typename T1, typename Tvec>
 struct cmp_loader_n
@@ -701,7 +701,7 @@ template<template<typename T1, typename Tvec> class OP, typename T1, typename Tv
 static void cmp_loop(const T1* src1, size_t step1, const T1* src2, size_t step2, uchar* dst, size_t step, int width, int height)
 {
     typedef OP<T1, Tvec> op;
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef cmp_loader_n<sizeof(T1), OP, T1, Tvec> ldr;
     const int wide_step = VTraits<Tvec>::vlanes() * sizeof(T1);
 #endif // CV_SIMD
@@ -713,7 +713,7 @@ static void cmp_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
     {
         int x = 0;
 
-    #if CV_SIMD || CV_SIMD_SCALABLE
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
         for (; x <= width - wide_step; x += wide_step)
         {
             ldr::l(src1 + x, src2 + x, dst + x);
@@ -768,7 +768,7 @@ static void cmp_loop(const T1* src1, size_t step1, const T1* src2, size_t step2,
     }
 }
 
-#if !CV_SIMD_64F
+#if !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template< template<typename T1, typename Tvec> class OP, typename T1>
 static void cmp_loop_nosimd(const T1* src1, size_t step1, const T1* src2, size_t step2, uchar* dst, size_t step, int width, int height)
 {
@@ -822,7 +822,7 @@ static void cmp_loop_nosimd(const double* src1, size_t step1, const double* src2
         break;
     }
 }
-#endif // !CV_SIMD_64F
+#endif // !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
 #endif // ARITHM_DEFINITIONS_ONLY
 
@@ -865,7 +865,7 @@ static void cmp_loop_nosimd(const double* src1, size_t step1, const double* src2
     }
 
 // todo: try to avoid define dispatcher functions using macros with these such cases
-DEFINE_SIMD_ALL(cmp)
+DEFINE_SIMD_ALL(cmp, void)
 
 //=========================================================================
 // scaling helpers for single and dual source
@@ -880,7 +880,7 @@ DEFINE_SIMD_ALL(cmp)
 
 //////////////////////////// Loaders ///////////////////////////////
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 // todo: add support for RW alignment & stream
 template<int nload, template<typename T1, typename T2, typename Tvec> class OP, typename T1, typename T2, typename Tvec>
 struct scalar_loader_n
@@ -1099,16 +1099,16 @@ struct scalar_loader_n<sizeof(float), OP, float, T2, v_float32>
 };
 #endif // CV_SIMD
 
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template<template<typename T1, typename T2, typename Tvec> class OP>
 struct scalar_loader_n<sizeof(int), OP, int, double, v_int32>
 {
     typedef OP<int, float, v_int32> op;
     typedef OP<double, double, v_float64> op64;
-    enum {step = v_int32::nlanes};
 
     static inline void l(const int* src1, const int* src2, const double* scalar, int* dst)
     {
+        const int step = VTraits<v_int32>::vlanes();
         v_int32 v_src1 = vx_load(src1);
         v_int32 v_src2 = vx_load(src2);
         v_int32 v_src1s = vx_load(src1 + step);
@@ -1125,6 +1125,7 @@ struct scalar_loader_n<sizeof(int), OP, int, double, v_int32>
     }
     static inline void l(const int* src1, const double* scalar, int* dst)
     {
+        const int step = VTraits<v_int32>::vlanes();
         v_int32 v_src1 = vx_load(src1);
         v_int32 v_src1s = vx_load(src1 + step);
 
@@ -1169,10 +1170,10 @@ struct scalar_loader_n<sizeof(float), OP, float, double, v_float32>
 {
     typedef OP<float, float, v_float32> op;
     typedef OP<double, double, v_float64> op64;
-    enum {step = v_float32::nlanes};
 
     static inline void l(const float* src1, const float* src2, const double* scalar, float* dst)
     {
+        const int step = VTraits<v_float32>::vlanes();
         v_float32 v_src1 = vx_load(src1);
         v_float32 v_src2 = vx_load(src2);
         v_float32 v_src1s = vx_load(src1 + step);
@@ -1186,6 +1187,7 @@ struct scalar_loader_n<sizeof(float), OP, float, double, v_float32>
     }
     static inline void l(const float* src1, const double* scalar, float* dst)
     {
+        const int step = VTraits<v_float32>::vlanes();
         v_float32 v_src1 = vx_load(src1);
         v_float32 v_src1s = vx_load(src1 + step);
 
@@ -1226,10 +1228,10 @@ template<template<typename T1, typename T2, typename Tvec> class OP>
 struct scalar_loader_n<sizeof(double), OP, double, double, v_float64>
 {
     typedef OP<double, double, v_float64> op;
-    enum {step = v_float64::nlanes};
 
     static inline void l(const double* src1, const double* src2, const double* scalar, double* dst)
     {
+        const int step = VTraits<v_float64>::vlanes();
         v_float64 v_src1 = vx_load(src1);
         v_float64 v_src2 = vx_load(src2);
         v_float64 v_src1s = vx_load(src1 + step);
@@ -1243,6 +1245,7 @@ struct scalar_loader_n<sizeof(double), OP, double, double, v_float64>
     }
     static inline void l(const double* src1, const double* scalar, double* dst)
     {
+        const int step = VTraits<v_float64>::vlanes();
         v_float64 v_src1 = vx_load(src1);
         v_float64 v_src1s = vx_load(src1 + step);
 
@@ -1253,7 +1256,7 @@ struct scalar_loader_n<sizeof(double), OP, double, double, v_float64>
         v_store(dst + step, r1);
     }
 };
-#endif // CV_SIMD_64F
+#endif // (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
 //////////////////////////// Loops /////////////////////////////////
 
@@ -1263,7 +1266,7 @@ static void scalar_loop(const T1* src1, size_t step1, const T1* src2, size_t ste
                  T1* dst, size_t step, int width, int height, const T2* scalar)
 {
     typedef OP<T1, T2, Tvec> op;
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef scalar_loader_n<sizeof(T1), OP, T1, T2, Tvec> ldr;
     const int wide_step = sizeof(T1) > sizeof(ushort) ? VTraits<Tvec>::vlanes() * 2 :
                           sizeof(T1) == sizeof(uchar) ? VTraits<Tvec>::vlanes() / 2 : VTraits<Tvec>::vlanes();
@@ -1277,7 +1280,7 @@ static void scalar_loop(const T1* src1, size_t step1, const T1* src2, size_t ste
     {
         int x = 0;
 
-    #if CV_SIMD || CV_SIMD_SCALABLE
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
         for (; x <= width - wide_step; x += wide_step)
         {
             ldr::l(src1 + x, src2 + x, scalar, dst + x);
@@ -1309,7 +1312,7 @@ template<template<typename T1, typename T2, typename Tvec> class OP, typename T1
 static void scalar_loop(const T1* src1, size_t step1, T1* dst, size_t step, int width, int height, const T2* scalar)
 {
     typedef OP<T1, T2, Tvec> op;
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef scalar_loader_n<sizeof(T1), OP, T1, T2, Tvec> ldr;
     const int wide_step = sizeof(T1) > sizeof(ushort) ? VTraits<Tvec>::vlanes() * 2 :
                           sizeof(T1) == sizeof(uchar) ? VTraits<Tvec>::vlanes() / 2 : VTraits<Tvec>::vlanes();
@@ -1322,7 +1325,7 @@ static void scalar_loop(const T1* src1, size_t step1, T1* dst, size_t step, int 
     {
         int x = 0;
 
-    #if CV_SIMD || CV_SIMD_SCALABLE
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
         for (; x <= width - wide_step; x += wide_step)
         {
             ldr::l(src1 + x, scalar, dst + x);
@@ -1349,7 +1352,7 @@ static void scalar_loop(const T1* src1, size_t step1, T1* dst, size_t step, int 
     vx_cleanup();
 }
 
-#if !CV_SIMD_64F
+#if !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 // dual source
 template<template<typename T1, typename T2, typename Tvec> class OP, typename T1, typename T2, typename Tvec>
 static void scalar_loop_nosimd(const T1* src1, size_t step1, const T1* src2, size_t step2,
@@ -1413,7 +1416,7 @@ static void scalar_loop_nosimd(const T1* src1, size_t step1, T1* dst, size_t ste
 #define SCALAR_LOOP64F scalar_loop_nosimd
 #else
 #define SCALAR_LOOP64F scalar_loop
-#endif // !CV_SIMD_64F
+#endif // !(CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
 #endif // ARITHM_DEFINITIONS_ONLY
 
@@ -1437,7 +1440,7 @@ struct op_mul
 template<typename T1, typename T2, typename Tvec>
 struct op_mul_scale
 {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static inline v_float32 r(const v_float32& a, const v_float32& b, const T2* scalar)
     {
         const v_float32 v_scalar = vx_setall_f32(*scalar);
@@ -1453,7 +1456,7 @@ struct op_mul_scale
 template<>
 struct op_mul_scale<double, double, v_float64>
 {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     static inline v_float64 r(const v_float64& a, const v_float64& b, const double* scalar)
     {
         const v_float64 v_scalar = vx_setall_f64(*scalar);
@@ -1578,7 +1581,7 @@ struct op_div_f
 template<typename T1, typename T2, typename Tvec>
 struct op_div_scale
 {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static inline v_float32 r(const v_float32& a, const v_float32& b, const T2* scalar)
     {
         const v_float32 v_scalar = vx_setall_f32(*scalar);
@@ -1600,7 +1603,7 @@ struct op_div_scale
 template<>
 struct op_div_scale<float, float, v_float32>
 {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static inline v_float32 r(const v_float32& a, const v_float32& b, const float* scalar)
     {
         const v_float32 v_scalar = vx_setall_f32(*scalar);
@@ -1614,7 +1617,7 @@ struct op_div_scale<float, float, v_float32>
 template<>
 struct op_div_scale<double, double, v_float64>
 {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     static inline v_float64 r(const v_float64& a, const v_float64& b, const double* scalar)
     {
         const v_float64 v_scalar = vx_setall_f64(*scalar);
@@ -1686,7 +1689,7 @@ DEFINE_SIMD_ALL(div, div_loop)
 template<typename T1, typename T2, typename Tvec>
 struct op_add_scale
 {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static inline v_float32 r(const v_float32& a, const v_float32& b, const T2* scalar)
     {
         const v_float32 v_alpha = vx_setall_f32(*scalar);
@@ -1702,7 +1705,7 @@ struct op_add_scale
 template<>
 struct op_add_scale<double, double, v_float64>
 {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     static inline v_float64 r(const v_float64& a, const v_float64& b, const double* scalar)
     {
         const v_float64 v_alpha = vx_setall_f64(*scalar);
@@ -1719,7 +1722,7 @@ struct op_add_scale<double, double, v_float64>
 template<typename T1, typename T2, typename Tvec>
 struct op_add_weighted
 {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static inline v_float32 r(const v_float32& a, const v_float32& b, const T2* scalars)
     {
         const v_float32 v_alpha = vx_setall_f32(scalars[0]);
@@ -1737,7 +1740,7 @@ struct op_add_weighted
 template<>
 struct op_add_weighted<double, double, v_float64>
 {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     static inline v_float64 r(const v_float64& a, const v_float64& b, const double* scalars)
     {
         const v_float64 v_alpha = vx_setall_f64(scalars[0]);
@@ -1836,7 +1839,7 @@ DEFINE_SIMD_F64(addWeighted, add_weighted_loop_d)
 template<typename T1, typename T2, typename Tvec>
 struct op_recip
 {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static inline v_float32 r(const v_float32& a, const T2* scalar)
     {
         const v_float32 v_scalar = vx_setall_f32(*scalar);
@@ -1858,7 +1861,7 @@ struct op_recip
 template<>
 struct op_recip<float, float, v_float32>
 {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static inline v_float32 r(const v_float32& a, const float* scalar)
     {
         const v_float32 v_scalar = vx_setall_f32(*scalar);
@@ -1872,7 +1875,7 @@ struct op_recip<float, float, v_float32>
 template<>
 struct op_recip<double, double, v_float64>
 {
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     static inline v_float64 r(const v_float64& a, const double* scalar)
     {
         const v_float64 v_scalar = vx_setall_f64(*scalar);

@@ -2396,11 +2396,11 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
         mat = (CvMat*)lineStorage;
 
         if( !CV_IS_MAT_CONT( mat->type ) || (mat->rows != 1 && mat->cols != 1) )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
             "The destination matrix should be continuous and have a single row or a single column" );
 
         if( CV_MAT_TYPE( mat->type ) != lineType )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
             "The destination matrix data type is inappropriate, see the manual" );
 
         lines = cvMakeSeqHeaderForArray( lineType, sizeof(CvSeq), elemSize, mat->data.ptr,
@@ -2427,7 +2427,7 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
                 threshold, iparam1, iparam2, l4, linesMax );
         break;
     default:
-        CV_Error( CV_StsBadArg, "Unrecognized method id" );
+        CV_Error( cv::Error::StsBadArg, "Unrecognized method id" );
     }
 
     int nlines = (int)(l2.size() + l4.size());
@@ -2473,7 +2473,7 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
     cv::Mat src = cv::cvarrToMat(src_image), circles_mat;
 
     if( !circle_storage )
-        CV_Error( CV_StsNullPtr, "NULL destination" );
+        CV_Error( cv::Error::StsNullPtr, "NULL destination" );
 
     bool isStorage = isStorageOrMat(circle_storage);
 
@@ -2490,7 +2490,7 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
 
         if( !CV_IS_MAT_CONT( mat->type ) || (mat->rows != 1 && mat->cols != 1) ||
             CV_MAT_TYPE(mat->type) != CV_32FC3 )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                       "The destination matrix should be continuous and have a single row or a single column" );
 
         circles = cvMakeSeqHeaderForArray( CV_32FC3, sizeof(CvSeq), sizeof(float)*3,

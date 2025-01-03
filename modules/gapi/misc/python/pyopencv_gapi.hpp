@@ -31,6 +31,7 @@ using map_string_and_vector_float   = std::map<std::string, std::vector<float>>;
 using map_int_and_double            = std::map<int, double>;
 using ep_OpenVINO                   = cv::gapi::onnx::ep::OpenVINO;
 using ep_DirectML                   = cv::gapi::onnx::ep::DirectML;
+using ep_CoreML                     = cv::gapi::onnx::ep::CoreML;
 using ep_CUDA                       = cv::gapi::onnx::ep::CUDA;
 using ep_TensorRT                   = cv::gapi::onnx::ep::TensorRT;
 
@@ -246,6 +247,7 @@ PyObject* pyopencv_from(const cv::GArg& value)
         HANDLE_CASE(BOOL,      bool);
         HANDLE_CASE(INT,       int);
         HANDLE_CASE(INT64,     int64_t);
+        HANDLE_CASE(UINT64,    uint64_t);
         HANDLE_CASE(DOUBLE,    double);
         HANDLE_CASE(FLOAT,     float);
         HANDLE_CASE(STRING,    std::string);
@@ -258,7 +260,6 @@ PyObject* pyopencv_from(const cv::GArg& value)
         HANDLE_CASE(MAT,       cv::Mat);
         HANDLE_CASE(UNKNOWN,   cv::detail::PyObjectHolder);
         HANDLE_CASE(DRAW_PRIM, cv::gapi::wip::draw::Prim);
-        UNSUPPORTED(UINT64);
 #undef HANDLE_CASE
 #undef UNSUPPORTED
     }
@@ -304,6 +305,7 @@ PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
         case cv::detail::OpaqueKind::CV_BOOL      : return pyopencv_from(o.rref<bool>());
         case cv::detail::OpaqueKind::CV_INT       : return pyopencv_from(o.rref<int>());
         case cv::detail::OpaqueKind::CV_INT64     : return pyopencv_from(o.rref<int64_t>());
+        case cv::detail::OpaqueKind::CV_UINT64    : return pyopencv_from(o.rref<uint64_t>());
         case cv::detail::OpaqueKind::CV_DOUBLE    : return pyopencv_from(o.rref<double>());
         case cv::detail::OpaqueKind::CV_FLOAT     : return pyopencv_from(o.rref<float>());
         case cv::detail::OpaqueKind::CV_STRING    : return pyopencv_from(o.rref<std::string>());
@@ -314,14 +316,13 @@ PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
         case cv::detail::OpaqueKind::CV_RECT      : return pyopencv_from(o.rref<cv::Rect>());
         case cv::detail::OpaqueKind::CV_UNKNOWN   : return pyopencv_from(o.rref<cv::GArg>());
         case cv::detail::OpaqueKind::CV_DRAW_PRIM : return pyopencv_from(o.rref<cv::gapi::wip::draw::Prim>());
-        case cv::detail::OpaqueKind::CV_UINT64    : break;
         case cv::detail::OpaqueKind::CV_SCALAR    : break;
         case cv::detail::OpaqueKind::CV_MAT       : break;
     }
 
     PyErr_SetString(PyExc_TypeError, "Unsupported GOpaque type");
     return NULL;
-};
+}
 
 template <>
 PyObject* pyopencv_from(const cv::detail::VectorRef& v)
@@ -331,6 +332,7 @@ PyObject* pyopencv_from(const cv::detail::VectorRef& v)
         case cv::detail::OpaqueKind::CV_BOOL      : return pyopencv_from_generic_vec(v.rref<bool>());
         case cv::detail::OpaqueKind::CV_INT       : return pyopencv_from_generic_vec(v.rref<int>());
         case cv::detail::OpaqueKind::CV_INT64     : return pyopencv_from_generic_vec(v.rref<int64_t>());
+        case cv::detail::OpaqueKind::CV_UINT64    : return pyopencv_from_generic_vec(v.rref<uint64_t>());
         case cv::detail::OpaqueKind::CV_DOUBLE    : return pyopencv_from_generic_vec(v.rref<double>());
         case cv::detail::OpaqueKind::CV_FLOAT     : return pyopencv_from_generic_vec(v.rref<float>());
         case cv::detail::OpaqueKind::CV_STRING    : return pyopencv_from_generic_vec(v.rref<std::string>());
@@ -343,7 +345,6 @@ PyObject* pyopencv_from(const cv::detail::VectorRef& v)
         case cv::detail::OpaqueKind::CV_MAT       : return pyopencv_from_generic_vec(v.rref<cv::Mat>());
         case cv::detail::OpaqueKind::CV_UNKNOWN   : return pyopencv_from_generic_vec(v.rref<cv::GArg>());
         case cv::detail::OpaqueKind::CV_DRAW_PRIM : return pyopencv_from_generic_vec(v.rref<cv::gapi::wip::draw::Prim>());
-        case cv::detail::OpaqueKind::CV_UINT64    : break;
     }
 
     PyErr_SetString(PyExc_TypeError, "Unsupported GArray type");
@@ -502,6 +503,8 @@ static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::Opaq
     {
         HANDLE_CASE(BOOL,    bool);
         HANDLE_CASE(INT,     int);
+        HANDLE_CASE(INT64,   int64_t);
+        HANDLE_CASE(UINT64,  uint64_t);
         HANDLE_CASE(DOUBLE,  double);
         HANDLE_CASE(FLOAT,   float);
         HANDLE_CASE(STRING,  std::string);
@@ -511,8 +514,6 @@ static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(SIZE,    cv::Size);
         HANDLE_CASE(RECT,    cv::Rect);
         HANDLE_CASE(UNKNOWN, cv::GArg);
-        UNSUPPORTED(UINT64);
-        UNSUPPORTED(INT64);
         UNSUPPORTED(SCALAR);
         UNSUPPORTED(MAT);
         UNSUPPORTED(DRAW_PRIM);
@@ -535,6 +536,8 @@ static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::Opaq
     {
         HANDLE_CASE(BOOL,      bool);
         HANDLE_CASE(INT,       int);
+        HANDLE_CASE(INT64,     int64_t);
+        HANDLE_CASE(UINT64,    uint64_t);
         HANDLE_CASE(DOUBLE,    double);
         HANDLE_CASE(FLOAT,     float);
         HANDLE_CASE(STRING,    std::string);
@@ -547,8 +550,6 @@ static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(MAT,       cv::Mat);
         HANDLE_CASE(UNKNOWN,   cv::GArg);
         HANDLE_CASE(DRAW_PRIM, cv::gapi::wip::draw::Prim);
-        UNSUPPORTED(UINT64);
-        UNSUPPORTED(INT64);
 #undef HANDLE_CASE
 #undef UNSUPPORTED
     }

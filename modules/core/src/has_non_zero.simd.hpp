@@ -87,11 +87,11 @@ static bool hasNonZero8u( const uchar* src, size_t len )
 {
     bool res = false;
     const uchar* srcEnd = src+len;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef v_uint8 v_type;
     const v_type v_zero = vx_setzero_u8();
     constexpr const int unrollCount = 2;
-    int step = v_type::nlanes * unrollCount;
+    int step = VTraits<v_type>::vlanes() * unrollCount;
     int len0 = len & -step;
     const uchar* srcSimdEnd = src+len0;
 
@@ -99,10 +99,10 @@ static bool hasNonZero8u( const uchar* src, size_t len )
     while(!res && countSIMD--)
     {
         v_type v0 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v1 = vx_load(src);
-        src += v_type::nlanes;
-        res = v_check_any(((v0 | v1) != v_zero));
+        src += VTraits<v_type>::vlanes();
+        res = v_check_any((v_ne(v_or(v0, v1), v_zero)));
     }
 
     v_cleanup();
@@ -114,11 +114,11 @@ static bool hasNonZero16u( const ushort* src, size_t len )
 {
     bool res = false;
     const ushort* srcEnd = src+len;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef v_uint16 v_type;
     const v_type v_zero = vx_setzero_u16();
     constexpr const int unrollCount = 4;
-    int step = v_type::nlanes * unrollCount;
+    int step = VTraits<v_type>::vlanes() * unrollCount;
     int len0 = len & -step;
     const ushort* srcSimdEnd = src+len0;
 
@@ -126,16 +126,16 @@ static bool hasNonZero16u( const ushort* src, size_t len )
     while(!res && countSIMD--)
     {
         v_type v0 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v1 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v2 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v3 = vx_load(src);
-        src += v_type::nlanes;
-        v0 |= v1;
-        v2 |= v3;
-        res = v_check_any(((v0 | v2) != v_zero));
+        src += VTraits<v_type>::vlanes();
+        v0 = v_or(v0, v1);
+        v2 = v_or(v2, v3);
+        res = v_check_any((v_ne(v_or(v0, v2), v_zero)));
     }
 
     v_cleanup();
@@ -147,11 +147,11 @@ static bool hasNonZero32s( const int* src, size_t len )
 {
     bool res = false;
     const int* srcEnd = src+len;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef v_int32 v_type;
     const v_type v_zero = vx_setzero_s32();
     constexpr const int unrollCount = 8;
-    int step = v_type::nlanes * unrollCount;
+    int step = VTraits<v_type>::vlanes() * unrollCount;
     int len0 = len & -step;
     const int* srcSimdEnd = src+len0;
 
@@ -159,29 +159,29 @@ static bool hasNonZero32s( const int* src, size_t len )
     while(!res && countSIMD--)
     {
         v_type v0 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v1 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v2 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v3 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v4 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v5 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v6 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v7 = vx_load(src);
-        src += v_type::nlanes;
-        v0 |= v1;
-        v2 |= v3;
-        v4 |= v5;
-        v6 |= v7;
+        src += VTraits<v_type>::vlanes();
+        v0 = v_or(v0, v1);
+        v2 = v_or(v2, v3);
+        v4 = v_or(v4, v5);
+        v6 = v_or(v6, v7);
 
-        v0 |= v2;
-        v4 |= v6;
-        res = v_check_any(((v0 | v4) != v_zero));
+        v0 = v_or(v0, v2);
+        v4 = v_or(v4, v6);
+        res = v_check_any((v_ne(v_or(v0, v4), v_zero)));
     }
 
     v_cleanup();
@@ -193,11 +193,11 @@ static bool hasNonZero32f( const float* src, size_t len )
 {
     bool res = false;
     const float* srcEnd = src+len;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef v_float32 v_type;
     const v_type v_zero = vx_setzero_f32();
     constexpr const int unrollCount = 8;
-    int step = v_type::nlanes * unrollCount;
+    int step = VTraits<v_type>::vlanes() * unrollCount;
     int len0 = len & -step;
     const float* srcSimdEnd = src+len0;
 
@@ -205,30 +205,30 @@ static bool hasNonZero32f( const float* src, size_t len )
     while(!res && countSIMD--)
     {
         v_type v0 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v1 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v2 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v3 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v4 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v5 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v6 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v7 = vx_load(src);
-        src += v_type::nlanes;
-        v0 |= v1;
-        v2 |= v3;
-        v4 |= v5;
-        v6 |= v7;
+        src += VTraits<v_type>::vlanes();
+        v0 = v_or(v0, v1);
+        v2 = v_or(v2, v3);
+        v4 = v_or(v4, v5);
+        v6 = v_or(v6, v7);
 
-        v0 |= v2;
-        v4 |= v6;
+        v0 = v_or(v0, v2);
+        v4 = v_or(v4, v6);
         //res = v_check_any(((v0 | v4) != v_zero));//beware : (NaN != 0) returns "false" since != is mapped to _CMP_NEQ_OQ and not _CMP_NEQ_UQ
-        res = !v_check_all(((v0 | v4) == v_zero));
+        res = !v_check_all((v_eq(v_or(v0, v4), v_zero)));
     }
 
     v_cleanup();
@@ -240,11 +240,11 @@ static bool hasNonZero64f( const double* src, size_t len )
 {
     bool res = false;
     const double* srcEnd = src+len;
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     typedef v_float64 v_type;
     const v_type v_zero = vx_setzero_f64();
     constexpr const int unrollCount = 16;
-    int step = v_type::nlanes * unrollCount;
+    int step = VTraits<v_type>::vlanes() * unrollCount;
     int len0 = len & -step;
     const double* srcSimdEnd = src+len0;
 
@@ -252,55 +252,55 @@ static bool hasNonZero64f( const double* src, size_t len )
     while(!res && countSIMD--)
     {
         v_type v0 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v1 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v2 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v3 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v4 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v5 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v6 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v7 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v8 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v9 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v10 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v11 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v12 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v13 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v14 = vx_load(src);
-        src += v_type::nlanes;
+        src += VTraits<v_type>::vlanes();
         v_type v15 = vx_load(src);
-        src += v_type::nlanes;
-        v0  |= v1;
-        v2  |= v3;
-        v4  |= v5;
-        v6  |= v7;
-        v8  |= v9;
-        v10 |= v11;
-        v12 |= v13;
-        v14 |= v15;
+        src += VTraits<v_type>::vlanes();
+        v0 = v_or(v0, v1);
+        v2 = v_or(v2, v3);
+        v4 = v_or(v4, v5);
+        v6 = v_or(v6, v7);
+        v8 = v_or(v8, v9);
+        v10 = v_or(v10, v11);
+        v12 = v_or(v12, v13);
+        v14 = v_or(v14, v15);
 
-        v0  |= v2;
-        v4  |= v6;
-        v8  |= v10;
-        v12 |= v14;
+        v0 = v_or(v0, v2);
+        v4 = v_or(v4, v6);
+        v8 = v_or(v8, v10);
+        v12 = v_or(v12, v14);
 
-        v0  |= v4;
-        v8  |= v12;
+        v0 = v_or(v0, v4);
+        v8 = v_or(v8, v12);
         //res = v_check_any(((v0 | v8) != v_zero));//beware : (NaN != 0) returns "false" since != is mapped to _CMP_NEQ_OQ and not _CMP_NEQ_UQ
-        res = !v_check_all(((v0 | v8) == v_zero));
+        res = !v_check_all((v_eq(v_or(v0, v8), v_zero)));
     }
 
     v_cleanup();
@@ -310,7 +310,7 @@ static bool hasNonZero64f( const double* src, size_t len )
 
 HasNonZeroFunc getHasNonZeroTab(int depth)
 {
-    static HasNonZeroFunc hasNonZeroTab[] =
+    static HasNonZeroFunc hasNonZeroTab[CV_DEPTH_MAX] =
     {
         (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero8u), (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero8u),
         (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero16u), (HasNonZeroFunc)GET_OPTIMIZED(hasNonZero16u),

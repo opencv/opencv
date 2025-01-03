@@ -82,6 +82,10 @@ class CppHeaderParser(object):
         modlist = []
 
         # pass 0: extracts the modifiers
+        if "CV_ND" in arg_str:
+            modlist.append("/ND")
+            arg_str = arg_str.replace("CV_ND", "")
+
         if "CV_OUT" in arg_str:
             modlist.append("/O")
             arg_str = arg_str.replace("CV_OUT", "")
@@ -89,6 +93,10 @@ class CppHeaderParser(object):
         if "CV_IN_OUT" in arg_str:
             modlist.append("/IO")
             arg_str = arg_str.replace("CV_IN_OUT", "")
+
+        if "CV_WRAP_FILE_PATH" in arg_str:
+            modlist.append("/PATH")
+            arg_str = arg_str.replace("CV_WRAP_FILE_PATH", "")
 
         isarray = False
         npos = arg_str.find("CV_CARRAY")
@@ -451,8 +459,7 @@ class CppHeaderParser(object):
                                                  ("CV_INLINE", ""),
                                                  ("CV_DEPRECATED", ""),
                                                  ("CV_DEPRECATED_EXTERNAL", ""),
-                                                 ("CV_NODISCARD_STD", ""),
-                                                 ("CV_NODISCARD", "")]).strip()
+                                                 ("CV_NODISCARD_STD", "")]).strip()
 
         if decl_str.strip().startswith('virtual'):
             virtual_method = True
@@ -510,9 +517,9 @@ class CppHeaderParser(object):
             if rettype == classname or rettype == "~" + classname:
                 rettype, funcname = "", rettype
             else:
-                if bool(re.match('\w+\s+\(\*\w+\)\s*\(.*\)', decl_str)):
+                if bool(re.match(r'\w+\s+\(\*\w+\)\s*\(.*\)', decl_str)):
                     return [] # function typedef
-                elif bool(re.match('\w+\s+\(\w+::\*\w+\)\s*\(.*\)', decl_str)):
+                elif bool(re.match(r'\w+\s+\(\w+::\*\w+\)\s*\(.*\)', decl_str)):
                     return [] # class method typedef
                 elif bool(re.match('[A-Z_]+', decl_start)):
                     return [] # it seems to be a macro instantiation
@@ -627,6 +634,8 @@ class CppHeaderParser(object):
                                                              ("noArray", arg_type)]).strip()
                     if '/IO' in modlist and '/O' in modlist:
                         modlist.remove('/O')
+                    if (arg_name.lower() == 'filename' or arg_name.lower() == 'filepath') and '/PATH' not in modlist:
+                        modlist.append('/PATH')
                     args.append([arg_type, arg_name, defval, modlist])
                 npos = arg_start-1
 

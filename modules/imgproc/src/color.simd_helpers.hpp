@@ -76,7 +76,7 @@ struct Set<i0, -1, -1>
 
 enum SizePolicy
 {
-    TO_YUV, FROM_YUV, FROM_UYVY, NONE
+    TO_YUV, FROM_YUV, FROM_UYVY, TO_UYVY, NONE
 };
 
 template< typename VScn, typename VDcn, typename VDepth, SizePolicy sizePolicy = NONE >
@@ -89,8 +89,8 @@ struct CvtHelper
         int stype = _src.type();
         scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
 
-        CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
-        CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
+        CV_CheckChannels(scn, VScn::contains(scn), "Invalid number of channels in input image");
+        CV_CheckChannels(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
         CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
 
         if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
@@ -109,6 +109,7 @@ struct CvtHelper
             dstSz = Size(sz.width, sz.height * 2 / 3);
             break;
         case FROM_UYVY:
+        case TO_UYVY:
             CV_Assert( sz.width % 2 == 0);
             dstSz = sz;
             break;

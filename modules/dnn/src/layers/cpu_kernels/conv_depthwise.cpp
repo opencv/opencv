@@ -92,7 +92,7 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
         ofstab[k] = dy * Wi + dx;
     }
 
-    const float *weights0 = conv->weightsBufPtr, *bias = conv->biasBuf.data();
+    const float *weights0 = conv->getWeights(), *bias = conv->biasBuf.data();
     const float* relu = reluslope.data();
     CV_Assert(ksize > 1 || (pad_left == 0 && pad_right == 0 && pad_top == 0 && pad_bottom == 0));
 
@@ -119,7 +119,7 @@ void runDepthwise(InputArray _input, OutputArray _output, const Ptr<FastConv>& c
                                             pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);
             else
 #endif
-#if CV_TRY_RVV
+#if CV_TRY_RVV && CV_RVV
             if(canRunOpt && conv->useRVV)
                 opt_RVV::fastDepthwiseConv(weights, Hk, Wk, stride_h, stride_w, dilation_h, dilation_w,
                                             pad_top, pad_left, bias, relu, inptr0, Hi, Wi, outptr0, c, H0, W0);
@@ -236,13 +236,11 @@ void depthWiseBlockConv2D(const float* wptr,
                             v21 = v_load(imgptr2 + in_j + dilation_w),
                             v22 = v_load(imgptr2 + in_j + dilation_w*2);
 
-                    v_float32x4 vout = v00*vw00 + v01*vw01 + v02*vw02 +
-                                     v10*vw10 + v11*vw11 + v12*vw12 +
-                                     v20*vw20 + v21*vw21 + v22*vw22 + vbias;
+                    v_float32x4 vout = v_add(v_add(v_add(v_add(v_add(v_add(v_add(v_add(v_add(v_mul(v00, vw00), v_mul(v01, vw01)), v_mul(v02, vw02)), v_mul(v10, vw10)), v_mul(v11, vw11)), v_mul(v12, vw12)), v_mul(v20, vw20)), v_mul(v21, vw21)), v_mul(v22, vw22)), vbias);
                     if (fusedAdd)
-                        vout = v_load(outptr + out_j) + vout;
+                        vout = v_add(v_load(outptr + out_j), vout);
                     if (relu)
-                        vout = v_select(vout > z, vout, vout*vrc);
+                        vout = v_select(v_gt(vout, z), vout, v_mul(vout, vrc));
                     v_store(outptr + out_j, vout);
                 }
             }
@@ -268,14 +266,12 @@ void depthWiseBlockConv2D(const float* wptr,
                     v_load_deinterleave(imgptr2 + in_j, v20, v21);
                     v_load_deinterleave(imgptr2 + in_j + 2, v22, unused);
 
-                    v_float32x4 vout = v00 * vw00 + v01 * vw01 + v02 * vw02 +
-                            v10 * vw10 + v11 * vw11 + v12 * vw12 +
-                            v20 * vw20 + v21 * vw21 + v22 * vw22 + vbias;
+                    v_float32x4 vout = v_add(v_add(v_add(v_add(v_add(v_add(v_add(v_add(v_add(v_mul(v00, vw00), v_mul(v01, vw01)), v_mul(v02, vw02)), v_mul(v10, vw10)), v_mul(v11, vw11)), v_mul(v12, vw12)), v_mul(v20, vw20)), v_mul(v21, vw21)), v_mul(v22, vw22)), vbias);
 
                     if (fusedAdd)
-                        vout = v_load(outptr + out_j) + vout;
+                        vout = v_add(v_load(outptr + out_j), vout);
                     if (relu)
-                        vout = v_select(vout > z, vout, vout*vrc);
+                        vout = v_select(v_gt(vout, z), vout, v_mul(vout, vrc));
                     v_store(outptr + out_j, vout);
                 }
             }
@@ -381,11 +377,11 @@ void depthWiseBlockConv1D(const float* wptr,
                         v01 = v_load(imgptr0 + in_j + dilation_w),
                         v02 = v_load(imgptr0 + in_j + dilation_w*2);
 
-                v_float32x4 vout = v00*vw00 + v01*vw01 + v02*vw02 + vbias;
+                v_float32x4 vout = v_add(v_add(v_add(v_mul(v00, vw00), v_mul(v01, vw01)), v_mul(v02, vw02)), vbias);
                 if (fusedAdd)
-                    vout = v_load(outptr + out_j) + vout;
+                    vout = v_add(v_load(outptr + out_j), vout);
                 if (relu)
-                    vout = v_select(vout > z, vout, vout*vrc);
+                    vout = v_select(v_gt(vout, z), vout, v_mul(vout, vrc));
                 v_store(outptr + out_j, vout);
             }
         }
@@ -407,13 +403,13 @@ void depthWiseBlockConv1D(const float* wptr,
                 v_load_deinterleave(imgptr0 + in_j, v00, v01);
                 v_load_deinterleave(imgptr0 + in_j + 2, v02, unused);
 
-                v_float32x4 vout = v00 * vw00 + v01 * vw01 + v02 * vw02 + vbias;
+                v_float32x4 vout = v_add(v_add(v_add(v_mul(v00, vw00), v_mul(v01, vw01)), v_mul(v02, vw02)), vbias);
 
                 if (fusedAdd)
-                    vout = v_load(outptr + out_j) + vout;
+                    vout = v_add(v_load(outptr + out_j), vout);
 
                 if (relu)
-                    vout = v_select(vout > z, vout, vout*vrc);
+                    vout = v_select(v_gt(vout, z), vout, v_mul(vout, vrc));
                 v_store(outptr + out_j, vout);
             }
         }

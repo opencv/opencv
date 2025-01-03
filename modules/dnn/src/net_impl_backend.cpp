@@ -10,6 +10,10 @@
 #include "backend.hpp"
 #include "factory.hpp"
 
+#ifdef HAVE_CUDA
+#include "cuda4dnn/init.hpp"
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -170,11 +174,19 @@ void Net::Impl::setPreferableBackend(Net& net, int backendId)
     if (backendId == DNN_BACKEND_INFERENCE_ENGINE)
         backendId = DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;  // = getInferenceEngineBackendTypeParam();
 
-    if (netWasQuantized && backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_TIMVX)
+    if (netWasQuantized && backendId != DNN_BACKEND_OPENCV && backendId != DNN_BACKEND_TIMVX &&
+        backendId != DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
     {
-        CV_LOG_WARNING(NULL, "DNN: Only default and TIMVX backends support quantized networks");
+        CV_LOG_WARNING(NULL, "DNN: Only default, TIMVX and OpenVINO backends support quantized networks");
         backendId = DNN_BACKEND_OPENCV;
     }
+#ifdef HAVE_DNN_NGRAPH
+    if (netWasQuantized && backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && INF_ENGINE_VER_MAJOR_LT(INF_ENGINE_RELEASE_2023_0))
+    {
+        CV_LOG_WARNING(NULL, "DNN: OpenVINO 2023.0 and higher is required to supports quantized networks");
+        backendId = DNN_BACKEND_OPENCV;
+    }
+#endif
 
     if (preferableBackend != backendId)
     {
@@ -234,6 +246,16 @@ void Net::Impl::setPreferableTarget(int targetId)
 #endif
         }
 
+        if (IS_DNN_CUDA_TARGET(targetId))
+        {
+            preferableTarget = DNN_TARGET_CPU;
+#ifdef HAVE_CUDA
+            if (cuda4dnn::doesDeviceSupportFP16() && targetId == DNN_TARGET_CUDA_FP16)
+                preferableTarget = DNN_TARGET_CUDA_FP16;
+            else
+                preferableTarget = DNN_TARGET_CUDA;
+#endif
+        }
 #if !defined(__arm64__) || !__arm64__
         if (targetId == DNN_TARGET_CPU_FP16)
         {
@@ -243,6 +265,14 @@ void Net::Impl::setPreferableTarget(int targetId)
 #endif
 
         clear();
+
+        if (targetId == DNN_TARGET_CPU_FP16)
+        {
+            if (useWinograd) {
+                CV_LOG_INFO(NULL, "DNN: DNN_TARGET_CPU_FP16 is set => Winograd convolution is disabled by default to preserve accuracy. If needed, enable it explicitly using enableWinograd(true).");
+                enableWinograd(false);
+            }
+        }
     }
 }
 

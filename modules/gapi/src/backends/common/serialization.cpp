@@ -8,9 +8,8 @@
 #include <map> // map
 #include <ade/util/zip_range.hpp> // indexed
 
-#define NOMINMAX
-
 #ifdef _WIN32
+#define NOMINMAX
 #include <winsock.h>      // htonl, ntohl
 #else
 #include <netinet/in.h>   // htonl, ntohl
