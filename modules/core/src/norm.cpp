@@ -921,7 +921,10 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                     type == CV_32F ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_32f_C1R :
                     0) :
                     normType == NORM_L1 ?
-                    (type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_8u_C1R :
+                    (
+                    #if !IPP_DISABLE_NORM_L1
+                    type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_8u_C1R :
+                    #endif
                     type == CV_16U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_16u_C1R :
                     type == CV_16S ? (ippiNormRelFuncNoHint)ippiNormRel_L1_16s_C1R :
                     0) :
