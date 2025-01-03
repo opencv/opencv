@@ -1444,7 +1444,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
         if (i > 0 && !getRect(width, height, frames.back().getPixels(), apngFrame.getPixels(), over1.data(), bpp, rowbytes, 0, 0, 0, 3))
         {
-            frames[i - 1].setDelayNum(frames.back().getDelayNum() + apngFrame.getDelayNum());
+            frames.back().setDelayNum(frames.back().getDelayNum() + apngFrame.getDelayNum());
             num_frames--;
         }
         else
