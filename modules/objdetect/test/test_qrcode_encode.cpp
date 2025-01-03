@@ -5,16 +5,6 @@
 #include "test_precomp.hpp"
 namespace opencv_test { namespace {
 
-#if !defined CV_CXX11
-// Wrapper for generating seeded random number via std::rand.
-template<unsigned Seed>
-class SeededRandFunctor {
-public:
-    SeededRandFunctor() { std::srand(Seed); }
-    int operator()(int i) { return std::rand() % (i + 1); }
-};
-#endif
-
 std::string encode_qrcode_images_name[] = {
         "version1_mode1.png", "version1_mode2.png", "version1_mode4.png",
         "version2_mode1.png", "version2_mode2.png", "version2_mode4.png",
@@ -118,9 +108,7 @@ TEST(Objdetect_QRCode_Encode, generate_test_data)
         }
 
         std::string decoded_info = "";
-#ifdef HAVE_QUIRC
         EXPECT_TRUE(decodeQRCode(resized_src, corners, decoded_info, straight_barcode)) << "The QR code cannot be decoded: " << image_path;
-#endif
         file_config << "info" << decoded_info;
         file_config << "}";
     }
@@ -306,7 +294,6 @@ TEST(Objdetect_QRCode_Encode_Decode, regression)
                     corners[k].y = corners[k].y * height_ratio;
                 }
 
-#ifdef HAVE_QUIRC
                 Mat straight_barcode;
                 std::string output_info = QRCodeDetector().decode(resized_src, corners, straight_barcode);
                 EXPECT_FALSE(output_info.empty())
@@ -314,7 +301,6 @@ TEST(Objdetect_QRCode_Encode_Decode, regression)
                     << " version: " << version << " error correction level: " << (int)level;
                 EXPECT_EQ(input_info, output_info) << "The generated QRcode is not same as test data." << " Mode: " << (int)mode <<
                                                         " version: " << version << " error correction level: " << (int)level;
-#endif
             }
         }
     }
@@ -356,16 +342,14 @@ TEST(Objdetect_QRCode_Encode_Kanji, regression)
             corners[j].y = corners[j].y * height_ratio;
         }
 
-#ifdef HAVE_QUIRC
         Mat straight_barcode;
         std::string decoded_info = QRCodeDetector().decode(resized_src, corners, straight_barcode);
         EXPECT_FALSE(decoded_info.empty()) << "The generated QRcode cannot be decoded.";
         EXPECT_EQ(input_info, decoded_info);
-#endif
     }
 }
 
-TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
+TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, regression)
 {
     // disabled since QR decoder probably doesn't support structured append mode qr codes
     const std::string root = "qrcode/decode_encode";
@@ -401,43 +385,45 @@ TEST(Objdetect_QRCode_Encode_Decode_Structured_Append, DISABLED_regression)
             vector<Mat> qrcodes;
             encoder->encodeStructuredAppend(input_info, qrcodes);
             EXPECT_TRUE(!qrcodes.empty()) << "Can't generate this QR images";
+            CV_CheckEQ(qrcodes.size(), (size_t)j, "Number of QR codes");
 
-            std::string output_info = "";
+            std::vector<Point2f> corners(4 * qrcodes.size());
             for (size_t k = 0; k < qrcodes.size(); k++)
             {
                 Mat qrcode = qrcodes[k];
+                corners[4 * k] = Point2f(border_width, border_width);
+                corners[4 * k + 1] = Point2f(qrcode.cols * 1.0f - border_width, border_width);
+                corners[4 * k + 2] = Point2f(qrcode.cols * 1.0f - border_width, qrcode.rows * 1.0f - border_width);
+                corners[4 * k + 3] = Point2f(border_width, qrcode.rows * 1.0f - border_width);
 
-                std::vector<Point2f> corners(4);
-                corners[0] = Point2f(border_width, border_width);
-                corners[1] = Point2f(qrcode.cols * 1.0f - border_width, border_width);
-                corners[2] = Point2f(qrcode.cols * 1.0f - border_width, qrcode.rows * 1.0f - border_width);
-                corners[3] = Point2f(border_width, qrcode.rows * 1.0f - border_width);
+                float width_ratio = fixed_size.width * 1.0f / qrcode.cols;
+                float height_ratio = fixed_size.height * 1.0f / qrcode.rows;
+                resize(qrcode, qrcodes[k], fixed_size, 0, 0, INTER_AREA);
 
-                Mat resized_src;
-                resize(qrcode, resized_src, fixed_size, 0, 0, INTER_AREA);
-                float width_ratio =  resized_src.cols * 1.0f / qrcode.cols;
-                float height_ratio = resized_src.rows * 1.0f / qrcode.rows;
-                for(size_t m = 0; m < corners.size(); m++)
+                for (size_t ki = 0; ki < 4; ki++)
                 {
-                    corners[m].x = corners[m].x * width_ratio;
-                    corners[m].y = corners[m].y * height_ratio;
+                    corners[4 * k + ki].x = corners[4 * k + ki].x * width_ratio + fixed_size.width * k;
+                    corners[4 * k + ki].y = corners[4 * k + ki].y * height_ratio;
                 }
-
-#ifdef HAVE_QUIRC
-                Mat straight_barcode;
-                std::string decoded_info = QRCodeDetector().decode(resized_src, corners, straight_barcode);
-                EXPECT_FALSE(decoded_info.empty())
-                    << "The generated QRcode cannot be decoded." << " Mode: " << modes[i]
-                    << " structures number: " << k << "/" << j;
-                output_info += decoded_info;
-#endif
             }
-#ifdef HAVE_QUIRC
+
+            Mat resized_src;
+            hconcat(qrcodes, resized_src);
+
+            std::vector<cv::String> decoded_info;
+            cv::String output_info;
+            EXPECT_TRUE(QRCodeDetector().decodeMulti(resized_src, corners, decoded_info));
+            for (size_t k = 0; k < decoded_info.size(); ++k)
+            {
+                if (!decoded_info[k].empty())
+                    output_info = decoded_info[k];
+            }
+            EXPECT_FALSE(output_info.empty())
+                << "The generated QRcode cannot be decoded." << " Mode: " << modes[i]
+                << " structures number: " << j;
+
             EXPECT_EQ(input_info, output_info) << "The generated QRcode is not same as test data." << " Mode: " << mode <<
                                                   " structures number: " << j;
-#else
-            std::cout << "Mode=" << mode << ": Unable to verify generated QR codes - QUIRC is disabled" << std::endl;
-#endif
         }
     }
 }
@@ -547,5 +533,61 @@ TEST(Objdetect_QRCode_Encode_Decode, regression_issue22029)
         }
     }
 }
+
+// This test reproduces issue https://github.com/opencv/opencv/issues/24366 only in a loop
+TEST(Objdetect_QRCode_Encode_Decode, auto_version_pick)
+{
+    cv::QRCodeEncoder::Params params;
+    params.correction_level = cv::QRCodeEncoder::CORRECT_LEVEL_L;
+    params.mode = cv::QRCodeEncoder::EncodeMode::MODE_AUTO;
+
+    cv::Ptr<cv::QRCodeEncoder> encoder = cv::QRCodeEncoder::create(params);
+
+    for (int len = 1; len < 19; len++) {
+        std::string input;
+        input.resize(len);
+        cv::randu(Mat(1, len, CV_8U, &input[0]), 'a', 'z' + 1);
+        cv::Mat qrcode;
+        encoder->encode(input, qrcode);
+    }
+}
+
+// Test two QR codes which error correction procedure requires more number of
+// syndroms that described in the ISO/IEC 18004
+typedef testing::TestWithParam<std::pair<std::string, std::string>> Objdetect_QRCode_decoding;
+TEST_P(Objdetect_QRCode_decoding, error_correction)
+{
+    const std::string filename = get<0>(GetParam());
+    const std::string expected = get<1>(GetParam());
+
+    QRCodeDetector qrcode;
+    cv::String decoded_msg;
+    Mat src = cv::imread(findDataFile("qrcode/" + filename), IMREAD_GRAYSCALE);
+
+    std::vector<Point2f> corners(4);
+    corners[0] = Point2f(0, 0);
+    corners[1] = Point2f(src.cols * 1.0f, 0);
+    corners[2] = Point2f(src.cols * 1.0f, src.rows * 1.0f);
+    corners[3] = Point2f(0, src.rows * 1.0f);
+
+    Mat resized_src;
+    resize(src, resized_src, fixed_size, 0, 0, INTER_AREA);
+    float width_ratio =  resized_src.cols * 1.0f / src.cols;
+    float height_ratio = resized_src.rows * 1.0f / src.rows;
+    for(size_t m = 0; m < corners.size(); m++)
+    {
+        corners[m].x = corners[m].x * width_ratio;
+        corners[m].y = corners[m].y * height_ratio;
+    }
+
+    Mat straight_barcode;
+    EXPECT_NO_THROW(decoded_msg = qrcode.decode(resized_src, corners, straight_barcode));
+    ASSERT_FALSE(straight_barcode.empty()) << "Can't decode qrimage " << filename;
+    EXPECT_EQ(expected, decoded_msg);
+}
+INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_decoding, testing::ValuesIn(std::vector<std::pair<std::string, std::string>>{
+    {"err_correct_1M.png", "New"},
+    {"err_correct_2L.png", "Version 2 QR Code Test Image"},
+}));
 
 }} // namespace

@@ -2,8 +2,9 @@
 ; jidctfst.asm - fast integer IDCT (64-bit SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
-; Copyright (C) 2009, 2016, D. R. Commander.
+; Copyright (C) 2009, 2016, 2024, D. R. Commander.
 ; Copyright (C) 2018, Matthias Räncker.
+; Copyright (C) 2023, Aliaksiej Kandracienka.
 ;
 ; Based on the x86 SIMD extension for IJG JPEG library
 ; Copyright (C) 1999-2006, MIYASAKA Masaru.
@@ -57,7 +58,7 @@ F_1_613 equ (F_2_613 - (1 << CONST_BITS))         ; FIX(2.613125930) - FIX(1)
 %define PRE_MULTIPLY_SCALE_BITS  2
 %define CONST_SHIFT              (16 - PRE_MULTIPLY_SCALE_BITS - CONST_BITS)
 
-    alignz      32
+    ALIGNZ      32
     GLOBAL_DATA(jconst_idct_ifast_sse2)
 
 EXTN(jconst_idct_ifast_sse2):
@@ -68,7 +69,7 @@ PW_MF1613      times 8  dw -F_1_613 << CONST_SHIFT
 PW_F1082       times 8  dw  F_1_082 << CONST_SHIFT
 PB_CENTERJSAMP times 16 db  CENTERJSAMPLE
 
-    alignz      32
+    ALIGNZ      32
 
 ; --------------------------------------------------------------------------
     SECTION     SEG_TEXT
@@ -86,8 +87,7 @@ PB_CENTERJSAMP times 16 db  CENTERJSAMPLE
 ; r12 = JSAMPARRAY output_buf
 ; r13d = JDIMENSION output_col
 
-%define original_rbp  rbp + 0
-%define wk(i)         rbp - (WK_NUM - (i)) * SIZEOF_XMMWORD
+%define wk(i)         r15 - (WK_NUM - (i)) * SIZEOF_XMMWORD
                                         ; xmmword wk[WK_NUM]
 %define WK_NUM        2
 
@@ -95,14 +95,15 @@ PB_CENTERJSAMP times 16 db  CENTERJSAMPLE
     GLOBAL_FUNCTION(jsimd_idct_ifast_sse2)
 
 EXTN(jsimd_idct_ifast_sse2):
+    ENDBR64
     push        rbp
-    mov         rax, rsp                     ; rax = original rbp
-    sub         rsp, byte 4
+    mov         rbp, rsp
+    push        r15
     and         rsp, byte (-SIZEOF_XMMWORD)  ; align to 128 bits
-    mov         [rsp], rax
-    mov         rbp, rsp                     ; rbp = aligned rbp
-    lea         rsp, [wk(0)]
-    collect_args 4
+    ; Allocate stack space for wk array.  r15 is used to access it.
+    mov         r15, rsp
+    sub         rsp, byte (SIZEOF_XMMWORD * WK_NUM)
+    COLLECT_ARGS 4
 
     ; ---- Pass 1: process columns from input.
 
@@ -320,7 +321,6 @@ EXTN(jsimd_idct_ifast_sse2):
 
     ; ---- Pass 2: process rows from work array, store into output array.
 
-    mov         rax, [original_rbp]
     mov         rdi, r12                ; (JSAMPROW *)
     mov         eax, r13d
 
@@ -479,9 +479,9 @@ EXTN(jsimd_idct_ifast_sse2):
     movq        XMM_MMWORD [rdx+rax*SIZEOF_JSAMPLE], xmm6
     movq        XMM_MMWORD [rsi+rax*SIZEOF_JSAMPLE], xmm2
 
-    uncollect_args 4
-    mov         rsp, rbp                ; rsp <- aligned rbp
-    pop         rsp                     ; rsp <- original rbp
+    UNCOLLECT_ARGS 4
+    lea         rsp, [rbp-8]
+    pop         r15
     pop         rbp
     ret
     ret

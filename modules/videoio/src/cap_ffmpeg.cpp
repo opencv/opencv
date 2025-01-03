@@ -65,7 +65,7 @@
 namespace cv {
 namespace {
 
-class CvCapture_FFMPEG_proxy CV_FINAL : public cv::IVideoCapture
+class CvCapture_FFMPEG_proxy CV_FINAL : public cv::VideoCaptureBase
 {
 public:
     CvCapture_FFMPEG_proxy() { ffmpegCapture = 0; }
@@ -74,13 +74,18 @@ public:
     {
         open(filename, params);
     }
+    CvCapture_FFMPEG_proxy(const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters& params)
+        : ffmpegCapture(NULL)
+    {
+        open(stream, params);
+    }
     virtual ~CvCapture_FFMPEG_proxy() { close(); }
 
-    virtual double getProperty(int propId) const CV_OVERRIDE
+    virtual double getProperty_(int propId) const CV_OVERRIDE
     {
         return ffmpegCapture ? icvGetCaptureProperty_FFMPEG_p(ffmpegCapture, propId) : 0;
     }
-    virtual bool setProperty(int propId, double value) CV_OVERRIDE
+    virtual bool setProperty_(int propId, double value) CV_OVERRIDE
     {
         return ffmpegCapture ? icvSetCaptureProperty_FFMPEG_p(ffmpegCapture, propId, value)!=0 : false;
     }
@@ -88,7 +93,7 @@ public:
     {
         return ffmpegCapture ? icvGrabFrame_FFMPEG_p(ffmpegCapture)!=0 : false;
     }
-    virtual bool retrieveFrame(int flag, cv::OutputArray frame) CV_OVERRIDE
+    virtual bool retrieveFrame_(int flag, cv::OutputArray frame) CV_OVERRIDE
     {
         unsigned char* data = 0;
         int step=0, width=0, height=0, cn=0, depth=0;
@@ -112,10 +117,7 @@ public:
                 return false;
         }
 
-        cv::Mat tmp(height, width, CV_MAKETYPE(depth, cn), data, step);
-        applyMetadataRotation(*this, tmp);
-        tmp.copyTo(frame);
-
+        cv::Mat(height, width, CV_MAKETYPE(depth, cn), data, step).copyTo(frame);
         return true;
     }
     bool open(const cv::String& filename, const cv::VideoCaptureParameters& params)
@@ -123,6 +125,14 @@ public:
         close();
 
         ffmpegCapture = cvCreateFileCaptureWithParams_FFMPEG(filename.c_str(), params);
+        return ffmpegCapture != 0;
+    }
+    bool open(const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters& params)
+    {
+        close();
+
+        readStream = stream;  // Increase counter
+        ffmpegCapture = cvCreateStreamCaptureWithParams_FFMPEG(stream, params);
         return ffmpegCapture != 0;
     }
     void close()
@@ -134,10 +144,11 @@ public:
     }
 
     virtual bool isOpened() const CV_OVERRIDE { return ffmpegCapture != 0; }
-    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_FFMPEG; }
+    virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_FFMPEG; }
 
 protected:
     CvCapture_FFMPEG* ffmpegCapture;
+    Ptr<IStreamReader> readStream;
 };
 
 } // namespace
@@ -145,6 +156,14 @@ protected:
 cv::Ptr<cv::IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_FFMPEG_proxy> capture = cv::makePtr<CvCapture_FFMPEG_proxy>(filename, params);
+    if (capture && capture->isOpened())
+        return capture;
+    return cv::Ptr<cv::IVideoCapture>();
+}
+
+cv::Ptr<cv::IVideoCapture> cvCreateStreamCapture_FFMPEG_proxy(const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters& params)
+{
+    cv::Ptr<CvCapture_FFMPEG_proxy> capture = std::make_shared<CvCapture_FFMPEG_proxy>(stream, params);
     if (capture && capture->isOpened())
         return capture;
     return cv::Ptr<cv::IVideoCapture>();
@@ -198,7 +217,11 @@ public:
         return ffmpegWriter->getProperty(propId);
     }
 
-    virtual bool setProperty(int, double) CV_OVERRIDE { return false; }
+    virtual bool setProperty(int propId, double value) CV_OVERRIDE {
+        if (!ffmpegWriter)
+            return 0;
+        return ffmpegWriter->setProperty(propId, value);
+    }
     virtual bool isOpened() const CV_OVERRIDE { return ffmpegWriter != 0; }
 
 protected:
@@ -233,7 +256,7 @@ cv::Ptr<cv::IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& fi
 #include "plugin_api.hpp"
 #else
 #define CAPTURE_ABI_VERSION 1
-#define CAPTURE_API_VERSION 1
+#define CAPTURE_API_VERSION 2
 #include "plugin_capture_api.hpp"
 #define WRITER_ABI_VERSION 1
 #define WRITER_API_VERSION 1
@@ -254,7 +277,7 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     CvCapture_FFMPEG_proxy *cap = 0;
     try
     {
-        cap = new CvCapture_FFMPEG_proxy(filename, cv::VideoCaptureParameters());
+        cap = new CvCapture_FFMPEG_proxy(String(filename), cv::VideoCaptureParameters());
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;
@@ -291,7 +314,43 @@ CvResult CV_API_CALL cv_capture_open_with_params(
     try
     {
         cv::VideoCaptureParameters parameters(params, n_params);
-        cap = new CvCapture_FFMPEG_proxy(filename, parameters);
+        cap = new CvCapture_FFMPEG_proxy(String(filename), parameters);
+        if (cap->isOpened())
+        {
+            *handle = (CvPluginCapture)cap;
+            return CV_ERROR_OK;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Exception is raised: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "FFmpeg: Unknown C++ exception is raised");
+    }
+    if (cap)
+        delete cap;
+    return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_capture_open_buffer(
+        void* opaque,
+        long long(*read)(void* opaque, char* buffer, long long size),
+        long long(*seek)(void* opaque, long long offset, int way),
+        int* params, unsigned n_params,
+        CV_OUT CvPluginCapture* handle
+)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+    *handle = NULL;
+    CvCapture_FFMPEG_proxy *cap = 0;
+    try
+    {
+        cv::VideoCaptureParameters parameters(params, n_params);
+        cap = new CvCapture_FFMPEG_proxy(makePtr<PluginStreamReader>(opaque, read, seek), parameters);
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;
@@ -514,8 +573,19 @@ CvResult CV_API_CALL cv_writer_get_prop(CvPluginWriter handle, int prop, CV_OUT 
 }
 
 static
-CvResult CV_API_CALL cv_writer_set_prop(CvPluginWriter /*handle*/, int /*prop*/, double /*val*/)
+CvResult CV_API_CALL cv_writer_set_prop(CvPluginWriter handle, int prop, double val)
 {
+    if (!handle)
+        return CV_ERROR_FAIL;
+    try
+    {
+        CvVideoWriter_FFMPEG_proxy* instance = (CvVideoWriter_FFMPEG_proxy*)handle;
+        return (instance->setProperty(prop, val) ? CV_ERROR_OK : CV_ERROR_FAIL);
+    }
+    catch (...)
+    {
+        return CV_ERROR_FAIL;
+    }
     return CV_ERROR_FAIL;
 }
 
@@ -597,6 +667,9 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
     },
     {
         /*  8*/cv_capture_open_with_params,
+    },
+    {
+        /*  9*/cv_capture_open_buffer,
     }
 };
 

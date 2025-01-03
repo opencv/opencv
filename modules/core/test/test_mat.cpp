@@ -474,12 +474,13 @@ TEST(Core_PCA, accuracy)
     ASSERT_LE(err, diffBackPrjEps) << "bad accuracy of cvBackProjectPCA() (CV_PCA_DATA_AS_COL)";
 #endif
     // Test read and write
-    FileStorage fs( "PCA_store.yml", FileStorage::WRITE );
+    const std::string filename = cv::tempfile("PCA_store.yml");
+    FileStorage fs( filename, FileStorage::WRITE );
     rPCA.write( fs );
     fs.release();
 
     PCA lPCA;
-    fs.open( "PCA_store.yml", FileStorage::READ );
+    fs.open( filename, FileStorage::READ );
     lPCA.read( fs.root() );
     err = cvtest::norm(rPCA.eigenvectors, lPCA.eigenvectors, NORM_L2 | NORM_RELATIVE);
     EXPECT_LE(err, 0) << "bad accuracy of write/load functions (YML)";
@@ -487,6 +488,7 @@ TEST(Core_PCA, accuracy)
     EXPECT_LE(err, 0) << "bad accuracy of write/load functions (YML)";
     err = cvtest::norm(rPCA.mean, lPCA.mean, NORM_L2 | NORM_RELATIVE);
     EXPECT_LE(err, 0) << "bad accuracy of write/load functions (YML)";
+    EXPECT_EQ(0, remove(filename.c_str()));
 }
 
 class Core_ArrayOpTest : public cvtest::BaseTest
@@ -596,10 +598,10 @@ static void setValue(SparseMat& M, const int* idx, double value, RNG& rng)
     else if( M.type() == CV_64F )
         *(double*)ptr = value;
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(cv::Error::StsUnsupportedFormat, "");
 }
 
-#if defined(__GNUC__) && (__GNUC__ == 11 || __GNUC__ == 12)
+#if defined(__GNUC__) && (__GNUC__ >= 11)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
@@ -648,8 +650,8 @@ void Core_ArrayOpTest::run( int /* start_from */)
         MatND A(3, sz3, CV_32F), B(3, sz3, CV_16SC4);
         CvMatND matA = cvMatND(A), matB = cvMatND(B);
         RNG rng;
-        rng.fill(A, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
-        rng.fill(B, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
+        rng.fill(A, RNG::UNIFORM, Scalar::all(-10), Scalar::all(10));
+        rng.fill(B, RNG::UNIFORM, Scalar::all(-10), Scalar::all(10));
 
         int idx0[] = {3,4,5}, idx1[] = {0, 9, 7};
         float val0 = 130;
@@ -805,7 +807,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         all_vals.resize(nz0);
         all_vals2.resize(nz0);
         Mat_<double> _all_vals(all_vals), _all_vals2(all_vals2);
-        rng.fill(_all_vals, CV_RAND_UNI, Scalar(-1000), Scalar(1000));
+        rng.fill(_all_vals, RNG::UNIFORM, Scalar(-1000), Scalar(1000));
         if( depth == CV_32F )
         {
             Mat _all_vals_f;
@@ -1747,18 +1749,22 @@ TEST(Core_Mat_array, copyTo_roi_row)
     EXPECT_EQ(5, (int)dst2[4]);
 }
 
-TEST(Core_Mat_array, SplitMerge)
+typedef testing::TestWithParam< tuple<int, perf::MatType> > Core_Mat_arrays;
+
+TEST_P(Core_Mat_arrays, SplitMerge)
 {
-    std::array<cv::Mat, 3> src;
+    int cn =  get<0>(GetParam());
+    int type =  get<1>(GetParam());
+    std::vector<cv::Mat> src(cn);
     for (size_t i = 0; i < src.size(); ++i)
     {
-        src[i] = Mat(10, 10, CV_8U, Scalar((double)(16 * (i + 1))));
+        src[i] = Mat(10, 10, type, Scalar((double)(16 * (i + 1))));
     }
 
     Mat merged;
     merge(src, merged);
 
-    std::array<cv::Mat, 3> dst;
+    std::vector<cv::Mat> dst(cn);
     split(merged, dst);
 
     for (size_t i = 0; i < dst.size(); ++i)
@@ -1766,6 +1772,17 @@ TEST(Core_Mat_array, SplitMerge)
         EXPECT_EQ(0, cvtest::norm(src[i], dst[i], NORM_INF));
     }
 }
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_Mat_arrays, testing::Combine(
+    testing::Range(1, 9),
+    testing::Values(
+        perf::MatType(CV_8U),
+        perf::MatType(CV_16U),
+        perf::MatType(CV_32S),
+        perf::MatType(CV_64F)
+    )
+)
+);
 
 TEST(Mat, regression_8680)
 {
@@ -2256,6 +2273,27 @@ TEST(Core_Eigen, eigen2cv_check_Mat_type)
     Mat_<double> d_mat;
     EXPECT_ANY_THROW(eigen2cv(eigen_A, d_mat));
     //EXPECT_EQ(CV_64FC1, d_mat.type());
+}
+
+TEST(Core_Eigen, cv2eigen_check_RowMajor)
+{
+    Mat A(3, 2, CV_32FC1, Scalar::all(0));
+    A.at<float>(0,0) = 1.0;
+    A.at<float>(0,1) = 2.0;
+    A.at<float>(1,0) = 3.0;
+    A.at<float>(1,1) = 4.0;
+    A.at<float>(2,0) = 5.0;
+    A.at<float>(2,1) = 6.0;
+
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> eigen_A;
+    EXPECT_NO_THROW(cv2eigen(A, eigen_A));
+
+    ASSERT_EQ(1.0, eigen_A(0, 0));
+    ASSERT_EQ(2.0, eigen_A(0, 1));
+    ASSERT_EQ(3.0, eigen_A(1, 0));
+    ASSERT_EQ(4.0, eigen_A(1, 1));
+    ASSERT_EQ(5.0, eigen_A(2, 0));
+    ASSERT_EQ(6.0, eigen_A(2, 1));
 }
 #endif // HAVE_EIGEN
 

@@ -7,7 +7,7 @@
 #if !defined(GAPI_STANDALONE)
 
 #include <opencv2/core/hal/intrin.hpp>
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 #include "gfluidcore_func.hpp"
 #include "gfluidcore_func.simd.hpp"
 

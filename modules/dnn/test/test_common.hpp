@@ -211,7 +211,7 @@ public:
             if ((!l->supportBackend(backend) || l->preferableTarget != target) && !fused)
             {
                 hasFallbacks = true;
-                std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to has backend implementation" << endl;
+                std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to have backend implementation" << endl;
             }
         }
         if (hasFallbacks && raiseError)
@@ -231,6 +231,8 @@ public:
         if (backend == DNN_BACKEND_CUDA)
             expectNoFallbacks(net);
     }
+
+    size_t getTopMemoryUsageMB();
 
 protected:
     void checkBackend(Mat* inp = 0, Mat* ref = 0)

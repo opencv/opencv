@@ -337,7 +337,7 @@ namespace detail {
 template<typename V>
 IOStream& put_v(IOStream&, const V&, std::size_t) {
     GAPI_Error("variant>>: requested index is invalid");
-};
+}
 
 template<typename V, typename X, typename... Xs>
 IOStream& put_v(IOStream& os, const V& v, std::size_t x) {

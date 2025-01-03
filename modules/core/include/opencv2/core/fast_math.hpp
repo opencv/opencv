@@ -68,7 +68,7 @@
   // nothing, intrinsics/asm code is not supported
 #else
   #if ((defined _MSC_VER && defined _M_X64) \
-      || (defined __GNUC__ && defined __x86_64__ && defined __SSE2__)) \
+      || (defined __GNUC__ && defined __SSE2__)) \
       && !defined(OPENCV_SKIP_INCLUDE_EMMINTRIN_H)
     #include <emmintrin.h>
   #endif
@@ -84,7 +84,7 @@
   #if defined(CV_INLINE_ROUND_FLT)
     // user-specified version
     // CV_INLINE_ROUND_DBL should be defined too
-  #elif defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON__) && !defined __SOFTFP__
+  #elif defined __GNUC__ && defined __arm__ && (defined __ARM_PCS_VFP || defined __ARM_VFPV3__ || defined __ARM_NEON) && !defined __SOFTFP__
     // 1. general scheme
     #define ARM_ROUND(_value, _asm_string) \
         int res; \

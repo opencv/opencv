@@ -276,7 +276,7 @@ template<typename T> struct VBLAS
     int givens(T*, T*, int, T, T) const { return 0; }
 };
 
-#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE_64F
+#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, GCC 13 related
 template<> inline int VBLAS<float>::dot(const float* a, const float* b, int n, float* result) const
 {
     if( n < 2*VTraits<v_float32>::vlanes() )
@@ -1191,7 +1191,7 @@ bool solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int method )
     Mat dst = _dst.getMat();
 
     if( m < n )
-        CV_Error(CV_StsBadArg, "The function can not solve under-determined linear systems" );
+        CV_Error(cv::Error::StsBadArg, "The function can not solve under-determined linear systems" );
 
     if( m == n )
         is_normal = false;
@@ -1515,7 +1515,7 @@ void SVD::backSubst( InputArray _w, InputArray _u, InputArray _vt,
                vt.ptr<double>(), vt.step, true, rhs.ptr<double>(), rhs.step, nb,
                dst.ptr<double>(), dst.step, buffer.data());
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 }
 
 

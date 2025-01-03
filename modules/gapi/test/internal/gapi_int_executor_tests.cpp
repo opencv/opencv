@@ -55,7 +55,7 @@ public:
     GMockExecutable(bool can_reshape = true)
         : m_priv(new Priv{can_reshape, 0, 0})
     {
-    };
+    }
 
     void setReshape(bool can_reshape) { m_priv->m_can_reshape = can_reshape; }
 
@@ -92,7 +92,7 @@ class GMockBackendImpl final: public cv::gapi::GBackend::Priv
     }
 
 public:
-    GMockBackendImpl(const GMockExecutable& exec) : m_exec(exec) { };
+    GMockBackendImpl(const GMockExecutable& exec) : m_exec(exec) { }
     int getCompileCounter() const { return m_compile_counter; }
 };
 
@@ -124,8 +124,8 @@ GMockFunctor mock_kernel(const cv::gapi::GBackend& backend, Callable c)
                        };
 }
 
-void dummyFooImpl(const cv::Mat&, cv::Mat&)                 { };
-void dummyBarImpl(const cv::Mat&, const cv::Mat&, cv::Mat&) { };
+void dummyFooImpl(const cv::Mat&, cv::Mat&)                 { }
+void dummyBarImpl(const cv::Mat&, const cv::Mat&, cv::Mat&) { }
 
 struct GExecutorReshapeTest: public ::testing::Test
 {
@@ -155,7 +155,7 @@ struct GExecutorReshapeTest: public ::testing::Test
     std::shared_ptr<GMockBackendImpl> backend_impl2;
     cv::gapi::GBackend                backend2;
     cv::GKernelPackage                pkg;
-    cv::Mat                           in_mat1, in_mat2, out_mat;;
+    cv::Mat                           in_mat1, in_mat2, out_mat;
 };
 
 } // anonymous namespace

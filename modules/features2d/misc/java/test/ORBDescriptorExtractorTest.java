@@ -111,7 +111,7 @@ public class ORBDescriptorExtractorTest extends OpenCVTestCase {
 
         extractor.write(filename);
 
-        String truth = "%YAML:1.0\n---\nname: \"Feature2D.ORB\"\nnfeatures: 500\nscaleFactor: 1.2000000476837158e+00\nnlevels: 8\nedgeThreshold: 31\nfirstLevel: 0\nwta_k: 2\nscoreType: 0\npatchSize: 31\nfastThreshold: 20\n";
+        String truth = "%YAML:1.0\n---\nname: \"Feature2D.ORB\"\nnfeatures: 500\nscaleFactor: 1.2000000476837158\nnlevels: 8\nedgeThreshold: 31\nfirstLevel: 0\nwta_k: 2\nscoreType: 0\npatchSize: 31\nfastThreshold: 20\n";
 //        String truth = "%YAML:1.0\n---\n";
         String actual = readFile(filename);
         actual = actual.replaceAll("e\\+000", "e+00"); // NOTE: workaround for different platforms double representation

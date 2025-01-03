@@ -6,7 +6,7 @@
 
 #pragma once
 
-#if !defined(GAPI_STANDALONE) && CV_SIMD
+#if !defined(GAPI_STANDALONE) && (CV_SIMD || CV_SIMD_SCALABLE)
 
 #include <opencv2/core.hpp>
 

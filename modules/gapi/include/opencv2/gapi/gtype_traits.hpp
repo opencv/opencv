@@ -231,10 +231,10 @@ template<typename T> struct GObtainCtor {
     static HostCtor get() { return HostCtor{}; }
 };
 template<typename T> struct GObtainCtor<GArray<T> > {
-    static HostCtor get() { return HostCtor{ConstructVec{&GArray<T>::VCtor}}; };
+    static HostCtor get() { return HostCtor{ConstructVec{&GArray<T>::VCtor}}; }
 };
 template<typename T> struct GObtainCtor<GOpaque<T> > {
-    static HostCtor get() { return HostCtor{ConstructOpaque{&GOpaque<T>::Ctor}}; };
+    static HostCtor get() { return HostCtor{ConstructOpaque{&GOpaque<T>::Ctor}}; }
 };
 } // namespace detail
 } // namespace cv

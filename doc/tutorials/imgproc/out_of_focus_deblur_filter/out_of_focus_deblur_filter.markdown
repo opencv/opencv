@@ -117,6 +117,6 @@ References
 - [SmartDeblur] - SmartDeblur site
 
 <!-- invisible references list -->
-[Digital Image Processing]: http://web.ipac.caltech.edu/staff/fmasci/home/astro_refs/Digital_Image_Processing_2ndEd.pdf
+[Digital Image Processing]: http://web.ipac.caltech.edu/staff/fmasci/home/RefMaterial/ImageProc/Book_DigitalImageProcessing.pdf
 [Image Deblurring in Matlab]: https://www.mathworks.com/help/images/image-deblurring.html
 [SmartDeblur]: http://yuzhikov.com/articles/BlurredImagesRestoration1.htm

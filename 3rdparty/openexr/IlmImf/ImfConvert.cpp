@@ -107,7 +107,7 @@ floatToUint (float f)
     if (isNegative (f) || isNan (f))
 	return 0;
 
-    if (isInfinity (f) || f > UINT_MAX)
+    if (isInfinity (f) || f > (float)UINT_MAX)
 	return UINT_MAX;
 
     return (unsigned int) f;

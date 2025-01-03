@@ -48,6 +48,7 @@ struct GOrigin;
  *    `cv::GOpaque<T>`   | T
  *    cv::GFrame         | cv::MediaFrame
  */
+
 /**
  * @brief GMat class represents image or tensor data in the
  * graph.
@@ -75,6 +76,18 @@ public:
      * is not empty anymore).
      */
     GAPI_WRAP GMat();                       // Empty constructor
+
+    /**
+     * @brief Constructs a value-initialized GMat
+     *
+     * GMat may be associated with a buffer at graph construction time.
+     * It is useful when some operation has a Mat input which doesn't
+     * change during the program execution, and is set only once.
+     * In this case, there's no need to declare such GMat as graph input.
+     *
+     * @param m a cv::Mat buffer to associate with this GMat object.
+     */
+    GAPI_WRAP explicit GMat(cv::Mat m);     // Value-initialization constructor
 
     /// @private
     GMat(const GNode &n, std::size_t out);  // Operation result constructor

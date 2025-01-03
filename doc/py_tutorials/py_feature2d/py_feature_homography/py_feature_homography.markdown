@@ -102,9 +102,3 @@ plt.imshow(img3, 'gray'),plt.show()
 See the result below. Object is marked in white color in cluttered image:
 
 ![image](images/homography_findobj.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

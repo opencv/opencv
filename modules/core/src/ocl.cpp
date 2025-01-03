@@ -1170,10 +1170,10 @@ bool haveOpenCL()
     if (!g_isOpenCLInitialized)
     {
         CV_TRACE_REGION("Init_OpenCL_Runtime");
-        const char* envPath = getenv("OPENCV_OPENCL_RUNTIME");
-        if (envPath)
+        std::string envPath = utils::getConfigurationParameterString("OPENCV_OPENCL_RUNTIME");
+        if (!envPath.empty())
         {
-            if (cv::String(envPath) == "disabled")
+            if (envPath == "disabled")
             {
                 g_isOpenCLAvailable = false;
                 g_isOpenCLInitialized = true;
@@ -1604,6 +1604,9 @@ struct Device::Impl
             pos = pos2 + 1;
         }
 
+        khr_fp64_support_ = isExtensionSupported("cl_khr_fp64");
+        khr_fp16_support_ = isExtensionSupported("cl_khr_fp16");
+
         intelSubgroupsSupport_ = isExtensionSupported("cl_intel_subgroups");
 
         vendorName_ = getStrProp(CL_DEVICE_VENDOR);
@@ -1692,7 +1695,9 @@ struct Device::Impl
     String version_;
     std::string extensions_;
     int doubleFPConfig_;
+    bool khr_fp64_support_;
     int halfFPConfig_;
+    bool khr_fp16_support_;
     bool hostUnifiedMemory_;
     int maxComputeUnits_;
     size_t maxWorkGroupSize_;
@@ -1843,6 +1848,11 @@ int Device::singleFPConfig() const
 
 int Device::halfFPConfig() const
 { return p ? p->halfFPConfig_ : 0; }
+
+bool Device::hasFP64() const
+{ return p ? p->khr_fp64_support_ : false; }
+bool Device::hasFP16() const
+{ return p ? p->khr_fp16_support_ : false; }
 
 bool Device::endianLittle() const
 { return p ? p->getBoolProp(CL_DEVICE_ENDIAN_LITTLE) : false; }
@@ -2109,24 +2119,18 @@ static bool parseOpenCLDeviceConfiguration(const std::string& configurationStr,
     return true;
 }
 
-#if defined WINRT || defined _WIN32_WCE
-static cl_device_id selectOpenCLDevice(const char* configuration = NULL)
-{
-    CV_UNUSED(configuration)
-    return NULL;
-}
-#else
-static cl_device_id selectOpenCLDevice(const char* configuration = NULL)
+static cl_device_id selectOpenCLDevice(const std::string & configuration_ = std::string())
 {
     std::string platform, deviceName;
     std::vector<std::string> deviceTypes;
 
-    if (!configuration)
-        configuration = getenv("OPENCV_OPENCL_DEVICE");
+    std::string configuration(configuration_);
+    if (configuration.empty())
+        configuration = utils::getConfigurationParameterString("OPENCV_OPENCL_DEVICE");
 
-    if (configuration &&
-            (strcmp(configuration, "disabled") == 0 ||
-             !parseOpenCLDeviceConfiguration(std::string(configuration), platform, deviceTypes, deviceName)
+    if (!configuration.empty() &&
+            (configuration == "disabled" ||
+             !parseOpenCLDeviceConfiguration(configuration, platform, deviceTypes, deviceName)
             ))
         return NULL;
 
@@ -2194,7 +2198,7 @@ static cl_device_id selectOpenCLDevice(const char* configuration = NULL)
         if (!isID)
         {
             deviceTypes.push_back("GPU");
-            if (configuration)
+            if (!configuration.empty())
                 deviceTypes.push_back("CPU");
         }
         else
@@ -2262,7 +2266,7 @@ static cl_device_id selectOpenCLDevice(const char* configuration = NULL)
     }
 
 not_found:
-    if (!configuration)
+    if (configuration.empty())
         return NULL; // suppress messages on stderr
 
     std::ostringstream msg;
@@ -2277,7 +2281,6 @@ not_found:
     CV_LOG_ERROR(NULL, msg.str());
     return NULL;
 }
-#endif
 
 #ifdef HAVE_OPENCL_SVM
 namespace svm {
@@ -2330,12 +2333,12 @@ static unsigned int getSVMCapabilitiesMask()
     static unsigned int mask = 0;
     if (!initialized)
     {
-        const char* envValue = getenv("OPENCV_OPENCL_SVM_CAPABILITIES_MASK");
-        if (envValue == NULL)
+        const std::string envValue = utils::getConfigurationParameterString("OPENCV_OPENCL_SVM_CAPABILITIES_MASK");
+        if (envValue.empty())
         {
             return ~0U; // all bits 1
         }
-        mask = atoi(envValue);
+        mask = atoi(envValue.c_str());
         initialized = true;
     }
     return mask;
@@ -2472,8 +2475,8 @@ public:
         std::string configuration = configuration_;
         if (configuration_.empty())
         {
-            const char* c = getenv("OPENCV_OPENCL_DEVICE");
-            if (c)
+            const std::string c = utils::getConfigurationParameterString("OPENCV_OPENCL_DEVICE");
+            if (!c.empty())
                 configuration = c;
         }
         Impl* impl = findContext(configuration);
@@ -2484,7 +2487,7 @@ public:
             return impl;
         }
 
-        cl_device_id d = selectOpenCLDevice(configuration.empty() ? NULL : configuration.c_str());
+        cl_device_id d = selectOpenCLDevice(configuration);
         if (d == NULL)
             return NULL;
 
@@ -7221,7 +7224,7 @@ String kernelToStr(InputArray _kernel, int ddepth, const char * name)
 
     typedef std::string (* func_t)(const Mat &);
     static const func_t funcs[] = { kerToStr<uchar>, kerToStr<char>, kerToStr<ushort>, kerToStr<short>,
-                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, kerToStr<float16_t> };
+                                    kerToStr<int>, kerToStr<float>, kerToStr<double>, kerToStr<hfloat> };
     const func_t func = funcs[ddepth];
     CV_Assert(func != 0);
 

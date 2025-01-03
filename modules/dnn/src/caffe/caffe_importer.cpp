@@ -126,8 +126,8 @@ public:
             const google::protobuf::UnknownField& field = unknownFields.field(i);
             CV_Assert(field.type() == google::protobuf::UnknownField::TYPE_GROUP);
             CV_CheckGE(field.group().field_count(), 2, "UnknownField should have at least 2 items: name and value");
-            std::string fieldName = field.group().field(0).length_delimited();
-            std::string fieldValue = field.group().field(1).length_delimited();
+            std::string fieldName(field.group().field(0).length_delimited());
+            std::string fieldValue(field.group().field(1).length_delimited());
             params.set(fieldName, fieldValue);
         }
     }
@@ -137,7 +137,7 @@ public:
         const Reflection *refl = msg.GetReflection();
         int type = field->cpp_type();
         bool isRepeated = field->is_repeated();
-        const std::string &name = field->name();
+        const std::string name(field->name());
 
         #define SET_UP_FILED(getter, arrayConstr, gtype)                                    \
             if (isRepeated) {                                                               \
@@ -189,7 +189,7 @@ public:
                 params.set(name, DictValue::arrayString(buf.begin(), size));
             }
             else {
-                params.set(name, refl->GetEnum(msg, field)->name());
+                params.set(name, std::string(refl->GetEnum(msg, field)->name()));
             }
             break;
         default:
@@ -212,7 +212,7 @@ public:
         {
             const FieldDescriptor *fd = msgDesc->field(fieldId);
 
-            if (!isInternal && !ends_with_param(fd->name()))
+            if (!isInternal && !ends_with_param(std::string(fd->name())))
                 continue;
 
             const google::protobuf::UnknownFieldSet& unknownFields = msgRefl->GetUnknownFields(msg);
@@ -279,8 +279,8 @@ public:
                 // Half precision floats.
                 CV_Assert(raw_data.size() / 2 == (int)dstBlob.total());
 
-                Mat halfs((int)shape.size(), &shape[0], CV_16SC1, (void*)raw_data.c_str());
-                convertFp16(halfs, dstBlob);
+                Mat halfs((int)shape.size(), &shape[0], CV_16FC1, (void*)raw_data.c_str());
+                halfs.convertTo(dstBlob, CV_32F);
             }
             else if (pbBlob.raw_data_type() == caffe::FLOAT)
             {
@@ -498,6 +498,11 @@ public:
             else if ("ConvolutionDepthwise" == type)
             {
                 type = "Convolution";
+            }
+            else if (type == "Softmax"){
+                // set default axis to 1
+                if(!layerParams.has("axis"))
+                    layerParams.set("axis", 1);
             }
 
             int id = dstNet.addLayer(name, type, layerParams);

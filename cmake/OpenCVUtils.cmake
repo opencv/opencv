@@ -309,7 +309,11 @@ function(ocv_include_directories)
            dir MATCHES "/usr/include$")
       # workaround for GCC 6.x bug
     else()
-      include_directories(AFTER SYSTEM "${dir}")
+      if(${CMAKE_SYSTEM_NAME} MATCHES QNX)
+        include_directories(AFTER "${dir}")
+      else()
+        include_directories(AFTER SYSTEM "${dir}")
+      endif()
     endif()
   endforeach()
   include_directories(BEFORE ${__add_before})
@@ -349,23 +353,23 @@ function(ocv_target_include_directories target)
   #ocv_debug_message("ocv_target_include_directories(${target} ${ARGN})")
   _ocv_fix_target(target)
   set(__params "")
-  if(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
-      ";${ARGN};" MATCHES "/usr/include;")
-    return() # workaround for GCC 6.x bug
-  endif()
-  set(__params "")
   set(__system_params "")
   set(__var_name __params)
   foreach(dir ${ARGN})
     if("${dir}" STREQUAL "SYSTEM")
       set(__var_name __system_params)
     else()
-      get_filename_component(__abs_dir "${dir}" ABSOLUTE)
-      ocv_is_opencv_directory(__is_opencv_dir "${dir}")
-      if(__is_opencv_dir)
-        list(APPEND ${__var_name} "${__abs_dir}")
+      if(CV_GCC AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0" AND
+          dir MATCHES "/usr/include$")
+         # workaround for GCC 6.x bug
       else()
-        list(APPEND ${__var_name} "${dir}")
+        get_filename_component(__abs_dir "${dir}" ABSOLUTE)
+        ocv_is_opencv_directory(__is_opencv_dir "${dir}")
+        if(__is_opencv_dir)
+          list(APPEND ${__var_name} "${__abs_dir}")
+        else()
+          list(APPEND ${__var_name} "${dir}")
+        endif()
       endif()
     endif()
   endforeach()
@@ -1430,6 +1434,18 @@ macro(ocv_parse_header2 LIBNAME HDR_PATH VARNAME)
   endif()
 endmacro()
 
+# set ${LIBNAME}_VERSION_STRING to ${LIBVER} without quotes
+macro(ocv_parse_header_version LIBNAME HDR_PATH LIBVER)
+  ocv_clear_vars(${LIBNAME}_VERSION_STRING)
+  set(${LIBNAME}_H "")
+  if(EXISTS "${HDR_PATH}")
+    file(STRINGS "${HDR_PATH}" ${LIBNAME}_H REGEX "^#define[ \t]+${LIBVER}[ \t]+\"[^\"]*\".*$" LIMIT_COUNT 1)
+  endif()
+  if(${LIBNAME}_H)
+    string(REGEX REPLACE "^.*[ \t]${LIBVER}[ \t]+\"(.+)\"$" "\\1" ${LIBNAME}_VERSION_STRING "${${LIBNAME}_H}")
+  endif()
+endmacro()
+
 ################################################################################################
 # short command to setup source group
 function(ocv_source_group group)
@@ -1545,13 +1561,23 @@ function(_ocv_append_target_includes target)
   endif()
 endfunction()
 
+macro(ocv_add_cuda_compile_flags)
+  ocv_cuda_compile_flags()
+  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: ${CUDA_NVCC_FLAGS}
+  "-Xcompiler=${CMAKE_CXX_FLAGS_CUDA} $<$<CONFIG:Debug>:${CMAKE_CXX_FLAGS_DEBUG_CUDA}> \
+  $<$<CONFIG:Release>:${CMAKE_CXX_FLAGS_RELEASE_CUDA}>" >)
+endmacro()
+
 function(ocv_add_executable target)
   add_executable(${target} ${ARGN})
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_CUDA)
+    ocv_add_cuda_compile_flags()
+  endif()
   _ocv_append_target_includes(${target})
 endfunction()
 
 function(ocv_add_library target)
-  if(HAVE_CUDA AND ARGN MATCHES "\\.cu")
+  if(NOT ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_CUDA AND ARGN MATCHES "\\.cu")
     ocv_include_directories(${CUDA_INCLUDE_DIRS})
     ocv_cuda_compile(cuda_objs ${ARGN})
     set(OPENCV_MODULE_${target}_CUDA_OBJECTS ${cuda_objs} CACHE INTERNAL "Compiled CUDA object files")
@@ -1559,12 +1585,16 @@ function(ocv_add_library target)
 
   add_library(${target} ${ARGN} ${cuda_objs})
 
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_CUDA)
+    ocv_add_cuda_compile_flags()
+  endif()
+
   if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
     message(STATUS "Setting Apple target properties for ${target}")
 
     set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG 1)
 
-    if(IOS AND NOT MAC_CATALYST)
+    if((IOS OR XROS) AND NOT MAC_CATALYST)
       set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/ios/Info.plist")
     else()
       set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/osx/Info.plist")
@@ -1966,7 +1996,7 @@ macro(ocv_git_describe var_name path)
       OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     if(NOT GIT_RESULT EQUAL 0)
-      execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9].[0-9]*" --exclude "[^-]*-cvsdk"
+      execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "[0-9].[0-9]*.[0-9]*" --exclude "[^-]*-cvsdk"
         WORKING_DIRECTORY "${path}"
         OUTPUT_VARIABLE ${var_name}
         RESULT_VARIABLE GIT_RESULT

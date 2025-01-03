@@ -696,7 +696,7 @@ void calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean, int
     Mat mean;
     ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), _mean.depth()), CV_32F);
 
-    if( (flags & CV_COVAR_USE_AVG) != 0 )
+    if( (flags & cv::COVAR_USE_AVG) != 0 )
     {
         CV_Assert( _mean.size() == size );
         if( _mean.isContinuous() && _mean.type() == ctype )
@@ -722,8 +722,8 @@ void calcCovarMatrix( const Mat* data, int nsamples, Mat& covar, Mat& _mean, int
         }
     }
 
-    calcCovarMatrix( _data, covar, mean, (flags & ~(CV_COVAR_ROWS|CV_COVAR_COLS)) | CV_COVAR_ROWS, ctype );
-    if( (flags & CV_COVAR_USE_AVG) == 0 )
+    calcCovarMatrix( _data, covar, mean, (flags & ~(cv::COVAR_ROWS|cv::COVAR_COLS)) | cv::COVAR_ROWS, ctype );
+    if( (flags & cv::COVAR_USE_AVG) == 0 )
         _mean = mean.reshape(1, size.height);
 }
 
@@ -754,7 +754,7 @@ void calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mea
         }
 
         Mat mean;
-        if( (flags & CV_COVAR_USE_AVG) != 0 )
+        if( (flags & cv::COVAR_USE_AVG) != 0 )
         {
             CV_Assert( _mean.size() == size );
 
@@ -770,9 +770,9 @@ void calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mea
             mean = _mean.getMat().reshape(1, 1);
         }
 
-        calcCovarMatrix( _data, _covar, mean, (flags & ~(CV_COVAR_ROWS|CV_COVAR_COLS)) | CV_COVAR_ROWS, ctype );
+        calcCovarMatrix( _data, _covar, mean, (flags & ~(cv::COVAR_ROWS|cv::COVAR_COLS)) | cv::COVAR_ROWS, ctype );
 
-        if( (flags & CV_COVAR_USE_AVG) == 0 )
+        if( (flags & cv::COVAR_USE_AVG) == 0 )
         {
             mean = mean.reshape(1, size.height);
             mean.copyTo(_mean);
@@ -781,14 +781,14 @@ void calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mea
     }
 
     Mat data = _src.getMat(), mean;
-    CV_Assert( ((flags & CV_COVAR_ROWS) != 0) ^ ((flags & CV_COVAR_COLS) != 0) );
-    bool takeRows = (flags & CV_COVAR_ROWS) != 0;
+    CV_Assert( ((flags & cv::COVAR_ROWS) != 0) ^ ((flags & cv::COVAR_COLS) != 0) );
+    bool takeRows = (flags & cv::COVAR_ROWS) != 0;
     int type = data.type();
     int nsamples = takeRows ? data.rows : data.cols;
     CV_Assert( nsamples > 0 );
     Size size = takeRows ? Size(data.cols, 1) : Size(1, data.rows);
 
-    if( (flags & CV_COVAR_USE_AVG) != 0 )
+    if( (flags & cv::COVAR_USE_AVG) != 0 )
     {
         mean = _mean.getMat();
         ctype = std::max(std::max(CV_MAT_DEPTH(ctype >= 0 ? ctype : type), mean.depth()), CV_32F);
@@ -808,8 +808,8 @@ void calcCovarMatrix( InputArray _src, OutputArray _covar, InputOutputArray _mea
         mean = _mean.getMat();
     }
 
-    mulTransposed( data, _covar, ((flags & CV_COVAR_NORMAL) == 0) ^ takeRows,
-        mean, (flags & CV_COVAR_SCALE) != 0 ? 1./nsamples : 1, ctype );
+    mulTransposed( data, _covar, ((flags & cv::COVAR_NORMAL) == 0) ^ takeRows,
+        mean, (flags & cv::COVAR_SCALE) != 0 ? 1./nsamples : 1, ctype );
 }
 
 
@@ -921,7 +921,7 @@ void mulTransposed(InputArray _src, OutputArray _dst, bool ata,
     {
         MulTransposedFunc func = getMulTransposedFunc(stype, dtype, ata);
         if( !func )
-            CV_Error( CV_StsUnsupportedFormat, "" );
+            CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
         func( src, dst, delta, scale );
         completeSymm( dst, false );
@@ -979,7 +979,7 @@ typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
 
 static DotProdFunc getDotProdFunc(int depth)
 {
-    static DotProdFunc dotProdTab[] =
+    static DotProdFunc dotProdTab[CV_DEPTH_MAX] =
     {
         (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)GET_OPTIMIZED(dotProd_8s),
         (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
@@ -995,9 +995,18 @@ double Mat::dot(InputArray _mat) const
     CV_INSTRUMENT_REGION();
 
     Mat mat = _mat.getMat();
+    CV_Assert_N( mat.type() == type(), mat.size == size);
+
     int cn = channels();
+    if (this->dims <= 2)
+    {
+        double product = 0;
+        CALL_HAL_RET(dotProduct, cv_hal_dotProduct, product, this->data, this->step, mat.data, mat.step,
+                     this->cols * cn, this->rows, this->depth());
+    }
+
     DotProdFunc func = getDotProdFunc(depth());
-    CV_Assert_N( mat.type() == type(), mat.size == size, func != 0 );
+    CV_Assert(func != 0 );
 
     if( isContinuous() && mat.isContinuous() )
     {
@@ -1162,7 +1171,7 @@ cvCalcCovarMatrix( const CvArr** vecarr, int count,
     if( avgarr )
         mean = mean0 = cv::cvarrToMat(avgarr);
 
-    if( (flags & CV_COVAR_COLS) != 0 || (flags & CV_COVAR_ROWS) != 0 )
+    if( (flags & cv::COVAR_COLS) != 0 || (flags & cv::COVAR_ROWS) != 0 )
     {
 
         cv::Mat data = cv::cvarrToMat(vecarr[0]);

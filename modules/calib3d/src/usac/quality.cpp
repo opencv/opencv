@@ -69,7 +69,7 @@ public:
             else if (inlier_number - point < preemptive_thr)
                     break;
         // score is negative inlier number! If less then better
-        return {inlier_number, -static_cast<double>(inlier_number)};
+        return {inlier_number, -static_cast<float>(inlier_number)};
     }
 
     Score getScore (const std::vector<float> &errors) const override {
@@ -78,10 +78,10 @@ public:
             if (errors[point] < threshold)
                 inlier_number++;
         // score is negative inlier number! If less then better
-        return {inlier_number, -static_cast<double>(inlier_number)};
+        return {inlier_number, -static_cast<float>(inlier_number)};
     }
 
-    void setBestScore(double best_score_) override {
+    void setBestScore(float best_score_) override {
         if (best_score > best_score_) best_score = best_score_;
     }
 
@@ -106,18 +106,17 @@ protected:
     const Ptr<Error> error;
     const int points_size;
     const double threshold, k_msac;
-    double best_score, norm_thr, one_over_thr;
+    const float norm_thr, one_over_thr;
+    float best_score;
 public:
     MsacQualityImpl (int points_size_, double threshold_, const Ptr<Error> &error_, double k_msac_)
-            : error (error_), points_size (points_size_), threshold (threshold_), k_msac(k_msac_) {
-        best_score = std::numeric_limits<double>::max();
-        norm_thr = threshold*k_msac;
-        one_over_thr = 1 / norm_thr;
-    }
+            : error (error_), points_size (points_size_), threshold (threshold_), k_msac(k_msac_),
+              norm_thr(static_cast<float>(threshold*k_msac)), one_over_thr(1.f/norm_thr),
+              best_score(std::numeric_limits<float>::max()) {}
 
     inline Score getScore (const Mat &model) const override {
         error->setModelParameters(model);
-        double err, sum_errors = 0;
+        float err, sum_errors = 0;
         int inlier_number = 0;
         const auto preemptive_thr = points_size + best_score;
         for (int point = 0; point < points_size; point++) {
@@ -133,7 +132,7 @@ public:
     }
 
     Score getScore (const std::vector<float> &errors) const override {
-        double sum_errors = 0;
+        float sum_errors = 0;
         int inlier_number = 0;
         for (int point = 0; point < points_size; point++) {
             const auto err = errors[point];
@@ -146,7 +145,7 @@ public:
         return {inlier_number, sum_errors};
     }
 
-    void setBestScore(double best_score_) override {
+    void setBestScore(float best_score_) override {
         if (best_score > best_score_) best_score = best_score_;
     }
 
@@ -244,7 +243,7 @@ public:
             } else if (total_loss + point_idx > preemptive_thr)
                 break;
         }
-        return {num_tentative_inliers, total_loss};
+        return {num_tentative_inliers, (float)total_loss};
     }
 
     Score getScore (const std::vector<float> &errors) const override {
@@ -263,10 +262,10 @@ public:
                         (stored_complete_gamma_values[x] - gamma_value_of_k)) * norm_loss);
             }
         }
-        return {num_tentative_inliers, total_loss};
+        return {num_tentative_inliers, (float)total_loss};
     }
 
-    void setBestScore (double best_loss) override {
+    void setBestScore (float best_loss) override {
         if (previous_best_loss > best_loss) previous_best_loss = best_loss;
     }
 
@@ -317,7 +316,7 @@ public:
         return {inlier_number, Utils::findMedian (errors)};
     }
 
-    void setBestScore (double /*best_score*/) override {}
+    void setBestScore (float /*best_score*/) override {}
 
     int getPointsSize () const override { return points_size; }
     int getInliers (const Mat &model, std::vector<int> &inliers) const override
@@ -487,9 +486,9 @@ public:
         if (last_model_is_good && do_sprt) {
             out_score.inlier_number = tested_inliers;
             if (score_type == ScoreMethod::SCORE_METHOD_MSAC)
-                out_score.score = sum_errors;
+                out_score.score = static_cast<float>(sum_errors);
             else if (score_type == ScoreMethod::SCORE_METHOD_RANSAC)
-                out_score.score = -static_cast<double>(tested_inliers);
+                out_score.score = -static_cast<float>(tested_inliers);
             else out_score = quality->getScore(errors);
         }
         return last_model_is_good;

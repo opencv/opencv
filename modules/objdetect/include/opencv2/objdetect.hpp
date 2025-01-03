@@ -54,59 +54,61 @@
 @{
     @defgroup objdetect_cascade_classifier Cascade Classifier for Object Detection
 
-The object detector described below has been initially proposed by Paul Viola @cite Viola01 and
-improved by Rainer Lienhart @cite Lienhart02 .
+    The object detector described below has been initially proposed by Paul Viola @cite Viola01 and
+    improved by Rainer Lienhart @cite Lienhart02 .
 
-First, a classifier (namely a *cascade of boosted classifiers working with haar-like features*) is
-trained with a few hundred sample views of a particular object (i.e., a face or a car), called
-positive examples, that are scaled to the same size (say, 20x20), and negative examples - arbitrary
-images of the same size.
+    First, a classifier (namely a *cascade of boosted classifiers working with haar-like features*) is
+    trained with a few hundred sample views of a particular object (i.e., a face or a car), called
+    positive examples, that are scaled to the same size (say, 20x20), and negative examples - arbitrary
+    images of the same size.
 
-After a classifier is trained, it can be applied to a region of interest (of the same size as used
-during the training) in an input image. The classifier outputs a "1" if the region is likely to show
-the object (i.e., face/car), and "0" otherwise. To search for the object in the whole image one can
-move the search window across the image and check every location using the classifier. The
-classifier is designed so that it can be easily "resized" in order to be able to find the objects of
-interest at different sizes, which is more efficient than resizing the image itself. So, to find an
-object of an unknown size in the image the scan procedure should be done several times at different
-scales.
+    After a classifier is trained, it can be applied to a region of interest (of the same size as used
+    during the training) in an input image. The classifier outputs a "1" if the region is likely to show
+    the object (i.e., face/car), and "0" otherwise. To search for the object in the whole image one can
+    move the search window across the image and check every location using the classifier. The
+    classifier is designed so that it can be easily "resized" in order to be able to find the objects of
+    interest at different sizes, which is more efficient than resizing the image itself. So, to find an
+    object of an unknown size in the image the scan procedure should be done several times at different
+    scales.
 
-The word "cascade" in the classifier name means that the resultant classifier consists of several
-simpler classifiers (*stages*) that are applied subsequently to a region of interest until at some
-stage the candidate is rejected or all the stages are passed. The word "boosted" means that the
-classifiers at every stage of the cascade are complex themselves and they are built out of basic
-classifiers using one of four different boosting techniques (weighted voting). Currently Discrete
-Adaboost, Real Adaboost, Gentle Adaboost and Logitboost are supported. The basic classifiers are
-decision-tree classifiers with at least 2 leaves. Haar-like features are the input to the basic
-classifiers, and are calculated as described below. The current algorithm uses the following
-Haar-like features:
+    The word "cascade" in the classifier name means that the resultant classifier consists of several
+    simpler classifiers (*stages*) that are applied subsequently to a region of interest until at some
+    stage the candidate is rejected or all the stages are passed. The word "boosted" means that the
+    classifiers at every stage of the cascade are complex themselves and they are built out of basic
+    classifiers using one of four different boosting techniques (weighted voting). Currently Discrete
+    Adaboost, Real Adaboost, Gentle Adaboost and Logitboost are supported. The basic classifiers are
+    decision-tree classifiers with at least 2 leaves. Haar-like features are the input to the basic
+    classifiers, and are calculated as described below. The current algorithm uses the following
+    Haar-like features:
 
-![image](pics/haarfeatures.png)
+    ![image](pics/haarfeatures.png)
 
-The feature used in a particular classifier is specified by its shape (1a, 2b etc.), position within
-the region of interest and the scale (this scale is not the same as the scale used at the detection
-stage, though these two scales are multiplied). For example, in the case of the third line feature
-(2c) the response is calculated as the difference between the sum of image pixels under the
-rectangle covering the whole feature (including the two white stripes and the black stripe in the
-middle) and the sum of the image pixels under the black stripe multiplied by 3 in order to
-compensate for the differences in the size of areas. The sums of pixel values over a rectangular
-regions are calculated rapidly using integral images (see below and the integral description).
+    The feature used in a particular classifier is specified by its shape (1a, 2b etc.), position within
+    the region of interest and the scale (this scale is not the same as the scale used at the detection
+    stage, though these two scales are multiplied). For example, in the case of the third line feature
+    (2c) the response is calculated as the difference between the sum of image pixels under the
+    rectangle covering the whole feature (including the two white stripes and the black stripe in the
+    middle) and the sum of the image pixels under the black stripe multiplied by 3 in order to
+    compensate for the differences in the size of areas. The sums of pixel values over a rectangular
+    regions are calculated rapidly using integral images (see below and the integral description).
 
-Check @ref tutorial_cascade_classifier "the corresponding tutorial" for more details.
+    Check @ref tutorial_cascade_classifier "the corresponding tutorial" for more details.
 
-The following reference is for the detection part only. There is a separate application called
-opencv_traincascade that can train a cascade of boosted classifiers from a set of samples.
+    The following reference is for the detection part only. There is a separate application called
+    opencv_traincascade that can train a cascade of boosted classifiers from a set of samples.
 
-@note In the new C++ interface it is also possible to use LBP (local binary pattern) features in
-addition to Haar-like features. .. [Viola01] Paul Viola and Michael J. Jones. Rapid Object Detection
-using a Boosted Cascade of Simple Features. IEEE CVPR, 2001. The paper is available online at
-<https://github.com/SvHey/thesis/blob/master/Literature/ObjectDetection/violaJones_CVPR2001.pdf>
+    @note In the new C++ interface it is also possible to use LBP (local binary pattern) features in
+    addition to Haar-like features. .. [Viola01] Paul Viola and Michael J. Jones. Rapid Object Detection
+    using a Boosted Cascade of Simple Features. IEEE CVPR, 2001. The paper is available online at
+    <https://github.com/SvHey/thesis/blob/master/Literature/ObjectDetection/violaJones_CVPR2001.pdf>
 
     @defgroup objdetect_hog HOG (Histogram of Oriented Gradients) descriptor and object detector
     @defgroup objdetect_barcode Barcode detection and decoding
     @defgroup objdetect_qrcode QRCode detection and encoding
     @defgroup objdetect_dnn_face DNN-based face detection and recognition
-Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
+
+    Check @ref tutorial_dnn_face "the corresponding tutorial" for more details.
+
     @defgroup objdetect_common Common functions and classes
     @defgroup objdetect_aruco ArUco markers and boards detection for robust camera pose estimation
     @{
@@ -730,19 +732,21 @@ public:
         ECI_UTF8 = 26
     };
 
-    /** @brief QR code encoder parameters.
-     @param version The optional version of QR code (by default - maximum possible depending on
-                    the length of the string).
-     @param correction_level The optional level of error correction (by default - the lowest).
-     @param mode The optional encoding mode - Numeric, Alphanumeric, Byte, Kanji, ECI or Structured Append.
-     @param structure_number The optional number of QR codes to generate in Structured Append mode.
-    */
+    /** @brief QR code encoder parameters. */
     struct CV_EXPORTS_W_SIMPLE Params
     {
         CV_WRAP Params();
+
+        //! The optional version of QR code (by default - maximum possible depending on the length of the string).
         CV_PROP_RW int version;
+
+        //! The optional level of error correction (by default - the lowest).
         CV_PROP_RW CorrectionLevel correction_level;
+
+        //! The optional encoding mode - Numeric, Alphanumeric, Byte, Kanji, ECI or Structured Append.
         CV_PROP_RW EncodeMode mode;
+
+        //! The optional number of QR codes to generate in Structured Append mode.
         CV_PROP_RW int structure_number;
     };
 
@@ -852,7 +856,7 @@ public:
     CV_WRAP QRCodeDetectorAruco& setDetectorParameters(const QRCodeDetectorAruco::Params& params);
 
     /** @brief Aruco detector parameters are used to search for the finder patterns. */
-    CV_WRAP aruco::DetectorParameters getArucoParameters();
+    CV_WRAP const aruco::DetectorParameters& getArucoParameters() const;
 
     /** @brief Aruco detector parameters are used to search for the finder patterns. */
     CV_WRAP void setArucoParameters(const aruco::DetectorParameters& params);

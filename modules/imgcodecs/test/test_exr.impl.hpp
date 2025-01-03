@@ -192,6 +192,15 @@ TEST(Imgcodecs_EXR, read_YC_changeDepth)
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
 
+    const Mat img_rgb = cv::imread(filenameInput, IMREAD_COLOR_RGB);
+
+    ASSERT_FALSE(img_rgb.empty());
+    ASSERT_EQ(CV_8UC3, img_rgb.type());
+
+    cvtColor(img_rgb, img_rgb, COLOR_RGB2BGR);
+
+    EXPECT_TRUE(cvtest::norm(img, img_rgb, NORM_INF) == 0);
+
     // Cannot test writing, EXR encoder doesn't support 8U depth
 }
 
@@ -304,5 +313,28 @@ TEST(Imgcodecs_EXR, read_RGBA_unchanged)
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
+
+// See https://github.com/opencv/opencv/pull/26211
+// ( related with https://github.com/opencv/opencv/issues/26207 )
+TEST(Imgcodecs_EXR, imencode_regression_26207_extra)
+{
+    // CV_8U is not supported depth for EXR Encoder.
+    const cv::Mat src(100, 100, CV_8UC1, cv::Scalar::all(0));
+    std::vector<uchar> buf;
+    bool ret = false;
+    EXPECT_ANY_THROW(ret = imencode(".exr", src, buf));
+    EXPECT_FALSE(ret);
+}
+TEST(Imgcodecs_EXR, imwrite_regression_26207_extra)
+{
+    // CV_8U is not supported depth for EXR Encoder.
+    const cv::Mat src(100, 100, CV_8UC1, cv::Scalar::all(0));
+    const string filename = cv::tempfile(".exr");
+    bool ret = false;
+    EXPECT_ANY_THROW(ret = imwrite(filename, src));
+    EXPECT_FALSE(ret);
+    remove(filename.c_str());
+}
+
 
 }} // namespace

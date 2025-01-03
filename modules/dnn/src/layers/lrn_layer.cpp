@@ -121,7 +121,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -166,7 +166,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -483,8 +483,8 @@ public:
             axes.resize(ieInpNode.get_shape().size() - 2);
             std::iota(axes.begin(), axes.end(), 2);
         }
-        auto ngraph_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes.data());
-        auto lrn = std::make_shared<ngraph::op::LRN>(ieInpNode, ngraph_axes, alphaSize, beta, bias, size);
+        auto ngraph_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{axes.size()}, axes.data());
+        auto lrn = std::make_shared<ov::op::v0::LRN>(ieInpNode, ngraph_axes, alphaSize, beta, bias, size);
         return Ptr<BackendNode>(new InfEngineNgraphNode(lrn));
     }
 #endif  // HAVE_DNN_NGRAPH

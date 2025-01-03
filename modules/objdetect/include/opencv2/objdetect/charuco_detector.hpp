@@ -77,6 +77,9 @@ public:
      * If camera parameters are provided, the process is based in an approximated pose estimation, else it is based on local homography.
      * Only visible corners are returned. For each corner, its corresponding identifier is also returned in charucoIds.
      * @sa findChessboardCorners
+     * @note After OpenCV 4.6.0, there was an incompatible change in the ChArUco pattern generation algorithm for even row counts.
+     * Use cv::aruco::CharucoBoard::setLegacyPattern() to ensure compatibility with patterns created using OpenCV versions prior to 4.6.0.
+     * For more information, see the issue: https://github.com/opencv/opencv/issues/23152
      */
     CV_WRAP void detectBoard(InputArray image, OutputArray charucoCorners, OutputArray charucoIds,
                              InputOutputArrayOfArrays markerCorners = noArray(),

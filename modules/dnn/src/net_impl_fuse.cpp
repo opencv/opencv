@@ -728,6 +728,10 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                     if(inp_i_data->skip || inp_i_data->consumers.size() != 1)
                         break;
 #ifdef HAVE_CUDA
+                    /* Risk: Not every operation in "NaryEltwise" is supported in the CUDA backend. There is a chance
+                             that Concat's output is filled with data in both host and device, leading to data missing.
+                             See https://github.com/opencv/opencv/issues/24721 for more details.
+                    */
                     if (preferableBackend == DNN_BACKEND_CUDA &&
                         (inp_i_data->layerInstance->supportBackend(DNN_BACKEND_CUDA) == false ||
                          (inp_i_data->layerInstance->type != "Convolution" &&

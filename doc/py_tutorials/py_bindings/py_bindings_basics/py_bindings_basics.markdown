@@ -79,9 +79,12 @@ Functions are extended using `CV_EXPORTS_W` macro. An example is shown below.
 @code{.cpp}
 CV_EXPORTS_W void equalizeHist( InputArray src, OutputArray dst );
 @endcode
-Header parser can understand the input and output arguments from keywords like
-InputArray, OutputArray etc. But sometimes, we may need to hardcode inputs and outputs. For that,
-macros like `CV_OUT`, `CV_IN_OUT` etc. are used.
+Header parser can understand the input and output arguments from keywords like InputArray,
+OutputArray etc. The arguments semantics are kept in Python: anything that is modified in C++
+will be modified in Python. And vice-versa read-only Python objects cannot be modified by OpenCV,
+if they are used as output. Such situation will cause Python exception. Sometimes, the parameters
+that are passed by reference in C++ may be used as input, output or both.
+Macros `CV_OUT`, `CV_IN_OUT` allow to solve ambiguity and generate correct bindings.
 @code{.cpp}
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                      CV_OUT Point2f& center, CV_OUT float& radius );

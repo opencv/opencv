@@ -34,7 +34,7 @@ class aruco_objdetect_test(NewOpenCVTests):
                 aruco_dict = cv.aruco.getPredefinedDictionary(aruco_type[aruco_type_i])
                 board = cv.aruco.CharucoBoard((cols, rows), square_size, marker_size, aruco_dict)
                 charuco_detector = cv.aruco.CharucoDetector(board)
-                from_cv_img = board.generateImage((cols*square_size*10, rows*square_size*10))
+                from_cv_img = board.generateImage((cols*square_size, rows*square_size))
 
                 #draw desk using svg
                 fd1, filesvg = tempfile.mkstemp(prefix="out", suffix=".svg")
@@ -50,15 +50,20 @@ class aruco_objdetect_test(NewOpenCVTests):
                     pm.make_charuco_board()
                     pm.save()
                     drawing = svg2rlg(filesvg)
-                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=720)
+                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=72)
                     from_svg_img = cv.imread(filepng)
+                    _charucoCorners, _charuco_ids_svg, marker_corners_svg, marker_ids_svg = charuco_detector.detectBoard(from_svg_img)
+                    _charucoCorners, _charuco_ids_cv, marker_corners_cv, marker_ids_cv = charuco_detector.detectBoard(from_cv_img)
+                    marker_corners_svg_map, marker_corners_cv_map = {}, {}
+                    for i in range(len(marker_ids_svg)):
+                        marker_corners_svg_map[int(marker_ids_svg[i][0])] = marker_corners_svg[i]
+                    for i in range(len(marker_ids_cv)):
+                        marker_corners_cv_map[int(marker_ids_cv[i][0])] = marker_corners_cv[i]
 
-                    #test
-                    _charucoCorners, _charucoIds, markerCorners_svg, markerIds_svg = charuco_detector.detectBoard(from_svg_img)
-                    _charucoCorners, _charucoIds, markerCorners_cv, markerIds_cv = charuco_detector.detectBoard(from_cv_img)
-
-                    np.testing.assert_allclose(markerCorners_svg, markerCorners_cv, 0.1, 0.1)
-                    np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
+                    for key_svg in marker_corners_svg_map.keys():
+                        marker_svg = marker_corners_svg_map[key_svg]
+                        marker_cv = marker_corners_cv_map[key_svg]
+                        np.testing.assert_allclose(marker_svg, marker_cv, 0.1, 0.1)
                 finally:
                     if os.path.exists(filesvg):
                         os.remove(filesvg)
@@ -87,7 +92,7 @@ class aruco_objdetect_test(NewOpenCVTests):
                 aruco_dict = cv.aruco.getPredefinedDictionary(aruco_type)
                 board = cv.aruco.CharucoBoard((cols, rows), square_size, marker_size, aruco_dict)
                 charuco_detector = cv.aruco.CharucoDetector(board)
-                from_cv_img = board.generateImage((cols*square_size*10, rows*square_size*10))
+                from_cv_img = board.generateImage((cols*square_size, rows*square_size))
 
                 #draw desk using svg
                 fd1, filesvg = tempfile.mkstemp(prefix="out", suffix=".svg")
@@ -102,15 +107,22 @@ class aruco_objdetect_test(NewOpenCVTests):
                     pm.make_charuco_board()
                     pm.save()
                     drawing = svg2rlg(filesvg)
-                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=720)
+                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=72)
                     from_svg_img = cv.imread(filepng)
 
                     #test
-                    _charucoCorners, _charucoIds, markerCorners_svg, markerIds_svg = charuco_detector.detectBoard(from_svg_img)
-                    _charucoCorners, _charucoIds, markerCorners_cv, markerIds_cv = charuco_detector.detectBoard(from_cv_img)
+                    _charucoCorners, _charuco_ids_svg, marker_corners_svg, marker_ids_svg = charuco_detector.detectBoard(from_svg_img)
+                    _charucoCorners, _charuco_ids_cv, marker_corners_cv, marker_ids_cv = charuco_detector.detectBoard(from_cv_img)
+                    marker_corners_svg_map, marker_corners_cv_map = {}, {}
+                    for i in range(len(marker_ids_svg)):
+                        marker_corners_svg_map[int(marker_ids_svg[i][0])] = marker_corners_svg[i]
+                    for i in range(len(marker_ids_cv)):
+                        marker_corners_cv_map[int(marker_ids_cv[i][0])] = marker_corners_cv[i]
 
-                    np.testing.assert_allclose(markerCorners_svg, markerCorners_cv, 0.1, 0.1)
-                    np.testing.assert_allclose(markerIds_svg, markerIds_cv, 0.1, 0.1)
+                    for key_svg in marker_corners_svg_map.keys():
+                        marker_svg = marker_corners_svg_map[key_svg]
+                        marker_cv = marker_corners_cv_map[key_svg]
+                        np.testing.assert_allclose(marker_svg, marker_cv, 0.1, 0.1)
                 finally:
                     if os.path.exists(filesvg):
                         os.remove(filesvg)

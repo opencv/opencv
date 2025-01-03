@@ -30,6 +30,7 @@ PERF_TEST_P_(Perf_Barcode_multi, detect)
     }
     SANITY_CHECK_NOTHING();
     ASSERT_TRUE(res);
+    ASSERT_EQ(16ull, corners.size());
 }
 
 PERF_TEST_P_(Perf_Barcode_multi, detect_decode)
@@ -54,6 +55,8 @@ PERF_TEST_P_(Perf_Barcode_multi, detect_decode)
     }
     SANITY_CHECK_NOTHING();
     ASSERT_TRUE(res);
+    ASSERT_EQ(16ull, corners.size());
+    ASSERT_EQ(4ull, decoded_info.size());
 }
 
 PERF_TEST_P_(Perf_Barcode_single, detect)
@@ -76,6 +79,7 @@ PERF_TEST_P_(Perf_Barcode_single, detect)
     }
     SANITY_CHECK_NOTHING();
     ASSERT_TRUE(res);
+    ASSERT_EQ(4ull, corners.size());
 }
 
 PERF_TEST_P_(Perf_Barcode_single, detect_decode)
@@ -100,6 +104,8 @@ PERF_TEST_P_(Perf_Barcode_single, detect_decode)
     }
     SANITY_CHECK_NOTHING();
     ASSERT_TRUE(res);
+    ASSERT_EQ(4ull, corners.size());
+    ASSERT_EQ(1ull, decoded_info.size());
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Barcode_multi,

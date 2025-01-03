@@ -141,7 +141,7 @@ CV_ALWAYS_INLINE uint64_t v_reduce_min(const v_uint64x2& a)
 
 CV_ALWAYS_INLINE v_uint64x2 v_select(const v_uint64x2& mask, const v_uint64x2& a, const v_uint64x2& b)
 {
-    return b ^ ((a ^ b) & mask);
+    return v_xor(b, v_and(v_xor(a, b), mask));
 }
 #endif
 
@@ -151,16 +151,16 @@ minMaxIdx_reduce_##suffix( VT &valMin, VT &valMax, IT &idxMin, IT &idxMax, IT &n
                   T &minVal, T &maxVal, size_t &minIdx, size_t &maxIdx, \
                   size_t delta ) \
 { \
-    if ( v_check_any(idxMin != none) ) \
+    if ( v_check_any(v_ne(idxMin, none)) ) \
     { \
         minVal = v_reduce_min(valMin); \
-        minIdx = (size_t)v_reduce_min(v_select(v_reinterpret_as_##suffix2(v_setall_##suffix((IR)minVal) == valMin), \
+        minIdx = (size_t)v_reduce_min(v_select(v_reinterpret_as_##suffix2(v_eq(v_setall_##suffix((IR)minVal), valMin)), \
                      idxMin, v_setall_##suffix2(maxLimit))) + delta; \
     } \
-    if ( v_check_any(idxMax != none) ) \
+    if ( v_check_any(v_ne(idxMax, none)) ) \
     { \
         maxVal = v_reduce_max(valMax); \
-        maxIdx = (size_t)v_reduce_min(v_select(v_reinterpret_as_##suffix2(v_setall_##suffix((IR)maxVal) == valMax), \
+        maxIdx = (size_t)v_reduce_min(v_select(v_reinterpret_as_##suffix2(v_eq(v_setall_##suffix((IR)maxVal), valMax)), \
                      idxMax, v_setall_##suffix2(maxLimit))) + delta; \
     } \
 }
@@ -210,18 +210,18 @@ static void minMaxIdx_8u(const uchar* src, const uchar* mask, int* minval, int* 
                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
 {
 #if CV_SIMD128
-    if ( len >= v_uint8x16::nlanes )
+    if ( len >= VTraits<v_uint8x16>::vlanes() )
     {
         int j, len0;
         int minVal, maxVal;
         size_t minIdx, maxIdx;
 
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
-                        (int)0, (int)UCHAR_MAX, v_uint8x16::nlanes, len, startidx, j, len0 );
+                        (int)0, (int)UCHAR_MAX, VTraits<v_uint8x16>::vlanes(), len, startidx, j, len0 );
 
-        if ( j <= len0 - v_uint8x16::nlanes )
+        if ( j <= len0 - VTraits<v_uint8x16>::vlanes() )
         {
-            v_uint8x16 inc = v_setall_u8(v_uint8x16::nlanes);
+            v_uint8x16 inc = v_setall_u8((uchar)VTraits<v_uint8x16>::vlanes());
             v_uint8x16 none = v_reinterpret_as_u8(v_setall_s8(-1));
             v_uint8x16 idxStart(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
@@ -235,31 +235,31 @@ static void minMaxIdx_8u(const uchar* src, const uchar* mask, int* minval, int* 
 
                 if ( !mask )
                 {
-                    for( ; k < std::min(len0, j + 15 * v_uint8x16::nlanes); k += v_uint8x16::nlanes )
+                    for( ; k < std::min(len0, j + 15 * VTraits<v_uint8x16>::vlanes()); k += VTraits<v_uint8x16>::vlanes() )
                     {
                         v_uint8x16 data = v_load(src + k);
-                        v_uint8x16 cmpMin = (data < valMin);
-                        v_uint8x16 cmpMax = (data > valMax);
+                        v_uint8x16 cmpMin = (v_lt(data, valMin));
+                        v_uint8x16 cmpMax = (v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
                 else
                 {
-                    for( ; k < std::min(len0, j + 15 * v_uint8x16::nlanes); k += v_uint8x16::nlanes )
+                    for( ; k < std::min(len0, j + 15 * VTraits<v_uint8x16>::vlanes()); k += VTraits<v_uint8x16>::vlanes() )
                     {
                         v_uint8x16 data = v_load(src + k);
-                        v_uint8x16 maskVal = v_load(mask + k) != v_setzero_u8();
-                        v_uint8x16 cmpMin = (data < valMin) & maskVal;
-                        v_uint8x16 cmpMax = (data > valMax) & maskVal;
+                        v_uint8x16 maskVal = v_ne(v_load(mask + k), v_setzero_u8());
+                        v_uint8x16 cmpMin = v_and(v_lt(data, valMin), maskVal);
+                        v_uint8x16 cmpMax = v_and(v_gt(data, valMax), maskVal);
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(cmpMin, data, valMin);
                         valMax = v_select(cmpMax, data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
 
@@ -287,18 +287,18 @@ static void minMaxIdx_8s(const schar* src, const uchar* mask, int* minval, int* 
                          size_t* minidx, size_t* maxidx, int len, size_t startidx )
 {
 #if CV_SIMD128
-    if ( len >= v_int8x16::nlanes )
+    if ( len >= VTraits<v_int8x16>::vlanes() )
     {
         int j, len0;
         int minVal, maxVal;
         size_t minIdx, maxIdx;
 
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
-                        (int)SCHAR_MIN, (int)SCHAR_MAX, v_int8x16::nlanes, len, startidx, j, len0 );
+                        (int)SCHAR_MIN, (int)SCHAR_MAX, VTraits<v_int8x16>::vlanes(), len, startidx, j, len0 );
 
-        if ( j <= len0 - v_int8x16::nlanes )
+        if ( j <= len0 - VTraits<v_int8x16>::vlanes() )
         {
-            v_uint8x16 inc = v_setall_u8(v_int8x16::nlanes);
+            v_uint8x16 inc = v_setall_u8((uchar)VTraits<v_int8x16>::vlanes());
             v_uint8x16 none = v_reinterpret_as_u8(v_setall_s8(-1));
             v_uint8x16 idxStart(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 
@@ -312,31 +312,31 @@ static void minMaxIdx_8s(const schar* src, const uchar* mask, int* minval, int* 
 
                 if ( !mask )
                 {
-                    for( ; k < std::min(len0, j + 15 * v_int8x16::nlanes); k += v_int8x16::nlanes )
+                    for( ; k < std::min(len0, j + 15 * VTraits<v_int8x16>::vlanes()); k += VTraits<v_int8x16>::vlanes() )
                     {
                         v_int8x16 data = v_load(src + k);
-                        v_uint8x16 cmpMin = v_reinterpret_as_u8(data < valMin);
-                        v_uint8x16 cmpMax = v_reinterpret_as_u8(data > valMax);
+                        v_uint8x16 cmpMin = v_reinterpret_as_u8(v_lt(data, valMin));
+                        v_uint8x16 cmpMax = v_reinterpret_as_u8(v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
                 else
                 {
-                    for( ; k < std::min(len0, j + 15 * v_int8x16::nlanes); k += v_int8x16::nlanes )
+                    for( ; k < std::min(len0, j + 15 * VTraits<v_int8x16>::vlanes()); k += VTraits<v_int8x16>::vlanes() )
                     {
                         v_int8x16 data = v_load(src + k);
-                        v_uint8x16 maskVal = v_load(mask + k) != v_setzero_u8();
-                        v_uint8x16 cmpMin = v_reinterpret_as_u8(data < valMin) & maskVal;
-                        v_uint8x16 cmpMax = v_reinterpret_as_u8(data > valMax) & maskVal;
+                        v_uint8x16 maskVal = v_ne(v_load(mask + k), v_setzero_u8());
+                        v_uint8x16 cmpMin = v_and(v_reinterpret_as_u8(v_lt(data, valMin)), maskVal);
+                        v_uint8x16 cmpMax = v_and(v_reinterpret_as_u8(v_gt(data, valMax)), maskVal);
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(v_reinterpret_as_s8(cmpMin), data, valMin);
                         valMax = v_select(v_reinterpret_as_s8(cmpMax), data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
 
@@ -364,18 +364,18 @@ static void minMaxIdx_16u(const ushort* src, const uchar* mask, int* minval, int
                           size_t* minidx, size_t* maxidx, int len, size_t startidx )
 {
 #if CV_SIMD128
-    if ( len >= v_uint16x8::nlanes )
+    if ( len >= VTraits<v_uint16x8>::vlanes() )
     {
         int j, len0;
         int minVal, maxVal;
         size_t minIdx, maxIdx;
 
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
-                        (int)0, (int)USHRT_MAX, v_uint16x8::nlanes, len, startidx, j, len0 );
+                        (int)0, (int)USHRT_MAX, VTraits<v_uint16x8>::vlanes(), len, startidx, j, len0 );
 
-        if ( j <= len0 - v_uint16x8::nlanes )
+        if ( j <= len0 - VTraits<v_uint16x8>::vlanes() )
         {
-            v_uint16x8 inc = v_setall_u16(v_uint16x8::nlanes);
+            v_uint16x8 inc = v_setall_u16((uchar)VTraits<v_uint16x8>::vlanes());
             v_uint16x8 none = v_reinterpret_as_u16(v_setall_s16(-1));
             v_uint16x8 idxStart(0, 1, 2, 3, 4, 5, 6, 7);
 
@@ -389,31 +389,31 @@ static void minMaxIdx_16u(const ushort* src, const uchar* mask, int* minval, int
 
                 if ( !mask )
                 {
-                    for( ; k < std::min(len0, j + 8191 * v_uint16x8::nlanes); k += v_uint16x8::nlanes )
+                    for( ; k < std::min(len0, j + 8191 * VTraits<v_uint16x8>::vlanes()); k += VTraits<v_uint16x8>::vlanes() )
                     {
                         v_uint16x8 data = v_load(src + k);
-                        v_uint16x8 cmpMin = (data < valMin);
-                        v_uint16x8 cmpMax = (data > valMax);
+                        v_uint16x8 cmpMin = (v_lt(data, valMin));
+                        v_uint16x8 cmpMax = (v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
                 else
                 {
-                    for( ; k < std::min(len0, j + 8191 * v_uint16x8::nlanes); k += v_uint16x8::nlanes )
+                    for( ; k < std::min(len0, j + 8191 * VTraits<v_uint16x8>::vlanes()); k += VTraits<v_uint16x8>::vlanes() )
                     {
                         v_uint16x8 data = v_load(src + k);
-                        v_uint16x8 maskVal = v_load_expand(mask + k) != v_setzero_u16();
-                        v_uint16x8 cmpMin = (data < valMin) & maskVal;
-                        v_uint16x8 cmpMax = (data > valMax) & maskVal;
+                        v_uint16x8 maskVal = v_ne(v_load_expand(mask + k), v_setzero_u16());
+                        v_uint16x8 cmpMin = v_and(v_lt(data, valMin), maskVal);
+                        v_uint16x8 cmpMax = v_and(v_gt(data, valMax), maskVal);
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(cmpMin, data, valMin);
                         valMax = v_select(cmpMax, data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
 
@@ -441,18 +441,18 @@ static void minMaxIdx_16s(const short* src, const uchar* mask, int* minval, int*
                           size_t* minidx, size_t* maxidx, int len, size_t startidx )
 {
 #if CV_SIMD128
-    if ( len >= v_int16x8::nlanes )
+    if ( len >= VTraits<v_int16x8>::vlanes() )
     {
         int j, len0;
         int minVal, maxVal;
         size_t minIdx, maxIdx;
 
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
-                        (int)SHRT_MIN, (int)SHRT_MAX, v_int16x8::nlanes, len, startidx, j, len0 );
+                        (int)SHRT_MIN, (int)SHRT_MAX, VTraits<v_int16x8>::vlanes(), len, startidx, j, len0 );
 
-        if ( j <= len0 - v_int16x8::nlanes )
+        if ( j <= len0 - VTraits<v_int16x8>::vlanes() )
         {
-            v_uint16x8 inc = v_setall_u16(v_int16x8::nlanes);
+            v_uint16x8 inc = v_setall_u16((uchar)VTraits<v_int16x8>::vlanes());
             v_uint16x8 none = v_reinterpret_as_u16(v_setall_s16(-1));
             v_uint16x8 idxStart(0, 1, 2, 3, 4, 5, 6, 7);
 
@@ -466,31 +466,31 @@ static void minMaxIdx_16s(const short* src, const uchar* mask, int* minval, int*
 
                 if ( !mask )
                 {
-                    for( ; k < std::min(len0, j + 8191 * v_int16x8::nlanes); k += v_int16x8::nlanes )
+                    for( ; k < std::min(len0, j + 8191 * VTraits<v_int16x8>::vlanes()); k += VTraits<v_int16x8>::vlanes() )
                     {
                         v_int16x8 data = v_load(src + k);
-                        v_uint16x8 cmpMin = v_reinterpret_as_u16(data < valMin);
-                        v_uint16x8 cmpMax = v_reinterpret_as_u16(data > valMax);
+                        v_uint16x8 cmpMin = v_reinterpret_as_u16(v_lt(data, valMin));
+                        v_uint16x8 cmpMax = v_reinterpret_as_u16(v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
                 else
                 {
-                    for( ; k < std::min(len0, j + 8191 * v_int16x8::nlanes); k += v_int16x8::nlanes )
+                    for( ; k < std::min(len0, j + 8191 * VTraits<v_int16x8>::vlanes()); k += VTraits<v_int16x8>::vlanes() )
                     {
                         v_int16x8 data = v_load(src + k);
-                        v_uint16x8 maskVal = v_load_expand(mask + k) != v_setzero_u16();
-                        v_uint16x8 cmpMin = v_reinterpret_as_u16(data < valMin) & maskVal;
-                        v_uint16x8 cmpMax = v_reinterpret_as_u16(data > valMax) & maskVal;
+                        v_uint16x8 maskVal = v_ne(v_load_expand(mask + k), v_setzero_u16());
+                        v_uint16x8 cmpMin = v_and(v_reinterpret_as_u16(v_lt(data, valMin)), maskVal);
+                        v_uint16x8 cmpMax = v_and(v_reinterpret_as_u16(v_gt(data, valMax)), maskVal);
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(v_reinterpret_as_s16(cmpMin), data, valMin);
                         valMax = v_select(v_reinterpret_as_s16(cmpMax), data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
 
@@ -518,14 +518,14 @@ static void minMaxIdx_32s(const int* src, const uchar* mask, int* minval, int* m
                           size_t* minidx, size_t* maxidx, int len, size_t startidx )
 {
 #if CV_SIMD128
-    if ( len >= 2 * v_int32x4::nlanes )
+    if ( len >= 2 * VTraits<v_int32x4>::vlanes() )
     {
-        int j = 0, len0 = len & -(2 * v_int32x4::nlanes);
+        int j = 0, len0 = len & -(2 * VTraits<v_int32x4>::vlanes());
         int minVal = *minval, maxVal = *maxval;
         size_t minIdx = *minidx, maxIdx = *maxidx;
 
         {
-            v_uint32x4 inc = v_setall_u32(v_int32x4::nlanes);
+            v_uint32x4 inc = v_setall_u32(VTraits<v_int32x4>::vlanes());
             v_uint32x4 none = v_reinterpret_as_u32(v_setall_s32(-1));
             v_uint32x4 idxStart(0, 1, 2, 3);
 
@@ -539,49 +539,49 @@ static void minMaxIdx_32s(const int* src, const uchar* mask, int* minval, int* m
 
                 if ( !mask )
                 {
-                    for( ; k < std::min(len0, j + 32766 * 2 * v_int32x4::nlanes); k += 2 * v_int32x4::nlanes )
+                    for( ; k < std::min(len0, j + 32766 * 2 * VTraits<v_int32x4>::vlanes()); k += 2 * VTraits<v_int32x4>::vlanes() )
                     {
                         v_int32x4 data = v_load(src + k);
-                        v_uint32x4 cmpMin = v_reinterpret_as_u32(data < valMin);
-                        v_uint32x4 cmpMax = v_reinterpret_as_u32(data > valMax);
+                        v_uint32x4 cmpMin = v_reinterpret_as_u32(v_lt(data, valMin));
+                        v_uint32x4 cmpMax = v_reinterpret_as_u32(v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
-                        data = v_load(src + k + v_int32x4::nlanes);
-                        cmpMin = v_reinterpret_as_u32(data < valMin);
-                        cmpMax = v_reinterpret_as_u32(data > valMax);
+                        idx = v_add(idx, inc);
+                        data = v_load(src + k + VTraits<v_int32x4>::vlanes());
+                        cmpMin = v_reinterpret_as_u32(v_lt(data, valMin));
+                        cmpMax = v_reinterpret_as_u32(v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
                 else
                 {
-                    for( ; k < std::min(len0, j + 32766 * 2 * v_int32x4::nlanes); k += 2 * v_int32x4::nlanes )
+                    for( ; k < std::min(len0, j + 32766 * 2 * VTraits<v_int32x4>::vlanes()); k += 2 * VTraits<v_int32x4>::vlanes() )
                     {
                         v_int32x4 data = v_load(src + k);
-                        v_uint16x8 maskVal = v_load_expand(mask + k) != v_setzero_u16();
+                        v_uint16x8 maskVal = v_ne(v_load_expand(mask + k), v_setzero_u16());
                         v_int32x4 maskVal1, maskVal2;
                         v_expand(v_reinterpret_as_s16(maskVal), maskVal1, maskVal2);
-                        v_uint32x4 cmpMin = v_reinterpret_as_u32((data < valMin) & maskVal1);
-                        v_uint32x4 cmpMax = v_reinterpret_as_u32((data > valMax) & maskVal1);
+                        v_uint32x4 cmpMin = v_reinterpret_as_u32(v_and(v_lt(data, valMin), maskVal1));
+                        v_uint32x4 cmpMax = v_reinterpret_as_u32(v_and(v_gt(data, valMax), maskVal1));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(v_reinterpret_as_s32(cmpMin), data, valMin);
                         valMax = v_select(v_reinterpret_as_s32(cmpMax), data, valMax);
-                        idx += inc;
-                        data = v_load(src + k + v_int32x4::nlanes);
-                        cmpMin = v_reinterpret_as_u32((data < valMin) & maskVal2);
-                        cmpMax = v_reinterpret_as_u32((data > valMax) & maskVal2);
+                        idx = v_add(idx, inc);
+                        data = v_load(src + k + VTraits<v_int32x4>::vlanes());
+                        cmpMin = v_reinterpret_as_u32(v_and(v_lt(data, valMin), maskVal2));
+                        cmpMax = v_reinterpret_as_u32(v_and(v_gt(data, valMax), maskVal2));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(v_reinterpret_as_s32(cmpMin), data, valMin);
                         valMax = v_select(v_reinterpret_as_s32(cmpMax), data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
 
@@ -609,18 +609,18 @@ static void minMaxIdx_32f(const float* src, const uchar* mask, float* minval, fl
                           size_t* minidx, size_t* maxidx, int len, size_t startidx )
 {
 #if CV_SIMD128
-    if ( len >= 2 * v_float32x4::nlanes )
+    if ( len >= 2 * VTraits<v_float32x4>::vlanes() )
     {
         int j, len0;
         float minVal, maxVal;
         size_t minIdx, maxIdx;
 
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
-                        FLT_MIN, FLT_MAX, 2 * v_float32x4::nlanes, len, startidx, j, len0 );
+                        FLT_MIN, FLT_MAX, 2 * VTraits<v_float32x4>::vlanes(), len, startidx, j, len0 );
 
-        if ( j <= len0 - 2 * v_float32x4::nlanes )
+        if ( j <= len0 - 2 * VTraits<v_float32x4>::vlanes() )
         {
-            v_uint32x4 inc = v_setall_u32(v_float32x4::nlanes);
+            v_uint32x4 inc = v_setall_u32(VTraits<v_float32x4>::vlanes());
             v_uint32x4 none = v_reinterpret_as_u32(v_setall_s32(-1));
             v_uint32x4 idxStart(0, 1, 2, 3);
 
@@ -634,49 +634,49 @@ static void minMaxIdx_32f(const float* src, const uchar* mask, float* minval, fl
 
                 if ( !mask )
                 {
-                    for( ; k < std::min(len0, j + 32766 * 2 * v_float32x4::nlanes); k += 2 * v_float32x4::nlanes )
+                    for( ; k < std::min(len0, j + 32766 * 2 * VTraits<v_float32x4>::vlanes()); k += 2 * VTraits<v_float32x4>::vlanes() )
                     {
                         v_float32x4 data = v_load(src + k);
-                        v_uint32x4 cmpMin = v_reinterpret_as_u32(data < valMin);
-                        v_uint32x4 cmpMax = v_reinterpret_as_u32(data > valMax);
+                        v_uint32x4 cmpMin = v_reinterpret_as_u32(v_lt(data, valMin));
+                        v_uint32x4 cmpMax = v_reinterpret_as_u32(v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
-                        data = v_load(src + k + v_float32x4::nlanes);
-                        cmpMin = v_reinterpret_as_u32(data < valMin);
-                        cmpMax = v_reinterpret_as_u32(data > valMax);
+                        idx = v_add(idx, inc);
+                        data = v_load(src + k + VTraits<v_float32x4>::vlanes());
+                        cmpMin = v_reinterpret_as_u32(v_lt(data, valMin));
+                        cmpMax = v_reinterpret_as_u32(v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
                 else
                 {
-                    for( ; k < std::min(len0, j + 32766 * 2 * v_float32x4::nlanes); k += 2 * v_float32x4::nlanes )
+                    for( ; k < std::min(len0, j + 32766 * 2 * VTraits<v_float32x4>::vlanes()); k += 2 * VTraits<v_float32x4>::vlanes() )
                     {
                         v_float32x4 data = v_load(src + k);
-                        v_uint16x8 maskVal = v_load_expand(mask + k) != v_setzero_u16();
+                        v_uint16x8 maskVal = v_ne(v_load_expand(mask + k), v_setzero_u16());
                         v_int32x4 maskVal1, maskVal2;
                         v_expand(v_reinterpret_as_s16(maskVal), maskVal1, maskVal2);
-                        v_uint32x4 cmpMin = v_reinterpret_as_u32(v_reinterpret_as_s32(data < valMin) & maskVal1);
-                        v_uint32x4 cmpMax = v_reinterpret_as_u32(v_reinterpret_as_s32(data > valMax) & maskVal1);
+                        v_uint32x4 cmpMin = v_reinterpret_as_u32(v_and(v_reinterpret_as_s32(v_lt(data, valMin)), maskVal1));
+                        v_uint32x4 cmpMax = v_reinterpret_as_u32(v_and(v_reinterpret_as_s32(v_gt(data, valMax)), maskVal1));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(v_reinterpret_as_f32(cmpMin), data, valMin);
                         valMax = v_select(v_reinterpret_as_f32(cmpMax), data, valMax);
-                        idx += inc;
-                        data = v_load(src + k + v_float32x4::nlanes);
-                        cmpMin = v_reinterpret_as_u32(v_reinterpret_as_s32(data < valMin) & maskVal2);
-                        cmpMax = v_reinterpret_as_u32(v_reinterpret_as_s32(data > valMax) & maskVal2);
+                        idx = v_add(idx, inc);
+                        data = v_load(src + k + VTraits<v_float32x4>::vlanes());
+                        cmpMin = v_reinterpret_as_u32(v_and(v_reinterpret_as_s32(v_lt(data, valMin)), maskVal2));
+                        cmpMax = v_reinterpret_as_u32(v_and(v_reinterpret_as_s32(v_gt(data, valMax)), maskVal2));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(v_reinterpret_as_f32(cmpMin), data, valMin);
                         valMax = v_select(v_reinterpret_as_f32(cmpMax), data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
 
@@ -704,18 +704,18 @@ static void minMaxIdx_64f(const double* src, const uchar* mask, double* minval, 
                           size_t* minidx, size_t* maxidx, int len, size_t startidx )
 {
 #if CV_SIMD128_64F
-    if ( len >= 4 * v_float64x2::nlanes )
+    if ( len >= 4 * VTraits<v_float64x2>::vlanes() )
     {
         int j, len0;
         double minVal, maxVal;
         size_t minIdx, maxIdx;
 
         minMaxIdx_init( src, mask, minval, maxval, minidx, maxidx, minVal, maxVal, minIdx, maxIdx,
-                        DBL_MIN, DBL_MAX, 4 * v_float64x2::nlanes, len, startidx, j, len0 );
+                        DBL_MIN, DBL_MAX, 4 * VTraits<v_float64x2>::vlanes(), len, startidx, j, len0 );
 
-        if ( j <= len0 - 4 * v_float64x2::nlanes )
+        if ( j <= len0 - 4 * VTraits<v_float64x2>::vlanes() )
         {
-            v_uint64x2 inc = v_setall_u64(v_float64x2::nlanes);
+            v_uint64x2 inc = v_setall_u64(VTraits<v_float64x2>::vlanes());
             v_uint64x2 none = v_reinterpret_as_u64(v_setall_s64(-1));
             v_uint64x2 idxStart(0, 1);
 
@@ -729,84 +729,84 @@ static void minMaxIdx_64f(const double* src, const uchar* mask, double* minval, 
 
                 if ( !mask )
                 {
-                    for( ; k < std::min(len0, j + 32764 * 4 * v_float64x2::nlanes); k += 4 * v_float64x2::nlanes )
+                    for( ; k < std::min(len0, j + 32764 * 4 * VTraits<v_float64x2>::vlanes()); k += 4 * VTraits<v_float64x2>::vlanes() )
                     {
                         v_float64x2 data = v_load(src + k);
-                        v_uint64x2 cmpMin = v_reinterpret_as_u64(data < valMin);
-                        v_uint64x2 cmpMax = v_reinterpret_as_u64(data > valMax);
+                        v_uint64x2 cmpMin = v_reinterpret_as_u64(v_lt(data, valMin));
+                        v_uint64x2 cmpMax = v_reinterpret_as_u64(v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
-                        data = v_load(src + k + v_float64x2::nlanes);
-                        cmpMin = v_reinterpret_as_u64(data < valMin);
-                        cmpMax = v_reinterpret_as_u64(data > valMax);
+                        idx = v_add(idx, inc);
+                        data = v_load(src + k + VTraits<v_float64x2>::vlanes());
+                        cmpMin = v_reinterpret_as_u64(v_lt(data, valMin));
+                        cmpMax = v_reinterpret_as_u64(v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
-                        data = v_load(src + k + 2 * v_float64x2::nlanes);
-                        cmpMin = v_reinterpret_as_u64(data < valMin);
-                        cmpMax = v_reinterpret_as_u64(data > valMax);
+                        idx = v_add(idx, inc);
+                        data = v_load(src + k + 2 * VTraits<v_float64x2>::vlanes());
+                        cmpMin = v_reinterpret_as_u64(v_lt(data, valMin));
+                        cmpMax = v_reinterpret_as_u64(v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
-                        data = v_load(src + k + 3 * v_float64x2::nlanes);
-                        cmpMin = v_reinterpret_as_u64(data < valMin);
-                        cmpMax = v_reinterpret_as_u64(data > valMax);
+                        idx = v_add(idx, inc);
+                        data = v_load(src + k + 3 * VTraits<v_float64x2>::vlanes());
+                        cmpMin = v_reinterpret_as_u64(v_lt(data, valMin));
+                        cmpMax = v_reinterpret_as_u64(v_gt(data, valMax));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_min(data, valMin);
                         valMax = v_max(data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
                 else
                 {
-                    for( ; k < std::min(len0, j + 32764 * 4 * v_float64x2::nlanes); k += 4 * v_float64x2::nlanes )
+                    for( ; k < std::min(len0, j + 32764 * 4 * VTraits<v_float64x2>::vlanes()); k += 4 * VTraits<v_float64x2>::vlanes() )
                     {
                         v_float64x2 data = v_load(src + k);
-                        v_uint16x8 maskVal = v_load_expand(mask + k) != v_setzero_u16();
+                        v_uint16x8 maskVal = v_ne(v_load_expand(mask + k), v_setzero_u16());
                         v_int32x4 maskVal1, maskVal2;
                         v_expand(v_reinterpret_as_s16(maskVal), maskVal1, maskVal2);
                         v_int64x2 maskVal3, maskVal4;
                         v_expand(maskVal1, maskVal3, maskVal4);
-                        v_uint64x2 cmpMin = v_reinterpret_as_u64(v_reinterpret_as_s64(data < valMin) & maskVal3);
-                        v_uint64x2 cmpMax = v_reinterpret_as_u64(v_reinterpret_as_s64(data > valMax) & maskVal3);
+                        v_uint64x2 cmpMin = v_reinterpret_as_u64(v_and(v_reinterpret_as_s64(v_lt(data, valMin)), maskVal3));
+                        v_uint64x2 cmpMax = v_reinterpret_as_u64(v_and(v_reinterpret_as_s64(v_gt(data, valMax)), maskVal3));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(v_reinterpret_as_f64(cmpMin), data, valMin);
                         valMax = v_select(v_reinterpret_as_f64(cmpMax), data, valMax);
-                        idx += inc;
-                        data = v_load(src + k + v_float64x2::nlanes);
-                        cmpMin = v_reinterpret_as_u64(v_reinterpret_as_s64(data < valMin) & maskVal4);
-                        cmpMax = v_reinterpret_as_u64(v_reinterpret_as_s64(data > valMax) & maskVal4);
+                        idx = v_add(idx, inc);
+                        data = v_load(src + k + VTraits<v_float64x2>::vlanes());
+                        cmpMin = v_reinterpret_as_u64(v_and(v_reinterpret_as_s64(v_lt(data, valMin)), maskVal4));
+                        cmpMax = v_reinterpret_as_u64(v_and(v_reinterpret_as_s64(v_gt(data, valMax)), maskVal4));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(v_reinterpret_as_f64(cmpMin), data, valMin);
                         valMax = v_select(v_reinterpret_as_f64(cmpMax), data, valMax);
-                        idx += inc;
-                        data = v_load(src + k + 2 * v_float64x2::nlanes);
+                        idx = v_add(idx, inc);
+                        data = v_load(src + k + 2 * VTraits<v_float64x2>::vlanes());
                         v_expand(maskVal2, maskVal3, maskVal4);
-                        cmpMin = v_reinterpret_as_u64(v_reinterpret_as_s64(data < valMin) & maskVal3);
-                        cmpMax = v_reinterpret_as_u64(v_reinterpret_as_s64(data > valMax) & maskVal3);
+                        cmpMin = v_reinterpret_as_u64(v_and(v_reinterpret_as_s64(v_lt(data, valMin)), maskVal3));
+                        cmpMax = v_reinterpret_as_u64(v_and(v_reinterpret_as_s64(v_gt(data, valMax)), maskVal3));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(v_reinterpret_as_f64(cmpMin), data, valMin);
                         valMax = v_select(v_reinterpret_as_f64(cmpMax), data, valMax);
-                        idx += inc;
-                        data = v_load(src + k + 3 * v_float64x2::nlanes);
-                        cmpMin = v_reinterpret_as_u64(v_reinterpret_as_s64(data < valMin) & maskVal4);
-                        cmpMax = v_reinterpret_as_u64(v_reinterpret_as_s64(data > valMax) & maskVal4);
+                        idx = v_add(idx, inc);
+                        data = v_load(src + k + 3 * VTraits<v_float64x2>::vlanes());
+                        cmpMin = v_reinterpret_as_u64(v_and(v_reinterpret_as_s64(v_lt(data, valMin)), maskVal4));
+                        cmpMax = v_reinterpret_as_u64(v_and(v_reinterpret_as_s64(v_gt(data, valMax)), maskVal4));
                         idxMin = v_select(cmpMin, idx, idxMin);
                         idxMax = v_select(cmpMax, idx, idxMax);
                         valMin = v_select(v_reinterpret_as_f64(cmpMin), data, valMin);
                         valMax = v_select(v_reinterpret_as_f64(cmpMax), data, valMax);
-                        idx += inc;
+                        idx = v_add(idx, inc);
                     }
                 }
 
@@ -834,7 +834,7 @@ typedef void (*MinMaxIdxFunc)(const uchar*, const uchar*, int*, int*, size_t*, s
 
 static MinMaxIdxFunc getMinmaxTab(int depth)
 {
-    static MinMaxIdxFunc minmaxTab[] =
+    static MinMaxIdxFunc minmaxTab[CV_DEPTH_MAX] =
     {
         (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8s),
         (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16s),
@@ -846,6 +846,8 @@ static MinMaxIdxFunc getMinmaxTab(int depth)
     return minmaxTab[depth];
 }
 
+// The function expects 1-based indexing for ofs
+// Zero is treated as invalid offset (not found)
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {
     int i, d = a.dims;
@@ -1511,8 +1513,30 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     Mat src = _src.getMat(), mask = _mask.getMat();
 
     if (src.dims <= 2)
-        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols, src.rows, src.depth(), minVal, maxVal,
-                 minIdx, maxIdx, mask.data);
+    {
+        CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows,
+                 src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data);
+    }
+    else if (src.isContinuous())
+    {
+        int res = cv_hal_minMaxIdx(src.data, 0, (int)src.total()*cn, 1, src.depth(),
+                                   minVal, maxVal, minIdx, maxIdx, mask.data);
+
+        if (res == CV_HAL_ERROR_OK)
+        {
+            // minIdx[0] and minIdx[0] are always 0 for "flatten" version
+            if (minIdx)
+                ofs2idx(src, minIdx[1]+1, minIdx);
+            if (maxIdx)
+                ofs2idx(src, maxIdx[1]+1, maxIdx);
+            return;
+        }
+        else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+        {
+            CV_Error_(cv::Error::StsInternal,
+            ("HAL implementation minMaxIdx ==> " CVAUX_STR(cv_hal_minMaxIdx) " returned %d (0x%08x)", res, res));
+        }
+    }
 
     CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MINMAXLOC>(src.cols, src.rows),
                openvx_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
@@ -1545,9 +1569,9 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     if (!src.empty() && mask.empty())
     {
         if( minidx == 0 )
-             minidx = 1;
-         if( maxidx == 0 )
-             maxidx = 1;
+            minidx = 1;
+        if( maxidx == 0 )
+            maxidx = 1;
     }
 
     if( minidx == 0 )

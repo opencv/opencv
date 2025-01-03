@@ -98,18 +98,18 @@ namespace detail
         GAPI_Assert(m_hint != nullptr);
         using U = util::decay_t<T>;
         return dynamic_cast<TypeHint<U>*>(m_hint.get()) != nullptr;
-    };
+    }
 
     template <typename T>
     void GOpaqueU::specifyType(){
         m_hint.reset(new TypeHint<util::decay_t<T>>);
-    };
+    }
 
     template <typename T>
     void GOpaqueU::storeKind(){
         // FIXME: Add assert here on cv::Mat and cv::Scalar?
         setKind(cv::detail::GOpaqueTraits<T>::kind);
-    };
+    }
 
     // This class represents a typed object reference.
     // Depending on origins, this reference may be either "just a" reference to

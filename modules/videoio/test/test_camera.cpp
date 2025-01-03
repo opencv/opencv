@@ -223,6 +223,35 @@ TEST(DISABLED_videoio_camera, v4l_read_framesize)
     capture.release();
 }
 
+TEST(DISABLED_videoio_camera, v4l_rgb_convert)
+{
+    VideoCapture capture(CAP_V4L2);
+    ASSERT_TRUE(capture.isOpened());
+    std::cout << "Camera 0 via " << capture.getBackendName() << " backend" << std::endl;
+    std::cout << " Frame width: " << capture.get(CAP_PROP_FRAME_WIDTH) << std::endl;
+    std::cout << "      height: " << capture.get(CAP_PROP_FRAME_HEIGHT) << std::endl;
+    std::cout << "Pixel format: " << capture.get(cv::CAP_PROP_FORMAT) << std::endl;
+    if (capture.get(CAP_PROP_FOURCC) != VideoWriter::fourcc('Y', 'U', 'Y', 'V'))
+    {
+        throw SkipTestException("Camera does not support YUYV format");
+    }
+    capture.set(cv::CAP_PROP_CONVERT_RGB, 0);
+    std::cout << "New pixel format: " << capture.get(cv::CAP_PROP_FORMAT) << std::endl;
+
+    cv::Mat frame;
+    for (int i = 0; i < 10; i++)
+    {
+        int pixel_type  = (int)capture.get(cv::CAP_PROP_FORMAT);
+        int channels    = CV_MAT_CN(pixel_type);
+        int pixel_bytes = CV_ELEM_SIZE(pixel_type);
+
+        // YUYV is expected for most of popular USB cam (COLOR_YUV2BGR_YUYV conversion)
+        EXPECT_EQ(2, channels);
+        EXPECT_EQ(2, pixel_bytes);
+
+        capture >> frame;
+    }
+}
 
 static
 utils::Paths getTestCameras()

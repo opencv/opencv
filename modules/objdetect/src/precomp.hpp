@@ -52,5 +52,7 @@
 #include "opencv2/core/private.hpp"
 
 #include <numeric>
+#include <array>
+#include <vector>
 
 #endif

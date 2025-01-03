@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
+#include "hal_replacement.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
 #include <algorithm> // std::swap_ranges
@@ -268,6 +269,8 @@ void transpose( InputArray _src, OutputArray _dst )
         return;
     }
 
+    CALL_HAL(transpose2d, cv_hal_transpose2d, src.data, src.step, dst.data, dst.step, src.cols, src.rows, esz);
+
     CV_IPP_RUN_FAST(ipp_transpose(src, dst))
 
     if( dst.data == src.data )
@@ -355,10 +358,10 @@ void transposeND(InputArray src_, const std::vector<int>& order, OutputArray dst
 #if CV_SIMD128
 template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, size_t esz )
 {
-    typedef typename V::lane_type T;
+    typedef typename VTraits<V>::lane_type T;
     int end = (int)(size.width*esz);
     int width = (end + 1)/2;
-    int width_1 = width & -v_uint8x16::nlanes;
+    int width_1 = width & -VTraits<v_uint8x16>::vlanes();
     int i, j;
 
 #if CV_STRONG_ALIGNMENT
@@ -367,15 +370,15 @@ template<typename V> CV_ALWAYS_INLINE void flipHoriz_single( const uchar* src, s
 
     for( ; size.height--; src += sstep, dst += dstep )
     {
-        for( i = 0, j = end; i < width_1; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+        for( i = 0, j = end; i < width_1; i += VTraits<v_uint8x16>::vlanes(), j -= VTraits<v_uint8x16>::vlanes() )
         {
             V t0, t1;
 
             t0 = v_load((T*)((uchar*)src + i));
-            t1 = v_load((T*)((uchar*)src + j - v_uint8x16::nlanes));
+            t1 = v_load((T*)((uchar*)src + j - VTraits<v_uint8x16>::vlanes()));
             t0 = v_reverse(t0);
             t1 = v_reverse(t1);
-            v_store((T*)(dst + j - v_uint8x16::nlanes), t0);
+            v_store((T*)(dst + j - VTraits<v_uint8x16>::vlanes()), t0);
             v_store((T*)(dst + i), t1);
         }
         if (isAligned<sizeof(T)>(src, dst))
@@ -445,14 +448,14 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
 #if CV_STRONG_ALIGNMENT
     size_t alignmentMark = ((size_t)src)|((size_t)dst)|sstep|dstep;
 #endif
-    if (esz == 2 * v_uint8x16::nlanes)
+    if (esz == 2 * (size_t)VTraits<v_uint8x16>::vlanes())
     {
         int end = (int)(size.width*esz);
         int width = end/2;
 
         for( ; size.height--; src += sstep, dst += dstep )
         {
-            for( int i = 0, j = end - 2 * v_uint8x16::nlanes; i < width; i += 2 * v_uint8x16::nlanes, j -= 2 * v_uint8x16::nlanes )
+            for( int i = 0, j = end - 2 * VTraits<v_uint8x16>::vlanes(); i < width; i += 2 * VTraits<v_uint8x16>::vlanes(), j -= 2 * VTraits<v_uint8x16>::vlanes() )
             {
 #if CV_SIMD256
                 v_uint8x32 t0, t1;
@@ -465,25 +468,25 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
                 v_uint8x16 t0, t1, t2, t3;
 
                 t0 = v_load((uchar*)src + i);
-                t1 = v_load((uchar*)src + i + v_uint8x16::nlanes);
+                t1 = v_load((uchar*)src + i + VTraits<v_uint8x16>::vlanes());
                 t2 = v_load((uchar*)src + j);
-                t3 = v_load((uchar*)src + j + v_uint8x16::nlanes);
+                t3 = v_load((uchar*)src + j + VTraits<v_uint8x16>::vlanes());
                 v_store(dst + j, t0);
-                v_store(dst + j + v_uint8x16::nlanes, t1);
+                v_store(dst + j + VTraits<v_uint8x16>::vlanes(), t1);
                 v_store(dst + i, t2);
-                v_store(dst + i + v_uint8x16::nlanes, t3);
+                v_store(dst + i + VTraits<v_uint8x16>::vlanes(), t3);
 #endif
             }
         }
     }
-    else if (esz == v_uint8x16::nlanes)
+    else if (esz == (size_t)VTraits<v_uint8x16>::vlanes())
     {
         int end = (int)(size.width*esz);
         int width = end/2;
 
         for( ; size.height--; src += sstep, dst += dstep )
         {
-            for( int i = 0, j = end - v_uint8x16::nlanes; i < width; i += v_uint8x16::nlanes, j -= v_uint8x16::nlanes )
+            for( int i = 0, j = end - VTraits<v_uint8x16>::vlanes(); i < width; i += VTraits<v_uint8x16>::vlanes(), j -= VTraits<v_uint8x16>::vlanes() )
             {
                 v_uint8x16 t0, t1;
 
@@ -533,19 +536,19 @@ flipHoriz( const uchar* src, size_t sstep, uchar* dst, size_t dstep, Size size, 
 
         for( ; size.height--; src += sstep, dst += dstep )
         {
-            for ( int i = 0, j = end; i < width; i += v_uint8x16::nlanes + sizeof(uint64_t), j -= v_uint8x16::nlanes + sizeof(uint64_t) )
+            for ( int i = 0, j = end; i < width; i += VTraits<v_uint8x16>::vlanes() + sizeof(uint64_t), j -= VTraits<v_uint8x16>::vlanes() + sizeof(uint64_t) )
             {
                 v_uint8x16 t0, t1;
                 uint64_t t2, t3;
 
                 t0 = v_load((uchar*)src + i);
-                t2 = *((uint64_t*)((uchar*)src + i + v_uint8x16::nlanes));
-                t1 = v_load((uchar*)src + j - v_uint8x16::nlanes - sizeof(uint64_t));
+                t2 = *((uint64_t*)((uchar*)src + i + VTraits<v_uint8x16>::vlanes()));
+                t1 = v_load((uchar*)src + j - VTraits<v_uint8x16>::vlanes() - sizeof(uint64_t));
                 t3 = *((uint64_t*)((uchar*)src + j - sizeof(uint64_t)));
-                v_store(dst + j - v_uint8x16::nlanes - sizeof(uint64_t), t0);
+                v_store(dst + j - VTraits<v_uint8x16>::vlanes() - sizeof(uint64_t), t0);
                 *((uint64_t*)(dst + j - sizeof(uint64_t))) = t2;
                 v_store(dst + i, t1);
-                *((uint64_t*)(dst + i + v_uint8x16::nlanes)) = t3;
+                *((uint64_t*)(dst + i + VTraits<v_uint8x16>::vlanes())) = t3;
             }
         }
     }
@@ -801,6 +804,9 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
     int type = src.type();
     _dst.create( size, type );
     Mat dst = _dst.getMat();
+
+    CALL_HAL(flip, cv_hal_flip, type, src.ptr(), src.step, src.cols, src.rows,
+             dst.ptr(), dst.step, flip_mode);
 
     CV_IPP_RUN_FAST(ipp_flip(src, dst, flip_mode));
 
@@ -1075,10 +1081,8 @@ void broadcast(InputArray _src, InputArray _shape, OutputArray _dst) {
     }
 }
 
-void rotate(InputArray _src, OutputArray _dst, int rotateMode)
+static void rotateImpl(InputArray _src, OutputArray _dst, int rotateMode)
 {
-    CV_Assert(_src.dims() <= 2);
-
     switch (rotateMode)
     {
     case ROTATE_90_CLOCKWISE:
@@ -1095,6 +1099,53 @@ void rotate(InputArray _src, OutputArray _dst, int rotateMode)
     default:
         break;
     }
+}
+
+void rotate(InputArray _src, OutputArray _dst, int rotateMode)
+{
+    CV_Assert(_src.dims() <= 2);
+    int angle;
+
+    if (_dst.isUMat())
+    {
+        rotateImpl(_src, _dst, rotateMode);
+        return;
+    }
+
+    Mat src = _src.getMat();
+    int type = src.type();
+    if( src.empty() )
+    {
+        _dst.release();
+        return;
+    }
+
+    switch (rotateMode)
+    {
+    case ROTATE_90_CLOCKWISE:
+        _dst.create(src.cols, src.rows, type);
+        angle = 90;
+        break;
+    case ROTATE_180:
+        _dst.create(src.rows, src.cols, type);
+        angle = 180;
+        break;
+    case ROTATE_90_COUNTERCLOCKWISE:
+        _dst.create(src.cols, src.rows, type);
+        angle = 270;
+        break;
+    default:
+        _dst.create(src.rows, src.cols, type);
+        angle = 0;
+        break;
+    }
+
+    Mat dst = _dst.getMat();
+    CALL_HAL(rotate90, cv_hal_rotate90, type, src.ptr(), src.step, src.cols, src.rows,
+             dst.ptr(), dst.step, angle);
+
+    // use src (Mat) since _src (InputArray) is updated by _dst.create() when in-place
+    rotateImpl(src, _dst, rotateMode);
 }
 
 }  // namespace

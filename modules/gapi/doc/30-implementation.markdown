@@ -4,7 +4,7 @@
 
 # G-API Implementation details
 
-Note -- this section is still in progress.
+@note this section is still in progress.
 
 # API layer {#gapi_detail_api}
 

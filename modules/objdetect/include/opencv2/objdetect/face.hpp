@@ -20,7 +20,7 @@ model download link: https://github.com/opencv/opencv_zoo/tree/master/models/fac
 class CV_EXPORTS_W FaceDetectorYN
 {
 public:
-    virtual ~FaceDetectorYN() {};
+    virtual ~FaceDetectorYN() {}
 
     /** @brief Set the size for the network input, which overwrites the input size of creating model. Call this method when the size of input image does not match the input size when creating model
      *
@@ -71,7 +71,7 @@ public:
      */
     CV_WRAP virtual int detect(InputArray image, OutputArray faces) = 0;
 
-    /** @brief Creates an instance of this class with given parameters
+    /** @brief Creates an instance of face detector class with given parameters
      *
      *  @param model the path to the requested model
      *  @param config the path to the config file for compability, which is not requested for ONNX models
@@ -82,14 +82,37 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceDetectorYN> create(const String& model,
-                                              const String& config,
+    CV_WRAP static Ptr<FaceDetectorYN> create(CV_WRAP_FILE_PATH const String& model,
+                                              CV_WRAP_FILE_PATH const String& config,
                                               const Size& input_size,
                                               float score_threshold = 0.9f,
                                               float nms_threshold = 0.3f,
                                               int top_k = 5000,
                                               int backend_id = 0,
                                               int target_id = 0);
+
+    /** @overload
+     *
+     *  @param framework Name of origin framework
+     *  @param bufferModel A buffer with a content of binary file with weights
+     *  @param bufferConfig A buffer with a content of text file contains network configuration
+     *  @param input_size the size of the input image
+     *  @param score_threshold the threshold to filter out bounding boxes of score smaller than the given value
+     *  @param nms_threshold the threshold to suppress bounding boxes of IoU bigger than the given value
+     *  @param top_k keep top K bboxes before NMS
+     *  @param backend_id the id of backend
+     *  @param target_id the id of target device
+     */
+    CV_WRAP static Ptr<FaceDetectorYN> create(const String& framework,
+                                              const std::vector<uchar>& bufferModel,
+                                              const std::vector<uchar>& bufferConfig,
+                                              const Size& input_size,
+                                              float score_threshold = 0.9f,
+                                              float nms_threshold = 0.3f,
+                                              int top_k = 5000,
+                                              int backend_id = 0,
+                                              int target_id = 0);
+
 };
 
 /** @brief DNN-based face recognizer
@@ -99,29 +122,29 @@ model download link: https://github.com/opencv/opencv_zoo/tree/master/models/fac
 class CV_EXPORTS_W FaceRecognizerSF
 {
 public:
-    virtual ~FaceRecognizerSF() {};
+    virtual ~FaceRecognizerSF() {}
 
     /** @brief Definition of distance used for calculating the distance between two face features
      */
     enum DisType { FR_COSINE=0, FR_NORM_L2=1 };
 
-    /** @brief Aligning image to put face on the standard position
+    /** @brief Aligns detected face with the source input image and crops it
      *  @param src_img input image
-     *  @param face_box the detection result used for indicate face in input image
+     *  @param face_box the detected face result from the input image
      *  @param aligned_img output aligned image
      */
     CV_WRAP virtual void alignCrop(InputArray src_img, InputArray face_box, OutputArray aligned_img) const = 0;
 
-    /** @brief Extracting face feature from aligned image
+    /** @brief Extracts face feature from aligned image
      *  @param aligned_img input aligned image
      *  @param face_feature output face feature
      */
     CV_WRAP virtual void feature(InputArray aligned_img, OutputArray face_feature) = 0;
 
-    /** @brief Calculating the distance between two face features
+    /** @brief Calculates the distance between two face features
      *  @param face_feature1 the first input feature
      *  @param face_feature2 the second input feature of the same size and the same type as face_feature1
-     *  @param dis_type defining the similarity with optional values "FR_OSINE" or "FR_NORM_L2"
+     *  @param dis_type defines how to calculate the distance between two face features with optional values "FR_COSINE" or "FR_NORM_L2"
      */
     CV_WRAP virtual double match(InputArray face_feature1, InputArray face_feature2, int dis_type = FaceRecognizerSF::FR_COSINE) const = 0;
 
@@ -131,7 +154,23 @@ public:
      *  @param backend_id the id of backend
      *  @param target_id the id of target device
      */
-    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& model, const String& config, int backend_id = 0, int target_id = 0);
+    CV_WRAP static Ptr<FaceRecognizerSF> create(CV_WRAP_FILE_PATH const String& model, CV_WRAP_FILE_PATH const String& config, int backend_id = 0, int target_id = 0);
+
+    /**
+     *  @brief Creates an instance of this class from a buffer containing the model weights and configuration.
+     *  @param framework Name of the framework (ONNX, etc.)
+     *  @param bufferModel A buffer containing the binary model weights.
+     *  @param bufferConfig A buffer containing the network configuration.
+     *  @param backend_id The id of the backend.
+     *  @param target_id The id of the target device.
+     *
+     *  @return A pointer to the created instance of FaceRecognizerSF.
+     */
+    CV_WRAP static Ptr<FaceRecognizerSF> create(const String& framework,
+                                                const std::vector<uchar>& bufferModel,
+                                                const std::vector<uchar>& bufferConfig,
+                                                int backend_id = 0,
+                                                int target_id = 0);
 };
 
 //! @}

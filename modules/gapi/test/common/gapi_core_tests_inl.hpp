@@ -1699,7 +1699,7 @@ namespace {
             return cv::MediaFrame::View(std::move(pp), std::move(ss));
         }
     };
-};
+}
 
 namespace {
     class TestMediaGray final : public cv::MediaFrame::IAdapter {
@@ -1718,7 +1718,7 @@ namespace {
             return cv::MediaFrame::View(std::move(pp), std::move(ss));
         }
     };
-};
+}
 
 TEST_P(SizeMFTest, ParseTest)
 {

@@ -62,10 +62,15 @@ public:
     {
         std::vector<UMat> outputs;
         outs.getUMatVector(outputs);
-        if (outs.depth() == CV_16S)
-            convertFp16(blobs[0], outputs[0]);
+        if (outs.depth() == CV_16F) {
+            auto blob = blobs[0];
+            if (blob.type() != CV_32F) {
+                blob.convertTo(blob, CV_32F);
+            }
+            blob.convertTo(outputs[0], CV_16F);
+        }
         else
-            blobs[0].copyTo(outputs[0]);
+            blobs[0].convertTo(outputs[0], outputs[0].type());
         return true;
     }
 #endif
@@ -80,7 +85,7 @@ public:
 
         std::vector<Mat> outputs;
         outputs_arr.getMatVector(outputs);
-        blobs[0].copyTo(outputs[0]);
+        blobs[0].convertTo(outputs[0], outputs[0].type());
     }
 
 #ifdef HAVE_CANN
@@ -123,9 +128,23 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+        ov::element::Type dType;
+        if (blobs[0].depth() == CV_32F) {
+            dType = ov::element::f32;
+        } else if (blobs[0].depth() == CV_32S) {
+            dType = ov::element::i32;
+        } else if (blobs[0].depth() == CV_8S) {
+            dType = ov::element::i8;
+        } else {
+            CV_Error(Error::StsNotImplemented, format("Unexpected Const data depth: %d", blobs[0].depth()));
+        }
+        std::shared_ptr<ov::Node> node =
+                    std::make_shared<ov::op::v0::Constant>(dType,
                                                            getShape<size_t>(blobs[0]),
                                                            blobs[0].data);
+        if (node->get_element_type() != ov::element::f32) {
+            node = std::make_shared<ov::op::v0::Convert>(node, ov::element::f32);
+        }
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -151,7 +170,11 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         CV_Assert(blobs.size() == 1);
-        return make_cuda_node<cuda4dnn::ConstOp>(preferableTarget, std::move(context->stream), blobs[0]);
+        Mat blob = blobs[0];
+        if (blob.type() != CV_32F) {
+            blob.convertTo(blob, CV_32F);
+        }
+        return make_cuda_node<cuda4dnn::ConstOp>(preferableTarget, std::move(context->stream), blob);
     }
 #endif
 

@@ -51,13 +51,8 @@
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-#include <ngraph/op/roi_pooling.hpp>
-#include <ngraph/op/psroi_pooling.hpp>
-#else
-#include <ngraph/op/experimental/layers/roi_pooling.hpp>
-#include <ngraph/op/experimental/layers/psroi_pooling.hpp>
-#endif
+#include <openvino/op/roi_pooling.hpp>
+#include <openvino/op/psroi_pooling.hpp>
 #endif
 
 #include "../op_vkcom.hpp"
@@ -293,7 +288,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -353,7 +348,7 @@ public:
             CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -588,20 +583,20 @@ public:
         CV_Assert_N((inputs.size() == 1 && (type == MAX || type == AVE || type == SUM)) || inputs.size() == 2, nodes.size() == inputs.size());
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
-        ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
+        ov::op::PadType pad_type = ov::op::PadType::EXPLICIT;
         if (!padMode.empty())
-            pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
+            pad_type = padMode == "VALID" ? ov::op::PadType::VALID : ov::op::PadType::SAME_UPPER;
 
-        auto rounding_type = ceilMode ? ngraph::op::RoundingType::CEIL : ngraph::op::RoundingType::FLOOR;
+        auto rounding_type = ceilMode ? ov::op::RoundingType::CEIL : ov::op::RoundingType::FLOOR;
         if (type == AVE) {
             auto exclude_pad = !avePoolPaddedArea;
-            auto ave_pool = std::make_shared<ngraph::op::v1::AvgPool>(ieInpNode, ngraph::Strides(strides),
-                            ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+            auto ave_pool = std::make_shared<ov::op::v1::AvgPool>(ieInpNode, ov::Strides(strides),
+                            ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
                             exclude_pad, rounding_type, pad_type);
             return Ptr<BackendNode>(new InfEngineNgraphNode(ave_pool));
         }
         else if (type == SUM) {
-            ngraph::Shape inpShape = ieInpNode.get_shape();
+            ov::Shape inpShape = ieInpNode.get_shape();
             CV_Assert(inpShape.size() == 2 + kernel_size.size());
             std::vector<int64_t> axes;
             for (size_t i = 0; i < kernel_size.size(); i++)
@@ -609,37 +604,33 @@ public:
                 if (inpShape[2 + i] == kernel_size[i])
                     axes.push_back(2 + i);
             }
-            auto reduction_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes);
-            auto reduce_sum = std::make_shared<ngraph::op::v1::ReduceSum>(ieInpNode, reduction_axes, true);
+            auto reduction_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{axes.size()}, axes);
+            auto reduce_sum = std::make_shared<ov::op::v1::ReduceSum>(ieInpNode, reduction_axes, true);
             return Ptr<BackendNode>(new InfEngineNgraphNode(reduce_sum));
         }
         else if (type == MAX) {
-            std::shared_ptr<ngraph::Node> max_pool;
+            std::shared_ptr<ov::Node> max_pool;
             if (computeMaxIdx) {
-#if INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1)
                 std::vector<size_t> dilations(kernel_size.size(), 1);
-                max_pool = std::make_shared<ngraph::op::v8::MaxPool>(ieInpNode, ngraph::Strides(strides), ngraph::Strides(dilations),
-                                ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                max_pool = std::make_shared<ov::op::v8::MaxPool>(ieInpNode, ov::Strides(strides), ov::Strides(dilations),
+                                ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
                                 rounding_type, pad_type);
-#else
-                CV_Error(Error::StsNotImplemented, "OpenVINO MaxPool with indices");
-#endif
             } else {
-                max_pool = std::make_shared<ngraph::op::v1::MaxPool>(ieInpNode, ngraph::Strides(strides),
-                                ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+                max_pool = std::make_shared<ov::op::v1::MaxPool>(ieInpNode, ov::Strides(strides),
+                                ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
                                 rounding_type, pad_type);
             }
             return Ptr<BackendNode>(new InfEngineNgraphNode(max_pool));
         }
         else if (type == ROI) {
             auto& coords = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            auto roi = std::make_shared<ngraph::op::ROIPooling>(ieInpNode, coords,
-                       ngraph::Shape{(size_t)pooledSize.height, (size_t)pooledSize.width}, spatialScale, "max");
+            auto roi = std::make_shared<ov::op::v0::ROIPooling>(ieInpNode, coords,
+                       ov::Shape{(size_t)pooledSize.height, (size_t)pooledSize.width}, spatialScale, "max");
             return Ptr<BackendNode>(new InfEngineNgraphNode(roi));
         }
         else if (type == PSROI) {
             auto& coords = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            auto psroi = std::make_shared<ngraph::op::PSROIPooling>(ieInpNode, coords,
+            auto psroi = std::make_shared<ov::op::v0::PSROIPooling>(ieInpNode, coords,
                          (size_t)psRoiOutChannels, (size_t)pooledSize.width, spatialScale, 1, 1, "average");
             return Ptr<BackendNode>(new InfEngineNgraphNode(psroi));
         }
@@ -898,25 +889,25 @@ public:
                                 v_float32x4 max_idx0 = v_setall_f32(-1.f);
                                 v_float32x4 max_idx1 = max_idx0;
                                 int index0 = ystart * inp_width + xstart;
-                                v_float32x4 idx0 = idx00 + v_setall_f32((float)index0);
-                                v_float32x4 idx1 = idx0 + v_setall_f32((float)(stride_w*4));
+                                v_float32x4 idx0 = v_add(idx00, v_setall_f32((float)index0));
+                                v_float32x4 idx1 = v_add(idx0, v_setall_f32((float)(stride_w * 4)));
 
                                 for (int y = ystart; y < yend; ++y)
                                 {
-                                    for (int x = xstart; x < xend; ++x, idx0 += ones, idx1 += ones)
+                                    for (int x = xstart; x < xend; ++x, idx0 = v_add(idx0, ones), idx1 = v_add(idx1, ones))
                                     {
                                         const int index = y * inp_width + x;
                                         v_float32x4 v0(srcData[index], srcData[index + stride_w],
                                                        srcData[index + stride_w*2], srcData[index + stride_w*3]);
                                         v_float32x4 v1(srcData[index + stride_w*4], srcData[index + stride_w*5],
                                                        srcData[index + stride_w*6], srcData[index + stride_w*7]);
-                                        max_idx0 = v_select(v0 > max_val0, idx0, max_idx0);
-                                        max_idx1 = v_select(v1 > max_val1, idx1, max_idx1);
+                                        max_idx0 = v_select(v_gt(v0, max_val0), idx0, max_idx0);
+                                        max_idx1 = v_select(v_gt(v1, max_val1), idx1, max_idx1);
                                         max_val0 = v_max(max_val0, v0);
                                         max_val1 = v_max(max_val1, v1);
                                     }
-                                    idx0 += idx_delta;
-                                    idx1 += idx_delta;
+                                    idx0 = v_add(idx0, idx_delta);
+                                    idx1 = v_add(idx1, idx_delta);
                                 }
                                 v_store(dstData + x0, max_val0);
                                 v_store(dstData + x0 + 4, max_val1);
@@ -1069,12 +1060,12 @@ public:
                                                    srcData[index + stride_w*2], srcData[index + stride_w*3]);
                                     v_float32x4 v1(srcData[index + stride_w*4], srcData[index + stride_w*5],
                                                    srcData[index + stride_w*6], srcData[index + stride_w*7]);
-                                    sum_val0 += v0;
-                                    sum_val1 += v1;
+                                    sum_val0 = v_add(sum_val0, v0);
+                                    sum_val1 = v_add(sum_val1, v1);
                                 }
                             }
-                            v_store(dstData + x0, sum_val0*ikarea);
-                            v_store(dstData + x0 + 4, sum_val1*ikarea);
+                            v_store(dstData + x0, v_mul(sum_val0, ikarea));
+                            v_store(dstData + x0 + 4, v_mul(sum_val1, ikarea));
                             x0 += 7;
                         }
                         else

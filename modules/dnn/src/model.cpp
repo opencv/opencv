@@ -37,6 +37,7 @@ public:
 
     virtual void setPreferableBackend(Backend backendId) { net.setPreferableBackend(backendId); }
     virtual void setPreferableTarget(Target targetId) { net.setPreferableTarget(targetId); }
+    virtual void enableWinograd(bool useWinograd) { net.enableWinograd(useWinograd); }
 
     virtual
     void initNet(const Net& network)
@@ -88,6 +89,11 @@ public:
     void setInputSwapRB(bool swapRB_)
     {
         swapRB = swapRB_;
+    }
+    /*virtual*/
+    void setOutputNames(const std::vector<String>& outNames_)
+    {
+        outNames = outNames_;
     }
 
     /*virtual*/
@@ -151,10 +157,18 @@ Model& Model::setPreferableBackend(Backend backendId)
     impl->setPreferableBackend(backendId);
     return *this;
 }
+
 Model& Model::setPreferableTarget(Target targetId)
 {
     CV_DbgAssert(impl);
     impl->setPreferableTarget(targetId);
+    return *this;
+}
+
+Model& Model::enableWinograd(bool useWinograd)
+{
+    CV_DbgAssert(impl);
+    impl->enableWinograd(useWinograd);
     return *this;
 }
 
@@ -192,6 +206,13 @@ Model& Model::setInputSwapRB(bool swapRB)
 {
     CV_DbgAssert(impl);
     impl->setInputSwapRB(swapRB);
+    return *this;
+}
+
+Model& Model::setOutputNames(const std::vector<String>& outNames)
+{
+    CV_DbgAssert(impl);
+    impl->setOutputNames(outNames);
     return *this;
 }
 
@@ -306,9 +327,9 @@ void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
 }
 
 KeypointsModel::KeypointsModel(const String& model, const String& config)
-    : Model(model, config) {};
+    : Model(model, config) {}
 
-KeypointsModel::KeypointsModel(const Net& network) : Model(network) {};
+KeypointsModel::KeypointsModel(const Net& network) : Model(network) {}
 
 std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
 {
@@ -364,15 +385,17 @@ std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
 }
 
 SegmentationModel::SegmentationModel(const String& model, const String& config)
-    : Model(model, config) {};
+    : Model(model, config) {}
 
-SegmentationModel::SegmentationModel(const Net& network) : Model(network) {};
+SegmentationModel::SegmentationModel(const Net& network) : Model(network) {}
 
 void SegmentationModel::segment(InputArray frame, OutputArray mask)
 {
     std::vector<Mat> outs;
     impl->processFrame(frame, outs);
-    CV_Assert(outs.size() == 1);
+    // default output is the first one
+    if(outs.size() > 1)
+        outs.resize(1);
     Mat score = outs[0];
 
     const int chns = score.size[1];

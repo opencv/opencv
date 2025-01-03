@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_timvx.hpp"
+#include "../ie_ngraph.hpp"
 
 #include <algorithm>
 #include <stdlib.h>
@@ -90,7 +91,8 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         return backendId == DNN_BACKEND_OPENCV ||
-            (backendId == DNN_BACKEND_TIMVX && haveTimVX());
+            (backendId == DNN_BACKEND_TIMVX && haveTimVX()) ||
+            backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     virtual bool tryFuse(Ptr<Layer>& top) CV_OVERRIDE
@@ -193,6 +195,26 @@ public:
 #endif  // HAVE_TIMVX
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+        input = ngraphDequantize(input, input_sc, input_zp);
+
+        ov::Output<ov::Node> res;
+        if (logSoftMax) {
+            res = std::make_shared<ov::op::v5::LogSoftmax>(input, axis);
+        } else {
+            res = std::make_shared<ov::op::v1::Softmax>(input, axis);
+        }
+
+        res = ngraphQuantize(res, output_sc, output_zp);
+        return new InfEngineNgraphNode(res);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     template <bool with_log>
     class SoftmaxInt8Invoker : public ParallelLoopBody {

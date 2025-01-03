@@ -21,9 +21,14 @@ namespace hal {
 void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
-                 int depth, int scn, bool swapBlue, bool isCbCr)
+                 int depth, int scn, bool swapBlue, bool isCbCr, AlgorithmHint hint)
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == ALGO_HINT_APPROX)
+    {
+        CALL_HAL(cvtBGRtoYUV, cv_hal_cvtBGRtoYUVApprox, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isCbCr);
+    }
 
     CALL_HAL(cvtBGRtoYUV, cv_hal_cvtBGRtoYUV, src_data, src_step, dst_data, dst_step, width, height, depth, scn, swapBlue, isCbCr);
 
@@ -69,9 +74,14 @@ void cvtBGRtoYUV(const uchar * src_data, size_t src_step,
 void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
                  uchar * dst_data, size_t dst_step,
                  int width, int height,
-                 int depth, int dcn, bool swapBlue, bool isCbCr)
+                 int depth, int dcn, bool swapBlue, bool isCbCr, AlgorithmHint hint)
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == ALGO_HINT_APPROX)
+    {
+        CALL_HAL(cvtYUVtoBGR, cv_hal_cvtYUVtoBGRApprox, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isCbCr);
+    }
 
     CALL_HAL(cvtYUVtoBGR, cv_hal_cvtYUVtoBGR, src_data, src_step, dst_data, dst_step, width, height, depth, dcn, swapBlue, isCbCr);
 
@@ -115,36 +125,21 @@ void cvtYUVtoBGR(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
-                         uchar * dst_data, size_t dst_step,
-                         int dst_width, int dst_height,
-                         int dcn, bool swapBlue, int uIdx)
-{
-    CV_INSTRUMENT_REGION();
-
-    CALL_HAL(cvtTwoPlaneYUVtoBGR, cv_hal_cvtTwoPlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
-
-    cvtTwoPlaneYUVtoBGR(
-            src_data, src_step, src_data + src_step * dst_height, src_step, dst_data, dst_step,
-            dst_width, dst_height, dcn, swapBlue, uIdx);
-}
-
-void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
-                         uchar * dst_data, size_t dst_step,
-                         int dst_width, int dst_height,
-                         int dcn, bool swapBlue, int uIdx)
-{
-    CV_INSTRUMENT_REGION();
-
-    cvtTwoPlaneYUVtoBGR(y_data, src_step, uv_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
-}
-
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_data, size_t uv_step,
                          uchar * dst_data, size_t dst_step,
                          int dst_width, int dst_height,
-                         int dcn, bool swapBlue, int uIdx)
+                         int dcn, bool swapBlue, int uIdx, AlgorithmHint hint)
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == ALGO_HINT_APPROX)
+    {
+            CALL_HAL(cvtTwoPlaneYUVtoBGREx, cv_hal_cvtTwoPlaneYUVtoBGRExApprox,
+                y_data, y_step, uv_data, uv_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
+    }
 
     CALL_HAL(cvtTwoPlaneYUVtoBGREx, cv_hal_cvtTwoPlaneYUVtoBGREx,
              y_data, y_step, uv_data, uv_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
@@ -153,12 +148,55 @@ void cvtTwoPlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * uv_d
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// 4:2:0, two planes in one array: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+void cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step,
+                         uchar * dst_data, size_t dst_step,
+                         int dst_width, int dst_height,
+                         int dcn, bool swapBlue, int uIdx, AlgorithmHint hint)
+{
+    CV_INSTRUMENT_REGION();
+
+    if (hint == ALGO_HINT_APPROX)
+    {
+        CALL_HAL(cvtTwoPlaneYUVtoBGR, cv_hal_cvtTwoPlaneYUVtoBGRApprox, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
+    }
+
+    CALL_HAL(cvtTwoPlaneYUVtoBGR, cv_hal_cvtTwoPlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
+
+    cvtTwoPlaneYUVtoBGR(
+            src_data, src_step, src_data + src_step * dst_height, src_step, dst_data, dst_step,
+            dst_width, dst_height, dcn, swapBlue, uIdx, hint);
+}
+
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+void cvtTwoPlaneYUVtoBGR(const uchar * y_data, const uchar * uv_data, size_t src_step,
+                         uchar * dst_data, size_t dst_step,
+                         int dst_width, int dst_height,
+                         int dcn, bool swapBlue, int uIdx, AlgorithmHint hint)
+{
+    CV_INSTRUMENT_REGION();
+
+    cvtTwoPlaneYUVtoBGR(y_data, src_step, uv_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx, hint);
+}
+
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                            uchar * dst_data, size_t dst_step,
                            int dst_width, int dst_height,
-                           int dcn, bool swapBlue, int uIdx)
+                           int dcn, bool swapBlue, int uIdx, AlgorithmHint hint)
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == ALGO_HINT_APPROX)
+    {
+        CALL_HAL(cvtThreePlaneYUVtoBGR, cv_hal_cvtThreePlaneYUVtoBGRApprox, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
+    }
 
     CALL_HAL(cvtThreePlaneYUVtoBGR, cv_hal_cvtThreePlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
 
@@ -166,12 +204,20 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
                            uchar * dst_data, size_t dst_step,
                            int width, int height,
-                           int scn, bool swapBlue, int uIdx)
+                           int scn, bool swapBlue, int uIdx, AlgorithmHint hint)
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == ALGO_HINT_APPROX)
+    {
+        CALL_HAL(cvtBGRtoThreePlaneYUV, cv_hal_cvtBGRtoThreePlaneYUVApprox, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, uIdx);
+    }
 
     CALL_HAL(cvtBGRtoThreePlaneYUV, cv_hal_cvtBGRtoThreePlaneYUV, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, uIdx);
 
@@ -179,6 +225,9 @@ void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
                          uchar * y_data, uchar * uv_data, size_t dst_step,
                          int width, int height,
@@ -193,16 +242,45 @@ void cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+// 4:2:2 interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                          uchar * dst_data, size_t dst_step,
                          int width, int height,
-                         int dcn, bool swapBlue, int uIdx, int ycn)
+                         int dcn, bool swapBlue, int uIdx, int ycn, AlgorithmHint hint)
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == ALGO_HINT_APPROX)
+    {
+        CALL_HAL(cvtOnePlaneYUVtoBGR, cv_hal_cvtOnePlaneYUVtoBGRApprox, src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, uIdx, ycn);
+    }
 
     CALL_HAL(cvtOnePlaneYUVtoBGR, cv_hal_cvtOnePlaneYUVtoBGR, src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, uIdx, ycn);
 
     CV_CPU_DISPATCH(cvtOnePlaneYUVtoBGR, (src_data, src_step, dst_data, dst_step, width, height, dcn, swapBlue, uIdx, ycn),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+// 4:2:2 interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 14-bit fixed-point arithmetics is used
+void cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step,
+                         uchar * dst_data, size_t dst_step,
+                         int width, int height,
+                         int scn, bool swapBlue, int uIdx, int ycn, AlgorithmHint hint)
+{
+    CV_INSTRUMENT_REGION();
+
+    if (hint == ALGO_HINT_APPROX)
+    {
+        CALL_HAL(cvtOnePlaneBGRtoYUV, cv_hal_cvtOnePlaneBGRtoYUVApprox, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, uIdx, ycn);
+    }
+
+    CALL_HAL(cvtOnePlaneBGRtoYUV, cv_hal_cvtOnePlaneBGRtoYUV, src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, uIdx, ycn);
+
+    CV_CPU_DISPATCH(cvtOnePlaneBGRtoYUV, (src_data, src_step, dst_data, dst_step, width, height, scn, swapBlue, uIdx, ycn),
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
@@ -219,7 +297,7 @@ bool oclCvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx )
     OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("YUV2RGB", ocl::imgproc::color_yuv_oclsrc,
-                       format("-D dcn=%d -D bidx=%d", dcn, bidx)))
+                       format("-D DCN=%d -D BIDX=%d", dcn, bidx)))
     {
         return false;
     }
@@ -232,7 +310,7 @@ bool oclCvtColorBGR2YUV( InputArray _src, OutputArray _dst, int bidx )
     OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
 
     if(!h.createKernel("RGB2YUV", ocl::imgproc::color_yuv_oclsrc,
-                       format("-D dcn=3 -D bidx=%d", bidx)))
+                       format("-D DCN=3 -D BIDX=%d", bidx)))
     {
         return false;
     }
@@ -245,7 +323,7 @@ bool oclCvtcolorYCrCb2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx)
     OclHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
     if(!h.createKernel("YCrCb2RGB", ocl::imgproc::color_yuv_oclsrc,
-                       format("-D dcn=%d -D bidx=%d", dcn, bidx)))
+                       format("-D DCN=%d -D BIDX=%d", dcn, bidx)))
     {
         return false;
     }
@@ -258,7 +336,7 @@ bool oclCvtColorBGR2YCrCb( InputArray _src, OutputArray _dst, int bidx)
     OclHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
 
     if(!h.createKernel("RGB2YCrCb", ocl::imgproc::color_yuv_oclsrc,
-                       format("-D dcn=3 -D bidx=%d", bidx)))
+                       format("-D DCN=3 -D BIDX=%d", bidx)))
     {
         return false;
     }
@@ -272,8 +350,22 @@ bool oclCvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int
 
     bool optimized = _src.offset() % 4 == 0 && _src.step() % 4 == 0;
     if(!h.createKernel("YUV2RGB_422", ocl::imgproc::color_yuv_oclsrc,
-                       format("-D dcn=%d -D bidx=%d -D uidx=%d -D yidx=%d%s", dcn, bidx, uidx, yidx,
+                       format("-D DCN=%d -D BIDX=%d -D UIDX=%d -D YIDX=%d%s", dcn, bidx, uidx, yidx,
                        optimized ? " -D USE_OPTIMIZED_LOAD" : "")))
+    {
+        return false;
+    }
+
+    return h.run();
+}
+
+bool oclCvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx, int yidx )
+{
+    OclHelper< Set<3, 4>, Set<2>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
+
+    if(!h.createKernel("RGB2YUV_422", ocl::imgproc::color_yuv_oclsrc,
+                       format("-D DCN=%d -D BIDX=%d -D UIDX=%d -D YIDX=%d", dcn, bidx, uidx, yidx
+                       )))
     {
         return false;
     }
@@ -294,7 +386,7 @@ bool oclCvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int
     OclHelper< Set<1>, Set<3, 4>, Set<CV_8U>, FROM_YUV > h(_src, _dst, dcn);
 
     if(!h.createKernel("YUV2RGB_NVx", ocl::imgproc::color_yuv_oclsrc,
-                       format("-D dcn=%d -D bidx=%d -D uidx=%d", dcn, bidx, uidx)))
+                       format("-D DCN=%d -D BIDX=%d -D UIDX=%d", dcn, bidx, uidx)))
     {
         return false;
     }
@@ -307,7 +399,7 @@ bool oclCvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, i
     OclHelper< Set<1>, Set<3, 4>, Set<CV_8U>, FROM_YUV > h(_src, _dst, dcn);
 
     if(!h.createKernel("YUV2RGB_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
-                       format("-D dcn=%d -D bidx=%d -D uidx=%d%s", dcn, bidx, uidx,
+                       format("-D DCN=%d -D BIDX=%d -D UIDX=%d%s", dcn, bidx, uidx,
                        _src.isContinuous() ? " -D SRC_CONT" : "")))
     {
         return false;
@@ -321,7 +413,7 @@ bool oclCvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, int bidx, 
     OclHelper< Set<3, 4>, Set<1>, Set<CV_8U>, TO_YUV > h(_src, _dst, 1);
 
     if(!h.createKernel("RGB2YUV_YV12_IYUV", ocl::imgproc::color_yuv_oclsrc,
-                       format("-D dcn=1 -D bidx=%d -D uidx=%d", bidx, uidx)))
+                       format("-D DCN=1 -D BIDX=%d -D UIDX=%d", bidx, uidx)))
     {
         return false;
     }
@@ -335,29 +427,43 @@ bool oclCvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, int bidx, 
 // HAL calls
 //
 
-void cvtColorBGR2YUV(InputArray _src, OutputArray _dst, bool swapb, bool crcb)
+void cvtColorBGR2YUV(InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, bool crcb)
 {
     CvtHelper< Set<3, 4>, Set<3>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, 3);
 
     hal::cvtBGRtoYUV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
-                     h.depth, h.scn, swapb, crcb);
+                     h.depth, h.scn, swapb, crcb, hint);
 }
 
-void cvtColorYUV2BGR(InputArray _src, OutputArray _dst, int dcn, bool swapb, bool crcb)
+void cvtColorYUV2BGR(InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, bool crcb)
 {
     if(dcn <= 0) dcn = 3;
     CvtHelper< Set<3>, Set<3, 4>, Set<CV_8U, CV_16U, CV_32F> > h(_src, _dst, dcn);
 
     hal::cvtYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
-                     h.depth, dcn, swapb, crcb);
+                     h.depth, dcn, swapb, crcb, hint);
 }
 
-void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx, int ycn)
+// 4:2:2 interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx, int ycn)
 {
     CvtHelper< Set<2>, Set<3, 4>, Set<CV_8U>, FROM_UYVY > h(_src, _dst, dcn);
 
     hal::cvtOnePlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
-                             dcn, swapb, uidx, ycn);
+                             dcn, swapb, uidx, ycn, hint);
+}
+
+// 4:2:2 interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 14-bit fixed-point arithmetics is used
+void cvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, int uidx, int ycn)
+{
+    CvtHelper< Set<3, 4>, Set<2>, Set<CV_8U>, TO_UYVY > h(_src, _dst, 2);
+
+    hal::cvtOnePlaneBGRtoYUV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
+                             h.scn, swapb, uidx, ycn, hint);
 }
 
 void cvtColorYUV2Gray_ch( InputArray _src, OutputArray _dst, int coi )
@@ -367,12 +473,15 @@ void cvtColorYUV2Gray_ch( InputArray _src, OutputArray _dst, int coi )
     extractChannel(_src, _dst, coi);
 }
 
-void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, bool swapb, int uidx)
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, int uidx)
 {
     CvtHelper< Set<3, 4>, Set<1>, Set<CV_8U>, TO_YUV > h(_src, _dst, 1);
 
     hal::cvtBGRtoThreePlaneYUV(h.src.data, h.src.step, h.dst.data, h.dst.step, h.src.cols, h.src.rows,
-                               h.scn, swapb, uidx);
+                               h.scn, swapb, uidx, hint);
 }
 
 void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
@@ -389,28 +498,35 @@ void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst )
     h.src(Range(0, h.dstSz.height), Range::all()).copyTo(h.dst);
 }
 
-void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx)
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx)
 {
     if(dcn <= 0) dcn = 3;
     CvtHelper< Set<1>, Set<3, 4>, Set<CV_8U>, FROM_YUV> h(_src, _dst, dcn);
 
     hal::cvtThreePlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.dst.cols, h.dst.rows,
-                               dcn, swapb, uidx);
+                               dcn, swapb, uidx, hint);
 }
 
-// http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
-// http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
-
-void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx )
+// 4:2:0, two planes in one array: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+// see also: http://www.fourcc.org/yuv.php#NV21, http://www.fourcc.org/yuv.php#NV12
+void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx )
 {
     if(dcn <= 0) dcn = 3;
     CvtHelper< Set<1>, Set<3, 4>, Set<CV_8U>, FROM_YUV> h(_src, _dst, dcn);
 
     hal::cvtTwoPlaneYUVtoBGR(h.src.data, h.src.step, h.dst.data, h.dst.step, h.dst.cols, h.dst.rows,
-                             dcn, swapb, uidx);
+                             dcn, swapb, uidx, hint);
 }
 
-void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int dcn, bool swapb, int uidx )
+// 4:2:0, two planes: Y, UV interleaved
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
+void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx )
 {
     int stype = _ysrc.type();
     int depth = CV_MAT_DEPTH(stype);
@@ -428,13 +544,13 @@ void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArr
     {
         hal::cvtTwoPlaneYUVtoBGR(ysrc.data, uvsrc.data, ysrc.step,
                                  dst.data, dst.step, dst.cols, dst.rows,
-                                 dcn, swapb, uidx);
+                                 dcn, swapb, uidx, hint);
     }
     else
     {
         hal::cvtTwoPlaneYUVtoBGR(ysrc.data, ysrc.step, uvsrc.data, uvsrc.step,
                                 dst.data, dst.step, dst.cols, dst.rows,
-                                dcn, swapb, uidx);
+                                dcn, swapb, uidx, hint);
     }
 }
 
