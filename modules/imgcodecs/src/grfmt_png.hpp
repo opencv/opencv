@@ -136,7 +136,7 @@ protected:
     static void row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass);
     bool processing_start(void* frame_ptr, const Mat& img);
     bool processing_finish();
-    void compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, int channels);
+    void compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, Mat& img);
     size_t read_from_io(void* _Buffer, size_t _ElementSize, size_t _ElementCount);
     uint32_t  read_chunk(Chunk& chunk);
 
@@ -176,7 +176,6 @@ public:
 
     bool isFormatSupported( int depth ) const CV_OVERRIDE;
     bool write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
-    bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params) CV_OVERRIDE;
     bool writeanimation(const Animation& animinfo, const std::vector<int>& params) CV_OVERRIDE;
 
     ImageEncoder newEncoder() const CV_OVERRIDE;
