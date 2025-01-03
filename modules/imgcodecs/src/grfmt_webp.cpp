@@ -392,20 +392,6 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     return (size > 0) && (bytes_written == size);
 }
 
-bool WebPEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
-{
-    CV_LOG_INFO(NULL, "Multi page image will be written as animation with 1 second frame duration.");
-
-    Animation animation;
-    animation.frames = img_vec;
-
-    for (size_t i = 0; i < animation.frames.size(); i++)
-    {
-        animation.durations.push_back(1000);
-    }
-    return writeanimation(animation, params);
-}
-
 bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<int>& params)
 {
     CV_CheckDepthEQ(animation.frames[0].depth(), CV_8U, "WebP codec supports only 8-bit unsigned images");
