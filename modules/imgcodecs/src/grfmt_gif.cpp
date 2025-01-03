@@ -219,7 +219,7 @@ void GifDecoder::readExtensions() {
             len = (uchar)m_strm.getByte();
             CV_Assert(len == 4);
             auto flags = (uchar)m_strm.getByte();
-            m_strm.getWord(); // delay time, not used
+            m_animation.durations.push_back(m_strm.getWord() * 10); // delay time
             opMode = (GifOpMode)((flags & 0x1C) >> 2);
             hasTransparentColor = flags & 0x01;
             transparentColor = (uchar)m_strm.getByte();
@@ -407,6 +407,10 @@ bool GifDecoder::getFrameCount_() {
             while (len) {
                 m_strm.skip(len);
                 len = m_strm.getByte();
+                if (len == 3 && m_strm.getByte() == 1)
+                {
+                    m_animation.loop_count = m_strm.getWord();
+                }
             }
         } else if (!(type ^ 0x2C)) {
             // skip image data
@@ -490,16 +494,11 @@ bool GifEncoder::isFormatSupported(int depth) const {
 
 bool GifEncoder::write(const Mat &img, const std::vector<int> &params) {
     std::vector<Mat> img_vec(1, img);
-    return writeFrames(img_vec, params);
+    return writemulti(img_vec, params);
 }
 
-bool GifEncoder::writemulti(const std::vector<Mat> &img_vec, const std::vector<int> &params) {
-    return writeFrames(img_vec, params);
-}
-
-bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
-                             const std::vector<int>& params) {
-    if (img_vec.empty()) {
+bool GifEncoder::writeanimation(const Animation& animation, const std::vector<int>& params) {
+    if (animation.frames.empty()) {
         return false;
     }
 
@@ -510,6 +509,8 @@ bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
     } else if (!strm.open(m_filename)) {
         return false;
     }
+
+    loopCount = animation.loop_count;
 
     // confirm the params
     for (size_t i = 0; i < params.size(); i += 2) {
@@ -561,13 +562,13 @@ bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
     if (fast) {
         const uchar transparent = 0x92; // 1001_0010: the middle of the color table
         if (dithering == GRFMT_GIF_None) {
-            img_vec_ = img_vec;
+            img_vec_ = animation.frames;
             transparentColor = transparent;
         } else {
             localColorTableSize = 0;
             int transRGB;
             const int depth = 3 << 8 | 3 << 4 | 2; // r:g:b = 3:3:2
-            for (auto &img: img_vec) {
+            for (auto &img: animation.frames) {
                 Mat img_(img.size(), img.type());
                 transRGB = ditheringKernel(img, img_, depth, criticalTransparency);
                 if (transRGB >= 0) {
@@ -583,13 +584,13 @@ bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
     } else if (dithering != GRFMT_GIF_None) {
         int depth = (int)floor(log2(colorNum) / 3) + dithering;
         depth = depth << 8 | depth << 4 | depth;
-        for (auto &img : img_vec) {
+        for (auto &img : animation.frames) {
             Mat img_(img.size(), img.type());
             ditheringKernel(img, img_, depth, criticalTransparency);
             img_vec_.push_back(img_);
         }
     } else {
-        img_vec_ = img_vec;
+        img_vec_ = animation.frames;
     }
     bool result = writeHeader(img_vec_);
     if (!result) {
@@ -597,8 +598,9 @@ bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
         return false;
     }
 
-    for (const auto &img : img_vec_) {
-        result = writeFrame(img);
+    for (size_t i = 0; i < img_vec_.size(); i++) {
+        frameDelay = cvRound(animation.durations[i] / 10);
+        result = writeFrame(img_vec_[i]);
     }
 
     strm.putByte(0x3B); // trailer
