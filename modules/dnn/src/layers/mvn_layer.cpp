@@ -149,7 +149,7 @@ public:
         UMat& bnorm_bias = umat_shift;
 
         const unsigned LOCAL_SIZE = 128;
-        bool use_half = (inputs[0].depth() == CV_16S);
+        bool use_half = (inputs[0].depth() == CV_16F);
         String opts = format(" -DT=%s -DT4=%s -Dconvert_T=%s -DLOCAL_SIZE=%u", use_half ? "half" : "float",
                              use_half ? "half4" : "float4", use_half ? "convert_half4" : "convert_float4",
                              LOCAL_SIZE
@@ -164,7 +164,7 @@ public:
             CV_Assert(newRows != 0);
 
             MatShape s = shape(newRows, inpMat.total() / newRows);
-            UMat meanMat = UMat(s[0], 1, (use_half) ? CV_16S : CV_32F);
+            UMat meanMat = UMat(s[0], 1, (use_half) ? CV_16F : CV_32F);
             UMat tmpMat  = UMat(s[0], s[1], CV_32F);
             float alpha = 1.0f / s[1];
 
@@ -226,7 +226,7 @@ public:
         if (normVariance && (row_size % 4 == 0) && (plane_size % 4 == 0))
             return fast_forward_ocl(inputs, outputs);
 
-        if (inputs[0].depth() == CV_16S)
+        if (inputs[0].depth() == CV_16F)
             return false;
 
         String opts = format(" -DT=float -DT4=float4 -Dconvert_T=convert_float4");
@@ -309,7 +309,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -336,15 +336,11 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2021_2)
-        auto mvn = std::make_shared<ngraph::op::MVN>(ieInpNode, acrossChannels, normVariance, eps);
-#else
         int64_t start_axis = acrossChannels ? 1 : 2;
         std::vector<int64_t> axes_v(ieInpNode.get_shape().size() - start_axis);
         std::iota(axes_v.begin(), axes_v.end(), start_axis);
-        auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes_v.size()}, axes_v.data());
-        auto mvn = std::make_shared<ngraph::op::v6::MVN>(ieInpNode, axes, normVariance, eps, ngraph::op::MVNEpsMode::INSIDE_SQRT);
-#endif
+        auto axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{axes_v.size()}, axes_v.data());
+        auto mvn = std::make_shared<ov::op::v6::MVN>(ieInpNode, axes, normVariance, eps, ov::op::MVNEpsMode::INSIDE_SQRT);
         return Ptr<BackendNode>(new InfEngineNgraphNode(mvn));
     }
 #endif  // HAVE_DNN_NGRAPH

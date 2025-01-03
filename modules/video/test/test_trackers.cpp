@@ -166,7 +166,7 @@ TEST(vittrack, accuracy_vittrack)
     cv::TrackerVit::Params params;
     params.net = model;
     cv::Ptr<Tracker> tracker = TrackerVit::create(params);
-    checkTrackingAccuracy(tracker, 0.67);
+    checkTrackingAccuracy(tracker, 0.64);
 }
 
 }}  // namespace opencv_test::

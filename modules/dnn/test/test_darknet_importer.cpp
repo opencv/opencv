@@ -357,7 +357,8 @@ TEST_P(Test_Darknet_nets, YoloVoc)
 #else
         CV_TEST_TAG_MEMORY_1GB,
 #endif
-        CV_TEST_TAG_LONG
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
     );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2020040000)  // nGraph compilation failure
@@ -919,10 +920,10 @@ TEST_P(Test_Darknet_nets, YOLOv4_tiny)
 TEST_P(Test_Darknet_nets, YOLOv4x_mish)
 {
     applyTestTag(
-            CV_TEST_TAG_LONG,
-            CV_TEST_TAG_MEMORY_2GB,
-            CV_TEST_TAG_DEBUG_VERYLONG
-            );
+        CV_TEST_TAG_MEMORY_2GB,
+        CV_TEST_TAG_LONG,
+        CV_TEST_TAG_DEBUG_VERYLONG
+    );
 
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2021040000)
     // IE exception: Ngraph operation Transpose with name permute_168 has dynamic output shape on 0 port, but CPU plug-in supports only static shape
@@ -1047,6 +1048,11 @@ TEST_P(Test_Darknet_layers, tanh)
 TEST_P(Test_Darknet_layers, avgpool_softmax)
 {
     testDarknetLayer("avgpool_softmax");
+}
+
+TEST_P(Test_Darknet_layers, crop)
+{
+    testDarknetLayer("crop");
 }
 
 TEST_P(Test_Darknet_layers, region)

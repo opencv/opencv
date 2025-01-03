@@ -5,8 +5,8 @@ if (WIN32 AND NOT ARM)
   message(FATAL_ERROR "BUILD_TBB option supports Windows on ARM only!\nUse regular official TBB build instead of the BUILD_TBB option!")
 endif()
 
-ocv_update(OPENCV_TBB_RELEASE "v2020.2")
-ocv_update(OPENCV_TBB_RELEASE_MD5 "5af6f6c2a24c2043e62e47205e273b1f")
+ocv_update(OPENCV_TBB_RELEASE "v2021.11.0")
+ocv_update(OPENCV_TBB_RELEASE_MD5 "b301151120b08a17e98dcdda6e4f6011")
 ocv_update(OPENCV_TBB_FILENAME "${OPENCV_TBB_RELEASE}.tar.gz")
 string(REGEX REPLACE "^v" "" OPENCV_TBB_RELEASE_ "${OPENCV_TBB_RELEASE}")
 #ocv_update(OPENCV_TBB_SUBDIR ...)
@@ -17,7 +17,7 @@ ocv_download(FILENAME ${OPENCV_TBB_FILENAME}
              URL
                "${OPENCV_TBB_URL}"
                "$ENV{OPENCV_TBB_URL}"
-               "https://github.com/01org/tbb/archive/"
+               "https://github.com/oneapi-src/oneTBB/archive/refs/tags/"
              DESTINATION_DIR ${tbb_src_dir}
              ID TBB
              STATUS res
@@ -44,7 +44,6 @@ ocv_include_directories("${tbb_src_dir}/include"
 
 file(GLOB lib_srcs "${tbb_src_dir}/src/tbb/*.cpp")
 file(GLOB lib_hdrs "${tbb_src_dir}/src/tbb/*.h")
-list(APPEND lib_srcs "${tbb_src_dir}/src/rml/client/rml_tbb.cpp")
 ocv_list_filterout(lib_srcs "${tbb_src_dir}/src/tbb/tbbbind.cpp")  # hwloc.h requirement
 ocv_list_filterout(lib_srcs "${tbb_src_dir}/src/tbb/tbb_bind.cpp")  # hwloc.h requirement 2020.1+
 
@@ -100,6 +99,8 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
     -Wimplicit-fallthrough             # TBB 2018 under GCC 7+
     -Wmissing-prototypes               # MacOSX, Android/Clang
     -Wundef -Wmissing-declarations     # TBB 2019
+    -Wnon-virtual-dtor                 # oneTBB-2020.2 Android
+    -Wunused-but-set-variable          # oneTBB-2020.2 Android
 )
 
 set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
@@ -168,6 +169,6 @@ ocv_install_target(tbb EXPORT OpenCVModules
     OPTIONAL
     )
 
-ocv_install_3rdparty_licenses(tbb "${tbb_src_dir}/LICENSE" "${tbb_src_dir}/README")
+ocv_install_3rdparty_licenses(tbb "${tbb_src_dir}/LICENSE.txt" "${tbb_src_dir}/README.md")
 
 ocv_tbb_read_version("${tbb_src_dir}/include" tbb)

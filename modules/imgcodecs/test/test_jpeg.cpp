@@ -7,94 +7,9 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_JPEG
 
-/**
- * Test for check whether reading exif orientation tag was processed successfully or not
- * The test info is the set of 8 images named testExifRotate_{1 to 8}.jpg
- * The test image is the square 10x10 points divided by four sub-squares:
- * (R corresponds to Red, G to Green, B to Blue, W to white)
- * ---------             ---------
- * | R | G |             | G | R |
- * |-------| - (tag 1)   |-------| - (tag 2)
- * | B | W |             | W | B |
- * ---------             ---------
- *
- * ---------             ---------
- * | W | B |             | B | W |
- * |-------| - (tag 3)   |-------| - (tag 4)
- * | G | R |             | R | G |
- * ---------             ---------
- *
- * ---------             ---------
- * | R | B |             | G | W |
- * |-------| - (tag 5)   |-------| - (tag 6)
- * | G | W |             | R | B |
- * ---------             ---------
- *
- * ---------             ---------
- * | W | G |             | B | R |
- * |-------| - (tag 7)   |-------| - (tag 8)
- * | B | R |             | W | G |
- * ---------             ---------
- *
- *
- * Every image contains exif field with orientation tag (0x112)
- * After reading each image the corresponding matrix must be read as
- * ---------
- * | R | G |
- * |-------|
- * | B | W |
- * ---------
- *
- */
-
-typedef testing::TestWithParam<string> Imgcodecs_Jpeg_Exif;
-
-TEST_P(Imgcodecs_Jpeg_Exif, exif_orientation)
-{
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + GetParam();
-    const int colorThresholdHigh = 250;
-    const int colorThresholdLow = 5;
-
-    Mat m_img = imread(filename);
-    ASSERT_FALSE(m_img.empty());
-    Vec3b vec;
-
-    //Checking the first quadrant (with supposed red)
-    vec = m_img.at<Vec3b>(2, 2); //some point inside the square
-    EXPECT_LE(vec.val[0], colorThresholdLow);
-    EXPECT_LE(vec.val[1], colorThresholdLow);
-    EXPECT_GE(vec.val[2], colorThresholdHigh);
-
-    //Checking the second quadrant (with supposed green)
-    vec = m_img.at<Vec3b>(2, 7);  //some point inside the square
-    EXPECT_LE(vec.val[0], colorThresholdLow);
-    EXPECT_GE(vec.val[1], colorThresholdHigh);
-    EXPECT_LE(vec.val[2], colorThresholdLow);
-
-    //Checking the third quadrant (with supposed blue)
-    vec = m_img.at<Vec3b>(7, 2);  //some point inside the square
-    EXPECT_GE(vec.val[0], colorThresholdHigh);
-    EXPECT_LE(vec.val[1], colorThresholdLow);
-    EXPECT_LE(vec.val[2], colorThresholdLow);
+extern "C" {
+#include "jpeglib.h"
 }
-
-const string exif_files[] =
-{
-    "readwrite/testExifOrientation_1.jpg",
-    "readwrite/testExifOrientation_2.jpg",
-    "readwrite/testExifOrientation_3.jpg",
-    "readwrite/testExifOrientation_4.jpg",
-    "readwrite/testExifOrientation_5.jpg",
-    "readwrite/testExifOrientation_6.jpg",
-    "readwrite/testExifOrientation_7.jpg",
-    "readwrite/testExifOrientation_8.jpg"
-};
-
-INSTANTIATE_TEST_CASE_P(ExifFiles, Imgcodecs_Jpeg_Exif,
-                        testing::ValuesIn(exif_files));
-
-//==================================================================================================
 
 TEST(Imgcodecs_Jpeg, encode_empty)
 {
@@ -177,6 +92,45 @@ TEST(Imgcodecs_Jpeg, encode_decode_rst_jpeg)
     EXPECT_EQ(0, remove(output_rst.c_str()));
     EXPECT_EQ(0, remove(output_normal.c_str()));
 }
+
+// See https://github.com/opencv/opencv/issues/25274
+typedef testing::TestWithParam<int> Imgcodecs_Jpeg_decode_cmyk;
+TEST_P(Imgcodecs_Jpeg_decode_cmyk, regression25274)
+{
+    const int imread_flag = GetParam();
+
+    /*
+     * "test_1_c4.jpg" is CMYK-JPEG.
+     * $ convert test_1_c3.jpg -colorspace CMYK test_1_c4.jpg
+     * $ identify test_1_c4.jpg
+     * test_1_c4.jpg JPEG 480x640 480x640+0+0 8-bit CMYK 11240B 0.000u 0:00.000
+     */
+
+    cvtest::TS& ts = *cvtest::TS::ptr();
+
+    string  rgb_filename  = string(ts.get_data_path()) + "readwrite/test_1_c3.jpg";
+    cv::Mat rgb_img       = cv::imread(rgb_filename, imread_flag);
+    ASSERT_FALSE(rgb_img.empty());
+
+    string  cmyk_filename = string(ts.get_data_path()) + "readwrite/test_1_c4.jpg";
+    cv::Mat cmyk_img      = cv::imread(cmyk_filename, imread_flag);
+    ASSERT_FALSE(cmyk_img.empty());
+
+    EXPECT_EQ(rgb_img.size(), cmyk_img.size());
+    EXPECT_EQ(rgb_img.type(), cmyk_img.type());
+
+    // Jpeg is lossy compression.
+    // There may be small differences in decoding results by environments.
+    // -> 255 * 1% = 2.55 .
+    EXPECT_LE(cvtest::norm(rgb_img, cmyk_img, NORM_INF), 3); // norm() <= 3
+}
+
+INSTANTIATE_TEST_CASE_P( /* nothing */,
+                        Imgcodecs_Jpeg_decode_cmyk,
+                        testing::Values(cv::IMREAD_COLOR,
+                                        cv::IMREAD_COLOR_RGB,
+                                        cv::IMREAD_GRAYSCALE,
+                                        cv::IMREAD_ANYCOLOR));
 
 //==================================================================================================
 
@@ -269,6 +223,71 @@ TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_invalid)
         EXPECT_EQ( default_sampling_factor, test_jpeg_subsampling(src, param) );
     }
 }
+
+//==================================================================================================
+// See https://github.com/opencv/opencv/issues/25646
+typedef testing::TestWithParam<std::tuple<int, int>> Imgcodecs_Jpeg_encode_withLumaChromaQuality;
+
+TEST_P(Imgcodecs_Jpeg_encode_withLumaChromaQuality, basic)
+{
+    const int luma   = get<0>(GetParam());
+    const int chroma = get<1>(GetParam());
+
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    string fname = string(ts.get_data_path()) + "../cv/shared/lena.png";
+
+    cv::Mat src = imread(fname, cv::IMREAD_COLOR);
+    ASSERT_FALSE(src.empty());
+
+    // Add imread RGB test
+    cv::Mat src_rgb = imread(fname, cv::IMREAD_COLOR_RGB);
+    ASSERT_FALSE(src_rgb.empty());
+
+    cvtColor(src_rgb, src_rgb, COLOR_RGB2BGR);
+    EXPECT_TRUE(cvtest::norm(src, src_rgb, NORM_INF) == 0);
+
+    std::vector<uint8_t> jpegNormal;
+    ASSERT_NO_THROW(cv::imencode(".jpg", src, jpegNormal));
+
+    std::vector<int> param;
+    param.push_back(IMWRITE_JPEG_LUMA_QUALITY);
+    param.push_back(luma);
+    param.push_back(IMWRITE_JPEG_CHROMA_QUALITY);
+    param.push_back(chroma);
+
+    std::vector<uint8_t> jpegCustom;
+    ASSERT_NO_THROW(cv::imencode(".jpg", src, jpegCustom, param));
+
+#if JPEG_LIB_VERSION >= 70
+    // For jpeg7+, we can support IMWRITE_JPEG_LUMA_QUALITY and IMWRITE_JPEG_CHROMA_QUALITY.
+    if( (luma == 95 /* Default Luma Quality */ ) && ( chroma == 95 /* Default Chroma Quality */))
+    {
+        EXPECT_EQ(jpegNormal, jpegCustom);
+    }
+    else
+    {
+        EXPECT_NE(jpegNormal, jpegCustom);
+    }
+#else
+    // For jpeg6-, we cannot support IMWRITE_JPEG_LUMA/CHROMA_QUALITY because jpeg_default_qtables() is missing.
+    // - IMWRITE_JPEG_LUMA_QUALITY updates internal parameter of IMWRITE_JPEG_QUALITY.
+    // - IMWRITE_JPEG_CHROMA_QUALITY updates nothing.
+    if( luma == 95 /* Default Jpeg Quality */ )
+    {
+        EXPECT_EQ(jpegNormal, jpegCustom);
+    }
+    else
+    {
+        EXPECT_NE(jpegNormal, jpegCustom);
+    }
+#endif
+}
+
+INSTANTIATE_TEST_CASE_P( /* nothing */,
+                        Imgcodecs_Jpeg_encode_withLumaChromaQuality,
+                        testing::Combine(
+                            testing::Values(70, 95, 100),    // IMWRITE_JPEG_LUMA_QUALITY
+                            testing::Values(70, 95, 100) )); // IMWRITE_JPEG_CHROMA_QUALITY
 
 #endif // HAVE_JPEG
 

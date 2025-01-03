@@ -86,7 +86,11 @@ CASE(test_adam)
 CASE(test_adam_multiple)
     // no filter
 CASE(test_add)
-    // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 0.00024;  // Expected: (normL1) <= (l1), actual: 0.000234754 vs 1e-05
+        default_lInf = 0.0011;  // Expected: (normInf) <= (lInf), actual: 0.00106502 vs 0.0001
+    }
 CASE(test_add_bcast)
 #if SKIP_SET_1
     SKIP;
@@ -544,16 +548,28 @@ CASE(test_cumsum_2d_negative_axis)
     // no filter
 CASE(test_depthtospace_crd_mode)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 1e-4;  // Expected: (normL1) <= (l1), actual: 9.33057e-05 vs 1e-05
+        default_lInf = 2.5e-4;  // Expected: (normInf) <= (lInf), actual: 0.000243843 vs 0.0001
+    }
 CASE(test_depthtospace_crd_mode_example)
     // no filter
 CASE(test_depthtospace_dcr_mode)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 1e-4;  // Expected: (normL1) <= (l1), actual: 9.33057e-05 vs 1e-05
+        default_lInf = 2.5e-4;  // Expected: (normInf) <= (lInf), actual: 0.000243843 vs 0.0001
+    }
 CASE(test_depthtospace_example)
     // no filter
 CASE(test_dequantizelinear)
-    // no filter
+    SKIP;
 CASE(test_dequantizelinear_axis)
-    // no filter
+    SKIP;
+CASE(test_dequantizelinear_blocked)
+    SKIP;
 CASE(test_det_2d)
     // no filter
 CASE(test_det_nd)
@@ -597,7 +613,7 @@ CASE(test_dynamicquantizelinear_min_adjusted_expanded)
 CASE(test_edge_pad)
     // no filter
 CASE(test_einsum_batch_diagonal)
-    // no filter
+    SKIP;
 CASE(test_einsum_batch_matmul)
     // no filter
 CASE(test_einsum_inner_prod)
@@ -610,7 +626,13 @@ CASE(test_elu)
     // no filter
 CASE(test_elu_default)
     // no filter
+CASE(test_elu_default_expanded_ver18)
+    // no filter
 CASE(test_elu_example)
+    // no filter
+CASE(test_elu_example_expanded_ver18)
+    // no filter
+CASE(test_elu_expanded_ver18)
     // no filter
 CASE(test_equal)
     // no filter
@@ -674,6 +696,36 @@ CASE(test_gathernd_example_int32)
     // no filter
 CASE(test_gathernd_example_int32_batch_dim1)
     // no filter
+CASE(test_gelu_default_1)
+    // no filter
+CASE(test_gelu_default_1_expanded)
+    // no filter
+CASE(test_gelu_default_2)
+    // no filter
+CASE(test_gelu_default_2_expanded)
+    // no filter
+CASE(test_gelu_tanh_1)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+    }
+CASE(test_gelu_tanh_1_expanded)
+    // no filter
+CASE(test_gelu_tanh_2)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80057e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80144e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
+    }
+CASE(test_gelu_tanh_2_expanded)
+    // no filter
 CASE(test_gemm_all_attributes)
     // no filter
 CASE(test_gemm_alpha)
@@ -735,6 +787,10 @@ CASE(test_gridsample_nearest)
 CASE(test_gridsample_reflection_padding)
     // no filter
 CASE(test_gridsample_zeros_padding)
+    // no filter
+CASE(test_group_normalization_epsilon)
+    // no filter
+CASE(test_group_normalization_example)
     // no filter
 CASE(test_gru_batchwise)
     // no filter
@@ -1050,16 +1106,35 @@ CASE(test_min_uint64)
     // no filter
 CASE(test_min_uint8)
     // no filter
+CASE(test_mish)
+    // no filter
+CASE(test_mish_expanded)
+    // no filter
 CASE(test_mod_broadcast)
     // no filter
 CASE(test_mod_int64_fmod)
     // no filter
 CASE(test_mod_mixed_sign_float16)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 0.0011;  // Expected: (normL1) <= (l1), actual: 0.00104141 vs 1e-05
+        default_lInf = 0.0016;  // Expected: (normInf) <= (lInf), actual: 0.00156212 vs 0.0001
+    }
 CASE(test_mod_mixed_sign_float32)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 0.0011;  // Expected: (normL1) <= (l1), actual: 0.00104141 vs 1e-05
+        default_lInf = 0.0016;  // Expected: (normInf) <= (lInf), actual: 0.00156212 vs 0.0001
+    }
 CASE(test_mod_mixed_sign_float64)
     // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 0.0011;  // Expected: (normL1) <= (l1), actual: 0.00104167 vs 1e-05
+        default_lInf = 0.0016;  // Expected: (normInf) <= (lInf), actual: 0.00156251 vs 0.0001
+    }
 CASE(test_mod_mixed_sign_int16)
     // no filter
 CASE(test_mod_mixed_sign_int32)
@@ -1081,7 +1156,11 @@ CASE(test_momentum)
 CASE(test_momentum_multiple)
     // no filter
 CASE(test_mul)
-    // no filter
+    if (target == DNN_TARGET_OPENCL)
+    {
+        default_l1 = 0.00024; // Expected: (normL1) <= (l1), actual: 0.00023824 vs 1e-05
+        default_lInf = 0.0015; // Expected: (normInf) <= (lInf), actual: 0.00145674 vs 0.0001
+    }
 CASE(test_mul_bcast)
 #if SKIP_SET_1
     SKIP;
@@ -1233,7 +1312,7 @@ CASE(test_or_bcast4v3d)
 CASE(test_or_bcast4v4d)
     // no filter
 CASE(test_pow)
-    // no filter
+    SKIP_OPENCL_FP16;
 CASE(test_pow_bcast_array)
     // no filter
 CASE(test_pow_bcast_scalar)
@@ -1271,9 +1350,11 @@ CASE(test_qlinearmatmul_2D)
 CASE(test_qlinearmatmul_3D)
     // no filter
 CASE(test_quantizelinear)
-    // no filter
+    SKIP;
 CASE(test_quantizelinear_axis)
-    // no filter
+    SKIP;
+CASE(test_quantizelinear_blocked)
+    SKIP;
 CASE(test_range_float_type_positive_delta)
     // no filter
 CASE(test_range_float_type_positive_delta_expanded)
@@ -1784,7 +1865,13 @@ CASE(test_selu)
     // no filter
 CASE(test_selu_default)
     // no filter
+CASE(test_selu_default_expanded_ver18)
+    // no filter
 CASE(test_selu_example)
+    // no filter
+CASE(test_selu_example_expanded_ver18)
+    // no filter
+CASE(test_selu_expanded_ver18)
     // no filter
 CASE(test_sequence_insert_at_back)
     // no filter

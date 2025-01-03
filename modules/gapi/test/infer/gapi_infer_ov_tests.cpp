@@ -25,11 +25,9 @@ void initDLDTDataPath()
     static bool initialized = false;
     if (!initialized)
     {
-        const char* omzDataPath = getenv("OPENCV_OPEN_MODEL_ZOO_DATA_PATH");
-        if (omzDataPath)
-            cvtest::addDataSearchPath(omzDataPath);
-        const char* dnnDataPath = getenv("OPENCV_DNN_TEST_DATA_PATH");
-        if (dnnDataPath) {
+        cvtest::addDataSearchEnv("OPENCV_OPEN_MODEL_ZOO_DATA_PATH");
+        const std::string dnnDataPath = cv::utils::getConfigurationParameterString("OPENCV_DNN_TEST_DATA_PATH");
+        if (!dnnDataPath.empty()) {
             // Add the dnnDataPath itself - G-API is using some images there directly
             cvtest::addDataSearchPath(dnnDataPath);
             cvtest::addDataSearchPath(dnnDataPath + std::string("/omz_intel_models"));
@@ -319,7 +317,173 @@ struct TestAgeGenderListOV : public BaseAgeGenderOV {
     }
 };
 
+class TestMediaBGR final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_mat;
+    using Cb = cv::MediaFrame::View::Callback;
+    Cb m_cb;
+
+public:
+    explicit TestMediaBGR(cv::Mat m, Cb cb = [](){})
+        : m_mat(m), m_cb(cb) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::BGR, cv::Size(m_mat.cols, m_mat.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = { m_mat.ptr(), nullptr, nullptr, nullptr };
+        cv::MediaFrame::View::Strides ss = { m_mat.step, 0u, 0u, 0u };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss), Cb{m_cb});
+    }
+};
+
+struct MediaFrameTestAgeGenderOV: public ::testing::Test {
+    MediaFrameTestAgeGenderOV() {
+        initDLDTDataPath();
+        xml_path  = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.xml", false);
+        bin_path  = findDataFile(SUBDIR + "age-gender-recognition-retail-0013.bin", false);
+        device    = "CPU";
+        blob_path = "age-gender-recognition-retail-0013.blob";
+
+        cv::Size sz{62, 62};
+        m_in_mat = cv::Mat(sz, CV_8UC3);
+        cv::resize(m_in_mat, m_in_mat, sz);
+
+        m_in_y = cv::Mat{sz, CV_8UC1};
+        cv::randu(m_in_y, 0, 255);
+        m_in_uv = cv::Mat{sz / 2, CV_8UC2};
+        cv::randu(m_in_uv, 0, 255);
+    }
+
+    cv::Mat m_in_y;
+    cv::Mat m_in_uv;
+
+    cv::Mat m_in_mat;
+
+    cv::Mat m_out_ov_age;
+    cv::Mat m_out_ov_gender;
+
+    cv::Mat m_out_gapi_age;
+    cv::Mat m_out_gapi_gender;
+
+    std::string xml_path;
+    std::string bin_path;
+    std::string blob_path;
+    std::string device;
+    std::string image_path;
+
+    using AGInfo = std::tuple<cv::GMat, cv::GMat>;
+    G_API_NET(AgeGender, <AGInfo(cv::GMat)>, "typed-age-gender");
+
+    void validate() {
+        normAssert(m_out_ov_age,    m_out_gapi_age,    "0: Test age output");
+        normAssert(m_out_ov_gender, m_out_gapi_gender, "0: Test gender output");
+    }
+}; // MediaFrameTestAgeGenderOV
+
 } // anonymous namespace
+
+TEST_F(MediaFrameTestAgeGenderOV, InferMediaInputBGR)
+{
+    // OpenVINO
+    AGNetOVComp ref(xml_path, bin_path, device);
+    ref.cfgPrePostProcessing([](ov::preprocess::PrePostProcessor &ppp) {
+        ppp.input().tensor().set_element_type(ov::element::u8);
+        ppp.input().tensor().set_layout("NHWC");
+    });
+    ref.compile()(m_in_mat, m_out_ov_age, m_out_ov_gender);
+
+    // G-API
+    cv::GFrame in;
+    cv::GMat age, gender;
+    std::tie(age, gender) = cv::gapi::infer<AgeGender>(in);
+    cv::GComputation comp{cv::GIn(in), cv::GOut(age, gender)};
+
+    auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
+    auto pp = cv::gapi::ov::Params<AgeGender> {
+        xml_path, bin_path, device
+    }.cfgOutputLayers({ "age_conv3", "prob" });
+
+    comp.apply(cv::gin(frame),
+               cv::gout(m_out_gapi_age, m_out_gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    validate();
+}
+
+TEST_F(MediaFrameTestAgeGenderOV, InferROIGenericMediaInputBGR) {
+    // OpenVINO
+    cv::Rect roi(cv::Rect(cv::Point{20, 25}, cv::Size{16, 16}));
+    auto frame = MediaFrame::Create<TestMediaBGR>(m_in_mat);
+    static constexpr const char* tag = "age-gender-generic";
+
+    // OpenVINO
+    AGNetOVComp ref(xml_path, bin_path, device);
+    ref.cfgPrePostProcessing([](ov::preprocess::PrePostProcessor &ppp) {
+        ppp.input().tensor().set_element_type(ov::element::u8);
+        ppp.input().tensor().set_layout("NHWC");
+    });
+    ref.compile()(m_in_mat, roi, m_out_ov_age, m_out_ov_gender);
+
+    // G-API
+    cv::GFrame in;
+    cv::GOpaque<cv::Rect> rr;
+    GInferInputs inputs;
+    inputs["data"] = in;
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>(tag, rr, inputs);
+    auto age = outputs.at("age_conv3");
+    auto gender = outputs.at("prob");
+    cv::GComputation comp{cv::GIn(in, rr), cv::GOut(age, gender)};
+
+    auto pp = AGNetROIGenComp::params(xml_path, bin_path, device);
+
+    comp.apply(cv::gin(frame, roi), cv::gout(m_out_gapi_age, m_out_gapi_gender),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    validate();
+}
+
+class TestMediaNV12 final: public cv::MediaFrame::IAdapter {
+    cv::Mat m_y;
+    cv::Mat m_uv;
+
+public:
+    TestMediaNV12(cv::Mat y, cv::Mat uv) : m_y(y), m_uv(uv) {
+    }
+    cv::GFrameDesc meta() const override {
+        return cv::GFrameDesc{cv::MediaFormat::NV12, cv::Size(m_y.cols, m_y.rows)};
+    }
+    cv::MediaFrame::View access(cv::MediaFrame::Access) override {
+        cv::MediaFrame::View::Ptrs pp = {
+            m_y.ptr(), m_uv.ptr(), nullptr, nullptr
+        };
+        cv::MediaFrame::View::Strides ss = {
+            m_y.step, m_uv.step, 0u, 0u
+        };
+        return cv::MediaFrame::View(std::move(pp), std::move(ss));
+    }
+};
+
+TEST_F(MediaFrameTestAgeGenderOV, TestMediaNV12AgeGenderOV)
+{
+    cv::GFrame in;
+    cv::GOpaque<cv::Rect> rr;
+    GInferInputs inputs;
+    inputs["data"] = in;
+    static constexpr const char* tag = "age-gender-generic";
+    auto outputs = cv::gapi::infer<cv::gapi::Generic>(tag, rr, inputs);
+    auto age = outputs.at("age_conv3");
+    auto gender = outputs.at("prob");
+    cv::GComputation comp{cv::GIn(in, rr), cv::GOut(age, gender)};
+
+    auto frame = MediaFrame::Create<TestMediaNV12>(m_in_y, m_in_uv);
+    auto pp = AGNetROIGenComp::params(xml_path, bin_path, device);
+
+    cv::Rect roi(cv::Rect(cv::Point{20, 25}, cv::Size{16, 16}));
+
+    EXPECT_NO_THROW(comp.apply(cv::gin(frame, roi),
+                    cv::gout(m_out_gapi_age, m_out_gapi_gender),
+                    cv::compile_args(cv::gapi::networks(pp))));
+}
 
 // TODO: Make all of tests below parmetrized to avoid code duplication
 TEST_F(TestAgeGenderOV, Infer_Tensor) {
@@ -656,6 +820,187 @@ TEST_F(TestAgeGenderListOV, InferList2Generic_Image) {
     // Assert
     validate();
 }
+
+static ov::element::Type toOV(int depth) {
+    switch (depth) {
+    case CV_8U:  return ov::element::u8;
+    case CV_32S: return ov::element::i32;
+    case CV_32F: return ov::element::f32;
+    case CV_16F: return ov::element::f16;
+    default: GAPI_Error("OV Backend: Unsupported data type");
+    }
+    return ov::element::undefined;
+}
+
+struct TestMeanScaleOV : public ::testing::TestWithParam<int>{
+    G_API_NET(IdentityNet, <cv::GMat(cv::GMat)>, "test-identity-net");
+
+    static cv::GComputation create() {
+        cv::GMat in;
+        cv::GMat out;
+        out = cv::gapi::infer<IdentityNet>(in);
+
+        return cv::GComputation{cv::GIn(in), cv::GOut(out)};
+    }
+
+    using Params = cv::gapi::ov::Params<IdentityNet>;
+    static Params params(const std::string &xml_path,
+                         const std::string &bin_path,
+                         const std::string &device) {
+        return Params {
+            xml_path, bin_path, device
+        }.cfgInputModelLayout("NHWC")
+         .cfgOutputLayers({ "output" });
+    }
+
+    TestMeanScaleOV() {
+        initDLDTDataPath();
+
+        m_model_path = findDataFile("gapi/ov/identity_net_100x100.xml");
+        m_weights_path = findDataFile("gapi/ov/identity_net_100x100.bin");
+        m_device_id = "CPU";
+
+        m_ov_model = cv::gapi::ov::wrap::getCore()
+            .read_model(m_model_path, m_weights_path);
+
+        auto input_depth = GetParam();
+        auto input = cv::imread(findDataFile("gapi/gapi_logo.jpg"));
+        input.convertTo(m_in_mat, input_depth);
+    }
+
+    void addPreprocToOV(
+        std::function<void(ov::preprocess::PrePostProcessor&)> f) {
+
+        auto input_depth = GetParam();
+
+        ov::preprocess::PrePostProcessor ppp(m_ov_model);
+        ppp.input().tensor().set_layout(ov::Layout("NHWC"))
+                            .set_element_type(toOV(input_depth))
+                            .set_shape({ 1, 100, 100, 3 });
+        ppp.input().model().set_layout(ov::Layout("NHWC"));
+        f(ppp);
+        m_ov_model = ppp.build();
+    }
+
+    void runOV() {
+        auto compiled_model = cv::gapi::ov::wrap::getCore()
+            .compile_model(m_ov_model, m_device_id);
+        auto infer_request = compiled_model.create_infer_request();
+
+        auto input_tensor = infer_request.get_input_tensor();
+        cv::gapi::ov::util::to_ov(m_in_mat, input_tensor);
+
+        infer_request.infer();
+
+        auto out_tensor = infer_request.get_tensor("output");
+        m_out_mat_ov.create(cv::gapi::ov::util::to_ocv(out_tensor.get_shape()),
+                            cv::gapi::ov::util::to_ocv(out_tensor.get_element_type()));
+        cv::gapi::ov::util::to_ocv(out_tensor, m_out_mat_ov);
+    }
+
+    std::string m_model_path;
+    std::string m_weights_path;
+    std::string m_device_id;
+
+    std::shared_ptr<ov::Model> m_ov_model;
+
+    cv::Mat m_in_mat;
+    cv::Mat m_out_mat_gapi;
+    cv::Mat m_out_mat_ov;
+};
+
+TEST_P(TestMeanScaleOV, Mean)
+{
+    int input_depth = GetParam();
+
+    std::vector<float> mean_values{ 220.1779, 218.9857, 217.8986 };
+
+    // Run OV reference pipeline:
+    {
+        addPreprocToOV([&](ov::preprocess::PrePostProcessor& ppp) {
+            if (input_depth == CV_8U || input_depth == CV_32S) {
+                ppp.input().preprocess().convert_element_type(ov::element::f32);
+            }
+            ppp.input().preprocess().mean(mean_values);
+            });
+        runOV();
+    }
+
+    // Run G-API
+    GComputation comp = create();
+    auto pp = params(m_model_path, m_weights_path, m_device_id);
+    pp.cfgMean(mean_values);
+
+    comp.apply(cv::gin(m_in_mat), cv::gout(m_out_mat_gapi),
+               cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate OV results against G-API ones:
+    normAssert(m_out_mat_ov, m_out_mat_gapi, "Test output");
+}
+
+TEST_P(TestMeanScaleOV, Scale)
+{
+    int input_depth = GetParam();
+
+    std::vector<float> scale_values{ 2., 2., 2. };
+
+    // Run OV reference pipeline:
+    {
+        addPreprocToOV([&](ov::preprocess::PrePostProcessor& ppp) {
+            if (input_depth == CV_8U || input_depth == CV_32S) {
+                ppp.input().preprocess().convert_element_type(ov::element::f32);
+            }
+            ppp.input().preprocess().scale(scale_values);
+            });
+        runOV();
+    }
+
+    // Run G-API
+    GComputation comp = create();
+    auto pp = params(m_model_path, m_weights_path, m_device_id);
+    pp.cfgScale(scale_values);
+
+    comp.apply(cv::gin(m_in_mat), cv::gout(m_out_mat_gapi),
+        cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate OV results against G-API ones:
+    normAssert(m_out_mat_ov, m_out_mat_gapi, "Test output");
+}
+
+TEST_P(TestMeanScaleOV, MeanAndScale)
+{
+    int input_depth = GetParam();
+
+    std::vector<float> mean_values{ 220.1779, 218.9857, 217.8986 };
+    std::vector<float> scale_values{ 2., 2., 2. };
+
+    // Run OV reference pipeline:
+    {
+        addPreprocToOV([&](ov::preprocess::PrePostProcessor& ppp) {
+            if (input_depth == CV_8U || input_depth == CV_32S) {
+                ppp.input().preprocess().convert_element_type(ov::element::f32);
+            }
+            ppp.input().preprocess().mean(mean_values);
+            ppp.input().preprocess().scale(scale_values);
+            });
+        runOV();
+    }
+
+    // Run G-API
+    GComputation comp = create();
+    auto pp = params(m_model_path, m_weights_path, m_device_id);
+    pp.cfgMean(mean_values);
+    pp.cfgScale(scale_values);
+
+    comp.apply(cv::gin(m_in_mat), cv::gout(m_out_mat_gapi),
+        cv::compile_args(cv::gapi::networks(pp)));
+
+    // Validate OV results against G-API ones:
+    normAssert(m_out_mat_ov, m_out_mat_gapi, "Test output");
+}
+
+INSTANTIATE_TEST_CASE_P(Instantiation, TestMeanScaleOV,
+                        Values(CV_8U, CV_32S, CV_16F, CV_32F));
 
 } // namespace opencv_test
 

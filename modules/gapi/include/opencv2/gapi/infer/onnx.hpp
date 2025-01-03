@@ -11,9 +11,11 @@
 #include <string>
 #include <array>
 #include <tuple> // tuple, tuple_size
+#include <map>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 #include <opencv2/gapi/util/any.hpp>
+#include <opencv2/gapi/util/optional.hpp>
 
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
@@ -31,6 +33,65 @@ namespace onnx {
  * @brief This namespace contains Execution Providers structures for G-API ONNX Runtime backend.
  */
 namespace ep {
+
+/**
+ * @brief This structure provides functions
+ * that fill inference options for ONNX CoreML Execution Provider.
+ * Please follow https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml-execution-provider
+ */
+struct GAPI_EXPORTS_W_SIMPLE CoreML {
+    /** @brief Class constructor.
+
+    Constructs CoreML parameters.
+
+    */
+    GAPI_WRAP
+    CoreML() = default;
+
+    /** @brief Limit CoreML Execution Provider to run on CPU only.
+
+    This function is used to limit CoreML to run on CPU only.
+    Please follow: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml_flag_use_cpu_only
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    CoreML& cfgUseCPUOnly() {
+        use_cpu_only = true;
+        return *this;
+    }
+
+    /** @brief Enable CoreML EP to run on a subgraph in the body of a control flow ONNX operator (i.e. a Loop, Scan or If operator).
+
+    This function is used to enable CoreML EP to run on
+    a subgraph of a control flow of ONNX operation.
+    Please follow: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml_flag_enable_on_subgraph
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    CoreML& cfgEnableOnSubgraph() {
+        enable_on_subgraph = true;
+        return *this;
+    }
+
+    /** @brief Enable CoreML EP to run only on Apple Neural Engine.
+
+    This function is used to enable CoreML EP to run only on Apple Neural Engine.
+    Please follow: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html#coreml_flag_only_enable_device_with_ane
+
+    @return reference to this parameter structure.
+    */
+    GAPI_WRAP
+    CoreML& cfgEnableOnlyNeuralEngine() {
+        enable_only_ane = true;
+        return *this;
+    }
+
+    bool use_cpu_only = false;
+    bool enable_on_subgraph = false;
+    bool enable_only_ane = false;
+};
 
 /**
  * @brief This structure provides functions
@@ -97,11 +158,22 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
 
     Constructs OpenVINO parameters based on device type information.
 
-    @param dev_type Target device type to use. ("CPU_FP32", "GPU_FP16", etc)
+    @param dev_type Target device type to use. ("CPU", "GPU", "GPU.0" etc)
     */
     GAPI_WRAP
     explicit OpenVINO(const std::string &dev_type)
         : device_type(dev_type) {
+    }
+
+    /** @brief Class constructor.
+
+    Constructs OpenVINO parameters based on map of options passed.
+
+    * @param params A map of parameter names and their corresponding string values.
+    */
+    GAPI_WRAP
+    explicit OpenVINO(const std::map<std::string, std::string>& params)
+        : params_map(params) {
     }
 
     /** @brief Specifies OpenVINO Execution Provider cache dir.
@@ -114,6 +186,10 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgCacheDir(const std::string &dir) {
+        if (!params_map.empty()) {
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
+                                                   "created from the parameters map."));
+        }
         cache_dir = dir;
         return *this;
     }
@@ -128,6 +204,10 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgNumThreads(size_t nthreads) {
+        if (!params_map.empty()) {
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
+                                                   "created from the parameters map."));
+        }
         num_of_threads = nthreads;
         return *this;
     }
@@ -141,6 +221,10 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgEnableOpenCLThrottling() {
+        if (!params_map.empty()) {
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
+                                                   "created from the parameters map."));
+        }
         enable_opencl_throttling = true;
         return *this;
     }
@@ -157,6 +241,10 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     */
     GAPI_WRAP
     OpenVINO& cfgEnableDynamicShapes() {
+        if (!params_map.empty()) {
+            cv::util::throw_error(std::logic_error("ep::OpenVINO cannot be changed if"
+                                                   "created from the parameters map."));
+        }
         enable_dynamic_shapes = true;
         return *this;
     }
@@ -166,6 +254,7 @@ struct GAPI_EXPORTS_W_SIMPLE OpenVINO {
     size_t num_of_threads = 0;
     bool enable_opencl_throttling = false;
     bool enable_dynamic_shapes = false;
+    std::map<std::string, std::string> params_map;
 };
 
 /**
@@ -205,6 +294,7 @@ public:
 using EP = cv::util::variant< cv::util::monostate
                             , OpenVINO
                             , DirectML
+                            , CoreML
                             , CUDA
                             , TensorRT>;
 
@@ -262,8 +352,10 @@ struct ParamDesc {
     std::unordered_map<std::string, std::pair<cv::Scalar, cv::Scalar> > generic_mstd;
     std::unordered_map<std::string, bool> generic_norm;
 
+    std::map<std::string, std::string> session_options;
     std::vector<cv::gapi::onnx::ep::EP> execution_providers;
     bool disable_mem_pattern;
+    cv::util::optional<int> opt_level;
 };
 } // namespace detail
 
@@ -496,6 +588,20 @@ public:
 
     /** @brief Adds execution provider for runtime.
 
+    The function is used to add ONNX Runtime CoreML Execution Provider options.
+
+    @param ep CoreML Execution Provider options.
+    @see cv::gapi::onnx::ep::CoreML.
+
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgAddExecutionProvider(ep::CoreML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+        return *this;
+    }
+
+    /** @brief Adds execution provider for runtime.
+
     The function is used to add ONNX Runtime CUDA Execution Provider options.
 
     @param ep CUDA Execution Provider options.
@@ -531,6 +637,30 @@ public:
         return *this;
     }
 
+    /** @brief Configures session options for ONNX Runtime.
+
+    This function is used to set various session options for the ONNX Runtime
+    session by accepting a map of key-value pairs.
+
+    @param options A map of session option to be applied to the ONNX Runtime session.
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgSessionOptions(const std::map<std::string, std::string>& options) {
+        desc.session_options.insert(options.begin(), options.end());
+        return *this;
+    }
+
+    /** @brief Configures optimization level for ONNX Runtime.
+
+    @param opt_level [optimization level]: Valid values are 0 (disable), 1 (basic), 2 (extended), 99 (all).
+    Please see onnxruntime_c_api.h (enum GraphOptimizationLevel) for the full list of all optimization levels.
+    @return the reference on modified object.
+    */
+    Params<Net>& cfgOptLevel(const int opt_level) {
+        desc.opt_level = cv::util::make_optional(opt_level);
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend() const { return cv::gapi::onnx::backend(); }
     std::string   tag()     const { return Net::tag(); }
@@ -558,7 +688,7 @@ public:
     @param model_path path to model file (.onnx file).
     */
     Params(const std::string& tag, const std::string& model_path)
-        : desc{model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {}, {}, false }, m_tag(tag) {}
+        : desc{ model_path, 0u, 0u, {}, {}, {}, {}, {}, {}, {}, {}, {}, true, {}, {}, {}, {}, false, {} }, m_tag(tag) {}
 
     /** @see onnx::Params::cfgMeanStdDev. */
     void cfgMeanStdDev(const std::string &layer,
@@ -583,6 +713,11 @@ public:
     }
 
     /** @see onnx::Params::cfgAddExecutionProvider. */
+    void cfgAddExecutionProvider(ep::CoreML&& ep) {
+        desc.execution_providers.emplace_back(std::move(ep));
+    }
+
+    /** @see onnx::Params::cfgAddExecutionProvider. */
     void cfgAddExecutionProvider(ep::CUDA&& ep) {
         desc.execution_providers.emplace_back(std::move(ep));
     }
@@ -595,6 +730,16 @@ public:
     /** @see onnx::Params::cfgDisableMemPattern. */
     void cfgDisableMemPattern() {
         desc.disable_mem_pattern = true;
+    }
+
+    /** @see onnx::Params::cfgSessionOptions. */
+    void cfgSessionOptions(const std::map<std::string, std::string>& options) {
+        desc.session_options.insert(options.begin(), options.end());
+    }
+
+/** @see onnx::Params::cfgOptLevel. */
+    void cfgOptLevel(const int opt_level) {
+        desc.opt_level = cv::util::make_optional(opt_level);
     }
 
     // BEGIN(G-API's network parametrization API)

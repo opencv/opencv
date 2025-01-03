@@ -381,6 +381,8 @@ private:
 #define OPENCV_HAL_IMPL_NEON_INIT(_Tpv, _Tp, suffix) \
 inline v_##_Tpv v_setzero_##suffix() { return v_##_Tpv(vdupq_n_##suffix((_Tp)0)); } \
 inline v_##_Tpv v_setall_##suffix(_Tp v) { return v_##_Tpv(vdupq_n_##suffix(v)); } \
+template <> inline v_##_Tpv v_setzero_() { return v_setzero_##suffix(); } \
+template <> inline v_##_Tpv v_setall_(_Tp v) { return v_setall_##suffix(v); } \
 inline _Tpv##_t vreinterpretq_##suffix##_##suffix(_Tpv##_t v) { return v; } \
 inline v_uint8x16 v_reinterpret_as_u8(const v_##_Tpv& v) { return v_uint8x16(vreinterpretq_u8_##suffix(v.val)); } \
 inline v_int8x16 v_reinterpret_as_s8(const v_##_Tpv& v) { return v_int8x16(vreinterpretq_s8_##suffix(v.val)); } \
@@ -1642,7 +1644,7 @@ inline int v_signmask(const v_uint64x2& a)
 #if CV_NEON_AARCH64
     const int64x2_t signPosition = {0,1};
     uint64x2_t v0 = vshlq_u64(vshrq_n_u64(a.val, 63), signPosition);
-    uint64_t t0 = vaddvq_u64(v0);
+    int t0 = (int)vaddvq_u64(v0);
     return t0;
 #else // #if CV_NEON_AARCH64
     int64x1_t m0 = vdup_n_s64(0);
@@ -1990,11 +1992,9 @@ inline v_int32x4 v_round(const v_float32x4& a)
 #else
 inline v_int32x4 v_round(const v_float32x4& a)
 {
-    static const int32x4_t v_sign = vdupq_n_s32(1 << 31),
-        v_05 = vreinterpretq_s32_f32(vdupq_n_f32(0.5f));
-
-    int32x4_t v_addition = vorrq_s32(v_05, vandq_s32(v_sign, vreinterpretq_s32_f32(a.val)));
-    return v_int32x4(vcvtq_s32_f32(vaddq_f32(a.val, vreinterpretq_f32_s32(v_addition))));
+    // See https://github.com/opencv/opencv/pull/24271#issuecomment-1867318007
+    float32x4_t delta = vdupq_n_f32(12582912.0f);
+    return v_int32x4(vcvtq_s32_f32(vsubq_f32(vaddq_f32(a.val, delta), delta)));
 }
 #endif
 inline v_int32x4 v_floor(const v_float32x4& a)
@@ -2607,7 +2607,7 @@ inline void v_lut_deinterleave(const double* tab, const v_int32x4& idxvec, v_flo
 
 ////// FP16 support ///////
 #if CV_FP16
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     float16x4_t v =
     #ifndef vld1_f16 // APPLE compiler defines vld1_f16 as macro
@@ -2618,7 +2618,7 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_float32x4(vcvt_f32_f16(v));
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     float16x4_t hv = vcvt_f16_f32(v.val);
 
@@ -2629,7 +2629,7 @@ inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
     #endif
 }
 #else
-inline v_float32x4 v_load_expand(const float16_t* ptr)
+inline v_float32x4 v_load_expand(const hfloat* ptr)
 {
     const int N = 4;
     float buf[N];
@@ -2637,16 +2637,38 @@ inline v_float32x4 v_load_expand(const float16_t* ptr)
     return v_load(buf);
 }
 
-inline void v_pack_store(float16_t* ptr, const v_float32x4& v)
+inline void v_pack_store(hfloat* ptr, const v_float32x4& v)
 {
     const int N = 4;
     float buf[N];
     v_store(buf, v);
-    for( int i = 0; i < N; i++ ) ptr[i] = float16_t(buf[i]);
+    for( int i = 0; i < N; i++ ) ptr[i] = hfloat(buf[i]);
 }
 #endif
 
 inline void v_cleanup() {}
+
+#include "intrin_math.hpp"
+#if defined(CV_SIMD_FP16) && CV_SIMD_FP16
+inline v_float16x8 v_exp(const v_float16x8& x) { return v_exp_default_16f<v_float16x8, v_int16x8>(x); }
+inline v_float16x8 v_log(const v_float16x8& x) { return v_log_default_16f<v_float16x8, v_int16x8>(x); }
+inline void v_sincos(const v_float16x8& x, v_float16x8& s, v_float16x8& c) { v_sincos_default_16f<v_float16x8, v_int16x8>(x, s, c); }
+inline v_float16x8 v_sin(const v_float16x8& x) { return v_sin_default_16f<v_float16x8, v_int16x8>(x); }
+inline v_float16x8 v_cos(const v_float16x8& x) { return v_cos_default_16f<v_float16x8, v_int16x8>(x); }
+#endif
+inline v_float32x4 v_exp(const v_float32x4& x) { return v_exp_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_log(const v_float32x4& x) { return v_log_default_32f<v_float32x4, v_int32x4>(x); }
+inline void v_sincos(const v_float32x4& x, v_float32x4& s, v_float32x4& c) { v_sincos_default_32f<v_float32x4, v_int32x4>(x, s, c); }
+inline v_float32x4 v_sin(const v_float32x4& x) { return v_sin_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_cos(const v_float32x4& x) { return v_cos_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_erf(const v_float32x4& x) { return v_erf_default_32f<v_float32x4, v_int32x4>(x); }
+#if CV_SIMD128_64F
+inline v_float64x2 v_exp(const v_float64x2& x) { return v_exp_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_log(const v_float64x2& x) { return v_log_default_64f<v_float64x2, v_int64x2>(x); }
+inline void v_sincos(const v_float64x2& x, v_float64x2& s, v_float64x2& c) { v_sincos_default_64f<v_float64x2, v_int64x2>(x, s, c); }
+inline v_float64x2 v_sin(const v_float64x2& x) { return v_sin_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_cos(const v_float64x2& x) { return v_cos_default_64f<v_float64x2, v_int64x2>(x); }
+#endif
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

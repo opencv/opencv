@@ -235,14 +235,69 @@ const videoio_container_params_t videoio_container_params[] =
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_container, testing::ValuesIn(videoio_container_params));
 
-typedef tuple<string, string, int, int> videoio_encapsulate_params_t;
+typedef tuple<VideoCaptureAPIs, string, int, int, int, int, int> videoio_container_get_params_t;
+typedef testing::TestWithParam<videoio_container_get_params_t > videoio_container_get;
+
+TEST_P(videoio_container_get, read)
+{
+    const VideoCaptureAPIs api = get<0>(GetParam());
+
+    if (!videoio_registry::hasBackend(api))
+        throw SkipTestException("Backend was not found");
+
+    const string fileName = get<1>(GetParam());
+    const int height = get<2>(GetParam());
+    const int width = get<3>(GetParam());
+    const int nFrames = get<4>(GetParam());
+    const int bitrate = get<5>(GetParam());
+    const int fps = get<6>(GetParam());
+
+    VideoCapture container(findDataFile(fileName), api, { CAP_PROP_FORMAT, -1 });
+    if (!container.isOpened())
+        throw SkipTestException("Video stream is not supported");
+
+    const int heightProp = static_cast<int>(container.get(CAP_PROP_FRAME_HEIGHT));
+    ASSERT_EQ(height, heightProp);
+    const int widthProp = static_cast<int>(container.get(CAP_PROP_FRAME_WIDTH));
+    ASSERT_EQ(width, widthProp);
+    const int nFramesProp = static_cast<int>(container.get(CAP_PROP_FRAME_COUNT));
+    ASSERT_EQ(nFrames, nFramesProp);
+    const int bitrateProp = static_cast<int>(container.get(CAP_PROP_BITRATE));
+    ASSERT_EQ(bitrate, bitrateProp);
+    const double fpsProp = container.get(CAP_PROP_FPS);
+    ASSERT_EQ(fps, fpsProp);
+
+    vector<int> displayTimeMs;
+    int iFrame = 1;
+    while (container.grab()) {
+        displayTimeMs.push_back(static_cast<int>(container.get(CAP_PROP_POS_MSEC)));
+        const int iFrameProp = static_cast<int>(container.get(CAP_PROP_POS_FRAMES));
+        ASSERT_EQ(iFrame++, iFrameProp);
+    }
+    sort(displayTimeMs.begin(), displayTimeMs.end());
+    vector<int> displayTimeDiffMs(displayTimeMs.size());
+    std::adjacent_difference(displayTimeMs.begin(), displayTimeMs.end(), displayTimeDiffMs.begin());
+    auto minTimeMsIt = min_element(displayTimeDiffMs.begin() + 1, displayTimeDiffMs.end());
+    auto maxTimeMsIt = max_element(displayTimeDiffMs.begin() + 1, displayTimeDiffMs.end());
+    const int frameTimeMs = static_cast<int>(1000.0 / fps);
+    ASSERT_NEAR(frameTimeMs, *minTimeMsIt, 1);
+    ASSERT_NEAR(frameTimeMs, *maxTimeMsIt, 1);
+}
+
+const videoio_container_get_params_t videoio_container_get_params[] =
+{
+    videoio_container_get_params_t(CAP_FFMPEG, "video/big_buck_bunny.mp4", 384, 672, 125, 483, 24),
+    videoio_container_get_params_t(CAP_FFMPEG, "video/big_buck_bunny.mjpg.avi", 384, 672, 125, 2713, 24),
+    videoio_container_get_params_t(CAP_FFMPEG, "video/sample_322x242_15frames.yuv420p.libx264.mp4", 242, 322, 15, 542, 25)
+};
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_container_get, testing::ValuesIn(videoio_container_get_params));
+
+typedef tuple<string, string, int, int, bool, bool> videoio_encapsulate_params_t;
 typedef testing::TestWithParam< videoio_encapsulate_params_t > videoio_encapsulate;
 
 TEST_P(videoio_encapsulate, write)
 {
-#ifdef _WIN32
-    throw SkipTestException("Test disabled until PR for raw video encapsulation is merged and windows dll is updated");
-#else
     const VideoCaptureAPIs api = CAP_FFMPEG;
     if (!videoio_registry::hasBackend(api))
         throw SkipTestException("FFmpeg backend was not found");
@@ -252,6 +307,8 @@ TEST_P(videoio_encapsulate, write)
     const int idrPeriod = get<2>(GetParam());
     const int nFrames = get<3>(GetParam());
     const string fileNameOut = tempfile(cv::format("test_encapsulated_stream.%s", ext.c_str()).c_str());
+    const bool setPts = get<4>(GetParam());
+    const bool tsWorking = get<5>(GetParam());
 
     // Use VideoWriter to encapsulate encoded video read with VideoReader
     {
@@ -265,12 +322,15 @@ TEST_P(videoio_encapsulate, write)
         capRaw.retrieve(extraData, codecExtradataIndex);
         const int fourcc = static_cast<int>(capRaw.get(CAP_PROP_FOURCC));
         const bool mpeg4 = (fourcc == fourccFromString("FMP4"));
-
         VideoWriter container(fileNameOut, api, fourcc, fps, { width, height }, { VideoWriterProperties::VIDEOWRITER_PROP_RAW_VIDEO, 1, VideoWriterProperties::VIDEOWRITER_PROP_KEY_INTERVAL, idrPeriod });
         ASSERT_TRUE(container.isOpened());
         Mat rawFrame;
         for (int i = 0; i < nFrames; i++) {
             ASSERT_TRUE(capRaw.read(rawFrame));
+            if (setPts && i == 0) {
+                double dts = capRaw.get(CAP_PROP_DTS_DELAY);
+                ASSERT_TRUE(container.set(VIDEOWRITER_PROP_DTS_DELAY, dts)) << "dts=" << dts;
+            }
             ASSERT_FALSE(rawFrame.empty());
             if (i == 0 && mpeg4) {
                 Mat tmp = rawFrame.clone();
@@ -280,6 +340,10 @@ TEST_P(videoio_encapsulate, write)
                 rawFrame = Mat(1, newSz, CV_8UC1);
                 memcpy(rawFrame.data, extraData.data, extraData.total());
                 memcpy(rawFrame.data + extraData.total(), tmp.data, tmp.total());
+            }
+            if (setPts) {
+                double pts = capRaw.get(CAP_PROP_PTS);
+                ASSERT_TRUE(container.set(VIDEOWRITER_PROP_PTS, pts)) << "pts=" << pts;
             }
             container.write(rawFrame);
         }
@@ -307,53 +371,50 @@ TEST_P(videoio_encapsulate, write)
             ASSERT_TRUE(capActual.read(actual));
             ASSERT_FALSE(actual.empty());
             ASSERT_EQ(0, cvtest::norm(reference, actual, NORM_INF));
-
             ASSERT_TRUE(capActualRaw.grab());
             const bool keyFrameActual = capActualRaw.get(CAP_PROP_LRF_HAS_KEY_FRAME) == 1.;
             const bool keyFrameReference = idrPeriod ? i % idrPeriod == 0 : 1;
             ASSERT_EQ(keyFrameReference, keyFrameActual);
+            if (tsWorking) {
+                ASSERT_EQ(round(capReference.get(CAP_PROP_POS_MSEC)), round(capActual.get(CAP_PROP_POS_MSEC)));
+            }
         }
     }
 
     ASSERT_EQ(0, remove(fileNameOut.c_str()));
-#endif
 }
 
 const videoio_encapsulate_params_t videoio_encapsulate_params[] =
 {
-    videoio_encapsulate_params_t("video/big_buck_bunny.h264", "avi", 125, 125),
-    videoio_encapsulate_params_t("video/big_buck_bunny.h265", "mp4", 125, 125),
-    videoio_encapsulate_params_t("video/big_buck_bunny.wmv", "wmv", 12, 13),
-    videoio_encapsulate_params_t("video/big_buck_bunny.mp4", "mp4", 12, 13),
-    videoio_encapsulate_params_t("video/big_buck_bunny.mjpg.avi", "mp4", 0, 4),
-    videoio_encapsulate_params_t("video/big_buck_bunny.mov", "mp4", 12, 13),
-    videoio_encapsulate_params_t("video/big_buck_bunny.avi", "mp4", 125, 125),
-    videoio_encapsulate_params_t("video/big_buck_bunny.mpg", "mp4", 12, 13),
-    videoio_encapsulate_params_t("video/VID00003-20100701-2204.wmv", "wmv", 12, 13),
-    videoio_encapsulate_params_t("video/VID00003-20100701-2204.mpg", "mp4", 12,13),
-    videoio_encapsulate_params_t("video/VID00003-20100701-2204.avi", "mp4", 12, 13),
-    videoio_encapsulate_params_t("video/VID00003-20100701-2204.3GP", "mp4", 51, 52),
-    videoio_encapsulate_params_t("video/sample_sorenson.avi", "mp4", 12, 13),
-    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libxvid.mp4", "mp4", 3, 4),
-    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.mpeg2video.mp4", "mp4", 12, 13),
-    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.mjpeg.mp4", "mp4", 0, 5),
-    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libx264.mp4", "avi", 15, 15),
-    videoio_encapsulate_params_t("../cv/tracking/faceocc2/data/faceocc2.webm", "webm", 128, 129),
-    videoio_encapsulate_params_t("../cv/video/1920x1080.avi", "mp4", 12, 13),
-    videoio_encapsulate_params_t("../cv/video/768x576.avi", "avi", 15, 16)
+    videoio_encapsulate_params_t("video/big_buck_bunny.h264", "avi", 125, 125, false, false), // tsWorking = false: no timestamp information
+    videoio_encapsulate_params_t("video/big_buck_bunny.h265", "mp4", 125, 125, false, false), // tsWorking = false: no timestamp information
+    videoio_encapsulate_params_t("video/big_buck_bunny.wmv", "wmv", 12, 13, false, true),
+    videoio_encapsulate_params_t("video/big_buck_bunny.mp4", "mp4", 12, 13, false, true),
+    videoio_encapsulate_params_t("video/big_buck_bunny.mjpg.avi", "mp4", 0, 4, false, true),
+    videoio_encapsulate_params_t("video/big_buck_bunny.mov", "mp4", 12, 13, false, true),
+    videoio_encapsulate_params_t("video/big_buck_bunny.avi", "mp4", 125, 125, false, false), // tsWorking = false: PTS not available for all frames
+    videoio_encapsulate_params_t("video/big_buck_bunny.mpg", "mp4", 12, 13, true, true),
+    videoio_encapsulate_params_t("video/VID00003-20100701-2204.wmv", "wmv", 12, 13, false, true),
+    videoio_encapsulate_params_t("video/VID00003-20100701-2204.mpg", "mp4", 12, 13, false, false), // tsWorking = false: PTS not available for all frames
+    videoio_encapsulate_params_t("video/VID00003-20100701-2204.avi", "mp4", 12, 13, false, false), // tsWorking = false: Unable to correctly set PTS when writing
+    videoio_encapsulate_params_t("video/VID00003-20100701-2204.3GP", "mp4", 51, 52, false, false), // tsWorking = false: Source with variable fps
+    videoio_encapsulate_params_t("video/sample_sorenson.avi", "mp4", 12, 13, false, true),
+    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libxvid.mp4", "mp4", 3, 4, false, true),
+    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.mpeg2video.mp4", "mpg", 12, 13, false, true),
+    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.mjpeg.mp4", "mp4", 0, 5, false, true),
+    videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libx264.mp4", "ts", 15, 15, true, true),
+    videoio_encapsulate_params_t("../cv/tracking/faceocc2/data/faceocc2.webm", "webm", 128, 129, false, true),
+    videoio_encapsulate_params_t("../cv/video/1920x1080.avi", "mp4", 12, 13, false, true),
+    videoio_encapsulate_params_t("../cv/video/768x576.avi", "avi", 15, 16, false, true),
     // Not supported by with FFmpeg:
-    //videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libx265.mp4", "mp4", 15, 15),
-    //videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", "mp4", 15, 15),
-
+    //videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libx265.mp4", "mp4", 15, 15, true, true),
+    //videoio_encapsulate_params_t("video/sample_322x242_15frames.yuv420p.libvpx-vp9.mp4", "mp4", 15, 15, false, true),
 };
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_encapsulate, testing::ValuesIn(videoio_encapsulate_params));
 
 TEST(videoio_encapsulate_set_idr, write)
 {
-#ifdef _WIN32
-    throw SkipTestException("Test disabled until PR for raw video encapsulation is merged and windows dll is updated");
-#else
     const VideoCaptureAPIs api = CAP_FFMPEG;
     if (!videoio_registry::hasBackend(api))
         throw SkipTestException("FFmpeg backend was not found");
@@ -390,7 +451,7 @@ TEST(videoio_encapsulate_set_idr, write)
                 memcpy(rawFrame.data, extraData.data, extraData.total());
                 memcpy(rawFrame.data + extraData.total(), tmp.data, tmp.total());
             }
-            if (static_cast<bool>(capRaw.get(CAP_PROP_LRF_HAS_KEY_FRAME)))
+            if (capRaw.get(CAP_PROP_LRF_HAS_KEY_FRAME) != 0)
                 container.set(VideoWriterProperties::VIDEOWRITER_PROP_KEY_FLAG, 1);
             else
                 container.set(VideoWriterProperties::VIDEOWRITER_PROP_KEY_FLAG, 0);
@@ -432,7 +493,6 @@ TEST(videoio_encapsulate_set_idr, write)
     }
 
     ASSERT_EQ(0, remove(fileNameOut.c_str()));
-#endif
 }
 
 typedef tuple<string, string, int> videoio_skip_params_t;
@@ -677,7 +737,6 @@ static void ffmpeg_check_read_raw(VideoCapture& cap)
     EXPECT_TRUE(data.rows == 1 || data.cols == 1) << data.size;
     EXPECT_EQ((size_t)37118, data.total());
 
-#ifndef WIN32
     // 12 is the nearset key frame to frame 18
     EXPECT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 18.));
     EXPECT_EQ(cap.get(CAP_PROP_POS_FRAMES), 12.);
@@ -685,7 +744,6 @@ static void ffmpeg_check_read_raw(VideoCapture& cap)
     EXPECT_EQ(CV_8UC1, data.type()) << "CV_8UC1 != " << typeToString(data.type());
     EXPECT_TRUE(data.rows == 1 || data.cols == 1) << data.size;
     EXPECT_EQ((size_t)8726, data.total());
-#endif
 }
 
 TEST(videoio_ffmpeg, ffmpeg_check_extra_data)
@@ -719,9 +777,7 @@ TEST(videoio_ffmpeg, open_with_property)
     // confirm properties are returned without initializing AVCodecContext
     EXPECT_EQ(cap.get(CAP_PROP_FORMAT), -1);
     EXPECT_EQ(static_cast<int>(cap.get(CAP_PROP_FOURCC)), fourccFromString("FMP4"));
-#ifndef WIN32
     EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), 0.0);
-#endif
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_HEIGHT), 384.0);
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_WIDTH), 672.0);
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_COUNT), 125);
@@ -742,9 +798,7 @@ TEST(videoio_ffmpeg, create_with_property)
     // confirm properties are returned without initializing AVCodecContext
     EXPECT_TRUE(cap.get(CAP_PROP_FORMAT) == -1);
     EXPECT_EQ(static_cast<int>(cap.get(CAP_PROP_FOURCC)), fourccFromString("FMP4"));
-#ifndef WIN32
     EXPECT_EQ(cap.get(CAP_PROP_N_THREADS), 0.0);
-#endif
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_HEIGHT), 384.0);
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_WIDTH), 672.0);
     EXPECT_EQ(cap.get(CAP_PROP_FRAME_COUNT), 125);

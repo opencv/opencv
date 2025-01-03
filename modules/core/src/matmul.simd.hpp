@@ -394,19 +394,6 @@ GEMMSingleMul( const T* a_data, size_t a_step,
             {
                 WT al(a_data[k]);
                 j=0;
-                 #if CV_ENABLE_UNROLLED
-                for(; j <= m - 4; j += 4 )
-                {
-                    WT t0 = d_buf[j] + WT(b_data[j])*al;
-                    WT t1 = d_buf[j+1] + WT(b_data[j+1])*al;
-                    d_buf[j] = t0;
-                    d_buf[j+1] = t1;
-                    t0 = d_buf[j+2] + WT(b_data[j+2])*al;
-                    t1 = d_buf[j+3] + WT(b_data[j+3])*al;
-                    d_buf[j+2] = t0;
-                    d_buf[j+3] = t1;
-                }
-                #endif
                 for( ; j < m; j++ )
                     d_buf[j] += WT(b_data[j])*al;
             }
@@ -1608,7 +1595,10 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
 static void
 transform_32f( const float* src, float* dst, const float* m, int len, int scn, int dcn )
 {
-#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__aarch64__) && !defined(_M_ARM64)
+// Disabled for RISC-V Vector (scalable), because of:
+// 1. v_matmuladd for RVV is 128-bit only but not scalable, this will fail the test `Core_Transform.accuracy`.
+// 2. Both gcc and clang can autovectorize this, with better performance than using Universal intrinsic.
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__aarch64__) && !defined(_M_ARM64) && !(CV_TRY_RVV && CV_RVV)
     int x = 0;
     if( scn == 3 && dcn == 3 )
     {
@@ -1805,7 +1795,7 @@ diagtransform_64f(const double* src, double* dst, const double* m, int len, int 
 
 TransformFunc getTransformFunc(int depth)
 {
-    static TransformFunc transformTab[] =
+    static TransformFunc transformTab[CV_DEPTH_MAX] =
     {
         (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
         (TransformFunc)transform_16s, (TransformFunc)transform_32s, (TransformFunc)transform_32f,
@@ -1817,7 +1807,7 @@ TransformFunc getTransformFunc(int depth)
 
 TransformFunc getDiagTransformFunc(int depth)
 {
-    static TransformFunc diagTransformTab[] =
+    static TransformFunc diagTransformTab[CV_DEPTH_MAX] =
     {
         (TransformFunc)diagtransform_8u, (TransformFunc)diagtransform_8s, (TransformFunc)diagtransform_16u,
         (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,
@@ -2546,8 +2536,7 @@ double dotProd_16s(const short* src1, const short* src2, int len)
 
 double dotProd_32s(const int* src1, const int* src2, int len)
 {
-#if CV_SIMD_64F // TODO: enable for CV_SIMD_SCALABLE_64F
-// Test failed on RVV(QEMU): Too big difference (=1.20209e-08 > 1.11022e-12)
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     double r = .0;
     int i = 0;
     const int step  = VTraits<v_int32>::vlanes();

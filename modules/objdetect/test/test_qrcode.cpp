@@ -614,4 +614,69 @@ TEST(Objdetect_QRCode_detectAndDecode, utf8_output)
     EXPECT_NE(decoded_info.find("M\xc3\xbcllheimstrasse"), std::string::npos);
 }
 
+TEST_P(Objdetect_QRCode_detectAndDecodeMulti, detect_regression_24679)
+{
+    const std::string name_current_image = "issue_24679.png";
+    const std::string root = "qrcode/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat img = imread(image_path);
+    const std::string method = GetParam();
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    if (method == "aruco_based") {
+        qrcode = QRCodeDetectorAruco();
+    }
+    std::vector<cv::String> decoded_info;
+    ASSERT_TRUE(qrcode.detectAndDecodeMulti(img, decoded_info));
+    EXPECT_EQ(decoded_info.size(), 4U);
+}
+
+TEST_P(Objdetect_QRCode_detectAndDecodeMulti, detect_regression_24011)
+{
+    const std::string name_current_image = "issue_24011.jpg";
+    const std::string root = "qrcode/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat img = imread(image_path);
+    const std::string method = GetParam();
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    if (method == "aruco_based") {
+        qrcode = QRCodeDetectorAruco();
+    }
+    std::vector<cv::String> decoded_info;
+    ASSERT_TRUE(qrcode.detectAndDecodeMulti(img, decoded_info));
+    EXPECT_EQ(decoded_info.size(), 2U);
+}
+
+TEST(Objdetect_QRCode_detect, detect_regression_24450)
+{
+    const std::string name_current_image = "issue_24450.png";
+    const std::string root = "qrcode/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat img = imread(image_path);
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    std::vector<Point2f> points;
+    ASSERT_TRUE(qrcode.detect(img, points));
+    EXPECT_EQ(points.size(), 4U);
+    img.at<Vec3b>(img.rows - 1, 296) = {};
+    ASSERT_TRUE(qrcode.detect(img, points));
+    EXPECT_EQ(points.size(), 4U);
+}
+
+TEST(Objdetect_QRCode_detect, detect_regression_22892)
+{
+    const std::string name_current_image = "issue_22892.png";
+    const std::string root = "qrcode/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat img = imread(image_path);
+
+    QRCodeDetector qrcode;
+    std::vector<Point> corners;
+    Mat straight_code;
+    qrcode.detectAndDecodeCurved(img, corners, straight_code);
+    EXPECT_EQ(corners.size(), 4U);
+}
+
 }} // namespace

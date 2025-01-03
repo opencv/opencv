@@ -18,6 +18,95 @@ opencv_fd:
   rgb: false
   sample: "object_detection"
 
+# YOLOv8 object detection family from ultralytics (https://github.com/ultralytics/ultralytics)
+# Might be used for all YOLOv8n YOLOv8s YOLOv8m YOLOv8l and YOLOv8x
+yolov8x:
+  load_info:
+    url: "https://huggingface.co/cabelo/yolov8/resolve/main/yolov8x.onnx?download=true"
+    sha1: "462f15d668c046d38e27d3df01fe8142dd004cb4"
+  model: "yolov8x.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8s:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8s.onnx"
+    sha1: "82cd83984396fe929909ecb58212b0e86d0904b1"
+  model: "yolov8s.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8n:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
+    sha1: "68f864475d06e2ec4037181052739f268eeac38d"
+  model: "yolov8n.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8m:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8m.onnx"
+    sha1: "656ffeb4f3b067bc30df956728b5f9c61a4cb090"
+  model: "yolov8m.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8l:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8l.onnx"
+    sha1: "462df53ca3a85d110bf6be7fc2e2bb1277124395"
+  model: "yolov8l.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+# YOLOv5 object detection family from ultralytics (https://github.com/ultralytics/ultralytics)
+# Might be used for all YOLOv5n YOLOv5s YOLOv5m YOLOv5l and YOLOv5x
+
+yolov5l:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov5l.onnx"
+    sha1: "9de7e54c524b7fe7577bbd4cdbbdaed53375c8f1"
+  model: "yolov5l.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
 # YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
 # YOLO object detection family from Darknet (https://pjreddie.com/darknet/yolo/)
 # Might be used for all YOLOv2, TinyYolov2, YOLOv3, YOLOv4 and TinyYolov4

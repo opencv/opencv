@@ -111,7 +111,7 @@ public:
     void addBlobs(const std::vector<cv::Ptr<BackendWrapper> >& ptrs);
 
     void createNet(Target targetId);
-    // void setNodePtr(std::shared_ptr<ngraph::Node>* ptr);
+    // void setNodePtr(std::shared_ptr<ov::Node>* ptr);
 
     void reset();
 

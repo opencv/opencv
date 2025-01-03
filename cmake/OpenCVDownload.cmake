@@ -40,11 +40,14 @@ file(REMOVE "${OPENCV_DOWNLOAD_WITH_WGET}")
 ocv_check_environment_variables(OPENCV_DOWNLOAD_MIRROR_ID)
 
 function(ocv_init_download_mirror)
+  if(NOT GIT_FOUND)
+    return()
+  endif()
   if(NOT DEFINED OPENCV_DOWNLOAD_MIRROR_ID)
     # Run `git remote get-url origin` to get remote source
     execute_process(
       COMMAND
-        git remote get-url origin
+        ${GIT_EXECUTABLE} remote get-url origin
       WORKING_DIRECTORY
         ${CMAKE_SOURCE_DIR}
       RESULT_VARIABLE

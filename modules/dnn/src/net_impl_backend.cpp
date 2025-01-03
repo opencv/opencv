@@ -10,6 +10,10 @@
 #include "backend.hpp"
 #include "factory.hpp"
 
+#ifdef HAVE_CUDA
+#include "cuda4dnn/init.hpp"
+#endif
+
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
@@ -242,6 +246,16 @@ void Net::Impl::setPreferableTarget(int targetId)
 #endif
         }
 
+        if (IS_DNN_CUDA_TARGET(targetId))
+        {
+            preferableTarget = DNN_TARGET_CPU;
+#ifdef HAVE_CUDA
+            if (cuda4dnn::doesDeviceSupportFP16() && targetId == DNN_TARGET_CUDA_FP16)
+                preferableTarget = DNN_TARGET_CUDA_FP16;
+            else
+                preferableTarget = DNN_TARGET_CUDA;
+#endif
+        }
 #if !defined(__arm64__) || !__arm64__
         if (targetId == DNN_TARGET_CPU_FP16)
         {
@@ -251,6 +265,14 @@ void Net::Impl::setPreferableTarget(int targetId)
 #endif
 
         clear();
+
+        if (targetId == DNN_TARGET_CPU_FP16)
+        {
+            if (useWinograd) {
+                CV_LOG_INFO(NULL, "DNN: DNN_TARGET_CPU_FP16 is set => Winograd convolution is disabled by default to preserve accuracy. If needed, enable it explicitly using enableWinograd(true).");
+                enableWinograd(false);
+            }
+        }
     }
 }
 

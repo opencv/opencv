@@ -202,8 +202,8 @@ struct CvtHelper
         int stype = _src.type();
         scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
 
-        CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
-        CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
+        CV_CheckChannels(scn, VScn::contains(scn), "Invalid number of channels in input image");
+        CV_CheckChannels(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
         CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
 
         if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
@@ -247,8 +247,8 @@ struct OclHelper
         int scn = src.channels();
         int depth = src.depth();
 
-        CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
-        CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
+        CV_CheckChannels(scn, VScn::contains(scn), "Invalid number of channels in input image");
+        CV_CheckChannels(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
         CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
 
         switch (sizePolicy)
@@ -277,7 +277,7 @@ struct OclHelper
         int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
         int pxPerWIx = 1;
 
-        cv::String baseOptions = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+        cv::String baseOptions = format("-D SRC_DEPTH=%d -D SCN=%d -D PIX_PER_WI_Y=%d ",
                                         src.depth(), src.channels(), pxPerWIy);
 
         switch (sizePolicy)
@@ -556,15 +556,15 @@ void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
 void cvtColorBGR2XYZ( InputArray _src, OutputArray _dst, bool swapb );
 void cvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb );
 
-void cvtColorBGR2YUV( InputArray _src, OutputArray _dst, bool swapb, bool crcb);
-void cvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool crcb);
+void cvtColorBGR2YUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, bool crcb);
+void cvtColorYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, bool crcb);
 
-void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx, int ycn);
-void cvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, bool swapb, int uidx, int ycn);
-void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx );
-void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int dcn, bool swapb, int uidx );
-void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx );
-void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, bool swapb, int uidx);
+void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx, int ycn );
+void cvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, int uidx, int ycn );
+void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx );
+void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx );
+void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx );
+void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, int uidx );
 void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst );
 void cvtColorYUV2Gray_ch( InputArray _src, OutputArray _dst, int coi );
 

@@ -59,7 +59,6 @@
 #include "../cuda4dnn/primitives/concat.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
-
 namespace cv
 {
 namespace dnn
@@ -165,14 +164,14 @@ public:
             for( i = 0; i < ninputs; i++ )
             {
                 Mat& inp = inputs[i];
-                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S || inp.type() == CV_8S) &&
+                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16F || inp.type() == CV_8S) &&
                            inp.dims == 4 && inp.size[0] == output.size[0] &&
                            inp.size[2] == output.size[2] &&
                            inp.size[3] == output.size[3] );
                 nchannels += inp.size[1];
             }
             CV_Assert( nchannels == output.size[1] );
-            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16S || output.type() == CV_8S) );
+            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16F || output.type() == CV_8S) );
 
             cc.chptrs.resize(nchannels*batchsz);
 
@@ -223,7 +222,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -303,6 +302,8 @@ public:
             ranges[cAxis].start = 0;
             for (size_t i = 0; i < inputs.size(); i++)
             {
+                if (inputs[i].empty())
+                    continue;
                 ranges[cAxis].end = ranges[cAxis].start + inputs[i].size[cAxis];
                 for (int j = 0; j < outMat.dims; ++j)
                 {
@@ -397,7 +398,7 @@ public:
         std::vector<size_t> maxDims(numDims, 0);
 
         CV_Assert(inputs.size() == nodes.size());
-        ngraph::OutputVector inp_nodes;
+        ov::OutputVector inp_nodes;
         for (int i = 0; i < nodes.size(); ++i)
         {
             auto inp = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
@@ -423,14 +424,14 @@ public:
             }
             if (needPadding)
             {
-                inp_nodes[i] = std::make_shared<ngraph::op::v1::Pad>(
+                inp_nodes[i] = std::make_shared<ov::op::v1::Pad>(
                     inp_nodes[i],
-                    std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{begins.size()}, begins.data()),
-                    std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{ends.size()}, ends.data()),
-                    ngraph::op::PadMode::CONSTANT);
+                    std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{begins.size()}, begins.data()),
+                    std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{ends.size()}, ends.data()),
+                    ov::op::PadMode::CONSTANT);
             }
         }
-        auto concat = std::make_shared<ngraph::op::Concat>(inp_nodes, cAxis);
+        auto concat = std::make_shared<ov::op::v0::Concat>(inp_nodes, cAxis);
         return Ptr<BackendNode>(new InfEngineNgraphNode(concat));
     }
 #endif  // HAVE_DNN_NGRAPH

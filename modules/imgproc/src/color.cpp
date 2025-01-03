@@ -168,7 +168,7 @@ static bool ocl_cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
 // helper function for dual-plane modes
 
-void cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int code )
+void cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int code, AlgorithmHint hint )
 {
     // only YUV420 is currently supported
     switch (code)
@@ -177,11 +177,11 @@ void cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, in
         case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
             break;
         default:
-            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+            CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
             return;
     }
 
-    cvtColorTwoPlaneYUV2BGRpair(_ysrc, _uvsrc, _dst, dstChannels(code), swapBlue(code), uIndex(code));
+    cvtColorTwoPlaneYUV2BGRpair(_ysrc, _uvsrc, _dst, hint, dstChannels(code), swapBlue(code), uIndex(code));
 }
 
 
@@ -189,9 +189,12 @@ void cvtColorTwoPlane( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, in
 //                                   The main function                                  //
 //////////////////////////////////////////////////////////////////////////////////////////
 
-void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
+void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn, AlgorithmHint hint)
 {
     CV_INSTRUMENT_REGION();
+
+    if (hint == cv::ALGO_HINT_DEFAULT)
+        hint = cv::getDefaultAlgorithmHint();
 
     CV_Assert(!_src.empty());
 
@@ -244,12 +247,12 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case COLOR_BGR2YCrCb: case COLOR_RGB2YCrCb:
         case COLOR_BGR2YUV:   case COLOR_RGB2YUV:
-            cvtColorBGR2YUV(_src, _dst, swapBlue(code), code == COLOR_BGR2YCrCb || code == COLOR_RGB2YCrCb);
+            cvtColorBGR2YUV(_src, _dst, hint, swapBlue(code), code == COLOR_BGR2YCrCb || code == COLOR_RGB2YCrCb);
             break;
 
         case COLOR_YCrCb2BGR: case COLOR_YCrCb2RGB:
         case COLOR_YUV2BGR:   case COLOR_YUV2RGB:
-            cvtColorYUV2BGR(_src, _dst, dcn, swapBlue(code), code == COLOR_YCrCb2BGR || code == COLOR_YCrCb2RGB);
+            cvtColorYUV2BGR(_src, _dst, hint, dcn, swapBlue(code), code == COLOR_YCrCb2BGR || code == COLOR_YCrCb2RGB);
             break;
 
         case COLOR_BGR2XYZ:
@@ -321,14 +324,14 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21: case COLOR_YUV2BGRA_NV12: case COLOR_YUV2RGBA_NV12:
             // http://www.fourcc.org/yuv.php#NV21 == yuv420sp -> a plane of 8 bit Y samples followed by an interleaved V/U plane containing 8 bit 2x2 subsampled chroma samples
             // http://www.fourcc.org/yuv.php#NV12 -> a plane of 8 bit Y samples followed by an interleaved U/V plane containing 8 bit 2x2 subsampled colour difference samples
-            cvtColorTwoPlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uIndex(code));
+            cvtColorTwoPlaneYUV2BGR(_src, _dst, hint, dcn, swapBlue(code), uIndex(code));
             break;
 
         case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGRA_YV12: case COLOR_YUV2RGBA_YV12:
         case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV: case COLOR_YUV2BGRA_IYUV: case COLOR_YUV2RGBA_IYUV:
             //http://www.fourcc.org/yuv.php#YV12 == yuv420p -> It comprises an NxM Y plane followed by (N/2)x(M/2) V and U planes.
             //http://www.fourcc.org/yuv.php#IYUV == I420 -> It comprises an NxN Y plane followed by (N/2)x(N/2) U and V planes
-            cvtColorThreePlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uIndex(code));
+            cvtColorThreePlaneYUV2BGR(_src, _dst, hint, dcn, swapBlue(code), uIndex(code));
             break;
 
         case COLOR_YUV2GRAY_420:
@@ -337,7 +340,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
         case COLOR_RGB2YUV_YV12: case COLOR_BGR2YUV_YV12: case COLOR_RGBA2YUV_YV12: case COLOR_BGRA2YUV_YV12:
         case COLOR_RGB2YUV_IYUV: case COLOR_BGR2YUV_IYUV: case COLOR_RGBA2YUV_IYUV: case COLOR_BGRA2YUV_IYUV:
-            cvtColorBGR2ThreePlaneYUV(_src, _dst, swapBlue(code), uIndex(code));
+            cvtColorBGR2ThreePlaneYUV(_src, _dst, hint, swapBlue(code), uIndex(code));
             break;
 
         case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
@@ -349,7 +352,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             {
                 int ycn  = (code==COLOR_YUV2RGB_UYVY || code==COLOR_YUV2BGR_UYVY ||
                             code==COLOR_YUV2RGBA_UYVY || code==COLOR_YUV2BGRA_UYVY) ? 1 : 0;
-                cvtColorOnePlaneYUV2BGR(_src, _dst, dcn, swapBlue(code), uIndex(code), ycn);
+                cvtColorOnePlaneYUV2BGR(_src, _dst, hint, dcn, swapBlue(code), uIndex(code), ycn);
                 break;
             }
 
@@ -362,7 +365,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             {
                 int ycn  = (code==COLOR_RGB2YUV_UYVY ||  code==COLOR_BGR2YUV_UYVY ||
                             code==COLOR_RGBA2YUV_UYVY || code==COLOR_BGRA2YUV_UYVY) ? 1 : 0;
-                cvtColorOnePlaneBGR2YUV(_src, _dst, swapBlue(code), uIndex(code), ycn);
+                cvtColorOnePlaneBGR2YUV(_src, _dst, hint, swapBlue(code), uIndex(code), ycn);
                 break;
             }
 
@@ -379,11 +382,12 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             cvtColormRGBA2RGBA(_src, _dst);
             break;
         default:
-            CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+            CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
     }
 }
 } //namespace cv
 
+#ifndef OPENCV_EXCLUDE_C_API
 
 CV_IMPL void
 cvCvtColor( const CvArr* srcarr, CvArr* dstarr, int code )
@@ -394,3 +398,5 @@ cvCvtColor( const CvArr* srcarr, CvArr* dstarr, int code )
     cv::cvtColor(src, dst, code, dst.channels());
     CV_Assert( dst.data == dst0.data );
 }
+
+#endif

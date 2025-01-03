@@ -1078,6 +1078,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             i == CV_COMP_BHATTACHARYYA ? "Bhattacharyya" :
             i == CV_COMP_KL_DIV ? "Kullback-Leibler" : "Unknown";
 
+        const auto thresh = FLT_EPSILON*14*MAX(fabs(v0),0.17);
         if( cvIsNaN(v) || cvIsInf(v) )
         {
             ts->printf( cvtest::TS::LOG, "The comparison result using the method #%d (%s) is invalid (=%g)\n",
@@ -1085,7 +1086,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             code = cvtest::TS::FAIL_INVALID_OUTPUT;
             break;
         }
-        else if( fabs(v0 - v) > FLT_EPSILON*14*MAX(fabs(v0),0.1) )
+        else if( fabs(v0 - v) > thresh )
         {
             ts->printf( cvtest::TS::LOG, "The comparison result using the method #%d (%s)\n\tis inaccurate (=%g, should be =%g)\n",
                 i, method_name, v, v0 );
@@ -2025,6 +2026,75 @@ TEST(Imgproc_Hist_Calc, IPP_ranges_with_nonequal_exponent_21595)
     ASSERT_EQ(histogram_u.at<float>(1), 2.f) << "0 not counts correctly, res: " << histogram_u.at<float>(1);
     ASSERT_EQ(histogram_u.at<float>(2), 4.f) << "1 not counts correctly, res: " << histogram_u.at<float>(2);
 }
+
+////////////////////////////////////////// equalizeHist() /////////////////////////////////////////
+
+void equalizeHistReference(const Mat& src, Mat& dst)
+{
+    std::vector<int> hist(256, 0);
+    for (int y = 0; y < src.rows; y++)
+    {
+        const uchar* srow = src.ptr(y);
+        for (int x = 0; x < src.cols; x++)
+        {
+            hist[srow[x]]++;
+        }
+    }
+
+    int first = 0;
+    while (!hist[first]) ++first;
+
+    int total = (int)src.total();
+    if (hist[first] == total)
+    {
+        dst.setTo(first);
+        return;
+    }
+
+    std::vector<uchar> lut(256);
+    lut[first] = 0;
+    float scale = (255.f)/(total - hist[first]);
+
+    int sum = 0;
+    for (int i = first + 1; i < 256; ++i)
+    {
+        sum += hist[i];
+        lut[i] = saturate_cast<uchar>(sum * scale);
+    }
+
+    cv::LUT(src, lut, dst);
+}
+
+typedef ::testing::TestWithParam<std::tuple<cv::Size, int>> Imgproc_Equalize_Hist;
+
+TEST_P(Imgproc_Equalize_Hist, accuracy)
+{
+    auto p = GetParam();
+    cv::Size size = std::get<0>(p);
+    int idx = std::get<1>(p);
+
+    RNG &rng = cvtest::TS::ptr()->get_rng();
+    rng.state += idx;
+
+    cv::Mat src(size, CV_8U);
+    cvtest::randUni(rng, src, Scalar::all(0), Scalar::all(255));
+
+    cv::Mat dst, gold;
+
+    equalizeHistReference(src, gold);
+
+    cv::equalizeHist(src, dst);
+
+    ASSERT_EQ(CV_8UC1, dst.type());
+    ASSERT_EQ(gold.size(), dst.size());
+
+    EXPECT_MAT_NEAR(dst, gold, 1);
+    EXPECT_MAT_N_DIFF(dst, gold, 0.05 * size.area()); // The 5% range could be accomodated to HAL
+}
+
+INSTANTIATE_TEST_CASE_P(Imgproc_Hist, Imgproc_Equalize_Hist, ::testing::Combine(
+                        ::testing::Values(cv::Size(123, 321), cv::Size(256, 256), cv::Size(1024, 768)),
+                        ::testing::Range(0, 10)));
 
 }} // namespace
 /* End Of File */

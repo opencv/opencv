@@ -41,7 +41,7 @@ if(MSVC)
     # and IE deprecated code warning C4996
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503 /wd4996)
   endif()
-  if(MSVC_VERSION LESS 1920)  # MSVS 2015/2017
+  if((MSVC_VERSION LESS 1920) OR ARM OR AARCH64) # MSVS 2015/2017 on x86 and ARM
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)  # 'unreachable code'
   endif()
 endif()
@@ -79,6 +79,7 @@ set(gapi_srcs
     src/api/gframe.cpp
     src/api/gkernel.cpp
     src/api/gbackend.cpp
+    src/api/gcommon.cpp
     src/api/gproto.cpp
     src/api/gnode.cpp
     src/api/gcall.cpp
@@ -88,6 +89,7 @@ set(gapi_srcs
     src/api/kernels_imgproc.cpp
     src/api/kernels_video.cpp
     src/api/kernels_nnparsers.cpp
+    src/api/kernels_ot.cpp
     src/api/kernels_streaming.cpp
     src/api/kernels_stereo.cpp
     src/api/render.cpp
@@ -120,8 +122,10 @@ set(gapi_srcs
     src/executor/gabstractstreamingexecutor.cpp
     src/executor/gexecutor.cpp
     src/executor/gtbbexecutor.cpp
+    src/executor/gthreadedexecutor.cpp
     src/executor/gstreamingexecutor.cpp
     src/executor/gasync.cpp
+    src/executor/thread_pool.cpp
 
     # CPU Backend (currently built-in)
     src/backends/cpu/gcpubackend.cpp
@@ -130,6 +134,7 @@ set(gapi_srcs
     src/backends/cpu/gcpustereo.cpp
     src/backends/cpu/gcpuvideo.cpp
     src/backends/cpu/gcpucore.cpp
+    src/backends/cpu/gcpuot.cpp
     src/backends/cpu/gnnparsers.cpp
 
     # Fluid Backend (also built-in, FIXME:move away)
@@ -163,6 +168,7 @@ set(gapi_srcs
     # ONNX backend
     src/backends/onnx/gonnxbackend.cpp
     src/backends/onnx/dml_ep.cpp
+    src/backends/onnx/coreml_ep.cpp
 
     # Render backend
     src/backends/render/grenderocv.cpp
@@ -240,17 +246,24 @@ set(gapi_srcs
     src/utils/itt.cpp
     )
 
+file(GLOB_RECURSE gapi_3rdparty_srcs
+    "${CMAKE_CURRENT_LIST_DIR}/src/3rdparty/vasot/src/*.cpp"
+)
+
 ocv_add_dispatched_file(backends/fluid/gfluidimgproc_func SSE4_1 AVX2)
 ocv_add_dispatched_file(backends/fluid/gfluidcore_func SSE4_1 AVX2)
 
 ocv_list_add_prefix(gapi_srcs "${CMAKE_CURRENT_LIST_DIR}/")
 
 # For IDE users
-ocv_source_group("Src"     FILES ${gapi_srcs})
+ocv_source_group("Src"     FILES ${gapi_srcs} ${gapi_3rdparty_srcs})
 ocv_source_group("Include" FILES ${gapi_ext_hdrs})
 
-ocv_set_module_sources(HEADERS ${gapi_ext_hdrs} SOURCES ${gapi_srcs})
+ocv_set_module_sources(HEADERS ${gapi_ext_hdrs} SOURCES ${gapi_srcs} ${gapi_3rdparty_srcs})
 ocv_module_include_directories("${CMAKE_CURRENT_LIST_DIR}/src")
+
+# VAS Object Tracking includes
+ocv_module_include_directories(${CMAKE_CURRENT_LIST_DIR}/src/3rdparty/vasot/include)
 
 ocv_create_module()
 
@@ -383,9 +396,10 @@ if(HAVE_ONNX)
   endif()
 endif()
 
+ocv_install_3rdparty_licenses(vasot "${CMAKE_CURRENT_SOURCE_DIR}/src/3rdparty/vasot/LICENSE.txt")
+
 ocv_add_perf_tests()
 ocv_add_samples()
-
 
 # Required for sample with inference on host
 if(TARGET example_gapi_onevpl_infer_with_advanced_device_selection)

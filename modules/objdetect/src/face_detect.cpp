@@ -200,6 +200,9 @@ private:
                     float score = std::sqrt(cls_score * obj_score);
                     face.at<float>(0, 14) = score;
 
+                    // Checking if the score meets the threshold before adding the face
+                    if (score < scoreThreshold)
+                        continue;
                     // Get bounding box
                     float cx = ((c + bbox_v[idx * 4 + 0]) * strides[i]);
                     float cy = ((r + bbox_v[idx * 4 + 1]) * strides[i]);
@@ -306,7 +309,7 @@ Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& framework,
 #ifdef HAVE_OPENCV_DNN
     return makePtr<FaceDetectorYNImpl>(framework, bufferModel, bufferConfig, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
 #else
-    CV_UNUSED(model); CV_UNUSED(config); CV_UNUSED(input_size); CV_UNUSED(score_threshold); CV_UNUSED(nms_threshold); CV_UNUSED(top_k); CV_UNUSED(backend_id); CV_UNUSED(target_id);
+    CV_UNUSED(framework);  CV_UNUSED(bufferModel); CV_UNUSED(bufferConfig); CV_UNUSED(input_size); CV_UNUSED(score_threshold); CV_UNUSED(nms_threshold); CV_UNUSED(top_k); CV_UNUSED(backend_id); CV_UNUSED(target_id);
     CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN requires enabled 'dnn' module.");
 #endif
 }

@@ -27,7 +27,7 @@ public:
      * @param prototxt_path prototxt file path for the super resolution model
      * @param model_path model file path for the super resolution model
      */
-    CV_WRAP BarcodeDetector(const std::string &prototxt_path, const std::string &model_path);
+    CV_WRAP BarcodeDetector(CV_WRAP_FILE_PATH const std::string &prototxt_path, CV_WRAP_FILE_PATH const std::string &model_path);
     ~BarcodeDetector();
 
     /** @brief Decodes barcode in image once it's found by the detect() method.
@@ -57,6 +57,52 @@ public:
                                       CV_OUT std::vector<std::string> &decoded_info,
                                       CV_OUT std::vector<std::string> &decoded_type,
                                       OutputArray points = noArray()) const;
+
+    /** @brief Get detector downsampling threshold.
+     *
+     * @return detector downsampling threshold
+     */
+    CV_WRAP double getDownsamplingThreshold() const;
+
+    /** @brief Set detector downsampling threshold.
+     *
+     * By default, the detect method resizes the input image to this limit if the smallest image size is is greater than the threshold.
+     * Increasing this value can improve detection accuracy and the number of results at the expense of performance.
+     * Correlates with detector scales. Setting this to a large value will disable downsampling.
+     * @param thresh downsampling limit to apply (default 512)
+     * @see setDetectorScales
+     */
+    CV_WRAP BarcodeDetector& setDownsamplingThreshold(double thresh);
+
+    /** @brief Returns detector box filter sizes.
+     *
+     * @param sizes output parameter for returning the sizes.
+     */
+    CV_WRAP void getDetectorScales(CV_OUT std::vector<float>& sizes) const;
+
+    /** @brief Set detector box filter sizes.
+     *
+     * Adjusts the value and the number of box filters used in the detect step.
+     * The filter sizes directly correlate with the expected line widths for a barcode. Corresponds to expected barcode distance.
+     * If the downsampling limit is increased, filter sizes need to be adjusted in an inversely proportional way.
+     * @param sizes box filter sizes, relative to minimum dimension of the image (default [0.01, 0.03, 0.06, 0.08])
+     */
+    CV_WRAP BarcodeDetector& setDetectorScales(const std::vector<float>& sizes);
+
+    /** @brief Get detector gradient magnitude threshold.
+     *
+     * @return detector gradient magnitude threshold.
+     */
+    CV_WRAP double getGradientThreshold() const;
+
+    /** @brief Set detector gradient magnitude threshold.
+     *
+     * Sets the coherence threshold for detected bounding boxes.
+     * Increasing this value will generate a closer fitted bounding box width and can reduce false-positives.
+     * Values between 16 and 1024 generally work, while too high of a value will remove valid detections.
+     * @param thresh gradient magnitude threshold (default 64).
+     */
+    CV_WRAP BarcodeDetector& setGradientThreshold(double thresh);
 };
 //! @}
 

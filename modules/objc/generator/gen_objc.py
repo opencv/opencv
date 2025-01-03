@@ -481,6 +481,7 @@ class FuncInfo(GeneralInfo):
             self.objc_name = "getelem"
         if self.namespace in namespaces_dict:
             self.objc_name = '%s_%s' % (namespaces_dict[self.namespace], self.objc_name)
+            self.swift_name = '%s_%s' % (namespaces_dict[self.namespace], self.swift_name)
         for m in decl[2]:
             if m.startswith("="):
                 self.objc_name = m[1:]
@@ -1119,7 +1120,7 @@ class ObjectiveCWrapperGenerator(object):
                         name = line[p0:p1]
                         for arg in args:
                             if arg.name == name:
-                                toWrite.append(re.sub('\*\s*@param ', '* @param ', line))
+                                toWrite.append(re.sub(r'\*\s*@param ', '* @param ', line))
                                 break
                     else:
                         s0 = line.find("@see")
@@ -1511,13 +1512,13 @@ def escape_underscore(str):
     return str.replace('_', '\\_')
 
 def escape_texttt(str):
-    return re.sub(re.compile('texttt{(.*?)\}', re.DOTALL), lambda x: 'texttt{' + escape_underscore(x.group(1)) + '}', str)
+    return re.sub(re.compile('texttt{(.*?)}', re.DOTALL), lambda x: 'texttt{' + escape_underscore(x.group(1)) + '}', str)
 
 def get_macros(tex):
     out = ""
-    if re.search("\\\\fork\s*{", tex):
+    if re.search(r"\\fork\s*{", tex):
         out += "\\newcommand{\\fork}[4]{ \\left\\{ \\begin{array}{l l} #1 & \\text{#2}\\\\\\\\ #3 & \\text{#4}\\\\\\\\ \\end{array} \\right.} "
-    if re.search("\\\\vecthreethree\s*{", tex):
+    if re.search(r"\\vecthreethree\s*{", tex):
         out += "\\newcommand{\\vecthreethree}[9]{ \\begin{bmatrix} #1 & #2 & #3\\\\\\\\ #4 & #5 & #6\\\\\\\\ #7 & #8 & #9 \\end{bmatrix} } "
     return out
 
@@ -1600,7 +1601,7 @@ if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description='OpenCV Objective-C Wrapper Generator')
     arg_parser.add_argument('-p', '--parser', required=True, help='OpenCV header parser')
     arg_parser.add_argument('-c', '--config', required=True, help='OpenCV modules config')
-    arg_parser.add_argument('-t', '--target', required=True, help='Target (either ios or osx)')
+    arg_parser.add_argument('-t', '--target', required=True, help='Target (either ios or osx or visionos)')
     arg_parser.add_argument('-f', '--framework', required=True, help='Framework name')
 
     args=arg_parser.parse_args()
@@ -1671,6 +1672,7 @@ if __name__ == "__main__":
         logging.info("\nCommon headers (%d):\n%s", len(common_headers), pformat(common_headers))
 
         gendict_fname = os.path.join(misc_location, 'gen_dict.json')
+        module_source_map = {}
         if os.path.exists(gendict_fname):
             with open(gendict_fname) as f:
                 gen_type_dict = json.load(f)
@@ -1687,6 +1689,7 @@ if __name__ == "__main__":
             header_fix.update(gen_type_dict.get("header_fix", {}))
             enum_fix.update(gen_type_dict.get("enum_fix", {}))
             const_fix.update(gen_type_dict.get("const_fix", {}))
+            module_source_map = gen_type_dict.get("SourceMap", {})
             namespaces_dict.update(gen_type_dict.get("namespaces_dict", {}))
             module_imports += gen_type_dict.get("module_imports", [])
 
@@ -1695,15 +1698,10 @@ if __name__ == "__main__":
         if os.path.exists(objc_files_dir):
             copied_files += copy_objc_files(objc_files_dir, objc_base_path, module, True)
 
-        if args.target == 'ios':
-            ios_files_dir = os.path.join(misc_location, 'ios')
-            if os.path.exists(ios_files_dir):
-                copied_files += copy_objc_files(ios_files_dir, objc_base_path, module, True)
-
-        if args.target == 'osx':
-            osx_files_dir = os.path.join(misc_location, 'macosx')
-            if os.path.exists(osx_files_dir):
-                copied_files += copy_objc_files(osx_files_dir, objc_base_path, module, True)
+        target_path = 'macosx' if args.target == 'osx' else module_source_map.get(args.target, args.target)
+        target_files_dir = os.path.join(misc_location, target_path)
+        if os.path.exists(target_files_dir):
+            copied_files += copy_objc_files(target_files_dir, objc_base_path, module, True)
 
         objc_test_files_dir = os.path.join(misc_location, 'test')
         if os.path.exists(objc_test_files_dir):

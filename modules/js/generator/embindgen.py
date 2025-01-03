@@ -76,6 +76,7 @@ if sys.version_info[0] >= 3:
 else:
     from cStringIO import StringIO
 
+import json
 
 func_table = {}
 
@@ -103,14 +104,35 @@ def makeWhiteList(module_list):
                 wl[k] = m[k]
     return wl
 
+def makeWhiteListJson(module_list):
+    wl = {}
+    for n, gen_dict in module_list.items():
+        m = gen_dict["whitelist"]
+        for k in m.keys():
+            if k in wl:
+                wl[k] += m[k]
+            else:
+                wl[k] = m[k]
+    return wl
+
+def makeNamespacePrefixOverride(module_list):
+    wl = {}
+    for n, gen_dict in module_list.items():
+        if "namespace_prefix_override" in gen_dict:
+            m = gen_dict["namespace_prefix_override"]
+            for k in m.keys():
+                if k in wl:
+                    wl[k] += m[k]
+                else:
+                    wl[k] = m[k]
+    return wl
+
+
 white_list = None
-namespace_prefix_override = {
-    'dnn' : '',
-    'aruco' : '',
-}
+namespace_prefix_override = None
 
 # Features to be exported
-export_enums = False
+export_enums = True
 export_consts = True
 with_wrapped_functions = True
 with_default_params = True
@@ -226,16 +248,17 @@ class ArgInfo(object):
                 self.const = True
             elif m == "/Ref":
                 self.reference = True
-        if self.tp == "Mat":
-            if self.outputarg:
-                self.tp = "cv::Mat&"
-            elif self.inputarg:
-                self.tp = "const cv::Mat&"
-        if self.tp == "vector_Mat":
-            if self.outputarg:
-                self.tp = "std::vector<cv::Mat>&"
-            elif self.inputarg:
-                self.tp = "const std::vector<cv::Mat>&"
+        if self.tp == "Mat" and (self.inputarg or self.outputarg):
+            self.tp = "cv::Mat&"
+            if self.inputarg and not self.outputarg:
+                self.const = True
+        if self.tp == "vector_Mat" and (self.inputarg or self.outputarg):
+            self.tp = "std::vector<cv::Mat>&"
+            if self.reference and not self.const:
+                self.inputarg = False
+                self.outputarg = True
+            elif self.inputarg and not self.outputarg:
+                self.const = True
         self.tp = handle_vector(self.tp).strip()
         if self.const:
             self.tp = "const " + self.tp
@@ -834,6 +857,7 @@ class JSWrapperGenerator(object):
                 if method.cname in ignore_list:
                     continue
                 if not method.name in white_list[method.class_name]:
+                    #print('Not in whitelist: "{}"'.format(method.name))
                     continue
                 if method.is_constructor:
                     for variant in method.variants:
@@ -893,7 +917,7 @@ class JSWrapperGenerator(object):
                 if ns_name.split('.')[0] != 'cv':
                     continue
                 for name, enum in sorted(ns.enums.items()):
-                    if not name.endswith('.anonymous'):
+                    if '.unnamed_' not in name:
                         name = name.replace("cv.", "")
                         enum_values = []
                         for enum_val in enum:
@@ -913,7 +937,10 @@ class JSWrapperGenerator(object):
             for ns_name, ns in sorted(self.namespaces.items()):
                 if ns_name.split('.')[0] != 'cv':
                     continue
+                # TODO CALIB_FIX_FOCAL_LENGTH is defined both in cv:: and cv::fisheye
+                prefix = 'FISHEYE_' if 'fisheye' in ns_name else ''
                 for name, const in sorted(ns.consts.items()):
+                    name = prefix + name
                     # print("Gen consts: ", name, const)
                     self.bindings.append(const_template.substitute(js_name=name, value=const))
 
@@ -938,9 +965,9 @@ if __name__ == "__main__":
     if len(sys.argv) < 5:
         print("Usage:\n", \
             os.path.basename(sys.argv[0]), \
-            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp> <opencv_js.config.py>")
+            "<full path to hdr_parser.py> <bindings.cpp> <headers.txt> <core_bindings.cpp> <whitelist.json or opencv_js.config.py>")
         print("Current args are: ", ", ".join(["'"+a+"'" for a in sys.argv]))
-        exit(0)
+        exit(1)
 
     dstdir = "."
     hdr_parser_path = os.path.abspath(sys.argv[1])
@@ -953,8 +980,23 @@ if __name__ == "__main__":
     headers = open(sys.argv[3], 'r').read().split(';')
     coreBindings = sys.argv[4]
     whiteListFile = sys.argv[5]
-    exec(open(whiteListFile).read())
-    assert(white_list)
+
+    if whiteListFile.endswith(".json") or whiteListFile.endswith(".JSON"):
+        with open(whiteListFile) as f:
+            gen_dict = json.load(f)
+        f.close()
+        white_list = makeWhiteListJson(gen_dict)
+        namespace_prefix_override = makeNamespacePrefixOverride(gen_dict)
+    elif whiteListFile.endswith(".py") or whiteListFile.endswith(".PY"):
+        exec(open(whiteListFile).read())
+        assert(white_list)
+        namespace_prefix_override = {
+            'dnn' : '',
+            'aruco' : '',
+        }
+    else:
+        print("Unexpected format of OpenCV config file", whiteListFile)
+        exit(1)
 
     generator = JSWrapperGenerator()
     generator.gen(bindingsCpp, headers, coreBindings)

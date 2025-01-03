@@ -15,10 +15,10 @@
 #include "quirc.h"
 #endif
 
+#include <array>
 #include <limits>
 #include <cmath>
 #include <queue>
-#include <limits>
 #include <map>
 
 namespace cv
@@ -465,16 +465,25 @@ bool QRDetect::localization()
     CV_TRACE_FUNCTION();
     Point2f begin, end;
     vector<Vec3d> list_lines_x = searchHorizontalLines();
-    if( list_lines_x.empty() ) { return false; }
-    vector<Point2f> list_lines_y = separateVerticalLines(list_lines_x);
-    if( list_lines_y.empty() ) { return false; }
-
+    vector<Point2f> list_lines_y;
     Mat labels;
-    kmeans(list_lines_y, 3, labels,
-           TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
-           3, KMEANS_PP_CENTERS, localization_points);
+    if (!list_lines_x.empty())
+    {
+        list_lines_y = separateVerticalLines(list_lines_x);
+        if (!list_lines_y.empty())
+        {
+            kmeans(list_lines_y, 3, labels,
+                TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
+                3, KMEANS_PP_CENTERS, localization_points);
 
-    fixationPoints(localization_points);
+            fixationPoints(localization_points);
+        }
+    }
+
+    if (labels.empty())
+    {
+        localization_points.clear();
+    }
 
     bool square_flag = false, local_points_flag = false;
     double triangle_sides[3];
@@ -1015,6 +1024,17 @@ public:
     float coeff_expansion = 1.f;
     vector<Point2f> getOriginalPoints() {return original_points;}
     bool useAlignmentMarkers;
+
+    // Structured Append mode generates a sequence of QR codes.
+    // Final message is restored according to the index of the code in sequence.
+    // Different QR codes are grouped by a parity value.
+    bool isStructured() { return mode == QRCodeEncoder::EncodeMode::MODE_STRUCTURED_APPEND; }
+    struct {
+        uint8_t parity = 0;
+        uint8_t sequence_num = 0;
+        uint8_t total_num = 1;
+    } structure_info;
+
 protected:
     double getNumModules();
     Mat getHomography() {
@@ -1067,6 +1087,8 @@ protected:
     std::string result_info;
     uint8_t version, version_size;
     float test_perspective_size;
+    QRCodeEncoder::EncodeMode mode;
+
     struct sortPairAsc
     {
         bool operator()(const std::pair<size_t, double> &a,
@@ -1549,9 +1571,9 @@ Point QRDecode::findClosestZeroPoint(Point2f original_point)
     Point zero_point;
 
     const int step = 2;
-    for (int i = orig_x - step; i >= 0 && i <= orig_x + step; i++)
+    for (int i = std::max(orig_x - step, 0); i >= 0 && i <= std::min(orig_x + step, bin_barcode.cols - 1); i++)
     {
-        for (int j = orig_y - step; j >= 0 && j <= orig_y + step; j++)
+        for (int j = std::max(orig_y - step, 0); j >= 0 && j <= std::min(orig_y + step, bin_barcode.rows - 1); j++)
         {
             Point p(i, j);
             value = bin_barcode.at<uint8_t>(p);
@@ -1929,7 +1951,7 @@ vector<vector<float> > QRDecode::computeSpline(const vector<int> &x_arr, const v
     }
     for (int i = 0; i < n - 1; i++)
     {
-        h[i] = static_cast<float>(y_arr[i + 1] - y_arr[i]);
+        h[i] = static_cast<float>(y_arr[i + 1] - y_arr[i]) + std::numeric_limits<float>::epsilon();
     }
     for (int i = 1; i < n - 1; i++)
     {
@@ -2780,7 +2802,6 @@ static std::string encodeUTF8_bytesarray(const uint8_t* str, const size_t size) 
 
 bool QRDecode::decodingProcess()
 {
-    QRCodeEncoder::EncodeMode mode;
     QRCodeEncoder::ECIEncodings eci;
     const uint8_t* payload;
     size_t payload_len;
@@ -2825,6 +2846,9 @@ bool QRDecode::decodingProcess()
     eci = decoder->eci;
     payload = reinterpret_cast<const uint8_t*>(result_info.c_str());
     payload_len = result_info.size();
+    structure_info.parity = decoder->parity;
+    structure_info.sequence_num = decoder->sequence_num;
+    structure_info.total_num = decoder->total_num;
 #endif
 
     // Check output string format
@@ -2878,6 +2902,9 @@ bool QRDecode::decodingProcess()
             CV_LOG_WARNING(NULL, "QR: ECI is not supported properly");
             result_info.assign((const char*)payload, payload_len);
             return true;
+        case QRCodeEncoder::EncodeMode::MODE_STRUCTURED_APPEND:
+            result_info.assign((const char*)payload, payload_len);
+            return true;
         default:
             CV_LOG_WARNING(NULL, "QR: unsupported QR data type");
             return false;
@@ -2908,7 +2935,8 @@ QRDecode::QRDecode(bool _useAlignmentMarkers):
     useAlignmentMarkers(_useAlignmentMarkers),
     version(0),
     version_size(0),
-    test_perspective_size(0.f)
+    test_perspective_size(0.f),
+    mode(QRCodeEncoder::EncodeMode::MODE_AUTO)
     {}
 
 std::string ImplContour::decode(InputArray in, InputArray points, OutputArray straight_qrcode) const {
@@ -3051,7 +3079,10 @@ protected:
     {
         bool operator()(const Point2f& a, const Point2f& b) const
         {
-            return a.y < b.y;
+            if (a.y != b.y)
+                return a.y < b.y;
+            else
+                return a.x < b.x;
         }
     };
     struct compareSquare
@@ -3677,7 +3708,11 @@ bool QRDetectMulti::checkSets(vector<vector<Point2f> >& true_points_group, vecto
     vector<int> set_size(true_points_group.size());
     for (size_t i = 0; i < true_points_group.size(); i++)
     {
-        set_size[i] = int( (true_points_group[i].size() - 2 ) * (true_points_group[i].size() - 1) * true_points_group[i].size()) / 6;
+        const std::uint64_t true_points_group_size = true_points_group[i].size();
+        // ensure set_size[i] doesn't overflow
+        CV_Assert(true_points_group_size <= 2345);
+        set_size[i] = static_cast<int>((true_points_group_size - 2) * (true_points_group_size - 1) *
+                                       true_points_group_size / 6);
     }
 
     vector< vector< Vec3i > > all_points(true_points_group.size());
@@ -4075,11 +4110,44 @@ bool ImplContour::decodeMulti(
         }
         straight_qrcode.assign(tmp_straight_qrcodes);
     }
+
     decoded_info.clear();
     for (size_t i = 0; i < info.size(); i++)
     {
-       decoded_info.push_back(info[i]);
+        auto& decoder = qrdec[i];
+        if (!decoder.isStructured())
+        {
+            decoded_info.push_back(info[i]);
+            continue;
+        }
+
+        // Store final message corresponding to 0-th code in a sequence.
+        if (decoder.structure_info.sequence_num != 0)
+        {
+            decoded_info.push_back("");
+            continue;
+        }
+
+        cv::String decoded = info[i];
+        for (size_t idx = 1; idx < decoder.structure_info.total_num; ++idx)
+        {
+            auto it = std::find_if(qrdec.begin(), qrdec.end(), [&](QRDecode& dec) {
+                return dec.structure_info.parity == decoder.structure_info.parity &&
+                       dec.structure_info.sequence_num == idx;
+            });
+            if (it != qrdec.end())
+            {
+                decoded += info[it - qrdec.begin()];
+            }
+            else
+            {
+                decoded = "";
+                break;
+            }
+        }
+        decoded_info.push_back(decoded);
     }
+
     alignmentMarkers.resize(src_points.size());
     updateQrCorners.resize(src_points.size()*4ull);
     for (size_t i = 0ull; i < src_points.size(); i++) {
@@ -4551,13 +4619,13 @@ vector<QRCode> analyzeFinderPatterns(const vector<vector<Point2f> > &corners, co
 struct PimplQRAruco : public ImplContour {
     QRCodeDetectorAruco::Params qrParams;
     aruco::ArucoDetector arucoDetector;
-    aruco::DetectorParameters arucoParams;
 
     PimplQRAruco() {
         Mat bits = Mat::ones(Size(5, 5), CV_8UC1);
         Mat(bits, Rect(1, 1, 3, 3)).setTo(Scalar(0));
         Mat byteList = aruco::Dictionary::getByteListFromBits(bits);
         aruco::Dictionary dictionary = aruco::Dictionary(byteList, 5, 4);
+        aruco::DetectorParameters arucoParams;
         arucoParams.minMarkerPerimeterRate = 0.02;
         arucoDetector = aruco::ArucoDetector(dictionary, arucoParams);
     }
@@ -4631,12 +4699,12 @@ QRCodeDetectorAruco& QRCodeDetectorAruco::setDetectorParameters(const QRCodeDete
     return *this;
 }
 
-aruco::DetectorParameters QRCodeDetectorAruco::getArucoParameters() {
-    return std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoParams;
+const aruco::DetectorParameters& QRCodeDetectorAruco::getArucoParameters() const {
+    return std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoDetector.getDetectorParameters();
 }
 
 void QRCodeDetectorAruco::setArucoParameters(const aruco::DetectorParameters& params) {
-    std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoParams = params;
+    std::dynamic_pointer_cast<PimplQRAruco>(p)->arucoDetector.setDetectorParameters(params);
 }
 
 }  // namespace

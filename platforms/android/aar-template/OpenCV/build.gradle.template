@@ -1,11 +1,13 @@
 plugins {
     id 'com.android.library'
     id 'maven-publish'
+    id 'kotlin-android'
 }
 
 android {
     namespace 'org.opencv'
     compileSdk ${COMPILE_SDK}
+    ndkVersion "${NDK_VERSION}"
 
     defaultConfig {
         minSdk ${MIN_SDK}
@@ -39,7 +41,6 @@ android {
         }
     }
     buildFeatures {
-        aidl true
         prefabPublishing true
         buildConfig true
     }
@@ -52,13 +53,13 @@ android {
         main {
             java.srcDirs = ['src/main/java']
             //jniLibs.srcDirs = ['libs']
-            aidl.srcDirs = ['src/main/java']
         }
     }
 
     publishing {
         singleVariant('release') {
             withSourcesJar()
+            withJavadocJar()
         }
     }
 }
@@ -66,14 +67,42 @@ android {
 publishing {
     publications {
         release(MavenPublication) {
+            // Builds aar, sources jar and javadoc jar from project sources and creates maven
+            groupId = 'org.opencv'
+            artifactId = '${PACKAGE_NAME}'
+            version = '${OPENCV_VERSION}'
+            afterEvaluate {
+                from components.release
+            }
+        }
+        modified(MavenPublication) {
+            // Creates maven from opencv-release.aar
             groupId = 'org.opencv'
             artifactId = '${PACKAGE_NAME}'
             version = '${OPENCV_VERSION}'
             artifact("opencv-release.aar")
-
-//            afterEvaluate {
-//                from components.release
-//            }
+            pom {
+                name = "OpenCV"
+                description = "Open Source Computer Vision Library"
+                url = "https://opencv.org/"
+                licenses {
+                    license {
+                        name = "The Apache License, Version 2.0"
+                        url = "https://github.com/opencv/opencv/blob/master/LICENSE"
+                    }
+                }
+                developers {
+                    developer {
+                        id = "admin"
+                        name = "OpenCV Team"
+                        email = "admin@opencv.org"
+                    }
+                }
+                scm {
+                    connection = "scm:git:https://github.com/opencv/opencv.git"
+                    url = "https://github.com/opencv/opencv"
+                }
+            }
         }
     }
     repositories {

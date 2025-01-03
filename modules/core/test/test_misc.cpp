@@ -8,10 +8,8 @@
 
 #include <opencv2/core/utils/fp_control_utils.hpp>
 
-#ifdef CV_CXX11
 #include <chrono>
 #include <thread>
-#endif
 
 namespace opencv_test { namespace {
 
@@ -282,9 +280,7 @@ public:
             // FP state is not supported
             // no checks
         }
-#ifdef CV_CXX11
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-#endif
     }
 
     cv::details::FPDenormalsModeState base_state;
@@ -912,7 +908,22 @@ TYPED_TEST_P(Rect_Test, Overflows) {
   EXPECT_EQ(R(), R(20, 0, 10, 10) & R(0, num_lowest, 10, 10));
   EXPECT_EQ(R(), R(num_lowest, 0, 10, 10) & R(0, num_lowest, 10, 10));
 }
-REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows);
+
+// See https://github.com/opencv/opencv/issues/26016
+// Rect_<int>.contains(Point_<float/double>) needs template specialization.
+// This is test for a point on the edge and its nearest points.
+template<typename T> T cv_nexttoward(T v, T v2);
+template<> int cv_nexttoward<int>(int v, int v2) { CV_UNUSED(v); return v2; }
+template<> float cv_nexttoward<float>(float v, float v2) { return std::nextafter(v,v2); }
+template<> double cv_nexttoward<double>(double v, double v2) { return std::nexttoward(v,v2); }
+TYPED_TEST_P(Rect_Test, OnTheEdge) {
+  Rect_<int> rect(0,0,500,500);
+  TypeParam h = static_cast<TypeParam>(rect.height);
+  ASSERT_TRUE ( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h - 1))));
+  ASSERT_FALSE( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h    ))));
+  ASSERT_FALSE( rect.contains( Point_<TypeParam>(250, cv_nexttoward(h, h + 1))));
+}
+REGISTER_TYPED_TEST_CASE_P(Rect_Test, Overflows, OnTheEdge);
 
 typedef ::testing::Types<int, float, double> RectTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(Negative_Test, Rect_Test, RectTypes);

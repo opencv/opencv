@@ -358,7 +358,7 @@ static void fitLine2D( const Point2f * points, int count, int dist,
      calc_weights = (void ( * )(float *, int, float *)) _PFP.fp;
      break;*/
     default:
-        CV_Error(CV_StsBadArg, "Unknown distance type");
+        CV_Error(cv::Error::StsBadArg, "Unknown distance type");
     }
 
     AutoBuffer<float> wr(count*2);
@@ -499,7 +499,7 @@ static void fitLine3D( Point3f * points, int count, int dist,
         break;
 
     default:
-        CV_Error(CV_StsBadArg, "Unknown distance");
+        CV_Error(cv::Error::StsBadArg, "Unknown distance");
     }
 
     AutoBuffer<float> buf(count*2);

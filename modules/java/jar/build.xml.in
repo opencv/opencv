@@ -45,18 +45,23 @@
       @CMAKE_CONFIG_OPENCV_JAVADOC_LINK@
       additionalparam="--allow-script-in-comments"
       >
-      <Header>
+      <bottom>
          <![CDATA[
             <script>
               var url = window.location.href;
               var pos = url.lastIndexOf('/javadoc/');
               url = pos >= 0 ? (url.substring(0, pos) + '/javadoc/mymath.js') : (window.location.origin + '/mymath.js');
               var script = document.createElement('script');
-              script.src = '@OPENCV_MATHJAX_RELPATH@/MathJax.js?config=TeX-AMS-MML_HTMLorMML,' + url;
-              document.getElementsByTagName('head')[0].appendChild(script);
+              script.setAttribute("src", url);
+              script.setAttribute("defer", "")
+              document.head.appendChild(script);
+              script = document.createElement('script');
+              script.setAttribute("src", '@OPENCV_MATHJAX_RELPATH@/es5/tex-chtml.js');
+              script.setAttribute("defer", "")
+              document.head.appendChild(script);
             </script>
          ]]>
-      </Header>
+      </bottom>
     </javadoc>
   </target>
 

@@ -1189,8 +1189,8 @@ static bool ocl_pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, in
                                        "BORDER_REFLECT_101" };
     char cvt[2][50];
     String buildOptions = format(
-            "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
-            "-D T1=%s -D cn=%d -D kercn=%d -D fdepth=%d -D %s -D LOCAL_SIZE=%d",
+            "-D T=%s -D FT=%s -D CONVERT_TO_T=%s -D CONVERT_TO_FT=%s%s "
+            "-D T1=%s -D CN=%d -D KERCN=%d -D FDEPTH=%d -D %s -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, cn)),
             ocl::convertTypeStr(float_depth, depth, cn, cvt[0], sizeof(cvt[0])),
             ocl::convertTypeStr(depth, float_depth, cn, cvt[1], sizeof(cvt[1])),
@@ -1232,8 +1232,8 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
     const int local_size = channels == 1 ? 16 : 8;
     char cvt[2][50];
     String buildOptions = format(
-            "-D T=%s -D FT=%s -D convertToT=%s -D convertToFT=%s%s "
-            "-D T1=%s -D cn=%d -D LOCAL_SIZE=%d",
+            "-D T=%s -D FT=%s -D CONVERT_TO_T=%s -D CONVERT_TO_FT=%s%s "
+            "-D T1=%s -D CN=%d -D LOCAL_SIZE=%d",
             ocl::typeToStr(type), ocl::typeToStr(CV_MAKETYPE(float_depth, channels)),
             ocl::convertTypeStr(float_depth, depth, channels, cvt[0], sizeof(cvt[0])),
             ocl::convertTypeStr(depth, float_depth, channels, cvt[1], sizeof(cvt[1])),
@@ -1265,69 +1265,6 @@ static bool ocl_pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int 
 #endif
 
 }
-
-#if defined(HAVE_IPP)
-namespace cv
-{
-static bool ipp_pyrdown( InputArray _src, OutputArray _dst, const Size& _dsz, int borderType )
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-#if IPP_VERSION_X100 >= 810 && !IPP_DISABLE_PYRAMIDS_DOWN
-    Size dsz = _dsz.empty() ? Size((_src.cols() + 1)/2, (_src.rows() + 1)/2) : _dsz;
-    bool isolated = (borderType & BORDER_ISOLATED) != 0;
-    int borderTypeNI = borderType & ~BORDER_ISOLATED;
-
-    Mat src = _src.getMat();
-    _dst.create( dsz, src.type() );
-    Mat dst = _dst.getMat();
-    int depth = src.depth();
-
-
-    {
-        bool isolated = (borderType & BORDER_ISOLATED) != 0;
-        int borderTypeNI = borderType & ~BORDER_ISOLATED;
-        if (borderTypeNI == BORDER_DEFAULT && (!src.isSubmatrix() || isolated) && dsz == Size(src.cols*2, src.rows*2))
-        {
-            typedef IppStatus (CV_STDCALL * ippiPyrUp)(const void* pSrc, int srcStep, void* pDst, int dstStep, IppiSize srcRoi, Ipp8u* buffer);
-            int type = src.type();
-            CV_SUPPRESS_DEPRECATED_START
-            ippiPyrUp pyrUpFunc = type == CV_8UC1 ? (ippiPyrUp) ippiPyrUp_Gauss5x5_8u_C1R :
-                                  type == CV_8UC3 ? (ippiPyrUp) ippiPyrUp_Gauss5x5_8u_C3R :
-                                  type == CV_32FC1 ? (ippiPyrUp) ippiPyrUp_Gauss5x5_32f_C1R :
-                                  type == CV_32FC3 ? (ippiPyrUp) ippiPyrUp_Gauss5x5_32f_C3R : 0;
-            CV_SUPPRESS_DEPRECATED_END
-
-            if (pyrUpFunc)
-            {
-                int bufferSize;
-                IppiSize srcRoi = { src.cols, src.rows };
-                IppDataType dataType = depth == CV_8U ? ipp8u : ipp32f;
-                CV_SUPPRESS_DEPRECATED_START
-                IppStatus ok = ippiPyrUpGetBufSize_Gauss5x5(srcRoi.width, dataType, src.channels(), &bufferSize);
-                CV_SUPPRESS_DEPRECATED_END
-                if (ok >= 0)
-                {
-                    Ipp8u* buffer = ippsMalloc_8u_L(bufferSize);
-                    ok = pyrUpFunc(src.data, (int) src.step, dst.data, (int) dst.step, srcRoi, buffer);
-                    ippsFree(buffer);
-
-                    if (ok >= 0)
-                    {
-                        CV_IMPL_ADD(CV_IMPL_IPP);
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-#else
-    CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(_dsz); CV_UNUSED(borderType);
-#endif
-    return false;
-}
-}
-#endif
 
 #ifdef HAVE_OPENVX
 namespace cv
@@ -1426,15 +1363,19 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     Mat dst = _dst.getMat();
     int depth = src.depth();
 
-    CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
-
-#ifdef HAVE_IPP
-    bool isolated = (borderType & BORDER_ISOLATED) != 0;
-    int borderTypeNI = borderType & ~BORDER_ISOLATED;
-#endif
-    CV_IPP_RUN(borderTypeNI == BORDER_DEFAULT && (!_src.isSubmatrix() || isolated) && dsz == Size((_src.cols() + 1)/2, (_src.rows() + 1)/2),
-        ipp_pyrdown( _src,  _dst,  _dsz,  borderType));
-
+    if(src.isSubmatrix() && !(borderType & BORDER_ISOLATED))
+    {
+        Point ofs;
+        Size wsz(src.cols, src.rows);
+        src.locateROI( wsz, ofs );
+        CALL_HAL(pyrDown, cv_hal_pyrdown_offset, src.data, src.step, src.cols, src.rows,
+                 dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(),
+                 ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, borderType & (~BORDER_ISOLATED));
+    }
+    else
+    {
+        CALL_HAL(pyrDown, cv_hal_pyrdown, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
+    }
 
     PyrFunc func = 0;
     if( depth == CV_8U )
@@ -1448,7 +1389,7 @@ void cv::pyrDown( InputArray _src, OutputArray _dst, const Size& _dsz, int borde
     else if( depth == CV_64F )
         func = pyrDown_< FltCast<double, 8> >;
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     func( src, dst, borderType );
 }
@@ -1551,7 +1492,7 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
     else if( depth == CV_64F )
         func = pyrUp_< FltCast<double, 6> >;
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
     func( src, dst, borderType );
 }
@@ -1722,7 +1663,7 @@ CV_IMPL void
 cvReleasePyramid( CvMat*** _pyramid, int extra_layers )
 {
     if( !_pyramid )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
 
     if( *_pyramid )
         for( int i = 0; i <= extra_layers; i++ )
@@ -1743,7 +1684,7 @@ cvCreatePyramid( const CvArr* srcarr, int extra_layers, double rate,
     CvMat stub, *src = cvGetMat( srcarr, &stub );
 
     if( extra_layers < 0 )
-        CV_Error( CV_StsOutOfRange, "The number of extra layers must be non negative" );
+        CV_Error( cv::Error::StsOutOfRange, "The number of extra layers must be non negative" );
 
     int i, layer_step, elem_size = CV_ELEM_SIZE(src->type);
     cv::Size layer_size, size = cvGetMatSize(src);
@@ -1770,7 +1711,7 @@ cvCreatePyramid( const CvArr* srcarr, int extra_layers, double rate,
         }
 
         if( bufsize < 0 )
-            CV_Error( CV_StsOutOfRange, "The buffer is too small to fit the pyramid" );
+            CV_Error( cv::Error::StsOutOfRange, "The buffer is too small to fit the pyramid" );
         ptr = buf->data.ptr;
     }
 

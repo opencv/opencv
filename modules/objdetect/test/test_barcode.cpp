@@ -60,7 +60,7 @@ map<string, BarcodeResult> testResults {
     { "single/book.jpg", {"EAN_13", "9787115279460"} },
     { "single/bottle_1.jpg", {"EAN_13", "6922255451427"} },
     { "single/bottle_2.jpg", {"EAN_13", "6921168509256"} },
-    { "multiple/4_barcodes.jpg", {"EAN_13;EAN_13;EAN_13;EAN_13", "9787564350840;9783319200064;9787118081473;9787122276124"} }
+    { "multiple/4_barcodes.jpg", {"EAN_13;EAN_13;EAN_13;EAN_13", "9787564350840;9783319200064;9787118081473;9787122276124"} },
 };
 
 typedef testing::TestWithParam< string > BarcodeDetector_main;
@@ -93,6 +93,13 @@ TEST_P(BarcodeDetector_main, interface)
         string res = det.decode(img, points);
         ASSERT_FALSE(res.empty());
         EXPECT_EQ(1u, expected_lines.count(res));
+    }
+
+    {
+        string res = det.detectAndDecode(img, points);
+        ASSERT_FALSE(res.empty());
+        EXPECT_EQ(1u, expected_lines.count(res));
+        EXPECT_EQ(4u, points.size());
     }
 
     // common interface (multi)
@@ -135,6 +142,89 @@ TEST(BarcodeDetector_base, invalid)
     EXPECT_FALSE(bardet.detectMulti(zero_image, corners));
     corners = std::vector<Point>(4);
     EXPECT_ANY_THROW(bardet.decodeMulti(zero_image, corners, decoded_info));
+}
+
+struct ParamStruct
+{
+    double down_thresh;
+    vector<float> scales;
+    double grad_thresh;
+    unsigned res_count;
+};
+
+inline static std::ostream &operator<<(std::ostream &out, const ParamStruct &p)
+{
+    out << "(" << p.down_thresh << ", ";
+    for(float val : p.scales)
+        out << val << ", ";
+    out << p.grad_thresh << ")";
+    return out;
+}
+
+ParamStruct param_list[] = {
+    { 512, {0.01f, 0.03f, 0.06f, 0.08f}, 64, 4 }, // default values -> 4 codes
+    { 512, {0.01f, 0.03f, 0.06f, 0.08f}, 1024, 2 },
+    { 512, {0.01f, 0.03f, 0.06f, 0.08f}, 2048, 0 },
+    { 128, {0.01f, 0.03f, 0.06f, 0.08f}, 64, 3 },
+    { 64, {0.01f, 0.03f, 0.06f, 0.08f}, 64, 2 },
+    { 128, {0.0000001f}, 64, 1 },
+    { 128, {0.0000001f, 0.0001f}, 64, 1 },
+    { 128, {0.0000001f, 0.1f}, 64, 1 },
+    { 512, {0.1f}, 64, 0 },
+};
+
+typedef testing::TestWithParam<ParamStruct> BarcodeDetector_parameters_tune;
+
+TEST_P(BarcodeDetector_parameters_tune, accuracy)
+{
+    const ParamStruct param = GetParam();
+
+    const string fname = "multiple/4_barcodes.jpg";
+    const string image_path = findDataFile(string("barcode/") + fname);
+
+    const Mat img = imread(image_path);
+    ASSERT_FALSE(img.empty()) << "Can't read image: " << image_path;
+
+    auto bardet = barcode::BarcodeDetector();
+    bardet.setDownsamplingThreshold(param.down_thresh);
+    bardet.setDetectorScales(param.scales);
+    bardet.setGradientThreshold(param.grad_thresh);
+    vector<Point2f> points;
+    bardet.detectMulti(img, points);
+    EXPECT_EQ(points.size() / 4, param.res_count);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, BarcodeDetector_parameters_tune, testing::ValuesIn(param_list));
+
+TEST(BarcodeDetector_parameters, regression)
+{
+    const double expected_dt = 1024, expected_gt = 256;
+    const vector<float> expected_ds = {0.1f};
+    vector<float> ds_value = {0.0f};
+
+    auto bardet = barcode::BarcodeDetector();
+
+    bardet.setDownsamplingThreshold(expected_dt).setDetectorScales(expected_ds).setGradientThreshold(expected_gt);
+
+    double dt_value = bardet.getDownsamplingThreshold();
+    bardet.getDetectorScales(ds_value);
+    double gt_value = bardet.getGradientThreshold();
+
+    EXPECT_EQ(expected_dt, dt_value);
+    EXPECT_EQ(expected_ds, ds_value);
+    EXPECT_EQ(expected_gt, gt_value);
+}
+
+TEST(BarcodeDetector_parameters, invalid)
+{
+    auto bardet = barcode::BarcodeDetector();
+
+    EXPECT_ANY_THROW(bardet.setDownsamplingThreshold(-1));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<float> {}));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<float> {-1}));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<float> {1.5}));
+    EXPECT_ANY_THROW(bardet.setDetectorScales(vector<float> (17, 0.5)));
+    EXPECT_ANY_THROW(bardet.setGradientThreshold(-0.1));
 }
 
 }} // opencv_test::<anonymous>::
