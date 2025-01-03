@@ -164,16 +164,15 @@ public class RecorderActivity extends CameraActivity implements CvCameraViewList
     {
         Log.d(TAG, "Camera frame arrived");
 
-        Mat rgbMat = inputFrame.rgba();
+        mVideoFrame = inputFrame.rgba();
 
-        Log.d(TAG, "Size: " + rgbMat.width() + "x" + rgbMat.height());
+        Log.d(TAG, "Size: " + mVideoFrame.width() + "x" + mVideoFrame.height());
 
         if (mVideoWriter != null && mVideoWriter.isOpened()) {
-            Imgproc.cvtColor(rgbMat, mVideoFrame, Imgproc.COLOR_RGBA2BGR);
             mVideoWriter.write(mVideoFrame);
         }
 
-        return rgbMat;
+        return mVideoFrame;
     }
 
     @Override
