@@ -99,6 +99,61 @@ static bool fillFrames(Animation& animation, bool hasAlpha, int n = 14)
     return true;
 }
 
+#ifdef HAVE_IMGCODEC_GIF
+
+TEST(Imgcodecs_Gif, imwriteanimation_rgba)
+{
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true));
+    s_animation.bgcolor = Scalar(0, 0, 0, 0); // TO DO not implemented yet.
+
+    // Create a temporary output filename for saving the animation.
+    string output = cv::tempfile(".gif");
+
+    // Write the animation to a .webp file and verify success.
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
+
+    // Read the animation back and compare with the original.
+    EXPECT_TRUE(imreadanimation(output, l_animation));
+
+    size_t expected_frame_count = s_animation.frames.size();
+
+    // Verify that the number of frames matches the expected count.
+    EXPECT_EQ(expected_frame_count, imcount(output));
+    EXPECT_EQ(expected_frame_count, l_animation.frames.size());
+
+    // Check that the background color and loop count match between saved and loaded animations.
+    EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor); // written as BGRA order
+    EXPECT_EQ(l_animation.loop_count, s_animation.loop_count);
+
+    // Verify that the durations of frames match.
+    for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
+        EXPECT_EQ(cvRound(s_animation.durations[i] / 10), cvRound(l_animation.durations[i] / 10));
+
+    EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
+    EXPECT_EQ(expected_frame_count + 3, l_animation.frames.size());
+    EXPECT_EQ(l_animation.frames.size(), l_animation.durations.size());
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[5], l_animation.frames[16], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[6], l_animation.frames[17], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[7], l_animation.frames[18], NORM_INF));
+
+    // Verify whether the imread function successfully loads the first frame
+    Mat frame = imread(output, IMREAD_UNCHANGED);
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[0], frame, NORM_INF));
+
+    std::vector<uchar> buf;
+    readFileBytes(output, buf);
+    vector<Mat> webp_frames;
+
+    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
+    EXPECT_EQ(expected_frame_count, webp_frames.size());
+
+    // Clean up by removing the temporary file.
+    EXPECT_EQ(0, remove(output.c_str()));
+}
+
+#endif // HAVE_IMGCODEC_GIF
+
 #ifdef HAVE_WEBP
 
 TEST(Imgcodecs_WebP, imwriteanimation_rgba)
@@ -283,6 +338,51 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgba)
     // Verify whether the imread function successfully loads the first frame
     Mat frame = imread(output, IMREAD_UNCHANGED);
     EXPECT_EQ(0, cvtest::norm(l_animation.frames[0], frame, NORM_INF));
+
+    std::vector<uchar> buf;
+    readFileBytes(output, buf);
+    vector<Mat> apng_frames;
+
+    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, apng_frames));
+    EXPECT_EQ(expected_frame_count, apng_frames.size());
+
+    apng_frames.clear();
+    // Test saving the animation frames as individual still images.
+    EXPECT_TRUE(imwrite(output, s_animation.frames));
+
+    // Read back the still images into a vector of Mats.
+    EXPECT_TRUE(imreadmulti(output, apng_frames));
+
+    // Expect all frames written as multi-page image
+    EXPECT_EQ(expected_frame_count, apng_frames.size());
+
+    // Clean up by removing the temporary file.
+    EXPECT_EQ(0, remove(output.c_str()));
+}
+
+TEST(Imgcodecs_APNG, imwriteanimation_rgba16u)
+{
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true));
+
+    for (size_t i = 0; i < s_animation.frames.size(); i++)
+    {
+        s_animation.frames[i].convertTo(s_animation.frames[i], CV_16U, 255);
+    }
+    // Create a temporary output filename for saving the animation.
+    string output = cv::tempfile(".png");
+
+    // Write the animation to a .png file and verify success.
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
+
+    // Read the animation back and compare with the original.
+    EXPECT_TRUE(imreadanimation(output, l_animation));
+
+    size_t expected_frame_count = s_animation.frames.size() - 2;
+
+    // Verify that the number of frames matches the expected count.
+    EXPECT_EQ(expected_frame_count, imcount(output));
+    EXPECT_EQ(expected_frame_count, l_animation.frames.size());
 
     std::vector<uchar> buf;
     readFileBytes(output, buf);
