@@ -303,21 +303,6 @@ bool AvifEncoder::write(const Mat &img, const std::vector<int> &params) {
   return writemulti(img_vec, params);
 }
 
-bool AvifEncoder::writemulti(const std::vector<Mat> &img_vec,
-                             const std::vector<int> &params) {
-
-    CV_LOG_INFO(NULL, "Multi page image will be written as animation with 1 second frame duration.");
-
-    Animation animation;
-    animation.frames = img_vec;
-
-    for (size_t i = 0; i < animation.frames.size(); i++)
-    {
-        animation.durations.push_back(1000);
-    }
-    return writeanimation(animation, params);
-}
-
 bool AvifEncoder::writeanimation(const Animation& animation,
                                  const std::vector<int> &params) {
   int bit_depth = 8;
