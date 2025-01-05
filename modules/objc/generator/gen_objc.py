@@ -1662,7 +1662,7 @@ if __name__ == "__main__":
                h_files += [os.path.join(root, filename) for filename in fnmatch.filter(filenames, '*.h')]
                hpp_files += [os.path.join(root, filename) for filename in fnmatch.filter(filenames, '*.hpp')]
             srcfiles = h_files + hpp_files
-            srcfiles = [f for f in srcfiles if not re_bad.search(f.replace('\\', '/'))]
+            srcfiles = [f for f in srcfiles if not re_bad.search(os.path.relpath(f, module_location).replace('\\', '/'))]
         logging.info("\nFiles (%d):\n%s", len(srcfiles), pformat(srcfiles))
 
         common_headers_fname = os.path.join(misc_location, 'filelist_common')
