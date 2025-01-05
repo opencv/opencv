@@ -64,7 +64,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_1, accuracy) {
     for (size_t i=0; i <=3; i++) {
         Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
         float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
+        for (size_t j=1; j <=3; j++) {
             diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
             float dd = diff.x * diff.x + diff.y * diff.y;
             if(dd<d){d=dd;}
@@ -102,7 +102,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_2, accuracy) {
     for (size_t i=0; i <=3; i++) {
         Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
         float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
+        for (size_t j=1; j <=3; j++) {
             diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
             float dd = diff.x * diff.x + diff.y * diff.y;
             if(dd<d){d=dd;}
@@ -151,7 +151,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_3, accuracy) {
     for (size_t i=0; i <=3; i++) {
         Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
         float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
+        for (size_t j=1; j <=3; j++) {
             diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
             float dd = diff.x * diff.x + diff.y * diff.y;
             if(dd<d){d=dd;}
@@ -219,7 +219,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_4, accuracy) {
     for (size_t i=0; i <=3; i++) {
         Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
         float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
+        for (size_t j=1; j <=3; j++) {
             diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
             float dd = diff.x * diff.x + diff.y * diff.y;
             if(dd<d){d=dd;}
@@ -289,7 +289,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_5, accuracy) {
     for (size_t i=0; i <=3; i++) {
         Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
         float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
+        for (size_t j=1; j <=3; j++) {
             diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
             float dd = diff.x * diff.x + diff.y * diff.y;
             if(dd<d){d=dd;}
@@ -357,7 +357,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_6, accuracy) {
     for (size_t i=0; i <=3; i++) {
         Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
         float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
+        for (size_t j=1; j <=3; j++) {
             diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
             float dd = diff.x * diff.x + diff.y * diff.y;
             if(dd<d){d=dd;}
@@ -425,7 +425,7 @@ TEST(Imgproc_FitEllipseDirect_Issue_7, accuracy) {
     for (size_t i=0; i <=3; i++) {
         Point2f diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[0];
         float d = diff.x * diff.x + diff.y * diff.y;
-        for (size_t j=1; i <=3; i++) {
+        for (size_t j=1; j <=3; j++) {
             diff = ellipseDirectTrueVertices[i] - ellipseDirectTestVertices[j];
             float dd = diff.x * diff.x + diff.y * diff.y;
             if(dd<d){d=dd;}
