@@ -720,6 +720,15 @@ bool PngDecoder::processing_start(void* frame_ptr, const Mat& img)
 {
     static uint8_t header[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
 
+    if (m_png_ptr)
+    {
+        png_structp png_ptr = (png_structp)m_png_ptr;
+        png_infop info_ptr = (png_infop)m_info_ptr;
+        png_infop end_info = (png_infop)m_end_info;
+        png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+        m_png_ptr = m_info_ptr = m_end_info = 0;
+    }
+
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     png_infop info_ptr = png_create_info_struct(png_ptr);
 
