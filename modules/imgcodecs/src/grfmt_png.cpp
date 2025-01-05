@@ -181,8 +181,8 @@ PngDecoder::PngDecoder()
 {
     m_signature = "\x89\x50\x4e\x47\xd\xa\x1a\xa";
     m_color_type = 0;
-    m_png_ptr = 0;
-    m_info_ptr = m_end_info = 0;
+    m_png_ptr = nullptr;
+    m_info_ptr = m_end_info = nullptr;
     m_f = 0;
     m_buf_supported = true;
     m_buf_pos = 0;
@@ -203,7 +203,7 @@ PngDecoder::~PngDecoder()
     if( m_f )
     {
         fclose( m_f );
-        m_f = 0;
+        m_f = nullptr;
     }
 
     if( m_png_ptr )
@@ -212,7 +212,7 @@ PngDecoder::~PngDecoder()
         png_infop info_ptr = (png_infop)m_info_ptr;
         png_infop end_info = (png_infop)m_end_info;
         png_destroy_read_struct( &png_ptr, &info_ptr, &end_info );
-        m_png_ptr = m_info_ptr = m_end_info = 0;
+        m_png_ptr = m_info_ptr = m_end_info = nullptr;
     }
 }
 
@@ -241,15 +241,14 @@ bool  PngDecoder::readHeader()
     volatile bool result = false;
 
     png_structp png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
+    png_infop info_ptr = nullptr;
+    png_infop end_info = nullptr;
 
     if( png_ptr )
     {
-        png_infop info_ptr = png_create_info_struct( png_ptr );
-        png_infop end_info = png_create_info_struct( png_ptr );
+        info_ptr = png_create_info_struct( png_ptr );
+        end_info = png_create_info_struct( png_ptr );
 
-        m_png_ptr = png_ptr;
-        m_info_ptr = info_ptr;
-        m_end_info = end_info;
         m_buf_pos = 0;
 
         if( info_ptr && end_info )
@@ -266,7 +265,10 @@ bool  PngDecoder::readHeader()
                 {
                     m_f = fopen(m_filename.c_str(), "rb");
                     if (!m_f)
+                    {
+                        png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
                         return false;
+                    }
                     png_init_io(png_ptr, m_f);
 
                     if (fread(sig, 1, 8, m_f))
@@ -280,7 +282,10 @@ bool  PngDecoder::readHeader()
                 }
 
                 if (!(id == id_IHDR && m_chunkIHDR.p.size() == 25))
+                {
+                    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
                     return false;
+                }
 
                 while (true)
                 {
@@ -288,7 +293,10 @@ bool  PngDecoder::readHeader()
                     id = read_chunk(chunk);
 
                     if ((m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
+                    {
+                        png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
                         return false;
+                    }
 
                     if (id == id_IDAT)
                     {
@@ -379,6 +387,17 @@ bool  PngDecoder::readHeader()
                 }
             }
         }
+    }
+
+    if(result)
+    {
+        m_png_ptr = png_ptr;
+        m_info_ptr = info_ptr;
+        m_end_info = end_info;
+    }
+    else
+    {
+        png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
     }
 
     return result;
@@ -762,19 +781,23 @@ bool PngDecoder::processing_finish()
 
     png_structp png_ptr = (png_structp)m_png_ptr;
     png_infop info_ptr = (png_infop)m_info_ptr;
+    png_infop end_info = (png_infop)m_end_info;
 
-    if (!png_ptr || !info_ptr)
+    if (!png_ptr)
         return false;
 
     if (setjmp(png_jmpbuf(png_ptr)))
     {
-        png_destroy_read_struct(&png_ptr, &info_ptr, 0);
+        png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
         return false;
     }
 
     png_process_data(png_ptr, info_ptr, footer, 12);
-    png_destroy_read_struct(&png_ptr, &info_ptr, 0);
-    m_png_ptr = 0;
+    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+    m_png_ptr = nullptr;
+    m_info_ptr = nullptr;
+    m_end_info = nullptr;
+
     return true;
 }
 
