@@ -423,7 +423,6 @@ bool  PngDecoder::readData( Mat& img )
                 fseek(m_f, -8, SEEK_CUR);
             else
                 m_buf_pos -= 8;
-
         }
         else
             m_mat_next.copyTo(mat_cur);
@@ -456,9 +455,9 @@ bool  PngDecoder::readData( Mat& img )
                         memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
 
                     compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
-                    if (delay_den < 1000)
-                        delay_num = cvRound(1000.0 / delay_den);
-                    m_animation.durations.push_back(delay_num);
+                    if (!delay_den)
+                        delay_den = 100;
+                    m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
 
                     if (mat_cur.channels() == img.channels())
                         mat_cur.copyTo(img);
@@ -514,9 +513,9 @@ bool  PngDecoder::readData( Mat& img )
                 if (processing_finish())
                 {
                     compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
-                    if (delay_den < 1000)
-                        delay_num = cvRound(1000.0 / delay_den);
-                    m_animation.durations.push_back(delay_num);
+                    if (!delay_den)
+                        delay_den = 100;
+                    m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
 
                     if (mat_cur.channels() == img.channels())
                         mat_cur.copyTo(img);
@@ -735,6 +734,15 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
 bool PngDecoder::processing_start(void* frame_ptr, const Mat& img)
 {
     static uint8_t header[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
+
+    if (m_png_ptr)
+    {
+        png_structp png_ptr = (png_structp)m_png_ptr;
+        png_infop info_ptr = (png_infop)m_info_ptr;
+        png_infop end_info = (png_infop)m_end_info;
+        png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+        m_png_ptr = m_info_ptr = m_end_info = nullptr;
+    }
 
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     png_infop info_ptr = png_create_info_struct(png_ptr);
