@@ -20,7 +20,7 @@ Mat src_gray;
 Mat standard_hough, probabilistic_hough, weighted_hough;
 int min_threshold = 50;
 int max_trackbar = 150;
-int weightedhough_max_trackbar = 1e+5;
+int weightedhough_max_trackbar = 100000;
 
 const char* standard_name = "Standard Hough Lines Demo";
 const char* probabilistic_name = "Probabilistic Hough Lines Demo";
@@ -161,8 +161,7 @@ void Weighted_Hough( int, void* )
 
   /// 3. Use Weighted Hough Transform
   const bool use_edgeval{true};
-  HoughLines( edge_img, s_lines, 1, CV_PI/180, min_threshold + w_trackbar, 0, 0,
-  	      0, CV_PI, use_edgeval);
+  HoughLines( edge_img, s_lines, 1, CV_PI/180, min_threshold + w_trackbar, 0, 0, 0, CV_PI, use_edgeval);
 
   /// Show the result
   for( size_t i = 0; i < s_lines.size(); i++ )
