@@ -436,11 +436,9 @@ bool  PngDecoder::readData( Mat& img )
                         memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
 
                     compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
-                    if (delay_den < 100)
-                        delay_num = cvRound(1000.0 / delay_den);
-                    else
-                        delay_num *= cvRound(1000.0 / delay_den);
-                    m_animation.durations.push_back(delay_num);
+                    if (!delay_den)
+                        delay_den = 100;
+                    m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
 
                     if (mat_cur.channels() == img.channels())
                         mat_cur.copyTo(img);
@@ -496,11 +494,9 @@ bool  PngDecoder::readData( Mat& img )
                 if (processing_finish())
                 {
                     compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
-                    if (delay_den < 100)
-                        delay_num = cvRound(1000.0 / delay_den);
-                    else
-                        delay_num *= cvRound(1000.0 / delay_den);
-                    m_animation.durations.push_back(delay_num);
+                    if (!delay_den)
+                        delay_den = 100;
+                    m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
 
                     if (mat_cur.channels() == img.channels())
                         mat_cur.copyTo(img);
