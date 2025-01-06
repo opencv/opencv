@@ -722,7 +722,7 @@ bool PngDecoder::processing_start(void* frame_ptr, const Mat& img)
         png_infop info_ptr = (png_infop)m_info_ptr;
         png_infop end_info = (png_infop)m_end_info;
         png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
-        m_png_ptr = m_info_ptr = m_end_info = 0;
+        m_png_ptr = m_info_ptr = m_end_info = nullptr;
     }
 
     png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
