@@ -67,7 +67,7 @@
  *  https://github.com/apngasm/apngasm
 
 
- /* APNG Optimizer 1.4
+ * APNG Optimizer 1.4
  *
  * Makes APNG files smaller.
  *
