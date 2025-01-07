@@ -25,6 +25,15 @@ Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/
 * Clean up "oops" commits before submitting;
 * Follow the [coding style guide](https://github.com/opencv/opencv/wiki/Coding_Style_Guide).
 
+### How to Run the Script
+
+如何使用OpenCV來執行
+
+### 前置作業
+- 安裝 OpenCV，執行以下指令來安裝:
+  ```bash
+  pip install opencv-python
+
 ### Additional Resources
 
 * [Submit your OpenCV-based project](https://form.jotform.com/233105358823151) for inclusion in Community Friday on opencv.org
