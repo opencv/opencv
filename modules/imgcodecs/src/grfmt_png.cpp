@@ -253,18 +253,12 @@ bool  PngDecoder::readHeader()
                     return false;
                 }
                 png_init_io(png_ptr, m_f);
-
-                if (fread(sig, 1, 8, m_f))
-                    id = read_chunk(m_chunkIHDR);
             }
 
-            if (id != id_IHDR)
-            {
-                if (read_from_io(&sig, 8, 1) != 1)
-                    return false;
-                id = read_chunk(m_chunkIHDR);
-            }
+            if (read_from_io(&sig, 8, 1) != 1)
+                return false;
 
+            id = read_chunk(m_chunkIHDR);
             if (!(id == id_IHDR && m_chunkIHDR.p.size() == 25))
             {
                 return false;
