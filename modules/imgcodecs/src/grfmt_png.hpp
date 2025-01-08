@@ -140,10 +140,47 @@ protected:
     size_t read_from_io(void* _Buffer, size_t _ElementSize, size_t _ElementCount);
     uint32_t  read_chunk(Chunk& chunk);
 
+    struct PngPtrs {
+        public:
+            PngPtrs() {
+                png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
+                if (png_ptr) {
+                    info_ptr = png_create_info_struct( png_ptr );
+                    end_info = png_create_info_struct( png_ptr );
+                } else {
+                    info_ptr = end_info = nullptr;
+                }
+            }
+            ~PngPtrs() {
+                clear();
+            }
+            PngPtrs& operator=(PngPtrs&& other) {
+                clear();
+                png_ptr = other.png_ptr;
+                info_ptr = other.info_ptr;
+                end_info = other.end_info;
+                other.png_ptr = nullptr;
+                other.info_ptr = other.end_info = nullptr;
+                return *this;
+            }
+            void clear() {
+                if (png_ptr) {
+                    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
+                    png_ptr = nullptr;
+                    info_ptr = end_info = nullptr;
+                }
+            }
+            png_structp getPng() const { return png_ptr; }
+            png_infop getInfo() const { return info_ptr; }
+            png_infop getEndInfo() const { return end_info; }
+        private:
+            png_structp png_ptr; // pointer to decompression structure
+            png_infop info_ptr; // pointer to image information structure
+            png_infop end_info; // pointer to one more image information structure
+    };
+
+    PngPtrs m_png_ptrs;
     int   m_bit_depth;
-    void* m_png_ptr;  // pointer to decompression structure
-    void* m_info_ptr; // pointer to image information structure
-    void* m_end_info; // pointer to one more image information structure
     FILE* m_f;
     int   m_color_type;
     Chunk m_chunkIHDR;
