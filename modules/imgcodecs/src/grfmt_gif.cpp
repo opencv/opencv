@@ -321,6 +321,7 @@ bool GifDecoder::lzwDecode() {
             // clear code
             if (!(code ^ clearCode)) {
                 lzwExtraTable.clear();
+                lzwExtraTable.resize((1 << 12) + 1);
                 // reset the code size, the same as that in the initialization part
                 lzwCodeSize  = lzwMinCodeSize + 1;
                 lzwTableSize = exitCode;
@@ -341,20 +342,24 @@ bool GifDecoder::lzwDecode() {
 
             // output code
             // 1. renew the lzw extra table
-            if (code < colorTableSize) {
-                lzwExtraTable[lzwTableSize].suffix = (uchar)code;
-                lzwTableSize ++;
-                lzwExtraTable[lzwTableSize].prefix.clear();
-                lzwExtraTable[lzwTableSize].prefix.push_back((uchar)code);
-                lzwExtraTable[lzwTableSize].length = 2;
-            } else if (code <= lzwTableSize) {
-                lzwExtraTable[lzwTableSize].suffix = lzwExtraTable[code].prefix[0];
-                lzwTableSize ++;
-                lzwExtraTable[lzwTableSize].prefix = lzwExtraTable[code].prefix;
-                lzwExtraTable[lzwTableSize].prefix.push_back(lzwExtraTable[code].suffix);
-                lzwExtraTable[lzwTableSize].length = lzwExtraTable[code].length + 1;
-            } else {
-                return false;
+            //    * notice that if the lzw table size is full, 
+            //    * we should use the old table until a clear code is encountered
+            if (lzwTableSize < 1<<12) {
+                if (code < colorTableSize) {
+                    lzwExtraTable[lzwTableSize].suffix = (uchar)code;
+                    lzwTableSize ++;
+                    lzwExtraTable[lzwTableSize].prefix.clear();
+                    lzwExtraTable[lzwTableSize].prefix.push_back((uchar)code);
+                    lzwExtraTable[lzwTableSize].length = 2;
+                } else if (code <= lzwTableSize) {
+                    lzwExtraTable[lzwTableSize].suffix = lzwExtraTable[code].prefix[0];
+                    lzwTableSize ++;
+                    lzwExtraTable[lzwTableSize].prefix = lzwExtraTable[code].prefix;
+                    lzwExtraTable[lzwTableSize].prefix.push_back(lzwExtraTable[code].suffix);
+                    lzwExtraTable[lzwTableSize].length = lzwExtraTable[code].length + 1;
+                } else {
+                    return false;
+                }
             }
 
             // 2. output to the code stream
@@ -402,14 +407,27 @@ bool GifDecoder::getFrameCount_() {
     while (type != 0x3B) {
         if (!(type ^ 0x21)) {
             // skip all kinds of the extensions
-            m_strm.skip(1);
-            int len = m_strm.getByte();
-            while (len) {
-                m_strm.skip(len);
+            int extension = m_strm.getByte(), len;
+            // Application Extension need to be handled for the loop count
+            if (extension == 0xFF) {
                 len = m_strm.getByte();
-                if (len == 3 && m_strm.getByte() == 1)
-                {
-                    m_animation.loop_count = m_strm.getWord();
+                while (len) {
+                    if (len == 3) {
+                        if (m_strm.getByte() == 0x01) {
+                            m_animation.loop_count = m_strm.getWord();
+                        } else {
+                            m_strm.skip(2);
+                        }
+                    } else {
+                        m_strm.skip(len);
+                    }
+                    len = m_strm.getByte();
+                }
+            } else {
+                len = m_strm.getByte();
+                while (len) {
+                    m_strm.skip(len);
+                    len = m_strm.getByte();
                 }
             }
         } else if (!(type ^ 0x2C)) {
