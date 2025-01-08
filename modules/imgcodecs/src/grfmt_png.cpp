@@ -260,7 +260,8 @@ bool  PngDecoder::readHeader()
 
             if (id != id_IHDR)
             {
-                read_from_io(&sig, 8, 1);
+                if (read_from_io(&sig, 8, 1) != 1)
+                    return false;
                 id = read_chunk(m_chunkIHDR);
             }
 
@@ -274,7 +275,7 @@ bool  PngDecoder::readHeader()
                 m_is_fcTL_loaded = false;
                 id = read_chunk(chunk);
 
-                if ((m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
+                if (!id || (m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
                 {
                     return false;
                 }
@@ -679,8 +680,10 @@ size_t PngDecoder::read_from_io(void* _Buffer, size_t _ElementSize, size_t _Elem
     if (m_f)
         return fread(_Buffer, _ElementSize, _ElementCount, m_f);
 
-    if (m_buf_pos + _ElementSize > m_buf.cols * m_buf.rows * m_buf.elemSize())
-        CV_Error(Error::StsInternal, "PNG input buffer is incomplete");
+    if (m_buf_pos + _ElementSize > m_buf.cols * m_buf.rows * m_buf.elemSize()) {
+        CV_LOG_WARNING(NULL, "PNG input buffer is incomplete");
+        return 0;
+    }
 
     memcpy( _Buffer, m_buf.ptr() + m_buf_pos, _ElementSize );
     m_buf_pos += _ElementSize;
