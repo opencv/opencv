@@ -5,7 +5,7 @@
  *  contours and approximate it by ellipses using three methods.
  *  1: OpenCV's original method fitEllipse which implements Fitzgibbon 1995 method.
  *  2: The Approximate Mean Square (AMS) method fitEllipseAMS  proposed by Taubin 1991
- *  3: The Direct least square (Direct) method fitEllipseDirect proposed by Fitzgibbon1999.
+ *  3: The Direct least square (Direct) method fitEllipseDirect proposed by oy1998NumericallySD.
  *
  *  Trackbar specify threshold parameter.
  *
