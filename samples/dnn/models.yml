@@ -441,3 +441,19 @@ dasiamrpn:
     dasiamrpn_kernel_cls_sha1: "e9ccd270ce8059bdf7ed0d1845c03ef4a951ee0f"
   dasiamrpn_kernel_cls_model: "object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx"
   sample: "object_tracker"
+
+################################################################################
+# Inpainting models.
+################################################################################
+
+lama:
+  load_info:
+    url: "https://github.com/opencv/opencv_zoo/raw/main/models/person_reid_youtureid/person_reid_youtu_2021nov.onnx?download="
+    sha1: "d4316b100db40f8840aa82626e1cf3f519a7f1ae"
+  model: "lama_fp32.onnx"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 512
+  height: 512
+  rgb: false
+  sample: "inpainting"
