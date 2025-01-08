@@ -17,7 +17,7 @@ CV__DNN_INLINE_NS_BEGIN
 
 void RemoveIdentityOps(tensorflow::GraphDef& net);
 
-void simplifySubgraphs(tensorflow::GraphDef& net);
+void simplifySubgraphs(tensorflow::GraphDef& net, bool newEngine);
 
 Mat getTensorContent(const tensorflow::TensorProto& tensor, bool forceCopy = true);
 

@@ -1200,5 +1200,17 @@ TEST(Imgproc_Remap, issue_23562)
     }
 }
 
+TEST(Imgproc_Resize, issue_26497)
+{
+    std::vector<float> vec = {0.f, 1.f, 2.f, 3.f};
+    Mat A(vec), B;
+    resize(A, B, Size(2,2), 0, 0, INTER_LINEAR);
+    double minv = 0, maxv = 0;
+    cvtest::minMaxIdx(B, &minv, &maxv, nullptr, nullptr, noArray());
+    EXPECT_EQ(B.size(), Size(2, 2));
+    EXPECT_LE(0., minv);
+    EXPECT_LE(maxv, 3.);
+}
+
 }} // namespace
 /* End of file. */

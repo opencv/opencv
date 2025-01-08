@@ -55,10 +55,7 @@ endif(WITH_CUDA)
 
 # --- Eigen ---
 if(WITH_EIGEN AND NOT HAVE_EIGEN)
-  if((OPENCV_FORCE_EIGEN_FIND_PACKAGE_CONFIG
-      OR NOT (CMAKE_VERSION VERSION_LESS "3.0.0")  # Eigen3Targets.cmake required CMake 3.0.0+
-      ) AND NOT OPENCV_SKIP_EIGEN_FIND_PACKAGE_CONFIG
-  )
+  if(NOT OPENCV_SKIP_EIGEN_FIND_PACKAGE_CONFIG)
     find_package(Eigen3 CONFIG QUIET)  # Ceres 2.0.0 CMake scripts doesn't work with CMake's FindEigen3.cmake module (due to missing EIGEN3_VERSION_STRING)
   endif()
   if(NOT Eigen3_FOUND)
@@ -161,3 +158,19 @@ if(WITH_CLP)
     endif()
   endif()
 endif(WITH_CLP)
+
+# --- ARM KleidiCV
+if(WITH_KLEIDICV)
+  if(KLEIDICV_SOURCE_PATH AND EXISTS "${KLEIDICV_SOURCE_PATH}/adapters/opencv/CMakeLists.txt")
+    set(HAVE_KLEIDICV ON)
+  endif()
+  if(NOT HAVE_KLEIDICV)
+    include("${OpenCV_SOURCE_DIR}/3rdparty/kleidicv/kleidicv.cmake")
+    download_kleidicv(KLEIDICV_SOURCE_PATH)
+    if(KLEIDICV_SOURCE_PATH)
+      set(HAVE_KLEIDICV ON)
+    endif()
+  else()
+    set(HAVE_KLEIDICV OFF)
+  endif()
+endif(WITH_KLEIDICV)

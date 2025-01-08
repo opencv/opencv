@@ -84,15 +84,11 @@ if(NOT ${found})
                         "Consider providing the '${executable}' variable via CMake command line or environment variables\n")
       endif()
       ocv_clear_vars(PYTHONINTERP_FOUND PYTHON_EXECUTABLE PYTHON_VERSION_STRING PYTHON_VERSION_MAJOR PYTHON_VERSION_MINOR PYTHON_VERSION_PATCH)
-      if(NOT CMAKE_VERSION VERSION_LESS "3.12")
-        set(__PYTHON_PREFIX Python3)
-        find_host_package(${__PYTHON_PREFIX} "${preferred_version}" COMPONENTS Interpreter)
-        if(${__PYTHON_PREFIX}_EXECUTABLE)
-          set(PYTHON_EXECUTABLE "${${__PYTHON_PREFIX}_EXECUTABLE}")
-          find_host_package(PythonInterp "${preferred_version}")  # Populate other variables
-        endif()
-      else()
-        message(STATUS "Consider using CMake 3.12+ for better Python support")
+      set(__PYTHON_PREFIX Python3)
+      find_host_package(${__PYTHON_PREFIX} "${preferred_version}" COMPONENTS Interpreter)
+      if(${__PYTHON_PREFIX}_EXECUTABLE)
+        set(PYTHON_EXECUTABLE "${${__PYTHON_PREFIX}_EXECUTABLE}")
+        find_host_package(PythonInterp "${preferred_version}")  # Populate other variables
       endif()
     endif()
     if(PYTHONINTERP_FOUND AND "${_python_version_major}" STREQUAL "${PYTHON_VERSION_MAJOR}")
@@ -126,6 +122,23 @@ if(NOT ${found})
       endif()
       if(NOT ${${include_dir_env}} STREQUAL "")
           set(PYTHON_INCLUDE_DIR "${${include_dir_env}}")
+      endif()
+      if (APPLE AND NOT CMAKE_CROSSCOMPILING)
+          if (NOT PYTHON_LIBRARY AND NOT PYTHON_INCLUDE_DIR)
+              execute_process(COMMAND ${_executable} -c "from sysconfig import *; print(get_config_var('INCLUDEPY'))"
+                              RESULT_VARIABLE _cvpy_process
+                              OUTPUT_VARIABLE _include_dir
+                              OUTPUT_STRIP_TRAILING_WHITESPACE)
+              execute_process(COMMAND ${_executable} -c "from sysconfig import *; print('%s/%s' % (get_config_var('LIBDIR'), get_config_var('LIBRARY').replace('.a', '.dylib' if get_platform().startswith('macos') else '.so')))"
+                              RESULT_VARIABLE _cvpy_process
+                              OUTPUT_VARIABLE _library
+                              OUTPUT_STRIP_TRAILING_WHITESPACE)
+              if (_include_dir AND _library AND EXISTS "${_include_dir}/Python.h" AND EXISTS "${_library}")
+                  set(PYTHON_INCLUDE_PATH "${_include_dir}")
+                  set(PYTHON_INCLUDE_DIR "${_include_dir}")
+                  set(PYTHON_LIBRARY "${_library}")
+              endif()
+          endif()
       endif()
 
       # not using _version_string here, because it might not conform to the CMake version format

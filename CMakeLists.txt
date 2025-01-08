@@ -861,7 +861,7 @@ if(NOT DEFINED OpenCV_HAL)
   set(OpenCV_HAL "OpenCV_HAL")
 endif()
 
-if(WITH_KLEIDICV)
+if(HAVE_KLEIDICV)
   ocv_debug_message(STATUS "Enable KleidiCV acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";kleidicv;")
     set(OpenCV_HAL "kleidicv;${OpenCV_HAL}")

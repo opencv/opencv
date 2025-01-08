@@ -89,8 +89,8 @@ yolov5l:
   width: 640
   height: 640
   rgb: true
-  classes: "object_detection_classes_yolo.txt"
-  background_label_id: 0
+  labels: "object_detection_classes_yolo.txt"
+  postprocessing: "yolov5"
   sample: "object_detection"
 
 # YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
@@ -112,6 +112,7 @@ yolov4:
   rgb: true
   labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
+  postprocessing: "darknet"
   sample: "object_detection"
 
 yolov4-tiny:
@@ -130,6 +131,7 @@ yolov4-tiny:
   rgb: true
   labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
+  postprocessing: "darknet"
   sample: "object_detection"
 
 yolov3:
@@ -148,6 +150,7 @@ yolov3:
   rgb: true
   labels: "object_detection_classes_yolo.txt"
   background_label_id: 0
+  postprocessing: "darknet"
   sample: "object_detection"
 
 tiny-yolo-voc:
@@ -166,14 +169,18 @@ tiny-yolo-voc:
   rgb: true
   labels: "object_detection_classes_pascal_voc.txt"
   background_label_id: 0
+  postprocessing: "darknet"
   sample: "object_detection"
 
-# Caffe implementation of SSD model from https://github.com/chuanqi305/MobileNet-SSD
+# Caffe implementation of SSD model from https://github.com/PINTO0309/MobileNet-SSD-RealSense
 ssd_caffe:
   load_info:
-    url: "https://drive.google.com/uc?export=download&id=0B3gersZ2cHIxRm5PMWRoTkdHdHc"
+    url: "https://github.com/PINTO0309/MobileNet-SSD-RealSense/raw/refs/heads/master/caffemodel/MobileNetSSD/MobileNetSSD_deploy.caffemodel"
     sha1: "994d30a8afaa9e754d17d2373b2d62a7dfbaaf7a"
   model: "MobileNetSSD_deploy.caffemodel"
+  config_load_info:
+    url: "https://github.com/PINTO0309/MobileNet-SSD-RealSense/raw/refs/heads/master/caffemodel/MobileNetSSD/MobileNetSSD_deploy.prototxt"
+    sha1: "25c8404cecdef638c2bd9ac7f3b46a8b96897deb"
   config: "MobileNetSSD_deploy.prototxt"
   mean: [127.5, 127.5, 127.5]
   scale: 0.007843
@@ -181,6 +188,7 @@ ssd_caffe:
   height: 300
   rgb: false
   labels: "object_detection_classes_pascal_voc.txt"
+  postprocessing: "ssd"
   sample: "object_detection"
 
 # TensorFlow implementation of SSD model from https://github.com/tensorflow/models/tree/master/research/object_detection
@@ -202,6 +210,7 @@ ssd_tf:
   height: 300
   rgb: true
   labels: "object_detection_classes_coco.txt"
+  postprocessing: "ssd"
   sample: "object_detection"
 
 # TensorFlow implementation of Faster-RCNN model from https://github.com/tensorflow/models/tree/master/research/object_detection
@@ -222,6 +231,7 @@ faster_rcnn_tf:
   width: 800
   height: 600
   rgb: true
+  postprocessing: "ssd"
   sample: "object_detection"
 
 ################################################################################
@@ -380,6 +390,7 @@ reid:
     sha1: "d4316b100db40f8840aa82626e1cf3f519a7f1ae"
   model: "person_reid_youtu_2021nov.onnx"
   yolo_load_info:
+    yolo_url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
     yolo_sha1: "68f864475d06e2ec4037181052739f268eeac38d"
   yolo_model: "yolov8n.onnx"
   mean: [0.485, 0.456, 0.406]
@@ -393,3 +404,40 @@ reid:
   rgb: false
   yolo_rgb: true
   sample: "person_reid"
+
+################################################################################
+# Tracker models.
+################################################################################
+
+vit:
+  load_info:
+    url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_vittrack/object_tracking_vittrack_2023sep.onnx"
+    sha1: "50008bb4f6a27b1aa940ad886b1bd1936ac4ed3e"
+  model: "object_tracking_vittrack_2023sep.onnx"
+  sample: "object_tracker"
+
+nanotrack:
+  nanotrack_head_load_info:
+    nanotrack_head_url: "https://github.com/HonglinChu/SiamTrackers/raw/refs/heads/master/NanoTrack/models/nanotrackv2/nanotrack_head_sim.onnx"
+    nanotrack_head_sha1: "39f168489671700cf739e402dfc67d41ce648aef"
+  nanotrack_head_model: "nanotrack_head_sim.onnx"
+  nanotrack_back_load_info:
+    nanotrack_back_url: "https://github.com/HonglinChu/SiamTrackers/raw/refs/heads/master/NanoTrack/models/nanotrackv2/nanotrack_backbone_sim.onnx"
+    nanotrack_back_sha1: "6e773a364457b78574f9f63a23b0659ee8646f8f"
+  nanotrack_back_model: "nanotrack_backbone_sim.onnx"
+  sample: "object_tracker"
+
+dasiamrpn:
+  dasiamrpn_load_info:
+    dasiamrpn_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_model_2021nov.onnx?download="
+    dasiamrpn_sha1: "91b774fce7df4c0e4918469f0f482d9a27d0e2d4"
+  dasiamrpn_model: "object_tracking_dasiamrpn_model_2021nov.onnx"
+  dasiamrpn_kernel_r1_load_info:
+    dasiamrpn_kernel_r1_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_kernel_r1_2021nov.onnx?download="
+    dasiamrpn_kernel_r1_sha1: "bb64620a54348657133eb28be2d3a2a8c76b84b3"
+  dasiamrpn_kernel_r1_model: "object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx"
+  dasiamrpn_kernel_cls_load_info:
+    dasiamrpn_kernel_cls_url: "https://github.com/opencv/opencv_zoo/raw/fef72f8fa7c52eaf116d3df358d24e6e959ada0e/models/object_tracking_dasiamrpn/object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx?download="
+    dasiamrpn_kernel_cls_sha1: "e9ccd270ce8059bdf7ed0d1845c03ef4a951ee0f"
+  dasiamrpn_kernel_cls_model: "object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx"
+  sample: "object_tracker"

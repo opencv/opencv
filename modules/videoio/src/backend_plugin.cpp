@@ -145,7 +145,6 @@ protected:
 
     bool checkCompatibility(const OpenCV_API_Header& api_header, unsigned int abi_version, unsigned int api_version, bool checkMinorOpenCVVersion)
     {
-#if 0  // FIXIT: OpenCV 5.0
         if (api_header.opencv_version_major != CV_VERSION_MAJOR)
         {
             CV_LOG_ERROR(NULL, "Video I/O: wrong OpenCV major version used by plugin '" << api_header.api_description << "': " <<
@@ -162,9 +161,6 @@ protected:
                 cv::format("%d.%d, OpenCV version is '" CV_VERSION "'", api_header.opencv_version_major, api_header.opencv_version_minor))
             return false;
         }
-#else
-        CV_UNUSED(checkMinorOpenCVVersion);
-#endif
         CV_LOG_INFO(NULL, "Video I/O: initialized '" << api_header.api_description << "': built with "
             << cv::format("OpenCV %d.%d (ABI/API = %d/%d)",
                  api_header.opencv_version_major, api_header.opencv_version_minor,

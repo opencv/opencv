@@ -602,7 +602,7 @@ bool isAligned(const void* p1, const void* p2, const void* p3, const void* p4)
     return isAligned<N>(((size_t)p1)|((size_t)p2)|((size_t)p3)|((size_t)p4));
 }
 
-/*! @brief Flags that allow to midify some functions behavior. Used as set of flags.
+/*! @brief Flags that allow to modify some functions' behavior. Used as set of flags.
 */
 enum AlgorithmHint {
     ALGO_HINT_DEFAULT = 0, //!< Default algorithm behaviour defined during OpenCV build

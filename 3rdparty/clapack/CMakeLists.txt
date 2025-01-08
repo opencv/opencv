@@ -23,7 +23,8 @@ set(the_target "libclapack")
 add_library(${the_target} STATIC ${lapack_srcs} ${runtime_srcs} ${lib_hdrs})
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wno-parentheses -Wno-uninitialized -Wno-array-bounds
-    -Wno-implicit-function-declaration -Wno-unused -Wunused-parameter -Wstringop-truncation) # gcc/clang warnings
+    -Wno-implicit-function-declaration -Wno-unused -Wunused-parameter -Wstringop-truncation
+    -Wtautological-negation-compare) # gcc/clang warnings
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4244 /wd4554 /wd4723 /wd4819) # visual studio warnings
 
 set_target_properties(${the_target}

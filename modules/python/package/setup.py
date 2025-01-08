@@ -19,7 +19,7 @@ def main():
     os.chdir(SCRIPT_DIR)
 
     package_name = 'opencv'
-    package_version = os.environ.get('OPENCV_VERSION', '5.0.0')  # TODO
+    package_version = os.environ.get('OPENCV_VERSION', '5.0.0-alpha')  # TODO
 
     long_description = 'Open Source Computer Vision Library Python bindings'  # TODO
 

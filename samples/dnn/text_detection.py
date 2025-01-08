@@ -97,10 +97,7 @@ def main():
         help()
         exit(1)
 
-    if args.download_sha is not None:
-        args.model = findModel(args.model, args.download_sha)
-    else:
-        args.model = findModel(args.model, args.sha1)
+    args.model = findModel(args.model, args.sha1)
 
     args.ocr_model = findModel(args.ocr_model, args.ocr_sha1)
     args.input = findFile(args.input)

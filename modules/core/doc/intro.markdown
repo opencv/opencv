@@ -220,32 +220,52 @@ version the use of templates is limited.
 Consequently, there is a limited fixed set of primitive data types the library can operate on. That
 is, array elements should have one of the following types:
 
--   8-bit unsigned integer (uchar)
--   8-bit signed integer (schar)
--   16-bit unsigned integer (ushort)
--   16-bit signed integer (short)
--   32-bit signed integer (int)
--   32-bit floating-point number (float)
--   64-bit floating-point number (double)
+-   8-bit unsigned integer (uint8_t, uchar)
+-   8-bit signed integer (int8_t, schar)
+-   16-bit unsigned integer (uint16_t, ushort)
+-   16-bit signed integer (int16_t, short)
+-   32-bit unsigned integer (uint32_t, unsigned) *1
+-   32-bit signed integer (int32_t, int)
+-   64-bit unsigned integer (uint64_t, unsigned long) *1
+-   64-bit signed integer (int64_t, long) *1
+-   16-bit brain floating point number / bfloat16 (bfloat) *1
+-   16-bit half precision floating-point / hfloat16 (hfloat)
+-   32-bit single precision floating-point number (float)
+-   64-bit double precision floating-point number (double)
+-   Boolean (boolean) *1
 -   a tuple of several elements where all elements have the same type (one of the above). An array
     whose elements are such tuples, are called multi-channel arrays, as opposite to the
     single-channel arrays, whose elements are scalar values. The maximum possible number of
-    channels is defined by the #CV_CN_MAX constant, which is currently set to 512.
+    channels is defined by the #CV_CN_MAX constant, which is currently set to 128.
 
-For these basic types, the following enumeration is applied:
+@note *1) Supported from OpenCV5.
+
+For these basic types, the following definition is applied:
 ```.cpp
-    enum { CV_8U=0, CV_8S=1, CV_16U=2, CV_16S=3, CV_32S=4, CV_32F=5, CV_64F=6 };
+#define CV_8U   0
+#define CV_8S   1
+#define CV_16U  2
+#define CV_16S  3
+#define CV_32S  4
+#define CV_32F  5
+#define CV_64F  6
+#define CV_16F  7
+#define CV_16BF 8
+#define CV_Bool 9
+#define CV_64U  10
+#define CV_64S  11
+#define CV_32U  12
 ```
 Multi-channel (n-channel) types can be specified using the following options:
 
--   #CV_8UC1 ... #CV_64FC4 constants (for a number of channels from 1 to 4)
--   CV_8UC(n) ... CV_64FC(n) or CV_MAKETYPE(CV_8U, n) ... CV_MAKETYPE(CV_64F, n) macros when
+-   #CV_8UC1 ... #CV_32UC4 constants (for a number of channels from 1 to 4)
+-   CV_8UC(n) ... CV_32UC(n) or CV_MAKETYPE(CV_8U, n) ... CV_MAKETYPE(CV_32U, n) macros when
     the number of channels is more than 4 or unknown at the compilation time.
 
 @note `#CV_32FC1 == #CV_32F, #CV_32FC2 == #CV_32FC(2) == #CV_MAKETYPE(CV_32F, 2)`, and
-`#CV_MAKETYPE(depth, n) == ((depth&7) + ((n-1)<<3)`. This means that the constant type is formed from the
-depth, taking the lowest 3 bits, and the number of channels minus 1, taking the next
-`log2(CV_CN_MAX)` bits.
+`#CV_MAKETYPE(depth, n) == (CV_MAT_DEPTH(depth) + (((cn)-1) << CV_CN_SHIFT))`. This means that
+the constant type is formed from the depth, taking the lowest CV_CN_SHIFT bits, which is currently set to 5,
+and the number of channels minus 1, taking the next `log2(CV_CN_MAX)` bits.
 
 Examples:
 ```.cpp

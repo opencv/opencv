@@ -1541,7 +1541,7 @@ respectively (see #getGaussianKernel for details); to fully control the result r
 possible future modifications of all this semantics, it is recommended to specify all of ksize,
 sigmaX, and sigmaY.
 @param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
-@param hint Implementation modfication flags. See #AlgorithmHint
+@param hint Implementation modification flags. See #AlgorithmHint
 
 @sa  sepFilter2D, filter2D, blur, boxFilter, bilateralFilter, medianBlur
  */
@@ -2474,7 +2474,7 @@ flag #WARP_INVERSE_MAP that means that M is the inverse transformation (
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image corresponding to
 the "outliers" in the source image are not modified by the function.
 @param borderValue value used in case of a constant border; by default, it is 0.
-@param hint Implementation modfication flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
+@param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 
 @sa  warpPerspective, resize, remap, getRectSubPix, transform
@@ -2509,7 +2509,7 @@ optional flag #WARP_INVERSE_MAP, that sets M as the inverse transformation (
 \f$\texttt{dst}\rightarrow\texttt{src}\f$ ).
 @param borderMode pixel extrapolation method (#BORDER_CONSTANT or #BORDER_REPLICATE).
 @param borderValue value used in case of a constant border; by default, it equals 0.
-@param hint Implementation modfication flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
+@param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 
 @sa  warpAffine, resize, remap, getRectSubPix, perspectiveTransform
@@ -2556,7 +2556,7 @@ The extra flag WARP_RELATIVE_MAP can be ORed to the interpolation method
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
 @param borderValue Value used in case of a constant border. By default, it is 0.
-@param hint Implementation modfication flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
+@param hint Implementation modification flags. Set #ALGO_HINT_APPROX to use FP16 precision (if available)
 for linear calculation for faster speed. See #AlgorithmHint.
 @note
 Due to current implementation limitations the size of an input and output images should be less than 32767x32767.
@@ -3780,7 +3780,7 @@ floating-point.
 @param code color space conversion code (see #ColorConversionCodes).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
 channels is derived automatically from src and code.
-@param hint Implementation modfication flags. See #AlgorithmHint
+@param hint Implementation modification flags. See #AlgorithmHint
 
 @see @ref imgproc_color_conversions
  */
@@ -3803,7 +3803,7 @@ This function only supports YUV420 to RGB conversion as of now.
 - #COLOR_YUV2RGB_NV21
 - #COLOR_YUV2BGRA_NV21
 - #COLOR_YUV2RGBA_NV21
-@param hint Implementation modfication flags. See #AlgorithmHint
+@param hint Implementation modification flags. See #AlgorithmHint
 */
 CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 

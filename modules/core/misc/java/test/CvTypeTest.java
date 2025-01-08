@@ -29,12 +29,24 @@ public class CvTypeTest extends OpenCVTestCase {
         assertEquals(CvType.CV_32SC4, CvType.CV_32SC(4));
     }
 
+    public void testCV_32UC() {
+        assertEquals(CvType.CV_32UC4, CvType.CV_32UC(4));
+    }
+
+    public void testCV_64SC() {
+        assertEquals(CvType.CV_64SC4, CvType.CV_64SC(4));
+    }
+
     public void testCV_32FC() {
         assertEquals(CvType.CV_32FC4, CvType.CV_32FC(4));
     }
 
     public void testCV_64FC() {
         assertEquals(CvType.CV_64FC4, CvType.CV_64FC(4));
+    }
+
+    public void testCV_BoolFC() {
+        assertEquals(CvType.CV_BoolC1, CvType.CV_BoolC(1));
     }
 
     public void testCV_16FC() {
@@ -66,6 +78,8 @@ public class CvTypeTest extends OpenCVTestCase {
         assertEquals("CV_32FC1", CvType.typeToString(CvType.CV_32F));
         assertEquals("CV_32FC3", CvType.typeToString(CvType.CV_32FC3));
         assertEquals("CV_32FC(127)", CvType.typeToString(CvType.CV_32FC(127)));
+        assertEquals("CV_64UC(12)", CvType.typeToString(CvType.CV_64UC(12)));
+        assertEquals("CV_16BFC1", CvType.typeToString(CvType.CV_16BFC(1)));
     }
 
 }
