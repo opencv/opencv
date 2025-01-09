@@ -138,6 +138,7 @@ if(${PYTHON}_VERSION_STRING VERSION_GREATER "3.6" AND PYTHON_DEFAULT_VERSION VER
   # CMake constructions, because failed generation produces a warning instead of
   # halts on hard error.
   add_custom_command(
+    POST_BUILD
     TARGET copy_opencv_typing_stubs
     COMMAND ${PYTHON_DEFAULT_EXECUTABLE} ${PYTHON_SOURCE_DIR}/src2/copy_typings_stubs_on_success.py
             --stubs_dir ${OPENCV_PYTHON_BINDINGS_DIR}/cv2
