@@ -294,7 +294,7 @@ void GifDecoder::code2pixel(Mat& img, int start, int k){
 bool GifDecoder::lzwDecode() {
     // initialization
     lzwMinCodeSize = m_strm.getByte();
-    const int lzwMaxSize = (1 << 12); // 12 is the maximum code width
+    const int lzwMaxSize = (1 << 12); // 4096 is the maximum size of the lzw table
     int lzwCodeSize = lzwMinCodeSize + 1;
     int clearCode = 1 << lzwMinCodeSize;
     int exitCode = clearCode + 1;
