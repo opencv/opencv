@@ -575,7 +575,8 @@ HoughLinesProbabilistic( Mat& image,
         Point line_end[2];
         float a, b;
         int* adata = accum.ptr<int>();
-        int i = point.y, j = point.x, k, x0, y0, dx0, dy0, xflag;
+        int i = point.y, j = point.x, k,  xflag;
+        int64_t x0, y0, dx0, dy0;
         int good_line;
         const int shift = 16;
 
@@ -626,8 +627,8 @@ HoughLinesProbabilistic( Mat& image,
 
         for( k = 0; k < 2; k++ )
         {
-            int gap = 0, x = x0, y = y0, dx = dx0, dy = dy0;
-
+            int gap = 0;
+            int64_t x = x0, y = y0, dx = dx0, dy = dy0 ;
             if( k > 0 )
                 dx = -dx, dy = -dy;
 
@@ -636,7 +637,7 @@ HoughLinesProbabilistic( Mat& image,
             for( ;; x += dx, y += dy )
             {
                 uchar* mdata;
-                int i1, j1;
+                int64_t i1, j1;
 
                 if( xflag )
                 {
@@ -661,8 +662,8 @@ HoughLinesProbabilistic( Mat& image,
                 if( *mdata )
                 {
                     gap = 0;
-                    line_end[k].y = i1;
-                    line_end[k].x = j1;
+                    line_end[k].y = static_cast<int>(i1);
+                    line_end[k].x = static_cast<int>(j1);
                 }
                 else if( ++gap > lineGap )
                     break;
@@ -674,7 +675,7 @@ HoughLinesProbabilistic( Mat& image,
 
         for( k = 0; k < 2; k++ )
         {
-            int x = x0, y = y0, dx = dx0, dy = dy0;
+            int64_t x = x0, y = y0, dx = dx0, dy = dy0;
 
             if( k > 0 )
                 dx = -dx, dy = -dy;
@@ -684,7 +685,7 @@ HoughLinesProbabilistic( Mat& image,
             for( ;; x += dx, y += dy )
             {
                 uchar* mdata;
-                int i1, j1;
+                int64_t i1, j1;
 
                 if( xflag )
                 {
