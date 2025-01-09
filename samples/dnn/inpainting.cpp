@@ -167,7 +167,7 @@ int main(int argc, char **argv)
         displayImage.setTo(Scalar(255, 255, 255), maskGray > 0); // Highlight mask area
         imshow("Draw Mask", displayImage);
 
-        char key = waitKey(1);
+        int key = waitKey(1);
         if (key == 'i') {
             brush_size += 1;
             cout << "Brush size increased to " << brush_size << endl;
