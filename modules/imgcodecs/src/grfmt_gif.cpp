@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "grfmt_gif.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 #ifdef HAVE_IMGCODEC_GIF
 namespace cv
@@ -293,11 +294,12 @@ void GifDecoder::code2pixel(Mat& img, int start, int k){
 bool GifDecoder::lzwDecode() {
     // initialization
     lzwMinCodeSize = m_strm.getByte();
+    const int lzwMaxSize = (1 << 12); // 12 is the maximum code width
     int lzwCodeSize = lzwMinCodeSize + 1;
     int clearCode = 1 << lzwMinCodeSize;
     int exitCode = clearCode + 1;
     CV_Assert(lzwCodeSize > 2 && lzwCodeSize <= 12);
-    std::vector<lzwNodeD> lzwExtraTable((1 << 12) + 1);
+    std::vector<lzwNodeD> lzwExtraTable(lzwMaxSize + 1);
     int colorTableSize = clearCode;
     int lzwTableSize = exitCode;
 
@@ -321,7 +323,7 @@ bool GifDecoder::lzwDecode() {
             // clear code
             if (!(code ^ clearCode)) {
                 lzwExtraTable.clear();
-                lzwExtraTable.resize((1 << 12) + 1);
+                lzwExtraTable.resize(lzwMaxSize + 1);
                 // reset the code size, the same as that in the initialization part
                 lzwCodeSize  = lzwMinCodeSize + 1;
                 lzwTableSize = exitCode;
@@ -344,7 +346,7 @@ bool GifDecoder::lzwDecode() {
             // 1. renew the lzw extra table
             //    * notice that if the lzw table size is full, 
             //    * we should use the old table until a clear code is encountered
-            if (lzwTableSize < 1<<12) {
+            if (lzwTableSize < lzwMaxSize) {
                 if (code < colorTableSize) {
                     lzwExtraTable[lzwTableSize].suffix = (uchar)code;
                     lzwTableSize ++;
@@ -373,7 +375,7 @@ bool GifDecoder::lzwDecode() {
             }
 
             // check if the code size is full
-            if (lzwTableSize > (1 << 12)) {
+            if (lzwTableSize > lzwMaxSize) {
                 return false;
             }
 
@@ -407,16 +409,18 @@ bool GifDecoder::getFrameCount_() {
     while (type != 0x3B) {
         if (!(type ^ 0x21)) {
             // skip all kinds of the extensions
-            int extension = m_strm.getByte(), len;
+            int extension = m_strm.getByte();
             // Application Extension need to be handled for the loop count
             if (extension == 0xFF) {
-                len = m_strm.getByte();
+                int len = m_strm.getByte();
                 while (len) {
                     if (len == 3) {
                         if (m_strm.getByte() == 0x01) {
                             m_animation.loop_count = m_strm.getWord();
                         } else {
+                            // this branch should not be reached in normal cases
                             m_strm.skip(2);
+                            CV_LOG_WARNING(NULL, "found Unknown Application Extension");
                         }
                     } else {
                         m_strm.skip(len);
@@ -424,7 +428,11 @@ bool GifDecoder::getFrameCount_() {
                     len = m_strm.getByte();
                 }
             } else {
-                len = m_strm.getByte();
+                // if it does not belong to any of the extension type mentioned in the GIF Specification
+                if (extension != 0xF9 && extension != 0xFE && extension != 0x01) {
+                    CV_LOG_WARNING(NULL, "found Unknown Extension Type: " + std::to_string(extension));
+                }
+                int len = m_strm.getByte();
                 while (len) {
                     m_strm.skip(len);
                     len = m_strm.getByte();
