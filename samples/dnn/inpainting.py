@@ -12,6 +12,12 @@ How to use:
     You can download lama inpainting model using
         `python download_models.py lama`
 
+    References:
+      Github: https://github.com/advimman/lama
+      ONNX model: https://huggingface.co/Carve/LaMa-ONNX/blob/main/lama_fp32.onnx
+
+      ONNX model was further quantized using block quantization from [opencv_zoo](https://github.com/opencv/opencv_zoo)
+
     Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to point to the directory where models are downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 '''
 import argparse
@@ -32,6 +38,16 @@ def help():
 
         Inpainting model path can also be specified using --model argument.
         '''
+    )
+
+def keyboard_shorcuts():
+    print('''
+    Keyboard Shorcuts:
+        Press 'i' to increase brush size.
+        Press 'd' to decrease brush size.
+        Press ' ' (space bar) after selecting area to be inpainted.
+        Press ESC to terminate the program.
+    '''
     )
 
 def get_args_parser():
@@ -84,6 +100,9 @@ def draw_mask(event, x, y, flags, param):
 
 def main():
     global mask_gray, brush_size
+
+    keyboard_shorcuts()
+
     if hasattr(args, 'help'):
         help()
         exit(1)

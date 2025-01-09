@@ -12,6 +12,12 @@ How to use:
     You can download lama inpainting model using:
        `python download_models.py lama`
 
+    References:
+      Github: https://github.com/advimman/lama
+      ONNX model: https://huggingface.co/Carve/LaMa-ONNX/blob/main/lama_fp32.onnx
+
+      ONNX model was further quantized using block quantization from [opencv_zoo](https://github.com/opencv/opencv_zoo)
+
     Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to point to the directory where models are downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 */
 
@@ -34,11 +40,17 @@ const string about = "Use this script for image inpainting using OpenCV. \n\n"
         "\t Example: ./example_dnn_inpainting\n\n"
         "Inpainting model path can also be specified using --model argument.\n\n";
 
+const string keyboard_shorcuts = "Keyboard Shorcuts: \n\n"
+        "Press 'i' to increase brush size.\n"
+        "Press 'd' to decrease brush size.\n"
+        "Press ' ' (space bar) after selecting area to be inpainted.\n"
+        "Press ESC to terminate the program.\n\n";
+
 const string param_keys =
-    "{help    h  |                   | show help message}"
-    "{ @alias    |       lama        | An alias name of model to extract preprocessing parameters from models.yml file. }"
-    "{ zoo       | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
-    "{input   i  |                   | image file path}";
+    "{ help    h  |                   | show help message}"
+    "{ @alias     |       lama        | An alias name of model to extract preprocessing parameters from models.yml file. }"
+    "{ zoo        | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
+    "{ input   i  |                   | image file path}";
 
 const string backend_keys = format(
     "{ backend | default | Choose one of computation backends: "
@@ -80,6 +92,7 @@ static void drawMask(int event, int x, int y, int, void*) {
 int main(int argc, char **argv)
 {
     CommandLineParser parser(argc, argv, keys);
+    cout<<keyboard_shorcuts<<endl;
 
     if (!parser.has("@alias") || parser.has("help"))
     {
