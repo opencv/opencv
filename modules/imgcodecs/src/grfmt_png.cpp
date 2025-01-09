@@ -256,7 +256,7 @@ bool  PngDecoder::readHeader()
             }
 
             // Read PNG header: 137 80 78 71 13 10 26 10
-            if (!read_from_io(&sig, 1, 8))
+            if (!read_from_io(&sig, 8))
                 return false;
 
             id = read_chunk(m_chunkIHDR);
@@ -679,25 +679,25 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
             });
 }
 
-bool PngDecoder::read_from_io(void* _Buffer, size_t _ElementSize, size_t _ElementCount)
+bool PngDecoder::read_from_io(void* buffer, size_t num_bytes)
 {
     if (m_f)
-        return fread(_Buffer, _ElementSize, _ElementCount, m_f) == _ElementCount;
+        return fread(buffer, 1, num_bytes, m_f) == num_bytes;
 
-    if (m_buf_pos + _ElementCount*_ElementSize > m_buf.cols * m_buf.rows * m_buf.elemSize()) {
+    if (m_buf_pos + num_bytes > m_buf.cols * m_buf.rows * m_buf.elemSize()) {
         CV_LOG_WARNING(NULL, "PNG input buffer is incomplete");
         return false;
     }
 
-    memcpy( _Buffer, m_buf.ptr() + m_buf_pos, _ElementCount*_ElementSize );
-    m_buf_pos += _ElementCount*_ElementSize;
+    memcpy( buffer, m_buf.ptr() + m_buf_pos, num_bytes );
+    m_buf_pos += num_bytes;
     return true;
 }
 
 uint32_t PngDecoder::read_chunk(Chunk& chunk)
 {
     unsigned char len[4];
-    if (read_from_io(&len, 4, 1))
+    if (read_from_io(&len, 4))
     {
         const size_t size = static_cast<size_t>(png_get_uint_32(len)) + 12;
         if (size > PNG_USER_CHUNK_MALLOC_MAX)
@@ -706,7 +706,7 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
         }
         chunk.p.resize(size);
         memcpy(chunk.p.data(), len, 4);
-        if (read_from_io(&chunk.p[4], 1, chunk.p.size() - 4))
+        if (read_from_io(&chunk.p[4], chunk.p.size() - 4))
             return *(uint32_t*)(&chunk.p[4]);
     }
     return 0;
