@@ -105,8 +105,6 @@ static inline IppiInterpolationType ippiGetInterpolation(int inter)
 
 #include "filterengine.hpp"
 
-#include "opencv2/core/sse_utils.hpp"
-
 namespace cv {
 
 CV_EXPORTS
