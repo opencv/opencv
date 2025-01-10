@@ -255,11 +255,14 @@ bool  PngDecoder::readHeader()
                 png_init_io(png_ptr, m_f);
             }
 
-            if (read_from_io(&sig, 8, 1) != 1)
+            // Read PNG header: 137 80 78 71 13 10 26 10
+            if (!read_from_io(&sig, 8))
                 return false;
 
             id = read_chunk(m_chunkIHDR);
-            if (!(id == id_IHDR && m_chunkIHDR.p.size() == 25))
+            // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
+            // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
+            if (!(id == id_IHDR && m_chunkIHDR.p.size() == 8 + 13 + 4))
             {
                 return false;
             }
@@ -283,23 +286,25 @@ bool  PngDecoder::readHeader()
                     break;
                 }
 
-                if (id == id_acTL && chunk.p.size() == 20)
+                if (id == id_acTL)
                 {
+                    // 8=HDR+size, 8=size of acTL chunk, 4=CRC
+                    // https://wiki.mozilla.org/APNG_Specification#%60acTL%60:_The_Animation_Control_Chunk
+                    if (chunk.p.size() != 8 + 8 + 4)
+                        return false;
                     m_animation.loop_count = png_get_uint_32(&chunk.p[12]);
 
-                    if (chunk.p[8] > 0)
-                    {
-                        chunk.p[8] = 0;
-                        chunk.p[9] = 0;
-                        m_frame_count = png_get_uint_32(&chunk.p[8]);
-                        m_frame_count++;
-                    }
-                    else
-                        m_frame_count = png_get_uint_32(&chunk.p[8]);
+                    m_frame_count = png_get_uint_32(&chunk.p[8]);
+                    if (m_frame_count == 0)
+                        return false;
                 }
 
                 if (id == id_fcTL)
                 {
+                    // 8=HDR+size, 26=size of fcTL chunk, 4=CRC
+                    // https://wiki.mozilla.org/APNG_Specification#%60fcTL%60:_The_Frame_Control_Chunk
+                    if (chunk.p.size() != 8 + 26 + 4)
+                        return false;
                     m_is_fcTL_loaded = true;
                     w0 = png_get_uint_32(&chunk.p[12]);
                     h0 = png_get_uint_32(&chunk.p[16]);
@@ -313,6 +318,11 @@ bool  PngDecoder::readHeader()
 
                 if (id == id_bKGD)
                 {
+                    // 8=HDR+size, ??=size of bKGD chunk, 4=CRC
+                    // The spec is actually more complex: http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
+                    // TODO: we only check that 4 bytes can be read from &chunk.p[8]. Fix.
+                    if (chunk.p.size() < 8 + 4)
+                        return false;
                     int bgcolor = png_get_uint_32(&chunk.p[8]);
                     m_animation.bgcolor[3] = (bgcolor >> 24) & 0xFF;
                     m_animation.bgcolor[2] = (bgcolor >> 16) & 0xFF;
@@ -669,34 +679,34 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
             });
 }
 
-size_t PngDecoder::read_from_io(void* _Buffer, size_t _ElementSize, size_t _ElementCount)
+bool PngDecoder::read_from_io(void* buffer, size_t num_bytes)
 {
     if (m_f)
-        return fread(_Buffer, _ElementSize, _ElementCount, m_f);
+        return fread(buffer, 1, num_bytes, m_f) == num_bytes;
 
-    if (m_buf_pos + _ElementSize > m_buf.cols * m_buf.rows * m_buf.elemSize()) {
+    if (m_buf_pos + num_bytes > m_buf.cols * m_buf.rows * m_buf.elemSize()) {
         CV_LOG_WARNING(NULL, "PNG input buffer is incomplete");
-        return 0;
+        return false;
     }
 
-    memcpy( _Buffer, m_buf.ptr() + m_buf_pos, _ElementSize );
-    m_buf_pos += _ElementSize;
-    return 1;
+    memcpy( buffer, m_buf.ptr() + m_buf_pos, num_bytes );
+    m_buf_pos += num_bytes;
+    return true;
 }
 
 uint32_t PngDecoder::read_chunk(Chunk& chunk)
 {
     unsigned char len[4];
-    if (read_from_io(&len, 4, 1) == 1)
+    if (read_from_io(&len, 4))
     {
-        const size_t size = png_get_uint_32(len) + 12;
+        const size_t size = static_cast<size_t>(png_get_uint_32(len)) + 12;
         if (size > PNG_USER_CHUNK_MALLOC_MAX)
         {
             CV_LOG_WARNING(NULL, "chunk data is too large");
         }
         chunk.p.resize(size);
         memcpy(chunk.p.data(), len, 4);
-        if (read_from_io(&chunk.p[4], chunk.p.size() - 4, 1) == 1)
+        if (read_from_io(&chunk.p[4], chunk.p.size() - 4))
             return *(uint32_t*)(&chunk.p[4]);
     }
     return 0;
