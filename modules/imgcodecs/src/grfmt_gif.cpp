@@ -344,7 +344,7 @@ bool GifDecoder::lzwDecode() {
 
             // output code
             // 1. renew the lzw extra table
-            //    * notice that if the lzw table size is full, 
+            //    * notice that if the lzw table size is full,
             //    * we should use the old table until a clear code is encountered
             if (lzwTableSize < lzwMaxSize) {
                 if (code < colorTableSize) {
