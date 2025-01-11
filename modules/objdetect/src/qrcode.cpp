@@ -3561,10 +3561,43 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
     if (num_points < 3)
         return num_points;
 
-    Mat labels;
-    kmeans(list_lines_y, num_points, labels,
-            TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
-            num_points, KMEANS_PP_CENTERS, tmp_localization_points);
+     /* --- calculate centers of each cluster --- */
+
+    struct Cluster {
+        Point2f center = Point2f(0, 0);
+        int numPoints = 0;
+        double distance(const Point2f& point) const { return norm(center - point); }
+        void addPoint(const Point2f& point) { 
+            center = ((center * numPoints) + point) / (1+numPoints);
+            ++numPoints;
+        }
+    };
+    std::vector<Cluster> clusters;
+
+    for(const auto& point : list_lines_y) {
+        bool isWithinCluster = false;
+        for(auto& cluster : clusters) {
+            if(cluster.distance(point) < 10.0) {
+                cluster.addPoint(point);
+                isWithinCluster = true;
+                break;
+            }
+        }
+        if(!isWithinCluster) {
+            Cluster newCluster;
+            newCluster.addPoint(point);
+            clusters.push_back(newCluster);
+        }
+    }
+
+    tmp_localization_points.clear();
+    for(const auto& cluster : clusters)
+        tmp_localization_points.push_back(cluster.center);
+
+    num_points = static_cast<int>(clusters.size());
+
+    /* ----------------------------------------- */
+
     bin_barcode_temp = bin_barcode.clone();
     if (purpose == SHRINKING)
     {
@@ -3621,7 +3654,7 @@ void QRDetectMulti::findQRCodeContours(vector<Point2f>& tmp_localization_points,
         count_contours = (int)all_contours_points.size();
     kmeans(all_contours_points, count_contours, qrcode_labels,
           TermCriteria( TermCriteria::EPS + TermCriteria::COUNT, 10, 0.1),
-          count_contours, KMEANS_PP_CENTERS, clustered_localization_points);
+          std::min(count_contours, 10), KMEANS_PP_CENTERS, clustered_localization_points);
 
     vector< vector< Point2f > > qrcode_clusters(count_contours);
     for (int i = 0; i < count_contours; i++)
