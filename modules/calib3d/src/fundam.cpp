@@ -434,13 +434,13 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             H.convertTo(H, H.type(), scaleFor(H.at<double>(2,2)));
 
             // find new inliers
-            const float thr_sqr = (float) ransacReprojThreshold * ransacReprojThreshold;
+            const float thr_sqr = static_cast<float>(ransacReprojThreshold * ransacReprojThreshold);
             cv::Mat errors;
             cb->computeError(src_input, dst_input, H, errors);
             uchar* maskptr = tempMask.ptr<uchar>();
             const float * const errors_ptr = errors.ptr<float>();
             for (int i = 0; i < npoints_input; i++) {
-                maskptr[i] = (uchar) (errors_ptr[i] <= thr_sqr);
+                maskptr[i] = static_cast<uchar>(errors_ptr[i] <= thr_sqr);
             }
         }
     }
