@@ -441,3 +441,22 @@ dasiamrpn:
     dasiamrpn_kernel_cls_sha1: "e9ccd270ce8059bdf7ed0d1845c03ef4a951ee0f"
   dasiamrpn_kernel_cls_model: "object_tracking_dasiamrpn_kernel_cls1_2021nov.onnx"
   sample: "object_tracker"
+
+################################################################################
+# Inpainting models.
+################################################################################
+
+ldm_inpainting:
+  encoder_load_info:
+    url: None # TODO: Add actual URL when available
+    sha1: None  # TODO: Add actual SHA1 when available
+  encoder_model: "InpaintEncoder.onnx"
+  decoder_load_info:
+    url: None # TODO: Add actual URL when available
+    sha1: None  # TODO: Add actual SHA1 when available
+  decoder_model: "InpaintDecoder.onnx"
+  diffusor_load_info:
+    url: None # TODO: Add actual URL when available
+    sha1: None  # TODO: Add actual SHA1 when available
+  diffusor_model: "LatentDiffusion.onnx"
+  sample: "ldm_inpainting"
