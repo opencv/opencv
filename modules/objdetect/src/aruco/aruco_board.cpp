@@ -122,7 +122,6 @@ void Board::Impl::generateImage(Size outSize, OutputArray img, int marginSize, i
         float height = (float)cv::norm(vecHeight);
 
         Size dst_sz(cvRound(width), cvRound(height));
-        
         dst_sz.width = dst_sz.height = std::min(dst_sz.width, dst_sz.height); //marker should be square
         dictionary.generateImageMarker(ids[m], dst_sz.width, marker, borderBits);
 

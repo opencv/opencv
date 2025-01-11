@@ -332,7 +332,7 @@ TEST(CV_ArucoBoardGenerateImage_RotationTest, HandlesRotatedMarkersWithoutBoundi
     Dictionary dict = getPredefinedDictionary(DICT_4X4_50);
     DetectorParameters detectorParams;
     ArucoDetector detector(dict, detectorParams);
-    std::vector<float> angles = { 0.0f, 45.0f, 90.0f, 135.0f };
+    std::vector<float> angles = {0.0f, 45.0f, 90.0f, 135.0f};
     for (auto angle_deg : angles)
     {
         float angle_rad = angle_deg * static_cast<float>(CV_PI) / 180.0f;
@@ -350,15 +350,14 @@ TEST(CV_ArucoBoardGenerateImage_RotationTest, HandlesRotatedMarkersWithoutBoundi
             p.x = xNew;
             p.y = yNew;
         }
-        std::vector<std::vector<Point3f>> allObjPoints{ markerCorners };
-        std::vector<int> ids{ 0 };
+        std::vector<std::vector<Point3f>> allObjPoints{markerCorners};
+        std::vector<int> ids{0};
         Board board(allObjPoints, dict, ids);
-        float markerSize = 1.0f; 
+        float markerSize = 1.0f;
         float rotatedSize = markerSize * std::sqrt(2.0f);
         int borderBits = 1;
         int marginSize = 20;
-        int sidePixels = static_cast<int>((rotatedSize + 2.0f * borderBits) * 500)
-                         + 2 * marginSize;
+        int sidePixels = static_cast<int>((rotatedSize + 2.0f * borderBits) * 500) + 2 * marginSize;
         Mat outImg;
         Size outSize(sidePixels, sidePixels);
         ASSERT_NO_THROW(board.generateImage(outSize, outImg, marginSize, borderBits))
