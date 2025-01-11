@@ -49,12 +49,7 @@ private:
     typedef decltype(has_parenthesis_operator_check<C>(0)) type;
 
 public:
-#if __cplusplus >= 201103L || (defined(_MSC_VER) && _MSC_VER >= 1900/*MSVS 2015*/)
     static CV_CONSTEXPR bool value = type::value;
-#else
-    // support MSVS 2013
-    static const int value = type::value;
-#endif
 };
 } // namespace sfinae
 

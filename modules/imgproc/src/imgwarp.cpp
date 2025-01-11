@@ -3292,13 +3292,7 @@ public:
                            int _borderType, const Scalar &_borderValue) :
         ParallelLoopBody(), src(_src), dst(_dst), M(_M), interpolation(_interpolation),
         borderType(_borderType), borderValue(_borderValue)
-    {
-#if defined(_MSC_VER) && _MSC_VER == 1800 /* MSVS 2013 */ && CV_AVX
-        // details: https://github.com/opencv/opencv/issues/11026
-        borderValue.val[2] = _borderValue.val[2];
-        borderValue.val[3] = _borderValue.val[3];
-#endif
-    }
+    {}
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
