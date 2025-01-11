@@ -339,6 +339,10 @@ bool  PngDecoder::readHeader()
             png_bytep trans;
             png_color_16p trans_values;
 
+            // Free chunk in case png_read_info uses longjmp.
+            chunk.p.clear();
+            chunk.p.shrink_to_fit();
+
             png_read_info( png_ptr, info_ptr );
             png_get_IHDR(png_ptr, info_ptr, &wdth, &hght,
                 &bit_depth, &color_type, 0, 0, 0);
@@ -703,6 +707,7 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
         if (size > PNG_USER_CHUNK_MALLOC_MAX)
         {
             CV_LOG_WARNING(NULL, "chunk data is too large");
+            return 0;
         }
         chunk.p.resize(size);
         memcpy(chunk.p.data(), len, 4);
