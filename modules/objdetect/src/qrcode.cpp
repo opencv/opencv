@@ -3435,6 +3435,10 @@ bool QRDetectMulti::compareSquare::operator()(const Vec3i& a, const Vec3i& b) co
 
 int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localization_points)
 {
+    // Max of 100 QR codes in an image (3 positional indicators each).
+    const size_t MaxAllowedPoints = 300;
+    const size_t NumPositionIndicatorsInQRCode = 3;
+
     struct Cluster {
         Point2f center = Point2f(0, 0);
         int numPoints = 0;
@@ -3465,28 +3469,31 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
         }
     };
 
-    size_t NumPositionIndicatorsInQRCode = 3;
     Mat scaledBinBarcodeCache = bin_barcode;
-    bool useFullsized = false;
+    bool exceedLimit = false;
+    bool useUnscaled = false;
+
     size_t numPoints = 0;
     vector<Cluster> clusters;
 
-    // Loop through each horizontal epsilon
+    // With each iteration the algorithm becomes more lenient.
     for (eps_horizontal = 0.1; eps_horizontal < 0.4; eps_horizontal += 0.1) {
-        // Attempt first on scaled image
+        // Attempt to find localization points on the scaled image.
         {
             vector<Vec3d> intermediatePotentialPoints = searchHorizontalLines();
             if(!intermediatePotentialPoints.empty()) {
                 vector<Point2f> potentialPoints = \
                     extractVerticalLines(intermediatePotentialPoints, eps_horizontal);
                 if(potentialPoints.size() >= NumPositionIndicatorsInQRCode) {
+                    // Each cluster represents a possible localization point.
                     clusters = Cluster::findClustersInPoints(potentialPoints);
-                    numPoints = clusters.size();
+                    exceedLimit = MaxAllowedPoints < clusters.size();
+                    if(!exceedLimit) numPoints = clusters.size();
                 }
             }
         }
 
-        // If the image was originally shrunk, attempt to find points on the fullsized image.
+        // If the image was originally shrunk, find points on the full-sized unscaled image.
         if(purpose == SHRINKING)
         {
             bin_barcode = bin_barcode_fullsize;
@@ -3497,18 +3504,23 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
                 if(potentialPoints.size() >= NumPositionIndicatorsInQRCode) {
                     vector<Cluster> clustersOnFullSize = \
                         Cluster::findClustersInPoints(potentialPoints);
-                    if(numPoints < clustersOnFullSize.size()) {
-                        useFullsized = true;
-                        numPoints = clustersOnFullSize.size();
-                        clusters = clustersOnFullSize;
+                    if(clustersOnFullSize.size() < MaxAllowedPoints) {
+                        if(exceedLimit || numPoints < clustersOnFullSize.size()) {
+                            exceedLimit = false;
+                            useUnscaled = true;
+                            numPoints = clustersOnFullSize.size();
+                            clusters = clustersOnFullSize;
+                        }
                     }
                 }
             }
         }
 
-        // Found enough points in the image.
-        if(NumPositionIndicatorsInQRCode < numPoints) {
-            if(useFullsized) {
+        // Further iterations would only gather more points than this iteration.
+        if(exceedLimit)
+            break;
+        else if(NumPositionIndicatorsInQRCode <= numPoints) {
+            if(useUnscaled) {
                 purpose = UNCHANGED;
                 coeff_expansion = 1.0;
             } else {
@@ -3519,7 +3531,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
         else {
             // Reset state
             bin_barcode = scaledBinBarcodeCache;
-            useFullsized = false;
+            useUnscaled = false;
             numPoints = 0;
             clusters.clear();
         }
@@ -3528,12 +3540,10 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
     if(numPoints < NumPositionIndicatorsInQRCode)
         return numPoints;
 
-    // Save clusters.
     tmp_localization_points.clear();
     for(const auto& cluster : clusters)
         tmp_localization_points.push_back(cluster.center);
-    
-    // Use unscaled images, while protecting any pre-existing references.
+
     bin_barcode_temp = bin_barcode.clone();
     if (purpose == SHRINKING || purpose == ZOOMING) {
         int width = cvRound(bin_barcode.cols * (purpose == SHRINKING ? coeff_expansion : 1/coeff_expansion));
