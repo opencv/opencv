@@ -24,7 +24,7 @@ In this tutorial you will learn:
 Theory
 ------
 
-@note The explanation is based on the books @cite gonzalez and @cite gruzman. Also, you can refer to Matlab's tutorial [Image Deblurring in Matlab] and the article [SmartDeblur].
+@note The explanation is based on the books @cite Gonzalez1987 and @cite gruzman. Also, you can refer to Matlab's tutorial [Image Deblurring in Matlab] and the article [SmartDeblur].
 @note The out-of-focus image on this page is a real world  image. The out-of-focus was achieved manually by camera optics.
 
 ### What is a degradation image model?
