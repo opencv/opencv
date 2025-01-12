@@ -1120,7 +1120,7 @@ class ObjectiveCWrapperGenerator(object):
                         name = line[p0:p1]
                         for arg in args:
                             if arg.name == name:
-                                toWrite.append(re.sub('\*\s*@param ', '* @param ', line))
+                                toWrite.append(re.sub(r'\*\s*@param ', '* @param ', line))
                                 break
                     else:
                         s0 = line.find("@see")
@@ -1512,13 +1512,13 @@ def escape_underscore(str):
     return str.replace('_', '\\_')
 
 def escape_texttt(str):
-    return re.sub(re.compile('texttt{(.*?)\}', re.DOTALL), lambda x: 'texttt{' + escape_underscore(x.group(1)) + '}', str)
+    return re.sub(re.compile('texttt{(.*?)}', re.DOTALL), lambda x: 'texttt{' + escape_underscore(x.group(1)) + '}', str)
 
 def get_macros(tex):
     out = ""
-    if re.search("\\\\fork\s*{", tex):
+    if re.search(r"\\fork\s*{", tex):
         out += "\\newcommand{\\fork}[4]{ \\left\\{ \\begin{array}{l l} #1 & \\text{#2}\\\\\\\\ #3 & \\text{#4}\\\\\\\\ \\end{array} \\right.} "
-    if re.search("\\\\vecthreethree\s*{", tex):
+    if re.search(r"\\vecthreethree\s*{", tex):
         out += "\\newcommand{\\vecthreethree}[9]{ \\begin{bmatrix} #1 & #2 & #3\\\\\\\\ #4 & #5 & #6\\\\\\\\ #7 & #8 & #9 \\end{bmatrix} } "
     return out
 

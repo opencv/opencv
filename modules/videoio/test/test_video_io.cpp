@@ -47,6 +47,14 @@ public:
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
         if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
             throw SkipTestException("Unstable MSMF test");
+#ifdef __linux__
+        if (cvtest::skipUnstableTests && apiPref == CAP_GSTREAMER &&
+            (ext == "avi" || ext == "mkv") &&
+            (video_file.find("MPEG") != std::string::npos))
+        {
+            throw SkipTestException("Unstable GSTREAMER test");
+        }
+#endif
         writeVideo();
         VideoCapture cap;
         ASSERT_NO_THROW(cap.open(video_file, apiPref));
@@ -852,6 +860,13 @@ TEST_P(videowriter_acceleration, write)
     std::string backend_name = cv::videoio_registry::getBackendName(backend);
     if (!videoio_registry::hasBackend(backend))
         throw SkipTestException(cv::String("Backend is not available/disabled: ") + backend_name);
+#ifdef __linux__
+    if (cvtest::skipUnstableTests && backend == CAP_GSTREAMER &&
+        (extension == "mkv") && (codecid == "MPEG"))
+    {
+        throw SkipTestException("Unstable GSTREAMER test");
+    }
+#endif
 
     const Size sz(640, 480);
     const int frameNum = 15;
