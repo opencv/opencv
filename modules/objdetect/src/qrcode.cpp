@@ -3443,7 +3443,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
         Point2f center = Point2f(0, 0);
         int numPoints = 0;
         double distance(const Point2f& point) const { return norm(center - point); }
-        void addPoint(const Point2f& point) { 
+        void addPoint(const Point2f& point) {
             center = ((center * numPoints) + point) / (1+numPoints);
             ++numPoints;
         }
@@ -3538,7 +3538,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
     }
 
     if(numPoints < NumPositionIndicatorsInQRCode)
-        return numPoints;
+        return static_cast<int>(numPoints);
 
     tmp_localization_points.clear();
     for(const auto& cluster : clusters)
@@ -3556,7 +3556,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
         bin_barcode = bin_barcode_fullsize.clone();
     }
 
-    return numPoints;
+    return static_cast<int>(numPoints);
 }
 
 void QRDetectMulti::findQRCodeContours(vector<Point2f>& tmp_localization_points,
