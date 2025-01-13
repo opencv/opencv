@@ -4,7 +4,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/mat.hpp"
-#include "opencv2/core/types_c.h"
 
 namespace cv {
 

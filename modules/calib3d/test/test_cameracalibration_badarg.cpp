@@ -41,7 +41,6 @@
 
 #include "test_precomp.hpp"
 #include "test_chessboardgenerator.hpp"
-#include "opencv2/core/types_c.h"
 
 namespace opencv_test { namespace {
 
@@ -232,8 +231,6 @@ protected:
 
     void run(int /* start_from */ )
     {
-        Mat zeros(1, sizeof(CvMat), CV_8U, Scalar(0));
-
         Mat src_cpp(3, 1, CV_32F);
         Mat dst_cpp(3, 3, CV_32F);
 
