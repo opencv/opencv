@@ -6,7 +6,6 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
 
 namespace cv {
 
