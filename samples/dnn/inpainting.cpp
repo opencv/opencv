@@ -50,7 +50,7 @@ const string param_keys =
     "{ help    h  |                   | show help message}"
     "{ @alias     |       lama        | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo        | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
-    "{ input   i  |                   | image file path}";
+    "{ input   i  |    baboon.jpg     | image file path}";
 
 const string backend_keys = format(
     "{ backend | default | Choose one of computation backends: "
@@ -92,7 +92,6 @@ static void drawMask(int event, int x, int y, int, void*) {
 int main(int argc, char **argv)
 {
     CommandLineParser parser(argc, argv, keys);
-    cout<<keyboard_shorcuts<<endl;
 
     if (!parser.has("@alias") || parser.has("help"))
     {
@@ -123,6 +122,8 @@ int main(int argc, char **argv)
     int fontSize = 50;
     int fontWeight = 500;
 
+    cout<<"Model loading..."<<endl;
+
     EngineType engine = ENGINE_AUTO;
     if (backend != "default" || target != "cpu"){
         engine = ENGINE_CLASSIC;
@@ -146,6 +147,7 @@ int main(int argc, char **argv)
 
     maskGray = Mat::zeros(image.size(), CV_8U);
 
+    cout<<keyboard_shorcuts<<endl;
     namedWindow("Draw Mask");
     setMouseCallback("Draw Mask", drawMask);
 
@@ -181,7 +183,7 @@ int main(int argc, char **argv)
         }
     }
     destroyAllWindows();
-
+    cout<<"Processing image..."<<endl;
     Mat image_blob = blobFromImage(image, scale, Size(width, height), mean_v, swapRB, false);
 
     Mat mask_blob;
@@ -209,6 +211,7 @@ int main(int argc, char **argv)
     int h = static_cast<int>(width * aspectRatio);
     resize(output_image, output_image, Size(width, h));
 
+    cout<<"Process completed!!!"<<endl;
     imshow("Inpainted Output", output_image);
     waitKey(0);
 

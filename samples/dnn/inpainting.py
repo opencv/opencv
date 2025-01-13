@@ -57,7 +57,7 @@ def get_args_parser():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
-    parser.add_argument('--input', '-i', default=0, help='Path to image file.', required=False)
+    parser.add_argument('--input', '-i', default="baboon.jpg", help='Path to image file.', required=False)
     parser.add_argument('--backend', default="default", type=str, choices=backends,
             help="Choose one of computation backends: "
             "default: automatically (by default), "
@@ -101,7 +101,7 @@ def draw_mask(event, x, y, flags, param):
 def main():
     global mask_gray, brush_size
 
-    keyboard_shorcuts()
+    print("Model loading...")
 
     if hasattr(args, 'help'):
         help()
@@ -131,6 +131,7 @@ def main():
     aspect_ratio = input_image.shape[0]/input_image.shape[1]
 
 
+    keyboard_shorcuts()
     cv.namedWindow("Draw Mask")
     cv.setMouseCallback("Draw Mask", draw_mask)
 
@@ -163,6 +164,7 @@ def main():
 
     cv.destroyAllWindows()
 
+    print("Processing image...")
     image_blob = cv.dnn.blobFromImage(input_image, args.scale, (args.width, args.height), args.mean, args.rgb, False)
     mask_blob = cv.dnn.blobFromImage(mask_gray, scalefactor=1.0, size=(args.width, args.height), mean=(0,), swapRB=False, crop=False)
     mask_blob = (mask_blob > 0).astype(np.float32)
@@ -179,6 +181,7 @@ def main():
     width = output_image.shape[1]
     height = int(width*aspect_ratio)
     output_image = cv.resize(output_image, (width, height))
+    print("Process completed!!!")
 
     cv.imshow("Inpainted Output", output_image)
     cv.waitKey(0)
