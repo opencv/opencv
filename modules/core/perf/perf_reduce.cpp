@@ -1,5 +1,4 @@
 #include "perf_precomp.hpp"
-#include "opencv2/core/core_c.h"
 
 namespace opencv_test
 {
