@@ -1048,9 +1048,9 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             const int off_x = isRelative ? (_offset.x+dx) : 0;
             int sx = XY[dx*2]-3+off_x, sy = XY[dx*2+1]-3+off_y;
             const AT* w = wtab + FXY[dx]*64;
-            const T* S = S0 + sy*sstep + sx*cn;
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
+                const T* S = S0 + sy*sstep + sx*cn;
                 for(int k = 0; k < cn; k++ )
                 {
                     WT sum = 0;
@@ -1091,9 +1091,9 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                     for(int i = 0; i < 8; i++, w += 8 )
                     {
                         int yi = y[i];
-                        const T* S1 = S0 + yi*sstep;
                         if( yi < 0 )
                             continue;
+                        const T* S1 = S0 + yi*sstep;
                         if( x[0] >= 0 )
                             sum += (S1[x[0]] - cv)*w[0];
                         if( x[1] >= 0 )
