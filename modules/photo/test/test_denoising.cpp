@@ -164,5 +164,49 @@ TEST(Photo_Denoising, speed)
     t = (double)getTickCount() - t;
     printf("execution time: %gms\n", t*1000./getTickFrequency());
 }
+TEST(Photo_DenoisingGrayscaleMulti16Bit, regression)
+{
+    const int imgs_count = 3;
+    const int width = 100;
+    const int height = 100;
+    std::vector<Mat> original(imgs_count);
 
+    for (int i = 0; i < imgs_count; i++)
+    {
+        original[i] = Mat::ones(height, width, CV_16UC1) * 10000;
+        randu(original[i], Scalar::all(0), Scalar::all(500));
+    }
+
+    int templateWindowSize = 7;
+    int searchWindowSize = 21;
+    float h = 15.0f;
+    std::vector<float> h_vec = {h};
+
+    Mat result;
+
+    try
+    {
+        cv::fastNlMeansDenoisingMulti(
+            original,
+            result,
+            imgs_count / 2,
+            imgs_count,
+            h_vec,
+            templateWindowSize,
+            searchWindowSize,
+            cv::NORM_L1);
+    }
+    catch (const cv::Exception &e)
+    {
+        FAIL() << "fastNlMeansDenoisingMulti threw an exception with 16-bit images: " << e.what();
+    }
+
+    ASSERT_FALSE(result.empty()) << "Denoising result is empty.";
+    ASSERT_EQ(result.type(), CV_16UC1) << "Denoising result has incorrect type.";
+    ASSERT_EQ(result.size(), original[0].size()) << "Denoising result has incorrect size.";
+    double minVal, maxVal;
+    minMaxLoc(result, &minVal, &maxVal);
+    ASSERT_GE(minVal, 0) << "Denoised image has negative values.";
+    ASSERT_LE(maxVal, 65535) << "Denoised image has values exceeding 16-bit maximum.";
+}
 }} // namespace
