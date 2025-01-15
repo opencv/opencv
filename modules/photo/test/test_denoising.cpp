@@ -52,6 +52,24 @@ namespace opencv_test { namespace {
 #  define DUMP(image, path)
 #endif
 
+double computePSNR(const Mat& I1, const Mat& I2) {
+    CV_Assert(I1.type() == I2.type() && I1.size() == I2.size());
+
+    Mat s1;
+    absdiff(I1, I2, s1);
+    s1.convertTo(s1, CV_32F);
+    s1 = s1.mul(s1);
+
+    Scalar s = sum(s1);
+
+    double mse = s[0] / static_cast<double>(I1.total());
+    if (mse == 0) {
+        return INFINITY;
+    }
+    double max_pixel = 65535.0;
+    double psnr = 10.0 * log10((max_pixel * max_pixel) / mse);
+    return psnr;
+}
 
 TEST(Photo_DenoisingGrayscale, regression)
 {
@@ -164,17 +182,17 @@ TEST(Photo_Denoising, speed)
     t = (double)getTickCount() - t;
     printf("execution time: %gms\n", t*1000./getTickFrequency());
 }
-TEST(Photo_DenoisingGrayscaleMulti16Bit, regression)
+TEST(Photo_DenoisingGrayscaleMulti16Bit, ComprehensiveRegression)
 {
-    const int imgs_count = 3;
-    const int width = 100;
-    const int height = 100;
+    const int imgs_count = 5;
+    const int width = 512;
+    const int height = 512;
     std::vector<Mat> original(imgs_count);
 
     for (int i = 0; i < imgs_count; i++)
     {
         original[i] = Mat::ones(height, width, CV_16UC1) * 10000;
-        randu(original[i], Scalar::all(0), Scalar::all(500));
+        randu(original[i], Scalar::all(9500), Scalar::all(10500));
     }
 
     int templateWindowSize = 7;
@@ -204,9 +222,44 @@ TEST(Photo_DenoisingGrayscaleMulti16Bit, regression)
     ASSERT_FALSE(result.empty()) << "Denoising result is empty.";
     ASSERT_EQ(result.type(), CV_16UC1) << "Denoising result has incorrect type.";
     ASSERT_EQ(result.size(), original[0].size()) << "Denoising result has incorrect size.";
+
     double minVal, maxVal;
     minMaxLoc(result, &minVal, &maxVal);
     ASSERT_GE(minVal, 0) << "Denoised image has negative values.";
     ASSERT_LE(maxVal, 65535) << "Denoised image has values exceeding 16-bit maximum.";
+
+    Mat groundTruth = Mat::ones(height, width, CV_16UC1) * 10000;
+    double psnr = computePSNR(result, groundTruth);
+    ASSERT_GT(psnr, 30.0) << "PSNR is too low, denoising may not be effective.";
+
+    Mat maxImage = Mat::ones(height, width, CV_16UC1) * 65535;
+    original = std::vector<Mat>(imgs_count, maxImage);
+    cv::fastNlMeansDenoisingMulti(
+        original,
+        result,
+        imgs_count / 2,
+        imgs_count,
+        h_vec,
+        templateWindowSize,
+        searchWindowSize,
+        cv::NORM_L1);
+    minMaxLoc(result, &minVal, &maxVal);
+    ASSERT_EQ(maxVal, 65535) << "Denoised max image altered maximum pixel values.";
+
+    Mat zeroImage = Mat::zeros(height, width, CV_16UC1);
+    original = std::vector<Mat>(imgs_count, zeroImage);
+    cv::fastNlMeansDenoisingMulti(
+        original,
+        result,
+        imgs_count / 2,
+        imgs_count,
+        h_vec,
+        templateWindowSize,
+        searchWindowSize,
+        cv::NORM_L1);
+    minMaxLoc(result, &minVal, &maxVal);
+    ASSERT_EQ(minVal, 0) << "Denoised zero image altered minimum pixel values.";
+    ASSERT_EQ(maxVal, 0) << "Denoised zero image altered maximum pixel values.";
 }
+
 }} // namespace
