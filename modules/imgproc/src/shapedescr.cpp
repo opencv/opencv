@@ -342,7 +342,9 @@ namespace cv
 
 static inline Point2f getOfs(int i, float eps)
 {
-    return Point2f(((i & 1)*2 - 1)*eps, ((i & 2) - 1)*eps);
+    std::mt19937 gen(i);
+    std::uniform_real_distribution<float> dis(-eps, eps);
+    return Point2f(dis(gen), dis(gen));
 }
 
 static RotatedRect fitEllipseNoDirect( InputArray _points )

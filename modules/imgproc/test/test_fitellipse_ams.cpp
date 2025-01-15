@@ -337,4 +337,15 @@ TEST(Imgproc_FitEllipseAMS_Issue_7, accuracy) {
     EXPECT_TRUE(checkEllipse(ellipseAMSTest, ellipseAMSTrue, tol));
 }
 
+TEST(Imgproc_FitEllipseAMS_HorizontalLine, accuracy) {
+    vector<Point2f> pts({{-300, 100}, {-200, 100}, {-100, 100}, {0, 100}, {100, 100}, {200, 100}, {300, 100}});
+    const RotatedRect el = fitEllipseAMS(pts);
+
+    EXPECT_NEAR(el.center.x, 150, 50);
+    EXPECT_NEAR(el.center.y, 100, 1);
+    EXPECT_NEAR(el.size.width, 1, 1);
+    EXPECT_NEAR(el.size.height, 1100, 100);
+    EXPECT_NEAR(el.angle, 90, 0.1);
+}
+
 }} // namespace
