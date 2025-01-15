@@ -1017,10 +1017,10 @@ int fastcv_hal_canny(
 
     if (lowThreshold > highThreshold)
         CV_HAL_RETURN_NOT_IMPLEMENTED("lowThreshold is greater then highThreshold");
-	
-	const double epsilon = 1e-9;
-	
-	if (std::abs(lowThreshold - std::round(lowThreshold)) > epsilon || std::abs(highThreshold - std::round(highThreshold)) > epsilon)
+
+    const double epsilon = 1e-9;
+
+    if (std::abs(lowThreshold - std::round(lowThreshold)) > epsilon || std::abs(highThreshold - std::round(highThreshold)) > epsilon)
         CV_HAL_RETURN_NOT_IMPLEMENTED("threshold with decimal values not supported");
 
     INITIALIZATION_CHECK;
