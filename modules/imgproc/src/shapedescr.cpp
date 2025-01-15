@@ -340,11 +340,10 @@ double cv::contourArea( InputArray _contour, bool oriented )
 namespace cv
 {
 
-static inline Point2f getOfs(int i, float eps)
+static inline Point2f getOfs(float eps)
 {
-    std::mt19937 gen(i);
-    std::uniform_real_distribution<float> dis(-eps, eps);
-    return Point2f(dis(gen), dis(gen));
+    RNG& rng = theRNG();
+    return Point2f(rng.uniform(-eps, eps), rng.uniform(-eps, eps));
 }
 
 static RotatedRect fitEllipseNoDirect( InputArray _points )
@@ -421,7 +420,7 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
         float eps = (float)(s/(n*2)*1e-3);
         for( i = 0; i < n; i++ )
         {
-            Point2f p = ptsf_copy[i] + getOfs(i, eps);
+            Point2f p = ptsf_copy[i] + getOfs(eps);
             ptsf_copy[i] = p;
         }
 
@@ -746,7 +745,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         for( i = 0; i < n; i++ )
         {
             Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-            Point2f delta = getOfs(i, eps);
+            Point2f delta = getOfs(eps);
             double px = (p.x + delta.x - c.x)*scale, py = (p.y + delta.y - c.y)*scale;
 
             A.at<double>(i,0) = px*px;
