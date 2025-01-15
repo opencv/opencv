@@ -4848,6 +4848,11 @@ The function cv::putText renders the specified text string in the image. Symbols
 using the specified font are replaced by question marks. See #getTextSize for a text rendering code
 example.
 
+The `fontScale` parameter is a scale factor that is multiplied by the base font size:
+- When scale > 1, the text is magnified.
+- When 0 < scale < 1, the text is minimized.
+- When scale < 0, the text is mirrored or reversed.
+
 @param img Image.
 @param text Text string to be drawn.
 @param org Bottom-left corner of the text string in the image.
