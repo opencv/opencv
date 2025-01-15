@@ -80,7 +80,7 @@ bool JpegXLDecoder::read(Mat* pimg)
 {
     // Open file
     if (!m_f) {
-        m_f.reset(fopen(m_filename.c_str(), "rb"));
+        m_f = std::unique_ptr<FILE, int (*)(FILE*)>(fopen(m_filename.c_str(), "rb"), &fclose);
         if (!m_f)
             return false;
     }
