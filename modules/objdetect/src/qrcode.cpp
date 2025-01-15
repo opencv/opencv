@@ -3470,8 +3470,9 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
     };
 
     Mat scaledBinBarcodeCache = bin_barcode;
-    bool exceedLimit = false;
-    bool useUnscaled = false;
+    bool tooManyPoints = false;
+    bool useFullsizedImage = false;
+    bool useNoiseFilter = false;
 
     size_t numPoints = 0;
     vector<Cluster> clusters;
@@ -3487,8 +3488,8 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
                 if(potentialPoints.size() >= NumPositionIndicatorsInQRCode) {
                     // Each cluster represents a possible localization point.
                     clusters = Cluster::findClustersInPoints(potentialPoints);
-                    exceedLimit = MaxAllowedPoints < clusters.size();
-                    if(!exceedLimit) numPoints = clusters.size();
+                    tooManyPoints = MaxAllowedPoints < clusters.size();
+                    if(!tooManyPoints) numPoints = clusters.size();
                 }
             }
         }
@@ -3504,36 +3505,48 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
                 if(potentialPoints.size() >= NumPositionIndicatorsInQRCode) {
                     vector<Cluster> clustersOnFullSize = \
                         Cluster::findClustersInPoints(potentialPoints);
-                    if(clustersOnFullSize.size() < MaxAllowedPoints) {
-                        if(exceedLimit || numPoints < clustersOnFullSize.size()) {
-                            exceedLimit = false;
-                            useUnscaled = true;
-                            numPoints = clustersOnFullSize.size();
-                            clusters = clustersOnFullSize;
-                        }
+                    if(numPoints < clustersOnFullSize.size() && clustersOnFullSize.size() < MaxAllowedPoints) {
+                        numPoints = clustersOnFullSize.size();
+                        clusters = clustersOnFullSize;
+                        tooManyPoints = false;
+                        useFullsizedImage = true;
                     }
                 }
             }
         }
 
-        // Further iterations would only gather more points than this iteration.
-        if(exceedLimit)
-            break;
-        else if(NumPositionIndicatorsInQRCode <= numPoints) {
-            if(useUnscaled) {
+        if(tooManyPoints) {
+            if(!useNoiseFilter) {
+                cv::medianBlur(scaledBinBarcodeCache, bin_barcode, 5);
+                cv::medianBlur(bin_barcode_fullsize, bin_barcode_fullsize, 5);
+                scaledBinBarcodeCache = bin_barcode;
+                
+                tooManyPoints = false;
+                useFullsizedImage = false;
+                useNoiseFilter = true;
+
+                eps_horizontal--;
+            }
+            else {
+                // Further iterations would only gather more points than this iteration.
+                break;
+            }
+        }
+        else if(numPoints < NumPositionIndicatorsInQRCode) {
+            // Reset state
+            bin_barcode = scaledBinBarcodeCache;
+            useFullsizedImage = false;
+            numPoints = 0;
+            clusters.clear();
+        }
+        else {
+            if(useFullsizedImage) {
                 purpose = UNCHANGED;
                 coeff_expansion = 1.0;
             } else {
                 bin_barcode = scaledBinBarcodeCache;
             }
             break;
-        }
-        else {
-            // Reset state
-            bin_barcode = scaledBinBarcodeCache;
-            useUnscaled = false;
-            numPoints = 0;
-            clusters.clear();
         }
     }
 
