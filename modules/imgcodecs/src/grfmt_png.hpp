@@ -154,14 +154,13 @@ protected:
             ~PngPtrs() {
                 clear();
             }
-            PngPtrs& operator=(PngPtrs&& other) {
-                clear();
-                png_ptr = other.png_ptr;
-                info_ptr = other.info_ptr;
-                end_info = other.end_info;
-                other.png_ptr = nullptr;
-                other.info_ptr = other.end_info = nullptr;
-                return *this;
+            void moveTo(PngPtrs& other) {
+                other.clear();
+                other.png_ptr = png_ptr;
+                other.info_ptr = info_ptr;
+                other.end_info = end_info;
+                png_ptr = nullptr;
+                info_ptr = end_info = nullptr;
             }
             void clear() {
                 if (png_ptr) {
