@@ -962,7 +962,11 @@ static ushort LabCbrtTab_b[LAB_CBRT_TAB_SIZE_B];
 
 static const bool enableBitExactness = true;
 static const bool enableRGB2LabInterpolation = true;
+
+#if CV_SIMD
 static const bool enablePackedLab = true;
+#endif
+
 enum
 {
     lab_lut_shift = 5,
@@ -979,8 +983,12 @@ static const int minABvalue = -8145;
 static const int *abToXZ_b;
 // Luv constants
 static const bool enableRGB2LuvInterpolation = true;
+
+#if CV_SIMD
 static const bool enablePackedRGB2Luv = true;
 static const bool enablePackedLuv2RGB = true;
+#endif
+
 static const softfloat uLow(-134), uHigh(220), uRange(uHigh-uLow);
 static const softfloat vLow(-140), vHigh(122), vRange(vHigh-vLow);
 
@@ -1381,7 +1389,7 @@ static inline void trilinearInterpolate(int cx, int cy, int cz, const int16_t* L
     c = CV_DESCALE(c, trilinear_shift*3);
 }
 
-#if CV_SIMD_WIDTH == 16
+#if (CV_SIMD && CV_SIMD_WIDTH == 16)
 
 // 8 inValues are in [0; LAB_BASE]
 static inline void trilinearPackedInterpolate(const v_uint16x8& inX, const v_uint16x8& inY, const v_uint16x8& inZ,
@@ -1974,7 +1982,7 @@ struct RGB2Lab_f
                     clipv(bvec0); clipv(bvec1);
                     #undef clipv
                     /* int iR = R*LAB_BASE, iG = G*LAB_BASE, iB = B*LAB_BASE, iL, ia, ib; */
-                    v_float32 basef = vx_setall_f32(LAB_BASE);
+                    v_float32 basef = vx_setall_f32(static_cast<float>(LAB_BASE));
                     rvec0 = v_mul(rvec0, basef), gvec0 = v_mul(gvec0, basef), bvec0 = v_mul(bvec0, basef);
                     rvec1 = v_mul(rvec1, basef), gvec1 = v_mul(gvec1, basef), bvec1 = v_mul(bvec1, basef);
 
@@ -2005,14 +2013,14 @@ struct RGB2Lab_f
                     b_vec0 = v_cvt_f32(i_bvec0); b_vec1 = v_cvt_f32(i_bvec1);
 
                     /* dst[i] = L*100.0f */
-                    v_float32 v100dBase = vx_setall_f32(100.0f/LAB_BASE);
+                    v_float32 v100dBase = vx_setall_f32(100.0f / static_cast<float>(LAB_BASE));
                     l_vec0 = v_mul(l_vec0, v100dBase);
                     l_vec1 = v_mul(l_vec1, v100dBase);
                     /*
                     dst[i + 1] = a*256.0f - 128.0f;
                     dst[i + 2] = b*256.0f - 128.0f;
                     */
-                    v_float32 v256dBase = vx_setall_f32(256.0f/LAB_BASE), vm128 = vx_setall_f32(-128.f);
+                    v_float32 v256dBase = vx_setall_f32(256.0f / static_cast<float>(LAB_BASE)), vm128 = vx_setall_f32(-128.f);
                     a_vec0 = v_fma(a_vec0, v256dBase, vm128);
                     a_vec1 = v_fma(a_vec1, v256dBase, vm128);
                     b_vec0 = v_fma(b_vec0, v256dBase, vm128);
@@ -2030,10 +2038,10 @@ struct RGB2Lab_f
                 float G = clip(src[1]);
                 float B = clip(src[bIdx^2]);
 
-                int iR = cvRound(R*LAB_BASE), iG = cvRound(G*LAB_BASE), iB = cvRound(B*LAB_BASE);
+                int iR = cvRound(R*static_cast<float>(LAB_BASE)), iG = cvRound(G*static_cast<float>(LAB_BASE)), iB = cvRound(B*static_cast<float>(LAB_BASE));
                 int iL, ia, ib;
                 trilinearInterpolate(iR, iG, iB, LABLUVLUTs16.RGB2LabLUT_s16, iL, ia, ib);
-                float L = iL*1.0f/LAB_BASE, a = ia*1.0f/LAB_BASE, b = ib*1.0f/LAB_BASE;
+                float L = iL*1.0f/static_cast<float>(LAB_BASE), a = ia*1.0f/static_cast<float>(LAB_BASE), b = ib*1.0f/static_cast<float>(LAB_BASE);
 
                 dst[i] = L*100.0f;
                 dst[i + 1] = a*256.0f - 128.0f;

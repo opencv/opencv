@@ -955,7 +955,7 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
                     sum += S[0]*w[8] + S[cn]*w[9] + S[cn*2]*w[10] + S[cn*3]*w[11];
                     S += sstep;
                     sum += S[0]*w[12] + S[cn]*w[13] + S[cn*2]*w[14] + S[cn*3]*w[15];
-                    S += 1 - sstep*3;
+                    S -= sstep * 3 - 1;
                     D[k] = castOp(sum);
                 }
             }
@@ -988,9 +988,9 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
                     for(int i = 0; i < 4; i++, w += 4 )
                     {
                         int yi = y[i];
-                        const T* S = S0 + yi*sstep;
                         if( yi < 0 )
                             continue;
+                        const T* S = S0 + yi*sstep;
                         if( x[0] >= 0 )
                             sum += (S[x[0]] - cv)*w[0];
                         if( x[1] >= 0 )
@@ -1048,9 +1048,9 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             const int off_x = isRelative ? (_offset.x+dx) : 0;
             int sx = XY[dx*2]-3+off_x, sy = XY[dx*2+1]-3+off_y;
             const AT* w = wtab + FXY[dx]*64;
-            const T* S = S0 + sy*sstep + sx*cn;
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
+                const T* S = S0 + sy*sstep + sx*cn;
                 for(int k = 0; k < cn; k++ )
                 {
                     WT sum = 0;
@@ -1091,9 +1091,9 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                     for(int i = 0; i < 8; i++, w += 8 )
                     {
                         int yi = y[i];
-                        const T* S1 = S0 + yi*sstep;
                         if( yi < 0 )
                             continue;
+                        const T* S1 = S0 + yi*sstep;
                         if( x[0] >= 0 )
                             sum += (S1[x[0]] - cv)*w[0];
                         if( x[1] >= 0 )
@@ -1274,8 +1274,8 @@ public:
                         #endif
                         for( ; x1 < bcols; x1++ )
                         {
-                            int sx = cvRound(sX[x1]*INTER_TAB_SIZE);
-                            int sy = cvRound(sY[x1]*INTER_TAB_SIZE);
+                            int sx = cvRound(sX[x1]*static_cast<float>(INTER_TAB_SIZE));
+                            int sy = cvRound(sY[x1]*static_cast<float>(INTER_TAB_SIZE));
                             int v = (sy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (sx & (INTER_TAB_SIZE-1));
                             XY[x1*2] = saturate_cast<short>(sx >> INTER_BITS);
                             XY[x1*2+1] = saturate_cast<short>(sy >> INTER_BITS);
@@ -1314,8 +1314,8 @@ public:
 
                         for( ; x1 < bcols; x1++ )
                         {
-                            int sx = cvRound(sXY[x1*2]*INTER_TAB_SIZE);
-                            int sy = cvRound(sXY[x1*2+1]*INTER_TAB_SIZE);
+                            int sx = cvRound(sXY[x1*2]*static_cast<float>(INTER_TAB_SIZE));
+                            int sy = cvRound(sXY[x1*2+1]*static_cast<float>(INTER_TAB_SIZE));
                             int v = (sy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (sx & (INTER_TAB_SIZE-1));
                             XY[x1*2] = saturate_cast<short>(sx >> INTER_BITS);
                             XY[x1*2+1] = saturate_cast<short>(sy >> INTER_BITS);
@@ -1991,7 +1991,7 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
     bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
 #endif
 
-    const float scale = 1.f/INTER_TAB_SIZE;
+    const float scale = 1.f/static_cast<float>(INTER_TAB_SIZE);
     int x, y;
     for( y = 0; y < size.height; y++ )
     {
@@ -2071,8 +2071,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                     #endif
                     for( ; x < size.width; x++ )
                     {
-                        int ix = saturate_cast<int>(src1f[x]*INTER_TAB_SIZE);
-                        int iy = saturate_cast<int>(src2f[x]*INTER_TAB_SIZE);
+                        int ix = saturate_cast<int>(src1f[x]*static_cast<float>(INTER_TAB_SIZE));
+                        int iy = saturate_cast<int>(src2f[x]*static_cast<float>(INTER_TAB_SIZE));
                         dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
                         dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
                         dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
@@ -2117,8 +2117,8 @@ void cv::convertMaps( InputArray _map1, InputArray _map2,
                 #endif
                 for( ; x < size.width; x++ )
                 {
-                    int ix = saturate_cast<int>(src1f[x*2]*INTER_TAB_SIZE);
-                    int iy = saturate_cast<int>(src1f[x*2+1]*INTER_TAB_SIZE);
+                    int ix = saturate_cast<int>(src1f[x*2]*static_cast<float>(INTER_TAB_SIZE));
+                    int iy = saturate_cast<int>(src1f[x*2+1]*static_cast<float>(INTER_TAB_SIZE));
                     dst1[x*2] = saturate_cast<short>(ix >> INTER_BITS);
                     dst1[x*2+1] = saturate_cast<short>(iy >> INTER_BITS);
                     dst2[x] = (ushort)((iy & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE + (ix & (INTER_TAB_SIZE-1)));
@@ -2599,7 +2599,7 @@ private:
 
 #endif
 
-static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation, int borderType, InputArray _M, int flags )
+static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation, int borderType, const Scalar & borderValue, InputArray _M, int flags )
 {
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP();
@@ -2618,7 +2618,7 @@ static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation
         Mat dst = _dst.getMat();
         ::ipp::IwiImage        iwSrc = ippiGetImage(src);
         ::ipp::IwiImage        iwDst = ippiGetImage(dst);
-        ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType));
+        ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType), ippiGetValue(borderValue));
         IwTransDirection       iwTransDirection;
         if(!ippBorder)
             return false;
@@ -2661,7 +2661,7 @@ static bool ipp_warpAffine( InputArray _src, OutputArray _dst, int interpolation
     return true;
 #else
     CV_UNUSED(_src); CV_UNUSED(_dst); CV_UNUSED(interpolation);
-    CV_UNUSED(borderType); CV_UNUSED(_M); CV_UNUSED(flags);
+    CV_UNUSED(borderType); CV_UNUSED(borderValue); CV_UNUSED(_M); CV_UNUSED(flags);
     return false;
 #endif
 }
@@ -2703,38 +2703,29 @@ void warpAffineBlocklineNN(int *adelta, int *bdelta, short* xy, int X0, int Y0, 
 {
     CALL_HAL(warpAffineBlocklineNN, cv_hal_warpAffineBlocklineNN, adelta, bdelta, xy, X0, Y0, bw);
 
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
+    constexpr int AB_BITS = MAX(10, static_cast<int>(INTER_BITS));
     int x1 = 0;
-    #if CV_TRY_SSE4_1
-    bool useSSE4_1 = CV_CPU_HAS_SUPPORT_SSE4_1;
-    if( useSSE4_1 )
-        opt_SSE4_1::WarpAffineInvoker_Blockline_SSE41(adelta, bdelta, xy, X0, Y0, bw);
-    else
-    #endif
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     {
-        #if CV_SIMD128
+        const v_int32 v_X0 = vx_setall_s32(X0);
+        const v_int32 v_Y0 = vx_setall_s32(Y0);
+        const int step = VTraits<v_int16>::vlanes();
+        for (; x1 <= bw - step; x1 += step)
         {
-            v_int32x4 v_X0 = v_setall_s32(X0), v_Y0 = v_setall_s32(Y0);
-            int span = VTraits<v_uint16x8>::vlanes();
-            for( ; x1 <= bw - span; x1 += span )
-            {
-                v_int16x8 v_dst[2];
-                #define CV_CONVERT_MAP(ptr,offset,shift) v_pack(v_shr<AB_BITS>(v_add(shift,v_load(ptr + offset))),\
-                                                                v_shr<AB_BITS>(v_add(shift,v_load(ptr + offset + 4))))
-                v_dst[0] = CV_CONVERT_MAP(adelta, x1, v_X0);
-                v_dst[1] = CV_CONVERT_MAP(bdelta, x1, v_Y0);
-                #undef CV_CONVERT_MAP
-                v_store_interleave(xy + (x1 << 1), v_dst[0], v_dst[1]);
-            }
+            v_int16 v_X = v_pack(v_shr<AB_BITS>(v_add(v_X0, vx_load(adelta + x1))),
+                                 v_shr<AB_BITS>(v_add(v_X0, vx_load(adelta + x1 + step / 2))));
+            v_int16 v_Y = v_pack(v_shr<AB_BITS>(v_add(v_Y0, vx_load(bdelta + x1))),
+                                 v_shr<AB_BITS>(v_add(v_Y0, vx_load(bdelta + x1 + step / 2))));
+            v_store_interleave(xy + 2 * x1, v_X, v_Y);
         }
-        #endif
-        for( ; x1 < bw; x1++ )
-        {
-            int X = (X0 + adelta[x1]) >> AB_BITS;
-            int Y = (Y0 + bdelta[x1]) >> AB_BITS;
-            xy[x1*2] = saturate_cast<short>(X);
-            xy[x1*2+1] = saturate_cast<short>(Y);
-        }
+    }
+#endif
+    for (; x1 < bw; x1++)
+    {
+        const int X = (X0 + adelta[x1]) >> AB_BITS;
+        const int Y = (Y0 + bdelta[x1]) >> AB_BITS;
+        xy[x1 * 2] = saturate_cast<short>(X);
+        xy[x1 * 2 + 1] = saturate_cast<short>(Y);
     }
 }
 
@@ -2828,7 +2819,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
 
-    CV_IPP_RUN_FAST(ipp_warpAffine(src, dst, interpolation, borderType, matM, flags));
+    CV_IPP_RUN_FAST(ipp_warpAffine(src, dst, interpolation, borderType, borderValue, matM, flags));
 
     if( !(flags & WARP_INVERSE_MAP) )
     {
@@ -3152,7 +3143,7 @@ void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alph
     for( ; x1 < bw; x1++ )
     {
         double W = W0 + M[6]*x1;
-        W = W ? INTER_TAB_SIZE/W : 0;
+        W = W ? static_cast<double>(INTER_TAB_SIZE)/W : 0;
         double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
         double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
         int X = saturate_cast<int>(fX);

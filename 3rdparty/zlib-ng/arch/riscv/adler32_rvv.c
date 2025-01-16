@@ -9,8 +9,8 @@
 #include <riscv_vector.h>
 #include <stdint.h>
 
-#include "../../zbuild.h"
-#include "../../adler32_p.h"
+#include "zbuild.h"
+#include "adler32_p.h"
 
 static inline uint32_t adler32_rvv_impl(uint32_t adler, uint8_t* restrict dst, const uint8_t *src, size_t len, int COPY) {
     /* split Adler-32 into component sums */

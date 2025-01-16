@@ -111,8 +111,18 @@ enum ImwriteFlags {
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272,//!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
        IMWRITE_AVIF_QUALITY        = 512,//!< For AVIF, it can be a quality between 0 and 100 (the higher the better). Default is 95.
        IMWRITE_AVIF_DEPTH          = 513,//!< For AVIF, it can be 8, 10 or 12. If >8, it is stored/read as CV_32F. Default is 8.
-       IMWRITE_AVIF_SPEED          = 514 //!< For AVIF, it is between 0 (slowest) and (fastest). Default is 9.
-     };
+       IMWRITE_AVIF_SPEED          = 514,//!< For AVIF, it is between 0 (slowest) and (fastest). Default is 9.
+       IMWRITE_JPEGXL_QUALITY      = 640,//!< For JPEG XL, it can be a quality from 0 to 100 (the higher is the better). Default value is 95. If set, distance parameter is re-calicurated from quality level automatically. This parameter request libjxl v0.10 or later.
+       IMWRITE_JPEGXL_EFFORT       = 641,//!< For JPEG XL, encoder effort/speed level without affecting decoding speed; it is between 1 (fastest) and 10 (slowest). Default is 7.
+       IMWRITE_JPEGXL_DISTANCE     = 642,//!< For JPEG XL, distance level for lossy compression: target max butteraugli distance, lower = higher quality, 0 = lossless; range: 0 .. 25. Default is 1.
+       IMWRITE_JPEGXL_DECODING_SPEED = 643,//!< For JPEG XL, decoding speed tier for the provided options; minimum is 0 (slowest to decode, best quality/density), and maximum is 4 (fastest to decode, at the cost of some quality/density). Default is 0.
+       IMWRITE_GIF_LOOP            = 1024,//!< For GIF, it can be a loop flag from 0 to 65535. Default is 0 - loop forever.
+       IMWRITE_GIF_SPEED           = 1025,//!< For GIF, it is between 1 (slowest) and 100 (fastest). Default is 96.
+       IMWRITE_GIF_QUALITY         = 1026, //!< For GIF, it can be a quality from 1 to 8. Default is 2. See cv::ImwriteGifCompressionFlags.
+       IMWRITE_GIF_DITHER          = 1027, //!< For GIF, it can be a quality from -1(most dither) to 3(no dither). Default is 0.
+       IMWRITE_GIF_TRANSPARENCY    = 1028, //!< For GIF, the alpha channel lower than this will be set to transparent. Default is 1.
+       IMWRITE_GIF_COLORTABLE      = 1029  //!< For GIF, 0 means global color table is used, 1 means local color table is used. Default is 0.
+};
 
 enum ImwriteJPEGSamplingFactorParams {
        IMWRITE_JPEG_SAMPLING_FACTOR_411 = 0x411111, //!< 4x1,1x1,1x1
@@ -216,25 +226,68 @@ enum ImwriteHDRCompressionFlags {
     IMWRITE_HDR_COMPRESSION_RLE = 1
 };
 
+//! Imwrite GIF specific values for IMWRITE_GIF_QUALITY parameter key, if larger than 3, then its related to the size of the color table.
+enum ImwriteGIFCompressionFlags {
+    IMWRITE_GIF_FAST_NO_DITHER       = 1,
+    IMWRITE_GIF_FAST_FLOYD_DITHER    = 2,
+    IMWRITE_GIF_COLORTABLE_SIZE_8    = 3,
+    IMWRITE_GIF_COLORTABLE_SIZE_16   = 4,
+    IMWRITE_GIF_COLORTABLE_SIZE_32   = 5,
+    IMWRITE_GIF_COLORTABLE_SIZE_64   = 6,
+    IMWRITE_GIF_COLORTABLE_SIZE_128  = 7,
+    IMWRITE_GIF_COLORTABLE_SIZE_256  = 8
+};
+
 //! @} imgcodecs_flags
+
+/** @brief Represents an animation with multiple frames.
+The `Animation` struct is designed to store and manage data for animated sequences such as those from animated formats (e.g., GIF, AVIF, APNG, WebP).
+It provides support for looping, background color settings, frame timing, and frame storage.
+*/
+struct CV_EXPORTS_W_SIMPLE Animation
+{
+    //! Number of times the animation should loop. 0 means infinite looping.
+    CV_PROP_RW int loop_count;
+    //! Background color of the animation in BGRA format.
+    CV_PROP_RW Scalar bgcolor;
+    //! Duration for each frame in milliseconds.
+    CV_PROP_RW std::vector<int> durations;
+    //! Vector of frames, where each Mat represents a single frame.
+    CV_PROP_RW std::vector<Mat> frames;
+
+    /** @brief Constructs an Animation object with optional loop count and background color.
+
+    @param loopCount An integer representing the number of times the animation should loop:
+    - `0` (default) indicates infinite looping, meaning the animation will replay continuously.
+    - Positive values denote finite repeat counts, allowing the animation to play a limited number of times.
+    - If a negative value or a value beyond the maximum of `0xffff` (65535) is provided, it is reset to `0`
+    (infinite looping) to maintain valid bounds.
+
+    @param bgColor A `Scalar` object representing the background color in BGRA format:
+    - Defaults to `Scalar()`, indicating an empty color (usually transparent if supported).
+    - This background color provides a solid fill behind frames that have transparency, ensuring a consistent display appearance.
+    */
+    Animation(int loopCount = 0, Scalar bgColor = Scalar());
+};
 
 /** @brief Loads an image from a file.
 
 @anchor imread
 
-The function imread loads an image from the specified file and returns it. If the image cannot be
-read (because of missing file, improper permissions, unsupported or invalid format), the function
-returns an empty matrix ( Mat::data==NULL ).
+The `imread` function loads an image from the specified file and returns OpenCV matrix. If the image cannot be
+read (because of a missing file, improper permissions, or unsupported/invalid format), the function
+returns an empty matrix.
 
 Currently, the following file formats are supported:
 
 -   Windows bitmaps - \*.bmp, \*.dib (always supported)
+-   GIF files - \*.gif (always supported)
 -   JPEG files - \*.jpeg, \*.jpg, \*.jpe (see the *Note* section)
 -   JPEG 2000 files - \*.jp2 (see the *Note* section)
 -   Portable Network Graphics - \*.png (see the *Note* section)
 -   WebP - \*.webp (see the *Note* section)
 -   AVIF - \*.avif (see the *Note* section)
--   Portable image format - \*.pbm, \*.pgm, \*.ppm \*.pxm, \*.pnm (always supported)
+-   Portable image format - \*.pbm, \*.pgm, \*.ppm, \*.pxm, \*.pnm (always supported)
 -   PFM files - \*.pfm (see the *Note* section)
 -   Sun rasters - \*.sr, \*.ras (always supported)
 -   TIFF files - \*.tiff, \*.tif (see the *Note* section)
@@ -243,32 +296,31 @@ Currently, the following file formats are supported:
 -   Raster and Vector geospatial data supported by GDAL (see the *Note* section)
 
 @note
--   The function determines the type of an image by the content, not by the file extension.
+-   The function determines the type of an image by its content, not by the file extension.
 -   In the case of color images, the decoded images will have the channels stored in **B G R** order.
 -   When using IMREAD_GRAYSCALE, the codec's internal grayscale conversion will be used, if available.
-    Results may differ to the output of cvtColor()
--   On Microsoft Windows\* OS and MacOSX\*, the codecs shipped with an OpenCV image (libjpeg,
-    libpng, libtiff, and libjasper) are used by default. So, OpenCV can always read JPEGs, PNGs,
-    and TIFFs. On MacOSX, there is also an option to use native MacOSX image readers. But beware
-    that currently these native image loaders give images with different pixel values because of
-    the color management embedded into MacOSX.
--   On Linux\*, BSD flavors and other Unix-like open-source operating systems, OpenCV looks for
-    codecs supplied with an OS image. Install the relevant packages (do not forget the development
-    files, for example, "libjpeg-dev", in Debian\* and Ubuntu\*) to get the codec support or turn
+    Results may differ from the output of cvtColor().
+-   On Microsoft Windows\* and Mac OS\*, the codecs shipped with OpenCV (libjpeg, libpng, libtiff,
+    and libjasper) are used by default. So, OpenCV can always read JPEGs, PNGs, and TIFFs. On Mac OS,
+    there is also an option to use native Mac OS image readers. However, beware that currently these
+    native image loaders give images with different pixel values because of the color management embedded
+    into Mac OS.
+-   On Linux\*, BSD flavors, and other Unix-like open-source operating systems, OpenCV looks for
+    codecs supplied with the OS. Ensure the relevant packages are installed (including development
+    files, such as "libjpeg-dev" in Debian\* and Ubuntu\*) to get codec support, or turn
     on the OPENCV_BUILD_3RDPARTY_LIBS flag in CMake.
--   In the case you set *WITH_GDAL* flag to true in CMake and @ref IMREAD_LOAD_GDAL to load the image,
-    then the [GDAL](http://www.gdal.org) driver will be used in order to decode the image, supporting
-    the following formats: [Raster](http://www.gdal.org/formats_list.html),
-    [Vector](http://www.gdal.org/ogr_formats.html).
--   If EXIF information is embedded in the image file, the EXIF orientation will be taken into account
-    and thus the image will be rotated accordingly except if the flags @ref IMREAD_IGNORE_ORIENTATION
+-   If the *WITH_GDAL* flag is set to true in CMake and @ref IMREAD_LOAD_GDAL is used to load the image,
+    the [GDAL](http://www.gdal.org) driver will be used to decode the image, supporting
+    [Raster](http://www.gdal.org/formats_list.html) and [Vector](http://www.gdal.org/ogr_formats.html) formats.
+-   If EXIF information is embedded in the image file, the EXIF orientation will be taken into account,
+    and thus the image will be rotated accordingly unless the flags @ref IMREAD_IGNORE_ORIENTATION
     or @ref IMREAD_UNCHANGED are passed.
--   Use the IMREAD_UNCHANGED flag to keep the floating point values from PFM image.
--   By default number of pixels must be less than 2^30. Limit can be set using system
-    variable OPENCV_IO_MAX_IMAGE_PIXELS
+-   Use the IMREAD_UNCHANGED flag to preserve the floating-point values from PFM images.
+-   By default, the number of pixels must be less than 2^30. This limit can be changed by setting
+    the environment variable `OPENCV_IO_MAX_IMAGE_PIXELS`. See @ref tutorial_env_reference.
 
-@param filename Name of file to be loaded.
-@param flags Flag that can take values of cv::ImreadModes
+@param filename Name of the file to be loaded.
+@param flags Flag that can take values of `cv::ImreadModes`.
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR_BGR );
 
@@ -305,6 +357,38 @@ The function imreadmulti loads a specified range from a multi-page image from th
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
 
+/** @example samples/cpp/tutorial_code/imgcodecs/animations.cpp
+An example to show usage of cv::imreadanimation and cv::imwriteanimation functions.
+Check @ref tutorial_animations "the corresponding tutorial" for more details
+*/
+
+/** @brief Loads frames from an animated image file into an Animation structure.
+
+The function imreadanimation loads frames from an animated image file (e.g., GIF, AVIF, APNG, WEBP) into the provided Animation struct.
+
+@param filename A string containing the path to the file.
+@param animation A reference to an Animation structure where the loaded frames will be stored. It should be initialized before the function is called.
+@param start The index of the first frame to load. This is optional and defaults to 0.
+@param count The number of frames to load. This is optional and defaults to 32767.
+
+@return Returns true if the file was successfully loaded and frames were extracted; returns false otherwise.
+*/
+CV_EXPORTS_W bool imreadanimation(const String& filename, CV_OUT Animation& animation, int start = 0, int count = INT16_MAX);
+
+/** @brief Saves an Animation to a specified file.
+
+The function imwriteanimation saves the provided Animation data to the specified file in an animated format.
+Supported formats depend on the implementation and may include formats like GIF, AVIF, APNG, or WEBP.
+
+@param filename The name of the file where the animation will be saved. The file extension determines the format.
+@param animation A constant reference to an Animation struct containing the frames and metadata to be saved.
+@param params Optional format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ...).
+These parameters are used to specify additional options for the encoding process. Refer to `cv::ImwriteFlags` for details on possible parameters.
+
+@return Returns true if the animation was successfully saved; returns false otherwise.
+*/
+CV_EXPORTS_W bool imwriteanimation(const String& filename, const Animation& animation, const std::vector<int>& params = std::vector<int>());
+
 /** @brief Returns the number of images inside the given file
 
 The function imcount returns the number of pages in a multi-page image (e.g. TIFF), the number of frames in an animation (e.g. AVIF), and 1 otherwise.
@@ -327,13 +411,19 @@ can be saved using this function, with these exceptions:
 - With Radiance HDR encoder, non 64-bit float (CV_64F) images can be saved.
   - All images will be converted to 32-bit float (CV_32F).
 - With JPEG 2000 encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+- With JPEG XL encoder, 8-bit unsigned (CV_8U), 16-bit unsigned (CV_16U) and 32-bit float(CV_32F) images can be saved.
+  - JPEG XL images with an alpha channel can be saved using this function.
+    To do this, create 8-bit (or 16-bit, 32-bit float) 4-channel image BGRA, where the alpha channel goes last.
+    Fully transparent pixels should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535/1.0.
 - With PAM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
 - With PNG encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
   - PNG images with an alpha channel can be saved using this function. To do this, create
     8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
     should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
 - With PGM/PPM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
-- With TIFF encoder, 8-bit unsigned (CV_8U), 16-bit unsigned (CV_16U),
+- With TIFF encoder, 8-bit unsigned (CV_8U), 8-bit signed (CV_8S),
+                     16-bit unsigned (CV_16U), 16-bit signed (CV_16S),
+                     32-bit signed (CV_32S),
                      32-bit float (CV_32F) and 64-bit float (CV_64F) images can be saved.
   - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
   - 32-bit float 3-channel (CV_32FC3) TIFF images will be saved
@@ -406,13 +496,27 @@ The function imencode compresses the image and stores it in the memory buffer th
 result. See cv::imwrite for the list of supported formats and flags description.
 
 @param ext File extension that defines the output format. Must include a leading period.
-@param img Image to be written.
+@param img Image to be compressed.
 @param buf Output buffer resized to fit the compressed image.
 @param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
 */
 CV_EXPORTS_W bool imencode( const String& ext, InputArray img,
                             CV_OUT std::vector<uchar>& buf,
                             const std::vector<int>& params = std::vector<int>());
+
+/** @brief Encodes array of images into a memory buffer.
+
+The function is analog to cv::imencode for in-memory multi-page image compression.
+See cv::imwrite for the list of supported formats and flags description.
+
+@param ext File extension that defines the output format. Must include a leading period.
+@param imgs Vector of images to be written.
+@param buf Output buffer resized to fit the compressed data.
+@param params Format-specific parameters. See cv::imwrite and cv::ImwriteFlags.
+*/
+CV_EXPORTS_W bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
+                                 CV_OUT std::vector<uchar>& buf,
+                                 const std::vector<int>& params = std::vector<int>());
 
 /** @brief Checks if the specified image file can be decoded by OpenCV.
 
