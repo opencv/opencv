@@ -32,9 +32,9 @@ JpegXLDecoder::~JpegXLDecoder()
 void JpegXLDecoder::close()
 {
     if (m_decoder)
-        m_decoder.release();
+        m_decoder.reset();
     if (m_f)
-        m_f.release();
+        m_f.reset();
     m_read_buffer = {};
     m_width = m_height = 0;
     m_type = m_convert = -1;
