@@ -76,7 +76,7 @@ ImageDecoder JpegXLDecoder::newDecoder() const
     return makePtr<JpegXLDecoder>();
 }
 
-bool JpegXLDecoder::read(Mat* pimg)
+bool JpegXLDecoder::read(Mat& img)
 {
     // Open file
     if (!m_f) {
@@ -111,15 +111,59 @@ bool JpegXLDecoder::read(Mat* pimg)
     if (m_read_buffer.capacity() < read_buffer_size)
         m_read_buffer.resize(read_buffer_size);
 
-    // Create image if needed
-    if (m_type != -1 && pimg) {
-        pimg->create(m_height, m_width, m_type);
-        if (!pimg->isContinuous())
-            return false;
+    // Prepare for readData()
+    Mat wimg = img;
+    if (m_type != -1 /* readHeader() had been called. */)
+    {
+        const uint32_t scn = CV_MAT_CN(m_type);        // from image
+        const uint32_t dcn = (uint32_t)img.channels(); // to OpenCV
+        const int depth = CV_MAT_DEPTH(img.type());
+
+        CV_CheckChannels(scn, (scn == 1 || scn == 3 || scn == 4), "Unsupported src channels");
+        CV_CheckChannels(dcn, (dcn == 1 || dcn == 3 || dcn == 4), "Unsupported dst channels");
+        CV_CheckDepth(depth, (depth == CV_8U || depth == CV_16U || depth == CV_32F), "Unsupported depth");
+
+        m_format = {
+            dcn,
+            JXL_TYPE_UINT8, // (temporary)
+            JXL_LITTLE_ENDIAN, // endianness
+            0 // align stride to bytes
+        };
+        switch (depth) {
+            case CV_8U:  m_format.data_type = JXL_TYPE_UINT8; break;
+            case CV_16U: m_format.data_type = JXL_TYPE_UINT16; break;
+            case CV_32F: m_format.data_type = JXL_TYPE_FLOAT; break;
+            default: break;
+        }
+        // libjxl cannot read to BGR pixel order directly.
+        // So we have to decode as RGB(A) and to convert to BGR(A)
+        if (!m_use_rgb) {
+            switch (dcn) {
+                case 1:  m_convert = -1; break;
+                case 3:  m_convert = cv::COLOR_RGB2BGR; break;
+                case 4:  m_convert = cv::COLOR_RGBA2BGRA; break;
+                default: break;
+            }
+        }
+        // libjxl cannot convert from color image to gray image directly.
+        // So we have to decode as RGB(A) and to convert to GRAY.
+        if( (scn >= 3) && (dcn == 1) )
+        {
+            Mat work(img.size(), CV_MAKETYPE(depth, scn));
+            wimg = work; // replace to working buffer.
+            m_format.num_channels = scn;
+            switch (scn) {
+                case 3:  m_convert = cv::COLOR_RGB2GRAY; break;
+                case 4:  m_convert = cv::COLOR_RGBA2GRAY; break;
+                default: break;
+            }
+        }
+        // OPTIMIZE: JxlDecoderSetImageOutCallback() can reduce memory usage for converting from RGB(A) to BGR(A) and GRAY image.
         if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutBuffer(m_decoder.get(),
                                                            &m_format,
-                                                           pimg->ptr<uint8_t>(),
-                                                           pimg->total() * pimg->elemSize())) {
+                                                           wimg.ptr<uint8_t>(),
+                                                           wimg.total() * wimg.elemSize()))
+        {
             return false;
         }
     }
@@ -172,49 +216,28 @@ bool JpegXLDecoder::read(Mat* pimg)
 
                 m_width = info.xsize;
                 m_height = info.ysize;
-                m_format = {
-                    ncn,
-                    JXL_TYPE_UINT8, // (temporary)
-                    JXL_LITTLE_ENDIAN, // endianness
-                    0 // align stride to bytes
-                };
-                if (!m_use_rgb) {
-                    switch (ncn) {
-                    case 3:
-                        m_convert = cv::COLOR_RGB2BGR;
-                        break;
-                    case 4:
-                        m_convert = cv::COLOR_RGBA2BGRA;
-                        break;
-                    default:
-                        m_convert = -1;
-                    }
-                }
                 if (info.exponent_bits_per_sample > 0) {
-                    m_format.data_type = JXL_TYPE_FLOAT;
                     m_type = CV_MAKETYPE( CV_32F, ncn );
                 } else {
                     switch (info.bits_per_sample) {
                         case 8:
-                            m_format.data_type = JXL_TYPE_UINT8;
                             m_type = CV_MAKETYPE( CV_8U, ncn );
                             break;
                         case 16:
-                            m_format.data_type = JXL_TYPE_UINT16;
                             m_type = CV_MAKETYPE( CV_16U, ncn );
                             break;
                         default:
                             return false;
                     }
                 }
-                if (!pimg)
-                    return true;
+                if (img.empty())
+                    return true; // Return to readHeader()
                 break;
             }
             case JXL_DEC_FULL_IMAGE: {
                 // Image is ready
                 if (m_convert != -1)
-                    cv::cvtColor(*pimg, *pimg, m_convert);
+                    cv::cvtColor(wimg, img, m_convert);
                 break;
             }
             case JXL_DEC_ERROR: {
@@ -232,14 +255,15 @@ bool JpegXLDecoder::read(Mat* pimg)
 bool JpegXLDecoder::readHeader()
 {
     close();
-    return read(nullptr);
+    cv::Mat dmy;
+    return read(dmy);
 }
 
 bool JpegXLDecoder::readData(Mat& img)
 {
     if (!m_decoder || m_width == 0 || m_height == 0)
         return false;
-    return read(&img);
+    return read(img);
 }
 
 /////////////////////// JpegXLEncoder ///////////////////

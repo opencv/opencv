@@ -180,6 +180,75 @@ TEST(Imgcodecs_JpegXL, encode_from_uncontinued_image)
     EXPECT_TRUE(ret);
 }
 
+// See https://github.com/opencv/opencv/issues/26767
+
+typedef tuple<perf::MatType, ImreadModes> MatType_and_ImreadFlag;
+typedef testing::TestWithParam<MatType_and_ImreadFlag> Imgcodecs_JpegXL_MatType_ImreadFlag;
+
+TEST_P(Imgcodecs_JpegXL_MatType_ImreadFlag, all_imreadFlags)
+{
+    string tmp_fname = cv::tempfile(".jxl");
+    const int matType  = get<0>(GetParam());
+    const int imreadFlag  = get<1>(GetParam());
+
+    Mat img(240, 320, matType);
+    randu(img, Scalar(0, 0, 0, 255), Scalar(255, 255, 255, 255));
+
+    vector<int> param;
+    param.push_back(IMWRITE_JPEGXL_DISTANCE);
+    param.push_back(0 /* Lossless */);
+    EXPECT_NO_THROW(imwrite(tmp_fname, img));
+
+    Mat img_decoded;
+    EXPECT_NO_THROW(img_decoded = imread(tmp_fname, imreadFlag));
+    EXPECT_FALSE(img_decoded.empty());
+
+    switch( imreadFlag )
+    {
+        case IMREAD_UNCHANGED:
+            EXPECT_EQ( img.type(), img_decoded.type() );
+            break;
+        case IMREAD_GRAYSCALE:
+            EXPECT_EQ( img_decoded.depth(), CV_8U );
+            EXPECT_EQ( img_decoded.channels(), 1 );
+            break;
+        case IMREAD_COLOR:
+        case IMREAD_COLOR_RGB:
+            EXPECT_EQ( img_decoded.depth(), CV_8U );
+            EXPECT_EQ( img_decoded.channels(), 3 );
+            break;
+        case IMREAD_ANYDEPTH:
+            EXPECT_EQ( img_decoded.depth(), img.depth() );
+            EXPECT_EQ( img_decoded.channels(), 1 );
+            break;
+        case IMREAD_ANYCOLOR:
+            EXPECT_EQ( img_decoded.depth(), CV_8U ) ;
+            EXPECT_EQ( img_decoded.channels(), img.channels() == 1 ? 1 : 3 ); // Alpha channel will be dropped.
+            break;
+    }
+    remove(tmp_fname.c_str());
+}
+
+INSTANTIATE_TEST_CASE_P(
+    /**/,
+    Imgcodecs_JpegXL_MatType_ImreadFlag,
+    testing::Combine(
+        testing::Values(
+            CV_8UC1,  CV_8UC3,  CV_8UC4,
+            CV_16UC1, CV_16UC3, CV_16UC4,
+            CV_32FC1, CV_32FC3, CV_32FC4
+        ),
+        testing::Values(
+            IMREAD_UNCHANGED,
+            IMREAD_GRAYSCALE,
+            IMREAD_COLOR,
+            IMREAD_COLOR_RGB,
+            IMREAD_ANYDEPTH,
+            IMREAD_ANYCOLOR
+        )
+) );
+
+
 #endif  // HAVE_JPEGXL
 
 }  // namespace

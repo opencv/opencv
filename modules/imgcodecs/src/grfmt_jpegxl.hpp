@@ -46,7 +46,7 @@ protected:
     JxlDecoderStatus m_status;
 
 private:
-    bool read(Mat* pimg);
+    bool read(Mat& pimg);
 };
 
 
