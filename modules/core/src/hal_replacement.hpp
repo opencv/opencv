@@ -907,6 +907,7 @@ inline int hal_ni_gemm64fc(const double* src1, size_t src1_step, const double* s
    @param minIdx Pointer to the returned minimum and maximum location.
    @param maxIdx Pointer to the returned minimum and maximum location.
    @param mask Specified array region.
+   @param mask_step Mask array step.
 */
 inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, int height, int depth, double* minVal, double* maxVal,
                             int* minIdx, int* maxIdx, uchar* mask, size_t mask_step) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
