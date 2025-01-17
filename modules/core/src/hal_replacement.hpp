@@ -909,7 +909,7 @@ inline int hal_ni_gemm64fc(const double* src1, size_t src1_step, const double* s
    @param mask Specified array region.
 */
 inline int hal_ni_minMaxIdx(const uchar* src_data, size_t src_step, int width, int height, int depth, double* minVal, double* maxVal,
-                            int* minIdx, int* maxIdx, uchar* mask) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+                            int* minIdx, int* maxIdx, uchar* mask, size_t mask_step) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_minMaxIdx hal_ni_minMaxIdx

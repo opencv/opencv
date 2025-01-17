@@ -1515,12 +1515,12 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     if (src.dims <= 2)
     {
         CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows,
-                 src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data);
+                 src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data, mask.step);
     }
-    else if (src.isContinuous())
+    else if (src.isContinuous() && mask.isContinuous())
     {
         int res = cv_hal_minMaxIdx(src.data, 0, (int)src.total()*cn, 1, src.depth(),
-                                   minVal, maxVal, minIdx, maxIdx, mask.data);
+                                   minVal, maxVal, minIdx, maxIdx, mask.data, 0);
 
         if (res == CV_HAL_ERROR_OK)
         {
