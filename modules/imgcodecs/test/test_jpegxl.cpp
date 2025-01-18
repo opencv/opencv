@@ -197,7 +197,7 @@ TEST_P(Imgcodecs_JpegXL_MatType_ImreadFlag, all_imreadFlags)
     vector<int> param;
     param.push_back(IMWRITE_JPEGXL_DISTANCE);
     param.push_back(0 /* Lossless */);
-    EXPECT_NO_THROW(imwrite(tmp_fname, img));
+    EXPECT_NO_THROW(imwrite(tmp_fname, img, param));
 
     Mat img_decoded;
     EXPECT_NO_THROW(img_decoded = imread(tmp_fname, imreadFlag));

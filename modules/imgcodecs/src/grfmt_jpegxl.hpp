@@ -41,7 +41,6 @@ protected:
     JxlDecoderPtr m_decoder;
     JxlThreadParallelRunnerPtr m_parallel_runner;
     JxlPixelFormat m_format;
-    int m_convert;
     std::vector<uint8_t> m_read_buffer;
     JxlDecoderStatus m_status;
 
