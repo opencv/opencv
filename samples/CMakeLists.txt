@@ -43,6 +43,11 @@ if(ANDROID AND (BUILD_ANDROID_EXAMPLES OR INSTALL_ANDROID_EXAMPLES))
   add_subdirectory(android)
 endif()
 if(INSTALL_PYTHON_EXAMPLES)
+  find_package(Python3 REQUIRED)
+  find_package(OpenCV REQUIRED PATHS "..")
+
+  include_directories(${OpenCV_INCLUDE_DIRS})
+  link_directories(${OpenCV_LIBRARY_DIRS})
   add_subdirectory(python)
 endif()
 # The examples in this folder will work with a semihosting version of

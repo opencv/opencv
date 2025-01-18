@@ -4,6 +4,11 @@
 if(DEFINED OPENCV_INITIAL_PASS)  # OpenCV build
 
 if(ANDROID OR APPLE_FRAMEWORK OR WINRT)
+find_package(Python3 REQUIRED)
+
+if(NOT __disable_python3)
+  add_subdirectory(python3)
+endif()
   ocv_module_disable_(python2)
   ocv_module_disable_(python3)
   return()
