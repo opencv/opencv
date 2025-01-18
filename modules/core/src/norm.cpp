@@ -1112,6 +1112,16 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
                normType == NORM_L2 || normType == NORM_L2SQR ||
               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
 
+    if( src1.dims <= 2 )
+    {
+        double result;
+        CALL_HAL_RET(normDiff, cv_hal_normDiff, result, src1.data, src1.step, src2.data, src2.step, mask.data, mask.step, src1.cols, src1.rows, src1.type(), normType);
+    }
+    else if( src1.isContinuous() && src2.isContinuous() && mask.isContinuous() )
+    {
+        double result;
+        CALL_HAL_RET(normDiff, cv_hal_normDiff, result, src1.data, 0, src2.data, 0, mask.data, 0, src1.total(), 1, src1.type(), normType);
+    }
     if( src1.isContinuous() && src2.isContinuous() && mask.empty() )
     {
         size_t len = src1.total()*src1.channels();

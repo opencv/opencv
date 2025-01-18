@@ -23,6 +23,7 @@
 #include "hal_rvv_1p0/merge.hpp" // core
 #include "hal_rvv_1p0/mean.hpp" // core
 #include "hal_rvv_1p0/norm.hpp" // core
+#include "hal_rvv_1p0/normdiff.hpp" // core
 #endif
 
 #endif
