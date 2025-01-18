@@ -623,6 +623,16 @@ double norm( InputArray _src, int normType, InputArray _mask )
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(src, normType, mask, _result), _result);
 
     int depth = src.depth(), cn = src.channels();
+    if( src.dims <= 2 )
+    {
+        double result;
+        CALL_HAL_RET(norm, cv_hal_norm, result, src.data, src.step, mask.data, mask.step, src.cols, src.rows, src.type(), normType);
+    }
+    else if( src.isContinuous() && mask.isContinuous() )
+    {
+        double result;
+        CALL_HAL_RET(norm, cv_hal_norm, result, src.data, 0, mask.data, 0, src.total(), 1, src.type(), normType);
+    }
     if( src.isContinuous() && mask.empty() )
     {
         size_t len = src.total()*cn;
