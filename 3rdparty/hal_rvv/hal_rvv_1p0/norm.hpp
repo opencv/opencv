@@ -116,6 +116,7 @@ inline int normL2Sqr_8UC1(const uchar* src, size_t src_step, const uchar* mask, 
         vec_sum = __riscv_vmv_v_x_u32m8(0, vlmax);
     };
 
+    *result = 0;
     if (mask)
     {
         for (int i = 0; i < height; i++)
@@ -177,8 +178,8 @@ inline int normInf_8UC4(const uchar* src, size_t src_step, const uchar* mask, si
                 vl = __riscv_vsetvl_e8m8(width * 4 - j);
                 vlm = __riscv_vsetvl_e8m2(width - jm);
                 auto vec_src = __riscv_vle8_v_u8m8(src_row + j, vl);
-                auto vec_mask = __riscv_vle8_v_u8m2(mask_row + j, vlm);
-                auto vec_mask_ext = __riscv_vmul(__riscv_vzext_vf4(vec_mask, vlm), 0x01010101, vlm);
+                auto vec_mask = __riscv_vle8_v_u8m2(mask_row + jm, vlm);
+                auto vec_mask_ext = __riscv_vmul(__riscv_vzext_vf4(__riscv_vminu(vec_mask, 1, vlm), vlm), 0x01010101, vlm);
                 auto bool_mask_ext = __riscv_vmsne(__riscv_vreinterpret_u8m8(vec_mask_ext), 0, vl);
                 vec_max = __riscv_vmaxu_tumu(bool_mask_ext, vec_max, vec_max, vec_src, vl);
             }
@@ -222,8 +223,8 @@ inline int normL1_8UC4(const uchar* src, size_t src_step, const uchar* mask, siz
                 vl = __riscv_vsetvl_e8m2(width * 4 - j);
                 vlm = __riscv_vsetvl_e8mf2(width - jm);
                 auto vec_src = __riscv_vle8_v_u8m2(src_row + j, vl);
-                auto vec_mask = __riscv_vle8_v_u8mf2(mask_row + j, vlm);
-                auto vec_mask_ext = __riscv_vmul(__riscv_vzext_vf4(vec_mask, vlm), 0x01010101, vlm);
+                auto vec_mask = __riscv_vle8_v_u8mf2(mask_row + jm, vlm);
+                auto vec_mask_ext = __riscv_vmul(__riscv_vzext_vf4(__riscv_vminu(vec_mask, 1, vlm), vlm), 0x01010101, vlm);
                 auto bool_mask_ext = __riscv_vmsne(__riscv_vreinterpret_u8m2(vec_mask_ext), 0, vl);
                 auto vec_zext = __riscv_vzext_vf4_u32m8_m(bool_mask_ext, vec_src, vl);
                 vec_sum = __riscv_vadd_tumu(bool_mask_ext, vec_sum, vec_sum, vec_zext, vl);
@@ -269,6 +270,7 @@ inline int normL2Sqr_8UC4(const uchar* src, size_t src_step, const uchar* mask, 
         vec_sum = __riscv_vmv_v_x_u32m8(0, vlmax);
     };
 
+    *result = 0;
     if (mask)
     {
         for (int i = 0; i < height; i++)
@@ -283,8 +285,8 @@ inline int normL2Sqr_8UC4(const uchar* src, size_t src_step, const uchar* mask, 
                 reduce(vl);
 
                 auto vec_src = __riscv_vle8_v_u8m2(src_row + j, vl);
-                auto vec_mask = __riscv_vle8_v_u8mf2(mask_row + j, vlm);
-                auto vec_mask_ext = __riscv_vmul(__riscv_vzext_vf4(vec_mask, vlm), 0x01010101, vlm);
+                auto vec_mask = __riscv_vle8_v_u8mf2(mask_row + jm, vlm);
+                auto vec_mask_ext = __riscv_vmul(__riscv_vzext_vf4(__riscv_vminu(vec_mask, 1, vlm), vlm), 0x01010101, vlm);
                 auto bool_mask_ext = __riscv_vmsne(__riscv_vreinterpret_u8m2(vec_mask_ext), 0, vl);
                 auto vec_mul = __riscv_vwmulu_vv_u16m4_m(bool_mask_ext, vec_src, vec_src, vl);
                 auto vec_zext = __riscv_vzext_vf2_u32m8_m(bool_mask_ext, vec_mul, vl);
@@ -471,7 +473,7 @@ inline int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mas
             return normL2Sqr_8UC1(src, src_step, mask, mask_step, width, height, result);
         case NORM_L2:
             int ret = normL2Sqr_8UC1(src, src_step, mask, mask_step, width, height, result);
-            *result = sqrt(*result);
+            *result = std::sqrt(*result);
             return ret;
         }
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -486,7 +488,7 @@ inline int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mas
             return normL2Sqr_8UC4(src, src_step, mask, mask_step, width, height, result);
         case NORM_L2:
             int ret = normL2Sqr_8UC4(src, src_step, mask, mask_step, width, height, result);
-            *result = sqrt(*result);
+            *result = std::sqrt(*result);
             return ret;
         }
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -501,7 +503,7 @@ inline int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mas
             return normL2Sqr_32FC1(src, src_step, mask, mask_step, width, height, result);
         case NORM_L2:
             int ret = normL2Sqr_32FC1(src, src_step, mask, mask_step, width, height, result);
-            *result = sqrt(*result);
+            *result = std::sqrt(*result);
             return ret;
         }
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
