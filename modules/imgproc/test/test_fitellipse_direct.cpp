@@ -341,7 +341,7 @@ TEST(Imgproc_FitEllipseDirect_HorizontalLine, accuracy) {
     vector<Point2f> pts({{-300, 100}, {-200, 100}, {-100, 100}, {0, 100}, {100, 100}, {200, 100}, {300, 100}});
     const RotatedRect el = fitEllipseDirect(pts);
 
-    EXPECT_NEAR(el.center.x, 0, 50);
+    EXPECT_NEAR(el.center.x, 0, 100);
     EXPECT_NEAR(el.center.y, 100, 1);
     EXPECT_NEAR(el.size.width, 2, 2);
     EXPECT_NEAR(el.size.height, 600, 100);

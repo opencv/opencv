@@ -420,7 +420,7 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
         float eps = (float)(s/(n*2)*1e-3);
         for( i = 0; i < n; i++ )
         {
-            Point2f p = ptsf_copy[i] + getOfs(eps);
+            const Point2f p = ptsf_copy[i] + getOfs(eps);
             ptsf_copy[i] = p;
         }
 
@@ -745,7 +745,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         for( i = 0; i < n; i++ )
         {
             Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-            Point2f delta = getOfs(eps);
+            const Point2f delta = getOfs(eps);
             double px = (p.x + delta.x - c.x)*scale, py = (p.y + delta.y - c.y)*scale;
 
             A.at<double>(i,0) = px*px;
