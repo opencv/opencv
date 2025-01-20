@@ -592,7 +592,6 @@ static bool ocl_filter2D( InputArray _src, OutputArray _dst, int ddepth,
 
     // For smaller filter kernels, there is a special kernel that is more
     // efficient than the general one.
-    UMat kernelDataUMat;
     if (device.isIntel() && (device.type() & ocl::Device::TYPE_GPU) &&
         ((ksize.width < 5 && ksize.height < 5) ||
         (ksize.width == 5 && ksize.height == 5 && cn == 1)))
