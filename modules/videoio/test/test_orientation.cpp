@@ -42,8 +42,8 @@ TEST_P(VideoCaptureAPITests, mp4_orientation_meta_auto)
     ASSERT_EQ(480, frame.rows);
 }
 
-// related issue: https://github.com/opencv/opencv/issues/15499
-TEST_P(VideoCaptureAPITests, mp4_orientation_no_rotation)
+// related issues: https://github.com/opencv/opencv/issues/15499 & 26795
+TEST_P(VideoCaptureAPITests, mp4_orientation_test)
 {
     cv::VideoCaptureAPIs api = GetParam();
     if (!videoio_registry::hasBackend(api))
@@ -53,13 +53,29 @@ TEST_P(VideoCaptureAPITests, mp4_orientation_no_rotation)
 
     VideoCapture cap;
     EXPECT_NO_THROW(cap.open(video_file, api));
-    cap.set(CAP_PROP_ORIENTATION_AUTO, 0);
     ASSERT_TRUE(cap.isOpened()) << "Can't open the video: " << video_file << " with backend " << api << std::endl;
+
+    // test with default auto-orientation
+    ASSERT_TRUE(cap.get(CAP_PROP_ORIENTATION_AUTO));
+    Size default_size;
+    EXPECT_NO_THROW(default_size = Size((int)cap.get(CAP_PROP_FRAME_WIDTH),
+                                        (int)cap.get(CAP_PROP_FRAME_HEIGHT)));
+    EXPECT_EQ(270, default_size.width);
+    EXPECT_EQ(480, default_size.height);
+
+    Mat default_frame;
+    cap >> default_frame;
+    ASSERT_FALSE(default_frame.empty());
+    EXPECT_EQ(270, default_frame.cols);
+    EXPECT_EQ(480, default_frame.rows);
+
+    // test with auto-orientation disabled
+    cap.set(CAP_PROP_ORIENTATION_AUTO, 0);
     ASSERT_FALSE(cap.get(CAP_PROP_ORIENTATION_AUTO));
 
     Size actual;
     EXPECT_NO_THROW(actual = Size((int)cap.get(CAP_PROP_FRAME_WIDTH),
-                                    (int)cap.get(CAP_PROP_FRAME_HEIGHT)));
+                                       (int)cap.get(CAP_PROP_FRAME_HEIGHT)));
     EXPECT_EQ(480, actual.width);
     EXPECT_EQ(270, actual.height);
 
