@@ -1,60 +1,8 @@
-/* <copyright>
-  This file is provided under a dual BSD/GPLv2 license.  When using or
-  redistributing this file, you may do so under either license.
+/*
+  Copyright (C) 2005-2019 Intel Corporation
 
-  GPL LICENSE SUMMARY
-
-  Copyright (c) 2005-2014 Intel Corporation. All rights reserved.
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of version 2 of the GNU General Public License as
-  published by the Free Software Foundation.
-
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
-  The full GNU General Public License is included in this distribution
-  in the file called LICENSE.GPL.
-
-  Contact Information:
-  http://software.intel.com/en-us/articles/intel-vtune-amplifier-xe/
-
-  BSD LICENSE
-
-  Copyright (c) 2005-2014 Intel Corporation. All rights reserved.
-  All rights reserved.
-
-  Redistribution and use in source and binary forms, with or without
-  modification, are permitted provided that the following conditions
-  are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in
-      the documentation and/or other materials provided with the
-      distribution.
-    * Neither the name of Intel Corporation nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-</copyright> */
+  SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+*/
 #ifndef _ITTNOTIFY_H_
 #define _ITTNOTIFY_H_
 
@@ -63,7 +11,8 @@
 @brief Public User API functions and types
 @mainpage
 
-The ITT API is used to annotate a user's program with additional information
+The Instrumentation and Tracing Technology API (ITT API) is used to
+annotate a user's program with additional information
 that can be used by correctness and performance tools. The user inserts
 calls in their program. Those calls generate information that is collected
 at runtime, and used by Intel(R) Threading Tools.
@@ -141,6 +90,10 @@ The same ID may not be reused for different instances, unless a previous
 #  define ITT_OS_FREEBSD   4
 #endif /* ITT_OS_FREEBSD */
 
+#ifndef ITT_OS_OPENBSD
+#  define ITT_OS_OPENBSD   5
+#endif /* ITT_OS_OPENBSD */
+
 #ifndef ITT_OS
 #  if defined WIN32 || defined _WIN32
 #    define ITT_OS ITT_OS_WIN
@@ -148,6 +101,8 @@ The same ID may not be reused for different instances, unless a previous
 #    define ITT_OS ITT_OS_MAC
 #  elif defined( __FreeBSD__ )
 #    define ITT_OS ITT_OS_FREEBSD
+#  elif defined( __OpenBSD__)
+#    define ITT_OS ITT_OS_OPENBSD
 #  else
 #    define ITT_OS ITT_OS_LINUX
 #  endif
@@ -169,6 +124,10 @@ The same ID may not be reused for different instances, unless a previous
 #  define ITT_PLATFORM_FREEBSD 4
 #endif /* ITT_PLATFORM_FREEBSD */
 
+#ifndef ITT_PLATFORM_OPENBSD
+#  define ITT_PLATFORM_OPENBSD 5
+#endif /* ITT_PLATFORM_OPENBSD */
+
 #ifndef ITT_PLATFORM
 #  if ITT_OS==ITT_OS_WIN
 #    define ITT_PLATFORM ITT_PLATFORM_WIN
@@ -176,6 +135,8 @@ The same ID may not be reused for different instances, unless a previous
 #    define ITT_PLATFORM ITT_PLATFORM_MAC
 #  elif ITT_OS==ITT_OS_FREEBSD
 #    define ITT_PLATFORM ITT_PLATFORM_FREEBSD
+#  elif ITT_OS==ITT_OS_OPENBSD
+#    define ITT_PLATFORM ITT_PLATFORM_OPENBSD
 #  else
 #    define ITT_PLATFORM ITT_PLATFORM_POSIX
 #  endif
@@ -228,7 +189,12 @@ The same ID may not be reused for different instances, unless a previous
 
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
 /* use __forceinline (VC++ specific) */
-#define ITT_INLINE           __forceinline
+#if defined(__MINGW32__) && !defined(__cplusplus)
+#define ITT_INLINE           static __inline__ __attribute__((__always_inline__,__gnu_inline__))
+#else
+#define ITT_INLINE           static __forceinline
+#endif /* __MINGW32__ */
+
 #define ITT_INLINE_ATTRIBUTE /* nothing */
 #else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
 /*
@@ -289,20 +255,20 @@ The same ID may not be reused for different instances, unless a previous
 #define ITTNOTIFY_VOID(n) (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)
 #define ITTNOTIFY_DATA(n) (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)
 
-#define ITTNOTIFY_VOID_D0(n,d)       (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d)
-#define ITTNOTIFY_VOID_D1(n,d,x)     (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x)
-#define ITTNOTIFY_VOID_D2(n,d,x,y)   (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x,y)
-#define ITTNOTIFY_VOID_D3(n,d,x,y,z) (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x,y,z)
-#define ITTNOTIFY_VOID_D4(n,d,x,y,z,a)     (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x,y,z,a)
-#define ITTNOTIFY_VOID_D5(n,d,x,y,z,a,b)   (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x,y,z,a,b)
-#define ITTNOTIFY_VOID_D6(n,d,x,y,z,a,b,c) (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x,y,z,a,b,c)
-#define ITTNOTIFY_DATA_D0(n,d)       (!(d)->flags) ?       0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d)
-#define ITTNOTIFY_DATA_D1(n,d,x)     (!(d)->flags) ?       0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x)
-#define ITTNOTIFY_DATA_D2(n,d,x,y)   (!(d)->flags) ?       0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x,y)
-#define ITTNOTIFY_DATA_D3(n,d,x,y,z) (!(d)->flags) ?       0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x,y,z)
-#define ITTNOTIFY_DATA_D4(n,d,x,y,z,a)     (!(d)->flags) ? 0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x,y,z,a)
-#define ITTNOTIFY_DATA_D5(n,d,x,y,z,a,b)   (!(d)->flags) ? 0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x,y,z,a,b)
-#define ITTNOTIFY_DATA_D6(n,d,x,y,z,a,b,c) (!(d)->flags) ? 0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x,y,z,a,b,c)
+#define ITTNOTIFY_VOID_D0(n,d)       (d == NULL) ? (void)0 : (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d)
+#define ITTNOTIFY_VOID_D1(n,d,x)     (d == NULL) ? (void)0 : (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x)
+#define ITTNOTIFY_VOID_D2(n,d,x,y)   (d == NULL) ? (void)0 : (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x,y)
+#define ITTNOTIFY_VOID_D3(n,d,x,y,z) (d == NULL) ? (void)0 : (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x,y,z)
+#define ITTNOTIFY_VOID_D4(n,d,x,y,z,a)     (d == NULL) ? (void)0 : (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x,y,z,a)
+#define ITTNOTIFY_VOID_D5(n,d,x,y,z,a,b)   (d == NULL) ? (void)0 : (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x,y,z,a,b)
+#define ITTNOTIFY_VOID_D6(n,d,x,y,z,a,b,c) (d == NULL) ? (void)0 : (!(d)->flags) ? (void)0 : (!ITTNOTIFY_NAME(n)) ? (void)0 : ITTNOTIFY_NAME(n)(d,x,y,z,a,b,c)
+#define ITTNOTIFY_DATA_D0(n,d)       (d == NULL) ? 0 : (!(d)->flags) ?       0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d)
+#define ITTNOTIFY_DATA_D1(n,d,x)     (d == NULL) ? 0 : (!(d)->flags) ?       0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x)
+#define ITTNOTIFY_DATA_D2(n,d,x,y)   (d == NULL) ? 0 : (!(d)->flags) ?       0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x,y)
+#define ITTNOTIFY_DATA_D3(n,d,x,y,z) (d == NULL) ? 0 : (!(d)->flags) ?       0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x,y,z)
+#define ITTNOTIFY_DATA_D4(n,d,x,y,z,a)     (d == NULL) ? 0 : (!(d)->flags) ? 0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x,y,z,a)
+#define ITTNOTIFY_DATA_D5(n,d,x,y,z,a,b)   (d == NULL) ? 0 : (!(d)->flags) ? 0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x,y,z,a,b)
+#define ITTNOTIFY_DATA_D6(n,d,x,y,z,a,b,c) (d == NULL) ? 0 : (!(d)->flags) ? 0 : (!ITTNOTIFY_NAME(n)) ?       0 : ITTNOTIFY_NAME(n)(d,x,y,z,a,b,c)
 
 #ifdef ITT_STUB
 #undef ITT_STUB
@@ -340,7 +306,7 @@ extern "C" {
  *     only pauses tracing and analyzing memory access.
  *     It does not pause tracing or analyzing threading APIs.
  *   .
- * - Intel(R) Parallel Amplifier and Intel(R) VTune(TM) Amplifier XE:
+ * - Intel(R) VTune(TM) Profiler:
  *   - Does continue to record when new threads are started.
  *   .
  * - Other effects:
@@ -355,34 +321,142 @@ void ITTAPI __itt_resume(void);
 /** @brief Detach collection */
 void ITTAPI __itt_detach(void);
 
+/**
+ * @enum __itt_collection_scope
+ * @brief Enumerator for collection scopes
+ */
+typedef enum {
+    __itt_collection_scope_host    = 1 << 0,
+    __itt_collection_scope_offload = 1 << 1,
+    __itt_collection_scope_all     = 0x7FFFFFFF
+} __itt_collection_scope;
+
+/** @brief Pause scoped collection */
+void ITTAPI __itt_pause_scoped(__itt_collection_scope);
+/** @brief Resume scoped collection */
+void ITTAPI __itt_resume_scoped(__itt_collection_scope);
+
 /** @cond exclude_from_documentation */
 #ifndef INTEL_NO_MACRO_BODY
 #ifndef INTEL_NO_ITTNOTIFY_API
-ITT_STUBV(ITTAPI, void, pause,  (void))
-ITT_STUBV(ITTAPI, void, resume, (void))
-ITT_STUBV(ITTAPI, void, detach, (void))
-#define __itt_pause      ITTNOTIFY_VOID(pause)
-#define __itt_pause_ptr  ITTNOTIFY_NAME(pause)
-#define __itt_resume     ITTNOTIFY_VOID(resume)
-#define __itt_resume_ptr ITTNOTIFY_NAME(resume)
-#define __itt_detach     ITTNOTIFY_VOID(detach)
-#define __itt_detach_ptr ITTNOTIFY_NAME(detach)
+ITT_STUBV(ITTAPI, void, pause,         (void))
+ITT_STUBV(ITTAPI, void, pause_scoped,  (__itt_collection_scope))
+ITT_STUBV(ITTAPI, void, resume,        (void))
+ITT_STUBV(ITTAPI, void, resume_scoped, (__itt_collection_scope))
+ITT_STUBV(ITTAPI, void, detach,        (void))
+#define __itt_pause             ITTNOTIFY_VOID(pause)
+#define __itt_pause_ptr         ITTNOTIFY_NAME(pause)
+#define __itt_pause_scoped      ITTNOTIFY_VOID(pause_scoped)
+#define __itt_pause_scoped_ptr  ITTNOTIFY_NAME(pause_scoped)
+#define __itt_resume            ITTNOTIFY_VOID(resume)
+#define __itt_resume_ptr        ITTNOTIFY_NAME(resume)
+#define __itt_resume_scoped     ITTNOTIFY_VOID(resume_scoped)
+#define __itt_resume_scoped_ptr ITTNOTIFY_NAME(resume_scoped)
+#define __itt_detach            ITTNOTIFY_VOID(detach)
+#define __itt_detach_ptr        ITTNOTIFY_NAME(detach)
 #else  /* INTEL_NO_ITTNOTIFY_API */
 #define __itt_pause()
-#define __itt_pause_ptr  0
+#define __itt_pause_ptr           0
+#define __itt_pause_scoped(scope)
+#define __itt_pause_scoped_ptr    0
 #define __itt_resume()
-#define __itt_resume_ptr 0
+#define __itt_resume_ptr          0
+#define __itt_resume_scoped(scope)
+#define __itt_resume_scoped_ptr   0
 #define __itt_detach()
-#define __itt_detach_ptr 0
+#define __itt_detach_ptr          0
 #endif /* INTEL_NO_ITTNOTIFY_API */
 #else  /* INTEL_NO_MACRO_BODY */
-#define __itt_pause_ptr  0
-#define __itt_resume_ptr 0
-#define __itt_detach_ptr 0
+#define __itt_pause_ptr           0
+#define __itt_pause_scoped_ptr    0
+#define __itt_resume_ptr          0
+#define __itt_resume_scoped_ptr   0
+#define __itt_detach_ptr          0
 #endif /* INTEL_NO_MACRO_BODY */
 /** @endcond */
 /** @} control group */
 /** @endcond */
+
+/**
+ * @defgroup Intel Processor Trace control
+ * API from this group provides control over collection and analysis of Intel Processor Trace (Intel PT) data
+ * Information about Intel Processor Trace technology can be found here (Volume 3 chapter 35):
+ * https://software.intel.com/sites/default/files/managed/39/c5/325462-sdm-vol-1-2abcd-3abcd.pdf
+ * Use this API to mark particular code regions for loading detailed performance statistics.
+ * This mode makes your analysis faster and more accurate.
+ * @{
+*/
+typedef unsigned char __itt_pt_region;
+
+/**
+ * @brief function saves a region name marked with Intel PT API and returns a region id.
+ * Only 7 names can be registered. Attempts to register more names will be ignored and a region id with auto names will be returned.
+ * For automatic naming of regions pass NULL as function parameter
+*/
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+__itt_pt_region ITTAPI __itt_pt_region_createA(const char    *name);
+__itt_pt_region ITTAPI __itt_pt_region_createW(const wchar_t *name);
+#if defined(UNICODE) || defined(_UNICODE)
+#  define __itt_pt_region_create __itt_pt_region_createW
+#else /* UNICODE */
+#  define __itt_pt_region_create __itt_pt_region_createA
+#endif /* UNICODE */
+#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+__itt_pt_region ITTAPI __itt_pt_region_create(const char *name);
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+ITT_STUB(ITTAPI, __itt_pt_region, pt_region_createA, (const char    *name))
+ITT_STUB(ITTAPI, __itt_pt_region, pt_region_createW, (const wchar_t *name))
+#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+ITT_STUB(ITTAPI, __itt_pt_region, pt_region_create,  (const char    *name))
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_pt_region_createA     ITTNOTIFY_DATA(pt_region_createA)
+#define __itt_pt_region_createA_ptr ITTNOTIFY_NAME(pt_region_createA)
+#define __itt_pt_region_createW     ITTNOTIFY_DATA(pt_region_createW)
+#define __itt_pt_region_createW_ptr ITTNOTIFY_NAME(pt_region_createW)
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_pt_region_create     ITTNOTIFY_DATA(pt_region_create)
+#define __itt_pt_region_create_ptr ITTNOTIFY_NAME(pt_region_create)
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_pt_region_createA(name) (__itt_pt_region)0
+#define __itt_pt_region_createA_ptr 0
+#define __itt_pt_region_createW(name) (__itt_pt_region)0
+#define __itt_pt_region_createW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_pt_region_create(name)  (__itt_pt_region)0
+#define __itt_pt_region_create_ptr 0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_pt_region_createA_ptr 0
+#define __itt_pt_region_createW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_pt_region_create_ptr  0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief function contains a special code pattern identified on the post-processing stage and
+ * marks the beginning of a code region targeted for Intel PT analysis
+ * @param[in] region - region id, 0 <= region < 8
+*/
+void __itt_mark_pt_region_begin(__itt_pt_region region);
+/**
+ * @brief function contains a special code pattern identified on the post-processing stage and
+ * marks the end of a code region targeted for Intel PT analysis
+ * @param[in] region - region id, 0 <= region < 8
+*/
+void __itt_mark_pt_region_end(__itt_pt_region region);
+/** @} Intel PT control group*/
 
 /**
  * @defgroup threads Threads
@@ -541,13 +615,25 @@ ITT_STUBV(ITTAPI, void, suppress_pop, (void))
 /** @endcond */
 
 /**
- * @enum __itt_model_disable
- * @brief Enumerator for the disable methods
+ * @enum __itt_suppress_mode
+ * @brief Enumerator for the suppressing modes
  */
 typedef enum __itt_suppress_mode {
     __itt_unsuppress_range,
     __itt_suppress_range
 } __itt_suppress_mode_t;
+
+/**
+ * @enum __itt_collection_state
+ * @brief Enumerator for collection state.
+ */
+typedef enum {
+    __itt_collection_uninitialized = 0, /* uninitialized */
+    __itt_collection_init_fail = 1, /* failed to init */
+    __itt_collection_collector_absent = 2, /* non work state collector is absent */
+    __itt_collection_collector_exists = 3, /* work state collector exists */
+    __itt_collection_init_successful = 4 /* success to init */
+} __itt_collection_state;
 
 /**
  * @brief Mark a range of memory for error suppression or unsuppression for error types included in mask
@@ -1496,7 +1582,7 @@ ITT_STUBV(ITTAPI, void, heap_allocate_end, (__itt_heap_function h, void** addr, 
 /** @endcond */
 
 /**
- * @brief Record an free begin occurrence.
+ * @brief Record a free begin occurrence.
  */
 void ITTAPI __itt_heap_free_begin(__itt_heap_function h, void* addr);
 
@@ -1516,7 +1602,7 @@ ITT_STUBV(ITTAPI, void, heap_free_begin, (__itt_heap_function h, void* addr))
 /** @endcond */
 
 /**
- * @brief Record an free end occurrence.
+ * @brief Record a free end occurrence.
  */
 void ITTAPI __itt_heap_free_end(__itt_heap_function h, void* addr);
 
@@ -1536,7 +1622,7 @@ ITT_STUBV(ITTAPI, void, heap_free_end, (__itt_heap_function h, void* addr))
 /** @endcond */
 
 /**
- * @brief Record an reallocation begin occurrence.
+ * @brief Record a reallocation begin occurrence.
  */
 void ITTAPI __itt_heap_reallocate_begin(__itt_heap_function h, void* addr, size_t new_size, int initialized);
 
@@ -1556,7 +1642,7 @@ ITT_STUBV(ITTAPI, void, heap_reallocate_begin, (__itt_heap_function h, void* add
 /** @endcond */
 
 /**
- * @brief Record an reallocation end occurrence.
+ * @brief Record a reallocation end occurrence.
  */
 void ITTAPI __itt_heap_reallocate_end(__itt_heap_function h, void* addr, void** new_addr, size_t new_size, int initialized);
 
@@ -2692,7 +2778,7 @@ ITT_STUB(ITTAPI, __itt_clock_domain*, clock_domain_create, (__itt_get_clock_info
 
 /**
  * @ingroup clockdomains
- * @brief Recalculate clock domains frequences and clock base timestamps.
+ * @brief Recalculate clock domains frequencies and clock base timestamps.
  */
 void ITTAPI __itt_clock_domain_reset(void);
 
@@ -3597,11 +3683,12 @@ ITT_STUBV(ITTAPI, void, enable_attach, (void))
 /** @endcond */
 
 /**
- * @brief Module load info
- * This API is used to report necessary information in case of module relocation
- * @param[in] start_addr - relocated module start address
- * @param[in] end_addr - relocated module end address
- * @param[in] path - file system path to the module
+ * @brief Module load notification
+ * This API is used to report necessary information in case of bypassing default system loader.
+ * Notification should be done immidiatelly after this module is loaded to process memory.
+ * @param[in] start_addr - module start address
+ * @param[in] end_addr - module end address
+ * @param[in] path - file system full path to the module
  */
 #if ITT_PLATFORM==ITT_PLATFORM_WIN
 void ITTAPI __itt_module_loadA(void *start_addr, void *end_addr, const char *path);
@@ -3656,7 +3743,462 @@ ITT_STUB(ITTAPI, void, module_load,  (void *start_addr, void *end_addr, const ch
 #endif /* INTEL_NO_MACRO_BODY */
 /** @endcond */
 
+/**
+ * @brief Report module unload
+ * This API is used to report necessary information in case of bypassing default system loader.
+ * Notification should be done just before the module is unloaded from process memory.
+ * @param[in] addr - base address of loaded module
+ */
+void ITTAPI __itt_module_unload(void *addr);
 
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, module_unload, (void *addr))
+#define __itt_module_unload     ITTNOTIFY_VOID(module_unload)
+#define __itt_module_unload_ptr ITTNOTIFY_NAME(module_unload)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_module_unload(addr)
+#define __itt_module_unload_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_module_unload_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/** @cond exclude_from_documentation */
+typedef enum
+{
+    __itt_module_type_unknown = 0,
+    __itt_module_type_elf,
+    __itt_module_type_coff
+} __itt_module_type;
+/** @endcond */
+
+/** @cond exclude_from_documentation */
+typedef enum
+{
+    itt_section_type_unknown,
+    itt_section_type_bss,        /* notifies that the section contains uninitialized data. These are the relevant section types and the modules that contain them:
+                                  * ELF module:  SHT_NOBITS section type
+                                  * COFF module: IMAGE_SCN_CNT_UNINITIALIZED_DATA section type
+                                  */
+    itt_section_type_data,       /* notifies that section contains initialized data. These are the relevant section types and the modules that contain them:
+                                  * ELF module:  SHT_PROGBITS section type
+                                  * COFF module: IMAGE_SCN_CNT_INITIALIZED_DATA section type
+                                  */
+    itt_section_type_text        /* notifies that the section contains executable code. These are the relevant section types and the modules that contain them:
+                                  * ELF module:  SHT_PROGBITS section type
+                                  * COFF module: IMAGE_SCN_CNT_CODE section type
+                                  */
+} __itt_section_type;
+/** @endcond */
+
+/**
+ * @hideinitializer
+ * @brief bit-mask, detects a section attribute that indicates whether a section can be executed as code:
+ * These are the relevant section attributes and the modules that contain them:
+ * ELF module:  PF_X section attribute
+ * COFF module: IMAGE_SCN_MEM_EXECUTE attribute
+ */
+#define __itt_section_exec 0x20000000
+
+/**
+ * @hideinitializer
+ * @brief bit-mask, detects a section attribute that indicates whether a section can be read.
+ * These are the relevant section attributes and the modules that contain them:
+ * ELF module:  PF_R attribute
+ * COFF module: IMAGE_SCN_MEM_READ attribute
+ */
+#define __itt_section_read 0x40000000
+
+/**
+ * @hideinitializer
+ * @brief bit-mask, detects a section attribute that indicates whether a section can be written to.
+ * These are the relevant section attributes and the modules that contain them:
+ * ELF module:  PF_W attribute
+ * COFF module: IMAGE_SCN_MEM_WRITE attribute
+ */
+#define __itt_section_write 0x80000000
+
+/** @cond exclude_from_documentation */
+#pragma pack(push, 8)
+
+typedef struct ___itt_section_info
+{
+    const char* name;                 /*!< Section name in UTF8 */
+    __itt_section_type type;          /*!< Section content and semantics description */
+    size_t flags;                     /*!< Section bit flags that describe attributes using bit mask
+                                       * Zero if disabled, non-zero if enabled
+                                       */
+    void* start_addr;                 /*!< Section load(relocated) start address */
+    size_t size;                      /*!< Section file offset */
+    size_t file_offset;               /*!< Section size */
+} __itt_section_info;
+
+#pragma pack(pop)
+/** @endcond */
+
+/** @cond exclude_from_documentation */
+#pragma pack(push, 8)
+
+typedef struct ___itt_module_object
+{
+    unsigned int version;                 /*!< API version*/
+    __itt_id module_id;                   /*!< Unique identifier. This is unchanged for sections that belong to the same module */
+    __itt_module_type module_type;        /*!< Binary module format */
+    const char* module_name;              /*!< Unique module name or path to module in UTF8
+                                           * Contains module name when module_bufer and module_size exist
+                                           * Contains module path when module_bufer and module_size absent
+                                           * module_name remains the same for the certain module_id
+                                           */
+    void* module_buffer;                  /*!< Module buffer content */
+    size_t module_size;                   /*!< Module buffer size */
+                                          /*!< If module_buffer and module_size exist, the binary module is dumped onto the system.
+                                           * If module_buffer and module_size do not exist,
+                                           * the binary module exists on the system already.
+                                           * The module_name parameter contains the path to the module.
+                                           */
+    __itt_section_info* section_array;    /*!< Reference to section information */
+    size_t section_number;
+} __itt_module_object;
+
+#pragma pack(pop)
+/** @endcond */
+
+/**
+ * @brief Load module content and its loaded(relocated) sections.
+ * This API is useful to save a module, or specify its location on the system and report information about loaded sections.
+ * The target module is saved on the system if module buffer content and size are available.
+ * If module buffer content and size are unavailable, the module name contains the path to the existing binary module.
+ * @param[in] module_obj - provides module and section information, along with unique module identifiers (name,module ID)
+ * which bind the binary module to particular sections.
+ */
+void ITTAPI __itt_module_load_with_sections(__itt_module_object* module_obj);
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, module_load_with_sections,  (__itt_module_object* module_obj))
+#define __itt_module_load_with_sections     ITTNOTIFY_VOID(module_load_with_sections)
+#define __itt_module_load_with_sections_ptr ITTNOTIFY_NAME(module_load_with_sections)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_module_load_with_sections(module_obj)
+#define __itt_module_load_with_sections_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_module_load_with_sections_ptr  0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Unload a module and its loaded(relocated) sections.
+ * This API notifies that the module and its sections were unloaded.
+ * @param[in] module_obj - provides module and sections information, along with unique module identifiers (name,module ID)
+ * which bind the binary module to particular sections.
+ */
+void ITTAPI __itt_module_unload_with_sections(__itt_module_object* module_obj);
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, module_unload_with_sections,  (__itt_module_object* module_obj))
+#define __itt_module_unload_with_sections     ITTNOTIFY_VOID(module_unload_with_sections)
+#define __itt_module_unload_with_sections_ptr ITTNOTIFY_NAME(module_unload_with_sections)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_module_unload_with_sections(module_obj)
+#define __itt_module_unload_with_sections_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_module_unload_with_sections_ptr  0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/** @cond exclude_from_documentation */
+#pragma pack(push, 8)
+
+typedef struct ___itt_histogram
+{
+    const __itt_domain* domain;      /*!< Domain of the histogram*/
+    const char* nameA;               /*!< Name of the histogram */
+#if defined(UNICODE) || defined(_UNICODE)
+    const wchar_t* nameW;
+#else  /* UNICODE || _UNICODE */
+    void* nameW;
+#endif /* UNICODE || _UNICODE */
+    __itt_metadata_type x_type;     /*!< Type of the histogram X axis */
+    __itt_metadata_type y_type;     /*!< Type of the histogram Y axis */
+    int   extra1;                   /*!< Reserved to the runtime */
+    void* extra2;                   /*!< Reserved to the runtime */
+    struct ___itt_histogram* next;
+}  __itt_histogram;
+
+#pragma pack(pop)
+/** @endcond */
+
+/**
+ * @brief Create a typed histogram instance with given name/domain.
+ * @param[in] domain The domain controlling the call.
+ * @param[in] name   The name of the histogram.
+ * @param[in] x_type The type of the X axis in histogram (may be 0 to calculate batch statistics).
+ * @param[in] y_type The type of the Y axis in histogram.
+*/
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+__itt_histogram* ITTAPI __itt_histogram_createA(const __itt_domain* domain, const char* name, __itt_metadata_type x_type, __itt_metadata_type y_type);
+__itt_histogram* ITTAPI __itt_histogram_createW(const __itt_domain* domain, const wchar_t* name, __itt_metadata_type x_type, __itt_metadata_type y_type);
+#if defined(UNICODE) || defined(_UNICODE)
+#  define __itt_histogram_create     __itt_histogram_createW
+#  define __itt_histogram_create_ptr __itt_histogram_createW_ptr
+#else /* UNICODE */
+#  define __itt_histogram_create     __itt_histogram_createA
+#  define __itt_histogram_create_ptr __itt_histogram_createA_ptr
+#endif /* UNICODE */
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+__itt_histogram* ITTAPI __itt_histogram_create(const __itt_domain* domain, const char* name, __itt_metadata_type x_type, __itt_metadata_type y_type);
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+ITT_STUB(ITTAPI, __itt_histogram*, histogram_createA, (const __itt_domain* domain, const char* name, __itt_metadata_type x_type, __itt_metadata_type y_type))
+ITT_STUB(ITTAPI, __itt_histogram*, histogram_createW, (const __itt_domain* domain, const wchar_t* name, __itt_metadata_type x_type, __itt_metadata_type y_type))
+#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+ITT_STUB(ITTAPI, __itt_histogram*, histogram_create, (const __itt_domain* domain, const char* name, __itt_metadata_type x_type, __itt_metadata_type y_type))
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_histogram_createA     ITTNOTIFY_DATA(histogram_createA)
+#define __itt_histogram_createA_ptr ITTNOTIFY_NAME(histogram_createA)
+#define __itt_histogram_createW     ITTNOTIFY_DATA(histogram_createW)
+#define __itt_histogram_createW_ptr ITTNOTIFY_NAME(histogram_createW)
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_histogram_create     ITTNOTIFY_DATA(histogram_create)
+#define __itt_histogram_create_ptr ITTNOTIFY_NAME(histogram_create)
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_histogram_createA(domain, name, x_type, y_type) (__itt_histogram*)0
+#define __itt_histogram_createA_ptr 0
+#define __itt_histogram_createW(domain, name, x_type, y_type) (__itt_histogram*)0
+#define __itt_histogram_createW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_histogram_create(domain, name, x_type, y_type) (__itt_histogram*)0
+#define __itt_histogram_create_ptr 0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_histogram_createA_ptr 0
+#define __itt_histogram_createW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_histogram_create_ptr 0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Submit statistics for a histogram instance.
+ * @param[in] hist    Pointer to the histogram instance to which the histogram statistic is to be dumped.
+ * @param[in] length  The number of elements in dumped axis data array.
+ * @param[in] x_data  The X axis dumped data itself (may be NULL to calculate batch statistics).
+ * @param[in] y_data  The Y axis dumped data itself.
+*/
+void ITTAPI __itt_histogram_submit(__itt_histogram* hist, size_t length, void* x_data, void* y_data);
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, histogram_submit, (__itt_histogram* hist, size_t length, void* x_data, void* y_data))
+#define __itt_histogram_submit     ITTNOTIFY_VOID(histogram_submit)
+#define __itt_histogram_submit_ptr ITTNOTIFY_NAME(histogram_submit)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_histogram_submit(hist, length, x_data, y_data)
+#define __itt_histogram_submit_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_histogram_submit_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+
+/**
+* @brief function allows to obtain the current collection state at the moment
+* @return collection state as a enum __itt_collection_state
+*/
+__itt_collection_state __itt_get_collection_state(void);
+
+/**
+* @brief function releases resources allocated by ITT API static part
+* this API should be called from the library destructor
+* @return void
+*/
+void __itt_release_resources(void);
+/** @endcond */
+
+/**
+ * @brief Create a typed counter with given domain pointer, string name and counter type
+*/
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+__itt_counter ITTAPI __itt_counter_createA_v3(const __itt_domain* domain, const char* name, __itt_metadata_type type);
+__itt_counter ITTAPI __itt_counter_createW_v3(const __itt_domain* domain, const wchar_t* name, __itt_metadata_type type);
+#if defined(UNICODE) || defined(_UNICODE)
+#  define __itt_counter_create_v3     __itt_counter_createW_v3
+#  define __itt_counter_create_v3_ptr __itt_counter_createW_v3_ptr
+#else /* UNICODE */
+#  define __itt_counter_create_v3     __itt_counter_createA_v3
+#  define __itt_counter_create_v3_ptr __itt_counter_createA_v3_ptr
+#endif /* UNICODE */
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+__itt_counter ITTAPI __itt_counter_create_v3(const __itt_domain* domain, const char* name, __itt_metadata_type type);
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+ITT_STUB(ITTAPI, __itt_counter, counter_createA_v3, (const __itt_domain* domain, const char* name, __itt_metadata_type type))
+ITT_STUB(ITTAPI, __itt_counter, counter_createW_v3, (const __itt_domain* domain, const wchar_t* name, __itt_metadata_type type))
+#else  /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+ITT_STUB(ITTAPI, __itt_counter, counter_create_v3,  (const __itt_domain* domain, const char* name, __itt_metadata_type type))
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_counter_createA_v3     ITTNOTIFY_DATA(counter_createA_v3)
+#define __itt_counter_createA_v3_ptr ITTNOTIFY_NAME(counter_createA_v3)
+#define __itt_counter_createW_v3     ITTNOTIFY_DATA(counter_createW_v3)
+#define __itt_counter_createW_v3_ptr ITTNOTIFY_NAME(counter_createW_v3)
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_counter_create_v3     ITTNOTIFY_DATA(counter_create_v3)
+#define __itt_counter_create_v3_ptr ITTNOTIFY_NAME(counter_create_v3)
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_counter_createA_v3(domain, name, type) (__itt_counter)0
+#define __itt_counter_createA_v3_ptr 0
+#define __itt_counter_createW_v3(domain, name, type) (__itt_counter)0
+#define __itt_counter_create_typedW_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_counter_create_v3(domain, name, type) (__itt_counter)0
+#define __itt_counter_create_v3_ptr  0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#if ITT_PLATFORM==ITT_PLATFORM_WIN
+#define __itt_counter_createA_v3_ptr 0
+#define __itt_counter_createW_v3_ptr 0
+#else /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#define __itt_counter_create_v3_ptr  0
+#endif /* ITT_PLATFORM==ITT_PLATFORM_WIN */
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief Set the counter value api
+ */
+void ITTAPI __itt_counter_set_value_v3(__itt_counter counter, void *value_ptr);
+
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, counter_set_value_v3, (__itt_counter counter, void *value_ptr))
+#define __itt_counter_set_value_v3     ITTNOTIFY_VOID(counter_set_value_v3)
+#define __itt_counter_set_value_v3_ptr ITTNOTIFY_NAME(counter_set_value_v3)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_counter_set_value_v3(counter, value_ptr)
+#define __itt_counter_set_value_v3_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_counter_set_value_v3_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
+
+/**
+ * @brief describes the type of context metadata
+*/
+typedef enum {
+    __itt_context_unknown = 0,              /*!< Undefined type */
+    __itt_context_nameA,                    /*!< ASCII string char* type */
+    __itt_context_nameW,                    /*!< Unicode string wchar_t* type */
+    __itt_context_deviceA,                  /*!< ASCII string char* type */
+    __itt_context_deviceW,                  /*!< Unicode string wchar_t* type */
+    __itt_context_unitsA,                   /*!< ASCII string char* type */
+    __itt_context_unitsW,                   /*!< Unicode string wchar_t* type */
+    __itt_context_pci_addrA,                /*!< ASCII string char* type */
+    __itt_context_pci_addrW,                /*!< Unicode string wchar_t* type */
+    __itt_context_tid,                      /*!< Unsigned 64-bit integer type */
+    __itt_context_max_val,                  /*!< Unsigned 64-bit integer type */
+    __itt_context_bandwidth_flag,           /*!< Unsigned 64-bit integer type */
+    __itt_context_latency_flag,             /*!< Unsigned 64-bit integer type */
+    __itt_context_occupancy_flag,           /*!< Unsigned 64-bit integer type */
+    __itt_context_on_thread_flag,           /*!< Unsigned 64-bit integer type */
+    __itt_context_is_abs_val_flag,          /*!< Unsigned 64-bit integer type */
+    __itt_context_cpu_instructions_flag,    /*!< Unsigned 64-bit integer type */
+    __itt_context_cpu_cycles_flag           /*!< Unsigned 64-bit integer type */
+} __itt_context_type;
+
+#if defined(UNICODE) || defined(_UNICODE)
+#  define __itt_context_name __itt_context_nameW
+#  define __itt_context_device __itt_context_deviceW
+#  define __itt_context_units __itt_context_unitsW
+#  define __itt_context_pci_addr __itt_context_pci_addrW
+#else  /* UNICODE || _UNICODE */
+#  define __itt_context_name __itt_context_nameA
+#  define __itt_context_device __itt_context_deviceA
+#  define __itt_context_units __itt_context_unitsA
+#  define __itt_context_pci_addr __itt_context_pci_addrA
+#endif /* UNICODE || _UNICODE */
+
+/** @cond exclude_from_documentation */
+#pragma pack(push, 8)
+
+typedef struct ___itt_context_metadata
+{
+    __itt_context_type type;    /*!< Type of the context metadata value */
+    void* value;                /*!< Pointer to context metadata value itself */
+}  __itt_context_metadata;
+
+#pragma pack(pop)
+/** @endcond */
+
+/** @cond exclude_from_documentation */
+#pragma pack(push, 8)
+
+typedef struct ___itt_counter_metadata
+{
+    __itt_counter counter;              /*!< Associated context metadata counter */
+    __itt_context_type type;            /*!< Type of the context metadata value */
+    const char* str_valueA;             /*!< String context metadata value */
+#if defined(UNICODE) || defined(_UNICODE)
+    const wchar_t* str_valueW;
+#else  /* UNICODE || _UNICODE */
+    void* str_valueW;
+#endif /* UNICODE || _UNICODE */
+    unsigned long long value;           /*!< Numeric context metadata value */
+    int   extra1;                       /*!< Reserved to the runtime */
+    void* extra2;                       /*!< Reserved to the runtime */
+    struct ___itt_counter_metadata* next;
+}  __itt_counter_metadata;
+
+#pragma pack(pop)
+/** @endcond */
+
+/**
+ * @brief Bind context metadata to counter instance
+ * @param[in] counter   Pointer to the counter instance to which the context metadata is to be associated.
+ * @param[in] length    The number of elements in context metadata array.
+ * @param[in] metadata  The context metadata itself.
+*/
+void ITTAPI __itt_bind_context_metadata_to_counter(__itt_counter counter, size_t length, __itt_context_metadata* metadata);
+
+/** @cond exclude_from_documentation */
+#ifndef INTEL_NO_MACRO_BODY
+#ifndef INTEL_NO_ITTNOTIFY_API
+ITT_STUBV(ITTAPI, void, bind_context_metadata_to_counter, (__itt_counter counter, size_t length, __itt_context_metadata* metadata))
+#define __itt_bind_context_metadata_to_counter     ITTNOTIFY_VOID(bind_context_metadata_to_counter)
+#define __itt_bind_context_metadata_to_counter_ptr ITTNOTIFY_NAME(bind_context_metadata_to_counter)
+#else  /* INTEL_NO_ITTNOTIFY_API */
+#define __itt_bind_context_metadata_to_counter(counter, length, metadata)
+#define __itt_bind_context_metadata_to_counter_ptr 0
+#endif /* INTEL_NO_ITTNOTIFY_API */
+#else  /* INTEL_NO_MACRO_BODY */
+#define __itt_bind_context_metadata_to_counter_ptr 0
+#endif /* INTEL_NO_MACRO_BODY */
+/** @endcond */
 
 #ifdef __cplusplus
 }
@@ -4005,7 +4547,7 @@ ITT_STUB(ITTAPI, __itt_caller, stack_caller_create, (void))
 /** @endcond */
 
 /**
- * @brief Destroy the inforamtion about stitch point identified by the pointer previously returned by __itt_stack_caller_create()
+ * @brief Destroy the information about stitch point identified by the pointer previously returned by __itt_stack_caller_create()
  */
 void ITTAPI __itt_stack_caller_destroy(__itt_caller id);
 

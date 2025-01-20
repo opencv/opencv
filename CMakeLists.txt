@@ -1722,7 +1722,7 @@ endif()
 
 if(CV_TRACE OR OPENCV_TRACE)
   ocv_build_features_string(trace_status EXCLUSIVE
-    IF HAVE_ITT THEN "with Intel ITT"
+    IF HAVE_ITT THEN "with Intel ITT(${ITTNOTIFY_VERSION})"
     ELSE "built-in")
   status("")
   status("  Trace: " OPENCV_TRACE THEN "YES (${trace_status})" ELSE NO)
