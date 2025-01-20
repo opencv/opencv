@@ -411,6 +411,32 @@ TEST_P(Objdetect_QRCode_detectMulti, detect_regression_16961)
     EXPECT_EQ(corners.size(), expect_corners_size);
 }
 
+typedef testing::TestWithParam<std::string> Objdetect_QRCode_detectMulti;
+TEST_P(Objdetect_QRCode_detectMulti, detect_none_26642)
+{
+    const std::string method = GetParam();
+    const std::string name_current_image = "issue_26642.jpg";
+    const std::string root = "qrcode/";
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat src = imread(image_path);
+    ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+    GraphicalCodeDetector detector = QRCodeDetector();
+    if (method == "aruco_based") {
+        detector = QRCodeDetectorAruco();
+    }
+    std::vector<Point> corners;
+
+    auto start = std::chrono::system_clock::now();
+    bool retval = detector.detectMulti(src, corners);
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsedTime = end - start;
+
+    EXPECT_LT(elapsedTime.count(), 15.0);
+    EXPECT_EQ((int)corners.size(), 0);
+    ASSERT_FALSE(retval);
+}
+
+
 INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_detectMulti, testing::Values("contours_based", "aruco_based"));
 typedef testing::TestWithParam<std::string> Objdetect_QRCode_detectAndDecodeMulti;
 TEST_P(Objdetect_QRCode_detectAndDecodeMulti, check_output_parameters_type_19363)
