@@ -1682,6 +1682,83 @@ transform_32f( const float* src, float* dst, const float* m, int len, int scn, i
 static void
 transform_8s(const schar* src, schar* dst, const float* m, int len, int scn, int dcn)
 {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int BITS = 10, SCALE = 1 << BITS;
+    const float MAX_M = (float)(1 << (15 - BITS));
+
+    if( scn == 3 && dcn == 3 &&
+        std::abs(m[0]) < MAX_M && std::abs(m[1]) < MAX_M && std::abs(m[ 2]) < MAX_M*256 && std::abs(m[ 3]) < MAX_M*256 &&
+        std::abs(m[4]) < MAX_M && std::abs(m[5]) < MAX_M && std::abs(m[ 6]) < MAX_M*256 && std::abs(m[ 7]) < MAX_M*256 &&
+        std::abs(m[8]) < MAX_M && std::abs(m[9]) < MAX_M && std::abs(m[10]) < MAX_M*256 && std::abs(m[11]) < MAX_M*256 )
+    {
+        const int nChannels = 3;
+
+        union {
+            short s[6];
+            int p[3];
+        } m16;
+        m16.s[0] = saturate_cast<short>(m[0] * SCALE); m16.s[1] = saturate_cast<short>(m[1] * SCALE);
+        m16.s[2] = saturate_cast<short>(m[4] * SCALE); m16.s[3] = saturate_cast<short>(m[5] * SCALE);
+        m16.s[4] = saturate_cast<short>(m[8] * SCALE); m16.s[5] = saturate_cast<short>(m[9] * SCALE);
+        int m32[] = {saturate_cast<int>(m[ 2] * SCALE), saturate_cast<int>(m[ 3] * SCALE),
+                     saturate_cast<int>(m[ 6] * SCALE), saturate_cast<int>(m[ 7] * SCALE),
+                     saturate_cast<int>(m[10] * SCALE), saturate_cast<int>(m[11] * SCALE)};
+        v_int16 m01 = v_reinterpret_as_s16(vx_setall_s32(m16.p[0]));
+        v_int32 m2 = vx_setall_s32(m32[0]);
+        v_int32 m3 = vx_setall_s32(m32[1]);
+        v_int16 m45 = v_reinterpret_as_s16(vx_setall_s32(m16.p[1]));
+        v_int32 m6 = vx_setall_s32(m32[2]);
+        v_int32 m7 = vx_setall_s32(m32[3]);
+        v_int16 m89 = v_reinterpret_as_s16(vx_setall_s32(m16.p[2]));
+        v_int32 m10 = vx_setall_s32(m32[4]);
+        v_int32 m11 = vx_setall_s32(m32[5]);
+        int x = 0;
+        for (; x <= (len - VTraits<v_int8>::vlanes()) * nChannels; x += VTraits<v_int8>::vlanes() * nChannels)
+        {
+            v_int8 b, g, r;
+            v_load_deinterleave(src + x, b, g, r);
+            v_int8 bgl, bgh;
+            v_zip(b, g, bgl, bgh);
+            v_int16 rl, rh;
+            v_expand(r, rl, rh);
+
+            v_int16 dbl, dbh, dgl, dgh, drl, drh;
+            v_int16 p0, p2;
+            v_int32 p1, p3;
+            v_expand(bgl, p0, p2);
+            v_expand(v_reinterpret_as_s16(rl), p1, p3);
+            dbl = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(p0, m01), v_mul(p1, m2)), m3),
+                                    v_add(v_add(v_dotprod(p2, m01), v_mul(p3, m2)), m3));
+            dgl = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(p0, m45), v_mul(p1, m6)), m7),
+                                    v_add(v_add(v_dotprod(p2, m45), v_mul(p3, m6)), m7));
+            drl = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(p0, m89), v_mul(p1, m10)), m11),
+                                    v_add(v_add(v_dotprod(p2, m89), v_mul(p3, m10)), m11));
+            v_expand(bgh, p0, p2);
+            v_expand(v_reinterpret_as_s16(rh), p1, p3);
+            dbh = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(p0, m01), v_mul(p1, m2)), m3),
+                                    v_add(v_add(v_dotprod(p2, m01), v_mul(p3, m2)), m3));
+            dgh = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(p0, m45), v_mul(p1, m6)), m7),
+                                    v_add(v_add(v_dotprod(p2, m45), v_mul(p3, m6)), m7));
+            drh = v_rshr_pack<BITS>(v_add(v_add(v_dotprod(p0, m89), v_mul(p1, m10)), m11),
+                                    v_add(v_add(v_dotprod(p2, m89), v_mul(p3, m10)), m11));
+            v_store_interleave(dst + x, v_pack(dbl, dbh), v_pack(dgl, dgh), v_pack(drl, drh));
+        }
+        m32[1] = saturate_cast<int>((m[3] + 0.5f)*SCALE);
+        m32[3] = saturate_cast<int>((m[7] + 0.5f)*SCALE);
+        m32[5] = saturate_cast<int>((m[11] + 0.5f)*SCALE);
+        for( ; x < len * nChannels; x += nChannels )
+        {
+            int v0 = src[x], v1 = src[x+1], v2 = src[x+2];
+            schar t0 = saturate_cast<schar>((m16.s[0] * v0 + m16.s[1] * v1 + m32[0] * v2 + m32[1]) >> BITS);
+            schar t1 = saturate_cast<schar>((m16.s[2] * v0 + m16.s[3] * v1 + m32[2] * v2 + m32[3]) >> BITS);
+            schar t2 = saturate_cast<schar>((m16.s[4] * v0 + m16.s[5] * v1 + m32[4] * v2 + m32[5]) >> BITS);
+            dst[x] = t0; dst[x+1] = t1; dst[x+2] = t2;
+        }
+        vx_cleanup();
+        return;
+    }
+#endif
+
     transform_(src, dst, m, len, scn, dcn);
 }
 
