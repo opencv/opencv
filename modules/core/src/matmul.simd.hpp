@@ -1765,6 +1765,53 @@ transform_8s(const schar* src, schar* dst, const float* m, int len, int scn, int
 static void
 transform_16s(const short* src, short* dst, const float* m, int len, int scn, int dcn)
 {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if (scn == 3 && dcn == 3) {
+        int x = 0;
+
+        v_float32 m0  = vx_setall_f32(m[ 0]);
+        v_float32 m1  = vx_setall_f32(m[ 1]);
+        v_float32 m2  = vx_setall_f32(m[ 2]);
+        v_float32 m3  = vx_setall_f32(m[ 3]);
+        v_float32 m4  = vx_setall_f32(m[ 4]);
+        v_float32 m5  = vx_setall_f32(m[ 5]);
+        v_float32 m6  = vx_setall_f32(m[ 6]);
+        v_float32 m7  = vx_setall_f32(m[ 7]);
+        v_float32 m8  = vx_setall_f32(m[ 8]);
+        v_float32 m9  = vx_setall_f32(m[ 9]);
+        v_float32 m10 = vx_setall_f32(m[10]);
+        v_float32 m11 = vx_setall_f32(m[11]);
+        for (; x <= (len - VTraits<v_int16>::vlanes())*3; x +=  VTraits<v_int16>::vlanes()*3)
+        {
+            v_int16 b, g, r;
+            v_load_deinterleave(src + x, b, g, r);
+            v_int32 bl, bh, gl, gh, rl, rh;
+            v_expand(b, bl, bh);
+            v_expand(g, gl, gh);
+            v_expand(r, rl, rh);
+
+            v_int16 db, dg, dr;
+            db = v_pack(v_round(v_muladd(v_cvt_f32(bl), m0, v_muladd(v_cvt_f32(gl), m1, v_muladd(v_cvt_f32(rl),  m2,  m3)))),
+                        v_round(v_muladd(v_cvt_f32(bh), m0, v_muladd(v_cvt_f32(gh), m1, v_muladd(v_cvt_f32(rh),  m2,  m3)))));
+            dg = v_pack(v_round(v_muladd(v_cvt_f32(bl), m4, v_muladd(v_cvt_f32(gl), m5, v_muladd(v_cvt_f32(rl),  m6,  m7)))),
+                        v_round(v_muladd(v_cvt_f32(bh), m4, v_muladd(v_cvt_f32(gh), m5, v_muladd(v_cvt_f32(rh),  m6,  m7)))));
+            dr = v_pack(v_round(v_muladd(v_cvt_f32(bl), m8, v_muladd(v_cvt_f32(gl), m9, v_muladd(v_cvt_f32(rl), m10, m11)))),
+                        v_round(v_muladd(v_cvt_f32(bh), m8, v_muladd(v_cvt_f32(gh), m9, v_muladd(v_cvt_f32(rh), m10, m11)))));
+            v_store_interleave(dst + x, db, dg, dr);
+        }
+        for( ; x < len * 3; x += 3 )
+        {
+            float v0 = src[x], v1 = src[x + 1], v2 = src[x + 2];
+            short t0 = saturate_cast<short>(m[0] * v0 + m[1] * v1 + m[ 2] * v2 + m[ 3]);
+            short t1 = saturate_cast<short>(m[4] * v0 + m[5] * v1 + m[ 6] * v2 + m[ 7]);
+            short t2 = saturate_cast<short>(m[8] * v0 + m[9] * v1 + m[10] * v2 + m[11]);
+            dst[x] = t0; dst[x + 1] = t1; dst[x + 2] = t2;
+        }
+        vx_cleanup();
+        return;
+    }
+#endif
+
     transform_(src, dst, m, len, scn, dcn);
 }
 
