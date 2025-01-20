@@ -755,6 +755,9 @@ if(UNIX OR MINGW)
     # TODO:
     # - std::aligned_alloc() C++17 / C11
   endif()
+
+  CHECK_SYMBOL_EXISTS(getauxval sys/auxv.h HAVE_GETAUXVAL)
+  CHECK_SYMBOL_EXISTS(elf_aux_info sys/auxv.h HAVE_ELF_AUX_INFO)
 elseif(WIN32)
   include(CheckIncludeFile)
   include(CheckSymbolExists)

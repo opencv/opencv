@@ -151,7 +151,7 @@ const uint64_t AT_HWCAP = NT_GNU_HWCAP;
 #endif
 
 
-#if (defined __ppc64__ || defined __PPC64__) && defined __unix__
+#if ((defined __ppc64__ || defined __PPC64__) && (defined HAVE_GETAUXVAL || defined HAVE_ELF_AUX_INFO))
 # include "sys/auxv.h"
 # ifndef AT_HWCAP2
 #   define AT_HWCAP2 26
@@ -686,7 +686,7 @@ struct HWFeatures
         have[CV_CPU_MSA] = true;
     #endif
 
-    #if (defined __ppc64__ || defined __PPC64__) && defined __linux__
+    #if (defined __ppc64__ || defined __PPC64__) && defined HAVE_GETAUXVAL
         unsigned int hwcap = getauxval(AT_HWCAP);
         if (hwcap & PPC_FEATURE_HAS_VSX) {
             hwcap = getauxval(AT_HWCAP2);
@@ -696,7 +696,7 @@ struct HWFeatures
                 have[CV_CPU_VSX] = (hwcap & PPC_FEATURE2_ARCH_2_07) != 0;
             }
         }
-    #elif (defined __ppc64__ || defined __PPC64__) && defined __FreeBSD__
+    #elif (defined __ppc64__ || defined __PPC64__) && defined HAVE_ELF_AUX_INFO
         unsigned long hwcap = 0;
         elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
         if (hwcap & PPC_FEATURE_HAS_VSX) {
@@ -708,7 +708,7 @@ struct HWFeatures
             }
         }
     #else
-        // TODO: AIX, OpenBSD
+        // TODO: AIX
         #if CV_VSX || defined _ARCH_PWR8 || defined __POWER9_VECTOR__
             have[CV_CPU_VSX] = true;
         #endif
