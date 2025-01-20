@@ -25,6 +25,16 @@ void PrintTo(const ImreadModes& val, std::ostream* os)
         v &= ~IMREAD_COLOR;
         *os << "IMREAD_COLOR" << (v == 0 ? "" : " | ");
     }
+    else if ((v & IMREAD_COLOR_RGB) != 0)
+    {
+        CV_Assert(IMREAD_COLOR_RGB == 256);
+        v &= ~IMREAD_COLOR_RGB;
+        *os << "IMREAD_COLOR_RGB" << (v == 0 ? "" : " | ");
+    }
+    else if ((v & IMREAD_ANYCOLOR) != 0)
+    {
+        // Do nothing
+    }
     else
     {
         CV_Assert(IMREAD_GRAYSCALE == 0);
@@ -49,11 +59,6 @@ void PrintTo(const ImreadModes& val, std::ostream* os)
     {
         v &= ~IMREAD_IGNORE_ORIENTATION;
         *os << "IMREAD_IGNORE_ORIENTATION" << (v == 0 ? "" : " | ");
-    }
-    if ((v & IMREAD_COLOR_RGB) != 0)
-    {
-        v &= ~IMREAD_COLOR_RGB;
-        *os << "IMREAD_COLOR_RGB" << (v == 0 ? "" : " | ");
     }
     switch (v)
     {
