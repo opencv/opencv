@@ -139,7 +139,7 @@ bool JpegXLDecoder::read(Mat& img)
         m_format = {
             dcn,
             JXL_TYPE_UINT8, // (temporary)
-            JXL_LITTLE_ENDIAN, // endianness
+            JXL_NATIVE_ENDIAN, // endianness
             0 // align stride to bytes
         };
         switch (depth) {
