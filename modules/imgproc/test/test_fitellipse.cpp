@@ -102,4 +102,15 @@ TEST(Imgproc_FitEllipse_JavaCase, accuracy) {
     EXPECT_NEAR(e.size.height, sqrt(2.)*2, 0.4);
 }
 
+TEST(Imgproc_FitEllipse_HorizontalLine, accuracy) {
+    vector<Point2f> pts({{-300, 100}, {-200, 100}, {-100, 100}, {0, 100}, {100, 100}, {200, 100}, {300, 100}});
+    const RotatedRect el = fitEllipse(pts);
+
+    EXPECT_NEAR(el.center.x, -100, 100);
+    EXPECT_NEAR(el.center.y, 100, 1);
+    EXPECT_NEAR(el.size.width, 1, 1);
+    EXPECT_GE(el.size.height, 150);
+    EXPECT_NEAR(el.angle, 90, 0.1);
+}
+
 }} // namespace
