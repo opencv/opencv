@@ -440,6 +440,11 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
     }
     SVBackSubst(w, u, vt, b, x);
 
+    const bool is_ellipse = 4.0 * gfp[0] * gfp[1] - gfp[2] * gfp[2] > min_eps;
+    if (!is_ellipse) {
+        return fitEllipseDirect(points);
+    }
+
     // now use general-form parameters A - E to find the ellipse center:
     // differentiate general form wrt x/y to get two equations for cx and cy
     A = Mat( 2, 2, CV_64F, Ad );
