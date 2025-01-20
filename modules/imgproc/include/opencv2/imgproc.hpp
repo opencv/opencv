@@ -4855,6 +4855,10 @@ example.
 @param org Bottom-left corner of the text string in the image.
 @param fontFace Font type, see #HersheyFonts.
 @param fontScale Font scale factor that is multiplied by the font-specific base size.
+                   - When `fontScale > 1`, the text is magnified.
+                   - When `0 < fontScale < 1`, the text is reduced.
+                   - When `fontScale < 0`, the text is mirrored or reversed.
+
 @param color Text color.
 @param thickness Thickness of the lines used to draw a text.
 @param lineType Line type. See #LineTypes
