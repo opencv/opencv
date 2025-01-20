@@ -412,7 +412,8 @@ bool  PngDecoder::readData( Mat& img )
 
         frameCur.setMat(mat_cur);
 
-        processing_start((void*)&frameRaw, mat_cur);
+        if (!processing_start((void*)&frameRaw, mat_cur))
+            return false;
         png_structp png_ptr = m_png_ptrs.getPng();
         png_infop info_ptr = m_png_ptrs.getInfo();
 
@@ -721,9 +722,9 @@ bool PngDecoder::processing_start(void* frame_ptr, const Mat& img)
 {
     static uint8_t header[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
 
-    PngPtrs png_ptrs;
-    png_structp png_ptr = png_ptrs.getPng();
-    png_infop info_ptr = png_ptrs.getInfo();
+    m_png_ptrs = PngPtrs();
+    png_structp png_ptr = m_png_ptrs.getPng();
+    png_infop info_ptr = m_png_ptrs.getInfo();
 
     if (!png_ptr || !info_ptr) {
         return false;
@@ -734,7 +735,6 @@ bool PngDecoder::processing_start(void* frame_ptr, const Mat& img)
         return false;
     }
 
-    m_png_ptrs = std::move(png_ptrs);
     png_set_crc_action(png_ptr, PNG_CRC_QUIET_USE, PNG_CRC_QUIET_USE);
     png_set_progressive_read_fn(png_ptr, frame_ptr, (png_progressive_info_ptr)info_fn, row_fn, NULL);
 
