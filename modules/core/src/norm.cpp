@@ -631,7 +631,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
     else if( src.isContinuous() && mask.isContinuous() )
     {
         double result;
-        CALL_HAL_RET(norm, cv_hal_norm, result, src.data, 0, mask.data, 0, src.total(), 1, src.type(), normType);
+        CALL_HAL_RET(norm, cv_hal_norm, result, src.data, 0, mask.data, 0, (int)src.total(), 1, src.type(), normType);
     }
     if( src.isContinuous() && mask.empty() )
     {
@@ -1120,7 +1120,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
     else if( src1.isContinuous() && src2.isContinuous() && mask.isContinuous() )
     {
         double result;
-        CALL_HAL_RET(normDiff, cv_hal_normDiff, result, src1.data, 0, src2.data, 0, mask.data, 0, src1.total(), 1, src1.type(), normType);
+        CALL_HAL_RET(normDiff, cv_hal_normDiff, result, src1.data, 0, src2.data, 0, mask.data, 0, (int)src1.total(), 1, src1.type(), normType);
     }
     if( src1.isContinuous() && src2.isContinuous() && mask.empty() )
     {
