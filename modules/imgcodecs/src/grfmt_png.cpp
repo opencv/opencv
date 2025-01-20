@@ -380,7 +380,7 @@ bool  PngDecoder::readHeader()
 
     if(result)
     {
-        png_ptrs.moveTo(m_png_ptrs);
+        m_png_ptrs = std::move(png_ptrs);
     }
 
     return result;
@@ -734,7 +734,7 @@ bool PngDecoder::processing_start(void* frame_ptr, const Mat& img)
         return false;
     }
 
-    png_ptrs.moveTo(m_png_ptrs);
+    m_png_ptrs = std::move(png_ptrs);
     png_set_crc_action(png_ptr, PNG_CRC_QUIET_USE, PNG_CRC_QUIET_USE);
     png_set_progressive_read_fn(png_ptr, frame_ptr, (png_progressive_info_ptr)info_fn, row_fn, NULL);
 
