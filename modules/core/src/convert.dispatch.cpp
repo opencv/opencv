@@ -283,11 +283,11 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
 
     if( dims <= 2 )
     {
-        CALL_HAL(convertScale, cv_hal_convertScale, data, step, dstMat.data, dstMat.step, cols * cn, rows, sdepth, ddepth, alpha, beta);
+        CALL_HAL(convertScale, cv_hal_convertScale, src.data, src.step, dstMat.data, dstMat.step, src.cols * cn, src.rows, sdepth, ddepth, alpha, beta);
     }
     else if( isContinuous() && dstMat.isContinuous() )
     {
-        CALL_HAL(convertScale, cv_hal_convertScale, data, 0, dstMat.data, 0, (int)total() * cn, 1, sdepth, ddepth, alpha, beta);
+        CALL_HAL(convertScale, cv_hal_convertScale, src.data, 0, dstMat.data, 0, (int)src.total() * cn, 1, sdepth, ddepth, alpha, beta);
     }
 
     BinaryFunc func = noScale ? getConvertFunc(sdepth, ddepth) : getConvertScaleFunc(sdepth, ddepth);
