@@ -1869,6 +1869,45 @@ transform_32s(const int* src, int* dst, const double* m, int len, int scn, int d
 static void
 transform_64f(const double* src, double* dst, const double* m, int len, int scn, int dcn)
 {
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    if( scn == 3 && dcn == 3) {
+        int x = 0;
+
+        v_float64 m0  = vx_setall_f64(m[ 0]);
+        v_float64 m1  = vx_setall_f64(m[ 1]);
+        v_float64 m2  = vx_setall_f64(m[ 2]);
+        v_float64 m3  = vx_setall_f64(m[ 3]);
+        v_float64 m4  = vx_setall_f64(m[ 4]);
+        v_float64 m5  = vx_setall_f64(m[ 5]);
+        v_float64 m6  = vx_setall_f64(m[ 6]);
+        v_float64 m7  = vx_setall_f64(m[ 7]);
+        v_float64 m8  = vx_setall_f64(m[ 8]);
+        v_float64 m9  = vx_setall_f64(m[ 9]);
+        v_float64 m10 = vx_setall_f64(m[10]);
+        v_float64 m11 = vx_setall_f64(m[11]);
+        for (; x <= (len - VTraits<v_float64>::vlanes()) * 3; x += VTraits<v_float64>::vlanes() * 3) {
+            v_float64 b, g, r;
+            v_load_deinterleave(src + x, b, g, r);
+
+            v_float64 db, dg, dr;
+            db = v_fma(b, m0, v_fma(g, m1, v_fma(r,  m2,  m3)));
+            dg = v_fma(b, m4, v_fma(g, m5, v_fma(r,  m6,  m7)));
+            dr = v_fma(b, m8, v_fma(g, m9, v_fma(r, m10, m11)));
+
+            v_store_interleave(dst + x, db, dg, dr);
+        }
+        for (; x < len * 3; x += 3) {
+            double b = src[x], g = src[x + 1], r = src[x + 2];
+            double db = saturate_cast<double>(m[0] * b + m[1] * g + m[ 2] * r + m[ 3]);
+            double dg = saturate_cast<double>(m[4] * b + m[5] * g + m[ 6] * r + m[ 7]);
+            double dr = saturate_cast<double>(m[8] * b + m[9] * g + m[10] * r + m[11]);
+            dst[x] = db; dst[x + 1] = dg; dst[x + 2] = dr;
+        }
+        vx_cleanup();
+        return;
+    }
+#endif
+
     transform_(src, dst, m, len, scn, dcn);
 }
 
