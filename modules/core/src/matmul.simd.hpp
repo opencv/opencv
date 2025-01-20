@@ -1818,6 +1818,51 @@ transform_16s(const short* src, short* dst, const float* m, int len, int scn, in
 static void
 transform_32s(const int* src, int* dst, const double* m, int len, int scn, int dcn)
 {
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    if( scn == 3 && dcn == 3) {
+        int x = 0;
+
+        v_float64 m0  = vx_setall_f64(m[ 0]);
+        v_float64 m1  = vx_setall_f64(m[ 1]);
+        v_float64 m2  = vx_setall_f64(m[ 2]);
+        v_float64 m3  = vx_setall_f64(m[ 3]);
+        v_float64 m4  = vx_setall_f64(m[ 4]);
+        v_float64 m5  = vx_setall_f64(m[ 5]);
+        v_float64 m6  = vx_setall_f64(m[ 6]);
+        v_float64 m7  = vx_setall_f64(m[ 7]);
+        v_float64 m8  = vx_setall_f64(m[ 8]);
+        v_float64 m9  = vx_setall_f64(m[ 9]);
+        v_float64 m10 = vx_setall_f64(m[10]);
+        v_float64 m11 = vx_setall_f64(m[11]);
+        for (; x <= (len - VTraits<v_int32>::vlanes()) * 3; x += VTraits<v_int32>::vlanes() * 3) {
+            v_int32 b, g, r;
+            v_load_deinterleave(src + x, b, g, r);
+            v_float64 bh = v_cvt_f64_high(b), bl = v_cvt_f64(b);
+            v_float64 gh = v_cvt_f64_high(g), gl = v_cvt_f64(g);
+            v_float64 rh = v_cvt_f64_high(r), rl = v_cvt_f64(r);
+
+            v_int32 db, dg, dr;
+            db = v_round(v_fma(bl, m0, v_fma(gl, m1, v_fma(rl,  m2,  m3))),
+                         v_fma(bh, m0, v_fma(gh, m1, v_fma(rh,  m2,  m3))));
+            dg = v_round(v_fma(bl, m4, v_fma(gl, m5, v_fma(rl,  m6,  m7))),
+                         v_fma(bh, m4, v_fma(gh, m5, v_fma(rh,  m6,  m7))));
+            dr = v_round(v_fma(bl, m8, v_fma(gl, m9, v_fma(rl, m10, m11))),
+                         v_fma(bh, m8, v_fma(gh, m9, v_fma(rh, m10, m11))));
+
+            v_store_interleave(dst + x, db, dg, dr);
+        }
+        for (; x < len * 3; x += 3) {
+            double b = src[x], g = src[x + 1], r = src[x + 2];
+            int db = saturate_cast<int>(m[0] * b + m[1] * g + m[ 2] * r + m[ 3]);
+            int dg = saturate_cast<int>(m[4] * b + m[5] * g + m[ 6] * r + m[ 7]);
+            int dr = saturate_cast<int>(m[8] * b + m[9] * g + m[10] * r + m[11]);
+            dst[x] = db; dst[x + 1] = dg; dst[x + 2] = dr;
+        }
+        vx_cleanup();
+        return;
+    }
+#endif
+
     transform_(src, dst, m, len, scn, dcn);
 }
 
