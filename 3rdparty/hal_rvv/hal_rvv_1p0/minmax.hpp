@@ -10,6 +10,8 @@ namespace cv { namespace cv_hal_rvv {
 
 #undef cv_hal_minMaxIdx
 #define cv_hal_minMaxIdx cv::cv_hal_rvv::minMaxIdx
+#undef cv_hal_minMaxIdxMaskStep
+#define cv_hal_minMaxIdxMaskStep cv::cv_hal_rvv::minMaxIdx
 
 #define HAL_RVV_MINMAXIDX_READTWICE_GENERATOR(D_TYPE, V_TYPE, EEW, EMUL, IS_U, IS_F, F_OR_X, F_OR_S, M_EMUL) \
 inline int minMaxIdx_##V_TYPE(const uchar* src_data, size_t src_step, int width, int height, double* minVal, double* maxVal, \
@@ -261,8 +263,11 @@ HAL_RVV_MINMAXIDX_READONCE_GENERATOR(double, f64, e64, m4, , f, f, f, mf2, m2)
 #undef HAL_RVV_MINMAXIDX_READONCE_GENERATOR
 
 inline int minMaxIdx(const uchar* src_data, size_t src_step, int width, int height, int depth, double* minVal, double* maxVal,
-                     int* minIdx, int* maxIdx, uchar* mask, size_t mask_step)
+                     int* minIdx, int* maxIdx, uchar* mask, size_t mask_step = 0)
 {
+    if (!mask_step)
+        mask_step = src_step;
+
     switch (depth)
     {
     case CV_8UC1:
