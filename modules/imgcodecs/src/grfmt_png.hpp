@@ -134,10 +134,10 @@ protected:
     static void readDataFromBuf(void* png_ptr, uchar* dst, size_t size);
     static void info_fn(png_structp png_ptr, png_infop info_ptr);
     static void row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass);
-    bool processing_start(void* frame_ptr, const Mat& img);
-    bool processing_finish();
+    CV_NODISCARD_STD bool processing_start(void* frame_ptr, const Mat& img);
+    CV_NODISCARD_STD bool processing_finish();
     void compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, Mat& img);
-    bool read_from_io(void* buffer, size_t num_bytes);
+    CV_NODISCARD_STD bool read_from_io(void* buffer, size_t num_bytes);
     uint32_t  read_chunk(Chunk& chunk);
 
     struct PngPtrs {
