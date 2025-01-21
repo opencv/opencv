@@ -90,6 +90,25 @@ static int convert_to_char(PyObject *o, char *dst, const ArgInfo& info)
 #include "pyopencv_generated_types_content.h"
 #include "pyopencv_generated_funcs.h"
 
+PyObject* pycv_imread(PyObject* , PyObject* args, PyObject* kwargs) {
+    const char* filename = NULL;
+    int flags = IMREAD_COLOR;  // Default flag
+    if (!PyArg_ParseTuple(args, "s|i", &filename, &flags))
+    {
+        return NULL;  // Return None on error
+    }
+
+    Mat img = imread(filename, flags);
+    if (img.empty())
+    {
+        // Return None if the image couldn't be read
+        Py_RETURN_NONE;
+    }
+
+    // Return the image as a Python object
+    return pyopencv_from(img);
+}
+
 static PyObject* pycvRegisterMatType(PyObject *self, PyObject *value)
 {
     CV_LOG_DEBUG(NULL, cv::format("pycvRegisterMatType %p %p\n", self, value));
