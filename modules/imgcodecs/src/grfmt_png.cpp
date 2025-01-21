@@ -248,6 +248,9 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, unsigned char* dst, size_t si
 
 bool  PngDecoder::readHeader()
 {
+    // Declare dynamic variables before a potential longjmp.
+    Chunk chunk;
+
     if (!InitPngPtr())
         return false;
 
@@ -257,7 +260,6 @@ bool  PngDecoder::readHeader()
     m_buf_pos = 0;
     unsigned char sig[8];
     uint32_t id = 0;
-    Chunk chunk;
 
     if( !m_buf.empty() )
         png_set_read_fn(m_png_ptr, this, (png_rw_ptr)readDataFromBuf );
@@ -283,9 +285,9 @@ bool  PngDecoder::readHeader()
         return false;
     }
 
+    m_is_fcTL_loaded = false;
     while (true)
     {
-        m_is_fcTL_loaded = false;
         id = read_chunk(chunk);
 
         if (!id || (m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
@@ -368,6 +370,9 @@ bool  PngDecoder::readHeader()
     m_color_type = color_type;
     m_bit_depth = bit_depth;
 
+    if (m_is_fcTL_loaded && (int(x0 + w0) > m_width || int(y0 + h0) > m_height || dop > 2 || bop > 1))
+        return false;
+
     if (bit_depth <= 8 || bit_depth == 16)
     {
         switch (color_type)
@@ -396,6 +401,10 @@ bool  PngDecoder::readHeader()
 
 bool  PngDecoder::readData( Mat& img )
 {
+    // Declare dynamic variables before a potential longjmp.
+    AutoBuffer<unsigned char*> _buffer(m_height);
+    Chunk chunk;
+
     if (m_frame_count > 1)
     {
         Mat mat_cur = Mat::zeros(img.rows, img.cols, m_type);
@@ -428,7 +437,6 @@ bool  PngDecoder::readData( Mat& img )
 
         while (true)
         {
-            Chunk chunk;
             id = read_chunk(chunk);
             if (!id)
                 return false;
@@ -529,7 +537,6 @@ bool  PngDecoder::readData( Mat& img )
     }
 
     volatile bool result = false;
-    AutoBuffer<unsigned char*> _buffer(m_height);
     unsigned char** buffer = _buffer.data();
     bool color = img.channels() > 1;
 
