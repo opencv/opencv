@@ -34,7 +34,7 @@ def help():
         Firstly, download required models i.e. lama using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 
         To run:
-        Example: python inpainting.py lama
+        Example: python inpainting.py [--input=<image_name>]
 
         Inpainting model path can also be specified using --model argument.
         '''
@@ -45,6 +45,7 @@ def keyboard_shorcuts():
     Keyboard Shorcuts:
         Press 'i' to increase brush size.
         Press 'd' to decrease brush size.
+        Press 'r' to reset mask.
         Press ' ' (space bar) after selecting area to be inpainted.
         Press ESC to terminate the program.
     '''
@@ -57,7 +58,7 @@ def get_args_parser():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
-    parser.add_argument('--input', '-i', default="baboon.jpg", help='Path to image file.', required=False)
+    parser.add_argument('--input', '-i', default="rubberwhale1.png", help='Path to image file.', required=False)
     parser.add_argument('--backend', default="default", type=str, choices=backends,
             help="Choose one of computation backends: "
             "default: automatically (by default), "
@@ -119,74 +120,77 @@ def main():
     net.setPreferableTarget(get_target_id(args.target))
 
     input_image = cv.imread(findFile(args.input))
-    mask_gray = np.zeros((input_image.shape[0], input_image.shape[1]), dtype=np.uint8)
+    aspect_ratio = input_image.shape[0]/input_image.shape[1]
+    height = int(args.width*aspect_ratio)
 
+    input_image = cv.resize(input_image, (args.width, height))
+    image = input_image.copy()
+    keyboard_shorcuts()
 
-    stdSize = 0.6
+    stdSize = 0.7
     stdWeight = 2
     stdImgSize = 512
     imgWidth = min(input_image.shape[:2])
     fontSize = min(1.5, (stdSize*imgWidth)/stdImgSize)
     fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
-    aspect_ratio = input_image.shape[0]/input_image.shape[1]
 
-
-    keyboard_shorcuts()
-    cv.namedWindow("Draw Mask")
-    cv.setMouseCallback("Draw Mask", draw_mask)
-
-    label = "Draw the mask on the image. Press space bar when done."
+    label = "Press 'i' to increase, 'd' to decrease brush size. And 'r' to reset mask. "
     labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
+    alpha = 0.5
+
     while True:
-        display_image = input_image.copy()
-        overlay = input_image.copy()
+        mask_gray = np.zeros((input_image.shape[0], input_image.shape[1]), dtype=np.uint8)
 
-        alpha = 0.5
-        cv.rectangle(overlay, (0, 0), (labelSize[0]+10, labelSize[1]+int(30*fontSize)), (255, 255, 255), cv.FILLED)
-        cv.addWeighted(overlay, alpha, display_image, 1 - alpha, 0, display_image)
+        cv.namedWindow("Draw Mask")
+        cv.setMouseCallback("Draw Mask", draw_mask)
 
-        cv.putText(display_image, label, (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
-        cv.putText(display_image, "Press 'i' to increase and 'd' to decrease brush size.", (10, int(50*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
-        display_image[mask_gray > 0] = [255, 255, 255]
-        cv.imshow("Draw Mask", display_image)
+        while True:
+            display_image = input_image.copy()
+            overlay = input_image.copy()
 
-        key = cv.waitKey(1) & 0xFF
-        if key == ord('i'):  # Increase brush size
-            brush_size += 1
-            print(f"Brush size increased to {brush_size}")
-        elif key == ord('d'):  # Decrease brush size
-            brush_size = max(1, brush_size - 1)
-            print(f"Brush size decreased to {brush_size}")
-        elif key == ord(' '): # Press space bar to finish drawing
-            break
-        elif key == 27:
-            exit()
+            cv.rectangle(overlay, (0, 0), (labelSize[0]+10, labelSize[1]+int(30*fontSize)), (255, 255, 255), cv.FILLED)
+            cv.addWeighted(overlay, alpha, display_image, 1 - alpha, 0, display_image)
 
-    cv.destroyAllWindows()
+            cv.putText(display_image, "Draw the mask on the image. Press space bar when done.", (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+            cv.putText(display_image, label, (10, int(50*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+            display_image[mask_gray > 0] = [255, 255, 255]
+            cv.imshow("Draw Mask", display_image)
 
-    print("Processing image...")
-    image_blob = cv.dnn.blobFromImage(input_image, args.scale, (args.width, args.height), args.mean, args.rgb, False)
-    mask_blob = cv.dnn.blobFromImage(mask_gray, scalefactor=1.0, size=(args.width, args.height), mean=(0,), swapRB=False, crop=False)
-    mask_blob = (mask_blob > 0).astype(np.float32)
+            key = cv.waitKey(30) & 0xFF
+            if key == ord('i'):  # Increase brush size
+                brush_size += 1
+                print(f"Brush size increased to {brush_size}")
+            elif key == ord('d'):  # Decrease brush size
+                brush_size = max(1, brush_size - 1)
+                print(f"Brush size decreased to {brush_size}")
+            elif key == ord('r'):  # clear the mask
+                mask_gray = np.zeros((input_image.shape[0], input_image.shape[1]), dtype=np.uint8)
+                print(f"Mask cleared")
+            elif key == ord(' '): # Press space bar to finish drawing
+                break
+            elif key == 27:
+                exit()
 
-    net.setInput(image_blob, "image")
-    net.setInput(mask_blob, "mask")
+        cv.destroyAllWindows()
 
-    output = net.forward()
+        print("Processing image...")
+        image_blob = cv.dnn.blobFromImage(image, args.scale, (args.width, args.height), args.mean, args.rgb, False)
+        mask_blob = cv.dnn.blobFromImage(mask_gray, scalefactor=1.0, size=(args.width, args.height), mean=(0,), swapRB=False, crop=False)
+        mask_blob = (mask_blob > 0).astype(np.float32)
 
-    # Postprocessing
-    output_image = output[0]
-    output_image = np.transpose(output_image, (1, 2, 0))
-    output_image = (output_image).astype(np.uint8)
-    width = output_image.shape[1]
-    height = int(width*aspect_ratio)
-    output_image = cv.resize(output_image, (width, height))
-    print("Process completed!!!")
+        net.setInput(image_blob, "image")
+        net.setInput(mask_blob, "mask")
 
-    cv.imshow("Inpainted Output", output_image)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
-    return
+        output = net.forward()
+
+        # Postprocessing
+        output_image = output[0]
+        output_image = np.transpose(output_image, (1, 2, 0))
+        output_image = (output_image).astype(np.uint8)
+        output_image = cv.resize(output_image, (args.width, height))
+        image = output_image
+
+        cv.imshow("Inpainted Output", output_image)
 
 if __name__ == '__main__':
     args = get_args_parser()

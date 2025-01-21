@@ -37,12 +37,13 @@ using namespace std;
 const string about = "Use this script for image inpainting using OpenCV. \n\n"
         "Firstly, download required models i.e. lama using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to point to the directory where models are downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.\n"
         "To run:\n"
-        "\t Example: ./example_dnn_inpainting\n\n"
+        "\t Example: ./example_dnn_inpainting [--input=<image_name>] \n\n"
         "Inpainting model path can also be specified using --model argument.\n\n";
 
 const string keyboard_shorcuts = "Keyboard Shorcuts: \n\n"
         "Press 'i' to increase brush size.\n"
         "Press 'd' to decrease brush size.\n"
+        "Press 'r' to reset mask.\n"
         "Press ' ' (space bar) after selecting area to be inpainted.\n"
         "Press ESC to terminate the program.\n\n";
 
@@ -50,7 +51,7 @@ const string param_keys =
     "{ help    h  |                   | show help message}"
     "{ @alias     |       lama        | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo        | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
-    "{ input   i  |    baboon.jpg     | image file path}";
+    "{ input   i  | rubberwhale1.png  | image file path}";
 
 const string backend_keys = format(
     "{ backend | default | Choose one of computation backends: "
@@ -74,7 +75,7 @@ const string target_keys = format(
 string keys = param_keys + backend_keys + target_keys;
 bool drawing = false;
 Mat maskGray;
-int brush_size = 25;
+int brush_size = 15;
 
 
 static void drawMask(int event, int x, int y, int, void*) {
@@ -119,7 +120,7 @@ int main(int argc, char **argv)
     int stdWeight = 400;
     int stdImgSize = 512;
     int imgWidth = -1; // Initialization
-    int fontSize = 50;
+    int fontSize = 60;
     int fontWeight = 500;
 
     cout<<"Model loading..."<<endl;
@@ -135,85 +136,92 @@ int main(int argc, char **argv)
 
     FontFace fontFace("sans");
 
-    Mat image = imread(findFile(imgPath));
-    if (image.empty()) {
+    Mat input_image = imread(findFile(imgPath));
+    if (input_image.empty()) {
         cerr << "Error: Input image could not be loaded." << endl;
         return -1;
     }
-    double aspectRatio = static_cast<double>(image.rows) / static_cast<double>(image.cols);
-    imgWidth = min(image.rows, image.cols);
+    double aspectRatio = static_cast<double>(input_image.rows) / static_cast<double>(input_image.cols);
+    int h = static_cast<int>(width * aspectRatio);
+    resize(input_image, input_image, Size(width, h));
+    Mat image = input_image.clone();
+
+    imgWidth = min(input_image.rows, input_image.cols);
     fontSize = min(fontSize, (stdSize*imgWidth)/stdImgSize);
     fontWeight = min(fontWeight, (stdWeight*imgWidth)/stdImgSize);
 
-    maskGray = Mat::zeros(image.size(), CV_8U);
-
     cout<<keyboard_shorcuts<<endl;
-    namedWindow("Draw Mask");
-    setMouseCallback("Draw Mask", drawMask);
+    const string label = "Press 'i' to increase, 'd' to decrease brush size. And 'r' to reset mask. ";
+    double alpha = 0.5;
+    Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
+    r.height += 2 * fontSize; // padding
+    r.width += 10; // padding
 
-    const string label = "Draw the mask on the image. Press space bar when done ";
+    for (;;) {
+        maskGray = Mat::zeros(input_image.size(), CV_8U);
 
-    for(;;) {
-        Mat displayImage = image.clone();
-        Mat overlay = image.clone();
+        namedWindow("Draw Mask");
+        setMouseCallback("Draw Mask", drawMask);
 
-        double alpha = 0.5;
-        Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
-        r.height += 2 * fontSize; // padding
-        r.width += 10; // padding
-        rectangle(overlay, r, Scalar::all(255), FILLED);
-        addWeighted(overlay, alpha, displayImage, 1 - alpha, 0, displayImage);
-        putText(displayImage, label, Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
-        putText(displayImage, "Press 'i' to increase and 'd' to decrease brush size", Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+        for(;;) {
+            Mat displayImage = input_image.clone();
+            Mat overlay = input_image.clone();
 
-        displayImage.setTo(Scalar(255, 255, 255), maskGray > 0); // Highlight mask area
-        imshow("Draw Mask", displayImage);
+            rectangle(overlay, r, Scalar::all(255), FILLED);
+            addWeighted(overlay, alpha, displayImage, 1 - alpha, 0, displayImage);
+            putText(displayImage, "Draw the mask on the image. Press space bar when done", Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+            putText(displayImage, label, Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
 
-        int key = waitKey(1);
-        if (key == 'i') {
-            brush_size += 1;
-            cout << "Brush size increased to " << brush_size << endl;
-        } else if (key == 'd') {
-            brush_size = max(1, brush_size - 1);
-            cout << "Brush size decreased to " << brush_size << endl;
-        } else if (key == ' ') {
-            break;
-        } else if (key == 27){
-            return -1;
+            displayImage.setTo(Scalar(255, 255, 255), maskGray > 0); // Highlight mask area
+            imshow("Draw Mask", displayImage);
+
+            int key = waitKey(30) & 255;
+            if (key == 'i') {
+                brush_size += 1;
+                cout << "Brush size increased to " << brush_size << endl;
+            } else if (key == 'd') {
+                brush_size = max(1, brush_size - 1);
+                cout << "Brush size decreased to " << brush_size << endl;
+            } else if (key == 'r') {
+                maskGray = Mat::zeros(image.size(), CV_8U);
+                cout << "Mask cleared." << endl;
+            } else if (key == ' ') {
+                break;
+            } else if (key == 27){
+                return -1;
+            }
         }
+        destroyAllWindows();
+        cout<<"Processing image..."<<endl;
+        Mat image_blob = blobFromImage(image, scale, Size(width, height), mean_v, swapRB, false);
+
+        Mat mask_blob;
+        mask_blob = blobFromImage(maskGray, 1.0, Size(width, height), Scalar(0), false, false);
+        mask_blob = (mask_blob > 0);
+        mask_blob.convertTo(mask_blob, CV_32F);
+        mask_blob = mask_blob/255.0;
+
+        net.setInput(image_blob, "image");
+        net.setInput(mask_blob, "mask");
+
+        Mat output = net.forward();
+
+        Mat output_transposed(3, &output.size[1], CV_32F, output.ptr<float>());
+
+        vector<Mat> channels;
+        for (int i = 0; i < 3; ++i) {
+            channels.push_back(Mat(output_transposed.size[1], output_transposed.size[2], CV_32F,
+                                        output_transposed.ptr<float>(i)));
+        }
+        Mat output_image;
+        merge(channels, output_image);
+        output_image.convertTo(output_image, CV_8U);
+
+        resize(output_image, output_image, Size(width, h));
+        image = output_image;
+
+        imshow("Inpainted Output", output_image);
     }
-    destroyAllWindows();
-    cout<<"Processing image..."<<endl;
-    Mat image_blob = blobFromImage(image, scale, Size(width, height), mean_v, swapRB, false);
-
-    Mat mask_blob;
-    mask_blob = blobFromImage(maskGray, 1.0, Size(width, height), Scalar(0), false, false);
-    mask_blob = (mask_blob > 0);
-    mask_blob.convertTo(mask_blob, CV_32F);
-    mask_blob = mask_blob/255.0;
-
-    net.setInput(image_blob, "image");
-    net.setInput(mask_blob, "mask");
-
-    Mat output = net.forward();
-
-    Mat output_transposed(3, &output.size[1], CV_32F, output.ptr<float>());
-
-    vector<Mat> channels;
-    for (int i = 0; i < 3; ++i) {
-        channels.push_back(Mat(output_transposed.size[1], output_transposed.size[2], CV_32F,
-                                    output_transposed.ptr<float>(i)));
-    }
-    Mat output_image;
-    merge(channels, output_image);
-    output_image.convertTo(output_image, CV_8U);
-
-    int h = static_cast<int>(width * aspectRatio);
-    resize(output_image, output_image, Size(width, h));
-
-    cout<<"Process completed!!!"<<endl;
-    imshow("Inpainted Output", output_image);
-    waitKey(0);
 
     return 0;
 }
