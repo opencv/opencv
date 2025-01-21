@@ -17,15 +17,18 @@ public class ImgcodecsTest extends OpenCVTestCase {
         Mat rgb = new Mat();
         Imgproc.cvtColor(src, rgb, Imgproc.COLOR_BGR2RGB);
 
-        Animation animation;
+        Animation animation = new Animation();
         List<Mat> frames = new List<Mat>();
-        List<int> durations = new List<int>();
+        MatOfInt durations = new MatOfInt();
+
         frames.add(src);
         durations.add(100);
         frames.add(rgb);
         durations.add(100);
+
         animation.set_frames(frames);
         animation.set_durations(durations);
+
         assertTrue(Imgcodecs.imwriteanimation("animationtest.png", animation));
         assertTrue(Imgcodecs.imreadanimation("animationtest.png", animation));
     }
