@@ -9,6 +9,9 @@ import org.opencv.imgcodecs.Animation;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ImgcodecsTest extends OpenCVTestCase {
 
     public void testAnimation() {
