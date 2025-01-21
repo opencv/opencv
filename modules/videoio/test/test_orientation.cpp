@@ -78,6 +78,12 @@ TEST_P(VideoCaptureAPITests, mp4_orientation_switch)
 }
 
 
-INSTANTIATE_TEST_CASE_P(videoio, VideoCaptureAPITests, testing::Values(CAP_FFMPEG, CAP_AVFOUNDATION));
+INSTANTIATE_TEST_CASE_P(videoio, VideoCaptureAPITests,
+                            testing::Values(
+#if defined(__APPLE__)
+                                            CAP_AVFOUNDATION,
+#endif
+                                            CAP_FFMPEG
+                                            ));
 
 }} // namespace
