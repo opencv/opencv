@@ -31,8 +31,14 @@ public class ImgcodecsTest extends OpenCVTestCase {
         animation.set_frames(frames);
         animation.set_durations(durations);
 
-        assertTrue(Imgcodecs.imwriteanimation("animationtest.png", animation));
-        assertTrue(Imgcodecs.imreadanimation("animationtest.png", animation));
+        String filename = OpenCVTestRunner.getTempFileName("png");
+        assertTrue(Imgcodecs.imwriteanimation(filename, animation));
+
+        Animation readAnimation = new Animation();
+        assertTrue(Imgcodecs.imreadanimation(filename, readAnimation));
+
+        List<Mat> readFrames = readAnimation.get_frames();
+        assertTrue(readFrames.size() == 2);
     }
 
     public void testImdecode() {
