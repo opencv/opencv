@@ -41,6 +41,8 @@
 //
 //M*/
 
+#include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/hal/intrin_neon.hpp"
 #include "precomp.hpp"
 
 #ifdef HAVE_LAPACK
@@ -2199,6 +2201,44 @@ diagtransform_16s(const short* src, short* dst, const float* m, int len, int scn
 static void
 diagtransform_32s(const int* src, int* dst, const double* m, int len, int scn, int dcn)
 {
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    if (scn == 3 && dcn == 3) {
+        int x = 0;
+
+        v_float64 m0  = vx_setall_f64(m[ 0]);
+        v_float64 m3  = vx_setall_f64(m[ 3]);
+        v_float64 m5  = vx_setall_f64(m[ 5]);
+        v_float64 m7  = vx_setall_f64(m[ 7]);
+        v_float64 m10 = vx_setall_f64(m[10]);
+        v_float64 m11 = vx_setall_f64(m[11]);
+        for (; x <= (len - VTraits<v_float32>::vlanes()) * 3; x += VTraits<v_float32>::vlanes() * 3) {
+            v_int32 b, g, r;
+            v_load_deinterleave(src + x, b, g, r);
+            v_float64 bh = v_cvt_f64_high(b), bl = v_cvt_f64(b);
+            v_float64 gh = v_cvt_f64_high(g), gl = v_cvt_f64(g);
+            v_float64 rh = v_cvt_f64_high(r), rl = v_cvt_f64(r);
+
+            v_int32 db = v_round(v_fma( m0, bl,  m3),
+                                 v_fma( m0, bh,  m3));
+            v_int32 dg = v_round(v_fma( m5, gl,  m7),
+                                 v_fma( m5, gh,  m7));
+            v_int32 dr = v_round(v_fma(m10, rl, m11),
+                                 v_fma(m10, rh, m11));
+
+            v_store_interleave(dst + x, db, dg, dr);
+        }
+        for (; x < len * 3; x += 3) {
+            int b = src[x], g = src[x + 1], r = src[x + 2];
+            int db = saturate_cast<int>(m[ 0] * b + m[ 3]);
+            int dg = saturate_cast<int>(m[ 5] * g + m[ 7]);
+            int dr = saturate_cast<int>(m[10] * r + m[11]);
+            dst[x] = db; dst[x + 1] = dg; dst[x + 2] = dr;
+        }
+        vx_cleanup();
+        return;
+    }
+#endif
+
     diagtransform_(src, dst, m, len, scn, dcn);
 }
 
