@@ -2,11 +2,33 @@ package org.opencv.test.imgcodecs;
 
 import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfInt;
+import org.opencv.imgproc.Imgproc;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgcodecs.Animation;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
 public class ImgcodecsTest extends OpenCVTestCase {
+
+    public void testAnimation() {
+        src = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.IMREAD_REDUCED_COLOR_4);
+        assertFalse(src.empty());
+
+        Mat rgb = new Mat();
+        Imgproc.cvtColor(src, rgb, Imgproc.COLOR_BGR2RGB);
+
+        Animation animation;
+        List<Mat> frames = new List<Mat>();
+        List<int> durations = new List<int>();
+        frames.add(src);
+        durations.add(100);
+        frames.add(rgb);
+        durations.add(100);
+        animation.set_frames(frames);
+        animation.set_durations(durations);
+        assertTrue(Imgcodecs.imwriteanimation("animationtest.png", animation));
+        assertTrue(Imgcodecs.imreadanimation("animationtest.png", animation));
+    }
 
     public void testImdecode() {
         fail("Not yet implemented");
