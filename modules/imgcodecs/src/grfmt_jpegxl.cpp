@@ -89,7 +89,7 @@ ImageDecoder JpegXLDecoder::newDecoder() const
     return makePtr<JpegXLDecoder>();
 }
 
-bool JpegXLDecoder::read(Mat& img)
+bool JpegXLDecoder::readHeader()
 {
     // Open file
     if (!m_f) {
@@ -119,75 +119,86 @@ bool JpegXLDecoder::read(Mat& img)
         }
     }
 
+    return read();
+}
+
+bool JpegXLDecoder::readData(Mat& img)
+{
+    if (!m_decoder || m_width == 0 || m_height == 0 || m_type == -1)
+        return false;
+
+    // Prepare to decode image
+    const uint32_t scn = CV_MAT_CN(m_type);        // from image
+    const uint32_t dcn = (uint32_t)img.channels(); // to OpenCV
+    const int depth = CV_MAT_DEPTH(img.type());
+    JxlImageOutCallback cbFunc = nullptr;
+
+    CV_CheckChannels(scn, (scn == 1 || scn == 3 || scn == 4), "Unsupported src channels");
+    CV_CheckChannels(dcn, (dcn == 1 || dcn == 3 || dcn == 4), "Unsupported dst channels");
+    CV_CheckDepth(depth, (depth == CV_8U || depth == CV_16U || depth == CV_32F), "Unsupported depth");
+
+    m_format = {
+        dcn,
+        JXL_TYPE_UINT8, // (temporary)
+        JXL_NATIVE_ENDIAN, // endianness
+        0 // align stride to bytes
+    };
+    switch (depth) {
+        case CV_8U:  m_format.data_type = JXL_TYPE_UINT8; break;
+        case CV_16U: m_format.data_type = JXL_TYPE_UINT16; break;
+        case CV_32F: m_format.data_type = JXL_TYPE_FLOAT; break;
+        default: break;
+    }
+    // libjxl cannot read to BGR pixel order directly.
+    // So we have to use callback function to convert from RGB(A) to BGR(A).
+    if (!m_use_rgb) {
+        switch (dcn) {
+            case 1:  break;
+            case 3:  cbFunc = (depth == CV_32F)? cbRGBtoBGR_32F:   (depth == CV_16U)? cbRGBtoBGR_16U:   cbRGBtoBGR_8U; break;
+            case 4:  cbFunc = (depth == CV_32F)? cbRGBAtoBGRA_32F: (depth == CV_16U)? cbRGBAtoBGRA_16U: cbRGBAtoBGRA_8U; break;
+            default: break;
+        }
+    }
+    // libjxl cannot convert from color image to gray image directly.
+    // So we have to use callback function to convert from RGB(A) to GRAY.
+    if( (scn >= 3) && (dcn == 1) )
+    {
+        m_format.num_channels = scn;
+        switch (scn) {
+            case 3:  cbFunc = (depth == CV_32F)? cbRGBtoGRAY_32F:  (depth == CV_16U)? cbRGBtoGRAY_16U:  cbRGBtoGRAY_8U; break;
+            case 4:  cbFunc = (depth == CV_32F)? cbRGBAtoGRAY_32F: (depth == CV_16U)? cbRGBAtoGRAY_16U: cbRGBAtoGRAY_8U; break;
+            default: break;
+        }
+    }
+    if(cbFunc != nullptr)
+    {
+        if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutCallback(m_decoder.get(),
+                                                             &m_format,
+                                                             cbFunc,
+                                                             static_cast<void*>(&img)))
+        {
+            return false;
+        }
+    }else{
+        if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutBuffer(m_decoder.get(),
+                                                           &m_format,
+                                                           img.ptr<uint8_t>(),
+                                                           img.total() * img.elemSize()))
+        {
+            return false;
+        }
+    }
+
+    return read();
+}
+
+// Common reading routine for readHeader() and readBody()
+bool JpegXLDecoder::read()
+{
     // Create buffer for reading
     const size_t read_buffer_size = 16384;  // 16KB chunks
     if (m_read_buffer.capacity() < read_buffer_size)
         m_read_buffer.resize(read_buffer_size);
-
-    // Prepare for readData()
-    if (m_type != -1 /* readHeader() had been called. */)
-    {
-        const uint32_t scn = CV_MAT_CN(m_type);        // from image
-        const uint32_t dcn = (uint32_t)img.channels(); // to OpenCV
-        const int depth = CV_MAT_DEPTH(img.type());
-        JxlImageOutCallback cbFunc = nullptr;
-
-        CV_CheckChannels(scn, (scn == 1 || scn == 3 || scn == 4), "Unsupported src channels");
-        CV_CheckChannels(dcn, (dcn == 1 || dcn == 3 || dcn == 4), "Unsupported dst channels");
-        CV_CheckDepth(depth, (depth == CV_8U || depth == CV_16U || depth == CV_32F), "Unsupported depth");
-
-        m_format = {
-            dcn,
-            JXL_TYPE_UINT8, // (temporary)
-            JXL_NATIVE_ENDIAN, // endianness
-            0 // align stride to bytes
-        };
-        switch (depth) {
-            case CV_8U:  m_format.data_type = JXL_TYPE_UINT8; break;
-            case CV_16U: m_format.data_type = JXL_TYPE_UINT16; break;
-            case CV_32F: m_format.data_type = JXL_TYPE_FLOAT; break;
-            default: break;
-        }
-        // libjxl cannot read to BGR pixel order directly.
-        // So we have to use callback function to convert from RGB(A) to BGR(A).
-        if (!m_use_rgb) {
-            switch (dcn) {
-                case 1:  break;
-                case 3:  cbFunc = (depth == CV_32F)? cbRGBtoBGR_32F:   (depth == CV_16U)? cbRGBtoBGR_16U:   cbRGBtoBGR_8U; break;
-                case 4:  cbFunc = (depth == CV_32F)? cbRGBAtoBGRA_32F: (depth == CV_16U)? cbRGBAtoBGRA_16U: cbRGBAtoBGRA_8U; break;
-                default: break;
-            }
-        }
-        // libjxl cannot convert from color image to gray image directly.
-        // So we have to use callback function to convert from RGB(A) to GRAY.
-        if( (scn >= 3) && (dcn == 1) )
-        {
-            m_format.num_channels = scn;
-            switch (scn) {
-                case 3:  cbFunc = (depth == CV_32F)? cbRGBtoGRAY_32F:  (depth == CV_16U)? cbRGBtoGRAY_16U:  cbRGBtoGRAY_8U; break;
-                case 4:  cbFunc = (depth == CV_32F)? cbRGBAtoGRAY_32F: (depth == CV_16U)? cbRGBAtoGRAY_16U: cbRGBAtoGRAY_8U; break;
-                default: break;
-            }
-        }
-        if(cbFunc != nullptr)
-        {
-            if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutCallback(m_decoder.get(),
-                                                                 &m_format,
-                                                                 cbFunc,
-                                                                 static_cast<void*>(&img)))
-            {
-                return false;
-            }
-        }else{
-            if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutBuffer(m_decoder.get(),
-                                                               &m_format,
-                                                               img.ptr<uint8_t>(),
-                                                               img.total() * img.elemSize()))
-            {
-                return false;
-            }
-        }
-    }
 
     // Start decoding loop
     do {
@@ -228,6 +239,7 @@ bool JpegXLDecoder::read(Mat& img)
             case JXL_DEC_BASIC_INFO: {
                 if (m_type != -1)
                     return false;
+
                 JxlBasicInfo info;
                 if (JXL_DEC_SUCCESS != JxlDecoderGetBasicInfo(m_decoder.get(), &info))
                     return false;
@@ -237,23 +249,15 @@ bool JpegXLDecoder::read(Mat& img)
 
                 m_width = info.xsize;
                 m_height = info.ysize;
-                if (info.exponent_bits_per_sample > 0) {
-                    m_type = CV_MAKETYPE( CV_32F, ncn );
-                } else {
-                    switch (info.bits_per_sample) {
-                        case 8:
-                            m_type = CV_MAKETYPE( CV_8U, ncn );
-                            break;
-                        case 16:
-                            m_type = CV_MAKETYPE( CV_16U, ncn );
-                            break;
-                        default:
-                            return false;
-                    }
+                int depth = (info.exponent_bits_per_sample > 0)?CV_32F:
+                            (info.bits_per_sample == 16)?CV_16U:
+                            (info.bits_per_sample == 8)?CV_8U: -1;
+                if(depth == -1)
+                {
+                    return false; // Return to readHeader()
                 }
-                if (img.empty())
-                    return true; // Return to readHeader()
-                break;
+                m_type = CV_MAKETYPE( depth, ncn );
+                return true;
             }
             case JXL_DEC_FULL_IMAGE: {
                 // Image is ready
@@ -269,20 +273,6 @@ bool JpegXLDecoder::read(Mat& img)
     } while (m_status != JXL_DEC_SUCCESS);
 
     return true;
-}
-
-bool JpegXLDecoder::readHeader()
-{
-    close();
-    cv::Mat dmy;
-    return read(dmy);
-}
-
-bool JpegXLDecoder::readData(Mat& img)
-{
-    if (!m_decoder || m_width == 0 || m_height == 0)
-        return false;
-    return read(img);
 }
 
 // Callback functopms
