@@ -18,7 +18,7 @@ public class ImgcodecsTest extends OpenCVTestCase {
         Imgproc.cvtColor(src, rgb, Imgproc.COLOR_BGR2RGB);
 
         Animation animation = new Animation();
-        List<Mat> frames = new List<Mat>();
+        List<Mat> frames = new ArrayList<>();
         MatOfInt durations = new MatOfInt();
 
         frames.add(src);
