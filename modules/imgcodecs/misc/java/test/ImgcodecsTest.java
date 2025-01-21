@@ -1,5 +1,6 @@
 package org.opencv.test.imgcodecs;
 
+import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfInt;
 import org.opencv.imgproc.Imgproc;
