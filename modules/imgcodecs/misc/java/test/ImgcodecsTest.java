@@ -23,12 +23,12 @@ public class ImgcodecsTest extends OpenCVTestCase {
 
         Animation animation = new Animation();
         List<Mat> frames = new ArrayList<>();
-        MatOfInt durations = new MatOfInt(2);
+        MatOfInt durations = new MatOfInt();
 
         frames.add(src);
         frames.add(rgb);
-        durations[0] = 100;
-        durations[1] = 100;
+        durations.push_back(100);
+        durations.push_back(100);
 
         animation.set_frames(frames);
         animation.set_durations(durations);
