@@ -2039,7 +2039,7 @@ diagtransform_8s(const schar* src, schar* dst, const float* m, int len, int scn,
         v_float32 m7  = vx_setall_f32(m[ 7]);
         v_float32 m10 = vx_setall_f32(m[10]);
         v_float32 m11 = vx_setall_f32(m[11]);
-        for (; x <= (len - VTraits<v_uint8>::vlanes()) * 3; x += VTraits<v_uint8>::vlanes() * 3) {
+        for (; x <= (len - VTraits<v_int8>::vlanes()) * 3; x += VTraits<v_int8>::vlanes() * 3) {
             v_int8 b, g, r;
             v_load_deinterleave(src + x, b, g, r);
             v_int16 b_u16_l, g_u16_l, r_u16_l;
@@ -2097,6 +2097,51 @@ diagtransform_8s(const schar* src, schar* dst, const float* m, int len, int scn,
 static void
 diagtransform_16u(const ushort* src, ushort* dst, const float* m, int len, int scn, int dcn)
 {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if (scn == 3 && dcn == 3) {
+        int x = 0;
+
+        v_float32 m0  = vx_setall_f32(m[ 0]);
+        v_float32 m3  = vx_setall_f32(m[ 3]);
+        v_float32 m5  = vx_setall_f32(m[ 5]);
+        v_float32 m7  = vx_setall_f32(m[ 7]);
+        v_float32 m10 = vx_setall_f32(m[10]);
+        v_float32 m11 = vx_setall_f32(m[11]);
+        for (; x <= (len - VTraits<v_uint16>::vlanes()) * 3; x += VTraits<v_uint16>::vlanes() * 3) {
+            v_uint16 b, g, r;
+            v_load_deinterleave(src + x, b, g, r);
+            v_uint32 b_u32_l, g_u32_l, r_u32_l;
+            v_uint32 b_u32_h, g_u32_h, r_u32_h;
+            v_expand(b, b_u32_l, b_u32_h);
+            v_expand(g, g_u32_l, g_u32_h);
+            v_expand(r, r_u32_l, r_u32_h);
+
+            v_float32 db_f32_l = v_fma( m0, v_cvt_f32(v_reinterpret_as_s32(b_u32_l)),  m3);
+            v_float32 db_f32_h = v_fma( m0, v_cvt_f32(v_reinterpret_as_s32(b_u32_h)),  m3);
+
+            v_float32 dg_f32_l = v_fma( m5, v_cvt_f32(v_reinterpret_as_s32(g_u32_l)),  m7);
+            v_float32 dg_f32_h = v_fma( m5, v_cvt_f32(v_reinterpret_as_s32(g_u32_h)),  m7);
+
+            v_float32 dr_f32_l = v_fma(m10, v_cvt_f32(v_reinterpret_as_s32(r_u32_l)), m11);
+            v_float32 dr_f32_h = v_fma(m10, v_cvt_f32(v_reinterpret_as_s32(r_u32_h)), m11);
+
+            v_store_interleave(dst + x,
+                               v_pack_u(v_round(db_f32_l), v_round(db_f32_h)),
+                               v_pack_u(v_round(dg_f32_l), v_round(dg_f32_h)),
+                               v_pack_u(v_round(dr_f32_l), v_round(dr_f32_h)));
+        }
+        for (; x < len * 3; x += 3) {
+            int b = src[x], g = src[x + 1], r = src[x + 2];
+            ushort db = saturate_cast<ushort>(m[ 0] * b + m[ 3]);
+            ushort dg = saturate_cast<ushort>(m[ 5] * g + m[ 7]);
+            ushort dr = saturate_cast<ushort>(m[10] * r + m[11]);
+            dst[x] = db; dst[x + 1] = dg; dst[x + 2] = dr;
+        }
+        vx_cleanup();
+        return;
+    }
+#endif
+
     diagtransform_(src, dst, m, len, scn, dcn);
 }
 
