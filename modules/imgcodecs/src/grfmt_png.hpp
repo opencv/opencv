@@ -130,7 +130,7 @@ public:
 
     ImageDecoder newDecoder() const CV_OVERRIDE;
 
-protected:
+private:
     static void readDataFromBuf(void* png_ptr, uchar* dst, size_t size);
     static void info_fn(png_structp png_ptr, png_infop info_ptr);
     static void row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass);

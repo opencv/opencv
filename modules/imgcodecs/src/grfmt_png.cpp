@@ -403,6 +403,7 @@ bool  PngDecoder::readData( Mat& img )
 {
     // Declare dynamic variables before a potential longjmp.
     AutoBuffer<unsigned char*> _buffer(m_height);
+    unsigned char** buffer = _buffer.data();
     Chunk chunk;
 
     if (m_frame_count > 1)
@@ -537,7 +538,6 @@ bool  PngDecoder::readData( Mat& img )
     }
 
     volatile bool result = false;
-    unsigned char** buffer = _buffer.data();
     bool color = img.channels() > 1;
 
     if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
@@ -774,7 +774,6 @@ bool PngDecoder::processing_finish()
 
     if (setjmp(png_jmpbuf(m_png_ptr)))
     {
-        ClearPngPtr();
         return false;
     }
 
