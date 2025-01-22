@@ -33,10 +33,8 @@ struct VideoCaptureAPITests: TestWithParam<cv::VideoCaptureAPIs>
         EXPECT_EQ(width, (int)cap.get(CAP_PROP_FRAME_WIDTH));
         EXPECT_EQ(height, (int)cap.get(CAP_PROP_FRAME_HEIGHT));
 
-        printf("before read frame!\n");
         Mat frame;
         cap >> frame;
-        printf("after read frame!\n");
 
         ASSERT_EQ(width, frame.cols);
         ASSERT_EQ(height, frame.rows);
@@ -52,7 +50,6 @@ TEST_P(VideoCaptureAPITests, mp4_orientation_default_auto)
 {
     EXPECT_TRUE(cap.get(CAP_PROP_ORIENTATION_AUTO));
     orientationCheck(90., 270, 480);
-    printf("Check done!\n");
 }
 
 TEST_P(VideoCaptureAPITests, mp4_orientation_forced)
@@ -63,7 +60,9 @@ TEST_P(VideoCaptureAPITests, mp4_orientation_forced)
 
 TEST_P(VideoCaptureAPITests, mp4_orientation_switch)
 {
+    SCOPED_TRACE("Initial orientation with autorotation");
     orientationCheck(90., 270, 480);
+    SCOPED_TRACE("Disabled autorotation");
     EXPECT_TRUE(cap.set(CAP_PROP_ORIENTATION_AUTO, false));
     EXPECT_FALSE(cap.get(CAP_PROP_ORIENTATION_AUTO));
     orientationCheck(90., 480, 270);
