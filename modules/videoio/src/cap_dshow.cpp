@@ -3360,7 +3360,7 @@ namespace cv
 {
 videoInput VideoCapture_DShow::g_VI;
 
-VideoCapture_DShow::VideoCapture_DShow(int index)
+VideoCapture_DShow::VideoCapture_DShow(int index, const VideoCaptureParameters& params)
     : m_index(-1)
     , m_width(-1)
     , m_height(-1)
@@ -3370,6 +3370,16 @@ VideoCapture_DShow::VideoCapture_DShow(int index)
     , m_convertRGBSet(true)
 {
     CoInitialize(0);
+
+    if (!params.empty()) {
+        int tmpW = params.get<int>(CV_CAP_PROP_FRAME_WIDTH, -1);
+        int tmpH = params.get<int>(CV_CAP_PROP_FRAME_HEIGHT, -1);
+        int tmpFOURCC = params.get<int>(CV_CAP_PROP_FOURCC, -1);
+        if (tmpW != -1 && tmpH != -1) {
+            g_VI.setupDeviceFourcc(index, tmpW, tmpH, tmpFOURCC);
+        }
+    }
+
     open(index);
 }
 VideoCapture_DShow::~VideoCapture_DShow()
@@ -3675,9 +3685,9 @@ void VideoCapture_DShow::close()
     m_convertRGBSet = true;
 }
 
-Ptr<IVideoCapture> create_DShow_capture(int index)
+Ptr<IVideoCapture> create_DShow_capture(int index, const VideoCaptureParameters& params)
 {
-    return makePtr<VideoCapture_DShow>(index);
+    return makePtr<VideoCapture_DShow>(index, params);
 }
 
 
