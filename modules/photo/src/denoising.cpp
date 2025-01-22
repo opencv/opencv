@@ -249,8 +249,8 @@ static void fastNlMeansDenoisingMulti_( const std::vector<Mat>& srcImgs, Mat& ds
     int hn = (int)h.size();
     double granularity = (double)std::max(1., (double)dst.total()/(1 << 16));
 
-    int depth = CV_MAT_DEPTH(srcImgs[0].type());
-    int channels = CV_MAT_CN(srcImgs[0].type());
+    int depth = srcImgs[0].depth();
+    int channels = srcImgs[0].channels();
 
     switch (depth)
     {

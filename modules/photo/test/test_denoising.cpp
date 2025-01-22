@@ -185,14 +185,14 @@ TEST(Photo_DenoisingGrayscaleMulti16Bit, ComprehensiveRegression)
         return psnr;
     };
 
-    const int imgs_count = 5;
-    const int width = 512;
-    const int height = 512;
+    const int imgs_count = 3;
+    const int width = 127;
+    const int height = 129;
     std::vector<Mat> original(imgs_count);
 
     for (int i = 0; i < imgs_count; i++)
     {
-        original[i] = Mat::ones(height, width, CV_16UC1) * 10000;
+        original[i] = Mat(height, width, CV_16UC1);
         randu(original[i], Scalar::all(9500), Scalar::all(10500));
     }
 
