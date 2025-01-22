@@ -84,6 +84,7 @@ public:
         ICV_CONNECTING_BELOW = -1,
     };
 
+    ContourArena arena;
     CTree tree;
 
     vector<LRP> rns;
@@ -91,7 +92,7 @@ public:
     vector<int> int_rns;
 
 public:
-    LinkRunner()
+    LinkRunner():tree(&arena)
     {
         tree.newElem();
         rns.reserve(100);
@@ -122,7 +123,7 @@ void LinkRunner::convertLinks(int& first, int& prev, bool isHole)
 
         do
         {
-            node.body.pts.push_back(rns[cur].pt);
+            node.body.pts.emplace_back(arena.newItem(rns[cur].pt));
             int p_temp = cur;
             cur = rns[cur].link;
             rns[p_temp].link = -1;

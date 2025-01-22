@@ -170,7 +170,8 @@ static bool icvTraceContour(Mat& image, const Point& start, const Point& end, bo
 }
 
 template <typename T>
-static void icvFetchContourEx(Mat& image,
+static void icvFetchContourEx(ContourArena& arena,
+                              Mat& image,
                               const Point& start,
                               T nbd,
                               Contour& res_contour,
@@ -197,7 +198,7 @@ static void icvFetchContourEx(Mat& image,
         Trait<T>::setRightFlag(i0, i0, nbd);
         if (!res_contour.isChain)
         {
-            res_contour.pts.push_back(pt);
+            res_contour.pts.emplace_back(arena.newItem(pt));
         }
     }
     else
@@ -236,7 +237,7 @@ static void icvFetchContourEx(Mat& image,
             }
             else if (s != prev_s || isDirect)
             {
-                res_contour.pts.push_back(pt);
+                res_contour.pts.emplace_back(arena.newItem(pt));
             }
 
             if (s != prev_s)
@@ -281,6 +282,7 @@ static void icvFetchContourEx(Mat& image,
 // It supports both hierarchical and plane variants of Suzuki algorithm.
 struct ContourScanner_
 {
+    ContourArena arena;
     Mat image;
     Point offset;  // ROI offset: coordinates, added to each contour point
     Point pt;  // current scanner position
@@ -293,7 +295,7 @@ struct ContourScanner_
     array<int, 128> ctable;
 
 public:
-    ContourScanner_() {}
+    ContourScanner_():tree(&arena) {}
     ~ContourScanner_() {}
     inline bool isInt() const
     {
@@ -373,7 +375,7 @@ CNode& ContourScanner_::makeContour(schar& nbd_, const bool is_hole, const int x
     res.body.origin = start_pt + offset;
     if (isSimple())
     {
-        icvFetchContourEx<schar>(this->image, start_pt, MASK8_NEW, res.body, isDirect);
+        icvFetchContourEx<schar>(this->arena, this->image, start_pt, MASK8_NEW, res.body, isDirect);
     }
     else
     {
@@ -382,7 +384,7 @@ CNode& ContourScanner_::makeContour(schar& nbd_, const bool is_hole, const int x
         {
             const int start_val = this->image.at<int>(start_pt);
             lval = start_val & MASK8_LVAL;
-            icvFetchContourEx<int>(this->image, start_pt, 0, res.body, isDirect);
+            icvFetchContourEx<int>(this->arena, this->image, start_pt, 0, res.body, isDirect);
         }
         else
         {
@@ -391,7 +393,7 @@ CNode& ContourScanner_::makeContour(schar& nbd_, const bool is_hole, const int x
             nbd_ = (nbd_ + 1) & MASK8_LVAL;
             if (nbd_ == 0)
                 nbd_ = MASK8_BLACK | MASK8_NEW;
-            icvFetchContourEx<schar>(this->image, start_pt, lval, res.body, isDirect);
+            icvFetchContourEx<schar>(this->arena, this->image, start_pt, lval, res.body, isDirect);
         }
         res.body.brect.x -= this->offset.x;
         res.body.brect.y -= this->offset.y;
@@ -403,7 +405,7 @@ CNode& ContourScanner_::makeContour(schar& nbd_, const bool is_hole, const int x
     if (this->approx_method1 != this->approx_method2)
     {
         CV_Assert(res.body.isChain);
-        res.body.pts = approximateChainTC89(res.body.codes, prev_origin, this->approx_method2);
+        approximateChainTC89(arena, res.body.codes, prev_origin, this->approx_method2, res.body.pts);
         res.body.isChain = false;
     }
     return res;
