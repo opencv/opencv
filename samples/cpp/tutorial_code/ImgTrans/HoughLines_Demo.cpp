@@ -71,7 +71,6 @@ int main( int argc, char** argv )
    namedWindow( probabilistic_name, WINDOW_AUTOSIZE );
    createTrackbar( thresh_label, probabilistic_name, &p_trackbar, max_trackbar, Probabilistic_Hough );
 
-   char edge_thresh_label[50];
    const char* edge_thresh_label = "Edge Thres: input";
    namedWindow( weighted_name, WINDOW_AUTOSIZE);
    createTrackbar( edge_thresh_label, weighted_name, &e_trackbar, max_trackbar, Weighted_Hough);
