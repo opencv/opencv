@@ -242,12 +242,12 @@ static void fastNlMeansDenoisingMultiCheckPreconditions(
 
 template<typename ST, typename IT, typename UIT, typename D>
 static void fastNlMeansDenoisingMulti_( const std::vector<Mat>& srcImgs, Mat& dst,
-                                       int imgToDenoiseIndex, int temporalWindowSize,
+                                        int imgToDenoiseIndex, int temporalWindowSize,
                                         const std::vector<float>& h,
-                                       int templateWindowSize, int searchWindowSize)
+                                        int templateWindowSize, int searchWindowSize)
 {
-    int hn = static_cast<int>(h.size());
-    double granularity = std::max(1.0, static_cast<double>(dst.total()) / (1 << 16));
+    int hn = (int)h.size();
+    double granularity = (double)std::max(1., (double)dst.total()/(1 << 16));
 
     int depth = CV_MAT_DEPTH(srcImgs[0].type());
     int channels = CV_MAT_CN(srcImgs[0].type());

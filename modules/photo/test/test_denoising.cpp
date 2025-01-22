@@ -52,24 +52,6 @@ namespace opencv_test { namespace {
 #  define DUMP(image, path)
 #endif
 
-double computePSNR(const Mat& I1, const Mat& I2) {
-    CV_Assert(I1.type() == I2.type() && I1.size() == I2.size());
-
-    Mat s1;
-    absdiff(I1, I2, s1);
-    s1.convertTo(s1, CV_32F);
-    s1 = s1.mul(s1);
-
-    Scalar s = sum(s1);
-
-    double mse = s[0] / static_cast<double>(I1.total());
-    if (mse == 0) {
-        return INFINITY;
-    }
-    double max_pixel = 65535.0;
-    double psnr = 10.0 * log10((max_pixel * max_pixel) / mse);
-    return psnr;
-}
 
 TEST(Photo_DenoisingGrayscale, regression)
 {
@@ -184,6 +166,25 @@ TEST(Photo_Denoising, speed)
 }
 TEST(Photo_DenoisingGrayscaleMulti16Bit, ComprehensiveRegression)
 {
+    auto computePSNR = [](const Mat& I1, const Mat& I2) -> double {
+        CV_Assert(I1.type() == I2.type() && I1.size() == I2.size());
+
+        Mat s1;
+        absdiff(I1, I2, s1);
+        s1.convertTo(s1, CV_32F);
+        s1 = s1.mul(s1);
+
+        Scalar s = sum(s1);
+
+        double mse = s[0] / static_cast<double>(I1.total());
+        if (mse == 0) {
+            return INFINITY;
+        }
+        double max_pixel = 65535.0;
+        double psnr = 10.0 * log10((max_pixel * max_pixel) / mse);
+        return psnr;
+    };
+
     const int imgs_count = 5;
     const int width = 512;
     const int height = 512;
