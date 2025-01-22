@@ -41,8 +41,6 @@
 //
 //M*/
 
-#include "opencv2/core/hal/intrin.hpp"
-#include "opencv2/core/hal/intrin_neon.hpp"
 #include "precomp.hpp"
 
 #ifdef HAVE_LAPACK
