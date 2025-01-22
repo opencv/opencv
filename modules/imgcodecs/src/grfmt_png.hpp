@@ -130,56 +130,21 @@ public:
 
     ImageDecoder newDecoder() const CV_OVERRIDE;
 
-protected:
+private:
     static void readDataFromBuf(void* png_ptr, uchar* dst, size_t size);
     static void info_fn(png_structp png_ptr, png_infop info_ptr);
     static void row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass);
-    bool processing_start(void* frame_ptr, const Mat& img);
-    bool processing_finish();
+    CV_NODISCARD_STD bool processing_start(void* frame_ptr, const Mat& img);
+    CV_NODISCARD_STD bool processing_finish();
     void compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, Mat& img);
-    bool read_from_io(void* buffer, size_t num_bytes);
+    CV_NODISCARD_STD bool read_from_io(void* buffer, size_t num_bytes);
     uint32_t  read_chunk(Chunk& chunk);
+    CV_NODISCARD_STD bool InitPngPtr();
+    void ClearPngPtr();
 
-    struct PngPtrs {
-        public:
-            PngPtrs() {
-                png_ptr = png_create_read_struct( PNG_LIBPNG_VER_STRING, 0, 0, 0 );
-                if (png_ptr) {
-                    info_ptr = png_create_info_struct( png_ptr );
-                    end_info = png_create_info_struct( png_ptr );
-                } else {
-                    info_ptr = end_info = nullptr;
-                }
-            }
-            ~PngPtrs() {
-                clear();
-            }
-            PngPtrs& operator=(PngPtrs&& other) {
-                clear();
-                png_ptr = other.png_ptr;
-                info_ptr = other.info_ptr;
-                end_info = other.end_info;
-                other.png_ptr = nullptr;
-                other.info_ptr = other.end_info = nullptr;
-                return *this;
-            }
-            void clear() {
-                if (png_ptr) {
-                    png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
-                    png_ptr = nullptr;
-                    info_ptr = end_info = nullptr;
-                }
-            }
-            png_structp getPng() const { return png_ptr; }
-            png_infop getInfo() const { return info_ptr; }
-            png_infop getEndInfo() const { return end_info; }
-        private:
-            png_structp png_ptr; // pointer to decompression structure
-            png_infop info_ptr; // pointer to image information structure
-            png_infop end_info; // pointer to one more image information structure
-    };
-
-    PngPtrs m_png_ptrs;
+    png_structp m_png_ptr = nullptr; // pointer to decompression structure
+    png_infop m_info_ptr = nullptr; // pointer to image information structure
+    png_infop m_end_info = nullptr; // pointer to one more image information structure
     int   m_bit_depth;
     FILE* m_f;
     int   m_color_type;

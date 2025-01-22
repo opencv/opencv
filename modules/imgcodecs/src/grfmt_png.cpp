@@ -198,11 +198,32 @@ PngDecoder::PngDecoder()
 
 PngDecoder::~PngDecoder()
 {
+    ClearPngPtr();
     if( m_f )
     {
         fclose( m_f );
         m_f = nullptr;
     }
+}
+
+bool PngDecoder::InitPngPtr() {
+    ClearPngPtr();
+
+    m_png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
+    if (!m_png_ptr)
+        return false;
+
+    m_info_ptr = png_create_info_struct(m_png_ptr);
+    m_end_info = png_create_info_struct(m_png_ptr);
+    return (m_info_ptr && m_end_info);
+}
+
+void PngDecoder::ClearPngPtr() {
+    if (m_png_ptr)
+        png_destroy_read_struct(&m_png_ptr, &m_info_ptr, &m_end_info);
+    m_png_ptr = nullptr;
+    m_info_ptr = nullptr;
+    m_end_info = nullptr;
 }
 
 ImageDecoder PngDecoder::newDecoder() const
@@ -227,167 +248,164 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, unsigned char* dst, size_t si
 
 bool  PngDecoder::readHeader()
 {
-    volatile bool result = false;
+    // Declare dynamic variables before a potential longjmp.
+    Chunk chunk;
 
-    PngPtrs png_ptrs;
-    png_structp png_ptr = png_ptrs.getPng();
-    png_infop info_ptr = png_ptrs.getInfo();
-    png_infop end_info = png_ptrs.getEndInfo();
+    if (!InitPngPtr())
+        return false;
 
-    if( png_ptr && info_ptr && end_info )
+    if (setjmp(png_jmpbuf(m_png_ptr)))
+        return false;
+
+    m_buf_pos = 0;
+    unsigned char sig[8];
+    uint32_t id = 0;
+
+    if( !m_buf.empty() )
+        png_set_read_fn(m_png_ptr, this, (png_rw_ptr)readDataFromBuf );
+    else
     {
-        m_buf_pos = 0;
-        if( setjmp( png_jmpbuf( png_ptr ) ) == 0 )
+        m_f = fopen(m_filename.c_str(), "rb");
+        if (!m_f)
         {
-            unsigned char sig[8];
-            uint32_t id = 0;
-            Chunk chunk;
-
-            if( !m_buf.empty() )
-                png_set_read_fn(png_ptr, this, (png_rw_ptr)readDataFromBuf );
-            else
-            {
-                m_f = fopen(m_filename.c_str(), "rb");
-                if (!m_f)
-                {
-                    return false;
-                }
-                png_init_io(png_ptr, m_f);
-            }
-
-            // Read PNG header: 137 80 78 71 13 10 26 10
-            if (!read_from_io(&sig, 8))
-                return false;
-
-            id = read_chunk(m_chunkIHDR);
-            // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
-            // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
-            if (!(id == id_IHDR && m_chunkIHDR.p.size() == 8 + 13 + 4))
-            {
-                return false;
-            }
-
-            while (true)
-            {
-                m_is_fcTL_loaded = false;
-                id = read_chunk(chunk);
-
-                if (!id || (m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
-                {
-                    return false;
-                }
-
-                if (id == id_IDAT)
-                {
-                    if (m_f)
-                        fseek(m_f, 0, SEEK_SET);
-                    else
-                        m_buf_pos = 0;
-                    break;
-                }
-
-                if (id == id_acTL)
-                {
-                    // 8=HDR+size, 8=size of acTL chunk, 4=CRC
-                    // https://wiki.mozilla.org/APNG_Specification#%60acTL%60:_The_Animation_Control_Chunk
-                    if (chunk.p.size() != 8 + 8 + 4)
-                        return false;
-                    m_animation.loop_count = png_get_uint_32(&chunk.p[12]);
-
-                    m_frame_count = png_get_uint_32(&chunk.p[8]);
-                    if (m_frame_count == 0)
-                        return false;
-                }
-
-                if (id == id_fcTL)
-                {
-                    // 8=HDR+size, 26=size of fcTL chunk, 4=CRC
-                    // https://wiki.mozilla.org/APNG_Specification#%60fcTL%60:_The_Frame_Control_Chunk
-                    if (chunk.p.size() != 8 + 26 + 4)
-                        return false;
-                    m_is_fcTL_loaded = true;
-                    w0 = png_get_uint_32(&chunk.p[12]);
-                    h0 = png_get_uint_32(&chunk.p[16]);
-                    x0 = png_get_uint_32(&chunk.p[20]);
-                    y0 = png_get_uint_32(&chunk.p[24]);
-                    delay_num = png_get_uint_16(&chunk.p[28]);
-                    delay_den = png_get_uint_16(&chunk.p[30]);
-                    dop = chunk.p[32];
-                    bop = chunk.p[33];
-                }
-
-                if (id == id_bKGD)
-                {
-                    // 8=HDR+size, ??=size of bKGD chunk, 4=CRC
-                    // The spec is actually more complex: http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
-                    // TODO: we only check that 4 bytes can be read from &chunk.p[8]. Fix.
-                    if (chunk.p.size() < 8 + 4)
-                        return false;
-                    int bgcolor = png_get_uint_32(&chunk.p[8]);
-                    m_animation.bgcolor[3] = (bgcolor >> 24) & 0xFF;
-                    m_animation.bgcolor[2] = (bgcolor >> 16) & 0xFF;
-                    m_animation.bgcolor[1] = (bgcolor >> 8) & 0xFF;
-                    m_animation.bgcolor[0] = bgcolor & 0xFF;
-                }
-
-                if (id == id_PLTE || id == id_tRNS)
-                    m_chunksInfo.push_back(chunk);
-            }
-
-            png_uint_32 wdth, hght;
-            int bit_depth, color_type, num_trans=0;
-            png_bytep trans;
-            png_color_16p trans_values;
-
-            // Free chunk in case png_read_info uses longjmp.
-            chunk.p.clear();
-            chunk.p.shrink_to_fit();
-
-            png_read_info( png_ptr, info_ptr );
-            png_get_IHDR(png_ptr, info_ptr, &wdth, &hght,
-                &bit_depth, &color_type, 0, 0, 0);
-
-            m_width = (int)wdth;
-            m_height = (int)hght;
-            m_color_type = color_type;
-            m_bit_depth = bit_depth;
-
-            if (bit_depth <= 8 || bit_depth == 16)
-            {
-                switch (color_type)
-                {
-                case PNG_COLOR_TYPE_RGB:
-                case PNG_COLOR_TYPE_PALETTE:
-                    png_get_tRNS(png_ptr, info_ptr, &trans, &num_trans, &trans_values);
-                    if (num_trans > 0)
-                        m_type = CV_8UC4;
-                    else
-                        m_type = CV_8UC3;
-                    break;
-                case PNG_COLOR_TYPE_GRAY_ALPHA:
-                case PNG_COLOR_TYPE_RGB_ALPHA:
-                    m_type = CV_8UC4;
-                    break;
-                default:
-                    m_type = CV_8UC1;
-                }
-                if (bit_depth == 16)
-                    m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
-                result = true;
-            }
+            return false;
         }
+        png_init_io(m_png_ptr, m_f);
     }
 
-    if(result)
+    // Read PNG header: 137 80 78 71 13 10 26 10
+    if (!read_from_io(&sig, 8))
+        return false;
+
+    id = read_chunk(m_chunkIHDR);
+    // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
+    // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
+    if (!(id == id_IHDR && m_chunkIHDR.p.size() == 8 + 13 + 4))
     {
-        m_png_ptrs = std::move(png_ptrs);
+        return false;
     }
 
-    return result;
+    m_is_fcTL_loaded = false;
+    while (true)
+    {
+        id = read_chunk(chunk);
+
+        if (!id || (m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
+        {
+            return false;
+        }
+
+        if (id == id_IDAT)
+        {
+            if (m_f)
+                fseek(m_f, 0, SEEK_SET);
+            else
+                m_buf_pos = 0;
+            break;
+        }
+
+        if (id == id_acTL)
+        {
+            // 8=HDR+size, 8=size of acTL chunk, 4=CRC
+            // https://wiki.mozilla.org/APNG_Specification#%60acTL%60:_The_Animation_Control_Chunk
+            if (chunk.p.size() != 8 + 8 + 4)
+                return false;
+            m_animation.loop_count = png_get_uint_32(&chunk.p[12]);
+
+            m_frame_count = png_get_uint_32(&chunk.p[8]);
+            if (m_frame_count == 0)
+                return false;
+        }
+
+        if (id == id_fcTL)
+        {
+            // 8=HDR+size, 26=size of fcTL chunk, 4=CRC
+            // https://wiki.mozilla.org/APNG_Specification#%60fcTL%60:_The_Frame_Control_Chunk
+            if (chunk.p.size() != 8 + 26 + 4)
+                return false;
+            m_is_fcTL_loaded = true;
+            w0 = png_get_uint_32(&chunk.p[12]);
+            h0 = png_get_uint_32(&chunk.p[16]);
+            x0 = png_get_uint_32(&chunk.p[20]);
+            y0 = png_get_uint_32(&chunk.p[24]);
+            delay_num = png_get_uint_16(&chunk.p[28]);
+            delay_den = png_get_uint_16(&chunk.p[30]);
+            dop = chunk.p[32];
+            bop = chunk.p[33];
+        }
+
+        if (id == id_bKGD)
+        {
+            // 8=HDR+size, ??=size of bKGD chunk, 4=CRC
+            // The spec is actually more complex: http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
+            // TODO: we only check that 4 bytes can be read from &chunk.p[8]. Fix.
+            if (chunk.p.size() < 8 + 4)
+                return false;
+            int bgcolor = png_get_uint_32(&chunk.p[8]);
+            m_animation.bgcolor[3] = (bgcolor >> 24) & 0xFF;
+            m_animation.bgcolor[2] = (bgcolor >> 16) & 0xFF;
+            m_animation.bgcolor[1] = (bgcolor >> 8) & 0xFF;
+            m_animation.bgcolor[0] = bgcolor & 0xFF;
+        }
+
+        if (id == id_PLTE || id == id_tRNS)
+            m_chunksInfo.push_back(chunk);
+    }
+
+    png_uint_32 wdth, hght;
+    int bit_depth, color_type, num_trans=0;
+    png_bytep trans;
+    png_color_16p trans_values;
+
+    // Free chunk in case png_read_info uses longjmp.
+    chunk.p.clear();
+    chunk.p.shrink_to_fit();
+
+    png_read_info( m_png_ptr, m_info_ptr );
+    png_get_IHDR(m_png_ptr, m_info_ptr, &wdth, &hght,
+        &bit_depth, &color_type, 0, 0, 0);
+
+    m_width = (int)wdth;
+    m_height = (int)hght;
+    m_color_type = color_type;
+    m_bit_depth = bit_depth;
+
+    if (m_is_fcTL_loaded && (int(x0 + w0) > m_width || int(y0 + h0) > m_height || dop > 2 || bop > 1))
+        return false;
+
+    if (bit_depth <= 8 || bit_depth == 16)
+    {
+        switch (color_type)
+        {
+        case PNG_COLOR_TYPE_RGB:
+        case PNG_COLOR_TYPE_PALETTE:
+            png_get_tRNS(m_png_ptr, m_info_ptr, &trans, &num_trans, &trans_values);
+            if (num_trans > 0)
+                m_type = CV_8UC4;
+            else
+                m_type = CV_8UC3;
+            break;
+        case PNG_COLOR_TYPE_GRAY_ALPHA:
+        case PNG_COLOR_TYPE_RGB_ALPHA:
+            m_type = CV_8UC4;
+            break;
+        default:
+            m_type = CV_8UC1;
+        }
+        if (bit_depth == 16)
+            m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
+    }
+
+    return true;
 }
 
 bool  PngDecoder::readData( Mat& img )
 {
+    // Declare dynamic variables before a potential longjmp.
+    AutoBuffer<unsigned char*> _buffer(m_height);
+    unsigned char** buffer = _buffer.data();
+    Chunk chunk;
+
     if (m_frame_count > 1)
     {
         Mat mat_cur = Mat::zeros(img.rows, img.cols, m_type);
@@ -412,13 +430,14 @@ bool  PngDecoder::readData( Mat& img )
 
         frameCur.setMat(mat_cur);
 
-        processing_start((void*)&frameRaw, mat_cur);
-        png_structp png_ptr = m_png_ptrs.getPng();
-        png_infop info_ptr = m_png_ptrs.getInfo();
+        if (!processing_start((void*)&frameRaw, mat_cur))
+            return false;
+
+        if(setjmp(png_jmpbuf(m_png_ptr)))
+            return false;
 
         while (true)
         {
-            Chunk chunk;
             id = read_chunk(chunk);
             if (!id)
                 return false;
@@ -482,14 +501,14 @@ bool  PngDecoder::readData( Mat& img )
             else if (id == id_IDAT)
             {
                 m_is_IDAT_loaded = true;
-                png_process_data(png_ptr, info_ptr, chunk.p.data(), chunk.p.size());
+                png_process_data(m_png_ptr, m_info_ptr, chunk.p.data(), chunk.p.size());
             }
             else if (id == id_fdAT && m_is_fcTL_loaded)
             {
                 m_is_IDAT_loaded = true;
                 png_save_uint_32(&chunk.p[4], static_cast<uint32_t>(chunk.p.size() - 16));
                 memcpy(&chunk.p[8], "IDAT", 4);
-                png_process_data(png_ptr, info_ptr, &chunk.p[4], chunk.p.size() - 4);
+                png_process_data(m_png_ptr, m_info_ptr, &chunk.p[4], chunk.p.size() - 4);
             }
             else if (id == id_IEND)
             {
@@ -513,30 +532,24 @@ bool  PngDecoder::readData( Mat& img )
                 return true;
             }
             else
-                png_process_data(png_ptr, info_ptr, chunk.p.data(), chunk.p.size());
+                png_process_data(m_png_ptr, m_info_ptr, chunk.p.data(), chunk.p.size());
         }
         return false;
     }
 
     volatile bool result = false;
-    AutoBuffer<unsigned char*> _buffer(m_height);
-    unsigned char** buffer = _buffer.data();
     bool color = img.channels() > 1;
 
-    png_structp png_ptr = m_png_ptrs.getPng();
-    png_infop info_ptr = m_png_ptrs.getInfo();
-    png_infop end_info = m_png_ptrs.getEndInfo();
-
-    if( png_ptr && info_ptr && end_info && m_width && m_height )
+    if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
     {
-        if( setjmp( png_jmpbuf ( png_ptr ) ) == 0 )
+        if( setjmp( png_jmpbuf ( m_png_ptr ) ) == 0 )
         {
             int y;
 
             if( img.depth() == CV_8U && m_bit_depth == 16 )
-                png_set_strip_16( png_ptr );
+                png_set_strip_16( m_png_ptr );
             else if( !isBigEndian() )
-                png_set_swap( png_ptr );
+                png_set_swap( m_png_ptr );
 
             if(img.channels() < 4)
             {
@@ -548,46 +561,46 @@ bool  PngDecoder::readData( Mat& img )
                  * indicate that it is a good idea to always ask for
                  * stripping alpha..  18.11.2004 Axel Walthelm
                  */
-                 png_set_strip_alpha( png_ptr );
+                 png_set_strip_alpha( m_png_ptr );
             } else
-                png_set_tRNS_to_alpha( png_ptr );
+                png_set_tRNS_to_alpha( m_png_ptr );
 
             if( m_color_type == PNG_COLOR_TYPE_PALETTE )
-                png_set_palette_to_rgb( png_ptr );
+                png_set_palette_to_rgb( m_png_ptr );
 
             if( (m_color_type & PNG_COLOR_MASK_COLOR) == 0 && m_bit_depth < 8 )
 #if (PNG_LIBPNG_VER_MAJOR*10000 + PNG_LIBPNG_VER_MINOR*100 + PNG_LIBPNG_VER_RELEASE >= 10209) || \
     (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR == 0 && PNG_LIBPNG_VER_RELEASE >= 18)
-                png_set_expand_gray_1_2_4_to_8( png_ptr );
+                png_set_expand_gray_1_2_4_to_8( m_png_ptr );
 #else
                 png_set_gray_1_2_4_to_8( png_ptr );
 #endif
 
             if( (m_color_type & PNG_COLOR_MASK_COLOR) && color && !m_use_rgb)
-                png_set_bgr( png_ptr ); // convert RGB to BGR
+                png_set_bgr( m_png_ptr ); // convert RGB to BGR
             else if( color )
-                png_set_gray_to_rgb( png_ptr ); // Gray->RGB
+                png_set_gray_to_rgb( m_png_ptr ); // Gray->RGB
             else
-                png_set_rgb_to_gray( png_ptr, 1, 0.299, 0.587 ); // RGB->Gray
+                png_set_rgb_to_gray( m_png_ptr, 1, 0.299, 0.587 ); // RGB->Gray
 
-            png_set_interlace_handling( png_ptr );
-            png_read_update_info( png_ptr, info_ptr );
+            png_set_interlace_handling( m_png_ptr );
+            png_read_update_info( m_png_ptr, m_info_ptr );
 
             for( y = 0; y < m_height; y++ )
                 buffer[y] = img.data + y*img.step;
 
-            png_read_image( png_ptr, buffer );
-            png_read_end( png_ptr, end_info );
+            png_read_image( m_png_ptr, buffer );
+            png_read_end( m_png_ptr, m_end_info );
 
 #ifdef PNG_eXIf_SUPPORTED
             png_uint_32 num_exif = 0;
             png_bytep exif = 0;
 
             // Exif info could be in info_ptr (intro_info) or end_info per specification
-            if( png_get_valid(png_ptr, info_ptr, PNG_INFO_eXIf) )
-                png_get_eXIf_1(png_ptr, info_ptr, &num_exif, &exif);
-            else if( png_get_valid(png_ptr, end_info, PNG_INFO_eXIf) )
-                png_get_eXIf_1(png_ptr, end_info, &num_exif, &exif);
+            if( png_get_valid(m_png_ptr, m_info_ptr, PNG_INFO_eXIf) )
+                png_get_eXIf_1(m_png_ptr, m_info_ptr, &num_exif, &exif);
+            else if( png_get_valid(m_png_ptr, m_end_info, PNG_INFO_eXIf) )
+                png_get_eXIf_1(m_png_ptr, m_end_info, &num_exif, &exif);
 
             if( exif && num_exif > 0 )
             {
@@ -719,42 +732,34 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
 
 bool PngDecoder::processing_start(void* frame_ptr, const Mat& img)
 {
+    if (!InitPngPtr())
+        return false;
+
+    if (setjmp(png_jmpbuf(m_png_ptr)))
+        return false;
+
     static uint8_t header[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
 
-    PngPtrs png_ptrs;
-    png_structp png_ptr = png_ptrs.getPng();
-    png_infop info_ptr = png_ptrs.getInfo();
-
-    if (!png_ptr || !info_ptr) {
-        return false;
-    }
-
-    if (setjmp(png_jmpbuf(png_ptr)))
-    {
-        return false;
-    }
-
-    m_png_ptrs = std::move(png_ptrs);
-    png_set_crc_action(png_ptr, PNG_CRC_QUIET_USE, PNG_CRC_QUIET_USE);
-    png_set_progressive_read_fn(png_ptr, frame_ptr, (png_progressive_info_ptr)info_fn, row_fn, NULL);
+    png_set_crc_action(m_png_ptr, PNG_CRC_QUIET_USE, PNG_CRC_QUIET_USE);
+    png_set_progressive_read_fn(m_png_ptr, frame_ptr, (png_progressive_info_ptr)info_fn, row_fn, NULL);
 
     if (img.channels() < 4)
-        png_set_strip_alpha(png_ptr);
+        png_set_strip_alpha(m_png_ptr);
     else
-        png_set_tRNS_to_alpha(png_ptr);
+        png_set_tRNS_to_alpha(m_png_ptr);
 
-    png_process_data(png_ptr, info_ptr, header, 8);
-    png_process_data(png_ptr, info_ptr, m_chunkIHDR.p.data(), m_chunkIHDR.p.size());
+    png_process_data(m_png_ptr, m_info_ptr, header, 8);
+    png_process_data(m_png_ptr, m_info_ptr, m_chunkIHDR.p.data(), m_chunkIHDR.p.size());
 
     if ((m_color_type & PNG_COLOR_MASK_COLOR) && img.channels() > 1 && !m_use_rgb)
-        png_set_bgr(png_ptr); // convert RGB to BGR
+        png_set_bgr(m_png_ptr); // convert RGB to BGR
     else if (img.channels() > 1)
-        png_set_gray_to_rgb(png_ptr); // Gray->RGB
+        png_set_gray_to_rgb(m_png_ptr); // Gray->RGB
     else
-        png_set_rgb_to_gray(png_ptr, 1, 0.299, 0.587); // RGB->Gray
+        png_set_rgb_to_gray(m_png_ptr, 1, 0.299, 0.587); // RGB->Gray
 
     for (size_t i = 0; i < m_chunksInfo.size(); i++)
-        png_process_data(png_ptr, info_ptr, m_chunksInfo[i].p.data(), m_chunksInfo[i].p.size());
+        png_process_data(m_png_ptr, m_info_ptr, m_chunksInfo[i].p.data(), m_chunksInfo[i].p.size());
 
     return true;
 }
@@ -763,22 +768,17 @@ bool PngDecoder::processing_finish()
 {
     static uint8_t footer[12] = { 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130 };
 
-    png_structp png_ptr = m_png_ptrs.getPng();
-    png_infop info_ptr = m_png_ptrs.getInfo();
-
-    if (!png_ptr) {
-        m_png_ptrs.clear();
+    if (!m_png_ptr) {
         return false;
     }
 
-    if (setjmp(png_jmpbuf(png_ptr)))
+    if (setjmp(png_jmpbuf(m_png_ptr)))
     {
-        m_png_ptrs.clear();
         return false;
     }
 
-    png_process_data(png_ptr, info_ptr, footer, 12);
-    m_png_ptrs.clear();
+    png_process_data(m_png_ptr, m_info_ptr, footer, 12);
+    ClearPngPtr();
 
     return true;
 }
