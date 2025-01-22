@@ -247,7 +247,7 @@ public:
 class VideoCaptureBase : public IVideoCapture
 {
 public:
-    VideoCaptureBase() : autorotate(false) {}
+    VideoCaptureBase() : autorotate(true) {}
     double getProperty(int propId) const CV_OVERRIDE
     {
         switch(propId)
