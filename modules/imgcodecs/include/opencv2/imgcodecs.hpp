@@ -267,7 +267,7 @@ struct CV_EXPORTS_W_SIMPLE Animation
     - Defaults to `Scalar()`, indicating an empty color (usually transparent if supported).
     - This background color provides a solid fill behind frames that have transparency, ensuring a consistent display appearance.
     */
-    Animation(int loopCount = 0, Scalar bgColor = Scalar());
+    CV_WRAP Animation(int loopCount = 0, Scalar bgColor = Scalar());
 };
 
 /** @brief Loads an image from a file.
