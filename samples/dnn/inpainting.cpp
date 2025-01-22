@@ -156,25 +156,23 @@ int main(int argc, char **argv)
     Rect r = getTextSize(Size(), label, Point(), fontFace, fontSize, fontWeight);
     r.height += 2 * fontSize; // padding
     r.width += 10; // padding
+    // Setting up window
+    namedWindow("Draw Mask");
+    setMouseCallback("Draw Mask", drawMask);
+    Mat tempImage = input_image.clone();
+    Mat overlay = input_image.clone();
+    rectangle(overlay, r, Scalar::all(255), FILLED);
+    addWeighted(overlay, alpha, tempImage, 1 - alpha, 0, tempImage);
+    putText(tempImage, "Draw the mask on the image. Press space bar when done", Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+    putText(tempImage, label, Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
+    Mat displayImage = tempImage.clone();
 
     for (;;) {
         maskGray = Mat::zeros(input_image.size(), CV_8U);
-
-        namedWindow("Draw Mask");
-        setMouseCallback("Draw Mask", drawMask);
-
+        displayImage = tempImage.clone();
         for(;;) {
-            Mat displayImage = input_image.clone();
-            Mat overlay = input_image.clone();
-
-            rectangle(overlay, r, Scalar::all(255), FILLED);
-            addWeighted(overlay, alpha, displayImage, 1 - alpha, 0, displayImage);
-            putText(displayImage, "Draw the mask on the image. Press space bar when done", Point(10, fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
-            putText(displayImage, label, Point(10, 2*fontSize), Scalar(0,0,0), fontFace, fontSize, fontWeight);
-
             displayImage.setTo(Scalar(255, 255, 255), maskGray > 0); // Highlight mask area
             imshow("Draw Mask", displayImage);
-
             int key = waitKey(30) & 255;
             if (key == 'i') {
                 brush_size += 1;
@@ -184,6 +182,7 @@ int main(int argc, char **argv)
                 cout << "Brush size decreased to " << brush_size << endl;
             } else if (key == 'r') {
                 maskGray = Mat::zeros(image.size(), CV_8U);
+                displayImage = tempImage.clone();
                 cout << "Mask cleared." << endl;
             } else if (key == ' ') {
                 break;
@@ -191,8 +190,8 @@ int main(int argc, char **argv)
                 return -1;
             }
         }
-        destroyAllWindows();
         cout<<"Processing image..."<<endl;
+        // Inference block
         Mat image_blob = blobFromImage(image, scale, Size(width, height), mean_v, swapRB, false);
 
         Mat mask_blob;
@@ -205,7 +204,7 @@ int main(int argc, char **argv)
         net.setInput(mask_blob, "mask");
 
         Mat output = net.forward();
-
+        // Post Processing
         Mat output_transposed(3, &output.size[1], CV_32F, output.ptr<float>());
 
         vector<Mat> channels;

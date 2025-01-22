@@ -137,25 +137,23 @@ def main():
     label = "Press 'i' to increase, 'd' to decrease brush size. And 'r' to reset mask. "
     labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
     alpha = 0.5
+    # Setting up the window
+    cv.namedWindow("Draw Mask")
+    cv.setMouseCallback("Draw Mask", draw_mask)
+    temp_image = input_image.copy()
+    overlay = input_image.copy()
+    cv.rectangle(overlay, (0, 0), (labelSize[0]+10, labelSize[1]+int(30*fontSize)), (255, 255, 255), cv.FILLED)
+    cv.addWeighted(overlay, alpha, temp_image, 1 - alpha, 0, temp_image)
+    cv.putText(temp_image, "Draw the mask on the image. Press space bar when done.", (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+    cv.putText(temp_image, label, (10, int(50*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+    display_image = temp_image.copy()
 
     while True:
         mask_gray = np.zeros((input_image.shape[0], input_image.shape[1]), dtype=np.uint8)
-
-        cv.namedWindow("Draw Mask")
-        cv.setMouseCallback("Draw Mask", draw_mask)
-
+        display_image = temp_image.copy()
         while True:
-            display_image = input_image.copy()
-            overlay = input_image.copy()
-
-            cv.rectangle(overlay, (0, 0), (labelSize[0]+10, labelSize[1]+int(30*fontSize)), (255, 255, 255), cv.FILLED)
-            cv.addWeighted(overlay, alpha, display_image, 1 - alpha, 0, display_image)
-
-            cv.putText(display_image, "Draw the mask on the image. Press space bar when done.", (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
-            cv.putText(display_image, label, (10, int(50*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
             display_image[mask_gray > 0] = [255, 255, 255]
             cv.imshow("Draw Mask", display_image)
-
             key = cv.waitKey(30) & 0xFF
             if key == ord('i'):  # Increase brush size
                 brush_size += 1
@@ -165,15 +163,15 @@ def main():
                 print(f"Brush size decreased to {brush_size}")
             elif key == ord('r'):  # clear the mask
                 mask_gray = np.zeros((input_image.shape[0], input_image.shape[1]), dtype=np.uint8)
+                display_image = temp_image.copy()
                 print(f"Mask cleared")
             elif key == ord(' '): # Press space bar to finish drawing
                 break
             elif key == 27:
                 exit()
 
-        cv.destroyAllWindows()
-
         print("Processing image...")
+        # Inference block
         image_blob = cv.dnn.blobFromImage(image, args.scale, (args.width, args.height), args.mean, args.rgb, False)
         mask_blob = cv.dnn.blobFromImage(mask_gray, scalefactor=1.0, size=(args.width, args.height), mean=(0,), swapRB=False, crop=False)
         mask_blob = (mask_blob > 0).astype(np.float32)
