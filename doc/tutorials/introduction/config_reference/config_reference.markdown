@@ -317,8 +317,6 @@ All libraries required to read images in these formats are included into OpenCV 
 @note OpenJPEG have higher priority than JasPer which is deprecated. In order to use JasPer, OpenJPEG must be disabled.
 @note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported.
 
-@warning OpenEXR ver 2.2 or earlier cannot be used in combination with C++17 or later. In this case, updating OpenEXR ver 2.3.0 or later is required.
-
 ### GDAL integration
 
 `WITH_GDAL` (default: _OFF_)
