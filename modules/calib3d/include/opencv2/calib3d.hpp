@@ -4075,17 +4075,6 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     the provided rvec and tvec values as initial approximations of the rotation and translation
     vectors, respectively, and further optimizes them.
     @param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
-    This function returns the rotation and the translation vectors that transform a 3D point expressed in the object
-    coordinate frame to the camera coordinate frame, using different methods:
-    - P3P methods (@ref SOLVEPNP_P3P, @ref SOLVEPNP_AP3P): need 4 input points to return a unique solution.
-    - @ref SOLVEPNP_IPPE Input points must be >= 4 and object points must be coplanar.
-    - @ref SOLVEPNP_IPPE_SQUARE Special case suitable for marker pose estimation.
-    Number of input points must be 4. Object points must be defined in the following order:
-    - point 0: [-squareLength / 2,  squareLength / 2, 0]
-    - point 1: [ squareLength / 2,  squareLength / 2, 0]
-    - point 2: [ squareLength / 2, -squareLength / 2, 0]
-    - point 3: [-squareLength / 2, -squareLength / 2, 0]
-    - for all the other flags, number of input points must be >= 4 and object points can be in any configuration.
     @param criteria Termination criteria for internal undistortPoints call.
     The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
     thus the input are very similar. More information about Perspective-n-Points is described in @ref calib3d_solvePnP
@@ -4141,7 +4130,7 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
                                       OutputArray rvec, OutputArray tvec,
                                       bool useExtrinsicGuess = false, int iterationsCount = 100,
                                       float reprojectionError = 8.0, double confidence = 0.99,
-                                      OutputArray inliers = noArray(),int flags = SOLVEPNP_ITERATIVE,
+                                      OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE,
                                       TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)
                                     );
 
