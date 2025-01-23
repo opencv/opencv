@@ -249,9 +249,9 @@ class ArenaDynamicBufferIndexed
                     ++_size;
                 }
                 const_iterator cbegin(void) const noexcept {return const_iterator(first.get());}
-                const_iterator cend(void) const noexcept {return const_iterator(static_cast<Item::index_storage_t>(first.get()+_size));}
+                const_iterator cend(void) const noexcept {return const_iterator(static_cast<typename Item::index_storage_t>(first.get()+_size));}
                 iterator begin(void) const noexcept {return iterator(first.get());}
-                iterator end(void) const noexcept {return iterator(static_cast<Item::index_storage_t>(first.get()+_size));}
+                iterator end(void) const noexcept {return iterator(static_cast<typename Item::index_storage_t>(first.get()+_size));}
                 Item operator[](size_t index) const noexcept {return Item(static_cast<unsigned int>(first.get()+index));}
                 Item operator[](size_t index) noexcept {return Item(static_cast<unsigned int>(first.get()+index));}
             public:
