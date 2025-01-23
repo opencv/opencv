@@ -206,7 +206,7 @@ protected:
         std::vector<float> h_vec = {config.h};
 
         ASSERT_NO_THROW({
-            cv::fastNlMeansDenoisingMulti(inputImages, result, inputImages.size() / 2, inputImages.size(), h_vec, config.templateWindowSize, config.searchWindowSize, cv::NORM_L1);
+            cv::fastNlMeansDenoisingMulti(inputImages, result, static_cast<int>(inputImages.size() / 2), static_cast<int>(inputImages.size()), h_vec, config.templateWindowSize, config.searchWindowSize, cv::NORM_L1);
         }) << "fastNlMeansDenoisingMulti threw an unexpected exception in " << testCaseName;
 
         ASSERT_FALSE(result.empty()) << "Denoising result is empty in " << testCaseName;
