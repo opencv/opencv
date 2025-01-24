@@ -720,10 +720,10 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
         if (size != 8 + 26 + 4)
             return 0;
     } else if (id == id_bKGD) {
-        // 8=HDR+size, 6=size of bKGD chunk, 4=CRC
+        // 8=HDR+size, (1, 2 or 6)=size of bKGD chunk, 4=CRC
         // The spec is actually more complex:
         // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
-        if (size < 8 + 6)
+        if (size != 8 + 1 + 4 && size != 8 + 2 + 4 && size != 8 + 6 + 4)
             return 0;
     } else if (id != id_fdAT && id != id_IDAT && id != id_IEND && id != id_PLTE && id != id_tRNS) {
         if (size > PNG_USER_CHUNK_MALLOC_MAX)
