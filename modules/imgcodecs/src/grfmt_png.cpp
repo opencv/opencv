@@ -278,12 +278,8 @@ bool  PngDecoder::readHeader()
         return false;
 
     id = read_chunk(m_chunkIHDR);
-    // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
-    // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
-    if (!(id == id_IHDR && m_chunkIHDR.p.size() == 8 + 13 + 4))
-    {
+    if (id != id_IHDR)
         return false;
-    }
 
     m_is_fcTL_loaded = false;
     while (true)
@@ -306,10 +302,7 @@ bool  PngDecoder::readHeader()
 
         if (id == id_acTL)
         {
-            // 8=HDR+size, 8=size of acTL chunk, 4=CRC
             // https://wiki.mozilla.org/APNG_Specification#%60acTL%60:_The_Animation_Control_Chunk
-            if (chunk.p.size() != 8 + 8 + 4)
-                return false;
             m_animation.loop_count = png_get_uint_32(&chunk.p[12]);
 
             m_frame_count = png_get_uint_32(&chunk.p[8]);
@@ -319,10 +312,7 @@ bool  PngDecoder::readHeader()
 
         if (id == id_fcTL)
         {
-            // 8=HDR+size, 26=size of fcTL chunk, 4=CRC
             // https://wiki.mozilla.org/APNG_Specification#%60fcTL%60:_The_Frame_Control_Chunk
-            if (chunk.p.size() != 8 + 26 + 4)
-                return false;
             m_is_fcTL_loaded = true;
             w0 = png_get_uint_32(&chunk.p[12]);
             h0 = png_get_uint_32(&chunk.p[16]);
@@ -336,11 +326,7 @@ bool  PngDecoder::readHeader()
 
         if (id == id_bKGD)
         {
-            // 8=HDR+size, ??=size of bKGD chunk, 4=CRC
             // The spec is actually more complex: http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
-            // TODO: we only check that 4 bytes can be read from &chunk.p[8]. Fix.
-            if (chunk.p.size() < 8 + 4)
-                return false;
             int bgcolor = png_get_uint_32(&chunk.p[8]);
             m_animation.bgcolor[3] = (bgcolor >> 24) & 0xFF;
             m_animation.bgcolor[2] = (bgcolor >> 16) & 0xFF;
@@ -713,20 +699,46 @@ bool PngDecoder::read_from_io(void* buffer, size_t num_bytes)
 
 uint32_t PngDecoder::read_chunk(Chunk& chunk)
 {
-    unsigned char len[4];
-    if (read_from_io(&len, 4))
-    {
-        const size_t size = static_cast<size_t>(png_get_uint_32(len)) + 12;
+    unsigned char size_id[8];
+    if (!read_from_io(&size_id, 8))
+        return 0;
+    const size_t size = static_cast<size_t>(png_get_uint_32(size_id)) + 12;
+
+    const uint32_t id = *(uint32_t*)(&size_id[4]);
+    if (id == id_IHDR) {
+        // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
+        // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
+        if (size != 8 + 13 + 4)
+            return 0;
+    } else if (id == id_acTL) {
+        // 8=HDR+size, 8=size of acTL chunk, 4=CRC
+        // https://wiki.mozilla.org/APNG_Specification#%60acTL%60:_The_Animation_Control_Chunk
+        if (size != 8 + 8 + 4)
+            return 0;
+    } else if (id == id_fcTL) {
+        // 8=HDR+size, 26=size of fcTL chunk, 4=CRC
+        // https://wiki.mozilla.org/APNG_Specification#%60fcTL%60:_The_Frame_Control_Chunk
+        if (size != 8 + 26 + 4)
+            return 0;
+    } else if (id == id_bKGD) {
+        // 8=HDR+size, ??=size of bKGD chunk, 4=CRC
+        // The spec is actually more complex:
+        // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
+        // TODO: we only check that 4 bytes can be read from &chunk.p[8]. Fix.
+        if (size < 8 + 4)
+            return 0;
+    } else if (id != id_fdAT && id != id_IDAT && id != id_IEND && id != id_PLTE && id != id_tRNS) {
         if (size > PNG_USER_CHUNK_MALLOC_MAX)
         {
-            CV_LOG_WARNING(NULL, "chunk data is too large");
+            CV_LOG_WARNING(NULL, "user chunk data is too large");
             return 0;
         }
-        chunk.p.resize(size);
-        memcpy(chunk.p.data(), len, 4);
-        if (read_from_io(&chunk.p[4], chunk.p.size() - 4))
-            return *(uint32_t*)(&chunk.p[4]);
     }
+
+    chunk.p.resize(size);
+    memcpy(chunk.p.data(), size_id, 8);
+    if (read_from_io(&chunk.p[8], chunk.p.size() - 8))
+        return id;
     return 0;
 }
 
