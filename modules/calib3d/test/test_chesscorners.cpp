@@ -849,5 +849,67 @@ TEST(Calib3d_RotatedCirclesPatternDetector, issue_24964)
     EXPECT_LE(error, precise_success_error_level);
 }
 
+TEST(Calib3d_AsymmetricCirclesPatternDetector, issue_x1)
+{
+    string path = cvtest::findDataFile("cv/cameracalibration/asymmetric_circles/test5.png");
+    Mat image = cv::imread(path);
+    ASSERT_FALSE(image.empty()) << "Can't read image: " << path;
+
+    vector<Point2f> centers;
+    Size parrernSize(5, 5);//(3, 6); (5, 5);
+    Mat goldCenters(parrernSize.height, parrernSize.width, CV_32FC2);
+    Point2f firstGoldCenter(380.f, 430.f);
+    for (int i = 0; i < parrernSize.height; i++)
+    {
+        for (int j = 0; j < parrernSize.width; j++)
+        {
+            goldCenters.at<Point2f>(i, j) = Point2f(firstGoldCenter.x + j * 100.f, firstGoldCenter.y + i * 100.f);
+        }
+    }
+
+    bool found = false;
+    found = findCirclesGrid(image, parrernSize, centers, CALIB_CB_ASYMMETRIC_GRID);
+
+    drawChessboardCorners(image, parrernSize, centers,found);
+    imshow("image", image);
+    waitKey(0);
+
+    EXPECT_TRUE(found);
+    ASSERT_EQ(centers.size(), (size_t)parrernSize.area());
+    //double error = calcError(centers, goldCenters);
+    //EXPECT_LE(error, precise_success_error_level);
+}
+
+TEST(Calib3d_AsymmetricCirclesPatternDetector, issue_x2)
+{
+    string path = cvtest::findDataFile("cv/cameracalibration/asymmetric_circles/test7.png");
+    Mat image = cv::imread(path);
+    ASSERT_FALSE(image.empty()) << "Can't read image: " << path;
+
+    vector<Point2f> centers;
+    Size parrernSize(3, 6);//(3, 6); (5, 5);
+    Mat goldCenters(parrernSize.height, parrernSize.width, CV_32FC2);
+    Point2f firstGoldCenter(380.f, 430.f);
+    for (int i = 0; i < parrernSize.height; i++)
+    {
+        for (int j = 0; j < parrernSize.width; j++)
+        {
+            goldCenters.at<Point2f>(i, j) = Point2f(firstGoldCenter.x + j * 100.f, firstGoldCenter.y + i * 100.f);
+        }
+    }
+
+    bool found = false;
+    found = findCirclesGridNew(image, parrernSize, centers, CALIB_CB_ASYMMETRIC_GRID);
+
+    //drawChessboardCorners(image, parrernSize, centers,found);
+    //imshow("image", image);
+    //waitKey(0);
+
+    //EXPECT_TRUE(found);
+    //ASSERT_EQ(centers.size(), (size_t)parrernSize.area());
+    //double error = calcError(centers, goldCenters);
+    //EXPECT_LE(error, precise_success_error_level);
+}
+
 }} // namespace
 /* End of file. */

@@ -1487,6 +1487,12 @@ CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags = CALIB_CB_SYMMETRIC_GRID,
                                    const Ptr<FeatureDetector> &blobDetector = SimpleBlobDetector::create());
 
+CV_EXPORTS_W bool findCirclesGridNew(InputArray image, Size patternSize,
+                                     OutputArray centers, int flags,
+                                     const Ptr<FeatureDetector> &blobDetector = SimpleBlobDetector::create(),
+                                     const CirclesGridFinderParameters& parameters = CirclesGridFinderParameters());
+
+
 /** @brief Finds the camera intrinsic and extrinsic parameters from several views of a calibration
 pattern.
 

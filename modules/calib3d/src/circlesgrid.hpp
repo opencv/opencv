@@ -120,6 +120,7 @@ struct Path
 class CirclesGridFinder
 {
 public:
+  cv::Mat img;
   CirclesGridFinder(cv::Size patternSize, const std::vector<cv::Point2f> &testKeypoints,
                     const cv::CirclesGridFinderParameters &parameters = cv::CirclesGridFinderParameters());
   bool findHoles();
