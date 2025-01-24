@@ -1120,6 +1120,22 @@ bool cv::fisheye::solvePnP( InputArray opoints, InputArray ipoints,
     return cv::solvePnP(opoints, imagePointsNormalized, cameraMatrix, noArray(), rvec, tvec, useExtrinsicGuess, flags);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// cv::fisheye::solvePnPRansac
+
+bool cv::fisheye::solvePnPRansac( InputArray opoints, InputArray ipoints,
+               InputArray cameraMatrix, InputArray distCoeffs,
+               OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess,
+               int iterationsCount, float reprojectionError,
+               double confidence, OutputArray inliers,
+               int flags, TermCriteria criteria)
+{
+    Mat imagePointsNormalized;
+    cv::fisheye::undistortPoints(ipoints, imagePointsNormalized, cameraMatrix, distCoeffs, noArray(), cameraMatrix, criteria);
+    return cv::solvePnPRansac(opoints, imagePointsNormalized, cameraMatrix, noArray(), rvec, tvec,
+                              useExtrinsicGuess, iterationsCount, reprojectionError, confidence, inliers, flags);
+}
+
 namespace cv{ namespace {
 void subMatrix(const Mat& src, Mat& dst, const std::vector<uchar>& cols, const std::vector<uchar>& rows)
 {
