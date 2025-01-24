@@ -2068,6 +2068,36 @@ template<int i>
 inline v_float32x4 v_broadcast_element(const v_float32x4& a)
 { return v_float32x4((__m128)__lsx_vreplvei_w((__m128i)a.val, i)); }
 
+/////////////////// unpack lo //////////////////////////////
+
+inline v_uint16x8 v_unpacklo(const v_uint8x16& a, const v_uint8x16& b)
+{
+    return v_uint16x8(__lsx_vilvl_b(a.val, b.val));
+}
+inline v_uint32x4 v_unpacklo(const v_uint16x8& a, const v_uint16x8& b)
+{
+    return v_uint32x4(__lsx_vilvl_h(a.val, b.val));
+}
+inline v_uint64x2 v_unpacklo(const v_uint32x4& a, const v_uint32x4& b)
+{
+    return v_uint64x2(__lsx_vilvl_w(a.val, b.val));
+}
+
+/////////////////// unpack hi //////////////////////////////
+
+inline v_uint16x8 v_unpackhi(const v_uint8x16& a, const v_uint8x16& b)
+{
+    return v_uint16x8(__lsx_vilvh_b(a.val, b.val));
+}
+inline v_uint32x4 v_unpackhi(const v_uint16x8& a, const v_uint16x8& b)
+{
+    return v_uint32x4(__lsx_vilvh_h(a.val, b.val));
+}
+inline v_uint64x2 v_unpackhi(const v_uint32x4& a, const v_uint32x4& b)
+{
+    return v_uint64x2(__lsx_vilvh_w(a.val, b.val));
+
+
 /////////////////// load deinterleave //////////////////////////////
 
 inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b)

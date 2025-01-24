@@ -1990,6 +1990,33 @@ OPENCV_HAL_IMPL_WASM_TRANSPOSE4x4(v_uint32x4, i32x4)
 OPENCV_HAL_IMPL_WASM_TRANSPOSE4x4(v_int32x4, i32x4)
 OPENCV_HAL_IMPL_WASM_TRANSPOSE4x4(v_float32x4, i32x4)
 
+// unpack low
+inline v_uint16x8 v_unpacklo(const v_uint8x16& a, const v_uint8x16& b)
+{
+    return v_uint16x8(wasm_i8x16_shuffle(a.val, b.val, 0,16,1,17,2,18,3,19,4,20,5,21,6,22,7,23));
+}
+inline v_uint32x4 v_unpacklo(const v_uint16x8& a, const v_uint16x8& b)
+{
+    return v_uint32x4(wasm_i16x8_shuffle(a.val, b.val, 0,8,1,9,2,10,3,11));
+}
+inline v_uint64x2 v_unpacklo(const v_uint32x4& a, const v_uint32x4& b)
+{
+    return v_uint64x2(wasm_i32x4_shuffle(a.val, b.val, 0,4,1,5));
+}
+// unpack high
+inline v_uint16x8 v_unpackhi(const v_uint8x16& a, const v_uint8x16& b)
+{
+    return v_uint16x8(wasm_i8x16_shuffle(a.val, b.val, 8,24,9,25,10,26,11,27,12,28,13,29,14,30,15,31));
+}
+inline v_uint32x4 v_unpackhi(const v_uint16x8& a, const v_uint16x8& b)
+{
+    return v_uint32x4(wasm_i16x8_shuffle(a.val, b.val, 4,12,5,13,6,14,7,15));
+}
+inline v_uint64x2 v_unpackhi(const v_uint32x4& a, const v_uint32x4& b)
+{
+    return v_uint64x2(wasm_i32x4_shuffle(a.val, b.val, 2,6,3,7));
+}
+
 // load deinterleave
 inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b)
 {

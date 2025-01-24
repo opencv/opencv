@@ -79,41 +79,48 @@ static inline T threshToZeroInv(const T& src, const T& thresh)
     return src <= thresh ? src : 0;
 }
 
-template <typename T>
-static void threshGeneric(Size roi, const T* src, size_t src_step, T* dst,
-                          size_t dst_step, T thresh, T maxval, int type)
+template <typename T, bool useMask>
+static void threshGeneric(Size roi, const T* src, size_t src_step,
+                          T* dst, size_t dst_step,
+                          const uchar* mask, size_t mask_step,
+                          T thresh, T maxval, int type)
 {
     int i = 0, j;
     switch (type)
     {
     case THRESH_BINARY:
-        for (; i < roi.height; i++, src += src_step, dst += dst_step)
+        for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
             for (j = 0; j < roi.width; j++)
-                dst[j] = threshBinary<T>(src[j], thresh, maxval);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshBinary<T>(src[j], thresh, maxval);
         return;
 
     case THRESH_BINARY_INV:
-        for (; i < roi.height; i++, src += src_step, dst += dst_step)
+        for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
             for (j = 0; j < roi.width; j++)
-                dst[j] = threshBinaryInv<T>(src[j], thresh, maxval);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshBinaryInv<T>(src[j], thresh, maxval);
         return;
 
     case THRESH_TRUNC:
-        for (; i < roi.height; i++, src += src_step, dst += dst_step)
+        for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
             for (j = 0; j < roi.width; j++)
-                  dst[j] = threshTrunc<T>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshTrunc<T>(src[j], thresh);
         return;
 
     case THRESH_TOZERO:
-        for (; i < roi.height; i++, src += src_step, dst += dst_step)
+        for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
             for (j = 0; j < roi.width; j++)
-                dst[j] = threshToZero<T>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshToZero<T>(src[j], thresh);
         return;
 
     case THRESH_TOZERO_INV:
-        for (; i < roi.height; i++, src += src_step, dst += dst_step)
+        for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
             for (j = 0; j < roi.width; j++)
-                dst[j] = threshToZeroInv<T>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshToZeroInv<T>(src[j], thresh);
         return;
 
     default:
@@ -121,8 +128,9 @@ static void threshGeneric(Size roi, const T* src, size_t src_step, T* dst,
     }
 }
 
+template<bool useMask>
 static void
-thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
+thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar maxval, int type )
 {
     Size roi = _src.size();
     roi.width *= _src.channels();
@@ -136,61 +144,72 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         src_step = dst_step = roi.width;
     }
 
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
+    if constexpr(!useMask)
     {
-        IppiSize sz = { roi.width, roi.height };
-        CV_SUPPRESS_DEPRECATED_START
-        switch( type )
+        #if defined(HAVE_IPP)
+        CV_IPP_CHECK()
         {
-        case THRESH_TRUNC:
-            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_8u_C1IR, _dst.ptr(), (int)dst_step, sz, thresh) >= 0)
+            IppiSize sz = { roi.width, roi.height };
+            CV_SUPPRESS_DEPRECATED_START
+            switch( type )
             {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
+            case THRESH_TRUNC:
+                if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_8u_C1IR, _dst.ptr(), (int)dst_step, sz, thresh) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_8u_C1R, _src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+                break;
+            case THRESH_TOZERO:
+                if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_8u_C1IR, _dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_8u_C1R, _src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh + 1, 0) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+                break;
+            case THRESH_TOZERO_INV:
+                if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_8u_C1IR, _dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_8u_C1R, _src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+                break;
             }
-            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_8u_C1R, _src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO:
-            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_8u_C1IR, _dst.ptr(), (int)dst_step, sz, thresh+1, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_8u_C1R, _src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh + 1, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO_INV:
-            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_8u_C1IR, _dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_8u_C1R, _src.ptr(), (int)src_step, _dst.ptr(), (int)dst_step, sz, thresh, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
+            CV_SUPPRESS_DEPRECATED_END
         }
-        CV_SUPPRESS_DEPRECATED_END
+        #endif
     }
-#endif
 
     int j = 0;
     const uchar* src = _src.ptr();
     uchar* dst = _dst.ptr();
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const uchar* mask = nullptr;
+    size_t mask_step = 0;
+    if constexpr(useMask)
+    {
+        mask = _mask.ptr();
+        mask_step = _mask.step;
+    }
+
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
     v_uint8 thresh_u = vx_setall_u8( thresh );
     v_uint8 maxval16 = vx_setall_u8( maxval );
 
@@ -201,10 +220,20 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         {
             for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
             {
-                v_uint8 v0;
+                v_uint8 v0, v2;
                 v0 = vx_load( src + j );
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_not(vm0));
+                }
                 v0 = v_lt(thresh_u, v0);
                 v0 = v_and(v0, maxval16);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, vm0), v2);
+                }
                 v_store( dst + j, v0 );
             }
         }
@@ -215,10 +244,20 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         {
             for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
             {
-                v_uint8 v0;
+                v_uint8 v0, v2;
                 v0 = vx_load( src + j );
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_not(vm0));
+                }
                 v0 = v_le(v0, thresh_u);
                 v0 = v_and(v0, maxval16);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, vm0), v2);
+                }
                 v_store( dst + j, v0 );
             }
         }
@@ -229,9 +268,19 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         {
             for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
             {
-                v_uint8 v0;
+                v_uint8 v0, v2;
                 v0 = vx_load( src + j );
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_not(vm0));
+                }
                 v0 = v_sub(v0, v_sub(v0, thresh_u));
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, vm0), v2);
+                }
                 v_store( dst + j, v0 );
             }
         }
@@ -242,9 +291,19 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         {
             for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
             {
-                v_uint8 v0;
+                v_uint8 v0, v2;
                 v0 = vx_load( src + j );
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_not(vm0));
+                }
                 v0 = v_and(v_lt(thresh_u, v0), v0);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, vm0), v2);
+                }
                 v_store( dst + j, v0 );
             }
         }
@@ -255,9 +314,19 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
         {
             for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
             {
-                v_uint8 v0;
+                v_uint8 v0, v2;
                 v0 = vx_load( src + j );
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_not(vm0));
+                }
                 v0 = v_and(v_le(v0, thresh_u), v0);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, vm0), v2);
+                }
                 v_store( dst + j, v0 );
             }
         }
@@ -315,25 +384,37 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
             {
                 uchar t0 = tab[src[j]];
                 uchar t1 = tab[src[j+1]];
+                uchar m0 = useMask ? mask[j] : 0xFF;
+                uchar m1 = useMask ? mask[j+1] : 0xFF;
 
-                dst[j] = t0;
-                dst[j+1] = t1;
+                if (!useMask || (m0 != 0))
+                    dst[j] = t0;
+                if (!useMask || (m1 != 0))
+                    dst[j+1] = t1;
 
                 t0 = tab[src[j+2]];
                 t1 = tab[src[j+3]];
+                m0 = useMask ? mask[j+2] : 0xFF;
+                m1 = useMask ? mask[j+3] : 0xFF;
 
-                dst[j+2] = t0;
-                dst[j+3] = t1;
+                if (!useMask || (m0 != 0))
+                    dst[j+2] = t0;
+                if (!useMask || (m1 != 0))
+                    dst[j+3] = t1;
             }
 #endif
             for( ; j < roi.width; j++ )
-                dst[j] = tab[src[j]];
+            {
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = tab[src[j]];
+            }
         }
     }
 }
 
+template<bool useMask>
 static void
-thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
+thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort maxval, int type)
 {
     Size roi = _src.size();
     roi.width *= _src.channels();
@@ -351,6 +432,14 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
 
     const ushort* src = _src.ptr<ushort>();
     ushort* dst = _dst.ptr<ushort>();
+    const uchar* mask = nullptr;
+    size_t mask_step = 0;
+    if constexpr(useMask)
+    {
+        mask = _mask.ptr();
+        mask_step = _mask.step;
+    }
+
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     int i, j;
     v_uint16 thresh_u = vx_setall_u16(thresh);
@@ -361,19 +450,35 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
     case THRESH_BINARY:
         for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
         {
-            for (j = 0; j <= roi.width - 2*VTraits<v_uint16>::vlanes(); j += 2*VTraits<v_uint16>::vlanes())
+            j = 0;
+            const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_uint16 v0, v1;
+                v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
+                    v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
+                }
                 v0 = v_lt(thresh_u, v0);
                 v1 = v_lt(thresh_u, v1);
                 v0 = v_and(v0, maxval16);
                 v1 = v_and(v1, maxval16);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_u16(v_unpacklo(vm0, vm0))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_u16(v_unpackhi(vm0, vm0))), v3);
+                }
                 v_store(dst + j, v0);
                 v_store(dst + j + VTraits<v_uint16>::vlanes(), v1);
             }
-            if (j <= roi.width - VTraits<v_uint16>::vlanes())
+            if ( !useMask && (j <= roi.width - VTraits<v_uint16>::vlanes()) )
             {
                 v_uint16 v0 = vx_load(src + j);
                 v0 = v_lt(thresh_u, v0);
@@ -383,7 +488,8 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
             }
 
             for (; j < roi.width; j++)
-                dst[j] = threshBinary<ushort>(src[j], thresh, maxval);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshBinary<ushort>(src[j], thresh, maxval);
         }
         break;
 
@@ -391,19 +497,34 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
         for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
         {
             j = 0;
-            for (; j <= roi.width - 2*VTraits<v_uint16>::vlanes(); j += 2*VTraits<v_uint16>::vlanes())
+            const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_uint16 v0, v1;
+                v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
+                    v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
+                }
                 v0 = v_le(v0, thresh_u);
                 v1 = v_le(v1, thresh_u);
                 v0 = v_and(v0, maxval16);
                 v1 = v_and(v1, maxval16);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_u16(v_unpacklo(vm0, vm0))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_u16(v_unpackhi(vm0, vm0))), v3);
+                }
                 v_store(dst + j, v0);
                 v_store(dst + j + VTraits<v_uint16>::vlanes(), v1);
             }
-            if (j <= roi.width - VTraits<v_uint16>::vlanes())
+            if ( !useMask && (j <= roi.width - VTraits<v_uint16>::vlanes()) )
             {
                 v_uint16 v0 = vx_load(src + j);
                 v0 = v_le(v0, thresh_u);
@@ -413,7 +534,8 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
             }
 
             for (; j < roi.width; j++)
-                dst[j] = threshBinaryInv<ushort>(src[j], thresh, maxval);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshBinaryInv<ushort>(src[j], thresh, maxval);
         }
         break;
 
@@ -421,17 +543,32 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
         for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
         {
             j = 0;
-            for (; j <= roi.width - 2*VTraits<v_uint16>::vlanes(); j += 2*VTraits<v_uint16>::vlanes())
+            const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_uint16 v0, v1;
+                v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
+                    v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
+                }
                 v0 = v_min(v0, thresh_u);
                 v1 = v_min(v1, thresh_u);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0,v_reinterpret_as_u16(v_unpacklo(vm0, vm0))), v2);
+                    v1 = v_or(v_and(v1,v_reinterpret_as_u16(v_unpackhi(vm0, vm0))), v3);
+                }
                 v_store(dst + j, v0);
                 v_store(dst + j + VTraits<v_uint16>::vlanes(), v1);
             }
-            if (j <= roi.width - VTraits<v_uint16>::vlanes())
+            if ( !useMask && (j <= roi.width - VTraits<v_uint16>::vlanes()) )
             {
                 v_uint16 v0 = vx_load(src + j);
                 v0 = v_min(v0, thresh_u);
@@ -440,7 +577,8 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
             }
 
             for (; j < roi.width; j++)
-                dst[j] = threshTrunc<ushort>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshTrunc<ushort>(src[j], thresh);
         }
         break;
 
@@ -448,17 +586,32 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
         for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
         {
             j = 0;
-            for (; j <= roi.width - 2*VTraits<v_uint16>::vlanes(); j += 2*VTraits<v_uint16>::vlanes())
+            const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_uint16 v0, v1;
+                v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
+                    v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
+                }
                 v0 = v_and(v_lt(thresh_u, v0), v0);
                 v1 = v_and(v_lt(thresh_u, v1), v1);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_u16(v_unpacklo(vm0, vm0))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_u16(v_unpackhi(vm0, vm0))), v3);
+                }
                 v_store(dst + j, v0);
                 v_store(dst + j + VTraits<v_uint16>::vlanes(), v1);
             }
-            if (j <= roi.width - VTraits<v_uint16>::vlanes())
+            if ( !useMask && (j <= roi.width - VTraits<v_uint16>::vlanes()) )
             {
                 v_uint16 v0 = vx_load(src + j);
                 v0 = v_and(v_lt(thresh_u, v0), v0);
@@ -467,7 +620,8 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
             }
 
             for (; j < roi.width; j++)
-                dst[j] = threshToZero<ushort>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshToZero<ushort>(src[j], thresh);
         }
         break;
 
@@ -475,17 +629,32 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
         for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
         {
             j = 0;
-            for (; j <= roi.width - 2*VTraits<v_uint16>::vlanes(); j += 2*VTraits<v_uint16>::vlanes())
+            const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_uint16 v0, v1;
+                v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
+                    v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
+                }
                 v0 = v_and(v_le(v0, thresh_u), v0);
                 v1 = v_and(v_le(v1, thresh_u), v1);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_u16(v_unpacklo(vm0, vm0))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_u16(v_unpackhi(vm0, vm0))), v3);
+                }
                 v_store(dst + j, v0);
                 v_store(dst + j + VTraits<v_uint16>::vlanes(), v1);
             }
-            if (j <= roi.width - VTraits<v_uint16>::vlanes())
+            if ( !useMask && (j <= roi.width - VTraits<v_uint16>::vlanes()) )
             {
                 v_uint16 v0 = vx_load(src + j);
                 v0 = v_and(v_le(v0, thresh_u), v0);
@@ -494,17 +663,19 @@ thresh_16u(const Mat& _src, Mat& _dst, ushort thresh, ushort maxval, int type)
             }
 
             for (; j < roi.width; j++)
-                dst[j] = threshToZeroInv<ushort>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshToZeroInv<ushort>(src[j], thresh);
         }
         break;
     }
 #else
-    threshGeneric<ushort>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
+    threshGeneric<ushort, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
+template<bool useMask>
 static void
-thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
+thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short maxval, int type )
 {
     Size roi = _src.size();
     roi.width *= _src.channels();
@@ -520,56 +691,67 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         src_step = dst_step = roi.width;
     }
 
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
+    const uchar* mask = nullptr;
+    size_t mask_step = 0;
+    if constexpr(useMask)
     {
-        IppiSize sz = { roi.width, roi.height };
-        CV_SUPPRESS_DEPRECATED_START
-        switch( type )
-        {
-        case THRESH_TRUNC:
-            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_16s_C1IR, dst, (int)dst_step*sizeof(dst[0]), sz, thresh) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_16s_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO:
-            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_16s_C1IR, dst, (int)dst_step*sizeof(dst[0]), sz, thresh + 1, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_16s_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh + 1, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO_INV:
-            if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_16s_C1IR, dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_16s_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0) >= 0)
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        }
-        CV_SUPPRESS_DEPRECATED_END
+        mask = _mask.ptr();
+        mask_step = _mask.step;
     }
-#endif
+
+    if constexpr(!useMask)
+    {
+        #if defined(HAVE_IPP)
+        CV_IPP_CHECK()
+        {
+            IppiSize sz = { roi.width, roi.height };
+            CV_SUPPRESS_DEPRECATED_START
+            switch( type )
+            {
+            case THRESH_TRUNC:
+                if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_16s_C1IR, dst, (int)dst_step*sizeof(dst[0]), sz, thresh) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_16s_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+                break;
+            case THRESH_TOZERO:
+                if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_16s_C1IR, dst, (int)dst_step*sizeof(dst[0]), sz, thresh + 1, 0) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_16s_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh + 1, 0) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+                break;
+            case THRESH_TOZERO_INV:
+                if (_src.data == _dst.data && CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_16s_C1IR, dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                if (CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_16s_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0) >= 0)
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+                break;
+            }
+            CV_SUPPRESS_DEPRECATED_END
+        }
+        #endif
+    }
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     int i, j;
@@ -582,19 +764,34 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
         {
             j = 0;
-            for( ; j <= roi.width - 2*VTraits<v_int16>::vlanes(); j += 2*VTraits<v_int16>::vlanes() )
+            const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_int16 v0, v1;
+                v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_int16>::vlanes() );
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
+                    v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
+                }
                 v0 = v_lt(thresh8, v0);
                 v1 = v_lt(thresh8, v1);
                 v0 = v_and(v0, maxval8);
                 v1 = v_and(v1, maxval8);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_s16(v_unpacklo(vm0, vm0))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_s16(v_unpackhi(vm0, vm0))), v3);
+                }
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_int16>::vlanes(), v1 );
             }
-            if( j <= roi.width - VTraits<v_int16>::vlanes() )
+            if ( !useMask && (j <= roi.width - VTraits<v_int16>::vlanes()) )
             {
                 v_int16 v0 = vx_load( src + j );
                 v0 = v_lt(thresh8, v0);
@@ -604,7 +801,8 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             }
 
             for( ; j < roi.width; j++ )
-                dst[j] = threshBinary<short>(src[j], thresh, maxval);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshBinary<short>(src[j], thresh, maxval);
         }
         break;
 
@@ -612,19 +810,34 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
         {
             j = 0;
-            for( ; j <= roi.width - 2*VTraits<v_int16>::vlanes(); j += 2*VTraits<v_int16>::vlanes() )
+            const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_int16 v0, v1;
+                v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_int16>::vlanes() );
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
+                    v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
+                }
                 v0 = v_le(v0, thresh8);
                 v1 = v_le(v1, thresh8);
                 v0 = v_and(v0, maxval8);
                 v1 = v_and(v1, maxval8);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_s16(v_unpacklo(vm0, vm0))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_s16(v_unpackhi(vm0, vm0))), v3);
+                }
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_int16>::vlanes(), v1 );
             }
-            if( j <= roi.width - VTraits<v_int16>::vlanes() )
+            if ( !useMask && (j <= roi.width - VTraits<v_int16>::vlanes()) )
             {
                 v_int16 v0 = vx_load( src + j );
                 v0 = v_le(v0, thresh8);
@@ -634,7 +847,8 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             }
 
             for( ; j < roi.width; j++ )
-                dst[j] = threshBinaryInv<short>(src[j], thresh, maxval);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshBinaryInv<short>(src[j], thresh, maxval);
         }
         break;
 
@@ -642,17 +856,32 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
         {
             j = 0;
-            for( ; j <= roi.width - 2*VTraits<v_int16>::vlanes(); j += 2*VTraits<v_int16>::vlanes() )
+            const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_int16 v0, v1;
+                v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_int16>::vlanes() );
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
+                    v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
+                }
                 v0 = v_min( v0, thresh8 );
                 v1 = v_min( v1, thresh8 );
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_s16(v_unpacklo(vm0, vm0))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_s16(v_unpackhi(vm0, vm0))), v3);
+                }
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_int16>::vlanes(), v1 );
             }
-            if( j <= roi.width - VTraits<v_int16>::vlanes() )
+            if ( !useMask && (j <= roi.width - VTraits<v_int16>::vlanes()) )
             {
                 v_int16 v0 = vx_load( src + j );
                 v0 = v_min( v0, thresh8 );
@@ -661,7 +890,8 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             }
 
             for( ; j < roi.width; j++ )
-                dst[j] = threshTrunc<short>( src[j], thresh );
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshTrunc<short>( src[j], thresh );
         }
         break;
 
@@ -669,17 +899,32 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
         {
             j = 0;
-            for( ; j <= roi.width - 2*VTraits<v_int16>::vlanes(); j += 2*VTraits<v_int16>::vlanes() )
+            const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_int16 v0, v1;
+                v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_int16>::vlanes() );
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
+                    v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
+                }
                 v0 = v_and(v_lt(thresh8, v0), v0);
                 v1 = v_and(v_lt(thresh8, v1), v1);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_s16(v_unpacklo(vm0, vm0))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_s16(v_unpackhi(vm0, vm0))), v3);
+                }
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_int16>::vlanes(), v1 );
             }
-            if( j <= roi.width - VTraits<v_int16>::vlanes() )
+            if ( !useMask && (j <= roi.width - VTraits<v_int16>::vlanes()) )
             {
                 v_int16 v0 = vx_load( src + j );
                 v0 = v_and(v_lt(thresh8, v0), v0);
@@ -688,7 +933,8 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             }
 
             for( ; j < roi.width; j++ )
-                dst[j] = threshToZero<short>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshToZero<short>(src[j], thresh);
         }
         break;
 
@@ -696,17 +942,32 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
         for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
         {
             j = 0;
-            for( ; j <= roi.width - 2*VTraits<v_int16>::vlanes(); j += 2*VTraits<v_int16>::vlanes() )
+            const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_int16 v0, v1;
+                v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_int16>::vlanes() );
+                v_uint8 vm0;
+                if constexpr(useMask)
+                {
+                    vm0 = vx_load( mask + j );
+                    v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
+                    v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
+                }
                 v0 = v_and(v_le(v0, thresh8), v0);
                 v1 = v_and(v_le(v1, thresh8), v1);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_s16(v_unpacklo(vm0, vm0))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_s16(v_unpackhi(vm0, vm0))), v3);
+                }
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_int16>::vlanes(), v1 );
             }
-            if( j <= roi.width - VTraits<v_int16>::vlanes() )
+            if ( !useMask && (j <= roi.width - VTraits<v_int16>::vlanes()) )
             {
                 v_int16 v0 = vx_load( src + j );
                 v0 = v_and(v_le(v0, thresh8), v0);
@@ -715,20 +976,21 @@ thresh_16s( const Mat& _src, Mat& _dst, short thresh, short maxval, int type )
             }
 
             for( ; j < roi.width; j++ )
-                dst[j] = threshToZeroInv<short>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshToZeroInv<short>(src[j], thresh);
         }
         break;
     default:
         CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 #else
-    threshGeneric<short>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
+    threshGeneric<short, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
-
+template<bool useMask>
 static void
-thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
+thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float maxval, int type )
 {
     Size roi = _src.size();
     roi.width *= _src.channels();
@@ -743,64 +1005,99 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
         roi.height = 1;
     }
 
-#if defined(HAVE_IPP)
-    CV_IPP_CHECK()
+    const uchar* mask = nullptr;
+    size_t mask_step = 0;
+    if constexpr(useMask)
     {
-        IppiSize sz = { roi.width, roi.height };
-        switch( type )
-        {
-        case THRESH_TRUNC:
-            if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO:
-            if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, nextafterf(thresh, std::numeric_limits<float>::infinity()), 0))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        case THRESH_TOZERO_INV:
-            if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP);
-                return;
-            }
-            setIppErrorStatus();
-            break;
-        }
+        mask = _mask.ptr();
+        mask_step = _mask.step;
     }
-#endif
+
+    if constexpr(!useMask)
+    {
+        #if defined(HAVE_IPP)
+        CV_IPP_CHECK()
+        {
+            IppiSize sz = { roi.width, roi.height };
+            switch( type )
+            {
+            case THRESH_TRUNC:
+                if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_GT_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh))
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+                break;
+            case THRESH_TOZERO:
+                if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_LTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, nextafterf(thresh, std::numeric_limits<float>::infinity()), 0))
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+                break;
+            case THRESH_TOZERO_INV:
+                if (0 <= CV_INSTRUMENT_FUN_IPP(ippiThreshold_GTVal_32f_C1R, src, (int)src_step*sizeof(src[0]), dst, (int)dst_step*sizeof(dst[0]), sz, thresh, 0))
+                {
+                    CV_IMPL_ADD(CV_IMPL_IPP);
+                    return;
+                }
+                setIppErrorStatus();
+                break;
+            }
+        }
+        #endif
+    }
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     int i, j;
     v_float32 thresh4 = vx_setall_f32( thresh );
     v_float32 maxval4 = vx_setall_f32( maxval );
 
+    v_uint8 vm0;
     switch( type )
     {
         case THRESH_BINARY:
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
                 j = 0;
-                for( ; j <= roi.width - 2*VTraits<v_float32>::vlanes(); j += 2*VTraits<v_float32>::vlanes() )
+                int readCount = 0;
+                const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
+                const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+                const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+                for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
                 {
-                    v_float32 v0, v1;
+                    v_float32 v0, v1, v2, v3;
                     v0 = vx_load( src + j );
                     v1 = vx_load( src + j + VTraits<v_float32>::vlanes() );
+                    v_uint16 vm00;
+                    if constexpr(useMask)
+                    {
+                        const int readParity = ((readCount++)&0x1);
+                        if (!readParity)
+                            vm0 = vx_load( mask + j );
+                        switch(readParity)
+                        {
+                            case 0: vm00 = v_unpacklo(vm0, vm0); break;
+                            case 1: vm00 = v_unpackhi(vm0, vm0); break;
+                        }
+                        v2 = v_and(v0, v_reinterpret_as_f32(v_not(v_unpacklo(vm00, vm00))));
+                        v3 = v_and(v1, v_reinterpret_as_f32(v_not(v_unpackhi(vm00, vm00))));
+                    }
                     v0 = v_lt(thresh4, v0);
                     v1 = v_lt(thresh4, v1);
                     v0 = v_and(v0, maxval4);
                     v1 = v_and(v1, maxval4);
+                    if constexpr(useMask)
+                    {
+                        v0 = v_or(v_and(v0, v_reinterpret_as_f32(v_unpacklo(vm00, vm00))), v2);
+                        v1 = v_or(v_and(v1, v_reinterpret_as_f32(v_unpackhi(vm00, vm00))), v3);
+                    }
                     v_store( dst + j, v0 );
                     v_store( dst + j + VTraits<v_float32>::vlanes(), v1 );
                 }
-                if( j <= roi.width - VTraits<v_float32>::vlanes() )
+                if ( !useMask && (j <= roi.width - VTraits<v_float32>::vlanes()) )
                 {
                     v_float32 v0 = vx_load( src + j );
                     v0 = v_lt(thresh4, v0);
@@ -810,7 +1107,8 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = threshBinary<float>(src[j], thresh, maxval);
+                    if (!useMask || (mask[j] != 0))
+                        dst[j] = threshBinary<float>(src[j], thresh, maxval);
             }
             break;
 
@@ -818,19 +1116,42 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
                 j = 0;
-                for( ; j <= roi.width - 2*VTraits<v_float32>::vlanes(); j += 2*VTraits<v_float32>::vlanes() )
+                int readCount = 0;
+                const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
+                const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+                const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+                for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
                 {
-                    v_float32 v0, v1;
+                    v_float32 v0, v1, v2, v3;
                     v0 = vx_load( src + j );
                     v1 = vx_load( src + j + VTraits<v_float32>::vlanes() );
+                    v_uint16 vm00;
+                    if constexpr(useMask)
+                    {
+                        const int readParity = ((readCount++)&0x1);
+                        if (!readParity)
+                            vm0 = vx_load( mask + j );
+                        switch(readParity)
+                        {
+                            case 0: vm00 = v_unpacklo(vm0, vm0); break;
+                            case 1: vm00 = v_unpackhi(vm0, vm0); break;
+                        }
+                        v2 = v_and(v0, v_reinterpret_as_f32(v_not(v_unpacklo(vm00, vm00))));
+                        v3 = v_and(v1, v_reinterpret_as_f32(v_not(v_unpackhi(vm00, vm00))));
+                    }
                     v0 = v_le(v0, thresh4);
                     v1 = v_le(v1, thresh4);
                     v0 = v_and(v0, maxval4);
                     v1 = v_and(v1, maxval4);
+                    if constexpr(useMask)
+                    {
+                        v0 = v_or(v_and(v0, v_reinterpret_as_f32(v_unpacklo(vm00, vm00))), v2);
+                        v1 = v_or(v_and(v1, v_reinterpret_as_f32(v_unpackhi(vm00, vm00))), v3);
+                    }
                     v_store( dst + j, v0 );
                     v_store( dst + j + VTraits<v_float32>::vlanes(), v1 );
                 }
-                if( j <= roi.width - VTraits<v_float32>::vlanes() )
+                if ( !useMask && (j <= roi.width - VTraits<v_float32>::vlanes()) )
                 {
                     v_float32 v0 = vx_load( src + j );
                     v0 = v_le(v0, thresh4);
@@ -840,7 +1161,8 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = threshBinaryInv<float>(src[j], thresh, maxval);
+                    if (!useMask || (mask[j] != 0))
+                        dst[j] = threshBinaryInv<float>(src[j], thresh, maxval);
             }
             break;
 
@@ -848,17 +1170,40 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
                 j = 0;
-                for( ; j <= roi.width - 2*VTraits<v_float32>::vlanes(); j += 2*VTraits<v_float32>::vlanes() )
+                int readCount = 0;
+                const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
+                const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+                const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+                for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
                 {
-                    v_float32 v0, v1;
+                    v_float32 v0, v1, v2, v3;
                     v0 = vx_load( src + j );
                     v1 = vx_load( src + j + VTraits<v_float32>::vlanes() );
+                    v_uint16 vm00;
+                    if constexpr(useMask)
+                    {
+                        const int readParity = ((readCount++)&0x1);
+                        if (!readParity)
+                            vm0 = vx_load( mask + j );
+                        switch(readParity)
+                        {
+                            case 0: vm00 = v_unpacklo(vm0, vm0); break;
+                            case 1: vm00 = v_unpackhi(vm0, vm0); break;
+                        }
+                        v2 = v_and(v0, v_reinterpret_as_f32(v_not(v_unpacklo(vm00, vm00))));
+                        v3 = v_and(v1, v_reinterpret_as_f32(v_not(v_unpackhi(vm00, vm00))));
+                    }
                     v0 = v_min( v0, thresh4 );
                     v1 = v_min( v1, thresh4 );
+                    if constexpr(useMask)
+                    {
+                        v0 = v_or(v_and(v0, v_reinterpret_as_f32(v_unpacklo(vm00, vm00))), v2);
+                        v1 = v_or(v_and(v1, v_reinterpret_as_f32(v_unpackhi(vm00, vm00))), v3);
+                    }
                     v_store( dst + j, v0 );
                     v_store( dst + j + VTraits<v_float32>::vlanes(), v1 );
                 }
-                if( j <= roi.width - VTraits<v_float32>::vlanes() )
+                if ( !useMask && (j <= roi.width - VTraits<v_float32>::vlanes()) )
                 {
                     v_float32 v0 = vx_load( src + j );
                     v0 = v_min( v0, thresh4 );
@@ -867,7 +1212,8 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = threshTrunc<float>(src[j], thresh);
+                    if (!useMask || (mask[j] != 0))
+                        dst[j] = threshTrunc<float>(src[j], thresh);
             }
             break;
 
@@ -875,17 +1221,40 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
                 j = 0;
-                for( ; j <= roi.width - 2*VTraits<v_float32>::vlanes(); j += 2*VTraits<v_float32>::vlanes() )
+                int readCount = 0;
+                const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
+                const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+                const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+                for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
                 {
-                    v_float32 v0, v1;
+                    v_float32 v0, v1, v2, v3;
                     v0 = vx_load( src + j );
                     v1 = vx_load( src + j + VTraits<v_float32>::vlanes() );
+                    v_uint16 vm00;
+                    if constexpr(useMask)
+                    {
+                        const int readParity = ((readCount++)&0x1);
+                        if (!readParity)
+                            vm0 = vx_load( mask + j );
+                        switch(readParity)
+                        {
+                            case 0: vm00 = v_unpacklo(vm0, vm0); break;
+                            case 1: vm00 = v_unpackhi(vm0, vm0); break;
+                        }
+                        v2 = v_and(v0, v_reinterpret_as_f32(v_not(v_unpacklo(vm00, vm00))));
+                        v3 = v_and(v1, v_reinterpret_as_f32(v_not(v_unpackhi(vm00, vm00))));
+                    }
                     v0 = v_and(v_lt(thresh4, v0), v0);
                     v1 = v_and(v_lt(thresh4, v1), v1);
+                    if constexpr(useMask)
+                    {
+                        v0 = v_or(v_and(v0, v_reinterpret_as_f32(v_unpacklo(vm00, vm00))), v2);
+                        v1 = v_or(v_and(v1, v_reinterpret_as_f32(v_unpackhi(vm00, vm00))), v3);
+                    }
                     v_store( dst + j, v0 );
                     v_store( dst + j + VTraits<v_float32>::vlanes(), v1 );
                 }
-                if( j <= roi.width - VTraits<v_float32>::vlanes() )
+                if ( !useMask && (j <= roi.width - VTraits<v_float32>::vlanes()) )
                 {
                     v_float32 v0 = vx_load( src + j );
                     v0 = v_and(v_lt(thresh4, v0), v0);
@@ -894,7 +1263,8 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = threshToZero<float>(src[j], thresh);
+                    if (!useMask || (mask[j] != 0))
+                        dst[j] = threshToZero<float>(src[j], thresh);
             }
             break;
 
@@ -902,17 +1272,40 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
             for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
             {
                 j = 0;
-                for( ; j <= roi.width - 2*VTraits<v_float32>::vlanes(); j += 2*VTraits<v_float32>::vlanes() )
+                int readCount = 0;
+                const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
+                const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+                const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+                for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
                 {
-                    v_float32 v0, v1;
+                    v_float32 v0, v1, v2, v3;
                     v0 = vx_load( src + j );
                     v1 = vx_load( src + j + VTraits<v_float32>::vlanes() );
+                    v_uint16 vm00;
+                    if constexpr(useMask)
+                    {
+                        const int readParity = ((readCount++)&0x1);
+                        if (!readParity)
+                            vm0 = vx_load( mask + j );
+                        switch(readParity)
+                        {
+                            case 0: vm00 = v_unpacklo(vm0, vm0); break;
+                            case 1: vm00 = v_unpackhi(vm0, vm0); break;
+                        }
+                        v2 = v_and(v0, v_reinterpret_as_f32(v_not(v_unpacklo(vm00, vm00))));
+                        v3 = v_and(v1, v_reinterpret_as_f32(v_not(v_unpackhi(vm00, vm00))));
+                    }
                     v0 = v_and(v_le(v0, thresh4), v0);
                     v1 = v_and(v_le(v1, thresh4), v1);
+                    if constexpr(useMask)
+                    {
+                        v0 = v_or(v_and(v0, v_reinterpret_as_f32(v_unpacklo(vm00, vm00))), v2);
+                        v1 = v_or(v_and(v1, v_reinterpret_as_f32(v_unpackhi(vm00, vm00))), v3);
+                    }
                     v_store( dst + j, v0 );
                     v_store( dst + j + VTraits<v_float32>::vlanes(), v1 );
                 }
-                if( j <= roi.width - VTraits<v_float32>::vlanes() )
+                if ( !useMask && (j <= roi.width - VTraits<v_float32>::vlanes()) )
                 {
                     v_float32 v0 = vx_load( src + j );
                     v0 = v_and(v_le(v0, thresh4), v0);
@@ -921,19 +1314,21 @@ thresh_32f( const Mat& _src, Mat& _dst, float thresh, float maxval, int type )
                 }
 
                 for( ; j < roi.width; j++ )
-                    dst[j] = threshToZeroInv<float>(src[j], thresh);
+                    if (!useMask || (mask[j] != 0))
+                        dst[j] = threshToZeroInv<float>(src[j], thresh);
             }
             break;
         default:
             CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 #else
-    threshGeneric<float>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
+    threshGeneric<float, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
+template<bool useMask>
 static void
-thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
+thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double maxval, int type)
 {
     Size roi = _src.size();
     roi.width *= _src.channels();
@@ -948,30 +1343,65 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
         roi.height = 1;
     }
 
+    const uchar* mask = nullptr;
+    size_t mask_step = 0;
+    if constexpr(useMask)
+    {
+        mask = _mask.ptr();
+        mask_step = _mask.step;
+    }
+
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     int i, j;
     v_float64 thresh2 = vx_setall_f64( thresh );
     v_float64 maxval2 = vx_setall_f64( maxval );
 
+    v_uint8 vm0;
     switch( type )
     {
     case THRESH_BINARY:
         for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
         {
             j = 0;
-            for( ; j <= roi.width - 2*VTraits<v_float64>::vlanes(); j += 2*VTraits<v_float64>::vlanes() )
+            int readCount = 0;
+            const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_float64 v0, v1;
+                v_float64 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_float64>::vlanes() );
+                v_uint32 vm0000;
+                if constexpr(useMask)
+                {
+                    const int readParity = ((readCount++)&0x3);
+                    v_uint16 vm00;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
+                    switch(readParity)
+                    {
+                        case 0: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
+                        case 1: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpackhi(vm00, vm00); break;
+                        case 2: vm00 = v_unpackhi(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
+                        case 3: vm00 = v_unpackhi(vm0, vm0); vm0000 = v_unpackhi(vm00, vm00); break;
+                    }
+                    v2 = v_and(v0, v_reinterpret_as_f64(v_not(v_unpacklo(vm0000, vm0000))));
+                    v3 = v_and(v1, v_reinterpret_as_f64(v_not(v_unpackhi(vm0000, vm0000))));
+                }
                 v0 = v_lt(thresh2, v0);
                 v1 = v_lt(thresh2, v1);
                 v0 = v_and(v0, maxval2);
                 v1 = v_and(v1, maxval2);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_f64(v_unpacklo(vm0000, vm0000))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_f64(v_unpackhi(vm0000, vm0000))), v3);
+                }
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_float64>::vlanes(), v1 );
             }
-            if( j <= roi.width - VTraits<v_float64>::vlanes() )
+            if ( !useMask && (j <= roi.width - VTraits<v_float64>::vlanes()) )
             {
                 v_float64 v0 = vx_load( src + j );
                 v0 = v_lt(thresh2, v0);
@@ -981,7 +1411,8 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
             }
 
             for( ; j < roi.width; j++ )
-                dst[j] = threshBinary<double>(src[j], thresh, maxval);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshBinary<double>(src[j], thresh, maxval);
         }
         break;
 
@@ -989,19 +1420,45 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
         for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
         {
             j = 0;
-            for( ; j <= roi.width - 2*VTraits<v_float64>::vlanes(); j += 2*VTraits<v_float64>::vlanes() )
+            int readCount = 0;
+            const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_float64 v0, v1;
+                v_float64 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_float64>::vlanes() );
+                v_uint32 vm0000;
+                if constexpr(useMask)
+                {
+                    const int readParity = ((readCount++)&0x3);
+                    v_uint16 vm00;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
+                    switch(readParity)
+                    {
+                        case 0: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
+                        case 1: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpackhi(vm00, vm00); break;
+                        case 2: vm00 = v_unpackhi(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
+                        case 3: vm00 = v_unpackhi(vm0, vm0); vm0000 = v_unpackhi(vm00, vm00); break;
+                    }
+                    v2 = v_and(v0, v_reinterpret_as_f64(v_not(v_unpacklo(vm0000, vm0000))));
+                    v3 = v_and(v1, v_reinterpret_as_f64(v_not(v_unpackhi(vm0000, vm0000))));
+                }
                 v0 = v_le(v0, thresh2);
                 v1 = v_le(v1, thresh2);
                 v0 = v_and(v0, maxval2);
                 v1 = v_and(v1, maxval2);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_f64(v_unpacklo(vm0000, vm0000))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_f64(v_unpackhi(vm0000, vm0000))), v3);
+                }
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_float64>::vlanes(), v1 );
             }
-            if( j <= roi.width - VTraits<v_float64>::vlanes() )
+            if ( !useMask && (j <= roi.width - VTraits<v_float64>::vlanes()) )
             {
                 v_float64 v0 = vx_load( src + j );
                 v0 = v_le(v0, thresh2);
@@ -1011,7 +1468,8 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
             }
 
             for( ; j < roi.width; j++ )
-                dst[j] = threshBinaryInv<double>(src[j], thresh, maxval);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshBinaryInv<double>(src[j], thresh, maxval);
         }
         break;
 
@@ -1019,17 +1477,43 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
         for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
         {
             j = 0;
-            for( ; j <= roi.width - 2*VTraits<v_float64>::vlanes(); j += 2*VTraits<v_float64>::vlanes() )
+            int readCount = 0;
+            const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_float64 v0, v1;
+                v_float64 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_float64>::vlanes() );
+                v_uint32 vm0000;
+                if constexpr(useMask)
+                {
+                    const int readParity = ((readCount++)&0x3);
+                    v_uint16 vm00;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
+                    switch(readParity)
+                    {
+                        case 0: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
+                        case 1: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpackhi(vm00, vm00); break;
+                        case 2: vm00 = v_unpackhi(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
+                        case 3: vm00 = v_unpackhi(vm0, vm0); vm0000 = v_unpackhi(vm00, vm00); break;
+                    }
+                    v2 = v_and(v0, v_reinterpret_as_f64(v_not(v_unpacklo(vm0000, vm0000))));
+                    v3 = v_and(v1, v_reinterpret_as_f64(v_not(v_unpackhi(vm0000, vm0000))));
+                }
                 v0 = v_min( v0, thresh2 );
                 v1 = v_min( v1, thresh2 );
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_f64(v_unpacklo(vm0000, vm0000))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_f64(v_unpackhi(vm0000, vm0000))), v3);
+                }
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_float64>::vlanes(), v1 );
             }
-            if( j <= roi.width - VTraits<v_float64>::vlanes() )
+            if ( !useMask && (j <= roi.width - VTraits<v_float64>::vlanes()) )
             {
                 v_float64 v0 = vx_load( src + j );
                 v0 = v_min( v0, thresh2 );
@@ -1038,7 +1522,8 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
             }
 
             for( ; j < roi.width; j++ )
-                dst[j] = threshTrunc<double>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshTrunc<double>(src[j], thresh);
         }
         break;
 
@@ -1046,17 +1531,43 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
         for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
         {
             j = 0;
-            for( ; j <= roi.width - 2*VTraits<v_float64>::vlanes(); j += 2*VTraits<v_float64>::vlanes() )
+            int readCount = 0;
+            const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_float64 v0, v1;
+                v_float64 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_float64>::vlanes() );
+                v_uint32 vm0000;
+                if constexpr(useMask)
+                {
+                    const int readParity = ((readCount++)&0x3);
+                    v_uint16 vm00;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
+                    switch(readParity)
+                    {
+                        case 0: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
+                        case 1: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpackhi(vm00, vm00); break;
+                        case 2: vm00 = v_unpackhi(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
+                        case 3: vm00 = v_unpackhi(vm0, vm0); vm0000 = v_unpackhi(vm00, vm00); break;
+                    }
+                    v2 = v_and(v0, v_reinterpret_as_f64(v_not(v_unpacklo(vm0000, vm0000))));
+                    v3 = v_and(v1, v_reinterpret_as_f64(v_not(v_unpackhi(vm0000, vm0000))));
+                }
                 v0 = v_and(v_lt(thresh2, v0), v0);
                 v1 = v_and(v_lt(thresh2, v1), v1);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_f64(v_unpacklo(vm0000, vm0000))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_f64(v_unpackhi(vm0000, vm0000))), v3);
+                }
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_float64>::vlanes(), v1 );
             }
-            if( j <= roi.width - VTraits<v_float64>::vlanes() )
+            if ( !useMask && (j <= roi.width - VTraits<v_float64>::vlanes()) )
             {
                 v_float64 v0 = vx_load( src + j );
                 v0 = v_and(v_lt(thresh2, v0), v0);
@@ -1065,7 +1576,8 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
             }
 
             for( ; j < roi.width; j++ )
-                dst[j] = threshToZero<double>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshToZero<double>(src[j], thresh);
         }
         break;
 
@@ -1073,17 +1585,43 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
         for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
         {
             j = 0;
-            for( ; j <= roi.width - 2*VTraits<v_float64>::vlanes(); j += 2*VTraits<v_float64>::vlanes() )
+            int readCount = 0;
+            const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
             {
-                v_float64 v0, v1;
+                v_float64 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_float64>::vlanes() );
+                v_uint32 vm0000;
+                if constexpr(useMask)
+                {
+                    const int readParity = ((readCount++)&0x3);
+                    v_uint16 vm00;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
+                    switch(readParity)
+                    {
+                        case 0: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
+                        case 1: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpackhi(vm00, vm00); break;
+                        case 2: vm00 = v_unpackhi(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
+                        case 3: vm00 = v_unpackhi(vm0, vm0); vm0000 = v_unpackhi(vm00, vm00); break;
+                    }
+                    v2 = v_and(v0, v_reinterpret_as_f64(v_not(v_unpacklo(vm0000, vm0000))));
+                    v3 = v_and(v1, v_reinterpret_as_f64(v_not(v_unpackhi(vm0000, vm0000))));
+                }
                 v0 = v_and(v_le(v0, thresh2), v0);
                 v1 = v_and(v_le(v1, thresh2), v1);
+                if constexpr(useMask)
+                {
+                    v0 = v_or(v_and(v0, v_reinterpret_as_f64(v_unpacklo(vm0000, vm0000))), v2);
+                    v1 = v_or(v_and(v1, v_reinterpret_as_f64(v_unpackhi(vm0000, vm0000))), v3);
+                }
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_float64>::vlanes(), v1 );
             }
-            if( j <= roi.width - VTraits<v_float64>::vlanes() )
+            if ( !useMask && (j <= roi.width - VTraits<v_float64>::vlanes()) )
             {
                 v_float64 v0 = vx_load( src + j );
                 v0 = v_and(v_le(v0, thresh2), v0);
@@ -1092,14 +1630,15 @@ thresh_64f(const Mat& _src, Mat& _dst, double thresh, double maxval, int type)
             }
 
             for( ; j < roi.width; j++ )
-                dst[j] = threshToZeroInv<double>(src[j], thresh);
+                if (!useMask || (mask[j] != 0))
+                    dst[j] = threshToZeroInv<double>(src[j], thresh);
         }
         break;
     default:
         CV_Error(cv::Error::StsBadArg, ""); return;
     }
 #else
-    threshGeneric<double>(roi, src, src_step, dst, dst_step, thresh, maxval, type);
+    threshGeneric<double, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
@@ -1123,8 +1662,8 @@ static bool ipp_getThreshVal_Otsu_8u( const unsigned char* _src, int step, Size 
 }
 #endif
 
-template<typename T, size_t BinsOnStack = 0u>
-static double getThreshVal_Otsu( const Mat& _src, const Size& size)
+template<typename T, size_t BinsOnStack = 0u, bool useMask = false>
+static double getThreshVal_Otsu( const Mat& _src, const Mat& _mask, const Size& size)
 {
     const int N = std::numeric_limits<T>::max() + 1;
     int i, j;
@@ -1138,24 +1677,47 @@ static double getThreshVal_Otsu( const Mat& _src, const Size& size)
     #if CV_ENABLE_UNROLLED
     int* h_unrolled[3] = {h + N, h + 2 * N, h + 3 * N };
     #endif
+    int maskCount = 0;
     for( i = 0; i < size.height; i++ )
     {
         const T* src = _src.ptr<T>(i, 0);
+        const unsigned char* pMask = nullptr;
+        if constexpr(useMask)
+            pMask = _mask.ptr<unsigned char>(i, 0);
         j = 0;
         #if CV_ENABLE_UNROLLED
         for( ; j <= size.width - 4; j += 4 )
         {
             int v0 = src[j], v1 = src[j+1];
-            h[v0]++; h_unrolled[0][v1]++;
+            if constexpr(useMask)
+              h[v0] += (pMask[j] != 0) ? 1 : 0;
+            else
+              h[v0]++;
+            if constexpr(useMask)
+                h_unrolled[0][v1] += (pMask[j+1] != 0) ? ++maskCount,1 : 0;
+            else
+                h_unrolled[0][v1]++;
             v0 = src[j+2]; v1 = src[j+3];
-            h_unrolled[1][v0]++; h_unrolled[2][v1]++;
+            if constexpr(useMask)
+                h_unrolled[1][v0] += (pMask[j+2] != 0) ? ++maskCount,1 : 0;
+            else
+                h_unrolled[1][v0]++;
+            if constexpr(useMask)
+                h_unrolled[2][v1] += (pMask[j+3] != 0) ? ++maskCount,1 : 0;
+            else
+                h_unrolled[2][v1]++;
         }
         #endif
         for( ; j < size.width; j++ )
-            h[src[j]]++;
+        {
+            if constexpr(useMask)
+                h[src[j]] += (pMask[j] != 0) ? ++maskCount,1 : 0;
+            else
+                h[src[j]]++;
+        }
     }
 
-    double mu = 0, scale = 1./(size.width*size.height);
+    double mu = 0, scale = 1./(useMask ? maskCount : (size.width*size.height));
     for( i = 0; i < N; i++ )
     {
         #if CV_ENABLE_UNROLLED
@@ -1193,7 +1755,7 @@ static double getThreshVal_Otsu( const Mat& _src, const Size& size)
 }
 
 static double
-getThreshVal_Otsu_8u( const Mat& _src )
+getThreshVal_Otsu_8u( const Mat& _src, const Mat& _mask )
 {
     Size size = _src.size();
     int step = (int) _src.step;
@@ -1204,18 +1766,24 @@ getThreshVal_Otsu_8u( const Mat& _src )
         step = size.width;
     }
 
-#ifdef HAVE_IPP
-    unsigned char thresh = 0;
-    CV_IPP_RUN_FAST(ipp_getThreshVal_Otsu_8u(_src.ptr(), step, size, thresh), thresh);
-#else
-    CV_UNUSED(step);
-#endif
+    if (_mask.empty())
+    {
+        #ifdef HAVE_IPP
+        unsigned char thresh = 0;
+        CV_IPP_RUN_FAST(ipp_getThreshVal_Otsu_8u(_src.ptr(), step, size, thresh), thresh);
+        #else
+        CV_UNUSED(step);
+        #endif
+    }
 
-    return getThreshVal_Otsu<uchar, 256u>(_src, size);
+    if (!_mask.empty())
+        return getThreshVal_Otsu<uchar, 256u, true>(_src, _mask, size);
+    else
+        return getThreshVal_Otsu<uchar, 256u, false>(_src, _mask, size);
 }
 
 static double
-getThreshVal_Otsu_16u( const Mat& _src )
+getThreshVal_Otsu_16u( const Mat& _src, const Mat& _mask )
 {
     Size size = _src.size();
     if( _src.isContinuous() )
@@ -1224,11 +1792,15 @@ getThreshVal_Otsu_16u( const Mat& _src )
         size.height = 1;
     }
 
-    return getThreshVal_Otsu<ushort>(_src, size);
+    if (!_mask.empty())
+        return getThreshVal_Otsu<ushort, true>(_src, _mask, size);
+    else
+        return getThreshVal_Otsu<ushort, false>(_src, _mask, size);
 }
 
+template<bool useMask>
 static double
-getThreshVal_Triangle_8u( const Mat& _src )
+getThreshVal_Triangle_8u( const Mat& _src, const Mat& _mask )
 {
     Size size = _src.size();
     int step = (int) _src.step;
@@ -1247,18 +1819,40 @@ getThreshVal_Triangle_8u( const Mat& _src )
     for( i = 0; i < size.height; i++ )
     {
         const uchar* src = _src.ptr() + step*i;
+        const uchar* mask = nullptr;
+        if constexpr(useMask)
+          mask = _mask.ptr<unsigned char>(i);
         j = 0;
         #if CV_ENABLE_UNROLLED
         for( ; j <= size.width - 4; j += 4 )
         {
             int v0 = src[j], v1 = src[j+1];
-            h[v0]++; h_unrolled[0][v1]++;
+            if constexpr(useMask)
+                h[v0] += (mask[j] != 0) ? 1 : 0;
+            else
+                h[v0]++;
+            if constexpr(useMask)
+                h_unrolled[0][v1] += (mask[j+1] != 0) ? 1 : 0;
+            else
+                h_unrolled[0][v1]++;
             v0 = src[j+2]; v1 = src[j+3];
-            h_unrolled[1][v0]++; h_unrolled[2][v1]++;
+            if constexpr(useMask)
+                h_unrolled[1][v0] += (mask[j+2] != 0) ? 1 : 0;
+            else
+                h_unrolled[1][v0]++;
+            if constexpr(useMask)
+                h_unrolled[2][v0] += (mask[j+3] != 0) ? 1 : 0;
+            else
+                h_unrolled[2][v1]++;
         }
         #endif
         for( ; j < size.width; j++ )
-            h[src[j]]++;
+        {
+            if constexpr(useMask)
+                h[src[j]] += (mask[j] != 0) ? 1 : 0;
+            else
+                h[src[j]]++;
+        }
     }
 
     int left_bound = 0, right_bound = 0, max_ind = 0, max = 0;
@@ -1344,10 +1938,12 @@ getThreshVal_Triangle_8u( const Mat& _src )
 class ThresholdRunner : public ParallelLoopBody
 {
 public:
-    ThresholdRunner(Mat _src, Mat _dst, double _thresh, double _maxval, int _thresholdType)
+    ThresholdRunner(Mat _src, Mat _dst, const cv::Mat& _mask, double _thresh, double _maxval, int _thresholdType)
     {
         src = _src;
         dst = _dst;
+        mask = _mask;
+        useMask = !mask.empty();
 
         thresh = _thresh;
         maxval = _maxval;
@@ -1361,45 +1957,78 @@ public:
 
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);
+        Mat maskStripe;
 
-        CALL_HAL(threshold, cv_hal_threshold, srcStripe.data, srcStripe.step, dstStripe.data, dstStripe.step,
-                 srcStripe.cols, srcStripe.rows, srcStripe.depth(), srcStripe.channels(),
-                 thresh, maxval, thresholdType);
-
-        if (srcStripe.depth() == CV_8U)
+        if (useMask)
         {
-            thresh_8u( srcStripe, dstStripe, (uchar)thresh, (uchar)maxval, thresholdType );
-        }
-        else if( srcStripe.depth() == CV_16S )
+            maskStripe = mask.rowRange(row0, row1);
+            CALL_HAL(threshold_mask, cv_hal_threshold_mask, srcStripe.data, srcStripe.step, dstStripe.data, dstStripe.step,
+                     maskStripe.data, maskStripe.step,
+                     srcStripe.cols, srcStripe.rows, srcStripe.depth(), srcStripe.channels(),
+                     thresh, maxval, thresholdType);
+            if (srcStripe.depth() == CV_8U)
+            {
+                thresh_8u<true>( srcStripe, dstStripe, maskStripe, (uchar)thresh, (uchar)maxval, thresholdType );
+            }
+            else if( srcStripe.depth() == CV_16S )
+            {
+                thresh_16s<true>( srcStripe, dstStripe, maskStripe, (short)thresh, (short)maxval, thresholdType );
+            }
+            else if( srcStripe.depth() == CV_16U )
+            {
+                thresh_16u<true>( srcStripe, dstStripe, maskStripe, (ushort)thresh, (ushort)maxval, thresholdType );
+            }
+            else if( srcStripe.depth() == CV_32F )
+            {
+                thresh_32f<true>( srcStripe, dstStripe, maskStripe, (float)thresh, (float)maxval, thresholdType );
+            }
+            else if( srcStripe.depth() == CV_64F )
+            {
+                thresh_64f<true>(srcStripe, dstStripe, maskStripe, thresh, maxval, thresholdType);
+            }
+        }//end if (useMask)
+        else//if (!useMask)
         {
-            thresh_16s( srcStripe, dstStripe, (short)thresh, (short)maxval, thresholdType );
-        }
-        else if( srcStripe.depth() == CV_16U )
-        {
-            thresh_16u( srcStripe, dstStripe, (ushort)thresh, (ushort)maxval, thresholdType );
-        }
-        else if( srcStripe.depth() == CV_32F )
-        {
-            thresh_32f( srcStripe, dstStripe, (float)thresh, (float)maxval, thresholdType );
-        }
-        else if( srcStripe.depth() == CV_64F )
-        {
-            thresh_64f(srcStripe, dstStripe, thresh, maxval, thresholdType);
-        }
+            CALL_HAL(threshold, cv_hal_threshold, srcStripe.data, srcStripe.step, dstStripe.data, dstStripe.step,
+                     srcStripe.cols, srcStripe.rows, srcStripe.depth(), srcStripe.channels(),
+                     thresh, maxval, thresholdType);
+            if (srcStripe.depth() == CV_8U)
+            {
+                thresh_8u<false>( srcStripe, dstStripe, maskStripe, (uchar)thresh, (uchar)maxval, thresholdType );
+            }
+            else if( srcStripe.depth() == CV_16S )
+            {
+                thresh_16s<false>( srcStripe, dstStripe, maskStripe, (short)thresh, (short)maxval, thresholdType );
+            }
+            else if( srcStripe.depth() == CV_16U )
+            {
+                thresh_16u<false>( srcStripe, dstStripe, maskStripe, (ushort)thresh, (ushort)maxval, thresholdType );
+            }
+            else if( srcStripe.depth() == CV_32F )
+            {
+                thresh_32f<false>( srcStripe, dstStripe, maskStripe, (float)thresh, (float)maxval, thresholdType );
+            }
+            else if( srcStripe.depth() == CV_64F )
+            {
+                thresh_64f<false>(srcStripe, dstStripe, maskStripe, thresh, maxval, thresholdType);
+            }
+        }//end if (!useMask)
     }
 
 private:
     Mat src;
     Mat dst;
+    Mat mask;
 
     double thresh;
     double maxval;
     int thresholdType;
+    bool useMask;
 };
 
 #ifdef HAVE_OPENCL
 
-static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, double maxval, int thresh_type )
+static bool ocl_threshold( InputArray _src, OutputArray _dst, InputArray _mask, double & thresh, double maxval, int thresh_type )
 {
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
         kercn = ocl::predictOptimalVectorWidth(_src, _dst), ktype = CV_MAKE_TYPE(depth, kercn);
@@ -1418,16 +2047,26 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
     ocl::Device dev = ocl::Device::getDefault();
     int stride_size = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
 
-    ocl::Kernel k("threshold", ocl::imgproc::threshold_oclsrc,
-                  format("-D %s -D T=%s -D T1=%s -D STRIDE_SIZE=%d%s", thresholdMap[thresh_type],
-                         ocl::typeToStr(ktype), ocl::typeToStr(depth), stride_size,
-                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+    const bool useMask = !_mask.empty();
+
+    ocl::Kernel k =
+        !useMask ?
+            ocl::Kernel("threshold", ocl::imgproc::threshold_oclsrc,
+                        format("-D %s -D T=%s -D T1=%s -D STRIDE_SIZE=%d%s", thresholdMap[thresh_type],
+                        ocl::typeToStr(ktype), ocl::typeToStr(depth), stride_size,
+                        doubleSupport ? " -D DOUBLE_SUPPORT" : "")) :
+            ocl::Kernel("threshold_mask", ocl::imgproc::threshold_mask_oclsrc,
+                        format("-D %s -D T=%s -D T1=%s -D STRIDE_SIZE=%d%s", thresholdMap[thresh_type],
+                        ocl::typeToStr(ktype), ocl::typeToStr(depth), stride_size,
+                        doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
+
     if (k.empty())
         return false;
 
     UMat src = _src.getUMat();
     _dst.create(src.size(), type);
     UMat dst = _dst.getUMat();
+    UMat mask = !useMask ? cv::UMat() : _mask.getUMat();
 
     if (depth <= CV_32S)
         thresh = cvFloor(thresh);
@@ -1435,10 +2074,17 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
     const double min_vals[] = { 0, CHAR_MIN, 0, SHRT_MIN, INT_MIN, -FLT_MAX, -DBL_MAX, 0 };
     double min_val = min_vals[depth];
 
-    k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst, cn, kercn),
-           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(thresh))),
-           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(maxval))),
-           ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(min_val))));
+    if (!useMask)
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst, cn, kercn),
+               ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(thresh))),
+               ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(maxval))),
+               ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(min_val))));
+    else
+        k.args(ocl::KernelArg::ReadOnlyNoSize(src), ocl::KernelArg::WriteOnly(dst, cn, kercn),
+            ocl::KernelArg::ReadOnlyNoSize(mask),
+            ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(thresh))),
+            ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(maxval))),
+            ocl::KernelArg::Constant(Mat(1, 1, depth, Scalar::all(min_val))));
 
     size_t globalsize[2] = { (size_t)dst.cols * cn / kercn, (size_t)dst.rows };
     globalsize[1] = (globalsize[1] + stride_size - 1) / stride_size;
@@ -1450,8 +2096,9 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
 
 #ifdef HAVE_OPENVX
 #define IMPL_OPENVX_TOZERO 1
-static bool openvx_threshold(Mat src, Mat dst, int thresh, int maxval, int type)
+static bool openvx_threshold(Mat src, Mat dst, const Mat& mask, int thresh, int maxval, int type)
 {
+    CV_Assert(mask.empty());
     Mat a = src;
 
     int trueVal, falseVal;
@@ -1542,15 +2189,25 @@ static bool openvx_threshold(Mat src, Mat dst, int thresh, int maxval, int type)
 
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
 {
+  return cv::threshold(_src, _dst, cv::noArray(), thresh, maxval, type);
+}
+
+double cv::threshold( InputArray _src, OutputArray _dst, InputArray _mask, double thresh, double maxval, int type )
+{
     CV_INSTRUMENT_REGION();
+    CV_Assert(_mask.empty() || ((_mask.type() == CV_8UC1) && (_mask.size() == _src.size())));
 
     CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
-                ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
+                ocl_threshold(_src, _dst, _mask, thresh, maxval, type), thresh)
 
     const bool isDisabled = ((type & THRESH_DRYRUN) != 0);
     type &= ~THRESH_DRYRUN;
 
     Mat src = _src.getMat();
+    Mat mask = _mask.getMat();
+
+    const bool hasMask = !mask.empty();
+    const bool isMaskValid = hasMask && ((mask.type() == CV_8UC1) && (mask.size() == src.size()));
 
     if (!isDisabled)
         _dst.create( src.size(), src.type() );
@@ -1565,16 +2222,27 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         int src_type = src.type();
         CV_CheckType(src_type, src_type == CV_8UC1 || src_type == CV_16UC1, "THRESH_OTSU mode");
 
-        CALL_HAL_RET(thresholdOtsu, cv_hal_threshold_otsu, thresh, src.data, src.step, dst.data, dst.step,
-                     src.cols, src.rows, src_type, maxval, type);
+        if (isMaskValid)
+        {
+            CALL_HAL_RET(thresholdMaskOtsu, cv_hal_threshold_mask_otsu, thresh, src.data, src.step, dst.data, dst.step, mask.data, mask.step,
+                src.cols, src.rows, src_type, maxval, type);
+        }
+        else
+        {
+            CALL_HAL_RET(thresholdOtsu, cv_hal_threshold_otsu, thresh, src.data, src.step, dst.data, dst.step,
+                         src.cols, src.rows, src_type, maxval, type);
+        }
 
-        thresh = src.type() == CV_8UC1 ? getThreshVal_Otsu_8u( src )
-                                       : getThreshVal_Otsu_16u( src );
+        thresh = src.type() == CV_8UC1 ? getThreshVal_Otsu_8u( src, mask )
+                                       : getThreshVal_Otsu_16u( src, mask );
     }
     else if( automatic_thresh == cv::THRESH_TRIANGLE )
     {
         CV_Assert( src.type() == CV_8UC1 );
-        thresh = getThreshVal_Triangle_8u( src );
+        if (isMaskValid)
+            thresh = getThreshVal_Triangle_8u<true>( src, mask );
+        else
+            thresh = getThreshVal_Triangle_8u<false>( src, mask );
     }
 
     if( src.depth() == CV_8U )
@@ -1598,15 +2266,15 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 int v = type == THRESH_BINARY ? (ithresh >= 255 ? 0 : imaxval) :
                         type == THRESH_BINARY_INV ? (ithresh >= 255 ? imaxval : 0) :
                         /*type == THRESH_TRUNC ? imaxval :*/ 0;
-                dst.setTo(v);
+                dst.setTo(v, mask);
             }
             else
-                src.copyTo(dst);
+                src.copyTo(dst, mask);
             return thresh;
         }
 
        CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_THRESHOLD>(src.cols, src.rows),
-                  openvx_threshold(src, dst, ithresh, imaxval, type), (double)ithresh)
+                  openvx_threshold(src, dst, mask, ithresh, imaxval, type), (double)ithresh)
 
         thresh = ithresh;
         maxval = imaxval;
@@ -1632,10 +2300,10 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 int v = type == THRESH_BINARY ? (ithresh >= SHRT_MAX ? 0 : imaxval) :
                 type == THRESH_BINARY_INV ? (ithresh >= SHRT_MAX ? imaxval : 0) :
                 /*type == THRESH_TRUNC ? imaxval :*/ 0;
-                dst.setTo(v);
+                dst.setTo(v, mask);
             }
             else
-                src.copyTo(dst);
+                src.copyTo(dst, mask);
             return thresh;
         }
         thresh = ithresh;
@@ -1663,10 +2331,10 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
                 int v = type == THRESH_BINARY ? (ithresh >= (int)USHRT_MAX ? 0 : imaxval) :
                         type == THRESH_BINARY_INV ? (ithresh >= (int)USHRT_MAX ? imaxval : 0) :
                   /*type == THRESH_TRUNC ? imaxval :*/ 0;
-                dst.setTo(v);
+                dst.setTo(v, mask);
             }
             else
-                src.copyTo(dst);
+                src.copyTo(dst, mask);
             return thresh;
         }
         thresh = ithresh;
@@ -1683,7 +2351,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         return thresh;
 
     parallel_for_(Range(0, dst.rows),
-                  ThresholdRunner(src, dst, thresh, maxval, type),
+                  ThresholdRunner(src, dst, mask, thresh, maxval, type),
                   dst.total()/(double)(1<<16));
     return thresh;
 }
