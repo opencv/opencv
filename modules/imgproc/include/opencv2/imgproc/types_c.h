@@ -613,7 +613,7 @@ enum
     CV_THRESH_TRIANGLE    =16,  /**< use Triangle algorithm to choose the optimal threshold value;
                                  combine the flag with one of the above CV_THRESH_* values, but not
                                  with CV_THRESH_OTSU */
-    CV_THRESH_DISABLE     =128 /**< compute threshold only (useful for OTSU/TRIANGLE) but does not
+    CV_THRESH_DRYRUN      =128 /**< compute threshold only (useful for OTSU/TRIANGLE) but does not
                                   actually run thresholding */
 };
 

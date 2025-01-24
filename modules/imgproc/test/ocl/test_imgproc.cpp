@@ -386,7 +386,7 @@ OCL_TEST_P(Threshold, Mat)
     }
 }
 
-struct Threshold_Disabled :
+struct Threshold_Dryrun :
         public ImgprocTestBase
 {
     int thresholdType;
@@ -399,7 +399,7 @@ struct Threshold_Disabled :
     }
 };
 
-OCL_TEST_P(Threshold_Disabled, Mat)
+OCL_TEST_P(Threshold_Dryrun, Mat)
 {
     for (int j = 0; j < test_loop_times; j++)
     {
@@ -408,7 +408,7 @@ OCL_TEST_P(Threshold_Disabled, Mat)
         double maxVal = randomDouble(20.0, 127.0);
         double thresh = randomDouble(0.0, maxVal);
 
-        const int _thresholdType = thresholdType | THRESH_DISABLE;
+        const int _thresholdType = thresholdType | THRESH_DRYRUN;
 
         src_roi.copyTo(dst_roi);
         usrc_roi.copyTo(udst_roi);
@@ -517,7 +517,7 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, Threshold, Combine(
                                    ThreshOp(THRESH_TOZERO), ThreshOp(THRESH_TOZERO_INV)),
                             Bool()));
 
-OCL_INSTANTIATE_TEST_CASE_P(Imgproc, Threshold_Disabled, Combine(
+OCL_INSTANTIATE_TEST_CASE_P(Imgproc, Threshold_Dryrun, Combine(
                             Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
                                    CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4,
                                    CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4),

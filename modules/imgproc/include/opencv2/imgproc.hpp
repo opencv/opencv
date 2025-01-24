@@ -330,7 +330,7 @@ enum ThresholdTypes {
     THRESH_MASK       = 7,
     THRESH_OTSU       = 8, //!< flag, use Otsu algorithm to choose the optimal threshold value
     THRESH_TRIANGLE   = 16, //!< flag, use Triangle algorithm to choose the optimal threshold value
-    THRESH_DISABLE    = 128 //!< flag, compute threshold only (useful for OTSU/TRIANGLE) but does not actually run thresholding
+    THRESH_DRYRUN     = 128 //!< flag, compute threshold only (useful for OTSU/TRIANGLE) but does not actually run thresholding
 };
 
 //! adaptive threshold algorithm

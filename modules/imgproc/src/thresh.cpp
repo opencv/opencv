@@ -1404,8 +1404,8 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
         kercn = ocl::predictOptimalVectorWidth(_src, _dst), ktype = CV_MAKE_TYPE(depth, kercn);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    const bool isDisabled = ((thresh_type & THRESH_DISABLE) != 0);
-    thresh_type &= ~THRESH_DISABLE;
+    const bool isDisabled = ((thresh_type & THRESH_DRYRUN) != 0);
+    thresh_type &= ~THRESH_DRYRUN;
 
     if ( isDisabled ||
         !(thresh_type == THRESH_BINARY || thresh_type == THRESH_BINARY_INV || thresh_type == THRESH_TRUNC ||
@@ -1547,8 +1547,8 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
                 ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
 
-    const bool isDisabled = ((type & THRESH_DISABLE) != 0);
-    type &= ~THRESH_DISABLE;
+    const bool isDisabled = ((type & THRESH_DRYRUN) != 0);
+    type &= ~THRESH_DRYRUN;
 
     Mat src = _src.getMat();
 

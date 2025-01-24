@@ -502,7 +502,7 @@ BIGDATA_TEST(Imgproc_Threshold, huge)
     ASSERT_EQ((uint64)nz, n / 2);
 }
 
-TEST(Imgproc_Threshold, threshold_disabling)
+TEST(Imgproc_Threshold, threshold_dryrun)
 {
     Size sz(16, 16);
     Mat input_original(sz, CV_8U, Scalar::all(2));
@@ -513,7 +513,7 @@ TEST(Imgproc_Threshold, threshold_disabling)
     {
         for(int threshFlag : threshFlags)
         {
-            const int _threshType = threshType | threshFlag | THRESH_DISABLE;
+            const int _threshType = threshType | threshFlag | THRESH_DRYRUN;
             cv::threshold(input, input, 2.0, 0.0, _threshType);
             EXPECT_MAT_NEAR(input, input_original, 0);
         }
