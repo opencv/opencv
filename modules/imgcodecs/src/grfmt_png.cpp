@@ -327,9 +327,9 @@ bool  PngDecoder::readHeader()
         if (id == id_bKGD)
         {
             // The spec is actually more complex: http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
-            m_animation.bgcolor[0] = chunk.p[9];
-            m_animation.bgcolor[1] = chunk.p[11];
-            m_animation.bgcolor[2] = chunk.p[13];
+            m_animation.bgcolor[0] = png_get_uint_16(&chunk.p[8]);
+            m_animation.bgcolor[1] = png_get_uint_16(&chunk.p[10]);
+            m_animation.bgcolor[2] = png_get_uint_16(&chunk.p[12]);
             m_animation.bgcolor[3] = 0;
         }
 
