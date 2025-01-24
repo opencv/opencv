@@ -327,11 +327,10 @@ bool  PngDecoder::readHeader()
         if (id == id_bKGD)
         {
             // The spec is actually more complex: http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
-            int bgcolor = png_get_uint_32(&chunk.p[8]);
-            m_animation.bgcolor[3] = (bgcolor >> 24) & 0xFF;
-            m_animation.bgcolor[2] = (bgcolor >> 16) & 0xFF;
-            m_animation.bgcolor[1] = (bgcolor >> 8) & 0xFF;
-            m_animation.bgcolor[0] = bgcolor & 0xFF;
+            m_animation.bgcolor[0] = chunk.p[9];
+            m_animation.bgcolor[1] = chunk.p[11];
+            m_animation.bgcolor[2] = chunk.p[13];
+            m_animation.bgcolor[3] = 0;
         }
 
         if (id == id_PLTE || id == id_tRNS)
@@ -721,11 +720,10 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
         if (size != 8 + 26 + 4)
             return 0;
     } else if (id == id_bKGD) {
-        // 8=HDR+size, ??=size of bKGD chunk, 4=CRC
+        // 8=HDR+size, 6=size of bKGD chunk, 4=CRC
         // The spec is actually more complex:
         // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
-        // TODO: we only check that 4 bytes can be read from &chunk.p[8]. Fix.
-        if (size < 8 + 4)
+        if (size < 8 + 6)
             return 0;
     } else if (id != id_fdAT && id != id_IDAT && id != id_IEND && id != id_PLTE && id != id_tRNS) {
         if (size > PNG_USER_CHUNK_MALLOC_MAX)
@@ -1533,13 +1531,13 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         if (palsize > 0)
             writeChunk(m_f, "PLTE", (unsigned char*)(&palette), palsize * 3);
 
-        if ((animation.bgcolor != Scalar()) && (animation.frames.size() > 1))
+        if ((animation.bgcolor != Scalar()) && coltype)
         {
-            uint64_t bgvalue = (static_cast<int>(animation.bgcolor[0]) & 0xFF) << 24 |
-                (static_cast<int>(animation.bgcolor[1]) & 0xFF) << 16 |
-                (static_cast<int>(animation.bgcolor[2]) & 0xFF) << 8 |
-                (static_cast<int>(animation.bgcolor[3]) & 0xFF);
-            writeChunk(m_f, "bKGD", (unsigned char*)(&bgvalue), 6); //the bKGD chunk must precede the first IDAT chunk, and must follow the PLTE chunk.
+            unsigned char bgvalue[6] = {};
+            bgvalue[1] = animation.bgcolor[0];
+            bgvalue[3] = animation.bgcolor[1];
+            bgvalue[5] = animation.bgcolor[2];
+            writeChunk(m_f, "bKGD", bgvalue, 6); //the bKGD chunk must precede the first IDAT chunk, and must follow the PLTE chunk.
         }
 
         if (trnssize > 0)
