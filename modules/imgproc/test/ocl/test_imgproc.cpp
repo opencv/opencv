@@ -386,6 +386,40 @@ OCL_TEST_P(Threshold, Mat)
     }
 }
 
+struct Threshold_Disabled :
+        public ImgprocTestBase
+{
+    int thresholdType;
+
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        thresholdType = GET_PARAM(2);
+        useRoi = GET_PARAM(3);
+    }
+};
+
+OCL_TEST_P(Threshold_Disabled, Mat)
+{
+    for (int j = 0; j < test_loop_times; j++)
+    {
+        random_roi();
+
+        double maxVal = randomDouble(20.0, 127.0);
+        double thresh = randomDouble(0.0, maxVal);
+
+        const int _thresholdType = thresholdType | THRESH_DISABLE;
+
+        src_roi.copyTo(dst_roi);
+        usrc_roi.copyTo(udst_roi);
+
+        OCL_OFF(cv::threshold(src_roi, dst_roi, thresh, maxVal, _thresholdType));
+        OCL_ON(cv::threshold(usrc_roi, udst_roi, thresh, maxVal, _thresholdType));
+
+        OCL_EXPECT_MATS_NEAR(dst, 0);
+    }
+}
+
 /////////////////////////////////////////// CLAHE //////////////////////////////////////////////////
 
 PARAM_TEST_CASE(CLAHETest, Size, double, bool)
@@ -474,6 +508,16 @@ OCL_INSTANTIATE_TEST_CASE_P(Imgproc, Integral, Combine(
                             Bool()));
 
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, Threshold, Combine(
+                            Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
+                                   CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4,
+                                   CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4),
+                            Values(0),
+                            Values(ThreshOp(THRESH_BINARY),
+                                   ThreshOp(THRESH_BINARY_INV), ThreshOp(THRESH_TRUNC),
+                                   ThreshOp(THRESH_TOZERO), ThreshOp(THRESH_TOZERO_INV)),
+                            Bool()));
+
+OCL_INSTANTIATE_TEST_CASE_P(Imgproc, Threshold_Disabled, Combine(
                             Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_8UC4,
                                    CV_16SC1, CV_16SC2, CV_16SC3, CV_16SC4,
                                    CV_32FC1, CV_32FC2, CV_32FC3, CV_32FC4),
