@@ -247,7 +247,7 @@ public:
 class VideoCaptureBase : public IVideoCapture
 {
 public:
-    VideoCaptureBase() : autorotate(false) {}
+    VideoCaptureBase() : autorotate(true) {}
     double getProperty(int propId) const CV_OVERRIDE
     {
         switch(propId)
@@ -358,7 +358,7 @@ Ptr<IVideoWriter> cvCreateVideoWriter_MSMF(const std::string& filename, int four
                                            double fps, const Size& frameSize,
                                            const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> create_DShow_capture(int index);
+Ptr<IVideoCapture> create_DShow_capture(int index, const VideoCaptureParameters& params);
 
 Ptr<IVideoCapture> create_V4L_capture_cam(int index);
 Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename);
