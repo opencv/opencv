@@ -768,7 +768,6 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
             A.at<double>(i,5) = 1.0;
         }
         cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
-        DM *= (1.0/n);
 
         TM(0,0) = DM(0,5)*DM(3,5)*DM(4,4) - DM(0,5)*DM(3,4)*DM(4,5) - DM(0,4)*DM(3,5)*DM(5,4) + \
                   DM(0,3)*DM(4,5)*DM(5,4) + DM(0,4)*DM(3,4)*DM(5,5) - DM(0,3)*DM(4,4)*DM(5,5);
