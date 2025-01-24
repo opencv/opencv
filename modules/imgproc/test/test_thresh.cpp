@@ -508,7 +508,7 @@ TEST(Imgproc_Threshold, threshold_disabling)
     Mat input_original(sz, CV_8U, Scalar::all(2));
     Mat input = input_original.clone();
     std::vector<int> threshTypes = {THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV};
-    std::vector<int> threshFlags = {THRESH_OTSU, THRESH_TRIANGLE};
+    std::vector<int> threshFlags = {0, THRESH_OTSU, THRESH_TRIANGLE};
     for(int threshType : threshTypes)
     {
         for(int threshFlag : threshFlags)
