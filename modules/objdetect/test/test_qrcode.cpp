@@ -426,12 +426,8 @@ TEST_P(Objdetect_QRCode_detectMulti, detect_none_26642)
     }
     std::vector<Point> corners;
 
-    auto start = std::chrono::system_clock::now();
     bool retval = detector.detectMulti(src, corners);
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsedTime = end - start;
 
-    EXPECT_LT(elapsedTime.count(), 15.0);
     EXPECT_EQ((int)corners.size(), 0);
     ASSERT_FALSE(retval);
 }

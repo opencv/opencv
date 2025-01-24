@@ -3517,10 +3517,10 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
 
         if(tooManyPoints) {
             if(!useNoiseFilter) {
-                cv::medianBlur(scaledBinBarcodeCache, bin_barcode, 5);
-                cv::medianBlur(bin_barcode_fullsize, bin_barcode_fullsize, 5);
+                cv::medianBlur(scaledBinBarcodeCache, bin_barcode, 3);
+                cv::medianBlur(bin_barcode_fullsize, bin_barcode_fullsize, 3);
                 scaledBinBarcodeCache = bin_barcode;
-                
+
                 tooManyPoints = false;
                 useFullsizedImage = false;
                 useNoiseFilter = true;
