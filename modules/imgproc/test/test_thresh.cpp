@@ -502,6 +502,25 @@ BIGDATA_TEST(Imgproc_Threshold, huge)
     ASSERT_EQ((uint64)nz, n / 2);
 }
 
+TEST(Imgproc_Threshold, threshold_dryrun)
+{
+    Size sz(16, 16);
+    Mat input_original(sz, CV_8U, Scalar::all(2));
+    Mat input = input_original.clone();
+    std::vector<int> threshTypes = {THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV};
+    std::vector<int> threshFlags = {0, THRESH_OTSU, THRESH_TRIANGLE};
+    for(int threshType : threshTypes)
+    {
+        for(int threshFlag : threshFlags)
+        {
+            const int _threshType = threshType | threshFlag | THRESH_DRYRUN;
+            cv::threshold(input, input, 2.0, 0.0, _threshType);
+            EXPECT_MAT_NEAR(input, input_original, 0);
+        }
+    }
+}
+
+
 TEST(Imgproc_Threshold, regression_THRESH_TOZERO_IPP_16085)
 {
     Size sz(16, 16);
