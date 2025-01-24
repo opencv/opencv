@@ -274,7 +274,7 @@ bool  PngDecoder::readHeader()
     }
 
     // Read PNG header: 137 80 78 71 13 10 26 10
-    if (!read_from_io(&sig, 8))
+    if (!readFromStreamOrBuffer(&sig, 8))
         return false;
 
     id = read_chunk(m_chunkIHDR);
@@ -682,7 +682,7 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
             });
 }
 
-bool PngDecoder::read_from_io(void* buffer, size_t num_bytes)
+bool PngDecoder::readFromStreamOrBuffer(void* buffer, size_t num_bytes)
 {
     if (m_f)
         return fread(buffer, 1, num_bytes, m_f) == num_bytes;
@@ -700,7 +700,7 @@ bool PngDecoder::read_from_io(void* buffer, size_t num_bytes)
 uint32_t PngDecoder::read_chunk(Chunk& chunk)
 {
     unsigned char size_id[8];
-    if (!read_from_io(&size_id, 8))
+    if (!readFromStreamOrBuffer(&size_id, 8))
         return 0;
     const size_t size = static_cast<size_t>(png_get_uint_32(size_id)) + 12;
 
@@ -737,7 +737,7 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
 
     chunk.p.resize(size);
     memcpy(chunk.p.data(), size_id, 8);
-    if (read_from_io(&chunk.p[8], chunk.p.size() - 8))
+    if (readFromStreamOrBuffer(&chunk.p[8], chunk.p.size() - 8))
         return id;
     return 0;
 }
@@ -960,15 +960,24 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     return result;
 }
 
-size_t PngEncoder::write_to_io(void const* _Buffer, size_t  _ElementSize, size_t _ElementCount, FILE * _Stream)
+size_t PngEncoder::writeToStreamOrBuffer(void const* buffer, size_t num_bytes, FILE* stream)
 {
-    if (_Stream)
-        return fwrite(_Buffer, _ElementSize, _ElementCount, _Stream);
+    if (!buffer || !num_bytes)
+        return 0; // Handle null buffer or empty writes
+
+    if (stream)
+    {
+        size_t written = fwrite(buffer, 1, num_bytes, stream);
+        return written; // fwrite handles the write count
+    }
 
     size_t cursz = m_buf->size();
-    m_buf->resize(cursz + _ElementCount);
-    memcpy( &(*m_buf)[cursz], _Buffer, _ElementCount );
-    return _ElementCount;
+    if (cursz + num_bytes > m_buf->max_size())
+        throw std::runtime_error("Buffer size exceeds maximum capacity");
+
+    m_buf->resize(cursz + num_bytes);
+    memcpy(&(*m_buf)[cursz], buffer, num_bytes);
+    return num_bytes;
 }
 
 void PngEncoder::writeChunk(FILE* f, const char* name, unsigned char* data, uint32_t length)
@@ -977,26 +986,26 @@ void PngEncoder::writeChunk(FILE* f, const char* name, unsigned char* data, uint
     uint32_t crc = crc32(0, Z_NULL, 0);
 
     png_save_uint_32(buf, length);
-    write_to_io(buf, 1, 4, f);
-    write_to_io(name, 1, 4, f);
+    writeToStreamOrBuffer(buf, 4, f);
+    writeToStreamOrBuffer(name, 4, f);
     crc = crc32(crc, (const Bytef*)name, 4);
 
     if (memcmp(name, "fdAT", 4) == 0)
     {
         png_save_uint_32(buf, next_seq_num++);
-        write_to_io(buf, 1, 4, f);
+        writeToStreamOrBuffer(buf, 4, f);
         crc = crc32(crc, buf, 4);
         length -= 4;
     }
 
     if (data != NULL && length > 0)
     {
-        write_to_io(data, 1, length, f);
+        writeToStreamOrBuffer(data, length, f);
         crc = crc32(crc, data, length);
     }
 
     png_save_uint_32(buf, crc);
-    write_to_io(buf, 1, 4, f);
+    writeToStreamOrBuffer(buf, 4, f);
 }
 
 void PngEncoder::writeIDATs(FILE* f, int frame, unsigned char* data, uint32_t length, uint32_t idat_size)
@@ -1521,7 +1530,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         png_save_uint_32(buf_acTL, num_frames - first);
         png_save_uint_32(buf_acTL + 4, loops);
 
-        write_to_io(header, 1, 8, m_f);
+        writeToStreamOrBuffer(header, 8, m_f);
 
         writeChunk(m_f, "IHDR", buf_IHDR, 13);
 
