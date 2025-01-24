@@ -3083,7 +3083,7 @@ types.
 
 @sa  adaptiveThreshold, findContours, compare, min, max
  */
-CV_EXPORTS_W double threshold( InputArray src, OutputArray dst, InputArray mask, 
+CV_EXPORTS_W double threshold( InputArray src, OutputArray dst, InputArray mask,
                                double thresh, double maxval, int type );
 
 CV_EXPORTS_W double threshold( InputArray src, OutputArray dst,
