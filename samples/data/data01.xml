@@ -50,7 +50,7 @@
 <labelsmat type_id="opencv-matrix">
     <rows>40</rows>
     <cols>1</cols>
-    <dt>d</dt>
+    <dt>f</dt>
     <data>
         0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
     </data>
