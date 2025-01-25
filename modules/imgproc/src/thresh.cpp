@@ -80,7 +80,7 @@ static inline T threshToZeroInv(const T& src, const T& thresh)
 }
 
 template <typename T, bool useMask>
-static void threshGeneric(Size roi, const T* src, size_t src_step,
+static void threshGeneric(Size roi, const int cn, const T* src, size_t src_step,
                           T* dst, size_t dst_step,
                           const uchar* mask, size_t mask_step,
                           T thresh, T maxval, int type)
@@ -91,35 +91,35 @@ static void threshGeneric(Size roi, const T* src, size_t src_step,
     case THRESH_BINARY:
         for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
             for (j = 0; j < roi.width; j++)
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshBinary<T>(src[j], thresh, maxval);
         return;
 
     case THRESH_BINARY_INV:
         for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
             for (j = 0; j < roi.width; j++)
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshBinaryInv<T>(src[j], thresh, maxval);
         return;
 
     case THRESH_TRUNC:
         for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
             for (j = 0; j < roi.width; j++)
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshTrunc<T>(src[j], thresh);
         return;
 
     case THRESH_TOZERO:
         for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
             for (j = 0; j < roi.width; j++)
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshToZero<T>(src[j], thresh);
         return;
 
     case THRESH_TOZERO_INV:
         for (; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
             for (j = 0; j < roi.width; j++)
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshToZeroInv<T>(src[j], thresh);
         return;
 
@@ -133,7 +133,8 @@ static void
 thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar maxval, int type )
 {
     Size roi = _src.size();
-    roi.width *= _src.channels();
+    const int cn = _src.channels();
+    roi.width *= cn;
     size_t src_step = _src.step;
     size_t dst_step = _dst.step;
     size_t mask_step = _mask.step;
@@ -144,7 +145,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
         roi.height = 1;
         src_step = dst_step = roi.width;
         if (useMask)
-          mask_step = roi.width;
+            mask_step = _mask.total();
     }
 
     if (!useMask)
@@ -214,19 +215,24 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
     v_uint8 thresh_u = vx_setall_u8( thresh );
     v_uint8 maxval16 = vx_setall_u8( maxval );
 
+    v_uint8 vm0;
     switch( type )
     {
     case THRESH_BINARY:
         for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
-            for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
+            const int srcReadLanes = VTraits<v_uint8>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( j = 0; j <= roi.width - atomicReadLanes; j += srcReadLanes)
             {
                 v_uint8 v0, v2;
                 v0 = vx_load( src + j );
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_lt(thresh_u, v0);
@@ -243,14 +249,18 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
     case THRESH_BINARY_INV:
         for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
-            for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
+            const int srcReadLanes = VTraits<v_uint8>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( j = 0; j <= roi.width - atomicReadLanes; j += srcReadLanes)
             {
                 v_uint8 v0, v2;
                 v0 = vx_load( src + j );
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_le(v0, thresh_u);
@@ -267,14 +277,18 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
     case THRESH_TRUNC:
         for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
-            for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
+            const int srcReadLanes = VTraits<v_uint8>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( j = 0; j <= roi.width - atomicReadLanes; j += srcReadLanes)
             {
                 v_uint8 v0, v2;
                 v0 = vx_load( src + j );
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_sub(v0, v_sub(v0, thresh_u));
@@ -290,14 +304,18 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
     case THRESH_TOZERO:
         for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
-            for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
+            const int srcReadLanes = VTraits<v_uint8>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( j = 0; j <= roi.width - atomicReadLanes; j += srcReadLanes)
             {
                 v_uint8 v0, v2;
                 v0 = vx_load( src + j );
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_and(v_lt(thresh_u, v0), v0);
@@ -313,14 +331,18 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
     case THRESH_TOZERO_INV:
         for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
-            for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
+            const int srcReadLanes = VTraits<v_uint8>::vlanes();
+            const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
+            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
+            for( j = 0; j <= roi.width - atomicReadLanes; j += srcReadLanes)
             {
                 v_uint8 v0, v2;
                 v0 = vx_load( src + j );
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_and(v_le(v0, thresh_u), v0);
@@ -385,7 +407,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
             {
                 uchar t0 = tab[src[j]];
                 uchar t1 = tab[src[j+1]];
-                uchar m0 = useMask ? mask[j] : 0xFF;
+                uchar m0 = useMask ? mask[j/cn] : 0xFF;
                 uchar m1 = useMask ? mask[j+1] : 0xFF;
 
                 if (!useMask || (m0 != 0))
@@ -406,7 +428,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
 #endif
             for( ; j < roi.width; j++ )
             {
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = tab[src[j]];
             }
         }
@@ -418,7 +440,8 @@ static void
 thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort maxval, int type)
 {
     Size roi = _src.size();
-    roi.width *= _src.channels();
+    const int cn = _src.channels();
+    roi.width *= cn;
     size_t src_step = _src.step / _src.elemSize1();
     size_t dst_step = _dst.step / _dst.elemSize1();
 
@@ -430,7 +453,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
         roi.height = 1;
         src_step = dst_step = roi.width;
         if (useMask)
-            mask_step = roi.width;
+            mask_step = _mask.total();
     }
 
     // HAVE_IPP not supported
@@ -446,6 +469,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
     v_uint16 thresh_u = vx_setall_u16(thresh);
     v_uint16 maxval16 = vx_setall_u16(maxval);
 
+    v_uint8 vm0;
     switch (type)
     {
     case THRESH_BINARY:
@@ -460,10 +484,11 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -489,7 +514,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
             }
 
             for (; j < roi.width; j++)
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshBinary<ushort>(src[j], thresh, maxval);
         }
         break;
@@ -506,10 +531,11 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -535,7 +561,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
             }
 
             for (; j < roi.width; j++)
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshBinaryInv<ushort>(src[j], thresh, maxval);
         }
         break;
@@ -552,10 +578,11 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -578,7 +605,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
             }
 
             for (; j < roi.width; j++)
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshTrunc<ushort>(src[j], thresh);
         }
         break;
@@ -595,10 +622,11 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -621,7 +649,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
             }
 
             for (; j < roi.width; j++)
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshToZero<ushort>(src[j], thresh);
         }
         break;
@@ -638,10 +666,11 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
                 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -664,13 +693,13 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
             }
 
             for (; j < roi.width; j++)
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshToZeroInv<ushort>(src[j], thresh);
         }
         break;
     }
 #else
-    threshGeneric<ushort, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
+    threshGeneric<ushort, useMask>(roi, cn, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
@@ -679,7 +708,8 @@ static void
 thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short maxval, int type )
 {
     Size roi = _src.size();
-    roi.width *= _src.channels();
+    const int cn = _src.channels();
+    roi.width *= cn;
     const short* src = _src.ptr<short>();
     short* dst = _dst.ptr<short>();
     size_t src_step = _src.step/sizeof(src[0]);
@@ -692,7 +722,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
         roi.height = 1;
         src_step = dst_step = roi.width;
         if (useMask)
-          mask_step = roi.width;
+            mask_step = _mask.total();
     }
 
     const uchar* mask = nullptr;
@@ -758,6 +788,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
     v_int16 thresh8 = vx_setall_s16( thresh );
     v_int16 maxval8 = vx_setall_s16( maxval );
 
+    v_uint8 vm0;
     switch( type )
     {
     case THRESH_BINARY:
@@ -772,10 +803,11 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_int16>::vlanes() );
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -801,7 +833,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
             }
 
             for( ; j < roi.width; j++ )
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshBinary<short>(src[j], thresh, maxval);
         }
         break;
@@ -818,10 +850,11 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_int16>::vlanes() );
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -847,7 +880,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
             }
 
             for( ; j < roi.width; j++ )
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshBinaryInv<short>(src[j], thresh, maxval);
         }
         break;
@@ -864,10 +897,11 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_int16>::vlanes() );
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -890,7 +924,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
             }
 
             for( ; j < roi.width; j++ )
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshTrunc<short>( src[j], thresh );
         }
         break;
@@ -907,10 +941,11 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_int16>::vlanes() );
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -933,7 +968,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
             }
 
             for( ; j < roi.width; j++ )
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshToZero<short>(src[j], thresh);
         }
         break;
@@ -950,10 +985,11 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
                 v1 = vx_load( src + j + VTraits<v_int16>::vlanes() );
-                v_uint8 vm0;
                 if (useMask)
                 {
-                    vm0 = vx_load( mask + j );
+                    const int readParity = (j%maskReadLanes)/srcReadLanes;
+                    if (!readParity)
+                        vm0 = vx_load( mask + j );
                     v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -976,7 +1012,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
             }
 
             for( ; j < roi.width; j++ )
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshToZeroInv<short>(src[j], thresh);
         }
         break;
@@ -984,7 +1020,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
         CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 #else
-    threshGeneric<short, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
+    threshGeneric<short, useMask>(roi, cn, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
@@ -993,7 +1029,8 @@ static void
 thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float maxval, int type )
 {
     Size roi = _src.size();
-    roi.width *= _src.channels();
+    const int cn = _src.channels();
+    roi.width *= cn;
     const float* src = _src.ptr<float>();
     float* dst = _dst.ptr<float>();
     size_t src_step = _src.step/sizeof(src[0]);
@@ -1005,7 +1042,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
         roi.width *= roi.height;
         roi.height = 1;
         if (useMask)
-            mask_step = roi.width;
+            mask_step = _mask.total();
     }
 
     const uchar* mask = nullptr;
@@ -1105,7 +1142,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                 }
 
                 for( ; j < roi.width; j++ )
-                    if (!useMask || (mask[j] != 0))
+                    if (!useMask || (mask[j/cn] != 0))
                         dst[j] = threshBinary<float>(src[j], thresh, maxval);
             }
             break;
@@ -1316,7 +1353,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
             CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 #else
-    threshGeneric<float, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
+    threshGeneric<float, useMask>(roi, cn, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
@@ -1325,7 +1362,8 @@ static void
 thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double maxval, int type)
 {
     Size roi = _src.size();
-    roi.width *= _src.channels();
+    const int cn = _src.channels();
+    roi.width *= cn;
     const double* src = _src.ptr<double>();
     double* dst = _dst.ptr<double>();
     size_t src_step = _src.step / sizeof(src[0]);
@@ -1337,7 +1375,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
         roi.width *= roi.height;
         roi.height = 1;
         if (useMask)
-            mask_step = roi.width;
+            mask_step = _mask.total();
     }
 
     const uchar* mask = nullptr;
@@ -1626,7 +1664,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
         CV_Error(cv::Error::StsBadArg, ""); return;
     }
 #else
-    threshGeneric<double, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
+    threshGeneric<double, useMask>(roi, cn, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
@@ -2183,7 +2221,7 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
 double cv::threshold( InputArray _src, OutputArray _dst, InputArray _mask, double thresh, double maxval, int type )
 {
     CV_INSTRUMENT_REGION();
-    CV_Assert(_mask.empty() || ((_mask.type() == CV_8UC1) && (_mask.size() == _src.size())));
+    CV_Assert(_mask.empty() || ((_mask.type() == CV_8UC1) && (_mask.size() == _src.size()) && (_src.channels() == 1)));
 
     CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
                 ocl_threshold(_src, _dst, _mask, thresh, maxval, type), thresh)
