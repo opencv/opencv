@@ -523,7 +523,7 @@ TEST(Imgproc_Threshold, threshold_dryrun)
 TEST(Imgproc_Threshold, threshold_mask)
 {
     std::vector<int> depths = {CV_8U, CV_16U, CV_16S, CV_32F, CV_64F};
-    std::vector<int> channels = {1};//{1, 3}; more than 1 channel is not supported yet
+    std::vector<int> channels = {1, 3};
     std::vector<int> threshTypes = {THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV};
     std::vector<int> threshFlags = {0};//{THRESH_OTSU, THRESH_TRIANGLE} there is no way to compare OTSU/TRIANGLE since the threshold will be different
     for(int depth : depths)

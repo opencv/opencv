@@ -2092,33 +2092,6 @@ OPENCV_HAL_IMPL_SSE_TRANSPOSE4x4(v_uint32x4, epi32, OPENCV_HAL_NOP, OPENCV_HAL_N
 OPENCV_HAL_IMPL_SSE_TRANSPOSE4x4(v_int32x4, epi32, OPENCV_HAL_NOP, OPENCV_HAL_NOP)
 OPENCV_HAL_IMPL_SSE_TRANSPOSE4x4(v_float32x4, ps, _mm_castps_si128, _mm_castsi128_ps)
 
-// unpack lo
-inline v_uint16x8 v_unpacklo(const v_uint8x16& a, const v_uint8x16& b)
-{
-    return v_uint16x8(_mm_unpacklo_epi8(a.val, b.val));
-}
-inline v_uint32x4 v_unpacklo(const v_uint16x8& a, const v_uint16x8& b)
-{
-    return v_uint32x4(_mm_unpacklo_epi16(a.val, b.val));
-}
-inline v_uint64x2 v_unpacklo(const v_uint32x4& a, const v_uint32x4& b)
-{
-    return v_uint64x2(_mm_unpacklo_epi32(a.val, b.val));
-}
-// unpack hi
-inline v_uint16x8 v_unpackhi(const v_uint8x16& a, const v_uint8x16& b)
-{
-    return v_uint16x8(_mm_unpackhi_epi8(a.val, b.val));
-}
-inline v_uint32x4 v_unpackhi(const v_uint16x8& a, const v_uint16x8& b)
-{
-    return v_uint32x4(_mm_unpackhi_epi16(a.val, b.val));
-}
-inline v_uint64x2 v_unpackhi(const v_uint32x4& a, const v_uint32x4& b)
-{
-    return v_uint64x2(_mm_unpackhi_epi32(a.val, b.val));
-}
-
 // load deinterleave
 inline void v_load_deinterleave(const uchar* ptr, v_uint8x16& a, v_uint8x16& b)
 {
