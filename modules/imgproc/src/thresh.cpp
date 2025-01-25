@@ -399,6 +399,8 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
 
         src = _src.ptr();
         dst = _dst.ptr();
+        if (useMask)
+          mask = _mask.ptr();
         for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = j_scalar;
