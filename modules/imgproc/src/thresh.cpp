@@ -202,9 +202,11 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
     const uchar* src = _src.ptr();
     uchar* dst = _dst.ptr();
     const uchar* mask = nullptr;
+    size_t mask_step = 0;
     if (useMask)
     {
         mask = _mask.ptr();
+        mask_step = _mask.step;
     }
 
     #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -431,9 +433,11 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
     const ushort* src = _src.ptr<ushort>();
     ushort* dst = _dst.ptr<ushort>();
     const uchar* mask = nullptr;
+    size_t mask_step = 0;
     if (useMask)
     {
         mask = _mask.ptr();
+        mask_step = _mask.step;
     }
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -665,7 +669,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
         break;
     }
 #else
-    threshGeneric<ushort, useMask>(roi, src, src_step, dst, dst_step, mask, mask.step, thresh, maxval, type);
+    threshGeneric<ushort, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
@@ -688,9 +692,11 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
     }
 
     const uchar* mask = nullptr;
+    size_t mask_step = 0;
     if (useMask)
     {
         mask = _mask.ptr();
+        mask_step = _mask.step;
     }
 
     if (!useMask)
@@ -978,7 +984,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
         CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 #else
-    threshGeneric<short, useMask>(roi, src, src_step, dst, dst_step, mask, mask.step, thresh, maxval, type);
+    threshGeneric<short, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
@@ -1000,9 +1006,11 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
     }
 
     const uchar* mask = nullptr;
+    size_t mask_step = 0;
     if (useMask)
     {
         mask = _mask.ptr();
+        mask_step = _mask.step;
     }
 
     if (!useMask)
@@ -1309,7 +1317,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
             CV_Error( cv::Error::StsBadArg, "" ); return;
     }
 #else
-    threshGeneric<float, useMask>(roi, src, src_step, dst, dst_step, mask, mask.step, thresh, maxval, type);
+    threshGeneric<float, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
@@ -1331,9 +1339,11 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
     }
 
     const uchar* mask = nullptr;
+    size_t mask_step = 0;
     if (useMask)
     {
         mask = _mask.ptr();
+        mask_step = _mask.step;
     }
 
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
@@ -1618,7 +1628,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
         CV_Error(cv::Error::StsBadArg, ""); return;
     }
 #else
-    threshGeneric<double, useMask>(roi, src, src_step, dst, dst_step, mask, mask.step, thresh, maxval, type);
+    threshGeneric<double, useMask>(roi, src, src_step, dst, dst_step, mask, mask_step, thresh, maxval, type);
 #endif
 }
 
