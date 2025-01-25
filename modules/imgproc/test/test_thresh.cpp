@@ -550,11 +550,11 @@ TEST(Imgproc_Threshold, threshold_mask)
                         cv::threshold(input, output_mask, mask, 127, 255, _threshType);
 
                         cv::bitwise_not(mask, mask);
+                        input.copyTo(output_mask, mask);
 
                         Mat output_nomask;
                         cv::threshold(input, output_nomask, 127, 255, _threshType);
                         input.copyTo(output_nomask, mask);
-                        input.copyTo(output_mask, mask);
                         
                         EXPECT_MAT_NEAR(output_mask, output_nomask, 0);
                     }
