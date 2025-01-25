@@ -22,11 +22,11 @@ void cv::contourTreeToResults(CTree& tree,
         return;
     }
 
+    CV_Assert(tree.size() < (size_t)numeric_limits<int>::max());
     // mapping for indexes (original -> resulting)
     // -1 - based indexing
     vector<int> index_mapping(tree.size() + 1, -1);
 
-    CV_Assert(tree.size() < (size_t)numeric_limits<int>::max());
     const int total = (int)tree.size() - 1;
     _contours.create(total, 1, 0, -1, true);
     {
