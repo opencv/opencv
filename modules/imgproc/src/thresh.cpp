@@ -136,12 +136,15 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
     roi.width *= _src.channels();
     size_t src_step = _src.step;
     size_t dst_step = _dst.step;
+    size_t mask_step = _mask.step;
 
-    if( _src.isContinuous() && _dst.isContinuous() )
+    if( _src.isContinuous() && _dst.isContinuous() && (!useMask || _mask.empty() || _mask.isContinuous()) )
     {
         roi.width *= roi.height;
         roi.height = 1;
         src_step = dst_step = roi.width;
+        if (useMask)
+          mask_step = roi.width;
     }
 
     if (!useMask)
@@ -202,11 +205,9 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
     const uchar* src = _src.ptr();
     uchar* dst = _dst.ptr();
     const uchar* mask = nullptr;
-    size_t mask_step = 0;
     if (useMask)
     {
         mask = _mask.ptr();
-        mask_step = _mask.step;
     }
 
     #if (CV_SIMD || CV_SIMD_SCALABLE)
@@ -216,7 +217,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
     switch( type )
     {
     case THRESH_BINARY:
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
             {
@@ -240,7 +241,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
         break;
 
     case THRESH_BINARY_INV:
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
             {
@@ -264,7 +265,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
         break;
 
     case THRESH_TRUNC:
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
             {
@@ -287,7 +288,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
         break;
 
     case THRESH_TOZERO:
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
             {
@@ -310,7 +311,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
         break;
 
     case THRESH_TOZERO_INV:
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
             {
@@ -376,7 +377,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
 
         src = _src.ptr();
         dst = _dst.ptr();
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = j_scalar;
 #if CV_ENABLE_UNROLLED
@@ -421,11 +422,15 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
     size_t src_step = _src.step / _src.elemSize1();
     size_t dst_step = _dst.step / _dst.elemSize1();
 
-    if (_src.isContinuous() && _dst.isContinuous())
+    size_t mask_step = _mask.step;
+
+    if( _src.isContinuous() && _dst.isContinuous() && (!useMask || _mask.empty() || _mask.isContinuous()) )
     {
         roi.width *= roi.height;
         roi.height = 1;
         src_step = dst_step = roi.width;
+        if (useMask)
+            mask_step = roi.width;
     }
 
     // HAVE_IPP not supported
@@ -433,12 +438,8 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
     const ushort* src = _src.ptr<ushort>();
     ushort* dst = _dst.ptr<ushort>();
     const uchar* mask = nullptr;
-    size_t mask_step = 0;
     if (useMask)
-    {
         mask = _mask.ptr();
-        mask_step = _mask.step;
-    }
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     int i, j;
@@ -448,7 +449,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
     switch (type)
     {
     case THRESH_BINARY:
-        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
@@ -494,7 +495,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
         break;
 
     case THRESH_BINARY_INV:
-        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
@@ -540,7 +541,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
         break;
 
     case THRESH_TRUNC:
-        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
@@ -583,7 +584,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
         break;
 
     case THRESH_TOZERO:
-        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
@@ -626,7 +627,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
         break;
 
     case THRESH_TOZERO_INV:
-        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
+        for (i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0)
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
@@ -683,21 +684,20 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
     short* dst = _dst.ptr<short>();
     size_t src_step = _src.step/sizeof(src[0]);
     size_t dst_step = _dst.step/sizeof(dst[0]);
+    size_t mask_step = _mask.step;
 
-    if( _src.isContinuous() && _dst.isContinuous() )
+    if( _src.isContinuous() && _dst.isContinuous() && (!useMask || _mask.empty() || _mask.isContinuous()) )
     {
         roi.width *= roi.height;
         roi.height = 1;
         src_step = dst_step = roi.width;
+        if (useMask)
+          mask_step = roi.width;
     }
 
     const uchar* mask = nullptr;
-    size_t mask_step = 0;
     if (useMask)
-    {
         mask = _mask.ptr();
-        mask_step = _mask.step;
-    }
 
     if (!useMask)
     {
@@ -761,7 +761,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
     switch( type )
     {
     case THRESH_BINARY:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
@@ -807,7 +807,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
         break;
 
     case THRESH_BINARY_INV:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
@@ -853,7 +853,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
         break;
 
     case THRESH_TRUNC:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
@@ -896,7 +896,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
         break;
 
     case THRESH_TOZERO:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
@@ -939,7 +939,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
         break;
 
     case THRESH_TOZERO_INV:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
@@ -998,20 +998,19 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
     float* dst = _dst.ptr<float>();
     size_t src_step = _src.step/sizeof(src[0]);
     size_t dst_step = _dst.step/sizeof(dst[0]);
+    size_t mask_step = _mask.step;
 
-    if( _src.isContinuous() && _dst.isContinuous() )
+    if( _src.isContinuous() && _dst.isContinuous() && (!useMask || _mask.empty() || _mask.isContinuous()) )
     {
         roi.width *= roi.height;
         roi.height = 1;
+        if (useMask)
+            mask_step = roi.width;
     }
 
     const uchar* mask = nullptr;
-    size_t mask_step = 0;
     if (useMask)
-    {
         mask = _mask.ptr();
-        mask_step = _mask.step;
-    }
 
     if (!useMask)
     {
@@ -1059,7 +1058,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
     switch( type )
     {
         case THRESH_BINARY:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
             {
                 j = 0;
                 const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
@@ -1112,7 +1111,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
             break;
 
         case THRESH_BINARY_INV:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
             {
                 j = 0;
                 const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
@@ -1165,7 +1164,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
             break;
 
         case THRESH_TRUNC:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
             {
                 j = 0;
                 const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
@@ -1215,7 +1214,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
             break;
 
         case THRESH_TOZERO:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
             {
                 j = 0;
                 const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
@@ -1265,7 +1264,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
             break;
 
         case THRESH_TOZERO_INV:
-            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+            for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
             {
                 j = 0;
                 const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
@@ -1331,20 +1330,19 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
     double* dst = _dst.ptr<double>();
     size_t src_step = _src.step / sizeof(src[0]);
     size_t dst_step = _dst.step / sizeof(dst[0]);
+    size_t mask_step = _mask.step;
 
-    if (_src.isContinuous() && _dst.isContinuous())
+    if( _src.isContinuous() && _dst.isContinuous() && (!useMask || _mask.empty() || _mask.isContinuous()) )
     {
         roi.width *= roi.height;
         roi.height = 1;
+        if (useMask)
+            mask_step = roi.width;
     }
 
     const uchar* mask = nullptr;
-    size_t mask_step = 0;
     if (useMask)
-    {
         mask = _mask.ptr();
-        mask_step = _mask.step;
-    }
 
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     int i, j;
@@ -1355,7 +1353,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
     switch( type )
     {
     case THRESH_BINARY:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
@@ -1411,7 +1409,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
         break;
 
     case THRESH_BINARY_INV:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
@@ -1467,7 +1465,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
         break;
 
     case THRESH_TRUNC:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
@@ -1520,7 +1518,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
         break;
 
     case THRESH_TOZERO:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
@@ -1573,7 +1571,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
         break;
 
     case THRESH_TOZERO_INV:
-        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for( i = 0; i < roi.height; i++, src += src_step, dst += dst_step, mask += useMask ? mask_step : 0 )
         {
             j = 0;
             const int srcReadLanes = 2*VTraits<v_float64>::vlanes();

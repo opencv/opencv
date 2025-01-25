@@ -552,6 +552,7 @@ TEST(Imgproc_Threshold, threshold_mask)
                     input.copyTo(output_mask, notmask);
                     cv::threshold(input, output_mask, mask, 127, 255, _threshType);
 
+                    printf("%d %d %d\r\n", depth, threshType, threshFlag);
                     EXPECT_MAT_NEAR(output_mask, output_nomask, 0);
                 }
             }
