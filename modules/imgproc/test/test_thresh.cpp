@@ -546,17 +546,17 @@ TEST(Imgproc_Threshold, threshold_mask)
                         cv::RotatedRect ellipseRect((cv::Point2f)cv::Point(sz.width/2, sz.height/2), (cv::Size2f)sz, 0);
                         cv::ellipse(mask, ellipseRect, cv::Scalar::all(255), cv::FILLED);//for very different mask alignments
 
-                        Mat output_mask = cv::Mat::zeros(sz, input.type());
-                        cv::threshold(input, output_mask, mask, 127, 255, _threshType);
+                        Mat output_with_mask = cv::Mat::zeros(sz, input.type());
+                        cv::threshold(input, output_with_mask, mask, 127, 255, _threshType);
 
                         cv::bitwise_not(mask, mask);
-                        input.copyTo(output_mask, mask);
+                        input.copyTo(output_with_mask, mask);
 
-                        Mat output_nomask;
-                        cv::threshold(input, output_nomask, 127, 255, _threshType);
-                        input.copyTo(output_nomask, mask);
+                        Mat output_without_mask;
+                        cv::threshold(input, output_without_mask, 127, 255, _threshType);
+                        input.copyTo(output_without_mask, mask);
                         
-                        EXPECT_MAT_NEAR(output_mask, output_nomask, 0);
+                        EXPECT_MAT_NEAR(output_with_mask, output_without_mask, 0);
                     }
                 }
             }
