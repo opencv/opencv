@@ -414,7 +414,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 uchar t0 = tab[src[j]];
                 uchar t1 = tab[src[j+1]];
                 uchar m0 = useMask ? mask[j/cn] : 0xFF;
-                uchar m1 = useMask ? mask[j/cn+1] : 0xFF;
+                uchar m1 = useMask ? mask[(j+1)/cn] : 0xFF;
 
                 if (!useMask || (m0 != 0))
                     dst[j] = t0;
@@ -423,8 +423,8 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
 
                 t0 = tab[src[j+2]];
                 t1 = tab[src[j+3]];
-                m0 = useMask ? mask[j/cn+2] : 0xFF;
-                m1 = useMask ? mask[j/cn+3] : 0xFF;
+                m0 = useMask ? mask[(j+2)/cn] : 0xFF;
+                m1 = useMask ? mask[(j+3)/cn] : 0xFF;
 
                 if (!useMask || (m0 != 0))
                     dst[j+2] = t0;

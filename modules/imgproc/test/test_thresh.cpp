@@ -522,41 +522,47 @@ TEST(Imgproc_Threshold, threshold_dryrun)
 
 TEST(Imgproc_Threshold, threshold_mask)
 {
-    std::vector<int> depths = {CV_8U, CV_16U, CV_16S, CV_32F, CV_64F};
+    std::vector<bool> useROIs = {false, true};
+    std::vector<int> depths = {CV_8U, CV_16U, CV_16U, CV_16S, CV_32F, CV_64F};
     std::vector<int> channels = {1, 3};
     std::vector<int> threshTypes = {THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV};
     std::vector<int> threshFlags = {0};//{THRESH_OTSU, THRESH_TRIANGLE} there is no way to compare OTSU/TRIANGLE since the threshold will be different
-    for(int depth : depths)
+    for(bool useROI : useROIs)
     {
-        for(int cn : channels)
+        for(int depth : depths)
         {
-            for(int threshType : threshTypes)
+            for(int cn : channels)
             {
-                for(int threshFlag : threshFlags)
+                for(int threshType : threshTypes)
                 {
-                    const bool isValidConfig = ((depth == CV_8U) || ((threshFlag != THRESH_OTSU) && (threshFlag != THRESH_TRIANGLE)));
-                    if (isValidConfig)
+                    for(int threshFlag : threshFlags)
                     {
-                        const int _threshType = threshType | threshFlag;
-                        Size sz(127, 127);
-                        Mat input(sz, CV_MAKETYPE(depth, cn));
-                        cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(255));
+                        const bool isValidConfig = ((depth == CV_8U) || ((threshFlag != THRESH_OTSU) && (threshFlag != THRESH_TRIANGLE)));
+                        if (isValidConfig)
+                        {
+                            const int _threshType = threshType | threshFlag;
+                            Size sz(127, 127);
+                            Size wrapperSize = useROI ? Size(sz.width+4, sz.height+4) : sz;
+                            Mat wrapper(wrapperSize, CV_MAKETYPE(depth, cn));
+                            Mat input = useROI ? Mat(wrapper, Rect(Point(), sz)) : wrapper;
+                            cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(255));
 
-                        Mat mask = cv::Mat::zeros(sz, CV_8UC1);
-                        cv::RotatedRect ellipseRect((cv::Point2f)cv::Point(sz.width/2, sz.height/2), (cv::Size2f)sz, 0);
-                        cv::ellipse(mask, ellipseRect, cv::Scalar::all(255), cv::FILLED);//for very different mask alignments
+                            Mat mask = cv::Mat::zeros(sz, CV_8UC1);
+                            cv::RotatedRect ellipseRect((cv::Point2f)cv::Point(sz.width/2, sz.height/2), (cv::Size2f)sz, 0);
+                            cv::ellipse(mask, ellipseRect, cv::Scalar::all(255), cv::FILLED);//for very different mask alignments
 
-                        Mat output_with_mask = cv::Mat::zeros(sz, input.type());
-                        cv::threshold(input, output_with_mask, mask, 127, 255, _threshType);
+                            Mat output_with_mask = cv::Mat::zeros(sz, input.type());
+                            cv::threshold(input, output_with_mask, mask, 127, 255, _threshType);
 
-                        cv::bitwise_not(mask, mask);
-                        input.copyTo(output_with_mask, mask);
+                            cv::bitwise_not(mask, mask);
+                            input.copyTo(output_with_mask, mask);
 
-                        Mat output_without_mask;
-                        cv::threshold(input, output_without_mask, 127, 255, _threshType);
-                        input.copyTo(output_without_mask, mask);
+                            Mat output_without_mask;
+                            cv::threshold(input, output_without_mask, 127, 255, _threshType);
+                            input.copyTo(output_without_mask, mask);
 
-                        EXPECT_MAT_NEAR(output_with_mask, output_without_mask, 0);
+                            EXPECT_MAT_NEAR(output_with_mask, output_without_mask, 0);
+                        }
                     }
                 }
             }
