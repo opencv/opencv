@@ -555,7 +555,7 @@ TEST(Imgproc_Threshold, threshold_mask)
                         Mat output_without_mask;
                         cv::threshold(input, output_without_mask, 127, 255, _threshType);
                         input.copyTo(output_without_mask, mask);
-                        
+
                         EXPECT_MAT_NEAR(output_with_mask, output_without_mask, 0);
                     }
                 }
