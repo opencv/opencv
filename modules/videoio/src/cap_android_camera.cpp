@@ -80,7 +80,7 @@ static double elapsedTimeFrom(std::chrono::time_point<std::chrono::system_clock>
 
 class AndroidCameraCapture : public IVideoCapture
 {
-    int cachedIndex;
+    int deviceIndex;
     AObjPtr<ACameraManager> cameraManager { nullptr, ACameraManager_delete };
     AObjPtr<ACameraDevice> cameraDevice { nullptr, ACameraDevice_close };
     AObjPtr<AImageReader> imageReader { nullptr, AImageReader_delete };
@@ -100,16 +100,17 @@ class AndroidCameraCapture : public IVideoCapture
     bool targetAdded = false;
     // properties
     uint32_t fourCC = FOURCC_UNKNOWN;
-    bool settingWidth = false;
-    bool settingHeight = false;
-    int desiredWidth = 640;
-    int desiredHeight = 480;
+    int32_t desiredWidth = 640;
+    int32_t desiredHeight = 480;
+    enum SetupState { setupDone = 0, setupWidth = 0x01, setupHeight = 0x02 } widthHeightState = setupDone;
     uint8_t flashMode = ACAMERA_FLASH_MODE_OFF;
     uint8_t aeMode = ACAMERA_CONTROL_AE_MODE_ON;
     int64_t exposureTime = 0;
     RangeValue<int64_t> exposureRange;
     int32_t sensitivity = 0;
     RangeValue<int32_t> sensitivityRange;
+    float zoomRatio = 1.0f;
+    RangeValue<float> zoomRange;
 
     ACameraDevice_stateCallbacks deviceCallbacks = {};
     ACameraCaptureSession_stateCallbacks sessionCallbacks = {};
@@ -136,7 +137,8 @@ class AndroidCameraCapture : public IVideoCapture
     std::condition_variable condition;
 
 public:
-    AndroidCameraCapture(const VideoCaptureParameters& params)
+    AndroidCameraCapture(int index, const VideoCaptureParameters& params)
+        : deviceIndex(index)
     {
         deviceCallbacks.context = this;
         deviceCallbacks.onError = OnDeviceError;
@@ -151,8 +153,8 @@ public:
         captureCallbacks.onCaptureCompleted = OnCaptureCompleted;
         captureCallbacks.onCaptureFailed = OnCaptureFailed;
 
-        desiredWidth = params.get<int>(CAP_PROP_FRAME_WIDTH, desiredWidth);
-        desiredHeight = params.get<int>(CAP_PROP_FRAME_HEIGHT, desiredHeight);
+        desiredWidth = params.get<int32_t>(CAP_PROP_FRAME_WIDTH, desiredWidth);
+        desiredHeight = params.get<int32_t>(CAP_PROP_FRAME_HEIGHT, desiredHeight);
 
         static const struct {
             int propId;
@@ -277,7 +279,7 @@ public:
             return false;
         }
         if (colorFormat == COLOR_FormatYUV420Planar) {
-            Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
+            const Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
             switch (fourCC) {
                 case FOURCC_BGRA:
                     cvtColor(yuv, out, COLOR_YUV2BGRA_YV12);
@@ -299,33 +301,32 @@ public:
                     break;
                 default:
                     LOGE("Unexpected FOURCC value: %d", fourCC);
-                    break;
+                    return false;
             }
         } else if (colorFormat == COLOR_FormatYUV420SemiPlanar) {
-            Mat yuv(frameHeight + frameHeight/2, frameStride, CV_8UC1, buffer.data());
-            Mat tmp = (frameWidth == frameStride) ? yuv : yuv(Rect(0, 0, frameWidth, frameHeight + frameHeight / 2));
+            const Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data(), frameStride);
             switch (fourCC) {
                 case FOURCC_BGRA:
-                    cvtColor(tmp, out, COLOR_YUV2BGRA_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2BGRA_NV21);
                     break;
                 case FOURCC_RGBA:
-                    cvtColor(tmp, out, COLOR_YUV2RGBA_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2RGBA_NV21);
                     break;
                 case FOURCC_BGR:
-                    cvtColor(tmp, out, COLOR_YUV2BGR_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2BGR_NV21);
                     break;
                 case FOURCC_RGB:
-                    cvtColor(tmp, out, COLOR_YUV2RGB_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2RGB_NV21);
                     break;
                 case FOURCC_GRAY:
-                    cvtColor(tmp, out, COLOR_YUV2GRAY_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2GRAY_NV21);
                     break;
                 case FOURCC_NV21:
-                    tmp.copyTo(out);
+                    yuv.copyTo(out);
                     break;
                 default:
                     LOGE("Unexpected FOURCC value: %d", fourCC);
-                    break;
+                    return false;
             }
         } else {
             LOGE("Unsupported video format: %d", colorFormat);
@@ -351,6 +352,8 @@ public:
                 return fourCC;
             case CAP_PROP_ANDROID_DEVICE_TORCH:
                 return (flashMode == ACAMERA_FLASH_MODE_TORCH) ? 1 : 0;
+            case CAP_PROP_ZOOM:
+                return zoomRange.isValid() ? zoomRatio : -1;
             default:
                 break;
         }
@@ -362,22 +365,12 @@ public:
     {
         switch (property_id) {
             case CAP_PROP_FRAME_WIDTH:
-                desiredWidth = value;
-                settingWidth = true;
-                if (settingWidth && settingHeight) {
-                    setWidthHeight();
-                    settingWidth = false;
-                    settingHeight = false;
-                }
+                desiredWidth = static_cast<int32_t>(value);
+                setWidthHeight(setupWidth);
                 return true;
             case CAP_PROP_FRAME_HEIGHT:
-                desiredHeight = value;
-                settingHeight = true;
-                if (settingWidth && settingHeight) {
-                    setWidthHeight();
-                    settingWidth = false;
-                    settingHeight = false;
-                }
+                desiredHeight = static_cast<int32_t>(value);
+                setWidthHeight(setupHeight);
                 return true;
             case CAP_PROP_FOURCC:
                 {
@@ -437,6 +430,12 @@ public:
                     return submitRequest(ACaptureRequest_setEntry_i32, ACAMERA_SENSOR_SENSITIVITY, sensitivity);
                 }
                 return false;
+            case CAP_PROP_ZOOM:
+                if (isOpened() && zoomRange.isValid()) {
+                    zoomRatio = zoomRange.clamp(static_cast<float>(value));
+                    return submitRequest(ACaptureRequest_setEntry_float, ACAMERA_CONTROL_ZOOM_RATIO, zoomRatio);
+                }
+                return true;
             case CAP_PROP_ANDROID_DEVICE_TORCH:
                 flashMode = (value != 0) ? ACAMERA_FLASH_MODE_TORCH : ACAMERA_FLASH_MODE_OFF;
                 if (isOpened()) {
@@ -449,9 +448,8 @@ public:
         return false;
     }
 
-    bool initCapture(int index)
+    bool initCapture()
     {
-        cachedIndex = index;
         cameraManager.reset(ACameraManager_create());
         if (!cameraManager) {
             LOGE("Cannot create camera manager!");
@@ -464,11 +462,11 @@ public:
             return false;
         }
         AObjPtr<ACameraIdList> cameraIdList(cameraIds, ACameraManager_deleteCameraIdList);
-        if (index < 0 || index >= cameraIds->numCameras) {
-            LOGE("Camera index out of range %d (Number of cameras: %d)", index, cameraIds->numCameras);
+        if (deviceIndex < 0 || deviceIndex >= cameraIds->numCameras) {
+            LOGE("Camera index out of range %d (Number of cameras: %d)", deviceIndex, cameraIds->numCameras);
             return false;
         }
-        const char *cameraId = cameraIdList.get()->cameraIds[index];
+        const char *cameraId = cameraIdList.get()->cameraIds[deviceIndex];
 
         ACameraDevice* camera;
         cStatus = ACameraManager_openCamera(cameraManager.get(), cameraId, &deviceCallbacks, &camera);
@@ -568,9 +566,12 @@ public:
         captureSession.reset(session);
 
         ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_CONTROL_AE_MODE, 1, &aeMode);
-        ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
         if (aeMode != ACAMERA_CONTROL_AE_MODE_ON) {
+            ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
             ACaptureRequest_setEntry_i64(captureRequest.get(), ACAMERA_SENSOR_EXPOSURE_TIME, 1, &exposureTime);
+        }
+        if (zoomRange.isValid()) {
+            ACaptureRequest_setEntry_float(captureRequest.get(), ACAMERA_CONTROL_ZOOM_RATIO, 1, &zoomRatio);
         }
         ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_FLASH_MODE, 1, &flashMode);
 
@@ -609,6 +610,17 @@ private:
             LOGW("Unsupported ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE");
             sensitivityRange.min = sensitivityRange.max = 0;
             sensitivity = 0;
+        }
+
+        cStatus = ACameraMetadata_getConstEntry(metadata, ACAMERA_CONTROL_ZOOM_RATIO_RANGE, &val);
+        if (cStatus == ACAMERA_OK){
+            zoomRange.min = val.data.f[0];
+            zoomRange.max = val.data.f[1];
+            zoomRatio = zoomRange.clamp(zoomRatio);
+        } else {
+            LOGW("Unsupported ACAMERA_CONTROL_ZOOM_RATIO_RANGE");
+            zoomRange.min = zoomRange.max = 0;
+            zoomRatio = 1.0f;
         }
     }
 
@@ -658,9 +670,13 @@ private:
         }
     }
 
-    void setWidthHeight() {
-        cleanUp();
-        initCapture(cachedIndex);
+    void setWidthHeight(SetupState newState) {
+        if ((widthHeightState | newState) == (setupWidth | setupHeight)) {
+            cleanUp();
+            initCapture();
+            newState = setupDone;
+        }
+        widthHeightState = newState;
     }
 
     void cleanUp() {
@@ -786,8 +802,8 @@ void AndroidCameraCapture::OnCaptureFailed(void* context,
 /****************** Implementation of interface functions ********************/
 
 Ptr<IVideoCapture> cv::createAndroidCapture_cam(int index, const VideoCaptureParameters& params) {
-    Ptr<AndroidCameraCapture> res = makePtr<AndroidCameraCapture>(params);
-    if (res && res->initCapture(index))
+    Ptr<AndroidCameraCapture> res = makePtr<AndroidCameraCapture>(index, params);
+    if (res && res->initCapture())
         return res;
     return Ptr<IVideoCapture>();
 }
