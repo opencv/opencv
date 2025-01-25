@@ -437,7 +437,7 @@ public:
     TreeIterator(Tree<T>& tree_) : tree(tree_)
     {
         CV_Assert(!tree.isEmpty());
-        levels.push(0);
+        levels.push_back(0);
     }
     bool isDone() const
     {
@@ -445,20 +445,20 @@ public:
     }
     const TreeNode<T>& getNext_s()
     {
-        int idx = levels.top();
-        levels.pop();
+        int idx = levels.back();
+        levels.pop_back();
         const TreeNode<T>& res = tree.elem(idx);
         int cur = tree.lastSibling(res.first_child);
         while (cur != -1)
         {
-            levels.push(cur);
+            levels.push_back(cur);
             cur = tree.elem(cur).prev;
         }
         return res;
     }
 
 private:
-    std::stack<int> levels;
+    std::vector<int> levels;
     Tree<T>& tree;
 };
 
