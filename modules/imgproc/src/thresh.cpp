@@ -234,9 +234,14 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 v0 = vx_load( src + j );
                 if (useMask)
                 {
-                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
-                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
-                    vm0 = vx_lut(mask, maskReadLUT);
+                    if (cn == 1)
+                        vm0 = v_load(mask + j);
+                    else
+                    {
+                        for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                            maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                        vm0 = vx_lut(mask, maskReadLUT);
+                    }
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_lt(thresh_u, v0);
@@ -262,9 +267,14 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 v0 = vx_load( src + j );
                 if (useMask)
                 {
-                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
-                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
-                    vm0 = vx_lut(mask, maskReadLUT);
+                    if (cn == 1)
+                        vm0 = v_load(mask + j);
+                    else
+                    {
+                        for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                            maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                        vm0 = vx_lut(mask, maskReadLUT);
+                    }
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_le(v0, thresh_u);
@@ -290,9 +300,14 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 v0 = vx_load( src + j );
                 if (useMask)
                 {
-                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
-                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
-                    vm0 = vx_lut(mask, maskReadLUT);
+                    if (cn == 1)
+                        vm0 = v_load(mask + j);
+                    else
+                    {
+                        for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                            maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                        vm0 = vx_lut(mask, maskReadLUT);
+                    }
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_sub(v0, v_sub(v0, thresh_u));
@@ -317,9 +332,14 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 v0 = vx_load( src + j );
                 if (useMask)
                 {
-                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
-                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
-                    vm0 = vx_lut(mask, maskReadLUT);
+                    if (cn == 1)
+                        vm0 = v_load(mask + j);
+                    else
+                    {
+                        for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                            maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                        vm0 = vx_lut(mask, maskReadLUT);
+                    }
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_and(v_lt(thresh_u, v0), v0);
@@ -344,9 +364,14 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 v0 = vx_load( src + j );
                 if (useMask)
                 {
-                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
-                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
-                    vm0 = vx_lut(mask, maskReadLUT);
+                    if (cn == 1)
+                        vm0 = v_load(mask + j);
+                    else
+                    {
+                        for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                            maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                        vm0 = vx_lut(mask, maskReadLUT);
+                    }
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_and(v_le(v0, thresh_u), v0);
