@@ -232,7 +232,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_lt(thresh_u, v0);
@@ -260,7 +260,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_le(v0, thresh_u);
@@ -288,7 +288,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_sub(v0, v_sub(v0, thresh_u));
@@ -315,7 +315,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_and(v_lt(thresh_u, v0), v0);
@@ -342,7 +342,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_not(vm0));
                 }
                 v0 = v_and(v_le(v0, thresh_u), v0);
@@ -490,7 +490,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -537,7 +537,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -584,7 +584,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -628,7 +628,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -672,7 +672,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_reinterpret_as_u16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_u16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -809,7 +809,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -856,7 +856,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -903,7 +903,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -947,7 +947,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -991,7 +991,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 {
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     v2 = v_and(v0, v_reinterpret_as_s16(v_not(v_unpacklo(vm0, vm0))));
                     v3 = v_and(v1, v_reinterpret_as_s16(v_not(v_unpackhi(vm0, vm0))));
                 }
@@ -1113,7 +1113,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                     {
                         const int readParity = (j%maskReadLanes)/srcReadLanes;
                         if (!readParity)
-                            vm0 = vx_load( mask + j );
+                            vm0 = vx_load( mask + (j/cn) );
                         switch(readParity)
                         {
                             case 0: vm00 = v_unpacklo(vm0, vm0); break;
@@ -1166,7 +1166,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                     {
                         const int readParity = (j%maskReadLanes)/srcReadLanes;
                         if (!readParity)
-                            vm0 = vx_load( mask + j );
+                            vm0 = vx_load( mask + (j/cn) );
                         switch(readParity)
                         {
                             case 0: vm00 = v_unpacklo(vm0, vm0); break;
@@ -1197,7 +1197,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                 }
 
                 for( ; j < roi.width; j++ )
-                    if (!useMask || (mask[j] != 0))
+                    if (!useMask || (mask[j/cn] != 0))
                         dst[j] = threshBinaryInv<float>(src[j], thresh, maxval);
             }
             break;
@@ -1219,7 +1219,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                     {
                         const int readParity = (j%maskReadLanes)/srcReadLanes;
                         if (!readParity)
-                            vm0 = vx_load( mask + j );
+                            vm0 = vx_load( mask + (j/cn) );
                         switch(readParity)
                         {
                             case 0: vm00 = v_unpacklo(vm0, vm0); break;
@@ -1247,7 +1247,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                 }
 
                 for( ; j < roi.width; j++ )
-                    if (!useMask || (mask[j] != 0))
+                    if (!useMask || (mask[j/cn] != 0))
                         dst[j] = threshTrunc<float>(src[j], thresh);
             }
             break;
@@ -1269,7 +1269,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                     {
                         const int readParity = (j%maskReadLanes)/srcReadLanes;
                         if (!readParity)
-                            vm0 = vx_load( mask + j );
+                            vm0 = vx_load( mask + (j/cn) );
                         switch(readParity)
                         {
                             case 0: vm00 = v_unpacklo(vm0, vm0); break;
@@ -1297,7 +1297,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                 }
 
                 for( ; j < roi.width; j++ )
-                    if (!useMask || (mask[j] != 0))
+                    if (!useMask || (mask[j/cn] != 0))
                         dst[j] = threshToZero<float>(src[j], thresh);
             }
             break;
@@ -1319,7 +1319,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                     {
                         const int readParity = (j%maskReadLanes)/srcReadLanes;
                         if (!readParity)
-                            vm0 = vx_load( mask + j );
+                            vm0 = vx_load( mask + (j/cn) );
                         switch(readParity)
                         {
                             case 0: vm00 = v_unpacklo(vm0, vm0); break;
@@ -1347,7 +1347,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                 }
 
                 for( ; j < roi.width; j++ )
-                    if (!useMask || (mask[j] != 0))
+                    if (!useMask || (mask[j/cn] != 0))
                         dst[j] = threshToZeroInv<float>(src[j], thresh);
             }
             break;
@@ -1410,7 +1410,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     v_uint16 vm00;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     switch(readParity)
                     {
                         case 0: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
@@ -1443,7 +1443,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
             }
 
             for( ; j < roi.width; j++ )
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshBinary<double>(src[j], thresh, maxval);
         }
         break;
@@ -1466,7 +1466,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     v_uint16 vm00;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     switch(readParity)
                     {
                         case 0: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
@@ -1499,7 +1499,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
             }
 
             for( ; j < roi.width; j++ )
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshBinaryInv<double>(src[j], thresh, maxval);
         }
         break;
@@ -1522,7 +1522,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     v_uint16 vm00;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     switch(readParity)
                     {
                         case 0: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
@@ -1552,7 +1552,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
             }
 
             for( ; j < roi.width; j++ )
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshTrunc<double>(src[j], thresh);
         }
         break;
@@ -1575,7 +1575,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     v_uint16 vm00;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     switch(readParity)
                     {
                         case 0: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
@@ -1605,7 +1605,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
             }
 
             for( ; j < roi.width; j++ )
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshToZero<double>(src[j], thresh);
         }
         break;
@@ -1628,7 +1628,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
                     const int readParity = (j%maskReadLanes)/srcReadLanes;
                     v_uint16 vm00;
                     if (!readParity)
-                        vm0 = vx_load( mask + j );
+                        vm0 = vx_load( mask + (j/cn) );
                     switch(readParity)
                     {
                         case 0: vm00 = v_unpacklo(vm0, vm0); vm0000 = v_unpacklo(vm00, vm00); break;
@@ -1658,7 +1658,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
             }
 
             for( ; j < roi.width; j++ )
-                if (!useMask || (mask[j] != 0))
+                if (!useMask || (mask[j/cn] != 0))
                     dst[j] = threshToZeroInv<double>(src[j], thresh);
         }
         break;
