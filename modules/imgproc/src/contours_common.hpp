@@ -312,6 +312,69 @@ typedef ContourArena::Item ContourPoint;
 //typedef std::vector<ContourPoint> ContourPointsStorage;
 typedef ArenaDynamicBufferIndexed<Point>::Range ContourPointsStorage;
 
+template<typename T, size_t BLOCK_LENGTH = 256>
+class vectorWithArena
+{
+    public:
+        typedef struct {T data[BLOCK_LENGTH];} block_t;
+        typedef ArenaStackBuffer<block_t> arena_t;
+    public:
+        vectorWithArena(arena_t* arena):_arena(arena),_capacity(0),_size(0) {}
+        vectorWithArena(const vectorWithArena&) = delete;
+        vectorWithArena(vectorWithArena&& other):_arena(nullptr),_capacity(0),_size(0) noexcept {*this = other;}
+        ~vectorWithArena() {
+            if (_arena != nullptr)
+                _arena->releaseItems(_blocks);
+        }
+    public:
+        vectorWithArena& operator=(const vectorWithArena&) = delete;
+        vectorWithArena& operator=(vectorWithArena&& other) noexcept {
+            if (&other != this) {
+              std::swap(this->_arena, other._arena);
+              std::swap(this->_blocks, other._blocks);
+              std::swap(this->_capacity, other._capacity);
+              std::swap(this->_size, other._size);
+            }
+        }
+    public:
+        bool empty(void) const {return !_size;}
+        size_t capacity(void) const {return _capacity;}
+        size_t size(void) const {return _size;}
+        T& at(size_t index) {return _blocks[index/BLOCK_LENGTH].get().data[index%BLOCK_LENGTH];}
+        const T& at(size_t index) const {return _blocks[index/BLOCK_LENGTH].get().data[index%BLOCK_LENGTH];}
+        T& back(void) {return at(_size-1);}
+        const T& back(void) const {return at(_size-1);}
+    public:
+        void push_back(const T& value) {
+             if (_size == _capacity)
+             {
+                 _blocks.emplace_back(std::move(_arena->newItem()));
+                 _capacity += BLOCK_LENGTH;
+             }
+             at(_size++) = value;
+        }
+        void emplace_back(T&& value) {
+            if (_size == _capacity)
+            {
+                _blocks.emplace_back(std::move(_arena->newItem()));
+                _capacity += BLOCK_LENGTH;
+            }
+            at(_size++) = std::move(value);
+        }
+        void pop_back(void) {
+            if (!((--_size) % BLOCK_LENGTH))
+            {
+                _blocks.pop_back();
+                _capacity -= BLOCK_LENGTH;
+            }
+        }
+    private:
+        arena_t* _arena;
+        std::vector<typename arena_t::Item> _blocks;
+        size_t _capacity;
+        size_t _size;
+};
+
 template <typename T>
 class TreeNode
 {
@@ -358,6 +421,9 @@ public:
 private:
     ContourArena* _contoursArena;
     ArenaStackBuffer<TreeNode<T> > _treeNodesArena;
+public:
+    typename vectorWithArena<int>::arena_t _treeIteratorArena;
+private:
     typedef typename ArenaStackBuffer<TreeNode<T> >::Item node_t;
     std::vector<node_t> nodes;
 
@@ -434,7 +500,7 @@ template <typename T>
 class TreeIterator
 {
 public:
-    TreeIterator(Tree<T>& tree_) : tree(tree_)
+    TreeIterator(Tree<T>& tree_) : tree(tree_),levels(&tree._treeIteratorArena)
     {
         CV_Assert(!tree.isEmpty());
         levels.push_back(0);
@@ -458,8 +524,8 @@ public:
     }
 
 private:
-    std::vector<int> levels;
     Tree<T>& tree;
+    vectorWithArena<int> levels;
 };
 
 //==============================================================================
