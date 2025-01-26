@@ -321,7 +321,7 @@ class vectorWithArena
     public:
         vectorWithArena(arena_t* arena):_arena(arena),_capacity(0),_size(0) {}
         vectorWithArena(const vectorWithArena&) = delete;
-        vectorWithArena(vectorWithArena&& other):_arena(nullptr),_capacity(0),_size(0) noexcept {*this = other;}
+        vectorWithArena(vectorWithArena&& other) noexcept :_arena(nullptr),_capacity(0),_size(0) {*this = other;}
         ~vectorWithArena() {
             if (_arena != nullptr)
                 _arena->releaseItems(_blocks);
