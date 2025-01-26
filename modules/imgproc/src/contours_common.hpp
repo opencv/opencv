@@ -375,6 +375,50 @@ class vectorWithArena
         size_t _size;
 };
 
+template<typename T>
+class vectorRanges
+{
+    public:
+        vectorRanges(void) = default;
+        vectorRanges(const vectorRanges&) = default;
+        vectorRanges(vectorRanges&& other) noexcept = default;
+        ~vectorRanges() = default;
+    public:
+        vectorRanges& operator=(const vectorRanges&) = default;
+        vectorRanges& operator=(vectorRanges&& other) noexcept = default;
+    public:
+        bool empty(void) const {return !_size;}
+        size_t size(void) const {return _size;}
+        T at(size_t index) const {
+            for(const auto& range : _ranges) {
+                if (index < range.second)
+                    return static_cast<T>(range.first+index);
+                else
+                    index -= range.second;
+          }
+          return _ranges[0].first;//should not occur
+        }
+        T back(void) const {return at(_size-1);}
+    public:
+        void push_back(const T& value) {
+            if (_ranges.empty() || (value != back()+1))
+                _ranges.push_back(std::make_pair(value, 1));
+            else
+                ++_ranges.back().second;
+            ++_size;
+        }
+        void pop_back(void) {
+            if (_ranges.back().second == 1)
+                _ranges.pop_back();
+            else
+                --_ranges.back().second;
+            --_size;
+        }
+    private:
+        std::vector<std::pair<T, size_t> > _ranges;
+        size_t _size = 0;
+};
+
 template <typename T>
 class TreeNode
 {
@@ -500,7 +544,7 @@ template <typename T>
 class TreeIterator
 {
 public:
-    TreeIterator(Tree<T>& tree_) : tree(tree_),levels(&tree._treeIteratorArena)
+    TreeIterator(Tree<T>& tree_) : tree(tree_)//,levels(&tree._treeIteratorArena)
     {
         CV_Assert(!tree.isEmpty());
         levels.push_back(0);
@@ -525,7 +569,7 @@ public:
 
 private:
     Tree<T>& tree;
-    vectorWithArena<int> levels;
+    vectorRanges<int> levels;
 };
 
 //==============================================================================
