@@ -588,7 +588,7 @@ public:
     explicit Contour(ContourArena* arena) : _arena(arena), isHole(false), isChain(false) {
     }
     Contour(const Contour&) = delete;
-    Contour(Contour&& other) noexcept {*this = std::move(other);}
+    Contour(Contour&& other) noexcept : _arena(nullptr) {*this = std::move(other);}
     Contour& operator=(const Contour&) = delete;
     Contour& operator=(Contour&& other) noexcept {
         if (&other != this) {
@@ -603,7 +603,8 @@ public:
         return *this;
     }
     ~Contour() {
-      _arena->releaseItems(pts);
+        if (_arena != nullptr)
+            _arena->releaseItems(pts);
     }
     void updateBoundingRect() {}
     bool isEmpty() const
