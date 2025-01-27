@@ -103,6 +103,10 @@ static const struct VideoBackendInfo builtin_backends[] =
 
 #ifdef HAVE_DSHOW
     DECLARE_STATIC_BACKEND(CAP_DSHOW, "DSHOW", MODE_CAPTURE_BY_INDEX, 0, create_DShow_capture, 0)
+#endif  
+
+#ifdef HAVE_LIBCAMERA
+    DECLARE_STATIC_BACKEND(CAP_LIBCAMERA, "LIBCAMERA", MODE_CAPTURE_ALL, createLibcameraCapture_file, createLibcameraCapture_cam, 0)
 #endif
 
     // Linux, some Unix
@@ -187,9 +191,7 @@ static const struct VideoBackendInfo builtin_backends[] =
     DECLARE_STATIC_BACKEND(CAP_OBSENSOR, "OBSENSOR", MODE_CAPTURE_BY_INDEX, 0, create_obsensor_capture, 0)
 #endif
 
-#ifdef HAVE_LIBCAMERA
-    DECLARE_STATIC_BACKEND(CAP_LIBCAMERA, "LIBCAMERA", MODE_CAPTURE_ALL, createLibcameraCapture_file, createLibcameraCapture_cam, 0)
-#endif
+
     // dropped backends: MIL, TYZX
 };
 
