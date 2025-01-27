@@ -248,6 +248,63 @@ INSTANTIATE_TEST_CASE_P(
         )
 ) );
 
+TEST(Imgcodecs_JpegXL, imdecode_truncated_stream)
+{
+    cv::Mat src(100, 100, CV_8UC1, Scalar(40,50,10));
+    vector<uint8_t> buff;
+    vector<int> param;
+
+    bool ret = false;
+    EXPECT_NO_THROW(ret = cv::imencode(".jxl", src, buff, param));
+    EXPECT_TRUE(ret);
+
+    // Try to decode non-truncated image.
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imdecode(buff, cv::IMREAD_COLOR));
+    EXPECT_FALSE(decoded.empty());
+
+    // Try to decode truncated image.
+    buff.resize(buff.size() - 1 );
+    EXPECT_NO_THROW(decoded = cv::imdecode(buff, cv::IMREAD_COLOR));
+    EXPECT_TRUE(decoded.empty());
+}
+
+TEST(Imgcodecs_JpegXL, imread_truncated_stream)
+{
+    string tmp_fname = cv::tempfile(".jxl");
+    cv::Mat src(100, 100, CV_8UC1, Scalar(40,50,10));
+    vector<uint8_t> buff;
+    vector<int> param;
+
+    bool ret = false;
+    EXPECT_NO_THROW(ret = cv::imencode(".jxl", src, buff, param));
+    EXPECT_TRUE(ret);
+
+    // Try to decode non-truncated image.
+    FILE *fp = nullptr;
+
+    fp = fopen(tmp_fname.c_str(), "wb");
+    EXPECT_TRUE(fp != nullptr);
+    fwrite(&buff[0], sizeof(uint8_t), buff.size(), fp);
+    fclose(fp);
+
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imread(tmp_fname, cv::IMREAD_COLOR));
+    EXPECT_FALSE(decoded.empty());
+
+    // Try to decode truncated image.
+    fp = fopen(tmp_fname.c_str(), "wb");
+    EXPECT_TRUE(fp != nullptr);
+    fwrite(&buff[0], sizeof(uint8_t), buff.size() - 1, fp);
+    fclose(fp);
+
+    EXPECT_NO_THROW(decoded = cv::imread(tmp_fname, cv::IMREAD_COLOR));
+    EXPECT_TRUE(decoded.empty());
+
+    // Delete temporary file
+    remove(tmp_fname.c_str());
+}
+
 
 #endif  // HAVE_JPEGXL
 
