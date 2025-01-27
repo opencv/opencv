@@ -817,52 +817,6 @@ void LibcameraApp::CloseCamera()
 		std::cerr << "Camera closed" << std::endl;
 }
 
-void LibcameraApp::ConfigureStill(unsigned int flags)
-{
-	if (options_->verbose)
-		std::cerr << "Configuring still capture..." << std::endl;
-
-	// Always request a raw stream as this forces the full resolution capture mode.
-	// (options_->mode can override the choice of camera mode, however.)
-	StreamRoles stream_roles = { StreamRole::StillCapture, StreamRole::Raw };
-	configuration_ = camera_->generateConfiguration(stream_roles);
-	if (!configuration_)
-		throw std::runtime_error("failed to generate still capture configuration");
-
-	// Now we get to override any of the default settings from the options_->
-	if (flags & FLAG_STILL_BGR)
-		configuration_->at(0).pixelFormat = libcamera::formats::BGR888;
-	else if (flags & FLAG_STILL_RGB)
-		configuration_->at(0).pixelFormat = libcamera::formats::RGB888;
-	else
-		configuration_->at(0).pixelFormat = libcamera::formats::YUV420;
-	if ((flags & FLAG_STILL_BUFFER_MASK) == FLAG_STILL_DOUBLE_BUFFER)
-		configuration_->at(0).bufferCount = 2;
-	else if ((flags & FLAG_STILL_BUFFER_MASK) == FLAG_STILL_TRIPLE_BUFFER)
-		configuration_->at(0).bufferCount = 3;
-    if (options_->photo_width)
-        configuration_->at(0).size.width = options_->photo_width;
-    if (options_->photo_height)
-        configuration_->at(0).size.height = options_->photo_height;
-
-//    configuration_->transform = options_->transform;
-
-	//if (have_raw_stream && !options_->rawfull)
-	{
-		configuration_->at(1).size.width = configuration_->at(0).size.width;
-		configuration_->at(1).size.height = configuration_->at(0).size.height;
-	}
-	configuration_->at(1).bufferCount = configuration_->at(0).bufferCount;
-
-	configureDenoise(options_->denoise == "auto" ? "cdn_hq" : options_->denoise);
-	setupCapture();
-
-	streams_["still"] = configuration_->at(0).stream();
-	streams_["raw"] = configuration_->at(1).stream();
-
-	if (options_->verbose)
-		std::cerr << "Still capture setup complete" << std::endl;
-}
 
 void LibcameraApp::ConfigureViewfinder()
 {
@@ -1317,7 +1271,13 @@ public:
     virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; } // Need to modify videoio.hpp/enum VideoCaptureAPIs
     // bool configureHW(const cv::VideoCaptureParameters&);
     // bool configureStreamsProperty(const cv::VideoCaptureParameters&);
+<<<<<<< HEAD
     bool isOpened() const CV_OVERRIDE { return camerastarted; }
+=======
+    bool isOpened() const CV_OVERRIDE { 
+        return true; 
+    } //camerastarted
+>>>>>>> f1cd8084b4 (New branch for debugging)
 
 protected:
 
@@ -1329,12 +1289,17 @@ protected:
     std::atomic<bool> running,frameready;
     uint8_t *framebuffer;
     std::mutex mtx;
+<<<<<<< HEAD
     std::condition_variable cv;
     std::mutex cv_mtx;
     bool thread_exit = false;
     // bool isFramePending;
     // bool needsReconfigure;
     std::atomic<bool> isFramePending,needsReconfigure;
+=======
+    bool isFramePending;
+    bool needsReconfigure;
+>>>>>>> f1cd8084b4 (New branch for debugging)
 };
 
 LibcameraCapture::LibcameraCapture()
@@ -1358,9 +1323,13 @@ LibcameraCapture::LibcameraCapture()
     running.store(false, std::memory_order_release);;
     frameready.store(false, std::memory_order_release);;
     framebuffer=nullptr;
+<<<<<<< HEAD
     // isFramePending=false;
     isFramePending.store(false, std::memory_order_release);
     needsReconfigure.store(false, std::memory_order_release);
+=======
+    isFramePending=false;
+>>>>>>> f1cd8084b4 (New branch for debugging)
 }
 
 <<<<<<< HEAD
@@ -1389,10 +1358,13 @@ double LibcameraCapture::getProperty(int propId) const {
 }
 =======
 
+<<<<<<< HEAD
 >>>>>>> 701d70b176 (Fix setProperty() and getProperty() for libcamera backend)
 
 >>>>>>> 7a241ef86a (Add set and get Property func (not tested and compiled yet))
 
+=======
+>>>>>>> f1cd8084b4 (New branch for debugging)
 LibcameraCapture::~LibcameraCapture()
 {   
     stopVideo();
@@ -1403,6 +1375,7 @@ LibcameraCapture::~LibcameraCapture()
 // using namespace LibcameraApp;
 
 
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 void *LibcameraCapture::videoThreadFunc(void *p)
@@ -1455,6 +1428,8 @@ bool LibcameraCapture::capturePhoto(cv::Mat &frame)
     }
     return true;
 }
+=======
+>>>>>>> f1cd8084b4 (New branch for debugging)
 
 void *LibcameraCapture::videoThreadFunc(void *p) //not resolved
 {   
@@ -1498,10 +1473,14 @@ void *LibcameraCapture::videoThreadFunc(void *p) //not resolved
 bool LibcameraCapture::startVideo() //not resolved
 {   
 <<<<<<< HEAD
+<<<<<<< HEAD
     // if(camerastarted) stopPhoto();
 =======
     if(camerastarted) stopPhoto();
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
+=======
+    // if(camerastarted) stopPhoto();
+>>>>>>> f1cd8084b4 (New branch for debugging)
     if(running.load(std::memory_order_relaxed)){
         std::cerr<<"Video thread already running";
         return false;
@@ -1554,9 +1533,12 @@ void LibcameraCapture::stopVideo()
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
+=======
+>>>>>>> f1cd8084b4 (New branch for debugging)
 /**
  * @brief Attempt to start the camera and ensure a frame is pending for capture.
  *
@@ -1576,6 +1558,7 @@ bool LibcameraCapture::grabFrame()
     if(isFramePending)
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
     {
+<<<<<<< HEAD
         // if (needsReconfigure)
         // {
         //     // restart the camera
@@ -1584,6 +1567,15 @@ bool LibcameraCapture::grabFrame()
         //     // needsReconfigure = false;
         //     needsReconfigure.store(false, std::memory_order_release);
         // }
+=======
+        if (needsReconfigure)
+        {
+            // restart the camera
+            stopVideo();
+            startVideo();
+            needsReconfigure = false;
+        }
+>>>>>>> f1cd8084b4 (New branch for debugging)
         return true;
     }
     else 
@@ -1596,8 +1588,13 @@ bool LibcameraCapture::grabFrame()
             std::cerr<<"Error starting video thread";
             return false;
         }
+<<<<<<< HEAD
         // isFramePending = true;
         // isFramePending.store(true, std::memory_order_release);
+=======
+        isFramePending = true;
+        
+>>>>>>> f1cd8084b4 (New branch for debugging)
 	}
     return running.load(std::memory_order_acquire);
 }
@@ -1621,6 +1618,7 @@ bool LibcameraCapture::grabFrame()
 bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
 {   
 <<<<<<< HEAD
+<<<<<<< HEAD
     // if (needsReconfigure)
     // {
     //     // restart the camera
@@ -1633,6 +1631,16 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
 	if(!running.load(std::memory_order_acquire)) return false;
 =======
     
+=======
+    if (needsReconfigure)
+    {
+        // restart the camera
+        stopVideo();
+        startVideo();
+        needsReconfigure = false;
+    }
+
+>>>>>>> f1cd8084b4 (New branch for debugging)
 	if(!running.load(std::memory_order_acquire))return false;
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -1645,10 +1653,14 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     while((!frameready.load(std::memory_order_acquire))&&(!timeout_reached)){
         nanosleep(&req,NULL);
 <<<<<<< HEAD
+<<<<<<< HEAD
         timeout_reached = (std::chrono::high_resolution_clock::now() - start_time > std::chrono::milliseconds(timeout_lim));
 =======
         timeout_reached = (std::chrono::high_resolution_clock::now() - start_time > std::chrono::milliseconds(1000));
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
+=======
+        timeout_reached = (std::chrono::high_resolution_clock::now() - start_time > std::chrono::milliseconds(timeout_lim));
+>>>>>>> f1cd8084b4 (New branch for debugging)
         //timeout=1000. Need to be modified in this class.
     }
     if(frameready.load(std::memory_order_acquire)){
@@ -1667,30 +1679,130 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
         return false;
 }
 
+<<<<<<< HEAD
 double LibcameraCapture::getProperty(int propId) const
 { 
     return app->GetProperty(propId);
+=======
+
+double LibcameraCapture::getProperty(int propId) const
+{
+    switch (propId)
+    {
+    case cv::CAP_PROP_BRIGHTNESS:
+        return options->brightness;
+
+    case cv::CAP_PROP_CONTRAST:
+        return options->contrast;
+
+    case cv::CAP_PROP_SATURATION:
+        return options->saturation;
+
+    case cv::CAP_PROP_SHARPNESS:
+        return options->sharpness;
+
+    case cv::CAP_PROP_AUTO_EXPOSURE:
+        return options->getExposureMode() == Exposure_Modes::EXPOSURE_NORMAL;
+
+    case cv::CAP_PROP_EXPOSURE:
+        return options->shutter;
+
+    case cv::CAP_PROP_AUTO_WB:
+        return options->getWhiteBalance() == WhiteBalance_Modes::WB_AUTO;
+
+    case cv::CAP_PROP_WB_TEMPERATURE:
+        // Since we don't have a direct WB temperature, return an approximation based on the current setting
+        switch (options->getWhiteBalance()) {
+            case WhiteBalance_Modes::WB_TUNGSTEN:
+                return 3000.0; // Approximate value for tungsten
+            case WhiteBalance_Modes::WB_INDOOR:
+                return 4500.0; // Approximate value for indoor
+            case WhiteBalance_Modes::WB_DAYLIGHT:
+                return 5500.0; // Approximate value for daylight
+            case WhiteBalance_Modes::WB_CLOUDY:
+                return 7000.0; // Approximate value for cloudy
+            default:
+                return 5000.0; // Default approximation if none of the above
+        }
+
+    case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_X:
+        return options->roi_x;
+
+    case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_Y:
+        return options->roi_y;
+
+    case cv::CAP_PROP_XI_AEAG_ROI_WIDTH:
+        return options->roi_width;
+
+    case cv::CAP_PROP_XI_AEAG_ROI_HEIGHT:
+        return options->roi_height;
+
+    case cv::CAP_PROP_FOURCC:
+    {
+        // Return the FOURCC code of the current video format.
+        // This is a placeholder. You should replace it with the actual FOURCC code.
+        // return cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
+        // return options->getFourCC();
+        std::cerr<<"Warning: Not implemented yet"<<std::endl;
+        return 0;
+    }
+
+    case cv::CAP_PROP_FRAME_WIDTH:
+        if (options->video_width != 0) {
+            return options->video_width;
+        } else {
+            return options->photo_width;
+        }
+
+    case cv::CAP_PROP_FRAME_HEIGHT:
+        if (options->video_height != 0) {
+            return options->video_height;
+        } else {
+            return options->photo_height;
+        }
+
+    case cv::CAP_PROP_FPS:
+        return options->framerate;
+
+    case cv::CAP_PROP_AUTOFOCUS:
+    case cv::CAP_PROP_BUFFERSIZE:
+    case cv::CAP_PROP_PAN:
+    case cv::CAP_PROP_TILT:
+    case cv::CAP_PROP_ROLL:
+    case cv::CAP_PROP_IRIS:
+        // Not implemented, return a default value or an error code
+        std::cerr << "Warning: Property " << propId << " is not supported." << std::endl;
+        return 0; // Or some other value indicating an error or not supported
+
+    default:
+        std::cerr << "Warning: Unsupported property: " << propId << std::endl;
+        return 0;
+    }
+>>>>>>> f1cd8084b4 (New branch for debugging)
 }
 
 bool LibcameraCapture::setProperty(int propId, double value)
 {
-    // bool needsReconfigure = false;
     switch (propId)
     {
     case cv::CAP_PROP_BRIGHTNESS:
         options->brightness = value;
+        needsReconfigure = true;
         break;
 
     case cv::CAP_PROP_CONTRAST:
         options->contrast = value;
+        needsReconfigure = true;
         break;
 
     case cv::CAP_PROP_SATURATION:
         options->saturation = value;
+        needsReconfigure = true;
         break;
 
     case cv::CAP_PROP_SHARPNESS:
         options->sharpness = value;
+        needsReconfigure = true;
         break;
 
     case cv::CAP_PROP_AUTO_EXPOSURE:
@@ -1700,14 +1812,17 @@ bool LibcameraCapture::setProperty(int propId, double value)
         else{
             options->setExposureMode(Exposure_Modes::EXPOSURE_SHORT);
         }
+        needsReconfigure = true;
         break;
 
     case cv::CAP_PROP_EXPOSURE:
         options->shutter = value; // Assumes value is in milliseconds, libcamera uses seconds
+        needsReconfigure = true;        
         break;
 
     case cv::CAP_PROP_AUTO_WB:
         options->setWhiteBalance(value ? WhiteBalance_Modes::WB_AUTO : WhiteBalance_Modes::WB_INDOOR);
+        needsReconfigure = true;
         break;
 
     case cv::CAP_PROP_WB_TEMPERATURE:
@@ -1723,6 +1838,7 @@ bool LibcameraCapture::setProperty(int propId, double value)
         } else {
             options->setWhiteBalance(WhiteBalance_Modes::WB_CLOUDY);
         }
+        needsReconfigure = true;
         break;
 
     // case cv::CAP_PROP_ZOOM: // This is a custom property for ROI
@@ -1778,17 +1894,17 @@ bool LibcameraCapture::setProperty(int propId, double value)
 
     case cv::CAP_PROP_FRAME_WIDTH:
         options->video_width = options->photo_width = (int)value;
-        // needsReconfigure = true;
+        needsReconfigure = true;
         break;
 
     case cv::CAP_PROP_FRAME_HEIGHT:
         options->video_height = options->photo_height = (int)value;
-        // needsReconfigure = true;
+        needsReconfigure = true;
         break;
 
     case cv::CAP_PROP_FPS:
         options->framerate = (float)value;
-        // needsReconfigure = true;
+        needsReconfigure = true;
         break;
     case cv::CAP_PROP_AUTOFOCUS: // Not implemented
     case cv::CAP_PROP_BUFFERSIZE: // Not implemented
@@ -1807,6 +1923,14 @@ bool LibcameraCapture::setProperty(int propId, double value)
         return false;
     }
 
+    // if (needsReconfigure)
+    // {
+    //     if (isFramePending)
+    //     {
+    //         stopVideo();
+    //         startVideo();
+    //     }
+    // }
     return true;
 }
 

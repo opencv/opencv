@@ -192,12 +192,16 @@ static const struct VideoBackendInfo builtin_backends[] =
 #endif
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 #ifdef HAVE_LIBCAMERA
     DECLARE_STATIC_BACKEND(CAP_LIBCAMERA, "LIBCAMERA", MODE_CAPTURE_ALL, createLibcameraCapture_file, createLibcameraCapture_cam, 0)
 #endif
 >>>>>>> 92cb3b26b3 (A complete version of basic functionality test.)
+=======
+
+>>>>>>> f1cd8084b4 (New branch for debugging)
     // dropped backends: MIL, TYZX
 };
 
