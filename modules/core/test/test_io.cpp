@@ -2003,6 +2003,70 @@ TEST(Core_InputOutput, FileStorage_invalid_attribute_value_regression_25946)
     ASSERT_EQ(0, std::remove(fileName.c_str()));
 }
 
+// see https://github.com/opencv/opencv/issues/26829
+TEST(Core_InputOutput, FileStorage_int64_26829)
+{
+    const std::string filename = cv::tempfile("FileStorage_int64_26829_test.xml");
+
+    {
+        FileStorage fs(filename, FileStorage::WRITE);
+
+        fs << "String1" << "string1";
+        fs << "IntMin" << INT_MIN;
+        fs << "String2" << "string2";
+        fs << "Int64Min" << INT64_MIN;
+        fs << "String3" << "string3";
+        fs << "IntMax" << INT_MAX;
+        fs << "String4" << "string4";
+        fs << "Int64Max" << INT64_MAX;
+        fs << "String5" << "string5";
+    }
+
+    {
+        FileStorage fs(filename, FileStorage::READ);
+
+        {
+            std::string str;
+
+            fs["String1"] >> str;
+            EXPECT_EQ(str, "string1");
+
+            fs["String2"] >> str;
+            EXPECT_EQ(str, "string2");
+
+            fs["String3"] >> str;
+            EXPECT_EQ(str, "string3");
+
+            fs["String4"] >> str;
+            EXPECT_EQ(str, "string4");
+
+            fs["String5"] >> str;
+            EXPECT_EQ(str, "string5");
+        }
+
+        {
+            int value;
+
+            fs["IntMin"] >> value;
+            EXPECT_EQ(value, INT_MIN);
+
+            fs["IntMax"] >> value;
+            EXPECT_EQ(value, INT_MAX);
+        }
+
+
+        {
+            int64_t value;
+
+            fs["Int64Min"] >> value;
+            EXPECT_EQ(value, INT64_MIN);
+
+            fs["Int64Max"] >> value;
+            EXPECT_EQ(value, INT64_MAX);
+        }
+    }
+}
+
 template <typename T>
 T fsWriteRead(const T& expectedValue, const char* ext)
 {
