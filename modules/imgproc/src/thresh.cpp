@@ -2074,8 +2074,8 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, InputArray _mask, 
                         ocl::typeToStr(ktype), ocl::typeToStr(depth), stride_size,
                         doubleSupport ? " -D DOUBLE_SUPPORT" : "")) :
             ocl::Kernel("threshold_mask", ocl::imgproc::threshold_mask_oclsrc,
-                        format("-D %s -D T=%s -D T1=%s -D STRIDE_SIZE=%d%s", thresholdMap[thresh_type],
-                        ocl::typeToStr(ktype), ocl::typeToStr(depth), stride_size,
+                        format("-D %s -D T=%s -D T1=%s -D CN=%d -D STRIDE_SIZE=%d%s", thresholdMap[thresh_type],
+                        ocl::typeToStr(ktype), ocl::typeToStr(depth), cn, stride_size,
                         doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
 
     if (k.empty())

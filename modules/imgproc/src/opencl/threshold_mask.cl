@@ -64,7 +64,7 @@ __kernel void threshold_mask(__global const uchar * srcptr, int src_step, int sr
     {
         int src_index = mad24(gy, src_step, mad24(gx, (int)sizeof(T), src_offset));
         int dst_index = mad24(gy, dst_step, mad24(gx, (int)sizeof(T), dst_offset));
-        int mask_index = mad24(gy, mask_step, mad24(gx, (int)sizeof(T), mask_offset));
+        int mask_index = mad24(gy, mask_step, mad24(gx/CN, (int)sizeof(uchar), mask_offset));
 
         #pragma unroll
         for (int i = 0; i < STRIDE_SIZE; i++)

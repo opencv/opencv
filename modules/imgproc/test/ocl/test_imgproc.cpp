@@ -442,7 +442,7 @@ OCL_TEST_P(Threshold_masked, Mat)
         double maxVal = randomDouble(20.0, 127.0);
         double thresh = randomDouble(0.0, maxVal);
 
-        const int _thresholdType = thresholdType | THRESH_DRYRUN;
+        const int _thresholdType = thresholdType;
 
         cv::Size sz = src_roi.size();
         cv::Mat mask_roi = cv::Mat::zeros(sz, CV_8UC1);
