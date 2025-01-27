@@ -849,5 +849,18 @@ TEST(Calib3d_RotatedCirclesPatternDetector, issue_24964)
     EXPECT_LE(error, precise_success_error_level);
 }
 
+TEST(Calib3d_CornerOrdering, issue_26830) {
+    const cv::String dataDir = string(TS::ptr()->get_data_path()) + "cv/cameracalibration/";
+    const cv::Mat image = cv::imread(dataDir + "checkerboard_marker_white.png");
+
+    std::vector<Point2f> cornersMinimumSizeMatchesPatternSize;
+    ASSERT_TRUE(cv::findChessboardCornersSB(image, Size(14, 9), cornersMinimumSizeMatchesPatternSize, CALIB_CB_MARKER | CALIB_CB_LARGER));
+
+    std::vector<Point2f> cornersMinimumSizeSmallerThanPatternSize;
+    ASSERT_TRUE(cv::findChessboardCornersSB(image, Size(4, 4), cornersMinimumSizeSmallerThanPatternSize, CALIB_CB_MARKER | CALIB_CB_LARGER));
+
+    ASSERT_EQ(cornersMinimumSizeMatchesPatternSize, cornersMinimumSizeSmallerThanPatternSize);
+}
+
 }} // namespace
 /* End of file. */
