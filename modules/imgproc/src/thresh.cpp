@@ -227,8 +227,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
         {
             const int srcReadLanes = VTraits<v_uint8>::vlanes();
             const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( j = 0; j <= roi.width - atomicReadLanes; j += srcReadLanes)
+            for( j = 0; j <= roi.width - srcReadLanes; j += srcReadLanes)
             {
                 v_uint8 v0, v2;
                 v0 = vx_load( src + j );
@@ -260,8 +259,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
         {
             const int srcReadLanes = VTraits<v_uint8>::vlanes();
             const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( j = 0; j <= roi.width - atomicReadLanes; j += srcReadLanes)
+            for( j = 0; j <= roi.width - srcReadLanes; j += srcReadLanes)
             {
                 v_uint8 v0, v2;
                 v0 = vx_load( src + j );
@@ -293,8 +291,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
         {
             const int srcReadLanes = VTraits<v_uint8>::vlanes();
             const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( j = 0; j <= roi.width - atomicReadLanes; j += srcReadLanes)
+            for( j = 0; j <= roi.width - srcReadLanes; j += srcReadLanes)
             {
                 v_uint8 v0, v2;
                 v0 = vx_load( src + j );
@@ -325,8 +322,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
         {
             const int srcReadLanes = VTraits<v_uint8>::vlanes();
             const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( j = 0; j <= roi.width - atomicReadLanes; j += srcReadLanes)
+            for( j = 0; j <= roi.width - srcReadLanes; j += srcReadLanes)
             {
                 v_uint8 v0, v2;
                 v0 = vx_load( src + j );
@@ -357,8 +353,7 @@ thresh_8u( const Mat& _src, Mat& _dst, const Mat& _mask, uchar thresh, uchar max
         {
             const int srcReadLanes = VTraits<v_uint8>::vlanes();
             const int maskReadLanes = !useMask ? 0 : VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( j = 0; j <= roi.width - atomicReadLanes; j += srcReadLanes)
+            for( j = 0; j <= roi.width - srcReadLanes; j += srcReadLanes)
             {
                 v_uint8 v0, v2;
                 v0 = vx_load( src + j );
@@ -513,8 +508,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
             j = 0;
             const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
@@ -540,11 +534,21 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 v_store(dst + j, v0);
                 v_store(dst + j + VTraits<v_uint16>::vlanes(), v1);
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_uint16>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_uint16>::vlanes() )
             {
                 v_uint16 v0 = vx_load(src + j);
+                v_uint16 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_u16(v_not(vm0)));
+                }
                 v0 = v_lt(thresh_u, v0);
                 v0 = v_and(v0, maxval16);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_u16(vm0)), v2);
                 v_store(dst + j, v0);
                 j += VTraits<v_uint16>::vlanes();
             }
@@ -561,8 +565,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
             j = 0;
             const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
@@ -588,11 +591,21 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 v_store(dst + j, v0);
                 v_store(dst + j + VTraits<v_uint16>::vlanes(), v1);
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_uint16>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_uint16>::vlanes() )
             {
                 v_uint16 v0 = vx_load(src + j);
+                v_uint16 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_u16(v_not(vm0)));
+                }
                 v0 = v_le(v0, thresh_u);
                 v0 = v_and(v0, maxval16);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_u16(vm0)), v2);
                 v_store(dst + j, v0);
                 j += VTraits<v_uint16>::vlanes();
             }
@@ -609,8 +622,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
             j = 0;
             const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
@@ -634,10 +646,20 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 v_store(dst + j, v0);
                 v_store(dst + j + VTraits<v_uint16>::vlanes(), v1);
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_uint16>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_uint16>::vlanes() )
             {
                 v_uint16 v0 = vx_load(src + j);
+                v_uint16 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_u16(v_not(vm0)));
+                }
                 v0 = v_min(v0, thresh_u);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_u16(vm0)), v2);
                 v_store(dst + j, v0);
                 j += VTraits<v_uint16>::vlanes();
             }
@@ -654,8 +676,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
             j = 0;
             const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
@@ -679,10 +700,20 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 v_store(dst + j, v0);
                 v_store(dst + j + VTraits<v_uint16>::vlanes(), v1);
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_uint16>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_uint16>::vlanes() )
             {
                 v_uint16 v0 = vx_load(src + j);
+                v_uint16 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_u16(v_not(vm0)));
+                }
                 v0 = v_and(v_lt(thresh_u, v0), v0);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_u16(vm0)), v2);
                 v_store(dst + j, v0);
                 j += VTraits<v_uint16>::vlanes();
             }
@@ -699,8 +730,7 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
             j = 0;
             const int srcReadLanes = 2*VTraits<v_uint16>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_uint16 v0, v1, v2, v3;
                 v0 = vx_load(src + j);
@@ -724,10 +754,20 @@ thresh_16u(const Mat& _src, Mat& _dst, const Mat& _mask, ushort thresh, ushort m
                 v_store(dst + j, v0);
                 v_store(dst + j + VTraits<v_uint16>::vlanes(), v1);
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_uint16>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_uint16>::vlanes() )
             {
                 v_uint16 v0 = vx_load(src + j);
+                v_uint16 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_u16(v_not(vm0)));
+                }
                 v0 = v_and(v_le(v0, thresh_u), v0);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_u16(vm0)), v2);
                 v_store(dst + j, v0);
                 j += VTraits<v_uint16>::vlanes();
             }
@@ -841,8 +881,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
             j = 0;
             const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
@@ -868,11 +907,21 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_int16>::vlanes(), v1 );
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_int16>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_int16>::vlanes() )
             {
                 v_int16 v0 = vx_load( src + j );
+                v_int16 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_s16(v_not(vm0)));
+                }
                 v0 = v_lt(thresh8, v0);
                 v0 = v_and(v0, maxval8);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_s16(vm0)), v2);
                 v_store( dst + j, v0 );
                 j += VTraits<v_int16>::vlanes();
             }
@@ -889,8 +938,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
             j = 0;
             const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
@@ -916,11 +964,21 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_int16>::vlanes(), v1 );
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_int16>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_int16>::vlanes() )
             {
                 v_int16 v0 = vx_load( src + j );
+                v_int16 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_s16(v_not(vm0)));
+                }
                 v0 = v_le(v0, thresh8);
                 v0 = v_and(v0, maxval8);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_s16(vm0)), v2);
                 v_store( dst + j, v0 );
                 j += VTraits<v_int16>::vlanes();
             }
@@ -937,8 +995,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
             j = 0;
             const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
@@ -962,10 +1019,20 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_int16>::vlanes(), v1 );
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_int16>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_int16>::vlanes() )
             {
                 v_int16 v0 = vx_load( src + j );
+                v_int16 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_s16(v_not(vm0)));
+                }
                 v0 = v_min( v0, thresh8 );
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_s16(vm0)), v2);
                 v_store( dst + j, v0 );
                 j += VTraits<v_int16>::vlanes();
             }
@@ -982,8 +1049,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
             j = 0;
             const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
@@ -1007,10 +1073,20 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_int16>::vlanes(), v1 );
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_int16>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_int16>::vlanes() )
             {
                 v_int16 v0 = vx_load( src + j );
+                v_int16 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_s16(v_not(vm0)));
+                }
                 v0 = v_and(v_lt(thresh8, v0), v0);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_s16(vm0)), v2);
                 v_store( dst + j, v0 );
                 j += VTraits<v_int16>::vlanes();
             }
@@ -1027,8 +1103,7 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
             j = 0;
             const int srcReadLanes = 2*VTraits<v_int16>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_int16 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
@@ -1052,10 +1127,20 @@ thresh_16s( const Mat& _src, Mat& _dst, const Mat& _mask, short thresh, short ma
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_int16>::vlanes(), v1 );
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_int16>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_int16>::vlanes() )
             {
                 v_int16 v0 = vx_load( src + j );
+                v_int16 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_s16(v_not(vm0)));
+                }
                 v0 = v_and(v_le(v0, thresh8), v0);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_s16(vm0)), v2);
                 v_store( dst + j, v0 );
                 j += VTraits<v_int16>::vlanes();
             }
@@ -1153,8 +1238,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                 j = 0;
                 const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
                 const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-                const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-                for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+                for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
                 {
                     v_float32 v0, v1, v2, v3;
                     v0 = vx_load( src + j );
@@ -1180,11 +1264,21 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                     v_store( dst + j, v0 );
                     v_store( dst + j + VTraits<v_float32>::vlanes(), v1 );
                 }
-                if ( !useMask && (j <= roi.width - VTraits<v_float32>::vlanes()) )
+                if ( j <= roi.width - VTraits<v_float32>::vlanes() )
                 {
                     v_float32 v0 = vx_load( src + j );
+                    v_float32 v2;
+                    if (useMask)
+                    {
+                        for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                            maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                        vm0 = vx_lut(mask, maskReadLUT);
+                        v2 = v_and(v0, v_reinterpret_as_f32(v_not(vm0)));
+                    }
                     v0 = v_lt(thresh4, v0);
                     v0 = v_and(v0, maxval4);
+                    if (useMask)
+                        v0 = v_or(v_and(v0, v_reinterpret_as_f32(vm0)), v2);
                     v_store( dst + j, v0 );
                     j += VTraits<v_float32>::vlanes();
                 }
@@ -1201,8 +1295,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                 j = 0;
                 const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
                 const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-                const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-                for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+                for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
                 {
                     v_float32 v0, v1, v2, v3;
                     v0 = vx_load( src + j );
@@ -1228,11 +1321,21 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                     v_store( dst + j, v0 );
                     v_store( dst + j + VTraits<v_float32>::vlanes(), v1 );
                 }
-                if ( !useMask && (j <= roi.width - VTraits<v_float32>::vlanes()) )
+                if ( j <= roi.width - VTraits<v_float32>::vlanes() )
                 {
                     v_float32 v0 = vx_load( src + j );
+                    v_float32 v2;
+                    if (useMask)
+                    {
+                        for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                            maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                        vm0 = vx_lut(mask, maskReadLUT);
+                        v2 = v_and(v0, v_reinterpret_as_f32(v_not(vm0)));
+                    }
                     v0 = v_le(v0, thresh4);
                     v0 = v_and(v0, maxval4);
+                    if (useMask)
+                        v0 = v_or(v_and(v0, v_reinterpret_as_f32(vm0)), v2);
                     v_store( dst + j, v0 );
                     j += VTraits<v_float32>::vlanes();
                 }
@@ -1249,8 +1352,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                 j = 0;
                 const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
                 const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-                const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-                for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+                for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
                 {
                     v_float32 v0, v1, v2, v3;
                     v0 = vx_load( src + j );
@@ -1274,10 +1376,20 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                     v_store( dst + j, v0 );
                     v_store( dst + j + VTraits<v_float32>::vlanes(), v1 );
                 }
-                if ( !useMask && (j <= roi.width - VTraits<v_float32>::vlanes()) )
+                if ( j <= roi.width - VTraits<v_float32>::vlanes() )
                 {
                     v_float32 v0 = vx_load( src + j );
+                    v_float32 v2;
+                    if (useMask)
+                    {
+                        for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                            maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                        vm0 = vx_lut(mask, maskReadLUT);
+                        v2 = v_and(v0, v_reinterpret_as_f32(v_not(vm0)));
+                    }
                     v0 = v_min( v0, thresh4 );
+                    if (useMask)
+                        v0 = v_or(v_and(v0, v_reinterpret_as_f32(vm0)), v2);
                     v_store( dst + j, v0 );
                     j += VTraits<v_float32>::vlanes();
                 }
@@ -1294,8 +1406,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                 j = 0;
                 const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
                 const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-                const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-                for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+                for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
                 {
                     v_float32 v0, v1, v2, v3;
                     v0 = vx_load( src + j );
@@ -1319,10 +1430,20 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                     v_store( dst + j, v0 );
                     v_store( dst + j + VTraits<v_float32>::vlanes(), v1 );
                 }
-                if ( !useMask && (j <= roi.width - VTraits<v_float32>::vlanes()) )
+                if ( j <= roi.width - VTraits<v_float32>::vlanes() )
                 {
                     v_float32 v0 = vx_load( src + j );
+                    v_float32 v2;
+                    if (useMask)
+                    {
+                        for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                            maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                        vm0 = vx_lut(mask, maskReadLUT);
+                        v2 = v_and(v0, v_reinterpret_as_f32(v_not(vm0)));
+                    }
                     v0 = v_and(v_lt(thresh4, v0), v0);
+                    if (useMask)
+                        v0 = v_or(v_and(v0, v_reinterpret_as_f32(vm0)), v2);
                     v_store( dst + j, v0 );
                     j += VTraits<v_float32>::vlanes();
                 }
@@ -1339,8 +1460,7 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                 j = 0;
                 const int srcReadLanes = 2*VTraits<v_float32>::vlanes();
                 const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-                const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-                for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+                for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
                 {
                     v_float32 v0, v1, v2, v3;
                     v0 = vx_load( src + j );
@@ -1364,10 +1484,20 @@ thresh_32f( const Mat& _src, Mat& _dst, const Mat& _mask, float thresh, float ma
                     v_store( dst + j, v0 );
                     v_store( dst + j + VTraits<v_float32>::vlanes(), v1 );
                 }
-                if ( !useMask && (j <= roi.width - VTraits<v_float32>::vlanes()) )
+                if ( j <= roi.width - VTraits<v_float32>::vlanes() )
                 {
                     v_float32 v0 = vx_load( src + j );
+                    v_float32 v2;
+                    if (useMask)
+                    {
+                        for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                            maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                        vm0 = vx_lut(mask, maskReadLUT);
+                        v2 = v_and(v0, v_reinterpret_as_f32(v_not(vm0)));
+                    }
                     v0 = v_and(v_le(v0, thresh4), v0);
+                    if (useMask)
+                        v0 = v_or(v_and(v0, v_reinterpret_as_f32(vm0)), v2);
                     v_store( dst + j, v0 );
                     j += VTraits<v_float32>::vlanes();
                 }
@@ -1428,8 +1558,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
             j = 0;
             const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_float64 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
@@ -1455,11 +1584,21 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_float64>::vlanes(), v1 );
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_float64>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_float64>::vlanes() )
             {
                 v_float64 v0 = vx_load( src + j );
+                v_float64 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_f64(v_not(vm0)));
+                }
                 v0 = v_lt(thresh2, v0);
                 v0 = v_and(v0, maxval2);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_f64(vm0)), v2);
                 v_store( dst + j, v0 );
                 j += VTraits<v_float64>::vlanes();
             }
@@ -1476,8 +1615,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
             j = 0;
             const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_float64 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
@@ -1503,11 +1641,21 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_float64>::vlanes(), v1 );
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_float64>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_float64>::vlanes() )
             {
                 v_float64 v0 = vx_load( src + j );
+                v_float64 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_f64(v_not(vm0)));
+                }
                 v0 = v_le(v0, thresh2);
                 v0 = v_and(v0, maxval2);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_f64(vm0)), v2);
                 v_store( dst + j, v0 );
                 j += VTraits<v_float64>::vlanes();
             }
@@ -1524,8 +1672,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
             j = 0;
             const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_float64 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
@@ -1549,10 +1696,20 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_float64>::vlanes(), v1 );
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_float64>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_float64>::vlanes() )
             {
                 v_float64 v0 = vx_load( src + j );
+                v_float64 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_f64(v_not(vm0)));
+                }
                 v0 = v_min( v0, thresh2 );
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_f64(vm0)), v2);
                 v_store( dst + j, v0 );
                 j += VTraits<v_float64>::vlanes();
             }
@@ -1569,8 +1726,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
             j = 0;
             const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_float64 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
@@ -1594,10 +1750,20 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_float64>::vlanes(), v1 );
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_float64>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_float64>::vlanes() )
             {
                 v_float64 v0 = vx_load( src + j );
+                v_float64 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_f64(v_not(vm0)));
+                }
                 v0 = v_and(v_lt(thresh2, v0), v0);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_f64(vm0)), v2);
                 v_store( dst + j, v0 );
                 j += VTraits<v_float64>::vlanes();
             }
@@ -1614,8 +1780,7 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
             j = 0;
             const int srcReadLanes = 2*VTraits<v_float64>::vlanes();
             const int maskReadLanes = !useMask ? 0 : 2*VTraits<v_uint8>::vlanes();
-            const int atomicReadLanes = std::max(srcReadLanes, maskReadLanes);
-            for( ; j <= roi.width - atomicReadLanes; j += srcReadLanes )
+            for( ; j <= roi.width - srcReadLanes; j += srcReadLanes )
             {
                 v_float64 v0, v1, v2, v3;
                 v0 = vx_load( src + j );
@@ -1639,10 +1804,20 @@ thresh_64f(const Mat& _src, Mat& _dst, const Mat& _mask, double thresh, double m
                 v_store( dst + j, v0 );
                 v_store( dst + j + VTraits<v_float64>::vlanes(), v1 );
             }
-            if ( !useMask && (j <= roi.width - VTraits<v_float64>::vlanes()) )
+            if ( j <= roi.width - VTraits<v_float64>::vlanes() )
             {
                 v_float64 v0 = vx_load( src + j );
+                v_float64 v2;
+                if (useMask)
+                {
+                    for(int k = 0 ; k<static_cast<int>(sizeof(maskReadLUT)/sizeof(int)) ; ++k)
+                        maskReadLUT[k] = (k+(j/srcReadLanes)*maskReadLanes)/maskRepeat;
+                    vm0 = vx_lut(mask, maskReadLUT);
+                    v2 = v_and(v0, v_reinterpret_as_f64(v_not(vm0)));
+                }
                 v0 = v_and(v_le(v0, thresh2), v0);
+                if (useMask)
+                    v0 = v_or(v_and(v0, v_reinterpret_as_f64(vm0)), v2);
                 v_store( dst + j, v0 );
                 j += VTraits<v_float64>::vlanes();
             }
