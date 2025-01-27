@@ -43,6 +43,8 @@
 #ifndef OPENCV_IMGPROC_FILTER_HPP
 #define OPENCV_IMGPROC_FILTER_HPP
 
+#include <opencv2/core.hpp>
+#include <vector>
 namespace cv
 {
 #ifdef HAVE_OPENCL
