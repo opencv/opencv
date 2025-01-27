@@ -54,10 +54,10 @@ class BlockStorage {
 
         void clear(void) {
             const size_t minDynamicBlocks = !staticBlocksCount ? 1 : 0;
-            for(size_t i = minDynamicBlocks, count = blocks.size() ; i<count ; ++i ) {
-                delete blocks[i];
+            for(size_t i = minDynamicBlocks, count = dynamicBlocks.size() ; i<count ; ++i ) {
+                delete dynamicBlocks[i];
             }
-            blocks.resize(minDynamicBlocks);
+            dynamicBlocks.resize(minDynamicBlocks);
             sz = 0;
         }
 
