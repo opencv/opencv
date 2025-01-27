@@ -52,9 +52,8 @@
 #endif
 
 __kernel void threshold_mask(__global const uchar * srcptr, int src_step, int src_offset,
-                             __global uchar * dstptr, int dst_step, int dst_offset,
+                             __global uchar * dstptr, int dst_step, int dst_offset, int rows, int cols,
                              __global const uchar * maskptr, int mask_step, int mask_offset,
-                             int rows, int cols,
                              T1 thresh, T1 max_val, T1 min_val)
 {
     int gx = get_global_id(0);
