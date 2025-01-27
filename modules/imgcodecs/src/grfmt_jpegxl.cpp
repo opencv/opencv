@@ -28,7 +28,8 @@ static void cbRGBAtoGRAY_32F(void *opaque, size_t x, size_t y, size_t num_pixels
 
 /////////////////////// JpegXLDecoder ///////////////////
 
-JpegXLDecoder::JpegXLDecoder() : m_f(nullptr, &fclose)
+JpegXLDecoder::JpegXLDecoder() : m_f(nullptr, &fclose),
+                                 m_read_buffer(16384,0) // 16KB chunks
 {
     m_signature = "\xFF\x0A";
     m_decoder = nullptr;
@@ -100,11 +101,6 @@ bool JpegXLDecoder::readHeader()
             if (!m_f) {
                 return false;
             }
-        }
-        // Create buffer for reading file
-        constexpr size_t read_buffer_size = 16384;  // 16KB chunks
-        if (m_read_buffer.capacity() < read_buffer_size) {
-            m_read_buffer.resize(read_buffer_size);
         }
     }
 
@@ -229,6 +225,7 @@ bool JpegXLDecoder::read()
             }
             else {
                 // When data source is on file
+                // Release input buffer if it had been set already. If not, there are no errors.
                 size_t remaining = JxlDecoderReleaseInput(m_decoder.get());
                 // Move any remaining bytes to the beginning
                 if (remaining > 0)
@@ -252,6 +249,7 @@ bool JpegXLDecoder::read()
             }
 
             // Set input buffer
+            // It must be kept until calling JxlDecoderReleaseInput() or m_decoder.reset().
             if (JXL_DEC_SUCCESS != JxlDecoderSetInput(m_decoder.get(), data_ptr, data_len)) {
                 return false;
             }
