@@ -52,15 +52,14 @@ static vector<ApproxItem> pass_0(const vector<schar>& chain, Point pt, bool isAp
     return res;
 }
 
-static void gatherPoints(ContourArena& arena, const vector<ApproxItem>& ares, ContourPointsStorage& output)
+static void gatherPoints(const vector<ApproxItem>& ares, ContourPointsStorage& output)
 {
-    output.resize(0);
-    output.reserve(ares.size() / 2);
+    output.clear();
     for (const ApproxItem& item : ares)
     {
         if (item.removed)
             continue;
-        output.emplace_back(arena.newItem(item.pt));
+        output.push_back(item.pt);
     }
 }
 
@@ -272,13 +271,13 @@ static void pass_cleanup(vector<ApproxItem>& ares, size_t start_idx)
 }  // namespace
 
 
-void cv::approximateChainTC89(ContourArena& arena, vector<schar> chain, const Point& origin, const int method,
+void cv::approximateChainTC89(vector<schar> chain, const Point& origin, const int method,
                               ContourPointsStorage& output)
 {
     if (chain.size() == 0)
     {
-        output.resize(0);
-        output.emplace_back(arena.newItem(origin));
+        output.clear();
+        output.push_back(origin);
         return;
     }
 
@@ -351,5 +350,5 @@ void cv::approximateChainTC89(ContourArena& arena, vector<schar> chain, const Po
         }
     }
 
-    gatherPoints(arena, ares, output);
+    gatherPoints(ares, output);
 }

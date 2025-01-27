@@ -84,17 +84,18 @@ public:
         ICV_CONNECTING_BELOW = -1,
     };
 
-    ContourArena arena;
     CTree tree;
 
     vector<LRP> rns;
     vector<int> ext_rns;
     vector<int> int_rns;
 
+    ContourPointsStorage::storage_t storage;
+
 public:
-    LinkRunner():tree(&arena)
+    LinkRunner(void)
     {
-        tree.newElem();
+        tree.newElem(Contour(&storage));
         rns.reserve(100);
     }
     void process(Mat& image);
@@ -118,12 +119,12 @@ void LinkRunner::convertLinks(int& first, int& prev, bool isHole)
         if (rns[cur].link == -1)
             continue;
 
-        CNode& node = tree.newElem();
+        CNode& node = tree.newElem(Contour(&storage));
         node.body.isHole = isHole;
 
         do
         {
-            node.body.pts.emplace_back(arena.newItem(rns[cur].pt));
+            node.body.addPoint(rns[cur].pt);
             int p_temp = cur;
             cur = rns[cur].link;
             rns[p_temp].link = -1;

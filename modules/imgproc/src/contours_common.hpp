@@ -6,7 +6,8 @@
 #define OPENCV_CONTOURS_COMMON_HPP
 
 #include "precomp.hpp"
-#include <stack>
+
+#include <array>
 
 namespace cv {
 
@@ -27,365 +28,114 @@ inline schar clamp_direction(schar dir)
     return std::min(dir, (schar)15);
 }
 
-
-template <typename T, size_t CAPACITY = 4096>
-class ArenaStackBuffer
-{
+// BLOCK_SIZE_ELEM - number of elements in a block
+// STATIC_CAPACITY_BYTES - static memory in bytes for preallocated blocks
+template <typename T, size_t BLOCK_SIZE_ELEM = 1024, size_t STATIC_CAPACITY_BYTES = 4096>
+class BlockStorage {
     public:
-        class Item
+        using value_type = T;
+        typedef struct {value_type data[BLOCK_SIZE_ELEM];} block_type;
+
+        BlockStorage()
         {
-            friend class ArenaStackBuffer;
+            const size_t minDynamicBlocks = !staticBlocksCount ? 1 : 0;
+            for(size_t i = 0 ; i<minDynamicBlocks ; ++i)
+                dynamicBlocks.push_back(new block_type);
+        }
+        BlockStorage(const BlockStorage&) = delete;
+        BlockStorage(BlockStorage&&) noexcept = default;
+        ~BlockStorage() {
+            for(const auto & block : dynamicBlocks) {
+                delete block;
+            }
+        }
+        BlockStorage& operator=(const BlockStorage&) = delete;
+        BlockStorage& operator=(BlockStorage&&) noexcept = default;
+
+        void clear(void) {
+            const size_t minDynamicBlocks = !staticBlocksCount ? 1 : 0;
+            for(size_t i = minDynamicBlocks, count = blocks.size() ; i<count ; ++i ) {
+                delete blocks[i];
+            }
+            blocks.resize(minDynamicBlocks);
+            sz = 0;
+        }
+
+        void push_back(const value_type& value) {
+            const size_t blockIndex = sz / BLOCK_SIZE_ELEM;
+            const size_t currentBlocksCount = staticBlocksCount+dynamicBlocks.size();
+            if (blockIndex == currentBlocksCount)
+                dynamicBlocks.push_back(new block_type);
+            block_type& cur_block =
+                (blockIndex < staticBlocksCount) ? staticBlocks[blockIndex] :
+                *dynamicBlocks[blockIndex-staticBlocksCount];
+            cur_block.data[sz % BLOCK_SIZE_ELEM] = value;
+            ++sz;
+        }
+
+        size_t size() const { return sz; }
+
+        const value_type & at(size_t index) const {
+            const size_t blockIndex = index / BLOCK_SIZE_ELEM;
+            const block_type& cur_block =
+                (blockIndex < staticBlocksCount) ? staticBlocks[blockIndex] :
+                *dynamicBlocks[blockIndex-staticBlocksCount];
+            return cur_block.data[index % BLOCK_SIZE_ELEM];
+        }
+    public:
+        friend class RangeIterator;
+        class RangeIterator
+        {
             public:
-                Item(ArenaStackBuffer* owner = nullptr, T* baseAddress = nullptr)
-                    :_owner(owner),_baseAddress(baseAddress) {}
-                Item(const Item&) = delete;
-                Item(Item&& other) noexcept
-                    :_owner(nullptr),_baseAddress(nullptr) {*this = std::move(other);}
-                ~Item() {if (_owner != nullptr) _owner->releaseItem(*this);}
-                Item& operator=(const Item&) = delete;
-                Item& operator=(Item&& other) noexcept {
-                    if (&other != this) {
-                        std::swap(this->_owner, other._owner);
-                        std::swap(this->_baseAddress, other._baseAddress);
-                    }
+                RangeIterator(const BlockStorage* _owner, size_t _first, size_t _last)
+                             :owner(_owner),remaining(_last-_first),
+                              blockIndex(_first/BLOCK_SIZE_ELEM),offset(_first%BLOCK_SIZE_ELEM) {
+                }
+            private:
+                const BlockStorage* owner = nullptr;
+                size_t remaining = 0;
+                size_t blockIndex = 0;
+                size_t offset = 0;
+            public:
+                bool done(void) const {return !remaining;}
+                std::pair<const value_type*, size_t> operator*(void) const {return get();}
+                std::pair<const value_type*, size_t> get(void) const {
+                    const block_type& cur_block =
+                        (blockIndex < owner->staticBlocksCount) ? owner->staticBlocks[blockIndex] :
+                        *owner->dynamicBlocks[blockIndex-owner->staticBlocksCount];
+                    const value_type* rangeStart = cur_block.data+offset;
+                    const size_t rangeLength = std::min(remaining, BLOCK_SIZE_ELEM-offset);
+                    return std::make_pair(rangeStart, rangeLength);
+                }
+                RangeIterator& operator++() {
+                    std::pair<const value_type*, size_t> range = get();
+                    remaining -= range.second;
+                    offset = 0;
+                    ++blockIndex;
                     return *this;
                 }
-            public:
-                operator T& () noexcept {return get();}
-                operator const T& () const noexcept {return get();}
-                T& get() {return *_baseAddress;}
-                const T& get() const {return *_baseAddress;}
-            private:
-                ArenaStackBuffer* _owner;
-                T* _baseAddress;
         };
-    public:
-          ArenaStackBuffer(void):bufferCapacityInElements(CAPACITY/sizeof(T)), nextAllocOffsetInElements(0) {}
-          ArenaStackBuffer(const ArenaStackBuffer&) = delete;
-          ArenaStackBuffer(ArenaStackBuffer&&) noexcept = delete;
-          ~ArenaStackBuffer() = default;
-          ArenaStackBuffer& operator=(const ArenaStackBuffer&) = delete;
-          ArenaStackBuffer& operator=(ArenaStackBuffer&&) noexcept = delete;
-    public:
-        template<typename... Ts>
-        Item newItem(Ts&&... params) {
-            if (nextAllocOffsetInElements < bufferCapacityInElements)
-                return Item(this, new(_buffer+sizeof(T)*(nextAllocOffsetInElements++)) T(std::forward<Ts>(params)...));
-            else
-                return Item(this, new T(std::forward<Ts>(params)...));
-        }
-        void releaseItem(Item& item) {
-            if (!item._owner){
-            }
-            else if (item._baseAddress != nullptr)
-            {
-                T* beginBufferAddress = reinterpret_cast<T*>(_buffer);
-                T* endBufferAddress = beginBufferAddress+nextAllocOffsetInElements;
-                const bool isInBuffer = (beginBufferAddress <= item._baseAddress) && (item._baseAddress < endBufferAddress);
-                if (!isInBuffer)
-                    delete item._baseAddress;
-                else
-                {
-                    item._baseAddress->~T();
-                    if (item._baseAddress+1 == endBufferAddress)//last address can be reused
-                        --nextAllocOffsetInElements;
-                }
-                item._owner = nullptr;
-            }
-        }
-        void releaseItems(std::vector<Item>& items) {
-          size_t count = items.size();
-          while(count--)
-            releaseItem(items[count]);
-        }
-        T& get(const Item& item) {return item.get();}
-        const T& get(const Item& item) const {return item.get();}
-    private:
-        unsigned char _buffer[CAPACITY];
-        size_t bufferCapacityInElements;
-        size_t nextAllocOffsetInElements;
-};
-
-template <typename T, size_t CAPACITY = 4096>
-class ArenaDynamicBuffer
-{
-    public:
-        class Item
-        {
-            friend class ArenaDynamicBuffer;
-            public:
-                  Item(ArenaDynamicBuffer* owner = nullptr, size_t index = 0):_owner(owner),_index(index) {}
-                  Item(const Item&) = delete;
-                  Item(Item&& other) noexcept
-                      :_owner(nullptr),_index(0) {*this = std::move(other);}
-                  ~Item() {if (_owner != nullptr) _owner->releaseItem(*this);}
-                  Item& operator=(const Item&) = delete;
-                  Item& operator=(Item&& other) noexcept {
-                      if (&other != this) {
-                          std::swap(_owner, other._owner);
-                          std::swap(_index, other._index);
-                      }
-                      return *this;
-                  }
-            public:
-                  operator T& () noexcept {return get();}
-                  operator const T& () const noexcept {return get();}
-                  T& get() {return _owner->get(*this);}
-                  const T& get() const {return _owner->get(*this);}
-            private:
-                ArenaDynamicBuffer* _owner;
-                size_t _index;
-        };
-    public:
-        ArenaDynamicBuffer(void) {_buffer.reserve(CAPACITY/sizeof(T));_freeIndices.reserve(_buffer.capacity());}
-        ArenaDynamicBuffer(const ArenaDynamicBuffer&) = delete;
-        ArenaDynamicBuffer(ArenaDynamicBuffer&&) noexcept = delete;
-        ~ArenaDynamicBuffer() = default;
-        ArenaDynamicBuffer& operator=(const ArenaDynamicBuffer&) = delete;
-        ArenaDynamicBuffer& operator=(ArenaDynamicBuffer&&) noexcept = delete;
-    public:
-        template<typename... Ts>
-        Item newItem(Ts&&... params) {
-            if (!_freeIndices.empty())
-            {
-                const size_t index = _freeIndices.back();
-                _freeIndices.pop_back();
-                _buffer[index] = std::move(T(std::forward<Ts>(params)...));
-                return Item(this, index);
-            }
-            else
-            {
-                const size_t index = _buffer.size();
-                _buffer.emplace_back(std::move(T(std::forward<Ts>(params)...)));
-                return Item(this, index);
-            }
-        }
-        void releaseItem(Item& item) {
-            if (item._owner != nullptr)
-            {
-                if (item._index == _buffer.size())
-                    _buffer.pop_back();
-                else
-                    _freeIndices.push_back(item._index);
-                item._owner = nullptr;
-            }
-        }
-        void releaseItems(std::vector<Item>& items) {
-            size_t count = items.size();
-            while(count--)
-                releaseItem(items[count]);
-        }
-        T& get(const Item& item) {return _buffer[item._index];}
-        const T& get(const Item& item) const {return _buffer[item._index];}
-    private:
-        std::vector<T> _buffer;
-        std::vector<size_t> _freeIndices;
-};
-
-template <typename T, size_t CAPACITY = 4096>
-class ArenaDynamicBufferIndexed
-{
-    public:
-        class Item
-        {
-            friend class ArenaDynamicBufferIndexed;
-            public:
-                typedef unsigned int index_storage_t;
-            public:
-                  explicit Item(index_storage_t index = 0):_index(index) {}
-                  Item(const Item&) = delete;
-                  Item(Item&& other) noexcept
-                      :_index(0) {*this = std::move(other);}
-                  ~Item() {}
-                  Item& operator=(const Item&) = delete;
-                  Item& operator=(Item&& other) noexcept {
-                      if (&other != this) {
-                          std::swap(_index, other._index);
-                      }
-                      return *this;
-                  }
-            public:
-                index_storage_t get(void) const {return _index;}
-            private:
-                index_storage_t _index;
-        };
-    public:
-        ArenaDynamicBufferIndexed(void) {_buffer.reserve(CAPACITY/sizeof(T));}
-        ArenaDynamicBufferIndexed(const ArenaDynamicBufferIndexed&) = delete;
-        ArenaDynamicBufferIndexed(ArenaDynamicBufferIndexed&&) noexcept = delete;
-        ~ArenaDynamicBufferIndexed() = default;
-        ArenaDynamicBufferIndexed& operator=(const ArenaDynamicBufferIndexed&) = delete;
-        ArenaDynamicBufferIndexed& operator=(ArenaDynamicBufferIndexed&&) noexcept = delete;
-    public:
-        class Range {
-            public:
-                class const_iterator {
-                    public:
-                        typedef typename ArenaDynamicBufferIndexed::Item::index_storage_t index_storage_t;
-                    public:
-                        const_iterator(index_storage_t _value):value(_value) {}
-                        const_iterator& operator++() {++value; return *this;}
-                        const_iterator operator++(int) {return result(value++);}
-                        const index_storage_t& operator*() const {return value;}
-                        index_storage_t& operator*() {return value;}
-                        bool operator==(const const_iterator& other) const {return this->value == other.value;}
-                        bool operator!=(const const_iterator& other) const {return this->value != other.value;}
-                        bool operator<(const const_iterator& other) const {return this->value < other.value;}
-                    private:
-                        index_storage_t value;
-                };
-                typedef const_iterator iterator;
-            public:
-                Range(void):_size(0) {}
-            public:
-                size_t size(void) const {return _size;}
-                void resize(size_t value) {_size = value;}
-                void reserve(size_t) {}
-                void emplace_back(Item&& value) {
-                    if (!_size)
-                        first = std::move(value);
-                    else
-                        CV_Assert(value.get() == first.get()+_size);
-                    ++_size;
-                }
-                const_iterator cbegin(void) const noexcept {return const_iterator(first.get());}
-                const_iterator cend(void) const noexcept {return const_iterator(static_cast<typename Item::index_storage_t>(first.get()+_size));}
-                iterator begin(void) const noexcept {return iterator(first.get());}
-                iterator end(void) const noexcept {return iterator(static_cast<typename Item::index_storage_t>(first.get()+_size));}
-                Item operator[](size_t index) const noexcept {return Item(static_cast<unsigned int>(first.get()+index));}
-                Item operator[](size_t index) noexcept {return Item(static_cast<unsigned int>(first.get()+index));}
-            public:
-                Item first;
-                size_t _size;
-        };
-    public:
-        template<typename... Ts>
-        Item newItem(Ts&&... params) {
-            const size_t index = _buffer.size();
-            _buffer.emplace_back(std::move(T(std::forward<Ts>(params)...)));
-            return Item(static_cast<typename Item::index_storage_t>(index));
-        }
-        void releaseItem(Item item) {
-            if (item._index == _buffer.size())
-                _buffer.pop_back();
-        }
-        void releaseItems(Range& items) {
-            if (items.first.get()+items._size == _buffer.size())
-                _buffer.resize(_buffer.size()-items._size);
-        }
-        T& get(const Item& item) {return get(item._index);}
-        const T& get(const Item& item) const {return get(item._index);}
-        T& get(typename Item::index_storage_t index) {return _buffer[index];}
-        const T& get(typename Item::index_storage_t index) const {return _buffer[index];}
-    private:
-        std::vector<T> _buffer;
-
-};
-
-template <typename T>
-class ArenaDummy
-{
-    public:
-        typedef T Item;
-    public:
-        ArenaDummy(void) {}
-        ArenaDummy(const ArenaDummy&) = delete;
-        ArenaDummy(ArenaDummy&&) noexcept = delete;
-        ~ArenaDummy() = default;
-        ArenaDummy& operator=(const ArenaDummy&) = delete;
-        ArenaDummy& operator=(ArenaDummy&&) noexcept = delete;
-    public:
-        template<typename... Ts>
-        Item newItem(Ts&&... params) {return T(std::forward<Ts>(params)...);}
-        void releaseItem(Item&) {}
-        void releaseItems(std::vector<Item>&) {}
-        T& get(const Item& item) {return item;}
-        const T& get(const Item& item) const {return item;}
-};
-
-//typedef ArenaDummy<Point> ContourArena;
-//typedef ArenaStackBuffer<Point> ContourArena;
-//typedef ArenaDynamicBuffer<Point> ContourArena;
-typedef ArenaDynamicBufferIndexed<Point> ContourArena;
-typedef ContourArena::Item ContourPoint;
-
-//typedef std::vector<ContourPoint> ContourPointsStorage;
-typedef ArenaDynamicBufferIndexed<Point>::Range ContourPointsStorage;
-
-template<typename T, size_t BLOCK_LENGTH = 256>
-class vectorWithArena
-{
-    public:
-        typedef struct {T data[BLOCK_LENGTH];} block_t;
-        typedef ArenaStackBuffer<block_t> arena_t;
-    public:
-        vectorWithArena(arena_t* arena):_arena(arena),_capacity(0),_size(0) {}
-        vectorWithArena(const vectorWithArena&) = delete;
-        vectorWithArena(vectorWithArena&& other) noexcept :_arena(nullptr),_capacity(0),_size(0) {*this = other;}
-        ~vectorWithArena() {
-            if (_arena != nullptr)
-                _arena->releaseItems(_blocks);
-        }
-    public:
-        vectorWithArena& operator=(const vectorWithArena&) = delete;
-        vectorWithArena& operator=(vectorWithArena&& other) noexcept {
-            if (&other != this) {
-              std::swap(this->_arena, other._arena);
-              std::swap(this->_blocks, other._blocks);
-              std::swap(this->_capacity, other._capacity);
-              std::swap(this->_size, other._size);
-            }
-        }
-    public:
-        bool empty(void) const {return !_size;}
-        size_t capacity(void) const {return _capacity;}
-        size_t size(void) const {return _size;}
-        T& at(size_t index) {return _blocks[index/BLOCK_LENGTH].get().data[index%BLOCK_LENGTH];}
-        const T& at(size_t index) const {return _blocks[index/BLOCK_LENGTH].get().data[index%BLOCK_LENGTH];}
-        T& back(void) {return at(_size-1);}
-        const T& back(void) const {return at(_size-1);}
-    public:
-        void push_back(const T& value) {
-             if (_size == _capacity)
-             {
-                 _blocks.emplace_back(std::move(_arena->newItem()));
-                 _capacity += BLOCK_LENGTH;
-             }
-             at(_size++) = value;
-        }
-        void emplace_back(T&& value) {
-            if (_size == _capacity)
-            {
-                _blocks.emplace_back(std::move(_arena->newItem()));
-                _capacity += BLOCK_LENGTH;
-            }
-            at(_size++) = std::move(value);
-        }
-        void pop_back(void) {
-            if (!((--_size) % BLOCK_LENGTH))
-            {
-                _blocks.pop_back();
-                _capacity -= BLOCK_LENGTH;
-            }
+        RangeIterator getRangeIterator(size_t first, size_t last) const {
+          return RangeIterator(this, first, last);
         }
     private:
-        arena_t* _arena;
-        std::vector<typename arena_t::Item> _blocks;
-        size_t _capacity;
-        size_t _size;
+        std::array<block_type, STATIC_CAPACITY_BYTES/(BLOCK_SIZE_ELEM*sizeof(value_type))> staticBlocks;
+        const size_t staticBlocksCount = STATIC_CAPACITY_BYTES/(BLOCK_SIZE_ELEM*sizeof(value_type));
+        std::vector<block_type*> dynamicBlocks;
+        size_t sz = 0;
 };
 
 template<typename T>
-class vectorRanges
+class vectorOfRanges
 {
     public:
-        vectorRanges(void) = default;
-        vectorRanges(const vectorRanges&) = default;
-        vectorRanges(vectorRanges&& other) noexcept = default;
-        ~vectorRanges() = default;
+        vectorOfRanges(void) = default;
+        vectorOfRanges(const vectorOfRanges&) = default;
+        vectorOfRanges(vectorOfRanges&& other) noexcept = default;
+        ~vectorOfRanges() = default;
     public:
-        vectorRanges& operator=(const vectorRanges&) = default;
-        vectorRanges& operator=(vectorRanges&& other) noexcept = default;
+        vectorOfRanges& operator=(const vectorOfRanges&) = default;
+        vectorOfRanges& operator=(vectorOfRanges&& other) noexcept = default;
     public:
         bool empty(void) const {return !_size;}
         size_t size(void) const {return _size;}
@@ -437,8 +187,8 @@ public:
     T body;
 
 public:
-    TreeNode(int self, ContourArena* arena) :
-        self_(self), parent(-1), first_child(-1), prev(-1), next(-1), ctable_next(-1), body(arena)
+    TreeNode(int self, T&& body_) :
+        self_(self), parent(-1), first_child(-1), prev(-1), next(-1), ctable_next(-1), body(std::move(body_))
     {
         CV_Assert(self >= 0);
     }
@@ -456,27 +206,21 @@ template <typename T>
 class Tree
 {
 public:
-    Tree(ContourArena* contoursArena):_contoursArena(contoursArena) {}
+    Tree() {}
     Tree(const Tree&) = delete;
     Tree(Tree&&) = delete;
     Tree& operator=(const Tree&) = delete;
     Tree& operator=(Tree&&) = delete;
     ~Tree() = default;
 private:
-    ContourArena* _contoursArena;
-    ArenaStackBuffer<TreeNode<T> > _treeNodesArena;
-public:
-    typename vectorWithArena<int>::arena_t _treeIteratorArena;
-private:
-    typedef typename ArenaStackBuffer<TreeNode<T> >::Item node_t;
-    std::vector<node_t> nodes;
+    std::vector<TreeNode<T>> nodes;
 
 public:
-    TreeNode<T>& newElem()
+    TreeNode<T>& newElem(T && body_)
     {
         const size_t idx = nodes.size();
         CV_DbgAssert(idx < (size_t)std::numeric_limits<int>::max());
-        nodes.emplace_back(std::move(_treeNodesArena.newItem((int)idx, _contoursArena)));
+        nodes.emplace_back(std::move(TreeNode<T>((int)idx, std::move(body_))));
         return nodes[idx];
     }
     TreeNode<T>& elem(int idx)
@@ -569,43 +313,62 @@ public:
 
 private:
     Tree<T>& tree;
-    vectorRanges<int> levels;
+    vectorOfRanges<int> levels;
 };
 
 //==============================================================================
 
+class ContourPointsStorage
+{
+    public:
+        typedef cv::Point point_storage_t;
+        typedef BlockStorage<point_storage_t> storage_t;
+    public:
+        ContourPointsStorage(void) = delete;
+        ContourPointsStorage(storage_t* _storage):storage(_storage) {}
+        ContourPointsStorage(const ContourPointsStorage&) = delete;
+        ContourPointsStorage(ContourPointsStorage&&) noexcept = default;
+        ~ContourPointsStorage() = default;
+        ContourPointsStorage& operator=(const ContourPointsStorage&) = delete;
+        ContourPointsStorage& operator=(ContourPointsStorage&&) noexcept = default;
+    public:
+        storage_t::RangeIterator getRangeIterator(void) const {return storage->getRangeIterator(first, last);}
+    public:
+        bool empty(void) const {return first == last;}
+        size_t size(void) const {return last - first;}
+    public:
+        void clear(void) {first = last;}
+        void push_back(const point_storage_t& value) {
+            if (empty()) {
+                first = storage->size();
+            }
+            storage->push_back(value);
+            last = storage->size();
+        }
+        const cv::Point& at(size_t index) const {return storage->at(first+index);}
+    private:
+        BlockStorage<point_storage_t>* storage = nullptr;
+        size_t first = 0;
+        size_t last = 0;
+};
+
 class Contour
 {
 public:
-    ContourArena* _arena;
+    ContourPointsStorage pts;
     cv::Rect brect;
     cv::Point origin;
-    ContourPointsStorage pts;
     std::vector<schar> codes;
-    bool isHole;
-    bool isChain;
+    bool isHole = false;
+    bool isChain = false;
 
-    explicit Contour(ContourArena* arena) : _arena(arena), isHole(false), isChain(false) {
+    explicit Contour(ContourPointsStorage::storage_t* storage_):pts(storage_) {
     }
     Contour(const Contour&) = delete;
-    Contour(Contour&& other) noexcept : _arena(nullptr) {*this = std::move(other);}
+    Contour(Contour&& other) noexcept = default;
     Contour& operator=(const Contour&) = delete;
-    Contour& operator=(Contour&& other) noexcept {
-        if (&other != this) {
-            std::swap(this->_arena, other._arena);
-            std::swap(this->brect, other.brect);
-            std::swap(this->origin, other.origin);
-            std::swap(this->pts, other.pts);
-            std::swap(this->codes, other.codes);
-            std::swap(this->isHole, other.isHole);
-            std::swap(this->isChain, other.isChain);
-        }
-        return *this;
-    }
-    ~Contour() {
-        if (_arena != nullptr)
-            _arena->releaseItems(pts);
-    }
+    Contour& operator=(Contour&& other) noexcept = default;
+    ~Contour() = default;
     void updateBoundingRect() {}
     bool isEmpty() const
     {
@@ -614,6 +377,10 @@ public:
     size_t size() const
     {
         return isChain ? codes.size() : pts.size();
+    }
+    void addPoint(const Point& pt)
+    {
+        pts.push_back(pt);
     }
     void copyTo(void* data) const
     {
@@ -625,14 +392,16 @@ public:
         }
         else
         {
-          unsigned char* dst = reinterpret_cast<unsigned char*>(data);
-          memcpy(dst, &_arena->get(*pts.begin()), pts.size()*sizeof(Point));
-          /*for(auto& it : pts)
-          {
-            const Point& point = _arena->get(it);
-            memcpy(dst, &point, sizeof(point));
-            dst += sizeof(point);
-          }*/
+            /*for (size_t i = 0, count = pts.size() ; i < count ; ++i)
+                ((Point*)data)[i] = pts.at(i);
+                */
+            cv::Point* dst = reinterpret_cast<cv::Point*>(data);
+            for(auto rangeIterator = pts.getRangeIterator() ; !rangeIterator.done() ; ++rangeIterator)
+            {
+                const auto range = *rangeIterator;
+                memcpy(dst, range.first, range.second*sizeof(cv::Point));
+                dst += range.second;
+            }
         }
     }
 };
@@ -648,7 +417,7 @@ void contourTreeToResults(CTree& tree,
                           cv::OutputArray& _hierarchy);
 
 
-void approximateChainTC89(ContourArena& arena, std::vector<schar> chain, const Point& origin, const int method,
+void approximateChainTC89(std::vector<schar> chain, const Point& origin, const int method,
                           ContourPointsStorage& output);
 
 }  // namespace cv
