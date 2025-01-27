@@ -425,12 +425,6 @@ public:
     explicit Contour(ContourPointsStorage::storage_t* pointStorage_,
                      ContourCodesStorage::storage_t* codesStorage_)
                     :pts(pointStorage_),codes(codesStorage_) {
-      size_t s = sizeof(codes);
-      s = sizeof(ContourCodesStorage);
-      s = sizeof(BlockStorage<schar, 1024, 0>);
-      s = sizeof(std::array<schar, 0>);
-      s = sizeof(std::vector<ContourPointsStorage::storage_t::block_type*>);
-      s = s;
     }
     Contour(const Contour&) = delete;
     Contour(Contour&& other) noexcept = default;
