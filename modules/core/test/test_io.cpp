@@ -2006,64 +2006,58 @@ TEST(Core_InputOutput, FileStorage_invalid_attribute_value_regression_25946)
 // see https://github.com/opencv/opencv/issues/26829
 TEST(Core_InputOutput, FileStorage_int64_26829)
 {
-    const std::string filename = cv::tempfile("FileStorage_int64_26829_test.xml");
+    String content =
+        "%YAML:1.0\n"
+        "String1: string1\n"
+        "IntMin: -2147483648\n"
+        "String2: string2\n"
+        "Int64Min: -9223372036854775808\n"
+        "String3: string3\n"
+        "IntMax: 2147483647\n"
+        "String4: string4\n"
+        "Int64Max: 9223372036854775807\n"
+        "String5: string5\n";
+
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
 
     {
-        FileStorage fs(filename, FileStorage::WRITE);
+        std::string str;
 
-        fs << "String1" << "string1";
-        fs << "IntMin" << INT_MIN;
-        fs << "String2" << "string2";
-        fs << "Int64Min" << INT64_MIN;
-        fs << "String3" << "string3";
-        fs << "IntMax" << INT_MAX;
-        fs << "String4" << "string4";
-        fs << "Int64Max" << INT64_MAX;
-        fs << "String5" << "string5";
+        fs["String1"] >> str;
+        EXPECT_EQ(str, "string1");
+
+        fs["String2"] >> str;
+        EXPECT_EQ(str, "string2");
+
+        fs["String3"] >> str;
+        EXPECT_EQ(str, "string3");
+
+        fs["String4"] >> str;
+        EXPECT_EQ(str, "string4");
+
+        fs["String5"] >> str;
+        EXPECT_EQ(str, "string5");
     }
 
     {
-        FileStorage fs(filename, FileStorage::READ);
+        int value;
 
-        {
-            std::string str;
+        fs["IntMin"] >> value;
+        EXPECT_EQ(value, INT_MIN);
 
-            fs["String1"] >> str;
-            EXPECT_EQ(str, "string1");
-
-            fs["String2"] >> str;
-            EXPECT_EQ(str, "string2");
-
-            fs["String3"] >> str;
-            EXPECT_EQ(str, "string3");
-
-            fs["String4"] >> str;
-            EXPECT_EQ(str, "string4");
-
-            fs["String5"] >> str;
-            EXPECT_EQ(str, "string5");
-        }
-
-        {
-            int value;
-
-            fs["IntMin"] >> value;
-            EXPECT_EQ(value, INT_MIN);
-
-            fs["IntMax"] >> value;
-            EXPECT_EQ(value, INT_MAX);
-        }
+        fs["IntMax"] >> value;
+        EXPECT_EQ(value, INT_MAX);
+    }
 
 
-        {
-            int64_t value;
+    {
+        int64_t value;
 
-            fs["Int64Min"] >> value;
-            EXPECT_EQ(value, INT64_MIN);
+        fs["Int64Min"] >> value;
+        EXPECT_EQ(value, INT64_MIN);
 
-            fs["Int64Max"] >> value;
-            EXPECT_EQ(value, INT64_MAX);
-        }
+        fs["Int64Max"] >> value;
+        EXPECT_EQ(value, INT64_MAX);
     }
 }
 
