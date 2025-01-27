@@ -263,8 +263,72 @@ enum DftFlags {
     DCT_ROWS           = DFT_ROWS
 };
 
-//! Various border types, image boundaries are denoted with `|`
-//! @see borderInterpolate, copyMakeBorder
+/*! Various border types, image boundaries are denoted with the `|` character in the table below, when describing each method.
+
+The following examples show the result of the @ref copyMakeBorder call according to different methods.
+Input image is `6x4` (width x height) size and the @ref copyMakeBorder function is used with a border size of 2 pixels
+in each direction, giving a resulting image of `10x8` resolution.
+
+@code
+Input image:
+[[ 0  1  2  3  4  5]
+ [ 6  7  8  9 10 11]
+ [12 13 14 15 16 17]
+ [18 19 20 21 22 23]]
+
+Border type: BORDER_CONSTANT (a constant value of 255 is used)
+[[255 255 255 255 255 255 255 255 255 255]
+ [255 255 255 255 255 255 255 255 255 255]
+ [255 255   0   1   2   3   4   5 255 255]
+ [255 255   6   7   8   9  10  11 255 255]
+ [255 255  12  13  14  15  16  17 255 255]
+ [255 255  18  19  20  21  22  23 255 255]
+ [255 255 255 255 255 255 255 255 255 255]
+ [255 255 255 255 255 255 255 255 255 255]]
+
+Border type: BORDER_REPLICATE
+[[ 0  0  0  1  2  3  4  5  5  5]
+ [ 0  0  0  1  2  3  4  5  5  5]
+ [ 0  0  0  1  2  3  4  5  5  5]
+ [ 6  6  6  7  8  9 10 11 11 11]
+ [12 12 12 13 14 15 16 17 17 17]
+ [18 18 18 19 20 21 22 23 23 23]
+ [18 18 18 19 20 21 22 23 23 23]
+ [18 18 18 19 20 21 22 23 23 23]]
+
+Border type: BORDER_REFLECT
+[[ 7  6  6  7  8  9 10 11 11 10]
+ [ 1  0  0  1  2  3  4  5  5  4]
+ [ 1  0  0  1  2  3  4  5  5  4]
+ [ 7  6  6  7  8  9 10 11 11 10]
+ [13 12 12 13 14 15 16 17 17 16]
+ [19 18 18 19 20 21 22 23 23 22]
+ [19 18 18 19 20 21 22 23 23 22]
+ [13 12 12 13 14 15 16 17 17 16]]
+
+Border type: BORDER_WRAP
+[[16 17 12 13 14 15 16 17 12 13]
+ [22 23 18 19 20 21 22 23 18 19]
+ [ 4  5  0  1  2  3  4  5  0  1]
+ [10 11  6  7  8  9 10 11  6  7]
+ [16 17 12 13 14 15 16 17 12 13]
+ [22 23 18 19 20 21 22 23 18 19]
+ [ 4  5  0  1  2  3  4  5  0  1]
+ [10 11  6  7  8  9 10 11  6  7]]
+
+Border type: BORDER_REFLECT_101
+[[14 13 12 13 14 15 16 17 16 15]
+ [ 8  7  6  7  8  9 10 11 10  9]
+ [ 2  1  0  1  2  3  4  5  4  3]
+ [ 8  7  6  7  8  9 10 11 10  9]
+ [14 13 12 13 14 15 16 17 16 15]
+ [20 19 18 19 20 21 22 23 22 21]
+ [14 13 12 13 14 15 16 17 16 15]
+ [ 8  7  6  7  8  9 10 11 10  9]]
+@endcode
+
+@see borderInterpolate, copyMakeBorder
+ */
 enum BorderTypes {
     BORDER_CONSTANT    = 0, //!< `iiiiii|abcdefgh|iiiiiii`  with some specified `i`
     BORDER_REPLICATE   = 1, //!< `aaaaaa|abcdefgh|hhhhhhh`
