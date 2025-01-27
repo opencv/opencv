@@ -45,6 +45,7 @@
 
 #include <opencv2/core.hpp>
 #include <vector>
+
 namespace cv
 {
 #ifdef HAVE_OPENCL
