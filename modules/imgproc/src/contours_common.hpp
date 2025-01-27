@@ -362,16 +362,56 @@ class ContourPointsStorage
         }
         const cv::Point& at(size_t index) const {return storage->at(first+index);}
         cv::Point& at(size_t index) {return storage->at(first+index);}
+        const cv::Point& operator[](size_t index) const {return at(index);}
+        cv::Point& operator[](size_t index) {return at(index);}
     private:
-        BlockStorage<point_storage_t>* storage = nullptr;
+        storage_t* storage = nullptr;
         size_t first = 0;
         size_t last = 0;
 };
 
-//typedef BlockStorage<schar> ContourCodesStorage;
-typedef std::vector<schar> ContourCodesStorage;
-//typedef std::basic_string<schar> ContourCodesStorage;
-
+class ContourCodesStorage
+{
+    public:
+        typedef schar code_storage_t;
+        typedef BlockStorage<code_storage_t, 1024, 0> storage_t;
+    public:
+        ContourCodesStorage(void) = delete;
+        ContourCodesStorage(storage_t* _storage):storage(_storage) {}
+        ContourCodesStorage(const ContourCodesStorage&) = delete;
+        ContourCodesStorage(ContourCodesStorage&&) noexcept = default;
+        ~ContourCodesStorage() = default;
+        ContourCodesStorage& operator=(const ContourCodesStorage&) = delete;
+        ContourCodesStorage& operator=(ContourCodesStorage&&) noexcept = default;
+    public:
+        storage_t::RangeIterator getRangeIterator(void) const {return storage->getRangeIterator(first, last);}
+    public:
+        bool empty(void) const {return first == last;}
+        size_t size(void) const {return last - first;}
+    public:
+        void clear(void) {first = last;}
+        bool resize(size_t newSize) {
+            bool ok = (newSize <= size());
+            if (ok)
+                last = first+newSize;
+            return ok;
+        }
+        void push_back(const code_storage_t& value) {
+            if (empty()) {
+                first = storage->size();
+            }
+            storage->push_back(value);
+            last = storage->size();
+        }
+        const schar& at(size_t index) const {return storage->at(first+index);}
+        schar& at(size_t index) {return storage->at(first+index);}
+        const schar& operator[](size_t index) const {return at(index);}
+        schar& operator[](size_t index) {return at(index);}
+    private:
+        storage_t* storage = nullptr;
+        size_t first = 0;
+        size_t last = 0;
+};
 class Contour
 {
 public:
@@ -382,7 +422,15 @@ public:
     bool isHole = false;
     bool isChain = false;
 
-    explicit Contour(ContourPointsStorage::storage_t* storage_):pts(storage_) {
+    explicit Contour(ContourPointsStorage::storage_t* pointStorage_,
+                     ContourCodesStorage::storage_t* codesStorage_)
+                    :pts(pointStorage_),codes(codesStorage_) {
+      size_t s = sizeof(codes);
+      s = sizeof(ContourCodesStorage);
+      s = sizeof(BlockStorage<schar, 1024, 0>);
+      s = sizeof(std::array<schar, 0>);
+      s = sizeof(std::vector<ContourPointsStorage::storage_t::block_type*>);
+      s = s;
     }
     Contour(const Contour&) = delete;
     Contour(Contour&& other) noexcept = default;
@@ -408,7 +456,14 @@ public:
         //       instead of reusing existing vector data
         if (isChain)
         {
-            memcpy(data, codes.data(), codes.size() * sizeof(typename decltype(codes)::value_type));
+            /*memcpy(data, codes.data(), codes.size() * sizeof(typename decltype(codes)::value_type));*/
+            schar* dst = reinterpret_cast<schar*>(data);
+            for(auto rangeIterator = codes.getRangeIterator() ; !rangeIterator.done() ; ++rangeIterator)
+            {
+                const auto range = *rangeIterator;
+                memcpy(dst, range.first, range.second*sizeof(schar));
+                dst += range.second;
+            }
         }
         else
         {

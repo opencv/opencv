@@ -281,8 +281,8 @@ static void icvFetchContourEx(Mat& image,
 // It supports both hierarchical and plane variants of Suzuki algorithm.
 struct ContourScanner_
 {
-    // ContourArena arena;
-    ContourPointsStorage::storage_t& storage;
+    ContourPointsStorage::storage_t& pointsStorage;
+    ContourCodesStorage::storage_t& codesStorage;
 
     Mat image;
     Point offset;  // ROI offset: coordinates, added to each contour point
@@ -296,7 +296,9 @@ struct ContourScanner_
     array<int, 128> ctable;
 
 public:
-    ContourScanner_(ContourPointsStorage::storage_t& _storage):storage(_storage) {}
+    ContourScanner_(ContourPointsStorage::storage_t& _pointsStorage,
+                    ContourCodesStorage::storage_t& _codesStorage)
+                   :pointsStorage(_pointsStorage),codesStorage(_codesStorage) {}
     ~ContourScanner_() {}
     inline bool isInt() const
     {
@@ -313,13 +315,13 @@ public:
     int findNextX(int x, int y, int& prev, int& p);
     bool findNext();
 
-    static shared_ptr<ContourScanner_> create(ContourPointsStorage::storage_t& storage, Mat img, int mode, int method, Point offset);
+    static shared_ptr<ContourScanner_> create(ContourPointsStorage::storage_t& pointsStorage, ContourCodesStorage::storage_t& codesStorage, Mat img, int mode, int method, Point offset);
 };  // class ContourScanner_
 
 typedef shared_ptr<ContourScanner_> ContourScanner;
 
 
-shared_ptr<ContourScanner_> ContourScanner_::create(ContourPointsStorage::storage_t& storage, Mat img, int mode, int method, Point offset)
+shared_ptr<ContourScanner_> ContourScanner_::create(ContourPointsStorage::storage_t& pointsStorage, ContourCodesStorage::storage_t& codesStorage, Mat img, int mode, int method, Point offset)
 {
     if (mode == RETR_CCOMP && img.type() == CV_32SC1)
         mode = RETR_FLOODFILL;
@@ -345,14 +347,14 @@ shared_ptr<ContourScanner_> ContourScanner_::create(ContourPointsStorage::storag
     Size size = img.size();
     CV_Assert(size.height >= 1);
 
-    shared_ptr<ContourScanner_> scanner = make_shared<ContourScanner_>(storage);
+    shared_ptr<ContourScanner_> scanner = make_shared<ContourScanner_>(pointsStorage, codesStorage);
     scanner->image = img;
     scanner->mode = mode;
     scanner->offset = offset;
     scanner->pt = Point(1, 1);
     scanner->lnbd = Point(0, 1);
     scanner->nbd = 2;
-    CNode& root = scanner->tree.newElem(Contour(&scanner->storage));
+    CNode& root = scanner->tree.newElem(Contour(&scanner->pointsStorage, &scanner->codesStorage));
     CV_Assert(root.self() == 0);
     root.body.isHole = true;
     root.body.brect = Rect(Point(0, 0), size);
@@ -370,7 +372,7 @@ CNode& ContourScanner_::makeContour(schar& nbd_, const bool is_hole, const int x
 
     const Point start_pt(x - (is_hole ? 1 : 0), y);
 
-    CNode& res = tree.newElem(Contour(&storage));
+    CNode& res = tree.newElem(Contour(&pointsStorage, &codesStorage));
     res.body.isHole = is_hole;
     res.body.isChain = isChain;
     res.body.origin = start_pt + offset;
@@ -677,8 +679,9 @@ void cv::findContours(InputArray _image,
         threshold(image, image, 0, 1, THRESH_BINARY);
 
     // find contours
-    ContourPointsStorage::storage_t storage;
-    ContourScanner scanner = ContourScanner_::create(storage, image, mode, method, offset + Point(-1, -1));
+    ContourPointsStorage::storage_t pointsStorage;
+    ContourCodesStorage::storage_t codesStorage;
+    ContourScanner scanner = ContourScanner_::create(pointsStorage, codesStorage, image, mode, method, offset + Point(-1, -1));
     while (scanner->findNext())
     {
     }
