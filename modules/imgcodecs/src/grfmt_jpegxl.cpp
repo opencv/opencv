@@ -28,13 +28,15 @@ static void cbRGBAtoGRAY_32F(void *opaque, size_t x, size_t y, size_t num_pixels
 
 /////////////////////// JpegXLDecoder ///////////////////
 
-JpegXLDecoder::JpegXLDecoder() : m_f(nullptr, &fclose)
+JpegXLDecoder::JpegXLDecoder() : m_f(nullptr, &fclose),
+                                 m_read_buffer(16384,0) // 16KB chunks
 {
     m_signature = "\xFF\x0A";
     m_decoder = nullptr;
-    m_buf_supported = false;
+    m_buf_supported = true;
     m_type = -1;
     m_status = JXL_DEC_NEED_MORE_INPUT;
+    m_is_mbuf_set = false;
 }
 
 JpegXLDecoder::~JpegXLDecoder()
@@ -52,6 +54,7 @@ void JpegXLDecoder::close()
     m_width = m_height = 0;
     m_type = -1;
     m_status = JXL_DEC_NEED_MORE_INPUT;
+    m_is_mbuf_set = false;
 }
 
 // see https://github.com/libjxl/libjxl/blob/v0.10.0/doc/format_overview.md
@@ -91,11 +94,14 @@ ImageDecoder JpegXLDecoder::newDecoder() const
 
 bool JpegXLDecoder::readHeader()
 {
-    // Open file
-    if (!m_f) {
-        m_f.reset(fopen(m_filename.c_str(), "rb"));
-        if (!m_f)
-            return false;
+    if (m_buf.empty()) {
+        // Open file
+        if (!m_f) {
+            m_f.reset(fopen(m_filename.c_str(), "rb"));
+            if (!m_f) {
+                return false;
+            }
+        }
     }
 
     // Initialize decoder
@@ -118,6 +124,9 @@ bool JpegXLDecoder::readHeader()
             return false;
         }
     }
+
+    // Reset to read header data stream
+    m_is_mbuf_set = false;
 
     return read();
 }
@@ -195,38 +204,53 @@ bool JpegXLDecoder::readData(Mat& img)
 // Common reading routine for readHeader() and readBody()
 bool JpegXLDecoder::read()
 {
-    // Create buffer for reading
-    const size_t read_buffer_size = 16384;  // 16KB chunks
-    if (m_read_buffer.capacity() < read_buffer_size)
-        m_read_buffer.resize(read_buffer_size);
-
     // Start decoding loop
     do {
         // Check if we need more input
         if (m_status == JXL_DEC_NEED_MORE_INPUT) {
-            size_t remaining = JxlDecoderReleaseInput(m_decoder.get());
-            // Move any remaining bytes to the beginning
-            if (remaining > 0)
-                memmove(m_read_buffer.data(), m_read_buffer.data() + m_read_buffer.size() - remaining, remaining);
-            // Read more data from file
-            size_t bytes_read = fread(m_read_buffer.data() + remaining,
-                                    1, m_read_buffer.size() - remaining, m_f.get());
-            if (bytes_read == 0) {
-                if (ferror(m_f.get())) {
-                    CV_LOG_WARNING(NULL, "Error reading input file");
+            uint8_t* data_ptr = nullptr;
+            size_t   data_len = 0;
+
+            if( !m_buf.empty() ) {
+                // When data source in on memory
+                if (m_is_mbuf_set) {
+                    // We expect m_buf contains whole JpegXL data stream.
+                    // If it had been truncated, m_status will be JXL_DEC_NEED_MORE_INPUT again.
+                    CV_LOG_WARNING(NULL, "Truncated JXL data in memory");
                     return false;
                 }
-                // If we reached EOF but decoder needs more input, file is truncated
-                if (m_status == JXL_DEC_NEED_MORE_INPUT) {
-                    CV_LOG_WARNING(NULL, "Truncated JXL file");
-                    return false;
+                data_ptr = m_buf.ptr();
+                data_len = m_buf.total();
+                m_is_mbuf_set = true;
+            }
+            else {
+                // When data source is on file
+                // Release input buffer if it had been set already. If not, there are no errors.
+                size_t remaining = JxlDecoderReleaseInput(m_decoder.get());
+                // Move any remaining bytes to the beginning
+                if (remaining > 0)
+                    memmove(m_read_buffer.data(), m_read_buffer.data() + m_read_buffer.size() - remaining, remaining);
+                // Read more data from file
+                size_t bytes_read = fread(m_read_buffer.data() + remaining,
+                                          1, m_read_buffer.size() - remaining, m_f.get());
+                if (bytes_read == 0) {
+                    if (ferror(m_f.get())) {
+                        CV_LOG_WARNING(NULL, "Error reading input file");
+                        return false;
+                    }
+                    // If we reached EOF but decoder needs more input, file is truncated
+                    if (m_status == JXL_DEC_NEED_MORE_INPUT) {
+                        CV_LOG_WARNING(NULL, "Truncated JXL file");
+                        return false;
+                    }
                 }
+                data_ptr = m_read_buffer.data();
+                data_len = bytes_read + remaining;
             }
 
             // Set input buffer
-            if (JXL_DEC_SUCCESS != JxlDecoderSetInput(m_decoder.get(),
-                                                      m_read_buffer.data(),
-                                                      bytes_read + remaining)) {
+            // It must be kept until calling JxlDecoderReleaseInput() or m_decoder.reset().
+            if (JXL_DEC_SUCCESS != JxlDecoderSetInput(m_decoder.get(), data_ptr, data_len)) {
                 return false;
             }
         }
