@@ -75,13 +75,22 @@ class BlockStorage {
 
         size_t size() const { return sz; }
 
-        const value_type & at(size_t index) const {
+        const value_type& at(size_t index) const {
             const size_t blockIndex = index / BLOCK_SIZE_ELEM;
             const block_type& cur_block =
                 (blockIndex < staticBlocksCount) ? staticBlocks[blockIndex] :
                 *dynamicBlocks[blockIndex-staticBlocksCount];
             return cur_block.data[index % BLOCK_SIZE_ELEM];
         }
+        value_type& at(size_t index) {
+            const size_t blockIndex = index / BLOCK_SIZE_ELEM;
+            block_type& cur_block =
+                (blockIndex < staticBlocksCount) ? staticBlocks[blockIndex] :
+                *dynamicBlocks[blockIndex-staticBlocksCount];
+            return cur_block.data[index % BLOCK_SIZE_ELEM];
+        }
+        const value_type& operator[](size_t index) const {return at(index);}
+        value_type& operator[](size_t index) {return at(index);}
     public:
         friend class RangeIterator;
         class RangeIterator
@@ -338,6 +347,12 @@ class ContourPointsStorage
         size_t size(void) const {return last - first;}
     public:
         void clear(void) {first = last;}
+        bool resize(size_t newSize) {
+            bool ok = (newSize <= size());
+            if (ok)
+                last = first+newSize;
+            return ok;
+        }
         void push_back(const point_storage_t& value) {
             if (empty()) {
                 first = storage->size();
@@ -346,11 +361,16 @@ class ContourPointsStorage
             last = storage->size();
         }
         const cv::Point& at(size_t index) const {return storage->at(first+index);}
+        cv::Point& at(size_t index) {return storage->at(first+index);}
     private:
         BlockStorage<point_storage_t>* storage = nullptr;
         size_t first = 0;
         size_t last = 0;
 };
+
+//typedef BlockStorage<schar> ContourCodesStorage;
+typedef std::vector<schar> ContourCodesStorage;
+//typedef std::basic_string<schar> ContourCodesStorage;
 
 class Contour
 {
@@ -358,7 +378,7 @@ public:
     ContourPointsStorage pts;
     cv::Rect brect;
     cv::Point origin;
-    std::vector<schar> codes;
+    ContourCodesStorage codes;
     bool isHole = false;
     bool isChain = false;
 
@@ -388,7 +408,7 @@ public:
         //       instead of reusing existing vector data
         if (isChain)
         {
-            memcpy(data, &codes[0], codes.size() * sizeof(codes[0]));
+            memcpy(data, codes.data(), codes.size() * sizeof(typename decltype(codes)::value_type));
         }
         else
         {
@@ -417,7 +437,7 @@ void contourTreeToResults(CTree& tree,
                           cv::OutputArray& _hierarchy);
 
 
-void approximateChainTC89(std::vector<schar> chain, const Point& origin, const int method,
+void approximateChainTC89(const ContourCodesStorage& chain, const Point& origin, const int method,
                           ContourPointsStorage& output);
 
 }  // namespace cv

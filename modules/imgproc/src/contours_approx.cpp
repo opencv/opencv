@@ -31,7 +31,7 @@ static const Point chainCodeDeltas[8] =
 // Restores all the digital curve points from the chain code.
 // Removes the points (from the resultant polygon)
 // that have zero 1-curvature
-static vector<ApproxItem> pass_0(const vector<schar>& chain, Point pt, bool isApprox, bool isFull)
+static vector<ApproxItem> pass_0(const ContourCodesStorage& chain, Point pt, bool isApprox, bool isFull)
 {
     vector<ApproxItem> res;
     const size_t len = chain.size();
@@ -57,9 +57,8 @@ static void gatherPoints(const vector<ApproxItem>& ares, ContourPointsStorage& o
     output.clear();
     for (const ApproxItem& item : ares)
     {
-        if (item.removed)
-            continue;
-        output.push_back(item.pt);
+        if (!item.removed)
+            output.push_back(item.pt);
     }
 }
 
@@ -271,7 +270,7 @@ static void pass_cleanup(vector<ApproxItem>& ares, size_t start_idx)
 }  // namespace
 
 
-void cv::approximateChainTC89(vector<schar> chain, const Point& origin, const int method,
+void cv::approximateChainTC89(const ContourCodesStorage& chain, const Point& origin, const int method,
                               ContourPointsStorage& output)
 {
     if (chain.size() == 0)
