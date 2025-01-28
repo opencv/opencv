@@ -867,6 +867,17 @@ DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
 #endif
     }
 
+    if(typeid(T) == typeid(float))
+    {
+        CALL_HAL(dftOcv, cv_hal_dftOcv, reinterpret_cast<const uchar*>(src), reinterpret_cast<uchar*>(dst), CV_32F,
+                 c.nf, c.factors, c.scale, c.itab, c.wave, c.tab_size, c.n, c.isInverse, c.noPermute);
+    }
+    if(typeid(T) == typeid(double))
+    {
+        CALL_HAL(dftOcv, cv_hal_dftOcv, reinterpret_cast<const uchar*>(src), reinterpret_cast<uchar*>(dst), CV_64F,
+                 c.nf, c.factors, c.scale, c.itab, c.wave, c.tab_size, c.n, c.isInverse, c.noPermute);
+    }
+
     int tab_step = c.tab_size == n ? 1 : c.tab_size == n*2 ? 2 : c.tab_size/n;
 
     // 0. shuffle data
