@@ -4,6 +4,7 @@
 //
 // Copyright (C) 2019-2020, Intel Corporation, all rights reserved.
 
+#include <immintrin.h> // added this line to include AVX-512 intrinsics
 #include "opencv2/core/hal/intrin.hpp"
 
 #if defined(__GNUC__) && __GNUC__ == 12
@@ -13,7 +14,7 @@
 #endif
 
 namespace cv { namespace hal {
-CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
+// CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 namespace { // Anonymous namespace to avoid exposing the implementation classes
 
@@ -28,6 +29,7 @@ class IntegralCalculator  {
 public:
     IntegralCalculator() {}
 
+    static constexpr size_t channels = num_channels;
 
     void calculate_integral_avx512(const uchar *src, size_t _srcstep,
                                    double *sum,      size_t _sumstep,
@@ -37,17 +39,17 @@ public:
         const int srcstep = (int)(_srcstep/sizeof(uchar));
         const int sumstep = (int)(_sumstep/sizeof(double));
         const int sqsumstep = (int)(_sqsumstep/sizeof(double));
-        const int ops_per_line = width * num_channels;
+        const int ops_per_line = width * channels;
 
         // Clear the first line of the sum as per spec (see integral documentation)
         // Also adjust the index of sum and sqsum to be at the real 0th element
         // and not point to the border pixel so it stays in sync with the src pointer
-        memset( sum, 0, (ops_per_line+num_channels)*sizeof(double));
-        sum += num_channels;
+        memset( sum, 0, (ops_per_line + channels)*sizeof(double));
+        sum += channels;
 
         if (sqsum) {
-            memset( sqsum, 0, (ops_per_line+num_channels)*sizeof(double));
-            sqsum += num_channels;
+            memset( sqsum, 0, (ops_per_line + channels)*sizeof(double));
+            sqsum += channels;
         }
 
         // Now calculate the integral over the whole image one line at a time
@@ -87,9 +89,9 @@ public:
     {
         // Note the negative index is because the sums/sqsums pointers point to the first real pixel
         // after the border pixel so we have to look backwards
-        _mm512_mask_storeu_epi64(&sums[-(ptrdiff_t)num_channels], (1<<num_channels)-1, _mm512_setzero_si512());
+        _mm512_mask_storeu_epi64(&sums[-static_cast<ptrdiff_t>(channels)], (1<<channels)-1, _mm512_setzero_si512());
         if (sqsums)
-            _mm512_mask_storeu_epi64(&sqsums[-(ptrdiff_t)num_channels], (1<<num_channels)-1, _mm512_setzero_si512());
+            _mm512_mask_storeu_epi64(&sqsums[-static_cast<ptrdiff_t>(channels)], (1<<channels)-1, _mm512_setzero_si512());
     }
 
 
@@ -385,7 +387,7 @@ __m512d IntegralCalculator < 3 > ::calculate_integral(const __m512i src_longs, c
     //    shifts data left by 3 and 6 qwords(lanes) and gets rolling sum in all lanes
     //   Vertical LANES:     76543210
     //   src_longs       :   HGFEDCBA
-    //   shit3lanes      : + EDCBA
+    //   shift3lanes      : + EDCBA
     //   shift6lanes     : + BA
     //   carry_over_idxs : + 65765765  (index position of result from previous iteration)
     //                     = integral
@@ -418,7 +420,7 @@ __m512d IntegralCalculator < 4 > ::calculate_integral(const __m512i src_longs, c
     //    shifts data left by 3 and 6 qwords(lanes) and gets rolling sum in all lanes
     //   Vertical LANES:     76543210
     //   src_longs       :   HGFEDCBA
-    //   shit4lanes      : + DCBA
+    //   shift4lanes      : + DCBA
     //   carry_over_idxs : + 76547654  (index position of result from previous iteration)
     //                     = integral
     __m512i shifted4lanes = _mm512_maskz_expand_epi64(0xF0, src_longs);
@@ -443,8 +445,6 @@ void calculate_integral_avx512(const uchar *src,   size_t _srcstep,
                                double      *sqsum, size_t _sqsumstep,
                                int width, int height, int cn)
 {
-    CV_INSTRUMENT_REGION();
-
     switch(cn){
         case 1: {
             IntegralCalculator< 1 > calculator;
@@ -464,12 +464,13 @@ void calculate_integral_avx512(const uchar *src,   size_t _srcstep,
         case 4: {
             IntegralCalculator< 4 > calculator;
             calculator.calculate_integral_avx512(src, _srcstep, sum, _sumstep, sqsum, _sqsumstep, width, height);
+            break; // added break to prevent fall-through
         }
     }
 }
 
 
-CV_CPU_OPTIMIZATION_NAMESPACE_END
+// CV_CPU_OPTIMIZATION_NAMESPACE_END
 }} // end namespace cv::hal
 
 #if defined(__GNUC__) && __GNUC__ == 12
