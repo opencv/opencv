@@ -16,6 +16,8 @@ endforeach()
 set(__type MODULE)
 if(BUILD_FAT_JAVA_LIB)
   set(__type SHARED) # samples link to libopencv_java
+elseif(WIN32 AND CMAKE_GENERATOR MATCHES "Ninja")
+  set(__type SHARED)  # avoid placing .dll into lib/... location
 elseif(APPLE)
   set(CMAKE_SHARED_MODULE_SUFFIX ".dylib")  # Java is not able to load .so files
 endif()
