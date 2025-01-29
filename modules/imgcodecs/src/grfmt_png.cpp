@@ -352,12 +352,7 @@ bool  PngDecoder::readHeader()
 
     png_color_16p background_color;
     if (png_get_bKGD(m_png_ptr, m_info_ptr, &background_color))
-    {
-        m_animation.bgcolor[0] = background_color->red;
-        m_animation.bgcolor[1] = background_color->green;
-        m_animation.bgcolor[2] = background_color->blue;
-        m_animation.bgcolor[3] = 0;
-    }
+        m_animation.bgcolor = Scalar(background_color->blue, background_color->green, background_color->red);
 
     if (bit_depth <= 8 || bit_depth == 16)
     {
@@ -1544,9 +1539,9 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         if ((animation.bgcolor != Scalar()) && coltype)
         {
             unsigned char bgvalue[6] = {};
-            bgvalue[1] = animation.bgcolor[0];
+            bgvalue[1] = animation.bgcolor[2];
             bgvalue[3] = animation.bgcolor[1];
-            bgvalue[5] = animation.bgcolor[2];
+            bgvalue[5] = animation.bgcolor[0];
             writeChunk(m_f, "bKGD", bgvalue, 6); //the bKGD chunk must precede the first IDAT chunk, and must follow the PLTE chunk.
         }
 
