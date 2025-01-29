@@ -260,7 +260,7 @@ double CvCaptureAVI_VFW::getProperty( int property_id ) const
     case CV_CAP_PROP_FRAME_COUNT:
         return film_range.end_index - film_range.start_index;
     }
-    return 0;
+    return -1.0;
 }
 
 bool CvCaptureAVI_VFW::setProperty( int property_id, double value )

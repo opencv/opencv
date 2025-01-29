@@ -251,7 +251,7 @@ double CvCaptureCAM_PvAPI::getProperty( int property_id ) const
         PvAttrEnumGet(Camera.Handle,"MulticastEnable",mEnable,sizeof(mEnable),NULL);
         if (strcmp(mEnable, "Off") == 0)
         {
-            return -1;
+            return -1.0;
         }
         else
         {

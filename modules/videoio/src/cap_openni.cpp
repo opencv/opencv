@@ -684,7 +684,7 @@ bool CvCapture_OpenNI::setProperty( int propIdx, double propValue )
 
 double CvCapture_OpenNI::getCommonProperty( int propIdx ) const
 {
-    double propValue = 0;
+    double propValue = -1.0;
 
     switch( propIdx )
     {

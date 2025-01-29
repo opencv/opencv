@@ -519,7 +519,7 @@ double CvCaptureCAM::getProperty(int property_id) const{
             return mCaptureDevice.torchMode;
 
         default:
-            return 0;
+            return -1.0;
     }
 
 

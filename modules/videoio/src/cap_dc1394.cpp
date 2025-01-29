@@ -504,7 +504,7 @@ static double icvGetPropertyCAM_DC1394( CvCaptureCAM_DC1394* capture, int proper
         }
     }
 
-    return 0;
+    return -1.0;
 };
 
 // resize capture->frame appropriately depending on camera and capture settings

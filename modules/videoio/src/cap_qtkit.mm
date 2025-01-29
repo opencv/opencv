@@ -457,12 +457,12 @@ double CvCaptureCAM::getProperty(int property_id) const{
             retval = s1.height;
             break;
         default:
-            retval = 0;
+            retval = -1;
             break;
     }
 
     [localpool drain];
-    return retval;
+    return (double) retval;
 }
 
 bool CvCaptureCAM::setProperty(int property_id, double value) {

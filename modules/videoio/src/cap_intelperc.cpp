@@ -48,7 +48,7 @@ int IntelPerCStreamBase::getProfileIDX() const
 }
 double IntelPerCStreamBase::getProperty(int propIdx) const
 {
-    double ret = 0.0;
+    double ret = -1.0;
     switch (propIdx)
     {
     case CV_CAP_PROP_INTELPERC_PROFILE_COUNT:

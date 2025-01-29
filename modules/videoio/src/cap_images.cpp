@@ -155,7 +155,7 @@ double CvCapture_Images::getProperty(int id) const
         CV_WARN("collections of images don't have 4-character codes");
         return 0;
     }
-    return 0;
+    return -1.0;
 }
 
 bool CvCapture_Images::setProperty(int id, double value)

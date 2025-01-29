@@ -576,6 +576,7 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
         case CV_CAP_PROP_VIEWFINDER:
             return findWidgetByName(PROP_VIEWFINDER);
     }
+    output = -1.0;
     return NULL;
 }
 
@@ -586,7 +587,7 @@ CameraWidget * DigitalCameraCapture::getGenericProperty(int propertyId,
 double DigitalCameraCapture::getProperty(int propertyId) const
 {
     CameraWidget * widget = NULL;
-    double output = 0;
+    double output = -1.0;
     if (propertyId < 0)
     {
         widget = getWidget(-propertyId);
@@ -642,7 +643,7 @@ double DigitalCameraCapture::getProperty(int propertyId) const
                         return i;
                     }
                 }
-                return -1;
+                return -1.0;
             }
             case GP_WIDGET_TOGGLE:
             {
@@ -669,7 +670,7 @@ double DigitalCameraCapture::getProperty(int propertyId) const
         char buf[128] = "";
         sprintf(buf, "cannot get property: %d", propertyId);
         message(WARNING, (const char *) buf, e);
-        return 0;
+        return -1.0;
     }
 }
 

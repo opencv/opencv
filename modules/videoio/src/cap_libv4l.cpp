@@ -1406,7 +1406,7 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
         if (v4l1_ioctl (capture->deviceHandle, VIDIOCGWIN, &capture->captureWindow) < 0) {
           fprintf (stderr, " ERROR: V4L: Unable to determine size of incoming image\n");
           icvCloseCAM_V4L(capture);
-          return -1;
+          return -1.0;
         } else {
           int retval = (property_id == CV_CAP_PROP_FRAME_WIDTH)?capture->captureWindow.width:capture->captureWindow.height;
           return retval / 0xFFFF;
@@ -1433,7 +1433,7 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
         sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         if (xioctl (capture->deviceHandle, VIDIOC_G_PARM, &sp) < 0){
             fprintf(stderr, "VIDEOIO ERROR: V4L: Unable to get camera FPS\n");
-            return (double) -1;
+            return -1.0;
         }
 
         // this is the captureable, not per say what you'll get..
@@ -1496,7 +1496,7 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
 
       if ((v4l2_min == -1) && (v4l2_max == -1)) {
         fprintf(stderr, "VIDEOIO ERROR: V4L2: Property %s(%u) not supported by device\n", name, property_id);
-        return -1;
+        return -1.0;
       }
 
       /* all was OK, so convert to 0.0 - 1.0 range, and return the value */
@@ -1521,17 +1521,17 @@ static double icvGetPropertyCAM_V4L (CvCaptureCAM_V4L* capture,
         break;
       case CV_CAP_PROP_GAIN:
         fprintf(stderr, "VIDEOIO ERROR: V4L: Gain control in V4L is not supported\n");
-        return -1;
+        return -1.0;
         break;
       case CV_CAP_PROP_EXPOSURE:
         fprintf(stderr, "VIDEOIO ERROR: V4L: Exposure control in V4L is not supported\n");
-        return -1;
+        return -1.0;
         break;
     }
 
     if (retval == -1) {
       /* there was a problem */
-      return -1;
+      return -1.0;
     }
     /* all was OK, so convert to 0.0 - 1.0 range, and return the value */
     return float (retval) / 0xFFFF;

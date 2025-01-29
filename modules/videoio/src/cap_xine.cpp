@@ -221,7 +221,7 @@ class XINECapture : public IVideoCapture
         case CV_CAP_PROP_FPS: return frame_rate;
         case CV_CAP_PROP_FOURCC: return (double)xine_get_stream_info(stream, XINE_STREAM_INFO_VIDEO_FOURCC);
         }
-        return 0;
+        return -1.0;
     }
 
     bool setProperty(int property_id, double value) CV_OVERRIDE

@@ -594,7 +594,7 @@ double CvCaptureCAM_DC1394_v2_CPP::getProperty(int propId) const
                 &fs.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].value) == DC1394_SUCCESS)
               return feature_set.feature[dc1394properties[propId]-DC1394_FEATURE_MIN].value;
     }
-    return -1; // the value of the feature can be 0, so returning 0 as an error is wrong
+    return -1.0;
 }
 
 bool CvCaptureCAM_DC1394_v2_CPP::setProperty(int propId, double value)

@@ -1061,7 +1061,7 @@ double GStreamerCapture::getProperty(int propId) const
 
     if(!pipeline) {
         CV_WARN("GStreamer: no pipeline");
-        return 0;
+        return -1.0;
     }
 
     switch(propId)
@@ -1074,7 +1074,7 @@ double GStreamerCapture::getProperty(int propId) const
         if(!status) {
             handleMessage(pipeline);
             CV_WARN("GStreamer: unable to query position of stream");
-            return 0;
+            return -1.0;
         }
         return value * 1e-6; // nano seconds to milli seconds
     case CV_CAP_PROP_POS_FRAMES:
@@ -1082,14 +1082,14 @@ double GStreamerCapture::getProperty(int propId) const
         {
             if (isPosFramesEmulated)
                 return emulatedFrameNumber;
-            return 0; // TODO getProperty() "unsupported" value should be changed
+            return -1.0;
         }
         format = GST_FORMAT_DEFAULT;
         status = gst_element_query_position(sink.get(), CV_GST_FORMAT(format), &value);
         if(!status) {
             handleMessage(pipeline);
             CV_WARN("GStreamer: unable to query position of stream");
-            return 0;
+            return -1.0;
         }
         return value;
     case CV_CAP_PROP_POS_AVI_RATIO:
@@ -1098,7 +1098,7 @@ double GStreamerCapture::getProperty(int propId) const
         if(!status) {
             handleMessage(pipeline);
             CV_WARN("GStreamer: unable to query position of stream");
-            return 0;
+            return -1.0;
         }
         return ((double) value) / GST_FORMAT_PERCENT_MAX;
     case CV_CAP_PROP_FRAME_WIDTH:
@@ -1128,7 +1128,7 @@ double GStreamerCapture::getProperty(int propId) const
         if(!sink)
         {
             CV_WARN("there is no sink yet");
-            return 0;
+            return -1.0;
         }
         return gst_app_sink_get_max_buffers(GST_APP_SINK(sink.get()));
     default:
@@ -1136,7 +1136,7 @@ double GStreamerCapture::getProperty(int propId) const
         break;
     }
 
-    return 0;
+    return -1.0;
 }
 
 /*!
