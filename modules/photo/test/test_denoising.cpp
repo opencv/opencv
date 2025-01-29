@@ -164,80 +164,34 @@ TEST(Photo_Denoising, speed)
     t = (double)getTickCount() - t;
     printf("execution time: %gms\n", t*1000./getTickFrequency());
 }
-// Related issue :
-// - https://github.com/opencv/opencv/issues/26582
-class Photo_DenoisingGrayscaleMulti16Bit : public ::testing::Test {
-protected:
-    struct TestConfig {
-        int width = 127;
-        int height = 129;
-        int imgs_count = 3;
-        float h = 15.0f;
-        int templateWindowSize = 7;
-        int searchWindowSize = 21;
-    };
 
-    static double computePSNR(const cv::Mat& I1, const cv::Mat& I2) {
-        CV_Assert(I1.type() == I2.type() && I1.size() == I2.size());
-        cv::Mat s1;
-        cv::absdiff(I1, I2, s1);
-        s1.convertTo(s1, CV_32F);
-        s1 = s1.mul(s1);
-        cv::Scalar s = cv::sum(s1);
-        double mse = s[0] / static_cast<double>(I1.total());
-
-        if (mse == 0) return INFINITY;
-
-        double max_pixel = 65535.0;
-        return 10.0 * log10((max_pixel * max_pixel) / mse);
-    }
-
-    static std::vector<cv::Mat> generateTestImages(const TestConfig& config, int minVal, int maxVal) {
-        std::vector<cv::Mat> images(config.imgs_count);
-        for (int i = 0; i < config.imgs_count; i++) {
-            images[i] = cv::Mat(config.height, config.width, CV_16UC1);
-            cv::randu(images[i], cv::Scalar::all(minVal), cv::Scalar::all(maxVal));
-        }
-        return images;
-    }
-
-    void runDenoisingTest(const std::vector<cv::Mat>& inputImages, const TestConfig& config, const std::string& testCaseName, int expectedMinVal, int expectedMaxVal, double psnrThreshold = -1) {
-        cv::Mat result;
-        std::vector<float> h_vec = {config.h};
-
-        ASSERT_NO_THROW({
-            cv::fastNlMeansDenoisingMulti(inputImages, result, static_cast<int>(inputImages.size() / 2), static_cast<int>(inputImages.size()), h_vec, config.templateWindowSize, config.searchWindowSize, cv::NORM_L1);
-        }) << "fastNlMeansDenoisingMulti threw an unexpected exception in " << testCaseName;
-
-        ASSERT_FALSE(result.empty()) << "Denoising result is empty in " << testCaseName;
-        ASSERT_EQ(result.type(), CV_16UC1) << "Incorrect result type in " << testCaseName;
-        ASSERT_EQ(result.size(), inputImages[0].size()) << "Incorrect result size in " << testCaseName;
-
-        double minVal, maxVal;
-        cv::minMaxLoc(result, &minVal, &maxVal);
-        EXPECT_GE(minVal, expectedMinVal) << "Minimum value out of range in " << testCaseName;
-        EXPECT_LE(maxVal, expectedMaxVal) << "Maximum value out of range in " << testCaseName;
-
-        if (psnrThreshold > 0) {
-            cv::Mat groundTruth = cv::Mat::ones(config.height, config.width, CV_16UC1) * 10000;
-            double psnr = computePSNR(result, groundTruth);
-            EXPECT_GT(psnr, psnrThreshold) << "PSNR is too low in " << testCaseName;
-        }
-    }
-};
-
-TEST_F(Photo_DenoisingGrayscaleMulti16Bit, ComprehensiveDenoisingTest)
+// Related issue : https://github.com/opencv/opencv/issues/26582
+TEST(Photo_DenoisingGrayscaleMulti16bitL1, regression)
 {
-    TestConfig config;
+    const int imgs_count = 3;
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
 
-    auto randomImages = generateTestImages(config, 9500, 10500);
-    runDenoisingTest(randomImages, config, "RandomValuesDenoising", 0, 65535, 30.0);
+    vector<Mat> original_8u(imgs_count);
+    vector<Mat> original_16u(imgs_count);
+    for (int i = 0; i < imgs_count; i++)
+    {
+        string original_path = format("%slena_noised_gaussian_sigma=20_multi_%d.png", folder.c_str(), i);
+        original_8u[i] = imread(original_path, IMREAD_GRAYSCALE);
+        ASSERT_FALSE(original_8u[i].empty()) << "Could not load input image " << original_path;
+        original_8u[i].convertTo(original_16u[i], CV_16U);
+    }
 
-    auto maxImages = std::vector<cv::Mat>(config.imgs_count, cv::Mat::ones(config.height, config.width, CV_16UC1) * 65535);
-    runDenoisingTest(maxImages, config, "MaxValueDenoising", 65535, 65535);
+    Mat result_8u, result_16u;
+    std::vector<float> h = {15};
+    fastNlMeansDenoisingMulti(original_8u, result_8u, /*imgToDenoiseIndex*/ imgs_count / 2, /*temporalWindowSize*/ imgs_count, h, 7, 21, NORM_L1);
+    fastNlMeansDenoisingMulti(original_16u, result_16u, /*imgToDenoiseIndex*/ imgs_count / 2, /*temporalWindowSize*/ imgs_count, h, 7, 21, NORM_L1);
+    DUMP(result_8u, "8u.res.png");
+    DUMP(result_16u, "16u.res.png");
 
-    auto zeroImages = std::vector<cv::Mat>(config.imgs_count, cv::Mat::zeros(config.height, config.width, CV_16UC1));
-    runDenoisingTest(zeroImages, config, "ZeroValueDenoising", 0, 0);
+    cv::Mat expected;
+    result_8u.convertTo(expected, CV_16U);
+
+    EXPECT_MAT_NEAR(result_16u, expected, 1);
 }
 
 }} // namespace
