@@ -457,6 +457,7 @@ inline Ort::Value createTensor(const cv::Mat& data) {
 
 inline Ort::Value createTensor(const cv::gimpl::onnx::TensorInfo& tensor_params,
                                const cv::Mat& data) {
+    GAPI_LOG_INFO(nullptr, "Calling CreateTensor");
     GAPI_Assert(data.isContinuous ());
     switch (tensor_params.type) {
     case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8:
@@ -576,10 +577,13 @@ using GConstGONNXModel = ade::ConstTypedGraph
 cv::gimpl::onnx::GONNXExecutable::GONNXExecutable(const ade::Graph &g,
                                                   const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g) {
+    std::cout << "Another CreateTensor API will be called for this ONNX model." << std::endl;
     // FIXME: Currently this backend is capable to run a single inference node only.
     // Need to extend our island fusion with merge/not-to-merge decision making parametrization
     GConstGONNXModel iem(g);
 
+    cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_INFO);
+    GAPI_LOG_INFO(nullptr, "Parsing graph nodes into data and ops.")
     for (auto &nh : nodes) {
         switch (m_gm.metadata(nh).get<NodeType>().t) {
         case NodeType::OP:
@@ -605,6 +609,7 @@ cv::gimpl::onnx::GONNXExecutable::GONNXExecutable(const ade::Graph &g,
         default: util::throw_error(std::logic_error("Unsupported NodeType"));
         }
     }
+    GAPI_LOG_INFO(nullptr, "    Done.")
 }
 
 // FIXME: Document what it does
@@ -647,6 +652,7 @@ cv::GArg cv::gimpl::onnx::GONNXExecutable::packArg(const cv::GArg &arg) {
 
 void cv::gimpl::onnx::GONNXExecutable::run(std::vector<InObj>  &&input_objs,
                                            std::vector<OutObj> &&output_objs) {
+    GAPI_LOG_INFO(nullptr, "Running GONNXExecutable.")
     // Update resources with run-time information - what this Island
     // has received from user (or from another Island, or mix...)
     // FIXME: Check input/output objects against GIsland protocol
@@ -661,6 +667,8 @@ void cv::gimpl::onnx::GONNXExecutable::run(std::vector<InObj>  &&input_objs,
 
     // Initialize kernel's execution context:
     // - Input parameters
+
+    GAPI_LOG_INFO(nullptr, "Packing arguments.");
     ONNXCallContext context;
     context.args.reserve(op.args.size());
     using namespace std::placeholders;
@@ -684,13 +692,16 @@ void cv::gimpl::onnx::GONNXExecutable::run(std::vector<InObj>  &&input_objs,
         context.results[out_port] = magazine::getObjPtr(m_res, out_desc);
     }
 
+    GAPI_LOG_INFO(nullptr, "Running the kernel.");
     // And now trigger the execution
     GConstGONNXModel giem(m_g);
     const auto &uu = giem.metadata(this_nh).get<ONNXUnit>();
     const auto &kk = giem.metadata(this_nh).get<ONNXCallable>();
     kk.run(uu, context);
 
+    GAPI_LOG_INFO(nullptr, "Writing results back.");
     for (auto &it : output_objs) magazine::writeBack(m_res, it.first, it.second);
+    GAPI_LOG_INFO(nullptr, "    Done.")
 }
 
 namespace cv {
@@ -719,6 +730,7 @@ static GraphOptimizationLevel convertToGraphOptimizationLevel(const int opt_leve
 
 ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     : params(pp) {
+    GAPI_LOG_INFO(nullptr, "Calling ONNXCompiled constructor");
     // Validate input parameters before allocating any resources
     if (params.num_in > 1u && params.num_in != params.input_names.size()) {
         cv::util::throw_error(std::logic_error("Please specify input layer names for "
@@ -741,12 +753,13 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
 
     if (pp.disable_mem_pattern) {
         session_options.DisableMemPattern();
+        GAPI_LOG_INFO(nullptr, "Disable mem pattern.");
     }
 
     if (pp.opt_level.has_value()) {
         session_options.SetGraphOptimizationLevel(convertToGraphOptimizationLevel(pp.opt_level.value()));
     }
-    this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
+    this_env = Ort::Env(ORT_LOGGING_LEVEL_VERBOSE, "");
 #ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);
 #else
@@ -824,9 +837,11 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     // Pre-allocate vectors (not buffers) for runtime info
     in_data.resize(params.num_in);
     out_data.resize(params.num_out);
+    GAPI_LOG_INFO(nullptr, "    Done.");
 }
 
 std::vector<TensorInfo> ONNXCompiled::getTensorInfo(TensorPosition pos) {
+    GAPI_LOG_INFO(nullptr, "getTensorInfo is called.")
     GAPI_Assert(pos == INPUT || pos == OUTPUT);
 
     const auto num_nodes = pos == INPUT
@@ -849,6 +864,7 @@ std::vector<TensorInfo> ONNXCompiled::getTensorInfo(TensorPosition pos) {
         tensor_info.back().name = std::string(name_p.get());
     }
 
+    GAPI_LOG_INFO(nullptr, "    Done.")
     return tensor_info;
 }
 
@@ -904,6 +920,7 @@ cv::Mat ONNXCompiled::allocOutput(int i) const {
 
 void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
                        std::vector<cv::Mat>& outs) {
+    GAPI_LOG_INFO(nullptr, "Calling ONNXCompiled::Run");
     std::vector<Ort::Value> in_tensors, out_tensors;
 
     // Layer names order for run
@@ -931,30 +948,22 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
 
     auto in_run_names  = getCharNames(input_names);
     if (!is_dynamic && !is_postproc) {
-        // Easy path - just run the session which is bound to G-API's
-        // internal data
-        for (auto i : ade::util::iota(params.output_names.size())) {
-        out_tensors.emplace_back(createTensor(out_tensor_info[i],
-                                              outs[i]));
-        }
-        auto out_run_names = getCharNames(params.output_names);
-        this_session.Run(Ort::RunOptions{nullptr},
-                         in_run_names.data(),
-                         &in_tensors.front(),
-                         input_names.size(),
-                         out_run_names.data(),
-                         &out_tensors.front(),
-                         params.output_names.size());
-        if (out_tensor_info[0].type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64) {
-            // cv::Mat does not support int64 output data.
-            // Conversion from int 64 to int 32 is carried in the copyFromONNX function
-            // The output is written to out_mat
-            for (auto &&iter : ade::util::zip(ade::util::toRange(out_tensors),
-                                              ade::util::toRange(outs))) {
-                auto &out_tensor = std::get<0>(iter);
-                auto &out_mat = std::get<1>(iter);
-                copyFromONNX(out_tensor, out_mat);
-            }
+        // Not anymore an easy path
+        auto out_run_names  = getCharNames(params.output_names);
+        GAPI_LOG_INFO(nullptr, "Calling 'this_session.Run' in ORT");
+        auto outputs = this_session.Run(Ort::RunOptions{nullptr},
+                                        in_run_names.data(),
+                                        &in_tensors.front(),
+                                        input_names.size(),
+                                        out_run_names.data(),
+                                        out_run_names.size());
+
+       // The output is written to out_mat
+        for (auto &&iter : ade::util::zip(ade::util::toRange(outputs),
+                                          ade::util::toRange(outs))) {
+            auto &out_tensor = std::get<0>(iter);
+            auto &out_mat = std::get<1>(iter);
+            copyFromONNX(out_tensor, out_mat);
         }
     } else {
         // Hard path - run session & user-defined post-processing
@@ -967,6 +976,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
             : ade::util::transform(params.names_to_remap, std::back_inserter(out_names),
                                    [] (const std::string& ntr) { return ntr.c_str(); });
 
+        GAPI_LOG_INFO(nullptr, "Calling 'this_session.Run' in ORT with postproc after.");
         auto outputs = this_session.Run(Ort::RunOptions{nullptr},
                                         in_run_names.data(),
                                         &in_tensors.front(),
@@ -1005,6 +1015,7 @@ void ONNXCompiled::Run(const std::vector<cv::Mat>& ins,
             }
         }
     }
+    GAPI_LOG_INFO(nullptr, "    Done.");
 }
 
 void ONNXCompiled::run() {
