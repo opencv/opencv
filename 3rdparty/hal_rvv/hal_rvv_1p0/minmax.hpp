@@ -17,46 +17,50 @@ namespace
 {
     template<typename T> struct rvv;
 
-    #define HAL_RVV_GENERATOR(T, EEW, TYPE, IS_U, EMUL, M_EMUL) \
+    #define HAL_RVV_GENERATOR(T, EEW, TYPE, IS_U, EMUL, M_EMUL, B_LEN) \
     template<> struct rvv<T> \
     { \
-        static constexpr auto& vsetvlmax = __riscv_vsetvlmax_e##EEW##EMUL; \
-        static constexpr auto& vsetvl = __riscv_vsetvl_e##EEW##EMUL; \
-        static constexpr auto& vmv_v_x = __riscv_vmv_v_x_##TYPE##EMUL; \
-        static constexpr auto& vle = __riscv_vle##EEW##_v_##TYPE##EMUL; \
-        static constexpr auto& vle_mask = __riscv_vle8_v_u8##M_EMUL; \
-        static constexpr auto& vmin_tu = __riscv_vmin##IS_U##_vv_##TYPE##EMUL##_tu; \
-        static constexpr auto& vmax_tu = __riscv_vmax##IS_U##_vv_##TYPE##EMUL##_tu; \
-        static constexpr auto& vmin_tumu = __riscv_vmin##IS_U##_vv_##TYPE##EMUL##_tumu; \
-        static constexpr auto& vmax_tumu = __riscv_vmax##IS_U##_vv_##TYPE##EMUL##_tumu; \
-        static constexpr auto& vredmin = __riscv_vredmin##IS_U##_vs_##TYPE##EMUL##_##TYPE##EMUL; \
-        static constexpr auto& vredmax = __riscv_vredmax##IS_U##_vs_##TYPE##EMUL##_##TYPE##EMUL; \
+        using vec_t = v##IS_U##int##EEW##EMUL##_t; \
+        using bool_t = vbool##B_LEN##_t; \
+        static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e##EEW##EMUL(); } \
+        static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e##EEW##EMUL(a); } \
+        static inline vec_t vmv_v_x(T a, size_t b) { return __riscv_vmv_v_x_##TYPE##EMUL(a, b); } \
+        static inline vec_t vle(const T* a, size_t b) { return __riscv_vle##EEW##_v_##TYPE##EMUL(a, b); } \
+        static inline vuint8##M_EMUL##_t vle_mask(const uchar* a, size_t b) { return __riscv_vle8_v_u8##M_EMUL(a, b); } \
+        static inline vec_t vmin_tu(vec_t a, vec_t b, vec_t c, size_t d) { return __riscv_vmin##IS_U##_tu(a, b, c, d); } \
+        static inline vec_t vmax_tu(vec_t a, vec_t b, vec_t c, size_t d) { return __riscv_vmax##IS_U##_tu(a, b, c, d); } \
+        static inline vec_t vmin_tumu(bool_t a, vec_t b, vec_t c, vec_t d, size_t e) { return __riscv_vmin##IS_U##_tumu(a, b, c, d, e); } \
+        static inline vec_t vmax_tumu(bool_t a, vec_t b, vec_t c, vec_t d, size_t e) { return __riscv_vmax##IS_U##_tumu(a, b, c, d, e); } \
+        static inline vec_t vredmin(vec_t a, vec_t b, size_t c) { return __riscv_vredmin##IS_U(a, b, c); } \
+        static inline vec_t vredmax(vec_t a, vec_t b, size_t c) { return __riscv_vredmax##IS_U(a, b, c); } \
     };
-    HAL_RVV_GENERATOR(uchar , 8 , u8 , u, m1, m1 )
-    HAL_RVV_GENERATOR(schar , 8 , i8 ,  , m1, m1 )
-    HAL_RVV_GENERATOR(ushort, 16, u16, u, m1, mf2)
-    HAL_RVV_GENERATOR(short , 16, i16,  , m1, mf2)
+    HAL_RVV_GENERATOR(uchar , 8 , u8 , u, m1, m1 , 8 )
+    HAL_RVV_GENERATOR(schar , 8 , i8 ,  , m1, m1 , 8 )
+    HAL_RVV_GENERATOR(ushort, 16, u16, u, m1, mf2, 16)
+    HAL_RVV_GENERATOR(short , 16, i16,  , m1, mf2, 16)
     #undef HAL_RVV_GENERATOR
 
-    #define HAL_RVV_GENERATOR(T, EEW, TYPE, IS_F, F_OR_S, F_OR_X, EMUL, M_EMUL, P_EMUL, B_LEN) \
+    #define HAL_RVV_GENERATOR(T, NAME, EEW, TYPE, IS_F, F_OR_S, F_OR_X, EMUL, M_EMUL, P_EMUL, B_LEN) \
     template<> struct rvv<T> \
     { \
-        static constexpr auto& vsetvlmax = __riscv_vsetvlmax_e##EEW##EMUL; \
-        static constexpr auto& vsetvl = __riscv_vsetvl_e##EEW##EMUL; \
-        static constexpr auto& vmv_v_x = __riscv_v##IS_F##mv_v_##F_OR_X##_##TYPE##EMUL; \
-        static constexpr auto& vid = __riscv_vid_v_u32##P_EMUL; \
-        static constexpr auto& vundefined = __riscv_vundefined_u32##P_EMUL; \
-        static constexpr auto& vle = __riscv_vle##EEW##_v_##TYPE##EMUL; \
-        static constexpr auto& vle_mask = __riscv_vle8_v_u8##M_EMUL; \
-        static constexpr auto& vmlt = __riscv_vm##F_OR_S##lt##_vv_##TYPE##EMUL##_##B_LEN; \
-        static constexpr auto& vmgt = __riscv_vm##F_OR_S##gt##_vv_##TYPE##EMUL##_##B_LEN; \
-        static constexpr auto& vmlt_mu = __riscv_vm##F_OR_S##lt##_vv_##TYPE##EMUL##_##B_LEN##_mu; \
-        static constexpr auto& vmgt_mu = __riscv_vm##F_OR_S##gt##_vv_##TYPE##EMUL##_##B_LEN##_mu; \
-        static constexpr auto& vmv_x_s = __riscv_v##IS_F##mv_##F_OR_X##_s_##TYPE##EMUL##_##TYPE; \
+        using vec_t = v##NAME##EEW##EMUL##_t; \
+        using bool_t = vbool##B_LEN##_t; \
+        static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e##EEW##EMUL(); } \
+        static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e##EEW##EMUL(a); } \
+        static inline vec_t vmv_v_x(T a, size_t b) { return __riscv_v##IS_F##mv_v_##F_OR_X##_##TYPE##EMUL(a, b); } \
+        static inline vuint32##P_EMUL##_t vid(size_t a) { return __riscv_vid_v_u32##P_EMUL(a); } \
+        static inline vuint32##P_EMUL##_t vundefined() { return __riscv_vundefined_u32##P_EMUL(); } \
+        static inline vec_t vle(const T* a, size_t b) { return __riscv_vle##EEW##_v_##TYPE##EMUL(a, b); } \
+        static inline vuint8##M_EMUL##_t vle_mask(const uchar* a, size_t b) { return __riscv_vle8_v_u8##M_EMUL(a, b); } \
+        static inline bool_t vmlt(vec_t a, vec_t b, size_t c) { return __riscv_vm##F_OR_S##lt(a, b, c); } \
+        static inline bool_t vmgt(vec_t a, vec_t b, size_t c) { return __riscv_vm##F_OR_S##gt(a, b, c); } \
+        static inline bool_t vmlt_mu(bool_t a, bool_t b, vec_t c, vec_t d, size_t e) { return __riscv_vm##F_OR_S##lt##_mu(a, b, c, d, e); } \
+        static inline bool_t vmgt_mu(bool_t a, bool_t b, vec_t c, vec_t d, size_t e) { return __riscv_vm##F_OR_S##gt##_mu(a, b, c, d, e); } \
+        static inline T vmv_x_s(vec_t a) { return __riscv_v##IS_F##mv_##F_OR_X(a); } \
     };
-    HAL_RVV_GENERATOR(int   , 32, i32,  , s, x, m4, m1 , m4, b8 )
-    HAL_RVV_GENERATOR(float , 32, f32, f, f, f, m4, m1 , m4, b8 )
-    HAL_RVV_GENERATOR(double, 64, f64, f, f, f, m4, mf2, m2, b16)
+    HAL_RVV_GENERATOR(int   , int  , 32, i32,  , s, x, m4, m1 , m4, 8 )
+    HAL_RVV_GENERATOR(float , float, 32, f32, f, f, f, m4, m1 , m4, 8 )
+    HAL_RVV_GENERATOR(double, float, 64, f64, f, f, f, m4, mf2, m2, 16)
     #undef HAL_RVV_GENERATOR
 }
 
