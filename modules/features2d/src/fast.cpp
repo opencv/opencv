@@ -227,7 +227,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                     for( k = 0; k < N; k++ )
                     {
                         int x = ptr[pixel[k]];
-                        if(x < vt)
+                        if(x < vt) // (to test claimed that x < vt never happens)
                         {
                             if( ++count > K )
                             {
