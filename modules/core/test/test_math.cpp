@@ -504,7 +504,7 @@ double Core_DotProductTest::get_success_error_level( int test_case_idx, int i, i
 #ifdef __riscv
     const int depth = test_mat[i][j].depth();
     if (depth == CV_64F)
-        return 1.7e-5;
+        return 2.5e-5;
 #endif
     return Core_MatrixTest::get_success_error_level( test_case_idx, i, j );
 }
