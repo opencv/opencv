@@ -524,7 +524,7 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
     switch (type)
     {
     case CV_8UC1:
-        switch (norm_type & ~CV_RELATIVE)
+        switch (norm_type & ~NORM_RELATIVE)
         {
         case NORM_INF:
             ret = normDiffInf_8UC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
@@ -544,7 +544,7 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
         }
         break;
     case CV_8UC4:
-        switch (norm_type & ~CV_RELATIVE)
+        switch (norm_type & ~NORM_RELATIVE)
         {
         case NORM_INF:
             ret = normDiffInf_8UC4(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
@@ -564,7 +564,7 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
         }
         break;
     case CV_32FC1:
-        switch (norm_type & ~CV_RELATIVE)
+        switch (norm_type & ~NORM_RELATIVE)
         {
         case NORM_INF:
             ret = normDiffInf_32FC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
@@ -587,10 +587,10 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
         ret = CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    if(ret == CV_HAL_ERROR_OK && (norm_type & CV_RELATIVE))
+    if(ret == CV_HAL_ERROR_OK && (norm_type & NORM_RELATIVE))
     {
         double result_;
-        ret = cv::cv_hal_rvv::norm(src2, src2_step, mask, mask_step, width, height, type, norm_type & ~CV_RELATIVE, &result_);
+        ret = cv::cv_hal_rvv::norm(src2, src2_step, mask, mask_step, width, height, type, norm_type & ~NORM_RELATIVE, &result_);
         if(ret == CV_HAL_ERROR_OK)
         {
             *result /= result_ + DBL_EPSILON;

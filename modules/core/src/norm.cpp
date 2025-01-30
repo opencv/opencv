@@ -633,7 +633,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
     }
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(src, normType, mask, _result), _result);
-    
+
     if( src.isContinuous() && mask.empty() )
     {
         size_t len = src.total()*cn;
