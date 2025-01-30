@@ -285,7 +285,7 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
     {
         CALL_HAL(convertScale, cv_hal_convertScale, src.data, src.step, dstMat.data, dstMat.step, src.cols * cn, src.rows, sdepth, ddepth, alpha, beta);
     }
-    else if( isContinuous() && dstMat.isContinuous() )
+    else if( src.isContinuous() && dstMat.isContinuous() )
     {
         CALL_HAL(convertScale, cv_hal_convertScale, src.data, 0, dstMat.data, 0, (int)src.total() * cn, 1, sdepth, ddepth, alpha, beta);
     }

@@ -520,56 +520,84 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
     if (!result)
         return CV_HAL_ERROR_OK;
 
+    int ret;
     switch (type)
     {
     case CV_8UC1:
-        switch (norm_type)
+        switch (norm_type & ~CV_RELATIVE)
         {
         case NORM_INF:
-            return normDiffInf_8UC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffInf_8UC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            break;
         case NORM_L1:
-            return normDiffL1_8UC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffL1_8UC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            break;
         case NORM_L2SQR:
-            return normDiffL2Sqr_8UC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffL2Sqr_8UC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            break;
         case NORM_L2:
-            int ret = normDiffL2Sqr_8UC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffL2Sqr_8UC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
             *result = std::sqrt(*result);
-            return ret;
+            break;
+        default:
+            ret = CV_HAL_ERROR_NOT_IMPLEMENTED;
         }
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        break;
     case CV_8UC4:
-        switch (norm_type)
+        switch (norm_type & ~CV_RELATIVE)
         {
         case NORM_INF:
-            return normDiffInf_8UC4(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffInf_8UC4(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            break;
         case NORM_L1:
-            return normDiffL1_8UC4(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffL1_8UC4(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            break;
         case NORM_L2SQR:
-            return normDiffL2Sqr_8UC4(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffL2Sqr_8UC4(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            break;
         case NORM_L2:
-            int ret = normDiffL2Sqr_8UC4(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffL2Sqr_8UC4(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
             *result = std::sqrt(*result);
-            return ret;
+            break;
+        default:
+            ret = CV_HAL_ERROR_NOT_IMPLEMENTED;
         }
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        break;
     case CV_32FC1:
-        switch (norm_type)
+        switch (norm_type & ~CV_RELATIVE)
         {
         case NORM_INF:
-            return normDiffInf_32FC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffInf_32FC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            break;
         case NORM_L1:
-            return normDiffL1_32FC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffL1_32FC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            break;
         case NORM_L2SQR:
-            return normDiffL2Sqr_32FC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffL2Sqr_32FC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            break;
         case NORM_L2:
-            int ret = normDiffL2Sqr_32FC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
+            ret = normDiffL2Sqr_32FC1(src1, src1_step, src2, src2_step, mask, mask_step, width, height, result);
             *result = std::sqrt(*result);
-            return ret;
+            break;
+        default:
+            ret = CV_HAL_ERROR_NOT_IMPLEMENTED;
         }
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        break;
+    default:
+        ret = CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    if(ret == CV_HAL_ERROR_OK && (norm_type & CV_RELATIVE))
+    {
+        double result_;
+        ret = cv::cv_hal_rvv::norm(src2, src2_step, mask, mask_step, width, height, type, norm_type & ~CV_RELATIVE, &result_);
+        if(ret == CV_HAL_ERROR_OK)
+        {
+            *result /= result_ + DBL_EPSILON;
+        }
+    }
+
+    return ret;
 }
 
 }}
