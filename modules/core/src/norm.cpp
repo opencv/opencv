@@ -576,7 +576,10 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                 type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_L1_16s_C1R :
                 0) :
                 normType == NORM_L2 || normType == NORM_L2SQR ?
-                (type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C1R :
+                (
+                #if !IPP_DISABLE_NORM_8U
+                type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C1R :
+                #endif
                 type == CV_16UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_16u_C1R :
                 type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_L2_16s_C1R :
                 0) : 0;
@@ -926,18 +929,27 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                     0) : 0;
                 ippiNormRelFuncNoHint ippiNormRel =
                     normType == NORM_INF ?
-                    (type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_8u_C1R :
+                    (
+                    #if !IPP_DISABLE_NORM_8U
+                    type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_8u_C1R :
+                    #endif
                     type == CV_16U ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_16u_C1R :
                     type == CV_16S ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_16s_C1R :
                     type == CV_32F ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_32f_C1R :
                     0) :
                     normType == NORM_L1 ?
-                    (type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_8u_C1R :
+                    (
+                    #if !IPP_DISABLE_NORM_8U
+                    type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_8u_C1R :
+                    #endif
                     type == CV_16U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_16u_C1R :
                     type == CV_16S ? (ippiNormRelFuncNoHint)ippiNormRel_L1_16s_C1R :
                     0) :
                     normType == NORM_L2 || normType == NORM_L2SQR ?
-                    (type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L2_8u_C1R :
+                    (
+                    #if !IPP_DISABLE_NORM_8U
+                    type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L2_8u_C1R :
+                    #endif
                     type == CV_16U ? (ippiNormRelFuncNoHint)ippiNormRel_L2_16u_C1R :
                     type == CV_16S ? (ippiNormRelFuncNoHint)ippiNormRel_L2_16s_C1R :
                     0) : 0;
@@ -1045,18 +1057,27 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 0) : 0;
             ippiNormDiffFuncNoHint ippiNormDiff =
                 normType == NORM_INF ?
-                (type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C1R :
+                (
+                #if !IPP_DISABLE_NORM_8U
+                type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C1R :
+                #endif
                 type == CV_16U ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C1R :
                 type == CV_16S ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C1R :
                 type == CV_32F ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_32f_C1R :
                 0) :
                 normType == NORM_L1 ?
-                (type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C1R :
+                (
+                #if !IPP_DISABLE_NORM_8U
+                type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C1R :
+                #endif
                 type == CV_16U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C1R :
                 type == CV_16S ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C1R :
                 0) :
                 normType == NORM_L2 || normType == NORM_L2SQR ?
-                (type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C1R :
+                (
+                #if !IPP_DISABLE_NORM_8U
+                type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C1R :
+                #endif
                 type == CV_16U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16u_C1R :
                 type == CV_16S ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16s_C1R :
                 0) : 0;

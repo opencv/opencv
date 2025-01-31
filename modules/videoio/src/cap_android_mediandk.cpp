@@ -573,8 +573,8 @@ public:
             Mat bufferMat(image.rows, image.cols, CV_8UC4, buffer.bits, buffer.stride * 4);
             switch (image.type()) {
                 case CV_8UC4: image.copyTo(bufferMat);                  break;
-                case CV_8UC3: cvtColor(image, bufferMat, CV_BGR2RGBA);  break;
-                case CV_8UC1: cvtColor(image, bufferMat, CV_GRAY2RGBA); break;
+                case CV_8UC3: cvtColor(image, bufferMat, COLOR_BGR2RGBA);  break;
+                case CV_8UC1: cvtColor(image, bufferMat, COLOR_GRAY2RGBA); break;
             }
         } else {
             LOGE("Unknown surface buffer format: 0x%x", buffer.format);
@@ -585,8 +585,8 @@ public:
         //OpenCV doesn't support RGB to NV12 so we need to convert to YV12 and then manually changed it to NV12
         Mat imageYV12;
         switch (image.type()) {
-            case CV_8UC4: cvtColor(image, imageYV12, CV_RGBA2YUV_YV12); break;
-            case CV_8UC3: cvtColor(image, imageYV12, CV_BGR2YUV_YV12);  break;
+            case CV_8UC4: cvtColor(image, imageYV12, COLOR_RGBA2YUV_YV12); break;
+            case CV_8UC3: cvtColor(image, imageYV12, COLOR_BGR2YUV_YV12);  break;
             case CV_8UC1: imageYV12.create(image.rows + image.rows/2, image.cols, CV_8UC1);
                           image.copyTo(imageYV12.rowRange(0, image.rows));
                           imageYV12.rowRange(image.rows, imageYV12.rows) = 128;
