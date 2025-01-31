@@ -98,6 +98,28 @@ static bool fillFrames(Animation& animation, bool hasAlpha, int n = 14)
 
     return true;
 }
+// Related issue : https://github.com/opencv/opencv/issues/26839
+
+TEST(ImwriteAnimationTest, FallbackFrom8S)
+{
+    Mat signed8Bit(10, 10, CV_8SC4, Scalar::all(-128));
+    Animation anim;
+    anim.frames.push_back(signed8Bit);
+    anim.durations.push_back(50);
+
+    std::string filename = "test_animation_fallback.png";
+
+    bool success = imwriteanimation(filename, anim);
+    EXPECT_TRUE(success) << "imwriteanimation() should fallback to 8-bit instead of failing";
+
+    Animation readAnim;
+    bool readSuccess = imreadanimation(filename, readAnim);
+    EXPECT_TRUE(readSuccess) << "imreadanimation() should successfully read the fallback animation";
+    ASSERT_EQ(readAnim.frames.size(), anim.frames.size()) << "Number of frames should match";
+    EXPECT_EQ(readAnim.frames[0].depth(), CV_8U) << "Frame depth should be CV_8U after fallback";
+    EXPECT_EQ(readAnim.frames[0].channels(), anim.frames[0].channels()) << "Number of channels should remain unchanged";
+    std::remove(filename.c_str());
+}
 
 #ifdef HAVE_IMGCODEC_GIF
 

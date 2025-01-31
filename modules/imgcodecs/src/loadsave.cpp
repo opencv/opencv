@@ -963,20 +963,16 @@ static bool imwriteanimation_(const String& filename, const Animation& animation
         {
             tempAnim.frames.push_back(inFrame);
         }
-        // use 16-bit depth if supported by the encoder
-        else if (inFrame.depth() == CV_16U && encoder->isFormatSupported(CV_16U))
-        {
-            tempAnim.frames.push_back(inFrame);
-        }
         else
         {
             // fallback to 8-bit depth if unsupported
             CV_LOG_ONCE_WARNING(NULL,
-                "imwriteanimation_: Unsupported depth for this encoder, fallback to CV_8U");
+                                "imwriteanimation_: Unsupported depth for this encoder, fallback to CV_8U");
             Mat converted;
             inFrame.convertTo(converted, CV_8U);
             tempAnim.frames.push_back(converted);
         }
+
         tempAnim.durations.push_back(animation.durations[i]);
     }
     encoder->setDestination(filename);
