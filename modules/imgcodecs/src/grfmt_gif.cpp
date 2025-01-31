@@ -181,7 +181,7 @@ bool GifDecoder::readData(Mat &img) {
         } else if (img.channels() == 1){
             cvtColor(img_, img, COLOR_BGRA2GRAY);
         } else {
-            CV_LOG_WARNING(NULL, "Unsupported channels");
+            CV_LOG_WARNING(NULL, cv::format("Unsupported channels: %d", img.channels()));
             hasRead = false;
         }
     }

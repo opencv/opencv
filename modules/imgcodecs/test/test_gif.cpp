@@ -241,20 +241,18 @@ TEST(Imgcodecs_Gif, read_gif_special){
     const string gif_filename2 = root + "gifsuite/special2.gif";
     const string png_filename2 = root + "gifsuite/special2.png";
     cv::Mat gif_img1;
-    ASSERT_NO_THROW(gif_img1 = cv::imread(gif_filename1,IMREAD_UNCHANGED));
+    ASSERT_NO_THROW(gif_img1 = cv::imread(gif_filename1,IMREAD_COLOR));
     ASSERT_FALSE(gif_img1.empty());
     cv::Mat png_img1;
-    ASSERT_NO_THROW(png_img1 = cv::imread(png_filename1,IMREAD_UNCHANGED));
+    ASSERT_NO_THROW(png_img1 = cv::imread(png_filename1,IMREAD_COLOR));
     ASSERT_FALSE(png_img1.empty());
-    cv::cvtColor(png_img1, png_img1, cv::COLOR_BGRA2BGR);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), gif_img1, png_img1);
     cv::Mat gif_img2;
-    ASSERT_NO_THROW(gif_img2 = cv::imread(gif_filename2,IMREAD_UNCHANGED));
+    ASSERT_NO_THROW(gif_img2 = cv::imread(gif_filename2,IMREAD_COLOR));
     ASSERT_FALSE(gif_img2.empty());
     cv::Mat png_img2;
-    ASSERT_NO_THROW(png_img2 = cv::imread(png_filename2,IMREAD_UNCHANGED));
+    ASSERT_NO_THROW(png_img2 = cv::imread(png_filename2,IMREAD_COLOR));
     ASSERT_FALSE(png_img2.empty());
-    cv::cvtColor(png_img2, png_img2, cv::COLOR_BGRA2BGR);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), gif_img2, png_img2);
 }
 
