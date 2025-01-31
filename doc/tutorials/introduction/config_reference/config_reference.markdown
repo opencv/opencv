@@ -217,7 +217,7 @@ Following options can be used to produce special builds with instrumentation or 
 | `ENABLE_BUILD_HARDENING` | GCC, Clang, MSVC | Enable compiler options which reduce possibility of code exploitation.  |
 | `ENABLE_LTO` | GCC, Clang, MSVC | Enable Link Time Optimization (LTO). |
 | `ENABLE_THIN_LTO` | Clang | Enable thin LTO which incorporates intermediate bitcode to binaries allowing consumers optimize their applications later. |
-| `OPENCV_ALGO_HINT_DEFAULT` | Any | Set default OpenCV implementation hint value: `ALGO_HINT_ACCURATE` or `ALGO_HINT_APROX`. Dangerous! The option  changes behaviour globally and may affect accuracy of many algorithms. |
+| `OPENCV_ALGO_HINT_DEFAULT` | Any | Set default OpenCV implementation hint value: `ALGO_HINT_ACCURATE` or `ALGO_HINT_APPROX`. Dangerous! The option  changes behaviour globally and may affect accuracy of many algorithms. |
 
 @see [GCC instrumentation](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html)
 @see [Build hardening](https://en.wikipedia.org/wiki/Hardening_(computing))
@@ -316,6 +316,8 @@ All libraries required to read images in these formats are included into OpenCV 
 
 @note OpenJPEG have higher priority than JasPer which is deprecated. In order to use JasPer, OpenJPEG must be disabled.
 @note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported.
+
+@warning OpenEXR ver 2.2 or earlier cannot be used in combination with C++17 or later. In this case, updating OpenEXR ver 2.3.0 or later is required.
 
 ### GDAL integration
 
