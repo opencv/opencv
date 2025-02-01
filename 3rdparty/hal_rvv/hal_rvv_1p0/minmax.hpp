@@ -1,8 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-#ifndef OPENCV_HAL_RVV_MINMAXIDX_HPP_INCLUDED
-#define OPENCV_HAL_RVV_MINMAXIDX_HPP_INCLUDED
+#ifndef OPENCV_HAL_RVV_MINMAX_HPP_INCLUDED
+#define OPENCV_HAL_RVV_MINMAX_HPP_INCLUDED
 
 #include <riscv_vector.h>
 
@@ -13,7 +13,7 @@ namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_minMaxIdxMaskStep
 #define cv_hal_minMaxIdxMaskStep cv::cv_hal_rvv::minMaxIdx
 
-namespace
+namespace minmax
 {
     template<typename T> struct rvv;
 
@@ -68,9 +68,9 @@ template<typename T>
 inline int minMaxIdxReadTwice(const uchar* src_data, size_t src_step, int width, int height, double* minVal, double* maxVal,
                               int* minIdx, int* maxIdx, uchar* mask, size_t mask_step)
 {
-    int vlmax = rvv<T>::vsetvlmax();
-    auto vec_min = rvv<T>::vmv_v_x(std::numeric_limits<T>::max(), vlmax);
-    auto vec_max = rvv<T>::vmv_v_x(std::numeric_limits<T>::lowest(), vlmax);
+    int vlmax = minmax::rvv<T>::vsetvlmax();
+    auto vec_min = minmax::rvv<T>::vmv_v_x(std::numeric_limits<T>::max(), vlmax);
+    auto vec_max = minmax::rvv<T>::vmv_v_x(std::numeric_limits<T>::lowest(), vlmax);
     T val_min, val_max;
 
     if (mask)
@@ -82,19 +82,19 @@ inline int minMaxIdxReadTwice(const uchar* src_data, size_t src_step, int width,
             int vl;
             for (int j = 0; j < width; j += vl)
             {
-                vl = rvv<T>::vsetvl(width - j);
-                auto vec_src = rvv<T>::vle(src_row + j, vl);
-                auto vec_mask = rvv<T>::vle_mask(mask_row + j, vl);
+                vl = minmax::rvv<T>::vsetvl(width - j);
+                auto vec_src = minmax::rvv<T>::vle(src_row + j, vl);
+                auto vec_mask = minmax::rvv<T>::vle_mask(mask_row + j, vl);
                 auto bool_mask = __riscv_vmsne(vec_mask, 0, vl);
-                vec_min = rvv<T>::vmin_tumu(bool_mask, vec_min, vec_min, vec_src, vl);
-                vec_max = rvv<T>::vmax_tumu(bool_mask, vec_max, vec_max, vec_src, vl);
+                vec_min = minmax::rvv<T>::vmin_tumu(bool_mask, vec_min, vec_min, vec_src, vl);
+                vec_max = minmax::rvv<T>::vmax_tumu(bool_mask, vec_max, vec_max, vec_src, vl);
             }
         }
 
-        auto sc_minval = rvv<T>::vmv_v_x(std::numeric_limits<T>::max(), vlmax);
-        auto sc_maxval = rvv<T>::vmv_v_x(std::numeric_limits<T>::lowest(), vlmax);
-        sc_minval = rvv<T>::vredmin(vec_min, sc_minval, vlmax);
-        sc_maxval = rvv<T>::vredmax(vec_max, sc_maxval, vlmax);
+        auto sc_minval = minmax::rvv<T>::vmv_v_x(std::numeric_limits<T>::max(), vlmax);
+        auto sc_maxval = minmax::rvv<T>::vmv_v_x(std::numeric_limits<T>::lowest(), vlmax);
+        sc_minval = minmax::rvv<T>::vredmin(vec_min, sc_minval, vlmax);
+        sc_maxval = minmax::rvv<T>::vredmax(vec_max, sc_maxval, vlmax);
         val_min = __riscv_vmv_x(sc_minval);
         val_max = __riscv_vmv_x(sc_maxval);
 
@@ -106,9 +106,9 @@ inline int minMaxIdxReadTwice(const uchar* src_data, size_t src_step, int width,
             int vl;
             for (int j = 0; j < width && (!found_min || !found_max); j += vl)
             {
-                vl = rvv<T>::vsetvl(width - j);
-                auto vec_src = rvv<T>::vle(src_row + j, vl);
-                auto vec_mask = rvv<T>::vle_mask(mask_row + j, vl);
+                vl = minmax::rvv<T>::vsetvl(width - j);
+                auto vec_src = minmax::rvv<T>::vle(src_row + j, vl);
+                auto vec_mask = minmax::rvv<T>::vle_mask(mask_row + j, vl);
                 auto bool_mask = __riscv_vmsne(vec_mask, 0, vl);
                 auto bool_zero = __riscv_vmxor(bool_mask, bool_mask, vl);
                 if (!found_min)
@@ -144,17 +144,17 @@ inline int minMaxIdxReadTwice(const uchar* src_data, size_t src_step, int width,
             int vl;
             for (int j = 0; j < width; j += vl)
             {
-                vl = rvv<T>::vsetvl(width - j);
-                auto vec_src = rvv<T>::vle(src_row + j, vl);
-                vec_min = rvv<T>::vmin_tu(vec_min, vec_min, vec_src, vl);
-                vec_max = rvv<T>::vmax_tu(vec_max, vec_max, vec_src, vl);
+                vl = minmax::rvv<T>::vsetvl(width - j);
+                auto vec_src = minmax::rvv<T>::vle(src_row + j, vl);
+                vec_min = minmax::rvv<T>::vmin_tu(vec_min, vec_min, vec_src, vl);
+                vec_max = minmax::rvv<T>::vmax_tu(vec_max, vec_max, vec_src, vl);
             }
         }
 
-        auto sc_minval = rvv<T>::vmv_v_x(std::numeric_limits<T>::max(), vlmax);
-        auto sc_maxval = rvv<T>::vmv_v_x(std::numeric_limits<T>::lowest(), vlmax);
-        sc_minval = rvv<T>::vredmin(vec_min, sc_minval, vlmax);
-        sc_maxval = rvv<T>::vredmax(vec_max, sc_maxval, vlmax);
+        auto sc_minval = minmax::rvv<T>::vmv_v_x(std::numeric_limits<T>::max(), vlmax);
+        auto sc_maxval = minmax::rvv<T>::vmv_v_x(std::numeric_limits<T>::lowest(), vlmax);
+        sc_minval = minmax::rvv<T>::vredmin(vec_min, sc_minval, vlmax);
+        sc_maxval = minmax::rvv<T>::vredmax(vec_max, sc_maxval, vlmax);
         val_min = __riscv_vmv_x(sc_minval);
         val_max = __riscv_vmv_x(sc_maxval);
 
@@ -165,8 +165,8 @@ inline int minMaxIdxReadTwice(const uchar* src_data, size_t src_step, int width,
             int vl;
             for (int j = 0; j < width && (!found_min || !found_max); j += vl)
             {
-                vl = rvv<T>::vsetvl(width - j);
-                auto vec_src = rvv<T>::vle(src_row + j, vl);
+                vl = minmax::rvv<T>::vsetvl(width - j);
+                auto vec_src = minmax::rvv<T>::vle(src_row + j, vl);
                 if (!found_min)
                 {
                     auto bool_minpos = __riscv_vmseq(vec_src, val_min, vl);
@@ -208,11 +208,11 @@ template<typename T>
 inline int minMaxIdxReadOnce(const uchar* src_data, size_t src_step, int width, int height, double* minVal, double* maxVal,
                              int* minIdx, int* maxIdx, uchar* mask, size_t mask_step)
 {
-    int vlmax = rvv<T>::vsetvlmax();
-    auto vec_min = rvv<T>::vmv_v_x(std::numeric_limits<T>::max(), vlmax);
-    auto vec_max = rvv<T>::vmv_v_x(std::numeric_limits<T>::lowest(), vlmax);
-    auto vec_pos = rvv<T>::vid(vlmax);
-    auto vec_minpos = rvv<T>::vundefined(), vec_maxpos = rvv<T>::vundefined();
+    int vlmax = minmax::rvv<T>::vsetvlmax();
+    auto vec_min = minmax::rvv<T>::vmv_v_x(std::numeric_limits<T>::max(), vlmax);
+    auto vec_max = minmax::rvv<T>::vmv_v_x(std::numeric_limits<T>::lowest(), vlmax);
+    auto vec_pos = minmax::rvv<T>::vid(vlmax);
+    auto vec_minpos = minmax::rvv<T>::vundefined(), vec_maxpos = minmax::rvv<T>::vundefined();
     T val_min, val_max;
 
     if (mask)
@@ -224,14 +224,14 @@ inline int minMaxIdxReadOnce(const uchar* src_data, size_t src_step, int width, 
             int vl;
             for (int j = 0; j < width; j += vl)
             {
-                vl = rvv<T>::vsetvl(width - j);
-                auto vec_src = rvv<T>::vle(src_row + j, vl);
-                auto vec_mask = rvv<T>::vle_mask(mask_row + j, vl);
+                vl = minmax::rvv<T>::vsetvl(width - j);
+                auto vec_src = minmax::rvv<T>::vle(src_row + j, vl);
+                auto vec_mask = minmax::rvv<T>::vle_mask(mask_row + j, vl);
                 auto bool_mask = __riscv_vmsne(vec_mask, 0, vl);
                 auto bool_zero = __riscv_vmxor(bool_mask, bool_mask, vl);
 
-                auto bool_minpos = rvv<T>::vmlt_mu(bool_mask, bool_zero, vec_src, vec_min, vl);
-                auto bool_maxpos = rvv<T>::vmgt_mu(bool_mask, bool_zero, vec_src, vec_max, vl);
+                auto bool_minpos = minmax::rvv<T>::vmlt_mu(bool_mask, bool_zero, vec_src, vec_min, vl);
+                auto bool_maxpos = minmax::rvv<T>::vmgt_mu(bool_mask, bool_zero, vec_src, vec_max, vl);
                 vec_minpos = __riscv_vmerge_tu(vec_minpos, vec_minpos, vec_pos, bool_minpos, vl);
                 vec_maxpos = __riscv_vmerge_tu(vec_maxpos, vec_maxpos, vec_pos, bool_maxpos, vl);
 
@@ -249,11 +249,11 @@ inline int minMaxIdxReadOnce(const uchar* src_data, size_t src_step, int width, 
             int vl;
             for (int j = 0; j < width; j += vl)
             {
-                vl = rvv<T>::vsetvl(width - j);
-                auto vec_src = rvv<T>::vle(src_row + j, vl);
+                vl = minmax::rvv<T>::vsetvl(width - j);
+                auto vec_src = minmax::rvv<T>::vle(src_row + j, vl);
 
-                auto bool_minpos = rvv<T>::vmlt(vec_src, vec_min, vl);
-                auto bool_maxpos = rvv<T>::vmgt(vec_src, vec_max, vl);
+                auto bool_minpos = minmax::rvv<T>::vmlt(vec_src, vec_min, vl);
+                auto bool_maxpos = minmax::rvv<T>::vmgt(vec_src, vec_max, vl);
                 vec_minpos = __riscv_vmerge_tu(vec_minpos, vec_minpos, vec_pos, bool_minpos, vl);
                 vec_maxpos = __riscv_vmerge_tu(vec_maxpos, vec_maxpos, vec_pos, bool_maxpos, vl);
 
@@ -268,18 +268,18 @@ inline int minMaxIdxReadOnce(const uchar* src_data, size_t src_step, int width, 
     val_max = std::numeric_limits<T>::lowest();
     for (int i = 0; i < vlmax; i++)
     {
-        if (val_min > rvv<T>::vmv_x_s(vec_min))
+        if (val_min > minmax::rvv<T>::vmv_x_s(vec_min))
         {
-            val_min = rvv<T>::vmv_x_s(vec_min);
+            val_min = minmax::rvv<T>::vmv_x_s(vec_min);
             if (minIdx)
             {
                 minIdx[0] = __riscv_vmv_x(vec_minpos) / width;
                 minIdx[1] = __riscv_vmv_x(vec_minpos) % width;
             }
         }
-        if (val_max < rvv<T>::vmv_x_s(vec_max))
+        if (val_max < minmax::rvv<T>::vmv_x_s(vec_max))
         {
-            val_max = rvv<T>::vmv_x_s(vec_max);
+            val_max = minmax::rvv<T>::vmv_x_s(vec_max);
             if (maxIdx)
             {
                 maxIdx[0] = __riscv_vmv_x(vec_maxpos) / width;
