@@ -1,8 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-#ifndef OPENCV_HAL_RVV_NORMDIFF_HPP_INCLUDED
-#define OPENCV_HAL_RVV_NORMDIFF_HPP_INCLUDED
+#ifndef OPENCV_HAL_RVV_NORM_DIFF_HPP_INCLUDED
+#define OPENCV_HAL_RVV_NORM_DIFF_HPP_INCLUDED
 
 #include <riscv_vector.h>
 
