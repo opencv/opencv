@@ -10,17 +10,10 @@
 
 # Look for the header file.
 
-unset(WEBP_FOUND)
+FIND_PATH(WEBP_INCLUDE_DIR NAMES webp/decode.h)
 
-find_package(WebP QUIET)
-
-if(TARGET WebP::webp AND TARGET WebP::webpdemux AND TARGET WebP::libwebpmux)
-    MARK_AS_ADVANCED(WEBP_INCLUDE_DIR)
-    MARK_AS_ADVANCED(WEBP_LIBRARY)
-
-    SET(WEBP_FOUND TRUE)
-    SET(WEBP_LIBRARY WebP)
-    SET(WEBP_INCLUDE_DIR)
+if(NOT WEBP_INCLUDE_DIR)
+    unset(WEBP_FOUND)
 else()
     MARK_AS_ADVANCED(WEBP_INCLUDE_DIR)
 
