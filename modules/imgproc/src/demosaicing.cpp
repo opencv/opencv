@@ -123,13 +123,13 @@ public:
     }
 };
 
-#if CV_SIMD || CV_SIMD_SCALABLE
 class SIMDBayerInterpolator_8u
 {
 public:
     static int bayer2Gray(const uchar* bayer, int bayer_step, uchar* dst,
                    int width, int bcoeff, int gcoeff, int rcoeff)
     {
+#if CV_SIMD || CV_SIMD_SCALABLE
 #if CV_NEON
         uint16x8_t masklo = vdupq_n_u16(255);
         const uchar* bayer_end = bayer + width;
@@ -274,6 +274,9 @@ public:
 #endif
 
         return static_cast<int>(bayer - (bayer_end - width));
+#else
+        return 0;
+#endif
     }
 
     int bayer2RGB(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
@@ -283,7 +286,7 @@ public:
          G R G R | G R G R | G R G R | G R G R
          B G B G | B G B G | B G B G | B G B G
          */
-
+#if CV_SIMD128
 #if CV_NEON
         uint16x8_t masklo = vdupq_n_u16(255);
         uint8x16x3_t pix;
@@ -406,6 +409,9 @@ public:
 #endif
 
         return (int)(bayer - (bayer_end - width));
+#else
+        return 0;
+#endif
     }
 
     int bayer2RGBA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue, const uchar alpha) const
@@ -416,6 +422,7 @@ public:
          B G B G | B G B G | B G B G | B G B G
          */
 
+#if CV_SIMD128
 #if CV_NEON
         uint16x8_t masklo = vdupq_n_u16(255);
         uint8x16x4_t pix;
@@ -537,6 +544,9 @@ public:
 #endif
 
         return (int)(bayer - (bayer_end - width));
+#else
+        return 0;
+#endif
     }
 
     int bayer2RGB_EA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
@@ -556,6 +566,7 @@ public:
              B G B G | B G B G | B G B G | B G B G
              */
 
+#if CV_SIMD128
             v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
             v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
             v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
@@ -643,12 +654,11 @@ public:
         }
 
         return int(bayer - (bayer_end - width));
+#else
+        return 0;
+#endif
     }
 };
-#else
-typedef SIMDBayerStubInterpolator_<uchar> SIMDBayerInterpolator_8u;
-#endif
-
 
 template<typename T, class SIMDInterpolator>
 class Bayer2Gray_Invoker :
