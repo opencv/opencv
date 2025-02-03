@@ -8,8 +8,8 @@
 
 namespace cv { namespace cv_hal_rvv {
 
-#undef cv_hal_dftOcv
-#define cv_hal_dftOcv cv::cv_hal_rvv::dftOcv
+#undef cv_hal_dft
+#define cv_hal_dft cv::cv_hal_rvv::dft
 
 namespace dxt
 {
@@ -40,8 +40,10 @@ namespace dxt
     };
 }
 
+// the algorithm is copied from core/src/dxt.cpp,
+// in the function template static void cv::DFT and cv::DFT_R2, cv::DFT_R3, cv::DFT_R5
 template<typename T>
-inline int dftOcv(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T scale, int* itab,
+inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T scale, int* itab,
                   const Complex<T>* wave, int tab_size, int len, bool isInverse, bool noPermute)
 {
     int n = len;
@@ -584,7 +586,7 @@ inline int dftOcv(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, 
     return CV_HAL_ERROR_OK;
 }
 
-inline int dftOcv(const uchar* src, uchar* dst, int depth, int nf, int *factors, double scale, int* itab, void* wave,
+inline int dft(const uchar* src, uchar* dst, int depth, int nf, int *factors, double scale, int* itab, void* wave,
                   int tab_size, int n, bool isInverse, bool noPermute)
 {
     if( n == 0 )
@@ -593,10 +595,10 @@ inline int dftOcv(const uchar* src, uchar* dst, int depth, int nf, int *factors,
     switch( depth )
     {
     case CV_32F:
-        return dftOcv(reinterpret_cast<const Complex<float>*>(src), reinterpret_cast<Complex<float>*>(dst), nf, factors, (float)scale,
+        return dft(reinterpret_cast<const Complex<float>*>(src), reinterpret_cast<Complex<float>*>(dst), nf, factors, (float)scale,
                       itab, reinterpret_cast<const Complex<float>*>(wave), tab_size, n, isInverse, noPermute);
     case CV_64F:
-        return dftOcv(reinterpret_cast<const Complex<double>*>(src), reinterpret_cast<Complex<double>*>(dst), nf, factors, (double)scale,
+        return dft(reinterpret_cast<const Complex<double>*>(src), reinterpret_cast<Complex<double>*>(dst), nf, factors, (double)scale,
                       itab, reinterpret_cast<const Complex<double>*>(wave), tab_size, n, isInverse, noPermute);
     }
     return CV_HAL_ERROR_NOT_IMPLEMENTED;

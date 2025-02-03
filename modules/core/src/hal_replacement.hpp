@@ -710,14 +710,14 @@ inline int hal_ni_dftFree1D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 @param isInverse OcvDftOptions data
 @param noPermute OcvDftOptions data
  */
-inline int hal_ni_dftOcv(const uchar* src, uchar* dst, int depth, int nf, int *factors, double scale, int* itab, void* wave,
+inline int hal_ni_dft(const uchar* src, uchar* dst, int depth, int nf, int *factors, double scale, int* itab, void* wave,
                          int tab_size, int n, bool isInverse, bool noPermute) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_dftInit1D hal_ni_dftInit1D
 #define cv_hal_dft1D hal_ni_dft1D
 #define cv_hal_dftFree1D hal_ni_dftFree1D
-#define cv_hal_dftOcv hal_ni_dftOcv
+#define cv_hal_dft hal_ni_dft
 //! @endcond
 
 /**
