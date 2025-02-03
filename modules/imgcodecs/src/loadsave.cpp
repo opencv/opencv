@@ -1372,7 +1372,7 @@ bool imencode( const String& ext, InputArray _img,
         else
             code = encoder->writemulti(write_vec, params);
 
-        encoder->throwOnEror();
+        encoder->throwOnError();
         CV_Assert( code );
     }
     catch (const cv::Exception& e)
