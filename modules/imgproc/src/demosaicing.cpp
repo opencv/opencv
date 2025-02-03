@@ -551,6 +551,7 @@ public:
 
     int bayer2RGB_EA(const uchar* bayer, int bayer_step, uchar* dst, int width, int blue) const
     {
+#if CV_SIMD128
         const uchar* bayer_end = bayer + width;
         v_uint16x8 masklow = v_setall_u16(0x00ff);
         v_uint16x8 delta1 = v_setall_u16(1), delta2 = v_setall_u16(2);
@@ -566,7 +567,6 @@ public:
              B G B G | B G B G | B G B G | B G B G
              */
 
-#if CV_SIMD128
             v_uint16x8 r0 = v_reinterpret_as_u16(v_load(bayer));
             v_uint16x8 r1 = v_reinterpret_as_u16(v_load(bayer+bayer_step));
             v_uint16x8 r2 = v_reinterpret_as_u16(v_load(bayer+bayer_step*2));
