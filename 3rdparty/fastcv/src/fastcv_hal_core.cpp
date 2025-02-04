@@ -190,8 +190,8 @@ int fastcv_hal_transpose2d(
 int fastcv_hal_meanStdDev(
     const uchar*      src_data,
     size_t            src_step,
-    int               width,
-    int               height,
+    size_t            width,
+    size_t            height,
     int               src_type,
     double*           mean_val,
     double*           stddev_val,
@@ -217,7 +217,7 @@ int fastcv_hal_meanStdDev(
 
     float32_t mean, variance;
 
-    fcvStatus status = fcvImageIntensityStats_v2(src_data, src_step, 0, 0, width, height,
+    fcvStatus status = fcvImageIntensityStats_v2(src_data, src_step, 0, 0, (int)width, (int)height,
                                    &mean, &variance, FASTCV_BIASED_VARIANCE_ESTIMATOR);
 
     if(mean_val != nullptr)

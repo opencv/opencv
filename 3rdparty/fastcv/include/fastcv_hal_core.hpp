@@ -105,8 +105,8 @@ int fastcv_hal_transpose2d(
 int fastcv_hal_meanStdDev(
     const uchar     * src_data,
     size_t            src_step,
-    int               width,
-    int               height,
+    size_t            width,
+    size_t            height,
     int               src_type,
     double          * mean_val,
     double          * stddev_val,

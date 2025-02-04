@@ -568,16 +568,17 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
 
     if (src.isContinuous() && mask.isContinuous())
     {
-        CALL_HAL(meanStdDev, cv_hal_meanStdDev, src.data, 0, (int)src.total(), 1, src.type(),
+        CALL_HAL(meanStdDev, cv_hal_meanStdDev, src.data, 0, src.total(), static_cast<size_t>(1),
+                 src.type(),
                  _mean.needed() ? mean_mat.ptr<double>() : nullptr,
                  _sdv.needed() ? stddev_mat.ptr<double>() : nullptr,
-                 mask.data, 0);
+                 mask.data, static_cast<size_t>(0));
     }
     else
     {
         if (src.dims <= 2)
         {
-            CALL_HAL(meanStdDev, cv_hal_meanStdDev, src.data, src.step, src.cols, src.rows, src.type(),
+            CALL_HAL(meanStdDev, cv_hal_meanStdDev, src.data, src.step, static_cast<size_t>(src.cols), static_cast<size_t>(src.rows), src.type(),
                      _mean.needed() ? mean_mat.ptr<double>() : nullptr,
                      _sdv.needed() ? stddev_mat.ptr<double>() : nullptr,
                      mask.data, mask.step);

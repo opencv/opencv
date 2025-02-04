@@ -946,7 +946,7 @@ inline int hal_ni_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int 
    @param mask_step Mask array step.
    @sa meanStdDev
 */
-inline int hal_ni_meanStdDev(const uchar* src_data, size_t src_step, int width, int height,
+inline int hal_ni_meanStdDev(const uchar* src_data, size_t src_step, size_t width, size_t height,
                              int src_type, double* mean_val, double* stddev_val, uchar* mask, size_t mask_step)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 

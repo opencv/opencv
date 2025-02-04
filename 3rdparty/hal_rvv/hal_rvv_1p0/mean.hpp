@@ -11,14 +11,14 @@ namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_meanStdDev
 #define cv_hal_meanStdDev cv::cv_hal_rvv::meanStdDev
 
-inline int meanStdDev_8UC1(const uchar* src_data, size_t src_step, int width, int height,
+inline int meanStdDev_8UC1(const uchar* src_data, size_t src_step, size_t width, size_t height,
                             double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
-inline int meanStdDev_8UC4(const uchar* src_data, size_t src_step, int width, int height,
+inline int meanStdDev_8UC4(const uchar* src_data, size_t src_step, size_t width, size_t height,
                             double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
-inline int meanStdDev_32FC1(const uchar* src_data, size_t src_step, int width, int height,
+inline int meanStdDev_32FC1(const uchar* src_data, size_t src_step, size_t width, size_t height,
                             double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
 
-inline int meanStdDev(const uchar* src_data, size_t src_step, int width, int height,
+inline int meanStdDev(const uchar* src_data, size_t src_step, size_t width, size_t height,
                              int src_type, double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
     switch (src_type)
     {
@@ -33,7 +33,7 @@ inline int meanStdDev(const uchar* src_data, size_t src_step, int width, int hei
     }
 }
 
-inline int meanStdDev_8UC1(const uchar* src_data, size_t src_step, int width, int height,
+inline int meanStdDev_8UC1(const uchar* src_data, size_t src_step, size_t width, size_t height,
                              double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
     int nz = 0;
     int vlmax = __riscv_vsetvlmax_e64m8();
@@ -93,7 +93,7 @@ inline int meanStdDev_8UC1(const uchar* src_data, size_t src_step, int width, in
     return CV_HAL_ERROR_OK;
 }
 
-inline int meanStdDev_8UC4(const uchar* src_data, size_t src_step, int width, int height,
+inline int meanStdDev_8UC4(const uchar* src_data, size_t src_step, size_t width, size_t height,
                              double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
     int nz = 0;
     int vlmax = __riscv_vsetvlmax_e64m8();
@@ -163,7 +163,7 @@ inline int meanStdDev_8UC4(const uchar* src_data, size_t src_step, int width, in
     return CV_HAL_ERROR_OK;
 }
 
-inline int meanStdDev_32FC1(const uchar* src_data, size_t src_step, int width, int height,
+inline int meanStdDev_32FC1(const uchar* src_data, size_t src_step, size_t width, size_t height,
                              double* mean_val, double* stddev_val, uchar* mask, size_t mask_step) {
     int nz = 0;
     int vlmax = __riscv_vsetvlmax_e64m4();
