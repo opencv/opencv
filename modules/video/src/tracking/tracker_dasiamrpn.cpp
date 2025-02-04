@@ -57,10 +57,8 @@ Mat sizeCal(const Mat& w, const Mat& h)
 class TrackerDaSiamRPNImpl : public TrackerDaSiamRPN
 {
 public:
-    TrackerDaSiamRPNImpl(const TrackerDaSiamRPN::Params& parameters)
-        : params(parameters)
+    TrackerDaSiamRPNImpl(const TrackerDaSiamRPN::Params& params)
     {
-
         siamRPN = dnn::readNet(params.model);
         siamKernelCL1 = dnn::readNet(params.kernel_cls1);
         siamKernelR1 = dnn::readNet(params.kernel_r1);
@@ -77,11 +75,20 @@ public:
         siamKernelCL1.setPreferableTarget(params.target);
     }
 
+    TrackerDaSiamRPNImpl(const dnn::Net& siam_rpn, const dnn::Net& kernel_cls1, const dnn::Net& kernel_r1)
+    {
+        CV_Assert(!siam_rpn.empty());
+        CV_Assert(!kernel_cls1.empty());
+        CV_Assert(!kernel_r1.empty());
+
+        siamRPN = siam_rpn;
+        siamKernelCL1 = kernel_cls1;
+        siamKernelR1 = kernel_r1;
+    }
+
     void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     bool update(InputArray image, Rect& boundingBox) CV_OVERRIDE;
     float getTrackingScore() CV_OVERRIDE;
-
-    TrackerDaSiamRPN::Params params;
 
 protected:
     dnn::Net siamRPN, siamKernelR1, siamKernelCL1;
@@ -425,16 +432,31 @@ Mat TrackerDaSiamRPNImpl::getSubwindow(Mat& img, const Rect2f& targetBox, float 
 
     return zCrop;
 }
+
 Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const TrackerDaSiamRPN::Params& parameters)
 {
     return makePtr<TrackerDaSiamRPNImpl>(parameters);
+}
+
+Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const dnn::Net& siam_rpn, const dnn::Net& kernel_cls1, const dnn::Net& kernel_r1)
+{
+    return makePtr<TrackerDaSiamRPNImpl>(siam_rpn, kernel_cls1, kernel_r1);
 }
 
 #else  // OPENCV_HAVE_DNN
 Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const TrackerDaSiamRPN::Params& parameters)
 {
     (void)(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use GOTURN, the tracking module needs to be built with opencv_dnn !");
+    CV_Error(cv::Error::StsNotImplemented, "to use DaSiamRPN, the tracking module needs to be built with opencv_dnn !");
+}
+
+Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const dnn::Net& siam_rpn, const dnn::Net& kernel_cls1, const dnn::Net& kernel_r1)
+{
+    (void)(siam_rpn);
+    (void)(kernel_cls1);
+    (void)(kernel_r1);
+    CV_Error(cv::Error::StsNotImplemented, "to use DaSiamRPN, the tracking module needs to be built with opencv_dnn !");
+
 }
 #endif  // OPENCV_HAVE_DNN
 }

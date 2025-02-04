@@ -31,11 +31,16 @@ TrackerGOTURN::Params::Params()
 class TrackerGOTURNImpl : public TrackerGOTURN
 {
 public:
+    TrackerGOTURNImpl(const dnn::Net& model)
+    {
+        CV_Assert(!model.empty());
+        net = model;
+    }
+
     TrackerGOTURNImpl(const TrackerGOTURN::Params& parameters)
-        : params(parameters)
     {
         // Load GOTURN architecture from *.prototxt and pretrained weights from *.caffemodel
-        net = dnn::readNetFromCaffe(params.modelTxt, params.modelBin);
+        net = dnn::readNetFromCaffe(parameters.modelTxt, parameters.modelBin);
         CV_Assert(!net.empty());
     }
 
@@ -48,8 +53,6 @@ public:
             CV_Error(Error::StsInternal, "Set image first");
         boundingBox_ = boundingBox & Rect(Point(0, 0), image_.size());
     }
-
-    TrackerGOTURN::Params params;
 
     dnn::Net net;
     Rect boundingBox_;
@@ -129,10 +132,21 @@ Ptr<TrackerGOTURN> TrackerGOTURN::create(const TrackerGOTURN::Params& parameters
     return makePtr<TrackerGOTURNImpl>(parameters);
 }
 
+Ptr<TrackerGOTURN> TrackerGOTURN::create(const dnn::Net& model)
+{
+    return makePtr<TrackerGOTURNImpl>(model);
+}
+
 #else  // OPENCV_HAVE_DNN
 Ptr<TrackerGOTURN> TrackerGOTURN::create(const TrackerGOTURN::Params& parameters)
 {
     (void)(parameters);
+    CV_Error(cv::Error::StsNotImplemented, "to use GOTURN, the tracking module needs to be built with opencv_dnn !");
+}
+
+Ptr<TrackerGOTURN> TrackerGOTURN::create(const dnn::Net& model)
+{
+    (void)(model);
     CV_Error(cv::Error::StsNotImplemented, "to use GOTURN, the tracking module needs to be built with opencv_dnn !");
 }
 #endif  // OPENCV_HAVE_DNN

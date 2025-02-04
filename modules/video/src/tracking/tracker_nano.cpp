@@ -87,18 +87,26 @@ class TrackerNanoImpl : public TrackerNano
 {
 public:
     TrackerNanoImpl(const TrackerNano::Params& parameters)
-        : params(parameters)
     {
-        backbone = dnn::readNet(params.backbone);
-        neckhead = dnn::readNet(params.neckhead);
+        backbone = dnn::readNet(parameters.backbone);
+        neckhead = dnn::readNet(parameters.neckhead);
 
         CV_Assert(!backbone.empty());
         CV_Assert(!neckhead.empty());
 
-        backbone.setPreferableBackend(params.backend);
-        backbone.setPreferableTarget(params.target);
-        neckhead.setPreferableBackend(params.backend);
-        neckhead.setPreferableTarget(params.target);
+        backbone.setPreferableBackend(parameters.backend);
+        backbone.setPreferableTarget(parameters.target);
+        neckhead.setPreferableBackend(parameters.backend);
+        neckhead.setPreferableTarget(parameters.target);
+    }
+
+    TrackerNanoImpl(const dnn::Net& _backbone, const dnn::Net& _neckhead)
+    {
+        CV_Assert(!_backbone.empty());
+        CV_Assert(!_neckhead.empty());
+
+        backbone = _backbone;
+        neckhead = _neckhead;
     }
 
     void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
@@ -109,8 +117,6 @@ public:
     std::vector<float> targetSz = {0, 0};  // H and W of bounding box
     std::vector<float> targetPos = {0, 0}; // center point of bounding box (x, y)
     float tracking_score;
-
-    TrackerNano::Params params;
 
     struct trackerConfig
     {
@@ -349,10 +355,22 @@ Ptr<TrackerNano> TrackerNano::create(const TrackerNano::Params& parameters)
     return makePtr<TrackerNanoImpl>(parameters);
 }
 
+Ptr<TrackerNano> TrackerNano::create(const dnn::Net& backbone, const dnn::Net& neckhead)
+{
+    return makePtr<TrackerNanoImpl>(backbone, neckhead);
+}
+
 #else  // OPENCV_HAVE_DNN
 Ptr<TrackerNano> TrackerNano::create(const TrackerNano::Params& parameters)
 {
     CV_UNUSED(parameters);
+    CV_Error(cv::Error::StsNotImplemented, "to use NanoTrack, the tracking module needs to be built with opencv_dnn !");
+}
+
+Ptr<TrackerNano> TrackerNano::create(const dnn::Net& backbone, const dnn::Net& neckhead)
+{
+    CV_UNUSED(backbone);
+    CV_UNUSED(neckhead);
     CV_Error(cv::Error::StsNotImplemented, "to use NanoTrack, the tracking module needs to be built with opencv_dnn !");
 }
 #endif  // OPENCV_HAVE_DNN

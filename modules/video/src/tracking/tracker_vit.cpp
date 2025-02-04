@@ -42,16 +42,26 @@ class TrackerVitImpl : public TrackerVit
 {
 public:
     TrackerVitImpl(const TrackerVit::Params& parameters)
-        : params(parameters)
     {
-        net = dnn::readNet(params.net);
+        net = dnn::readNet(parameters.net);
         CV_Assert(!net.empty());
 
-        net.setPreferableBackend(params.backend);
-        net.setPreferableTarget(params.target);
+        net.setPreferableBackend(parameters.backend);
+        net.setPreferableTarget(parameters.target);
 
-        i2bp.mean = params.meanvalue * 255.0;
-        i2bp.scalefactor = (1.0 / params.stdvalue) * (1 / 255.0);
+        i2bp.mean = parameters.meanvalue * 255.0;
+        i2bp.scalefactor = (1.0 / parameters.stdvalue) * (1 / 255.0);
+        tracking_score_threshold = parameters.tracking_score_threshold;
+    }
+
+    TrackerVitImpl(const dnn::Net& model, Scalar meanvalue, Scalar stdvalue, float _tracking_score_threshold)
+    {
+        CV_Assert(!model.empty());
+
+        net = model;
+        i2bp.mean = meanvalue * 255.0;
+        i2bp.scalefactor = (1.0 / stdvalue) * (1 / 255.0);
+        tracking_score_threshold = _tracking_score_threshold;
     }
 
     void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
@@ -61,7 +71,7 @@ public:
     Rect rect_last;
     float tracking_score;
 
-    TrackerVit::Params params;
+    float tracking_score_threshold;
     dnn::Image2BlobParams i2bp;
 
 
@@ -189,7 +199,7 @@ bool TrackerVitImpl::update(InputArray image_, Rect &boundingBoxRes)
     minMaxLoc(conf_map, nullptr, &maxVal, nullptr, &maxLoc);
     tracking_score = static_cast<float>(maxVal);
 
-    if (tracking_score >= params.tracking_score_threshold) {
+    if (tracking_score >= tracking_score_threshold) {
         float cx = (maxLoc.x + offset_map.at<float>(0, maxLoc.y, maxLoc.x)) / 16;
         float cy = (maxLoc.y + offset_map.at<float>(1, maxLoc.y, maxLoc.x)) / 16;
         float w = size_map.at<float>(0, maxLoc.y, maxLoc.x);
@@ -213,11 +223,26 @@ Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params& parameters)
     return makePtr<TrackerVitImpl>(parameters);
 }
 
+Ptr<TrackerVit> TrackerVit::create(const dnn::Net& model, Scalar meanvalue, Scalar stdvalue, float tracking_score_threshold)
+{
+    return makePtr<TrackerVitImpl>(model, meanvalue, stdvalue, tracking_score_threshold);
+}
+
 #else  // OPENCV_HAVE_DNN
 Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params& parameters)
 {
     CV_UNUSED(parameters);
     CV_Error(Error::StsNotImplemented, "to use vittrack, the tracking module needs to be built with opencv_dnn !");
 }
+
+Ptr<TrackerVit> TrackerVit::create(const dnn::Net& model, Scalar meanvalue, Scalar stdvalue, float tracking_score_threshold)
+{
+    CV_UNUSED(model);
+    CV_UNUSED(meanvalue);
+    CV_UNUSED(stdvalue);
+    CV_UNUSED(tracking_score_threshold);
+    CV_Error(Error::StsNotImplemented, "to use vittrack, the tracking module needs to be built with opencv_dnn !");
+}
+
 #endif  // OPENCV_HAVE_DNN
 }
