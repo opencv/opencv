@@ -514,19 +514,11 @@ GifEncoder::~GifEncoder() {
     close();
 }
 
-bool GifEncoder::isFormatSupported(int depth) const {
-    return depth == CV_8U;
-}
-
-bool GifEncoder::write(const Mat &img, const std::vector<int> &params) {
-    std::vector<Mat> img_vec(1, img);
-    return writemulti(img_vec, params);
-}
-
 bool GifEncoder::writeanimation(const Animation& animation, const std::vector<int>& params) {
     if (animation.frames.empty()) {
         return false;
     }
+    CV_CheckDepthEQ(animation.frames[0].depth(), CV_8U, "GIF encoder supports only 8-bit unsigned images");
 
     if (m_buf) {
         if (!strm.open(*m_buf)) {
