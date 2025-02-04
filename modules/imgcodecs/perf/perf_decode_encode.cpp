@@ -68,6 +68,7 @@ PERF_TEST_P(Decode, bgr, testing::ValuesIn(exts))
     String filename = getDataPath("perf/1920x1080.png");
 
     Mat src = imread(filename);
+    EXPECT_FALSE(src.empty()) << "Cannot open test image perf/1920x1080.png";
     vector<uchar> buf;
     EXPECT_TRUE(imencode(GetParam(), src, buf));
 
@@ -81,6 +82,7 @@ PERF_TEST_P(Decode, rgb, testing::ValuesIn(exts))
     String filename = getDataPath("perf/1920x1080.png");
 
     Mat src = imread(filename);
+    EXPECT_FALSE(src.empty()) << "Cannot open test image perf/1920x1080.png";
     vector<uchar> buf;
     EXPECT_TRUE(imencode(GetParam(), src, buf));
 
@@ -94,6 +96,7 @@ PERF_TEST_P(Encode, bgr, testing::ValuesIn(exts))
     String filename = getDataPath("perf/1920x1080.png");
 
     Mat src = imread(filename);
+    EXPECT_FALSE(src.empty()) << "Cannot open test image perf/1920x1080.png";
     vector<uchar> buf;
 
     TEST_CYCLE() imencode(GetParam(), src, buf);
@@ -109,11 +112,12 @@ PERF_TEST_P(Encode, multi, testing::ValuesIn(exts_multi))
 {
     String filename = getDataPath("perf/1920x1080.png");
     vector<Mat> vec;
-    imreadmulti(filename, vec);
+    EXPECT_TRUE(imreadmulti(filename, vec));
     vec.push_back(vec.back().clone());
     circle(vec.back(), Point(100, 100), 45, Scalar(0, 0, 255, 0), 2, LINE_AA);
     vector<uchar> buf;
-    imwrite("test" + GetParam(), vec);
+    EXPECT_TRUE(imwrite("test" + GetParam(), vec));
+
     TEST_CYCLE() imencode(GetParam(), vec, buf);
 
     std::cout << "Encoded buffer size: " << buf.size()
