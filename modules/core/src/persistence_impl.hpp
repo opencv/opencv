@@ -151,6 +151,8 @@ public:
 
         int getInt32();
 
+        int64_t getInt64();
+
         double getFloat64();
 
         bool endOfStream() const;

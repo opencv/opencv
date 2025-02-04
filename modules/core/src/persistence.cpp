@@ -1818,6 +1818,15 @@ int FileStorage::Impl::Base64Decoder::getInt32() {
     return ival;
 }
 
+int64_t FileStorage::Impl::Base64Decoder::getInt64() {
+    size_t sz = decoded.size();
+    if (ofs + 8 > sz && !readMore(8))
+        return 0;
+    int64_t ival = readLong(&decoded[ofs]);
+    ofs += 8;
+    return ival;
+}
+
 double FileStorage::Impl::Base64Decoder::getFloat64() {
     size_t sz = decoded.size();
     if (ofs + 8 > sz && !readMore(8))
@@ -1875,6 +1884,12 @@ char *FileStorage::Impl::parseBase64(char *ptr, int indent, FileNode &collection
                         break;
                     case CV_32S:
                         ival = base64decoder.getInt32();
+                        break;
+                    case CV_64U:
+                        ival = base64decoder.getInt64();
+                        break;
+                    case CV_64S:
+                        ival = base64decoder.getInt64();
                         break;
                     case CV_32F: {
                         Cv32suf v;
@@ -2468,7 +2483,7 @@ size_t FileNode::rawSize() const
         p += 4;
     size_t sz0 = (size_t)(p - p0);
     if( tp == INT )
-        return sz0 + 4;
+        return sz0 + 8;
     if( tp == REAL )
         return sz0 + 8;
     if( tp == NONE )
@@ -2502,13 +2517,7 @@ void FileNode::setValue( int type, const void* value, int len )
         sz += 4;
 
     if( type == INT )
-    {
-        int64_t ival = *(const int64_t*)value;
-        if (ival > INT_MAX || ival < INT_MIN)
-            sz += 8;
-        else
-            sz += 4;
-    }
+        sz += 8;
     else if( type == REAL )
         sz += 8;
     else if( type == STRING )
@@ -2529,10 +2538,7 @@ void FileNode::setValue( int type, const void* value, int len )
     if( type == INT )
     {
         int64_t ival = *(const int64_t*)value;
-        if (sz > 8)
-            writeInt(p, ival);
-        else
-            writeInt(p, static_cast<int>(ival));
+        writeInt(p, ival);
     }
     else if( type == REAL )
     {
@@ -2683,7 +2689,7 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                 offset = alignSize( offset, elem_size );
                 uchar* data = data0 + offset;
 
-                for( int i = 0; i < count; i++ )
+                for( int i = 0; i < count; i++, ++(*this) )
                 {
                     FileNode node = *(*this);
                     if( node.isInt() )
@@ -2807,11 +2813,6 @@ FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, void* _data0, si
                     }
                     else
                         CV_Error( Error::StsError, "readRawData can only be used to read plain sequences of numbers" );
-                    ++(*this);
-                    if (elem_type == CV_64S)
-                    {
-                        ofs += 4;
-                    }
                 }
                 offset = (int)(data - data0);
             }
