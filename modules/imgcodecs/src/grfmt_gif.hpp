@@ -83,9 +83,6 @@ public:
     GifEncoder();
     ~GifEncoder() CV_OVERRIDE;
 
-    bool isFormatSupported(int depth) const CV_OVERRIDE;
-
-    bool write(const Mat& img, const std::vector<int>& params) CV_OVERRIDE;
     bool writeanimation(const Animation& animation, const std::vector<int>& params) CV_OVERRIDE;
 
     ImageEncoder newEncoder() const CV_OVERRIDE;

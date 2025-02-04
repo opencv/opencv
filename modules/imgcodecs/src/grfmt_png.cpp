@@ -1412,6 +1412,9 @@ void PngEncoder::deflateRectFin(unsigned char* zbuf, uint32_t* zsize, int bpp, i
 
 bool PngEncoder::writeanimation(const Animation& animation, const std::vector<int>& params)
 {
+    int frame_type = animation.frames[0].type();
+    int frame_depth = animation.frames[0].depth();
+    CV_CheckType(frame_type, frame_depth == CV_8U || frame_depth == CV_16U, "APNG decoder supports only 8 or 16 bit unsigned images");
     int compression_level = 6;
     int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
     bool isBilevel = false;
@@ -1435,7 +1438,8 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         }
     }
 
-    CV_UNUSED(isBilevel);
+    if (isBilevel)
+        CV_LOG_WARNING(NULL, "IMWRITE_PNG_BILEVEL parameter is not supported yet.");
     uint32_t first =0;
     uint32_t loops= animation.loop_count;
     uint32_t coltype= animation.frames[0].channels() == 1 ? PNG_COLOR_TYPE_GRAY : animation.frames[0].channels() == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA;

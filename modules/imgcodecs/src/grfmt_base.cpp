@@ -140,6 +140,11 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
     return true;
 }
 
+bool BaseImageEncoder::write(const Mat &img, const std::vector<int> &params) {
+    std::vector<Mat> img_vec(1, img);
+    return writemulti(img_vec, params);
+}
+
 bool BaseImageEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
 {
     if(img_vec.size() > 1)
@@ -157,6 +162,7 @@ bool BaseImageEncoder::writemulti(const std::vector<Mat>& img_vec, const std::ve
 
 bool BaseImageEncoder::writeanimation(const Animation&, const std::vector<int>& )
 {
+    CV_LOG_WARNING(NULL, "No Animation encoder for specified file extension");
     return false;
 }
 
@@ -165,7 +171,7 @@ ImageEncoder BaseImageEncoder::newEncoder() const
     return ImageEncoder();
 }
 
-void BaseImageEncoder::throwOnEror() const
+void BaseImageEncoder::throwOnError() const
 {
     if(!m_last_error.empty())
     {
