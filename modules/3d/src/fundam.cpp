@@ -353,6 +353,11 @@ Mat findHomography( InputArray _points1, InputArray _points2,
 
     if( result && npoints > 4 && method != RHO)
     {
+        // save the original points before compressing
+        const int npoints_input = npoints;
+        const Mat src_input = src.clone();
+        const Mat dst_input = dst.clone();
+
         compressElems( src.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
         npoints = compressElems( dst.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
         if( npoints > 0 )
@@ -414,6 +419,16 @@ Mat findHomography( InputArray _points1, InputArray _points2,
                            .setGeodesic(true));
             solver.optimize();
             H.convertTo(H, H.type(), scaleFor(H.at<double>(2, 2)));
+
+            // find new inliers
+            const float thr_sqr = static_cast<float>(ransacReprojThreshold * ransacReprojThreshold);
+            cv::Mat errors;
+            cb->computeError(src_input, dst_input, H, errors);
+            uchar* maskptr = tempMask.ptr<uchar>();
+            const float * const errors_ptr = errors.ptr<float>();
+            for (int i = 0; i < npoints_input; i++) {
+                maskptr[i] = static_cast<uchar>(errors_ptr[i] <= thr_sqr);
+            }
         }
     }
 
