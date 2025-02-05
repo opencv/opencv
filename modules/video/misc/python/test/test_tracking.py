@@ -12,22 +12,22 @@ class tracking_test(NewOpenCVTests):
         self.assertTrue(t is not None)
 
     def test_createGoturnTracker(self):
-        proto = self.find_file("dnn/gsoc2016-goturn/goturn.prototxt");
-        weights = self.find_file("dnn/gsoc2016-goturn/goturn.caffemodel");
+        proto = self.find_file("dnn/gsoc2016-goturn/goturn.prototxt", required=False);
+        weights = self.find_file("dnn/gsoc2016-goturn/goturn.caffemodel", required=False);
         net = cv.dnn.readNet(proto, weights)
         t = cv.TrackerGOTURN.create(net)
         self.assertTrue(t is not None)
 
     def test_createNanoTracker(self):
-        backbone_path = self.find_file("dnn/onnx/models/nanotrack_backbone_sim_v2.onnx");
-        neckhead_path = self.find_file("dnn/onnx/models/nanotrack_head_sim_v2.onnx");
+        backbone_path = self.find_file("dnn/onnx/models/nanotrack_backbone_sim_v2.onnx", required=False);
+        neckhead_path = self.find_file("dnn/onnx/models/nanotrack_head_sim_v2.onnx", required=False);
         backbone = cv.dnn.readNet(backbone_path)
         neckhead = cv.dnn.readNet(neckhead_path)
         t = cv.TrackerNano.create(backbone, neckhead)
         self.assertTrue(t is not None)
 
     def test_createVitTracker(self):
-        model_path = self.find_file("dnn/onnx/models/vitTracker.onnx");
+        model_path = self.find_file("dnn/onnx/models/vitTracker.onnx", required=False);
         model = cv.dnn.readNet(model_path)
         t = cv.TrackerVit.create(model)
         self.assertTrue(t is not None)

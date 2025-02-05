@@ -234,15 +234,5 @@ Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params& parameters)
     CV_UNUSED(parameters);
     CV_Error(Error::StsNotImplemented, "to use vittrack, the tracking module needs to be built with opencv_dnn !");
 }
-
-Ptr<TrackerVit> TrackerVit::create(const dnn::Net& model, Scalar meanvalue, Scalar stdvalue, float tracking_score_threshold)
-{
-    CV_UNUSED(model);
-    CV_UNUSED(meanvalue);
-    CV_UNUSED(stdvalue);
-    CV_UNUSED(tracking_score_threshold);
-    CV_Error(Error::StsNotImplemented, "to use vittrack, the tracking module needs to be built with opencv_dnn !");
-}
-
 #endif  // OPENCV_HAVE_DNN
 }

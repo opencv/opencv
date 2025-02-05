@@ -914,7 +914,7 @@ public:
 #ifdef HAVE_OPENCV_DNN
     /** @brief Constructor
      *  @param backbone pre-loaded backbone model
-     *  @param backbone pre-loaded neckhead model
+     *  @param neckhead pre-loaded neckhead model
      */
     static CV_WRAP
     Ptr<TrackerNano> create(const dnn::Net& backbone, const dnn::Net& neckhead);

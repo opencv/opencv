@@ -366,12 +366,5 @@ Ptr<TrackerNano> TrackerNano::create(const TrackerNano::Params& parameters)
     CV_UNUSED(parameters);
     CV_Error(cv::Error::StsNotImplemented, "to use NanoTrack, the tracking module needs to be built with opencv_dnn !");
 }
-
-Ptr<TrackerNano> TrackerNano::create(const dnn::Net& backbone, const dnn::Net& neckhead)
-{
-    CV_UNUSED(backbone);
-    CV_UNUSED(neckhead);
-    CV_Error(cv::Error::StsNotImplemented, "to use NanoTrack, the tracking module needs to be built with opencv_dnn !");
-}
 #endif  // OPENCV_HAVE_DNN
 }

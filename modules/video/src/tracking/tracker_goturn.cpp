@@ -143,12 +143,6 @@ Ptr<TrackerGOTURN> TrackerGOTURN::create(const TrackerGOTURN::Params& parameters
     (void)(parameters);
     CV_Error(cv::Error::StsNotImplemented, "to use GOTURN, the tracking module needs to be built with opencv_dnn !");
 }
-
-Ptr<TrackerGOTURN> TrackerGOTURN::create(const dnn::Net& model)
-{
-    (void)(model);
-    CV_Error(cv::Error::StsNotImplemented, "to use GOTURN, the tracking module needs to be built with opencv_dnn !");
-}
 #endif  // OPENCV_HAVE_DNN
 
 }  // namespace cv

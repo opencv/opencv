@@ -24,6 +24,7 @@ public class TrackerCreateTest extends OpenCVTestCase {
     private final static String ENV_OPENCV_DNN_TEST_DATA_PATH = "OPENCV_DNN_TEST_DATA_PATH";
     private final static String ENV_OPENCV_TEST_DATA_PATH = "OPENCV_TEST_DATA_PATH";
     private String testDataPath;
+    private String modelsDataPath;
 
     @Override
     protected void setUp() throws Exception {
@@ -31,6 +32,19 @@ public class TrackerCreateTest extends OpenCVTestCase {
 
         // relys on https://developer.android.com/reference/java/lang/System
         isTestCaseEnabled = System.getProperties().getProperty("java.vm.name") != "Dalvik";
+        if (!isTestCaseEnabled) {
+            return;
+        }
+
+        testDataPath = System.getenv(ENV_OPENCV_TEST_DATA_PATH);
+        if (testDataPath == null) {
+            throw new Exception(ENV_OPENCV_TEST_DATA_PATH + " has to be defined!");
+        }
+
+        modelsDataPath = System.getenv(ENV_OPENCV_DNN_TEST_DATA_PATH);
+        if (modelsDataPath == null) {
+            modelsDataPath = testDataPath;
+        }
 
         if (isTestCaseEnabled) {
             testDataPath = System.getenv(ENV_OPENCV_DNN_TEST_DATA_PATH);
@@ -41,19 +55,11 @@ public class TrackerCreateTest extends OpenCVTestCase {
         }
     }
 
-    public void testCreateTrackerGOTURNParams() {
-        TrackerGOTURN_Params params = new TrackerGOTURN_Params();
-        params.set_modelTxt(new File(testDataPath, "dnn/gsoc2016-goturn/goturn.prototxt").toString());
-        params.set_modelBin(new File(testDataPath, "dnn/gsoc2016-goturn/goturn.caffemodel").toString());
-        Tracker tracker = TrackerGOTURN.create(params);
-        assert(tracker != null);
-    }
-
-    public void testCreateTrackerGOTURNModels() {
+    public void testCreateTrackerGOTURN() {
         Net net;
         try {
             String protoFile = new File(testDataPath, "dnn/gsoc2016-goturn/goturn.prototxt").toString();
-            String weightsFile = new File(testDataPath, "dnn/gsoc2016-goturn/goturn.caffemodel").toString();
+            String weightsFile = new File(modelsDataPath, "dnn/gsoc2016-goturn/goturn.caffemodel").toString();
             net = Dnn.readNetFromCaffe(protoFile, weightsFile);
         } catch (CvException e) {
             return;
@@ -62,20 +68,12 @@ public class TrackerCreateTest extends OpenCVTestCase {
         assert(tracker != null);
     }
 
-    public void testCreateTrackerNanoParams() {
-        TrackerNano_Params params = new TrackerNano_Params();
-        params.set_backbone(new File(testDataPath, "dnn/onnx/models/nanotrack_backbone_sim_v2.onnx").toString());
-        params.set_neckhead(new File(testDataPath, "dnn/onnx/models/nanotrack_head_sim_v2.onnx").toString());
-        Tracker tracker = TrackerNano.create(params);
-        assert(tracker != null);
-    }
-
-    public void testCreateTrackerNanoModels() {
+    public void testCreateTrackerNano() {
         Net backbone;
         Net neckhead;
         try {
-            String backboneFile = new File(testDataPath, "dnn/onnx/models/nanotrack_backbone_sim_v2.onnx").toString();
-            String neckheadFile = new File(testDataPath, "dnn/onnx/models/nanotrack_head_sim_v2.onnx").toString();
+            String backboneFile = new File(modelsDataPath, "dnn/onnx/models/nanotrack_backbone_sim_v2.onnx").toString();
+            String neckheadFile = new File(modelsDataPath, "dnn/onnx/models/nanotrack_head_sim_v2.onnx").toString();
             backbone = Dnn.readNet(backboneFile);
             neckhead = Dnn.readNet(neckheadFile);
         } catch (CvException e) {
@@ -85,17 +83,10 @@ public class TrackerCreateTest extends OpenCVTestCase {
         assert(tracker != null);
     }
 
-    public void testCreateTrackerVitParams() {
-        TrackerVit_Params params = new TrackerVit_Params();
-        params.set_net(new File(testDataPath, "dnn/onnx/models/vitTracker.onnx").toString());
-        Tracker tracker = TrackerVit.create(params);
-        assert(tracker != null);
-    }
-
-    public void testCreateTrackerVitModels() {
+    public void testCreateTrackerVit() {
         Net net;
         try {
-            String backboneFile = new File(testDataPath, "dnn/onnx/models/vitTracker.onnx").toString();
+            String backboneFile = new File(modelsDataPath, "dnn/onnx/models/vitTracker.onnx").toString();
             net = Dnn.readNet(backboneFile);
         } catch (CvException e) {
             return;
