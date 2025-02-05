@@ -1769,6 +1769,8 @@ TEST_P(Core_Mat_arrays, SplitMerge)
 
     for (size_t i = 0; i < dst.size(); ++i)
     {
+        std::cout << "src:"<< src[i] << std::endl;
+        std::cout << "dst:" << dst[i] << std::endl;
         EXPECT_EQ(0, cvtest::norm(src[i], dst[i], NORM_INF));
     }
 }
