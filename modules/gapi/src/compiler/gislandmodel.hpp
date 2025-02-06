@@ -8,8 +8,11 @@
 #ifndef OPENCV_GAPI_GISLANDMODEL_HPP
 #define OPENCV_GAPI_GISLANDMODEL_HPP
 
-#include <unordered_set>
+#include <unordered_set> // unordered_map
 #include <memory>        // shared_ptr
+#include <exception>     // exception_ptr
+#include <string>        // string
+#include <cstddef>       // size_t
 
 #include <ade/graph.hpp>
 #include <ade/typed_graph.hpp>
