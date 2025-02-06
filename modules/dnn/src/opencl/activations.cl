@@ -360,7 +360,8 @@ __kernel void SignForward(const int n, __global T* in, __global T* out)
         out[index] = in[index] > 0.f ? 1.0f : ((in[index] < 0.f) ? -1.0f : 0.0f);
 }
 
-__kernel void ReciprocalForward(const int n, __global T* in, __global T* out)
+__kernel void 
+calForward(const int n, __global T* in, __global T* out)
 {
     int index = get_global_id(0);
     if(index < n)
