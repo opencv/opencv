@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+=======
+
+>>>>>>> fa82ee68644a0f8b73f37b43ecbed6f97c8047b2
 #ifndef OPENCV_HAL_RVV_SPLIT_HPP_INCLUDED
 #define OPENCV_HAL_RVV_SPLIT_HPP_INCLUDED 
 #include <riscv_vector.h>
@@ -155,8 +159,32 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
             dst3[i] = src[i * cn + 3];
         }
     }
-
-    // Обработка оставшихся каналов (блоками по 4)
+//   for (; k < cn; k += 4) {
+//         uchar *dst0 = dst[k], *dst1 = dst[k+1], *dst2 = dst[k+2], *dst3 = dst[k+3];
+//         i = 0;
+//         // Векторная обработка
+//         for (; i <= len - vl; i += vl) {
+//             auto a = __riscv_vlse8_v_u8m1(src + k + 0 + i * cn, cn * sizeof(uchar), vl);
+//             auto b = __riscv_vlse8_v_u8m1(src + k + 1 + i * cn, cn * sizeof(uchar), vl);
+//             auto c = __riscv_vlse8_v_u8m1(src + k + 2 + i * cn, cn * sizeof(uchar), vl);
+//             auto d = __riscv_vlse8_v_u8m1(src + k + 3 + i * cn, cn * sizeof(uchar), vl);
+//             __riscv_vse8_v_u8m1(dst0 + i, a, vl);
+//             __riscv_vse8_v_u8m1(dst1 + i, b, vl);
+//             __riscv_vse8_v_u8m1(dst2 + i, c, vl);
+//             __riscv_vse8_v_u8m1(dst3 + i, d, vl);
+//         }
+//         // Скалярный остаток
+//         #if defined(__clang__)
+//         #pragma clang loop vectorize(disable)
+//         #endif
+//         for (; i < len; i++) {
+//             int j = k + i * cn;
+//             dst0[i] = src[j];
+//             dst1[i] = src[j + 1];
+//             dst2[i] = src[j + 2];
+//             dst3[i] = src[j + 3];
+//         }
+//     Обработка оставшихся каналов (блоками по 4)
     for (; k < cn; k += 4) {
         uchar *dst0 = dst[k], *dst1 = dst[k+1], *dst2 = dst[k+2], *dst3 = dst[k+3];
         i = 0;
@@ -193,10 +221,10 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
             auto b4 = __riscv_vlse8_v_u8m1(src + k + 1 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
             auto c4 = __riscv_vlse8_v_u8m1(src + k + 2 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
             auto d4 = __riscv_vlse8_v_u8m1(src + k + 3 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i + vl + vl + vl, a3, vl);
-            __riscv_vse8_v_u8m1(dst1 + i + vl + vl + vl, b3, vl);
-            __riscv_vse8_v_u8m1(dst2 + i + vl + vl + vl, c3, vl);
-            __riscv_vse8_v_u8m1(dst3 + i + vl + vl + vl, d3, vl);
+            __riscv_vse8_v_u8m1(dst0 + i + vl + vl + vl, a4, vl);
+            __riscv_vse8_v_u8m1(dst1 + i + vl + vl + vl, b4, vl);
+            __riscv_vse8_v_u8m1(dst2 + i + vl + vl + vl, c4, vl);
+            __riscv_vse8_v_u8m1(dst3 + i + vl + vl + vl, d4, vl);
         }
         // Скалярный остаток
         #if defined(__clang__)
