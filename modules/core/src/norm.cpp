@@ -623,9 +623,20 @@ double norm( InputArray _src, int normType, InputArray _mask )
 #endif
 
     Mat src = _src.getMat(), mask = _mask.getMat();
+    int depth = src.depth(), cn = src.channels();
+    if( src.dims <= 2 )
+    {
+        double result;
+        CALL_HAL_RET(norm, cv_hal_norm, result, src.data, src.step, mask.data, mask.step, src.cols, src.rows, src.type(), normType);
+    }
+    else if( src.isContinuous() && mask.isContinuous() )
+    {
+        double result;
+        CALL_HAL_RET(norm, cv_hal_norm, result, src.data, 0, mask.data, 0, (int)src.total(), 1, src.type(), normType);
+    }
+
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(src, normType, mask, _result), _result);
 
-    int depth = src.depth(), cn = src.channels();
     if( src.isContinuous() && mask.empty() )
     {
         size_t len = src.total()*cn;
@@ -1108,15 +1119,25 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
                 _result)
 #endif
 
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    int depth = src1.depth(), cn = src1.channels();
+    if( src1.dims <= 2 )
+    {
+        double result;
+        CALL_HAL_RET(normDiff, cv_hal_normDiff, result, src1.data, src1.step, src2.data, src2.step, mask.data, mask.step, src1.cols, src1.rows, src1.type(), normType);
+    }
+    else if( src1.isContinuous() && src2.isContinuous() && mask.isContinuous() )
+    {
+        double result;
+        CALL_HAL_RET(normDiff, cv_hal_normDiff, result, src1.data, 0, src2.data, 0, mask.data, 0, (int)src1.total(), 1, src1.type(), normType);
+    }
+
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(_src1, _src2, normType, _mask, _result), _result);
 
     if( normType & CV_RELATIVE )
     {
         return norm(_src1, _src2, normType & ~CV_RELATIVE, _mask)/(norm(_src2, normType, _mask) + DBL_EPSILON);
     }
-
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
-    int depth = src1.depth(), cn = src1.channels();
 
     normType &= 7;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
