@@ -10,6 +10,7 @@
 
 #include <unordered_set>
 #include <memory>        // shared_ptr
+#include <exception>     // exception_ptr
 
 #include <ade/graph.hpp>
 #include <ade/typed_graph.hpp>
