@@ -134,6 +134,7 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
                typenum == NPY_USHORT ? CV_16U :
                typenum == NPY_SHORT ? CV_16S :
                typenum == NPY_INT ? CV_32S :
+               typenum == NPY_UINT32 ? CV_32U :
                typenum == NPY_INT32 ? CV_32S :
                typenum == NPY_HALF ? CV_16F :
                typenum == NPY_FLOAT ? CV_32F :
