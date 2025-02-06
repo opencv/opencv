@@ -872,15 +872,11 @@ void setWindowTitle_COCOA(const cv::String& winname, const cv::String& title)
         cv::namedWindow(winname);
         window = cvGetWindow(winname.c_str());
     }
-
     if (window == NULL)
         CV_Error(cv::Error::StsNullPtr, "NULL window");
-
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-
     NSString *windowTitle = [NSString stringWithFormat:@"%s", title.c_str()];
     [window setTitle:windowTitle];
-
     [localpool drain];
 }
 
@@ -963,14 +959,14 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 
     //modified code using ternary operator:
     if ([event type] == NSLeftMouseDown) {
-    [self cvSendMouseEvent:event 
-                      type:([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_RBUTTONDOWN : CV_EVENT_LBUTTONDOWN 
+    [self cvSendMouseEvent:event
+                      type:([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_RBUTTONDOWN : CV_EVENT_LBUTTONDOWN
                      flags:flags | (([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_FLAG_RBUTTON : CV_EVENT_FLAG_LBUTTON)];
 }
 
 if ([event type] == NSLeftMouseUp) {
-    [self cvSendMouseEvent:event 
-                      type:([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_RBUTTONUP : CV_EVENT_LBUTTONUP 
+    [self cvSendMouseEvent:event
+                      type:([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_RBUTTONUP : CV_EVENT_LBUTTONUP
                      flags:flags | (([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_FLAG_RBUTTON : CV_EVENT_FLAG_LBUTTON)];
 }
 
