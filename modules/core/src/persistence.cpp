@@ -1818,6 +1818,15 @@ int FileStorage::Impl::Base64Decoder::getInt32() {
     return ival;
 }
 
+int64_t FileStorage::Impl::Base64Decoder::getInt64() {
+    size_t sz = decoded.size();
+    if (ofs + 8 > sz && !readMore(8))
+        return 0;
+    int64_t ival = readLong(&decoded[ofs]);
+    ofs += 8;
+    return ival;
+}
+
 double FileStorage::Impl::Base64Decoder::getFloat64() {
     size_t sz = decoded.size();
     if (ofs + 8 > sz && !readMore(8))
@@ -1875,6 +1884,12 @@ char *FileStorage::Impl::parseBase64(char *ptr, int indent, FileNode &collection
                         break;
                     case CV_32S:
                         ival = base64decoder.getInt32();
+                        break;
+                    case CV_64U:
+                        ival = base64decoder.getInt64();
+                        break;
+                    case CV_64S:
+                        ival = base64decoder.getInt64();
                         break;
                     case CV_32F: {
                         Cv32suf v;

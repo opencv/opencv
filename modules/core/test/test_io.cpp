@@ -601,17 +601,31 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         std::vector<data_t> rawdata;
 
         cv::Mat _em_out, _em_in;
-        cv::Mat _2d_out, _2d_in;
+        cv::Mat _2d_out_u8, _2d_in_u8;
+        cv::Mat _2d_out_i64, _2d_in_i64;
+        cv::Mat _2d_out_u64, _2d_in_u64;
         cv::Mat _nd_out, _nd_in;
         cv::Mat _rd_out(8, 16, CV_64FC1), _rd_in;
 
         {   /* init */
 
-            /* a normal mat */
-            _2d_out = cv::Mat(10, 20, CV_8UC3, cv::Scalar(1U, 2U, 127U));
-            for (int i = 0; i < _2d_out.rows; ++i)
-                for (int j = 0; j < _2d_out.cols; ++j)
-                    _2d_out.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
+            /* a normal mat u8 */
+            _2d_out_u8 = cv::Mat(10, 20, CV_8UC3, cv::Scalar(1U, 2U, 127U));
+            for (int i = 0; i < _2d_out_u8.rows; ++i)
+                for (int j = 0; j < _2d_out_u8.cols; ++j)
+                    _2d_out_u8.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
+
+            /* a normal mat i64 */
+            _2d_out_i64 = cv::Mat(10, 20, CV_64SC3, cv::Scalar(1LL, 2LL, 2251799813685247LL));
+            for (int i = 0; i < _2d_out_i64.rows; ++i)
+                for (int j = 0; j < _2d_out_i64.cols; ++j)
+                    _2d_out_i64.at<cv::Vec3l>(i, j)[1] = i + j;
+
+            /* a normal mat u64 */
+            _2d_out_u64 = cv::Mat(10, 20, CV_64UC3, cv::Scalar(1ULL, 2ULL, 4503599627370495ULL));
+            for (int i = 0; i < _2d_out_u64.rows; ++i)
+                for (int j = 0; j < _2d_out_u64.cols; ++j)
+                    _2d_out_u64.at<cv::Vec<uint64_t, 3>>(i, j)[1] = i + j;
 
             /* a 4d mat */
             const int Size[] = {4, 4, 4, 4};
@@ -643,7 +657,9 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         if (testReadWrite || useMemory || generateTestData)
         {
             cv::FileStorage fs(name, write_flags + (useMemory ? cv::FileStorage::MEMORY : 0));
-            fs << "normal_2d_mat" << _2d_out;
+            fs << "normal_2d_mat_u8" << _2d_out_u8;
+            fs << "normal_2d_mat_i64" << _2d_out_i64;
+            fs << "normal_2d_mat_u64" << _2d_out_u64;
             fs << "normal_nd_mat" << _nd_out;
             fs << "empty_2d_mat"  << _em_out;
             fs << "random_mat"    << _rd_out;
@@ -686,14 +702,16 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                 }
             }
             std::cout << "Storage size: " << sz << std::endl;
-            EXPECT_LE(sz, (size_t)6000);
+            EXPECT_LE(sz, (size_t)21000);
         }
         {   /* read */
             cv::FileStorage fs(name, cv::FileStorage::READ + (useMemory ? cv::FileStorage::MEMORY : 0));
 
             /* mat */
             fs["empty_2d_mat"]  >> _em_in;
-            fs["normal_2d_mat"] >> _2d_in;
+            fs["normal_2d_mat_u8"] >> _2d_in_u8;
+            fs["normal_2d_mat_i64"] >> _2d_in_i64;
+            fs["normal_2d_mat_u64"] >> _2d_in_u64;
             fs["normal_nd_mat"] >> _nd_in;
             fs["random_mat"]    >> _rd_in;
 
@@ -729,22 +747,66 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         EXPECT_EQ(_em_in.depth(), _em_out.depth());
         EXPECT_TRUE(_em_in.empty());
 
-        ASSERT_EQ(_2d_in.rows   , _2d_out.rows);
-        ASSERT_EQ(_2d_in.cols   , _2d_out.cols);
-        ASSERT_EQ(_2d_in.dims   , _2d_out.dims);
-        ASSERT_EQ(_2d_in.depth(), _2d_out.depth());
+        ASSERT_EQ(_2d_in_u8.rows   , _2d_out_u8.rows);
+        ASSERT_EQ(_2d_in_u8.cols   , _2d_out_u8.cols);
+        ASSERT_EQ(_2d_in_u8.dims   , _2d_out_u8.dims);
+        ASSERT_EQ(_2d_in_u8.depth(), _2d_out_u8.depth());
+
+        ASSERT_EQ(_2d_in_i64.rows   , _2d_out_i64.rows);
+        ASSERT_EQ(_2d_in_i64.cols   , _2d_out_i64.cols);
+        ASSERT_EQ(_2d_in_i64.dims   , _2d_out_i64.dims);
+        ASSERT_EQ(_2d_in_i64.depth(), _2d_out_i64.depth());
+
+        ASSERT_EQ(_2d_in_u64.rows   , _2d_out_u64.rows);
+        ASSERT_EQ(_2d_in_u64.cols   , _2d_out_u64.cols);
+        ASSERT_EQ(_2d_in_u64.dims   , _2d_out_u64.dims);
+        ASSERT_EQ(_2d_in_u64.depth(), _2d_out_u64.depth());
 
         errors = 0;
-        for(int i = 0; i < _2d_out.rows; ++i)
+        for(int i = 0; i < _2d_out_u8.rows; ++i)
         {
-            for (int j = 0; j < _2d_out.cols; ++j)
+            for (int j = 0; j < _2d_out_u8.cols; ++j)
             {
-                if (_2d_in.at<cv::Vec3b>(i, j) != _2d_out.at<cv::Vec3b>(i, j)) {
-                    EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
+                if (_2d_in_u8.at<cv::Vec3b>(i, j) != _2d_out_u8.at<cv::Vec3b>(i, j)) {
+                    EXPECT_EQ(_2d_in_u8.at<cv::Vec3b>(i, j), _2d_out_u8.at<cv::Vec3b>(i, j));
                     printf("i = %d, j = %d\n", i, j);
                     if (++errors >= 3)
                     {
-                        i = _2d_out.rows;
+                        i = _2d_out_u8.rows;
+                        break;
+                    }
+                }
+            }
+        }
+
+        errors = 0;
+        for(int i = 0; i < _2d_out_i64.rows; ++i)
+        {
+            for (int j = 0; j < _2d_out_i64.cols; ++j)
+            {
+                if (_2d_in_i64.at<cv::Vec3l>(i, j) != _2d_out_i64.at<cv::Vec3l>(i, j)) {
+                    EXPECT_EQ(_2d_in_i64.at<cv::Vec3l>(i, j), _2d_out_i64.at<cv::Vec3l>(i, j));
+                    printf("i = %d, j = %d\n", i, j);
+                    if (++errors >= 3)
+                    {
+                        i = _2d_out_i64.rows;
+                        break;
+                    }
+                }
+            }
+        }
+
+        errors = 0;
+        for(int i = 0; i < _2d_out_u64.rows; ++i)
+        {
+            for (int j = 0; j < _2d_out_u64.cols; ++j)
+            {
+                if (_2d_in_u64.at<cv::Vec<uint64_t, 3>>(i, j) != _2d_out_u64.at<cv::Vec<uint64_t, 3>>(i, j)) {
+                    EXPECT_EQ((_2d_in_u64.at<cv::Vec<uint64_t, 3>>(i, j)), (_2d_out_u64.at<cv::Vec<uint64_t, 3>>(i, j)));
+                    printf("i = %d, j = %d\n", i, j);
+                    if (++errors >= 3)
+                    {
+                        i = _2d_out_u64.rows;
                         break;
                     }
                 }
