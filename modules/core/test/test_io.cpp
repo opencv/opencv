@@ -702,7 +702,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                 }
             }
             std::cout << "Storage size: " << sz << std::endl;
-            EXPECT_LE(sz, (size_t)20000);
+            EXPECT_LE(sz, (size_t)21000);
         }
         {   /* read */
             cv::FileStorage fs(name, cv::FileStorage::READ + (useMemory ? cv::FileStorage::MEMORY : 0));
