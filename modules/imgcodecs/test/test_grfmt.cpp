@@ -164,6 +164,8 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             continue;
         if (cn != 3 && ext == ".ppm")
             continue;
+        if (cn == 1 && ext == ".gif")
+            continue;
         string filename = cv::tempfile(format("%d%s", cn, ext.c_str()).c_str());
 
         Mat img_gt(size, CV_MAKETYPE(CV_8U, cn), Scalar::all(0));
@@ -179,8 +181,14 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
         ASSERT_TRUE(imwrite(filename, img_gt, parameters));
         Mat img = imread(filename, IMREAD_UNCHANGED);
         ASSERT_FALSE(img.empty());
-        EXPECT_EQ(img.size(), img.size());
-        EXPECT_EQ(img.type(), img.type());
+        EXPECT_EQ(img_gt.size(), img.size());
+        EXPECT_EQ(img_gt.channels(), img.channels());
+        if (ext == ".pfm") {
+            EXPECT_EQ(img_gt.depth(), CV_8U);
+            EXPECT_EQ(img.depth(),    CV_32F);
+        } else {
+            EXPECT_EQ(img_gt.depth(), img.depth());
+        }
         EXPECT_EQ(cn, img.channels());
 
 
@@ -199,6 +207,14 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             double n = cvtest::norm(img, img_gt, NORM_L2);
             EXPECT_LT(n, 1.);
             EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), img, img_gt);
+        }
+        else if (ext == ".gif")
+        {
+            // GIF encoder will reduce the number of colors to 256.
+            // It is hard to compare image comparison by pixel unit.
+            double n = cvtest::norm(img, img_gt, NORM_L1);
+            double expected = 0.03 * img.size().area();
+            EXPECT_LT(n, expected);
         }
         else
         {
@@ -237,6 +253,9 @@ const string all_exts[] =
 #endif
 #ifdef HAVE_IMGCODEC_PFM
     ".pfm",
+#endif
+#ifdef HAVE_IMGCODEC_GIF
+    ".gif",
 #endif
 };
 
