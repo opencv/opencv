@@ -14,7 +14,7 @@ namespace cv
 //////////////////////////////////////////////////////////////////////
 GifDecoder::GifDecoder() {
     m_signature = R"(GIF)";
-    m_type = CV_8UC4;
+    m_type = CV_8UC3;
     bgColor = -1;
     m_buf_supported = true;
     globalColorTableSize = 0;
@@ -172,12 +172,17 @@ bool GifDecoder::readData(Mat &img) {
             } else {
                 cvtColor(img_, img, COLOR_BGRA2BGR);
             }
-        } else {
+        } else if (img.channels() == 4){
             if (m_use_rgb) {
                 cvtColor(img_, img, COLOR_BGRA2RGBA);
             } else {
                 img_.copyTo(img);
             }
+        } else if (img.channels() == 1){
+            cvtColor(img_, img, COLOR_BGRA2GRAY);
+        } else {
+            CV_LOG_WARNING(NULL, cv::format("Unsupported channels: %d", img.channels()));
+            hasRead = false;
         }
     }
 
@@ -414,6 +419,7 @@ bool GifDecoder::getFrameCount_() {
             if (extension == 0xFF) {
                 int len = m_strm.getByte();
                 while (len) {
+                    // TODO: In strictly, Application Identifier and Authentication Code should be checked.
                     if (len == 3) {
                         if (m_strm.getByte() == 0x01) {
                             m_animation.loop_count = m_strm.getWord();
@@ -427,9 +433,28 @@ bool GifDecoder::getFrameCount_() {
                     }
                     len = m_strm.getByte();
                 }
+            } else if (extension == 0xF9) {
+                int len = m_strm.getByte();
+                while (len) {
+                    if (len == 4) {
+                        int packedFields = m_strm.getByte();
+                        //  3 bit : Reserved
+                        //  3 bit : Disposal Method
+                        //  1 bit : User Input Flag
+                        //  1 bit : Transparent Color Flag
+                        if ( (packedFields & 0x01)== 0x01) {
+                            m_type = CV_8UC4; // Transparent Index is given.
+                        }
+                        m_strm.skip(2); // Delay Time
+                        m_strm.skip(1); // Transparent Color Index
+                    } else {
+                        m_strm.skip(len);
+                    }
+                    len = m_strm.getByte();
+                }
             } else {
                 // if it does not belong to any of the extension type mentioned in the GIF Specification
-                if (extension != 0xF9 && extension != 0xFE && extension != 0x01) {
+                if (extension != 0xFE && extension != 0x01) {
                     CV_LOG_WARNING(NULL, "found Unknown Extension Type: " + std::to_string(extension));
                 }
                 int len = m_strm.getByte();
