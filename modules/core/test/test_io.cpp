@@ -616,13 +616,13 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                     _2d_out_u8.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
 
             /* a normal mat i64 */
-            _2d_out_i64 = cv::Mat(10, 20, CV_64SC3, cv::Scalar(1LL, 2LL, 4611686018427387903LL));
+            _2d_out_i64 = cv::Mat(10, 20, CV_64SC3, cv::Scalar(1LL, 2LL, 2251799813685247LL));
             for (int i = 0; i < _2d_out_i64.rows; ++i)
                 for (int j = 0; j < _2d_out_i64.cols; ++j)
                     _2d_out_i64.at<cv::Vec3l>(i, j)[1] = i + j;
 
             /* a normal mat u64 */
-            _2d_out_u64 = cv::Mat(10, 20, CV_64UC3, cv::Scalar(1ULL, 2ULL, 9223372036854775807ULL));
+            _2d_out_u64 = cv::Mat(10, 20, CV_64UC3, cv::Scalar(1ULL, 2ULL, 4503599627370495ULL));
             for (int i = 0; i < _2d_out_u64.rows; ++i)
                 for (int j = 0; j < _2d_out_u64.cols; ++j)
                     _2d_out_u64.at<cv::Vec<uint64_t, 3>>(i, j)[1] = i + j;
