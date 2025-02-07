@@ -46,12 +46,13 @@ enum
 {
     HAL_EXP = 0,
     HAL_LOG = 1,
-    HAL_SQRT = 2
+    HAL_SQRT = 2,
+    HAL_INV_SQRT = 3
 };
 
 TEST(Core_HAL, mathfuncs)
 {
-    for( int hcase = 0; hcase < 6; hcase++ )
+    for( int hcase = 0; hcase < 8; hcase++ )
     {
         int depth = hcase % 2 == 0 ? CV_32F : CV_64F;
         double eps = depth == CV_32F ? 1e-5 : 1e-10;
@@ -86,6 +87,13 @@ TEST(Core_HAL, mathfuncs)
                 else
                     hal::sqrt64f(src.ptr<double>(), dst.ptr<double>(), n);
                 break;
+            case HAL_INV_SQRT:
+                if( depth == CV_32F )
+                    hal::invSqrt32f(src.ptr<float>(), dst.ptr<float>(), n);
+                else
+                    hal::invSqrt64f(src.ptr<double>(), dst.ptr<double>(), n);
+                break;
+            
             default:
                 CV_Error(Error::StsBadArg, "unknown function");
             }
@@ -104,6 +112,9 @@ TEST(Core_HAL, mathfuncs)
             case HAL_SQRT:
                 pow(src, 0.5, dst0);
                 break;
+            case HAL_INV_SQRT:
+                pow(src, -0.5, dst0);
+                break;
             default:
                 CV_Error(Error::StsBadArg, "unknown function");
             }
@@ -114,8 +125,13 @@ TEST(Core_HAL, mathfuncs)
 
         double freq = getTickFrequency();
         printf("%s (N=%d, %s): hal time=%.2fusec, ocv time=%.2fusec\n",
-               (nfunc == HAL_EXP ? "exp" : nfunc == HAL_LOG ? "log" : nfunc == HAL_SQRT ? "sqrt" : "???"),
-               n, (depth == CV_32F ? "f32" : "f64"), min_hal_t*1e6/freq, min_ocv_t*1e6/freq);
+                (
+                nfunc == HAL_EXP  ? "exp" :
+                nfunc == HAL_LOG  ? "log" :
+                nfunc == HAL_SQRT ? "sqrt" :
+                nfunc == HAL_INV_SQRT ? "rsqrt" : "???"
+                ),
+                n, (depth == CV_32F ? "f32" : "f64"), min_hal_t*1e6/freq, min_ocv_t*1e6/freq);
     }
 }
 
