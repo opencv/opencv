@@ -215,6 +215,31 @@ int normL1_(const uchar* a, const uchar* b, int n)
 
 //==================================================================================================
 
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+
+template<> inline
+double normL1(const float* src, int n) {
+    v_float64 d00 = vx_setzero_f64(), d01 = vx_setzero_f64();
+    v_float64 d10 = vx_setzero_f64(), d11 = vx_setzero_f64();
+    int j = 0;
+    for (; j <= n - 2 * VTraits<v_float32>::vlanes(); j += 2 * VTraits<v_float32>::vlanes()) {
+        v_float32 v0 = vx_load(src + j), v1 = vx_load(src + j + VTraits<v_float32>::vlanes());
+        d00 = v_add(d00, v_abs(v_cvt_f64(v0))); d01 = v_add(d01, v_abs(v_cvt_f64_high(v0)));
+        d10 = v_add(d10, v_abs(v_cvt_f64(v1))); d11 = v_add(d11, v_abs(v_cvt_f64_high(v1)));
+    }
+    double s = 0.f;
+    s += v_reduce_sum(v_add(v_add(v_add(d00, d01), d10), d11));
+    for (; j < n; j++) {
+        s += cv_abs(src[j]);
+    }
+    return s;
+}
+
+#endif
+
+//==================================================================================================
+
+
 template<typename T, typename ST> int
 normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
 {
