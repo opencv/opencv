@@ -815,4 +815,49 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , PatchNaNsFixture,
     )
 );
 
+//////////////EXP64F////////////
+typedef Size_MatType ExpFixture;
+
+PERF_TEST_P(ExpFixture, Exp32F, 
+    testing::Combine(testing::Values(TYPICAL_MAT_SIZES), testing::Values(CV_32F)))
+{
+    cv::Size size = std::get<0>(GetParam());
+    int type = std::get<1>(GetParam());
+
+    cv::Mat src(size, type);
+    cv::Mat dst(size, type);
+
+    declare.in(src).out(dst);
+
+    cv::randu(src, -5.0, 5.0);
+
+    TEST_CYCLE()
+    {
+        cv::exp(src, dst);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST_P(ExpFixture, Exp64F, 
+    testing::Combine(testing::Values(TYPICAL_MAT_SIZES), testing::Values(CV_64F)))
+{
+    cv::Size size = std::get<0>(GetParam());
+    int type = std::get<1>(GetParam());
+
+    cv::Mat src(size, type);
+    cv::Mat dst(size, type);
+
+    declare.in(src).out(dst);
+
+    cv::randu(src, -5.0, 5.0);
+
+    TEST_CYCLE()
+    {
+        cv::exp(src, dst);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace
