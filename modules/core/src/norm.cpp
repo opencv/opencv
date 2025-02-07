@@ -215,6 +215,29 @@ int normL1_(const uchar* a, const uchar* b, int n)
 
 //==================================================================================================
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+
+template<> inline
+float normInf(const float* src, int n) {
+    v_float32 d0 = vx_setzero_f32(), d1 = vx_setzero_f32();
+    v_float32 d2 = vx_setzero_f32(), d3 = vx_setzero_f32();
+    int j = 0;
+    for (; j <= n - 4 * VTraits<v_float32>::vlanes(); j += 4 * VTraits<v_float32>::vlanes()) {
+        d0 = v_max(d0, v_abs(vx_load(src + j                                   )));
+        d1 = v_max(d1, v_abs(vx_load(src + j +     VTraits<v_float32>::vlanes())));
+        d2 = v_max(d2, v_abs(vx_load(src + j + 2 * VTraits<v_float32>::vlanes())));
+        d3 = v_max(d3, v_abs(vx_load(src + j + 3 * VTraits<v_float32>::vlanes())));
+    }
+    d0 = v_max(d0, v_max(d1, v_max(d2, d3)));
+    float s = 0.f;
+    for (; j < n; j++) {
+        s = std::max(s, cv_abs(src[j]));
+    }
+    return std::max(s, v_reduce_max(d0));
+}
+
+#endif
+
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
 template<> inline
