@@ -94,12 +94,23 @@ TEST(Imgproc_FitEllipse_JavaCase, accuracy) {
     pts.push_back(Point2f(-1, -1)*scale+shift);
     pts.push_back(Point2f(1, -1)*scale+shift);
 
-    // check that we get almost vertical ellipse centered around (1, 3)
+    // check that we get almost circle centered around (0, 0)
     RotatedRect e = fitEllipse(pts);
     EXPECT_NEAR(e.center.x, 0, 0.01);
     EXPECT_NEAR(e.center.y, 0, 0.01);
     EXPECT_NEAR(e.size.width, sqrt(2.)*2, 0.4);
     EXPECT_NEAR(e.size.height, sqrt(2.)*2, 0.4);
+}
+
+TEST(Imgproc_FitEllipse_HorizontalLine, accuracy) {
+    vector<Point2f> pts({{-300, 100}, {-200, 100}, {-100, 100}, {0, 100}, {100, 100}, {200, 100}, {300, 100}});
+    const RotatedRect el = fitEllipse(pts);
+
+    EXPECT_NEAR(el.center.x, -100, 100);
+    EXPECT_NEAR(el.center.y, 100, 1);
+    EXPECT_NEAR(el.size.width, 1, 1);
+    EXPECT_GE(el.size.height, 150);
+    EXPECT_NEAR(el.angle, 90, 0.1);
 }
 
 }} // namespace

@@ -112,13 +112,17 @@ enum ImwriteFlags {
        IMWRITE_AVIF_QUALITY        = 512,//!< For AVIF, it can be a quality between 0 and 100 (the higher the better). Default is 95.
        IMWRITE_AVIF_DEPTH          = 513,//!< For AVIF, it can be 8, 10 or 12. If >8, it is stored/read as CV_32F. Default is 8.
        IMWRITE_AVIF_SPEED          = 514,//!< For AVIF, it is between 0 (slowest) and (fastest). Default is 9.
+       IMWRITE_JPEGXL_QUALITY      = 640,//!< For JPEG XL, it can be a quality from 0 to 100 (the higher is the better). Default value is 95. If set, distance parameter is re-calicurated from quality level automatically. This parameter request libjxl v0.10 or later.
+       IMWRITE_JPEGXL_EFFORT       = 641,//!< For JPEG XL, encoder effort/speed level without affecting decoding speed; it is between 1 (fastest) and 10 (slowest). Default is 7.
+       IMWRITE_JPEGXL_DISTANCE     = 642,//!< For JPEG XL, distance level for lossy compression: target max butteraugli distance, lower = higher quality, 0 = lossless; range: 0 .. 25. Default is 1.
+       IMWRITE_JPEGXL_DECODING_SPEED = 643,//!< For JPEG XL, decoding speed tier for the provided options; minimum is 0 (slowest to decode, best quality/density), and maximum is 4 (fastest to decode, at the cost of some quality/density). Default is 0.
        IMWRITE_GIF_LOOP            = 1024,//!< For GIF, it can be a loop flag from 0 to 65535. Default is 0 - loop forever.
        IMWRITE_GIF_SPEED           = 1025,//!< For GIF, it is between 1 (slowest) and 100 (fastest). Default is 96.
        IMWRITE_GIF_QUALITY         = 1026, //!< For GIF, it can be a quality from 1 to 8. Default is 2. See cv::ImwriteGifCompressionFlags.
        IMWRITE_GIF_DITHER          = 1027, //!< For GIF, it can be a quality from -1(most dither) to 3(no dither). Default is 0.
        IMWRITE_GIF_TRANSPARENCY    = 1028, //!< For GIF, the alpha channel lower than this will be set to transparent. Default is 1.
        IMWRITE_GIF_COLORTABLE      = 1029  //!< For GIF, 0 means global color table is used, 1 means local color table is used. Default is 0.
-     };
+};
 
 enum ImwriteJPEGSamplingFactorParams {
        IMWRITE_JPEG_SAMPLING_FACTOR_411 = 0x411111, //!< 4x1,1x1,1x1
@@ -259,11 +263,11 @@ struct CV_EXPORTS_W_SIMPLE Animation
     - If a negative value or a value beyond the maximum of `0xffff` (65535) is provided, it is reset to `0`
     (infinite looping) to maintain valid bounds.
 
-    @param bgColor A `Scalar` object representing the background color in BGRA format:
+    @param bgColor A `Scalar` object representing the background color in BGR format:
     - Defaults to `Scalar()`, indicating an empty color (usually transparent if supported).
     - This background color provides a solid fill behind frames that have transparency, ensuring a consistent display appearance.
     */
-    Animation(int loopCount = 0, Scalar bgColor = Scalar());
+    CV_WRAP Animation(int loopCount = 0, Scalar bgColor = Scalar());
 };
 
 /** @brief Loads an image from a file.
@@ -407,11 +411,15 @@ can be saved using this function, with these exceptions:
 - With Radiance HDR encoder, non 64-bit float (CV_64F) images can be saved.
   - All images will be converted to 32-bit float (CV_32F).
 - With JPEG 2000 encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
+- With JPEG XL encoder, 8-bit unsigned (CV_8U), 16-bit unsigned (CV_16U) and 32-bit float(CV_32F) images can be saved.
+  - JPEG XL images with an alpha channel can be saved using this function.
+    To achieve this, create an 8-bit 4-channel (CV_8UC4) / 16-bit 4-channel (CV_16UC4) / 32-bit float 4-channel (CV_32FC4) BGRA image, ensuring the alpha channel is the last component.
+    Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255/65535/1.0.
 - With PAM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
 - With PNG encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
-  - PNG images with an alpha channel can be saved using this function. To do this, create
-    8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
-    should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
+  - PNG images with an alpha channel can be saved using this function.
+    To achieve this, create an 8-bit 4-channel (CV_8UC4) / 16-bit 4-channel (CV_16UC4) BGRA image, ensuring the alpha channel is the last component.
+    Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255/65535(see the code sample below).
 - With PGM/PPM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
 - With TIFF encoder, 8-bit unsigned (CV_8U), 8-bit signed (CV_8S),
                      16-bit unsigned (CV_16U), 16-bit signed (CV_16S),
@@ -420,6 +428,11 @@ can be saved using this function, with these exceptions:
   - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
   - 32-bit float 3-channel (CV_32FC3) TIFF images will be saved
     using the LogLuv high dynamic range encoding (4 bytes per pixel)
+- With GIF encoder, 8-bit unsigned (CV_8U) images can be saved.
+  - GIF images with an alpha channel can be saved using this function.
+    To achieve this, create an 8-bit 4-channel (CV_8UC4) BGRA image, ensuring the alpha channel is the last component.
+    Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255.
+  - 8-bit single-channel images (CV_8UC1) are not supported due to GIF's limitation to indexed color formats.
 
 If the image format is not supported, the image will be converted to 8-bit unsigned (CV_8U) and saved that way.
 

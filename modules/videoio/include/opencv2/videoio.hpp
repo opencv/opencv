@@ -168,7 +168,7 @@ enum VideoCaptureProperties {
        CAP_PROP_TRIGGER       =24,
        CAP_PROP_TRIGGER_DELAY =25,
        CAP_PROP_WHITE_BALANCE_RED_V =26,
-       CAP_PROP_ZOOM          =27,
+       CAP_PROP_ZOOM          =27, //!< Android: May switch physical cameras/lenses. Factor and range are hardware-dependent.
        CAP_PROP_FOCUS         =28,
        CAP_PROP_GUID          =29,
        CAP_PROP_ISO_SPEED     =30,
@@ -719,6 +719,25 @@ enum VideoCaptureOBSensorProperties{
 
 //! @} videoio_flags_others
 
+/** @brief Read data stream interface
+ */
+class CV_EXPORTS_W IStreamReader
+{
+public:
+    virtual ~IStreamReader();
+
+    /** @brief Read bytes from stream */
+    virtual long long read(char* buffer, long long size) = 0;
+
+    /** @brief Sets the stream position
+     *
+     * @param offset Seek offset
+     * @param origin SEEK_SET / SEEK_END / SEEK_CUR
+     *
+     * @see fseek
+     */
+    virtual long long seek(long long offset, int origin) = 0;
+};
 
 class IVideoCapture;
 //! @cond IGNORED
@@ -798,6 +817,14 @@ public:
     */
     CV_WRAP explicit VideoCapture(int index, int apiPreference, const std::vector<int>& params);
 
+    /** @overload
+    @brief Opens a video using data stream.
+
+    The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
+    See cv::VideoCaptureProperties
+    */
+    CV_WRAP VideoCapture(const Ptr<IStreamReader>& source, int apiPreference, const std::vector<int>& params);
+
     /** @brief Default destructor
 
     The method first calls VideoCapture::release to close the already opened file or camera.
@@ -851,6 +878,19 @@ public:
     The method first calls VideoCapture::release to close the already opened file or camera.
     */
     CV_WRAP virtual bool open(int index, int apiPreference, const std::vector<int>& params);
+
+    /** @brief Opens a video using data stream.
+
+    @overload
+
+    The `params` parameter allows to specify extra parameters encoded as pairs `(paramId_1, paramValue_1, paramId_2, paramValue_2, ...)`.
+    See cv::VideoCaptureProperties
+
+    @return `true` if the file has been successfully opened
+
+    The method first calls VideoCapture::release to close the already opened file or camera.
+     */
+    CV_WRAP virtual bool open(const Ptr<IStreamReader>& source, int apiPreference, const std::vector<int>& params);
 
     /** @brief Returns true if video capturing has been initialized already.
 
