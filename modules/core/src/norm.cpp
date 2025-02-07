@@ -235,6 +235,27 @@ double normL1(const float* src, int n) {
     return s;
 }
 
+template<> inline
+double normL2Sqr(const float* src, int n) {
+    v_float64 d00 = vx_setzero_f64(), d01 = vx_setzero_f64();
+    v_float64 d10 = vx_setzero_f64(), d11 = vx_setzero_f64();
+    int j = 0;
+    for (; j <= n - 2 * VTraits<v_float32>::vlanes(); j += 2 * VTraits<v_float32>::vlanes()) {
+        v_float32 v0 = vx_load(src + j), v1 = vx_load(src + j + VTraits<v_float32>::vlanes());
+        v_float64 v00 = v_cvt_f64(v0), v01 = v_cvt_f64_high(v0);
+        v_float64 v10 = v_cvt_f64(v1), v11 = v_cvt_f64_high(v1);
+        d00 = v_add(d00, v_mul(v00, v00)); d01 = v_add(d01, v_mul(v01, v01));
+        d10 = v_add(d10, v_mul(v10, v10)); d11 = v_add(d11, v_mul(v11, v11));
+    }
+    double s = 0.f;
+    s += v_reduce_sum(v_add(v_add(v_add(d00, d01), d10), d11));
+    for (; j < n; j++) {
+        double v = src[j];
+        s += v * v;
+    }
+    return s;
+}
+
 #endif
 
 //==================================================================================================
