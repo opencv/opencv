@@ -9,8 +9,8 @@ namespace cv { namespace cv_hal_rvv {
 
 #undef cv_hal_split8u
 #define cv_hal_split8u cv::cv_hal_rvv::split8u
-//#undef cv_hal_split16u
-//#define cv_hal_split8u cv::cv_hal_rvv::split16u
+// #undef cv_hal_split16u
+// #define cv_hal_split8u cv::cv_hal_rvv::split16u
 
 #if defined __GNUC__
 __attribute__((optimize("no-tree-vectorize")))
@@ -18,8 +18,11 @@ __attribute__((optimize("no-tree-vectorize")))
 inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
     int k = cn % 4 ? cn % 4 : 4;
     int i = 0;
-    int vl = __riscv_vsetvlmax_e8m1();
-
+    int vl = __riscv_vsetvlmax_e8m4();
+    // printf("m1 %d\n", __riscv_vsetvlmax_e8m1());
+    // printf("m2 %d\n", __riscv_vsetvlmax_e8m2());
+    // printf("m4 %d\n", __riscv_vsetvlmax_e8m4());
+    // printf("m8 %d\n", __riscv_vsetvlmax_e8m8());
     if (k == 1) {
         uchar* dst0 = dst[0];
         if (cn == 1) {
@@ -27,8 +30,8 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
         } else {
             // Векторная обработка
             for (; i <= len - vl; i += vl) {
-                auto vec = __riscv_vlse8_v_u8m1(src + i * cn, cn * sizeof(uchar), vl);
-                __riscv_vse8_v_u8m1(dst0 + i, vec, vl);
+                auto vec = __riscv_vlse8_v_u8m4(src + i * cn, cn, vl);
+                __riscv_vse8_v_u8m4(dst0 + i, vec, vl);
             }
             // Скалярный остаток
             #if defined(__clang__)
@@ -41,14 +44,15 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
         uchar *dst0 = dst[0], *dst1 = dst[1];
         // Векторная обработка
         for (; i <= len - vl * 4; i += vl * 4) {
-            auto a1 = __riscv_vlse8_v_u8m1(src + 0 + i * cn, cn * sizeof(uchar), vl);
-            auto b1 = __riscv_vlse8_v_u8m1(src + 1 + i * cn, cn * sizeof(uchar), vl);
-            auto a2 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            auto b2 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            auto a3 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto b3 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto a4 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto b4 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+        //for (; i <= len - vl; i += vl) {
+            auto a1 = __riscv_vlse8_v_u8m1(src + 0 + i * cn, cn, vl);
+            auto b1 = __riscv_vlse8_v_u8m1(src + 1 + i * cn, cn, vl);
+            auto a2 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl) * cn, cn, vl);
+            auto b2 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl) * cn, cn, vl);
+            auto a3 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl) * cn, cn, vl);
+            auto b3 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl) * cn, cn, vl);
+            auto a4 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl + vl) * cn, cn, vl);
+            auto b4 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl + vl) * cn, cn, vl);
             __riscv_vse8_v_u8m1(dst0 + i, a1, vl);
             __riscv_vse8_v_u8m1(dst1 + i, b1, vl);
             __riscv_vse8_v_u8m1(dst0 + i + vl, a2, vl);
@@ -69,31 +73,34 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
     } else if (k == 3) {
         uchar *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2];
         // Векторная обработка
-        for (; i <= len - vl * 4; i += vl * 4) {
-            auto a = __riscv_vlse8_v_u8m1(src + 0 + i * cn, cn * sizeof(uchar), vl);
-            auto b = __riscv_vlse8_v_u8m1(src + 1 + i * cn, cn * sizeof(uchar), vl);
-            auto c = __riscv_vlse8_v_u8m1(src + 2 + i * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i, a, vl);
-            __riscv_vse8_v_u8m1(dst1 + i, b, vl);
-            __riscv_vse8_v_u8m1(dst2 + i, c, vl);
-            auto a2 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            auto b2 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            auto c2 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl) * cn, cn * sizeof(uchar), vl);
+        //for (; i <= len - vl * 4; i += vl * 4) {
+        vl = __riscv_vsetvlmax_e8m2();
+        for (; i <= len - vl * 2; i += vl * 2) {
+        //for (; i <= len - vl; i += vl) {
+            auto a = __riscv_vlse8_v_u8m2(src + 0 + i * cn, cn, vl);
+            auto b = __riscv_vlse8_v_u8m2(src + 1 + i * cn, cn, vl);
+            auto c = __riscv_vlse8_v_u8m2(src + 2 + i * cn, cn, vl);
+            __riscv_vse8_v_u8m2(dst0 + i, a, vl);
+            __riscv_vse8_v_u8m2(dst1 + i, b, vl);
+            __riscv_vse8_v_u8m2(dst2 + i, c, vl);
+            auto a2 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl) * cn, cn, vl);
+            auto b2 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl) * cn, cn, vl);
+            auto c2 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl) * cn, cn, vl);
             __riscv_vse8_v_u8m1(dst0 + i + vl, a2, vl);
             __riscv_vse8_v_u8m1(dst1 + i + vl, b2, vl);
             __riscv_vse8_v_u8m1(dst2 + i + vl, c2, vl);
-            auto a3 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto b3 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto c3 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i + vl + vl, a3, vl);
-            __riscv_vse8_v_u8m1(dst1 + i + vl + vl, b3, vl);
-            __riscv_vse8_v_u8m1(dst2 + i + vl + vl, c3, vl);
-            auto a4 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto b4 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto c4 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i + vl + vl + vl, a4, vl);
-            __riscv_vse8_v_u8m1(dst1 + i + vl + vl + vl, b4, vl);
-            __riscv_vse8_v_u8m1(dst2 + i + vl + vl + vl, c4, vl);
+            // auto a3 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto b3 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto c3 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // __riscv_vse8_v_u8m1(dst0 + i + vl + vl, a3, vl);
+            // __riscv_vse8_v_u8m1(dst1 + i + vl + vl, b3, vl);
+            // __riscv_vse8_v_u8m1(dst2 + i + vl + vl, c3, vl);
+            // auto a4 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto b4 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto c4 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // __riscv_vse8_v_u8m1(dst0 + i + vl + vl + vl, a4, vl);
+            // __riscv_vse8_v_u8m1(dst1 + i + vl + vl + vl, b4, vl);
+            // __riscv_vse8_v_u8m1(dst2 + i + vl + vl + vl, c4, vl);
         }
         // Скалярный остаток
         #if defined(__clang__)
@@ -106,43 +113,46 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
         }
     } else {
         uchar *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3];
+        vl = __riscv_vsetvlmax_e8m2();
         // Векторная обработка
-        for (; i <= len - vl * 4; i += vl * 4) {
-            auto a = __riscv_vlse8_v_u8m1(src + 0 + i * cn, cn * sizeof(uchar), vl);
-            auto b = __riscv_vlse8_v_u8m1(src + 1 + i * cn, cn * sizeof(uchar), vl);
-            auto c = __riscv_vlse8_v_u8m1(src + 2 + i * cn, cn * sizeof(uchar), vl);
-            auto d = __riscv_vlse8_v_u8m1(src + 3 + i * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i, a, vl);
-            __riscv_vse8_v_u8m1(dst1 + i, b, vl);
-            __riscv_vse8_v_u8m1(dst2 + i, c, vl);
-            __riscv_vse8_v_u8m1(dst3 + i, d, vl);
+        for (; i <= len - vl * 2; i += vl * 2) {
+        //for (; i <= len - vl; i += vl) {
+            
+            auto a = __riscv_vlse8_v_u8m2(src + 0 + i * cn, cn, vl);
+            auto b = __riscv_vlse8_v_u8m2(src + 1 + i * cn, cn, vl);
+            auto c = __riscv_vlse8_v_u8m2(src + 2 + i * cn, cn, vl);
+            auto d = __riscv_vlse8_v_u8m2(src + 3 + i * cn, cn, vl);
+            __riscv_vse8_v_u8m2(dst0 + i, a, vl);
+            __riscv_vse8_v_u8m2(dst1 + i, b, vl);
+            __riscv_vse8_v_u8m2(dst2 + i, c, vl);
+            __riscv_vse8_v_u8m2(dst3 + i, d, vl);
 
-            auto a2 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            auto b2 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            auto c2 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            auto d2 = __riscv_vlse8_v_u8m1(src + 3 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i + vl, a2, vl);
-            __riscv_vse8_v_u8m1(dst1 + i + vl, b2, vl);
-            __riscv_vse8_v_u8m1(dst2 + i + vl, c2, vl);
-            __riscv_vse8_v_u8m1(dst3 + i + vl, d2, vl);
+            auto a2 = __riscv_vlse8_v_u8m2(src + 0 + (i + vl) * cn, cn, vl);
+            auto b2 = __riscv_vlse8_v_u8m2(src + 1 + (i + vl) * cn, cn, vl);
+            auto c2 = __riscv_vlse8_v_u8m2(src + 2 + (i + vl) * cn, cn, vl);
+            auto d2 = __riscv_vlse8_v_u8m2(src + 3 + (i + vl) * cn, cn, vl);
+            __riscv_vse8_v_u8m2(dst0 + i + vl, a2, vl);
+            __riscv_vse8_v_u8m2(dst1 + i + vl, b2, vl);
+            __riscv_vse8_v_u8m2(dst2 + i + vl, c2, vl);
+            __riscv_vse8_v_u8m2(dst3 + i + vl, d2, vl);
 
-            auto a3 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto b3 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto c3 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto d3 = __riscv_vlse8_v_u8m1(src + 3 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i + vl + vl, a3, vl);
-            __riscv_vse8_v_u8m1(dst1 + i + vl + vl, b3, vl);
-            __riscv_vse8_v_u8m1(dst2 + i + vl + vl, c3, vl);
-            __riscv_vse8_v_u8m1(dst3 + i + vl + vl, d3, vl);
+            // auto a3 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto b3 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto c3 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto d3 = __riscv_vlse8_v_u8m1(src + 3 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // __riscv_vse8_v_u8m1(dst0 + i + vl + vl, a3, vl);
+            // __riscv_vse8_v_u8m1(dst1 + i + vl + vl, b3, vl);
+            // __riscv_vse8_v_u8m1(dst2 + i + vl + vl, c3, vl);
+            // __riscv_vse8_v_u8m1(dst3 + i + vl + vl, d3, vl);
 
-            auto a4 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto b4 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto c4 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto d4 = __riscv_vlse8_v_u8m1(src + 3 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i + vl + vl + vl, a4, vl);
-            __riscv_vse8_v_u8m1(dst1 + i + vl + vl + vl, b4, vl);
-            __riscv_vse8_v_u8m1(dst2 + i + vl + vl + vl, c4, vl);
-            __riscv_vse8_v_u8m1(dst3 + i + vl + vl + vl, d4, vl);
+            // auto a4 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto b4 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto c4 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto d4 = __riscv_vlse8_v_u8m1(src + 3 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // __riscv_vse8_v_u8m1(dst0 + i + vl + vl + vl, a4, vl);
+            // __riscv_vse8_v_u8m1(dst1 + i + vl + vl + vl, b4, vl);
+            // __riscv_vse8_v_u8m1(dst2 + i + vl + vl + vl, c4, vl);
+            // __riscv_vse8_v_u8m1(dst3 + i + vl + vl + vl, d4, vl);
         }
         // Скалярный остаток
         #if defined(__clang__)
@@ -155,74 +165,48 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
             dst3[i] = src[i * cn + 3];
         }
     }
-//   for (; k < cn; k += 4) {
-//         uchar *dst0 = dst[k], *dst1 = dst[k+1], *dst2 = dst[k+2], *dst3 = dst[k+3];
-//         i = 0;
-//         // Векторная обработка
-//         for (; i <= len - vl; i += vl) {
-//             auto a = __riscv_vlse8_v_u8m1(src + k + 0 + i * cn, cn * sizeof(uchar), vl);
-//             auto b = __riscv_vlse8_v_u8m1(src + k + 1 + i * cn, cn * sizeof(uchar), vl);
-//             auto c = __riscv_vlse8_v_u8m1(src + k + 2 + i * cn, cn * sizeof(uchar), vl);
-//             auto d = __riscv_vlse8_v_u8m1(src + k + 3 + i * cn, cn * sizeof(uchar), vl);
-//             __riscv_vse8_v_u8m1(dst0 + i, a, vl);
-//             __riscv_vse8_v_u8m1(dst1 + i, b, vl);
-//             __riscv_vse8_v_u8m1(dst2 + i, c, vl);
-//             __riscv_vse8_v_u8m1(dst3 + i, d, vl);
-//         }
-//         // Скалярный остаток
-//         #if defined(__clang__)
-//         #pragma clang loop vectorize(disable)
-//         #endif
-//         for (; i < len; i++) {
-//             int j = k + i * cn;
-//             dst0[i] = src[j];
-//             dst1[i] = src[j + 1];
-//             dst2[i] = src[j + 2];
-//             dst3[i] = src[j + 3];
-//         }
-//     Обработка оставшихся каналов (блоками по 4)
     for (; k < cn; k += 4) {
         uchar *dst0 = dst[k], *dst1 = dst[k+1], *dst2 = dst[k+2], *dst3 = dst[k+3];
         i = 0;
-        // Векторная обработка
-        for (; i <= len - vl * 4; i += vl * 4) {
-            auto a = __riscv_vlse8_v_u8m1(src + k + 0 + i * cn, cn * sizeof(uchar), vl);
-            auto b = __riscv_vlse8_v_u8m1(src + k + 1 + i * cn, cn * sizeof(uchar), vl);
-            auto c = __riscv_vlse8_v_u8m1(src + k + 2 + i * cn, cn * sizeof(uchar), vl);
-            auto d = __riscv_vlse8_v_u8m1(src + k + 3 + i * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i, a, vl);
-            __riscv_vse8_v_u8m1(dst1 + i, b, vl);
-            __riscv_vse8_v_u8m1(dst2 + i, c, vl);
-            __riscv_vse8_v_u8m1(dst3 + i, d, vl);
+        vl = __riscv_vsetvlmax_e8m2();
+        for (; i <= len - vl * 2; i += vl * 2) {
+        //for (; i <= len - vl; i += vl)  {
+            auto a = __riscv_vlse8_v_u8m2(src + k + 0 + i * cn, cn, vl);
+            auto b = __riscv_vlse8_v_u8m2(src + k + 1 + i * cn, cn, vl);
+            auto c = __riscv_vlse8_v_u8m2(src + k + 2 + i * cn, cn, vl);
+            auto d = __riscv_vlse8_v_u8m2(src + k + 3 + i * cn, cn, vl);
+            __riscv_vse8_v_u8m2(dst0 + i, a, vl);
+            __riscv_vse8_v_u8m2(dst1 + i, b, vl);
+            __riscv_vse8_v_u8m2(dst2 + i, c, vl);
+            __riscv_vse8_v_u8m2(dst3 + i, d, vl);
 
-            auto a2 = __riscv_vlse8_v_u8m1(src + k + 0 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            auto b2 = __riscv_vlse8_v_u8m1(src + k + 1 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            auto c2 = __riscv_vlse8_v_u8m1(src + k + 2 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            auto d2 = __riscv_vlse8_v_u8m1(src + k + 3 + (i + vl) * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i + vl, a2, vl);
-            __riscv_vse8_v_u8m1(dst1 + i + vl, b2, vl);
-            __riscv_vse8_v_u8m1(dst2 + i + vl, c2, vl);
-            __riscv_vse8_v_u8m1(dst3 + i + vl, d2, vl);
+            auto a2 = __riscv_vlse8_v_u8m2(src + k + 0 + (i + vl) * cn, cn, vl);
+            auto b2 = __riscv_vlse8_v_u8m2(src + k + 1 + (i + vl) * cn, cn, vl);
+            auto c2 = __riscv_vlse8_v_u8m2(src + k + 2 + (i + vl) * cn, cn, vl);
+            auto d2 = __riscv_vlse8_v_u8m2(src + k + 3 + (i + vl) * cn, cn, vl);
+            __riscv_vse8_v_u8m2(dst0 + i + vl, a2, vl);
+            __riscv_vse8_v_u8m2(dst1 + i + vl, b2, vl);
+            __riscv_vse8_v_u8m2(dst2 + i + vl, c2, vl);
+            __riscv_vse8_v_u8m2(dst3 + i + vl, d2, vl);
 
-            auto a3 = __riscv_vlse8_v_u8m1(src + k + 0 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto b3 = __riscv_vlse8_v_u8m1(src + k + 1 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto c3 = __riscv_vlse8_v_u8m1(src + k + 2 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto d3 = __riscv_vlse8_v_u8m1(src + k + 3 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i + vl + vl, a3, vl);
-            __riscv_vse8_v_u8m1(dst1 + i + vl + vl, b3, vl);
-            __riscv_vse8_v_u8m1(dst2 + i + vl + vl, c3, vl);
-            __riscv_vse8_v_u8m1(dst3 + i + vl + vl, d3, vl);
+            // auto a3 = __riscv_vlse8_v_u8m1(src + k + 0 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto b3 = __riscv_vlse8_v_u8m1(src + k + 1 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto c3 = __riscv_vlse8_v_u8m1(src + k + 2 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto d3 = __riscv_vlse8_v_u8m1(src + k + 3 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // __riscv_vse8_v_u8m1(dst0 + i + vl + vl, a3, vl);
+            // __riscv_vse8_v_u8m1(dst1 + i + vl + vl, b3, vl);
+            // __riscv_vse8_v_u8m1(dst2 + i + vl + vl, c3, vl);
+            // __riscv_vse8_v_u8m1(dst3 + i + vl + vl, d3, vl);
 
-            auto a4 = __riscv_vlse8_v_u8m1(src + k + 0 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto b4 = __riscv_vlse8_v_u8m1(src + k + 1 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto c4 = __riscv_vlse8_v_u8m1(src + k + 2 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            auto d4 = __riscv_vlse8_v_u8m1(src + k + 3 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
-            __riscv_vse8_v_u8m1(dst0 + i + vl + vl + vl, a4, vl);
-            __riscv_vse8_v_u8m1(dst1 + i + vl + vl + vl, b4, vl);
-            __riscv_vse8_v_u8m1(dst2 + i + vl + vl + vl, c4, vl);
-            __riscv_vse8_v_u8m1(dst3 + i + vl + vl + vl, d4, vl);
+            // auto a4 = __riscv_vlse8_v_u8m1(src + k + 0 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto b4 = __riscv_vlse8_v_u8m1(src + k + 1 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto c4 = __riscv_vlse8_v_u8m1(src + k + 2 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // auto d4 = __riscv_vlse8_v_u8m1(src + k + 3 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
+            // __riscv_vse8_v_u8m1(dst0 + i + vl + vl + vl, a4, vl);
+            // __riscv_vse8_v_u8m1(dst1 + i + vl + vl + vl, b4, vl);
+            // __riscv_vse8_v_u8m1(dst2 + i + vl + vl + vl, c4, vl);
+            // __riscv_vse8_v_u8m1(dst3 + i + vl + vl + vl, d4, vl);
         }
-        // Скалярный остаток
         #if defined(__clang__)
         #pragma clang loop vectorize(disable)
         #endif
@@ -235,11 +219,37 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
     }
     return CV_HAL_ERROR_OK;
 }
-//inline int split16u(const uchar* src, uchar** dst, int len, int cn) {
+// #if defined __GNUC__
+// __attribute__((optimize("no-tree-vectorize")))
+// #endif
+
+// inline int split16u(const uchar* src, uchar** dst, int len, int cn) {
+//     int k = cn % 4 ? cn % 4 : 4;
+//     int i = 0;
+//     int vl = __riscv_vsetvlmax_e16m1();
+//      if (k == 1) {
+//        uchar* dst0 = dst[0];
+//        if (cn == 1) {
+//            memcpy(dst0, src, len * sizeof(uchar));
+//        }
+//        else {
+//            for (; i <= len - vl; i += vl) {
+//                auto vec = __riscv_vlse16_v_u16m1(src + i * cn, cn * sizeof(uchar), vl);
+//                __riscv_vse16_v_u16m1(dst0 + i, vec, vl);
+//            }
+//         #if defined(__clang__)
+//         #pragma clang loop vectorize(disable)
+//         #endif
+//            for (; i < len; i++)
+//                dst0[i] = src[i * cn];
+//        }
+//    }
+// }
+// inline int split16u(const uchar* src, uchar** dst, int len, int cn) {
 //    int k = cn % 4 ? cn % 4 : 4;
 //    int i = 0;
 //    int vl = __riscv_vsetvlmax_e16m1();
-//
+
 //    if (k == 1) {
 //        uchar* dst0 = dst[0];
 //        if (cn == 1) {
@@ -252,9 +262,9 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //                __riscv_vse16_v_u16m1(dst0 + i, vec, vl);
 //            }
 //            // Скалярный остаток
-//#if defined(__clang__)
-//#pragma clang loop vectorize(disable)
-//#endif
+// #if defined(__clang__)
+// #pragma clang loop vectorize(disable)
+// #endif
 //            for (; i < len; i++)
 //                dst0[i] = src[i * cn];
 //        }
@@ -281,9 +291,9 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            __riscv_vse16_v_u16m1(dst1 + i + vl + vl + vl, b4, vl);
 //        }
 //        // Скалярный остаток
-//#if defined(__clang__)
-//#pragma clang loop vectorize(disable)
-//#endif
+// #if defined(__clang__)
+// #pragma clang loop vectorize(disable)
+// #endif
 //        for (; i < len; i++) {
 //            dst0[i] = src[i * cn];
 //            dst1[i] = src[i * cn + 1];
@@ -319,9 +329,9 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            __riscv_vse16_v_u16m1(dst2 + i + vl + vl + vl, c4, vl);
 //        }
 //        // Скалярный остаток
-//#if defined(__clang__)
-//#pragma clang loop vectorize(disable)
-//#endif
+// #if defined(__clang__)
+// #pragma clang loop vectorize(disable)
+// #endif
 //        for (; i < len; i++) {
 //            dst0[i] = src[i * cn];
 //            dst1[i] = src[i * cn + 1];
@@ -340,7 +350,7 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            __riscv_vse16_v_u16m1(dst1 + i, b, vl);
 //            __riscv_vse16_v_u16m1(dst2 + i, c, vl);
 //            __riscv_vse16_v_u16m1(dst3 + i, d, vl);
-//
+
 //            auto a2 = __riscv_vlse16_v_u16m1(src + 0 + (i + vl) * cn, cn * sizeof(uchar), vl);
 //            auto b2 = __riscv_vlse16_v_u16m1(src + 1 + (i + vl) * cn, cn * sizeof(uchar), vl);
 //            auto c2 = __riscv_vlse16_v_u16m1(src + 2 + (i + vl) * cn, cn * sizeof(uchar), vl);
@@ -349,7 +359,7 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            __riscv_vse16_v_u16m1(dst1 + i + vl, b2, vl);
 //            __riscv_vse16_v_u16m1(dst2 + i + vl, c2, vl);
 //            __riscv_vse16_v_u16m1(dst3 + i + vl, d2, vl);
-//
+
 //            auto a3 = __riscv_vlse16_v_u16m1(src + 0 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
 //            auto b3 = __riscv_vlse16_v_u16m1(src + 1 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
 //            auto c3 = __riscv_vlse16_v_u16m1(src + 2 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
@@ -358,7 +368,7 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            __riscv_vse16_v_u16m1(dst1 + i + vl + vl, b3, vl);
 //            __riscv_vse16_v_u16m1(dst2 + i + vl + vl, c3, vl);
 //            __riscv_vse16_v_u16m1(dst3 + i + vl + vl, d3, vl);
-//
+
 //            auto a4 = __riscv_vlse16_v_u16m1(src + 0 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
 //            auto b4 = __riscv_vlse16_v_u16m1(src + 1 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
 //            auto c4 = __riscv_vlse16_v_u16m1(src + 2 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
@@ -369,9 +379,9 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            __riscv_vse16_v_u16m1(dst3 + i + vl + vl + vl, d4, vl);
 //        }
 //        // Скалярный остаток
-//#if defined(__clang__)
-//#pragma clang loop vectorize(disable)
-//#endif
+// #if defined(__clang__)
+// #pragma clang loop vectorize(disable)
+// #endif
 //        for (; i < len; i++) {
 //            dst0[i] = src[i * cn];
 //            dst1[i] = src[i * cn + 1];
@@ -379,7 +389,7 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            dst3[i] = src[i * cn + 3];
 //        }
 //    }
-//
+
 //    // Обработка оставшихся каналов (блоками по 4)
 //    for (; k < cn; k += 4) {
 //        uchar* dst0 = dst[k], * dst1 = dst[k + 1], * dst2 = dst[k + 2], * dst3 = dst[k + 3];
@@ -394,7 +404,7 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            __riscv_vse16_v_u16m1(dst1 + i, b, vl);
 //            __riscv_vse16_v_u16m1(dst2 + i, c, vl);
 //            __riscv_vse16_v_u16m1(dst3 + i, d, vl);
-//
+
 //            auto a2 = __riscv_vlse16_v_u16m1(src + k + 0 + (i + vl) * cn, cn * sizeof(uchar), vl);
 //            auto b2 = __riscv_vlse16_v_u16m1(src + k + 1 + (i + vl) * cn, cn * sizeof(uchar), vl);
 //            auto c2 = __riscv_vlse16_v_u16m1(src + k + 2 + (i + vl) * cn, cn * sizeof(uchar), vl);
@@ -403,7 +413,7 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            __riscv_vse16_v_u16m1(dst1 + i + vl, b2, vl);
 //            __riscv_vse16_v_u16m1(dst2 + i + vl, c2, vl);
 //            __riscv_vse16_v_u16m1(dst3 + i + vl, d2, vl);
-//
+
 //            auto a3 = __riscv_vlse16_v_u16m1(src + k + 0 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
 //            auto b3 = __riscv_vlse16_v_u16m1(src + k + 1 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
 //            auto c3 = __riscv_vlse16_v_u16m1(src + k + 2 + (i + vl + vl) * cn, cn * sizeof(uchar), vl);
@@ -412,7 +422,7 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            __riscv_vse16_v_u16m1(dst1 + i + vl + vl, b3, vl);
 //            __riscv_vse16_v_u16m1(dst2 + i + vl + vl, c3, vl);
 //            __riscv_vse16_v_u16m1(dst3 + i + vl + vl, d3, vl);
-//
+
 //            auto a4 = __riscv_vlse16_v_u16m1(src + k + 0 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
 //            auto b4 = __riscv_vlse16_v_u16m1(src + k + 1 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
 //            auto c4 = __riscv_vlse16_v_u16m1(src + k + 2 + (i + vl + vl + vl) * cn, cn * sizeof(uchar), vl);
@@ -423,9 +433,9 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //            __riscv_vse16_v_u16m1(dst3 + i + vl + vl + vl, d3, vl);
 //        }
 //        // Скалярный остаток
-//#if defined(__clang__)
-//#pragma clang loop vectorize(disable)
-//#endif
+// #if defined(__clang__)
+// #pragma clang loop vectorize(disable)
+// #endif
 //        for (; i < len; i++) {
 //            dst0[i] = src[k + i * cn];
 //            dst1[i] = src[k + i * cn + 1];
@@ -434,7 +444,7 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
 //        }
 //    }
 //    return CV_HAL_ERROR_OK;
-//}
+// }
 }
 }
 #endif
