@@ -202,12 +202,11 @@ public:
 
     /**
      * @brief Encode and write the image data.
-     * This is a pure virtual function that must be implemented by derived classes.
      * @param img The Mat object containing the image data to be encoded.
      * @param params A vector of parameters controlling the encoding process (e.g., compression level).
      * @return true if the image was successfully written, false otherwise.
      */
-    virtual bool write(const Mat& img, const std::vector<int>& params) = 0;
+    virtual bool write(const Mat& img, const std::vector<int>& params);
 
     /**
      * @brief Encode and write multiple images (e.g., for animated formats).
@@ -236,7 +235,7 @@ public:
      * @brief Throw an exception based on the last error encountered during encoding.
      * This method can be used to propagate error conditions back to the caller.
      */
-    virtual void throwOnEror() const;
+    virtual void throwOnError() const;
 
 protected:
     String m_description;    ///< Description of the encoder (e.g., format name, capabilities).
