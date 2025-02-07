@@ -592,7 +592,8 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
     uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
-    int j, count = 0, nz0 = 0;
+    int j;
+    int64_t count = 0, nz0 = 0;
     AutoBuffer<double> _buf(cn*4);
     double *s = (double*)_buf.data(), *sq = s + cn;
     int *sbuf = (int*)s, *sqbuf = (int*)sq;

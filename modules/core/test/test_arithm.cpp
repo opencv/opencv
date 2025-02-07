@@ -2814,6 +2814,19 @@ TEST(Core_MeanStdDev, regression_multichannel)
     }
 }
 
+// Related issue : https://github.com/opencv/opencv/issues/26861
+TEST(Core_MeanStdDevTest, LargeImage)
+{
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_14GB);
+    // (1<<16) * ((1<<15)+10) = ~2.147 billion
+    cv::Mat largeImage = cv::Mat::ones((1 << 16), ((1 << 15) + 10), CV_8U);
+    cv::Scalar mean, stddev;
+    cv::meanStdDev(largeImage, mean, stddev);
+    EXPECT_NEAR(mean[0], 1.0, 1e-5);
+    EXPECT_NEAR(stddev[0], 0.0, 1e-5);
+}
+
 template <typename T> static inline
 void testDivideInitData(Mat& src1, Mat& src2)
 {
