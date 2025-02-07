@@ -1740,6 +1740,7 @@ TEST(Core_Mat_array, copyTo_roi_row)
 
     std::array<uchar, 5> dst2;
     src.copyTo(dst2);
+
     EXPECT_EQ(1, (int)dst2[0]);
     EXPECT_EQ(2, (int)dst2[1]);
     EXPECT_EQ(3, (int)dst2[2]);
@@ -1756,7 +1757,7 @@ TEST_P(Core_Mat_arrays, SplitMerge)
     std::vector<cv::Mat> src(cn);
     for (size_t i = 0; i < src.size(); ++i)
     {
-        src[i] = Mat(10, 10, type, Scalar((double)(16 * (i + 1))));
+        src[i] = Mat(30, 30, type, Scalar((double)(16 * (i + 1))));
     }
 
     Mat merged;
