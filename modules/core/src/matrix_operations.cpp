@@ -90,7 +90,7 @@ void cv::hconcat(InputArray _src, OutputArray dst)
 
     std::vector<Mat> src;
     _src.getMatVector(src);
-    hconcat(!src.empty() ? &src[0] : 0, src.size(), dst);
+    hconcat(!src.empty() ? &src[0] : nullptr, src.size(), dst);
 }
 
 void cv::vconcat(const Mat* src, size_t nsrc, OutputArray _dst)
@@ -135,7 +135,7 @@ void cv::vconcat(InputArray _src, OutputArray dst)
 
     std::vector<Mat> src;
     _src.getMatVector(src);
-    vconcat(!src.empty() ? &src[0] : 0, src.size(), dst);
+    vconcat(!src.empty() ? &src[0] : nullptr, src.size(), dst);
 }
 
 //////////////////////////////////////// set identity ////////////////////////////////////////////
@@ -173,7 +173,7 @@ static bool ocl_setIdentity( InputOutputArray _m, const Scalar& s )
            ocl::KernelArg::Constant(Mat(1, 1, sctype, s)));
 
     size_t globalsize[2] = { (size_t)m.cols * cn / kercn, ((size_t)m.rows + rowsPerWI - 1) / rowsPerWI };
-    return k.run(2, globalsize, NULL, false);
+    return k.run(2, globalsize, nullptr, false);
 }
 
 }
@@ -214,8 +214,9 @@ void cv::setIdentity( InputOutputArray _m, const Scalar& s )
 
         for( int i = 0; i < rows; i++, data += step )
         {
-            for( int j = 0; j < cols; j++ )
-                data[j] = j == i ? val : 0;
+            std::fill(data, data + cols, 0.0);
+            if (i < cols)
+                data[i] = val;
         }
     }
     else
