@@ -584,15 +584,6 @@ struct data_t
     }
 };
 
-template <typename ValueType>
-static void init_normal_2d_mat(Mat& mat_2d, int rows, int cols, int type, const Scalar& scalar, ValueType min, ValueType max)
-{
-    mat_2d = Mat(rows, cols, type, scalar);
-    for (int i = 0; i < rows; ++i)
-        for (int j = 0; j < cols; ++j)
-            mat_2d.at<Vec<ValueType, 3>>(i, j)[1] = Vec<ValueType, 3>::randu(min, max)[1];
-}
-
 static void test_filestorage_basic(int write_flags, const char* suffix_name, bool testReadWrite, bool useMemory = false)
 {
     const bool generateTestData = false; // enable to regenerate reference in opencv_extra
@@ -620,16 +611,20 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         {   /* init */
 
             /* a normal mat u8 */
-            init_normal_2d_mat<uchar>(_2d_out_u8, 10, 20, CV_8UC3, Scalar(1U, 2U, 127U), 0U, 255U);
+            _2d_out_u8 = Mat(10, 20, CV_8UC3);
+            cv::randu(_2d_out_u8, 0U, 255U);
 
             /* a normal mat u32 */
-            init_normal_2d_mat<uint>(_2d_out_u32, 10, 20, CV_32UC3, Scalar(1U, 2U, 2147483647U), 0U, 2147483647U);
+            _2d_out_u32 = Mat(10, 20, CV_32UC3);
+            cv::randu(_2d_out_u32, 0U, 2147483647U);
 
             /* a normal mat i64 */
-            init_normal_2d_mat<int64_t>(_2d_out_i64, 10, 20, CV_64SC3, Scalar(1LL, 2LL, 2251799813685247LL), -2251799813685247LL, 2251799813685247LL);
+            _2d_out_i64 = Mat(10, 20, CV_64SC3);
+            cv::randu(_2d_out_i64, -2251799813685247LL, 2251799813685247LL);
 
             /* a normal mat u64 */
-            init_normal_2d_mat<uint64_t>(_2d_out_u64, 10, 20, CV_64UC3, Scalar(1ULL, 2ULL, 4503599627370495ULL), 0ULL, 4503599627370495ULL);
+            _2d_out_u64 = Mat(10, 20, CV_64UC3);
+            cv::randu(_2d_out_u64, 0ULL, 4503599627370495ULL);
 
             /* a 4d mat */
             const int Size[] = {4, 4, 4, 4};
