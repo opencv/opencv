@@ -602,6 +602,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
 
         cv::Mat _em_out, _em_in;
         cv::Mat _2d_out_u8, _2d_in_u8;
+        cv::Mat _2d_out_u32, _2d_in_u32;
         cv::Mat _2d_out_i64, _2d_in_i64;
         cv::Mat _2d_out_u64, _2d_in_u64;
         cv::Mat _nd_out, _nd_in;
@@ -614,6 +615,12 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             for (int i = 0; i < _2d_out_u8.rows; ++i)
                 for (int j = 0; j < _2d_out_u8.cols; ++j)
                     _2d_out_u8.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
+
+            /* a normal mat u32 */
+            _2d_out_u32 = cv::Mat(10, 20, CV_32UC3, cv::Scalar(1U, 2U, 2147483647U));
+            for (int i = 0; i < _2d_out_u32.rows; ++i)
+                for (int j = 0; j < _2d_out_u32.cols; ++j)
+                    _2d_out_u32.at<cv::Vec<uint, 3>>(i, j)[1] = i + j;
 
             /* a normal mat i64 */
             _2d_out_i64 = cv::Mat(10, 20, CV_64SC3, cv::Scalar(1LL, 2LL, 2251799813685247LL));
@@ -658,6 +665,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         {
             cv::FileStorage fs(name, write_flags + (useMemory ? cv::FileStorage::MEMORY : 0));
             fs << "normal_2d_mat_u8" << _2d_out_u8;
+            fs << "normal_2d_mat_u32" << _2d_out_u32;
             fs << "normal_2d_mat_i64" << _2d_out_i64;
             fs << "normal_2d_mat_u64" << _2d_out_u64;
             fs << "normal_nd_mat" << _nd_out;
@@ -702,7 +710,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                 }
             }
             std::cout << "Storage size: " << sz << std::endl;
-            EXPECT_LE(sz, (size_t)21000);
+            EXPECT_LE(sz, (size_t)24000);
         }
         {   /* read */
             cv::FileStorage fs(name, cv::FileStorage::READ + (useMemory ? cv::FileStorage::MEMORY : 0));
@@ -710,6 +718,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             /* mat */
             fs["empty_2d_mat"]  >> _em_in;
             fs["normal_2d_mat_u8"] >> _2d_in_u8;
+            fs["normal_2d_mat_u32"] >> _2d_in_u32;
             fs["normal_2d_mat_i64"] >> _2d_in_i64;
             fs["normal_2d_mat_u64"] >> _2d_in_u64;
             fs["normal_nd_mat"] >> _nd_in;
@@ -752,6 +761,11 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         ASSERT_EQ(_2d_in_u8.dims   , _2d_out_u8.dims);
         ASSERT_EQ(_2d_in_u8.depth(), _2d_out_u8.depth());
 
+        ASSERT_EQ(_2d_in_u32.rows   , _2d_out_u32.rows);
+        ASSERT_EQ(_2d_in_u32.cols   , _2d_out_u32.cols);
+        ASSERT_EQ(_2d_in_u32.dims   , _2d_out_u32.dims);
+        ASSERT_EQ(_2d_in_u32.depth(), _2d_out_u32.depth());
+
         ASSERT_EQ(_2d_in_i64.rows   , _2d_out_i64.rows);
         ASSERT_EQ(_2d_in_i64.cols   , _2d_out_i64.cols);
         ASSERT_EQ(_2d_in_i64.dims   , _2d_out_i64.dims);
@@ -773,6 +787,23 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                     if (++errors >= 3)
                     {
                         i = _2d_out_u8.rows;
+                        break;
+                    }
+                }
+            }
+        }
+
+        errors = 0;
+        for(int i = 0; i < _2d_out_u32.rows; ++i)
+        {
+            for (int j = 0; j < _2d_out_u32.cols; ++j)
+            {
+                if (_2d_in_u32.at<cv::Vec<uint, 3>>(i, j) != _2d_out_u32.at<cv::Vec<uint, 3>>(i, j)) {
+                    EXPECT_EQ((_2d_in_u32.at<cv::Vec<uint, 3>>(i, j)), (_2d_out_u32.at<cv::Vec<uint, 3>>(i, j)));
+                    printf("i = %d, j = %d\n", i, j);
+                    if (++errors >= 3)
+                    {
+                        i = _2d_out_u32.rows;
                         break;
                     }
                 }
