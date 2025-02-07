@@ -3,8 +3,9 @@
 // of this distribution and at http://opencv.org/license.html.
 #ifndef OPENCV_HAL_RVV_SPLIT_HPP_INCLUDED
 #define OPENCV_HAL_RVV_SPLIT_HPP_INCLUDED 
+
 #include <riscv_vector.h>
-#include <stdio.h>
+
 namespace cv { namespace cv_hal_rvv {
 
 #undef cv_hal_split8u
