@@ -62,19 +62,31 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
     } else if (k == 3) {
         uchar *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2];
         vl = __riscv_vsetvlmax_e8m8();
-        for (; i <= len - vl * 2; i += vl * 2) {
-            auto a = __riscv_vlse8_v_u8m2(src + 0 + i * cn, cn, vl);
-            auto b = __riscv_vlse8_v_u8m2(src + 1 + i * cn, cn, vl);
-            auto c = __riscv_vlse8_v_u8m2(src + 2 + i * cn, cn, vl);
-            __riscv_vse8_v_u8m2(dst0 + i, a, vl);
-            __riscv_vse8_v_u8m2(dst1 + i, b, vl);
-            __riscv_vse8_v_u8m2(dst2 + i, c, vl);
-            auto a2 = __riscv_vlse8_v_u8m2(src + 0 + (i + vl) * cn, cn, vl);
-            auto b2 = __riscv_vlse8_v_u8m2(src + 1 + (i + vl) * cn, cn, vl);
-            auto c2 = __riscv_vlse8_v_u8m2(src + 2 + (i + vl) * cn, cn, vl);
-            __riscv_vse8_v_u8m2(dst0 + i + vl, a2, vl);
-            __riscv_vse8_v_u8m2(dst1 + i + vl, b2, vl);
-            __riscv_vse8_v_u8m2(dst2 + i + vl, c2, vl);
+        for (; i <= len - vl * 4; i += vl * 4) {
+            auto a = __riscv_vlse8_v_u8m1(src + 0 + i * cn, cn, vl);
+            auto b = __riscv_vlse8_v_u8m1(src + 1 + i * cn, cn, vl);
+            auto c = __riscv_vlse8_v_u8m1(src + 2 + i * cn, cn, vl);
+            __riscv_vse8_v_u8m1(dst0 + i, a, vl);
+            __riscv_vse8_v_u8m1(dst1 + i, b, vl);
+            __riscv_vse8_v_u8m1(dst2 + i, c, vl);
+            auto a2 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl) * cn, cn, vl);
+            auto b2 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl) * cn, cn, vl);
+            auto c2 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl) * cn, cn, vl);
+            __riscv_vse8_v_u8m1(dst0 + i + vl, a2, vl);
+            __riscv_vse8_v_u8m1(dst1 + i + vl, b2, vl);
+            __riscv_vse8_v_u8m1(dst2 + i + vl, c2, vl);
+            auto a3 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl) * cn, cn, vl);
+            auto b3 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl) * cn, cn, vl);
+            auto c3 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl) * cn, cn, vl);
+            __riscv_vse8_v_u8m1(dst0 + i + vl + vl, a3, vl);
+            __riscv_vse8_v_u8m1(dst1 + i + vl + vl, b3, vl);
+            __riscv_vse8_v_u8m1(dst2 + i + vl + vl, c3, vl);
+            auto a4 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl + vl) * cn, cn, vl);
+            auto b4 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl + vl) * cn, cn, vl);
+            auto c4 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl + vl) * cn, cn, vl);
+            __riscv_vse8_v_u8m1(dst0 + i + vl + vl + vl, a4, vl);
+            __riscv_vse8_v_u8m1(dst1 + i + vl + vl + vl, b4, vl);
+            __riscv_vse8_v_u8m1(dst2 + i + vl + vl + vl, c4, vl);
         }
         #if defined(__clang__)
         #pragma clang loop vectorize(disable)
@@ -87,24 +99,42 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn) {
     } else {
         uchar *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3];
         vl = __riscv_vsetvlmax_e8m8();
-        for (; i <= len - vl * 2; i += vl * 2) {
-            auto a = __riscv_vlse8_v_u8m2(src + 0 + i * cn, cn, vl);
-            auto b = __riscv_vlse8_v_u8m2(src + 1 + i * cn, cn, vl);
-            auto c = __riscv_vlse8_v_u8m2(src + 2 + i * cn, cn, vl);
-            auto d = __riscv_vlse8_v_u8m2(src + 3 + i * cn, cn, vl);
-            __riscv_vse8_v_u8m2(dst0 + i, a, vl);
-            __riscv_vse8_v_u8m2(dst1 + i, b, vl);
-            __riscv_vse8_v_u8m2(dst2 + i, c, vl);
-            __riscv_vse8_v_u8m2(dst3 + i, d, vl);
+        for (; i <= len - vl * 4; i += vl * 4) {
+            auto a = __riscv_vlse8_v_u8m1(src + 0 + i * cn, cn, vl);
+            auto b = __riscv_vlse8_v_u8m1(src + 1 + i * cn, cn, vl);
+            auto c = __riscv_vlse8_v_u8m1(src + 2 + i * cn, cn, vl);
+            auto d = __riscv_vlse8_v_u8m1(src + 3 + i * cn, cn, vl);
+            __riscv_vse8_v_u8m1(dst0 + i, a, vl);
+            __riscv_vse8_v_u8m1(dst1 + i, b, vl);
+            __riscv_vse8_v_u8m1(dst2 + i, c, vl);
+            __riscv_vse8_v_u8m1(dst3 + i, d, vl);
 
-            auto a2 = __riscv_vlse8_v_u8m2(src + 0 + (i + vl) * cn, cn, vl);
-            auto b2 = __riscv_vlse8_v_u8m2(src + 1 + (i + vl) * cn, cn, vl);
-            auto c2 = __riscv_vlse8_v_u8m2(src + 2 + (i + vl) * cn, cn, vl);
-            auto d2 = __riscv_vlse8_v_u8m2(src + 3 + (i + vl) * cn, cn, vl);
-            __riscv_vse8_v_u8m2(dst0 + i + vl, a2, vl);
-            __riscv_vse8_v_u8m2(dst1 + i + vl, b2, vl);
-            __riscv_vse8_v_u8m2(dst2 + i + vl, c2, vl);
-            __riscv_vse8_v_u8m2(dst3 + i + vl, d2, vl);
+            auto a2 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl) * cn, cn, vl);
+            auto b2 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl) * cn, cn, vl);
+            auto c2 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl) * cn, cn, vl);
+            auto d2 = __riscv_vlse8_v_u8m1(src + 3 + (i + vl) * cn, cn, vl);
+            __riscv_vse8_v_u8m1(dst0 + i + vl, a2, vl);
+            __riscv_vse8_v_u8m1(dst1 + i + vl, b2, vl);
+            __riscv_vse8_v_u8m1(dst2 + i + vl, c2, vl);
+            __riscv_vse8_v_u8m1(dst3 + i + vl, d2, vl);
+
+            auto a3 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl) * cn, cn, vl);
+            auto b3 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl) * cn, cn, vl);
+            auto c3 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl) * cn, cn, vl);
+            auto d3 = __riscv_vlse8_v_u8m1(src + 3 + (i + vl + vl) * cn, cn, vl);
+            __riscv_vse8_v_u8m1(dst0 + i + vl + vl, a3, vl);
+            __riscv_vse8_v_u8m1(dst1 + i + vl + vl, b3, vl);
+            __riscv_vse8_v_u8m1(dst2 + i + vl + vl, c3, vl);
+            __riscv_vse8_v_u8m1(dst3 + i + vl + vl, d3, vl);
+
+            auto a4 = __riscv_vlse8_v_u8m1(src + 0 + (i + vl + vl + vl) * cn, cn, vl);
+            auto b4 = __riscv_vlse8_v_u8m1(src + 1 + (i + vl + vl + vl) * cn, cn, vl);
+            auto c4 = __riscv_vlse8_v_u8m1(src + 2 + (i + vl + vl + vl) * cn, cn, vl);
+            auto d4 = __riscv_vlse8_v_u8m1(src + 3 + (i + vl + vl + vl) * cn, cn, vl);
+            __riscv_vse8_v_u8m1(dst0 + i + vl + vl + vl, a4, vl);
+            __riscv_vse8_v_u8m1(dst1 + i + vl + vl + vl, b4, vl);
+            __riscv_vse8_v_u8m1(dst2 + i + vl + vl + vl, c4, vl);
+            __riscv_vse8_v_u8m1(dst3 + i + vl + vl + vl, d4, vl);
         }
         #if defined(__clang__)
         #pragma clang loop vectorize(disable)
