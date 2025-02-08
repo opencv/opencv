@@ -784,6 +784,7 @@ void cvSetPropTopmost_COCOA( const char* name, const bool topmost )
 
 void setWindowTitle_COCOA(const cv::String& winname, const cv::String& title)
 {
+
     @autoreleasepool{
         CVWindow *window = cvGetWindow(winname.c_str());
 
@@ -799,6 +800,7 @@ void setWindowTitle_COCOA(const cv::String& winname, const cv::String& title)
         NSString *windowTitle = [NSString stringWithFormat:@"%s", title.c_str()];
         [window setTitle:windowTitle];
     }
+
 }
 
 static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
@@ -874,8 +876,19 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     if([event modifierFlags] & NSControlKeyMask)	flags |= CV_EVENT_FLAG_CTRLKEY;
     if([event modifierFlags] & NSAlternateKeyMask)	flags |= CV_EVENT_FLAG_ALTKEY;
 
-    if([event type] == NSLeftMouseDown)	{[self cvSendMouseEvent:event type:CV_EVENT_LBUTTONDOWN flags:flags | CV_EVENT_FLAG_LBUTTON];}
-    if([event type] == NSLeftMouseUp)	{[self cvSendMouseEvent:event type:CV_EVENT_LBUTTONUP   flags:flags | CV_EVENT_FLAG_LBUTTON];}
+    //modified code using ternary operator:
+    if ([event type] == NSLeftMouseDown) {
+    [self cvSendMouseEvent:event
+                      type:([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_RBUTTONDOWN : CV_EVENT_LBUTTONDOWN
+                     flags:flags | (([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_FLAG_RBUTTON : CV_EVENT_FLAG_LBUTTON)];
+}
+
+if ([event type] == NSLeftMouseUp) {
+    [self cvSendMouseEvent:event
+                      type:([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_RBUTTONUP : CV_EVENT_LBUTTONUP
+                     flags:flags | (([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_FLAG_RBUTTON : CV_EVENT_FLAG_LBUTTON)];
+}
+
     if([event type] == NSRightMouseDown){[self cvSendMouseEvent:event type:CV_EVENT_RBUTTONDOWN flags:flags | CV_EVENT_FLAG_RBUTTON];}
     if([event type] == NSRightMouseUp)	{[self cvSendMouseEvent:event type:CV_EVENT_RBUTTONUP   flags:flags | CV_EVENT_FLAG_RBUTTON];}
     if([event type] == NSOtherMouseDown){[self cvSendMouseEvent:event type:CV_EVENT_MBUTTONDOWN flags:flags];}
