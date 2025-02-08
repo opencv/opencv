@@ -82,7 +82,7 @@ public final class CustomCleaner {
 
     class PhantomCleanable extends PhantomReference<Object> implements Cleanable {
 
-        private final Runnable action;
+       private final Runnable action;
        PhantomCleanable prev = this;
        PhantomCleanable next = this;
 
