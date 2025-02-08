@@ -12,7 +12,7 @@ PERF_TEST_P( Size_Depth_Channels, split,
              (
                  testing::Values(TYPICAL_MAT_SIZES),
                  testing::Values(CV_8U, CV_16S, CV_32F, CV_64F),
-                 testing::Values(2, 3, 4)
+                 testing::Values(2, 3, 4, 5, 6, 7, 8)
              )
            )
 {
