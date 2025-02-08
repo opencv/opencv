@@ -295,7 +295,7 @@ Following formats can be read by OpenCV without help of any third-party library:
 
 | Formats | Option | Default |
 | --------| ------ | ------- |
-| [BMP](https://en.wikipedia.org/wiki/BMP_file_format) | (Alway) | _ON_ |
+| [BMP](https://en.wikipedia.org/wiki/BMP_file_format) | (Always) | _ON_ |
 | [HDR](https://en.wikipedia.org/wiki/RGBE_image_format) | `WITH_IMGCODEC_HDR` | _ON_ |
 | [Sun Raster](https://en.wikipedia.org/wiki/Sun_Raster) | `WITH_IMGCODEC_SUNRASTER` | _ON_ |
 | [PPM, PGM, PBM, PAM](https://en.wikipedia.org/wiki/Netpbm#File_formats) | `WITH_IMGCODEC_PXM` | _ON_ |
