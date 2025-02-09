@@ -27,6 +27,11 @@
 #include "hal_rvv_1p0/convert_scale.hpp" // core
 #include "hal_rvv_1p0/minmax.hpp" // core
 #include "hal_rvv_1p0/atan.hpp" // core
+
+#include "hal_rvv_1p0/lu.hpp" // core
+#include "hal_rvv_1p0/cholesky.hpp" // core
+#include "hal_rvv_1p0/qr.hpp" // core
+#include "hal_rvv_1p0/svd.hpp" // core
 #endif
 
 #endif
