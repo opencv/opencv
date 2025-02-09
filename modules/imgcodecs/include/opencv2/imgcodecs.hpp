@@ -65,6 +65,7 @@ namespace cv
 //! @{
 
 //! Imread flags
+//! @note IMREAD_COLOR_BGR (IMREAD_COLOR) and IMREAD_COLOR_RGB can not be set at the same time.
 enum ImreadModes {
        IMREAD_UNCHANGED            = -1, //!< If set, return the loaded image as is (with alpha channel, otherwise it gets cropped). Ignore EXIF orientation.
        IMREAD_GRAYSCALE            = 0,  //!< If set, always convert image to the single channel grayscale image (codec internal conversion).
