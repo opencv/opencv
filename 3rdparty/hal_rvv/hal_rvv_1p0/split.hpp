@@ -13,9 +13,6 @@ namespace cv { namespace cv_hal_rvv {
 
 inline int split8u(const uchar* src, uchar** dst, int len, int cn)
 {
-    if (cn > 8)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
     int vl = 0;
     if (cn == 1)
     {
@@ -62,71 +59,31 @@ inline int split8u(const uchar* src, uchar** dst, int len, int cn)
             __riscv_vse8_v_u8m2(dst3 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 3), vl);
         }
     }
-    else if ( cn == 5)
+    else
     {
-        uchar *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3], *dst4 = dst[4];
-        for (int i = 0; i < len; i += vl)
+        int k = 0;
+        for (; k <= cn - 4; k += 4)
         {
-            vl = __riscv_vsetvl_e8m1(len - i);
-            vuint8m1x5_t seg = __riscv_vlseg5e8_v_u8m1x5(src + i * cn, vl);
-            __riscv_vse8_v_u8m1(dst0 + i, __riscv_vget_v_u8m1x5_u8m1(seg, 0), vl);
-            __riscv_vse8_v_u8m1(dst1 + i, __riscv_vget_v_u8m1x5_u8m1(seg, 1), vl);
-            __riscv_vse8_v_u8m1(dst2 + i, __riscv_vget_v_u8m1x5_u8m1(seg, 2), vl);
-            __riscv_vse8_v_u8m1(dst3 + i, __riscv_vget_v_u8m1x5_u8m1(seg, 3), vl);
-            __riscv_vse8_v_u8m1(dst4 + i, __riscv_vget_v_u8m1x5_u8m1(seg, 4), vl);
+            uchar *dst0 = dst[k], *dst1 = dst[k + 1], *dst2 = dst[k + 2], *dst3 = dst[k + 3];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e8m2(len - i);
+                vuint8m2x4_t seg = __riscv_vlsseg4e8_v_u8m2x4(src + k + i * cn, cn, vl);
+                __riscv_vse8_v_u8m2(dst0 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 0), vl);
+                __riscv_vse8_v_u8m2(dst1 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 1), vl);
+                __riscv_vse8_v_u8m2(dst2 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 2), vl);
+                __riscv_vse8_v_u8m2(dst3 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 3), vl);
+            }
         }
-    }
-    else if ( cn == 6)
-    {
-        uchar *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3], *dst4 = dst[4], *dst5 = dst[5];
-        for (int i = 0; i < len; i += vl)
+        for (; k < cn; ++k)
         {
-            vl = __riscv_vsetvl_e8m1(len - i);
-            vuint8m1x6_t seg = __riscv_vlseg6e8_v_u8m1x6(src + i * cn, vl);
-            __riscv_vse8_v_u8m1(dst0 + i, __riscv_vget_v_u8m1x6_u8m1(seg, 0), vl);
-            __riscv_vse8_v_u8m1(dst1 + i, __riscv_vget_v_u8m1x6_u8m1(seg, 1), vl);
-            __riscv_vse8_v_u8m1(dst2 + i, __riscv_vget_v_u8m1x6_u8m1(seg, 2), vl);
-            __riscv_vse8_v_u8m1(dst3 + i, __riscv_vget_v_u8m1x6_u8m1(seg, 3), vl);
-            __riscv_vse8_v_u8m1(dst4 + i, __riscv_vget_v_u8m1x6_u8m1(seg, 4), vl);
-            __riscv_vse8_v_u8m1(dst5 + i, __riscv_vget_v_u8m1x6_u8m1(seg, 5), vl);
-        }
-    }
-    else if ( cn == 7)
-    {
-        uchar *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3], *dst4 = dst[4], *dst5 = dst[5], *dst6 = dst[6];
-        for (int i = 0; i < len; i += vl)
-        {
-            vl = __riscv_vsetvl_e8m1(len - i);
-            vuint8m1x7_t seg = __riscv_vlseg7e8_v_u8m1x7(src + i * cn, vl);
-            __riscv_vse8_v_u8m1(dst0 + i, __riscv_vget_v_u8m1x7_u8m1(seg, 0), vl);
-            __riscv_vse8_v_u8m1(dst1 + i, __riscv_vget_v_u8m1x7_u8m1(seg, 1), vl);
-            __riscv_vse8_v_u8m1(dst2 + i, __riscv_vget_v_u8m1x7_u8m1(seg, 2), vl);
-            __riscv_vse8_v_u8m1(dst3 + i, __riscv_vget_v_u8m1x7_u8m1(seg, 3), vl);
-            __riscv_vse8_v_u8m1(dst4 + i, __riscv_vget_v_u8m1x7_u8m1(seg, 4), vl);
-            __riscv_vse8_v_u8m1(dst5 + i, __riscv_vget_v_u8m1x7_u8m1(seg, 5), vl);
-            __riscv_vse8_v_u8m1(dst6 + i, __riscv_vget_v_u8m1x7_u8m1(seg, 6), vl);
-        }
-    }
-    else if ( cn == 8)
-    {
-        uchar *dst0 = dst[0], *dst1 = dst[1], *dst2 = dst[2], *dst3 = dst[3], *dst4 = dst[4], *dst5 = dst[5], *dst6 = dst[6], *dst7 = dst[7];
-        for (int i = 0; i < len; i += vl)
-        {
-            vl = __riscv_vsetvl_e8m2(len - i);
-            vuint8m2x4_t seg = __riscv_vlsseg4e8_v_u8m2x4(src + i * cn, cn, vl);
-            __riscv_vse8_v_u8m2(dst0 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 0), vl);
-            __riscv_vse8_v_u8m2(dst1 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 1), vl);
-            __riscv_vse8_v_u8m2(dst2 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 2), vl);
-            __riscv_vse8_v_u8m2(dst3 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 3), vl);
-        }
-        for (int i = 0; i < len; i += vl)
-        {
-            vl = __riscv_vsetvl_e8m2(len - i);
-            vuint8m2x4_t seg = __riscv_vlsseg4e8_v_u8m2x4(src + 4 + i * cn, cn, vl);
-            __riscv_vse8_v_u8m2(dst4 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 0), vl);
-            __riscv_vse8_v_u8m2(dst5 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 1), vl);
-            __riscv_vse8_v_u8m2(dst6 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 2), vl);
-            __riscv_vse8_v_u8m2(dst7 + i, __riscv_vget_v_u8m2x4_u8m2(seg, 3), vl);
+            uchar* dstK = dst[k];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e8m2(len - i);
+                vuint8m2_t seg = __riscv_vlse8_v_u8m2(src + k + i * cn, cn, vl);
+                __riscv_vse8_v_u8m2(dstK + i, seg, vl);
+            }
         }
     }
     return CV_HAL_ERROR_OK;
