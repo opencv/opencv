@@ -24,9 +24,7 @@ namespace svd
         static inline vfloat32m4_t vfmv_v_f(float a, size_t b) { return __riscv_vfmv_v_f_f32m4(a, b); }
         static inline vfloat32m1_t vfmv_s_f(float a, size_t b) { return __riscv_vfmv_s_f_f32m1(a, b); }
         static inline vfloat32m4_t vle(const float* a, size_t b) { return __riscv_vle32_v_f32m4(a, b); }
-        static inline vfloat32m4_t vlse(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32m4(a, b, c); }
         static inline void vse(float* a, vfloat32m4_t b, size_t c) { __riscv_vse32(a, b, c); }
-        static inline void vsse(float* a, ptrdiff_t b, vfloat32m4_t c, size_t d) { __riscv_vsse32(a, b, c, d); }
     };
 
     template<> struct rvv<double>
@@ -36,9 +34,7 @@ namespace svd
         static inline vfloat64m4_t vfmv_v_f(double a, size_t b) { return __riscv_vfmv_v_f_f64m4(a, b); }
         static inline vfloat64m1_t vfmv_s_f(double a, size_t b) { return __riscv_vfmv_s_f_f64m1(a, b); }
         static inline vfloat64m4_t vle(const double* a, size_t b) { return __riscv_vle64_v_f64m4(a, b); }
-        static inline vfloat64m4_t vlse(const double* a, ptrdiff_t b, size_t c) { return __riscv_vlse64_v_f64m4(a, b, c); }
         static inline void vse(double* a, vfloat64m4_t b, size_t c) { __riscv_vse64(a, b, c); }
-        static inline void vsse(double* a, ptrdiff_t b, vfloat64m4_t c, size_t d) { __riscv_vsse64(a, b, c, d); }
     };
 }
 
