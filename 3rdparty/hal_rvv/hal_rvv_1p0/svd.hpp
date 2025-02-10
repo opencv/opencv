@@ -78,14 +78,12 @@ inline int SVD(T* src, size_t src_step, T* w, T*, size_t, T* vt, size_t vt_step,
     int vlmax = svd::rvv<T>::vsetvlmax(), vl;
     for( i = 0; i < n; i++ )
     {
-        auto vec_sum = svd::rvv<T>::vfmv_v_f(0, vlmax);
-        for( k = 0; k < m; k += vl )
+        for( k = 0, sd = 0; k < m; k++ )
         {
-            vl = svd::rvv<T>::vsetvl(m - k);
-            auto vec_src = svd::rvv<T>::vle(src + i * src_step + k, vl);
-            vec_sum = __riscv_vfmacc_tu(vec_sum, vec_src, vec_src, vl);
+            T t = src[i*src_step + k];
+            sd += (double)t*t;
         }
-        W[i] = __riscv_vfmv_f(__riscv_vfredosum(vec_sum, svd::rvv<T>::vfmv_s_f(0, vlmax), vlmax));
+        W[i] = sd;
 
         if( vt )
         {
