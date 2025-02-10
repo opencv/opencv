@@ -4,9 +4,8 @@ import argparse
 from tqdm import tqdm
 from functools import partial
 from copy import deepcopy
-from download_models import downloadFile, getSaveDir
-import yaml
 import os
+from common import *
 
 ## let use write description of the script and general information how to use it
 
@@ -45,46 +44,93 @@ Note: If you are running it on CPU it might take a large chank of time.
 Also make sure to have abount 15GB of RAM to make proccess faster (other wise swapping will ckick in and everything will be slower)
 '''
 
+def get_args_parser():
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_OPENCV, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_CUDA)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL, cv.dnn.DNN_TARGET_CUDA)
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
+                        help='An optional path to file with preprocessing parameters.')
+    parser.add_argument('--input', '-i', default="rubberwhale1.png", help='Path to image file.', required=False)
+    parser.add_argument('--samples', '-s', type=int, help='Number of times to sample the model.', default=50)
+    parser.add_argument('--mask', '-m', type=str, help='Path to mask image. If not provided, interactive mask creation will be used.', default=None)
 
-parser = argparse.ArgumentParser(description='Use this script to run inpainting using Latent Diffusion Model',
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--encoder', '-e', type=str, help='Path to encoder network.', default=None)
-parser.add_argument('--decoder', '-d', type=str, help='Path to decoder network.', default=None)
-parser.add_argument('--diffusor', '-df', type=str, help='Path to diffusion network.', default=None)
-parser.add_argument('--image', '-i', type=str, help='Path to input image.', default=None)
-parser.add_argument('--samples', '-s', type=int, help='Number of times to sample the model.', default=50)
-parser.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
-                        help="Choose one of computation backends: "
-                             "%d: automatically (by default), "
-                             "%d: OpenCV implementation, "
-                             "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                             "%d: CUDA, " % backends)
-parser.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
-                        help='Choose one of target computation devices: '
-                         '%d: CPU target (by default), '
-                         '%d: OpenCL, '
-                         '%d: NCS2 VPU, '
-                         '%d: HDDL VPU, '
-                         '%d: CUDA ' % targets)
-parser.add_argument('--mask', '-m', type=str, help='Path to mask image. If not provided, interactive mask creation will be used.', default=None)
+    parser.add_argument('--backend', default="default", type=str, choices=backends,
+            help="Choose one of computation backends: "
+            "default: automatically (by default), "
+            "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+            "opencv: OpenCV implementation, "
+            "vkcom: VKCOM, "
+            "cuda: CUDA, "
+            "webnn: WebNN")
+    parser.add_argument('--target', default="cpu", type=str, choices=targets,
+            help="Choose one of target computation devices: "
+            "cpu: CPU target (by default), "
+            "opencl: OpenCL, "
+            "opencl_fp16: OpenCL fp16 (half-float precision), "
+            "ncs2_vpu: NCS2 VPU, "
+            "hddl_vpu: HDDL VPU, "
+            "vulkan: Vulkan, "
+            "cuda: CUDA, "
+            "cuda_fp16: CUDA fp16 (half-float preprocess)")
+    args, _ = parser.parse_known_args()
+    add_preproc_args(args.zoo, parser, 'ldm_inpainting', prefix="", alias="ldm_inpainting")
+    add_preproc_args(args.zoo, parser, 'ldm_inpainting', prefix="encoder_", alias="ldm_inpainting")
+    add_preproc_args(args.zoo, parser, 'ldm_inpainting', prefix="decoder_", alias="ldm_inpainting")
+    add_preproc_args(args.zoo, parser, 'ldm_inpainting', prefix="diffusor_", alias="ldm_inpainting")
+    parser = argparse.ArgumentParser(parents=[parser],
+                                        description='Image inpainting using OpenCV.',
+                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    return parser.parse_args()
 
-def make_batch(image, mask):
-    image = image.astype(np.float32)/255.0
-    image = image[np.newaxis, ...].transpose(0,3,1,2)
+stdSize = 0.7
+stdWeight = 2
+stdImgSize = 512
+imgWidth = None
+fontSize = 1.5
+fontThickness = 1
 
-    mask = mask.astype(np.float32)/255.0
-    mask = mask[np.newaxis, np.newaxis, ...]
-    mask[mask < 0.5] = 0
-    mask[mask >= 0.5] = 1
+def keyboard_shorcuts():
+    print('''
+    Keyboard Shorcuts:
+        Press 'i' to increase brush size.
+        Press 'd' to decrease brush size.
+        Press 'r' to reset mask.
+        Press ' ' (space bar) after selecting area to be inpainted.
+        Press ESC to terminate the program.
+    '''
+    )
 
-    masked_image = (1-mask)*image
+def help():
+    print(
+        '''
+        Use this script for image inpainting using OpenCV.
 
-    batch = {"image": image, "mask": mask, "masked_image": masked_image}
+        Firstly, download required models i.e. ldm_inpainting using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
+
+        To run:
+        Example: python ldm_inpainting.py [--input=<image_name>]
+        '''
+    )
+
+def make_batch_blob(image, mask):
+
+    blob_image = cv.dnn.blobFromImage(image, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=args.rgb, crop=False)
+
+    blob_mask = cv.dnn.blobFromImage(mask, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=False, crop=False)
+
+    blob_mask = (blob_mask >= 0.5).astype(np.float32)
+    masked_image = (1 - blob_mask) * blob_image
+
+    batch = {
+        "image": blob_image,
+        "mask": blob_mask,
+        "masked_image": masked_image
+    }
+
     for k in batch:
-        batch[k] = batch[k]*2.0-1.0
+        batch[k] = batch[k]*2.0 - 1.0
+
     return batch
 
 def noise_like(shape, repeat=False):
@@ -304,47 +350,16 @@ class DDIMInpainter(object):
         self.conditioning_key = conditioning_key
         self.register_schedule(linear_start=linear_start, linear_end=linear_end)
 
-        # Load model configurations from YAML
-        config_file = 'models.yml'
-        save_dir = getSaveDir()
-        models_info = yaml.safe_load(open(config_file, 'r'))
-        ldm_config = models_info.get('ldm_inpainting', {})
-
         # Initialize models using provided paths or download if necessary
-        encoder_path = args.encoder
-        decoder_path = args.decoder
-        diffusor_path = args.diffusor
+        encoder_path = findModel(args.encoder_model, args.encoder_sha1)
+        decoder_path = findModel(args.decoder_model, args.decoder_sha1)
+        diffusor_path = findModel(args.diffusor_model, args.diffusor_sha1)
 
-        if not encoder_path and ldm_config.get('encoder_load_info'):
-            encoder_path = os.path.join(save_dir, ldm_config['encoder_model'])
-            if not os.path.exists(encoder_path):
-                print(f"Could not find {ldm_config['encoder_model']} model graph at {args.encoder}. Downloading...")
-                downloadFile(ldm_config['encoder_load_info']['url'],
-                        sha=ldm_config['encoder_load_info']['sha1'],
-                        save_dir=save_dir)
-
-        if not decoder_path and ldm_config.get('decoder_load_info'):
-            decoder_path = os.path.join(save_dir, ldm_config['decoder_model'])
-            if not os.path.exists(decoder_path):
-                print(f"Could not find {ldm_config['decoder_model']} model graph at {args.decoder}. Downloading...")
-                downloadFile(ldm_config['decoder_load_info']['url'],
-                           sha=ldm_config['decoder_load_info']['sha1'],
-                           save_dir=save_dir)
-
-        if not diffusor_path and ldm_config.get('diffusor_load_info'):
-            diffusor_path = os.path.join(save_dir, ldm_config['diffusor_model'])
-            if not os.path.exists(diffusor_path):
-                print(f"Could not find {ldm_config['diffusor_model']} model graph at {args.diffusor}. Downloading...")
-                downloadFile(ldm_config['diffusor_load_info']['url'],
-                           sha=ldm_config['diffusor_load_info']['sha1'],
-                           save_dir=save_dir)
-
-        # Initialize models
         self.encoder = cv.dnn.readNet(encoder_path)
-        self.decoder = cv.dnn.readNet(decoder_path)
         self.diffusor = cv.dnn.readNet(diffusor_path)
+        self.decoder = cv.dnn.readNet(decoder_path)
         self.sampler = DDIMSampler(self, ddpm_num_timesteps=self.num_timesteps)
-        self.set_backend(backend=args.backend, target=args.target)
+        self.set_backend(backend=get_backend_id(args.backend), target=get_target_id(args.target))
 
     def set_backend(self, backend=cv.dnn.DNN_BACKEND_DEFAULT, target=cv.dnn.DNN_TARGET_CPU):
         self.encoder.setPreferableBackend(backend)
@@ -357,7 +372,6 @@ class DDIMInpainter(object):
         self.diffusor.setPreferableTarget(target)
 
     def apply_diffusor(self, x, timestep, cond):
-
         x = np.concatenate([x, cond], axis=1)
         x = cv.Mat(x.astype(np.float32))
         timestep = cv.Mat(timestep.astype(np.int64))
@@ -366,6 +380,7 @@ class DDIMInpainter(object):
         self.diffusor.setInput(x, names[0])
         self.diffusor.setInput(timestep, names[1])
         output = self.diffusor.forward()
+
         return output
 
     def register_buffer(self, name, attr):
@@ -412,7 +427,6 @@ class DDIMInpainter(object):
             betas * np.sqrt(alphas_cumprod_prev) / (1. - alphas_cumprod)))
         self.register_buffer('posterior_mean_coef2', to_numpy(
             (1. - alphas_cumprod_prev) * np.sqrt(alphas) / (1. - alphas_cumprod)))
-
         if self.parameterization == "eps":
             lvlb_weights = self.betas ** 2 / (
                         2 * self.posterior_variance * to_numpy(alphas) * (1 - self.alphas_cumprod))
@@ -426,7 +440,6 @@ class DDIMInpainter(object):
         assert not np.isnan(self.lvlb_weights).all()
 
     def apply_model(self, x_noisy, t, cond, return_ids=False):
-
         if isinstance(cond, dict):
             # hybrid case, cond is exptected to be a dict
             pass
@@ -437,7 +450,6 @@ class DDIMInpainter(object):
             cond = {key: cond}
 
         x_recon = self.apply_diffusor(x_noisy, t, cond['c_concat'])
-
         if isinstance(x_recon, tuple) and not return_ids:
             return x_recon[0]
         else:
@@ -457,7 +469,6 @@ class DDIMInpainter(object):
         c = np.concatenate([c, cc], axis=1)
 
         shape = (c.shape[1] - 1,) + c.shape[2:]
-
         # Sample from the model
         samples_ddim, _ = self.sampler.sample(
             S=S,
@@ -481,53 +492,63 @@ class DDIMInpainter(object):
 
         return inpainted
 
-def create_mask(img, radius=20):
+def create_mask(img):
     drawing = False  # True if the mouse is pressed
-    counter = 0
+    brush_size = 20
 
     # Mouse callback function
     def draw_circle(event, x, y, flags, param):
-        nonlocal drawing, counter, radius
+        nonlocal drawing, brush_size
 
         if event == cv.EVENT_LBUTTONDOWN:
-            drawing = True if counter % 2 == 0 else False
-            counter += 1
-            cv.circle(img, (x, y), radius, (255, 255, 255), -1)
-            cv.circle(mask, (x, y), radius, 255, -1)
-
+            drawing = True
         elif event == cv.EVENT_MOUSEMOVE:
             if drawing:
-                cv.circle(img, (x, y), radius, (255, 255, 255), -1)
-                cv.circle(mask, (x, y), radius, 255, -1)
+                cv.circle(mask, (x, y), brush_size, (255), thickness=-1)
+        elif event == cv.EVENT_LBUTTONUP:
+            drawing = False
 
-    mask = np.zeros((img.shape[0], img.shape[1]), np.uint8)
 
     # Create window with instructions
-    window_name = 'image - Controls: Left click to start/stop drawing, ESC to finish'
+    window_name = 'Draw Mask'
     cv.namedWindow(window_name)
     cv.setMouseCallback(window_name, draw_circle)
+    label = "Press 'i' to increase, 'd' to decrease brush size. And 'r' to reset mask. "
+    labelSize, _ = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, fontSize, fontThickness)
+    alpha = 0.5
+    temp_image = img.copy()
+    overlay = img.copy()
+    cv.rectangle(overlay, (0, 0), (labelSize[0]+10, labelSize[1]+int(30*fontSize)), (255, 255, 255), cv.FILLED)
+    cv.addWeighted(overlay, alpha, temp_image, 1 - alpha, 0, temp_image)
+    cv.putText(temp_image, "Draw the mask on the image. Press space bar when done.", (10, int(25*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
+    cv.putText(temp_image, label, (10, int(50*fontSize)), cv.FONT_HERSHEY_SIMPLEX, fontSize, (0, 0, 0), fontThickness)
 
+    mask = np.zeros((img.shape[0], img.shape[1]), np.uint8)
+    display_img = temp_image.copy()
     while True:
-        # Create a copy of the image to show instructions
-        display_img = img.copy()
-        if not drawing:
-            cv.putText(display_img, 'Click to start drawing', (10, 30),
-                      cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-        else:
-            cv.putText(display_img, 'Click to stop drawing', (10, 30),
-                      cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-        cv.putText(display_img, 'Press ESC when finished', (10, 60),
-                  cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-
+        display_img[mask > 0] = [255, 255, 255]
         cv.imshow(window_name, display_img)
-        if cv.waitKey(1) & 0xFF == 27:  # Press 'ESC' to exit
+        # Create a copy of the image to show instructions
+        key = cv.waitKey(30) & 0xFF
+        if key == ord('i'):  # Increase brush size
+            brush_size += 1
+            print(f"Brush size increased to {brush_size}")
+        elif key == ord('d'):  # Decrease brush size
+            brush_size = max(1, brush_size - 1)
+            print(f"Brush size decreased to {brush_size}")
+        elif key == ord('r'):  # clear the mask
+            mask = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
+            display_img = temp_image.copy()
+            print(f"Mask cleared")
+        elif key == ord(' '): # Press space bar to finish drawing
             break
+        elif key == 27:
+            exit()
 
     cv.destroyAllWindows()
     return mask
 
-def prepare_input(args):
-    image = cv.imread(args.image)
+def prepare_input(args, image):
     if args.mask:
         mask = cv.imread(args.mask, cv.IMREAD_GRAYSCALE)
         if mask is None:
@@ -538,19 +559,28 @@ def prepare_input(args):
         mask = create_mask(deepcopy(image))
 
     image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
-    batch = make_batch(image, mask)
+    batch = make_batch_blob(image, mask)
     return batch
 
 def main(args):
+    global imgWidth, fontSize, fontThickness
+    keyboard_shorcuts()
 
-    batch = prepare_input(args)
+    image = cv.imread(findFile(args.input))
+    imgWidth = min(image.shape[:2])
+    fontSize = min(1.5, (stdSize*imgWidth)/stdImgSize)
+    fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
+
+    batch = prepare_input(args, image)
 
     model = DDIMInpainter(args)
     result = model.inpaint(batch["masked_image"], batch["mask"], S=args.samples)
 
-    ext = args.image.split('.')[-1]
-    cv.imwrite(args.image.replace(f".{ext}", f"_inpainted.{ext}"), result[..., ::-1])
+    result = result.astype(np.uint8)
+    cv.imshow("Inpainted Image", result)
+    cv.waitKey(0)
+    cv.destroyAllWindows()
 
 if __name__ == '__main__':
-    args = parser.parse_args()
+    args = get_args_parser()
     main(args)

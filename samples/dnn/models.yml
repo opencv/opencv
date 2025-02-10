@@ -471,4 +471,9 @@ ldm_inpainting:
     diffusor_url: "https://dl.opencv.org/models/ldm_inpainting/LatentDiffusion.onnx"
     diffusor_sha1: "2c6f8a505d9a93195510c854d8f023fab27ce70e"
   diffusor_model: "LatentDiffusion.onnx"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 512
+  height: 512
+  rgb: true
   sample: "ldm_inpainting"
