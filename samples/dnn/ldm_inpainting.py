@@ -117,7 +117,7 @@ def make_batch_blob(image, mask):
 
     blob_image = cv.dnn.blobFromImage(image, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=args.rgb, crop=False)
 
-    blob_mask = cv.dnn.blobFromImage(mask, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=False, crop=False)
+    blob_mask = cv.dnn.blobFromImage(mask, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=args.rgb, crop=False)
 
     blob_mask = (blob_mask >= 0.5).astype(np.float32)
     masked_image = (1 - blob_mask) * blob_image
@@ -355,9 +355,13 @@ class DDIMInpainter(object):
         decoder_path = findModel(args.decoder_model, args.decoder_sha1)
         diffusor_path = findModel(args.diffusor_model, args.diffusor_sha1)
 
-        self.encoder = cv.dnn.readNet(encoder_path)
-        self.diffusor = cv.dnn.readNet(diffusor_path)
-        self.decoder = cv.dnn.readNet(decoder_path)
+        engine = cv.dnn.ENGINE_AUTO
+        if args.backend != "default" or args.target != "cpu":
+            engine = cv.dnn.ENGINE_CLASSIC
+
+        self.encoder = cv.dnn.readNet(encoder_path, "", "", engine)
+        self.diffusor = cv.dnn.readNet(diffusor_path, "", "", engine)
+        self.decoder = cv.dnn.readNet(decoder_path, "", "", engine)
         self.sampler = DDIMSampler(self, ddpm_num_timesteps=self.num_timesteps)
         self.set_backend(backend=get_backend_id(args.backend), target=get_target_id(args.target))
 
@@ -558,7 +562,6 @@ def prepare_input(args, image):
     else:
         mask = create_mask(deepcopy(image))
 
-    image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
     batch = make_batch_blob(image, mask)
     return batch
 
@@ -570,6 +573,8 @@ def main(args):
     imgWidth = min(image.shape[:2])
     fontSize = min(1.5, (stdSize*imgWidth)/stdImgSize)
     fontThickness = max(1,(stdWeight*imgWidth)//stdImgSize)
+    aspect_ratio = image.shape[0]/image.shape[1]
+    height = int(args.width*aspect_ratio)
 
     batch = prepare_input(args, image)
 
@@ -577,6 +582,7 @@ def main(args):
     result = model.inpaint(batch["masked_image"], batch["mask"], S=args.samples)
 
     result = result.astype(np.uint8)
+    result = cv.resize(result, (args.width, height))
     cv.imshow("Inpainted Image", result)
     cv.waitKey(0)
     cv.destroyAllWindows()
