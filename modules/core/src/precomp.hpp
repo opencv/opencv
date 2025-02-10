@@ -90,7 +90,6 @@
 
 #include "opencv2/core/hal/hal.hpp"
 #include "opencv2/core/hal/intrin.hpp"
-#include "opencv2/core/sse_utils.hpp"
 #include "opencv2/core/neon_utils.hpp"
 #include "opencv2/core/vsx_utils.hpp"
 #include "hal_replacement.hpp"

@@ -61,6 +61,7 @@
 #include <limits.h>
 #include <float.h>
 #include <stack>
+#include <numeric>
 
 #define GET_OPTIMIZED(func) (func)
 
@@ -104,8 +105,6 @@ static inline IppiInterpolationType ippiGetInterpolation(int inter)
 #endif
 
 #include "filterengine.hpp"
-
-#include "opencv2/core/sse_utils.hpp"
 
 namespace cv {
 

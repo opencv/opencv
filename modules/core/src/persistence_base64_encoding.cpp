@@ -206,8 +206,11 @@ int base64::icvCalcStructSize(const char *dt, int initial_size) {
             case 'w': { elem_max_size = std::max( elem_max_size, sizeof(ushort) ); break; }
             case 's': { elem_max_size = std::max( elem_max_size, sizeof(short ) ); break; }
             case 'i': { elem_max_size = std::max( elem_max_size, sizeof(int   ) ); break; }
+            case 'n': { elem_max_size = std::max( elem_max_size, sizeof(unsigned) ); break; }
             case 'f': { elem_max_size = std::max( elem_max_size, sizeof(float ) ); break; }
             case 'd': { elem_max_size = std::max( elem_max_size, sizeof(double) ); break; }
+            case 'I': { elem_max_size = std::max( elem_max_size, sizeof(int64_t)); break; }
+            case 'U': { elem_max_size = std::max( elem_max_size, sizeof(uint64_t)); break; }
             default: break;
         }
     }
@@ -335,6 +338,7 @@ size_t base64::RawDataToBinaryConvertor::make_to_binary_funcs(const std::string 
                     size = sizeof(ushort);
                     pack.func = to_binary<ushort>;
                     break;
+                case 'n':
                 case 'i':
                     size = sizeof(uint);
                     pack.func = to_binary<uint>;
@@ -346,6 +350,11 @@ size_t base64::RawDataToBinaryConvertor::make_to_binary_funcs(const std::string 
                 case 'd':
                     size = sizeof(double);
                     pack.func = to_binary<double>;
+                    break;
+                case 'I':
+                case 'U':
+                    size = sizeof(uint64_t);
+                    pack.func = to_binary<uint64_t>;
                     break;
                 case 'r':
                 default:

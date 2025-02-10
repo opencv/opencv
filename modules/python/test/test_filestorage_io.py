@@ -119,12 +119,12 @@ class filestorage_io_test(NewOpenCVTests):
         os.remove(fname)
 
     @staticmethod
-    def get_normal_2d_mat():
+    def get_normal_2d_mat(dtype):
         rows = 10
         cols = 20
         cn = 3
 
-        image = np.zeros((rows, cols, cn), np.uint8)
+        image = np.zeros((rows, cols, cn), dtype)
         image[:] = (1, 2, 127)
 
         for i in range(rows):
@@ -176,7 +176,8 @@ class filestorage_io_test(NewOpenCVTests):
     def write_base64_json(self, fname):
         fs = cv.FileStorage(fname, cv.FileStorage_WRITE_BASE64)
 
-        mats = {'normal_2d_mat': self.get_normal_2d_mat(),
+        mats = {'normal_2d_mat_u8': self.get_normal_2d_mat(np.uint8),
+                'normal_2d_mat_u32': self.get_normal_2d_mat(np.uint32),
                 'normal_nd_mat': self.get_normal_nd_mat(),
                 'empty_2d_mat': self.get_empty_2d_mat(),
                 'random_mat': self.get_random_mat()}
