@@ -374,10 +374,10 @@ int normL1(const uchar* src, int n) {
 
 template<> inline
 int normL1(const schar* src, int n) {
-    v_int32 r00 = vx_setzero_s32(), r01 = vx_setzero_s32();
-    v_int32 r10 = vx_setzero_s32(), r11 = vx_setzero_s32();
-    v_int32 r20 = vx_setzero_s32(), r21 = vx_setzero_s32();
-    v_int32 r30 = vx_setzero_s32(), r31 = vx_setzero_s32();
+    v_uint32 r00 = vx_setzero_u32(), r01 = vx_setzero_u32();
+    v_uint32 r10 = vx_setzero_u32(), r11 = vx_setzero_u32();
+    v_uint32 r20 = vx_setzero_u32(), r21 = vx_setzero_u32();
+    v_uint32 r30 = vx_setzero_u32(), r31 = vx_setzero_u32();
     int j = 0;
     for (; j<= n - 2 * VTraits<v_int8>::vlanes(); j += 2 * VTraits<v_int8>::vlanes()) {
         v_int8 v0 = vx_load(src + j);
@@ -387,10 +387,10 @@ int normL1(const schar* src, int n) {
         v_expand(v00, v000, v001);
         v_expand(v01, v010, v011);
 
-        r00 = v_add(r00, v000);
-        r01 = v_add(r01, v001);
-        r10 = v_add(r10, v010);
-        r11 = v_add(r11, v011);
+        r00 = v_add(r00, v_abs(v000));
+        r01 = v_add(r01, v_abs(v001));
+        r10 = v_add(r10, v_abs(v010));
+        r11 = v_add(r11, v_abs(v011));
 
         v_int8 v1 = vx_load(src + j + VTraits<v_int8>::vlanes());
         v_int16 v10, v11;
@@ -399,16 +399,16 @@ int normL1(const schar* src, int n) {
         v_expand(v10, v100, v101);
         v_expand(v11, v110, v111);
 
-        r20 = v_add(r20, v100);
-        r21 = v_add(r21, v101);
-        r30 = v_add(r30, v110);
-        r31 = v_add(r31, v111);
+        r20 = v_add(r20, v_abs(v100));
+        r21 = v_add(r21, v_abs(v101));
+        r30 = v_add(r30, v_abs(v110));
+        r31 = v_add(r31, v_abs(v111));
     }
     int s = 0;
     s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
     s += v_reduce_sum(v_add(v_add(v_add(r20, r21), r30), r31));
     for (; j < n; j++) {
-        s += src[j];
+        s += saturate_cast<int>(cv_abs(src[j]));
     }
     return s;
 }
@@ -450,35 +450,35 @@ int normL1(const ushort* src, int n) {
 
 template<> inline
 int normL1(const short* src, int n) {
-    v_int32 d00 = vx_setzero_s32(), d01 = vx_setzero_s32();
-    v_int32 d10 = vx_setzero_s32(), d11 = vx_setzero_s32();
-    v_int32 d20 = vx_setzero_s32(), d21 = vx_setzero_s32();
-    v_int32 d30 = vx_setzero_s32(), d31 = vx_setzero_s32();
+    v_uint32 d00 = vx_setzero_u32(), d01 = vx_setzero_u32();
+    v_uint32 d10 = vx_setzero_u32(), d11 = vx_setzero_u32();
+    v_uint32 d20 = vx_setzero_u32(), d21 = vx_setzero_u32();
+    v_uint32 d30 = vx_setzero_u32(), d31 = vx_setzero_u32();
     int j = 0;
     for (; j<= n - 4 * VTraits<v_int16>::vlanes(); j += 4 * VTraits<v_int16>::vlanes()) {
         v_int16 v0 = vx_load(src + j), v1 = vx_load(src + j + VTraits<v_int16>::vlanes());
         v_int32 v00, v01, v10, v11;
         v_expand(v0, v00, v01);
         v_expand(v1, v10, v11);
-        d00 = v_add(d00, v00);
-        d01 = v_add(d01, v01);
-        d10 = v_add(d10, v10);
-        d11 = v_add(d11, v11);
+        d00 = v_add(d00, v_abs(v00));
+        d01 = v_add(d01, v_abs(v01));
+        d10 = v_add(d10, v_abs(v10));
+        d11 = v_add(d11, v_abs(v11));
 
         v_int16 v2 = vx_load(src + j + 2 * VTraits<v_int16>::vlanes()), v3 = vx_load(src + j + 3 * VTraits<v_int16>::vlanes());
         v_int32 v20, v21, v30, v31;
         v_expand(v2, v20, v21);
         v_expand(v3, v30, v31);
-        d20 = v_add(d20, v20);
-        d21 = v_add(d21, v21);
-        d30 = v_add(d30, v30);
-        d31 = v_add(d31, v31);
+        d20 = v_add(d20, v_abs(v20));
+        d21 = v_add(d21, v_abs(v21));
+        d30 = v_add(d30, v_abs(v30));
+        d31 = v_add(d31, v_abs(v31));
     }
     int s = 0;
     s += v_reduce_sum(v_add(v_add(v_add(d00, d01), d10), d11));
     s += v_reduce_sum(v_add(v_add(v_add(d20, d21), d30), d31));
     for (; j < n; j++) {
-        s += src[j];
+        s += saturate_cast<int>(cv_abs(src[j]));
     }
     return s;
 }
