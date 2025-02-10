@@ -275,6 +275,25 @@ int normInf(const ushort* src, int n) {
 }
 
 template<> inline
+int normInf(const short* src, int n) {
+    v_uint16 d0 = vx_setzero_u16(), d1 = vx_setzero_u16();
+    v_uint16 d2 = vx_setzero_u16(), d3 = vx_setzero_u16();
+    int j = 0;
+    for (; j <= n - 4 * VTraits<v_int16>::vlanes(); j += 4 * VTraits<v_int16>::vlanes()) {
+        d0 = v_max(d0, v_abs(vx_load(src + j                                  )));
+        d1 = v_max(d1, v_abs(vx_load(src + j +     VTraits<v_int16>::vlanes())));
+        d2 = v_max(d2, v_abs(vx_load(src + j + 2 * VTraits<v_int16>::vlanes())));
+        d3 = v_max(d3, v_abs(vx_load(src + j + 3 * VTraits<v_int16>::vlanes())));
+    }
+    d0 = v_max(d0, v_max(d1, v_max(d2, d3)));
+    int s = 0;
+    for (; j < n; j++) {
+        s = std::max(s, (int)src[j]);
+    }
+    return std::max(s, saturate_cast<int>(v_reduce_max(d0)));
+}
+
+template<> inline
 int normInf(const int* src, int n) {
     v_uint32 r0 = vx_setzero_u32(), r1 = vx_setzero_u32();
     v_uint32 r2 = vx_setzero_u32(), r3 = vx_setzero_u32();
@@ -430,6 +449,41 @@ int normL1(const ushort* src, int n) {
 }
 
 template<> inline
+int normL1(const short* src, int n) {
+    v_int32 d00 = vx_setzero_s32(), d01 = vx_setzero_s32();
+    v_int32 d10 = vx_setzero_s32(), d11 = vx_setzero_s32();
+    v_int32 d20 = vx_setzero_s32(), d21 = vx_setzero_s32();
+    v_int32 d30 = vx_setzero_s32(), d31 = vx_setzero_s32();
+    int j = 0;
+    for (; j<= n - 4 * VTraits<v_int16>::vlanes(); j += 4 * VTraits<v_int16>::vlanes()) {
+        v_int16 v0 = vx_load(src + j), v1 = vx_load(src + j + VTraits<v_int16>::vlanes());
+        v_int32 v00, v01, v10, v11;
+        v_expand(v0, v00, v01);
+        v_expand(v1, v10, v11);
+        d00 = v_add(d00, v00);
+        d01 = v_add(d01, v01);
+        d10 = v_add(d10, v10);
+        d11 = v_add(d11, v11);
+
+        v_int16 v2 = vx_load(src + j + 2 * VTraits<v_int16>::vlanes()), v3 = vx_load(src + j + 3 * VTraits<v_int16>::vlanes());
+        v_int32 v20, v21, v30, v31;
+        v_expand(v2, v20, v21);
+        v_expand(v3, v30, v31);
+        d20 = v_add(d20, v20);
+        d21 = v_add(d21, v21);
+        d30 = v_add(d30, v30);
+        d31 = v_add(d31, v31);
+    }
+    int s = 0;
+    s += v_reduce_sum(v_add(v_add(v_add(d00, d01), d10), d11));
+    s += v_reduce_sum(v_add(v_add(v_add(d20, d21), d30), d31));
+    for (; j < n; j++) {
+        s += src[j];
+    }
+    return s;
+}
+
+template<> inline
 int normL2Sqr(const uchar* src, int n) {
     v_int32 r00 = vx_setzero_s32(), r01 = vx_setzero_s32();
     v_int32 r10 = vx_setzero_s32(), r11 = vx_setzero_s32();
@@ -565,6 +619,32 @@ double normL2Sqr(const ushort* src, int n) {
         v_int32 s0 = v_reinterpret_as_s32(v0), s1 = v_reinterpret_as_s32(v1);
         v_float64 f00 = v_cvt_f64(s0), f01 = v_cvt_f64_high(s0);
         v_float64 f10 = v_cvt_f64(s1), f11 = v_cvt_f64_high(s1);
+
+        r00 = v_add(r00, v_mul(f00, f00));
+        r01 = v_add(r01, v_mul(f01, f01));
+        r10 = v_add(r10, v_mul(f10, f10));
+        r11 = v_add(r11, v_mul(f11, f11));
+    }
+    double s = 0;
+    s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
+    for (; j < n; j++) {
+        double v = saturate_cast<double>(src[j]);
+        s += v * v;
+    }
+    return s;
+}
+
+template<> inline
+double normL2Sqr(const short* src, int n) {
+    v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
+    v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
+    int j = 0;
+    for (; j <= n - VTraits<v_int16>::vlanes(); j += VTraits<v_int16>::vlanes()) {
+        v_int16 v = vx_load(src + j);
+        v_int32 v0, v1;
+        v_expand(v, v0, v1);
+        v_float64 f00 = v_cvt_f64(v0), f01 = v_cvt_f64_high(v0);
+        v_float64 f10 = v_cvt_f64(v1), f11 = v_cvt_f64_high(v1);
 
         r00 = v_add(r00, v_mul(f00, f00));
         r01 = v_add(r01, v_mul(f01, f01));
