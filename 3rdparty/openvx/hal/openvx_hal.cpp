@@ -191,7 +191,7 @@ int ovx_hal_mul(const T *a, size_t astep, const T *b, size_t bstep, T *c, size_t
 #ifdef _WIN32
     const float MAGIC_SCALE = 0x0.01010102p0;
 #else
-    const float MAGIC_SCALE = 0x1.010102p-8;
+    const float MAGIC_SCALE = 0.003922; // 0x1.010102p-8;
 #endif
     try
     {
