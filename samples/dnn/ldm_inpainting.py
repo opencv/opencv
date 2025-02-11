@@ -7,7 +7,7 @@ from copy import deepcopy
 import os
 from common import *
 
-## let use write description of the script and general information how to use it
+## General information on how to use the sample
 
 '''
 This sample proposes experimental inpainting sample using Latent Diffusion Model (LDM) for inpainting.
@@ -15,14 +15,12 @@ Most of the script is based on the code from the official repository of the LDM 
 
 Current limitations of the script:
     - Slow diffusion sampling
-    - Not exact reproduction of the results from the original repository (due to issues related deviation in covolution operation.
+    - Not exact reproduction of the results from the original repository (due to issues related deviation in convolution operation.
     See issue for more details: https://github.com/opencv/opencv/pull/25973)
 
-Steps for running the script:
+LDM inpainting model was converted to ONNX graph using following steps:
 
-1. Firstly generate ONNX graph of the Latent Diffusion Model.
-
-    Generate the using this [repo](https://github.com/Abdurrahheem/latent-diffusion/tree/ash/export2onnx) and follow instructions below
+    Generate the onnx model using this [repo](https://github.com/Abdurrahheem/latent-diffusion/tree/ash/export2onnx) and follow instructions below
 
     - git clone https://github.com/Abdurrahheem/latent-diffusion.git
     - cd latent-diffusion
@@ -31,17 +29,19 @@ Steps for running the script:
     - wget -O models/ldm/inpainting_big/last.ckpt https://heibox.uni-heidelberg.de/f/4d9ac7ea40c64582b7c9/?dl=1
     - python -m scripts.inpaint.py --indir data/inpainting_examples/ --outdir outputs/inpainting_results --export=True
 
-2. Build opencv (preferebly with CUDA support enabled
+2. Build opencv
 3. Run the script
 
     - cd opencv/samples/dnn
-    - python ldm_inpainting -e=<path-to-InpaintEncoder.onnx file> -d=<path-to-InpaintDecoder.onnx file> -df=<path-to-LatenDiffusion.onnx file> -i=<path-to-image>
+    - Download models using `python download_models.py ldm_inpainting`
+    - python ldm_inpainting.py
+    - For more options, use python ldm_inpainting.py -h
 
-Right after the last command you will be promted with image. You can click on left mouse botton and starting selection a region you would like to be inpainted (delited).
-Once you finish marking the region, click on left mouse botton again and press esc botton on your keyboard. The inpainting proccess will start.
+After running the code you will be promted with image. You can click on left mouse button and start selecting a region you would like to be inpainted (deleted).
+Once you finish marking the region, click on left mouse button again and press esc button on your keyboard. The inpainting proccess will start.
 
 Note: If you are running it on CPU it might take a large chank of time.
-Also make sure to have abount 15GB of RAM to make proccess faster (other wise swapping will ckick in and everything will be slower)
+Also make sure to have abount 15GB of RAM to make proccess faster (other wise swapping will kick in and everything will be slower)
 '''
 
 def get_args_parser():
@@ -79,7 +79,7 @@ def get_args_parser():
     add_preproc_args(args.zoo, parser, 'ldm_inpainting', prefix="decoder_", alias="ldm_inpainting")
     add_preproc_args(args.zoo, parser, 'ldm_inpainting', prefix="diffusor_", alias="ldm_inpainting")
     parser = argparse.ArgumentParser(parents=[parser],
-                                        description='Image inpainting using OpenCV.',
+                                        description='Diffusion based image inpainting using OpenCV.',
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     return parser.parse_args()
 
@@ -106,10 +106,10 @@ def help():
         '''
         Use this script for image inpainting using OpenCV.
 
-        Firstly, download required models i.e. ldm_inpainting using `download_models.py` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
+        Firstly, download required models i.e. ldm_inpainting using `download_models.py ldm_inpainting` (if not already done). Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to specify where models should be downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 
         To run:
-        Example: python ldm_inpainting.py [--input=<image_name>]
+        Example: python ldm_inpainting.py
         '''
     )
 
