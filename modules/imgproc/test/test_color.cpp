@@ -1485,9 +1485,6 @@ double CV_ColorRGBTest::get_success_error_level( int /*test_case_idx*/, int /*i*
 void CV_ColorRGBTest::convert_forward( const Mat& src, Mat& dst )
 {
     int depth = src.depth(), cn = src.channels();
-/*#if defined _DEBUG || defined DEBUG
-    int dst_cn = CV_MAT_CN(dst->type);
-#endif*/
     int i, j, cols = src.cols;
     int g_rshift = dst_bits == 16 ? 2 : 3;
     int r_lshift = dst_bits == 16 ? 11 : 10;
@@ -1571,9 +1568,6 @@ void CV_ColorRGBTest::convert_forward( const Mat& src, Mat& dst )
 void CV_ColorRGBTest::convert_backward( const Mat& /*src*/, const Mat& src, Mat& dst )
 {
     int depth = src.depth(), cn = dst.channels();
-/*#if defined _DEBUG || defined DEBUG
-    int src_cn = CV_MAT_CN(src->type);
-#endif*/
     int i, j, cols = src.cols;
     int g_lshift = dst_bits == 16 ? 2 : 3;
     int r_rshift = dst_bits == 16 ? 11 : 10;
