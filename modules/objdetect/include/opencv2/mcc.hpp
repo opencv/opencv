@@ -32,12 +32,9 @@
 
 #include "objdetect/checker_detector.hpp"
 #include "objdetect/checker_model.hpp"
-#include "objdetect/ccm.hpp"
 
 /** @defgroup mcc Macbeth Chart module
 @{
-    @defgroup color_correction Color Correction Model
-@}
 
 
 @addtogroup mcc
