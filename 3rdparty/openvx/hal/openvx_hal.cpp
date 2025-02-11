@@ -1,5 +1,7 @@
 #include "openvx_hal.hpp"
+#include "opencv2/core/hal/interface.h"
 #include "opencv2/imgproc/hal/interface.h"
+#include "opencv2/features2d/hal/interface.h"
 
 #define IVX_HIDE_INFO_WARNINGS
 #include "ivx.hpp"
@@ -1319,6 +1321,75 @@ int ovx_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width,
             maxIdx[0] = loc.y;
             maxIdx[1] = loc.x;
         }
+    }
+    catch (const ivx::RuntimeError & e)
+    {
+        PRINT_HALERR_MSG(runtime);
+        return CV_HAL_ERROR_UNKNOWN;
+
+    }
+    catch (const ivx::WrapperError & e)
+    {
+        PRINT_HALERR_MSG(wrapper);
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+template <> inline bool skipSmallImages<VX_KERNEL_FAST_CORNERS>(int w, int h) { return w*h < 800 * 600; }
+
+int ovx_hal_FAST(const uchar* src_data, size_t src_step, int width, int height, uchar* keypoints_data, size_t* keypoints_count,
+                 int threshold, bool nonmax_suppression, int /*cv::FastFeatureDetector::DetectorType*/ dtype)
+{
+    // Nonmax suppression is done differently in OpenCV than in OpenVX
+    // 9/16 is the only supported mode in OpenVX
+    if(nonmax_suppression || dtype != CV_HAL_TYPE_9_16)
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    if (skipSmallImages<VX_KERNEL_FAST_CORNERS>(width, height))
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    try
+    {
+        ivx::Context context = getOpenVXHALContext();
+        ivx::Image img = ivx::Image::createFromHandle(context, VX_DF_IMAGE_U8,
+                                                      ivx::Image::createAddressing(width, height, 1, (vx_int32)src_step),
+                                                      const_cast<uchar*>(src_data));
+
+        ivx::Scalar vxthreshold = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, threshold);
+        vx_size capacity = width * height;
+        ivx::Array corners = ivx::Array::create(context, VX_TYPE_KEYPOINT, capacity);
+
+        ivx::Scalar numCorners = ivx::Scalar::create<VX_TYPE_SIZE>(context, 0);
+
+        ivx::IVX_CHECK_STATUS(vxuFastCorners(context, img, vxthreshold, (vx_bool)nonmax_suppression, corners, numCorners));
+
+        size_t nPoints = numCorners.getValue<vx_size>();
+        std::vector<vx_keypoint_t> vxCorners(nPoints);
+        corners.copyTo(vxCorners);
+        cvhalKeyPoint* keypoints = (cvhalKeyPoint*)keypoints_data;
+        for(size_t i = 0; i < std::min(nPoints, *keypoints_count); i++)
+        {
+            //if nonmaxSuppression is false, vxCorners[i].strength is undefined
+            keypoints[i].x = vxCorners[i].x;
+            keypoints[i].y = vxCorners[i].y;
+            keypoints[i].size = 7;
+            keypoints[i].angle = -1;
+            keypoints[i].response = vxCorners[i].strength;
+        }
+
+        *keypoints_count = std::min(nPoints, *keypoints_count);
+
+#ifdef VX_VERSION_1_1
+        //we should take user memory back before release
+        //(it's not done automatically according to standard)
+        img.swapHandle();
+#endif
     }
     catch (const ivx::RuntimeError & e)
     {
