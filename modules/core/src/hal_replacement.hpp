@@ -189,7 +189,7 @@ inline int hal_ni_absDiffScalar8u8u  (const uchar* src_data, size_t src_step, uc
 Bitwise AND: _dst[i] = src1[i] & src2[i]_ @n
 Bitwise OR: _dst[i] = src1[i] | src2[i]_ @n
 Bitwise XOR: _dst[i] = src1[i] ^ src2[i]_ @n
-Bitwise NOT: _dst[i] = !src[i]_
+Bitwise NOT: _dst[i] = ~src[i]_
 @param src1_data first source image data
 @param src1_step first source image step
 @param src2_data second source image data
@@ -263,7 +263,7 @@ For 8s input type 128 is added to LUT index
 Destination should have the same element type and number of channels as lookup table elements
 @param src_data Source image data
 @param src_step Source image step
-@param src_type Sorce image type
+@param src_type Source image type
 @param lut_data Pointer to lookup table
 @param lut_channel_size Size of each channel in bytes
 @param lut_channels Number of channels in lookup table
@@ -454,7 +454,7 @@ inline int hal_ni_div64f(const double *src1_data, size_t src1_step, const double
 //! @}
 
 /**
-Computes reciprocial: _dst[i] = scale / src[i]_
+Computes reciprocal: _dst[i] = scale / src[i]_
 @param src_data source image data
 @param src_step source image step
 @param dst_data destination image data
@@ -463,7 +463,7 @@ Computes reciprocial: _dst[i] = scale / src[i]_
 @param height height of the images
 @param scale additional multiplier
  */
-//! @addtogroup core_hal_interface_reciprocial Element-wise reciprocial
+//! @addtogroup core_hal_interface_reciprocal Element-wise reciprocal
 //! @{
 inline int hal_ni_recip8u(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int width, int height, double scale) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 inline int hal_ni_recip8s(const schar *src_data, size_t src_step, schar *dst_data, size_t dst_step, int width, int height, double scale) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
@@ -824,14 +824,14 @@ inline int hal_ni_dctFree2D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEME
 Performs \f$LU\f$ decomposition of square matrix \f$A=P*L*U\f$ (where \f$P\f$ is permutation matrix) and solves matrix equation \f$A*X=B\f$.
 Function returns the \f$sign\f$ of permutation \f$P\f$ via parameter info.
 @param src1 pointer to input matrix \f$A\f$ stored in row major order. After finish of work src1 contains at least \f$U\f$ part of \f$LU\f$
-decomposition which is appropriate for determainant calculation: \f$det(A)=sign*\prod_{j=1}^{M}a_{jj}\f$.
+decomposition which is appropriate for determinant calculation: \f$det(A)=sign*\prod_{j=1}^{M}a_{jj}\f$.
 @param src1_step number of bytes between two consequent rows of matrix \f$A\f$.
 @param m size of square matrix \f$A\f$.
 @param src2 pointer to \f$M\times N\f$ matrix \f$B\f$ which is the right-hand side of system \f$A*X=B\f$. \f$B\f$ stored in row major order.
 If src2 is null pointer only \f$LU\f$ decomposition will be performed. After finish of work src2 contains solution \f$X\f$ of system \f$A*X=B\f$.
 @param src2_step number of bytes between two consequent rows of matrix \f$B\f$.
 @param n number of right-hand vectors in \f$M\times N\f$ matrix \f$B\f$.
-@param info indicates success of decomposition. If *info is equals to zero decomposition failed, othervise *info is equals to \f$sign\f$.
+@param info indicates success of decomposition. If *info is equals to zero decomposition failed, otherwise *info is equals to \f$sign\f$.
  */
 //! @addtogroup core_hal_interface_decomp_lu LU matrix decomposition
 //! @{
