@@ -475,5 +475,5 @@ ldm_inpainting:
   scale: 0.00392
   width: 512
   height: 512
-  rgb: false
+  rgb: true
   sample: "ldm_inpainting"

@@ -117,7 +117,7 @@ def make_batch_blob(image, mask):
 
     blob_image = cv.dnn.blobFromImage(image, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=args.rgb, crop=False)
 
-    blob_mask = cv.dnn.blobFromImage(mask, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=args.rgb, crop=False)
+    blob_mask = cv.dnn.blobFromImage(mask, scalefactor=args.scale, size=(args.width, args.height), mean=args.mean, swapRB=False, crop=False)
 
     blob_mask = (blob_mask >= 0.5).astype(np.float32)
     masked_image = (1 - blob_mask) * blob_image
@@ -583,6 +583,7 @@ def main(args):
 
     result = result.astype(np.uint8)
     result = cv.resize(result, (args.width, height))
+    result = cv.cvtColor(result, cv.COLOR_RGB2BGR)
     cv.imshow("Inpainted Image", result)
     cv.waitKey(0)
     cv.destroyAllWindows()
