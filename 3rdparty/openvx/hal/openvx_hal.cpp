@@ -1145,3 +1145,57 @@ int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, 
 
     return CV_HAL_ERROR_OK;
 }
+
+int ovx_hal_meanStdDev(const uchar* src_data, size_t src_step, int width, int height,
+                       int src_type, double* mean_val, double* stddev_val, uchar* mask, size_t mask_step)
+{
+    (void)mask_step;
+
+    if (src_type != CV_8UC1 || mask)
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    if (skipSmallImages<VX_KERNEL_MEAN_STDDEV>(width, height))
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    try
+    {
+        ivx::Context ctx = getOpenVXHALContext();
+#ifndef VX_VERSION_1_1
+        if (ctx.vendorID() == VX_ID_KHRONOS)
+            return false; // Do not use OpenVX meanStdDev estimation for sample 1.0.1 implementation due to lack of accuracy
+#endif
+
+        ivx::Image ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                        ivx::Image::createAddressing(width, height, 1, (vx_int32)src_step), const_cast<uchar*>(src_data));
+
+        vx_float32 mean_temp, stddev_temp;
+        ivx::IVX_CHECK_STATUS(vxuMeanStdDev(ctx, ia, &mean_temp, &stddev_temp));
+
+        if (mean_val)
+        {
+            mean_val[0] = mean_temp;
+        }
+
+        if (stddev_val)
+        {
+            stddev_val[0] = stddev_temp;
+        }
+    }
+    catch (const ivx::RuntimeError & e)
+    {
+        PRINT_HALERR_MSG(runtime);
+        return CV_HAL_ERROR_UNKNOWN;
+
+    }
+    catch (const ivx::WrapperError & e)
+    {
+        PRINT_HALERR_MSG(wrapper);
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+
+    return CV_HAL_ERROR_OK;
+}
