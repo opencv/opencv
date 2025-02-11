@@ -1199,3 +1199,45 @@ int ovx_hal_meanStdDev(const uchar* src_data, size_t src_step, int width, int he
 
     return CV_HAL_ERROR_OK;
 }
+
+int ovx_hal_lut(const uchar *src_data, size_t src_step, size_t src_type, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height)
+{
+    if (src_type != CV_8UC1 || lut_channels != 1 || lut_channel_size != 1)
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    if (skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(width, width))
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    try
+    {
+        ivx::Context ctx = getOpenVXHALContext();
+
+        ivx::Image ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                                                     ivx::Image::createAddressing(width, height, 1, (vx_int32)src_step),
+                                                     const_cast<uchar*>(src_data));
+        ivx::Image ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
+                                                     ivx::Image::createAddressing(width, height, 1, (vx_int32)dst_step),
+                                                     dst_data);
+
+        ivx::LUT lut = ivx::LUT::create(ctx);
+        lut.copyFrom(lut_data);
+        ivx::IVX_CHECK_STATUS(vxuTableLookup(ctx, ia, lut, ib));
+    }
+    catch (const ivx::RuntimeError & e)
+    {
+        PRINT_HALERR_MSG(runtime);
+        return CV_HAL_ERROR_UNKNOWN;
+
+    }
+    catch (const ivx::WrapperError & e)
+    {
+        PRINT_HALERR_MSG(wrapper);
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+
+    return CV_HAL_ERROR_OK;
+}
