@@ -1161,6 +1161,11 @@ int ovx_hal_meanStdDev(const uchar* src_data, size_t src_step, int width, int he
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
+    if (src_step == 0)
+    {
+        src_step = (int)width;
+    }
+
     try
     {
         ivx::Context ctx = getOpenVXHALContext();
@@ -1200,14 +1205,16 @@ int ovx_hal_meanStdDev(const uchar* src_data, size_t src_step, int width, int he
     return CV_HAL_ERROR_OK;
 }
 
-int ovx_hal_lut(const uchar *src_data, size_t src_step, size_t src_type, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height)
+int ovx_hal_lut(const uchar *src_data, size_t src_step, size_t src_type,
+                const uchar* lut_data, size_t lut_channel_size, size_t lut_channels,
+                uchar *dst_data, size_t dst_step, int width, int height)
 {
     if (src_type != CV_8UC1 || lut_channels != 1 || lut_channel_size != 1)
     {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    if (skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(width, width))
+    if (skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(width, height))
     {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
@@ -1226,6 +1233,92 @@ int ovx_hal_lut(const uchar *src_data, size_t src_step, size_t src_type, const u
         ivx::LUT lut = ivx::LUT::create(ctx);
         lut.copyFrom(lut_data);
         ivx::IVX_CHECK_STATUS(vxuTableLookup(ctx, ia, lut, ib));
+    }
+    catch (const ivx::RuntimeError & e)
+    {
+        PRINT_HALERR_MSG(runtime);
+        return CV_HAL_ERROR_UNKNOWN;
+
+    }
+    catch (const ivx::WrapperError & e)
+    {
+        PRINT_HALERR_MSG(wrapper);
+        return CV_HAL_ERROR_UNKNOWN;
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+template <> inline bool skipSmallImages<VX_KERNEL_MINMAXLOC>(int w, int h) { return w*h < 3840 * 2160; }
+
+int ovx_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width, int height, int depth,
+                              double* minVal, double* maxVal, int* minIdx, int* maxIdx, uchar* mask, size_t mask_step)
+{
+    (void)mask_step;
+
+    if ((depth != CV_8U && depth != CV_16S) || mask )
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    if (skipSmallImages<VX_KERNEL_MINMAXLOC>(width, height))
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    if (src_step == 0)
+    {
+        src_step = (int)width;
+    }
+
+    try
+    {
+        ivx::Context ctx = getOpenVXHALContext();
+        ivx::Image ia = ivx::Image::createFromHandle(ctx, depth == CV_8U ? VX_DF_IMAGE_U8 : VX_DF_IMAGE_S16,
+                                                     ivx::Image::createAddressing(width, height, depth == CV_8U ? 1 : 2, (vx_int32)src_step),
+                                                     const_cast<uchar*>(src_data));
+
+        ivx::Scalar vxMinVal = ivx::Scalar::create(ctx, depth == CV_8U ? VX_TYPE_UINT8 : VX_TYPE_INT16, 0);
+        ivx::Scalar vxMaxVal = ivx::Scalar::create(ctx, depth == CV_8U ? VX_TYPE_UINT8 : VX_TYPE_INT16, 0);
+        ivx::Array vxMinInd, vxMaxInd;
+        ivx::Scalar vxMinCount, vxMaxCount;
+        if (minIdx)
+        {
+            vxMinInd = ivx::Array::create(ctx, VX_TYPE_COORDINATES2D, 1);
+            vxMinCount = ivx::Scalar::create(ctx, VX_TYPE_UINT32, 0);
+        }
+        if (maxIdx)
+        {
+            vxMaxInd = ivx::Array::create(ctx, VX_TYPE_COORDINATES2D, 1);
+            vxMaxCount = ivx::Scalar::create(ctx, VX_TYPE_UINT32, 0);
+        }
+
+        ivx::IVX_CHECK_STATUS(vxuMinMaxLoc(ctx, ia, vxMinVal, vxMaxVal, vxMinInd, vxMaxInd, vxMinCount, vxMaxCount));
+
+        if (minVal)
+        {
+            *minVal = depth == CV_8U ? vxMinVal.getValue<vx_uint8>() : vxMinVal.getValue<vx_int16>();
+        }
+        if (maxVal)
+        {
+            *maxVal = depth == CV_8U ? vxMaxVal.getValue<vx_uint8>() : vxMaxVal.getValue<vx_int16>();
+        }
+        if (minIdx)
+        {
+            if(vxMinCount.getValue<vx_uint32>()<1) throw ivx::RuntimeError(VX_ERROR_INVALID_VALUE, std::string(__func__) + "(): minimum value location not found");
+            vx_coordinates2d_t loc;
+            vxMinInd.copyRangeTo(0, 1, &loc);
+            minIdx[0] = loc.y;
+            minIdx[1] = loc.x;
+        }
+        if (maxIdx)
+        {
+            if (vxMaxCount.getValue<vx_uint32>()<1) throw ivx::RuntimeError(VX_ERROR_INVALID_VALUE, std::string(__func__) + "(): maximum value location not found");
+            vx_coordinates2d_t loc;
+            vxMaxInd.copyRangeTo(0, 1, &loc);
+            maxIdx[0] = loc.y;
+            maxIdx[1] = loc.x;
+        }
     }
     catch (const ivx::RuntimeError & e)
     {

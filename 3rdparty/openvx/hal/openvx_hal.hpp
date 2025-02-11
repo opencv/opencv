@@ -57,6 +57,8 @@ int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, 
 int ovx_hal_meanStdDev(const uchar* src_data, size_t src_step, int width, int height,
                        int src_type, double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
 int ovx_hal_lut(const uchar *src_data, size_t src_step, size_t src_type, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height);
+int ovx_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width, int height, int depth,
+                              double* minVal, double* maxVal, int* minIdx, int* maxIdx, uchar* mask, size_t mask_step);
 
 //==================================================================================================
 // functions redefinition
@@ -148,5 +150,7 @@ int ovx_hal_lut(const uchar *src_data, size_t src_step, size_t src_type, const u
 #define cv_hal_meanStdDev ovx_hal_meanStdDev
 #undef cv_hal_lut
 #define cv_hal_lut ovx_hal_lut
+#undef cv_hal_minMaxIdxMaskStep
+#define cv_hal_minMaxIdxMaskStep ovx_hal_minMaxIdxMaskStep
 
 #endif
