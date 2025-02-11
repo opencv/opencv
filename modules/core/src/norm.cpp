@@ -288,7 +288,7 @@ int normInf(const short* src, int n) {
     d0 = v_max(d0, v_max(d1, v_max(d2, d3)));
     int s = 0;
     for (; j < n; j++) {
-        s = std::max(s, (int)src[j]);
+        s = std::max(s, saturate_cast<int>(cv_abs(src[j])));
     }
     return std::max(s, saturate_cast<int>(v_reduce_max(d0)));
 }
