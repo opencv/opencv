@@ -329,7 +329,8 @@ enum ThresholdTypes {
     THRESH_TOZERO_INV = 4, //!< \f[\texttt{dst} (x,y) =  \fork{0}{if \(\texttt{src}(x,y) > \texttt{thresh}\)}{\texttt{src}(x,y)}{otherwise}\f]
     THRESH_MASK       = 7,
     THRESH_OTSU       = 8, //!< flag, use Otsu algorithm to choose the optimal threshold value
-    THRESH_TRIANGLE   = 16 //!< flag, use Triangle algorithm to choose the optimal threshold value
+    THRESH_TRIANGLE   = 16, //!< flag, use Triangle algorithm to choose the optimal threshold value
+    THRESH_DRYRUN     = 128 //!< flag, compute threshold only (useful for OTSU/TRIANGLE) but does not actually run thresholding
 };
 
 //! adaptive threshold algorithm
@@ -2165,11 +2166,13 @@ Must fall between 0 and max_theta.
 @param max_theta For standard and multi-scale Hough transform, an upper bound for the angle.
 Must fall between min_theta and CV_PI. The actual maximum angle in the accumulator may be slightly
 less than max_theta, depending on the parameters min_theta and theta.
+@param use_edgeval True if you want to use weighted Hough transform.
  */
 CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double rho, double theta, int threshold,
                               double srn = 0, double stn = 0,
-                              double min_theta = 0, double max_theta = CV_PI );
+                              double min_theta = 0, double max_theta = CV_PI,
+                              bool use_edgeval = false );
 
 /** @brief Finds line segments in a binary image using the probabilistic Hough transform.
 
@@ -3907,7 +3910,7 @@ is \f$W \times H\f$ and templ is \f$w \times h\f$ , then result is \f$(W-w+1) \t
             of channels as template or only one channel, which is then used for all template and
             image channels. If the data type is #CV_8U, the mask is interpreted as a binary mask,
             meaning only elements where mask is nonzero are used and are kept unchanged independent
-            of the actual mask value (weight equals 1). For data tpye #CV_32F, the mask values are
+            of the actual mask value (weight equals 1). For data type #CV_32F, the mask values are
             used as weights. The exact formulas are documented in #TemplateMatchModes.
  */
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
@@ -4342,7 +4345,7 @@ CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
 
  The function calculates the ellipse that fits a set of 2D points.
  It returns the rotated rectangle in which the ellipse is inscribed.
- The Direct least square (Direct) method by @cite Fitzgibbon1999 is used.
+ The Direct least square (Direct) method by @cite oy1998NumericallySD is used.
 
  For an ellipse, this basis set is \f$ \chi= \left(x^2, x y, y^2, x, y, 1\right) \f$,
  which is a set of six free coefficients \f$ A^T=\left\{A_{\text{xx}},A_{\text{xy}},A_{\text{yy}},A_x,A_y,A_0\right\} \f$.
@@ -4847,6 +4850,11 @@ CV_EXPORTS void ellipse2Poly(Point2d center, Size2d axes, int angle,
 The function cv::putText renders the specified text string in the image. Symbols that cannot be rendered
 using the specified font are replaced by question marks. See #getTextSize for a text rendering code
 example.
+
+The `fontScale` parameter is a scale factor that is multiplied by the base font size:
+- When scale > 1, the text is magnified.
+- When 0 < scale < 1, the text is minimized.
+- When scale < 0, the text is mirrored or reversed.
 
 @param img Image.
 @param text Text string to be drawn.

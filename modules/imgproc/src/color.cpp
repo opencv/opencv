@@ -387,6 +387,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn, AlgorithmHi
 }
 } //namespace cv
 
+#ifndef OPENCV_EXCLUDE_C_API
 
 CV_IMPL void
 cvCvtColor( const CvArr* srcarr, CvArr* dstarr, int code )
@@ -397,3 +398,5 @@ cvCvtColor( const CvArr* srcarr, CvArr* dstarr, int code )
     cv::cvtColor(src, dst, code, dst.channels());
     CV_Assert( dst.data == dst0.data );
 }
+
+#endif

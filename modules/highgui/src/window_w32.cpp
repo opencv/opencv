@@ -2158,6 +2158,9 @@ static void showSaveDialog(CvWindow& window)
 #ifdef HAVE_JPEG
                       "JPEG files (*.jpeg;*.jpg;*.jpe)\0*.jpeg;*.jpg;*.jpe\0"
 #endif
+#ifdef HAVE_JPEGXL
+                      "JPEG XL files (*.jxl)\0*.jxl\0"
+#endif
 #ifdef HAVE_TIFF
                       "TIFF Files (*.tiff;*.tif)\0*.tiff;*.tif\0"
 #endif
@@ -2167,9 +2170,15 @@ static void showSaveDialog(CvWindow& window)
 #ifdef HAVE_WEBP
                       "WebP files (*.webp)\0*.webp\0"
 #endif
-                      "Portable image format (*.pbm;*.pgm;*.ppm;*.pxm;*.pnm)\0*.pbm;*.pgm;*.ppm;*.pxm;*.pnm\0"
+                      "Portable image format (*.pbm;*.pgm;*.ppm;*.pnm;*.pam)\0*.pbm;*.pgm;*.ppm;*.pnm;*.pam\0"
 #ifdef HAVE_OPENEXR
                       "OpenEXR Image files (*.exr)\0*.exr\0"
+#endif
+#ifdef HAVE_AVIF
+                      "AVIF files (*.avif)\0*.avif\0"
+#endif
+#ifdef HAVE_IMGCODEC_GIF
+                      "Graphics Interchange Format 89a(*.gif)\0*.gif\0"
 #endif
                       "Radiance HDR (*.hdr;*.pic)\0*.hdr;*.pic\0"
                       "Sun raster files (*.sr;*.ras)\0*.sr;*.ras\0"
@@ -2191,7 +2200,7 @@ static void showSaveDialog(CvWindow& window)
     }
 #else
     CV_UNUSED(window);
-    CV_LOG_WARNING("Save dialog requires enabled 'imgcodecs' module.");
+    CV_LOG_WARNING(NULL, "Save dialog requires enabled 'imgcodecs' module.");
     return;
 #endif
 }

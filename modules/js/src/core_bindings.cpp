@@ -378,7 +378,6 @@ namespace binding_utils
         return result;
     }
 
-
     void Tracker_init_wrapper(cv::Tracker& arg0, const cv::Mat& arg1, const Rect& arg2)
     {
         return arg0.init(arg1, arg2);
@@ -588,7 +587,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("epsilon", &cv::TermCriteria::epsilon);
 
 #define EMSCRIPTEN_CV_SIZE(type) \
-    emscripten::value_object<type>("#type") \
+    emscripten::value_object<type>(#type) \
         .field("width", &type::width) \
         .field("height", &type::height);
 
@@ -596,7 +595,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     EMSCRIPTEN_CV_SIZE(Size2f)
 
 #define EMSCRIPTEN_CV_POINT(type) \
-    emscripten::value_object<type>("#type") \
+    emscripten::value_object<type>(#type) \
         .field("x", &type::x) \
         .field("y", &type::y); \
 
@@ -618,10 +617,6 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("center", &cv::RotatedRect::center)
         .field("size", &cv::RotatedRect::size)
         .field("angle", &cv::RotatedRect::angle);
-
-    function("rotatedRectPoints", select_overload<emscripten::val(const cv::RotatedRect&)>(&binding_utils::rotatedRectPoints));
-    function("rotatedRectBoundingRect", select_overload<Rect(const cv::RotatedRect&)>(&binding_utils::rotatedRectBoundingRect));
-    function("rotatedRectBoundingRect2f", select_overload<Rect2f(const cv::RotatedRect&)>(&binding_utils::rotatedRectBoundingRect2f));
 
     emscripten::value_object<cv::KeyPoint>("KeyPoint")
         .field("angle", &cv::KeyPoint::angle)
@@ -649,10 +644,25 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("minLoc", &binding_utils::MinMaxLoc::minLoc)
         .field("maxLoc", &binding_utils::MinMaxLoc::maxLoc);
 
+    emscripten::value_object<cv::Exception>("Exception")
+        .field("code", &cv::Exception::code)
+        .field("msg", &binding_utils::getExceptionMsg, &binding_utils::setExceptionMsg);
+
     emscripten::value_object<binding_utils::Circle>("Circle")
         .field("center", &binding_utils::Circle::center)
         .field("radius", &binding_utils::Circle::radius);
 
+    function("boxPoints", select_overload<emscripten::val(const cv::RotatedRect&)>(&binding_utils::rotatedRectPoints));
+    function("rotatedRectPoints", select_overload<emscripten::val(const cv::RotatedRect&)>(&binding_utils::rotatedRectPoints));
+    function("rotatedRectBoundingRect", select_overload<Rect(const cv::RotatedRect&)>(&binding_utils::rotatedRectBoundingRect));
+    function("rotatedRectBoundingRect2f", select_overload<Rect2f(const cv::RotatedRect&)>(&binding_utils::rotatedRectBoundingRect2f));
+    function("exceptionFromPtr", &binding_utils::exceptionFromPtr, allow_raw_pointers());
+    function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat&, const cv::Mat&)>(&binding_utils::minMaxLoc));
+    function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat&)>(&binding_utils::minMaxLoc_1));
+    function("CV_MAT_DEPTH", &binding_utils::cvMatDepth);
+    function("getBuildInformation", &binding_utils::getBuildInformation);
+
+#ifdef HAVE_OPENCV_IMGPROC
     emscripten::value_object<cv::Moments >("Moments")
         .field("m00", &cv::Moments::m00)
         .field("m10", &cv::Moments::m10)
@@ -679,48 +689,23 @@ EMSCRIPTEN_BINDINGS(binding_utils)
         .field("nu12", &cv::Moments::nu12)
         .field("nu03", &cv::Moments::nu03);
 
-    emscripten::value_object<cv::Exception>("Exception")
-        .field("code", &cv::Exception::code)
-        .field("msg", &binding_utils::getExceptionMsg, &binding_utils::setExceptionMsg);
-
-    function("exceptionFromPtr", &binding_utils::exceptionFromPtr, allow_raw_pointers());
-
-#ifdef HAVE_OPENCV_IMGPROC
     function("minEnclosingCircle", select_overload<binding_utils::Circle(const cv::Mat&)>(&binding_utils::minEnclosingCircle));
-
     function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar, Scalar, int)>(&binding_utils::floodFill_wrapper));
-
     function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar, Scalar)>(&binding_utils::floodFill_wrapper_1));
-
     function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val, Scalar)>(&binding_utils::floodFill_wrapper_2));
-
     function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar, emscripten::val)>(&binding_utils::floodFill_wrapper_3));
-
     function("floodFill", select_overload<int(cv::Mat&, cv::Mat&, Point, Scalar)>(&binding_utils::floodFill_wrapper_4));
-#endif
-
-    function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat&, const cv::Mat&)>(&binding_utils::minMaxLoc));
-
-    function("minMaxLoc", select_overload<binding_utils::MinMaxLoc(const cv::Mat&)>(&binding_utils::minMaxLoc_1));
-
-#ifdef HAVE_OPENCV_IMGPROC
     function("morphologyDefaultBorderValue", &cv::morphologyDefaultBorderValue);
 #endif
 
-    function("CV_MAT_DEPTH", &binding_utils::cvMatDepth);
-
 #ifdef HAVE_OPENCV_VIDEO
     function("CamShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::CamShiftWrapper));
-
     function("meanShift", select_overload<emscripten::val(const cv::Mat&, Rect&, TermCriteria)>(&binding_utils::meanShiftWrapper));
 
     emscripten::class_<cv::Tracker >("Tracker")
         .function("init", select_overload<void(cv::Tracker&,const cv::Mat&,const Rect&)>(&binding_utils::Tracker_init_wrapper), pure_virtual())
         .function("update", select_overload<emscripten::val(cv::Tracker&,const cv::Mat&)>(&binding_utils::Tracker_update_wrapper), pure_virtual());
-
 #endif
-
-    function("getBuildInformation", &binding_utils::getBuildInformation);
 
 #ifdef HAVE_PTHREADS_PF
     function("parallel_pthreads_set_threads_num", &cv::parallel_pthreads_set_threads_num);

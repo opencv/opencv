@@ -217,7 +217,7 @@ Following options can be used to produce special builds with instrumentation or 
 | `ENABLE_BUILD_HARDENING` | GCC, Clang, MSVC | Enable compiler options which reduce possibility of code exploitation.  |
 | `ENABLE_LTO` | GCC, Clang, MSVC | Enable Link Time Optimization (LTO). |
 | `ENABLE_THIN_LTO` | Clang | Enable thin LTO which incorporates intermediate bitcode to binaries allowing consumers optimize their applications later. |
-| `OPENCV_ALGO_HINT_DEFAULT` | Any | Set default OpenCV implementation hint value: `ALGO_HINT_ACCURATE` or `ALGO_HINT_APROX`. Dangerous! The option  changes behaviour globally and may affect accuracy of many algorithms. |
+| `OPENCV_ALGO_HINT_DEFAULT` | Any | Set default OpenCV implementation hint value: `ALGO_HINT_ACCURATE` or `ALGO_HINT_APPROX`. Dangerous! The option  changes behaviour globally and may affect accuracy of many algorithms. |
 
 @see [GCC instrumentation](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html)
 @see [Build hardening](https://en.wikipedia.org/wiki/Hardening_(computing))
@@ -293,28 +293,37 @@ TODO: other options: `WITH_OPENCL_SVM`, `WITH_OPENCLAMDFFT`, `WITH_OPENCLAMDBLAS
 
 Following formats can be read by OpenCV without help of any third-party library:
 
-- [BMP](https://en.wikipedia.org/wiki/BMP_file_format)
-- [HDR](https://en.wikipedia.org/wiki/RGBE_image_format) (`WITH_IMGCODEC_HDR`)
-- [Sun Raster](https://en.wikipedia.org/wiki/Sun_Raster) (`WITH_IMGCODEC_SUNRASTER`)
-- [PPM, PGM, PBM, PFM](https://en.wikipedia.org/wiki/Netpbm#File_formats) (`WITH_IMGCODEC_PXM`, `WITH_IMGCODEC_PFM`)
+| Formats | Option | Default |
+| --------| ------ | ------- |
+| [BMP](https://en.wikipedia.org/wiki/BMP_file_format) | (Always) | _ON_ |
+| [HDR](https://en.wikipedia.org/wiki/RGBE_image_format) | `WITH_IMGCODEC_HDR` | _ON_ |
+| [Sun Raster](https://en.wikipedia.org/wiki/Sun_Raster) | `WITH_IMGCODEC_SUNRASTER` | _ON_ |
+| [PPM, PGM, PBM, PAM](https://en.wikipedia.org/wiki/Netpbm#File_formats) | `WITH_IMGCODEC_PXM` | _ON_ |
+| [PFM](https://en.wikipedia.org/wiki/Netpbm#File_formats) | `WITH_IMGCODEC_PFM` | _ON_ |
+| [GIF](https://en.wikipedia.org/wiki/GIF) | `WITH_IMGCODEC_GIF` | _OFF_ |
 
+### PNG, JPEG, TIFF, WEBP, JPEG 2000, EXR, JPEG XL support
 
-### PNG, JPEG, TIFF, WEBP support
-
-| Formats | Option | Default | Force build own |
-| --------| ------ | ------- | --------------- |
-| [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) | `WITH_PNG` | _ON_ | `BUILD_PNG` |
-| [JPEG](https://en.wikipedia.org/wiki/JPEG) | `WITH_JPEG` | _ON_ | `BUILD_JPEG` |
-| [TIFF](https://en.wikipedia.org/wiki/TIFF) | `WITH_TIFF` | _ON_ | `BUILD_TIFF` |
-| [WEBP](https://en.wikipedia.org/wiki/WebP) | `WITH_WEBP` | _ON_ | `BUILD_WEBP` |
-| [JPEG2000 with OpenJPEG](https://en.wikipedia.org/wiki/OpenJPEG) | `WITH_OPENJPEG` | _ON_ | `BUILD_OPENJPEG` |
-| [JPEG2000 with JasPer](https://en.wikipedia.org/wiki/JasPer) | `WITH_JASPER` | _ON_ (see note) | `BUILD_JASPER` |
-| [EXR](https://en.wikipedia.org/wiki/OpenEXR) | `WITH_OPENEXR` | _ON_ | `BUILD_OPENEXR` |
+| Formats | Library | Option | Default | Force build own |
+| --------| ------- | ------ | ------- | --------------- |
+| [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) | [libpng](https://en.wikipedia.org/wiki/Libpng)| `WITH_PNG` | _ON_ | `BUILD_PNG` |
+|^| [libspng(simple png)](https://libspng.org/) | `WITH_SPNG` | _OFF_ | `BUILD_SPNG` |
+| [JPEG](https://en.wikipedia.org/wiki/JPEG) | [libjpeg-turbo](https://en.wikipedia.org/wiki/Libjpeg) | `WITH_JPEG` | _ON_ | `BUILD_JPEG` |
+|^| [libjpeg](https://en.wikipedia.org/wiki/Libjpeg) | `WITH_JPEG` | _OFF_ | `BUILD_JPEG` with `BUILD_JPEG_TURBO_DISABLE` |
+| [TIFF](https://en.wikipedia.org/wiki/TIFF) | [LibTIFF](https://en.wikipedia.org/wiki/LibTIFF) | `WITH_TIFF` | _ON_ | `BUILD_TIFF` |
+| [WebP](https://en.wikipedia.org/wiki/WebP) || `WITH_WEBP` | _ON_ | `BUILD_WEBP` |
+| [JPEG 2000](https://en.wikipedia.org/wiki/JPEG_2000) | [OpenJPEG](https://en.wikipedia.org/wiki/OpenJPEG) | `WITH_OPENJPEG` | _ON_ | `BUILD_OPENJPEG` |
+|^| [JasPer](https://en.wikipedia.org/wiki/JasPer) | `WITH_JASPER` | _ON_ (see note) | `BUILD_JASPER` |
+| [OpenEXR](https://en.wikipedia.org/wiki/OpenEXR) || `WITH_OPENEXR` | _ON_ | `BUILD_OPENEXR` |
+| [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL) || `WITH_JPEGXL` | _ON_ | Not supported. (see note) |
 
 All libraries required to read images in these formats are included into OpenCV and will be built automatically if not found at the configuration stage. Corresponding `BUILD_*` options will force building and using own libraries, they are enabled by default on some platforms, e.g. Windows.
 
-@note OpenJPEG have higher priority than JasPer which is deprecated. In order to use JasPer, OpenJPEG must be disabled.
+@note (All) Only one library for each image format can be enabled(e.g. In order to use JasPer for JPEG 2000 format, OpenJPEG must be disabled).
+@note (JPEG 2000) OpenJPEG have higher priority than JasPer which is deprecated.
+@note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported.
 
+@warning OpenEXR ver 2.2 or earlier cannot be used in combination with C++17 or later. In this case, updating OpenEXR ver 2.3.0 or later is required.
 
 ### GDAL integration
 
