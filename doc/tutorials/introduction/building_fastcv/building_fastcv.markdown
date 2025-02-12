@@ -8,7 +8,7 @@ Building Opencv with Fastcv {#tutorial_building_fastcv}
 Enable Opencv with Fastcv for Qcom Chipsets
 -------------------------------------------
 This Document scope is to guide the Developers to enable Opencv Acceleration with Fastcv for the Qualcomm chipsets on arm64 architecture.
-Enablement of  Opencv with Fastcv backend on Non-Qualcomm chipsets or Linux platforms other than Qualcomm Linux | Qualcomm is currently out of scope 
+Enablement of  Opencv with Fastcv backend on Non-Qualcomm chipsets or Linux platforms other than [Qualcomm Linux](https://www.qualcomm.com/developer/software/qualcomm-linux) is currently out of scope 
 
 About Fastcv :
 -------------------------------------------
@@ -39,7 +39,7 @@ Compiling Opencv with Fastcv for Android :
 -------------------------------------------
 1.	**Follow Wiki page for Opencv Compilation** : https://github.com/opencv/opencv/wiki/Custom-OpenCV-Android-SDK-and-AAR-package-build
 
- Once the Opencv repository code is cloned into the workspace , Please add WITH_FASTCV flag to cmake vars as below to arm64 entry in opencv\platforms\android\ndk-18-api-level-24.config.py  to enable Fastcv HAL/Extenstions Compilation
+ Once the Opencv repository code is cloned into the workspace , Please add **WITH_FASTCV** flag to cmake vars as below to arm64 entry in **opencv\platforms\android\ndk-18-api-level-24.config.py**  to enable Fastcv HAL/Extenstions Compilation
 
  ```
   ABI("3", "arm64-v8a", None, 24, cmake_vars=dict(WITH_FASTCV='ON')),
@@ -48,7 +48,7 @@ Compiling Opencv with Fastcv for Android :
 
 Compiling Opencv with FastCV for Qualcomm Linux :
 -------------------------------------------
-1.	Install eSDK by following Qualcomm® Linux Documentation
+1.	Install eSDK by following [Qualcomm® Linux Documentation](https://docs.qualcomm.com/bundle/publicresource/topics/80-70017-51/install-sdk.html?vproduct=1601111740013072&version=1.3&facet=Qualcomm%20Intelligent%20Multimedia%20Product%20(QIMP)%20SDK&state=preview)
 
 2.	After installing the eSDK, set the ESDK_ROOT:
 ```
