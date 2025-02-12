@@ -137,9 +137,7 @@ HAL and Extension list of APIs :
 |				|					|fcvAdaptiveThresholdGaussian5x5u8_v2          |
 |				|					|fcvAdaptiveThresholdMean3x3u8_v2              |
 |				|					|fcvAdaptiveThresholdMean5x5u8_v2              |
-|				|subtract			|fcvImageDiffu8f32_v2                          |
 |				|pyrUp & pyrDown	|fcvPyramidCreateu8_v4      	               |
-|				|resize				|fcvScaledownby2Gaussian5x5u8_v3               |
 |				|cvtColor			|fcvColorRGB888toYCrCbu8_v3                    |
 |				|					|fcvColorRGB888ToHSV888u8                      |
 |				|GaussianBlur		|fcvFilterGaussian5x5u8_v3                     |
