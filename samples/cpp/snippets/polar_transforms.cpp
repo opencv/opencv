@@ -47,14 +47,6 @@ int main( int argc, char** argv )
         Point2f center( (float)src.cols / 2, (float)src.rows / 2 );
         double maxRadius = 0.7*min(center.y, center.x);
 
-#if 0 //deprecated
-        double M = frame.cols / log(maxRadius);
-        logPolar(frame, log_polar_img, center, M, flags);
-        linearPolar(frame, lin_polar_img, center, maxRadius, flags);
-
-        logPolar(log_polar_img, recovered_log_polar, center, M, flags + WARP_INVERSE_MAP);
-        linearPolar(lin_polar_img, recovered_lin_polar_img, center, maxRadius, flags + WARP_INVERSE_MAP);
-#endif
         //! [InverseMap]
         // direct transform
         warpPolar(src, lin_polar_img, Size(),center, maxRadius, flags);                     // linear Polar
