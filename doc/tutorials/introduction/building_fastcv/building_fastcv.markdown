@@ -13,11 +13,12 @@ Enablement of  Opencv with Fastcv backend on Non-Qualcomm chipsets or Linux plat
 About Fastcv :
 -------------------------------------------
 FastCV provides two main features to computer vision application developers: 
-•	First, it provides a library of frequently used computer vision (CV) functions, optimized to run efficiently on a wide variety of Qualcomm’s Snapdragon devices. 
-•	Second, it provides a clean processor-agnostic hardware acceleration API, under which chipset vendors can hardware accelerate FastCV functions on Qualcomm’s Snapdragon hardware. 
+- First, it provides a library of frequently used computer vision (CV) functions, optimized to run efficiently on a wide variety of Qualcomm’s Snapdragon devices. 
+- Second, it provides a clean processor-agnostic hardware acceleration API, under which chipset vendors can hardware accelerate FastCV functions on Qualcomm’s Snapdragon hardware.
+
 FastCV is released as a unified binary, a single binary containing two implementations of the library. 
-•	The first implementation runs on Arm® architecture and is referred to as FastCV for Arm architecture. 
-•	The second implementation runs only on Qualcomm® Snapdragon™ chipsets and is called FastCV for Snapdragon. 
+- The first implementation runs on Arm® architecture and is referred to as FastCV for Arm architecture. 
+- The second implementation runs only on Qualcomm® Snapdragon™ chipsets and is called FastCV for Snapdragon. 
 FastCV library is Qualcomm proprietary and provides faster implementation of CV algorithms on various HW as compared to other CV libraries. 
 
 Opencv Acceleration with Fastcv HAL/ Extensions :
@@ -29,14 +30,14 @@ Opencv Acceleration with Fastcv HAL/ Extensions :
 
 Supported Platforms : 
 -------------------------------------------
-•	Android : Qualcomm Chipsets with the Android from Snapdragon 8 Gen 1 onwards(https://www.qualcomm.com/products/mobile/snapdragon/smartphones#product-list)
-•	Linux : Qualcomm Linux Program related boards mentioned in Hardware
++ Android : Qualcomm Chipsets with the Android from Snapdragon 8 Gen 1 onwards(https://www.qualcomm.com/products/mobile/snapdragon/smartphones#product-list)
++ Linux   : Qualcomm Linux Program related boards mentioned in Hardware
 
 Compiling Opencv with Fastcv for Android :
 -------------------------------------------
 1.	**Follow Wiki page for Opencv Compilation** : https://github.com/opencv/opencv/wiki/Custom-OpenCV-Android-SDK-and-AAR-package-build
-a.	Once  the Opencv repository code is cloned into the workspace , Please add as below to arm64 entry in opencv\platforms\android\ndk-18-api-level-24.config.py  to enable Fastcv HAL/Extenstions Compilation
-**ABI("3", "arm64-v8a", None, 24, cmake_vars=dict(WITH_FASTCV='ON')),**
+ Once  the Opencv repository code is cloned into the workspace , Please add as below to arm64 entry in opencv\platforms\android\ndk-18-api-level-24.config.py  to enable Fastcv HAL/Extenstions Compilation
+  **ABI("3", "arm64-v8a", None, 24, cmake_vars=dict(WITH_FASTCV='ON')),**
 2.	Remaining steps can be followed as mentioned in the above wiki page 
 
 Compiling Opencv with FastCV for Qualcomm Linux :
@@ -51,39 +52,42 @@ Go to the directory where the SDK was installed:
 ```
 cd $ESDK_ROOT
 ```
-### 3.  Environment Setup
-During the execution of the command 
-source environment-setup-armv8-2a-qcom-linux, 
+3.  Environment Setup
+During the execution of the command
+```
+source environment-setup-armv8-2a-qcom-linux
+```
 if you encounter the following message:
+```
 Your environment is misconfigured, you probably need to 'unset LD_LIBRARY_PATH'
 but please check why this was set in the first place and that it's safe to unset.
 The SDK will not operate correctly in most cases when LD_LIBRARY_PATH is set.
+```
+Then Follow these steps:
+ 1.	Unset LD_LIBRARY_PATH:unset LD_LIBRARY_PATH
 
-##Follow these steps:
-1.	Unset LD_LIBRARY_PATH:unset LD_LIBRARY_PATH
-
-2: Clone OpenCV Repositories
-You can clone the OpenCV repositories in any directory (it does not need to be inside the SDK directory).
-1.	Clone the main OpenCV repository:
+4. Clone OpenCV Repositories
+ You can clone the OpenCV repositories in any directory (it does not need to be inside the SDK directory).
+ 1.	Clone the main OpenCV repository:
 ```
 git clone https://github.com/opencv/opencv.git
 ```
 
-2.	Clone the OpenCV contrib repository:
+ 2.	Clone the OpenCV contrib repository:
 ```
 git clone https://github.com/opencv/opencv_contrib.git
 ```
-3: Build OpenCV
-1.	Create a build directory and navigate into it:
+5. Build OpenCV
+ 1.	Create a build directory and navigate into it:
 ```
 mkdir build
 cd build
 ```
-2.	Configure the build with CMake:
+ 2.	Configure the build with CMake:
 ```
 cmake -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DWITH_FASTCV=ON -DBUILD_SHARED_LIBS=ON -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules/fastcv/ ../opencv
 ```
-3.	Compile the code:
+ 3.	Compile the code:
 ```
 make -j$(nproc)
 ```
@@ -96,7 +100,8 @@ with the latest FastCV libraries downloaded in:
 ```
 build\3rdparty\fastcv\libs
 ```
-4.	Push Binaries and Libs on to the target
+6. Validation
+Push the Opencv libraries , test binaries and test data on to the target . Execute the OpenCV Conformance or Performance tests
 During runtime, If libwebp.so.7 lib is missing, find the lib in the below Path and push it on the target
 ```
 <ESDK_PATH>\qcom-wayland_sdk\tmp\sysroots\qcs6490-rb3gen2-vision-kit\usr\lib\libwebp.so.7
