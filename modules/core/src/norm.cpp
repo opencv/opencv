@@ -297,22 +297,14 @@ template<> inline
 int normInf(const int* src, int n) {
     v_uint32 r0 = vx_setzero_u32(), r1 = vx_setzero_u32();
     v_uint32 r2 = vx_setzero_u32(), r3 = vx_setzero_u32();
-    v_uint32 r4 = vx_setzero_u32(), r5 = vx_setzero_u32();
-    v_uint32 r6 = vx_setzero_u32(), r7 = vx_setzero_u32();
     int j = 0;
-    for (; j <= n - 8 * VTraits<v_int32>::vlanes(); j += 8 * VTraits<v_int32>::vlanes()) {
+    for (; j <= n - 4 * VTraits<v_int32>::vlanes(); j += 4 * VTraits<v_int32>::vlanes()) {
         r0 = v_max(r0, v_abs(vx_load(src + j                                 )));
         r1 = v_max(r1, v_abs(vx_load(src + j +     VTraits<v_int32>::vlanes())));
         r2 = v_max(r2, v_abs(vx_load(src + j + 2 * VTraits<v_int32>::vlanes())));
         r3 = v_max(r3, v_abs(vx_load(src + j + 3 * VTraits<v_int32>::vlanes())));
-        r4 = v_max(r4, v_abs(vx_load(src + j + 4 * VTraits<v_int32>::vlanes())));
-        r5 = v_max(r5, v_abs(vx_load(src + j + 5 * VTraits<v_int32>::vlanes())));
-        r6 = v_max(r6, v_abs(vx_load(src + j + 6 * VTraits<v_int32>::vlanes())));
-        r7 = v_max(r7, v_abs(vx_load(src + j + 7 * VTraits<v_int32>::vlanes())));
     }
     r0 = v_max(r0, v_max(r1, v_max(r2, r3)));
-    r4 = v_max(r4, v_max(r5, v_max(r6, r7)));
-    r0 = v_max(r0, r4);
     int s = 0;
     for (; j < n; j++) {
         s = std::max(s, cv_abs(src[j]));
