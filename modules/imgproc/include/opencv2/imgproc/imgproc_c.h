@@ -263,20 +263,6 @@ CVAPI(void)  cvRemap( const CvArr* src, CvArr* dst,
 CVAPI(void)  cvConvertMaps( const CvArr* mapx, const CvArr* mapy,
                             CvArr* mapxy, CvArr* mapalpha );
 
-/** @brief Performs forward or inverse log-polar image transform
-@see cv::warpPolar
-*/
-CVAPI(void)  cvLogPolar( const CvArr* src, CvArr* dst,
-                         CvPoint2D32f center, double M,
-                         int flags CV_DEFAULT(+CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
-
-/** Performs forward or inverse linear-polar image transform
-@see cv::warpPolar
-*/
-CVAPI(void)  cvLinearPolar( const CvArr* src, CvArr* dst,
-                         CvPoint2D32f center, double maxRadius,
-                         int flags CV_DEFAULT(+CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
-
 #ifdef _MSC_VER
 #pragma warning( pop )
 #endif
