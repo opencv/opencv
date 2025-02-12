@@ -39,10 +39,10 @@ Compiling Opencv with Fastcv for Android :
 -------------------------------------------
 1.	**Follow Wiki page for Opencv Compilation** : https://github.com/opencv/opencv/wiki/Custom-OpenCV-Android-SDK-and-AAR-package-build
 
- Once the Opencv repository code is cloned into the workspace , Please add as below to arm64 entry in opencv\platforms\android\ndk-18-api-level-24.config.py  to enable Fastcv HAL/Extenstions Compilation
+ Once the Opencv repository code is cloned into the workspace , Please add WITH_FASTCV flag to cmake vars as below to arm64 entry in opencv\platforms\android\ndk-18-api-level-24.config.py  to enable Fastcv HAL/Extenstions Compilation
 
  ```
-  ABI("3", "arm64-v8a", None, 24, cmake_vars=dict(**WITH_FASTCV='ON'**)),
+  ABI("3", "arm64-v8a", None, 24, cmake_vars=dict(WITH_FASTCV='ON')),
  ```
 2.	Remaining steps can be followed as mentioned in the above wiki page 
 
