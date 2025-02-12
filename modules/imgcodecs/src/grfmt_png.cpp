@@ -699,7 +699,18 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
         return 0;
     const size_t size = static_cast<size_t>(png_get_uint_32(size_id)) + 12;
 
-    const uint32_t id = *(uint32_t*)(&size_id[4]);
+    uint32_t id;
+    if (isBigEndian())
+    {
+        id = (uint32_t)(*(size_id + 4))
+            + ((uint32_t)(*(size_id + 5)) << 8)
+            + ((uint32_t)(*(size_id + 6)) << 16)
+            + ((uint32_t)(*(size_id + 7)) << 24);
+    }
+    else
+    {
+        id = png_get_uint_32(size_id + 4);
+    }
     if (id == id_IHDR) {
         // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
         // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
