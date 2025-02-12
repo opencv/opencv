@@ -38,12 +38,12 @@ namespace mcc
 //! @addtogroup mcc
 //! @{
 
-/** TYPECHART
+/** COLORCHART
  *
  * \brief enum to hold the type of the checker
  *
  */
-enum TYPECHART
+enum COLORCHART
 {
     MCC24 = 0, ///< Standard Macbeth Chart with 24 squares
     SG140,       ///< DigitalSG with 140 squares
@@ -73,21 +73,21 @@ public:
     CV_WRAP static Ptr<CChecker> create();
 
 public:
-    // CV_PROP_RW TYPECHART target;             ///< type of checkercolor
+    // CV_PROP_RW COLORCHART target;             ///< type of checkercolor
     // CV_PROP_RW std::vector<cv::Point2f> box; ///< positions of the corners
     // CV_PROP_RW cv::Mat charts_rgb;             ///< charts profile in rgb color space
     // CV_PROP_RW cv::Mat charts_ycbcr;         ///< charts profile in YCbCr color space
     // CV_PROP_RW float cost;                     ///< cost to aproximate
     // CV_PROP_RW cv::Point2f center;             ///< center of the chart.
 
-    CV_WRAP virtual void setTarget(TYPECHART _target)  = 0;
+    CV_WRAP virtual void setTarget(COLORCHART _target)  = 0;
     CV_WRAP virtual void setBox(std::vector<Point2f> _box) = 0;
     CV_WRAP virtual void setChartsRGB(Mat _chartsRGB) = 0;
     CV_WRAP virtual void setChartsYCbCr(Mat _chartsYCbCr) = 0;
     CV_WRAP virtual void setCost(float _cost) = 0;
     CV_WRAP virtual void setCenter(Point2f _center) = 0;
 
-    CV_WRAP virtual TYPECHART getTarget() = 0;
+    CV_WRAP virtual COLORCHART getTarget() = 0;
     CV_WRAP virtual std::vector<Point2f> getBox() = 0;
 
     /** @brief Computes and returns the coordinates of the central parts of the charts modules.

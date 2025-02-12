@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     int t = parser.get<int>("t");
 
     CV_Assert(0 <= t && t <= 2);
-    TYPECHART chartType = TYPECHART(t);
+    COLORCHART chartType = COLORCHART(t);
 
     string model_path = parser.get<string>("m");
     string pbtxt_path = parser.get<string>("pb");
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 
     //load the network
 
-    Ptr<CCheckerDetector> detector = CCheckerDetector::create();
+    Ptr<CCheckerDetector> detector;
     if (model_path != "" && pbtxt_path != ""){
         cv::dnn::Net net = cv::dnn::readNetFromTensorflow(model_path, pbtxt_path);
 
@@ -90,12 +90,11 @@ int main(int argc, char *argv[])
             net.setPreferableTarget(dnn::DNN_TARGET_CUDA);
         }
 
-        if (!detector->setNet(net))
-        {
-            cout << "Loading Model failed: Aborting" << endl;
-            return 0;
-        }
+        detector = CCheckerDetector::create(net);
         cout<<"Detecting checkers using neural network."<<endl;
+    }
+    else{
+        detector = CCheckerDetector::create();
     }
 
     while (inputVideo.grab())
