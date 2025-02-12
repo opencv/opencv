@@ -1104,26 +1104,23 @@ inline int hal_ni_transpose2d(const uchar* src_data, size_t src_step, uchar* dst
 #include "custom_hal.hpp"
 
 //! @cond IGNORED
-#define CALL_HAL_RET(name, fun, retval, ...) \
+
+#define CALL_HAL_RET2(name, fun, retval, ...) \
 { \
-    int res = __CV_EXPAND(fun(__VA_ARGS__, &retval)); \
+    int res = __CV_EXPAND(fun(__VA_ARGS__)); \
     if (res == CV_HAL_ERROR_OK) \
         return retval; \
     else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
         CV_Error_(cv::Error::StsInternal, \
-            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res)); \
+        ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res)); \
 }
 
+#define CALL_HAL_RET(name, fun, retval, ...) \
+CALL_HAL_RET2(name, fun, retval, __VA_ARGS__, &retval)
 
 #define CALL_HAL(name, fun, ...) \
-{ \
-    int res = __CV_EXPAND(fun(__VA_ARGS__)); \
-    if (res == CV_HAL_ERROR_OK) \
-        return; \
-    else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED) \
-        CV_Error_(cv::Error::StsInternal, \
-            ("HAL implementation " CVAUX_STR(name) " ==> " CVAUX_STR(fun) " returned %d (0x%08x)", res, res)); \
-}
+CALL_HAL_RET2(name, fun, ,__VA_ARGS__)
+
 //! @endcond
 
 #endif
