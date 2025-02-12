@@ -44,6 +44,10 @@ Ptr<CCheckerDetector> CCheckerDetector::create()
 {
     return makePtr<CCheckerDetectorImpl>();
 }
+Ptr<CCheckerDetector> CCheckerDetector::create(const dnn::Net& net)
+{
+    return makePtr<CCheckerDetectorImpl>(net);
+}
 
 CCheckerDetectorImpl::
     CCheckerDetectorImpl()
@@ -56,15 +60,8 @@ CCheckerDetectorImpl::~CCheckerDetectorImpl()
 }
 
 bool CCheckerDetectorImpl::
-    setNet(cv::dnn::Net _net)
-{
-    net = _net;
-    return !net.empty();
-}
-
-bool CCheckerDetectorImpl::
-    _no_net_process(InputArray image, const TYPECHART chartType, const int nc,
-                    const Ptr<DetectorParametersMCC> &params,
+    _no_net_process(InputArray image, const COLORCHART chartType, const int nc,
+                    const DetectorParametersMCC &params,
                     std::vector<cv::Rect> regionsOfInterest)
 {
     m_checkers.clear();
@@ -255,8 +252,8 @@ bool CCheckerDetectorImpl::
 }
 
 bool CCheckerDetectorImpl::
-    process(InputArray image, const TYPECHART chartType,const std::vector<cv::Rect> &regionsOfInterest,
-            const int nc /*= 1*/, bool useNet /*=false*/, const Ptr<DetectorParametersMCC> &params)
+    process(InputArray image, const COLORCHART chartType,const std::vector<cv::Rect> &regionsOfInterest,
+            const int nc /*= 1*/, bool useNet /*=false*/, const DetectorParametersMCC &params)
 {
     m_checkers.clear();
 
@@ -297,12 +294,12 @@ bool CCheckerDetectorImpl::
         for (int i = 0; i < detectionMat.rows; i++)
         {
             float confidence = detectionMat.at<float>(i, 2);
-            if (confidence > params->confidenceThreshold)
+            if (confidence > params.confidenceThreshold)
             {
-                float xTopLeft = max(0.0f, detectionMat.at<float>(i, 3) * cols - params->borderWidth);
-                float yTopLeft = max(0.0f, detectionMat.at<float>(i, 4) * rows - params->borderWidth);
-                float xBottomRight = min((float)cols - 1, detectionMat.at<float>(i, 5) * cols + params->borderWidth);
-                float yBottomRight = min((float)rows - 1, detectionMat.at<float>(i, 6) * rows + params->borderWidth);
+                float xTopLeft = max(0.0f, detectionMat.at<float>(i, 3) * cols - params.borderWidth);
+                float yTopLeft = max(0.0f, detectionMat.at<float>(i, 4) * rows - params.borderWidth);
+                float xBottomRight = min((float)cols - 1, detectionMat.at<float>(i, 5) * cols + params.borderWidth);
+                float yBottomRight = min((float)rows - 1, detectionMat.at<float>(i, 6) * rows + params.borderWidth);
 
                 cv::Point2f topLeft = {xTopLeft, yTopLeft};
                 cv::Point2f bottomRight = {xBottomRight, yBottomRight};
@@ -487,8 +484,8 @@ bool CCheckerDetectorImpl::
 
 //Overload for the above function
 bool CCheckerDetectorImpl::
-    process(InputArray image, const TYPECHART chartType,
-            const int nc /*= 1*/, bool useNet /*=false*/, const Ptr<DetectorParametersMCC> &params)
+    process(InputArray image, const COLORCHART chartType,
+            const int nc /*= 1*/, bool useNet /*=false*/, const DetectorParametersMCC &params)
 {
     return process(image, chartType, std::vector<cv::Rect>(1, Rect(0, 0, image.cols(), image.rows())),
                    nc,useNet, params);
@@ -498,7 +495,7 @@ bool CCheckerDetectorImpl::
 void CCheckerDetectorImpl::
     prepareImage(InputArray bgr, OutputArray grayOut,
                  OutputArray bgrOut, float &aspOut,
-                 const Ptr<DetectorParametersMCC> &params) const
+                 const DetectorParametersMCC &params) const
 {
 
     int min_size;
@@ -508,9 +505,9 @@ void CCheckerDetectorImpl::
 
     // Resize image
     min_size = std::min(size.width, size.height);
-    if (params->minImageSize > min_size)
+    if (params.minImageSize > min_size)
     {
-        aspOut = (float)params->minImageSize / min_size;
+        aspOut = (float)params.minImageSize / min_size;
         cv::resize(bgr, bgrOut, cv::Size(int(size.width * aspOut), int(size.height * aspOut)), INTER_LINEAR_EXACT);
     }
 
@@ -534,20 +531,20 @@ void CCheckerDetectorImpl::
 void CCheckerDetectorImpl::
     performThreshold(InputArray grayscaleImg,
                      OutputArrayOfArrays thresholdImgs,
-                     const Ptr<DetectorParametersMCC> &params) const
+                     const DetectorParametersMCC &params) const
 {
     // number of window sizes (scales) to apply adaptive thresholding
-    int nScales = (params->adaptiveThreshWinSizeMax - params->adaptiveThreshWinSizeMin) / params->adaptiveThreshWinSizeStep + 1;
+    int nScales = (params.adaptiveThreshWinSizeMax - params.adaptiveThreshWinSizeMin) / params.adaptiveThreshWinSizeStep + 1;
     thresholdImgs.create(nScales, 1, CV_8U);
     std::vector<cv::Mat> _thresholdImgs(nScales);
     parallel_for_(Range(0, nScales),[&](const Range& range) {
         const int start = range.start;
         const int end = range.end;
         for (int i = start; i < end; i++) {
-            int currScale = params->adaptiveThreshWinSizeMin + i * params->adaptiveThreshWinSizeStep;
+            int currScale = params.adaptiveThreshWinSizeMin + i * params.adaptiveThreshWinSizeStep;
             cv::Mat tempThresholdImg;
             cv::adaptiveThreshold(grayscaleImg, tempThresholdImg, 255, ADAPTIVE_THRESH_MEAN_C,
-                                  THRESH_BINARY_INV, currScale, params->adaptiveThreshConstant);
+                                  THRESH_BINARY_INV, currScale, params.adaptiveThreshConstant);
             _thresholdImgs[i] = tempThresholdImg;
         }
     });
@@ -559,7 +556,7 @@ void CCheckerDetectorImpl::
     findContours(
         InputArray srcImg,
         ContoursVector &contours,
-        const Ptr<DetectorParametersMCC> &params) const
+        const DetectorParametersMCC &params) const
 {
     // contour detected
     // [Suzuki85] Suzuki, S. and Abe, K., Topological Structural Analysis of Digitized
@@ -578,16 +575,16 @@ void CCheckerDetectorImpl::
         contour = allContours[i];
 
         int contourSize = (int)contour.size();
-        if (contourSize <= params->minContourPointsAllowed)
+        if (contourSize <= params.minContourPointsAllowed)
             continue;
 
         double area = cv::contourArea(contour);
         // double perm = cv::arcLength(contour, true);
 
-        if (this->net_used && area / srcImgArea < params->minContoursAreaRate)
+        if (this->net_used && area / srcImgArea < params.minContoursAreaRate)
             continue;
 
-        if (!this->net_used && area < params->minContoursArea)
+        if (!this->net_used && area < params.minContoursArea)
             continue;
         // Circularity factor condition
         // KORDECKI, A., & PALUS, H. (2014). Automatic detection of colour charts in images.
@@ -602,7 +599,7 @@ void CCheckerDetectorImpl::
         cv::convexHull(contour, hull);
         double area_hull = cv::contourArea(hull);
         double S = area / area_hull;
-        if (S < params->minContourSolidity)
+        if (S < params.minContourSolidity)
             continue;
 
         // Texture analysis
@@ -616,7 +613,7 @@ void CCheckerDetectorImpl::
     findCandidates(
         const ContoursVector &contours,
         std::vector<CChart> &detectedCharts,
-        const Ptr<DetectorParametersMCC> &params)
+        const DetectorParametersMCC &params)
 {
     std::vector<cv::Point> approxCurve;
     std::vector<CChart> possibleCharts;
@@ -627,7 +624,7 @@ void CCheckerDetectorImpl::
         // Approximate to a polygon
         //  It uses the Douglas-Peucker algorithm
         // http://en.wikipedia.org/wiki/Ramer-Douglas-Peucker_algorithm
-        double eps = contours[i].size() * params->findCandidatesApproxPolyDPEpsMultiplier;
+        double eps = contours[i].size() * params.findCandidatesApproxPolyDPEpsMultiplier;
         cv::approxPolyDP(contours[i], approxCurve, eps, true);
 
         // We interested only in polygons that contains only four points
@@ -649,7 +646,7 @@ void CCheckerDetectorImpl::
         }
 
         // Check that distance is not very small
-        if (minDist < params->minContourLengthAllowed)
+        if (minDist < params.minContourLengthAllowed)
             continue;
 
         // All tests are passed. Save chart candidate:
@@ -686,7 +683,7 @@ void CCheckerDetectorImpl::
 
             distSquared /= 4;
 
-            if (distSquared < params->minInterContourDistance)
+            if (distSquared < params.minInterContourDistance)
             {
                 tooNearCandidates.push_back(std::pair<int, int>(i, j));
             }
@@ -724,7 +721,7 @@ void CCheckerDetectorImpl::
     clustersAnalysis(
         const std::vector<CChart> &detectedCharts,
         std::vector<int> &groups,
-        const Ptr<DetectorParametersMCC> &params)
+        const DetectorParametersMCC &params)
 {
     size_t N = detectedCharts.size();
     std::vector<cv::Point> X(N);
@@ -736,7 +733,7 @@ void CCheckerDetectorImpl::
     for (size_t i = 0; i < N; i++)
     {
         chart = detectedCharts[i];
-        b0 = chart.large_side * params->B0factor;
+        b0 = chart.large_side * params.B0factor;
         X[i] = chart.center;
         W[i] = chart.area;
         B0[i] = b0;
@@ -756,9 +753,9 @@ void CCheckerDetectorImpl::
         InputArray img,
         const std::vector<CChart> &detectedCharts,
         const std::vector<int> &G,
-        const TYPECHART chartType,
+        const COLORCHART chartType,
         std::vector<std::vector<cv::Point2f>> &colorChartsOut,
-        const Ptr<DetectorParametersMCC> &params)
+        const DetectorParametersMCC &params)
 {
     std::vector<int> gU;
     unique(G, gU);
@@ -779,7 +776,7 @@ void CCheckerDetectorImpl::
                 chartSub.push_back(detectedCharts[i]);
 
         size_t Nsc = chartSub.size();
-        if (Nsc < params->minGroupSize)
+        if (Nsc < params.minGroupSize)
             continue;
 
         ///-------------------------------------------------
@@ -968,12 +965,12 @@ void CCheckerDetectorImpl::
 void CCheckerDetectorImpl::
     checkerAnalysis(
         InputArray img_f,
-        const TYPECHART chartType,
+        const COLORCHART chartType,
         const unsigned int nc,
         const std::vector<std::vector<cv::Point2f>> &colorCharts,
         std::vector<Ptr<CChecker>> &checkers,
         float asp,
-        const Ptr<DetectorParametersMCC> &params,
+        const DetectorParametersMCC &params,
         const cv::Mat &img_rgb_org,
         const cv::Mat &img_ycbcr_org,
         std::vector<cv::Mat> &rgb_planes,
@@ -1010,7 +1007,7 @@ void CCheckerDetectorImpl::
     {
         ibox = colorCharts[idx[i]];
 
-        if (J[i] > params->maxError)
+        if (J[i] > params.maxError)
             continue;
 
         // redimention box
@@ -1035,7 +1032,7 @@ void CCheckerDetectorImpl::
 }
 
 void CCheckerDetectorImpl::
-    removeTooCloseDetections(const Ptr<DetectorParametersMCC> &params)
+    removeTooCloseDetections(const DetectorParametersMCC &params)
 {
     // Remove these elements which corners are too close to each other.
     // Eliminate overlaps!!!
@@ -1060,7 +1057,7 @@ void CCheckerDetectorImpl::
 
             distSquared /= 4;
 
-            if (distSquared < params->minInterCheckerDistance)
+            if (distSquared < params.minInterCheckerDistance)
             {
                 tooNearCandidates.push_back(std::pair<int, int>(i, j));
             }
@@ -1187,7 +1184,7 @@ void CCheckerDetectorImpl::
 void CCheckerDetectorImpl::
     get_profile(
         const std::vector<cv::Point2f> &ibox,
-        const TYPECHART chartType,
+        const COLORCHART chartType,
         OutputArray charts_rgb,
         OutputArray charts_ycbcr,
         InputArray im_rgb,
@@ -1304,7 +1301,7 @@ void CCheckerDetectorImpl::
 
 float CCheckerDetectorImpl::
     cost_function(InputArray im_rgb, InputOutputArray mask, InputArray lab,
-                  const std::vector<cv::Point2f> &ibox, const TYPECHART chartType)
+                  const std::vector<cv::Point2f> &ibox, const COLORCHART chartType)
 {
     CChartModel cccm(chartType);
     std::vector<cv::Point2f> fbox = cccm.box;

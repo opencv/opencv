@@ -47,79 +47,88 @@ namespace mcc
 //! @addtogroup mcc
 //! @{
 
-/**
- * @brief Parameters for the detectMarker process:
- * - int adaptiveThreshWinSizeMin : minimum window size for adaptive
- *                                  thresholding before finding contours
- *                                  (default 23).
- * - int adaptiveThreshWinSizeMax : maximum window size for adaptive
- *                                  thresholding before finding contours
- *                                  (default 153).
- * - int adaptiveThreshWinSizeStep : increments from adaptiveThreshWinSizeMin to
- *                                   adaptiveThreshWinSizeMax during the
- *                                   thresholding (default 16).
- * - double adaptiveThreshConstant : constant for adaptive thresholding before
- *                                   finding contours (default 7)
- * - double minContoursAreaRate : determine minimum area for marker contour to
- *                                be detected. This is defined as a rate respect
- *                                to the area of the input image. Used only if
- *                                neural network is used (default 0.003).
- * - double minContoursArea : determine minimum area for marker contour to be
- *                            detected. This is defined as the actual area. Used
- *                            only if neural network is not used (default 100).
- * - double confidenceThreshold : minimum confidence for a bounding box detected
- *                                by neural network to classify as
- *                                detection.(default 0.5)
- *                                (0<=confidenceThreshold<=1)
- * - double minContourSolidity : minimum solidity of a contour for it be
- *                               detected as a square in the chart. (default
- *                               0.9).
- * - double findCandidatesApproxPolyDPEpsMultiplier : multipler to be used in
- *                                                    cv::ApproxPolyDP function
- *                                                    (default 0.05)
- * - int borderWidth : width of the padding used to pass the inital neural
- *                     network detection in the succeeding system.(default 0)
- * - float B0factor : distance between two neighbours squares of the same chart.
- *                    Defined as the ratio between distance and large dimension
- *                    of square (default 1.25)
- * - float maxError : maximum allowed error in the detection of a chart.
- *                    default(0.1)
- * - int minContourPointsAllowed : minium points in a detected contour.
- *                                 default(4)
- * - int minContourLengthAllowed : minimum length of a countour. default(100)
- * - int minInterContourDistance : minimum distance between two contours.
- *                                 default(100)
- * - int minInterCheckerDistance : minimum distance between two checkers.
- *                                 default(10000)
- * - int minImageSize : minimum size of the smaller dimension of the image.
- *                      default(1000)
- * - unsigned minGroupSize : minimum number of a squared of a chart that must be
- *                           detected. default(4)
+/** @brief struct DetectorParametersMCC is used by CCheckerDetector
  */
-struct CV_EXPORTS_W DetectorParametersMCC
+struct CV_EXPORTS_W_SIMPLE DetectorParametersMCC
 {
-
-    DetectorParametersMCC();
-
-    CV_WRAP static Ptr<DetectorParametersMCC> create();
-
+    CV_WRAP DetectorParametersMCC(){
+        adaptiveThreshWinSizeMin=23;
+        adaptiveThreshWinSizeMax=153;
+        adaptiveThreshWinSizeStep=16;
+        adaptiveThreshConstant=7;
+        minContoursAreaRate=0.003;
+        minContoursArea=100;
+        confidenceThreshold=0.5;
+        minContourSolidity=0.9;
+        findCandidatesApproxPolyDPEpsMultiplier=0.05;
+        borderWidth=0;
+        B0factor=1.25f;
+        maxError=0.1f;
+        minContourPointsAllowed=4;
+        minContourLengthAllowed=100;
+        minInterContourDistance=100;
+        minInterCheckerDistance=10000;
+        minImageSize=1000;
+        minGroupSize=4;
+    }
+    /// minimum window size for adaptive thresholding before finding contours (default 23).
     CV_PROP_RW int adaptiveThreshWinSizeMin;
+
+    /// maximum window size for adaptive thresholding before finding contours (default 153).
     CV_PROP_RW int adaptiveThreshWinSizeMax;
+
+    /// increments from adaptiveThreshWinSizeMin to adaptiveThreshWinSizeMax during the thresholding (default 16).
     CV_PROP_RW int adaptiveThreshWinSizeStep;
+
+    /// constant for adaptive thresholding before finding contours (default 7)
     CV_PROP_RW double adaptiveThreshConstant;
+
+    /** @brief determine minimum area for marker contour to be detected
+     *
+     * This is defined as a rate respect to the area of the input image. Used only if neural network is used (default 0.03).
+     */
     CV_PROP_RW double minContoursAreaRate;
+
+    /** @brief determine minimum area for marker contour to be detected
+     *
+     * This is defined as the actual area. Used only if neural network is used (default 100).
+     */
     CV_PROP_RW double minContoursArea;
+
+    /// minimum confidence for a bounding box detected by neural network to classify as detection.(default 0.5) (0<=confidenceThreshold<=1)
     CV_PROP_RW double confidenceThreshold;
+
+    /// minimum solidity of a contour for it be detected as a square in the chart. (default 0.9).
     CV_PROP_RW double minContourSolidity;
+
+    /// multipler to be used in cv::ApproxPolyDP function (default 0.05)
     CV_PROP_RW double findCandidatesApproxPolyDPEpsMultiplier;
+
+    /// width of the padding used to pass the inital neural network detection in the succeeding system.(default 0)
     CV_PROP_RW int borderWidth;
+
+    /// distance between two neighboring squares of the same chart as a ratio of the large dimension of a square (default 1.25).
     CV_PROP_RW float B0factor;
+
+    /// maximum allowed error in the detection of a chart (default 0.1).
     CV_PROP_RW float maxError;
+
+    /// minimum points in a detected contour (default 4).
     CV_PROP_RW int minContourPointsAllowed;
+
+    /// minimum length of a contour (default 100).
     CV_PROP_RW int minContourLengthAllowed;
+
+    /// minimum distance between two contours (default 100).
     CV_PROP_RW int minInterContourDistance;
+
+    /// minimum distance between two checkers (default 10000).
     CV_PROP_RW int minInterCheckerDistance;
+
+    /// minimum size of the smaller dimension of the image (default 1000).
     CV_PROP_RW int minImageSize;
+
+    /// minimum number of squares in a chart that must be detected (default 4).
     CV_PROP_RW unsigned minGroupSize;
 };
 
@@ -129,48 +138,34 @@ struct CV_EXPORTS_W DetectorParametersMCC
 class CV_EXPORTS_W CCheckerDetector : public Algorithm
 {
 public:
-    /** \brief Set the net which will be used to find the approximate
-    *         bounding boxes for the color charts.
-    *
-    * It is not necessary to use this, but this usually results in
-    * better detection rate.
-    *
-    * \param net the neural network, if the network in empty, then
-    *            the function will return false.
-    * \return true if it was able to set the detector's network,
-    *         false otherwise.
-    */
-
-    CV_WRAP virtual bool setNet(dnn::Net net) = 0;
-
-    /** \brief Find the ColorCharts in the given image.
+    /** @brief Find the ColorCharts in the given image.
     *
     * The found charts are not returned but instead stored in the
     * detector, these can be accessed later on using getBestColorChecker()
     * and getListColorChecker()
-    * \param image image in color space BGR
-    * \param chartType type of the chart to detect
-    * \param regionsOfInterest regions of image to look for the chart, if
+    * @param image image in color space BGR
+    * @param chartType type of the chart to detect
+    * @param regionsOfInterest regions of image to look for the chart, if
     *                          it is empty, charts are looked for in the
     *                          entire image
-    * \param nc number of charts in the image, if you don't know the exact
+    * @param nc number of charts in the image, if you don't know the exact
     *           then keeping this number high helps.
-    * \param useNet if it is true the network provided using the setNet()
+    * @param useNet if it is true the network provided using the setNet()
     *               is used for preliminary search for regions where chart
     *               could be present, inside the regionsOfInterest provied.
-    * \param params parameters of the detection system. More information
+    * @param params parameters of the detection system. More information
     *               about them can be found in the struct DetectorParametersMCC.
-    * \return true if atleast one chart is detected otherwise false
+    * @return true if atleast one chart is detected otherwise false
     */
 
     CV_WRAP_AS(processWithROI) virtual bool
-    process(InputArray image, const TYPECHART chartType,
+    process(InputArray image, const COLORCHART chartType,
             const std::vector<Rect> &regionsOfInterest,
             const int nc = 1, bool useNet = false,
-            const Ptr<DetectorParametersMCC> &params = DetectorParametersMCC::create()) = 0;
+            const DetectorParametersMCC &params = DetectorParametersMCC()) = 0;
 
 
-    /** \brief Find the ColorCharts in the given image.
+    /** @brief Find the ColorCharts in the given image.
     *
     * Differs from the above one only in the arguments.
     *
@@ -179,39 +174,49 @@ public:
     * The found charts are not returned but instead stored in the
     * detector, these can be accessed later on using getBestColorChecker()
     * and getListColorChecker()
-    * \param image image in color space BGR
-    * \param chartType type of the chart to detect
-    * \param nc number of charts in the image, if you don't know the exact
+    * @param image image in color space BGR
+    * @param chartType type of the chart to detect
+    * @param nc number of charts in the image, if you don't know the exact
     *           then keeping this number high helps.
-    * \param useNet if it is true the network provided using the setNet()
+    * @param useNet if it is true the network provided using the setNet()
     *               is used for preliminary search for regions where chart
     *               could be present, inside the regionsOfInterest provied.
-    * \param params parameters of the detection system. More information
+    * @param params parameters of the detection system. More information
     *               about them can be found in the struct DetectorParametersMCC.
-    * \return true if atleast one chart is detected otherwise false
+    * @return true if atleast one chart is detected otherwise false
     */
 
     CV_WRAP virtual bool
-    process(InputArray image, const TYPECHART chartType,
+    process(InputArray image, const COLORCHART chartType,
             const int nc = 1, bool useNet = false,
-            const Ptr<DetectorParametersMCC> &params = DetectorParametersMCC::create()) = 0;
+            const DetectorParametersMCC &params = DetectorParametersMCC()) = 0;
 
-    /** \brief Get the best color checker. By the best it means the one
+    /** @brief Get the best color checker. By the best it means the one
     *         detected with the highest confidence.
-    * \return checker A single colorchecker, if atleast one colorchecker
+    * @return checker A single colorchecker, if atleast one colorchecker
     *                 was detected, 'nullptr' otherwise.
     */
     CV_WRAP virtual Ptr<mcc::CChecker> getBestColorChecker() = 0;
 
-    /** \brief Get the list of all detected colorcheckers
-    * \return checkers vector of colorcheckers
+    /** @brief Get the list of all detected colorcheckers
+    * @return checkers vector of colorcheckers
     */
     CV_WRAP virtual std::vector<Ptr<CChecker>> getListColorChecker() = 0;
 
-    /** \brief Returns the implementation of the CCheckerDetector.
+    /** @brief Returns the implementation of the CCheckerDetector.
     *
     */
     CV_WRAP static Ptr<CCheckerDetector> create();
+     /** @brief Set the net which will be used to find the approximate
+    *         bounding boxes for the color charts. And returns the implementation of the CCheckerDetector.
+    *
+    * It is not necessary to use this, but this usually results in
+    * better detection rate.
+    *
+    * @param net the neural network, if the network in empty, then
+    *            the function will return false.
+    */
+    CV_WRAP static Ptr<CCheckerDetector> create(const cv::dnn::Net &net);
 };
 
 //! @} mcc

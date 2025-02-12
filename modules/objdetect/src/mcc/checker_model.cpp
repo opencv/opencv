@@ -38,7 +38,7 @@ namespace mcc
 
 ///////////////////////////////////////////////////////////////////////////////
 /// CChartModel
-CChartModel::CChartModel(const TYPECHART chartType)
+CChartModel::CChartModel(const COLORCHART chartType)
 {
     switch (chartType)
     {
@@ -378,7 +378,7 @@ Ptr<CChecker> CChecker::create()
     return makePtr<CCheckerImpl>();
 }
 
-void CCheckerImpl::setTarget(TYPECHART _target)
+void CCheckerImpl::setTarget(COLORCHART _target)
 {
     target = _target;
 }
@@ -403,7 +403,7 @@ void CCheckerImpl::setCenter(Point2f _center)
     center = _center;
 }
 
-TYPECHART CCheckerImpl::getTarget()
+COLORCHART CCheckerImpl::getTarget()
 {
     return target;
 }

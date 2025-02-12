@@ -37,7 +37,7 @@
 @{
 
 
-@addtogroup mcc
+@addtogroup checker_detector
 
 Introduction
 ------------
@@ -50,7 +50,7 @@ depeding on many variables, this gives us the colors initially present and the
 colors that are present in the image, based on this information we can apply any
 suitable algorithm to find the actual color of all the objects present in the
 image.
-
+@}
 */
 
 #endif
