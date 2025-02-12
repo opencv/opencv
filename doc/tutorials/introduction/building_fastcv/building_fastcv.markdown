@@ -116,7 +116,7 @@ HAL and Extension list of APIs :
 -------------------------------------------
 
 ###Fastcv based Opencv HAL APIs list :
--------------------------------------------
+
 |OpenCV module	|OpenCV API	        | Underlying FastCV API for OpenCV acceleration|
 | --------------| ------------------|--------------------------------------------- |
 |IMGPROC	    |medianBlur		 	|fcvFilterMedian3x3u8_v3                       |
@@ -158,7 +158,7 @@ HAL and Extension list of APIs :
 
 
 ###Fastcv based Opencv Extensions APIs list :
--------------------------------------------
+
 |OpenCV Extension APIs  |Underlying FastCV API for OpenCV acceleration|
 | --------------------  |---------------------------------------------|
 |matmuls8s32			|fcvMatrixMultiplys8s32                       |
