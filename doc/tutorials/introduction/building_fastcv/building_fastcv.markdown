@@ -26,6 +26,8 @@ Opencv Acceleration with Fastcv HAL/ Extensions :
 1.	Accelerates OpenCV APIs using FastCV as the backend, resulting in improved performance.
 2.	Enhances OpenCV functionality with FastCV-based HAL and Extension APIs, which were not available in earlier versions that only included the default OpenCV library.
 3.	CV applications can be developed using the standard OpenCV APIs. The OpenCV library invokes FastCV HAL APIs, which in turn call FastCV algorithms.
+
+
 ![](fastcv_hal_extns.png)
 
 Supported Platforms : 
@@ -40,7 +42,7 @@ Compiling Opencv with Fastcv for Android :
  Once the Opencv repository code is cloned into the workspace , Please add as below to arm64 entry in opencv\platforms\android\ndk-18-api-level-24.config.py  to enable Fastcv HAL/Extenstions Compilation
 
  ```
-  ABI("3", "arm64-v8a", None, 24, cmake_vars=dict(WITH_FASTCV='ON')),
+  ABI("3", "arm64-v8a", None, 24, cmake_vars=dict(**WITH_FASTCV='ON'**)),
  ```
 2.	Remaining steps can be followed as mentioned in the above wiki page 
 
@@ -57,6 +59,7 @@ Go to the directory where the SDK was installed:
 cd $ESDK_ROOT
 ```
 3.  Environment Setup
+
 During the execution of the command
 ```
 source environment-setup-armv8-2a-qcom-linux
@@ -71,6 +74,7 @@ Then Follow these steps:
  + Unset LD_LIBRARY_PATH:unset LD_LIBRARY_PATH
 
 4. Clone OpenCV Repositories
+
  You can clone the OpenCV repositories in any directory (it does not need to be inside the SDK directory).
  + Clone the main OpenCV repository:
 ```
