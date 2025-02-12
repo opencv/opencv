@@ -26,7 +26,7 @@ Opencv Acceleration with Fastcv HAL/ Extensions :
 1.	Accelerates OpenCV APIs using FastCV as the backend, resulting in improved performance.
 2.	Enhances OpenCV functionality with FastCV-based HAL and Extension APIs, which were not available in earlier versions that only included the default OpenCV library.
 3.	CV applications can be developed using the standard OpenCV APIs. The OpenCV library invokes FastCV HAL APIs, which in turn call FastCV algorithms.
-![](fastcv_hal_extns.jpg)
+![](fastcv_hal_extns.png)
 
 Supported Platforms : 
 -------------------------------------------
@@ -36,8 +36,12 @@ Supported Platforms :
 Compiling Opencv with Fastcv for Android :
 -------------------------------------------
 1.	**Follow Wiki page for Opencv Compilation** : https://github.com/opencv/opencv/wiki/Custom-OpenCV-Android-SDK-and-AAR-package-build
- Once  the Opencv repository code is cloned into the workspace , Please add as below to arm64 entry in opencv\platforms\android\ndk-18-api-level-24.config.py  to enable Fastcv HAL/Extenstions Compilation
-  **ABI("3", "arm64-v8a", None, 24, cmake_vars=dict(WITH_FASTCV='ON')),**
+
+ Once the Opencv repository code is cloned into the workspace , Please add as below to arm64 entry in opencv\platforms\android\ndk-18-api-level-24.config.py  to enable Fastcv HAL/Extenstions Compilation
+
+ ```
+  ABI("3", "arm64-v8a", None, 24, cmake_vars=dict(WITH_FASTCV='ON')),
+ ```
 2.	Remaining steps can be followed as mentioned in the above wiki page 
 
 Compiling Opencv with FastCV for Qualcomm Linux :
@@ -64,30 +68,30 @@ but please check why this was set in the first place and that it's safe to unset
 The SDK will not operate correctly in most cases when LD_LIBRARY_PATH is set.
 ```
 Then Follow these steps:
- 1.	Unset LD_LIBRARY_PATH:unset LD_LIBRARY_PATH
+ + Unset LD_LIBRARY_PATH:unset LD_LIBRARY_PATH
 
 4. Clone OpenCV Repositories
  You can clone the OpenCV repositories in any directory (it does not need to be inside the SDK directory).
- 1.	Clone the main OpenCV repository:
+ + Clone the main OpenCV repository:
 ```
 git clone https://github.com/opencv/opencv.git
 ```
 
- 2.	Clone the OpenCV contrib repository:
+ + Clone the OpenCV contrib repository:
 ```
 git clone https://github.com/opencv/opencv_contrib.git
 ```
 5. Build OpenCV
- 1.	Create a build directory and navigate into it:
+ + Create a build directory and navigate into it:
 ```
 mkdir build
 cd build
 ```
- 2.	Configure the build with CMake:
+ + Configure the build with CMake:
 ```
 cmake -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DWITH_FASTCV=ON -DBUILD_SHARED_LIBS=ON -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules/fastcv/ ../opencv
 ```
- 3.	Compile the code:
+ + Compile the code:
 ```
 make -j$(nproc)
 ```
@@ -115,7 +119,7 @@ Sample application examples for calling the Fastcv based Extension APIs are cove
 HAL and Extension list of APIs :
 -------------------------------------------
 
-###Fastcv based Opencv HAL APIs list :
+**Fastcv based Opencv HAL APIs list :**
 
 |OpenCV module	|OpenCV API	        | Underlying FastCV API for OpenCV acceleration|
 | --------------| ------------------|--------------------------------------------- |
@@ -157,7 +161,7 @@ HAL and Extension list of APIs :
 |				|addWeighted		|	fcvAddWeightedu8_v2                        |
 
 
-###Fastcv based Opencv Extensions APIs list :
+**Fastcv based Opencv Extensions APIs list :**
 
 |OpenCV Extension APIs  |Underlying FastCV API for OpenCV acceleration|
 | --------------------  |---------------------------------------------|
