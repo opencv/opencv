@@ -121,16 +121,16 @@
 namespace cv
 {
 
-const uint32_t id_IHDR = 0x52444849; // PNG header
-const uint32_t id_acTL = 0x4C546361; // Animation control chunk
-const uint32_t id_fcTL = 0x4C546366; // Frame control chunk
-const uint32_t id_IDAT = 0x54414449; // first frame and/or default image
-const uint32_t id_fdAT = 0x54416466; // Frame data chunk
-const uint32_t id_PLTE = 0x45544C50; // The PLTE chunk contains a color palette for indexed-color images
-const uint32_t id_bKGD = 0x44474B62; // The bKGD chunk specifies a default background color for the image
-const uint32_t id_tRNS = 0x534E5274; // The tRNS chunk provides transparency information
-const uint32_t id_tEXt = 0x74584574; // The tEXt chunk stores metadata as text in key-value pairs
-const uint32_t id_IEND = 0x444E4549; // end/footer chunk
+const uint32_t id_IHDR = 0x49484452; // PNG header
+const uint32_t id_acTL = 0x6163544C; // Animation control chunk
+const uint32_t id_fcTL = 0x6663544C; // Frame control chunk
+const uint32_t id_IDAT = 0x49444154; // first frame and/or default image
+const uint32_t id_fdAT = 0x66644154; // Frame data chunk
+const uint32_t id_PLTE = 0x504C5445; // The PLTE chunk contains a color palette for indexed-color images
+const uint32_t id_bKGD = 0x624B4744; // The bKGD chunk specifies a default background color for the image
+const uint32_t id_tRNS = 0x74524E53; // The tRNS chunk provides transparency information
+const uint32_t id_tEXt = 0x74455874; // The tEXt chunk stores metadata as text in key-value pairs
+const uint32_t id_IEND = 0x49454E44; // end/footer chunk
 
 APNGFrame::APNGFrame()
 {
@@ -699,7 +699,7 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
         return 0;
     const size_t size = static_cast<size_t>(png_get_uint_32(size_id)) + 12;
 
-    const uint32_t id = *(uint32_t*)(&size_id[4]);
+    const uint32_t id = png_get_uint_32(size_id + 4);
     if (id == id_IHDR) {
         // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
         // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
