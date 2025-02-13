@@ -310,12 +310,12 @@ macro(ocv_set_cuda_arch_bin_and_ptx nvcc_executable)
 
   # Check if user specified 1.0/2.1 compute capability: we don't support it
   macro(ocv_wipeout_deprecated_cc target_cc)
-    if(" ${CUDA_ARCH_BIN} ${CUDA_ARCH_PTX}" MATCHES " ${target_cc}")
+    if(${target_cc} IN_LIST ARCH_BIN_NO_POINTS OR ${target_cc} IN_LIST ARCH_PTX_NO_POINTS)
       message(SEND_ERROR "CUDA: ${target_cc} compute capability is not supported - exclude it from ARCH/PTX list and re-run CMake")
     endif()
   endmacro()
-  ocv_wipeout_deprecated_cc("1.0")
-  ocv_wipeout_deprecated_cc("2.1")
+  ocv_wipeout_deprecated_cc("10")
+  ocv_wipeout_deprecated_cc("21")
 endmacro()
 
 macro(ocv_set_nvcc_threads_for_vs)
