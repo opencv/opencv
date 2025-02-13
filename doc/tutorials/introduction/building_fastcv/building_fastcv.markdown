@@ -37,7 +37,7 @@ Supported Platforms
 -------------------
 
 1. Android : Qualcomm Chipsets with the Android from Snapdragon 8 Gen 1 onwards(https://www.qualcomm.com/products/mobile/snapdragon/smartphones#product-list)
-2. Linux   : Qualcomm Linux Program related boards mentioned in Hardware
+2. Linux   : Qualcomm Linux Program related boards mentioned in [Hardware](https://www.qualcomm.com/developer/software/qualcomm-linux/hardware)
 
 Compiling OpenCV with FastCV for Android
 ----------------------------------------
@@ -166,7 +166,8 @@ HAL and Extension list of APIs
 |               |multiply          |fcvElementMultiplyu8                           |
 |               |                  |fcvElementMultiplys16                          |
 |               |                  |fcvElementMultiplyf32                          |
-|               |addWeighted       | fcvAddWeightedu8_v2                           |
+|               |addWeighted       |fcvAddWeightedu8_v2                            |
+|               |subtract          |fcvImageDiffu8f32_v2                           |
 
 
 **FastCV based OpenCV Extensions APIs list :**
