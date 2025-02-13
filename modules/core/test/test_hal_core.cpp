@@ -42,184 +42,186 @@
 
 namespace opencv_test { namespace {
 
-enum
+enum HALFunc
 {
     HAL_EXP = 0,
     HAL_LOG = 1,
     HAL_SQRT = 2,
-    HAL_INV_SQRT = 3
+    HAL_INV_SQRT = 3,
+    HAL_LU = 4,
+    HAL_CHOL = 5,
 };
 
-TEST(Core_HAL, mathfuncs)
+void PrintTo(const HALFunc& v, std::ostream* os)
 {
-    for( int hcase = 0; hcase < 8; hcase++ )
-    {
-        int depth = hcase % 2 == 0 ? CV_32F : CV_64F;
-        double eps = depth == CV_32F ? 1e-5 : 1e-10;
-        int nfunc = hcase / 2;
-        int n = 100;
-
-        Mat src(1, n, depth), dst(1, n, depth), dst0(1, n, depth);
-        randu(src, 1, 10);
-
-        double min_hal_t = DBL_MAX, min_ocv_t = DBL_MAX;
-
-        for( int iter = 0; iter < 10; iter++ )
-        {
-            double t = (double)getTickCount();
-            switch (nfunc)
-            {
-            case HAL_EXP:
-                if( depth == CV_32F )
-                    hal::exp32f(src.ptr<float>(), dst.ptr<float>(), n);
-                else
-                    hal::exp64f(src.ptr<double>(), dst.ptr<double>(), n);
-                break;
-            case HAL_LOG:
-                if( depth == CV_32F )
-                    hal::log32f(src.ptr<float>(), dst.ptr<float>(), n);
-                else
-                    hal::log64f(src.ptr<double>(), dst.ptr<double>(), n);
-                break;
-            case HAL_SQRT:
-                if( depth == CV_32F )
-                    hal::sqrt32f(src.ptr<float>(), dst.ptr<float>(), n);
-                else
-                    hal::sqrt64f(src.ptr<double>(), dst.ptr<double>(), n);
-                break;
-            case HAL_INV_SQRT:
-                if( depth == CV_32F )
-                    hal::invSqrt32f(src.ptr<float>(), dst.ptr<float>(), n);
-                else
-                    hal::invSqrt64f(src.ptr<double>(), dst.ptr<double>(), n);
-                break;
-            
-            default:
-                CV_Error(Error::StsBadArg, "unknown function");
-            }
-            t = (double)getTickCount() - t;
-            min_hal_t = std::min(min_hal_t, t);
-
-            t = (double)getTickCount();
-            switch (nfunc)
-            {
-            case HAL_EXP:
-                exp(src, dst0);
-                break;
-            case HAL_LOG:
-                log(src, dst0);
-                break;
-            case HAL_SQRT:
-                pow(src, 0.5, dst0);
-                break;
-            case HAL_INV_SQRT:
-                pow(src, -0.5, dst0);
-                break;
-            default:
-                CV_Error(Error::StsBadArg, "unknown function");
-            }
-            t = (double)getTickCount() - t;
-            min_ocv_t = std::min(min_ocv_t, t);
-        }
-        EXPECT_LE(cvtest::norm(dst, dst0, NORM_INF | NORM_RELATIVE), eps);
-
-        double freq = getTickFrequency();
-        printf("%s (N=%d, %s): hal time=%.2fusec, ocv time=%.2fusec\n",
-                (
-                nfunc == HAL_EXP  ? "exp" :
-                nfunc == HAL_LOG  ? "log" :
-                nfunc == HAL_SQRT ? "sqrt" :
-                nfunc == HAL_INV_SQRT ? "rsqrt" : "???"
-                ),
-                n, (depth == CV_32F ? "f32" : "f64"), min_hal_t*1e6/freq, min_ocv_t*1e6/freq);
-    }
+    switch (v) {
+    case HAL_EXP: *os << "HAL_EXP"; return;
+    case HAL_LOG: *os << "HAL_LOG"; return;
+    case HAL_SQRT: *os << "HAL_SQRT"; return;
+    case HAL_INV_SQRT: *os << "HAL_INV_SQRT"; return;
+    case HAL_LU: *os << "LU"; return;
+    case HAL_CHOL: *os << "Cholesky"; return;
+    } // don't use "default:" to emit compiler warnings
 }
 
-enum
+typedef testing::TestWithParam<std::tuple<int, HALFunc> > mathfuncs;
+TEST_P(mathfuncs, accuracy)
 {
-    HAL_LU = 0,
-    HAL_CHOL = 1
-};
+    const int depth = std::get<0>(GetParam());
+    const int nfunc = std::get<1>(GetParam());
 
-typedef testing::TestWithParam<int> HAL;
+    double eps = depth == CV_32F ? 1e-5 : 1e-10;
+    int n = 100;
 
-TEST_P(HAL, mat_decomp)
-{
-    int hcase = GetParam();
-    SCOPED_TRACE(cv::format("hcase=%d", hcase));
+    Mat src(1, n, depth), dst(1, n, depth), dst0(1, n, depth);
+    randu(src, 1, 10);
+
+    for( int iter = 0; iter < 10; iter++ )
     {
-        int depth = hcase % 2 == 0 ? CV_32F : CV_64F;
-        int size = (hcase / 2) % 4;
-        size = size == 0 ? 3 : size == 1 ? 4  : size == 2 ? 6 : 15;
-        int nfunc = (hcase / 8);
-    #if CV_LASX
-        double eps = depth == CV_32F ? 1e-5 : 2e-10;
-    #else
-        double eps = depth == CV_32F ? 1e-5 : 1e-10;
-    #endif
-
-        if( size == 3 )
-            return; // TODO ???
-
-        Mat a0(size, size, depth), a(size, size, depth), b(size, 1, depth), x(size, 1, depth), x0(size, 1, depth);
-        randu(a0, -1, 1);
-        a0 = a0*a0.t();
-        randu(b, -1, 1);
-
-        double min_hal_t = DBL_MAX, min_ocv_t = DBL_MAX;
-        size_t asize = size*size*a.elemSize();
-        size_t bsize = size*b.elemSize();
-
-        for( int iter = 0; iter < 10; iter++ )
+        switch (nfunc)
         {
-            memcpy(x.ptr(), b.ptr(), bsize);
-            memcpy(a.ptr(), a0.ptr(), asize);
+        case HAL_EXP:
+            if( depth == CV_32F )
+                hal::exp32f(src.ptr<float>(), dst.ptr<float>(), n);
+            else
+                hal::exp64f(src.ptr<double>(), dst.ptr<double>(), n);
+            break;
+        case HAL_LOG:
+            if( depth == CV_32F )
+                hal::log32f(src.ptr<float>(), dst.ptr<float>(), n);
+            else
+                hal::log64f(src.ptr<double>(), dst.ptr<double>(), n);
+            break;
+        case HAL_SQRT:
+            if( depth == CV_32F )
+                hal::sqrt32f(src.ptr<float>(), dst.ptr<float>(), n);
+            else
+                hal::sqrt64f(src.ptr<double>(), dst.ptr<double>(), n);
+            break;
+        case HAL_INV_SQRT:
+            if( depth == CV_32F )
+                hal::invSqrt32f(src.ptr<float>(), dst.ptr<float>(), n);
+            else
+                hal::invSqrt64f(src.ptr<double>(), dst.ptr<double>(), n);
+            break;
 
-            double t = (double)getTickCount();
-            switch (nfunc)
-            {
-            case HAL_LU:
-                if( depth == CV_32F )
-                    hal::LU32f(a.ptr<float>(), a.step, size, x.ptr<float>(), x.step, 1);
-                else
-                    hal::LU64f(a.ptr<double>(), a.step, size, x.ptr<double>(), x.step, 1);
-                break;
-            case HAL_CHOL:
-                if( depth == CV_32F )
-                    hal::Cholesky32f(a.ptr<float>(), a.step, size, x.ptr<float>(), x.step, 1);
-                else
-                    hal::Cholesky64f(a.ptr<double>(), a.step, size, x.ptr<double>(), x.step, 1);
-                break;
-            default:
-                CV_Error(Error::StsBadArg, "unknown function");
-            }
-            t = (double)getTickCount() - t;
-            min_hal_t = std::min(min_hal_t, t);
-
-            t = (double)getTickCount();
-            bool solveStatus = solve(a0, b, x0, (nfunc == HAL_LU ? DECOMP_LU : DECOMP_CHOLESKY));
-            t = (double)getTickCount() - t;
-            EXPECT_TRUE(solveStatus);
-            min_ocv_t = std::min(min_ocv_t, t);
+        default:
+            CV_Error(Error::StsBadArg, "unknown function");
         }
-        //std::cout << "x: " << Mat(x.t()) << std::endl;
-        //std::cout << "x0: " << Mat(x0.t()) << std::endl;
 
-        EXPECT_LE(cvtest::norm(x, x0, NORM_INF | NORM_RELATIVE), eps)
-            << "x:  " << Mat(x.t())
-            << "\nx0: " << Mat(x0.t())
-            << "\na0: " << a0
-            << "\nb: " << b;
-
-        double freq = getTickFrequency();
-        printf("%s (%d x %d, %s): hal time=%.2fusec, ocv time=%.2fusec\n",
-               (nfunc == HAL_LU ? "LU" : nfunc == HAL_CHOL ? "Cholesky" : "???"),
-               size, size,
-               (depth == CV_32F ? "f32" : "f64"),
-               min_hal_t*1e6/freq, min_ocv_t*1e6/freq);
+        src.copyTo(dst0);
+        switch (nfunc)
+        {
+        case HAL_EXP:
+            if( depth == CV_32F )
+                dst0.forEach<float>([](float& v, const int*) -> void { v = std::exp(v); });
+            else
+                dst0.forEach<double>([](double& v, const int*) -> void { v = std::exp(v); });
+            break;
+        case HAL_LOG:
+            if( depth == CV_32F )
+                dst0.forEach<float>([](float& v, const int*) -> void { v = std::log(v); });
+            else
+                dst0.forEach<double>([](double& v, const int*) -> void { v = std::log(v); });
+            break;
+        case HAL_SQRT:
+            if( depth == CV_32F )
+                dst0.forEach<float>([](float& v, const int*) -> void { v = std::sqrt(v); });
+            else
+                dst0.forEach<double>([](double& v, const int*) -> void { v = std::sqrt(v); });
+            break;
+        case HAL_INV_SQRT:
+            if( depth == CV_32F )
+                dst0.forEach<float>([](float& v, const int*) -> void { v = std::pow(v, -0.5); });
+            else
+                dst0.forEach<double>([](double& v, const int*) -> void { v = std::pow(v, -0.5); });
+            break;
+        default:
+            CV_Error(Error::StsBadArg, "unknown function");
+        }
     }
+    EXPECT_LE(cvtest::norm(dst, dst0, NORM_INF | NORM_RELATIVE), eps);
+}
+INSTANTIATE_TEST_CASE_P(Core_HAL, mathfuncs,
+    testing::Combine(
+        testing::Values(CV_32F, CV_64F),
+        testing::Values(HAL_EXP, HAL_LOG, HAL_SQRT, HAL_INV_SQRT)
+    )
+);
+
+typedef testing::TestWithParam<std::tuple<int, HALFunc, int> > mat_decomp;
+TEST_P(mat_decomp, accuracy)
+{
+    const int depth = std::get<0>(GetParam());
+    const int nfunc = std::get<1>(GetParam());
+    const int size = std::get<1>(GetParam());
+
+#if CV_LASX
+    double eps = depth == CV_32F ? 1e-5 : 2e-10;
+#else
+    double eps = depth == CV_32F ? 1e-5 : 1e-10;
+#endif
+
+    if( size == 3 )
+        return; // TODO ???
+
+    Mat a0(size, size, depth), a(size, size, depth), b(size, 1, depth), x(size, 1, depth), x0(size, 1, depth);
+    randu(a0, -1, 1);
+    a0 = a0*a0.t();
+    randu(b, -1, 1);
+
+    double min_hal_t = DBL_MAX, min_ocv_t = DBL_MAX;
+    size_t asize = size*size*a.elemSize();
+    size_t bsize = size*b.elemSize();
+
+    for( int iter = 0; iter < 10; iter++ )
+    {
+        memcpy(x.ptr(), b.ptr(), bsize);
+        memcpy(a.ptr(), a0.ptr(), asize);
+
+        double t = (double)getTickCount();
+        switch (nfunc)
+        {
+        case HAL_LU:
+            if( depth == CV_32F )
+                hal::LU32f(a.ptr<float>(), a.step, size, x.ptr<float>(), x.step, 1);
+            else
+                hal::LU64f(a.ptr<double>(), a.step, size, x.ptr<double>(), x.step, 1);
+            break;
+        case HAL_CHOL:
+            if( depth == CV_32F )
+                hal::Cholesky32f(a.ptr<float>(), a.step, size, x.ptr<float>(), x.step, 1);
+            else
+                hal::Cholesky64f(a.ptr<double>(), a.step, size, x.ptr<double>(), x.step, 1);
+            break;
+        default:
+            CV_Error(Error::StsBadArg, "unknown function");
+        }
+        t = (double)getTickCount() - t;
+        min_hal_t = std::min(min_hal_t, t);
+
+        t = (double)getTickCount();
+        bool solveStatus = solve(a0, b, x0, (nfunc == HAL_LU ? DECOMP_LU : DECOMP_CHOLESKY));
+        t = (double)getTickCount() - t;
+        EXPECT_TRUE(solveStatus);
+        min_ocv_t = std::min(min_ocv_t, t);
+    }
+    //std::cout << "x: " << Mat(x.t()) << std::endl;
+    //std::cout << "x0: " << Mat(x0.t()) << std::endl;
+
+    EXPECT_LE(cvtest::norm(x, x0, NORM_INF | NORM_RELATIVE), eps)
+        << "x:  " << Mat(x.t())
+        << "\nx0: " << Mat(x0.t())
+        << "\na0: " << a0
+        << "\nb: " << b;
 }
 
-INSTANTIATE_TEST_CASE_P(Core, HAL, testing::Range(0, 16));
+INSTANTIATE_TEST_CASE_P(Core_HAL, mat_decomp,
+    testing::Combine(
+        testing::Values(CV_32F, CV_64F),
+        testing::Values(HAL_LU, HAL_CHOL),
+        testing::Values(3, 4, 6, 15)
+    )
+);
 
 }} // namespace

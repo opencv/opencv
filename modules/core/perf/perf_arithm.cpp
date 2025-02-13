@@ -706,8 +706,8 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , ArithmMixedTest,
     )
 );
 
-typedef Size_MatType InvSqrtfFixture;
-PERF_TEST_P(InvSqrtfFixture, InvSqrtf, testing::Combine(
+typedef Size_MatType InvSqrtFixture;
+PERF_TEST_P(InvSqrtFixture, InvSqrt, testing::Combine(
     testing::Values(TYPICAL_MAT_SIZES),
     testing::Values(CV_32FC1, CV_64FC1)))
 {
@@ -720,7 +720,7 @@ PERF_TEST_P(InvSqrtfFixture, InvSqrtf, testing::Combine(
 
     TEST_CYCLE() cv::pow(src, -0.5, dst);
 
-    SANITY_CHECK(dst, 1);
+    SANITY_CHECK_NOTHING();
 }
 
 ///////////// Rotate ////////////////////////
