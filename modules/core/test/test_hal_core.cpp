@@ -114,25 +114,25 @@ TEST_P(mathfuncs, accuracy)
         {
         case HAL_EXP:
             if( depth == CV_32F )
-                dst0.forEach<float>([](float& v, const int*) -> void { v = std::exp(v); });
+                dst0.forEach<float>([](float& v, const int*) -> void { v = std::expf(v); });
             else
                 dst0.forEach<double>([](double& v, const int*) -> void { v = std::exp(v); });
             break;
         case HAL_LOG:
             if( depth == CV_32F )
-                dst0.forEach<float>([](float& v, const int*) -> void { v = std::log(v); });
+                dst0.forEach<float>([](float& v, const int*) -> void { v = std::logf(v); });
             else
                 dst0.forEach<double>([](double& v, const int*) -> void { v = std::log(v); });
             break;
         case HAL_SQRT:
             if( depth == CV_32F )
-                dst0.forEach<float>([](float& v, const int*) -> void { v = std::sqrt(v); });
+                dst0.forEach<float>([](float& v, const int*) -> void { v = std::sqrtf(v); });
             else
                 dst0.forEach<double>([](double& v, const int*) -> void { v = std::sqrt(v); });
             break;
         case HAL_INV_SQRT:
             if( depth == CV_32F )
-                dst0.forEach<float>([](float& v, const int*) -> void { v = std::pow(v, -0.5); });
+                dst0.forEach<float>([](float& v, const int*) -> void { v = std::powf(v, -0.5); });
             else
                 dst0.forEach<double>([](double& v, const int*) -> void { v = std::pow(v, -0.5); });
             break;
