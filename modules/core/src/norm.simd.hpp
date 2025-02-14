@@ -53,9 +53,10 @@ struct NormL2_SIMD {
 template<>
 struct NormInf_SIMD<uchar, int> {
     int operator() (const uchar* src, int n) const {
+        int j = 0;
+        int s = 0;
         v_uint8 r0 = vx_setzero_u8(), r1 = vx_setzero_u8();
         v_uint8 r2 = vx_setzero_u8(), r3 = vx_setzero_u8();
-        int j = 0;
         for (; j <= n - 4 * VTraits<v_uint8>::vlanes(); j += 4 * VTraits<v_uint8>::vlanes()) {
             r0 = v_max(r0, vx_load(src + j                                 ));
             r1 = v_max(r1, vx_load(src + j +     VTraits<v_uint8>::vlanes()));
@@ -63,7 +64,6 @@ struct NormInf_SIMD<uchar, int> {
             r3 = v_max(r3, vx_load(src + j + 3 * VTraits<v_uint8>::vlanes()));
         }
         r0 = v_max(r0, v_max(r1, v_max(r2, r3)));
-        int s = 0;
         for (; j < n; j++) {
             s = std::max(s, (int)src[j]);
         }
@@ -74,9 +74,10 @@ struct NormInf_SIMD<uchar, int> {
 template<>
 struct NormInf_SIMD<schar, int> {
     int operator() (const schar* src, int n) const {
+        int j = 0;
+        int s = 0;
         v_uint8 r0 = vx_setzero_u8(), r1 = vx_setzero_u8();
         v_uint8 r2 = vx_setzero_u8(), r3 = vx_setzero_u8();
-        int j = 0;
         for (; j <= n - 4 * VTraits<v_int8>::vlanes(); j += 4 * VTraits<v_int8>::vlanes()) {
             r0 = v_max(r0, v_abs(vx_load(src + j                                )));
             r1 = v_max(r1, v_abs(vx_load(src + j +     VTraits<v_int8>::vlanes())));
@@ -84,7 +85,6 @@ struct NormInf_SIMD<schar, int> {
             r3 = v_max(r3, v_abs(vx_load(src + j + 3 * VTraits<v_int8>::vlanes())));
         }
         r0 = v_max(r0, v_max(r1, v_max(r2, r3)));
-        int s = 0;
         for (; j < n; j++) {
             s = std::max(s, cv_abs(src[j]));
         }
@@ -95,9 +95,10 @@ struct NormInf_SIMD<schar, int> {
 template<>
 struct NormInf_SIMD<ushort, int> {
     int operator() (const ushort* src, int n) const {
+        int j = 0;
+        int s = 0;
         v_uint16 d0 = vx_setzero_u16(), d1 = vx_setzero_u16();
         v_uint16 d2 = vx_setzero_u16(), d3 = vx_setzero_u16();
-        int j = 0;
         for (; j <= n - 4 * VTraits<v_uint16>::vlanes(); j += 4 * VTraits<v_uint16>::vlanes()) {
             d0 = v_max(d0, vx_load(src + j                                  ));
             d1 = v_max(d1, vx_load(src + j +     VTraits<v_uint16>::vlanes()));
@@ -105,7 +106,6 @@ struct NormInf_SIMD<ushort, int> {
             d3 = v_max(d3, vx_load(src + j + 3 * VTraits<v_uint16>::vlanes()));
         }
         d0 = v_max(d0, v_max(d1, v_max(d2, d3)));
-        int s = 0;
         for (; j < n; j++) {
             s = std::max(s, (int)src[j]);
         }
@@ -116,9 +116,10 @@ struct NormInf_SIMD<ushort, int> {
 template<>
 struct NormInf_SIMD<short, int> {
     int operator() (const short* src, int n) const {
+        int j = 0;
+        int s = 0;
         v_uint16 d0 = vx_setzero_u16(), d1 = vx_setzero_u16();
         v_uint16 d2 = vx_setzero_u16(), d3 = vx_setzero_u16();
-        int j = 0;
         for (; j <= n - 4 * VTraits<v_int16>::vlanes(); j += 4 * VTraits<v_int16>::vlanes()) {
             d0 = v_max(d0, v_abs(vx_load(src + j                                  )));
             d1 = v_max(d1, v_abs(vx_load(src + j +     VTraits<v_int16>::vlanes())));
@@ -126,7 +127,6 @@ struct NormInf_SIMD<short, int> {
             d3 = v_max(d3, v_abs(vx_load(src + j + 3 * VTraits<v_int16>::vlanes())));
         }
         d0 = v_max(d0, v_max(d1, v_max(d2, d3)));
-        int s = 0;
         for (; j < n; j++) {
             s = std::max(s, saturate_cast<int>(cv_abs(src[j])));
         }
@@ -137,9 +137,10 @@ struct NormInf_SIMD<short, int> {
 template<>
 struct NormInf_SIMD<int, int> {
     int operator() (const int* src, int n) const {
+        int j = 0;
+        int s = 0;
         v_uint32 r0 = vx_setzero_u32(), r1 = vx_setzero_u32();
         v_uint32 r2 = vx_setzero_u32(), r3 = vx_setzero_u32();
-        int j = 0;
         for (; j <= n - 4 * VTraits<v_int32>::vlanes(); j += 4 * VTraits<v_int32>::vlanes()) {
             r0 = v_max(r0, v_abs(vx_load(src + j                                 )));
             r1 = v_max(r1, v_abs(vx_load(src + j +     VTraits<v_int32>::vlanes())));
@@ -147,7 +148,6 @@ struct NormInf_SIMD<int, int> {
             r3 = v_max(r3, v_abs(vx_load(src + j + 3 * VTraits<v_int32>::vlanes())));
         }
         r0 = v_max(r0, v_max(r1, v_max(r2, r3)));
-        int s = 0;
         for (; j < n; j++) {
             s = std::max(s, cv_abs(src[j]));
         }
@@ -158,9 +158,10 @@ struct NormInf_SIMD<int, int> {
 template<>
 struct NormInf_SIMD<float, float> {
     float operator() (const float* src, int n) const {
+        int j = 0;
+        float s = 0.f;
         v_float32 r0 = vx_setzero_f32(), r1 = vx_setzero_f32();
         v_float32 r2 = vx_setzero_f32(), r3 = vx_setzero_f32();
-        int j = 0;
         for (; j <= n - 4 * VTraits<v_float32>::vlanes(); j += 4 * VTraits<v_float32>::vlanes()) {
             r0 = v_max(r0, v_abs(vx_load(src + j                                   )));
             r1 = v_max(r1, v_abs(vx_load(src + j +     VTraits<v_float32>::vlanes())));
@@ -168,7 +169,6 @@ struct NormInf_SIMD<float, float> {
             r3 = v_max(r3, v_abs(vx_load(src + j + 3 * VTraits<v_float32>::vlanes())));
         }
         r0 = v_max(r0, v_max(r1, v_max(r2, r3)));
-        float s = 0.f;
         for (; j < n; j++) {
             s = std::max(s, cv_abs(src[j]));
         }
@@ -179,11 +179,12 @@ struct NormInf_SIMD<float, float> {
 template<>
 struct NormL1_SIMD<uchar, int> {
     int operator() (const uchar* src, int n) const {
+        int j = 0;
+        int s = 0;
         v_int32 r00 = vx_setzero_s32(), r01 = vx_setzero_s32();
         v_int32 r10 = vx_setzero_s32(), r11 = vx_setzero_s32();
         v_int32 r20 = vx_setzero_s32(), r21 = vx_setzero_s32();
         v_int32 r30 = vx_setzero_s32(), r31 = vx_setzero_s32();
-        int j = 0;
         for (; j<= n - 2 * VTraits<v_uint8>::vlanes(); j += 2 * VTraits<v_uint8>::vlanes()) {
             v_uint8 v0 = vx_load(src + j);
             v_uint16 v00, v01;
@@ -209,7 +210,6 @@ struct NormL1_SIMD<uchar, int> {
             r30 = v_add(r30, v_reinterpret_as_s32(v110));
             r31 = v_add(r31, v_reinterpret_as_s32(v111));
         }
-        int s = 0;
         s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
         s += v_reduce_sum(v_add(v_add(v_add(r20, r21), r30), r31));
         for (; j < n; j++) {
@@ -222,11 +222,12 @@ struct NormL1_SIMD<uchar, int> {
 template<>
 struct NormL1_SIMD<schar, int> {
     int operator() (const schar* src, int n) const {
+        int j = 0;
+        int s = 0;
         v_uint32 r00 = vx_setzero_u32(), r01 = vx_setzero_u32();
         v_uint32 r10 = vx_setzero_u32(), r11 = vx_setzero_u32();
         v_uint32 r20 = vx_setzero_u32(), r21 = vx_setzero_u32();
         v_uint32 r30 = vx_setzero_u32(), r31 = vx_setzero_u32();
-        int j = 0;
         for (; j<= n - 2 * VTraits<v_int8>::vlanes(); j += 2 * VTraits<v_int8>::vlanes()) {
             v_uint8 v0 = v_abs(vx_load(src + j));
             v_uint16 v00, v01;
@@ -252,7 +253,6 @@ struct NormL1_SIMD<schar, int> {
             r30 = v_add(r30, v110);
             r31 = v_add(r31, v111);
         }
-        int s = 0;
         s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
         s += v_reduce_sum(v_add(v_add(v_add(r20, r21), r30), r31));
         for (; j < n; j++) {
@@ -265,11 +265,12 @@ struct NormL1_SIMD<schar, int> {
 template<>
 struct NormL1_SIMD<ushort, int> {
     int operator() (const ushort* src, int n) const {
+        int j = 0;
+        int s = 0;
         v_int32 d00 = vx_setzero_s32(), d01 = vx_setzero_s32();
         v_int32 d10 = vx_setzero_s32(), d11 = vx_setzero_s32();
         v_int32 d20 = vx_setzero_s32(), d21 = vx_setzero_s32();
         v_int32 d30 = vx_setzero_s32(), d31 = vx_setzero_s32();
-        int j = 0;
         for (; j<= n - 4 * VTraits<v_uint16>::vlanes(); j += 4 * VTraits<v_uint16>::vlanes()) {
             v_uint16 v0 = vx_load(src + j), v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
             v_uint32 v00, v01, v10, v11;
@@ -289,7 +290,6 @@ struct NormL1_SIMD<ushort, int> {
             d30 = v_add(d30, v_reinterpret_as_s32(v30));
             d31 = v_add(d31, v_reinterpret_as_s32(v31));
         }
-        int s = 0;
         s += v_reduce_sum(v_add(v_add(v_add(d00, d01), d10), d11));
         s += v_reduce_sum(v_add(v_add(v_add(d20, d21), d30), d31));
         for (; j < n; j++) {
@@ -302,11 +302,12 @@ struct NormL1_SIMD<ushort, int> {
 template<>
 struct NormL1_SIMD<short, int> {
     int operator() (const short* src, int n) const {
+        int j = 0;
+        int s = 0;
         v_uint32 d00 = vx_setzero_u32(), d01 = vx_setzero_u32();
         v_uint32 d10 = vx_setzero_u32(), d11 = vx_setzero_u32();
         v_uint32 d20 = vx_setzero_u32(), d21 = vx_setzero_u32();
         v_uint32 d30 = vx_setzero_u32(), d31 = vx_setzero_u32();
-        int j = 0;
         for (; j<= n - 4 * VTraits<v_int16>::vlanes(); j += 4 * VTraits<v_int16>::vlanes()) {
             v_uint16 v0 = v_abs(vx_load(src + j)), v1 = v_abs(vx_load(src + j + VTraits<v_int16>::vlanes()));
             v_uint32 v00, v01, v10, v11;
@@ -326,7 +327,6 @@ struct NormL1_SIMD<short, int> {
             d30 = v_add(d30, v30);
             d31 = v_add(d31, v31);
         }
-        int s = 0;
         s += v_reduce_sum(v_add(v_add(v_add(d00, d01), d10), d11));
         s += v_reduce_sum(v_add(v_add(v_add(d20, d21), d30), d31));
         for (; j < n; j++) {
@@ -339,8 +339,9 @@ struct NormL1_SIMD<short, int> {
 template<>
 struct NormL2_SIMD<uchar, int> {
     int operator() (const uchar* src, int n) const {
-        v_uint32 r0 = vx_setzero_u32(), r1 = vx_setzero_u32();
         int j = 0;
+        int s = 0;
+        v_uint32 r0 = vx_setzero_u32(), r1 = vx_setzero_u32();
         for (; j <= n - 2 * VTraits<v_uint8>::vlanes(); j += 2 * VTraits<v_uint8>::vlanes()) {
             v_uint8 v0 = vx_load(src + j);
             r0 = v_dotprod_expand(v0, v0, r0);
@@ -348,7 +349,6 @@ struct NormL2_SIMD<uchar, int> {
             v_uint8 v1 = vx_load(src + j + VTraits<v_uint8>::vlanes());
             r1 = v_dotprod_expand(v1, v1, r1);
         }
-        int s = 0;
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
             int v = saturate_cast<int>(src[j]);
@@ -361,15 +361,15 @@ struct NormL2_SIMD<uchar, int> {
 template<>
 struct NormL2_SIMD<schar, int> {
     int operator() (const schar* src, int n) const {
-        v_int32 r0 = vx_setzero_s32(), r1 = vx_setzero_s32();
         int j = 0;
+        int s = 0;
+        v_int32 r0 = vx_setzero_s32(), r1 = vx_setzero_s32();
         for (; j <= n - 2 * VTraits<v_int8>::vlanes(); j += 2 * VTraits<v_int8>::vlanes()) {
             v_int8 v0 = vx_load(src + j);
             r0 = v_dotprod_expand(v0, v0, r0);
             v_int8 v1 = vx_load(src + j + VTraits<v_int8>::vlanes());
             r1 = v_dotprod_expand(v1, v1, r1);
         }
-        int s = 0;
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
             int v = saturate_cast<int>(src[j]);
@@ -386,9 +386,10 @@ struct NormL2_SIMD<schar, int> {
 template<>
 struct NormInf_SIMD<double, double> {
     double operator() (const double* src, int n) const {
+        int j = 0;
+        double s = 0.f;
         v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
         v_float64 r2 = vx_setzero_f64(), r3 = vx_setzero_f64();
-        int j = 0;
         for (; j <= n - 4 * VTraits<v_float64>::vlanes(); j += 4 * VTraits<v_float64>::vlanes()) {
             r0 = v_max(r0, v_abs(vx_load(src + j                                   )));
             r1 = v_max(r1, v_abs(vx_load(src + j +     VTraits<v_float64>::vlanes())));
@@ -396,10 +397,10 @@ struct NormInf_SIMD<double, double> {
             r3 = v_max(r3, v_abs(vx_load(src + j + 3 * VTraits<v_float64>::vlanes())));
         }
         r0 = v_max(r0, v_max(r1, v_max(r2, r3)));
-        double s = 0;
         for (; j < n; j++) {
             s = std::max(s, cv_abs(src[j]));
         }
+        // [TODO]: use v_reduce_max when it supports float64
         double t[VTraits<v_float64>::max_nlanes];
         vx_store(t, r0);
         for (int i = 0; i < VTraits<v_float64>::vlanes(); i++) {
@@ -412,15 +413,15 @@ struct NormInf_SIMD<double, double> {
 template<>
 struct NormL1_SIMD<int, double> {
     double operator() (const int* src, int n) const {
+        int j = 0;
+        double s = 0.f;
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
-        int j = 0;
         for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
             v_float32 v0 = v_abs(v_cvt_f32(vx_load(src + j))), v1 = v_abs(v_cvt_f32(vx_load(src + j + VTraits<v_int32>::vlanes())));
             r00 = v_add(r00, v_cvt_f64(v0)); r01 = v_add(r01, v_cvt_f64_high(v0));
             r10 = v_add(r10, v_cvt_f64(v1)); r11 = v_add(r11, v_cvt_f64_high(v1));
         }
-        double s = 0.f;
         s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
         for (; j < n; j++) {
             s += cv_abs(src[j]);
@@ -432,11 +433,12 @@ struct NormL1_SIMD<int, double> {
 template<>
 struct NormL1_SIMD<float, double> {
     double operator() (const float* src, int n) const {
+        int j = 0;
+        double s = 0.f;
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
         v_float64 r20 = vx_setzero_f64(), r21 = vx_setzero_f64();
         v_float64 r30 = vx_setzero_f64(), r31 = vx_setzero_f64();
-        int j = 0;
         for (; j <= n - 4 * VTraits<v_float32>::vlanes(); j += 4 * VTraits<v_float32>::vlanes()) {
             v_float32 v0 = v_abs(vx_load(src + j)), v1 = v_abs(vx_load(src + j + VTraits<v_float32>::vlanes()));
             r00 = v_add(r00, v_cvt_f64(v0)); r01 = v_add(r01, v_cvt_f64_high(v0));
@@ -446,7 +448,6 @@ struct NormL1_SIMD<float, double> {
             r20 = v_add(r20, v_cvt_f64(v2)); r21 = v_add(r21, v_cvt_f64_high(v2));
             r30 = v_add(r30, v_cvt_f64(v3)); r31 = v_add(r31, v_cvt_f64_high(v3));
         }
-        double s = 0.f;
         s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
         s += v_reduce_sum(v_add(v_add(v_add(r20, r21), r30), r31));
         for (; j < n; j++) {
@@ -459,17 +460,19 @@ struct NormL1_SIMD<float, double> {
 template<>
 struct NormL1_SIMD<double, double> {
     double operator() (const double* src, int n) const {
+        int j = 0;
+        double s = 0.f;
+#ifndef CV_RVV  // It triggers segmentation fault on CI but it works fine on real hardware
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
-        int j = 0;
         for (; j <= n - 4 * VTraits<v_float64>::vlanes(); j += 4 * VTraits<v_float64>::vlanes()) {
             r00 = v_add(r00, v_abs(vx_load(src + j                                   )));
             r01 = v_add(r01, v_abs(vx_load(src + j +     VTraits<v_float64>::vlanes())));
             r10 = v_add(r10, v_abs(vx_load(src + j + 2 * VTraits<v_float64>::vlanes())));
             r11 = v_add(r11, v_abs(vx_load(src + j + 3 * VTraits<v_float64>::vlanes())));
         }
-        double s = 0.f;
         s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
+#endif
         for (; j < n; j++) {
             s += cv_abs(src[j]);
         }
@@ -480,8 +483,9 @@ struct NormL1_SIMD<double, double> {
 template<>
 struct NormL2_SIMD<ushort, double> {
     double operator() (const ushort* src, int n) const {
-        v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
         int j = 0;
+        double s = 0.f;
+        v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
         for (; j <= n - 2 * VTraits<v_uint16>::vlanes(); j += 2 * VTraits<v_uint16>::vlanes()) {
             v_uint16 v0 = vx_load(src + j);
             v_uint64 u0 = v_dotprod_expand(v0, v0);
@@ -491,7 +495,6 @@ struct NormL2_SIMD<ushort, double> {
             v_uint64 u1 = v_dotprod_expand(v1, v1);
             r1 = v_add(r1, v_cvt_f64(v_reinterpret_as_s64(u1)));
         }
-        double s = 0;
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
             double v = saturate_cast<double>(src[j]);
@@ -504,8 +507,9 @@ struct NormL2_SIMD<ushort, double> {
 template<>
 struct NormL2_SIMD<short, double> {
     double operator() (const short* src, int n) const {
-        v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
         int j = 0;
+        double s = 0.f;
+        v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
         for (; j <= n - 2 * VTraits<v_int16>::vlanes(); j += 2 * VTraits<v_int16>::vlanes()) {
             v_int16 v0 = vx_load(src + j);
             r0 = v_add(r0, v_cvt_f64(v_dotprod_expand(v0, v0)));
@@ -513,7 +517,6 @@ struct NormL2_SIMD<short, double> {
             v_int16 v1 = vx_load(src + j + VTraits<v_int16>::vlanes());
             r1 = v_add(r1, v_cvt_f64(v_dotprod_expand(v1, v1)));
         }
-        double s = 0;
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
             double v = saturate_cast<double>(src[j]);
@@ -526,8 +529,9 @@ struct NormL2_SIMD<short, double> {
 template<>
 struct NormL2_SIMD<int, double> {
     double operator() (const int* src, int n) const {
-        v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
         int j = 0;
+        double s = 0.f;
+        v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
         for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
             v_int32 v0 = vx_load(src + j);
             r0 = v_add(r0, v_cvt_f64(v_dotprod(v0, v0)));
@@ -535,7 +539,6 @@ struct NormL2_SIMD<int, double> {
             v_int32 v1 = vx_load(src + j + VTraits<v_int32>::vlanes());
             r1 = v_add(r1, v_cvt_f64(v_dotprod(v1, v1)));
         }
-        double s = 0.f;
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
             double v = src[j];
@@ -548,9 +551,10 @@ struct NormL2_SIMD<int, double> {
 template<>
 struct NormL2_SIMD<float, double> {
     double operator() (const float* src, int n) const {
+        int j = 0;
+        double s = 0.f;
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
-        int j = 0;
         for (; j <= n - 2 * VTraits<v_float32>::vlanes(); j += 2 * VTraits<v_float32>::vlanes()) {
             v_float32 v0 = vx_load(src + j), v1 = vx_load(src + j + VTraits<v_float32>::vlanes());
             v_float64 v00 = v_cvt_f64(v0), v01 = v_cvt_f64_high(v0);
@@ -558,7 +562,6 @@ struct NormL2_SIMD<float, double> {
             r00 = v_fma(v00, v00, r00); r01 = v_fma(v01, v01, r01);
             r10 = v_fma(v10, v10, r10); r11 = v_fma(v11, v11, r11);
         }
-        double s = 0.f;
         s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
         for (; j < n; j++) {
             double v = src[j];
@@ -571,9 +574,11 @@ struct NormL2_SIMD<float, double> {
 template<>
 struct NormL2_SIMD<double, double> {
     double operator() (const double* src, int n) const {
+        int j = 0;
+        double s = 0.f;
+#ifndef CV_RVV // It triggers segmentation fault on CI but it works fine on real hardware
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
-        int j = 0;
         for (; j <= n - 4 * VTraits<v_float64>::vlanes(); j += 4 * VTraits<v_float64>::vlanes()) {
             v_float64 v00 = vx_load(src + j                                   );
             v_float64 v01 = vx_load(src + j +     VTraits<v_float64>::vlanes());
@@ -582,8 +587,8 @@ struct NormL2_SIMD<double, double> {
             r00 = v_fma(v00, v00, r00); r01 = v_fma(v01, v01, r01);
             r10 = v_fma(v10, v10, r10); r11 = v_fma(v11, v11, r11);
         }
-        double s = 0.f;
         s += v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
+#endif
         for (; j < n; j++) {
             double v = src[j];
             s += v * v;
