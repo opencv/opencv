@@ -22,7 +22,13 @@ Details: TBD
 #include <VX/vx.h>
 #include <VX/vxu.h>
 
-#ifndef VX_VERSION_1_1
+// For OpenVX 1.2 & 1.3
+#if (VX_VERSION > VX_VERSION_1_1)
+# include <VX/vx_compatibility.h>
+#endif
+
+
+#if (VX_VERSION == VX_VERSION_1_0)
 // 1.1 to 1.0 backward compatibility defines
 
 static const vx_enum VX_INTERPOLATION_BILINEAR = VX_INTERPOLATION_TYPE_BILINEAR;
@@ -31,12 +37,6 @@ static const vx_enum VX_INTERPOLATION_NEAREST_NEIGHBOR = VX_INTERPOLATION_TYPE_N
 
 static const vx_enum VX_BORDER_CONSTANT = VX_BORDER_MODE_CONSTANT;
 static const vx_enum VX_BORDER_REPLICATE = VX_BORDER_MODE_REPLICATE;
-
-#else
-
-    #ifdef IVX_RENAMED_REFS
-        static const vx_enum VX_REF_ATTRIBUTE_TYPE = VX_REFERENCE_TYPE;
-    #endif
 
 #endif
 
@@ -218,7 +218,7 @@ template<> struct TypeToEnum<vx_int64>    { static const vx_enum value = VX_TYPE
 template<> struct TypeToEnum<vx_uint64>   { static const vx_enum value = VX_TYPE_UINT64; };
 template<> struct TypeToEnum<vx_float32>  { static const vx_enum value = VX_TYPE_FLOAT32, imgType = VX_DF_IMAGE('F', '0', '3', '2'); };
 template<> struct TypeToEnum<vx_float64>  { static const vx_enum value = VX_TYPE_FLOAT64; };
-template<> struct TypeToEnum<vx_bool>     { static const vx_enum value = VX_TYPE_BOOL; };
+//template<> struct TypeToEnum<vx_bool>     { static const vx_enum value = VX_TYPE_BOOL; };
 template<> struct TypeToEnum<vx_keypoint_t> {static const vx_enum value = VX_TYPE_KEYPOINT; };
 // the commented types are aliases (of integral tyes) and have conflicts with the types above
 //template<> struct TypeToEnum<vx_enum>     { static const vx_enum val = VX_TYPE_ENUM; };
