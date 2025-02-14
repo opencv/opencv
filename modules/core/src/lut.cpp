@@ -6,7 +6,6 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "convert.hpp"
-#include "opencv2/core/openvx/ovx_defs.hpp"
 
 /****************************************************************************************\
 *                                    LUT Transform                                       *
@@ -103,39 +102,6 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
     return k.run(2, globalSize, NULL, false);
 }
 
-#endif
-
-#ifdef HAVE_OPENVX
-static bool openvx_LUT(Mat src, Mat dst, Mat _lut)
-{
-    if (src.type() != CV_8UC1 || dst.type() != src.type() || _lut.type() != src.type() || !_lut.isContinuous())
-        return false;
-
-    try
-    {
-        ivx::Context ctx = ovx::getOpenVXContext();
-
-        ivx::Image
-            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                ivx::Image::createAddressing(src.cols, src.rows, 1, (vx_int32)(src.step)), src.data),
-            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
-
-        ivx::LUT lut = ivx::LUT::create(ctx);
-        lut.copyFrom(_lut);
-        ivx::IVX_CHECK_STATUS(vxuTableLookup(ctx, ia, lut, ib));
-    }
-    catch (const ivx::RuntimeError& e)
-    {
-        VX_DbgThrow(e.what());
-    }
-    catch (const ivx::WrapperError& e)
-    {
-        VX_DbgThrow(e.what());
-    }
-
-    return true;
-}
 #endif
 
 #if defined(HAVE_IPP)
@@ -378,9 +344,6 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     Mat src = _src.getMat(), lut = _lut.getMat();
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
-
-    CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_TABLE_LOOKUP>(src.cols, src.rows),
-               openvx_LUT(src, dst, lut))
 
     CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,
              lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);

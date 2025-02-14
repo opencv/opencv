@@ -450,7 +450,7 @@ It does not throw exception, but terminates the application.
 
 //! @endcond
 
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
 #  define CV_DbgAssert(expr) CV_Assert(expr)
 #else
 /** replaced with CV_Assert(expr) in Debug configuration */

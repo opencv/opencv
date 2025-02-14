@@ -611,10 +611,8 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         {   /* init */
 
             /* a normal mat */
-            _2d_out = cv::Mat(10, 20, CV_8UC3, cvScalar(1U, 2U, 127U));
-            for (int i = 0; i < _2d_out.rows; ++i)
-                for (int j = 0; j < _2d_out.cols; ++j)
-                    _2d_out.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
+            _2d_out = Mat(10, 20, CV_8UC3);
+            cv::randu(_2d_out, 0U, 255U);
 
             /* a 4d mat */
             const int Size[] = {4, 4, 4, 4};
@@ -731,29 +729,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         EXPECT_EQ(_em_in.depth(), _em_out.depth());
         EXPECT_TRUE(_em_in.empty());
 
-        ASSERT_EQ(_2d_in.rows   , _2d_out.rows);
-        ASSERT_EQ(_2d_in.cols   , _2d_out.cols);
-        ASSERT_EQ(_2d_in.dims   , _2d_out.dims);
-        ASSERT_EQ(_2d_in.depth(), _2d_out.depth());
-
-        errors = 0;
-        for(int i = 0; i < _2d_out.rows; ++i)
-        {
-            for (int j = 0; j < _2d_out.cols; ++j)
-            {
-                EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
-                if (::testing::Test::HasNonfatalFailure())
-                {
-                    printf("i = %d, j = %d\n", i, j);
-                    errors++;
-                }
-                if (errors >= 3)
-                {
-                    i = _2d_out.rows;
-                    break;
-                }
-            }
-        }
+        EXPECT_MAT_NEAR(_2d_in, _2d_out, 0);
 
         ASSERT_EQ(_nd_in.rows   , _nd_out.rows);
         ASSERT_EQ(_nd_in.cols   , _nd_out.cols);

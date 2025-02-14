@@ -105,7 +105,7 @@ CfgParamDeviceSelector::CfgParamDeviceSelector(const CfgParams& cfg_params) :
             //Create device
             UINT creationFlags = 0;//D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
             // If the project is in a debug build, enable debugging via SDK Layers with this flag.
             creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif

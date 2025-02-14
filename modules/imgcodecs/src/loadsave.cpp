@@ -83,6 +83,13 @@ static Size validateInputImageSize(const Size& size)
 
 static inline int calcType(int type, int flags)
 {
+    if(flags != IMREAD_UNCHANGED)
+    {
+        CV_CheckNE(flags & (IMREAD_COLOR_BGR | IMREAD_COLOR_RGB),
+                   IMREAD_COLOR_BGR | IMREAD_COLOR_RGB,
+                   "IMREAD_COLOR_BGR (IMREAD_COLOR) and IMREAD_COLOR_RGB can not be set at the same time.");
+    }
+
     if ( (flags & (IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH)) == (IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH))
         return type;
 
