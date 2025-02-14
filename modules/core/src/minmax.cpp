@@ -5,7 +5,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
-#include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
 #include "opencv2/core/detail/dispatch_helper.impl.hpp"
 
@@ -1119,82 +1118,6 @@ bool ocl_minMaxIdx( InputArray _src, double* minVal, double* maxVal, int* minLoc
 
 #endif
 
-#ifdef HAVE_OPENVX
-namespace ovx {
-    template <> inline bool skipSmallImages<VX_KERNEL_MINMAXLOC>(int w, int h) { return w*h < 3840 * 2160; }
-}
-static bool openvx_minMaxIdx(Mat &src, double* minVal, double* maxVal, int* minIdx, int* maxIdx, Mat &mask)
-{
-    int stype = src.type();
-    size_t total_size = src.total();
-    int rows = src.size[0], cols = rows ? (int)(total_size / rows) : 0;
-    if ((stype != CV_8UC1 && stype != CV_16SC1) || !mask.empty() ||
-        (src.dims != 2 && !(src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size))
-        )
-        return false;
-
-    try
-    {
-        ivx::Context ctx = ovx::getOpenVXContext();
-        ivx::Image
-            ia = ivx::Image::createFromHandle(ctx, stype == CV_8UC1 ? VX_DF_IMAGE_U8 : VX_DF_IMAGE_S16,
-                ivx::Image::createAddressing(cols, rows, stype == CV_8UC1 ? 1 : 2, (vx_int32)(src.step[0])), src.ptr());
-
-        ivx::Scalar vxMinVal = ivx::Scalar::create(ctx, stype == CV_8UC1 ? VX_TYPE_UINT8 : VX_TYPE_INT16, 0);
-        ivx::Scalar vxMaxVal = ivx::Scalar::create(ctx, stype == CV_8UC1 ? VX_TYPE_UINT8 : VX_TYPE_INT16, 0);
-        ivx::Array vxMinInd, vxMaxInd;
-        ivx::Scalar vxMinCount, vxMaxCount;
-        if (minIdx)
-        {
-            vxMinInd = ivx::Array::create(ctx, VX_TYPE_COORDINATES2D, 1);
-            vxMinCount = ivx::Scalar::create(ctx, VX_TYPE_UINT32, 0);
-        }
-        if (maxIdx)
-        {
-            vxMaxInd = ivx::Array::create(ctx, VX_TYPE_COORDINATES2D, 1);
-            vxMaxCount = ivx::Scalar::create(ctx, VX_TYPE_UINT32, 0);
-        }
-
-        ivx::IVX_CHECK_STATUS(vxuMinMaxLoc(ctx, ia, vxMinVal, vxMaxVal, vxMinInd, vxMaxInd, vxMinCount, vxMaxCount));
-
-        if (minVal)
-        {
-            *minVal = stype == CV_8UC1 ? vxMinVal.getValue<vx_uint8>() : vxMinVal.getValue<vx_int16>();
-        }
-        if (maxVal)
-        {
-            *maxVal = stype == CV_8UC1 ? vxMaxVal.getValue<vx_uint8>() : vxMaxVal.getValue<vx_int16>();
-        }
-        if (minIdx)
-        {
-            if(vxMinCount.getValue<vx_uint32>()<1) throw ivx::RuntimeError(VX_ERROR_INVALID_VALUE, std::string(__func__) + "(): minimum value location not found");
-            vx_coordinates2d_t loc;
-            vxMinInd.copyRangeTo(0, 1, &loc);
-            size_t minidx = loc.y * cols + loc.x + 1;
-            ofs2idx(src, minidx, minIdx);
-        }
-        if (maxIdx)
-        {
-            if (vxMaxCount.getValue<vx_uint32>()<1) throw ivx::RuntimeError(VX_ERROR_INVALID_VALUE, std::string(__func__) + "(): maximum value location not found");
-            vx_coordinates2d_t loc;
-            vxMaxInd.copyRangeTo(0, 1, &loc);
-            size_t maxidx = loc.y * cols + loc.x + 1;
-            ofs2idx(src, maxidx, maxIdx);
-        }
-    }
-    catch (const ivx::RuntimeError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-    catch (const ivx::WrapperError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-
-    return true;
-}
-#endif
-
 #ifdef HAVE_IPP
 static IppStatus ipp_minMaxIndex_wrap(const void* pSrc, int srcStep, IppiSize size, IppDataType dataType,
     float* pMinVal, float* pMaxVal, IppiPoint* pMinIndex, IppiPoint* pMaxIndex, const Ipp8u*, int)
@@ -1519,12 +1442,9 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
             CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows,
                      src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data);
         }
-        else
-        {
-            CALL_HAL(minMaxIdxMaskStep, cv_hal_minMaxIdxMaskStep, src.data, src.step, src.cols*cn, src.rows,
-                     src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data, mask.step);
-        }
 
+        CALL_HAL(minMaxIdxMaskStep, cv_hal_minMaxIdxMaskStep, src.data, src.step, src.cols*cn, src.rows,
+                 src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data, mask.step);
     }
     else if (src.isContinuous() && mask.isContinuous())
     {
@@ -1546,9 +1466,6 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
             ("HAL implementation minMaxIdx ==> " CVAUX_STR(cv_hal_minMaxIdx) " returned %d (0x%08x)", res, res));
         }
     }
-
-    CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MINMAXLOC>(src.cols, src.rows),
-               openvx_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
     CV_IPP_RUN_FAST(ipp_minMaxIdx(src, minVal, maxVal, minIdx, maxIdx, mask))
 
