@@ -4,6 +4,10 @@
 
 #include "precomp.hpp"
 
+#if CV_RVV
+#include "norm.rvv1p0.hpp"
+#endif
+
 namespace cv {
 
 using NormFunc = int (*)(const uchar*, const uchar*, uchar*, int, int);
@@ -462,7 +466,9 @@ struct NormL1_SIMD<double, double> {
     double operator() (const double* src, int n) const {
         int j = 0;
         double s = 0.f;
-#ifndef CV_RVV  // It triggers segmentation fault on CI but it works fine on real hardware
+#if CV_RVV // This is introduced to workaround the accuracy issue on ci
+        s = normL1_rvv(src, n, j);
+#else
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
         for (; j <= n - 4 * VTraits<v_float64>::vlanes(); j += 4 * VTraits<v_float64>::vlanes()) {
@@ -576,7 +582,9 @@ struct NormL2_SIMD<double, double> {
     double operator() (const double* src, int n) const {
         int j = 0;
         double s = 0.f;
-#ifndef CV_RVV // It triggers segmentation fault on CI but it works fine on real hardware
+#if CV_RVV // This is introduced to workaround the accuracy issue on ci
+        s = normL2_rvv(src, n, j);
+#else
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
         for (; j <= n - 4 * VTraits<v_float64>::vlanes(); j += 4 * VTraits<v_float64>::vlanes()) {
