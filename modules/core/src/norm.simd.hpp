@@ -23,7 +23,7 @@ struct NormInf_SIMD {
     inline ST operator() (const T* src, int n) const {
         ST s = 0;
         for (int i = 0; i < n; i++) {
-            s += std::max(s, (ST)cv_abs(src[i]));
+            s = std::max(s, (ST)cv_abs(src[i]));
         }
         return s;
     }
@@ -367,6 +367,9 @@ struct NormL2_SIMD<schar, int> {
     int operator() (const schar* src, int n) const {
         int j = 0;
         int s = 0;
+#if CV_RVV
+        s = normL2_rvv<schar, int>(src, n, j);
+#else
         v_int32 r0 = vx_setzero_s32(), r1 = vx_setzero_s32();
         for (; j <= n - 2 * VTraits<v_int8>::vlanes(); j += 2 * VTraits<v_int8>::vlanes()) {
             v_int8 v0 = vx_load(src + j);
@@ -375,6 +378,7 @@ struct NormL2_SIMD<schar, int> {
             r1 = v_dotprod_expand(v1, v1, r1);
         }
         s += v_reduce_sum(v_add(r0, r1));
+#endif
         for (; j < n; j++) {
             int v = saturate_cast<int>(src[j]);
             s += v * v;
@@ -467,7 +471,7 @@ struct NormL1_SIMD<double, double> {
         int j = 0;
         double s = 0.f;
 #if CV_RVV // This is introduced to workaround the accuracy issue on ci
-        s = normL1_rvv(src, n, j);
+        s = normL1_rvv<double, double>(src, n, j);
 #else
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
@@ -583,7 +587,7 @@ struct NormL2_SIMD<double, double> {
         int j = 0;
         double s = 0.f;
 #if CV_RVV // This is introduced to workaround the accuracy issue on ci
-        s = normL2_rvv(src, n, j);
+        s = normL2_rvv<double, double>(src, n, j);
 #else
         v_float64 r00 = vx_setzero_f64(), r01 = vx_setzero_f64();
         v_float64 r10 = vx_setzero_f64(), r11 = vx_setzero_f64();
