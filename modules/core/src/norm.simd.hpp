@@ -229,6 +229,9 @@ struct NormL1_SIMD<ushort, int> {
     int operator() (const ushort* src, int n) const {
         int j = 0;
         int s = 0;
+#if CV_RVV
+        s = normL1_rvv<ushort, int>(src, n, j);
+#else
         v_uint64 r0 = vx_setzero_u64(), r1 = vx_setzero_u64();
         v_uint16 one = vx_setall_u16(1);
         for (; j<= n - 2 * VTraits<v_uint16>::vlanes(); j += 2 * VTraits<v_uint16>::vlanes()) {
@@ -238,7 +241,8 @@ struct NormL1_SIMD<ushort, int> {
             v_uint16 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
             r1 = v_dotprod_expand_fast(v1, one, r1);
         }
-        s += v_reduce_sum(v_add(r0, r1));
+        s += (int)v_reduce_sum(v_add(r0, r1));
+#endif
         for (; j < n; j++) {
             s += src[j];
         }
@@ -251,6 +255,9 @@ struct NormL1_SIMD<short, int> {
     int operator() (const short* src, int n) const {
         int j = 0;
         int s = 0;
+#if CV_RVV
+        s = normL1_rvv<short, int>(src, n, j);
+#else
         v_uint64 r0 = vx_setzero_u64(), r1 = vx_setzero_u64();
         v_uint16 one = vx_setall_u16(1);
         for (; j<= n - 2 * VTraits<v_int16>::vlanes(); j += 2 * VTraits<v_int16>::vlanes()) {
@@ -260,7 +267,8 @@ struct NormL1_SIMD<short, int> {
             v_uint16 v1 = v_abs(vx_load(src + j + VTraits<v_int16>::vlanes()));
             r1 = v_dotprod_expand_fast(v1, one, r1);
         }
-        s += v_reduce_sum(v_add(r0, r1));
+        s += (int)v_reduce_sum(v_add(r0, r1));
+#endif
         for (; j < n; j++) {
             s += saturate_cast<int>(cv_abs(src[j]));
         }
