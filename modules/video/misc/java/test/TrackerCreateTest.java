@@ -69,11 +69,13 @@ public class TrackerCreateTest extends OpenCVTestCase {
         try {
             String protoFile = new File(testDataPath, "dnn/gsoc2016-goturn/goturn.prototxt").toString();
             String weightsFile = new File(modelsDataPath, "dnn/gsoc2016-goturn/goturn.caffemodel").toString();
-            net = dnnClass.getMethod("readNetFromCaffe", String.class, String.class).invoke(protoFile, weightsFile);
+            net = dnnClass.getMethod("readNetFromCaffe", String.class, String.class).invoke(null, protoFile, weightsFile);
             tracker = TrackerGOTURN.create(DeepNeuralNet.class.cast(net));
         } catch (CvException e) {
+            e.printStackTrace();
             return;
         } catch (Exception e) {
+            e.printStackTrace();
             return;
         }
         assert(tracker != null);
@@ -86,12 +88,14 @@ public class TrackerCreateTest extends OpenCVTestCase {
         try {
             String backboneFile = new File(modelsDataPath, "dnn/onnx/models/nanotrack_backbone_sim_v2.onnx").toString();
             String neckheadFile = new File(modelsDataPath, "dnn/onnx/models/nanotrack_head_sim_v2.onnx").toString();
-            backbone = dnnClass.getMethod("readNet", String.class).invoke(backboneFile);
-            neckhead = dnnClass.getMethod("readNet", String.class).invoke(neckheadFile);
+            backbone = dnnClass.getMethod("readNet", String.class).invoke(null, backboneFile);
+            neckhead = dnnClass.getMethod("readNet", String.class).invoke(null, neckheadFile);
             tracker = TrackerNano.create(DeepNeuralNet.class.cast(backbone), DeepNeuralNet.class.cast(neckhead));
         } catch (CvException e) {
+            e.printStackTrace();
             return;
         } catch (Exception e) {
+            e.printStackTrace();
             return;
         }
         assert(tracker != null);
@@ -101,12 +105,14 @@ public class TrackerCreateTest extends OpenCVTestCase {
         Object net;
         Tracker tracker;
         try {
-            String backboneFile = new File(modelsDataPath, "dnn/onnx/models/vitTracker.onnx").toString();
-            net = dnnClass.getMethod("readNet", String.class).invoke(backboneFile);
+            String backboneFile = new File(testDataPath, "dnn/onnx/models/vitTracker.onnx").toString();
+            net = dnnClass.getMethod("readNet", String.class).invoke(null, backboneFile);
             tracker = TrackerVit.create(DeepNeuralNet.class.cast(net));
         } catch (CvException e) {
+            e.printStackTrace();
             return;
         } catch (Exception e) {
+            e.printStackTrace();
             return;
         }
         assert(tracker != null);
