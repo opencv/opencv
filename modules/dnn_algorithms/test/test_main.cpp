@@ -10,6 +10,8 @@
 static
 void initTests()
 {
+    cvtest::addDataSearchEnv("OPENCV_DNN_TEST_DATA_PATH");
+    cvtest::addDataSearchSubDirectory("");
 }
 
 CV_TEST_MAIN("cv", initTests())

@@ -4,17 +4,9 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/core.hpp"
-#ifdef HAVE_OPENCV_DNN
-#include "opencv2/dnn.hpp"
-#endif
-
-#include <algorithm>
-
 namespace cv
 {
 
-#ifdef HAVE_OPENCV_DNN
 class FaceRecognizerSFImpl : public FaceRecognizerSF
 {
 public:
@@ -190,16 +182,10 @@ private:
 private:
     dnn::Net net;
 };
-#endif
 
 Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& model, const String& config, int backend_id, int target_id)
 {
-#ifdef HAVE_OPENCV_DNN
     return makePtr<FaceRecognizerSFImpl>(model, config, backend_id, target_id);
-#else
-    CV_UNUSED(model); CV_UNUSED(config); CV_UNUSED(backend_id); CV_UNUSED(target_id);
-    CV_Error(cv::Error::StsNotImplemented, "cv::FaceRecognizerSF requires enabled 'dnn' module");
-#endif
 }
 
 Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& framework,
@@ -207,12 +193,7 @@ Ptr<FaceRecognizerSF> FaceRecognizerSF::create(const String& framework,
                                                const std::vector<uchar>& bufferConfig,
                                                int backend_id, int target_id)
 {
-#ifdef HAVE_OPENCV_DNN
     return makePtr<FaceRecognizerSFImpl>(framework, bufferModel, bufferConfig, backend_id, target_id);
-#else
-    CV_UNUSED(framework);  CV_UNUSED(bufferModel); CV_UNUSED(bufferConfig); CV_UNUSED(backend_id); CV_UNUSED(target_id);
-    CV_Error(cv::Error::StsNotImplemented, "cv::FaceRecognizerSF requires enabled 'dnn' module");
-#endif
 }
 
 } // namespace cv

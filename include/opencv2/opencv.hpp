@@ -61,6 +61,9 @@
 #ifdef HAVE_OPENCV_DNN
 #include "opencv2/dnn.hpp"
 #endif
+#ifdef HAVE_OPENCV_DNN_ALGORITHMS
+#include "opencv2/dnn_algorithms.hpp"
+#endif
 #ifdef HAVE_OPENCV_FLANN
 #include "opencv2/flann.hpp"
 #endif

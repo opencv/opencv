@@ -49,4 +49,12 @@
 #include "opencv2/core/ocl.hpp"
 #include "opencv2/core.hpp"
 
+#ifdef HAVE_OPENCV_DNN
+# define BAD_INST(algorithm) \
+    CV_Error(Error::StsBadArg, "Bad model instance passed to " algorithm);
+#else
+# define NOT_IMPL(algorithm) \
+    CV_Error(cv::Error::StsNotImplemented, algorithm " requires build with opencv_dnn");
+#endif
+
 #endif

@@ -4,19 +4,9 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/imgproc.hpp"
-#include "opencv2/core.hpp"
-
-#ifdef HAVE_OPENCV_DNN
-#include "opencv2/dnn.hpp"
-#endif
-
-#include <algorithm>
-
 namespace cv
 {
 
-#ifdef HAVE_OPENCV_DNN
 class FaceDetectorYNImpl : public FaceDetectorYN
 {
 public:
@@ -277,7 +267,6 @@ private:
     float nmsThreshold;
     const std::vector<int> strides;
 };
-#endif
 
 Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& model,
                                            const String& config,
@@ -288,12 +277,7 @@ Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& model,
                                            const int backend_id,
                                            const int target_id)
 {
-#ifdef HAVE_OPENCV_DNN
     return makePtr<FaceDetectorYNImpl>(model, config, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
-#else
-    CV_UNUSED(model); CV_UNUSED(config); CV_UNUSED(input_size); CV_UNUSED(score_threshold); CV_UNUSED(nms_threshold); CV_UNUSED(top_k); CV_UNUSED(backend_id); CV_UNUSED(target_id);
-    CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN requires enabled 'dnn' module.");
-#endif
 }
 
 Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& framework,
@@ -306,12 +290,7 @@ Ptr<FaceDetectorYN> FaceDetectorYN::create(const String& framework,
                                            const int backend_id,
                                            const int target_id)
 {
-#ifdef HAVE_OPENCV_DNN
     return makePtr<FaceDetectorYNImpl>(framework, bufferModel, bufferConfig, input_size, score_threshold, nms_threshold, top_k, backend_id, target_id);
-#else
-    CV_UNUSED(framework);  CV_UNUSED(bufferModel); CV_UNUSED(bufferConfig); CV_UNUSED(input_size); CV_UNUSED(score_threshold); CV_UNUSED(nms_threshold); CV_UNUSED(top_k); CV_UNUSED(backend_id); CV_UNUSED(target_id);
-    CV_Error(cv::Error::StsNotImplemented, "cv::FaceDetectorYN requires enabled 'dnn' module.");
-#endif
 }
 
 } // namespace cv

@@ -41,9 +41,6 @@ void Tracking::runTrackingTest(const Ptr<Tracker>& tracker, const TrackingParams
     c.open(videoPath);
     if (!c.isOpened())
         throw SkipTestException("Can't open video file");
-#if 0
-    // c.set(CAP_PROP_POS_FRAMES, startFrame);
-#else
     if (startFrame)
         std::cout << "startFrame = " << startFrame << std::endl;
     for (int i = 0; i < startFrame; i++)
@@ -52,7 +49,6 @@ void Tracking::runTrackingTest(const Ptr<Tracker>& tracker, const TrackingParams
         c >> dummy_frame;
         ASSERT_FALSE(dummy_frame.empty()) << i << ": " << videoPath;
     }
-#endif
 
     // decode frames into memory (don't measure decoding performance)
     std::vector<Mat> frames;
@@ -84,11 +80,15 @@ void Tracking::runTrackingTest(const Ptr<Tracker>& tracker, const TrackingParams
 
 //==================================================================================================
 
-PERF_TEST_P(Tracking, MIL, testing::ValuesIn(getTrackingParams()))
+PERF_TEST_P(Tracking, GOTURN, testing::ValuesIn(getTrackingParams()))
 {
-    auto tracker = TrackerMIL::create();
+    std::string model = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.prototxt");
+    std::string weights = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.caffemodel", false);
+    cv::TrackerGOTURN::Params params;
+    params.modelTxt = model;
+    params.modelBin = weights;
+    auto tracker = cv::TrackerGOTURN::create(params);
     runTrackingTest<Rect>(tracker, GetParam());
 }
-
 
 }} // namespace

@@ -1,4 +1,4 @@
-#ifdef HAVE_OPENCV_VIDEO
+#ifdef HAVE_OPENCV_DNN_ALGORITHMS
 typedef TrackerMIL::Params TrackerMIL_Params;
 typedef TrackerGOTURN::Params TrackerGOTURN_Params;
 typedef TrackerDaSiamRPN::Params TrackerDaSiamRPN_Params;

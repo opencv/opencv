@@ -4,10 +4,7 @@
 
 // Author, PengyuLiu, 1872918507@qq.com
 
-#include "../precomp.hpp"
-#ifdef HAVE_OPENCV_DNN
-#include "opencv2/dnn.hpp"
-#endif
+#include "precomp.hpp"
 
 namespace cv {
 
@@ -26,17 +23,10 @@ TrackerVit::Params::Params()
     net = "vitTracker.onnx";
     meanvalue = Scalar{0.485, 0.456, 0.406}; // normalized mean (already divided by 255)
     stdvalue = Scalar{0.229, 0.224, 0.225};  // normalized std (already divided by 255)
-#ifdef HAVE_OPENCV_DNN
     backend = dnn::DNN_BACKEND_DEFAULT;
     target = dnn::DNN_TARGET_CPU;
-#else
-    backend = -1;  // invalid value
-    target = -1;  // invalid value
-#endif
     tracking_score_threshold = 0.20f; // safe threshold to filter out black frames
 }
-
-#ifdef HAVE_OPENCV_DNN
 
 class TrackerVitImpl : public TrackerVit
 {
@@ -228,11 +218,4 @@ Ptr<TrackerVit> TrackerVit::create(const dnn::Net& model, Scalar meanvalue, Scal
     return makePtr<TrackerVitImpl>(model, meanvalue, stdvalue, tracking_score_threshold);
 }
 
-#else  // OPENCV_HAVE_DNN
-Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params& parameters)
-{
-    CV_UNUSED(parameters);
-    CV_Error(Error::StsNotImplemented, "to use vittrack, the tracking module needs to be built with opencv_dnn !");
-}
-#endif  // OPENCV_HAVE_DNN
-}
+} // namespace cv

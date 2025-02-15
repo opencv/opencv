@@ -2,11 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "../precomp.hpp"
-
-#ifdef HAVE_OPENCV_DNN
-#include "opencv2/dnn.hpp"
-#endif
+#include "precomp.hpp"
 
 namespace cv {
 
@@ -25,8 +21,6 @@ TrackerGOTURN::Params::Params()
     modelTxt = "goturn.prototxt";
     modelBin = "goturn.caffemodel";
 }
-
-#ifdef HAVE_OPENCV_DNN
 
 class TrackerGOTURNImpl : public TrackerGOTURN
 {
@@ -136,13 +130,5 @@ Ptr<TrackerGOTURN> TrackerGOTURN::create(const dnn::Net& model)
 {
     return makePtr<TrackerGOTURNImpl>(model);
 }
-
-#else  // OPENCV_HAVE_DNN
-Ptr<TrackerGOTURN> TrackerGOTURN::create(const TrackerGOTURN::Params& parameters)
-{
-    (void)(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use GOTURN, the tracking module needs to be built with opencv_dnn !");
-}
-#endif  // OPENCV_HAVE_DNN
 
 }  // namespace cv

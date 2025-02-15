@@ -9,9 +9,12 @@
 #include "barcode_decoder/ean13_decoder.hpp"
 #include "barcode_decoder/ean8_decoder.hpp"
 #include "barcode_detector/bardetect.hpp"
-#include "barcode_decoder/common/super_scale.hpp"
 #include "barcode_decoder/common/utils.hpp"
 #include "graphical_code_detector_impl.hpp"
+
+#ifdef HAVE_OPENCV_DNN
+#include "opencv2/dnn_algorithms/super_scale.hpp"
+#endif
 
 using std::string;
 using std::vector;
@@ -140,7 +143,9 @@ bool BarDecode::decodeMultiplyProcess()
 struct BarcodeImpl : public GraphicalCodeDetector::Impl
 {
 public:
-    shared_ptr<SuperScale> sr;
+#ifdef HAVE_OPENCV_DNN
+    shared_ptr<cv::SuperScale> sr;
+#endif
     bool use_nn_sr = false;
     double detectorThrDownSample = 512.f;
     vector<float> detectorWindowSizes = {0.01f, 0.03f, 0.06f, 0.08f};
@@ -185,7 +190,12 @@ vector<Mat> BarcodeImpl::initDecode(const Mat &src, const vector<vector<Point2f>
         if (bar_img.cols < 320 || bar_img.cols > 640)
         {
             float scale = 560.0f / static_cast<float>(bar_img.cols);
-            sr->processImageScale(bar_img, bar_img, scale, use_nn_sr);
+#ifdef HAVE_OPENCV_DNN
+            if (use_nn_sr)
+                sr->processImageScale(bar_img, bar_img, scale);
+            else
+#endif
+                resize(bar_img, bar_img, Size(), scale, scale, INTER_CUBIC);
         }
         bar_imgs.emplace_back(bar_img);
     }
@@ -347,15 +357,16 @@ BarcodeDetector::BarcodeDetector(const string &prototxt_path, const string &mode
 {
     Ptr<BarcodeImpl> p_ = new BarcodeImpl();
     p = p_;
-    p_->sr = make_shared<SuperScale>();
+#ifdef HAVE_OPENCV_DNN
     if (!prototxt_path.empty() && !model_path.empty())
     {
         CV_Assert(utils::fs::exists(prototxt_path));
         CV_Assert(utils::fs::exists(model_path));
-        int res = p_->sr->init(prototxt_path, model_path);
-        CV_Assert(res == 0);
+        p_->sr = SuperScale::create(prototxt_path, model_path);
+        CV_Assert(p_->sr->isOpened());
         p_->use_nn_sr = true;
     }
+#endif
 }
 
 BarcodeDetector::~BarcodeDetector() = default;

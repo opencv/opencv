@@ -1,0 +1,6 @@
+{
+    "whitelist":
+    {
+        "FaceDetectorYN": ["setInputSize", "getInputSize", "setScoreThreshold", "getScoreThreshold", "setNMSThreshold", "getNMSThreshold", "setTopK", "getTopK", "detect", "create"]
+    }
+}

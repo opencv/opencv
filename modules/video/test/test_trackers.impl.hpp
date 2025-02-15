@@ -9,6 +9,11 @@
  *
  */
 
+#include <string>
+#include <vector>
+#include <opencv2/core.hpp>
+#include <opencv2/videoio.hpp>
+
 enum BBTransformations
 {
     NoTransform = 0,
@@ -31,7 +36,7 @@ namespace {
 std::vector<std::string> splitString(const std::string& s_, const std::string& delimiter)
 {
     std::string s = s_;
-    std::vector<string> token;
+    std::vector<std::string> token;
     size_t pos = 0;
     while ((pos = s.find(delimiter)) != std::string::npos)
     {
@@ -42,15 +47,15 @@ std::vector<std::string> splitString(const std::string& s_, const std::string& d
     return token;
 }
 
-float calcDistance(const Rect& a, const Rect& b)
+float calcDistance(const cv::Rect& a, const cv::Rect& b)
 {
-    Point2f p_a((float)(a.x + a.width / 2), (float)(a.y + a.height / 2));
-    Point2f p_b((float)(b.x + b.width / 2), (float)(b.y + b.height / 2));
-    Point2f diff = p_a - p_b;
+    cv::Point2f p_a((float)(a.x + a.width / 2), (float)(a.y + a.height / 2));
+    cv::Point2f p_b((float)(b.x + b.width / 2), (float)(b.y + b.height / 2));
+    cv::Point2f diff = p_a - p_b;
     return sqrt(diff.dot(diff));
 }
 
-float calcOverlap(const Rect& a, const Rect& b)
+float calcOverlap(const cv::Rect& a, const cv::Rect& b)
 {
     float rectIntersectionArea = (float)(a & b).area();
     return rectIntersectionArea / (a.area() + b.area() - rectIntersectionArea);
@@ -58,11 +63,11 @@ float calcOverlap(const Rect& a, const Rect& b)
 
 }  // namespace
 
-template <typename Tracker, typename ROI_t = Rect2d>
+template <typename Tracker, typename ROI_t = cv::Rect2d>
 class TrackerTest
 {
 public:
-    TrackerTest(const Ptr<Tracker>& tracker, const string& video, float distanceThreshold,
+    TrackerTest(const cv::Ptr<Tracker>& tracker, const std::string& video, float distanceThreshold,
             float overlapThreshold, int shift = NoTransform, int segmentIdx = 1, int numSegments = 10);
     ~TrackerTest() {}
     void run();
@@ -72,12 +77,12 @@ protected:
 
     void distanceAndOverlapTest();
 
-    Ptr<Tracker> tracker;
-    string video;
-    std::vector<Rect> bbs;
+    cv::Ptr<Tracker> tracker;
+    std::string video;
+    std::vector<cv::Rect> bbs;
     int startFrame;
-    string suffix;
-    string prefix;
+    std::string suffix;
+    std::string prefix;
     float overlapThreshold;
     float distanceThreshold;
     int segmentIdx;
@@ -86,14 +91,14 @@ protected:
 
     int gtStartFrame;
     int endFrame;
-    vector<int> validSequence;
+    std::vector<int> validSequence;
 
 private:
-    Rect applyShift(const Rect& bb);
+    cv::Rect applyShift(const cv::Rect& bb);
 };
 
 template <typename Tracker, typename ROI_t>
-TrackerTest<Tracker, ROI_t>::TrackerTest(const Ptr<Tracker>& _tracker, const string& _video, float _distanceThreshold,
+TrackerTest<Tracker, ROI_t>::TrackerTest(const cv::Ptr<Tracker>& _tracker, const std::string& _video, float _distanceThreshold,
         float _overlapThreshold, int _shift, int _segmentIdx, int _numSegments)
     : tracker(_tracker)
     , video(_video)
@@ -107,10 +112,10 @@ TrackerTest<Tracker, ROI_t>::TrackerTest(const Ptr<Tracker>& _tracker, const str
 }
 
 template <typename Tracker, typename ROI_t>
-Rect TrackerTest<Tracker, ROI_t>::applyShift(const Rect& bb_)
+cv::Rect TrackerTest<Tracker, ROI_t>::applyShift(const cv::Rect& bb_)
 {
-    Rect bb = bb_;
-    Point center(bb.x + (bb.width / 2), bb.y + (bb.height / 2));
+    cv::Rect bb = bb_;
+    cv::Point center(bb.x + (bb.width / 2), bb.y + (bb.height / 2));
 
     int xLimit = bb.x + bb.width - 1;
     int yLimit = bb.y + bb.height - 1;
@@ -166,14 +171,14 @@ Rect TrackerTest<Tracker, ROI_t>::applyShift(const Rect& bb_)
         w = (int)(ratio * bb.width);
         h = (int)(ratio * bb.height);
 
-        bb = Rect(center.x - (w / 2), center.y - (h / 2), w, h);
+        bb = cv::Rect(center.x - (w / 2), center.y - (h / 2), w, h);
         break;
     case Scale_0_9:
         ratio = 0.9f;
         w = (int)(ratio * bb.width);
         h = (int)(ratio * bb.height);
 
-        bb = Rect(center.x - (w / 2), center.y - (h / 2), w, h);
+        bb = cv::Rect(center.x - (w / 2), center.y - (h / 2), w, h);
         break;
     case 11:
         //scale 1.1
@@ -181,7 +186,7 @@ Rect TrackerTest<Tracker, ROI_t>::applyShift(const Rect& bb_)
         w = (int)(ratio * bb.width);
         h = (int)(ratio * bb.height);
 
-        bb = Rect(center.x - (w / 2), center.y - (h / 2), w, h);
+        bb = cv::Rect(center.x - (w / 2), center.y - (h / 2), w, h);
         break;
     case 12:
         //scale 1.2
@@ -189,7 +194,7 @@ Rect TrackerTest<Tracker, ROI_t>::applyShift(const Rect& bb_)
         w = (int)(ratio * bb.width);
         h = (int)(ratio * bb.height);
 
-        bb = Rect(center.x - (w / 2), center.y - (h / 2), w, h);
+        bb = cv::Rect(center.x - (w / 2), center.y - (h / 2), w, h);
         break;
     default:
         break;
@@ -206,18 +211,18 @@ void TrackerTest<Tracker, ROI_t>::distanceAndOverlapTest()
     int fc = (startFrame - gtStartFrame);
 
     bbs.at(fc) = applyShift(bbs.at(fc));
-    Rect currentBBi = bbs.at(fc);
+    cv::Rect currentBBi = bbs.at(fc);
     ROI_t currentBB(currentBBi);
     float sumDistance = 0;
     float sumOverlap = 0;
 
-    string folder = cvtest::TS::ptr()->get_data_path() + "/" + TRACKING_DIR + "/" + video + "/" + FOLDER_IMG;
-    string videoPath = folder + "/" + video + ".webm";
+    std::string folder = cvtest::TS::ptr()->get_data_path() + "/" + TRACKING_DIR + "/" + video + "/" + FOLDER_IMG;
+    std::string videoPath = folder + "/" + video + ".webm";
 
-    VideoCapture c;
+    cv::VideoCapture c;
     c.open(videoPath);
     if (!c.isOpened())
-        throw SkipTestException("Can't open video file");
+        throw cvtest::SkipTestException("Can't open video file");
 #if 0
     c.set(CAP_PROP_POS_FRAMES, startFrame);
 #else
@@ -225,7 +230,7 @@ void TrackerTest<Tracker, ROI_t>::distanceAndOverlapTest()
         std::cout << "startFrame = " << startFrame << std::endl;
     for (int i = 0; i < startFrame; i++)
     {
-        Mat dummy_frame;
+        cv::Mat dummy_frame;
         c >> dummy_frame;
         ASSERT_FALSE(dummy_frame.empty()) << i << ": " << videoPath;
     }
@@ -233,7 +238,7 @@ void TrackerTest<Tracker, ROI_t>::distanceAndOverlapTest()
 
     for (int frameCounter = startFrame; frameCounter < endFrame; frameCounter++)
     {
-        Mat frame;
+        cv::Mat frame;
         c >> frame;
 
         ASSERT_FALSE(frame.empty()) << "frameCounter=" << frameCounter << " video=" << videoPath;
@@ -256,7 +261,7 @@ void TrackerTest<Tracker, ROI_t>::distanceAndOverlapTest()
         Mat result;
         repeat(frame, 1, 2, result);
         rectangle(result, currentBB, Scalar(0, 255, 0), 1);
-        Rect roi2(frame.cols, 0, frame.cols, frame.rows);
+        cv::Rect roi2(frame.cols, 0, frame.cols, frame.rows);
         rectangle(result(roi2), bbs.at(fc), Scalar(0, 0, 255), 1);
         imshow("result", result);
         waitKey(1);
@@ -278,19 +283,19 @@ template <typename Tracker, typename ROI_t>
 void TrackerTest<Tracker, ROI_t>::checkDataTest()
 {
 
-    FileStorage fs;
-    fs.open(cvtest::TS::ptr()->get_data_path() + TRACKING_DIR + "/" + video + "/" + video + ".yml", FileStorage::READ);
+    cv::FileStorage fs;
+    fs.open(cvtest::TS::ptr()->get_data_path() + TRACKING_DIR + "/" + video + "/" + video + ".yml", cv::FileStorage::READ);
     fs["start"] >> startFrame;
     fs["prefix"] >> prefix;
     fs["suffix"] >> suffix;
     fs.release();
 
-    string gtFile = cvtest::TS::ptr()->get_data_path() + TRACKING_DIR + "/" + video + "/gt.txt";
+    std::string gtFile = cvtest::TS::ptr()->get_data_path() + TRACKING_DIR + "/" + video + "/gt.txt";
     std::ifstream gt;
     //open the ground truth
     gt.open(gtFile.c_str());
     ASSERT_TRUE(gt.is_open()) << gtFile;
-    string line;
+    std::string line;
     int bbCounter = 0;
     while (getline(gt, line))
     {
@@ -305,15 +310,15 @@ void TrackerTest<Tracker, ROI_t>::checkDataTest()
     }
 
     //exclude from the images sequence, the frames where the target is occluded or out of view
-    string omitFile = cvtest::TS::ptr()->get_data_path() + TRACKING_DIR + "/" + video + "/" + FOLDER_OMIT_INIT + "/" + video + ".txt";
+    std::string omitFile = cvtest::TS::ptr()->get_data_path() + TRACKING_DIR + "/" + video + "/" + FOLDER_OMIT_INIT + "/" + video + ".txt";
     std::ifstream omit;
     omit.open(omitFile.c_str());
     if (omit.is_open())
     {
-        string omitLine;
+        std::string omitLine;
         while (getline(omit, omitLine))
         {
-            vector<string> tokens = splitString(omitLine, " ");
+            std::vector<std::string> tokens = splitString(omitLine, " ");
             int s_start = atoi(tokens.at(0).c_str());
             int s_end = atoi(tokens.at(1).c_str());
             for (int k = s_start; k <= s_end; k++)
@@ -335,11 +340,11 @@ void TrackerTest<Tracker, ROI_t>::checkDataTest()
     //open the ground truth
     gt2.open(gtFile.c_str());
     ASSERT_TRUE(gt2.is_open()) << gtFile;
-    string line2;
+    std::string line2;
     while (getline(gt2, line2))
     {
-        vector<string> tokens = splitString(line2, ",");
-        Rect bb(atoi(tokens.at(0).c_str()), atoi(tokens.at(1).c_str()), atoi(tokens.at(2).c_str()), atoi(tokens.at(3).c_str()));
+        std::vector<std::string> tokens = splitString(line2, ",");
+        cv::Rect bb(atoi(tokens.at(0).c_str()), atoi(tokens.at(1).c_str()), atoi(tokens.at(2).c_str()), atoi(tokens.at(3).c_str()));
         ASSERT_EQ((size_t)4, tokens.size()) << "Incorrect ground truth file " << gtFile;
 
         bbs.push_back(bb);
