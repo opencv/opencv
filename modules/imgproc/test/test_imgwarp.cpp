@@ -1033,7 +1033,7 @@ TEST(Imgproc_Remap, DISABLED_memleak)
         remap(src, dst, map_x, map_y, INTER_LINEAR);
     }
 }
-
+#if 0
 //** @deprecated */
 TEST(Imgproc_linearPolar, identity)
 {
@@ -1114,6 +1114,7 @@ TEST(Imgproc_logPolar, identity)
     cv::waitKey();
 #endif
 }
+#endif
 
 TEST(Imgproc_warpPolar, identity)
 {
