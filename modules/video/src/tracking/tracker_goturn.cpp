@@ -132,17 +132,30 @@ Ptr<TrackerGOTURN> TrackerGOTURN::create(const TrackerGOTURN::Params& parameters
     return makePtr<TrackerGOTURNImpl>(parameters);
 }
 
-Ptr<TrackerGOTURN> TrackerGOTURN::create(const dnn::Net& model)
+Ptr<TrackerGOTURN> TrackerGOTURN::create(cv::DeepNeuralNet & model)
 {
-    return makePtr<TrackerGOTURNImpl>(model);
+    try
+    {
+        return makePtr<TrackerGOTURNImpl>(dynamic_cast<dnn::Net&>(model));
+    }
+    catch (const std::bad_cast & e)
+    {
+        BAD_INST("GOTURN");
+    }
 }
 
 #else  // OPENCV_HAVE_DNN
-Ptr<TrackerGOTURN> TrackerGOTURN::create(const TrackerGOTURN::Params& parameters)
+
+Ptr<TrackerGOTURN> TrackerGOTURN::create(const TrackerGOTURN::Params&)
 {
-    (void)(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use GOTURN, the tracking module needs to be built with opencv_dnn !");
+    NOT_IMPL("GOTURN");
 }
+
+Ptr<TrackerGOTURN> TrackerGOTURN::create(cv::DeepNeuralNet &)
+{
+    NOT_IMPL("GOTURN");
+}
+
 #endif  // OPENCV_HAVE_DNN
 
 }  // namespace cv

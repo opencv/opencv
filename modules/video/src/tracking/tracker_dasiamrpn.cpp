@@ -438,16 +438,29 @@ Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const TrackerDaSiamRPN::Params& p
     return makePtr<TrackerDaSiamRPNImpl>(parameters);
 }
 
-Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const dnn::Net& siam_rpn, const dnn::Net& kernel_cls1, const dnn::Net& kernel_r1)
+Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(cv::DeepNeuralNet & siam_rpn, cv::DeepNeuralNet & kernel_cls1, cv::DeepNeuralNet & kernel_r1)
 {
-    return makePtr<TrackerDaSiamRPNImpl>(siam_rpn, kernel_cls1, kernel_r1);
+    try
+    {
+        return makePtr<TrackerDaSiamRPNImpl>(dynamic_cast<dnn::Net&>(siam_rpn), dynamic_cast<dnn::Net&>(kernel_cls1), dynamic_cast<dnn::Net&>(kernel_r1));
+    }
+    catch (const std::bad_cast & e)
+    {
+        BAD_INST("DaSiamRPN");
+    }
 }
 
 #else  // OPENCV_HAVE_DNN
-Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const TrackerDaSiamRPN::Params& parameters)
+
+Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const TrackerDaSiamRPN::Params &)
 {
-    (void)(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use DaSiamRPN, the tracking module needs to be built with opencv_dnn !");
+    NOT_IMPL("DaSiamRPN");
 }
+
+Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(cv::DeepNeuralNet &, cv::DeepNeuralNet &, cv::DeepNeuralNet &)
+{
+    NOT_IMPL("DaSiamRPN");
+}
+
 #endif  // OPENCV_HAVE_DNN
 }

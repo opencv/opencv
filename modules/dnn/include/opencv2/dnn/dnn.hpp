@@ -471,7 +471,7 @@ CV__DNN_INLINE_NS_BEGIN
      *
      * This class supports reference counting of its instances, i. e. copies point to the same instance.
      */
-    class CV_EXPORTS_W_SIMPLE Net
+    class CV_EXPORTS_W_SIMPLE Net : public cv::DeepNeuralNet
     {
     public:
 

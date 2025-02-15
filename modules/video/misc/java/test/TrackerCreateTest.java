@@ -6,8 +6,7 @@ import org.opencv.core.CvType;
 import org.opencv.core.CvException;
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
-import org.opencv.dnn.Dnn;
-import org.opencv.dnn.Net;
+import org.opencv.core.DeepNeuralNet;
 import org.opencv.test.OpenCVTestCase;
 
 import org.opencv.video.Tracker;
@@ -25,10 +24,19 @@ public class TrackerCreateTest extends OpenCVTestCase {
     private final static String ENV_OPENCV_TEST_DATA_PATH = "OPENCV_TEST_DATA_PATH";
     private String testDataPath;
     private String modelsDataPath;
+    private Class netClass;
+    private Class dnnClass;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+
+        try {
+            netClass = this.getClassForName("org.opencv.dnn.Net");
+            dnnClass = this.getClassForName("org.opencv.dnn.Dnn");
+        } catch (ClassNotFoundException e) {
+            throw new TestSkipException();
+        }
 
         // relys on https://developer.android.com/reference/java/lang/System
         isTestCaseEnabled = System.getProperties().getProperty("java.vm.name") != "Dalvik";
@@ -56,42 +64,51 @@ public class TrackerCreateTest extends OpenCVTestCase {
     }
 
     public void testCreateTrackerGOTURN() {
-        Net net;
+        Object net;
+        Tracker tracker;
         try {
             String protoFile = new File(testDataPath, "dnn/gsoc2016-goturn/goturn.prototxt").toString();
             String weightsFile = new File(modelsDataPath, "dnn/gsoc2016-goturn/goturn.caffemodel").toString();
-            net = Dnn.readNetFromCaffe(protoFile, weightsFile);
+            net = dnnClass.getMethod("readNetFromCaffe", String.class, String.class).invoke(protoFile, weightsFile);
+            tracker = TrackerGOTURN.create(DeepNeuralNet.class.cast(net));
         } catch (CvException e) {
             return;
+        } catch (Exception e) {
+            return;
         }
-        Tracker tracker = TrackerGOTURN.create(net);
         assert(tracker != null);
     }
 
     public void testCreateTrackerNano() {
-        Net backbone;
-        Net neckhead;
+        Object backbone;
+        Object neckhead;
+        Tracker tracker;
         try {
             String backboneFile = new File(modelsDataPath, "dnn/onnx/models/nanotrack_backbone_sim_v2.onnx").toString();
             String neckheadFile = new File(modelsDataPath, "dnn/onnx/models/nanotrack_head_sim_v2.onnx").toString();
-            backbone = Dnn.readNet(backboneFile);
-            neckhead = Dnn.readNet(neckheadFile);
+            backbone = dnnClass.getMethod("readNet", String.class).invoke(backboneFile);
+            neckhead = dnnClass.getMethod("readNet", String.class).invoke(neckheadFile);
+            tracker = TrackerNano.create(DeepNeuralNet.class.cast(backbone), DeepNeuralNet.class.cast(neckhead));
         } catch (CvException e) {
             return;
+        } catch (Exception e) {
+            return;
         }
-        Tracker tracker = TrackerNano.create(backbone, neckhead);
         assert(tracker != null);
     }
 
     public void testCreateTrackerVit() {
-        Net net;
+        Object net;
+        Tracker tracker;
         try {
             String backboneFile = new File(modelsDataPath, "dnn/onnx/models/vitTracker.onnx").toString();
-            net = Dnn.readNet(backboneFile);
+            net = dnnClass.getMethod("readNet", String.class).invoke(backboneFile);
+            tracker = TrackerVit.create(DeepNeuralNet.class.cast(net));
         } catch (CvException e) {
             return;
+        } catch (Exception e) {
+            return;
         }
-        Tracker tracker = TrackerVit.create(net);
         assert(tracker != null);
     }
 

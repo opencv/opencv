@@ -3294,6 +3294,12 @@ protected:
     void writeFormat(FileStorage& fs) const;
 };
 
+class CV_EXPORTS_W_SIMPLE DeepNeuralNet
+{
+public:
+    virtual ~DeepNeuralNet() {}
+};
+
 enum struct Param {
     INT=0, BOOLEAN=1, REAL=2, STRING=3, MAT=4, MAT_VECTOR=5, ALGORITHM=6, FLOAT=7,
     UNSIGNED_INT=8, UINT64=9, UCHAR=11, SCALAR=12

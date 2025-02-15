@@ -223,16 +223,29 @@ Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params& parameters)
     return makePtr<TrackerVitImpl>(parameters);
 }
 
-Ptr<TrackerVit> TrackerVit::create(const dnn::Net& model, Scalar meanvalue, Scalar stdvalue, float tracking_score_threshold)
+Ptr<TrackerVit> TrackerVit::create(cv::DeepNeuralNet & model, Scalar meanvalue, Scalar stdvalue, float tracking_score_threshold)
 {
-    return makePtr<TrackerVitImpl>(model, meanvalue, stdvalue, tracking_score_threshold);
+    try
+    {
+        return makePtr<TrackerVitImpl>(dynamic_cast<dnn::Net&>(model), meanvalue, stdvalue, tracking_score_threshold);
+    }
+    catch (const std::bad_cast & e)
+    {
+        BAD_INST("Vit");
+    }
 }
 
 #else  // OPENCV_HAVE_DNN
-Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params& parameters)
+
+Ptr<TrackerVit> TrackerVit::create(const TrackerVit::Params&)
 {
-    CV_UNUSED(parameters);
-    CV_Error(Error::StsNotImplemented, "to use vittrack, the tracking module needs to be built with opencv_dnn !");
+    NOT_IMPL("Vit");
 }
+
+Ptr<TrackerVit> TrackerVit::create(cv::DeepNeuralNet &, Scalar, Scalar, float)
+{
+    NOT_IMPL("Vit");
+}
+
 #endif  // OPENCV_HAVE_DNN
 }

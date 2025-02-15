@@ -355,16 +355,29 @@ Ptr<TrackerNano> TrackerNano::create(const TrackerNano::Params& parameters)
     return makePtr<TrackerNanoImpl>(parameters);
 }
 
-Ptr<TrackerNano> TrackerNano::create(const dnn::Net& backbone, const dnn::Net& neckhead)
+Ptr<TrackerNano> TrackerNano::create(cv::DeepNeuralNet & backbone, cv::DeepNeuralNet & neckhead)
 {
-    return makePtr<TrackerNanoImpl>(backbone, neckhead);
+    try
+    {
+        return makePtr<TrackerNanoImpl>(dynamic_cast<dnn::Net&>(backbone), dynamic_cast<dnn::Net&>(neckhead));
+    }
+    catch (const std::bad_cast & e)
+    {
+        BAD_INST("Nano");
+    }
 }
 
 #else  // OPENCV_HAVE_DNN
-Ptr<TrackerNano> TrackerNano::create(const TrackerNano::Params& parameters)
+
+Ptr<TrackerNano> TrackerNano::create(const TrackerNano::Params&)
 {
-    CV_UNUSED(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use NanoTrack, the tracking module needs to be built with opencv_dnn !");
+    NOT_IMPL("Nano");
 }
+
+Ptr<TrackerNano> TrackerNano::create(cv::DeepNeuralNet &, cv::DeepNeuralNet &)
+{
+    NOT_IMPL("Nano");
+}
+
 #endif  // OPENCV_HAVE_DNN
 }
