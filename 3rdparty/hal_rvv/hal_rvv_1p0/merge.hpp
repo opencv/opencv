@@ -102,117 +102,86 @@ inline int merge8u(const uchar** src, uchar* dst, int len, int cn ) {
     return CV_HAL_ERROR_OK;
 }
 
-#if defined __GNUC__
-__attribute__((optimize("no-tree-vectorize")))
-#endif
 inline int merge16u(const ushort** src, ushort* dst, int len, int cn ) {
-    int k = cn % 4 ? cn % 4 : 4;
-    int i = 0;
-    int vl = __riscv_vsetvlmax_e16m1();
-    if( k == 1 )
+    int vl = 0;
+    if (cn == 1)
     {
         const ushort* src0 = src[0];
-        for( ; i <= len - vl; i += vl)
+        for (int i = 0; i < len; i += vl)
         {
-            auto a = __riscv_vle16_v_u16m1(src0 + i, vl);
-            __riscv_vsse16_v_u16m1(dst + i*cn, sizeof(ushort)*cn, a, vl);
+            vl = __riscv_vsetvl_e16m8(len - i);
+            __riscv_vse16_v_u16m8(dst + i, __riscv_vle16_v_u16m8(src0 + i, vl), vl);
         }
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( ; i < len; i++)
-            dst[i*cn] = src0[i];
     }
-    else if( k == 2 )
+    else if (cn == 2)
     {
         const ushort *src0 = src[0], *src1 = src[1];
-        for( ; i <= len - vl; i += vl)
+        for (int i = 0; i < len; i += vl)
         {
-            auto a = __riscv_vle16_v_u16m1(src0 + i, vl);
-            auto b = __riscv_vle16_v_u16m1(src1 + i, vl);
-            __riscv_vsse16_v_u16m1(dst + i*cn, sizeof(ushort)*cn, a, vl);
-            __riscv_vsse16_v_u16m1(dst + i*cn + 1, sizeof(ushort)*cn, b, vl);
-        }
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( ; i < len; i++ )
-        {
-            dst[i*cn] = src0[i];
-            dst[i*cn+1] = src1[i];
+            vl = __riscv_vsetvl_e16m4(len - i);
+            vuint16m4x2_t seg = __riscv_vcreate_v_u16m4x2(
+                __riscv_vle16_v_u16m4(src0 + i, vl),
+                __riscv_vle16_v_u16m4(src1 + i, vl)
+            );
+            __riscv_vsseg2e16_v_u16m4x2(dst + i * cn, seg, vl);
         }
     }
-    else if( k == 3 )
+    else if (cn == 3)
     {
         const ushort *src0 = src[0], *src1 = src[1], *src2 = src[2];
-        for( ; i <= len - vl; i += vl)
+        for (int i = 0; i < len; i += vl)
         {
-            auto a = __riscv_vle16_v_u16m1(src0 + i, vl);
-            auto b = __riscv_vle16_v_u16m1(src1 + i, vl);
-            auto c = __riscv_vle16_v_u16m1(src2 + i, vl);
-            __riscv_vsse16_v_u16m1(dst + i*cn, sizeof(ushort)*cn, a, vl);
-            __riscv_vsse16_v_u16m1(dst + i*cn + 1, sizeof(ushort)*cn, b, vl);
-            __riscv_vsse16_v_u16m1(dst + i*cn + 2, sizeof(ushort)*cn, c, vl);
+            vl = __riscv_vsetvl_e16m2(len - i);
+            vuint16m2x3_t seg = __riscv_vcreate_v_u16m2x3(
+                __riscv_vle16_v_u16m2(src0 + i, vl),
+                __riscv_vle16_v_u16m2(src1 + i, vl),
+                __riscv_vle16_v_u16m2(src2 + i, vl)
+            );
+            __riscv_vsseg3e16_v_u16m2x3(dst + i * cn, seg, vl);
         }
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( ; i < len; i++ )
+    }
+    else if (cn == 4)
+    {
+        const ushort *src0 = src[0], *src1 = src[1], *src2 = src[2], *src3 = src[3];
+        for (int i = 0; i < len; i += vl)
         {
-            dst[i*cn] = src0[i];
-            dst[i*cn+1] = src1[i];
-            dst[i*cn+2] = src2[i];
+            vl = __riscv_vsetvl_e16m2(len - i);
+            vuint16m2x4_t seg = __riscv_vcreate_v_u16m2x4(
+                __riscv_vle16_v_u16m2(src0 + i, vl),
+                __riscv_vle16_v_u16m2(src1 + i, vl),
+                __riscv_vle16_v_u16m2(src2 + i, vl),
+                __riscv_vle16_v_u16m2(src3 + i, vl)
+            );
+            __riscv_vsseg4e16_v_u16m2x4(dst + i * cn, seg, vl);
         }
     }
     else
     {
-        const ushort *src0 = src[0], *src1 = src[1], *src2 = src[2], *src3 = src[3];
-        for( ; i <= len - vl; i += vl)
+        int k = 0;
+        for (; k <= cn - 4; k += 4)
         {
-            auto a = __riscv_vle16_v_u16m1(src0 + i, vl);
-            auto b = __riscv_vle16_v_u16m1(src1 + i, vl);
-            auto c = __riscv_vle16_v_u16m1(src2 + i, vl);
-            auto d = __riscv_vle16_v_u16m1(src3 + i, vl);
-            __riscv_vsse16_v_u16m1(dst + i*cn, sizeof(ushort)*cn, a, vl);
-            __riscv_vsse16_v_u16m1(dst + i*cn + 1, sizeof(ushort)*cn, b, vl);
-            __riscv_vsse16_v_u16m1(dst + i*cn + 2, sizeof(ushort)*cn, c, vl);
-            __riscv_vsse16_v_u16m1(dst + i*cn + 3, sizeof(ushort)*cn, d, vl);
+            const ushort *src0 = src[k], *src1 = src[k + 1], *src2 = src[k + 2], *src3 = src[k + 3];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e16m2(len - i);
+                vuint16m2x4_t seg = __riscv_vcreate_v_u16m2x4(
+                    __riscv_vle16_v_u16m2(src0 + i, vl),
+                    __riscv_vle16_v_u16m2(src1 + i, vl),
+                    __riscv_vle16_v_u16m2(src2 + i, vl),
+                    __riscv_vle16_v_u16m2(src3 + i, vl)
+                );
+                __riscv_vssseg4e16_v_u16m2x4(dst + k + i * cn, cn * sizeof(ushort), seg, vl);
+            }
         }
-        #if defined(__clang__)
-        #pragma clang loop vectorize(disable)
-        #endif
-        for( ; i < len; i++ )
+        for (; k < cn; ++k)
         {
-            dst[i*cn] = src0[i];
-            dst[i*cn+1] = src1[i];
-            dst[i*cn+2] = src2[i];
-            dst[i*cn+3] = src3[i];
-        }
-    }
-    #if defined(__clang__)
-    #pragma clang loop vectorize(disable)
-    #endif
-    for( ; k < cn; k += 4 )
-    {
-        const uint16_t *src0 = src[k], *src1 = src[k+1], *src2 = src[k+2], *src3 = src[k+3];
-        i = 0;
-        for( ; i <= len - vl; i += vl)
-        {
-            auto a = __riscv_vle16_v_u16m1(src0 + i, vl);
-            auto b = __riscv_vle16_v_u16m1(src1 + i, vl);
-            auto c = __riscv_vle16_v_u16m1(src2 + i, vl);
-            auto d = __riscv_vle16_v_u16m1(src3 + i, vl);
-            __riscv_vsse16_v_u16m1(dst + k+i*cn, sizeof(ushort)*cn, a, vl);
-            __riscv_vsse16_v_u16m1(dst + k+i*cn + 1, sizeof(ushort)*cn, b, vl);
-            __riscv_vsse16_v_u16m1(dst + k+i*cn + 2, sizeof(ushort)*cn, c, vl);
-            __riscv_vsse16_v_u16m1(dst + k+i*cn + 3, sizeof(ushort)*cn, d, vl);
-        }
-        for( ; i < len; i++ )
-        {
-            dst[k+i*cn] = src0[i];
-            dst[k+i*cn+1] = src1[i];
-            dst[k+i*cn+2] = src2[i];
-            dst[k+i*cn+3] = src3[i];
+            const ushort* srcK = src[k];
+            for (int i = 0; i < len; i += vl)
+            {
+                vl = __riscv_vsetvl_e16m2(len - i);
+                vuint16m2_t seg = __riscv_vle16_v_u16m2(srcK + i, vl);
+                __riscv_vsse16_v_u16m2(dst + k + i * cn, cn * sizeof(ushort), seg, vl);
+            }
         }
     }
     return CV_HAL_ERROR_OK;
