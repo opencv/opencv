@@ -1294,7 +1294,6 @@ inline int hal_ni_pyrup(const uchar* src_data, size_t src_step, int src_width, i
 #define cv_hal_pyrup hal_ni_pyrup
 //! @endcond
 
-
 /**
    @brief Canny edge detector
    @param src_data Source image data

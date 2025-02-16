@@ -282,7 +282,7 @@ namespace pyramids
                     auto vec_src3 = rvv<float>::vloxei_T(src, vec_tabM, vl);
                     vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(float), vl);
                     auto vec_src4 = rvv<float>::vloxei_T(src, vec_tabM, vl);
-                    __riscv_vse32(row + x, __riscv_vfmadd(__riscv_vfadd(__riscv_vfadd(vec_src1, vec_src2, vl), vec_src3, vl), 4, 
+                    __riscv_vse32(row + x, __riscv_vfmadd(__riscv_vfadd(__riscv_vfadd(vec_src1, vec_src2, vl), vec_src3, vl), 4,
                                                           __riscv_vfadd(__riscv_vfadd(vec_src0, vec_src4, vl), __riscv_vfadd(vec_src2, vec_src2, vl), vl), vl), vl);
                 }
             }
