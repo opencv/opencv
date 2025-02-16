@@ -3528,7 +3528,11 @@ cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], in
         b[i+4] = dst[i].y;
     }
 
-    solve(A, B, X, solveMethod);
+    if (!solve(A, B, X, solveMethod) && (solveMethod == DECOMP_LU || solveMethod == DECOMP_CHOLESKY))
+    {
+        solve(A, B, X, DECOMP_QR);
+    }
+
     M.ptr<double>()[8] = 1.;
 
     return M;

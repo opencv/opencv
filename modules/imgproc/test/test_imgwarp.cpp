@@ -1765,5 +1765,33 @@ TEST(Imgproc_Remap, issue_23562)
     }
 }
 
+TEST(Imgproc_getPerspectiveTransform, issue_26916)
+{
+    float src_data[] = {320, 512, 960, 512, 0, 1024, 1280, 1024};
+    const Mat src_points(4, 2, CV_32FC1, src_data);
+
+    float dst_data[] = {0, 0, 1280, 0, 0, 1024, 1280, 1024};
+    const Mat dst_points(4, 2, CV_32FC1, dst_data);
+
+    Mat perspective_transform = getPerspectiveTransform(src_points, dst_points);
+    perspective_transform.convertTo(perspective_transform, CV_32FC1);
+
+    const Mat ones = Mat::ones(4, 1, CV_32FC1);
+
+    Mat homogeneous_src_points;
+    hconcat(src_points, ones, homogeneous_src_points);
+
+    Mat obtained_homogeneous_dst_points = (perspective_transform * homogeneous_src_points.t()).t();
+    for (int row = 0; row < 4; ++row)
+    {
+        obtained_homogeneous_dst_points.row(row) /= obtained_homogeneous_dst_points.at<float>(row, 2);
+    }
+
+    Mat expected_homogeneous_dst_points;
+    hconcat(dst_points, ones, expected_homogeneous_dst_points);
+
+    EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-3);
+}
+
 }} // namespace
 /* End of file. */
