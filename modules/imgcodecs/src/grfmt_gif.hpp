@@ -11,12 +11,12 @@
 namespace cv
 {
 
-enum GifOpMode
-{
-    GRFMT_GIF_Nothing = 0,
-    GRFMT_GIF_PreviousImage = 1,
-    GRFMT_GIF_Background = 2,
-    GRFMT_GIF_Cover = 3
+// See https://www.w3.org/Graphics/GIF/spec-gif89a.txt
+enum DisposalMethod {
+    NoDisposalSpecified      = 0,
+    DoNotDispose             = 1,
+    RestoreToBackgroundColor = 2,
+    RestoreToPrevious        = 3,
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -43,7 +43,6 @@ protected:
     int                 depth;
     int                 idx;
 
-    GifOpMode           opMode;
     bool                hasTransparentColor;
     uchar               transparentColor;
     int                 top, left, width, height;
@@ -66,7 +65,7 @@ protected:
         std::vector<uchar> prefix;
     };
 
-    void readExtensions();
+    DisposalMethod readExtensions();
     void code2pixel(Mat& img, int start, int k);
     bool lzwDecode();
     bool getFrameCount_();
