@@ -193,6 +193,7 @@ bool GifDecoder::readData(Mat &img) {
             hasRead = false;
         }
     }
+
     // release the memory
     img_.release();
 
