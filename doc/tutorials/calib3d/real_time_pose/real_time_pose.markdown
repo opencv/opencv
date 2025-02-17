@@ -14,8 +14,7 @@ Real Time pose estimation of a textured object {#tutorial_real_time_pose}
 
 Nowadays, augmented reality is one of the top research topic in computer vision and robotics fields.
 The most elemental problem in augmented reality is the estimation of the camera pose respect of an
-object in the case of computer vision area to do later some 3D rendering or in the case of robotics
-obtain an object pose in order to grasp it and do some manipulation. However, this is not a trivial
+object in the case of computer vision area to perform subsequent 3D rendering or, in robotics, to obtain an object pose for grasping and manipulation. However, this is not a trivial
 problem to solve due to the fact that the most common issue in image processing is the computational
 cost of applying a lot of algorithms or mathematical operations for solving a problem which is basic
 and immediately for humans.
@@ -23,7 +22,7 @@ and immediately for humans.
 Goal
 ----
 
-In this tutorial is explained how to build a real time application to estimate the camera pose in
+This tutorial explains how to build a real-time application to estimate the camera pose in
 order to track a textured object with six degrees of freedom given a 2D image and its 3D textured
 model.
 
@@ -74,7 +73,7 @@ The tutorial consists of two main programs:
 
 -#  **Model registration**
 
-    This application is exclusive to whom don't have a 3D textured model of the object to be detected.
+    This application is intended for users who do not have a 3D textured model of the object to be detected.
     You can use this program to create your own textured 3D model. This program only works for planar
     objects, then if you want to model an object with complex shape you should use a sophisticated
     software to create it.
@@ -82,7 +81,7 @@ The tutorial consists of two main programs:
     The application needs an input image of the object to be registered and its 3D mesh. We have also
     to provide the intrinsic parameters of the camera with which the input image was taken. All the
     files need to be specified using the absolute path or the relative one from your application’s
-    working directory. If none files are specified the program will try to open the provided default
+    working directory. If no files are specified the program will try to open the provided default
     parameters.
 
     The application starts up extracting the ORB features and descriptors from the input image and
@@ -97,7 +96,7 @@ The tutorial consists of two main programs:
 
 -#  **Model detection**
 
-    The aim of this application is estimate in real time the object pose given its 3D textured model.
+    The aim of this application is to estimate in real time the object pose given its 3D textured model.
 
     The application starts up loading the 3D textured model in YAML file format with the same
     structure explained in the model registration program. From the scene, the ORB features and
@@ -106,7 +105,7 @@ The tutorial consists of two main programs:
     Using the found matches along with @ref cv::solvePnPRansac function the `R` and `t` of
     the camera are computed. Finally, a KalmanFilter is applied in order to reject bad poses.
 
-    In the case that you compiled OpenCV with the samples, you can find it in opencv/build/bin/cpp-tutorial-pnp_detection\`.
+    In the case that you compiled OpenCV with the samples, you can find it in opencv/build/bin/cpp-tutorial-pnp_detection`.
     Then you can run the application and change some parameters:
     @code{.cpp}
     This program shows how to detect an object given its 3D textured model. You can choose to use a recorded video or the webcam.
@@ -326,7 +325,7 @@ Here is explained in detail the code for the real time application:
     descriptors, match using *two Nearest Neighbour* the extracted descriptors with the given model
     descriptors and vice versa. Then, a ratio test is applied to the two direction matches in order to
     remove these matches which its distance ratio between the first and second best match is larger
-    than a given threshold. Finally, a symmetry test is applied in order the remove non symmetrical
+    than a given threshold. Finally, a symmetry test is applied in order to remove non symmetrical
     matches.
     @code{.cpp}
     void RobustMatcher::robustMatch( const cv::Mat& frame, std::vector<cv::DMatch>& good_matches,
@@ -489,7 +488,7 @@ Here is explained in detail the code for the real time application:
 
     }
     @endcode
-    In the following code are the 3th and 4th steps of the main algorithm. The first, calling the
+    In the following code are the 3rd and 4th steps of the main algorithm. The first, calling the
     above function and the second taking the output inliers vector from RANSAC to get the 2D scene
     points for drawing purpose. As seen in the code we must be sure to apply RANSAC if we have
     matches, in the other case, the function @ref cv::solvePnPRansac crashes due to any OpenCV *bug*.
