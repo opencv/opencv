@@ -3503,13 +3503,14 @@ cv::Matx23d cv::getRotationMatrix2D_(Point2f center, double angle, double scale)
  * \  0  0  0 x3 y3  1 -x3*v3 -y3*v3 / \c21/ \v3/
  *
  * where:
- *   cij - matrix coefficients, c22 = 1
+ *   cij - matrix coefficients, c22 = 1 or c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
  */
 cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod)
 {
     CV_INSTRUMENT_REGION();
 
-    Mat M(3, 3, CV_64F), X(8, 1, CV_64F, M.ptr());
+    // try c22 = 1
+    Mat M(3, 3, CV_64F), X8(8, 1, CV_64F, M.ptr());
     double a[8][8], b[8];
     Mat A(8, 8, CV_64F, a), B(8, 1, CV_64F, b);
 
@@ -3528,12 +3529,24 @@ cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], in
         b[i+4] = dst[i].y;
     }
 
-    if (!solve(A, B, X, solveMethod) && (solveMethod == DECOMP_LU || solveMethod == DECOMP_CHOLESKY))
+    if (solve(A, B, X8, solveMethod) && norm(A * X8, B) < 1e-8)
     {
-        solve(A, B, X, DECOMP_QR);
+        M.ptr<double>()[8] = 1.;
+
+        return M;
     }
 
-    M.ptr<double>()[8] = 1.;
+    // c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
+    hconcat(A, -B, A);
+
+    Mat AtA;
+    mulTransposed(A, AtA, true);
+
+    Mat D, U;
+    eigen(AtA, D, U);
+
+    Mat X9(1, 9, CV_64F, M.ptr());
+    U.row(8).copyTo(X9);
 
     return M;
 }
