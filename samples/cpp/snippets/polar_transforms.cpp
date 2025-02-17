@@ -11,7 +11,8 @@ int main( int argc, char** argv )
     Mat log_polar_img, lin_polar_img, recovered_log_polar, recovered_lin_polar_img;
 
     CommandLineParser parser(argc, argv, "{@input|0| camera device number or video file path}");
-    parser.about("\nThis program illustrates usage of Linear-Polar and Log-Polar image transforms\n");
+    parser.about("\nThis program illustrates usage of warpPolar for both linear and log-polar transforms.\n"
+                 "Note: The old linearPolar and logPolar functions are deprecated and replaced by warpPolar.\n");
     parser.printMessage();
     std::string arg = parser.get<std::string>("@input");
 
@@ -48,9 +49,9 @@ int main( int argc, char** argv )
         double maxRadius = 0.7*min(center.y, center.x);
 
         //! [InverseMap]
-        // direct transform
-        warpPolar(src, lin_polar_img, Size(),center, maxRadius, flags);                     // linear Polar
-        warpPolar(src, log_polar_img, Size(),center, maxRadius, flags + WARP_POLAR_LOG);    // semilog Polar
+        // direct transform using warpPolar (replacing deprecated functions)
+        warpPolar(src, lin_polar_img, Size(),center, maxRadius, flags);                     // Linear-polar transform
+        warpPolar(src, log_polar_img, Size(),center, maxRadius, flags + WARP_POLAR_LOG);    // Log-polar transform
         // inverse transform
         warpPolar(lin_polar_img, recovered_lin_polar_img, src.size(), center, maxRadius, flags + WARP_INVERSE_MAP);
         warpPolar(log_polar_img, recovered_log_polar, src.size(), center, maxRadius, flags + WARP_POLAR_LOG + WARP_INVERSE_MAP);
@@ -62,7 +63,7 @@ int main( int argc, char** argv )
             dst = log_polar_img;
         else
             dst = lin_polar_img;
-        //get a point from the polar image
+        // get a point from the polar image
         int rho = cvRound(dst.cols * 0.75);
         int phi = cvRound(dst.rows / 2.0);
 
