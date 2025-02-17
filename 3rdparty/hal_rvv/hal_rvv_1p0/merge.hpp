@@ -17,6 +17,30 @@ namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_merge64s
 #define cv_hal_merge64s cv::cv_hal_rvv::merge64s
 
+#if defined __clang__ && __clang_major__ < 18
+#define OPENCV_HAL_IMPL_RVV_VCREATE_x2(suffix, width, v0, v1) \
+    __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x2(seg, 0, v0); \
+    seg = __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x2(seg, 1, v1);
+
+#define OPENCV_HAL_IMPL_RVV_VCREATE_x3(suffix, width, v0, v1, v2) \
+    __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x3(seg, 0, v0); \
+    seg = __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x3(seg, 1, v1); \
+    seg = __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x3(seg, 2, v2);
+
+#define OPENCV_HAL_IMPL_RVV_VCREATE_x4(suffix, width, v0, v1, v2, v3) \
+    __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x4(seg, 0, v0); \
+    seg = __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x4(seg, 1, v1); \
+    seg = __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x4(seg, 2, v2); \
+    seg = __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x4(seg, 3, v3);
+
+#define __riscv_vcreate_v_u8m4x2(v0, v1) OPENCV_HAL_IMPL_RVV_VCREATE_x2(u8, 4, v0, v1)
+#define __riscv_vcreate_v_u8m2x3(v0, v1, v2) OPENCV_HAL_IMPL_RVV_VCREATE_x3(u8, 2, v0, v1, v2)
+#define __riscv_vcreate_v_u8m2x4(v0, v1, v2, v3) OPENCV_HAL_IMPL_RVV_VCREATE_x4(u8, 2, v0, v1, v2, v3)
+#define __riscv_vcreate_v_u16m4x2(v0, v1) OPENCV_HAL_IMPL_RVV_VCREATE_x2(u16, 4, v0, v1)
+#define __riscv_vcreate_v_u16m2x3(v0, v1, v2) OPENCV_HAL_IMPL_RVV_VCREATE_x3(u16, 2, v0, v1, v2)
+#define __riscv_vcreate_v_u16m2x4(v0, v1, v2, v3) OPENCV_HAL_IMPL_RVV_VCREATE_x4(u16, 2, v0, v1, v2, v3)
+#endif  // clang < 18
+
 inline int merge8u(const uchar** src, uchar* dst, int len, int cn ) {
     int vl = 0;
     if (cn == 1)
