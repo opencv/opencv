@@ -232,16 +232,22 @@ struct NormL1_SIMD<ushort, int> {
 #if CV_RVV
         s = normL1_rvv<ushort, int>(src, n, j);
 #else
-        v_uint64 r0 = vx_setzero_u64(), r1 = vx_setzero_u64();
-        v_uint16 one = vx_setall_u16(1);
+        v_uint32 r00 = vx_setzero_u32(), r01 = vx_setzero_u32();
+        v_uint32 r10 = vx_setzero_u32(), r11 = vx_setzero_u32();
         for (; j<= n - 2 * VTraits<v_uint16>::vlanes(); j += 2 * VTraits<v_uint16>::vlanes()) {
             v_uint16 v0 = vx_load(src + j);
-            r0 = v_dotprod_expand_fast(v0, one, r0);
+            v_uint32 v00, v01;
+            v_expand(v0, v00, v01);
+            r00 = v_add(r00, v00);
+            r01 = v_add(r01, v01);
 
             v_uint16 v1 = vx_load(src + j + VTraits<v_uint16>::vlanes());
-            r1 = v_dotprod_expand_fast(v1, one, r1);
+            v_uint32 v10, v11;
+            v_expand(v1, v10, v11);
+            r10 = v_add(r10, v10);
+            r11 = v_add(r11, v11);
         }
-        s += (int)v_reduce_sum(v_add(r0, r1));
+        s += (int)v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
 #endif
         for (; j < n; j++) {
             s += src[j];
@@ -258,16 +264,22 @@ struct NormL1_SIMD<short, int> {
 #if CV_RVV
         s = normL1_rvv<short, int>(src, n, j);
 #else
-        v_uint64 r0 = vx_setzero_u64(), r1 = vx_setzero_u64();
-        v_uint16 one = vx_setall_u16(1);
+        v_uint32 r00 = vx_setzero_u32(), r01 = vx_setzero_u32();
+        v_uint32 r10 = vx_setzero_u32(), r11 = vx_setzero_u32();
         for (; j<= n - 2 * VTraits<v_int16>::vlanes(); j += 2 * VTraits<v_int16>::vlanes()) {
             v_uint16 v0 = v_abs(vx_load(src + j));
-            r0 = v_dotprod_expand_fast(v0, one, r0);
+            v_uint32 v00, v01;
+            v_expand(v0, v00, v01);
+            r00 = v_add(r00, v00);
+            r01 = v_add(r01, v01);
 
             v_uint16 v1 = v_abs(vx_load(src + j + VTraits<v_int16>::vlanes()));
-            r1 = v_dotprod_expand_fast(v1, one, r1);
+            v_uint32 v10, v11;
+            v_expand(v1, v10, v11);
+            r10 = v_add(r10, v10);
+            r11 = v_add(r11, v11);
         }
-        s += (int)v_reduce_sum(v_add(r0, r1));
+        s += (int)v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
 #endif
         for (; j < n; j++) {
             s += saturate_cast<int>(cv_abs(src[j]));
