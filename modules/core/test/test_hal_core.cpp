@@ -154,7 +154,7 @@ TEST_P(mat_decomp, accuracy)
 {
     const int depth = std::get<0>(GetParam());
     const int nfunc = std::get<1>(GetParam());
-    const int size = std::get<1>(GetParam());
+    const int size = std::get<2>(GetParam());
 
 #if CV_LASX
     double eps = depth == CV_32F ? 1e-5 : 2e-10;
