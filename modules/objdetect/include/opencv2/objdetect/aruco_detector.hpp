@@ -285,6 +285,16 @@ public:
                           const DetectorParameters &detectorParams = DetectorParameters(),
                           const RefineParameters& refineParams = RefineParameters());
 
+    /** @brief ArucoDetector constructor for multiple dictionaries
+     *
+     * @param dictionaries indicates the type of markers that will be searched
+     * @param detectorParams marker detection parameters
+     * @param refineParams marker refine detection parameters
+     */
+    CV_WRAP ArucoDetector(const std::vector<Dictionary> &dictionaries,
+                          const DetectorParameters &detectorParams = DetectorParameters(),
+                          const RefineParameters& refineParams = RefineParameters());
+
     /** @brief Basic marker detection
      *
      * @param image input image
@@ -296,8 +306,10 @@ public:
      * The identifiers have the same order than the markers in the imgPoints array.
      * @param rejectedImgPoints contains the imgPoints of those squares whose inner code has not a
      * correct codification. Useful for debugging purposes.
+     * @param dictIndices vector of dictionary indices for each detected marker. Use getDictionaries() to get the
+     * list of corresponding dictionaries.
      *
-     * Performs marker detection in the input image. Only markers included in the specific dictionary
+     * Performs marker detection in the input image. Only markers included in the specific dictionaries
      * are searched. For each detected marker, it returns the 2D position of its corner in the image
      * and its corresponding identifier.
      * Note that this function does not perform pose estimation.
@@ -306,7 +318,7 @@ public:
      * @sa undistort, estimatePoseSingleMarkers,  estimatePoseBoard
      */
     CV_WRAP void detectMarkers(InputArray image, OutputArrayOfArrays corners, OutputArray ids,
-                               OutputArrayOfArrays rejectedImgPoints = noArray()) const;
+                               OutputArrayOfArrays rejectedImgPoints = noArray(), OutputArray dictIndices = noArray()) const;
 
     /** @brief Refine not detected markers based on the already detected and the board layout
      *
@@ -329,6 +341,8 @@ public:
      * If camera parameters and distortion coefficients are provided, missing markers are reprojected
      * using projectPoint function. If not, missing marker projections are interpolated using global
      * homography, and all the marker corners in the board must have the same Z coordinate.
+     * @note This function assumes that the board only contains markers from one dictionary, so only the
+     * first configured dictionary is used.
      */
     CV_WRAP void refineDetectedMarkers(InputArray image, const Board &board,
                                        InputOutputArrayOfArrays detectedCorners,
@@ -336,8 +350,12 @@ public:
                                        InputArray cameraMatrix = noArray(), InputArray distCoeffs = noArray(),
                                        OutputArray recoveredIdxs = noArray()) const;
 
-    CV_WRAP const Dictionary& getDictionary() const;
-    CV_WRAP void setDictionary(const Dictionary& dictionary);
+    CV_WRAP const Dictionary& getDictionary(size_t index = 0) const;
+    CV_WRAP void setDictionary(const Dictionary& dictionary, size_t index = 0);
+    CV_WRAP const std::vector<Dictionary>& getDictionaries() const;
+    CV_WRAP void setDictionaries(const std::vector<Dictionary>& dictionaries);
+    CV_WRAP void addDictionary(const Dictionary& dictionary);
+    CV_WRAP void removeDictionary(size_t index);
 
     CV_WRAP const DetectorParameters& getDetectorParameters() const;
     CV_WRAP void setDetectorParameters(const DetectorParameters& detectorParameters);
