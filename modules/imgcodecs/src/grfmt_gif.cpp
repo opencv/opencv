@@ -65,6 +65,8 @@ bool GifDecoder::readHeader() {
         for (int i = 0; i < 3 * globalColorTableSize; i++) {
             globalColorTable[i] = (uchar)m_strm.getByte();
         }
+        CV_CheckGE(bgColor, 0,                    "bgColor should be >= 0");
+        CV_CheckLT(bgColor, globalColorTableSize, "bgColor should be < globalColorTableSize");
     }
 
     // get the frame count
@@ -79,7 +81,8 @@ bool GifDecoder::readData(Mat &img) {
         lastImage.copyTo(img);
         return true;
     }
-    const DisposalMethod disposalMethod = readExtensions();
+
+    const GifDisposeMethod disposalMethod = readExtensions();
 
     // Image separator
     CV_Assert(!(m_strm.getByte()^0x2C));
@@ -95,15 +98,14 @@ bool GifDecoder::readData(Mat &img) {
     if (lastImage.empty())
     {
         Scalar background(0.0, 0.0, 0.0, 0.0);
-
-        if (( 0 <= bgColor) && ( bgColor < globalColorTableSize))
+        if (bgColor < globalColorTableSize)
         {
-            background = cv::Scalar( globalColorTable[bgColor * 3 + 2], // B
-                                     globalColorTable[bgColor * 3 + 1], // G
-                                     globalColorTable[bgColor * 3 + 0], // R
-                                     0);                                // A
+            background = Scalar( globalColorTable[bgColor * 3 + 2], // B
+                                 globalColorTable[bgColor * 3 + 1], // G
+                                 globalColorTable[bgColor * 3 + 0], // R
+                                 0);                                // A
         }
-        img_ = cv::Mat(m_height, m_width, CV_8UC4, background);
+        img_ = Mat(m_height, m_width, CV_8UC4, background);
     } else {
         img_ = lastImage;
     }
@@ -112,22 +114,26 @@ bool GifDecoder::readData(Mat &img) {
     Mat restore;
     switch(disposalMethod)
     {
-        case NoDisposalSpecified:
-        case DoNotDispose:
+        case GIF_DISPOSE_NA:
+        case GIF_DISPOSE_NONE:
             // Do nothing
             break;
-        case RestoreToBackgroundColor:
-            if (globalColorTableSize) {
-                restore = cv::Mat(width, height, CV_8UC4,
-                                  cv::Scalar(
-                                      globalColorTable[bgColor * 3 + 2], // B
-                                      globalColorTable[bgColor * 3 + 1], // G
-                                      globalColorTable[bgColor * 3 + 0], // R
-                                      0));                               // A
+        case GIF_DISPOSE_RESTORE_BACKGROUND:
+            if (bgColor < globalColorTableSize)
+            {
+                const Scalar background = Scalar( globalColorTable[bgColor * 3 + 2], // B
+                                                  globalColorTable[bgColor * 3 + 1], // G
+                                                  globalColorTable[bgColor * 3 + 0], // R
+                                                  0);                                // A
+                restore = Mat(width, height, CV_8UC4, background);
+            }
+            else
+            {
+                CV_LOG_WARNING(NULL, cv::format("bgColor(%d) is out of globalColorTableSize(%d)", bgColor, globalColorTableSize));
             }
             break;
-        case RestoreToPrevious:
-            restore = cv::Mat(img_, cv::Rect(left,top,width,height)).clone();
+        case GIF_DISPOSE_RESTORE_PREVIOUS:
+            restore = Mat(img_, cv::Rect(left,top,width,height)).clone();
             break;
         default:
             CV_Assert(false);
@@ -200,7 +206,7 @@ bool GifDecoder::readData(Mat &img) {
     // update lastImage to dispose current frame.
     if(!restore.empty())
     {
-        cv::Mat roi = cv::Mat(lastImage, cv::Rect(left,top,width,height));
+        Mat roi = Mat(lastImage, cv::Rect(left,top,width,height));
         restore.copyTo(roi);
     }
 
@@ -227,9 +233,9 @@ bool GifDecoder::nextPage() {
     }
 }
 
-DisposalMethod GifDecoder::readExtensions() {
+GifDisposeMethod GifDecoder::readExtensions() {
     uchar len;
-    DisposalMethod disposalMethod = DisposalMethod::NoDisposalSpecified;
+    GifDisposeMethod disposalMethod = GifDisposeMethod::GIF_DISPOSE_NA;
     while (!(m_strm.getByte() ^ 0x21)) {
         auto extensionType = (uchar)m_strm.getByte();
 
@@ -240,7 +246,7 @@ DisposalMethod GifDecoder::readExtensions() {
             len = (uchar)m_strm.getByte();
             CV_Assert(len == 4);
             auto flags = (uchar)m_strm.getByte();
-            disposalMethod = static_cast<DisposalMethod>( ( flags >> 2 ) & 0x3 );
+            disposalMethod = static_cast<GifDisposeMethod>( ( flags >> 2 ) & 0x3 );
             hasTransparentColor = flags & 0x01;
             m_animation.durations.push_back(m_strm.getWord() * 10); // delay time
             transparentColor = (uchar)m_strm.getByte();
@@ -676,7 +682,7 @@ bool GifEncoder::writeFrame(const Mat &img) {
     strm.putByte(0xF9); // graphic control label
     strm.putByte(0x04); // block size, fixed number
     // flag is a packed field, and the first 3 bits are reserved
-    uchar flag = DoNotDispose << 2;
+    uchar flag = GifDisposeMethod::GIF_DISPOSE_NONE << 2;
     if (criticalTransparency)
         flag |= 1;
     strm.putByte(flag);

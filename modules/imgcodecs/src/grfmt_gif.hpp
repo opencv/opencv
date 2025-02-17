@@ -12,11 +12,11 @@ namespace cv
 {
 
 // See https://www.w3.org/Graphics/GIF/spec-gif89a.txt
-enum DisposalMethod {
-    NoDisposalSpecified      = 0,
-    DoNotDispose             = 1,
-    RestoreToBackgroundColor = 2,
-    RestoreToPrevious        = 3,
+enum GifDisposeMethod {
+    GIF_DISPOSE_NA                 = 0,
+    GIF_DISPOSE_NONE               = 1,
+    GIF_DISPOSE_RESTORE_BACKGROUND = 2,
+    GIF_DISPOSE_RESTORE_PREVIOUS   = 3,
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -65,7 +65,7 @@ protected:
         std::vector<uchar> prefix;
     };
 
-    DisposalMethod readExtensions();
+    GifDisposeMethod readExtensions();
     void code2pixel(Mat& img, int start, int k);
     bool lzwDecode();
     bool getFrameCount_();
