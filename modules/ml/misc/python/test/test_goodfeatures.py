@@ -17,7 +17,7 @@ class TestGoodFeaturesToTrack_test(NewOpenCVTests):
 
         results = dict([(t, cv.goodFeaturesToTrack(arr, numPoints, t, 2, useHarrisDetector=True)) for t in threshes])
         # Check that GoodFeaturesToTrack has not modified input image
-        self.assertTrue(arr.tostring() == original.tostring())
+        self.assertTrue(arr.tobytes() == original.tobytes())
         # Check for repeatability
         for i in range(1):
             results2 = dict([(t, cv.goodFeaturesToTrack(arr, numPoints, t, 2, useHarrisDetector=True)) for t in threshes])
