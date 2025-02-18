@@ -58,7 +58,7 @@ class NewOpenCVTests(unittest.TestCase):
 
     def hashimg(self, im):
         """ Compute a hash for an image, useful for image comparisons """
-        return hashlib.md5(im.tostring()).hexdigest()
+        return hashlib.md5(im.tobytes()).hexdigest()
 
     if sys.version_info[:2] == (2, 6):
         def assertLess(self, a, b, msg=None):
