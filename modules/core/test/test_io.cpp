@@ -605,6 +605,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         cv::Mat _2d_out_u32, _2d_in_u32;
         cv::Mat _2d_out_i64, _2d_in_i64;
         cv::Mat _2d_out_u64, _2d_in_u64;
+        cv::Mat _2d_out_bool, _2d_in_bool;
         cv::Mat _nd_out, _nd_in;
         cv::Mat _rd_out(8, 16, CV_64FC1), _rd_in;
 
@@ -625,6 +626,10 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             /* a normal mat u64 */
             _2d_out_u64 = Mat(10, 20, CV_64UC3);
             cv::randu(_2d_out_u64, 0ULL, 4503599627370495ULL);
+
+            /* a normal mat bool */
+            _2d_out_bool = Mat(10, 20, CV_BoolC3);
+            cv::randu(_2d_out_bool, 0U, 2U);
 
             /* a 4d mat */
             const int Size[] = {4, 4, 4, 4};
@@ -660,6 +665,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             fs << "normal_2d_mat_u32" << _2d_out_u32;
             fs << "normal_2d_mat_i64" << _2d_out_i64;
             fs << "normal_2d_mat_u64" << _2d_out_u64;
+            fs << "normal_2d_mat_bool" << _2d_out_bool;
             fs << "normal_nd_mat" << _nd_out;
             fs << "empty_2d_mat"  << _em_out;
             fs << "random_mat"    << _rd_out;
@@ -702,7 +708,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                 }
             }
             std::cout << "Storage size: " << sz << std::endl;
-            EXPECT_LE(sz, (size_t)24000);
+            EXPECT_LE(sz, (size_t)25000);
         }
         {   /* read */
             cv::FileStorage fs(name, cv::FileStorage::READ + (useMemory ? cv::FileStorage::MEMORY : 0));
@@ -713,6 +719,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             fs["normal_2d_mat_u32"] >> _2d_in_u32;
             fs["normal_2d_mat_i64"] >> _2d_in_i64;
             fs["normal_2d_mat_u64"] >> _2d_in_u64;
+            fs["normal_2d_mat_bool"] >> _2d_in_bool;
             fs["normal_nd_mat"] >> _nd_in;
             fs["random_mat"]    >> _rd_in;
 
@@ -752,6 +759,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         EXPECT_MAT_NEAR(_2d_in_u32, _2d_out_u32, 0);
         EXPECT_MAT_NEAR(_2d_in_i64, _2d_out_i64, 0);
         EXPECT_MAT_NEAR(_2d_in_u64, _2d_out_u64, 0);
+        EXPECT_MAT_NEAR(_2d_in_bool, _2d_out_bool, 0);
 
         ASSERT_EQ(_nd_in.rows   , _nd_out.rows);
         ASSERT_EQ(_nd_in.cols   , _nd_out.cols);
