@@ -61,7 +61,7 @@ enum COLORCHART
  *
  */
 
-class CV_EXPORTS_W CChecker
+class CV_EXPORTS_W CChecker: public Algorithm
 {
 public:
     CChecker() {}
@@ -118,7 +118,7 @@ public:
  *  the checker is always in the same position, even if the image changes, so
  *  the drawing will always take place at the same position.
 */
-class CV_EXPORTS_W CCheckerDraw
+class CV_EXPORTS_W CCheckerDraw : public Algorithm
 {
 
 public:
