@@ -156,7 +156,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         gold_corners = np.array([[offset, offset],[marker_size+offset-1.0,offset],
                                  [marker_size+offset-1.0,marker_size+offset-1.0],
                                  [offset, marker_size+offset-1.0]], dtype=np.float32)
-        corners, ids, rejected = aruco_detector.detectMarkers(img_marker)
+        corners, ids, rejected, _ = aruco_detector.detectMarkers(img_marker)
 
         self.assertEqual(1, len(ids))
         self.assertEqual(id, ids[0])
@@ -171,7 +171,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         board = cv.aruco.GridBoard(board_size, 5.0, 1.0, aruco_dict)
         board_image = board.generateImage((board_size[0]*50, board_size[1]*50), marginSize=10)
 
-        corners, ids, rejected = aruco_detector.detectMarkers(board_image)
+        corners, ids, rejected, _ = aruco_detector.detectMarkers(board_image)
         self.assertEqual(board_size[0]*board_size[1], len(ids))
 
         part_corners, part_ids, part_rejected = corners[:-1], ids[:-1], list(rejected)
@@ -203,7 +203,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         gold_corners = np.array(board.getObjPoints())[:, :, 0:2]*cell_size
 
         # detect corners
-        markerCorners, markerIds, _ = aruco_detector.detectMarkers(image)
+        markerCorners, markerIds, _, _ = aruco_detector.detectMarkers(image)
 
         # test refine
         rejected = [markerCorners[-1]]
@@ -457,6 +457,31 @@ class aruco_objdetect_test(NewOpenCVTests):
         points2 = np.array(detected_points)
         with self.assertRaises(Exception):
             img = cv.aruco.drawDetectedDiamonds(img, points2, borderColor=255)
+
+    def test_multi_dict_arucodetector(self):
+        aruco_params = cv.aruco.DetectorParameters()
+        aruco_dicts = [
+                cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_250),
+                cv.aruco.getPredefinedDictionary(cv.aruco.DICT_5X5_250)
+            ]
+        aruco_detector = cv.aruco.ArucoDetector(aruco_dicts, aruco_params)
+        id = 2
+        marker_size = 100
+        offset = 10
+        img_marker1 = cv.aruco.generateImageMarker(aruco_dicts[0], id, marker_size, aruco_params.markerBorderBits)
+        img_marker1 = np.pad(img_marker1, pad_width=offset, mode='constant', constant_values=255)
+        img_marker2 = cv.aruco.generateImageMarker(aruco_dicts[1], id, marker_size, aruco_params.markerBorderBits)
+        img_marker2 = np.pad(img_marker2, pad_width=offset, mode='constant', constant_values=255)
+        img_markers = np.concatenate((img_marker1, img_marker2), axis=1)
+
+        corners, ids, rejected, dictIndices = aruco_detector.detectMarkers(img_markers)
+
+        self.assertEqual(2, len(ids))
+        self.assertEqual(id, ids[0])
+        self.assertEqual(id, ids[1])
+        self.assertEqual(2, len(dictIndices))
+        self.assertEqual(0, dictIndices[0])
+        self.assertEqual(1, dictIndices[1])
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

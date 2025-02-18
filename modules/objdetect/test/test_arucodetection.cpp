@@ -640,6 +640,7 @@ TEST(CV_ArucoDetectMarkers, regression_contour_24220)
 
 TEST(CV_ArucoMultiDict, addRemoveDictionary)
 {
+    // using default constructor that pre-configures DICT_4X4_50
     aruco::ArucoDetector detector;
     detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_5X5_100));
     const auto& dicts = detector.getDictionaries();
@@ -649,11 +650,10 @@ TEST(CV_ArucoMultiDict, addRemoveDictionary)
     detector.removeDictionary(0);
     ASSERT_EQ(dicts.size(), 1ul);
     EXPECT_EQ(dicts[0].markerSize, 5);
-    detector.removeDictionary(0);
-    EXPECT_EQ(dicts.size(), 0ul);
     detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_6X6_100));
     detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_7X7_250));
     detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_APRILTAG_25h9));
+    detector.removeDictionary(0);
     ASSERT_EQ(dicts.size(), 3ul);
     EXPECT_EQ(dicts[0].markerSize, 6);
     EXPECT_EQ(dicts[1].markerSize, 7);
@@ -672,27 +672,17 @@ TEST(CV_ArucoMultiDict, addRemoveDictionary)
 TEST(CV_ArucoMultiDict, noDict)
 {
     aruco::ArucoDetector detector;
-    detector.removeDictionary(0);
-
-    vector<vector<Point2f> > markerCorners;
-    vector<int> markerIds;
-
-    string img_path = cvtest::findDataFile("aruco/singlemarkersoriginal.jpg");
-    Mat image = imread(img_path);
-
-    detector.detectMarkers(image, markerCorners, markerIds);
-
-    EXPECT_EQ(markerIds.size(), 0u);
+    EXPECT_THROW({
+        detector.removeDictionary(0);
+    }, Exception);
 }
 
 
 TEST(CV_ArucoMultiDict, multiMarkerDetection)
 {
-    aruco::ArucoDetector detector;
-    detector.removeDictionary(0);
-
     const int markerSidePixels = 100;
     const int imageSize = markerSidePixels * 2 + 3 * (markerSidePixels / 2);
+    vector<aruco::Dictionary> usedDictionaries;
 
     // draw synthetic image
     Mat img = Mat(imageSize, imageSize, CV_8UC1, Scalar::all(255));
@@ -702,17 +692,17 @@ TEST(CV_ArucoMultiDict, multiMarkerDetection)
             int id = y * 2 + x;
             int dictId = x * 4 + y * 8;
             auto dict = aruco::getPredefinedDictionary(dictId);
-            detector.addDictionary(dict);
+            usedDictionaries.push_back(dict);
             aruco::generateImageMarker(dict, id, markerSidePixels, marker);
-            Point2f firstCorner =
-                Point2f(markerSidePixels / 2.f + x * (1.5f * markerSidePixels),
+            Point2f firstCorner(markerSidePixels / 2.f + x * (1.5f * markerSidePixels),
                         markerSidePixels / 2.f + y * (1.5f * markerSidePixels));
-            Mat aux = img.colRange((int)firstCorner.x, (int)firstCorner.x + markerSidePixels)
-                          .rowRange((int)firstCorner.y, (int)firstCorner.y + markerSidePixels);
+            Mat aux = img(Rect((int)firstCorner.x, (int)firstCorner.y, markerSidePixels, markerSidePixels));
             marker.copyTo(aux);
         }
     }
     img.convertTo(img, CV_8UC3);
+
+    aruco::ArucoDetector detector(usedDictionaries);
 
     vector<vector<Point2f> > markerCorners;
     vector<int> markerIds;
