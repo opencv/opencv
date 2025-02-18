@@ -11,8 +11,7 @@ int main( int argc, char** argv )
     Mat log_polar_img, lin_polar_img, recovered_log_polar, recovered_lin_polar_img;
 
     CommandLineParser parser(argc, argv, "{@input|0| camera device number or video file path}");
-    parser.about("\nThis program illustrates usage of warpPolar for both linear and log-polar transforms.\n"
-                 "Note: The old linearPolar and logPolar functions are deprecated and replaced by warpPolar.\n");
+    parser.about("\nThis program illustrates usage of warpPolar for both linear and log-polar transforms.\n");
     parser.printMessage();
     std::string arg = parser.get<std::string>("@input");
 
