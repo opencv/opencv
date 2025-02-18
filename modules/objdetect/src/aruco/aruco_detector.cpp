@@ -654,7 +654,9 @@ struct ArucoDetector::ArucoDetectorImpl {
 
     ArucoDetectorImpl(const std::vector<Dictionary>&_dictionaries, const DetectorParameters &_detectorParams,
                       const RefineParameters& _refineParams): dictionaries(_dictionaries),
-                      detectorParams(_detectorParams), refineParams(_refineParams) {}
+                      detectorParams(_detectorParams), refineParams(_refineParams) {
+                          CV_Assert(!dictionaries.empty());
+                      }
     /**
      * @brief Detect square candidates in the input image
      */
@@ -1034,10 +1036,7 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
     _copyVector2Output(candidates, _corners);
     Mat(ids).copyTo(_ids);
     if (_dictIndices.needed()) {
-        _dictIndices.create(dictIndices.size(), 1, CV_32SC1);
-        Mat dictIndicesMat = _dictIndices.getMat();
-        Mat m = cv::Mat1i(dictIndices).t();
-        m.copyTo(dictIndicesMat);
+        Mat(dictIndices).copyTo(_dictIndices);
     }
 }
 
@@ -1346,12 +1345,12 @@ void ArucoDetector::read(const FileNode &fn) {
     arucoDetectorImpl->refineParams.readRefineParameters(fn);
 }
 
-const Dictionary& ArucoDetector::getDictionary(size_t index) const {
+const Dictionary& ArucoDetector::getDictionary(int index) const {
     CV_Assert(index < arucoDetectorImpl->dictionaries.size());
     return arucoDetectorImpl->dictionaries[index];
 }
 
-void ArucoDetector::setDictionary(const Dictionary& dictionary, size_t index) {
+void ArucoDetector::setDictionary(const Dictionary& dictionary, int index) {
     // special case: if index is 0, we add the dictionary to the list to preserve the old behavior
     CV_Assert(index == 0 || index < arucoDetectorImpl->dictionaries.size());
     if (index == 0 && arucoDetectorImpl->dictionaries.empty()) {
@@ -1373,8 +1372,10 @@ void ArucoDetector::addDictionary(const Dictionary& dictionary) {
     arucoDetectorImpl->dictionaries.push_back(dictionary);
 }
 
-void ArucoDetector::removeDictionary(size_t index) {
+void ArucoDetector::removeDictionary(int index) {
     CV_Assert(index < arucoDetectorImpl->dictionaries.size());
+    // disallow no dictionaries
+    CV_Assert(arucoDetectorImpl->dictionaries.size() > 1);
     arucoDetectorImpl->dictionaries.erase(arucoDetectorImpl->dictionaries.begin() + index);
 }
 

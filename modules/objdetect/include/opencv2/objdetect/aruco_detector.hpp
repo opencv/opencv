@@ -350,12 +350,12 @@ public:
                                        InputArray cameraMatrix = noArray(), InputArray distCoeffs = noArray(),
                                        OutputArray recoveredIdxs = noArray()) const;
 
-    CV_WRAP const Dictionary& getDictionary(size_t index = 0) const;
-    CV_WRAP void setDictionary(const Dictionary& dictionary, size_t index = 0);
+    CV_WRAP const Dictionary& getDictionary(int index = 0) const;
+    CV_WRAP void setDictionary(const Dictionary& dictionary, int index = 0);
     CV_WRAP const std::vector<Dictionary>& getDictionaries() const;
     CV_WRAP void setDictionaries(const std::vector<Dictionary>& dictionaries);
     CV_WRAP void addDictionary(const Dictionary& dictionary);
-    CV_WRAP void removeDictionary(size_t index);
+    CV_WRAP void removeDictionary(int index);
 
     CV_WRAP const DetectorParameters& getDetectorParameters() const;
     CV_WRAP void setDetectorParameters(const DetectorParameters& detectorParameters);
