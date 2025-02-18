@@ -567,29 +567,11 @@ double norm( InputArray _src, int normType, InputArray _mask )
             {
                 const uchar* data = src.ptr<const uchar>();
 
-                if( normType == NORM_L2 )
+                if( normType == NORM_L2 || normType == NORM_L2SQR || normType == NORM_L1 || normType == NORM_INF )
                 {
                     double result = 0;
                     func(data, 0, (uchar*)&result, (int)len, 1);
-                    return std::sqrt(result);
-                }
-                if( normType == NORM_L2SQR )
-                {
-                    double result = 0;
-                    func(data, 0, (uchar*)&result, (int)len, 1);
-                    return result;
-                }
-                if( normType == NORM_L1 )
-                {
-                    double result = 0;
-                    func(data, 0, (uchar*)&result, (int)len, 1);
-                    return result;
-                }
-                if( normType == NORM_INF )
-                {
-                    float result = 0;
-                    func(data, 0, (uchar*)&result, (int)len, 1);
-                    return result;
+                    return normType == NORM_L2 ? std::sqrt(result) : result;
                 }
             }
             if( depth == CV_8U )
