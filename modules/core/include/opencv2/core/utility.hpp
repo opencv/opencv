@@ -1029,7 +1029,7 @@ protected:
     void getByName(const String& name, bool space_delete, Param type, void* dst) const;
     void getByIndex(int index, bool space_delete, Param type, void* dst) const;
 
-    struct __attribute__((visibility("hidden"))) Impl;
+    struct CV_IMPL_HIDDEN Impl;
     Impl* impl;
 };
 

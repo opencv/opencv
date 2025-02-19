@@ -45,6 +45,14 @@
 #ifndef OPENCV_CORE_CVDEF_H
 #define OPENCV_CORE_CVDEF_H
 
+#if defined(_MSC_VER)
+    #define CV_IMPL_HIDDEN
+#elif defined(__GNUC__) || defined(__clang__)
+    #define CV_IMPL_HIDDEN __attribute__((visibility("hidden")))
+#else
+    #define CV_IMPL_HIDDEN
+#endif
+
 #include "opencv2/core/version.hpp"
 
 //! @addtogroup core_utils
