@@ -6,7 +6,7 @@
 #include "test_precomp.hpp"
 #include <set>
 #include <string>
-#include "npy_blob.hpp"
+#include <opencv2/dnn/utils/npy_blob.hpp>
 #include <opencv2/dnn/shape_utils.hpp>
 
 #if defined(_MSC_VER)  // workaround for 32-bit MSVC compiler
