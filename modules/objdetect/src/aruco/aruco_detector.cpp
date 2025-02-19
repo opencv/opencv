@@ -1346,13 +1346,13 @@ void ArucoDetector::read(const FileNode &fn) {
 }
 
 const Dictionary& ArucoDetector::getDictionary(int index) const {
-    CV_Assert(index < arucoDetectorImpl->dictionaries.size());
+    CV_Assert(static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size());
     return arucoDetectorImpl->dictionaries[index];
 }
 
 void ArucoDetector::setDictionary(const Dictionary& dictionary, int index) {
     // special case: if index is 0, we add the dictionary to the list to preserve the old behavior
-    CV_Assert(index == 0 || index < arucoDetectorImpl->dictionaries.size());
+    CV_Assert(index == 0 || static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size());
     if (index == 0 && arucoDetectorImpl->dictionaries.empty()) {
         arucoDetectorImpl->dictionaries.push_back(dictionary);
     } else {
@@ -1373,9 +1373,9 @@ void ArucoDetector::addDictionary(const Dictionary& dictionary) {
 }
 
 void ArucoDetector::removeDictionary(int index) {
-    CV_Assert(index < arucoDetectorImpl->dictionaries.size());
+    CV_Assert(static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size());
     // disallow no dictionaries
-    CV_Assert(arucoDetectorImpl->dictionaries.size() > 1);
+    CV_Assert(arucoDetectorImpl->dictionaries.size() > 1ul);
     arucoDetectorImpl->dictionaries.erase(arucoDetectorImpl->dictionaries.begin() + index);
 }
 
