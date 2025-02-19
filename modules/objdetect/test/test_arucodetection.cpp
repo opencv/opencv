@@ -708,7 +708,7 @@ TEST(CV_ArucoMultiDict, multiMarkerDetection)
     vector<int> markerIds;
     vector<vector<Point2f> > rejectedImgPts;
     vector<int> dictIds;
-    detector.detectMarkers(img, markerCorners, markerIds, rejectedImgPts, dictIds);
+    detector.detectMarkersMultiDict(img, markerCorners, markerIds, rejectedImgPts, dictIds);
     ASSERT_EQ(markerIds.size(), 4u);
     ASSERT_EQ(dictIds.size(), 4u);
     for (size_t i = 0; i < dictIds.size(); ++i) {

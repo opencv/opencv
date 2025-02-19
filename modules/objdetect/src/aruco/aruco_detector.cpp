@@ -641,6 +641,11 @@ static inline void findCornerInPyrImage(const float scale_init, const int closes
     }
 }
 
+enum class DictionaryMode {
+    Single,
+    Multi
+};
+
 struct ArucoDetector::ArucoDetectorImpl {
     /// dictionaries indicates the types of markers that will be searched
     std::vector<Dictionary> dictionaries;
@@ -657,6 +662,252 @@ struct ArucoDetector::ArucoDetectorImpl {
                       detectorParams(_detectorParams), refineParams(_refineParams) {
                           CV_Assert(!dictionaries.empty());
                       }
+
+    /*
+     * @brief Detect markers either using multiple or just first dictionary
+     */
+    void detectMarkers(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,
+            OutputArrayOfArrays _rejectedImgPoints, OutputArray _dictIndices, DictionaryMode dictMode) {
+        CV_Assert(!_image.empty());
+
+        CV_Assert(detectorParams.markerBorderBits > 0);
+        // check that the parameters are set correctly if Aruco3 is used
+        CV_Assert(!(detectorParams.useAruco3Detection == true &&
+                    detectorParams.minSideLengthCanonicalImg == 0 &&
+                    detectorParams.minMarkerLengthRatioOriginalImg == 0.0));
+
+        Mat grey;
+        _convertToGrey(_image, grey);
+
+        // Aruco3 functionality is the extension of Aruco.
+        // The description can be found in:
+        // [1] Speeded up detection of squared fiducial markers, 2018, FJ Romera-Ramirez et al.
+        // if Aruco3 functionality if not wanted
+        // change some parameters to be sure to turn it off
+        if (!detectorParams.useAruco3Detection) {
+            detectorParams.minMarkerLengthRatioOriginalImg = 0.0;
+            detectorParams.minSideLengthCanonicalImg = 0;
+        }
+        else {
+            // always turn on corner refinement in case of Aruco3, due to upsampling
+            detectorParams.cornerRefinementMethod = (int)CORNER_REFINE_SUBPIX;
+            // only CORNER_REFINE_SUBPIX implement correctly for useAruco3Detection
+            // Todo: update other CORNER_REFINE methods
+        }
+
+        /// Step 0: equation (2) from paper [1]
+        const float fxfy = (!detectorParams.useAruco3Detection ? 1.f : detectorParams.minSideLengthCanonicalImg /
+                (detectorParams.minSideLengthCanonicalImg + std::max(grey.cols, grey.rows)*
+                 detectorParams.minMarkerLengthRatioOriginalImg));
+
+        /// Step 1: create image pyramid. Section 3.4. in [1]
+        vector<Mat> grey_pyramid;
+        int closest_pyr_image_idx = 0, num_levels = 0;
+        //// Step 1.1: resize image with equation (1) from paper [1]
+        if (detectorParams.useAruco3Detection) {
+            const float scale_pyr = 2.f;
+            const float img_area = static_cast<float>(grey.rows*grey.cols);
+            const float min_area_marker = static_cast<float>(detectorParams.minSideLengthCanonicalImg*
+                    detectorParams.minSideLengthCanonicalImg);
+            // find max level
+            num_levels = static_cast<int>(log2(img_area / min_area_marker)/scale_pyr);
+            // the closest pyramid image to the downsampled segmentation image
+            // will later be used as start index for corner upsampling
+            const float scale_img_area = img_area * fxfy * fxfy;
+            closest_pyr_image_idx = cvRound(log2(img_area / scale_img_area)/scale_pyr);
+        }
+        buildPyramid(grey, grey_pyramid, num_levels);
+
+        // resize to segmentation image
+        // in this reduces size the contours will be detected
+        if (fxfy != 1.f)
+            resize(grey, grey, Size(cvRound(fxfy * grey.cols), cvRound(fxfy * grey.rows)));
+
+        /// STEP 2: Detect marker candidates
+        vector<vector<Point2f> > candidates;
+        vector<vector<Point> > contours;
+        vector<int> ids;
+
+        /// STEP 2.a Detect marker candidates :: using AprilTag
+        if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG){
+            _apriltag(grey, detectorParams, candidates, contours);
+        }
+        /// STEP 2.b Detect marker candidates :: traditional way
+        else {
+            detectCandidates(grey, candidates, contours);
+        }
+
+        /// STEP 2.c FILTER OUT NEAR CANDIDATE PAIRS
+        vector<int> dictIndices;
+        vector<vector<Point2f>> rejectedImgPoints;
+        if (DictionaryMode::Single == dictMode) {
+            Dictionary& dictionary = dictionaries.at(0);
+            auto selectedCandidates = filterTooCloseCandidates(candidates, contours, dictionary.markerSize);
+            candidates.clear();
+            contours.clear();
+
+            /// STEP 2: Check candidate codification (identify markers)
+            identifyCandidates(grey, grey_pyramid, selectedCandidates, candidates, contours,
+                    ids, dictionary, rejectedImgPoints);
+
+            /// STEP 3: Corner refinement :: use corner subpix
+            if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
+                CV_Assert(detectorParams.cornerRefinementWinSize > 0 && detectorParams.cornerRefinementMaxIterations > 0 &&
+                        detectorParams.cornerRefinementMinAccuracy > 0);
+                // Do subpixel estimation. In Aruco3 start on the lowest pyramid level and upscale the corners
+                parallel_for_(Range(0, (int)candidates.size()), [&](const Range& range) {
+                    const int begin = range.start;
+                    const int end = range.end;
+
+                    for (int i = begin; i < end; i++) {
+                        if (detectorParams.useAruco3Detection) {
+                            const float scale_init = (float) grey_pyramid[closest_pyr_image_idx].cols / grey.cols;
+                            findCornerInPyrImage(scale_init, closest_pyr_image_idx, grey_pyramid, Mat(candidates[i]), detectorParams);
+                        } else {
+                            int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
+                                        getAverageModuleSize(candidates[i], dictionary.markerSize, detectorParams.markerBorderBits)));
+                            cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
+                            cornerSubPix(grey, Mat(candidates[i]), Size(cornerRefinementWinSize, cornerRefinementWinSize), Size(-1, -1),
+                                    TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
+                                        detectorParams.cornerRefinementMaxIterations,
+                                        detectorParams.cornerRefinementMinAccuracy));
+                        }
+                    }
+                });
+            }
+        } else if (DictionaryMode::Multi == dictMode) {
+            unordered_set<int> uniqueMarkerSizes;
+            for (const Dictionary& dictionary : dictionaries) {
+                uniqueMarkerSizes.insert(dictionary.markerSize);
+            }
+
+            // create at max 4 marker candidate trees for each dictionary size
+            vector<vector<MarkerCandidateTree>> candidatesPerDictionarySize = {{}, {}, {}, {}};
+            for (int markerSize : uniqueMarkerSizes) {
+                // min marker size is 4, so subtract 4 to get index
+                const auto dictionarySizeIndex = markerSize - 4;
+                // copy candidates
+                vector<vector<Point2f>> candidatesCopy = candidates;
+                vector<vector<Point> > contoursCopy = contours;
+                candidatesPerDictionarySize[dictionarySizeIndex] = filterTooCloseCandidates(candidatesCopy, contoursCopy, markerSize);
+            }
+            candidates.clear();
+            contours.clear();
+
+            /// STEP 2: Check candidate codification (identify markers)
+            int dictIndex = 0;
+            for (const Dictionary&  currentDictionary : dictionaries) {
+                const auto dictionarySizeIndex = currentDictionary.markerSize - 4;
+                // temporary variable to store the current candidates
+                vector<vector<Point2f>> currentCandidates;
+                identifyCandidates(grey, grey_pyramid, candidatesPerDictionarySize[dictionarySizeIndex], currentCandidates, contours,
+                        ids, currentDictionary, rejectedImgPoints);
+                if (_dictIndices.needed()) {
+                    dictIndices.insert(dictIndices.end(), currentCandidates.size(), dictIndex);
+                }
+
+                /// STEP 3: Corner refinement :: use corner subpix
+                if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
+                    CV_Assert(detectorParams.cornerRefinementWinSize > 0 && detectorParams.cornerRefinementMaxIterations > 0 &&
+                            detectorParams.cornerRefinementMinAccuracy > 0);
+                    // Do subpixel estimation. In Aruco3 start on the lowest pyramid level and upscale the corners
+                    parallel_for_(Range(0, (int)currentCandidates.size()), [&](const Range& range) {
+                        const int begin = range.start;
+                        const int end = range.end;
+
+                        for (int i = begin; i < end; i++) {
+                            if (detectorParams.useAruco3Detection) {
+                                const float scale_init = (float) grey_pyramid[closest_pyr_image_idx].cols / grey.cols;
+                                findCornerInPyrImage(scale_init, closest_pyr_image_idx, grey_pyramid, Mat(currentCandidates[i]), detectorParams);
+                            }
+                            else {
+                                int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
+                                            getAverageModuleSize(currentCandidates[i], currentDictionary.markerSize, detectorParams.markerBorderBits)));
+                                cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
+                                cornerSubPix(grey, Mat(currentCandidates[i]), Size(cornerRefinementWinSize, cornerRefinementWinSize), Size(-1, -1),
+                                        TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
+                                            detectorParams.cornerRefinementMaxIterations,
+                                            detectorParams.cornerRefinementMinAccuracy));
+                            }
+                        }
+                    });
+                }
+                candidates.insert(candidates.end(), currentCandidates.begin(), currentCandidates.end());
+                dictIndex++;
+            }
+
+            // Clean up rejectedImgPoints by comparing to itself and all candidates
+            const float epsilon = 0.000001;
+            auto compareCandidates = [epsilon](std::vector<Point2f> a, std::vector<Point2f> b) {
+                for (int i = 0; i < 4; i++) {
+                    if (std::abs(a[i].x - b[i].x) > epsilon || std::abs(a[i].y - b[i].y) > epsilon) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+            std::sort(rejectedImgPoints.begin(), rejectedImgPoints.end(), [](const vector<Point2f>& a, const vector<Point2f>&b){
+                    float avgX = (a[0].x + a[1].x + a[2].x + a[3].x)*.25f;
+                    float avgY = (a[0].y + a[1].y + a[2].y + a[3].y)*.25f;
+                    float aDist = avgX*avgX + avgY*avgY;
+                    avgX = (b[0].x + b[1].x + b[2].x + b[3].x)*.25f;
+                    avgY = (b[0].y + b[1].y + b[2].y + b[3].y)*.25f;
+                    float bDist = avgX*avgX + avgY*avgY;
+                    return aDist < bDist;
+                });
+            auto last = std::unique(rejectedImgPoints.begin(), rejectedImgPoints.end(), compareCandidates);
+            rejectedImgPoints.erase(last, rejectedImgPoints.end());
+
+            for (auto it = rejectedImgPoints.begin(); it != rejectedImgPoints.end();) {
+                bool erased = false;
+                for (const auto& candidate : candidates) {
+                    if (compareCandidates(candidate, *it)) {
+                        it = rejectedImgPoints.erase(it);
+                        erased = true;
+                        break;
+                    }
+                }
+                if (!erased) {
+                    it++;
+                }
+            }
+        }
+
+        /// STEP 3, Optional : Corner refinement :: use contour container
+        if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_CONTOUR){
+
+            if (!ids.empty()) {
+
+                // do corner refinement using the contours for each detected markers
+                parallel_for_(Range(0, (int)candidates.size()), [&](const Range& range) {
+                        for (int i = range.start; i < range.end; i++) {
+                        _refineCandidateLines(contours[i], candidates[i]);
+                        }
+                        });
+            }
+        }
+
+        if (detectorParams.cornerRefinementMethod != (int)CORNER_REFINE_SUBPIX && fxfy != 1.f) {
+            // only CORNER_REFINE_SUBPIX implement correctly for useAruco3Detection
+            // Todo: update other CORNER_REFINE methods
+
+            // scale to orignal size, this however will lead to inaccurate detections!
+            for (auto &vecPoints : candidates)
+                for (auto &point : vecPoints)
+                    point *= 1.f/fxfy;
+        }
+
+        // copy to output arrays
+        _copyVector2Output(candidates, _corners);
+        Mat(ids).copyTo(_ids);
+        if(_rejectedImgPoints.needed()) {
+            _copyVector2Output(rejectedImgPoints, _rejectedImgPoints);
+        }
+        if (_dictIndices.needed()) {
+            Mat(dictIndices).copyTo(_dictIndices);
+        }
+    }
+
     /**
      * @brief Detect square candidates in the input image
      */
@@ -771,9 +1022,8 @@ struct ArucoDetector::ArucoDetectorImpl {
      */
     void identifyCandidates(const Mat& grey, const vector<Mat>& image_pyr, vector<MarkerCandidateTree>& selectedContours,
                             vector<vector<Point2f> >& accepted, vector<vector<Point> >& contours,
-                            vector<int>& ids, const Dictionary& currentDictionary, OutputArrayOfArrays _rejected = noArray()) {
+                            vector<int>& ids, const Dictionary& currentDictionary, vector<vector<Point2f>>& rejected) const {
         size_t ncandidates = selectedContours.size();
-        vector<vector<Point2f> > rejected;
 
         vector<int> idsTmp(ncandidates, -1);
         vector<int> rotated(ncandidates, 0);
@@ -853,11 +1103,6 @@ struct ArucoDetector::ArucoDetectorImpl {
                 rejected.push_back(selectedContours[i].corners);
             }
         }
-
-        // parse output
-        if(_rejected.needed()) {
-            _copyVector2Output(rejected, _rejected);
-        }
     }
 
 };
@@ -875,169 +1120,13 @@ ArucoDetector::ArucoDetector(const std::vector<Dictionary> &_dictionaries,
 }
 
 void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,
+                                  OutputArrayOfArrays _rejectedImgPoints) const {
+    arucoDetectorImpl->detectMarkers(_image, _corners, _ids, _rejectedImgPoints, noArray(), DictionaryMode::Single);
+}
+
+void ArucoDetector::detectMarkersMultiDict(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,
                                   OutputArrayOfArrays _rejectedImgPoints, OutputArray _dictIndices) const {
-    CV_Assert(!_image.empty());
-    DetectorParameters& detectorParams = arucoDetectorImpl->detectorParams;
-
-    CV_Assert(detectorParams.markerBorderBits > 0);
-    // check that the parameters are set correctly if Aruco3 is used
-    CV_Assert(!(detectorParams.useAruco3Detection == true &&
-                detectorParams.minSideLengthCanonicalImg == 0 &&
-                detectorParams.minMarkerLengthRatioOriginalImg == 0.0));
-
-    Mat grey;
-    _convertToGrey(_image, grey);
-
-    // Aruco3 functionality is the extension of Aruco.
-    // The description can be found in:
-    // [1] Speeded up detection of squared fiducial markers, 2018, FJ Romera-Ramirez et al.
-    // if Aruco3 functionality if not wanted
-    // change some parameters to be sure to turn it off
-    if (!detectorParams.useAruco3Detection) {
-        detectorParams.minMarkerLengthRatioOriginalImg = 0.0;
-        detectorParams.minSideLengthCanonicalImg = 0;
-    }
-    else {
-        // always turn on corner refinement in case of Aruco3, due to upsampling
-        detectorParams.cornerRefinementMethod = (int)CORNER_REFINE_SUBPIX;
-        // only CORNER_REFINE_SUBPIX implement correctly for useAruco3Detection
-        // Todo: update other CORNER_REFINE methods
-    }
-
-    /// Step 0: equation (2) from paper [1]
-    const float fxfy = (!detectorParams.useAruco3Detection ? 1.f : detectorParams.minSideLengthCanonicalImg /
-                       (detectorParams.minSideLengthCanonicalImg + std::max(grey.cols, grey.rows)*
-                       detectorParams.minMarkerLengthRatioOriginalImg));
-
-    /// Step 1: create image pyramid. Section 3.4. in [1]
-    vector<Mat> grey_pyramid;
-    int closest_pyr_image_idx = 0, num_levels = 0;
-    //// Step 1.1: resize image with equation (1) from paper [1]
-    if (detectorParams.useAruco3Detection) {
-        const float scale_pyr = 2.f;
-        const float img_area = static_cast<float>(grey.rows*grey.cols);
-        const float min_area_marker = static_cast<float>(detectorParams.minSideLengthCanonicalImg*
-                                                         detectorParams.minSideLengthCanonicalImg);
-        // find max level
-        num_levels = static_cast<int>(log2(img_area / min_area_marker)/scale_pyr);
-        // the closest pyramid image to the downsampled segmentation image
-        // will later be used as start index for corner upsampling
-        const float scale_img_area = img_area * fxfy * fxfy;
-        closest_pyr_image_idx = cvRound(log2(img_area / scale_img_area)/scale_pyr);
-    }
-    buildPyramid(grey, grey_pyramid, num_levels);
-
-    // resize to segmentation image
-    // in this reduces size the contours will be detected
-    if (fxfy != 1.f)
-        resize(grey, grey, Size(cvRound(fxfy * grey.cols), cvRound(fxfy * grey.rows)));
-
-    /// STEP 2: Detect marker candidates
-    vector<vector<Point2f> > candidates;
-    vector<vector<Point> > contours;
-    vector<int> ids;
-
-    /// STEP 2.a Detect marker candidates :: using AprilTag
-    if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG){
-        _apriltag(grey, detectorParams, candidates, contours);
-    }
-    /// STEP 2.b Detect marker candidates :: traditional way
-    else {
-        arucoDetectorImpl->detectCandidates(grey, candidates, contours);
-    }
-
-    /// STEP 2.c FILTER OUT NEAR CANDIDATE PAIRS
-    unordered_set<int> uniqueMarkerSizes;
-    for (const Dictionary& dictionary : arucoDetectorImpl->dictionaries) {
-        uniqueMarkerSizes.insert(dictionary.markerSize);
-    }
-
-    // create at max 4 marker candidate trees for each dictionary size
-    vector<vector<MarkerCandidateTree>> candidatesPerDictionarySize = {{}, {}, {}, {}};
-    for (int markerSize : uniqueMarkerSizes) {
-        // min marker size is 4, so subtract 4 to get index
-        const auto dictionarySizeIndex = markerSize - 4;
-        // copy candidates
-        vector<vector<Point2f>> candidatesCopy = candidates;
-        vector<vector<Point> > contoursCopy = contours;
-        candidatesPerDictionarySize[dictionarySizeIndex] = arucoDetectorImpl->filterTooCloseCandidates(candidatesCopy, contoursCopy, markerSize);
-    }
-    candidates.clear();
-    contours.clear();
-
-    /// STEP 2: Check candidate codification (identify markers)
-    size_t dictIndex = 0;
-    vector<int> dictIndices;
-    for (const Dictionary&  currentDictionary : arucoDetectorImpl->dictionaries) {
-        const auto dictionarySizeIndex = currentDictionary.markerSize - 4;
-        // temporary variable to store the current candidates
-        vector<vector<Point2f>> currentCandidates;
-        arucoDetectorImpl->identifyCandidates(grey, grey_pyramid, candidatesPerDictionarySize[dictionarySizeIndex], currentCandidates, contours,
-                                            ids, currentDictionary, _rejectedImgPoints);
-        if (_dictIndices.needed()) {
-            dictIndices.insert(dictIndices.end(), currentCandidates.size(), dictIndex);
-        }
-
-        /// STEP 3: Corner refinement :: use corner subpix
-        if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
-            CV_Assert(detectorParams.cornerRefinementWinSize > 0 && detectorParams.cornerRefinementMaxIterations > 0 &&
-                    detectorParams.cornerRefinementMinAccuracy > 0);
-            // Do subpixel estimation. In Aruco3 start on the lowest pyramid level and upscale the corners
-            parallel_for_(Range(0, (int)currentCandidates.size()), [&](const Range& range) {
-                const int begin = range.start;
-                const int end = range.end;
-
-                for (int i = begin; i < end; i++) {
-                    if (detectorParams.useAruco3Detection) {
-                        const float scale_init = (float) grey_pyramid[closest_pyr_image_idx].cols / grey.cols;
-                        findCornerInPyrImage(scale_init, closest_pyr_image_idx, grey_pyramid, Mat(currentCandidates[i]), detectorParams);
-                    }
-                    else {
-                        int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
-                                                    getAverageModuleSize(currentCandidates[i], currentDictionary.markerSize, detectorParams.markerBorderBits)));
-                        cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
-                        cornerSubPix(grey, Mat(currentCandidates[i]), Size(cornerRefinementWinSize, cornerRefinementWinSize), Size(-1, -1),
-                                    TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
-                                                detectorParams.cornerRefinementMaxIterations,
-                                                detectorParams.cornerRefinementMinAccuracy));
-                    }
-                }
-            });
-        }
-        candidates.insert(candidates.end(), currentCandidates.begin(), currentCandidates.end());
-        dictIndex++;
-    }
-
-    /// STEP 3, Optional : Corner refinement :: use contour container
-    if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_CONTOUR){
-
-        if (!ids.empty()) {
-
-            // do corner refinement using the contours for each detected markers
-            parallel_for_(Range(0, (int)candidates.size()), [&](const Range& range) {
-                for (int i = range.start; i < range.end; i++) {
-                    _refineCandidateLines(contours[i], candidates[i]);
-                }
-            });
-        }
-    }
-
-    if (detectorParams.cornerRefinementMethod != (int)CORNER_REFINE_SUBPIX && fxfy != 1.f) {
-        // only CORNER_REFINE_SUBPIX implement correctly for useAruco3Detection
-        // Todo: update other CORNER_REFINE methods
-
-        // scale to orignal size, this however will lead to inaccurate detections!
-        for (auto &vecPoints : candidates)
-            for (auto &point : vecPoints)
-                point *= 1.f/fxfy;
-    }
-
-    // copy to output arrays
-    _copyVector2Output(candidates, _corners);
-    Mat(ids).copyTo(_ids);
-    if (_dictIndices.needed()) {
-        Mat(dictIndices).copyTo(_dictIndices);
-    }
+    arucoDetectorImpl->detectMarkers(_image, _corners, _ids, _rejectedImgPoints, _dictIndices, DictionaryMode::Multi);
 }
 
 /**
@@ -1151,7 +1240,6 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
                                           InputOutputArrayOfArrays _rejectedCorners, InputArray _cameraMatrix,
                                           InputArray _distCoeffs, OutputArray _recoveredIdxs) const {
     DetectorParameters& detectorParams = arucoDetectorImpl->detectorParams;
-    const Dictionary& dictionary = arucoDetectorImpl->dictionaries[0];
     RefineParameters& refineParams = arucoDetectorImpl->refineParams;
     CV_Assert(refineParams.minRepDistance > 0);
 
@@ -1174,10 +1262,6 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
     // list of missing markers indicating if they have been assigned to a candidate
     vector<bool > alreadyIdentified(_rejectedCorners.total(), false);
 
-    // maximum bits that can be corrected
-    int maxCorrectionRecalculated =
-        int(double(dictionary.maxCorrectionBits) * refineParams.errorCorrectionRate);
-
     Mat grey;
     _convertToGrey(_image, grey);
 
@@ -1193,106 +1277,112 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
     }
     vector<int> recoveredIdxs; // original indexes of accepted markers in _rejectedCorners
 
-    // for each missing marker, try to find a correspondence
-    for(unsigned int i = 0; i < undetectedMarkersIds.size(); i++) {
+    for (const auto& dictionary : arucoDetectorImpl->dictionaries) {
+        // maximum bits that can be corrected
+        int maxCorrectionRecalculated =
+            int(double(dictionary.maxCorrectionBits) * refineParams.errorCorrectionRate);
 
-        // best match at the moment
-        int closestCandidateIdx = -1;
-        double closestCandidateDistance = refineParams.minRepDistance * refineParams.minRepDistance + 1;
-        Mat closestRotatedMarker;
+        // for each missing marker, try to find a correspondence
+        for(unsigned int i = 0; i < undetectedMarkersIds.size(); i++) {
 
-        for(unsigned int j = 0; j < _rejectedCorners.total(); j++) {
-            if(alreadyIdentified[j]) continue;
+            // best match at the moment
+            int closestCandidateIdx = -1;
+            double closestCandidateDistance = refineParams.minRepDistance * refineParams.minRepDistance + 1;
+            Mat closestRotatedMarker;
 
-            // check distance
-            double minDistance = closestCandidateDistance + 1;
-            bool valid = false;
-            int validRot = 0;
-            for(int c = 0; c < 4; c++) { // first corner in rejected candidate
-                double currentMaxDistance = 0;
-                for(int k = 0; k < 4; k++) {
-                    Point2f rejCorner = _rejectedCorners.getMat(j).ptr<Point2f>()[(c + k) % 4];
-                    Point2f distVector = undetectedMarkersCorners[i][k] - rejCorner;
-                    double cornerDist = distVector.x * distVector.x + distVector.y * distVector.y;
-                    currentMaxDistance = max(currentMaxDistance, cornerDist);
+            for(unsigned int j = 0; j < _rejectedCorners.total(); j++) {
+                if(alreadyIdentified[j]) continue;
+
+                // check distance
+                double minDistance = closestCandidateDistance + 1;
+                bool valid = false;
+                int validRot = 0;
+                for(int c = 0; c < 4; c++) { // first corner in rejected candidate
+                    double currentMaxDistance = 0;
+                    for(int k = 0; k < 4; k++) {
+                        Point2f rejCorner = _rejectedCorners.getMat(j).ptr<Point2f>()[(c + k) % 4];
+                        Point2f distVector = undetectedMarkersCorners[i][k] - rejCorner;
+                        double cornerDist = distVector.x * distVector.x + distVector.y * distVector.y;
+                        currentMaxDistance = max(currentMaxDistance, cornerDist);
+                    }
+                    // if distance is better than current best distance
+                    if(currentMaxDistance < closestCandidateDistance) {
+                        valid = true;
+                        validRot = c;
+                        minDistance = currentMaxDistance;
+                    }
+                    if(!refineParams.checkAllOrders) break;
                 }
-                // if distance is better than current best distance
-                if(currentMaxDistance < closestCandidateDistance) {
-                    valid = true;
-                    validRot = c;
-                    minDistance = currentMaxDistance;
+
+                if(!valid) continue;
+
+                // apply rotation
+                Mat rotatedMarker;
+                if(refineParams.checkAllOrders) {
+                    rotatedMarker = Mat(4, 1, CV_32FC2);
+                    for(int c = 0; c < 4; c++)
+                        rotatedMarker.ptr<Point2f>()[c] =
+                            _rejectedCorners.getMat(j).ptr<Point2f>()[(c + 4 + validRot) % 4];
                 }
-                if(!refineParams.checkAllOrders) break;
+                else rotatedMarker = _rejectedCorners.getMat(j);
+
+                // last filter, check if inner code is close enough to the assigned marker code
+                int codeDistance = 0;
+                // if errorCorrectionRate, dont check code
+                if(refineParams.errorCorrectionRate >= 0) {
+
+                    // extract bits
+                    Mat bits = _extractBits(
+                        grey, rotatedMarker, dictionary.markerSize, detectorParams.markerBorderBits,
+                        detectorParams.perspectiveRemovePixelPerCell,
+                        detectorParams.perspectiveRemoveIgnoredMarginPerCell, detectorParams.minOtsuStdDev);
+
+                    Mat onlyBits =
+                        bits.rowRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits)
+                            .colRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits);
+
+                    codeDistance =
+                        dictionary.getDistanceToId(onlyBits, undetectedMarkersIds[i], false);
+                }
+
+                // if everythin is ok, assign values to current best match
+                if(refineParams.errorCorrectionRate < 0 || codeDistance < maxCorrectionRecalculated) {
+                    closestCandidateIdx = j;
+                    closestCandidateDistance = minDistance;
+                    closestRotatedMarker = rotatedMarker;
+                }
             }
 
-            if(!valid) continue;
+            // if at least one good match, we have rescue the missing marker
+            if(closestCandidateIdx >= 0) {
 
-            // apply rotation
-            Mat rotatedMarker;
-            if(refineParams.checkAllOrders) {
-                rotatedMarker = Mat(4, 1, CV_32FC2);
-                for(int c = 0; c < 4; c++)
-                    rotatedMarker.ptr<Point2f>()[c] =
-                        _rejectedCorners.getMat(j).ptr<Point2f>()[(c + 4 + validRot) % 4];
+                // subpixel refinement
+                if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
+                    CV_Assert(detectorParams.cornerRefinementWinSize > 0 &&
+                              detectorParams.cornerRefinementMaxIterations > 0 &&
+                              detectorParams.cornerRefinementMinAccuracy > 0);
+
+                    std::vector<Point2f> marker(closestRotatedMarker.begin<Point2f>(), closestRotatedMarker.end<Point2f>());
+                    int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
+                                                  getAverageModuleSize(marker, dictionary.markerSize, detectorParams.markerBorderBits)));
+                    cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
+                    cornerSubPix(grey, closestRotatedMarker,
+                                 Size(cornerRefinementWinSize, cornerRefinementWinSize),
+                                 Size(-1, -1), TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
+                                                            detectorParams.cornerRefinementMaxIterations,
+                                                            detectorParams.cornerRefinementMinAccuracy));
+                }
+
+                // remove from rejected
+                alreadyIdentified[closestCandidateIdx] = true;
+
+                // add to detected
+                finalAcceptedCorners.push_back(closestRotatedMarker);
+                finalAcceptedIds.push_back(undetectedMarkersIds[i]);
+
+                // add the original index of the candidate
+                recoveredIdxs.push_back(closestCandidateIdx);
             }
-            else rotatedMarker = _rejectedCorners.getMat(j);
-
-            // last filter, check if inner code is close enough to the assigned marker code
-            int codeDistance = 0;
-            // if errorCorrectionRate, dont check code
-            if(refineParams.errorCorrectionRate >= 0) {
-
-                // extract bits
-                Mat bits = _extractBits(
-                    grey, rotatedMarker, dictionary.markerSize, detectorParams.markerBorderBits,
-                    detectorParams.perspectiveRemovePixelPerCell,
-                    detectorParams.perspectiveRemoveIgnoredMarginPerCell, detectorParams.minOtsuStdDev);
-
-                Mat onlyBits =
-                    bits.rowRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits)
-                        .colRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits);
-
-                codeDistance =
-                    dictionary.getDistanceToId(onlyBits, undetectedMarkersIds[i], false);
-            }
-
-            // if everythin is ok, assign values to current best match
-            if(refineParams.errorCorrectionRate < 0 || codeDistance < maxCorrectionRecalculated) {
-                closestCandidateIdx = j;
-                closestCandidateDistance = minDistance;
-                closestRotatedMarker = rotatedMarker;
-            }
-        }
-
-        // if at least one good match, we have rescue the missing marker
-        if(closestCandidateIdx >= 0) {
-
-            // subpixel refinement
-            if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
-                CV_Assert(detectorParams.cornerRefinementWinSize > 0 &&
-                          detectorParams.cornerRefinementMaxIterations > 0 &&
-                          detectorParams.cornerRefinementMinAccuracy > 0);
-
-                std::vector<Point2f> marker(closestRotatedMarker.begin<Point2f>(), closestRotatedMarker.end<Point2f>());
-                int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
-                                              getAverageModuleSize(marker, dictionary.markerSize, detectorParams.markerBorderBits)));
-                cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
-                cornerSubPix(grey, closestRotatedMarker,
-                             Size(cornerRefinementWinSize, cornerRefinementWinSize),
-                             Size(-1, -1), TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
-                                                        detectorParams.cornerRefinementMaxIterations,
-                                                        detectorParams.cornerRefinementMinAccuracy));
-            }
-
-            // remove from rejected
-            alreadyIdentified[closestCandidateIdx] = true;
-
-            // add to detected
-            finalAcceptedCorners.push_back(closestRotatedMarker);
-            finalAcceptedIds.push_back(undetectedMarkersIds[i]);
-
-            // add the original index of the candidate
-            recoveredIdxs.push_back(closestCandidateIdx);
         }
     }
 
@@ -1346,13 +1436,13 @@ void ArucoDetector::read(const FileNode &fn) {
 }
 
 const Dictionary& ArucoDetector::getDictionary(int index) const {
-    CV_Assert(static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size());
+    CV_Assert(index >= 0 && static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size());
     return arucoDetectorImpl->dictionaries[index];
 }
 
 void ArucoDetector::setDictionary(const Dictionary& dictionary, int index) {
     // special case: if index is 0, we add the dictionary to the list to preserve the old behavior
-    CV_Assert(index == 0 || static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size());
+    CV_Assert(index == 0 || (index >= 0 && static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size()));
     if (index == 0 && arucoDetectorImpl->dictionaries.empty()) {
         arucoDetectorImpl->dictionaries.push_back(dictionary);
     } else {
@@ -1373,7 +1463,7 @@ void ArucoDetector::addDictionary(const Dictionary& dictionary) {
 }
 
 void ArucoDetector::removeDictionary(int index) {
-    CV_Assert(static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size());
+    CV_Assert(index >= 0 && static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size());
     // disallow no dictionaries
     CV_Assert(arucoDetectorImpl->dictionaries.size() > 1ul);
     arucoDetectorImpl->dictionaries.erase(arucoDetectorImpl->dictionaries.begin() + index);

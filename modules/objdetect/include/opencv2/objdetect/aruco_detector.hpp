@@ -287,7 +287,7 @@ public:
 
     /** @brief ArucoDetector constructor for multiple dictionaries
      *
-     * @param dictionaries indicates the type of markers that will be searched
+     * @param dictionaries indicates the type of markers that will be searched. Empty dictionaries will throw an error.
      * @param detectorParams marker detection parameters
      * @param refineParams marker refine detection parameters
      */
@@ -306,10 +306,8 @@ public:
      * The identifiers have the same order than the markers in the imgPoints array.
      * @param rejectedImgPoints contains the imgPoints of those squares whose inner code has not a
      * correct codification. Useful for debugging purposes.
-     * @param dictIndices vector of dictionary indices for each detected marker. Use getDictionaries() to get the
-     * list of corresponding dictionaries.
      *
-     * Performs marker detection in the input image. Only markers included in the specific dictionaries
+     * Performs marker detection in the input image. Only markers included in the first specified dictionary
      * are searched. For each detected marker, it returns the 2D position of its corner in the image
      * and its corresponding identifier.
      * Note that this function does not perform pose estimation.
@@ -318,7 +316,7 @@ public:
      * @sa undistort, estimatePoseSingleMarkers,  estimatePoseBoard
      */
     CV_WRAP void detectMarkers(InputArray image, OutputArrayOfArrays corners, OutputArray ids,
-                               OutputArrayOfArrays rejectedImgPoints = noArray(), OutputArray dictIndices = noArray()) const;
+                               OutputArrayOfArrays rejectedImgPoints = noArray()) const;
 
     /** @brief Refine not detected markers based on the already detected and the board layout
      *
@@ -349,6 +347,31 @@ public:
                                        InputOutputArray detectedIds, InputOutputArrayOfArrays rejectedCorners,
                                        InputArray cameraMatrix = noArray(), InputArray distCoeffs = noArray(),
                                        OutputArray recoveredIdxs = noArray()) const;
+
+    /** @brief Basic marker detection
+     *
+     * @param image input image
+     * @param corners vector of detected marker corners. For each marker, its four corners
+     * are provided, (e.g std::vector<std::vector<cv::Point2f> > ). For N detected markers,
+     * the dimensions of this array is Nx4. The order of the corners is clockwise.
+     * @param ids vector of identifiers of the detected markers. The identifier is of type int
+     * (e.g. std::vector<int>). For N detected markers, the size of ids is also N.
+     * The identifiers have the same order than the markers in the imgPoints array.
+     * @param rejectedImgPoints contains the imgPoints of those squares whose inner code has not a
+     * correct codification. Useful for debugging purposes.
+     * @param dictIndices vector of dictionary indices for each detected marker. Use getDictionaries() to get the
+     * list of corresponding dictionaries.
+     *
+     * Performs marker detection in the input image. Only markers included in the specific dictionaries
+     * are searched. For each detected marker, it returns the 2D position of its corner in the image
+     * and its corresponding identifier.
+     * Note that this function does not perform pose estimation.
+     * @note The function does not correct lens distortion or takes it into account. It's recommended to undistort
+     * input image with corresponding camera model, if camera parameters are known
+     * @sa undistort, estimatePoseSingleMarkers,  estimatePoseBoard
+     */
+    CV_WRAP void detectMarkersMultiDict(InputArray image, OutputArrayOfArrays corners, OutputArray ids,
+                               OutputArrayOfArrays rejectedImgPoints = noArray(), OutputArray dictIndices = noArray()) const;
 
     CV_WRAP const Dictionary& getDictionary(int index = 0) const;
     CV_WRAP void setDictionary(const Dictionary& dictionary, int index = 0);

@@ -142,6 +142,9 @@ class CV_ArucoRefine : public cvtest::BaseTest {
             params.useAruco3Detection = true;
         aruco::RefineParameters refineParams(10.f, 3.f, true);
         detector = aruco::ArucoDetector(dictionary, params, refineParams);
+        detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_5X5_250));
+        detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_4X4_250));
+        detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_7X7_250));
     }
 
     protected:
