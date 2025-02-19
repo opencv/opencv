@@ -13,418 +13,419 @@ namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_pyrup
 #define cv_hal_pyrup cv::cv_hal_rvv::pyrUp
 
-namespace pyramids
+namespace pyramids {
+
+template<typename T> struct rvv;
+
+template<> struct rvv<uchar>
 {
-    template<typename T> struct rvv;
+    static inline size_t vsetvl_WT(size_t a) { return __riscv_vsetvl_e32m4(a); }
+    static inline vuint8m1_t vle_T(const uchar* a, size_t b) { return __riscv_vle8_v_u8m1(a, b); }
+    static inline vint32m4_t vle_WT(const int* a, size_t b) { return __riscv_vle32_v_i32m4(a, b); }
+    static inline vuint32m4_t vle_M(const uint* a, size_t b) { return __riscv_vle32_v_u32m4(a, b); }
+    static inline vuint8m1_t vlse_T(const uchar* a, ptrdiff_t b, size_t c) { return __riscv_vlse8_v_u8m1(a, b, c); }
+    static inline vuint8m1_t vloxei_T(const uchar* a, vuint32m4_t b, size_t c) { return __riscv_vloxei32_v_u8m1(a, b, c); }
+    static inline void vse_T(uchar* a, vuint8m1_t b, size_t c) { return __riscv_vse8(a, b, c); }
+    static inline vint32m4_t vcvt_T_WT(vuint8m1_t a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(a, b)); }
+    static inline vuint8m1_t vcvt_WT_T(vint32m4_t a, int b, size_t c) { return __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vsra(__riscv_vadd(a, 1 << (b - 1), c), b, c)), c), c); }
+};
 
-    template<> struct rvv<uchar>
-    {
-        static inline size_t vsetvl_WT(size_t a) { return __riscv_vsetvl_e32m4(a); }
-        static inline vuint8m1_t vle_T(const uchar* a, size_t b) { return __riscv_vle8_v_u8m1(a, b); }
-        static inline vint32m4_t vle_WT(const int* a, size_t b) { return __riscv_vle32_v_i32m4(a, b); }
-        static inline vuint32m4_t vle_M(const uint* a, size_t b) { return __riscv_vle32_v_u32m4(a, b); }
-        static inline vuint8m1_t vlse_T(const uchar* a, ptrdiff_t b, size_t c) { return __riscv_vlse8_v_u8m1(a, b, c); }
-        static inline vuint8m1_t vloxei_T(const uchar* a, vuint32m4_t b, size_t c) { return __riscv_vloxei32_v_u8m1(a, b, c); }
-        static inline void vse_T(uchar* a, vuint8m1_t b, size_t c) { return __riscv_vse8(a, b, c); }
-        static inline vint32m4_t vcvt_T_WT(vuint8m1_t a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(a, b)); }
-        static inline vuint8m1_t vcvt_WT_T(vint32m4_t a, int b, size_t c) { return __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vsra(__riscv_vadd(a, 1 << (b - 1), c), b, c)), c), c); }
-    };
+template<> struct rvv<short>
+{
+    static inline size_t vsetvl_WT(size_t a) { return __riscv_vsetvl_e32m4(a); }
+    static inline vint16m2_t vle_T(const short* a, size_t b) { return __riscv_vle16_v_i16m2(a, b); }
+    static inline vint32m4_t vle_WT(const int* a, size_t b) { return __riscv_vle32_v_i32m4(a, b); }
+    static inline vuint32m4_t vle_M(const uint* a, size_t b) { return __riscv_vle32_v_u32m4(a, b); }
+    static inline vint16m2_t vlse_T(const short* a, ptrdiff_t b, size_t c) { return __riscv_vlse16_v_i16m2(a, b, c); }
+    static inline vint16m2_t vloxei_T(const short* a, vuint32m4_t b, size_t c) { return __riscv_vloxei32_v_i16m2(a, b, c); }
+    static inline void vse_T(short* a, vint16m2_t b, size_t c) { return __riscv_vse16(a, b, c); }
+    static inline vint32m4_t vcvt_T_WT(vint16m2_t a, size_t b) { return __riscv_vsext_vf2(a, b); }
+    static inline vint16m2_t vcvt_WT_T(vint32m4_t a, int b, size_t c) { return __riscv_vncvt_x(__riscv_vsra(__riscv_vadd(a, 1 << (b - 1), c), b, c), c); }
+};
 
-    template<> struct rvv<short>
-    {
-        static inline size_t vsetvl_WT(size_t a) { return __riscv_vsetvl_e32m4(a); }
-        static inline vint16m2_t vle_T(const short* a, size_t b) { return __riscv_vle16_v_i16m2(a, b); }
-        static inline vint32m4_t vle_WT(const int* a, size_t b) { return __riscv_vle32_v_i32m4(a, b); }
-        static inline vuint32m4_t vle_M(const uint* a, size_t b) { return __riscv_vle32_v_u32m4(a, b); }
-        static inline vint16m2_t vlse_T(const short* a, ptrdiff_t b, size_t c) { return __riscv_vlse16_v_i16m2(a, b, c); }
-        static inline vint16m2_t vloxei_T(const short* a, vuint32m4_t b, size_t c) { return __riscv_vloxei32_v_i16m2(a, b, c); }
-        static inline void vse_T(short* a, vint16m2_t b, size_t c) { return __riscv_vse16(a, b, c); }
-        static inline vint32m4_t vcvt_T_WT(vint16m2_t a, size_t b) { return __riscv_vsext_vf2(a, b); }
-        static inline vint16m2_t vcvt_WT_T(vint32m4_t a, int b, size_t c) { return __riscv_vncvt_x(__riscv_vsra(__riscv_vadd(a, 1 << (b - 1), c), b, c), c); }
-    };
+template<> struct rvv<float>
+{
+    static inline size_t vsetvl_WT(size_t a) { return __riscv_vsetvl_e32m4(a); }
+    static inline vfloat32m4_t vle_T(const float* a, size_t b) { return __riscv_vle32_v_f32m4(a, b); }
+    static inline vfloat32m4_t vle_WT(const float* a, size_t b) { return __riscv_vle32_v_f32m4(a, b); }
+    static inline vuint32m4_t vle_M(const uint* a, size_t b) { return __riscv_vle32_v_u32m4(a, b); }
+    static inline vfloat32m4_t vlse_T(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32m4(a, b, c); }
+    static inline vfloat32m4_t vloxei_T(const float* a, vuint32m4_t b, size_t c) { return __riscv_vloxei32_v_f32m4(a, b, c); }
+    static inline void vse_T(float* a, vfloat32m4_t b, size_t c) { return __riscv_vse32(a, b, c); }
+};
 
-    template<> struct rvv<float>
+template<typename T, typename WT> struct pyrDownVec0
+{
+    void operator()(const T* src, WT* row, const uint* tabM, int start, int end)
     {
-        static inline size_t vsetvl_WT(size_t a) { return __riscv_vsetvl_e32m4(a); }
-        static inline vfloat32m4_t vle_T(const float* a, size_t b) { return __riscv_vle32_v_f32m4(a, b); }
-        static inline vfloat32m4_t vle_WT(const float* a, size_t b) { return __riscv_vle32_v_f32m4(a, b); }
-        static inline vuint32m4_t vle_M(const uint* a, size_t b) { return __riscv_vle32_v_u32m4(a, b); }
-        static inline vfloat32m4_t vlse_T(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32m4(a, b, c); }
-        static inline vfloat32m4_t vloxei_T(const float* a, vuint32m4_t b, size_t c) { return __riscv_vloxei32_v_f32m4(a, b, c); }
-        static inline void vse_T(float* a, vfloat32m4_t b, size_t c) { return __riscv_vse32(a, b, c); }
-    };
-
-    template<typename T, typename WT> struct pyrDownVec0
-    {
-        void operator()(const T* src, WT* row, const uint* tabM, int start, int end)
+        int vl;
+        switch (start)
         {
-            int vl;
-            switch (start)
+        case 1:
+            for( int x = start; x < end; x += vl )
             {
-            case 1:
-                for( int x = start; x < end; x += vl )
-                {
-                    vl = rvv<T>::vsetvl_WT(end - x);
-                    auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + x * 2 - 2, 2 * sizeof(T), vl), vl);
-                    auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + x * 2 - 1, 2 * sizeof(T), vl), vl);
-                    auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + x * 2, 2 * sizeof(T), vl), vl);
-                    auto vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + x * 2 + 1, 2 * sizeof(T), vl), vl);
-                    auto vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + x * 2 + 2, 2 * sizeof(T), vl), vl);
-                    __riscv_vse32(row + x, __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
-                                                        __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                }
-                break;
-            case 2:
-                for( int x = start / 2; x < end / 2; x += vl )
-                {
-                    vl = rvv<T>::vsetvl_WT(end / 2 - x);
-                    auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 2, 4 * sizeof(T), vl), vl);
-                    auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 2, 4 * sizeof(T), vl), vl);
-                    auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 2, 4 * sizeof(T), vl), vl);
-                    auto vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 2, 4 * sizeof(T), vl), vl);
-                    auto vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 2, 4 * sizeof(T), vl), vl);
-                    __riscv_vsse32(row + x * 2, 2 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                vl = rvv<T>::vsetvl_WT(end - x);
+                auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + x * 2 - 2, 2 * sizeof(T), vl), vl);
+                auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + x * 2 - 1, 2 * sizeof(T), vl), vl);
+                auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + x * 2, 2 * sizeof(T), vl), vl);
+                auto vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + x * 2 + 1, 2 * sizeof(T), vl), vl);
+                auto vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + x * 2 + 2, 2 * sizeof(T), vl), vl);
+                __riscv_vse32(row + x, __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                                                    __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
+            }
+            break;
+        case 2:
+            for( int x = start / 2; x < end / 2; x += vl )
+            {
+                vl = rvv<T>::vsetvl_WT(end / 2 - x);
+                auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 2, 4 * sizeof(T), vl), vl);
+                auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 2, 4 * sizeof(T), vl), vl);
+                auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 2, 4 * sizeof(T), vl), vl);
+                auto vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 2, 4 * sizeof(T), vl), vl);
+                auto vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 2, 4 * sizeof(T), vl), vl);
+                __riscv_vsse32(row + x * 2, 2 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                                                                         __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
+                vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 2 + 1, 4 * sizeof(T), vl), vl);
+                vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 2 + 1, 4 * sizeof(T), vl), vl);
+                vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 2 + 1, 4 * sizeof(T), vl), vl);
+                vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 2 + 1, 4 * sizeof(T), vl), vl);
+                vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 2 + 1, 4 * sizeof(T), vl), vl);
+                __riscv_vsse32(row + x * 2 + 1, 2 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
                                                                              __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                    vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 2 + 1, 4 * sizeof(T), vl), vl);
-                    vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 2 + 1, 4 * sizeof(T), vl), vl);
-                    vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 2 + 1, 4 * sizeof(T), vl), vl);
-                    vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 2 + 1, 4 * sizeof(T), vl), vl);
-                    vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 2 + 1, 4 * sizeof(T), vl), vl);
-                    __riscv_vsse32(row + x * 2 + 1, 2 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
-                                                                                 __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                }
-                break;
-            case 3:
-                for( int x = start / 3; x < end / 3; x += vl )
-                {
-                    vl = rvv<T>::vsetvl_WT(end / 3 - x);
-                    auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 3, 6 * sizeof(T), vl), vl);
-                    auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 3, 6 * sizeof(T), vl), vl);
-                    auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 3, 6 * sizeof(T), vl), vl);
-                    auto vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 3, 6 * sizeof(T), vl), vl);
-                    auto vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 3, 6 * sizeof(T), vl), vl);
-                    __riscv_vsse32(row + x * 3, 3 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+            }
+            break;
+        case 3:
+            for( int x = start / 3; x < end / 3; x += vl )
+            {
+                vl = rvv<T>::vsetvl_WT(end / 3 - x);
+                auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 3, 6 * sizeof(T), vl), vl);
+                auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 3, 6 * sizeof(T), vl), vl);
+                auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 3, 6 * sizeof(T), vl), vl);
+                auto vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 3, 6 * sizeof(T), vl), vl);
+                auto vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 3, 6 * sizeof(T), vl), vl);
+                __riscv_vsse32(row + x * 3, 3 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                                                                         __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
+                vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 3 + 1, 6 * sizeof(T), vl), vl);
+                vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 3 + 1, 6 * sizeof(T), vl), vl);
+                vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 3 + 1, 6 * sizeof(T), vl), vl);
+                vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 3 + 1, 6 * sizeof(T), vl), vl);
+                vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 3 + 1, 6 * sizeof(T), vl), vl);
+                __riscv_vsse32(row + x * 3 + 1, 3 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
                                                                              __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                    vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 3 + 1, 6 * sizeof(T), vl), vl);
-                    vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 3 + 1, 6 * sizeof(T), vl), vl);
-                    vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 3 + 1, 6 * sizeof(T), vl), vl);
-                    vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 3 + 1, 6 * sizeof(T), vl), vl);
-                    vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 3 + 1, 6 * sizeof(T), vl), vl);
-                    __riscv_vsse32(row + x * 3 + 1, 3 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
-                                                                                 __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                    vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 3 + 2, 6 * sizeof(T), vl), vl);
-                    vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 3 + 2, 6 * sizeof(T), vl), vl);
-                    vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 3 + 2, 6 * sizeof(T), vl), vl);
-                    vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 3 + 2, 6 * sizeof(T), vl), vl);
-                    vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 3 + 2, 6 * sizeof(T), vl), vl);
-                    __riscv_vsse32(row + x * 3 + 2, 3 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
-                                                                                 __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                }
-                break;
-            case 4:
-                for( int x = start / 4; x < end / 4; x += vl )
-                {
-                    vl = rvv<T>::vsetvl_WT(end / 4 - x);
-                    auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 4, 8 * sizeof(T), vl), vl);
-                    auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 4, 8 * sizeof(T), vl), vl);
-                    auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 4, 8 * sizeof(T), vl), vl);
-                    auto vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 4, 8 * sizeof(T), vl), vl);
-                    auto vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 4, 8 * sizeof(T), vl), vl);
-                    __riscv_vsse32(row + x * 4, 4 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 3 + 2, 6 * sizeof(T), vl), vl);
+                vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 3 + 2, 6 * sizeof(T), vl), vl);
+                vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 3 + 2, 6 * sizeof(T), vl), vl);
+                vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 3 + 2, 6 * sizeof(T), vl), vl);
+                vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 3 + 2, 6 * sizeof(T), vl), vl);
+                __riscv_vsse32(row + x * 3 + 2, 3 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
                                                                              __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                    vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 4 + 1, 8 * sizeof(T), vl), vl);
-                    vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 4 + 1, 8 * sizeof(T), vl), vl);
-                    vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 4 + 1, 8 * sizeof(T), vl), vl);
-                    vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 4 + 1, 8 * sizeof(T), vl), vl);
-                    vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 4 + 1, 8 * sizeof(T), vl), vl);
-                    __riscv_vsse32(row + x * 4 + 1, 4 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
-                                                                                 __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                    vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 4 + 2, 8 * sizeof(T), vl), vl);
-                    vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 4 + 2, 8 * sizeof(T), vl), vl);
-                    vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 4 + 2, 8 * sizeof(T), vl), vl);
-                    vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 4 + 2, 8 * sizeof(T), vl), vl);
-                    vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 4 + 2, 8 * sizeof(T), vl), vl);
-                    __riscv_vsse32(row + x * 4 + 2, 4 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
-                                                                                 __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                    vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 4 + 3, 8 * sizeof(T), vl), vl);
-                    vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 4 + 3, 8 * sizeof(T), vl), vl);
-                    vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 4 + 3, 8 * sizeof(T), vl), vl);
-                    vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 4 + 3, 8 * sizeof(T), vl), vl);
-                    vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 4 + 3, 8 * sizeof(T), vl), vl);
-                    __riscv_vsse32(row + x * 4 + 3, 4 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
-                                                                                 __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                }
-                break;
-            default:
-                for( int x = start; x < end; x += vl )
-                {
-                    vl = rvv<T>::vsetvl_WT(end - x);
-                    auto vec_tabM = rvv<T>::vle_M(tabM + x, vl);
-                    vec_tabM = __riscv_vmul(__riscv_vsub(vec_tabM, start * 2, vl), sizeof(T), vl);
-                    auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vloxei_T(src, vec_tabM, vl), vl);
-                    vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(T), vl);
-                    auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vloxei_T(src, vec_tabM, vl), vl);
-                    vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(T), vl);
-                    auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vloxei_T(src, vec_tabM, vl), vl);
-                    vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(T), vl);
-                    auto vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vloxei_T(src, vec_tabM, vl), vl);
-                    vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(T), vl);
-                    auto vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vloxei_T(src, vec_tabM, vl), vl);
-                    __riscv_vse32(row + x, __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
-                                                        __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
-                }
+            }
+            break;
+        case 4:
+            for( int x = start / 4; x < end / 4; x += vl )
+            {
+                vl = rvv<T>::vsetvl_WT(end / 4 - x);
+                auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 4, 8 * sizeof(T), vl), vl);
+                auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 4, 8 * sizeof(T), vl), vl);
+                auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 4, 8 * sizeof(T), vl), vl);
+                auto vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 4, 8 * sizeof(T), vl), vl);
+                auto vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 4, 8 * sizeof(T), vl), vl);
+                __riscv_vsse32(row + x * 4, 4 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                                                                         __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
+                vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 4 + 1, 8 * sizeof(T), vl), vl);
+                vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 4 + 1, 8 * sizeof(T), vl), vl);
+                vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 4 + 1, 8 * sizeof(T), vl), vl);
+                vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 4 + 1, 8 * sizeof(T), vl), vl);
+                vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 4 + 1, 8 * sizeof(T), vl), vl);
+                __riscv_vsse32(row + x * 4 + 1, 4 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                                                                             __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
+                vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 4 + 2, 8 * sizeof(T), vl), vl);
+                vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 4 + 2, 8 * sizeof(T), vl), vl);
+                vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 4 + 2, 8 * sizeof(T), vl), vl);
+                vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 4 + 2, 8 * sizeof(T), vl), vl);
+                vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 4 + 2, 8 * sizeof(T), vl), vl);
+                __riscv_vsse32(row + x * 4 + 2, 4 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                                                                             __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
+                vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 2) * 4 + 3, 8 * sizeof(T), vl), vl);
+                vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 - 1) * 4 + 3, 8 * sizeof(T), vl), vl);
+                vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2) * 4 + 3, 8 * sizeof(T), vl), vl);
+                vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 1) * 4 + 3, 8 * sizeof(T), vl), vl);
+                vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vlse_T(src + (x * 2 + 2) * 4 + 3, 8 * sizeof(T), vl), vl);
+                __riscv_vsse32(row + x * 4 + 3, 4 * sizeof(WT), __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                                                                             __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
+            }
+            break;
+        default:
+            for( int x = start; x < end; x += vl )
+            {
+                vl = rvv<T>::vsetvl_WT(end - x);
+                auto vec_tabM = rvv<T>::vle_M(tabM + x, vl);
+                vec_tabM = __riscv_vmul(__riscv_vsub(vec_tabM, start * 2, vl), sizeof(T), vl);
+                auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vloxei_T(src, vec_tabM, vl), vl);
+                vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(T), vl);
+                auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vloxei_T(src, vec_tabM, vl), vl);
+                vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(T), vl);
+                auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vloxei_T(src, vec_tabM, vl), vl);
+                vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(T), vl);
+                auto vec_src3 = rvv<T>::vcvt_T_WT(rvv<T>::vloxei_T(src, vec_tabM, vl), vl);
+                vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(T), vl);
+                auto vec_src4 = rvv<T>::vcvt_T_WT(rvv<T>::vloxei_T(src, vec_tabM, vl), vl);
+                __riscv_vse32(row + x, __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                                                    __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), vl);
             }
         }
-    };
-    template<> struct pyrDownVec0<float, float>
+    }
+};
+template<> struct pyrDownVec0<float, float>
+{
+    void operator()(const float* src, float* row, const uint* tabM, int start, int end)
     {
-        void operator()(const float* src, float* row, const uint* tabM, int start, int end)
+        int vl;
+        switch (start)
         {
-            int vl;
-            switch (start)
+        case 1:
+            for( int x = start; x < end; x += vl )
             {
-            case 1:
-                for( int x = start; x < end; x += vl )
-                {
-                    vl = rvv<float>::vsetvl_WT(end - x);
-                    auto vec_src0 = rvv<float>::vlse_T(src + x * 2 - 2, 2 * sizeof(float), vl);
-                    auto vec_src1 = rvv<float>::vlse_T(src + x * 2 - 1, 2 * sizeof(float), vl);
-                    auto vec_src2 = rvv<float>::vlse_T(src + x * 2, 2 * sizeof(float), vl);
-                    auto vec_src3 = rvv<float>::vlse_T(src + x * 2 + 1, 2 * sizeof(float), vl);
-                    auto vec_src4 = rvv<float>::vlse_T(src + x * 2 + 2, 2 * sizeof(float), vl);
-                    __riscv_vse32(row + x, __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
-                }
-                break;
-            case 2:
-                for( int x = start / 2; x < end / 2; x += vl )
-                {
-                    vl = rvv<float>::vsetvl_WT(end / 2 - x);
-                    auto vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 2, 4 * sizeof(float), vl);
-                    auto vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 2, 4 * sizeof(float), vl);
-                    auto vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 2, 4 * sizeof(float), vl);
-                    auto vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 2, 4 * sizeof(float), vl);
-                    auto vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 2, 4 * sizeof(float), vl);
-                    __riscv_vsse32(row + x * 2, 2 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
-                    vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 2 + 1, 4 * sizeof(float), vl);
-                    vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 2 + 1, 4 * sizeof(float), vl);
-                    vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 2 + 1, 4 * sizeof(float), vl);
-                    vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 2 + 1, 4 * sizeof(float), vl);
-                    vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 2 + 1, 4 * sizeof(float), vl);
-                    __riscv_vsse32(row + x * 2 + 1, 2 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
-                }
-                break;
-            case 3:
-                for( int x = start / 3; x < end / 3; x += vl )
-                {
-                    vl = rvv<float>::vsetvl_WT(end / 3 - x);
-                    auto vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 3, 6 * sizeof(float), vl);
-                    auto vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 3, 6 * sizeof(float), vl);
-                    auto vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 3, 6 * sizeof(float), vl);
-                    auto vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 3, 6 * sizeof(float), vl);
-                    auto vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 3, 6 * sizeof(float), vl);
-                    __riscv_vsse32(row + x * 3, 3 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
-                    vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 3 + 1, 6 * sizeof(float), vl);
-                    vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 3 + 1, 6 * sizeof(float), vl);
-                    vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 3 + 1, 6 * sizeof(float), vl);
-                    vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 3 + 1, 6 * sizeof(float), vl);
-                    vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 3 + 1, 6 * sizeof(float), vl);
-                    __riscv_vsse32(row + x * 3 + 1, 3 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
-                    vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 3 + 2, 6 * sizeof(float), vl);
-                    vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 3 + 2, 6 * sizeof(float), vl);
-                    vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 3 + 2, 6 * sizeof(float), vl);
-                    vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 3 + 2, 6 * sizeof(float), vl);
-                    vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 3 + 2, 6 * sizeof(float), vl);
-                    __riscv_vsse32(row + x * 3 + 2, 3 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
-                }
-                break;
-            case 4:
-                for( int x = start / 4; x < end / 4; x += vl )
-                {
-                    vl = rvv<float>::vsetvl_WT(end / 4 - x);
-                    auto vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 4, 8 * sizeof(float), vl);
-                    auto vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 4, 8 * sizeof(float), vl);
-                    auto vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 4, 8 * sizeof(float), vl);
-                    auto vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 4, 8 * sizeof(float), vl);
-                    auto vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 4, 8 * sizeof(float), vl);
-                    __riscv_vsse32(row + x * 4, 4 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
-                    vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 4 + 1, 8 * sizeof(float), vl);
-                    vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 4 + 1, 8 * sizeof(float), vl);
-                    vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 4 + 1, 8 * sizeof(float), vl);
-                    vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 4 + 1, 8 * sizeof(float), vl);
-                    vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 4 + 1, 8 * sizeof(float), vl);
-                    __riscv_vsse32(row + x * 4 + 1, 4 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
-                    vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 4 + 2, 8 * sizeof(float), vl);
-                    vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 4 + 2, 8 * sizeof(float), vl);
-                    vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 4 + 2, 8 * sizeof(float), vl);
-                    vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 4 + 2, 8 * sizeof(float), vl);
-                    vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 4 + 2, 8 * sizeof(float), vl);
-                    __riscv_vsse32(row + x * 4 + 2, 4 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
-                    vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 4 + 3, 8 * sizeof(float), vl);
-                    vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 4 + 3, 8 * sizeof(float), vl);
-                    vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 4 + 3, 8 * sizeof(float), vl);
-                    vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 4 + 3, 8 * sizeof(float), vl);
-                    vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 4 + 3, 8 * sizeof(float), vl);
-                    __riscv_vsse32(row + x * 4 + 3, 4 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
-                }
-                break;
-            default:
-                for( int x = start; x < end; x += vl )
-                {
-                    vl = rvv<float>::vsetvl_WT(end - x);
-                    auto vec_tabM = rvv<float>::vle_M(tabM + x, vl);
-                    vec_tabM = __riscv_vmul(__riscv_vsub(vec_tabM, start * 2, vl), sizeof(float), vl);
-                    auto vec_src0 = rvv<float>::vloxei_T(src, vec_tabM, vl);
-                    vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(float), vl);
-                    auto vec_src1 = rvv<float>::vloxei_T(src, vec_tabM, vl);
-                    vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(float), vl);
-                    auto vec_src2 = rvv<float>::vloxei_T(src, vec_tabM, vl);
-                    vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(float), vl);
-                    auto vec_src3 = rvv<float>::vloxei_T(src, vec_tabM, vl);
-                    vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(float), vl);
-                    auto vec_src4 = rvv<float>::vloxei_T(src, vec_tabM, vl);
-                    __riscv_vse32(row + x, __riscv_vfmadd(__riscv_vfadd(__riscv_vfadd(vec_src1, vec_src2, vl), vec_src3, vl), 4,
-                                                          __riscv_vfadd(__riscv_vfadd(vec_src0, vec_src4, vl), __riscv_vfadd(vec_src2, vec_src2, vl), vl), vl), vl);
-                }
+                vl = rvv<float>::vsetvl_WT(end - x);
+                auto vec_src0 = rvv<float>::vlse_T(src + x * 2 - 2, 2 * sizeof(float), vl);
+                auto vec_src1 = rvv<float>::vlse_T(src + x * 2 - 1, 2 * sizeof(float), vl);
+                auto vec_src2 = rvv<float>::vlse_T(src + x * 2, 2 * sizeof(float), vl);
+                auto vec_src3 = rvv<float>::vlse_T(src + x * 2 + 1, 2 * sizeof(float), vl);
+                auto vec_src4 = rvv<float>::vlse_T(src + x * 2 + 2, 2 * sizeof(float), vl);
+                __riscv_vse32(row + x, __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
+            }
+            break;
+        case 2:
+            for( int x = start / 2; x < end / 2; x += vl )
+            {
+                vl = rvv<float>::vsetvl_WT(end / 2 - x);
+                auto vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 2, 4 * sizeof(float), vl);
+                auto vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 2, 4 * sizeof(float), vl);
+                auto vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 2, 4 * sizeof(float), vl);
+                auto vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 2, 4 * sizeof(float), vl);
+                auto vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 2, 4 * sizeof(float), vl);
+                __riscv_vsse32(row + x * 2, 2 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
+                vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 2 + 1, 4 * sizeof(float), vl);
+                vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 2 + 1, 4 * sizeof(float), vl);
+                vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 2 + 1, 4 * sizeof(float), vl);
+                vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 2 + 1, 4 * sizeof(float), vl);
+                vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 2 + 1, 4 * sizeof(float), vl);
+                __riscv_vsse32(row + x * 2 + 1, 2 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
+            }
+            break;
+        case 3:
+            for( int x = start / 3; x < end / 3; x += vl )
+            {
+                vl = rvv<float>::vsetvl_WT(end / 3 - x);
+                auto vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 3, 6 * sizeof(float), vl);
+                auto vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 3, 6 * sizeof(float), vl);
+                auto vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 3, 6 * sizeof(float), vl);
+                auto vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 3, 6 * sizeof(float), vl);
+                auto vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 3, 6 * sizeof(float), vl);
+                __riscv_vsse32(row + x * 3, 3 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
+                vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 3 + 1, 6 * sizeof(float), vl);
+                vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 3 + 1, 6 * sizeof(float), vl);
+                vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 3 + 1, 6 * sizeof(float), vl);
+                vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 3 + 1, 6 * sizeof(float), vl);
+                vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 3 + 1, 6 * sizeof(float), vl);
+                __riscv_vsse32(row + x * 3 + 1, 3 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
+                vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 3 + 2, 6 * sizeof(float), vl);
+                vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 3 + 2, 6 * sizeof(float), vl);
+                vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 3 + 2, 6 * sizeof(float), vl);
+                vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 3 + 2, 6 * sizeof(float), vl);
+                vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 3 + 2, 6 * sizeof(float), vl);
+                __riscv_vsse32(row + x * 3 + 2, 3 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
+            }
+            break;
+        case 4:
+            for( int x = start / 4; x < end / 4; x += vl )
+            {
+                vl = rvv<float>::vsetvl_WT(end / 4 - x);
+                auto vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 4, 8 * sizeof(float), vl);
+                auto vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 4, 8 * sizeof(float), vl);
+                auto vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 4, 8 * sizeof(float), vl);
+                auto vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 4, 8 * sizeof(float), vl);
+                auto vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 4, 8 * sizeof(float), vl);
+                __riscv_vsse32(row + x * 4, 4 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
+                vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 4 + 1, 8 * sizeof(float), vl);
+                vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 4 + 1, 8 * sizeof(float), vl);
+                vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 4 + 1, 8 * sizeof(float), vl);
+                vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 4 + 1, 8 * sizeof(float), vl);
+                vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 4 + 1, 8 * sizeof(float), vl);
+                __riscv_vsse32(row + x * 4 + 1, 4 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
+                vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 4 + 2, 8 * sizeof(float), vl);
+                vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 4 + 2, 8 * sizeof(float), vl);
+                vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 4 + 2, 8 * sizeof(float), vl);
+                vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 4 + 2, 8 * sizeof(float), vl);
+                vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 4 + 2, 8 * sizeof(float), vl);
+                __riscv_vsse32(row + x * 4 + 2, 4 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
+                vec_src0 = rvv<float>::vlse_T(src + (x * 2 - 2) * 4 + 3, 8 * sizeof(float), vl);
+                vec_src1 = rvv<float>::vlse_T(src + (x * 2 - 1) * 4 + 3, 8 * sizeof(float), vl);
+                vec_src2 = rvv<float>::vlse_T(src + (x * 2) * 4 + 3, 8 * sizeof(float), vl);
+                vec_src3 = rvv<float>::vlse_T(src + (x * 2 + 1) * 4 + 3, 8 * sizeof(float), vl);
+                vec_src4 = rvv<float>::vlse_T(src + (x * 2 + 2) * 4 + 3, 8 * sizeof(float), vl);
+                __riscv_vsse32(row + x * 4 + 3, 4 * sizeof(float), __riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), vl);
+            }
+            break;
+        default:
+            for( int x = start; x < end; x += vl )
+            {
+                vl = rvv<float>::vsetvl_WT(end - x);
+                auto vec_tabM = rvv<float>::vle_M(tabM + x, vl);
+                vec_tabM = __riscv_vmul(__riscv_vsub(vec_tabM, start * 2, vl), sizeof(float), vl);
+                auto vec_src0 = rvv<float>::vloxei_T(src, vec_tabM, vl);
+                vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(float), vl);
+                auto vec_src1 = rvv<float>::vloxei_T(src, vec_tabM, vl);
+                vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(float), vl);
+                auto vec_src2 = rvv<float>::vloxei_T(src, vec_tabM, vl);
+                vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(float), vl);
+                auto vec_src3 = rvv<float>::vloxei_T(src, vec_tabM, vl);
+                vec_tabM =  __riscv_vadd(vec_tabM, start * sizeof(float), vl);
+                auto vec_src4 = rvv<float>::vloxei_T(src, vec_tabM, vl);
+                __riscv_vse32(row + x, __riscv_vfmadd(__riscv_vfadd(__riscv_vfadd(vec_src1, vec_src2, vl), vec_src3, vl), 4,
+                                                      __riscv_vfadd(__riscv_vfadd(vec_src0, vec_src4, vl), __riscv_vfadd(vec_src2, vec_src2, vl), vl), vl), vl);
             }
         }
-    };
+    }
+};
 
-    template<typename T, typename WT> struct pyrDownVec1
+template<typename T, typename WT> struct pyrDownVec1
+{
+    void operator()(WT* row0, WT* row1, WT* row2, WT* row3, WT* row4, T* dst, int end)
     {
-        void operator()(WT* row0, WT* row1, WT* row2, WT* row3, WT* row4, T* dst, int end)
+        int vl;
+        for( int x = 0 ; x < end; x += vl )
         {
-            int vl;
+            vl = pyramids::rvv<T>::vsetvl_WT(end - x);
+            auto vec_src0 = pyramids::rvv<T>::vle_WT(row0 + x, vl);
+            auto vec_src1 = pyramids::rvv<T>::vle_WT(row1 + x, vl);
+            auto vec_src2 = pyramids::rvv<T>::vle_WT(row2 + x, vl);
+            auto vec_src3 = pyramids::rvv<T>::vle_WT(row3 + x, vl);
+            auto vec_src4 = pyramids::rvv<T>::vle_WT(row4 + x, vl);
+            pyramids::rvv<T>::vse_T(dst + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+                                                                                      __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), 8, vl), vl);
+        }
+    }
+};
+template<> struct pyrDownVec1<float, float>
+{
+    void operator()(float* row0, float* row1, float* row2, float* row3, float* row4, float* dst, int end)
+    {
+        int vl;
+        for( int x = 0 ; x < end; x += vl )
+        {
+            vl = pyramids::rvv<float>::vsetvl_WT(end - x);
+            auto vec_src0 = pyramids::rvv<float>::vle_WT(row0 + x, vl);
+            auto vec_src1 = pyramids::rvv<float>::vle_WT(row1 + x, vl);
+            auto vec_src2 = pyramids::rvv<float>::vle_WT(row2 + x, vl);
+            auto vec_src3 = pyramids::rvv<float>::vle_WT(row3 + x, vl);
+            auto vec_src4 = pyramids::rvv<float>::vle_WT(row4 + x, vl);
+            pyramids::rvv<float>::vse_T(dst + x, __riscv_vfmul(__riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), 1.f / 256.f, vl), vl);
+        }
+    }
+};
+
+template<typename T, typename WT> struct pyrUpVec0
+{
+    void operator()(const T* src, WT* row, const uint* dtab, int start, int end)
+    {
+        int vl;
+        for( int x = start; x < end; x += vl )
+        {
+            vl = rvv<T>::vsetvl_WT(end - x);
+            auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vle_T(src + x - start, vl), vl);
+            auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vle_T(src + x, vl), vl);
+            auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vle_T(src + x + start, vl), vl);
+
+            auto vec_dtab = rvv<T>::vle_M(dtab + x, vl);
+            vec_dtab = __riscv_vmul(vec_dtab, sizeof(WT), vl);
+            __riscv_vsoxei32(row, vec_dtab, __riscv_vadd(__riscv_vadd(vec_src0, vec_src2, vl), __riscv_vadd(__riscv_vsll(vec_src1, 2, vl), __riscv_vsll(vec_src1, 1, vl), vl), vl), vl);
+            __riscv_vsoxei32(row, __riscv_vadd(vec_dtab, start * sizeof(WT), vl), __riscv_vsll(__riscv_vadd(vec_src1, vec_src2, vl), 2, vl), vl);
+        }
+    }
+};
+template<> struct pyrUpVec0<float, float>
+{
+    void operator()(const float* src, float* row, const uint* dtab, int start, int end)
+    {
+        int vl;
+        for( int x = start; x < end; x += vl )
+        {
+            vl = rvv<float>::vsetvl_WT(end - x);
+            auto vec_src0 = rvv<float>::vle_T(src + x - start, vl);
+            auto vec_src1 = rvv<float>::vle_T(src + x, vl);
+            auto vec_src2 = rvv<float>::vle_T(src + x + start, vl);
+
+            auto vec_dtab = rvv<float>::vle_M(dtab + x, vl);
+            vec_dtab = __riscv_vmul(vec_dtab, sizeof(float), vl);
+            __riscv_vsoxei32(row, vec_dtab, __riscv_vfadd(__riscv_vfmadd(vec_src1, 6, vec_src0, vl), vec_src2, vl), vl);
+            __riscv_vsoxei32(row, __riscv_vadd(vec_dtab, start * sizeof(float), vl), __riscv_vfmul(__riscv_vfadd(vec_src1, vec_src2, vl), 4, vl), vl);
+        }
+    }
+};
+
+template<typename T, typename WT> struct pyrUpVec1
+{
+    void operator()(WT* row0, WT* row1, WT* row2, T* dst0, T* dst1, int end)
+    {
+        int vl;
+        if (dst0 != dst1)
+        {
             for( int x = 0 ; x < end; x += vl )
             {
                 vl = pyramids::rvv<T>::vsetvl_WT(end - x);
                 auto vec_src0 = pyramids::rvv<T>::vle_WT(row0 + x, vl);
                 auto vec_src1 = pyramids::rvv<T>::vle_WT(row1 + x, vl);
                 auto vec_src2 = pyramids::rvv<T>::vle_WT(row2 + x, vl);
-                auto vec_src3 = pyramids::rvv<T>::vle_WT(row3 + x, vl);
-                auto vec_src4 = pyramids::rvv<T>::vle_WT(row4 + x, vl);
-                pyramids::rvv<T>::vse_T(dst + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
-                                                                                          __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), 8, vl), vl);
+                pyramids::rvv<T>::vse_T(dst0 + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(vec_src0, vec_src2, vl), __riscv_vadd(__riscv_vsll(vec_src1, 2, vl), __riscv_vsll(vec_src1, 1, vl), vl), vl), 6, vl), vl);
+                pyramids::rvv<T>::vse_T(dst1 + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vsll(__riscv_vadd(vec_src1, vec_src2, vl), 2, vl), 6, vl), vl);
             }
         }
-    };
-    template<> struct pyrDownVec1<float, float>
-    {
-        void operator()(float* row0, float* row1, float* row2, float* row3, float* row4, float* dst, int end)
+        else
         {
-            int vl;
+            for( int x = 0 ; x < end; x += vl )
+            {
+                vl = pyramids::rvv<T>::vsetvl_WT(end - x);
+                auto vec_src0 = pyramids::rvv<T>::vle_WT(row0 + x, vl);
+                auto vec_src1 = pyramids::rvv<T>::vle_WT(row1 + x, vl);
+                auto vec_src2 = pyramids::rvv<T>::vle_WT(row2 + x, vl);
+                pyramids::rvv<T>::vse_T(dst0 + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(vec_src0, vec_src2, vl), __riscv_vadd(__riscv_vsll(vec_src1, 2, vl), __riscv_vsll(vec_src1, 1, vl), vl), vl), 6, vl), vl);
+            }
+        }
+    }
+};
+template<> struct pyrUpVec1<float, float>
+{
+    void operator()(float* row0, float* row1, float* row2, float* dst0, float* dst1, int end)
+    {
+        int vl;
+        if (dst0 != dst1)
+        {
             for( int x = 0 ; x < end; x += vl )
             {
                 vl = pyramids::rvv<float>::vsetvl_WT(end - x);
                 auto vec_src0 = pyramids::rvv<float>::vle_WT(row0 + x, vl);
                 auto vec_src1 = pyramids::rvv<float>::vle_WT(row1 + x, vl);
                 auto vec_src2 = pyramids::rvv<float>::vle_WT(row2 + x, vl);
-                auto vec_src3 = pyramids::rvv<float>::vle_WT(row3 + x, vl);
-                auto vec_src4 = pyramids::rvv<float>::vle_WT(row4 + x, vl);
-                pyramids::rvv<float>::vse_T(dst + x, __riscv_vfmul(__riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), 1.f / 256.f, vl), vl);
+                pyramids::rvv<float>::vse_T(dst0 + x, __riscv_vfmul(__riscv_vfadd(__riscv_vfmadd(vec_src1, 6, vec_src0, vl), vec_src2, vl), 1.f / 64.f, vl), vl);
+                pyramids::rvv<float>::vse_T(dst1 + x, __riscv_vfmul(__riscv_vfadd(vec_src1, vec_src2, vl), 1.f / 16.f, vl), vl);
             }
         }
-    };
-
-    template<typename T, typename WT> struct pyrUpVec0
-    {
-        void operator()(const T* src, WT* row, const uint* dtab, int start, int end)
+        else
         {
-            int vl;
-            for( int x = start; x < end; x += vl )
+            for( int x = 0 ; x < end; x += vl )
             {
-                vl = rvv<T>::vsetvl_WT(end - x);
-                auto vec_src0 = rvv<T>::vcvt_T_WT(rvv<T>::vle_T(src + x - start, vl), vl);
-                auto vec_src1 = rvv<T>::vcvt_T_WT(rvv<T>::vle_T(src + x, vl), vl);
-                auto vec_src2 = rvv<T>::vcvt_T_WT(rvv<T>::vle_T(src + x + start, vl), vl);
+                vl = pyramids::rvv<float>::vsetvl_WT(end - x);
+                auto vec_src0 = pyramids::rvv<float>::vle_WT(row0 + x, vl);
+                auto vec_src1 = pyramids::rvv<float>::vle_WT(row1 + x, vl);
+                auto vec_src2 = pyramids::rvv<float>::vle_WT(row2 + x, vl);
+                pyramids::rvv<float>::vse_T(dst0 + x, __riscv_vfmul(__riscv_vfadd(__riscv_vfmadd(vec_src1, 6, vec_src0, vl), vec_src2, vl), 1.f / 64.f, vl), vl);
+            }
+        }
+    }
+};
 
-                auto vec_dtab = rvv<T>::vle_M(dtab + x, vl);
-                vec_dtab = __riscv_vmul(vec_dtab, sizeof(WT), vl);
-                __riscv_vsoxei32(row, vec_dtab, __riscv_vadd(__riscv_vadd(vec_src0, vec_src2, vl), __riscv_vadd(__riscv_vsll(vec_src1, 2, vl), __riscv_vsll(vec_src1, 1, vl), vl), vl), vl);
-                __riscv_vsoxei32(row, __riscv_vadd(vec_dtab, start * sizeof(WT), vl), __riscv_vsll(__riscv_vadd(vec_src1, vec_src2, vl), 2, vl), vl);
-            }
-        }
-    };
-    template<> struct pyrUpVec0<float, float>
-    {
-        void operator()(const float* src, float* row, const uint* dtab, int start, int end)
-        {
-            int vl;
-            for( int x = start; x < end; x += vl )
-            {
-                vl = rvv<float>::vsetvl_WT(end - x);
-                auto vec_src0 = rvv<float>::vle_T(src + x - start, vl);
-                auto vec_src1 = rvv<float>::vle_T(src + x, vl);
-                auto vec_src2 = rvv<float>::vle_T(src + x + start, vl);
-
-                auto vec_dtab = rvv<float>::vle_M(dtab + x, vl);
-                vec_dtab = __riscv_vmul(vec_dtab, sizeof(float), vl);
-                __riscv_vsoxei32(row, vec_dtab, __riscv_vfadd(__riscv_vfmadd(vec_src1, 6, vec_src0, vl), vec_src2, vl), vl);
-                __riscv_vsoxei32(row, __riscv_vadd(vec_dtab, start * sizeof(float), vl), __riscv_vfmul(__riscv_vfadd(vec_src1, vec_src2, vl), 4, vl), vl);
-            }
-        }
-    };
-
-    template<typename T, typename WT> struct pyrUpVec1
-    {
-        void operator()(WT* row0, WT* row1, WT* row2, T* dst0, T* dst1, int end)
-        {
-            int vl;
-            if (dst0 != dst1)
-            {
-                for( int x = 0 ; x < end; x += vl )
-                {
-                    vl = pyramids::rvv<T>::vsetvl_WT(end - x);
-                    auto vec_src0 = pyramids::rvv<T>::vle_WT(row0 + x, vl);
-                    auto vec_src1 = pyramids::rvv<T>::vle_WT(row1 + x, vl);
-                    auto vec_src2 = pyramids::rvv<T>::vle_WT(row2 + x, vl);
-                    pyramids::rvv<T>::vse_T(dst0 + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(vec_src0, vec_src2, vl), __riscv_vadd(__riscv_vsll(vec_src1, 2, vl), __riscv_vsll(vec_src1, 1, vl), vl), vl), 6, vl), vl);
-                    pyramids::rvv<T>::vse_T(dst1 + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vsll(__riscv_vadd(vec_src1, vec_src2, vl), 2, vl), 6, vl), vl);
-                }
-            }
-            else
-            {
-                for( int x = 0 ; x < end; x += vl )
-                {
-                    vl = pyramids::rvv<T>::vsetvl_WT(end - x);
-                    auto vec_src0 = pyramids::rvv<T>::vle_WT(row0 + x, vl);
-                    auto vec_src1 = pyramids::rvv<T>::vle_WT(row1 + x, vl);
-                    auto vec_src2 = pyramids::rvv<T>::vle_WT(row2 + x, vl);
-                    pyramids::rvv<T>::vse_T(dst0 + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(vec_src0, vec_src2, vl), __riscv_vadd(__riscv_vsll(vec_src1, 2, vl), __riscv_vsll(vec_src1, 1, vl), vl), vl), 6, vl), vl);
-                }
-            }
-        }
-    };
-    template<> struct pyrUpVec1<float, float>
-    {
-        void operator()(float* row0, float* row1, float* row2, float* dst0, float* dst1, int end)
-        {
-            int vl;
-            if (dst0 != dst1)
-            {
-                for( int x = 0 ; x < end; x += vl )
-                {
-                    vl = pyramids::rvv<float>::vsetvl_WT(end - x);
-                    auto vec_src0 = pyramids::rvv<float>::vle_WT(row0 + x, vl);
-                    auto vec_src1 = pyramids::rvv<float>::vle_WT(row1 + x, vl);
-                    auto vec_src2 = pyramids::rvv<float>::vle_WT(row2 + x, vl);
-                    pyramids::rvv<float>::vse_T(dst0 + x, __riscv_vfmul(__riscv_vfadd(__riscv_vfmadd(vec_src1, 6, vec_src0, vl), vec_src2, vl), 1.f / 64.f, vl), vl);
-                    pyramids::rvv<float>::vse_T(dst1 + x, __riscv_vfmul(__riscv_vfadd(vec_src1, vec_src2, vl), 1.f / 16.f, vl), vl);
-                }
-            }
-            else
-            {
-                for( int x = 0 ; x < end; x += vl )
-                {
-                    vl = pyramids::rvv<float>::vsetvl_WT(end - x);
-                    auto vec_src0 = pyramids::rvv<float>::vle_WT(row0 + x, vl);
-                    auto vec_src1 = pyramids::rvv<float>::vle_WT(row1 + x, vl);
-                    auto vec_src2 = pyramids::rvv<float>::vle_WT(row2 + x, vl);
-                    pyramids::rvv<float>::vse_T(dst0 + x, __riscv_vfmul(__riscv_vfadd(__riscv_vfmadd(vec_src1, 6, vec_src0, vl), vec_src2, vl), 1.f / 64.f, vl), vl);
-                }
-            }
-        }
-    };
-}
+} // cv::cv_hal_rvv::pyramids
 
 template<typename T, typename WT>
 struct PyrDownInvoker : ParallelLoopBody
