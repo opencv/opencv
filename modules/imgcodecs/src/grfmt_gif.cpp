@@ -682,7 +682,7 @@ bool GifEncoder::writeFrame(const Mat &img) {
     strm.putByte(0xF9); // graphic control label
     strm.putByte(0x04); // block size, fixed number
     // flag is a packed field, and the first 3 bits are reserved
-    uchar flag = GifDisposeMethod::GIF_DISPOSE_NONE << 2;
+    uchar flag = GifDisposeMethod::GIF_DISPOSE_RESTORE_PREVIOUS << 2;
     if (criticalTransparency)
         flag |= 1;
     strm.putByte(flag);
