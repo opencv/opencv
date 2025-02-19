@@ -11,34 +11,35 @@ namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_dft
 #define cv_hal_dft cv::cv_hal_rvv::dft
 
-namespace dxt
+namespace dxt {
+
+template<typename T> struct rvv;
+
+template<> struct rvv<float>
 {
-    template<typename T> struct rvv;
+    static inline size_t vsetvl_itab(size_t a) { return __riscv_vsetvl_e32m8(a); }
+    static inline vuint32m8_t vlse_itab(const uint* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_u32m8(a, b, c); }
+    static inline vfloat32m8_t vlse_itab_f(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32m8(a, b, c); }
+    static inline void vsse_itab(float* a, ptrdiff_t b, vfloat32m8_t c, size_t d) { return __riscv_vsse32(a, b, c, d); }
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32mf2(a); }
+    static inline vfloat32m1_t vfmv_s(float a, size_t b) { return __riscv_vfmv_s_f_f32m1(a, b); }
+    static inline vfloat32mf2_t vlse(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32mf2(a, b, c); }
+    static inline void vsse(float* a, ptrdiff_t b, vfloat32mf2_t c, size_t d) { return __riscv_vsse32(a, b, c, d); }
+};
 
-    template<> struct rvv<float>
-    {
-        static inline size_t vsetvl_itab(size_t a) { return __riscv_vsetvl_e32m8(a); }
-        static inline vuint32m8_t vlse_itab(const uint* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_u32m8(a, b, c); }
-        static inline vfloat32m8_t vlse_itab_f(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32m8(a, b, c); }
-        static inline void vsse_itab(float* a, ptrdiff_t b, vfloat32m8_t c, size_t d) { return __riscv_vsse32(a, b, c, d); }
-        static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32mf2(a); }
-        static inline vfloat32m1_t vfmv_s(float a, size_t b) { return __riscv_vfmv_s_f_f32m1(a, b); }
-        static inline vfloat32mf2_t vlse(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32mf2(a, b, c); }
-        static inline void vsse(float* a, ptrdiff_t b, vfloat32mf2_t c, size_t d) { return __riscv_vsse32(a, b, c, d); }
-    };
+template<> struct rvv<double>
+{
+    static inline size_t vsetvl_itab(size_t a) { return __riscv_vsetvl_e32m4(a); }
+    static inline vuint32m4_t vlse_itab(const uint* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_u32m4(a, b, c); }
+    static inline vfloat64m8_t vlse_itab_f(const double* a, ptrdiff_t b, size_t c) { return __riscv_vlse64_v_f64m8(a, b, c); }
+    static inline void vsse_itab(double* a, ptrdiff_t b, vfloat64m8_t c, size_t d) { return __riscv_vsse64(a, b, c, d); }
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e64m1(a); }
+    static inline vfloat64m1_t vfmv_s(double a, size_t b) { return __riscv_vfmv_s_f_f64m1(a, b); }
+    static inline vfloat64m1_t vlse(const double* a, ptrdiff_t b, size_t c) { return __riscv_vlse64_v_f64m1(a, b, c); }
+    static inline void vsse(double* a, ptrdiff_t b, vfloat64m1_t c, size_t d) { return __riscv_vsse64(a, b, c, d); }
+};
 
-    template<> struct rvv<double>
-    {
-        static inline size_t vsetvl_itab(size_t a) { return __riscv_vsetvl_e32m4(a); }
-        static inline vuint32m4_t vlse_itab(const uint* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_u32m4(a, b, c); }
-        static inline vfloat64m8_t vlse_itab_f(const double* a, ptrdiff_t b, size_t c) { return __riscv_vlse64_v_f64m8(a, b, c); }
-        static inline void vsse_itab(double* a, ptrdiff_t b, vfloat64m8_t c, size_t d) { return __riscv_vsse64(a, b, c, d); }
-        static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e64m1(a); }
-        static inline vfloat64m1_t vfmv_s(double a, size_t b) { return __riscv_vfmv_s_f_f64m1(a, b); }
-        static inline vfloat64m1_t vlse(const double* a, ptrdiff_t b, size_t c) { return __riscv_vlse64_v_f64m1(a, b, c); }
-        static inline void vsse(double* a, ptrdiff_t b, vfloat64m1_t c, size_t d) { return __riscv_vsse64(a, b, c, d); }
-    };
-}
+} // cv::cv_hal_rvv::dxt
 
 // the algorithm is copied from core/src/dxt.cpp,
 // in the function template static void cv::DFT and cv::DFT_R2, cv::DFT_R3, cv::DFT_R5
@@ -104,11 +105,11 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
                     {
                         j = itab[0];
 
-                        CV_SWAP(dst[i+1], dsth[j], t);
+                        t = dst[i+1], dst[i+1] = dsth[j], dsth[j] = t;
                         if( j > i )
                         {
-                            CV_SWAP(dst[i], dst[j], t);
-                            CV_SWAP(dsth[i+1], dsth[j+1], t);
+                            t = dst[i], dst[i] = dst[j], dst[j] = t;
+                            t = dsth[i+1], dsth[i+1] = dsth[j+1], dsth[j+1] = t;
                         }
                     }
                 }
@@ -120,7 +121,7 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
                 {
                     j = itab[0];
                     if( j > i )
-                        CV_SWAP(dst[i], dst[j], t);
+                        t = dst[i], dst[i] = dst[j], dst[j] = t;
                 }
             }
         }
