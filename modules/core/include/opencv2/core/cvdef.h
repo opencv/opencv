@@ -45,14 +45,6 @@
 #ifndef OPENCV_CORE_CVDEF_H
 #define OPENCV_CORE_CVDEF_H
 
-#if defined(_MSC_VER)
-    #define CV_IMPL_HIDDEN
-#elif defined(__GNUC__) || defined(__clang__)
-    #define CV_IMPL_HIDDEN __attribute__((visibility("hidden")))
-#else
-    #define CV_IMPL_HIDDEN
-#endif
-
 #include "opencv2/core/version.hpp"
 
 //! @addtogroup core_utils
@@ -494,6 +486,14 @@ Cv64suf;
 #define CV_WRAP_DEFAULT(val)
 /* Indicates that the function parameter has filesystem path semantic */
 #define CV_WRAP_FILE_PATH
+
+#if defined(_MSC_VER)
+    #define CV_IMPL_HIDDEN
+#elif defined(__GNUC__) || defined(__clang__)
+    #define CV_IMPL_HIDDEN __attribute__((visibility("hidden")))
+#else
+    #define CV_IMPL_HIDDEN
+#endif
 
 /****************************************************************************************\
 *                                  Matrix type (Mat)                                     *
