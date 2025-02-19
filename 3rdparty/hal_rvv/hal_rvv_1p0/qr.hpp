@@ -6,14 +6,12 @@
 
 #include <riscv_vector.h>
 
-namespace cv { namespace cv_hal_rvv {
+namespace cv { namespace cv_hal_rvv { namespace qr {
 
 #undef cv_hal_QR32f
-#define cv_hal_QR32f cv::cv_hal_rvv::QR
+#define cv_hal_QR32f cv::cv_hal_rvv::qr::QR
 #undef cv_hal_QR64f
-#define cv_hal_QR64f cv::cv_hal_rvv::QR
-
-namespace qr {
+#define cv_hal_QR64f cv::cv_hal_rvv::qr::QR
 
 template<typename T> struct rvv;
 
@@ -41,8 +39,6 @@ template<> struct rvv<double>
     static inline void vsse(double* a, ptrdiff_t b, vfloat64m4_t c, size_t d) { __riscv_vsse64(a, b, c, d); }
 };
 
-} // cv::cv_hal_rvv::qr
-
 // the algorithm is copied from core/src/matrix_decomp.cpp,
 // in the function template static int cv::QRImpl
 template<typename T>
@@ -66,50 +62,50 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
     if (dst == NULL)
         dst = val + m;
 
-    int vlmax = qr::rvv<T>::vsetvlmax(), vl;
+    int vlmax = rvv<T>::vsetvlmax(), vl;
     for (int l = 0; l < n; l++)
     {
         //generate val
         int vlSize = m - l;
-        auto vec_sum = qr::rvv<T>::vfmv_v_f(0, vlmax);
+        auto vec_sum = rvv<T>::vfmv_v_f(0, vlmax);
         for (int i = 0; i < vlSize; i += vl)
         {
-            vl = qr::rvv<T>::vsetvl(vlSize - i);
-            auto vec_src = qr::rvv<T>::vlse(src1 + (l + i) * src1_step + l, sizeof(T) * src1_step, vl);
-            qr::rvv<T>::vse(val + i, vec_src, vl);
+            vl = rvv<T>::vsetvl(vlSize - i);
+            auto vec_src = rvv<T>::vlse(src1 + (l + i) * src1_step + l, sizeof(T) * src1_step, vl);
+            rvv<T>::vse(val + i, vec_src, vl);
             vec_sum = __riscv_vfmacc_tu(vec_sum, vec_src, vec_src, vl);
         }
-        T vlNorm = __riscv_vfmv_f(__riscv_vfredosum(vec_sum, qr::rvv<T>::vfmv_s_f(0, vlmax), vlmax));
+        T vlNorm = __riscv_vfmv_f(__riscv_vfredosum(vec_sum, rvv<T>::vfmv_s_f(0, vlmax), vlmax));
         T tmpV = val[0];
         val[0] = val[0] + (val[0] >= 0 ? 1 : -1) * std::sqrt(vlNorm);
         vlNorm = std::sqrt(vlNorm + val[0] * val[0] - tmpV*tmpV);
         for (int i = 0; i < vlSize; i += vl)
         {
-            vl = qr::rvv<T>::vsetvl(vlSize - i);
-            auto vec_src = qr::rvv<T>::vle(val + i, vl);
+            vl = rvv<T>::vsetvl(vlSize - i);
+            auto vec_src = rvv<T>::vle(val + i, vl);
             vec_src = __riscv_vfdiv(vec_src, vlNorm, vl);
-            qr::rvv<T>::vse(val + i, vec_src, vl);
+            rvv<T>::vse(val + i, vec_src, vl);
         }
         //multiply A_l*val
         for (int j = l; j < n; j++)
         {
-            vec_sum = qr::rvv<T>::vfmv_v_f(0, vlmax);
+            vec_sum = rvv<T>::vfmv_v_f(0, vlmax);
             for (int i = l; i < m; i += vl)
             {
-                vl = qr::rvv<T>::vsetvl(m - i);
-                auto vec_src1 = qr::rvv<T>::vle(val + i - l, vl);
-                auto vec_src2 = qr::rvv<T>::vlse(src1 + i * src1_step + j, sizeof(T) * src1_step, vl);
+                vl = rvv<T>::vsetvl(m - i);
+                auto vec_src1 = rvv<T>::vle(val + i - l, vl);
+                auto vec_src2 = rvv<T>::vlse(src1 + i * src1_step + j, sizeof(T) * src1_step, vl);
                 vec_sum = __riscv_vfmacc_tu(vec_sum, vec_src1, vec_src2, vl);
             }
-            T v_lA = 2 * __riscv_vfmv_f(__riscv_vfredosum(vec_sum, qr::rvv<T>::vfmv_s_f(0, vlmax), vlmax));
+            T v_lA = 2 * __riscv_vfmv_f(__riscv_vfredosum(vec_sum, rvv<T>::vfmv_s_f(0, vlmax), vlmax));
 
             for (int i = l; i < m; i += vl)
             {
-                vl = qr::rvv<T>::vsetvl(m - i);
-                auto vec_src1 = qr::rvv<T>::vle(val + i - l, vl);
-                auto vec_src2 = qr::rvv<T>::vlse(src1 + i * src1_step + j, sizeof(T) * src1_step, vl);
+                vl = rvv<T>::vsetvl(m - i);
+                auto vec_src1 = rvv<T>::vle(val + i - l, vl);
+                auto vec_src2 = rvv<T>::vlse(src1 + i * src1_step + j, sizeof(T) * src1_step, vl);
                 vec_src2 = __riscv_vfnmsac(vec_src2, v_lA, vec_src1, vl);
-                qr::rvv<T>::vsse(src1 + i * src1_step + j, sizeof(T) * src1_step, vec_src2, vl);
+                rvv<T>::vsse(src1 + i * src1_step + j, sizeof(T) * src1_step, vec_src2, vl);
             }
         }
 
@@ -117,10 +113,10 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
         dst[l] = val[0] * val[0];
         for (int i = 1; i < vlSize; i += vl)
         {
-            vl = qr::rvv<T>::vsetvl(vlSize - i);
-            auto vec_src = qr::rvv<T>::vle(val + i, vl);
+            vl = rvv<T>::vsetvl(vlSize - i);
+            auto vec_src = rvv<T>::vle(val + i, vl);
             vec_src = __riscv_vfdiv(vec_src, val[0], vl);
-            qr::rvv<T>::vsse(src1 + (l + i) * src1_step + l, sizeof(T) * src1_step, vec_src, vl);
+            rvv<T>::vsse(src1 + (l + i) * src1_step + l, sizeof(T) * src1_step, vec_src, vl);
         }
     }
 
@@ -133,31 +129,31 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
             val[0] = (T)1;
             for (int j = 1; j < m - l; j += vl)
             {
-                vl = qr::rvv<T>::vsetvl(m - l - j);
-                auto vec_src = qr::rvv<T>::vlse(src1 + (j + l) * src1_step + l, sizeof(T) * src1_step, vl);
-                qr::rvv<T>::vse(val + j, vec_src, vl);
+                vl = rvv<T>::vsetvl(m - l - j);
+                auto vec_src = rvv<T>::vlse(src1 + (j + l) * src1_step + l, sizeof(T) * src1_step, vl);
+                rvv<T>::vse(val + j, vec_src, vl);
             }
 
             //h_l*x
             for (int j = 0; j < k; j++)
             {
-                auto vec_sum = qr::rvv<T>::vfmv_v_f(0, vlmax);
+                auto vec_sum = rvv<T>::vfmv_v_f(0, vlmax);
                 for (int i = l; i < m; i += vl)
                 {
-                    vl = qr::rvv<T>::vsetvl(m - i);
-                    auto vec_src1 = qr::rvv<T>::vle(val + i - l, vl);
-                    auto vec_src2 = qr::rvv<T>::vlse(src2 + i * src2_step + j, sizeof(T) * src2_step, vl);
+                    vl = rvv<T>::vsetvl(m - i);
+                    auto vec_src1 = rvv<T>::vle(val + i - l, vl);
+                    auto vec_src2 = rvv<T>::vlse(src2 + i * src2_step + j, sizeof(T) * src2_step, vl);
                     vec_sum = __riscv_vfmacc_tu(vec_sum, vec_src1, vec_src2, vl);
                 }
-                T v_lB = 2 * dst[l] * __riscv_vfmv_f(__riscv_vfredosum(vec_sum, qr::rvv<T>::vfmv_s_f(0, vlmax), vlmax));
+                T v_lB = 2 * dst[l] * __riscv_vfmv_f(__riscv_vfredosum(vec_sum, rvv<T>::vfmv_s_f(0, vlmax), vlmax));
 
                 for (int i = l; i < m; i += vl)
                 {
-                    vl = qr::rvv<T>::vsetvl(m - i);
-                    auto vec_src1 = qr::rvv<T>::vle(val + i - l, vl);
-                    auto vec_src2 = qr::rvv<T>::vlse(src2 + i * src2_step + j, sizeof(T) * src2_step, vl);
+                    vl = rvv<T>::vsetvl(m - i);
+                    auto vec_src1 = rvv<T>::vle(val + i - l, vl);
+                    auto vec_src2 = rvv<T>::vlse(src2 + i * src2_step + j, sizeof(T) * src2_step, vl);
                     vec_src2 = __riscv_vfnmsac(vec_src2, v_lB, vec_src1, vl);
-                    qr::rvv<T>::vsse(src2 + i * src2_step + j, sizeof(T) * src2_step, vec_src2, vl);
+                    rvv<T>::vsse(src2 + i * src2_step + j, sizeof(T) * src2_step, vec_src2, vl);
                 }
             }
         }
@@ -168,11 +164,11 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
             {
                 for (int p = 0; p < k; p += vl)
                 {
-                    vl = qr::rvv<T>::vsetvl(k - p);
-                    auto vec_src1 = qr::rvv<T>::vle(src2 + i * src2_step + p, vl);
-                    auto vec_src2 = qr::rvv<T>::vle(src2 + j * src2_step + p, vl);
+                    vl = rvv<T>::vsetvl(k - p);
+                    auto vec_src1 = rvv<T>::vle(src2 + i * src2_step + p, vl);
+                    auto vec_src2 = rvv<T>::vle(src2 + j * src2_step + p, vl);
                     vec_src1 = __riscv_vfnmsac(vec_src1, src1[i*src1_step + j], vec_src2, vl);
-                    qr::rvv<T>::vse(src2 + i * src2_step + p, vec_src1, vl);
+                    rvv<T>::vse(src2 + i * src2_step + p, vec_src1, vl);
                 }
             }
             if (std::abs(src1[i*src1_step + i]) < eps)
@@ -182,10 +178,10 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
             }
             for (int p = 0; p < k; p += vl)
             {
-                vl = qr::rvv<T>::vsetvl(k - p);
-                auto vec_src = qr::rvv<T>::vle(src2 + i * src2_step + p, vl);
+                vl = rvv<T>::vsetvl(k - p);
+                auto vec_src = rvv<T>::vle(src2 + i * src2_step + p, vl);
                 vec_src = __riscv_vfdiv(vec_src, src1[i*src1_step + i], vl);
-                qr::rvv<T>::vse(src2 + i * src2_step + p, vec_src, vl);
+                rvv<T>::vse(src2 + i * src2_step + p, vec_src, vl);
             }
         }
     }
@@ -194,6 +190,6 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
     return CV_HAL_ERROR_OK;
 }
 
-}}
+}}}
 
 #endif
