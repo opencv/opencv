@@ -13,32 +13,33 @@ namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_LU64f
 #define cv_hal_LU64f cv::cv_hal_rvv::LU
 
-namespace lu
+namespace lu {
+
+template<typename T> struct rvv;
+
+template<> struct rvv<float>
 {
-    template<typename T> struct rvv;
+    static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e32m4(); }
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32m4(a); }
+    static inline vfloat32m4_t vfmv_v_f(float a, size_t b) { return __riscv_vfmv_v_f_f32m4(a, b); }
+    static inline vfloat32m1_t vfmv_s_f(float a, size_t b) { return __riscv_vfmv_s_f_f32m1(a, b); }
+    static inline vfloat32m4_t vle(const float* a, size_t b) { return __riscv_vle32_v_f32m4(a, b); }
+    static inline vfloat32m4_t vlse(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32m4(a, b, c); }
+    static inline void vse(float* a, vfloat32m4_t b, size_t c) { __riscv_vse32(a, b, c); }
+};
 
-    template<> struct rvv<float>
-    {
-        static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e32m4(); }
-        static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32m4(a); }
-        static inline vfloat32m4_t vfmv_v_f(float a, size_t b) { return __riscv_vfmv_v_f_f32m4(a, b); }
-        static inline vfloat32m1_t vfmv_s_f(float a, size_t b) { return __riscv_vfmv_s_f_f32m1(a, b); }
-        static inline vfloat32m4_t vle(const float* a, size_t b) { return __riscv_vle32_v_f32m4(a, b); }
-        static inline vfloat32m4_t vlse(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32m4(a, b, c); }
-        static inline void vse(float* a, vfloat32m4_t b, size_t c) { __riscv_vse32(a, b, c); }
-    };
+template<> struct rvv<double>
+{
+    static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e64m4(); }
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e64m4(a); }
+    static inline vfloat64m4_t vfmv_v_f(double a, size_t b) { return __riscv_vfmv_v_f_f64m4(a, b); }
+    static inline vfloat64m1_t vfmv_s_f(double a, size_t b) { return __riscv_vfmv_s_f_f64m1(a, b); }
+    static inline vfloat64m4_t vle(const double* a, size_t b) { return __riscv_vle64_v_f64m4(a, b); }
+    static inline vfloat64m4_t vlse(const double* a, ptrdiff_t b, size_t c) { return __riscv_vlse64_v_f64m4(a, b, c); }
+    static inline void vse(double* a, vfloat64m4_t b, size_t c) { __riscv_vse64(a, b, c); }
+};
 
-    template<> struct rvv<double>
-    {
-        static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e64m4(); }
-        static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e64m4(a); }
-        static inline vfloat64m4_t vfmv_v_f(double a, size_t b) { return __riscv_vfmv_v_f_f64m4(a, b); }
-        static inline vfloat64m1_t vfmv_s_f(double a, size_t b) { return __riscv_vfmv_s_f_f64m1(a, b); }
-        static inline vfloat64m4_t vle(const double* a, size_t b) { return __riscv_vle64_v_f64m4(a, b); }
-        static inline vfloat64m4_t vlse(const double* a, ptrdiff_t b, size_t c) { return __riscv_vlse64_v_f64m4(a, b, c); }
-        static inline void vse(double* a, vfloat64m4_t b, size_t c) { __riscv_vse64(a, b, c); }
-    };
-}
+} // cv::cv_hal_rvv::lu
 
 // the algorithm is copied from core/src/matrix_decomp.cpp,
 // in the function template static int cv::LUImpl
