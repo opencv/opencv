@@ -6,14 +6,12 @@
 
 #include <riscv_vector.h>
 
-namespace cv { namespace cv_hal_rvv {
+namespace cv { namespace cv_hal_rvv { namespace pyramids {
 
 #undef cv_hal_pyrdown
-#define cv_hal_pyrdown cv::cv_hal_rvv::pyrDown
+#define cv_hal_pyrdown cv::cv_hal_rvv::pyramids::pyrDown
 #undef cv_hal_pyrup
-#define cv_hal_pyrup cv::cv_hal_rvv::pyrUp
-
-namespace pyramids {
+#define cv_hal_pyrup cv::cv_hal_rvv::pyramids::pyrUp
 
 template<typename T> struct rvv;
 
@@ -296,13 +294,13 @@ template<typename T, typename WT> struct pyrDownVec1
         int vl;
         for( int x = 0 ; x < end; x += vl )
         {
-            vl = pyramids::rvv<T>::vsetvl_WT(end - x);
-            auto vec_src0 = pyramids::rvv<T>::vle_WT(row0 + x, vl);
-            auto vec_src1 = pyramids::rvv<T>::vle_WT(row1 + x, vl);
-            auto vec_src2 = pyramids::rvv<T>::vle_WT(row2 + x, vl);
-            auto vec_src3 = pyramids::rvv<T>::vle_WT(row3 + x, vl);
-            auto vec_src4 = pyramids::rvv<T>::vle_WT(row4 + x, vl);
-            pyramids::rvv<T>::vse_T(dst + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
+            vl = rvv<T>::vsetvl_WT(end - x);
+            auto vec_src0 = rvv<T>::vle_WT(row0 + x, vl);
+            auto vec_src1 = rvv<T>::vle_WT(row1 + x, vl);
+            auto vec_src2 = rvv<T>::vle_WT(row2 + x, vl);
+            auto vec_src3 = rvv<T>::vle_WT(row3 + x, vl);
+            auto vec_src4 = rvv<T>::vle_WT(row4 + x, vl);
+            rvv<T>::vse_T(dst + x, rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
                                                                                       __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl), 8, vl), vl);
         }
     }
@@ -314,13 +312,13 @@ template<> struct pyrDownVec1<float, float>
         int vl;
         for( int x = 0 ; x < end; x += vl )
         {
-            vl = pyramids::rvv<float>::vsetvl_WT(end - x);
-            auto vec_src0 = pyramids::rvv<float>::vle_WT(row0 + x, vl);
-            auto vec_src1 = pyramids::rvv<float>::vle_WT(row1 + x, vl);
-            auto vec_src2 = pyramids::rvv<float>::vle_WT(row2 + x, vl);
-            auto vec_src3 = pyramids::rvv<float>::vle_WT(row3 + x, vl);
-            auto vec_src4 = pyramids::rvv<float>::vle_WT(row4 + x, vl);
-            pyramids::rvv<float>::vse_T(dst + x, __riscv_vfmul(__riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), 1.f / 256.f, vl), vl);
+            vl = rvv<float>::vsetvl_WT(end - x);
+            auto vec_src0 = rvv<float>::vle_WT(row0 + x, vl);
+            auto vec_src1 = rvv<float>::vle_WT(row1 + x, vl);
+            auto vec_src2 = rvv<float>::vle_WT(row2 + x, vl);
+            auto vec_src3 = rvv<float>::vle_WT(row3 + x, vl);
+            auto vec_src4 = rvv<float>::vle_WT(row4 + x, vl);
+            rvv<float>::vse_T(dst + x, __riscv_vfmul(__riscv_vfmadd(vec_src2, 6, __riscv_vfmadd(__riscv_vfadd(vec_src1, vec_src3, vl), 4, __riscv_vfadd(vec_src0, vec_src4, vl), vl), vl), 1.f / 256.f, vl), vl);
         }
     }
 };
@@ -373,23 +371,23 @@ template<typename T, typename WT> struct pyrUpVec1
         {
             for( int x = 0 ; x < end; x += vl )
             {
-                vl = pyramids::rvv<T>::vsetvl_WT(end - x);
-                auto vec_src0 = pyramids::rvv<T>::vle_WT(row0 + x, vl);
-                auto vec_src1 = pyramids::rvv<T>::vle_WT(row1 + x, vl);
-                auto vec_src2 = pyramids::rvv<T>::vle_WT(row2 + x, vl);
-                pyramids::rvv<T>::vse_T(dst0 + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(vec_src0, vec_src2, vl), __riscv_vadd(__riscv_vsll(vec_src1, 2, vl), __riscv_vsll(vec_src1, 1, vl), vl), vl), 6, vl), vl);
-                pyramids::rvv<T>::vse_T(dst1 + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vsll(__riscv_vadd(vec_src1, vec_src2, vl), 2, vl), 6, vl), vl);
+                vl = rvv<T>::vsetvl_WT(end - x);
+                auto vec_src0 = rvv<T>::vle_WT(row0 + x, vl);
+                auto vec_src1 = rvv<T>::vle_WT(row1 + x, vl);
+                auto vec_src2 = rvv<T>::vle_WT(row2 + x, vl);
+                rvv<T>::vse_T(dst0 + x, rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(vec_src0, vec_src2, vl), __riscv_vadd(__riscv_vsll(vec_src1, 2, vl), __riscv_vsll(vec_src1, 1, vl), vl), vl), 6, vl), vl);
+                rvv<T>::vse_T(dst1 + x, rvv<T>::vcvt_WT_T(__riscv_vsll(__riscv_vadd(vec_src1, vec_src2, vl), 2, vl), 6, vl), vl);
             }
         }
         else
         {
             for( int x = 0 ; x < end; x += vl )
             {
-                vl = pyramids::rvv<T>::vsetvl_WT(end - x);
-                auto vec_src0 = pyramids::rvv<T>::vle_WT(row0 + x, vl);
-                auto vec_src1 = pyramids::rvv<T>::vle_WT(row1 + x, vl);
-                auto vec_src2 = pyramids::rvv<T>::vle_WT(row2 + x, vl);
-                pyramids::rvv<T>::vse_T(dst0 + x, pyramids::rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(vec_src0, vec_src2, vl), __riscv_vadd(__riscv_vsll(vec_src1, 2, vl), __riscv_vsll(vec_src1, 1, vl), vl), vl), 6, vl), vl);
+                vl = rvv<T>::vsetvl_WT(end - x);
+                auto vec_src0 = rvv<T>::vle_WT(row0 + x, vl);
+                auto vec_src1 = rvv<T>::vle_WT(row1 + x, vl);
+                auto vec_src2 = rvv<T>::vle_WT(row2 + x, vl);
+                rvv<T>::vse_T(dst0 + x, rvv<T>::vcvt_WT_T(__riscv_vadd(__riscv_vadd(vec_src0, vec_src2, vl), __riscv_vadd(__riscv_vsll(vec_src1, 2, vl), __riscv_vsll(vec_src1, 1, vl), vl), vl), 6, vl), vl);
             }
         }
     }
@@ -403,29 +401,27 @@ template<> struct pyrUpVec1<float, float>
         {
             for( int x = 0 ; x < end; x += vl )
             {
-                vl = pyramids::rvv<float>::vsetvl_WT(end - x);
-                auto vec_src0 = pyramids::rvv<float>::vle_WT(row0 + x, vl);
-                auto vec_src1 = pyramids::rvv<float>::vle_WT(row1 + x, vl);
-                auto vec_src2 = pyramids::rvv<float>::vle_WT(row2 + x, vl);
-                pyramids::rvv<float>::vse_T(dst0 + x, __riscv_vfmul(__riscv_vfadd(__riscv_vfmadd(vec_src1, 6, vec_src0, vl), vec_src2, vl), 1.f / 64.f, vl), vl);
-                pyramids::rvv<float>::vse_T(dst1 + x, __riscv_vfmul(__riscv_vfadd(vec_src1, vec_src2, vl), 1.f / 16.f, vl), vl);
+                vl = rvv<float>::vsetvl_WT(end - x);
+                auto vec_src0 = rvv<float>::vle_WT(row0 + x, vl);
+                auto vec_src1 = rvv<float>::vle_WT(row1 + x, vl);
+                auto vec_src2 = rvv<float>::vle_WT(row2 + x, vl);
+                rvv<float>::vse_T(dst0 + x, __riscv_vfmul(__riscv_vfadd(__riscv_vfmadd(vec_src1, 6, vec_src0, vl), vec_src2, vl), 1.f / 64.f, vl), vl);
+                rvv<float>::vse_T(dst1 + x, __riscv_vfmul(__riscv_vfadd(vec_src1, vec_src2, vl), 1.f / 16.f, vl), vl);
             }
         }
         else
         {
             for( int x = 0 ; x < end; x += vl )
             {
-                vl = pyramids::rvv<float>::vsetvl_WT(end - x);
-                auto vec_src0 = pyramids::rvv<float>::vle_WT(row0 + x, vl);
-                auto vec_src1 = pyramids::rvv<float>::vle_WT(row1 + x, vl);
-                auto vec_src2 = pyramids::rvv<float>::vle_WT(row2 + x, vl);
-                pyramids::rvv<float>::vse_T(dst0 + x, __riscv_vfmul(__riscv_vfadd(__riscv_vfmadd(vec_src1, 6, vec_src0, vl), vec_src2, vl), 1.f / 64.f, vl), vl);
+                vl = rvv<float>::vsetvl_WT(end - x);
+                auto vec_src0 = rvv<float>::vle_WT(row0 + x, vl);
+                auto vec_src1 = rvv<float>::vle_WT(row1 + x, vl);
+                auto vec_src2 = rvv<float>::vle_WT(row2 + x, vl);
+                rvv<float>::vse_T(dst0 + x, __riscv_vfmul(__riscv_vfadd(__riscv_vfmadd(vec_src1, 6, vec_src0, vl), vec_src2, vl), 1.f / 64.f, vl), vl);
             }
         }
     }
 };
-
-} // cv::cv_hal_rvv::pyramids
 
 template<typename T, typename WT>
 struct PyrDownInvoker : ParallelLoopBody
@@ -537,7 +533,7 @@ void PyrDownInvoker<T, WT>::operator()(const Range& range) const
                 if( x == _dst_width )
                     break;
 
-                pyramids::pyrDownVec0<T, WT>()(src, row, reinterpret_cast<const uint*>(tabM), cn, width0);
+                pyrDownVec0<T, WT>()(src, row, reinterpret_cast<const uint*>(tabM), cn, width0);
                 x = width0;
 
                 // tabR
@@ -554,7 +550,7 @@ void PyrDownInvoker<T, WT>::operator()(const Range& range) const
             rows[k] = buf + ((y*2 - PD_SZ/2 + k - sy0) % PD_SZ)*bufstep;
         row0 = rows[0]; row1 = rows[1]; row2 = rows[2]; row3 = rows[3]; row4 = rows[4];
 
-        pyramids::pyrDownVec1<T, WT>()(row0, row1, row2, row3, row4, dst, _dst_width);
+        pyrDownVec1<T, WT>()(row0, row1, row2, row3, row4, dst, _dst_width);
     }
 }
 
@@ -620,7 +616,7 @@ inline int pyrUp(const uchar* src_data, size_t src_step, int src_width, int src_
                 }
             }
 
-            pyramids::pyrUpVec0<T, WT>()(src, row, reinterpret_cast<const uint*>(dtab), cn, src_width - cn);
+            pyrUpVec0<T, WT>()(src, row, reinterpret_cast<const uint*>(dtab), cn, src_width - cn);
         }
 
         // do vertical convolution and decimation and write the result to the destination image
@@ -628,7 +624,7 @@ inline int pyrUp(const uchar* src_data, size_t src_step, int src_width, int src_
             rows[k] = buf + ((y - PU_SZ/2 + k - sy0) % PU_SZ)*bufstep;
         row0 = rows[0]; row1 = rows[1]; row2 = rows[2];
 
-        pyramids::pyrUpVec1<T, WT>()(row0, row1, row2, dst0, dst1, dst_width);
+        pyrUpVec1<T, WT>()(row0, row1, row2, dst0, dst1, dst_width);
     }
 
     if (dst_height > src_height*2)
@@ -681,6 +677,6 @@ inline int pyrUp(const uchar* src_data, size_t src_step, int src_width, int src_
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
-}}
+}}}
 
 #endif
