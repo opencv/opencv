@@ -706,6 +706,23 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , ArithmMixedTest,
     )
 );
 
+typedef Size_MatType InvSqrtFixture;
+PERF_TEST_P(InvSqrtFixture, InvSqrt, testing::Combine(
+    testing::Values(TYPICAL_MAT_SIZES),
+    testing::Values(CV_32FC1, CV_64FC1)))
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+
+    Mat src(sz, type), dst(sz, type);
+    randu(src, FLT_EPSILON, 1000);
+    declare.in(src).out(dst);
+
+    TEST_CYCLE() cv::pow(src, -0.5, dst);
+
+    SANITY_CHECK_NOTHING();
+}
+
 ///////////// Rotate ////////////////////////
 
 typedef perf::TestBaseWithParam<std::tuple<cv::Size, int, perf::MatType>> RotateTest;
