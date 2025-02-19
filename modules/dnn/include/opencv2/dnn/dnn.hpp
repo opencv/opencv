@@ -885,7 +885,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_WRAP int64 getPerfProfile(CV_OUT std::vector<double>& timings);
 
 
-        struct Impl;
+        struct __attribute__((visibility("hidden"))) Impl;
         inline Impl* getImpl() const { return impl.get(); }
         inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }
         friend class accessor::DnnNetAccessor;
@@ -1496,7 +1496,7 @@ CV__DNN_INLINE_NS_BEGIN
          Net& getNetwork_() const;
          inline Net& getNetwork_() { return const_cast<const Model*>(this)->getNetwork_(); }
 
-         struct Impl;
+         struct __attribute__((visibility("hidden"))) Impl;
          inline Impl* getImpl() const { return impl.get(); }
          inline Impl& getImplRef() const { CV_DbgAssert(impl); return *impl.get(); }
      protected:

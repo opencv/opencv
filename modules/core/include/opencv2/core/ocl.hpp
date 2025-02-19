@@ -247,7 +247,7 @@ public:
       */
     static Device fromHandle(void* d);
 
-    struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
     inline bool empty() const { return !p; }
 protected:
@@ -322,7 +322,7 @@ public:
     void setUserContext(std::type_index typeId, const std::shared_ptr<UserContext>& userContext);
     std::shared_ptr<UserContext> getUserContext(std::type_index typeId);
 
-    struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
     inline bool empty() const { return !p; }
 // TODO OpenCV 5.0
@@ -346,7 +346,7 @@ public:
     /** @deprecated */
     static Platform& getDefault();
 
-    struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
     inline bool empty() const { return !p; }
 protected:
@@ -411,7 +411,7 @@ public:
     /// @brief Returns OpenCL command queue with enable profiling mode support
     const Queue& getProfilingQueue() const;
 
-    struct Impl; friend struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl; friend struct __attribute__((visibility("hidden"))) Impl;
     inline Impl* getImpl() const { return p; }
     inline bool empty() const { return !p; }
 protected:
@@ -545,7 +545,7 @@ public:
     size_t localMemSize() const;
 
     void* ptr() const;
-    struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl;
 
 protected:
     Impl* p;
@@ -579,7 +579,7 @@ public:
      */
     void getBinary(std::vector<char>& binary) const;
 
-    struct Impl; friend struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl; friend struct __attribute__((visibility("hidden"))) Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
     inline bool empty() const { return !p; }
 protected:
@@ -663,7 +663,7 @@ public:
     //        const unsigned char* binary, const size_t size,
     //        const cv::String& buildOptions = cv::String());
 
-    struct Impl; friend struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl; friend struct __attribute__((visibility("hidden"))) Impl;
     inline Impl* getImpl() const { return (Impl*)p; }
     inline bool empty() const { return !p; }
 protected:
@@ -696,7 +696,7 @@ public:
     int deviceNumber() const;
     void getDevice(Device& device, int d) const;
 
-    struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl;
     bool empty() const { return !p; }
 protected:
     Impl* p;
@@ -772,7 +772,7 @@ public:
 
     void* ptr() const;
 protected:
-    struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl;
     Impl* p;
 };
 
@@ -787,7 +787,7 @@ public:
     uint64 durationNS() const; ///< duration in nanoseconds
 
 protected:
-    struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl;
     Impl* const p;
 
 private:
@@ -875,7 +875,7 @@ public:
     /** @overload */
     static OpenCLExecutionContext create(const Context& context, const Device& device);
 
-    struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl;
     inline bool empty() const { return !p; }
     void release();
 protected:

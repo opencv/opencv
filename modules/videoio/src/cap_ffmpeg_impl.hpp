@@ -771,7 +771,7 @@ public:
     bool trylock();
     void unlock();
 
-    struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl;
 protected:
     Impl* impl;
 

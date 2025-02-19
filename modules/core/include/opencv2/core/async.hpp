@@ -89,7 +89,7 @@ public:
 
 
     // PImpl
-    struct Impl; friend struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl; friend struct Impl;
     inline void* _getImpl() const CV_NOEXCEPT { return p; }
 protected:
     Impl* p;

@@ -53,7 +53,7 @@ public:
     void lock_shared(); ///< acquire shareable (reader) lock
     void unlock_shared(); ///< release shareable (reader) lock
 
-    struct Impl;
+    struct __attribute__((visibility("hidden"))) Impl;
 protected:
     Impl* pImpl;
 
