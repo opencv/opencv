@@ -437,6 +437,8 @@ class FuncInfo(GeneralInfo):
             arg_fix_map = func_fix_map.get(arg[1], {})
             arg[0] = arg_fix_map.get('ctype',  arg[0]) #fixing arg type
             arg[3] = arg_fix_map.get('attrib', arg[3]) #fixing arg attrib
+            if arg[0] == 'dnn_Net':
+                arg[0] = 'Net'
             self.args.append(ArgInfo(arg))
 
     def fullClassJAVA(self):
@@ -486,7 +488,7 @@ class JavaWrapperGenerator(object):
             jni_name = "(*("+classinfo.fullNameCPP()+"*)%(n)s_nativeObj)"
         type_dict.setdefault(name, {}).update(
             { "j_type" : classinfo.jname,
-              "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+              "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
               "jni_name" : jni_name,
               "jni_type" : "jlong",
               "suffix" : "J",
@@ -495,7 +497,7 @@ class JavaWrapperGenerator(object):
         )
         type_dict.setdefault(name+'*', {}).update(
             { "j_type" : classinfo.jname,
-              "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+              "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
               "jni_name" : "&("+jni_name+")",
               "jni_type" : "jlong",
               "suffix" : "J",

@@ -75,7 +75,6 @@ int waitKeyImpl (int maxWait) {return 0;}
 const int MIN_SLIDER_WIDTH=200;
 
 static NSApplication *application = nil;
-static NSAutoreleasePool *pool = nil;
 static NSMutableDictionary *windows = nil;
 static bool wasInitialized = false;
 
@@ -129,24 +128,10 @@ static bool wasInitialized = false;
 - (void)createSliderWithName:(const char *)name maxValue:(int)max value:(int *)value callback:(CvTrackbarCallback)callback;
 @end
 
-/*static void icvCocoaCleanup(void)
-{
-    //cout << "icvCocoaCleanup" << endl;
-    if( application )
-    {
-        destroyAllWindowsImpl();
-        //[application terminate:nil];
-        application = 0;
-        [pool release];
-    }
-}*/
-
 static int cocoa_InitSystem( int , char** )
 {
-    //cout << "cocoa_InitSystem" << endl;
     wasInitialized = true;
 
-    pool = [[NSAutoreleasePool alloc] init];
     application = [NSApplication sharedApplication];
     windows = [[NSMutableDictionary alloc] init];
 
@@ -158,152 +143,141 @@ static int cocoa_InitSystem( int , char** )
     if( floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_5 )
         [application setActivationPolicy:NSApplicationActivationPolicyRegular];
 #endif
-    //[application finishLaunching];
-    //atexit(icvCocoaCleanup);
-
     setlocale(LC_NUMERIC,"C");
 
     return 0;
 }
 
 static CVWindow *cvGetWindow(const char *name) {
-    //cout << "cvGetWindow" << endl;
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    NSString *cvname = [NSString stringWithFormat:@"%s", name];
-    CVWindow* retval = (CVWindow*) [windows valueForKey:cvname] ;
-    //cout << "retain count: " << [retval retainCount] << endl;
-    //retval = [retval retain];
-    //cout << "retain count: " << [retval retainCount] << endl;
-    [localpool drain];
-    //cout << "retain count: " << [retval retainCount] << endl;
-    return retval;
+    CVWindow* retval = nil;
+    @autoreleasepool{
+        NSString *cvname = [NSString stringWithFormat:@"%s", name];
+        retval = (CVWindow*) [windows valueForKey:cvname];
+        if (retval != nil) {
+            [retval retain];
+        }
+    }
+    return [retval autorelease];
 }
 
 void destroyWindowImpl( const char* name)
 {
-
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    //cout << "destroyWindowImpl" << endl;
-    CVWindow *window = cvGetWindow(name);
-    if(window) {
-        if ([window styleMask] & NSFullScreenWindowMask) {
-            [window toggleFullScreen:nil];
+    @autoreleasepool{
+        CVWindow *window = cvGetWindow(name);
+        if(window) {
+            if ([window styleMask] & NSFullScreenWindowMask) {
+                [window toggleFullScreen:nil];
+            }
+            [window close];
+            [windows removeObjectForKey:[NSString stringWithFormat:@"%s", name]];
         }
-        [window close];
-        [windows removeObjectForKey:[NSString stringWithFormat:@"%s", name]];
     }
-    [localpool drain];
 }
 
 
 void destroyAllWindowsImpl( void )
 {
-    //cout << "destroyAllWindowsImpl" << endl;
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    NSDictionary* list = [NSDictionary dictionaryWithDictionary:windows];
-    for(NSString *key in list) {
-        destroyWindowImpl([key cStringUsingEncoding:NSASCIIStringEncoding]);
+    @autoreleasepool {
+        NSDictionary* list = [NSDictionary dictionaryWithDictionary:windows];
+        for(NSString *key in list) {
+            destroyWindowImpl([key cStringUsingEncoding:NSASCIIStringEncoding]);
+        }
     }
-    [localpool drain];
 }
 
 
 void showImageImpl( const char* name, cv::InputArray arr)
 {
-    //cout << "showImageImpl" << endl;
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    CVWindow *window = cvGetWindow(name);
-    if(!window)
-    {
-        namedWindowImpl(name, cv::WINDOW_AUTOSIZE);
-        window = cvGetWindow(name);
-    }
-
-    if(window)
-    {
-        bool empty = [[window contentView] image] == nil;
-        NSRect vrectOld = [[window contentView] frame];
-        NSSize oldImageSize = [[[window contentView] image] size];
-        [[window contentView] setImageData:arr];
-        if([window autosize] || [window firstContent] || empty)
+    @autoreleasepool {
+        CVWindow *window = cvGetWindow(name);
+        if(!window)
         {
-            NSSize imageSize = [[[window contentView] image] size];
-            // Only adjust the image size if the new image is a different size from the previous
-            if (oldImageSize.height != imageSize.height || oldImageSize.width != imageSize.width)
+            namedWindowImpl(name, cv::WINDOW_AUTOSIZE);
+            window = cvGetWindow(name);
+        }
+
+        if(window)
+        {
+            bool empty = [[window contentView] image] == nil;
+            NSRect vrectOld = [[window contentView] frame];
+            NSSize oldImageSize = [[[window contentView] image] size];
+            [[window contentView] setImageData:arr];
+            if([window autosize] || [window firstContent] || empty)
             {
-                //Set new view size considering sliders (reserve height and min width)
-                NSSize scaledImageSize = imageSize;
-                if ([[window contentView] respondsToSelector:@selector(convertSizeFromBacking:)])
+                NSSize imageSize = [[[window contentView] image] size];
+                // Only adjust the image size if the new image is a different size from the previous
+                if (oldImageSize.height != imageSize.height || oldImageSize.width != imageSize.width)
                 {
-                    // Only resize for retina displays if the image is bigger than the screen
-                    NSSize screenSize = NSScreen.mainScreen.visibleFrame.size;
-                    CGFloat titleBarHeight = window.frame.size.height - [window contentRectForFrameRect:window.frame].size.height;
-                    screenSize.height -= titleBarHeight;
-                    if (imageSize.width > screenSize.width || imageSize.height > screenSize.height)
+                    //Set new view size considering sliders (reserve height and min width)
+                    NSSize scaledImageSize = imageSize;
+                    if ([[window contentView] respondsToSelector:@selector(convertSizeFromBacking:)])
                     {
-                        CGFloat fx = screenSize.width/std::max(imageSize.width, (CGFloat)1.f);
-                        CGFloat fy = screenSize.height/std::max(imageSize.height, (CGFloat)1.f);
-                        CGFloat min_f = std::min(fx, fy);
-                        scaledImageSize = [[window contentView] convertSizeFromBacking:imageSize];
-                        scaledImageSize.width = std::min(scaledImageSize.width, min_f*imageSize.width);
-                        scaledImageSize.height = std::min(scaledImageSize.height, min_f*imageSize.height);
+                        // Only resize for retina displays if the image is bigger than the screen
+                        NSSize screenSize = NSScreen.mainScreen.visibleFrame.size;
+                        CGFloat titleBarHeight = window.frame.size.height - [window contentRectForFrameRect:window.frame].size.height;
+                        screenSize.height -= titleBarHeight;
+                        if (imageSize.width > screenSize.width || imageSize.height > screenSize.height)
+                        {
+                            CGFloat fx = screenSize.width/std::max(imageSize.width, (CGFloat)1.f);
+                            CGFloat fy = screenSize.height/std::max(imageSize.height, (CGFloat)1.f);
+                            CGFloat min_f = std::min(fx, fy);
+                            scaledImageSize = [[window contentView] convertSizeFromBacking:imageSize];
+                            scaledImageSize.width = std::min(scaledImageSize.width, min_f*imageSize.width);
+                            scaledImageSize.height = std::min(scaledImageSize.height, min_f*imageSize.height);
+                        }
                     }
-                }
-                NSSize contentSize = vrectOld.size;
-                contentSize.height = scaledImageSize.height + [window contentView].sliderHeight;
-                contentSize.width = std::max<int>(scaledImageSize.width, MIN_SLIDER_WIDTH);
-                [window setContentSize:contentSize]; //adjust sliders to fit new window size
-                if([window firstContent])
-                {
-                    int x = [window x0];
-                    int y = [window y0];
-                    if(x >= 0 && y >= 0)
+                    NSSize contentSize = vrectOld.size;
+                    contentSize.height = scaledImageSize.height + [window contentView].sliderHeight;
+                    contentSize.width = std::max<int>(scaledImageSize.width, MIN_SLIDER_WIDTH);
+                    [window setContentSize:contentSize]; //adjust sliders to fit new window size
+                    if([window firstContent])
                     {
-                        y = [[window screen] visibleFrame].size.height - y;
-                        [window setFrameTopLeftPoint:NSMakePoint(x, y)];
+                        int x = [window x0];
+                        int y = [window y0];
+                        if(x >= 0 && y >= 0)
+                        {
+                            y = [[window screen] visibleFrame].size.height - y;
+                            [window setFrameTopLeftPoint:NSMakePoint(x, y)];
+                        }
                     }
                 }
             }
+            [window setFirstContent:NO];
         }
-        [window setFirstContent:NO];
     }
-    [localpool drain];
 }
 
 void resizeWindowImpl( const char* name, int width, int height)
 {
-
-    //cout << "resizeWindowImpl" << endl;
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    CVWindow *window = cvGetWindow(name);
-    if(window && ![window autosize]) {
-        height += [window contentView].sliderHeight;
-        NSSize size = { (CGFloat)width, (CGFloat)height };
-        [window setContentSize:size];
+    @autoreleasepool {
+        CVWindow *window = cvGetWindow(name);
+        if(window && ![window autosize]) {
+            height += [window contentView].sliderHeight;
+            NSSize size = { (CGFloat)width, (CGFloat)height };
+            [window setContentSize:size];
+        }
     }
-    [localpool drain];
 }
 
 void moveWindowImpl( const char* name, int x, int y)
 {
-    NSAutoreleasePool* localpool1 = [[NSAutoreleasePool alloc] init];
     CVWindow *window = nil;
 
     if(name == NULL)
         CV_Error( cv::Error::StsNullPtr, "NULL window name" );
-    //cout << "moveWindowImpl"<< endl;
-    window = cvGetWindow(name);
-    if(window) {
-        if([window firstContent]) {
-            [window setX0:x];
-            [window setY0:y];
-        }
-        else {
-            y = [[window screen] visibleFrame].size.height - y;
-            [window setFrameTopLeftPoint:NSMakePoint(x, y)];
+    @autoreleasepool {
+        window = cvGetWindow(name);
+        if(window) {
+            if([window firstContent]) {
+                [window setX0:x];
+                [window setY0:y];
+            }
+            else {
+                y = [[window screen] visibleFrame].size.height - y;
+                [window setFrameTopLeftPoint:NSMakePoint(x, y)];
+            }
         }
     }
-    [localpool1 drain];
 }
 
 static int cocoa_CreateTrackbar (const char* trackbar_name,
@@ -311,28 +285,22 @@ static int cocoa_CreateTrackbar (const char* trackbar_name,
                               int* val, int count,
                               CvTrackbarCallback on_notify)
 {
-
-
     int result = 0;
     CVWindow *window = nil;
-    NSAutoreleasePool* localpool2 = nil;
-
-    if (localpool2 != nil) [localpool2 drain];
-    localpool2 = [[NSAutoreleasePool alloc] init];
 
     if(window_name == NULL)
         CV_Error( cv::Error::StsNullPtr, "NULL window name" );
 
-    //cout << "cocoa_CreateTrackbar" << endl ;
-    window = cvGetWindow(window_name);
-    if(window) {
-        [window createSliderWithName:trackbar_name
-                            maxValue:count
-                               value:val
-                            callback:on_notify];
-        result = 1;
+    @autoreleasepool {
+        window = cvGetWindow(window_name);
+        if(window) {
+            [window createSliderWithName:trackbar_name
+                                maxValue:count
+                                value:val
+                                callback:on_notify];
+            result = 1;
+        }
     }
-    [localpool2 drain];
     return result;
 }
 
@@ -343,18 +311,17 @@ int createTrackbar2Impl(const char* trackbar_name,
                               CvTrackbarCallback2 on_notify2,
                               void* userdata)
 {
-    //cout <<"createTrackbar2Impl" << endl;
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     int res = cocoa_CreateTrackbar(trackbar_name, window_name, val, count, NULL);
-    if(res) {
-        CVWindow *window = cvGetWindow(window_name);
-        if (window && [window respondsToSelector:@selector(sliders)]) {
-            CVSlider *slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
-            [slider setCallback2:on_notify2];
-            [slider setUserData:userdata];
+    @autoreleasepool {
+        if(res) {
+            CVWindow *window = cvGetWindow(window_name);
+            if (window && [window respondsToSelector:@selector(sliders)]) {
+                CVSlider *slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
+                [slider setCallback2:on_notify2];
+                [slider setUserData:userdata];
+            }
         }
     }
-    [localpool drain];
     return res;
 }
 
@@ -362,43 +329,34 @@ int createTrackbar2Impl(const char* trackbar_name,
 void setMouseCallbackImpl( const char* name, CvMouseCallback function, void* info)
 {
     CVWindow *window = nil;
-    NSAutoreleasePool* localpool3 = nil;
-    //cout << "setMouseCallbackImpl" << endl;
-
-    if (localpool3 != nil) [localpool3 drain];
-    localpool3 = [[NSAutoreleasePool alloc] init];
 
     if(name == NULL)
         CV_Error( cv::Error::StsNullPtr, "NULL window name" );
-
-    window = cvGetWindow(name);
-    if(window) {
-        [window setMouseCallback:function];
-        [window setMouseParam:info];
+    @autoreleasepool {
+        window = cvGetWindow(name);
+        if(window) {
+            [window setMouseCallback:function];
+            [window setMouseParam:info];
+        }
     }
-    [localpool3 drain];
 }
 
  int getTrackbarPosImpl( const char* trackbar_name, const char* window_name )
 {
     CVWindow *window = nil;
     int pos = -1;
-    NSAutoreleasePool* localpool4 = nil;
-    //cout << "getTrackbarPosImpl" << endl;
     if(trackbar_name == NULL || window_name == NULL)
         CV_Error( cv::Error::StsNullPtr, "NULL trackbar or window name" );
 
-    if (localpool4 != nil) [localpool4 drain];
-    localpool4 = [[NSAutoreleasePool alloc] init];
-
-    window = cvGetWindow(window_name);
-    if(window && [window respondsToSelector:@selector(sliders)]) {
-        CVSlider *slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
-        if(slider) {
-            pos = [[slider slider] intValue];
+    @autoreleasepool {
+        window = cvGetWindow(window_name);
+        if(window && [window respondsToSelector:@selector(sliders)]) {
+            CVSlider *slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
+            if(slider) {
+                pos = [[slider slider] intValue];
+            }
         }
     }
-    [localpool4 drain];
     return pos;
 }
 
@@ -406,82 +364,71 @@ void setTrackbarPosImpl(const char* trackbar_name, const char* window_name, int 
 {
     CVWindow *window = nil;
     CVSlider *slider = nil;
-    NSAutoreleasePool* localpool5 = nil;
 
-    //cout << "setTrackbarPosImpl" << endl;
     if(trackbar_name == NULL || window_name == NULL)
         CV_Error( cv::Error::StsNullPtr, "NULL trackbar or window name" );
 
     if(pos < 0)
         CV_Error( cv::Error::StsOutOfRange, "Bad trackbar maximal value" );
 
-    if (localpool5 != nil) [localpool5 drain];
-    localpool5 = [[NSAutoreleasePool alloc] init];
-
-    window = cvGetWindow(window_name);
-    if(window && [window respondsToSelector:@selector(sliders)]) {
-        slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
-        if(slider) {
-            [[slider slider] setIntValue:pos];
-            if([slider respondsToSelector:@selector(handleSlider)]) {
-                [slider performSelector:@selector(handleSlider)];
+    @autoreleasepool {
+        window = cvGetWindow(window_name);
+        if(window && [window respondsToSelector:@selector(sliders)]) {
+            slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
+            if(slider) {
+                [[slider slider] setIntValue:pos];
+                if([slider respondsToSelector:@selector(handleSlider)]) {
+                    [slider performSelector:@selector(handleSlider)];
+                }
             }
         }
     }
-    [localpool5 drain];
 }
 
 void setTrackbarMaxImpl(const char* trackbar_name, const char* window_name, int maxval)
 {
     CVWindow *window = nil;
     CVSlider *slider = nil;
-    NSAutoreleasePool* localpool5 = nil;
 
-    //cout << "setTrackbarPosImpl" << endl;
     if(trackbar_name == NULL || window_name == NULL)
         CV_Error( cv::Error::StsNullPtr, "NULL trackbar or window name" );
 
-    if (localpool5 != nil) [localpool5 drain];
-    localpool5 = [[NSAutoreleasePool alloc] init];
-
-    window = cvGetWindow(window_name);
-    if(window && [window respondsToSelector:@selector(sliders)]) {
-        slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
-        if(slider) {
-            if(maxval >= 0) {
-                int minval = [[slider slider] minValue];
-                maxval = (minval>maxval)?minval:maxval;
-                [[slider slider] setMaxValue:maxval];
+    @autoreleasepool {
+        window = cvGetWindow(window_name);
+        if(window && [window respondsToSelector:@selector(sliders)]) {
+            slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
+            if(slider) {
+                if(maxval >= 0) {
+                    int minval = [[slider slider] minValue];
+                    maxval = (minval>maxval)?minval:maxval;
+                    [[slider slider] setMaxValue:maxval];
+                }
             }
         }
     }
-    [localpool5 drain];
 }
 
 void setTrackbarMinImpl(const char* trackbar_name, const char* window_name, int minval)
 {
     CVWindow *window = nil;
     CVSlider *slider = nil;
-    NSAutoreleasePool* localpool5 = nil;
 
     if(trackbar_name == NULL || window_name == NULL)
         CV_Error( cv::Error::StsNullPtr, "NULL trackbar or window name" );
 
-    if (localpool5 != nil) [localpool5 drain];
-    localpool5 = [[NSAutoreleasePool alloc] init];
-
-    window = cvGetWindow(window_name);
-    if(window && [window respondsToSelector:@selector(sliders)]) {
-        slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
-        if(slider) {
-            if(minval >= 0) {
-                int maxval = [[slider slider] maxValue];
-                minval = (minval<maxval)?minval:maxval;
-                [[slider slider] setMinValue:minval];
+    @autoreleasepool {
+        window = cvGetWindow(window_name);
+        if(window && [window respondsToSelector:@selector(sliders)]) {
+            slider = [[window sliders] valueForKey:[NSString stringWithFormat:@"%s", trackbar_name]];
+            if(slider) {
+                if(minval >= 0) {
+                    int maxval = [[slider slider] maxValue];
+                    minval = (minval<maxval)?minval:maxval;
+                    [[slider slider] setMinValue:minval];
+                }
             }
         }
     }
-    [localpool5 drain];
 }
 
 int namedWindowImpl( const char* name, int flags )
@@ -489,95 +436,86 @@ int namedWindowImpl( const char* name, int flags )
     if( !wasInitialized )
         cocoa_InitSystem(0, 0);
 
-    //cout << "namedWindowImpl" << endl;
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-    CVWindow *window = cvGetWindow(name);
-    if( window )
-    {
+    @autoreleasepool {
+        CVWindow *window = cvGetWindow(name);
+        if( window )
+        {
+            [window setAutosize:(flags == cv::WINDOW_AUTOSIZE)];
+            return 0;
+        }
+
+        NSScreen* mainDisplay = [NSScreen mainScreen];
+        NSString *windowName = [NSString stringWithFormat:@"%s", name];
+        NSUInteger showResize = NSResizableWindowMask;
+        NSUInteger styleMask = NSTitledWindowMask|NSMiniaturizableWindowMask|showResize;
+        CGFloat windowWidth = [NSWindow minFrameWidthWithTitle:windowName styleMask:styleMask];
+        NSRect initContentRect = NSMakeRect(0, 0, windowWidth, 0);
+        if (mainDisplay) {
+            NSRect dispFrame = [mainDisplay visibleFrame];
+            initContentRect.origin.y = dispFrame.size.height-20;
+        }
+
+        window = [[CVWindow alloc] initWithContentRect:initContentRect
+                                            styleMask:NSTitledWindowMask|NSMiniaturizableWindowMask|showResize
+                                            backing:NSBackingStoreBuffered
+                                                defer:YES
+                                                screen:mainDisplay];
+
+        [window setFrameTopLeftPoint:initContentRect.origin];
+
+        [window setFirstContent:YES];
+        [window setX0:-1];
+        [window setY0:-1];
+
+        [window setContentView:[[CVView alloc] init]];
+
+        [NSApp activateIgnoringOtherApps:YES];
+
+        [window setHasShadow:YES];
+        [window setAcceptsMouseMovedEvents:YES];
+        [window useOptimizedDrawing:YES];
+        [window setTitle:windowName];
+        [window makeKeyAndOrderFront:nil];
+
         [window setAutosize:(flags == cv::WINDOW_AUTOSIZE)];
-        [localpool drain];
-        return 0;
+
+        [windows setValue:window forKey:windowName];
+
+        return [windows count]-1;
     }
-
-    NSScreen* mainDisplay = [NSScreen mainScreen];
-
-    NSString *windowName = [NSString stringWithFormat:@"%s", name];
-    NSUInteger showResize = NSResizableWindowMask;
-    NSUInteger styleMask = NSTitledWindowMask|NSMiniaturizableWindowMask|showResize;
-    CGFloat windowWidth = [NSWindow minFrameWidthWithTitle:windowName styleMask:styleMask];
-    NSRect initContentRect = NSMakeRect(0, 0, windowWidth, 0);
-    if (mainDisplay) {
-        NSRect dispFrame = [mainDisplay visibleFrame];
-        initContentRect.origin.y = dispFrame.size.height-20;
-    }
-
-
-    window = [[CVWindow alloc] initWithContentRect:initContentRect
-                                         styleMask:NSTitledWindowMask|NSMiniaturizableWindowMask|showResize
-                                           backing:NSBackingStoreBuffered
-                                             defer:YES
-                                            screen:mainDisplay];
-
-    [window setFrameTopLeftPoint:initContentRect.origin];
-
-    [window setFirstContent:YES];
-    [window setX0:-1];
-    [window setY0:-1];
-
-    [window setContentView:[[CVView alloc] init]];
-
-    [NSApp activateIgnoringOtherApps:YES];
-
-    [window setHasShadow:YES];
-    [window setAcceptsMouseMovedEvents:YES];
-    [window useOptimizedDrawing:YES];
-    [window setTitle:windowName];
-    [window makeKeyAndOrderFront:nil];
-
-    [window setAutosize:(flags == cv::WINDOW_AUTOSIZE)];
-
-    [windows setValue:window forKey:windowName];
-
-    [localpool drain];
-    return [windows count]-1;
 }
 
 int waitKeyImpl (int maxWait)
 {
-    //cout << "waitKeyImpl" << endl;
     int returnCode = -1;
-    NSAutoreleasePool *localpool = [[NSAutoreleasePool alloc] init];
-    double start = [[NSDate date] timeIntervalSince1970];
+    @autoreleasepool {
+        double start = [[NSDate date] timeIntervalSince1970];
 
-    while(true) {
-        if(([[NSDate date] timeIntervalSince1970] - start) * 1000 >= maxWait && maxWait>0)
-            break;
+        while(true) {
+            if(([[NSDate date] timeIntervalSince1970] - start) * 1000 >= maxWait && maxWait>0)
+                break;
 
-        //event = [application currentEvent];
-        [localpool drain];
-        localpool = [[NSAutoreleasePool alloc] init];
+            NSEvent *event =
+            [application
+            nextEventMatchingMask:NSAnyEventMask
+            untilDate://[NSDate dateWithTimeIntervalSinceNow: 1./100]
+            [NSDate distantPast]
+            inMode:NSDefaultRunLoopMode
+            dequeue:YES];
 
-        NSEvent *event =
-        [application
-         nextEventMatchingMask:NSAnyEventMask
-         untilDate://[NSDate dateWithTimeIntervalSinceNow: 1./100]
-         [NSDate distantPast]
-         inMode:NSDefaultRunLoopMode
-         dequeue:YES];
+            if([event type] == NSKeyDown && [[event characters] length]) {
+                returnCode = [[event characters] characterAtIndex:0];
+                break;
+            }
 
-        if([event type] == NSKeyDown && [[event characters] length]) {
-            returnCode = [[event characters] characterAtIndex:0];
-            break;
+            [application sendEvent:event];
+            [application updateWindows];
+
+            [NSThread sleepForTimeInterval:1/100.];
         }
 
-        [application sendEvent:event];
-        [application updateWindows];
-
-        [NSThread sleepForTimeInterval:1/100.];
+        return returnCode;
     }
-    [localpool drain];
-
-    return returnCode;
 }
 
 cv::Rect cvGetWindowRect_COCOA( const char* name )
@@ -637,8 +575,6 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
     NSDictionary *fullscreenOptions = nil;
 #endif
 
-    NSAutoreleasePool* localpool = nil;
-
     if( name == NULL )
     {
         CV_Error( cv::Error::StsNullPtr, "NULL name string" );
@@ -655,46 +591,45 @@ void cvSetModeWindow_COCOA( const char* name, double prop_value )
         return;
     }
 
-    localpool = [[NSAutoreleasePool alloc] init];
-
+    @autoreleasepool {
 #if MAC_OS_X_VERSION_MAX_ALLOWED > MAC_OS_X_VERSION_10_6
-    if ( ([window styleMask] & NSFullScreenWindowMask) && prop_value==cv::WINDOW_NORMAL )
-    {
-        [window toggleFullScreen:nil];
+        if ( ([window styleMask] & NSFullScreenWindowMask) && prop_value==cv::WINDOW_NORMAL )
+        {
+            [window toggleFullScreen:nil];
 
-        window.status=cv::WINDOW_NORMAL;
-    }
-    else if( !([window styleMask] & NSFullScreenWindowMask) && prop_value==cv::WINDOW_FULLSCREEN )
-    {
-        [window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
+            window.status=cv::WINDOW_NORMAL;
+        }
+        else if( !([window styleMask] & NSFullScreenWindowMask) && prop_value==cv::WINDOW_FULLSCREEN )
+        {
+            [window setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
 
-        NSScreen* screen = [window screen];
+            NSScreen* screen = [window screen];
 
-        NSRect frame = [screen frame];
-        [window setFrame:frame display:YES];
+            NSRect frame = [screen frame];
+            [window setFrame:frame display:YES];
 
-        [window setContentSize:frame.size];
+            [window setContentSize:frame.size];
 
-        [window toggleFullScreen:nil];
+            [window toggleFullScreen:nil];
 
-        [window setFrameTopLeftPoint: frame.origin];
+            [window setFrameTopLeftPoint: frame.origin];
 
-        window.status=cv::WINDOW_FULLSCREEN;
-    }
+            window.status=cv::WINDOW_FULLSCREEN;
+        }
 #else
-    fullscreenOptions = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:NSFullScreenModeSetting];
-    if ( [[window contentView] isInFullScreenMode] && prop_value==cv::WINDOW_NORMAL )
-    {
-        [[window contentView] exitFullScreenModeWithOptions:fullscreenOptions];
-        window.status=cv::WINDOW_NORMAL;
-    }
-    else if( ![[window contentView] isInFullScreenMode] && prop_value==cv::WINDOW_FULLSCREEN )
-    {
-        [[window contentView] enterFullScreenMode:[NSScreen mainScreen] withOptions:fullscreenOptions];
-        window.status=cv::WINDOW_FULLSCREEN;
-    }
+        fullscreenOptions = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:NSFullScreenModeSetting];
+        if ( [[window contentView] isInFullScreenMode] && prop_value==cv::WINDOW_NORMAL )
+        {
+            [[window contentView] exitFullScreenModeWithOptions:fullscreenOptions];
+            window.status=cv::WINDOW_NORMAL;
+        }
+        else if( ![[window contentView] isInFullScreenMode] && prop_value==cv::WINDOW_FULLSCREEN )
+        {
+            [[window contentView] enterFullScreenMode:[NSScreen mainScreen] withOptions:fullscreenOptions];
+            window.status=cv::WINDOW_FULLSCREEN;
+        }
 #endif
-    [localpool drain];
+    }
 }
 
 double cvGetPropVisible_COCOA(const char* name)
@@ -741,56 +676,53 @@ double cvGetPropTopmost_COCOA(const char* name)
 void cvSetPropTopmost_COCOA( const char* name, const bool topmost )
 {
     CVWindow *window = nil;
-    NSAutoreleasePool* localpool = nil;
 
     if( name == NULL )
     {
         CV_Error( cv::Error::StsNullPtr, "NULL name string" );
     }
 
-    window = cvGetWindow(name);
-    if ( window == NULL )
-    {
-        CV_Error( cv::Error::StsNullPtr, "NULL window" );
-    }
+    @autoreleasepool {
+        window = cvGetWindow(name);
+        if ( window == NULL )
+        {
+            CV_Error( cv::Error::StsNullPtr, "NULL window" );
+        }
 
-    if (([window styleMask] & NSFullScreenWindowMask))
-    {
-        return;
-    }
+        if (([window styleMask] & NSFullScreenWindowMask))
+        {
+            return;
+        }
 
-    localpool = [[NSAutoreleasePool alloc] init];
-    if (topmost)
-    {
-        [window makeKeyAndOrderFront:window.self];
-        [window setLevel:CGWindowLevelForKey(kCGMaximumWindowLevelKey)];
+        if (topmost)
+        {
+            [window makeKeyAndOrderFront:window.self];
+            [window setLevel:CGWindowLevelForKey(kCGMaximumWindowLevelKey)];
+        }
+        else
+        {
+            [window makeKeyAndOrderFront:nil];
+        }
     }
-    else
-    {
-        [window makeKeyAndOrderFront:nil];
-    }
-    [localpool drain];
 }
 
 void setWindowTitle_COCOA(const cv::String& winname, const cv::String& title)
 {
-    CVWindow *window = cvGetWindow(winname.c_str());
+    @autoreleasepool {
+        CVWindow *window = cvGetWindow(winname.c_str());
 
-    if (window == NULL)
-    {
-        cv::namedWindow(winname);
-        window = cvGetWindow(winname.c_str());
+        if (window == NULL)
+        {
+            cv::namedWindow(winname);
+            window = cvGetWindow(winname.c_str());
+        }
+
+        if (window == NULL)
+            CV_Error(cv::Error::StsNullPtr, "NULL window");
+
+        NSString *windowTitle = [NSString stringWithFormat:@"%s", title.c_str()];
+        [window setTitle:windowTitle];
     }
-
-    if (window == NULL)
-        CV_Error(cv::Error::StsNullPtr, "NULL window");
-
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-
-    NSString *windowTitle = [NSString stringWithFormat:@"%s", title.c_str()];
-    [window setTitle:windowTitle];
-
-    [localpool drain];
 }
 
 static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
@@ -824,9 +756,7 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 
 - (void)cvSendMouseEvent:(NSEvent *)event type:(int)type flags:(int)flags {
     (void)event;
-    //cout << "cvSendMouseEvent" << endl;
     NSPoint mp = [NSEvent mouseLocation];
-    //NSRect visible = [[self contentView] frame];
     mp = [self convertScreenToBase: mp];
     CVView *contentView = [self contentView];
     NSSize viewSize = contentView.frame.size;
@@ -857,11 +787,9 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     } else if( mp.x >= 0 && mp.y >= 0 && mp.x < imageSize.width && mp.y < imageSize.height ) {
       mouseCallback(type, mp.x, mp.y, flags, mouseParam);
     }
-
 }
 
 - (void)cvMouseEvent:(NSEvent *)event {
-    //cout << "cvMouseEvent" << endl;
     if(!mouseCallback)
         return;
 
@@ -870,8 +798,19 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     if([event modifierFlags] & NSControlKeyMask)	flags |= cv::EVENT_FLAG_CTRLKEY;
     if([event modifierFlags] & NSAlternateKeyMask)	flags |= cv::EVENT_FLAG_ALTKEY;
 
-    if([event type] == NSLeftMouseDown)	{[self cvSendMouseEvent:event type:cv::EVENT_LBUTTONDOWN flags:flags | cv::EVENT_FLAG_LBUTTON];}
-    if([event type] == NSLeftMouseUp)	{[self cvSendMouseEvent:event type:cv::EVENT_LBUTTONUP   flags:flags | cv::EVENT_FLAG_LBUTTON];}
+    //modified code using ternary operator:
+    if ([event type] == NSLeftMouseDown) {
+    [self cvSendMouseEvent:event
+                      type:([event modifierFlags] & NSControlKeyMask) ? cv::EVENT_RBUTTONDOWN : cv::EVENT_LBUTTONDOWN
+                     flags:flags | (([event modifierFlags] & NSControlKeyMask) ? cv::EVENT_FLAG_RBUTTON : cv::EVENT_FLAG_LBUTTON)];
+    }
+
+    if ([event type] == NSLeftMouseUp) {
+        [self cvSendMouseEvent:event
+                          type:([event modifierFlags] & NSControlKeyMask) ? cv::EVENT_RBUTTONUP : cv::EVENT_LBUTTONUP
+                         flags:flags | (([event modifierFlags] & NSControlKeyMask) ? cv::EVENT_FLAG_RBUTTON : cv::EVENT_FLAG_LBUTTON)];
+    }
+
     if([event type] == NSRightMouseDown){[self cvSendMouseEvent:event type:cv::EVENT_RBUTTONDOWN flags:flags | cv::EVENT_FLAG_RBUTTON];}
     if([event type] == NSRightMouseUp)	{[self cvSendMouseEvent:event type:cv::EVENT_RBUTTONUP   flags:flags | cv::EVENT_FLAG_RBUTTON];}
     if([event type] == NSOtherMouseDown){[self cvSendMouseEvent:event type:cv::EVENT_MBUTTONDOWN flags:flags];}
@@ -887,20 +826,15 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     [self cvMouseEvent:theEvent];
 }
 - (void)keyDown:(NSEvent *)theEvent {
-    //cout << "keyDown" << endl;
     [super keyDown:theEvent];
 }
 - (void)rightMouseDragged:(NSEvent *)theEvent {
-    //cout << "rightMouseDragged" << endl ;
     [self cvMouseEvent:theEvent];
 }
 - (void)rightMouseUp:(NSEvent *)theEvent {
-    //cout << "rightMouseUp" << endl;
     [self cvMouseEvent:theEvent];
 }
 - (void)rightMouseDown:(NSEvent *)theEvent {
-    // Does not seem to work?
-    //cout << "rightMouseDown" << endl;
     [self cvMouseEvent:theEvent];
 }
 - (void)mouseMoved:(NSEvent *)theEvent {
@@ -926,7 +860,6 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 }
 
 - (void)createSliderWithName:(const char *)name maxValue:(int)max value:(int *)value callback:(CvTrackbarCallback)callback {
-    //cout << "createSliderWithName" << endl;
     if(sliders == nil)
         sliders = [[NSMutableDictionary alloc] init];
 
@@ -961,7 +894,6 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     [slidersKeys addObject:cvname];
     [[self contentView] addSubview:slider];
 
-
     //update contentView size to contain sliders
     NSSize viewSize=[[self contentView] frame].size,
            sliderSize=[slider frame].size;
@@ -990,36 +922,33 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
 @synthesize image;
 
 - (id)init {
-    //cout << "CVView init" << endl;
     [super init];
     return self;
 }
 
 - (void)setImageData:(cv::InputArray)arr {
-    //cout << "setImageData" << endl;
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
+    @autoreleasepool {
+        cv::Mat arrMat = arr.getMat();
 
-    cv::Mat arrMat = arr.getMat();
-    /*CGColorSpaceRef colorspace = NULL;
-    CGDataProviderRef provider = NULL;
-    int width = cvimage->width;
-    int height = cvimage->height;
+        NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+                    pixelsWide:arrMat.cols
+                    pixelsHigh:arrMat.rows
+                    bitsPerSample:8
+                    samplesPerPixel:3
+                    hasAlpha:NO
+                    isPlanar:NO
+                    colorSpaceName:NSDeviceRGBColorSpace
+                    bitmapFormat: kCGImageAlphaNone
+                    bytesPerRow:((arrMat.cols * 3 + 3) & -4)
+                    bitsPerPixel:24];
 
-    colorspace = CGColorSpaceCreateDeviceRGB();
-
-    int size = 8;
-    int nbChannels = 3;
-
-    provider = CGDataProviderCreateWithData(NULL, cvimage->data.ptr, width * height , NULL );
-
-    CGImageRef imageRef = CGImageCreate(width, height, size , size*nbChannels , cvimage->step, colorspace,  kCGImageAlphaNone , provider, NULL, true, kCGRenderingIntentDefault);
-
-    NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithCGImage:imageRef];
-    if(image) {
-        [image release];
-    }*/
-
-    NSBitmapImageRep *bitmap = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
+        if (bitmap) {
+            cv::Mat dst(arrMat.rows, arrMat.cols, CV_8UC3, [bitmap bitmapData], [bitmap bytesPerRow]);
+            convertToShow(arrMat, dst);
+        }
+        else {
+            // It's not guaranteed to like the bitsPerPixel:24, but this is a lot slower so we'd rather not do it
+            bitmap = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
                 pixelsWide:arrMat.cols
                 pixelsHigh:arrMat.rows
                 bitsPerSample:8
@@ -1027,119 +956,93 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
                 hasAlpha:NO
                 isPlanar:NO
                 colorSpaceName:NSDeviceRGBColorSpace
-                bitmapFormat: kCGImageAlphaNone
-                bytesPerRow:((arrMat.cols * 3 + 3) & -4)
-                bitsPerPixel:24];
-
-    if (bitmap) {
-        cv::Mat dst(arrMat.rows, arrMat.cols, CV_8UC3, [bitmap bitmapData], [bitmap bytesPerRow]);
-        convertToShow(arrMat, dst);
-    }
-    else {
-        // It's not guaranteed to like the bitsPerPixel:24, but this is a lot slower so we'd rather not do it
-        bitmap = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL
-            pixelsWide:arrMat.cols
-            pixelsHigh:arrMat.rows
-            bitsPerSample:8
-            samplesPerPixel:3
-            hasAlpha:NO
-            isPlanar:NO
-            colorSpaceName:NSDeviceRGBColorSpace
-            bytesPerRow:(arrMat.cols * 4)
-            bitsPerPixel:32];
-        cv::Mat dst(arrMat.rows, arrMat.cols, CV_8UC4, [bitmap bitmapData], [bitmap bytesPerRow]);
-        convertToShow(arrMat, dst);
-    }
-
-    if( image ) {
-        [image release];
-    }
-
-    image = [[NSImage alloc] init];
-    [image addRepresentation:bitmap];
-    [bitmap release];
-
-    // This isn't supported on older versions of macOS
-    // The performance issues this solves are mainly on newer versions of macOS, so that's fine
-    if( floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_5 ) {
-        if (![self imageView]) {
-            [self setImageView:[[NSView alloc] init]];
-            [[self imageView] setWantsLayer:true];
-            [self addSubview:[self imageView]];
+                bytesPerRow:(arrMat.cols * 4)
+                bitsPerPixel:32];
+            cv::Mat dst(arrMat.rows, arrMat.cols, CV_8UC4, [bitmap bitmapData], [bitmap bytesPerRow]);
+            convertToShow(arrMat, dst);
         }
 
-        [[[self imageView] layer] setContents:image];
+        if( image ) {
+            [image release];
+        }
 
-        NSRect imageViewFrame = [self frame];
-        imageViewFrame.size.height -= [self sliderHeight];
-        NSRect constrainedFrame = { imageViewFrame.origin, constrainAspectRatio(imageViewFrame.size, [image size]) };
-        [[self imageView] setFrame:constrainedFrame];
+        image = [[NSImage alloc] init];
+        [image addRepresentation:bitmap];
+        [bitmap release];
+
+        // This isn't supported on older versions of macOS
+        // The performance issues this solves are mainly on newer versions of macOS, so that's fine
+        if( floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_5 ) {
+            if (![self imageView]) {
+                [self setImageView:[[NSView alloc] init]];
+                [[self imageView] setWantsLayer:true];
+                [self addSubview:[self imageView]];
+            }
+
+            [[[self imageView] layer] setContents:image];
+
+            NSRect imageViewFrame = [self frame];
+            imageViewFrame.size.height -= [self sliderHeight];
+            NSRect constrainedFrame = { imageViewFrame.origin, constrainAspectRatio(imageViewFrame.size, [image size]) };
+            [[self imageView] setFrame:constrainedFrame];
+        }
+        else {
+            NSRect redisplayRect = [self frame];
+            redisplayRect.size.height -= [self sliderHeight];
+            [self setNeedsDisplayInRect:redisplayRect];
+        }
     }
-    else {
-        NSRect redisplayRect = [self frame];
-        redisplayRect.size.height -= [self sliderHeight];
-        [self setNeedsDisplayInRect:redisplayRect];
-    }
-
-    /*CGColorSpaceRelease(colorspace);
-    CGDataProviderRelease(provider);
-    CGImageRelease(imageRef);*/
-
-    [localpool drain];
 }
 
 - (void)setFrameSize:(NSSize)size {
-    //cout << "setFrameSize" << endl;
     [super setFrameSize:size];
 
-    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
     int height = size.height;
 
-    CVWindow *cvwindow = (CVWindow *)[self window];
-    if ([cvwindow respondsToSelector:@selector(sliders)]) {
-        for(NSString *key in [cvwindow slidersKeys]) {
-            CVSlider *slider = [[cvwindow sliders] valueForKey:key];
-            NSRect r = [slider frame];
-            r.origin.y = height - r.size.height;
-            r.size.width = [[cvwindow contentView] frame].size.width;
+    @autoreleasepool {
+        CVWindow *cvwindow = (CVWindow *)[self window];
+        if ([cvwindow respondsToSelector:@selector(sliders)]) {
+            for(NSString *key in [cvwindow slidersKeys]) {
+                CVSlider *slider = [[cvwindow sliders] valueForKey:key];
+                NSRect r = [slider frame];
+                r.origin.y = height - r.size.height;
+                r.size.width = [[cvwindow contentView] frame].size.width;
 
-            CGRect sliderRect = slider.slider.frame;
-            CGFloat targetWidth = r.size.width - (sliderRect.origin.x + 10);
-            sliderRect.size.width = targetWidth < 0 ? 0 : targetWidth;
-            slider.slider.frame = sliderRect;
+                CGRect sliderRect = slider.slider.frame;
+                CGFloat targetWidth = r.size.width - (sliderRect.origin.x + 10);
+                sliderRect.size.width = targetWidth < 0 ? 0 : targetWidth;
+                slider.slider.frame = sliderRect;
 
-            [slider setFrame:r];
-            height -= r.size.height;
+                [slider setFrame:r];
+                height -= r.size.height;
+            }
+        }
+        NSRect frame = self.frame;
+        if (frame.size.height < self.sliderHeight) {
+            frame.size.height = self.sliderHeight;
+            self.frame = frame;
+        }
+        if ([self imageView]) {
+            NSRect imageViewFrame = frame;
+            imageViewFrame.size.height -= [self sliderHeight];
+            NSRect constrainedFrame = { imageViewFrame.origin, constrainAspectRatio(imageViewFrame.size, [image size]) };
+            [[self imageView] setFrame:constrainedFrame];
         }
     }
-    NSRect frame = self.frame;
-    if (frame.size.height < self.sliderHeight) {
-        frame.size.height = self.sliderHeight;
-        self.frame = frame;
-    }
-    if ([self imageView]) {
-        NSRect imageViewFrame = frame;
-        imageViewFrame.size.height -= [self sliderHeight];
-        NSRect constrainedFrame = { imageViewFrame.origin, constrainAspectRatio(imageViewFrame.size, [image size]) };
-        [[self imageView] setFrame:constrainedFrame];
-    }
-    [localpool drain];
 }
 
 - (void)drawRect:(NSRect)rect {
-    //cout << "drawRect" << endl;
     [super drawRect:rect];
     // If imageView exists, all drawing will be done by it and nothing needs to happen here
     if ([self image] && ![self imageView]) {
-        NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-
-        if(image != nil) {
-            [image drawInRect: [self frame]
-                     fromRect: NSZeroRect
-                    operation: NSCompositeSourceOver
-                     fraction: 1.0];
+        @autoreleasepool {
+            if(image != nil) {
+                [image drawInRect: [self frame]
+                        fromRect: NSZeroRect
+                        operation: NSCompositeSourceOver
+                        fraction: 1.0];
+            }
         }
-        [localpool release];
     }
 }
 
@@ -1183,8 +1086,6 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
     [self addSubview:slider];
 
     [self setAutoresizingMask:NSViewWidthSizable];
-
-    //[self setFrame:NSMakeRect(12, 0, 100, 30)];
 
     return self;
 }
