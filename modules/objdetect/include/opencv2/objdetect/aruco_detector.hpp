@@ -340,7 +340,7 @@ public:
      * using projectPoint function. If not, missing marker projections are interpolated using global
      * homography, and all the marker corners in the board must have the same Z coordinate.
      * @note This function assumes that the board only contains markers from one dictionary, so only the
-     * first configured dictionary is used.
+     * first configured dictionary is used. It has to match the dictionary of the board to work properly.
      */
     CV_WRAP void refineDetectedMarkers(InputArray image, const Board &board,
                                        InputOutputArrayOfArrays detectedCorners,
