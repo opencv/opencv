@@ -219,7 +219,7 @@ inline int flip(int src_type,
                 size_t dst_step,
                 int flip_mode)
 {
-    if (src_width < 0 || src_height < 0)
+    if (src_width < 0 || src_height < 0 || src_data == dst_data)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     int esz = CV_ELEM_SIZE(src_type);
