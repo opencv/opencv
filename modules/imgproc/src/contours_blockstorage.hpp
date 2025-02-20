@@ -119,4 +119,4 @@ class BlockStorage {
 
 }  // namespace cv
 
-#endif  // OPENCV_CONTOURS_COMMON_HPP
+#endif  // OPENCV_CONTOURS_BLOCKSTORAGE_HPP
