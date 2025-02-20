@@ -125,11 +125,17 @@ class filestorage_io_test(NewOpenCVTests):
         cn = 3
 
         image = np.zeros((rows, cols, cn), dtype)
-        image[:] = (1, 2, 127)
+        if dtype != bool:
+            image[:] = (1, 2, 127)
+        else:
+            image[:] = (False, True, False)
 
         for i in range(rows):
             for j in range(cols):
-                image[i, j, 1] = (i + j) % 256
+                if dtype != bool:
+                    image[i, j, 1] = (i + j) % 256
+                else:
+                    image[i, j, 1] = (i + j) % 2 != 0
 
         return image
 
@@ -178,6 +184,7 @@ class filestorage_io_test(NewOpenCVTests):
 
         mats = {'normal_2d_mat_u8': self.get_normal_2d_mat(np.uint8),
                 'normal_2d_mat_u32': self.get_normal_2d_mat(np.uint32),
+                'normal_2d_mat_bool': self.get_normal_2d_mat(bool),
                 'normal_nd_mat': self.get_normal_nd_mat(),
                 'empty_2d_mat': self.get_empty_2d_mat(),
                 'random_mat': self.get_random_mat()}
