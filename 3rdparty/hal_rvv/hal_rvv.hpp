@@ -28,7 +28,6 @@
 #include "hal_rvv_1p0/minmax.hpp" // core
 #include "hal_rvv_1p0/atan.hpp" // core
 #include "hal_rvv_1p0/split.hpp" // core
-#include "hal_rvv_1p0/exp.hpp" // core
 #endif
 
 #endif
