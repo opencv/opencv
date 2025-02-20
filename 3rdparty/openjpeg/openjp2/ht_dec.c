@@ -901,7 +901,7 @@ typedef struct frwd_struct {
   *  X controls this value.
   *
   *  Unstuffing prevent sequences that are more than 0xFF7F from appearing
-  *  in the conpressed sequence.  So whenever a value of 0xFF is coded, the
+  *  in the compressed sequence.  So whenever a value of 0xFF is coded, the
   *  MSB of the next byte is set 0 and must be ignored during decoding.
   *
   *  Reading can go beyond the end of buffer by up to 3 bytes.
@@ -1032,7 +1032,7 @@ OPJ_UINT32 frwd_fetch(frwd_struct_t *msp)
 //************************************************************************/
 /** @brief Allocates T1 buffers
   *
-  *  @param [in, out]  t1 is codeblock cofficients storage
+  *  @param [in, out]  t1 is codeblock coefficients storage
   *  @param [in]       w is codeblock width
   *  @param [in]       h is codeblock height
   */
@@ -1120,7 +1120,7 @@ OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
 /** @brief Decodes one codeblock, processing the cleanup, siginificance
   *         propagation, and magnitude refinement pass
   *
-  *  @param [in, out]  t1 is codeblock cofficients storage
+  *  @param [in, out]  t1 is codeblock coefficients storage
   *  @param [in]       cblk is codeblock properties
   *  @param [in]       orient is the subband to which the codeblock belongs (not needed)
   *  @param [in]       roishift is region of interest shift
