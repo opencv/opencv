@@ -1240,6 +1240,7 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
                                           InputOutputArrayOfArrays _rejectedCorners, InputArray _cameraMatrix,
                                           InputArray _distCoeffs, OutputArray _recoveredIdxs) const {
     DetectorParameters& detectorParams = arucoDetectorImpl->detectorParams;
+    const Dictionary& dictionary = arucoDetectorImpl->dictionaries.at(0);
     RefineParameters& refineParams = arucoDetectorImpl->refineParams;
     CV_Assert(refineParams.minRepDistance > 0);
 
@@ -1262,6 +1263,10 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
     // list of missing markers indicating if they have been assigned to a candidate
     vector<bool > alreadyIdentified(_rejectedCorners.total(), false);
 
+    // maximum bits that can be corrected
+    int maxCorrectionRecalculated =
+        int(double(dictionary.maxCorrectionBits) * refineParams.errorCorrectionRate);
+
     Mat grey;
     _convertToGrey(_image, grey);
 
@@ -1277,112 +1282,106 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
     }
     vector<int> recoveredIdxs; // original indexes of accepted markers in _rejectedCorners
 
-    for (const auto& dictionary : arucoDetectorImpl->dictionaries) {
-        // maximum bits that can be corrected
-        int maxCorrectionRecalculated =
-            int(double(dictionary.maxCorrectionBits) * refineParams.errorCorrectionRate);
+    // for each missing marker, try to find a correspondence
+    for(unsigned int i = 0; i < undetectedMarkersIds.size(); i++) {
 
-        // for each missing marker, try to find a correspondence
-        for(unsigned int i = 0; i < undetectedMarkersIds.size(); i++) {
+        // best match at the moment
+        int closestCandidateIdx = -1;
+        double closestCandidateDistance = refineParams.minRepDistance * refineParams.minRepDistance + 1;
+        Mat closestRotatedMarker;
 
-            // best match at the moment
-            int closestCandidateIdx = -1;
-            double closestCandidateDistance = refineParams.minRepDistance * refineParams.minRepDistance + 1;
-            Mat closestRotatedMarker;
+        for(unsigned int j = 0; j < _rejectedCorners.total(); j++) {
+            if(alreadyIdentified[j]) continue;
 
-            for(unsigned int j = 0; j < _rejectedCorners.total(); j++) {
-                if(alreadyIdentified[j]) continue;
-
-                // check distance
-                double minDistance = closestCandidateDistance + 1;
-                bool valid = false;
-                int validRot = 0;
-                for(int c = 0; c < 4; c++) { // first corner in rejected candidate
-                    double currentMaxDistance = 0;
-                    for(int k = 0; k < 4; k++) {
-                        Point2f rejCorner = _rejectedCorners.getMat(j).ptr<Point2f>()[(c + k) % 4];
-                        Point2f distVector = undetectedMarkersCorners[i][k] - rejCorner;
-                        double cornerDist = distVector.x * distVector.x + distVector.y * distVector.y;
-                        currentMaxDistance = max(currentMaxDistance, cornerDist);
-                    }
-                    // if distance is better than current best distance
-                    if(currentMaxDistance < closestCandidateDistance) {
-                        valid = true;
-                        validRot = c;
-                        minDistance = currentMaxDistance;
-                    }
-                    if(!refineParams.checkAllOrders) break;
+            // check distance
+            double minDistance = closestCandidateDistance + 1;
+            bool valid = false;
+            int validRot = 0;
+            for(int c = 0; c < 4; c++) { // first corner in rejected candidate
+                double currentMaxDistance = 0;
+                for(int k = 0; k < 4; k++) {
+                    Point2f rejCorner = _rejectedCorners.getMat(j).ptr<Point2f>()[(c + k) % 4];
+                    Point2f distVector = undetectedMarkersCorners[i][k] - rejCorner;
+                    double cornerDist = distVector.x * distVector.x + distVector.y * distVector.y;
+                    currentMaxDistance = max(currentMaxDistance, cornerDist);
                 }
-
-                if(!valid) continue;
-
-                // apply rotation
-                Mat rotatedMarker;
-                if(refineParams.checkAllOrders) {
-                    rotatedMarker = Mat(4, 1, CV_32FC2);
-                    for(int c = 0; c < 4; c++)
-                        rotatedMarker.ptr<Point2f>()[c] =
-                            _rejectedCorners.getMat(j).ptr<Point2f>()[(c + 4 + validRot) % 4];
+                // if distance is better than current best distance
+                if(currentMaxDistance < closestCandidateDistance) {
+                    valid = true;
+                    validRot = c;
+                    minDistance = currentMaxDistance;
                 }
-                else rotatedMarker = _rejectedCorners.getMat(j);
-
-                // last filter, check if inner code is close enough to the assigned marker code
-                int codeDistance = 0;
-                // if errorCorrectionRate, dont check code
-                if(refineParams.errorCorrectionRate >= 0) {
-
-                    // extract bits
-                    Mat bits = _extractBits(
-                        grey, rotatedMarker, dictionary.markerSize, detectorParams.markerBorderBits,
-                        detectorParams.perspectiveRemovePixelPerCell,
-                        detectorParams.perspectiveRemoveIgnoredMarginPerCell, detectorParams.minOtsuStdDev);
-
-                    Mat onlyBits =
-                        bits.rowRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits)
-                            .colRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits);
-
-                    codeDistance =
-                        dictionary.getDistanceToId(onlyBits, undetectedMarkersIds[i], false);
-                }
-
-                // if everythin is ok, assign values to current best match
-                if(refineParams.errorCorrectionRate < 0 || codeDistance < maxCorrectionRecalculated) {
-                    closestCandidateIdx = j;
-                    closestCandidateDistance = minDistance;
-                    closestRotatedMarker = rotatedMarker;
-                }
+                if(!refineParams.checkAllOrders) break;
             }
 
-            // if at least one good match, we have rescue the missing marker
-            if(closestCandidateIdx >= 0) {
+            if(!valid) continue;
 
-                // subpixel refinement
-                if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
-                    CV_Assert(detectorParams.cornerRefinementWinSize > 0 &&
-                              detectorParams.cornerRefinementMaxIterations > 0 &&
-                              detectorParams.cornerRefinementMinAccuracy > 0);
-
-                    std::vector<Point2f> marker(closestRotatedMarker.begin<Point2f>(), closestRotatedMarker.end<Point2f>());
-                    int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
-                                                  getAverageModuleSize(marker, dictionary.markerSize, detectorParams.markerBorderBits)));
-                    cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
-                    cornerSubPix(grey, closestRotatedMarker,
-                                 Size(cornerRefinementWinSize, cornerRefinementWinSize),
-                                 Size(-1, -1), TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
-                                                            detectorParams.cornerRefinementMaxIterations,
-                                                            detectorParams.cornerRefinementMinAccuracy));
-                }
-
-                // remove from rejected
-                alreadyIdentified[closestCandidateIdx] = true;
-
-                // add to detected
-                finalAcceptedCorners.push_back(closestRotatedMarker);
-                finalAcceptedIds.push_back(undetectedMarkersIds[i]);
-
-                // add the original index of the candidate
-                recoveredIdxs.push_back(closestCandidateIdx);
+            // apply rotation
+            Mat rotatedMarker;
+            if(refineParams.checkAllOrders) {
+                rotatedMarker = Mat(4, 1, CV_32FC2);
+                for(int c = 0; c < 4; c++)
+                    rotatedMarker.ptr<Point2f>()[c] =
+                        _rejectedCorners.getMat(j).ptr<Point2f>()[(c + 4 + validRot) % 4];
             }
+            else rotatedMarker = _rejectedCorners.getMat(j);
+
+            // last filter, check if inner code is close enough to the assigned marker code
+            int codeDistance = 0;
+            // if errorCorrectionRate, dont check code
+            if(refineParams.errorCorrectionRate >= 0) {
+
+                // extract bits
+                Mat bits = _extractBits(
+                    grey, rotatedMarker, dictionary.markerSize, detectorParams.markerBorderBits,
+                    detectorParams.perspectiveRemovePixelPerCell,
+                    detectorParams.perspectiveRemoveIgnoredMarginPerCell, detectorParams.minOtsuStdDev);
+
+                Mat onlyBits =
+                    bits.rowRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits)
+                        .colRange(detectorParams.markerBorderBits, bits.rows - detectorParams.markerBorderBits);
+
+                codeDistance =
+                    dictionary.getDistanceToId(onlyBits, undetectedMarkersIds[i], false);
+            }
+
+            // if everythin is ok, assign values to current best match
+            if(refineParams.errorCorrectionRate < 0 || codeDistance < maxCorrectionRecalculated) {
+                closestCandidateIdx = j;
+                closestCandidateDistance = minDistance;
+                closestRotatedMarker = rotatedMarker;
+            }
+        }
+
+        // if at least one good match, we have rescue the missing marker
+        if(closestCandidateIdx >= 0) {
+
+            // subpixel refinement
+            if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
+                CV_Assert(detectorParams.cornerRefinementWinSize > 0 &&
+                          detectorParams.cornerRefinementMaxIterations > 0 &&
+                          detectorParams.cornerRefinementMinAccuracy > 0);
+
+                std::vector<Point2f> marker(closestRotatedMarker.begin<Point2f>(), closestRotatedMarker.end<Point2f>());
+                int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
+                                              getAverageModuleSize(marker, dictionary.markerSize, detectorParams.markerBorderBits)));
+                cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
+                cornerSubPix(grey, closestRotatedMarker,
+                             Size(cornerRefinementWinSize, cornerRefinementWinSize),
+                             Size(-1, -1), TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
+                                                        detectorParams.cornerRefinementMaxIterations,
+                                                        detectorParams.cornerRefinementMinAccuracy));
+            }
+
+            // remove from rejected
+            alreadyIdentified[closestCandidateIdx] = true;
+
+            // add to detected
+            finalAcceptedCorners.push_back(closestRotatedMarker);
+            finalAcceptedIds.push_back(undetectedMarkersIds[i]);
+
+            // add the original index of the candidate
+            recoveredIdxs.push_back(closestCandidateIdx);
         }
     }
 
