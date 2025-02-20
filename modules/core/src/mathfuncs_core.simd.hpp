@@ -527,7 +527,7 @@ void exp32f( const float *_x, float *y, int n )
     float maxval = (float)(exp_max_val/exp_prescale);
     float postscale = (float)exp_postscale;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     const int VECSZ = VTraits<v_float32>::vlanes();
     const v_float32 vprescale = vx_setall_f32((float)exp_prescale);
     const v_float32 vpostscale = vx_setall_f32((float)exp_postscale);
@@ -641,7 +641,7 @@ void exp64f( const double *_x, double *y, int n )
     double minval = (-exp_max_val/exp_prescale);
     double maxval = (exp_max_val/exp_prescale);
 
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     const int VECSZ = VTraits<v_float64>::vlanes();
     const v_float64 vprescale = vx_setall_f64(exp_prescale);
     const v_float64 vpostscale = vx_setall_f64(exp_postscale);

@@ -820,7 +820,8 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/ , PatchNaNsFixture,
     )
 );
 
-//////////////EXP64F////////////
+//////////////EXP////////////
+
 typedef Size_MatType ExpFixture;
 
 PERF_TEST_P(ExpFixture, Exp,
