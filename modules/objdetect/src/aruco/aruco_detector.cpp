@@ -837,7 +837,7 @@ struct ArucoDetector::ArucoDetectorImpl {
             }
 
             // Clean up rejectedImgPoints by comparing to itself and all candidates
-            const float epsilon = 0.000001;
+            const float epsilon = 0.000001f;
             auto compareCandidates = [epsilon](std::vector<Point2f> a, std::vector<Point2f> b) {
                 for (int i = 0; i < 4; i++) {
                     if (std::abs(a[i].x - b[i].x) > epsilon || std::abs(a[i].y - b[i].y) > epsilon) {
