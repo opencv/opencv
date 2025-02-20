@@ -692,6 +692,9 @@ if(UNIX OR MINGW)
     # TODO:
     # - std::aligned_alloc() C++17 / C11
   endif()
+
+  CHECK_SYMBOL_EXISTS(getauxval sys/auxv.h HAVE_GETAUXVAL)
+  CHECK_SYMBOL_EXISTS(elf_aux_info sys/auxv.h HAVE_ELF_AUX_INFO)
 elseif(WIN32)
   include(CheckIncludeFile)
   include(CheckSymbolExists)
@@ -1647,7 +1650,7 @@ endif()
 
 if(CV_TRACE OR OPENCV_TRACE)
   ocv_build_features_string(trace_status EXCLUSIVE
-    IF HAVE_ITT THEN "with Intel ITT"
+    IF HAVE_ITT THEN "with Intel ITT(${ITTNOTIFY_VERSION})"
     ELSE "built-in")
   status("")
   status("  Trace: " OPENCV_TRACE THEN "YES (${trace_status})" ELSE NO)

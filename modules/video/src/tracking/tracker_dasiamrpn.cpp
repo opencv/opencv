@@ -58,33 +58,41 @@ class TrackerDaSiamRPNImpl : public TrackerDaSiamRPN
 {
 public:
     TrackerDaSiamRPNImpl(const TrackerDaSiamRPN::Params& parameters)
-        : params(parameters)
     {
         // the tracker uses DNN models in quite sophisticated way,
         // so it's not supported yet by the new engine.
         // BUG: https://github.com/opencv/opencv/issues/26201
         dnn::EngineType engine = dnn::ENGINE_CLASSIC;
-        siamRPN = dnn::readNet(params.model, "", "", engine);
-        siamKernelCL1 = dnn::readNet(params.kernel_cls1, "", "", engine);
-        siamKernelR1 = dnn::readNet(params.kernel_r1, "", "", engine);
+        siamRPN = dnn::readNet(parameters.model, "", "", engine);
+        siamKernelCL1 = dnn::readNet(parameters.kernel_cls1, "", "", engine);
+        siamKernelR1 = dnn::readNet(parameters.kernel_r1, "", "", engine);
 
         CV_Assert(!siamRPN.empty());
         CV_Assert(!siamKernelCL1.empty());
         CV_Assert(!siamKernelR1.empty());
 
-        siamRPN.setPreferableBackend(params.backend);
-        siamRPN.setPreferableTarget(params.target);
-        siamKernelR1.setPreferableBackend(params.backend);
-        siamKernelR1.setPreferableTarget(params.target);
-        siamKernelCL1.setPreferableBackend(params.backend);
-        siamKernelCL1.setPreferableTarget(params.target);
+        siamRPN.setPreferableBackend(parameters.backend);
+        siamRPN.setPreferableTarget(parameters.target);
+        siamKernelR1.setPreferableBackend(parameters.backend);
+        siamKernelR1.setPreferableTarget(parameters.target);
+        siamKernelCL1.setPreferableBackend(parameters.backend);
+        siamKernelCL1.setPreferableTarget(parameters.target);
+    }
+
+    TrackerDaSiamRPNImpl(const dnn::Net& siam_rpn, const dnn::Net& kernel_cls1, const dnn::Net& kernel_r1)
+    {
+        CV_Assert(!siam_rpn.empty());
+        CV_Assert(!kernel_cls1.empty());
+        CV_Assert(!kernel_r1.empty());
+
+        siamRPN = siam_rpn;
+        siamKernelCL1 = kernel_cls1;
+        siamKernelR1 = kernel_r1;
     }
 
     void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     bool update(InputArray image, Rect& boundingBox) CV_OVERRIDE;
     float getTrackingScore() CV_OVERRIDE;
-
-    TrackerDaSiamRPN::Params params;
 
 protected:
     dnn::Net siamRPN, siamKernelR1, siamKernelCL1;
@@ -428,16 +436,22 @@ Mat TrackerDaSiamRPNImpl::getSubwindow(Mat& img, const Rect2f& targetBox, float 
 
     return zCrop;
 }
+
 Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const TrackerDaSiamRPN::Params& parameters)
 {
     return makePtr<TrackerDaSiamRPNImpl>(parameters);
+}
+
+Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const dnn::Net& siam_rpn, const dnn::Net& kernel_cls1, const dnn::Net& kernel_r1)
+{
+    return makePtr<TrackerDaSiamRPNImpl>(siam_rpn, kernel_cls1, kernel_r1);
 }
 
 #else  // OPENCV_HAVE_DNN
 Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const TrackerDaSiamRPN::Params& parameters)
 {
     (void)(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use DaSimRPN, the tracking module needs to be built with opencv_dnn !");
+    CV_Error(cv::Error::StsNotImplemented, "to use DaSiamRPN, the tracking module needs to be built with opencv_dnn !");
 }
 #endif  // OPENCV_HAVE_DNN
 }

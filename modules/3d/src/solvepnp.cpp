@@ -56,7 +56,7 @@ namespace cv {
 
 using namespace std;
 
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
 static bool isPlanarObjectPoints(InputArray _objectPoints, double threshold)
 {
     CV_CheckType(_objectPoints.type(), _objectPoints.type() == CV_32FC3 || _objectPoints.type() == CV_64FC3,
@@ -924,7 +924,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     {
         CV_Assert(npoints == 4);
 
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
         double Xs[4][3];
         if (opoints.depth() == CV_32F)
         {

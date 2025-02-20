@@ -180,6 +180,132 @@ TEST(Imgcodecs_JpegXL, encode_from_uncontinued_image)
     EXPECT_TRUE(ret);
 }
 
+// See https://github.com/opencv/opencv/issues/26767
+
+typedef tuple<perf::MatType, ImreadModes> MatType_and_ImreadFlag;
+typedef testing::TestWithParam<MatType_and_ImreadFlag> Imgcodecs_JpegXL_MatType_ImreadFlag;
+
+TEST_P(Imgcodecs_JpegXL_MatType_ImreadFlag, all_imreadFlags)
+{
+    string tmp_fname = cv::tempfile(".jxl");
+    const int matType  = get<0>(GetParam());
+    const int imreadFlag  = get<1>(GetParam());
+
+    Mat img(240, 320, matType);
+    randu(img, Scalar(0, 0, 0, 255), Scalar(255, 255, 255, 255));
+
+    vector<int> param;
+    param.push_back(IMWRITE_JPEGXL_DISTANCE);
+    param.push_back(0 /* Lossless */);
+    EXPECT_NO_THROW(imwrite(tmp_fname, img, param));
+
+    Mat img_decoded;
+    EXPECT_NO_THROW(img_decoded = imread(tmp_fname, imreadFlag));
+    EXPECT_FALSE(img_decoded.empty());
+
+    switch( imreadFlag )
+    {
+        case IMREAD_UNCHANGED:
+            EXPECT_EQ( img.type(), img_decoded.type() );
+            break;
+        case IMREAD_GRAYSCALE:
+            EXPECT_EQ( img_decoded.depth(), CV_8U );
+            EXPECT_EQ( img_decoded.channels(), 1 );
+            break;
+        case IMREAD_COLOR:
+        case IMREAD_COLOR_RGB:
+            EXPECT_EQ( img_decoded.depth(), CV_8U );
+            EXPECT_EQ( img_decoded.channels(), 3 );
+            break;
+        case IMREAD_ANYDEPTH:
+            EXPECT_EQ( img_decoded.depth(), img.depth() );
+            EXPECT_EQ( img_decoded.channels(), 1 );
+            break;
+        case IMREAD_ANYCOLOR:
+            EXPECT_EQ( img_decoded.depth(), CV_8U ) ;
+            EXPECT_EQ( img_decoded.channels(), img.channels() == 1 ? 1 : 3 ); // Alpha channel will be dropped.
+            break;
+    }
+    remove(tmp_fname.c_str());
+}
+
+INSTANTIATE_TEST_CASE_P(
+    /**/,
+    Imgcodecs_JpegXL_MatType_ImreadFlag,
+    testing::Combine(
+        testing::Values(
+            CV_8UC1,  CV_8UC3,  CV_8UC4,
+            CV_16UC1, CV_16UC3, CV_16UC4,
+            CV_32FC1, CV_32FC3, CV_32FC4
+        ),
+        testing::Values(
+            IMREAD_UNCHANGED,
+            IMREAD_GRAYSCALE,
+            IMREAD_COLOR,
+            IMREAD_COLOR_RGB,
+            IMREAD_ANYDEPTH,
+            IMREAD_ANYCOLOR
+        )
+) );
+
+TEST(Imgcodecs_JpegXL, imdecode_truncated_stream)
+{
+    cv::Mat src(100, 100, CV_8UC1, Scalar(40,50,10));
+    vector<uint8_t> buff;
+    vector<int> param;
+
+    bool ret = false;
+    EXPECT_NO_THROW(ret = cv::imencode(".jxl", src, buff, param));
+    EXPECT_TRUE(ret);
+
+    // Try to decode non-truncated image.
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imdecode(buff, cv::IMREAD_COLOR));
+    EXPECT_FALSE(decoded.empty());
+
+    // Try to decode truncated image.
+    buff.resize(buff.size() - 1 );
+    EXPECT_NO_THROW(decoded = cv::imdecode(buff, cv::IMREAD_COLOR));
+    EXPECT_TRUE(decoded.empty());
+}
+
+TEST(Imgcodecs_JpegXL, imread_truncated_stream)
+{
+    string tmp_fname = cv::tempfile(".jxl");
+    cv::Mat src(100, 100, CV_8UC1, Scalar(40,50,10));
+    vector<uint8_t> buff;
+    vector<int> param;
+
+    bool ret = false;
+    EXPECT_NO_THROW(ret = cv::imencode(".jxl", src, buff, param));
+    EXPECT_TRUE(ret);
+
+    // Try to decode non-truncated image.
+    FILE *fp = nullptr;
+
+    fp = fopen(tmp_fname.c_str(), "wb");
+    EXPECT_TRUE(fp != nullptr);
+    fwrite(&buff[0], sizeof(uint8_t), buff.size(), fp);
+    fclose(fp);
+
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imread(tmp_fname, cv::IMREAD_COLOR));
+    EXPECT_FALSE(decoded.empty());
+
+    // Try to decode truncated image.
+    fp = fopen(tmp_fname.c_str(), "wb");
+    EXPECT_TRUE(fp != nullptr);
+    fwrite(&buff[0], sizeof(uint8_t), buff.size() - 1, fp);
+    fclose(fp);
+
+    EXPECT_NO_THROW(decoded = cv::imread(tmp_fname, cv::IMREAD_COLOR));
+    EXPECT_TRUE(decoded.empty());
+
+    // Delete temporary file
+    remove(tmp_fname.c_str());
+}
+
+
 #endif  // HAVE_JPEGXL
 
 }  // namespace

@@ -298,11 +298,6 @@ bool AvifEncoder::isFormatSupported(int depth) const {
   return (depth == CV_8U || depth == CV_16U);
 }
 
-bool AvifEncoder::write(const Mat &img, const std::vector<int> &params) {
-  std::vector<Mat> img_vec(1, img);
-  return writemulti(img_vec, params);
-}
-
 bool AvifEncoder::writeanimation(const Animation& animation,
                                  const std::vector<int> &params) {
   int bit_depth = 8;

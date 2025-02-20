@@ -87,22 +87,30 @@ class TrackerNanoImpl : public TrackerNano
 {
 public:
     TrackerNanoImpl(const TrackerNano::Params& parameters)
-        : params(parameters)
     {
         dnn::EngineType engine = dnn::ENGINE_AUTO;
-        if (params.backend != 0 || params.target != 0){
+        if (parameters.backend != 0 || parameters.target != 0){
             engine = dnn::ENGINE_CLASSIC;
         }
-        backbone = dnn::readNet(params.backbone, "", "", engine);
-        neckhead = dnn::readNet(params.neckhead, "", "", engine);
+        backbone = dnn::readNet(parameters.backbone, "", "", engine);
+        neckhead = dnn::readNet(parameters.neckhead, "", "", engine);
 
         CV_Assert(!backbone.empty());
         CV_Assert(!neckhead.empty());
 
-        backbone.setPreferableBackend(params.backend);
-        backbone.setPreferableTarget(params.target);
-        neckhead.setPreferableBackend(params.backend);
-        neckhead.setPreferableTarget(params.target);
+        backbone.setPreferableBackend(parameters.backend);
+        backbone.setPreferableTarget(parameters.target);
+        neckhead.setPreferableBackend(parameters.backend);
+        neckhead.setPreferableTarget(parameters.target);
+    }
+
+    TrackerNanoImpl(const dnn::Net& _backbone, const dnn::Net& _neckhead)
+    {
+        CV_Assert(!_backbone.empty());
+        CV_Assert(!_neckhead.empty());
+
+        backbone = _backbone;
+        neckhead = _neckhead;
     }
 
     void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
@@ -113,8 +121,6 @@ public:
     std::vector<float> targetSz = {0, 0};  // H and W of bounding box
     std::vector<float> targetPos = {0, 0}; // center point of bounding box (x, y)
     float tracking_score;
-
-    TrackerNano::Params params;
 
     struct trackerConfig
     {
@@ -351,6 +357,11 @@ float TrackerNanoImpl::getTrackingScore()
 Ptr<TrackerNano> TrackerNano::create(const TrackerNano::Params& parameters)
 {
     return makePtr<TrackerNanoImpl>(parameters);
+}
+
+Ptr<TrackerNano> TrackerNano::create(const dnn::Net& backbone, const dnn::Net& neckhead)
+{
+    return makePtr<TrackerNanoImpl>(backbone, neckhead);
 }
 
 #else  // OPENCV_HAVE_DNN

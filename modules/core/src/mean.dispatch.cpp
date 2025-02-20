@@ -129,13 +129,29 @@ Scalar mean(InputArray _src, InputArray _mask)
     CV_Assert( mask.empty() || mask.type() == CV_8U || mask.type() == CV_8S || mask.type() == CV_Bool);
 
     int k, cn = src.channels(), depth = src.depth();
-    Scalar s;
+    Scalar s = Scalar::all(0.0);
+
+    CV_Assert( cn <= 4 );
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_mean(src, mask, s), s)
 
+    if (src.isContinuous() && mask.isContinuous())
+    {
+        CALL_HAL_RET2(meanStdDev, cv_hal_meanStdDev, s, src.data, 0, (int)src.total(), 1, src.type(),
+                      &s[0], nullptr /*stddev*/, mask.data, 0);
+    }
+    else
+    {
+        if (src.dims <= 2)
+        {
+            CALL_HAL_RET2(meanStdDev, cv_hal_meanStdDev, s, src.data, src.step, src.cols, src.rows, src.type(),
+                          &s[0], nullptr, mask.data, mask.step);
+        }
+    }
+
     SumFunc func = getSumFunc(depth);
 
-    CV_Assert( cn <= 4 && func != 0 );
+    CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2] = {};
@@ -317,7 +333,6 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
     return true;
 }
 #endif
-
 
 #ifdef HAVE_IPP
 static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& mask)
@@ -532,7 +547,8 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
     uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, blockSize = total, partialBlockSize = 0;
-    int j, count = 0, nz0 = 0;
+    int j;
+    int64_t count = 0, nz0 = 0;
     double _buf[CV_CN_MAX*4];
     double *s = _buf, *sq = s + cn;
     int *sbuf = (int*)s, *sqbuf = (int*)sq;

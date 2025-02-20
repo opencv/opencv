@@ -42,100 +42,19 @@ using namespace cv;
 
 template <typename T> struct RangeValue {
     T min, max;
-    /**
-     * return absolute value from relative value
-     * * value: in percent (50 for 50%)
-     * */
-    T value(int percent) {
+
+    RangeValue(T minv = 0, T maxv = 0) : min(minv), max(maxv) {}
+    bool isValid() const { return (min != max); }
+    T percentage(int percent) const {
         return static_cast<T>(min + ((max - min) * percent) / 100);
     }
-    RangeValue(T minv = 0, T maxv = 0) : min(minv), max(maxv) {}
-    bool Supported() const { return (min != max); }
     T clamp( T value ) const {
         return (value > max) ? max : ((value < min) ? min : value);
     }
 };
 
-static inline void deleter_ACameraManager(ACameraManager *cameraManager) {
-    ACameraManager_delete(cameraManager);
-}
-
-static inline void deleter_ACameraIdList(ACameraIdList *cameraIdList) {
-    ACameraManager_deleteCameraIdList(cameraIdList);
-}
-
-static inline void deleter_ACameraDevice(ACameraDevice *cameraDevice) {
-    ACameraDevice_close(cameraDevice);
-}
-
-static inline void deleter_ACameraMetadata(ACameraMetadata *cameraMetadata) {
-    ACameraMetadata_free(cameraMetadata);
-}
-
-static inline void deleter_AImageReader(AImageReader *imageReader) {
-    AImageReader_delete(imageReader);
-}
-
-static inline void deleter_ACaptureSessionOutputContainer(ACaptureSessionOutputContainer *outputContainer) {
-    ACaptureSessionOutputContainer_free(outputContainer);
-}
-
-static inline void deleter_ACameraCaptureSession(ACameraCaptureSession *captureSession) {
-    ACameraCaptureSession_close(captureSession);
-}
-
-static inline void deleter_AImage(AImage *image) {
-    AImage_delete(image);
-}
-
-static inline void deleter_ANativeWindow(ANativeWindow *nativeWindow) {
-    ANativeWindow_release(nativeWindow);
-}
-
-static inline void deleter_ACaptureSessionOutput(ACaptureSessionOutput *sessionOutput) {
-    ACaptureSessionOutput_free(sessionOutput);
-}
-
-static inline void deleter_ACameraOutputTarget(ACameraOutputTarget *outputTarget) {
-    ACameraOutputTarget_free(outputTarget);
-}
-
-static inline void deleter_ACaptureRequest(ACaptureRequest *captureRequest) {
-    ACaptureRequest_free(captureRequest);
-}
-
-/*
- * CameraDevice callbacks
- */
-static void OnDeviceDisconnect(void* /* ctx */, ACameraDevice* dev) {
-    std::string id(ACameraDevice_getId(dev));
-    LOGW("Device %s disconnected", id.c_str());
-}
-
-static void OnDeviceError(void* /* ctx */, ACameraDevice* dev, int err) {
-    std::string id(ACameraDevice_getId(dev));
-    LOGI("Camera Device Error: %#x, Device %s", err, id.c_str());
-
-    switch (err) {
-        case ERROR_CAMERA_IN_USE:
-            LOGI("Camera in use");
-            break;
-        case ERROR_CAMERA_SERVICE:
-            LOGI("Fatal Error occurred in Camera Service");
-            break;
-        case ERROR_CAMERA_DEVICE:
-            LOGI("Fatal Error occurred in Camera Device");
-            break;
-        case ERROR_CAMERA_DISABLED:
-            LOGI("Camera disabled");
-            break;
-        case ERROR_MAX_CAMERAS_IN_USE:
-            LOGI("System limit for maximum concurrent cameras used was exceeded");
-            break;
-        default:
-            LOGI("Unknown Camera Device Error: %#x", err);
-    }
-}
+template <typename T>
+using AObjPtr = std::unique_ptr<T, std::function<void(T *)>>;
 
 enum class CaptureSessionState {
     INITIALIZING,  // session is ready
@@ -143,22 +62,6 @@ enum class CaptureSessionState {
     ACTIVE,        // session is busy
     CLOSED         // session was closed
 };
-
-void OnSessionClosed(void* context, ACameraCaptureSession* session);
-
-void OnSessionReady(void* context, ACameraCaptureSession* session);
-
-void OnSessionActive(void* context, ACameraCaptureSession* session);
-
-void OnCaptureCompleted(void* context,
-                        ACameraCaptureSession* session,
-                        ACaptureRequest* request,
-                        const ACameraMetadata* result);
-
-void OnCaptureFailed(void* context,
-                     ACameraCaptureSession* session,
-                     ACaptureRequest* request,
-                     ACameraCaptureFailure* failure);
 
 #define CAPTURE_TIMEOUT_SECONDS 2
 #define CAPTURE_POLL_INTERVAL_MS 5
@@ -177,16 +80,16 @@ static double elapsedTimeFrom(std::chrono::time_point<std::chrono::system_clock>
 
 class AndroidCameraCapture : public IVideoCapture
 {
-    int cachedIndex;
-    std::shared_ptr<ACameraManager> cameraManager;
-    std::shared_ptr<ACameraDevice> cameraDevice;
-    std::shared_ptr<AImageReader> imageReader;
-    std::shared_ptr<ACaptureSessionOutputContainer> outputContainer;
-    std::shared_ptr<ACaptureSessionOutput> sessionOutput;
-    std::shared_ptr<ANativeWindow> nativeWindow;
-    std::shared_ptr<ACameraOutputTarget> outputTarget;
-    std::shared_ptr<ACaptureRequest> captureRequest;
-    std::shared_ptr<ACameraCaptureSession> captureSession;
+    int deviceIndex;
+    AObjPtr<ACameraManager> cameraManager { nullptr, ACameraManager_delete };
+    AObjPtr<ACameraDevice> cameraDevice { nullptr, ACameraDevice_close };
+    AObjPtr<AImageReader> imageReader { nullptr, AImageReader_delete };
+    AObjPtr<ACaptureSessionOutputContainer> outputContainer { nullptr, ACaptureSessionOutputContainer_free };
+    AObjPtr<ACaptureSessionOutput> sessionOutput { nullptr, ACaptureSessionOutput_free };
+    AObjPtr<ANativeWindow> nativeWindow { nullptr, ANativeWindow_release };
+    AObjPtr<ACameraOutputTarget> outputTarget { nullptr, ACameraOutputTarget_free };
+    AObjPtr<ACaptureRequest> captureRequest { nullptr, ACaptureRequest_free };
+    AObjPtr<ACameraCaptureSession> captureSession { nullptr, ACameraCaptureSession_close };
     CaptureSessionState sessionState = CaptureSessionState::INITIALIZING;
     int32_t frameWidth = 0;
     int32_t frameStride = 0;
@@ -197,18 +100,36 @@ class AndroidCameraCapture : public IVideoCapture
     bool targetAdded = false;
     // properties
     uint32_t fourCC = FOURCC_UNKNOWN;
-    bool settingWidth = false;
-    bool settingHeight = false;
-    int desiredWidth = 640;
-    int desiredHeight = 480;
+    int32_t desiredWidth = 640;
+    int32_t desiredHeight = 480;
+    enum SetupState { setupDone = 0, setupWidth = 0x01, setupHeight = 0x02 } widthHeightState = setupDone;
     uint8_t flashMode = ACAMERA_FLASH_MODE_OFF;
     uint8_t aeMode = ACAMERA_CONTROL_AE_MODE_ON;
     int64_t exposureTime = 0;
     RangeValue<int64_t> exposureRange;
     int32_t sensitivity = 0;
     RangeValue<int32_t> sensitivityRange;
+    float zoomRatio = 1.0f;
+    RangeValue<float> zoomRange;
 
-public:
+    ACameraDevice_stateCallbacks deviceCallbacks = {};
+    ACameraCaptureSession_stateCallbacks sessionCallbacks = {};
+    ACameraCaptureSession_captureCallbacks captureCallbacks = {};
+
+    static void OnDeviceDisconnect(void* ctx, ACameraDevice* dev);
+    static void OnDeviceError(void* ctx, ACameraDevice* dev, int err);
+    static void OnSessionClosed(void* context, ACameraCaptureSession* session);
+    static void OnSessionReady(void* context, ACameraCaptureSession* session);
+    static void OnSessionActive(void* context, ACameraCaptureSession* session);
+    static void OnCaptureCompleted(void* context,
+                                   ACameraCaptureSession* session,
+                                   ACaptureRequest* request,
+                                   const ACameraMetadata* result);
+    static void OnCaptureFailed(void* context,
+                                ACameraCaptureSession* session,
+                                ACaptureRequest* request,
+                                ACameraCaptureFailure* failure);
+
     // for synchronization with NDK capture callback
     bool waitingCapture = false;
     bool captureSuccess = false;
@@ -216,10 +137,24 @@ public:
     std::condition_variable condition;
 
 public:
-    AndroidCameraCapture(const VideoCaptureParameters& params)
+    AndroidCameraCapture(int index, const VideoCaptureParameters& params)
+        : deviceIndex(index)
     {
-        desiredWidth = params.get<int>(CAP_PROP_FRAME_WIDTH, desiredWidth);
-        desiredHeight = params.get<int>(CAP_PROP_FRAME_HEIGHT, desiredHeight);
+        deviceCallbacks.context = this;
+        deviceCallbacks.onError = OnDeviceError;
+        deviceCallbacks.onDisconnected = OnDeviceDisconnect,
+
+        sessionCallbacks.context = this;
+        sessionCallbacks.onReady = OnSessionReady;
+        sessionCallbacks.onActive = OnSessionActive;
+        sessionCallbacks.onClosed = OnSessionClosed;
+
+        captureCallbacks.context = this;
+        captureCallbacks.onCaptureCompleted = OnCaptureCompleted;
+        captureCallbacks.onCaptureFailed = OnCaptureFailed;
+
+        desiredWidth = params.get<int32_t>(CAP_PROP_FRAME_WIDTH, desiredWidth);
+        desiredHeight = params.get<int32_t>(CAP_PROP_FRAME_HEIGHT, desiredHeight);
 
         static const struct {
             int propId;
@@ -237,47 +172,7 @@ public:
 
     ~AndroidCameraCapture() { cleanUp(); }
 
-    ACameraDevice_stateCallbacks* GetDeviceListener() {
-        static ACameraDevice_stateCallbacks cameraDeviceListener = {
-            .onDisconnected = ::OnDeviceDisconnect,
-            .onError = ::OnDeviceError,
-        };
-        return &cameraDeviceListener;
-    }
-
-    ACameraCaptureSession_stateCallbacks sessionListener;
-
-    ACameraCaptureSession_stateCallbacks* GetSessionListener() {
-        sessionListener = {
-            .context = this,
-            .onClosed = ::OnSessionClosed,
-            .onReady = ::OnSessionReady,
-            .onActive = ::OnSessionActive,
-        };
-        return &sessionListener;
-    }
-
-    ACameraCaptureSession_captureCallbacks captureListener;
-
-    ACameraCaptureSession_captureCallbacks* GetCaptureCallback() {
-        captureListener = {
-            .context = this,
-            .onCaptureStarted = nullptr,
-            .onCaptureProgressed = nullptr,
-            .onCaptureCompleted = ::OnCaptureCompleted,
-            .onCaptureFailed = ::OnCaptureFailed,
-            .onCaptureSequenceCompleted = nullptr,
-            .onCaptureSequenceAborted = nullptr,
-            .onCaptureBufferLost = nullptr,
-        };
-        return &captureListener;
-    }
-
-    void setSessionState(CaptureSessionState newSessionState) {
-        this->sessionState = newSessionState;
-    }
-
-    bool isOpened() const CV_OVERRIDE { return imageReader.get() != nullptr && captureSession.get() != nullptr; }
+    bool isOpened() const CV_OVERRIDE { return imageReader && captureSession; }
 
     int getCaptureDomain() CV_OVERRIDE { return CAP_ANDROID; }
 
@@ -294,12 +189,15 @@ public:
                     waitingCapture = true;
                     captureSuccess = false;
                     auto start = std::chrono::system_clock::now();
-                    bool captured = condition.wait_for(lock, std::chrono::seconds(CAPTURE_TIMEOUT_SECONDS), [this]{ return captureSuccess; });
+                    bool captured = condition.wait_for(lock, std::chrono::seconds(
+                                        CAPTURE_TIMEOUT_SECONDS), [this]{ return captureSuccess; });
                     waitingCapture = false;
                     if (captured) {
                         mStatus = AImageReader_acquireLatestImage(imageReader.get(), &img);
-                        // even though an image has been captured we may not be able to acquire it straight away so we poll every 10ms
-                        while (mStatus == AMEDIA_IMGREADER_NO_BUFFER_AVAILABLE && elapsedTimeFrom(start) < CAPTURE_TIMEOUT_SECONDS) {
+                        // even though an image has been captured we may not be able to acquire it
+                        // straight away so we poll every 10ms
+                        while (mStatus == AMEDIA_IMGREADER_NO_BUFFER_AVAILABLE &&
+                               elapsedTimeFrom(start) < CAPTURE_TIMEOUT_SECONDS) {
                             std::this_thread::sleep_for(std::chrono::milliseconds(CAPTURE_POLL_INTERVAL_MS));
                             mStatus = AImageReader_acquireLatestImage(imageReader.get(), &img);
                         }
@@ -320,7 +218,7 @@ public:
                 }
             }
         }
-        std::shared_ptr<AImage> image = std::shared_ptr<AImage>(img, deleter_AImage);
+        AObjPtr<AImage> image(img, AImage_delete);
         int32_t srcFormat = -1;
         AImage_getFormat(image.get(), &srcFormat);
         if (srcFormat != AIMAGE_FORMAT_YUV_420_888) {
@@ -345,14 +243,19 @@ public:
         AImage_getPlanePixelStride(image.get(), 1, &uvPixelStride);
         int32_t yBufferLen = yLen;
 
-        if ( (uvPixelStride == 2) && (uPixel == vPixel + 1) && (yLen == (yStride * (frameHeight - 1)) + frameWidth) && (uLen == (uvStride * ((frameHeight / 2) - 1)) + frameWidth - 1) && (uvStride == yStride)  && (vLen == uLen) ) {
+        if ( (uvPixelStride == 2) && (uPixel == vPixel + 1) &&
+             (yLen == (yStride * (frameHeight - 1)) + frameWidth) &&
+             (uLen == (uvStride * ((frameHeight / 2) - 1)) + frameWidth - 1) &&
+             (uvStride == yStride)  && (vLen == uLen) ) {
             frameStride = yStride;
             yBufferLen = frameStride * frameHeight;
             colorFormat = COLOR_FormatYUV420SemiPlanar;
             if (fourCC == FOURCC_UNKNOWN) {
                 fourCC = FOURCC_NV21;
             }
-        } else if ( (uvPixelStride == 1) && (uPixel == vPixel + vLen) && (yLen == frameWidth * frameHeight) && (uLen == yLen / 4) && (vLen == uLen) ) {
+        } else if ( (uvPixelStride == 1) && (uPixel == vPixel + vLen) &&
+                    (yLen == frameWidth * frameHeight) &&
+                    (uLen == yLen / 4) && (vLen == uLen) ) {
             colorFormat = COLOR_FormatYUV420Planar;
             if (fourCC == FOURCC_UNKNOWN) {
                 fourCC = FOURCC_YV12;
@@ -376,7 +279,7 @@ public:
             return false;
         }
         if (colorFormat == COLOR_FormatYUV420Planar) {
-            Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
+            const Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data());
             switch (fourCC) {
                 case FOURCC_BGRA:
                     cvtColor(yuv, out, COLOR_YUV2BGRA_YV12);
@@ -398,33 +301,32 @@ public:
                     break;
                 default:
                     LOGE("Unexpected FOURCC value: %d", fourCC);
-                    break;
+                    return false;
             }
         } else if (colorFormat == COLOR_FormatYUV420SemiPlanar) {
-            Mat yuv(frameHeight + frameHeight/2, frameStride, CV_8UC1, buffer.data());
-            Mat tmp = (frameWidth == frameStride) ? yuv : yuv(Rect(0, 0, frameWidth, frameHeight + frameHeight / 2));
+            const Mat yuv(frameHeight + frameHeight/2, frameWidth, CV_8UC1, buffer.data(), frameStride);
             switch (fourCC) {
                 case FOURCC_BGRA:
-                    cvtColor(tmp, out, COLOR_YUV2BGRA_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2BGRA_NV21);
                     break;
                 case FOURCC_RGBA:
-                    cvtColor(tmp, out, COLOR_YUV2RGBA_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2RGBA_NV21);
                     break;
                 case FOURCC_BGR:
-                    cvtColor(tmp, out, COLOR_YUV2BGR_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2BGR_NV21);
                     break;
                 case FOURCC_RGB:
-                    cvtColor(tmp, out, COLOR_YUV2RGB_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2RGB_NV21);
                     break;
                 case FOURCC_GRAY:
-                    cvtColor(tmp, out, COLOR_YUV2GRAY_NV21);
+                    cvtColor(yuv, out, COLOR_YUV2GRAY_NV21);
                     break;
                 case FOURCC_NV21:
-                    tmp.copyTo(out);
+                    yuv.copyTo(out);
                     break;
                 default:
                     LOGE("Unexpected FOURCC value: %d", fourCC);
-                    break;
+                    return false;
             }
         } else {
             LOGE("Unsupported video format: %d", colorFormat);
@@ -450,6 +352,8 @@ public:
                 return fourCC;
             case CAP_PROP_ANDROID_DEVICE_TORCH:
                 return (flashMode == ACAMERA_FLASH_MODE_TORCH) ? 1 : 0;
+            case CAP_PROP_ZOOM:
+                return zoomRange.isValid() ? zoomRatio : -1;
             default:
                 break;
         }
@@ -461,22 +365,12 @@ public:
     {
         switch (property_id) {
             case CAP_PROP_FRAME_WIDTH:
-                desiredWidth = value;
-                settingWidth = true;
-                if (settingWidth && settingHeight) {
-                    setWidthHeight();
-                    settingWidth = false;
-                    settingHeight = false;
-                }
+                desiredWidth = static_cast<int32_t>(value);
+                setWidthHeight(setupWidth);
                 return true;
             case CAP_PROP_FRAME_HEIGHT:
-                desiredHeight = value;
-                settingHeight = true;
-                if (settingWidth && settingHeight) {
-                    setWidthHeight();
-                    settingWidth = false;
-                    settingHeight = false;
-                }
+                desiredHeight = static_cast<int32_t>(value);
+                setWidthHeight(setupHeight);
                 return true;
             case CAP_PROP_FOURCC:
                 {
@@ -497,7 +391,8 @@ public:
                                     fourCC = newFourCC;
                                     return true;
                                 } else {
-                                    LOGE("Unsupported FOURCC conversion COLOR_FormatYUV420SemiPlanar -> COLOR_FormatYUV420Planar");
+                                    LOGE("Unsupported FOURCC conversion COLOR_FormatYUV420SemiPlanar"
+                                         " -> COLOR_FormatYUV420Planar");
                                     return false;
                                 }
                             case FOURCC_NV21:
@@ -505,7 +400,8 @@ public:
                                     fourCC = newFourCC;
                                     return true;
                                 } else {
-                                    LOGE("Unsupported FOURCC conversion COLOR_FormatYUV420Planar -> COLOR_FormatYUV420SemiPlanar");
+                                    LOGE("Unsupported FOURCC conversion COLOR_FormatYUV420Planar"
+                                         " -> COLOR_FormatYUV420SemiPlanar");
                                     return false;
                                 }
                             default:
@@ -521,19 +417,25 @@ public:
                 }
                 return true;
             case CAP_PROP_EXPOSURE:
-                if (isOpened() && exposureRange.Supported()) {
+                if (isOpened() && exposureRange.isValid()) {
                     exposureTime = exposureRange.clamp(static_cast<int64_t>(value));
                     LOGI("Setting CAP_PROP_EXPOSURE will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
                     return submitRequest(ACaptureRequest_setEntry_i64, ACAMERA_SENSOR_EXPOSURE_TIME, exposureTime);
                 }
                 return false;
             case CAP_PROP_ISO_SPEED:
-                if (isOpened() && sensitivityRange.Supported()) {
+                if (isOpened() && sensitivityRange.isValid()) {
                     sensitivity = sensitivityRange.clamp(static_cast<int32_t>(value));
                     LOGI("Setting CAP_PROP_ISO_SPEED will have no effect unless CAP_PROP_AUTO_EXPOSURE is off");
                     return submitRequest(ACaptureRequest_setEntry_i32, ACAMERA_SENSOR_SENSITIVITY, sensitivity);
                 }
                 return false;
+            case CAP_PROP_ZOOM:
+                if (isOpened() && zoomRange.isValid()) {
+                    zoomRatio = zoomRange.clamp(static_cast<float>(value));
+                    return submitRequest(ACaptureRequest_setEntry_float, ACAMERA_CONTROL_ZOOM_RATIO, zoomRatio);
+                }
+                return true;
             case CAP_PROP_ANDROID_DEVICE_TORCH:
                 flashMode = (value != 0) ? ACAMERA_FLASH_MODE_TORCH : ACAMERA_FLASH_MODE_OFF;
                 if (isOpened()) {
@@ -546,132 +448,67 @@ public:
         return false;
     }
 
-    void setWidthHeight() {
-        cleanUp();
-        initCapture(cachedIndex);
-    }
-
-    // calculate a score based on how well the width and height match the desired width and height
-    // basically draw the 2 rectangle on top of each other and take the ratio of the non-overlapping
-    // area to the overlapping area
-    double getScore(int32_t width, int32_t height) {
-        double area1 = width * height;
-        double area2 = desiredWidth * desiredHeight;
-        if ((width < desiredWidth) == (height < desiredHeight)) {
-            return (width < desiredWidth) ? (area2 - area1)/area1 : (area1 - area2)/area2;
-        } else {
-            int32_t overlappedWidth = std::min(width, desiredWidth);
-            int32_t overlappedHeight = std::min(height, desiredHeight);
-            double overlappedArea = overlappedWidth * overlappedHeight;
-            return (area1 + area2 - overlappedArea)/overlappedArea;
-        }
-    }
-
-    bool initCapture(int index)
+    bool initCapture()
     {
-        cachedIndex = index;
-        cameraManager = std::shared_ptr<ACameraManager>(ACameraManager_create(), deleter_ACameraManager);
+        cameraManager.reset(ACameraManager_create());
         if (!cameraManager) {
             LOGE("Cannot create camera manager!");
             return false;
         }
-        ACameraIdList* cameraIds = nullptr;
+        ACameraIdList* cameraIds;
         camera_status_t cStatus = ACameraManager_getCameraIdList(cameraManager.get(), &cameraIds);
         if (cStatus != ACAMERA_OK) {
             LOGE("Get camera list failed with error code: %d", cStatus);
             return false;
         }
-        std::shared_ptr<ACameraIdList> cameraIdList = std::shared_ptr<ACameraIdList>(cameraIds, deleter_ACameraIdList);
-        if (index < 0 || index >= cameraIds->numCameras) {
-            LOGE("Camera index out of range %d (Number of cameras: %d)", index, cameraIds->numCameras);
+        AObjPtr<ACameraIdList> cameraIdList(cameraIds, ACameraManager_deleteCameraIdList);
+        if (deviceIndex < 0 || deviceIndex >= cameraIds->numCameras) {
+            LOGE("Camera index out of range %d (Number of cameras: %d)", deviceIndex, cameraIds->numCameras);
             return false;
         }
-        ACameraDevice* camera = nullptr;
-        cStatus = ACameraManager_openCamera(cameraManager.get(), cameraIdList.get()->cameraIds[index], GetDeviceListener(), &camera);
+        const char *cameraId = cameraIdList.get()->cameraIds[deviceIndex];
+
+        ACameraDevice* camera;
+        cStatus = ACameraManager_openCamera(cameraManager.get(), cameraId, &deviceCallbacks, &camera);
         if (cStatus != ACAMERA_OK) {
             LOGE("Open camera failed with error code: %d", cStatus);
             return false;
         }
-        cameraDevice = std::shared_ptr<ACameraDevice>(camera, deleter_ACameraDevice);
+        cameraDevice.reset(camera);
+
         ACameraMetadata* metadata;
-        cStatus = ACameraManager_getCameraCharacteristics(cameraManager.get(), cameraIdList.get()->cameraIds[index], &metadata);
+        cStatus = ACameraManager_getCameraCharacteristics(cameraManager.get(), cameraId, &metadata);
         if (cStatus != ACAMERA_OK) {
             LOGE("Get camera characteristics failed with error code: %d", cStatus);
             return false;
         }
-        std::shared_ptr<ACameraMetadata> cameraMetadata = std::shared_ptr<ACameraMetadata>(metadata, deleter_ACameraMetadata);
-        ACameraMetadata_const_entry entry = {};
-        ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
+        AObjPtr<ACameraMetadata> cameraMetadata(metadata, ACameraMetadata_free);
 
-        double bestScore = std::numeric_limits<double>::max();
-        int32_t bestMatchWidth = 0;
-        int32_t bestMatchHeight = 0;
+        getPropertyRanges(cameraMetadata.get());
 
-        for (uint32_t i = 0; i < entry.count; i += 4) {
-            int32_t input = entry.data.i32[i + 3];
-            int32_t format = entry.data.i32[i + 0];
-            if (input) {
-                continue;
-            }
-            if (format == AIMAGE_FORMAT_YUV_420_888) {
-                int32_t width = entry.data.i32[i + 1];
-                int32_t height = entry.data.i32[i + 2];
-                if (width == desiredWidth && height == desiredHeight) {
-                    bestMatchWidth = width;
-                    bestMatchHeight = height;
-                    bestScore = 0;
-                    break;
-                } else {
-                    double score = getScore(width, height);
-                    if (score < bestScore) {
-                        bestMatchWidth = width;
-                        bestMatchHeight = height;
-                        bestScore = score;
-                    }
-                }
-            }
-        }
+        int32_t bestMatchWidth = 0, bestMatchHeight = 0;
+        findResolutionMatch(cameraMetadata.get(), bestMatchWidth, bestMatchHeight);
         LOGI("Best resolution match: %dx%d", bestMatchWidth, bestMatchHeight);
 
-        ACameraMetadata_const_entry val;
-        cStatus = ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE, &val);
-        if (cStatus == ACAMERA_OK) {
-            exposureRange.min = exposureTimeLimits.clamp(val.data.i64[0]);
-            exposureRange.max = exposureTimeLimits.clamp(val.data.i64[1]);
-            exposureTime = exposureRange.value(2);
-        } else {
-            LOGW("Unsupported ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE");
-            exposureRange.min = exposureRange.max = 0;
-            exposureTime = 0;
-        }
-        cStatus = ACameraMetadata_getConstEntry(cameraMetadata.get(), ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE, &val);
-        if (cStatus == ACAMERA_OK){
-            sensitivityRange.min = val.data.i32[0];
-            sensitivityRange.max = val.data.i32[1];
-            sensitivity = sensitivityRange.value(2);
-        } else {
-            LOGW("Unsupported ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE");
-            sensitivityRange.min = sensitivityRange.max = 0;
-            sensitivity = 0;
-        }
-
         AImageReader* reader;
-        media_status_t mStatus = AImageReader_new(bestMatchWidth, bestMatchHeight, AIMAGE_FORMAT_YUV_420_888, MAX_BUF_COUNT, &reader);
+        media_status_t mStatus = AImageReader_new(bestMatchWidth, bestMatchHeight,
+                                                  AIMAGE_FORMAT_YUV_420_888, MAX_BUF_COUNT, &reader);
         if (mStatus != AMEDIA_OK) {
             LOGE("ImageReader creation failed with error code: %d", mStatus);
             return false;
         }
         frameWidth = bestMatchWidth;
         frameHeight = bestMatchHeight;
-        imageReader = std::shared_ptr<AImageReader>(reader, deleter_AImageReader);
+        imageReader.reset(reader);
 
-        ANativeWindow *window;
+        ANativeWindow* window;
         mStatus = AImageReader_getWindow(imageReader.get(), &window);
         if (mStatus != AMEDIA_OK) {
             LOGE("Could not get ANativeWindow: %d", mStatus);
             return false;
         }
-        nativeWindow = std::shared_ptr<ANativeWindow>(window, deleter_ANativeWindow);
+        nativeWindow.reset(window);
+        ANativeWindow_acquire(nativeWindow.get());
 
         ACaptureSessionOutputContainer* container;
         cStatus = ACaptureSessionOutputContainer_create(&container);
@@ -679,16 +516,16 @@ public:
             LOGE("CaptureSessionOutputContainer creation failed with error code: %d", cStatus);
             return false;
         }
-        outputContainer = std::shared_ptr<ACaptureSessionOutputContainer>(container, deleter_ACaptureSessionOutputContainer);
+        outputContainer.reset(container);
 
-        ANativeWindow_acquire(nativeWindow.get());
         ACaptureSessionOutput* output;
         cStatus = ACaptureSessionOutput_create(nativeWindow.get(), &output);
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureSessionOutput creation failed with error code: %d", cStatus);
             return false;
         }
-        sessionOutput = std::shared_ptr<ACaptureSessionOutput>(output, deleter_ACaptureSessionOutput);
+        sessionOutput.reset(output);
+
         cStatus = ACaptureSessionOutputContainer_add(outputContainer.get(), sessionOutput.get());
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureSessionOutput Container add failed with error code: %d", cStatus);
@@ -702,15 +539,15 @@ public:
             LOGE("CameraOutputTarget creation failed with error code: %d", cStatus);
             return false;
         }
-        outputTarget = std::shared_ptr<ACameraOutputTarget>(target, deleter_ACameraOutputTarget);
+        outputTarget.reset(target);
 
-        ACaptureRequest * request;
+        ACaptureRequest* request;
         cStatus = ACameraDevice_createCaptureRequest(cameraDevice.get(), TEMPLATE_PREVIEW, &request);
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureRequest creation failed with error code: %d", cStatus);
             return false;
         }
-        captureRequest = std::shared_ptr<ACaptureRequest>(request, deleter_ACaptureRequest);
+        captureRequest.reset(request);
 
         cStatus = ACaptureRequest_addTarget(captureRequest.get(), outputTarget.get());
         if (cStatus != ACAMERA_OK) {
@@ -719,22 +556,27 @@ public:
         }
         targetAdded = true;
 
-        ACameraCaptureSession *session;
-        cStatus = ACameraDevice_createCaptureSession(cameraDevice.get(), outputContainer.get(), GetSessionListener(), &session);
+        ACameraCaptureSession* session;
+        cStatus = ACameraDevice_createCaptureSession(cameraDevice.get(),
+                                                     outputContainer.get(), &sessionCallbacks, &session);
         if (cStatus != ACAMERA_OK) {
             LOGE("CaptureSession creation failed with error code: %d", cStatus);
             return false;
         }
-        captureSession = std::shared_ptr<ACameraCaptureSession>(session, deleter_ACameraCaptureSession);
+        captureSession.reset(session);
 
         ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_CONTROL_AE_MODE, 1, &aeMode);
-        ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
         if (aeMode != ACAMERA_CONTROL_AE_MODE_ON) {
+            ACaptureRequest_setEntry_i32(captureRequest.get(), ACAMERA_SENSOR_SENSITIVITY, 1, &sensitivity);
             ACaptureRequest_setEntry_i64(captureRequest.get(), ACAMERA_SENSOR_EXPOSURE_TIME, 1, &exposureTime);
+        }
+        if (zoomRange.isValid()) {
+            ACaptureRequest_setEntry_float(captureRequest.get(), ACAMERA_CONTROL_ZOOM_RATIO, 1, &zoomRatio);
         }
         ACaptureRequest_setEntry_u8(captureRequest.get(), ACAMERA_FLASH_MODE, 1, &flashMode);
 
-        cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(), GetCaptureCallback(), 1, &request, nullptr);
+        cStatus = ACameraCaptureSession_setRepeatingRequest(captureSession.get(),
+                                                            &captureCallbacks, 1, &request, nullptr);
         if (cStatus != ACAMERA_OK) {
             LOGE("CameraCaptureSession set repeating request failed with error code: %d", cStatus);
             return false;
@@ -742,29 +584,122 @@ public:
         return true;
     }
 
+private:
+    void getPropertyRanges(const ACameraMetadata* metadata)
+    {
+        camera_status_t cStatus;
+        ACameraMetadata_const_entry val;
+
+        cStatus = ACameraMetadata_getConstEntry(metadata, ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE, &val);
+        if (cStatus == ACAMERA_OK) {
+            exposureRange.min = exposureTimeLimits.clamp(val.data.i64[0]);
+            exposureRange.max = exposureTimeLimits.clamp(val.data.i64[1]);
+            exposureTime = exposureRange.percentage(2);
+        } else {
+            LOGW("Unsupported ACAMERA_SENSOR_INFO_EXPOSURE_TIME_RANGE");
+            exposureRange.min = exposureRange.max = 0;
+            exposureTime = 0;
+        }
+
+        cStatus = ACameraMetadata_getConstEntry(metadata, ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE, &val);
+        if (cStatus == ACAMERA_OK){
+            sensitivityRange.min = val.data.i32[0];
+            sensitivityRange.max = val.data.i32[1];
+            sensitivity = sensitivityRange.percentage(2);
+        } else {
+            LOGW("Unsupported ACAMERA_SENSOR_INFO_SENSITIVITY_RANGE");
+            sensitivityRange.min = sensitivityRange.max = 0;
+            sensitivity = 0;
+        }
+
+        cStatus = ACameraMetadata_getConstEntry(metadata, ACAMERA_CONTROL_ZOOM_RATIO_RANGE, &val);
+        if (cStatus == ACAMERA_OK){
+            zoomRange.min = val.data.f[0];
+            zoomRange.max = val.data.f[1];
+            zoomRatio = zoomRange.clamp(zoomRatio);
+        } else {
+            LOGW("Unsupported ACAMERA_CONTROL_ZOOM_RATIO_RANGE");
+            zoomRange.min = zoomRange.max = 0;
+            zoomRatio = 1.0f;
+        }
+    }
+
+    // calculate a score based on how well the width and height match the desired width and height
+    // basically draw the 2 rectangle on top of each other and take the ratio of the non-overlapping
+    // area to the overlapping area
+    double getScore(int32_t width, int32_t height) const {
+        double area1 = width * height;
+        double area2 = desiredWidth * desiredHeight;
+        if ((width < desiredWidth) == (height < desiredHeight)) {
+            return (width < desiredWidth) ? (area2 - area1)/area1 : (area1 - area2)/area2;
+        } else {
+            int32_t overlappedWidth = std::min(width, desiredWidth);
+            int32_t overlappedHeight = std::min(height, desiredHeight);
+            double overlappedArea = overlappedWidth * overlappedHeight;
+            return (area1 + area2 - overlappedArea)/overlappedArea;
+        }
+    }
+
+    void findResolutionMatch(const ACameraMetadata* metadata,
+                             int32_t &bestMatchWidth, int32_t &bestMatchHeight) const {
+        ACameraMetadata_const_entry entry = {};
+        ACameraMetadata_getConstEntry(metadata, ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &entry);
+
+        double bestScore = std::numeric_limits<double>::max();
+        for (uint32_t i = 0; i < entry.count; i += 4) {
+            int32_t input = entry.data.i32[i + 3];
+            int32_t format = entry.data.i32[i + 0];
+
+            if (!input && format == AIMAGE_FORMAT_YUV_420_888) {
+                int32_t width = entry.data.i32[i + 1];
+                int32_t height = entry.data.i32[i + 2];
+
+                if (width == desiredWidth && height == desiredHeight) {
+                    bestMatchWidth = width;
+                    bestMatchHeight = height;
+                    return;
+                }
+
+                double score = getScore(width, height);
+                if (score < bestScore) {
+                    bestMatchWidth = width;
+                    bestMatchHeight = height;
+                    bestScore = score;
+                }
+            }
+        }
+    }
+
+    void setWidthHeight(SetupState newState) {
+        if ((widthHeightState | newState) == (setupWidth | setupHeight)) {
+            cleanUp();
+            initCapture();
+            newState = setupDone;
+        }
+        widthHeightState = newState;
+    }
+
     void cleanUp() {
-        captureListener.context = nullptr;
-        sessionListener.context = nullptr;
         if (sessionState == CaptureSessionState::ACTIVE) {
             ACameraCaptureSession_stopRepeating(captureSession.get());
         }
-        captureSession = nullptr;
+        captureSession.reset();
         if (targetAdded) {
             ACaptureRequest_removeTarget(captureRequest.get(), outputTarget.get());
             targetAdded = false;
         }
-        captureRequest = nullptr;
-        outputTarget = nullptr;
+        captureRequest.reset();
+        outputTarget.reset();
         if (sessionOutputAdded) {
             ACaptureSessionOutputContainer_remove(outputContainer.get(), sessionOutput.get());
             sessionOutputAdded = false;
         }
-        sessionOutput = nullptr;
-        nativeWindow = nullptr;
-        outputContainer = nullptr;
-        cameraDevice = nullptr;
-        cameraManager = nullptr;
-        imageReader = nullptr;
+        sessionOutput.reset();
+        nativeWindow.reset();
+        outputContainer.reset();
+        cameraDevice.reset();
+        cameraManager.reset();
+        imageReader.reset();
     }
 
     template<typename FuncT, typename T>
@@ -775,38 +710,70 @@ public:
         return request &&
                setFn(request, tag, 1, &data) == ACAMERA_OK &&
                ACameraCaptureSession_setRepeatingRequest(captureSession.get(),
-                                                         GetCaptureCallback(),
+                                                         &captureCallbacks,
                                                          1, &request, nullptr) == ACAMERA_OK;
     }
 };
 
+/********************************  Device management  *******************************/
+
+void AndroidCameraCapture::OnDeviceDisconnect(void* /* ctx */, ACameraDevice* dev) {
+    const char *id = ACameraDevice_getId(dev);
+    LOGW("Device %s disconnected", id ? id : "<null>");
+}
+
+void AndroidCameraCapture::OnDeviceError(void* /* ctx */, ACameraDevice* dev, int err) {
+    const char *id = ACameraDevice_getId(dev);
+    LOGI("Camera Device Error: %#x, Device %s", err, id ? id : "<null>");
+
+    switch (err) {
+        case ERROR_CAMERA_IN_USE:
+            LOGI("Camera in use");
+            break;
+        case ERROR_CAMERA_SERVICE:
+            LOGI("Fatal Error occurred in Camera Service");
+            break;
+        case ERROR_CAMERA_DEVICE:
+            LOGI("Fatal Error occurred in Camera Device");
+            break;
+        case ERROR_CAMERA_DISABLED:
+            LOGI("Camera disabled");
+            break;
+        case ERROR_MAX_CAMERAS_IN_USE:
+            LOGI("System limit for maximum concurrent cameras used was exceeded");
+            break;
+        default:
+            LOGI("Unknown Camera Device Error: %#x", err);
+    }
+}
+
 /********************************  Session management  *******************************/
 
-void OnSessionClosed(void* context, ACameraCaptureSession* session) {
+void AndroidCameraCapture::OnSessionClosed(void* context, ACameraCaptureSession* session) {
     if (context == nullptr) return;
     LOGW("session %p closed", session);
-    reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::CLOSED);
+    static_cast<AndroidCameraCapture*>(context)->sessionState = CaptureSessionState::CLOSED;
 }
 
-void OnSessionReady(void* context, ACameraCaptureSession* session) {
+void AndroidCameraCapture::OnSessionReady(void* context, ACameraCaptureSession* session) {
     if (context == nullptr) return;
     LOGW("session %p ready", session);
-    reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::READY);
+    static_cast<AndroidCameraCapture*>(context)->sessionState = CaptureSessionState::READY;
 }
 
-void OnSessionActive(void* context, ACameraCaptureSession* session) {
+void AndroidCameraCapture::OnSessionActive(void* context, ACameraCaptureSession* session) {
     if (context == nullptr) return;
     LOGW("session %p active", session);
-    reinterpret_cast<AndroidCameraCapture*>(context)->setSessionState(CaptureSessionState::ACTIVE);
+    static_cast<AndroidCameraCapture*>(context)->sessionState = CaptureSessionState::ACTIVE;
 }
 
-void OnCaptureCompleted(void* context,
-                        ACameraCaptureSession* session,
-                        ACaptureRequest* /* request */,
-                        const ACameraMetadata* /* result */) {
+void AndroidCameraCapture::OnCaptureCompleted(void* context,
+                                              ACameraCaptureSession* session,
+                                              ACaptureRequest* /* request */,
+                                              const ACameraMetadata* /* result */) {
     if (context == nullptr) return;
     LOGV("session %p capture completed", session);
-    AndroidCameraCapture* cameraCapture = reinterpret_cast<AndroidCameraCapture*>(context);
+    AndroidCameraCapture* cameraCapture = static_cast<AndroidCameraCapture*>(context);
     std::unique_lock<std::mutex> lock(cameraCapture->mtx);
 
     if (cameraCapture->waitingCapture) {
@@ -816,13 +783,13 @@ void OnCaptureCompleted(void* context,
     }
 }
 
-void OnCaptureFailed(void* context,
-                     ACameraCaptureSession* session,
-                     ACaptureRequest* /* request */,
-                     ACameraCaptureFailure* /* failure */) {
+void AndroidCameraCapture::OnCaptureFailed(void* context,
+                                           ACameraCaptureSession* session,
+                                           ACaptureRequest* /* request */,
+                                           ACameraCaptureFailure* /* failure */) {
     if (context == nullptr) return;
     LOGV("session %p capture failed", session);
-    AndroidCameraCapture* cameraCapture = reinterpret_cast<AndroidCameraCapture*>(context);
+    AndroidCameraCapture* cameraCapture = static_cast<AndroidCameraCapture*>(context);
     std::unique_lock<std::mutex> lock(cameraCapture->mtx);
 
     if (cameraCapture->waitingCapture) {
@@ -835,8 +802,8 @@ void OnCaptureFailed(void* context,
 /****************** Implementation of interface functions ********************/
 
 Ptr<IVideoCapture> cv::createAndroidCapture_cam(int index, const VideoCaptureParameters& params) {
-    Ptr<AndroidCameraCapture> res = makePtr<AndroidCameraCapture>(params);
-    if (res && res->initCapture(index))
+    Ptr<AndroidCameraCapture> res = makePtr<AndroidCameraCapture>(index, params);
+    if (res && res->initCapture())
         return res;
     return Ptr<IVideoCapture>();
 }

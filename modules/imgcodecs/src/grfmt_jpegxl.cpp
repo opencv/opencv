@@ -12,16 +12,31 @@
 
 namespace cv
 {
+// Callback functions for JpegXLDecoder
+static void cbRGBtoBGR_8U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBAtoBGRA_8U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBtoBGR_16U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBAtoBGRA_16U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBtoBGR_32F(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBAtoBGRA_32F(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBtoGRAY_8U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBAtoGRAY_8U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBtoGRAY_16U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBAtoGRAY_16U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBtoGRAY_32F(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
+static void cbRGBAtoGRAY_32F(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels);
 
 /////////////////////// JpegXLDecoder ///////////////////
 
-JpegXLDecoder::JpegXLDecoder() : m_f(nullptr, &fclose)
+JpegXLDecoder::JpegXLDecoder() : m_f(nullptr, &fclose),
+                                 m_read_buffer(16384,0) // 16KB chunks
 {
     m_signature = "\xFF\x0A";
     m_decoder = nullptr;
-    m_buf_supported = false;
-    m_type = m_convert = -1;
+    m_buf_supported = true;
+    m_type = -1;
     m_status = JXL_DEC_NEED_MORE_INPUT;
+    m_is_mbuf_set = false;
 }
 
 JpegXLDecoder::~JpegXLDecoder()
@@ -32,13 +47,14 @@ JpegXLDecoder::~JpegXLDecoder()
 void JpegXLDecoder::close()
 {
     if (m_decoder)
-        m_decoder.release();
+        m_decoder.reset();
     if (m_f)
-        m_f.release();
+        m_f.reset();
     m_read_buffer = {};
     m_width = m_height = 0;
-    m_type = m_convert = -1;
+    m_type = -1;
     m_status = JXL_DEC_NEED_MORE_INPUT;
+    m_is_mbuf_set = false;
 }
 
 // see https://github.com/libjxl/libjxl/blob/v0.10.0/doc/format_overview.md
@@ -76,13 +92,16 @@ ImageDecoder JpegXLDecoder::newDecoder() const
     return makePtr<JpegXLDecoder>();
 }
 
-bool JpegXLDecoder::read(Mat* pimg)
+bool JpegXLDecoder::readHeader()
 {
-    // Open file
-    if (!m_f) {
-        m_f.reset(fopen(m_filename.c_str(), "rb"));
-        if (!m_f)
-            return false;
+    if (m_buf.empty()) {
+        // Open file
+        if (!m_f) {
+            m_f.reset(fopen(m_filename.c_str(), "rb"));
+            if (!m_f) {
+                return false;
+            }
+        }
     }
 
     // Initialize decoder
@@ -106,51 +125,132 @@ bool JpegXLDecoder::read(Mat* pimg)
         }
     }
 
-    // Create buffer for reading
-    const size_t read_buffer_size = 16384;  // 16KB chunks
-    if (m_read_buffer.capacity() < read_buffer_size)
-        m_read_buffer.resize(read_buffer_size);
+    // Reset to read header data stream
+    m_is_mbuf_set = false;
 
-    // Create image if needed
-    if (m_type != -1 && pimg) {
-        pimg->create(m_height, m_width, m_type);
-        if (!pimg->isContinuous())
+    return read();
+}
+
+bool JpegXLDecoder::readData(Mat& img)
+{
+    if (!m_decoder || m_width == 0 || m_height == 0 || m_type == -1)
+        return false;
+
+    // Prepare to decode image
+    const uint32_t scn = CV_MAT_CN(m_type);        // from image
+    const uint32_t dcn = (uint32_t)img.channels(); // to OpenCV
+    const int depth = CV_MAT_DEPTH(img.type());
+    JxlImageOutCallback cbFunc = nullptr;
+
+    CV_CheckChannels(scn, (scn == 1 || scn == 3 || scn == 4), "Unsupported src channels");
+    CV_CheckChannels(dcn, (dcn == 1 || dcn == 3 || dcn == 4), "Unsupported dst channels");
+    CV_CheckDepth(depth, (depth == CV_8U || depth == CV_16U || depth == CV_32F), "Unsupported depth");
+
+    m_format = {
+        dcn,
+        JXL_TYPE_UINT8, // (temporary)
+        JXL_NATIVE_ENDIAN, // endianness
+        0 // align stride to bytes
+    };
+    switch (depth) {
+        case CV_8U:  m_format.data_type = JXL_TYPE_UINT8; break;
+        case CV_16U: m_format.data_type = JXL_TYPE_UINT16; break;
+        case CV_32F: m_format.data_type = JXL_TYPE_FLOAT; break;
+        default: break;
+    }
+    // libjxl cannot read to BGR pixel order directly.
+    // So we have to use callback function to convert from RGB(A) to BGR(A).
+    if (!m_use_rgb) {
+        switch (dcn) {
+            case 1:  break;
+            case 3:  cbFunc = (depth == CV_32F)? cbRGBtoBGR_32F:   (depth == CV_16U)? cbRGBtoBGR_16U:   cbRGBtoBGR_8U; break;
+            case 4:  cbFunc = (depth == CV_32F)? cbRGBAtoBGRA_32F: (depth == CV_16U)? cbRGBAtoBGRA_16U: cbRGBAtoBGRA_8U; break;
+            default: break;
+        }
+    }
+    // libjxl cannot convert from color image to gray image directly.
+    // So we have to use callback function to convert from RGB(A) to GRAY.
+    if( (scn >= 3) && (dcn == 1) )
+    {
+        m_format.num_channels = scn;
+        switch (scn) {
+            case 3:  cbFunc = (depth == CV_32F)? cbRGBtoGRAY_32F:  (depth == CV_16U)? cbRGBtoGRAY_16U:  cbRGBtoGRAY_8U; break;
+            case 4:  cbFunc = (depth == CV_32F)? cbRGBAtoGRAY_32F: (depth == CV_16U)? cbRGBAtoGRAY_16U: cbRGBAtoGRAY_8U; break;
+            default: break;
+        }
+    }
+    if(cbFunc != nullptr)
+    {
+        if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutCallback(m_decoder.get(),
+                                                             &m_format,
+                                                             cbFunc,
+                                                             static_cast<void*>(&img)))
+        {
             return false;
+        }
+    }else{
         if (JXL_DEC_SUCCESS != JxlDecoderSetImageOutBuffer(m_decoder.get(),
                                                            &m_format,
-                                                           pimg->ptr<uint8_t>(),
-                                                           pimg->total() * pimg->elemSize())) {
+                                                           img.ptr<uint8_t>(),
+                                                           img.total() * img.elemSize()))
+        {
             return false;
         }
     }
 
+    return read();
+}
+
+// Common reading routine for readHeader() and readBody()
+bool JpegXLDecoder::read()
+{
     // Start decoding loop
     do {
         // Check if we need more input
         if (m_status == JXL_DEC_NEED_MORE_INPUT) {
-            size_t remaining = JxlDecoderReleaseInput(m_decoder.get());
-            // Move any remaining bytes to the beginning
-            if (remaining > 0)
-                memmove(m_read_buffer.data(), m_read_buffer.data() + m_read_buffer.size() - remaining, remaining);
-            // Read more data from file
-            size_t bytes_read = fread(m_read_buffer.data() + remaining,
-                                    1, m_read_buffer.size() - remaining, m_f.get());
-            if (bytes_read == 0) {
-                if (ferror(m_f.get())) {
-                    CV_LOG_WARNING(NULL, "Error reading input file");
+            uint8_t* data_ptr = nullptr;
+            size_t   data_len = 0;
+
+            if( !m_buf.empty() ) {
+                // When data source in on memory
+                if (m_is_mbuf_set) {
+                    // We expect m_buf contains whole JpegXL data stream.
+                    // If it had been truncated, m_status will be JXL_DEC_NEED_MORE_INPUT again.
+                    CV_LOG_WARNING(NULL, "Truncated JXL data in memory");
                     return false;
                 }
-                // If we reached EOF but decoder needs more input, file is truncated
-                if (m_status == JXL_DEC_NEED_MORE_INPUT) {
-                    CV_LOG_WARNING(NULL, "Truncated JXL file");
-                    return false;
+                data_ptr = m_buf.ptr();
+                data_len = m_buf.total();
+                m_is_mbuf_set = true;
+            }
+            else {
+                // When data source is on file
+                // Release input buffer if it had been set already. If not, there are no errors.
+                size_t remaining = JxlDecoderReleaseInput(m_decoder.get());
+                // Move any remaining bytes to the beginning
+                if (remaining > 0)
+                    memmove(m_read_buffer.data(), m_read_buffer.data() + m_read_buffer.size() - remaining, remaining);
+                // Read more data from file
+                size_t bytes_read = fread(m_read_buffer.data() + remaining,
+                                          1, m_read_buffer.size() - remaining, m_f.get());
+                if (bytes_read == 0) {
+                    if (ferror(m_f.get())) {
+                        CV_LOG_WARNING(NULL, "Error reading input file");
+                        return false;
+                    }
+                    // If we reached EOF but decoder needs more input, file is truncated
+                    if (m_status == JXL_DEC_NEED_MORE_INPUT) {
+                        CV_LOG_WARNING(NULL, "Truncated JXL file");
+                        return false;
+                    }
                 }
+                data_ptr = m_read_buffer.data();
+                data_len = bytes_read + remaining;
             }
 
             // Set input buffer
-            if (JXL_DEC_SUCCESS != JxlDecoderSetInput(m_decoder.get(),
-                                                      m_read_buffer.data(),
-                                                      bytes_read + remaining)) {
+            // It must be kept until calling JxlDecoderReleaseInput() or m_decoder.reset().
+            if (JXL_DEC_SUCCESS != JxlDecoderSetInput(m_decoder.get(), data_ptr, data_len)) {
                 return false;
             }
         }
@@ -163,6 +263,7 @@ bool JpegXLDecoder::read(Mat* pimg)
             case JXL_DEC_BASIC_INFO: {
                 if (m_type != -1)
                     return false;
+
                 JxlBasicInfo info;
                 if (JXL_DEC_SUCCESS != JxlDecoderGetBasicInfo(m_decoder.get(), &info))
                     return false;
@@ -172,49 +273,18 @@ bool JpegXLDecoder::read(Mat* pimg)
 
                 m_width = info.xsize;
                 m_height = info.ysize;
-                m_format = {
-                    ncn,
-                    JXL_TYPE_UINT8, // (temporary)
-                    JXL_LITTLE_ENDIAN, // endianness
-                    0 // align stride to bytes
-                };
-                if (!m_use_rgb) {
-                    switch (ncn) {
-                    case 3:
-                        m_convert = cv::COLOR_RGB2BGR;
-                        break;
-                    case 4:
-                        m_convert = cv::COLOR_RGBA2BGRA;
-                        break;
-                    default:
-                        m_convert = -1;
-                    }
+                int depth = (info.exponent_bits_per_sample > 0)?CV_32F:
+                            (info.bits_per_sample == 16)?CV_16U:
+                            (info.bits_per_sample == 8)?CV_8U: -1;
+                if(depth == -1)
+                {
+                    return false; // Return to readHeader()
                 }
-                if (info.exponent_bits_per_sample > 0) {
-                    m_format.data_type = JXL_TYPE_FLOAT;
-                    m_type = CV_MAKETYPE( CV_32F, ncn );
-                } else {
-                    switch (info.bits_per_sample) {
-                        case 8:
-                            m_format.data_type = JXL_TYPE_UINT8;
-                            m_type = CV_MAKETYPE( CV_8U, ncn );
-                            break;
-                        case 16:
-                            m_format.data_type = JXL_TYPE_UINT16;
-                            m_type = CV_MAKETYPE( CV_16U, ncn );
-                            break;
-                        default:
-                            return false;
-                    }
-                }
-                if (!pimg)
-                    return true;
-                break;
+                m_type = CV_MAKETYPE( depth, ncn );
+                return true;
             }
             case JXL_DEC_FULL_IMAGE: {
                 // Image is ready
-                if (m_convert != -1)
-                    cv::cvtColor(*pimg, *pimg, m_convert);
                 break;
             }
             case JXL_DEC_ERROR: {
@@ -229,17 +299,172 @@ bool JpegXLDecoder::read(Mat* pimg)
     return true;
 }
 
-bool JpegXLDecoder::readHeader()
+// Callback functopms
+static void cbRGBtoBGR_8U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
 {
-    close();
-    return read(nullptr);
+    const uint8_t* src = static_cast<const uint8_t*>(pixels);
+
+    constexpr int dstStep = 3;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    uint8_t* dstBase = const_cast<uint8_t*>(pDst->ptr(y));
+    uint8_t* dst = dstBase + x * dstStep;
+
+    icvCvt_RGB2BGR_8u_C3R( src, 0, dst, 0, Size(num_pixels , 1) );
+}
+static void cbRGBAtoBGRA_8U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
+{
+    const uint8_t* src = static_cast<const uint8_t*>(pixels);
+
+    constexpr int dstStep = 4;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    uint8_t* dstBase = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(pDst->ptr(y)));
+    uint8_t* dst = dstBase + x * dstStep;
+
+    icvCvt_RGBA2BGRA_8u_C4R( src, 0, dst, 0, Size(num_pixels, 1) );
+}
+static void cbRGBtoBGR_16U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
+{
+    const uint16_t* src = static_cast<const uint16_t*>(pixels);
+
+    constexpr int dstStep = 3;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    uint16_t* dstBase = const_cast<uint16_t*>(reinterpret_cast<const uint16_t*>(pDst->ptr(y)));
+    uint16_t* dst = dstBase + x * dstStep;
+
+    icvCvt_BGR2RGB_16u_C3R( src, 0, dst, 0, Size(num_pixels, 1));
+}
+static void cbRGBAtoBGRA_16U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
+{
+    const uint16_t* src = static_cast<const uint16_t*>(pixels);
+
+    constexpr int dstStep = 4;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    uint16_t* dstBase = const_cast<uint16_t*>(reinterpret_cast<const uint16_t*>(pDst->ptr(y)));
+    uint16_t* dst = dstBase + x * dstStep;
+
+    icvCvt_BGRA2RGBA_16u_C4R( src, 0, dst, 0, Size(num_pixels, 1));
+}
+static void cbRGBtoBGR_32F(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
+{
+    constexpr int srcStep = 3;
+    const uint32_t* src = static_cast<const uint32_t*>(pixels);
+
+    constexpr int dstStep = 3;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    uint32_t* dstBase = const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(pDst->ptr(y)));
+    uint32_t* dst = dstBase + x * dstStep;
+
+    for(size_t i = 0 ; i < num_pixels; i++)
+    {
+        dst[ i * dstStep + 0 ] = src[ i * srcStep + 2];
+        dst[ i * dstStep + 1 ] = src[ i * srcStep + 1];
+        dst[ i * dstStep + 2 ] = src[ i * srcStep + 0];
+    }
+}
+static void cbRGBAtoBGRA_32F(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
+{
+    constexpr int srcStep = 4;
+    const uint32_t* src = static_cast<const uint32_t*>(pixels);
+
+    constexpr int dstStep = 4;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    uint32_t* dstBase = const_cast<uint32_t*>(reinterpret_cast<const uint32_t*>(pDst->ptr(y)));
+    uint32_t* dst = dstBase + x * dstStep;
+
+    for(size_t i = 0 ; i < num_pixels; i++)
+    {
+        dst[ i * dstStep + 0 ] = src[ i * srcStep + 2];
+        dst[ i * dstStep + 1 ] = src[ i * srcStep + 1];
+        dst[ i * dstStep + 2 ] = src[ i * srcStep + 0];
+        dst[ i * dstStep + 3 ] = src[ i * srcStep + 3];
+    }
 }
 
-bool JpegXLDecoder::readData(Mat& img)
+static void cbRGBtoGRAY_8U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
 {
-    if (!m_decoder || m_width == 0 || m_height == 0)
-        return false;
-    return read(&img);
+    const uint8_t* src = static_cast<const uint8_t*>(pixels);
+
+    constexpr int dstStep = 1;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    uint8_t* dstBase = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(pDst->ptr(y)));
+    uint8_t* dst = dstBase + x * dstStep;
+
+    icvCvt_BGR2Gray_8u_C3C1R(src, 0, dst, 0, Size(num_pixels, 1) );
+}
+static void cbRGBAtoGRAY_8U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
+{
+    const uint8_t* src = static_cast<const uint8_t*>(pixels);
+
+    constexpr int dstStep = 1;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    uint8_t* dstBase = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(pDst->ptr(y)));
+    uint8_t* dst = dstBase + x * dstStep;
+
+    icvCvt_BGRA2Gray_8u_C4C1R(src, 0, dst, 0, Size(num_pixels, 1) );
+}
+static void cbRGBtoGRAY_16U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
+{
+    const uint16_t* src = static_cast<const uint16_t*>(pixels);
+
+    constexpr int dstStep = 1;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    uint16_t* dstBase = const_cast<uint16_t*>(reinterpret_cast<const uint16_t*>(pDst->ptr(y)));
+    uint16_t* dst = dstBase + x * dstStep;
+
+    icvCvt_BGRA2Gray_16u_CnC1R(src, 0, dst, 0, Size(num_pixels, 1), /* ncn= */ 3 );
+}
+static void cbRGBAtoGRAY_16U(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
+{
+    const uint16_t* src = static_cast<const uint16_t*>(pixels);
+
+    constexpr int dstStep = 1;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    uint16_t* dstBase = const_cast<uint16_t*>(reinterpret_cast<const uint16_t*>(pDst->ptr(y)));
+    uint16_t* dst = dstBase + x * dstStep;
+
+    icvCvt_BGRA2Gray_16u_CnC1R(src, 0, dst, 0, Size(num_pixels, 1), /* ncn= */ 4 );
+}
+static void cbRGBtoGRAY_32F(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
+{
+    constexpr float cR = 0.299f;
+    constexpr float cG = 0.587f;
+    constexpr float cB = 1.000f - cR - cG;
+
+    constexpr int srcStep = 3;
+    const float* src = static_cast<const float*>(pixels);
+
+    constexpr int dstStep = 1;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    float* dstBase = const_cast<float*>(reinterpret_cast<const float*>(pDst->ptr(y)));
+    float* dst = dstBase + x * dstStep;
+
+    for(size_t i = 0 ; i < num_pixels; i++)
+    {
+        dst[ i * dstStep ] = src[ i * srcStep + 0] * cR +
+                             src[ i * srcStep + 1] * cG +
+                             src[ i * srcStep + 2] * cB;
+    }
+}
+static void cbRGBAtoGRAY_32F(void *opaque, size_t x, size_t y, size_t num_pixels, const void *pixels)
+{
+    constexpr float cR = 0.299f;
+    constexpr float cG = 0.587f;
+    constexpr float cB = 1.000f - cR - cG;
+
+    constexpr int srcStep = 4;
+    const float* src = static_cast<const float*>(pixels);
+
+    constexpr int dstStep = 1;
+    const cv::Mat *pDst = static_cast<cv::Mat*>(opaque);
+    float* dstBase = const_cast<float*>(reinterpret_cast<const float*>(pDst->ptr(y)));
+    float* dst = dstBase + x * dstStep;
+
+    for(size_t i = 0 ; i < num_pixels; i++)
+    {
+        dst[ i * dstStep ] = src[ i * srcStep + 0] * cR +
+                             src[ i * srcStep + 1] * cG +
+                             src[ i * srcStep + 2] * cB;
+    }
 }
 
 /////////////////////// JpegXLEncoder ///////////////////
