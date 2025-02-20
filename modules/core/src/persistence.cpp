@@ -2441,7 +2441,7 @@ size_t FileNode::rawSize() const
         p += 4;
     size_t sz0 = (size_t)(p - p0);
     if( tp == INT )
-        return sz0 + 4;
+        return sz0 + 8;
     if( tp == REAL )
         return sz0 + 8;
     if( tp == NONE )
@@ -2475,13 +2475,7 @@ void FileNode::setValue( int type, const void* value, int len )
         sz += 4;
 
     if( type == INT )
-    {
-        int64_t ival = *(const int64_t*)value;
-        if (ival > INT_MAX || ival < INT_MIN)
-            sz += 8;
-        else
-            sz += 4;
-    }
+        sz += 8;
     else if( type == REAL )
         sz += 8;
     else if( type == STRING )
@@ -2502,10 +2496,7 @@ void FileNode::setValue( int type, const void* value, int len )
     if( type == INT )
     {
         int64_t ival = *(const int64_t*)value;
-        if (sz > 8)
-            writeInt(p, ival);
-        else
-            writeInt(p, static_cast<int>(ival));
+        writeInt(p, ival);
     }
     else if( type == REAL )
     {

@@ -22,7 +22,13 @@ Details: TBD
 #include <VX/vx.h>
 #include <VX/vxu.h>
 
-#ifndef VX_VERSION_1_1
+// For OpenVX 1.2 & 1.3
+#if (VX_VERSION > VX_VERSION_1_1)
+# include <VX/vx_compatibility.h>
+#endif
+
+
+#if (VX_VERSION == VX_VERSION_1_0)
 // 1.1 to 1.0 backward compatibility defines
 
 static const vx_enum VX_INTERPOLATION_BILINEAR = VX_INTERPOLATION_TYPE_BILINEAR;
@@ -31,12 +37,6 @@ static const vx_enum VX_INTERPOLATION_NEAREST_NEIGHBOR = VX_INTERPOLATION_TYPE_N
 
 static const vx_enum VX_BORDER_CONSTANT = VX_BORDER_MODE_CONSTANT;
 static const vx_enum VX_BORDER_REPLICATE = VX_BORDER_MODE_REPLICATE;
-
-#else
-
-    #ifdef IVX_RENAMED_REFS
-        static const vx_enum VX_REF_ATTRIBUTE_TYPE = VX_REFERENCE_TYPE;
-    #endif
 
 #endif
 
@@ -218,7 +218,7 @@ template<> struct TypeToEnum<vx_int64>    { static const vx_enum value = VX_TYPE
 template<> struct TypeToEnum<vx_uint64>   { static const vx_enum value = VX_TYPE_UINT64; };
 template<> struct TypeToEnum<vx_float32>  { static const vx_enum value = VX_TYPE_FLOAT32, imgType = VX_DF_IMAGE('F', '0', '3', '2'); };
 template<> struct TypeToEnum<vx_float64>  { static const vx_enum value = VX_TYPE_FLOAT64; };
-template<> struct TypeToEnum<vx_bool>     { static const vx_enum value = VX_TYPE_BOOL; };
+//template<> struct TypeToEnum<vx_bool>     { static const vx_enum value = VX_TYPE_BOOL; };
 template<> struct TypeToEnum<vx_keypoint_t> {static const vx_enum value = VX_TYPE_KEYPOINT; };
 // the commented types are aliases (of integral tyes) and have conflicts with the types above
 //template<> struct TypeToEnum<vx_enum>     { static const vx_enum val = VX_TYPE_ENUM; };
@@ -1717,6 +1717,22 @@ static const vx_enum
 #endif
     }
 
+    /// Convert cv::Mat type to standard image format (fourcc), throws WrapperError if not possible
+    static vx_df_image matTypeToFormat(int matType)
+    {
+        switch (matType)
+        {
+            case CV_8UC4:  return VX_DF_IMAGE_RGBX;
+            case CV_8UC3:  return VX_DF_IMAGE_RGB;
+            case CV_8UC1:  return VX_DF_IMAGE_U8;
+            case CV_16UC1: return VX_DF_IMAGE_U16;
+            case CV_16SC1: return VX_DF_IMAGE_S16;
+            case CV_32SC1: return VX_DF_IMAGE_S32;
+            case CV_32FC1: return VX_DF_IMAGE('F', '0', '3', '2');
+            default:       throw WrapperError(std::string(__func__)+"(): unsupported cv::Mat type");
+        }
+    }
+
 #ifdef IVX_USE_OPENCV
     /// Convert image format (fourcc) to cv::Mat type, throws WrapperError if not possible
     static int formatToMatType(vx_df_image format, vx_uint32 planeIdx = 0)
@@ -1739,22 +1755,6 @@ static const vx_enum
         case VX_DF_IMAGE_NV12:
         case VX_DF_IMAGE_NV21: return planeIdx == 0 ? CV_8UC1 : CV_8UC2;
         default: throw WrapperError(std::string(__func__)+"(): unsupported image format");
-        }
-    }
-
-    /// Convert cv::Mat type to standard image format (fourcc), throws WrapperError if not possible
-    static vx_df_image matTypeToFormat(int matType)
-    {
-        switch (matType)
-        {
-        case CV_8UC4:  return VX_DF_IMAGE_RGBX;
-        case CV_8UC3:  return VX_DF_IMAGE_RGB;
-        case CV_8UC1:  return VX_DF_IMAGE_U8;
-        case CV_16UC1: return VX_DF_IMAGE_U16;
-        case CV_16SC1: return VX_DF_IMAGE_S16;
-        case CV_32SC1: return VX_DF_IMAGE_S32;
-        case CV_32FC1: return VX_DF_IMAGE('F', '0', '3', '2');
-        default:       throw WrapperError(std::string(__func__)+"(): unsupported cv::Mat type");
         }
     }
 
@@ -3176,6 +3176,27 @@ public:
 
     void getMapping(vx_uint32 dst_x, vx_uint32 dst_y, vx_float32 &src_x, vx_float32 &src_y) const
     { IVX_CHECK_STATUS(vxGetRemapPoint(ref, dst_x, dst_y, &src_x, &src_y)); }
+
+    void setMappings(vx_float32* map_x, size_t map_x_stride, vx_float32* map_y, size_t map_y_stride)
+    {
+        for (vx_uint32 y = 0; y < dstHeight(); y++)
+        {
+            const vx_float32* map_x_line = (vx_float32*)((char*)map_x + y*map_x_stride);
+            const vx_float32* map_y_line = (vx_float32*)((char*)map_y + y*map_y_stride);
+            for (vx_uint32 x = 0; x < dstWidth(); x++)
+                setMapping(x, y, map_x_line[x], map_y_line[x]);
+        }
+    }
+
+    void setMappings(vx_float32* map, size_t map_stride)
+    {
+        for (vx_uint32 y = 0; y < dstHeight(); y++)
+        {
+            const vx_float32* map_line = (vx_float32*)((char*)map + y*map_stride);
+            for (vx_uint32 x = 0; x < 2*dstWidth(); x+=2)
+                setMapping(x, y, map_line[x], map_line[x+1]);
+        }
+    }
 
 #ifdef IVX_USE_OPENCV
     void setMappings(const cv::Mat& map_x, const cv::Mat& map_y)

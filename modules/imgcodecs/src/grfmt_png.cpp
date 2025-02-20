@@ -121,15 +121,16 @@
 namespace cv
 {
 
-const uint32_t id_IHDR = 0x52444849; // PNG header
-const uint32_t id_acTL = 0x4C546361; // Animation control chunk
-const uint32_t id_fcTL = 0x4C546366; // Frame control chunk
-const uint32_t id_IDAT = 0x54414449; // first frame and/or default image
-const uint32_t id_fdAT = 0x54416466; // Frame data chunk
-const uint32_t id_PLTE = 0x45544C50;
-const uint32_t id_bKGD = 0x44474B62;
-const uint32_t id_tRNS = 0x534E5274;
-const uint32_t id_IEND = 0x444E4549; // end/footer chunk
+const uint32_t id_IHDR = 0x49484452; // PNG header
+const uint32_t id_acTL = 0x6163544C; // Animation control chunk
+const uint32_t id_fcTL = 0x6663544C; // Frame control chunk
+const uint32_t id_IDAT = 0x49444154; // first frame and/or default image
+const uint32_t id_fdAT = 0x66644154; // Frame data chunk
+const uint32_t id_PLTE = 0x504C5445; // The PLTE chunk contains a color palette for indexed-color images
+const uint32_t id_bKGD = 0x624B4744; // The bKGD chunk specifies a default background color for the image
+const uint32_t id_tRNS = 0x74524E53; // The tRNS chunk provides transparency information
+const uint32_t id_tEXt = 0x74455874; // The tEXt chunk stores metadata as text in key-value pairs
+const uint32_t id_IEND = 0x49454E44; // end/footer chunk
 
 APNGFrame::APNGFrame()
 {
@@ -324,15 +325,6 @@ bool  PngDecoder::readHeader()
             bop = chunk.p[33];
         }
 
-        if (id == id_bKGD)
-        {
-            // The spec is actually more complex: http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
-            m_animation.bgcolor[0] = png_get_uint_16(&chunk.p[8]);
-            m_animation.bgcolor[1] = png_get_uint_16(&chunk.p[10]);
-            m_animation.bgcolor[2] = png_get_uint_16(&chunk.p[12]);
-            m_animation.bgcolor[3] = 0;
-        }
-
         if (id == id_PLTE || id == id_tRNS)
             m_chunksInfo.push_back(chunk);
     }
@@ -355,8 +347,12 @@ bool  PngDecoder::readHeader()
     m_color_type = color_type;
     m_bit_depth = bit_depth;
 
-    if (m_is_fcTL_loaded && (int(x0 + w0) > m_width || int(y0 + h0) > m_height || dop > 2 || bop > 1))
+    if (m_is_fcTL_loaded && ((long long int)x0 + w0 > m_width || (long long int)y0 + h0 > m_height || dop > 2 || bop > 1))
         return false;
+
+    png_color_16p background_color;
+    if (png_get_bKGD(m_png_ptr, m_info_ptr, &background_color))
+        m_animation.bgcolor = Scalar(background_color->blue, background_color->green, background_color->red);
 
     if (bit_depth <= 8 || bit_depth == 16)
     {
@@ -703,7 +699,7 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
         return 0;
     const size_t size = static_cast<size_t>(png_get_uint_32(size_id)) + 12;
 
-    const uint32_t id = *(uint32_t*)(&size_id[4]);
+    const uint32_t id = png_get_uint_32(size_id + 4);
     if (id == id_IHDR) {
         // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
         // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
@@ -725,7 +721,7 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
         // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
         if (size != 8 + 1 + 4 && size != 8 + 2 + 4 && size != 8 + 6 + 4)
             return 0;
-    } else if (id != id_fdAT && id != id_IDAT && id != id_IEND && id != id_PLTE && id != id_tRNS) {
+    } else if (id != id_fdAT && id != id_IDAT && id != id_IEND && id != id_PLTE && id != id_tEXt && id != id_tRNS) {
         if (size > PNG_USER_CHUNK_MALLOC_MAX)
         {
             CV_LOG_WARNING(NULL, "user chunk data is too large");
@@ -1416,6 +1412,9 @@ void PngEncoder::deflateRectFin(unsigned char* zbuf, uint32_t* zsize, int bpp, i
 
 bool PngEncoder::writeanimation(const Animation& animation, const std::vector<int>& params)
 {
+    int frame_type = animation.frames[0].type();
+    int frame_depth = animation.frames[0].depth();
+    CV_CheckType(frame_type, frame_depth == CV_8U || frame_depth == CV_16U, "APNG decoder supports only 8 or 16 bit unsigned images");
     int compression_level = 6;
     int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
     bool isBilevel = false;
@@ -1439,7 +1438,8 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         }
     }
 
-    CV_UNUSED(isBilevel);
+    if (isBilevel)
+        CV_LOG_WARNING(NULL, "IMWRITE_PNG_BILEVEL parameter is not supported yet.");
     uint32_t first =0;
     uint32_t loops= animation.loop_count;
     uint32_t coltype= animation.frames[0].channels() == 1 ? PNG_COLOR_TYPE_GRAY : animation.frames[0].channels() == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA;
@@ -1543,9 +1543,9 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         if ((animation.bgcolor != Scalar()) && coltype)
         {
             unsigned char bgvalue[6] = {};
-            bgvalue[1] = animation.bgcolor[0];
+            bgvalue[1] = animation.bgcolor[2];
             bgvalue[3] = animation.bgcolor[1];
-            bgvalue[5] = animation.bgcolor[2];
+            bgvalue[5] = animation.bgcolor[0];
             writeChunk(m_f, "bKGD", bgvalue, 6); //the bKGD chunk must precede the first IDAT chunk, and must follow the PLTE chunk.
         }
 
