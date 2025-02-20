@@ -396,7 +396,7 @@ void sqrt32f(const float* src, float* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     const int VECSZ = VTraits<v_float32>::vlanes();
     for( ; i < len; i += VECSZ*2 )
     {
@@ -425,7 +425,7 @@ void sqrt64f(const double* src, double* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     const int VECSZ = VTraits<v_float64>::vlanes();
     for( ; i < len; i += VECSZ*2 )
     {

@@ -1,3 +1,6 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #ifndef OPENCV_HAL_RVV_EXP64F_HPP_INCLUDED
 #define OPENCV_HAL_RVV_EXP64F_HPP_INCLUDED
 
@@ -36,7 +39,7 @@ inline int exp64f(const double* src, double* dst, int n) {
         vint64m8_t int_part = __riscv_vfcvt_x_f_v_i64m8(vx, vl);
         vfloat64m8_t vpow2n = pow2_v_i64m8_f64m8(int_part, vl);
 
-        vfloat64m8_t frac_part = __riscv_vfsub_vv_f64m8(vx, 
+        vfloat64m8_t frac_part = __riscv_vfsub_vv_f64m8(vx,
                                 __riscv_vfcvt_f_x_v_f64m8(int_part, vl), vl);
         frac_part = __riscv_vfmul_vf_f64m8(frac_part, CV_LOG2, vl);
 
@@ -47,7 +50,7 @@ inline int exp64f(const double* src, double* dst, int n) {
             term = __riscv_vfmul_vv_f64m8(term, frac_part, vl);
             res = __riscv_vfmacc_vf_f64m8(res, factor_term[j], term, vl);
         }
-    
+
         res = __riscv_vfmul_vv_f64m8(res, vpow2n, vl);
         __riscv_vse64_v_f64m8(dst + i, res, vl);
 
