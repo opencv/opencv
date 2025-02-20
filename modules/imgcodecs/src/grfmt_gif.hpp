@@ -12,12 +12,33 @@ namespace cv
 {
 
 // See https://www.w3.org/Graphics/GIF/spec-gif89a.txt
+// 23. Graphic Control Extension.
+// <Packed Fields>
+//  Reserved               : 3 bits
+//  Disposal Method        : 3 bits
+//  User Input Flag        : 1 bit
+//  Transparent Color Flag : 1 bit
+constexpr int GIF_DISPOSE_METHOD_SHIFT = 2;
+constexpr int GIF_DISPOSE_METHOD_MASK  = 7; // 0b111
+constexpr int GIF_TRANS_COLOR_FLAG_MASK  = 1; // 0b1
+
 enum GifDisposeMethod {
     GIF_DISPOSE_NA                 = 0,
     GIF_DISPOSE_NONE               = 1,
     GIF_DISPOSE_RESTORE_BACKGROUND = 2,
     GIF_DISPOSE_RESTORE_PREVIOUS   = 3,
+    // 4-7 are reserved/undefined.
+
+    GIF_DISPOSE_MAX                = GIF_DISPOSE_RESTORE_PREVIOUS,
 };
+
+enum GifTransparentColorFlag {
+    GIF_TRANSPARENT_INDEX_NOT_GIVEN = 0,
+    GIF_TRANSPARENT_INDEX_GIVEN     = 1,
+
+    GIF_TRANSPARENT_INDEX_MAX       = GIF_TRANSPARENT_INDEX_GIVEN,
+};
+
 
 //////////////////////////////////////////////////////////////////////
 ////                        GIF Decoder                           ////

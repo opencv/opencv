@@ -245,9 +245,16 @@ GifDisposeMethod GifDecoder::readExtensions() {
             hasTransparentColor = false;
             len = (uchar)m_strm.getByte();
             CV_Assert(len == 4);
-            auto flags = (uchar)m_strm.getByte();
-            disposalMethod = static_cast<GifDisposeMethod>( ( flags >> 2 ) & 0x3 );
-            hasTransparentColor = flags & 0x01;
+            const uint8_t packedFields = (uchar)m_strm.getByte();
+
+            const uint8_t dm = (packedFields >> GIF_DISPOSE_METHOD_SHIFT) & GIF_DISPOSE_METHOD_MASK;
+            CV_CheckLE(dm, GIF_DISPOSE_MAX, "Unsupported Dispose Method");
+            disposalMethod = static_cast<GifDisposeMethod>(dm);
+
+            const uint8_t transColorFlag = packedFields & GIF_TRANS_COLOR_FLAG_MASK;
+            CV_CheckLE(transColorFlag, GIF_TRANSPARENT_INDEX_MAX, "Unsupported Transparent Color Flag");
+            hasTransparentColor = (transColorFlag == GIF_TRANSPARENT_INDEX_GIVEN);
+
             m_animation.durations.push_back(m_strm.getWord() * 10); // delay time
             transparentColor = (uchar)m_strm.getByte();
         }
@@ -454,14 +461,10 @@ bool GifDecoder::getFrameCount_() {
                 int len = m_strm.getByte();
                 while (len) {
                     if (len == 4) {
-                        int packedFields = m_strm.getByte();
-                        //  3 bit : Reserved
-                        //  3 bit : Disposal Method
-                        //  1 bit : User Input Flag
-                        //  1 bit : Transparent Color Flag
-                        if ( (packedFields & 0x01)== 0x01) {
-                            m_type = CV_8UC4; // Transparent Index is given.
-                        }
+                        const uint8_t packedFields = m_strm.getByte(); // Packed Fields
+                        const uint8_t transColorFlag = packedFields & GIF_TRANS_COLOR_FLAG_MASK;
+                        CV_CheckLE(transColorFlag, GIF_TRANSPARENT_INDEX_MAX, "Unsupported Transparent Color Flag");
+                        m_type = (transColorFlag == GIF_TRANSPARENT_INDEX_GIVEN) ? CV_8UC4 : CV_8UC3;
                         m_strm.skip(2); // Delay Time
                         m_strm.skip(1); // Transparent Color Index
                     } else {
@@ -681,11 +684,9 @@ bool GifEncoder::writeFrame(const Mat &img) {
     strm.putByte(0x21); // extension introducer
     strm.putByte(0xF9); // graphic control label
     strm.putByte(0x04); // block size, fixed number
-    // flag is a packed field, and the first 3 bits are reserved
-    uchar flag = GifDisposeMethod::GIF_DISPOSE_RESTORE_PREVIOUS << 2;
-    if (criticalTransparency)
-        flag |= 1;
-    strm.putByte(flag);
+    const uint8_t gcePackedFields = (GIF_DISPOSE_RESTORE_PREVIOUS << GIF_DISPOSE_METHOD_SHIFT) |
+                                    (criticalTransparency) ? GIF_TRANSPARENT_INDEX_GIVEN : GIF_TRANSPARENT_INDEX_NOT_GIVEN;
+    strm.putByte(gcePackedFields);
     strm.putWord(frameDelay);
     strm.putByte(transparentColor);
     strm.putByte(0x00); // end of the extension
@@ -696,7 +697,7 @@ bool GifEncoder::writeFrame(const Mat &img) {
     strm.putWord(top);
     strm.putWord(width);
     strm.putWord(height);
-    flag = localColorTableSize > 0 ? 0x80 : 0x00;
+    uint8_t flag = localColorTableSize > 0 ? 0x80 : 0x00;
     if (localColorTableSize > 0) {
         std::vector<Mat> img_vec(1, img);
         getColorTable(img_vec, false);
