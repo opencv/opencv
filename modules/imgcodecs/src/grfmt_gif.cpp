@@ -685,7 +685,7 @@ bool GifEncoder::writeFrame(const Mat &img) {
     strm.putByte(0xF9); // graphic control label
     strm.putByte(0x04); // block size, fixed number
     const uint8_t gcePackedFields = (GIF_DISPOSE_RESTORE_PREVIOUS << GIF_DISPOSE_METHOD_SHIFT) |
-                                    (criticalTransparency) ? GIF_TRANSPARENT_INDEX_GIVEN : GIF_TRANSPARENT_INDEX_NOT_GIVEN;
+                                    (criticalTransparency ? GIF_TRANSPARENT_INDEX_GIVEN : GIF_TRANSPARENT_INDEX_NOT_GIVEN);
     strm.putByte(gcePackedFields);
     strm.putWord(frameDelay);
     strm.putByte(transparentColor);
