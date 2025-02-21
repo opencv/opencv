@@ -93,7 +93,7 @@ public:
     CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
     Board();
 
-    struct Impl;
+    struct CV_IMPL_HIDDEN Impl;
 protected:
     Board(const Ptr<Impl>& impl);
     Ptr<Impl> impl;
