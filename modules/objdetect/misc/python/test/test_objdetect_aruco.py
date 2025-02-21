@@ -458,5 +458,30 @@ class aruco_objdetect_test(NewOpenCVTests):
         with self.assertRaises(Exception):
             img = cv.aruco.drawDetectedDiamonds(img, points2, borderColor=255)
 
+    def test_multi_dict_arucodetector(self):
+        aruco_params = cv.aruco.DetectorParameters()
+        aruco_dicts = [
+                cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_250),
+                cv.aruco.getPredefinedDictionary(cv.aruco.DICT_5X5_250)
+            ]
+        aruco_detector = cv.aruco.ArucoDetector(aruco_dicts, aruco_params)
+        id = 2
+        marker_size = 100
+        offset = 10
+        img_marker1 = cv.aruco.generateImageMarker(aruco_dicts[0], id, marker_size, aruco_params.markerBorderBits)
+        img_marker1 = np.pad(img_marker1, pad_width=offset, mode='constant', constant_values=255)
+        img_marker2 = cv.aruco.generateImageMarker(aruco_dicts[1], id, marker_size, aruco_params.markerBorderBits)
+        img_marker2 = np.pad(img_marker2, pad_width=offset, mode='constant', constant_values=255)
+        img_markers = np.concatenate((img_marker1, img_marker2), axis=1)
+
+        corners, ids, rejected, dictIndices = aruco_detector.detectMarkersMultiDict(img_markers)
+
+        self.assertEqual(2, len(ids))
+        self.assertEqual(id, ids[0])
+        self.assertEqual(id, ids[1])
+        self.assertEqual(2, len(dictIndices))
+        self.assertEqual(0, dictIndices[0])
+        self.assertEqual(1, dictIndices[1])
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
