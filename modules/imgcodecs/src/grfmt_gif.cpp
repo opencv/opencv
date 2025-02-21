@@ -461,7 +461,7 @@ bool GifDecoder::getFrameCount_() {
                 int len = m_strm.getByte();
                 while (len) {
                     if (len == 4) {
-                        const uint8_t packedFields = m_strm.getByte(); // Packed Fields
+                        const uint8_t packedFields = static_cast<uint8_t>(m_strm.getByte()); // Packed Fields
                         const uint8_t transColorFlag = packedFields & GIF_TRANS_COLOR_FLAG_MASK;
                         CV_CheckLE(transColorFlag, GIF_TRANSPARENT_INDEX_MAX, "Unsupported Transparent Color Flag");
                         m_type = (transColorFlag == GIF_TRANSPARENT_INDEX_GIVEN) ? CV_8UC4 : CV_8UC3;
@@ -684,8 +684,8 @@ bool GifEncoder::writeFrame(const Mat &img) {
     strm.putByte(0x21); // extension introducer
     strm.putByte(0xF9); // graphic control label
     strm.putByte(0x04); // block size, fixed number
-    const uint8_t gcePackedFields = (GIF_DISPOSE_RESTORE_PREVIOUS << GIF_DISPOSE_METHOD_SHIFT) |
-                                    (criticalTransparency ? GIF_TRANSPARENT_INDEX_GIVEN : GIF_TRANSPARENT_INDEX_NOT_GIVEN);
+    const int gcePackedFields = static_cast<int>(GIF_DISPOSE_RESTORE_PREVIOUS << GIF_DISPOSE_METHOD_SHIFT) |
+                                static_cast<int>(criticalTransparency ? GIF_TRANSPARENT_INDEX_GIVEN : GIF_TRANSPARENT_INDEX_NOT_GIVEN);
     strm.putByte(gcePackedFields);
     strm.putWord(frameDelay);
     strm.putByte(transparentColor);
