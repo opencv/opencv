@@ -62,16 +62,17 @@ def add_argument(zoo, parser, name, help, required=False, default=None, type=Non
 
 def add_preproc_args(zoo, parser, sample, alias=None, prefix=""):
     aliases = []
-    if os.path.isfile(zoo):
+    if os.path.isfile(zoo) and prefix == "":
         fs = cv.FileStorage(zoo, cv.FILE_STORAGE_READ)
         root = fs.root()
         for name in root.keys():
             model = root.getNode(name)
             if model.getNode('sample').string() == sample:
                 aliases.append(name)
+    if len(aliases):
+        parser.add_argument(prefix+'alias', nargs='?', choices=aliases,
+                            help='An alias name of model to extract preprocessing parameters from models.yml file.')
 
-    parser.add_argument(prefix+'alias', nargs='?', choices=aliases,
-                        help='An alias name of model to extract preprocessing parameters from models.yml file.')
     add_argument(zoo, parser, prefix+'model',
                  help='Path to a binary file of model contains trained weights. '
                       'It could be a file with extensions .caffemodel (Caffe), '

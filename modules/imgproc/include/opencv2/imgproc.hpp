@@ -268,12 +268,7 @@ enum InterpolationFlags{
     /** flag, fills all of the destination image pixels. If some of them correspond to outliers in the
     source image, they are set to zero */
     WARP_FILL_OUTLIERS   = 8,
-    /** flag, inverse transformation
-
-    For example, #linearPolar or #logPolar transforms:
-    - flag is __not__ set: \f$dst( \rho , \phi ) = src(x,y)\f$
-    - flag is set: \f$dst(x,y) = src( \rho , \phi )\f$
-    */
+    /** flag, inverse transformation */
     WARP_INVERSE_MAP     = 16,
     WARP_RELATIVE_MAP    = 32
 };
@@ -2709,97 +2704,6 @@ source image. The center must be inside the image.
  */
 CV_EXPORTS_W void getRectSubPix( InputArray image, Size patchSize,
                                  Point2f center, OutputArray patch, int patchType = -1 );
-
-/** @example samples/cpp/snippets/polar_transforms.cpp
-An example using the cv::linearPolar and cv::logPolar operations
-*/
-/** @example samples/python/snippets/logpolar.py
-An example using the linearPolar and logPolar operations in python
-*/
-
-/** @brief Remaps an image to semilog-polar coordinates space.
-
-@deprecated This function produces same result as cv::warpPolar(src, dst, src.size(), center, maxRadius, flags+WARP_POLAR_LOG);
-
-@internal
-Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image d)"):
-\f[\begin{array}{l}
-  dst( \rho , \phi ) = src(x,y) \\
-  dst.size() \leftarrow src.size()
-\end{array}\f]
-
-where
-\f[\begin{array}{l}
-  I = (dx,dy) = (x - center.x,y - center.y) \\
-  \rho = M \cdot log_e(\texttt{magnitude} (I)) ,\\
-  \phi = Kangle \cdot \texttt{angle} (I) \\
-\end{array}\f]
-
-and
-\f[\begin{array}{l}
-  M = src.cols / log_e(maxRadius) \\
-  Kangle = src.rows / 2\Pi \\
-\end{array}\f]
-
-The function emulates the human "foveal" vision and can be used for fast scale and
-rotation-invariant template matching, for object tracking and so forth.
-@param src Source image
-@param dst Destination image. It will have same size and type as src.
-@param center The transformation center; where the output precision is maximal
-@param M Magnitude scale parameter. It determines the radius of the bounding circle to transform too.
-@param flags A combination of interpolation methods, see #InterpolationFlags
-
-@note
--   The function can not operate in-place.
--   To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
-
-@sa cv::linearPolar
-@endinternal
-*/
-CV_EXPORTS_W void logPolar( InputArray src, OutputArray dst,
-                            Point2f center, double M, int flags );
-
-/** @brief Remaps an image to polar coordinates space.
-
-@deprecated This function produces same result as cv::warpPolar(src, dst, src.size(), center, maxRadius, flags)
-
-@internal
-Transform the source image using the following transformation (See @ref polar_remaps_reference_image "Polar remaps reference image c)"):
-\f[\begin{array}{l}
-  dst( \rho , \phi ) = src(x,y) \\
-  dst.size() \leftarrow src.size()
-\end{array}\f]
-
-where
-\f[\begin{array}{l}
-  I = (dx,dy) = (x - center.x,y - center.y) \\
-  \rho = Kmag \cdot \texttt{magnitude} (I) ,\\
-  \phi = angle \cdot \texttt{angle} (I)
-\end{array}\f]
-
-and
-\f[\begin{array}{l}
-  Kx = src.cols / maxRadius \\
-  Ky = src.rows / 2\Pi
-\end{array}\f]
-
-
-@param src Source image
-@param dst Destination image. It will have same size and type as src.
-@param center The transformation center;
-@param maxRadius The radius of the bounding circle to transform. It determines the inverse magnitude scale parameter too.
-@param flags A combination of interpolation methods, see #InterpolationFlags
-
-@note
--   The function can not operate in-place.
--   To calculate magnitude and angle in degrees #cartToPolar is used internally thus angles are measured from 0 to 360 with accuracy about 0.3 degrees.
-
-@sa cv::logPolar
-@endinternal
-*/
-CV_EXPORTS_W void linearPolar( InputArray src, OutputArray dst,
-                               Point2f center, double maxRadius, int flags );
-
 
 /** \brief Remaps an image to polar or semilog-polar coordinates space
 
