@@ -9,10 +9,7 @@
 // Link to original inference code: https://github.com/HonglinChu/NanoTrack
 // Link to original training repo: https://github.com/HonglinChu/SiamTrackers/tree/master/NanoTrack
 
-#include "../precomp.hpp"
-#ifdef HAVE_OPENCV_DNN
-#include "opencv2/dnn.hpp"
-#endif
+#include "precomp.hpp"
 
 namespace cv {
 
@@ -30,16 +27,10 @@ TrackerNano::Params::Params()
 {
     backbone = "backbone.onnx";
     neckhead = "neckhead.onnx";
-#ifdef HAVE_OPENCV_DNN
     backend = dnn::DNN_BACKEND_DEFAULT;
     target = dnn::DNN_TARGET_CPU;
-#else
-    backend = -1;  // invalid value
-    target = -1;  // invalid value
-#endif
 }
 
-#ifdef HAVE_OPENCV_DNN
 static void softmax(const Mat& src, Mat& dst)
 {
     Mat maxVal;
@@ -360,11 +351,4 @@ Ptr<TrackerNano> TrackerNano::create(const dnn::Net& backbone, const dnn::Net& n
     return makePtr<TrackerNanoImpl>(backbone, neckhead);
 }
 
-#else  // OPENCV_HAVE_DNN
-Ptr<TrackerNano> TrackerNano::create(const TrackerNano::Params& parameters)
-{
-    CV_UNUSED(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use NanoTrack, the tracking module needs to be built with opencv_dnn !");
-}
-#endif  // OPENCV_HAVE_DNN
-}
+} // namespace cv

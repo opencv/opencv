@@ -2,15 +2,15 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#ifndef OPENCV_OBJDETECT_FACE_HPP
-#define OPENCV_OBJDETECT_FACE_HPP
+#ifndef OPENCV_DNN_ALGORITHMS_FACE_HPP
+#define OPENCV_DNN_ALGORITHMS_FACE_HPP
 
 #include <opencv2/core.hpp>
 
 namespace cv
 {
 
-//! @addtogroup objdetect_dnn_face
+//! @addtogroup dnn_algorithms_dnn_face
 //! @{
 
 /** @brief DNN-based face detector

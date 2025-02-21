@@ -2,11 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include "../precomp.hpp"
-
-#ifdef HAVE_OPENCV_DNN
-#include "opencv2/dnn.hpp"
-#endif
+#include "precomp.hpp"
 
 namespace cv {
 
@@ -25,16 +21,9 @@ TrackerDaSiamRPN::Params::Params()
     model = "dasiamrpn_model.onnx";
     kernel_cls1 = "dasiamrpn_kernel_cls1.onnx";
     kernel_r1 = "dasiamrpn_kernel_r1.onnx";
-#ifdef HAVE_OPENCV_DNN
     backend = dnn::DNN_BACKEND_DEFAULT;
     target = dnn::DNN_TARGET_CPU;
-#else
-    backend = -1;  // invalid value
-    target = -1;  // invalid value
-#endif
 }
-
-#ifdef HAVE_OPENCV_DNN
 
 template <typename T> static
 T sizeCal(const T& w, const T& h)
@@ -443,11 +432,4 @@ Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const dnn::Net& siam_rpn, const d
     return makePtr<TrackerDaSiamRPNImpl>(siam_rpn, kernel_cls1, kernel_r1);
 }
 
-#else  // OPENCV_HAVE_DNN
-Ptr<TrackerDaSiamRPN> TrackerDaSiamRPN::create(const TrackerDaSiamRPN::Params& parameters)
-{
-    (void)(parameters);
-    CV_Error(cv::Error::StsNotImplemented, "to use DaSiamRPN, the tracking module needs to be built with opencv_dnn !");
-}
-#endif  // OPENCV_HAVE_DNN
-}
+} // namespace cv

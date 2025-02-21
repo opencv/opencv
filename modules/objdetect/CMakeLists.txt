@@ -4,7 +4,7 @@ ocv_define_module(objdetect
     opencv_imgproc
     opencv_calib3d
     OPTIONAL
-        opencv_dnn
+        opencv_dnn_algorithms
     WRAP
         python
         java
