@@ -46,9 +46,6 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
-#ifdef HAVE_OPENCV_DNN
-# include "opencv2/dnn.hpp"
-#endif
 
 namespace cv
 {
@@ -829,12 +826,10 @@ public:
     static CV_WRAP
     Ptr<TrackerGOTURN> create(const TrackerGOTURN::Params& parameters = TrackerGOTURN::Params());
 
-#ifdef HAVE_OPENCV_DNN
     /** @brief Constructor
     @param model pre-loaded GOTURN model
     */
-    static CV_WRAP Ptr<TrackerGOTURN> create(const dnn::Net& model);
-#endif
+    static CV_WRAP Ptr<TrackerGOTURN> create(cv::DeepNeuralNet & model);
 
     //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
@@ -863,15 +858,13 @@ public:
     static CV_WRAP
     Ptr<TrackerDaSiamRPN> create(const TrackerDaSiamRPN::Params& parameters = TrackerDaSiamRPN::Params());
 
-#ifdef HAVE_OPENCV_DNN
     /** @brief Constructor
      *  @param siam_rpn pre-loaded SiamRPN model
      *  @param kernel_cls1 pre-loaded CLS model
      *  @param kernel_r1 pre-loaded R1 model
      */
     static CV_WRAP
-    Ptr<TrackerDaSiamRPN> create(const dnn::Net& siam_rpn, const dnn::Net& kernel_cls1, const dnn::Net& kernel_r1);
-#endif
+    Ptr<TrackerDaSiamRPN> create(cv::DeepNeuralNet & siam_rpn, cv::DeepNeuralNet & kernel_cls1, cv::DeepNeuralNet & kernel_r1);
 
     /** @brief Return tracking score
     */
@@ -911,14 +904,12 @@ public:
     static CV_WRAP
     Ptr<TrackerNano> create(const TrackerNano::Params& parameters = TrackerNano::Params());
 
-#ifdef HAVE_OPENCV_DNN
     /** @brief Constructor
      *  @param backbone pre-loaded backbone model
      *  @param neckhead pre-loaded neckhead model
      */
     static CV_WRAP
-    Ptr<TrackerNano> create(const dnn::Net& backbone, const dnn::Net& neckhead);
-#endif
+    Ptr<TrackerNano> create(cv::DeepNeuralNet & backbone, cv::DeepNeuralNet & neckhead);
 
     /** @brief Return tracking score
     */
@@ -958,7 +949,6 @@ public:
     static CV_WRAP
     Ptr<TrackerVit> create(const TrackerVit::Params& parameters = TrackerVit::Params());
 
-#ifdef HAVE_OPENCV_DNN
     /** @brief Constructor
      *  @param model pre-loaded DNN model
      *  @param meanvalue mean value for image preprocessing
@@ -966,9 +956,8 @@ public:
      *  @param tracking_score_threshold threshold for tracking score
      */
     static CV_WRAP
-    Ptr<TrackerVit> create(const dnn::Net& model, Scalar meanvalue = Scalar(0.485, 0.456, 0.406),
+    Ptr<TrackerVit> create(cv::DeepNeuralNet & model, Scalar meanvalue = Scalar(0.485, 0.456, 0.406),
                            Scalar stdvalue = Scalar(0.229, 0.224, 0.225), float tracking_score_threshold = 0.20f);
-#endif
 
     /** @brief Return tracking score
     */
