@@ -6,6 +6,7 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/objdetect.hpp"
+#include "opencv2/mcc.hpp"
 
 #include <random>
 
