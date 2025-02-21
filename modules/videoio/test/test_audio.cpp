@@ -135,7 +135,16 @@ TEST_P(Audio, audio)
     doTest();
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Audio, testing::ValuesIn(audioParams));
+inline static std::string Audio_name_printer(const testing::TestParamInfo<Audio::ParamType>& info)
+{
+    std::ostringstream out;
+    out << getExtensionSafe(get<0>(info.param)) << "_"
+        << get<1>(info.param) << "CN" << "_"
+        << getBackendNameSafe(get<4>(info.param));
+    return out.str();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Audio, testing::ValuesIn(audioParams), Audio_name_printer);
 
 class MediaTestFixture : public AudioBaseTest, public testing::TestWithParam <paramCombination>
 {
@@ -283,7 +292,16 @@ const paramCombination mediaParams[] =
 #endif  // _WIN32
 };
 
-INSTANTIATE_TEST_CASE_P(/**/, Media, testing::ValuesIn(mediaParams));
+inline static std::string Media_name_printer(const testing::TestParamInfo<Media::ParamType>& info)
+{
+    std::ostringstream out;
+    out << getExtensionSafe(get<0>(info.param)) << "_"
+        << get<1>(info.param) << "CN" << "_"
+        << getBackendNameSafe(get<10>(info.param));
+    return out.str();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Media, testing::ValuesIn(mediaParams), Media_name_printer);
 
 TEST(AudioOpenCheck, bad_arg_invalid_audio_stream)
 {

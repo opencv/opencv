@@ -8,49 +8,49 @@ on:
 jobs:
 
   Linux:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux.yaml@fix-videoio-filters
     with:
-      workflow_branch: main
+      workflow_branch: fix-videoio-filters
 
   Ubuntu2004-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64.yaml@fix-videoio-filters
 
   Ubuntu2004-ARM64-Debug:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64-Debug.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64-Debug.yaml@fix-videoio-filters
 
   Ubuntu2004-x64-OpenVINO:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-OpenVINO.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-OpenVINO.yaml@fix-videoio-filters
 
   Ubuntu2004-x64-CUDA:
     if: "${{ contains(github.event.pull_request.labels.*.name, 'category: dnn') }} || ${{ contains(github.event.pull_request.labels.*.name, 'category: dnn (onnx)') }}"
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-Cuda.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-Cuda.yaml@fix-videoio-filters
 
   Windows10-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10.yaml@fix-videoio-filters
 
   Windows10-x64-Vulkan:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-Vulkan.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-Vulkan.yaml@fix-videoio-filters
 
   macOS-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64.yaml@fix-videoio-filters
 
   macOS-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-x86_64.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-x86_64.yaml@fix-videoio-filters
 
   macOS-ARM64-Vulkan:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64-Vulkan.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64-Vulkan.yaml@fix-videoio-filters
 
   iOS:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-iOS.yaml@fix-videoio-filters
 
   Android-SDK:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-4.x-Android-SDK.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-4.x-Android-SDK.yaml@fix-videoio-filters
 
   TIM-VX:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@fix-videoio-filters
 
   docs:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-docs.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-docs.yaml@fix-videoio-filters
 
   Linux-RISC-V-Clang:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-RISCV.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-RISCV.yaml@fix-videoio-filters

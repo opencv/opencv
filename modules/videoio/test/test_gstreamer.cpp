@@ -218,7 +218,14 @@ static const string bunny_params[] = {
     string("mjpg.avi")
 };
 
-INSTANTIATE_TEST_CASE_P(videoio, gstreamer_bunny, testing::ValuesIn(bunny_params));
+inline static std::string gstreamer_bunny_name_printer(const testing::TestParamInfo<gstreamer_bunny::ParamType>& info)
+{
+    std::ostringstream out;
+    out << extToStringSafe(info.param);
+    return out.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, gstreamer_bunny, testing::ValuesIn(bunny_params), gstreamer_bunny_name_printer);
 
 
 }} // namespace
