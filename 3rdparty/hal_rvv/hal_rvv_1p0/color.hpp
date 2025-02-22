@@ -5,8 +5,35 @@
 #define OPENCV_HAL_RVV_COLOR_HPP_INCLUDED
 
 #include <riscv_vector.h>
+#include <thread>
+#include <future>
 
 namespace cv { namespace cv_hal_rvv {
+
+namespace color {
+    template<typename F, typename... Args>
+    inline int parallel_for(int n, F func, Args&&... args)
+    {
+        int num_threads = std::thread::hardware_concurrency();
+        int length = (n + num_threads - 1) / num_threads;
+        auto futures = new std::future<int>[num_threads];
+        for (int x = 0; x < num_threads; x++)
+        {
+            futures[x] = std::async(std::launch::async, func, x * length, std::min(n, (x + 1) * length), std::forward<Args>(args)...);
+        }
+        for (int x = 0; x < num_threads; x++)
+        {
+            if (futures[x].get() != CV_HAL_ERROR_OK)
+            {
+                delete[] futures;
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
+            }
+        }
+
+        delete[] futures;
+        return CV_HAL_ERROR_OK;
+    }
+} // cv::cv_hal_rvv::color
 
 namespace BGRtoBGR {
 #undef cv_hal_cvtBGRtoBGR
@@ -39,7 +66,7 @@ template<> struct rvv<float>
 };
 
 template<typename T>
-inline int cvtBGRtoBGR(const T * src, size_t src_step, T * dst, size_t dst_step, int width, int height, int scn, int dcn, bool swapBlue)
+inline int cvtBGRtoBGR(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, int dcn, bool swapBlue)
 {
     if ((scn != 3 && scn != 4) || (dcn != 3 && dcn != 4))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -48,14 +75,14 @@ inline int cvtBGRtoBGR(const T * src, size_t src_step, T * dst, size_t dst_step,
 
     if (scn == dcn && !swapBlue)
     {
-        for (int i = 0; i < height; i++)
+        for (int i = start; i < end; i++)
             memcpy(dst + dst_step * i, src + src_step * i, sizeof(T) * width * scn);
     }
     else
     {
         auto constant = rvv<T>::vmv_v_x(typeid(T) == typeid(float) ? 1 : std::numeric_limits<T>::max(), rvv<T>::vsetvlmax());
         int vl;
-        for (int i = 0; i < height; i++)
+        for (int i = start; i < end; i++)
         {
             for (int j = 0; j < width; j += vl)
             {
@@ -83,11 +110,11 @@ inline int cvtBGRtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return cvtBGRtoBGR<uchar>(reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, height, scn, dcn, swapBlue);
+        return color::parallel_for(height, cvtBGRtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, dcn, swapBlue);
     case CV_16U:
-        return cvtBGRtoBGR<ushort>(reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, height, scn, dcn, swapBlue);
+        return color::parallel_for(height, cvtBGRtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, dcn, swapBlue);
     case CV_32F:
-        return cvtBGRtoBGR<float>(reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, height, scn, dcn, swapBlue);
+        return color::parallel_for(height, cvtBGRtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, dcn, swapBlue);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -134,7 +161,7 @@ template<> struct rvv<float>
 };
 
 template<typename T>
-inline int cvtBGRtoGray(const T * src, size_t src_step, T * dst, size_t dst_step, int width, int height, int scn, bool swapBlue)
+inline int cvtBGRtoGray(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, bool swapBlue)
 {
     if (scn != 3 && scn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -142,7 +169,7 @@ inline int cvtBGRtoGray(const T * src, size_t src_step, T * dst, size_t dst_step
     dst_step /= sizeof(T);
 
     int vl;
-    for (int i = 0; i < height; i++)
+    for (int i = start; i < end; i++)
     {
         for (int j = 0; j < width; j += vl)
         {
@@ -163,11 +190,11 @@ inline int cvtBGRtoGray(const uchar * src_data, size_t src_step, uchar * dst_dat
     switch (depth)
     {
     case CV_8U:
-        return cvtBGRtoGray<uchar>(reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, height, scn, swapBlue);
+        return color::parallel_for(height, cvtBGRtoGray<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue);
     case CV_16U:
-        return cvtBGRtoGray<ushort>(reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, height, scn, swapBlue);
+        return color::parallel_for(height, cvtBGRtoGray<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue);
     case CV_32F:
-        return cvtBGRtoGray<float>(reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, height, scn, swapBlue);
+        return color::parallel_for(height, cvtBGRtoGray<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -187,11 +214,10 @@ template<> struct rvv<uchar>
     static inline vuint8m1_t vlse(const uchar* a, ptrdiff_t b, size_t c) { return __riscv_vlse8_v_u8m1(a, b, c); }
     static inline void vsse(uchar* a, ptrdiff_t b, vuint8m1_t c, size_t d) { return __riscv_vsse8(a, b, c, d); }
     static inline vint32m4_t vcvt0(vuint8m1_t a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(a, b)); }
-    static inline vuint8m1_t vcvt1(vint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(a), b, __RISCV_VXRM_RNU, c), 0, __RISCV_VXRM_RNU, c); }
+    static inline vuint8m1_t vcvt1(vint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vmax(a, 0, c)), b, __RISCV_VXRM_RNU, c), 0, __RISCV_VXRM_RNU, c); }
     static inline vint32m4_t vssrl(vint32m4_t a, size_t b, size_t c) { return __riscv_vssra(a, b, __RISCV_VXRM_RNU, c); }
     static inline vint32m4_t vsub(vint32m4_t a, vint32m4_t b, size_t c) { return __riscv_vsub(a, b, c); }
     static inline vint32m4_t vmul(vint32m4_t a, int b, size_t c) { return __riscv_vmul(a, b, c); }
-    static inline vint32m4_t vmax(vint32m4_t a, int b, size_t c) { return __riscv_vmax(a, b, c); }
     static inline vint32m4_t vmadd(vint32m4_t a, int b, vint32m4_t c, size_t d) { return __riscv_vmadd(a, b, c, d); }
     static inline vint32m4_t vmv_v_x(int a, size_t b) { return __riscv_vmv_v_x_i32m4(a, b); }
 };
@@ -203,11 +229,10 @@ template<> struct rvv<ushort>
     static inline vuint16m2_t vlse(const ushort* a, ptrdiff_t b, size_t c) { return __riscv_vlse16_v_u16m2(a, b, c); }
     static inline void vsse(ushort* a, ptrdiff_t b, vuint16m2_t c, size_t d) { return __riscv_vsse16(a, b, c, d); }
     static inline vint32m4_t vcvt0(vuint16m2_t a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf2(a, b)); }
-    static inline vuint16m2_t vcvt1(vint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(a), b, __RISCV_VXRM_RNU, c); }
+    static inline vuint16m2_t vcvt1(vint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vmax(a, 0, c)), b, __RISCV_VXRM_RNU, c); }
     static inline vint32m4_t vssrl(vint32m4_t a, size_t b, size_t c) { return __riscv_vssra(a, b, __RISCV_VXRM_RNU, c); }
     static inline vint32m4_t vsub(vint32m4_t a, vint32m4_t b, size_t c) { return __riscv_vsub(a, b, c); }
     static inline vint32m4_t vmul(vint32m4_t a, int b, size_t c) { return __riscv_vmul(a, b, c); }
-    static inline vint32m4_t vmax(vint32m4_t a, int b, size_t c) { return __riscv_vmax(a, b, c); }
     static inline vint32m4_t vmadd(vint32m4_t a, int b, vint32m4_t c, size_t d) { return __riscv_vmadd(a, b, c, d); }
     static inline vint32m4_t vmv_v_x(int a, size_t b) { return __riscv_vmv_v_x_i32m4(a, b); }
 };
@@ -223,13 +248,12 @@ template<> struct rvv<float>
     static inline vfloat32m4_t vssrl(vfloat32m4_t a, size_t, size_t) { return a; }
     static inline vfloat32m4_t vsub(vfloat32m4_t a, vfloat32m4_t b, size_t c) { return __riscv_vfsub(a, b, c); }
     static inline vfloat32m4_t vmul(vfloat32m4_t a, float b, size_t c) { return __riscv_vfmul(a, b, c); }
-    static inline vfloat32m4_t vmax(vfloat32m4_t a, float, size_t) { return a; }
     static inline vfloat32m4_t vmadd(vfloat32m4_t a, float b, vfloat32m4_t c, size_t d) { return __riscv_vfmadd(a, b, c, d); }
     static inline vfloat32m4_t vmv_v_x(float a, size_t b) { return __riscv_vfmv_v_f_f32m4(a, b); }
 };
 
 template<typename T>
-inline int cvtBGRtoYUV(const T * src, size_t src_step, T * dst, size_t dst_step, int width, int height, int scn, bool swapBlue, bool isCbCr)
+inline int cvtBGRtoYUV(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, bool swapBlue, bool isCbCr)
 {
     if (scn != 3 && scn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -238,7 +262,7 @@ inline int cvtBGRtoYUV(const T * src, size_t src_step, T * dst, size_t dst_step,
 
     auto delta = rvv<T>::vmv_v_x((1 << 14) * (typeid(T) == typeid(float) ? 0.5f : std::numeric_limits<T>::max() / 2 + 1), rvv<T>::vsetvlmax());
     int vl;
-    for (int i = 0; i < height; i++)
+    for (int i = start; i < end; i++)
     {
         for (int j = 0; j < width; j += vl)
         {
@@ -250,9 +274,9 @@ inline int cvtBGRtoYUV(const T * src, size_t src_step, T * dst, size_t dst_step,
             rvv<T>::vsse(dst + dst_step * i + j * 3, sizeof(T) * 3, rvv<T>::vcvt1(vec_dstY, 14, vl), vl);
 
             vec_dstY = rvv<T>::vssrl(vec_dstY, 14, vl);
-            auto vec_dstC = rvv<T>::vmax(rvv<T>::vmadd(rvv<T>::vsub(vec_srcB, vec_dstY, vl), isCbCr ? rvv<T>::YCB : rvv<T>::B2U, delta, vl), 0, vl);
+            auto vec_dstC = rvv<T>::vmadd(rvv<T>::vsub(vec_srcB, vec_dstY, vl), isCbCr ? rvv<T>::YCB : rvv<T>::B2U, delta, vl);
             rvv<T>::vsse(dst + dst_step * i + j * 3 + 1, sizeof(T) * 3, rvv<T>::vcvt1(vec_dstC, 14, vl), vl);
-            vec_dstC = rvv<T>::vmax(rvv<T>::vmadd(rvv<T>::vsub(vec_srcR, vec_dstY, vl), isCbCr ? rvv<T>::YCR : rvv<T>::R2V, delta, vl), 0, vl);
+            vec_dstC = rvv<T>::vmadd(rvv<T>::vsub(vec_srcR, vec_dstY, vl), isCbCr ? rvv<T>::YCR : rvv<T>::R2V, delta, vl);
             rvv<T>::vsse(dst + dst_step * i + j * 3 + 2, sizeof(T) * 3, rvv<T>::vcvt1(vec_dstC, 14, vl), vl);
         }
     }
@@ -265,11 +289,11 @@ inline int cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return cvtBGRtoYUV<uchar>(reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, height, scn, swapBlue, isCbCr);
+        return color::parallel_for(height, cvtBGRtoYUV<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
     case CV_16U:
-        return cvtBGRtoYUV<ushort>(reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, height, scn, swapBlue, isCbCr);
+        return color::parallel_for(height, cvtBGRtoYUV<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
     case CV_32F:
-        return cvtBGRtoYUV<float>(reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, height, scn, swapBlue, isCbCr);
+        return color::parallel_for(height, cvtBGRtoYUV<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
