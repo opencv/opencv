@@ -244,6 +244,8 @@ OCV_OPTION(WITH_VTK "Include VTK library support (and build opencv_viz module ei
 OCV_OPTION(WITH_CUDA "Include NVidia Cuda Runtime support" OFF
   VISIBLE_IF NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_CUDA)
+  OCV_OPTION(MATCH_CUDA_MINOR_VERSION "Require match the cuda minor version to link against produced libraries." ON
+  VISIBLE_IF WITH_CUDA)
 OCV_OPTION(WITH_CUFFT "Include NVidia Cuda Fast Fourier Transform (FFT) library support" WITH_CUDA
   VISIBLE_IF WITH_CUDA
   VERIFY HAVE_CUFFT)

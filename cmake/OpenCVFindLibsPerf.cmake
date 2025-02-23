@@ -39,6 +39,34 @@ if(WITH_IPP)
 endif()
 
 # --- CUDA ---
+# Function to calculate the version range based on match_minor flag
+function(get_version_range version match_minor lower_bound upper_bound)
+    # Split the version into components
+    string(REPLACE "." ";" version_list ${version})
+    list(LENGTH version_list version_length)
+
+    # Extract major and minor components
+    list(GET version_list 0 major)
+    if(version_length GREATER 1)
+        list(GET version_list 1 minor)
+    else()
+        set(minor 0)  # Default minor to 0 if not provided
+    endif()
+
+    # Determine the range based on match_minor flag
+    if(match_minor)
+        # Match minor: range is [major.minor, major.<minor + 1>)
+        math(EXPR new_minor "${minor} + 1")
+        set(${lower_bound} "${major}.${minor}" PARENT_SCOPE)
+        set(${upper_bound} "${major}.${new_minor}" PARENT_SCOPE)
+    else()
+        # Do not match minor: range is [major, <major + 1>)
+        math(EXPR new_major "${major} + 1")
+        set(${lower_bound} "${major}" PARENT_SCOPE)
+        set(${upper_bound} "${new_major}" PARENT_SCOPE)
+    endif()
+endfunction()
+
 if(WITH_CUDA)
   if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
     include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDALanguage.cmake")
@@ -51,6 +79,7 @@ CUDA support will be disabled in OpenCV build.
 To eliminate this warning remove WITH_CUDA=ON CMake configuration option.
 ")
   endif()
+  get_version_range(${CUDA_VERSION_STRING} ${MATCH_CUDA_MINOR_VERSION} CUDA_VERSION_MIN CUDA_VERSION_MAX)  
 endif(WITH_CUDA)
 
 # --- Eigen ---
