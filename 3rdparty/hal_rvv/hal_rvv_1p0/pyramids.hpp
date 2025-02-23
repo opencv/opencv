@@ -5,6 +5,7 @@
 #define OPENCV_HAL_RVV_PYRAMIDS_HPP_INCLUDED
 
 #include <riscv_vector.h>
+#include "thread_pool.hpp"
 
 namespace cv { namespace cv_hal_rvv { namespace pyramids {
 
@@ -424,77 +425,7 @@ template<> struct pyrUpVec1<float, float>
 };
 
 template<typename T, typename WT>
-struct PyrDownInvoker : ParallelLoopBody
-{
-    PyrDownInvoker(const uchar* _src_data, size_t _src_step, int _src_width, int _src_height, uchar* _dst_data, size_t _dst_step, int _dst_width, int _dst_height, int _cn, int _borderType, int* _tabR, int* _tabM, int* _tabL)
-    {
-        src_data = _src_data;
-        src_step = _src_step;
-        src_width = _src_width;
-        src_height = _src_height;
-        dst_data = _dst_data;
-        dst_step = _dst_step;
-        dst_width = _dst_width;
-        dst_height = _dst_height;
-        cn = _cn;
-        borderType = _borderType;
-        tabR = _tabR;
-        tabM = _tabM;
-        tabL = _tabL;
-    }
-
-    void operator()(const Range& range) const CV_OVERRIDE;
-
-    const uchar* src_data;
-    size_t src_step;
-    int src_width;
-    int src_height;
-    uchar* dst_data;
-    size_t dst_step;
-    int dst_width;
-    int dst_height;
-    int cn;
-    int borderType;
-    int* tabR;
-    int* tabM;
-    int* tabL;
-};
-
-// the algorithm is copied from imgproc/src/pyramids.cpp,
-// in the function template void cv::pyrDown_
-template<typename T, typename WT>
-inline int pyrDown(const uchar* src_data, size_t src_step, int src_width, int src_height, uchar* dst_data, size_t dst_step, int dst_width, int dst_height, int cn, int borderType)
-{
-    const int PD_SZ = 5;
-
-    std::vector<int> _tabM(dst_width * cn), _tabL(cn * (PD_SZ + 2)), _tabR(cn * (PD_SZ + 2));
-    int *tabM = _tabM.data(), *tabL = _tabL.data(), *tabR = _tabR.data();
-
-    CV_Assert( src_width > 0 && src_height > 0 &&
-               std::abs(dst_width*2 - src_width) <= 2 &&
-               std::abs(dst_height*2 - src_height) <= 2 );
-    int width0 = std::min((src_width-PD_SZ/2-1)/2 + 1, dst_width);
-
-    for (int x = 0; x <= PD_SZ+1; x++)
-    {
-        int sx0 = borderInterpolate(x - PD_SZ/2, src_width, borderType)*cn;
-        int sx1 = borderInterpolate(x + width0*2 - PD_SZ/2, src_width, borderType)*cn;
-        for (int k = 0; k < cn; k++)
-        {
-            tabL[x*cn + k] = sx0 + k;
-            tabR[x*cn + k] = sx1 + k;
-        }
-    }
-
-    for (int x = 0; x < dst_width*cn; x++)
-        tabM[x] = (x/cn)*2*cn + x % cn;
-
-    cv::parallel_for_(Range(0,dst_height), PyrDownInvoker<T, WT>(src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, cn, borderType, tabR, tabM, tabL), cv::getNumThreads());
-    return CV_HAL_ERROR_OK;
-}
-
-template<typename T, typename WT>
-void PyrDownInvoker<T, WT>::operator()(const Range& range) const
+int PyrDownInvoker(int start, int end, const uchar* src_data, size_t src_step, int src_width, int src_height, uchar* dst_data, size_t dst_step, int dst_width, int cn, int borderType, int* tabR, int* tabM, int* tabL)
 {
     const int PD_SZ = 5;
 
@@ -503,12 +434,12 @@ void PyrDownInvoker<T, WT>::operator()(const Range& range) const
     WT* buf = (WT*)(((size_t)_buf.data() + 15) & -16);
     WT* rows[PD_SZ];
 
-    int sy0 = -PD_SZ/2, sy = range.start * 2 + sy0, width0 = std::min((src_width-PD_SZ/2-1)/2 + 1, dst_width);
+    int sy0 = -PD_SZ/2, sy = start * 2 + sy0, width0 = std::min((src_width-PD_SZ/2-1)/2 + 1, dst_width);
 
     int _dst_width = dst_width * cn;
     width0 *= cn;
 
-    for (int y = range.start; y < range.end; y++)
+    for (int y = start; y < end; y++)
     {
         T* dst = reinterpret_cast<T*>(dst_data + dst_step * y);
         WT *row0, *row1, *row2, *row3, *row4;
@@ -551,6 +482,39 @@ void PyrDownInvoker<T, WT>::operator()(const Range& range) const
 
         pyrDownVec1<T, WT>()(row0, row1, row2, row3, row4, dst, _dst_width);
     }
+    return CV_HAL_ERROR_OK;
+}
+
+// the algorithm is copied from imgproc/src/pyramids.cpp,
+// in the function template void cv::pyrDown_
+template<typename T, typename WT>
+inline int pyrDown(const uchar* src_data, size_t src_step, int src_width, int src_height, uchar* dst_data, size_t dst_step, int dst_width, int dst_height, int cn, int borderType)
+{
+    const int PD_SZ = 5;
+
+    std::vector<int> _tabM(dst_width * cn), _tabL(cn * (PD_SZ + 2)), _tabR(cn * (PD_SZ + 2));
+    int *tabM = _tabM.data(), *tabL = _tabL.data(), *tabR = _tabR.data();
+
+    CV_Assert( src_width > 0 && src_height > 0 &&
+               std::abs(dst_width*2 - src_width) <= 2 &&
+               std::abs(dst_height*2 - src_height) <= 2 );
+    int width0 = std::min((src_width-PD_SZ/2-1)/2 + 1, dst_width);
+
+    for (int x = 0; x <= PD_SZ+1; x++)
+    {
+        int sx0 = borderInterpolate(x - PD_SZ/2, src_width, borderType)*cn;
+        int sx1 = borderInterpolate(x + width0*2 - PD_SZ/2, src_width, borderType)*cn;
+        for (int k = 0; k < cn; k++)
+        {
+            tabL[x*cn + k] = sx0 + k;
+            tabR[x*cn + k] = sx1 + k;
+        }
+    }
+
+    for (int x = 0; x < dst_width*cn; x++)
+        tabM[x] = (x/cn)*2*cn + x % cn;
+
+    return ThreadPool::parallel_for(dst_height, -1, PyrDownInvoker<T, WT>, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, cn, borderType, tabR, tabM, tabL);
 }
 
 // the algorithm is copied from imgproc/src/pyramids.cpp,
