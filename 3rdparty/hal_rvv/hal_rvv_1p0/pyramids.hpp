@@ -467,8 +467,7 @@ inline int pyrDown(const uchar* src_data, size_t src_step, int src_width, int sr
 {
     const int PD_SZ = 5;
 
-    AutoBuffer<int> _tabM(dst_width * cn), _tabL(cn * (PD_SZ + 2)),
-        _tabR(cn * (PD_SZ + 2));
+    std::vector<int> _tabM(dst_width * cn), _tabL(cn * (PD_SZ + 2)), _tabR(cn * (PD_SZ + 2));
     int *tabM = _tabM.data(), *tabL = _tabL.data(), *tabR = _tabR.data();
 
     CV_Assert( src_width > 0 && src_height > 0 &&
@@ -499,9 +498,9 @@ void PyrDownInvoker<T, WT>::operator()(const Range& range) const
 {
     const int PD_SZ = 5;
 
-    int bufstep = (int)alignSize(dst_width*cn, 16);
-    AutoBuffer<WT> _buf(bufstep*PD_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf.data(), 16);
+    int bufstep = (dst_width*cn + 15) & -16;
+    std::vector<WT> _buf(bufstep*PD_SZ + 16);
+    WT* buf = (WT*)(((size_t)_buf.data() + 15) & -16);
     WT* rows[PD_SZ];
 
     int sy0 = -PD_SZ/2, sy = range.start * 2 + sy0, width0 = std::min((src_width-PD_SZ/2-1)/2 + 1, dst_width);
@@ -561,10 +560,10 @@ inline int pyrUp(const uchar* src_data, size_t src_step, int src_width, int src_
 {
     const int PU_SZ = 3;
 
-    int bufstep = (int)alignSize((dst_width+1)*cn, 16);
-    AutoBuffer<WT> _buf(bufstep*PU_SZ + 16);
-    WT* buf = alignPtr((WT*)_buf.data(), 16);
-    AutoBuffer<int> _dtab(src_width*cn);
+    int bufstep = ((dst_width+1)*cn + 15) & -16;
+    std::vector<WT> _buf(bufstep*PU_SZ + 16);
+    WT* buf = (WT*)(((size_t)_buf.data() + 15) & -16);
+    std::vector<int> _dtab(src_width*cn);
     int* dtab = _dtab.data();
     WT* rows[PU_SZ];
 
