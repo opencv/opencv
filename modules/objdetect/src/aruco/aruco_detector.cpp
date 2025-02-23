@@ -655,13 +655,13 @@ struct ArucoDetector::ArucoDetectorImpl {
     }
 
     /**
-     * @brief  FILTER OUT NEAR CANDIDATE PAIRS
+     * @brief FILTER OUT NEAR CANDIDATES PAIRS AND TOO NEAR CANDIDATES TO IMAGE BORDER
      *
-     * save the outter/inner border (i.e. potential candidates) to vector<MarkerCandidateTree>,
+     * save the outer/inner border (i.e. potential candidates) to vector<MarkerCandidateTree>,
      * clear candidates and contours
      */
     vector<MarkerCandidateTree>
-    filterTooCloseCandidates(const Size &imageSize, vector<vector<Point2f> > &candidates, vector<vector<Point> > &contours) {
+    filterCandidates(const Size &imageSize, vector<vector<Point2f> > &candidates, vector<vector<Point> > &contours) {
         CV_Assert(detectorParams.minMarkerDistanceRate >= 0. && detectorParams.minDistanceToBorder >= 0);
         vector<MarkerCandidateTree> candidateTree(candidates.size());
         for(size_t i = 0ull; i < candidates.size(); i++) {
@@ -946,8 +946,8 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
         arucoDetectorImpl->detectCandidates(grey, candidates, contours);
     }
 
-     /// STEP 2.c FILTER OUT NEAR CANDIDATE PAIRS
-    auto selectedCandidates = arucoDetectorImpl->filterTooCloseCandidates(grey.size(), candidates, contours);
+     /// STEP 2.c FILTER OUT NEAR CANDIDATES PAIRS AND TOO NEAR CANDIDATES TO IMAGE BORDER
+    auto selectedCandidates = arucoDetectorImpl->filterCandidates(grey.size(), candidates, contours);
 
     /// STEP 2: Check candidate codification (identify markers)
     arucoDetectorImpl->identifyCandidates(grey, grey_pyramid, selectedCandidates, candidates, contours,
