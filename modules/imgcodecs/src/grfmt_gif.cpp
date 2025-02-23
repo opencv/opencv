@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "grfmt_gif.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 #ifdef HAVE_IMGCODEC_GIF
 namespace cv
@@ -13,7 +14,7 @@ namespace cv
 //////////////////////////////////////////////////////////////////////
 GifDecoder::GifDecoder() {
     m_signature = R"(GIF)";
-    m_type = CV_8UC4;
+    m_type = CV_8UC3;
     bgColor = -1;
     m_buf_supported = true;
     globalColorTableSize = 0;
@@ -171,12 +172,17 @@ bool GifDecoder::readData(Mat &img) {
             } else {
                 cvtColor(img_, img, COLOR_BGRA2BGR);
             }
-        } else {
+        } else if (img.channels() == 4){
             if (m_use_rgb) {
                 cvtColor(img_, img, COLOR_BGRA2RGBA);
             } else {
                 img_.copyTo(img);
             }
+        } else if (img.channels() == 1){
+            cvtColor(img_, img, COLOR_BGRA2GRAY);
+        } else {
+            CV_LOG_WARNING(NULL, cv::format("Unsupported channels: %d", img.channels()));
+            hasRead = false;
         }
     }
 
@@ -219,7 +225,7 @@ void GifDecoder::readExtensions() {
             len = (uchar)m_strm.getByte();
             CV_Assert(len == 4);
             auto flags = (uchar)m_strm.getByte();
-            m_strm.getWord(); // delay time, not used
+            m_animation.durations.push_back(m_strm.getWord() * 10); // delay time
             opMode = (GifOpMode)((flags & 0x1C) >> 2);
             hasTransparentColor = flags & 0x01;
             transparentColor = (uchar)m_strm.getByte();
@@ -293,11 +299,12 @@ void GifDecoder::code2pixel(Mat& img, int start, int k){
 bool GifDecoder::lzwDecode() {
     // initialization
     lzwMinCodeSize = m_strm.getByte();
+    const int lzwMaxSize = (1 << 12); // 4096 is the maximum size of the LZW table (12 bits)
     int lzwCodeSize = lzwMinCodeSize + 1;
     int clearCode = 1 << lzwMinCodeSize;
     int exitCode = clearCode + 1;
     CV_Assert(lzwCodeSize > 2 && lzwCodeSize <= 12);
-    std::vector<lzwNodeD> lzwExtraTable((1 << 12) + 1);
+    std::vector<lzwNodeD> lzwExtraTable(lzwMaxSize + 1);
     int colorTableSize = clearCode;
     int lzwTableSize = exitCode;
 
@@ -321,6 +328,7 @@ bool GifDecoder::lzwDecode() {
             // clear code
             if (!(code ^ clearCode)) {
                 lzwExtraTable.clear();
+                lzwExtraTable.resize(lzwMaxSize + 1);
                 // reset the code size, the same as that in the initialization part
                 lzwCodeSize  = lzwMinCodeSize + 1;
                 lzwTableSize = exitCode;
@@ -341,20 +349,24 @@ bool GifDecoder::lzwDecode() {
 
             // output code
             // 1. renew the lzw extra table
-            if (code < colorTableSize) {
-                lzwExtraTable[lzwTableSize].suffix = (uchar)code;
-                lzwTableSize ++;
-                lzwExtraTable[lzwTableSize].prefix.clear();
-                lzwExtraTable[lzwTableSize].prefix.push_back((uchar)code);
-                lzwExtraTable[lzwTableSize].length = 2;
-            } else if (code <= lzwTableSize) {
-                lzwExtraTable[lzwTableSize].suffix = lzwExtraTable[code].prefix[0];
-                lzwTableSize ++;
-                lzwExtraTable[lzwTableSize].prefix = lzwExtraTable[code].prefix;
-                lzwExtraTable[lzwTableSize].prefix.push_back(lzwExtraTable[code].suffix);
-                lzwExtraTable[lzwTableSize].length = lzwExtraTable[code].length + 1;
-            } else {
-                return false;
+            //    * notice that if the lzw table size is full,
+            //    * we should use the old table until a clear code is encountered
+            if (lzwTableSize < lzwMaxSize) {
+                if (code < colorTableSize) {
+                    lzwExtraTable[lzwTableSize].suffix = (uchar)code;
+                    lzwTableSize ++;
+                    lzwExtraTable[lzwTableSize].prefix.clear();
+                    lzwExtraTable[lzwTableSize].prefix.push_back((uchar)code);
+                    lzwExtraTable[lzwTableSize].length = 2;
+                } else if (code <= lzwTableSize) {
+                    lzwExtraTable[lzwTableSize].suffix = lzwExtraTable[code].prefix[0];
+                    lzwTableSize ++;
+                    lzwExtraTable[lzwTableSize].prefix = lzwExtraTable[code].prefix;
+                    lzwExtraTable[lzwTableSize].prefix.push_back(lzwExtraTable[code].suffix);
+                    lzwExtraTable[lzwTableSize].length = lzwExtraTable[code].length + 1;
+                } else {
+                    return false;
+                }
             }
 
             // 2. output to the code stream
@@ -368,7 +380,7 @@ bool GifDecoder::lzwDecode() {
             }
 
             // check if the code size is full
-            if (lzwTableSize > (1 << 12)) {
+            if (lzwTableSize > lzwMaxSize) {
                 return false;
             }
 
@@ -402,11 +414,54 @@ bool GifDecoder::getFrameCount_() {
     while (type != 0x3B) {
         if (!(type ^ 0x21)) {
             // skip all kinds of the extensions
-            m_strm.skip(1);
-            int len = m_strm.getByte();
-            while (len) {
-                m_strm.skip(len);
-                len = m_strm.getByte();
+            int extension = m_strm.getByte();
+            // Application Extension need to be handled for the loop count
+            if (extension == 0xFF) {
+                int len = m_strm.getByte();
+                while (len) {
+                    // TODO: In strictly, Application Identifier and Authentication Code should be checked.
+                    if (len == 3) {
+                        if (m_strm.getByte() == 0x01) {
+                            m_animation.loop_count = m_strm.getWord();
+                        } else {
+                            // this branch should not be reached in normal cases
+                            m_strm.skip(2);
+                            CV_LOG_WARNING(NULL, "found Unknown Application Extension");
+                        }
+                    } else {
+                        m_strm.skip(len);
+                    }
+                    len = m_strm.getByte();
+                }
+            } else if (extension == 0xF9) {
+                int len = m_strm.getByte();
+                while (len) {
+                    if (len == 4) {
+                        int packedFields = m_strm.getByte();
+                        //  3 bit : Reserved
+                        //  3 bit : Disposal Method
+                        //  1 bit : User Input Flag
+                        //  1 bit : Transparent Color Flag
+                        if ( (packedFields & 0x01)== 0x01) {
+                            m_type = CV_8UC4; // Transparent Index is given.
+                        }
+                        m_strm.skip(2); // Delay Time
+                        m_strm.skip(1); // Transparent Color Index
+                    } else {
+                        m_strm.skip(len);
+                    }
+                    len = m_strm.getByte();
+                }
+            } else {
+                // if it does not belong to any of the extension type mentioned in the GIF Specification
+                if (extension != 0xFE && extension != 0x01) {
+                    CV_LOG_WARNING(NULL, "found Unknown Extension Type: " + std::to_string(extension));
+                }
+                int len = m_strm.getByte();
+                while (len) {
+                    m_strm.skip(len);
+                    len = m_strm.getByte();
+                }
             }
         } else if (!(type ^ 0x2C)) {
             // skip image data
@@ -484,24 +539,11 @@ GifEncoder::~GifEncoder() {
     close();
 }
 
-bool GifEncoder::isFormatSupported(int depth) const {
-    return depth == CV_8U;
-}
-
-bool GifEncoder::write(const Mat &img, const std::vector<int> &params) {
-    std::vector<Mat> img_vec(1, img);
-    return writeFrames(img_vec, params);
-}
-
-bool GifEncoder::writemulti(const std::vector<Mat> &img_vec, const std::vector<int> &params) {
-    return writeFrames(img_vec, params);
-}
-
-bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
-                             const std::vector<int>& params) {
-    if (img_vec.empty()) {
+bool GifEncoder::writeanimation(const Animation& animation, const std::vector<int>& params) {
+    if (animation.frames.empty()) {
         return false;
     }
+    CV_CheckDepthEQ(animation.frames[0].depth(), CV_8U, "GIF encoder supports only 8-bit unsigned images");
 
     if (m_buf) {
         if (!strm.open(*m_buf)) {
@@ -510,6 +552,8 @@ bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
     } else if (!strm.open(m_filename)) {
         return false;
     }
+
+    loopCount = animation.loop_count;
 
     // confirm the params
     for (size_t i = 0; i < params.size(); i += 2) {
@@ -561,13 +605,13 @@ bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
     if (fast) {
         const uchar transparent = 0x92; // 1001_0010: the middle of the color table
         if (dithering == GRFMT_GIF_None) {
-            img_vec_ = img_vec;
+            img_vec_ = animation.frames;
             transparentColor = transparent;
         } else {
             localColorTableSize = 0;
             int transRGB;
             const int depth = 3 << 8 | 3 << 4 | 2; // r:g:b = 3:3:2
-            for (auto &img: img_vec) {
+            for (auto &img: animation.frames) {
                 Mat img_(img.size(), img.type());
                 transRGB = ditheringKernel(img, img_, depth, criticalTransparency);
                 if (transRGB >= 0) {
@@ -583,13 +627,13 @@ bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
     } else if (dithering != GRFMT_GIF_None) {
         int depth = (int)floor(log2(colorNum) / 3) + dithering;
         depth = depth << 8 | depth << 4 | depth;
-        for (auto &img : img_vec) {
+        for (auto &img : animation.frames) {
             Mat img_(img.size(), img.type());
             ditheringKernel(img, img_, depth, criticalTransparency);
             img_vec_.push_back(img_);
         }
     } else {
-        img_vec_ = img_vec;
+        img_vec_ = animation.frames;
     }
     bool result = writeHeader(img_vec_);
     if (!result) {
@@ -597,8 +641,9 @@ bool GifEncoder::writeFrames(const std::vector<Mat>& img_vec,
         return false;
     }
 
-    for (const auto &img : img_vec_) {
-        result = writeFrame(img);
+    for (size_t i = 0; i < img_vec_.size(); i++) {
+        frameDelay = cvRound(animation.durations[i] / 10);
+        result = writeFrame(img_vec_[i]);
     }
 
     strm.putByte(0x3B); // trailer

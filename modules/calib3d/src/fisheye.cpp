@@ -589,8 +589,8 @@ void cv::fisheye::initUndistortRectifyMap( InputArray K, InputArray D, InputArra
 
             if( m1type == CV_16SC2 )
             {
-                int iu = cv::saturate_cast<int>(u*cv::INTER_TAB_SIZE);
-                int iv = cv::saturate_cast<int>(v*cv::INTER_TAB_SIZE);
+                int iu = cv::saturate_cast<int>(u*static_cast<double>(cv::INTER_TAB_SIZE));
+                int iv = cv::saturate_cast<int>(v*static_cast<double>(cv::INTER_TAB_SIZE));
                 m1[j*2+0] = (short)(iu >> cv::INTER_BITS);
                 m1[j*2+1] = (short)(iv >> cv::INTER_BITS);
                 m2[j] = (ushort)((iv & (cv::INTER_TAB_SIZE-1))*cv::INTER_TAB_SIZE + (iu & (cv::INTER_TAB_SIZE-1)));
@@ -1118,6 +1118,22 @@ bool cv::fisheye::solvePnP( InputArray opoints, InputArray ipoints,
     Mat imagePointsNormalized;
     cv::fisheye::undistortPoints(ipoints, imagePointsNormalized, cameraMatrix, distCoeffs, noArray(), cameraMatrix, criteria);
     return cv::solvePnP(opoints, imagePointsNormalized, cameraMatrix, noArray(), rvec, tvec, useExtrinsicGuess, flags);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// cv::fisheye::solvePnPRansac
+
+bool cv::fisheye::solvePnPRansac( InputArray opoints, InputArray ipoints,
+               InputArray cameraMatrix, InputArray distCoeffs,
+               OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess,
+               int iterationsCount, float reprojectionError,
+               double confidence, OutputArray inliers,
+               int flags, TermCriteria criteria)
+{
+    Mat imagePointsNormalized;
+    cv::fisheye::undistortPoints(ipoints, imagePointsNormalized, cameraMatrix, distCoeffs, noArray(), cameraMatrix, criteria);
+    return cv::solvePnPRansac(opoints, imagePointsNormalized, cameraMatrix, noArray(), rvec, tvec,
+                              useExtrinsicGuess, iterationsCount, reprojectionError, confidence, inliers, flags);
 }
 
 namespace cv{ namespace {

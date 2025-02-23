@@ -340,9 +340,10 @@ double cv::contourArea( InputArray _contour, bool oriented )
 namespace cv
 {
 
-static inline Point2f getOfs(int i, float eps)
+static inline Point2f getOfs(float eps)
 {
-    return Point2f(((i & 1)*2 - 1)*eps, ((i & 2) - 1)*eps);
+    RNG& rng = theRNG();
+    return Point2f(rng.uniform(-eps, eps), rng.uniform(-eps, eps));
 }
 
 static RotatedRect fitEllipseNoDirect( InputArray _points )
@@ -419,7 +420,7 @@ static RotatedRect fitEllipseNoDirect( InputArray _points )
         float eps = (float)(s/(n*2)*1e-3);
         for( i = 0; i < n; i++ )
         {
-            Point2f p = ptsf_copy[i] + getOfs(i, eps);
+            const Point2f p = ptsf_copy[i] + getOfs(eps);
             ptsf_copy[i] = p;
         }
 
@@ -515,6 +516,7 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
     Mat points = _points.getMat();
     int i, n = points.checkVector(2);
     int depth = points.depth();
+    float eps = 0;
     CV_Assert( n >= 0 && (depth == CV_32F || depth == CV_32S));
 
     RotatedRect box;
@@ -552,57 +554,70 @@ cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
     }
     double scale = 100./(s > FLT_EPSILON ? s : (double)FLT_EPSILON);
 
-    for( i = 0; i < n; i++ )
+    // first, try the original pointset.
+    // if it's singular, try to shift the points a bit
+    int iter = 0;
+    for( iter = 0; iter < 2; iter++ )
     {
-        Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-        double px = (p.x - c.x)*scale, py = (p.y - c.y)*scale;
+        for( i = 0; i < n; i++ )
+        {
+            Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
+            const Point2f delta = getOfs(eps);
+            const double px = (p.x + delta.x - c.x)*scale, py = (p.y + delta.y - c.y)*scale;
 
-        A.at<double>(i,0) = px*px;
-        A.at<double>(i,1) = px*py;
-        A.at<double>(i,2) = py*py;
-        A.at<double>(i,3) = px;
-        A.at<double>(i,4) = py;
-        A.at<double>(i,5) = 1.0;
+            A.at<double>(i,0) = px*px;
+            A.at<double>(i,1) = px*py;
+            A.at<double>(i,2) = py*py;
+            A.at<double>(i,3) = px;
+            A.at<double>(i,4) = py;
+            A.at<double>(i,5) = 1.0;
+        }
+        cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
+        DM *= (1.0/n);
+        double dnm = ( DM(2,5)*(DM(0,5) + DM(2,5)) - (DM(1,5)*DM(1,5)) );
+        double ddm =  (4.*(DM(0,5) + DM(2,5))*( (DM(0,5)*DM(2,5)) - (DM(1,5)*DM(1,5))));
+        double ddmm = (2.*(DM(0,5) + DM(2,5))*( (DM(0,5)*DM(2,5)) - (DM(1,5)*DM(1,5))));
+
+        M(0,0)=((-DM(0,0) + DM(0,2) + DM(0,5)*DM(0,5))*(DM(1,5)*DM(1,5)) + (-2*DM(0,1)*DM(1,5) + DM(0,5)*(DM(0,0) \
+                - (DM(0,5)*DM(0,5)) + (DM(1,5)*DM(1,5))))*DM(2,5) + (DM(0,0) - (DM(0,5)*DM(0,5)))*(DM(2,5)*DM(2,5))) / ddm;
+        M(0,1)=((DM(1,5)*DM(1,5))*(-DM(0,1) + DM(1,2) + DM(0,5)*DM(1,5)) + (DM(0,1)*DM(0,5) - ((DM(0,5)*DM(0,5)) + 2*DM(1,1))*DM(1,5) + \
+                (DM(1,5)*DM(1,5)*DM(1,5)))*DM(2,5) + (DM(0,1) - DM(0,5)*DM(1,5))*(DM(2,5)*DM(2,5))) / ddm;
+        M(0,2)=(-2*DM(1,2)*DM(1,5)*DM(2,5) - DM(0,5)*(DM(2,5)*DM(2,5))*(DM(0,5) + DM(2,5)) + DM(0,2)*dnm + \
+                (DM(1,5)*DM(1,5))*(DM(2,2) + DM(2,5)*(DM(0,5) + DM(2,5))))/ddm;
+        M(0,3)=(DM(1,5)*(DM(1,5)*DM(2,3) - 2*DM(1,3)*DM(2,5)) + DM(0,3)*dnm) / ddm;
+        M(0,4)=(DM(1,5)*(DM(1,5)*DM(2,4) - 2*DM(1,4)*DM(2,5)) + DM(0,4)*dnm) / ddm;
+        M(1,0)=(-(DM(0,2)*DM(0,5)*DM(1,5)) + (2*DM(0,1)*DM(0,5) - DM(0,0)*DM(1,5))*DM(2,5))/ddmm;
+        M(1,1)=(-(DM(0,1)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,2)*DM(1,5)) + 2*DM(1,1)*DM(2,5)))/ddmm;
+        M(1,2)=(-(DM(0,2)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,2)) + 2*DM(1,2)*DM(2,5)))/ddmm;
+        M(1,3)=(-(DM(0,3)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,3)) + 2*DM(1,3)*DM(2,5)))/ddmm;
+        M(1,4)=(-(DM(0,4)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,4)) + 2*DM(1,4)*DM(2,5)))/ddmm;
+        M(2,0)=(-2*DM(0,1)*DM(0,5)*DM(1,5) + (DM(0,0) + (DM(0,5)*DM(0,5)))*(DM(1,5)*DM(1,5)) + DM(0,5)*(-(DM(0,5)*DM(0,5)) \
+                + (DM(1,5)*DM(1,5)))*DM(2,5) - (DM(0,5)*DM(0,5))*(DM(2,5)*DM(2,5)) + DM(0,2)*(-(DM(1,5)*DM(1,5)) + DM(0,5)*(DM(0,5) + DM(2,5)))) / ddm;
+        M(2,1)=((DM(0,5)*DM(0,5))*(DM(1,2) - DM(1,5)*DM(2,5)) + (DM(1,5)*DM(1,5))*(DM(0,1) - DM(1,2) + DM(1,5)*DM(2,5)) \
+                + DM(0,5)*(DM(1,2)*DM(2,5) + DM(1,5)*(-2*DM(1,1) + (DM(1,5)*DM(1,5)) - (DM(2,5)*DM(2,5))))) / ddm;
+        M(2,2)=((DM(0,5)*DM(0,5))*(DM(2,2) - (DM(2,5)*DM(2,5))) + (DM(1,5)*DM(1,5))*(DM(0,2) - DM(2,2) + (DM(2,5)*DM(2,5))) + \
+                DM(0,5)*(-2*DM(1,2)*DM(1,5) + DM(2,5)*((DM(1,5)*DM(1,5)) + DM(2,2) - (DM(2,5)*DM(2,5))))) / ddm;
+        M(2,3)=((DM(1,5)*DM(1,5))*(DM(0,3) - DM(2,3)) + (DM(0,5)*DM(0,5))*DM(2,3) + DM(0,5)*(-2*DM(1,3)*DM(1,5) + DM(2,3)*DM(2,5))) / ddm;
+        M(2,4)=((DM(1,5)*DM(1,5))*(DM(0,4) - DM(2,4)) + (DM(0,5)*DM(0,5))*DM(2,4) + DM(0,5)*(-2*DM(1,4)*DM(1,5) + DM(2,4)*DM(2,5))) / ddm;
+        M(3,0)=DM(0,3);
+        M(3,1)=DM(1,3);
+        M(3,2)=DM(2,3);
+        M(3,3)=DM(3,3);
+        M(3,4)=DM(3,4);
+        M(4,0)=DM(0,4);
+        M(4,1)=DM(1,4);
+        M(4,2)=DM(2,4);
+        M(4,3)=DM(3,4);
+        M(4,4)=DM(4,4);
+
+        if (fabs(cv::determinant(M)) > 1.0e-10) {
+            break;
+        }
+
+        eps = (float)(s/(n*2)*1e-2);
     }
-    cv::mulTransposed( A, DM, true, noArray(), 1.0, -1 );
-    DM *= (1.0/n);
-    double dnm = ( DM(2,5)*(DM(0,5) + DM(2,5)) - (DM(1,5)*DM(1,5)) );
-    double ddm =  (4.*(DM(0,5) + DM(2,5))*( (DM(0,5)*DM(2,5)) - (DM(1,5)*DM(1,5))));
-    double ddmm = (2.*(DM(0,5) + DM(2,5))*( (DM(0,5)*DM(2,5)) - (DM(1,5)*DM(1,5))));
 
-    M(0,0)=((-DM(0,0) + DM(0,2) + DM(0,5)*DM(0,5))*(DM(1,5)*DM(1,5)) + (-2*DM(0,1)*DM(1,5) + DM(0,5)*(DM(0,0) \
-            - (DM(0,5)*DM(0,5)) + (DM(1,5)*DM(1,5))))*DM(2,5) + (DM(0,0) - (DM(0,5)*DM(0,5)))*(DM(2,5)*DM(2,5))) / ddm;
-    M(0,1)=((DM(1,5)*DM(1,5))*(-DM(0,1) + DM(1,2) + DM(0,5)*DM(1,5)) + (DM(0,1)*DM(0,5) - ((DM(0,5)*DM(0,5)) + 2*DM(1,1))*DM(1,5) + \
-            (DM(1,5)*DM(1,5)*DM(1,5)))*DM(2,5) + (DM(0,1) - DM(0,5)*DM(1,5))*(DM(2,5)*DM(2,5))) / ddm;
-    M(0,2)=(-2*DM(1,2)*DM(1,5)*DM(2,5) - DM(0,5)*(DM(2,5)*DM(2,5))*(DM(0,5) + DM(2,5)) + DM(0,2)*dnm + \
-            (DM(1,5)*DM(1,5))*(DM(2,2) + DM(2,5)*(DM(0,5) + DM(2,5))))/ddm;
-    M(0,3)=(DM(1,5)*(DM(1,5)*DM(2,3) - 2*DM(1,3)*DM(2,5)) + DM(0,3)*dnm) / ddm;
-    M(0,4)=(DM(1,5)*(DM(1,5)*DM(2,4) - 2*DM(1,4)*DM(2,5)) + DM(0,4)*dnm) / ddm;
-    M(1,0)=(-(DM(0,2)*DM(0,5)*DM(1,5)) + (2*DM(0,1)*DM(0,5) - DM(0,0)*DM(1,5))*DM(2,5))/ddmm;
-    M(1,1)=(-(DM(0,1)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,2)*DM(1,5)) + 2*DM(1,1)*DM(2,5)))/ddmm;
-    M(1,2)=(-(DM(0,2)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,2)) + 2*DM(1,2)*DM(2,5)))/ddmm;
-    M(1,3)=(-(DM(0,3)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,3)) + 2*DM(1,3)*DM(2,5)))/ddmm;
-    M(1,4)=(-(DM(0,4)*DM(1,5)*DM(2,5)) + DM(0,5)*(-(DM(1,5)*DM(2,4)) + 2*DM(1,4)*DM(2,5)))/ddmm;
-    M(2,0)=(-2*DM(0,1)*DM(0,5)*DM(1,5) + (DM(0,0) + (DM(0,5)*DM(0,5)))*(DM(1,5)*DM(1,5)) + DM(0,5)*(-(DM(0,5)*DM(0,5)) \
-            + (DM(1,5)*DM(1,5)))*DM(2,5) - (DM(0,5)*DM(0,5))*(DM(2,5)*DM(2,5)) + DM(0,2)*(-(DM(1,5)*DM(1,5)) + DM(0,5)*(DM(0,5) + DM(2,5)))) / ddm;
-    M(2,1)=((DM(0,5)*DM(0,5))*(DM(1,2) - DM(1,5)*DM(2,5)) + (DM(1,5)*DM(1,5))*(DM(0,1) - DM(1,2) + DM(1,5)*DM(2,5)) \
-            + DM(0,5)*(DM(1,2)*DM(2,5) + DM(1,5)*(-2*DM(1,1) + (DM(1,5)*DM(1,5)) - (DM(2,5)*DM(2,5))))) / ddm;
-    M(2,2)=((DM(0,5)*DM(0,5))*(DM(2,2) - (DM(2,5)*DM(2,5))) + (DM(1,5)*DM(1,5))*(DM(0,2) - DM(2,2) + (DM(2,5)*DM(2,5))) + \
-             DM(0,5)*(-2*DM(1,2)*DM(1,5) + DM(2,5)*((DM(1,5)*DM(1,5)) + DM(2,2) - (DM(2,5)*DM(2,5))))) / ddm;
-    M(2,3)=((DM(1,5)*DM(1,5))*(DM(0,3) - DM(2,3)) + (DM(0,5)*DM(0,5))*DM(2,3) + DM(0,5)*(-2*DM(1,3)*DM(1,5) + DM(2,3)*DM(2,5))) / ddm;
-    M(2,4)=((DM(1,5)*DM(1,5))*(DM(0,4) - DM(2,4)) + (DM(0,5)*DM(0,5))*DM(2,4) + DM(0,5)*(-2*DM(1,4)*DM(1,5) + DM(2,4)*DM(2,5))) / ddm;
-    M(3,0)=DM(0,3);
-    M(3,1)=DM(1,3);
-    M(3,2)=DM(2,3);
-    M(3,3)=DM(3,3);
-    M(3,4)=DM(3,4);
-    M(4,0)=DM(0,4);
-    M(4,1)=DM(1,4);
-    M(4,2)=DM(2,4);
-    M(4,3)=DM(3,4);
-    M(4,4)=DM(4,4);
-
-    if (fabs(cv::determinant(M)) > 1.0e-10) {
+    if (iter < 2) {
             Mat eVal, eVec;
             eigenNonSymmetric(M, eVal, eVec);
 
@@ -744,7 +759,7 @@ cv::RotatedRect cv::fitEllipseDirect( InputArray _points )
         for( i = 0; i < n; i++ )
         {
             Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-            Point2f delta = getOfs(i, eps);
+            const Point2f delta = getOfs(eps);
             double px = (p.x + delta.x - c.x)*scale, py = (p.y + delta.y - c.y)*scale;
 
             A.at<double>(i,0) = px*px;

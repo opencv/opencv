@@ -1078,6 +1078,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             i == CV_COMP_BHATTACHARYYA ? "Bhattacharyya" :
             i == CV_COMP_KL_DIV ? "Kullback-Leibler" : "Unknown";
 
+        const auto thresh = FLT_EPSILON*14*MAX(fabs(v0),0.17);
         if( cvIsNaN(v) || cvIsInf(v) )
         {
             ts->printf( cvtest::TS::LOG, "The comparison result using the method #%d (%s) is invalid (=%g)\n",
@@ -1085,7 +1086,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             code = cvtest::TS::FAIL_INVALID_OUTPUT;
             break;
         }
-        else if( fabs(v0 - v) > FLT_EPSILON*14*MAX(fabs(v0),0.1) )
+        else if( fabs(v0 - v) > thresh )
         {
             ts->printf( cvtest::TS::LOG, "The comparison result using the method #%d (%s)\n\tis inaccurate (=%g, should be =%g)\n",
                 i, method_name, v, v0 );

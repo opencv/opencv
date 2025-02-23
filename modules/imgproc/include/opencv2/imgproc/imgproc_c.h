@@ -219,7 +219,7 @@ replication border mode.
 @see cv::warpAffine
 */
 CVAPI(void)  cvWarpAffine( const CvArr* src, CvArr* dst, const CvMat* map_matrix,
-                           int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
+                           int flags CV_DEFAULT(+CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
                            CvScalar fillval CV_DEFAULT(cvScalarAll(0)) );
 
 /** @brief Computes affine transform matrix for mapping src[i] to dst[i] (i=0,1,2)
@@ -239,7 +239,7 @@ CVAPI(CvMat*)  cv2DRotationMatrix( CvPoint2D32f center, double angle,
 @see cv::warpPerspective
 */
 CVAPI(void)  cvWarpPerspective( const CvArr* src, CvArr* dst, const CvMat* map_matrix,
-                                int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
+                                int flags CV_DEFAULT(+CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
                                 CvScalar fillval CV_DEFAULT(cvScalarAll(0)) );
 
 /** @brief Computes perspective transform matrix for mapping src[i] to dst[i] (i=0,1,2,3)
@@ -254,7 +254,7 @@ CVAPI(CvMat*) cvGetPerspectiveTransform( const CvPoint2D32f* src,
 */
 CVAPI(void)  cvRemap( const CvArr* src, CvArr* dst,
                       const CvArr* mapx, const CvArr* mapy,
-                      int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
+                      int flags CV_DEFAULT(+CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS),
                       CvScalar fillval CV_DEFAULT(cvScalarAll(0)) );
 
 /** @brief Converts mapx & mapy from floating-point to integer formats for cvRemap
@@ -268,14 +268,14 @@ CVAPI(void)  cvConvertMaps( const CvArr* mapx, const CvArr* mapy,
 */
 CVAPI(void)  cvLogPolar( const CvArr* src, CvArr* dst,
                          CvPoint2D32f center, double M,
-                         int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
+                         int flags CV_DEFAULT(+CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
 
 /** Performs forward or inverse linear-polar image transform
 @see cv::warpPolar
 */
 CVAPI(void)  cvLinearPolar( const CvArr* src, CvArr* dst,
                          CvPoint2D32f center, double maxRadius,
-                         int flags CV_DEFAULT(CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
+                         int flags CV_DEFAULT(+CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS));
 
 #ifdef _MSC_VER
 #pragma warning( pop )

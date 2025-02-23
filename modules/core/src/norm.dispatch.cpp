@@ -7,6 +7,9 @@
 #include "opencl_kernels_core.hpp"
 #include "stat.hpp"
 
+#include "norm.simd.hpp"
+#include "norm.simd_declarations.hpp"
+
 /****************************************************************************************\
 *                                         norm                                           *
 \****************************************************************************************/
@@ -216,72 +219,6 @@ int normL1_(const uchar* a, const uchar* b, int n)
 //==================================================================================================
 
 template<typename T, typename ST> int
-normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
-{
-    ST result = *_result;
-    if( !mask )
-    {
-        result = std::max(result, normInf<T, ST>(src, len*cn));
-    }
-    else
-    {
-        for( int i = 0; i < len; i++, src += cn )
-            if( mask[i] )
-            {
-                for( int k = 0; k < cn; k++ )
-                    result = std::max(result, ST(cv_abs(src[k])));
-            }
-    }
-    *_result = result;
-    return 0;
-}
-
-template<typename T, typename ST> int
-normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn)
-{
-    ST result = *_result;
-    if( !mask )
-    {
-        result += normL1<T, ST>(src, len*cn);
-    }
-    else
-    {
-        for( int i = 0; i < len; i++, src += cn )
-            if( mask[i] )
-            {
-                for( int k = 0; k < cn; k++ )
-                    result += cv_abs(src[k]);
-            }
-    }
-    *_result = result;
-    return 0;
-}
-
-template<typename T, typename ST> int
-normL2_(const T* src, const uchar* mask, ST* _result, int len, int cn)
-{
-    ST result = *_result;
-    if( !mask )
-    {
-        result += normL2Sqr<T, ST>(src, len*cn);
-    }
-    else
-    {
-        for( int i = 0; i < len; i++, src += cn )
-            if( mask[i] )
-            {
-                for( int k = 0; k < cn; k++ )
-                {
-                    T v = src[k];
-                    result += (ST)v*v;
-                }
-            }
-    }
-    *_result = result;
-    return 0;
-}
-
-template<typename T, typename ST> int
 normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn)
 {
     ST result = *_result;
@@ -347,50 +284,26 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
     return 0;
 }
 
-#define CV_DEF_NORM_FUNC(L, suffix, type, ntype) \
-    static int norm##L##_##suffix(const type* src, const uchar* mask, ntype* r, int len, int cn) \
-{ return norm##L##_(src, mask, r, len, cn); } \
+#define CV_DEF_NORM_DIFF_FUNC(L, suffix, type, ntype) \
     static int normDiff##L##_##suffix(const type* src1, const type* src2, \
     const uchar* mask, ntype* r, int len, int cn) \
 { return normDiff##L##_(src1, src2, mask, r, (int)len, cn); }
 
-#define CV_DEF_NORM_ALL(suffix, type, inftype, l1type, l2type) \
-    CV_DEF_NORM_FUNC(Inf, suffix, type, inftype) \
-    CV_DEF_NORM_FUNC(L1, suffix, type, l1type) \
-    CV_DEF_NORM_FUNC(L2, suffix, type, l2type)
+#define CV_DEF_NORM_DIFF_ALL(suffix, type, inftype, l1type, l2type) \
+    CV_DEF_NORM_DIFF_FUNC(Inf, suffix, type, inftype) \
+    CV_DEF_NORM_DIFF_FUNC(L1, suffix, type, l1type) \
+    CV_DEF_NORM_DIFF_FUNC(L2, suffix, type, l2type)
 
-CV_DEF_NORM_ALL(8u, uchar, int, int, int)
-CV_DEF_NORM_ALL(8s, schar, int, int, int)
-CV_DEF_NORM_ALL(16u, ushort, int, int, double)
-CV_DEF_NORM_ALL(16s, short, int, int, double)
-CV_DEF_NORM_ALL(32s, int, int, double, double)
-CV_DEF_NORM_ALL(32f, float, float, double, double)
-CV_DEF_NORM_ALL(64f, double, double, double, double)
-
+CV_DEF_NORM_DIFF_ALL(8u, uchar, int, int, int)
+CV_DEF_NORM_DIFF_ALL(8s, schar, int, int, int)
+CV_DEF_NORM_DIFF_ALL(16u, ushort, int, int, double)
+CV_DEF_NORM_DIFF_ALL(16s, short, int, int, double)
+CV_DEF_NORM_DIFF_ALL(32s, int, int, double, double)
+CV_DEF_NORM_DIFF_ALL(32f, float, float, double, double)
+CV_DEF_NORM_DIFF_ALL(64f, double, double, double, double)
 
 typedef int (*NormFunc)(const uchar*, const uchar*, uchar*, int, int);
 typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, int, int);
-
-static NormFunc getNormFunc(int normType, int depth)
-{
-    static NormFunc normTab[3][8] =
-    {
-        {
-            (NormFunc)GET_OPTIMIZED(normInf_8u), (NormFunc)GET_OPTIMIZED(normInf_8s), (NormFunc)GET_OPTIMIZED(normInf_16u), (NormFunc)GET_OPTIMIZED(normInf_16s),
-            (NormFunc)GET_OPTIMIZED(normInf_32s), (NormFunc)GET_OPTIMIZED(normInf_32f), (NormFunc)normInf_64f, 0
-        },
-        {
-            (NormFunc)GET_OPTIMIZED(normL1_8u), (NormFunc)GET_OPTIMIZED(normL1_8s), (NormFunc)GET_OPTIMIZED(normL1_16u), (NormFunc)GET_OPTIMIZED(normL1_16s),
-            (NormFunc)GET_OPTIMIZED(normL1_32s), (NormFunc)GET_OPTIMIZED(normL1_32f), (NormFunc)normL1_64f, 0
-        },
-        {
-            (NormFunc)GET_OPTIMIZED(normL2_8u), (NormFunc)GET_OPTIMIZED(normL2_8s), (NormFunc)GET_OPTIMIZED(normL2_16u), (NormFunc)GET_OPTIMIZED(normL2_16s),
-            (NormFunc)GET_OPTIMIZED(normL2_32s), (NormFunc)GET_OPTIMIZED(normL2_32f), (NormFunc)normL2_64f, 0
-        }
-    };
-
-    return normTab[normType][depth];
-}
 
 static NormDiffFunc getNormDiffFunc(int normType, int depth)
 {
@@ -576,7 +489,10 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
                 type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_L1_16s_C1R :
                 0) :
                 normType == NORM_L2 || normType == NORM_L2SQR ?
-                (type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C1R :
+                (
+                #if !IPP_DISABLE_NORM_8U
+                type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C1R :
+                #endif
                 type == CV_16UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_16u_C1R :
                 type == CV_16SC1 ? (ippiNormFuncNoHint)ippiNorm_L2_16s_C1R :
                 0) : 0;
@@ -600,6 +516,11 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
 }  // ipp_norm()
 #endif  // HAVE_IPP
 
+static NormFunc getNormFunc(int normType, int depth) {
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(getNormFunc, (normType, depth), CV_CPU_DISPATCH_MODES_ALL);
+}
+
 double norm( InputArray _src, int normType, InputArray _mask )
 {
     CV_INSTRUMENT_REGION();
@@ -620,9 +541,23 @@ double norm( InputArray _src, int normType, InputArray _mask )
 #endif
 
     Mat src = _src.getMat(), mask = _mask.getMat();
+    int depth = src.depth(), cn = src.channels();
+    if( src.dims <= 2 )
+    {
+        double result;
+        CALL_HAL_RET(norm, cv_hal_norm, result, src.data, src.step, mask.data, mask.step, src.cols, src.rows, src.type(), normType);
+    }
+    else if( src.isContinuous() && mask.isContinuous() )
+    {
+        double result;
+        CALL_HAL_RET(norm, cv_hal_norm, result, src.data, 0, mask.data, 0, (int)src.total(), 1, src.type(), normType);
+    }
+
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(src, normType, mask, _result), _result);
 
-    int depth = src.depth(), cn = src.channels();
+    NormFunc func = getNormFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
+    CV_Assert( func != 0 );
+
     if( src.isContinuous() && mask.empty() )
     {
         size_t len = src.total()*cn;
@@ -630,30 +565,18 @@ double norm( InputArray _src, int normType, InputArray _mask )
         {
             if( depth == CV_32F )
             {
-                const float* data = src.ptr<float>();
+                const uchar* data = src.ptr<const uchar>();
 
-                if( normType == NORM_L2 )
+                if( normType == NORM_L2 || normType == NORM_L2SQR || normType == NORM_L1 )
                 {
                     double result = 0;
-                    GET_OPTIMIZED(normL2_32f)(data, 0, &result, (int)len, 1);
-                    return std::sqrt(result);
-                }
-                if( normType == NORM_L2SQR )
-                {
-                    double result = 0;
-                    GET_OPTIMIZED(normL2_32f)(data, 0, &result, (int)len, 1);
-                    return result;
-                }
-                if( normType == NORM_L1 )
-                {
-                    double result = 0;
-                    GET_OPTIMIZED(normL1_32f)(data, 0, &result, (int)len, 1);
-                    return result;
+                    func(data, 0, (uchar*)&result, (int)len, 1);
+                    return normType == NORM_L2 ? std::sqrt(result) : result;
                 }
                 if( normType == NORM_INF )
                 {
                     float result = 0;
-                    GET_OPTIMIZED(normInf_32f)(data, 0, &result, (int)len, 1);
+                    func(data, 0, (uchar*)&result, (int)len, 1);
                     return result;
                 }
             }
@@ -699,9 +622,6 @@ double norm( InputArray _src, int normType, InputArray _mask )
 
         return result;
     }
-
-    NormFunc func = getNormFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
-    CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2] = {};
@@ -915,18 +835,27 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                     0) : 0;
                 ippiNormRelFuncNoHint ippiNormRel =
                     normType == NORM_INF ?
-                    (type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_8u_C1R :
+                    (
+                    #if !IPP_DISABLE_NORM_8U
+                    type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_8u_C1R :
+                    #endif
                     type == CV_16U ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_16u_C1R :
                     type == CV_16S ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_16s_C1R :
                     type == CV_32F ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_32f_C1R :
                     0) :
                     normType == NORM_L1 ?
-                    (type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_8u_C1R :
+                    (
+                    #if !IPP_DISABLE_NORM_8U
+                    type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_8u_C1R :
+                    #endif
                     type == CV_16U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_16u_C1R :
                     type == CV_16S ? (ippiNormRelFuncNoHint)ippiNormRel_L1_16s_C1R :
                     0) :
                     normType == NORM_L2 || normType == NORM_L2SQR ?
-                    (type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L2_8u_C1R :
+                    (
+                    #if !IPP_DISABLE_NORM_8U
+                    type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L2_8u_C1R :
+                    #endif
                     type == CV_16U ? (ippiNormRelFuncNoHint)ippiNormRel_L2_16u_C1R :
                     type == CV_16S ? (ippiNormRelFuncNoHint)ippiNormRel_L2_16s_C1R :
                     0) : 0;
@@ -1034,18 +963,27 @@ static bool ipp_norm(InputArray _src1, InputArray _src2, int normType, InputArra
                 0) : 0;
             ippiNormDiffFuncNoHint ippiNormDiff =
                 normType == NORM_INF ?
-                (type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C1R :
+                (
+                #if !IPP_DISABLE_NORM_8U
+                type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C1R :
+                #endif
                 type == CV_16U ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C1R :
                 type == CV_16S ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16s_C1R :
                 type == CV_32F ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_32f_C1R :
                 0) :
                 normType == NORM_L1 ?
-                (type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C1R :
+                (
+                #if !IPP_DISABLE_NORM_8U
+                type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C1R :
+                #endif
                 type == CV_16U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C1R :
                 type == CV_16S ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16s_C1R :
                 0) :
                 normType == NORM_L2 || normType == NORM_L2SQR ?
-                (type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C1R :
+                (
+                #if !IPP_DISABLE_NORM_8U
+                type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C1R :
+                #endif
                 type == CV_16U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16u_C1R :
                 type == CV_16S ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16s_C1R :
                 0) : 0;
@@ -1087,15 +1025,25 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
                 _result)
 #endif
 
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
+    int depth = src1.depth(), cn = src1.channels();
+    if( src1.dims <= 2 )
+    {
+        double result;
+        CALL_HAL_RET(normDiff, cv_hal_normDiff, result, src1.data, src1.step, src2.data, src2.step, mask.data, mask.step, src1.cols, src1.rows, src1.type(), normType);
+    }
+    else if( src1.isContinuous() && src2.isContinuous() && mask.isContinuous() )
+    {
+        double result;
+        CALL_HAL_RET(normDiff, cv_hal_normDiff, result, src1.data, 0, src2.data, 0, mask.data, 0, (int)src1.total(), 1, src1.type(), normType);
+    }
+
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_norm(_src1, _src2, normType, _mask, _result), _result);
 
     if( normType & CV_RELATIVE )
     {
         return norm(_src1, _src2, normType & ~CV_RELATIVE, _mask)/(norm(_src2, normType, _mask) + DBL_EPSILON);
     }
-
-    Mat src1 = _src1.getMat(), src2 = _src2.getMat(), mask = _mask.getMat();
-    int depth = src1.depth(), cn = src1.channels();
 
     normType &= 7;
     CV_Assert( normType == NORM_INF || normType == NORM_L1 ||

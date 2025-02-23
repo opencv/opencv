@@ -221,17 +221,17 @@ public:
             int  y = 0;
 
             buf[0] = 0;
-            sprintf_s(buf, sizeof(buf)-1, "Mode: %s OpenGL %s", m_modeStr[mode].c_str(), use_buffer() ? "buffer" : "texture");
+            snprintf(buf, sizeof(buf), "Mode: %s OpenGL %s", m_modeStr[mode].c_str(), use_buffer() ? "buffer" : "texture");
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
             buf[0] = 0;
-            sprintf_s(buf, sizeof(buf)-1, "Time, msec: %2.1f", time);
+            snprintf(buf, sizeof(buf), "Time, msec: %2.1f", time);
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             y += tm.tmHeight;
             buf[0] = 0;
-            sprintf_s(buf, sizeof(buf)-1, "OpenCL device: %s", oclDevName.c_str());
+            snprintf(buf, sizeof(buf), "OpenCL device: %s", oclDevName.c_str());
             ::TextOut(hDC, 0, y, buf, (int)strlen(buf));
 
             ::SelectObject(hDC, hOldFont);

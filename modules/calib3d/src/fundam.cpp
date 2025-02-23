@@ -414,6 +414,11 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 
     if( result && npoints > 4 && method != RHO)
     {
+        // save the original points before compressing
+        const int npoints_input = npoints;
+        const Mat src_input = src.clone();
+        const Mat dst_input = dst.clone();
+
         compressElems( src.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
         npoints = compressElems( dst.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
         if( npoints > 0 )
@@ -427,6 +432,16 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             Mat H8(9, 1, CV_64F, H.ptr<double>());
             LMSolver::create(makePtr<HomographyRefineCallback>(src, dst), 10)->run(H8);
             H.convertTo(H, H.type(), scaleFor(H.at<double>(2,2)));
+
+            // find new inliers
+            const float thr_sqr = static_cast<float>(ransacReprojThreshold * ransacReprojThreshold);
+            cv::Mat errors;
+            cb->computeError(src_input, dst_input, H, errors);
+            uchar* maskptr = tempMask.ptr<uchar>();
+            const float * const errors_ptr = errors.ptr<float>();
+            for (int i = 0; i < npoints_input; i++) {
+                maskptr[i] = static_cast<uchar>(errors_ptr[i] <= thr_sqr);
+            }
         }
     }
 
@@ -1209,7 +1224,7 @@ double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_pt1.type() == CV_64F && _pt2.type() == CV_64F && _F.type() == CV_64F);
+    CV_Assert(_pt1.depth() == CV_64F && _pt2.depth() == CV_64F && _F.depth() == CV_64F);
     CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
 
     Mat pt1(_pt1.getMat());

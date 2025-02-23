@@ -17,6 +17,8 @@
 
 #include <opencv2/imgproc.hpp>
 
+#include <chrono>
+
 #ifdef HAVE_GSTREAMER
 #include <gst/app/gstappsink.h>
 #include <gst/gstbuffer.h>

@@ -24,8 +24,6 @@ if(HAVE_FASTCV)
     ocv_install_target(fastcv_hal EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
   endif()
 
-  ocv_install_3rdparty_licenses(FastCV "${OpenCV_BINARY_DIR}/3rdparty/fastcv/LICENSE")
-
   if(ENABLE_SOLUTION_FOLDERS)
     set_target_properties(fastcv_hal PROPERTIES FOLDER "3rdparty")
   endif()

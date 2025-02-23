@@ -133,6 +133,8 @@ public:
      */
     virtual bool checkSignature(const String& signature) const;
 
+    const Animation& animation() const { return m_animation; };
+
     /**
      * @brief Create and return a new instance of the derived image decoder.
      * @return A new ImageDecoder object.
@@ -151,6 +153,7 @@ protected:
     bool m_use_rgb;       ///< Flag indicating whether to decode the image in RGB order.
     ExifReader m_exif;    ///< Object for reading EXIF metadata from the image.
     size_t m_frame_count; ///< Number of frames in the image (for animations and multi-page images).
+    Animation m_animation;
 };
 
 
@@ -199,12 +202,11 @@ public:
 
     /**
      * @brief Encode and write the image data.
-     * This is a pure virtual function that must be implemented by derived classes.
      * @param img The Mat object containing the image data to be encoded.
      * @param params A vector of parameters controlling the encoding process (e.g., compression level).
      * @return true if the image was successfully written, false otherwise.
      */
-    virtual bool write(const Mat& img, const std::vector<int>& params) = 0;
+    virtual bool write(const Mat& img, const std::vector<int>& params);
 
     /**
      * @brief Encode and write multiple images (e.g., for animated formats).
@@ -214,6 +216,8 @@ public:
      * @return true if multiple images were successfully written, false otherwise.
      */
     virtual bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params);
+
+    virtual bool writeanimation(const Animation& animation, const std::vector<int>& params);
 
     /**
      * @brief Get a description of the image encoder (e.g., the format it supports).
@@ -231,7 +235,7 @@ public:
      * @brief Throw an exception based on the last error encountered during encoding.
      * This method can be used to propagate error conditions back to the caller.
      */
-    virtual void throwOnEror() const;
+    virtual void throwOnError() const;
 
 protected:
     String m_description;    ///< Description of the encoder (e.g., format name, capabilities).

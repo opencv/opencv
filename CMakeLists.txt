@@ -306,6 +306,9 @@ OCV_OPTION(WITH_OPENJPEG "Include JPEG2K support (OpenJPEG)" ON
 OCV_OPTION(WITH_JPEG "Include JPEG support" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_JPEG)
+OCV_OPTION(WITH_JPEGXL "Include JPEG XL support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_JPEGXL)
 OCV_OPTION(WITH_WEBP "Include WebP support" ON
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_WEBP)
@@ -752,6 +755,9 @@ if(UNIX OR MINGW)
     # TODO:
     # - std::aligned_alloc() C++17 / C11
   endif()
+
+  CHECK_SYMBOL_EXISTS(getauxval sys/auxv.h HAVE_GETAUXVAL)
+  CHECK_SYMBOL_EXISTS(elf_aux_info sys/auxv.h HAVE_ELF_AUX_INFO)
 elseif(WIN32)
   include(CheckIncludeFile)
   include(CheckSymbolExists)
@@ -761,6 +767,13 @@ elseif(WIN32)
     if(HAVE_MALLOC_H)
       CHECK_SYMBOL_EXISTS(_aligned_malloc malloc.h HAVE_WIN32_ALIGNED_MALLOC)
     endif()
+  endif()
+endif()
+
+if(DEFINED OPENCV_ALGO_HINT_DEFAULT)
+  if(NOT OPENCV_ALGO_HINT_DEFAULT STREQUAL "ALGO_HINT_ACCURATE" AND
+     NOT OPENCV_ALGO_HINT_DEFAULT STREQUAL "ALGO_HINT_APPROX")
+    message(FATAL_ERROR "OPENCV_ALGO_HINT_DEFAULT should be one of ALGO_HINT_ACCURATE or ALGO_HINT_APPROX.")
   endif()
 endif()
 
@@ -1533,6 +1546,10 @@ if(WITH_TIFF OR HAVE_TIFF)
   status("    TIFF:" TIFF_FOUND THEN "${TIFF_LIBRARY} (ver ${TIFF_VERSION} / ${TIFF_VERSION_STRING})" ELSE "build (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
 endif()
 
+if(WITH_JPEGXL OR HAVE_JPEGXL)
+  status("    JPEG XL:" JPEGXL_FOUND THEN "${JPEGXL_LIBRARY} (ver ${JPEGXL_VERSION})" ELSE "NO")
+endif()
+
 if(HAVE_OPENJPEG)
   status("    JPEG 2000:" OpenJPEG_FOUND
       THEN "OpenJPEG (ver ${OPENJPEG_VERSION})"
@@ -1708,7 +1725,7 @@ endif()
 
 if(CV_TRACE OR OPENCV_TRACE)
   ocv_build_features_string(trace_status EXCLUSIVE
-    IF HAVE_ITT THEN "with Intel ITT"
+    IF HAVE_ITT THEN "with Intel ITT(${ITTNOTIFY_VERSION})"
     ELSE "built-in")
   status("")
   status("  Trace: " OPENCV_TRACE THEN "YES (${trace_status})" ELSE NO)
