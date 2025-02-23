@@ -79,7 +79,7 @@ CUDA support will be disabled in OpenCV build.
 To eliminate this warning remove WITH_CUDA=ON CMake configuration option.
 ")
   endif()
-  get_version_range(${CUDA_VERSION_STRING} ${MATCH_CUDA_MINOR_VERSION} CUDA_VERSION_MIN CUDA_VERSION_MAX)  
+  get_version_range(${CUDA_VERSION_STRING} ${MATCH_CUDA_MINOR_VERSION} CUDA_VERSION_MIN CUDA_VERSION_MAX)
 endif(WITH_CUDA)
 
 # --- Eigen ---
