@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
+#include "test_common.hpp"
 
 namespace opencv_test { namespace {
 
@@ -327,6 +328,78 @@ const string pngsuite_files_corrupted[] = {
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_PngSuite_Corrupted,
                         testing::ValuesIn(pngsuite_files_corrupted));
 
+CV_ENUM(PNGStrategy, IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY, IMWRITE_PNG_STRATEGY_RLE, IMWRITE_PNG_STRATEGY_FIXED);
+CV_ENUM(PNGFilters, IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, IMWRITE_PNG_FILTER_UP, IMWRITE_PNG_FILTER_AVG, IMWRITE_PNG_FILTER_PAETH, IMWRITE_PNG_FAST_FILTERS, IMWRITE_PNG_ALL_FILTERS);
+
+typedef testing::TestWithParam<testing::tuple<string, PNGStrategy, PNGFilters, int>> Imgcodecs_Png_Encode;
+
+TEST_P(Imgcodecs_Png_Encode, params)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/" + get<0>(GetParam());
+
+    const int strategy = get<1>(GetParam());
+    const int filter = get<2>(GetParam());
+    const int compression_level = get<3>(GetParam());
+
+    std::vector<uchar> file_buf;
+    readFileBytes(filename, file_buf);
+    Mat src = imdecode(file_buf, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot decode test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level, IMWRITE_PNG_STRATEGY, strategy, IMWRITE_PNG_FILTER, filter });
+    EXPECT_EQ(buf.size(), file_buf.size());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_Encode,
+    testing::Values(
+        make_tuple("f00n0g08.png", IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_FILTER_NONE, 6),
+        make_tuple("f00n2c08.png", IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_FILTER_NONE, 6),
+        make_tuple("f01n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_SUB, 6),
+        make_tuple("f01n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_SUB, 6),
+        make_tuple("f02n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_UP, 6),
+        make_tuple("f02n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_UP, 6),
+        make_tuple("f03n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_AVG, 6),
+        make_tuple("f03n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_AVG, 6),
+        make_tuple("f04n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_PAETH, 6),
+        make_tuple("f04n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_PAETH, 6),
+        make_tuple("z03n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 3),
+        make_tuple("z06n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 6),
+        make_tuple("z09n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 9)));
+
+typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_Compression;
+
+TEST_P(Imgcodecs_Png_Compression, compression_level)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + get<0>(GetParam());
+
+    const int compression_level = get<1>(GetParam());
+    const size_t compression_level_output_size = get<2>(GetParam());
+
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot read test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level });
+    EXPECT_EQ(buf.size(), compression_level_output_size);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_Compression,
+    testing::Values(
+        make_tuple("pngsuite/z09n2c08.png", 0, 3172),
+        make_tuple("pngsuite/z09n2c08.png", 1, 481),
+        make_tuple("pngsuite/z09n2c08.png", 2, 454),
+        make_tuple("pngsuite/z09n2c08.png", 3, 422),
+        make_tuple("pngsuite/z09n2c08.png", 4, 465),
+        make_tuple("pngsuite/z09n2c08.png", 5, 414),
+        make_tuple("pngsuite/z09n2c08.png", 6, 365),
+        make_tuple("pngsuite/z09n2c08.png", 7, 351),
+        make_tuple("pngsuite/z09n2c08.png", 8, 351),
+        make_tuple("pngsuite/z09n2c08.png", 9, 351)));
 #endif // HAVE_PNG
 
 }} // namespace
