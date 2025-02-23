@@ -55,9 +55,8 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
     src1_step /= sizeof(T);
     src2_step /= sizeof(T);
 
-    cv::AutoBuffer<T> buffer;
     size_t buf_size = m ? m + n : dst != NULL;
-    buffer.allocate(buf_size);
+    std::vector<T> buffer(buf_size);
     T* val = buffer.data();
     if (dst == NULL)
         dst = val + m;

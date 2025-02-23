@@ -64,7 +64,7 @@ inline int SVD(T* src, size_t src_step, T* w, T*, size_t, T* vt, size_t vt_step,
     else
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    AutoBuffer<double> Wbuf(n);
+    std::vector<double> Wbuf(n);
     double* W = Wbuf.data();
     int i, j, k, iter, max_iter = std::max(m, 30);
     T c, s;
@@ -205,7 +205,6 @@ inline int SVD(T* src, size_t src_step, T* w, T*, size_t, T* vt, size_t vt_step,
     if( !vt )
         return CV_HAL_ERROR_OK;
 
-    RNG rng(0x12345678);
     for( i = 0; i < n1; i++ )
     {
         sd = i < n ? W[i] : 0;
@@ -218,7 +217,7 @@ inline int SVD(T* src, size_t src_step, T* w, T*, size_t, T* vt, size_t vt_step,
             const T val0 = (T)(1./m);
             for( k = 0; k < m; k++ )
             {
-                T val = (rng.next() & 256) != 0 ? val0 : -val0;
+                T val = (rand() & 256) != 0 ? val0 : -val0;
                 src[i*src_step + k] = val;
             }
             for( iter = 0; iter < 2; iter++ )
