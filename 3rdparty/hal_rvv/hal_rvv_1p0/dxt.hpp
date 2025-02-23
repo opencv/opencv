@@ -428,7 +428,7 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
             // radix-"factor" - an odd number
             int p, q, factor2 = (factor - 1)/2;
             int dd, dw_f = tab_size/factor;
-            AutoBuffer<Complex<T> > buf(factor2 * 2);
+            std::vector<Complex<T> > buf(factor2 * 2);
             Complex<T>* a = buf.data();
             Complex<T>* b = a + factor2;
 
