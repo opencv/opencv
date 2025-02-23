@@ -369,6 +369,37 @@ INSTANTIATE_TEST_CASE_P(/**/,
         make_tuple("z06n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 6),
         make_tuple("z09n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 9)));
 
+typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_Compression;
+
+TEST_P(Imgcodecs_Png_Compression, compression_level)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + get<0>(GetParam());
+
+    const int compression_level = get<1>(GetParam());
+    const size_t compression_level_output_size = get<2>(GetParam());
+
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot read test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level });
+    EXPECT_EQ(buf.size(), compression_level_output_size);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_Compression,
+    testing::Values(
+        make_tuple("pngsuite/z09n2c08.png", 0, 3172),
+        make_tuple("pngsuite/z09n2c08.png", 1, 481),
+        make_tuple("pngsuite/z09n2c08.png", 2, 454),
+        make_tuple("pngsuite/z09n2c08.png", 3, 422),
+        make_tuple("pngsuite/z09n2c08.png", 4, 465),
+        make_tuple("pngsuite/z09n2c08.png", 5, 414),
+        make_tuple("pngsuite/z09n2c08.png", 6, 365),
+        make_tuple("pngsuite/z09n2c08.png", 7, 351),
+        make_tuple("pngsuite/z09n2c08.png", 8, 351),
+        make_tuple("pngsuite/z09n2c08.png", 9, 351)));
 #endif // HAVE_PNG
 
 }} // namespace
