@@ -52,7 +52,6 @@
 #include "hal_replacement.hpp"
 #include <opencv2/core/utils/configuration.private.hpp>
 #include "opencv2/core/hal/intrin.hpp"
-#include "opencv2/core/openvx/ovx_defs.hpp"
 #include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
 
@@ -955,7 +954,7 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
                     sum += S[0]*w[8] + S[cn]*w[9] + S[cn*2]*w[10] + S[cn*3]*w[11];
                     S += sstep;
                     sum += S[0]*w[12] + S[cn]*w[13] + S[cn*2]*w[14] + S[cn*3]*w[15];
-                    S += 1 - sstep*3;
+                    S -= sstep * 3 - 1;
                     D[k] = castOp(sum);
                 }
             }
@@ -988,9 +987,9 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
                     for(int i = 0; i < 4; i++, w += 4 )
                     {
                         int yi = y[i];
-                        const T* S = S0 + yi*sstep;
                         if( yi < 0 )
                             continue;
+                        const T* S = S0 + yi*sstep;
                         if( x[0] >= 0 )
                             sum += (S[x[0]] - cv)*w[0];
                         if( x[1] >= 0 )
@@ -1048,9 +1047,9 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             const int off_x = isRelative ? (_offset.x+dx) : 0;
             int sx = XY[dx*2]-3+off_x, sy = XY[dx*2+1]-3+off_y;
             const AT* w = wtab + FXY[dx]*64;
-            const T* S = S0 + sy*sstep + sx*cn;
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
+                const T* S = S0 + sy*sstep + sx*cn;
                 for(int k = 0; k < cn; k++ )
                 {
                     WT sum = 0;
@@ -1091,9 +1090,9 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                     for(int i = 0; i < 8; i++, w += 8 )
                     {
                         int yi = y[i];
-                        const T* S1 = S0 + yi*sstep;
                         if( yi < 0 )
                             continue;
+                        const T* S1 = S0 + yi*sstep;
                         if( x[0] >= 0 )
                             sum += (S1[x[0]] - cv)*w[0];
                         if( x[1] >= 0 )
@@ -1573,94 +1572,6 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
 
 #endif
 
-#ifdef HAVE_OPENVX
-static bool openvx_remap(Mat src, Mat dst, Mat map1, Mat map2, int interpolation, const Scalar& borderValue)
-{
-    vx_interpolation_type_e inter_type;
-    switch (interpolation)
-    {
-    case INTER_LINEAR:
-#if VX_VERSION > VX_VERSION_1_0
-        inter_type = VX_INTERPOLATION_BILINEAR;
-#else
-        inter_type = VX_INTERPOLATION_TYPE_BILINEAR;
-#endif
-        break;
-    case INTER_NEAREST:
-/* NEAREST_NEIGHBOR mode disabled since OpenCV round half to even while OpenVX sample implementation round half up
-#if VX_VERSION > VX_VERSION_1_0
-        inter_type = VX_INTERPOLATION_NEAREST_NEIGHBOR;
-#else
-        inter_type = VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
-#endif
-        if (!map1.empty())
-            for (int y = 0; y < map1.rows; ++y)
-            {
-                float* line = map1.ptr<float>(y);
-                for (int x = 0; x < map1.cols; ++x)
-                    line[x] = cvRound(line[x]);
-            }
-        if (!map2.empty())
-            for (int y = 0; y < map2.rows; ++y)
-            {
-                float* line = map2.ptr<float>(y);
-                for (int x = 0; x < map2.cols; ++x)
-                    line[x] = cvRound(line[x]);
-            }
-        break;
-*/
-    case INTER_AREA://AREA interpolation mode is unsupported
-    default:
-        return false;
-    }
-
-    try
-    {
-        ivx::Context ctx = ovx::getOpenVXContext();
-
-        Mat a;
-        if (dst.data != src.data)
-            a = src;
-        else
-            src.copyTo(a);
-
-        ivx::Image
-            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
-            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
-
-        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-        //since OpenVX standard says nothing about thread-safety for now
-        ivx::border_t prevBorder = ctx.immediateBorder();
-        ctx.setImmediateBorder(VX_BORDER_CONSTANT, (vx_uint8)(borderValue[0]));
-
-        ivx::Remap map = ivx::Remap::create(ctx, src.cols, src.rows, dst.cols, dst.rows);
-        if (map1.empty()) map.setMappings(map2);
-        else if (map2.empty()) map.setMappings(map1);
-        else map.setMappings(map1, map2);
-        ivx::IVX_CHECK_STATUS(vxuRemap(ctx, ia, map, inter_type, ib));
-#ifdef VX_VERSION_1_1
-        ib.swapHandle();
-        ia.swapHandle();
-#endif
-
-        ctx.setImmediateBorder(prevBorder);
-    }
-    catch (const ivx::RuntimeError & e)
-    {
-        CV_Error(cv::Error::StsInternal, e.what());
-        return false;
-    }
-    catch (const ivx::WrapperError & e)
-    {
-        CV_Error(cv::Error::StsInternal, e.what());
-        return false;
-    }
-    return true;
-}
-#endif
-
 #if defined HAVE_IPP && !IPP_DISABLE_REMAP
 
 typedef IppStatus (CV_STDCALL * ippiRemap)(const void * pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi,
@@ -1798,17 +1709,6 @@ void cv::remap( InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
-
-    CV_OVX_RUN(
-        src.type() == CV_8UC1 && dst.type() == CV_8UC1 &&
-        !ovx::skipSmallImages<VX_KERNEL_REMAP>(src.cols, src.rows) &&
-        (borderType& ~BORDER_ISOLATED) == BORDER_CONSTANT &&
-        ((map1.type() == CV_32FC2 && map2.empty() && map1.size == dst.size) ||
-         (map1.type() == CV_32FC1 && map2.type() == CV_32FC1 && map1.size == dst.size && map2.size == dst.size) ||
-         (map1.empty() && map2.type() == CV_32FC2 && map2.size == dst.size)) &&
-        ((borderType & BORDER_ISOLATED) != 0 || !src.isSubmatrix()) &&
-        !hasRelativeFlag,
-        openvx_remap(src, dst, map1, map2, interpolation, borderValue));
 
     CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
 

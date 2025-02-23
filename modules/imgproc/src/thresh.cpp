@@ -44,8 +44,6 @@
 #include "opencl_kernels_imgproc.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 
-#include "opencv2/core/openvx/ovx_defs.hpp"
-
 namespace cv
 {
 
@@ -1404,10 +1402,13 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
     int type = _src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type),
         kercn = ocl::predictOptimalVectorWidth(_src, _dst), ktype = CV_MAKE_TYPE(depth, kercn);
     bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
+    const bool isDisabled = ((thresh_type & THRESH_DRYRUN) != 0);
+    thresh_type &= ~THRESH_DRYRUN;
 
-    if ( !(thresh_type == THRESH_BINARY || thresh_type == THRESH_BINARY_INV || thresh_type == THRESH_TRUNC ||
-           thresh_type == THRESH_TOZERO || thresh_type == THRESH_TOZERO_INV) ||
-         (!doubleSupport && depth == CV_64F))
+    if ( isDisabled ||
+        !(thresh_type == THRESH_BINARY || thresh_type == THRESH_BINARY_INV || thresh_type == THRESH_TRUNC ||
+         thresh_type == THRESH_TOZERO || thresh_type == THRESH_TOZERO_INV) ||
+        (!doubleSupport && depth == CV_64F))
         return false;
 
     const char * const thresholdMap[] = { "THRESH_BINARY", "THRESH_BINARY_INV", "THRESH_TRUNC",
@@ -1444,97 +1445,6 @@ static bool ocl_threshold( InputArray _src, OutputArray _dst, double & thresh, d
 
 #endif
 
-
-#ifdef HAVE_OPENVX
-#define IMPL_OPENVX_TOZERO 1
-static bool openvx_threshold(Mat src, Mat dst, int thresh, int maxval, int type)
-{
-    Mat a = src;
-
-    int trueVal, falseVal;
-    switch (type)
-    {
-    case THRESH_BINARY:
-#ifndef VX_VERSION_1_1
-        if (maxval != 255)
-            return false;
-#endif
-        trueVal = maxval;
-        falseVal = 0;
-        break;
-    case THRESH_TOZERO:
-#if IMPL_OPENVX_TOZERO
-        trueVal = 255;
-        falseVal = 0;
-        if (dst.data == src.data)
-        {
-            a = Mat(src.size(), src.type());
-            src.copyTo(a);
-        }
-        break;
-#endif
-    case THRESH_BINARY_INV:
-#ifdef VX_VERSION_1_1
-        trueVal = 0;
-        falseVal = maxval;
-        break;
-#endif
-    case THRESH_TOZERO_INV:
-#ifdef VX_VERSION_1_1
-#if IMPL_OPENVX_TOZERO
-        trueVal = 0;
-        falseVal = 255;
-        if (dst.data == src.data)
-        {
-            a = Mat(src.size(), src.type());
-            src.copyTo(a);
-        }
-        break;
-#endif
-#endif
-    case THRESH_TRUNC:
-    default:
-        return false;
-    }
-
-    try
-    {
-        ivx::Context ctx = ovx::getOpenVXContext();
-
-        ivx::Threshold thh = ivx::Threshold::createBinary(ctx, VX_TYPE_UINT8, thresh);
-        thh.setValueTrue(trueVal);
-        thh.setValueFalse(falseVal);
-
-        ivx::Image
-            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                ivx::Image::createAddressing(a.cols*a.channels(), a.rows, 1, (vx_int32)(a.step)), src.data),
-            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                ivx::Image::createAddressing(dst.cols*dst.channels(), dst.rows, 1, (vx_int32)(dst.step)), dst.data);
-
-        ivx::IVX_CHECK_STATUS(vxuThreshold(ctx, ia, thh, ib));
-#if IMPL_OPENVX_TOZERO
-        if (type == THRESH_TOZERO || type == THRESH_TOZERO_INV)
-        {
-            ivx::Image
-                ic = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                    ivx::Image::createAddressing(dst.cols*dst.channels(), dst.rows, 1, (vx_int32)(dst.step)), dst.data);
-            ivx::IVX_CHECK_STATUS(vxuAnd(ctx, ib, ia, ic));
-        }
-#endif
-    }
-    catch (const ivx::RuntimeError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-    catch (const ivx::WrapperError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-
-    return true;
-}
-#endif
-
 }
 
 double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double maxval, int type )
@@ -1544,10 +1454,14 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     CV_OCL_RUN_(_src.dims() <= 2 && _dst.isUMat(),
                 ocl_threshold(_src, _dst, thresh, maxval, type), thresh)
 
+    const bool isDisabled = ((type & THRESH_DRYRUN) != 0);
+    type &= ~THRESH_DRYRUN;
+
     Mat src = _src.getMat();
 
-    _dst.create( src.size(), src.type() );
-    Mat dst = _dst.getMat();
+    if (!isDisabled)
+        _dst.create( src.size(), src.type() );
+    Mat dst = isDisabled ? cv::Mat() : _dst.getMat();
 
     int automatic_thresh = (type & ~cv::THRESH_MASK);
     type &= THRESH_MASK;
@@ -1574,6 +1488,9 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     {
         int ithresh = cvFloor(thresh);
         thresh = ithresh;
+        if (isDisabled)
+            return thresh;
+
         int imaxval = cvRound(maxval);
         if( type == THRESH_TRUNC )
             imaxval = ithresh;
@@ -1595,9 +1512,6 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
             return thresh;
         }
 
-       CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_THRESHOLD>(src.cols, src.rows),
-                  openvx_threshold(src, dst, ithresh, imaxval, type), (double)ithresh)
-
         thresh = ithresh;
         maxval = imaxval;
     }
@@ -1605,6 +1519,9 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     {
         int ithresh = cvFloor(thresh);
         thresh = ithresh;
+        if (isDisabled)
+            return thresh;
+
         int imaxval = cvRound(maxval);
         if( type == THRESH_TRUNC )
             imaxval = ithresh;
@@ -1632,6 +1549,9 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
     {
         int ithresh = cvFloor(thresh);
         thresh = ithresh;
+        if (isDisabled)
+            return thresh;
+
         int imaxval = cvRound(maxval);
         if (type == THRESH_TRUNC)
             imaxval = ithresh;
@@ -1662,6 +1582,9 @@ double cv::threshold( InputArray _src, OutputArray _dst, double thresh, double m
         ;
     else
         CV_Error( cv::Error::StsUnsupportedFormat, "" );
+
+    if (isDisabled)
+        return thresh;
 
     parallel_for_(Range(0, dst.rows),
                   ThresholdRunner(src, dst, thresh, maxval, type),

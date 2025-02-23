@@ -187,13 +187,6 @@ bool checkExtensionAvailability(const char *extension_name,
 
 static int init_instance_extension(VkInstance& kInstance)
 {
-#if defined(__ANDROID_API__) && __ANDROID_API__ >= 26
-    if (support_VK_KHR_android_surface)
-    {
-        vkCreateAndroidSurfaceKHR = (PFN_vkCreateAndroidSurfaceKHR)vkGetInstanceProcAddr(kInstance, "vkCreateAndroidSurfaceKHR");
-    }
-#endif // __ANDROID_API__ >= 26
-
     return 0;
 }
 
@@ -648,7 +641,7 @@ GPUInfo Context::parseGPUInfo(VkPhysicalDevice& kPhysicalDevice)
     info.support_VK_EXT_memory_budget = 0;
     info.support_VK_EXT_queue_family_foreign = 0;
 #if defined(__ANDROID_API__) && __ANDROID_API__ >= 26
-    gpu_info.support_VK_ANDROID_external_memory_android_hardware_buffer = 0;
+    info.support_VK_ANDROID_external_memory_android_hardware_buffer = 0;
 #endif // __ANDROID_API__ >= 26
     info.support_VK_NV_cooperative_matrix = 0;
     for (uint32_t j = 0; j < deviceExtensionPropertyCount; j++)
