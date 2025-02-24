@@ -327,6 +327,48 @@ const string pngsuite_files_corrupted[] = {
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_PngSuite_Corrupted,
                         testing::ValuesIn(pngsuite_files_corrupted));
 
+typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_Default;
+
+TEST_P(Imgcodecs_Png_Default, compression_level)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + get<0>(GetParam());
+
+    const int compression_level = get<1>(GetParam());
+    const size_t compression_level_output_size = get<2>(GetParam());
+
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot read test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level });
+    EXPECT_EQ(buf.size(), compression_level_output_size);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_Default,
+    testing::Values(
+        make_tuple("pngsuite/z09n2c08.png", 0, 3172),
+        make_tuple("pngsuite/z09n2c08.png", 1, 481),
+        make_tuple("pngsuite/z09n2c08.png", 2, 454),
+        make_tuple("pngsuite/z09n2c08.png", 3, 422),
+        make_tuple("pngsuite/z09n2c08.png", 4, 465),
+        make_tuple("pngsuite/z09n2c08.png", 5, 414),
+        make_tuple("pngsuite/z09n2c08.png", 6, 365),
+        make_tuple("pngsuite/z09n2c08.png", 7, 351),
+        make_tuple("pngsuite/z09n2c08.png", 8, 351),
+        make_tuple("pngsuite/z09n2c08.png", 9, 351),
+        make_tuple("pngsuite/PngSuite.png", 0, 197245),
+        make_tuple("pngsuite/PngSuite.png", 1, 9186),
+        make_tuple("pngsuite/PngSuite.png", 2, 8772),
+        make_tuple("pngsuite/PngSuite.png", 3, 8324),
+        make_tuple("pngsuite/PngSuite.png", 4, 7985),
+        make_tuple("pngsuite/PngSuite.png", 5, 7882),
+        make_tuple("pngsuite/PngSuite.png", 6, 7006),
+        make_tuple("pngsuite/PngSuite.png", 7, 6937),
+        make_tuple("pngsuite/PngSuite.png", 8, 6575),
+        make_tuple("pngsuite/PngSuite.png", 9, 6524)));
+
 #endif // HAVE_PNG
 
 }} // namespace
