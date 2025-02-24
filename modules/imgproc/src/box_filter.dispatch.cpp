@@ -313,7 +313,6 @@ Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
-
 #if 0 //defined(HAVE_IPP)
 static bool ipp_boxfilter(Mat &src, Mat &dst, Size ksize, Point anchor, bool normalize, int borderType)
 {

@@ -46,41 +46,18 @@ TEST(Imgcodecs_Tiff, decode_tile16384x16384)
 //==================================================================================================
 // See https://github.com/opencv/opencv/issues/22388
 
-/**
- * Dummy enum to show combination of IMREAD_*.
- */
-enum ImreadMixModes
-{
-    IMREAD_MIX_UNCHANGED                   = IMREAD_UNCHANGED                                     ,
-    IMREAD_MIX_GRAYSCALE                   = IMREAD_GRAYSCALE                                     ,
-    IMREAD_MIX_COLOR                       = IMREAD_COLOR     | IMREAD_COLOR_RGB                  ,
-    IMREAD_MIX_GRAYSCALE_ANYDEPTH          = IMREAD_GRAYSCALE | IMREAD_ANYDEPTH                   ,
-    IMREAD_MIX_GRAYSCALE_ANYCOLOR          = IMREAD_GRAYSCALE                    | IMREAD_ANYCOLOR,
-    IMREAD_MIX_GRAYSCALE_ANYDEPTH_ANYCOLOR = IMREAD_GRAYSCALE | IMREAD_ANYDEPTH  | IMREAD_ANYCOLOR,
-    IMREAD_MIX_COLOR_ANYDEPTH              = IMREAD_COLOR     | IMREAD_ANYDEPTH                   ,
-    IMREAD_MIX_COLOR_ANYCOLOR              = IMREAD_COLOR                        | IMREAD_ANYCOLOR,
-    IMREAD_MIX_COLOR_ANYDEPTH_ANYCOLOR     = IMREAD_COLOR     | IMREAD_ANYDEPTH  | IMREAD_ANYCOLOR
-};
-
-typedef tuple< uint64_t, tuple<string, int>, ImreadMixModes > Bufsize_and_Type;
+typedef tuple< uint64_t, perf::MatType, ImreadModes > Bufsize_and_Type;
 typedef testing::TestWithParam<Bufsize_and_Type> Imgcodecs_Tiff_decode_Huge;
-
-static inline
-void PrintTo(const ImreadMixModes& val, std::ostream* os)
-{
-    PrintTo( static_cast<ImreadModes>(val), os );
-}
 
 TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
 {
     // Get test parameters
     const uint64_t buffer_size   = get<0>(GetParam());
-    const string mat_type_string =   get<0>(get<1>(GetParam()));
-    const int mat_type           =   get<1>(get<1>(GetParam()));
+    const perf::MatType mat_type = get<1>(GetParam());
     const int imread_mode        = get<2>(GetParam());
 
     // Detect data file
-    const string req_filename = cv::format("readwrite/huge-tiff/%s_%zu.tif", mat_type_string.c_str(), (size_t)buffer_size);
+    const string req_filename = cv::format("readwrite/huge-tiff/%s_%zu.tif", typeToString(mat_type).c_str(), (size_t)buffer_size);
     const string filename = findDataFile( req_filename );
 
     // Preparation process for test
@@ -125,7 +102,7 @@ TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
             case IMREAD_GRAYSCALE | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH:
                 ncn = (ncn == 1)?1:3;
                 break;
-            case IMREAD_COLOR | IMREAD_COLOR_RGB:
+            case IMREAD_COLOR:
                 ncn = 3;
                 depth = 1;
                 break;
@@ -402,9 +379,9 @@ TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
     case MAKE_FLAG(CV_16UC1, CV_16UC4):
     case MAKE_FLAG(CV_16UC3, CV_16UC4):
     default:
-        FAIL() << cv::format("Unknown test pattern: from = %d ( %d, %d) to = %d ( %d, %d )",
-                              mat_type,   (int)CV_MAT_CN(mat_type   ), ( CV_MAT_DEPTH(mat_type   )==CV_16U)?16:8,
-                              img.type(), (int)CV_MAT_CN(img.type() ), ( CV_MAT_DEPTH(img.type() )==CV_16U)?16:8);
+        FAIL() << cv::format("Unknown test pattern: from = ( %d, %d) to = ( %d, %d )",
+                              (int)CV_MAT_CN(mat_type   ), ( CV_MAT_DEPTH(mat_type   )==CV_16U)?16:8,
+                              (int)CV_MAT_CN(img.type() ), ( CV_MAT_DEPTH(img.type() )==CV_16U)?16:8);
         break;
     }
 
@@ -414,8 +391,8 @@ TEST_P(Imgcodecs_Tiff_decode_Huge, regression)
 // Basic Test
 const Bufsize_and_Type Imgcodecs_Tiff_decode_Huge_list_basic[] =
 {
-    make_tuple<uint64_t, tuple<string,int>,ImreadMixModes>( 1073479680ull, make_tuple<string,int>("CV_8UC1",  CV_8UC1),  IMREAD_MIX_COLOR ),
-    make_tuple<uint64_t, tuple<string,int>,ImreadMixModes>( 2147483648ull, make_tuple<string,int>("CV_16UC4", CV_16UC4), IMREAD_MIX_COLOR ),
+    make_tuple<uint64_t, perf::MatType, ImreadModes>( 1073479680ull, CV_8UC1,  IMREAD_COLOR ),
+    make_tuple<uint64_t, perf::MatType, ImreadModes>( 2147483648ull, CV_16UC4, IMREAD_COLOR ),
 };
 
 INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff, Imgcodecs_Tiff_decode_Huge,
@@ -423,21 +400,25 @@ INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff, Imgcodecs_Tiff_decode_Huge,
 );
 
 // Full Test
+//  This full test is disabled in default, following steps are required to run.
+//  (1) replace "DISABLED_Imgcodecs_Tiff_Full" to "Imgcodecs_Tiff_Full" and rebuild opencv_test_imgcodecs.
+//  (2) set "OPENCV_IO_MAX_IMAGE_PIXELS=2147483648" in environment variable.
+//  (3) run "./bin/opencv_test_imgcodecs --test_tag_enable=mem_6gb,verylong,debug_verylong" .
 
 /**
  * Test lists for combination of IMREAD_*.
  */
-const ImreadMixModes all_modes_Huge_Full[] =
+const ImreadModes all_modes_Huge_Full[] =
 {
-    IMREAD_MIX_UNCHANGED,
-    IMREAD_MIX_GRAYSCALE,
-    IMREAD_MIX_GRAYSCALE_ANYDEPTH,
-    IMREAD_MIX_GRAYSCALE_ANYCOLOR,
-    IMREAD_MIX_GRAYSCALE_ANYDEPTH_ANYCOLOR,
-    IMREAD_MIX_COLOR,
-    IMREAD_MIX_COLOR_ANYDEPTH,
-    IMREAD_MIX_COLOR_ANYCOLOR,
-    IMREAD_MIX_COLOR_ANYDEPTH_ANYCOLOR,
+    static_cast<ImreadModes>(IMREAD_UNCHANGED                                     ) ,
+    static_cast<ImreadModes>(IMREAD_GRAYSCALE                                     ) ,
+    static_cast<ImreadModes>(IMREAD_COLOR                                         ) ,
+    static_cast<ImreadModes>(IMREAD_GRAYSCALE | IMREAD_ANYDEPTH                   ) ,
+    static_cast<ImreadModes>(IMREAD_GRAYSCALE                    | IMREAD_ANYCOLOR) ,
+    static_cast<ImreadModes>(IMREAD_GRAYSCALE | IMREAD_ANYDEPTH  | IMREAD_ANYCOLOR) ,
+    static_cast<ImreadModes>(IMREAD_COLOR     | IMREAD_ANYDEPTH                   ) ,
+    static_cast<ImreadModes>(IMREAD_COLOR                        | IMREAD_ANYCOLOR) ,
+    static_cast<ImreadModes>(IMREAD_COLOR     | IMREAD_ANYDEPTH  | IMREAD_ANYCOLOR)
 };
 
 const uint64_t huge_buffer_sizes_decode_Full[] =
@@ -448,16 +429,17 @@ const uint64_t huge_buffer_sizes_decode_Full[] =
     2147483648ull, // 2048 * 1024 * 1024
 };
 
-const tuple<string, int> mat_types_Full[] =
+const perf::MatType mat_types_Full[] =
 {
-    make_tuple<string, int>("CV_8UC1",  CV_8UC1),  // 8bit  GRAY
-    make_tuple<string, int>("CV_8UC3",  CV_8UC3),  // 24bit RGB
-    make_tuple<string, int>("CV_8UC4",  CV_8UC4),  // 32bit RGBA
-    make_tuple<string, int>("CV_16UC1", CV_16UC1), // 16bit GRAY
-    make_tuple<string, int>("CV_16UC3", CV_16UC3), // 48bit RGB
-    make_tuple<string, int>("CV_16UC4", CV_16UC4), // 64bit RGBA
+    CV_8UC1,  // 8bit  GRAY
+    CV_8UC3,  // 24bit RGB
+    CV_8UC4,  // 32bit RGBA
+    CV_16UC1, // 16bit GRAY
+    CV_16UC3, // 48bit RGB
+    CV_16UC4, // 64bit RGBA
 };
 
+// INSTANTIATE_TEST_CASE_P(Imgcodecs_Tiff_Full, Imgcodecs_Tiff_decode_Huge,
 INSTANTIATE_TEST_CASE_P(DISABLED_Imgcodecs_Tiff_Full, Imgcodecs_Tiff_decode_Huge,
         testing::Combine(
             testing::ValuesIn(huge_buffer_sizes_decode_Full),

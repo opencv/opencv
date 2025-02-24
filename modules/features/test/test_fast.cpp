@@ -118,8 +118,8 @@ void CV_FastTest::run( int )
     read( fs["exp_kps2"], exp_kps2, Mat() );
     fs.release();
 
-     if ( exp_kps1.size != kps1.size || 0 != cvtest::norm(exp_kps1, kps1, NORM_L2) ||
-          exp_kps2.size != kps2.size || 0 != cvtest::norm(exp_kps2, kps2, NORM_L2))
+    if ( exp_kps1.size != kps1.size || 0 != cvtest::norm(exp_kps1, kps1, NORM_L2) ||
+         exp_kps2.size != kps2.size || 0 != cvtest::norm(exp_kps2, kps2, NORM_L2))
     {
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return;
@@ -134,5 +134,35 @@ void CV_FastTest::run( int )
 }
 
 TEST(Features2d_FAST, regression) { CV_FastTest test; test.safe_run(); }
+
+// #define DUMP_TEST_DATA
+
+TEST(Features2d_FAST, noNMS)
+{
+    Mat img = imread(string(cvtest::TS::ptr()->get_data_path()) + "inpaint/orig.png", cv::IMREAD_GRAYSCALE);
+    string xml = string(cvtest::TS::ptr()->get_data_path()) + "fast/result_no_nonmax.xml";
+
+    vector<KeyPoint> keypoints;
+    FAST(img, keypoints, 100, false, FastFeatureDetector::DetectorType::TYPE_9_16);
+    Mat kps(1, (int)(keypoints.size() * sizeof(KeyPoint)), CV_8U, &keypoints[0]);
+
+    Mat gt_kps;
+    FileStorage fs(xml, FileStorage::READ);
+#ifdef DUMP_TEST_DATA
+    if (!fs.isOpened())
+    {
+        fs.open(xml, FileStorage::WRITE);
+        fs << "exp_kps" << kps;
+        fs.release();
+        fs.open(xml, FileStorage::READ);
+    }
+#endif
+    ASSERT_TRUE(fs.isOpened());
+    fs["exp_kps"] >> gt_kps;
+    fs.release();
+    ASSERT_GT(gt_kps.total(), size_t(0));
+
+    ASSERT_EQ( 0, cvtest::norm(gt_kps, kps, NORM_L2));
+}
 
 }} // namespace
