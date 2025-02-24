@@ -559,7 +559,7 @@ bool GifEncoder::writeanimation(const Animation& animation, const std::vector<in
     for (size_t i = 0; i < params.size(); i += 2) {
         switch (params[i]) {
             case IMWRITE_GIF_LOOP:
-                loopCount = std::min(std::max(params[i + 1], 0), 65535); // loop count is in 2 bytes
+                loopCount = std::min(std::max(params[i + 1], -1), 65535); // loop count is in 2 bytes
                 break;
             case IMWRITE_GIF_SPEED:
                 frameDelay = 100 - std::min(std::max(params[i + 1] - 1, 0), 99); // from 10ms to 1000ms
@@ -810,16 +810,18 @@ bool GifEncoder::writeHeader(const std::vector<Mat>& img_vec) {
         strm.putBytes(globalColorTable.data(), globalColorTableSize * 3);
     }
 
-
-    // add application extension to set the loop count
-    strm.putByte(0x21); // GIF extension code
-    strm.putByte(0xFF); // application extension table
-    strm.putByte(0x0B); // length of application block, in decimal is 11
-    strm.putBytes(R"(NETSCAPE2.0)", 11); // application authentication code
-    strm.putByte(0x03); // length of application block, in decimal is 3
-    strm.putByte(0x01); // identifier
-    strm.putWord(loopCount);
-    strm.putByte(0x00); // end of the extension
+    if ( loopCount >= 0 )
+    {
+        // add application extension to set the loop count
+        strm.putByte(0x21); // GIF extension code
+        strm.putByte(0xFF); // application extension table
+        strm.putByte(0x0B); // length of application block, in decimal is 11
+        strm.putBytes(R"(NETSCAPE2.0)", 11); // application authentication code
+        strm.putByte(0x03); // length of application block, in decimal is 3
+        strm.putByte(0x01); // identifier
+        strm.putWord(loopCount);
+        strm.putByte(0x00); // end of the extension
+    }
 
     return true;
 }

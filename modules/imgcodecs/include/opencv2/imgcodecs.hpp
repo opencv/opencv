@@ -85,6 +85,7 @@ enum ImreadModes {
      };
 
 //! Imwrite flags
+
 enum ImwriteFlags {
        IMWRITE_JPEG_QUALITY        = 1,  //!< For JPEG, it can be a quality from 0 to 100 (the higher is the better). Default value is 95.
        IMWRITE_JPEG_PROGRESSIVE    = 2,  //!< Enable JPEG features, 0 or 1, default is False.
@@ -117,7 +118,13 @@ enum ImwriteFlags {
        IMWRITE_JPEGXL_EFFORT       = 641,//!< For JPEG XL, encoder effort/speed level without affecting decoding speed; it is between 1 (fastest) and 10 (slowest). Default is 7.
        IMWRITE_JPEGXL_DISTANCE     = 642,//!< For JPEG XL, distance level for lossy compression: target max butteraugli distance, lower = higher quality, 0 = lossless; range: 0 .. 25. Default is 1.
        IMWRITE_JPEGXL_DECODING_SPEED = 643,//!< For JPEG XL, decoding speed tier for the provided options; minimum is 0 (slowest to decode, best quality/density), and maximum is 4 (fastest to decode, at the cost of some quality/density). Default is 0.
-       IMWRITE_GIF_LOOP            = 1024,//!< For GIF, it can be a loop flag from 0 to 65535. Default is 0 - loop forever.
+       IMWRITE_GIF_LOOP            = 1024, //!< For GIF, use to specify loop times from -1 to 65535. -1 means no loop. 0 means loop forever.
+       /**<
+       @note When positive N is set, whether it is displayed N or N+1 times depends on the implementation of the user application.
+             Animated GIF with loop is extended with the Netscape Application Block(NAB), which it not a part of GIF89a specification.
+             See https://en.wikipedia.org/wiki/GIF#Animated_GIF .
+             This loop times behaviour has not been documented clearly.
+       */
        IMWRITE_GIF_SPEED           = 1025,//!< For GIF, it is between 1 (slowest) and 100 (fastest). Default is 96.
        IMWRITE_GIF_QUALITY         = 1026, //!< For GIF, it can be a quality from 1 to 8. Default is 2. See cv::ImwriteGifCompressionFlags.
        IMWRITE_GIF_DITHER          = 1027, //!< For GIF, it can be a quality from -1(most dither) to 3(no dither). Default is 0.
@@ -263,6 +270,7 @@ struct CV_EXPORTS_W_SIMPLE Animation
     - Positive values denote finite repeat counts, allowing the animation to play a limited number of times.
     - If a negative value or a value beyond the maximum of `0xffff` (65535) is provided, it is reset to `0`
     (infinite looping) to maintain valid bounds.
+    - (GIF) Whether to display loopCount times or loopCount+1 times depends on the implementation of the user application. See ::IMWRITE_GIF_LOOP .
 
     @param bgColor A `Scalar` object representing the background color in BGR format:
     - Defaults to `Scalar()`, indicating an empty color (usually transparent if supported).
