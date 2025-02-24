@@ -61,7 +61,7 @@ std::vector<T>& getVec(InputArray _input) {
 }
 }
 template<typename _Tp, typename _DotTp>
-static int Sklansky_( typename std::vector<Point_<_Tp>> vec, int start, int end, int* stack, int nsign, int sign2 )
+static int Sklansky_(const typename std::vector<Point_<_Tp>>& vec, int start, int end, int* stack, int nsign, int sign2 )
 {
 	int incr = end > start ? 1 : -1;
     // prepare first triangle
@@ -184,7 +184,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     }
 
 
-    AutoBuffer<int> _stack(total + 2), _hullbuf(total);
+    std::vector<int> _stack(total + 2), _hullbuf(total);
     int* stack = _stack.data();
     int* hullbuf = _hullbuf.data();
 
