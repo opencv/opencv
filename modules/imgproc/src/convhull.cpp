@@ -52,24 +52,29 @@ void getPointVec(InputArray _input, std::vector<Point_<T>>& vector) {
     if (_input.isVector()) {
         vector = *static_cast<std::vector<Point_<T>>*>(_input.getObj());
     } else if(_input.isMat()){
-        Mat m = _input.getMat();
-       vector.clear();
+       Mat m = _input.getMat();
        if(m.rows == 2 && m.cols >= 2) {
+           vector.resize(m.cols);
            for(int x = 0; x < m.cols; x++) {
-               vector.push_back(Point_<T>(m.at<T>(0, x), m.at<T>(1, x)));
+               vector[x] = Point_<T>(m.at<T>(0, x), m.at<T>(1, x));
            }
        } else if(m.rows == 1 && m.cols % 2 == 0) {
+           vector.resize(m.cols / 2);
+           int cnt = 0;
            for(int x = 0; x < m.cols; x+=2) {
-               vector.push_back(Point_<T>(m.at<T>(0, x), m.at<T>(0, x + 1)));
+               vector[cnt++] = Point_<T>(m.at<T>(0, x), m.at<T>(0, x + 1));
            }
        } else {
            if(m.cols == 2 && m.rows >= 2) {
+               vector.resize(m.rows);
                for(int y = 0; y < m.rows; y++) {
-                   vector.push_back(Point_<T>(m.at<T>(y, 0), m.at<T>(y, 1)));
+                   vector[y] = Point_<T>(m.at<T>(y, 0), m.at<T>(y, 1));
                }
            } else if(m.cols == 1 && m.rows % 2 == 0) {
+               vector.resize(m.rows / 2);
+               int cnt = 0;
                for(int y = 0; y < m.rows; y+=2) {
-                   vector.push_back(Point_<T>(m.at<T>(y, 0), m.at<T>(y + 1, 0)));
+                   vector[cnt++] = Point_<T>(m.at<T>(y, 0), m.at<T>(y + 1, 0));
                }
            } else {
                CV_Error(cv::Error::StsNotImplemented, "InputArray is not formatted correctly");
@@ -345,11 +350,12 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     } else {
         _hull.clear();
-        Mat_<Point> vHull;
+        Mat_<Point> mHull(1, nout);
+        Point* ptr = reinterpret_cast<Point*>(mHull.ptr(0));
         for(int j = 0; j < nout; j++ ) {
-            vHull.push_back(points[hullbuf[j]]);
+            *ptr = points[hullbuf[j]];
         }
-        vHull.copyTo(_hull);
+        mHull.copyTo(_hull);
     }
 }
 
