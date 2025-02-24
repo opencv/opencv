@@ -24,7 +24,7 @@ template<> struct rvv<float>
     static inline vfloat32m1_t vfmv_s(float a, size_t b) { return __riscv_vfmv_s_f_f32m1(a, b); }
     static inline void vlseg(const float* a, T& b, T& c, size_t d) { auto x = __riscv_vlseg2e32_v_f32mf2x2(a, d); b = __riscv_vget_v_f32mf2x2_f32mf2(x, 0), c = __riscv_vget_v_f32mf2x2_f32mf2(x, 1); }
     static inline void vlsseg(const float* a, ptrdiff_t b, T& c, T& d, size_t e) { auto x = __riscv_vlsseg2e32_v_f32mf2x2(a, b, e); c = __riscv_vget_v_f32mf2x2_f32mf2(x, 0), d = __riscv_vget_v_f32mf2x2_f32mf2(x, 1); }
-    static inline void vsseg(float* a, T b, T c, size_t d) { __riscv_vsseg2e32(a, __riscv_vcreate_v_f32mf2x2(b, c), d); }
+    static inline void vsseg(float* a, T b, T c, size_t d) { __riscv_vsseg2e32(a, __riscv_vset_v_f32mf2_f32mf2x2(__riscv_vset_v_f32mf2_f32mf2x2(vfloat32mf2x2_t(), 0, b), 1, c), d); }
 };
 
 template<> struct rvv<double>
@@ -38,7 +38,7 @@ template<> struct rvv<double>
     static inline vfloat64m1_t vfmv_s(double a, size_t b) { return __riscv_vfmv_s_f_f64m1(a, b); }
     static inline void vlseg(const double* a, T& b, T& c, size_t d) { auto x = __riscv_vlseg2e64_v_f64m1x2(a, d); b = __riscv_vget_v_f64m1x2_f64m1(x, 0), c = __riscv_vget_v_f64m1x2_f64m1(x, 1); }
     static inline void vlsseg(const double* a, ptrdiff_t b, T& c, T& d, size_t e) { auto x = __riscv_vlsseg2e64_v_f64m1x2(a, b, e); c = __riscv_vget_v_f64m1x2_f64m1(x, 0), d = __riscv_vget_v_f64m1x2_f64m1(x, 1); }
-    static inline void vsseg(double* a, T b, T c, size_t d) { __riscv_vsseg2e64(a, __riscv_vcreate_v_f64m1x2(b, c), d); }
+    static inline void vsseg(double* a, T b, T c, size_t d) { __riscv_vsseg2e64(a, __riscv_vset_v_f64m1_f64m1x2(__riscv_vset_v_f64m1_f64m1x2(vfloat64m1x2_t(), 0, b), 1, c), d); }
 };
 
 // the algorithm is copied from core/src/dxt.cpp,
