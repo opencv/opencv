@@ -48,16 +48,36 @@ namespace cv
 
 namespace detail {
 template<typename T>
-std::vector<T>& getVec(InputArray _input) {
-    std::vector<T> *input;
+void getPointVec(InputArray _input, std::vector<Point_<T>>& vector) {
     if (_input.isVector()) {
-        input = static_cast<std::vector<T>*>(_input.getObj());
+        vector = *static_cast<std::vector<Point_<T>>*>(_input.getObj());
+    } else if(_input.isMat()){
+        Mat m = _input.getMat();
+       vector.clear();
+       if(m.rows == 2 && m.cols >= 2) {
+           for(int x = 0; x < m.cols; x++) {
+               vector.push_back(Point_<T>(m.at<T>(0, x), m.at<T>(1, x)));
+           }
+       } else if(m.rows == 1 && m.cols % 2 == 0) {
+           for(int x = 0; x < m.cols; x+=2) {
+               vector.push_back(Point_<T>(m.at<T>(0, x), m.at<T>(0, x + 1)));
+           }
+       } else {
+           if(m.cols == 2 && m.rows >= 2) {
+               for(int y = 0; y < m.rows; y++) {
+                   vector.push_back(Point_<T>(m.at<T>(y, 0), m.at<T>(y, 1)));
+               }
+           } else if(m.cols == 1 && m.rows % 2 == 0) {
+               for(int y = 0; y < m.rows; y+=2) {
+                   vector.push_back(Point_<T>(m.at<T>(y, 0), m.at<T>(y + 1, 0)));
+               }
+           } else {
+               CV_Error(cv::Error::StsNotImplemented, "InputArray is not formatted correctly");
+           }
+       }
     } else {
-        size_t length = _input.total();
-        T *data = reinterpret_cast<T*>(_input.getMat().data);
-        input = new std::vector<T>(data, data + length);
+        CV_Error(cv::Error::StsNotImplemented, "InputArray is neither std::vector nor cv::Mat");
     }
-    return *input;
 }
 }
 template<typename _Tp, typename _DotTp>
@@ -155,7 +175,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     Mat mPoints = _points.getMat();
 
 
-    int i, total = mPoints.checkVector(2), depth = mPoints.depth(), nout = 0, type = _points.type();
+    int i, total = mPoints.checkVector(2), depth = mPoints.depth(), nout = 0;
     int miny_ind = 0, maxy_ind = 0;
     CV_Assert(total >= 0 && (depth == CV_32F || depth == CV_32S));
 
@@ -171,18 +191,16 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     bool is_float = depth == CV_32F;
 
     if(is_float) {
-    	pointsf = detail::getVec<Point2f>(_points);
-        for( i = 0; i < total; i++ ) {
-            points.push_back(Point(pointsf[i]));
+    	detail::getPointVec<float>(_points, pointsf);
+        for(size_t j = 0; j < pointsf.size(); j++ ) {
+            points.push_back(Point(pointsf[j].x, pointsf[j].y));
         }
     } else {
-    	points = detail::getVec<Point>(_points);
-        for( i = 0; i < total; i++ ) {
-            pointsf.push_back(Point2f(points[i]));
+    	detail::getPointVec<int>(_points, points);
+        for(size_t j = 0; j < points.size(); j++ ) {
+            pointsf.push_back(Point2f(points[j].x, points[j].y));
         }
-
     }
-
 
     std::vector<int> _stack(total + 2), _hullbuf(total);
     int* stack = _stack.data();
@@ -194,33 +212,32 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     if( !is_float )
     {
         std::sort(points.begin(), points.end(), CHullCmpPoints<int>());
-        for( i = 1; i < total; i++ )
+        for(size_t j = 1; j < points.size(); j++ )
         {
-            int y = points[i].y;
+            int y = points[j].y;
             if( points[miny_ind].y > y )
-                miny_ind = i;
+                miny_ind = j;
             if( points[maxy_ind].y < y )
-                maxy_ind = i;
+                maxy_ind = j;
         }
     }
     else
     {
         std::sort(pointsf.begin(), pointsf.end(), CHullCmpPoints<float>());
-        for( i = 1; i < total; i++ )
+        for(size_t j = 1; j < pointsf.size(); j++ )
         {
-            float y = pointsf[i].y;
+            float y = pointsf[j].y;
             if( pointsf[miny_ind].y > y )
-                miny_ind = i;
+                miny_ind = j;
             if( pointsf[maxy_ind].y < y )
-                maxy_ind = i;
+                maxy_ind = j;
         }
     }
 
     const Point* pointer = points.data();
-    const Point2f* pointerf = pointsf.data();
 
-    if( pointer[0].x == pointer[total-1].x &&
-        pointer[0].y == pointer[total-1].y )
+    if( pointer[0].x == pointer[points.size()-1].x &&
+        pointer[0].y == pointer[points.size()-1].y )
     {
         hullbuf[nout++] = 0;
     }
@@ -233,8 +250,8 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
             Sklansky_<float, double>( pointsf, 0, maxy_ind, tl_stack, -1, 1);
         int *tr_stack = stack + tl_count;
         int tr_count = !is_float ?
-            Sklansky_<int, int64>( points, total-1, maxy_ind, tr_stack, -1, -1) :
-            Sklansky_<float, double>( pointsf, total-1, maxy_ind, tr_stack, -1, -1);
+            Sklansky_<int, int64>( points, points.size()-1, maxy_ind, tr_stack, -1, -1) :
+            Sklansky_<float, double>( pointsf, pointsf.size()-1, maxy_ind, tr_stack, -1, -1);
 
         // gather upper part of convex hull to output
         if( !clockwise )
@@ -256,8 +273,8 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
             Sklansky_<float, double>( pointsf, 0, miny_ind, bl_stack, 1, -1);
         int *br_stack = stack + bl_count;
         int br_count = !is_float ?
-            Sklansky_<int, int64>( points, total-1, miny_ind, br_stack, 1, 1) :
-            Sklansky_<float, double>( pointsf, total-1, miny_ind, br_stack, 1, 1);
+            Sklansky_<int, int64>( points, points.size()-1, miny_ind, br_stack, 1, 1) :
+            Sklansky_<float, double>( pointsf, points.size()-1, miny_ind, br_stack, 1, 1);
 
         if( clockwise )
         {
@@ -280,7 +297,6 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
                 br_count = MIN( br_count, 2 );
             }
         }
-
         for( i = 0; i < bl_count-1; i++ )
             hullbuf[nout++] = int(&pointer[bl_stack[i]] - pointer);
         for( i = br_count-1; i > 0; i-- )
@@ -326,15 +342,15 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
     }
 
-    if( !returnPoints )
+    if( !returnPoints ) {
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
-    else
-    {
-        _hull.create(nout, 1, CV_MAKETYPE(depth, 2));
-        Mat hull = _hull.getMat();
-        size_t step = !hull.isContinuous() ? hull.step[0] : sizeof(Point);
-        for( i = 0; i < nout; i++ )
-            *(Point*)(hull.ptr() + i*step) = points[hullbuf[i]];
+    } else {
+        _hull.clear();
+        Mat_<Point> vHull;
+        for(int j = 0; j < nout; j++ ) {
+            vHull.push_back(points[hullbuf[j]]);
+        }
+        vHull.copyTo(_hull);
     }
 }
 
