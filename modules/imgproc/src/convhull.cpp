@@ -174,7 +174,6 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     CV_Assert(_points.getObj() != _hull.getObj());
     Mat mPoints = _points.getMat();
 
-
     int i, total = mPoints.checkVector(2), depth = mPoints.depth(), nout = 0;
     int miny_ind = 0, maxy_ind = 0;
     CV_Assert(total >= 0 && (depth == CV_32F || depth == CV_32S));
