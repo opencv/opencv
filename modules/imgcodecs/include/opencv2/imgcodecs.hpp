@@ -85,7 +85,6 @@ enum ImreadModes {
      };
 
 //! Imwrite flags
-
 enum ImwriteFlags {
        IMWRITE_JPEG_QUALITY        = 1,  //!< For JPEG, it can be a quality from 0 to 100 (the higher is the better). Default value is 95.
        IMWRITE_JPEG_PROGRESSIVE    = 2,  //!< Enable JPEG features, 0 or 1, default is False.
