@@ -1439,39 +1439,25 @@ void ArucoDetector::read(const FileNode &fn) {
     arucoDetectorImpl->refineParams.readRefineParameters(fn);
 }
 
-const Dictionary& ArucoDetector::getDictionary(int index) const {
-    CV_Assert(index >= 0 && static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size());
-    return arucoDetectorImpl->dictionaries[index];
+const Dictionary& ArucoDetector::getDictionary() const {
+    return arucoDetectorImpl->dictionaries[0];
 }
 
-void ArucoDetector::setDictionary(const Dictionary& dictionary, int index) {
-    // special case: if index is 0, we add the dictionary to the list to preserve the old behavior
-    CV_Assert(index == 0 || (index >= 0 && static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size()));
-    if (index == 0 && arucoDetectorImpl->dictionaries.empty()) {
+void ArucoDetector::setDictionary(const Dictionary& dictionary) {
+    if (arucoDetectorImpl->dictionaries.empty()) {
         arucoDetectorImpl->dictionaries.push_back(dictionary);
     } else {
-        arucoDetectorImpl->dictionaries.at(index) = dictionary;
+        arucoDetectorImpl->dictionaries[0] = dictionary;
     }
 }
 
-const vector<Dictionary>& ArucoDetector::getDictionaries() const {
+vector<Dictionary> ArucoDetector::getDictionaries() const {
     return arucoDetectorImpl->dictionaries;
 }
 
 void ArucoDetector::setDictionaries(const vector<Dictionary>& dictionaries) {
     CV_Assert(!dictionaries.empty());
     arucoDetectorImpl->dictionaries = dictionaries;
-}
-
-void ArucoDetector::addDictionary(const Dictionary& dictionary) {
-    arucoDetectorImpl->dictionaries.push_back(dictionary);
-}
-
-void ArucoDetector::removeDictionary(int index) {
-    CV_Assert(index >= 0 && static_cast<size_t>(index) < arucoDetectorImpl->dictionaries.size());
-    // disallow no dictionaries
-    CV_Assert(arucoDetectorImpl->dictionaries.size() > 1ul);
-    arucoDetectorImpl->dictionaries.erase(arucoDetectorImpl->dictionaries.begin() + index);
 }
 
 const DetectorParameters& ArucoDetector::getDetectorParameters() const {
