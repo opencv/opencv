@@ -353,9 +353,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         Mat_<Point> mHull(1, nout);
         Point* ptr = reinterpret_cast<Point*>(mHull.ptr(0));
         for(int j = 0; j < nout; j++ ) {
-            *ptr = points[hullbuf[j]];
+            ptr[j] = points[hullbuf[j]];
         }
-        mHull.copyTo(_hull);
+        _hull.setTo(mHull);
     }
 }
 
