@@ -327,9 +327,9 @@ const string pngsuite_files_corrupted[] = {
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_PngSuite_Corrupted,
                         testing::ValuesIn(pngsuite_files_corrupted));
 
-typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_Default;
+typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_ImwriteFlags;
 
-TEST_P(Imgcodecs_Png_Default, compression_level)
+TEST_P(Imgcodecs_Png_ImwriteFlags, compression_level)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + get<0>(GetParam());
@@ -346,18 +346,28 @@ TEST_P(Imgcodecs_Png_Default, compression_level)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/,
-    Imgcodecs_Png_Default,
+    Imgcodecs_Png_ImwriteFlags,
     testing::Values(
-        make_tuple("pngsuite/z09n2c08.png", 0, 3172),
-        make_tuple("pngsuite/z09n2c08.png", 1, 232),
-        make_tuple("pngsuite/z09n2c08.png", 2, 232),
-        make_tuple("pngsuite/z09n2c08.png", 3, 232),
-        make_tuple("pngsuite/z09n2c08.png", 4, 286),
-        make_tuple("pngsuite/z09n2c08.png", 5, 242),
-        make_tuple("pngsuite/z09n2c08.png", 6, 224),
-        make_tuple("pngsuite/z09n2c08.png", 7, 224),
-        make_tuple("pngsuite/z09n2c08.png", 8, 224),
-        make_tuple("pngsuite/z09n2c08.png", 9, 224),
+        make_tuple("gifsuite/gif_big.png", 0, 7262971),
+        make_tuple("gifsuite/gif_big.png", 1, 143568),
+        make_tuple("gifsuite/gif_big.png", 2, 138940),
+        make_tuple("gifsuite/gif_big.png", 3, 129949),
+        make_tuple("gifsuite/gif_big.png", 4, 94006),
+        make_tuple("gifsuite/gif_big.png", 5, 90875),
+        make_tuple("gifsuite/gif_big.png", 6, 81390),
+        make_tuple("gifsuite/gif_big.png", 7, 81122),
+        make_tuple("gifsuite/gif_big.png", 8, 74337),
+        make_tuple("gifsuite/gif_big.png", 9, 70835),
+        make_tuple("drawing/image.png", 0, 721617),
+        make_tuple("drawing/image.png", 1, 74400),
+        make_tuple("drawing/image.png", 2, 72994),
+        make_tuple("drawing/image.png", 3, 71437),
+        make_tuple("drawing/image.png", 4, 70737),
+        make_tuple("drawing/image.png", 5, 69875),
+        make_tuple("drawing/image.png", 6, 69083),
+        make_tuple("drawing/image.png", 7, 68922),
+        make_tuple("drawing/image.png", 8, 68495),
+        make_tuple("drawing/image.png", 9, 67523),
         make_tuple("pngsuite/PngSuite.png", 0, 197245),
         make_tuple("pngsuite/PngSuite.png", 1, 4014),
         make_tuple("pngsuite/PngSuite.png", 2, 3863),
