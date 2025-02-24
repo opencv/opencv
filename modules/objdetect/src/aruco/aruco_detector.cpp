@@ -648,7 +648,7 @@ enum class DictionaryMode {
 
 struct ArucoDetector::ArucoDetectorImpl {
     /// dictionaries indicates the types of markers that will be searched
-    std::vector<Dictionary> dictionaries;
+    vector<Dictionary> dictionaries;
 
     /// marker detection parameters, check DetectorParameters docs to see available settings
     DetectorParameters detectorParams;
@@ -657,7 +657,7 @@ struct ArucoDetector::ArucoDetectorImpl {
     RefineParameters refineParams;
     ArucoDetectorImpl() {}
 
-    ArucoDetectorImpl(const std::vector<Dictionary>&_dictionaries, const DetectorParameters &_detectorParams,
+    ArucoDetectorImpl(const vector<Dictionary>&_dictionaries, const DetectorParameters &_detectorParams,
                       const RefineParameters& _refineParams): dictionaries(_dictionaries),
                       detectorParams(_detectorParams), refineParams(_refineParams) {
                           CV_Assert(!dictionaries.empty());
@@ -838,7 +838,7 @@ struct ArucoDetector::ArucoDetectorImpl {
 
             // Clean up rejectedImgPoints by comparing to itself and all candidates
             const float epsilon = 0.000001f;
-            auto compareCandidates = [epsilon](std::vector<Point2f> a, std::vector<Point2f> b) {
+            auto compareCandidates = [epsilon](vector<Point2f> a, vector<Point2f> b) {
                 for (int i = 0; i < 4; i++) {
                     if (std::abs(a[i].x - b[i].x) > epsilon || std::abs(a[i].y - b[i].y) > epsilon) {
                         return false;
@@ -1113,7 +1113,7 @@ ArucoDetector::ArucoDetector(const Dictionary &_dictionary,
     arucoDetectorImpl = makePtr<ArucoDetectorImpl>(vector<Dictionary>{_dictionary}, _detectorParams, _refineParams);
 }
 
-ArucoDetector::ArucoDetector(const std::vector<Dictionary> &_dictionaries,
+ArucoDetector::ArucoDetector(const vector<Dictionary> &_dictionaries,
                              const DetectorParameters &_detectorParams,
                              const RefineParameters& _refineParams) {
     arucoDetectorImpl = makePtr<ArucoDetectorImpl>(_dictionaries, _detectorParams, _refineParams);
@@ -1454,6 +1454,7 @@ const vector<Dictionary>& ArucoDetector::getDictionaries() const {
 }
 
 void ArucoDetector::setDictionaries(const vector<Dictionary>& dictionaries) {
+    CV_Assert(!dictionaries.empty());
     arucoDetectorImpl->dictionaries = dictionaries;
 }
 
