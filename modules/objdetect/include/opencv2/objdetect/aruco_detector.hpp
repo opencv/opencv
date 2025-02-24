@@ -373,66 +373,33 @@ public:
     CV_WRAP void detectMarkersMultiDict(InputArray image, OutputArrayOfArrays corners, OutputArray ids,
                                OutputArrayOfArrays rejectedImgPoints = noArray(), OutputArray dictIndices = noArray()) const;
 
-    /** @brief Returns a specific dictionary from the set of dictionaries used for marker detection.
+    /** @brief Returns first dictionary from internal list used for marker detection.
      *
-     * @param index Index of the dictionary to retrieve. Default is 0, returning the first dictionary if multiple are set.
-     *
-     * Returns the dictionary at the specified index from the internal collection of dictionaries used by the ArucoDetector.
-     * If only one dictionary is set, or if the index is 0, this method will return that dictionary.
-     * If multiple dictionaries are in use (e.g., for dictionary cascade), this allows access to each dictionary individually.
-     * @note If the index is out of bounds, the function throws an error.
+     * @return The first dictionary from the configured ArucoDetector.
      */
-    CV_WRAP const Dictionary& getDictionary(int index = 0) const;
+    CV_WRAP const Dictionary& getDictionary() const;
 
-    /** @brief Sets a specific dictionary in the list of dictionaries used for marker detection, replacing the dictionary at the given index.
+    /** @brief Sets and replaces the first dictionary in internal list to be used for marker detection.
      *
-     * @param dictionary The dictionary to set at the specified index.
-     * @param index Index of the dictionary to set. Default is 0, replacing the first dictionary if multiple are set.
-     *
-     * Sets the dictionary at the specified index within the internal collection of dictionaries used by the ArucoDetector.
-     * If implementing a dictionary cascade or similar, this method allows for replacing specific dictionaries within the collection.
-     * @note If the index is out of bounds, the method is going to throw an error.
+     * @param dictionary The new dictionary that will replace the first dictionary in the internal list.
      */
-    CV_WRAP void setDictionary(const Dictionary& dictionary, int index = 0);
+    CV_WRAP void setDictionary(const Dictionary& dictionary);
 
     /** @brief Returns all dictionaries currently used for marker detection as a vector.
      *
-     * @return A constant reference to a std::vector<Dictionary> containing all dictionaries used by the ArucoDetector.
-     *
-     * Provides access to the entire set of Dictionary objects currently configured within the ArucoDetector.
-     * This is useful for inspecting the dictionaries being used, iterating through them, or determining the number of dictionaries in use.
+     * @return A std::vector<Dictionary> containing all dictionaries used by the ArucoDetector.
      */
-    CV_WRAP const std::vector<Dictionary>& getDictionaries() const;
+    CV_WRAP std::vector<Dictionary> getDictionaries() const;
 
     /** @brief Sets the entire collection of dictionaries to be used for marker detection, replacing any existing dictionaries.
      *
      * @param dictionaries A std::vector<Dictionary> containing the new set of dictionaries to be used.
      *
-     * Configures the ArucoDetector to use the provided vector of Dictionary objects for marker detection.
+     * Configures the ArucoDetector to use the provided vector of dictionaries for marker detection.
      * This method replaces any dictionaries that were previously set.
      * @note Setting an empty vector of dictionaries will throw an error.
      */
     CV_WRAP void setDictionaries(const std::vector<Dictionary>& dictionaries);
-
-    /** @brief Adds a new dictionary to the collection of dictionaries used for marker detection.
-     *
-     * @param dictionary The dictionary to add to the collection.
-     *
-     * Appends the provided Dictionary object to the internal collection of dictionaries used by the ArucoDetector.
-     * This method is useful when you want to extend the set of dictionaries already in use without replacing them entirely.
-     */
-    CV_WRAP void addDictionary(const Dictionary& dictionary);
-
-    /** @brief Removes a dictionary from the collection of dictionaries at the specified index.
-     *
-     * @param index Index of the dictionary to remove from the collection.
-     *
-     * Removes the Dictionary object at the specified index from the internal collection of dictionaries.
-     * After removing a dictionary, the indices of subsequent dictionaries in the collection will be shifted.
-     * @note If the index is out of bounds, the function will throw. It will also not allow removing the last
-     * dictionary of the internal collection.
-     */
-    CV_WRAP void removeDictionary(int index);
 
     CV_WRAP const DetectorParameters& getDetectorParameters() const;
     CV_WRAP void setDetectorParameters(const DetectorParameters& detectorParameters);

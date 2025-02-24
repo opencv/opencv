@@ -647,33 +647,31 @@ TEST(CV_ArucoDetectMarkers, regression_contour_24220)
     }
 }
 
-TEST(CV_ArucoMultiDict, addRemoveDictionary)
+TEST(CV_ArucoMultiDict, setGetDictionaries)
 {
-    // using default constructor that pre-configures DICT_4X4_50
-    aruco::ArucoDetector detector;
-    detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_5X5_100));
-    const auto& dicts = detector.getDictionaries();
+    vector<aruco::Dictionary> dictionaries = {aruco::getPredefinedDictionary(aruco::DICT_4X4_50), aruco::getPredefinedDictionary(aruco::DICT_5X5_100)};
+    aruco::ArucoDetector detector(dictionaries);
+    vector<aruco::Dictionary> dicts = detector.getDictionaries();
     ASSERT_EQ(dicts.size(), 2ul);
     EXPECT_EQ(dicts[0].markerSize, 4);
     EXPECT_EQ(dicts[1].markerSize, 5);
-    detector.removeDictionary(0);
-    ASSERT_EQ(dicts.size(), 1ul);
-    EXPECT_EQ(dicts[0].markerSize, 5);
-    detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_6X6_100));
-    detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_7X7_250));
-    detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_APRILTAG_25h9));
-    detector.removeDictionary(0);
+    dictionaries.clear();
+    dictionaries.push_back(aruco::getPredefinedDictionary(aruco::DICT_6X6_100));
+    dictionaries.push_back(aruco::getPredefinedDictionary(aruco::DICT_7X7_250));
+    dictionaries.push_back(aruco::getPredefinedDictionary(aruco::DICT_APRILTAG_25h9));
+    detector.setDictionaries(dictionaries);
+    dicts = detector.getDictionaries();
     ASSERT_EQ(dicts.size(), 3ul);
     EXPECT_EQ(dicts[0].markerSize, 6);
     EXPECT_EQ(dicts[1].markerSize, 7);
     EXPECT_EQ(dicts[2].markerSize, 5);
-    detector.setDictionary(aruco::getPredefinedDictionary(aruco::DICT_APRILTAG_36h10), 1);
     auto dict = detector.getDictionary();
     EXPECT_EQ(dict.markerSize, 6);
     detector.setDictionary(aruco::getPredefinedDictionary(aruco::DICT_APRILTAG_16h5));
+    dicts = detector.getDictionaries();
     ASSERT_EQ(dicts.size(), 3ul);
     EXPECT_EQ(dicts[0].markerSize, 4);
-    EXPECT_EQ(dicts[1].markerSize, 6);
+    EXPECT_EQ(dicts[1].markerSize, 7);
     EXPECT_EQ(dicts[2].markerSize, 5);
 }
 
@@ -681,9 +679,6 @@ TEST(CV_ArucoMultiDict, addRemoveDictionary)
 TEST(CV_ArucoMultiDict, noDict)
 {
     aruco::ArucoDetector detector;
-    EXPECT_THROW({
-        detector.removeDictionary(0);
-    }, Exception);
     EXPECT_THROW({
         detector.setDictionaries({});
     }, Exception);
@@ -743,7 +738,7 @@ TEST(CV_ArucoMultiDict, serialization)
         // compare default constructor result
         EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_4X4_50), test_detector.getDictionary());
     }
-    detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_5X5_100));
+    detector.setDictionaries({aruco::getPredefinedDictionary(aruco::DICT_4X4_50), aruco::getPredefinedDictionary(aruco::DICT_5X5_100)});
     {
         FileStorage fs(fileName, FileStorage::Mode::WRITE);
         detector.write(fs);
@@ -752,9 +747,10 @@ TEST(CV_ArucoMultiDict, serialization)
         aruco::ArucoDetector test_detector;
         test_detector.read(test_fs.root());
         // check for one additional dictionary
-        ASSERT_EQ(2ul, test_detector.getDictionaries().size());
-        EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_4X4_50), test_detector.getDictionary());
-        EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_5X5_100), test_detector.getDictionary(1));
+        auto dicts = test_detector.getDictionaries();
+        ASSERT_EQ(2ul, dicts.size());
+        EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_4X4_50), dicts[0]);
+        EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_5X5_100), dicts[1]);
     }
 }
 
