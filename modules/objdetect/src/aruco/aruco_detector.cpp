@@ -1407,13 +1407,18 @@ void ArucoDetector::refineDetectedMarkers(InputArray _image, const Board& _board
 }
 
 void ArucoDetector::write(FileStorage &fs) const {
-    fs << "dictionaries" << "[";
-    for (auto& dictionary : arucoDetectorImpl->dictionaries) {
-        fs << "{";
-        dictionary.writeDictionary(fs);
-        fs << "}";
+    // preserve old format for single dictionary case
+    if (1 == arucoDetectorImpl->dictionaries.size()) {
+        arucoDetectorImpl->dictionaries[0].writeDictionary(fs);
+    } else {
+        fs << "dictionaries" << "[";
+        for (auto& dictionary : arucoDetectorImpl->dictionaries) {
+            fs << "{";
+            dictionary.writeDictionary(fs);
+            fs << "}";
+        }
+        fs << "]";
     }
-    fs << "]";
     arucoDetectorImpl->detectorParams.writeDetectorParameters(fs);
     arucoDetectorImpl->refineParams.writeRefineParameters(fs);
 }

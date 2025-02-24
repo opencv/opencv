@@ -6,6 +6,15 @@
 #include "opencv2/objdetect/aruco_detector.hpp"
 #include "opencv2/calib3d.hpp"
 
+namespace cv::aruco {
+    bool operator==(const Dictionary& d1, const Dictionary& d2);
+    bool operator==(const Dictionary& d1, const Dictionary& d2) {
+        return d1.markerSize == d2.markerSize
+            && std::equal(d1.bytesList.begin<uchar>(), d1.bytesList.end<uchar>(), d2.bytesList.begin<uchar>())
+            && d1.maxCorrectionBits == d2.maxCorrectionBits;
+    };
+}
+
 namespace opencv_test { namespace {
 
 /**
@@ -675,6 +684,9 @@ TEST(CV_ArucoMultiDict, noDict)
     EXPECT_THROW({
         detector.removeDictionary(0);
     }, Exception);
+    EXPECT_THROW({
+        detector.setDictionaries({});
+    }, Exception);
 }
 
 
@@ -713,6 +725,36 @@ TEST(CV_ArucoMultiDict, multiMarkerDetection)
     ASSERT_EQ(dictIds.size(), 4u);
     for (size_t i = 0; i < dictIds.size(); ++i) {
         EXPECT_EQ(dictIds[i], (int)i);
+    }
+}
+
+
+TEST(CV_ArucoMultiDict, serialization)
+{
+    const std::string fileName("test_aruco_serialization.json");
+    aruco::ArucoDetector detector;
+    {
+        FileStorage fs(fileName, FileStorage::Mode::WRITE);
+        detector.write(fs);
+        fs.release();
+        FileStorage test_fs(fileName, FileStorage::Mode::READ);
+        aruco::ArucoDetector test_detector;
+        test_detector.read(test_fs.root());
+        // compare default constructor result
+        EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_4X4_50), test_detector.getDictionary());
+    }
+    detector.addDictionary(aruco::getPredefinedDictionary(aruco::DICT_5X5_100));
+    {
+        FileStorage fs(fileName, FileStorage::Mode::WRITE);
+        detector.write(fs);
+        fs.release();
+        FileStorage test_fs(fileName, FileStorage::Mode::READ);
+        aruco::ArucoDetector test_detector;
+        test_detector.read(test_fs.root());
+        // check for one additional dictionary
+        ASSERT_EQ(2ul, test_detector.getDictionaries().size());
+        EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_4X4_50), test_detector.getDictionary());
+        EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_5X5_100), test_detector.getDictionary(1));
     }
 }
 
