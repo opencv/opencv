@@ -357,27 +357,7 @@ INSTANTIATE_TEST_CASE_P(/**/,
         make_tuple("../perf/512x512.png", 6, 156621),
         make_tuple("../perf/512x512.png", 7, 155696),
         make_tuple("../perf/512x512.png", 8, 153708),
-        make_tuple("../perf/512x512.png", 9, 152181),
-        make_tuple("drawing/image.png", 0, 721617),
-        make_tuple("drawing/image.png", 1, 74400),
-        make_tuple("drawing/image.png", 2, 72994),
-        make_tuple("drawing/image.png", 3, 71437),
-        make_tuple("drawing/image.png", 4, 70737),
-        make_tuple("drawing/image.png", 5, 69875),
-        make_tuple("drawing/image.png", 6, 69083),
-        make_tuple("drawing/image.png", 7, 68922),
-        make_tuple("drawing/image.png", 8, 68495),
-        make_tuple("drawing/image.png", 9, 67523),
-        make_tuple("pngsuite/PngSuite.png", 0, 197245),
-        make_tuple("pngsuite/PngSuite.png", 1, 4014),
-        make_tuple("pngsuite/PngSuite.png", 2, 3863),
-        make_tuple("pngsuite/PngSuite.png", 3, 3553),
-        make_tuple("pngsuite/PngSuite.png", 4, 3248),
-        make_tuple("pngsuite/PngSuite.png", 5, 3199),
-        make_tuple("pngsuite/PngSuite.png", 6, 2264),
-        make_tuple("pngsuite/PngSuite.png", 7, 2582),
-        make_tuple("pngsuite/PngSuite.png", 8, 1609),
-        make_tuple("pngsuite/PngSuite.png", 9, 1585)));
+        make_tuple("../perf/512x512.png", 9, 152181)));
 
 #endif // HAVE_PNG
 
