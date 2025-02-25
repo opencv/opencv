@@ -77,7 +77,7 @@ void getPointVec(InputArray _input, std::vector<Point_<T>>& vector) {
                    vector[cnt++] = Point_<T>(m.at<T>(y, 0), m.at<T>(y + 1, 0));
                }
            } else {
-               CV_Error(cv::Error::StsNotImplemented, "InputArray is not formatted correctly");
+               CV_Error(cv::Error::StsUnsupportedFormat, "InputArray is not formatted correctly");
            }
        }
     } else {
@@ -352,16 +352,36 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     } else {
         _hull.create(nout, 1, _hull.type());
-        if(_hull.depth() == CV_32F) {
-            std::vector<Point2f>& vHull = *static_cast<std::vector<Point2f>*>(_hull.getObj());
-            for(int j = 0; j < nout; j++ ) {
-                vHull[j] = pointsf[hullbuf[j]];
+        if(_hull.isVector()) {
+            if(_hull.depth() == CV_32F) {
+                std::vector<Point2f>& vHull = *static_cast<std::vector<Point2f>*>(_hull.getObj());
+                for(int j = 0; j < nout; j++ ) {
+                    vHull[j] = pointsf[hullbuf[j]];
+                }
+            } else if(_hull.depth() == CV_32S) {
+                std::vector<Point>& vHull = *static_cast<std::vector<Point>*>(_hull.getObj());
+                for(int j = 0; j < nout; j++ ) {
+                    vHull[j] = points[hullbuf[j]];
+                }
+            } else {
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported OutputArray");
             }
-        } else if(_hull.depth() == CV_32S) {
-            std::vector<Point>& vHull = *static_cast<std::vector<Point>*>(_hull.getObj());
-            for(int j = 0; j < nout; j++ ) {
-                vHull[j] = points[hullbuf[j]];
+        } else if (_hull.isMat()) {
+            if (_hull.depth() == CV_32F) {
+                Point2f* ptr = reinterpret_cast<Point2f*>(_hull.getMat().ptr(0));
+                for (int j = 0; j < nout; j++) {
+                    ptr[j] = pointsf[hullbuf[j]];
+                }
+            } else if (_hull.depth() == CV_32S) {
+                Point* ptr = reinterpret_cast<Point*>(_hull.getMat().ptr(0));
+                for (int j = 0; j < nout; j++) {
+                    ptr[j] = points[hullbuf[j]];
+                }
+            } else {
+                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported OutputArray");
             }
+        } else {
+            CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported OutputArray");
         }
     }
 }
