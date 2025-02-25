@@ -181,9 +181,6 @@ struct NormInf_SIMD<int, int> {
     int operator() (const int* src, int n) const {
         int j = 0;
         int s = 0;
-#if CV_RVV
-        s = normInf_rvv<int, int>(src, n, j);
-#else
         v_uint32 r0 = vx_setzero_u32(), r1 = vx_setzero_u32();
         v_uint32 r2 = vx_setzero_u32(), r3 = vx_setzero_u32();
         for (; j <= n - 4 * VTraits<v_int32>::vlanes(); j += 4 * VTraits<v_int32>::vlanes()) {
@@ -194,7 +191,6 @@ struct NormInf_SIMD<int, int> {
         }
         r0 = v_max(r0, v_max(r1, v_max(r2, r3)));
         s = std::max(s, saturate_cast<int>(v_reduce_max(r0)));
-#endif
         for (; j < n; j++) {
             s = std::max(s, cv_abs(src[j]));
         }
@@ -250,9 +246,6 @@ struct NormL1_SIMD<schar, int> {
     int operator() (const schar* src, int n) const {
         int j = 0;
         int s = 0;
-#if CV_RVV
-        s = normL1_rvv<schar, int>(src, n, j);
-#else
         v_uint32 r0 = vx_setzero_u32(), r1 = vx_setzero_u32();
         v_uint8  one = vx_setall_u8(1);
         for (; j<= n - 2 * VTraits<v_int8>::vlanes(); j += 2 * VTraits<v_int8>::vlanes()) {
@@ -263,7 +256,6 @@ struct NormL1_SIMD<schar, int> {
             r1 = v_dotprod_expand_fast(v1, one, r1);
         }
         s += v_reduce_sum(v_add(r0, r1));
-#endif
         for (; j < n; j++) {
             s += saturate_cast<int>(cv_abs(src[j]));
         }
@@ -276,9 +268,6 @@ struct NormL1_SIMD<ushort, int> {
     int operator() (const ushort* src, int n) const {
         int j = 0;
         int s = 0;
-#if CV_RVV
-        s = normL1_rvv<ushort, int>(src, n, j);
-#else
         v_uint32 r00 = vx_setzero_u32(), r01 = vx_setzero_u32();
         v_uint32 r10 = vx_setzero_u32(), r11 = vx_setzero_u32();
         for (; j<= n - 2 * VTraits<v_uint16>::vlanes(); j += 2 * VTraits<v_uint16>::vlanes()) {
@@ -295,7 +284,6 @@ struct NormL1_SIMD<ushort, int> {
             r11 = v_add(r11, v11);
         }
         s += (int)v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
-#endif
         for (; j < n; j++) {
             s += src[j];
         }
@@ -308,9 +296,6 @@ struct NormL1_SIMD<short, int> {
     int operator() (const short* src, int n) const {
         int j = 0;
         int s = 0;
-#if CV_RVV
-        s = normL1_rvv<short, int>(src, n, j);
-#else
         v_uint32 r00 = vx_setzero_u32(), r01 = vx_setzero_u32();
         v_uint32 r10 = vx_setzero_u32(), r11 = vx_setzero_u32();
         for (; j<= n - 2 * VTraits<v_int16>::vlanes(); j += 2 * VTraits<v_int16>::vlanes()) {
@@ -327,7 +312,6 @@ struct NormL1_SIMD<short, int> {
             r11 = v_add(r11, v11);
         }
         s += (int)v_reduce_sum(v_add(v_add(v_add(r00, r01), r10), r11));
-#endif
         for (; j < n; j++) {
             s += saturate_cast<int>(cv_abs(src[j]));
         }
@@ -340,9 +324,6 @@ struct NormL2_SIMD<uchar, int> {
     int operator() (const uchar* src, int n) const {
         int j = 0;
         int s = 0;
-#if CV_RVV
-        s = normL2_rvv<uchar, int>(src, n, j);
-#else
         v_uint32 r0 = vx_setzero_u32(), r1 = vx_setzero_u32();
         for (; j <= n - 2 * VTraits<v_uint8>::vlanes(); j += 2 * VTraits<v_uint8>::vlanes()) {
             v_uint8 v0 = vx_load(src + j);
@@ -352,7 +333,6 @@ struct NormL2_SIMD<uchar, int> {
             r1 = v_dotprod_expand_fast(v1, v1, r1);
         }
         s += v_reduce_sum(v_add(r0, r1));
-#endif
         for (; j < n; j++) {
             int v = saturate_cast<int>(src[j]);
             s += v * v;
@@ -366,9 +346,6 @@ struct NormL2_SIMD<schar, int> {
     int operator() (const schar* src, int n) const {
         int j = 0;
         int s = 0;
-#if CV_RVV
-        s = normL2_rvv<schar, int>(src, n, j);
-#else
         v_int32 r0 = vx_setzero_s32(), r1 = vx_setzero_s32();
         for (; j <= n - 2 * VTraits<v_int8>::vlanes(); j += 2 * VTraits<v_int8>::vlanes()) {
             v_int8 v0 = vx_load(src + j);
@@ -377,7 +354,6 @@ struct NormL2_SIMD<schar, int> {
             r1 = v_dotprod_expand_fast(v1, v1, r1);
         }
         s += v_reduce_sum(v_add(r0, r1));
-#endif
         for (; j < n; j++) {
             int v = saturate_cast<int>(src[j]);
             s += v * v;
@@ -1362,7 +1338,12 @@ CV_DEF_NORM_ALL(64f, double, double, double, double)
 NormFunc getNormFunc(int normType, int depth)
 {
     CV_INSTRUMENT_REGION();
-    static NormFunc normTab[3][8] =
+
+    NormFunc fn;
+    CALL_HAL_RET(getNormFunc, cv_hal_getNormFunc, fn, normType, depth);
+
+    // [FIXME] append 0's when merging to 5.x
+    static NormFunc normTab[3][CV_DEPTH_MAX] =
     {
         {
             (NormFunc)GET_OPTIMIZED(normInf_8u), (NormFunc)GET_OPTIMIZED(normInf_8s), (NormFunc)GET_OPTIMIZED(normInf_16u), (NormFunc)GET_OPTIMIZED(normInf_16s),
@@ -1377,8 +1358,8 @@ NormFunc getNormFunc(int normType, int depth)
             (NormFunc)GET_OPTIMIZED(normL2_32s), (NormFunc)GET_OPTIMIZED(normL2_32f), (NormFunc)normL2_64f, 0
         }
     };
-
-    return normTab[normType][depth];
+    fn = normTab[normType][depth];
+    return fn;
 }
 
 NormDiffFunc getNormDiffFunc(int normType, int depth)
