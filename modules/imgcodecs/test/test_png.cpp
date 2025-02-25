@@ -327,6 +327,38 @@ const string pngsuite_files_corrupted[] = {
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_PngSuite_Corrupted,
                         testing::ValuesIn(pngsuite_files_corrupted));
 
+typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_ImwriteFlags;
+
+TEST_P(Imgcodecs_Png_ImwriteFlags, compression_level)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + get<0>(GetParam());
+
+    const int compression_level = get<1>(GetParam());
+    const size_t compression_level_output_size = get<2>(GetParam());
+
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot read test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level });
+    EXPECT_EQ(buf.size(), compression_level_output_size);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_ImwriteFlags,
+    testing::Values(
+        make_tuple("../perf/512x512.png", 0, 788279),
+        make_tuple("../perf/512x512.png", 1, 179503),
+        make_tuple("../perf/512x512.png", 2, 176007),
+        make_tuple("../perf/512x512.png", 3, 170497),
+        make_tuple("../perf/512x512.png", 4, 163357),
+        make_tuple("../perf/512x512.png", 5, 159190),
+        make_tuple("../perf/512x512.png", 6, 156621),
+        make_tuple("../perf/512x512.png", 7, 155696),
+        make_tuple("../perf/512x512.png", 8, 153708),
+        make_tuple("../perf/512x512.png", 9, 152181)));
+
 #endif // HAVE_PNG
 
 }} // namespace
