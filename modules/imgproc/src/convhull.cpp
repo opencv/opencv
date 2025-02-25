@@ -196,13 +196,15 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 
     if(is_float) {
     	detail::getPointVec<float>(_points, pointsf);
+    	points.resize(pointsf.size());
         for(size_t j = 0; j < pointsf.size(); j++ ) {
-            points.push_back(Point(pointsf[j].x, pointsf[j].y));
+            points[i] = Point(pointsf[j].x, pointsf[j].y);
         }
     } else {
     	detail::getPointVec<int>(_points, points);
+        pointsf.resize(points.size());
         for(size_t j = 0; j < points.size(); j++ ) {
-            pointsf.push_back(Point2f(points[j].x, points[j].y));
+            pointsf[i] = Point2f(points[j].x, points[j].y);
         }
     }
 
@@ -349,12 +351,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     if( !returnPoints ) {
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     } else {
-        Mat_<Point> mHull(1, nout);
-        Point* ptr = reinterpret_cast<Point*>(mHull.ptr(0));
+        _hull.create(nout, 1, _hull.type());
+        std::vector<Point>& vHull = *static_cast<std::vector<Point>*>(_hull.getObj());
         for(int j = 0; j < nout; j++ ) {
-            ptr[j] = points[hullbuf[j]];
+            vHull[j] = points[hullbuf[j]];
         }
-        _hull.setTo(mHull);
     }
 }
 
