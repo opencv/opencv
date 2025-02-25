@@ -6,13 +6,15 @@
 #include "opencv2/objdetect/aruco_detector.hpp"
 #include "opencv2/calib3d.hpp"
 
-namespace cv::aruco {
-    bool operator==(const Dictionary& d1, const Dictionary& d2);
-    bool operator==(const Dictionary& d1, const Dictionary& d2) {
-        return d1.markerSize == d2.markerSize
-            && std::equal(d1.bytesList.begin<uchar>(), d1.bytesList.end<uchar>(), d2.bytesList.begin<uchar>())
-            && d1.maxCorrectionBits == d2.maxCorrectionBits;
-    };
+namespace cv {
+    namespace aruco {
+        bool operator==(const Dictionary& d1, const Dictionary& d2);
+        bool operator==(const Dictionary& d1, const Dictionary& d2) {
+            return d1.markerSize == d2.markerSize
+                && std::equal(d1.bytesList.begin<uchar>(), d1.bytesList.end<uchar>(), d2.bytesList.begin<uchar>())
+                && d1.maxCorrectionBits == d2.maxCorrectionBits;
+        };
+    }
 }
 
 namespace opencv_test { namespace {
@@ -730,9 +732,19 @@ TEST(CV_ArucoMultiDict, serialization)
     aruco::ArucoDetector detector;
     {
         FileStorage fs(fileName, FileStorage::Mode::WRITE);
+        if (!fs.isOpened()) {
+            cout << "[  SKIPPED ] " << "CV_ArucoMultiDict.serialization"
+                << " - Skipping due to 'File system write error.'" << endl;
+            return;
+        }
         detector.write(fs);
         fs.release();
         FileStorage test_fs(fileName, FileStorage::Mode::READ);
+        if (!test_fs.isOpened()) {
+            cout << "[  SKIPPED ] " << "CV_ArucoMultiDict.serialization"
+                << " - Skipping due to 'File system read error.'" << endl;
+            return;
+        }
         aruco::ArucoDetector test_detector;
         test_detector.read(test_fs.root());
         // compare default constructor result
@@ -741,9 +753,19 @@ TEST(CV_ArucoMultiDict, serialization)
     detector.setDictionaries({aruco::getPredefinedDictionary(aruco::DICT_4X4_50), aruco::getPredefinedDictionary(aruco::DICT_5X5_100)});
     {
         FileStorage fs(fileName, FileStorage::Mode::WRITE);
+        if (!fs.isOpened()) {
+            cout << "[  SKIPPED ] " << "CV_ArucoMultiDict.serialization"
+                << " - Skipping due to 'File system write error.'" << endl;
+            return;
+        }
         detector.write(fs);
         fs.release();
         FileStorage test_fs(fileName, FileStorage::Mode::READ);
+        if (!test_fs.isOpened()) {
+            cout << "[  SKIPPED ] " << "CV_ArucoMultiDict.serialization"
+                << " - Skipping due to 'File system read error.'" << endl;
+            return;
+        }
         aruco::ArucoDetector test_detector;
         test_detector.read(test_fs.root());
         // check for one additional dictionary
