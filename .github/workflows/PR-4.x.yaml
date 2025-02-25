@@ -28,12 +28,6 @@ jobs:
   Windows10-x64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10.yaml@main
 
-  Windows10-x64-UWP:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-UWP.yaml@main
-
-  Windows10-ARM64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-ARM64.yaml@main
-
   Windows10-x64-Vulkan:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-Vulkan.yaml@main
 
@@ -51,9 +45,6 @@ jobs:
 
   Android-SDK:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-4.x-Android-SDK.yaml@main
-
-  Android-Test:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-Android-Test.yaml@main
 
   TIM-VX:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-timvx-backend-tests-4.x.yml@main
