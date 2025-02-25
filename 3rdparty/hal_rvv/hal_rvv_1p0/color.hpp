@@ -92,9 +92,9 @@ static inline int cvtBGRtoBGR(int start, int end, const T * src, size_t src_step
     else
     {
         auto alpha = rvv<T>::vmv_v_x(typeid(T) == typeid(float) ? 1.0f : std::numeric_limits<T>::max(), rvv<T>::vsetvlmax());
-        int vl;
         for (int i = start; i < end; i++)
         {
+            int vl;
             for (int j = 0; j < width; j += vl)
             {
                 vl = rvv<T>::vsetvl(width - j);
@@ -171,9 +171,9 @@ static inline int cvtGraytoBGR(int start, int end, const T * src, size_t src_ste
     dst_step /= sizeof(T);
 
     auto alpha = rvv<T>::vmv_v_x(typeid(T) == typeid(float) ? 1.0f : std::numeric_limits<T>::max(), rvv<T>::vsetvlmax());
-    int vl;
     for (int i = start; i < end; i++)
     {
+        int vl;
         for (int j = 0; j < width; j += vl)
         {
             vl = rvv<T>::vsetvl(width - j);
@@ -287,9 +287,9 @@ static inline int cvtBGRtoGray(int start, int end, const T * src, size_t src_ste
     src_step /= sizeof(T);
     dst_step /= sizeof(T);
 
-    int vl;
     for (int i = start; i < end; i++)
     {
+        int vl;
         for (int j = 0; j < width; j += vl)
         {
             vl = rvv<T>::vsetvl(width - j);
@@ -385,9 +385,9 @@ static inline int cvtYUVtoBGR(int start, int end, const T * src, size_t src_step
 
     decltype(rvv<T>::U2B) delta = typeid(T) == typeid(float) ? 0.5f : std::numeric_limits<T>::max() / 2 + 1;
     auto alpha = rvv<T>::vmv_v_x(typeid(T) == typeid(float) ? 1.0f : std::numeric_limits<T>::max(), rvv<T>::vsetvlmax());
-    int vl;
     for (int i = start; i < end; i++)
     {
+        int vl;
         for (int j = 0; j < width; j += vl)
         {
             vl = rvv<T>::vsetvl(width - j);
@@ -528,9 +528,9 @@ static inline int cvtBGRtoYUV(int start, int end, const T * src, size_t src_step
     dst_step /= sizeof(T);
 
     auto delta = rvv<T>::vmv_v_x((1 << 14) * (typeid(T) == typeid(float) ? 0.5f : std::numeric_limits<T>::max() / 2 + 1), rvv<T>::vsetvlmax());
-    int vl;
     for (int i = start; i < end; i++)
     {
+        int vl;
         for (int j = 0; j < width; j += vl)
         {
             vl = rvv<T>::vsetvl(width - j);
@@ -581,12 +581,12 @@ namespace PlaneYUVtoBGR {
 #undef cv_hal_cvtThreePlaneYUVtoBGR
 #define cv_hal_cvtThreePlaneYUVtoBGR cv::cv_hal_rvv::PlaneYUVtoBGR::cvtThreePlaneYUVtoBGR
 
+static const int ITUR_BT_601_SHIFT = 20;
 static const int ITUR_BT_601_CY  = 1220542;
 static const int ITUR_BT_601_CUB = 2116026;
 static const int ITUR_BT_601_CUG = -409993;
 static const int ITUR_BT_601_CVG = -852492;
 static const int ITUR_BT_601_CVR = 1673527;
-static const int ITUR_BT_601_SHIFT = 20;
 
 static inline void uvToBGRuv(int vl, const vuint8m1_t u, const vuint8m1_t v, vint32m4_t& buv, vint32m4_t& guv, vint32m4_t& ruv)
 {
@@ -665,9 +665,6 @@ static inline void cvtYuv42xxp2BGR8(int vl, const vuint8m1_t u, const vuint8m1_t
 // in the functor struct YUV422toRGB8Invoker
 static inline int cvtSinglePlaneYUVtoBGR(int start, int end, uchar * dst_data, size_t dst_step, int dst_width, size_t stride, const uchar* src_data, int dcn, bool swapBlue, int uIdx, int yIdx)
 {
-    if (dcn != 3 && dcn != 4)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
     // [yIdx, uIdx] | [uidx, vidx]:
     //     0, 0     |     1, 3
     //     0, 1     |     3, 1
@@ -676,7 +673,7 @@ static inline int cvtSinglePlaneYUVtoBGR(int start, int end, uchar * dst_data, s
     const int vidx = (2 + uidx) % 4;
     const uchar* yuv_src = src_data + start * stride;
 
-    auto vget = [](vuint8m1x4_t x, int p) {
+    auto vget = [](vuint8m1x4_t x, size_t p) {
         switch (p)
         {
         case 0:
@@ -691,10 +688,10 @@ static inline int cvtSinglePlaneYUVtoBGR(int start, int end, uchar * dst_data, s
         /*NOTREACHED*/
     };
 
-    int vl;
     for (int j = start; j < end; j++, yuv_src += stride)
     {
         uchar* row = dst_data + dst_step * j;
+        int vl;
         for (int i = 0; i < dst_width / 2; i += vl, row += vl*dcn*2)
         {
             vl = __riscv_vsetvl_e8m1(dst_width / 2 - i);
@@ -735,13 +732,13 @@ static inline int cvtMultiPlaneYUVtoBGR(int start, int end, uchar * dst_data, si
         uvsteps[0] = uvsteps[1] = stride;
     }
 
-    int vl;
     for (int j = rangeBegin; j < rangeEnd; j += 2, my1 += stride * 2, u1 += uvsteps[(usIdx++) & 1], v1 += uvsteps[(vsIdx++) & 1])
     {
         uchar* row1 = dst_data + dst_step * j;
         uchar* row2 = dst_data + dst_step * (j + 1);
         const uchar* my2 = my1 + stride;
 
+        int vl;
         for (int i = 0; i < dst_width / 2; i += vl, row1 += vl*dcn*2, row2 += vl*dcn*2)
         {
             vl = __riscv_vsetvl_e8m1(dst_width / 2 - i);
@@ -803,6 +800,8 @@ inline int cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar 
 } // cv::cv_hal_rvv::PlaneYUVtoBGR
 
 namespace PlaneBGRtoYUV {
+#undef cv_hal_cvtOnePlaneBGRtoYUV
+#define cv_hal_cvtOnePlaneBGRtoYUV cv::cv_hal_rvv::PlaneBGRtoYUV::cvtOnePlaneBGRtoYUV
 #undef cv_hal_cvtBGRtoTwoPlaneYUV
 #define cv_hal_cvtBGRtoTwoPlaneYUV cv::cv_hal_rvv::PlaneBGRtoYUV::cvtBGRtoTwoPlaneYUV
 #undef cv_hal_cvtBGRtoThreePlaneYUV
@@ -838,12 +837,128 @@ static inline void bgrToUV42x(int vl, vuint8m1_t b, vuint8m1_t g, vuint8m1_t r, 
     v = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(vv, ITUR_BT_601_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RDN, vl);
 }
 
+static const int BGR2YUV422_SHIFT = 14;
+static const int B2Y422 =  1606; // 0.114062 * (236 - 16) / 256 * 16384
+static const int G2Y422 =  8258; // 0.586506 * (236 - 16) / 256 * 16384
+static const int R2Y422 =  4211; // 0.299077 * (236 - 16) / 256 * 16384
+static const int B2U422 =  3596; //  0.439 * 8192
+static const int G2U422 = -2384; // -0.291 * 8192
+static const int R2U422 = -1212; // -0.148 * 8192
+static const int B2V422 =  -582; // -0.071 * 8192
+static const int G2V422 = -3015; // -0.368 * 8192
+
+static inline vuint8m1_t BGR2Y(int vl, const vuint8m1_t b, const vuint8m1_t g, const vuint8m1_t r)
+{
+    auto bb = __riscv_vzext_vf4(b, vl);
+    auto gg = __riscv_vzext_vf4(g, vl);
+    auto rr = __riscv_vzext_vf4(r, vl);
+    auto yy = __riscv_vmadd(bb, B2Y422, __riscv_vmadd(gg, G2Y422, __riscv_vmadd(rr, R2Y422, __riscv_vmv_v_x_u32m4((16 << BGR2YUV422_SHIFT) + (1 << (BGR2YUV422_SHIFT - 1)), vl), vl), vl), vl);
+    return __riscv_vnclipu(__riscv_vnclipu(yy, BGR2YUV422_SHIFT, __RISCV_VXRM_RDN, vl), 0, __RISCV_VXRM_RDN, vl);
+}
+
+static inline void BGR2UV(int vl, const vuint8m1_t b0, const vuint8m1_t g0, const vuint8m1_t r0,
+                          const vuint8m1_t b1, const vuint8m1_t g1, const vuint8m1_t r1,
+                          vuint8m1_t& u, vuint8m1_t& v)
+{
+    auto bb = __riscv_vadd(__riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(b0, vl)), __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(b1, vl)), vl);
+    auto gg = __riscv_vadd(__riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(g0, vl)), __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(g1, vl)), vl);
+    auto rr = __riscv_vadd(__riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(r0, vl)), __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(r1, vl)), vl);
+    auto uu = __riscv_vmadd(bb, B2U422, __riscv_vmadd(gg, G2U422, __riscv_vmadd(rr, R2U422, __riscv_vmv_v_x_i32m4(257 << (BGR2YUV422_SHIFT - 1), vl), vl), vl), vl);
+    auto vv = __riscv_vmadd(bb, B2V422, __riscv_vmadd(gg, G2V422, __riscv_vmadd(rr, B2U422, __riscv_vmv_v_x_i32m4(257 << (BGR2YUV422_SHIFT - 1), vl), vl), vl), vl);
+    u = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(uu, BGR2YUV422_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RDN, vl);
+    v = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(vv, BGR2YUV422_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RDN, vl);
+}
+
+static inline void cvtBGR82Yuv422(int vl, const vuint8m1_t b0, const vuint8m1_t g0, const vuint8m1_t r0,
+                                  const vuint8m1_t b1, const vuint8m1_t g1, const vuint8m1_t r1,
+                                  uchar* row, int yidx, int uidx, int vidx)
+{
+    auto vset = [](vuint8m1x4_t x, size_t p, vuint8m1_t y) {
+        switch (p)
+        {
+        case 0:
+            return __riscv_vset_v_u8m1_u8m1x4(x, 0, y);
+        case 1:
+            return __riscv_vset_v_u8m1_u8m1x4(x, 1, y);
+        case 2:
+            return __riscv_vset_v_u8m1_u8m1x4(x, 2, y);
+        case 3:
+            return __riscv_vset_v_u8m1_u8m1x4(x, 3, y);
+        }
+        /*NOTREACHED*/
+    };
+
+    vuint8m1_t u, v;
+    BGR2UV(vl, b0, g0, r0, b1, g1, r1, u, v);
+
+    vuint8m1x4_t x{};
+    x = vset(x, uidx, u);
+    x = vset(x, vidx, v);
+    x = vset(x, yidx    , BGR2Y(vl, b0, g0, r0));
+    x = vset(x, yidx + 2, BGR2Y(vl, b1, g1, r1));
+    __riscv_vsseg4e8(row, x, vl);
+}
+
+// the algorithm is copied from imgproc/src/color_yuv.simd.cpp,
+// in the functor struct RGB8toYUV422Invoker
+static inline int cvtBGRtoSinglePlaneYUV(int start, int end, uchar * dst_data, size_t dst_step, int width, size_t stride, const uchar* src_data, int scn, bool swapBlue, int uIdx, int yIdx)
+{
+    // [yIdx, uIdx] | [uidx, vidx]:
+    //     0, 0     |     1, 3
+    //     0, 1     |     3, 1
+    //     1, 0     |     0, 2
+    const int uidx = 1 - yIdx + uIdx * 2;
+    const int vidx = (2 + uidx) % 4;
+    const uchar* rgb_src = src_data + start * stride;
+
+    for (int j = start; j < end; j++, rgb_src += stride)
+    {
+        uchar* row = dst_data + dst_step * j;
+        int vl;
+        for (int i = 0; i < width / 2; i += vl)
+        {
+            vl = __riscv_vsetvl_e8m1(width / 2 - i);
+            vuint8m1_t b0, g0, r0;
+            vuint8m1_t b1, g1, r1;
+            if (scn == 3)
+            {
+                auto x = __riscv_vlseg6e8_v_u8m1x6(rgb_src + 6 * i, vl);
+                b0 = __riscv_vget_v_u8m1x6_u8m1(x, 0);
+                g0 = __riscv_vget_v_u8m1x6_u8m1(x, 1);
+                r0 = __riscv_vget_v_u8m1x6_u8m1(x, 2);
+                b1 = __riscv_vget_v_u8m1x6_u8m1(x, 3);
+                g1 = __riscv_vget_v_u8m1x6_u8m1(x, 4);
+                r1 = __riscv_vget_v_u8m1x6_u8m1(x, 5);
+            }
+            else
+            {
+                auto x = __riscv_vlseg8e8_v_u8m1x8(rgb_src + 8 * i, vl);
+                b0 = __riscv_vget_v_u8m1x8_u8m1(x, 0);
+                g0 = __riscv_vget_v_u8m1x8_u8m1(x, 1);
+                r0 = __riscv_vget_v_u8m1x8_u8m1(x, 2);
+                b1 = __riscv_vget_v_u8m1x8_u8m1(x, 4);
+                g1 = __riscv_vget_v_u8m1x8_u8m1(x, 5);
+                r1 = __riscv_vget_v_u8m1x8_u8m1(x, 6);
+            }
+            if (swapBlue)
+            {
+                auto t = b0;
+                b0 = r0, r0 = t;
+                t = b1, b1 = r1, r1 = t;
+            }
+
+            cvtBGR82Yuv422(vl, b0, g0, r0, b1, g1, r1, row + 4 * i, yIdx, uidx, vidx);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
 // the algorithm is copied from imgproc/src/color_yuv.simd.cpp,
 // in the functor struct RGB8toYUV420pInvoker
 static inline int cvtBGRtoMultiPlaneYUV(int start, int end, uchar * yData, uchar * uvData, size_t dst_step, int width, int height, size_t stride, const uchar* src_data, int scn, bool swapBlue, int uIdx)
 {
     uchar* yRow = (uchar*)0, *uRow = (uchar*)0, *vRow = (uchar*)0, *uvRow = (uchar*)0;
-    int vl;
     for (int sRow = start*2; sRow < end*2; sRow++)
     {
         const uchar* srcRow = src_data + stride*sRow;
@@ -862,6 +977,7 @@ static inline int cvtBGRtoMultiPlaneYUV(int start, int end, uchar * yData, uchar
             }
         }
 
+        int vl;
         for (int i = 0; i < width / 2; i += vl)
         {
             vl = __riscv_vsetvl_e8m1(width / 2 - i);
@@ -922,6 +1038,13 @@ static inline int cvtBGRtoMultiPlaneYUV(int start, int end, uchar * yData, uchar
     }
 
     return CV_HAL_ERROR_OK;
+}
+
+inline int cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx, int yIdx)
+{
+    if (scn != 3 && scn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return ThreadPool::parallel_for(height, -1, {cvtBGRtoSinglePlaneYUV}, dst_data, dst_step, width, src_step, src_data, scn, swapBlue, uIdx, yIdx);
 }
 
 inline int cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
