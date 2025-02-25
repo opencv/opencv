@@ -232,6 +232,10 @@ private:
     unsigned char  trns[256];
     uint32_t       palsize, trnssize;
     uint32_t       next_seq_num;
+    int            m_compression_level;
+    int            m_compression_strategy;
+    int            m_filter;
+    bool           m_isBilevel;
 };
 
 }

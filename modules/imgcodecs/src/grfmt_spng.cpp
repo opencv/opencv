@@ -492,6 +492,10 @@ SPngEncoder::SPngEncoder()
 {
     m_description = "Portable Network Graphics files (*.png)";
     m_buf_supported = true;
+    m_compression_level = Z_BEST_SPEED;
+    m_compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
+    m_filter = IMWRITE_PNG_FILTER_SUB; // Default filter
+    m_isBilevel = false;
 }
 
 SPngEncoder::~SPngEncoder()
@@ -526,6 +530,7 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
     int width = img.cols, height = img.rows;
     int depth = img.depth(), channels = img.channels();
     volatile bool result = false;
+    bool set_only_compression_level = false;
 
     if (depth != CV_8U && depth != CV_16U)
         return false;
@@ -535,30 +540,34 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
         struct spng_ihdr ihdr = {};
         ihdr.height = height;
         ihdr.width = width;
-        int compression_level = -1;                          // Invalid value to allow setting 0-9 as valid
-        int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
-        bool isBilevel = false;
 
         for (size_t i = 0; i < params.size(); i += 2)
         {
             if (params[i] == IMWRITE_PNG_COMPRESSION)
             {
-                compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-                compression_level = params[i + 1];
-                compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
+                m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
+                m_compression_level = params[i + 1];
+                m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
+                set_only_compression_level = true;
             }
             if (params[i] == IMWRITE_PNG_STRATEGY)
             {
-                compression_strategy = params[i + 1];
-                compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
+                m_compression_strategy = params[i + 1];
+                m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
+                set_only_compression_level = false;
             }
             if (params[i] == IMWRITE_PNG_BILEVEL)
             {
-                isBilevel = params[i + 1] != 0;
+                m_isBilevel = params[i + 1] != 0;
+            }
+            if( params[i] == IMWRITE_PNG_FILTER )
+            {
+                m_filter = params[i+1];
+                set_only_compression_level = false;
             }
         }
 
-        ihdr.bit_depth = depth == CV_8U ? isBilevel ? 1 : 8 : 16;
+        ihdr.bit_depth = depth == CV_8U ? m_isBilevel ? 1 : 8 : 16;
         ihdr.color_type = (uint8_t)(channels == 1 ? SPNG_COLOR_TYPE_GRAYSCALE : channels == 3 ? SPNG_COLOR_TYPE_TRUECOLOR
                                                                                               : SPNG_COLOR_TYPE_TRUECOLOR_ALPHA);
         ihdr.interlace_method = SPNG_INTERLACE_NONE;
@@ -579,16 +588,10 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
 
         if (m_buf || f)
         {
-            if (compression_level >= 0)
-            {
-                spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, compression_level);
-            }
-            else
-            {
-                spng_set_option(ctx, SPNG_FILTER_CHOICE, SPNG_FILTER_CHOICE_SUB);
-                spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, Z_BEST_SPEED);
-            }
-            spng_set_option(ctx, SPNG_IMG_COMPRESSION_STRATEGY, compression_strategy);
+            if (!set_only_compression_level)
+                spng_set_option(ctx, SPNG_FILTER_CHOICE, m_filter);
+            spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, m_compression_level);
+            spng_set_option(ctx, SPNG_IMG_COMPRESSION_STRATEGY, m_compression_strategy);
 
             int ret;
             spng_encode_chunks(ctx);
