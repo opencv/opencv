@@ -352,9 +352,16 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     } else {
         _hull.create(nout, 1, _hull.type());
-        std::vector<Point>& vHull = *static_cast<std::vector<Point>*>(_hull.getObj());
-        for(int j = 0; j < nout; j++ ) {
-            vHull[j] = points[hullbuf[j]];
+        if(_hull.depth() == CV_32F) {
+            std::vector<Point2f>& vHull = *static_cast<std::vector<Point2f>*>(_hull.getObj());
+            for(int j = 0; j < nout; j++ ) {
+                vHull[j] = pointsf[hullbuf[j]];
+            }
+        } else if(_hull.depth() == CV_32S) {
+            std::vector<Point>& vHull = *static_cast<std::vector<Point>*>(_hull.getObj());
+            for(int j = 0; j < nout; j++ ) {
+                vHull[j] = points[hullbuf[j]];
+            }
         }
     }
 }
