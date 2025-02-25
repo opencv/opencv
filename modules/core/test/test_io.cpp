@@ -665,10 +665,10 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             fs << "normal_2d_mat_u32" << _2d_out_u32;
             fs << "normal_2d_mat_i64" << _2d_out_i64;
             fs << "normal_2d_mat_u64" << _2d_out_u64;
+            fs << "normal_2d_mat_bool" << _2d_out_bool;
             fs << "normal_nd_mat" << _nd_out;
             fs << "empty_2d_mat"  << _em_out;
             fs << "random_mat"    << _rd_out;
-            fs << "normal_2d_mat_bool" << _2d_out_bool;
 
             fs << "rawdata" << "[:";
             for (int i = 0; i < (int)rawdata_N/10; i++)
@@ -719,9 +719,9 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             fs["normal_2d_mat_u32"] >> _2d_in_u32;
             fs["normal_2d_mat_i64"] >> _2d_in_i64;
             fs["normal_2d_mat_u64"] >> _2d_in_u64;
+            fs["normal_2d_mat_bool"] >> _2d_in_bool;
             fs["normal_nd_mat"] >> _nd_in;
             fs["random_mat"]    >> _rd_in;
-            fs["normal_2d_mat_bool"] >> _2d_in_bool;
 
             /* raw data */
             std::vector<data_t>(rawdata_N).swap(rawdata);
