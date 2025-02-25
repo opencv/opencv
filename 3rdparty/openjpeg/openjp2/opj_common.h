@@ -28,8 +28,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef OPJ_COMMMON_H
-#define OPJ_COMMMON_H
+#ifndef OPJ_COMMON_H
+#define OPJ_COMMON_H
 
 /*
  ==========================================================
@@ -44,4 +44,4 @@
 #define OPJ_COMP_PARAM_DEFAULT_PROG_ORDER     OPJ_LRCP
 #define OPJ_COMP_PARAM_DEFAULT_NUMRESOLUTION  6
 
-#endif /* OPJ_COMMMON_H */
+#endif /* OPJ_COMMON_H */
