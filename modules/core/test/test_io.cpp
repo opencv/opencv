@@ -627,10 +627,6 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             _2d_out_u64 = Mat(10, 20, CV_64UC3);
             cv::randu(_2d_out_u64, 0ULL, 4503599627370495ULL);
 
-            /* a normal mat bool */
-            _2d_out_bool = Mat(10, 20, CV_BoolC3);
-            cv::randu(_2d_out_bool, 0U, 2U);
-
             /* a 4d mat */
             const int Size[] = {4, 4, 4, 4};
             cv::Mat _4d(4, Size, CV_64FC4, cv::Scalar(0.888, 0.111, 0.666, 0.444));
@@ -643,6 +639,10 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
 
             /* a random mat */
             cv::randu(_rd_out, cv::Scalar(0.0), cv::Scalar(1.0));
+
+            /* a normal mat bool */
+            _2d_out_bool = Mat(10, 20, CV_BoolC3);
+            cv::randu(_2d_out_bool, 0U, 2U);
 
             /* raw data */
             for (int i = 0; i < (int)rawdata_N; i++) {
@@ -665,10 +665,10 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             fs << "normal_2d_mat_u32" << _2d_out_u32;
             fs << "normal_2d_mat_i64" << _2d_out_i64;
             fs << "normal_2d_mat_u64" << _2d_out_u64;
-            fs << "normal_2d_mat_bool" << _2d_out_bool;
             fs << "normal_nd_mat" << _nd_out;
             fs << "empty_2d_mat"  << _em_out;
             fs << "random_mat"    << _rd_out;
+            fs << "normal_2d_mat_bool" << _2d_out_bool;
 
             fs << "rawdata" << "[:";
             for (int i = 0; i < (int)rawdata_N/10; i++)
@@ -719,9 +719,9 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             fs["normal_2d_mat_u32"] >> _2d_in_u32;
             fs["normal_2d_mat_i64"] >> _2d_in_i64;
             fs["normal_2d_mat_u64"] >> _2d_in_u64;
-            fs["normal_2d_mat_bool"] >> _2d_in_bool;
             fs["normal_nd_mat"] >> _nd_in;
             fs["random_mat"]    >> _rd_in;
+            fs["normal_2d_mat_bool"] >> _2d_in_bool;
 
             /* raw data */
             std::vector<data_t>(rawdata_N).swap(rawdata);
