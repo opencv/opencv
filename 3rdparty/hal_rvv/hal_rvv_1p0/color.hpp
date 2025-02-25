@@ -81,8 +81,6 @@ template<> struct rvv<float>
 template<typename T>
 static inline int cvtBGRtoBGR(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, int dcn, bool swapBlue)
 {
-    if ((scn != 3 && scn != 4) || (dcn != 3 && dcn != 4))
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     src_step /= sizeof(T);
     dst_step /= sizeof(T);
 
@@ -117,6 +115,8 @@ static inline int cvtBGRtoBGR(int start, int end, const T * src, size_t src_step
 
 inline int cvtBGRtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, int dcn, bool swapBlue)
 {
+    if ((scn != 3 && scn != 4) || (dcn != 3 && dcn != 4))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     switch (depth)
     {
     case CV_8U:
@@ -167,8 +167,6 @@ template<> struct rvv<float>
 template<typename T>
 static inline int cvtGraytoBGR(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int dcn)
 {
-    if (dcn != 3 && dcn != 4)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     src_step /= sizeof(T);
     dst_step /= sizeof(T);
 
@@ -189,6 +187,8 @@ static inline int cvtGraytoBGR(int start, int end, const T * src, size_t src_ste
 
 inline int cvtGraytoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn)
 {
+    if (dcn != 3 && dcn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     switch (depth)
     {
     case CV_8U:
@@ -284,8 +284,6 @@ template<> struct rvv<float>
 template<typename T>
 static inline int cvtBGRtoGray(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, bool swapBlue)
 {
-    if (scn != 3 && scn != 4)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     src_step /= sizeof(T);
     dst_step /= sizeof(T);
 
@@ -312,6 +310,8 @@ static inline int cvtBGRtoGray(int start, int end, const T * src, size_t src_ste
 
 inline int cvtBGRtoGray(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, bool swapBlue)
 {
+    if (scn != 3 && scn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     switch (depth)
     {
     case CV_8U:
@@ -380,8 +380,6 @@ template<> struct rvv<float>
 template<typename T>
 static inline int cvtYUVtoBGR(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int dcn, bool swapBlue, bool isCbCr)
 {
-    if (dcn != 3 && dcn != 4)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     src_step /= sizeof(T);
     dst_step /= sizeof(T);
 
@@ -417,6 +415,8 @@ static inline int cvtYUVtoBGR(int start, int end, const T * src, size_t src_step
 
 inline int cvtYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn, bool swapBlue, bool isCbCr)
 {
+    if (dcn != 3 && dcn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     switch (depth)
     {
     case CV_8U:
@@ -524,8 +524,6 @@ template<> struct rvv<float>
 template<typename T>
 static inline int cvtBGRtoYUV(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, bool swapBlue, bool isCbCr)
 {
-    if (scn != 3 && scn != 4)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     src_step /= sizeof(T);
     dst_step /= sizeof(T);
 
@@ -559,6 +557,8 @@ static inline int cvtBGRtoYUV(int start, int end, const T * src, size_t src_step
 
 inline int cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, bool swapBlue, bool isCbCr)
 {
+    if (scn != 3 && scn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     switch (depth)
     {
     case CV_8U:
@@ -604,9 +604,9 @@ static inline void yBGRuvToBGRA(int vl, const vuint8m1_t vy, const vint32m4_t bu
 {
     auto yy = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(vy, vl));
     auto y = __riscv_vmul(__riscv_vmax(__riscv_vsub(yy, 16, vl), 0, vl), ITUR_BT_601_CY, vl);
-    b = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(__riscv_vadd(y, buv, vl), ITUR_BT_601_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RNU, vl);
-    g = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(__riscv_vadd(y, guv, vl), ITUR_BT_601_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RNU, vl);
-    r = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(__riscv_vadd(y, ruv, vl), ITUR_BT_601_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RNU, vl);
+    b = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(__riscv_vadd(y, buv, vl), ITUR_BT_601_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RDN, vl);
+    g = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(__riscv_vadd(y, guv, vl), ITUR_BT_601_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RDN, vl);
+    r = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(__riscv_vadd(y, ruv, vl), ITUR_BT_601_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RDN, vl);
     a = __riscv_vmv_v_x_u8m1(0xFF, vl);
 }
 
@@ -712,9 +712,6 @@ static inline int cvtSinglePlaneYUVtoBGR(int start, int end, uchar * dst_data, s
 // in the functor struct YUV420sp2RGB8Invoker and YUV420p2RGB8Invoker
 static inline int cvtMultiPlaneYUVtoBGR(int start, int end, uchar * dst_data, size_t dst_step, int dst_width, size_t stride, const uchar* y1, const uchar* u, const uchar* v, int ustepIdx, int vstepIdx, int dcn, bool swapBlue, int uIdx)
 {
-    if (dcn != 3 && dcn != 4)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-
     const int rangeBegin = start * 2;
     const int rangeEnd = end * 2;
     const uchar* my1 = y1 + rangeBegin * stride;
@@ -753,7 +750,7 @@ static inline int cvtMultiPlaneYUVtoBGR(int start, int end, uchar * dst_data, si
             x = __riscv_vlseg2e8_v_u8m1x2(my2 + 2 * i, vl);
             auto vy02 = __riscv_vget_v_u8m1x2_u8m1(x, 0), vy12 = __riscv_vget_v_u8m1x2_u8m1(x, 1);
 
-            decltype(vy01) uu, vv;
+            vuint8m1_t uu, vv;
             switch (uIdx)
             {
             case 0:
@@ -777,18 +774,23 @@ static inline int cvtMultiPlaneYUVtoBGR(int start, int end, uchar * dst_data, si
 
 inline int cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx, int yIdx)
 {
+    if (dcn != 3 && dcn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return ThreadPool::parallel_for(dst_height, -1, {cvtSinglePlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, dcn, swapBlue, uIdx, yIdx);
 }
 
 inline int cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx)
 {
+    if (dcn != 3 && dcn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     const uchar* uv = src_data + src_step * static_cast<size_t>(dst_height);
-
     return ThreadPool::parallel_for(dst_height / 2, -1, {cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, uv, uv, 0, 0, dcn, swapBlue, uIdx);
 }
 
 inline int cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx)
 {
+    if (dcn != 3 && dcn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
     const uchar* u = src_data + src_step * static_cast<size_t>(dst_height);
     const uchar* v = src_data + src_step * static_cast<size_t>(dst_height + dst_height/4) + (dst_width/2) * ((dst_height % 4)/2);
 
@@ -799,6 +801,147 @@ inline int cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar 
     return ThreadPool::parallel_for(dst_height / 2, -1, {cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, u, v, ustepIdx, vstepIdx, dcn, swapBlue, -1);
 }
 } // cv::cv_hal_rvv::PlaneYUVtoBGR
+
+namespace PlaneBGRtoYUV {
+#undef cv_hal_cvtBGRtoTwoPlaneYUV
+#define cv_hal_cvtBGRtoTwoPlaneYUV cv::cv_hal_rvv::PlaneBGRtoYUV::cvtBGRtoTwoPlaneYUV
+#undef cv_hal_cvtBGRtoThreePlaneYUV
+#define cv_hal_cvtBGRtoThreePlaneYUV cv::cv_hal_rvv::PlaneBGRtoYUV::cvtBGRtoThreePlaneYUV
+
+static const int ITUR_BT_601_SHIFT = 20;
+static const int ITUR_BT_601_CBY =  102760; // 0.114035 * (236-16)/256 * (1 << ITUR_BT_601_SHIFT)
+static const int ITUR_BT_601_CGY =  528482; // 0.586472 * (236-16)/256 * (1 << ITUR_BT_601_SHIFT)
+static const int ITUR_BT_601_CRY =  269484; // 0.299055 * (236-16)/256 * (1 << ITUR_BT_601_SHIFT)
+static const int ITUR_BT_601_CBU =  460324; //  0.439 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CGU = -305135; // -0.291 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CRU = -155188; // -0.148 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CBV =  -74448; // -0.071 * (1 << (ITUR_BT_601_SHIFT-1))
+static const int ITUR_BT_601_CGV = -385875; // -0.368 * (1 << (ITUR_BT_601_SHIFT-1))
+
+static inline vuint8m1_t bgrToY42x(int vl, vuint8m1_t b, vuint8m1_t g, vuint8m1_t r)
+{
+    auto bb = __riscv_vzext_vf4(b, vl);
+    auto gg = __riscv_vzext_vf4(g, vl);
+    auto rr = __riscv_vzext_vf4(r, vl);
+    auto yy = __riscv_vmadd(bb, ITUR_BT_601_CBY, __riscv_vmadd(gg, ITUR_BT_601_CGY, __riscv_vmadd(rr, ITUR_BT_601_CRY, __riscv_vmv_v_x_u32m4((16 << ITUR_BT_601_SHIFT) + (1 << (ITUR_BT_601_SHIFT - 1)), vl), vl), vl), vl);
+    return __riscv_vnclipu(__riscv_vnclipu(yy, ITUR_BT_601_SHIFT, __RISCV_VXRM_RDN, vl), 0, __RISCV_VXRM_RDN, vl);
+}
+
+static inline void bgrToUV42x(int vl, vuint8m1_t b, vuint8m1_t g, vuint8m1_t r, vuint8m1_t& u, vuint8m1_t& v)
+{
+    auto bb = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(b, vl));
+    auto gg = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(g, vl));
+    auto rr = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(r, vl));
+    auto uu = __riscv_vmadd(bb, ITUR_BT_601_CBU, __riscv_vmadd(gg, ITUR_BT_601_CGU, __riscv_vmadd(rr, ITUR_BT_601_CRU, __riscv_vmv_v_x_i32m4((128 << ITUR_BT_601_SHIFT) + (1 << (ITUR_BT_601_SHIFT - 1)), vl), vl), vl), vl);
+    auto vv = __riscv_vmadd(bb, ITUR_BT_601_CBV, __riscv_vmadd(gg, ITUR_BT_601_CGV, __riscv_vmadd(rr, ITUR_BT_601_CBU, __riscv_vmv_v_x_i32m4((128 << ITUR_BT_601_SHIFT) + (1 << (ITUR_BT_601_SHIFT - 1)), vl), vl), vl), vl);
+    u = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(uu, ITUR_BT_601_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RDN, vl);
+    v = __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(__riscv_vnclip(vv, ITUR_BT_601_SHIFT, __RISCV_VXRM_RDN, vl), 0, vl)), 0, __RISCV_VXRM_RDN, vl);
+}
+
+// the algorithm is copied from imgproc/src/color_yuv.simd.cpp,
+// in the functor struct RGB8toYUV420pInvoker
+static inline int cvtBGRtoMultiPlaneYUV(int start, int end, uchar * yData, uchar * uvData, size_t dst_step, int width, int height, size_t stride, const uchar* src_data, int scn, bool swapBlue, int uIdx)
+{
+    uchar* yRow = (uchar*)0, *uRow = (uchar*)0, *vRow = (uchar*)0, *uvRow = (uchar*)0;
+    int vl;
+    for (int sRow = start*2; sRow < end*2; sRow++)
+    {
+        const uchar* srcRow = src_data + stride*sRow;
+        yRow = yData + dst_step * sRow;
+        bool evenRow = (sRow % 2) == 0;
+        if (evenRow)
+        {
+            if (uIdx < 2)
+            {
+                uvRow = uvData + dst_step*(sRow/2);
+            }
+            else
+            {
+                uRow = uvData + dst_step * (sRow/4) + ((sRow/2) % 2) * (width/2);
+                vRow = uvData + dst_step * ((sRow + height)/4) + (((sRow + height)/2) % 2) * (width/2);
+            }
+        }
+
+        for (int i = 0; i < width / 2; i += vl)
+        {
+            vl = __riscv_vsetvl_e8m1(width / 2 - i);
+            vuint8m1_t b0, g0, r0;
+            vuint8m1_t b1, g1, r1;
+            if (scn == 3)
+            {
+                auto x = __riscv_vlseg6e8_v_u8m1x6(srcRow + 6 * i, vl);
+                b0 = __riscv_vget_v_u8m1x6_u8m1(x, 0);
+                g0 = __riscv_vget_v_u8m1x6_u8m1(x, 1);
+                r0 = __riscv_vget_v_u8m1x6_u8m1(x, 2);
+                b1 = __riscv_vget_v_u8m1x6_u8m1(x, 3);
+                g1 = __riscv_vget_v_u8m1x6_u8m1(x, 4);
+                r1 = __riscv_vget_v_u8m1x6_u8m1(x, 5);
+            }
+            else
+            {
+                auto x = __riscv_vlseg8e8_v_u8m1x8(srcRow + 8 * i, vl);
+                b0 = __riscv_vget_v_u8m1x8_u8m1(x, 0);
+                g0 = __riscv_vget_v_u8m1x8_u8m1(x, 1);
+                r0 = __riscv_vget_v_u8m1x8_u8m1(x, 2);
+                b1 = __riscv_vget_v_u8m1x8_u8m1(x, 4);
+                g1 = __riscv_vget_v_u8m1x8_u8m1(x, 5);
+                r1 = __riscv_vget_v_u8m1x8_u8m1(x, 6);
+            }
+            if (swapBlue)
+            {
+                auto t = b0;
+                b0 = r0, r0 = t;
+                t = b1, b1 = r1, r1 = t;
+            }
+
+            auto y0 = bgrToY42x(vl, b0, g0, r0);
+            auto y1 = bgrToY42x(vl, b1, g1, r1);
+            __riscv_vsseg2e8(yRow + 2 * i, __riscv_vset_v_u8m1_u8m1x2(__riscv_vset_v_u8m1_u8m1x2(vuint8m1x2_t(), 0, y0), 1, y1), vl);
+
+            if(evenRow)
+            {
+                vuint8m1_t uu, vv;
+                bgrToUV42x(vl, b0, g0, r0, uu, vv);
+                if(uIdx & 1)
+                {
+                    auto t = uu;
+                    uu = vv, vv = t;
+                }
+
+                if(uIdx < 2)
+                {
+                    __riscv_vsseg2e8(uvRow + 2 * i, __riscv_vset_v_u8m1_u8m1x2(__riscv_vset_v_u8m1_u8m1x2(vuint8m1x2_t(), 0, uu), 1, vv), vl);
+                }
+                else
+                {
+                    __riscv_vse8(uRow + i, uu, vl);
+                    __riscv_vse8(vRow + i, vv, vl);
+                }
+            }
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+inline int cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
+                               uchar * y_data, size_t y_step, uchar * uv_data, size_t uv_step,
+                               int width, int height,
+                               int scn, bool swapBlue, int uIdx)
+{
+    if (y_step != uv_step || (scn != 3 && scn != 4))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return ThreadPool::parallel_for(height / 2, -1, {cvtBGRtoMultiPlaneYUV}, y_data, uv_data, y_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2);
+}
+
+inline int cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx)
+{
+    if (scn != 3 && scn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    uchar* uv_data = dst_data + dst_step * static_cast<size_t>(height);
+    return ThreadPool::parallel_for(height / 2, -1, {cvtBGRtoMultiPlaneYUV}, dst_data, uv_data, dst_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2 ? 3 : 2);
+}
+} // cv::cv_hal_rvv::PlaneBGRtoYUV
 
 }}
 
