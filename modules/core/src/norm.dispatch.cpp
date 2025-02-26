@@ -586,7 +586,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
 
                 if( normType == NORM_HAMMING )
                 {
-                    return hal::normHamming(data, (int)len);
+                    return hal::normHamming(data, (int)len, 1);
                 }
 
                 if( normType == NORM_HAMMING2 )
