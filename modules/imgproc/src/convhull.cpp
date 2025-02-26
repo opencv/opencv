@@ -48,41 +48,16 @@ namespace cv
 
 namespace detail {
 template<typename T>
-void getPointVec(InputArray _input, std::vector<Point_<T>>& vector) {
+std::vector<T>& getVec(InputArray _input) {
+    std::vector<T> *input;
     if (_input.isVector()) {
-        vector = *static_cast<std::vector<Point_<T>>*>(_input.getObj());
-    } else if(_input.isMat()){
-       Mat m = _input.getMat();
-       if(m.rows == 2 && m.cols >= 2) {
-           vector.resize(m.cols);
-           for(int x = 0; x < m.cols; x++) {
-               vector[x] = Point_<T>(m.at<T>(0, x), m.at<T>(1, x));
-           }
-       } else if(m.rows == 1 && m.cols % 2 == 0) {
-           vector.resize(m.cols / 2);
-           int cnt = 0;
-           for(int x = 0; x < m.cols; x+=2) {
-               vector[cnt++] = Point_<T>(m.at<T>(0, x), m.at<T>(0, x + 1));
-           }
-       } else {
-           if(m.cols == 2 && m.rows >= 2) {
-               vector.resize(m.rows);
-               for(int y = 0; y < m.rows; y++) {
-                   vector[y] = Point_<T>(m.at<T>(y, 0), m.at<T>(y, 1));
-               }
-           } else if(m.cols == 1 && m.rows % 2 == 0) {
-               vector.resize(m.rows / 2);
-               int cnt = 0;
-               for(int y = 0; y < m.rows; y+=2) {
-                   vector[cnt++] = Point_<T>(m.at<T>(y, 0), m.at<T>(y + 1, 0));
-               }
-           } else {
-               CV_Error(cv::Error::StsUnsupportedFormat, "InputArray is not formatted correctly");
-           }
-       }
+        input = static_cast<std::vector<T>*>(_input.getObj());
     } else {
-        CV_Error(cv::Error::StsNotImplemented, "InputArray is neither std::vector nor cv::Mat");
+        size_t length = _input.total();
+        T *data = reinterpret_cast<T*>(_input.getMat().data);
+        input = new std::vector<T>(data, data + length);
     }
+    return *input;
 }
 }
 template<typename _Tp, typename _DotTp>
@@ -179,7 +154,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     CV_Assert(_points.getObj() != _hull.getObj());
     Mat mPoints = _points.getMat();
 
-    int i, total = mPoints.checkVector(2), depth = mPoints.depth(), nout = 0;
+    int total = mPoints.checkVector(2), depth = mPoints.depth(), nout = 0;
     int miny_ind = 0, maxy_ind = 0;
     CV_Assert(total >= 0 && (depth == CV_32F || depth == CV_32S));
 
@@ -195,16 +170,16 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     bool is_float = depth == CV_32F;
 
     if(is_float) {
-    	detail::getPointVec<float>(_points, pointsf);
+    	pointsf = detail::getVec<Point2f>(_points);
     	points.resize(pointsf.size());
         for(size_t j = 0; j < pointsf.size(); j++ ) {
-            points[i] = Point(pointsf[j].x, pointsf[j].y);
+            points[j] = Point(pointsf[j].x, pointsf[j].y);
         }
     } else {
-    	detail::getPointVec<int>(_points, points);
+    	points = detail::getVec<Point>(_points);
         pointsf.resize(points.size());
         for(size_t j = 0; j < points.size(); j++ ) {
-            pointsf[i] = Point2f(points[j].x, points[j].y);
+            pointsf[j] = Point2f(points[j].x, points[j].y);
         }
     }
 
@@ -266,9 +241,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
             std::swap( tl_count, tr_count );
         }
 
-        for( i = 0; i < tl_count-1; i++ )
+        for(int i = 0; i < tl_count-1; i++ )
             hullbuf[nout++] = int(&pointer[tl_stack[i]] - pointer);
-        for( i = tr_count - 1; i > 0; i-- )
+        for(int i = tr_count - 1; i > 0; i-- )
             hullbuf[nout++] = int(&pointer[tr_stack[i]] - pointer);
         int stop_idx = tr_count > 2 ? tr_stack[1] : tl_count > 2 ? tl_stack[tl_count - 2] : -1;
 
@@ -303,9 +278,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
                 br_count = MIN( br_count, 2 );
             }
         }
-        for( i = 0; i < bl_count-1; i++ )
+        for(int i = 0; i < bl_count-1; i++ )
             hullbuf[nout++] = int(&pointer[bl_stack[i]] - pointer);
-        for( i = br_count-1; i > 0; i-- )
+        for(int i = br_count-1; i > 0; i-- )
             hullbuf[nout++] = int(&pointer[br_stack[i]] - pointer);
 
         // try to make the convex hull indices form
@@ -314,7 +289,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         if( nout >= 3 )
         {
             int min_idx = 0, max_idx = 0, lt = 0;
-            for( i = 1; i < nout; i++ )
+            for(int i = 1; i < nout; i++ )
             {
                 int idx = hullbuf[i];
                 lt += hullbuf[i-1] < idx;
@@ -332,6 +307,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
                 int i0 = ascending ? min_idx : max_idx, j = i0;
                 if( i0 > 0 )
                 {
+                    int i;
                     for( i = 0; i < nout; i++ )
                     {
                         int curr_idx = stack[i] = hullbuf[j];
@@ -351,37 +327,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     if( !returnPoints ) {
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     } else {
-        _hull.create(nout, 1, _hull.type());
-        if(_hull.isVector()) {
-            if(_hull.depth() == CV_32F) {
-                std::vector<Point2f>& vHull = *static_cast<std::vector<Point2f>*>(_hull.getObj());
-                for(int j = 0; j < nout; j++ ) {
-                    vHull[j] = pointsf[hullbuf[j]];
-                }
-            } else if(_hull.depth() == CV_32S) {
-                std::vector<Point>& vHull = *static_cast<std::vector<Point>*>(_hull.getObj());
-                for(int j = 0; j < nout; j++ ) {
-                    vHull[j] = points[hullbuf[j]];
-                }
-            } else {
-                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported OutputArray");
-            }
-        } else if (_hull.isMat()) {
-            if (_hull.depth() == CV_32F) {
-                Point2f* ptr = reinterpret_cast<Point2f*>(_hull.getMat().ptr(0));
-                for (int j = 0; j < nout; j++) {
-                    ptr[j] = pointsf[hullbuf[j]];
-                }
-            } else if (_hull.depth() == CV_32S) {
-                Point* ptr = reinterpret_cast<Point*>(_hull.getMat().ptr(0));
-                for (int j = 0; j < nout; j++) {
-                    ptr[j] = points[hullbuf[j]];
-                }
-            } else {
-                CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported OutputArray");
-            }
-        } else {
-            CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported OutputArray");
+        InputArray tmplate = std::vector<Point>();
+        _hull.create(nout, 1, tmplate.type());
+        Point* ptr = reinterpret_cast<Point*>(_hull.getMat().ptr(0));
+        for (int j = 0; j < nout; j++) {
+            ptr[j] = points[hullbuf[j]];
         }
     }
 }
