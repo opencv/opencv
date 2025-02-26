@@ -9,6 +9,16 @@
 
 namespace cv { namespace cv_hal_rvv {
 
+namespace color {
+    template<typename... Args>
+    static inline int invoke(int length, double fstripe, std::function<int(int, int, Args...)> func, Args&&... args)
+    {
+        if (length < 240)
+            return func(0, length, std::forward<Args>(args)...);
+        return ThreadPool::parallel_for(length, fstripe, func, std::forward<Args>(args)...);
+    }
+} // cv::cv_hal_rvv::color
+
 namespace BGRtoBGR {
 #undef cv_hal_cvtBGRtoBGR
 #define cv_hal_cvtBGRtoBGR cv::cv_hal_rvv::BGRtoBGR::cvtBGRtoBGR
@@ -120,11 +130,11 @@ inline int cvtBGRtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return ThreadPool::parallel_for(height, -1, cvtBGRtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, dcn, swapBlue);
+        return color::invoke(height, -1, cvtBGRtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, dcn, swapBlue);
     case CV_16U:
-        return ThreadPool::parallel_for(height, -1, cvtBGRtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, dcn, swapBlue);
+        return color::invoke(height, -1, cvtBGRtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, dcn, swapBlue);
     case CV_32F:
-        return ThreadPool::parallel_for(height, -1, cvtBGRtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, dcn, swapBlue);
+        return color::invoke(height, -1, cvtBGRtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, dcn, swapBlue);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -192,11 +202,11 @@ inline int cvtGraytoBGR(const uchar * src_data, size_t src_step, uchar * dst_dat
     switch (depth)
     {
     case CV_8U:
-        return ThreadPool::parallel_for(height, -1, cvtGraytoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn);
+        return color::invoke(height, -1, cvtGraytoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn);
     case CV_16U:
-        return ThreadPool::parallel_for(height, -1, cvtGraytoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn);
+        return color::invoke(height, -1, cvtGraytoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn);
     case CV_32F:
-        return ThreadPool::parallel_for(height, -1, cvtGraytoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn);
+        return color::invoke(height, -1, cvtGraytoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -315,11 +325,11 @@ inline int cvtBGRtoGray(const uchar * src_data, size_t src_step, uchar * dst_dat
     switch (depth)
     {
     case CV_8U:
-        return ThreadPool::parallel_for(height, -1, cvtBGRtoGray<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue);
+        return color::invoke(height, -1, cvtBGRtoGray<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue);
     case CV_16U:
-        return ThreadPool::parallel_for(height, -1, cvtBGRtoGray<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue);
+        return color::invoke(height, -1, cvtBGRtoGray<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue);
     case CV_32F:
-        return ThreadPool::parallel_for(height, -1, cvtBGRtoGray<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue);
+        return color::invoke(height, -1, cvtBGRtoGray<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -396,6 +406,11 @@ static inline int cvtYUVtoBGR(int start, int end, const T * src, size_t src_step
             auto vec_srcY = rvv<T>::vcvt0(vec_srcY_T, vl);
             auto vec_srcU = rvv<T>::vcvt0(vec_srcU_T, vl);
             auto vec_srcV = rvv<T>::vcvt0(vec_srcV_T, vl);
+            if (isCbCr)
+            {
+                auto t = vec_srcU;
+                vec_srcU = vec_srcV, vec_srcV = t;
+            }
 
             auto vec_dstB = rvv<T>::vmul(rvv<T>::vsub(vec_srcU, delta, vl), isCbCr ? rvv<T>::CB2B : rvv<T>::U2B, vl);
             auto vec_dstG = rvv<T>::vmul(rvv<T>::vsub(vec_srcU, delta, vl), isCbCr ? rvv<T>::CB2G : rvv<T>::U2G, vl);
@@ -420,11 +435,11 @@ inline int cvtYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return ThreadPool::parallel_for(height, -1, cvtYUVtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
+        return color::invoke(height, -1, cvtYUVtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
     case CV_16U:
-        return ThreadPool::parallel_for(height, -1, cvtYUVtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
+        return color::invoke(height, -1, cvtYUVtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
     case CV_32F:
-        return ThreadPool::parallel_for(height, -1, cvtYUVtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
+        return color::invoke(height, -1, cvtYUVtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -527,7 +542,7 @@ static inline int cvtBGRtoYUV(int start, int end, const T * src, size_t src_step
     src_step /= sizeof(T);
     dst_step /= sizeof(T);
 
-    auto delta = rvv<T>::vmv_v_x((1 << 14) * (typeid(T) == typeid(float) ? 0.5f : std::numeric_limits<T>::max() / 2 + 1), rvv<T>::vsetvlmax());
+    auto delta = rvv<T>::vmv_v_x(typeid(T) == typeid(float) ? 0.5f : (1 << 14) * (std::numeric_limits<T>::max() / 2 + 1), rvv<T>::vsetvlmax());
     for (int i = start; i < end; i++)
     {
         int vl;
@@ -548,6 +563,11 @@ static inline int cvtBGRtoYUV(int start, int end, const T * src, size_t src_step
             auto vec_dstY = rvv<T>::vssra(rvv<T>::vmadd(vec_srcB, rvv<T>::B2Y, rvv<T>::vmadd(vec_srcG, rvv<T>::G2Y, rvv<T>::vmul(vec_srcR, rvv<T>::R2Y, vl), vl), vl), 14, vl);
             auto vec_dstU = rvv<T>::vmadd(rvv<T>::vsub(vec_srcB, vec_dstY, vl), isCbCr ? rvv<T>::YCB : rvv<T>::B2U, delta, vl);
             auto vec_dstV = rvv<T>::vmadd(rvv<T>::vsub(vec_srcR, vec_dstY, vl), isCbCr ? rvv<T>::YCR : rvv<T>::R2V, delta, vl);
+            if (isCbCr)
+            {
+                auto t = vec_dstU;
+                vec_dstU = vec_dstV, vec_dstV = t;
+            }
             rvv<T>::vsseg(dst + i * dst_step + j * 3, rvv<T>::vcvt1(vec_dstY, 0, vl), rvv<T>::vcvt1(vec_dstU, 14, vl), rvv<T>::vcvt1(vec_dstV, 14, vl), vl);
         }
     }
@@ -562,11 +582,11 @@ inline int cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return ThreadPool::parallel_for(height, -1, cvtBGRtoYUV<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
+        return color::invoke(height, -1, cvtBGRtoYUV<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
     case CV_16U:
-        return ThreadPool::parallel_for(height, -1, cvtBGRtoYUV<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
+        return color::invoke(height, -1, cvtBGRtoYUV<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
     case CV_32F:
-        return ThreadPool::parallel_for(height, -1, cvtBGRtoYUV<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
+        return color::invoke(height, -1, cvtBGRtoYUV<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -773,7 +793,7 @@ inline int cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * 
 {
     if (dcn != 3 && dcn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    return ThreadPool::parallel_for(dst_height, -1, {cvtSinglePlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, dcn, swapBlue, uIdx, yIdx);
+    return color::invoke(dst_height, -1, {cvtSinglePlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, dcn, swapBlue, uIdx, yIdx);
 }
 
 inline int cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx)
@@ -781,7 +801,7 @@ inline int cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * 
     if (dcn != 3 && dcn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     const uchar* uv = src_data + src_step * static_cast<size_t>(dst_height);
-    return ThreadPool::parallel_for(dst_height / 2, -1, {cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, uv, uv, 0, 0, dcn, swapBlue, uIdx);
+    return color::invoke(dst_height / 2, -1, {cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, uv, uv, 0, 0, dcn, swapBlue, uIdx);
 }
 
 inline int cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx)
@@ -795,7 +815,7 @@ inline int cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar 
     int vstepIdx = dst_height % 4 == 2 ? 1 : 0;
     if(uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); }
 
-    return ThreadPool::parallel_for(dst_height / 2, -1, {cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, u, v, ustepIdx, vstepIdx, dcn, swapBlue, -1);
+    return color::invoke(dst_height / 2, -1, {cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, u, v, ustepIdx, vstepIdx, dcn, swapBlue, -1);
 }
 } // cv::cv_hal_rvv::PlaneYUVtoBGR
 
@@ -1044,7 +1064,7 @@ inline int cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step, uchar * 
 {
     if (scn != 3 && scn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    return ThreadPool::parallel_for(height, -1, {cvtBGRtoSinglePlaneYUV}, dst_data, dst_step, width, src_step, src_data, scn, swapBlue, uIdx, yIdx);
+    return color::invoke(height, -1, {cvtBGRtoSinglePlaneYUV}, dst_data, dst_step, width, src_step, src_data, scn, swapBlue, uIdx, yIdx);
 }
 
 inline int cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
@@ -1054,7 +1074,7 @@ inline int cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
 {
     if (y_step != uv_step || (scn != 3 && scn != 4))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    return ThreadPool::parallel_for(height / 2, -1, {cvtBGRtoMultiPlaneYUV}, y_data, uv_data, y_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2);
+    return color::invoke(height / 2, -1, {cvtBGRtoMultiPlaneYUV}, y_data, uv_data, y_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2);
 }
 
 inline int cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx)
@@ -1062,7 +1082,7 @@ inline int cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step, uchar 
     if (scn != 3 && scn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     uchar* uv_data = dst_data + dst_step * static_cast<size_t>(height);
-    return ThreadPool::parallel_for(height / 2, -1, {cvtBGRtoMultiPlaneYUV}, dst_data, uv_data, dst_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2 ? 3 : 2);
+    return color::invoke(height / 2, -1, {cvtBGRtoMultiPlaneYUV}, dst_data, uv_data, dst_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2 ? 3 : 2);
 }
 } // cv::cv_hal_rvv::PlaneBGRtoYUV
 
