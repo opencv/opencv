@@ -120,6 +120,8 @@ inline int minMaxIdxReadTwice(const uchar* src_data, size_t src_step, int width,
                         found_min = true;
                         minIdx[0] = i;
                         minIdx[1] = j + index;
+                        if (src_step == sizeof(T) && width > 1)
+                            std::swap(minIdx[0], minIdx[1]);
                     }
                 }
                 if (!found_max)
@@ -131,6 +133,8 @@ inline int minMaxIdxReadTwice(const uchar* src_data, size_t src_step, int width,
                         found_max = true;
                         maxIdx[0] = i;
                         maxIdx[1] = j + index;
+                        if (src_step == sizeof(T) && width > 1)
+                            std::swap(maxIdx[0], maxIdx[1]);
                     }
                 }
             }
@@ -176,6 +180,8 @@ inline int minMaxIdxReadTwice(const uchar* src_data, size_t src_step, int width,
                         found_min = true;
                         minIdx[0] = i;
                         minIdx[1] = j + index;
+                        if (src_step == sizeof(T) && width > 1)
+                            std::swap(minIdx[0], minIdx[1]);
                     }
                 }
                 if (!found_max)
@@ -187,6 +193,8 @@ inline int minMaxIdxReadTwice(const uchar* src_data, size_t src_step, int width,
                         found_max = true;
                         maxIdx[0] = i;
                         maxIdx[1] = j + index;
+                        if (src_step == sizeof(T) && width > 1)
+                            std::swap(maxIdx[0], maxIdx[1]);
                     }
                 }
             }
@@ -275,6 +283,8 @@ inline int minMaxIdxReadOnce(const uchar* src_data, size_t src_step, int width, 
             {
                 minIdx[0] = __riscv_vmv_x(vec_minpos) / width;
                 minIdx[1] = __riscv_vmv_x(vec_minpos) % width;
+                if (src_step == sizeof(T) && width > 1)
+                    std::swap(minIdx[0], minIdx[1]);
             }
         }
         if (val_max < rvv<T>::vmv_x_s(vec_max))
@@ -284,6 +294,8 @@ inline int minMaxIdxReadOnce(const uchar* src_data, size_t src_step, int width, 
             {
                 maxIdx[0] = __riscv_vmv_x(vec_maxpos) / width;
                 maxIdx[1] = __riscv_vmv_x(vec_maxpos) % width;
+                if (src_step == sizeof(T) && width > 1)
+                    std::swap(maxIdx[0], maxIdx[1]);
             }
         }
         vec_min = __riscv_vslidedown(vec_min, 1, vlmax);

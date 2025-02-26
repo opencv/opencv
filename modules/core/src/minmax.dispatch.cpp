@@ -316,38 +316,11 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
     {
         if ((size_t)src.step == (size_t)mask.step || mask.empty())
         {
-            int res = cv_hal_minMaxIdx(src.data, src.step, src.cols*cn, src.rows,
-                                       src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data);
-            if (res == CV_HAL_ERROR_OK)
-            {
-                if (minIdx && !minIdx[0])
-                    ofs2idx(src, minIdx[1]+1, minIdx);
-                if (maxIdx && !maxIdx[0])
-                    ofs2idx(src, maxIdx[1]+1, maxIdx);
-                return;
-            }
-            else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
-            {
-                CV_Error_(cv::Error::StsInternal,
-                ("HAL implementation minMaxIdx ==> " CVAUX_STR(cv_hal_minMaxIdx) " returned %d (0x%08x)", res, res));
-            }
+            CALL_HAL(minMaxIdx, cv_hal_minMaxIdx, src.data, src.step, src.cols*cn, src.rows,
+                     src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data);
         }
-
-        int res = cv_hal_minMaxIdxMaskStep(src.data, src.step, src.cols*cn, src.rows,
-                                           src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data, mask.step);
-        if (res == CV_HAL_ERROR_OK)
-        {
-            if (minIdx && !minIdx[0])
-                ofs2idx(src, minIdx[1]+1, minIdx);
-            if (maxIdx && !maxIdx[0])
-                ofs2idx(src, maxIdx[1]+1, maxIdx);
-            return;
-        }
-        else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
-        {
-            CV_Error_(cv::Error::StsInternal,
-            ("HAL implementation minMaxIdxMaskStep ==> " CVAUX_STR(cv_hal_minMaxIdxMaskStep) " returned %d (0x%08x)", res, res));
-        }
+        CALL_HAL(minMaxIdxMaskStep, cv_hal_minMaxIdxMaskStep, src.data, src.step, src.cols*cn, src.rows,
+                 src.depth(), minVal, maxVal, minIdx, maxIdx, mask.data, mask.step);
     }
     else if (src.isContinuous() && (mask.isContinuous() || mask.empty()))
     {
