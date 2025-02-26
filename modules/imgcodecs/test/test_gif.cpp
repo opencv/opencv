@@ -366,6 +366,56 @@ TEST(Imgcodecs_Gif, encode_IMREAD_GRAYSCALE) {
     EXPECT_EQ(decoded.channels(), 1);
 }
 
+typedef testing::TestWithParam<int> Imgcodecs_Gif_GIF_LOOP;
+TEST_P(Imgcodecs_Gif_GIF_LOOP, imencode)
+{
+    int loopCount = GetParam();
+
+    vector<int> param;
+    param.push_back(cv::IMWRITE_GIF_LOOP);
+    param.push_back(loopCount);
+
+    vector<cv::Mat> src;
+    for(int n = 1; n <= 5 ; n ++ )
+    {
+        cv::Mat frame(64, 64, CV_8UC3, cv::Scalar::all(0));
+        cv::putText(frame, cv::format("%d", n), cv::Point(0,64), cv::FONT_HERSHEY_PLAIN, 4.0, cv::Scalar::all(255));
+        src.push_back(frame);
+    }
+
+    bool ret = false;
+    vector<uint8_t> buf;
+#if 0
+    // To output gif image for test.
+    EXPECT_NO_THROW(ret = imwrite(cv::format("gif_loop-%d.gif", loopCount), src, param));
+    EXPECT_TRUE(ret);
+#endif
+    EXPECT_NO_THROW(ret = imencode(".gif", src, buf, param));
+    EXPECT_TRUE(ret);
+
+    std::vector<uint8_t> netscape = {'N','E','T','S','C','A','P','E'};
+    auto pos = std::search(buf.begin(), buf.end(), netscape.begin(), netscape.end());
+    if(loopCount < 0) {
+        EXPECT_EQ(pos, buf.end()) << "Netscape Applicatioin Block should not be included if IMWRITE_GIF_LOOP < 0";
+    } else {
+        EXPECT_NE(pos, buf.end()) << "Netscape Applicatioin Block should be included if IMWRITE_GIF_LOOP >= 0";
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/,
+    Imgcodecs_Gif_GIF_LOOP,
+    testing::Values(
+        -2,
+        -1, // Minimum Limit, no-loop
+         0, // Default, loop-forever
+         1, // Positive minimum value
+         2,
+     65534,
+     65535, // Maximum Limit
+     65536
+    )
+);
+
 }//opencv_test
 }//namespace
 
