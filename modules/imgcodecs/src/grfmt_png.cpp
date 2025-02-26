@@ -814,6 +814,10 @@ PngEncoder::PngEncoder()
     next_seq_num = 0;
     trnssize = 0;
     palsize = 0;
+    m_compression_level = Z_BEST_SPEED;
+    m_compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
+    m_filter = IMWRITE_PNG_FILTER_SUB; // Default filter
+    m_isBilevel = false;
     memset(palette, 0, sizeof(palette));
     memset(trns, 0, sizeof(trns));
     memset(op, 0, sizeof(op));
@@ -858,6 +862,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     int depth = img.depth(), channels = img.channels();
     volatile bool result = false;
     AutoBuffer<uchar*> buffer;
+    bool set_only_compression_level = false;
 
     if( depth != CV_8U && depth != CV_16U )
         return false;
@@ -882,45 +887,40 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         png_init_io( png_ptr, (png_FILE_p)f );
                 }
 
-                int compression_level = -1; // Invalid value to allow setting 0-9 as valid
-                int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
-                bool isBilevel = false;
-
                 for( size_t i = 0; i < params.size(); i += 2 )
                 {
                     if( params[i] == IMWRITE_PNG_COMPRESSION )
                     {
-                        compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-                        compression_level = params[i+1];
-                        compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
+                        m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
+                        m_compression_level = params[i+1];
+                        m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
+                        set_only_compression_level = true;
                     }
                     if( params[i] == IMWRITE_PNG_STRATEGY )
                     {
-                        compression_strategy = params[i+1];
-                        compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
+                        m_compression_strategy = params[i+1];
+                        m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
+                        set_only_compression_level = false;
                     }
                     if( params[i] == IMWRITE_PNG_BILEVEL )
                     {
-                        isBilevel = params[i+1] != 0;
+                        m_isBilevel = params[i+1] != 0;
+                    }
+                    if( params[i] == IMWRITE_PNG_FILTER )
+                    {
+                        m_filter = params[i+1];
+                        set_only_compression_level = false;
                     }
                 }
 
                 if( m_buf || f )
                 {
-                    if( compression_level >= 0 )
-                    {
-                        png_set_compression_level( png_ptr, compression_level );
-                    }
-                    else
-                    {
-                        // tune parameters for speed
-                        // (see http://wiki.linuxquestions.org/wiki/Libpng)
-                        png_set_filter(png_ptr, PNG_FILTER_TYPE_BASE, PNG_FILTER_SUB);
-                        png_set_compression_level(png_ptr, Z_BEST_SPEED);
-                    }
-                    png_set_compression_strategy(png_ptr, compression_strategy);
+                    if (!set_only_compression_level)
+                        png_set_filter(png_ptr, PNG_FILTER_TYPE_BASE, m_filter);
+                    png_set_compression_level(png_ptr, m_compression_level);
+                    png_set_compression_strategy(png_ptr, m_compression_strategy);
 
-                    png_set_IHDR( png_ptr, info_ptr, width, height, depth == CV_8U ? isBilevel?1:8 : 16,
+                    png_set_IHDR( png_ptr, info_ptr, width, height, depth == CV_8U ? m_isBilevel ? 1 : 8 : 16,
                         channels == 1 ? PNG_COLOR_TYPE_GRAY :
                         channels == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGBA,
                         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
@@ -928,7 +928,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 
                     png_write_info( png_ptr, info_ptr );
 
-                    if (isBilevel)
+                    if (m_isBilevel)
                         png_set_packing(png_ptr);
 
                     png_set_bgr( png_ptr );
@@ -1399,7 +1399,7 @@ void PngEncoder::deflateRectFin(unsigned char* zbuf, uint32_t* zsize, int bpp, i
     fin_zstream.zalloc = Z_NULL;
     fin_zstream.zfree = Z_NULL;
     fin_zstream.opaque = Z_NULL;
-    deflateInit2(&fin_zstream, Z_BEST_COMPRESSION, 8, 15, 8, op[n].filters ? Z_FILTERED : Z_DEFAULT_STRATEGY);
+    deflateInit2(&fin_zstream, m_compression_level, 8, 15, 8, op[n].filters ? Z_FILTERED : m_compression_strategy);
 
     fin_zstream.next_out = zbuf;
     fin_zstream.avail_out = zbuf_size;
@@ -1415,30 +1415,27 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
     int frame_type = animation.frames[0].type();
     int frame_depth = animation.frames[0].depth();
     CV_CheckType(frame_type, frame_depth == CV_8U || frame_depth == CV_16U, "APNG decoder supports only 8 or 16 bit unsigned images");
-    int compression_level = 6;
-    int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
-    bool isBilevel = false;
 
     for (size_t i = 0; i < params.size(); i += 2)
     {
         if (params[i] == IMWRITE_PNG_COMPRESSION)
         {
-            compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-            compression_level = params[i + 1];
-            compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
+            m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
+            m_compression_level = params[i + 1];
+            m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
         }
         if (params[i] == IMWRITE_PNG_STRATEGY)
         {
-            compression_strategy = params[i + 1];
-            compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
+            m_compression_strategy = params[i + 1];
+            m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
         }
         if (params[i] == IMWRITE_PNG_BILEVEL)
         {
-            isBilevel = params[i + 1] != 0;
+            m_isBilevel = params[i + 1] != 0;
         }
     }
 
-    if (isBilevel)
+    if (m_isBilevel)
         CV_LOG_WARNING(NULL, "IMWRITE_PNG_BILEVEL parameter is not supported yet.");
     uint32_t first =0;
     uint32_t loops= animation.loop_count;
@@ -1556,13 +1553,13 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         op_zstream1.zalloc = Z_NULL;
         op_zstream1.zfree = Z_NULL;
         op_zstream1.opaque = Z_NULL;
-        deflateInit2(&op_zstream1, compression_level, 8, 15, 8, compression_strategy);
+        deflateInit2(&op_zstream1, m_compression_level, 8, 15, 8, m_compression_strategy);
 
         op_zstream2.data_type = Z_BINARY;
         op_zstream2.zalloc = Z_NULL;
         op_zstream2.zfree = Z_NULL;
         op_zstream2.opaque = Z_NULL;
-        deflateInit2(&op_zstream2, compression_level, 8, 15, 8, Z_FILTERED);
+        deflateInit2(&op_zstream2, m_compression_level, 8, 15, 8, Z_FILTERED);
 
         idat_size = (rowbytes + 1) * height;
         zbuf_size = idat_size + ((idat_size + 7) >> 3) + ((idat_size + 63) >> 6) + 11;
