@@ -80,7 +80,14 @@ static cv::VideoCaptureAPIs supported_backends[] = {
     CAP_FFMPEG
 };
 
-INSTANTIATE_TEST_CASE_P(videoio, VideoCaptureAPITests, testing::ValuesIn(supported_backends));
+inline static std::string VideoCaptureAPITests_name_printer(const testing::TestParamInfo<VideoCaptureAPITests::ParamType>& info)
+{
+    std::ostringstream out;
+    out << getBackendNameSafe(info.param);
+    return out.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, VideoCaptureAPITests, testing::ValuesIn(supported_backends), VideoCaptureAPITests_name_printer);
 
 #endif // WIN32
 

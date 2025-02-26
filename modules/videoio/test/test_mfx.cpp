@@ -160,8 +160,9 @@ inline static std::string videoio_mfx_name_printer(const testing::TestParamInfo<
 {
     std::ostringstream out;
     const Size sz = get<0>(info.param);
-    const std::string ext = get<2>(info.param);
-    out << sz.width << "x" << sz.height << "x" << get<1>(info.param) << "x" << ext.substr(1, ext.size() - 1);
+    out << sz.height << "p" << "_"
+        << get<1>(info.param) << "FPS" << "_"
+        << extToStringSafe(get<2>(info.param));
     return out.str();
 }
 
