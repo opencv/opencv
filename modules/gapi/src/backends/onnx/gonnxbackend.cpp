@@ -732,6 +732,11 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
         cv::util::throw_error(std::logic_error("Please specify output layer names for "
                                                + params.model_path));
     }
+    // WA: Some ONNX Runtime + OVEP libraries don't allow
+    //     creation of environment after addition of OpenVINO
+    //     Execution Provider.
+    // Create and initialize the ONNX environment
+    this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
     GAPI_LOG_INFO(NULL, "Adding Execution Providers for \"" << pp.model_path << "\"");
@@ -750,7 +755,6 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     if (pp.opt_level.has_value()) {
         session_options.SetGraphOptimizationLevel(convertToGraphOptimizationLevel(pp.opt_level.value()));
     }
-    this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
 #ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);
 #else
