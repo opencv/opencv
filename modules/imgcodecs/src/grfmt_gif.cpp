@@ -273,31 +273,20 @@ GifDisposeMethod GifDecoder::readExtensions() {
 }
 
 void GifDecoder::code2pixel(Mat& img, int start, int k){
-    const int screen_width  = img.size().width;
-    const int screen_height = img.size().height;
-
     for (int i = start; i < height; i += k) {
-        const int py = top + i;
-        if (py >= screen_height) {
-            continue;
-        }
         for (int j = 0; j < width; j++) {
             uchar colorIdx = imgCodeStream[idx++];
             if (hasTransparentColor && colorIdx == transparentColor) {
                 continue;
             }
-            const int px = left + j;
-            if (px >= screen_width) {
-                continue;
-            }
             if (colorIdx < localColorTableSize) {
-                img.at<Vec4b>(py, px) =
+                img.at<Vec4b>(top + i, left + j) =
                         Vec4b(localColorTable[colorIdx * 3 + 2], // B
                               localColorTable[colorIdx * 3 + 1], // G
                               localColorTable[colorIdx * 3],     // R
                               255);                              // A
             } else if (colorIdx < globalColorTableSize) {
-                img.at<Vec4b>(py, px) =
+                img.at<Vec4b>(top + i, left + j) =
                         Vec4b(globalColorTable[colorIdx * 3 + 2], // B
                               globalColorTable[colorIdx * 3 + 1], // G
                               globalColorTable[colorIdx * 3],     // R
@@ -311,7 +300,7 @@ void GifDecoder::code2pixel(Mat& img, int start, int k){
                  * white as its first two entries, so that monochrome images can be rendered adequately."
                  */
                 uchar intensity = colorIdx ^ 1 ? colorIdx : 255;
-                img.at<Vec4b>(py, px) =
+                img.at<Vec4b>(top + i, left + j) =
                         Vec4b(intensity, intensity, intensity, 255);
             } else {
                 CV_Assert(false);
