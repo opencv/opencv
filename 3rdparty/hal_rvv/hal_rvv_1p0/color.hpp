@@ -130,11 +130,11 @@ inline int cvtBGRtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, -1, cvtBGRtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, dcn, swapBlue);
+        return cvtBGRtoBGR<uchar>(0, height, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, dcn, swapBlue);
     case CV_16U:
-        return color::invoke(height, -1, cvtBGRtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, dcn, swapBlue);
+        return cvtBGRtoBGR<ushort>(0, height, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, dcn, swapBlue);
     case CV_32F:
-        return color::invoke(height, -1, cvtBGRtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, dcn, swapBlue);
+        return cvtBGRtoBGR<float>(0, height, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, dcn, swapBlue);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -202,11 +202,11 @@ inline int cvtGraytoBGR(const uchar * src_data, size_t src_step, uchar * dst_dat
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, -1, cvtGraytoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn);
+        return cvtGraytoBGR<uchar>(0, height, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn);
     case CV_16U:
-        return color::invoke(height, -1, cvtGraytoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn);
+        return cvtGraytoBGR<ushort>(0, height, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn);
     case CV_32F:
-        return color::invoke(height, -1, cvtGraytoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn);
+        return cvtGraytoBGR<float>(0, height, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -1211,7 +1211,7 @@ inline int cvtHSVtoBGR<uchar>(int start, int end, const uchar * src, size_t src_
 }
 
 template<>
-inline int cvtHSVtoBGR<float>(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int dcn, bool swapBlue, bool isFullRange, bool isHSV)
+inline int cvtHSVtoBGR<float>(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int dcn, bool swapBlue, bool, bool isHSV)
 {
     src_step /= sizeof(float);
     dst_step /= sizeof(float);
@@ -1326,13 +1326,6 @@ inline int cvtBGRtoHSV<uchar>(int start, int end, const uchar * src, size_t src_
             h = __riscv_vmerge(h, __riscv_vsub(g, b, vl), __riscv_vmseq(v, r, vl), vl);
             h = __riscv_vssra(__riscv_vmul(h, __riscv_vfcvt_x(__riscv_vfrdiv(__riscv_vfcvt_f(__riscv_vmul(diff, 6, vl), vl), isFullRange ? 256 << 12 : 180 << 12, vl), vl), vl), 12, __RISCV_VXRM_RNU, vl);
             h = __riscv_vadd_mu(__riscv_vmslt(h, 0, vl), h, h, isFullRange ? 256 : 180, vl);
-            // auto s = __riscv_vdiv(diff, __riscv_vadd(__riscv_vabs(v, vl), FLT_EPSILON, vl), vl);
-            // diff = __riscv_vrdiv(__riscv_vadd(diff, FLT_EPSILON, vl), 60.0f, vl);
-
-            // auto h = __riscv_vmadd(__riscv_vsub(r, g, vl), diff, __riscv_vmv_v_f_f32m2(240.0f, vl), vl);
-            // h = __riscv_vmerge(h, __riscv_vmadd(__riscv_vsub(b, r, vl), diff, __riscv_vmv_v_f_f32m2(120.0f, vl), vl), __riscv_vmfeq(v, g, vl), vl);
-            // h = __riscv_vmerge(h, __riscv_vmul(__riscv_vsub(g, b, vl), diff, vl), __riscv_vmfeq(v, r, vl), vl);
-            // h = __riscv_vadd_mu(__riscv_vmflt(h, 0, vl), h, h, 360.0f, vl);
 
             vuint8mf2x3_t x{};
             x = __riscv_vset_v_u8mf2_u8mf2x3(x, 0, __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m2_u32m2(h), 0, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
@@ -1346,7 +1339,7 @@ inline int cvtBGRtoHSV<uchar>(int start, int end, const uchar * src, size_t src_
 }
 
 template<>
-inline int cvtBGRtoHSV<float>(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int scn, bool swapBlue, bool isFullRange, bool isHSV)
+inline int cvtBGRtoHSV<float>(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int scn, bool swapBlue, bool, bool isHSV)
 {
     src_step /= sizeof(float);
     dst_step /= sizeof(float);
