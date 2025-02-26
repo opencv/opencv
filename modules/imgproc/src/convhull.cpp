@@ -327,7 +327,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     if( !returnPoints ) {
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     } else {
-        InputArray tmplate = std::vector<Point>();
+        const InputArray tmplate = std::vector<Point>();
         _hull.create(nout, 1, tmplate.type());
         Point* ptr = reinterpret_cast<Point*>(_hull.getMat().ptr(0));
         for (int j = 0; j < nout; j++) {
