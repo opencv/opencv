@@ -108,7 +108,7 @@ static inline int cvtBGRtoBGR(int start, int end, const T * src, size_t src_step
             for (int j = 0; j < width; j += vl)
             {
                 vl = rvv<T>::vsetvl(width - j);
-                typename rvv<T>::T vec_srcB, vec_srcG, vec_srcR, vec_srcA;
+                typename rvv<T>::T vec_srcB, vec_srcG, vec_srcR, vec_srcA{};
                 rvv<T>::vlseg(src + i * src_step + j * scn, scn, vec_srcB, vec_srcG, vec_srcR, vec_srcA, vl);
                 if (swapBlue)
                 {
@@ -929,9 +929,9 @@ static inline int cvtBGRtoSinglePlaneYUV(int start, int end, uchar * dst_data, s
     //     1, 0     |     0, 2
     const int uidx = 1 - yIdx + uIdx * 2;
     const int vidx = (2 + uidx) % 4;
-    const uchar* rgb_src = src_data + start * stride;
+    const uchar* bgr_src = src_data + start * stride;
 
-    for (int j = start; j < end; j++, rgb_src += stride)
+    for (int j = start; j < end; j++, bgr_src += stride)
     {
         uchar* row = dst_data + dst_step * j;
         int vl;
@@ -942,7 +942,7 @@ static inline int cvtBGRtoSinglePlaneYUV(int start, int end, uchar * dst_data, s
             vuint8m1_t b1, g1, r1;
             if (scn == 3)
             {
-                auto x = __riscv_vlseg6e8_v_u8m1x6(rgb_src + 6 * i, vl);
+                auto x = __riscv_vlseg6e8_v_u8m1x6(bgr_src + 6 * i, vl);
                 b0 = __riscv_vget_v_u8m1x6_u8m1(x, 0);
                 g0 = __riscv_vget_v_u8m1x6_u8m1(x, 1);
                 r0 = __riscv_vget_v_u8m1x6_u8m1(x, 2);
@@ -952,7 +952,7 @@ static inline int cvtBGRtoSinglePlaneYUV(int start, int end, uchar * dst_data, s
             }
             else
             {
-                auto x = __riscv_vlseg8e8_v_u8m1x8(rgb_src + 8 * i, vl);
+                auto x = __riscv_vlseg8e8_v_u8m1x8(bgr_src + 8 * i, vl);
                 b0 = __riscv_vget_v_u8m1x8_u8m1(x, 0);
                 g0 = __riscv_vget_v_u8m1x8_u8m1(x, 1);
                 r0 = __riscv_vget_v_u8m1x8_u8m1(x, 2);
@@ -1085,6 +1085,194 @@ inline int cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step, uchar 
     return color::invoke(height / 2, -1, {cvtBGRtoMultiPlaneYUV}, dst_data, uv_data, dst_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2 ? 3 : 2);
 }
 } // cv::cv_hal_rvv::PlaneBGRtoYUV
+
+namespace HSVtoBGR {
+#undef cv_hal_cvtHSVtoBGR
+#define cv_hal_cvtHSVtoBGR cv::cv_hal_rvv::HSVtoBGR::cvtHSVtoBGR
+
+template<typename T>
+static inline int cvtHSVtoBGR(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int dcn, bool swapBlue, bool isFullRange, bool isHSV);
+
+static inline void ComputeSectorAndClampedH(int vl, vfloat32m2_t& h, vint32m2_t& sector)
+{
+    int rd;
+    asm volatile("fsrmi %0, %1" : "=r"(rd) : "i"(2)); // Rounding Mode: RDN
+    sector = __riscv_vfcvt_x(h, vl);
+    asm volatile("fsrm %0" : : "r"(rd));
+
+    h = __riscv_vfsub(h, __riscv_vfcvt_f(sector, vl), vl);
+    sector = __riscv_vrem(sector, 6, vl);
+    sector = __riscv_vadd_mu(__riscv_vmslt(sector, 0, vl), sector, sector, 6, vl);
+}
+
+static inline void Hxx2BGR_loadtab(int vl, vfloat32m2_t tab0, vfloat32m2_t tab1, vfloat32m2_t tab2, vfloat32m2_t tab3,
+                                   vint32m2_t sector, vfloat32m2_t& b, vfloat32m2_t& g, vfloat32m2_t& r)
+{
+    static const uint sector_data[3][6] =
+    {
+        {1, 1, 3, 0, 0, 2},
+        {3, 0, 0, 2, 1, 1},
+        {0, 2, 1, 1, 3, 0}
+    };
+    auto loadtab = [&](size_t p) {
+        auto sd = __riscv_vloxei32_v_u32m2(sector_data[p], __riscv_vreinterpret_v_i32m2_u32m2(sector), vl);
+        auto x = __riscv_vmerge(vfloat32m2_t(), tab0, __riscv_vmseq(sd, 0, vl), vl);
+        x = __riscv_vmerge(x, tab1, __riscv_vmseq(sd, 1, vl), vl);
+        x = __riscv_vmerge(x, tab2, __riscv_vmseq(sd, 2, vl), vl);
+        return __riscv_vmerge(x, tab3, __riscv_vmseq(sd, 3, vl), vl);
+    };
+
+    sector = __riscv_vmul(sector, sizeof(uint), vl);
+    b = loadtab(0);
+    g = loadtab(1);
+    r = loadtab(2);
+}
+
+static inline void HSV2BGR_native(int vl, vfloat32m2_t h, vfloat32m2_t s, vfloat32m2_t v,
+                                  vfloat32m2_t& b, vfloat32m2_t& g, vfloat32m2_t& r,
+                                  const float hscale)
+{
+    h = __riscv_vfmul(h, hscale, vl);
+    vint32m2_t sector;
+    ComputeSectorAndClampedH(vl, h, sector);
+
+    auto tab0 = v;
+    auto tab1 = __riscv_vfnmsub(v, s, v, vl);
+    auto tab2 = __riscv_vfnmsub(__riscv_vfmul(v, s, vl), h, v, vl);
+    auto tab3 = __riscv_vfadd(v, __riscv_vfsub(tab1, tab2, vl), vl);
+    Hxx2BGR_loadtab(vl, tab0, tab1, tab2, tab3, sector, b, g, r);
+}
+
+static inline void HLS2BGR_native(int vl, vfloat32m2_t h, vfloat32m2_t l, vfloat32m2_t s,
+                                  vfloat32m2_t& b, vfloat32m2_t& g, vfloat32m2_t& r,
+                                  const float hscale)
+{
+    h = __riscv_vfmul(h, hscale, vl);
+    vint32m2_t sector;
+    ComputeSectorAndClampedH(vl, h, sector);
+
+    auto tab0 = __riscv_vmerge(__riscv_vfnmsub(l, s, __riscv_vfadd(l, s, vl), vl), __riscv_vfmadd(l, s, l, vl), __riscv_vmfle(l, 0.5f, vl), vl);
+    auto tab1 = __riscv_vfsub(__riscv_vfadd(l, l, vl), tab0, vl);
+    auto tab3 = __riscv_vfmadd(__riscv_vfsub(tab0, tab1, vl), h, tab1, vl);
+    auto tab2 = __riscv_vfsub(__riscv_vfadd(tab0, tab1, vl), tab3, vl);
+    Hxx2BGR_loadtab(vl, tab0, tab1, tab2, tab3, sector, b, g, r);
+}
+
+// the algorithm is copied from imgproc/src/color_hsv.simd.cpp,
+// in the functor struct HSV2RGB_f, HSV2RGB_b, HLS2RGB_f and HLS2RGB_b
+template<>
+inline int cvtHSVtoBGR<uchar>(int start, int end, const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int dcn, bool swapBlue, bool isFullRange, bool isHSV)
+{
+    float hs = 6.0f / (isFullRange ? 255 : 180), r255 = 1.0f / 255;
+    auto alpha = __riscv_vmv_v_x_u8mf2(std::numeric_limits<uchar>::max(), __riscv_vsetvlmax_e8mf2());
+    for (int i = start; i < end; i++)
+    {
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e8mf2(width - j);
+            auto x = __riscv_vlseg3e8_v_u8mf2x3(src + i * src_step + j * 3, vl);
+            auto h = __riscv_vfwcvt_f(__riscv_vwcvtu_x(__riscv_vget_v_u8mf2x3_u8mf2(x, 0), vl), vl);
+            auto s = __riscv_vfmul(__riscv_vfwcvt_f(__riscv_vwcvtu_x(__riscv_vget_v_u8mf2x3_u8mf2(x, 1), vl), vl), r255, vl);
+            auto v = __riscv_vfmul(__riscv_vfwcvt_f(__riscv_vwcvtu_x(__riscv_vget_v_u8mf2x3_u8mf2(x, 2), vl), vl), r255, vl);
+
+            vfloat32m2_t b, g, r;
+            isHSV ? HSV2BGR_native(vl, h, s, v, b, g, r, hs) : HLS2BGR_native(vl, h, s, v, b, g, r, hs);
+            if (swapBlue)
+            {
+                auto t = b;
+                b = r, r = t;
+            }
+            b = __riscv_vfmul(b, 255.0f, vl);
+            g = __riscv_vfmul(g, 255.0f, vl);
+            r = __riscv_vfmul(r, 255.0f, vl);
+
+            if (dcn == 3)
+            {
+                vuint8mf2x3_t y{};
+                y = __riscv_vset_v_u8mf2_u8mf2x3(y, 0, __riscv_vnclipu(__riscv_vfncvt_xu(b, vl), 0, __RISCV_VXRM_RNU, vl));
+                y = __riscv_vset_v_u8mf2_u8mf2x3(y, 1, __riscv_vnclipu(__riscv_vfncvt_xu(g, vl), 0, __RISCV_VXRM_RNU, vl));
+                y = __riscv_vset_v_u8mf2_u8mf2x3(y, 2, __riscv_vnclipu(__riscv_vfncvt_xu(r, vl), 0, __RISCV_VXRM_RNU, vl));
+                __riscv_vsseg3e8(dst + i * dst_step + j * 3, y, vl);
+            }
+            else
+            {
+                vuint8mf2x4_t y{};
+                y = __riscv_vset_v_u8mf2_u8mf2x4(y, 0, __riscv_vnclipu(__riscv_vfncvt_xu(b, vl), 0, __RISCV_VXRM_RNU, vl));
+                y = __riscv_vset_v_u8mf2_u8mf2x4(y, 1, __riscv_vnclipu(__riscv_vfncvt_xu(g, vl), 0, __RISCV_VXRM_RNU, vl));
+                y = __riscv_vset_v_u8mf2_u8mf2x4(y, 2, __riscv_vnclipu(__riscv_vfncvt_xu(r, vl), 0, __RISCV_VXRM_RNU, vl));
+                y = __riscv_vset_v_u8mf2_u8mf2x4(y, 3, alpha);
+                __riscv_vsseg4e8(dst + i * dst_step + j * 4, y, vl);
+            }
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+template<>
+inline int cvtHSVtoBGR<float>(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int dcn, bool swapBlue, bool isFullRange, bool isHSV)
+{
+    src_step /= sizeof(float);
+    dst_step /= sizeof(float);
+
+    float hs = 6.0f / 360;
+    auto alpha = __riscv_vfmv_v_f_f32m2(1.0f, __riscv_vsetvlmax_e32m2());
+    for (int i = start; i < end; i++)
+    {
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e32m2(width - j);
+            auto x = __riscv_vlseg3e32_v_f32m2x3(src + i * src_step + j * 3, vl);
+            auto h = __riscv_vget_v_f32m2x3_f32m2(x, 0), s = __riscv_vget_v_f32m2x3_f32m2(x, 1), v = __riscv_vget_v_f32m2x3_f32m2(x, 2);
+
+            vfloat32m2_t b, g, r;
+            isHSV ? HSV2BGR_native(vl, h, s, v, b, g, r, hs) : HLS2BGR_native(vl, h, s, v, b, g, r, hs);
+            if (swapBlue)
+            {
+                auto t = b;
+                b = r, r = t;
+            }
+
+            if (dcn == 3)
+            {
+                vfloat32m2x3_t y{};
+                y = __riscv_vset_v_f32m2_f32m2x3(y, 0, b);
+                y = __riscv_vset_v_f32m2_f32m2x3(y, 1, g);
+                y = __riscv_vset_v_f32m2_f32m2x3(y, 2, r);
+                __riscv_vsseg3e32(dst + i * dst_step + j * 3, y, vl);
+            }
+            else
+            {
+                vfloat32m2x4_t y{};
+                y = __riscv_vset_v_f32m2_f32m2x4(y, 0, b);
+                y = __riscv_vset_v_f32m2_f32m2x4(y, 1, g);
+                y = __riscv_vset_v_f32m2_f32m2x4(y, 2, r);
+                y = __riscv_vset_v_f32m2_f32m2x4(y, 3, alpha);
+                __riscv_vsseg4e32(dst + i * dst_step + j * 4, y, vl);
+            }
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+inline int cvtHSVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn, bool swapBlue, bool isFullRange, bool isHSV)
+{
+    if (dcn != 3 && dcn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    switch (depth)
+    {
+    case CV_8U:
+        return color::invoke(height, -1, cvtHSVtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue, isFullRange, isHSV);
+    case CV_32F:
+        return color::invoke(height, -1, cvtHSVtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue, isFullRange, isHSV);
+    }
+
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+} // cv::cv_hal_rvv::YUVtoBGR
 
 }}
 
