@@ -185,6 +185,14 @@ typedef signed char schar;
 #define CV_HAL_GEMM_3_T 4
 //! @}
 
+
+typedef struct HAL_Context
+{
+    typedef void (*parallel_for_body)(int start, int end, void* data);
+    typedef void (*parallel_for)(int tasks, parallel_for_body callback, void* data);
+    parallel_for parallel_for_fn;
+} HAL_Context;
+
 //! @}
 
 #endif

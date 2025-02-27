@@ -100,11 +100,10 @@ struct LUTCacheU32
 };
 
 template <typename LUT_TYPE>
-class LUTParallelBody : public cv::ParallelLoopBody
+struct LUTParallelBody
 {
     using ElemType = typename LUT_TYPE::ElemType;
 
-public:
     const uchar* src_data;
     const uchar* lut_data;
     uchar* dst_data;
@@ -122,42 +121,42 @@ public:
         dst_step(dst_step), width(width)
     {
     }
+};
 
-    void operator()(const cv::Range& range) const CV_OVERRIDE
+template <typename LUT_TYPE>
+void parallel_for_body_fn(int start, int end, void* data)
+{
+    typedef LUTParallelBody<LUT_TYPE> BodyType;
+    BodyType *inst = (BodyType*)data;
+
+    auto src = inst->src_data + start * inst->src_step;
+    auto dst = inst->dst_data + start * inst->dst_step;
+    size_t h = end - start;
+    size_t w = inst->width;
+    if (w == inst->src_step && w * LUT_TYPE::elem_size == inst->dst_step)
     {
-        auto src = src_data + range.start * src_step;
-        auto dst = dst_data + range.start * dst_step;
-        size_t h = range.size();
-        size_t w = width;
-        if (w == src_step && w * LUT_TYPE::elem_size == dst_step)
+        w = w * h;
+        h = 1;
+    }
+    auto lut = LUT_TYPE::loadTable((typename BodyType::ElemType*)inst->lut_data);
+    size_t maxlv = LUT_TYPE::setvlmax();
+    for (; h; h--, src += inst->src_step, dst += inst->dst_step)
+    {
+        size_t vl = maxlv;
+        size_t l = w;
+        auto s = src;
+        auto d = (typename BodyType::ElemType*)dst;
+        for (; l >= vl; l -= vl, s += vl, d += vl)
         {
-            w = w * h;
-            h = 1;
+            LUT_TYPE::lut(s, lut, d, vl);
         }
-        auto lut = LUT_TYPE::loadTable((ElemType*)lut_data);
-        size_t maxlv = LUT_TYPE::setvlmax();
-        for (; h; h--, src += src_step, dst += dst_step)
+        for (; l > 0; l -= vl, s += vl, d += vl)
         {
-            size_t vl = maxlv;
-            size_t l = w;
-            auto s = src;
-            auto d = (ElemType*)dst;
-            for (; l >= vl; l -= vl, s += vl, d += vl)
-            {
-                LUT_TYPE::lut(s, lut, d, vl);
-            }
-            for (; l > 0; l -= vl, s += vl, d += vl)
-            {
-                vl = LUT_TYPE::setvl(l);
-                LUT_TYPE::lut(s, lut, d, vl);
-            }
+            vl = LUT_TYPE::setvl(l);
+            LUT_TYPE::lut(s, lut, d, vl);
         }
     }
-
-private:
-    LUTParallelBody(const LUTParallelBody&);
-    LUTParallelBody& operator=(const LUTParallelBody&);
-};
+}
 
 inline int lut(const uchar* src_data,
                size_t src_step,
@@ -168,7 +167,8 @@ inline int lut(const uchar* src_data,
                uchar* dst_data,
                size_t dst_step,
                int width,
-               int height)
+               int height,
+               HAL_Context * ctx)
 {
     if (width <= 0 || height <= 0)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -184,31 +184,28 @@ inline int lut(const uchar* src_data,
         if (lut_channel_size == 1 && vlen >= 256)
         {
             LUTParallelBody<LUTCacheU8> body(src_data, src_step, lut_data, dst_data, dst_step, w);
-            Range all(0, height);
             if (w * h >= (1 << 18))
-                cv::parallel_for_(all, body);
+                ctx->parallel_for_fn(height, &parallel_for_body_fn<LUTCacheU8>, &body);
             else
-                body(all);
+                parallel_for_body_fn<LUTCacheU8>(0, height, &body);
             return CV_HAL_ERROR_OK;
         }
         else if (lut_channel_size == 2 && vlen >= 512)
         {
             LUTParallelBody<LUTCacheU16> body(src_data, src_step, lut_data, dst_data, dst_step, w);
-            Range all(0, height);
             if (w * h >= (1 << 18))
-                cv::parallel_for_(all, body);
+                ctx->parallel_for_fn(height, &parallel_for_body_fn<LUTCacheU16>, &body);
             else
-                body(all);
+                parallel_for_body_fn<LUTCacheU16>(0, height, &body);
             return CV_HAL_ERROR_OK;
         }
         else if (lut_channel_size == 4 && vlen >= 1024)
         {
             LUTParallelBody<LUTCacheU32> body(src_data, src_step, lut_data, dst_data, dst_step, w);
-            Range all(0, height);
             if (w * h >= (1 << 18))
-                cv::parallel_for_(all, body);
+                ctx->parallel_for_fn(height, &parallel_for_body_fn<LUTCacheU32>, &body);
             else
-                body(all);
+                parallel_for_body_fn<LUTCacheU32>(0, height, &body);
             return CV_HAL_ERROR_OK;
         }
     }
