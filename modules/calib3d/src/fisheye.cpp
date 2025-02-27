@@ -479,9 +479,16 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         {
             Vec2d pu = pw * scale; //undistorted point
 
-            // reproject
-            Vec3d pr = RR * Vec3d(pu[0], pu[1], 1.0); // rotated point optionally multiplied by new camera matrix
-            Vec2d fi(pr[0]/pr[2], pr[1]/pr[2]);       // final
+            if (!R.empty() || !P.empty())
+            {
+                // reproject
+                Vec3d pr = RR * Vec3d(pu[0], pu[1], 1.0); // rotated point optionally multiplied by new camera matrix
+                Vec2d fi(pr[0]/pr[2], pr[1]/pr[2]);       // final
+            }
+            else
+            {
+                Vec2d fi = pu;
+            }
 
             if( sdepth == CV_32F )
                 dstf[i] = fi;
