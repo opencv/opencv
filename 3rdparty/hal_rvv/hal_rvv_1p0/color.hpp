@@ -238,7 +238,7 @@ template<> struct rvv<uchar>
     }
     static inline void vse(uchar* a, T b, size_t c) { return __riscv_vse8(a, b, c); }
     static inline vuint32m4_t vcvt0(T a, size_t b) { return __riscv_vzext_vf4(a, b); }
-    static inline T vcvt1(vuint32m4_t a, size_t b, size_t c) { return __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vssrl(a, b, __RISCV_VXRM_RNU, c), c), c); }
+    static inline T vcvt1(vuint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vnclipu(a, b, __RISCV_VXRM_RNU, c), 0, __RISCV_VXRM_RNU, c); }
     static inline vuint32m4_t vmul(vuint32m4_t a, uint b, size_t c) { return __riscv_vmul(a, b, c); }
     static inline vuint32m4_t vmadd(vuint32m4_t a, uint b, vuint32m4_t c, size_t d) { return __riscv_vmadd(a, b, c, d); }
 };
@@ -262,7 +262,7 @@ template<> struct rvv<ushort>
     }
     static inline void vse(ushort* a, T b, size_t c) { return __riscv_vse16(a, b, c); }
     static inline vuint32m4_t vcvt0(T a, size_t b) { return __riscv_vzext_vf2(a, b); }
-    static inline T vcvt1(vuint32m4_t a, size_t b, size_t c) { return __riscv_vncvt_x(__riscv_vssrl(a, b, __RISCV_VXRM_RNU, c), c); }
+    static inline T vcvt1(vuint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(a, b, __RISCV_VXRM_RNU, c); }
     static inline vuint32m4_t vmul(vuint32m4_t a, uint b, size_t c) { return __riscv_vmul(a, b, c); }
     static inline vuint32m4_t vmadd(vuint32m4_t a, uint b, vuint32m4_t c, size_t d) { return __riscv_vmadd(a, b, c, d); }
 };
@@ -705,7 +705,7 @@ static inline int cvtSinglePlaneYUVtoBGR(int start, int end, uchar * dst_data, s
         case 3:
             return __riscv_vget_v_u8m1x4_u8m1(x, 3);
         }
-        /*NOTREACHED*/
+        throw;
     };
 
     for (int j = start; j < end; j++, yuv_src += stride)
@@ -905,7 +905,7 @@ static inline void cvtBGR82Yuv422(int vl, const vuint8m1_t b0, const vuint8m1_t 
         case 3:
             return __riscv_vset_v_u8m1_u8m1x4(x, 3, y);
         }
-        /*NOTREACHED*/
+        throw;
     };
 
     vuint8m1_t u, v;
@@ -1320,7 +1320,18 @@ inline int cvtBGRtoHSV<uchar>(int start, int end, const uchar * src, size_t src_
             vmin = __riscv_vmin(vmin, r, vl);
             auto diff = __riscv_vsub(v, vmin, vl);
 
-            auto s = __riscv_vnclip(__riscv_vmul(diff, __riscv_vfcvt_x(__riscv_vfrdiv(__riscv_vfcvt_f(v, vl), 255 << 12, vl), vl), vl), 12, __RISCV_VXRM_RNU, vl);
+            vint32m2_t l, t;
+            if (isHSV)
+            {
+                t = v;
+            }
+            else
+            {
+                l = __riscv_vdiv(__riscv_vadd(v, vmin, vl), 2, vl);
+                t = __riscv_vmerge(__riscv_vrsub(__riscv_vadd(v, vmin, vl), std::numeric_limits<uchar>::max() * 2, vl), __riscv_vadd(v, vmin, vl), __riscv_vmslt(l, std::numeric_limits<uchar>::max() / 2, vl), vl);
+            }
+            auto s = __riscv_vssra(__riscv_vmul(diff, __riscv_vfcvt_x(__riscv_vfrdiv(__riscv_vfcvt_f(t, vl), 255 << 12, vl), vl), vl), 12, __RISCV_VXRM_RNU, vl);
+
             auto h = __riscv_vmadd(diff, 4, __riscv_vsub(r, g, vl), vl);
             h = __riscv_vmerge(h, __riscv_vmadd(diff, 2, __riscv_vsub(b, r, vl), vl), __riscv_vmseq(v, g, vl), vl);
             h = __riscv_vmerge(h, __riscv_vsub(g, b, vl), __riscv_vmseq(v, r, vl), vl);
@@ -1329,8 +1340,8 @@ inline int cvtBGRtoHSV<uchar>(int start, int end, const uchar * src, size_t src_
 
             vuint8mf2x3_t x{};
             x = __riscv_vset_v_u8mf2_u8mf2x3(x, 0, __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m2_u32m2(h), 0, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
-            x = __riscv_vset_v_u8mf2_u8mf2x3(x, 1, __riscv_vncvt_x(__riscv_vreinterpret_v_i16m1_u16m1(s), vl));
-            x = __riscv_vset_v_u8mf2_u8mf2x3(x, 2, __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m2_u32m2(v), vl), vl));
+            x = __riscv_vset_v_u8mf2_u8mf2x3(x, 1, __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m2_u32m2(isHSV ? s : l), vl), vl));
+            x = __riscv_vset_v_u8mf2_u8mf2x3(x, 2, __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m2_u32m2(isHSV ? v : s), vl), vl));
             __riscv_vsseg3e8(dst + i * dst_step + j * 3, x, vl);
         }
     }
@@ -1377,7 +1388,18 @@ inline int cvtBGRtoHSV<float>(int start, int end, const float * src, size_t src_
             vmin = __riscv_vfmin(vmin, g, vl);
             vmin = __riscv_vfmin(vmin, r, vl);
             auto diff = __riscv_vfsub(v, vmin, vl);
-            auto s = __riscv_vfdiv(diff, __riscv_vfadd(__riscv_vfabs(v, vl), FLT_EPSILON, vl), vl);
+
+            vfloat32m2_t l, t;
+            if (isHSV)
+            {
+                t = __riscv_vfadd(__riscv_vfabs(v, vl), FLT_EPSILON, vl);
+            }
+            else
+            {
+                l = __riscv_vfmul(__riscv_vfadd(v, vmin, vl), 0.5f, vl);
+                t = __riscv_vmerge(__riscv_vfrsub(__riscv_vfadd(v, vmin, vl), 2.0f, vl), __riscv_vfadd(v, vmin, vl), __riscv_vmflt(l, 0.5f, vl), vl);
+            }
+            auto s = __riscv_vfdiv(diff, t, vl);
             diff = __riscv_vfrdiv(__riscv_vfadd(diff, FLT_EPSILON, vl), 60.0f, vl);
 
             auto h = __riscv_vfmadd(__riscv_vfsub(r, g, vl), diff, __riscv_vfmv_v_f_f32m2(240.0f, vl), vl);
@@ -1387,8 +1409,8 @@ inline int cvtBGRtoHSV<float>(int start, int end, const float * src, size_t src_
 
             vfloat32m2x3_t x{};
             x = __riscv_vset_v_f32m2_f32m2x3(x, 0, h);
-            x = __riscv_vset_v_f32m2_f32m2x3(x, 1, s);
-            x = __riscv_vset_v_f32m2_f32m2x3(x, 2, v);
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 1, isHSV ? s : l);
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 2, isHSV ? v : s);
             __riscv_vsseg3e32(dst + i * dst_step + j * 3, x, vl);
         }
     }
@@ -1411,6 +1433,123 @@ inline int cvtBGRtoHSV(const uchar * src_data, size_t src_step, uchar * dst_data
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 } // cv::cv_hal_rvv::BGRtoHSV
+
+namespace XYZtoBGR {
+#undef cv_hal_cvtXYZtoBGR
+#define cv_hal_cvtXYZtoBGR cv::cv_hal_rvv::XYZtoBGR::cvtXYZtoBGR
+
+template<typename T> struct rvv;
+template<> struct rvv<uchar>
+{
+    using T = vuint8m1_t;
+    static constexpr int XYZ2sRGB_D65[] =
+    {
+          228,   -836,   4331,
+        -3970,   7684,    170,
+        13273,  -6296,  -2042
+    };
+    static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e8m1(); }
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e8m1(a); }
+    static inline void vlseg(const uchar* a, T& b, T& c, T& d, size_t e){ auto x = __riscv_vlseg3e8_v_u8m1x3(a, e); b = __riscv_vget_v_u8m1x3_u8m1(x, 0), c = __riscv_vget_v_u8m1x3_u8m1(x, 1), d = __riscv_vget_v_u8m1x3_u8m1(x, 2); }
+    static inline void vsseg(uchar* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e8(a, __riscv_vcreate_v_u8m1x3(c, d, e), g) : __riscv_vsseg4e8(a, __riscv_vcreate_v_u8m1x4(c, d, e, f), g); }
+    static inline vint32m4_t vcvt0(T a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(a, b)); }
+    static inline T vcvt1(vint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vmax(a, 0, c)), b, __RISCV_VXRM_RNU, c), 0, __RISCV_VXRM_RNU, c); }
+    static inline vint32m4_t vmul(vint32m4_t a, int b, size_t c) { return __riscv_vmul(a, b, c); }
+    static inline vint32m4_t vmadd(vint32m4_t a, int b, vint32m4_t c, size_t d) { return __riscv_vmadd(a, b, c, d); }
+    static inline T vmv_v_x(uchar a, size_t b) { return __riscv_vmv_v_x_u8m1(a, b); }
+};
+template<> struct rvv<ushort>
+{
+    using T = vuint16m2_t;
+    static constexpr int XYZ2sRGB_D65[] =
+    {
+          228,   -836,   4331,
+        -3970,   7684,    170,
+        13273,  -6296,  -2042
+    };
+    static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e16m2(); }
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e16m2(a); }
+    static inline void vlseg(const ushort* a, T& b, T& c, T& d, size_t e){ auto x = __riscv_vlseg3e16_v_u16m2x3(a, e); b = __riscv_vget_v_u16m2x3_u16m2(x, 0), c = __riscv_vget_v_u16m2x3_u16m2(x, 1), d = __riscv_vget_v_u16m2x3_u16m2(x, 2); }
+    static inline void vsseg(ushort* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e16(a, __riscv_vcreate_v_u16m2x3(c, d, e), g) : __riscv_vsseg4e16(a, __riscv_vcreate_v_u16m2x4(c, d, e, f), g); }
+    static inline vint32m4_t vcvt0(T a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf2(a, b)); }
+    static inline T vcvt1(vint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vmax(a, 0, c)), b, __RISCV_VXRM_RNU, c); }
+    static inline vint32m4_t vmul(vint32m4_t a, int b, size_t c) { return __riscv_vmul(a, b, c); }
+    static inline vint32m4_t vmadd(vint32m4_t a, int b, vint32m4_t c, size_t d) { return __riscv_vmadd(a, b, c, d); }
+    static inline T vmv_v_x(ushort a, size_t b) { return __riscv_vmv_v_x_u16m2(a, b); }
+};
+template<> struct rvv<float>
+{
+    using T = vfloat32m2_t;
+    static constexpr float XYZ2sRGB_D65[] =
+    {
+         0.055648f, -0.204043f,  1.057311f,
+        -0.969256f,  1.875991f,  0.041556f,
+         3.240479f, -1.53715f , -0.498535f
+    };
+    static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e32m2(); }
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32m2(a); }
+    static inline void vlseg(const float* a, T& b, T& c, T& d, size_t e){ auto x = __riscv_vlseg3e32_v_f32m2x3(a, e); b = __riscv_vget_v_f32m2x3_f32m2(x, 0), c = __riscv_vget_v_f32m2x3_f32m2(x, 1), d = __riscv_vget_v_f32m2x3_f32m2(x, 2); }
+    static inline void vsseg(float* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e32(a, __riscv_vcreate_v_f32m2x3(c, d, e), g) : __riscv_vsseg4e32(a, __riscv_vcreate_v_f32m2x4(c, d, e, f), g); }
+    static inline T vcvt0(T a, size_t) { return a; }
+    static inline T vcvt1(T a, size_t, size_t) { return a; }
+    static inline T vmul(T a, float b, size_t c) { return __riscv_vfmul(a, b, c); }
+    static inline T vmadd(T a, float b, T c, size_t d) { return __riscv_vfmadd(a, b, c, d); }
+    static inline T vmv_v_x(float a, size_t b) { return __riscv_vfmv_v_f_f32m2(a, b); }
+};
+
+// the algorithm is copied from imgproc/src/color_lab.cpp,
+// in the functor struct XYZ2RGB_f and XYZ2RGB_i
+template<typename T>
+static inline int cvtXYZtoBGR(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int dcn, bool swapBlue)
+{
+    src_step /= sizeof(T);
+    dst_step /= sizeof(T);
+
+    auto alpha = rvv<T>::vmv_v_x(typeid(T) == typeid(float) ? 1.0f : std::numeric_limits<T>::max(), rvv<T>::vsetvlmax());
+    for (int i = start; i < end; i++)
+    {
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = rvv<T>::vsetvl(width - j);
+            typename rvv<T>::T vec_srcX_T, vec_srcY_T, vec_srcZ_T;
+            rvv<T>::vlseg(src + i * src_step + j * 3, vec_srcX_T, vec_srcY_T, vec_srcZ_T, vl);
+            auto vec_srcX = rvv<T>::vcvt0(vec_srcX_T, vl);
+            auto vec_srcY = rvv<T>::vcvt0(vec_srcY_T, vl);
+            auto vec_srcZ = rvv<T>::vcvt0(vec_srcZ_T, vl);
+
+            auto vec_dstB = rvv<T>::vmadd(vec_srcX, rvv<T>::XYZ2sRGB_D65[0], rvv<T>::vmadd(vec_srcY, rvv<T>::XYZ2sRGB_D65[1], rvv<T>::vmul(vec_srcZ, rvv<T>::XYZ2sRGB_D65[2], vl), vl), vl);
+            auto vec_dstG = rvv<T>::vmadd(vec_srcX, rvv<T>::XYZ2sRGB_D65[3], rvv<T>::vmadd(vec_srcY, rvv<T>::XYZ2sRGB_D65[4], rvv<T>::vmul(vec_srcZ, rvv<T>::XYZ2sRGB_D65[5], vl), vl), vl);
+            auto vec_dstR = rvv<T>::vmadd(vec_srcX, rvv<T>::XYZ2sRGB_D65[6], rvv<T>::vmadd(vec_srcY, rvv<T>::XYZ2sRGB_D65[7], rvv<T>::vmul(vec_srcZ, rvv<T>::XYZ2sRGB_D65[8], vl), vl), vl);
+            if (swapBlue)
+            {
+                auto t = vec_dstB;
+                vec_dstB = vec_dstR, vec_dstR = t;
+            }
+            rvv<T>::vsseg(dst + i * dst_step + j * dcn, dcn, rvv<T>::vcvt1(vec_dstB, 12, vl), rvv<T>::vcvt1(vec_dstG, 12, vl), rvv<T>::vcvt1(vec_dstR, 12, vl), alpha, vl);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+inline int cvtXYZtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int dcn, bool swapBlue)
+{
+    if (dcn != 3 && dcn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    switch (depth)
+    {
+    case CV_8U:
+        return color::invoke(height, -1, cvtXYZtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue);
+    case CV_16U:
+        return color::invoke(height, -1, cvtXYZtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn, swapBlue);
+    case CV_32F:
+        return color::invoke(height, -1, cvtXYZtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue);
+    }
+
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+} // cv::cv_hal_rvv::XYZtoBGR
 
 }}
 
