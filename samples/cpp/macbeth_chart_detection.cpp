@@ -1,7 +1,7 @@
 #include <opencv2/core.hpp>
 
 #include <opencv2/highgui.hpp>
-#include <opencv2/mcc.hpp>
+#include "opencv2/objdetect/mcc_checker_detector.hpp"
 #include <opencv2/dnn.hpp>
 #include <iostream>
 #include "../dnn/common.hpp"
@@ -128,16 +128,8 @@ int main(int argc, char *argv[])
         }
         else
         {
-
-            // get checker
             vector<Ptr<CChecker>> checkers = detector->getListColorChecker();
-            for (Ptr<CChecker> checker : checkers)
-            {
-                // current checker
-
-                Ptr<CCheckerDraw> cdraw = CCheckerDraw::create(checker);
-                cdraw->draw(image);
-            }
+            detector->draw(checkers, image);
         }
 
         imshow("image result | q or esc to quit", image);

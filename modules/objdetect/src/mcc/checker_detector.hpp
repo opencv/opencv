@@ -29,7 +29,7 @@
 #ifndef _MCC_CHECKER_DETECTOR_HPP
 #define _MCC_CHECKER_DETECTOR_HPP
 
-#include "opencv2/mcc.hpp"
+#include "opencv2/objdetect/mcc_checker_detector.hpp"
 #include "charts.hpp"
 
 namespace cv
@@ -70,6 +70,9 @@ public:
     {
         return m_checkers;
     }
+    virtual void getRefColor(const COLORCHART chartType, cv::Mat& output) CV_OVERRIDE;
+
+    virtual void draw(std::vector<Ptr<CChecker>>& checkers, InputOutputArray img, const cv::Scalar color = CV_RGB(0,250,0), const int thickness = 2) CV_OVERRIDE;
 
 protected: // methods pipeline
     bool _no_net_process(InputArray image, const COLORCHART chartType,

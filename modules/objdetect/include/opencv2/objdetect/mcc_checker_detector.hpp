@@ -29,9 +29,8 @@
 #ifndef OPENCV_OBJDETECT_MCC_CHECKER_DETECTOR_HPP
 #define OPENCV_OBJDETECT_MCC_CHECKER_DETECTOR_HPP
 #include <opencv2/core.hpp>
-#include "checker_model.hpp"
 #include <opencv2/dnn.hpp>
-
+#include <opencv2/imgproc.hpp>
 //----------To view debugging output-----------------------------
 //Read the tutorial on how to use debugging in this module
 //It can be found in the documentation of 'mcc' modules,
@@ -46,6 +45,72 @@ namespace mcc
 {
 //! @addtogroup mcc
 //! @{
+
+/** COLORCHART
+ *
+ * \brief enum to hold the type of the checker
+ *
+ */
+enum COLORCHART
+{
+    MCC24 = 0, ///< Standard Macbeth Chart with 24 squares
+    SG140,       ///< DigitalSG with 140 squares
+    VINYL18,   ///< DKK color chart with 12 squares and 6 rectangle
+
+};
+
+/** CChecker
+ *
+ * \brief checker object
+ *
+ *     This class contains the information about the detected checkers,i.e, their
+ *     type, the corners of the chart, the color profile, the cost, centers chart,
+ *     etc.
+ *
+ */
+
+class CV_EXPORTS_W CChecker: public Algorithm
+{
+public:
+    CChecker() {}
+    virtual ~CChecker() {}
+    /** \brief Create a new CChecker object.
+ * \return A pointer to the implementation of the CChecker
+ */
+
+    CV_WRAP static Ptr<CChecker> create();
+
+public:
+    // CV_PROP_RW COLORCHART target;             ///< type of checkercolor
+    // CV_PROP_RW std::vector<cv::Point2f> box; ///< positions of the corners
+    // CV_PROP_RW cv::Mat charts_rgb;             ///< charts profile in rgb color space
+    // CV_PROP_RW cv::Mat charts_ycbcr;         ///< charts profile in YCbCr color space
+    // CV_PROP_RW float cost;                     ///< cost to aproximate
+    // CV_PROP_RW cv::Point2f center;             ///< center of the chart.
+
+    CV_WRAP virtual void setTarget(COLORCHART _target)  = 0;
+    CV_WRAP virtual void setBox(std::vector<Point2f> _box) = 0;
+    CV_WRAP virtual void setChartsRGB(Mat _chartsRGB) = 0;
+    CV_WRAP virtual void setChartsYCbCr(Mat _chartsYCbCr) = 0;
+    CV_WRAP virtual void setCost(float _cost) = 0;
+    CV_WRAP virtual void setCenter(Point2f _center) = 0;
+
+    CV_WRAP virtual COLORCHART getTarget() = 0;
+    CV_WRAP virtual std::vector<Point2f> getBox() = 0;
+
+    /** @brief Computes and returns the coordinates of the central parts of the charts modules.
+     *
+     * This method computes transformation matrix from the checkers's coordinates (`cv::mcc::CChecker::getBox()`)
+     * and find by this the coordinates of the central parts of the charts modules.
+     * It is used in `cv::mcc::CCheckerDetector::draw()` and in `ChartsRGB` calculation.
+     */
+    CV_WRAP virtual std::vector<Point2f> getColorCharts() = 0;
+
+    CV_WRAP virtual Mat getChartsRGB() = 0;
+    CV_WRAP virtual Mat getChartsYCbCr() = 0;
+    CV_WRAP virtual float getCost() = 0;
+    CV_WRAP virtual Point2f getCenter() = 0;
+};
 
 /** @brief struct DetectorParametersMCC is used by CCheckerDetector
  */
@@ -217,6 +282,25 @@ public:
     *            the function will return false.
     */
     CV_WRAP static Ptr<CCheckerDetector> create(const cv::dnn::Net &net);
+
+    /** @brief Draws the checker to the given image.
+     * @param img image in color space BGR
+
+    * @param checkers The checkers which will be drawn by this object.
+    * @param color The color by with which the squares of the checker
+    *         will be drawn
+    * @param thickness The thickness with which the sqaures will be
+    *         drawn
+    */
+
+    CV_WRAP virtual void draw(std::vector<Ptr<CChecker>>& checkers, InputOutputArray img, const cv::Scalar color = CV_RGB(0,250,0), const int thickness = 2) = 0;
+
+    /** @brief Draws the checker to the given image.
+     * @param chartType type of the chart to detect
+     * @param output returns the reference color in color space RGB
+    */
+
+    CV_WRAP virtual void getRefColor(const COLORCHART chartType, cv::Mat& output) = 0;
 };
 
 //! @} mcc

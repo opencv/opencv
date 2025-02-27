@@ -461,25 +461,6 @@ Point2f CCheckerImpl::getCenter()
     return center;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////
-// CheckerDraw
-Ptr<CCheckerDraw> CCheckerDraw::create(Ptr<CChecker> pChecker, cv::Scalar color /*= CV_RGB(0,250,0)*/, int thickness /*=2*/)
-{
-    return makePtr<CCheckerDrawImpl>(pChecker, color, thickness);
-}
-
-void CCheckerDrawImpl::draw(InputOutputArray img)
-{
-    std::vector<Point2f> charts = m_pChecker->getColorCharts();
-    size_t N = charts.size() / 4;
-    for (size_t i = 0, k; i < N; i++)
-    {
-        k = 4 * i;
-        for (size_t j = 0; j < 4; j++)
-            cv::line(img, charts[k+j], charts[k+((j + 1) % 4)], m_color, m_thickness, LINE_AA);
-    }
-}
-
 void transform_points_forward(const Matx33f& T, const std::vector<Point2f> &X, std::vector<Point2f> &Xt)
 {
     size_t N = X.size();
