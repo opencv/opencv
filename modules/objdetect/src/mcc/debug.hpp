@@ -29,7 +29,7 @@
 #ifndef _MCC_DEBUG_HPP
 #define _MCC_DEBUG_HPP
 
-#include "opencv2/mcc.hpp"
+#include "opencv2/objdetect/mcc_checker_detector.hpp"
 #ifdef MCC_DEBUG
 
 namespace cv

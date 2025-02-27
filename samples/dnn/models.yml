@@ -482,7 +482,7 @@ ldm_inpainting:
 # Macbeth chart detection model.
 ################################################################################
 
- mcc:
+mcc:
   load_info:
     url: "https://github.com/gursimarsingh/opencv_zoo/raw/refs/heads/mcc_model/models/macbeth_chart_detector/frozen_inference_graph.pb?download="
     sha1: "fae7dbef14c4ae1fca76f3662220fbd460ed5ed6"

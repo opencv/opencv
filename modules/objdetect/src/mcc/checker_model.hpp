@@ -151,30 +151,6 @@ private:
     float cost;                     ///< cost to aproximate
     cv::Point2f center;             ///< center of the chart.
 };
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-// CheckerDraw
-
-/** \brief checker draw
-      * \author Pedro Marrero Fernandez
-      */
-class CCheckerDrawImpl : public CCheckerDraw
-{
-
-public:
-    CCheckerDrawImpl(Ptr<CChecker> pChecker, cv::Scalar color = CV_RGB(0, 250, 0), int thickness = 2)
-        : m_pChecker(pChecker), m_color(color), m_thickness(thickness)
-    {
-        CV_Assert(pChecker);
-    }
-
-    void draw(InputOutputArray img) CV_OVERRIDE;
-
-private:
-    Ptr<CChecker> m_pChecker;
-    cv::Scalar m_color;
-    int m_thickness;
-};
 // @}
 
 void transform_points_forward(const Matx33f& T, const std::vector<Point2f> &X, std::vector<Point2f> &Xt);
