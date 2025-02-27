@@ -1,4 +1,5 @@
 ## OpenCV: Open Source Computer Vision Library
+## By: Biruk Alemayehu
 
 ### Resources
 
