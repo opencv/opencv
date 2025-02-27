@@ -1551,6 +1551,152 @@ inline int cvtXYZtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data
 }
 } // cv::cv_hal_rvv::XYZtoBGR
 
+namespace BGRtoXYZ {
+#undef cv_hal_cvtBGRtoXYZ
+#define cv_hal_cvtBGRtoXYZ cv::cv_hal_rvv::BGRtoXYZ::cvtBGRtoXYZ
+
+template<typename T> struct rvv;
+template<> struct rvv<uchar>
+{
+    using T = vuint8m1_t;
+    static constexpr uint sRGB2XYZ_D65[] =
+    {
+         739,  1465,  1689,
+         296,  2929,   871,
+        3892,   488,    79
+    };
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e8m1(a); }
+    static inline void vlseg(const uchar* a, int b, T& c, T& d, T& e, size_t f)
+    {
+        if (b == 3)
+        {
+            auto x = __riscv_vlseg3e8_v_u8m1x3(a, f);
+            c = __riscv_vget_v_u8m1x3_u8m1(x, 0), d = __riscv_vget_v_u8m1x3_u8m1(x, 1), e = __riscv_vget_v_u8m1x3_u8m1(x, 2);
+        }
+        else
+        {
+            auto x = __riscv_vlseg4e8_v_u8m1x4(a, f);
+            c = __riscv_vget_v_u8m1x4_u8m1(x, 0), d = __riscv_vget_v_u8m1x4_u8m1(x, 1), e = __riscv_vget_v_u8m1x4_u8m1(x, 2);
+        }
+    }
+    static inline void vsseg(uchar* a, T b, T c, T d, size_t e) { __riscv_vsseg3e8(a, __riscv_vcreate_v_u8m1x3(b, c, d), e); }
+    static inline vuint32m4_t vcvt0(T a, size_t b) { return __riscv_vzext_vf4(a, b); }
+    static inline T vcvt1(vuint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vnclipu(a, b, __RISCV_VXRM_RNU, c), 0, __RISCV_VXRM_RNU, c); }
+    static inline vuint32m4_t vmul(vuint32m4_t a, uint b, size_t c) { return __riscv_vmul(a, b, c); }
+    static inline vuint32m4_t vmadd(vuint32m4_t a, uint b, vuint32m4_t c, size_t d) { return __riscv_vmadd(a, b, c, d); }
+};
+template<> struct rvv<ushort>
+{
+    using T = vuint16m2_t;
+    static constexpr uint sRGB2XYZ_D65[] =
+    {
+         739,  1465,  1689,
+         296,  2929,   871,
+        3892,   488,    79
+    };
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e16m2(a); }
+    static inline void vlseg(const ushort* a, int b, T& c, T& d, T& e, size_t f)
+    {
+        if (b == 3)
+        {
+            auto x = __riscv_vlseg3e16_v_u16m2x3(a, f);
+            c = __riscv_vget_v_u16m2x3_u16m2(x, 0), d = __riscv_vget_v_u16m2x3_u16m2(x, 1), e = __riscv_vget_v_u16m2x3_u16m2(x, 2);
+        }
+        else
+        {
+            auto x = __riscv_vlseg4e16_v_u16m2x4(a, f);
+            c = __riscv_vget_v_u16m2x4_u16m2(x, 0), d = __riscv_vget_v_u16m2x4_u16m2(x, 1), e = __riscv_vget_v_u16m2x4_u16m2(x, 2);
+        }
+    }
+    static inline void vsseg(ushort* a, T b, T c, T d, size_t e) { __riscv_vsseg3e16(a, __riscv_vcreate_v_u16m2x3(b, c, d), e); }
+    static inline vuint32m4_t vcvt0(T a, size_t b) { return __riscv_vzext_vf2(a, b); }
+    static inline T vcvt1(vuint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(a, b, __RISCV_VXRM_RNU, c); }
+    static inline vuint32m4_t vmul(vuint32m4_t a, uint b, size_t c) { return __riscv_vmul(a, b, c); }
+    static inline vuint32m4_t vmadd(vuint32m4_t a, uint b, vuint32m4_t c, size_t d) { return __riscv_vmadd(a, b, c, d); }
+};
+template<> struct rvv<float>
+{
+    using T = vfloat32m2_t;
+    static constexpr float sRGB2XYZ_D65[] =
+    {
+        0.180423, 0.357580, 0.412453,
+        0.072169, 0.715160, 0.212671,
+        0.950227, 0.119193, 0.019334
+    };
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32m2(a); }
+    static inline void vlseg(const float* a, int b, T& c, T& d, T& e, size_t f)
+    {
+        if (b == 3)
+        {
+            auto x = __riscv_vlseg3e32_v_f32m2x3(a, f);
+            c = __riscv_vget_v_f32m2x3_f32m2(x, 0), d = __riscv_vget_v_f32m2x3_f32m2(x, 1), e = __riscv_vget_v_f32m2x3_f32m2(x, 2);
+        }
+        else
+        {
+            auto x = __riscv_vlseg4e32_v_f32m2x4(a, f);
+            c = __riscv_vget_v_f32m2x4_f32m2(x, 0), d = __riscv_vget_v_f32m2x4_f32m2(x, 1), e = __riscv_vget_v_f32m2x4_f32m2(x, 2);
+        }
+    }
+    static inline void vsseg(float* a, T b, T c, T d, size_t e) { __riscv_vsseg3e32(a, __riscv_vcreate_v_f32m2x3(b, c, d), e); }
+    static inline T vcvt0(T a, size_t) { return a; }
+    static inline T vcvt1(T a, size_t, size_t) { return a; }
+    static inline T vmul(T a, float b, size_t c) { return __riscv_vfmul(a, b, c); }
+    static inline T vmadd(T a, float b, T c, size_t d) { return __riscv_vfmadd(a, b, c, d); }
+};
+
+// the algorithm is copied from imgproc/src/color_lab.cpp,
+// in the functor struct XYZ2RGB_f and XYZ2RGB_i
+template<typename T>
+static inline int cvtBGRtoXYZ(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, bool swapBlue)
+{
+    src_step /= sizeof(T);
+    dst_step /= sizeof(T);
+
+    for (int i = start; i < end; i++)
+    {
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = rvv<T>::vsetvl(width - j);
+            typename rvv<T>::T vec_srcB_T, vec_srcG_T, vec_srcR_T;
+            rvv<T>::vlseg(src + i * src_step + j * scn, scn, vec_srcB_T, vec_srcG_T, vec_srcR_T, vl);
+            auto vec_srcB = rvv<T>::vcvt0(vec_srcB_T, vl);
+            auto vec_srcG = rvv<T>::vcvt0(vec_srcG_T, vl);
+            auto vec_srcR = rvv<T>::vcvt0(vec_srcR_T, vl);
+            if (swapBlue)
+            {
+                auto t = vec_srcB;
+                vec_srcB = vec_srcR, vec_srcR = t;
+            }
+
+            auto vec_dstX = rvv<T>::vmadd(vec_srcB, rvv<T>::sRGB2XYZ_D65[0], rvv<T>::vmadd(vec_srcG, rvv<T>::sRGB2XYZ_D65[1], rvv<T>::vmul(vec_srcR, rvv<T>::sRGB2XYZ_D65[2], vl), vl), vl);
+            auto vec_dstY = rvv<T>::vmadd(vec_srcB, rvv<T>::sRGB2XYZ_D65[3], rvv<T>::vmadd(vec_srcG, rvv<T>::sRGB2XYZ_D65[4], rvv<T>::vmul(vec_srcR, rvv<T>::sRGB2XYZ_D65[5], vl), vl), vl);
+            auto vec_dstZ = rvv<T>::vmadd(vec_srcB, rvv<T>::sRGB2XYZ_D65[6], rvv<T>::vmadd(vec_srcG, rvv<T>::sRGB2XYZ_D65[7], rvv<T>::vmul(vec_srcR, rvv<T>::sRGB2XYZ_D65[8], vl), vl), vl);
+            rvv<T>::vsseg(dst + i * dst_step + j * 3, rvv<T>::vcvt1(vec_dstX, 12, vl), rvv<T>::vcvt1(vec_dstY, 12, vl), rvv<T>::vcvt1(vec_dstZ, 12, vl), vl);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+inline int cvtBGRtoXYZ(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, bool swapBlue)
+{
+    if (scn != 3 && scn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    switch (depth)
+    {
+    case CV_8U:
+        return color::invoke(height, -1, cvtBGRtoXYZ<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue);
+    case CV_16U:
+        return color::invoke(height, -1, cvtBGRtoXYZ<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue);
+    case CV_32F:
+        return color::invoke(height, -1, cvtBGRtoXYZ<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue);
+    }
+
+    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+}
+} // cv::cv_hal_rvv::BGRtoXYZ
+
 }}
 
 #endif
