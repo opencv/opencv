@@ -1781,7 +1781,7 @@ TEST(Imgproc_getPerspectiveTransform, issue_26916)
 
     Mat perspective_transform = getPerspectiveTransform(src_points_f, dst_points_f);
     EXPECT_NEAR(perspective_transform.at<double>(2, 2), 0, 1e-16);
-    EXPECT_NEAR(cv::norm(perspective_transform), 1, 0);
+    EXPECT_NEAR(cv::norm(perspective_transform), 1, 1e-14);
 
     const Mat ones = Mat::ones(4, 1, CV_64FC1);
 
@@ -1797,7 +1797,7 @@ TEST(Imgproc_getPerspectiveTransform, issue_26916)
     Mat expected_homogeneous_dst_points;
     hconcat(dst_points, ones, expected_homogeneous_dst_points);
 
-    EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-9);
+    EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-10);
 }
 
 }} // namespace

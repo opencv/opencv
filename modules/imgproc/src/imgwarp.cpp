@@ -3558,10 +3558,10 @@ cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], in
     mulTransposed(A, AtA, true);
 
     Mat D, U;
-    eigen(AtA, D, U);
+    SVDecomp(AtA, D, U, noArray());
 
-    Mat X9(1, 9, CV_64F, M.ptr());
-    U.row(8).copyTo(X9);
+    Mat X9(9, 1, CV_64F, M.ptr());
+    U.col(8).copyTo(X9);
 
     return M;
 }
