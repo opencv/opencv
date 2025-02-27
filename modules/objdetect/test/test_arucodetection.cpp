@@ -11,7 +11,8 @@ namespace cv {
         bool operator==(const Dictionary& d1, const Dictionary& d2);
         bool operator==(const Dictionary& d1, const Dictionary& d2) {
             return d1.markerSize == d2.markerSize
-                && std::equal(d1.bytesList.begin<uchar>(), d1.bytesList.end<uchar>(), d2.bytesList.begin<uchar>())
+                && std::equal(d1.bytesList.begin<Vec<uint8_t, 4>>(), d1.bytesList.end<Vec<uint8_t, 4>>(), d2.bytesList.begin<Vec<uint8_t, 4>>())
+                && std::equal(d2.bytesList.begin<Vec<uint8_t, 4>>(), d2.bytesList.end<Vec<uint8_t, 4>>(), d1.bytesList.begin<Vec<uint8_t, 4>>())
                 && d1.maxCorrectionBits == d2.maxCorrectionBits;
         };
     }
