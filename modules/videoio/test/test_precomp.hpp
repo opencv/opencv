@@ -63,7 +63,8 @@ inline std::string fourccToStringSafe(int fourcc)
 {
     std::string res = fourccToString(fourcc);
     // TODO: return hex values for invalid characters
-    std::transform(res.begin(), res.end(), res.begin(), [](char c) -> char { return (c >= '0' && c <= 'z') ? c : (c == ' ' ? '_' : 'x'); });
+    std::transform(res.begin(), res.end(), res.begin(),
+        [](char c) -> char { return (c >= '0' && c <= 'z') ? c : (c == ' ' ? '_' : 'x'); });
     return res;
 }
 
@@ -71,6 +72,37 @@ inline int fourccFromString(const std::string &fourcc)
 {
     if (fourcc.size() != 4) return 0;
     return cv::VideoWriter::fourcc(fourcc[0], fourcc[1], fourcc[2], fourcc[3]);
+}
+
+inline std::string extToStringSafe(const std::string & ext)
+{
+    std::string res;
+    const bool start_with_dot = (ext.size() > 0) && (ext[0] == '.');
+    std::transform(start_with_dot ? ext.begin() + 1 : ext.begin(), ext.end(), std::back_inserter(res),
+        [](char c) -> char { return (c >= '0' && c <= 'z') ? c : ((c == ' ' || c == '.') ? '_' : 'x'); });
+    return res;
+}
+
+inline std::string getExtensionSafe(const std::string & fname)
+{
+    std::string fext(std::find(fname.begin(), fname.end(), '.'), fname.end());
+    if (fext.size() == 0)
+        return std::string("NOEXT");
+    else
+        return extToStringSafe(fext);
+}
+
+inline std::string getBackendNameSafe(const cv::VideoCaptureAPIs & api)
+{
+    const std::string res = cv::videoio_registry::getBackendName(api);
+    if (res.substr(0, 7) == "Unknown")
+    {
+        std::ostringstream os; os << "BACKEND_" << (size_t)api; return os.str();
+    }
+    else
+    {
+        return res;
+    }
 }
 
 inline void generateFrame(int i, int FRAME_COUNT, cv::Mat & frame)

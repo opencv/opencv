@@ -366,6 +366,54 @@ TEST(Imgcodecs_Gif, encode_IMREAD_GRAYSCALE) {
     EXPECT_EQ(decoded.channels(), 1);
 }
 
+// See https://github.com/opencv/opencv/issues/26924
+TEST(Imgcodecs_Gif, decode_disposal_method)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "gifsuite/disposalMethod.gif";
+    cv::Animation anim;
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imreadanimation(filename, anim, cv::IMREAD_UNCHANGED));
+    EXPECT_TRUE(ret);
+
+    /* [Detail of this test]
+     * disposalMethod.gif has 5 frames to draw 8x8 rectangles with each color index, offsets and disposal method.
+     *   frame 1 draws {1, ... ,1} rectangle at (1,1) with DisposalMethod = 0.
+     *   frame 2 draws {2, ... ,2} rectangle at (2,2) with DisposalMethod = 3.
+     *   frame 3 draws {3, ... ,3} rectangle at (3,3) with DisposalMethod = 1.
+     *   frame 4 draws {4, ... ,4} rectangle at (4,4) with DisposalMethod = 2.
+     *   frame 5 draws {5, ... ,5} rectangle at (5,5) with DisposalMethod = 1.
+     *
+     * To convenience to test, color[N] in the color table has RGB(32*N, some, some).
+     *   color[0] = RGB(0,0,0) (background color).
+     *   color[1] = RGB(32,0,0)
+     *   color[2] = RGB(64,0,255)
+     *   color[3] = RGB(96,255,0)
+     *   color[4] = RGB(128,128,128)
+     *   color[5] = RGB(160,255,255)
+     */
+    const int refIds[5][6] =
+    {// { 0, 0, 0, 0, 0, 0}     0 is background color.
+        { 0, 1, 1, 1, 1, 1}, // 1 is to be not disposed.
+        { 0, 1, 2, 2, 2, 2}, // 2 is to be restored to previous.
+        { 0, 1, 1, 3, 3, 3}, // 3 is to be left in place.
+        { 0, 1, 1, 3, 4, 4}, // 4 is to be restored to the background color.
+        { 0, 1, 1, 3, 0, 5}, // 5 is to be left in place.
+    };
+
+    for(int i = 0 ; i < 5; i++)
+    {
+        cv::Mat frame = anim.frames[i];
+        EXPECT_FALSE(frame.empty());
+        EXPECT_EQ(frame.type(), CV_8UC4);
+        for(int j = 0; j < 6; j ++ )
+        {
+            const cv::Scalar p = frame.at<Vec4b>(j,j);
+            EXPECT_EQ( p[2], refIds[i][j] * 32 ) << "  i = " << i << " j = " << j << " pixels = " << p;
+        }
+    }
+}
+
 typedef testing::TestWithParam<int> Imgcodecs_Gif_GIF_LOOP;
 TEST_P(Imgcodecs_Gif_GIF_LOOP, imencode)
 {
