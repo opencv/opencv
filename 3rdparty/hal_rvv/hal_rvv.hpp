@@ -24,10 +24,12 @@
 #include "hal_rvv_1p0/mean.hpp" // core
 #include "hal_rvv_1p0/norm.hpp" // core
 #include "hal_rvv_1p0/norm_diff.hpp" // core
+#include "hal_rvv_1p0/norm_hamming.hpp" // core
 #include "hal_rvv_1p0/convert_scale.hpp" // core
 #include "hal_rvv_1p0/minmax.hpp" // core
 #include "hal_rvv_1p0/atan.hpp" // core
 #include "hal_rvv_1p0/split.hpp" // core
+#include "hal_rvv_1p0/flip.hpp" // core
 
 #include "hal_rvv_1p0/pyramids.hpp" // imgproc
 #endif
