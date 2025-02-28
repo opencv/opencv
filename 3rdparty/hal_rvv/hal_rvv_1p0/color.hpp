@@ -1291,21 +1291,21 @@ inline int cvtBGRtoHSV<uchar>(int start, int end, const uchar * src, size_t src_
         int vl;
         for (int j = 0; j < width; j += vl)
         {
-            vl = __riscv_vsetvl_e8mf2(width - j);
-            vint32m2_t b, g, r;
+            vl = __riscv_vsetvl_e8m1(width - j);
+            vint32m4_t b, g, r;
             if (scn == 3)
             {
-                auto x = __riscv_vlseg3e8_v_u8mf2x3(src + i * src_step + j * 3, vl);
-                b = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x3_u8mf2(x, 0), vl));
-                g = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x3_u8mf2(x, 1), vl));
-                r = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x3_u8mf2(x, 2), vl));
+                auto x = __riscv_vlseg3e8_v_u8m1x3(src + i * src_step + j * 3, vl);
+                b = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(x, 0), vl));
+                g = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(x, 1), vl));
+                r = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(x, 2), vl));
             }
             else
             {
-                auto x = __riscv_vlseg4e8_v_u8mf2x4(src + i * src_step + j * 4, vl);
-                b = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x4_u8mf2(x, 0), vl));
-                g = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x4_u8mf2(x, 1), vl));
-                r = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x4_u8mf2(x, 2), vl));
+                auto x = __riscv_vlseg4e8_v_u8m1x4(src + i * src_step + j * 4, vl);
+                b = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x4_u8m1(x, 0), vl));
+                g = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x4_u8m1(x, 1), vl));
+                r = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x4_u8m1(x, 2), vl));
             }
             if (swapBlue)
             {
@@ -1320,7 +1320,7 @@ inline int cvtBGRtoHSV<uchar>(int start, int end, const uchar * src, size_t src_
             vmin = __riscv_vmin(vmin, r, vl);
             auto diff = __riscv_vsub(v, vmin, vl);
 
-            vint32m2_t l, t;
+            vint32m4_t l, t;
             if (isHSV)
             {
                 t = v;
@@ -1338,10 +1338,10 @@ inline int cvtBGRtoHSV<uchar>(int start, int end, const uchar * src, size_t src_
             h = __riscv_vssra(__riscv_vmul(h, __riscv_vfcvt_x(__riscv_vfrdiv(__riscv_vfcvt_f(__riscv_vmul(diff, 6, vl), vl), isFullRange ? 256 << 12 : 180 << 12, vl), vl), vl), 12, __RISCV_VXRM_RNU, vl);
             h = __riscv_vadd_mu(__riscv_vmslt(h, 0, vl), h, h, isFullRange ? 256 : 180, vl);
 
-            vuint8mf2x3_t x{};
-            x = __riscv_vset_v_u8mf2_u8mf2x3(x, 0, __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m2_u32m2(h), 0, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
-            x = __riscv_vset_v_u8mf2_u8mf2x3(x, 1, __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m2_u32m2(isHSV ? s : l), vl), vl));
-            x = __riscv_vset_v_u8mf2_u8mf2x3(x, 2, __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m2_u32m2(isHSV ? v : s), vl), vl));
+            vuint8m1x3_t x{};
+            x = __riscv_vset_v_u8m1_u8m1x3(x, 0, __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(h), 0, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl));
+            x = __riscv_vset_v_u8m1_u8m1x3(x, 1, __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m4_u32m4(isHSV ? s : l), vl), vl));
+            x = __riscv_vset_v_u8m1_u8m1x3(x, 2, __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vreinterpret_v_i32m4_u32m4(isHSV ? v : s), vl), vl));
             __riscv_vsseg3e8(dst + i * dst_step + j * 3, x, vl);
         }
     }
@@ -1708,9 +1708,37 @@ namespace LabTable
             for (int i = 0; i <= GAMMA_TAB_SIZE; i++)
             {
                 float x = i * 1.0f / GAMMA_TAB_SIZE;
-                ig[i] = x <= 0.0031308 ? x*12.92f : (float)(1.055*std::pow((double)x, 1./2.4) - 0.055);
+                ig[i] = applyInvGamma(x);
             }
             sRGBInvGammaTab = splineBuild(ig, GAMMA_TAB_SIZE);
+
+            for (int i = 0; i < INV_GAMMA_TAB_SIZE; i++)
+            {
+                float x = i * 1.0f / INV_GAMMA_TAB_SIZE;
+                sRGBInvGammaTab_b[i] = (int)std::rint(255 * applyInvGamma(x));
+            }
+
+            for (int i = 0; i < 256; i++)
+            {
+                float li = i * 100.0f / 255.0f, yy, fy;
+                if( i <= 20)
+                {
+                    yy = li / 903.3f;
+                    fy = 7.787f * yy + 16.0f / 116.0f;
+                }
+                else
+                {
+                    fy = (li + 16.0f) / 116.0f;
+                    yy = fy * fy * fy;
+                }
+                LabToYF_b[i*2  ] = (int)std::rint(yy * BASE);
+                LabToYF_b[i*2+1] = (int)std::rint(fy * BASE);
+            }
+
+            for (int i = minABvalue; i < BASE*9/4+minABvalue; i++)
+            {
+                abToXZ_b[i-minABvalue] = i <= 3390 ? i*108/841 - BASE*16/116*108/841 : i*i/BASE*i/BASE;
+            }
         }
 
         ~Tab()
@@ -1743,9 +1771,21 @@ namespace LabTable
             return tab;
         }
 
+        inline float applyInvGamma(float x)
+        {
+            return x <= 0.0031308 ? x*12.92f : (float)(1.055*std::pow((double)x, 1./2.4) - 0.055);
+        }
+
     public:
         static constexpr int GAMMA_TAB_SIZE = 1024;
+        static constexpr int INV_GAMMA_SHIFT = 12, INV_GAMMA_TAB_SIZE = 4096;
+        static constexpr int BASE = 1 << 14;
+        static constexpr int minABvalue = -8145;
+
         const float* sRGBInvGammaTab;
+        int sRGBInvGammaTab_b[INV_GAMMA_TAB_SIZE];
+        int LabToYF_b[256*2];
+        int abToXZ_b[BASE*9/4];
 
         static Tab& Instance()
         {
@@ -1780,7 +1820,86 @@ static inline int cvtLabtoBGR(int start, int end, const T * src, size_t src_step
 template<>
 inline int cvtLabtoBGR<uchar>(int start, int end, const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int dcn, bool swapBlue, bool isLab, bool srgb)
 {
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    static const int XYZ2sRGB[] =
+    {
+        (int)std::rint((1 << 12) *  0.055648f * 0.950456f), (int)std::rint((1 << 12) * -0.204043f), (int)std::rint((1 << 12) *  1.057311f * 1.088754f),
+        (int)std::rint((1 << 12) * -0.969256f * 0.950456f), (int)std::rint((1 << 12) *  1.875991f), (int)std::rint((1 << 12) *  0.041556f * 1.088754f),
+        (int)std::rint((1 << 12) *  3.240479f * 0.950456f), (int)std::rint((1 << 12) * -1.53715f ), (int)std::rint((1 << 12) * -0.498535f * 1.088754f)
+    };
+
+    if (!isLab) return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    auto alpha = __riscv_vmv_v_x_u8m1(std::numeric_limits<uchar>::max(), __riscv_vsetvlmax_e8m1());
+    for (int i = start; i < end; i++)
+    {
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e8m1(width - j);
+            auto vec_src = __riscv_vlseg3e8_v_u8m1x3(src + i * src_step + j * 3, vl);
+            auto l = __riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(vec_src, 0), vl);
+            auto a = __riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(vec_src, 1), vl);
+            auto b = __riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(vec_src, 2), vl);
+
+            auto vec_yf = __riscv_vloxseg2ei32_v_i32m4x2(LabTable::Tab::Instance().LabToYF_b, __riscv_vmul(l, 2 * sizeof(int), vl), vl);
+            auto y = __riscv_vget_v_i32m4x2_i32m4(vec_yf, 0), ify = __riscv_vget_v_i32m4x2_i32m4(vec_yf, 1);
+
+            auto adiv = __riscv_vsub(__riscv_vsra(__riscv_vmadd(__riscv_vreinterpret_v_u32m4_i32m4(a), 5*53687, __riscv_vmv_v_x_i32m4(1 << 7, vl), vl), 13, vl), 128*LabTable::Tab::BASE/500  , vl);
+            auto bdiv = __riscv_vsub(__riscv_vsra(__riscv_vmadd(__riscv_vreinterpret_v_u32m4_i32m4(b),   41943, __riscv_vmv_v_x_i32m4(1 << 4, vl), vl),  9, vl), 128*LabTable::Tab::BASE/200-1, vl); // not +1 here
+
+            auto x = __riscv_vadd(ify, adiv, vl);
+            auto z = __riscv_vsub(ify, bdiv, vl);
+            x = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().abToXZ_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vsub(x, LabTable::Tab::minABvalue, vl)), sizeof(int), vl), vl);
+            z = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().abToXZ_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vsub(z, LabTable::Tab::minABvalue, vl)), sizeof(int), vl), vl);
+
+            auto bo = __riscv_vssra(__riscv_vmadd(x, XYZ2sRGB[0], __riscv_vmadd(y, XYZ2sRGB[1], __riscv_vmul(z, XYZ2sRGB[2], vl), vl), vl), 14, __RISCV_VXRM_RNU, vl);
+            auto go = __riscv_vssra(__riscv_vmadd(x, XYZ2sRGB[3], __riscv_vmadd(y, XYZ2sRGB[4], __riscv_vmul(z, XYZ2sRGB[5], vl), vl), vl), 14, __RISCV_VXRM_RNU, vl);
+            auto ro = __riscv_vssra(__riscv_vmadd(x, XYZ2sRGB[6], __riscv_vmadd(y, XYZ2sRGB[7], __riscv_vmul(z, XYZ2sRGB[8], vl), vl), vl), 14, __RISCV_VXRM_RNU, vl);
+            bo = __riscv_vmin(__riscv_vmax(bo, 0, vl), LabTable::Tab::INV_GAMMA_TAB_SIZE - 1, vl);
+            go = __riscv_vmin(__riscv_vmax(go, 0, vl), LabTable::Tab::INV_GAMMA_TAB_SIZE - 1, vl);
+            ro = __riscv_vmin(__riscv_vmax(ro, 0, vl), LabTable::Tab::INV_GAMMA_TAB_SIZE - 1, vl);
+            if (srgb)
+            {
+                bo = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().sRGBInvGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(bo), sizeof(int), vl), vl);
+                go = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().sRGBInvGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(go), sizeof(int), vl), vl);
+                ro = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().sRGBInvGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(ro), sizeof(int), vl), vl);
+            }
+            else
+            {
+                bo = __riscv_vsra(__riscv_vsub(__riscv_vsll(bo, 8, vl), bo, vl), LabTable::Tab::INV_GAMMA_SHIFT, vl);
+                go = __riscv_vsra(__riscv_vsub(__riscv_vsll(go, 8, vl), go, vl), LabTable::Tab::INV_GAMMA_SHIFT, vl);
+                ro = __riscv_vsra(__riscv_vsub(__riscv_vsll(ro, 8, vl), ro, vl), LabTable::Tab::INV_GAMMA_SHIFT, vl);
+            }
+
+            auto bb = __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(bo), 0, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl);
+            auto gg = __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(go), 0, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl);
+            auto rr = __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(ro), 0, __RISCV_VXRM_RNU, vl), 0, __RISCV_VXRM_RNU, vl);
+            if (swapBlue)
+            {
+                auto t = bb;
+                bb = rr, rr = t;
+            }
+            if (dcn == 3)
+            {
+                vuint8m1x3_t vec_dst{};
+                vec_dst = __riscv_vset_v_u8m1_u8m1x3(vec_dst, 0, bb);
+                vec_dst = __riscv_vset_v_u8m1_u8m1x3(vec_dst, 1, gg);
+                vec_dst = __riscv_vset_v_u8m1_u8m1x3(vec_dst, 2, rr);
+                __riscv_vsseg3e8(dst + i * dst_step + j * 3, vec_dst, vl);
+            }
+            else
+            {
+                vuint8m1x4_t vec_dst{};
+                vec_dst = __riscv_vset_v_u8m1_u8m1x4(vec_dst, 0, bb);
+                vec_dst = __riscv_vset_v_u8m1_u8m1x4(vec_dst, 1, gg);
+                vec_dst = __riscv_vset_v_u8m1_u8m1x4(vec_dst, 2, rr);
+                vec_dst = __riscv_vset_v_u8m1_u8m1x4(vec_dst, 3, alpha);
+                __riscv_vsseg4e8(dst + i * dst_step + j * 4, vec_dst, vl);
+            }
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
 }
 
 template<>
@@ -1823,19 +1942,18 @@ inline int cvtLabtoBGR<float>(int start, int end, const float * src, size_t src_
             bo = __riscv_vfmin(__riscv_vfmax(bo, 0.0f, vl), 1.0f, vl);
             go = __riscv_vfmin(__riscv_vfmax(go, 0.0f, vl), 1.0f, vl);
             ro = __riscv_vfmin(__riscv_vfmax(ro, 0.0f, vl), 1.0f, vl);
+            if (srgb)
+            {
+                bo = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(bo, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                go = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(go, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                ro = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(ro, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+            }
+
             if (swapBlue)
             {
                 auto t = bo;
                 bo = ro, ro = t;
             }
-
-            if (srgb)
-            {
-                ro = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(ro, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
-                go = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(go, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
-                bo = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(bo, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
-            }
-
             if (dcn == 3)
             {
                 vfloat32m2x3_t vec_dst{};
