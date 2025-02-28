@@ -414,6 +414,7 @@ TEST(Imgcodecs_Gif, decode_disposal_method)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/26970
 typedef testing::TestWithParam<int> Imgcodecs_Gif_GIF_LOOP;
 TEST_P(Imgcodecs_Gif_GIF_LOOP, imencode)
 {
@@ -444,9 +445,9 @@ TEST_P(Imgcodecs_Gif_GIF_LOOP, imencode)
     std::vector<uint8_t> netscape = {'N','E','T','S','C','A','P','E'};
     auto pos = std::search(buf.begin(), buf.end(), netscape.begin(), netscape.end());
     if(loopCount < 0) {
-        EXPECT_EQ(pos, buf.end()) << "Netscape Applicatioin Block should not be included if IMWRITE_GIF_LOOP < 0";
+        EXPECT_EQ(pos, buf.end()) << "Netscape Application Block should not be included if IMWRITE_GIF_LOOP < 0";
     } else {
-        EXPECT_NE(pos, buf.end()) << "Netscape Applicatioin Block should be included if IMWRITE_GIF_LOOP >= 0";
+        EXPECT_NE(pos, buf.end()) << "Netscape Application Block should be included if IMWRITE_GIF_LOOP >= 0";
     }
 }
 
