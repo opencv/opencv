@@ -1,3 +1,6 @@
+// Add the new retrieval mode constant
+#define CV_RETR_EXTERNAL_EDGE 5
+
 // must be defined before importing numpy headers
 // https://numpy.org/doc/1.17/reference/c-api.array.html#importing-the-api
 #define PY_ARRAY_UNIQUE_SYMBOL opencv_ARRAY_API
@@ -562,6 +565,17 @@ static bool init_body(PyObject * m)
     PUBLISH(CV_16FC2);
     PUBLISH(CV_16FC3);
     PUBLISH(CV_16FC4);
+
+    // Add the new retrieval mode constant
+    PyObject* CV_RETR_EXTERNAL_EDGE_obj = PyLong_FromLong(CV_RETR_EXTERNAL_EDGE);
+    if (PyDict_SetItemString(d, "CV_RETR_EXTERNAL_EDGE", CV_RETR_EXTERNAL_EDGE_obj) < 0)
+    {
+        PyErr_SetString(PyExc_ImportError, "Can't register CV_RETR_EXTERNAL_EDGE constant");
+        Py_CLEAR(CV_RETR_EXTERNAL_EDGE_obj);
+        return false;
+    }
+    Py_DECREF(CV_RETR_EXTERNAL_EDGE_obj);
+
 #undef PUBLISH_
 #undef PUBLISH
 
@@ -606,3 +620,57 @@ void initcv2()
 }
 
 #endif
+
+static PyObject* pyopencv_cv_findContours(PyObject* , PyObject* py_args, PyObject* kw)
+{
+    using namespace cv;
+
+    {
+    PyObject* pyobj_image = NULL;
+    Mat image;
+    PyObject* pyobj_contours = NULL;
+    PyObject* pyobj_hierarchy = NULL;
+    int mode=0;
+    int method=0;
+    Point offset;
+
+    const char* keywords[] = { "image", "mode", "method", "offset", NULL };
+    if( PyArg_ParseTupleAndKeywords(py_args, kw, "OOO|O:findContours", (char**)keywords, &pyobj_image, &pyobj_contours, &pyobj_hierarchy, &mode, &method, &offset) &&
+        pyopencv_to(pyobj_image, image, ArgInfo("image", 0)) &&
+        pyopencv_to(pyobj_contours, mode, ArgInfo("mode", 0)) &&
+        pyopencv_to(pyobj_hierarchy, method, ArgInfo("method", 0)) &&
+        pyopencv_to(pyobj_offset, offset, ArgInfo("offset", 0)) )
+    {
+        std::vector<std::vector<Point> > contours;
+        std::vector<Vec4i> hierarchy;
+        ERRWRAP2(cv::findContours(image, contours, hierarchy, mode, method, offset));
+        return Py_BuildValue("(NN)", pyopencv_from(contours), pyopencv_from(hierarchy));
+    }
+    }
+    PyErr_Clear();
+
+    {
+    PyObject* pyobj_image = NULL;
+    UMat image;
+    PyObject* pyobj_contours = NULL;
+    PyObject* pyobj_hierarchy = NULL;
+    int mode=0;
+    int method=0;
+    Point offset;
+
+    const char* keywords[] = { "image", "mode", "method", "offset", NULL };
+    if( PyArg_ParseTupleAndKeywords(py_args, kw, "OOO|O:findContours", (char**)keywords, &pyobj_image, &pyobj_contours, &pyobj_hierarchy, &mode, &method, &offset) &&
+        pyopencv_to(pyobj_image, image, ArgInfo("image", 0)) &&
+        pyopencv_to(pyobj_contours, mode, ArgInfo("mode", 0)) &&
+        pyopencv_to(pyobj_hierarchy, method, ArgInfo("method", 0)) &&
+        pyopencv_to(pyobj_offset, offset, ArgInfo("offset", 0)) )
+    {
+        std::vector<std::vector<Point> > contours;
+        std::vector<Vec4i> hierarchy;
+        ERRWRAP2(cv::findContours(image, contours, hierarchy, mode, method, offset));
+        return Py_BuildValue("(NN)", pyopencv_from(contours), pyopencv_from(hierarchy));
+    }
+    }
+
+    return NULL;
+}

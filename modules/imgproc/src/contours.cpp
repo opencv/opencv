@@ -38,6 +38,8 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+// Define the new retrieval mode before any includes
+#define CV_RETR_EXTERNAL_EDGE 4
 #include "precomp.hpp"
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/imgproc/detail/legacy.hpp"
@@ -935,7 +937,7 @@ icvFetchContourEx_32s( int*                 ptr,
         s = (s - 1) & 7;
         i1 = i0 + deltas[s];
     }
-    while( (*i1 & value_mask) != ccomp_val && s != s_end && ( s < MAX_SIZE - 1 ) );
+    while( (*i1 & value_mask) != ccomp_val && s != s_end && ( s < MAX_SIZE - 1 ));
 
     if( s == s_end )            /* single pixel domain */
     {
@@ -961,7 +963,7 @@ icvFetchContourEx_32s( int*                 ptr,
                 i4 = i3 + deltas[++s];
                 CV_Assert(i4 != NULL);
             }
-            while( (*i4 & value_mask) != ccomp_val && ( s < MAX_SIZE - 1 ) );
+            while( (*i4 & value_mask) != ccomp_val && ( s < MAX_SIZE - 1 ));
             s &= 7;
 
             /* check "right" bound */
@@ -1814,20 +1816,20 @@ cvFindContours( void*  img,  CvMemStorage*  storage,
     return cvFindContours_Impl(img, storage, firstContour, cntHeaderSize, mode, method, offset, 1);
 }
 
-void cv::findContours_legacy( InputArray _image, OutputArrayOfArrays _contours,
-                   OutputArray _hierarchy, int mode, int method, Point offset )
+void cv::findContours_legacy(InputArray _image, OutputArrayOfArrays _contours,
+                             OutputArray _hierarchy, int mode, int method, Point offset)
 {
     CV_INSTRUMENT_REGION();
 
     // Sanity check: output must be of type vector<vector<Point>>
     CV_Assert((_contours.kind() == _InputArray::STD_VECTOR_VECTOR || _contours.kind() == _InputArray::STD_VECTOR_MAT ||
-                _contours.kind() == _InputArray::STD_VECTOR_UMAT));
+               _contours.kind() == _InputArray::STD_VECTOR_UMAT));
 
     CV_Assert(_contours.empty() || (_contours.channels() == 2 && _contours.depth() == CV_32S));
 
     Mat image0 = _image.getMat(), image;
     Point offset0(0, 0);
-    if(method != CV_LINK_RUNS)
+    if (method != CV_LINK_RUNS)
     {
         offset0 = Point(-1, -1);
         copyMakeBorder(image0, image, 1, 1, 1, 1, BORDER_CONSTANT | BORDER_ISOLATED, Scalar(0));
@@ -1836,38 +1838,46 @@ void cv::findContours_legacy( InputArray _image, OutputArrayOfArrays _contours,
     {
         image = image0;
     }
+
+    // Ensure the input image is single-channel
+    CV_Assert(image.type() == CV_8UC1);
+
     MemStorage storage(cvCreateMemStorage());
     CvMat _cimage = cvMat(image);
     CvSeq* _ccontours = 0;
-    if( _hierarchy.needed() )
+    if (_hierarchy.needed())
         _hierarchy.clear();
+
+    
     cvFindContours_Impl(&_cimage, storage, &_ccontours, sizeof(CvContour), mode, method, cvPoint(offset0 + offset), 0);
-    if( !_ccontours )
+
+    if (!_ccontours)
     {
         _contours.clear();
         return;
     }
-    Seq<CvSeq*> all_contours(cvTreeToNodeSeq( _ccontours, sizeof(CvSeq), storage ));
+
+    Seq<CvSeq*> all_contours(cvTreeToNodeSeq(_ccontours, sizeof(CvSeq), storage));
     int i, total = (int)all_contours.size();
     _contours.create(total, 1, 0, -1, true);
     SeqIterator<CvSeq*> it = all_contours.begin();
-    for( i = 0; i < total; i++, ++it )
+    for (i = 0; i < total; i++, ++it)
     {
         CvSeq* c = *it;
         ((CvContour*)c)->color = (int)i;
         _contours.create((int)c->total, 1, CV_32SC2, i, true);
         Mat ci = _contours.getMat(i);
-        CV_Assert( ci.isContinuous() );
+        CV_Assert(ci.isContinuous());
         cvCvtSeqToArray(c, ci.ptr());
     }
 
-    if( _hierarchy.needed() )
+    if (_hierarchy.needed())
     {
         _hierarchy.create(1, total, CV_32SC4, -1, true);
         Vec4i* hierarchy = _hierarchy.getMat().ptr<Vec4i>();
 
         it = all_contours.begin();
-        for( i = 0; i < total; i++, ++it )
+        for (i = 0; i < total; i++, ++it)
         {
             CvSeq* c = *it;
             int h_next = c->h_next ? ((CvContour*)c->h_next)->color : -1;
@@ -1879,8 +1889,8 @@ void cv::findContours_legacy( InputArray _image, OutputArrayOfArrays _contours,
     }
 }
 
-void cv::findContours_legacy( InputArray _image, OutputArrayOfArrays _contours,
-                       int mode, int method, Point offset)
+void cv::findContours_legacy(InputArray _image, OutputArrayOfArrays _contours,
+                             int mode, int method, Point offset)
 {
     CV_INSTRUMENT_REGION();
 
