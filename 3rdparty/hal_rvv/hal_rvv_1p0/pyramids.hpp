@@ -460,6 +460,38 @@ struct PyrDownInvoker : ParallelLoopBody
     int* tabL;
 };
 
+static inline int borderInterpolate( int p, int len, int borderType )
+{
+    if( (unsigned)p < (unsigned)len )
+        ;
+    else if( borderType == BORDER_REPLICATE )
+        p = p < 0 ? 0 : len - 1;
+    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
+    {
+        int delta = borderType == BORDER_REFLECT_101;
+        if( len == 1 )
+            return 0;
+        do
+        {
+            if( p < 0 )
+                p = -p - 1 + delta;
+            else
+                p = len - 1 - (p - len) - delta;
+        }
+        while( (unsigned)p >= (unsigned)len );
+    }
+    else if( borderType == BORDER_WRAP )
+    {
+        if( p < 0 )
+            p -= ((p-len+1)/len)*len;
+        if( p >= len )
+            p %= len;
+    }
+    else if( borderType == BORDER_CONSTANT )
+        p = -1;
+    return p;
+}
+
 // the algorithm is copied from imgproc/src/pyramids.cpp,
 // in the function template void cv::pyrDown_
 template<typename T, typename WT>
@@ -470,9 +502,12 @@ inline int pyrDown(const uchar* src_data, size_t src_step, int src_width, int sr
     std::vector<int> _tabM(dst_width * cn), _tabL(cn * (PD_SZ + 2)), _tabR(cn * (PD_SZ + 2));
     int *tabM = _tabM.data(), *tabL = _tabL.data(), *tabR = _tabR.data();
 
-    CV_Assert( src_width > 0 && src_height > 0 &&
-               std::abs(dst_width*2 - src_width) <= 2 &&
-               std::abs(dst_height*2 - src_height) <= 2 );
+    if( src_width <= 0 || src_height <= 0 ||
+        std::abs(dst_width*2 - src_width) > 2 ||
+        std::abs(dst_height*2 - src_height) > 2 )
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
     int width0 = std::min((src_width-PD_SZ/2-1)/2 + 1, dst_width);
 
     for (int x = 0; x <= PD_SZ+1; x++)
@@ -567,8 +602,11 @@ inline int pyrUp(const uchar* src_data, size_t src_step, int src_width, int src_
     int* dtab = _dtab.data();
     WT* rows[PU_SZ];
 
-    CV_Assert( std::abs(dst_width - src_width*2) == dst_width % 2 &&
-               std::abs(dst_height - src_height*2) == dst_height % 2);
+    if( std::abs(dst_width  - src_width*2) != dst_width % 2 ||
+        std::abs(dst_height - src_height*2) != dst_height % 2)
+    {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
     int k, x, sy0 = -PU_SZ/2, sy = sy0;
 
     src_width *= cn;
@@ -587,7 +625,7 @@ inline int pyrUp(const uchar* src_data, size_t src_step, int src_width, int src_
         for( ; sy <= y + 1; sy++ )
         {
             WT* row = buf + ((sy - sy0) % PU_SZ)*bufstep;
-            int _sy = borderInterpolate(sy*2, src_height*2, BORDER_REFLECT_101)/2;
+            int _sy = borderInterpolate(sy*2, src_height*2, (int)BORDER_REFLECT_101)/2;
             const T* src = reinterpret_cast<const T*>(src_data + src_step * _sy);
 
             if( src_width == cn )
