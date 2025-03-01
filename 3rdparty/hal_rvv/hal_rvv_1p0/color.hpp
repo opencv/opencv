@@ -42,7 +42,26 @@ template<> struct rvv<uchar>
             c = __riscv_vget_v_u8m2x4_u8m2(x, 0), d = __riscv_vget_v_u8m2x4_u8m2(x, 1), e = __riscv_vget_v_u8m2x4_u8m2(x, 2), f = __riscv_vget_v_u8m2x4_u8m2(x, 3);
         }
     }
-    static inline void vsseg(uchar* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e8(a, __riscv_vcreate_v_u8m2x3(c, d, e), g) : __riscv_vsseg4e8(a, __riscv_vcreate_v_u8m2x4(c, d, e, f), g); }
+    static inline void vsseg(uchar* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vuint8m2x3_t x{};
+            x = __riscv_vset_v_u8m2_u8m2x3(x, 0, c);
+            x = __riscv_vset_v_u8m2_u8m2x3(x, 1, d);
+            x = __riscv_vset_v_u8m2_u8m2x3(x, 2, e);
+            __riscv_vsseg3e8(a, x, g);
+        }
+        else
+        {
+            vuint8m2x4_t x{};
+            x = __riscv_vset_v_u8m2_u8m2x4(x, 0, c);
+            x = __riscv_vset_v_u8m2_u8m2x4(x, 1, d);
+            x = __riscv_vset_v_u8m2_u8m2x4(x, 2, e);
+            x = __riscv_vset_v_u8m2_u8m2x4(x, 3, f);
+            __riscv_vsseg4e8(a, x, g);
+        }
+    }
     static inline T vmv_v_x(uchar a, size_t b) { return __riscv_vmv_v_x_u8m2(a, b); }
 };
 template<> struct rvv<ushort>
@@ -63,7 +82,26 @@ template<> struct rvv<ushort>
             c = __riscv_vget_v_u16m2x4_u16m2(x, 0), d = __riscv_vget_v_u16m2x4_u16m2(x, 1), e = __riscv_vget_v_u16m2x4_u16m2(x, 2), f = __riscv_vget_v_u16m2x4_u16m2(x, 3);
         }
     }
-    static inline void vsseg(ushort* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e16(a, __riscv_vcreate_v_u16m2x3(c, d, e), g) : __riscv_vsseg4e16(a, __riscv_vcreate_v_u16m2x4(c, d, e, f), g); }
+    static inline void vsseg(ushort* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vuint16m2x3_t x{};
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 0, c);
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 1, d);
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 2, e);
+            __riscv_vsseg3e16(a, x, g);
+        }
+        else
+        {
+            vuint16m2x4_t x{};
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 0, c);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 1, d);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 2, e);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 3, f);
+            __riscv_vsseg4e16(a, x, g);
+        }
+    }
     static inline T vmv_v_x(ushort a, size_t b) { return __riscv_vmv_v_x_u16m2(a, b); }
 };
 template<> struct rvv<float>
@@ -84,7 +122,26 @@ template<> struct rvv<float>
             c = __riscv_vget_v_f32m2x4_f32m2(x, 0), d = __riscv_vget_v_f32m2x4_f32m2(x, 1), e = __riscv_vget_v_f32m2x4_f32m2(x, 2), f = __riscv_vget_v_f32m2x4_f32m2(x, 3);
         }
     }
-    static inline void vsseg(float* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e32(a, __riscv_vcreate_v_f32m2x3(c, d, e), g) : __riscv_vsseg4e32(a, __riscv_vcreate_v_f32m2x4(c, d, e, f), g); }
+    static inline void vsseg(float* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vfloat32m2x3_t x{};
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 0, c);
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 1, d);
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 2, e);
+            __riscv_vsseg3e32(a, x, g);
+        }
+        else
+        {
+            vfloat32m2x4_t x{};
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 0, c);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 1, d);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 2, e);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 3, f);
+            __riscv_vsseg4e32(a, x, g);
+        }
+    }
     static inline T vmv_v_x(float a, size_t b) { return __riscv_vfmv_v_f_f32m2(a, b); }
 };
 
@@ -152,7 +209,26 @@ template<> struct rvv<uchar>
     static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e8m2(); }
     static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e8m2(a); }
     static inline T vle(const uchar* a, size_t b) { return __riscv_vle8_v_u8m2(a, b); }
-    static inline void vsseg(uchar* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e8(a, __riscv_vcreate_v_u8m2x3(c, d, e), g) : __riscv_vsseg4e8(a, __riscv_vcreate_v_u8m2x4(c, d, e, f), g); }
+    static inline void vsseg(uchar* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vuint8m2x3_t x{};
+            x = __riscv_vset_v_u8m2_u8m2x3(x, 0, c);
+            x = __riscv_vset_v_u8m2_u8m2x3(x, 1, d);
+            x = __riscv_vset_v_u8m2_u8m2x3(x, 2, e);
+            __riscv_vsseg3e8(a, x, g);
+        }
+        else
+        {
+            vuint8m2x4_t x{};
+            x = __riscv_vset_v_u8m2_u8m2x4(x, 0, c);
+            x = __riscv_vset_v_u8m2_u8m2x4(x, 1, d);
+            x = __riscv_vset_v_u8m2_u8m2x4(x, 2, e);
+            x = __riscv_vset_v_u8m2_u8m2x4(x, 3, f);
+            __riscv_vsseg4e8(a, x, g);
+        }
+    }
     static inline T vmv_v_x(uchar a, size_t b) { return __riscv_vmv_v_x_u8m2(a, b); }
 };
 template<> struct rvv<ushort>
@@ -161,7 +237,26 @@ template<> struct rvv<ushort>
     static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e16m2(); }
     static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e16m2(a); }
     static inline T vle(const ushort* a, size_t b) { return __riscv_vle16_v_u16m2(a, b); }
-    static inline void vsseg(ushort* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e16(a, __riscv_vcreate_v_u16m2x3(c, d, e), g) : __riscv_vsseg4e16(a, __riscv_vcreate_v_u16m2x4(c, d, e, f), g); }
+    static inline void vsseg(ushort* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vuint16m2x3_t x{};
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 0, c);
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 1, d);
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 2, e);
+            __riscv_vsseg3e16(a, x, g);
+        }
+        else
+        {
+            vuint16m2x4_t x{};
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 0, c);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 1, d);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 2, e);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 3, f);
+            __riscv_vsseg4e16(a, x, g);
+        }
+    }
     static inline T vmv_v_x(ushort a, size_t b) { return __riscv_vmv_v_x_u16m2(a, b); }
 };
 template<> struct rvv<float>
@@ -170,7 +265,26 @@ template<> struct rvv<float>
     static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e32m2(); }
     static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32m2(a); }
     static inline T vle(const float* a, size_t b) { return __riscv_vle32_v_f32m2(a, b); }
-    static inline void vsseg(float* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e32(a, __riscv_vcreate_v_f32m2x3(c, d, e), g) : __riscv_vsseg4e32(a, __riscv_vcreate_v_f32m2x4(c, d, e, f), g); }
+    static inline void vsseg(float* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vfloat32m2x3_t x{};
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 0, c);
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 1, d);
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 2, e);
+            __riscv_vsseg3e32(a, x, g);
+        }
+        else
+        {
+            vfloat32m2x4_t x{};
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 0, c);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 1, d);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 2, e);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 3, f);
+            __riscv_vsseg4e32(a, x, g);
+        }
+    }
     static inline T vmv_v_x(float a, size_t b) { return __riscv_vfmv_v_f_f32m2(a, b); }
 };
 
@@ -348,7 +462,26 @@ template<> struct rvv<uchar>
     static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e8m1(); }
     static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e8m1(a); }
     static inline void vlseg(const uchar* a, T& b, T& c, T& d, size_t e){ auto x = __riscv_vlseg3e8_v_u8m1x3(a, e); b = __riscv_vget_v_u8m1x3_u8m1(x, 0), c = __riscv_vget_v_u8m1x3_u8m1(x, 1), d = __riscv_vget_v_u8m1x3_u8m1(x, 2); }
-    static inline void vsseg(uchar* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e8(a, __riscv_vcreate_v_u8m1x3(c, d, e), g) : __riscv_vsseg4e8(a, __riscv_vcreate_v_u8m1x4(c, d, e, f), g); }
+    static inline void vsseg(uchar* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vuint8m1x3_t x{};
+            x = __riscv_vset_v_u8m1_u8m1x3(x, 0, c);
+            x = __riscv_vset_v_u8m1_u8m1x3(x, 1, d);
+            x = __riscv_vset_v_u8m1_u8m1x3(x, 2, e);
+            __riscv_vsseg3e8(a, x, g);
+        }
+        else
+        {
+            vuint8m1x4_t x{};
+            x = __riscv_vset_v_u8m1_u8m1x4(x, 0, c);
+            x = __riscv_vset_v_u8m1_u8m1x4(x, 1, d);
+            x = __riscv_vset_v_u8m1_u8m1x4(x, 2, e);
+            x = __riscv_vset_v_u8m1_u8m1x4(x, 3, f);
+            __riscv_vsseg4e8(a, x, g);
+        }
+    }
     static inline vint32m4_t vcvt0(T a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(a, b)); }
     static inline T vcvt1(vint32m4_t a, vint32m4_t b, size_t c, size_t d) { return __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vmax(__riscv_vadd(__riscv_vssra(a, c, __RISCV_VXRM_RNU, d), b, d), 0, d)), 0, __RISCV_VXRM_RNU, d), 0, __RISCV_VXRM_RNU, d); }
     static inline vint32m4_t vsub(vint32m4_t a, int b, size_t c) { return __riscv_vsub(a, b, c); }
@@ -363,7 +496,26 @@ template<> struct rvv<ushort>
     static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e16m2(); }
     static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e16m2(a); }
     static inline void vlseg(const ushort* a, T& b, T& c, T& d, size_t e){ auto x = __riscv_vlseg3e16_v_u16m2x3(a, e); b = __riscv_vget_v_u16m2x3_u16m2(x, 0), c = __riscv_vget_v_u16m2x3_u16m2(x, 1), d = __riscv_vget_v_u16m2x3_u16m2(x, 2); }
-    static inline void vsseg(ushort* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e16(a, __riscv_vcreate_v_u16m2x3(c, d, e), g) : __riscv_vsseg4e16(a, __riscv_vcreate_v_u16m2x4(c, d, e, f), g); }
+    static inline void vsseg(ushort* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vuint16m2x3_t x{};
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 0, c);
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 1, d);
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 2, e);
+            __riscv_vsseg3e16(a, x, g);
+        }
+        else
+        {
+            vuint16m2x4_t x{};
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 0, c);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 1, d);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 2, e);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 3, f);
+            __riscv_vsseg4e16(a, x, g);
+        }
+    }
     static inline vint32m4_t vcvt0(T a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf2(a, b)); }
     static inline T vcvt1(vint32m4_t a, vint32m4_t b, size_t c, size_t d) { return __riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vmax(__riscv_vadd(__riscv_vssra(a, c, __RISCV_VXRM_RNU, d), b, d), 0, d)), 0, __RISCV_VXRM_RNU, d); }
     static inline vint32m4_t vsub(vint32m4_t a, int b, size_t c) { return __riscv_vsub(a, b, c); }
@@ -378,7 +530,26 @@ template<> struct rvv<float>
     static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e32m2(); }
     static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32m2(a); }
     static inline void vlseg(const float* a, T& b, T& c, T& d, size_t e){ auto x = __riscv_vlseg3e32_v_f32m2x3(a, e); b = __riscv_vget_v_f32m2x3_f32m2(x, 0), c = __riscv_vget_v_f32m2x3_f32m2(x, 1), d = __riscv_vget_v_f32m2x3_f32m2(x, 2); }
-    static inline void vsseg(float* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e32(a, __riscv_vcreate_v_f32m2x3(c, d, e), g) : __riscv_vsseg4e32(a, __riscv_vcreate_v_f32m2x4(c, d, e, f), g); }
+    static inline void vsseg(float* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vfloat32m2x3_t x{};
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 0, c);
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 1, d);
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 2, e);
+            __riscv_vsseg3e32(a, x, g);
+        }
+        else
+        {
+            vfloat32m2x4_t x{};
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 0, c);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 1, d);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 2, e);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 3, f);
+            __riscv_vsseg4e32(a, x, g);
+        }
+    }
     static inline T vcvt0(T a, size_t) { return a; }
     static inline T vcvt1(T a, T b, size_t, size_t d) { return __riscv_vfadd(a, b, d); }
     static inline T vsub(T a, float b, size_t c) { return __riscv_vfsub(a, b, c); }
@@ -470,7 +641,14 @@ template<> struct rvv<uchar>
             c = __riscv_vget_v_u8m1x4_u8m1(x, 0), d = __riscv_vget_v_u8m1x4_u8m1(x, 1), e = __riscv_vget_v_u8m1x4_u8m1(x, 2);
         }
     }
-    static inline void vsseg(uchar* a, T b, T c, T d, size_t e) { __riscv_vsseg3e8(a, __riscv_vcreate_v_u8m1x3(b, c, d), e); }
+    static inline void vsseg(uchar* a, T b, T c, T d, size_t e)
+    {
+        vuint8m1x3_t x{};
+        x = __riscv_vset_v_u8m1_u8m1x3(x, 0, b);
+        x = __riscv_vset_v_u8m1_u8m1x3(x, 1, c);
+        x = __riscv_vset_v_u8m1_u8m1x3(x, 2, d);
+        __riscv_vsseg3e8(a, x, e);
+    }
     static inline vint32m4_t vcvt0(T a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(a, b)); }
     static inline T vcvt1(vint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vmax(a, 0, c)), b, __RISCV_VXRM_RNU, c), 0, __RISCV_VXRM_RNU, c); }
     static inline vint32m4_t vssra(vint32m4_t a, size_t b, size_t c) { return __riscv_vssra(a, b, __RISCV_VXRM_RNU, c); }
@@ -498,7 +676,14 @@ template<> struct rvv<ushort>
             c = __riscv_vget_v_u16m2x4_u16m2(x, 0), d = __riscv_vget_v_u16m2x4_u16m2(x, 1), e = __riscv_vget_v_u16m2x4_u16m2(x, 2);
         }
     }
-    static inline void vsseg(ushort* a, T b, T c, T d, size_t e) { __riscv_vsseg3e16(a, __riscv_vcreate_v_u16m2x3(b, c, d), e); }
+    static inline void vsseg(ushort* a, T b, T c, T d, size_t e)
+    {
+        vuint16m2x3_t x{};
+        x = __riscv_vset_v_u16m2_u16m2x3(x, 0, b);
+        x = __riscv_vset_v_u16m2_u16m2x3(x, 1, c);
+        x = __riscv_vset_v_u16m2_u16m2x3(x, 2, d);
+        __riscv_vsseg3e16(a, x, e);
+    }
     static inline vint32m4_t vcvt0(T a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf2(a, b)); }
     static inline T vcvt1(vint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vmax(a, 0, c)), b, __RISCV_VXRM_RNU, c); }
     static inline vint32m4_t vssra(vint32m4_t a, size_t b, size_t c) { return __riscv_vssra(a, b, __RISCV_VXRM_RNU, c); }
@@ -526,7 +711,14 @@ template<> struct rvv<float>
             c = __riscv_vget_v_f32m2x4_f32m2(x, 0), d = __riscv_vget_v_f32m2x4_f32m2(x, 1), e = __riscv_vget_v_f32m2x4_f32m2(x, 2);
         }
     }
-    static inline void vsseg(float* a, T b, T c, T d, size_t e) { __riscv_vsseg3e32(a, __riscv_vcreate_v_f32m2x3(b, c, d), e); }
+    static inline void vsseg(float* a, T b, T c, T d, size_t e)
+    {
+        vfloat32m2x3_t x{};
+        x = __riscv_vset_v_f32m2_f32m2x3(x, 0, b);
+        x = __riscv_vset_v_f32m2_f32m2x3(x, 1, c);
+        x = __riscv_vset_v_f32m2_f32m2x3(x, 2, d);
+        __riscv_vsseg3e32(a, x, e);
+    }
     static inline T vcvt0(T a, size_t) { return a; }
     static inline T vcvt1(T a, size_t, size_t) { return a; }
     static inline T vssra(T a, size_t, size_t) { return a; }
@@ -1451,7 +1643,26 @@ template<> struct rvv<uchar>
     static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e8m1(); }
     static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e8m1(a); }
     static inline void vlseg(const uchar* a, T& b, T& c, T& d, size_t e){ auto x = __riscv_vlseg3e8_v_u8m1x3(a, e); b = __riscv_vget_v_u8m1x3_u8m1(x, 0), c = __riscv_vget_v_u8m1x3_u8m1(x, 1), d = __riscv_vget_v_u8m1x3_u8m1(x, 2); }
-    static inline void vsseg(uchar* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e8(a, __riscv_vcreate_v_u8m1x3(c, d, e), g) : __riscv_vsseg4e8(a, __riscv_vcreate_v_u8m1x4(c, d, e, f), g); }
+    static inline void vsseg(uchar* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vuint8m1x3_t x{};
+            x = __riscv_vset_v_u8m1_u8m1x3(x, 0, c);
+            x = __riscv_vset_v_u8m1_u8m1x3(x, 1, d);
+            x = __riscv_vset_v_u8m1_u8m1x3(x, 2, e);
+            __riscv_vsseg3e8(a, x, g);
+        }
+        else
+        {
+            vuint8m1x4_t x{};
+            x = __riscv_vset_v_u8m1_u8m1x4(x, 0, c);
+            x = __riscv_vset_v_u8m1_u8m1x4(x, 1, d);
+            x = __riscv_vset_v_u8m1_u8m1x4(x, 2, e);
+            x = __riscv_vset_v_u8m1_u8m1x4(x, 3, f);
+            __riscv_vsseg4e8(a, x, g);
+        }
+    }
     static inline vint32m4_t vcvt0(T a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(a, b)); }
     static inline T vcvt1(vint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vmax(a, 0, c)), b, __RISCV_VXRM_RNU, c), 0, __RISCV_VXRM_RNU, c); }
     static inline vint32m4_t vmul(vint32m4_t a, int b, size_t c) { return __riscv_vmul(a, b, c); }
@@ -1470,7 +1681,26 @@ template<> struct rvv<ushort>
     static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e16m2(); }
     static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e16m2(a); }
     static inline void vlseg(const ushort* a, T& b, T& c, T& d, size_t e){ auto x = __riscv_vlseg3e16_v_u16m2x3(a, e); b = __riscv_vget_v_u16m2x3_u16m2(x, 0), c = __riscv_vget_v_u16m2x3_u16m2(x, 1), d = __riscv_vget_v_u16m2x3_u16m2(x, 2); }
-    static inline void vsseg(ushort* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e16(a, __riscv_vcreate_v_u16m2x3(c, d, e), g) : __riscv_vsseg4e16(a, __riscv_vcreate_v_u16m2x4(c, d, e, f), g); }
+    static inline void vsseg(ushort* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vuint16m2x3_t x{};
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 0, c);
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 1, d);
+            x = __riscv_vset_v_u16m2_u16m2x3(x, 2, e);
+            __riscv_vsseg3e16(a, x, g);
+        }
+        else
+        {
+            vuint16m2x4_t x{};
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 0, c);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 1, d);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 2, e);
+            x = __riscv_vset_v_u16m2_u16m2x4(x, 3, f);
+            __riscv_vsseg4e16(a, x, g);
+        }
+    }
     static inline vint32m4_t vcvt0(T a, size_t b) { return __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf2(a, b)); }
     static inline T vcvt1(vint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vmax(a, 0, c)), b, __RISCV_VXRM_RNU, c); }
     static inline vint32m4_t vmul(vint32m4_t a, int b, size_t c) { return __riscv_vmul(a, b, c); }
@@ -1489,7 +1719,26 @@ template<> struct rvv<float>
     static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e32m2(); }
     static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32m2(a); }
     static inline void vlseg(const float* a, T& b, T& c, T& d, size_t e){ auto x = __riscv_vlseg3e32_v_f32m2x3(a, e); b = __riscv_vget_v_f32m2x3_f32m2(x, 0), c = __riscv_vget_v_f32m2x3_f32m2(x, 1), d = __riscv_vget_v_f32m2x3_f32m2(x, 2); }
-    static inline void vsseg(float* a, int b, T c, T d, T e, T f, size_t g) { return b == 3 ? __riscv_vsseg3e32(a, __riscv_vcreate_v_f32m2x3(c, d, e), g) : __riscv_vsseg4e32(a, __riscv_vcreate_v_f32m2x4(c, d, e, f), g); }
+    static inline void vsseg(float* a, int b, T c, T d, T e, T f, size_t g)
+    {
+        if (b == 3)
+        {
+            vfloat32m2x3_t x{};
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 0, c);
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 1, d);
+            x = __riscv_vset_v_f32m2_f32m2x3(x, 2, e);
+            __riscv_vsseg3e32(a, x, g);
+        }
+        else
+        {
+            vfloat32m2x4_t x{};
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 0, c);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 1, d);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 2, e);
+            x = __riscv_vset_v_f32m2_f32m2x4(x, 3, f);
+            __riscv_vsseg4e32(a, x, g);
+        }
+    }
     static inline T vcvt0(T a, size_t) { return a; }
     static inline T vcvt1(T a, size_t, size_t) { return a; }
     static inline T vmul(T a, float b, size_t c) { return __riscv_vfmul(a, b, c); }
@@ -1579,7 +1828,14 @@ template<> struct rvv<uchar>
             c = __riscv_vget_v_u8m1x4_u8m1(x, 0), d = __riscv_vget_v_u8m1x4_u8m1(x, 1), e = __riscv_vget_v_u8m1x4_u8m1(x, 2);
         }
     }
-    static inline void vsseg(uchar* a, T b, T c, T d, size_t e) { __riscv_vsseg3e8(a, __riscv_vcreate_v_u8m1x3(b, c, d), e); }
+    static inline void vsseg(uchar* a, T b, T c, T d, size_t e)
+    {
+        vuint8m1x3_t x{};
+        x = __riscv_vset_v_u8m1_u8m1x3(x, 0, b);
+        x = __riscv_vset_v_u8m1_u8m1x3(x, 1, c);
+        x = __riscv_vset_v_u8m1_u8m1x3(x, 2, d);
+        __riscv_vsseg3e8(a, x, e);
+    }
     static inline vuint32m4_t vcvt0(T a, size_t b) { return __riscv_vzext_vf4(a, b); }
     static inline T vcvt1(vuint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(__riscv_vnclipu(a, b, __RISCV_VXRM_RNU, c), 0, __RISCV_VXRM_RNU, c); }
     static inline vuint32m4_t vmul(vuint32m4_t a, uint b, size_t c) { return __riscv_vmul(a, b, c); }
@@ -1608,7 +1864,14 @@ template<> struct rvv<ushort>
             c = __riscv_vget_v_u16m2x4_u16m2(x, 0), d = __riscv_vget_v_u16m2x4_u16m2(x, 1), e = __riscv_vget_v_u16m2x4_u16m2(x, 2);
         }
     }
-    static inline void vsseg(ushort* a, T b, T c, T d, size_t e) { __riscv_vsseg3e16(a, __riscv_vcreate_v_u16m2x3(b, c, d), e); }
+    static inline void vsseg(ushort* a, T b, T c, T d, size_t e)
+    {
+        vuint16m2x3_t x{};
+        x = __riscv_vset_v_u16m2_u16m2x3(x, 0, b);
+        x = __riscv_vset_v_u16m2_u16m2x3(x, 1, c);
+        x = __riscv_vset_v_u16m2_u16m2x3(x, 2, d);
+        __riscv_vsseg3e16(a, x, e);
+    }
     static inline vuint32m4_t vcvt0(T a, size_t b) { return __riscv_vzext_vf2(a, b); }
     static inline T vcvt1(vuint32m4_t a, size_t b, size_t c) { return __riscv_vnclipu(a, b, __RISCV_VXRM_RNU, c); }
     static inline vuint32m4_t vmul(vuint32m4_t a, uint b, size_t c) { return __riscv_vmul(a, b, c); }
@@ -1637,7 +1900,14 @@ template<> struct rvv<float>
             c = __riscv_vget_v_f32m2x4_f32m2(x, 0), d = __riscv_vget_v_f32m2x4_f32m2(x, 1), e = __riscv_vget_v_f32m2x4_f32m2(x, 2);
         }
     }
-    static inline void vsseg(float* a, T b, T c, T d, size_t e) { __riscv_vsseg3e32(a, __riscv_vcreate_v_f32m2x3(b, c, d), e); }
+    static inline void vsseg(float* a, T b, T c, T d, size_t e)
+    {
+        vfloat32m2x3_t x{};
+        x = __riscv_vset_v_f32m2_f32m2x3(x, 0, b);
+        x = __riscv_vset_v_f32m2_f32m2x3(x, 1, c);
+        x = __riscv_vset_v_f32m2_f32m2x3(x, 2, d);
+        __riscv_vsseg3e32(a, x, e);
+    }
     static inline T vcvt0(T a, size_t) { return a; }
     static inline T vcvt1(T a, size_t, size_t) { return a; }
     static inline T vmul(T a, float b, size_t c) { return __riscv_vfmul(a, b, c); }
