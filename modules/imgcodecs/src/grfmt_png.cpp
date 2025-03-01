@@ -862,7 +862,8 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     int depth = img.depth(), channels = img.channels();
     volatile bool result = false;
     AutoBuffer<uchar*> buffer;
-    bool set_only_compression_level = false;
+    bool set_compression_level = false;
+    bool set_filter = false;
 
     if( depth != CV_8U && depth != CV_16U )
         return false;
@@ -894,13 +895,12 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
                         m_compression_level = params[i+1];
                         m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
-                        set_only_compression_level = true;
+                        set_compression_level = true;
                     }
                     if( params[i] == IMWRITE_PNG_STRATEGY )
                     {
                         m_compression_strategy = params[i+1];
                         m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
-                        set_only_compression_level = false;
                     }
                     if( params[i] == IMWRITE_PNG_BILEVEL )
                     {
@@ -909,13 +909,13 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                     if( params[i] == IMWRITE_PNG_FILTER )
                     {
                         m_filter = params[i+1];
-                        set_only_compression_level = false;
+                        set_filter = true;
                     }
                 }
 
                 if( m_buf || f )
                 {
-                    if (!set_only_compression_level)
+                    if (!set_compression_level || set_filter)
                         png_set_filter(png_ptr, PNG_FILTER_TYPE_BASE, m_filter);
                     png_set_compression_level(png_ptr, m_compression_level);
                     png_set_compression_strategy(png_ptr, m_compression_strategy);
