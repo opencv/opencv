@@ -771,7 +771,7 @@ public:
     bool trylock();
     void unlock();
 
-    struct CV_IMPL_HIDDEN Impl;
+    struct Impl;
 protected:
     Impl* impl;
 
