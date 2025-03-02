@@ -28,11 +28,9 @@ namespace color {
     };
 
     template<typename... Args>
-    static inline int invoke(int length, std::function<int(int, int, Args...)> func, Args&&... args)
+    static inline int invoke(int width, int height, std::function<int(int, int, Args...)> func, Args&&... args)
     {
-        if (length < 240)
-            return func(0, length, std::forward<Args>(args)...);
-        cv::parallel_for_(Range(1, length), ColorInvoker(func, std::forward<Args>(args)...), cv::getNumThreads());
+        cv::parallel_for_(Range(1, height), ColorInvoker(func, std::forward<Args>(args)...), (width - 1) * height / static_cast<double>(1 << 16));
         return func(0, 1, std::forward<Args>(args)...);
     }
 } // cv::cv_hal_rvv::color
@@ -457,11 +455,11 @@ inline int cvtBGRtoGray(const uchar * src_data, size_t src_step, uchar * dst_dat
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, cvtBGRtoGray<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue);
+        return color::invoke(width, height, cvtBGRtoGray<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue);
     case CV_16U:
-        return color::invoke(height, cvtBGRtoGray<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue);
+        return color::invoke(width, height, cvtBGRtoGray<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue);
     case CV_32F:
-        return color::invoke(height, cvtBGRtoGray<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue);
+        return color::invoke(width, height, cvtBGRtoGray<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -624,11 +622,11 @@ inline int cvtYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, cvtYUVtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
+        return color::invoke(width, height, cvtYUVtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
     case CV_16U:
-        return color::invoke(height, cvtYUVtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
+        return color::invoke(width, height, cvtYUVtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
     case CV_32F:
-        return color::invoke(height, cvtYUVtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
+        return color::invoke(width, height, cvtYUVtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue, isCbCr);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -792,11 +790,11 @@ inline int cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, cvtBGRtoYUV<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
+        return color::invoke(width, height, cvtBGRtoYUV<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
     case CV_16U:
-        return color::invoke(height, cvtBGRtoYUV<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
+        return color::invoke(width, height, cvtBGRtoYUV<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
     case CV_32F:
-        return color::invoke(height, cvtBGRtoYUV<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
+        return color::invoke(width, height, cvtBGRtoYUV<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue, isCbCr);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -1003,7 +1001,7 @@ inline int cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * 
 {
     if (dcn != 3 && dcn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    return color::invoke(dst_height, {cvtSinglePlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, dcn, swapBlue, uIdx, yIdx);
+    return color::invoke(dst_width, dst_height, {cvtSinglePlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, dcn, swapBlue, uIdx, yIdx);
 }
 
 inline int cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx)
@@ -1011,7 +1009,7 @@ inline int cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * 
     if (dcn != 3 && dcn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     const uchar* uv = src_data + src_step * static_cast<size_t>(dst_height);
-    return color::invoke(dst_height / 2, {cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, uv, uv, 0, 0, dcn, swapBlue, uIdx);
+    return color::invoke(dst_width, dst_height / 2, {cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, uv, uv, 0, 0, dcn, swapBlue, uIdx);
 }
 
 inline int cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx)
@@ -1025,7 +1023,7 @@ inline int cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar 
     int vstepIdx = dst_height % 4 == 2 ? 1 : 0;
     if (uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); }
 
-    return color::invoke(dst_height / 2, {cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, u, v, ustepIdx, vstepIdx, dcn, swapBlue, -1);
+    return color::invoke(dst_width, dst_height / 2, {cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, u, v, ustepIdx, vstepIdx, dcn, swapBlue, -1);
 }
 } // cv::cv_hal_rvv::PlaneYUVtoBGR
 
@@ -1274,7 +1272,7 @@ inline int cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step, uchar * 
 {
     if (scn != 3 && scn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    return color::invoke(height, {cvtBGRtoSinglePlaneYUV}, dst_data, dst_step, width, src_step, src_data, scn, swapBlue, uIdx, yIdx);
+    return color::invoke(width, height, {cvtBGRtoSinglePlaneYUV}, dst_data, dst_step, width, src_step, src_data, scn, swapBlue, uIdx, yIdx);
 }
 
 inline int cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
@@ -1284,7 +1282,7 @@ inline int cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step,
 {
     if (y_step != uv_step || (scn != 3 && scn != 4))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    return color::invoke(height / 2, {cvtBGRtoMultiPlaneYUV}, y_data, uv_data, y_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2);
+    return color::invoke(width, height / 2, {cvtBGRtoMultiPlaneYUV}, y_data, uv_data, y_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2);
 }
 
 inline int cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx)
@@ -1292,7 +1290,7 @@ inline int cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step, uchar 
     if (scn != 3 && scn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     uchar* uv_data = dst_data + dst_step * static_cast<size_t>(height);
-    return color::invoke(height / 2, {cvtBGRtoMultiPlaneYUV}, dst_data, uv_data, dst_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2 ? 3 : 2);
+    return color::invoke(width, height / 2, {cvtBGRtoMultiPlaneYUV}, dst_data, uv_data, dst_step, width, height, src_step, src_data, scn, swapBlue, uIdx == 2 ? 3 : 2);
 }
 } // cv::cv_hal_rvv::PlaneBGRtoYUV
 
@@ -1421,7 +1419,7 @@ inline int cvtHSVtoBGR<uchar>(int start, int end, const uchar * src, size_t src_
 }
 
 template<>
-inline int cvtHSVtoBGR<float>(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int dcn, bool swapBlue, bool, bool isHSV)
+inline int cvtHSVtoBGR<float>(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int dcn, bool swapBlue, bool /*isFullRange*/, bool isHSV)
 {
     src_step /= sizeof(float);
     dst_step /= sizeof(float);
@@ -1475,9 +1473,9 @@ inline int cvtHSVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, cvtHSVtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue, isFullRange, isHSV);
+        return color::invoke(width, height, cvtHSVtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue, isFullRange, isHSV);
     case CV_32F:
-        return color::invoke(height, cvtHSVtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue, isFullRange, isHSV);
+        return color::invoke(width, height, cvtHSVtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue, isFullRange, isHSV);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -1560,7 +1558,7 @@ inline int cvtBGRtoHSV<uchar>(int start, int end, const uchar * src, size_t src_
 }
 
 template<>
-inline int cvtBGRtoHSV<float>(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int scn, bool swapBlue, bool, bool isHSV)
+inline int cvtBGRtoHSV<float>(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int scn, bool swapBlue, bool /*isFullRange*/, bool isHSV)
 {
     src_step /= sizeof(float);
     dst_step /= sizeof(float);
@@ -1635,9 +1633,9 @@ inline int cvtBGRtoHSV(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, cvtBGRtoHSV<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue, isFullRange, isHSV);
+        return color::invoke(width, height, cvtBGRtoHSV<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue, isFullRange, isHSV);
     case CV_32F:
-        return color::invoke(height, cvtBGRtoHSV<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue, isFullRange, isHSV);
+        return color::invoke(width, height, cvtBGRtoHSV<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue, isFullRange, isHSV);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -1807,11 +1805,11 @@ inline int cvtXYZtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, cvtXYZtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue);
+        return color::invoke(width, height, cvtXYZtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue);
     case CV_16U:
-        return color::invoke(height, cvtXYZtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn, swapBlue);
+        return color::invoke(width, height, cvtXYZtoBGR<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, dcn, swapBlue);
     case CV_32F:
-        return color::invoke(height, cvtXYZtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue);
+        return color::invoke(width, height, cvtXYZtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -1974,11 +1972,11 @@ inline int cvtBGRtoXYZ(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, cvtBGRtoXYZ<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue);
+        return color::invoke(width, height, cvtBGRtoXYZ<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue);
     case CV_16U:
-        return color::invoke(height, cvtBGRtoXYZ<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue);
+        return color::invoke(width, height, cvtBGRtoXYZ<ushort>, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue);
     case CV_32F:
-        return color::invoke(height, cvtBGRtoXYZ<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue);
+        return color::invoke(width, height, cvtBGRtoXYZ<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -2011,7 +2009,7 @@ namespace LabTable
                 float x = i * 1.0f / (255*8);
                 LabCbrtTab_b[i] = (int)std::rint((1 << 15) * applyCbrt(x));
             }
-            LabCbrtTab_b[324] -= 1, LabCbrtTab_b[2079] -= 1; // tweak to imitate the error of softfloat
+            LabCbrtTab_b[324] -= 1, LabCbrtTab_b[2079] -= 1; // tweak to imitate the error of softfloat cbrt
 
             for (int i = 0; i < 256; i++)
             {
@@ -2037,13 +2035,13 @@ namespace LabTable
                     fy = (li + 16.0f) / 116.0f;
                     yy = fy * fy * fy;
                 }
-                LabToYF_b[i*2  ] = (int)std::rint(yy * BASE);
-                LabToYF_b[i*2+1] = (int)std::rint(fy * BASE);
+                LabToYF_b[i*2  ] = (int)std::rint(yy * LAB_BASE);
+                LabToYF_b[i*2+1] = (int)std::rint(fy * LAB_BASE);
             }
 
-            for (int i = minABvalue; i < BASE*9/4+minABvalue; i++)
+            for (int i = minABvalue; i < LAB_BASE*9/4+minABvalue; i++)
             {
-                abToXZ_b[i-minABvalue] = i <= 3390 ? i*108/841 - BASE*16/116*108/841 : i*i/BASE*i/BASE;
+                abToXZ_b[i-minABvalue] = i <= 3390 ? i*108/841 - LAB_BASE*16/116*108/841 : i*i/LAB_BASE*i/LAB_BASE;
             }
 
             for (int LL = 0; LL < 256; LL++)
@@ -2053,7 +2051,7 @@ namespace LabTable
                 {
                     float u = uu*354.0f/255 - 134;
                     float up = 9.0f*(u + L*2.5719122887f);
-                    LuToUp_b[LL*256+uu] = std::rint(up*float(BASE/1024));
+                    LuToUp_b[LL*256+uu] = std::rint(up*float(LAB_BASE/1024));
                 }
                 for (int vv = 0; vv < 256; vv++)
                 {
@@ -2061,10 +2059,81 @@ namespace LabTable
                     float vp = 0.25f/(v + L*6.0884485245f);
                     if (vp >  0.25f) vp =  0.25f;
                     if (vp < -0.25f) vp = -0.25f;
-                    int ivp = std::rint(vp*float(BASE*1024));
+                    int ivp = std::rint(vp*float(LAB_BASE*1024));
                     LvToVp_b[LL*256+vv] = ivp;
                     int vpl = ivp*LL;
-                    LvToVpl_b[LL*256+vv] = (15600*(BASE/1024))*(long long)vpl;
+                    LvToVpl_b[LL*256+vv] = (15600*(LAB_BASE/1024))*(long long)vpl;
+                }
+            }
+
+            static constexpr float BGR2XYZ_D65[] =
+            {
+                0.180423f, 0.357580f, 0.412453f,
+                0.072169f, 0.715160f, 0.212671f,
+                0.950227f, 0.119193f, 0.019334f
+            };
+            int RGB2Luvprev[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3];
+            for (int p = 0; p < LAB_LUT_DIM; p++)
+            {
+                for (int q = 0; q < LAB_LUT_DIM; q++)
+                {
+                    for (int r = 0; r < LAB_LUT_DIM; r++)
+                    {
+                        int idx = p*3 + q*LAB_LUT_DIM*3 + r*LAB_LUT_DIM*LAB_LUT_DIM*3;
+                        float R = applyGamma(p / 32.0f);
+                        float G = applyGamma(q / 32.0f);
+                        float B = applyGamma(r / 32.0f);
+
+                        float X = R*BGR2XYZ_D65[0] + G*BGR2XYZ_D65[1] + B*BGR2XYZ_D65[2];
+                        float Y = R*BGR2XYZ_D65[3] + G*BGR2XYZ_D65[4] + B*BGR2XYZ_D65[5];
+                        float Z = R*BGR2XYZ_D65[6] + G*BGR2XYZ_D65[7] + B*BGR2XYZ_D65[8];
+
+                        float L = applyCbrt(Y);
+                        L = L*116.0f - 16.0f;
+
+                        float d = 52.0f/std::max(X + 15.0f * Y + 3.0f * Z, FLT_EPSILON);
+                        float u = L*(X*d - 2.5719122887f);
+                        float v = L*(2.25f*Y*d - 6.0884485245f);
+
+                        RGB2Luvprev[idx  ] = (int)std::rint(LAB_BASE*L/100.0f);
+                        RGB2Luvprev[idx+1] = (int)std::rint(LAB_BASE*(u+134.0f)/354.0f);
+                        RGB2Luvprev[idx+2] = (int)std::rint(LAB_BASE*(v+140.0f)/262.0f);
+                    }
+                }
+            }
+            // again, tweak to imitate the error of softfloat cbrt
+            static constexpr int errortab[] = {32,-1,5246,-1,6662,-1,7837,1,8625,-1,11969,1,15290,1,19142,1,19588,1,21707,-1,22731,-1,24291,-1,25922,-1,27402,-1,28485,-1,29878,-1,32405,-1,36227,1,38265,-1,38296,1,38403,-1,41795,1,41867,1,43796,1,48096,-1,50562,-1,51054,-1,54496,1,55328,-1,56973,-1,58594,1,61568,1,66512,-1,68543,-1,68615,1,70105,-1,70692,-1,74924,1,76336,-1,78781,1,79259,-1,80855,1,81662,1,82290,-1,83208,-1,84370,1,86293,1,87263,-1,87939,-1,89942,-1,90258,-1,92101,-1,92325,-1,95244,-1,97556,1,97758,-1,97769,1,98455,1,104087,-1,106997,-1};
+            for (size_t i = 0; i < sizeof(errortab) / sizeof(int); i += 2)
+                RGB2Luvprev[errortab[i]] += errortab[i + 1];
+            for (int p = 0; p < LAB_LUT_DIM; p++)
+                for (int q = 0; q < LAB_LUT_DIM; q++)
+                    for (int r = 0; r < LAB_LUT_DIM; r++)
+                        for (int p_ = 0; p_ < 2; ++p_)
+                            for (int q_ = 0; q_ < 2; ++q_)
+                                for (int r_ = 0; r_ < 2; ++r_)
+                                {
+                                    int idxold = std::min(p+p_, (int)(LAB_LUT_DIM-1))*3;
+                                    idxold += std::min(q+q_, (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;
+                                    idxold += std::min(r+r_, (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;
+                                    int idxnew = p*3*8 + q*LAB_LUT_DIM*3*8 + r*LAB_LUT_DIM*LAB_LUT_DIM*3*8+4*p_+2*q_+r_;
+                                    RGB2LuvLUT[idxnew]    = RGB2Luvprev[idxold];
+                                    RGB2LuvLUT[idxnew+8]  = RGB2Luvprev[idxold+1];
+                                    RGB2LuvLUT[idxnew+16] = RGB2Luvprev[idxold+2];
+                                }
+
+            for (int p = 0; p < TRILINEAR_BASE; p++)
+            {
+                int pp = TRILINEAR_BASE - p;
+                for (int q = 0; q < TRILINEAR_BASE; q++)
+                {
+                    int qq = TRILINEAR_BASE - q;
+                    for (int r = 0; r < TRILINEAR_BASE; r++)
+                    {
+                        int rr = TRILINEAR_BASE - r;
+                        int* w = &trilinearLUT[8*p + 8*TRILINEAR_BASE*q + 8*TRILINEAR_BASE*TRILINEAR_BASE*r];
+                        w[0]  = pp * qq * rr; w[1]  = pp * qq * r ; w[2]  = pp * q  * rr; w[3]  = pp * q  * r ;
+                        w[4]  = p  * qq * rr; w[5]  = p  * qq * r ; w[6]  = p  * q  * rr; w[7]  = p  * q  * r ;
+                    }
                 }
             }
         }
@@ -2119,18 +2188,19 @@ namespace LabTable
     public:
         static constexpr int GAMMA_TAB_SIZE = 1024;
         static constexpr int INV_GAMMA_SHIFT = 12, INV_GAMMA_TAB_SIZE = 4096;
-        static constexpr int BASE = 1 << 14;
+        static constexpr int LAB_BASE = 1 << 14, TRILINEAR_BASE = 16, LAB_LUT_DIM = 33;
         static constexpr int minABvalue = -8145;
 
         const float* LabCbrtTab, *sRGBGammaTab, *sRGBInvGammaTab;
         int LabCbrtTab_b[3072];
         int sRGBGammaTab_b[256], sRGBInvGammaTab_b[INV_GAMMA_TAB_SIZE];
         int LabToYF_b[256*2];
-        int abToXZ_b[BASE*9/4];
+        int abToXZ_b[LAB_BASE*9/4];
         int LuToUp_b[256*256], LvToVp_b[256*256];
         int64_t LvToVpl_b[256*256];
+        int RGB2LuvLUT[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8], trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
 
-        static Tab& Instance()
+        static Tab& instance()
         {
             static Tab tab;
             return tab;
@@ -2189,36 +2259,36 @@ inline int cvtLabtoBGR<uchar>(int start, int end, const uchar * src, size_t src_
             auto a = __riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(vec_src, 1), vl);
             auto b = __riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(vec_src, 2), vl);
 
-            auto vec_yf = __riscv_vloxseg2ei32_v_i32m4x2(LabTable::Tab::Instance().LabToYF_b, __riscv_vmul(l, 2 * sizeof(int), vl), vl);
+            auto vec_yf = __riscv_vloxseg2ei32_v_i32m4x2(LabTable::Tab::instance().LabToYF_b, __riscv_vmul(l, 2 * sizeof(int), vl), vl);
             auto y = __riscv_vget_v_i32m4x2_i32m4(vec_yf, 0), ify = __riscv_vget_v_i32m4x2_i32m4(vec_yf, 1);
 
             vint32m4_t x, z;
             if (isLab)
             {
-                auto adiv = __riscv_vsub(__riscv_vsra(__riscv_vmadd(__riscv_vreinterpret_v_u32m4_i32m4(a), 5*53687, __riscv_vmv_v_x_i32m4(1 << 7, vl), vl), 13, vl), 128*LabTable::Tab::BASE/500  , vl);
-                auto bdiv = __riscv_vsub(__riscv_vsra(__riscv_vmadd(__riscv_vreinterpret_v_u32m4_i32m4(b),   41943, __riscv_vmv_v_x_i32m4(1 << 4, vl), vl),  9, vl), 128*LabTable::Tab::BASE/200-1, vl); // not +1 here
+                auto adiv = __riscv_vsub(__riscv_vsra(__riscv_vmadd(__riscv_vreinterpret_v_u32m4_i32m4(a), 5*53687, __riscv_vmv_v_x_i32m4(1 << 7, vl), vl), 13, vl), 128*LabTable::Tab::LAB_BASE/500  , vl);
+                auto bdiv = __riscv_vsub(__riscv_vsra(__riscv_vmadd(__riscv_vreinterpret_v_u32m4_i32m4(b),   41943, __riscv_vmv_v_x_i32m4(1 << 4, vl), vl),  9, vl), 128*LabTable::Tab::LAB_BASE/200-1, vl); // not +1 here
 
                 x = __riscv_vadd(ify, adiv, vl);
                 z = __riscv_vsub(ify, bdiv, vl);
-                x = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().abToXZ_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vsub(x, LabTable::Tab::minABvalue, vl)), sizeof(int), vl), vl);
-                z = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().abToXZ_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vsub(z, LabTable::Tab::minABvalue, vl)), sizeof(int), vl), vl);
+                x = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().abToXZ_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vsub(x, LabTable::Tab::minABvalue, vl)), sizeof(int), vl), vl);
+                z = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().abToXZ_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(__riscv_vsub(z, LabTable::Tab::minABvalue, vl)), sizeof(int), vl), vl);
             }
             else
             {
-                auto up = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().LuToUp_b, __riscv_vmul(__riscv_vmadd(l, 256, a, vl), sizeof(int), vl), vl);
-                auto vp = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().LvToVp_b, __riscv_vmul(__riscv_vmadd(l, 256, b, vl), sizeof(int), vl), vl);
+                auto up = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().LuToUp_b, __riscv_vmul(__riscv_vmadd(l, 256, a, vl), sizeof(int), vl), vl);
+                auto vp = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().LvToVp_b, __riscv_vmul(__riscv_vmadd(l, 256, b, vl), sizeof(int), vl), vl);
                 
                 auto xv = __riscv_vwmul(up, vp, vl);
                 x = __riscv_vncvt_x(__riscv_vsra(__riscv_vmul(__riscv_vsra(xv, 14, vl), __riscv_vsext_vf2(y, vl), vl), 14, vl), vl);
 
-                auto vpl = __riscv_vloxei32_v_i64m8(LabTable::Tab::Instance().LvToVpl_b, __riscv_vmul(__riscv_vmadd(l, 256, b, vl), sizeof(int64_t), vl), vl);
+                auto vpl = __riscv_vloxei32_v_i64m8(LabTable::Tab::instance().LvToVpl_b, __riscv_vmul(__riscv_vmadd(l, 256, b, vl), sizeof(int64_t), vl), vl);
                 auto zp = __riscv_vsra(__riscv_vnmsub(xv, 255 / 3, vpl, vl), 14, vl);
-                auto zq = __riscv_vsub(zp, 5 * 255 * LabTable::Tab::BASE, vl);
+                auto zq = __riscv_vsub(zp, 5 * 255 * LabTable::Tab::LAB_BASE, vl);
                 auto zm = __riscv_vncvt_x(__riscv_vsra(__riscv_vmul(__riscv_vsext_vf2(y, vl), zq, vl), 14, vl), vl);
                 z = __riscv_vadd(__riscv_vsra(zm, 8, vl), __riscv_vsra(zm, 16, vl), vl);
 
-                x = __riscv_vmin(__riscv_vmax(x, 0, vl), 2 * LabTable::Tab::BASE, vl);
-                z = __riscv_vmin(__riscv_vmax(z, 0, vl), 2 * LabTable::Tab::BASE, vl);
+                x = __riscv_vmin(__riscv_vmax(x, 0, vl), 2 * LabTable::Tab::LAB_BASE, vl);
+                z = __riscv_vmin(__riscv_vmax(z, 0, vl), 2 * LabTable::Tab::LAB_BASE, vl);
             }
 
             auto bo = __riscv_vssra(__riscv_vmadd(x, XYZtab[0], __riscv_vmadd(y, XYZtab[1], __riscv_vmul(z, XYZtab[2], vl), vl), vl), 14, __RISCV_VXRM_RNU, vl);
@@ -2229,9 +2299,9 @@ inline int cvtLabtoBGR<uchar>(int start, int end, const uchar * src, size_t src_
             ro = __riscv_vmin(__riscv_vmax(ro, 0, vl), LabTable::Tab::INV_GAMMA_TAB_SIZE - 1, vl);
             if (srgb)
             {
-                bo = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().sRGBInvGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(bo), sizeof(int), vl), vl);
-                go = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().sRGBInvGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(go), sizeof(int), vl), vl);
-                ro = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().sRGBInvGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(ro), sizeof(int), vl), vl);
+                bo = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().sRGBInvGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(bo), sizeof(int), vl), vl);
+                go = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().sRGBInvGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(go), sizeof(int), vl), vl);
+                ro = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().sRGBInvGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(ro), sizeof(int), vl), vl);
             }
             else
             {
@@ -2333,9 +2403,9 @@ inline int cvtLabtoBGR<float>(int start, int end, const float * src, size_t src_
             ro = __riscv_vfmin(__riscv_vfmax(ro, 0.0f, vl), 1.0f, vl);
             if (srgb)
             {
-                bo = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(bo, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
-                go = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(go, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
-                ro = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(ro, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                bo = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(bo, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                go = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(go, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                ro = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(ro, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBInvGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
             }
 
             if (swapBlue)
@@ -2373,9 +2443,9 @@ inline int cvtLabtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, cvtLabtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue, isLab, srgb);
+        return color::invoke(width, height, cvtLabtoBGR<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue, isLab, srgb);
     case CV_32F:
-        return color::invoke(height, cvtLabtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue, isLab, srgb);
+        return color::invoke(width, height, cvtLabtoBGR<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, dcn, swapBlue, isLab, srgb);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -2386,85 +2456,224 @@ namespace BGRtoLab {
 #undef cv_hal_cvtBGRtoLab
 #define cv_hal_cvtBGRtoLab cv::cv_hal_rvv::BGRtoLab::cvtBGRtoLab
 
-template<typename T>
-static inline int cvtBGRtoLab(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, bool swapBlue, bool isLab, bool srgb);
+template<bool isLab, bool srgb> struct rvv;
+template<bool srgb> struct rvv<true, srgb>
+{
+    using T = vint32m4_t;
+    using S = vint16m2_t;
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e8m1(a); }
+    static inline void vlseg(const uchar* a, int b, T& c, T& d, T& e, size_t f)
+    {
+        if (b == 3)
+        {
+            auto x = __riscv_vlseg3e8_v_u8m1x3(a, f);
+            c = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(x, 0), f));
+            d = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(x, 1), f));
+            e = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(x, 2), f));
+        }
+        else
+        {
+            auto x = __riscv_vlseg4e8_v_u8m1x4(a, f);
+            c = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x4_u8m1(x, 0), f));
+            d = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x4_u8m1(x, 1), f));
+            e = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x4_u8m1(x, 2), f));
+        }
+    }
+    static inline void vsseg(uchar* a, S b, S c, S d, size_t e)
+    {
+        vuint8m1x3_t x{};
+        x = __riscv_vset_v_u8m1_u8m1x3(x, 0, __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(b, 0, e)), 0, __RISCV_VXRM_RNU, e));
+        x = __riscv_vset_v_u8m1_u8m1x3(x, 1, __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(c, 0, e)), 0, __RISCV_VXRM_RNU, e));
+        x = __riscv_vset_v_u8m1_u8m1x3(x, 2, __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(d, 0, e)), 0, __RISCV_VXRM_RNU, e));
+        __riscv_vsseg3e8(a, x, e);
+    }
+    static inline void process(T b, T g, T r, S& lo, S& ao, S& bo, int vl)
+    {
+        static const int BGR2XYZ[] =
+        {
+            (int)std::rint((1 << 12) * 0.180423f / 0.950456f), (int)std::rint((1 << 12) * 0.357580f / 0.950456f), (int)std::rint((1 << 12) * 0.412453f / 0.950456f),
+            (int)std::rint((1 << 12) * 0.072169f            ), (int)std::rint((1 << 12) * 0.715160f            ), (int)std::rint((1 << 12) * 0.212671f            ),
+            (int)std::rint((1 << 12) * 0.950227f / 1.088754f), (int)std::rint((1 << 12) * 0.119193f / 1.088754f), (int)std::rint((1 << 12) * 0.019334f / 1.088754f)
+        };
+
+        if (srgb)
+        {
+            b = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().sRGBGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(b), sizeof(int), vl), vl);
+            g = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().sRGBGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(g), sizeof(int), vl), vl);
+            r = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().sRGBGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(r), sizeof(int), vl), vl);
+        }
+        else
+        {
+            b = __riscv_vsll(b, 3, vl);
+            g = __riscv_vsll(g, 3, vl);
+            r = __riscv_vsll(r, 3, vl);
+        }
+
+        auto x = __riscv_vssra(__riscv_vmadd(b, BGR2XYZ[0], __riscv_vmadd(g, BGR2XYZ[1], __riscv_vmul(r, BGR2XYZ[2], vl), vl), vl), 12, __RISCV_VXRM_RNU, vl);
+        auto y = __riscv_vssra(__riscv_vmadd(b, BGR2XYZ[3], __riscv_vmadd(g, BGR2XYZ[4], __riscv_vmul(r, BGR2XYZ[5], vl), vl), vl), 12, __RISCV_VXRM_RNU, vl);
+        auto z = __riscv_vssra(__riscv_vmadd(b, BGR2XYZ[6], __riscv_vmadd(g, BGR2XYZ[7], __riscv_vmul(r, BGR2XYZ[8], vl), vl), vl), 12, __RISCV_VXRM_RNU, vl);
+        x = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().LabCbrtTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(x), sizeof(int), vl), vl);
+        y = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().LabCbrtTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(y), sizeof(int), vl), vl);
+        z = __riscv_vloxei32_v_i32m4(LabTable::Tab::instance().LabCbrtTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(z), sizeof(int), vl), vl);
+
+        lo = __riscv_vnclip(__riscv_vmadd(y, 296, __riscv_vmv_v_x_i32m4(-1336934, vl), vl), 15, __RISCV_VXRM_RNU, vl);
+        ao = __riscv_vnclip(__riscv_vmadd(__riscv_vsub(x, y, vl), 500, __riscv_vmv_v_x_i32m4(128 << 15, vl), vl), 15, __RISCV_VXRM_RNU, vl);
+        bo = __riscv_vnclip(__riscv_vmadd(__riscv_vsub(y, z, vl), 200, __riscv_vmv_v_x_i32m4(128 << 15, vl), vl), 15, __RISCV_VXRM_RNU, vl);
+    }
+};
+template<> struct rvv<false, true>
+{
+    using T = vint32m1_t;
+    using S = vint16mf2_t;
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e8mf4(a); }
+    static inline void vlseg(const uchar* a, int b, T& c, T& d, T& e, size_t f)
+    {
+        if (b == 3)
+        {
+            auto x = __riscv_vlseg3e8_v_u8mf4x3(a, f);
+            c = __riscv_vreinterpret_v_u32m1_i32m1(__riscv_vzext_vf4(__riscv_vget_v_u8mf4x3_u8mf4(x, 0), f));
+            d = __riscv_vreinterpret_v_u32m1_i32m1(__riscv_vzext_vf4(__riscv_vget_v_u8mf4x3_u8mf4(x, 1), f));
+            e = __riscv_vreinterpret_v_u32m1_i32m1(__riscv_vzext_vf4(__riscv_vget_v_u8mf4x3_u8mf4(x, 2), f));
+        }
+        else
+        {
+            auto x = __riscv_vlseg4e8_v_u8mf4x4(a, f);
+            c = __riscv_vreinterpret_v_u32m1_i32m1(__riscv_vzext_vf4(__riscv_vget_v_u8mf4x4_u8mf4(x, 0), f));
+            d = __riscv_vreinterpret_v_u32m1_i32m1(__riscv_vzext_vf4(__riscv_vget_v_u8mf4x4_u8mf4(x, 1), f));
+            e = __riscv_vreinterpret_v_u32m1_i32m1(__riscv_vzext_vf4(__riscv_vget_v_u8mf4x4_u8mf4(x, 2), f));
+        }
+    }
+    static inline void vsseg(uchar* a, S b, S c, S d, size_t e)
+    {
+        vuint8mf4x3_t x{};
+        x = __riscv_vset_v_u8mf4_u8mf4x3(x, 0, __riscv_vnclipu(__riscv_vreinterpret_v_i16mf2_u16mf2(__riscv_vmax(b, 0, e)), 0, __RISCV_VXRM_RNU, e));
+        x = __riscv_vset_v_u8mf4_u8mf4x3(x, 1, __riscv_vnclipu(__riscv_vreinterpret_v_i16mf2_u16mf2(__riscv_vmax(c, 0, e)), 0, __RISCV_VXRM_RNU, e));
+        x = __riscv_vset_v_u8mf4_u8mf4x3(x, 2, __riscv_vnclipu(__riscv_vreinterpret_v_i16mf2_u16mf2(__riscv_vmax(d, 0, e)), 0, __RISCV_VXRM_RNU, e));
+        __riscv_vsseg3e8(a, x, e);
+    }
+    static inline void process(T b, T g, T r, S& lo, S& ao, S& bo, int vl)
+    {
+        auto x = __riscv_vand(__riscv_vsll(b, 1, vl), 15, vl), y = __riscv_vand(__riscv_vsll(g, 1, vl), 15, vl), z = __riscv_vand(__riscv_vsll(r, 1, vl), 15, vl);
+        auto base = __riscv_vmul(__riscv_vreinterpret_v_i32m1_u32m1(__riscv_vmadd(z, 8*LabTable::Tab::TRILINEAR_BASE*LabTable::Tab::TRILINEAR_BASE, __riscv_vmadd(y, 8*LabTable::Tab::TRILINEAR_BASE, __riscv_vmul(x, 8, vl), vl), vl)), sizeof(int), vl);
+        auto w0 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().trilinearLUT, base, vl);
+        auto w1 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().trilinearLUT, __riscv_vadd(base, sizeof(int), vl), vl);
+        auto w2 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().trilinearLUT, __riscv_vadd(base, 2 * sizeof(int), vl), vl);
+        auto w3 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().trilinearLUT, __riscv_vadd(base, 3 * sizeof(int), vl), vl);
+        auto w4 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().trilinearLUT, __riscv_vadd(base, 4 * sizeof(int), vl), vl);
+        auto w5 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().trilinearLUT, __riscv_vadd(base, 5 * sizeof(int), vl), vl);
+        auto w6 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().trilinearLUT, __riscv_vadd(base, 6 * sizeof(int), vl), vl);
+        auto w7 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().trilinearLUT, __riscv_vadd(base, 7 * sizeof(int), vl), vl);
+
+        auto tx = __riscv_vsra(b, 3, vl), ty = __riscv_vsra(g, 3, vl), tz = __riscv_vsra(r, 3, vl);
+        base = __riscv_vmul(__riscv_vreinterpret_v_i32m1_u32m1(__riscv_vmadd(tz, 3*8*LabTable::Tab::LAB_LUT_DIM*LabTable::Tab::LAB_LUT_DIM, __riscv_vmadd(ty, 3*8*LabTable::Tab::LAB_LUT_DIM, __riscv_vmul(tx, 3*8, vl), vl), vl)), sizeof(int), vl);
+        auto interpolate = [&](vuint32m1_t p) {
+            auto a0 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().RGB2LuvLUT, p, vl);
+            auto a1 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().RGB2LuvLUT, __riscv_vadd(p, sizeof(int), vl), vl);
+            auto a2 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().RGB2LuvLUT, __riscv_vadd(p, 2 * sizeof(int), vl), vl);
+            auto a3 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().RGB2LuvLUT, __riscv_vadd(p, 3 * sizeof(int), vl), vl);
+            auto a4 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().RGB2LuvLUT, __riscv_vadd(p, 4 * sizeof(int), vl), vl);
+            auto a5 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().RGB2LuvLUT, __riscv_vadd(p, 5 * sizeof(int), vl), vl);
+            auto a6 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().RGB2LuvLUT, __riscv_vadd(p, 6 * sizeof(int), vl), vl);
+            auto a7 = __riscv_vloxei32_v_i32m1(LabTable::Tab::instance().RGB2LuvLUT, __riscv_vadd(p, 7 * sizeof(int), vl), vl);
+            return __riscv_vmadd(a0, w0, __riscv_vmadd(a1, w1, __riscv_vmadd(a2, w2, __riscv_vmadd(a3, w3, __riscv_vmadd(a4, w4, __riscv_vmadd(a5, w5, __riscv_vmadd(a6, w6, __riscv_vmul(a7, w7, vl), vl), vl), vl), vl), vl), vl), vl);
+        };
+
+        lo = __riscv_vnclip(__riscv_vssra(interpolate(base), 12, __RISCV_VXRM_RNU, vl), 6, __RISCV_VXRM_RDN, vl);
+        ao = __riscv_vnclip(__riscv_vssra(interpolate(__riscv_vadd(base, 8 * sizeof(int), vl)), 12, __RISCV_VXRM_RNU, vl), 6, __RISCV_VXRM_RDN, vl);
+        bo = __riscv_vnclip(__riscv_vssra(interpolate(__riscv_vadd(base, 16 * sizeof(int), vl)), 12, __RISCV_VXRM_RNU, vl), 6, __RISCV_VXRM_RDN, vl);
+    }
+};
+template<> struct rvv<false, false>
+{
+    using T = vint32m2_t;
+    using S = vfloat32m2_t;
+    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e8mf2(a); }
+    static inline void vlseg(const uchar* a, int b, T& c, T& d, T& e, size_t f)
+    {
+        if (b == 3)
+        {
+            auto x = __riscv_vlseg3e8_v_u8mf2x3(a, f);
+            c = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x3_u8mf2(x, 0), f));
+            d = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x3_u8mf2(x, 1), f));
+            e = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x3_u8mf2(x, 2), f));
+        }
+        else
+        {
+            auto x = __riscv_vlseg4e8_v_u8mf2x4(a, f);
+            c = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x4_u8mf2(x, 0), f));
+            d = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x4_u8mf2(x, 1), f));
+            e = __riscv_vreinterpret_v_u32m2_i32m2(__riscv_vzext_vf4(__riscv_vget_v_u8mf2x4_u8mf2(x, 2), f));
+        }
+    }
+    static inline void vsseg(uchar* a, S b, S c, S d, size_t e)
+    {
+        vfloat32m2x3_t x{};
+        x = __riscv_vset_v_f32m2_f32m2x3(x, 0, b);
+        x = __riscv_vset_v_f32m2_f32m2x3(x, 1, c);
+        x = __riscv_vset_v_f32m2_f32m2x3(x, 2, d);
+        __riscv_vsseg3e32(reinterpret_cast<float*>(a), x, e);
+    }
+    static inline void process(T b, T g, T r, S& lo, S& ao, S& bo, int vl)
+    {
+        lo = __riscv_vfmul(__riscv_vfcvt_f(b, vl), 1.0f / 255.0f, vl);
+        ao = __riscv_vfmul(__riscv_vfcvt_f(g, vl), 1.0f / 255.0f, vl);
+        bo = __riscv_vfmul(__riscv_vfcvt_f(r, vl), 1.0f / 255.0f, vl);
+    }
+};
+
+static inline int cvtBGRtoLab_f(int, int, const float *, size_t, float *, size_t, int, int, bool, bool, bool);
 
 // the algorithm is copied from imgproc/src/color_lab.cpp,
 // in the functor struct RGB2Lab_f, RGB2Lab_b, RGB2Luvfloat and RGB2Luvinterpolate
-template<>
-inline int cvtBGRtoLab<uchar>(int start, int end, const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int scn, bool swapBlue, bool isLab, bool srgb)
+template<bool isLab, bool srgb>
+static inline int cvtBGRtoLab_u(int start, int end, const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int scn, bool swapBlue)
 {
-    static const int BGR2XYZ[] =
-    {
-        (int)std::rint((1 << 12) * 0.180423f / 0.950456f), (int)std::rint((1 << 12) * 0.357580f / 0.950456f), (int)std::rint((1 << 12) * 0.412453f / 0.950456f),
-        (int)std::rint((1 << 12) * 0.072169f            ), (int)std::rint((1 << 12) * 0.715160f            ), (int)std::rint((1 << 12) * 0.212671f            ),
-        (int)std::rint((1 << 12) * 0.950227f / 1.088754f), (int)std::rint((1 << 12) * 0.119193f / 1.088754f), (int)std::rint((1 << 12) * 0.019334f / 1.088754f)
-    };
-
+    std::vector<float> buf(width * 3);
     for (int i = start; i < end; i++)
     {
         int vl;
         for (int j = 0; j < width; j += vl)
         {
-            vl = __riscv_vsetvl_e8m1(width - j);
-            vint32m4_t b, g, r;
-            if (scn == 3)
-            {
-                auto vec_src = __riscv_vlseg3e8_v_u8m1x3(src + i * src_step + j * 3, vl);
-                b = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(vec_src, 0), vl));
-                g = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(vec_src, 1), vl));
-                r = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x3_u8m1(vec_src, 2), vl));
-            }
-            else
-            {
-                auto vec_src = __riscv_vlseg4e8_v_u8m1x4(src + i * src_step + j * 4, vl);
-                b = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x4_u8m1(vec_src, 0), vl));
-                g = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x4_u8m1(vec_src, 1), vl));
-                r = __riscv_vreinterpret_v_u32m4_i32m4(__riscv_vzext_vf4(__riscv_vget_v_u8m1x4_u8m1(vec_src, 2), vl));
-            }
+            vl = rvv<isLab, srgb>::vsetvl(width - j);
+            typename rvv<isLab, srgb>::T b, g, r;
+            rvv<isLab, srgb>::vlseg(src + i * src_step + j * scn, scn, b, g, r, vl);
             if (swapBlue)
             {
                 auto t = b;
                 b = r, r = t;
             }
 
-            if (srgb)
+            typename rvv<isLab, srgb>::S lo, ao, bo;
+            rvv<isLab, srgb>::process(b, g, r, lo, ao, bo, vl);
+            rvv<isLab, srgb>::vsseg(isLab || srgb ? dst + i * dst_step + j * 3 : (uchar*)(buf.data() + j * 3), lo, ao, bo, vl);
+        }
+
+        if (!isLab && !srgb)
+        {
+            cvtBGRtoLab_f(0, 1, buf.data(), sizeof(float), buf.data(), sizeof(float), width, 3, false, false, false);
+            for (int j = 0; j < width; j += vl)
             {
-                b = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().sRGBGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(b), sizeof(int), vl), vl);
-                g = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().sRGBGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(g), sizeof(int), vl), vl);
-                r = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().sRGBGammaTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(r), sizeof(int), vl), vl);
+                vl = __riscv_vsetvl_e32m2(width - j);
+                auto vec_src = __riscv_vlseg3e32_v_f32m2x3(buf.data() + j * 3, vl);
+                auto l = __riscv_vget_v_f32m2x3_f32m2(vec_src, 0), a = __riscv_vget_v_f32m2x3_f32m2(vec_src, 1), b = __riscv_vget_v_f32m2x3_f32m2(vec_src, 2);
+
+                auto lo = __riscv_vfmul(l, 2.55f, vl);
+                auto ao = __riscv_vfmadd(a, 255.0f/354.0f, __riscv_vfmv_v_f_f32m2(134.0f*255.0f/354.0f, vl), vl);
+                auto bo = __riscv_vfmadd(b, 255.0f/262.0f, __riscv_vfmv_v_f_f32m2(140.0f*255.0f/262.0f, vl), vl);
+
+                vuint8mf2x3_t vec_dst{};
+                vec_dst = __riscv_vset_v_u8mf2_u8mf2x3(vec_dst, 0, __riscv_vnclipu(__riscv_vfncvt_xu(lo, vl), 0, __RISCV_VXRM_RNU, vl));
+                vec_dst = __riscv_vset_v_u8mf2_u8mf2x3(vec_dst, 1, __riscv_vnclipu(__riscv_vfncvt_xu(ao, vl), 0, __RISCV_VXRM_RNU, vl));
+                vec_dst = __riscv_vset_v_u8mf2_u8mf2x3(vec_dst, 2, __riscv_vnclipu(__riscv_vfncvt_xu(bo, vl), 0, __RISCV_VXRM_RNU, vl));
+                __riscv_vsseg3e8(dst + i * dst_step + j * 3, vec_dst, vl);
             }
-            else
-            {
-                b = __riscv_vsll(b, 3, vl);
-                g = __riscv_vsll(g, 3, vl);
-                r = __riscv_vsll(r, 3, vl);
-            }
-
-            auto x = __riscv_vssra(__riscv_vmadd(b, BGR2XYZ[0], __riscv_vmadd(g, BGR2XYZ[1], __riscv_vmul(r, BGR2XYZ[2], vl), vl), vl), 12, __RISCV_VXRM_RNU, vl);
-            auto y = __riscv_vssra(__riscv_vmadd(b, BGR2XYZ[3], __riscv_vmadd(g, BGR2XYZ[4], __riscv_vmul(r, BGR2XYZ[5], vl), vl), vl), 12, __RISCV_VXRM_RNU, vl);
-            auto z = __riscv_vssra(__riscv_vmadd(b, BGR2XYZ[6], __riscv_vmadd(g, BGR2XYZ[7], __riscv_vmul(r, BGR2XYZ[8], vl), vl), vl), 12, __RISCV_VXRM_RNU, vl);
-            x = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().LabCbrtTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(x), sizeof(int), vl), vl);
-            y = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().LabCbrtTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(y), sizeof(int), vl), vl);
-            z = __riscv_vloxei32_v_i32m4(LabTable::Tab::Instance().LabCbrtTab_b, __riscv_vmul(__riscv_vreinterpret_v_i32m4_u32m4(z), sizeof(int), vl), vl);
-
-            auto lo = __riscv_vnclip(__riscv_vmadd(y, 296, __riscv_vmv_v_x_i32m4(-1336934, vl), vl), 15, __RISCV_VXRM_RNU, vl);
-            auto ao = __riscv_vnclip(__riscv_vmadd(__riscv_vsub(x, y, vl), 500, __riscv_vmv_v_x_i32m4(128 << 15, vl), vl), 15, __RISCV_VXRM_RNU, vl);
-            auto bo = __riscv_vnclip(__riscv_vmadd(__riscv_vsub(y, z, vl), 200, __riscv_vmv_v_x_i32m4(128 << 15, vl), vl), 15, __RISCV_VXRM_RNU, vl);
-
-            vuint8m1x3_t vec_dst{};
-            vec_dst = __riscv_vset_v_u8m1_u8m1x3(vec_dst, 0, __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(lo, 0, vl)), 0, __RISCV_VXRM_RNU, vl));
-            vec_dst = __riscv_vset_v_u8m1_u8m1x3(vec_dst, 1, __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(ao, 0, vl)), 0, __RISCV_VXRM_RNU, vl));
-            vec_dst = __riscv_vset_v_u8m1_u8m1x3(vec_dst, 2, __riscv_vnclipu(__riscv_vreinterpret_v_i16m2_u16m2(__riscv_vmax(bo, 0, vl)), 0, __RISCV_VXRM_RNU, vl));
-            __riscv_vsseg3e8(dst + i * dst_step + j * 3, vec_dst, vl);
         }
     }
 
     return CV_HAL_ERROR_OK;
 }
 
-template<>
-inline int cvtBGRtoLab<float>(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int scn, bool swapBlue, bool isLab, bool srgb)
+static inline int cvtBGRtoLab_f(int start, int end, const float * src, size_t src_step, float * dst, size_t dst_step, int width, int scn, bool swapBlue, bool isLab, bool srgb)
 {
     static constexpr float BGR2XYZ[] =
     {
@@ -2515,22 +2724,22 @@ inline int cvtBGRtoLab<float>(int start, int end, const float * src, size_t src_
             r = __riscv_vfmin(__riscv_vfmax(r, 0.0f, vl), 1.0f, vl);
             if (srgb)
             {
-                b = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(b, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
-                g = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(g, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
-                r = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(r, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                b = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(b, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                g = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(g, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                r = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(r, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
             }
 
             auto x = __riscv_vfmadd(b, BGRtab[0], __riscv_vfmadd(g, BGRtab[1], __riscv_vfmul(r, BGRtab[2], vl), vl), vl);
             auto y = __riscv_vfmadd(b, BGRtab[3], __riscv_vfmadd(g, BGRtab[4], __riscv_vfmul(r, BGRtab[5], vl), vl), vl);
             auto z = __riscv_vfmadd(b, BGRtab[6], __riscv_vfmadd(g, BGRtab[7], __riscv_vfmul(r, BGRtab[8], vl), vl), vl);
-            auto fy = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(y, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
+            auto fy = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(y, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
 
             auto lo = __riscv_vfmadd(fy, 116.0f, __riscv_vfmv_v_f_f32m2(-16.0f, vl), vl);
             vfloat32m2_t ao, bo;
             if (isLab)
             {
-                x = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(x, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
-                z = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(z, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::Instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                x = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(x, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                z = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(z, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
 
                 lo = __riscv_vmerge(__riscv_vfmul(y, 903.3f, vl), lo, __riscv_vmfgt(y, 0.008856f, vl), vl);
                 ao = __riscv_vfmul(__riscv_vfsub(x, fy, vl), 500.0f, vl);
@@ -2558,12 +2767,21 @@ inline int cvtBGRtoLab(const uchar * src_data, size_t src_step, uchar * dst_data
 {
     if (scn != 3 && scn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    auto cvtBGRtoLab_b = cvtBGRtoLab_u<true, true>;
+    if (!isLab && !srgb)
+        cvtBGRtoLab_b = cvtBGRtoLab_u<false, false>;
+    else if (!isLab && srgb)
+        cvtBGRtoLab_b = cvtBGRtoLab_u<false, true>;
+    else if (isLab && !srgb)
+        cvtBGRtoLab_b = cvtBGRtoLab_u<true, false>;
+
     switch (depth)
     {
     case CV_8U:
-        return color::invoke(height, cvtBGRtoLab<uchar>, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue, isLab, srgb);
+        return color::invoke(width, height, {cvtBGRtoLab_b}, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, scn, swapBlue);
     case CV_32F:
-        return color::invoke(height, cvtBGRtoLab<float>, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue, isLab, srgb);
+        return color::invoke(width, height, {cvtBGRtoLab_f}, reinterpret_cast<const float*>(src_data), src_step, reinterpret_cast<float*>(dst_data), dst_step, width, scn, swapBlue, isLab, srgb);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
