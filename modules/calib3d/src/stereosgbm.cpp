@@ -2345,7 +2345,7 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
     using namespace cv;
 
     int width = img.cols, height = img.rows, npixels = width*height;
-    size_t bufSize = npixels*(int)(sizeof(Point2s) + sizeof(int) + sizeof(uchar));
+    size_t bufSize = npixels*(sizeof(Point2s) + sizeof(int)) + (npixels + 1)*sizeof(uchar);
     if( !_buf.isContinuous() || _buf.empty() || _buf.cols*_buf.rows*_buf.elemSize() < bufSize )
         _buf.reserveBuffer(bufSize);
 
@@ -2356,10 +2356,12 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
     Point2s* wbuf = (Point2s*)buf;
     buf += npixels*sizeof(wbuf[0]);
     uchar* rtype = (uchar*)buf;
+    buf += (npixels + 1) * sizeof(rtype[0]);
     int curlabel = 0;
 
     // clear out label assignments
     memset(labels, 0, npixels*sizeof(labels[0]));
+    memset(rtype, 0, (npixels + 1)*sizeof(rtype[0]));
 
     for( i = 0; i < height; i++ )
     {
