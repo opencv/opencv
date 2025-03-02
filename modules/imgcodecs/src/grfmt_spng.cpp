@@ -530,7 +530,8 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
     int width = img.cols, height = img.rows;
     int depth = img.depth(), channels = img.channels();
     volatile bool result = false;
-    bool set_only_compression_level = false;
+    bool set_compression_level = false;
+    bool set_filter = false;
 
     if (depth != CV_8U && depth != CV_16U)
         return false;
@@ -548,13 +549,12 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
                 m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
                 m_compression_level = params[i + 1];
                 m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
-                set_only_compression_level = true;
+                set_compression_level = true;
             }
             if (params[i] == IMWRITE_PNG_STRATEGY)
             {
                 m_compression_strategy = params[i + 1];
                 m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
-                set_only_compression_level = false;
             }
             if (params[i] == IMWRITE_PNG_BILEVEL)
             {
@@ -563,7 +563,7 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
             if( params[i] == IMWRITE_PNG_FILTER )
             {
                 m_filter = params[i+1];
-                set_only_compression_level = false;
+                set_filter = true;
             }
         }
 
@@ -588,7 +588,7 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
 
         if (m_buf || f)
         {
-            if (!set_only_compression_level)
+            if (!set_compression_level || set_filter)
                 spng_set_option(ctx, SPNG_FILTER_CHOICE, m_filter);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, m_compression_level);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_STRATEGY, m_compression_strategy);
