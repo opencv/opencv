@@ -466,6 +466,224 @@ inline int cvtBGRtoGray(const uchar * src_data, size_t src_step, uchar * dst_dat
 }
 } // cv::cv_hal_rvv::BGRtoGray
 
+namespace BGR5x5toBGR {
+#undef cv_hal_cvtBGR5x5toBGR
+#define cv_hal_cvtBGR5x5toBGR cv::cv_hal_rvv::BGR5x5toBGR::cvtBGR5x5toBGR
+
+static inline int cvtBGR5x5toBGR_u(int start, int end, const ushort * src, size_t src_step, uchar * dst, size_t dst_step, int width, int dcn, bool swapBlue, int greenBits)
+{
+    src_step /= sizeof(ushort);
+
+    for (int i = start; i < end; i++)
+    {
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e16m4(width - j);
+            auto vec_src = __riscv_vle16_v_u16m4(src + i * src_step + j, vl);
+
+            auto vec_dstB = __riscv_vncvt_x(__riscv_vsll(vec_src, 3, vl), vl), vec_dstA = __riscv_vmv_v_x_u8m2(std::numeric_limits<uchar>::max(), vl);
+            vuint8m2_t vec_dstG, vec_dstR;
+            if (greenBits == 6)
+            {
+                vec_dstG = __riscv_vncvt_x(__riscv_vand(__riscv_vsrl(vec_src, 3, vl), ~3, vl), vl);
+                vec_dstR = __riscv_vncvt_x(__riscv_vand(__riscv_vsrl(vec_src, 8, vl), ~7, vl), vl);
+            }
+            else
+            {
+                vec_dstG = __riscv_vncvt_x(__riscv_vand(__riscv_vsrl(vec_src, 2, vl), ~7, vl), vl);
+                vec_dstR = __riscv_vncvt_x(__riscv_vand(__riscv_vsrl(vec_src, 7, vl), ~7, vl), vl);
+                vec_dstA = __riscv_vmerge(vec_dstA, 0, __riscv_vmsltu(vec_src, 0x8000, vl), vl);
+            }
+            if (swapBlue)
+            {
+                auto t = vec_dstB;
+                vec_dstB = vec_dstR, vec_dstR = t;
+            }
+
+            if (dcn == 3)
+            {
+                vuint8m2x3_t x{};
+                x = __riscv_vset_v_u8m2_u8m2x3(x, 0, vec_dstB);
+                x = __riscv_vset_v_u8m2_u8m2x3(x, 1, vec_dstG);
+                x = __riscv_vset_v_u8m2_u8m2x3(x, 2, vec_dstR);
+                __riscv_vsseg3e8(dst + i * dst_step + j * 3, x, vl);
+            }
+            else
+            {
+                vuint8m2x4_t x{};
+                x = __riscv_vset_v_u8m2_u8m2x4(x, 0, vec_dstB);
+                x = __riscv_vset_v_u8m2_u8m2x4(x, 1, vec_dstG);
+                x = __riscv_vset_v_u8m2_u8m2x4(x, 2, vec_dstR);
+                x = __riscv_vset_v_u8m2_u8m2x4(x, 3, vec_dstA);
+                __riscv_vsseg4e8(dst + i * dst_step + j * 4, x, vl);
+            }
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+inline int cvtBGR5x5toBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int dcn, bool swapBlue, int greenBits)
+{
+    if ((dcn != 3 && dcn != 4) || (greenBits != 5 && greenBits != 6))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    return color::invoke(width, height, {cvtBGR5x5toBGR_u}, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, dcn, swapBlue, greenBits);
+}
+} // cv::cv_hal_rvv::BGR5x5toBGR
+
+namespace BGRtoBGR5x5 {
+#undef cv_hal_cvtBGRtoBGR5x5
+#define cv_hal_cvtBGRtoBGR5x5 cv::cv_hal_rvv::BGRtoBGR5x5::cvtBGRtoBGR5x5
+
+static inline int cvtBGRtoBGR5x5_u(int start, int end, const uchar * src, size_t src_step, ushort * dst, size_t dst_step, int width, int scn, bool swapBlue, int greenBits)
+{
+    dst_step /= sizeof(ushort);
+
+    for (int i = start; i < end; i++)
+    {
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e8m2(width - j);
+            vuint16m4_t vec_srcB, vec_srcG, vec_srcR, vec_srcA = __riscv_vmv_v_x_u16m4(0, vl);
+            if (scn == 3)
+            {
+                auto x = __riscv_vlseg3e8_v_u8m2x3(src + i * src_step + j * 3, vl);
+                vec_srcB = __riscv_vwcvtu_x(__riscv_vget_v_u8m2x3_u8m2(x, 0), vl);
+                vec_srcG = __riscv_vwcvtu_x(__riscv_vget_v_u8m2x3_u8m2(x, 1), vl);
+                vec_srcR = __riscv_vwcvtu_x(__riscv_vget_v_u8m2x3_u8m2(x, 2), vl);
+            }
+            else
+            {
+                auto x = __riscv_vlseg4e8_v_u8m2x4(src + i * src_step + j * 4, vl);
+                vec_srcB = __riscv_vwcvtu_x(__riscv_vget_v_u8m2x4_u8m2(x, 0), vl);
+                vec_srcG = __riscv_vwcvtu_x(__riscv_vget_v_u8m2x4_u8m2(x, 1), vl);
+                vec_srcR = __riscv_vwcvtu_x(__riscv_vget_v_u8m2x4_u8m2(x, 2), vl);
+                vec_srcA = __riscv_vwcvtu_x(__riscv_vget_v_u8m2x4_u8m2(x, 3), vl);
+            }
+            if (swapBlue)
+            {
+                auto t = vec_srcB;
+                vec_srcB = vec_srcR, vec_srcR = t;
+            }
+
+            auto vec_dst = __riscv_vsrl(vec_srcB, 3, vl);
+            if (greenBits == 6)
+            {
+                vec_dst = __riscv_vor(__riscv_vor(vec_dst, __riscv_vsll(__riscv_vand(vec_srcG, ~3, vl), 3, vl), vl), __riscv_vsll(__riscv_vand(vec_srcR, ~7, vl), 8, vl), vl);
+            }
+            else
+            {
+                vec_dst = __riscv_vor(__riscv_vor(vec_dst, __riscv_vsll(__riscv_vand(vec_srcG, ~7, vl), 2, vl), vl), __riscv_vsll(__riscv_vand(vec_srcR, ~7, vl), 7, vl), vl);
+                vec_dst = __riscv_vor_mu(__riscv_vmsne(vec_srcA, 0, vl), vec_dst, vec_dst, 0x8000, vl);
+            }
+            __riscv_vse16(dst + i * dst_step + j, vec_dst, vl);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+inline int cvtBGRtoBGR5x5(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int greenBits)
+{
+    if ((scn != 3 && scn != 4) || (greenBits != 5 && greenBits != 6))
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    return color::invoke(width, height, {cvtBGRtoBGR5x5_u}, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, scn, swapBlue, greenBits);
+}
+} // cv::cv_hal_rvv::BGRtoBGR5x5
+
+namespace BGR5x5toGray {
+#undef cv_hal_cvtBGR5x5toGray
+#define cv_hal_cvtBGR5x5toGray cv::cv_hal_rvv::BGR5x5toGray::cvtBGR5x5toGray
+
+static inline int cvtBGR5x5toGray_u(int start, int end, const ushort * src, size_t src_step, uchar * dst, size_t dst_step, int width, int greenBits)
+{
+    static constexpr uint B2Y = 3735, G2Y = 19235, R2Y = 9798;
+
+    src_step /= sizeof(ushort);
+
+    for (int i = start; i < end; i++)
+    {
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e16m2(width - j);
+            auto vec_src = __riscv_vle16_v_u16m2(src + i * src_step + j, vl);
+
+            auto vec_dstB = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsll(vec_src, 3, vl), ~7, vl), vl);
+            vuint32m4_t vec_dstG, vec_dstR;
+            if (greenBits == 6)
+            {
+                vec_dstG = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 3, vl), ~3, vl), vl);
+                vec_dstR = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 8, vl), ~7, vl), vl);
+            }
+            else
+            {
+                vec_dstG = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 2, vl), ~7, vl), vl);
+                vec_dstR = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 7, vl), ~7, vl), vl);
+            }
+
+            auto vec_dst = __riscv_vncvt_x(__riscv_vnclipu(__riscv_vmadd(vec_dstB, B2Y, __riscv_vmadd(vec_dstG, G2Y, __riscv_vmul(vec_dstR, R2Y, vl), vl), vl), 15, __RISCV_VXRM_RNU, vl), vl);
+            __riscv_vse8(dst + i * dst_step + j, vec_dst, vl);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+inline int cvtBGR5x5toGray(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int greenBits)
+{
+    if (greenBits != 5 && greenBits != 6)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    return color::invoke(width, height, {cvtBGR5x5toGray_u}, reinterpret_cast<const ushort*>(src_data), src_step, reinterpret_cast<uchar*>(dst_data), dst_step, width, greenBits);
+}
+} // cv::cv_hal_rvv::BGR5x5toGray
+
+namespace GraytoBGR5x5 {
+#undef cv_hal_cvtGraytoBGR5x5
+#define cv_hal_cvtGraytoBGR5x5 cv::cv_hal_rvv::GraytoBGR5x5::cvtGraytoBGR5x5
+
+static inline int cvtGraytoBGR5x5_u(int start, int end, const uchar * src, size_t src_step, ushort * dst, size_t dst_step, int width, int greenBits)
+{
+    dst_step /= sizeof(ushort);
+
+    for (int i = start; i < end; i++)
+    {
+        int vl;
+        for (int j = 0; j < width; j += vl)
+        {
+            vl = __riscv_vsetvl_e8m2(width - j);
+            auto vec_src = __riscv_vwcvtu_x(__riscv_vle8_v_u8m2(src + i * src_step + j, vl), vl);
+
+            auto vec_dst = __riscv_vsrl(vec_src, 3, vl);
+            if (greenBits == 6)
+            {
+                vec_dst = __riscv_vor(__riscv_vor(vec_dst, __riscv_vsll(__riscv_vand(vec_src, ~3, vl), 3, vl), vl), __riscv_vsll(vec_dst, 11, vl), vl);
+            }
+            else
+            {
+                vec_dst = __riscv_vor(__riscv_vor(vec_dst, __riscv_vsll(vec_dst, 5, vl), vl), __riscv_vsll(vec_dst, 10, vl), vl);
+            }
+            __riscv_vse16(dst + i * dst_step + j, vec_dst, vl);
+        }
+    }
+
+    return CV_HAL_ERROR_OK;
+}
+
+inline int cvtGraytoBGR5x5(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int greenBits)
+{
+    if (greenBits != 5 && greenBits != 6)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    return color::invoke(width, height, {cvtGraytoBGR5x5_u}, reinterpret_cast<const uchar*>(src_data), src_step, reinterpret_cast<ushort*>(dst_data), dst_step, width, greenBits);
+}
+} // cv::cv_hal_rvv::GraytoBGR5x5
+
 namespace YUVtoBGR {
 #undef cv_hal_cvtYUVtoBGR
 #define cv_hal_cvtYUVtoBGR cv::cv_hal_rvv::YUVtoBGR::cvtYUVtoBGR
