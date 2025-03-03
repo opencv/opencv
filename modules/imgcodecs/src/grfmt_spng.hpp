@@ -51,7 +51,6 @@ public:
 
 protected:
     static int writeDataToBuf(void *ctx, void *user, void *dst_src, size_t length);
-
 };
 
 }
