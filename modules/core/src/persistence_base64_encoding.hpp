@@ -68,6 +68,11 @@ to_binary(_uint_t val, uchar * cur)
     return sizeof(_uint_t);
 }
 
+template<> inline size_t to_binary(bool val, uchar * cur)
+{
+    return to_binary(static_cast<uchar>(val), cur);
+}
+
 template<> inline size_t to_binary(double val, uchar * cur)
 {
     Cv64suf bit64;
