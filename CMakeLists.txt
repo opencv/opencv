@@ -697,6 +697,9 @@ if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
   endif()
 endif()
 
+# Add or update the following flags in your root CMakeLists.txt file
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wnon-virtual-dtor")
+
 # ----------------------------------------------------------------------------
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------

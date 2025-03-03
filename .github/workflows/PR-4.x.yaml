@@ -54,3 +54,30 @@ jobs:
 
   Linux-RISC-V-Clang:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-RISCV.yaml@main
+
+  Windows10-x64-Mingw64:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up CMake
+      uses: lukka/get-cmake@v3
+
+    - name: Set up MinGW-w64
+      uses: egor-tensin/setup-mingw@v1
+      with:
+        architecture: x86_64
+
+    - name: Install dependencies
+      run: choco install mingw
+
+    - name: Configure CMake
+      run: cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ ..
+
+    - name: Build
+      run: cmake --build .
+
+    - name: Run tests
+      run: ctest
