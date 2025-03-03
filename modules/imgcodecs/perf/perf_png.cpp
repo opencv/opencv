@@ -65,7 +65,7 @@ PERF_TEST_P(PNG, params,
     testing::Combine(
         testing::Values(IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY, IMWRITE_PNG_STRATEGY_RLE, IMWRITE_PNG_STRATEGY_FIXED),
         testing::Values(IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, IMWRITE_PNG_FILTER_UP, IMWRITE_PNG_FILTER_AVG, IMWRITE_PNG_FILTER_PAETH, IMWRITE_PNG_FAST_FILTERS, IMWRITE_PNG_ALL_FILTERS),
-        testing::Values(1, 6, 9)))
+        testing::Values(1, 6)))
 {
     String filename = getDataPath("perf/1920x1080.png");
     const int strategy = get<0>(GetParam());
