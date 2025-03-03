@@ -102,7 +102,8 @@ cvt_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+// Excluding GNU in CV_SIMD_SCALABLE because of "opencv/issues/26936"
+#if (CV_SIMD || (CV_SIMD_SCALABLE && !(defined(__GNUC__) && !defined(__clang__))) )
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )
@@ -173,7 +174,8 @@ cvt_64f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+// Excluding GNU in CV_SIMD_SCALABLE because of "opencv/issues/26936"
+#if (CV_SIMD_64F || (CV_SIMD_SCALABLE_64F && !(defined(__GNUC__) && !defined(__clang__))) )
         for( ; j < size.width; j += VECSZ )
         {
             if( j > size.width - VECSZ )
