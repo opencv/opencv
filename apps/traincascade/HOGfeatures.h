@@ -23,7 +23,7 @@ public:
         int _maxSampleCount, cv::Size _winSize );
     virtual void setImage(const cv::Mat& img, uchar clsLabel, int idx);
     virtual float operator()(int varIdx, int sampleIdx) const;
-    virtual void writeFeatures( cv::FileStorage &fs, const cv::Mat& featureMap ) const;
+    virtual void saveFeatures( cv::FileStorage &fs, const cv::Mat& featureMap ) const;
 protected:
     virtual void generateFeatures();
     virtual void integralHistogram(const cv::Mat &img, std::vector<cv::Mat> &histogram, cv::Mat &norm, int nbins) const;
@@ -36,7 +36,7 @@ protected:
         void write( cv::FileStorage &fs ) const;
         void write( cv::FileStorage &fs, int varIdx ) const;
 
-        cv::Rect rect[N_CELLS]; //cells
+        cv::Rect rect[N_CELLS];  //cells
 
         struct
         {
@@ -70,7 +70,7 @@ inline float CvHOGEvaluator::Feature::calc( const std::vector<cv::Mat>& _hists, 
 
     const float *pnormSum = _normSum.ptr<float>((int)y);
     normFactor = (float)(pnormSum[fastRect[0].p0] - pnormSum[fastRect[1].p1] - pnormSum[fastRect[2].p2] + pnormSum[fastRect[3].p3]);
-    res = (res > 0.001f) ? ( res / (normFactor + 0.001f) ) : 0.f; //for cutting negative values, which appear due to floating precision
+    res = (res > 0.001f) ? ( res / (normFactor + 0.001f) ) : 0.f;  //Prevent negative values due to floating-point precision errors
 
     return res;
 }
