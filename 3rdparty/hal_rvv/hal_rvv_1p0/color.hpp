@@ -161,6 +161,8 @@ template<> struct rvv<float>
     static inline T vmv_v_x(float a, size_t b) { return __riscv_vfmv_v_f_f32m2(a, b); }
 };
 
+// the algorithm is copied from imgproc/src/color_rgb.simd.cpp,
+// in the functor struct RGB2RGB
 template<typename T>
 static inline int cvtBGRtoBGR(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, int dcn, bool swapBlue)
 {
@@ -304,6 +306,8 @@ template<> struct rvv<float>
     static inline T vmv_v_x(float a, size_t b) { return __riscv_vfmv_v_f_f32m2(a, b); }
 };
 
+// the algorithm is copied from imgproc/src/color_rgb.simd.cpp,
+// in the functor struct Gray2RGB
 template<typename T>
 static inline int cvtGraytoBGR(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int dcn)
 {
@@ -421,6 +425,8 @@ template<> struct rvv<float>
     static inline T vmadd(T a, float b, T c, size_t d) { return __riscv_vfmadd(a, b, c, d); }
 };
 
+// the algorithm is copied from imgproc/src/color_rgb.simd.cpp,
+// in the functor struct RGB2Gray
 template<typename T>
 static inline int cvtBGRtoGray(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, bool swapBlue)
 {
@@ -470,6 +476,8 @@ namespace BGR5x5toBGR {
 #undef cv_hal_cvtBGR5x5toBGR
 #define cv_hal_cvtBGR5x5toBGR cv::cv_hal_rvv::BGR5x5toBGR::cvtBGR5x5toBGR
 
+// the algorithm is copied from imgproc/src/color_rgb.simd.cpp,
+// in the functor struct RGB5x52RGB
 static inline int cvtBGR5x5toBGR_u(int start, int end, const ushort * src, size_t src_step, uchar * dst, size_t dst_step, int width, int dcn, bool swapBlue, int greenBits)
 {
     src_step /= sizeof(ushort);
@@ -537,6 +545,8 @@ namespace BGRtoBGR5x5 {
 #undef cv_hal_cvtBGRtoBGR5x5
 #define cv_hal_cvtBGRtoBGR5x5 cv::cv_hal_rvv::BGRtoBGR5x5::cvtBGRtoBGR5x5
 
+// the algorithm is copied from imgproc/src/color_rgb.simd.cpp,
+// in the functor struct RGB2RGB5x5
 static inline int cvtBGRtoBGR5x5_u(int start, int end, const uchar * src, size_t src_step, ushort * dst, size_t dst_step, int width, int scn, bool swapBlue, int greenBits)
 {
     dst_step /= sizeof(ushort);
@@ -599,6 +609,8 @@ namespace BGR5x5toGray {
 #undef cv_hal_cvtBGR5x5toGray
 #define cv_hal_cvtBGR5x5toGray cv::cv_hal_rvv::BGR5x5toGray::cvtBGR5x5toGray
 
+// the algorithm is copied from imgproc/src/color_rgb.simd.cpp,
+// in the functor struct RGB5x52Gray
 static inline int cvtBGR5x5toGray_u(int start, int end, const ushort * src, size_t src_step, uchar * dst, size_t dst_step, int width, int greenBits)
 {
     static constexpr uint B2Y = 3735, G2Y = 19235, R2Y = 9798;
@@ -647,6 +659,8 @@ namespace GraytoBGR5x5 {
 #undef cv_hal_cvtGraytoBGR5x5
 #define cv_hal_cvtGraytoBGR5x5 cv::cv_hal_rvv::GraytoBGR5x5::cvtGraytoBGR5x5
 
+// the algorithm is copied from imgproc/src/color_rgb.simd.cpp,
+// in the functor struct Gray2RGB5x5
 static inline int cvtGraytoBGR5x5_u(int start, int end, const uchar * src, size_t src_step, ushort * dst, size_t dst_step, int width, int greenBits)
 {
     dst_step /= sizeof(ushort);
@@ -792,6 +806,8 @@ template<> struct rvv<float>
     static inline T vmv_v_x(float a, size_t b) { return __riscv_vfmv_v_f_f32m2(a, b); }
 };
 
+// the algorithm is copied from imgproc/src/color_yuv.simd.cpp,
+// in the functor struct YCrCb2RGB_f and YCrCb2RGB_i
 template<typename T>
 static inline int cvtYUVtoBGR(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int dcn, bool swapBlue, bool isCbCr)
 {
@@ -962,6 +978,8 @@ template<> struct rvv<float>
     static inline T vmv_v_x(float a, size_t b) { return __riscv_vfmv_v_f_f32m2(a, b); }
 };
 
+// the algorithm is copied from imgproc/src/color_yuv.simd.cpp,
+// in the functor struct RGB2YCrCb_f and RGB2YCrCb_i
 template<typename T>
 static inline int cvtBGRtoYUV(int start, int end, const T * src, size_t src_step, T * dst, size_t dst_step, int width, int scn, bool swapBlue, bool isCbCr)
 {
@@ -2326,7 +2344,7 @@ namespace LabTable
             for (size_t i = 0; i < sizeof(error2) / sizeof(int); i += 2)
                 RGB2Luvprev[error2[i]] += error2[i + 1];
             #ifdef __clang__
-                RGB2Luvprev[36227] -= 1, RGB2Luvprev[38587] += 1;
+            RGB2Luvprev[36227] -= 1, RGB2Luvprev[38587] += 1;
             #endif
             for (int p = 0; p < LAB_LUT_DIM; p++)
                 for (int q = 0; q < LAB_LUT_DIM; q++)
@@ -2823,7 +2841,7 @@ template<> struct rvv<false, false>
 static inline int cvtBGRtoLab_f(int, int, const float *, size_t, float *, size_t, int, int, bool, bool, bool);
 
 // the algorithm is copied from imgproc/src/color_lab.cpp,
-// in the functor struct RGB2Lab_f, RGB2Lab_b, RGB2Luvfloat and RGB2Luvinterpolate
+// in the functor struct RGB2Lab_f, RGB2Lab_b, RGB2Luv_b, RGB2Luvfloat and RGB2Luvinterpolate
 template<bool isLab, bool srgb>
 static inline int cvtBGRtoLab_u(int start, int end, const uchar * src, size_t src_step, uchar * dst, size_t dst_step, int width, int scn, bool swapBlue)
 {
