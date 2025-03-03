@@ -52,11 +52,6 @@ public:
 protected:
     static int writeDataToBuf(void *ctx, void *user, void *dst_src, size_t length);
 
-private:
-    int m_compression_level;
-    int m_compression_strategy;
-    int m_filter;
-    bool m_isBilevel;
 };
 
 }

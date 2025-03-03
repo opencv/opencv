@@ -862,8 +862,6 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     int depth = img.depth(), channels = img.channels();
     volatile bool result = false;
     AutoBuffer<uchar*> buffer;
-    bool set_compression_level = false;
-    bool set_filter = false;
 
     if( depth != CV_8U && depth != CV_16U )
         return false;
@@ -876,6 +874,9 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
         {
             if( setjmp( png_jmpbuf ( png_ptr ) ) == 0 )
             {
+                bool set_compression_level = false;
+                bool set_filter = false;
+
                 if( m_buf )
                 {
                     png_set_write_fn(png_ptr, this,
