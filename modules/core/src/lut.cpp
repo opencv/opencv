@@ -327,6 +327,22 @@ private:
 
 } // cv::
 
+static void parallel_for_wrap(int tasks, HAL_Context::parallel_for_body body, void * data_)
+{
+    struct BodyWrap : public cv::ParallelLoopBody
+    {
+        HAL_Context::parallel_for_body actual_body;
+        void * data;
+        BodyWrap(HAL_Context::parallel_for_body actual_body_, void * data_) :  actual_body(actual_body_), data(data_) {}
+        void operator() (const cv::Range& range) const CV_OVERRIDE
+        {
+            actual_body(range.start, range.end, data);
+        }
+    };
+    BodyWrap wrap(body, data_);
+    parallel_for_(cv::Range(0, tasks), wrap, tasks);
+}
+
 void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
@@ -345,8 +361,10 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
+    HAL_Context ctx;
+    ctx.parallel_for_fn = &parallel_for_wrap;
     CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,
-             lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
+             lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows, &ctx);
 
 #if !IPP_DISABLE_PERF_LUT
     CV_IPP_RUN(_src.dims() <= 2, ipp_lut(src, lut, dst));
