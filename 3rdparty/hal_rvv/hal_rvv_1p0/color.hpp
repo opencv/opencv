@@ -625,17 +625,17 @@ static inline int cvtBGR5x5toGray_u(int start, int end, const ushort * src, size
             vl = __riscv_vsetvl_e16m2(width - j);
             auto vec_src = __riscv_vle16_v_u16m2(src + i * src_step + j, vl);
 
-            auto vec_dstB = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsll(vec_src, 3, vl), ~7, vl), vl);
+            auto vec_dstB = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsll(vec_src, 3, vl), 0xF8, vl), vl);
             vuint32m4_t vec_dstG, vec_dstR;
             if (greenBits == 6)
             {
-                vec_dstG = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 3, vl), ~3, vl), vl);
-                vec_dstR = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 8, vl), ~7, vl), vl);
+                vec_dstG = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 3, vl), 0xFC, vl), vl);
+                vec_dstR = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 8, vl), 0xF8, vl), vl);
             }
             else
             {
-                vec_dstG = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 2, vl), ~7, vl), vl);
-                vec_dstR = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 7, vl), ~7, vl), vl);
+                vec_dstG = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 2, vl), 0xF8, vl), vl);
+                vec_dstR = __riscv_vwcvtu_x(__riscv_vand(__riscv_vsrl(vec_src, 7, vl), 0xF8, vl), vl);
             }
 
             auto vec_dst = __riscv_vncvt_x(__riscv_vnclipu(__riscv_vmadd(vec_dstB, B2Y, __riscv_vmadd(vec_dstG, G2Y, __riscv_vmul(vec_dstR, R2Y, vl), vl), vl), 15, __RISCV_VXRM_RNU, vl), vl);
