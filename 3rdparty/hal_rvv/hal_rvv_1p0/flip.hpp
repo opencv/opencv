@@ -14,8 +14,8 @@ namespace cv { namespace cv_hal_rvv {
 
 struct FlipVlen256
 {
-    using SrcType = RVVU8M8;
-    using TabType = RVVU8M8;
+    using SrcType = RVV_U8M8;
+    using TabType = RVV_U8M8;
     using TabVecType = typename TabType::VecType;
 
     static inline void gather(const uchar* src, TabVecType tab, uchar* dst, size_t vl)
@@ -25,10 +25,10 @@ struct FlipVlen256
     }
 };
 
-struct FlipVlen512 : RVVU8M8
+struct FlipVlen512 : RVV_U8M8
 {
-    using SrcType = RVVU8M4;
-    using TabType = RVVU16M8;
+    using SrcType = RVV_U8M4;
+    using TabType = RVV_U16M8;
     using TabVecType = typename TabType::VecType;
 
     static inline void gather(const uchar* src, TabVecType tab, uchar* dst, size_t vl)

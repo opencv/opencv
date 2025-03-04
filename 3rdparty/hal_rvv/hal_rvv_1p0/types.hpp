@@ -23,44 +23,68 @@ struct RVV;
 
 // -------------------------------Supported types--------------------------------
 
-#define HAL_RVV_TYPE_ALIAS(TYPE_NAME, ELEM_TYPE)              \
-    using RVV##TYPE_NAME##M1 = struct RVV<ELEM_TYPE, LMUL_1>; \
-    using RVV##TYPE_NAME##M2 = struct RVV<ELEM_TYPE, LMUL_2>; \
-    using RVV##TYPE_NAME##M4 = struct RVV<ELEM_TYPE, LMUL_4>; \
-    using RVV##TYPE_NAME##M8 = struct RVV<ELEM_TYPE, LMUL_8>;
+using RVV_U8M1 = struct RVV<uint8_t, LMUL_1>;
+using RVV_U8M2 = struct RVV<uint8_t, LMUL_2>;
+using RVV_U8M4 = struct RVV<uint8_t, LMUL_4>;
+using RVV_U8M8 = struct RVV<uint8_t, LMUL_8>;
+using RVV_U8MF2 = struct RVV<uint8_t, LMUL_f2>;
+using RVV_U8MF4 = struct RVV<uint8_t, LMUL_f4>;
+using RVV_U8MF8 = struct RVV<uint8_t, LMUL_f8>;
 
-HAL_RVV_TYPE_ALIAS(U8, uint8_t)
-using RVVU8MF2 = struct RVV<uint8_t, LMUL_f2>;
-using RVVU8MF4 = struct RVV<uint8_t, LMUL_f4>;
-using RVVU8MF8 = struct RVV<uint8_t, LMUL_f8>;
+using RVV_I8M1 = struct RVV<int8_t, LMUL_1>;
+using RVV_I8M2 = struct RVV<int8_t, LMUL_2>;
+using RVV_I8M4 = struct RVV<int8_t, LMUL_4>;
+using RVV_I8M8 = struct RVV<int8_t, LMUL_8>;
+using RVV_I8MF2 = struct RVV<int8_t, LMUL_f2>;
+using RVV_I8MF4 = struct RVV<int8_t, LMUL_f4>;
+using RVV_I8MF8 = struct RVV<int8_t, LMUL_f8>;
 
-HAL_RVV_TYPE_ALIAS(I8, int8_t)
-using RVVI8MF2 = struct RVV<int8_t, LMUL_f2>;
-using RVVI8MF4 = struct RVV<int8_t, LMUL_f4>;
-using RVVI8MF8 = struct RVV<int8_t, LMUL_f8>;
+using RVV_U16M1 = struct RVV<uint16_t, LMUL_1>;
+using RVV_U16M2 = struct RVV<uint16_t, LMUL_2>;
+using RVV_U16M4 = struct RVV<uint16_t, LMUL_4>;
+using RVV_U16M8 = struct RVV<uint16_t, LMUL_8>;
+using RVV_U16MF2 = struct RVV<uint16_t, LMUL_f2>;
+using RVV_U16MF4 = struct RVV<uint16_t, LMUL_f4>;
 
-HAL_RVV_TYPE_ALIAS(U16, uint16_t)
-using RVVU16MF2 = struct RVV<uint16_t, LMUL_f2>;
-using RVVU16MF4 = struct RVV<uint16_t, LMUL_f4>;
+using RVV_I16M1 = struct RVV<int16_t, LMUL_1>;
+using RVV_I16M2 = struct RVV<int16_t, LMUL_2>;
+using RVV_I16M4 = struct RVV<int16_t, LMUL_4>;
+using RVV_I16M8 = struct RVV<int16_t, LMUL_8>;
+using RVV_I16MF2 = struct RVV<int16_t, LMUL_f2>;
+using RVV_I16MF4 = struct RVV<int16_t, LMUL_f4>;
 
-HAL_RVV_TYPE_ALIAS(I16, int16_t)
-using RVVI16MF2 = struct RVV<int16_t, LMUL_f2>;
-using RVVI16MF4 = struct RVV<int16_t, LMUL_f4>;
+using RVV_U32M1 = struct RVV<uint32_t, LMUL_1>;
+using RVV_U32M2 = struct RVV<uint32_t, LMUL_2>;
+using RVV_U32M4 = struct RVV<uint32_t, LMUL_4>;
+using RVV_U32M8 = struct RVV<uint32_t, LMUL_8>;
+using RVV_U32MF2 = struct RVV<uint32_t, LMUL_f2>;
 
-HAL_RVV_TYPE_ALIAS(U32, uint32_t)
-using RVVU32MF2 = struct RVV<uint32_t, LMUL_f2>;
+using RVV_I32M1 = struct RVV<int32_t, LMUL_1>;
+using RVV_I32M2 = struct RVV<int32_t, LMUL_2>;
+using RVV_I32M4 = struct RVV<int32_t, LMUL_4>;
+using RVV_I32M8 = struct RVV<int32_t, LMUL_8>;
+using RVV_I32MF2 = struct RVV<int32_t, LMUL_f2>;
 
-HAL_RVV_TYPE_ALIAS(I32, int32_t)
-using RVVI32MF2 = struct RVV<int32_t, LMUL_f2>;
+using RVV_U64M1 = struct RVV<uint64_t, LMUL_1>;
+using RVV_U64M2 = struct RVV<uint64_t, LMUL_2>;
+using RVV_U64M4 = struct RVV<uint64_t, LMUL_4>;
+using RVV_U64M8 = struct RVV<uint64_t, LMUL_8>;
 
-HAL_RVV_TYPE_ALIAS(U64, uint64_t)
+using RVV_I64M1 = struct RVV<int64_t, LMUL_1>;
+using RVV_I64M2 = struct RVV<int64_t, LMUL_2>;
+using RVV_I64M4 = struct RVV<int64_t, LMUL_4>;
+using RVV_I64M8 = struct RVV<int64_t, LMUL_8>;
 
-HAL_RVV_TYPE_ALIAS(I64, int64_t)
+using RVV_F32M1 = struct RVV<float, LMUL_1>;
+using RVV_F32M2 = struct RVV<float, LMUL_2>;
+using RVV_F32M4 = struct RVV<float, LMUL_4>;
+using RVV_F32M8 = struct RVV<float, LMUL_8>;
+using RVV_F32MF2 = struct RVV<float, LMUL_f2>;
 
-HAL_RVV_TYPE_ALIAS(F32, float)
-using RVVF32MF2 = struct RVV<float, LMUL_f2>;
-
-HAL_RVV_TYPE_ALIAS(F64, double)
+using RVV_F64M1 = struct RVV<double, LMUL_1>;
+using RVV_F64M2 = struct RVV<double, LMUL_2>;
+using RVV_F64M4 = struct RVV<double, LMUL_4>;
+using RVV_F64M8 = struct RVV<double, LMUL_8>;
 
 // -------------------------------Supported operations--------------------------------
 
@@ -273,23 +297,23 @@ HAL_RVV_DEFINE_ONE(
     template <>                                                                                 \
     inline TWO::VecType TWO::cast(ONE::VecType v, size_t vl) { return __riscv_vwcvt_x(v, vl); }
 
-HAL_RVV_CVT(RVVI8M4, RVVI16M8)
-HAL_RVV_CVT(RVVI8M2, RVVI16M4)
-HAL_RVV_CVT(RVVI8M1, RVVI16M2)
-HAL_RVV_CVT(RVVI8MF2, RVVI16M1)
-HAL_RVV_CVT(RVVI8MF4, RVVI16MF2)
-HAL_RVV_CVT(RVVI8MF8, RVVI16MF4)
+HAL_RVV_CVT(RVV_I8M4, RVV_I16M8)
+HAL_RVV_CVT(RVV_I8M2, RVV_I16M4)
+HAL_RVV_CVT(RVV_I8M1, RVV_I16M2)
+HAL_RVV_CVT(RVV_I8MF2, RVV_I16M1)
+HAL_RVV_CVT(RVV_I8MF4, RVV_I16MF2)
+HAL_RVV_CVT(RVV_I8MF8, RVV_I16MF4)
 
-HAL_RVV_CVT(RVVI16M4, RVVI32M8)
-HAL_RVV_CVT(RVVI16M2, RVVI32M4)
-HAL_RVV_CVT(RVVI16M1, RVVI32M2)
-HAL_RVV_CVT(RVVI16MF2, RVVI32M1)
-HAL_RVV_CVT(RVVI16MF4, RVVI32MF2)
+HAL_RVV_CVT(RVV_I16M4, RVV_I32M8)
+HAL_RVV_CVT(RVV_I16M2, RVV_I32M4)
+HAL_RVV_CVT(RVV_I16M1, RVV_I32M2)
+HAL_RVV_CVT(RVV_I16MF2, RVV_I32M1)
+HAL_RVV_CVT(RVV_I16MF4, RVV_I32MF2)
 
-HAL_RVV_CVT(RVVI32M4, RVVI64M8)
-HAL_RVV_CVT(RVVI32M2, RVVI64M4)
-HAL_RVV_CVT(RVVI32M1, RVVI64M2)
-HAL_RVV_CVT(RVVI32MF2, RVVI64M1)
+HAL_RVV_CVT(RVV_I32M4, RVV_I64M8)
+HAL_RVV_CVT(RVV_I32M2, RVV_I64M4)
+HAL_RVV_CVT(RVV_I32M1, RVV_I64M2)
+HAL_RVV_CVT(RVV_I32MF2, RVV_I64M1)
 
 #undef HAL_RVV_CVT
 
@@ -297,16 +321,16 @@ HAL_RVV_CVT(RVVI32MF2, RVVI64M1)
     template <>                \
     inline FOUR::VecType FOUR::cast(ONE::VecType v, size_t vl) { return __riscv_vsext_vf4(v, vl); }
 
-HAL_RVV_CVT(RVVI8M2, RVVI32M8)
-HAL_RVV_CVT(RVVI8M1, RVVI32M4)
-HAL_RVV_CVT(RVVI8MF2, RVVI32M2)
-HAL_RVV_CVT(RVVI8MF4, RVVI32M1)
-HAL_RVV_CVT(RVVI8MF8, RVVI32MF2)
+HAL_RVV_CVT(RVV_I8M2, RVV_I32M8)
+HAL_RVV_CVT(RVV_I8M1, RVV_I32M4)
+HAL_RVV_CVT(RVV_I8MF2, RVV_I32M2)
+HAL_RVV_CVT(RVV_I8MF4, RVV_I32M1)
+HAL_RVV_CVT(RVV_I8MF8, RVV_I32MF2)
 
-HAL_RVV_CVT(RVVI16M2, RVVI64M8)
-HAL_RVV_CVT(RVVI16M1, RVVI64M4)
-HAL_RVV_CVT(RVVI16MF2, RVVI64M2)
-HAL_RVV_CVT(RVVI16MF4, RVVI64M1)
+HAL_RVV_CVT(RVV_I16M2, RVV_I64M8)
+HAL_RVV_CVT(RVV_I16M1, RVV_I64M4)
+HAL_RVV_CVT(RVV_I16MF2, RVV_I64M2)
+HAL_RVV_CVT(RVV_I16MF4, RVV_I64M1)
 
 #undef HAL_RVV_CVT
 
@@ -314,16 +338,16 @@ HAL_RVV_CVT(RVVI16MF4, RVVI64M1)
     template <>                \
     inline FOUR::VecType FOUR::cast(ONE::VecType v, size_t vl) { return __riscv_vzext_vf4(v, vl); }
 
-HAL_RVV_CVT(RVVU8M2, RVVU32M8)
-HAL_RVV_CVT(RVVU8M1, RVVU32M4)
-HAL_RVV_CVT(RVVU8MF2, RVVU32M2)
-HAL_RVV_CVT(RVVU8MF4, RVVU32M1)
-HAL_RVV_CVT(RVVU8MF8, RVVU32MF2)
+HAL_RVV_CVT(RVV_U8M2, RVV_U32M8)
+HAL_RVV_CVT(RVV_U8M1, RVV_U32M4)
+HAL_RVV_CVT(RVV_U8MF2, RVV_U32M2)
+HAL_RVV_CVT(RVV_U8MF4, RVV_U32M1)
+HAL_RVV_CVT(RVV_U8MF8, RVV_U32MF2)
 
-HAL_RVV_CVT(RVVU16M2, RVVU64M8)
-HAL_RVV_CVT(RVVU16M1, RVVU64M4)
-HAL_RVV_CVT(RVVU16MF2, RVVU64M2)
-HAL_RVV_CVT(RVVU16MF4, RVVU64M1)
+HAL_RVV_CVT(RVV_U16M2, RVV_U64M8)
+HAL_RVV_CVT(RVV_U16M1, RVV_U64M4)
+HAL_RVV_CVT(RVV_U16MF2, RVV_U64M2)
+HAL_RVV_CVT(RVV_U16MF4, RVV_U64M1)
 
 #undef HAL_RVV_CVT
 
@@ -331,10 +355,10 @@ HAL_RVV_CVT(RVVU16MF4, RVVU64M1)
     template <>                 \
     inline EIGHT::VecType EIGHT::cast(ONE::VecType v, size_t vl) { return __riscv_vzext_vf8(v, vl); }
 
-HAL_RVV_CVT(RVVU8M1, RVVU64M8)
-HAL_RVV_CVT(RVVU8MF2, RVVU64M4)
-HAL_RVV_CVT(RVVU8MF4, RVVU64M2)
-HAL_RVV_CVT(RVVU8MF8, RVVU64M1)
+HAL_RVV_CVT(RVV_U8M1, RVV_U64M8)
+HAL_RVV_CVT(RVV_U8MF2, RVV_U64M4)
+HAL_RVV_CVT(RVV_U8MF4, RVV_U64M2)
+HAL_RVV_CVT(RVV_U8MF8, RVV_U64M1)
 
 #undef HAL_RVV_CVT
 
@@ -344,10 +368,10 @@ HAL_RVV_CVT(RVVU8MF8, RVVU64M1)
     template <>                                                                                  \
     inline F64::VecType F64::cast(F32::VecType v, size_t vl) { return __riscv_vfwcvt_f(v, vl); }
 
-HAL_RVV_CVT(RVVF32M4, RVVF64M8)
-HAL_RVV_CVT(RVVF32M2, RVVF64M4)
-HAL_RVV_CVT(RVVF32M1, RVVF64M2)
-HAL_RVV_CVT(RVVF32MF2, RVVF64M1)
+HAL_RVV_CVT(RVV_F32M4, RVV_F64M8)
+HAL_RVV_CVT(RVV_F32M2, RVV_F64M4)
+HAL_RVV_CVT(RVV_F32M1, RVV_F64M2)
+HAL_RVV_CVT(RVV_F32MF2, RVV_F64M1)
 
 #undef HAL_RVV_CVT
 
