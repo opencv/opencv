@@ -49,7 +49,7 @@ class NewOpenCVTests(unittest.TestCase):
             filepath = self.find_file(filename)
             with open(filepath, 'rb') as f:
                 filedata = f.read()
-            self.image_cache[filename] = cv.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
+            self.image_cache[filename] = cv.imdecode(np.frombuffer(filedata, dtype=np.uint8), iscolor)
         return self.image_cache[filename]
 
     def setUp(self):

@@ -30,6 +30,7 @@ Introduction to OpenCV {#tutorial_table_of_content_introduction}
 -   @subpage tutorial_arm_crosscompile_with_cmake
 -   @subpage tutorial_crosscompile_with_multiarch
 -   @subpage tutorial_building_tegra_cuda
+-   @subpage tutorial_building_fastcv
 -   @ref tutorial_ios_install
 
 ##### Usage basics
