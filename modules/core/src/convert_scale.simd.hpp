@@ -92,7 +92,7 @@ template<typename _Ts, typename _Td> inline void
 cvt_32f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
          Size size, float a, float b )
 {
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || (CV_SIMD_SCALABLE && !(defined(__GNUC__) && !defined(__clang__))) )
     v_float32 va = vx_setall_f32(a), vb = vx_setall_f32(b);
     const int VECSZ = VTraits<v_float32>::vlanes()*2;
 #endif
@@ -164,7 +164,7 @@ template<typename _Ts, typename _Td> inline void
 cvt_64f( const _Ts* src, size_t sstep, _Td* dst, size_t dstep,
          Size size, double a, double b )
 {
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+#if (CV_SIMD_64F || (CV_SIMD_SCALABLE_64F && !(defined(__GNUC__) && !defined(__clang__))) )
     v_float64 va = vx_setall_f64(a), vb = vx_setall_f64(b);
     const int VECSZ = VTraits<v_float64>::vlanes()*2;
 #endif

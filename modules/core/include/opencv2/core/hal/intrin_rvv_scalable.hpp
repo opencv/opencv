@@ -8,6 +8,7 @@
 #ifndef OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 #define OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 
+#include <array>
 #include <opencv2/core/check.hpp>
 
 #if defined(__GNUC__) && !defined(__clang__)
@@ -1591,7 +1592,7 @@ OPENCV_HAL_IMPL_RVV_INTERLEAVED(int64, int64, i64, 64, 32, VTraits<v_int64>::vla
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(float64, double, f64, 64, 32, VTraits<v_float64>::vlanes())
 #endif
 
-static uint64_t idx_interleave_pairs[] = { \
+static std::array<uint64_t, 32> idx_interleave_pairs = { \
     0x0705060403010200, 0x0f0d0e0c0b090a08, 0x1715161413111210, 0x1f1d1e1c1b191a18, \
     0x2725262423212220, 0x2f2d2e2c2b292a28, 0x3735363433313230, 0x3f3d3e3c3b393a38, \
     0x4745464443414240, 0x4f4d4e4c4b494a48, 0x5755565453515250, 0x5f5d5e5c5b595a58, \
@@ -1601,7 +1602,7 @@ static uint64_t idx_interleave_pairs[] = { \
     0xc7c5c6c4c3c1c2c0, 0xcfcdcecccbc9cac8, 0xd7d5d6d4d3d1d2d0, 0xdfdddedcdbd9dad8, \
     0xe7e5e6e4e3e1e2e0, 0xefedeeecebe9eae8, 0xf7f5f6f4f3f1f2f0, 0xfffdfefcfbf9faf8};
 
-static uint64_t idx_interleave_quads[] = { \
+static std::array<uint64_t, 32> idx_interleave_quads = { \
     0x0703060205010400, 0x0f0b0e0a0d090c08, 0x1713161215111410, 0x1f1b1e1a1d191c18, \
     0x2723262225212420, 0x2f2b2e2a2d292c28, 0x3733363235313430, 0x3f3b3e3a3d393c38, \
     0x4743464245414440, 0x4f4b4e4a4d494c48, 0x5753565255515450, 0x5f5b5e5a5d595c58, \
@@ -1615,7 +1616,7 @@ static uint64_t idx_interleave_quads[] = { \
 inline _Tpvec v_interleave_##func(const _Tpvec& vec) { \
     CV_CheckLE(VTraits<_Tpvec>::vlanes(), VTraits<_Tpvec>::max_nlanes, "RVV implementation only supports VLEN in the range [128, 1024]"); \
     vuint8m2_t vidx = __riscv_vundefined_u8m2();\
-    vidx = __riscv_vreinterpret_u8m2(__riscv_vle64_v_u64m2(idx_interleave_##func, 32)); \
+    vidx = __riscv_vreinterpret_u8m2(__riscv_vle64_v_u64m2(idx_interleave_##func.data(), idx_interleave_##func.size())); \
     return __riscv_vrgather(vec, vidx, VTraits<v_uint8>::vlanes()); \
 }
 OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ_NOEXPEND(v_uint8, pairs)
@@ -1627,7 +1628,7 @@ OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ_NOEXPEND(v_int8, quads)
 inline _Tpvec v_interleave_##func(const _Tpvec& vec) { \
     CV_CheckLE(VTraits<_Tpvec>::vlanes(), VTraits<_Tpvec>::max_nlanes, "RVV implementation only supports VLEN in the range [128, 1024]"); \
     vuint##width##m2_t vidx = __riscv_vundefined_u##width##m2();\
-    vidx = __riscv_vget_u##width##m2(vzext_vfx(__riscv_vreinterpret_u8m2(__riscv_vle64_v_u64m2(idx_interleave_##func, 32)), VTraits<v_uint8>::vlanes()), 0); \
+    vidx = __riscv_vget_u##width##m2(vzext_vfx(__riscv_vreinterpret_u8m2(__riscv_vle64_v_u64m2(idx_interleave_##func.data(), idx_interleave_##func.size())), VTraits<v_uint8>::vlanes()), 0); \
     return __riscv_vrgather(vec, vidx, VTraits<_Tpvec>::vlanes()); \
 }
 
