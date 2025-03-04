@@ -108,7 +108,8 @@ cvt_( const _Ts* src, size_t sstep, _Td* dst, size_t dstep, Size size )
     for( int i = 0; i < size.height; i++, src += sstep, dst += dstep )
     {
         int j = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+// Excluding GNU in CV_SIMD_SCALABLE because of "opencv/issues/26936"
+#if (CV_SIMD || (CV_SIMD_SCALABLE && !(defined(__GNUC__) && !defined(__clang__))) )
         const int VECSZ = VTraits<_Twvec>::vlanes()*2;
         for( ; j < size.width; j += VECSZ )
         {
