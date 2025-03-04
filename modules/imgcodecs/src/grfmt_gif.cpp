@@ -24,7 +24,6 @@ GifDecoder::GifDecoder() {
     hasRead = false;
     hasTransparentColor = false;
     transparentColor = 0;
-    opMode = GRFMT_GIF_Nothing;
     top = 0, left = 0, width = 0, height = 0;
     depth = 8;
     idx = 0;
@@ -66,6 +65,8 @@ bool GifDecoder::readHeader() {
         for (int i = 0; i < 3 * globalColorTableSize; i++) {
             globalColorTable[i] = (uchar)m_strm.getByte();
         }
+        CV_CheckGE(bgColor, 0,                    "bgColor should be >= 0");
+        CV_CheckLT(bgColor, globalColorTableSize, "bgColor should be < globalColorTableSize");
     }
 
     // get the frame count
@@ -81,7 +82,8 @@ bool GifDecoder::readData(Mat &img) {
         return true;
     }
 
-    readExtensions();
+    const GifDisposeMethod disposalMethod = readExtensions();
+
     // Image separator
     CV_Assert(!(m_strm.getByte()^0x2C));
     left = m_strm.getWord();
@@ -93,38 +95,50 @@ bool GifDecoder::readData(Mat &img) {
     imgCodeStream.resize(width * height);
     Mat img_;
 
-    switch (opMode) {
-        case GifOpMode::GRFMT_GIF_PreviousImage:
-            if (lastImage.empty()){
-                img_ = Mat::zeros(m_height, m_width, CV_8UC4);
-            } else {
-                img_ = lastImage;
+    if (lastImage.empty())
+    {
+        Scalar background(0.0, 0.0, 0.0, 0.0);
+        if (bgColor < globalColorTableSize)
+        {
+            background = Scalar( globalColorTable[bgColor * 3 + 2], // B
+                                 globalColorTable[bgColor * 3 + 1], // G
+                                 globalColorTable[bgColor * 3 + 0], // R
+                                 0);                                // A
+        }
+        img_ = Mat(m_height, m_width, CV_8UC4, background);
+    } else {
+        img_ = lastImage;
+    }
+    lastImage.release();
+
+    Mat restore;
+    switch(disposalMethod)
+    {
+        case GIF_DISPOSE_NA:
+        case GIF_DISPOSE_NONE:
+            // Do nothing
+            break;
+        case GIF_DISPOSE_RESTORE_BACKGROUND:
+            if (bgColor < globalColorTableSize)
+            {
+                const Scalar background = Scalar( globalColorTable[bgColor * 3 + 2], // B
+                                                  globalColorTable[bgColor * 3 + 1], // G
+                                                  globalColorTable[bgColor * 3 + 0], // R
+                                                  0);                                // A
+                restore = Mat(width, height, CV_8UC4, background);
+            }
+            else
+            {
+                CV_LOG_WARNING(NULL, cv::format("bgColor(%d) is out of globalColorTableSize(%d)", bgColor, globalColorTableSize));
             }
             break;
-        case GifOpMode::GRFMT_GIF_Background:
-            // background color is valid iff global color table exists
-            CV_Assert(globalColorTableSize > 0);
-            if (hasTransparentColor && transparentColor == bgColor) {
-                img_ = Mat(m_height, m_width, CV_8UC4,
-                           Scalar(globalColorTable[bgColor * 3 + 2],
-                                  globalColorTable[bgColor * 3 + 1],
-                                  globalColorTable[bgColor * 3], 0));
-            } else {
-                img_ = Mat(m_height, m_width, CV_8UC4,
-                           Scalar(globalColorTable[bgColor * 3 + 2],
-                                  globalColorTable[bgColor * 3 + 1],
-                                  globalColorTable[bgColor * 3], 255));
-            }
-            break;
-        case GifOpMode::GRFMT_GIF_Nothing:
-        case GifOpMode::GRFMT_GIF_Cover:
-            // default value
-            img_ = Mat::zeros(m_height, m_width, CV_8UC4);
+        case GIF_DISPOSE_RESTORE_PREVIOUS:
+            restore = Mat(img_, cv::Rect(left,top,width,height)).clone();
             break;
         default:
             CV_Assert(false);
+            break;
     }
-    lastImage.release();
 
     auto flags = (uchar)m_strm.getByte();
     if (flags & 0x80) {
@@ -189,6 +203,13 @@ bool GifDecoder::readData(Mat &img) {
     // release the memory
     img_.release();
 
+    // update lastImage to dispose current frame.
+    if(!restore.empty())
+    {
+        Mat roi = Mat(lastImage, cv::Rect(left,top,width,height));
+        restore.copyTo(roi);
+    }
+
     return hasRead;
 }
 
@@ -212,8 +233,9 @@ bool GifDecoder::nextPage() {
     }
 }
 
-void GifDecoder::readExtensions() {
+GifDisposeMethod GifDecoder::readExtensions() {
     uchar len;
+    GifDisposeMethod disposalMethod = GifDisposeMethod::GIF_DISPOSE_NA;
     while (!(m_strm.getByte() ^ 0x21)) {
         auto extensionType = (uchar)m_strm.getByte();
 
@@ -221,13 +243,19 @@ void GifDecoder::readExtensions() {
         // the scope of this extension is the next image or plain text extension
         if (!(extensionType ^ 0xF9)) {
             hasTransparentColor = false;
-            opMode = GifOpMode::GRFMT_GIF_Nothing;// default value
             len = (uchar)m_strm.getByte();
             CV_Assert(len == 4);
-            auto flags = (uchar)m_strm.getByte();
+            const uint8_t packedFields = (uchar)m_strm.getByte();
+
+            const uint8_t dm = (packedFields >> GIF_DISPOSE_METHOD_SHIFT) & GIF_DISPOSE_METHOD_MASK;
+            CV_CheckLE(dm, GIF_DISPOSE_MAX, "Unsupported Dispose Method");
+            disposalMethod = static_cast<GifDisposeMethod>(dm);
+
+            const uint8_t transColorFlag = packedFields & GIF_TRANS_COLOR_FLAG_MASK;
+            CV_CheckLE(transColorFlag, GIF_TRANSPARENT_INDEX_MAX, "Unsupported Transparent Color Flag");
+            hasTransparentColor = (transColorFlag == GIF_TRANSPARENT_INDEX_GIVEN);
+
             m_animation.durations.push_back(m_strm.getWord() * 10); // delay time
-            opMode = (GifOpMode)((flags & 0x1C) >> 2);
-            hasTransparentColor = flags & 0x01;
             transparentColor = (uchar)m_strm.getByte();
         }
 
@@ -240,6 +268,8 @@ void GifDecoder::readExtensions() {
     }
     // roll back to the block identifier
     m_strm.setPos(m_strm.getPos() - 1);
+
+    return disposalMethod;
 }
 
 void GifDecoder::code2pixel(Mat& img, int start, int k){
@@ -247,23 +277,6 @@ void GifDecoder::code2pixel(Mat& img, int start, int k){
         for (int j = 0; j < width; j++) {
             uchar colorIdx = imgCodeStream[idx++];
             if (hasTransparentColor && colorIdx == transparentColor) {
-                if (opMode != GifOpMode::GRFMT_GIF_PreviousImage) {
-                    if (colorIdx < localColorTableSize) {
-                        img.at<Vec4b>(top + i, left + j) =
-                                Vec4b(localColorTable[colorIdx * 3 + 2], // B
-                                      localColorTable[colorIdx * 3 + 1], // G
-                                      localColorTable[colorIdx * 3],     // R
-                                      0);                                // A
-                    } else if (colorIdx < globalColorTableSize) {
-                        img.at<Vec4b>(top + i, left + j) =
-                                Vec4b(globalColorTable[colorIdx * 3 + 2], // B
-                                      globalColorTable[colorIdx * 3 + 1], // G
-                                      globalColorTable[colorIdx * 3],     // R
-                                      0);                                 // A
-                    } else {
-                        img.at<Vec4b>(top + i, left + j) = Vec4b(0, 0, 0, 0);
-                    }
-                }
                 continue;
             }
             if (colorIdx < localColorTableSize) {
@@ -437,14 +450,10 @@ bool GifDecoder::getFrameCount_() {
                 int len = m_strm.getByte();
                 while (len) {
                     if (len == 4) {
-                        int packedFields = m_strm.getByte();
-                        //  3 bit : Reserved
-                        //  3 bit : Disposal Method
-                        //  1 bit : User Input Flag
-                        //  1 bit : Transparent Color Flag
-                        if ( (packedFields & 0x01)== 0x01) {
-                            m_type = CV_8UC4; // Transparent Index is given.
-                        }
+                        const uint8_t packedFields = static_cast<uint8_t>(m_strm.getByte()); // Packed Fields
+                        const uint8_t transColorFlag = packedFields & GIF_TRANS_COLOR_FLAG_MASK;
+                        CV_CheckLE(transColorFlag, GIF_TRANSPARENT_INDEX_MAX, "Unsupported Transparent Color Flag");
+                        m_type = (transColorFlag == GIF_TRANSPARENT_INDEX_GIVEN) ? CV_8UC4 : CV_8UC3;
                         m_strm.skip(2); // Delay Time
                         m_strm.skip(1); // Transparent Color Index
                     } else {
@@ -518,7 +527,6 @@ GifEncoder::GifEncoder() {
     m_height = 0, m_width = 0;
     width = 0, height = 0, top = 0, left = 0;
     m_buf_supported = true;
-    opMode = GRFMT_GIF_Cover;
     transparentColor = 0; // index of the transparent color, default 0. currently it is a constant number
     transparentRGB = Vec3b(0, 0, 0); // the transparent color, default black
     lzwMaxCodeSize = 12; // the maximum code size, default 12. currently it is a constant number
@@ -665,11 +673,9 @@ bool GifEncoder::writeFrame(const Mat &img) {
     strm.putByte(0x21); // extension introducer
     strm.putByte(0xF9); // graphic control label
     strm.putByte(0x04); // block size, fixed number
-    // flag is a packed field, and the first 3 bits are reserved
-    uchar flag = opMode << 2;
-    if (criticalTransparency)
-        flag |= 1;
-    strm.putByte(flag);
+    const int gcePackedFields = static_cast<int>(GIF_DISPOSE_RESTORE_PREVIOUS << GIF_DISPOSE_METHOD_SHIFT) |
+                                static_cast<int>(criticalTransparency ? GIF_TRANSPARENT_INDEX_GIVEN : GIF_TRANSPARENT_INDEX_NOT_GIVEN);
+    strm.putByte(gcePackedFields);
     strm.putWord(frameDelay);
     strm.putByte(transparentColor);
     strm.putByte(0x00); // end of the extension
@@ -680,7 +686,7 @@ bool GifEncoder::writeFrame(const Mat &img) {
     strm.putWord(top);
     strm.putWord(width);
     strm.putWord(height);
-    flag = localColorTableSize > 0 ? 0x80 : 0x00;
+    uint8_t flag = localColorTableSize > 0 ? 0x80 : 0x00;
     if (localColorTableSize > 0) {
         std::vector<Mat> img_vec(1, img);
         getColorTable(img_vec, false);

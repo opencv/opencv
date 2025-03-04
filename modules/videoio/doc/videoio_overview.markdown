@@ -10,7 +10,7 @@ Video I/O with OpenCV Overview {#videoio_overview}
 General Information
 -------------------
 
-The OpenCV @ref videoio module is a set of classes and functions to read and write video or images sequence.
+The OpenCV @ref videoio module is a set of classes and functions to read and write video or images sequences.
 
 Basically, the module provides the cv::VideoCapture and cv::VideoWriter classes as 2-layer interface to many video
 I/O APIs used as backend.
@@ -20,7 +20,7 @@ I/O APIs used as backend.
 Some backends such as Direct Show (DSHOW), Microsoft Media Foundation (MSMF),
 Video 4 Linux (V4L), etc... are interfaces to the video I/O library provided by the operating system.
 
-Some others backends like OpenNI2 for Kinect, Intel Perceptual Computing SDK, GStreamer,
+Some other backends like OpenNI2 for Kinect, Intel Perceptual Computing SDK, GStreamer,
 XIMEA Camera API, etc...  are interfaces to proprietary drivers or to external library.
 
 See the list of supported backends here: cv::VideoCaptureAPIs
@@ -84,8 +84,7 @@ for the operating system. Thus you can't use  VideoCapture or VideoWriter with t
 To get access to their devices, manufactures provide their own C++ API and library that you have to
 include and link with your OpenCV application.
 
-It is a common case that these libraries read/write images from/to a memory buffer. If it so, it is
-possible to make a `Mat` header for memory buffer (user-allocated data) and process it
+It is a common case that these libraries read/write images from/to a memory buffer. If so, it is possible to make a `Mat` header for memory buffer (user-allocated data) and process it
 in-place using OpenCV functions. See cv::Mat::Mat() for more details.
 
 
@@ -93,7 +92,7 @@ The FFmpeg library
 ------------------
 
 OpenCV can use the FFmpeg library (http://ffmpeg.org/) as backend to record, convert and stream audio and video.
-FFmpeg is a complete, cross-reference solution. If you enable FFmpeg while configuring OpenCV than
+FFmpeg is a complete, cross-reference solution. If you enable FFmpeg while configuring OpenCV then
 CMake will download and install the binaries in `OPENCV_SOURCE_CODE/3rdparty/ffmpeg/`. To use
 FFmpeg at runtime, you must deploy the FFmpeg binaries with your application.
 
