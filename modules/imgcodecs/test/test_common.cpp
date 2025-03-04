@@ -48,4 +48,21 @@ Mat generateTestImageGrayscale()
     return image;
 }
 
+void readFileBytes(const std::string& fname, std::vector<unsigned char>& buf)
+{
+    FILE * wfile = fopen(fname.c_str(), "rb");
+    if (wfile != NULL)
+    {
+        fseek(wfile, 0, SEEK_END);
+        size_t wfile_size = ftell(wfile);
+        fseek(wfile, 0, SEEK_SET);
+
+        buf.resize(wfile_size);
+        size_t data_size = fread(&buf[0], 1, wfile_size, wfile);
+        fclose(wfile);
+
+        EXPECT_EQ(data_size, wfile_size);
+    }
+}
+
 }  // namespace
