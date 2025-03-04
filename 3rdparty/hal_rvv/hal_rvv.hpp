@@ -30,6 +30,8 @@
 #include "hal_rvv_1p0/atan.hpp" // core
 #include "hal_rvv_1p0/split.hpp" // core
 #include "hal_rvv_1p0/flip.hpp" // core
+
+#include "hal_rvv_1p0/pyramids.hpp" // imgproc
 #endif
 
 #endif
