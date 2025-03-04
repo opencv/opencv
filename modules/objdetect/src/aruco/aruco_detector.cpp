@@ -10,7 +10,7 @@
 #include "apriltag/apriltag_quad_thresh.hpp"
 #include "aruco_utils.hpp"
 #include <cmath>
-#include <unordered_set>
+#include <map>
 
 namespace cv {
 namespace aruco {
@@ -752,44 +752,20 @@ struct ArucoDetector::ArucoDetectorImpl {
 
             /// STEP 3: Corner refinement :: use corner subpix
             if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
-                CV_Assert(detectorParams.cornerRefinementWinSize > 0 && detectorParams.cornerRefinementMaxIterations > 0 &&
-                        detectorParams.cornerRefinementMinAccuracy > 0);
-                // Do subpixel estimation. In Aruco3 start on the lowest pyramid level and upscale the corners
-                parallel_for_(Range(0, (int)candidates.size()), [&](const Range& range) {
-                    const int begin = range.start;
-                    const int end = range.end;
-
-                    for (int i = begin; i < end; i++) {
-                        if (detectorParams.useAruco3Detection) {
-                            const float scale_init = (float) grey_pyramid[closest_pyr_image_idx].cols / grey.cols;
-                            findCornerInPyrImage(scale_init, closest_pyr_image_idx, grey_pyramid, Mat(candidates[i]), detectorParams);
-                        } else {
-                            int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
-                                        getAverageModuleSize(candidates[i], dictionary.markerSize, detectorParams.markerBorderBits)));
-                            cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
-                            cornerSubPix(grey, Mat(candidates[i]), Size(cornerRefinementWinSize, cornerRefinementWinSize), Size(-1, -1),
-                                    TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
-                                        detectorParams.cornerRefinementMaxIterations,
-                                        detectorParams.cornerRefinementMinAccuracy));
-                        }
-                    }
-                });
+                performCornerSubpixRefinement(grey, grey_pyramid, closest_pyr_image_idx, candidates, dictionary);
             }
         } else if (DictionaryMode::Multi == dictMode) {
-            unordered_set<int> uniqueMarkerSizes;
+            map<size_t, vector<MarkerCandidateTree>> candidatesPerDictionarySize;
             for (const Dictionary& dictionary : dictionaries) {
-                uniqueMarkerSizes.insert(dictionary.markerSize);
+                candidatesPerDictionarySize.emplace(dictionary.markerSize, vector<MarkerCandidateTree>());
             }
 
-            // create at max 4 marker candidate trees for each dictionary size
-            vector<vector<MarkerCandidateTree>> candidatesPerDictionarySize = {{}, {}, {}, {}};
-            for (int markerSize : uniqueMarkerSizes) {
-                // min marker size is 4, so subtract 4 to get index
-                const auto dictionarySizeIndex = markerSize - 4;
+            // create candidate trees for each dictionary size
+            for (auto& candidatesTreeEntry : candidatesPerDictionarySize) {
                 // copy candidates
                 vector<vector<Point2f>> candidatesCopy = candidates;
                 vector<vector<Point> > contoursCopy = contours;
-                candidatesPerDictionarySize[dictionarySizeIndex] = filterTooCloseCandidates(candidatesCopy, contoursCopy, markerSize);
+                candidatesTreeEntry.second = filterTooCloseCandidates(candidatesCopy, contoursCopy, candidatesTreeEntry.first);
             }
             candidates.clear();
             contours.clear();
@@ -797,10 +773,9 @@ struct ArucoDetector::ArucoDetectorImpl {
             /// STEP 2: Check candidate codification (identify markers)
             int dictIndex = 0;
             for (const Dictionary&  currentDictionary : dictionaries) {
-                const auto dictionarySizeIndex = currentDictionary.markerSize - 4;
                 // temporary variable to store the current candidates
                 vector<vector<Point2f>> currentCandidates;
-                identifyCandidates(grey, grey_pyramid, candidatesPerDictionarySize[dictionarySizeIndex], currentCandidates, contours,
+                identifyCandidates(grey, grey_pyramid, candidatesPerDictionarySize.at(currentDictionary.markerSize), currentCandidates, contours,
                         ids, currentDictionary, rejectedImgPoints);
                 if (_dictIndices.needed()) {
                     dictIndices.insert(dictIndices.end(), currentCandidates.size(), dictIndex);
@@ -808,29 +783,7 @@ struct ArucoDetector::ArucoDetectorImpl {
 
                 /// STEP 3: Corner refinement :: use corner subpix
                 if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
-                    CV_Assert(detectorParams.cornerRefinementWinSize > 0 && detectorParams.cornerRefinementMaxIterations > 0 &&
-                            detectorParams.cornerRefinementMinAccuracy > 0);
-                    // Do subpixel estimation. In Aruco3 start on the lowest pyramid level and upscale the corners
-                    parallel_for_(Range(0, (int)currentCandidates.size()), [&](const Range& range) {
-                        const int begin = range.start;
-                        const int end = range.end;
-
-                        for (int i = begin; i < end; i++) {
-                            if (detectorParams.useAruco3Detection) {
-                                const float scale_init = (float) grey_pyramid[closest_pyr_image_idx].cols / grey.cols;
-                                findCornerInPyrImage(scale_init, closest_pyr_image_idx, grey_pyramid, Mat(currentCandidates[i]), detectorParams);
-                            }
-                            else {
-                                int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
-                                            getAverageModuleSize(currentCandidates[i], currentDictionary.markerSize, detectorParams.markerBorderBits)));
-                                cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
-                                cornerSubPix(grey, Mat(currentCandidates[i]), Size(cornerRefinementWinSize, cornerRefinementWinSize), Size(-1, -1),
-                                        TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
-                                            detectorParams.cornerRefinementMaxIterations,
-                                            detectorParams.cornerRefinementMinAccuracy));
-                            }
-                        }
-                    });
+                    performCornerSubpixRefinement(grey, grey_pyramid, closest_pyr_image_idx, currentCandidates, currentDictionary);
                 }
                 candidates.insert(candidates.end(), currentCandidates.begin(), currentCandidates.end());
                 dictIndex++;
@@ -1105,6 +1058,30 @@ struct ArucoDetector::ArucoDetectorImpl {
         }
     }
 
+    void performCornerSubpixRefinement(const Mat& grey, const vector<Mat>& grey_pyramid, int closest_pyr_image_idx, const vector<vector<Point2f>>& candidates, const Dictionary& dictionary) const {
+        CV_Assert(detectorParams.cornerRefinementWinSize > 0 && detectorParams.cornerRefinementMaxIterations > 0 &&
+                detectorParams.cornerRefinementMinAccuracy > 0);
+        // Do subpixel estimation. In Aruco3 start on the lowest pyramid level and upscale the corners
+        parallel_for_(Range(0, (int)candidates.size()), [&](const Range& range) {
+            const int begin = range.start;
+            const int end = range.end;
+
+            for (int i = begin; i < end; i++) {
+                if (detectorParams.useAruco3Detection) {
+                    const float scale_init = (float) grey_pyramid[closest_pyr_image_idx].cols / grey.cols;
+                    findCornerInPyrImage(scale_init, closest_pyr_image_idx, grey_pyramid, Mat(candidates[i]), detectorParams);
+                } else {
+                    int cornerRefinementWinSize = std::max(1, cvRound(detectorParams.relativeCornerRefinmentWinSize*
+                                getAverageModuleSize(candidates[i], dictionary.markerSize, detectorParams.markerBorderBits)));
+                    cornerRefinementWinSize = min(cornerRefinementWinSize, detectorParams.cornerRefinementWinSize);
+                    cornerSubPix(grey, Mat(candidates[i]), Size(cornerRefinementWinSize, cornerRefinementWinSize), Size(-1, -1),
+                            TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS,
+                                detectorParams.cornerRefinementMaxIterations,
+                                detectorParams.cornerRefinementMinAccuracy));
+                }
+            }
+        });
+    }
 };
 
 ArucoDetector::ArucoDetector(const Dictionary &_dictionary,
