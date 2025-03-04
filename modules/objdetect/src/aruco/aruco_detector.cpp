@@ -755,7 +755,7 @@ struct ArucoDetector::ArucoDetectorImpl {
                 performCornerSubpixRefinement(grey, grey_pyramid, closest_pyr_image_idx, candidates, dictionary);
             }
         } else if (DictionaryMode::Multi == dictMode) {
-            map<size_t, vector<MarkerCandidateTree>> candidatesPerDictionarySize;
+            map<int, vector<MarkerCandidateTree>> candidatesPerDictionarySize;
             for (const Dictionary& dictionary : dictionaries) {
                 candidatesPerDictionarySize.emplace(dictionary.markerSize, vector<MarkerCandidateTree>());
             }
