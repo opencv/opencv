@@ -989,7 +989,7 @@ template<typename R> struct TheTest
         for (int i = 0; i < VTraits<R>::vlanes(); i++)
         {
             auto c_signed = dataC.as_int(i);
-            dataC[i] = c_signed == 0 ? -1 : -std::abs(c_signed);
+            dataC[i] = (LaneType)(c_signed == 0 ? -1 : -std::abs(c_signed));
         }
         R a = dataA, b = dataB, c = dataC, d = dataD, e = dataE;
         dataC[VTraits<R>::vlanes() - 1] = 0;
