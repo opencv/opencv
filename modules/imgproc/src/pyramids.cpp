@@ -1388,6 +1388,8 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
     Mat dst = _dst.getMat();
     int depth = src.depth();
 
+    CALL_HAL(pyrUp, cv_hal_pyrup, src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows, depth, src.channels(), borderType);
+
 #ifdef HAVE_IPP
     bool isolated = (borderType & BORDER_ISOLATED) != 0;
     int borderTypeNI = borderType & ~BORDER_ISOLATED;
