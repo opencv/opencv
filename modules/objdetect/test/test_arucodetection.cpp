@@ -727,25 +727,55 @@ TEST(CV_ArucoMultiDict, multiMarkerDetection)
 }
 
 
+TEST(CV_ArucoMultiDict, multiMarkerDoubleDetection)
+{
+    const int markerSidePixels = 100;
+    const int imageWidth = 2 * markerSidePixels + 3 * (markerSidePixels / 2);
+    const int imageHeight = markerSidePixels + 2 * (markerSidePixels / 2);
+    vector<aruco::Dictionary> usedDictionaries = {
+        aruco::getPredefinedDictionary(aruco::DICT_5X5_50),
+        aruco::getPredefinedDictionary(aruco::DICT_5X5_100)
+    };
+
+    // draw synthetic image
+    Mat img = Mat(imageHeight, imageWidth, CV_8UC1, Scalar::all(255));
+    for(int y = 0; y < 2; y++) {
+        Mat marker;
+        int id = 49 + y;
+        auto dict = aruco::getPredefinedDictionary(aruco::DICT_5X5_100);
+        aruco::generateImageMarker(dict, id, markerSidePixels, marker);
+        Point2f firstCorner(markerSidePixels / 2.f + y * (1.5f * markerSidePixels),
+                    markerSidePixels / 2.f);
+        Mat aux = img(Rect((int)firstCorner.x, (int)firstCorner.y, markerSidePixels, markerSidePixels));
+        marker.copyTo(aux);
+    }
+    img.convertTo(img, CV_8UC3);
+
+    aruco::ArucoDetector detector(usedDictionaries);
+
+    vector<vector<Point2f> > markerCorners;
+    vector<int> markerIds;
+    vector<vector<Point2f> > rejectedImgPts;
+    vector<int> dictIds;
+    detector.detectMarkersMultiDict(img, markerCorners, markerIds, rejectedImgPts, dictIds);
+    ASSERT_EQ(markerIds.size(), 3u);
+    ASSERT_EQ(dictIds.size(), 3u);
+    EXPECT_EQ(dictIds[0], 0); // 5X5_50
+    EXPECT_EQ(dictIds[1], 1); // 5X5_100
+    EXPECT_EQ(dictIds[2], 1); // 5X5_100
+}
+
+
 TEST(CV_ArucoMultiDict, serialization)
 {
-    const std::string fileName("test_aruco_serialization.json");
     aruco::ArucoDetector detector;
     {
-        FileStorage fs(fileName, FileStorage::Mode::WRITE);
-        if (!fs.isOpened()) {
-            cout << "[  SKIPPED ] " << "CV_ArucoMultiDict.serialization"
-                << " - Skipping due to 'File system write error.'" << endl;
-            return;
-        }
-        detector.write(fs);
-        fs.release();
-        FileStorage test_fs(fileName, FileStorage::Mode::READ);
-        if (!test_fs.isOpened()) {
-            cout << "[  SKIPPED ] " << "CV_ArucoMultiDict.serialization"
-                << " - Skipping due to 'File system read error.'" << endl;
-            return;
-        }
+        FileStorage fs_out(".json", FileStorage::WRITE + FileStorage::MEMORY);
+        ASSERT_TRUE(fs_out.isOpened());
+        detector.write(fs_out);
+        std::string serialized_string = fs_out.releaseAndGetString();
+        FileStorage test_fs(serialized_string, FileStorage::Mode::READ + FileStorage::MEMORY);
+        ASSERT_TRUE(test_fs.isOpened());
         aruco::ArucoDetector test_detector;
         test_detector.read(test_fs.root());
         // compare default constructor result
@@ -753,20 +783,12 @@ TEST(CV_ArucoMultiDict, serialization)
     }
     detector.setDictionaries({aruco::getPredefinedDictionary(aruco::DICT_4X4_50), aruco::getPredefinedDictionary(aruco::DICT_5X5_100)});
     {
-        FileStorage fs(fileName, FileStorage::Mode::WRITE);
-        if (!fs.isOpened()) {
-            cout << "[  SKIPPED ] " << "CV_ArucoMultiDict.serialization"
-                << " - Skipping due to 'File system write error.'" << endl;
-            return;
-        }
-        detector.write(fs);
-        fs.release();
-        FileStorage test_fs(fileName, FileStorage::Mode::READ);
-        if (!test_fs.isOpened()) {
-            cout << "[  SKIPPED ] " << "CV_ArucoMultiDict.serialization"
-                << " - Skipping due to 'File system read error.'" << endl;
-            return;
-        }
+        FileStorage fs_out(".json", FileStorage::WRITE + FileStorage::MEMORY);
+        ASSERT_TRUE(fs_out.isOpened());
+        detector.write(fs_out);
+        std::string serialized_string = fs_out.releaseAndGetString();
+        FileStorage test_fs(serialized_string, FileStorage::Mode::READ + FileStorage::MEMORY);
+        ASSERT_TRUE(test_fs.isOpened());
         aruco::ArucoDetector test_detector;
         test_detector.read(test_fs.root());
         // check for one additional dictionary
