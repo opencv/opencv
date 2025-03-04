@@ -11,6 +11,8 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 // forward declarations
 void cartToPolar32f(const float *X, const float *Y, float* mag, float *angle, int len, bool angleInDegrees);
 void cartToPolar64f(const double *X, const double *Y, double* mag, double *angle, int len, bool angleInDegrees);
+void polarToCart32f(const float *mag, const float *angle, float *X, float *Y, int len, bool angleInDegrees);
+void polarToCart64f(const double *mag, const double *angle, double *X, double *Y, int len, bool angleInDegrees);
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees);
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
@@ -175,6 +177,198 @@ void cartToPolar64f(const double *X, const double *Y, double *mag, double *angle
             mag[i + j] = mbuf[j];
         for( j = 0; j < blksz; j++ )
             angle[i + j] = abuf[j];
+    }
+}
+
+namespace {
+
+static inline void SinCos_32f(const float* mag, const float* angle, float* cosval, float* sinval, int len, int angle_in_degrees)
+{
+    const int N = 64;
+
+    static const double sin_table[] =
+    {
+     0.00000000000000000000,     0.09801714032956060400,
+     0.19509032201612825000,     0.29028467725446233000,
+     0.38268343236508978000,     0.47139673682599764000,
+     0.55557023301960218000,     0.63439328416364549000,
+     0.70710678118654746000,     0.77301045336273699000,
+     0.83146961230254524000,     0.88192126434835494000,
+     0.92387953251128674000,     0.95694033573220894000,
+     0.98078528040323043000,     0.99518472667219682000,
+     1.00000000000000000000,     0.99518472667219693000,
+     0.98078528040323043000,     0.95694033573220894000,
+     0.92387953251128674000,     0.88192126434835505000,
+     0.83146961230254546000,     0.77301045336273710000,
+     0.70710678118654757000,     0.63439328416364549000,
+     0.55557023301960218000,     0.47139673682599786000,
+     0.38268343236508989000,     0.29028467725446239000,
+     0.19509032201612861000,     0.09801714032956082600,
+     0.00000000000000012246,    -0.09801714032956059000,
+    -0.19509032201612836000,    -0.29028467725446211000,
+    -0.38268343236508967000,    -0.47139673682599764000,
+    -0.55557023301960196000,    -0.63439328416364527000,
+    -0.70710678118654746000,    -0.77301045336273666000,
+    -0.83146961230254524000,    -0.88192126434835494000,
+    -0.92387953251128652000,    -0.95694033573220882000,
+    -0.98078528040323032000,    -0.99518472667219693000,
+    -1.00000000000000000000,    -0.99518472667219693000,
+    -0.98078528040323043000,    -0.95694033573220894000,
+    -0.92387953251128663000,    -0.88192126434835505000,
+    -0.83146961230254546000,    -0.77301045336273688000,
+    -0.70710678118654768000,    -0.63439328416364593000,
+    -0.55557023301960218000,    -0.47139673682599792000,
+    -0.38268343236509039000,    -0.29028467725446250000,
+    -0.19509032201612872000,    -0.09801714032956050600,
+    };
+
+    static const double k2 = (2*CV_PI)/N;
+
+    static const double sin_a0 = -0.166630293345647*k2*k2*k2;
+    static const double sin_a2 = k2;
+
+    static const double cos_a0 = -0.499818138450326*k2*k2;
+    /*static const double cos_a2 =  1;*/
+
+    double k1;
+    int i = 0;
+
+    if( !angle_in_degrees )
+        k1 = N/(2*CV_PI);
+    else
+        k1 = N/360.;
+
+#if CV_AVX2
+    if (USE_AVX2)
+    {
+        __m128d v_k1 = _mm_set1_pd(k1);
+        __m128d v_1 = _mm_set1_pd(1);
+        __m128i v_N1 = _mm_set1_epi32(N - 1);
+        __m128i v_N4 = _mm_set1_epi32(N >> 2);
+        __m128d v_sin_a0 = _mm_set1_pd(sin_a0);
+        __m128d v_sin_a2 = _mm_set1_pd(sin_a2);
+        __m128d v_cos_a0 = _mm_set1_pd(cos_a0);
+
+        for ( ; i <= len - 4; i += 4)
+        {
+            __m128 v_angle = _mm_loadu_ps(angle + i);
+
+            // 0-1
+            __m128d v_t = _mm_mul_pd(_mm_cvtps_pd(v_angle), v_k1);
+            __m128i v_it = _mm_cvtpd_epi32(v_t);
+            v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
+
+            __m128i v_sin_idx = _mm_and_si128(v_it, v_N1);
+            __m128i v_cos_idx = _mm_and_si128(_mm_sub_epi32(v_N4, v_sin_idx), v_N1);
+
+            __m128d v_t2 = _mm_mul_pd(v_t, v_t);
+            __m128d v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
+            __m128d v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
+
+            __m128d v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 8);
+            __m128d v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 8);
+
+            __m128d v_sin_val_0 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
+                                             _mm_mul_pd(v_cos_a, v_sin_b));
+            __m128d v_cos_val_0 = _mm_sub_pd(_mm_mul_pd(v_cos_a, v_cos_b),
+                                             _mm_mul_pd(v_sin_a, v_sin_b));
+
+            // 2-3
+            v_t = _mm_mul_pd(_mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_angle), 8))), v_k1);
+            v_it = _mm_cvtpd_epi32(v_t);
+            v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
+
+            v_sin_idx = _mm_and_si128(v_it, v_N1);
+            v_cos_idx = _mm_and_si128(_mm_sub_epi32(v_N4, v_sin_idx), v_N1);
+
+            v_t2 = _mm_mul_pd(v_t, v_t);
+            v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
+            v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
+
+            v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 8);
+            v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 8);
+
+            __m128d v_sin_val_1 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
+                                             _mm_mul_pd(v_cos_a, v_sin_b));
+            __m128d v_cos_val_1 = _mm_sub_pd(_mm_mul_pd(v_cos_a, v_cos_b),
+                                             _mm_mul_pd(v_sin_a, v_sin_b));
+
+            __m128 v_sin_val = _mm_movelh_ps(_mm_cvtpd_ps(v_sin_val_0),
+                                             _mm_cvtpd_ps(v_sin_val_1));
+            __m128 v_cos_val = _mm_movelh_ps(_mm_cvtpd_ps(v_cos_val_0),
+                                             _mm_cvtpd_ps(v_cos_val_1));
+
+            if (mag)
+            {
+                __m128 v_mag = _mm_loadu_ps(mag + i);
+                v_sin_val = _mm_mul_ps(v_sin_val, v_mag);
+                v_cos_val = _mm_mul_ps(v_cos_val, v_mag);
+            }
+
+            _mm_storeu_ps(sinval + i, v_sin_val);
+            _mm_storeu_ps(cosval + i, v_cos_val);
+        }
+    }
+#endif
+
+    for( ; i < len; i++ )
+    {
+        double t = angle[i]*k1;
+        int it = cvRound(t);
+        t -= it;
+        int sin_idx = it & (N - 1);
+        int cos_idx = (N/4 - sin_idx) & (N - 1);
+
+        double sin_b = (sin_a0*t*t + sin_a2)*t;
+        double cos_b = cos_a0*t*t + 1;
+
+        double sin_a = sin_table[sin_idx];
+        double cos_a = sin_table[cos_idx];
+
+        double sin_val = sin_a*cos_b + cos_a*sin_b;
+        double cos_val = cos_a*cos_b - sin_a*sin_b;
+
+        if (mag)
+        {
+            double mag_val = mag[i];
+            sin_val *= mag_val;
+            cos_val *= mag_val;
+        }
+
+        sinval[i] = (float)sin_val;
+        cosval[i] = (float)cos_val;
+    }
+}
+
+} // anonymous::
+
+void polarToCart32f(const float *mag, const float *angle, float *X, float *Y, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+    SinCos_32f(mag, angle, X, Y, len, angleInDegrees);
+}
+
+void polarToCart64f(const double *mag, const double *angle, double *X, double *Y, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    const int BLKSZ = 128;
+    float ybuf[BLKSZ], xbuf[BLKSZ], _mbuf[BLKSZ], abuf[BLKSZ];
+    float* mbuf = mag ? _mbuf : nullptr;
+    for( int i = 0; i < len; i += BLKSZ )
+    {
+        int j, blksz = std::min(BLKSZ, len - i);
+        for( j = 0; j < blksz; j++ )
+        {
+            if (mbuf)
+                mbuf[j] = (float)mag[i + j];
+            abuf[j] = (float)angle[i + j];
+        }
+        SinCos_32f(mbuf, abuf, xbuf, ybuf, blksz, angleInDegrees);
+        for( j = 0; j < blksz; j++ )
+            X[i + j] = xbuf[j];
+        for( j = 0; j < blksz; j++ )
+            Y[i + j] = ybuf[j];
     }
 }
 
