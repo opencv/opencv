@@ -263,19 +263,19 @@ inline int minMaxIdx(const uchar* src_data, size_t src_step, int width, int heig
     switch (depth)
     {
     case CV_8UC1:
-        return minMaxIdxReadTwice<RVVU8M1, RVVU8M1>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
+        return minMaxIdxReadTwice<RVV_U8M1, RVV_U8M1>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
     case CV_8SC1:
-        return minMaxIdxReadTwice<RVVI8M1, RVVU8M1>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
+        return minMaxIdxReadTwice<RVV_I8M1, RVV_U8M1>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
     case CV_16UC1:
-        return minMaxIdxReadTwice<RVVU16M1, RVVU8MF2>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
+        return minMaxIdxReadTwice<RVV_U16M1, RVV_U8MF2>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
     case CV_16SC1:
-        return minMaxIdxReadTwice<RVVI16M1, RVVU8MF2>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
+        return minMaxIdxReadTwice<RVV_I16M1, RVV_U8MF2>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
     case CV_32SC1:
-        return minMaxIdxReadOnce<RVVI32M4, RVVU8M1, RVVU32M4>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
+        return minMaxIdxReadOnce<RVV_I32M4, RVV_U8M1, RVV_U32M4>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
     case CV_32FC1:
-        return minMaxIdxReadOnce<RVVF32M4, RVVU8M1, RVVU32M4>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
+        return minMaxIdxReadOnce<RVV_F32M4, RVV_U8M1, RVV_U32M4>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
     case CV_64FC1:
-        return minMaxIdxReadOnce<RVVF64M4, RVVU8MF2, RVVU32M2>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
+        return minMaxIdxReadOnce<RVV_F64M4, RVV_U8MF2, RVV_U32M2>(src_data, src_step, width, height, minVal, maxVal, minIdx, maxIdx, mask, mask_step);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
