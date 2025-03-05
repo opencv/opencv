@@ -260,7 +260,7 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         auto wrapper_A = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto B = blobs[0];
-        auto C =  && const_input_C ? blobs[1] : Mat(); // in most cases C is constant
+        auto C =  && const_C ? blobs[1] : Mat(); // in most cases C is constant
 
         if (!trans_b)
             cv::transpose(B, B);
