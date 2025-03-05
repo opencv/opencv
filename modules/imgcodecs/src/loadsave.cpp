@@ -914,7 +914,7 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
     return success;
 }
 
-bool imdecodeanimation(InputArray buf, CV_OUT Animation& animation, int start, int count) 
+bool imdecodeanimation(InputArray buf, Animation& animation, int start, int count)
 {
     CV_TRACE_FUNCTION();
 
@@ -1104,7 +1104,7 @@ bool imwriteanimation(const String& filename, const Animation& animation, const 
     return imwriteanimation_(filename, animation, params);
 }
 
-static bool imencodeanimation_(const String& ext, const Animation& animation, CV_OUT std::vector<uchar>& buf, const std::vector<int>& params)
+static bool imencodeanimation_(const String& ext, const Animation& animation, std::vector<uchar>& buf, const std::vector<int>& params)
 {
     ImageEncoder encoder = findEncoder(ext);
     if (!encoder)
@@ -1129,7 +1129,7 @@ static bool imencodeanimation_(const String& ext, const Animation& animation, CV
     return code;
 }
 
-bool imencodeanimation(const String& ext, const Animation& animation, CV_OUT std::vector<uchar>& buf, const std::vector<int>& params) 
+bool imencodeanimation(const String& ext, const Animation& animation, std::vector<uchar>& buf, const std::vector<int>& params)
 {
     CV_Assert(!animation.frames.empty());
     CV_Assert(animation.frames.size() == animation.durations.size());
