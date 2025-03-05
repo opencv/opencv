@@ -19,7 +19,7 @@ using namespace cv::dnn::cuda4dnn;
 #include "cpu_kernels/fast_gemm.hpp"
 
 namespace cv { namespace dnn {
-
+// Y = alpha * A’ * B’ + beta * C
 class GemmLayerImpl CV_FINAL : public GemmLayer {
 public:
     GemmLayerImpl(const LayerParams& params) {
@@ -29,8 +29,8 @@ public:
         trans_b = params.get<bool>("transB", false);
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
-
-        if (params.has("constB") || params.has("constB") || params.has("have_bias"))
+        
+        if (params.has("constB") || params.has("constC") || params.has("have_bias"))
         {
             // The params are not part of ONNX, but set by old ONNX parser
             const_B = params.get<bool>("constB", false); // true means blobs[0] is B
@@ -208,6 +208,14 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
+        // "overload" const_B
+        bool const_input_B = (inputs.size() < 2) && const_B;
+        assert(const_input_B || inputs.size() >= 2);
+
+        // "overload" const_C
+        bool const_input_C = (inputs.size() < 3) && const_C;
+        assert(const_input_B || inputs.size() >= 3);
+
         const auto &A = inputs[0];
         auto &Y = outputs[0];
 
@@ -221,7 +229,7 @@ public:
 
         // broadcast C and copy C to output
         if (have_bias_) {
-            if (!const_C || broadcast_C.empty()) {
+            if (!const_input_C || broadcast_C.empty()) {
                 broadcastCWtihBeta(M, N, (inputs.size() >= 3 ? inputs.back() : blobs.back()));
             }
             int step = M * N;
@@ -234,7 +242,7 @@ public:
             std::memset(ptr_y, 0, total * sizeof(float));
         }
 
-        if (const_B) {
+        if (const_input_B) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
             fastGemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
         } else {
@@ -248,11 +256,11 @@ public:
                               const std::vector<Ptr<BackendWrapper>>& inputs,
                               const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE {
         CV_CheckFalse(trans_a, "DNN/Gemm/Cuda: does not support transA");
-        CV_CheckTrue(const_B, "DNN/Gemm/Cuda: input B (weight) is required to be constant");
+        CV_CheckTrue(const_input_B, "DNN/Gemm/Cuda: input B (weight) is required to be constant");
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         auto wrapper_A = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto B = blobs[0];
-        auto C = have_bias && const_C ? blobs[1] : Mat(); // in most cases C is constant
+        auto C =  && const_input_C ? blobs[1] : Mat(); // in most cases C is constant
 
         if (!trans_b)
             cv::transpose(B, B);
@@ -393,7 +401,9 @@ public:
 
 private:
     bool const_B;
+    bool const_B_on_input;
     bool const_C;
+    bool const_C_on_input;
     bool have_bias;
     std::vector<float> packed_B;
     std::vector<float> broadcast_C;
