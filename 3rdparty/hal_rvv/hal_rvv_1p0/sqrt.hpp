@@ -4,6 +4,7 @@
 #pragma once
 
 #include <riscv_vector.h>
+#include <cmath>
 
 namespace cv { namespace cv_hal_rvv {
 
@@ -60,8 +61,12 @@ inline int sqrt32f(const float* src, float* dst, int _len)
     {
         vl = __riscv_vsetvl_e32m8(len);
         auto x = __riscv_vle32_v_f32m8(src, vl);
-        auto y = __riscv_vfmul(x, detail::invSqrt<2>(x, vl), vl);
-        __riscv_vse32(dst, y, vl);
+        auto y = detail::invSqrt<2>(x, vl);
+        // just to prevent the compiler from calculating mask before the invSqrt, which will run out
+        // of registers and cause memory access.
+        asm volatile("" ::: "memory");
+        auto mask = __riscv_vmfne(__riscv_vmfne(x, 0.0, vl), x, INFINITY, vl);
+        __riscv_vse32(dst, __riscv_vfmul_mu(mask, x, x, y, vl), vl);
     }
 
     return CV_HAL_ERROR_OK;
@@ -74,8 +79,12 @@ inline int sqrt64f(const double* src, double* dst, int _len)
     {
         vl = __riscv_vsetvl_e64m8(len);
         auto x = __riscv_vle64_v_f64m8(src, vl);
-        auto y = __riscv_vfmul(x, detail::invSqrt<3>(x, vl), vl);
-        __riscv_vse64(dst, y, vl);
+        auto y = detail::invSqrt<3>(x, vl);
+        // just to prevent the compiler from calculating mask before the invSqrt, which will run out
+        // of registers and cause memory access.
+        asm volatile("" ::: "memory");
+        auto mask = __riscv_vmfne(__riscv_vmfne(x, 0.0, vl), x, INFINITY, vl);
+        __riscv_vse64(dst, __riscv_vfmul_mu(mask, x, x, y, vl), vl);
     }
 
     return CV_HAL_ERROR_OK;
