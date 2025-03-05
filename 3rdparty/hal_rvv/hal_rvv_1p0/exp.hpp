@@ -134,7 +134,7 @@ inline int exp32f(const float* src, float* dst, int _len)
         auto t = __riscv_vsra(xi, detail::exp_scale, vl);
         t = __riscv_vadd(t, 127, vl);
         t = __riscv_vmerge(t, 0, __riscv_vmslt(t, 0, vl), vl);
-        t = __riscv_vand(t, 255, vl);
+        t = __riscv_vmerge(t, 255, __riscv_vmsgt(t, 255, vl), vl);
         auto buf = __riscv_vreinterpret_f32m4(__riscv_vsll(t, 23, vl));
 
         auto _xi = __riscv_vreinterpret_u32m4(xi);
@@ -177,7 +177,7 @@ inline int exp64f(const double* src, double* dst, int _len)
         auto t = __riscv_vsra(xi, detail::exp_scale, vl);
         t = __riscv_vadd(t, 1023, vl);
         t = __riscv_vmerge(t, 0, __riscv_vmslt(t, 0, vl), vl);
-        t = __riscv_vand(t, 2047, vl);
+        t = __riscv_vmerge(t, 2047, __riscv_vmsgt(t, 2047, vl), vl);
         auto buf = __riscv_vreinterpret_f64m4(__riscv_vsll(t, 52, vl));
 
         auto _xi = __riscv_vreinterpret_u64m4(xi);
