@@ -535,9 +535,12 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
         struct spng_ihdr ihdr = {};
         ihdr.height = height;
         ihdr.width = width;
-        int compression_level = -1;                          // Invalid value to allow setting 0-9 as valid
+        int compression_level = Z_BEST_SPEED;
         int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
+        int filter = IMWRITE_PNG_FILTER_SUB; // Default filter
         bool isBilevel = false;
+        bool set_compression_level = false;
+        bool set_filter = false;
 
         for (size_t i = 0; i < params.size(); i += 2)
         {
@@ -546,6 +549,7 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
                 compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
                 compression_level = params[i + 1];
                 compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
+                set_compression_level = true;
             }
             if (params[i] == IMWRITE_PNG_STRATEGY)
             {
@@ -555,6 +559,11 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
             if (params[i] == IMWRITE_PNG_BILEVEL)
             {
                 isBilevel = params[i + 1] != 0;
+            }
+            if( params[i] == IMWRITE_PNG_FILTER )
+            {
+                filter = params[i+1];
+                set_filter = true;
             }
         }
 
@@ -579,15 +588,9 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
 
         if (m_buf || f)
         {
-            if (compression_level >= 0)
-            {
-                spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, compression_level);
-            }
-            else
-            {
-                spng_set_option(ctx, SPNG_FILTER_CHOICE, SPNG_FILTER_CHOICE_SUB);
-                spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, Z_BEST_SPEED);
-            }
+            if (!set_compression_level || set_filter)
+                spng_set_option(ctx, SPNG_FILTER_CHOICE, filter);
+            spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, compression_level);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_STRATEGY, compression_strategy);
 
             int ret;
