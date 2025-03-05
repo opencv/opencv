@@ -480,11 +480,14 @@ static void undistortPointsInternal( const Mat& _src, Mat& _dst, const Mat& _cam
             }
         }
 
-        double xx = RR[0][0]*x + RR[0][1]*y + RR[0][2];
-        double yy = RR[1][0]*x + RR[1][1]*y + RR[1][2];
-        double ww = 1./(RR[2][0]*x + RR[2][1]*y + RR[2][2]);
-        x = xx*ww;
-        y = yy*ww;
+        if( !matR.empty() || !matP.empty() )
+        {
+            double xx = RR[0][0]*x + RR[0][1]*y + RR[0][2];
+            double yy = RR[1][0]*x + RR[1][1]*y + RR[1][2];
+            double ww = 1./(RR[2][0]*x + RR[2][1]*y + RR[2][2]);
+            x = xx*ww;
+            y = yy*ww;
+        }
 
         if( dtype == CV_32FC2 )
         {
