@@ -36,6 +36,7 @@
 #include "hal_rvv_1p0/cholesky.hpp" // core
 #include "hal_rvv_1p0/qr.hpp" // core
 #include "hal_rvv_1p0/svd.hpp" // core
+#include "hal_rvv_1p0/sqrt.hpp" // core
 
 #include "hal_rvv_1p0/pyramids.hpp" // imgproc
 #include "hal_rvv_1p0/color.hpp" // imgproc
