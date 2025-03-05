@@ -333,8 +333,11 @@ inline int hal_ni_normDiff(const uchar* src1, size_t src1_step, const uchar* src
 @param depth Depth of input
 @param fn Function pointer to get the correct norm function
 */
-using NormFunc = int (*)(const uchar*, const uchar*, uchar*, int, int);
-inline int hal_ni_getNormFunc(int normType, int depth, NormFunc *fn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @addtogroup core_hal_interface_norm Absolute norm
+//! @{
+using hal_norm_func_t = int (*)(const uchar*, const uchar*, uchar*, int, int);
+inline int hal_ni_getNormFunc(int normType, int depth, hal_norm_func_t *fn) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
 
 /**
 @brief Convert array to another with specified type.
