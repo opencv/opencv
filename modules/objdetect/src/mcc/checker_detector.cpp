@@ -1178,16 +1178,20 @@ void CCheckerDetectorImpl::getRefColor(const COLORCHART chartType, cv::Mat& outp
     output = cv::Mat(colorCount, 1, CV_8UC3);
 
     for (int i = 0; i < colorCount; i++) {
-        lab_color.at<cv::Vec3f>(0, 0) = cv::Vec3f(colorData[i][0], colorData[i][1], colorData[i][2]);
+        lab_color.at<cv::Vec3f>(0, 0) = cv::Vec3f(
+            static_cast<float>(colorData[i][0]),
+            static_cast<float>(colorData[i][1]),
+            static_cast<float>(colorData[i][2])
+        );
 
         cv::cvtColor(lab_color, rgb_color, cv::COLOR_Lab2BGR);
 
         // Convert to 8-bit RGB values (0-255)
         cv::Vec3f rgb = rgb_color.at<cv::Vec3f>(0, 0) * 255;
         output.at<cv::Vec3b>(i, 0) = cv::Vec3b(
-            std::min(255, std::max(0, (int)rgb[0])),  // Blue
-            std::min(255, std::max(0, (int)rgb[1])),  // Green
-            std::min(255, std::max(0, (int)rgb[2]))   // Red
+            std::min(255, std::max(0, static_cast<int>(rgb[0]))),  // Blue
+            std::min(255, std::max(0, static_cast<int>(rgb[1]))),  // Green
+            std::min(255, std::max(0, static_cast<int>(rgb[2])))   // Red
         );
     }
 }
