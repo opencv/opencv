@@ -7,95 +7,61 @@
 #include <opencv2/core/base.hpp>
 #include <opencv2/core/utility.hpp>
 
+#include "hal_rvv_1p0/types.hpp"
+
 namespace cv { namespace cv_hal_rvv {
 
 #undef cv_hal_lut
 #define cv_hal_lut cv::cv_hal_rvv::lut
 
 // need vlen >= 256
-struct LUTCacheU8
+struct LUTCacheU8 : RVV_U8M8
 {
-    using ElemType = uchar;
+    using TabType = RVV_U8M8;
+    using SrcType = RVV_SameLen<uint8_t, TabType>;
+    using IdxType = RVV_SameLen<uint8_t, TabType>;
+
+    using ElemType = typename TabType::ElemType;
     constexpr static size_t elem_size = sizeof(ElemType);
 
-    static inline vuint8m8_t loadTable(const ElemType* lut_data)
+    static inline typename TabType::VecType
+        gather(typename IdxType::VecType src_v, typename TabType::VecType lut_v, size_t vl)
     {
-        return __riscv_vle8_v_u8m8(lut_data, 256);
-    }
-
-    static inline size_t setvl(size_t len)
-    {
-        return __riscv_vsetvl_e8m8(len);
-    }
-
-    static inline size_t setvlmax()
-    {
-        return __riscv_vsetvlmax_e8m8();
-    }
-
-    static inline void lut(const uchar* src, vuint8m8_t lut_v, ElemType* dst, size_t vl)
-    {
-        auto src_v = __riscv_vle8_v_u8m8(src, vl);
-        auto dst_v = __riscv_vrgather(lut_v, src_v, vl);
-        __riscv_vse8(dst, dst_v, vl);
+        return __riscv_vrgather(lut_v, src_v, vl);
     }
 };
 
 // need vlen >= 512
-struct LUTCacheU16
+struct LUTCacheU16 : RVV_U16M8
 {
-    using ElemType = uint16_t;
+    using TabType = RVV_U16M8;
+    using SrcType = RVV_SameLen<uint8_t, TabType>;
+    using IdxType = RVV_SameLen<uint16_t, TabType>;
+
+    using ElemType = typename TabType::ElemType;
     constexpr static size_t elem_size = sizeof(ElemType);
 
-    static inline vuint16m8_t loadTable(const ElemType* lut_data)
+    static inline typename TabType::VecType
+        gather(typename IdxType::VecType src_v, typename TabType::VecType lut_v, size_t vl)
     {
-        return __riscv_vle16_v_u16m8(lut_data, 256);
-    }
-
-    static inline size_t setvl(size_t len)
-    {
-        return __riscv_vsetvl_e16m8(len);
-    }
-
-    static inline size_t setvlmax()
-    {
-        return __riscv_vsetvlmax_e16m8();
-    }
-
-    static inline void lut(const uchar* src, vuint16m8_t lut_v, ElemType* dst, size_t vl)
-    {
-        auto src_v = __riscv_vzext_vf2(__riscv_vle8_v_u8m4(src, vl), vl);
-        auto dst_v = __riscv_vrgather(lut_v, src_v, vl);
-        __riscv_vse16(dst, dst_v, vl);
+        return __riscv_vrgather(lut_v, src_v, vl);
     }
 };
 
 // need vlen >= 1024
-struct LUTCacheU32
+struct LUTCacheU32 : RVV_U32M8
 {
-    using ElemType = uint32_t;
+    using TabType = RVV_U32M8;
+    using SrcType = RVV_SameLen<uint8_t, TabType>;
+    using IdxType = RVV_SameLen<uint16_t, TabType>;
+
+    using ElemType = typename TabType::ElemType;
     constexpr static size_t elem_size = sizeof(ElemType);
 
-    static inline vuint32m8_t loadTable(const ElemType* lut_data)
+    static inline typename TabType::VecType
+        gather(typename IdxType::VecType src_v, typename TabType::VecType lut_v, size_t vl)
     {
-        return __riscv_vle32_v_u32m8(lut_data, 256);
-    }
-
-    static inline size_t setvl(size_t len)
-    {
-        return __riscv_vsetvl_e32m8(len);
-    }
-
-    static inline size_t setvlmax()
-    {
-        return __riscv_vsetvlmax_e32m8();
-    }
-
-    static inline void lut(const uchar* src, vuint32m8_t lut_v, ElemType* dst, size_t vl)
-    {
-        auto src_v = __riscv_vzext_vf2(__riscv_vle8_v_u8m2(src, vl), vl);
-        auto dst_v = __riscv_vrgatherei16(lut_v, src_v, vl);
-        __riscv_vse32(dst, dst_v, vl);
+        return __riscv_vrgatherei16(lut_v, src_v, vl);
     }
 };
 
@@ -134,7 +100,7 @@ public:
             w = w * h;
             h = 1;
         }
-        auto lut = LUT_TYPE::loadTable((ElemType*)lut_data);
+        auto lut = LUT_TYPE::vload((ElemType*)lut_data, 256);
         size_t maxlv = LUT_TYPE::setvlmax();
         for (; h; h--, src += src_step, dst += dst_step)
         {
@@ -144,12 +110,18 @@ public:
             auto d = (ElemType*)dst;
             for (; l >= vl; l -= vl, s += vl, d += vl)
             {
-                LUT_TYPE::lut(s, lut, d, vl);
+                auto src_v = LUT_TYPE::SrcType::vload(s, vl);
+                auto idx_v = LUT_TYPE::IdxType::cast(src_v, vl);
+                auto dst_v = LUT_TYPE::gather(idx_v, lut, vl);
+                LUT_TYPE::vstore(d, dst_v, vl);
             }
             for (; l > 0; l -= vl, s += vl, d += vl)
             {
                 vl = LUT_TYPE::setvl(l);
-                LUT_TYPE::lut(s, lut, d, vl);
+                auto src_v = LUT_TYPE::SrcType::vload(s, vl);
+                auto idx_v = LUT_TYPE::IdxType::cast(src_v, vl);
+                auto dst_v = LUT_TYPE::gather(idx_v, lut, vl);
+                LUT_TYPE::vstore(d, dst_v, vl);
             }
         }
     }
