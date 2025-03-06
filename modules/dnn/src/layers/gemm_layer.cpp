@@ -29,7 +29,7 @@ public:
         trans_b = params.get<bool>("transB", false);
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
-        
+
         if (params.has("constB") || params.has("constC") || params.has("have_bias"))
         {
             // The params are not part of ONNX, but set by old ONNX parser
