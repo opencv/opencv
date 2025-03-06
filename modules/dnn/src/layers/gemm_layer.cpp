@@ -209,11 +209,11 @@ public:
         outputs_arr.getMatVector(outputs);
 
         // "overload" const_B
-        bool const_input_B = (inputs.size() < 2) && const_B;
+        const_input_B = (inputs.size() < 2) && const_B;
         assert(const_input_B || inputs.size() >= 2);
 
         // "overload" const_C
-        bool const_input_C = (inputs.size() < 3) && const_C;
+        const_input_C = (inputs.size() < 3) && const_C;
         assert(const_input_B || inputs.size() >= 3);
 
         const auto &A = inputs[0];
@@ -401,9 +401,9 @@ public:
 
 private:
     bool const_B;
-    bool const_B_on_input;
+    bool const_input_B;
     bool const_C;
-    bool const_C_on_input;
+    bool const_input_C;
     bool have_bias;
     std::vector<float> packed_B;
     std::vector<float> broadcast_C;
