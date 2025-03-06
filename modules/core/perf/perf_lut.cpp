@@ -43,23 +43,4 @@ PERF_TEST_P( SizePrm, LUT_multi,
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P( SizePrm, LUT_multi2,
-             testing::Values(szQVGA, szVGA, sz1080p)
-           )
-{
-    Size sz = GetParam();
-
-    int maxValue = 255;
-
-    Mat src(sz, CV_8UC3);
-    randu(src, 0, maxValue);
-    Mat lut(1, 256, CV_8UC3);
-    randu(lut, 0, maxValue);
-    Mat dst(sz, CV_8UC3);
-
-    TEST_CYCLE() LUT(src, lut, dst);
-
-    SANITY_CHECK_NOTHING();
-}
-
 }} // namespace
