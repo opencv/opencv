@@ -45,17 +45,6 @@
 
 namespace cv
 {
-
-namespace detail {
-template<typename T>
-void getVec(InputArray _input, std::vector<T>& output) {
-//        Mat m = _input.getMat();
-//        size_t length = m.total();
-//        T* ptr = m.ptr<T>();
-//        output = std::vector<T>(ptr, ptr + length);
-        _input.copyTo(output);
-}
-}
 template<typename _Tp, typename _DotTp>
 static int Sklansky_(const typename std::vector<Point_<_Tp>>& vec, int start, int end, int* stack, int nsign, int sign2 )
 {
