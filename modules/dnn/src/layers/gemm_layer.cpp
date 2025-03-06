@@ -214,7 +214,7 @@ public:
 
         // "overload" const_C
         const_input_C = (inputs.size() < 3) && const_C;
-        assert(const_input_B || inputs.size() >= 3);
+        assert(const_input_C || inputs.size() >= 3);
 
         const auto &A = inputs[0];
         auto &Y = outputs[0];
