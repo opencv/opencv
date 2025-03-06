@@ -198,6 +198,7 @@ public:
             EXPECT_EQ(bunny_param.getWidth(), frame.cols);
             EXPECT_EQ(bunny_param.getHeight(), frame.rows);
             count_actual += 1;
+            EXPECT_LE(count_actual, bunny_param.getCount() + 1);
             if (::testing::Test::HasFailure() && count_actual % 10 == 0)
                 break;
         }
