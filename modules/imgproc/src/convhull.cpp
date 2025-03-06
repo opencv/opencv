@@ -41,21 +41,32 @@
 
 #include "precomp.hpp"
 #include <iostream>
+#include <vector>
 
 namespace cv
 {
 
+namespace detail {
+template<typename T>
+void getVec(InputArray _input, std::vector<T>& output) {
+//        Mat m = _input.getMat();
+//        size_t length = m.total();
+//        T* ptr = m.ptr<T>();
+//        output = std::vector<T>(ptr, ptr + length);
+        _input.copyTo(output);
+}
+}
 template<typename _Tp, typename _DotTp>
-static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2 )
+static int Sklansky_(const typename std::vector<Point_<_Tp>>& vec, int start, int end, int* stack, int nsign, int sign2 )
 {
-    int incr = end > start ? 1 : -1;
+	int incr = end > start ? 1 : -1;
     // prepare first triangle
     int pprev = start, pcur = pprev + incr, pnext = pcur + incr;
     int stacksize = 3;
 
     if( start == end ||
-       (array[start]->x == array[end]->x &&
-        array[start]->y == array[end]->y) )
+       (vec[start].x == vec[end].x &&
+        vec[start].y == vec[end].y) )
     {
         stack[0] = start;
         return 1;
@@ -70,15 +81,15 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
     while( pnext != end )
     {
         // check the angle p1,p2,p3
-        _Tp cury = array[pcur]->y;
-        _Tp nexty = array[pnext]->y;
+        _Tp cury = vec[pcur].y;
+        _Tp nexty = vec[pnext].y;
         _Tp by = nexty - cury;
 
         if( CV_SIGN( by ) != nsign )
         {
-            _Tp ax = array[pcur]->x - array[pprev]->x;
-            _Tp bx = array[pnext]->x - array[pcur]->x;
-            _Tp ay = cury - array[pprev]->y;
+            _Tp ax = vec[pcur].x - vec[pprev].x;
+            _Tp bx = vec[pnext].x - vec[pcur].x;
+            _Tp ay = cury - vec[pprev].y;
             _DotTp convexity = (_DotTp)ay*bx - (_DotTp)ax*by; // if >0 then convex angle
 
             if( CV_SIGN( convexity ) == sign2 && (ax != 0 || ay != 0) )
@@ -121,13 +132,13 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 template<typename _Tp>
 struct CHullCmpPoints
 {
-    bool operator()(const Point_<_Tp>* p1, const Point_<_Tp>* p2) const
+    bool operator()(const Point_<_Tp>& p1, const Point_<_Tp>& p2) const
     {
-        if( p1->x != p2->x )
-            return p1->x < p2->x;
-        if( p1->y != p2->y )
-            return p1->y < p2->y;
-        return p1 < p2;
+        if( p1.x != p2.x )
+            return p1.x < p2.x;
+        if( p1.y != p2.y )
+            return p1.y < p2.y;
+        return &p1 < &p2;
     }
 };
 
@@ -136,11 +147,15 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_points.getObj() != _hull.getObj());
-    Mat points = _points.getMat();
-    int i, total = points.checkVector(2), depth = points.depth(), nout = 0;
+    CV_Assert(_points.getObj() != _hull.getObj() && _hull.isVector());
+    CV_Assert((_points.isMat() || _points.isVector()) && _hull.isVector());
+    CV_Assert(_points.isContinuous());
+
+    int total = _points.total(), depth = _points.depth(), nout = 0;
     int miny_ind = 0, maxy_ind = 0;
+    bool is_float = depth == CV_32F;
     CV_Assert(total >= 0 && (depth == CV_32F || depth == CV_32S));
+
 
     if( total == 0 )
     {
@@ -149,49 +164,45 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     }
 
     returnPoints = !_hull.fixedType() ? returnPoints : _hull.type() != CV_32S;
+    std::vector<Point> points;
+    std::vector<Point2f> pointsf;
+    _points.copyTo(points);
+    _points.copyTo(pointsf);
 
-    bool is_float = depth == CV_32F;
-    AutoBuffer<Point*> _pointer(total);
-    AutoBuffer<int> _stack(total + 2), _hullbuf(total);
-    Point** pointer = _pointer.data();
-    Point2f** pointerf = (Point2f**)pointer;
-    Point* data0 = points.ptr<Point>();
+    std::vector<int> _stack(total + 2), _hullbuf(total);
     int* stack = _stack.data();
     int* hullbuf = _hullbuf.data();
-
-    CV_Assert(points.isContinuous());
-
-    for( i = 0; i < total; i++ )
-        pointer[i] = &data0[i];
 
     // sort the point set by x-coordinate, find min and max y
     if( !is_float )
     {
-        std::sort(pointer, pointer + total, CHullCmpPoints<int>());
-        for( i = 1; i < total; i++ )
+        std::sort(points.begin(), points.end(), CHullCmpPoints<int>());
+        for(size_t j = 1; j < points.size(); j++ )
         {
-            int y = pointer[i]->y;
-            if( pointer[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointer[maxy_ind]->y < y )
-                maxy_ind = i;
+            int y = points[j].y;
+            if( points[miny_ind].y > y )
+                miny_ind = j;
+            if( points[maxy_ind].y < y )
+                maxy_ind = j;
         }
     }
     else
     {
-        std::sort(pointerf, pointerf + total, CHullCmpPoints<float>());
-        for( i = 1; i < total; i++ )
+        std::sort(pointsf.begin(), pointsf.end(), CHullCmpPoints<float>());
+        for(size_t j = 1; j < pointsf.size(); j++ )
         {
-            float y = pointerf[i]->y;
-            if( pointerf[miny_ind]->y > y )
-                miny_ind = i;
-            if( pointerf[maxy_ind]->y < y )
-                maxy_ind = i;
+            float y = pointsf[j].y;
+            if( pointsf[miny_ind].y > y )
+                miny_ind = j;
+            if( pointsf[maxy_ind].y < y )
+                maxy_ind = j;
         }
     }
 
-    if( pointer[0]->x == pointer[total-1]->x &&
-        pointer[0]->y == pointer[total-1]->y )
+    const Point* pointer = points.data();
+
+    if( pointer[0].x == pointer[points.size()-1].x &&
+        pointer[0].y == pointer[points.size()-1].y )
     {
         hullbuf[nout++] = 0;
     }
@@ -200,12 +211,12 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         // upper half
         int *tl_stack = stack;
         int tl_count = !is_float ?
-            Sklansky_<int, int64>( pointer, 0, maxy_ind, tl_stack, -1, 1) :
-            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1);
+            Sklansky_<int, int64>( points, 0, maxy_ind, tl_stack, -1, 1) :
+            Sklansky_<float, double>( pointsf, 0, maxy_ind, tl_stack, -1, 1);
         int *tr_stack = stack + tl_count;
         int tr_count = !is_float ?
-            Sklansky_<int, int64>( pointer, total-1, maxy_ind, tr_stack, -1, -1) :
-            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1);
+            Sklansky_<int, int64>( points, points.size()-1, maxy_ind, tr_stack, -1, -1) :
+            Sklansky_<float, double>( pointsf, pointsf.size()-1, maxy_ind, tr_stack, -1, -1);
 
         // gather upper part of convex hull to output
         if( !clockwise )
@@ -214,21 +225,21 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
             std::swap( tl_count, tr_count );
         }
 
-        for( i = 0; i < tl_count-1; i++ )
-            hullbuf[nout++] = int(pointer[tl_stack[i]] - data0);
-        for( i = tr_count - 1; i > 0; i-- )
-            hullbuf[nout++] = int(pointer[tr_stack[i]] - data0);
+        for(int i = 0; i < tl_count-1; i++ )
+            hullbuf[nout++] = int(&pointer[tl_stack[i]] - pointer);
+        for(int i = tr_count - 1; i > 0; i-- )
+            hullbuf[nout++] = int(&pointer[tr_stack[i]] - pointer);
         int stop_idx = tr_count > 2 ? tr_stack[1] : tl_count > 2 ? tl_stack[tl_count - 2] : -1;
 
         // lower half
         int *bl_stack = stack;
         int bl_count = !is_float ?
-            Sklansky_<int, int64>( pointer, 0, miny_ind, bl_stack, 1, -1) :
-            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1);
+            Sklansky_<int, int64>( points, 0, miny_ind, bl_stack, 1, -1) :
+            Sklansky_<float, double>( pointsf, 0, miny_ind, bl_stack, 1, -1);
         int *br_stack = stack + bl_count;
         int br_count = !is_float ?
-            Sklansky_<int, int64>( pointer, total-1, miny_ind, br_stack, 1, 1) :
-            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1);
+            Sklansky_<int, int64>( points, points.size()-1, miny_ind, br_stack, 1, 1) :
+            Sklansky_<float, double>( pointsf, points.size()-1, miny_ind, br_stack, 1, 1);
 
         if( clockwise )
         {
@@ -241,8 +252,8 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
             int check_idx = bl_count > 2 ? bl_stack[1] :
             bl_count + br_count > 2 ? br_stack[2-bl_count] : -1;
             if( check_idx == stop_idx || (check_idx >= 0 &&
-                                          pointer[check_idx]->x == pointer[stop_idx]->x &&
-                                          pointer[check_idx]->y == pointer[stop_idx]->y) )
+                                          pointer[check_idx].x == pointer[stop_idx].x &&
+                                          pointer[check_idx].y == pointer[stop_idx].y) )
             {
                 // if all the points lie on the same line, then
                 // the bottom part of the convex hull is the mirrored top part
@@ -251,11 +262,10 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
                 br_count = MIN( br_count, 2 );
             }
         }
-
-        for( i = 0; i < bl_count-1; i++ )
-            hullbuf[nout++] = int(pointer[bl_stack[i]] - data0);
-        for( i = br_count-1; i > 0; i-- )
-            hullbuf[nout++] = int(pointer[br_stack[i]] - data0);
+        for(int i = 0; i < bl_count-1; i++ )
+            hullbuf[nout++] = int(&pointer[bl_stack[i]] - pointer);
+        for(int i = br_count-1; i > 0; i-- )
+            hullbuf[nout++] = int(&pointer[br_stack[i]] - pointer);
 
         // try to make the convex hull indices form
         // an ascending or descending sequence by the cyclic
@@ -263,7 +273,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         if( nout >= 3 )
         {
             int min_idx = 0, max_idx = 0, lt = 0;
-            for( i = 1; i < nout; i++ )
+            for(int i = 1; i < nout; i++ )
             {
                 int idx = hullbuf[i];
                 lt += hullbuf[i-1] < idx;
@@ -281,6 +291,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
                 int i0 = ascending ? min_idx : max_idx, j = i0;
                 if( i0 > 0 )
                 {
+                    int i;
                     for( i = 0; i < nout; i++ )
                     {
                         int curr_idx = stack[i] = hullbuf[j];
@@ -297,15 +308,15 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
     }
 
-    if( !returnPoints )
+    if( !returnPoints ) {
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
-    else
-    {
+    } else {
         _hull.create(nout, 1, CV_MAKETYPE(depth, 2));
-        Mat hull = _hull.getMat();
-        size_t step = !hull.isContinuous() ? hull.step[0] : sizeof(Point);
-        for( i = 0; i < nout; i++ )
-            *(Point*)(hull.ptr() + i*step) = data0[hullbuf[i]];
+        std::vector<Point>& vHull = *static_cast<std::vector<Point>*>(_hull.getObj());
+        vHull.resize(nout);
+        for (int j = 0; j < nout; j++) {
+            vHull[j] = points[hullbuf[j]];
+        }
     }
 }
 
