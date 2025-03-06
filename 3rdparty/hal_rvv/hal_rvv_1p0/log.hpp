@@ -324,7 +324,7 @@ inline int log32f(const float* src, float* dst, int _len)
         tab_v = __riscv_vluxei32(detail::log_tab_32f, __riscv_vadd(idx, 4, vl), vl);
         auto buf_f = __riscv_vreinterpret_f32m4(buf_i);
         auto x0 = __riscv_vfmul(__riscv_vfsub(buf_f, 1.f, vl), tab_v, vl);
-        x0 = __riscv_vfsub(__riscv_vmseq(idx, (uint32_t)510 * 4, vl), x0, 1.f / 512, vl);
+        x0 = __riscv_vfsub_mu(__riscv_vmseq(idx, (uint32_t)510 * 4, vl), x0, x0, 1.f / 512, vl);
 
         auto res = __riscv_vfadd(__riscv_vfmul(x0, detail::log32f_a0, vl), detail::log32f_a1, vl);
         res = __riscv_vfmadd(res, x0, log_a2, vl);
@@ -361,7 +361,7 @@ inline int log64f(const double* src, double* dst, int _len)
         tab_v = __riscv_vluxei64(detail::log_tab_64f, __riscv_vadd(idx, 8, vl), vl);
         auto buf_f = __riscv_vreinterpret_f64m4(buf_i);
         auto x0 = __riscv_vfmul(__riscv_vfsub(buf_f, 1.0, vl), tab_v, vl);
-        x0 = __riscv_vfsub(__riscv_vmseq(idx, (uint64_t)510 * 8, vl), x0, 1. / 512, vl);
+        x0 = __riscv_vfsub_mu(__riscv_vmseq(idx, (uint64_t)510 * 8, vl), x0, x0, 1. / 512, vl);
 
         auto res = __riscv_vfadd(__riscv_vfmul(x0, detail::log64f_a0, vl), detail::log64f_a1, vl);
         res = __riscv_vfadd(__riscv_vfmul(x0, res, vl), detail::log64f_a2, vl);
