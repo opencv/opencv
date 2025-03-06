@@ -301,10 +301,10 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     } else {
         _hull.create(nout, 1, CV_MAKETYPE(depth, 2));
-        std::vector<Point>& vHull = *static_cast<std::vector<Point>*>(_hull.getObj());
-        vHull.resize(nout);
+        Mat mHull =_hull.getMat();
+        auto* ptr = mHull.ptr<Point>();
         for (int j = 0; j < nout; j++) {
-            vHull[j] = points[hullbuf[j]];
+            ptr[j] = points[hullbuf[j]];
         }
     }
 }
