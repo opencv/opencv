@@ -155,6 +155,8 @@ public:
             throw SkipTestException(cv::String("Backend is not available/disabled: ") + cv::videoio_registry::getBackendName(apiPref));
         if (cvtest::skipUnstableTests && apiPref == CAP_MSMF && (ext == "h264" || ext == "h265" || ext == "mpg"))
             throw SkipTestException("Unstable MSMF test");
+        if (cvtest::skipUnstableTests && apiPref == CAP_GSTREAMER && ext == "mjpg.avi")
+            throw SkipTestException("Unstable GStreamer mjpg.avi test");
         VideoCapture cap;
         EXPECT_NO_THROW(cap.open(video_file, apiPref));
         if (!cap.isOpened())

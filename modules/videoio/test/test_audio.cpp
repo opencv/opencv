@@ -176,9 +176,9 @@ public:
         const int numberOfChannels = (int)cap.get(CAP_PROP_AUDIO_TOTAL_CHANNELS);
         ASSERT_EQ(expectedNumAudioCh, numberOfChannels);
 
-        const int samplePerSecond = (int)cap.get(CAP_PROP_AUDIO_SAMPLES_PER_SECOND);
-        ASSERT_EQ(44100, samplePerSecond);
-        int samplesPerFrame = (int)(1./fps*samplePerSecond);
+        const double samplePerSecond = cap.get(CAP_PROP_AUDIO_SAMPLES_PER_SECOND);
+        ASSERT_DOUBLE_EQ(44100., samplePerSecond);
+        const double samplesPerFrame = samplePerSecond/fps;
 
         double audio0_timestamp = 0;
 
@@ -192,11 +192,15 @@ public:
             ASSERT_TRUE(cap.grab());
             if (frame == 0)
             {
-                double audio_shift = cap.get(CAP_PROP_AUDIO_SHIFT_NSEC);
-                double video0_timestamp = cap.get(CAP_PROP_POS_MSEC) * 1e-3;
-                audio0_timestamp = video0_timestamp + audio_shift * 1e-9;
-
-                std::cout << "video0 timestamp: " << video0_timestamp << "  audio0 timestamp: " << audio0_timestamp << " (audio shift nanoseconds: " << audio_shift << " , seconds: " << audio_shift * 1e-9 << ")" << std::endl;
+                double audio_shift = cap.get(CAP_PROP_AUDIO_SHIFT_NSEC); // nsec
+                double video0_timestamp = cap.get(CAP_PROP_POS_MSEC); // msec
+                audio0_timestamp = video0_timestamp + audio_shift * 1e-6; // msec
+                if (cvtest::debugLevel >= 1)
+                {
+                    cout << "video0 timestamp: " << video0_timestamp << " msec" << endl;
+                    cout << "audio0 timestamp: " << audio0_timestamp << " msec" << endl;
+                    cout << "audio shift: " << audio_shift << " nsec" << endl;
+                }
             }
             ASSERT_TRUE(cap.retrieve(videoFrame));
             if (epsilon >= 0)
@@ -225,36 +229,43 @@ public:
                 }
             }
 
-            if (frame < 5 || frame >= numberOfFrames-5)
-                std::cout << "frame=" << frame << ":  audioFrameSize=" << audioFrameCols << "  videoTimestamp=" << cap.get(CAP_PROP_POS_MSEC) << " ms" << std::endl;
-            else if (frame == 6)
-                std::cout << "frame..." << std::endl;
+            if (cvtest::debugLevel >= 1)
+            {
+                if (frame < 5 || frame >= numberOfFrames-5)
+                    cout << "frame=" << frame << ":  audioFrameSize=" << audioFrameCols << "  videoTimestamp=" << cap.get(CAP_PROP_POS_MSEC) << " ms" << endl;
+                else if (frame == 6)
+                    cout << "frame..." << endl;
+            }
 
             if (audioFrameCols == 0)
                 continue;
             if (frame != 0 && frame != numberOfFrames-1)
             {
                 // validate audio position
-                EXPECT_NEAR(
-                        cap.get(CAP_PROP_AUDIO_POS) / samplePerSecond + audio0_timestamp,
-                        cap.get(CAP_PROP_POS_MSEC) * 1e-3,
-                        (1.0 / fps) * 0.6)
-                    << "CAP_PROP_AUDIO_POS=" << cap.get(CAP_PROP_AUDIO_POS) << " CAP_PROP_POS_MSEC=" << cap.get(CAP_PROP_POS_MSEC);
+                const double audio_pos_samples = cap.get(CAP_PROP_AUDIO_POS); // samples
+                const double video_pos_msec = cap.get(CAP_PROP_POS_MSEC); // msec
+                const double audio_pos_msec = (audio_pos_samples * 1.e+3) / samplePerSecond + audio0_timestamp; // msec
+                EXPECT_NEAR(audio_pos_msec, video_pos_msec, 1.0 / fps)
+                    << "audio pos: " << audio_pos_samples << " samples, "
+                    << "video pos: "<< video_pos_msec << " msec";
             }
             if (frame != 0 && frame != numberOfFrames-1 && audioData[0].size() != (size_t)numberOfSamples)
             {
                 if (backend == cv::CAP_MSMF)
                 {
-                    int audioSamplesTolerance = samplesPerFrame / 2;
+                    double audioSamplesTolerance = samplesPerFrame / 2;
                     // validate audio frame size
-                    EXPECT_NEAR(audioFrame.cols, samplesPerFrame, audioSamplesTolerance);
+                    EXPECT_NEAR((double)audioFrame.cols, samplesPerFrame, audioSamplesTolerance);
                 }
             }
         }
         ASSERT_FALSE(cap.grab());
         ASSERT_FALSE(audioData.empty());
 
-        std::cout << "Total audio samples=" << audioData[0].size() << std::endl;
+        if (cvtest::debugLevel >= 1)
+        {
+            cout << "Total audio samples=" << audioData[0].size() << endl;
+        }
 
         if (epsilon >= 0)
             checkAudio();
