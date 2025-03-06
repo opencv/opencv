@@ -326,9 +326,12 @@ static LineSegmentIntersection parallelInt( Point2f a, Point2f b, Point2f c, Poi
     return code;
 }
 
-// Finds intersection of two line segments: (a, b) and (c, d).
+// Finds intersection of two directed line segments: (a -> b) and (c -> d).
 static LineSegmentIntersection intersectLineSegments( Point2f a, Point2f b, Point2f c,
-                                                      Point2f d, Point2f& p, Point2f& q )
+                                                      Point2f d, Point2f& p, Point2f& q,
+                                                      int aHB, int a1HB, int aHB1,
+                                                      int a1HB1, int bHA, int b1HA,
+                                                      int bHA1, int b1HA1, bool checkLineStartA)
 {
     double denom = (a.x - b.x) * (double)(d.y - c.y) - (a.y - b.y) * (double)(d.x - c.x);
 
@@ -346,10 +349,32 @@ static LineSegmentIntersection intersectLineSegments( Point2f a, Point2f b, Poin
     p.y = (float)(a.y + s*(b.y - a.y));
     q = p;
 
-    static const double eps = 1e-5;
-    return s < - eps || s > 1.+ eps || t < - eps || t > 1. + eps ? LS_NO_INTERSECTION :
-           s < eps || s > 1. - eps || t < eps || t > 1. - eps ? LS_ENDPOINT_INTERSECTION :
-           LS_SINGLE_INTERSECTION;
+    // Double check whether we had an intersection at the vertex, the == 0 check can fail
+    // It should be enough to check retrospectively - verify
+    const auto eps = 1e-4;
+    const bool isCloseToA = -eps < s && s < eps;
+    const bool isCloseToC = -eps < t && t < eps;
+    if (checkLineStartA && isCloseToA)
+    {
+        const bool wasOutside = b1HA1 < 0 && b1HA < 0;
+        const bool isInside = bHA1 > 0 && bHA > 0;
+        if (wasOutside && isInside)
+        {
+            return LS_ENDPOINT_INTERSECTION;
+        }
+    }
+    if (!checkLineStartA /*i.e. check C*/ && isCloseToC)
+    {
+        const bool wasOutside = a1HB1 < 0 && a1HB < 0;
+        const bool isInside = aHB1 > 0 && aHB > 0;
+        if (wasOutside && isInside)
+        {
+            return LS_ENDPOINT_INTERSECTION;
+        }
+    }
+
+    return s < 0. || s > 1. || t < 0. || t > 1. ? LS_NO_INTERSECTION :
+           s == 0. || s == 1. || t == 0. || t == 1. ? LS_ENDPOINT_INTERSECTION : LS_SINGLE_INTERSECTION;
 }
 
 static tInFlag inOut( Point2f p, tInFlag inflag, int aHB, int bHA, Point2f*& result )
@@ -396,6 +421,12 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
     Point2f p0;             // The first point.
     *result++ = Point2f(FLT_MAX, FLT_MAX);
 
+    bool isPadvanced = false; // false means Q advanced
+    int aHB1 = 0;
+    int bHA1 = 0;
+    int a1HB1 = 0;
+    int b1HA1 = 0;
+
     do
     {
         // Computations of key variables.
@@ -405,12 +436,16 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         Point2f A = P[a] - P[a1], B = Q[b] - Q[b1]; // directed edges on P and Q (resp.)
 
         int cross = areaSign( Origin, A, B );    // sign of z-component of A x B
-        int aHB = areaSign( Q[b1], Q[b], P[a] ); // a in H(b).
+        int aHB = areaSign( Q[b1], Q[b], P[a] ); // 1 if a in H(b), 0 if on line, else -1
         int bHA = areaSign( P[a1], P[a], Q[b] ); // b in H(A);
+        int a1HB = areaSign(Q[b1], Q[b], P[a1]); // a-1 in H(b).
+        int b1HA = areaSign(P[a1], P[a], Q[b1]); // b-1 in H(A);
 
         // If A & B intersect, update inflag.
         Point2f p, q;
-        LineSegmentIntersection code = intersectLineSegments( P[a1], P[a], Q[b1], Q[b], p, q );
+        LineSegmentIntersection code =
+            intersectLineSegments( P[a1], P[a], Q[b1], Q[b], p, q, aHB, a1HB,
+                                   aHB1, a1HB1, bHA, b1HA, bHA1, b1HA1, isPadvanced );
         if( code == LS_SINGLE_INTERSECTION || code == LS_ENDPOINT_INTERSECTION )
         {
             if( inflag == Unknown && FirstPoint )
@@ -440,25 +475,55 @@ static int intersectConvexConvex_( const Point2f* P, int n, const Point2f* Q, in
         else if ( cross == 0 && aHB == 0 && bHA == 0 ) {
             // Advance but do not output point.
             if ( inflag == Pin )
+            {
                 b = advance( b, &ba, m, inflag == Qin, Q[b], result );
+                isPadvanced = false;
+                aHB1 = aHB;
+                a1HB1 = a1HB;
+            }
             else
+            {
                 a = advance( a, &aa, n, inflag == Pin, P[a], result );
+                isPadvanced = true;
+                bHA1 = bHA;
+                b1HA1 = b1HA;
+            }
         }
 
         // Generic cases.
         else if( cross >= 0 )
         {
             if( bHA > 0)
+            {
                 a = advance( a, &aa, n, inflag == Pin, P[a], result );
+                isPadvanced = true;
+                bHA1 = bHA;
+                b1HA1 = b1HA;
+            }
             else
+            {
                 b = advance( b, &ba, m, inflag == Qin, Q[b], result );
+                isPadvanced = false;
+                aHB1 = aHB;
+                a1HB1 = a1HB;
+            }
         }
         else
         {
             if( aHB > 0)
+            {
                 b = advance( b, &ba, m, inflag == Qin, Q[b], result );
+                isPadvanced = false;
+                aHB1 = aHB;
+                a1HB1 = a1HB;
+            }
             else
+            {
                 a = advance( a, &aa, n, inflag == Pin, P[a], result );
+                isPadvanced = true;
+                bHA1 = bHA;
+                b1HA1 = b1HA;
+            }
         }
         // Quit when both adv. indices have cycled, or one has cycled twice.
     }
