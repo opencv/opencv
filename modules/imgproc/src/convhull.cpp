@@ -300,7 +300,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     if( !returnPoints ) {
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     } else {
-        _hull.create(nout, 1, CV_MAKETYPE(depth, 2));
+        _hull.create(nout, 1, _hull.type());
         Mat mHull =_hull.getMat();
         auto* ptr = mHull.ptr<Point>();
         for (int j = 0; j < nout; j++) {
