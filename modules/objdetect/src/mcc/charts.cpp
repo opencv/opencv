@@ -43,9 +43,9 @@ CChart::~CChart()
 }
 
 void CChart::
-    setCorners(std::vector<cv::Point2f> p)
+    setCorners(std::vector<Point2f> p)
 {
-    cv::Point v1, v2;
+    Point v1, v2;
     if (p.empty())
         return;
 
@@ -56,13 +56,13 @@ void CChart::
     polyanticlockwise(corners);
 
     // Properties
-    area = cv::contourArea(corners);
+    area = contourArea(corners);
     perimetro = perimeter(corners);
     center = mace_center(corners);
 
     v1 = corners[2] - corners[0];
     v2 = corners[3] - corners[1];
-    large_side = std::max(cv::norm(v1), cv::norm(v2));
+    large_side = std::max(norm(v1), norm(v2));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -74,23 +74,23 @@ CChartDraw::
 }
 
 void CChartDraw::
-    drawContour(cv::Scalar color /*= CV_RGB(0, 250, 0)*/) const
+    drawContour(Scalar color /*= CV_RGB(0, 250, 0)*/) const
 {
 
     //Draw lines
     int thickness = 2;
-    cv::line(m_image, (m_pChart).corners[0], (m_pChart).corners[1], color, thickness, LINE_AA);
-    cv::line(m_image, (m_pChart).corners[1], (m_pChart).corners[2], color, thickness, LINE_AA);
-    cv::line(m_image, (m_pChart).corners[2], (m_pChart).corners[3], color, thickness, LINE_AA);
-    cv::line(m_image, (m_pChart).corners[3], (m_pChart).corners[0], color, thickness, LINE_AA);
+    line(m_image, (m_pChart).corners[0], (m_pChart).corners[1], color, thickness, LINE_AA);
+    line(m_image, (m_pChart).corners[1], (m_pChart).corners[2], color, thickness, LINE_AA);
+    line(m_image, (m_pChart).corners[2], (m_pChart).corners[3], color, thickness, LINE_AA);
+    line(m_image, (m_pChart).corners[3], (m_pChart).corners[0], color, thickness, LINE_AA);
 }
 
 void CChartDraw::
-    drawCenter(cv::Scalar color /*= CV_RGB(0, 0, 255)*/) const
+    drawCenter(Scalar color /*= CV_RGB(0, 0, 255)*/) const
 {
     int radius = 3;
     int thickness = 2;
-    cv::circle(m_image, (m_pChart).center, radius, color, thickness);
+    circle(m_image, (m_pChart).center, radius, color, thickness);
 }
 } // namespace mcc
 } // namespace cv

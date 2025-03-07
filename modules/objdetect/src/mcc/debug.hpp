@@ -37,7 +37,7 @@ namespace cv
 namespace mcc
 {
 
-cv::Scalar randomcolor(RNG &rng);
+Scalar randomcolor(RNG &rng);
 
 void imshow_250xN(const std::string &name_, InputArray patch);
 

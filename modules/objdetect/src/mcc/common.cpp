@@ -33,12 +33,8 @@ namespace cv
 {
 namespace mcc
 {
-Rect poly2mask(const std::vector<cv::Point2f> &poly, cv::Size size, InputOutputArray mask)
+Rect poly2mask(const std::vector<Point2f> &poly, Size size, InputOutputArray mask)
 {
-    // Create black image with the same size as the original
-    //mask.create(size, CV_8UC1);
-    //mask.setTo(Scalar::all(0));
-
     // Create Polygon from vertices
     std::vector<Point> roi_poly;
     approxPolyDP(poly, roi_poly, 1.0, true);
@@ -54,7 +50,7 @@ Rect poly2mask(const std::vector<cv::Point2f> &poly, cv::Size size, InputOutputA
     return roi;
 }
 
-float perimeter(const std::vector<cv::Point2f> &ps)
+float perimeter(const std::vector<Point2f> &ps)
 {
     float sum = 0, dx, dy;
 
@@ -71,13 +67,13 @@ float perimeter(const std::vector<cv::Point2f> &ps)
     return sum;
 }
 
-cv::Point2f
-mace_center(const std::vector<cv::Point2f> &ps)
+Point2f
+mace_center(const std::vector<Point2f> &ps)
 {
-    cv::Point2f center;
+    Point2f center;
     int n;
 
-    center = cv::Point2f(0);
+    center = Point2f(0);
     n = (int)ps.size();
     for (int i = 0; i < n; i++)
         center += ps[i];
@@ -86,25 +82,25 @@ mace_center(const std::vector<cv::Point2f> &ps)
     return center;
 }
 
-void polyanticlockwise(std::vector<cv::Point2f> &points)
+void polyanticlockwise(std::vector<Point2f> &points)
 {
     // Sort the points in anti-clockwise order
     // Trace a line between the first and second point.
     // If the third point is at the right side, then the points are anti-clockwise
-    cv::Point2f v1 = points[1] - points[0];
-    cv::Point2f v2 = points[2] - points[0];
+    Point2f v1 = points[1] - points[0];
+    Point2f v2 = points[2] - points[0];
 
     //if the third point is in the left side, then sort in anti-clockwise order
     if ((v1.x * v2.y) - (v1.y * v2.x) < 0.0)
         std::swap(points[1], points[3]);
 }
-void polyclockwise(std::vector<cv::Point2f> &points)
+void polyclockwise(std::vector<Point2f> &points)
 {
     // Sort the points in clockwise order
     // Trace a line between the first and second point.
     // If the third point is at the right side, then the points are clockwise
-    cv::Point2f v1 = points[1] - points[0];
-    cv::Point2f v2 = points[2] - points[0];
+    Point2f v1 = points[1] - points[0];
+    Point2f v2 = points[2] - points[0];
 
     //if the third point is in the left side, then sort in clockwise order
     if ((v1.x * v2.y) - (v1.y * v2.x) > 0.0)

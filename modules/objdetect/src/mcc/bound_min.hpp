@@ -45,20 +45,20 @@ public:
     ~CBoundMin();
 
     void setCharts(const std::vector<CChart> &chartIn) { chart = chartIn; }
-    void getCorners(std::vector<cv::Point2f> &cornersOut) { cornersOut = corners; }
+    void getCorners(std::vector<Point2f> &cornersOut) { cornersOut = corners; }
     void calculate();
 
 private:
     std::vector<CChart> chart;
-    std::vector<cv::Point2f> corners;
+    std::vector<Point2f> corners;
 
 private:
-    bool validateLine(const std::vector<cv::Point3f> &Lc, cv::Point3f ln,
+    bool validateLine(const std::vector<Point3f> &Lc, Point3f ln,
                       int k, int &j)
     {
 
         double theta;
-        cv::Point2d v0, v1;
+        Point2d v0, v1;
 
         for (j = 0; j < k; j++)
         {

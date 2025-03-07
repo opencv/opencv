@@ -26,7 +26,7 @@ const string param_keys =
     "{ input i         |                   | Path to input image or video file. Skip this argument to capture frames from a camera.}"
     "{ type            |         0         | chartType: 0-Standard, 1-DigitalSG, 2-Vinyl, default:0 }"
     "{ num_charts      |         1         | Maximum number of charts in the image }"
-    "{use_gpu          |                   | Add this flag if you want to use gpu}"
+    "{ use_gpu         |                   | Add this flag if you want to use gpu}"
     "{ model           |                   | Path to the model file for using dnn model. }";
 
 const string backend_keys = format(
@@ -130,6 +130,13 @@ int main(int argc, char *argv[])
         {
             vector<Ptr<CChecker>> checkers = detector->getListColorChecker();
             detector->draw(checkers, image);
+
+            Mat chartRgb = checkers[0]->getChartsRGB();
+            Mat src = chartRgb.col(1).clone().reshape(3, chartRgb.rows/3);
+            Mat tgt;
+            detector->getRefColor(MCC24, tgt);
+            cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
+            cout<<"Actual colors: "<<src<<endl;
         }
 
         imshow("image result | q or esc to quit", image);

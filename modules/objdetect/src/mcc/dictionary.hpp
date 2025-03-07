@@ -69,7 +69,7 @@ const float CChartClassicModelColors[24][9] = {
 
 };
 
-const cv::Point2f CChartClassicModelCellchart[96] = {
+const Point2f CChartClassicModelCellchart[96] = {
     {0.25f, 0.25f},
     {2.75f, 0.25f},
     {2.75f, 2.75f},
@@ -169,7 +169,7 @@ const cv::Point2f CChartClassicModelCellchart[96] = {
 
 };
 
-const cv::Point2f CChartClassicModelCenter[24] = {
+const Point2f CChartClassicModelCenter[24] = {
     {1.50f, 1.50f},
     {4.25f, 1.50f},
     {7.00f, 1.50f},
@@ -347,7 +347,7 @@ const float CChartDigitalSGColors[140][9] = {
 
 };
 
-const cv::Point2f CChartDigitalSGCellchart[560] = {
+const Point2f CChartDigitalSGCellchart[560] = {
 
     {0.25f, 0.25f},
     {2.75f, 0.25f},
@@ -912,7 +912,7 @@ const cv::Point2f CChartDigitalSGCellchart[560] = {
 
 };
 
-const cv::Point2f CChartDigitalSGCenter[140] = {
+const Point2f CChartDigitalSGCenter[140] = {
     {1.5f, 1.5f},
     {4.25f, 1.5f},
     {7.0f, 1.5f},
@@ -1083,7 +1083,7 @@ const float CChartVinylColors[18][9] = {
     {183.0f, 147.0f, 125.0f, 63.684f, 10.293f, 16.764f, -1.0f, -1.0f, -1.0f},
 };
 
-const cv::Point2f CChartVinylCellchart[72] = {
+const Point2f CChartVinylCellchart[72] = {
     {0.25f, 0.25f},
     {3.0f, 0.25f},
     {3.0f, 6.25f},
@@ -1159,7 +1159,7 @@ const cv::Point2f CChartVinylCellchart[72] = {
 
 };
 
-const cv::Point2f CChartVinylCenter[18] = {
+const Point2f CChartVinylCenter[18] = {
     {1.625f, 3.25f},
     {4.625f, 3.25f},
     {7.625f, 3.25f},

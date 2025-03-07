@@ -53,9 +53,9 @@ void circshift(std::vector<T> &A, int shiff)
     A = Tmp;
 }
 
-float perimeter(const std::vector<cv::Point2f> &ps);
+float perimeter(const std::vector<Point2f> &ps);
 
-cv::Point2f mace_center(const std::vector<cv::Point2f> &ps);
+Point2f mace_center(const std::vector<Point2f> &ps);
 
 template <typename T>
 void unique(const std::vector<T> &A, std::vector<T> &U)
@@ -73,8 +73,8 @@ void unique(const std::vector<T> &A, std::vector<T> &U)
             U.push_back(Tm[i]);
 }
 
-void polyanticlockwise(std::vector<cv::Point2f> &points);
-void polyclockwise(std::vector<cv::Point2f> &points);
+void polyanticlockwise(std::vector<Point2f> &points);
+void polyclockwise(std::vector<Point2f> &points);
 
 // Does lexical cast of the input argument to string
 template <typename T>

@@ -63,9 +63,9 @@ public:
         _SUBCCMModel
     {
 
-        cv::Mat sub_chart;
-        cv::Size2i color_size;
-        std::vector<cv::Point2f> centers;
+        Mat sub_chart;
+        Size2i color_size;
+        std::vector<Point2f> centers;
 
     } SUBCCMModel;
 
@@ -86,11 +86,11 @@ public:
     // Cie L*a*b* values use illuminant D50 2 degree observer sRGB values for
     // for iluminante D65.
 
-    cv::Size2i size;
-    cv::Size2f boxsize;
-    std::vector<cv::Point2f> box;
-    std::vector<cv::Point2f> cellchart;
-    std::vector<cv::Point2f> center;
+    Size2i size;
+    Size2f boxsize;
+    std::vector<Point2f> box;
+    std::vector<Point2f> cellchart;
+    std::vector<Point2f> center;
     std::vector<std::vector<float>> chart;
 
 protected:
@@ -116,11 +116,11 @@ protected:
     void rot90(InputOutputArray mat, int itheta);
 };
 /** CChecker
-      *
-      * \brief checker model
-      * \author Pedro Marrero Fernandez
-      *
-      */
+ *
+ * \brief checker model
+ * \author Pedro Marrero Fernandez
+ *
+ */
 class CCheckerImpl : public CChecker
 {
 public:
@@ -145,11 +145,11 @@ public:
 
 private:
     COLORCHART target;             ///< type of checkercolor
-    std::vector<cv::Point2f> box; ///< positions of the corners
-    cv::Mat chartsRGB;             ///< charts profile in rgb color space
-    cv::Mat chartsYCbCr;         ///< charts profile in YCbCr color space
+    std::vector<Point2f> box; ///< positions of the corners
+    Mat chartsRGB;             ///< charts profile in rgb color space
+    Mat chartsYCbCr;         ///< charts profile in YCbCr color space
     float cost;                     ///< cost to aproximate
-    cv::Point2f center;             ///< center of the chart.
+    Point2f center;             ///< center of the chart.
 };
 // @}
 
