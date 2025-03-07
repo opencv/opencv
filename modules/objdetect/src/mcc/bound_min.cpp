@@ -50,7 +50,7 @@ void CBoundMin::calculate()
     if (!N)
         return;
 
-    std::vector<cv::Point2f> X(4 * N);
+    std::vector<Point2f> X(4 * N);
     for (size_t i = 0; i < N; i++)
     {
         mcc::CChart cc = chart[i];
@@ -61,7 +61,7 @@ void CBoundMin::calculate()
     }
 
     // media
-    cv::Point2f mu(0, 0);
+    Point2f mu(0, 0);
     for (size_t i = 0; i < 4 * N; i++)
         mu += X[i];
     mu /= (4 * (int)N);
@@ -70,11 +70,11 @@ void CBoundMin::calculate()
         X[i] -= mu;
 
     // calculate all line
-    std::vector<cv::Point3f> L;
+    std::vector<Point3f> L;
     L.resize(4 * N);
     for (size_t i = 0; i < N; i++)
     {
-        cv::Point3f v0, v1, v2, v3;
+        Point3f v0, v1, v2, v3;
         v0.x = X[4 * i + 0].x;
         v0.y = X[4 * i + 0].y;
         v0.z = 1;
@@ -97,7 +97,7 @@ void CBoundMin::calculate()
     // line convex hull
     std::vector<int> dist;
     dist.resize(4 * N);
-    cv::Point2f n;
+    Point2f n;
     float d;
 
     for (size_t i = 0; i < 4 * N; i++)
@@ -114,16 +114,16 @@ void CBoundMin::calculate()
 
     // sort
     std::vector<int> idx;
-    std::vector<cv::Point3f> Ls;
+    std::vector<Point3f> Ls;
     Ls.resize(4 * N);
     mcc::sort(dist, idx);
     for (size_t i = 0; i < 4 * N; i++)
         Ls[i] = L[idx[i]];
 
-    std::vector<cv::Point3f> Lc;
+    std::vector<Point3f> Lc;
     Lc.resize(4 * N);
     Lc[0] = Ls[0];
-    cv::Point3f ln;
+    Point3f ln;
 
     int j, k = 0;
     for (size_t i = 0; i < 4 * N; i++)
@@ -152,14 +152,14 @@ void CBoundMin::calculate()
         thetas[i] = atan2(Lc[i].y / Lc[i].z, Lc[i].x / Lc[i].z);
 
     sort(thetas, idx, false);
-    std::vector<cv::Point3f> lines;
+    std::vector<Point3f> lines;
     lines.resize(4);
     for (size_t i = 0; i < 4; i++)
         lines[i] = Lc[idx[i]];
 
-    cv::Point3f Vcart;
-    cv::Point2f Vhom;
-    std::vector<cv::Point2f> V;
+    Point3f Vcart;
+    Point2f Vhom;
+    std::vector<Point2f> V;
     V.resize(4);
 
     for (size_t i = 0; i < 4; i++)

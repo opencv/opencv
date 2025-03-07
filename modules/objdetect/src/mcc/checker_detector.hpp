@@ -40,7 +40,7 @@ namespace mcc
 class CCheckerDetectorImpl : public CCheckerDetector
 {
 
-    typedef std::vector<cv::Point> PointsVector;
+    typedef std::vector<Point> PointsVector;
     typedef std::vector<PointsVector> ContoursVector;
 
 public:
@@ -51,7 +51,7 @@ public:
     virtual ~CCheckerDetectorImpl();
 
     bool process(InputArray image, const COLORCHART chartType,
-                 const std::vector<cv::Rect> &regionsOfInterest,
+                 const std::vector<Rect> &regionsOfInterest,
                  const int nc = 1, bool use_net = false,
                  const DetectorParametersMCC &params = DetectorParametersMCC()) CV_OVERRIDE;
 
@@ -70,92 +70,92 @@ public:
     {
         return m_checkers;
     }
-    virtual void getRefColor(const COLORCHART chartType, cv::Mat& output) CV_OVERRIDE;
+    virtual void getRefColor(const COLORCHART chartType, Mat& output) CV_OVERRIDE;
 
-    virtual void draw(std::vector<Ptr<CChecker>>& checkers, InputOutputArray img, const cv::Scalar color = CV_RGB(0,250,0), const int thickness = 2) CV_OVERRIDE;
+    virtual void draw(std::vector<Ptr<CChecker>>& checkers, InputOutputArray img, const Scalar color = CV_RGB(0,250,0), const int thickness = 2) CV_OVERRIDE;
 
 protected: // methods pipeline
     bool _no_net_process(InputArray image, const COLORCHART chartType,
                          const int nc,
                          const DetectorParametersMCC &params,
-                         std::vector<cv::Rect> regionsOfInterest);
+                         std::vector<Rect> regionsOfInterest);
     /// prepareImage
-    /** \brief Prepare Image
-      * \param[in] bgrMat image in color space BGR
-      * \param[out] grayOut gray scale
-      * \param[out] bgrOut rescale image
-      * \param[out] aspOut aspect ratio
-      * \param[in] max_size rescale factor in max dim
+    /** @brief Prepare Image
+      * @param bgrMat image in color space BGR
+      * @param grayOut gray scale
+      * @param bgrOut rescale image
+      * @param aspOut aspect ratio
+      * @param max_size rescale factor in max dim
       */
     virtual void
     prepareImage(InputArray bgr, OutputArray grayOut, OutputArray bgrOut, float &aspOut, const DetectorParametersMCC &params) const;
 
     /// performThreshold
-    /** \brief Adaptative threshold
-      * \param[in] grayscaleImg gray scale image
-      * \param[in] thresholdImg binary image
-      * \param[in] wndx, wndy windows size
-      * \param[in] step
+    /** @brief Adaptative threshold
+      * @param grayscaleImg gray scale image
+      * @param thresholdImg binary image
+      * @param wndx, wndy windows size
+      * @param step
       */
     virtual void
     performThreshold(InputArray grayscaleImg, OutputArrayOfArrays thresholdImg, const DetectorParametersMCC &params) const;
 
     /// findContours
-    /** \brief find contour in the image
-    * \param[in] srcImg binary imagen
-    * \param[out] contours
-    * \param[in] minContourPointsAllowed
+    /** @brief find contour in the image
+    * @param srcImg binary imagen
+    * @param contours
+    * @param minContourPointsAllowed
     */
     virtual void
     findContours(InputArray srcImg, ContoursVector &contours, const DetectorParametersMCC &params) const;
 
     /// findCandidates
-    /** \brief find posibel candidates
-    * \param[in] contours
-    * \param[out] detectedCharts
-    * \param[in] minContourLengthAllowed
+    /** @brief find posibel candidates
+    * @param contours
+    * @param detectedCharts
+    * @param minContourLengthAllowed
     */
     virtual void
     findCandidates(const ContoursVector &contours, std::vector<CChart> &detectedCharts, const DetectorParametersMCC &params);
 
     /// clustersAnalysis
-    /** \brief clusters charts analysis
-    * \param[in] detectedCharts
-    * \param[out] groups
+    /** @brief clusters charts analysis
+    * @param detectedCharts
+    * @param groups
     */
     virtual void
     clustersAnalysis(const std::vector<CChart> &detectedCharts, std::vector<int> &groups, const DetectorParametersMCC &params);
 
     /// checkerRecognize
-    /** \brief checker color recognition
-    * \param[in] img
-    * \param[in] detectedCharts
-    * \param[in] G
-    * \param[out] colorChartsOut
+    /** @brief checker color recognition
+    * @param img
+    * @param detectedCharts
+    * @param G
+    * @param colorChartsOut
     */
     virtual void
     checkerRecognize(InputArray img, const std::vector<CChart> &detectedCharts, const std::vector<int> &G,
-                     const COLORCHART chartType, std::vector<std::vector<cv::Point2f>> &colorChartsOut,
+                     const COLORCHART chartType, std::vector<std::vector<Point2f>> &colorChartsOut,
                      const DetectorParametersMCC &params);
 
     /// checkerAnalysis
-    /** \brief evaluate checker
-    * \param[in] img
-    * \param[in] img_org
-    * \param[in] colorCharts
-    * \param[out] checker
-    * \param[in] asp
+    /** @brief evaluate checker
+    * @param img
+    * @param img_org
+    * @param colorCharts
+    * @param checker
+    * @param asp
     */
     virtual void
     checkerAnalysis(InputArray img_rgb_f,
                     const COLORCHART chartType, const unsigned int nc,
-                    const std::vector<std::vector<cv::Point2f>> &colorCharts,
+                    const std::vector<std::vector<Point2f>> &colorCharts,
                     std::vector<Ptr<CChecker>> &checkers, float asp,
                     const DetectorParametersMCC &params,
-                    const cv::Mat &img_rgb_org,
-                    const cv::Mat &img_ycbcr_org,
-                    std::vector<cv::Mat> &rgb_planes,
-                    std::vector<cv::Mat> &ycbcr_planes);
+                    const Mat &img_rgb_org,
+                    const Mat &img_ycbcr_org,
+                    std::vector<Mat> &rgb_planes,
+                    std::vector<Mat> &ycbcr_planes);
 
     virtual void
     removeTooCloseDetections(const DetectorParametersMCC &params);
@@ -167,8 +167,8 @@ protected:
 
 private: // methods aux
     void get_subbox_chart_physical(
-        const std::vector<cv::Point2f> &points,
-        std::vector<cv::Point2f> &chartPhy);
+        const std::vector<Point2f> &points,
+        std::vector<Point2f> &chartPhy);
 
     void reduce_array(
         const std::vector<float> &x,
@@ -177,25 +177,25 @@ private: // methods aux
 
     void transform_points_inverse(
         InputArray T,
-        const std::vector<cv::Point2f> &X,
-        std::vector<cv::Point2f> &Xt);
+        const std::vector<Point2f> &X,
+        std::vector<Point2f> &Xt);
 
     void get_profile(
-        const std::vector<cv::Point2f> &ibox,
+        const std::vector<Point2f> &ibox,
         const COLORCHART chartType,
         OutputArray charts_rgb,
         OutputArray charts_ycbcr,
         InputArray im_rgb,
         InputArray im_ycbcr,
-        std::vector<cv::Mat> &rgb_planes,
-        std::vector<cv::Mat> &ycbcr_planes);
+        std::vector<Mat> &rgb_planes,
+        std::vector<Mat> &ycbcr_planes);
 
-    /* \brief cost function
+    /** @brief cost function
      *  e(p) = ||f(p)||^2 = \sum_k (mu_{k,p}*r_k')/||mu_{k,p}||||r_k|| + ...
      *                   + \sum_k || \sigma_{k,p} ||^2
      */
     float cost_function(InputArray img, InputOutputArray mask, InputArray lab,
-                        const std::vector<cv::Point2f> &ibox,
+                        const std::vector<Point2f> &ibox,
                         const COLORCHART chartType);
 };
 

@@ -1,4 +1,5 @@
 import cv2 as cv
+import numpy as np
 import argparse
 import sys
 import os
@@ -101,9 +102,18 @@ def main(func_args=None):
             print("ChartColor not detected.")
         else:
             checkers = detector.getListColorChecker()
-            for checker in checkers:
-                cdraw = cv.mcc_CCheckerDraw.create(checker)
-                cdraw.draw(frame)
+            detector.draw(checkers, frame)
+            chart_rgb = checkers[0].getChartsRGB()
+
+            src = chart_rgb[:, 1].copy()
+            src = src.reshape((chart_rgb.shape[0] // 3, 3))
+            tgt = np.empty((src.shape), dtype=np.int32)
+            tgt = np.expand_dims(tgt, axis=1)
+            detector.getRefColor(cv.mcc.MCC24, tgt)
+            tgt = tgt.squeeze(1)
+
+            print("Actual colors: ", src)
+            print("Reference colors: ", tgt)
 
         cv.imshow("image result | Press ESC to quit", frame)
         cv.imshow("original", image_copy)

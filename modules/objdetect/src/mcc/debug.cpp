@@ -37,7 +37,7 @@ namespace cv
 {
 namespace mcc
 {
-cv::Scalar randomcolor(RNG &rng)
+Scalar randomcolor(RNG &rng)
 {
     int icolor = (unsigned)rng;
     return Scalar(icolor & 255, (icolor >> 8) & 255, (icolor >> 16) & 255);
@@ -46,18 +46,18 @@ cv::Scalar randomcolor(RNG &rng)
 void imshow_250xN(const std::string &name_, InputArray patch)
 {
 
-    cv::Mat bigpatch;
-    cv::Size size = patch.size();
+    Mat bigpatch;
+    Size size = patch.size();
     float asp = (float)size.height / size.width;
     int new_size = 550;
-    cv::resize(patch, bigpatch, cv::Size((int)new_size, int(new_size * asp)));
-    cv::imshow(name_, bigpatch);
+    resize(patch, bigpatch, Size((int)new_size, int(new_size * asp)));
+    imshow(name_, bigpatch);
 }
 
 void showAndSave(std::string name, InputArray m, std::string path)
 {
     imshow_250xN(name, m);
-    cv::imwrite(path + "/" + name + ".png", m);
+    imwrite(path + "/" + name + ".png", m);
     if (waitKey(0) == 'q')
         return;
 }

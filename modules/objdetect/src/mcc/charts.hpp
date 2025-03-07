@@ -34,7 +34,7 @@ namespace cv
 namespace mcc
 {
 
-/** \brief Chart model
+/** @brief Chart model
       *
       * .--------. <- px,py
       * |         | one chart for checker color
@@ -43,7 +43,7 @@ namespace mcc
       * |        |
       * .--------.
       *
-      * \author Pedro Marrero Fernndez
+      * @author Pedro Marrero Fernndez
       */
 
 class CChart
@@ -53,35 +53,35 @@ public:
     CChart();
     ~CChart();
 
-    /**\brief set corners
-          *\param p[in] new corners
-          */
-    void setCorners(std::vector<cv::Point2f> p);
+    /** @brief set corners
+     *@param p[in] new corners
+    */
+    void setCorners(std::vector<Point2f> p);
 
 public:
-    std::vector<cv::Point2f> corners;
-    cv::Point2f center;
+    std::vector<Point2f> corners;
+    Point2f center;
     double perimetro;
     double area;
     double large_side;
 };
 
-/** \brief Chart draw */
+/** @brief Chart draw */
 class CChartDraw
 {
 public:
-    /**\brief contructor */
+    /** @brief contructor */
     CChartDraw(CChart &pChart, InputOutputArray image);
 
-    /**\brief draw the chart contour over the image */
-    void drawContour(cv::Scalar color = CV_RGB(0, 250, 0)) const;
+    /** @brief draw the chart contour over the image */
+    void drawContour(Scalar color = CV_RGB(0, 250, 0)) const;
 
-    /**\brief draw the chart center over the image */
-    void drawCenter(cv::Scalar color = CV_RGB(0, 0, 255)) const;
+    /** @brief draw the chart center over the image */
+    void drawCenter(Scalar color = CV_RGB(0, 0, 255)) const;
 
 private:
     CChart &m_pChart;
-    cv::Mat m_image;
+    Mat m_image;
 };
 
 } // namespace mcc

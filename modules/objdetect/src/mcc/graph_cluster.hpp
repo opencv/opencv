@@ -40,7 +40,7 @@ public:
     CB0cluster();
     ~CB0cluster();
 
-    inline void setVertex(const std::vector<cv::Point> &V) { X = V; }
+    inline void setVertex(const std::vector<Point> &V) { X = V; }
     inline void setB0(const std::vector<double> &b0) { B0 = b0; }
     inline void setWeight(const std::vector<double> &Weight) { W = Weight; }
 
@@ -50,7 +50,7 @@ public:
 
 private:
     //entrada
-    std::vector<cv::Point> X;
+    std::vector<Point> X;
     std::vector<double> B0;
     std::vector<double> W;
 
