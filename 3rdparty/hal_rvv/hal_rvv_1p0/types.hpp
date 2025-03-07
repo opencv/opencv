@@ -92,27 +92,45 @@ template <typename Dst_T, typename RVV_T>
 using RVV_SameLen =
     RVV<Dst_T, RVV_LMUL(RVV_T::lmul / sizeof(typename RVV_T::ElemType) * sizeof(Dst_T))>;
 
+template <typename RVV_T>
+using RVV_BaseType = RVV<typename RVV_T::ElemType, LMUL_1>;
+
 // -------------------------------Supported operations--------------------------------
 
-#define HAL_RVV_SIZE_RELATED(EEW, TYPE, LMUL, S_OR_F, X_OR_F, IS_U, IS_F)         \
-static inline size_t setvlmax() { return __riscv_vsetvlmax_e##EEW##LMUL(); }      \
-static inline size_t setvl(size_t vl) { return __riscv_vsetvl_e##EEW##LMUL(vl); } \
-static inline VecType vload(const ElemType* ptr, size_t vl) {                     \
-    return __riscv_vle##EEW##_v_##TYPE##LMUL(ptr, vl);                            \
-}                                                                                 \
-static inline VecType vload(BoolType vm, const ElemType* ptr, size_t vl) {        \
-    return __riscv_vle##EEW(vm, ptr, vl);                                         \
-}                                                                                 \
-static inline void vstore(ElemType* ptr, VecType v, size_t vl) {                  \
-    __riscv_vse##EEW(ptr, v, vl);                                                 \
-}                                                                                 \
-static inline void vstore(BoolType vm, ElemType* ptr, VecType v, size_t vl) {     \
-    __riscv_vse##EEW(vm, ptr, v, vl);                                             \
-}                                                                                 \
-static inline VecType vundefined() { return __riscv_vundefined_##TYPE##LMUL(); }  \
-static inline VecType vmv(ElemType a, size_t b) {                                 \
-    return __riscv_v##IS_F##mv_v_##X_OR_F##_##TYPE##LMUL(a, b);                   \
-}                                                                                 \
+#define HAL_RVV_SIZE_RELATED(EEW, TYPE, LMUL, S_OR_F, X_OR_F, IS_U, IS_F)                            \
+static inline size_t setvlmax() { return __riscv_vsetvlmax_e##EEW##LMUL(); }                         \
+static inline size_t setvl(size_t vl) { return __riscv_vsetvl_e##EEW##LMUL(vl); }                    \
+static inline VecType vload(const ElemType* ptr, size_t vl) {                                        \
+    return __riscv_vle##EEW##_v_##TYPE##LMUL(ptr, vl);                                               \
+}                                                                                                    \
+static inline VecType vload(BoolType vm, const ElemType* ptr, size_t vl) {                           \
+    return __riscv_vle##EEW(vm, ptr, vl);                                                            \
+}                                                                                                    \
+static inline VecType vload_stride(const ElemType* ptr, ptrdiff_t unit, size_t vl) {                 \
+    return __riscv_vlse##EEW##_v_##TYPE##LMUL(ptr, unit, vl);                                        \
+}                                                                                                    \
+static inline VecType vload_stride(BoolType vm, const ElemType* ptr, ptrdiff_t unit, size_t vl) {    \
+    return __riscv_vlse##EEW(vm, ptr, unit, vl);                                                     \
+}                                                                                                    \
+static inline void vstore(ElemType* ptr, VecType v, size_t vl) {                                     \
+    __riscv_vse##EEW(ptr, v, vl);                                                                    \
+}                                                                                                    \
+static inline void vstore(BoolType vm, ElemType* ptr, VecType v, size_t vl) {                        \
+    __riscv_vse##EEW(vm, ptr, v, vl);                                                                \
+}                                                                                                    \
+static inline void vstore_stride(ElemType* ptr, ptrdiff_t unit, VecType v, size_t vl) {              \
+    __riscv_vsse##EEW(ptr, unit, v, vl);                                                             \
+}                                                                                                    \
+static inline void vstore_stride(BoolType vm, ElemType* ptr, ptrdiff_t unit, VecType v, size_t vl) { \
+    __riscv_vsse##EEW(vm, ptr, unit, v, vl);                                                         \
+}                                                                                                    \
+static inline VecType vundefined() { return __riscv_vundefined_##TYPE##LMUL(); }                     \
+static inline VecType vmv(ElemType a, size_t vl) {                                                   \
+    return __riscv_v##IS_F##mv_v_##X_OR_F##_##TYPE##LMUL(a, vl);                                     \
+}                                                                                                    \
+static inline VecType vmv_s(ElemType a, size_t vl) {                                                 \
+    return __riscv_v##IS_F##mv_s_##X_OR_F##_##TYPE##LMUL(a, vl);                                     \
+}                                                                                                    \
 HAL_RVV_SIZE_RELATED_CUSTOM(EEW, TYPE, LMUL)
 
 #define HAL_RVV_SIZE_UNRELATED(S_OR_F, X_OR_F, IS_U, IS_F)                                      \
@@ -334,9 +352,13 @@ HAL_RVV_CVT(RVV_U32MF2, RVV_U64M1)
 
 #undef HAL_RVV_CVT
 
-#define HAL_RVV_CVT(ONE, FOUR) \
-    template <>                \
-    inline FOUR::VecType FOUR::cast(ONE::VecType v, size_t vl) { return __riscv_vsext_vf4(v, vl); }
+#define HAL_RVV_CVT(ONE, FOUR)                                                                      \
+    template <>                                                                                     \
+    inline FOUR::VecType FOUR::cast(ONE::VecType v, size_t vl) { return __riscv_vsext_vf4(v, vl); } \
+    template <>                                                                                     \
+    inline ONE::VecType ONE::cast(FOUR::VecType v, size_t vl) {                                     \
+        return __riscv_vncvt_x(__riscv_vncvt_x(v, vl), vl);                                         \
+    }
 
 HAL_RVV_CVT(RVV_I8M2, RVV_I32M8)
 HAL_RVV_CVT(RVV_I8M1, RVV_I32M4)
@@ -351,9 +373,13 @@ HAL_RVV_CVT(RVV_I16MF4, RVV_I64M1)
 
 #undef HAL_RVV_CVT
 
-#define HAL_RVV_CVT(ONE, FOUR) \
-    template <>                \
-    inline FOUR::VecType FOUR::cast(ONE::VecType v, size_t vl) { return __riscv_vzext_vf4(v, vl); }
+#define HAL_RVV_CVT(ONE, FOUR)                                                                      \
+    template <>                                                                                     \
+    inline FOUR::VecType FOUR::cast(ONE::VecType v, size_t vl) { return __riscv_vzext_vf4(v, vl); } \
+    template <>                                                                                     \
+    inline ONE::VecType ONE::cast(FOUR::VecType v, size_t vl) {                                     \
+        return __riscv_vncvt_x(__riscv_vncvt_x(v, vl), vl);                                         \
+    }
 
 HAL_RVV_CVT(RVV_U8M2, RVV_U32M8)
 HAL_RVV_CVT(RVV_U8M1, RVV_U32M4)
@@ -368,9 +394,28 @@ HAL_RVV_CVT(RVV_U16MF4, RVV_U64M1)
 
 #undef HAL_RVV_CVT
 
-#define HAL_RVV_CVT(ONE, EIGHT) \
-    template <>                 \
-    inline EIGHT::VecType EIGHT::cast(ONE::VecType v, size_t vl) { return __riscv_vzext_vf8(v, vl); }
+#define HAL_RVV_CVT(ONE, EIGHT)                                                                       \
+    template <>                                                                                       \
+    inline EIGHT::VecType EIGHT::cast(ONE::VecType v, size_t vl) { return __riscv_vsext_vf8(v, vl); } \
+    template <>                                                                                       \
+    inline ONE::VecType ONE::cast(EIGHT::VecType v, size_t vl) {                                      \
+        return __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vncvt_x(v ,vl), vl), vl);                      \
+    }
+
+HAL_RVV_CVT(RVV_I8M1, RVV_I64M8)
+HAL_RVV_CVT(RVV_I8MF2, RVV_I64M4)
+HAL_RVV_CVT(RVV_I8MF4, RVV_I64M2)
+HAL_RVV_CVT(RVV_I8MF8, RVV_I64M1)
+
+#undef HAL_RVV_CVT
+
+#define HAL_RVV_CVT(ONE, EIGHT)                                                                       \
+    template <>                                                                                       \
+    inline EIGHT::VecType EIGHT::cast(ONE::VecType v, size_t vl) { return __riscv_vzext_vf8(v, vl); } \
+    template <>                                                                                       \
+    inline ONE::VecType ONE::cast(EIGHT::VecType v, size_t vl) {                                      \
+        return __riscv_vncvt_x(__riscv_vncvt_x(__riscv_vncvt_x(v ,vl), vl), vl);                      \
+    }
 
 HAL_RVV_CVT(RVV_U8M1, RVV_U64M8)
 HAL_RVV_CVT(RVV_U8MF2, RVV_U64M4)
@@ -389,6 +434,51 @@ HAL_RVV_CVT(RVV_F32M4, RVV_F64M8)
 HAL_RVV_CVT(RVV_F32M2, RVV_F64M4)
 HAL_RVV_CVT(RVV_F32M1, RVV_F64M2)
 HAL_RVV_CVT(RVV_F32MF2, RVV_F64M1)
+
+#undef HAL_RVV_CVT
+
+#define HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_TYPE, LMUL)                                    \
+    template <>                                                                               \
+    inline RVV<A, LMUL_TYPE>::VecType RVV<A, LMUL_TYPE>::cast(                                \
+        RVV<B, LMUL_TYPE>::VecType v, [[maybe_unused]] size_t vl                              \
+    ) {                                                                                       \
+        return __riscv_vreinterpret_##A_TYPE##LMUL(v);                                        \
+    }                                                                                         \
+    template <>                                                                               \
+    inline RVV<B, LMUL_TYPE>::VecType RVV<B, LMUL_TYPE>::cast(                                \
+        RVV<A, LMUL_TYPE>::VecType v, [[maybe_unused]] size_t vl                              \
+    ) {                                                                                       \
+        return __riscv_vreinterpret_##B_TYPE##LMUL(v);                                        \
+    }
+
+#define HAL_RVV_CVT2(A, B, A_TYPE, B_TYPE)        \
+    HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_1, m1) \
+    HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_2, m2) \
+    HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_4, m4) \
+    HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_8, m8)
+
+HAL_RVV_CVT2( uint8_t,  int8_t,  u8,  i8)
+HAL_RVV_CVT2(uint16_t, int16_t, u16, i16)
+HAL_RVV_CVT2(uint32_t, int32_t, u32, i32)
+HAL_RVV_CVT2(uint64_t, int64_t, u64, i64)
+
+HAL_RVV_CVT2( int32_t,  float, i32, f32)
+HAL_RVV_CVT2(uint32_t,  float, u32, f32)
+HAL_RVV_CVT2( int64_t, double, i64, f64)
+HAL_RVV_CVT2(uint64_t, double, u64, f64)
+
+#undef HAL_RVV_CVT2
+
+HAL_RVV_CVT( uint8_t,  int8_t,  u8,  i8, LMUL_f2, mf2)
+HAL_RVV_CVT(uint16_t, int16_t, u16, i16, LMUL_f2, mf2)
+HAL_RVV_CVT(uint32_t, int32_t, u32, i32, LMUL_f2, mf2)
+HAL_RVV_CVT( int32_t,   float, i32, f32, LMUL_f2, mf2)
+HAL_RVV_CVT(uint32_t,   float, u32, f32, LMUL_f2, mf2)
+
+HAL_RVV_CVT( uint8_t,  int8_t,  u8,  i8, LMUL_f4, mf4)
+HAL_RVV_CVT(uint16_t, int16_t, u16, i16, LMUL_f4, mf4)
+
+HAL_RVV_CVT( uint8_t,  int8_t,  u8,  i8, LMUL_f8, mf8)
 
 #undef HAL_RVV_CVT
 
