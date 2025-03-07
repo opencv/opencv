@@ -1175,7 +1175,7 @@ void CCheckerDetectorImpl::getRefColor(const COLORCHART chartType, cv::Mat& outp
             throw std::runtime_error("Unknown color type requested.");
     }
 
-    output = cv::Mat(colorCount, 1, CV_8UC3);
+    output = cv::Mat(colorCount, 1, CV_32SC3);
 
     for (int i = 0; i < colorCount; i++) {
         lab_color.at<cv::Vec3f>(0, 0) = cv::Vec3f(
@@ -1186,9 +1186,9 @@ void CCheckerDetectorImpl::getRefColor(const COLORCHART chartType, cv::Mat& outp
 
         cv::cvtColor(lab_color, rgb_color, cv::COLOR_Lab2BGR);
 
-        // Convert to 8-bit RGB values (0-255)
+        // Convert to 8-bit RGB values (0-255) but store as int
         cv::Vec3f rgb = rgb_color.at<cv::Vec3f>(0, 0) * 255;
-        output.at<cv::Vec3b>(i, 0) = cv::Vec3b(
+        output.at<cv::Vec3i>(i, 0) = cv::Vec3i(
             std::min(255, std::max(0, static_cast<int>(rgb[0]))),  // Blue
             std::min(255, std::max(0, static_cast<int>(rgb[1]))),  // Green
             std::min(255, std::max(0, static_cast<int>(rgb[2])))   // Red
