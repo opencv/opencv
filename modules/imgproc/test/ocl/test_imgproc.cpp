@@ -455,8 +455,8 @@ OCL_TEST_P(Threshold_masked, Mat)
         src_roi.copyTo(dst_roi);
         usrc_roi.copyTo(udst_roi);
 
-        OCL_OFF(cv::threshold(src_roi, dst_roi, mask_roi, thresh, maxVal, _thresholdType));
-        OCL_ON(cv::threshold(usrc_roi, udst_roi, umask_roi, thresh, maxVal, _thresholdType));
+        OCL_OFF(cv::thresholdWithMask(src_roi, dst_roi, mask_roi, thresh, maxVal, _thresholdType));
+        OCL_ON(cv::thresholdWithMask(usrc_roi, udst_roi, umask_roi, thresh, maxVal, _thresholdType));
 
         OCL_EXPECT_MATS_NEAR(dst, 0);
     }

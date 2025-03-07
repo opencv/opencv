@@ -3074,6 +3074,25 @@ or Triangle algorithm and uses it instead of the specified thresh.
 
 @param src input array (multiple-channel, 8-bit or 32-bit floating point).
 @param dst output array of the same size  and type and the same number of channels as src.
+@param thresh threshold value.
+@param maxval maximum value to use with the #THRESH_BINARY and #THRESH_BINARY_INV thresholding
+types.
+@param type thresholding type (see #ThresholdTypes).
+@return the computed threshold value if Otsu's or Triangle methods used.
+
+@sa  thresholdWithMask, adaptiveThreshold, findContours, compare, min, max
+ */
+CV_EXPORTS_W double threshold( InputArray src, OutputArray dst,
+                               double thresh, double maxval, int type );
+
+/** @brief Same as #threshold, but with an optional mask
+
+@note If the mask is empty, #thresholdWithMask is equivalent to #threshold.
+If the mask is not empty, dst *must* be of the same size and type as src, so that
+outliers pixels are left as-is
+
+@param src input array (multiple-channel, 8-bit or 32-bit floating point).
+@param dst output array of the same size  and type and the same number of channels as src.
 @param mask optional mask (same size as src, 8-bit).
 @param thresh threshold value.
 @param maxval maximum value to use with the #THRESH_BINARY and #THRESH_BINARY_INV thresholding
@@ -3081,13 +3100,10 @@ types.
 @param type thresholding type (see #ThresholdTypes).
 @return the computed threshold value if Otsu's or Triangle methods used.
 
-@sa  adaptiveThreshold, findContours, compare, min, max
- */
-CV_EXPORTS_W double threshold( InputArray src, OutputArray dst, InputArray mask,
-                               double thresh, double maxval, int type );
-
-CV_EXPORTS_W double threshold( InputArray src, OutputArray dst,
-                               double thresh, double maxval, int type );
+@sa  threshold, adaptiveThreshold, findContours, compare, min, max
+*/
+CV_EXPORTS_W double thresholdWithMask( InputArray src, InputOutputArray dst, InputArray mask,
+                                       double thresh, double maxval, int type );
 
 /** @brief Applies an adaptive threshold to an array.
 

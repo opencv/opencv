@@ -546,7 +546,7 @@ TEST_P(Imgproc_Threshold_Masked, threshold_mask)
         cv::ellipse(mask, ellipseRect, cv::Scalar::all(255), cv::FILLED);//for very different mask alignments
 
         Mat output_with_mask = cv::Mat::zeros(sz, input.type());
-        cv::threshold(input, output_with_mask, mask, 127, 255, _threshType);
+        cv::thresholdWithMask(input, output_with_mask, mask, 127, 255, _threshType);
 
         cv::bitwise_not(mask, mask);
         input.copyTo(output_with_mask, mask);
