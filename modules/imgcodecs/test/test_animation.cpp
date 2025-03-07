@@ -3,30 +3,9 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include "test_common.hpp"
 
 namespace opencv_test { namespace {
-
-static void readFileBytes(const std::string& fname, std::vector<unsigned char>& buf)
-{
-    FILE * wfile = fopen(fname.c_str(), "rb");
-    if (wfile != NULL)
-    {
-        fseek(wfile, 0, SEEK_END);
-        size_t wfile_size = ftell(wfile);
-        fseek(wfile, 0, SEEK_SET);
-
-        buf.resize(wfile_size);
-
-        size_t data_size = fread(&buf[0], 1, wfile_size, wfile);
-
-        if(wfile)
-        {
-            fclose(wfile);
-        }
-
-        EXPECT_EQ(data_size, wfile_size);
-    }
-}
 
 static bool fillFrames(Animation& animation, bool hasAlpha, int n = 14)
 {
@@ -425,6 +404,39 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgb)
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
+TEST(Imgcodecs_APNG, imwriteanimation_gray)
+{
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, false));
+
+    for (size_t i = 0; i < s_animation.frames.size(); i++)
+    {
+        cvtColor(s_animation.frames[i], s_animation.frames[i], COLOR_BGR2GRAY);
+    }
+
+    s_animation.bgcolor = Scalar(50, 100, 150);
+    string output = cv::tempfile(".png");
+    // Write the animation to a .png file and verify success.
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
+
+    // Read the animation back and compare with the original.
+    EXPECT_TRUE(imreadanimation(output, l_animation));
+
+    EXPECT_EQ(Scalar(), l_animation.bgcolor);
+    size_t expected_frame_count = s_animation.frames.size() - 2;
+
+    // Verify that the number of frames matches the expected count.
+    EXPECT_EQ(expected_frame_count, imcount(output));
+    EXPECT_EQ(expected_frame_count, l_animation.frames.size());
+
+    EXPECT_EQ(0, remove(output.c_str()));
+
+    for (size_t i = 0; i < l_animation.frames.size(); i++)
+    {
+        EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], l_animation.frames[i], NORM_INF));
+    }
+}
+
 TEST(Imgcodecs_APNG, imwritemulti_rgba)
 {
     Animation s_animation;
@@ -492,7 +504,7 @@ TEST(Imgcodecs_APNG, imwriteanimation_bgcolor)
 {
     Animation s_animation, l_animation;
     EXPECT_TRUE(fillFrames(s_animation, true, 2));
-    s_animation.bgcolor = Scalar(50, 100, 150, 128); // different values for test purpose.
+    s_animation.bgcolor = Scalar(50, 100, 150); // will be written in bKGD chunk as RGB.
 
     // Create a temporary output filename for saving the animation.
     string output = cv::tempfile(".png");

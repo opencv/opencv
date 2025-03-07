@@ -1318,6 +1318,26 @@ inline int hal_ni_pyrdown_offset(const uchar* src_data, size_t src_step, int src
 //! @endcond
 
 /**
+   @brief Perform Gaussian Blur and upsampling for input tile.
+   @param depth Depths of source and destination image
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param src_width Source image width
+   @param src_height Source image height
+   @param dst_width Destination image width
+   @param dst_height Destination image height
+   @param cn Number of channels
+   @param border_type Border type
+*/
+inline int hal_ni_pyrup(const uchar* src_data, size_t src_step, int src_width, int src_height, uchar* dst_data, size_t dst_step, int dst_width, int dst_height, int depth, int cn, int border_type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_pyrup hal_ni_pyrup
+//! @endcond
+
+/**
    @brief Canny edge detector
    @param src_data Source image data
    @param src_step Source image step

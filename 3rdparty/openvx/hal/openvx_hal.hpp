@@ -54,6 +54,33 @@ int ovx_hal_cvtThreePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size
 int ovx_hal_cvtBGRtoThreePlaneYUV(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int acn, bool swapBlue, int uIdx);
 int ovx_hal_cvtOnePlaneYUVtoBGR(const uchar * a, size_t astep, uchar * b, size_t bstep, int w, int h, int bcn, bool swapBlue, int uIdx, int ycn);
 int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, uchar * b, size_t bstep, uchar * c, size_t, uchar * d, size_t, int w, int h, int cn);
+int ovx_hal_meanStdDev(const uchar* src_data, size_t src_step, int width, int height,
+                       int src_type, double* mean_val, double* stddev_val, uchar* mask, size_t mask_step);
+int ovx_hal_lut(const uchar *src_data, size_t src_step, size_t src_type, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height);
+int ovx_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width, int height, int depth,
+                              double* minVal, double* maxVal, int* minIdx, int* maxIdx, uchar* mask, size_t mask_step);
+int ovx_hal_medianBlur(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, int ksize);
+int ovx_hal_sobel(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, int ksize, double scale, double delta, int border_type);
+int ovx_hal_canny(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                  int width, int height, int cn, double lowThreshold, double highThreshold, int ksize, bool L2gradient);
+int ovx_hal_pyrdown(const uchar* src_data, size_t src_step, int src_width, int src_height,
+                    uchar* dst_data, size_t dst_step, int dst_width, int dst_height, int depth, int cn, int border_type);
+int ovx_hal_boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                      int width, int height, int src_depth, int dst_depth, int cn,
+                      int margin_left, int margin_top, int margin_right, int margin_bottom,
+                      size_t ksize_width, size_t ksize_height, int anchor_x, int anchor_y, bool normalize, int border_type);
+int ovx_hal_equalize_hist(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height);
+int ovx_hal_gaussianBlur(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,  int width, int height,
+                        int depth, int cn, size_t margin_left, size_t margin_top, size_t margin_right, size_t margin_bottom,
+                        size_t ksize_width, size_t ksize_height, double sigmaX, double sigmaY, int border_type);
+int ovx_hal_remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+                     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+                     float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
+                     int interpolation, int border_type, const double border_value[4]);
+int ovx_hal_threshold(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                      int width, int height, int depth, int cn, double thresh, double maxValue, int thresholdType);
+int ovx_hal_FAST(const uchar* src_data, size_t src_step, int width, int height, uchar* keypoints_data, size_t* keypoints_count,
+                 int threshold, bool nonmax_suppression, int /*cv::FastFeatureDetector::DetectorType*/ dtype);
 
 //==================================================================================================
 // functions redefinition
@@ -141,5 +168,11 @@ int ovx_hal_integral(int depth, int sdepth, int, const uchar * a, size_t astep, 
 #define cv_hal_cvtOnePlaneYUVtoBGR ovx_hal_cvtOnePlaneYUVtoBGR
 #undef cv_hal_integral
 #define cv_hal_integral ovx_hal_integral
+#undef cv_hal_meanStdDev
+#define cv_hal_meanStdDev ovx_hal_meanStdDev
+#undef cv_hal_lut
+#define cv_hal_lut ovx_hal_lut
+#undef cv_hal_minMaxIdxMaskStep
+#define cv_hal_minMaxIdxMaskStep ovx_hal_minMaxIdxMaskStep
 
 #endif

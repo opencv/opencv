@@ -5,7 +5,6 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
-#include "opencv2/core/openvx/ovx_defs.hpp"
 #include "stat.hpp"
 
 #ifndef OPENCV_IPP_MEAN
@@ -130,13 +129,29 @@ Scalar mean(InputArray _src, InputArray _mask)
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
     int k, cn = src.channels(), depth = src.depth();
-    Scalar s;
+    Scalar s = Scalar::all(0.0);
+
+    CV_Assert( cn <= 4 );
 
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_mean(src, mask, s), s)
 
+    if (src.isContinuous() && mask.isContinuous())
+    {
+        CALL_HAL_RET2(meanStdDev, cv_hal_meanStdDev, s, src.data, 0, (int)src.total(), 1, src.type(),
+                      &s[0], nullptr /*stddev*/, mask.data, 0);
+    }
+    else
+    {
+        if (src.dims <= 2)
+        {
+            CALL_HAL_RET2(meanStdDev, cv_hal_meanStdDev, s, src.data, src.step, src.cols, src.rows, src.type(),
+                          &s[0], nullptr, mask.data, mask.step);
+        }
+    }
+
     SumFunc func = getSumFunc(depth);
 
-    CV_Assert( cn <= 4 && func != 0 );
+    CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
     uchar* ptrs[2] = {};
@@ -312,70 +327,6 @@ static bool ocl_meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv
 }
 #endif
 
-#ifdef HAVE_OPENVX
-    static bool openvx_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& mask)
-    {
-        size_t total_size = src.total();
-        int rows = src.size[0], cols = rows ? (int)(total_size / rows) : 0;
-        if (src.type() != CV_8UC1|| !mask.empty() ||
-               (src.dims != 2 && !(src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size))
-           )
-        return false;
-
-        try
-        {
-            ivx::Context ctx = ovx::getOpenVXContext();
-#ifndef VX_VERSION_1_1
-            if (ctx.vendorID() == VX_ID_KHRONOS)
-                return false; // Do not use OpenVX meanStdDev estimation for sample 1.0.1 implementation due to lack of accuracy
-#endif
-
-            ivx::Image
-                ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                    ivx::Image::createAddressing(cols, rows, 1, (vx_int32)(src.step[0])), src.ptr());
-
-            vx_float32 mean_temp, stddev_temp;
-            ivx::IVX_CHECK_STATUS(vxuMeanStdDev(ctx, ia, &mean_temp, &stddev_temp));
-
-            if (_mean.needed())
-            {
-                if (!_mean.fixedSize())
-                    _mean.create(1, 1, CV_64F, -1, true);
-                Mat mean = _mean.getMat();
-                CV_Assert(mean.type() == CV_64F && mean.isContinuous() &&
-                    (mean.cols == 1 || mean.rows == 1) && mean.total() >= 1);
-                double *pmean = mean.ptr<double>();
-                pmean[0] = mean_temp;
-                for (int c = 1; c < (int)mean.total(); c++)
-                    pmean[c] = 0;
-            }
-
-            if (_sdv.needed())
-            {
-                if (!_sdv.fixedSize())
-                    _sdv.create(1, 1, CV_64F, -1, true);
-                Mat stddev = _sdv.getMat();
-                CV_Assert(stddev.type() == CV_64F && stddev.isContinuous() &&
-                    (stddev.cols == 1 || stddev.rows == 1) && stddev.total() >= 1);
-                double *pstddev = stddev.ptr<double>();
-                pstddev[0] = stddev_temp;
-                for (int c = 1; c < (int)stddev.total(); c++)
-                    pstddev[c] = 0;
-            }
-        }
-        catch (const ivx::RuntimeError & e)
-        {
-            VX_DbgThrow(e.what());
-        }
-        catch (const ivx::WrapperError & e)
-        {
-            VX_DbgThrow(e.what());
-        }
-
-        return true;
-    }
-#endif
-
 #ifdef HAVE_IPP
 static bool ipp_meanStdDev(Mat& src, OutputArray _mean, OutputArray _sdv, Mat& mask)
 {
@@ -527,9 +478,6 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
 
     CV_Assert(mask.empty() || src.size == mask.size);
 
-    CV_OVX_RUN(!ovx::skipSmallImages<VX_KERNEL_MEAN_STDDEV>(src.cols, src.rows),
-               openvx_meanStdDev(src, _mean, _sdv, mask))
-
     CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_meanStdDev(src, _mean, _sdv, mask));
 
     int k, cn = src.channels(), depth = src.depth();
@@ -592,7 +540,8 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
     uchar* ptrs[2] = {};
     NAryMatIterator it(arrays, ptrs);
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
-    int j, count = 0, nz0 = 0;
+    int j;
+    int64_t count = 0, nz0 = 0;
     AutoBuffer<double> _buf(cn*4);
     double *s = (double*)_buf.data(), *sq = s + cn;
     int *sbuf = (int*)s, *sqbuf = (int*)sq;

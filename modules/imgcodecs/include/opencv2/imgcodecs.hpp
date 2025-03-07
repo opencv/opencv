@@ -65,6 +65,7 @@ namespace cv
 //! @{
 
 //! Imread flags
+//! @note IMREAD_COLOR_BGR (IMREAD_COLOR) and IMREAD_COLOR_RGB can not be set at the same time.
 enum ImreadModes {
        IMREAD_UNCHANGED            = -1, //!< If set, return the loaded image as is (with alpha channel, otherwise it gets cropped). Ignore EXIF orientation.
        IMREAD_GRAYSCALE            = 0,  //!< If set, always convert image to the single channel grayscale image (codec internal conversion).
@@ -95,6 +96,7 @@ enum ImwriteFlags {
        IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
        IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
        IMWRITE_PNG_BILEVEL         = 18, //!< Binary level PNG, 0 or 1, default is 0.
+       IMWRITE_PNG_FILTER          = 19, //!< One of cv::ImwritePNGFilterFlags, default is IMWRITE_PNG_FILTER_SUB.
        IMWRITE_PXM_BINARY          = 32, //!< For PPM, PGM, or PBM, it can be a binary format flag, 0 or 1. Default value is 1.
        IMWRITE_EXR_TYPE            = (3 << 4) + 0 /* 48 */, //!< override EXR storage type (FLOAT (FP32) is default)
        IMWRITE_EXR_COMPRESSION     = (3 << 4) + 1 /* 49 */, //!< override EXR compression type (ZIP_COMPRESSION = 3 is default)
@@ -210,6 +212,17 @@ enum ImwritePNGFlags {
        IMWRITE_PNG_STRATEGY_FIXED        = 4  //!< Using this value prevents the use of dynamic Huffman codes, allowing for a simpler decoder for special applications.
      };
 
+//! Imwrite PNG specific values for IMWRITE_PNG_FILTER parameter key
+enum ImwritePNGFilterFlags {
+       IMWRITE_PNG_FILTER_NONE           = 8,   //!< Applies no filter to the PNG image (useful when you want to save the raw pixel data without any compression filter).
+       IMWRITE_PNG_FILTER_SUB            = 16,  //!< Applies the "sub" filter, which calculates the difference between the current byte and the previous byte in the row.
+       IMWRITE_PNG_FILTER_UP             = 32,  //!< applies the "up" filter, which calculates the difference between the current byte and the corresponding byte directly above it.
+       IMWRITE_PNG_FILTER_AVG            = 64,  //!< applies the "average" filter, which calculates the average of the byte to the left and the byte above.
+       IMWRITE_PNG_FILTER_PAETH          = 128, //!< applies the "Paeth" filter, a more complex filter that predicts the next pixel value based on neighboring pixels.
+       IMWRITE_PNG_FAST_FILTERS          = (IMWRITE_PNG_FILTER_NONE | IMWRITE_PNG_FILTER_SUB | IMWRITE_PNG_FILTER_UP), //!< This is a combination of IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, and IMWRITE_PNG_FILTER_UP, typically used for faster compression.
+       IMWRITE_PNG_ALL_FILTERS           = (IMWRITE_PNG_FAST_FILTERS | IMWRITE_PNG_FILTER_AVG | IMWRITE_PNG_FILTER_PAETH) //!< This combines all available filters (NONE, SUB, UP, AVG, and PAETH), which will attempt to apply all of them for the best possible compression.
+     };
+
 //! Imwrite PAM specific tupletype flags used to define the 'TUPLETYPE' field of a PAM file.
 enum ImwritePAMFlags {
        IMWRITE_PAM_FORMAT_NULL            = 0,
@@ -263,7 +276,7 @@ struct CV_EXPORTS_W_SIMPLE Animation
     - If a negative value or a value beyond the maximum of `0xffff` (65535) is provided, it is reset to `0`
     (infinite looping) to maintain valid bounds.
 
-    @param bgColor A `Scalar` object representing the background color in BGRA format:
+    @param bgColor A `Scalar` object representing the background color in BGR format:
     - Defaults to `Scalar()`, indicating an empty color (usually transparent if supported).
     - This background color provides a solid fill behind frames that have transparency, ensuring a consistent display appearance.
     */
@@ -413,13 +426,13 @@ can be saved using this function, with these exceptions:
 - With JPEG 2000 encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
 - With JPEG XL encoder, 8-bit unsigned (CV_8U), 16-bit unsigned (CV_16U) and 32-bit float(CV_32F) images can be saved.
   - JPEG XL images with an alpha channel can be saved using this function.
-    To do this, create 8-bit (or 16-bit, 32-bit float) 4-channel image BGRA, where the alpha channel goes last.
-    Fully transparent pixels should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535/1.0.
+    To achieve this, create an 8-bit 4-channel (CV_8UC4) / 16-bit 4-channel (CV_16UC4) / 32-bit float 4-channel (CV_32FC4) BGRA image, ensuring the alpha channel is the last component.
+    Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255/65535/1.0.
 - With PAM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
 - With PNG encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
-  - PNG images with an alpha channel can be saved using this function. To do this, create
-    8-bit (or 16-bit) 4-channel image BGRA, where the alpha channel goes last. Fully transparent pixels
-    should have alpha set to 0, fully opaque pixels should have alpha set to 255/65535 (see the code sample below).
+  - PNG images with an alpha channel can be saved using this function.
+    To achieve this, create an 8-bit 4-channel (CV_8UC4) / 16-bit 4-channel (CV_16UC4) BGRA image, ensuring the alpha channel is the last component.
+    Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255/65535(see the code sample below).
 - With PGM/PPM encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
 - With TIFF encoder, 8-bit unsigned (CV_8U), 8-bit signed (CV_8S),
                      16-bit unsigned (CV_16U), 16-bit signed (CV_16S),
@@ -428,6 +441,11 @@ can be saved using this function, with these exceptions:
   - Multiple images (vector of Mat) can be saved in TIFF format (see the code sample below).
   - 32-bit float 3-channel (CV_32FC3) TIFF images will be saved
     using the LogLuv high dynamic range encoding (4 bytes per pixel)
+- With GIF encoder, 8-bit unsigned (CV_8U) images can be saved.
+  - GIF images with an alpha channel can be saved using this function.
+    To achieve this, create an 8-bit 4-channel (CV_8UC4) BGRA image, ensuring the alpha channel is the last component.
+    Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255.
+  - 8-bit single-channel images (CV_8UC1) are not supported due to GIF's limitation to indexed color formats.
 
 If the image format is not supported, the image will be converted to 8-bit unsigned (CV_8U) and saved that way.
 
