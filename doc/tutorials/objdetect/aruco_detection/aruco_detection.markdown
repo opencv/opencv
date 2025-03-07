@@ -18,7 +18,7 @@ of these markers is that a single marker provides enough correspondences (its fo
 to obtain the camera pose. Also, the inner binary codification makes them specially robust, allowing
 the possibility of applying error detection and correction techniques.
 
-The aruco module is based on the [ArUco library](http://www.uco.es/investiga/grupos/ava/node/26),
+The aruco module is based on the [ArUco library](https://www.uco.es/investiga/grupos/ava/portfolio/aruco/),
 a popular library for detection of square fiducial markers developed by Rafael Muñoz and Sergio Garrido @cite Aruco2014.
 
 The aruco functionalities are included in:
