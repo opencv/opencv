@@ -340,13 +340,12 @@ void Mat::copyTo( OutputArray _dst ) const
     if( dims == 0 && empty() )
     {
         _dst.release();
-        void* obj = _dst.getObj();
         if (_dst.isMat())
-            reinterpret_cast<Mat*>(obj)->flags = Mat::MAGIC_VAL | Mat::CONTINUOUS_FLAG | stype;
+            _dst.getObj<Mat>()->flags = Mat::MAGIC_VAL | Mat::CONTINUOUS_FLAG | stype;
         else if (_dst.isUMat())
-            reinterpret_cast<UMat*>(obj)->flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | stype;
+            _dst.getObj<UMat>()->flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | stype;
         else if (_dst.isGpuMat())
-            reinterpret_cast<cuda::GpuMat*>(obj)->flags = stype;
+            _dst.getObj<cuda::GpuMat>()->flags = stype;
         return;
     }
 
@@ -743,7 +742,7 @@ void repeat(InputArray _src, int ny, int nx, OutputArray _dst)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_src.getObj() != _dst.getObj());
+    CV_Assert(!_src.pointsTo(_dst));
     CV_Assert( _src.dims() <= 2 );
     CV_Assert( ny > 0 && nx > 0 );
 

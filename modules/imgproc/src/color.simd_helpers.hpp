@@ -93,7 +93,7 @@ struct CvtHelper
         CV_CheckChannels(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
         CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
 
-        if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
+        if (_src.pointsTo(_dst)) // inplace processing (#6653)
             _src.copyTo(src);
         else
             src = _src.getMat();
