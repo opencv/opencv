@@ -6,10 +6,10 @@
 
 #include <riscv_vector.h>
 
-namespace cv { namespace cv_hal_rvv {
+namespace cv { namespace cv_hal_rvv { namespace norm_diff {
 
 #undef cv_hal_normDiff
-#define cv_hal_normDiff cv::cv_hal_rvv::normDiff
+#define cv_hal_normDiff cv::cv_hal_rvv::norm_diff::normDiff
 
 inline int normDiffInf_8UC1(const uchar* src1, size_t src1_step, const uchar* src2, size_t src2_step, const uchar* mask, size_t mask_step, int width, int height, double* result)
 {
@@ -590,7 +590,7 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
     if(ret == CV_HAL_ERROR_OK && (norm_type & NORM_RELATIVE))
     {
         double result_;
-        ret = cv::cv_hal_rvv::norm(src2, src2_step, mask, mask_step, width, height, type, norm_type & ~NORM_RELATIVE, &result_);
+        ret = cv::cv_hal_rvv::norm::norm(src2, src2_step, mask, mask_step, width, height, type, norm_type & ~NORM_RELATIVE, &result_);
         if(ret == CV_HAL_ERROR_OK)
         {
             *result /= result_ + DBL_EPSILON;
@@ -600,6 +600,6 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
     return ret;
 }
 
-}}
+}}}
 
 #endif
