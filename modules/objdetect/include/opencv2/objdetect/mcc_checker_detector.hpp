@@ -32,6 +32,10 @@
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 
+//---------------------------------------------------------------
+// #define MCC_DEBUG
+//---------------------------------------------------------------
+
 namespace cv
 {
 namespace mcc
