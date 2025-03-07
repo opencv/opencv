@@ -2650,6 +2650,42 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)
                           );
 
+/**
+@brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme for fisheye camera moodel.
+
+@param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
+1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
+@param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
+where N is the number of points. vector\<Point2d\> can be also passed here.
+@param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
+@param distCoeffs Input vector of distortion coefficients (4x1/1x4).
+@param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
+the model coordinate system to the camera coordinate system.
+@param tvec Output translation vector.
+@param useExtrinsicGuess Parameter used for #SOLVEPNP_ITERATIVE. If true (1), the function uses
+the provided rvec and tvec values as initial approximations of the rotation and translation
+vectors, respectively, and further optimizes them.
+@param iterationsCount Number of iterations.
+@param reprojectionError Inlier threshold value used by the RANSAC procedure. The parameter value
+is the maximum allowed distance between the observed and computed point projections to consider it
+an inlier.
+@param confidence The probability that the algorithm produces a useful result.
+@param inliers Output vector that contains indices of inliers in objectPoints and imagePoints .
+@param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
+@param criteria Termination criteria for internal undistortPoints call.
+The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
+thus the input are very similar. More information about Perspective-n-Points is described in @ref calib3d_solvePnP
+for more information.
+*/
+CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
+                                  InputArray cameraMatrix, InputArray distCoeffs,
+                                  OutputArray rvec, OutputArray tvec,
+                                  bool useExtrinsicGuess = false, int iterationsCount = 100,
+                                  float reprojectionError = 8.0, double confidence = 0.99,
+                                  OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE,
+                                  TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)
+                                );
+
 } // namespace fisheye
 
 /** @brief Octree for 3D vision.

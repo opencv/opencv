@@ -1034,87 +1034,6 @@ TEST(Imgproc_Remap, DISABLED_memleak)
     }
 }
 
-//** @deprecated */
-TEST(Imgproc_linearPolar, identity)
-{
-    const int N = 33;
-    Mat in(N, N, CV_8UC3, Scalar(255, 0, 0));
-    in(cv::Rect(N/3, N/3, N/3, N/3)).setTo(Scalar::all(255));
-    cv::blur(in, in, Size(5, 5));
-    cv::blur(in, in, Size(5, 5));
-
-    Mat src = in.clone();
-    Mat dst;
-
-    Rect roi = Rect(0, 0, in.cols - ((N+19)/20), in.rows);
-
-    for (int i = 1; i <= 5; i++)
-    {
-        linearPolar(src, dst,
-            Point2f((N-1) * 0.5f, (N-1) * 0.5f), N * 0.5f,
-            cv::WARP_FILL_OUTLIERS | cv::INTER_LINEAR | cv::WARP_INVERSE_MAP);
-
-        linearPolar(dst, src,
-            Point2f((N-1) * 0.5f, (N-1) * 0.5f), N * 0.5f,
-            cv::WARP_FILL_OUTLIERS | cv::INTER_LINEAR);
-
-        double psnr = cvtest::PSNR(in(roi), src(roi));
-        EXPECT_LE(25, psnr) << "iteration=" << i;
-    }
-
-#if 0
-    Mat all(N*2+2,N*2+2, src.type(), Scalar(0,0,255));
-    in.copyTo(all(Rect(0,0,N,N)));
-    src.copyTo(all(Rect(0,N+1,N,N)));
-    src.copyTo(all(Rect(N+1,0,N,N)));
-    dst.copyTo(all(Rect(N+1,N+1,N,N)));
-    imwrite("linearPolar.png", all);
-    imshow("input", in); imshow("result", dst); imshow("restore", src); imshow("all", all);
-    cv::waitKey();
-#endif
-}
-
-//** @deprecated */
-TEST(Imgproc_logPolar, identity)
-{
-    const int N = 33;
-    Mat in(N, N, CV_8UC3, Scalar(255, 0, 0));
-    in(cv::Rect(N/3, N/3, N/3, N/3)).setTo(Scalar::all(255));
-    cv::blur(in, in, Size(5, 5));
-    cv::blur(in, in, Size(5, 5));
-
-    Mat src = in.clone();
-    Mat dst;
-
-    Rect roi = Rect(0, 0, in.cols - ((N+19)/20), in.rows);
-
-    double M = N/log(N * 0.5f);
-    for (int i = 1; i <= 5; i++)
-    {
-        logPolar(src, dst,
-            Point2f((N-1) * 0.5f, (N-1) * 0.5f), M,
-            WARP_FILL_OUTLIERS | INTER_LINEAR | WARP_INVERSE_MAP);
-
-        logPolar(dst, src,
-            Point2f((N-1) * 0.5f, (N-1) * 0.5f), M,
-            WARP_FILL_OUTLIERS | INTER_LINEAR);
-
-        double psnr = cvtest::PSNR(in(roi), src(roi));
-        EXPECT_LE(25, psnr) << "iteration=" << i;
-    }
-
-#if 0
-    Mat all(N*2+2,N*2+2, src.type(), Scalar(0,0,255));
-    in.copyTo(all(Rect(0,0,N,N)));
-    src.copyTo(all(Rect(0,N+1,N,N)));
-    src.copyTo(all(Rect(N+1,0,N,N)));
-    dst.copyTo(all(Rect(N+1,N+1,N,N)));
-    imwrite("logPolar.png", all);
-    imshow("input", in); imshow("result", dst); imshow("restore", src); imshow("all", all);
-    cv::waitKey();
-#endif
-}
-
 TEST(Imgproc_warpPolar, identity)
 {
     const int N = 33;
@@ -1210,6 +1129,41 @@ TEST(Imgproc_Resize, issue_26497)
     EXPECT_EQ(B.size(), Size(2, 2));
     EXPECT_LE(0., minv);
     EXPECT_LE(maxv, 3.);
+}
+
+TEST(Imgproc_getPerspectiveTransform, issue_26916)
+{
+    double src_data[] = {320, 512, 960, 512, 0, 1024, 1280, 1024};
+    const Mat src_points(4, 2, CV_64FC1, src_data);
+
+    double dst_data[] = {0, 0, 1280, 0, 0, 1024, 1280, 1024};
+    const Mat dst_points(4, 2, CV_64FC1, dst_data);
+
+    Mat src_points_f;
+    src_points.convertTo(src_points_f, CV_32FC1);
+
+    Mat dst_points_f;
+    dst_points.convertTo(dst_points_f, CV_32FC1);
+
+    Mat perspective_transform = getPerspectiveTransform(src_points_f, dst_points_f);
+    EXPECT_NEAR(perspective_transform.at<double>(2, 2), 0, 1e-16);
+    EXPECT_NEAR(cv::norm(perspective_transform), 1, 1e-14);
+
+    const Mat ones = Mat::ones(4, 1, CV_64FC1);
+
+    Mat homogeneous_src_points;
+    hconcat(src_points, ones, homogeneous_src_points);
+
+    Mat obtained_homogeneous_dst_points = (perspective_transform * homogeneous_src_points.t()).t();
+    for (int row = 0; row < 4; ++row)
+    {
+        obtained_homogeneous_dst_points.row(row) /= obtained_homogeneous_dst_points.at<double>(row, 2);
+    }
+
+    Mat expected_homogeneous_dst_points;
+    hconcat(dst_points, ones, expected_homogeneous_dst_points);
+
+    EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-10);
 }
 
 }} // namespace

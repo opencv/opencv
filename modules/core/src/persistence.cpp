@@ -1876,6 +1876,9 @@ char *FileStorage::Impl::parseBase64(char *ptr, int indent, FileNode &collection
                     case CV_8S:
                         ival = (char) base64decoder.getUInt8();
                         break;
+                    case CV_Bool:
+                        ival = base64decoder.getUInt8() != 0;
+                        break;
                     case CV_16U:
                         ival = base64decoder.getUInt16();
                         break;

@@ -202,6 +202,7 @@ int base64::icvCalcStructSize(const char *dt, int initial_size) {
         switch ( *type )
         {
             case 'u': { elem_max_size = std::max( elem_max_size, sizeof(uchar ) ); break; }
+            case 'b': { elem_max_size = std::max( elem_max_size, sizeof(uchar ) ); break; }
             case 'c': { elem_max_size = std::max( elem_max_size, sizeof(schar ) ); break; }
             case 'w': { elem_max_size = std::max( elem_max_size, sizeof(ushort) ); break; }
             case 's': { elem_max_size = std::max( elem_max_size, sizeof(short ) ); break; }
@@ -332,6 +333,10 @@ size_t base64::RawDataToBinaryConvertor::make_to_binary_funcs(const std::string 
                 case 'c':
                     size = sizeof(uchar);
                     pack.func = to_binary<uchar>;
+                    break;
+                case 'b':
+                    size = sizeof(uchar);
+                    pack.func = to_binary<bool>;
                     break;
                 case 'w':
                 case 's':

@@ -426,10 +426,18 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         if ((converged || !isEps) && !theta_flipped)
         {
             Vec2d pu = pw * scale; //undistorted point
+            Vec2d fi;
 
-            // reproject
-            Vec3d pr = RR * Vec3d(pu[0], pu[1], 1.0); // rotated point optionally multiplied by new camera matrix
-            Vec2d fi(pr[0]/pr[2], pr[1]/pr[2]);       // final
+            if (!R.empty() || !P.empty())
+            {
+                // reproject
+                Vec3d pr = RR * Vec3d(pu[0], pu[1], 1.0); // rotated point optionally multiplied by new camera matrix
+                fi = Vec2d(pr[0]/pr[2], pr[1]/pr[2]);     // final
+            }
+            else
+            {
+                fi = pu;
+            }
 
             if( sdepth == CV_32F )
                 dstf[i] = fi;
@@ -644,6 +652,19 @@ bool cv::fisheye::solvePnP( InputArray opoints, InputArray ipoints,
     Mat imagePointsNormalized;
     cv::fisheye::undistortPoints(ipoints, imagePointsNormalized, cameraMatrix, distCoeffs, noArray(), cameraMatrix, criteria);
     return cv::solvePnP(opoints, imagePointsNormalized, cameraMatrix, noArray(), rvec, tvec, useExtrinsicGuess, flags);
+}
+
+bool cv::fisheye::solvePnPRansac( InputArray opoints, InputArray ipoints,
+                                  InputArray cameraMatrix, InputArray distCoeffs,
+                                  OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess,
+                                  int iterationsCount, float reprojectionError,
+                                  double confidence, OutputArray inliers,
+                                  int flags, TermCriteria criteria)
+{
+    Mat imagePointsNormalized;
+    cv::fisheye::undistortPoints(ipoints, imagePointsNormalized, cameraMatrix, distCoeffs, noArray(), cameraMatrix, criteria);
+    return cv::solvePnPRansac(opoints, imagePointsNormalized, cameraMatrix, noArray(), rvec, tvec,
+                              useExtrinsicGuess, iterationsCount, reprojectionError, confidence, inliers, flags);
 }
 
 } // namespace cv

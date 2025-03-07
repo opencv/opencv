@@ -14,7 +14,7 @@ import requests
 import shutil
 from pathlib import Path
 from datetime import datetime
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
 __all__ = ["downloadFile"]
@@ -188,9 +188,11 @@ class URLLoader(Loader):
         self.url = url
 
     def download(self, filepath):
-        r = urlopen(self.url, timeout=60)
-        self.printRequest(r)
-        self.save(filepath, r)
+        headers = {'User-Agent': 'Wget/1.20.3'}
+        req = Request(self.url, headers=headers)
+        with urlopen(req, timeout=60) as r:
+            self.printRequest(r)
+            self.save(filepath, r)
         return os.path.getsize(filepath)
 
     def printRequest(self, r):

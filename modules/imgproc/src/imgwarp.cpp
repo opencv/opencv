@@ -957,7 +957,7 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
                     sum += S[0]*w[8] + S[cn]*w[9] + S[cn*2]*w[10] + S[cn*3]*w[11];
                     S += sstep;
                     sum += S[0]*w[12] + S[cn]*w[13] + S[cn*2]*w[14] + S[cn*3]*w[15];
-                    S += 1 - sstep*3;
+                    S -= sstep * 3 - 1;
                     D[k] = castOp(sum);
                 }
             }
@@ -990,9 +990,9 @@ static void remapBicubic( const Mat& _src, Mat& _dst, const Mat& _xy,
                     for(int i = 0; i < 4; i++, w += 4 )
                     {
                         int yi = y[i];
-                        const T* S = S0 + yi*sstep;
                         if( yi < 0 )
                             continue;
+                        const T* S = S0 + yi*sstep;
                         if( x[0] >= 0 )
                             sum += (S[x[0]] - cv)*w[0];
                         if( x[1] >= 0 )
@@ -1050,9 +1050,9 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
             const int off_x = isRelative ? (_offset.x+dx) : 0;
             int sx = XY[dx*2]-3+off_x, sy = XY[dx*2+1]-3+off_y;
             const AT* w = wtab + FXY[dx]*64;
-            const T* S = S0 + sy*sstep + sx*cn;
             if( (unsigned)sx < width1 && (unsigned)sy < height1 )
             {
+                const T* S = S0 + sy*sstep + sx*cn;
                 for(int k = 0; k < cn; k++ )
                 {
                     WT sum = 0;
@@ -1093,9 +1093,9 @@ static void remapLanczos4( const Mat& _src, Mat& _dst, const Mat& _xy,
                     for(int i = 0; i < 8; i++, w += 8 )
                     {
                         int yi = y[i];
-                        const T* S1 = S0 + yi*sstep;
                         if( yi < 0 )
                             continue;
+                        const T* S1 = S0 + yi*sstep;
                         if( x[0] >= 0 )
                             sum += (S1[x[0]] - cv)*w[0];
                         if( x[1] >= 0 )
@@ -1431,150 +1431,6 @@ static bool ocl_remap(InputArray _src, OutputArray _dst, InputArray _map1, Input
     size_t globalThreads[2] = { (size_t)dst.cols, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
     return k.run(2, globalThreads, NULL, false);
 }
-
-#if 0
-/**
-@deprecated with old version of cv::linearPolar
-*/
-static bool ocl_linearPolar(InputArray _src, OutputArray _dst,
-    Point2f center, double maxRadius, int flags)
-{
-    UMat src_with_border; // don't scope this variable (it holds image data)
-
-    UMat mapx, mapy, r, cp_sp;
-    UMat src = _src.getUMat();
-    _dst.create(src.size(), src.type());
-    Size dsize = src.size();
-    r.create(Size(1, dsize.width), CV_32F);
-    cp_sp.create(Size(1, dsize.height), CV_32FC2);
-
-    mapx.create(dsize, CV_32F);
-    mapy.create(dsize, CV_32F);
-    size_t w = dsize.width;
-    size_t h = dsize.height;
-    String buildOptions;
-    unsigned mem_size = 32;
-    if (flags & cv::WARP_INVERSE_MAP)
-    {
-        buildOptions = "-D InverseMap";
-    }
-    else
-    {
-        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_size);
-    }
-    String retval;
-    ocl::Program p(ocl::imgproc::linearPolar_oclsrc, buildOptions, retval);
-    ocl::Kernel k("linearPolar", p);
-    ocl::KernelArg ocl_mapx = ocl::KernelArg::PtrReadWrite(mapx), ocl_mapy = ocl::KernelArg::PtrReadWrite(mapy);
-    ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
-    ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
-
-    if (!(flags & cv::WARP_INVERSE_MAP))
-    {
-
-
-
-        ocl::Kernel computeAngleRadius_Kernel("computeAngleRadius", p);
-        float PI2_height = (float) CV_2PI / dsize.height;
-        float maxRadius_width = (float) maxRadius / dsize.width;
-        computeAngleRadius_Kernel.args(ocl_cp_sp, ocl_r, maxRadius_width, PI2_height, (unsigned)dsize.width, (unsigned)dsize.height);
-        size_t max_dim = max(h, w);
-        computeAngleRadius_Kernel.run(1, &max_dim, NULL, false);
-        k.args(ocl_mapx, ocl_mapy, ocl_cp_sp, ocl_r, center.x, center.y, (unsigned)dsize.width, (unsigned)dsize.height);
-    }
-    else
-    {
-        const int ANGLE_BORDER = 1;
-
-        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
-        src = src_with_border;
-        Size ssize = src_with_border.size();
-        ssize.height -= 2 * ANGLE_BORDER;
-        float ascale =  ssize.height / ((float)CV_2PI);
-        float pscale =  ssize.width / ((float) maxRadius);
-
-        k.args(ocl_mapx, ocl_mapy, ascale, pscale, center.x, center.y, ANGLE_BORDER, (unsigned)dsize.width, (unsigned)dsize.height);
-
-
-    }
-    size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
-    size_t localThreads[2] = { mem_size , mem_size };
-    k.run(2, globalThreads, localThreads, false);
-    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
-    return true;
-}
-static bool ocl_logPolar(InputArray _src, OutputArray _dst,
-    Point2f center, double M, int flags)
-{
-    if (M <= 0)
-        CV_Error(cv::Error::StsOutOfRange, "M should be >0");
-    UMat src_with_border; // don't scope this variable (it holds image data)
-
-    UMat mapx, mapy, r, cp_sp;
-    UMat src = _src.getUMat();
-    _dst.create(src.size(), src.type());
-    Size dsize = src.size();
-    r.create(Size(1, dsize.width), CV_32F);
-    cp_sp.create(Size(1, dsize.height), CV_32FC2);
-
-    mapx.create(dsize, CV_32F);
-    mapy.create(dsize, CV_32F);
-    size_t w = dsize.width;
-    size_t h = dsize.height;
-    String buildOptions;
-    unsigned mem_size = 32;
-    if (flags & cv::WARP_INVERSE_MAP)
-    {
-        buildOptions = "-D InverseMap";
-    }
-    else
-    {
-        buildOptions = format("-D ForwardMap  -D MEM_SIZE=%d", mem_size);
-    }
-    String retval;
-    ocl::Program p(ocl::imgproc::logPolar_oclsrc, buildOptions, retval);
-    //ocl::Program p(ocl::imgproc::my_linearPolar_oclsrc, buildOptions, retval);
-    //printf("%s\n", retval);
-    ocl::Kernel k("logPolar", p);
-    ocl::KernelArg ocl_mapx = ocl::KernelArg::PtrReadWrite(mapx), ocl_mapy = ocl::KernelArg::PtrReadWrite(mapy);
-    ocl::KernelArg  ocl_cp_sp = ocl::KernelArg::PtrReadWrite(cp_sp);
-    ocl::KernelArg ocl_r = ocl::KernelArg::PtrReadWrite(r);
-
-    if (!(flags & cv::WARP_INVERSE_MAP))
-    {
-
-
-
-        ocl::Kernel computeAngleRadius_Kernel("computeAngleRadius", p);
-        float PI2_height = (float) CV_2PI / dsize.height;
-
-        computeAngleRadius_Kernel.args(ocl_cp_sp, ocl_r, (float)M, PI2_height, (unsigned)dsize.width, (unsigned)dsize.height);
-        size_t max_dim = max(h, w);
-        computeAngleRadius_Kernel.run(1, &max_dim, NULL, false);
-        k.args(ocl_mapx, ocl_mapy, ocl_cp_sp, ocl_r, center.x, center.y, (unsigned)dsize.width, (unsigned)dsize.height);
-    }
-    else
-    {
-        const int ANGLE_BORDER = 1;
-
-        cv::copyMakeBorder(src, src_with_border, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
-        src = src_with_border;
-        Size ssize = src_with_border.size();
-        ssize.height -= 2 * ANGLE_BORDER;
-        float ascale =  ssize.height / ((float)CV_2PI);
-
-
-        k.args(ocl_mapx, ocl_mapy, ascale, (float)M, center.x, center.y, ANGLE_BORDER, (unsigned)dsize.width, (unsigned)dsize.height);
-
-
-    }
-    size_t globalThreads[2] = { (size_t)dsize.width , (size_t)dsize.height };
-    size_t localThreads[2] = { mem_size , mem_size };
-    k.run(2, globalThreads, localThreads, false);
-    remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX, (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
-    return true;
-}
-#endif
 
 #endif
 
@@ -3716,7 +3572,7 @@ cv::Matx23d cv::getRotationMatrix2D_(Point2f center, double angle, double scale)
  * vi = ---------------------
  *      c20*xi + c21*yi + c22
  *
- * Coefficients are calculated by solving linear system:
+ * Coefficients are calculated by solving one of 2 linear systems:
  * / x0 y0  1  0  0  0 -x0*u0 -y0*u0 \ /c00\ /u0\
  * | x1 y1  1  0  0  0 -x1*u1 -y1*u1 | |c01| |u1|
  * | x2 y2  1  0  0  0 -x2*u2 -y2*u2 | |c02| |u2|
@@ -3728,12 +3584,28 @@ cv::Matx23d cv::getRotationMatrix2D_(Point2f center, double angle, double scale)
  *
  * where:
  *   cij - matrix coefficients, c22 = 1
+ *
+ * or
+ *
+ * / x0 y0  1  0  0  0 -x0*u0 -y0*u0 -u0 \ /c00\ /0\
+ * | x1 y1  1  0  0  0 -x1*u1 -y1*u1 -u1 | |c01| |0|
+ * | x2 y2  1  0  0  0 -x2*u2 -y2*u2 -u2 | |c02| |0|
+ * | x3 y3  1  0  0  0 -x3*u3 -y3*u3 -u3 |.|c10|=|0|,
+ * |  0  0  0 x0 y0  1 -x0*v0 -y0*v0 -v0 | |c11| |0|
+ * |  0  0  0 x1 y1  1 -x1*v1 -y1*v1 -v1 | |c12| |0|
+ * |  0  0  0 x2 y2  1 -x2*v2 -y2*v2 -v2 | |c20| |0|
+ * \  0  0  0 x3 y3  1 -x3*v3 -y3*v3 -v3 / |c21| \0/
+ *                                         \c22/
+ *
+ * where:
+ *   cij - matrix coefficients, c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
  */
 cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod)
 {
     CV_INSTRUMENT_REGION();
 
-    Mat M(3, 3, CV_64F), X(8, 1, CV_64F, M.ptr());
+    // try c22 = 1
+    Mat M(3, 3, CV_64F), X8(8, 1, CV_64F, M.ptr());
     double a[8][8], b[8];
     Mat A(8, 8, CV_64F, a), B(8, 1, CV_64F, b);
 
@@ -3752,8 +3624,24 @@ cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], in
         b[i+4] = dst[i].y;
     }
 
-    solve(A, B, X, solveMethod);
-    M.ptr<double>()[8] = 1.;
+    if (solve(A, B, X8, solveMethod) && norm(A * X8, B) < 1e-8)
+    {
+        M.ptr<double>()[8] = 1.;
+
+        return M;
+    }
+
+    // c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
+    hconcat(A, -B, A);
+
+    Mat AtA;
+    mulTransposed(A, AtA, true);
+
+    Mat D, U;
+    SVDecomp(AtA, D, U, noArray());
+
+    Mat X9(9, 1, CV_64F, M.ptr());
+    U.col(8).copyTo(X9);
 
     return M;
 }
@@ -3973,20 +3861,6 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
               (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     }
-}
-
-void cv::linearPolar( InputArray _src, OutputArray _dst,
-                      Point2f center, double maxRadius, int flags )
-{
-    warpPolar(_src, _dst, _src.size(), center, maxRadius, flags & ~WARP_POLAR_LOG);
-}
-
-void cv::logPolar( InputArray _src, OutputArray _dst,
-                   Point2f center, double maxRadius, int flags )
-{
-    Size ssize = _src.size();
-    double M = maxRadius > 0 ? std::exp(ssize.width / maxRadius) : 1;
-    warpPolar(_src, _dst, ssize, center, M, flags | WARP_POLAR_LOG);
 }
 
 /* End of file. */
