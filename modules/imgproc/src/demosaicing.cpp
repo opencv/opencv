@@ -129,7 +129,7 @@ public:
     static int bayer2Gray(const uchar* bayer, int bayer_step, uchar* dst,
                    int width, int bcoeff, int gcoeff, int rcoeff)
     {
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if CV_SIMD
 #if CV_NEON
         uint16x8_t masklo = vdupq_n_u16(255);
         const uchar* bayer_end = bayer + width;
