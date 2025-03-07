@@ -412,6 +412,7 @@ public:
 
         return (int)(bayer - (bayer_end - width));
 #else
+        CV_UNUSED(bayer); CV_UNUSED(bayer_step); CV_UNUSED(dst); CV_UNUSED(width); CV_UNUSED(blue);
         return 0;
 #endif
     }
@@ -547,6 +548,8 @@ public:
 
         return (int)(bayer - (bayer_end - width));
 #else
+        CV_UNUSED(bayer); CV_UNUSED(bayer_step); CV_UNUSED(dst);
+        CV_UNUSED(width); CV_UNUSED(blue); CV_UNUSED(alpha);
         return 0;
 #endif
     }
@@ -657,6 +660,7 @@ public:
 
         return int(bayer - (bayer_end - width));
 #else
+        CV_UNUSED(bayer); CV_UNUSED(bayer_step); CV_UNUSED(dst); CV_UNUSED(width); CV_UNUSED(blue);
         return 0;
 #endif
     }
