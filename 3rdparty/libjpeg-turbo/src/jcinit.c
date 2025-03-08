@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2020, 2022, D. R. Commander.
+ * Copyright (C) 2020, 2022, 2024, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -40,7 +40,16 @@ jinit_compress_master(j_compress_ptr cinfo)
 
   /* Preprocessing */
   if (!cinfo->raw_data_in) {
-    if (cinfo->data_precision == 16) {
+    if (cinfo->data_precision <= 8) {
+      jinit_color_converter(cinfo);
+      jinit_downsampler(cinfo);
+      jinit_c_prep_controller(cinfo, FALSE /* never need full buffer here */);
+    } else if (cinfo->data_precision <= 12) {
+      j12init_color_converter(cinfo);
+      j12init_downsampler(cinfo);
+      j12init_c_prep_controller(cinfo,
+                                FALSE /* never need full buffer here */);
+    } else {
 #ifdef C_LOSSLESS_SUPPORTED
       j16init_color_converter(cinfo);
       j16init_downsampler(cinfo);
@@ -49,27 +58,18 @@ jinit_compress_master(j_compress_ptr cinfo)
 #else
       ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
 #endif
-    } else if (cinfo->data_precision == 12) {
-      j12init_color_converter(cinfo);
-      j12init_downsampler(cinfo);
-      j12init_c_prep_controller(cinfo,
-                                FALSE /* never need full buffer here */);
-    } else {
-      jinit_color_converter(cinfo);
-      jinit_downsampler(cinfo);
-      jinit_c_prep_controller(cinfo, FALSE /* never need full buffer here */);
     }
   }
 
   if (cinfo->master->lossless) {
 #ifdef C_LOSSLESS_SUPPORTED
     /* Prediction, sample differencing, and point transform */
-    if (cinfo->data_precision == 16)
-      j16init_lossless_compressor(cinfo);
-    else if (cinfo->data_precision == 12)
+    if (cinfo->data_precision <= 8)
+      jinit_lossless_compressor(cinfo);
+    else if (cinfo->data_precision <= 12)
       j12init_lossless_compressor(cinfo);
     else
-      jinit_lossless_compressor(cinfo);
+      j16init_lossless_compressor(cinfo);
     /* Entropy encoding: either Huffman or arithmetic coding. */
     if (cinfo->arith_code) {
       ERREXIT(cinfo, JERR_ARITH_NOTIMPL);
@@ -78,26 +78,26 @@ jinit_compress_master(j_compress_ptr cinfo)
     }
 
     /* Need a full-image difference buffer in any multi-pass mode. */
-    if (cinfo->data_precision == 16)
-      j16init_c_diff_controller(cinfo, (boolean)(cinfo->num_scans > 1 ||
-                                                 cinfo->optimize_coding));
-    else if (cinfo->data_precision == 12)
+    if (cinfo->data_precision <= 8)
+      jinit_c_diff_controller(cinfo, (boolean)(cinfo->num_scans > 1 ||
+                                               cinfo->optimize_coding));
+    else if (cinfo->data_precision <= 12)
       j12init_c_diff_controller(cinfo, (boolean)(cinfo->num_scans > 1 ||
                                                  cinfo->optimize_coding));
     else
-      jinit_c_diff_controller(cinfo, (boolean)(cinfo->num_scans > 1 ||
-                                               cinfo->optimize_coding));
+      j16init_c_diff_controller(cinfo, (boolean)(cinfo->num_scans > 1 ||
+                                                 cinfo->optimize_coding));
 #else
     ERREXIT(cinfo, JERR_NOT_COMPILED);
 #endif
   } else {
-    if (cinfo->data_precision == 16)
-      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
     /* Forward DCT */
-    if (cinfo->data_precision == 12)
+    if (cinfo->data_precision == 8)
+      jinit_forward_dct(cinfo);
+    else if (cinfo->data_precision == 12)
       j12init_forward_dct(cinfo);
     else
-      jinit_forward_dct(cinfo);
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
     /* Entropy encoding: either Huffman or arithmetic coding. */
     if (cinfo->arith_code) {
 #ifdef C_ARITH_CODING_SUPPORTED
@@ -125,16 +125,16 @@ jinit_compress_master(j_compress_ptr cinfo)
                                                cinfo->optimize_coding));
   }
 
-  if (cinfo->data_precision == 16)
+  if (cinfo->data_precision <= 8)
+    jinit_c_main_controller(cinfo, FALSE /* never need full buffer here */);
+  else if (cinfo->data_precision <= 12)
+    j12init_c_main_controller(cinfo, FALSE /* never need full buffer here */);
+  else
 #ifdef C_LOSSLESS_SUPPORTED
     j16init_c_main_controller(cinfo, FALSE /* never need full buffer here */);
 #else
     ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
 #endif
-  else if (cinfo->data_precision == 12)
-    j12init_c_main_controller(cinfo, FALSE /* never need full buffer here */);
-  else
-    jinit_c_main_controller(cinfo, FALSE /* never need full buffer here */);
 
   jinit_marker_writer(cinfo);
 

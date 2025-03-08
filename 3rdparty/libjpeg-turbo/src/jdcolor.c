@@ -6,7 +6,7 @@
  * Modified 2011 by Guido Vollbeding.
  * libjpeg-turbo Modifications:
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
- * Copyright (C) 2009, 2011-2012, 2014-2015, 2022, D. R. Commander.
+ * Copyright (C) 2009, 2011-2012, 2014-2015, 2022, 2024, D. R. Commander.
  * Copyright (C) 2013, Linaro Limited.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -759,8 +759,21 @@ _jinit_color_deconverter(j_decompress_ptr cinfo)
   my_cconvert_ptr cconvert;
   int ci;
 
-  if (cinfo->data_precision != BITS_IN_JSAMPLE)
-    ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+#ifdef D_LOSSLESS_SUPPORTED
+  if (cinfo->master->lossless) {
+#if BITS_IN_JSAMPLE == 8
+    if (cinfo->data_precision > BITS_IN_JSAMPLE || cinfo->data_precision < 2)
+#else
+    if (cinfo->data_precision > BITS_IN_JSAMPLE ||
+        cinfo->data_precision < BITS_IN_JSAMPLE - 3)
+#endif
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  } else
+#endif
+  {
+    if (cinfo->data_precision != BITS_IN_JSAMPLE)
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  }
 
   cconvert = (my_cconvert_ptr)
     (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,
@@ -802,9 +815,11 @@ _jinit_color_deconverter(j_decompress_ptr cinfo)
 
   switch (cinfo->out_color_space) {
   case JCS_GRAYSCALE:
+#ifdef D_LOSSLESS_SUPPORTED
     if (cinfo->master->lossless &&
         cinfo->jpeg_color_space != cinfo->out_color_space)
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
+#endif
     cinfo->out_color_components = 1;
     if (cinfo->jpeg_color_space == JCS_GRAYSCALE ||
         cinfo->jpeg_color_space == JCS_YCbCr) {
@@ -830,8 +845,10 @@ _jinit_color_deconverter(j_decompress_ptr cinfo)
   case JCS_EXT_BGRA:
   case JCS_EXT_ABGR:
   case JCS_EXT_ARGB:
+#ifdef D_LOSSLESS_SUPPORTED
     if (cinfo->master->lossless && cinfo->jpeg_color_space != JCS_RGB)
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
+#endif
     cinfo->out_color_components = rgb_pixelsize[cinfo->out_color_space];
     if (cinfo->jpeg_color_space == JCS_YCbCr) {
 #ifdef WITH_SIMD
@@ -858,8 +875,10 @@ _jinit_color_deconverter(j_decompress_ptr cinfo)
     break;
 
   case JCS_RGB565:
+#ifdef D_LOSSLESS_SUPPORTED
     if (cinfo->master->lossless)
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
+#endif
     cinfo->out_color_components = 3;
     if (cinfo->dither_mode == JDITHER_NONE) {
       if (cinfo->jpeg_color_space == JCS_YCbCr) {
@@ -893,9 +912,11 @@ _jinit_color_deconverter(j_decompress_ptr cinfo)
     break;
 
   case JCS_CMYK:
+#ifdef D_LOSSLESS_SUPPORTED
     if (cinfo->master->lossless &&
         cinfo->jpeg_color_space != cinfo->out_color_space)
       ERREXIT(cinfo, JERR_CONVERSION_NOTIMPL);
+#endif
     cinfo->out_color_components = 4;
     if (cinfo->jpeg_color_space == JCS_YCCK) {
       cconvert->pub._color_convert = ycck_cmyk_convert;

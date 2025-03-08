@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2012, 2015, 2022, D. R. Commander.
+ * Copyright (C) 2012, 2015, 2022, 2024, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -248,6 +248,9 @@ get_sof(j_decompress_ptr cinfo, boolean is_prog, boolean is_lossless,
   jpeg_component_info *compptr;
   INPUT_VARS(cinfo);
 
+  if (cinfo->marker->saw_SOF)
+    ERREXIT(cinfo, JERR_SOF_DUPLICATE);
+
   cinfo->progressive_mode = is_prog;
   cinfo->master->lossless = is_lossless;
   cinfo->arith_code = is_arith;
@@ -264,9 +267,6 @@ get_sof(j_decompress_ptr cinfo, boolean is_prog, boolean is_lossless,
   TRACEMS4(cinfo, 1, JTRC_SOF, cinfo->unread_marker,
            (int)cinfo->image_width, (int)cinfo->image_height,
            cinfo->num_components);
-
-  if (cinfo->marker->saw_SOF)
-    ERREXIT(cinfo, JERR_SOF_DUPLICATE);
 
   /* We don't support files in which the image height is initially specified */
   /* as 0 and is later redefined by DNL.  As long as we have to check that,  */
@@ -819,13 +819,11 @@ save_marker(j_decompress_ptr cinfo)
   /* Done reading what we want to read */
   if (cur_marker != NULL) {     /* will be NULL if bogus length word */
     /* Add new marker to end of list */
-    if (cinfo->marker_list == NULL) {
-      cinfo->marker_list = cur_marker;
+    if (cinfo->marker_list == NULL || cinfo->master->marker_list_end == NULL) {
+      cinfo->marker_list = cinfo->master->marker_list_end = cur_marker;
     } else {
-      jpeg_saved_marker_ptr prev = cinfo->marker_list;
-      while (prev->next != NULL)
-        prev = prev->next;
-      prev->next = cur_marker;
+      cinfo->master->marker_list_end->next = cur_marker;
+      cinfo->master->marker_list_end = cur_marker;
     }
     /* Reset pointer & calc remaining data length */
     data = cur_marker->data;
