@@ -139,32 +139,30 @@ struct NormInf_RVV<double, double> {
 template<>
 struct NormL1_RVV<uchar, int> {
     int operator() (const uchar* src, int n) const {
-        int vlmax = __riscv_vsetvlmax_e8m2();
-        auto s = __riscv_vmv_v_x_u32m8(0, vlmax);
+        auto s = __riscv_vmv_v_x_u32m1(0, __riscv_vsetvlmax_e32m1());
+        auto zero = __riscv_vmv_v_x_u16m1(0, __riscv_vsetvlmax_e16m1());
         int vl;
         for (int i = 0; i < n; i += vl) {
-            vl = __riscv_vsetvl_e8m2(n - i);
-            auto v = __riscv_vle8_v_u8m2(src + i, vl);
-            auto v_zext = __riscv_vzext_vf4(v, vl);
-            s = __riscv_vadd_tu(s, s, v_zext, vl);
+            vl = __riscv_vsetvl_e8m8(n - i);
+            auto v = __riscv_vle8_v_u8m8(src + i, vl);
+            s = __riscv_vwredsumu(__riscv_vwredsumu_tu(zero, v, zero, vl), s, vl);
         }
-        return __riscv_vmv_x(__riscv_vredsum(s, __riscv_vmv_s_x_u32m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
+        return __riscv_vmv_x(s);
     }
 };
 
 template<>
 struct NormL1_RVV<schar, int> {
     int operator() (const schar* src, int n) const {
-        int vlmax = __riscv_vsetvlmax_e8m2();
-        auto s = __riscv_vmv_v_x_u32m8(0, vlmax);
+        auto s = __riscv_vmv_v_x_u32m1(0, __riscv_vsetvlmax_e32m1());
+        auto zero = __riscv_vmv_v_x_u16m1(0, __riscv_vsetvlmax_e16m1());
         int vl;
         for (int i = 0; i < n; i += vl) {
-            vl = __riscv_vsetvl_e8m2(n - i);
-            auto v = __riscv_vle8_v_i8m2(src + i, vl);
-            auto v_zext = __riscv_vzext_vf4(custom_intrin::__riscv_vabs(v, vl), vl);
-            s = __riscv_vadd_tu(s, s, v_zext, vl);
+            vl = __riscv_vsetvl_e8m8(n - i);
+            auto v = custom_intrin::__riscv_vabs(__riscv_vle8_v_i8m8(src + i, vl), vl);
+            s = __riscv_vwredsumu(__riscv_vwredsumu_tu(zero, v, zero, vl), s, vl);
         }
-        return __riscv_vmv_x(__riscv_vredsum(s, __riscv_vmv_s_x_u32m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
+        return __riscv_vmv_x(s);
     }
 };
 
@@ -250,34 +248,30 @@ struct NormL1_RVV<double, double> {
 template<>
 struct NormL2_RVV<uchar, int> {
     int operator() (const uchar* src, int n) const {
-        int vlmax = __riscv_vsetvlmax_e8m2();
-        auto s = __riscv_vmv_v_x_u32m8(0, vlmax);
+        auto s = __riscv_vmv_v_x_u32m1(0, __riscv_vsetvlmax_e32m1());
         int vl;
         for (int i = 0; i < n; i += vl) {
-            vl = __riscv_vsetvl_e8m2(n - i);
-            auto v = __riscv_vle8_v_u8m2(src + i, vl);
+            vl = __riscv_vsetvl_e8m4(n - i);
+            auto v = __riscv_vle8_v_u8m4(src + i, vl);
             auto v_mul = __riscv_vwmulu(v, v, vl);
-            auto v_zext = __riscv_vzext_vf2(v_mul, vl);
-            s = __riscv_vadd_tu(s, s, v_zext, vl);
+            s = __riscv_vwredsumu(v_mul, s, vl);
         }
-        return __riscv_vmv_x(__riscv_vredsum(s, __riscv_vmv_s_x_u32m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
+        return __riscv_vmv_x(s);
     }
 };
 
 template<>
 struct NormL2_RVV<schar, int> {
     int operator() (const schar* src, int n) const {
-        int vlmax = __riscv_vsetvlmax_e8m2();
-        auto s = __riscv_vmv_v_x_i32m8(0, vlmax);
+        auto s = __riscv_vmv_v_x_i32m1(0, __riscv_vsetvlmax_e32m1());
         int vl;
         for (int i = 0; i < n; i += vl) {
-            vl = __riscv_vsetvl_e8m2(n - i);
-            auto v = __riscv_vle8_v_i8m2(src + i, vl);
+            vl = __riscv_vsetvl_e8m4(n - i);
+            auto v = __riscv_vle8_v_i8m4(src + i, vl);
             auto v_mul = __riscv_vwmul(v, v, vl);
-            auto v_zext = __riscv_vsext_vf2(v_mul, vl);
-            s = __riscv_vadd_tu(s, s, v_zext, vl);
+            s = __riscv_vwredsum(v_mul, s, vl);
         }
-        return __riscv_vmv_x(__riscv_vredsum(s, __riscv_vmv_s_x_i32m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
+        return __riscv_vmv_x(s);
     }
 };
 
