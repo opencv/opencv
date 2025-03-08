@@ -52,7 +52,6 @@
 #include "hal_replacement.hpp"
 #include <opencv2/core/utils/configuration.private.hpp>
 #include "opencv2/core/hal/intrin.hpp"
-#include "opencv2/core/openvx/ovx_defs.hpp"
 #include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
 
@@ -1573,94 +1572,6 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
 
 #endif
 
-#ifdef HAVE_OPENVX
-static bool openvx_remap(Mat src, Mat dst, Mat map1, Mat map2, int interpolation, const Scalar& borderValue)
-{
-    vx_interpolation_type_e inter_type;
-    switch (interpolation)
-    {
-    case INTER_LINEAR:
-#if VX_VERSION > VX_VERSION_1_0
-        inter_type = VX_INTERPOLATION_BILINEAR;
-#else
-        inter_type = VX_INTERPOLATION_TYPE_BILINEAR;
-#endif
-        break;
-    case INTER_NEAREST:
-/* NEAREST_NEIGHBOR mode disabled since OpenCV round half to even while OpenVX sample implementation round half up
-#if VX_VERSION > VX_VERSION_1_0
-        inter_type = VX_INTERPOLATION_NEAREST_NEIGHBOR;
-#else
-        inter_type = VX_INTERPOLATION_TYPE_NEAREST_NEIGHBOR;
-#endif
-        if (!map1.empty())
-            for (int y = 0; y < map1.rows; ++y)
-            {
-                float* line = map1.ptr<float>(y);
-                for (int x = 0; x < map1.cols; ++x)
-                    line[x] = cvRound(line[x]);
-            }
-        if (!map2.empty())
-            for (int y = 0; y < map2.rows; ++y)
-            {
-                float* line = map2.ptr<float>(y);
-                for (int x = 0; x < map2.cols; ++x)
-                    line[x] = cvRound(line[x]);
-            }
-        break;
-*/
-    case INTER_AREA://AREA interpolation mode is unsupported
-    default:
-        return false;
-    }
-
-    try
-    {
-        ivx::Context ctx = ovx::getOpenVXContext();
-
-        Mat a;
-        if (dst.data != src.data)
-            a = src;
-        else
-            src.copyTo(a);
-
-        ivx::Image
-            ia = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                ivx::Image::createAddressing(a.cols, a.rows, 1, (vx_int32)(a.step)), a.data),
-            ib = ivx::Image::createFromHandle(ctx, VX_DF_IMAGE_U8,
-                ivx::Image::createAddressing(dst.cols, dst.rows, 1, (vx_int32)(dst.step)), dst.data);
-
-        //ATTENTION: VX_CONTEXT_IMMEDIATE_BORDER attribute change could lead to strange issues in multi-threaded environments
-        //since OpenVX standard says nothing about thread-safety for now
-        ivx::border_t prevBorder = ctx.immediateBorder();
-        ctx.setImmediateBorder(VX_BORDER_CONSTANT, (vx_uint8)(borderValue[0]));
-
-        ivx::Remap map = ivx::Remap::create(ctx, src.cols, src.rows, dst.cols, dst.rows);
-        if (map1.empty()) map.setMappings(map2);
-        else if (map2.empty()) map.setMappings(map1);
-        else map.setMappings(map1, map2);
-        ivx::IVX_CHECK_STATUS(vxuRemap(ctx, ia, map, inter_type, ib));
-#ifdef VX_VERSION_1_1
-        ib.swapHandle();
-        ia.swapHandle();
-#endif
-
-        ctx.setImmediateBorder(prevBorder);
-    }
-    catch (const ivx::RuntimeError & e)
-    {
-        CV_Error(cv::Error::StsInternal, e.what());
-        return false;
-    }
-    catch (const ivx::WrapperError & e)
-    {
-        CV_Error(cv::Error::StsInternal, e.what());
-        return false;
-    }
-    return true;
-}
-#endif
-
 #if defined HAVE_IPP && !IPP_DISABLE_REMAP
 
 typedef IppStatus (CV_STDCALL * ippiRemap)(const void * pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi,
@@ -1798,17 +1709,6 @@ void cv::remap( InputArray _src, OutputArray _dst,
     Mat src = _src.getMat(), map1 = _map1.getMat(), map2 = _map2.getMat();
     _dst.create( map1.size(), src.type() );
     Mat dst = _dst.getMat();
-
-    CV_OVX_RUN(
-        src.type() == CV_8UC1 && dst.type() == CV_8UC1 &&
-        !ovx::skipSmallImages<VX_KERNEL_REMAP>(src.cols, src.rows) &&
-        (borderType& ~BORDER_ISOLATED) == BORDER_CONSTANT &&
-        ((map1.type() == CV_32FC2 && map2.empty() && map1.size == dst.size) ||
-         (map1.type() == CV_32FC1 && map2.type() == CV_32FC1 && map1.size == dst.size && map2.size == dst.size) ||
-         (map1.empty() && map2.type() == CV_32FC2 && map2.size == dst.size)) &&
-        ((borderType & BORDER_ISOLATED) != 0 || !src.isSubmatrix()) &&
-        !hasRelativeFlag,
-        openvx_remap(src, dst, map1, map2, interpolation, borderValue));
 
     CV_Assert( dst.cols < SHRT_MAX && dst.rows < SHRT_MAX && src.cols < SHRT_MAX && src.rows < SHRT_MAX );
 
@@ -3492,7 +3392,7 @@ cv::Matx23d cv::getRotationMatrix2D_(Point2f center, double angle, double scale)
  * vi = ---------------------
  *      c20*xi + c21*yi + c22
  *
- * Coefficients are calculated by solving linear system:
+ * Coefficients are calculated by solving one of 2 linear systems:
  * / x0 y0  1  0  0  0 -x0*u0 -y0*u0 \ /c00\ /u0\
  * | x1 y1  1  0  0  0 -x1*u1 -y1*u1 | |c01| |u1|
  * | x2 y2  1  0  0  0 -x2*u2 -y2*u2 | |c02| |u2|
@@ -3504,12 +3404,28 @@ cv::Matx23d cv::getRotationMatrix2D_(Point2f center, double angle, double scale)
  *
  * where:
  *   cij - matrix coefficients, c22 = 1
+ *
+ * or
+ *
+ * / x0 y0  1  0  0  0 -x0*u0 -y0*u0 -u0 \ /c00\ /0\
+ * | x1 y1  1  0  0  0 -x1*u1 -y1*u1 -u1 | |c01| |0|
+ * | x2 y2  1  0  0  0 -x2*u2 -y2*u2 -u2 | |c02| |0|
+ * | x3 y3  1  0  0  0 -x3*u3 -y3*u3 -u3 |.|c10|=|0|,
+ * |  0  0  0 x0 y0  1 -x0*v0 -y0*v0 -v0 | |c11| |0|
+ * |  0  0  0 x1 y1  1 -x1*v1 -y1*v1 -v1 | |c12| |0|
+ * |  0  0  0 x2 y2  1 -x2*v2 -y2*v2 -v2 | |c20| |0|
+ * \  0  0  0 x3 y3  1 -x3*v3 -y3*v3 -v3 / |c21| \0/
+ *                                         \c22/
+ *
+ * where:
+ *   cij - matrix coefficients, c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
  */
 cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], int solveMethod)
 {
     CV_INSTRUMENT_REGION();
 
-    Mat M(3, 3, CV_64F), X(8, 1, CV_64F, M.ptr());
+    // try c22 = 1
+    Mat M(3, 3, CV_64F), X8(8, 1, CV_64F, M.ptr());
     double a[8][8], b[8];
     Mat A(8, 8, CV_64F, a), B(8, 1, CV_64F, b);
 
@@ -3528,8 +3444,24 @@ cv::Mat cv::getPerspectiveTransform(const Point2f src[], const Point2f dst[], in
         b[i+4] = dst[i].y;
     }
 
-    solve(A, B, X, solveMethod);
-    M.ptr<double>()[8] = 1.;
+    if (solve(A, B, X8, solveMethod) && norm(A * X8, B) < 1e-8)
+    {
+        M.ptr<double>()[8] = 1.;
+
+        return M;
+    }
+
+    // c00^2 + c01^2 + c02^2 + c10^2 + c11^2 + c12^2 + c20^2 + c21^2 + c22^2 = 1
+    hconcat(A, -B, A);
+
+    Mat AtA;
+    mulTransposed(A, AtA, true);
+
+    Mat D, U;
+    SVDecomp(AtA, D, U, noArray());
+
+    Mat X9(9, 1, CV_64F, M.ptr());
+    U.col(8).copyTo(X9);
 
     return M;
 }
