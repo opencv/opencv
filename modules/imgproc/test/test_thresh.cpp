@@ -531,7 +531,11 @@ TEST_P(Imgproc_Threshold_Masked, threshold_mask)
     int cn = get<2>(GetParam());
     int threshType = get<3>(GetParam());
     int threshFlag = get<4>(GetParam());
-    const bool isValidConfig = ((depth == CV_8U) || ((threshFlag != THRESH_OTSU) && (threshFlag != THRESH_TRIANGLE)));
+    int type = CV_MAKETYPE(depth, cn);
+    const bool isValidConfig =
+      ( (threshFlag != THRESH_OTSU) && (threshFlag != THRESH_TRIANGLE) ) ||
+      ( (threshFlag == THRESH_OTSU) && ( (type == CV_8UC1) || (type == CV_16UC1) ) ) ||
+      ( (threshFlag == THRESH_TRIANGLE) && (type == CV_8UC1) );
     if (isValidConfig)
     {
         const int _threshType = threshType | threshFlag;
@@ -541,21 +545,43 @@ TEST_P(Imgproc_Threshold_Masked, threshold_mask)
         Mat input = useROI ? Mat(wrapper, Rect(Point(), sz)) : wrapper;
         cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(255));
 
-        Mat mask = cv::Mat::zeros(sz, CV_8UC1);
-        cv::RotatedRect ellipseRect((cv::Point2f)cv::Point(sz.width/2, sz.height/2), (cv::Size2f)sz, 0);
-        cv::ellipse(mask, ellipseRect, cv::Scalar::all(255), cv::FILLED);//for very different mask alignments
+        const bool isAutoThreshold = (threshFlag == THRESH_OTSU) || (threshFlag == THRESH_TRIANGLE);
+        if (isAutoThreshold)
+        {
+            //to compare results with OTSU and TRIANGLE, we use a rectangular ROI so that it can be compared
+            //with the non-masked version
+            Mat mask = cv::Mat::zeros(sz, CV_8UC1);
+            cv::Rect roiRect(sz.width/4, sz.height/4, sz.width/2, sz.height/2);
+            cv::rectangle(mask, roiRect, cv::Scalar::all(255), cv::FILLED);
 
-        Mat output_with_mask = cv::Mat::zeros(sz, input.type());
-        cv::thresholdWithMask(input, output_with_mask, mask, 127, 255, _threshType);
+            Mat output_with_mask = cv::Mat::zeros(sz, input.type());
+            const double autoThreshWithMask = cv::thresholdWithMask(input, output_with_mask, mask, 127, 255, _threshType);
+            output_with_mask = Mat(output_with_mask, roiRect);
 
-        cv::bitwise_not(mask, mask);
-        input.copyTo(output_with_mask, mask);
+            Mat output_without_mask;
+            const double autoThresholdWithoutMask = cv::threshold(Mat(input, roiRect), output_without_mask, 127, 255, _threshType);
 
-        Mat output_without_mask;
-        cv::threshold(input, output_without_mask, 127, 255, _threshType);
-        input.copyTo(output_without_mask, mask);
+            ASSERT_EQ(autoThreshWithMask, autoThresholdWithoutMask);
+            //EXPECT_MAT_NEAR(output_with_mask, output_without_mask, 0);
+        }
+        else//if (!isAutoThreshold)
+        {
+            Mat mask = cv::Mat::zeros(sz, CV_8UC1);
+            cv::RotatedRect ellipseRect((cv::Point2f)cv::Point(sz.width/2, sz.height/2), (cv::Size2f)sz, 0);
+            cv::ellipse(mask, ellipseRect, cv::Scalar::all(255), cv::FILLED);//for very different mask alignments
 
-        EXPECT_MAT_NEAR(output_with_mask, output_without_mask, 0);
+            Mat output_with_mask = cv::Mat::zeros(sz, input.type());
+            cv::thresholdWithMask(input, output_with_mask, mask, 127, 255, _threshType);
+
+            cv::bitwise_not(mask, mask);
+            input.copyTo(output_with_mask, mask);
+
+            Mat output_without_mask;
+            cv::threshold(input, output_without_mask, 127, 255, _threshType);
+            input.copyTo(output_without_mask, mask);
+
+            EXPECT_MAT_NEAR(output_with_mask, output_without_mask, 0);
+        }
     }
 }
 
@@ -565,7 +591,7 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Masked,
         testing::Values(CV_8U, CV_16U, CV_16S, CV_32F, CV_64F),//depth
         testing::Values(1, 3),//channels
         testing::Values(THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV),// threshTypes
-        testing::Values(0)//threshFlags there is no way to compare masked to non-masked OTSU/TRIANGLE since the threshold will be different
+        testing::Values(0, THRESH_OTSU, THRESH_TRIANGLE)
     )
 );
 

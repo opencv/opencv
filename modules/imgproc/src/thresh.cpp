@@ -1280,7 +1280,7 @@ getThreshVal_Otsu_8u( const Mat& _src, const Mat& _mask = cv::Mat())
 {
     Size size = _src.size();
     int step = (int) _src.step;
-    if( _src.isContinuous() )
+    if( _src.isContinuous() && ( _mask.empty() || _mask.isContinuous() ) )
     {
         size.width *= size.height;
         size.height = 1;
@@ -1307,16 +1307,16 @@ static double
 getThreshVal_Otsu_16u( const Mat& _src, const Mat& _mask = cv::Mat() )
 {
     Size size = _src.size();
-    if( _src.isContinuous() )
+    if( _src.isContinuous() && ( _mask.empty() || _mask.isContinuous() ) )
     {
         size.width *= size.height;
         size.height = 1;
     }
 
     if (!_mask.empty())
-        return getThreshVal_Otsu<ushort, true>(_src, _mask, size);
+        return getThreshVal_Otsu<ushort, 0u, true>(_src, _mask, size);
     else
-        return getThreshVal_Otsu<ushort, false>(_src, _mask, size);
+        return getThreshVal_Otsu<ushort, 0u, false>(_src, _mask, size);
 }
 
 template<bool useMask>
@@ -1325,7 +1325,7 @@ getThreshVal_Triangle_8u( const Mat& _src, const Mat& _mask = cv::Mat() )
 {
     Size size = _src.size();
     int step = (int) _src.step;
-    if( _src.isContinuous() )
+    if( _src.isContinuous() && ( _mask.empty() || _mask.isContinuous() ) )
     {
         size.width *= size.height;
         size.height = 1;
@@ -1785,8 +1785,8 @@ double cv::thresholdWithMask( InputArray _src, InputOutputArray _dst, InputArray
                      mask.data, mask.step,
                      src.cols, src.rows, src_type, maxval, type);
 
-        thresh = src.type() == CV_8UC1 ? getThreshVal_Otsu_8u( src )
-                                       : getThreshVal_Otsu_16u( src );
+        thresh = src.type() == CV_8UC1 ? getThreshVal_Otsu_8u( src, mask )
+                                       : getThreshVal_Otsu_16u( src, mask );
     }
     else if( automatic_thresh == cv::THRESH_TRIANGLE )
     {
