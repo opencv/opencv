@@ -90,11 +90,13 @@ public:
 
         CV_CheckEQ(K_a, K_b, "DNN/Gemm: Invalid dimension of dim K");
 
+        bool const_B_ = const_B || inputs.size() < 2;
+        bool const_C_ = const_C || inputs.size() < 3; // may be true if no bias is provided, has to be used in combo with have_bias_
         bool have_bias_ = have_bias || inputs.size() == 3;
 
         // Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
         if (have_bias_) {
-            const auto shape_C = const_C ? shape(blobs.back()) : inputs.back();
+            const auto shape_C = const_C_ ? shape(blobs.back()) : inputs.back();
 
             auto ndims_C = shape_C.size();
             CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
@@ -172,13 +174,18 @@ public:
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         opt.init();
 
+
+        bool const_B_ = const_B || inputs.size() < 2;
+        bool const_C_ = const_C || inputs.size() < 3; // may be true if no bias is provided, has to be used in combo with have_bias_
+        bool have_bias_ = have_bias || inputs.size() == 3;
+
         // pack B if it is const
-        if (const_B) {
+        if (const_B_) {
             fastGemmPackB(blobs[0], packed_B, trans_b, opt);
         }
 
         // also pre-broadcast bias
-        if (const_C) {
+        if (const_C_ && have_bias_) {
             const auto &C = blobs.back();
 
             std::vector<Mat> outputs;
@@ -208,13 +215,9 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        // "overload" const_B
-        const_input_B = (inputs.size() < 2) && const_B;
-        assert(const_input_B || inputs.size() >= 2);
-
-        // "overload" const_C
-        const_input_C = (inputs.size() < 3) && const_C;
-        assert(const_input_C || inputs.size() >= 3);
+        bool const_B_ = const_B || inputs.size() < 2;
+        bool const_C_ = const_C || inputs.size() < 3; // may be true if no bias is provided, has to be used in combo with have_bias_
+        bool have_bias_ = have_bias || inputs.size() == 3;
 
         const auto &A = inputs[0];
         auto &Y = outputs[0];
@@ -225,11 +228,10 @@ public:
         size_t dims_Y = shape_Y.size();
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
-        bool have_bias_ = have_bias || inputs.size() == 3;
 
         // broadcast C and copy C to output
         if (have_bias_) {
-            if (!const_input_C || broadcast_C.empty()) {
+            if (!const_C_ || broadcast_C.empty()) {
                 broadcastCWtihBeta(M, N, (inputs.size() >= 3 ? inputs.back() : blobs.back()));
             }
             int step = M * N;
@@ -242,7 +244,7 @@ public:
             std::memset(ptr_y, 0, total * sizeof(float));
         }
 
-        if (const_input_B) {
+        if (const_B_) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
             fastGemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
         } else {
@@ -256,7 +258,7 @@ public:
                               const std::vector<Ptr<BackendWrapper>>& inputs,
                               const std::vector<Ptr<BackendWrapper>>& outputs) CV_OVERRIDE {
         CV_CheckFalse(trans_a, "DNN/Gemm/Cuda: does not support transA");
-        CV_CheckTrue(const_input_B, "DNN/Gemm/Cuda: input B (weight) is required to be constant");
+        CV_CheckTrue(const_B, "DNN/Gemm/Cuda: input B (weight) is required to be constant");
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
         auto wrapper_A = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto B = blobs[0];
@@ -274,6 +276,10 @@ public:
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
                                       const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
+        bool const_B_ = const_B || inputs.size() < 2;
+        bool const_C_ = const_C || inputs.size() < 3; // may be true if no bias is provided, has to be used in combo with have_bias_
+        bool have_bias_ = have_bias || inputs.size() == 3;
+
         auto x1 = inputs[0].dynamicCast<CannBackendWrapper>();
         auto desc_x1 = x1->getTensorDesc();
         auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
@@ -289,7 +295,7 @@ public:
         op->set_input_x1_by_name(*op_x1, x1->name.c_str());
         op->update_input_desc_x1(*desc_x1);
         // set inputs : x2
-        if (const_B) {
+        if (const_B_) {
             auto B = blobs[0];
             auto op_const_B = std::make_shared<CannConstOp>(B.data, B.type(), shape(B), cv::format("%s_w", name.c_str()));
             op->set_input_x2_by_name(*(op_const_B->getOp()), "y");
@@ -303,6 +309,7 @@ public:
             op->update_input_desc_x2(*desc_x2);
         }
         // set inputs : bias
+        // TODO: clearify if the bias needs to be constant here
         auto mat_C = have_bias && const_C ? blobs.back() : Mat::zeros(1, 1, CV_32F);
         auto shape_C = shape(mat_C);
         if (real_ndims_C == 1) {
@@ -401,9 +408,7 @@ public:
 
 private:
     bool const_B;
-    bool const_input_B;
     bool const_C;
-    bool const_input_C;
     bool have_bias;
     std::vector<float> packed_B;
     std::vector<float> broadcast_C;
