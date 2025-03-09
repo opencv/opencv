@@ -437,39 +437,39 @@ struct MaskedNormInf_RVV<uchar, int> {
 template<>
 struct MaskedNormL1_RVV<uchar, int> {
     int operator() (const uchar* src, const uchar* mask, int len, int cn) const {
-        int vlmax = __riscv_vsetvlmax_e8m2();
-        auto s = __riscv_vmv_v_x_u32m8(0, vlmax);
+        auto s = __riscv_vmv_v_x_u32m1(0, __riscv_vsetvlmax_e32m1());
+        auto zero = __riscv_vmv_v_x_u16m1(0, __riscv_vsetvlmax_e16m1());
         if (cn == 1) {
             int vl;
             for (int i = 0; i < len; i += vl) {
-                vl = __riscv_vsetvl_e8m2(len - i);
-                auto v = __riscv_vle8_v_u8m2(src + i, vl);
-                auto m = __riscv_vle8_v_u8m2(mask + i, vl);
+                vl = __riscv_vsetvl_e8m8(len - i);
+                auto v = __riscv_vle8_v_u8m8(src + i, vl);
+                auto m = __riscv_vle8_v_u8m8(mask + i, vl);
                 auto b = __riscv_vmsne(m, 0, vl);
-                s = __riscv_vadd_tumu(b, s, s, __riscv_vzext_vf4(b, v, vl), vl);
+                s = __riscv_vwredsumu(__riscv_vwredsumu_tum(b, zero, v, zero, vl), s, __riscv_vsetvlmax_e16m1());
             }
         } else if (cn == 4) {
             int vl;
             for (int i = 0; i < len; i += vl) {
-                vl = __riscv_vsetvl_e8mf2(len - i);
-                auto v = __riscv_vle8_v_u8m2(src + i * 4, vl * 4);
-                auto m = __riscv_vle8_v_u8mf2(mask + i, vl);
-                auto b = __riscv_vmsne(__riscv_vreinterpret_u8m2(__riscv_vmul(__riscv_vzext_vf4(__riscv_vminu(m, 1, vl), vl), 0x01010101, vl)), 0, vl * 4);
-                s = __riscv_vadd_tumu(b, s, s, __riscv_vzext_vf4(b, v, vl * 4), vl * 4);
+                vl = __riscv_vsetvl_e8m2(len - i);
+                auto v = __riscv_vle8_v_u8m8(src + i * 4, vl * 4);
+                auto m = __riscv_vle8_v_u8m2(mask + i, vl);
+                auto b = __riscv_vmsne(__riscv_vreinterpret_u8m8(__riscv_vmul(__riscv_vzext_vf4(__riscv_vminu(m, 1, vl), vl), 0x01010101, vl)), 0, vl * 4);
+                s = __riscv_vwredsumu(__riscv_vwredsumu_tum(b, zero, v, zero, vl * 4), s, __riscv_vsetvlmax_e16m1());
             }
         } else {
             for (int cn_index = 0; cn_index < cn; cn_index++) {
                 int vl;
                 for (int i = 0; i < len; i += vl) {
-                    vl = __riscv_vsetvl_e8m2(len - i);
-                    auto v = __riscv_vlse8_v_u8m2(src + cn * i + cn_index, sizeof(uchar) * cn, vl);
-                    auto m = __riscv_vle8_v_u8m2(mask + i, vl);
+                    vl = __riscv_vsetvl_e8m8(len - i);
+                    auto v = __riscv_vlse8_v_u8m8(src + cn * i + cn_index, sizeof(uchar) * cn, vl);
+                    auto m = __riscv_vle8_v_u8m8(mask + i, vl);
                     auto b = __riscv_vmsne(m, 0, vl);
-                    s = __riscv_vadd_tumu(b, s, s, __riscv_vzext_vf4(b, v, vl), vl);
+                    s = __riscv_vwredsumu(__riscv_vwredsumu_tum(b, zero, v, zero, vl), s, __riscv_vsetvlmax_e16m1());
                 }
             }
         }
-        return __riscv_vmv_x(__riscv_vredsum(s, __riscv_vmv_s_x_u32m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
+        return __riscv_vmv_x(s);
     }
 };
 
@@ -537,19 +537,19 @@ struct MaskedNormInf_RVV<schar, int> {
 template<>
 struct MaskedNormL1_RVV<schar, int> {
     int operator() (const schar* src, const uchar* mask, int len, int cn) const {
-        int vlmax = __riscv_vsetvlmax_e8m2();
-        auto s = __riscv_vmv_v_x_u32m8(0, vlmax);
+        auto s = __riscv_vmv_v_x_u32m1(0, __riscv_vsetvlmax_e32m1());
+        auto zero = __riscv_vmv_v_x_u16m1(0, __riscv_vsetvlmax_e16m1());
         for (int cn_index = 0; cn_index < cn; cn_index++) {
             int vl;
             for (int i = 0; i < len; i += vl) {
-                vl = __riscv_vsetvl_e8m2(len - i);
-                auto v = __riscv_vlse8_v_i8m2(src + cn * i + cn_index, sizeof(schar) * cn, vl);
-                auto m = __riscv_vle8_v_u8m2(mask + i, vl);
+                vl = __riscv_vsetvl_e8m8(len - i);
+                auto v = custom_intrin::__riscv_vabs(__riscv_vlse8_v_i8m8(src + cn * i + cn_index, sizeof(schar) * cn, vl), vl);
+                auto m = __riscv_vle8_v_u8m8(mask + i, vl);
                 auto b = __riscv_vmsne(m, 0, vl);
-                s = __riscv_vadd_tumu(b, s, s, __riscv_vzext_vf4(b, custom_intrin::__riscv_vabs(v, vl), vl), vl);
+                s = __riscv_vwredsumu(__riscv_vwredsumu_tum(b, zero, v, zero, vl), s, __riscv_vsetvlmax_e16m1());
             }
         }
-        return __riscv_vmv_x(__riscv_vredsum(s, __riscv_vmv_s_x_u32m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
+        return __riscv_vmv_x(s);
     }
 };
 
@@ -595,19 +595,18 @@ struct MaskedNormInf_RVV<ushort, int> {
 template<>
 struct MaskedNormL1_RVV<ushort, int> {
     int operator() (const ushort* src, const uchar* mask, int len, int cn) const {
-        int vlmax = __riscv_vsetvlmax_e16m4();
-        auto s = __riscv_vmv_v_x_u32m8(0, vlmax);
+        auto s = __riscv_vmv_v_x_u32m1(0, __riscv_vsetvlmax_e32m1());
         for (int cn_index = 0; cn_index < cn; cn_index++) {
             int vl;
             for (int i = 0; i < len; i += vl) {
-                vl = __riscv_vsetvl_e16m4(len - i);
-                auto v = __riscv_vlse16_v_u16m4(src + cn * i + cn_index, sizeof(ushort) * cn, vl);
-                auto m = __riscv_vle8_v_u8m2(mask + i, vl);
+                vl = __riscv_vsetvl_e8m4(len - i);
+                auto v = __riscv_vlse16_v_u16m8(src + cn * i + cn_index, sizeof(ushort) * cn, vl);
+                auto m = __riscv_vle8_v_u8m4(mask + i, vl);
                 auto b = __riscv_vmsne(m, 0, vl);
-                s = __riscv_vadd_tumu(b, s, s, __riscv_vzext_vf2(b, v, vl), vl);
+                s = __riscv_vwredsumu_tum(b, s, v, s, vl);
             }
         }
-        return __riscv_vmv_x(__riscv_vredsum(s, __riscv_vmv_s_x_u32m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
+        return __riscv_vmv_x(s);
     }
 };
 
@@ -653,19 +652,18 @@ struct MaskedNormInf_RVV<short, int> {
 template<>
 struct MaskedNormL1_RVV<short, int> {
     int operator() (const short* src, const uchar* mask, int len, int cn) const {
-        int vlmax = __riscv_vsetvlmax_e16m4();
-        auto s = __riscv_vmv_v_x_u32m8(0, vlmax);
+        auto s = __riscv_vmv_v_x_u32m1(0, __riscv_vsetvlmax_e32m1());
         for (int cn_index = 0; cn_index < cn; cn_index++) {
             int vl;
             for (int i = 0; i < len; i += vl) {
-                vl = __riscv_vsetvl_e16m4(len - i);
-                auto v = __riscv_vlse16_v_i16m4(src + cn * i + cn_index, sizeof(short) * cn, vl);
-                auto m = __riscv_vle8_v_u8m2(mask + i, vl);
+                vl = __riscv_vsetvl_e8m4(len - i);
+                auto v = custom_intrin::__riscv_vabs(__riscv_vlse16_v_i16m8(src + cn * i + cn_index, sizeof(short) * cn, vl), vl);
+                auto m = __riscv_vle8_v_u8m4(mask + i, vl);
                 auto b = __riscv_vmsne(m, 0, vl);
-                s = __riscv_vadd_tumu(b, s, s, __riscv_vzext_vf2(b, custom_intrin::__riscv_vabs(v, vl), vl), vl);
+                s = __riscv_vwredsumu_tum(b, s, v, s, vl);
             }
         }
-        return __riscv_vmv_x(__riscv_vredsum(s, __riscv_vmv_s_x_u32m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
+        return __riscv_vmv_x(s);
     }
 };
 
