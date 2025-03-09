@@ -72,9 +72,13 @@ public:
         CV_CheckGE(num_inputs, 2, "DNN/Gemm: Gemm takes at least two inputs");
         CV_CheckLE(num_inputs, 3, "DNN/Gemm: Gemm takes at most three inputs");
 
+        bool const_B_ = const_B || inputs.size() < 2;
+        bool const_C_ = const_C || inputs.size() < 3; // may be true if no bias is provided, has to be used in combo with have_bias_
+        bool have_bias_ = have_bias || inputs.size() == 3;
+
         // Check whether A and B are two dimensional
         const auto shape_A = inputs[0];
-        const auto shape_B = const_B ? shape(blobs[0]) : inputs[1];
+        const auto shape_B = const_B_ ? shape(blobs[0]) : inputs[1];
         CV_CheckGE(shape_A.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor A must be n-dimensional (n >= 2)");
         CV_CheckEQ(shape_B.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor B must be two dimensional");
 
@@ -89,10 +93,6 @@ public:
 
 
         CV_CheckEQ(K_a, K_b, "DNN/Gemm: Invalid dimension of dim K");
-
-        bool const_B_ = const_B || inputs.size() < 2;
-        bool const_C_ = const_C || inputs.size() < 3; // may be true if no bias is provided, has to be used in combo with have_bias_
-        bool have_bias_ = have_bias || inputs.size() == 3;
 
         // Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
         if (have_bias_) {
