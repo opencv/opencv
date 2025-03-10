@@ -13,7 +13,7 @@ if(HAVE_IPP_ICV)
   target_compile_definitions(ipphal PRIVATE HAVE_IPP_ICV)
 endif()
 
-target_include_directories(ipphal PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(ipphal PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 target_include_directories(ipphal PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
