@@ -1162,13 +1162,20 @@ struct NormDiffL2_SIMD<float, double> {
         int j = 0;
         double s = 0.f;
         v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
-        for (; j <= n - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes()) {
+        v_float64 r2 = vx_setzero_f64(), r3 = vx_setzero_f64();
+        for (; j <= n - 2 * VTraits<v_float32>::vlanes(); j += 2 * VTraits<v_float32>::vlanes()) {
             v_float32 v01 = vx_load(src1 + j), v02 = vx_load(src2 + j);
             v_float32 v0 = v_absdiff(v01, v02);
             v_float64 f01 = v_cvt_f64(v0), f02 = v_cvt_f64_high(v0);
             r0 = v_fma(f01, f01, r0); r1 = v_fma(f02, f02, r1);
+
+            v_float32 v11 = vx_load(src1 + j + VTraits<v_float32>::vlanes()),
+                      v12 = vx_load(src2 + j + VTraits<v_float32>::vlanes());
+            v_float32 v1 = v_absdiff(v11, v12);
+            v_float64 f11 = v_cvt_f64(v1), f12 = v_cvt_f64_high(v1);
+            r2 = v_fma(f11, f11, r2); r3 = v_fma(f12, f12, r3);
         }
-        s += v_reduce_sum(v_add(r0, r1));
+        s += v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
         for (; j < n; j++) {
             double v = src1[j] - src2[j];
             s += v * v;
