@@ -43,6 +43,39 @@ static inline int invoke(int start, int end, std::function<int(int, int, Args...
     return func(start, start + 1, std::forward<Args>(args)...);
 }
 
+static inline int borderInterpolate( int p, int len, int borderType )
+{
+    if( (unsigned)p < (unsigned)len )
+        ;
+    else if( borderType == BORDER_REPLICATE )
+        p = p < 0 ? 0 : len - 1;
+    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
+    {
+        int delta = borderType == BORDER_REFLECT_101;
+        if( len == 1 )
+            return 0;
+        do
+        {
+            if( p < 0 )
+                p = -p - 1 + delta;
+            else
+                p = len - 1 - (p - len) - delta;
+        }
+        while( (unsigned)p >= (unsigned)len );
+    }
+    else if( borderType == BORDER_WRAP )
+    {
+        CV_Assert(len > 0);
+        if( p < 0 )
+            p -= ((p-len+1)/len)*len;
+        if( p >= len )
+            p %= len;
+    }
+    else if( borderType == BORDER_CONSTANT )
+        p = -1;
+    return p;
+}
+
 struct Filter2D
 {
     const uchar* kernel_data;
@@ -328,12 +361,12 @@ static inline int sepFilterRow(int start, int end, sepFilter2D* data, const ucha
         int pj;
         if (data->borderType & BORDER_ISOLATED)
         {
-            pj = borderInterpolate(y - data->anchor_x, width, data->borderType & ~BORDER_ISOLATED);
+            pj = filter::borderInterpolate(y - data->anchor_x, width, data->borderType & ~BORDER_ISOLATED);
             pj = pj < 0 ? noval : pj;
         }
         else
         {
-            pj = borderInterpolate(offset_x + y - data->anchor_x, full_width, data->borderType);
+            pj = filter::borderInterpolate(offset_x + y - data->anchor_x, full_width, data->borderType);
             pj = pj < 0 ? noval : pj - offset_x;
         }
         return pj;
@@ -403,12 +436,12 @@ static inline int sepFilterCol(int start, int end, sepFilter2D* data, const floa
         int pi;
         if (data->borderType & BORDER_ISOLATED)
         {
-            pi = borderInterpolate(x - data->anchor_y, height, data->borderType & ~BORDER_ISOLATED);
+            pi = filter::borderInterpolate(x - data->anchor_y, height, data->borderType & ~BORDER_ISOLATED);
             pi = pi < 0 ? noval : pi;
         }
         else
         {
-            pi = borderInterpolate(offset_y + x - data->anchor_y, full_height, data->borderType);
+            pi = filter::borderInterpolate(offset_y + x - data->anchor_y, full_height, data->borderType);
             pi = pi < 0 ? noval : pi - offset_y;
         }
         return pi;
@@ -593,15 +626,15 @@ static inline int morph(int start, int end, Morph2D* data, const uchar* src_data
         int pi, pj;
         if (data->borderType & BORDER_ISOLATED)
         {
-            pi = borderInterpolate(x - data->anchor_y, height, data->borderType & ~BORDER_ISOLATED);
-            pj = borderInterpolate(y - data->anchor_x, width , data->borderType & ~BORDER_ISOLATED);
+            pi = filter::borderInterpolate(x - data->anchor_y, height, data->borderType & ~BORDER_ISOLATED);
+            pj = filter::borderInterpolate(y - data->anchor_x, width , data->borderType & ~BORDER_ISOLATED);
             pi = pi < 0 ? noval : pi;
             pj = pj < 0 ? noval : pj;
         }
         else
         {
-            pi = borderInterpolate(offset_y + x - data->anchor_y, full_height, data->borderType);
-            pj = borderInterpolate(offset_x + y - data->anchor_x, full_width , data->borderType);
+            pi = filter::borderInterpolate(offset_y + x - data->anchor_y, full_height, data->borderType);
+            pj = filter::borderInterpolate(offset_x + y - data->anchor_x, full_width , data->borderType);
             pi = pi < 0 ? noval : pi - offset_y;
             pj = pj < 0 ? noval : pj - offset_x;
         }
