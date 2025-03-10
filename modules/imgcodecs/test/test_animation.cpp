@@ -543,6 +543,51 @@ TEST(Imgcodecs_APNG, imencode_rgba)
     EXPECT_EQ(read_frames.size(), s_animation.frames.size() - 2);
 }
 
+typedef testing::TestWithParam<string> Imgcodecs_ImageCollection;
+
+const string exts_multi[] = {
+#ifdef HAVE_AVIF
+    ".avif",
+#endif
+#ifdef HAVE_IMGCODEC_GIF
+    ".gif",
+#endif
+    ".png",
+#ifdef HAVE_TIFF
+    ".tiff",
+#endif
+#ifdef HAVE_WEBP
+    ".webp",
+#endif
+};
+
+TEST_P(Imgcodecs_ImageCollection, animations)
+{
+    Animation s_animation;
+    EXPECT_TRUE(fillFrames(s_animation, false));
+
+    string output = cv::tempfile(GetParam().c_str());
+    ASSERT_TRUE(imwritemulti(output, s_animation.frames));
+    vector<Mat> read_frames;
+    ASSERT_TRUE(imreadmulti(output, read_frames, IMREAD_UNCHANGED));
+
+    {
+        ImageCollection collection(output, IMREAD_UNCHANGED);
+        EXPECT_EQ(read_frames.size(), collection.size());
+        int i = 0;
+        for (auto&& frame : collection)
+        {
+            EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+            ++i;
+        }
+    }
+    EXPECT_EQ(0, remove(output.c_str()));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_ImageCollection,
+    testing::ValuesIn(exts_multi));
+
 #endif // HAVE_PNG
 
 }} // namespace
