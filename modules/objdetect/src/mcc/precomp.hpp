@@ -39,7 +39,7 @@
 #include <vector>
 #include <string>
 
-#include "opencv2/objdetect/mcc_checker_detector.hpp"
+#include "opencv2/objdetect.hpp"
 
 #include "common.hpp"
 

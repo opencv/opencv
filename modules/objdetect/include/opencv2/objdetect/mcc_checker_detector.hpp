@@ -179,7 +179,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParametersMCC
     CV_PROP_RW int minImageSize;
 
     /// minimum number of squares in a chart that must be detected (default 4).
-    CV_PROP_RW unsigned minGroupSize;
+    CV_PROP_RW int minGroupSize;
 };
 
 /** @brief A class to find the positions of the ColorCharts in the image.
