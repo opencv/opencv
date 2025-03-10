@@ -29,7 +29,7 @@
 #ifndef _MCC_CHECKER_DETECTOR_HPP
 #define _MCC_CHECKER_DETECTOR_HPP
 
-#include "opencv2/objdetect/mcc_checker_detector.hpp"
+#include "opencv2/objdetect.hpp"
 #include "charts.hpp"
 
 namespace cv

@@ -47,6 +47,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/objdetect/aruco_detector.hpp"
 #include "opencv2/objdetect/graphical_code_detector.hpp"
+#include "opencv2/objdetect/mcc_checker_detector.hpp"
 
 /**
 @defgroup objdetect Object Detection

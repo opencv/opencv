@@ -1,7 +1,7 @@
 #include <opencv2/core.hpp>
 
 #include <opencv2/highgui.hpp>
-#include "opencv2/objdetect/mcc_checker_detector.hpp"
+#include <opencv2/objdetect.hpp>
 #include <opencv2/dnn.hpp>
 #include <iostream>
 #include "../dnn/common.hpp"
