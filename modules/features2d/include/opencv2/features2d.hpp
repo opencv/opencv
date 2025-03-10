@@ -754,8 +754,7 @@ public:
       CV_PROP_RW int method;
       CV_PROP_RW int type;
       CV_PROP_RW int blockSize;
-      CV_PROP_RW double delta;
-      
+      CV_PROP_RW double delta;      
       CV_PROP_RW float thresholdStep;
       CV_PROP_RW float minThreshold;
       CV_PROP_RW float maxThreshold;
