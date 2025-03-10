@@ -752,7 +752,7 @@ void CCheckerDetectorImpl::
                 chartSub.push_back(detectedCharts[i]);
 
         size_t Nsc = chartSub.size();
-        if (Nsc < params.minGroupSize)
+        if (static_cast<int>(Nsc) < params.minGroupSize)
             continue;
 
         ///-------------------------------------------------
