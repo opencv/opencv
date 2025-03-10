@@ -75,13 +75,13 @@ class FcvSobelLoop_Invoker : public cv::ParallelLoopBody
         // Need additional lines to be border.
         if(range.start > 0)
         {
-            topLines     += halfKernelSize;
-            paddedHeight += halfKernelSize;
+            topLines     += MIN(range.start, halfKernelSize);
+            paddedHeight += MIN(range.start, halfKernelSize);
         }
 
         if(range.end < height)
         {
-            paddedHeight += halfKernelSize;
+            paddedHeight += MIN(height-range.end, halfKernelSize);
         }
 
         cv::Mat srcPadded = src(cv::Rect(0, range.start-topLines, width, paddedHeight));
@@ -305,8 +305,9 @@ int fastcv_hal_sobel(
     else
     {
         int nThreads = cv::getNumThreads();
-        int nStripes = nThreads > 1 ? 3*nThreads : 1;
-
+        // In each stripe, the height should be equal or larger than ksize.
+        // Use 3*nThreads stripes to avoid too many threads.
+        int nStripes = nThreads > 1 ? MIN(height / (int)ksize, 3 * nThreads) : 1;
         cv::parallel_for_(cv::Range(0, height), FcvSobelLoop_Invoker(src, dst, dx, dy, ksize, fcvBorder, 0), nStripes);
     }
 
@@ -1017,10 +1018,10 @@ int fastcv_hal_canny(
 
     if (lowThreshold > highThreshold)
         CV_HAL_RETURN_NOT_IMPLEMENTED("lowThreshold is greater then highThreshold");
-	
-	const double epsilon = 1e-9;
-	
-	if (std::abs(lowThreshold - std::round(lowThreshold)) > epsilon || std::abs(highThreshold - std::round(highThreshold)) > epsilon)
+
+    const double epsilon = 1e-9;
+
+    if (std::abs(lowThreshold - std::round(lowThreshold)) > epsilon || std::abs(highThreshold - std::round(highThreshold)) > epsilon)
         CV_HAL_RETURN_NOT_IMPLEMENTED("threshold with decimal values not supported");
 
     INITIALIZATION_CHECK;
