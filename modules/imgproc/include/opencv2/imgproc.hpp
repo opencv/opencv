@@ -3070,8 +3070,8 @@ Also, the special values #THRESH_OTSU or #THRESH_TRIANGLE may be combined with o
 above values. In these cases, the function determines the optimal threshold value using the Otsu's
 or Triangle algorithm and uses it instead of the specified thresh.
 
-@note Currently, the Otsu's method is implemented only for 8-bit and 16-bit single-channel images,
-and the Triangle's method is implemented only for 8-bit single-channel images.
+@note Currently, the Otsu's method is implemented only for CV_8UC1 and CV_16UC1 images,
+and the Triangle's method is implemented only for CV_8UC1 images.
 
 @param src input array (multiple-channel, CV_8U, CV_16S, CV_16U, CV_32F or CV_64F).
 @param dst output array of the same size  and type and the same number of channels as src.
