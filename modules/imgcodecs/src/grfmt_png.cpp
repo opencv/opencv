@@ -621,7 +621,7 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
             else {
                 // Blending mode
                 for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
-                    if (sp[3] == 65535) { // Fully opaque in 16-bit (max value)
+                    if (channels < 4 || sp[3] == 65535) { // Fully opaque in 16-bit (max value)
                         memcpy(dp, sp, channels * sizeof(uint16_t));
                     }
                     else if (sp[3] != 0) { // Partially transparent
@@ -656,7 +656,7 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
             else {
                 // Blending mode
                 for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
-                    if (sp[3] == 255) {
+                    if (channels < 4 || sp[3] == 255) {
                         // Fully opaque: copy source pixel directly
                         memcpy(dp, sp, channels);
                     }
