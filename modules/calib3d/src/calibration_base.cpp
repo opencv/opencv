@@ -1530,15 +1530,20 @@ void cv::getUndistortRectangles(InputArray _cameraMatrix, InputArray _distCoeffs
     Mat _pts(1, 4*(N-1), CV_64FC2);
     Point2d* pts = _pts.ptr<Point2d>();
 
+    // generate a grid of points across the image to estimate the distortion deformation
+    double stepX = (imgSize.width - 1) / static_cast<double>(N - 1);
+    double stepY = (imgSize.height - 1) / static_cast<double>(N - 1);
     for( y = k = 0; y < N; y++ )
     {
         for( x = 0; x < N; x++ )
         {
             if (x != 0 && x != N - 1 && y != 0 && y != N - 1)
             {
+                // skip all points except those on the image border, because inner grid points
+                // have no influence on the two deformation rectangles that are calculated below
                 continue;
             }
-            pts[k++] = Point2d((double)x*(imgSize.width-1)/(N-1), (double)y*(imgSize.height-1)/(N-1));
+            pts[k++] = Point2d(x * stepX, y * stepY);
         }
     }
 
