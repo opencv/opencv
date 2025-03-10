@@ -5,6 +5,8 @@
 #define OPENCV_HAL_RVV_DXT_HPP_INCLUDED
 
 #include <riscv_vector.h>
+#include "hal_rvv_1p0/types.hpp"
+#include "opencv2/core/types.hpp"
 
 namespace cv { namespace cv_hal_rvv { namespace dxt {
 
@@ -13,29 +15,21 @@ namespace cv { namespace cv_hal_rvv { namespace dxt {
 
 template<typename T> struct rvv;
 
-template<> struct rvv<float>
+template<> struct rvv<float> : RVV_F32MF2
 {
-    using T = vfloat32mf2_t;
-    static inline size_t vsetvl_itab(size_t a) { return __riscv_vsetvl_e32m8(a); }
-    static inline vuint32m8_t vlse_itab(const uint* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_u32m8(a, b, c); }
-    static inline vfloat32m8_t vlse_itab_f(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32m8(a, b, c); }
-    static inline void vsse_itab(float* a, ptrdiff_t b, vfloat32m8_t c, size_t d) { return __riscv_vsse32(a, b, c, d); }
-    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32mf2(a); }
-    static inline vfloat32m1_t vfmv_s(float a, size_t b) { return __riscv_vfmv_s_f_f32m1(a, b); }
+    using T = RVV_F32MF2::VecType;
+    using TabType = RVV_U32M8;
+    using TabTypeF = RVV_SameLen<float, TabType>;
     static inline void vlseg(const float* a, T& b, T& c, size_t d) { auto x = __riscv_vlseg2e32_v_f32mf2x2(a, d); b = __riscv_vget_v_f32mf2x2_f32mf2(x, 0), c = __riscv_vget_v_f32mf2x2_f32mf2(x, 1); }
     static inline void vlsseg(const float* a, ptrdiff_t b, T& c, T& d, size_t e) { auto x = __riscv_vlsseg2e32_v_f32mf2x2(a, b, e); c = __riscv_vget_v_f32mf2x2_f32mf2(x, 0), d = __riscv_vget_v_f32mf2x2_f32mf2(x, 1); }
     static inline void vsseg(float* a, T b, T c, size_t d) { __riscv_vsseg2e32(a, __riscv_vset_v_f32mf2_f32mf2x2(__riscv_vset_v_f32mf2_f32mf2x2(vfloat32mf2x2_t(), 0, b), 1, c), d); }
 };
 
-template<> struct rvv<double>
+template<> struct rvv<double> : RVV_F64M1
 {
-    using T = vfloat64m1_t;
-    static inline size_t vsetvl_itab(size_t a) { return __riscv_vsetvl_e32m4(a); }
-    static inline vuint32m4_t vlse_itab(const uint* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_u32m4(a, b, c); }
-    static inline vfloat64m8_t vlse_itab_f(const double* a, ptrdiff_t b, size_t c) { return __riscv_vlse64_v_f64m8(a, b, c); }
-    static inline void vsse_itab(double* a, ptrdiff_t b, vfloat64m8_t c, size_t d) { return __riscv_vsse64(a, b, c, d); }
-    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e64m1(a); }
-    static inline vfloat64m1_t vfmv_s(double a, size_t b) { return __riscv_vfmv_s_f_f64m1(a, b); }
+    using T = RVV_F64M1::VecType;
+    using TabType = RVV_U32M4;
+    using TabTypeF = RVV_SameLen<double, TabType>;
     static inline void vlseg(const double* a, T& b, T& c, size_t d) { auto x = __riscv_vlseg2e64_v_f64m1x2(a, d); b = __riscv_vget_v_f64m1x2_f64m1(x, 0), c = __riscv_vget_v_f64m1x2_f64m1(x, 1); }
     static inline void vlsseg(const double* a, ptrdiff_t b, T& c, T& d, size_t e) { auto x = __riscv_vlsseg2e64_v_f64m1x2(a, b, e); c = __riscv_vget_v_f64m1x2_f64m1(x, 0), d = __riscv_vget_v_f64m1x2_f64m1(x, 1); }
     static inline void vsseg(double* a, T b, T c, size_t d) { __riscv_vsseg2e64(a, __riscv_vset_v_f64m1_f64m1x2(__riscv_vset_v_f64m1_f64m1x2(vfloat64m1x2_t(), 0, b), 1, c), d); }
@@ -43,7 +37,7 @@ template<> struct rvv<double>
 
 // the algorithm is copied from core/src/dxt.cpp,
 // in the function template static void cv::DFT and cv::DFT_R2, cv::DFT_R3, cv::DFT_R5
-template<typename T>
+template <typename T>
 inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T scale, int* itab,
                   const Complex<T>* wave, int tab_size, int len, bool isInverse, bool noPermute)
 {
@@ -52,7 +46,9 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
     int dw0 = tab_size, dw;
     int i, j, k;
     Complex<T> t;
-    using VT = typename rvv<T>::T;
+    using VT = typename rvv<T>::VecType;
+    using TabType = typename rvv<T>::TabType;
+    using TabTypeF = typename rvv<T>::TabTypeF;
 
     int tab_step = tab_size == n ? 1 : tab_size == n*2 ? 2 : tab_size/n;
     int vl;
@@ -64,29 +60,29 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
         {
             for( i = 0; i < n; i += vl )
             {
-                vl = rvv<T>::vsetvl_itab(n - i);
-                auto vec_itab = rvv<T>::vlse_itab(reinterpret_cast<const uint*>(itab + i * tab_step), sizeof(int) * tab_step, vl);
+                vl = TabType::setvl(n - i);
+                auto vec_itab = TabType::vload_stride(reinterpret_cast<const uint*>(itab + i * tab_step), sizeof(int) * tab_step, vl);
                 vec_itab = __riscv_vmul(vec_itab, sizeof(T) * 2, vl);
                 auto vec_src_re = __riscv_vloxei32(reinterpret_cast<const T*>(src), vec_itab, vl);
                 vec_itab = __riscv_vadd(vec_itab, sizeof(T), vl);
                 auto vec_src_im = __riscv_vloxei32(reinterpret_cast<const T*>(src), vec_itab, vl);
-                rvv<T>::vsse_itab(reinterpret_cast<T*>(dst + i), sizeof(T) * 2, vec_src_re, vl);
-                rvv<T>::vsse_itab(reinterpret_cast<T*>(dst + i) + 1, sizeof(T) * 2, vec_src_im, vl);
+                TabTypeF::vstore_stride(reinterpret_cast<T*>(dst + i), sizeof(T) * 2, vec_src_re, vl);
+                TabTypeF::vstore_stride(reinterpret_cast<T*>(dst + i) + 1, sizeof(T) * 2, vec_src_im, vl);
             }
         }
         else
         {
             for( i = 0; i < n; i += vl )
             {
-                vl = rvv<T>::vsetvl_itab(n - i);
-                auto vec_itab = rvv<T>::vlse_itab(reinterpret_cast<const uint*>(itab + i * tab_step), sizeof(int) * tab_step, vl);
+                vl = TabType::setvl(n - i);
+                auto vec_itab = TabType::vload_stride(reinterpret_cast<const uint*>(itab + i * tab_step), sizeof(int) * tab_step, vl);
                 vec_itab = __riscv_vmul(vec_itab, sizeof(T) * 2, vl);
                 auto vec_src_re = __riscv_vloxei32(reinterpret_cast<const T*>(src), vec_itab, vl);
                 vec_itab = __riscv_vadd(vec_itab, sizeof(T), vl);
                 auto vec_src_im = __riscv_vloxei32(reinterpret_cast<const T*>(src), vec_itab, vl);
                 vec_src_im = __riscv_vfneg(vec_src_im, vl);
-                rvv<T>::vsse_itab(reinterpret_cast<T*>(dst + i), sizeof(T) * 2, vec_src_re, vl);
-                rvv<T>::vsse_itab(reinterpret_cast<T*>(dst + i) + 1, sizeof(T) * 2, vec_src_im, vl);
+                TabTypeF::vstore_stride(reinterpret_cast<T*>(dst + i), sizeof(T) * 2, vec_src_re, vl);
+                TabTypeF::vstore_stride(reinterpret_cast<T*>(dst + i) + 1, sizeof(T) * 2, vec_src_im, vl);
             }
         }
     }
@@ -131,10 +127,10 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
         {
             for( i = 0; i < n; i += vl )
             {
-                vl = rvv<T>::vsetvl_itab(n - i);
-                auto vec_src_im = rvv<T>::vlse_itab_f(reinterpret_cast<const T*>(dst + i) + 1, sizeof(T) * 2, vl);
+                vl = TabType::setvl(n - i);
+                auto vec_src_im = TabTypeF::vload_stride(reinterpret_cast<const T*>(dst + i) + 1, sizeof(T) * 2, vl);
                 vec_src_im = __riscv_vfneg(vec_src_im, vl);
-                rvv<T>::vsse_itab(reinterpret_cast<T*>(dst + i) + 1, sizeof(T) * 2, vec_src_im, vl);
+                TabTypeF::vstore_stride(reinterpret_cast<T*>(dst + i) + 1, sizeof(T) * 2, vec_src_im, vl);
             }
         }
     }
@@ -177,7 +173,7 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
 
                 for( j = 1; j < nx; j += vl )
                 {
-                    vl = rvv<T>::vsetvl(nx - j);
+                    vl = rvv<T>::setvl(nx - j);
                     v0 = dst + i + j;
                     v1 = v0 + nx*2;
 
@@ -238,7 +234,7 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
 
                 for( j = 1; j < nx; j += vl )
                 {
-                    vl = rvv<T>::vsetvl(nx - j);
+                    vl = rvv<T>::setvl(nx - j);
                     v = dst + i + j;
 
                     VT vec_re, vec_im, vec_w_re, vec_w_im;
@@ -284,7 +280,7 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
 
                 for( j = 1; j < nx; j += vl )
                 {
-                    vl = rvv<T>::vsetvl(nx - j);
+                    vl = rvv<T>::setvl(nx - j);
                     v = dst + i + j;
 
                     VT vec_re, vec_im, vec_w_re, vec_w_im;
@@ -323,7 +319,7 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
             {
                 for( j = 0; j < nx; j += vl )
                 {
-                    vl = rvv<T>::vsetvl(nx - j);
+                    vl = rvv<T>::setvl(nx - j);
                     Complex<T>* v0 = dst + i + j;
                     Complex<T>* v1 = v0 + nx*2;
                     Complex<T>* v2 = v1 + nx*2;
@@ -417,7 +413,7 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
                     {
                         for( p = 1; p <= factor2; p += vl )
                         {
-                            vl = rvv<T>::vsetvl(factor2 + 1 - p);
+                            vl = rvv<T>::setvl(factor2 + 1 - p);
 
                             VT vec_a_re, vec_a_im, vec_b_re, vec_b_im;
                             rvv<T>::vlsseg(reinterpret_cast<const T*>(v + nx * p), sizeof(T) * nx * 2, vec_a_re, vec_a_im, vl);
@@ -427,8 +423,8 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
                             auto vec_i0 = __riscv_vfsub(vec_a_im, vec_b_im, vl);
                             auto vec_i1 = __riscv_vfadd(vec_a_im, vec_b_im, vl);
 
-                            vn_0.re += __riscv_vfmv_f(__riscv_vfredosum(vec_r0, rvv<T>::vfmv_s(0, vl), vl));
-                            vn_0.im += __riscv_vfmv_f(__riscv_vfredosum(vec_i1, rvv<T>::vfmv_s(0, vl), vl));
+                            vn_0.re += __riscv_vfmv_f(__riscv_vfredosum(vec_r0, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
+                            vn_0.im += __riscv_vfmv_f(__riscv_vfredosum(vec_i1, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
 
                             rvv<T>::vsseg(reinterpret_cast<T*>(a + p - 1), vec_r0, vec_i0, vl);
                             rvv<T>::vsseg(reinterpret_cast<T*>(b + p - 1), vec_r1, vec_i1, vl);
@@ -440,7 +436,7 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
 
                         for( p = 1; p <= factor2; p += vl )
                         {
-                            vl = rvv<T>::vsetvl(factor2 + 1 - p);
+                            vl = rvv<T>::setvl(factor2 + 1 - p);
 
                             VT vec_re, vec_im, vec_w_re, vec_w_im;
                             rvv<T>::vlsseg(reinterpret_cast<const T*>(v + nx * p), sizeof(T) * nx * 2, vec_re, vec_im, vl);
@@ -458,8 +454,8 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
                             vec_r1 = __riscv_vfsub(vec_r2, vec_r1, vl);
                             vec_i1 = __riscv_vfadd(vec_i2, vec_i1, vl);
 
-                            vn_0.re += __riscv_vfmv_f(__riscv_vfredosum(vec_r0, rvv<T>::vfmv_s(0, vl), vl));
-                            vn_0.im += __riscv_vfmv_f(__riscv_vfredosum(vec_i1, rvv<T>::vfmv_s(0, vl), vl));
+                            vn_0.re += __riscv_vfmv_f(__riscv_vfredosum(vec_r0, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
+                            vn_0.im += __riscv_vfmv_f(__riscv_vfredosum(vec_i1, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
 
                             rvv<T>::vsseg(reinterpret_cast<T*>(a + p - 1), vec_r0, vec_i0, vl);
                             rvv<T>::vsseg(reinterpret_cast<T*>(b + p - 1), vec_r1, vec_i1, vl);
@@ -480,7 +476,7 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
 
                         for( q = 0; q < factor2; q += vl )
                         {
-                            vl = rvv<T>::vsetvl(factor2 - q);
+                            vl = rvv<T>::setvl(factor2 - q);
 
                             auto vec_d = __riscv_vadd(vec_dd, (q + 1) * dd % tab_size, vl);
                             auto vmask = __riscv_vmsgeu(vec_d, tab_size, vl);
@@ -498,10 +494,10 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
                             auto vec_i0 = __riscv_vfmul(vec_w, vec_a_im, vl);
                             auto vec_i1 = __riscv_vfmul(vec_w, vec_b_re, vl);
 
-                            T r0 = __riscv_vfmv_f(__riscv_vfredosum(vec_r0, rvv<T>::vfmv_s(0, vl), vl));
-                            T i0 = __riscv_vfmv_f(__riscv_vfredosum(vec_i0, rvv<T>::vfmv_s(0, vl), vl));
-                            T r1 = __riscv_vfmv_f(__riscv_vfredosum(vec_r1, rvv<T>::vfmv_s(0, vl), vl));
-                            T i1 = __riscv_vfmv_f(__riscv_vfredosum(vec_i1, rvv<T>::vfmv_s(0, vl), vl));
+                            T r0 = __riscv_vfmv_f(__riscv_vfredosum(vec_r0, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
+                            T i0 = __riscv_vfmv_f(__riscv_vfredosum(vec_i0, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
+                            T r1 = __riscv_vfmv_f(__riscv_vfredosum(vec_r1, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
+                            T i1 = __riscv_vfmv_f(__riscv_vfredosum(vec_i1, RVV<T, LMUL_1>::vmv_s(0, vl), vl));
 
                             s1.re += r0 + i0; s0.re += r0 - i0;
                             s1.im += r1 - i1; s0.im += r1 + i1;
@@ -523,23 +519,23 @@ inline int dft(const Complex<T>* src, Complex<T>* dst, int nf, int *factors, T s
 
         for( i = 0; i < len; i += vl )
         {
-            vl = rvv<T>::vsetvl_itab(len - i);
-            auto vec_src_re = rvv<T>::vlse_itab_f(reinterpret_cast<const T*>(dst + i), sizeof(T) * 2, vl);
-            auto vec_src_im = rvv<T>::vlse_itab_f(reinterpret_cast<const T*>(dst + i) + 1, sizeof(T) * 2, vl);
+            vl = TabType::setvl(len - i);
+            auto vec_src_re = TabTypeF::vload_stride(reinterpret_cast<const T*>(dst + i), sizeof(T) * 2, vl);
+            auto vec_src_im = TabTypeF::vload_stride(reinterpret_cast<const T*>(dst + i) + 1, sizeof(T) * 2, vl);
             vec_src_re = __riscv_vfmul(vec_src_re, re_scale, vl);
             vec_src_im = __riscv_vfmul(vec_src_im, im_scale, vl);
-            rvv<T>::vsse_itab(reinterpret_cast<T*>(dst + i), sizeof(T) * 2, vec_src_re, vl);
-            rvv<T>::vsse_itab(reinterpret_cast<T*>(dst + i) + 1, sizeof(T) * 2, vec_src_im, vl);
+            TabTypeF::vstore_stride(reinterpret_cast<T*>(dst + i), sizeof(T) * 2, vec_src_re, vl);
+            TabTypeF::vstore_stride(reinterpret_cast<T*>(dst + i) + 1, sizeof(T) * 2, vec_src_im, vl);
         }
     }
     else if( isInverse )
     {
         for( i = 0; i < len; i += vl )
         {
-            vl = rvv<T>::vsetvl_itab(len - i);
-            auto vec_src_im = rvv<T>::vlse_itab_f(reinterpret_cast<const T*>(dst + i) + 1, sizeof(T) * 2, vl);
+            vl = TabType::setvl(len - i);
+            auto vec_src_im = TabTypeF::vload_stride(reinterpret_cast<const T*>(dst + i) + 1, sizeof(T) * 2, vl);
             vec_src_im = __riscv_vfneg(vec_src_im, vl);
-            rvv<T>::vsse_itab(reinterpret_cast<T*>(dst + i) + 1, sizeof(T) * 2, vec_src_im, vl);
+            TabTypeF::vstore_stride(reinterpret_cast<T*>(dst + i) + 1, sizeof(T) * 2, vec_src_im, vl);
         }
     }
 
