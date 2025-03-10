@@ -1,7 +1,8 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level
 // directory of this distribution and at http://opencv.org/license.html.
-#pragma once
+#ifndef OPENCV_HAL_RVV_SQRT_HPP_INCLUDED
+#define OPENCV_HAL_RVV_SQRT_HPP_INCLUDED
 
 #include <riscv_vector.h>
 #include <cmath>
@@ -140,3 +141,5 @@ inline int invSqrt(const Elem* src, Elem* dst, int _len)
 }
 
 }}  // namespace cv::cv_hal_rvv
+
+#endif  // OPENCV_HAL_RVV_SQRT_HPP_INCLUDED
